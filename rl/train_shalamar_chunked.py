@@ -54,6 +54,16 @@ def run_chunk(epochs, steps_per_epoch, label, resume_path=None):
     t_start = time.time()
     rng = np.random.default_rng(int(time.time()) & 0xFFFF)
 
+    # Save checkpoint helper — for use mid-chunk too
+    def save_ckpt():
+        save_path = f"{OUT_DIR}/ppo_{label}_chunk{len(metrics)}.pt"
+        torch.save({"model": agent.net.state_dict(), "metrics": metrics,
+                    "ffba_advances": ffba_advances}, save_path)
+        latest = f"{OUT_DIR}/ppo_{label}_latest.pt"
+        if os.path.lexists(latest):
+            os.unlink(latest)
+        os.symlink(save_path, latest)
+
     for ep in range(epochs):
         buf = TrajectoryBuffer(obs_dim, steps_per_epoch)
         n_done = 0
@@ -101,16 +111,10 @@ def run_chunk(epochs, steps_per_epoch, label, resume_path=None):
         print(f"ep {len(metrics):4d}  eps={len(completed_returns):3d}  "
               f"ret={m['mean_return']:7.2f}  max={m['max_return']:7.2f}  "
               f"adv={ffba_advances}  ent={m['entropy']:.3f}  t={elapsed:.0f}s", flush=True)
+        # Save after EACH epoch — protects against mid-chunk hangs
+        save_ckpt()
 
-    save_path = f"{OUT_DIR}/ppo_{label}_chunk{len(metrics)}.pt"
-    torch.save({"model": agent.net.state_dict(), "metrics": metrics,
-                "ffba_advances": ffba_advances}, save_path)
-    # Symlink as latest
-    latest = f"{OUT_DIR}/ppo_{label}_latest.pt"
-    if os.path.lexists(latest):
-        os.unlink(latest)
-    os.symlink(save_path, latest)
-    print(f"\nSaved: {save_path} ({len(metrics)} total epochs, {ffba_advances} advances)", flush=True)
+    print(f"\nChunk done: {len(metrics)} total epochs, {ffba_advances} advances", flush=True)
     env.close()
 
 

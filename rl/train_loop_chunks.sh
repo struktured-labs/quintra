@@ -6,9 +6,10 @@ cd /home/struktured/projects/penta-dragon-dx-claude/rl
 source .venv/bin/activate
 
 LABEL="${1:-shalamar_ck}"
-TOTAL_CHUNKS="${2:-50}"  # 50 chunks × 5 epochs = 250 epochs total
-CHUNK_EPOCHS=5
-STEPS=1024
+TOTAL_CHUNKS="${2:-50}"  # 50 chunks × 2 epochs = 100 epochs total (when ALL succeed)
+CHUNK_EPOCHS="${3:-2}"
+STEPS="${4:-1024}"
+TIMEOUT="${5:-60}"
 LOG="logs/${LABEL}_chunked.log"
 
 echo "==== Chunked training: $TOTAL_CHUNKS chunks of $CHUNK_EPOCHS epochs ====" >> "$LOG"
@@ -18,7 +19,7 @@ for i in $(seq 1 $TOTAL_CHUNKS); do
     echo "" >> "$LOG"
     echo "==== CHUNK $i/$TOTAL_CHUNKS ====" >> "$LOG"
     echo "$(date): starting chunk $i" >> "$LOG"
-    timeout 90 python -u train_shalamar_chunked.py $CHUNK_EPOCHS $STEPS $LABEL >> "$LOG" 2>&1
+    timeout $TIMEOUT python -u train_shalamar_chunked.py $CHUNK_EPOCHS $STEPS $LABEL >> "$LOG" 2>&1
     rc=$?
     echo "$(date): chunk $i exit=$rc" >> "$LOG"
     if [ $rc -eq 0 ]; then
