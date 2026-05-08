@@ -102,9 +102,8 @@ class NaturalExploreEnv(PentaEnv):
             self._stale_count = 0
             reward += 0.05  # tiny reward for movement
             self._last_pos = cur_pos
-        # Reward room CHANGES (regardless of unique) — encourages navigation
-        if s.room != self.reward_tracker.last_state.room:
-            reward += 20.0
+        # NOTE: Don't reward room CHANGES — agent farms by oscillating.
+        # Only unique-room rewards fire (above and via reward_tracker).
         # Arena entry bonus
         if 0x0C <= s.scene <= 0x14 and s.scene not in self._arenas_seen:
             self._arenas_seen.add(s.scene)
@@ -125,7 +124,7 @@ class NaturalExploreEnv(PentaEnv):
 
 def run_chunk(epochs, steps_per_epoch, label, resume_path=None):
     device = "cpu"
-    env = NaturalExploreEnv(ROM, max_steps=1024, savestate_path=GAMEPLAY,
+    env = NaturalExploreEnv(ROM, max_steps=2048, savestate_path=GAMEPLAY,
                             reward_cfg=explore_reward_cfg())
     obs_dim = vector_dim()
     cfg = PPOConfig(epochs=epochs, steps_per_epoch=steps_per_epoch,
