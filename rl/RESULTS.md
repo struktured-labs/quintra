@@ -439,12 +439,31 @@ Result: v25 matches v19 ep200's level 1 generalization (single kill only) but di
 | 7 | Faze | 0x13 | 12 | FFD3=7 trigger | drops to 0x17 |
 | 8 | Penta | 0x14 | 28 | FFD3=7 trigger | drops to 0x17 |
 
-### Shalamar Trainer (v1, in progress)
-- `train_shalamar.py`: PPO + ShalamarArenaEnv (godmode HP, terminate on FFBA advance)
-- Fast reset: load_state without PyBoy restart (0.5ms/step measured)
-- Hyperparams: gamma=0.995, lam=0.97, entropy_coef=0.03, max_steps=600/episode
-- Reward: step_penalty=-0.005, boss_damage=0.5, boss_kill=200, ffba_advance=+500
-- Goal: kill Shalamar from arena state (FFBA 1→2 advance) consistently
+### Shalamar Trainer (v1-v6 iterations)
+
+**Hangs root-caused (after 3 days of bisection):**
+- `torch.distributions.Categorical.sample()` deadlocks with PyBoy threads
+- Even with `torch.set_num_threads(1)` + OMP/MKL env vars, intermittent hangs persist after ~3 epochs
+- Workaround: pure numpy MLP forward pass for inference. Torch only for gradient updates.
+- Workaround #2: chunked training (`train_loop_chunks.sh`) — each chunk = 2 epochs with 60s timeout. ~50% chunks succeed, others hung→killed→retry. Per-epoch checkpointing preserves progress.
+
+**Critical reward fixes:**
+- v1-v3 had `godmode_step` healing the boss every tick (DCBB pumped to 0xFF when FFBF==0; but FFBF tracks mini-bosses, not stage bosses → boss healed during arena). Fixed in v4: only pump DCBB when NOT in stage arena (D880 outside 0x0C-0x14).
+- Default `RewardTracker.boss_damage` only fires for mini-bosses. Added custom DCBB-drop reward in `ShalamarArenaEnv.step` (+0.2 per unit dropped). Full damage = +51 reward + 500 success bonus.
+- v6: godmode allows D880=0x17 in boss arena context (FFB7 set) — boss death cinematic may transition through 0x17 before reaching 0x18/0x16.
+
+**Training progress (v6):**
+| epoch | mean_return | max_return | adv (kills) | ent |
+|-------|-------------|------------|-------------|-----|
+| 1     | -29.77      | -29.77     | 0           | 2.48 |
+| 13    | 5.63        | 24.00      | 0           | 2.46 |
+| 30    | 50          | 86.56      | 0           | 2.36 |
+| 42    | 50          | 92.93      | 0           | 2.39 |
+
+Agent consistently dealing 250+ DCBB damage per episode (out of 255 max). NO FFBA advances yet.
+
+**User hint:** "Some stage bosses have very specific spots or moments they can be damaged."
+This explains why spam_a / random damage hits a wall around DCBB ~0x09 — boss has phase resets that require specific positioning/timing to overcome.
 
 ## Artifacts
 
