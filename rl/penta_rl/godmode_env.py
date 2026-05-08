@@ -42,9 +42,15 @@ def godmode_step(pb):
             pb.memory[0xFFBF] = 0
             pb.memory[0xDCBB] = 0xFF
     # In stage arena: DON'T touch DCBB (it's boss HP — let agent kill the boss)
+    # Death cinematic 0x17: only revert if NOT in boss arena context.
+    # During stage arena → 0x17 transition, the boss may be dying — let it through.
+    # Detect via FFB7 (set on arena entry, indicates boss flag).
     if d880 == 0x17:
-        pb.memory[0xD880] = 0x02
-        pb.memory[0xDCBB] = 0xFF
+        ffb7 = pb.memory[0xFFB7]
+        in_boss_context = 0x0C <= ffb7 <= 0x14
+        if not in_boss_context:
+            pb.memory[0xD880] = 0x02
+            pb.memory[0xDCBB] = 0xFF
 
 
 class GodmodeEnv(PentaEnv):
