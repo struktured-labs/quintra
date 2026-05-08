@@ -452,13 +452,22 @@ Result: v25 matches v19 ep200's level 1 generalization (single kill only) but di
 - Default `RewardTracker.boss_damage` only fires for mini-bosses. Added custom DCBB-drop reward in `ShalamarArenaEnv.step` (+0.2 per unit dropped). Full damage = +51 reward + 500 success bonus.
 - v6: godmode allows D880=0x17 in boss arena context (FFB7 set) — boss death cinematic may transition through 0x17 before reaching 0x18/0x16.
 
-**Training progress (v6):**
+**Training progress (v6 — entropy=0.03):**
 | epoch | mean_return | max_return | adv (kills) | ent |
 |-------|-------------|------------|-------------|-----|
 | 1     | -29.77      | -29.77     | 0           | 2.48 |
 | 13    | 5.63        | 24.00      | 0           | 2.46 |
 | 30    | 50          | 86.56      | 0           | 2.36 |
 | 42    | 50          | 92.93      | 0           | 2.39 |
+| 79    | 37          | 63.71      | 0           | 2.33 |
+
+**Eval of v6 latest ckpt (deterministic argmax):** Episode reward 55.81. min DCBB = 0x01 (almost killed!). Action distribution: 94.3% A, 5.6% U+A, 0.1% R. **Policy converged to "spam A" — drops boss HP to nearly 0 but doesn't trigger FFBA advance.**
+
+**Training v_explore (entropy=0.10, started 21:29):**
+| epoch | mean_return | max_return | adv | ent |
+|-------|-------------|------------|-----|-----|
+| 12    | 41          | 65.49      | 0   | 2.40 |
+| 31    | 45          | 78.87      | 0   | 2.44 |
 
 Agent consistently dealing 250+ DCBB damage per episode (out of 255 max). NO FFBA advances yet.
 
