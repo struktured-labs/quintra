@@ -469,6 +469,18 @@ Result: v25 matches v19 ep200's level 1 generalization (single kill only) but di
 | 12    | 41          | 65.49      | 0   | 2.40 |
 | 31    | 45          | 78.87      | 0   | 2.44 |
 
+**FINAL training results (after 200-chunk run for each):**
+- v6 (entropy=0.03): 316 total epochs. Final eval: 0/10 kills, mean_ret=27.1, min_DCBB=1.0
+- explore2 (entropy=0.10): 274 total epochs. Final eval: 0/10 kills, mean_ret=25.9, min_DCBB=0.0
+
+**Both policies converge to "spam attacks" — drive boss DCBB to 0x00-0x01 but NEVER trigger FFBA advance.**
+
+This proves the boss kill condition is NOT just DCBB=0. Some other state must be the trigger (positional, timing, item-based, or tile-based — per user's hint about "specific damage spots/moments"). Without user demo of the actual kill pattern, RL exploration won't find it in 300+ epochs.
+
+User has been engaged with diagnosis (`rl/SHALAMAR_FINDINGS.md`). Awaiting demo of:
+1. Natural arena door entry from level 1 dungeon
+2. Boss kill mechanism (positional pattern, special action, or hidden HP location)
+
 Agent consistently dealing 250+ DCBB damage per episode (out of 255 max). NO FFBA advances yet.
 
 **User hint:** "Some stage bosses have very specific spots or moments they can be damaged."
