@@ -7,6 +7,10 @@
         "TMPDIR": "/home/struktured/projects/penta-dragon-dx-claude/tmp",
         "SDL_AUDIODRIVER": "dummy"
       }
+    },
+    "misterclaw": {
+      "command": "/usr/local/bin/misterclaw-mcp",
+      "args": ["--host", "MiSTer"]
     }
   }
 }

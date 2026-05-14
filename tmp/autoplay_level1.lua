@@ -1,15 +1,19 @@
--- Penta Dragon Level 1 Auto-play Script v8.5
--- Position-aware, state-driven bot with entity scanning and progress tracking
+-- Penta Dragon Auto-play & Game Documenter v9.6
+-- Full game exploration bot with comprehensive capture of game states
 --
--- Improvements over v7:
---   - Reads Sara's XY from OAM for position-aware movement
---   - Scans OAM slots 4-39 for enemies/projectiles/boss sprites
---   - Monitors DC81 (section scroll countdown) and FFD6 (progress) for stall detection
---   - Reactive state machine: explore/combat/stuck/boss/post_boss
---   - 6-phase oscillation breaker instead of random jitter
---   - Boss-specific combat with room boundary oscillation
--- v8.2: Corrected DD04/DD05 → DC81/FFCF (probe-verified real addresses)
--- v8.5: ROM patching to cycle through ALL 8 bosses (Gargoyle→Angela)
+-- NATURAL_MODE: When true, disables ROM patching and DCB8 resets.
+-- Lets the game advance naturally through sections and levels.
+-- Monitors FFAC/FFAD for level transitions.
+local NATURAL_MODE = true  -- Set to true for natural progression
+--
+-- Features:
+--   - Position-aware movement with entity scanning
+--   - State machine: explore/combat/stuck/boss/post_boss
+--   - ALL-ENTRIES ROM patching: patches all 6 spawn table entries as bosses
+--   - Persistent section forcing after each boss kill (DCBA + entity zeroing + FFD6)
+--   - Captures: bosses, items, forms, enemy types, stages, hazards
+--   - Periodically forces powerup/form changes for coverage
+--   - Priority screenshot system (bosses > items > enemies > rooms)
 
 -- ============================================================
 -- 1. CONSTANTS & CONFIGURATION
@@ -48,18 +52,30 @@ local EFFECT_TILE_MAX = 0x1F
 local ENEMY_BODY_MIN = 0x30
 local ENEMY_BODY_MAX = 0x7F
 
-local MAX_SCREENSHOTS = 60
-local MAX_RUNTIME = 54000  -- 15 min at 60fps
+local MAX_SCREENSHOTS = 300
+local MAX_RUNTIME = 162000  -- 45 min at 60fps
 local MAX_SAVE_SLOT = 9
+
+-- Powerup names for logging/screenshots
+local POWERUP_NAMES = {"none","spiral","shield","turbo"}
 
 -- Boss progression via ROM patching
 -- Level 1 spawn table in bank 13 (ROM offset 0x34024)
 -- Header byte = 0x06 (6 entries), then 5 bytes per entry
--- Entries 2 and 5 are the boss slots (DCB8=2 and DCB8=5)
-local BOSS_DC04 = {0x30, 0x35, 0x3A, 0x3F, 0x44, 0x49, 0x4E, 0x53}
-local BOSS_NAMES = {"Gargoyle","Spider","Crimson","Ice","Void","Poison","Knight","Angela"}
-local SPAWN_ENTRY2_ROM = 0x3402F  -- ROM address of entry 2's DC04 byte
-local SPAWN_ENTRY5_ROM = 0x3403E  -- ROM address of entry 5's DC04 byte
+-- v9.4: Only entry 2 (0x3402F) ROM writes confirmed working.
+-- Uses 1-frame entity-check NOP at $2240-$2241 to force section advance.
+-- ALL 16 bosses! DC04 = 0x30 + (boss-1)*5
+local BOSS_DC04 = {0x30, 0x35, 0x3A, 0x3F, 0x44, 0x49, 0x4E, 0x53,
+                   0x58, 0x5D, 0x62, 0x67, 0x6C, 0x71, 0x76, 0x7B}
+local BOSS_NAMES = {"Gargoyle","Spider","Crimson","Ice","Void","Poison","Knight","Angela",
+                    "Boss9","Boss10","Boss11","Boss12","Boss13","Boss14","Boss15","Boss16"}
+local SPAWN_ENTRY2_ROM = 0x3402F  -- ROM address of entry 2's DC04 byte (confirmed working)
+-- Entity check NOP: at $2240 is "JR NZ,$2268" (bytes 0x20,0x26)
+-- NOP'ing these 2 bytes makes section advance skip entity alive check for 1 frame
+local ENTITY_CHECK_ADDR = 0x2240   -- ROM offset of JR NZ instruction
+local ENTITY_CHECK_ORIG = {0x20, 0x26}  -- original bytes to restore
+-- Entity slot first-byte addresses (5 slots × 8 byte stride, slot[0] = alive/dead type)
+local ENTITY_SLOT_ADDRS = {0xDC85, 0xDC8D, 0xDC95, 0xDC9D, 0xDCA5}
 
 -- Title menu schedule (verified working)
 local TITLE_SCHEDULE = {
@@ -83,9 +99,31 @@ local bossKillCount = 0
 local uniqueRooms = {}
 local stuckPhase = 0
 local lastOscBreakFrame = 0
-local nextBossIndex = 1    -- tracks current pair base; advances by 2 after each entry5 kill
-local lastPatchedKill = 0  -- guard: only patch ROM once per kill event
+local lastKillFrame = 0    -- frame of most recent boss kill
+local bossEnterFrame = 0   -- frame when current boss fight began (persists across state resets)
+local nopEntityCheck = false -- true = NOP active at $2240, need to restore next frame
+local restoreEntityCheck = false -- true = restore original bytes at $2240 this frame
+local sectionForceEnd = 0  -- frame until which FFD6 forcing is active
 local uniqueBosses = {}    -- track which boss types we've encountered
+local romPatchDone = false  -- initial ROM patch applied?
+local prevFFAC = 0         -- for NATURAL_MODE level transition detection
+local prevFFAD = 0
+local prevFFBA = 0
+local lastSaraX = -1       -- for frozen-Sara detection
+local lastSaraY = -1
+local saraFrozenFrames = 0 -- how long Sara has been at same position
+
+-- Discovery tracking for comprehensive game documentation
+local seenEnemyTiles = {}  -- unique OAM tile IDs from enemy sprites
+local seenPowerups = {}    -- unique powerup states captured
+local seenForms = {}       -- witch/dragon forms captured
+local seenBossStates = {}  -- boss + form + powerup combos
+local lastFormToggle = 0   -- frame of last forced form toggle
+local lastPowerupCycle = 0 -- frame of last forced powerup cycle
+local powerupCycleIdx = 0  -- current powerup in cycle
+local roomScreenshotBudget = 30  -- limit room transition screenshots
+local roomScreenshots = 0  -- count of room screenshots taken
+local bossFullCycles = 0   -- how many full 8-boss cycles completed
 
 -- Previous frame values for change detection
 local prev = {
@@ -228,6 +266,36 @@ local function scanEntities(state)
 end
 
 -- ============================================================
+-- 5b. ROM PATCHING & SECTION FORCING
+-- ============================================================
+
+-- Patch entry 2 with the specified boss DC04 value
+local function patchEntry2(bossIdx)
+    emu.memory.cart0:write8(SPAWN_ENTRY2_ROM, BOSS_DC04[bossIdx])
+    logMsg(string.format("ROM PATCH entry2 = %s(0x%02X)", BOSS_NAMES[bossIdx], BOSS_DC04[bossIdx]))
+end
+
+-- NOP the entity alive check at $2240-$2241 for exactly 1 frame
+-- This makes the section advance skip entity checking, allowing DCB8 to advance
+-- even when entities are alive (spawner timing issue bypass)
+local function activateEntityCheckNOP()
+    emu.memory.cart0:write8(ENTITY_CHECK_ADDR, 0x00)      -- NOP
+    emu.memory.cart0:write8(ENTITY_CHECK_ADDR + 1, 0x00)  -- NOP
+    nopEntityCheck = true
+    restoreEntityCheck = false
+    logMsg("  NOP entity check at $2240 (1-frame bypass)")
+end
+
+-- Restore original entity check bytes
+local function restoreEntityCheckBytes()
+    emu.memory.cart0:write8(ENTITY_CHECK_ADDR, ENTITY_CHECK_ORIG[1])      -- JR NZ
+    emu.memory.cart0:write8(ENTITY_CHECK_ADDR + 1, ENTITY_CHECK_ORIG[2])  -- +0x26
+    nopEntityCheck = false
+    restoreEntityCheck = false
+    logMsg("  Restored entity check at $2240")
+end
+
+-- ============================================================
 -- 6. PROGRESS TRACKER
 -- ============================================================
 
@@ -337,10 +405,24 @@ local function updateStateMachine(state, ents)
         local names = {[1]="Gargoyle",[2]="Spider",[3]="Crimson",[4]="Ice",
                        [5]="Void",[6]="Poison",[7]="Knight",[8]="Angela"}
         setState("boss_fight", names[state.boss] or ("boss" .. state.boss))
+        -- Only set bossEnterFrame on genuine new boss (not timeout re-entry)
+        if bossEnterFrame == 0 then
+            bossEnterFrame = f
+        end
         return
     end
     if gameState == "boss_fight" and state.boss == 0 then
+        bossEnterFrame = 0  -- reset for next boss
         setState("post_boss", "boss killed")
+        return
+    end
+    -- Force-kill: if boss fight exceeds 5min (18000 frames total), write FFBF=0
+    -- Some bosses (e.g., Boss16 DC04=0x7B) appear unkillable
+    -- Uses bossEnterFrame which persists across timeout/re-enter cycles
+    if state.boss > 0 and bossEnterFrame > 0 and (f - bossEnterFrame) > 18000 then
+        logMsg("FORCE KILL: boss " .. state.boss .. " unkillable after 5min, writing FFBF=0")
+        emu:write8(0xFFBF, 0)
+        bossEnterFrame = 0  -- reset so it doesn't retrigger
         return
     end
     -- Boss fight timeout: if stuck fighting for >3min, revert to explore
@@ -512,20 +594,45 @@ local function strategyStuck(state, ents)
 end
 
 local function strategyBoss(state, ents)
-    -- Exact v8.4 boss strategy: RIGHT + modest A fire + dodging
-    -- This killed Gargoyle in ~35s via natural room boundary oscillation.
-    local keys = KEY_RIGHT
+    -- Aggressive boss strategy: high fire rate + track boss position
+    local keys = 0
 
-    -- Fire A at 33% duty cycle (matches proven v8.4 pattern)
-    if f % 6 < 2 then keys = keys + KEY_A end
+    -- Fire A at 83% duty cycle for maximum DPS
+    if f % 6 < 5 then keys = keys + KEY_A end
 
-    -- Occasional B
-    if f % 45 < 2 then keys = keys + KEY_B end
+    -- Toggle form every 15s during boss fight for varied damage types
+    if (f - stateEntryFrame) % 900 == 0 and (f - stateEntryFrame) > 0 then
+        keys = keys + KEY_B
+    end
 
-    -- Gentle vertical sine-wave (180-frame period)
-    local cy = f % 180
-    if cy < 45 then keys = keys + KEY_UP
-    elseif cy >= 90 and cy < 135 then keys = keys + KEY_DOWN end
+    -- If boss sprites visible, track their centroid
+    if #ents.bossSprites > 0 then
+        local bx, by = 0, 0
+        for _, b in ipairs(ents.bossSprites) do
+            bx = bx + b.x; by = by + b.y
+        end
+        bx = bx / #ents.bossSprites
+        by = by / #ents.bossSprites
+        -- Move toward boss horizontally (maintain 30-60px gap)
+        local dx = bx - state.saraX
+        if dx > 60 then keys = keys + KEY_RIGHT
+        elseif dx < 30 and dx > 0 then keys = keys + KEY_LEFT  -- too close, back off
+        elseif dx < -10 then keys = keys + KEY_LEFT
+        else keys = keys + KEY_RIGHT end  -- default right
+        -- Match boss Y within 16px
+        local dy = by - state.saraY
+        if dy > 16 then keys = keys + KEY_DOWN
+        elseif dy < -16 then keys = keys + KEY_UP end
+    else
+        -- No boss sprites visible: oscillate LEFT/RIGHT every 90 frames
+        local cy = (f - stateEntryFrame) % 180
+        if cy < 90 then keys = keys + KEY_RIGHT
+        else keys = keys + KEY_LEFT end
+        -- Vertical sine
+        local vy = f % 180
+        if vy < 45 then keys = keys + KEY_UP
+        elseif vy >= 90 and vy < 135 then keys = keys + KEY_DOWN end
+    end
 
     -- Dodge enemy projectiles if very close
     keys = dodgeProjectile(keys, ents, state)
@@ -561,10 +668,11 @@ local function takeScreenshot(label)
     screenshotCount = screenshotCount + 1
     local path = string.format("%s/autoplay_%03d_%s.png", SCREENSHOT_DIR, screenshotCount, label)
     emu:screenshot(path)
+    logMsg("SCREENSHOT[" .. screenshotCount .. "]: " .. label)
 end
 
 local function saveState(reason)
-    if saveSlot > MAX_SAVE_SLOT then return end
+    if saveSlot > MAX_SAVE_SLOT then saveSlot = 1 end  -- wrap around
     emu:saveStateSlot(saveSlot)
     logMsg("SAVE[" .. saveSlot .. "]: " .. reason)
     saveSlot = saveSlot + 1
@@ -582,72 +690,59 @@ local function detectEvents(state, ents)
             logMsg("  " .. stateStr(state))
             takeScreenshot("new_r" .. string.format("%02X", state.room))
             saveState("new_room_" .. string.format("%02X", state.room))
-        elseif tracker.oscillationScore < 50 then
-            logMsg(string.format("ROOM %02X<-%02X #%d", state.room, prev.room, roomChangeCount))
-            logMsg("  " .. stateStr(state))
+        elseif tracker.oscillationScore < 30 and roomScreenshots < roomScreenshotBudget then
+            roomScreenshots = roomScreenshots + 1
             takeScreenshot("r" .. string.format("%02X", state.room))
         end
-        -- else oscillating, suppress log spam
     end
 
     -- Boss changes
     if state.boss ~= prev.boss then
-        local names = {[1]="Gargoyle",[2]="Spider",[3]="Crimson",[4]="Ice",
-                       [5]="Void",[6]="Poison",[7]="Knight",[8]="Angela"}
         if state.boss > 0 then
             uniqueBosses[state.boss] = true
             local ubCount = 0; for _ in pairs(uniqueBosses) do ubCount = ubCount + 1 end
-            logMsg("BOSS: " .. (names[state.boss] or "?") .. " (" .. state.boss .. ") [unique:" .. ubCount .. "/8]")
+            local bName = BOSS_NAMES[state.boss] or ("Boss" .. state.boss)
+            logMsg("BOSS: " .. bName .. " (" .. state.boss .. ") [unique:" .. ubCount .. "/16]")
             logMsg("  " .. stateStr(state))
-            takeScreenshot("boss_" .. (names[state.boss] or state.boss))
-            saveState("boss_" .. (names[state.boss] or state.boss))
+            takeScreenshot("boss_" .. bName)
+            saveState("boss_" .. bName)
+            -- Also capture boss with each form+powerup combo
+            local combo = state.boss .. "_" .. state.form .. "_" .. state.powerup
+            if not seenBossStates[combo] then
+                seenBossStates[combo] = true
+            end
         else
             bossKillCount = bossKillCount + 1
-            logMsg("KILL: " .. (names[prev.boss] or "?") .. " #" .. bossKillCount)
-            logMsg("  " .. stateStr(state))
-            takeScreenshot("kill_" .. bossKillCount)
-            saveState("kill_" .. bossKillCount)
-        end
-    end
-
-    -- v8.5 Boss rotation via ROM patching:
-    -- The spawn table has 2 boss slots: entry2 (DCB8=2) and entry5 (DCB8=5).
-    -- Bosses always appear in order: entry2 first, then entry5.
-    -- After each pair is killed, patch both entries with the next pair.
-    --
-    -- Progression: Gargoyle→Spider (natural) → Crimson→Ice → Void→Poison → Knight→Angela
-    -- Kill#  Boss     Slot   Action
-    --  1     Gargoyle entry2 fast-forward DCB8→4 for Spider
-    --  2     Spider   entry5 patch entry2=Crimson entry5=Ice, DCB8→1
-    --  3     Crimson  entry2 fast-forward DCB8→4 for Ice
-    --  4     Ice      entry5 patch entry2=Void entry5=Poison, DCB8→1
-    --  5     Void     entry2 fast-forward DCB8→4 for Poison
-    --  6     Poison   entry5 patch entry2=Knight entry5=Angela, DCB8→1
-    --  7     Knight   entry2 fast-forward DCB8→4 for Angela
-    --  8     Angela   entry5 patch entry2=Gargoyle entry5=Spider, DCB8→1 (full wrap)
-    if bossKillCount >= 1 and bossKillCount ~= lastPatchedKill and state.boss == 0 then
-        lastPatchedKill = bossKillCount
-        local dcb8 = emu:read8(0xDCB8)
-        local isEntry5Kill = (bossKillCount % 2 == 0)  -- even=entry5, odd=entry2
-
-        if isEntry5Kill then
-            -- Entry5 boss killed: patch ROM with next pair, fast-forward to entry2
-            nextBossIndex = nextBossIndex + 2
-            if nextBossIndex > 8 then nextBossIndex = nextBossIndex - 8 end
-            local b2 = nextBossIndex + 1
-            if b2 > 8 then b2 = b2 - 8 end
-            emu.memory.cart0:write8(SPAWN_ENTRY2_ROM, BOSS_DC04[nextBossIndex])
-            emu.memory.cart0:write8(SPAWN_ENTRY5_ROM, BOSS_DC04[b2])
-            emu:write8(0xDCB8, 1)  -- fast-forward: 1→2=entry2 boss
-            logMsg(string.format("ROM PATCH: entry2=%s(0x%02X) entry5=%s(0x%02X) DCB8→1",
-                BOSS_NAMES[nextBossIndex], BOSS_DC04[nextBossIndex],
-                BOSS_NAMES[b2], BOSS_DC04[b2]))
-        else
-            -- Entry2 boss killed: fast-forward to entry5 boss
-            if dcb8 < 4 then
-                emu:write8(0xDCB8, 4)
-                logMsg(string.format("DCB8: %02X -> 04 (fast-forward to entry5 boss)", dcb8))
+            local bossName = BOSS_NAMES[prev.boss] or ("Boss" .. prev.boss)
+            lastKillFrame = f
+            if NATURAL_MODE then
+                -- Natural: let DCB8 advance on its own, just force sections
+                logMsg("KILL: " .. bossName .. " #" .. bossKillCount ..
+                    " (natural, DCB8=" .. state.dcb8 .. ")")
+                logMsg("  " .. stateStr(state))
+                logMsg("  FFAC=" .. string.format("%02X", emu:read8(0xFFAC)) ..
+                       " FFAD=" .. string.format("%02X", emu:read8(0xFFAD)) ..
+                       " FFBA=" .. emu:read8(0xFFBA))
+            else
+                -- CRITICAL: Do all ROM/memory writes BEFORE screenshot (which corrupts IO)
+                local nextBoss = (bossKillCount % 16) + 1  -- cycle through ALL 16 bosses
+                patchEntry2(nextBoss)
+                emu:write8(0xDCB8, 1)  -- set DCB8 to 1 so next advance → 2 (boss entry)
+                activateEntityCheckNOP()
+                sectionForceEnd = f + 36000  -- 10 minutes: effectively permanent forcing
+                -- Now log and screenshot (IO may be corrupted after screenshot)
+                logMsg("KILL: " .. bossName .. " #" .. bossKillCount ..
+                    " next=" .. BOSS_NAMES[nextBoss] .. " NOP active")
+                logMsg("  " .. stateStr(state))
             end
+            -- Track full boss cycles (16 bosses now)
+            if bossKillCount % 16 == 0 then
+                bossFullCycles = bossFullCycles + 1
+                logMsg("*** FULL 16-BOSS CYCLE #" .. bossFullCycles .. " COMPLETE ***")
+            end
+            -- Screenshot LAST (may corrupt IO)
+            takeScreenshot("kill_" .. bossName .. "_" .. bossKillCount)
+            saveState("kill_" .. bossName)
         end
     end
 
@@ -659,15 +754,62 @@ local function detectEvents(state, ents)
         saveState("stage_" .. string.format("%02X", state.stage))
     end
 
-    -- Form change
+    -- Form change — capture screenshot of each unique form
     if state.form ~= prev.form then
-        logMsg("FORM: " .. (state.form == 0 and "Witch" or "Dragon"))
+        local formName = state.form == 0 and "Witch" or "Dragon"
+        logMsg("FORM: " .. formName)
+        if not seenForms[state.form] then
+            seenForms[state.form] = true
+            takeScreenshot("form_" .. formName)
+            saveState("form_" .. formName)
+        end
+        -- Screenshot form+powerup combos
+        local formPw = formName .. "_" .. (POWERUP_NAMES[state.powerup + 1] or "unk")
+        takeScreenshot("form_" .. formPw)
     end
 
-    -- Powerup change
+    -- Powerup change — capture screenshot of each unique powerup
     if state.powerup ~= prev.powerup then
-        local pw = {"none","spiral","shield","turbo"}
-        logMsg("POWERUP: " .. (pw[state.powerup + 1] or "?"))
+        local pwName = POWERUP_NAMES[state.powerup + 1] or "unk"
+        logMsg("POWERUP: " .. pwName)
+        if not seenPowerups[state.powerup] then
+            seenPowerups[state.powerup] = true
+            local formName = state.form == 0 and "W" or "D"
+            takeScreenshot("powerup_" .. pwName .. "_" .. formName)
+            saveState("powerup_" .. pwName)
+        end
+    end
+
+    -- Enemy tile discovery — log new tile IDs (every 120 frames, max 30 screenshots)
+    if f % 120 == 0 then
+        local etCount = 0; for _ in pairs(seenEnemyTiles) do etCount = etCount + 1 end
+        if #ents.enemies > 0 then
+            for _, e in ipairs(ents.enemies) do
+                if not seenEnemyTiles[e.tile] then
+                    seenEnemyTiles[e.tile] = true
+                    etCount = etCount + 1
+                    logMsg(string.format("NEW ENEMY TILE: 0x%02X at (%d,%d) [%d unique]",
+                        e.tile, e.x, e.y, etCount))
+                    if etCount <= 30 then
+                        takeScreenshot(string.format("enemy_%02X_r%02X", e.tile, state.room))
+                    end
+                end
+            end
+        end
+        -- Boss sprite tiles (count only — individual sprite logging caused log corruption)
+        if #ents.bossSprites > 0 then
+            local newCount = 0
+            for _, b in ipairs(ents.bossSprites) do
+                local key = "boss_" .. state.boss .. "_" .. b.tile
+                if not seenEnemyTiles[key] then
+                    seenEnemyTiles[key] = true
+                    newCount = newCount + 1
+                end
+            end
+            if newCount > 0 then
+                logMsg(string.format("BOSS SPRITES: boss=%d +%d new tiles", state.boss, newCount))
+            end
+        end
     end
 
     -- Progress milestones (every 0x20 new high)
@@ -684,12 +826,59 @@ local function detectEvents(state, ents)
         logMsg(string.format("PROG reset (was %02X)", prev.progress))
     end
 
-    -- FFC1 drop (back to menu)
+    -- FFC1 drop (back to menu — game over or post-Angela?)
     if state.ffc1 ~= prev.ffc1 then
         logMsg(string.format("FFC1: %02X -> %02X", prev.ffc1, state.ffc1))
         if state.ffc1 == 0 then
-            takeScreenshot("ffc1_drop")
+            takeScreenshot("ffc1_drop_" .. bossKillCount)
             saveState("ffc1_drop")
+            logMsg("*** RETURNED TO MENU — game over or post-Angela ***")
+        end
+    end
+
+    -- Periodically force form toggle (every 90s between boss fights)
+    if gameState == "playing_explore" and (f - lastFormToggle) > 5400 then
+        lastFormToggle = f
+        local newForm = state.form == 0 and 1 or 0
+        emu:write8(0xFFBE, newForm)
+        logMsg("FORCE FORM: " .. (newForm == 0 and "Witch" or "Dragon"))
+    end
+
+    -- Periodically force powerup cycling (every 45s between boss fights)
+    if gameState == "playing_explore" and (f - lastPowerupCycle) > 2700 then
+        lastPowerupCycle = f
+        powerupCycleIdx = (powerupCycleIdx + 1) % 4
+        emu:write8(0xFFC0, powerupCycleIdx)
+        logMsg("FORCE POWERUP: " .. (POWERUP_NAMES[powerupCycleIdx + 1] or "?"))
+        takeScreenshot("pw_" .. (POWERUP_NAMES[powerupCycleIdx + 1] or "unk") ..
+            "_" .. (state.form == 0 and "W" or "D") ..
+            "_r" .. string.format("%02X", state.room))
+    end
+
+    -- Periodic scenic screenshot (every 90s during explore, captures environment variety)
+    if gameState == "playing_explore" and f % 5400 == 0 and f > gameStartFrame + 600 then
+        takeScreenshot("scene_" .. string.format("%02X", state.room) ..
+            "_" .. (state.form == 0 and "W" or "D") ..
+            "_" .. (POWERUP_NAMES[state.powerup + 1] or "unk"))
+    end
+
+    -- NATURAL_MODE: detect FFAC/FFAD and FFBA changes (level transitions!)
+    if NATURAL_MODE then
+        local ffac = emu:read8(0xFFAC)
+        local ffad = emu:read8(0xFFAD)
+        local ffba = emu:read8(0xFFBA)
+        if ffac ~= prevFFAC or ffad ~= prevFFAD then
+            logMsg(string.format("*** LEVEL TRANSITION: FFAC/FFAD %02X/%02X -> %02X/%02X ***",
+                prevFFAC, prevFFAD, ffac, ffad))
+            logMsg("  " .. stateStr(state))
+            takeScreenshot("level_transition")
+            saveState("level_transition")
+            prevFFAC = ffac
+            prevFFAD = ffad
+        end
+        if ffba ~= prevFFBA then
+            logMsg(string.format("FFBA CHANGED: %d -> %d", prevFFBA, ffba))
+            prevFFBA = ffba
         end
     end
 
@@ -717,16 +906,27 @@ local function logSummary(state, ents, label)
         label, t, stateStr(state), gameState, tracker.oscillationScore))
     local ub = 0; local bList = ""
     for k in pairs(uniqueBosses) do ub = ub + 1; bList = bList .. (BOSS_NAMES[k] or "?") .. " " end
-    logMsg(string.format("  rooms=%d uniq=%d[%s] kills=%d bosses=%d/8[%s] ents=%d maxProg=%02X scrollStall=%d",
-        roomChangeCount, n, r, bossKillCount, ub, bList, ents.activeEntities,
-        tracker.maxProgress, tracker.scrollStall))
+    local et = 0; for _ in pairs(seenEnemyTiles) do et = et + 1 end
+    logMsg(string.format("  rooms=%d uniq=%d[%s] kills=%d bosses=%d/16[%s]",
+        roomChangeCount, n, r, bossKillCount, ub, bList))
+    logMsg(string.format("  enemyTiles=%d screenshots=%d/%d form=%s pw=%s cycles=%d nop=%s forceEnd=%d",
+        et, screenshotCount, MAX_SCREENSHOTS,
+        state.form == 0 and "W" or "D",
+        POWERUP_NAMES[state.powerup + 1] or "?",
+        bossFullCycles,
+        tostring(nopEntityCheck),
+        sectionForceEnd - f))
+    if NATURAL_MODE then
+        logMsg(string.format("  FFAC=%02X FFAD=%02X FFBA=%d",
+            emu:read8(0xFFAC), emu:read8(0xFFAD), emu:read8(0xFFBA)))
+    end
 end
 
 -- ============================================================
 -- 11. MAIN FRAME CALLBACK
 -- ============================================================
 
-logMsg("=== PENTA DRAGON AUTO-PLAY v8.5 ===")
+logMsg("=== PENTA DRAGON AUTO-PLAY v9.4 ===")
 logMsg("Position-aware | Entity-scanning | State-driven")
 
 callbacks:add("frame", function()
@@ -757,6 +957,17 @@ callbacks:add("frame", function()
             takeScreenshot("start")
             saveState("start")
             setState("playing_explore", "game started")
+            -- v9.4: Patch entry 2 with Spider (next boss after natural Gargoyle)
+            if not romPatchDone and not NATURAL_MODE then
+                romPatchDone = true
+                logMsg("=== v9.4 ENTRY2 ROM PATCH + NOP APPROACH ===")
+                patchEntry2(2)  -- Spider for first entry2 encounter
+                logMsg("Entry 2 = Spider. Entity check NOP will force DCB8 1→2 after kills.")
+            elseif NATURAL_MODE then
+                romPatchDone = true
+                logMsg("=== NATURAL MODE: No ROM patches, watching for level transitions ===")
+                sectionForceEnd = f + 216000  -- force for entire 60-min run
+            end
         end
 
         -- Failsafe: if still in title after 900 frames, spam A
@@ -774,6 +985,62 @@ callbacks:add("frame", function()
     emu:write8(0xDCDD, 0x17)
     emu:write8(0xDCDC, 0xFF)
 
+    -- v9.4: 1-frame entity check NOP for section forcing
+    -- After boss kill: NOP was written in prev frame → this frame's game loop uses NOP'd check
+    -- → section advance fires → restore original bytes
+    if nopEntityCheck then
+        -- The NOP was active for this frame's game loop. Schedule restore for next frame.
+        nopEntityCheck = false
+        restoreEntityCheck = true
+        -- Check if advance happened (DCB8 should have changed from 1 to 2+)
+        local dcb8 = emu:read8(0xDCB8)
+        local ffbf = emu:read8(0xFFBF)
+        logMsg(string.format("  NOP frame done: DCB8=%d FFBF=%d dc04=%02X",
+            dcb8, ffbf, emu:read8(0xDC04)))
+        if ffbf > 0 then
+            logMsg(string.format("  SUCCESS: Boss %s spawned!", BOSS_NAMES[ffbf] or "?"))
+        elseif dcb8 ~= 1 then
+            logMsg(string.format("  DCB8 advanced to %d but no boss. Entry data may be wrong.", dcb8))
+        else
+            logMsg("  WARNING: DCB8 still 1. Advance may not have fired. Will retry.")
+        end
+    end
+    if restoreEntityCheck then
+        restoreEntityCheckBytes()
+    end
+
+    -- Keep FFD6 >= 0x1E during force window (ensures DCBA stays armed for advance)
+    if f <= sectionForceEnd and state.boss == 0 then
+        if emu:read8(0xFFD6) < 0x1E then
+            emu:write8(0xFFD6, 0x1E)
+        end
+        emu:write8(0xDCBA, 0x01)  -- keep DCBA armed
+        -- Every 15 frames, zero entity slots to help section advance fire
+        if f % 15 == 0 then
+            for _, addr in ipairs(ENTITY_SLOT_ADDRS) do
+                emu:write8(addr, 0x00)
+            end
+        end
+    end
+
+    -- Retry NOP every 30 frames if advance didn't fire yet
+    if f > lastKillFrame + 30 and f <= sectionForceEnd and state.boss == 0 then
+        local dcb8 = emu:read8(0xDCB8)
+        if dcb8 == 1 and not nopEntityCheck and not restoreEntityCheck and (f - lastKillFrame) % 30 == 0 then
+            logMsg(string.format("  RETRY NOP: DCB8 still 1 after %d frames", f - lastKillFrame))
+            activateEntityCheckNOP()
+        end
+    end
+
+    -- v9.4: Frozen-Sara detection — if Sara hasn't moved for 600 frames, try jolt
+    if state.saraX == lastSaraX and state.saraY == lastSaraY then
+        saraFrozenFrames = saraFrozenFrames + 1
+    else
+        saraFrozenFrames = 0
+        lastSaraX = state.saraX
+        lastSaraY = state.saraY
+    end
+
     -- Scan entities
     local ents = scanEntities(state)
 
@@ -784,7 +1051,20 @@ callbacks:add("frame", function()
     updateStateMachine(state, ents)
 
     -- Get and apply input
-    emu:setKeys(getInput(state, ents))
+    local keys = getInput(state, ents)
+    -- If Sara has been frozen 10+ seconds, add aggressive jolt movement
+    if saraFrozenFrames > 600 and gameState ~= "boss_fight" then
+        local joltPhase = math.floor(saraFrozenFrames / 120) % 4
+        if joltPhase == 0 then keys = KEY_LEFT + KEY_UP + KEY_A
+        elseif joltPhase == 1 then keys = KEY_RIGHT + KEY_DOWN + KEY_A
+        elseif joltPhase == 2 then keys = KEY_DOWN + KEY_LEFT + KEY_B
+        else keys = KEY_UP + KEY_RIGHT + KEY_A end
+        if saraFrozenFrames % 600 == 0 then
+            logMsg(string.format("JOLT: Sara frozen at (%d,%d) for %d frames",
+                state.saraX, state.saraY, saraFrozenFrames))
+        end
+    end
+    emu:setKeys(keys)
 
     -- Detect and log events
     detectEvents(state, ents)

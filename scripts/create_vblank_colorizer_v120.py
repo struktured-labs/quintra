@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """
-v1.20: Direct VRAM Scan with 256-Byte Lookup Table - WORKING BG COLORIZATION
+v1.20: Direct VRAM Scan with 256-Byte Lookup Table
 
-This version implements TRUE direct VRAM scanning for BG tile colorization.
-Reads tile IDs from VRAM bank 0, looks up palette from 256-byte table,
-writes attributes to VRAM bank 1 at the SAME address.
+!!! WARNING - UNSTABLE APPROACH !!!
+This VBlank-based VRAM scanning approach has fundamental issues:
+  - VBlank timing too tight - can only process 256 tiles (8 rows) safely
+  - Processing more tiles causes screen corruption and flashing
+  - Colors appear inconsistent - purple spots, green items instead of gold
+  - Fighting against game's own rendering causes visual artifacts
 
-Key Features:
-  - DC0B-based tilemap selection (0x9800 or 0x9C00)
-  - 512 tiles processed per frame (16 rows x 32 cols)
-  - Fast O(1) palette lookup via 256-byte table
-  - Guaranteed alignment - read/write at same VRAM address
+A CLEANER APPROACH would be to hook the game's tile copy routine at 0x4296:
+  - Game already copies tiles from C1A0 staging buffer to VRAM
+  - Hook that routine to write attributes AT THE SAME TIME as tile writes
+  - Perfect synchronization, no VBlank timing issues
+  - Would require patching the game's ROM code directly
 
-BG Tile → Palette mapping:
+Current implementation kept for reference but NOT RECOMMENDED for use.
+!!!
+
+BG Tile → Palette mapping (when it works):
   0x00-0x0F: Floor/effects → Palette 0 (base)
   0x10-0x5F: Walls/borders → Palette 2 (blue/purple)
   0x60-0x7F: Structure → Palette 0 (base)
@@ -20,7 +26,7 @@ BG Tile → Palette mapping:
   0xA0-0xDF: Items → Palette 1 (gold) [flash AA-BB, dragon CE-DF]
   0xE0-0xFF: Borders → Palette 2 (blue/purple)
 
-OBJ Colorization (unchanged from v1.11):
+OBJ Colorization (unchanged from v1.11 - THIS PART WORKS):
   - Tile-based palette assignment for sprites
   - Boss detection via 0xFFBF flag
   - Dynamic palette loading for bosses

@@ -61,6 +61,15 @@ class RewardConfig:
     stage_boss_kill: float = 200.0         # D880 transitions from arena to 0x16 (post-boss reload)
     final_boss_penta_dragon: float = 1000.0 # FFBA=8 arena complete (Penta Dragon defeated)
     stage_boss_splash: float = 5.0          # D880 → 0x18 (cinematic splash)
+    # Stage boss DAMAGE shaping — privileged DCBB observation while in arena.
+    # Without this, the only signals between arena_enter (+30) and kill (+200) are
+    # the unique_room/step_penalty noise floor, leaving PPO with sparse credit.
+    # 2.0/HP × ~250 HP per stage boss = ~500 reward per full drain → dominates step_penalty.
+    stage_boss_damage: float = 2.0          # per HP unit drained in arena
+    stage_boss_phase_2: float = 50.0        # DCBB drops below 0xC0
+    stage_boss_phase_3: float = 100.0       # DCBB drops below 0x80
+    stage_boss_phase_4: float = 200.0       # DCBB drops below 0x40 (almost dead)
+    stage_boss_kill_signal_low_hp: float = 200.0  # arena→0x17 with DCBB<=10 (godmode-blocked kill)
 
 
 @dataclass
@@ -80,6 +89,9 @@ class RewardTracker:
     # Stage boss tracking
     stage_arenas_entered: set = field(default_factory=set)  # set of D880 values 0x0C..0x14
     stage_bosses_killed: set = field(default_factory=set)  # FFBA values where we transitioned arena → 0x16
+    cur_stage_boss_min_hp: int = 0xFF      # lowest DCBB seen in current stage-boss arena
+    cur_stage_boss_phase: int = 1          # stage boss phase milestones triggered
+    stage_boss_low_hp_credited: bool = False  # ensure low-HP kill signal fires once per arena visit
 
     def step(self, state: GameState, action: int = -1) -> tuple[float, dict]:
         cfg = self.cfg
@@ -174,11 +186,47 @@ class RewardTracker:
             events.append(("death", None))
 
         # ── Stage boss arena entry (D880 → 0x0C..0x14) ──
-        if 0x0C <= state.scene <= 0x14 and state.scene != prev.scene:
+        in_stage_arena_now = 0x0C <= state.scene <= 0x14
+        in_stage_arena_prev = 0x0C <= prev.scene <= 0x14
+        if in_stage_arena_now and state.scene != prev.scene:
             if state.scene not in self.stage_arenas_entered:
                 self.stage_arenas_entered.add(state.scene)
                 r += cfg.stage_boss_arena_enter
                 events.append(("STAGE_ARENA_ENTER", hex(state.scene), state.level))
+            # Fresh arena entry: reset boss-damage tracker so phases re-arm per fight.
+            self.cur_stage_boss_min_hp = state.boss_hp
+            self.cur_stage_boss_phase = 1
+            self.stage_boss_low_hp_credited = False
+        # ── Stage boss damage: dense privileged-DCBB reward while in arena ──
+        # In stage arena, DCBB = boss HP (per godmode_env.py docstring). Reward
+        # monotonic downward deltas; ignore upward jumps (phase reset / re-entry).
+        if in_stage_arena_now and in_stage_arena_prev:
+            if state.boss_hp < self.cur_stage_boss_min_hp:
+                progress = self.cur_stage_boss_min_hp - state.boss_hp
+                r += cfg.stage_boss_damage * progress
+                self.cur_stage_boss_min_hp = state.boss_hp
+                if state.boss_hp < 0xC0 and self.cur_stage_boss_phase < 2:
+                    r += cfg.stage_boss_phase_2
+                    self.cur_stage_boss_phase = 2
+                    events.append(("STAGE_BOSS_PHASE_2", state.boss_hp))
+                if state.boss_hp < 0x80 and self.cur_stage_boss_phase < 3:
+                    r += cfg.stage_boss_phase_3
+                    self.cur_stage_boss_phase = 3
+                    events.append(("STAGE_BOSS_PHASE_3", state.boss_hp))
+                if state.boss_hp < 0x40 and self.cur_stage_boss_phase < 4:
+                    r += cfg.stage_boss_phase_4
+                    self.cur_stage_boss_phase = 4
+                    events.append(("STAGE_BOSS_PHASE_4", state.boss_hp))
+        # ── Stage boss low-HP kill signal (fires once per arena visit) ──
+        # Godmode blocks the natural D880→0x16 transition by holding D880=0x17 when
+        # in boss context, so the canonical stage_boss_kill never triggers. Reward
+        # the arena→0x17 transition while DCBB is near zero as an equivalent signal.
+        if (in_stage_arena_prev and state.scene == 0x17
+                and prev.boss_hp <= 10
+                and not self.stage_boss_low_hp_credited):
+            r += cfg.stage_boss_kill_signal_low_hp
+            self.stage_boss_low_hp_credited = True
+            events.append(("STAGE_BOSS_KILL_LOWHP", prev.boss_hp, prev.level))
         # ── Stage boss splash (D880 → 0x18) ──
         if state.scene == 0x18 and prev.scene != 0x18:
             r += cfg.stage_boss_splash
@@ -234,3 +282,6 @@ class RewardTracker:
         self.cur_boss_phase = 1
         self.stage_arenas_entered.clear()
         self.stage_bosses_killed.clear()
+        self.cur_stage_boss_min_hp = 0xFF
+        self.cur_stage_boss_phase = 1
+        self.stage_boss_low_hp_credited = False

@@ -98,10 +98,11 @@ Humanoids (tiles 0x60-0x6F):   Palette 6 (purple) or 7 (boss)
 Special (tiles 0x70-0x7F):     Palette 7 (catfish)
 ```
 
-**Boss detection** (v2.33 table-based):
+**Boss/mini-boss detection** (v2.33 table-based):
 ```
-0xFFBF = 0: Normal mode (tile-based palettes)
-0xFFBF = 1-8: Boss mode (table lookup)
+0xFFBF = 0:   Normal mode (tile-based palettes)
+0xFFBF = 1-2: Mini-boss mode (mid-level encounters: 1=Gargoyle, 2=Spider)
+0xFFBF = 3-8: Boss mode (major encounters: 3=Crimson, 4=Ice, 5=Void, 6=Poison, 7=Knight, 8=Angela)
   - Boss slot table (8 bytes at 0x68C0): maps boss_flag → palette slot (6 or 7)
   - Boss palette table (64 bytes at 0x6880): maps boss_flag → 8-byte palette data
   - Loader: reads slot from table, computes OCPS target, loads 8 bytes from palette table
@@ -258,7 +259,7 @@ MCP tools (mgba_run, mgba_read_range, etc.) may be used for non-GUI operations l
 | `0xC200-0xC2FF` | Level/tilemap buffer data (NOT entities) |
 | `0xFE00-0xFE9F` | Hardware OAM |
 | `0xFFBE` | Sara form: 0=Witch, non-zero=Dragon |
-| `0xFFBF` | Boss flag: 0=normal, 1-8=boss index (v2.33: 8 bosses) |
+| `0xFFBF` | Boss/mini-boss flag: 0=normal, 1-2=mini-boss, 3-8=boss |
 | `0xFFC0` | Powerup state: 0=none, 1=spiral, 2=shield, 3=turbo |
 | `0xFFCB` | DMA buffer toggle: alternates 0/1 each frame |
 | `0xFFD0` | **Stage flag: 0=Level 1, 1=Bonus stage** (v2.28+) |

@@ -564,13 +564,14 @@ def create_bg_colorizer_continuous() -> bytes:
     code.extend([0xC6, 0x98])   # ADD A, 0x98
     code.extend([0x67])         # LD H, A  (HL = 0x9800 + position)
 
-    # B = 48 positions per frame
+    # B = 32 positions per frame
     # BG colorizer runs FIRST in VBlank - has ~4560 M-cycles available.
-    # 48 tiles × ~75 M-cycles avg = 3600 M + 62 M overhead = 3662 M.
-    # DMA (160 M) also needs VBlank. Total VBlank-critical: ~3822 M < 4560 M.
+    # 32 tiles × ~75 M-cycles avg = 2400 M + 62 M overhead = 2462 M.
+    # DMA (160 M) also needs VBlank. Total VBlank-critical: ~2622 M < 4560 M.
     # Palette loader + shadow colorizer use always-writable WRAM/registers, can overrun.
-    # Full tilemap refresh every 1024/48 ≈ 21 frames (~0.35 seconds at 60fps).
-    code.extend([0x06, 0x30])  # LD B, 48
+    # Total handler: ~6422 M (~9% of frame) - avoids slowdown.
+    # Full tilemap refresh every 1024/32 = 32 frames (~0.53 seconds at 60fps).
+    code.extend([0x06, 0x20])  # LD B, 32
 
     # === TILE LOOP ===
     tile_loop_start = len(code)

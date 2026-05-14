@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
 """
-v2.84: Scroll-Edge VBlank Pre-Coloring + VBK Safety
+v2.84.3: MiSTer Hardware Compatibility Fixes
 
-Changes from v2.83:
+Changes from v2.84.2:
+1. Speed Fix: Enhanced tilemap copy always uses tile-only fast path now.
+   The interleaved palette+tile copy had 288 STAT waits per frame (82K T-cycles),
+   exceeding the 70K frame budget and causing 2x slowdown on MiSTer.
+   Palettes are now handled by bg_sweep (2 rows/frame during VBlank).
+2. White Palette Fix: CGB palette registers are now loaded even during menus.
+   In CGB mode, the boot ROM initializes all BG palettes to white. Without
+   loading palettes on menus, the screen appeared all-white on MiSTer/hardware.
+3. Joypad: Retains v2.84.2 loop-based P13 read (8 reads via DEC C/JR NZ).
+
+Previous changes from v2.83:
 1. VBK Safety: Save/restore VBK (FF4F) around all VBlank handler work.
    Insurance against edge cases where VBlank fires while enhanced copy has VBK=1.
 
@@ -52,40 +62,59 @@ def create_conditional_palette_always(palette_loader_addr: int) -> bytes:
 def create_bank_aware_vblank_hook(combined_addr: int) -> bytes:
     """VBlank hook with joypad + bank-aware save/restore via FF99.
     Must be exactly 47 bytes (0x0824-0x0852).
+
+    v2.84.2: Fixed joypad timing for MiSTer/hardware compatibility.
+    Original ROM reads FF00 8 times for P13 (7 dummy + 1 actual) to allow
+    the multiplexer to settle. Previous version only did 2 reads (1 dummy +
+    1 actual), which works in emulators but fails on MiSTer FPGA hardware.
+
+    Uses DEC C / JR NZ loop for P13 to fit 8 reads in fewer bytes:
+      P14: 1 dummy + 1 actual read (14 bytes) — matches original
+      P13: 8 reads via loop (17 bytes) — matches original count
+      Bank switch + call: 16 bytes
+      Total: 14 + 17 + 16 = 47 bytes exactly
+
+    Trade-off: Removed joypad release (LD A,0x30; LDH [FF00],A) to make
+    room. The release is not strictly required — the game's edge detection
+    logic at 0x00A8 uses FF93/FF94/FF95/FF96 and doesn't depend on FF00
+    being deselected between reads.
     """
     lo, hi = combined_addr & 0xFF, (combined_addr >> 8) & 0xFF
     joy = bytearray([
-        0x3E, 0x20,  # LD A, 0x20
+        # --- P14: direction keys (1 dummy + 1 actual = matches original) ---
+        0x3E, 0x20,  # LD A, 0x20           ; select P14
         0xE0, 0x00,  # LDH [FF00], A
-        0xF0, 0x00,  # LDH A, [FF00]
+        0xF0, 0x00,  # LDH A, [FF00]        ; dummy read (settle time)
+        0xF0, 0x00,  # LDH A, [FF00]        ; actual read
         0x2F,        # CPL
         0xE6, 0x0F,  # AND 0x0F
         0xCB, 0x37,  # SWAP A
-        0x47,        # LD B, A
-        0x3E, 0x10,  # LD A, 0x10
+        0x47,        # LD B, A              ; B = direction nibble << 4
+        # --- P13: button keys (8 reads via loop = matches original) ---
+        0x3E, 0x10,  # LD A, 0x10           ; select P13
         0xE0, 0x00,  # LDH [FF00], A
-        0xF0, 0x00,  # LDH A, [FF00] (dummy)
-        0xF0, 0x00,  # LDH A, [FF00] (actual)
+        0x0E, 0x08,  # LD C, 8              ; 8 reads total
+        # .loop:
+        0xF0, 0x00,  # LDH A, [FF00]        ; read FF00
+        0x0D,        # DEC C
+        0x20, 0xFB,  # JR NZ, -5            ; loop back to LDH
+        # After loop: A = 8th read result (fully settled)
         0x2F,        # CPL
         0xE6, 0x0F,  # AND 0x0F
         0xB0,        # OR B
-        0xE0, 0x93,  # LDH [FF93], A
-        0x3E, 0x30,  # LD A, 0x30
-        0xE0, 0x00,  # LDH [FF00], A
+        0xE0, 0x93,  # LDH [FF93], A        ; store combined result
     ])
     hook = bytearray([
-        0xF0, 0x99,        # LDH A, [FF99]
+        0xF0, 0x99,        # LDH A, [FF99]       ; save current bank
         0xF5,              # PUSH AF
-        0x3E, 0x0D,        # LD A, 0x0D
+        0x3E, 0x0D,        # LD A, 0x0D          ; switch to bank 13
         0xEA, 0x00, 0x20,  # LD [0x2000], A
-        0xCD, lo, hi,      # CALL combined
+        0xCD, lo, hi,      # CALL combined        ; colorizer handler
         0xF1,              # POP AF
-        0xEA, 0x00, 0x20,  # LD [0x2000], A
+        0xEA, 0x00, 0x20,  # LD [0x2000], A       ; restore bank
         0xC9,              # RET
     ])
     total = joy + hook
-    while len(total) < 47:
-        total.append(0x00)
     assert len(total) == 47, f"Hook is {len(total)} bytes, must be 47!"
     return bytes(total)
 
@@ -198,13 +227,16 @@ def create_enhanced_tilemap_copy(bg_table_addr: int, base_addr: int,
         emit([opcode, addr & 0xFF, (addr >> 8) & 0xFF])
 
     # ================================================================
-    # MENU CHECK: Skip palette work on menus (FFC1=0)
+    # ALWAYS USE FAST PATH (tile-only copy, no palette writes)
+    # v2.84.3: Enhanced copy's 288 STAT waits exceeded one frame (82K T-cycles
+    # vs 70K frame budget), causing 2x slowdown on MiSTer. Fast path uses 144
+    # STAT waits (matches original game). Palettes handled by bg_sweep instead.
     # ================================================================
     if fast_menu_addr:
-        emit([0xF0, 0xC1])    # LDH A,[FFC1]         ; gameplay flag
-        emit([0xB7])           # OR A
-        emit([0xCA, fast_menu_addr & 0xFF, (fast_menu_addr >> 8) & 0xFF])
-                               # JP Z, fast_menu_copy ; menus → tile-only copy
+        emit([0xF0, 0xC1])    # LDH A,[FFC1]         ; (dead code, preserves size)
+        emit([0xB7])           # OR A                  ; (dead code, preserves size)
+        emit([0xC3, fast_menu_addr & 0xFF, (fast_menu_addr >> 8) & 0xFF])
+                               # JP fast_menu_copy    ; UNCONDITIONAL — always tile-only
 
     # ================================================================
     # PREAMBLE: Save state, set hook flag, mask IE
@@ -759,11 +791,14 @@ def create_combined_with_scroll_edge(bg_sweep_addr: int, cond_pal_addr: int,
     # AFTER_BG: Standard handler chain
     # ================================================================
     mark('after_bg')
-    # Menu early-out: skip palette + OBJ colorizer on menus (saves ~800M/frame)
+    # v2.84.3: Always load CGB palettes (even on menus). In CGB mode, the boot
+    # ROM initializes all BG palette RAM to white. Without loading palettes on
+    # menus, the screen appears all-white on MiSTer/real hardware.
+    emit([0xCD, cond_pal_addr & 0xFF, (cond_pal_addr >> 8) & 0xFF])
+    # OBJ colorizer only during gameplay (menu sprites don't need it)
     emit([0xF0, 0xC1])        # LDH A,[FFC1]
     emit([0xB7])               # OR A
-    emit_jr_fwd(0x28, 'just_dma')  # JR Z → menus: skip to DMA only
-    emit([0xCD, cond_pal_addr & 0xFF, (cond_pal_addr >> 8) & 0xFF])
+    emit_jr_fwd(0x28, 'just_dma')  # JR Z → menus: skip OBJ colorizer
     emit([0xCD, shadow_main_addr & 0xFF, (shadow_main_addr >> 8) & 0xFF])
     mark('just_dma')
     emit([0xCD, 0x80, 0xFF])  # CALL DMA (FF80)
@@ -819,7 +854,8 @@ def build_v284():
     enhanced_copy_tmp = create_enhanced_tilemap_copy(bg_table_addr, enhanced_copy_addr,
                                                       return_bridge_addr, fast_menu_addr=0)
     bg_sweep_addr = (enhanced_copy_addr + len(enhanced_copy_tmp) + 6 + 0xF) & ~0xF  # +6 for FFC1 check
-    bg_sweep = create_bg_sweep_no_scroll(bg_table_addr, bg_sweep_addr)
+    bg_sweep = create_bg_sweep_no_scroll(bg_table_addr, bg_sweep_addr,
+                                         rows_per_frame=1)  # v2.84.3: 1 row/frame to reduce VBlank cost
     cond_pal_addr = (bg_sweep_addr + len(bg_sweep) + 0xF) & ~0xF
     cond_pal = create_conditional_palette_always(pal_loader_addr)
     combined_addr = (cond_pal_addr + len(cond_pal) + 0xF) & ~0xF

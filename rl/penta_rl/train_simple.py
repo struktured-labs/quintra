@@ -15,16 +15,15 @@ SAVE_DIR = "/home/struktured/projects/penta-dragon-dx-claude/rl"
 
 def main(epochs: int = 100, steps_per_epoch: int = 1024, n_envs: int = 4,
          max_steps: int = 3000, save_dir: str = SAVE_DIR, resume: str = None,
-         label: str = "simple", savestate: str = None):
+         label: str = "simple", savestate: str = None, rom: str = None):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}, n_envs={n_envs}, epochs={epochs}, steps/epoch={steps_per_epoch}")
 
-    venv = VecPentaEnv(ROM, n=n_envs, max_steps=max_steps, savestate_path=savestate)
+    venv = VecPentaEnv(rom or ROM, n=n_envs, max_steps=max_steps, savestate_path=savestate)
     obs_dim = vector_dim()
     cfg = PPOConfig(epochs=epochs, steps_per_epoch=steps_per_epoch * n_envs,
-                    train_iters=10, entropy_coef=0.05,  # back to v5 entropy
-                    hidden=512, n_layers=4,             # 2x wider, 1 deeper
-                    gamma=0.995)                        # longer credit horizon
+                    train_iters=10, entropy_coef=0.05,
+                    hidden=256, n_layers=3, gamma=0.99)  # v5 baseline config
     agent = PPOAgent(obs_dim, N_ACTIONS, cfg, device=device)
     if resume and os.path.exists(resume):
         state = torch.load(resume, map_location=device, weights_only=False)

@@ -19,9 +19,10 @@ net = PolicyValueNet(vector_dim(), N_ACTIONS, 256, 3).to(device)
 net.load_state_dict(state["model"])
 net.eval()
 
-for save_name, save_path in [("gameplay_start", START), ("spider", SPIDER), ("gargoyle (sanity)", GARGOYLE)]:
+for save_name, save_path in [("gameplay_start", START)]:  # focus on the failing case
     print(f"\n=== {save_name} ===")
-    env = PentaEnv(REAL, max_steps=15000, savestate_path=save_path)
+    max_s = 30000 if save_name == "gameplay_start" else 15000
+    env = PentaEnv(REAL, max_steps=max_s, savestate_path=save_path)
     for mode in ["det", "sample"]:
         kills_total = 0; ep_kills_max = 0; multi_eps = 0
         n_eps = 10
@@ -29,7 +30,7 @@ for save_name, save_path in [("gameplay_start", START), ("spider", SPIDER), ("ga
         for ep in range(n_eps):
             obs, _ = env.reset()
             ep_kills = 0
-            for t in range(15000):
+            for t in range(max_s):
                 with torch.no_grad():
                     o = torch.as_tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
                     logits, _ = net(o)

@@ -95,20 +95,20 @@ def create_simplified_oam_colorizer() -> bytes:
 
     # Check if tile < 0x10 (projectile/effect)
     code.extend([0xFE, 0x10])        # CP 0x10
-    code.extend([0x38, 0x0A])        # JR C, +10 (to projectile_palette at offset 26)
+    code.extend([0x38, 0x0A])        # JR C, +10 (to projectile_palette)
 
     # Check if tile >= 0x78 (boss projectile)
     code.extend([0xFE, 0x78])        # CP 0x78
-    code.extend([0x30, 0x06])        # JR NC, +6 (to projectile_palette at offset 26)
+    code.extend([0x30, 0x06])        # JR NC, +6 (to projectile_palette)
 
     # Enemy palette (not a projectile)
     code.append(0x7B)                # LD A, E (enemy palette)
-    code.extend([0x18, 0x05])        # JR +5 (to apply_palette at offset 28)
+    code.extend([0x18, 0x05])        # JR +5 (to apply_palette)
 
-    # Sara palette (offset 23)
+    # Sara palette
     # sara_palette:
     code.append(0x7A)                # LD A, D (Sara palette)
-    code.extend([0x18, 0x02])        # JR +2 (to apply_palette at offset 28)
+    code.extend([0x18, 0x02])        # JR +2 (to apply_palette)
 
     # Projectile palette (palette 0)
     # projectile_palette:

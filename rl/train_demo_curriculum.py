@@ -27,39 +27,66 @@ from train_explore_natural import explore_reward_cfg
 
 ROM = "/home/struktured/projects/penta-dragon-dx-claude/rom/Penta Dragon (J) [A-fix].gb"
 CONVERTED_DIR = "/home/struktured/projects/penta-dragon-dx-claude/rl/saves/user_demo/converted"
+ARENA_DIR = "/home/struktured/projects/penta-dragon-dx-claude/rl/saves/curriculum"
 GAMEPLAY = "/home/struktured/projects/penta-dragon-dx-claude/rl/saves/gameplay_start.state"
 V19_CKPT = "/home/struktured/projects/penta-dragon-dx-claude/rl/ppo_v19_resume18_ep200.pt"
 NATURAL_LATEST = "/home/struktured/projects/penta-dragon-dx-claude/rl/ppo_explore_natural_latest.pt"
 OUT_DIR = "/home/struktured/projects/penta-dragon-dx-claude/rl"
 
+# Scenes known to be policy-traps where PyBoy can hang or game logic stalls.
+# Per project memory: D880=0x0b is a stuck state surfaced during stage-boss work.
+STUCK_SCENES = {0x0b}
+STUCK_TICK_LIMIT = 240          # ~16s at 4-frame skip — terminate sooner than max_steps
+STALE_POS_LIMIT = 480           # truncate if Sara hasn't moved for ~32s
+
 
 class DemoCurriculumEnv(PentaEnv):
     """Sample a different demo state each reset."""
 
-    def __init__(self, *args, demo_states=None, gameplay_weight=0.2, **kwargs):
+    def __init__(self, *args, demo_states=None, arena_states=None,
+                 gameplay_weight=0.2, **kwargs):
         # Use first demo state as default to satisfy parent
         self.demo_states = list(demo_states or [])
+        self.arena_states = list(arena_states or [])
         self.gameplay_weight = gameplay_weight
+        # Pre-classify demo states by FFBA value (read meta-style by file name).
+        # FFBA=1 states (L2 starts) are the ONLY path to FFBA=2 advance. Weight heavily.
+        ffba1_names = {"195759_L2_pumpkin_mb", "200043_L2_seahorse_mb",
+                       "200142_L2_post_troll_tp", "CHECKPOINT_200320"}
+        self.l2_states = [s for s in self.demo_states
+                          if os.path.basename(s).replace(".state", "") in ffba1_names]
+        self.l1_states = [s for s in self.demo_states if s not in self.l2_states]
         # Bootstrap with gameplay_start (first reset uses it; later resets sample)
         super().__init__(*args, savestate_path=GAMEPLAY, **kwargs)
         self._visited = set()
         self._init_ffba = 0
         self._max_dcb8 = 0
         self._cur_state_path = GAMEPLAY
+        self._stuck_scene_count = 0
 
     def _pick_state(self):
         if not self.demo_states:
             return GAMEPLAY
-        # gameplay_weight chance of using gameplay_start; else uniform demo state
-        if random.random() < self.gameplay_weight:
+        # 35% L2 (FFBA=1, path to FFBA=2 advance)
+        # 25% L1 demo (varied rooms in level 1)
+        # 25% arena (FFBA=1..8 stage-boss arenas — direct boss-fight curriculum)
+        # 15% gameplay_start (natural-explore baseline)
+        r = random.random()
+        if r < 0.35 and self.l2_states:
+            return random.choice(self.l2_states)
+        elif r < 0.60 and self.l1_states:
+            return random.choice(self.l1_states)
+        elif r < 0.85 and self.arena_states:
+            return random.choice(self.arena_states)
+        else:
             return GAMEPLAY
-        return random.choice(self.demo_states)
 
     def reset(self, seed=None, options=None):
         self._visited = set()
         self._max_dcb8 = 0
         self._stale_count = 0
         self._last_pos = None
+        self._stuck_scene_count = 0
         # Choose a state for this episode
         self._cur_state_path = self._pick_state()
         self.savestate_path = self._cur_state_path
@@ -104,27 +131,47 @@ class DemoCurriculumEnv(PentaEnv):
         py = self.pb.memory[0xFE05]
         px = self.pb.memory[0xFE04]
         cur_pos = (s.room, py // 8, px // 8)
-        if cur_pos == self._last_pos:
+        # Stop stagnation penalty if Sara is dead (scene 0x17) — body locks
+        # and accumulates -100+ penalty over rest of episode unfairly.
+        if cur_pos == self._last_pos and s.scene != 0x17:
             self._stale_count += 1
             if self._stale_count > 60:
                 reward -= 0.1
         else:
             self._stale_count = 0
-            reward += 0.05
+            if s.scene != 0x17:
+                reward += 0.05
             self._last_pos = cur_pos
+        if s.scene in STUCK_SCENES:
+            self._stuck_scene_count += 1
+        else:
+            self._stuck_scene_count = 0
         # Stage boss arena entry
         if 0x0C <= s.scene <= 0x14:
             reward += 1.0  # tiny stay-in-arena bonus
-        # FFBA advance from this episode's init
-        success = self._init_ffba < s.level <= 8
+        # FFBA advance from this episode's init.
+        # Only count advances when starting from a "normal" level (0-7).
+        # SHMUP states (init_ffba=7) can transition back to 0 — not progress.
+        success = self._init_ffba < s.level <= 8 and self._init_ffba < 7
         terminated = success
         truncated = self.steps >= self.max_steps
         if success:
             info["success"] = True
             reward += 1000.0
         elif s.level > 8:
-            reward -= 100.0
+            # FFBA corruption — silently terminate, no penalty (dragged returns down)
             terminated = True
+        # Terminate on death scene so we don't waste frames stuck in 0x17
+        if s.scene == 0x17 and not terminated and not truncated:
+            truncated = True
+        # Truncate stuck-state episodes early so they don't burn the chunk timeout
+        if not terminated and not truncated:
+            if self._stuck_scene_count >= STUCK_TICK_LIMIT:
+                truncated = True
+                info["stuck_scene"] = hex(s.scene)
+            elif self._stale_count >= STALE_POS_LIMIT:
+                truncated = True
+                info["stale_pos"] = True
         info["state"] = s
         info["steps"] = self.steps
         info["n_visited"] = len(self._visited)
@@ -135,8 +182,11 @@ class DemoCurriculumEnv(PentaEnv):
 def run_chunk(epochs, steps_per_epoch, label, resume_path=None):
     device = "cpu"
     demo_states = sorted(glob.glob(f"{CONVERTED_DIR}/*.state"))
+    arena_states = sorted(glob.glob(f"{ARENA_DIR}/arena_FFBA*.state"))
     print(f"Loaded {len(demo_states)} demo states from {CONVERTED_DIR}", flush=True)
-    env = DemoCurriculumEnv(ROM, max_steps=2048, demo_states=demo_states,
+    print(f"Loaded {len(arena_states)} arena states from {ARENA_DIR}", flush=True)
+    env = DemoCurriculumEnv(ROM, max_steps=1024, demo_states=demo_states,
+                            arena_states=arena_states,
                             gameplay_weight=0.2, reward_cfg=explore_reward_cfg())
     obs_dim = vector_dim()
     cfg = PPOConfig(epochs=epochs, steps_per_epoch=steps_per_epoch,

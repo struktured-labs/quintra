@@ -1,183 +1,224 @@
-# Projectile Tile Mapping - v2.29
+# Projectile Tile Mapping - v2.32
 
 ## Overview
 
-This document describes the projectile tile range assumptions used in v2.29. These ranges are **educated guesses** based on:
-- The existing tile range 0x00-0x1F for effects/projectiles
-- The current implementation that treats all < 0x10 as projectiles
-- Logical subdivision of the projectile range
+This document maps projectile tile IDs to their sources for implementing per-entity projectile colorization.
 
-**Status**: AWAITING VERIFICATION
-These ranges need to be tested and may require adjustment.
+**Status**: VERIFIED (Phase 1 Research Complete)
+Data collected via MCP OAM dumps from multiple save states.
 
-## Tile Range Assumptions
+## Key Finding: Tiles ARE Distinct Per Source
 
-### Projectile Tiles (0x00-0x0F)
+Sara W and Sara D use **different tile IDs** for their projectiles, enabling tile-based colorization without dynamic palette hacks.
 
-| Range | Source | Palette | Color |
-|-------|--------|---------|-------|
-| 0x00-0x07 | Sara projectiles | 0 (dynamic) | Pink (Sara W) or Green (Sara D) |
-| 0x08-0x0F | Enemy projectiles | 3 | Blue/dark (same as Crow) |
+## Verified Projectile Tile Assignments
 
-### Extended Effects (0x10-0x1F)
+| Tile ID | Source | Description | Recommended Palette |
+|---------|--------|-------------|---------------------|
+| 0x00 | Enemy/Boss | Generic enemy projectile (gargoyle) | 3 (dark blue) |
+| 0x01 | Spider boss | Spider boss projectile | 7 (boss red/orange) |
+| 0x02-0x05 | Unknown | Unverified | 0 (default) |
+| **0x06** | **Sara D** | Dragon fire projectile | **1 (green)** |
+| 0x07-0x08 | Unknown | Unverified | 0 (default) |
+| **0x09** | **Sara D** | Dragon fire projectile | **1 (green)** |
+| **0x0A** | **Sara D** | Dragon fire projectile | **1 (green)** |
+| 0x0B-0x0E | Unknown | Unverified | 0 (default) |
+| **0x0F** | **Sara W** | Witch magic projectile (round) | **2 (pink)** |
+| 0x10-0x1F | Effects | Death animations, impacts, etc. | 4 (yellow/white) |
 
-| Range | Type | Current Handling |
-|-------|------|------------------|
-| 0x10-0x1F | Effects/explosions | Falls through to default palette (4) |
+## Detailed Findings by Save State
 
-**Note**: These tiles may also be projectiles. Further testing needed.
+### Sara W + Orc (level1_sara_w_orc.ss0)
+- **tile 0x0F**: Sara W projectile (flags 0x00 = Palette 0)
+- Count: 47 instances over 300 frames
+- Consistent single tile for all Sara W shots
 
-## Dynamic Palette 0 System
+### Sara W + 4 Hornets (level1_sara_w_4_hornets.ss0)
+- **tile 0x0F**: Sara W projectile (flags 0x00 = Palette 0)
+- Count: 41 instances over 300 frames
+- Effect tiles observed: 0x12-0x1D (death animations)
 
-### How It Works
+### Sara D Firing (level1_sara_d_alone.ss0 + A button)
+- **tile 0x06**: Dragon fire (flags 0x00, 0x40) - count 15
+- **tile 0x09**: Dragon fire (flags 0x00, 0x40) - count 26
+- **tile 0x0A**: Dragon fire (flags 0x00, 0x40) - count 26
+- Flag 0x40 = X-flip for directional sprites
+- Sara D uses 3 different tiles (multi-part breath attack)
 
-1. **Palette Loader** reads Sara form flag (0xFFBE) at initialization
-2. **Based on Sara form**, loads different colors into Palette 0:
-   - Sara W (0xFFBE = 0) → Pink/red projectile colors
-   - Sara D (0xFFBE ≠ 0) → Green projectile colors
-3. **Tile Colorizer** assigns Palette 0 to tiles 0x00-0x07 (Sara projectiles)
+### Spider Boss (v2.26_level1_sara_w_spider_mini_boss.ss0)
+- **tile 0x01**: Spider projectile (flags 0x00 = Palette 0)
+- Count: 66 instances (stationary at 132,84)
+- **tile 0x1D**: UI element with flags 0x07 (Palette 7)
 
-### Palette Data
+### Gargoyle Boss (level1_sara_w_gargoyle_mini_boss.ss0)
+- Boss body uses tiles 0x30-0x7F (Palette 6)
+- **tile 0x00**: Appears with flags 0x00 (possible projectile)
+- Tiles 0x6E, 0x6F, 0x7C, 0x7F have flip flags (animated boss parts)
 
-**SaraProjectileWitch (Pink/Red)**
-```yaml
-colors: ["0000", "7C1F", "5817", "3010"]
-# Trans, Bright pink, Pink-red, Dark red
-```
+## Effect Tiles (0x10-0x1F)
 
-**SaraProjectileDragon (Green)**
-```yaml
-colors: ["0000", "03E0", "01C0", "0000"]
-# Trans, Bright green, Dark green, Black
-```
+| Tile | Purpose | Observations |
+|------|---------|--------------|
+| 0x12-0x15 | Death/hit effects | 2x2 sprite pattern |
+| 0x16-0x19 | Death animation frame 2 | |
+| 0x1A-0x1D | Death animation frame 3 | UI element uses 0x1D |
 
-## Colorizer Logic
+## Memory Addresses (Verified)
 
-### Tile Detection Flow
+| Address | Purpose | Values |
+|---------|---------|--------|
+| **0xFFBE** | Sara form | 0=Witch, non-zero=Dragon |
+| **0xFFBF** | Boss flag | 0=normal, 1=Gargoyle, 2=Spider |
+| **0xFFC0** | Powerup flag | 0=none, 1=spiral, 2=shield |
+| **0xFFD0** | Stage flag | 0=Level 1, 1=Bonus stage |
 
-```
-For each sprite tile ID:
-  IF tile < 0x10:
-    IF tile < 0x08:
-      → Sara projectile (Palette 0 - dynamic)
-    ELSE:
-      → Enemy projectile (Palette 3 - blue/dark)
-  ELSE IF tile < 0x20:
-    → Effect/explosion (default palette)
-  ELSE:
-    → (Continue with entity tile ranges...)
-```
+### Powerup Flag Values (0xFFC0)
+- **0x00**: No powerup / baseline
+- **0x01**: Spiral weapon active
+- **0x02**: Shield active
+- Other powerups: TBD (turbo showed 0x00, may use different address)
 
-### Assembly Implementation
+## Implementation for v2.32
+
+### Tile Colorizer Logic
 
 ```asm
-; Projectile sub-range check (tiles 0x00-0x0F)
-check_projectile_subrange:
+; Projectile/effect range (tiles 0x00-0x1F)
+check_projectile_range:
     LD A, C             ; Get tile ID
-    CP 0x08             ; Compare to 0x08
-    JR C, sara_projectile  ; If < 0x08, Sara projectile
+    CP 0x20             ; Is it < 0x20?
+    JR NC, check_sara   ; No, continue to Sara check
+
+    ; Check specific Sara projectile tiles
+    CP 0x0F             ; Sara W projectile?
+    JR Z, sara_w_projectile
+
+    CP 0x06             ; Sara D tile 0x06?
+    JR Z, sara_d_projectile
+    CP 0x09             ; Sara D tile 0x09?
+    JR Z, sara_d_projectile
+    CP 0x0A             ; Sara D tile 0x0A?
+    JR Z, sara_d_projectile
+
+    CP 0x02             ; Boss/enemy projectile range (0x00-0x01)?
+    JR C, enemy_projectile
+
+    CP 0x10             ; Effect range (0x10-0x1F)?
+    JR NC, effect_tile
+
+    ; Unknown tiles 0x02-0x05, 0x07-0x08, 0x0B-0x0E
+    XOR A               ; Default Palette 0
+    JR apply_palette
+
+sara_w_projectile:
+    LD A, 2             ; Palette 2 (pink - Sara W colors)
+    JR apply_palette
+
+sara_d_projectile:
+    LD A, 1             ; Palette 1 (green - Sara D colors)
+    JR apply_palette
 
 enemy_projectile:
-    LD A, 3             ; Palette 3 (Crow - blue/dark)
+    LD A, 3             ; Palette 3 (dark blue)
     JR apply_palette
 
-sara_projectile:
-    LD A, 0             ; Palette 0 (dynamic)
+effect_tile:
+    LD A, 4             ; Palette 4 (yellow/white effects)
     JR apply_palette
 ```
 
-## Testing Requirements
+### Alternative: Powerup-Based Palette Loading
 
-### Critical Tests
-
-1. **Sara W firing projectiles**
-   - Save state: `level1_sara_w_alone.ss0`
-   - Expected: Pink/red projectiles
-   - Verify tiles are in 0x00-0x07 range
-
-2. **Sara D firing projectiles**
-   - Save state: `level1_sara_d_alone.ss0`
-   - Expected: Green projectiles
-   - Verify tiles are in 0x00-0x07 range
-
-3. **Enemy projectiles**
-   - Save states: `level1_sara_w_4_hornets.ss0`, `level1_sara_w_crow.ss0`
-   - Expected: Blue/dark projectiles
-   - Verify tiles are in 0x08-0x0F range
-
-4. **Form switching**
-   - Collect dragon powerup while firing
-   - Expected: Projectile color changes from pink to green
-   - Verify Palette 0 contents update on form change
-
-### Fallback Plan
-
-If tile ranges are incorrect:
-
-**Option A**: Adjust tile range boundaries
-- Change CP 0x08 threshold based on actual tile usage
-- May need 0x04, 0x06, or other values
-
-**Option B**: All projectiles same color initially
-- Set both projectile ranges to Palette 0
-- Focus on dynamic palette loading (already works)
-- Defer sub-range detection until more data available
-
-**Option C**: No sub-range detection
-- All tiles < 0x10 use Palette 0 (dynamic)
-- No distinction between Sara and enemy projectiles
-- Simplest fallback, still provides form-based coloring
-
-## Known Limitations
-
-1. **Tile ranges are assumptions** - Need OAM dump verification
-2. **No powerup-based colors yet** - Requires finding powerup memory address
-3. **Extended effects (0x10-0x1F)** - Not yet handled, fall through to default
-4. **Boss projectiles** - Tiles 0x78+ not affected by this system
-
-## Future Enhancements
-
-### Powerup-Based Palette 0 (Phase 4)
-
-Once powerup address is found (e.g., 0xFFC3), expand palette loading:
+For powerup-colored projectiles, modify palette loader:
 
 ```asm
-; Check powerup state
-LDH A, [0xFFC3]
-OR A
-JR Z, no_powerup
+load_projectile_palettes:
+    ; Check powerup state
+    LDH A, [0xFFC0]     ; Read powerup flag
+    OR A
+    JR Z, load_form_based
 
-; Powerup active - load special palette
-CP 0x01  ; Spiral?
-JR NZ, +skip
-; Load cyan spiral palette into Palette 0
-+skip:
-CP 0x02  ; Shield?
-JR NZ, +skip
-; Load gold shield palette into Palette 0
-+skip:
-; (More powerup types...)
+    CP 0x01             ; Spiral?
+    JR NZ, check_shield
+    ; Load cyan into Palette 0 for spiral
+    LD HL, spiral_palette_data
+    JR load_palette_0
 
-no_powerup:
-; Load normal Sara projectile palette based on form
+check_shield:
+    CP 0x02             ; Shield?
+    JR NZ, load_form_based
+    ; Load gold into Palette 0 for shield
+    LD HL, shield_palette_data
+    JR load_palette_0
+
+load_form_based:
+    ; Fall back to Sara form-based colors
+    LDH A, [0xFFBE]
+    OR A
+    JR NZ, load_dragon_colors
+    ; Sara W colors
+    LD HL, sara_w_projectile_data
+    JR load_palette_0
+
+load_dragon_colors:
+    LD HL, sara_d_projectile_data
+    ; Fall through to load_palette_0
 ```
 
-### Extended Effects (0x10-0x1F)
+## Palette Color Recommendations
 
-Potential color assignments:
-- 0x10-0x13: Small explosions → Palette 0
-- 0x14-0x17: Large explosions → Palette 4 (yellow/orange)
-- 0x18-0x1F: Special effects → Palette 3 (blue)
+### Projectile Palettes
+| Palette | Use | Colors (GBC format) |
+|---------|-----|---------------------|
+| 0 | Dynamic/powerup | Varies by powerup state |
+| 1 | Sara D projectile | Trans, bright green, dark green, black |
+| 2 | Sara W projectile | Trans, pink, magenta, dark red |
+| 3 | Enemy projectile | Trans, dark blue, navy, black |
+
+### Powerup-Specific Colors
+| Powerup | Palette 0 Colors | Visual |
+|---------|------------------|--------|
+| Spiral (0x01) | Cyan, light blue, dark blue | Rotating cyan bullets |
+| Shield (0x02) | Gold, yellow, orange | Golden shield glow |
+| Turbo | Orange, red, dark red | Speed trails |
+
+## Testing Commands
+
+```bash
+# Verify Sara W projectile (tile 0x0F)
+mcp__mgba__mgba_dump_oam(
+    rom_path="rom/working/penta_dragon_dx_FIXED.gb",
+    savestate_path="save_states_for_claude/level1_sara_w_orc.ss0",
+    frames=120
+)
+
+# Verify Sara D projectiles (tiles 0x06, 0x09, 0x0A)
+mcp__mgba__mgba_run_lua(
+    rom_path="rom/working/penta_dragon_dx_FIXED.gb",
+    savestate_path="save_states_for_claude/level1_sara_d_alone.ss0",
+    script="-- Press A and track tiles",
+    timeout=60
+)
+
+# Verify powerup flag
+mcp__mgba__mgba_read_range(
+    rom_path="rom/working/penta_dragon_dx_FIXED.gb",
+    savestate_path="save_states_for_claude/sara_w_special_spiral_weapon_activated_level1_v_2.31.ss0",
+    start_address=0xFFC0,
+    length=4,
+    frames=30
+)
+```
 
 ## Version History
 
-- **v2.29**: Initial projectile sub-range implementation
-  - Dynamic Palette 0 based on Sara form
-  - Sara projectiles (0x00-0x07) vs enemy projectiles (0x08-0x0F)
-  - Awaiting testing and verification
+- **v2.29**: Initial projectile sub-range implementation (BROKEN)
+- **v2.30**: Jump offset fix attempt (BROKEN)
+- **v2.31**: Dynamic Palette 0 based on Sara form (STABLE)
+- **v2.32**: Per-entity projectile tiles + powerup support (IN DEVELOPMENT)
 
 ## Files Modified
 
-- `scripts/create_vblank_colorizer_v229.py` - Implementation
+- `scripts/create_vblank_colorizer_v232.py` - New implementation
 - `palettes/penta_palettes_v097.yaml` - Projectile palettes added
-- `docs/projectile_tile_mapping.md` - This document
+- `docs/projectile_tile_mapping.md` - This document (updated)
