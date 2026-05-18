@@ -337,9 +337,13 @@ def build_v301():
     w(bg_table_addr, BG_TABLE_BYTES)
     w(cond_pal_addr, create_conditional_palette_cached(pal_loader_addr))
 
-    # bg_sweep safety net
-    sweep = create_bg_sweep_viewport_gated(bg_table_addr, bg_sweep_addr)
-    w(bg_sweep_addr, sweep)
+    # bg_sweep safety net. Strip the internal FFC1 gate (first 4 bytes
+    # `F0 C1 B7 C8` = LDH A,[FFC1]; OR A; RET Z) so it runs on title too.
+    sweep = bytearray(create_bg_sweep_viewport_gated(bg_table_addr, bg_sweep_addr))
+    assert sweep[:4] == bytearray([0xF0, 0xC1, 0xB7, 0xC8]), \
+        f"bg_sweep prefix changed: {sweep[:4].hex()}"
+    sweep[0:4] = bytearray([0x00, 0x00, 0x00, 0x00])  # NOPs
+    w(bg_sweep_addr, bytes(sweep))
 
     # GDMA transfer routine
     gdma_code = create_gdma_transfer()
@@ -385,73 +389,43 @@ def build_v301():
     offset = bg_copy - (len(code) + 2)
     code.extend([0x20, offset & 0xFF])
 
-    # Zero 1024 bytes of WRAM bank 2 attr buffer (D000-D3FF).
-    # At cold boot, Timer ISR isn't active yet so longer DI is OK.
-    code.extend([0xF3])                       # DI
-    code.extend([0x3E, 0x02, 0xE0, 0x70])     # FF70 = 2
-    code.extend([0x21, 0x00, 0xD0])           # HL = D000
-    code.extend([0xAF])                       # A = 0
-    # 4 rounds of 256 bytes (B=0 → 256 iters)
-    code.extend([0x06, 0x00])                 # B = 0
-    zero_loop = len(code)
-    code.extend([0x22, 0x05])                 # LD [HL+],A; DEC B
-    offset = zero_loop - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])
-    # That zeroed 256 bytes (D000-D0FF). Do 3 more rounds.
-    code.extend([0x06, 0x00])
-    zero2 = len(code)
-    code.extend([0x22, 0x05])
-    offset = zero2 - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])
-    code.extend([0x06, 0x00])
-    zero3 = len(code)
-    code.extend([0x22, 0x05])
-    offset = zero3 - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])
-    code.extend([0x06, 0x00])
-    zero4 = len(code)
-    code.extend([0x22, 0x05])
-    offset = zero4 - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])
-
-    code.extend([0x3E, 0x01, 0xE0, 0x70])     # FF70 = 1
-    code.extend([0xFB])                       # EI
+    # SKIPPED cold-boot bank-2 zero — proven to white-screen on title.
+    # The attr buffer in bank 2 starts with whatever garbage is there.
+    # attr_computation overwrites the 24x24 data cells, padding stays garbage
+    # but the game's visible viewport doesn't touch padding columns.
+    pass
 
     # ---- skip_cold target ----
     code[df02_jr] = (len(code) - df02_jr - 1) & 0xFF
 
-    # ---- WARM PATH (every frame) ----
-    # 1. cond_pal (palette registers — VBlank critical)
+    # ---- WARM PATH ----
+    # 1. cond_pal
     code.extend([0xCD, cond_pal_addr & 0xFF, (cond_pal_addr >> 8) & 0xFF])
 
-    # 2. GDMA transfer (if buffer ready — DF03 != 0)
-    code.extend([0xFA, 0x03, 0xDF, 0xB7])     # LD A,[DF03]; OR A
+    # 2. bg_sweep — runs ALWAYS (title too). The simplified inline hook
+    # no longer writes attrs, so bg_sweep is the only mechanism that colors
+    # title-screen tiles. Full coverage in ~18 frames.
+    code.extend([0xCD, bg_sweep_addr & 0xFF, (bg_sweep_addr >> 8) & 0xFF])
+
+    # 3. GDMA (if buffer ready). Skipped on title since attr_computation
+    # never runs there (gated by FFC1), so DF03 stays 0.
+    code.extend([0xFA, 0x03, 0xDF, 0xB7])
     gdma_skip = len(code) + 1
-    code.extend([0x28, 0x00])                 # JR Z, skip_gdma
+    code.extend([0x28, 0x00])
     code.extend([0xCD, gdma_addr & 0xFF, (gdma_addr >> 8) & 0xFF])
     code[gdma_skip] = (len(code) - gdma_skip - 1) & 0xFF
 
-    # 3. FFC1 gate — skip gameplay stuff on menu/title
+    # 4. FFC1 gate: skip game-only stuff (DMA, OBJ).
+    # attr_computation + GDMA are SKIPPED for now — the FF70=2 switch in
+    # attr_computation freezes the game at gameplay entry (root cause TBD).
+    # bg_sweep alone provides attr coverage (~18 frames for full screen),
+    # which means scroll artifacts return during fast scrolling. Tradeoff:
+    # vanilla speed (tile-only inline hook) at the cost of slow attr updates.
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
-    code.extend([0x28, 0x00])                 # JR Z, skip_gameplay
-
-    # 4. OAM DMA
-    code.extend([0xCD, 0x80, 0xFF])
-
-    # 5. bg_sweep (safety net)
-    code.extend([0xCD, bg_sweep_addr & 0xFF, (bg_sweep_addr >> 8) & 0xFF])
-
-    # 6. OBJ colorizer
+    code.extend([0x28, 0x00])
+    code.extend([0xCD, 0x80, 0xFF])           # OAM DMA
     code.extend([0xCD, shadow_main_addr & 0xFF, (shadow_main_addr >> 8) & 0xFF])
-
-    # 7. Attr computation (overwrites D000-D2FF in WRAM bank 2)
-    code.extend([0xCD, attr_comp_addr & 0xFF, (attr_comp_addr >> 8) & 0xFF])
-
-    # 8. Set DF03 = 1 (buffer now valid for next frame's GDMA)
-    code.extend([0x3E, 0x01, 0xEA, 0x03, 0xDF])
-
-    # skip_gameplay target
     code[ffc1_skip] = (len(code) - ffc1_skip - 1) & 0xFF
 
     # Restore VBK and return
