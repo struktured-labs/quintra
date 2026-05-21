@@ -53,13 +53,45 @@ All probes pass on `rom/working/penta_dragon_dx_v301.gb`:
 - scroll tearing: 0.00/s pal changes, 0/s attr changes (vs vanilla 1.50/s)
 - phantom D887: 0 transitions (vs vanilla 18; matches v2.99/v3.00)
 
+## Follow-up dig (2026-05-20): the cap is NOT pure DI duration
+
+Subsequent probes ruled out "DI length" as the actual freeze trigger:
+
+| Variant inside one DI                                | DI ≈ T | Result |
+|------------------------------------------------------|--------|--------|
+| Pure NOPs                                            | 10240T | PASS   |
+| NOPs with FF70=2 held throughout                     | 8000T  | PASS   |
+| 96 writes via `LD [HL+], A` to bank 2                | ~1500T | PASS   |
+| Flat tile_loop with bg_table lookup, 128 iterations  | 10240T | PASS   |
+| Two tile_loops back-to-back, NO DE manipulation      | ~3870T | PASS   |
+| Two tile_loops with `INC DE × 3` gap between         | 3920T  | PASS   |
+| Two tile_loops with `INC DE × 4` gap between         | **3928T** | **FREEZE** |
+| Two tile_loops with `INC DE × 8` gap between         | 3960T  | FREEZE |
+| Two tile_loops with `ADD 8` gap between              | ~3914T | FREEZE |
+| Two tile_loops with row_loop (PUSH AF outer)         | ~4070T | FREEZE |
+
+The cliff is **cycle-precise**: it lands at one M-cycle (8T). Going from
+N=3 INC-DE-gap (passes) to N=4 (freezes) is a difference of 8T in DI.
+
+So it's not the DI length per se — long NOP/flat-loop DIs over 10000T pass.
+The freeze requires **a memory-write pattern that crosses some specific
+scheduled event during one DI window**. The most plausible suspect is
+LCD STAT interrupt missing a specific mode transition: 3928T ≈ 8.6
+scanlines (~456T each); blocking >8 scanlines may break a STAT-mode-0
+counter the game depends on.
+
+The per-row production fix sidesteps the issue entirely by moving the
+inter-row DE advance OUTSIDE the DI window. Each per-row DI stays under
+the cliff cleanly.
+
 ## What we still don't know
 
-- Why per-DI cap is ~2000-3000T and not the 7000T derived from Timer ISR
-  budget. Could be a different interrupt (STAT?), a vendor-specific
-  mGBA timing quirk, a CGB hardware specifics our diagnosis missed, or
-  the game's main loop having a tighter expectation than the ISR ceiling.
-  Knowing this would let us tune the per-row DI tighter (less overhead).
+- Exact mechanism behind the 3920T→3928T cliff. STAT mode-counter is the
+  best guess but unconfirmed. Instrumenting mGBA or checking the game's
+  STAT handler at 0x0853 would clarify.
+- Why the cliff materializes only with non-contiguous bank-2 writes (the
+  contiguous-write 2-loops-no-gap PASSES at ~3870T which is BELOW gap-3's
+  3920T — so the cliff isn't pure-time either; some interaction).
 - Hardware verification on MiSTer — emulator-only proof so far.
 
 ## Side experiments left behind
@@ -73,6 +105,15 @@ All probes pass on `rom/working/penta_dragon_dx_v301.gb`:
 - `scripts/build_v301_attr_2di.py` — 48 tiles split across 2 DI PASSES.
 - `scripts/build_v301_attr_enabled.py` — full original 8-chunk FREEZES.
 - `scripts/build_v301_per_row.py` — same fix as the main build now uses.
+- `scripts/build_v301_di_nops.py` — sweep DI length with NOPs (all pass up to 6000T).
+- `scripts/build_v301_di_ff70hold.py` — NOPs with FF70=2 held (all pass up to 8000T).
+- `scripts/build_v301_addr_probe.py` — bank-2 writes at varied addresses (all pass).
+- `scripts/build_v301_flat_loop.py` — flat tile_loops 24-128 iters (all pass).
+- `scripts/build_v301_2loops_nogap.py` — two tile_loops contiguous (PASS).
+- `scripts/build_v301_2rows_hram.py` — outer counter via HRAM, gap=8 (FREEZE).
+- `scripts/build_v301_2rows_unroll.py` — unrolled, no outer counter, ADD 8 gap (FREEZE).
+- `scripts/build_v301_inc_de_gap.py` — INC DE × N gap, N is the variable that controls the cliff.
 
-Keep the isolation/minimal scripts as regression sentinels; remove the
-freezing variants if the diagnosis doc here is enough record.
+Keep all of these as regression sentinels; the binary-search trail is more
+informative than the diagnosis doc alone if someone tries to reintroduce a
+"chunked" attr_comp.
