@@ -51,7 +51,7 @@ def _bg_table() -> bytes:
 BG_TABLE_BYTES = _bg_table()
 WRAM_BG_TABLE = 0xDA00
 WRAM_BG_TABLE_HI = (WRAM_BG_TABLE >> 8) & 0xFF
-ATTR_BUFFER = 0xD000  # WRAM bank 2
+ATTR_BUFFER = 0xD000  # WRAM bank 2 (DA00 alternative tested, made no difference)
 
 
 def create_inline_tile_copy_tileonly() -> bytes:
@@ -224,8 +224,8 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
 
     code.extend([0xC5, 0xD5, 0xE5, 0xF5])  # PUSH BC, DE, HL, AF
     code.extend([0x21, 0xA0, 0xC1])         # LD HL, 0xC1A0
-    code.extend([0x11, 0x00, 0xD0])         # LD DE, 0xD000
-    code.extend([0x3E, 0x08])               # LD A, 8 (rows; conservative under HDMA)
+    code.extend([0x11, 0x00, 0xD0])         # LD DE, 0xD000 (attr buffer)
+    code.extend([0x3E, 0x18])               # LD A, 24 (default — unused since attr_comp is skipped in production)
     code.extend([0xE0, 0xE0])               # LDH [FFE0], A (row counter in HRAM)
 
     row_loop = len(code)
@@ -412,10 +412,16 @@ def build_v301():
     code[gdma_skip] = (len(code) - gdma_skip - 1) & 0xFF
 
     # 4. FFC1 gate: game-only work (DMA + OBJ colorizer ONLY).
-    # attr_computation + GDMA/HDMA SKIPPED — both general-mode GDMA AND
-    # HBlank-mode HDMA fail when combined with attr_comp. Exhaustive
-    # test matrix in docs/v301_regression_stage_load_stuck.md.
-    # bg_sweep alone provides ~18-frame attr coverage (functional).
+    # attr_computation + GDMA/HDMA SKIPPED. Exhaustive testing this session
+    # showed every combination breaks gameplay:
+    #   - attr_comp alone at 23+ rows: breaks
+    #   - GDMA general-mode alone: breaks
+    #   - HDMA HBlank-mode alone: progresses but visual garbage
+    #   - attr_comp + GDMA at any row count: breaks
+    #   - attr_comp + HDMA at any row count: breaks
+    #   - attr_buffer at DA00 instead of D000: still breaks
+    # Production ships with bg_sweep alone (slow but functional attr coverage).
+    # See `docs/v301_regression_stage_load_stuck.md` for full matrix.
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
     code.extend([0x28, 0x00])
