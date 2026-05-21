@@ -126,6 +126,62 @@ state change + return from interrupt.
                  D880 = 0x02 (resume from checkpoint, or game over)
 ```
 
+## State handler data table format (verified from rom dump)
+
+Every state 0x01-0x09 handler is a **data table** with this layout:
+
+```
+offset  size  field          notes
+------  ----  -------------  --------------------------------------
+ +0x00   1    marker         0x02 (states 2-9) or 0x03 (state 0x01)
+ +0x01   1    substate cnt   2 for most; 3 for state 0x08
+ +0x02   2    config         lo byte = 0x01 always; hi byte = duration/timer
+ +0x04   4    signature      `05 07 09 89` for states 2-9; `08 07 09 89` for state 0x01
+ +0x08   *    handler ptrs   2 handlers per substate (A=render, B=update);
+                              16-bit bank3 addresses, repeating
+```
+
+### Per-state config + handler dump
+
+| State | Marker | Substates | Config hi | Config interp | Handlers (sub 0)       | Handlers (sub 1)       |
+|-------|--------|-----------|-----------|----------------|------------------------|------------------------|
+| 0x01  | 0x03   | 2         | 0xA5      | 165 frames (title timer?) | 0x4AC6, 0x4AD8     | 0x4B34, 0x4B63         |
+| 0x02  | 0x02   | 2         | 0xFA      | 250 frames (scroll cycle)  | 0x4C1C, 0x4C2A     | 0x4CC8, 0x4D42         |
+| 0x03  | 0x02   | 2         | 0x8C      | 140 frames     | 0x4E7C, 0x4EE8         | 0x4E92, 0x4FB1         |
+| 0x04  | 0x02   | 2         | 0xFF      | 255 (max)      | 0x50E6, 0x50EE         | 0x518D, 0x5222         |
+| 0x05  | 0x02   | 2         | 0xFF      | 255 (max)      | 0x53BB, 0x5401         | 0x54C7, 0x557F         |
+| 0x06  | 0x02   | 2         | 0xFF      | 255 (max)      | 0x5705, 0x570D         | 0x579E, 0x581F         |
+| 0x07  | 0x02   | 2         | 0xFF      | 255 (max)      | 0x61BB, 0x6208         | 0x61C3, 0x6256         |
+| 0x08  | 0x02   | **3**     | 0xFF      | 255 (max)      | 0x6398, 0x63A0         | 0x6451, 0x6485 + 0x63AD, 0x645E (substate 2) |
+| 0x09  | 0x02   | 2         | 0xC8      | 200 frames (matches DC81 init) | 0x596A, 0x5972 | 0x5A1B, 0x5A85         |
+
+### Config-byte interpretation
+
+The hi byte of config maps to **scene duration / timer initialization**:
+
+- Short cutscenes/transitions: 0x8C (140) — state 0x03
+- Title/menu: 0xA5 (165) — state 0x01
+- Scrolling section: 0xC8 (200) — matches `DC81 section scroll counter init`
+- Normal gameplay scroll cycle: 0xFA (250) — state 0x02 (dungeon)
+- Indefinite gameplay: 0xFF (max) — states 0x04-0x08 (interactive combat / boss arenas)
+
+The 0xFF for states 0x04-0x08 means "no built-in timeout" — these are
+states the game stays in until an external event (player action, kill,
+death, etc.) transitions out via RST 20 or direct D880 write.
+
+### Common signature `05 07 09 89`
+
+The 4-byte signature is identical for all gameplay states (0x02-0x09).
+For state 0x01, it differs: `08 07 09 89` (first byte changed). These
+bytes are likely **scratch offsets** into a shared substate-handling
+substructure (perhaps offsets into the entity-slot block at DC85+,
+since DC85 + 0x00 = DC85, +0x07 = DC8C, +0x09 = DC8E, +0x89 — though
+this last doesn't map cleanly).
+
+Another interpretation: these are 4 separate offsets into the 16-byte
+HRAM block FFE0-FFEF used as state-runtime scratch. Worth tracing a
+handler to confirm.
+
 ## State 0x08 deep-dive (3-substate combat)
 
 Most-detailed existing state. Uses DDA8 as a substate counter that
