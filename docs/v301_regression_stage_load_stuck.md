@@ -1,6 +1,22 @@
 # v3.01 Regression — Stuck on STAGE 01 Splash
 
-**Status: OPEN. v3.01 cannot enter gameplay; v3.00 is still the working production.**
+**Status: HISTORICAL. Superseded by `v301_breakthrough.md`.**
+**The "every combination breaks" conclusion in this doc was wrong.**
+**v3.01 production now ships with attr_comp + GDMA functional.**
+
+The matrix below was generated from probe-only verification (D880, FFBD bytes).
+Two distinct bugs were conflated:
+
+  - HBlank-mode HDMA (HDMA5=0xBF) corrupts VRAM tile IDs (visual-only,
+    invisible to state probes). Fixed by switching to general-mode (0x3F).
+  - Cycle starvation at ≥12 rows starves the autoplay harness's room
+    transitions. Fixed by limiting to 8 rows per frame.
+
+See `v301_breakthrough.md` for the working production approach.
+
+---
+
+## (Historical) Original investigation:
 
 ## Symptoms
 

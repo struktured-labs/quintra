@@ -173,12 +173,14 @@ def create_gdma_transfer() -> bytes:
     code.extend([0xE0, 0x53])               # HDMA3 = dest high
     code.extend([0xAF, 0xE0, 0x54])         # HDMA4 = 0x00
 
-    # Start HDMA in HBlank mode (64 blocks, 16 bytes per HBlank).
-    # General mode (HDMA5 = 0x3F) halts CPU for ~2048T per call, which
-    # was breaking the game's STAGE LOAD → dungeon transition.
-    # HBlank mode (HDMA5 = 0xBF, bit 7 set) spreads the work across
-    # ~64 HBlanks using HBlank-only CPU time. Doesn't halt CPU.
-    code.extend([0x3E, 0xBF, 0xE0, 0x55])   # HDMA5 = 0xBF → HBlank mode
+    # General-mode GDMA (HDMA5=0x3F): copies 1024 bytes atomically
+    # while CPU is halted (~512T). Required because HBlank-mode HDMA
+    # (HDMA5=0xBF) continues across multiple HBlanks; once we restore
+    # VBK=0 after the call returns, subsequent HBlank steps write to
+    # VRAM bank 0 (tile IDs) instead of bank 1 (attributes) — visible
+    # as random tile garbage. General mode completes before VBK is
+    # restored, keeping every write in VRAM bank 1.
+    code.extend([0x3E, 0x3F, 0xE0, 0x55])   # HDMA5 = 0x3F → general mode
 
     # GDMA done. Restore FF70=1, EI, VBK=0
     code.extend([0x3E, 0x01, 0xE0, 0x70])   # FF70=1
@@ -225,7 +227,7 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
     code.extend([0xC5, 0xD5, 0xE5, 0xF5])  # PUSH BC, DE, HL, AF
     code.extend([0x21, 0xA0, 0xC1])         # LD HL, 0xC1A0
     code.extend([0x11, 0x00, 0xD0])         # LD DE, 0xD000 (attr buffer)
-    code.extend([0x3E, 0x14])               # LD A, 20 (under 22-row cliff; cold-boot zero may unlock this)
+    code.extend([0x3E, 0x08])               # LD A, 8 (gameplay-safe cliff; preserves mini-boss + room progression)
     code.extend([0xE0, 0xE0])               # LDH [FFE0], A (row counter in HRAM)
 
     row_loop = len(code)
@@ -432,23 +434,25 @@ def build_v301():
     code.extend([0xCD, gdma_addr & 0xFF, (gdma_addr >> 8) & 0xFF])
     code[gdma_skip] = (len(code) - gdma_skip - 1) & 0xFF
 
-    # 4. FFC1 gate: game-only work (DMA + OBJ colorizer ONLY).
-    # attr_computation + GDMA/HDMA SKIPPED. EXHAUSTIVE testing confirmed
-    # every combination breaks gameplay:
-    #   - attr_comp ≤22 rows alone: WORKS
-    #   - attr_comp 23+ rows alone: BREAKS
-    #   - GDMA general-mode alone: BREAKS
-    #   - HDMA HBlank-mode alone: D880 progresses, visual garbage
-    #   - attr_comp + GDMA at any row count: BREAKS
-    #   - attr_comp + HDMA at any row count: BREAKS
-    #   - attr buffer at DA00 (alternate to D000): STILL BREAKS
-    #   - cold-boot zero + attr_comp + HDMA: STILL BREAKS
-    # Production ships with bg_sweep alone (functional, slow attr coverage).
+    # 4. FFC1 gate: game-only work.
+    # attr_computation + GDMA RE-ENABLED. The earlier "every combination
+    # breaks" matrix was misleading — it conflated two distinct failures:
+    #   (a) HBlank-mode HDMA writing to VRAM bank 0 after VBK was restored
+    #       (visual corruption of TILE IDs, not just attrs)
+    #   (b) Cycle starvation in the autoplay stress harness when row
+    #       count was too high (game's transition logic could not advance)
+    # General-mode GDMA + 8-row attr_comp avoids both: VBK stays at 1
+    # for the full atomic transfer, and 8 rows keeps cycle cost at
+    # ~17K T/frame, leaving the game ~53K T main-loop budget.
+    # Full 18-row visible coverage emerges in ~2.3 frames (attr_comp
+    # rotates through rows; bg_sweep covers gaps).
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
     code.extend([0x28, 0x00])
     code.extend([0xCD, 0x80, 0xFF])           # OAM DMA
     code.extend([0xCD, shadow_main_addr & 0xFF, (shadow_main_addr >> 8) & 0xFF])
+    code.extend([0xCD, attr_comp_addr & 0xFF, (attr_comp_addr >> 8) & 0xFF])
+    code.extend([0xCD, gdma_addr & 0xFF, (gdma_addr >> 8) & 0xFF])
     code[ffc1_skip] = (len(code) - ffc1_skip - 1) & 0xFF
 
     # Restore VBK, restore FF99, return

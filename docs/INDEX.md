@@ -35,10 +35,18 @@ then dive into the specific subsystem you care about.
 
 ## v3.01 colorization (current production)
 
+- [`v301_breakthrough.md`](v301_breakthrough.md) — **SHIPPED.** Full
+  attr_comp + GDMA optimization landed. Two distinct bugs (HBlank-mode
+  HDMA tile-ID corruption, autoplay starvation at ≥12 rows) were
+  conflated by probe-only verification. Fix: general-mode GDMA + 8-row
+  attr_comp. Verified visually + state-machine.
 - [`v301_gdma_freeze_diagnosis.md`](v301_gdma_freeze_diagnosis.md) —
   Full diagnosis of the v3.01 freeze: root cause was **stale FF99**;
   ISRs restored bank from FF99 → wrong bank → garbage exec.
   **Status: RESOLVED.**
+- [`v301_regression_stage_load_stuck.md`](v301_regression_stage_load_stuck.md) —
+  **HISTORICAL.** Earlier "every combination breaks" matrix was wrong.
+  Superseded by `v301_breakthrough.md`.
 - [`v301_performance.md`](v301_performance.md) — Per-VBlank cycle
   estimate (~53K T = ~76% of frame budget). Comparison to vanilla and
   v3.00. Empirical efficiency evidence from probes (scroll tearing
