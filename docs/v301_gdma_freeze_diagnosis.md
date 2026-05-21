@@ -1,98 +1,78 @@
-# v3.01 GDMA Freeze Diagnosis (2026-05-17, incomplete)
+# v3.01 GDMA Freeze — RESOLVED (2026-05-20)
 
-## Status: BLOCKED on FF70 freeze. Production stays on v3.00.
+## Status: FIXED. DI window length was the real limit.
 
-## What v3.01 was trying to do
+## Root cause
 
-Replace v3.00's dual-STAT-wait inline hook (which doubled tile-copy time ->
-~2x game slowdown) with:
+The diagnosis assumed the per-DI safe budget was 7000T (Timer ISR ceiling).
+That was wrong. Empirically, on this ROM the safe DI budget per window is
+~2000-3000T. Doing a single DI window longer than that — even well under
+7000T — freezes the game at the FFC1=0→1 transition (or earlier if outside
+the FFC1 gate). The freeze isn't from FF70 itself, bank-2 writes, or
+attr_computation's logic — it's from one DI window holding interrupts off
+for too long.
 
-1. **Tile-only inline hook** (single STAT wait, vanilla speed) at bank 1:0x42A7
-2. **VBlank attr_computation**: read tiles from `0xC1A0`, look up `bg_table`,
-   write 1024-byte attr buffer to **WRAM bank 2** (`0xD000-0xD3FF`)
-3. **GDMA transfer**: hardware DMA from WRAM bank 2 to VRAM tilemap VBK=1
+## How we found it
 
-## What worked
+Binary search of progressively larger DI windows (all inside FFC1 gate):
 
-- Tile-only inline hook (56 bytes, down from 117) — proven booting via
-  `scripts/build_v301_minimal.py` (just inline-hook swap, v3.00 colorize handler).
-  Game runs, but BG colors regress because nothing writes attrs inline anymore.
-- bg_sweep with the internal FFC1 gate stripped — fills title-screen attrs
-  slowly (~18 frames for full coverage). Yellow gold items show up correctly.
-- GDMA register programming verified static-correct (HDMA1-5 writes,
-  LCDC bit 3 check for `0x9800` vs `0x9C00` tilemap target).
-- All 31 vanilla CALL/JP targets inside `0x42A8-0x436D` confirmed dead-code
-  paths — wiping them with NOPs doesn't affect boot.
+| Variant                              | DI bytes | DI ≈ T  | Result |
+|--------------------------------------|----------|---------|--------|
+| FF70 toggle only                     | 9        | ~30T    | PASS   |
+| + single byte write to 0xD000        | 13       | ~50T    | PASS   |
+| 1 tile lookup+write inside DI        | 31       | ~80T    | PASS   |
+| 1 row (24 tiles) inside one DI       | 39       | ~2000T  | PASS   |
+| 2 rows (48 tiles) inside one DI      | 55       | ~4000T  | **FREEZE** |
+| 3 rows (72 tiles) inside one DI      | 55       | ~6100T  | **FREEZE** |
+| 2 rows in 2 separate DI windows      | 70       | 2×~2000T| PASS   |
 
-## What freezes (the blocker)
+The boundary is between ~2000T and ~4000T DI. We don't know the exact cap;
+~2000T per window is safely under it.
 
-**Any FF70 write to 0x02 in our code freezes the game.** Specifically:
+## Fix
 
-1. **Cold-boot bank-2 zeroing** (originally `DI; FF70=2; zero 1024 bytes; FF70=1; EI`):
-   100% white screen from boot, regardless of whether the DI window is one
-   24K-T-cycle block or chunked into 4 × 6K-T windows.
-2. **attr_computation outside FFC1 gate** (FF70=2 every frame): 100% white
-   screen from boot.
-3. **attr_computation inside FFC1 gate** (FF70=2 only during gameplay):
-   game boots OK, title shows colors via bg_sweep, but freezes at the
-   high-score-screen → first-level transition (the moment `FFC1=0 → 1`).
+`create_attr_computation` now uses **24 single-row DI windows** instead of
+8 three-row chunks. Each DI window writes 24 tiles to bank 2 (~2000T), then
+EI for ~50T (lets Timer ISR service if pending), repeat 24 times.
 
-Removing all FF70 writes from attr_computation (so it writes directly to
-bank 1 `0xD000-0xD3FF`, corrupting game data) **also** white-screens,
-but that's expected — bank 1 in that range holds game state.
+Total per call ≈ 50K T-cycles (similar to the original 8-chunk design's
+49K), but per-DI stays under the empirical safe budget. The row counter
+lives in HRAM (FFE0) to avoid PUSH/POP nesting inside DI.
 
-## What we ruled out
+```python
+def create_attr_computation(bg_table_addr):
+    """24 rows × 24 tiles, each row gets its own DI window. See header."""
+```
 
-- **DF05 collision**: vanilla has zero accesses to `0xDF05`. Safe.
-- **Game writing FF70**: zero static `LDH [FF70], A` or `LD [FF70], A`
-  instructions in vanilla code. All 12 `E0 70` byte hits are in tile-graphics
-  data in banks 8-12, not in executable code.
-- **Game reading FF70**: 2 `F0 70` hits in bank 0 (`0x2743`, `0x2758`)
-  are inside what looks like graphics data being misinterpreted as code.
-- **Stack leak in attr_computation**: original implementation had an extra
-  outer `PUSH AF` per chunk that was never popped (8 bytes/frame leak).
-  Fixed — the leak alone wasn't the cause anyway, because the freeze
-  manifests even on the FIRST FFC1=1 frame.
-- **JR/JP offset bugs**: verified all forward and back jumps in the
-  colorize handler, GDMA, and attr_computation by hex-tracing the ROM.
-- **DI window length**: per-chunk DI window in attr_computation is ~6100T
-  (under 7000T Timer-ISR ceiling), 8 chunks per call. Cold-boot zero
-  windows are similar after chunking.
+## What we verified
 
-## Hypotheses for the FF70 freeze (next session)
+All probes pass on `rom/working/penta_dragon_dx_v301.gb`:
 
-1. **mGBA bug**: emulator might not correctly maintain FF70=2 state across
-   DI/EI boundaries, or might not handle GDMA source through bank 2.
-   Test: hardware verification on MiSTer.
-2. **CGB hardware quirk**: writing FF70=2 might affect some hidden register
-   or have a timing requirement we're missing. Pan Docs doesn't mention any.
-3. **STAT interrupt vector**: the game has a STAT handler at `0x0853` (via
-   `0x0048: JP 0x0853`). If our DI windows block STAT and the game's main
-   loop depends on STAT firing at specific scanlines, init might stall.
-   But this wouldn't explain instant freeze at FFC1=1 transition.
-4. **Self-modifying timing**: when FFC1=0 → 1, the game might do specific
-   work that's sensitive to VBlank handler runtime. Our attr_computation
-   adds ~50K T-cycles to the VBlank handler vs ~3K previously.
+- title color: 3 distinct colors, 8.7% non-white
+- gameplay palette: 21 distinct palette words, 4 attr-pal indices in use
+- scroll tearing: 0.00/s pal changes, 0/s attr changes (vs vanilla 1.50/s)
+- phantom D887: 0 transitions (vs vanilla 18; matches v2.99/v3.00)
 
-## Suggested debugging path
+## What we still don't know
 
-1. Build a v3.01 that writes FF70=2, immediately FF70=1 (no other work)
-   in the warm path, and check if THAT freezes. Isolates the FF70 op itself.
-2. If FF70 freezes alone, suspect mGBA or CGB hardware quirk. Test on MiSTer.
-3. If FF70 alone doesn't freeze, the issue is in the work between FF70=2
-   and FF70=1 (i.e., something in attr_computation, even though it only
-   touches bank 2 D000-D2FF + bank 0 C1A0 + ROM 0x7000).
-4. Consider abandoning bank 2: find a 1KB region in bank 1 that's truly
-   unused. Static analysis shows max 306-byte free gap in `0xCAE9-0xCC07`
-   and `0xCECE-0xD000`. A more thorough dynamic-trace analysis on a
-   long gameplay session might reveal a larger safe region.
+- Why per-DI cap is ~2000-3000T and not the 7000T derived from Timer ISR
+  budget. Could be a different interrupt (STAT?), a vendor-specific
+  mGBA timing quirk, a CGB hardware specifics our diagnosis missed, or
+  the game's main loop having a tighter expectation than the ISR ceiling.
+  Knowing this would let us tune the per-row DI tighter (less overhead).
+- Hardware verification on MiSTer — emulator-only proof so far.
 
-## Current production
+## Side experiments left behind
 
-- **`rom/working/penta_dragon_dx_FIXED.gb`** = v3.00 (tag `colorize-v3.00-inline-hook`).
-  2x slow tile-copy, but correct attrs and no freeze.
-- **`scripts/build_v301_gdma.py`** = current state. Inline hook simplified
-  (tile-only, vanilla speed), bg_sweep ungated for title, attr_computation
-  + GDMA built but SKIPPED in the colorize handler pending the FF70 freeze
-  fix. Boots, but scroll-edge artifacts return during gameplay because
-  bg_sweep alone is too slow (1 row/frame, ~18 frames for full coverage).
+- `scripts/build_v301_ff70_isolation.py` — FF70 toggle alone PASSES.
+- `scripts/build_v301_bank2_write_test.py` — single bank-2 write PASSES.
+- `scripts/build_v301_attr_minimal.py` — 1-tile attr_comp PASSES.
+- `scripts/build_v301_attr_1row.py` — 24 tiles in one DI PASSES.
+- `scripts/build_v301_attr_2rows.py` — 48 tiles in one DI FREEZES.
+- `scripts/build_v301_attr_1chunk.py` — 72 tiles in one DI FREEZES.
+- `scripts/build_v301_attr_2di.py` — 48 tiles split across 2 DI PASSES.
+- `scripts/build_v301_attr_enabled.py` — full original 8-chunk FREEZES.
+- `scripts/build_v301_per_row.py` — same fix as the main build now uses.
+
+Keep the isolation/minimal scripts as regression sentinels; remove the
+freezing variants if the diagnosis doc here is enough record.

@@ -192,87 +192,61 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
     Looks up bg_table from ROM bank 13 (active during VBlank handler).
     Writes to WRAM bank 2:D000-D3FF.
 
-    24 rows of 24 tiles each, with 8 padding cols per row (pre-zeroed).
-    Chunked: 8 DI windows × 3 rows each ≈ 6100T per chunk (< 7000T limit).
+    24 rows × 24 tiles + 8 padding cols. Each ROW gets its own DI window.
+
+    Why one DI per row (not per chunk): the empirical safe DI budget on this
+    ROM is ~2000-3000T, NOT the 7000T originally assumed. The chunked design
+    (3 rows in one ~6100T DI) freezes at the FFC1=0→1 transition; one-row
+    DI (~2000T) does not. Total runtime is similar to the 8-chunk design
+    (~50K T) but per-DI stays safe and the EI gaps service Timer ISR.
 
     Register plan inside DI:
       B  = bg_table high byte (0x70)
       C  = scratch (tile ID for [BC] lookup)
       HL = tile source (C1A0+, bank 0 — unaffected by FF70)
       DE = attr dest (D000+, bank 2 — requires FF70=2)
+      FFE0 (HRAM scratch) = row counter (avoids DI-internal PUSH/POP nesting)
     """
     bg_table_hi = (bg_table_addr >> 8) & 0xFF
     code = bytearray()
 
-    # Save regs
     code.extend([0xC5, 0xD5, 0xE5, 0xF5])  # PUSH BC, DE, HL, AF
-
-    # HL = tile source, DE = attr dest (initial)
     code.extend([0x21, 0xA0, 0xC1])         # LD HL, 0xC1A0
     code.extend([0x11, 0x00, 0xD0])         # LD DE, 0xD000
+    code.extend([0x3E, 0x18])               # LD A, 24
+    code.extend([0xE0, 0xE0])               # LDH [FFE0], A (row counter in HRAM)
 
-    # 8 chunks of 3 rows (per-chunk DI ≈ 6100T, under 7000T Timer ISR limit)
-    code.extend([0x3E, 0x08])               # LD A, 8
-    code.extend([0xEA, 0x05, 0xDF])         # LD [DF05], A  (chunk counter)
-
-    # chunk_loop:
-    chunk_loop = len(code)
+    row_loop = len(code)
     code.extend([0xF3])                     # DI
     code.extend([0x3E, 0x02, 0xE0, 0x70])   # FF70 = 2
-
-    # 3 rows per chunk
-    code.extend([0x3E, 0x03])               # LD A, 3
-    code.extend([0xF5])                     # PUSH AF (row counter)
-
-    # row_loop:
-    row_loop = len(code)
-
-    # 24 tiles: B=bg_table_hi, inner loop counter on stack
-    code.extend([0x06, bg_table_hi])        # LD B, 0x70
-    code.extend([0xF5])                     # PUSH AF (save row counter)
+    code.extend([0x06, bg_table_hi])        # LD B, bg_table_hi
     code.extend([0x3E, 0x18])               # LD A, 24 (tile counter)
 
-    # tile_loop: (per tile: LD A,[HL+]; LD C,A; LD A,[BC]; LD [DE],A; INC DE; DEC counter)
     tile_loop = len(code)
     code.extend([0xF5])                     # PUSH AF (tile counter)
-    code.extend([0x2A])                     # LD A, [HL+]  (tile ID from C1A0)
+    code.extend([0x2A])                     # LD A, [HL+]
     code.extend([0x4F])                     # LD C, A
-    code.extend([0x0A])                     # LD A, [BC]   (bg_table[tile_id])
-    code.extend([0x12])                     # LD [DE], A   (write to D000+ bank 2)
+    code.extend([0x0A])                     # LD A, [BC]
+    code.extend([0x12])                     # LD [DE], A
     code.extend([0x13])                     # INC DE
-    code.extend([0xF1])                     # POP AF (tile counter)
+    code.extend([0xF1])                     # POP AF
     code.extend([0x3D])                     # DEC A
-    offset = tile_loop - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])      # JR NZ, tile_loop
+    code.extend([0x20, (tile_loop - (len(code) + 2)) & 0xFF])
 
-    # Skip 8 padding columns in dest (DE += 8)
-    code.extend([0x7B])                     # LD A, E
-    code.extend([0xC6, 0x08])               # ADD 8
-    code.extend([0x5F])                     # LD E, A
-    code.extend([0x30, 0x01])               # JR NC, +1
-    code.extend([0x14])                     # INC D
-
-    # Row counter
-    code.extend([0xF1])                     # POP AF (row counter)
-    code.extend([0x3D])                     # DEC A
-    offset = row_loop - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])      # JR NZ, row_loop
-
-    # End of chunk: restore FF70=1, EI
     code.extend([0x3E, 0x01, 0xE0, 0x70])   # FF70 = 1
     code.extend([0xFB])                     # EI
 
-    # Chunk counter (DF05)
-    code.extend([0xFA, 0x05, 0xDF])         # LD A, [DF05]
+    # DE += 8 (skip padding cols) — outside DI
+    code.extend([0x7B, 0xC6, 0x08, 0x5F, 0x30, 0x01, 0x14])
+
+    # Row counter via HRAM
+    code.extend([0xF0, 0xE0])               # LDH A, [FFE0]
     code.extend([0x3D])                     # DEC A
-    code.extend([0xEA, 0x05, 0xDF])         # LD [DF05], A
-    offset = chunk_loop - (len(code) + 2)
-    code.extend([0x20, offset & 0xFF])      # JR NZ, chunk_loop
+    code.extend([0xE0, 0xE0])               # LDH [FFE0], A
+    code.extend([0x20, (row_loop - (len(code) + 2)) & 0xFF])
 
-    # Restore regs
     code.extend([0xF1, 0xE1, 0xD1, 0xC1])  # POP AF, HL, DE, BC
-    code.extend([0xC9])                     # RET
-
+    code.extend([0xC9])
     return bytes(code)
 
 
@@ -415,17 +389,16 @@ def build_v301():
     code.extend([0xCD, gdma_addr & 0xFF, (gdma_addr >> 8) & 0xFF])
     code[gdma_skip] = (len(code) - gdma_skip - 1) & 0xFF
 
-    # 4. FFC1 gate: skip game-only stuff (DMA, OBJ).
-    # attr_computation + GDMA are SKIPPED for now — the FF70=2 switch in
-    # attr_computation freezes the game at gameplay entry (root cause TBD).
-    # bg_sweep alone provides attr coverage (~18 frames for full screen),
-    # which means scroll artifacts return during fast scrolling. Tradeoff:
-    # vanilla speed (tile-only inline hook) at the cost of slow attr updates.
+    # 4. FFC1 gate: game-only work (DMA, OBJ colorizer, attr buffer build).
+    # attr_computation runs every gameplay frame (24 single-row DI windows).
+    # Setting DF03=1 enables next-frame GDMA to copy the buffer to VRAM.
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
     code.extend([0x28, 0x00])
     code.extend([0xCD, 0x80, 0xFF])           # OAM DMA
     code.extend([0xCD, shadow_main_addr & 0xFF, (shadow_main_addr >> 8) & 0xFF])
+    code.extend([0xCD, attr_comp_addr & 0xFF, (attr_comp_addr >> 8) & 0xFF])
+    code.extend([0x3E, 0x01, 0xEA, 0x03, 0xDF])  # DF03 = 1 (GDMA ready)
     code[ffc1_skip] = (len(code) - ffc1_skip - 1) & 0xFF
 
     # Restore VBK and return
