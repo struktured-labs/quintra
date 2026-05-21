@@ -116,6 +116,60 @@ says, NOT necessarily the bank that was mapped when Timer fired.
 STAT only switches to bank 1 (no bank 3 detour), but the same restore-from-
 FF99 pattern at exit.
 
+### VBlank handler full structure (0x06D1)
+
+```asm
+0x06D1: F5 C5 D5 E5       PUSH AF, BC, DE, HL
+0x06D5: CD 80 FF          CALL 0xFF80          ; OAM DMA (HRAM routine)
+                                                ; NOTE: we NOP this for v3.01 — DMA is done in colorize handler
+0x06D8: 21 D4 FF; 34      INC (FFD4)           ; frame counter tick
+0x06DC: CD 24 08          CALL 0x0824          ; joypad-read slot (OUR HOOK lives here)
+0x06DF: CD 6C 08          CALL 0x086C          ; another VBlank sub (TBD)
+0x06E2: ...               BGP palette animation via FFE3/FFE2/FF47 timing
+0x0702: ...               OBP palette animation via DDAE/DDAD timing
+0x0727: ...               FFD5 timer logic (cycle 0..0x3C)
+...
+        D9                RETI
+```
+
+Our hook at 0x0824 runs in the middle of the VBlank handler with IME=0
+(set on VBlank IRQ entry). We can EI inside our handler — and we do,
+inside attr_computation — so STAT/Timer can fire AFTER OUR EI. That's
+when FF99 must already say 0x0D, or bank corruption occurs.
+
+### STAT helper 0x08F8 (mid-frame scroll registers)
+
+```asm
+0x08F8: F0 E8; B7; C8       LDH A,(FFE8); OR A; RET Z   ; FFE8=scroll-active flag
+0x08FC: 21 E9 FF; 34        INC (FFE9)                  ; sub-cycle 0..255
+0x0900: 7E; E6 03; 4F       A = FFE9 & 3; LD C, A
+0x0904: FA 00 DC; E6 0F     A = [DC00] & 0x0F           ; camera-Y sub-pixel
+0x0909: 81; E0 43           ADD C; LDH (FF43), A        ; SCX = (cam_Y & 0xF) + C
+0x090C: F0 D4; A0; 4F       A = [FFD4] & B (some mask); LD C, A
+0x0910: FA 02 DC; E6 0F     A = [DC02] & 0x0F           ; camera-X sub-pixel
+0x0915: 81; E0 42; C9       ADD C; LDH (FF42), A; RET   ; SCY = (cam_X & 0xF) + C
+```
+
+Purpose: smooth scrolling by updating SCX/SCY mid-frame. STAT IRQ fires
+on a configured trigger (mode 0 / LYC=LY), and this updates scroll
+registers at specific scanlines to break the screen into scroll regions
+(e.g., for HUD vs playfield). The FFE8 flag gates this — when FFE8=0
+(menus etc.), STAT does nothing meaningful.
+
+### Timer helper 0x0D79 (centisecond counter)
+
+```asm
+0x0D79: F0 D1               LDH A, (FFD1)
+0x0D7B: 3C; FE 64           INC A; CP 0x64               ; wrap at 100
+0x0D7E: 38 02               JR C, +2
+0x0D80: 3E 00               LD A, 0                      ; reset
+0x0D82: E0 D1; C9           LDH (FFD1), A; RET
+```
+
+FFD1 is the centisecond counter for the stopwatch (FFF5/FFF6 minutes/
+seconds are incremented elsewhere when FFD1 wraps). Timer fires at
+~89 Hz so FFD1 hits 100 about once a second.
+
 ### Bank 3:0x4000 (sound engine entry)
 
 ```asm
