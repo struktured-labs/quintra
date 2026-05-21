@@ -46,15 +46,15 @@ DCFD initialization, more state setup)
 
 The main loop body is **6 CALLs** plus 4 sync calls at the top:
 
-| CALL          | Bank | Hypothesized purpose                          |
+| CALL          | Bank | Verified purpose                              |
 |---------------|------|------------------------------------------------|
-| 0x495D × 4    | bank-1 | Frame sync / wait (likely HALTs internally) |
-| 0x0DE9        | bank-0 | Joypad processing / input dispatch          |
-| 0x0E7C        | bank-0 | AI / movement / entity updates              |
-| 0x01E8        | bank-0 | Collision / scroll                          |
-| 0x55BB        | bank-1 | Subsystem (TBD)                             |
-| 0x2222        | bank-0 | Subsystem (TBD)                             |
-| 0x4F5D        | bank-1 | Subsystem (TBD)                             |
+| 0x495D × 4    | bank-1 | Iterates SRAM at A800 (0x68 entries × 8 bytes). NOT a HALT — purely CPU-bound. Likely a per-frame "process SRAM tasks" loop, called 4× for thoroughness or batch size. |
+| 0x0DE9        | bank-0 | **Task processor A** — uses SRAM 0xAB40 as the queue base, DCE3/DCE4 as scratch pointers, may emit sound effects via D887 writes. Reads HL pointers through `RST 10` table lookups. |
+| 0x0E7C        | bank-0 | **Task processor B** — parallel to 0x0DE9 but uses SRAM 0xABA0 (offset +0x60 from queue A). Same code shape, different event queue. |
+| 0x01E8        | bank-0 | **Room transition processor** — reads FFCE (next-room), calls 0x12A0 (room load), advances FFCC (2-state cycle) and FFCD (4-state cycle). On cycle 0, JP 0x0B78 to commit the FFCE→FFBD transition (matches existing room-transition memory). |
+| 0x55BB        | bank-1 | Subsystem (TBD — yet to trace)                |
+| 0x2222        | bank-0 | **Enemy-section advancement** — when FFBF==0 (no mini-boss), checks FFD6 timer ≥30 to arm DCBA; if armed and all 5 entity slots at DC85/DC8D/DC95/DC9D/DCA5 are empty, advances DCB8 section counter. Matches "section advance at 0x2248" memory. |
+| 0x4F5D        | bank-1 | Subsystem (TBD — yet to trace)                |
 
 Each CALL is a "subsystem" — collectively they comprise one game tick.
 The `JP 0x016C` at the bottom loops back forever, with interrupts
