@@ -1,7 +1,26 @@
-# D880 Master Scene State Machine
+# D880 — Sound Engine Scene State (NOT the gameplay state machine)
 
-Consolidates the per-state notes from `reverse_engineering/notes/gap_d880_*`
-into a single unified state diagram.
+**Updated understanding (this iteration):** D880 is **read by the sound engine
+only**. A static cross-bank scan confirms only 2 absolute-mode reads of D880,
+both in bank 3 (the sound engine): 0x4029 (the dispatcher analyzed below) and
+0x4179. No game-logic subsystem reads D880 directly.
+
+**The actual gameplay-mode flag is FFC1.** 13 read sites across banks 0/1/2
+use the classic `F0 C1 A7 ...` (read FFC1; AND A; conditional) gate pattern
+that selects between "menu/title (skip)" and "gameplay (run subsystem)".
+
+So the values previously documented for D880 (0x02 = dungeon, 0x0A =
+mini-boss, 0x0C-0x14 = stage boss arenas, etc.) describe the **music/sound
+mode** the engine selects per scene. The game-state code uses FFC1 + per-
+subsystem state bytes (FFBA level counter, FFBD room id, FFBF mini-boss
+flag, etc.) to make gameplay decisions.
+
+The two are coupled in practice — game code that transitions scenes
+writes both: e.g. `LD A, 0x15; LD (D880), A` (set music to game-start)
+followed by `LD A, 1; LDH (FFC1), A` (enable gameplay processing). But
+they are accessed independently from there on.
+
+## Consolidates the per-state notes
 
 ## Dispatch (revised — verified by full disasm)
 
