@@ -180,7 +180,10 @@ def create_gdma_transfer() -> bytes:
     # VRAM bank 0 (tile IDs) instead of bank 1 (attributes) — visible
     # as random tile garbage. General mode completes before VBK is
     # restored, keeping every write in VRAM bank 1.
-    code.extend([0x3E, 0x3F, 0xE0, 0x55])   # HDMA5 = 0x3F → general mode
+    # HDMA5 = 0x0F → 256-byte general-mode transfer (matches the 8 rows
+    # × 32 bytes attr_comp fills). Saves ~768T per frame vs full 1024-byte
+    # transfer, and preserves bg_sweep's writes to VRAM rows 8-31.
+    code.extend([0x3E, 0x0F, 0xE0, 0x55])   # HDMA5 = 0x0F → general mode 256 bytes
 
     # GDMA done. Restore FF70=1, EI, VBK=0
     code.extend([0x3E, 0x01, 0xE0, 0x70])   # FF70=1
