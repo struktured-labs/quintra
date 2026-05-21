@@ -173,8 +173,12 @@ def create_gdma_transfer() -> bytes:
     code.extend([0xE0, 0x53])               # HDMA3 = dest high
     code.extend([0xAF, 0xE0, 0x54])         # HDMA4 = 0x00
 
-    # Start GDMA: 64 blocks (1024 bytes), mode 0 (general purpose)
-    code.extend([0x3E, 0x3F, 0xE0, 0x55])   # HDMA5 = 0x3F → CPU halts ~2048T
+    # Start HDMA in HBlank mode (64 blocks, 16 bytes per HBlank).
+    # General mode (HDMA5 = 0x3F) halts CPU for ~2048T per call, which
+    # was breaking the game's STAGE LOAD → dungeon transition.
+    # HBlank mode (HDMA5 = 0xBF, bit 7 set) spreads the work across
+    # ~64 HBlanks using HBlank-only CPU time. Doesn't halt CPU.
+    code.extend([0x3E, 0xBF, 0xE0, 0x55])   # HDMA5 = 0xBF → HBlank mode
 
     # GDMA done. Restore FF70=1, EI, VBK=0
     code.extend([0x3E, 0x01, 0xE0, 0x70])   # FF70=1
@@ -221,7 +225,7 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
     code.extend([0xC5, 0xD5, 0xE5, 0xF5])  # PUSH BC, DE, HL, AF
     code.extend([0x21, 0xA0, 0xC1])         # LD HL, 0xC1A0
     code.extend([0x11, 0x00, 0xD0])         # LD DE, 0xD000
-    code.extend([0x3E, 0x08])               # LD A, 8 (rows; conservative with GDMA)
+    code.extend([0x3E, 0x08])               # LD A, 8 (rows; conservative under HDMA)
     code.extend([0xE0, 0xE0])               # LDH [FFE0], A (row counter in HRAM)
 
     row_loop = len(code)
@@ -408,20 +412,15 @@ def build_v301():
     code[gdma_skip] = (len(code) - gdma_skip - 1) & 0xFF
 
     # 4. FFC1 gate: game-only work (DMA + OBJ colorizer ONLY).
-    # attr_computation + GDMA are SKIPPED — the GDMA appears to be the
-    # disruptor regardless of attr_comp row count. Tested 8, 16, 20, 24
-    # rows with GDMA — all break the STAGE LOAD → dungeon transition.
-    # Without GDMA, attr_comp at ≤22 rows is fine. Root cause likely
-    # mGBA-specific GDMA + VBlank interaction or a state-byte corruption
-    # we haven't traced. See `docs/v301_regression_stage_load_stuck.md`.
-    # bg_sweep alone provides ~18-frame attr coverage (slow but
-    # functional). Same effective shipped behavior as v3.00.
+    # attr_computation + GDMA/HDMA SKIPPED — both general-mode GDMA AND
+    # HBlank-mode HDMA fail when combined with attr_comp. Exhaustive
+    # test matrix in docs/v301_regression_stage_load_stuck.md.
+    # bg_sweep alone provides ~18-frame attr coverage (functional).
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
     code.extend([0x28, 0x00])
     code.extend([0xCD, 0x80, 0xFF])           # OAM DMA
     code.extend([0xCD, shadow_main_addr & 0xFF, (shadow_main_addr >> 8) & 0xFF])
-    # attr_computation + DF03=1 intentionally omitted; see comment above.
     code[ffc1_skip] = (len(code) - ffc1_skip - 1) & 0xFF
 
     # Restore VBK, restore FF99, return
