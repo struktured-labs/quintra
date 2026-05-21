@@ -36,7 +36,7 @@ are the hottest game-state bytes the engine touches.
 | FFBA   | 14R/4W  | Level/boss counter (0-8) — indexes stage boss tables     |
 | FFCA   | 12R/3W  | Flag byte — high bit checked via `BIT 7, A` after read  |
 | FFE4   | 1R/12W  | **Death cinematic flag** — set to 1 with `RST 28; CALL 0x4944` (per memory + context). Cleared after cleanup. |
-| FFC4   | 0R/12W  | **Start of text/HUD output buffer** — addressed via `LD HL, FFC4; RST 10` calls (~32 bytes through to FFE3). |
+| FFC4   | -       | **CENSUS FALSE POSITIVE.** The "writes" counted were operand bytes from `LD DE, $C4xx` immediates (e.g., `11 E0 C4` is `LD DE, $C4E0`, not `LDH (FFC4), A`). Likely unused by vanilla. |
 | FFCE   | 3R/9W   | Next-room value (set from 0x0BBF table, consumed at 0x0B78) |
 | FFDC   | 9R/2W   | Counter compared against memory (`INC A; CP (HL)` after read) |
 | FFEB   | 8R/3W   | Scroll phase toggle (0=normal, 1=alternate/bonus)        |

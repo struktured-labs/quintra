@@ -14,8 +14,11 @@ then dive into the specific subsystem you care about.
   ISR restores ROM bank from this shadow register), VBlank handler
   chain, sound engine entry, modifications vs vanilla.
 - [`rst_and_boot.md`](rst_and_boot.md) — All 8 RST vectors decoded
-  (RST 10 = HUD print, RST 28 = death cinematic, RST 38 = phantom-sound
-  trampoline, etc.) + boot init routine at bank 1:0x4000.
+  (RST 10 = HL += A pointer math, RST 28 = state-dispatcher wrapper, 
+  RST 38 = phantom-sound trampoline, etc.) + boot init at bank 1:0x4000.
+- [`main_loop_and_entry.md`](main_loop_and_entry.md) — Power-on → 0x0150
+  setup → main loop at **0x016C-0x018A** (6 subsystem CALLs + JP back).
+  Game-start entry at 0x3B37 confirmed.
 - [`hram_allocation_map.md`](hram_allocation_map.md) — HRAM byte-by-byte
   purpose. Cross-bank access census + identified roles for ~80% of bytes.
 - [`wram_allocation_map.md`](wram_allocation_map.md) — WRAM page heatmap

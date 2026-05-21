@@ -10,7 +10,7 @@ init routine at bank 1:0x4000.
 |-----|-------|-----------------------------------------------------|------------------------------------------|
 | 00  | 0x0000| `D0 63 FB EF FE F1 ...` (junk)                      | Unused (would fall into 0x0008)          |
 | 08  | 0x0008| `JP 0x0000`                                         | Soft reset (unused in normal play)       |
-| 10  | 0x0010| `JP 0x09DE`                                         | **HUD/text print** — caller sets `HL=FFC4` (text buffer) then `RST 10` |
+| 10  | 0x0010| `JP 0x09DE`                                         | **HL += A** (16-bit pointer-offset primitive — see `main_loop_and_entry.md`) |
 | 18  | 0x0018| `JP 0x0000`                                         | Soft reset (unused)                      |
 | 20  | 0x0020| `LD (D880), A; RETI`                                | **Fast scene change** — write A to D880 master-scene and RETI (returns from interrupt). Likely fired from STAT/Timer to change scene atomically. |
 | 28  | 0x0028| `JP 0x099A`                                         | **Death-cinematic trigger** — paired with `FFE4=1; RST 28` pattern in death code |
@@ -23,9 +23,10 @@ Notes:
 - `RST 38` is the famous v2.88 phantom-sound fix. Vanilla `RETI` at 0x003B
   re-enabled IME inside our extended VBlank handler, letting Timer ISR
   fire mid-VBlank and double-consume D887 → phantom sounds.
-- `RST 10` is the most-called RST — used everywhere the score / health /
-  text needs updating. Always paired with `LD HL, FFC4` (or similar
-  HUD buffer pointer) before the call.
+- `RST 10` is the most-called RST — used everywhere a table lookup or
+  offset pointer arithmetic is needed (`LD HL, base; LD A, idx; RST 10;
+  LD A, (HL)` pattern). **NOT a HUD/text print** — earlier doc draft
+  was wrong; corrected in `main_loop_and_entry.md`.
 
 ## Boot init at bank 1:0x4000
 
@@ -105,17 +106,29 @@ bank 0:0x4A44, after a chain through 0x099A. The cinematic sets
 `D880=0x17` and reads `FFE4=1` to know it's a death event vs
 something else.
 
-## RST 10 + FFC4 = HUD text routine
+## RST 10 = HL += A (CORRECTED)
 
-Pattern:
+`RST 10` is **NOT a HUD/text print**. Disassembly of 0x09DE:
 ```asm
-LD HL, FFC4         ; HUD text buffer start
-LD A, <string ID>   ; or other parameter
-RST 10              ; → JP 0x09DE
+0x09DE: ADD A, L
+        JR NC, +1
+        INC H
+        LD L, A
+        RET                ; HL = HL + A (with carry)
 ```
 
-The HUD buffer at FFC4 extends through to ~FFE3 (~32 bytes), enough for
-a stylized HUD line.
+It's a 1-byte shortcut for 16-bit pointer arithmetic. Used as:
+```asm
+LD HL, table_base
+LD A, index
+RST 10            ; HL = table_base + index
+LD A, (HL)        ; A = table[index]
+```
+
+The earlier "FFC4 writes" the static HRAM census saw were misidentified
+operand bytes from `LD DE/HL/BC, $C4xx` instructions (e.g., `11 E0 C4`
+= `LD DE, $C4E0`, not `LDH (FFC4), A`). FFC4 is not actually a HUD
+buffer in the game.
 
 ## RST 30 + 0x42A5 = ?
 
