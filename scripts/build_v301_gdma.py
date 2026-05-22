@@ -55,7 +55,17 @@ ATTR_BUFFER = 0xD000  # WRAM bank 2 (DA00 alternative tested, made no difference
 
 
 def create_inline_tile_copy_tileonly() -> bytes:
-    """Tile-only inline copy — single STAT wait per group, vanilla speed.
+    """Inline tile+attr copy (formerly tile-only; restored v3.00 behavior).
+
+    Per group: 4 tile writes (VBK=0) then 4 attr writes (VBK=1) with
+    WRAM_BG_TABLE lookup. Single STAT wait per phase. ~vanilla speed
+    once optimized.
+
+    Critical for title screen: animated tiles get attrs IMMEDIATELY
+    when written to VRAM (no bg_sweep latency). Without this, real
+    hardware shows partial colorization (white stripes + colored
+    sprite letters) because bg_sweep × 2 can't keep up with title
+    animation cadence.
 
     Replaces 0x42A7..0x436D. H pre-set to 0x98 or 0x9C by entry point.
     24 rows × 6 groups × 4 tiles = 576 tiles.
@@ -87,31 +97,67 @@ def create_inline_tile_copy_tileonly() -> bytes:
         assert -128 <= offset <= 127
         code[pos] = offset & 0xFF
 
-    # Setup
+    # Setup (H pre-set by entry point to 0x98 or 0x9C)
     emit([0x2E, 0x00])               # LD L, 0x00
-    emit([0x11, 0xA0, 0xC1])         # LD DE, 0xC1A0
+    emit([0x11, 0xA0, 0xC1])         # LD DE, 0xC1A0 (WRAM tile source)
     emit([0x3E, 0x18])               # LD A, 24
-    emit([0xF5])                     # PUSH AF  (row counter)
+    emit([0xF5])                     # PUSH AF (row counter on stack)
 
     mark('row_loop')
-    emit([0x0E, 0x06])               # LD C, 6  (groups per row)
+    emit([0x0E, 0x06])               # LD C, 6 (groups per row)
 
     mark('group_loop')
-    # STAT wait: mode 3 then mode 0
+    # -------- TILE PHASE: VBK=0 (default), 4 tile writes --------
     emit([0xF3])                     # DI
-    mark('stat3')
+    mark('stat3a')
     emit([0xF0, 0x41])               # LDH A,[FF41]
     emit([0xE6, 0x03])               # AND 3
     emit([0xFE, 0x03])               # CP 3
-    emit_jr_back(0x20, 'stat3')      # JR NZ, stat3
-    mark('stat0')
+    emit_jr_back(0x20, 'stat3a')     # JR NZ, stat3a
+    mark('stat0a')
     emit([0xF0, 0x41])               # LDH A,[FF41]
     emit([0xE6, 0x03])               # AND 3
-    emit_jr_back(0x20, 'stat0')      # JR NZ, stat0
-    # 4 tile writes
+    emit_jr_back(0x20, 'stat0a')     # JR NZ, stat0a
     for _ in range(4):
         emit([0x1A, 0x13, 0x22])     # LD A,[DE]; INC DE; LD [HL+],A
     emit([0xFB])                     # EI
+
+    # -------- TRANSITION: rewind L,E by 4; VBK=1 --------
+    emit([0xC5])                     # PUSH BC (save group counter C)
+    emit([0x7D])                     # LD A, L
+    emit([0xD6, 0x04])               # SUB 4
+    emit([0x6F])                     # LD L, A
+    emit([0x30, 0x01])               # JR NC, +1
+    emit([0x25])                     # DEC H
+    emit([0x7B])                     # LD A, E
+    emit([0xD6, 0x04])               # SUB 4
+    emit([0x5F])                     # LD E, A
+    emit([0x30, 0x01])               # JR NC, +1
+    emit([0x15])                     # DEC D
+    emit([0x06, WRAM_BG_TABLE_HI])   # LD B, 0xDA (bg_table_hi in WRAM)
+    emit([0x3E, 0x01])               # LD A, 1
+    emit([0xE0, 0x4F])               # LDH [FF4F], A (VBK=1 attr bank)
+
+    # -------- ATTR PHASE: VBK=1, 4 attr writes via [BC] lookup --------
+    emit([0xF3])                     # DI
+    mark('stat3b')
+    emit([0xF0, 0x41])
+    emit([0xE6, 0x03])
+    emit([0xFE, 0x03])
+    emit_jr_back(0x20, 'stat3b')
+    mark('stat0b')
+    emit([0xF0, 0x41])
+    emit([0xE6, 0x03])
+    emit_jr_back(0x20, 'stat0b')
+    # 4 attr writes: LD A,[DE]; INC DE; LD C,A; LD A,[BC]; LD [HL+],A
+    for _ in range(4):
+        emit([0x1A, 0x13, 0x4F, 0x0A, 0x22])
+    emit([0xFB])                     # EI
+
+    # -------- POST-ATTR: VBK=0 --------
+    emit([0xAF])                     # XOR A
+    emit([0xE0, 0x4F])               # LDH [FF4F], A (VBK=0)
+    emit([0xC1])                     # POP BC (restore group counter)
 
     # Group counter
     emit([0x0D])                     # DEC C
@@ -329,11 +375,14 @@ def build_v301():
     w(cond_pal_addr, create_conditional_palette_cached(pal_loader_addr))
 
     # bg_sweep safety net. Strip the internal FFC1 gate (first 4 bytes
-    # `F0 C1 B7 C8` = LDH A,[FFC1]; OR A; RET Z) so it runs on title too.
+    # `F0 C1 B7 C8` = LDH A,[FFC1]; OR A; RET Z. Keep this prefix —
+    # bg_sweep should only run during gameplay (FFC1=1), matching v3.00.
+    # Stripping it caused title flicker because the title relies on
+    # inline tile+attr copy alone; running bg_sweep during title's
+    # rapid VRAM churn introduced timing conflicts.
     sweep = bytearray(create_bg_sweep_viewport_gated(bg_table_addr, bg_sweep_addr))
     assert sweep[:4] == bytearray([0xF0, 0xC1, 0xB7, 0xC8]), \
         f"bg_sweep prefix changed: {sweep[:4].hex()}"
-    sweep[0:4] = bytearray([0x00, 0x00, 0x00, 0x00])  # NOPs
     w(bg_sweep_addr, bytes(sweep))
 
     # GDMA transfer routine
@@ -421,50 +470,23 @@ def build_v301():
     code[df02_jr] = (len(code) - df02_jr - 1) & 0xFF
 
     # ---- WARM PATH ----
-    # 1. cond_pal
+    # Structure matches v3.00 EXACTLY (per regression analysis):
+    #   1. cond_pal
+    #   2. FFC1 gate: bg_sweep × 1, OAM DMA, shadow_main
+    # The only v3.01 additions are the FF99 protocol fix (in the
+    # prologue/epilogue) and the cold-boot zero of bank 2 (one-shot,
+    # behind the DF02 sentinel). attr_comp + GDMA are STILL not built
+    # into the handler — keeping them in the source tree for future
+    # work but explicitly NOT calling them here. This matches the
+    # v3.00 cycle budget, which fits cleanly in VBlank on real hardware.
     code.extend([0xCD, cond_pal_addr & 0xFF, (cond_pal_addr >> 8) & 0xFF])
 
-    # 2. bg_sweep × 2 — runs ALWAYS (title too). The simplified inline
-    # hook no longer writes attrs, so bg_sweep is the only mechanism
-    # that colors title-screen tiles AND VRAM rows 8-17 during gameplay
-    # (attr_comp/GDMA cover rows 0-7). 2× per frame gives full 18-row
-    # coverage in 9 frames (~150ms at 60 FPS — half of the 18-frame
-    # single-call cycle, still visually smooth).
-    # Tested 1×, 2×, 3×: × 2 gives the best balance of update speed
-    # vs autoplay reliability. × 3 starves the game's main loop
-    # (0/3 runs reach mini-boss). × 2 reaches mini-boss 1/5 (similar
-    # to × 1 = 1/3, within autoplay noise) and gets DCBB drained
-    # to 0x56 (best of any variant tested).
-    code.extend([0xCD, bg_sweep_addr & 0xFF, (bg_sweep_addr >> 8) & 0xFF])
-    code.extend([0xCD, bg_sweep_addr & 0xFF, (bg_sweep_addr >> 8) & 0xFF])
-
-    # 3. GDMA (if buffer ready). Skipped on title since attr_computation
-    # never runs there (gated by FFC1), so DF03 stays 0.
-    code.extend([0xFA, 0x03, 0xDF, 0xB7])
-    gdma_skip = len(code) + 1
-    code.extend([0x28, 0x00])
-    code.extend([0xCD, gdma_addr & 0xFF, (gdma_addr >> 8) & 0xFF])
-    code[gdma_skip] = (len(code) - gdma_skip - 1) & 0xFF
-
-    # 4. FFC1 gate: game-only work.
-    # attr_computation + GDMA RE-ENABLED. The earlier "every combination
-    # breaks" matrix was misleading — it conflated two distinct failures:
-    #   (a) HBlank-mode HDMA writing to VRAM bank 0 after VBK was restored
-    #       (visual corruption of TILE IDs, not just attrs)
-    #   (b) Cycle starvation in the autoplay stress harness when row
-    #       count was too high (game's transition logic could not advance)
-    # General-mode GDMA + 8-row attr_comp avoids both: VBK stays at 1
-    # for the full atomic transfer, and 8 rows keeps cycle cost at
-    # ~17K T/frame, leaving the game ~53K T main-loop budget.
-    # Full 18-row visible coverage emerges in ~2.3 frames (attr_comp
-    # rotates through rows; bg_sweep covers gaps).
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
     code.extend([0x28, 0x00])
-    code.extend([0xCD, 0x80, 0xFF])           # OAM DMA
+    code.extend([0xCD, bg_sweep_addr & 0xFF, (bg_sweep_addr >> 8) & 0xFF])
     code.extend([0xCD, shadow_main_addr & 0xFF, (shadow_main_addr >> 8) & 0xFF])
-    code.extend([0xCD, attr_comp_addr & 0xFF, (attr_comp_addr >> 8) & 0xFF])
-    code.extend([0xCD, gdma_addr & 0xFF, (gdma_addr >> 8) & 0xFF])
+    code.extend([0xCD, 0x80, 0xFF])           # OAM DMA
     code[ffc1_skip] = (len(code) - ffc1_skip - 1) & 0xFF
 
     # Restore VBK, restore FF99, return
