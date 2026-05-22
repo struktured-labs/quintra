@@ -233,7 +233,15 @@ def create_palette_loader(pal_addr, boss_pal_addr, boss_slot_addr,
     bs_pos = len(code); code.extend([0x28, 0x00])
     code.extend([0x3D, 0x5F, 0x4F, 0x06, 0x00])
     code.extend([0x21, boss_slot_addr & 0xFF, (boss_slot_addr >> 8) & 0xFF])
-    code.extend([0x09, 0x7E, 0x87, 0xF6, 0x80, 0xE0, 0x6A])
+    # ADD A,A × 3 → slot*8 (OCPS index for OBJ palette slot).
+    # Was previously ADD A,A × 1 → slot*2, the wrong stride: each CGB
+    # palette is 8 bytes, so OBJ palette N starts at index N*8 in OCPS.
+    # The old code for Gargoyle (slot=6) wrote to OCPS=12 (palette 1
+    # color 2 + auto-increment), which corrupted Sara D's palette.
+    # User symptom: Sara's colors changed when a mini-boss spawned and
+    # reverted after she moved (subsequent OBJ palette refreshes
+    # overwrote the corruption).
+    code.extend([0x09, 0x7E, 0x87, 0x87, 0x87, 0xF6, 0x80, 0xE0, 0x6A])
     code.extend([0x7B, 0x87, 0x87, 0x87, 0x4F, 0x06, 0x00])
     code.extend([0x21, boss_pal_addr & 0xFF, (boss_pal_addr >> 8) & 0xFF])
     code.extend([0x09, 0x0E, 0x08, 0x2A, 0xE0, 0x6B, 0x0D, 0x20, 0xFA])
