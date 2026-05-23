@@ -35,18 +35,32 @@ then dive into the specific subsystem you care about.
 
 ## v3.01 colorization (current production)
 
-- [`v301_breakthrough.md`](v301_breakthrough.md) — **SHIPPED.** Full
-  attr_comp + GDMA optimization landed. Two distinct bugs (HBlank-mode
-  HDMA tile-ID corruption, autoplay starvation at ≥12 rows) were
-  conflated by probe-only verification. Fix: general-mode GDMA + 8-row
-  attr_comp. Verified visually + state-machine.
+- [`v301_resolved_issues.md`](v301_resolved_issues.md) — **CURRENT PRODUCTION 2026-05-23.**
+  Four user-reported issues resolved with mGBA-probe verification BEFORE
+  deployment: (1) Sara color change near miniboss [palette_loader OCPS
+  slot×8 fix]; (2-4) Title splotches root causes [cold-boot zero
+  overrunning VBlank, FF99 protocol overhead, missing bg_table pal 5
+  entries]. SELECT menu identical to v3.00. Scroll flicker is
+  pre-existing (matches v3.00).
+- [`scroll_flicker_analysis.md`](scroll_flicker_analysis.md) — Root cause
+  of scroll flicker: game double-buffers tilemaps (0x9800 ↔ 0x9C00) every
+  ~5 frames but bg_sweep only sweeps the DISPLAYED one. Non-displayed
+  accumulates uninit attrs that flash when LCDC bit 3 toggles. Both v3.00
+  and v3.01 have this characteristic. Three potential fixes described
+  but deferred (regression risk).
+- [`inline_tile_attr_copy.md`](inline_tile_attr_copy.md) — Full
+  documentation of the 0x42A7 inline tile+attr copy: entry points,
+  5 static callers, tile/attr phase structure with STAT-mode waits,
+  bg_table dependency, VBK toggling. v3.01 body is byte-for-byte
+  identical to v3.00's.
+- [`v301_breakthrough.md`](v301_breakthrough.md) — **HISTORICAL** (2026-05-21).
+  Earlier attr_comp + GDMA approach. Proved unreliable on hardware,
+  currently disabled in production (warm path is v3.00-equivalent).
 - [`v301_gdma_freeze_diagnosis.md`](v301_gdma_freeze_diagnosis.md) —
-  Full diagnosis of the v3.01 freeze: root cause was **stale FF99**;
-  ISRs restored bank from FF99 → wrong bank → garbage exec.
-  **Status: RESOLVED.**
+  Earlier root cause of v3.01 freeze: stale FF99 caused ISR bank
+  corruption. **Status: HISTORICAL** (attr_comp+GDMA disabled).
 - [`v301_regression_stage_load_stuck.md`](v301_regression_stage_load_stuck.md) —
-  **HISTORICAL.** Earlier "every combination breaks" matrix was wrong.
-  Superseded by `v301_breakthrough.md`.
+  **HISTORICAL.** Earlier "every combination breaks" matrix.
 - [`v301_performance.md`](v301_performance.md) — Per-VBlank cycle
   estimate (~53K T = ~76% of frame budget). Comparison to vanilla and
   v3.00. Empirical efficiency evidence from probes (scroll tearing
@@ -56,6 +70,23 @@ then dive into the specific subsystem you care about.
   tile inline, attrs go through VBlank attr_computation + GDMA).
 - [`bg_tile_architecture.md`](bg_tile_architecture.md) Versioning
   section — quick version table.
+
+## Game engine architecture (2026-05-23 additions)
+
+- [`game_state_machine.md`](game_state_machine.md) — Unified reference for
+  the 5 state bytes (D880, FFC1, FFBA, FFBF, FFBD) and their interactions.
+  Includes full D880 value table (boot, dungeon, mini-boss, 9 boss arenas,
+  death), authority chain, common transitions, autoplay timeline trace.
+- [`boss_arena_routines.md`](boss_arena_routines.md) — All 9 boss arena
+  setup routines (Shalamar through Penta Dragon + 1 hidden). Per-arena
+  init position, first data pointer, common setup chain. Includes
+  arena 1 disassembly for reference.
+- [`bank_switched_call_pattern.md`](bank_switched_call_pattern.md) —
+  CALL → thunk → RST 28h → bank-switched function → cleanup pattern
+  used throughout for cross-bank function invocation.
+- [`sound_engine.md`](sound_engine.md) — Timer ISR chain (0x0050 →
+  0x06B3 → bank 3:0x4000), sound engine state bytes D880-D88A,
+  bank-switching, why v3.01's removed FF99 protocol is safe.
 
 ## Reverse engineering — specific subsystems
 
