@@ -446,32 +446,15 @@ def build_v301():
     offset = bg_copy - (len(code) + 2)
     code.extend([0x20, offset & 0xFF])
 
-    # Cold-boot bank-2 zero — with the FF99 fix in place, the previous
-    # "white screens on title" issue should no longer happen. Try zeroing
-    # the attr buffer so subsequent HDMA copies a known-clean state to
-    # VRAM bank 1 instead of garbage.
-    code.extend([0xF3])                       # DI
-    code.extend([0x3E, 0x02, 0xE0, 0x70])     # FF70 = 2
-    code.extend([0x21, 0x00, 0xD0])           # HL = D000
-    code.extend([0xAF])                       # A = 0
-    code.extend([0x06, 0x00])                 # B = 0 (256 iters)
-    zero_loop1 = len(code)
-    code.extend([0x22, 0x05])                 # LD [HL+],A; DEC B
-    code.extend([0x20, (zero_loop1 - (len(code) + 2)) & 0xFF])
-    code.extend([0x06, 0x00])                 # B = 0 again
-    zero_loop2 = len(code)
-    code.extend([0x22, 0x05])
-    code.extend([0x20, (zero_loop2 - (len(code) + 2)) & 0xFF])
-    code.extend([0x06, 0x00])
-    zero_loop3 = len(code)
-    code.extend([0x22, 0x05])
-    code.extend([0x20, (zero_loop3 - (len(code) + 2)) & 0xFF])
-    code.extend([0x06, 0x00])
-    zero_loop4 = len(code)
-    code.extend([0x22, 0x05])
-    code.extend([0x20, (zero_loop4 - (len(code) + 2)) & 0xFF])
-    code.extend([0x3E, 0x01, 0xE0, 0x70])     # FF70 = 1
-    code.extend([0xFB])                       # EI
+    # Cold-boot bank-2 zero REMOVED. It took ~5K T on the first VBlank,
+    # which spilled the subsequent palette_loader call out of LCD mode 1
+    # into modes 2/3. CGB CRAM writes during mode 3 are dropped silently,
+    # leaving some OBJ palette bytes at boot defaults (0xFF 0x7F = white).
+    # Symptom: Sara's body rendered with white instead of pink because
+    # OBJ palette 2 color 1 stayed at 0x7FFF after palette_loader's
+    # writes were partially dropped.
+    # Since attr_comp + GDMA aren't called in the warm path, WRAM bank 2
+    # is never read — zeroing it served no purpose. Removed entirely.
 
     # ---- skip_cold target ----
     code[df02_jr] = (len(code) - df02_jr - 1) & 0xFF
