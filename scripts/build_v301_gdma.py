@@ -443,8 +443,15 @@ def build_v301():
     # game freeze. Updating FF99 here makes ISRs restore bank 13 correctly.
     # ============================================================
     code = bytearray()
-    code.extend([0xF0, 0x99, 0xF5])           # LDH A,[FF99]; PUSH AF (save FF99)
-    code.extend([0x3E, 0x0D, 0xE0, 0x99])     # LD A,0x0D; LDH [FF99],A (FF99=bank13)
+    # FF99 protocol REMOVED — v3.00 doesn't have it and works correctly.
+    # Adding it on v3.01 cost ~100T per VBlank and pushed palette_loader
+    # writes into LCD mode 3 where CRAM writes are dropped silently,
+    # producing the "splotches" the user reported on title screen.
+    # The original concern (ISRs restoring wrong ROM bank from FF99) is
+    # not a problem in practice: STAT and Timer ISRs in this ROM don't
+    # mid-handler restore FF99 in a way that breaks our bank context.
+    # code.extend([0xF0, 0x99, 0xF5])           # LDH A,[FF99]; PUSH AF
+    # code.extend([0x3E, 0x0D, 0xE0, 0x99])     # FF99 = 0x0D
     code.extend([0xF0, 0x4F, 0xF5])           # save VBK
     code.extend([0xAF, 0xE0, 0x4F])           # VBK = 0
 
@@ -456,7 +463,10 @@ def build_v301():
     # ---- COLD-BOOT PATH ----
     code.extend([0x3E, 0x5A, 0xEA, 0x02, 0xDF])  # DF02 = 0x5A
     code.extend([0xAF, 0xEA, 0x00, 0xDF])         # DF00 = 0 (hash)
-    code.extend([0xAF, 0xEA, 0x03, 0xDF])         # DF03 = 0 (GDMA-ready flag)
+    # DF03 init REMOVED. Was unused (only meaningful for attr_comp+GDMA
+    # path which isn't called). Saving 4 bytes / ~25T from cold-boot.
+    # Brings v3.01 cold-boot bytes to match v3.00 baseline exactly.
+    # code.extend([0xAF, 0xEA, 0x03, 0xDF])
 
     # Copy bg_table ROM → WRAM 0xDA00 (for inline hook compatibility — not
     # strictly needed for v3.01 since inline hook no longer reads it, but
@@ -503,7 +513,7 @@ def build_v301():
 
     # Restore VBK, restore FF99, return
     code.extend([0xF1, 0xE0, 0x4F])           # POP AF; LDH [VBK], A
-    code.extend([0xF1, 0xE0, 0x99])           # POP AF; LDH [FF99], A (restore FF99)
+    # code.extend([0xF1, 0xE0, 0x99])           # POP AF; LDH [FF99], A (FF99 protocol removed)
     code.extend([0xC9])
 
     assert colorize_addr + len(code) <= bg_table_addr, \
