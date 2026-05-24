@@ -66,8 +66,12 @@ def _bg_table() -> bytes:
     # Items
     for i in range(0x88, 0xE0):
         table[i] = 1
-    # Sentinel
-    table[0xFF] = 0xFF
+    # Sentinel — was 0xFF historically (palette 7 sentinel for ff_filter).
+    # Changed to 0x00 (pal 0): inline tile+attr copy at 0x42A7 looks up
+    # bg_table[tile_id] and writes the result as the attr byte. Any
+    # tile-ID 0xFF the game writes would have attr=0xFF=pal 7 splotch.
+    # The sentinel role is no longer needed in v3.01.
+    table[0xFF] = 0x00
     return bytes(table)
 
 
@@ -502,6 +506,64 @@ def build_v301():
     # tiles when the game's tilemap copy runs, bg_sweep on title was
     # redundant for correctness and harmful for timing.
     code.extend([0xCD, cond_pal_addr & 0xFF, (cond_pal_addr >> 8) & 0xFF])
+
+    # ============================================================
+    # ATTR CLEANER (from build_v301_attrinit.py; verified in mGBA to
+    # eliminate ALL uninit 0xFF attrs that produce title/menu splotches).
+    #
+    # Clears one row (32 bytes) of attrs in BOTH 0x9800 and 0x9C00
+    # tilemap regions per frame, for 32 frames after cold-boot. Then
+    # becomes a ~12T no-op. Runs AFTER cond_pal so palette_loader's
+    # CRAM writes have finished (avoids LCD mode 3 drops).
+    #
+    # State bytes:
+    #   DF07 = row counter (32→0)
+    #   DF08 = init sentinel (0x5A means counter initialized)
+    # ============================================================
+    # First-run handshake: DF08 sentinel
+    code.extend([0xFA, 0x08, 0xDF])           # LD A, [DF08]
+    code.extend([0xFE, 0x5A])                 # CP 0x5A
+    df08_jr = len(code) + 1
+    code.extend([0x20, 0x00])                 # JR NZ, do_init
+    # Already-initialized: load DF07
+    code.extend([0xFA, 0x07, 0xDF])           # LD A, [DF07]
+    code.extend([0xB7])                       # OR A
+    cleaner_skip_jr = len(code) + 1
+    code.extend([0x28, 0x00])                 # JR Z, skip_cleaner
+    code.extend([0x3D])                       # DEC A
+    code.extend([0xEA, 0x07, 0xDF])           # DF07 = A (current row 0..31)
+    # HL = 0x9800 + (A << 5)
+    code.extend([0x6F])                       # LD L, A
+    code.extend([0x26, 0x00])                 # LD H, 0
+    code.extend([0x29, 0x29, 0x29, 0x29, 0x29])  # ADD HL,HL × 5 (×32)
+    code.extend([0x7C])                       # LD A, H
+    code.extend([0xF6, 0x98])                 # OR 0x98
+    code.extend([0x67])                       # LD H, A
+    code.extend([0xE5])                       # PUSH HL (save for 2nd pass)
+    # VBK = 1
+    code.extend([0x3E, 0x01, 0xE0, 0x4F])
+    # Clear 32 bytes at 0x9800 + row*32
+    code.extend([0xAF])                       # A = 0
+    code.extend([0x06, 0x20])                 # B = 32
+    code.extend([0x22, 0x05, 0x20, 0xFC])     # loop: [HL+]=A; DEC B; JR NZ
+    # Switch to 0x9C00 region (H |= 0x04)
+    code.extend([0xE1])                       # POP HL
+    code.extend([0x7C, 0xF6, 0x04, 0x67])     # H |= 0x04
+    code.extend([0xAF])
+    code.extend([0x06, 0x20])
+    code.extend([0x22, 0x05, 0x20, 0xFC])     # clear 32 bytes at 0x9C00 + row*32
+    # VBK = 0
+    code.extend([0xAF, 0xE0, 0x4F])
+    skip_init_jr = len(code) + 1
+    code.extend([0x18, 0x00])                 # JR end_cleaner
+
+    # do_init target: set DF08=0x5A, DF07=32, skip cleaner this frame
+    code[df08_jr] = (len(code) - df08_jr - 1) & 0xFF
+    code.extend([0x3E, 0x5A, 0xEA, 0x08, 0xDF])  # DF08 = 0x5A
+    code.extend([0x3E, 0x20, 0xEA, 0x07, 0xDF])  # DF07 = 32
+    # end_cleaner / skip_cleaner targets
+    code[skip_init_jr] = (len(code) - skip_init_jr - 1) & 0xFF
+    code[cleaner_skip_jr] = (len(code) - cleaner_skip_jr - 1) & 0xFF
 
     code.extend([0xF0, 0xC1, 0xB7])
     ffc1_skip = len(code) + 1
