@@ -35,16 +35,15 @@ from build_v296_phantomsafe import create_bg_sweep_viewport_gated
 def _bg_table() -> bytes:
     """Tile-to-palette lookup table (256 bytes, one per tile ID).
 
-    Restored hazard pal 5 entries that v3.01 had dropped. The deployed
-    v3.00 FIXED.gb has these tiles mapped to pal 5 (hazards / spike
-    cylinders / thrusting spikes) — without them, those tiles render
-    with pal 0 (white BG = invisible) which produced the "splotches"
-    the user observed on title screen.
+    Tile-ID assignments derived from multi-room tilemap context
+    analysis. Pal-5 (red hazard) entries restored for spike cylinders
+    only; tiles 0x47/0x57 are dual-use (wall corners + thrusting
+    spikes) and we choose pal-6 (wall) because the orange/red
+    artifacts on wall corners are MORE visible than wall-color spikes.
 
-    Tile-by-tile diff against v3.00 FIXED.gb's deployed bg_table:
-      v3.01 used to map 0x2A-0x2E, 0x3A-0x3D → pal 0 (invisible)
-      v3.01 used to map 0x47, 0x57 → pal 6 (gray wall) wrongly
-      v3.00 maps these to pal 5 (red hazard / yellow text)
+    User-reported regression 2026-05-23: 0x47/0x57 = pal 5 caused
+    orange wall-corner artifacts (matched v3.00 byte but visible
+    regression). Reverted to pal 6 to avoid wall-corner artifacts.
     """
     table = bytearray(256)
     # Wall edge tiles → pal 6 (slate gray)
@@ -53,16 +52,17 @@ def _bg_table() -> bytes:
     # Wall interior tiles → pal 6
     for i in [0x25, 0x26, 0x34, 0x35, 0x36, 0x37, 0x38]:
         table[i] = 6
-    # Corner/doorway tiles → pal 6 (EXCEPT 0x47, 0x57 — see below)
-    for i in [0x41, 0x42, 0x44, 0x45, 0x46, 0x48, 0x49,
-              0x54, 0x55, 0x56, 0x59]:
+    # Corner/doorway tiles → pal 6. 0x47 and 0x57 INCLUDED here
+    # (NOT in hazard list) because their wall-corner use is more
+    # visible than their thrusting-spike use.
+    for i in [0x41, 0x42, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49,
+              0x54, 0x55, 0x56, 0x57, 0x59]:
         table[i] = 6
-    # Hazards: spike cylinders + thrusting wall spikes → pal 5
-    # These were dropped in the v3.01 _bg_table. Restored from v3.00.
+    # Hazards: spike cylinders only → pal 5
+    # (0x47/0x57 deliberately excluded — they're wall corners more
+    # often than spikes)
     for i in [0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x3A, 0x3B, 0x3C, 0x3D]:
         table[i] = 5
-    table[0x47] = 5  # thrusting spike (not gray wall)
-    table[0x57] = 5  # thrusting spike (not gray wall)
     # Items
     for i in range(0x88, 0xE0):
         table[i] = 1
