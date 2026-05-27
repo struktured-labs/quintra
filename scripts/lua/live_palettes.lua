@@ -173,8 +173,27 @@ callbacks:add("frame", function()
     -- v3.01 colorize handler reads DF0A, if non-zero treats DF0A-1
     -- as boss FFBA, JPs to bank2:0x4000 boss arena entry.
     if pending_dx then
+        log(string.format("f%d: PRE-DX  D880=0x%02X FFBA=%d FFC1=%d FFBD=%d DF0A_before=%d",
+            f, emu:read8(0xD880), emu:read8(0xFFBA), emu:read8(0xFFC1),
+            emu:read8(0xFFBD), emu:read8(0xDF0A)))
         emu:write8(0xDF0A, pending_dx)
-        log(string.format("f%d: DX teleport requested DF0A=%d", f, pending_dx))
+        log(string.format("f%d: WROTE DF0A=%d", f, pending_dx))
         pending_dx = nil
+        -- Schedule post-teleport diagnostic
+        post_dx_check_frames = 60
+    end
+
+    -- After a DX request, log state every few frames to see what happened
+    if post_dx_check_frames and post_dx_check_frames > 0 then
+        if post_dx_check_frames % 10 == 0 then
+            log(string.format("f%d: POST-DX (%d remaining) D880=0x%02X FFBA=%d FFC1=%d FFBD=%d DF0A=%d DF0B=0x%02X",
+                f, post_dx_check_frames, emu:read8(0xD880), emu:read8(0xFFBA),
+                emu:read8(0xFFC1), emu:read8(0xFFBD), emu:read8(0xDF0A),
+                emu:read8(0xDF0B)))
+        end
+        post_dx_check_frames = post_dx_check_frames - 1
     end
 end)
+
+-- Module-level state for post-teleport diagnostic
+post_dx_check_frames = 0

@@ -497,48 +497,20 @@ def build_v301():
     # ---- skip_cold target ----
     code[df02_jr] = (len(code) - df02_jr - 1) & 0xFF
 
-    # ============================================================
-    # DX TELEPORT HOOK (v3.01 feature)
-    # ============================================================
-    # If WRAM[DF0A] != 0 AND FFC1 != 0 (gameplay active), treat
-    # (DF0A - 1) as boss FFBA index (0-8) and JP to bank 2:0x4000.
-    # The arena routine handles all proper setup.
+    # DX TELEPORT hook REMOVED (was: JP bank2:0x4000 from VBlank IRQ).
+    # Investigation showed bank2:0x4000 calls bank0:0x0099, which is a
+    # STAT-mode busy-wait for LCD mode 3. From VBlank IRQ context the
+    # LCD is in mode 1 and stays there until our IRQ returns — so the
+    # busy-wait loops forever, and EI'd nested IRQs recurse into the
+    # same loop. Result: freeze.
     #
-    # State byte: DF0A
-    #   0       = no teleport
-    #   1..9    = teleport to FFBA = DF0A-1 (1=Shalamar, 9=PentaDragon)
-    #
-    # FFC1 guard: requires gameplay state. From title screen the arena
-    # entry expects pre-loaded sprite/palette/scroll context that the
-    # title state doesn't provide — would hang or render garbage.
-    #
-    # The teleport is a one-shot: DF0A is cleared after consumption.
-    # Hook fires from VBlank IRQ context: SP gets reset, EI before JP.
-    # ============================================================
-    code.extend([0xF0, 0xC1])                 # LDH A, [FFC1]
-    code.extend([0xB7])                       # OR A
-    ffc1_guard_jr = len(code) + 1
-    code.extend([0x28, 0x00])                 # JR Z, skip_teleport (no gameplay)
-    code.extend([0xFA, 0x0A, 0xDF])           # LD A, [DF0A]
-    code.extend([0xB7])                       # OR A
-    teleport_skip_jr = len(code) + 1
-    code.extend([0x28, 0x00])                 # JR Z, skip_teleport (no request)
-    # Teleport requested — A holds DF0A value
-    code.extend([0x3D])                       # DEC A (DF0A-1 = target FFBA)
-    code.extend([0xE0, 0xBA])                 # LDH [FFBA], A
-    code.extend([0xAF])                       # XOR A
-    code.extend([0xEA, 0x0A, 0xDF])           # LD [DF0A], A (clear request)
-    # Reset stack to clean position
-    code.extend([0x31, 0xFE, 0xDF])           # LD SP, 0xDFFE
-    # Switch MBC ROM bank to 2 (where boss arena code lives)
-    code.extend([0x3E, 0x02])                 # LD A, 2
-    code.extend([0xEA, 0x00, 0x20])           # LD [0x2000], A
-    code.extend([0xE0, 0x99])                 # LDH [FF99], A
-    code.extend([0xFB])                       # EI
-    code.extend([0xC3, 0x00, 0x40])           # JP 0x4000
-    # skip_teleport target (both guards jump here)
-    code[ffc1_guard_jr] = (len(code) - ffc1_guard_jr - 1) & 0xFF
-    code[teleport_skip_jr] = (len(code) - teleport_skip_jr - 1) & 0xFF
+    # True teleport would require either:
+    #   a) Hooking the GAME's main loop (no free bank-0 space)
+    #   b) Per-boss save states (manual one-time capture)
+    #   c) Reverse-engineering the natural boss-spawn trigger flag
+    # Pending a follow-up. For now teleport is unsupported; the
+    # editor's "State-byte Hold (legacy)" section is still usable for
+    # forcing FFBA/D880/FFB7 if user wants to experiment.
 
     # ---- WARM PATH ----
     # Structure matches v3.00 exactly: cond_pal → FFC1 gate {bg_sweep, OAM,

@@ -215,24 +215,10 @@ Make sure mGBA was launched with <code>--script scripts/lua/live_palettes.lua</c
 <button onclick="copyState()">Copy current as JSON</button>
 """]
 
-    # ─── DX TELEPORT: full ROM-side boss arena entry ───
-    # Triggers DX teleport hook in v3.01 colorize handler:
-    # writes DF0A = ffba+1, ROM JPs to bank2:0x4000 with FFBA set.
-    # This invokes the FULL arena init (boss tiles, palette, position).
-    html_parts.append('<div class="section"><h2>🎯 DX Teleport (Full Arena Entry)</h2>')
-    html_parts.append('<p style="font-size:0.85em;color:#888;">'
-                      'Triggers the v3.01 ROM-side teleport hook. Sets FFBA + JPs to '
-                      'bank2:0x4000 (boss arena entry). The arena routine handles all '
-                      'proper setup — boss tiles, palette, init position, scroll. '
-                      'You\'ll be dropped into the arena ready to fight. '
-                      'Works only with v3.01 production ROM (the hook is in our patch).</p>')
-    html_parts.append('<div style="display:flex;flex-wrap:wrap;gap:0.3em;">')
-    for ffba, name, d880, _hint in STAGE_BOSSES:
-        html_parts.append(
-            f'<button style="background:#2a4;color:white;font-weight:bold;" onclick="dxTeleport({ffba + 1})">'
-            f'🎯 {name}<br><span style="font-size:0.7em;opacity:0.8;">FFBA={ffba} D880=0x{d880:02X}</span></button>'
-        )
-    html_parts.append("</div></div>")
+    # DX Teleport section removed — the JP-from-VBlank approach
+    # freezes because arena entry calls a STAT-mode busy-wait that
+    # never resolves inside VBlank. Re-add when we have a clean
+    # main-loop hook or per-boss save states.
 
     # ─── Soft state-byte hold (legacy fallback if DX hook not present) ───
     html_parts.append('<div class="section"><h2>State-byte Hold (legacy)</h2>')
