@@ -500,25 +500,29 @@ def build_v301():
     # ============================================================
     # DX TELEPORT HOOK (v3.01 feature)
     # ============================================================
-    # If WRAM[DF0A] != 0, treat (DF0A - 1) as a boss FFBA index (0-8)
-    # and JP to bank 2:0x4000 (boss arena entry). The arena routine
-    # itself handles all proper setup (boss tile load, palette, init
-    # positions) — we just need to set FFBA + bank + transition cleanly.
+    # If WRAM[DF0A] != 0 AND FFC1 != 0 (gameplay active), treat
+    # (DF0A - 1) as boss FFBA index (0-8) and JP to bank 2:0x4000.
+    # The arena routine handles all proper setup.
     #
     # State byte: DF0A
     #   0       = no teleport
-    #   1..9    = teleport to FFBA = DF0A-1 (so 1 = Shalamar, 9 = Penta Dragon)
+    #   1..9    = teleport to FFBA = DF0A-1 (1=Shalamar, 9=PentaDragon)
     #
-    # Caveat: this hook fires from inside VBlank IRQ context. We
-    # reset SP to the top of WRAM (0xDFFE) so the arena routine
-    # has a clean stack. Original game state is discarded — caller
-    # should not rely on this resuming previous state. This is
-    # explicitly a DX debug/cheat feature, not a game-flow path.
+    # FFC1 guard: requires gameplay state. From title screen the arena
+    # entry expects pre-loaded sprite/palette/scroll context that the
+    # title state doesn't provide — would hang or render garbage.
+    #
+    # The teleport is a one-shot: DF0A is cleared after consumption.
+    # Hook fires from VBlank IRQ context: SP gets reset, EI before JP.
     # ============================================================
+    code.extend([0xF0, 0xC1])                 # LDH A, [FFC1]
+    code.extend([0xB7])                       # OR A
+    ffc1_guard_jr = len(code) + 1
+    code.extend([0x28, 0x00])                 # JR Z, skip_teleport (no gameplay)
     code.extend([0xFA, 0x0A, 0xDF])           # LD A, [DF0A]
     code.extend([0xB7])                       # OR A
     teleport_skip_jr = len(code) + 1
-    code.extend([0x28, 0x00])                 # JR Z, skip_teleport
+    code.extend([0x28, 0x00])                 # JR Z, skip_teleport (no request)
     # Teleport requested — A holds DF0A value
     code.extend([0x3D])                       # DEC A (DF0A-1 = target FFBA)
     code.extend([0xE0, 0xBA])                 # LDH [FFBA], A
@@ -528,11 +532,12 @@ def build_v301():
     code.extend([0x31, 0xFE, 0xDF])           # LD SP, 0xDFFE
     # Switch MBC ROM bank to 2 (where boss arena code lives)
     code.extend([0x3E, 0x02])                 # LD A, 2
-    code.extend([0xEA, 0x00, 0x20])           # LD [0x2000], A (MBC1 bank reg)
-    code.extend([0xE0, 0x99])                 # LDH [FF99], A (game's bank cache)
-    code.extend([0xFB])                       # EI (re-enable IRQs)
-    code.extend([0xC3, 0x00, 0x40])           # JP 0x4000 (bank 2 boss arena entry)
-    # skip_teleport target
+    code.extend([0xEA, 0x00, 0x20])           # LD [0x2000], A
+    code.extend([0xE0, 0x99])                 # LDH [FF99], A
+    code.extend([0xFB])                       # EI
+    code.extend([0xC3, 0x00, 0x40])           # JP 0x4000
+    # skip_teleport target (both guards jump here)
+    code[ffc1_guard_jr] = (len(code) - ffc1_guard_jr - 1) & 0xFF
     code[teleport_skip_jr] = (len(code) - teleport_skip_jr - 1) & 0xFF
 
     # ---- WARM PATH ----
