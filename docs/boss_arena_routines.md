@@ -35,8 +35,8 @@ Jump table at bank 2:0x6EA6 (ROM file 0xAEA6):
 | 5 | 4 | 0x8A76 | 0x4A76 | 0x10 | 119 bytes | Ted (stage 5) | 0xA0 | 0xA0 | 0x7623 |
 | 6 | 5 | 0x8AED | 0x4AED | 0x11 | 116 bytes | Troop (stage 6) | 0xA0 | 0xC0 | 0x762D |
 | 7 | 6 | 0x8B61 | 0x4B61 | 0x12 | 116 bytes | Faze (stage 7) | 0x90 | 0xC0 | 0x766B |
-| 8 | 7 | 0x8BD5 | 0x4BD5 | 0x13 | 113 bytes | Penta Dragon (final main) | 0xA8 | 0x90 | 0x76A6 |
-| 9 | 8 | 0x8C46 | 0x4C46 | 0x14 | ? bytes | **Hidden boss (Angela?)** | 0xA0 | 0xE0 | 0x76A8 |
+| 8 | 7 | 0x8BD5 | 0x4BD5 | 0x13 | 113 bytes | Angela | 0xA8 | 0x90 | 0x76A6 |
+| 9 | 8 | 0x8C46 | 0x4C46 | 0x14 | ? bytes | Penta Dragon (final main) | 0xA0 | 0xE0 | 0x76A8 |
 
 ## Common setup calls
 
@@ -118,8 +118,8 @@ Combined with documented states:
 | **0x10** | **Boss arena: Ted** |
 | **0x11** | **Boss arena: Troop** |
 | **0x12** | **Boss arena: Faze** |
-| **0x13** | **Boss arena: Penta Dragon (final main)** |
-| **0x14** | **Boss arena: Hidden boss (Angela?)** |
+| **0x13** | **Boss arena: Angela** |
+| **0x14** | **Boss arena: Penta Dragon (final main)** |
 | 0x17 | Death / timeout cinematic |
 | 0x18 | Boss splash (stage transition) |
 

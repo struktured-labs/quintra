@@ -64,6 +64,10 @@ PORT = 8077
 # least keeps the arena state byte set.
 STAGE_BOSSES = [
     # (FFBA, name, arena D880, hint about palette source)
+    # Indexes 7 and 8 corrected 2026-06-03 — empirically Angela=7,
+    # Penta Dragon=8 (user-verified via DX Teleport buttons).
+    # docs/boss_arena_routines.md previously had these swapped; the
+    # reverse_engineering notes (gap_boss_arena_setup.md) were correct.
     (0, "Shalamar (Stage 1)",      0x0C, "uses tile-range OBJ pal"),
     (1, "Riff (Stage 2)",          0x0D, "uses tile-range OBJ pal"),
     (2, "Crystal Dragon (Stage 3)", 0x0E, "uses tile-range OBJ pal"),
@@ -71,8 +75,8 @@ STAGE_BOSSES = [
     (4, "Ted (Stage 5)",           0x10, "uses tile-range OBJ pal"),
     (5, "Troop (Stage 6)",         0x11, "uses tile-range OBJ pal"),
     (6, "Faze (Stage 7)",          0x12, "uses tile-range OBJ pal"),
-    (7, "Penta Dragon (Final)",    0x13, "uses tile-range OBJ pal"),
-    (8, "Angela (Hidden)",         0x14, "uses tile-range OBJ pal"),
+    (7, "Angela",                  0x13, "uses tile-range OBJ pal"),
+    (8, "Penta Dragon (Final)",    0x14, "uses tile-range OBJ pal"),
 ]
 
 # Boss-palette YAML entries (FFBF 3-8 → boss-palette CRAM override).
