@@ -52,6 +52,90 @@ LANDING_PAD_ROM_ADDR = 0x6F80  # landing pad source (gets copied to WRAM DB00)
                               # overwriting the landing pad source.
 LANDING_PAD_WRAM = 0xDB00      # runtime landing pad location
 
+# ---- scene-aware bg_table (Phase 1a: Shalamar only) ----
+# Scene-detect routine sits in the gap between landing pad and bg_table.
+# bg_table variants live after attr_comp (which ends ~0x713A).
+SCENE_DETECT_ADDR = 0x6FB0     # ~33 bytes; landing pad source ends ~0x6FA8
+DUNGEON_TABLE_ADDR = 0x7000    # existing bg_table (unchanged)
+SHALAMAR_TABLE_ADDR = 0x7200   # Shalamar arena bg_table (D880=0x0C)
+# Reserve 0x7300, 0x7400, ... for additional arena tables when designed.
+DF23_PREV_SCENE = 0xDF23       # WRAM byte: previous D880 value
+                              # (uninitialized → first frame triggers copy
+                              # to whatever the current D880 maps to)
+
+
+def _bg_table_shalamar() -> bytes:
+    """Scene-specific bg_table for Shalamar arena (D880=0x0C).
+
+    Phase 1a: every body tile gets pal 6. User tunes pal 6 colors via
+    the live editor while in Shalamar arena → Shalamar's body recolors
+    coherently without affecting dungeon (different bg_table swaps in).
+
+    Probe data (docs/shalamar_bg.log): Shalamar's body is composed of
+    tile IDs 0x11-0xA4 (~165 unique tiles, drawn once each). Rows 9-12
+    use tiles 0x88-0xA4 which I initially mislabeled as 'HUD items' —
+    they're actually Shalamar's claws (rows 9-12 are mid-screen, not
+    bottom HUD; the floor occupies rows 12-17). Floor is 0x00, 0x01.
+
+    Phase 1b will split body into multiple palettes per part (shell,
+    claws, legs, eyes) — requires identifying which tile IDs are which.
+    """
+    t = bytearray(256)
+    # Shalamar's entire body (shell, body, claws, legs): pal 6.
+    # In dungeon context this range is split (walls→pal6, items→pal1)
+    # but here Shalamar's body covers the whole range.
+    for i in range(0x11, 0xA5):  # 0x11..0xA4 inclusive
+        t[i] = 6
+    # 0xA5-0xDF: not used in Shalamar arena per probe; leave pal 0
+    # (had been pal 1 in dungeon for items 0x88-0xDF, but for arena
+    # we keep these defaulted since nothing references them).
+    # 0xFF sentinel: 0 (per attrinit fix)
+    t[0xFF] = 0
+    return bytes(t)
+
+
+def build_scene_detect(dungeon_addr: int, shalamar_addr: int) -> bytes:
+    """Detect D880 scene change, swap WRAM 0xDA00 with the right bg_table.
+
+    Reads D880 (WRAM scene state). Compares to DF23 (previous). If same,
+    early RET. If different, dispatches:
+      D880 == 0x0C → Shalamar table
+      else         → dungeon table (default)
+    Copies 256 bytes from ROM table → WRAM 0xDA00. Updates DF23.
+
+    Called from the teleport routine (which runs every VBlank with bank
+    13 mapped). Cost when scene unchanged: ~16T (read+compare+RET).
+    Cost on scene change: ~16T + 256 bytes copy ≈ 4100T (well under VBlank).
+
+    Layout: ~33 bytes.
+    """
+    c = bytearray()
+    c.extend([0xFA, 0x80, 0xD8])          # LD A, [D880]
+    c.extend([0x21, DF23_PREV_SCENE & 0xFF, (DF23_PREV_SCENE >> 8) & 0xFF])
+    c.extend([0xBE])                      # CP [HL]
+    c.extend([0xC8])                      # RET Z (no change — fast path)
+
+    # Scene changed: save new value, dispatch
+    c.extend([0x77])                      # LD [HL], A   (DF23 = new D880)
+    c.extend([0xFE, 0x0C])                # CP 0x0C   (Shalamar?)
+    j_not_shalamar = len(c) + 1
+    c.extend([0x20, 0x00])                # JR NZ, not_shalamar
+    c.extend([0x21, shalamar_addr & 0xFF, (shalamar_addr >> 8) & 0xFF])
+    c.extend([0x18, 0x03])                # JR +3   (skip the dungeon LD HL)
+    # not_shalamar target
+    c[j_not_shalamar] = (len(c) - j_not_shalamar - 1) & 0xFF
+    c.extend([0x21, dungeon_addr & 0xFF, (dungeon_addr >> 8) & 0xFF])
+
+    # Copy 256 bytes: HL → DE = 0xDA00
+    c.extend([0x11, 0x00, 0xDA])          # LD DE, 0xDA00
+    c.extend([0x06, 0x00])                # LD B, 0   (256 iterations)
+    copy_loop = len(c)
+    c.extend([0x2A, 0x12, 0x13, 0x05])    # LD A,[HL+]; LD [DE],A; INC DE; DEC B
+    offset = copy_loop - (len(c) + 2)
+    c.extend([0x20, offset & 0xFF])       # JR NZ, copy_loop
+    c.extend([0xC9])                      # RET
+    return bytes(c)
+
 
 def build_landing_pad() -> bytes:
     """Executable code that runs in main-loop context AFTER the RETI.
@@ -104,6 +188,12 @@ def build_teleport_routine() -> bytes:
       SP+14: CPU-pushed PC (main-loop return — what RETI pops)
     """
     c = bytearray()
+
+    # ---- Per-frame scene-detect: swap bg_table if D880 changed ----
+    # Bank 13 is mapped (we're inside the colorize call chain). Reads
+    # D880, compares to DF23, copies the right table to WRAM 0xDA00 on
+    # change. Fast path (~16T) when scene unchanged.
+    c.extend([0xCD, SCENE_DETECT_ADDR & 0xFF, (SCENE_DETECT_ADDR >> 8) & 0xFF])
 
     # ---- One-shot: ensure landing pad is copied to WRAM 0xDB00 ----
     # Check sentinel DF1E
@@ -256,6 +346,22 @@ def main():
     assert len(lp) <= 40, f"landing pad too big: {len(lp)} > 40"
     off = BANK13 + (LANDING_PAD_ROM_ADDR - 0x4000)
     rom[off:off + len(lp)] = lp
+
+    # 2a. Scene-aware bg_table system (Phase 1a: Shalamar)
+    # Write Shalamar's bg_table at the reserved ROM address.
+    shalamar_table = _bg_table_shalamar()
+    assert len(shalamar_table) == 256
+    off = BANK13 + (SHALAMAR_TABLE_ADDR - 0x4000)
+    rom[off:off + 256] = shalamar_table
+    print(f"  Shalamar bg_table: 256 bytes at bank13:0x{SHALAMAR_TABLE_ADDR:04X}")
+
+    # Write scene-detect routine. Verify we don't overrun the landing pad.
+    sd = build_scene_detect(DUNGEON_TABLE_ADDR, SHALAMAR_TABLE_ADDR)
+    assert SCENE_DETECT_ADDR + len(sd) <= DUNGEON_TABLE_ADDR, \
+        f"scene-detect overruns dungeon table: 0x{SCENE_DETECT_ADDR + len(sd):04X} > 0x{DUNGEON_TABLE_ADDR:04X}"
+    off = BANK13 + (SCENE_DETECT_ADDR - 0x4000)
+    rom[off:off + len(sd)] = sd
+    print(f"  scene-detect routine: {len(sd)} bytes at bank13:0x{SCENE_DETECT_ADDR:04X}")
 
     # 3. Write the teleport routine at bank13:0x6E80, ending with JP COLORIZE
     tp = build_teleport_routine()
