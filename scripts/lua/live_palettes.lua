@@ -132,9 +132,56 @@ local cached = nil
 -- combo_state = {target = 0..8, phase = "pre"|"press"|"release", frames = N}
 local combo_state = nil
 
+-- One-shot title autostart. If /tmp/live_palettes_autostart sentinel exists
+-- on Lua load, run the canonical DOWN→A→A→A→START→A title sequence at the
+-- documented frames (180-396). Avoids manual keypresses inside mGBA.
+local autostart_armed = false
+do
+    local fh = io.open("/tmp/live_palettes_autostart", "r")
+    if fh then autostart_armed = true; fh:close()
+        log("autostart armed via /tmp/live_palettes_autostart")
+    end
+end
+local AUTOSTART_KEYS = {{180,185,0x80},{193,198,0x01},{241,246,0x01},
+                       {291,296,0x01},{341,346,0x08},{391,396,0x01}}
+
+-- One-shot screenshot. Poll for /tmp/live_palettes_screenshot containing
+-- a file path; when seen, save the current frame to that path and delete
+-- the trigger. Lets external scripts capture frames without mgba MCP.
+local last_shot_mtime = 0
+
 callbacks:add("frame", function()
     f = f + 1
     if f == 30 then log("Lua frame=30, polling /tmp/live_palettes.txt") end
+
+    -- Title autostart: only while armed and within the documented window.
+    if autostart_armed and f <= 500 then
+        local k = 0
+        for _, e in ipairs(AUTOSTART_KEYS) do
+            if f >= e[1] and f <= e[2] then k = e[3]; break end
+        end
+        if f <= 410 then emu:setKeys(k) end
+        if f == 500 then
+            autostart_armed = false
+            os.remove("/tmp/live_palettes_autostart")
+            log(string.format("f%d: autostart finished, FFC1=%d D880=0x%02X",
+                f, emu:read8(0xFFC1), emu:read8(0xD880)))
+        end
+    end
+
+    -- Screenshot trigger: read /tmp/live_palettes_screenshot, save to that path.
+    if f % 5 == 0 then
+        local sfh = io.open("/tmp/live_palettes_screenshot", "r")
+        if sfh then
+            local path = sfh:read("*all"):gsub("%s+$", "")
+            sfh:close()
+            if path and #path > 0 then
+                emu:screenshot(path)
+                log(string.format("f%d: screenshot saved to %s", f, path))
+                os.remove("/tmp/live_palettes_screenshot")
+            end
+        end
+    end
 
     -- Check for file changes every 30 frames (~0.5s).
     if f % 30 == 0 then
