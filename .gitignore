@@ -49,3 +49,6 @@ rl/saves/user_demo/*.sav
 rom/working/*.png
 rom/working/*.sav
 rom/working/*.ss*
+
+# Letta agent workspace
+.letta/

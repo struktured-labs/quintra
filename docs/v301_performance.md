@@ -1,5 +1,25 @@
 # v3.01 Performance Characteristics
 
+> **⚠️ CORRECTION (verified 2026-06-07).** The cycle estimates in the
+> "v3.01 colorize handler" table below describe the **attr_computation +
+> GDMA** path, which **is NOT what ships**. `build_v301_gdma.py` writes
+> the GDMA routine (bank13:0x6D80) and the 1024-byte `attr_computation`
+> routine (bank13:0x7100) into ROM but **never CALLs either** — scanning
+> the built ROM for `CD 80 6D` / `CD 00 71` finds nothing (both dead code).
+>
+> What actually ships every VBlank: `cond_pal` (cached, ~200T) + attr-cleaner
+> (only first 32 frames post-boot) + ungated `bg_sweep` (1 row, ~600T) +
+> OBJ colorizer (~300T). Plus, during the game's own tilemap copy, the
+> inline tile+attr hook at bank1:0x42A7 (v3.00-style: tile phase then attr
+> phase, each with its **own** STAT mode-0 wait — a dual STAT-wait per
+> group, 24 rows × 6 groups).
+>
+> **=> The real modded cost is far below the 53K T / 76% figure.** The
+> dominant cost-over-vanilla is the inline hook's *second* (attr-phase)
+> STAT-wait per group, NOT attr_computation. That dual-wait is the main
+> GB-speed-parity lever. The 53K T analysis is retained below for the
+> (disabled) GDMA design only.
+
 How efficient is the v3.01 colorization pipeline? Hard cycle counts +
 qualitative observations.
 
@@ -9,7 +29,11 @@ qualitative observations.
 - VBlank period: ~4,560 T-cycles (10 scanlines × 456T)
 - Active rendering period: ~65,664 T-cycles per frame
 
-## v3.01 colorize handler cycle estimate
+## v3.01 colorize handler cycle estimate (DISABLED attr_comp+GDMA path — NOT shipping)
+
+> This table is for the attr_comp+GDMA design that is compiled into ROM
+> but never called. See the correction banner at the top. Kept for
+> reference if that path is ever re-wired.
 
 Per-call (each VBlank, during gameplay i.e. FFC1=1):
 

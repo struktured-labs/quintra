@@ -10,7 +10,30 @@ Penta Dragon DX is a Game Boy Color colorization of the DMG game
 the original gameplay, sound, and timing.
 
 **Current production**: `rom/working/penta_dragon_dx_FIXED.gb` is
-v3.00 (tag `colorize-v3.00-inline-hook`).
+v3.01 (`scripts/build_v301_gdma.py`; `FIXED.gb` == `v301.gb`,
+md5 `dd617b7e83d1fef30b07d70be0a13586`). Re-synced to v3.01 on
+2026-06-07 (old stale v3.00 inline build → `FIXED.v300c.backup.gb`).
+
+> **Naming caveat (verified 2026-06-07):** the "GDMA" in
+> `build_v301_gdma.py` is a misnomer. It *writes* a GDMA routine
+> (bank13:0x6D80) and a 1024-byte `attr_computation` routine
+> (bank13:0x7100) into ROM, but **neither is ever CALLed** — scanning
+> the built ROM for `CD 80 6D` / `CD 00 71` finds nothing. They are
+> dead code. What actually ships is the v3.00-style inline tile+attr
+> copy at bank1:0x42A7 + `cond_pal` + attr-cleaner + ungated
+> `bg_sweep` + OBJ colorizer.
+>
+> The inline 0x42A7 hook is the ONLY live BG-attr writer, and it already
+> does the fused `[BC]` lookup (`LD A,[DE]; INC DE; LD C,A; LD A,[BC];
+> LD [HL+],A`) single-pass — so don't try to "add" a fused lookup
+> anywhere (PR #1's fused `bg_sweep` was closed for this reason). If
+> GB-speed parity is ever the goal, the real lever is the hook's
+> **second (attr-phase) STAT mode-0 wait per group** (vanilla waits
+> once/group, we wait twice, ×144 groups) — NOT `attr_computation`,
+> which is dead. The 53K T / 76%-frame figure in old perf notes was for
+> that dead path. Full write-up:
+> `docs/FINDINGS_2026_06_07_gdma_is_dead_code.md`;
+> corrected cost picture: `docs/v301_performance.md`.
 
 ## Critical instructions
 
@@ -36,7 +59,10 @@ v3.00 (tag `colorize-v3.00-inline-hook`).
 ## Where things live
 
 ### Build pipeline
-- `scripts/build_v300_inline_hook.py` — current production builder
+- `scripts/build_v301_gdma.py` — **current production builder** (see the
+  naming caveat above: the GDMA/attr_comp routines it emits are dead code;
+  the shipping path is the inline 0x42A7 hook + bg_sweep + attr-cleaner)
+- `scripts/build_v300_inline_hook.py` — historical v3.00 inline-hook builder
 - `scripts/build_v29*_*.py` — milestone builders (v294 title-fix,
   v295 minimal-title, v296 phantom-safe sweep, v297 calibrated table
   + viewport sweep, v298 refined table, v299 minimal table)
