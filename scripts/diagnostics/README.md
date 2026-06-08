@@ -21,3 +21,13 @@ to /tmp/).
 Conclusion: the fix is a static, position-banded attribute buffer blitted to
 VRAM every frame (atomic, via the GDMA path) — kills alternation (fresh every
 frame, not tile-dependent) and shared-tile bleed (color by cell, not tile ID).
+
+## proto_position_blit_relative.lua — THE FIX (proven concept)
+
+Per-frame position-banded attribute blit, banded RELATIVE to the boss's live
+top row (self-tracking), tile-gated so floor/background stays default. Result
+on Shalamar: alternation 134 -> 8 flips/200 samples (the 8 are claw-edge cells
+entering/leaving the gate), bands track the boss through its bob, background
+clean (no shared-tile bleed, no stray bands). This is the algorithm to port to
+the ROM (build the attr buffer relative to live boss min-row, blit every frame
+via GDMA / VRAM write in the arena's free VBlank budget).
