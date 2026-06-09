@@ -39,12 +39,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from build_v301_gdma import build_v301
+from build_v296_phantomsafe import create_bg_sweep_viewport_gated
 
 BASE_OUT = Path("rom/working/penta_dragon_dx_v301.gb")
 TP_OUT = Path("rom/working/penta_dragon_dx_teleport.gb")
 
 BANK13 = 13 * 0x4000
 COLORIZE_ADDR = 0x6E00
+BG_SWEEP_ADDR = 0x6CD0     # bg_sweep safety-net (re-patched to read WRAM 0xDA00)
+WRAM_BG_TABLE = 0xDA00     # per-scene table kept current by scene_detect
 TELEPORT_ADDR = 0x6E80     # teleport check + state setup + stack redirect
 LANDING_PAD_ROM_ADDR = 0x6F80  # landing pad source (gets copied to WRAM DB00)
                               # — moved from 0x6F00 because the teleport
@@ -440,6 +443,23 @@ def main():
     off = BANK13 + (SCENE_DETECT_ADDR - 0x4000)
     rom[off:off + len(sd)] = sd
     print(f"  scene-detect routine: {len(sd)} bytes at bank13:0x{SCENE_DETECT_ADDR:04X}")
+
+    # 2b. Re-patch bg_sweep to read the PER-SCENE WRAM table (0xDA00) instead
+    # of the ROM dungeon table (0x7000). The base build bakes the sweep with
+    # the dungeon table, so in arenas the sweep wrote dungeon-palette attrs for
+    # boss tiles while the inline hook (which DOES read 0xDA00) wrote the
+    # arena-band palette — the two writers disagreed and each boss cell flipped
+    # every sweep pass. That is the measured arena alternation. scene_detect
+    # keeps 0xDA00 in sync with the current scene, so reading it is correct in
+    # every scene (in the dungeon 0xDA00 == the dungeon table, so dungeon
+    # behavior is unchanged). FFC1 prefix NOP'd to match the base build.
+    sweep = bytearray(create_bg_sweep_viewport_gated(WRAM_BG_TABLE, BG_SWEEP_ADDR))
+    assert sweep[:4] == bytearray([0xF0, 0xC1, 0xB7, 0xC8]), \
+        f"bg_sweep prefix changed: {sweep[:4].hex()}"
+    sweep[0:4] = bytearray([0x00, 0x00, 0x00, 0x00])  # NOPs — run on title too
+    off = BANK13 + (BG_SWEEP_ADDR - 0x4000)
+    rom[off:off + len(sweep)] = sweep
+    print(f"  bg_sweep re-patched to WRAM 0x{WRAM_BG_TABLE:04X}: {len(sweep)} bytes at bank13:0x{BG_SWEEP_ADDR:04X}")
 
     # 3. Write the teleport routine at bank13:0x6E80, ending with JP COLORIZE
     tp = build_teleport_routine()
