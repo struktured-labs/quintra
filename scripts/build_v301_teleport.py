@@ -41,7 +41,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from build_v301_gdma import build_v301, create_inline_tile_copy_tileonly
 from build_v296_phantomsafe import create_bg_sweep_viewport_gated
 from arena_position import (
-    parse_footprint_posmaps, create_position_sweep, POSMAP_SIZE,
+    parse_footprint_posmaps, rle_encode_posmap, create_rle_expander,
+    create_position_sweep,
 )
 
 BASE_OUT = Path("rom/working/penta_dragon_dx_v301.gb")
@@ -54,9 +55,12 @@ WRAM_BG_TABLE = 0xDA00     # per-scene table kept current by scene_detect
 
 # Position-sweep (holy-grail path) layout in bank 13:
 POSSWEEP_ADDR = 0x7100     # position sweep code (reuses dead attr_comp space)
-POSMAP_DATA_ADDR = 0x7B00  # per-arena 18x32 posmaps (576 bytes each)
-POSMAP_PTR_TABLE = 0x7F80  # 9 x 2-byte LE pointers (arena idx 0..8; 0 = none)
-ROW_CURSOR_ADDR = 0xDF40   # sweep row cursor + scratch (free DF region)
+EXPAND_ADDR = 0x6D80       # RLE expander (reuses dead GDMA space)
+POSMAP_DATA_ADDR = 0x7B00  # RLE-compressed per-arena posmaps (variable length)
+POSMAP_PTR_TABLE = 0x7FE0  # 9 x 2-byte LE pointers to RLE data (0 = none)
+ROW_CURSOR_ADDR = 0xDF40   # sweep row cursor
+POSMAP_FLAG_ADDR = 0xDF46  # expanded-arena flag (idx+1; 0 = none/non-arena)
+POSMAP_SCRATCH_ADDR = 0xDF47  # vram_hi (+1: rows_left)
 # Posmaps captured as the MODAL attr the (good) tile-ID hook assigns each cell
 # over the animation (probe_arena_posmap_gen.lua on a hook-active ROM). This
 # freezes the proven Phase-0 look per-cell -> same colors, zero alternation.
@@ -478,34 +482,48 @@ def main():
 
     # 2c. POSITION SWEEP (holy-grail path). In arenas, write a FIXED per-cell
     # posmap to the BG attr plane instead of tile-ID attrs — a fixed map can't
-    # alternate (every write of a cell writes the same value). Maps come from
-    # the probed footprints; stored in bank-13 ROM, read directly by the sweep.
-    # Dispatcher tail-calls the normal (Phase-0) sweep in every non-arena scene
-    # and for any arena that has no posmap yet.
+    # alternate (every write of a cell writes the same value). Maps are RLE-
+    # compressed in bank-13 ROM (they are highly repetitive); on arena entry the
+    # sweep expands the active map to WRAM 0xD000 (the dead GDMA buffer, bank 2)
+    # once, then copies a few rows/frame from there. Non-arena / no-map arenas
+    # tail-call the normal (Phase-0) tile-ID sweep.
     posmaps = parse_footprint_posmaps(FOOTPRINT_LOG)
     ptr = [0] * 9
-    next_addr = POSMAP_DATA_ADDR
+    blob = bytearray()
     for idx, name in enumerate(ARENA_ORDER):
         m = posmaps.get(name)
         if not m or not any(m):
             continue
-        if next_addr + POSMAP_SIZE > POSMAP_PTR_TABLE:
-            print(f"  posmap: out of bank-13 space before {name} (idx {idx}) — skipped")
+        rle = rle_encode_posmap(m)
+        addr = POSMAP_DATA_ADDR + len(blob)
+        if addr + len(rle) > POSMAP_PTR_TABLE:
+            print(f"  posmap RLE: out of bank-13 space before {name} (idx {idx}) — skipped")
             break
-        off = BANK13 + (next_addr - 0x4000)
-        rom[off:off + POSMAP_SIZE] = m
-        ptr[idx] = next_addr
-        print(f"  posmap {name:14s}: {POSMAP_SIZE} bytes at bank13:0x{next_addr:04X}")
-        next_addr += POSMAP_SIZE
+        blob += rle
+        ptr[idx] = addr
+        print(f"  posmap {name:14s}: RLE {len(rle):3d} bytes at bank13:0x{addr:04X}")
+    off = BANK13 + (POSMAP_DATA_ADDR - 0x4000)
+    rom[off:off + len(blob)] = blob
+    print(f"  posmap RLE total: {len(blob)} bytes "
+          f"(0x{POSMAP_DATA_ADDR:04X}-0x{POSMAP_DATA_ADDR + len(blob):04X}, "
+          f"limit 0x{POSMAP_PTR_TABLE:04X})")
     pt = bytearray()
     for p in ptr:
         pt += bytes([p & 0xFF, (p >> 8) & 0xFF])
     off = BANK13 + (POSMAP_PTR_TABLE - 0x4000)
     rom[off:off + len(pt)] = pt
 
-    possweep = create_position_sweep(POSSWEEP_ADDR, BG_SWEEP_ADDR,
-                                     POSMAP_PTR_TABLE, ROW_CURSOR_ADDR,
-                                     rows_per_frame=2)
+    # RLE expander (reuses dead GDMA space at 0x6D80)
+    expander = create_rle_expander()
+    assert EXPAND_ADDR + len(expander) <= COLORIZE_ADDR, "expander overruns colorize handler"
+    off = BANK13 + (EXPAND_ADDR - 0x4000)
+    rom[off:off + len(expander)] = expander
+    print(f"  RLE expander: {len(expander)} bytes at bank13:0x{EXPAND_ADDR:04X}")
+
+    possweep = create_position_sweep(
+        POSSWEEP_ADDR, BG_SWEEP_ADDR, POSMAP_PTR_TABLE, EXPAND_ADDR,
+        row_cursor_addr=ROW_CURSOR_ADDR, flag_addr=POSMAP_FLAG_ADDR,
+        scratch_addr=POSMAP_SCRATCH_ADDR, rows_per_frame=2)
     assert POSSWEEP_ADDR + len(possweep) <= 0x7200, \
         f"position sweep overruns arena tables: 0x{POSSWEEP_ADDR + len(possweep):04X}"
     off = BANK13 + (POSSWEEP_ADDR - 0x4000)
