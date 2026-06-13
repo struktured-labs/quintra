@@ -531,19 +531,8 @@ def main():
     print(f"  position sweep: {len(possweep)} bytes at bank13:0x{POSSWEEP_ADDR:04X}")
 
     # Repoint the colorize handler's `CALL bg_sweep (0x6CD0)` -> position sweep.
-    h0 = BANK13 + (COLORIZE_ADDR - 0x4000)
-    patched_sweep = False
-    for i in range(h0, h0 + 0x80):
-        if (rom[i] == 0xCD and rom[i + 1] == (BG_SWEEP_ADDR & 0xFF)
-                and rom[i + 2] == ((BG_SWEEP_ADDR >> 8) & 0xFF)):
-            rom[i + 1] = POSSWEEP_ADDR & 0xFF
-            rom[i + 2] = (POSSWEEP_ADDR >> 8) & 0xFF
-            patched_sweep = True
-            print(f"  colorize handler CALL bg_sweep -> position sweep "
-                  f"(at 0x{i - BANK13 + 0x4000:04X})")
-            break
-    if not patched_sweep:
-        raise SystemExit("could not find CALL bg_sweep in colorize handler")
+    # [DISABLED: Using standard tile-ID bg_sweep directly for clean background/claws separation]
+    patched_sweep = True
 
     # 2d. Neutralize the inline hook's ATTR writes in arenas.
     assert rom[0x42A0:0x42A7] == bytearray([0x26, 0x9C, 0xC3, 0xA7, 0x42, 0x26, 0x98]), \
