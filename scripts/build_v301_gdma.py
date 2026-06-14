@@ -58,11 +58,13 @@ def _bg_table() -> bytes:
     for i in [0x41, 0x42, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49,
               0x54, 0x55, 0x56, 0x57, 0x59]:
         table[i] = 6
-    # Hazards: spike cylinders only → pal 5
-    # (0x47/0x57 deliberately excluded — they're wall corners more
-    # often than spikes)
+    # Hazards: rotating spike cylinders → pal 6 (METALLIC slate/gunmetal,
+    # 7FFF/6F7B/2D4A). Was pal 5 (white/yellow/red) which read washed-out and
+    # lava-ish; user wants a metallic look. pal 6 is the existing metal ramp
+    # (shared with walls, but spikes are shape-distinct rotating cylinders).
+    # pal 5 stays free for stage-2 LAVA. (0x47/0x57 excluded — wall corners.)
     for i in [0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x3A, 0x3B, 0x3C, 0x3D]:
-        table[i] = 5
+        table[i] = 6
     # Items
     for i in range(0x88, 0xE0):
         table[i] = 1

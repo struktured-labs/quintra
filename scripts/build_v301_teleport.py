@@ -438,6 +438,39 @@ def main():
     build_v301()
     rom = bytearray(BASE_OUT.read_bytes())
 
+    # 1a. Title: add "PENTA DRAGON DX" game-name header + "STRUKTURED LABS"
+    # attribution. The stock title screen shows only the YANOMAN bitmap logo +
+    # menu (no spelled-out game name). Rewrite the title TEXT command list
+    # in-place at bank1:0x4EA5 (entries = [col][row][tile..]0x9A; font A=0x80..
+    # Z=0x99, space=0x00; list ends with a 0x9A col byte). Keep the logo-
+    # continuation rows, the OPENING/GAME START menu, and the JAPAN ART MEDIA
+    # developer credit; DROP the redundant "(c)1992 YANOMAN" *text* line (the
+    # YANOMAN bitmap LOGO is untouched) and "LICENSED BY NINTENDO" to make room.
+    # Added text flushes via the C1A0 buffer + inline hook, so it is colorized
+    # (same two-tone as the stock menu text). Fits in the original 126-byte
+    # region (0x4EA5..0x4F22); a trailing 0x9A terminates the list early.
+    E = 0x9A
+    def _txt(s):
+        return [0x00 if c == ' ' else 0x80 + (ord(c) - 65) for c in s]
+    JAM = [0xD0, 0xD7, 0xD8, 0xD9, 0x00, 0x89, 0x80, 0x8F, 0x80, 0x8D, 0x00,
+           0x80, 0x91, 0x93, 0x00, 0x8C, 0x84, 0x83, 0x88, 0x80]  # (c)1992 JAPAN ART MEDIA
+    title_list = bytes(
+        [0x07, 0x03, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, E]          # logo continuation
+        + [0x07, 0x04, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, E]
+        + [0x07, 0x05, 0xC6, 0xC7, 0xC8, 0xC9, 0xD6, E]
+        + [0x03, 0x06] + _txt("PENTA DRAGON DX") + [E]         # game name + DX (row 6)
+        + [0x04, 0x08] + _txt("OPENING START") + [E]           # menu
+        + [0x04, 0x0A] + _txt("GAME    START") + [E]
+        + [0x00, 0x0E, 0xC0, E]                                 # (c) glyph
+        + [0x00, 0x0F] + JAM + [E]                              # JAPAN ART MEDIA
+        + [0x03, 0x11] + _txt("STRUKTURED LABS") + [E]         # attribution (row 17)
+        + [E]                                                   # list end
+    )
+    assert len(title_list) <= 126, f"title list {len(title_list)} > 126 (overruns region)"
+    assert rom[0x4EA5:0x4EA7] == bytes([0x07, 0x03]), "title list head moved"
+    rom[0x4EA5:0x4EA5 + len(title_list)] = title_list
+    print(f"  title: PENTA DRAGON DX header + STRUKTURED LABS ({len(title_list)}/126 bytes @0x4EA5)")
+
     # 2. Write the landing pad source bytes in bank13 ROM at 0x6F00
     lp = build_landing_pad()
     print(f"  landing pad source: {len(lp)} bytes at bank13:0x{LANDING_PAD_ROM_ADDR:04X}")
