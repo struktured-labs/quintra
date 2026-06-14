@@ -218,20 +218,35 @@ def build_scene_detect(dungeon_addr: int, arena_base_addr: int,
     # Scene changed: save new value
     c.extend([0x77])                      # LD [HL], A   (DF23 = new D880)   (A still = D880)
 
-    # Splash scene (D880=0x18, STAGE-intro / boss-name): load the uniform splash
-    # table so the big letters don't inherit wall/spike p6 (color bleed). Also
-    # re-assert DF02=0x5A so the colorize cold-boot copy (the stage-load re-zeroes
-    # DF02) can't restore the dungeon table over it mid-splash.
-    c.extend([0xFE, 0x18])                # CP 0x18
+    # Transitional / title scenes -> uniform all-pal0 splash table. These are
+    # direct-write/transient screens whose tile IDs span the whole 0x01-0xFF bank,
+    # so the dungeon table's 0x80-0xDF->p1 (red font) rule floods them red:
+    #   0x18 = STAGE-intro / boss-name splash (big letters were bleeding p6/p5)
+    #   0x1B = animated PENTA DRAGON banner (red bands behind letters, red showcase
+    #          text + red JAM-logo line — fill tile 0xDF + border 0xCA-0xDE are p1)
+    #   0x16 = post-boss reload (Riff/any boss defeat -> full VRAM tile-load shows
+    #          high tile IDs -> ~246/360 cells flood red + slowdown looked broken)
+    # The menu scenes (0x00/0x1C) are intentionally left on the dungeon table (their
+    # red menu font is by design). Re-assert DF02=0x5A to beat the cold-boot copy.
+    c.extend([0xFE, 0x18])                # CP 0x18 (splash)
+    j_s18 = len(c) + 1
+    c.extend([0x28, 0x00])                # JR Z, splash_body
+    c.extend([0xFE, 0x1B])                # CP 0x1B (animated banner)
+    j_s1b = len(c) + 1
+    c.extend([0x28, 0x00])                # JR Z, splash_body
+    c.extend([0xFE, 0x16])                # CP 0x16 (post-boss reload)
     j_not_splash = len(c) + 1
-    c.extend([0x20, 0x00])                # JR NZ, not_splash
+    c.extend([0x20, 0x00])                # JR NZ, not_splash (none matched)
+    splash_body = len(c)
+    c[j_s18] = (splash_body - j_s18 - 1) & 0xFF
+    c[j_s1b] = (splash_body - j_s1b - 1) & 0xFF
     c.extend([0x3E, 0x5A, 0xEA, 0x02, 0xDF])  # LD A,0x5A; LD [DF02],A
     c.extend([0x21, splash_addr & 0xFF, (splash_addr >> 8) & 0xFF])  # LD HL, splash
     j_copy_splash = len(c) + 1
     c.extend([0x18, 0x00])                # JR copy
     not_splash_pos = len(c)
     c[j_not_splash] = (not_splash_pos - j_not_splash - 1) & 0xFF
-    # (A is still = D880 here: CP 0x18 above does not modify A)
+    # (A is still = D880 here: CP above does not modify A)
 
     # Compute arena_idx = D880 - 0x0C. If carry → too low → dungeon.
     # If result >= 9 → too high → dungeon. Else load arena table.
