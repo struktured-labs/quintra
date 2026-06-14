@@ -103,21 +103,39 @@ local function load_palettes(path)
     return result
 end
 
+-- Bank-13 ROM palette SOURCE (cart0 absolute file offsets). The game's cond_pal
+-- reloads CRAM from here every frame (hash-cached) and on every scene change, so
+-- writing CRAM alone gets overwritten. Patching the source makes edits STICK and
+-- apply in ALL scenes (dungeon, arenas, title) via the normal palette load.
+--   bg_data  @ bank13:0x6800 -> file 13*0x4000 + (0x6800-0x4000) = 0x36800
+--   obj_data @ bank13:0x6840 -> file 0x36840
+local BG_SRC = 0x36800
+local OBJ_SRC = 0x36840
+
 local function apply_writes(writes)
     if not writes or #writes == 0 then return end
     for _, w in ipairs(writes) do
         if w.is_obj then
+            -- immediate (CRAM) + persistent (ROM source so cond_pal keeps it)
             emu:write8(0xFF6A, w.idx)
             emu:write8(0xFF6B, w.lo)
             emu:write8(0xFF6A, w.idx + 1)
             emu:write8(0xFF6B, w.hi)
+            emu.memory.cart0:write8(OBJ_SRC + w.idx, w.lo)
+            emu.memory.cart0:write8(OBJ_SRC + w.idx + 1, w.hi)
         else
             emu:write8(0xFF68, w.idx)
             emu:write8(0xFF69, w.lo)
             emu:write8(0xFF68, w.idx + 1)
             emu:write8(0xFF69, w.hi)
+            emu.memory.cart0:write8(BG_SRC + w.idx, w.lo)
+            emu.memory.cart0:write8(BG_SRC + w.idx + 1, w.hi)
         end
     end
+    -- Force cond_pal to reload from the edited source next frame (DF00 = hash
+    -- cache; zeroing it triggers a reload) so edits show even when the game
+    -- hasn't changed scene/hash.
+    emu:write8(0xDF00, 0x00)
 end
 
 -- Cached parsed data — applied EVERY frame so the game's cond_pal
@@ -219,9 +237,10 @@ callbacks:add("frame", function()
     -- (muted Ted's cyan dome/green tendrils to gray). Skip BG/OBJ pushes in
     -- arenas so the live preview matches the real ROM. (Combo + force-writes
     -- still run, so teleport keeps working.) Dungeon palette tuning unaffected.
-    local d880 = emu:read8(0xD880)
-    local in_arena = d880 >= 0x0C and d880 <= 0x14
-    if cached and not in_arena then apply_writes(cached.writes) end
+    -- Apply everywhere now (incl. boss arenas): writing the ROM palette SOURCE
+    -- means cond_pal loads the edits in every scene, so arena colors are tunable
+    -- live too (the old arena-skip was needed only when we wrote CRAM directly).
+    if cached then apply_writes(cached.writes) end
 
     -- Apply force writes EVERY frame (e.g., FFBF=3 for boss preview)
     if cached and cached.force then
