@@ -202,6 +202,14 @@ def build_scene_detect(dungeon_addr: int, arena_base_addr: int) -> bytes:
     # Arena: H = arena_base_high + A, L = 0
     c.extend([0xC6, arena_base_high])     # ADD A, arena_base_high
     c.extend([0x67])                      # LD H, A
+    # Suppress the colorize handler's cold-boot 0xDA00 copy IN ARENAS. The arena
+    # init (0x1A2B) zeroes a WRAM block covering DF02 (cold-boot sentinel) AND
+    # DF0D (this scene cache). scene_detect runs BEFORE colorize each frame, so
+    # re-asserting DF02=0x5A here makes the (later, same-frame) cold-boot skip —
+    # otherwise it re-copies the DUNGEON table over the arena table and wins the
+    # race (observed: crystal flooded red). Cold-boot still runs normally at real
+    # boot (non-arena scenes never take this branch).
+    c.extend([0x3E, 0x5A, 0xEA, 0x02, 0xDF])  # LD A,0x5A; LD [DF02],A
     c.extend([0x2E, 0x00])                # LD L, 0
     j_copy = len(c) + 1
     c.extend([0x18, 0x00])                # JR copy
