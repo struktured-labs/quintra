@@ -135,6 +135,13 @@ SPLASH_TABLE_ADDR = 0x7E40
 # at 0x6A10. mGBA-verified only; VBlank-budget/hardware risk -> teleport build
 # (opt-in branch) only. See docs/audit/obj_enemy_color_race.md.
 HWOAM_RECOLOR_ADDR = 0x7F40       # free bank-13 space after the splash table
+# Banner colorize override (showcase, D880=0x1B). Per-monster preview is
+# infeasible (the cycled names are a shared font, no monster sprites), so this
+# just gives the title banner intentional colors: "PENTA DRAGON" art (0xE0-0xFF)
+# -> p4 cyan (NO red, so it can't re-trigger the old red-bands complaint), monster
+# name glyphs (0x80-0x99) -> p5 gold, JAM logo (0xCA-0xCF/0xDA-0xDE) -> p1 red.
+# Patches 0xDA00 (loaded all-p0 by scene_detect at 0x1B) every frame at 0x1B.
+BANNER_OVERRIDE_ADDR = 0x7F70
 OBJ_COLORIZER_ADDR = 0x6A10      # create_tile_based_colorizer install addr (gdma)
 BOSS_SLOT_TABLE_ADDR = 0x68C0    # boss_slot_addr (gdma)
 # Per-stage molten tile IDs (probe_lava_ffba.lua histograms + docs/audit/stage2_lava.md):
@@ -475,6 +482,29 @@ def build_hwoam_recolor() -> bytes:
     return bytes(c)
 
 
+def build_banner_override() -> bytes:
+    """At D880=0x1B (title banner), patch 0xDA00 so the showcase has intentional
+    colors. CALLed every frame from the teleport routine (after the splash table
+    is in 0xDA00); no-op at any other scene. Letters use cyan (p4, no red)."""
+    c = bytearray()
+    c.extend([0xFA, 0x80, 0xD8])          # LD A,[D880]
+    c.extend([0xFE, 0x1B])                # CP 0x1B
+    c.extend([0xC0])                      # RET NZ
+    def fill(lo, n, pal):                 # 0xDA00+lo .. +lo+n-1 = pal
+        c.extend([0x3E, pal])             # LD A, pal
+        c.extend([0x21, lo, 0xDA])        # LD HL, 0xDA00+lo
+        c.extend([0x06, n])               # LD B, n
+        lp = len(c)
+        c.extend([0x22, 0x05])            # LD [HL+],A; DEC B
+        c.extend([0x20, (lp - (len(c) + 2)) & 0xFF])  # JR NZ, lp
+    fill(0xE0, 0x20, 4)                   # "PENTA DRAGON" letters -> cyan
+    fill(0x80, 0x1A, 5)                   # monster-name glyphs -> gold
+    fill(0xCA, 0x06, 1)                   # JAM logo (0xCA-0xCF) -> red
+    fill(0xDA, 0x05, 1)                   # JAM logo (0xDA-0xDE) -> red
+    c.extend([0xC9])                      # RET
+    return bytes(c)
+
+
 def build_landing_pad() -> bytes:
     """Executable code that runs in main-loop context AFTER the RETI.
 
@@ -537,6 +567,11 @@ def build_teleport_routine() -> bytes:
     # stages (no-op elsewhere). Must run after scene_detect (which may have just
     # copied the dungeon table) and before the colorize cold-boot copy. ----
     c.extend([0xCD, LAVA_OVERRIDE_ADDR & 0xFF, (LAVA_OVERRIDE_ADDR >> 8) & 0xFF])
+
+    # ---- Banner colorize: at D880=0x1B (animated title banner), patch 0xDA00
+    # (the all-p0 splash table) so the showcase reads as gold names / cyan
+    # "PENTA DRAGON" letters / red JAM logo. No-op elsewhere. ----
+    c.extend([0xCD, BANNER_OVERRIDE_ADDR & 0xFF, (BANNER_OVERRIDE_ADDR >> 8) & 0xFF])
 
     # ---- One-shot: ensure landing pad is copied to WRAM 0xDB00 ----
     # Check sentinel DF1E
@@ -809,6 +844,15 @@ def main():
     off = BANK13 + (HWOAM_RECOLOR_ADDR - 0x4000)
     rom[off:off + len(hwoam)] = hwoam
     print(f"  hwoam recolor: {len(hwoam)} bytes at bank13:0x{HWOAM_RECOLOR_ADDR:04X}")
+
+    # Banner colorize override (showcase, D880=0x1B), CALLed from teleport routine.
+    banner = build_banner_override()
+    assert HWOAM_RECOLOR_ADDR + len(hwoam) <= BANNER_OVERRIDE_ADDR, "hwoam overruns banner override"
+    assert BANNER_OVERRIDE_ADDR + len(banner) <= POSMAP_PTR_TABLE, \
+        f"banner override 0x{BANNER_OVERRIDE_ADDR + len(banner):04X} overruns posmap ptr table 0x{POSMAP_PTR_TABLE:04X}"
+    off = BANK13 + (BANNER_OVERRIDE_ADDR - 0x4000)
+    rom[off:off + len(banner)] = banner
+    print(f"  banner override: {len(banner)} bytes at bank13:0x{BANNER_OVERRIDE_ADDR:04X}")
 
     # 2b. Re-patch bg_sweep to read the PER-SCENE WRAM table (0xDA00) instead
     # of the ROM dungeon table (0x7000). The base build bakes the sweep with
