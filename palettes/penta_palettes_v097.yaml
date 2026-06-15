@@ -142,18 +142,21 @@ obj_palettes:
   SaraProjectileAndCrow:
     colors: ["0000", "001F", "0017", "000F"]  # Trans, Bright red, Medium red, Dark red
 
-  # Palette 4 - HORNETS (yellow/orange - insects)
+  # Palette 4 - HORNETS (amber - insects). Was 00DF mid (reddish -> read as a
+  # "red quadrant" on the wings); now a clean yellow->orange->amber ramp.
   Hornets:
-    colors: ["0000", "03FF", "00DF", "0000"]  # Trans, Yellow, Orange, Black
+    colors: ["0000", "03FF", "01FF", "0094"]  # Trans, Yellow, Orange, Dark amber
 
-  # Palette 5 - ORC/GROUND (green/brown - earthy)
+  # Palette 5 - ORC/GROUND (brown/tan - earthy). Was forest green (indistinct
+  # from Sara D's green); now tan->brown so ground enemies read distinct.
   OrcGround:
-    colors: ["0000", "02A0", "0160", "0000"]  # Trans, Forest green, Dark green, Black
+    colors: ["0000", "2A7C", "1574", "0CAC"]  # Trans, Tan, Brown, Dark brown
 
-  # Palette 6 - HUMANOID: Soldier, Moth, Spike (purple)
-  # In boss mode (boss_flag=1), this becomes Gargoyle
+  # Palette 6 - HUMANOID: Soldier, Moth, Spike. Shared with Gargoyle boss
+  # (boss_flag=1). Was harsh magenta; now a steel blue-gray that suits both a
+  # soldier and a stone gargoyle.
   Humanoid:
-    colors: ["0000", "7C1F", "4C0F", "0000"]  # Trans, Magenta, Dark purple, Black
+    colors: ["0000", "6B7E", "42B5", "2129"]  # Trans, Steel blue, Slate, Dark slate
 
   # Palette 7 - CATFISH/SPECIAL (cyan/teal)
   # In boss mode (boss_flag=2), this becomes Spider
