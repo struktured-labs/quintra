@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Pre-commit hook: run the new BG-scene regression tests before letting any
+# commit through. These tests catch the most common ROM-side palette
+# regressions (scene_detect dispatch wrong, banner_override/cutscene_override
+# fill ranges wrong, splash table not loaded). Each test runs a headless
+# mGBA in ~5s; total wall-clock ~15-20s for the 3 tests below.
+#
+# Install once with:
+#   ln -sfn ../../scripts/hooks/pre-commit .git/hooks/pre-commit
+#
+# Skip with `git commit --no-verify` if you need to commit work-in-progress
+# that you know will not pass yet.
+#
+# This intentionally does NOT run the full color_regression_tests.yaml suite
+# (~18 OBJ tests) because of the well-known mGBA Lua "frame" callback timing
+# issue that produces false positives on single-frame OAM reads. Once that's
+# fixed (planned: scanline callback or busy-loop+retry), this hook can be
+# expanded to the full suite.
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Detect whether the ROM-side build files were touched. If not, the regression
+# tests have nothing new to validate — skip to keep the hook fast.
+CHANGED=$(git diff --cached --name-only)
+if ! echo "$CHANGED" | grep -qE 'scripts/(build_v301|bg_experiment|create_vblank|run_color)|tests/color_regression|palettes/.*\.yaml|rom/working/'; then
+  echo "[pre-commit] No build/test/palette changes staged — skipping regression suite."
+  exit 0
+fi
+
+ROM="rom/working/penta_dragon_dx_teleport.gb"
+if [[ ! -f "$ROM" ]]; then
+  echo "[pre-commit] $ROM missing — building..."
+  uv run python scripts/build_v301_teleport.py > /tmp/precommit_build.log 2>&1 \
+    || { echo "[pre-commit] BUILD FAILED — see /tmp/precommit_build.log"; exit 1; }
+fi
+
+echo "[pre-commit] Running BG-scene regression tests against $ROM..."
+TESTS=(banner_bg_table_palettes cutscene_bg_table_palettes splash_bg_table_all_pal0)
+FAILED=()
+for t in "${TESTS[@]}"; do
+  if ! QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy xvfb-run -a \
+       uv run python scripts/run_color_regression.py --rom "$ROM" --test "$t" \
+       > "/tmp/precommit_${t}.log" 2>&1; then
+    FAILED+=("$t")
+    echo "  [FAIL] $t — see /tmp/precommit_${t}.log"
+  else
+    echo "  [PASS] $t"
+  fi
+done
+
+if [[ ${#FAILED[@]} -gt 0 ]]; then
+  echo
+  echo "[pre-commit] ${#FAILED[@]} regression test(s) failed — blocking commit."
+  echo "[pre-commit] To override (e.g., for WIP), use: git commit --no-verify"
+  exit 1
+fi
+
+echo "[pre-commit] All BG-scene regression tests passed."
+exit 0
