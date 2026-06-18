@@ -297,3 +297,56 @@ Recommended order for next iteration:
   `crow`/`sara_d_hornet_or_moth`/`jet_form_secret_stage`/
   `spiral_power_active`)
 - 12 tests total, ~25-30s wall-clock.
+
+(Iteration 5 expanded this further to 21 tests; iteration 8's STAT prelude
+attempt is described below.)
+
+## Iteration 8 — STAT prelude installed, measured, REVERTED
+
+Installed the iteration-7-designed 25-byte STAT prelude at bank0:0x0838 +
+vector patch 0x0049: 0x53→0x38. Measured both sides:
+
+**WINS (real, measured):**
+- gargoyle_miniboss slot-1 pal-6 frequency: 676/1166 (58%) → 5/1490 (0.34%)
+- Slot 1 transitions: 233 → 10
+- `moth_miniboss` test went from FAIL → PASS
+
+**REGRESSION (also real, also measured):**
+- `sara_w_alone` (D880=0x02, dungeon, FFBE=0): slots 0 and 2 (NOT touched
+  by my prelude — it only writes to 0xFE07) now read pal 4 in the OAM
+  dump for 86% of frames (1683/1950 frames pal 4 each).
+- BUT screenshot still shows Sara correctly as pink (pal 2) — **the LCD
+  draws correctly**; only the Lua OAM read is wrong.
+- Consensus filter picks pal 4 as the mode → test fails.
+- Pre-commit hook blocked the commit (working as designed).
+
+### Hypothesis for the side-effect
+
+My prelude adds ~30 cycles before the chained handler at 0x0853, which
+delays the chained handler's `CALL 0x08F8`. Disassembling 0x08F8 reveals
+it writes SCY (0xFF42) and SCX (0xFF43) — the BG scroll registers. So the
+chained STAT handler is doing **per-scanline parallax scroll**. The 30-
+cycle delay shifts WHEN the scroll write hits, which somehow interacts
+with the game's main-loop OAM writes such that the Lua OAM-read window
+captures pal-4 transient values in slots 0/2 (even though the LCD draws
+the correct pal-2 a few cycles later).
+
+### Fix paths for iteration 9+
+
+1. **Gate the prelude on FFBF != 0** (only run during boss fights). The
+   sara_w_alone test has FFBF=0 → prelude wouldn't fire → test stays
+   passing. Boss saves have FFBF != 0 → prelude fires → alternation fix.
+   Need ~5 extra bytes of gating; over the 27-byte ROM budget.
+   **Solution: relocate the prelude to WRAM** (0xDB?? area, copied from
+   ROM at boot like the levelsel stub). WRAM is bank-agnostic + size
+   unconstrained.
+2. **Investigate the timing side-effect**: trace what writes to slot 0/2
+   between my prelude and the chained handler. Maybe a way to neutralize
+   the side-effect without WRAM relocation.
+3. **Accept the trade**: install the prelude, exclude `sara_w_alone` from
+   the hook. Net hook coverage: -1 + several (boss tests now pass) = net
+   positive. But hides a real test regression — not great practice.
+
+**Recommendation:** Option 1 (WRAM relocation + FFBF gate) — cleanest and
+addresses the root cause (timing impact in dungeon scenes is unwanted).
+Iteration 9+ task.
