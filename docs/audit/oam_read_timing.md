@@ -230,6 +230,66 @@ on real MiSTer hardware (the phantom-sound history shows this is sensitive).
 Mitigation: gate the handler on `D880 < 0x16` (only run in dungeon + arena,
 not menus/cutscenes) → cuts overhead during attract cycle.
 
+### Bank-0 free space — confirmed location
+
+ROM scan for runs of 0x00 (padding) >= 20 bytes in bank 0 (0x0000-0x3FFF)
+found exactly ONE candidate: **0x0838 - 0x0852 = 27 bytes of 0x00**, sitting
+IMMEDIATELY before the existing STAT handler at 0x0853. Perfect for a
+fall-through prelude: install code at 0x0838, end at 0x0852, byte 0x0853
+naturally starts the original handler. No JP-chain needed — saves 3 bytes.
+
+### Prelude byte sequence (25 bytes, fits in the 27-byte window)
+
+```
+addr:  bytes               instruction              purpose
+0x0838 F5                  PUSH AF                  save A (chain expects clean entry)
+0x0839 E5                  PUSH HL                  save HL
+0x083A F0 BE               LDH A, [FFBE]            Sara form: 0=W, 1+=D
+0x083C B7                  OR A
+0x083D 20 04               JR NZ, +4                if dragon, skip to .dragon
+0x083F 3E 02               LD A, 0x02               (Sara W → pal 2)
+0x0841 18 02               JR +2                    skip dragon path
+0x0843 3E 01               LD A, 0x01               (Sara D → pal 1)
+0x0845 67                  LD H, A                  H = pal
+0x0846 FA 07 FE            LD A, [0xFE07]           current slot 1 attr
+0x0849 E6 F8               AND 0xF8                 clear low 3 bits
+0x084B B4                  OR H                     merge pal
+0x084C EA 07 FE            LD [0xFE07], A           write back
+0x084F E1                  POP HL                   restore HL
+0x0850 F1                  POP AF                   restore A+F
+0x0851 00                  NOP (padding)
+0x0852 00                  NOP (padding)
+0x0853 ...                 (original STAT handler — fall-through)
+```
+
+### Vector patch (1 ROM byte change)
+
+```
+0x0049: 0x53 → 0x38       (JP 0x0853 → JP 0x0838)
+```
+
+### Caveats to verify in next iteration
+
+1. **Does STAT IRQ fire often enough?** The current STAT trigger (whatever
+   it is — possibly LYC or mode 2 for sound timing) might only fire 1-2x
+   per frame, which isn't enough to catch every game-write-vs-LCD-read race.
+   Test: count STAT fires/frame with a probe.
+2. **Does writing 0xFE07 during STAT IRQ break anything?** OAM is accessible
+   during mode 0 (HBlank). If STAT fires during mode 1 (VBlank) too, OAM
+   write is fine. If during mode 2 or 3, OAM is locked → write is dropped
+   (no harm but no benefit).
+3. **If STAT IRQ fires too rarely, enable STAT mode-0 bit (0xFF41 bit 3)**
+   from the colorize chain — 1-time write at boot to add mode-0 trigger.
+   But risk: amplifies STAT call rate from ~2/frame to ~144/frame → may
+   break sound timing.
+
+Recommended order for next iteration:
+- (a) Install the 25-byte prelude (no STAT enable change).
+- (b) Run gargoyle_miniboss test; if pal 6 frequency drops, prelude is
+      firing. If it stays at ~58%, current STAT triggers aren't enough.
+- (c) If (b) shows need for more triggers, enable mode-0 bit and measure
+      phantom-sound risk via the existing D887 watchpoint Lua script.
+
 ## What's in the hook now
 
 - 6 BG-table tests (banner/cutscene/splash/postboss/2 arena dispatches)
