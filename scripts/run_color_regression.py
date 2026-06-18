@@ -34,7 +34,8 @@ class TestResult:
 def create_test_lua_script(output_prefix: str, frames: int = 60,
                            force_d880: int | None = None,
                            force_dcfd: int | None = None,
-                           force_ffba: int | None = None) -> str:
+                           force_ffba: int | None = None,
+                           force_df1f: int | None = None) -> str:
     """Generate Lua script for testing palette assignments + BG attrs."""
     force_block = ""
     if force_d880 is not None:
@@ -43,6 +44,17 @@ def create_test_lua_script(output_prefix: str, frames: int = 60,
         force_block += f"        emu:write8(0xDCFD, 0x{force_dcfd:02X})\n"
     if force_ffba is not None:
         force_block += f"        emu:write8(0xFFBA, 0x{force_ffba:02X})\n"
+    if force_df1f is not None:
+        # DF1F = colorize-skip counter set by the teleport-cheat path. Saves
+        # captured DURING a teleport transition have DF1F=0xFF and the
+        # colorize chain stays disabled. Setting 0 here pulls the wrapper
+        # out of skip-mode so the colorizer + hwoam_recolor run normally.
+        # NOTE (iter 25 finding): forcing 0 is NOT enough on its own for
+        # the spider_miniboss_sara_w save — that save's OAM is fully
+        # frozen (DMA/wrapper/recolor all dead, probably IME=0). force_df1f
+        # is included as infrastructure for future tests whose savestates
+        # only carry the teleport DF1F skip and nothing more invasive.
+        force_block += f"        emu:write8(0xDF1F, 0x{force_df1f:02X})\n"
     return f'''
 -- Color regression test script (OAM + BG attr histogram)
 local frame_count = 0
@@ -368,6 +380,7 @@ def run_single_test(test: dict, rom_path: str, savestate_dir: str, output_dir: s
         force_d880=test.get("force_d880"),
         force_dcfd=test.get("force_dcfd"),
         force_ffba=test.get("force_ffba"),
+        force_df1f=test.get("force_df1f"),
     )
     with open(lua_script_path, "w") as f:
         f.write(lua_script)
