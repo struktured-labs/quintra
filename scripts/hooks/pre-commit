@@ -51,7 +51,15 @@ TESTS=(
   cutscene_bg_table_palettes
   splash_bg_table_all_pal0
   postboss_reload_bg_table_all_pal0
+  # All 9 boss arena dispatches (D880 = 0x0C..0x14):
   shalamar_arena_dispatch
+  riff_arena_dispatch
+  crystal_dragon_arena_dispatch
+  cameo_arena_dispatch
+  ted_arena_dispatch
+  troop_arena_dispatch
+  faze_arena_dispatch
+  angela_arena_dispatch
   penta_dragon_arena_dispatch
   # OBJ tests (all verified reliable on wip-color-sweep via consensus filter):
   sara_w_alone

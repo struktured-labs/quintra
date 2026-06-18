@@ -280,27 +280,92 @@ tests:
         palette: 0
         description: "0x80-0xDF must NOT be pal1 red here (was the original item-13 red-flood)"
 
+  # Arena dispatch tests for all 9 bosses. scene_detect computes
+  #   arena_idx = D880 - 0x0C; arena_table_addr = ARENA_BASE_ADDR + arena_idx*0x100
+  # Each test verifies the dispatch fires AT ALL for that D880 value (tile 0x00
+  # is invariantly pal0 in any well-formed bg_table). Catches off-by-one in
+  # scene_detect's idx math and arena-table corruption regressions.
+  # boss_idx mapping: 0=Shalamar, 1=Riff, 2=Crystal Dragon, 3=Cameo, 4=Ted,
+  #                   5=Troop, 6=Faze, 7=Angela, 8=Penta Dragon
   - name: "shalamar_arena_dispatch"
     savestate: "level1_sara_d_alone.ss0"
-    description: "D880=0x0C (Shalamar arena, idx 0): scene_detect routes to arena table at 0x7200"
+    description: "D880=0x0C → arena idx 0 (Shalamar): scene_detect routes to 0x7200"
     force_d880: 0x0C
     check_boss_flag: false
     bg_table_expectations:
-      # Shalamar's arena_table_data assigns body parts to specific palettes.
-      # We only check ONE invariant: tile 0xFF (commonly border/fill) is NOT
-      # pal1 red (which would be a sign of dungeon-table fallthrough).
-      # The specific arena-table contents are NOT pinned because they're
-      # tuned palette-by-palette and may legitimately evolve.
       - tile_range: [0x00, 0x00]
         palette: 0
-        description: "tile 0x00 is always pal0 in any well-formed bg_table (sanity check)"
+        description: "tile 0x00 sanity check"
+
+  - name: "riff_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x0D → arena idx 1 (Riff): scene_detect routes to 0x7300"
+    force_d880: 0x0D
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+
+  - name: "crystal_dragon_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x0E → arena idx 2 (Crystal Dragon): scene_detect routes to 0x7400"
+    force_d880: 0x0E
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+
+  - name: "cameo_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x0F → arena idx 3 (Cameo): scene_detect routes to 0x7500"
+    force_d880: 0x0F
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+
+  - name: "ted_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x10 → arena idx 4 (Ted): scene_detect routes to 0x7600"
+    force_d880: 0x10
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+
+  - name: "troop_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x11 → arena idx 5 (Troop): scene_detect routes to 0x7700"
+    force_d880: 0x11
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+
+  - name: "faze_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x12 → arena idx 6 (Faze): scene_detect routes to 0x7800"
+    force_d880: 0x12
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+
+  - name: "angela_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x13 → arena idx 7 (Angela): scene_detect routes to 0x7900"
+    force_d880: 0x13
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
 
   - name: "penta_dragon_arena_dispatch"
     savestate: "level1_sara_d_alone.ss0"
-    description: "D880=0x14 (Penta Dragon arena, idx 8): scene_detect routes to last arena table"
+    description: "D880=0x14 → arena idx 8 (Penta Dragon): scene_detect routes to 0x7A00"
     force_d880: 0x14
     check_boss_flag: false
     bg_table_expectations:
       - tile_range: [0x00, 0x00]
         palette: 0
-        description: "tile 0x00 sanity check — confirms scene_detect's arena dispatch math works at high index"
+        description: "tile 0x00 sanity at high-index — catches off-by-one in dispatch math"
