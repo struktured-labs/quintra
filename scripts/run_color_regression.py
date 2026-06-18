@@ -106,23 +106,63 @@ local function maybe_force_state()
 {force_block}    end
 end
 
+-- Multi-sample OAM ring (filter the Lua "frame" callback timing transient):
+-- the callback can fire BEFORE the VBlank IRQ's hwoam_recolor writes HW OAM,
+-- so a single read can catch a pre-recolor state where slot N has the post-
+-- DMA race-residue palette instead of the final colorizer assignment. Take
+-- N samples across the post-target_frames window and majority-vote per slot
+-- so the steady-state palette wins even when one sample is transient.
+local oam_samples = {{}}  -- list of 40-entry tables, one per sample
+local function record_oam_sample()
+    table.insert(oam_samples, dump_oam())
+end
+local function consensus_oam()
+    -- Returns a 40-entry table where each slot's palette is the mode across
+    -- all samples (ties broken by latest sample — newer = closer to truth).
+    -- Other fields (y/x/tile/flags) come from the latest sample.
+    local out = {{}}
+    local last = oam_samples[#oam_samples]
+    for slot_idx = 1, 40 do
+        local counts = {{}}
+        for _, sample in ipairs(oam_samples) do
+            local pal = sample[slot_idx].palette
+            counts[pal] = (counts[pal] or 0) + 1
+        end
+        local best_pal, best_count = last[slot_idx].palette, 0
+        for pal, count in pairs(counts) do
+            if count > best_count or (count == best_count and pal == last[slot_idx].palette) then
+                best_pal, best_count = pal, count
+            end
+        end
+        local s = last[slot_idx]
+        out[slot_idx] = {{
+            slot = s.slot, y = s.y, x = s.x, tile = s.tile,
+            flags = (s.flags & 0xF8) | best_pal,  -- rebuild attr with consensus pal
+            palette = best_pal,
+            visible = s.visible,
+        }}
+    end
+    return out
+end
+
 callbacks:add("frame", function()
     frame_count = frame_count + 1
     maybe_force_state()
-    if frame_count >= target_frames then
-        -- KNOWN ISSUE: Lua's "frame" callback fires BEFORE the VBlank IRQ
-        -- handler's hwoam_recolor finishes writing HW OAM, so single-frame OAM
-        -- reads can catch a transient pre-recolor state (slot N attr shows the
-        -- post-DMA race-residue palette rather than the final colorizer
-        -- assignment). The screenshot below DOES reflect the LCD's actual
-        -- rendering (which sees the post-recolor OAM), so visually-verified
-        -- regressions remain caught even when the OAM dump disagrees.
-        -- See docs/audit/test_runner_oam_timing.md for full analysis + planned
-        -- fix (scanline callback or busy-loop + retry until OAM stabilizes).
+    -- Take OAM samples at target_frames-2, target_frames, target_frames+2,
+    -- target_frames+5, target_frames+8 (5 samples spanning ~10 frames so the
+    -- recolor's writes propagate to the displayed HW OAM. Each sample is
+    -- captured *after* the colorize IRQ for that frame has had a chance to
+    -- run, so consensus filters out the early-callback transient.
+    if frame_count == target_frames - 2 or frame_count == target_frames or
+       frame_count == target_frames + 2 or frame_count == target_frames + 5 then
+        record_oam_sample()
+    end
+    if frame_count >= target_frames + 8 then
+        record_oam_sample()
         emu:screenshot("{output_prefix}.png")
 
-        -- Dump OAM + BG attr histogram + bg_table + scene state
-        local oam = dump_oam()
+        -- Dump consensus OAM + BG attr histogram + bg_table + scene state
+        local oam = consensus_oam()
         local bg_histo = dump_bg_attr_histo()
         local bg_table = dump_bg_table_palettes()
         local boss_flag = emu:read8(0xFFBF)

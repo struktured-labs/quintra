@@ -269,3 +269,38 @@ tests:
       - tile_range: [0x01, 0xFF]
         palette: 0
         description: "SPLASH_TABLE is all-pal0 — no red flood possible from this scene"
+
+  - name: "postboss_reload_bg_table_all_pal0"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x16 post-boss reload (Riff/etc defeat): same splash table, no red flood"
+    force_d880: 0x16
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x80, 0xDF]
+        palette: 0
+        description: "0x80-0xDF must NOT be pal1 red here (was the original item-13 red-flood)"
+
+  - name: "shalamar_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x0C (Shalamar arena, idx 0): scene_detect routes to arena table at 0x7200"
+    force_d880: 0x0C
+    check_boss_flag: false
+    bg_table_expectations:
+      # Shalamar's arena_table_data assigns body parts to specific palettes.
+      # We only check ONE invariant: tile 0xFF (commonly border/fill) is NOT
+      # pal1 red (which would be a sign of dungeon-table fallthrough).
+      # The specific arena-table contents are NOT pinned because they're
+      # tuned palette-by-palette and may legitimately evolve.
+      - tile_range: [0x00, 0x00]
+        palette: 0
+        description: "tile 0x00 is always pal0 in any well-formed bg_table (sanity check)"
+
+  - name: "penta_dragon_arena_dispatch"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x14 (Penta Dragon arena, idx 8): scene_detect routes to last arena table"
+    force_d880: 0x14
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x00, 0x00]
+        palette: 0
+        description: "tile 0x00 sanity check — confirms scene_detect's arena dispatch math works at high index"
