@@ -70,6 +70,10 @@ TESTS=(
   sara_d_hornet_or_moth
   jet_form_secret_stage
   spiral_power_active
+  # Iter 10: WRAM STAT-IRQ stub (be7d5e3 + this) fixes Sara slot-1
+  # alternation in boss fights, unlocking these previously-flaky tests:
+  moth
+  gargoyle_miniboss
 )
 FAILED=()
 for t in "${TESTS[@]}"; do

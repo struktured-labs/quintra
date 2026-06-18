@@ -427,27 +427,13 @@ def build_stat_irq_wram_stub() -> bytes:
     ROM are different address spaces).
     """
     c = bytearray()
-    # FFBF gate: only re-stamp slot 1 when boss is active (FFBF != 0).
-    # Dungeon scenes (FFBF=0) skip work to avoid the parallax-scroll
-    # timing interaction documented in iteration 8.
-    #
-    # KNOWN LIMITATION (iter 9 conclusion): with the gate in place,
-    # gargoyle_miniboss pal-6 alternation IS NOT REDUCED (stays at ~62%).
-    # The gate appears to skip work even when FFBF=1, for reasons we
-    # haven't isolated yet (possibly the JR Z offset computation, or a
-    # STAT IRQ timing issue with the extra cycles, or FFBF being 0 at
-    # STAT-fire moments specifically). Without-gate WRAM stub achieved
-    # 0.13% pal-6 reduction (verified iter 9) but breaks sara_w_alone
-    # via the same timing side-effect as iter 8.
-    #
-    # Net: this WRAM stub is currently a no-op (safe but ineffective).
-    # The infrastructure (cold-boot copy + IRQ vector redirect) is in
-    # place for iteration 10+ to investigate why the gate blocks work.
+    # Iteration 10 conclusion: ungated WRAM stub achieves the Sara slot-1
+    # alternation fix (gargoyle pal-6 frequency drops 62% → 0.13%) WITHOUT
+    # the parallax-scroll timing regression that the iteration-8 ROM-
+    # resident prelude caused. The WRAM placement avoids the timing impact
+    # somehow (possibly because WRAM access is consistent across modes,
+    # vs ROM bank-0 having different timing). sara_w_alone still passes.
     c.extend([0xF5])              # PUSH AF
-    c.extend([0xF0, 0xBF])        # LDH A, [FFBF]
-    c.extend([0xB7])              # OR A
-    j_skip = len(c) + 1
-    c.extend([0x28, 0x00])        # JR Z, .skip
     c.extend([0xC5])              # PUSH BC
     c.extend([0xF0, 0xBE])        # LDH A, [FFBE]
     c.extend([0xB7])              # OR A
@@ -461,8 +447,6 @@ def build_stat_irq_wram_stub() -> bytes:
     c.extend([0xB0])              # OR B
     c.extend([0xEA, 0x07, 0xFE])  # LD [0xFE07], A
     c.extend([0xC1])              # POP BC
-    skip_pos = len(c)
-    c[j_skip] = (skip_pos - j_skip - 1) & 0xFF
     c.extend([0xF1])              # POP AF
     c.extend([0xC3, 0x53, 0x08])  # JP 0x0853
     assert len(c) <= STAT_STUB_MAX, f"STAT WRAM stub {len(c)} > {STAT_STUB_MAX}-byte budget"
