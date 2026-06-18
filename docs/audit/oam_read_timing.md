@@ -79,19 +79,56 @@ Sara's OAM slot 1 alternation in boss fights. Root cause: somewhere in
 the boss-fight path, slot 1's attr gets written to pal 6 (the gargoyle
 boss palette E value) when it should stay pal 2 (Sara W form's D value).
 
-Hypotheses to investigate next:
-1. **Game writes HW OAM directly.** Even though `rom[0x06D5]` was NOP'd
-   to disable the game's OAM DMA, the game's main loop may still write
-   attr bytes to `0xFE07` directly (LD [HL], A) for some sprite-management
-   reason. Trace WRAM-routine writes to `0xFE07` to find the source.
-2. **shadow_main's colorizer is processing only slot 0 from one shadow
-   pass and slot 1 from another — a 1-cycle phase issue.** If both
-   shadows have slot 1 = pal 6 from the game, then colorizer paints to
-   pal 2 in shadow A but DMA copies shadow B (which still has pal 6).
-3. **The boss_palette branch fires unexpectedly.** Could happen if
-   `tile=0x25` is somehow promoted to >=0x30 in the colorizer's path
-   for slot 1 specifically. Trace E/D registers AT EACH OAM SLOT inside
-   the colorizer.
+## Iteration 3 findings (2026-06-18)
+
+Deep probe at frames 250-400 (when HW slot 1 alternates) reveals the
+ACTUAL flow:
+
+- **Shadow A slot 1 attr**: pal 2 ALL frames (colorizer correctly paints
+  Sara palette in shadow buffer A at C007).
+- **Shadow B slot 1 attr**: pal 2 ALL frames (same for shadow buffer B
+  at C107).
+- **HW OAM slot 0**: pal 2 ALL frames (consistent with shadow).
+- **HW OAM slot 1**: pal 2 OR pal 6, alternating (~42/58 split).
+
+So the colorize handler IS doing its job. The DMA copies clean pal 2 to
+HW OAM. **My HW-OAM recolor also writes pal 2.** But BETWEEN my recolor
+(end of VBlank IRQ) and the Lua read (start of next frame), SOMETHING
+overwrites HW OAM slot 1 attr with 0xFE (= pal 6 + flips + bank + priority
+bits set). The "something" is the game's main-loop sprite-rebuild code
+running OUTSIDE VBlank — it writes directly to `0xFE07` between IRQs.
+
+The original NOP at `rom[0x06D5]` killed the game's OAM DMA, but there's
+STILL a direct-write path somewhere that we missed. ROM-scan for `EA 07
+FE` (direct LD [0xFE07], A) returns zero matches, so the write must be
+indirect (LD [HL], A with HL set elsewhere — likely a strided OAM-rebuild
+loop).
+
+### Fix options
+
+1. **Find and NOP the offending write.** Need mGBA memory watchpoint OR
+   instruction-trace at LY != 144 (main loop scanlines). Lua exposure
+   limited — may need an emulator-side script.
+2. **Add a 2nd recolor pass on every scanline / mode 2 (OAM scan).**
+   Triggered by STAT IRQ. Adds complexity + cycles but fixes it
+   guaranteed.
+3. **Disable the rogue path indirectly.** If the loop is part of
+   `gargoyle_logic` (boss-specific), patch the boss-spawn routine to
+   skip OAM rebuild.
+4. **Live with it.** Persistence-of-vision averages the alternation —
+   user perceives "slightly purple-tinged peach" not "flickering between
+   peach and blue-gray". Real visual impact is small. Mark known-issue
+   and move on.
+
+Option 4 is the lowest-effort, and the user's visual complaint in this
+session was about explicit "Sara half-orange" which was a DIFFERENT bug
+(the earlier B=40 recolor issue, since fixed). The current alternation
+is subtle enough that it may not have been noticed visually.
+
+Recommended next: pursue option 2 (STAT-triggered re-recolor) on a future
+iteration when there's a multi-hour window. For now, leave the 9 boss-
+save OBJ tests excluded from the hook (they'd be 42/58 flaky against the
+real alternation).
 
 Until fixed, the 9 boss-save OBJ tests stay out of the pre-commit hook
 because their YAML expectations (Sara=pal2) are objectively correct and
