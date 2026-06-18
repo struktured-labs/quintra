@@ -629,3 +629,61 @@ tests:
       - tile_range: [0x68, 0x68]
         palette: 4
         description: "0x68 (Penta Dragon cyan head) → pal 4"
+
+  # Iter 20: scene-routing tests for D880 values that scene_detect should
+  # route to the DUNGEON table (i.e., NOT splash/all-pal0 like 0x16/0x18/0x1B,
+  # and NOT an arena table like 0x0C-0x14). Each forces D880 to a "default"
+  # scene value and verifies the dungeon table's signature (tile 0x80 → pal 1
+  # red font). Catches regressions where someone accidentally adds the scene
+  # to the splash_body dispatch or arena range.
+
+  # D880=0x17 = death/game-over cinematic (0x4A44). Bank14 tiles loaded into
+  # VRAM 0x9000, window layer used for name splash. Not an arena and not in
+  # the splash list — falls through to dungeon table.
+  - name: "death_uses_dungeon_table"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x17 (death cinematic) routes to dungeon table — NOT splash"
+    force_d880: 0x17
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x80, 0x80]
+        palette: 1
+        description: "Tile 0x80 = pal 1 (dungeon font signature)"
+
+  # D880=0x19 = victory ending intermediate. Per cutscenes_intro_ending audit,
+  # the post-Penta-Dragon ending flows through D880=0x19 → 0x1A → 0x16. The
+  # 0x16 step IS in the splash list (postboss_reload_bg_table_all_pal0 covers
+  # it). The 0x19 step is NOT, so it routes to dungeon.
+  - name: "victory_intermediate_uses_dungeon_table"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x19 (victory ending intermediate) routes to dungeon table"
+    force_d880: 0x19
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x80, 0x80]
+        palette: 1
+        description: "Tile 0x80 = pal 1 (dungeon font signature)"
+
+  # D880=0x1A = victory ending step before 0x16. Same routing as 0x19.
+  - name: "victory_final_uses_dungeon_table"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x1A (victory ending step before postboss reload) routes to dungeon"
+    force_d880: 0x1A
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x80, 0x80]
+        palette: 1
+        description: "Tile 0x80 = pal 1 (dungeon font signature)"
+
+  # D880=0x1C = title menu text/cursor scene. Per scene_detect comment:
+  # "The menu scenes (0x00/0x1C) are intentionally left on the dungeon table
+  # (their red menu font is by design)." Verify that intent is preserved.
+  - name: "title_menu_uses_dungeon_table"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "D880=0x1C (title menu cursor) routes to dungeon table (red font by design)"
+    force_d880: 0x1C
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x80, 0x80]
+        palette: 1
+        description: "Tile 0x80 = pal 1 (red font — intentional for the title menu)"
