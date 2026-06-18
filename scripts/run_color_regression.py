@@ -375,22 +375,38 @@ def run_single_test(test: dict, rom_path: str, savestate_dir: str, output_dir: s
     if verbose:
         print(f"  Running mGBA with savestate {savestate}...")
 
-    # Run the test
-    success = run_test_with_mgba(rom_path, savestate_path, lua_script_path)
-
-    if not success:
-        return TestResult(name, False, "mGBA execution failed")
-
-    # Read results
+    # Iter 17: defensive retry. mGBA Lua occasionally fails to flush output
+    # under parallel/system load — we observed `cameo_arena_dispatch` in the
+    # iter-17 pre-commit hook produce a 0-byte JSON file once in ~30 runs
+    # while passing standalone. Retry the test once on JSON-parse failure
+    # or missing output before failing the test. Caps wall-clock cost at
+    # 2x the worst case (~10s); avoids blocking commits on transient flakes.
     json_path = f"{output_prefix}.json"
-    if not os.path.exists(json_path):
-        return TestResult(name, False, f"No output generated (expected {json_path})")
+    data = None
+    last_err = None
+    for attempt in (1, 2):
+        if os.path.exists(json_path):
+            try:
+                os.unlink(json_path)
+            except OSError:
+                pass
+        success = run_test_with_mgba(rom_path, savestate_path, lua_script_path)
+        if not success:
+            last_err = "mGBA execution failed"
+            continue
+        if not os.path.exists(json_path):
+            last_err = f"No output generated (expected {json_path})"
+            continue
+        try:
+            with open(json_path) as f:
+                data = json.load(f)
+            break
+        except json.JSONDecodeError as e:
+            last_err = f"Invalid JSON output: {e}"
+            continue
 
-    try:
-        with open(json_path) as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        return TestResult(name, False, f"Invalid JSON output: {e}")
+    if data is None:
+        return TestResult(name, False, f"{last_err} (after 2 attempts)")
 
     oam_data = data.get("oam", [])
     bg_histo = data.get("bg_histo", [0]*8)
