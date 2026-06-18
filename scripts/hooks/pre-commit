@@ -69,6 +69,21 @@ TESTS=(
   lava_stage5_override
   lava_stage7_override
   lava_off_at_ffba0
+  # Iter 18: per-arena bg_table CONTENT tests. The *_arena_dispatch tests
+  # only check "tile 0x00 = pal 0" (catches off-by-one in dispatch math
+  # but NOT arena-table corruption). These verify signature tile→palette
+  # mappings unique to each boss arena (e.g. Shalamar crown 0x11 → pal 4
+  # cyan, Penta Dragon red head 0x48 → pal 5). Together with the dispatch
+  # tests, they pin down both the routing AND the contents.
+  shalamar_arena_content
+  riff_arena_content
+  crystal_dragon_arena_content
+  cameo_arena_content
+  ted_arena_content
+  troop_arena_content
+  faze_arena_content
+  angela_arena_content
+  penta_dragon_arena_content
   # All 9 boss arena dispatches (D880 = 0x0C..0x14):
   shalamar_arena_dispatch
   riff_arena_dispatch

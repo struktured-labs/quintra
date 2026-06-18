@@ -518,3 +518,114 @@ tests:
       - tile_range: [0x02, 0x05]
         palette: 0
         description: "Floor IDs 0x02-0x05 stay pal 0 (floor) when FFBA=0"
+
+  # Iter 18: per-arena bg_table CONTENT regression tests. The existing
+  # *_arena_dispatch tests only verify "tile 0x00 = pal 0" — they catch
+  # off-by-one in the scene_detect dispatch math but NOT corruption of the
+  # actual arena bg_table data. These check signature tile→palette
+  # mappings that are UNIQUELY characteristic of each boss arena (verified
+  # against scripts/arena_tables_data.py:ARENA_TILE_PAL). If someone
+  # accidentally swaps two arena tables, or zeros out the signature
+  # tile range, these catch it. Each test forces D880 to the arena's
+  # scene value and asserts the dominant body-palette tile.
+  - name: "shalamar_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Shalamar arena table: crown tile 0x11 → pal 4 (cyan)"
+    force_d880: 0x0C
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x11, 0x11]
+        palette: 4
+        description: "0x11 (Shalamar crown) → pal 4 cyan"
+      - tile_range: [0x3C, 0x3C]
+        palette: 5
+        description: "0x3C (Shalamar claws/tail) → pal 5 red"
+
+  - name: "riff_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Riff arena table: body tile 0x30 → pal 2 (purple)"
+    force_d880: 0x0D
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x30, 0x30]
+        palette: 2
+        description: "0x30 (Riff purple body) → pal 2"
+
+  - name: "crystal_dragon_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Crystal Dragon arena table: tile 0x88 → pal 7 (ice cyan)"
+    force_d880: 0x0E
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x88, 0x88]
+        palette: 7
+        description: "0x88 (Crystal Dragon body) → pal 7 ice cyan"
+
+  - name: "cameo_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Cameo arena table: tile 0x10 → pal 5 (border gold), tile 0x61 → pal 2 (face)"
+    force_d880: 0x0F
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x10, 0x10]
+        palette: 5
+        description: "0x10 (Cameo border) → pal 5"
+      - tile_range: [0x61, 0x61]
+        palette: 2
+        description: "0x61 (Cameo face/body) → pal 2"
+
+  - name: "ted_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Ted arena table: tile 0x17 → pal 1 (gold body, dominant)"
+    force_d880: 0x10
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x17, 0x17]
+        palette: 1
+        description: "0x17 (Ted gold body) → pal 1"
+
+  - name: "troop_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Troop arena table: tile 0x23 → pal 7 (silver/steel blue)"
+    force_d880: 0x11
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x23, 0x23]
+        palette: 7
+        description: "0x23 (Troop silver body) → pal 7"
+
+  - name: "faze_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Faze arena table: tile 0x12 → pal 2 (spectral purple body)"
+    force_d880: 0x12
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x12, 0x12]
+        palette: 2
+        description: "0x12 (Faze spectral body) → pal 2"
+
+  - name: "angela_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Angela arena table: tile 0x20 → pal 2, tile 0x37 → pal 7"
+    force_d880: 0x13
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x20, 0x20]
+        palette: 2
+        description: "0x20 (Angela purple) → pal 2"
+      - tile_range: [0x37, 0x37]
+        palette: 7
+        description: "0x37 (Angela silver halo) → pal 7"
+
+  - name: "penta_dragon_arena_content"
+    savestate: "level1_sara_d_alone.ss0"
+    description: "Penta Dragon arena: tile 0x48 → pal 5 (red), 0x68 → pal 4 (cyan)"
+    force_d880: 0x14
+    check_boss_flag: false
+    bg_table_expectations:
+      - tile_range: [0x48, 0x48]
+        palette: 5
+        description: "0x48 (Penta Dragon red head) → pal 5"
+      - tile_range: [0x68, 0x68]
+        palette: 4
+        description: "0x68 (Penta Dragon cyan head) → pal 4"
