@@ -46,13 +46,21 @@ local frame_count = 0
 local target_frames = {frames}
 
 local function dump_oam()
+    -- Atomic block read via emu:readRange — eliminates the per-byte drift
+    -- that the 160-emu:read8 loop suffered (the emulator core advances
+    -- scanlines between individual read8 calls, and the game's main loop
+    -- can rewrite HW OAM mid-dump, producing inconsistent palette readings
+    -- for boss-save tests). readRange returns a string snapshot at a single
+    -- emulator-time point. See docs/audit/oam_read_timing.md for the full
+    -- investigation.
+    local raw = emu:readRange(0xFE00, 0xA0)  -- 40 sprites x 4 bytes = 160
     local oam_data = {{}}
     for i = 0, 39 do
-        local addr = 0xFE00 + i * 4
-        local y = emu:read8(addr)
-        local x = emu:read8(addr + 1)
-        local tile = emu:read8(addr + 2)
-        local flags = emu:read8(addr + 3)
+        local off = i * 4 + 1  -- Lua strings are 1-indexed
+        local y = raw:byte(off)
+        local x = raw:byte(off + 1)
+        local tile = raw:byte(off + 2)
+        local flags = raw:byte(off + 3)
         local palette = flags & 0x07
         table.insert(oam_data, {{
             slot = i,

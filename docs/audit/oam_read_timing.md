@@ -1,10 +1,26 @@
-# mGBA Lua OAM read timing — known issue + investigation log
+# mGBA Lua OAM read timing — resolved (and the real bug it uncovered)
 
-**State:** unresolved 2026-06-18. Test runner OAM dump for slots in boss-fight
-save states sometimes reports the boss palette (pal 6/7) for Sara's slots
-(0-3), even though the actual LCD renders her in the correct Sara palette
-(verified by sampling the rendered screenshot pixels — peach/pink, not
-blue-gray/red).
+**Resolution 2026-06-18:** the "per-byte drift in 40-slot loop" theory was
+WRONG. Switched dump_oam to `emu:readRange(0xFE00, 0xA0)` (atomic block
+read returning a string). That eliminated my probe-vs-runner discrepancy,
+which then revealed a **real game-side issue**: Sara's HW OAM slot 1 attr
+ALTERNATES between pal 2 (Sara W, correct) and pal 6 (Gargoyle, wrong)
+every few frames during the gargoyle_miniboss save.
+
+**Hard evidence:** dump-every-frame trace on
+`level1_sara_w_gargoyle_mini_boss.ss0` over 1166 frames showed slot 1 attr
+= 0x02 in 490 frames and 0x06 in 676 frames (≈42/58 split). Slot 0/2/3
+all stayed at pal 2. Only slot 1 alternates.
+
+This is the same kind of alternation pattern we documented for boss arena
+BG attrs (`project_arena_position_sweep.md` — Sara's right-half OBJ slot
+gets the boss palette written by ??? mid-frame). The screenshot still
+shows Sara as predominantly peach/pink because:
+1. LCD renders one specific frame's HW OAM; ~42% chance that snapshot is
+   the correct pal2 frame.
+2. Persistence-of-vision averages the alternating sprite colours, so the
+   user perceives "slightly purple-tinged peach" rather than "flickering
+   between peach and blue-gray".
 
 ## What's confirmed
 
@@ -49,31 +65,44 @@ not before it).
   → A = D (Sara form palette) = 2 for Sara W. No path produces pal 6 for
   this tile sequence.
 
-## Workarounds in place
+## What was fixed (test harness)
 
-- Tests that need slot-specific assertions on Sara during boss saves are
-  EXCLUDED from `scripts/hooks/pre-commit` (the 12-test reliable list
-  doesn't include `gargoyle_miniboss`, `spider_miniboss_*`, `mage`, `moth`,
-  `metal_ball_mage_soldier`).
-- BG-table tests (which read `0xDA00` once, not 40 OAM bytes) and OBJ
-  tests on STABLE scenes (non-boss `sara_w_alone`/`sara_d_alone`/`crow`)
-  are reliable and ARE in the hook.
+- `dump_oam` in `scripts/run_color_regression.py` switched from a 40-slot
+  loop of `emu:read8` calls to a single `emu:readRange(0xFE00, 0xA0)`
+  block read + Lua string indexing. This is the **atomic block-read
+  primitive** mGBA Lua exposes; eliminated the per-byte drift hypothesis
+  and made probe results reproducible.
 
-## Next-step ideas to try
+## What's NOT fixed (real game bug — future iteration)
 
-1. **Read OAM via memory:cart? or a single bulk-read primitive.** If
-   mGBA Lua has an atomic block-read API, that would eliminate the per-
-   byte drift.
-2. **Disable LCD during the dump.** `emu:write8(0xFF40, current & 0x7F)`
-   before reading, restore after. LCD off freezes the game's OAM writes
-   (since it's running its own sprite logic on next IRQ). Risk: changes
-   emulator state observable by the game.
-3. **Read OAM via shadow buffer instead of HW OAM.** Slot 1 in shadow A
-   (C007) at frame 60+ should reflect the colorizer's last write.
-   Probe showed `shA:t=25 a=00` — but that's because game's main loop
-   rewrote shadow to pal0 between colorizer and our read. Same issue.
-4. **Cross-validate via screenshot pixel-sampling.** Replace OAM-attr
-   assertions with "sample pixel at known Sara location, must match Sara
-   palette colour-set". More robust but bigger refactor.
+Sara's OAM slot 1 alternation in boss fights. Root cause: somewhere in
+the boss-fight path, slot 1's attr gets written to pal 6 (the gargoyle
+boss palette E value) when it should stay pal 2 (Sara W form's D value).
 
-(Option 1 likely fastest; defer until needed to widen hook coverage.)
+Hypotheses to investigate next:
+1. **Game writes HW OAM directly.** Even though `rom[0x06D5]` was NOP'd
+   to disable the game's OAM DMA, the game's main loop may still write
+   attr bytes to `0xFE07` directly (LD [HL], A) for some sprite-management
+   reason. Trace WRAM-routine writes to `0xFE07` to find the source.
+2. **shadow_main's colorizer is processing only slot 0 from one shadow
+   pass and slot 1 from another — a 1-cycle phase issue.** If both
+   shadows have slot 1 = pal 6 from the game, then colorizer paints to
+   pal 2 in shadow A but DMA copies shadow B (which still has pal 6).
+3. **The boss_palette branch fires unexpectedly.** Could happen if
+   `tile=0x25` is somehow promoted to >=0x30 in the colorizer's path
+   for slot 1 specifically. Trace E/D registers AT EACH OAM SLOT inside
+   the colorizer.
+
+Until fixed, the 9 boss-save OBJ tests stay out of the pre-commit hook
+because their YAML expectations (Sara=pal2) are objectively correct and
+the game IS wrong — but the test would flicker pass/fail with the
+alternation. Mark them as `known_flaky_until_alternation_fixed: true`
+when widening the hook.
+
+## What's in the hook now
+
+- 6 BG-table tests (banner/cutscene/splash/postboss/2 arena dispatches)
+- 6 OBJ tests on STABLE scenes (non-boss `sara_w_alone`/`sara_d_alone`/
+  `crow`/`sara_d_hornet_or_moth`/`jet_form_secret_stage`/
+  `spiral_power_active`)
+- 12 tests total, ~25-30s wall-clock.
