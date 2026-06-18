@@ -480,3 +480,30 @@ Conclusion: 5 remaining boss-save OBJ failures + tile 0x10-0x1F
 secondary-sprite improvement all need to wait for either (a) a
 fundamentally different IRQ mechanism, or (b) game-side fixes that
 attack the source of OAM writes. STAT-IRQ approach is exhausted.
+
+## Iteration 15 (2026-06-18) — switched dump_oam to dedicated OAM accessor
+
+**Hypothesis:** mGBA's `emu:readRange(0xFE00, 0xA0)` is the generic memory
+accessor. There's also `emu.memory.oam:readRange(0, 0xA0)`, a dedicated
+OAM-region userdata exposing read8/readRange. Theory: the dedicated
+accessor takes a more atomic snapshot at the emulator-time point of the
+Lua callback, possibly avoiding the cross-region timing drift that
+iter 8/14 stumbled on.
+
+**Result:**
+- Switched the test runner's `dump_oam` to `emu.memory.oam:readRange(0, 0xA0)`.
+- All 23 hook tests still pass — no regression.
+- Re-ran iteration 14's colorizer patch (`colorizer[49]=0x1B`, redirecting
+  tiles 0x10-0x1F to sara_palette) on top of the new accessor. `sara_w_alone`
+  STILL FAILS on slot 3.
+
+**Conclusion:** the iter-14 failure is NOT a Lua-sample-window artifact —
+the colorizer change is a real regression. Some downstream interaction
+(likely cycle-budget shift in the chained handler or attr buffer
+write timing) genuinely flips slot 3 to pal 4 in `sara_w_alone`.
+
+The OAM-accessor improvement is kept as a defensive infrastructure
+upgrade even though it doesn't unlock any additional tests. It eliminates
+"is this a probe-vs-runner discrepancy?" as a question in future
+iterations.
+
