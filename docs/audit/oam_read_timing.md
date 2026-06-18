@@ -156,6 +156,80 @@ re-stamp during HBlank, no need to expand B which would bring back Sara's
 half-orange via slot 10-11 secondary sprites mapping tile 0x10-0x1F to
 pal 4). This unifies the fix for ALL 9 excluded tests at once.
 
+## Iteration 7: detailed STAT-IRQ implementation plan
+
+Survey of the existing IRQ vectors (`rom/working/penta_dragon_dx_teleport.gb`):
+```
+0x0040 (VBlank): C3 D1 06 → JP 0x06D1 (game's existing VBlank handler, our trampoline hooks it)
+0x0048 (STAT):   C3 53 08 → JP 0x0853 (ALREADY IN USE — sound/music timing handler)
+0x0050 (Timer):  C3 B3 06 → JP 0x06B3 (game's timer / sound engine tick)
+0x0058 (Serial): D9       → RETI (unused)
+0x0060 (Joypad): D9       → RETI (unused)
+```
+
+So STAT can't be hijacked directly — the game has its own handler at 0x0853
+(saves all regs, switches to bank 1, does sound work, switches bank back,
+RETIs). Our STAT-IRQ re-recolor must CHAIN through it.
+
+### Plan for next iteration(s)
+
+1. **Author `stat_irq_handler` in bank-13 free space** (currently ~33 bytes
+   available between 0x7FCD and POSMAP_PTR_TABLE 0x7FE0, plus 14 bytes after
+   0x7FF2). Target size: ~30 bytes. Logic:
+   ```
+   stat_irq_handler:
+     PUSH AF
+     LDH A, [FFBE]        ; Sara form: 0=W, 1+=D
+     OR A
+     JR NZ, .dragon
+     LD A, 0x02           ; pal 2 = Sara W
+     JR .stamp
+   .dragon:
+     LD A, 0x01           ; pal 1 = Sara D
+   .stamp:
+     ; Re-stamp slot 1 attr (the dominant alternation slot)
+     LD H, A              ; save pal
+     LD A, [0xFE07]       ; current slot 1 attr
+     AND 0xF8             ; clear pal bits
+     OR H                 ; merge new pal
+     LD [0xFE07], A       ; write back
+     ; Also re-stamp slot 3 (same logic) and slots 10-15 (orc/soldier body)
+     ; ... (further stamps via tile-range lookup for non-Sara slots)
+     POP AF
+     JP 0x0853            ; chain to game's STAT handler
+   ```
+
+2. **Patch IRQ vector 0x0048** to JP `stat_irq_handler` instead of 0x0853.
+   1-byte change (the low byte of the JP target), but bank-13 is not always
+   mapped — the handler must live in a bank that's permanently accessible.
+   Bank 0 is always-mapped. Bank 13 is mapped during colorize chain but
+   NOT during main loop (which is when STAT fires).
+   
+   So: install handler in bank 0 free space. Or in WRAM (0xDB00 landing pad
+   has space if we move things around). WRAM is bank-agnostic.
+
+3. **Enable STAT mode 0 (HBlank) interrupt**: set bit 3 of STAT register
+   (0xFF41). Currently the game might enable STAT only for LYC match or
+   mode 1; need to OR in bit 3. One-shot write at boot OR every VBlank.
+
+4. **Performance check**: 144 STAT IRQs per frame × ~30 cycles per handler
+   = ~4320 cycles overhead per frame. CGB at single-speed has ~70000 cycles
+   per frame, so ~6% overhead. Probably tolerable in mGBA; real-hardware
+   measurement needed before claiming OK on MiSTer.
+
+5. **Verification**: rerun gargoyle_miniboss/spider_miniboss_*/moth/mage/
+   metal_ball_mage_soldier and all 4 orc/soldier/catfish/orc_with_items
+   slot-10+ tests. Expect: all 9 currently-excluded OBJ tests pass.
+
+6. **Hook expansion**: once all 9 pass reliably, add them to
+   `scripts/hooks/pre-commit`. Hook goes from 21 → 30 tests, ~70-80s.
+
+Estimated total effort: 2-3 short iterations OR one long focused session.
+Risk: the per-scanline overhead could push VBlank+colorize over budget
+on real MiSTer hardware (the phantom-sound history shows this is sensitive).
+Mitigation: gate the handler on `D880 < 0x16` (only run in dungeon + arena,
+not menus/cutscenes) → cuts overhead during attract cycle.
+
 ## What's in the hook now
 
 - 6 BG-table tests (banner/cutscene/splash/postboss/2 arena dispatches)
