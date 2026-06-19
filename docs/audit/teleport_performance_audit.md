@@ -1,5 +1,36 @@
 # Performance / Slowdown Audit — TELEPORT build colorize chain
 
+## 2026-06-18 UPDATE: iter 31 hwoam_recolor adds ~6000T/VBlank — MiSTer verification gated
+The teleport ROM now includes a post-DMA `hwoam_recolor` (iter 31,
+`scripts/build_v301_teleport.py:508-572`, addr `bank13:0x7F40`) that
+re-stamps ALL 40 HW OAM slots by tile range. The colorizer loop at
+`0x6A12` is shared with the shadow pass, but the caller (hwoam_recolor)
+sets `B=0x28` instead of `B=0x0A`, giving 40 iterations instead of 10.
+
+**Cycle estimate (single CGB T-cycles, single-speed):**
+- hwoam_recolor setup (gates, D/E load, HL load, B load, JP): ~80T
+- Inner colorizer loop: ~140-180T per active slot, ~25T for tile==0 skip
+- For a typical dungeon frame (~12 active sprites, 28 zero-tile slots):
+  - 12 × 160T (active path) + 28 × 25T (skip path) ≈ 1920 + 700 = **~2620T**
+- For a boss arena frame (boss enemies fill more slots, ~25 active):
+  - 25 × 160T + 15 × 25T ≈ 4000 + 375 = **~4375T**
+
+Steady-state with iter 31 ON (teleport, FFC1=1, dungeon ~12 sprites):
+- Pre-iter-31: ~7,500T/VBlank (164% of the 4,560T window)
+- Post-iter-31: ~7,500 + ~2,620 ≈ **~10,120T/VBlank (222% of window)**
+
+This is ~2.2× the VBlank window. The bg_sweep Phase 3 attr writes that
+previously landed at LY 0-4 now land further into active display — still
+the "swept row ahead of raster" class, but with less margin. mGBA-verified
+across 65 hook tests with no behavior regressions; **MiSTer hardware
+verification REQUIRED before promoting hwoam_recolor to production v3.01 /
+penta_dragon_dx_FIXED.gb.** The audit's trim recommendations (1: wrapper
+joypad 8→3; 2: fuse bg_sweep Phase 1+2) become more interesting as a
+cycle-recovery buffer for the hwoam_recolor cost.
+
+---
+
+
 Static analysis (no emulator). ROM analyzed: `rom/working/penta_dragon_dx_teleport.gb`
 (rebuilt from `scripts/build_v301_teleport.py`). Base compared: `rom/working/penta_dragon_dx_v301.gb`.
 Cycle counts are single-speed CGB T-cycles (frame = 70,224T; VBlank window ≈ 4,560T = 10 lines × 456T).
