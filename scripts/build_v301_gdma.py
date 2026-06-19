@@ -462,6 +462,9 @@ def build_v301():
     # the game's main-loop OAM rebuild overwrites HW OAM with p0 before display).
     # The full OBJ fix (cap 40 + DMA-ordering rework) is timing-critical and needs
     # MiSTer hardware verification — see docs/audit/obj_enemy_color_race.md.
+    # Iter 29 verified: raising to 0x28 + remap tile 0x10-0x1F → sara_palette
+    # does NOT unlock orc/soldier (shadow[14] stays at attr=0x00 even with
+    # B=40). The race is deeper than B-coverage. Reverted.
     colorizer[1] = 0x0A
     w(colorizer_addr, bytes(colorizer))
 
