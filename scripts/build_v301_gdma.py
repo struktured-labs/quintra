@@ -670,6 +670,30 @@ def build_v301():
     w(colorize_addr, bytes(code))
     print(f"  colorize handler: {len(code)} bytes at 0x{colorize_addr:04X}")
 
+    # Iter 34 experiment: tried backporting build_v301_teleport's
+    # hwoam_recolor (iter 31) into v3.01 production at 0x7F40 + adding a
+    # CALL after the colorize_handler in the wrapper. mGBA verification
+    # against rom/working/penta_dragon_dx_v301.gb showed Sara slot-1
+    # alternation (all odd slots read pal 4 in dungeon Sara W scenes):
+    #
+    #     sara_w_alone slot 0 = pal 2 (Sara W ✓)
+    #     sara_w_alone slot 1 = pal 4 (FAIL — expected 2)
+    #     sara_w_alone slot 2 = pal 2 ✓
+    #     sara_w_alone slot 3 = pal 4 (FAIL — expected 2)
+    #
+    # Root cause: v3.01 production lacks the STAT-IRQ WRAM stub (iter 10,
+    # `build_stat_irq_wram_stub` in build_v301_teleport.py:411) which
+    # re-stamps HW OAM slot 1 attr with Sara form palette every STAT IRQ.
+    # Without that stub, the base game's STAT IRQ chain leaves slot 1/3/5/7
+    # at pal 4 even though hwoam_recolor writes pal 2. Iter 31's win
+    # requires both fixes; a partial backport regresses Sara visibly.
+    #
+    # Full v3.01 backport requires also installing the STAT-IRQ WRAM stub
+    # AND the IRQ vector patch at 0x0048. That's a multi-step backport
+    # (cold-boot copy, vector patch, FFBF gate, etc.) and needs separate
+    # MiSTer hardware verification because v3.01 is the production ROM.
+    # Filed for future iteration. teleport ROM remains the gold standard.
+
     # ============================================================
     # VBLANK HOOK at 0x0824 and Wrapper at 0x6F10
     # ============================================================
@@ -713,6 +737,10 @@ def build_v301():
 
         # --- CALL actual colorize_handler ---
         0xCD, colorize_addr & 0xFF, (colorize_addr >> 8) & 0xFF,
+
+        # Iter 34: tried adding `CALL HWOAM_RECOLOR_ADDR` here as a
+        # backport of iter 31's teleport fix. Regressed Sara slots 1/3/5/7
+        # to pal 4 (see the long comment above the HWOAM block). Reverted.
 
         # --- RESTORE REGISTERS ---
         0xE1,                                 # POP HL
