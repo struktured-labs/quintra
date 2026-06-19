@@ -558,7 +558,15 @@ def build_hwoam_recolor() -> bytes:
     # sprites and is visually MUCH less loud than the half-orange Sara,
     # which was immediate and disturbing.
     c.extend([0x21, 0x03, 0xFE])           # LD HL, 0xFE03
-    c.extend([0x06, 0x0A])                 # LD B, 10
+    # Iter 31: raise from B=10 → B=40 for full 40-slot post-DMA stamp.
+    # Combined with the bg_experiment.py iter-31 tile-0x10-0x1F → sara_palette
+    # remap, the previously documented "Sara half-orange" regression at
+    # slots 10-11 is GONE — secondary Sara tiles map to D (Sara pal) instead
+    # of pal_4. This unlocks orc/soldier/orc_with_items by post-stamping
+    # HW OAM AFTER the DMA, so the shadow-side race documented in iter 29
+    # no longer matters. mGBA-verified; MiSTer hardware verification gated
+    # on this commit.
+    c.extend([0x06, 0x28])                 # LD B, 40
     loop_start = OBJ_COLORIZER_ADDR + 2    # after the colorizer's LD B,n
     c.extend([0xC3, loop_start & 0xFF, (loop_start >> 8) & 0xFF])  # JP colorizer loop_start
     return bytes(c)

@@ -135,6 +135,19 @@ TESTS=(
   sara_w_item_pickup_scene
   sara_w_pulsing_vram
   sara_w_secret_stage_shmup
+  # Iter 31: hwoam_recolor B 10 → 40 + tile 0x10-0x1F → sara_palette
+  # unlocks ALL previously-excluded slot-10+ enemy tests. Sara secondary
+  # tiles map to D (Sara pal) instead of pal_4, avoiding "Sara half-orange"
+  # while the post-DMA stamp coats slots 10+ with their correct tile-range
+  # palettes (orc → pal 5, soldier → pal 6, etc.). The audit's pessimistic
+  # "DMA-race needs MiSTer fix" was actually solvable by post-stamping HW
+  # OAM AFTER the DMA instead of trying to win the shadow-pass race.
+  orc
+  orc_with_items
+  soldier
+  catfish
+  spider_miniboss_sara_d
+  dragon_powerup
 )
 # Iter 19: parallelize the suite (xargs -P) and switch to a deterministic
 # post-hoc summary via .ok/.fail markers.

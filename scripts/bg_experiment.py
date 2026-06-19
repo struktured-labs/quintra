@@ -138,7 +138,11 @@ def create_tile_based_colorizer(colorizer_base_addr: int) -> bytes:
 
     labels['low_tiles'] = len(code)
     emit([0xFE, 0x20]); emit_jr(0x30, 'sara_palette')
-    emit([0xFE, 0x10]); emit_jr(0x30, 'pal_4')
+    # Iter 31: tile 0x10-0x1F is Sara's secondary body sprites. Route to
+    # sara_palette (D) so the iter-31 hwoam_recolor B=40 raise doesn't
+    # paint slot 10-11 pal 4 (Sara half-orange). Iter 29 verified this
+    # change is safe (sara_w_alone + all OBJ tests still pass).
+    emit([0xFE, 0x10]); emit_jr(0x30, 'sara_palette')
     emit([0xFE, 0x02]); emit_jr(0x38, 'pal_3')
     emit([0xAF]); emit_jr(0x18, 'apply_palette')
 
