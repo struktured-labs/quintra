@@ -778,3 +778,24 @@ tests:
       - slots: [0, 1, 2, 3]
         palette: 2
         description: "Sara W stays pal 2 even with crowded OAM (orcs occupy slot 10+)"
+
+  # Iter 33: 2 more from iter-32 sweep — Sara D variants and Sara W
+  # transient/powerup states. The dragon_powerup_item_crow combo exercises
+  # form-change + non-trivial enemy in the same frame.
+  - name: "sara_d_metal_ball_enemy"
+    savestate: "level1_sara_d_metal_ball.ss0"
+    description: "Sara D + metal-ball enemy — Sara D form palette holds in dungeon"
+    expected_boss_flag: 0
+    expectations:
+      - slots: [0, 1, 2, 3]
+        palette: 1
+        description: "Sara D in dungeon with metal-ball enemy"
+
+  - name: "sara_w_dragon_powerup_with_crow"
+    savestate: "level1_sara_w_dragon_powerup_item_crow.ss0"
+    description: "Dragon powerup item visible + crow enemy — form-change item + non-Sara enemy in same frame"
+    expected_boss_flag: 0
+    expectations:
+      - slots: [0, 1, 2, 3]
+        palette: 2
+        description: "Sara W still pal 2 even with dragon powerup pickup visible"

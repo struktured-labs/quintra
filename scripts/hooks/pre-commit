@@ -155,6 +155,10 @@ TESTS=(
   sara_w_in_spider_miniboss_live
   sara_d_teleport_tile
   sara_w_dual_enemies_with_arrows
+  # Iter 33: 2 more sweep-discovered tests covering Sara D + enemy and
+  # form-change + non-Sara-enemy combinations.
+  sara_d_metal_ball_enemy
+  sara_w_dragon_powerup_with_crow
 )
 # Iter 19: parallelize the suite (xargs -P) and switch to a deterministic
 # post-hoc summary via .ok/.fail markers.

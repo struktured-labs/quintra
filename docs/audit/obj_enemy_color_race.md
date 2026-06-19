@@ -1,4 +1,55 @@
-# OBJ enemy "black/blue/flat" color — root cause + fix (NEEDS hardware verify)
+# OBJ enemy "black/blue/flat" color — FIXED in TELEPORT ROM (iter 31, 2026-06-18); production v3.01 still pending hardware verification
+
+## UPDATE 2026-06-18 (iter 31, commit 534179f): teleport ROM unlocks all OBJ tests
+**The "DMA-ordering race" framing below turned out to be over-pessimistic.** The
+race exists for the SHADOW-pass colorizer (iter 29 verified shadow[14].attr stays
+at 0x00 even with B=40, because the game's main-loop OAM rebuild overwrites
+shadow attrs between colorize passes). But `hwoam_recolor` (the post-DMA stamp)
+lives in the VBlank wrapper AFTER the DMA — nothing the game does to shadow can
+race against it.
+
+The 2-byte + 1-line fix in the teleport ROM:
+- `scripts/bg_experiment.py:141` — tile 0x10-0x1F → `sara_palette` (was `pal_4`)
+- `scripts/build_v301_teleport.py:561` — `hwoam_recolor` `LD B, 10` → `LD B, 40`
+
+Sara's secondary body sprites (tiles 0x10-0x1F, slots 10-11 adjacent to primary)
+get the Sara form palette D instead of pal_4 (orange) — no "Sara half-orange"
+when B=40. Enemies in slots 10+ (orc 0x52, soldier 0x61, catfish, etc.) get
+their tile-range palette via the post-DMA stamp.
+
+Unlocked tests in the pre-commit hook (50 → 59):
+- orc (slot 14 tile 0x52 → pal 5 ✓)
+- orc_with_items (slot 12 tile 0x55 → pal 5 ✓)
+- soldier (slot 12 tile 0x61 → pal 6 ✓)
+- catfish (game-side default → correct pal ✓)
+- spider_miniboss_sara_d (Sara D form, savestate LIVE, → pal 1 ✓)
+- dragon_powerup (Sara form-change → pal 1 ✓)
+- sara_w_in_spider_miniboss_live (Sara W during spider miniboss, live save) ✓
+
+Still excluded (one test): `spider_miniboss_sara_w` — the savestate has
+DF1F=0xFF (frozen). Confirmed via `probe_spider_w_liveness.lua`: poisoning HW
+OAM with 0xAB persists 15 frames unmodified. The VBlank wrapper isn't running
+for that savestate; not a colorizer bug.
+
+## STILL PENDING: production v3.01 / FIXED.gb
+The teleport ROM (`penta_dragon_dx_teleport.gb`) has the iter-31 fix. The
+production v3.01 ROM (`penta_dragon_dx_v301.gb`) and the MiSTer-deployed
+`penta_dragon_dx_FIXED.gb` do NOT have `hwoam_recolor` installed — their bank-13
+0x7F40 area contains tile graphics, not code. Backporting requires either:
+  - Finding free space in production bank 13 (~52 bytes for hwoam_recolor +
+    wrapper hook for the CALL). Bank 13 in v3.01 is almost full; 0x7700 has
+    a tight ~16-byte gap but hwoam_recolor needs ~52 bytes.
+  - Reclaiming bytes from existing v3.01 features (e.g., the documented "dead
+    position-sweep system" at 0x7100 saves 159 bytes — see
+    `full_correctness_audit_2026-06-14.md`).
+  - Replacing the production ROM with the teleport ROM as the new gold standard.
+MiSTer hardware verification still required because B=40 adds ~30 cycles × 30
+slots ≈ 900 T-states to the post-DMA wrapper; mGBA tolerates VBlank overruns
+more than real CGB/DMG.
+
+---
+
+# Original investigation (2026-06-XX, pre-iter-31)
 
 Covers user items 3, 4, 6, 11 (Sara/monsters black or flat-blue; "random red
 quadrants"; regular enemies one flat color). Diagnosed by the color-sweep
