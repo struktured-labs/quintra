@@ -5,6 +5,7 @@ cd "$(git rev-parse --show-toplevel)"
 ROM="rom/working/penta_dragon_dx_teleport.gb"
 LUA="scripts/diagnostics/probe_savestate_sara.lua"
 STATES=(
+  # Iter 28 first sweep — for posterity
   level1_sara_w_p_item
   level1_sara_w_dragon_powerup_item
   level1_sara_w_extra_life_item
@@ -22,6 +23,20 @@ STATES=(
   level1_sara_w_secret_stage_1_dmg
   level1_sara_w_secret_stage_1_gbc
   level1_sara_w_before_entering_secret_stage
+  # Iter 32 second sweep — diverse remaining states
+  level1_sara_d_teleport_tile
+  level1_sara_spiral_powerup_item
+  level1_sara_w_dragon_powerup_item_crow
+  level1_sara_w_secret_stage_sequence_started
+  level1_sara_w_spike_hazard
+  level1_sara_w_shield1_item
+  level1_sara_w_cat_fish_fat_arrow_all_diagnos_arrow_item
+  level1_sara_w_fat_arrow_bidirectional_arrow_half_diagnol_arrow_wild_card_item
+  level1_sara_w_all_diagnol_arrow_item
+  level1_sara_w_2orcs_one_flickering_fat_arrow_bidirectioal_array_half_diagnol_arrow_random_item
+  level1_sara_w_right_before_secret_stage_trigger_gbc
+  level1_sara_w_half_pulsing_bottom_half_regular_top_bg_tiles
+  level1_sara1_shield1_item_spider_miniboss
 )
 printf "%-55s | %-4s | %-3s | %-4s | %-4s | %-4s | %-4s | sara slots(t/p)\n" "state" "d880" "fba" "ffbe" "ffbf" "ffc1" "df1f"
 echo "----------------------------------------------------------------------------------------------"

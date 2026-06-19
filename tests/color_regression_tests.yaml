@@ -750,3 +750,31 @@ tests:
       - slots: [0, 1, 2, 3]
         palette: 2
         description: "Sara W in secret stage SHMUP"
+
+  # Iter 32: more sweep-discovered tests for unique scene combinations.
+  - name: "sara_w_in_spider_miniboss_live"
+    savestate: "level1_sara_w_shield1_item.ss0"
+    description: "D880=0x0A FFBF=2 — Sara W in spider miniboss (LIVE save, DF1F=187 not 0xFF). Iter 31's hwoam_recolor B=40 colorizes Sara properly. The spider_miniboss_sara_w test failure is the FROZEN-savestate variant, not a colorizer bug."
+    expected_boss_flag: 2
+    expectations:
+      - slots: [0, 1, 2, 3]
+        palette: 2
+        description: "Sara W during spider miniboss — proves iter 31 fix covers spider scene"
+
+  - name: "sara_d_teleport_tile"
+    savestate: "level1_sara_d_teleport_tile.ss0"
+    description: "Sara D dungeon scene with teleport tile in view — Sara form palette stable through teleport-tile rendering"
+    expected_boss_flag: 0
+    expectations:
+      - slots: [0, 1, 2, 3]
+        palette: 1
+        description: "Sara D on a teleport tile"
+
+  - name: "sara_w_dual_enemies_with_arrows"
+    savestate: "level1_sara_w_2orcs_one_flickering_fat_arrow_bidirectioal_array_half_diagnol_arrow_random_item.ss0"
+    description: "2 orcs + multiple arrow types + random item — high-OAM-occupancy stress test"
+    expected_boss_flag: 0
+    expectations:
+      - slots: [0, 1, 2, 3]
+        palette: 2
+        description: "Sara W stays pal 2 even with crowded OAM (orcs occupy slot 10+)"
