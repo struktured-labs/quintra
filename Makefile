@@ -23,15 +23,19 @@ LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen test play info
-all: gen dirs $(BINDIR)/$(PROJECT).gbc
+.PHONY: all clean cleangen cleanall dirs gen build test play info
+# Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
+# for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
+# at parse time and misses the generated files on a fresh build.
+all: gen
+	@$(MAKE) --no-print-directory build
+
+build: dirs $(BINDIR)/$(PROJECT).gbc
 
 dirs:
 	@mkdir -p $(OBJDIR) $(BINDIR) $(GENDIR)
 
 # Rust codegen: build the codegen tool then run it.
-# In bootstrap mode (Phase 1) the codegen may be absent — emit a stub header
-# so SDCC doesn't error on missing includes.
 gen:
 	@cargo build --release -p quintra-codegen 2>&1 | grep -E 'error|warning' || true
 	@if [ ! -x target/release/quintra-codegen ]; then \
