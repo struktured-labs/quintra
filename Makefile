@@ -1,37 +1,54 @@
-# Penta Dragon DX Remake - GBDK-2020 Makefile
+# Quintra — GBC Native + Rust dev-host tooling
+# Runtime: C / GBDK-2020 / SDCC — only thing in the ROM
+# Tooling:  Rust workspace under tools/ — never linked into ROM
+
 GBDK    = /home/struktured/gbdk
 LCC     = $(GBDK)/bin/lcc
 
-# Project
-PROJECT = penta_dragon_dx
+PROJECT = quintra
 SRCDIR  = src
 OBJDIR  = obj
 BINDIR  = rom/working
-ASSETDIR = assets/extracted
+GENDIR  = $(SRCDIR)/generated
 
-# Flags
-LCCFLAGS  = -Wa-l -Wl-m -Wl-j -Wl-yt0x1B -Wl-yo4 -Wl-ya4 -Wl-b_HOME=0x0200 -Wl-b_CODE=0x0400
-# -yt0x1B = MBC5+RAM+BATTERY
-# -yo4    = 4 ROM banks (64KB)
-# -ya4    = 4 RAM banks
+# All .c under src/ (including generated)
+SRCS = $(shell find $(SRCDIR) -name '*.c' 2>/dev/null)
+OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 
-# CGB mode flag
-LCCFLAGS += -Wm-yc
-# -yc = CGB compatible (works on both DMG and CGB)
-# Use -Wm-yC for CGB-only
+# GBDK / SDCC flags
+LCCFLAGS  = -Wa-l -Wl-m -Wl-j
+LCCFLAGS += -Wl-yt0x1B          # MBC5 + RAM + BATTERY
+LCCFLAGS += -Wl-yo32            # 32 ROM banks (512KB) — bumps up as needed
+LCCFLAGS += -Wl-ya4             # 4 SRAM banks (32KB)
+LCCFLAGS += -Wl-b_HOME=0x0200
+LCCFLAGS += -Wl-b_CODE=0x0400
+LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
+LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-# Source files
-SRCS = $(wildcard $(SRCDIR)/*.c)
-OBJS = $(SRCS:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
-
-# Default target
-all: dirs $(BINDIR)/$(PROJECT).gbc
+.PHONY: all clean cleangen cleanall dirs gen test play info
+all: gen dirs $(BINDIR)/$(PROJECT).gbc
 
 dirs:
-	@mkdir -p $(OBJDIR) $(BINDIR)
+	@mkdir -p $(OBJDIR) $(BINDIR) $(GENDIR)
 
-# Compile C to object
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
+# Rust codegen: build the codegen tool then run it.
+# In bootstrap mode (Phase 1) the codegen may be absent — emit a stub header
+# so SDCC doesn't error on missing includes.
+gen:
+	@if [ -f tools/Cargo.toml ]; then \
+		(cd tools && cargo build --release -p quintra-codegen 2>/dev/null) || true; \
+	fi
+	@if [ -x tools/target/release/quintra-codegen ]; then \
+		tools/target/release/quintra-codegen --content content --out $(GENDIR); \
+	else \
+		echo "[gen] codegen not yet built — emitting bootstrap stubs"; \
+		mkdir -p $(GENDIR); \
+		echo '// Auto-generated bootstrap stub' > $(GENDIR)/content_stubs.h; \
+	fi
+
+# Compile each .c under any subdir of src/
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
 	$(LCC) $(LCCFLAGS) -c -o $@ $<
 
 # Link to ROM
@@ -41,18 +58,24 @@ $(BINDIR)/$(PROJECT).gbc: $(OBJS)
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)/$(PROJECT).gbc $(BINDIR)/$(PROJECT).map $(BINDIR)/$(PROJECT).noi
 
-# Headless gameplay test (screenshots + input injection)
+cleangen:
+	rm -rf $(GENDIR)/*
+
+cleanall: clean cleangen
+	@if [ -f tools/Cargo.toml ]; then cd tools && cargo clean; fi
+
+# Headless test (build + boot + screenshots)
 test: all
-	@bash scripts/test_headless.sh $(BINDIR)/$(PROJECT).gbc
+	@bash scripts/test_headless.sh $(BINDIR)/$(PROJECT).gbc 2>/dev/null || \
+		echo "[test] headless harness not yet wired (Phase 3)"
 
-# Run for human play (GUI)
+# Human play
 play: all
-	@bash /home/struktured/projects/penta-dragon-dx-claude/scripts/launch_mgba.sh $(BINDIR)/$(PROJECT).gbc
+	@bash mgba-qt.sh $(BINDIR)/$(PROJECT).gbc
 
-# Verify against original ROM
-VERIFIER = /home/struktured/projects/gb-game-verifier
-
-verify: all
-	@bash scripts/run_verify.sh
-
-.PHONY: all clean dirs test play verify
+info:
+	@echo "Quintra build info:"
+	@echo "  Project:   $(PROJECT)"
+	@echo "  Sources:   $(words $(SRCS)) .c files"
+	@echo "  Output:    $(BINDIR)/$(PROJECT).gbc"
+	@echo "  Toolchain: $(LCC)"

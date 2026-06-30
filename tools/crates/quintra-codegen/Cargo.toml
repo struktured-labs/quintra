@@ -1,0 +1,16 @@
+[package]
+name        = "quintra-codegen"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+description = "Quintra content → GBDK C tables emitter"
+
+[[bin]]
+name = "quintra-codegen"
+path = "src/main.rs"
+
+[dependencies]
+quintra-content = { workspace = true }
+anyhow          = { workspace = true }
+clap            = { workspace = true }

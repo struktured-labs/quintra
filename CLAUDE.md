@@ -4,179 +4,151 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Penta Dragon DX Remake** — a full ground-up rewrite of Penta Dragon (ペンタドラゴン) in C targeting Game Boy Color hardware using GBDK-2020. The goal is a faithful recreation of the original DMG game with native GBC color support.
+**Quintra** — a top-down action roguelike for Game Boy Color, native CGB, written in C with GBDK-2020. Pure roguelike (only knowledge persists), 5 monster-human classes, procgen rooms every run, rest-room saves only, item-driven builds (no XP grinding). Heavy Penta Dragon mechanical influence (bullet-hell projectile patterns, form-energy mechanics) crossed with Zelda LA / FF Adventure / Ultima ROV (top-down maze exploration, items as permanent character expansions).
 
-**Current Status**: v0.1.0 — Proof of concept (boots, displays colored tiles + Sara sprite)
+**The novelty layer:** all *dev-host* tooling and content authoring is in Rust under `tools/`. The C runtime is the only thing that ships on cart. Typed Rust content schema catches invalid items/enemies/biomes at `cargo build`, never at runtime. The seam is `src/generated/`.
 
-### Why a Remake?
+**Lineage:** this project pivoted from being a Penta Dragon DX clone (now under `archive/penta-dragon-dx/`) to a Penta-inspired-but-original game. The Penta-clone effort is preserved for reference but is not built or shipped.
 
-The original approach (in `penta-dragon-dx-claude`) patched the DMG ROM with VBlank hooks to inject CGB palette loading. After reaching v2.84.2 with 100% BG accuracy and full sprite colorization, we hit fundamental limitations:
-- Zero free ROM space in banks 0-1; all custom code crammed into bank 13
-- VBlank timing fights (game services interrupts during LCD rendering)
-- Per-level BG palettes impossible without more reverse engineering + tight timing budgets
-- Every new feature is a hack layered on hacks
-
-A native GBC rewrite gives us color as a first-class citizen with no timing constraints.
+**Current Status:** v0.2.0 — Phase 1 scaffolding complete. Boots in CGB mode, displays a colored background. Rust tooling workspace builds cleanly.
 
 ### Toolchain
 
-- **GBDK-2020 v4.5.0** installed at `~/gbdk`
+- **GBDK-2020 v4.5.0** at `~/gbdk` (C runtime)
 - **SDCC 4.5.1** (included with GBDK)
+- **Rust stable** (host-side tooling only — never compiled into ROM)
 - Compiler driver: `~/gbdk/bin/lcc`
+
+### Why a Rust tooling layer?
+
+Rust cannot target GBC's Sharp SM83 CPU — no LLVM/GCC backend exists. Game runtime *must* be C. But Rust shines on the host side for content authoring: typed schemas, compile-time invariant checking, deterministic procgen reference impls, automated asset processing. See `docs/superpowers/specs/2026-06-30-quintra-engine-design.md` for the full architecture.
 
 ## Common Commands
 
 ### Build
 
 ```bash
-make              # Build ROM -> rom/working/penta_dragon_dx.gbc
-make clean        # Clean build artifacts
+make            # cargo codegen → SDCC → rom/working/quintra.gbc
+make clean      # clean C build
+make cleangen   # wipe src/generated/
+make cleanall   # nuke everything
+make info       # print build summary
 ```
 
-### Test (headless)
+### Test / Play
 
 ```bash
-make test         # Build + run headless with screenshot capture
+make test       # build + headless mGBA + screenshots (Phase 3+)
+make play       # build + launch mGBA-qt for human testing
 ```
 
-### Play (GUI)
+### Rust tooling
 
 ```bash
-make play         # Build + launch mGBA for human testing
-```
-
-### Extract Assets
-
-```bash
-uv run python scripts/extract_assets.py   # Re-extract tiles from original ROM
+cd tools
+cargo build --release             # build all crates
+cargo test                        # run all Rust tests
+cargo run -p quintra-codegen      # regen src/generated/ from content/
+cargo run -p quintra-assets       # PNG → tile data (Phase 2+)
+cargo run -p quintra-mgba         # mGBA debug TUI (Phase 3+)
 ```
 
 ## Architecture
 
-### Project Structure
-
 ```
 penta-dragon-remake/
-├── src/
-│   ├── main.c              # Entry point, game loop, demo background
-│   ├── palettes.h          # All palette definitions (BG, OBJ, boss, powerup)
-│   └── palettes.c          # Palette loading functions
-├── assets/
-│   └── extracted/          # Tiles/sprites extracted from original ROM (gitignored)
-│       ├── bg/include/     # BG tile C headers
-│       ├── sprites/include/# Sprite tile C headers
-│       ├── tilemaps/       # Tilemap data
-│       └── sheets/         # Visual preview PNGs
-├── palettes/
-│   └── penta_palettes_v097.yaml  # Master palette definitions (BGR555)
-├── scripts/
-│   └── extract_assets.py   # Asset extraction from original ROM
-├── rom/
-│   └── working/            # Build output (.gbc)
-├── reverse_engineering/    # Disassembly analysis from original project
-├── save_states_for_claude/ # Test save states
-├── tmp/                    # Temporary test files
+├── src/                  # C runtime (ONLY thing in the ROM)
+│   ├── core/             # types, allocator, RNG, banking, fixed-point
+│   ├── render/           # palette, OAM, BG/tilemap, top-down scroll
+│   ├── audio/            # music + SFX
+│   ├── input/            # joypad
+│   ├── game/             # screens, ECS-lite, combat, procgen runtime
+│   ├── generated/        # Rust → C tables (gitignored)
+│   └── main.c
+├── tools/                # Rust workspace (host-only)
+│   └── crates/
+│       ├── quintra-content/   # typed content schema
+│       ├── quintra-codegen/   # content → C tables emitter
+│       ├── quintra-assets/    # PNG → tile data
+│       ├── quintra-procgen/   # reference procgen + rng
+│       └── quintra-mgba/      # mGBA debug bridge
+├── content/              # hand-authored content (Rust source)
+├── assets/               # raw PNGs + music
+├── archive/penta-dragon-dx/   # OLD Penta-clone code (reference)
+├── docs/superpowers/specs/    # design docs
+├── rom/working/          # build output (gitignored)
 └── Makefile
 ```
 
-### Color System
+### Cart spec
+- **MBC5 + RAM + battery** (cart type 0x1B)
+- **2 MB target** (currently building 512KB; bumps `-Wl-yo` as banks fill)
+- **32 KB SRAM** (4 × 8KB banks)
+- **CGB only** (`-Wm-yC` enforces)
 
-Native CGB palettes — no VBlank hacks needed:
+### Memory layout
 
-**8 BG Palettes:**
-| Palette | Usage | Colors |
-|---------|-------|--------|
-| 0 | Dungeon floor/platform | Blue-white |
-| 1 | Items/pickups | Gold/yellow |
-| 2 | Decorative | Purple/magenta |
-| 3 | Nature/organic | Green |
-| 4 | Water/ice | Cyan/teal |
-| 5 | Fire/lava | Red/orange |
-| 6 | Stone/castle walls | Blue-gray |
-| 7 | Mystery/special | Deep blue |
+See `docs/superpowers/specs/2026-06-30-quintra-engine-design.md` §2 for the full bank/WRAM/SRAM plan. High-level:
+- Banks 0–7: hot engine code (always resident)
+- Banks 8+: warm/cold content + per-biome data
+- WRAM `$C100`: 32-slot entity table (768 B)
+- WRAM `$C400`: player state
+- SRAM 0: suspend save; SRAM 1: meta-progress; SRAM 2: stats
 
-**8 OBJ Palettes:**
-| Palette | Usage |
-|---------|-------|
-| 0 | Enemy projectiles (blue) |
-| 1 | Sara Dragon (green) |
-| 2 | Sara Witch (skin/pink) |
-| 3 | Sara W projectile + Crows (red) |
-| 4 | Hornets (yellow/orange) |
-| 5 | Orc/ground (green/brown) |
-| 6 | Humanoid/soldier (purple) |
-| 7 | Catfish/special (cyan) |
+### Build flow
 
-**Dynamic palettes:** Boss palettes (8 bosses), powerup palettes (3 types), jet form palettes (2 Sara forms) — all loaded on demand via `load_boss_palette()` / `load_powerup_palette()`.
+1. `cargo run -p quintra-codegen` reads `content/*.rs` → emits `src/generated/*.{c,h}`
+2. `cargo run -p quintra-assets` processes `assets/` → tile/sprite C arrays
+3. SDCC compiles `src/**/*.c` (including generated) → `rom/working/quintra.gbc`
 
-### BG Tile Palette Lookup
+The Makefile chains these. `cargo build` failures fail the whole build — no ROM is emitted if content is invalid.
 
-256-byte table maps tile_id → CGB palette number:
-- 0x00-0x3F: Floor/edges → Palette 0
-- 0x40-0x5F: Wall fill → Palette 6
-- 0x60-0x87: Arches/doorways → Palette 0
-- 0x88-0xDF: Items → Palette 1
-- 0xE0-0xFD: Decorative → Palette 6
-- 0xFE-0xFF: Void → Palette 0
+## Development conventions
 
-### Sprite Tile Ranges
+### C runtime
+- Plain GBDK-2020 idioms: `void main(void)`, `wait_vbl_done()`, `SHOW_BKG`, etc.
+- Typedefs in `src/core/types.h`: `u8/i8/u16/i16/u32/i32`, `fix8_t` for 8.8 fixed point
+- Typed IDs (`class_id_t`, `item_id_t`, etc.) — opaque newtypes, opaque to C
+- `BANKED` keyword for far-bank functions
+- `__addressmod` far pointers for cross-bank data reads
+- One cross-bank far call per frame stage; no nested banking
 
-| Range | Entity | Palette |
-|-------|--------|---------|
-| 0x00-0x1F | Effects/projectiles | 0 |
-| 0x20-0x27 | Sara Witch | 2 |
-| 0x28-0x2F | Sara Dragon | 1 |
-| 0x30-0x3F | Crows | 3 |
-| 0x40-0x4F | Hornets | 4 |
-| 0x50-0x5F | Orcs | 5 |
-| 0x60-0x6F | Humanoids | 6 |
-| 0x70-0x7F | Special (catfish) | 7 |
+### Rust tooling
+- 2021 edition, MSRV 1.75
+- `#![forbid(unsafe_code)]` in all crates
+- Container types with `&'static [T]` skip serde (hand-authored Rust consts only)
+- Leaf scalars (enums) keep serde for future RON support
+- Validation always before emit: orphan ID, oversize table → cargo build fails
 
-## Original Game Knowledge (from reverse engineering)
+### Spec-first
+- New systems get spec entries before code — see `docs/superpowers/specs/`
+- Spec is source of truth for memory layout, bank plan, RPG numbers
 
-### Game Structure
-- Single continuous dungeon with 7 interconnected rooms (FFBD = room counter)
-- 6 sections per room (DCB8 = section cycle 0-5)
-- Boss detection: `boss_number = (DC04 - 0x30) / 5 + 1` (DC04 from level data table in bank 13)
-- 8 bosses: Gargoyle, Spider, Crimson, Ice, Void, Poison, Knight, Angela
+## Testing
 
-### Key Memory Addresses (original game)
-| Address | Purpose |
-|---------|---------|
-| FFBD | Room/section counter (0=title, 1-7=rooms) |
-| FFBE | Sara form (0=Witch, 1=Dragon) |
-| FFBF | Boss flag (0=normal, 1-8=boss) |
-| FFC0 | Powerup state (0=none, 1=spiral, 2=shield, 3=turbo) |
-| FFC1 | Gameplay active (0=menu, 1=gameplay) |
-| FFCB | DMA buffer toggle |
-| FFD0 | Stage flag (0=normal, 1=bonus) |
-| DCBB | Countdown timer |
-| DCDC/DCDD | Health system (sub/main HP) |
-| DCB8 | Section cycle counter |
-| DC04 | Section descriptor (boss type from level data) |
+### Headless (preferred for automation)
+- `make test` boots ROM in headless mGBA + screenshots (Phase 3+)
+- Save-state anchors at title / mid-combat / rest-room / boss for fast regression
+- NEVER launch mgba-qt GUI during automated testing (KDE Wayland)
+- ALWAYS clean stray Xvfb procs: `pkill -9 -f 'Xvfb :'`
 
-### Asset Extraction Notes
-- Tile data is **compressed in ROM** — extracted at runtime from VRAM via emulator
-- Sprite tiles load dynamically (only visible entities in VRAM at any time)
-- BG tiles for Level 1 are stable across gameplay states (255/256 non-empty)
-- Original ROM: 256KB (16 banks), MBC type varies
+### Rust unit tests
+- `cargo test` — content validation, procgen determinism, codegen output
+- xorshift32 determinism is pinned by test — the on-cart C impl must match
 
-## Dependencies
+### mGBA MCP
+- When available, prefer MCP `mgba_*` tools over CLI subprocess
 
-- GBDK-2020 v4.5.0 (`~/gbdk`)
-- Python >=3.11 + uv (for asset extraction scripts)
-- pillow, numpy, pyyaml (Python deps)
-- mGBA (testing)
+## Penta Dragon DX archive
 
-## Next Steps
+The original Penta-DX colorization effort lives in `archive/penta-dragon-dx/`. Reference for:
+- Original color palette designs (`palettes/`)
+- Reverse-engineering notes (`reverse_engineering/`)
+- Save states from OG gameplay (`save_states_for_claude/`)
+- Working VBlank colorizer architecture (in case we revisit)
 
-1. **Extract actual dungeon tileset** — Current BG tiles are text/font; need to capture dungeon graphics from gameplay state
-2. **Scrolling engine** — Implement horizontal scrolling dungeon
-3. **Player physics** — Gravity, jumping, collision detection
-4. **Enemy system** — Spawn, AI, tile-based palette assignment
-5. **Level data format** — Design level storage for multiple rooms
-6. **Sound** — Music and SFX system
+It does not build or ship as part of Quintra.
 
 ## Legal Notice
 
-The repository does NOT include the original ROM. Users must supply their own legally obtained copy for asset extraction.
+The repository does NOT include any original ROM. The Penta DX archive uses ROMs the user supplied legally. Quintra is wholly original — no original Penta assets are used in the new game.

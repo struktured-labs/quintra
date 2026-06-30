@@ -1,399 +1,67 @@
-// Penta Dragon DX Remake - GBC Native
-// Full color from the ground up
+// Quintra — Phase 1 bootstrap
+// Goal: ROM boots in CGB mode, shows a colored background, sits in vblank loop.
+// Real screen state machine, ECS, etc. arrive in Phase 3+.
 
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
-#include "types.h"
-#include "palettes.h"
-#include "player.h"
-#include "projectile.h"
-#include "enemy.h"
-#include "boss.h"
-#include "level.h"
-#include "sound.h"
-#include "music.h"
-#include "gamestate.h"
-#include "hud.h"
-#include "title.h"
-#include "itemmenu.h"
-#include "bonus.h"
+#include "core/types.h"
+// rBCPS/rBCPD/rOCPS/rOCPD are provided by gb/hardware.h via gb.h
 
-static uint8_t prev_keys;
-static uint8_t game_state;
-static uint8_t game_over_shown;
-static uint16_t intro_timer;
-// shake_timer removed — screen shake not in OG (verified)
+// Pack RGB555 -> BGR555 word (CGB native)
+#define RGB555(r,g,b)  ((u16)(((b) & 0x1F) << 10) | (((g) & 0x1F) << 5) | ((r) & 0x1F))
 
-static void game_init(void) {
-    DISPLAY_OFF;
+// Boot palette: deep purple-blue background gradient (placeholder title screen vibe)
+static const u16 boot_bg_pal[4] = {
+    RGB555( 0,  0,  3),    // 0 — near-black blue
+    RGB555( 4,  2, 12),    // 1 — deep indigo
+    RGB555(14,  6, 20),    // 2 — magenta-blue
+    RGB555(28, 20, 31),    // 3 — pale lilac (highlight)
+};
 
-    sound_init();
-    init_palettes();
-
-    // Tiles
-    level_load_tiles();
-    player_load_tiles();
-    projectile_load_tiles();
-    enemy_load_tiles();
-
-    // Systems
-    player_init();
-    projectile_init();
-    enemy_init();
-    boss_init();
-    level_init();
-    gamestate_init();
-
-    prev_keys = 0;
-
-    // Initialize HUD and items
-    hud_init();
-    itemmenu_init();
-
-    // Draw initial frame
-    player_draw();
-    projectile_draw();
-    enemy_draw();
-    boss_draw();
-
-    SHOW_BKG;
-    SHOW_SPRITES;
-    DISPLAY_ON;
-
-    // Start music after display is on (needs sound hardware fully ready)
-    music_init();
-
-    game_state = STATE_PLAYING;
-    game_over_shown = 0;
+static void load_bg_palette_0(void) {
+    rBCPS = 0x80;  // auto-increment, start at palette 0 / color 0
+    rBCPD = boot_bg_pal[0] & 0xFF; rBCPD = boot_bg_pal[0] >> 8;
+    rBCPD = boot_bg_pal[1] & 0xFF; rBCPD = boot_bg_pal[1] >> 8;
+    rBCPD = boot_bg_pal[2] & 0xFF; rBCPD = boot_bg_pal[2] >> 8;
+    rBCPD = boot_bg_pal[3] & 0xFF; rBCPD = boot_bg_pal[3] >> 8;
 }
 
-static void game_update(void) {
-    uint8_t keys = joypad();
-    uint8_t was_hit;
-    uint8_t hit_result;
-    uint8_t pi;
-
-    // Item menu (START to open/close, handled first)
-    if (menu_open) {
-        itemmenu_update(keys, prev_keys);
-        prev_keys = keys;
-        return; // Menu absorbs all input
-    }
-
-    // OG: SELECT opens item menu (verified via ROM disassembly at 0x0A6C).
-    // START also opens it for convenience (remake addition).
-    if (((keys & J_SELECT) && !(prev_keys & J_SELECT)) ||
-        ((keys & J_START) && !(prev_keys & J_START))) {
-        itemmenu_open();
-        itemmenu_draw();
-        prev_keys = keys;
-        return;
-    }
-
-    // B uses flash bomb directly (edge-triggered, no menu needed)
-    if ((keys & J_B) && !(prev_keys & J_B)) {
-        itemmenu_use_flash_bomb();
-    }
-
-    // Player
-    player_update(keys, prev_keys);
-
-    // Shoot (hold to auto-fire)
-    if (keys & J_A) {
-        if (player.shoot_cd == 0) {
-            projectile_spawn_player();
-            // Spiral powerup: extra diagonal shots
-            if (player.powerup == 1) {
-                projectile_spawn_player_dir(
-                    (player.dir == DIR_RIGHT) ? PROJ_SPEED : -PROJ_SPEED, -2);
-                projectile_spawn_player_dir(
-                    (player.dir == DIR_RIGHT) ? PROJ_SPEED : -PROJ_SPEED, 2);
-            }
-            // Shoot cooldown: Dragon form faster, Turbo powerup fastest
-            if (player.powerup == 3) {
-                player.shoot_cd = 4;
-            } else if (player.form == 1) {
-                player.shoot_cd = 6; // Dragon: faster fire rate
-            } else {
-                player.shoot_cd = 8; // Witch: standard
-            }
-            sound_shoot();
-            music_sfx_ch1(15);  // yield Ch1 melody during shoot SFX
-        }
-    }
-
-    // BG scroll (Sara stays fixed, world moves)
-    level_update(keys);
-
-    // Check for item pickups (Sara overlapping item tiles in BG)
-    level_check_item_pickup();
-
-    // Game progression (handles section cycling + enemy spawning)
-    // OG runs game logic at ~15 Hz (every 4th VBlank), not every frame.
-    // section_timer, room transitions, enemy spawning all on 4-frame tick.
-    // Verified via RL pipeline: remake was 4x too fast, causing room
-    // transitions at frame 155 instead of frame 620.
-    {
-        // OG tick phase = 1 (fires at frame offsets 5,9,13...)
-        // Remake phase alignment: init to 2 so first fire at frame 5
-        // (2→3→0=fire at frame 3 from init, +2 offset = frame 5)
-        static uint8_t logic_tick = 2;
-        logic_tick = (logic_tick + 1) & 3;
-        if (logic_tick == 0) {
-            gamestate_update(keys);
-        }
-    }
-    // SCX animation runs every frame (60 Hz), not on game tick
-    gamestate_animate_scx();
-
-    // Update all
-    projectile_update();
-
-    enemy_update();
-    boss_update();
-
-    // Extra life every 5000 points
-    if (game.score >= game.next_life_at) {
-        game.lives++;
-        game.next_life_at += 5000;
-        sound_pickup();
-    }
-
-    // HUD update
-    hud_update();
-
-    // Player-enemy collision (regular enemies)
-    if (player.invuln == 0) {
-        was_hit = 0;
-
-        if (enemy_check_player_hit(player.x, player.y)) {
-            was_hit = 1;
-        }
-        // Player-boss collision
-        if (!was_hit && boss_check_player_hit(player.x, player.y)) {
-            was_hit = 1;
-        }
-        // Player-projectile collision (enemy shots)
-        if (!was_hit) {
-            for (pi = 0; pi < MAX_PROJECTILES; pi++) {
-                if (projectiles[pi].active == 2) {
-                    if (projectiles[pi].x + 4 > player.x &&
-                        projectiles[pi].x < player.x + 12 &&
-                        projectiles[pi].y + 4 > player.y &&
-                        projectiles[pi].y < player.y + 12) {
-                        projectiles[pi].active = 0;
-                        was_hit = 1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (was_hit) {
-            {
-                // Damage: 15 base + 5 per stage (matches OG's significant HP chunks)
-                uint8_t dmg = 15 + (game_stage - 1) * 5;
-                if (game.hp > dmg) game.hp -= dmg;
-                else game.hp = 0;
-            }
-            player.invuln = 60;
-            sound_player_hit();
-            music_sfx_ch1(60);
-            music_sfx_ch4(15);
-            if (game.hp == 0) {
-                if (game.lives > 0) game.lives--;
-                if (game.lives == 0) {
-                    game.gameplay_active = 0; // Game over
-                    game_state = STATE_DEAD;
-                } else {
-                    // Respawn
-                    game.hp = 255;
-                    player_init();
-                    player.invuln = 120; // 2 seconds respawn protection
-                    enemy_init();
-                    boss_init();
-                    projectile_init();
-                }
-            }
-        }
-    }
-
-    // Projectile-boss collision: check if player shots hit the boss
-    if (boss.type != BOSS_NONE) {
-        hit_result = 0;
-        for (pi = 0; pi < MAX_PROJECTILES; pi++) {
-            if (projectiles[pi].active == 1) {  // Player shot only
-                hit_result = boss_check_hit(projectiles[pi].x, projectiles[pi].y);
-                if (hit_result) {
-                    projectiles[pi].active = 0;  // Consume the projectile
-                    if (hit_result == 2) {
-                        // Boss killed — score bonus + item reward
-                        game.score += 100 + game_stage * 50;
-                        itemmenu_add_item(ITEM_POTION);
-                        if (game_stage >= 3) {
-                            itemmenu_add_item(ITEM_SHIELD);
-                        }
-                        if (game_stage > MAX_STAGES && boss.type == BOSS_PENTA) {
-                            // Penta Dragon defeated — victory!
-                            game_state = STATE_VICTORY;
-                            music_pause();
-                            break;
-                        }
-                        gamestate_next_section();
-                        // Check if bonus stage should trigger
-                        if (bonus_pending) {
-                            bonus_pending = 0;
-                            stage_changed = 0; // Clear — bonus subsumes stage intro
-                            bonus_init();
-                            game_state = STATE_BONUS;
-                        } else if (stage_changed) {
-                            // Stage advanced — show stage intro
-                            stage_changed = 0;
-                            hud_stage_intro(game_stage);
-                            intro_timer = 120;
-                            game_state = STATE_STAGE_INTRO;
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Check if boss defeated (fallback: enemy_count == 0 during boss section with no boss entity)
-    if (gamestate_is_boss() && boss.type == BOSS_NONE && game.section_timer > 60) {
-        gamestate_next_section();
-    }
-
-    prev_keys = keys;
-}
-
-static void game_draw(void) {
-    player_draw();
-    // OG shows all sprites immediately (verified via mGBA MCP)
-    projectile_draw();
-    enemy_draw();
-    boss_draw();
-
-    // Screen shake removed — not in OG, causes SCY mismatches (verified)
-}
+// 16-byte gradient tile (8x8, 2bpp): rows pick varying color indices
+static const u8 gradient_tile[16] = {
+    0x00, 0x00,  // row 0: all color 0
+    0xFF, 0x00,  // row 1: all color 1
+    0xFF, 0x00,
+    0xFF, 0xFF,  // row 3: all color 3
+    0xFF, 0xFF,
+    0xFF, 0x00,
+    0xFF, 0x00,
+    0x00, 0x00,
+};
 
 void main(void) {
-    if (_cpu == CGB_TYPE) {
-        cpu_fast();
+    DISPLAY_OFF;
+
+    load_bg_palette_0();
+
+    // Load one gradient tile to VRAM index 0
+    set_bkg_data(0, 1, gradient_tile);
+
+    // Fill BG tilemap with tile 0 (default uses BG palette 0)
+    {
+        u8 fill[20];
+        u8 y;
+        for (y = 0; y < 20; ++y) fill[y] = 0;
+        for (y = 0; y < 18; ++y) {
+            set_bkg_tiles(0, y, 20, 1, fill);
+        }
     }
 
-    sound_init();
-    init_palettes();
+    SHOW_BKG;
+    DISPLAY_ON;
 
-    // Start music on title screen (matches original)
-    music_init();
-
-    // Start with title screen
-    title_init();
-    game_state = STATE_TITLE;
-    game_over_shown = 0;
-
-    while (1) {
+    // Idle loop — real game loop arrives in Phase 3
+    for (;;) {
         wait_vbl_done();
-
-        // Music runs in all states
-        music_update();
-        sound_update();
-
-        switch (game_state) {
-            case STATE_TITLE:
-                {
-                    uint8_t title_result = title_update();
-                    if (title_result >= 1) {
-                        title_cleanup();
-                        game_init();
-                        hud_stage_intro(game_stage);
-                        intro_timer = 360;
-                        game_state = STATE_STAGE_INTRO;
-                    }
-                }
-                break;
-
-            case STATE_PLAYING:
-                game_update();
-                game_draw();
-                break;
-
-            case STATE_DEAD:
-                if (!game_over_shown) {
-                    hud_game_over();
-                    music_pause();
-                    game_over_shown = 1;
-                }
-                if (joypad() & J_START) {
-                    game_over_shown = 0;
-                    music_init();
-                    title_init();
-                    game_state = STATE_TITLE;
-                }
-                break;
-
-            case STATE_BONUS:
-                // Bonus stage (jet form corridor)
-                if (bonus_update(joypad())) {
-                    // Bonus complete — show stage intro then gameplay
-                    bonus_cleanup();
-                    hud_stage_intro(game_stage);
-                    intro_timer = 120;
-                    game_state = STATE_STAGE_INTRO;
-                }
-                bonus_draw();
-                break;
-
-            case STATE_STAGE_INTRO:
-                intro_timer--;
-                // OG resets SCX/SCY to 0 ~90 frames after A press (verified)
-                if (intro_timer == 290) {
-                    SCX_REG = 0;
-                    SCY_REG = 0;
-                }
-                // OG stage screen is skippable via A/START (verified: extended test)
-                if (intro_timer > 60 && (joypad() & (J_A | J_START))) {
-                    intro_timer = 1;
-                }
-                if (intro_timer == 0) {
-                    hud_stage_intro_cleanup();
-                    if (game.gameplay_active) {
-                        DISPLAY_OFF;
-                        level_load_tiles();
-                        player_load_tiles();
-                        projectile_load_tiles();
-                        enemy_load_tiles();
-                        level_init();
-                        hud_init();
-                        SCX_REG = 0;  // OG starts at SCX=0, sets to 12 after 132 frames
-                        SCY_REG = 0;
-                        SHOW_BKG;
-                        SHOW_SPRITES;
-                        DISPLAY_ON;
-                        game.section_timer = 0;
-                        game_state = STATE_PLAYING;
-                    } else {
-                        game_init();
-                    }
-                }
-                break;
-
-            case STATE_VICTORY:
-                if (!game_over_shown) {
-                    hud_victory();
-                    sound_pickup();
-                    game_over_shown = 1;
-                }
-                if (joypad() & J_START) {
-                    game_over_shown = 0;
-                    music_init();
-                    title_init();
-                    game_state = STATE_TITLE;
-                }
-                break;
-        }
     }
 }

@@ -1,38 +1,63 @@
-# ROM files (copyrighted, cannot be in public repo)
+# ROM files (cannot redistribute)
 *.gb
 *.gbc
 *.gba
 rom/**/*.gb
 rom/**/*.gbc
+rom/**/*.ram
+rom/**/*.sav
 
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-
-# Build artifacts
-CMakeCache.txt
-CMakeFiles/
+# Build artifacts (C)
 obj/
 *.ihx
 *.map
 *.noi
 *.sym
-*.sav
+*.lk
+*.lst
+*.rel
+*.asm
 
-# Temporary files
+# Build artifacts (Rust)
+tools/target/
+target/
+Cargo.lock.bak
+
+# Generated code (regenerable from content/)
+src/generated/
+
+# Python (legacy)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Temp / log
 tmp/
 test_output/
 logs/
-
-# Debug output
 debug_*.png
 *.log
 tests/results/
 DONE
 
-# Extracted assets (derived from ROM, regenerate with scripts/extract_assets.py)
+# Legacy extracted assets
 assets/extracted/
 
-# Environment
+# Save states (case-by-case)
+*.ss0
+*.ss1
+*.ss2
+*.ss3
+
+# Environment / secrets
 setenv.sh
+.env
+.env.local
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

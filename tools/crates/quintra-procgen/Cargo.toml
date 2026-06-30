@@ -1,0 +1,10 @@
+[package]
+name        = "quintra-procgen"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+description = "Procgen reference impl + visualizer (host-side)"
+
+[dependencies]
+quintra-content = { workspace = true }

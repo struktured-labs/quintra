@@ -1,0 +1,10 @@
+[package]
+name        = "quintra-content"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+description = "Quintra content schema: typed Class/Item/Enemy/Biome/Room defs"
+
+[dependencies]
+serde   = { workspace = true }
