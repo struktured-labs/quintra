@@ -6,6 +6,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/enemy_ai.h"
+#include "game/pickup.h"
 
 entity_t entities[MAX_ENTITIES];
 
@@ -78,6 +79,7 @@ void entity_update_all(u8 keys, u8 pressed) {
         switch (entities[i].type) {
             case ENT_PROJECTILE: projectile_update(&entities[i], i); break;
             case ENT_ENEMY:      enemy_update(&entities[i], i);      break;
+            case ENT_PICKUP:     pickup_update(&entities[i], i);     break;
             default: break;
         }
         keys; pressed; // not used by current entity types

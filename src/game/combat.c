@@ -1,6 +1,7 @@
 #include "core/types.h"
 #include "game/combat.h"
 #include "game/entity.h"
+#include "game/pickup.h"
 #include "game/player.h"
 
 u8 combat_resolve(void) {
@@ -25,6 +26,8 @@ u8 combat_resolve(void) {
                 if (entities[j].hp > entities[i].damage) {
                     entities[j].hp = (u8)(entities[j].hp - entities[i].damage);
                 } else {
+                    // Drop pickup at enemy position before killing
+                    pickup_roll_drop(entities[j].x, entities[j].y);
                     entity_kill(j);
                 }
                 // Projectile pierce
@@ -38,7 +41,10 @@ u8 combat_resolve(void) {
         }
     }
 
-    // 2) Enemy -> player contact (respects iframes)
+    // 2) Pickup collisions (always processed; doesn't require iframes)
+    pickup_check_player_collision();
+
+    // 3) Enemy -> player contact (respects iframes)
     if (player.iframes == 0) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
             if (!(entities[i].flags & EF_ACTIVE)) continue;

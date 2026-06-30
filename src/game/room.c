@@ -14,6 +14,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
+#include "render/hud.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -52,6 +53,22 @@ static const u16 bullet_palette[4] = {
     BGR555(31, 24,  0),
     BGR555(28, 16,  0),
     BGR555(31, 31,  4),
+};
+
+// Heart pickup palette (red)
+static const u16 heart_palette[4] = {
+    BGR555( 0,  0,  0),
+    BGR555(31, 12, 12),
+    BGR555(16,  4,  4),
+    BGR555( 0,  0,  0),
+};
+
+// Coin pickup palette (gold)
+static const u16 coin_palette[4] = {
+    BGR555( 0,  0,  0),
+    BGR555(31, 24,  4),
+    BGR555(18, 12,  0),
+    BGR555(31, 31, 14),
 };
 
 static void build_default_room(void) {
@@ -141,13 +158,19 @@ void room_enter(void) {
     palette_obj_load(1, player_palette);
     palette_obj_load(2, bullet_palette);
     palette_obj_load(3, crawler_palette);
+    palette_obj_load(4, heart_palette);
+    palette_obj_load(5, coin_palette);
 
     tiles_load_room_bg();
     tiles_load_player_sprite();
     tiles_load_combat_sprites();
+    tiles_load_pickup_sprites();
 
     build_default_room();
     draw_room_tilemap();
+
+    hud_init();
+    hud_show();
 
     // Player sprite
     set_sprite_tile(0, SPR_PLAYER);
@@ -193,6 +216,7 @@ void room_enter(void) {
 
 void room_exit(void) {
     HIDE_SPRITES;
+    hud_hide();
     entity_init_all();
 }
 
