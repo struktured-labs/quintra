@@ -4,12 +4,15 @@
 run_state_t run_state;
 
 void run_state_clear(void) {
-    run_state.biome_id      = 0;
-    run_state.room_counter  = 0;
-    run_state.run_seed      = 0xCAFE1234UL;
-    run_state.entered_from  = DIR_NONE;
-    run_state.run_timer     = 0;
-    run_state.rooms_cleared = 0;
+    run_state.biome_id       = 0;
+    run_state.room_counter   = 0;
+    run_state.run_seed       = 0xCAFE1234UL;
+    run_state.entered_from   = DIR_NONE;
+    run_state.run_timer      = 0;
+    run_state.rooms_cleared  = 0;
+    run_state.victory        = 0;
+    run_state.score          = 0;
+    run_state.enemies_killed = 0;
 }
 
 void run_state_init(u32 seed) {

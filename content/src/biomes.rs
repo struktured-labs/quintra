@@ -17,7 +17,7 @@ pub const CRYSTAL_CAVERNS: Biome = Biome {
     max_rooms:    8,
     has_shop:     true,
     has_altar:    false,
-    boss:         BOSS_NONE,
+    boss:         BOSS_STONE_SENTINEL,
 };
 
 pub fn register(r: &mut Registry) {

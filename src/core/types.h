@@ -11,12 +11,20 @@ typedef int16_t  i16;
 typedef uint32_t u32;
 typedef int32_t  i32;
 
-// Fixed-point 8.8 — world coordinates and velocities
-typedef i16 fix8_t;
-#define FIX8(n)            ((fix8_t)((i16)(n) << 8))
+// Fixed-point 8.8 — kept for future sub-pixel velocities. i32 to avoid
+// overflow at positions > 127 px. SDCC's 32-bit arithmetic on Z80-derived
+// SM83 is slow and quirky, so prefer plain i16 pixel positions where
+// sub-pixel precision isn't needed.
+typedef i32 fix8_t;
+#define FIX8(n)            ((fix8_t)((i32)(n) << 8))
 #define FIX8_TO_INT(f)     ((i16)((f) >> 8))
 #define FIX8_FRAC(f)       ((u8)((f) & 0xFF))
 #define FIX8_MUL(a,b)      (((i32)(a) * (i32)(b)) >> 8)
+
+// Plain pixel-position type for world coordinates (player + entities).
+// Avoids fix8 SDCC arithmetic quirks for positions that don't need
+// sub-pixel motion. Rooms are <=160 px wide, well within i16 range.
+typedef i16 ppos_t;
 
 // Typed IDs — defended at codegen time, opaque at runtime
 typedef u8  class_id_t;

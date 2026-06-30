@@ -49,6 +49,14 @@ static const u16 crawler_palette[4] = {
     BGR555( 0,  0,  0),
 };
 
+// Stone Sentinel (boss) palette — granite grey with bright accent
+static const u16 sentinel_palette[4] = {
+    BGR555( 0,  0,  0),
+    BGR555(18, 18, 22),
+    BGR555( 8,  8, 12),
+    BGR555(28, 24, 14),
+};
+
 // Bullet palette — bright gold
 static const u16 bullet_palette[4] = {
     BGR555( 0,  0,  0),
@@ -113,13 +121,12 @@ static void draw_room_tilemap(void) {
 }
 
 static void place_player_sprite(void) {
-    // Sprite blink during iframes
     if (player.iframes > 0 && (player.iframes & 0x04)) {
         move_sprite(0, 0, 0);
     } else {
         move_sprite(0,
-            (u8)(FIX8_TO_INT(player.x) + 8),
-            (u8)(FIX8_TO_INT(player.y) + 16));
+            (u8)(player.x + 8),
+            (u8)(player.y + 16));
     }
 }
 
@@ -162,11 +169,13 @@ void room_enter(void) {
     palette_obj_load(3, crawler_palette);
     palette_obj_load(4, heart_palette);
     palette_obj_load(5, coin_palette);
+    palette_obj_load(6, sentinel_palette);
 
     tiles_load_room_bg();
     tiles_load_player_sprite();
     tiles_load_combat_sprites();
     tiles_load_pickup_sprites();
+    tiles_load_boss_sprite();
 
     hud_init();
     hud_show();
@@ -195,39 +204,30 @@ void room_exit(void) {
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
-    // ---- Movement
+    // ---- Movement: 1 px/frame, i16 positions
     {
-        fix8_t nx = player.x;
-        fix8_t ny = player.y;
-        fix8_t step = (fix8_t)((i16)player.spd * SPEED_SCALE);
+        ppos_t nx = player.x;
+        ppos_t ny = player.y;
         u8 moved = 0;
 
-        if (keys & J_LEFT)  { nx -= step; player.facing = FACE_W; moved = 1; }
-        if (keys & J_RIGHT) { nx += step; player.facing = FACE_E; moved = 1; }
-        if (keys & J_UP)    { ny -= step; player.facing = FACE_N; moved = 1; }
-        if (keys & J_DOWN)  { ny += step; player.facing = FACE_S; moved = 1; }
+        if (keys & J_LEFT)  { nx -= 1; player.facing = FACE_W; moved = 1; }
+        if (keys & J_RIGHT) { nx += 1; player.facing = FACE_E; moved = 1; }
+        if (keys & J_UP)    { ny -= 1; player.facing = FACE_N; moved = 1; }
+        if (keys & J_DOWN)  { ny += 1; player.facing = FACE_S; moved = 1; }
 
         // X axis
-        {
-            i16 px = FIX8_TO_INT(nx);
-            i16 py = FIX8_TO_INT(player.y);
-            if (is_walkable_at(px + 1, py + 1)
-                && is_walkable_at(px + 6, py + 1)
-                && is_walkable_at(px + 1, py + 6)
-                && is_walkable_at(px + 6, py + 6)) {
-                player.x = nx;
-            }
+        if (is_walkable_at(nx + 1, player.y + 1)
+            && is_walkable_at(nx + 6, player.y + 1)
+            && is_walkable_at(nx + 1, player.y + 6)
+            && is_walkable_at(nx + 6, player.y + 6)) {
+            player.x = nx;
         }
         // Y axis
-        {
-            i16 px = FIX8_TO_INT(player.x);
-            i16 py = FIX8_TO_INT(ny);
-            if (is_walkable_at(px + 1, py + 1)
-                && is_walkable_at(px + 6, py + 1)
-                && is_walkable_at(px + 1, py + 6)
-                && is_walkable_at(px + 6, py + 6)) {
-                player.y = ny;
-            }
+        if (is_walkable_at(player.x + 1, ny + 1)
+            && is_walkable_at(player.x + 6, ny + 1)
+            && is_walkable_at(player.x + 1, ny + 6)
+            && is_walkable_at(player.x + 6, ny + 6)) {
+            player.y = ny;
         }
 
         if (moved) {
@@ -249,16 +249,22 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Combat
     if (combat_resolve()) {
-        // Player died — Phase 5: return to TITLE. Phase 9 = GAMEOVER.
-        return SCREEN_TITLE;
+        // Player died → GAMEOVER
+        return SCREEN_GAMEOVER;
+    }
+
+    // ---- Victory check: boss defeated this run
+    if (run_state.victory) {
+        return SCREEN_VICTORY;
     }
 
     // ---- Door detection: if player stands on a door, advance to next room
     {
-        i16 px = FIX8_TO_INT(player.x) + 4;
-        i16 py = FIX8_TO_INT(player.y) + 4;
+        i16 px = player.x + 4;
+        i16 py = player.y + 4;
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
+
         if (tx < ROOM_W && ty < ROOM_H && room_tilemap[ty][tx] == BGT_DOOR) {
             // Determine which door
             u8 dir = DIR_NONE;

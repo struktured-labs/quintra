@@ -42,18 +42,18 @@ check() {
 }
 
 echo "[smoke] results in $OUT_DIR/"
-check 01_title            400
-check 02_class_select     400
-check 03_room0_enter      400
-check 04_room0_at_S_door  400
-check 05_room1_enter      400
-check 06_room2_enter      400
-check 07_room3_enter      400
-check 08_room4_enter      400
-check 09_fire_in_room4    400
-check 10_after_spray      400
-check 11_after_settle     400
-check 12_back_to_title    400
+check 01_title                400
+check 02_class_select         400
+check 03_room0_enter          400
+check 04_room1                400
+check 05_room2                400
+check 06_room3                400
+check 07_room4                400
+check 08_BOSS_room            400
+check 09_boss_under_fire      400
+check 10_boss_mid_fight       400
+check 11_after_long_assault   400
+check 12_back_to_title        400
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

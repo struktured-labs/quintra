@@ -3,6 +3,8 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/run_state.h"
+#include "content.h"
 
 u8 combat_resolve(void) {
     u8 i, j;
@@ -26,6 +28,17 @@ u8 combat_resolve(void) {
                 if (entities[j].hp > entities[i].damage) {
                     entities[j].hp = (u8)(entities[j].hp - entities[i].damage);
                 } else {
+                    // Score + kill stats
+                    {
+                        u8 eid = entities[j].ai_data[0];
+                        if (eid < N_ENEMIES) {
+                            u16 s = run_state.score + (u16)enemies[eid].stats.score;
+                            run_state.score = s;
+                        }
+                        run_state.enemies_killed++;
+                        // Boss kill → set victory flag
+                        if (eid == 1) run_state.victory = 1;
+                    }
                     // Drop pickup at enemy position before killing
                     pickup_roll_drop(entities[j].x, entities[j].y);
                     entity_kill(j);

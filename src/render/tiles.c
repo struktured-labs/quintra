@@ -110,6 +110,23 @@ void tiles_load_pickup_sprites(void) {
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
 }
 
+// Boss (Stone Sentinel) — chunky 8x8 with diamond accent.
+// Uses palette colors 1 (mid grey) + 2 (dark grey) + 3 (gold accent)
+const u8 sprite_tile_boss[16] = {
+    0xFF, 0xFF,    // 33333333 — top
+    0xFF, 0x7E,    // 11333311
+    0xFF, 0x3C,    // 11133111
+    0xFF, 0x18,    // 11113111
+    0xFF, 0x18,    // 11113111
+    0xFF, 0x3C,    // 11133111
+    0xFF, 0x7E,    // 11333311
+    0xFF, 0xFF,    // 33333333 — bottom
+};
+
+void tiles_load_boss_sprite(void) {
+    set_sprite_data(SPR_BOSS, 1, sprite_tile_boss);
+}
+
 // HUD tiles — full heart, half heart, empty heart, coin glyph, blank,
 // digits 0-9. 15 tiles total, loaded into BG slots HUD_HEART_FULL..+14.
 const u8 hud_tiles[15][16] = {

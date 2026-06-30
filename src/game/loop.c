@@ -9,6 +9,8 @@
 #include "game/class_select.h"
 #include "game/run_init.h"
 #include "game/room.h"
+#include "game/gameover.h"
+#include "game/victory.h"
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
 u16         loop_frame_counter  = 0;
@@ -25,8 +27,8 @@ const screen_t screens[SCREEN_COUNT] = {
     [SCREEN_BOSS]         = { 0, 0, 0, 0 },
     [SCREEN_INVENTORY]    = { 0, 0, 0, 0 },
     [SCREEN_DIALOG]       = { 0, 0, 0, 0 },
-    [SCREEN_GAMEOVER]     = { 0, 0, 0, 0 },
-    [SCREEN_VICTORY]      = { 0, 0, 0, 0 },
+    [SCREEN_GAMEOVER]     = { gameover_enter, gameover_exit, gameover_tick, gameover_draw },
+    [SCREEN_VICTORY]      = { victory_enter,  victory_exit,  victory_tick,  victory_draw  },
     [SCREEN_SCRATCH]      = { scratch_enter, scratch_exit, scratch_tick, scratch_draw },
 };
 

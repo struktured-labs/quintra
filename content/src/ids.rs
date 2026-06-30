@@ -14,13 +14,15 @@ pub const ITEM_CLAW_COMBO: ItemId = ItemId::new(0);
 pub const ITEM_HOWL:       ItemId = ItemId::new(1);
 
 // ----- Enemies
-pub const ENEMY_BLUE_CRAWLER: EnemyId = EnemyId::new(0);
+pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);
+pub const ENEMY_STONE_SENTINEL:  EnemyId = EnemyId::new(1);    // Crystal Caverns boss
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
 
-// ----- Bosses (placeholder)
-pub const BOSS_NONE: BossId = BossId::new(0);
+// ----- Bosses (placeholder — boss data currently lives in enemies table)
+pub const BOSS_NONE:             BossId = BossId::new(0);
+pub const BOSS_STONE_SENTINEL:   BossId = BossId::new(1);
 
 // ----- Rooms
 pub const ROOM_SMALL_EMPTY: RoomTemplateId = RoomTemplateId::new(0);
@@ -43,8 +45,12 @@ pub const BG_PAL_CAVERN_HI:   PaletteRef = PaletteRef::new(3);
 
 pub const SPRITE_WOLFKIN:     SpriteRef = SpriteRef::new(0);
 pub const SPRITE_CRAWLER:     SpriteRef = SpriteRef::new(1);
+pub const SPRITE_SENTINEL:    SpriteRef = SpriteRef::new(4);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
+
+// OBJ palette index for Stone Sentinel (loaded at room enter)
+pub const OBJ_PAL_SENTINEL:   PaletteRef = PaletteRef::new(6);
 
 pub const TILESET_CAVERN:     TilesetRef = TilesetRef::new(0);
 pub const TILEMAP_SMALL_EMPTY: TilemapId = TilemapId::new(0);

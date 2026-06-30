@@ -19,8 +19,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy) {
     if (idx == 0xFF) return 0xFF;
     e = &entities[idx];
     e->flags      |= EF_PLAYER_PROJ;
-    e->x           = (fix8_t)(player.x + FIX8(2));
-    e->y           = (fix8_t)(player.y + FIX8(2));
+    e->x           = FIX8((i16)player.x + 2);
+    e->y           = FIX8((i16)player.y + 2);
     e->vx          = (i8)((i16)dx * PROJECTILE_SPEED);
     e->vy          = (i8)((i16)dy * PROJECTILE_SPEED);
     e->sprite_tile = SPR_BULLET;

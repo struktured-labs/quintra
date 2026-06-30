@@ -13,6 +13,8 @@ enum {
     DIR_NONE = 0xFF,
 };
 
+#define BOSS_ROOM_DEPTH 5      // boss appears at this room_counter
+
 typedef struct {
     u8  biome_id;            // current biome
     u8  room_counter;        // number of rooms entered this run
@@ -20,6 +22,9 @@ typedef struct {
     u8  entered_from;        // DIR_* — which door the player just came through
     u16 run_timer;           // total ticks since run started (1/60 sec)
     u8  rooms_cleared;       // count of rooms where all enemies were defeated
+    u8  victory;             // 1 when boss has been defeated this run
+    u16 score;               // points scored from kills
+    u8  enemies_killed;      // run total
 } run_state_t;
 
 extern run_state_t run_state;

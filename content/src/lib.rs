@@ -42,12 +42,12 @@ mod tests {
     }
 
     #[test]
-    fn registry_phase2_counts() {
+    fn registry_counts() {
         let r = registry();
-        assert_eq!(r.n_classes(),        1, "Phase 2: 1 class (Wolfkin)");
-        assert_eq!(r.n_items(),          2, "Phase 2: 2 items (Claw Combo, Howl)");
-        assert_eq!(r.n_enemies(),        1, "Phase 2: 1 enemy (Blue Crawler)");
-        assert_eq!(r.n_biomes(),         1, "Phase 2: 1 biome (Crystal Caverns)");
-        assert_eq!(r.n_room_templates(), 1, "Phase 2: 1 room (Small Empty)");
+        assert_eq!(r.n_classes(),        1);
+        assert_eq!(r.n_items(),          2);
+        assert_eq!(r.n_enemies(),        2);   // Crawler + Sentinel
+        assert_eq!(r.n_biomes(),         1);
+        assert_eq!(r.n_room_templates(), 1);
     }
 }

@@ -1,10 +1,9 @@
--- Quintra Phase 7 smoke test.
--- Boots → TITLE → CLASS_SELECT → ROOM → walk → fire → walk through door
--- → screenshot at each transition → exit.
+-- Quintra Phase 9/10 smoke test.
+-- Boots → TITLE → CLASS_SELECT → walks through 5 doors to the BOSS room
+-- → fights → screenshot at each stage → exit.
 
 local OUT_DIR = os.getenv("QUINTRA_OUT_DIR") or "/tmp/quintra-smoketest"
 
--- GBDK joypad bitmask
 local KEY_A      = 0x01
 local KEY_B      = 0x02
 local KEY_SELECT = 0x04
@@ -14,57 +13,75 @@ local KEY_LEFT   = 0x20
 local KEY_UP     = 0x40
 local KEY_DOWN   = 0x80
 
+local LOG_FILE = OUT_DIR .. "/debug.log"
+local log_fh = io.open(LOG_FILE, "w")
+
 local function shot(name)
-    local path = OUT_DIR .. "/h_" .. name .. ".png"
-    emu:screenshot(path)
-    console:log("SHOT " .. name)
+    emu:screenshot(OUT_DIR .. "/h_" .. name .. ".png")
+    local rc_proc = emu:read8(0xFFFE)
+    local rc_room = emu:read8(0xFFFB)
+    local vic     = emu:read8(0xFFFD)
+    local in_boss = emu:read8(0xFFFC)
+    local py      = emu:read8(0xFFFA)
+    local px      = emu:read8(0xFFF9)
+    local tile    = emu:read8(0xFFF8)
+    local hp     = emu:read8(0xFFE4)
+    local ifr    = emu:read8(0xFFE5)
+    local line = string.format(
+        "SHOT %-25s  room=%d vic=%d boss=0x%02X  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, rc_room, vic, in_boss, px, py, tile, hp, ifr)
+    if log_fh then log_fh:write(line); log_fh:flush() end
+    console:log(line)
 end
 
 local function tick(n) for _ = 1, n do emu:runFrame() end end
 
-local function press(key, frames_held)
-    emu:setKeys(key)
-    tick(frames_held or 4)
+local function hold(key, frames)
+    -- Set keys on EVERY frame to defeat any per-frame reset
+    for _ = 1, (frames or 4) do
+        emu:setKeys(key)
+        emu:runFrame()
+    end
     emu:setKeys(0)
     tick(4)
 end
 
-local function tap(key) press(key, 2) end
+local function press(key, frames_held) hold(key, frames_held or 4) end
+local function tap(key) hold(key, 2) end
 
--- Boot + settle
+-- Walk through one door. Hold direction long enough to cross the room.
+local function walk_through_door(dir_key)
+    hold(dir_key, 220)
+    tick(20)
+end
+
+-- Boot
 tick(120); shot("01_title")
-
--- TITLE → CLASS_SELECT
 tap(KEY_START); tick(40); shot("02_class_select")
-
--- CLASS_SELECT → RUN_INIT → ROOM 0
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
--- Walk south, into the bottom door
-press(KEY_DOWN, 90); shot("04_room0_at_S_door")
+-- Walk through 5 doors to reach boss room (run_state.room_counter == 5)
+walk_through_door(KEY_DOWN);  shot("04_room1")
+walk_through_door(KEY_DOWN);  shot("05_room2")
+walk_through_door(KEY_DOWN);  shot("06_room3")
+walk_through_door(KEY_DOWN);  shot("07_room4")
+walk_through_door(KEY_DOWN);  shot("08_BOSS_room")
 
--- Should have transitioned to room 1 now
-tick(30); shot("05_room1_enter")
+-- After 5 walks, player ends up at bottom of boss room (walked into south wall).
+-- Boss is at center (y=72). Player at ~y=128. Fire UP at boss.
+hold(KEY_B + KEY_UP, 200)
+shot("09_boss_under_fire")
 
--- Walk further south into another door
-press(KEY_DOWN, 90); shot("06_room2_enter")
+tick(30)
+shot("10_boss_mid_fight")
 
--- East door
-press(KEY_RIGHT, 90); shot("07_room3_enter")
+-- Long sustained assault — boss has 50 HP, 2 dmg/shot, fire every 12 ticks
+-- ~16 shots / 200 frames = ~32 damage. Two presses to finish (66 dmg total).
+hold(KEY_B + KEY_UP, 400)
+tick(60)
+shot("11_after_long_assault")
 
--- North door
-press(KEY_UP, 90); shot("08_room4_enter")
-
--- Fire test in this room
-press(KEY_B + KEY_RIGHT, 6); tick(8); shot("09_fire_in_room4")
-
--- Spray + walk to engage enemies
-emu:setKeys(KEY_B + KEY_LEFT); tick(60); emu:setKeys(0); tick(20)
-shot("10_after_spray")
-
-tick(60); shot("11_after_settle")
-
--- Return to TITLE via START
+-- Whatever screen we're on now, return to TITLE
 press(KEY_START, 4); tick(40); shot("12_back_to_title")
 
 console:log("SMOKETEST DONE")

@@ -61,9 +61,8 @@ u8 aabb_overlap_ee(const entity_t *a, const entity_t *b) {
 
 u8 aabb_overlap_player(const entity_t *e) {
     i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
-    i16 px = FIX8_TO_INT(player.x), py = FIX8_TO_INT(player.y);
+    i16 px = (i16)player.x, py = (i16)player.y;     // player is i16 pixels
     u8  ew = hitbox_w(e), eh = hitbox_h(e);
-    // Player hitbox fixed at 6×6 (inset of 8×8 sprite by 1 on each edge)
     px += 1; py += 1;
     if (px + 6 <= ex) return 0;
     if (ex + (i16)ew <= px) return 0;

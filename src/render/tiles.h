@@ -25,6 +25,7 @@
 #define SPR_ENEMY  2
 #define SPR_HEART  3
 #define SPR_COIN   4
+#define SPR_BOSS   5
 
 // Tile blobs
 extern const u8 bg_tile_floor[16];
@@ -36,6 +37,7 @@ extern const u8 sprite_tile_bullet[16];
 extern const u8 sprite_tile_enemy[16];
 extern const u8 sprite_tile_heart[16];
 extern const u8 sprite_tile_coin[16];
+extern const u8 sprite_tile_boss[16];
 
 extern const u8 hud_tiles[][16];    // 15 tiles starting at HUD_HEART_FULL
 #define HUD_TILE_COUNT 15
@@ -44,6 +46,7 @@ void tiles_load_room_bg(void);
 void tiles_load_player_sprite(void);
 void tiles_load_combat_sprites(void);    // bullet + enemy
 void tiles_load_pickup_sprites(void);    // heart + coin
+void tiles_load_boss_sprite(void);
 void tiles_load_hud(void);               // hud BG tiles + 10 digits
 
 #endif

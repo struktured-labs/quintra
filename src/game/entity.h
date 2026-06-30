@@ -26,7 +26,7 @@ enum {
 typedef struct {
     u8     type;
     u8     flags;
-    fix8_t x, y;            // 8.8 fixed-point world coords (pixels)
+    fix8_t x, y;            // 8.8 fixed-point world coords (pixels) — i32 each
     i8     vx, vy;           // per-tick velocity delta (pixels, scaled)
     u8     sprite_tile;
     u8     palette;          // CGB OBJ palette index 0-7
@@ -38,6 +38,7 @@ typedef struct {
     u8     damage;
     u8     oam_slot;         // OAM index (1..32; 0 reserved for player)
 } entity_t;
+// entity_t is now 28 bytes (was 24) due to i32 fix8_t.
 
 extern entity_t entities[MAX_ENTITIES];
 

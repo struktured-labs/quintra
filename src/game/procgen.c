@@ -9,6 +9,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
+#include "core/types.h"
 #include "content.h"
 
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) {
@@ -36,13 +37,13 @@ static u8 pick_enemy_from_biome(const biome_def_t *bio) {
 static void place_player_after_entry(void) {
     u8 dir = run_state.entered_from;
     u8 tx, ty;
-    if (dir == DIR_N)      { tx = ROOM_W / 2; ty = ROOM_H - 3; }   // came from N, place near S
-    else if (dir == DIR_S) { tx = ROOM_W / 2; ty = 2; }            // came from S, place near N
-    else if (dir == DIR_E) { tx = 2;          ty = ROOM_H / 2; }   // came from E, place near W
-    else if (dir == DIR_W) { tx = ROOM_W - 3; ty = ROOM_H / 2; }   // came from W, place near E
-    else                   { tx = ROOM_W / 2; ty = ROOM_H / 2; }   // first room — center
-    player.x = FIX8((i16)tx * 8);
-    player.y = FIX8((i16)ty * 8);
+    if (dir == DIR_N)      { tx = ROOM_W / 2; ty = ROOM_H - 3; }
+    else if (dir == DIR_S) { tx = ROOM_W / 2; ty = 2; }
+    else if (dir == DIR_E) { tx = 2;          ty = ROOM_H / 2; }
+    else if (dir == DIR_W) { tx = ROOM_W - 3; ty = ROOM_H / 2; }
+    else                   { tx = ROOM_W / 2; ty = ROOM_H / 2; }
+    player.x = (ppos_t)((i16)tx * 8);
+    player.y = (ppos_t)((i16)ty * 8);
 }
 
 void procgen_generate_current_room(void) {
@@ -56,6 +57,7 @@ void procgen_generate_current_room(void) {
     bio;
     {
         u8 x, y;
+        u8 is_boss_room = (run_state.room_counter == BOSS_ROOM_DEPTH && !run_state.victory) ? 1 : 0;
         for (y = 0; y < ROOM_H; ++y) {
             for (x = 0; x < ROOM_W; ++x) {
                 if (y == 0 || y == ROOM_H - 1 || x == 0 || x == ROOM_W - 1) {
@@ -65,33 +67,49 @@ void procgen_generate_current_room(void) {
                 }
             }
         }
-        room_tilemap[0][ROOM_W / 2]            = BGT_DOOR;
-        room_tilemap[ROOM_H - 1][ROOM_W / 2]   = BGT_DOOR;
-        room_tilemap[ROOM_H / 2][0]            = BGT_DOOR;
-        room_tilemap[ROOM_H / 2][ROOM_W - 1]   = BGT_DOOR;
+        // Boss room: doors sealed (locked-in fight). Otherwise: open all 4.
+        if (!is_boss_room) {
+            room_tilemap[0][ROOM_W / 2]            = BGT_DOOR;
+            room_tilemap[ROOM_H - 1][ROOM_W / 2]   = BGT_DOOR;
+            room_tilemap[ROOM_H / 2][0]            = BGT_DOOR;
+            room_tilemap[ROOM_H / 2][ROOM_W - 1]   = BGT_DOOR;
+        }
     }
 
     // Clear entity table — fresh enemies per room
     entity_init_all();
 
-    // Spawn enemies: 1..(min(8, max_room_enemies)) random positions
-    {
+    // Debug markers (HRAM) — kept for ongoing diagnosis
+    *(volatile u8*)0xFFFE = run_state.room_counter;
+    *(volatile u8*)0xFFFD = run_state.victory;
+
+    if (run_state.room_counter == BOSS_ROOM_DEPTH && !run_state.victory) {
+        *(volatile u8*)0xFFFC = 0xBB;
+        u8 idx = enemy_spawn(1, ROOM_W / 2, ROOM_H / 2);
+        if (idx != 0xFF) {
+            entities[idx].palette     = 0x06;
+            entities[idx].sprite_tile = SPR_BOSS;
+            entities[idx].hitbox      = (8 << 4) | 8;
+        }
+    } else {
+        *(volatile u8*)0xFFFC = 0x00;
         u8 enemy_count = (u8)(1 + rng_range(4));   // 1..4
         u8 i;
         for (i = 0; i < enemy_count; ++i) {
             u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
             u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
-            // Don't spawn enemies on top of the player's entry tile
             if (tx == (u8)(FIX8_TO_INT(player.x) >> 3)
                 && ty == (u8)(FIX8_TO_INT(player.y) >> 3)) {
                 continue;
             }
             {
+                // Filter out the boss enemy from regular spawns
                 u8 eid = pick_enemy_from_biome(&biomes[run_state.biome_id]);
-                u8 idx = enemy_spawn(eid, tx, ty);
-                // Force OBJ palette 3 (crawler) — Phase 9 will pull from
-                // biome's per-enemy palette mapping
-                if (idx != 0xFF) entities[idx].palette = 0x03;
+                if (eid == 1) eid = 0;   // demote sentinel to crawler in normal rooms
+                {
+                    u8 idx = enemy_spawn(eid, tx, ty);
+                    if (idx != 0xFF) entities[idx].palette = 0x03;
+                }
             }
         }
     }

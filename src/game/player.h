@@ -21,7 +21,7 @@ typedef struct {
     u8     mp_max;
     u8     mp;
     u8     atk, def, spd, lck;
-    fix8_t x, y;         // 8.8 world position within current room (pixels)
+    ppos_t x, y;         // pixel position within current room (i16, no fix-point)
     u8     facing;
     u8     anim_frame;
     u8     iframes;
