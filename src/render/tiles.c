@@ -41,6 +41,30 @@ const u8 sprite_tile_player[16] = {
     0x00, 0x00,
 };
 
+// Bullet — 2x2 dot in color 3 (high-contrast accent)
+const u8 sprite_tile_bullet[16] = {
+    0x00, 0x00,
+    0x00, 0x00,
+    0x00, 0x00,
+    0x18, 0x18,
+    0x18, 0x18,
+    0x00, 0x00,
+    0x00, 0x00,
+    0x00, 0x00,
+};
+
+// Enemy (Blue Crawler) — round blob in color 2 with color 1 outline
+const u8 sprite_tile_enemy[16] = {
+    0x00, 0x00,
+    0x3C, 0x00,
+    0x7E, 0x42,
+    0xFF, 0x81,
+    0xFF, 0x81,
+    0x7E, 0x42,
+    0x3C, 0x00,
+    0x00, 0x00,
+};
+
 void tiles_load_room_bg(void) {
     set_bkg_data(BGT_VOID,  1, bg_tile_void);
     set_bkg_data(BGT_FLOOR, 1, bg_tile_floor);
@@ -50,4 +74,9 @@ void tiles_load_room_bg(void) {
 
 void tiles_load_player_sprite(void) {
     set_sprite_data(SPR_PLAYER, 1, sprite_tile_player);
+}
+
+void tiles_load_combat_sprites(void) {
+    set_sprite_data(SPR_BULLET, 1, sprite_tile_bullet);
+    set_sprite_data(SPR_ENEMY,  1, sprite_tile_enemy);
 }

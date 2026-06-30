@@ -29,6 +29,7 @@ typedef struct {
     u8     active_item;  // item_id_t LSB (Phase 4 — extend to u16 later)
     u8     active_charge;
     u8     starter_weapon;
+    u8     fire_cooldown;                // ticks until next shot allowed
     u8     inventory[INVENTORY_SLOTS];   // item id LSBs; 0xFF = empty
     u8     score_lo, score_hi;           // 16-bit score
 } player_state_t;

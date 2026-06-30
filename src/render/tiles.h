@@ -13,6 +13,8 @@
 
 // OBJ tile slots (sprite VRAM lives at 0x8000)
 #define SPR_PLAYER 0
+#define SPR_BULLET 1
+#define SPR_ENEMY  2
 
 // Tile blobs
 extern const u8 bg_tile_floor[16];
@@ -20,8 +22,11 @@ extern const u8 bg_tile_wall[16];
 extern const u8 bg_tile_door[16];
 extern const u8 bg_tile_void[16];
 extern const u8 sprite_tile_player[16];
+extern const u8 sprite_tile_bullet[16];
+extern const u8 sprite_tile_enemy[16];
 
 void tiles_load_room_bg(void);
 void tiles_load_player_sprite(void);
+void tiles_load_combat_sprites(void);    // bullet + enemy
 
 #endif
