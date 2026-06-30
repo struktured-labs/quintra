@@ -10,6 +10,18 @@
 
 // State byte for Walker AI: low nibble = direction (0-7), high nibble unused.
 
+// Map content enemy_id to OBJ tile slot in VRAM.
+static u8 sprite_for_enemy(u8 enemy_content_id) {
+    switch (enemy_content_id) {
+        case 0: return SPR_ENEMY_CRAWLER;
+        case 1: return SPR_BOSS;
+        case 2: return SPR_ENEMY_HORNET;
+        case 3: return SPR_ENEMY_SKELETON;
+        case 4: return SPR_ENEMY_ORC;
+        default: return SPR_ENEMY_CRAWLER;
+    }
+}
+
 u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) {
     u8 idx;
     entity_t *e;
@@ -22,14 +34,14 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) {
         e->x           = FIX8((i16)tile_x * 8);
         e->y           = FIX8((i16)tile_y * 8);
         e->vx = e->vy  = 0;
-        e->sprite_tile = SPR_ENEMY;
+        e->sprite_tile = sprite_for_enemy(enemy_content_id);
         e->palette     = def->palette;
         e->hp          = def->stats.hp;
         e->damage      = def->stats.damage;
         e->ai_data[0]  = enemy_content_id;
-        e->state       = (u8)(rng_next_u8() & 0x07);   // initial dir
+        e->state       = (u8)(rng_next_u8() & 0x07);
         e->state_timer = 30;
-        e->hitbox      = (6 << 4) | 6;                  // 6×6 hitbox
+        e->hitbox      = (6 << 4) | 6;
     }
     return idx;
 }

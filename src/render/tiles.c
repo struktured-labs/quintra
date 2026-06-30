@@ -2,6 +2,7 @@
 
 #include "core/types.h"
 #include "render/tiles.h"
+#include "render/sprites_gen.h"
 
 // All tiles are 2bpp 8x8 (16 bytes). For each row: byte_low, byte_high.
 // color = (high_bit, low_bit) per pixel.
@@ -182,4 +183,25 @@ void tiles_load_hud(void) {
     for (i = 0; i < HUD_TILE_COUNT; ++i) {
         set_bkg_data((u8)(HUD_HEART_FULL + i), 1, hud_tiles[i]);
     }
+}
+
+void tiles_load_all_class_sprites(void) {
+    // Each class metasprite = 4 tiles (64 bytes). Load all 5 contiguously
+    // at SPR_CLASS_BASE so class N's first tile is SPR_CLASS_BASE + N*4.
+    set_sprite_data((u8)(SPR_CLASS_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin);
+    set_sprite_data((u8)(SPR_CLASS_BASE + 1 * SPR_CLASS_STRIDE), 4, sprite_class_sauran);
+    set_sprite_data((u8)(SPR_CLASS_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin);
+    set_sprite_data((u8)(SPR_CLASS_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean);
+    set_sprite_data((u8)(SPR_CLASS_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine);
+}
+
+void tiles_load_all_enemy_sprites(void) {
+    set_sprite_data(SPR_ENEMY_CRAWLER,  1, sprite_enemy_crawler);
+    set_sprite_data(SPR_ENEMY_HORNET,   1, sprite_enemy_hornet);
+    set_sprite_data(SPR_ENEMY_SKELETON, 1, sprite_enemy_skeleton);
+    set_sprite_data(SPR_ENEMY_ORC,      1, sprite_enemy_orc);
+}
+
+void tiles_load_boss_metasprite(void) {
+    set_sprite_data(SPR_BOSS, 4, sprite_boss_sentinel);
 }

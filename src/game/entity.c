@@ -20,8 +20,8 @@ static u8 hitbox_h(const entity_t *e) { return  e->hitbox       & 0x0F; }
 void entity_init_all(void) {
     u8 i;
     memset(entities, 0, sizeof(entities));
-    // Park all sprites off-screen
-    for (i = 1; i <= MAX_ENTITIES; ++i) {
+    // Park entity sprites off-screen (slots 4..35)
+    for (i = 4; i < 4 + MAX_ENTITIES; ++i) {
         move_sprite(i, 0, 0);
     }
 }
@@ -33,7 +33,8 @@ u8 entity_spawn(u8 type) {
             memset(&entities[i], 0, sizeof(entity_t));
             entities[i].type    = type;
             entities[i].flags   = EF_ACTIVE | EF_ALIVE;
-            entities[i].oam_slot = (u8)(1 + i);
+            // OAM slots 0-3 reserved for player metasprite; entities use 4+
+            entities[i].oam_slot = (u8)(4 + i);
             return i;
         }
     }

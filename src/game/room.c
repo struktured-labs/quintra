@@ -121,12 +121,19 @@ static void draw_room_tilemap(void) {
 }
 
 static void place_player_sprite(void) {
+    // 16x16 player metasprite — 4 OAM slots, anchored at (x+8, y+16) per GBDK
     if (player.iframes > 0 && (player.iframes & 0x04)) {
         move_sprite(0, 0, 0);
+        move_sprite(1, 0, 0);
+        move_sprite(2, 0, 0);
+        move_sprite(3, 0, 0);
     } else {
-        move_sprite(0,
-            (u8)(player.x + 8),
-            (u8)(player.y + 16));
+        u8 sx = (u8)(player.x + 8);
+        u8 sy = (u8)(player.y + 16);
+        move_sprite(0, sx,         sy);
+        move_sprite(1, (u8)(sx+8), sy);
+        move_sprite(2, sx,         (u8)(sy+8));
+        move_sprite(3, (u8)(sx+8), (u8)(sy+8));
     }
 }
 
@@ -172,17 +179,29 @@ void room_enter(void) {
     palette_obj_load(6, sentinel_palette);
 
     tiles_load_room_bg();
-    tiles_load_player_sprite();
+    tiles_load_player_sprite();           // legacy single-tile fallback
     tiles_load_combat_sprites();
     tiles_load_pickup_sprites();
     tiles_load_boss_sprite();
+    tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
+    tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
+    tiles_load_boss_metasprite();         // 16x16 boss (slots 24..27)
 
     hud_init();
     hud_show();
 
-    // Player sprite tile + CGB OBJ palette 1
-    set_sprite_tile(0, SPR_PLAYER);
-    set_sprite_prop(0, 0x01);
+    // Player metasprite — 4 tiles starting at class-specific base
+    {
+        u8 base = (u8)(SPR_CLASS_BASE + (u8)(player.class_id * SPR_CLASS_STRIDE));
+        set_sprite_tile(0, (u8)(base + 0));    // TL
+        set_sprite_tile(1, (u8)(base + 1));    // TR
+        set_sprite_tile(2, (u8)(base + 2));    // BL
+        set_sprite_tile(3, (u8)(base + 3));    // BR
+        set_sprite_prop(0, 0x01);
+        set_sprite_prop(1, 0x01);
+        set_sprite_prop(2, 0x01);
+        set_sprite_prop(3, 0x01);
+    }
     player.facing        = FACE_S;
     player.iframes       = 0;
     player.fire_cooldown = 0;
