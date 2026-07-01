@@ -186,6 +186,7 @@ void room_enter(void) {
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
     tiles_load_boss_metasprite();         // 16x16 boss (slots 24..27)
+    tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
     hud_init();
     hud_show();
@@ -254,12 +255,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
     }
 
-    // ---- Fire (B press / hold)
+    // ---- Fire (B press / hold) — rapid Penta-style auto-fire
     if ((keys & J_B) && player.fire_cooldown == 0) {
         u8 dir = input_to_dir8(keys);
         if (dir == 0xFF) dir = facing_to_dir8(player.facing);
         projectile_spawn_player(dir8_dx[dir], dir8_dy[dir]);
-        player.fire_cooldown = 12;   // matches Wolfkin Claw Combo fire_rate
+        player.fire_cooldown = 6;    // 10 shots/sec — rapid
     }
     if (player.fire_cooldown > 0) player.fire_cooldown--;
 

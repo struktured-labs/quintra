@@ -4,6 +4,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/run_state.h"
+#include "render/tiles.h"
 #include "content.h"
 
 u8 combat_resolve(void) {
@@ -28,7 +29,6 @@ u8 combat_resolve(void) {
                 if (entities[j].hp > entities[i].damage) {
                     entities[j].hp = (u8)(entities[j].hp - entities[i].damage);
                 } else {
-                    // Score + kill stats
                     {
                         u8 eid = entities[j].ai_data[0];
                         if (eid < N_ENEMIES) {
@@ -36,13 +36,19 @@ u8 combat_resolve(void) {
                             run_state.score = s;
                         }
                         run_state.enemies_killed++;
-                        // Boss kill → set victory flag
                         if (eid == 1) run_state.victory = 1;
                     }
-                    // Drop pickup at enemy position before killing
+                    // Impact FX at enemy position
+                    fx_spawn(SPR_FX_IMPACT, 2,
+                        (i16)FIX8_TO_INT(entities[j].x),
+                        (i16)FIX8_TO_INT(entities[j].y), 8);
                     pickup_roll_drop(entities[j].x, entities[j].y);
                     entity_kill(j);
                 }
+                // Impact FX at bullet position (spawn on every hit, even non-kill)
+                fx_spawn(SPR_FX_IMPACT, 2,
+                    (i16)FIX8_TO_INT(entities[i].x),
+                    (i16)FIX8_TO_INT(entities[i].y), 4);
                 // Projectile pierce
                 if (entities[i].hp <= 1) {
                     entity_kill(i);

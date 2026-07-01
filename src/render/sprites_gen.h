@@ -18,6 +18,12 @@ extern const u8 sprite_enemy_hornet[16];
 extern const u8 sprite_enemy_skeleton[16];
 extern const u8 sprite_enemy_orc[16];
 
+// 8x8 FX sprites
+extern const u8 sprite_fx_bullet_a[16];
+extern const u8 sprite_fx_bullet_b[16];
+extern const u8 sprite_fx_muzzle[16];
+extern const u8 sprite_fx_impact[16];
+
 // 16x16 boss metasprite
 extern const u8 sprite_boss_sentinel[64];
 

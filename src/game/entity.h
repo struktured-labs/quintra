@@ -13,7 +13,7 @@ enum {
     ENT_PROJECTILE,
     ENT_ENEMY,
     ENT_PICKUP,
-    ENT_FX,
+    ENT_FX,         // visual-only, no collision, decays on state_timer=0
     ENT_TYPE_COUNT,
 };
 
@@ -56,5 +56,10 @@ void entity_draw_all(void);
 // 4-bit w in high nibble, 4-bit h in low nibble; box anchored at (x,y).
 u8   aabb_overlap_ee(const entity_t *a, const entity_t *b);
 u8   aabb_overlap_player(const entity_t *e);
+
+// FX: visual-only entity (no collision, decays on state_timer=0).
+// sprite_tile is the OBJ tile slot; ttl is frames until despawn.
+u8   fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl);
+void fx_update(entity_t *e, u8 idx);
 
 #endif

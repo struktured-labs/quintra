@@ -7,8 +7,8 @@
 #include "game/room.h"
 #include "render/tiles.h"
 
-#define PROJECTILE_SPEED  4    // px/tick
-#define PROJECTILE_TTL    60   // ticks before despawn (1 second)
+#define PROJECTILE_SPEED  3    // px/tick — slower = more visible, Penta-ish
+#define PROJECTILE_TTL    75   // ~225px range = 1.4 room widths
 #define PROJECTILE_DAMAGE 2
 
 u8 projectile_spawn_player(i8 dx, i8 dy) {
@@ -24,21 +24,28 @@ u8 projectile_spawn_player(i8 dx, i8 dy) {
     e->vx          = (i8)((i16)dx * PROJECTILE_SPEED);
     e->vy          = (i8)((i16)dy * PROJECTILE_SPEED);
     e->sprite_tile = SPR_BULLET;
-    e->palette     = 2;                  // OBJ palette 2 (item-gold accent)
-    e->hp          = 1;                  // pierce = 1 enemy
+    e->palette     = 2;
+    e->hp          = 1;
     e->state_timer = PROJECTILE_TTL;
-    e->hitbox      = (4 << 4) | 4;       // 4×4 hitbox
+    e->hitbox      = (7 << 4) | 7;       // 7×7 hitbox — nearly full sprite for reliable hits
     e->damage      = PROJECTILE_DAMAGE;
+    // ai_data[0] = animation phase (for 2-frame flicker)
+    e->ai_data[0]  = 0;
+    // Muzzle flash — 6-frame FX behind bullet
+    fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
     return idx;
 }
 
 void projectile_update(entity_t *e, u8 idx) {
-    // Despawn after TTL or off-screen / on wall
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 
-    e->x = (fix8_t)(e->x + FIX8(0) + ((i16)e->vx << 4));   // velocity in 4.4
-    e->y = (fix8_t)(e->y + FIX8(0) + ((i16)e->vy << 4));
+    e->x = (fix8_t)(e->x + ((i32)e->vx << 8));   // integer px/tick, fix8 units
+    e->y = (fix8_t)(e->y + ((i32)e->vy << 8));
+
+    // Alternate sprite frames each tick for a shimmer effect
+    e->ai_data[0] = (u8)(e->ai_data[0] + 1);
+    e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
 
     {
         i16 px = FIX8_TO_INT(e->x);

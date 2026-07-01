@@ -205,3 +205,10 @@ void tiles_load_all_enemy_sprites(void) {
 void tiles_load_boss_metasprite(void) {
     set_sprite_data(SPR_BOSS, 4, sprite_boss_sentinel);
 }
+
+void tiles_load_fx_sprites(void) {
+    set_sprite_data(SPR_BULLET,    1, sprite_fx_bullet_a);
+    set_sprite_data(SPR_BULLET_B,  1, sprite_fx_bullet_b);
+    set_sprite_data(SPR_FX_MUZZLE, 1, sprite_fx_muzzle);
+    set_sprite_data(SPR_FX_IMPACT, 1, sprite_fx_impact);
+}

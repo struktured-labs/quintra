@@ -27,9 +27,12 @@
 #define SPR_ENEMY_SKELETON 22
 #define SPR_ENEMY_ORC      23
 #define SPR_BOSS           24    // 4 tiles: 24..27
-#define SPR_BULLET         28
-#define SPR_HEART          29
-#define SPR_COIN           30
+#define SPR_BULLET         28    // 2-frame anim: SPR_BULLET + SPR_BULLET_B
+#define SPR_BULLET_B       29
+#define SPR_HEART          30
+#define SPR_COIN           31
+#define SPR_FX_MUZZLE      32
+#define SPR_FX_IMPACT      33
 // Legacy aliases (kept for back-compat with existing code):
 #define SPR_PLAYER         SPR_CLASS_BASE
 #define SPR_ENEMY          SPR_ENEMY_CRAWLER
@@ -60,5 +63,6 @@ void tiles_load_hud(void);
 void tiles_load_all_class_sprites(void);   // loads 5 classes × 4 tiles = 20 OBJ tiles
 void tiles_load_all_enemy_sprites(void);   // 4 enemy tiles
 void tiles_load_boss_metasprite(void);     // 16x16 boss (4 tiles at SPR_BOSS..+3)
+void tiles_load_fx_sprites(void);          // bullet (2 frames), muzzle, impact
 
 #endif

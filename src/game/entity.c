@@ -80,10 +80,32 @@ void entity_update_all(u8 keys, u8 pressed) {
             case ENT_PROJECTILE: projectile_update(&entities[i], i); break;
             case ENT_ENEMY:      enemy_update(&entities[i], i);      break;
             case ENT_PICKUP:     pickup_update(&entities[i], i);     break;
+            case ENT_FX:         fx_update(&entities[i], i);         break;
             default: break;
         }
-        keys; pressed; // not used by current entity types
+        keys; pressed;
     }
+}
+
+u8 fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl) {
+    u8 idx = entity_spawn(ENT_FX);
+    if (idx == 0xFF) return 0xFF;
+    {
+        entity_t *e = &entities[idx];
+        e->x = FIX8(px);
+        e->y = FIX8(py);
+        e->sprite_tile = sprite_tile;
+        e->palette     = palette;
+        e->state_timer = ttl;
+        e->hitbox      = 0;
+        e->damage      = 0;
+    }
+    return idx;
+}
+
+void fx_update(entity_t *e, u8 idx) {
+    if (e->state_timer == 0) { entity_kill(idx); return; }
+    e->state_timer--;
 }
 
 void entity_draw_all(void) {
