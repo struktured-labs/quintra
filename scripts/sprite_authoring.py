@@ -212,6 +212,102 @@ IMPACT = """\
 1.1..1.1""".splitlines()
 
 
+# ---------------- Dungeon BG tiles (8x8, opaque — glyph 0 = palette c0) ----
+# Floor tiles draw mostly c2 (light stone) so rooms read BRIGHT; walls use a
+# separate darker palette via CGB per-tile attributes.
+
+BGT_FLOOR_PLAIN = """\
+22222222
+22222222
+22212222
+22222222
+22222222
+21222222
+22222222
+22222322""".splitlines()
+
+BGT_FLOOR_CRACK = """\
+22222222
+22122222
+22212222
+22221222
+22222122
+22221222
+22212222
+22222222""".splitlines()
+
+BGT_FLOOR_PEBBLE = """\
+22222222
+23222122
+22222222
+22221222
+21222322
+22222222
+22132122
+22222222""".splitlines()
+
+BGT_WALL_BRICK = """\
+33333333
+22212221
+22212221
+11111111
+12221222
+12221222
+11111111
+22212221""".splitlines()
+
+BGT_DOOR_FRAME = """\
+31111113
+30000003
+30000003
+30000003
+30000003
+30000003
+30000003
+30000003""".splitlines()
+
+BGT_PILLAR = """\
+33333332
+32222212
+32222212
+32222212
+32222212
+32222212
+31111112
+22222222""".splitlines()
+
+BGT_CRYSTAL = """\
+00033000
+00322300
+03222230
+32222223
+03222230
+00322300
+00033000
+00000000""".splitlines()
+
+BGT_RUBBLE = """\
+22222222
+22112222
+22112222
+22222222
+22222112
+22222112
+21122222
+22222222""".splitlines()
+
+DUNGEON_TILES = [
+    ("floor_plain",  BGT_FLOOR_PLAIN),
+    ("floor_crack",  BGT_FLOOR_CRACK),
+    ("floor_pebble", BGT_FLOOR_PEBBLE),
+    ("wall_brick",   BGT_WALL_BRICK),
+    ("door_frame",   BGT_DOOR_FRAME),
+    ("pillar",       BGT_PILLAR),
+    ("crystal",      BGT_CRYSTAL),
+    ("rubble",       BGT_RUBBLE),
+]
+
+
 # 16x16 boss (Stone Sentinel)
 BOSS = """\
 ....111111111...
@@ -234,7 +330,7 @@ BOSS = """\
 
 # ---------------- Conversion --------------------
 
-GLYPH_TO_IDX = {".": 0, "1": 1, "2": 2, "3": 3}
+GLYPH_TO_IDX = {".": 0, "0": 0, "1": 1, "2": 2, "3": 3}
 IDX_TO_HEX   = {0: "#FF00FF", 1: "#A0A0A0", 2: "#606060", 3: "#202020"}
 
 
@@ -349,6 +445,12 @@ def emit_all_c():
         grid = parse_grid(lines)
         bytes_ = tile_2bpp_bytes(grid)
         print(emit_tile_c_array(f"sprite_fx_{name}", bytes_))
+
+    # Dungeon BG tiles (8x8 each)
+    for name, lines in DUNGEON_TILES:
+        grid = parse_grid(lines)
+        bytes_ = tile_2bpp_bytes(grid)
+        print(emit_tile_c_array(f"bgt_{name}", bytes_))
 
     # Boss (16x16 = 4 tiles)
     grid = parse_grid(BOSS)
