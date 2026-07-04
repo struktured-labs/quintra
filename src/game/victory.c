@@ -32,12 +32,13 @@ void victory_enter(void) {
     cls();
 
     gotoxy(6, 3);  printf("VICTORY!");
-    gotoxy(2, 6);  printf("you defeated");
-    gotoxy(2, 7);  printf("the SENTINEL");
+    gotoxy(2, 6);  printf("3 sentinels");
+    gotoxy(2, 7);  printf("felled. depths");
+    gotoxy(2, 8);  printf("cleansed!");
 
-    gotoxy(2, 10); printf("rooms   %u", (u16)run_state.room_counter);
-    gotoxy(2, 11); printf("kills   %u", (u16)run_state.enemies_killed);
-    gotoxy(2, 12); printf("score   %u", (u16)run_state.score);
+    gotoxy(2, 11); printf("rooms   %u", (u16)run_state.room_counter);
+    gotoxy(2, 12); printf("kills   %u", (u16)run_state.enemies_killed);
+    gotoxy(2, 13); printf("score   %u", (u16)run_state.score);
 
     gotoxy(2, 16); printf("PRESS  START");
 

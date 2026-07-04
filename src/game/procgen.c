@@ -4,6 +4,7 @@
 #include "core/rng.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
+#include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/room.h"
@@ -54,7 +55,10 @@ void procgen_generate_current_room(void) {
     bio;
     {
         u8 x, y;
-        u8 is_boss_room = (run_state.room_counter == BOSS_ROOM_DEPTH && !run_state.victory) ? 1 : 0;
+        // A boss guards every Nth room until BOSSES_TO_WIN are down.
+        u8 is_boss_room = (run_state.room_counter > 0
+            && (run_state.room_counter % BOSS_EVERY_N_ROOMS) == 0
+            && (u8)(run_state.room_counter / BOSS_EVERY_N_ROOMS) > run_state.bosses_beaten) ? 1 : 0;
 
         // Base: border walls + textured floor (plain / cracked / pebbled mix)
         for (y = 0; y < ROOM_H; ++y) {
@@ -120,6 +124,26 @@ void procgen_generate_current_room(void) {
                     }
                 }
             }
+
+            // Secret cracked wall — ~3 in 8 rooms hide one somewhere on the
+            // border (never on a door, corner, or the E/W door row).
+            if ((rng_next_u8() & 0x07) < 3) {
+                u8 side = (u8)(rng_next_u8() & 0x03);
+                u8 pos;
+                if (side == 0) {          // north wall
+                    pos = (u8)(2 + rng_range(ROOM_W - 4));
+                    if (pos != ROOM_W / 2) room_tilemap[0][pos] = BGT_WALL_CRACK;
+                } else if (side == 1) {   // south wall
+                    pos = (u8)(2 + rng_range(ROOM_W - 4));
+                    if (pos != ROOM_W / 2) room_tilemap[ROOM_H - 1][pos] = BGT_WALL_CRACK;
+                } else if (side == 2) {   // west wall
+                    pos = (u8)(2 + rng_range(ROOM_H - 4));
+                    if (pos != ROOM_H / 2) room_tilemap[pos][0] = BGT_WALL_CRACK;
+                } else {                  // east wall
+                    pos = (u8)(2 + rng_range(ROOM_H - 4));
+                    if (pos != ROOM_H / 2) room_tilemap[pos][ROOM_W - 1] = BGT_WALL_CRACK;
+                }
+            }
         }
     }
 
@@ -133,37 +157,57 @@ void procgen_generate_current_room(void) {
     *(volatile u8*)0xFFFE = run_state.room_counter;
     *(volatile u8*)0xFFFD = run_state.victory;
 
-    if (run_state.room_counter == BOSS_ROOM_DEPTH && !run_state.victory) {
-        *(volatile u8*)0xFFFC = 0xBB;
-        // Spawn 16x16 Sentinel roughly centered (tile x-1 so the 2x2 body centers)
-        u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, (ROOM_H / 2) - 1);
-        if (idx != 0xFF) {
-            entities[idx].palette     = 0x06;
-            entities[idx].sprite_tile = SPR_BOSS;
-            entities[idx].hitbox      = (14 << 4) | 14;   // near-full 16x16 box
-        }
-    } else {
+    // Secret treasure room: no enemies, loot piled in the middle.
+    if (run_state.secret_pending) {
+        run_state.secret_pending = 0;
         *(volatile u8*)0xFFFC = 0x00;
-        u8 enemy_count = (u8)(1 + rng_range(4));   // 1..4
-        u8 ptx = (u8)(player.x >> 3);
-        u8 pty = (u8)(player.y >> 3);
-        u8 i;
-        for (i = 0; i < enemy_count; ++i) {
-            u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
-            u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
-            // No spawn on solid tiles or within 3 tiles of the player
-            if (!room_tile_walkable(room_tilemap[ty][tx])) continue;
-            {
-                u8 dx = (tx > ptx) ? (u8)(tx - ptx) : (u8)(ptx - tx);
-                u8 dy = (ty > pty) ? (u8)(ty - pty) : (u8)(pty - ty);
-                if (dx < 3 && dy < 3) continue;
+        pickup_spawn(PICKUP_HEART_HALF, FIX8(72), FIX8(56));
+        pickup_spawn(PICKUP_HEART_HALF, FIX8(88), FIX8(56));
+        pickup_spawn(PICKUP_COIN_5,     FIX8(72), FIX8(72));
+        pickup_spawn(PICKUP_COIN_5,     FIX8(88), FIX8(72));
+        pickup_spawn_item((u8)(10 + rng_range(5)), FIX8(80), FIX8(64));
+        player.iframes = 60;
+        return;
+    }
+
+    {
+        u8 is_boss_room = (run_state.room_counter > 0
+            && (run_state.room_counter % BOSS_EVERY_N_ROOMS) == 0
+            && (u8)(run_state.room_counter / BOSS_EVERY_N_ROOMS) > run_state.bosses_beaten) ? 1 : 0;
+
+        if (is_boss_room) {
+            *(volatile u8*)0xFFFC = 0xBB;
+            u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, (ROOM_H / 2) - 1);
+            if (idx != 0xFF) {
+                entities[idx].sprite_tile = SPR_BOSS;
+                entities[idx].hitbox      = (14 << 4) | 14;
+                // Later bosses hit harder + have more HP
+                entities[idx].hp = (u8)(entities[idx].hp
+                    + (u8)(run_state.bosses_beaten * 30));
+                entities[idx].damage = (u8)(entities[idx].damage
+                    + run_state.bosses_beaten);
             }
-            {
-                u8 eid = pick_enemy_from_biome(&biomes[run_state.biome_id]);
-                if (eid == 1) eid = 0;   // boss never spawns in normal rooms
+        } else {
+            *(volatile u8*)0xFFFC = 0x00;
+            // Enemy count scales with depth (1-4 early, up to 6 deep)
+            u8 depth_bonus = (u8)(run_state.room_counter / 6);
+            u8 enemy_count = (u8)(1 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));
+            u8 ptx = (u8)(player.x >> 3);
+            u8 pty = (u8)(player.y >> 3);
+            u8 i;
+            for (i = 0; i < enemy_count; ++i) {
+                u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
+                u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
+                if (!room_tile_walkable(room_tilemap[ty][tx])) continue;
                 {
-                    u8 idx = enemy_spawn(eid, tx, ty);
-                    if (idx != 0xFF) entities[idx].palette = 0x03;
+                    u8 dx = (tx > ptx) ? (u8)(tx - ptx) : (u8)(ptx - tx);
+                    u8 dy = (ty > pty) ? (u8)(ty - pty) : (u8)(pty - ty);
+                    if (dx < 3 && dy < 3) continue;
+                }
+                {
+                    u8 eid = pick_enemy_from_biome(&biomes[run_state.biome_id]);
+                    if (eid == 1) eid = 0;   // boss never spawns in normal rooms
+                    enemy_spawn(eid, tx, ty);
                 }
             }
         }

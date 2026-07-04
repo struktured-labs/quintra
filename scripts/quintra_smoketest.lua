@@ -88,8 +88,9 @@ hold(KEY_B + KEY_UP, 400)
 tick(60)
 shot("11_after_long_assault")
 
--- Whatever screen we're on now, return to TITLE
-press(KEY_START, 4); tick(40); shot("12_back_to_title")
+-- START now PAUSES (dims palettes) instead of exiting
+press(KEY_START, 4); tick(20); shot("12_paused")
+press(KEY_START, 4); tick(20); shot("13_unpaused")
 
 console:log("SMOKETEST DONE")
 emu.frontend:quit()

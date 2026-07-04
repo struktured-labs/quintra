@@ -207,10 +207,12 @@ void tiles_load_boss_metasprite(void) {
 }
 
 void tiles_load_fx_sprites(void) {
-    set_sprite_data(SPR_BULLET,    1, sprite_fx_bullet_a);
-    set_sprite_data(SPR_BULLET_B,  1, sprite_fx_bullet_b);
-    set_sprite_data(SPR_FX_MUZZLE, 1, sprite_fx_muzzle);
-    set_sprite_data(SPR_FX_IMPACT, 1, sprite_fx_impact);
+    set_sprite_data(SPR_BULLET,     1, sprite_fx_bullet_a);
+    set_sprite_data(SPR_BULLET_B,   1, sprite_fx_bullet_b);
+    set_sprite_data(SPR_FX_MUZZLE,  1, sprite_fx_muzzle);
+    set_sprite_data(SPR_FX_IMPACT,  1, sprite_fx_impact);
+    set_sprite_data(SPR_ENEMY_WISP, 1, sprite_fx_wisp);
+    set_sprite_data(SPR_ITEM_ORB,   1, sprite_fx_item_orb);
 }
 
 void tiles_load_dungeon_bg(void) {
@@ -223,4 +225,5 @@ void tiles_load_dungeon_bg(void) {
     set_bkg_data(BGT_PILLAR,  1, bgt_pillar);
     set_bkg_data(BGT_CRYSTAL, 1, bgt_crystal);
     set_bkg_data(BGT_RUBBLE,  1, bgt_rubble);
+    set_bkg_data(BGT_WALL_CRACK, 1, bgt_wall_crack);
 }

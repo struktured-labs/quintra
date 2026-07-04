@@ -296,6 +296,17 @@ BGT_RUBBLE = """\
 21122222
 22222222""".splitlines()
 
+# Cracked wall — shoot it to reveal a secret passage (Zelda-1 style)
+BGT_WALL_CRACK = """\
+33333333
+22212021
+22210221
+11101111
+12201222
+12021222
+11101111
+22210221""".splitlines()
+
 DUNGEON_TILES = [
     ("floor_plain",  BGT_FLOOR_PLAIN),
     ("floor_crack",  BGT_FLOOR_CRACK),
@@ -305,6 +316,7 @@ DUNGEON_TILES = [
     ("pillar",       BGT_PILLAR),
     ("crystal",      BGT_CRYSTAL),
     ("rubble",       BGT_RUBBLE),
+    ("wall_crack",   BGT_WALL_CRACK),
 ]
 
 
@@ -413,11 +425,35 @@ ENEMIES_8 = [
     ("orc",      ORC),
 ]
 
+# Wisp — ghostly shooter enemy
+WISP = """\
+..1111..
+.111111.
+11311311
+11111111
+.111111.
+..1111..
+.1.11.1.
+1..11..1""".splitlines()
+
+# Item orb pickup
+ITEM_ORB = """\
+...11...
+..1331..
+.133331.
+.133331.
+.133331.
+..1331..
+...11...
+........""".splitlines()
+
 FX_8 = [
     ("bullet_a", BULLET_A),
     ("bullet_b", BULLET_B),
     ("muzzle",   MUZZLE),
     ("impact",   IMPACT),
+    ("wisp",     WISP),
+    ("item_orb", ITEM_ORB),
 ]
 
 

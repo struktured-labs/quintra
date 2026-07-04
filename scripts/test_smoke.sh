@@ -57,7 +57,8 @@ check 08_BOSS_room            400
 check 09_boss_under_fire      400
 check 10_boss_mid_fight       400
 check 11_after_long_assault   400
-check 12_back_to_title        400
+check 12_paused               400
+check 13_unpaused             400
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

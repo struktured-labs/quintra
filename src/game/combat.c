@@ -1,3 +1,4 @@
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "game/combat.h"
 #include "game/entity.h"
@@ -28,7 +29,9 @@ u8 combat_resolve(void) {
                 // Apply damage
                 if (entities[j].hp > entities[i].damage) {
                     entities[j].hp = (u8)(entities[j].hp - entities[i].damage);
+                    sfx_play(SFX_HIT);
                 } else {
+                    sfx_play(SFX_DEATH);
                     {
                         u8 eid = entities[j].ai_data[0];
                         if (eid < N_ENEMIES) {
@@ -36,7 +39,19 @@ u8 combat_resolve(void) {
                             run_state.score = s;
                         }
                         run_state.enemies_killed++;
-                        if (eid == 1) run_state.victory = 1;
+                        if (eid == 1) {
+                            // Boss down: reward burst + unseal, or final victory
+                            run_state.bosses_beaten++;
+                            if (run_state.bosses_beaten >= BOSSES_TO_WIN) {
+                                run_state.victory = 1;
+                            } else {
+                                run_state.pending_unseal = 1;
+                            }
+                            pickup_spawn(PICKUP_HEART_HALF, entities[j].x - FIX8(8), entities[j].y);
+                            pickup_spawn(PICKUP_HEART_HALF, entities[j].x + FIX8(16), entities[j].y);
+                            pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y - FIX8(8));
+                            pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y + FIX8(16));
+                        }
                     }
                     // Impact FX at enemy position
                     fx_spawn(SPR_FX_IMPACT, 2,
@@ -63,19 +78,26 @@ u8 combat_resolve(void) {
     // 2) Pickup collisions (always processed; doesn't require iframes)
     pickup_check_player_collision();
 
-    // 3) Enemy -> player contact (respects iframes)
+    // 3) Enemy bodies AND enemy projectiles -> player (respects iframes)
     if (player.iframes == 0) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
+            u8 hostile;
             if (!(entities[i].flags & EF_ACTIVE)) continue;
-            if (entities[i].type != ENT_ENEMY)    continue;
+            hostile = (entities[i].type == ENT_ENEMY)
+                || (entities[i].type == ENT_PROJECTILE
+                    && !(entities[i].flags & EF_PLAYER_PROJ));
+            if (!hostile) continue;
             if (aabb_overlap_player(&entities[i])) {
+                u8 was_projectile = (entities[i].type == ENT_PROJECTILE);
                 if (player.hp > entities[i].damage) {
                     player.hp = (u8)(player.hp - entities[i].damage);
                     player.iframes = 30;
+                    sfx_play(SFX_HURT);
                 } else {
                     player.hp = 0;
                     player_died = 1;
                 }
+                if (was_projectile) entity_kill(i);   // bullet spent
                 break;   // one hit per frame
             }
         }

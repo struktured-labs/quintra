@@ -12,9 +12,10 @@ pub const CRYSTAL_CAVERNS: Biome = Biome {
     bg_palettes:  [BG_PAL_CAVERN_BASE, BG_PAL_CAVERN_DEC, BG_PAL_CAVERN_ALT, BG_PAL_CAVERN_HI],
     music_track:  MUSIC_CAVERN,
     enemy_pool:   &[
-        (ENEMY_BLUE_CRAWLER, 50),
-        (ENEMY_HORNET,       25),
-        (ENEMY_SKELETON,     20),
+        (ENEMY_BLUE_CRAWLER, 40),
+        (ENEMY_HORNET,       22),
+        (ENEMY_SKELETON,     18),
+        (ENEMY_WISP,         15),
         (ENEMY_ORC,           5),
     ],
     room_template_pool: &[ROOM_SMALL_EMPTY],

@@ -1,6 +1,6 @@
 //! Enemy roster. Phase 2: 1 enemy (Blue Crawler — slow walker, fire-weak).
 
-use quintra_content::{AiScriptId, Enemy, EnemyStats, Registry};
+use quintra_content::{AiScriptId, Enemy, EnemyStats, ProjectileKind, Registry, ShotPattern};
 
 use crate::ids::*;
 
@@ -73,10 +73,26 @@ pub const ORC: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const WISP: Enemy = Enemy {
+    id:         ENEMY_WISP,
+    name:       "Wisp",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    stats: EnemyStats { hp: 2, damage: 1, speed: 32, score: 25, weakness: 0x04, poise: 0 },
+    ai_script:  AiScriptId::Shooter {
+        fire_rate: 90,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Single,
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
     r.add_enemy(HORNET.clone());
     r.add_enemy(SKELETON.clone());
     r.add_enemy(ORC.clone());
+    r.add_enemy(WISP.clone());
 }

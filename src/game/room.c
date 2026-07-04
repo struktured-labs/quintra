@@ -5,17 +5,21 @@
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
+#include "audio/music.h"
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/combat.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/loop.h"
+#include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "render/class_palettes.h"
 #include "render/hud.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -23,7 +27,10 @@
 
 u8 room_tilemap[ROOM_H][ROOM_W];
 
-#define SPEED_SCALE 32   // each spd unit = 32/256 px = 0.125 px/tick
+static u8 room_paused;
+// Secret door opened by shooting a cracked wall this room (0xFF = none)
+static u8 secret_door_x = 0xFF;
+static u8 secret_door_y = 0xFF;
 
 // Crystal Caverns BG palettes — floor kept bright so the play area reads,
 // walls clearly darker (sprite/value-band separation), crystals glow,
@@ -53,20 +60,28 @@ static const u16 pal_door[4] = {
     BGR555(28, 21,  6),    // 3: bright gold
 };
 
-// Player (Wolfkin) palette
-static const u16 player_palette[4] = {
-    BGR555( 0,  0,  0),
-    BGR555(28, 22, 14),
-    BGR555(16,  8,  4),
-    BGR555( 0,  0,  0),
-};
-
 // Crawler (enemy) palette — blue, with one accent
 static const u16 crawler_palette[4] = {
     BGR555( 0,  0,  0),
     BGR555( 8, 12, 28),
     BGR555( 4,  6, 20),
+    BGR555(20, 24, 31),
+};
+
+// Skeleton — bone white (OBJ palette 0)
+static const u16 skeleton_palette[4] = {
     BGR555( 0,  0,  0),
+    BGR555(28, 28, 26),
+    BGR555(13, 13, 15),
+    BGR555(30, 20, 18),
+};
+
+// Orc — moss green (OBJ palette 7)
+static const u16 orc_palette[4] = {
+    BGR555( 0,  0,  0),
+    BGR555(12, 22,  8),
+    BGR555( 5, 10,  4),
+    BGR555(27, 13,  6),
 };
 
 // Stone Sentinel (boss) palette — granite grey with bright accent
@@ -118,6 +133,71 @@ u8 room_tile_walkable(u8 t) {
 
 static u8 is_walkable_at(i16 px, i16 py) {
     return room_tile_walkable(room_tile_at_px(px, py));
+}
+
+// Halve each 5-bit channel: pause-dim without storing dim palettes.
+static void palette_bg_load_dimmed(u8 slot, const u16 *pal) {
+    u16 tmp[4];
+    u8 i;
+    for (i = 0; i < 4; ++i) tmp[i] = (u16)((pal[i] >> 1) & 0x3DEF);
+    palette_bg_load(slot, tmp);
+}
+
+static void room_apply_pause_palettes(u8 dim) {
+    if (dim) {
+        palette_bg_load_dimmed(BGPAL_FLOOR,   pal_floor);
+        palette_bg_load_dimmed(BGPAL_WALL,    pal_wall);
+        palette_bg_load_dimmed(BGPAL_CRYSTAL, pal_crystal);
+        palette_bg_load_dimmed(BGPAL_DOOR,    pal_door);
+    } else {
+        palette_bg_load(BGPAL_FLOOR,   pal_floor);
+        palette_bg_load(BGPAL_WALL,    pal_wall);
+        palette_bg_load(BGPAL_CRYSTAL, pal_crystal);
+        palette_bg_load(BGPAL_DOOR,    pal_door);
+    }
+}
+
+// Rewrite the 4 cardinal door tiles after a boss seal is lifted.
+// Called at the top of vblank so the handful of VRAM writes land safely.
+static void room_unseal_doors(void) {
+    room_tilemap[0][ROOM_W / 2]          = BGT_DOOR;
+    room_tilemap[ROOM_H - 1][ROOM_W / 2] = BGT_DOOR;
+    room_tilemap[ROOM_H / 2][0]          = BGT_DOOR;
+    room_tilemap[ROOM_H / 2][ROOM_W - 1] = BGT_DOOR;
+    wait_vbl_done();
+    {
+        u8 door = BGT_DOOR, attr = BGPAL_DOOR;
+        VBK_REG = 0;
+        set_bkg_tiles(ROOM_W / 2, 0,          1, 1, &door);
+        set_bkg_tiles(ROOM_W / 2, ROOM_H - 1, 1, 1, &door);
+        set_bkg_tiles(0,          ROOM_H / 2, 1, 1, &door);
+        set_bkg_tiles(ROOM_W - 1, ROOM_H / 2, 1, 1, &door);
+        VBK_REG = 1;
+        set_bkg_tiles(ROOM_W / 2, 0,          1, 1, &attr);
+        set_bkg_tiles(ROOM_W / 2, ROOM_H - 1, 1, 1, &attr);
+        set_bkg_tiles(0,          ROOM_H / 2, 1, 1, &attr);
+        set_bkg_tiles(ROOM_W - 1, ROOM_H / 2, 1, 1, &attr);
+        VBK_REG = 0;
+    }
+}
+
+// Single-tile rewrite (tile + attr) at the top of vblank.
+static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
+    room_tilemap[ty][tx] = t;
+    wait_vbl_done();
+    VBK_REG = 0;
+    set_bkg_tiles(tx, ty, 1, 1, &t);
+    VBK_REG = 1;
+    set_bkg_tiles(tx, ty, 1, 1, &attr);
+    VBK_REG = 0;
+}
+
+void room_open_secret(u8 tx, u8 ty) {
+    if (tx >= ROOM_W || ty >= ROOM_H) return;
+    room_set_tile_vbl(tx, ty, BGT_DOOR, BGPAL_DOOR);
+    secret_door_x = tx;
+    secret_door_y = ty;
+    sfx_play(SFX_DOOR);
 }
 
 // CGB palette attribute per tile id
@@ -200,12 +280,14 @@ void room_enter(void) {
     palette_bg_load(BGPAL_WALL,    pal_wall);
     palette_bg_load(BGPAL_CRYSTAL, pal_crystal);
     palette_bg_load(BGPAL_DOOR,    pal_door);
-    palette_obj_load(1, player_palette);
+    palette_obj_load(0, skeleton_palette);
+    palette_obj_load(1, class_obj_palettes[player.class_id < 5 ? player.class_id : 0]);
     palette_obj_load(2, bullet_palette);
     palette_obj_load(3, crawler_palette);
     palette_obj_load(4, heart_palette);
     palette_obj_load(5, coin_palette);
     palette_obj_load(6, sentinel_palette);
+    palette_obj_load(7, orc_palette);
 
     tiles_load_room_bg();
     tiles_load_dungeon_bg();              // authored dungeon tileset (overrides placeholders)
@@ -236,11 +318,16 @@ void room_enter(void) {
     player.facing        = FACE_S;
     player.iframes       = 0;
     player.fire_cooldown = 0;
+    room_paused          = 0;
 
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
     draw_room_tilemap();
     place_player_sprite();
+
+    secret_door_x = secret_door_y = 0xFF;
+    music_play_caverns();
+    if (*(volatile u8*)0xFFFC == 0xBB) sfx_play(SFX_ROAR);   // boss room entry
 
 
     SHOW_SPRITES;
@@ -251,10 +338,18 @@ void room_enter(void) {
 void room_exit(void) {
     HIDE_SPRITES;
     hud_hide();
+    music_stop();
     entity_init_all();
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
+    // ---- Pause (START toggles; world freezes, palettes dim)
+    if (pressed & J_START) {
+        room_paused ^= 1;
+        room_apply_pause_palettes(room_paused);
+    }
+    if (room_paused) return SCREEN_SELF;
+
     // ---- Movement: SPD-scaled sub-pixel accumulator.
     // acc += spd; each 5 accumulated = 1 px step. spd 5 = 1.0 px/f,
     // Sauran 4 = 0.8, Wolfkin 6 = 1.2, Vespine 7 = 1.4.
@@ -318,9 +413,30 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         return SCREEN_GAMEOVER;
     }
 
-    // ---- Victory check: boss defeated this run
+    // ---- Boss beaten (non-final): lift the door seal, run continues
+    if (run_state.pending_unseal) {
+        run_state.pending_unseal = 0;
+        room_unseal_doors();
+    }
+
+    // ---- Final victory: all bosses down
     if (run_state.victory) {
         return SCREEN_VICTORY;
+    }
+
+    // ---- Rubble poking: walking over rubble kicks it apart (Zelda bush-cut)
+    {
+        u8 rtx = (u8)((player.x + 4) >> 3);
+        u8 rty = (u8)((player.y + 4) >> 3);
+        if (rtx < ROOM_W && rty < ROOM_H
+            && room_tilemap[rty][rtx] == BGT_RUBBLE) {
+            room_set_tile_vbl(rtx, rty, BGT_FLOOR, BGPAL_FLOOR);
+            sfx_play(SFX_HIT);
+            if (rng_next_u8() < 100) {   // ~40%: hidden coin
+                pickup_spawn(PICKUP_COIN_1,
+                    FIX8((i16)rtx * 8), FIX8((i16)rty * 8));
+            }
+        }
     }
 
     // ---- Door detection: if player stands on a door, advance to next room
@@ -339,8 +455,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             else if (tx == ROOM_W - 1)     dir = DIR_E;
 
             if (dir != DIR_NONE) {
+                // Leaving through a shot-open secret door → treasure room
+                if (tx == secret_door_x && ty == secret_door_y) {
+                    run_state.secret_pending = 1;
+                }
+                secret_door_x = secret_door_y = 0xFF;
                 run_state.room_counter++;
                 run_state.entered_from = dir;
+                sfx_play(SFX_DOOR);
                 // Regenerate room in-place (skip full screen exit/enter)
                 DISPLAY_OFF;
                 procgen_generate_current_room();
@@ -348,14 +470,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 place_player_sprite();
                 hud_redraw_all();
                 DISPLAY_ON;
+                if (*(volatile u8*)0xFFFC == 0xBB) sfx_play(SFX_ROAR);
                 return SCREEN_SELF;
             }
         }
-    }
-
-    // ---- START returns to TITLE (Phase 5 testing)
-    if (pressed & J_START) {
-        return SCREEN_TITLE;
     }
 
     return SCREEN_SELF;

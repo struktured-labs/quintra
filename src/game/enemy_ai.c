@@ -5,6 +5,7 @@
 #include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/player.h"
+#include "game/projectile.h"
 #include "game/room.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -24,7 +25,22 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 2: return SPR_ENEMY_HORNET;
         case 3: return SPR_ENEMY_SKELETON;
         case 4: return SPR_ENEMY_ORC;
+        case 5: return SPR_ENEMY_WISP;
         default: return SPR_ENEMY_CRAWLER;
+    }
+}
+
+// Per-enemy OBJ palette (loaded in room_enter): crawler blue(3),
+// hornet amber(5, shares coin gold), skeleton bone(0), orc green(7),
+// sentinel granite(6), wisp bone-ghost(0).
+static u8 palette_for_enemy(u8 enemy_content_id) {
+    switch (enemy_content_id) {
+        case 1:  return 0x06;
+        case 2:  return 0x05;
+        case 3:  return 0x00;
+        case 4:  return 0x07;
+        case 5:  return 0x00;
+        default: return 0x03;
     }
 }
 
@@ -41,7 +57,8 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) {
         e->y           = FIX8((i16)tile_y * 8);
         e->vx = e->vy  = 0;
         e->sprite_tile = sprite_for_enemy(enemy_content_id);
-        e->palette     = def->palette;
+        e->palette     = palette_for_enemy(enemy_content_id);
+        def;
         e->hp          = def->stats.hp;
         e->damage      = def->stats.damage;
         e->ai_data[0]  = enemy_content_id;
@@ -155,6 +172,38 @@ static void charger_tick(entity_t *e, const enemy_def_t *def) {
     }
 }
 
+// ---------------- Shooter: drift + aimed shots ---------------------------
+
+static void shooter_tick(entity_t *e, const enemy_def_t *def) {
+    // Slow wander (half walker cadence) + fire toward player on a timer.
+    // ai_data[1] = fire countdown.
+    if ((e->state_timer & 0x07) == 0) {
+        i8 dx = dir8_dx[e->state & 0x07];
+        i8 dy = dir8_dy[e->state & 0x07];
+        if (!enemy_try_step(e, dx, dy)) {
+            e->state = (u8)(rng_next_u8() & 0x07);
+        }
+    }
+    e->state_timer++;
+    if (e->state_timer > 40) {
+        e->state_timer = 0;
+        e->state = (u8)(rng_next_u8() & 0x07);
+    }
+
+    if (e->ai_data[1] == 0) {
+        e->ai_data[1] = def->ai_p0;   // fire_rate
+        {
+            i16 ex = FIX8_TO_INT(e->x);
+            i16 ey = FIX8_TO_INT(e->y);
+            i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
+            i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
+            projectile_spawn_enemy(ex, ey, sx, sy, def->stats.damage);
+        }
+    } else {
+        e->ai_data[1]--;
+    }
+}
+
 // ---------------- Dispatch ----------------------------------------------
 
 void enemy_update(entity_t *e, u8 idx) {
@@ -163,6 +212,7 @@ void enemy_update(entity_t *e, u8 idx) {
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
+        case AI_SHOOTER: shooter_tick(e, def);             break;
         default:         walker_tick(e);                   break;
     }
 }

@@ -17,6 +17,8 @@ extern u8 room_tilemap[ROOM_H][ROOM_W];
 u8 room_tile_at_px(i16 px, i16 py);
 // 1 if the tile id is walkable / passable for entities+bullets.
 u8 room_tile_walkable(u8 t);
+// A player shot hit a cracked wall: convert it to a secret door.
+void room_open_secret(u8 tx, u8 ty);
 
 void        room_enter(void);
 void        room_exit(void);

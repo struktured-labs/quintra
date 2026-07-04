@@ -25,6 +25,7 @@
 #define BGT_PILLAR  21   // solid obstacle
 #define BGT_CRYSTAL 22   // solid glowing obstacle
 #define BGT_RUBBLE  23   // walkable decoration
+#define BGT_WALL_CRACK 24  // secret wall: solid until shot, then becomes a door
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
@@ -46,6 +47,8 @@
 #define SPR_COIN           31
 #define SPR_FX_MUZZLE      32
 #define SPR_FX_IMPACT      33
+#define SPR_ENEMY_WISP     34
+#define SPR_ITEM_ORB       35
 // Legacy aliases (kept for back-compat with existing code):
 #define SPR_PLAYER         SPR_CLASS_BASE
 #define SPR_ENEMY          SPR_ENEMY_CRAWLER

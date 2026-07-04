@@ -1,5 +1,6 @@
 #include <gb/gb.h>
 
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/entity.h"
@@ -7,6 +8,7 @@
 #include "game/player.h"
 #include "render/hud.h"
 #include "render/tiles.h"
+#include "content.h"
 
 u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) {
     u8 idx = entity_spawn(ENT_PICKUP);
@@ -37,10 +39,25 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) {
     return idx;
 }
 
+u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) {
+    u8 idx = pickup_spawn(PICKUP_ITEM, x, y);
+    if (idx != 0xFF) {
+        entities[idx].ai_data[1]  = item_index;
+        entities[idx].sprite_tile = SPR_ITEM_ORB;
+        entities[idx].palette     = 0x05;      // gold
+        entities[idx].state_timer = 255;       // items linger longest
+    }
+    return idx;
+}
+
 void pickup_roll_drop(fix8_t x, fix8_t y) {
     u8 r = rng_next_u8();
-    if      (r < 0x4C) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 30%
-    else if (r < 0xCD) pickup_spawn(PICKUP_COIN_1,     x, y);   // 50%
+    if      (r < 0x40) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 25%
+    else if (r < 0xB3) pickup_spawn(PICKUP_COIN_1,     x, y);   // 45%
+    else if (r < 0xCC) {                                        // 10%: item
+        // Passive stat-boosters live at items[] indices 10..14
+        pickup_spawn_item((u8)(10 + rng_range(5)), x, y);
+    }
     // else: no drop (20%)
 }
 
@@ -64,16 +81,58 @@ u8 pickup_check_player_collision(void) {
                         if (player.hp > player.hp_max) player.hp = player.hp_max;
                         hud_redraw_hp();
                     }
+                    sfx_play(SFX_HEART);
                     break;
                 case PICKUP_COIN_1:
                     if (player.coins < 999) player.coins++;
                     hud_redraw_coins();
+                    sfx_play(SFX_COIN);
                     break;
                 case PICKUP_COIN_5:
                     player.coins = (u16)(player.coins + 5);
                     if (player.coins > 999) player.coins = 999;
                     hud_redraw_coins();
+                    sfx_play(SFX_COIN);
                     break;
+                case PICKUP_ITEM: {
+                    // Apply every StatBoost effect on the item
+                    u8 item_idx = entities[i].ai_data[1];
+                    if (item_idx < N_ITEMS) {
+                        const item_def_t *it = &items[item_idx];
+                        u8 k;
+                        for (k = 0; k < it->n_effects; ++k) {
+                            const effect_t *ef = &it->effects[k];
+                            if (ef->kind != EFFECT_STAT_BOOST) continue;
+                            switch (ef->d0) {
+                                case STAT_HP:
+                                    player.hp_max = (u8)(player.hp_max + ef->d1);
+                                    if (player.hp_max > 24) player.hp_max = 24;
+                                    player.hp = (u8)(player.hp + ef->d1);
+                                    if (player.hp > player.hp_max) player.hp = player.hp_max;
+                                    break;
+                                case STAT_MP:
+                                    player.mp_max = (u8)(player.mp_max + ef->d1);
+                                    if (player.mp_max > 20) player.mp_max = 20;
+                                    break;
+                                case STAT_ATK:
+                                    if (player.atk < 15) player.atk = (u8)(player.atk + ef->d1);
+                                    break;
+                                case STAT_DEF:
+                                    if (player.def < 10) player.def = (u8)(player.def + ef->d1);
+                                    break;
+                                case STAT_SPD:
+                                    if (player.spd < 9) player.spd = (u8)(player.spd + ef->d1);
+                                    break;
+                                case STAT_LCK:
+                                    if (player.lck < 10) player.lck = (u8)(player.lck + ef->d1);
+                                    break;
+                            }
+                        }
+                        hud_redraw_all();
+                    }
+                    sfx_play(SFX_HEART);
+                    break;
+                }
             }
             entity_kill(i);
             any = 1;

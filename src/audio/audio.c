@@ -1,6 +1,8 @@
 #include <gb/gb.h>
 
 #include "audio/audio.h"
+#include "audio/music.h"
+#include "audio/sfx.h"
 
 void audio_init(void) {
     NR52_REG = 0x80;   // sound on
@@ -9,10 +11,6 @@ void audio_init(void) {
 }
 
 void audio_tick(void) {
-    // Phase 3 stub — no music engine yet
-}
-
-void sfx_play(u8 sfx_id) {
-    sfx_id;
-    // Phase 5+
+    sfx_tick();
+    music_tick();
 }

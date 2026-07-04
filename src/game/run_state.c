@@ -11,6 +11,9 @@ void run_state_clear(void) {
     run_state.run_timer      = 0;
     run_state.rooms_cleared  = 0;
     run_state.victory        = 0;
+    run_state.bosses_beaten  = 0;
+    run_state.pending_unseal = 0;
+    run_state.secret_pending = 0;
     run_state.score          = 0;
     run_state.enemies_killed = 0;
 }

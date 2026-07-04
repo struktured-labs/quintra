@@ -8,7 +8,4 @@
 void audio_init(void);
 void audio_tick(void);
 
-// SFX hooks (Phase 5+)
-void sfx_play(u8 sfx_id);
-
 #endif

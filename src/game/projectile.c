@@ -1,5 +1,6 @@
 #include <gb/gb.h>
 
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/projectile.h"
@@ -33,6 +34,28 @@ u8 projectile_spawn_player(i8 dx, i8 dy) {
     e->ai_data[0]  = 0;
     // Muzzle flash — 6-frame FX behind bullet
     fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
+    sfx_play(SFX_FIRE);
+    return idx;
+}
+
+u8 projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) {
+    u8 idx;
+    entity_t *e;
+    if (dx == 0 && dy == 0) return 0xFF;
+    idx = entity_spawn(ENT_PROJECTILE);
+    if (idx == 0xFF) return 0xFF;
+    e = &entities[idx];
+    // No EF_PLAYER_PROJ: combat treats it as hostile
+    e->x           = FIX8(px);
+    e->y           = FIX8(py);
+    e->vx          = (i8)((i16)dx * 2);   // slower than player shots
+    e->vy          = (i8)((i16)dy * 2);
+    e->sprite_tile = SPR_BULLET_B;
+    e->palette     = 3;                   // crawler blue — reads hostile
+    e->hp          = 1;
+    e->state_timer = 110;
+    e->hitbox      = (6 << 4) | 6;
+    e->damage      = damage;
     return idx;
 }
 
@@ -43,9 +66,11 @@ void projectile_update(entity_t *e, u8 idx) {
     e->x = (fix8_t)(e->x + ((i32)e->vx << 8));   // integer px/tick, fix8 units
     e->y = (fix8_t)(e->y + ((i32)e->vy << 8));
 
-    // Alternate sprite frames each tick for a shimmer effect
-    e->ai_data[0] = (u8)(e->ai_data[0] + 1);
-    e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
+    // Player bullets shimmer between 2 frames; enemy bullets stay static
+    if (e->flags & EF_PLAYER_PROJ) {
+        e->ai_data[0] = (u8)(e->ai_data[0] + 1);
+        e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
+    }
 
     {
         i16 px = FIX8_TO_INT(e->x);
@@ -55,10 +80,17 @@ void projectile_update(entity_t *e, u8 idx) {
             entity_kill(idx);
             return;
         }
-        // Solid tiles (pillars, crystals, walls) stop bullets
+        // Solid tiles stop bullets. Player shots crack open secret walls.
         {
             u8 t = room_tile_at_px(px + 4, py + 4);
-            if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_CRYSTAL) {
+            if (t == BGT_WALL_CRACK && (e->flags & EF_PLAYER_PROJ)) {
+                room_open_secret((u8)((px + 4) >> 3), (u8)((py + 4) >> 3));
+                fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+                entity_kill(idx);
+                return;
+            }
+            if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_CRYSTAL
+                || t == BGT_WALL_CRACK) {
                 fx_spawn(SPR_FX_IMPACT, 2, px, py, 4);
                 entity_kill(idx);
                 return;
