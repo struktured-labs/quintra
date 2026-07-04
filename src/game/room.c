@@ -148,18 +148,19 @@ static const u16 sentinel_palette[4] = {
     BGR555(28, 24, 14),
 };
 
-// Per-stage LARGE boss palette (OBJ slot 6): [rim/body-light, body-dark,
-// glowing eyes+maw]. Color 0 transparent. Menacing hues matched to each stage.
+// Per-stage LARGE boss palette (OBJ slot 6): [_, rim, body-dark, glowing].
+// Bodies are kept DARK with a bright stage-hued rim + glowing accent so the
+// boss reads clearly against ANY stage floor (light frost/gold included).
 static const u16 boss_stage_pal[STAGE_COUNT][4] = {
-    { BGR555(0,0,0), BGR555(14,16,24), BGR555( 5, 6,12), BGR555(20,28,31) }, // 0 blue
-    { BGR555(0,0,0), BGR555(12,22,10), BGR555( 4,10, 4), BGR555(24,31,14) }, // 1 green
-    { BGR555(0,0,0), BGR555(26,12, 6), BGR555(12, 4, 2), BGR555(31,26, 8) }, // 2 ember
-    { BGR555(0,0,0), BGR555(18,26,30), BGR555( 8,14,20), BGR555(31,31,31) }, // 3 frost
-    { BGR555(0,0,0), BGR555(20,24, 6), BGR555( 8,12, 2), BGR555(30,31,12) }, // 4 toxic
-    { BGR555(0,0,0), BGR555(16,14,22), BGR555( 6, 5,10), BGR555(26,20,31) }, // 5 shadow
-    { BGR555(0,0,0), BGR555(28,22, 8), BGR555(14,10, 2), BGR555(31,29,16) }, // 6 gold
-    { BGR555(0,0,0), BGR555(24, 6, 8), BGR555(12, 2, 3), BGR555(31,18,14) }, // 7 blood
-    { BGR555(0,0,0), BGR555(16, 8,24), BGR555( 7, 3,12), BGR555(18,31,16) }, // 8 void
+    { BGR555(0,0,0), BGR555(10,13,22), BGR555( 2, 3, 8), BGR555(22,29,31) }, // 0 blue
+    { BGR555(0,0,0), BGR555( 9,19, 7), BGR555( 2, 6, 2), BGR555(26,31,14) }, // 1 green
+    { BGR555(0,0,0), BGR555(22, 9, 4), BGR555( 6, 2, 1), BGR555(31,27,10) }, // 2 ember
+    { BGR555(0,0,0), BGR555(12,18,24), BGR555( 3, 5, 9), BGR555(31,31,31) }, // 3 frost
+    { BGR555(0,0,0), BGR555(16,20, 4), BGR555( 4, 6, 1), BGR555(31,31,14) }, // 4 toxic
+    { BGR555(0,0,0), BGR555(13,11,20), BGR555( 3, 3, 6), BGR555(28,22,31) }, // 5 shadow
+    { BGR555(0,0,0), BGR555(22,17, 5), BGR555( 6, 4, 1), BGR555(31,30,18) }, // 6 gold
+    { BGR555(0,0,0), BGR555(20, 4, 6), BGR555( 6, 1, 2), BGR555(31,20,16) }, // 7 blood
+    { BGR555(0,0,0), BGR555(13, 6,20), BGR555( 3, 1, 7), BGR555(20,31,18) }, // 8 void
 };
 
 // Bullet palette — bright gold
@@ -374,7 +375,7 @@ void room_enter(void) {
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
     tiles_load_boss_metasprite();         // 16x16 boss (slots 24..27)
-    tiles_load_boss_big();                // 32x32 final boss (slots 40..55)
+    tiles_load_boss_big(room_stage());    // this stage's 32x32 boss (slots 40..55)
     tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
     hud_init();

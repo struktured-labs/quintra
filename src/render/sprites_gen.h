@@ -32,6 +32,17 @@ extern const u8 sprite_boss_sentinel[64];
 // 32x32 final boss metasprite (16 tiles, row-major 4x4)
 extern const u8 sprite_boss_colossus[256];
 
+// 9 distinct 32x32 stage bosses (16 tiles each)
+extern const u8 sprite_boss_stage0[256];
+extern const u8 sprite_boss_stage1[256];
+extern const u8 sprite_boss_stage2[256];
+extern const u8 sprite_boss_stage3[256];
+extern const u8 sprite_boss_stage4[256];
+extern const u8 sprite_boss_stage5[256];
+extern const u8 sprite_boss_stage6[256];
+extern const u8 sprite_boss_stage7[256];
+extern const u8 sprite_boss_stage8[256];
+
 // 8x8 dungeon BG tiles
 extern const u8 bgt_floor_plain[16];
 extern const u8 bgt_floor_crack[16];

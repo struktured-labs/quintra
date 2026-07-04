@@ -206,8 +206,15 @@ void tiles_load_boss_metasprite(void) {
     set_sprite_data(SPR_BOSS, 4, sprite_boss_sentinel);
 }
 
-void tiles_load_boss_big(void) {
-    set_sprite_data(SPR_BOSS_BIG, 16, sprite_boss_colossus);
+void tiles_load_boss_big(u8 stage) {
+    // Load the current stage's distinct 32x32 boss into the fixed 16-tile
+    // slot range (SPR_BOSS_BIG). Only the active stage's art is resident.
+    static const u8 *const bosses[9] = {
+        sprite_boss_stage0, sprite_boss_stage1, sprite_boss_stage2,
+        sprite_boss_stage3, sprite_boss_stage4, sprite_boss_stage5,
+        sprite_boss_stage6, sprite_boss_stage7, sprite_boss_stage8,
+    };
+    set_sprite_data(SPR_BOSS_BIG, 16, bosses[stage < 9 ? stage : 8]);
 }
 
 void tiles_load_fx_sprites(void) {

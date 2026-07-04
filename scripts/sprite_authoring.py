@@ -363,6 +363,177 @@ def _make_boss_big():
 BOSS_BIG = _make_boss_big()
 
 
+# ---- Nine distinct 32x32 stage bosses (one per stage) --------------------
+# Each returns a 32-row x 32-col grid of glyph ints (0 transparent, 1 rim/
+# light, 2 dark body, 3 glowing eyes/maw). Helpers keep them compact.
+
+def _blank():
+    return [[0] * 32 for _ in range(32)]
+
+def _to_lines(g):
+    ch = {0: ".", 1: "1", 2: "2", 3: "3"}
+    return ["".join(ch[c] for c in row) for row in g]
+
+def _ellipse(g, cx, cy, rx, ry, fill=2, rim=1):
+    for y in range(32):
+        for x in range(32):
+            v = ((x - cx) ** 2) / (rx * rx) + ((y - cy) ** 2) / (ry * ry)
+            if v <= 1.0:
+                g[y][x] = rim if v >= 0.80 else fill
+
+def _eyes(g, pts):
+    for (ey, ex) in pts:
+        for yy in range(ey - 1, ey + 2):
+            for xx in range(ex - 1, ex + 2):
+                if 0 <= yy < 32 and 0 <= xx < 32:
+                    g[yy][xx] = 3
+
+# Stage 1 — Serpent: coiled S-body with a fanged head
+def _boss_serpent():
+    g = _blank()
+    import math
+    for t in range(0, 260, 2):
+        a = t / 40.0
+        r = 4 + t / 22.0
+        x = int(16 + r * math.cos(a))
+        y = int(16 + r * math.sin(a) * 0.7)
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                if dx*dx+dy*dy <= 5 and 0 <= y+dy < 32 and 0 <= x+dx < 32:
+                    g[y+dy][x+dx] = 1 if dx*dx+dy*dy >= 4 else 2
+    _eyes(g, [(6, 22), (8, 26)])
+    return _to_lines(g)
+
+# Stage 2 — Infernal Maw: broad demon head, huge glowing mouth
+def _boss_maw():
+    g = _blank()
+    _ellipse(g, 16, 15, 14, 13)
+    # horns
+    for y in range(0, 8):
+        for hx in (16 - (8 - y), 16 + (8 - y)):
+            if 0 <= hx < 32:
+                g[y][hx] = 1
+    _eyes(g, [(11, 10), (11, 22)])
+    # jagged maw across the lower face
+    for x in range(7, 25):
+        yy = 20 + (x % 3)
+        if g[yy][x]:
+            g[yy][x] = 3
+        if g[yy+1][x]:
+            g[yy+1][x] = 3
+    return _to_lines(g)
+
+# Stage 3 — Frost Spider: round body + 8 legs
+def _boss_spider():
+    g = _blank()
+    _ellipse(g, 16, 17, 9, 8)
+    import math
+    for k in range(8):
+        a = (k / 8.0) * 2 * math.pi
+        for step in range(4, 15):
+            x = int(16 + step * math.cos(a))
+            y = int(17 + step * math.sin(a))
+            if 0 <= y < 32 and 0 <= x < 32:
+                g[y][x] = 1
+    _eyes(g, [(14, 13), (14, 19), (16, 16)])
+    return _to_lines(g)
+
+# Stage 4 — Great Eye: giant eyeball with iris + lashes
+def _boss_eye():
+    g = _blank()
+    _ellipse(g, 16, 16, 15, 11, fill=1, rim=1)
+    _ellipse(g, 16, 16, 10, 8, fill=2, rim=2)
+    _ellipse(g, 16, 16, 4, 4, fill=3, rim=3)
+    # lashes
+    import math
+    for k in range(16):
+        a = (k / 16.0) * 2 * math.pi
+        x = int(16 + 15 * math.cos(a))
+        y = int(16 + 11 * math.sin(a))
+        x2 = int(16 + 18 * math.cos(a))
+        y2 = int(16 + 14 * math.sin(a))
+        if 0 <= y2 < 32 and 0 <= x2 < 32:
+            g[y2][x2] = 1
+    return _to_lines(g)
+
+# Stage 5 — Reaper: hooded skull
+def _boss_reaper():
+    g = _blank()
+    # hood
+    _ellipse(g, 16, 14, 13, 12)
+    for y in range(20, 32):
+        w = 13 - (y - 20)
+        for x in range(16 - w, 16 + w):
+            if 0 <= x < 32:
+                g[y][x] = 2 if (x in (16 - w, 16 + w - 1)) else 1
+    # skull face cavity (dark) + glowing eyes
+    _ellipse(g, 16, 15, 6, 6, fill=0, rim=2)
+    _eyes(g, [(14, 13), (14, 19)])
+    return _to_lines(g)
+
+# Stage 6 — Golem: blocky armored humanoid torso
+def _boss_golem():
+    g = _blank()
+    for y in range(4, 28):
+        for x in range(5, 27):
+            edge = (x < 7 or x > 24 or y < 6 or y > 25)
+            # brick seams
+            seam = ((x - 5) % 6 == 0) or ((y - 4) % 5 == 0)
+            g[y][x] = 1 if (edge or seam) else 2
+    _eyes(g, [(11, 12), (11, 20)])
+    # core gem
+    for yy in range(17, 20):
+        for xx in range(15, 18):
+            g[yy][xx] = 3
+    return _to_lines(g)
+
+# Stage 7 — Bloodmoon Hydra: body + three necked heads
+def _boss_hydra():
+    g = _blank()
+    _ellipse(g, 16, 22, 11, 8)
+    import math
+    for (nx, ex) in [(-8, 6), (0, 16), (8, 26)]:
+        for step in range(0, 16):
+            x = int(16 + nx * (step / 16.0))
+            y = 22 - step
+            if 0 <= y < 32 and 0 <= x < 32:
+                g[y][x] = 1
+                if x+1 < 32: g[y][x+1] = 2
+        # head
+        hx = int(16 + nx)
+        _eyes(g, [(5, ex)])
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                yy, xx = 6 + dy, hx + dx
+                if 0 <= yy < 32 and 0 <= xx < 32 and dx*dx+dy*dy <= 5:
+                    if not g[yy][xx]:
+                        g[yy][xx] = 1
+    return _to_lines(g)
+
+# Stage 8 — Void Lord (final): the Colossus, enlarged + crown of spikes
+def _boss_voidlord():
+    g = _make_boss_big()
+    g = [list(row) for row in [[{'.':0,'1':1,'2':2,'3':3}[c] for c in r] for r in g]]
+    # add a spiked crown across the top
+    for x in range(4, 28, 3):
+        for y in range(0, 4):
+            if abs((x % 6) - 3) < 1:
+                g[y][x] = 1
+    return _to_lines(g)
+
+BOSS_STAGES = [
+    _make_boss_big(),   # 0 Colossus
+    _boss_serpent(),    # 1
+    _boss_maw(),        # 2
+    _boss_spider(),     # 3
+    _boss_eye(),        # 4
+    _boss_reaper(),     # 5
+    _boss_golem(),      # 6
+    _boss_hydra(),      # 7
+    _boss_voidlord(),   # 8 final
+]
+
+
 # 16x16 boss (Stone Sentinel)
 BOSS = """\
 ....111111111...
@@ -540,6 +711,12 @@ def emit_all_c():
     grid = parse_grid(BOSS_BIG)
     tiles = sprite_to_tiles(grid, 32, 32)
     print(emit_metasprite_c_array("sprite_boss_colossus", tiles))
+
+    # Nine distinct 32x32 stage bosses
+    for i, spec in enumerate(BOSS_STAGES):
+        grid = parse_grid(spec)
+        tiles = sprite_to_tiles(grid, 32, 32)
+        print(emit_metasprite_c_array(f"sprite_boss_stage{i}", tiles))
 
 
 def emit_aseprite_pixels():
