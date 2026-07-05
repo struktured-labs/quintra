@@ -404,8 +404,8 @@ void room_enter(void) {
         draw_room_tilemap();
         entity_draw_all();
         place_player_sprite();
-        if (*(volatile u8*)0xFFFC == 0xBB) music_play_boss();
-        else                              music_play_stage(room_stage());
+        // Music kept running through the pack screen (room_exit no longer stops
+        // it), so there's nothing to restart here — resume is seamless.
         SHOW_SPRITES;
         SHOW_BKG;
         DISPLAY_ON;
@@ -437,8 +437,11 @@ void room_enter(void) {
 void room_exit(void) {
     HIDE_SPRITES;
     hud_hide();
-    music_stop();
-    entity_init_all();
+    // NOTE: do NOT wipe entities or stop music here. Opening the pack screen
+    // (START) exits the room and returns via the resume path, which expects
+    // the room's entities/player/music to be intact. Real room changes
+    // re-init entities in procgen_generate_current_room(). Leaving music
+    // running also avoids a restart blip every time the pack is toggled.
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
