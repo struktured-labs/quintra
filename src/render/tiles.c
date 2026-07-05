@@ -206,6 +206,18 @@ void tiles_load_boss_metasprite(void) {
     set_sprite_data(SPR_BOSS, 4, sprite_boss_sentinel);
 }
 
+void tiles_load_miniboss(u8 stage) {
+    // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
+    // stage's mini-boss looks distinct. Variant table must match the palette
+    // table in procgen.c (miniboss spawn). 0=sentinel,1=orc,2=skel,3=crawl,4=hornet
+    static const u8 *const mb[5] = {
+        sprite_boss_sentinel, sprite_miniboss_orc,     sprite_miniboss_skeleton,
+        sprite_miniboss_crawler, sprite_miniboss_hornet,
+    };
+    static const u8 variant[9] = { 0, 1, 2, 3, 4, 2, 1, 4, 3 };
+    set_sprite_data(SPR_BOSS, 4, mb[variant[stage < 9 ? stage : 8]]);
+}
+
 void tiles_load_boss_big(u8 stage) {
     // Load the current stage's distinct 32x32 boss into the fixed 16-tile
     // slot range (SPR_BOSS_BIG). Only the active stage's art is resident.

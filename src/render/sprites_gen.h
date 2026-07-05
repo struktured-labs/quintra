@@ -29,6 +29,12 @@ extern const u8 sprite_fx_item_orb[16];
 // 16x16 boss metasprite
 extern const u8 sprite_boss_sentinel[64];
 
+// 16x16 mini-boss variants (2x-scaled enemy art)
+extern const u8 sprite_miniboss_orc[64];
+extern const u8 sprite_miniboss_skeleton[64];
+extern const u8 sprite_miniboss_crawler[64];
+extern const u8 sprite_miniboss_hornet[64];
+
 // 32x32 final boss metasprite (16 tiles, row-major 4x4)
 extern const u8 sprite_boss_colossus[256];
 

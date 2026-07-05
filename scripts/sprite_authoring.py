@@ -585,6 +585,20 @@ def tile_2bpp_bytes(grid8x8):
     return out
 
 
+def scale2x(grid):
+    """Nearest-neighbour 2x upscale: each pixel becomes a 2x2 block.
+    Turns an 8x8 enemy grid into a 16x16 'elite' mini-boss."""
+    out = []
+    for row in grid:
+        doubled = []
+        for px in row:
+            doubled.append(px)
+            doubled.append(px)
+        out.append(doubled)
+        out.append(list(doubled))
+    return out
+
+
 def sprite_to_tiles(grid, w, h):
     """Slice a grid into 8x8 tiles in row-major order (TL,TR,BL,BR for 16x16)."""
     tiles = []
@@ -637,6 +651,15 @@ ENEMIES_8 = [
     ("hornet",   HORNET),
     ("skeleton", SKELETON),
     ("orc",      ORC),
+]
+
+# Mini-boss silhouettes: 2x-scaled enemy art (order matters — indexed by the
+# C-side miniboss table). The Sentinel stays a separate hand-drawn 16x16.
+MINIBOSS_SRC = [
+    ("orc",      ORC),
+    ("skeleton", SKELETON),
+    ("crawler",  CRAWLER),
+    ("hornet",   HORNET),
 ]
 
 # Wisp — ghostly shooter enemy
@@ -706,6 +729,13 @@ def emit_all_c():
     grid = parse_grid(BOSS)
     tiles = sprite_to_tiles(grid, 16, 16)
     print(emit_metasprite_c_array("sprite_boss_sentinel", tiles))
+
+    # Mini-boss variants: 16x16 "elite" bruisers made by 2x-scaling the 8x8
+    # enemy art, so each stage's mini-boss has a distinct silhouette.
+    for name, lines in MINIBOSS_SRC:
+        big = scale2x(parse_grid(lines))
+        print(emit_metasprite_c_array(f"sprite_miniboss_{name}",
+                                      sprite_to_tiles(big, 16, 16)))
 
     # Final boss (32x32 = 16 tiles, row-major 4x4)
     grid = parse_grid(BOSS_BIG)

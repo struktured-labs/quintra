@@ -226,8 +226,13 @@ void procgen_generate_current_room(void) {
             {
                 u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
+                    // Palette matches the stage's mini-boss silhouette (art is
+                    // swapped in VRAM by tiles_load_miniboss). Tables must agree:
+                    // variant 0=sentinel granite,1=orc green,2=skel bone,3=crawler blue,4=hornet amber
+                    static const u8 mb_variant[9] = { 0, 1, 2, 3, 4, 2, 1, 4, 3 };
+                    static const u8 mb_pal[5]     = { 0x06, 0x07, 0x00, 0x03, 0x05 };
                     entities[idx].sprite_tile = SPR_BOSS;
-                    entities[idx].palette     = 0x06;
+                    entities[idx].palette     = mb_pal[mb_variant[stage < 9 ? stage : 8]];
                     entities[idx].hitbox      = (14 << 4) | 14;
                     entities[idx].hp = (u8)(entities[idx].hp + (u8)(stage * 12));
                 }

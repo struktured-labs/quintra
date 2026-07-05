@@ -396,7 +396,7 @@ void room_enter(void) {
     tiles_load_boss_sprite();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
-    tiles_load_boss_metasprite();         // 16x16 boss (slots 24..27)
+    tiles_load_miniboss(room_stage());    // this stage's distinct 16x16 mini-boss (slots 24..27)
     tiles_load_boss_big(room_stage());    // this stage's 32x32 boss (slots 40..55)
     tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
