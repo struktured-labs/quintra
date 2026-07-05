@@ -211,6 +211,7 @@ void procgen_generate_current_room(void) {
                     entities[idx].palette     = boss_palette_for_stage(stage);
                     entities[idx].hitbox      = (15 << 4) | 15;
                     entities[idx].ai_data[3]  = 1;              // giant flag
+                    entities[idx].ai_data[2]  = stage;         // boss attack pattern
                     entities[idx].hp = (u8)(entities[idx].hp
                         + 40 + (u8)(stage * 22));
                     entities[idx].damage = (u8)(entities[idx].damage

@@ -15,6 +15,10 @@ u8   projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind);
 // Enemy-owned projectile from (px,py) toward direction (dx,dy), 2 px/tick.
 u8   projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage);
 
+// Enemy projectile with an explicit px/tick velocity (vx,vy). Used by bosses
+// to vary bullet speed within a single attack pattern.
+u8   projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage);
+
 // Per-frame update (called by entity_update_all dispatch)
 void projectile_update(entity_t *e, u8 idx);
 

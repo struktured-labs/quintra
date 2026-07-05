@@ -204,13 +204,32 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
     }
 }
 
-// ---------------- Boss: bullet-hell Sentinel -----------------------------
-// Slow chase + ring volleys. Volley cadence tightens with each boss and
-// enrages below half HP. ai_data[1] = volley timer, ai_data[5] = spiral
-// offset, ai_data[6] = max hp (for enrage threshold), set on first tick.
+// ---------------- Boss: bullet-hell patterns -----------------------------
+// Slow chase + volleys. Each of the 9 large stage bosses fires a distinct
+// pattern (ai_data[2] = pattern id = stage), so they read differently even
+// though they share this driver. The 16x16 mini-boss keeps the classic
+// alternating-spread. Cadence tightens below half HP (enrage).
+//
+// Boss ai_data layout:
+//   [0]=content id  [1]=volley timer  [2]=pattern id (0..8)  [3]=giant flag
+//   [4]=burst counter (Reaper)  [5]=rotation counter  [6]=max hp (enrage)
+
+// Index into dir8_* that points from (cx,cy) toward the player.
+static u8 aim_dir8(i16 cx, i16 cy) {
+    i8 sx = ((i16)player.x > cx) ? 1 : ((i16)player.x < cx) ? -1 : 0;
+    i8 sy = ((i16)player.y > cy) ? 1 : ((i16)player.y < cy) ? -1 : 0;
+    u8 d;
+    for (d = 0; d < 8; ++d)
+        if (dir8_dx[d] == sx && dir8_dy[d] == sy) return d;
+    return 0;   // on top of player -> fire up
+}
+
+// Fire one enemy bullet along dir8 index d, scaled to `spd` px/tick.
+static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
+    projectile_spawn_enemy_v(cx, cy, (i8)(dir8_dx[d] * spd), (i8)(dir8_dy[d] * spd), dmg);
+}
 
 static void boss_tick(entity_t *e) {
-    // Remember starting HP for the enrage check
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
 
     // Creep toward the player (1px every 3rd tick)
@@ -227,35 +246,86 @@ static void boss_tick(entity_t *e) {
         }
     }
 
-    if (e->ai_data[1] == 0) {
+    if (e->ai_data[1] != 0) { e->ai_data[1]--; return; }
+
+    {
         u8 giant = e->ai_data[3];
-        u8 base  = (u8)(e->ai_data[5] & 0x01);
-        u8 d;
-        // Colossus fires from its center (32x32); Sentinel from its 16x16.
+        u8 dmg   = e->damage;
+        u8 d, k;
         i16 cx = FIX8_TO_INT(e->x) + (giant ? 12 : 4);
         i16 cy = FIX8_TO_INT(e->y) + (giant ? 12 : 4);
-        if (giant) {
-            // Full 8-way ring every volley + an aimed shot at the player.
-            for (d = 0; d < 8; ++d)
-                projectile_spawn_enemy(cx, cy, dir8_dx[d], dir8_dy[d], e->damage);
-            {
-                i8 sx = ((i16)player.x > cx) ? 1 : ((i16)player.x < cx) ? -1 : 0;
-                i8 sy = ((i16)player.y > cy) ? 1 : ((i16)player.y < cy) ? -1 : 0;
-                projectile_spawn_enemy(cx, cy, sx, sy, e->damage);
-            }
-        } else {
-            // Sentinel: 4 shots, alternating cardinal / diagonal each volley.
-            for (d = base; d < 8; d = (u8)(d + 2))
-                projectile_spawn_enemy(cx, cy, dir8_dx[d], dir8_dy[d], e->damage);
+        u8 cadence;
+
+        if (!giant) {
+            // Mini-boss Sentinel: 4 shots, alternating cardinal/diagonal.
+            for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
+                boss_shot(cx, cy, d, 2, dmg);
+            cadence = 70;
+        } else switch (e->ai_data[2]) {
+            case 1:   // Serpent — rotating 4-cross (sweeps a spiral)
+                for (k = 0; k < 4; ++k)
+                    boss_shot(cx, cy, (u8)((e->ai_data[5] + k * 2) & 7), 2, dmg);
+                cadence = 20;
+                break;
+            case 2:   // Maw — fast aimed 3-shot breath
+                d = aim_dir8(cx, cy);
+                boss_shot(cx, cy, d, 3, dmg);
+                boss_shot(cx, cy, (u8)((d + 1) & 7), 3, dmg);
+                boss_shot(cx, cy, (u8)((d + 7) & 7), 3, dmg);
+                cadence = 28;
+                break;
+            case 3:   // Spider — alternating cardinal/diagonal web + aimed
+                for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
+                    boss_shot(cx, cy, d, 2, dmg);
+                boss_shot(cx, cy, aim_dir8(cx, cy), 3, dmg);
+                cadence = 38;
+                break;
+            case 4:   // Mire — chaotic scatter spray (random dir + speed)
+                for (k = 0; k < 6; ++k)
+                    boss_shot(cx, cy, (u8)rng_range(8), (i8)(1 + rng_range(3)), dmg);
+                cadence = 26;
+                break;
+            case 5:   // Reaper — 3-shot aimed burst, then a long pause
+                boss_shot(cx, cy, aim_dir8(cx, cy), 3, dmg);
+                e->ai_data[4]++;
+                if (e->ai_data[4] < 3) { e->ai_data[1] = 8; e->ai_data[5]++; return; }
+                e->ai_data[4] = 0;
+                cadence = 72;
+                break;
+            case 6:   // Golem — slow heavy full ring (dense wall)
+                for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 1, dmg);
+                cadence = 58;
+                break;
+            case 7:   // Hydra — three aimed streams at staggered speeds
+                d = aim_dir8(cx, cy);
+                boss_shot(cx, cy, d, 1, dmg);
+                boss_shot(cx, cy, d, 2, dmg);
+                boss_shot(cx, cy, d, 3, dmg);
+                boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
+                boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
+                cadence = 24;
+                break;
+            case 8:   // Void Lord — rotating fast cross + diagonal ring + aimed
+                for (k = 0; k < 4; ++k)
+                    boss_shot(cx, cy, (u8)((e->ai_data[5] + k * 2) & 7), 3, dmg);
+                for (d = 1; d < 8; d = (u8)(d + 2)) boss_shot(cx, cy, d, 1, dmg);
+                boss_shot(cx, cy, aim_dir8(cx, cy), 2, dmg);
+                cadence = 30;
+                break;
+            case 0:   // Colossus — full ring + aimed (the classic)
+            default:
+                for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 2, dmg);
+                boss_shot(cx, cy, aim_dir8(cx, cy), 2, dmg);
+                cadence = 55;
+                break;
         }
+
         e->ai_data[5]++;
-        {
-            u8 cadence = giant ? 55 : 70;
-            if (e->hp < (u8)(e->ai_data[6] >> 1)) cadence = (u8)(cadence - 25);  // enrage
-            e->ai_data[1] = cadence;
-        }
-    } else {
-        e->ai_data[1]--;
+        // Enrage below half HP — only tighten the longer cadences so short
+        // burst timers can't underflow.
+        if (cadence > 34 && e->hp < (u8)(e->ai_data[6] >> 1))
+            cadence = (u8)(cadence - 18);
+        e->ai_data[1] = cadence;
     }
 }
 
