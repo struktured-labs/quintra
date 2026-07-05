@@ -41,9 +41,6 @@ debug_*.png
 tests/results/
 DONE
 
-# Legacy extracted assets
-assets/extracted/
-
 # Save states (case-by-case)
 *.ss0
 *.ss1

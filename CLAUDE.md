@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The novelty layer:** all *dev-host* tooling and content authoring is in Rust under `tools/`. The C runtime is the only thing that ships on cart. Typed Rust content schema catches invalid items/enemies/biomes at `cargo build`, never at runtime. The seam is `src/generated/`.
 
-**Lineage:** this project pivoted from being a Penta Dragon DX clone (now under `archive/penta-dragon-dx/`) to a Penta-inspired-but-original game. The Penta-clone effort is preserved for reference but is not built or shipped.
+**Lineage:** this project began as a Penta Dragon DX colorization effort (that history lives in the separate `penta-dragon-dx` repo) and pivoted into Quintra, a Penta-inspired but wholly original game.
 
 **Current Status:** v0.6.0 — 9-stage roguelike, playable end to end. TITLE
 (pulsing + music) → CLASS_SELECT (5 classes, live preview + cursor + SFX) →
@@ -89,7 +89,6 @@ penta-dragon-remake/
 │       └── quintra-mgba/      # mGBA debug bridge
 ├── content/              # hand-authored content (Rust source)
 ├── assets/               # raw PNGs + music
-├── archive/penta-dragon-dx/   # OLD Penta-clone code (reference)
 ├── docs/superpowers/specs/    # design docs
 ├── rom/working/          # build output (gitignored)
 └── Makefile
@@ -154,16 +153,6 @@ The Makefile chains these. `cargo build` failures fail the whole build — no RO
 ### mGBA MCP
 - When available, prefer MCP `mgba_*` tools over CLI subprocess
 
-## Penta Dragon DX archive
-
-The original Penta-DX colorization effort lives in `archive/penta-dragon-dx/`. Reference for:
-- Original color palette designs (`palettes/`)
-- Reverse-engineering notes (`reverse_engineering/`)
-- Save states from OG gameplay (`save_states_for_claude/`)
-- Working VBlank colorizer architecture (in case we revisit)
-
-It does not build or ship as part of Quintra.
-
 ## Legal Notice
 
-The repository does NOT include any original ROM. The Penta DX archive uses ROMs the user supplied legally. Quintra is wholly original — no original Penta assets are used in the new game.
+Quintra is wholly original — no assets from Penta Dragon or any other game are used. This repository contains no original ROMs.
