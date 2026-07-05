@@ -678,17 +678,17 @@ def emit_all_c():
     print('#include "core/types.h"')
     print()
 
-    # Players (each is 16x16 = 4 tiles)
+    # Players (each is 16x16 = 4 tiles). The walk cycle is done at render time
+    # via OAM flip bits (see place_player_sprite), so no 2nd-frame tiles.
     for name, lines in PLAYERS:
         grid = parse_grid(lines)
-        tiles = sprite_to_tiles(grid, PLAYER_W, PLAYER_H)
-        print(emit_metasprite_c_array(f"sprite_class_{name}", tiles))
+        print(emit_metasprite_c_array(f"sprite_class_{name}",
+                                      sprite_to_tiles(grid, PLAYER_W, PLAYER_H)))
 
-    # Enemies (each 8x8 = 1 tile)
+    # Enemies (each 8x8 = 1 tile). Waddle is an OAM X-flip at render time.
     for name, lines in ENEMIES_8:
         grid = parse_grid(lines)
-        bytes_ = tile_2bpp_bytes(grid)
-        print(emit_tile_c_array(f"sprite_enemy_{name}", bytes_))
+        print(emit_tile_c_array(f"sprite_enemy_{name}", tile_2bpp_bytes(grid)))
 
     # FX sprites (8x8 each)
     for name, lines in FX_8:

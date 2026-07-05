@@ -309,8 +309,30 @@ static void place_player_sprite(void) {
     } else {
         u8 sx = (u8)(player.x + 8);
         u8 sy = (u8)(player.y + 16);
+        u8 base = (u8)(SPR_CLASS_BASE
+                       + (u8)(((player.class_id < 5) ? player.class_id : 0) * SPR_CLASS_STRIDE));
+        // Walk cycle without extra tile art: for half of the anim counter,
+        // swap the two leg tiles left<->right and X-flip them (OAM attr bit 5)
+        // so the legs step. anim_frame only advances while moving, so a still
+        // hero holds the neutral pose. Top row (head/torso) never changes.
+        u8 step = (player.anim_frame & 0x04) ? 1 : 0;
+        set_sprite_tile(0, (u8)(base + 0));
+        set_sprite_tile(1, (u8)(base + 1));
+        set_sprite_prop(0, 0x01);
+        set_sprite_prop(1, 0x01);
         move_sprite(0, sx,         sy);
         move_sprite(1, (u8)(sx+8), sy);
+        if (step) {
+            set_sprite_tile(2, (u8)(base + 3));   // BR art on the left, flipped
+            set_sprite_tile(3, (u8)(base + 2));   // BL art on the right, flipped
+            set_sprite_prop(2, 0x01 | S_FLIPX);
+            set_sprite_prop(3, 0x01 | S_FLIPX);
+        } else {
+            set_sprite_tile(2, (u8)(base + 2));
+            set_sprite_tile(3, (u8)(base + 3));
+            set_sprite_prop(2, 0x01);
+            set_sprite_prop(3, 0x01);
+        }
         move_sprite(2, sx,         (u8)(sy+8));
         move_sprite(3, (u8)(sx+8), (u8)(sy+8));
     }

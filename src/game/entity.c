@@ -10,6 +10,11 @@
 
 entity_t entities[MAX_ENTITIES];
 
+// Free-running counter driving the enemy waddle: for half its cycle the enemy
+// sprite is X-flipped (OAM attr bit 5), reading as a 2-frame idle/walk motion
+// with no extra tile art.
+static u8 g_enemy_anim;
+
 // 8-direction deltas: 0=N, 1=NE, 2=E, 3=SE, 4=S, 5=SW, 6=W, 7=NW
 const i8 dir8_dx[8] = {  0, +1, +1, +1,  0, -1, -1, -1 };
 const i8 dir8_dy[8] = { -1, -1,  0, +1, +1, +1,  0, -1 };
@@ -111,6 +116,7 @@ void fx_update(entity_t *e, u8 idx) {
 void entity_draw_all(void) {
     u8 i;
     u8 boss_drawn = 0;
+    g_enemy_anim++;
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) {
             continue;
@@ -168,7 +174,11 @@ void entity_draw_all(void) {
             }
         }
         set_sprite_tile(entities[i].oam_slot, entities[i].sprite_tile);
-        set_sprite_prop(entities[i].oam_slot, entities[i].palette);
+        {
+            u8 prop = entities[i].palette;
+            if (entities[i].type == ENT_ENEMY && (g_enemy_anim & 0x10)) prop |= S_FLIPX;
+            set_sprite_prop(entities[i].oam_slot, prop);
+        }
         move_sprite(entities[i].oam_slot,
             (u8)(FIX8_TO_INT(entities[i].x) + 8),
             (u8)(FIX8_TO_INT(entities[i].y) + 16));
