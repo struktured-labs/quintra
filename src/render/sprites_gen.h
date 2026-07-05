@@ -32,13 +32,8 @@ extern const u8 sprite_boss_sentinel[64];
 // 16x16 mini-boss variants (2x-scaled enemy art)
 extern const u8 sprite_miniboss_orc[64];
 extern const u8 sprite_miniboss_skeleton[64];
-extern const u8 sprite_miniboss_crawler[64];
-extern const u8 sprite_miniboss_hornet[64];
 
-// 32x32 final boss metasprite (16 tiles, row-major 4x4)
-extern const u8 sprite_boss_colossus[256];
-
-// 9 distinct 32x32 stage bosses (16 tiles each)
+// 9 distinct 32x32 stage bosses (16 tiles each; stage 0 is the Colossus)
 extern const u8 sprite_boss_stage0[256];
 extern const u8 sprite_boss_stage1[256];
 extern const u8 sprite_boss_stage2[256];
@@ -59,5 +54,6 @@ extern const u8 bgt_pillar[16];
 extern const u8 bgt_crystal[16];
 extern const u8 bgt_rubble[16];
 extern const u8 bgt_wall_crack[16];
+extern const u8 bgt_block[16];
 
 #endif

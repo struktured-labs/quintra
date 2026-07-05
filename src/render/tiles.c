@@ -7,35 +7,10 @@
 // All tiles are 2bpp 8x8 (16 bytes). For each row: byte_low, byte_high.
 // color = (high_bit, low_bit) per pixel.
 
-// Floor — uniform color 1 (mid)
-const u8 bg_tile_floor[16] = {
-    0xFF, 0x00,  0xFF, 0x00,  0xFF, 0x00,  0xFF, 0x00,
-    0xFF, 0x00,  0xFF, 0x00,  0xFF, 0x00,  0xFF, 0x00,
-};
-
-// Wall — color 3 (bright) with darker speckles on left edge
-const u8 bg_tile_wall[16] = {
-    0xFF, 0xFF,  0x7F, 0xFF,  0xFF, 0xFF,  0xBF, 0xFF,
-    0xFF, 0xFF,  0xDF, 0xFF,  0xFF, 0xFF,  0xEF, 0xFF,
-};
-
-// Door — color 2 (accent) frame
-const u8 bg_tile_door[16] = {
-    0xFF, 0xFF,  0x81, 0x7E,  0xBD, 0x7E,  0xBD, 0x7E,
-    0xBD, 0x7E,  0xBD, 0x7E,  0x81, 0x7E,  0xFF, 0xFF,
-};
-
-// Void — color 0 (black)
+// Void — color 0 (black); tile slot 0, loaded by tiles_load_dungeon_bg.
 const u8 bg_tile_void[16] = {
     0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0,
 };
-
-void tiles_load_room_bg(void) {
-    set_bkg_data(BGT_VOID,  1, bg_tile_void);
-    set_bkg_data(BGT_FLOOR, 1, bg_tile_floor);
-    set_bkg_data(BGT_WALL,  1, bg_tile_wall);
-    set_bkg_data(BGT_DOOR,  1, bg_tile_door);
-}
 
 // Heart pickup (small heart icon for floor drops)
 const u8 sprite_tile_heart[16] = {
@@ -140,19 +115,14 @@ void tiles_load_all_enemy_sprites(void) {
     set_sprite_data(SPR_ENEMY_ORC,      1, sprite_enemy_orc);
 }
 
-void tiles_load_boss_metasprite(void) {
-    set_sprite_data(SPR_BOSS, 4, sprite_boss_sentinel);
-}
-
 void tiles_load_miniboss(u8 stage) {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
     // stage's mini-boss looks distinct. Variant table must match the palette
     // table in procgen.c (miniboss spawn). 0=sentinel,1=orc,2=skel,3=crawl,4=hornet
-    static const u8 *const mb[5] = {
-        sprite_boss_sentinel, sprite_miniboss_orc,     sprite_miniboss_skeleton,
-        sprite_miniboss_crawler, sprite_miniboss_hornet,
+    static const u8 *const mb[3] = {
+        sprite_boss_sentinel, sprite_miniboss_orc, sprite_miniboss_skeleton,
     };
-    static const u8 variant[9] = { 0, 1, 2, 3, 4, 2, 1, 4, 3 };
+    static const u8 variant[9] = { 0, 1, 2, 0, 1, 2, 1, 2, 0 };
     set_sprite_data(SPR_BOSS, 4, mb[variant[stage < 9 ? stage : 8]]);
 }
 
@@ -177,7 +147,9 @@ void tiles_load_fx_sprites(void) {
 }
 
 void tiles_load_dungeon_bg(void) {
-    // Replace the flat placeholder tiles with the authored dungeon set
+    // Authored dungeon tileset (slot 0 = void/black; the rest overwrite the
+    // former flat placeholders).
+    set_bkg_data(BGT_VOID,    1, bg_tile_void);
     set_bkg_data(BGT_FLOOR,   1, bgt_floor_plain);
     set_bkg_data(BGT_WALL,    1, bgt_wall_brick);
     set_bkg_data(BGT_DOOR,    1, bgt_door_frame);
@@ -187,4 +159,5 @@ void tiles_load_dungeon_bg(void) {
     set_bkg_data(BGT_CRYSTAL, 1, bgt_crystal);
     set_bkg_data(BGT_RUBBLE,  1, bgt_rubble);
     set_bkg_data(BGT_WALL_CRACK, 1, bgt_wall_crack);
+    set_bkg_data(BGT_BLOCK,   1, bgt_block);
 }

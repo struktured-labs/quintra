@@ -26,6 +26,7 @@
 #define BGT_CRYSTAL 22   // solid glowing obstacle
 #define BGT_RUBBLE  23   // walkable decoration
 #define BGT_WALL_CRACK 24  // secret wall: solid until shot, then becomes a door
+#define BGT_BLOCK      25  // pushable crate (solid; slides one tile when shoved)
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
@@ -56,9 +57,6 @@
 #define SPR_ENEMY          SPR_ENEMY_CRAWLER
 
 // Tile blobs
-extern const u8 bg_tile_floor[16];
-extern const u8 bg_tile_wall[16];
-extern const u8 bg_tile_door[16];
 extern const u8 bg_tile_void[16];
 extern const u8 sprite_tile_heart[16];
 extern const u8 sprite_tile_coin[16];
@@ -66,14 +64,12 @@ extern const u8 sprite_tile_coin[16];
 extern const u8 hud_tiles[][16];
 #define HUD_TILE_COUNT 15
 
-void tiles_load_room_bg(void);
 void tiles_load_pickup_sprites(void);
 void tiles_load_hud(void);
 
 // Phase 12 metasprite loaders
 void tiles_load_all_class_sprites(void);   // loads 5 classes × 4 tiles = 20 OBJ tiles
 void tiles_load_all_enemy_sprites(void);   // 4 enemy tiles
-void tiles_load_boss_metasprite(void);     // 16x16 boss (4 tiles at SPR_BOSS..+3)
 void tiles_load_miniboss(u8 stage);        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage);        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void);          // bullet (2 frames), muzzle, impact

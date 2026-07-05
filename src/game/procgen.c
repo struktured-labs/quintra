@@ -141,6 +141,23 @@ void procgen_generate_current_room(void) {
                 }
             }
 
+            // Pushable blocks — 0-2 per room, kept in the interior away from
+            // the door lanes so they can always be walked around or shoved.
+            {
+                u8 nb = (u8)(rng_next_u8() % 3);
+                u8 i;
+                for (i = 0; i < nb; ++i) {
+                    u8 bx = (u8)(3 + rng_range(ROOM_W - 6));
+                    u8 by = (u8)(3 + rng_range(ROOM_H - 6));
+                    if (bx >= 9 && bx <= 11) continue;   // clear N/S door lane
+                    if (by >= 7 && by <= 9)  continue;   // clear E/W door lane
+                    if (room_tilemap[by][bx] == BGT_FLOOR) {
+                        room_tilemap[by][bx] = BGT_BLOCK;
+                    }
+                }
+            }
+
+
             // Secret cracked wall — ~half of rooms hide one on a border
             // (never on a door or the E/W door row). Rendered on its own
             // glowing palette so it's obviously shootable.
@@ -229,8 +246,8 @@ void procgen_generate_current_room(void) {
                     // Palette matches the stage's mini-boss silhouette (art is
                     // swapped in VRAM by tiles_load_miniboss). Tables must agree:
                     // variant 0=sentinel granite,1=orc green,2=skel bone,3=crawler blue,4=hornet amber
-                    static const u8 mb_variant[9] = { 0, 1, 2, 3, 4, 2, 1, 4, 3 };
-                    static const u8 mb_pal[5]     = { 0x06, 0x07, 0x00, 0x03, 0x05 };
+                    static const u8 mb_variant[9] = { 0, 1, 2, 0, 1, 2, 1, 2, 0 };
+                    static const u8 mb_pal[3]     = { 0x06, 0x07, 0x00 };
                     entities[idx].sprite_tile = SPR_BOSS;
                     entities[idx].palette     = mb_pal[mb_variant[stage < 9 ? stage : 8]];
                     entities[idx].hitbox      = (14 << 4) | 14;

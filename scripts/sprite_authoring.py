@@ -309,6 +309,18 @@ BGT_WALL_CRACK = """\
 11223311
 11331111""".splitlines()
 
+# Pushable block — a beveled crate the player can shove one tile at a time.
+# Bold border + inner cross so it reads as a distinct, movable object.
+BGT_BLOCK = """\
+33333333
+31111113
+31322313
+31233213
+31233213
+31322313
+31111113
+33333333""".splitlines()
+
 DUNGEON_TILES = [
     ("floor_plain",  BGT_FLOOR_PLAIN),
     ("floor_crack",  BGT_FLOOR_CRACK),
@@ -319,6 +331,7 @@ DUNGEON_TILES = [
     ("crystal",      BGT_CRYSTAL),
     ("rubble",       BGT_RUBBLE),
     ("wall_crack",   BGT_WALL_CRACK),
+    ("block",        BGT_BLOCK),
 ]
 
 
@@ -658,8 +671,6 @@ ENEMIES_8 = [
 MINIBOSS_SRC = [
     ("orc",      ORC),
     ("skeleton", SKELETON),
-    ("crawler",  CRAWLER),
-    ("hornet",   HORNET),
 ]
 
 # Wisp — ghostly shooter enemy
@@ -737,12 +748,7 @@ def emit_all_c():
         print(emit_metasprite_c_array(f"sprite_miniboss_{name}",
                                       sprite_to_tiles(big, 16, 16)))
 
-    # Final boss (32x32 = 16 tiles, row-major 4x4)
-    grid = parse_grid(BOSS_BIG)
-    tiles = sprite_to_tiles(grid, 32, 32)
-    print(emit_metasprite_c_array("sprite_boss_colossus", tiles))
-
-    # Nine distinct 32x32 stage bosses
+    # Nine distinct 32x32 stage bosses (stage 0 is the Colossus)
     for i, spec in enumerate(BOSS_STAGES):
         grid = parse_grid(spec)
         tiles = sprite_to_tiles(grid, 32, 32)

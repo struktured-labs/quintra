@@ -33,6 +33,9 @@ static u8 room_resume_flag;   // set by room_request_resume: skip procgen next e
 // Secret door opened by shooting a cracked wall this room (0xFF = none)
 static u8 secret_door_x = 0xFF;
 static u8 secret_door_y = 0xFF;
+// Block-push state: current lean direction + how long it's been held.
+static u8 push_dir = DIR_NONE;
+static u8 push_timer;
 
 void room_request_resume(void) { room_resume_flag = 1; }
 
@@ -278,6 +281,7 @@ static u8 attr_for_tile(u8 t) {
         case BGT_WALL:
         case BGT_PILLAR:  return BGPAL_WALL;
         case BGT_WALL_CRACK: return BGPAL_CRACK;   // glowing — obviously special
+        case BGT_BLOCK:   return BGPAL_DOOR;       // gold-ish, reads as interactive
         case BGT_CRYSTAL: return BGPAL_CRYSTAL;
         case BGT_DOOR:    return BGPAL_DOOR;
         default:          return BGPAL_FLOOR;
@@ -388,8 +392,7 @@ void room_enter(void) {
     palette_obj_load(6, boss_stage_pal[room_stage()]);   // stage-tinted large boss
     palette_obj_load(7, orc_palette);
 
-    tiles_load_room_bg();
-    tiles_load_dungeon_bg();              // authored dungeon tileset (overrides placeholders)
+    tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
@@ -499,6 +502,40 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (moved) {
             player.move_acc = (u8)(player.move_acc + player.spd);
         }
+
+        // --- Pushable blocks: lean into a block (pure cardinal move) and, if
+        //     the tile behind it is open floor, it slides one tile. A short
+        //     hold requirement keeps it deliberate rather than a nudge. ---
+        if (moved && ((dx != 0) != (dy != 0))) {
+            u8 ptx = (u8)((player.x + 4) >> 3);
+            u8 pty = (u8)((player.y + 4) >> 3);
+            u8 fx  = (u8)(ptx + dx);
+            u8 fy  = (u8)(pty + dy);
+            u8 cur = (u8)((dy != 0) ? ((dy < 0) ? DIR_N : DIR_S)
+                                    : ((dx < 0) ? DIR_W : DIR_E));
+            if (fx < ROOM_W && fy < ROOM_H && room_tilemap[fy][fx] == BGT_BLOCK) {
+                u8 bx = (u8)(fx + dx);
+                u8 by = (u8)(fy + dy);
+                u8 beyond = (bx < ROOM_W && by < ROOM_H) ? room_tilemap[by][bx] : BGT_WALL;
+                if (beyond == BGT_FLOOR || beyond == BGT_FLOOR2 || beyond == BGT_FLOOR3) {
+                    if (push_dir == cur) push_timer++;
+                    else { push_dir = cur; push_timer = 0; }
+                    if (push_timer >= 10) {
+                        room_set_tile_vbl(fx, fy, BGT_FLOOR, BGPAL_FLOOR);
+                        room_set_tile_vbl(bx, by, BGT_BLOCK, BGPAL_DOOR);
+                        sfx_play(SFX_DOOR);
+                        push_timer = 0;
+                    }
+                } else {
+                    push_dir = DIR_NONE;
+                }
+            } else {
+                push_dir = DIR_NONE;
+            }
+        } else {
+            push_dir = DIR_NONE;
+        }
+
         steps = 0;
         while (player.move_acc >= 5) { player.move_acc -= 5; steps++; }
 
