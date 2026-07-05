@@ -30,56 +30,11 @@ const u8 bg_tile_void[16] = {
     0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0, 0,0,
 };
 
-// Player — 6x6 square in color 1 with color 2 corners
-const u8 sprite_tile_player[16] = {
-    0x00, 0x00,
-    0x3C, 0x00,
-    0x7E, 0x00,
-    0x7E, 0x00,
-    0x7E, 0x00,
-    0x7E, 0x00,
-    0x3C, 0x00,
-    0x00, 0x00,
-};
-
-// Bullet — 2x2 dot in color 3 (high-contrast accent)
-const u8 sprite_tile_bullet[16] = {
-    0x00, 0x00,
-    0x00, 0x00,
-    0x00, 0x00,
-    0x18, 0x18,
-    0x18, 0x18,
-    0x00, 0x00,
-    0x00, 0x00,
-    0x00, 0x00,
-};
-
-// Enemy (Blue Crawler) — round blob in color 2 with color 1 outline
-const u8 sprite_tile_enemy[16] = {
-    0x00, 0x00,
-    0x3C, 0x00,
-    0x7E, 0x42,
-    0xFF, 0x81,
-    0xFF, 0x81,
-    0x7E, 0x42,
-    0x3C, 0x00,
-    0x00, 0x00,
-};
-
 void tiles_load_room_bg(void) {
     set_bkg_data(BGT_VOID,  1, bg_tile_void);
     set_bkg_data(BGT_FLOOR, 1, bg_tile_floor);
     set_bkg_data(BGT_WALL,  1, bg_tile_wall);
     set_bkg_data(BGT_DOOR,  1, bg_tile_door);
-}
-
-void tiles_load_player_sprite(void) {
-    set_sprite_data(SPR_PLAYER, 1, sprite_tile_player);
-}
-
-void tiles_load_combat_sprites(void) {
-    set_sprite_data(SPR_BULLET, 1, sprite_tile_bullet);
-    set_sprite_data(SPR_ENEMY,  1, sprite_tile_enemy);
 }
 
 // Heart pickup (small heart icon for floor drops)
@@ -109,23 +64,6 @@ const u8 sprite_tile_coin[16] = {
 void tiles_load_pickup_sprites(void) {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
-}
-
-// Boss (Stone Sentinel) — chunky 8x8 with diamond accent.
-// Uses palette colors 1 (mid grey) + 2 (dark grey) + 3 (gold accent)
-const u8 sprite_tile_boss[16] = {
-    0xFF, 0xFF,    // 33333333 — top
-    0xFF, 0x7E,    // 11333311
-    0xFF, 0x3C,    // 11133111
-    0xFF, 0x18,    // 11113111
-    0xFF, 0x18,    // 11113111
-    0xFF, 0x3C,    // 11133111
-    0xFF, 0x7E,    // 11333311
-    0xFF, 0xFF,    // 33333333 — bottom
-};
-
-void tiles_load_boss_sprite(void) {
-    set_sprite_data(SPR_BOSS, 1, sprite_tile_boss);
 }
 
 // HUD tiles — full heart, half heart, empty heart, coin glyph, blank,

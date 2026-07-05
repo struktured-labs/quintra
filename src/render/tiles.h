@@ -60,21 +60,14 @@ extern const u8 bg_tile_floor[16];
 extern const u8 bg_tile_wall[16];
 extern const u8 bg_tile_door[16];
 extern const u8 bg_tile_void[16];
-extern const u8 sprite_tile_player[16];   // legacy 8x8 (unused if metasprite loaded)
-extern const u8 sprite_tile_bullet[16];
-extern const u8 sprite_tile_enemy[16];
 extern const u8 sprite_tile_heart[16];
 extern const u8 sprite_tile_coin[16];
-extern const u8 sprite_tile_boss[16];
 
 extern const u8 hud_tiles[][16];
 #define HUD_TILE_COUNT 15
 
 void tiles_load_room_bg(void);
-void tiles_load_player_sprite(void);
-void tiles_load_combat_sprites(void);
 void tiles_load_pickup_sprites(void);
-void tiles_load_boss_sprite(void);
 void tiles_load_hud(void);
 
 // Phase 12 metasprite loaders

@@ -390,10 +390,7 @@ void room_enter(void) {
 
     tiles_load_room_bg();
     tiles_load_dungeon_bg();              // authored dungeon tileset (overrides placeholders)
-    tiles_load_player_sprite();           // legacy single-tile fallback
-    tiles_load_combat_sprites();
     tiles_load_pickup_sprites();
-    tiles_load_boss_sprite();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
     tiles_load_miniboss(room_stage());    // this stage's distinct 16x16 mini-boss (slots 24..27)
@@ -653,7 +650,22 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     run_state.secret_pending = 1;
                 }
                 secret_door_x = secret_door_y = 0xFF;
-                run_state.room_counter++;
+                // Sticky dungeon: room layout is a pure function of room_counter,
+                // so treat the counter as a position on a corridor. Leaving
+                // through the door we came in (opposite of entered_from) walks
+                // BACK to the previous room — regenerating its identical layout;
+                // any other door advances. entered_from = exit dir works for
+                // both (the player spawns at the opposite door either way).
+                {
+                    u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
+                    if (run_state.entered_from != DIR_NONE
+                        && dir == back_dir
+                        && run_state.room_counter > 0) {
+                        run_state.room_counter--;
+                    } else {
+                        run_state.room_counter++;
+                    }
+                }
                 run_state.entered_from = dir;
                 sfx_play(SFX_DOOR);
                 // Regenerate room in-place (skip full screen exit/enter)
