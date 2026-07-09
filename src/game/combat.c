@@ -106,6 +106,10 @@ u8 combat_resolve(void) BANKED {
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x + FIX8(16), entities[j].y);
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y + FIX8(16));
+                            // Every colossus yields a passive item — the
+                            // run's guaranteed power curve (indices 10..19)
+                            pickup_spawn_item((u8)(10 + rng_range(10)),
+                                entities[j].x + FIX8(4), entities[j].y + FIX8(4));
                         } else if (eid == 6) {
                             // Bomber: death detonation — a 4-way revenge
                             // burst. Kill it from a diagonal, or eat sparks.
