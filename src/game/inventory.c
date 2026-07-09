@@ -34,6 +34,16 @@ static const char *class_name(u8 id) {
 
 // stage_names now comes from the generated stage tables (stages.h).
 
+// Class passive perk names, indexed by class id (see player.c/room.c
+// for the mechanics each one drives).
+static const char *const perk_names[5] = {
+    "SWIFT PAWS",     // Wolfkin: +1 SPD
+    "SCALED HIDE",    // Sauran: slow HP regen
+    "RAVEN SIGHT",    // Corvin: HUD bar reads enemy HP
+    "TIDE ATTUNED",   // Picsean: MP regen x2
+    "VENOM SYNERGY",  // Vespine: elemental hits +1
+};
+
 // items[] is keyed by array position but item.id != index beyond the 5
 // starters — resolve the real entry by id (small table, linear scan is fine).
 static const char *item_name_by_id(u16 id) {
@@ -72,10 +82,12 @@ void inventory_enter(void) {
     gotoxy(1, 8);  printf("SPD %u", (u16)player.spd);
     gotoxy(8, 8);  printf("LCK %u", (u16)player.lck);
 
-    gotoxy(1, 11); printf("WPN A:");
+    gotoxy(1, 10); printf("WPN A:");
     printf("%s", item_name_by_id(player.starter_weapon));
-    gotoxy(1, 12); printf("SIG B:");
+    gotoxy(1, 11); printf("SIG B:");
     printf("%s", item_name_by_id(player.active_item));
+    gotoxy(1, 12); printf("PERK  ");
+    printf("%s", perk_names[player.class_id < 5 ? player.class_id : 0]);
 
     gotoxy(1, 14); printf("coins %u", (u16)player.coins);
     gotoxy(11, 14); printf("T %u:%u%u", (u16)(run_state.run_timer / 60),
