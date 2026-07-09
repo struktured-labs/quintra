@@ -43,5 +43,17 @@ void player_init_from_class(u8 class_id) {
         player.lck      = 0;
         player.starter_weapon = (u8)c->starter_weapon;
         player.active_item    = (u8)c->signature_active;
+
+        // Stat-shaped passives apply at init; behavioral ones (Corvin's
+        // HP-sight, Picsean's fast MP, Vespine's poison synergy) are
+        // keyed off passive_perk/class at their point of effect.
+        switch (c->passive_perk) {
+            case 1:   // Wolfkin: +20% move speed
+                if (player.spd < 9) player.spd++;
+                break;
+            // case 2 (Sauran HP+2/slow regen): the +2 is pre-baked into
+            // his 12-half-heart base (the HUD's cap); the regen half
+            // ticks in room.c.
+        }
     }
 }

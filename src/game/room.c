@@ -717,13 +717,27 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
         if (player.active_charge > 0) player.active_charge--;
 
-        // MP trickle: +1 every ~3.2s while below max
+        // MP trickle: +1 every ~3.2s while below max — Picsean's
+        // MP-attuned passive (perk 4) regenerates twice as fast.
         if (player.mp < player.mp_max) {
             static u8 mp_regen;
-            if (++mp_regen >= 192) {
+            u8 thresh = (player.class_id == 3) ? 96 : 192;
+            if (++mp_regen >= thresh) {
                 mp_regen = 0;
                 player.mp++;
                 hud_redraw_mp();
+            }
+        }
+
+        // Sauran's scaled hide (perk 2): slow HP regen, one half-heart
+        // per ~40s of active play.
+        if (player.class_id == 1 && player.hp < player.hp_max) {
+            static u16 hp_regen;
+            if (++hp_regen >= 1350) {
+                hp_regen = 0;
+                player.hp++;
+                hud_redraw_hp();
+                sfx_play(SFX_HEART);
             }
         }
     }
@@ -740,17 +754,30 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // ---- Boss HP bar + room-clear detection in one entity sweep.
     // HUD helper caches segments so polling only writes VRAM on change.
     {
-        u8 i, found = 0, alive = 0;
+        u8 i, found = 0, alive = 0, corvin_i = 0xFF;
         for (i = 0; i < MAX_ENTITIES; ++i) {
             if (!(entities[i].flags & EF_ACTIVE)) continue;
             if (entities[i].type != ENT_ENEMY)    continue;
             alive++;
+            if (corvin_i == 0xFF) corvin_i = i;
             if (!found && entities[i].ai_data[0] == 1) {
                 // ai_data[6] = remembered max HP (set on first boss tick);
                 // fall back to current hp for the very first frame.
                 u8 max = entities[i].ai_data[6];
                 if (max == 0) max = entities[i].hp;
                 hud_redraw_boss(entities[i].hp, max);
+                found = 1;
+            }
+        }
+        // Corvin's raven sight (perk 3): with no boss around, the bar
+        // reads a regular enemy's HP instead (max from the content table).
+        if (!found && player.class_id == 2 && corvin_i != 0xFF) {
+            u8 eid = entities[corvin_i].ai_data[0];
+            u8 max = (eid < N_ENEMIES) ? enemies[eid].stats.hp : 0;
+            if (max) {
+                // Elites carry doubled HP — double the reference too
+                if (entities[corvin_i].palette == 0x06) max = (u8)(max << 1);
+                hud_redraw_boss(entities[corvin_i].hp, max);
                 found = 1;
             }
         }

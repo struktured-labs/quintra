@@ -52,8 +52,12 @@ u8 combat_resolve(void) BANKED {
 
             // Per-hit damage: base + elemental x2 (weapon element in
             // projectile ai_data[1]) + crit x2 (LCK * 5% chance).
+            // Vespine's venom synergy (perk 5): elemental hits bite +1.
             dmg = entities[i].damage;
-            if (entities[i].ai_data[1] & weakness) dmg = (u8)(dmg << 1);
+            if (entities[i].ai_data[1] & weakness) {
+                dmg = (u8)(dmg << 1);
+                if (player.class_id == 4) dmg++;
+            }
             if (rng_range(100) < (u8)(player.lck * 5)) dmg = (u8)(dmg << 1);
             if (dmg == 0) dmg = 1;
 
