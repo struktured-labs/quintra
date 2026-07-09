@@ -56,7 +56,7 @@ static void render_title(void) {
         printf("PRESS  START");
     }
     gotoxy(1, 17); printf("SELECT=RECORDS");
-    gotoxy(15, 17); printf("v0.9");
+    gotoxy(15, 17); printf("v0.13");
     {
         u16 best = sram_meta_best();
         if (best > 0) {
