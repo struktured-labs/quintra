@@ -114,14 +114,19 @@ void hud_redraw_mp(void) {
 }
 
 void hud_redraw_depth(void) {
-    // Room depth as 2 digits, centered-ish (cols 8-9). Boss lives at depth 5.
+    // Room depth as 2 digits (cols 8-9) + current stage digit in the
+    // last column (col 19) so you always know which of the 9 (or the
+    // endless cycle) you're in.
     u8 row[2];
     u8 d = run_state.room_counter;
+    u8 s = (u8)((run_state.bosses_beaten % 9) + 1);
     if (d > 99) d = 99;
     row[0] = (u8)(HUD_DIGIT_0 + (d / 10));
     row[1] = (u8)(HUD_DIGIT_0 + (d % 10));
     VBK_REG = 0;
     set_win_tiles(8, 0, 2, 1, row);
+    row[0] = (u8)(HUD_DIGIT_0 + (s > 9 ? 9 : s));
+    set_win_tiles(19, 0, 1, 1, row);
 }
 
 void hud_redraw_boss(u8 cur, u8 max) {

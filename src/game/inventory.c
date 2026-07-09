@@ -64,9 +64,10 @@ void inventory_enter(void) {
     gotoxy(1, 2);  printf("%s", class_name(player.class_id));
     gotoxy(11, 2); printf("stage %u", (u16)(run_state.bosses_beaten + 1));
     {
-        u8 s = run_state.bosses_beaten;
+        // Endless descent wraps the theme cycle — name what you see
+        u8 s = (u8)(run_state.bosses_beaten % 9);
         gotoxy(1, 3);
-        printf("%s", stage_names[s < 9 ? s : 8]);
+        printf("%s", stage_names[s]);
     }
 
     gotoxy(1, 4);  printf("HP %u/%u", (u16)player.hp, (u16)player.hp_max);
