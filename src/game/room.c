@@ -54,6 +54,9 @@ static u8 hostiles_prev;
 static u8 shake_timer;
 static u8 shake_mag;
 
+// Death sequence: frames left in the fall-down beat before GAMEOVER.
+static u8 death_timer;
+
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
@@ -529,6 +532,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     }
     if (room_paused) { g_vbl_ticks = 0; return SCREEN_SELF; }   // clock holds
 
+    // ---- Death beat: the world keeps animating (bullets fly, bursts
+    // pop, screen shakes) but the hero is done — then GAMEOVER.
+    if (death_timer) {
+        if (--death_timer == 0) return SCREEN_GAMEOVER;
+        if (player.iframes) player.iframes--;   // drives the flicker
+        entity_update_all(0, 0);
+        place_player_sprite();
+        entity_draw_all();
+        return SCREEN_SELF;
+    }
+
     // ---- Stage-entry reveal: hold dimmed palettes briefly, then pop to
     // full brightness — a beat of "emerging into somewhere new".
     if (stage_fade) {
@@ -747,8 +761,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Combat
     if (combat_resolve()) {
-        // Player died → GAMEOVER
-        return SCREEN_GAMEOVER;
+        // Player died: don't hard-cut — a beat of shake, bursts, and a
+        // flickering hero falling before the GAMEOVER screen takes over.
+        death_timer = 50;
+        player.iframes = 50;             // reuse the iframe flicker
+        sfx_play(SFX_DEATH);
+        music_stop();
+        room_shake(2, 30);
+        fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x,     (i16)player.y,     16);
+        fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x - 8, (i16)player.y - 8, 24);
+        fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x + 8, (i16)player.y + 8, 32);
+        hud_redraw_hp();                 // show the empty hearts
+        return SCREEN_SELF;
     }
 
     // ---- Boss HP bar + room-clear detection in one entity sweep.
