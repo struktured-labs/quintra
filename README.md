@@ -19,34 +19,44 @@ tables at build time.
 |:---:|:---:|:---:|:---:|
 | ![title](docs/media/title.png) | ![class](docs/media/class.png) | ![dungeon](docs/media/dungeon.png) | ![pack](docs/media/pack.png) |
 
+| Stage boss | Merchant | Sanctuary | Ember Depths |
+|:---:|:---:|:---:|:---:|
+| ![boss](docs/media/boss.png) | ![shop](docs/media/shop.png) | ![sanctuary](docs/media/sanctuary.png) | ![ember](docs/media/ember.png) |
+
 ## Features
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
-  with its own stats, primary weapon, and signature move.
-- **9 distinct stages**, each with its own palette, music, and enemy roster:
-  Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault → Toxic Mire →
-  Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum.
-- **9 large-sprite bosses** (32×32 metasprites) — one per stage — plus
-  Sentinel-style **mini-bosses** and **merchants** mid-stage.
-- **Two-weapon combat**: `A` = your class's primary (distinct projectile per
-  class), `B` = its signature move on a cooldown.
+  with its own stats, primary weapon, signature move, and a live passive perk.
+- **9 distinct stages**, each with its own palette, music rotation, and enemy
+  roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
+  Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
+  **endless descent**: beat the 9th colossus and dive again at full power.
+- **9 large-sprite bosses** (32×32 metasprites, distinct bullet patterns,
+  telegraphed volleys) plus **mini-bosses** (weapon-swap orb drops),
+  **merchants** with priced wares, and a **sanctuary** breather before every
+  boss.
+- **8 enemy archetypes** — walkers, chasers, chargers, shooters, elite
+  variants, exploding Bombers, teleporting Shades.
+- **Two-weapon combat**: `A` = your class's primary, `B` = its signature move
+  (costs MP; MP regens, crystals shatter into mana wisps).
 - **RPG layer**: HP/MP/ATK/DEF/SPD/LCK, elemental weakness bonuses, crits,
-  hit-flash / hit-stop / knockback for weight.
+  hit-flash / hit-stop / knockback / screen shake for weight.
 - **Zelda-style secrets**: shoot the glowing amber cracked walls to open
-  treasure rooms; kick apart rubble for hidden coins.
-- **Item builds**: stat-boost pickups and shop wares stack into a run's power
-  curve — no XP grinding.
-- **Full chiptune audio**: per-stage exploration themes, a driving boss theme,
-  title / victory / gameover tracks, and 8 register-level SFX.
+  treasure vaults; kick apart rubble; shove crates.
+- **Roguelike persistence done right**: battery **suspend save** resumes your
+  run (and dies with you — permadeath holds), while best score / runs / wins
+  persist forever.
+- **Full chiptune audio**: four rotating exploration themes, a driving boss
+  theme, title / victory / gameover tracks, and 10 register-level SFX.
 
 ## Controls
 
 | Input | Action |
 |---|---|
 | **D-pad** | Move (8-way aim while firing) |
-| **A** | Primary weapon |
-| **B** | Class signature move |
-| **START** | Pack screen (stats + held items) |
+| **A** | Primary weapon · continue a suspended run (title) |
+| **B** | Class signature move (2 MP) |
+| **START** | Pack screen (stats, loadout, run clock) |
 | **SELECT** | Quick pause |
 
 Shoot the glowing amber wall tiles — they hide secret rooms.
@@ -57,13 +67,14 @@ Requires [GBDK-2020](https://github.com/gbdk-2020/gbdk-2020) v4.5.0 at `~/gbdk`
 and a stable Rust toolchain (host-side only — Rust never ships in the ROM).
 
 ```bash
-make            # cargo codegen → SDCC → rom/working/quintra.gbc
+make            # cargo codegen + sprite pipeline → SDCC → rom/working/quintra.gbc
 make play       # build + launch in mGBA
-make test       # build + headless mGBA smoke test
+make verify     # cargo tests + gameplay smoke + C<->Rust procgen parity
 make info       # print build summary
 ```
 
-Cart spec: **MBC5 + RAM + battery, CGB-only, 512 KB** (headroom to 2 MB).
+Cart spec: **MBC5 + RAM + battery, CGB-only, banked ROM** (autobank; 2 MB
+address space open).
 
 ## Architecture
 
