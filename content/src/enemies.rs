@@ -114,6 +114,23 @@ pub const SHADE: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const WARLOCK: Enemy = Enemy {
+    id:         ENEMY_WARLOCK,
+    name:       "Warlock",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    // Deep-stage caster: slow drift, three-way fanned volleys. The first
+    // enemy to exercise the content ShotPattern beyond Single.
+    stats: EnemyStats { hp: 5, damage: 2, speed: 32, score: 55, weakness: 0x04, poise: 1 },
+    ai_script:  AiScriptId::Shooter {
+        fire_rate: 100,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Fan(3),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -123,4 +140,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(WISP.clone());
     r.add_enemy(BOMBER.clone());
     r.add_enemy(SHADE.clone());
+    r.add_enemy(WARLOCK.clone());
 }

@@ -30,6 +30,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 5: return SPR_ENEMY_WISP;
         case 6: return SPR_ENEMY_BOMBER;
         case 7: return SPR_ENEMY_SHADE;
+        case 8: return SPR_ENEMY_WARLOCK;
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -46,6 +47,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 5:  return 0x00;
         case 6:  return 0x04;   // Bomber: red shell, amber fuse (danger!)
         case 7:  return 0x00;   // Shade: pale ghost-bone
+        case 8:  return 0x07;   // Warlock: green robes (0x06 = elite marker)
         default: return 0x03;
     }
 }
@@ -88,6 +90,10 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     e->y = FIX8(ny);
     return 1;
 }
+
+// Bullet helpers (defined with the boss section below)
+static u8 aim_dir8(i16 cx, i16 cy);
+static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg);
 
 // ---------------- Walker: random 8-dir wander --------------------------
 
@@ -199,11 +205,35 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
     if (e->ai_data[1] == 0) {
         e->ai_data[1] = def->ai_p0;   // fire_rate
         {
+            // Shot pattern from content: ai_p2 low nibble = kind
+            // (0 single, 1 fan, 2 ring), high nibble = N.
             i16 ex = FIX8_TO_INT(e->x);
             i16 ey = FIX8_TO_INT(e->y);
-            i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
-            i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
-            projectile_spawn_enemy(ex, ey, sx, sy, def->stats.damage);
+            u8 pat = (u8)(def->ai_p2 & 0x0F);
+            u8 n   = (u8)(def->ai_p2 >> 4);
+            u8 d, k;
+            switch (pat) {
+                case 1:   // Fan(n): aimed center + (n-1)/2 each side
+                    d = aim_dir8(ex, ey);
+                    boss_shot(ex, ey, d, 2, def->stats.damage);
+                    for (k = 1; k <= (u8)(n >> 1); ++k) {
+                        boss_shot(ex, ey, (u8)((d + k) & 7), 2, def->stats.damage);
+                        boss_shot(ex, ey, (u8)((d + 8 - k) & 7), 2, def->stats.damage);
+                    }
+                    break;
+                case 2: { // Ring(n): n of the 8 directions, evenly spaced
+                    u8 step = (n != 0 && n <= 8) ? (u8)(8 / n) : 2;
+                    for (d = 0; d < 8; d = (u8)(d + step))
+                        boss_shot(ex, ey, d, 2, def->stats.damage);
+                    break;
+                }
+                default: { // Single: aimed sign-step (original behavior)
+                    i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
+                    i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
+                    projectile_spawn_enemy(ex, ey, sx, sy, def->stats.damage);
+                    break;
+                }
+            }
         }
     } else {
         e->ai_data[1]--;
