@@ -151,6 +151,18 @@ void hud_redraw_boss(u8 cur, u8 max) {
     set_win_tiles(10, 0, 5, 1, row);
 }
 
+void hud_low_hp_pulse(u8 phase) {
+    // Swap HUD palette color 3 (heart red) between normal and white-hot.
+    static u8 last_phase = 0xFF;
+    u16 pal[4];
+    u8 i;
+    if (phase == last_phase) return;
+    last_phase = phase;
+    for (i = 0; i < 4; ++i) pal[i] = hud_palette[i];
+    if (phase) pal[3] = BGR555(31, 26, 24);   // white-hot flash
+    palette_bg_load(7, pal);
+}
+
 void hud_redraw_all(void) {
     hud_redraw_hp();
     hud_redraw_mp();

@@ -20,6 +20,9 @@ void hud_redraw_depth(void);  // call when run_state.room_counter changes
 // Boss HP as a 5-segment bar (cols 10-14). max==0 clears the bar.
 // Caches internally: cheap to call every frame.
 void hud_redraw_boss(u8 cur, u8 max);
+// Low-HP danger pulse: phase 1 flashes the heart color white-hot,
+// phase 0 restores it. Cached — safe to call every frame.
+void hud_low_hp_pulse(u8 phase);
 void hud_redraw_all(void);
 
 #endif

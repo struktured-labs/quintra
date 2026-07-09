@@ -79,6 +79,11 @@ void sfx_play(u8 id) {
             pend_kind = PEND_CLEAR_NOTE2;
             pend_timer = 5;
             break;
+        case SFX_LOWHP:
+            // Soft, short C7 blip — quiet env (6,down,2) so it reads as
+            // a heartbeat under combat, not an alarm over it.
+            ch1(0x00, 0x80, 0x62, 1985);
+            break;
         default:
             break;
     }

@@ -536,6 +536,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (run_state.run_timer < 65535) run_state.run_timer++;
     }
 
+    // ---- Low-HP danger: at one heart the HUD hearts pulse white-hot
+    // and a soft heartbeat blip sounds in the quiet between shots.
+    {
+        static u8 lowhp_t;
+        if (player.hp <= 2 && player.hp > 0) {
+            lowhp_t++;
+            hud_low_hp_pulse((u8)((lowhp_t & 0x10) ? 1 : 0));
+            if (lowhp_t >= 96) { lowhp_t = 0; sfx_play(SFX_LOWHP); }
+        } else if (lowhp_t) {
+            lowhp_t = 0;
+            hud_low_hp_pulse(0);
+        }
+    }
+
     // ---- Hit-stop: freeze the world a few frames on impact for weight,
     // but keep drawing so the flash/knockback is visible.
     if (g_hitstop) {
