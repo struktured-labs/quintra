@@ -10,22 +10,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Lineage:** this project began as a Penta Dragon DX colorization effort (that history lives in the separate `penta-dragon-dx` repo) and pivoted into Quintra, a Penta-inspired but wholly original game.
 
-**Current Status:** v0.6.0 — 9-stage roguelike, playable end to end. TITLE
-(pulsing + music) → CLASS_SELECT (5 classes, live preview + cursor + SFX) →
-9 stages of 6 rooms each, styled distinctly (Crystal Caverns → Verdant Hollow
-→ Ember Depths → Frost Vault → Toxic Mire → Shadow Keep → Golden Temple →
-Bloodmoon → Void Sanctum). Per stage: normal rooms, a mini-boss (16x16
-Sentinel + escort), a merchant, and a **32x32 large-sprite stage boss** — 9
-distinct bosses (Colossus/Serpent/Maw/Spider/Eye/Reaper/Golem/Hydra/VoidLord).
-Beat all 9 → VICTORY. Combat: A = per-class primary weapon, B = class
-signature move, DEF/LCK/elemental damage, hit-flash + hit-stop + knockback.
-Full audio: per-stage music, boss theme, title/victory/gameover, 8 SFX.
-START = pack/stats screen. Zelda-style shootable cracked walls → treasure
-rooms. 5 classes / 15 items / 6 enemies compiled from typed Rust content.
+**Current Status:** v0.9 — 9-stage roguelike, playable end to end, **banked
+ROM** (autobank; see the 2026-07-05 banking spec — new gameplay files need
+`#pragma bank 255` + `BANKED`, and `scripts/check_rom_layout.py` gates every
+link). TITLE (pulsing + music, CONTINUE when a suspend save exists, BEST
+score) → CLASS_SELECT (5 classes, live preview + cursor + SFX) → 9 stages of
+6 rooms each, styled distinctly (Crystal Caverns → Verdant Hollow → Ember
+Depths → Frost Vault → Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon
+→ Void Sanctum), each fading in from darkness. Per stage: normal rooms in 8
+procgen shapes, ~12% elite enemies (boss-glow, 2x HP), a mini-boss (drops
+A-weapon swap orbs), a merchant, and a **32x32 large-sprite stage boss** — 9
+distinct bosses with HUD HP bar, death explosion + screen shake. Beat all 9
+→ VICTORY. Combat: A = per-class primary weapon, B = signature move costing
+2 MP (blue HUD digits; MP regens, +1 on room clear), DEF/LCK/elemental,
+hit-flash + hit-stop + knockback both ways, pickup magnetism, room-clear
+chime. Full audio: per-stage music, boss theme, title/victory/gameover,
+9 SFX. START = pack/stats screen (stage names, weapon/signature). SRAM:
+suspend save every room (dies with you — permadeath holds) + persistent
+best/runs/wins. Zelda-style shootable cracked walls → treasure rooms.
+5 classes / 15 items / 6 enemies compiled from typed Rust content.
 
 ### Controls
-- D-pad move · A primary weapon · B signature move · START pack screen ·
-  SELECT quick-pause · shoot the glowing amber cracked walls for secrets.
+- D-pad move · A primary weapon · B signature move (2 MP) · START pack
+  screen · SELECT quick-pause · shoot the glowing amber cracked walls for
+  secrets · title: A = continue a suspended run.
 
 ### Toolchain
 
