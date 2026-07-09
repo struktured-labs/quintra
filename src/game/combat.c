@@ -74,8 +74,10 @@ u8 combat_resolve(void) BANKED {
                     if (g_hitstop < 2) g_hitstop = 2;
                     {
                         if (eid < N_ENEMIES) {
-                            u16 s = run_state.score + (u16)enemies[eid].stats.score;
-                            run_state.score = s;
+                            // Endless descent pays double
+                            u16 pts = enemies[eid].stats.score;
+                            if (run_state.bosses_beaten >= BOSSES_TO_WIN) pts = (u16)(pts << 1);
+                            run_state.score = (u16)(run_state.score + pts);
                         }
                         run_state.enemies_killed++;
                         // Enemy id 1 is used by BOTH the large stage boss

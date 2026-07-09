@@ -140,8 +140,11 @@ static const u16 pal_crack[4] = {
 };
 
 static u8 room_stage(void) {
+    // Endless descent (10th+ boss): the nine themes cycle again —
+    // Crystal Caverns at double power, and on down. Stats stay maxed
+    // (procgen clamps power separately); this drives look + music.
     u8 s = run_state.bosses_beaten;
-    return (s < STAGE_COUNT) ? s : (STAGE_COUNT - 1);
+    return (s < STAGE_COUNT) ? s : (u8)(s % STAGE_COUNT);
 }
 
 // Crawler (enemy) palette — blue, with one accent

@@ -297,23 +297,25 @@ void procgen_generate_current_room(void) BANKED {
         }
 
         if (is_boss_room) {
-            // EVERY stage ends with a LARGE (32x32) boss. Per-stage sprite is
-            // wired in Wave B; for now all use the Colossus metasprite. HP and
-            // damage scale with the stage.
+            // EVERY stage ends with a LARGE (32x32) boss. Power clamps at
+            // stage 8 (40 + 9*22 would overflow u8 -> a 4 HP boss); the
+            // SKIN cycles all nine colossi forever in endless descent.
             u8 stage = run_state.bosses_beaten;
+            u8 pow  = (stage < 9) ? stage : 8;
+            u8 skin = (u8)(stage % 9);
             *(volatile u8*)0xFFFC = 0xBB;
             {
                 u8 idx = enemy_spawn(1, (ROOM_W / 2) - 2, (ROOM_H / 2) - 2);
                 if (idx != 0xFF) {
-                    entities[idx].sprite_tile = boss_sprite_for_stage(stage);
-                    entities[idx].palette     = boss_palette_for_stage(stage);
+                    entities[idx].sprite_tile = boss_sprite_for_stage(skin);
+                    entities[idx].palette     = boss_palette_for_stage(skin);
                     entities[idx].hitbox      = (15 << 4) | 15;
                     entities[idx].ai_data[3]  = 1;              // giant flag
-                    entities[idx].ai_data[2]  = stage;         // boss attack pattern
+                    entities[idx].ai_data[2]  = skin;          // boss attack pattern
                     entities[idx].hp = (u8)(entities[idx].hp
-                        + 40 + (u8)(stage * 22));
+                        + 40 + (u8)(pow * 22));
                     entities[idx].damage = (u8)(entities[idx].damage
-                        + 1 + (stage >> 1));
+                        + 1 + (pow >> 1));
                 }
             }
         } else if (is_miniboss) {
@@ -325,14 +327,16 @@ void procgen_generate_current_room(void) BANKED {
                 u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
                     // Palette matches the stage's mini-boss silhouette (art is
-                    // swapped in VRAM by tiles_load_miniboss). Tables must agree:
-                    // variant 0=sentinel granite,1=orc green,2=skel bone,3=crawler blue,4=hornet amber
+                    // swapped in VRAM by tiles_load_miniboss, which uses the
+                    // WRAPPED stage — index the same way or deep stages get a
+                    // sprite/palette mismatch). HP power clamps (u8 overflow).
                     static const u8 mb_variant[9] = { 0, 1, 2, 0, 1, 2, 1, 2, 0 };
                     static const u8 mb_pal[3]     = { 0x06, 0x07, 0x00 };
+                    u8 mb_pow = (stage < 9) ? stage : 8;
                     entities[idx].sprite_tile = SPR_BOSS;
-                    entities[idx].palette     = mb_pal[mb_variant[stage < 9 ? stage : 8]];
+                    entities[idx].palette     = mb_pal[mb_variant[stage % 9]];
                     entities[idx].hitbox      = (14 << 4) | 14;
-                    entities[idx].hp = (u8)(entities[idx].hp + (u8)(stage * 12));
+                    entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
                 }
             }
             // two escorts drawn from the stage roster
