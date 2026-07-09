@@ -28,7 +28,10 @@ chime. Full audio: per-stage music, boss theme, title/victory/gameover,
 9 SFX. START = pack/stats screen (stage names, weapon/signature). SRAM:
 suspend save every room (dies with you — permadeath holds) + persistent
 best/runs/wins. Zelda-style shootable cracked walls → treasure rooms.
-5 classes / 15 items / 6 enemies compiled from typed Rust content.
+5 classes / 15 items / 8 enemies (incl. exploding Bombers, teleporting
+Shades) / 9 stage themes with designed weighted rosters + boss stats —
+all compiled from typed Rust content; `make verify` runs cargo tests,
+the gameplay smoke, and the C<->Rust procgen parity check.
 
 ### Controls
 - D-pad move · A primary weapon · B signature move (2 MP) · START pack
