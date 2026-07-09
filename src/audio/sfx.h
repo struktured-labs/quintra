@@ -15,6 +15,7 @@ enum {
     SFX_DOOR,         // rising whoosh
     SFX_ROAR,         // boss: low 75%-duty growl + slow noise
     SFX_HURT,         // player hurt: harsh 12.5%-duty snap
+    SFX_CLEAR,        // room cleared: G5 -> B5 -> E6 rising arpeggio
 };
 
 void sfx_play(u8 id);

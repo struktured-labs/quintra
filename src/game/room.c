@@ -41,6 +41,10 @@ static u8 push_timer;
 static u8 stage_seen = 0xFF;
 static u8 stage_fade;
 
+// Room-clear chime: hostiles seen alive this room (reset on every room
+// generation so walking into an empty room never false-fires the chime).
+static u8 hostiles_prev;
+
 void room_request_resume(void) { room_resume_flag = 1; }
 
 // Nine stage themes, indexed by run_state.bosses_beaten (clamped 0-8). Each
@@ -454,6 +458,8 @@ void room_enter(void) {
         music_play_stage(room_stage());
     }
 
+    hostiles_prev = 0;   // fresh room: re-arm the clear chime
+
     // Stage-entry reveal: first room of a new stage (or of a fresh run)
     // starts with dimmed palettes and pops to full ~0.4s in.
     if (run_state.room_counter == 0) stage_seen = 0xFF;
@@ -656,24 +662,32 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         return SCREEN_GAMEOVER;
     }
 
-    // ---- Boss HP bar: poll the (mini-)boss entity each frame; the HUD
-    // helper caches segments so this only writes VRAM on real changes.
+    // ---- Boss HP bar + room-clear detection in one entity sweep.
+    // HUD helper caches segments so polling only writes VRAM on change.
     {
-        u8 i, found = 0;
+        u8 i, found = 0, alive = 0;
         for (i = 0; i < MAX_ENTITIES; ++i) {
-            if ((entities[i].flags & EF_ACTIVE)
-                && entities[i].type == ENT_ENEMY
-                && entities[i].ai_data[0] == 1) {
+            if (!(entities[i].flags & EF_ACTIVE)) continue;
+            if (entities[i].type != ENT_ENEMY)    continue;
+            alive++;
+            if (!found && entities[i].ai_data[0] == 1) {
                 // ai_data[6] = remembered max HP (set on first boss tick);
                 // fall back to current hp for the very first frame.
                 u8 max = entities[i].ai_data[6];
                 if (max == 0) max = entities[i].hp;
                 hud_redraw_boss(entities[i].hp, max);
                 found = 1;
-                break;
             }
         }
         if (!found) hud_redraw_boss(0, 0);
+
+        // Last hostile down → rising chime. Boss kills keep their own
+        // fanfare (roar/explosion), so skip when one just landed.
+        if (alive == 0 && hostiles_prev != 0
+            && !run_state.pending_unseal && !run_state.victory) {
+            sfx_play(SFX_CLEAR);
+        }
+        hostiles_prev = alive;
     }
 
     // ---- Boss beaten (non-final): lift the door seal, run continues,
@@ -756,6 +770,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 } else {
                     music_play_stage(room_stage());
                 }
+                hostiles_prev = 0;   // fresh room: re-arm the clear chime
                 // Stage-entry reveal (door path — stage changes land here
                 // after a boss kill, not via room_enter)
                 if (room_stage() != stage_seen) {

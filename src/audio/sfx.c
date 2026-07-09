@@ -10,6 +10,8 @@
 #define PEND_COIN_NOTE2 1
 #define PEND_HEART_NOTE2 2
 #define PEND_DEATH_BUMP 3
+#define PEND_CLEAR_NOTE2 4
+#define PEND_CLEAR_NOTE3 5
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -70,6 +72,13 @@ void sfx_play(u8 id) {
             // duty 12.5%, 500Hz, sweep down (1,4), env (14,down,1)
             ch1(0x1C, 0x00, 0xE1, 1786);
             break;
+        case SFX_CLEAR:
+            // Zelda-secret rising arpeggio: G5 -> B5 -> E6, duty 50%,
+            // env (12,down,3). Notes 2/3 chained via the pend system.
+            ch1(0x00, 0x80, 0xC3, 1881);
+            pend_kind = PEND_CLEAR_NOTE2;
+            pend_timer = 5;
+            break;
         default:
             break;
     }
@@ -89,6 +98,17 @@ void sfx_tick(void) {
             break;
         case PEND_DEATH_BUMP:
             NR43_REG = 0x69;   // s=6, 7-bit — buzz falls apart as it fades
+            break;
+        case PEND_CLEAR_NOTE2:
+            NR13_REG = (u8)(1915 & 0xFF);              // B5
+            NR14_REG = (u8)(0x80 | (1915 >> 8));
+            pend_kind = PEND_CLEAR_NOTE3;              // chain note 3
+            pend_timer = 5;
+            return;
+        case PEND_CLEAR_NOTE3:
+            NR12_REG = 0xD4;                           // fresh, longer env
+            NR13_REG = (u8)(1949 & 0xFF);              // E6
+            NR14_REG = (u8)(0x80 | (1949 >> 8));
             break;
     }
     pend_kind = PEND_NONE;
