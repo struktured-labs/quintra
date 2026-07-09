@@ -45,7 +45,17 @@ pub struct StageTheme {
     pub door:    [Rgb5; 4],
     /// Large-boss OBJ tint: [transparent, rim, body-dark, glow]
     pub boss:    [Rgb5; 4],
+    /// Large-boss stats: added on top of the base enemy entry.
+    /// Registry enforces hp monotonically non-decreasing across stages.
+    pub boss_hp_bonus:  u8,
+    pub boss_dmg_bonus: u8,
+    /// Mini-boss silhouette: 0 = Sentinel, 1 = Orc, 2 = Skeleton. One
+    /// value consumed by BOTH the art loader and the palette pick — the
+    /// two hand-written C copies used to have to agree by comment.
+    pub mb_variant: u8,
 }
+
+pub const MB_VARIANTS: u8 = 3;
 
 impl StageTheme {
     pub fn validate(&self) -> Result<(), String> {
@@ -62,6 +72,10 @@ impl StageTheme {
             for c in pal {
                 c.validate().map_err(|e| format!("stage {}: {}", self.id, e))?;
             }
+        }
+        if self.mb_variant >= MB_VARIANTS {
+            return Err(format!("stage {} mb_variant {} out of range (0..{})",
+                self.id, self.mb_variant, MB_VARIANTS));
         }
         Ok(())
     }

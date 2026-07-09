@@ -313,9 +313,9 @@ void procgen_generate_current_room(void) BANKED {
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
                     entities[idx].hp = (u8)(entities[idx].hp
-                        + 40 + (u8)(pow * 22));
+                        + stage_boss_hp[pow]);
                     entities[idx].damage = (u8)(entities[idx].damage
-                        + 1 + (pow >> 1));
+                        + stage_boss_dmg[pow]);
                 }
             }
         } else if (is_miniboss) {
@@ -326,15 +326,13 @@ void procgen_generate_current_room(void) BANKED {
             {
                 u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
-                    // Palette matches the stage's mini-boss silhouette (art is
-                    // swapped in VRAM by tiles_load_miniboss, which uses the
-                    // WRAPPED stage — index the same way or deep stages get a
-                    // sprite/palette mismatch). HP power clamps (u8 overflow).
-                    static const u8 mb_variant[9] = { 0, 1, 2, 0, 1, 2, 1, 2, 0 };
-                    static const u8 mb_pal[3]     = { 0x06, 0x07, 0x00 };
+                    // Silhouette comes from the generated stage table —
+                    // ONE source shared with tiles_load_miniboss, so art and
+                    // palette can't drift apart. HP power clamps (u8 overflow).
+                    static const u8 mb_pal[3] = { 0x06, 0x07, 0x00 };
                     u8 mb_pow = (stage < 9) ? stage : 8;
                     entities[idx].sprite_tile = SPR_BOSS;
-                    entities[idx].palette     = mb_pal[mb_variant[stage % 9]];
+                    entities[idx].palette     = mb_pal[stage_mb_variant[stage % 9]];
                     entities[idx].hitbox      = (14 << 4) | 14;
                     entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
                 }

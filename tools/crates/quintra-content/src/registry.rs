@@ -46,6 +46,14 @@ impl Registry {
                         i, s.id));
                 }
             }
+            // Difficulty must never regress as the run deepens
+            for w in self.stages.windows(2) {
+                if w[1].boss_hp_bonus < w[0].boss_hp_bonus {
+                    errs.push(format!("stage {} boss hp {} < stage {} boss hp {} — \
+                        difficulty regression", w[1].id, w[1].boss_hp_bonus,
+                        w[0].id, w[0].boss_hp_bonus));
+                }
+            }
         }
 
         // Cross-ref checks

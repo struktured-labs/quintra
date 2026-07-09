@@ -4,6 +4,7 @@
 #include "core/types.h"
 #include "render/tiles.h"
 #include "render/sprites_gen.h"
+#include "stages.h"
 
 // All tiles are 2bpp 8x8 (16 bytes). For each row: byte_low, byte_high.
 // color = (high_bit, low_bit) per pixel.
@@ -137,8 +138,7 @@ void tiles_load_miniboss(u8 stage) BANKED {
     static const u8 *const mb[3] = {
         sprite_boss_sentinel, sprite_miniboss_orc, sprite_miniboss_skeleton,
     };
-    static const u8 variant[9] = { 0, 1, 2, 0, 1, 2, 1, 2, 0 };
-    set_sprite_data(SPR_BOSS, 4, mb[variant[stage < 9 ? stage : 8]]);
+    set_sprite_data(SPR_BOSS, 4, mb[stage_mb_variant[stage < 9 ? stage : 8]]);
 }
 
 void tiles_load_boss_big(u8 stage) BANKED {
