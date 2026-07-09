@@ -22,6 +22,10 @@ u8 room_tile_walkable(u8 t) BANKED;
 // A player shot hit a cracked wall: convert it to a secret door.
 void room_open_secret(u8 tx, u8 ty) BANKED;
 
+// Impact shake: wiggle the BG scroll (HUD unaffected) for a few frames.
+// mag = pixels (1-2 sensible); longer of current/new duration wins.
+void room_shake(u8 mag, u8 frames) BANKED;
+
 // Request that the next room_enter resume the CURRENT room (skip procgen)
 // instead of generating a new one — used when returning from the pack screen.
 void room_request_resume(void) BANKED;

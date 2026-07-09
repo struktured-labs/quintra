@@ -49,6 +49,16 @@ static u8 stage_fade;
 // generation so walking into an empty room never false-fires the chime).
 static u8 hostiles_prev;
 
+// Screen shake (BG scroll wiggle; the WINDOW HUD stays put). Set by
+// combat via room_shake() on boss kills / player hits.
+static u8 shake_timer;
+static u8 shake_mag;
+
+void room_shake(u8 mag, u8 frames) BANKED {
+    shake_mag = mag;
+    if (frames > shake_timer) shake_timer = frames;
+}
+
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
 
 // Nine stage themes, indexed by run_state.bosses_beaten (clamped 0-8). Each
@@ -484,6 +494,10 @@ void room_enter(void) {
 void room_exit(void) {
     HIDE_SPRITES;
     hud_hide();
+    // Settle any in-flight shake so the next screen isn't skewed
+    shake_timer = 0;
+    SCX_REG = 0;
+    SCY_REG = 0;
     // NOTE: do NOT wipe entities or stop music here. Opening the pack screen
     // (START) exits the room and returns via the resume path, which expects
     // the room's entities/player/music to be intact. Real room changes
@@ -820,4 +834,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 void room_draw(void) {
     place_player_sprite();
     entity_draw_all();
+
+    // Impact shake: alternate the BG scroll a few px, settle back to 0.
+    if (shake_timer) {
+        shake_timer--;
+        if (shake_timer == 0) {
+            SCX_REG = 0;
+            SCY_REG = 0;
+        } else {
+            SCX_REG = (shake_timer & 2) ? shake_mag : (u8)(256 - shake_mag);
+            SCY_REG = (shake_timer & 4) ? 1 : 0xFF;
+        }
+    }
 }

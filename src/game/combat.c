@@ -82,6 +82,7 @@ u8 combat_resolve(void) BANKED {
                             i16 bx = FIX8_TO_INT(entities[j].x) + 12;
                             i16 by = FIX8_TO_INT(entities[j].y) + 12;
                             g_hitstop = 8;   // boss kill: big freeze
+                            room_shake(2, 26);   // the colossus hits the floor
                             run_state.bosses_beaten++;
                             if (run_state.bosses_beaten >= BOSSES_TO_WIN) {
                                 run_state.victory = 1;
@@ -153,6 +154,7 @@ u8 combat_resolve(void) BANKED {
                     player.hp = (u8)(player.hp - taken);
                     player.iframes = 30;
                     g_hitstop = 3;
+                    room_shake(1, 6);   // small jolt: that one hurt
                     sfx_play(SFX_HURT);
                     // Knockback: shove the player up to 6px away from the
                     // source, one wall-checked pixel at a time (Zelda feel +
