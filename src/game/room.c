@@ -120,12 +120,13 @@ static const u16 bullet_palette[4] = {
     BGR555(31, 31,  4),
 };
 
-// Heart pickup palette (red)
+// Heart pickup palette (red). Color 3 is unused by the heart sprite —
+// it doubles as the Bomber's lit fuse and the weapon orb's glow core.
 static const u16 heart_palette[4] = {
     BGR555( 0,  0,  0),
     BGR555(31, 12, 12),
     BGR555(16,  4,  4),
-    BGR555( 0,  0,  0),
+    BGR555(31, 26,  6),
 };
 
 // Coin pickup palette (gold)

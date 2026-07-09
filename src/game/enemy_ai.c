@@ -42,6 +42,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 3:  return 0x00;
         case 4:  return 0x07;
         case 5:  return 0x00;
+        case 6:  return 0x04;   // Bomber: red shell, amber fuse (danger!)
         default: return 0x03;
     }
 }
