@@ -80,3 +80,74 @@ void sram_clear_run(void) {
     SRAM_BASE[0] = 0x00;   // kill the magic — everything else is inert
     sram_close();
 }
+
+// ---- Meta-progress: SRAM bank 1 (per the engine design's bank plan).
+// Layout: 'Q' 'M' version | best u16 | runs u16 | wins u16 | checksum.
+
+#define META_VERSION 1
+
+static void meta_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(1); }
+
+static u8 meta_sum(void) {
+    u8 s = 0, i;
+    for (i = 3; i < 9; ++i) s = (u8)(s + SRAM_BASE[i]);
+    return s;
+}
+
+static u8 meta_valid(void) {
+    return (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'M'
+        && SRAM_BASE[2] == META_VERSION
+        && SRAM_BASE[9] == meta_sum()) ? 1 : 0;
+}
+
+static void meta_reset(void) {
+    u8 i;
+    SRAM_BASE[0] = 'Q'; SRAM_BASE[1] = 'M'; SRAM_BASE[2] = META_VERSION;
+    for (i = 3; i < 9; ++i) SRAM_BASE[i] = 0;
+    SRAM_BASE[9] = meta_sum();
+}
+
+static u16 meta_get16(u8 off) {
+    return (u16)(SRAM_BASE[off] | ((u16)SRAM_BASE[off + 1] << 8));
+}
+
+static void meta_put16(u8 off, u16 v) {
+    SRAM_BASE[off]     = (u8)(v & 0xFF);
+    SRAM_BASE[off + 1] = (u8)(v >> 8);
+}
+
+u16 sram_meta_best(void) {
+    u16 v;
+    meta_open();
+    v = meta_valid() ? meta_get16(3) : 0;
+    sram_close();
+    return v;
+}
+
+u16 sram_meta_runs(void) {
+    u16 v;
+    meta_open();
+    v = meta_valid() ? meta_get16(5) : 0;
+    sram_close();
+    return v;
+}
+
+u16 sram_meta_wins(void) {
+    u16 v;
+    meta_open();
+    v = meta_valid() ? meta_get16(7) : 0;
+    sram_close();
+    return v;
+}
+
+u8 sram_meta_record(u16 score, u8 won) {
+    u8 is_best = 0;
+    meta_open();
+    if (!meta_valid()) meta_reset();
+    if (score > meta_get16(3)) { meta_put16(3, score); is_best = 1; }
+    meta_put16(5, (u16)(meta_get16(5) + 1));
+    if (won) meta_put16(7, (u16)(meta_get16(7) + 1));
+    SRAM_BASE[9] = meta_sum();
+    sram_close();
+    return is_best;
+}

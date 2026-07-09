@@ -68,7 +68,18 @@ void title_enter(void) {
         printf("PRESS  START");
     }
     gotoxy(6, 16);
-    printf("v0.4");
+    printf("v0.9");
+    {
+        u16 best = sram_meta_best();
+        if (best > 0) {
+            gotoxy(3, 14);
+            printf("BEST %u", best);
+            {
+                u16 w = sram_meta_wins();
+                if (w > 0) printf("  WINS %u", w);
+            }
+        }
+    }
 
     pulse_phase         = 0;
     last_palette_color2 = title_palette_steady[2];

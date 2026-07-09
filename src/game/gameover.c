@@ -23,8 +23,11 @@ static const u16 gameover_palette[4] = {
     BGR555(31, 28, 28),    // 3: pale pink-white
 };
 
+static u8 new_best;
+
 void gameover_enter(void) {
     sram_clear_run();   // run over -> suspend save dies with it
+    new_best = sram_meta_record(run_state.score, 0);
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;
@@ -38,7 +41,9 @@ void gameover_enter(void) {
     gotoxy(6, 3);  printf("GAME  OVER");
     gotoxy(2, 7);  printf("rooms   %u", (u16)run_state.room_counter);
     gotoxy(2, 8);  printf("kills   %u", (u16)run_state.enemies_killed);
-    gotoxy(2, 9);  printf("score   %u", (u16)run_state.score);
+    gotoxy(2, 9);  printf("score   %u%s", (u16)run_state.score,
+        new_best ? " NEW!" : "");
+    gotoxy(2, 10); printf("best    %u", sram_meta_best());
     gotoxy(2, 14); printf("PRESS  START");
 
     music_play_gameover();

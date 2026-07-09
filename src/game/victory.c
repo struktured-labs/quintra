@@ -25,8 +25,11 @@ static const u16 victory_palette[4] = {
     BGR555(31, 31, 24),    // 3: cream-gold
 };
 
+static u8 new_best;
+
 void victory_enter(void) {
     sram_clear_run();   // run over -> suspend save dies with it
+    new_best = sram_meta_record(run_state.score, 1);
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;
@@ -44,7 +47,9 @@ void victory_enter(void) {
 
     gotoxy(2, 11); printf("rooms   %u", (u16)run_state.room_counter);
     gotoxy(2, 12); printf("kills   %u", (u16)run_state.enemies_killed);
-    gotoxy(2, 13); printf("score   %u", (u16)run_state.score);
+    gotoxy(2, 13); printf("score   %u%s", (u16)run_state.score,
+        new_best ? " NEW!" : "");
+    gotoxy(2, 14); printf("best    %u", sram_meta_best());
 
     gotoxy(2, 16); printf("PRESS  START");
 
