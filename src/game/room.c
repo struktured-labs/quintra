@@ -36,6 +36,10 @@ static u8 secret_door_y = 0xFF;
 // Block-push state: current lean direction + how long it's been held.
 static u8 push_dir = DIR_NONE;
 static u8 push_timer;
+// Stage-entry reveal: first room of each new stage fades in from dimmed
+// palettes over ~half a second. stage_seen tracks the last stage revealed.
+static u8 stage_seen = 0xFF;
+static u8 stage_fade;
 
 void room_request_resume(void) { room_resume_flag = 1; }
 
@@ -450,6 +454,14 @@ void room_enter(void) {
         music_play_stage(room_stage());
     }
 
+    // Stage-entry reveal: first room of a new stage (or of a fresh run)
+    // starts with dimmed palettes and pops to full ~0.4s in.
+    if (run_state.room_counter == 0) stage_seen = 0xFF;
+    if (room_stage() != stage_seen) {
+        stage_seen = room_stage();
+        stage_fade = 26;
+        room_apply_pause_palettes(1);   // start dimmed
+    }
 
     SHOW_SPRITES;
     SHOW_BKG;
@@ -476,6 +488,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         room_apply_pause_palettes(room_paused);
     }
     if (room_paused) return SCREEN_SELF;
+
+    // ---- Stage-entry reveal: hold dimmed palettes briefly, then pop to
+    // full brightness — a beat of "emerging into somewhere new".
+    if (stage_fade) {
+        if (--stage_fade == 0) room_apply_pause_palettes(0);
+    }
 
     // ---- Hit-stop: freeze the world a few frames on impact for weight,
     // but keep drawing so the flash/knockback is visible.
@@ -737,6 +755,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     sfx_play(SFX_ROAR);
                 } else {
                     music_play_stage(room_stage());
+                }
+                // Stage-entry reveal (door path — stage changes land here
+                // after a boss kill, not via room_enter)
+                if (room_stage() != stage_seen) {
+                    stage_seen = room_stage();
+                    stage_fade = 26;
+                    room_apply_pause_palettes(1);
                 }
                 return SCREEN_SELF;
             }
