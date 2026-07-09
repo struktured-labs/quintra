@@ -32,6 +32,13 @@ static const char *class_name(u8 id) {
     return "?";
 }
 
+// Stage names — one per palette theme in room.c's stage_pal table.
+static const char *const stage_names[9] = {
+    "CRYSTAL CAVERNS", "VERDANT HOLLOW", "EMBER DEPTHS",
+    "FROST VAULT",     "TOXIC MIRE",     "SHADOW KEEP",
+    "GOLDEN TEMPLE",   "BLOODMOON",      "VOID SANCTUM",
+};
+
 // items[] is keyed by array position but item.id != index beyond the 5
 // starters — resolve the real entry by id (small table, linear scan is fine).
 static const char *item_name_by_id(u16 id) {
@@ -56,6 +63,11 @@ void inventory_enter(void) {
     gotoxy(5, 0);  printf("- PACK -");
     gotoxy(1, 2);  printf("%s", class_name(player.class_id));
     gotoxy(11, 2); printf("stage %u", (u16)(run_state.bosses_beaten + 1));
+    {
+        u8 s = run_state.bosses_beaten;
+        gotoxy(1, 3);
+        printf("%s", stage_names[s < 9 ? s : 8]);
+    }
 
     gotoxy(1, 4);  printf("HP %u/%u", (u16)player.hp, (u16)player.hp_max);
     gotoxy(11, 4); printf("MP %u/%u", (u16)player.mp, (u16)player.mp_max);
