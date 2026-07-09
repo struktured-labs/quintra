@@ -91,11 +91,24 @@ const u8 hud_tiles[15][16] = {
       0x3C,0x3C, 0x04,0x04, 0x18,0x18, 0x00,0x00 },
 };
 
+// Boss HP bar segments: solid filled cell vs hollow outline. Drawn in the
+// HUD palette (color 3 = red, color 1 = outline grey-blue).
+static const u8 hud_bar_full[16] = {
+    0x00,0x00, 0x7E,0x7E, 0x7E,0x7E, 0x7E,0x7E,
+    0x7E,0x7E, 0x7E,0x7E, 0x7E,0x7E, 0x00,0x00,
+};
+static const u8 hud_bar_empty[16] = {
+    0x00,0x00, 0x7E,0x00, 0x42,0x00, 0x42,0x00,
+    0x42,0x00, 0x42,0x00, 0x7E,0x00, 0x00,0x00,
+};
+
 void tiles_load_hud(void) {
     u8 i;
     for (i = 0; i < HUD_TILE_COUNT; ++i) {
         set_bkg_data((u8)(HUD_HEART_FULL + i), 1, hud_tiles[i]);
     }
+    set_bkg_data(HUD_BAR_FULL,  1, hud_bar_full);
+    set_bkg_data(HUD_BAR_EMPTY, 1, hud_bar_empty);
 }
 
 void tiles_load_all_class_sprites(void) {

@@ -638,6 +638,26 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         return SCREEN_GAMEOVER;
     }
 
+    // ---- Boss HP bar: poll the (mini-)boss entity each frame; the HUD
+    // helper caches segments so this only writes VRAM on real changes.
+    {
+        u8 i, found = 0;
+        for (i = 0; i < MAX_ENTITIES; ++i) {
+            if ((entities[i].flags & EF_ACTIVE)
+                && entities[i].type == ENT_ENEMY
+                && entities[i].ai_data[0] == 1) {
+                // ai_data[6] = remembered max HP (set on first boss tick);
+                // fall back to current hp for the very first frame.
+                u8 max = entities[i].ai_data[6];
+                if (max == 0) max = entities[i].hp;
+                hud_redraw_boss(entities[i].hp, max);
+                found = 1;
+                break;
+            }
+        }
+        if (!found) hud_redraw_boss(0, 0);
+    }
+
     // ---- Boss beaten (non-final): lift the door seal, run continues,
     // and the fight music yields back to the exploration theme.
     if (run_state.pending_unseal) {

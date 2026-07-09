@@ -16,6 +16,9 @@ void hud_hide(void);          // HIDE_WIN
 void hud_redraw_hp(void);     // call when player.hp / hp_max changes
 void hud_redraw_coins(void);  // call when player.coins changes
 void hud_redraw_depth(void);  // call when run_state.room_counter changes
+// Boss HP as a 5-segment bar (cols 10-14). max==0 clears the bar.
+// Caches internally: cheap to call every frame.
+void hud_redraw_boss(u8 cur, u8 max);
 void hud_redraw_all(void);
 
 #endif

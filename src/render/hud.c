@@ -100,8 +100,36 @@ void hud_redraw_depth(void) {
     set_win_tiles(8, 0, 2, 1, row);
 }
 
+void hud_redraw_boss(u8 cur, u8 max) {
+    // 5 segments, each worth max/5 HP (rounded up). Cached so per-frame
+    // polling only writes VRAM when the segment count actually changes.
+    static u8 last_segs = 0xFF;
+    u8 segs, i;
+    u8 row[5];
+
+    if (max == 0) {
+        segs = 0xFE;                     // sentinel: bar hidden
+        if (segs == last_segs) return;
+        for (i = 0; i < 5; ++i) row[i] = HUD_BLANK;
+    } else {
+        // ceil(cur * 5 / max), clamped 1..5 while alive
+        u16 t = (u16)((u16)cur * 5);
+        segs = (u8)((t + max - 1) / max);
+        if (segs > 5) segs = 5;
+        if (cur > 0 && segs == 0) segs = 1;
+        if (segs == last_segs) return;
+        for (i = 0; i < 5; ++i) {
+            row[i] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
+        }
+    }
+    last_segs = segs;
+    VBK_REG = 0;
+    set_win_tiles(10, 0, 5, 1, row);
+}
+
 void hud_redraw_all(void) {
     hud_redraw_hp();
     hud_redraw_coins();
     hud_redraw_depth();
+    hud_redraw_boss(0, 0);   // hidden until a boss is polled alive
 }

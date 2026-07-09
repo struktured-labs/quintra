@@ -18,6 +18,9 @@
 #define HUD_COIN        7
 #define HUD_BLANK       8
 #define HUD_DIGIT_0     9    // ...9..18 = digits 0..9
+// Boss HP bar segments (loaded with the HUD set; slots after dungeon tiles)
+#define HUD_BAR_FULL   26
+#define HUD_BAR_EMPTY  27
 
 // Dungeon tile slots (after HUD block)
 #define BGT_FLOOR2  19   // cracked floor variant
