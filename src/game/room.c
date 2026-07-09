@@ -734,7 +734,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             u8 max = (eid < N_ENEMIES) ? enemies[eid].stats.hp : 0;
             if (max) {
                 // Elites carry doubled HP — double the reference too
-                if (entities[corvin_i].palette == 0x06) max = (u8)(max << 1);
+                if (entities[corvin_i].flags & EF_ELITE) max = (u8)(max << 1);
                 hud_redraw_boss(entities[corvin_i].hp, max);
                 found = 1;
             }

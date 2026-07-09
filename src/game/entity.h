@@ -22,6 +22,7 @@ enum {
 #define EF_ON_SCREEN   0x04
 #define EF_DIRTY       0x08
 #define EF_PLAYER_PROJ 0x10   // player-owned projectile (vs enemy projectile)
+#define EF_ELITE       0x20   // elite enemy: boss-glow, 2x HP, sure loot
 
 typedef struct {
     u8     type;
