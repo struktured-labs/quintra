@@ -16,6 +16,15 @@ static const u16 hud_palette[4] = {
     BGR555(31,  6,  8),    // 3: heart red
 };
 
+// MP variant: same tiles, color 3 flips to magic blue. Assigned to the
+// MP digit columns via per-tile attributes — no extra tile data needed.
+static const u16 hud_palette_mp[4] = {
+    BGR555( 0,  0,  0),
+    BGR555(10, 14, 20),
+    BGR555(31, 20,  6),
+    BGR555( 8, 22, 31),    // 3: MP blue
+};
+
 // 1-row HUD layout (20 tiles wide):
 //
 //   col:  0 1 2 3 4   ...   15 16 17 18 19
@@ -26,15 +35,19 @@ static const u16 hud_palette[4] = {
 
 void hud_init(void) {
     tiles_load_hud();
-    // Place HUD on BG palette slot 7 (won't collide with room pal 0)
+    // Place HUD on BG palette slot 7 (won't collide with room pal 0);
+    // slot 6 is the blue MP variant for the MP digit columns.
     palette_bg_load(7, hud_palette);
+    palette_bg_load(6, hud_palette_mp);
 
     // Fill all 20 WIN tiles with blank, then set palette attribute = 7
+    // (except the MP columns 6-7, which take the blue palette 6)
     {
         u8 row[20];
         u8 attr[20];
         u8 i;
         for (i = 0; i < 20; ++i) { row[i] = HUD_BLANK; attr[i] = 0x07; }
+        attr[6] = attr[7] = 0x06;
         VBK_REG = 0; set_win_tiles(0, 0, 20, 1, row);
         VBK_REG = 1; set_win_tiles(0, 0, 20, 1, attr);
         VBK_REG = 0;
@@ -89,6 +102,17 @@ void hud_redraw_coins(void) {
     set_win_tiles(15, 0, 4, 1, row);
 }
 
+void hud_redraw_mp(void) {
+    // MP as blue digits (cols 6-7), right-aligned; hidden for MP-less state
+    u8 row[2];
+    u8 m = player.mp;
+    if (m > 99) m = 99;
+    row[0] = (m >= 10) ? (u8)(HUD_DIGIT_0 + (m / 10)) : HUD_BLANK;
+    row[1] = (u8)(HUD_DIGIT_0 + (m % 10));
+    VBK_REG = 0;
+    set_win_tiles(6, 0, 2, 1, row);
+}
+
 void hud_redraw_depth(void) {
     // Room depth as 2 digits, centered-ish (cols 8-9). Boss lives at depth 5.
     u8 row[2];
@@ -129,6 +153,7 @@ void hud_redraw_boss(u8 cur, u8 max) {
 
 void hud_redraw_all(void) {
     hud_redraw_hp();
+    hud_redraw_mp();
     hud_redraw_coins();
     hud_redraw_depth();
     hud_redraw_boss(0, 0);   // hidden until a boss is polled alive

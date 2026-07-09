@@ -609,8 +609,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
         if (player.fire_cooldown > 0) player.fire_cooldown--;
 
-        // ---- Weapon 2 (B, edge): class signature move, ~2.3s cooldown
-        if ((pressed & J_B) && player.active_charge == 0) {
+        // ---- Weapon 2 (B, edge): class signature move. Costs MP_COST_B
+        // magic on top of the ~2.3s cooldown; no MP -> error beep.
+        #define MP_COST_B 2
+        if ((pressed & J_B) && player.active_charge == 0
+            && player.mp < MP_COST_B) {
+            sfx_play(SFX_HURT);   // out of magic
+        }
+        if ((pressed & J_B) && player.active_charge == 0
+            && player.mp >= MP_COST_B) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + 1 + player.atk);
             u8 d;
@@ -649,8 +656,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
             sfx_play(SFX_ROAR);
             player.active_charge = 140;
+            player.mp = (u8)(player.mp - MP_COST_B);
+            hud_redraw_mp();
         }
         if (player.active_charge > 0) player.active_charge--;
+
+        // MP trickle: +1 every ~3.2s while below max
+        if (player.mp < player.mp_max) {
+            static u8 mp_regen;
+            if (++mp_regen >= 192) {
+                mp_regen = 0;
+                player.mp++;
+                hud_redraw_mp();
+            }
+        }
     }
 
     // ---- Entity updates
@@ -681,11 +700,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
         if (!found) hud_redraw_boss(0, 0);
 
-        // Last hostile down → rising chime. Boss kills keep their own
-        // fanfare (roar/explosion), so skip when one just landed.
+        // Last hostile down → rising chime + 1 MP back. Boss kills keep
+        // their own fanfare (roar/explosion), so skip when one just landed.
         if (alive == 0 && hostiles_prev != 0
             && !run_state.pending_unseal && !run_state.victory) {
             sfx_play(SFX_CLEAR);
+            if (player.mp < player.mp_max) {
+                player.mp++;
+                hud_redraw_mp();
+            }
         }
         hostiles_prev = alive;
     }

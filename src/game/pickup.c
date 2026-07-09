@@ -111,6 +111,8 @@ static void apply_item_effects(u8 item_idx) {
             case STAT_MP:
                 player.mp_max = (u8)(player.mp_max + ef->d1);
                 if (player.mp_max > 20) player.mp_max = 20;
+                player.mp = (u8)(player.mp + ef->d1);
+                if (player.mp > player.mp_max) player.mp = player.mp_max;
                 break;
             case STAT_ATK:
                 if (player.atk < 15) player.atk = (u8)(player.atk + ef->d1);
