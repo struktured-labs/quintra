@@ -43,9 +43,24 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
 u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_ITEM, x, y);
     if (idx != 0xFF) {
+        // Category tint for the passive orbs (indices 10..19):
+        // offense = red, defense = bone-white, utility/luck = gold.
+        static const u8 tint[10] = {
+            0x00,   // 10 Iron Heart   (defense)
+            0x05,   // 11 Speed Ring   (utility)
+            0x04,   // 12 PowerStone   (offense)
+            0x00,   // 13 Tough Skin   (defense)
+            0x05,   // 14 Lucky Coin   (utility)
+            0x05,   // 15 Mana Gem     (utility)
+            0x00,   // 16 Ward Charm   (defense)
+            0x04,   // 17 Swift Fang   (offense)
+            0x05,   // 18 HuntersEye   (utility)
+            0x04,   // 19 BloodSigil   (offense)
+        };
         entities[idx].ai_data[1]  = item_index;
         entities[idx].sprite_tile = SPR_ITEM_ORB;
-        entities[idx].palette     = 0x05;      // gold
+        entities[idx].palette     = (item_index >= 10 && item_index <= 19)
+            ? tint[item_index - 10] : 0x05;
         entities[idx].state_timer = 255;       // items linger longest
     }
     return idx;
