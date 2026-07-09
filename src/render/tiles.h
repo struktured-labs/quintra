@@ -56,6 +56,7 @@
 #define SPR_FX_IMPACT      33
 #define SPR_ENEMY_WISP     34
 #define SPR_ITEM_ORB       35
+#define SPR_ENEMY_BOMBER   36
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Legacy aliases (kept for back-compat with existing code):
 #define SPR_PLAYER         SPR_CLASS_BASE

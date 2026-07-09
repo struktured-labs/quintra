@@ -7,6 +7,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
@@ -105,6 +106,15 @@ u8 combat_resolve(void) BANKED {
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x + FIX8(16), entities[j].y);
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y + FIX8(16));
+                        } else if (eid == 6) {
+                            // Bomber: death detonation — a 4-way revenge
+                            // burst. Kill it from a diagonal, or eat sparks.
+                            i16 dx2 = FIX8_TO_INT(entities[j].x);
+                            i16 dy2 = FIX8_TO_INT(entities[j].y);
+                            projectile_spawn_enemy(dx2, dy2, 0, -2, entities[j].damage);
+                            projectile_spawn_enemy(dx2, dy2, 0,  2, entities[j].damage);
+                            projectile_spawn_enemy(dx2, dy2, -2, 0, entities[j].damage);
+                            projectile_spawn_enemy(dx2, dy2,  2, 0, entities[j].damage);
                         } else if (eid == 1) {
                             // Mini-boss down: solid reward, no stage advance.
                             // Always drops a weapon orb you don't hold —

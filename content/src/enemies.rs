@@ -88,6 +88,19 @@ pub const WISP: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const BOMBER: Enemy = Enemy {
+    id:         ENEMY_BOMBER,
+    name:       "Bomber",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    // Chunky slow walker. The real threat is the death detonation —
+    // combat.c fires a 4-way revenge burst when it dies.
+    stats: EnemyStats { hp: 4, damage: 2, speed: 40, score: 35, weakness: 0x02, poise: 2 },
+    ai_script:  AiScriptId::Walker,
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -95,4 +108,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(SKELETON.clone());
     r.add_enemy(ORC.clone());
     r.add_enemy(WISP.clone());
+    r.add_enemy(BOMBER.clone());
 }

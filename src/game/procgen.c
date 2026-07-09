@@ -420,6 +420,11 @@ void procgen_generate_current_room(void) BANKED {
                                 ? ((rng_next_u8() & 1) ? 5 : 4)   // wisp / orc
                                 : ((rng_next_u8() & 1) ? 2 : 3);  // hornet / skeleton
                         }
+                        // Stage 3+: some upgrades become Bombers (die angry)
+                        if (eid != 0 && eid != 1 && stage >= 3
+                            && (rng_next_u8() & 3) == 0) {
+                            eid = 6;
+                        }
                     }
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);

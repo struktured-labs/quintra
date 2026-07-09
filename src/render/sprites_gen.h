@@ -17,6 +17,7 @@ extern const u8 sprite_enemy_crawler[16];
 extern const u8 sprite_enemy_hornet[16];
 extern const u8 sprite_enemy_skeleton[16];
 extern const u8 sprite_enemy_orc[16];
+extern const u8 sprite_enemy_bomber[16];
 
 // 8x8 FX sprites
 extern const u8 sprite_fx_bullet_a[16];

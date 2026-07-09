@@ -27,6 +27,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 3: return SPR_ENEMY_SKELETON;
         case 4: return SPR_ENEMY_ORC;
         case 5: return SPR_ENEMY_WISP;
+        case 6: return SPR_ENEMY_BOMBER;
         default: return SPR_ENEMY_CRAWLER;
     }
 }

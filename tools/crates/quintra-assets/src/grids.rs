@@ -145,6 +145,17 @@ pub const ORC: [&str; 8] = [
     "1.1.1.1.",
 ];
 
+pub const BOMBER: [&str; 8] = [
+    "....3...",
+    "...3....",
+    "..1111..",
+    ".111111.",
+    "11311311",
+    "11111111",
+    ".111111.",
+    "..1111..",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -353,11 +364,12 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 4] = [
+pub const ENEMIES_8: [(&str, &[&str]); 5] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
     ("orc", &ORC),
+    ("bomber", &BOMBER),
 ];
 
 pub const FX_8: [(&str, &[&str]); 6] = [
