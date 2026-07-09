@@ -155,8 +155,15 @@ The Makefile chains these. `cargo build` failures fail the whole build — no RO
 - ALWAYS clean stray Xvfb procs: `pkill -9 -f 'Xvfb :'`
 
 ### Rust unit tests
-- `cargo test` — content validation, procgen determinism, codegen output
+- `cargo test` — content validation, procgen determinism, codegen output,
+  sprite-pipeline golden test (quintra-assets output == checked-in
+  sprites_gen.c), room-shape property tests (door connectivity across
+  seeds, lane clearance, boss sealing)
 - xorshift32 determinism is pinned by test — the on-cart C impl must match
+- `uv run --with pyboy python scripts/test_procgen_parity.py` — cross-seam
+  check: quintra-procgen's reference tilemap vs the real ROM's WRAM for
+  seeded rooms (plain/mini-boss/shop/rest/boss). Run after ANY change to
+  procgen.c's RNG call order or room layout code.
 
 ### mGBA MCP
 - When available, prefer MCP `mgba_*` tools over CLI subprocess

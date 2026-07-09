@@ -21,9 +21,16 @@ impl Xorshift32 {
 
     pub fn next_u8(&mut self) -> u8 { (self.next_u32() & 0xFF) as u8 }
 
-    /// Uniform integer in [0, n). Slight modulo bias acceptable for procgen.
-    pub fn range(&mut self, n: u32) -> u32 {
-        if n == 0 { 0 } else { self.next_u32() % n }
+    /// Mirror of the cart's `rng_range(u8 n)`: one full draw, the LOW BYTE
+    /// reduced mod n. (Not `next_u32() % n` — both call order AND the
+    /// reduction must match the C or every downstream value diverges.)
+    pub fn range_u8(&mut self, n: u8) -> u8 {
+        if n == 0 { 0 } else { self.next_u8() % n }
+    }
+
+    /// Mirror of the cart's `rng_range16(u16 n)`.
+    pub fn range_u16(&mut self, n: u16) -> u16 {
+        if n == 0 { 0 } else { ((self.next_u32() & 0xFFFF) as u16) % n }
     }
 }
 
