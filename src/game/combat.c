@@ -72,19 +72,35 @@ u8 combat_resolve(void) {
                             run_state.score = s;
                         }
                         run_state.enemies_killed++;
-                        if (eid == 1) {
+                        // Enemy id 1 is used by BOTH the large stage boss
+                        // (giant flag ai_data[3]=1) and the room-3 mini-boss.
+                        // Only the GIANT advances the stage — a mini-boss kill
+                        // must not skip the stage boss (bug: it used to).
+                        if (eid == 1 && entities[j].ai_data[3]) {
+                            i16 bx = FIX8_TO_INT(entities[j].x) + 12;
+                            i16 by = FIX8_TO_INT(entities[j].y) + 12;
                             g_hitstop = 8;   // boss kill: big freeze
-                            // Boss down: reward burst + unseal, or final victory
                             run_state.bosses_beaten++;
                             if (run_state.bosses_beaten >= BOSSES_TO_WIN) {
                                 run_state.victory = 1;
                             } else {
                                 run_state.pending_unseal = 1;
                             }
+                            // Death explosion: staggered ring of impact FX
+                            fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by - 10, 14);
+                            fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by - 10, 18);
+                            fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by + 10, 22);
+                            fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by + 10, 26);
+                            fx_spawn(SPR_FX_IMPACT, 2, bx,      by,      30);
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x - FIX8(8), entities[j].y);
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x + FIX8(16), entities[j].y);
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y + FIX8(16));
+                        } else if (eid == 1) {
+                            // Mini-boss down: solid reward, no stage advance
+                            g_hitstop = 5;
+                            pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
+                            pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
                         }
                     }
                     // Impact FX at enemy position

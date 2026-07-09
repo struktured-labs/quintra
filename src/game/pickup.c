@@ -63,12 +63,33 @@ void pickup_roll_drop(fix8_t x, fix8_t y) {
 
 void pickup_update(entity_t *e, u8 idx) {
     // Shop wares are permanent until bought; state counts a retry delay.
+    // They never magnetize (flying wares would force accidental purchases).
     if (e->ai_data[0] == PICKUP_SHOP) {
         if (e->state > 0) e->state--;
         return;
     }
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
+
+    // Magnetism: within a ~28px box of the player, drift 1px/frame toward
+    // them (2px when very close) — loot hoovers itself up, Zelda-style.
+    {
+        i16 ex = FIX8_TO_INT(e->x);
+        i16 ey = FIX8_TO_INT(e->y);
+        i16 dx = (i16)player.x - ex;
+        i16 dy = (i16)player.y - ey;
+        i16 adx = dx < 0 ? -dx : dx;
+        i16 ady = dy < 0 ? -dy : dy;
+        if (adx < 28 && ady < 28) {
+            u8 step = (adx < 12 && ady < 12) ? 2 : 1;
+            if (dx > 0)      ex += step;
+            else if (dx < 0) ex -= step;
+            if (dy > 0)      ey += step;
+            else if (dy < 0) ey -= step;
+            e->x = FIX8(ex);
+            e->y = FIX8(ey);
+        }
+    }
 }
 
 // Apply a generated item's StatBoost effects to the live player.
