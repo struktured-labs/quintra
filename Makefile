@@ -39,13 +39,14 @@ build: dirs $(BINDIR)/$(PROJECT).gbc
 dirs:
 	@mkdir -p $(OBJDIR) $(BINDIR) $(GENDIR)
 
-# Rust codegen: build the codegen tool then run it.
+# Rust codegen: content tables + sprite/tile art, both from typed Rust.
 gen:
-	@cargo build --release -p quintra-codegen 2>&1 | grep -E 'error|warning' || true
-	@if [ ! -x target/release/quintra-codegen ]; then \
-		echo "[gen] FATAL: codegen failed to build"; exit 1; \
+	@cargo build --release -p quintra-codegen -p quintra-assets 2>&1 | grep -E 'error|warning' || true
+	@if [ ! -x target/release/quintra-codegen ] || [ ! -x target/release/quintra-assets ]; then \
+		echo "[gen] FATAL: Rust tooling failed to build"; exit 1; \
 	fi
 	@target/release/quintra-codegen --content content --out $(GENDIR)
+	@target/release/quintra-assets --out $(SRCDIR)/render/sprites_gen.c
 
 # All headers under src/ (+ generated). lcc/SDCC can't emit .d dep files here,
 # so use a coarse dependency: any header change rebuilds every object. Slower
