@@ -102,7 +102,7 @@ void procgen_generate_current_room(void) BANKED {
             // N/S door at col 10; rows 7-9 for the E/W door at row 8) so
             // every door remains reachable regardless of pattern.
             {
-                u8 shape = (u8)(rng_next_u8() & 0x03);
+                u8 shape = (u8)(rng_next_u8() & 0x07);
                 if (shape == 1) {
                     // Four pillars at quarter points
                     room_tilemap[4][4]   = BGT_PILLAR;
@@ -126,8 +126,50 @@ void procgen_generate_current_room(void) BANKED {
                     room_tilemap[4][14]  = BGT_PILLAR; room_tilemap[4][15]  = BGT_PILLAR;
                     room_tilemap[13][4]  = BGT_PILLAR; room_tilemap[13][5]  = BGT_PILLAR;
                     room_tilemap[13][14] = BGT_PILLAR; room_tilemap[13][15] = BGT_PILLAR;
+                } else if (shape == 4) {
+                    // Inner vault: pillar ring at x 4-15 / y 4-12, with
+                    // lane-wide gaps where the door lanes cross it.
+                    u8 i;
+                    for (i = 4; i <= 15; ++i) {
+                        if (i >= 9 && i <= 11) continue;      // N/S lane gap
+                        room_tilemap[4][i]  = BGT_PILLAR;
+                        room_tilemap[12][i] = BGT_PILLAR;
+                    }
+                    for (i = 4; i <= 12; ++i) {
+                        if (i >= 7 && i <= 9) continue;       // E/W lane gap
+                        room_tilemap[i][4]  = BGT_PILLAR;
+                        room_tilemap[i][15] = BGT_PILLAR;
+                    }
+                } else if (shape == 5) {
+                    // Twin walls: vertical pillar runs at x=5 and x=14,
+                    // broken at the E/W lane — three linked chambers.
+                    u8 i;
+                    for (i = 2; i <= 14; ++i) {
+                        if (i >= 7 && i <= 9) continue;
+                        room_tilemap[i][5]  = BGT_PILLAR;
+                        room_tilemap[i][14] = BGT_PILLAR;
+                    }
+                } else if (shape == 6) {
+                    // Diagonal crystal spurs from each corner (shootable)
+                    room_tilemap[3][3]   = BGT_CRYSTAL; room_tilemap[4][4]   = BGT_CRYSTAL;
+                    room_tilemap[5][5]   = BGT_CRYSTAL;
+                    room_tilemap[3][16]  = BGT_CRYSTAL; room_tilemap[4][15]  = BGT_CRYSTAL;
+                    room_tilemap[5][14]  = BGT_CRYSTAL;
+                    room_tilemap[13][3]  = BGT_CRYSTAL; room_tilemap[12][4]  = BGT_CRYSTAL;
+                    room_tilemap[11][5]  = BGT_CRYSTAL;
+                    room_tilemap[13][16] = BGT_CRYSTAL; room_tilemap[12][15] = BGT_CRYSTAL;
+                    room_tilemap[11][14] = BGT_CRYSTAL;
+                } else if (shape == 7) {
+                    // Colonnade: two pillar rows flanking the E/W lane —
+                    // a great hall with cover to duck behind.
+                    static const u8 col_x[6] = { 3, 5, 7, 13, 15, 17 };
+                    u8 i;
+                    for (i = 0; i < 6; ++i) {
+                        room_tilemap[5][col_x[i]]  = BGT_PILLAR;
+                        room_tilemap[11][col_x[i]] = BGT_PILLAR;
+                    }
                 }
-                // shape 0: open room
+                // shape 0: open room (now 1-in-8 — variety rules)
             }
 
             // Rubble decoration (walkable) — 3 scatter spots
