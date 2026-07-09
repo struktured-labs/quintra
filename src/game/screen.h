@@ -28,7 +28,12 @@ typedef u8 screen_id_t;
 typedef screen_id_t (*screen_tick_fn)(u8 keys, u8 pressed);
 typedef void (*screen_void_fn)(void);
 
+// bank: ROM bank holding this screen's code (BANK(fn) link constant).
+// 0 = screen lives in home, no switch needed. The dispatcher in loop.c
+// maps the bank before every pointer call — a plain indirect call into
+// an unmapped bank is garbage (banking playbook §7).
 typedef struct {
+    u8               bank;
     screen_void_fn   enter;
     screen_void_fn   exit;
     screen_tick_fn   tick;

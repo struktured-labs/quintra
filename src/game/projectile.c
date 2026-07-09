@@ -1,3 +1,4 @@
+#pragma bank 255
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
@@ -14,7 +15,7 @@
 // doubles damage when it matches the target's weakness.
 u8 g_shot_element;
 
-u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) {
+u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     u8 idx;
     entity_t *e;
     u8 speed, ttl, pierce;
@@ -55,7 +56,7 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) {
 
 // Core spawn with an explicit px/tick velocity — lets bosses mix bullet speeds
 // (thin-fast streams vs. slow dense walls) within one pattern.
-u8 projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) {
+u8 projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) BANKED {
     u8 idx;
     entity_t *e;
     if (vx == 0 && vy == 0) return 0xFF;
@@ -76,12 +77,12 @@ u8 projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) {
     return idx;
 }
 
-u8 projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) {
+u8 projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) BANKED {
     // Legacy 8-dir helper: unit deltas at the default 2 px/tick.
     return projectile_spawn_enemy_v(px, py, (i8)((i16)dx * 2), (i8)((i16)dy * 2), damage);
 }
 
-void projectile_update(entity_t *e, u8 idx) {
+void projectile_update(entity_t *e, u8 idx) BANKED {
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 

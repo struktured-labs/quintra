@@ -1,3 +1,4 @@
+#pragma bank 255
 // CLASS_SELECT — pick a class for this run.
 // Phase 4: shows the 1 unlocked class (Wolfkin). Future content phases
 // will fill out the roster.
@@ -16,6 +17,8 @@
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
+
+BANKREF(class_select_enter)
 
 u8 class_select_cursor;
 

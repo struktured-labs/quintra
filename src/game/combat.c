@@ -1,3 +1,4 @@
+#pragma bank 255
 #include "audio/sfx.h"
 #include "core/rng.h"
 #include "core/types.h"
@@ -26,7 +27,7 @@ static void knockback_enemy(entity_t *e, i8 bvx, i8 bvy, u8 poise) {
     }
 }
 
-u8 combat_resolve(void) {
+u8 combat_resolve(void) BANKED {
     u8 i, j;
     u8 player_died = 0;
 

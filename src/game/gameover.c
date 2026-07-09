@@ -1,3 +1,4 @@
+#pragma bank 255
 // GAMEOVER — death stats screen, returns to TITLE.
 
 #include <gb/gb.h>
@@ -11,6 +12,8 @@
 #include "game/gameover.h"
 #include "game/run_state.h"
 #include "render/palette.h"
+
+BANKREF(gameover_enter)
 
 static const u16 gameover_palette[4] = {
     BGR555( 4,  0,  2),    // 0: deep red-black

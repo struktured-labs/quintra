@@ -1,3 +1,4 @@
+#pragma bank 255
 // Phase 3 placeholder — confirms the screen FSM transition works.
 #include <gb/gb.h>
 #include <gb/cgb.h>
@@ -9,6 +10,8 @@
 #include "game/scratch.h"
 #include "render/palette.h"
 #include "content.h"
+
+BANKREF(scratch_enter)
 
 static const u16 scratch_palette[4] = {
     BGR555( 2, 10,  4),    // 0: forest green

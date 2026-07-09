@@ -1,6 +1,8 @@
 #ifndef QUINTRA_GAME_PICKUP_H
 #define QUINTRA_GAME_PICKUP_H
 
+
+#include <gb/gb.h>
 #include "core/types.h"
 #include "game/entity.h"
 
@@ -17,18 +19,18 @@
 #define WARE_BIG     2   // Iron Heart (+2 max HP), 40 coins
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
-u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y);
+u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
 
 // Spawn a stat-boost item pickup (items[] table index)
-u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y);
+u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
-void pickup_roll_drop(fix8_t x, fix8_t y);
+void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;
 
 // Per-frame update (dispatch in entity_update_all)
-void pickup_update(entity_t *e, u8 idx);
+void pickup_update(entity_t *e, u8 idx) BANKED;
 
 // Player touch check + apply effect; returns 1 if anything was picked up
-u8   pickup_check_player_collision(void);
+u8   pickup_check_player_collision(void) BANKED;
 
 #endif

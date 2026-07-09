@@ -3,6 +3,8 @@
 #ifndef QUINTRA_RENDER_TILES_H
 #define QUINTRA_RENDER_TILES_H
 
+
+#include <gb/gb.h>
 #include "core/types.h"
 
 // BG tile slots
@@ -67,15 +69,15 @@ extern const u8 sprite_tile_coin[16];
 extern const u8 hud_tiles[][16];
 #define HUD_TILE_COUNT 15
 
-void tiles_load_pickup_sprites(void);
-void tiles_load_hud(void);
+void tiles_load_pickup_sprites(void) BANKED;
+void tiles_load_hud(void) BANKED;
 
 // Phase 12 metasprite loaders
-void tiles_load_all_class_sprites(void);   // loads 5 classes × 4 tiles = 20 OBJ tiles
-void tiles_load_all_enemy_sprites(void);   // 4 enemy tiles
-void tiles_load_miniboss(u8 stage);        // stage's distinct 16x16 mini-boss into SPR_BOSS
-void tiles_load_boss_big(u8 stage);        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
-void tiles_load_fx_sprites(void);          // bullet (2 frames), muzzle, impact
-void tiles_load_dungeon_bg(void);          // dungeon tileset (replaces flat placeholders)
+void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles = 20 OBJ tiles
+void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
+void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
+void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
+void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
+void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
 
 #endif

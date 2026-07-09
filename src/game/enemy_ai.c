@@ -1,3 +1,4 @@
+#pragma bank 255
 #include <gb/gb.h>
 
 #include "core/types.h"
@@ -44,7 +45,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
     }
 }
 
-u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) {
+u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
     u8 idx;
     entity_t *e;
     if (enemy_content_id >= N_ENEMIES) return 0xFF;
@@ -71,7 +72,7 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) {
 
 // Try to move an enemy 1px by (dx,dy); blocked by solid tiles + room bounds.
 // Returns 1 if moved.
-u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) {
+u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 nx = (i16)(FIX8_TO_INT(e->x) + dx);
     i16 ny = (i16)(FIX8_TO_INT(e->y) + dy);
     if (nx < 8 || nx >= (i16)((ROOM_W - 1) * 8)) return 0;
@@ -331,7 +332,7 @@ static void boss_tick(entity_t *e) {
 
 // ---------------- Dispatch ----------------------------------------------
 
-void enemy_update(entity_t *e, u8 idx) {
+void enemy_update(entity_t *e, u8 idx) BANKED {
     const enemy_def_t *def = &enemies[e->ai_data[0]];
     idx;
     if (e->ai_data[0] == 1) { boss_tick(e); return; }   // Sentinel

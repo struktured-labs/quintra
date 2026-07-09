@@ -1,3 +1,4 @@
+#pragma bank 255
 // ROOM — top-down gameplay scene. Phase 5: spawns N enemies, supports
 // 4-dir movement, 8-dir B-button fire, wall collision, combat resolution.
 // Phase 7 wires procgen to fill from biome.room_template_pool.
@@ -26,6 +27,8 @@
 #include "render/tiles.h"
 #include "content.h"
 
+BANKREF(room_enter)
+
 u8 room_tilemap[ROOM_H][ROOM_W];
 
 static u8 room_paused;
@@ -45,7 +48,7 @@ static u8 stage_fade;
 // generation so walking into an empty room never false-fires the chime).
 static u8 hostiles_prev;
 
-void room_request_resume(void) { room_resume_flag = 1; }
+void room_request_resume(void) BANKED { room_resume_flag = 1; }
 
 // Nine stage themes, indexed by run_state.bosses_beaten (clamped 0-8). Each
 // defines floor / wall / crystal / door palettes; the crack palette stays
@@ -198,7 +201,7 @@ static const u16 coin_palette[4] = {
     BGR555(31, 31, 14),
 };
 
-u8 room_tile_at_px(i16 px, i16 py) {
+u8 room_tile_at_px(i16 px, i16 py) BANKED {
     if (px < 0 || py < 0) return BGT_WALL;
     {
         u8 tx = (u8)(px >> 3);
@@ -208,7 +211,7 @@ u8 room_tile_at_px(i16 px, i16 py) {
     }
 }
 
-u8 room_tile_walkable(u8 t) {
+u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
          || t == BGT_RUBBLE || t == BGT_DOOR);
 }
@@ -275,7 +278,7 @@ static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
     VBK_REG = 0;
 }
 
-void room_open_secret(u8 tx, u8 ty) {
+void room_open_secret(u8 tx, u8 ty) BANKED {
     if (tx >= ROOM_W || ty >= ROOM_H) return;
     room_set_tile_vbl(tx, ty, BGT_DOOR, BGPAL_DOOR);
     secret_door_x = tx;

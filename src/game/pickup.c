@@ -1,3 +1,4 @@
+#pragma bank 255
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
@@ -10,7 +11,7 @@
 #include "render/tiles.h"
 #include "content.h"
 
-u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) {
+u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
     u8 idx = entity_spawn(ENT_PICKUP);
     if (idx == 0xFF) return 0xFF;
     {
@@ -39,7 +40,7 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) {
     return idx;
 }
 
-u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) {
+u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_ITEM, x, y);
     if (idx != 0xFF) {
         entities[idx].ai_data[1]  = item_index;
@@ -50,7 +51,7 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) {
     return idx;
 }
 
-void pickup_roll_drop(fix8_t x, fix8_t y) {
+void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     u8 r = rng_next_u8();
     if      (r < 0x40) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 25%
     else if (r < 0xB3) pickup_spawn(PICKUP_COIN_1,     x, y);   // 45%
@@ -61,7 +62,7 @@ void pickup_roll_drop(fix8_t x, fix8_t y) {
     // else: no drop (20%)
 }
 
-void pickup_update(entity_t *e, u8 idx) {
+void pickup_update(entity_t *e, u8 idx) BANKED {
     // Shop wares are permanent until bought; state counts a retry delay.
     // They never magnetize (flying wares would force accidental purchases).
     if (e->ai_data[0] == PICKUP_SHOP) {
@@ -131,7 +132,7 @@ static void apply_item_effects(u8 item_idx) {
     hud_redraw_all();
 }
 
-u8 pickup_check_player_collision(void) {
+u8 pickup_check_player_collision(void) BANKED {
     u8 i;
     u8 any = 0;
     for (i = 0; i < MAX_ENTITIES; ++i) {

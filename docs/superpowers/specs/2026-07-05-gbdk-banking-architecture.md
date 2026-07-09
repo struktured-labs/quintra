@@ -1,9 +1,11 @@
 # GBDK-2020 ROM Banking — Architecture & Playbook
 
-Status: **investigated, validated mechanism, refactor pending.** Written after a
-deep root-cause investigation. The game currently ships **unbanked** (v0.7.1,
-512 KB, ~6% of a 2 MB cart used) because unlocking the rest requires the
-coordinated refactor described here. This doc is the blueprint.
+Status: **CONVERTED (2026-07-08).** The refactor described here landed after the
+flat 32KB image silently overflowed (init code linked past 0x8000 → white
+screen at boot from commit bb622c0 onward). Home is now ~11.2 KB, trampoline
+at 0x28CB, screens dispatch bank-aware per §7, art+tiles co-located in bank 2
+per §8, and `scripts/check_rom_layout.py` fails any build whose layout
+regresses. §§1–11 below remain the reference for how and why.
 
 ---
 

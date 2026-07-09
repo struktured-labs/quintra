@@ -1,6 +1,8 @@
 #ifndef QUINTRA_GAME_INVENTORY_H
 #define QUINTRA_GAME_INVENTORY_H
 
+
+#include <gb/gb.h>
 #include "core/types.h"
 #include "game/screen.h"
 

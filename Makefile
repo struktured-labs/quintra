@@ -15,10 +15,14 @@ GENDIR  = $(SRCDIR)/generated
 SRCS = $(shell find $(SRCDIR) -name '*.c' 2>/dev/null)
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 
-# GBDK / SDCC flags
+# GBDK / SDCC flags — BANKED build (see docs/superpowers/specs/
+# 2026-07-05-gbdk-banking-architecture.md). -autobank runs bankpack, which
+# assigns every '#pragma bank 255' file a real bank and auto-sizes the ROM.
+# DO NOT add -Wm-yo<n>: a fixed bank count suppresses the auto sizing and
+# collapses all banked code back into banks 0-1 (silent boot-breakage).
 LCCFLAGS  = -Wa-l -Wl-m -Wl-j
+LCCFLAGS += -autobank
 LCCFLAGS += -Wm-yt0x1B          # MBC5 + RAM + BATTERY (set via makebin header byte)
-LCCFLAGS += -Wm-yo32            # 32 ROM banks (512KB) — bumps up as needed
 LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
@@ -53,9 +57,12 @@ $(OBJDIR)/%.o: %.c $(HDRS)
 	@mkdir -p $(dir $@)
 	$(LCC) $(LCCFLAGS) -c -o $@ $<
 
-# Link to ROM
+# Link to ROM, then verify the memory layout. The layout check exists
+# because the linker SILENTLY placed init code past 0x8000 when the flat
+# 32KB image overflowed (white screen at boot, shipped 6 broken commits).
 $(BINDIR)/$(PROJECT).gbc: $(OBJS)
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
+	@python3 scripts/check_rom_layout.py $(BINDIR)/$(PROJECT)
 
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)/$(PROJECT).gbc $(BINDIR)/$(PROJECT).map $(BINDIR)/$(PROJECT).noi

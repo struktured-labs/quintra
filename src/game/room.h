@@ -1,6 +1,8 @@
 #ifndef QUINTRA_GAME_ROOM_H
 #define QUINTRA_GAME_ROOM_H
 
+
+#include <gb/gb.h>
 #include "core/types.h"
 #include "game/screen.h"
 
@@ -14,15 +16,15 @@
 extern u8 room_tilemap[ROOM_H][ROOM_W];
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
-u8 room_tile_at_px(i16 px, i16 py);
+u8 room_tile_at_px(i16 px, i16 py) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.
-u8 room_tile_walkable(u8 t);
+u8 room_tile_walkable(u8 t) BANKED;
 // A player shot hit a cracked wall: convert it to a secret door.
-void room_open_secret(u8 tx, u8 ty);
+void room_open_secret(u8 tx, u8 ty) BANKED;
 
 // Request that the next room_enter resume the CURRENT room (skip procgen)
 // instead of generating a new one — used when returning from the pack screen.
-void room_request_resume(void);
+void room_request_resume(void) BANKED;
 
 void        room_enter(void);
 void        room_exit(void);

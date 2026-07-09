@@ -1,3 +1,4 @@
+#pragma bank 255
 // INVENTORY / STATS pause screen. Opened with START from a room; shows the
 // hero's class, live stats, held weapon + signature, coins, and run depth.
 // Returns to the room via a resume flag so the room is NOT regenerated.
@@ -16,6 +17,8 @@
 #include "game/run_state.h"
 #include "render/palette.h"
 #include "content.h"
+
+BANKREF(inventory_enter)
 
 static const u16 inv_palette[4] = {
     BGR555( 1,  2,  6),    // 0: deep blue

@@ -1,3 +1,4 @@
+#pragma bank 255
 #include <gb/gb.h>
 
 #include "core/types.h"
@@ -13,7 +14,7 @@
 #include "core/types.h"
 #include "content.h"
 
-u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) {
+u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
     return run_seed ^ ((u32)biome_id << 16) ^ ((u32)room_counter * 0x9E3779B9UL);
 }
 
@@ -61,7 +62,7 @@ static void place_player_after_entry(void) {
     player.y = (ppos_t)((i16)ty * 8);
 }
 
-void procgen_generate_current_room(void) {
+void procgen_generate_current_room(void) BANKED {
     const biome_def_t *bio = &biomes[run_state.biome_id];
     u32 seed = procgen_room_seed(run_state.run_seed, run_state.biome_id, run_state.room_counter);
     // A boss guards every Nth room until BOSSES_TO_WIN are down. Computed

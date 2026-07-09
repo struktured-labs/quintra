@@ -1,3 +1,4 @@
+#pragma bank 255
 // VICTORY — boss-defeated screen, returns to TITLE.
 
 #include <gb/gb.h>
@@ -11,6 +12,8 @@
 #include "game/run_state.h"
 #include "game/victory.h"
 #include "render/palette.h"
+
+BANKREF(victory_enter)
 
 static u8 pulse;
 

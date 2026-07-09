@@ -1,3 +1,4 @@
+#pragma bank 255
 // TITLE screen — "QUINTRA" + "PRESS START". Pulses palette so the screen
 // feels alive while waiting on player input.
 
@@ -13,6 +14,8 @@
 #include "game/loop.h"
 #include "game/title.h"
 #include "render/palette.h"
+
+BANKREF(title_enter)
 
 static u8  pulse_phase;
 static u16 last_palette_color2;

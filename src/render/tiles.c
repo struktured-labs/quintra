@@ -1,3 +1,4 @@
+#pragma bank 2
 #include <gb/gb.h>
 
 #include "core/types.h"
@@ -36,7 +37,7 @@ const u8 sprite_tile_coin[16] = {
     0x00, 0x00,
 };
 
-void tiles_load_pickup_sprites(void) {
+void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
 }
@@ -102,7 +103,7 @@ static const u8 hud_bar_empty[16] = {
     0x42,0x00, 0x42,0x00, 0x7E,0x00, 0x00,0x00,
 };
 
-void tiles_load_hud(void) {
+void tiles_load_hud(void) BANKED {
     u8 i;
     for (i = 0; i < HUD_TILE_COUNT; ++i) {
         set_bkg_data((u8)(HUD_HEART_FULL + i), 1, hud_tiles[i]);
@@ -111,7 +112,7 @@ void tiles_load_hud(void) {
     set_bkg_data(HUD_BAR_EMPTY, 1, hud_bar_empty);
 }
 
-void tiles_load_all_class_sprites(void) {
+void tiles_load_all_class_sprites(void) BANKED {
     // Each class metasprite = 4 tiles (64 bytes). Load all 5 contiguously
     // at SPR_CLASS_BASE so class N's first tile is SPR_CLASS_BASE + N*4.
     set_sprite_data((u8)(SPR_CLASS_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin);
@@ -121,14 +122,14 @@ void tiles_load_all_class_sprites(void) {
     set_sprite_data((u8)(SPR_CLASS_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine);
 }
 
-void tiles_load_all_enemy_sprites(void) {
+void tiles_load_all_enemy_sprites(void) BANKED {
     set_sprite_data(SPR_ENEMY_CRAWLER,  1, sprite_enemy_crawler);
     set_sprite_data(SPR_ENEMY_HORNET,   1, sprite_enemy_hornet);
     set_sprite_data(SPR_ENEMY_SKELETON, 1, sprite_enemy_skeleton);
     set_sprite_data(SPR_ENEMY_ORC,      1, sprite_enemy_orc);
 }
 
-void tiles_load_miniboss(u8 stage) {
+void tiles_load_miniboss(u8 stage) BANKED {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
     // stage's mini-boss looks distinct. Variant table must match the palette
     // table in procgen.c (miniboss spawn). 0=sentinel,1=orc,2=skel,3=crawl,4=hornet
@@ -139,7 +140,7 @@ void tiles_load_miniboss(u8 stage) {
     set_sprite_data(SPR_BOSS, 4, mb[variant[stage < 9 ? stage : 8]]);
 }
 
-void tiles_load_boss_big(u8 stage) {
+void tiles_load_boss_big(u8 stage) BANKED {
     // Load the current stage's distinct 32x32 boss into the fixed 16-tile
     // slot range (SPR_BOSS_BIG). Only the active stage's art is resident.
     static const u8 *const bosses[9] = {
@@ -150,7 +151,7 @@ void tiles_load_boss_big(u8 stage) {
     set_sprite_data(SPR_BOSS_BIG, 16, bosses[stage < 9 ? stage : 8]);
 }
 
-void tiles_load_fx_sprites(void) {
+void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_BULLET,     1, sprite_fx_bullet_a);
     set_sprite_data(SPR_BULLET_B,   1, sprite_fx_bullet_b);
     set_sprite_data(SPR_FX_MUZZLE,  1, sprite_fx_muzzle);
@@ -159,7 +160,7 @@ void tiles_load_fx_sprites(void) {
     set_sprite_data(SPR_ITEM_ORB,   1, sprite_fx_item_orb);
 }
 
-void tiles_load_dungeon_bg(void) {
+void tiles_load_dungeon_bg(void) BANKED {
     // Authored dungeon tileset (slot 0 = void/black; the rest overwrite the
     // former flat placeholders).
     set_bkg_data(BGT_VOID,    1, bg_tile_void);
