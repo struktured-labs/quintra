@@ -79,6 +79,18 @@ static void render(void) {
             (u16)c->base_stats.hp_max, (u16)c->base_stats.mp_max);
         gotoxy(1, 12); printf("AT %u  DF %u  SP %u",
             (u16)c->base_stats.atk, (u16)c->base_stats.def, (u16)c->base_stats.spd);
+        // Loadout preview: this class's A weapon + B signature (by id —
+        // item.id != items[] index beyond the starters)
+        {
+            u8 i;
+            const char *wn = "?", *sn = "?";
+            for (i = 0; i < N_ITEMS; ++i) {
+                if (items[i].id == c->starter_weapon)   wn = items[i].name;
+                if (items[i].id == c->signature_active) sn = items[i].name;
+            }
+            gotoxy(1, 13); printf("A %s", wn);
+            gotoxy(1, 14); printf("B %s", sn);
+        }
     }
 
     gotoxy(2, 16); printf("A=START  B=BACK");
