@@ -27,7 +27,7 @@ LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify play info
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -78,6 +78,14 @@ cleanall: clean cleangen
 test: all
 	@bash scripts/test_headless.sh $(BINDIR)/$(PROJECT).gbc 2>/dev/null || \
 		echo "[test] headless harness not yet wired (Phase 3)"
+
+# The whole verification stack: Rust unit/property/golden tests, the
+# headless gameplay smoke (pixel + state asserts), and the cross-seam
+# procgen parity check (Rust reference vs the ROM's WRAM).
+verify: all
+	cargo test -q
+	bash scripts/test_smoke.sh
+	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 
 # Human play
 play: all
