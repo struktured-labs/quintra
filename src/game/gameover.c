@@ -10,6 +10,7 @@
 #include "audio/music.h"
 #include "core/types.h"
 #include "game/gameover.h"
+#include "game/sram.h"
 #include "game/run_state.h"
 #include "render/palette.h"
 
@@ -23,6 +24,7 @@ static const u16 gameover_palette[4] = {
 };
 
 void gameover_enter(void) {
+    sram_clear_run();   // run over -> suspend save dies with it
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;

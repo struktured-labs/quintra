@@ -6,11 +6,13 @@
 #include "game/loop.h"
 #include "game/run_init.h"
 #include "game/run_state.h"
+#include "game/sram.h"
 
 void run_init_enter(void) {
     u32 seed = (u32)loop_frame_counter ^ 0xA5A5A5A5UL;
     rng_seed(seed);
     run_state_init(seed ^ 0xDEADBEEFUL);
+    sram_clear_run();   // a fresh run invalidates any suspend save
 }
 
 void run_init_exit(void) {}

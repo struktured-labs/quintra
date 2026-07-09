@@ -12,10 +12,14 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/loop.h"
+#include "game/sram.h"
 #include "game/title.h"
 #include "render/palette.h"
 
 BANKREF(title_enter)
+
+// Cached at enter so tick doesn't hit SRAM every frame
+static u8 has_save;
 
 static u8  pulse_phase;
 static u16 last_palette_color2;
@@ -53,8 +57,16 @@ void title_enter(void) {
     printf("QUINTRA");
     gotoxy(5, 6);
     printf("THE  ROGUELIKE");
-    gotoxy(4, 12);
-    printf("PRESS  START");
+    has_save = sram_run_valid();
+    if (has_save) {
+        gotoxy(4, 11);
+        printf("A     CONTINUE");
+        gotoxy(4, 13);
+        printf("START NEW RUN");
+    } else {
+        gotoxy(4, 12);
+        printf("PRESS  START");
+    }
     gotoxy(6, 16);
     printf("v0.4");
 
@@ -72,6 +84,13 @@ void title_exit(void) {
 
 screen_id_t title_tick(u8 keys, u8 pressed) {
     keys;
+    // Resume the suspended run (room regenerates from the saved seed +
+    // counter; hud_init runs in room_enter, so RUN_INIT is skippable).
+    if ((pressed & J_A) && has_save && sram_load_run()) {
+        sfx_play(SFX_HEART);
+        music_stop();
+        return SCREEN_ROOM;
+    }
     if (pressed & J_START) { sfx_play(SFX_COIN); music_stop(); return SCREEN_CLASS_SELECT; }
     return SCREEN_SELF;
 }

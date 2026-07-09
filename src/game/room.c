@@ -21,6 +21,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/sram.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
 #include "render/palette.h"
@@ -472,6 +473,9 @@ void room_enter(void) {
         room_apply_pause_palettes(1);   // start dimmed
     }
 
+    // Suspend save: every room entry snapshots the run (battery SRAM).
+    sram_save_run();
+
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
@@ -804,6 +808,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     stage_fade = 26;
                     room_apply_pause_palettes(1);
                 }
+                sram_save_run();   // suspend save on every room entry
                 return SCREEN_SELF;
             }
         }
