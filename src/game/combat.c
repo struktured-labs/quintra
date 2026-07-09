@@ -6,6 +6,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -147,6 +148,28 @@ u8 combat_resolve(void) {
                     player.iframes = 30;
                     g_hitstop = 3;
                     sfx_play(SFX_HURT);
+                    // Knockback: shove the player up to 6px away from the
+                    // source, one wall-checked pixel at a time (Zelda feel +
+                    // breaks contact so iframes aren't instantly re-spent).
+                    {
+                        i16 sx = FIX8_TO_INT(entities[i].x);
+                        i16 sy = FIX8_TO_INT(entities[i].y);
+                        i8 kx = ((i16)player.x > sx) ? 1 : ((i16)player.x < sx) ? -1 : 0;
+                        i8 ky = ((i16)player.y > sy) ? 1 : ((i16)player.y < sy) ? -1 : 0;
+                        u8 n;
+                        for (n = 0; n < 6; ++n) {
+                            i16 nx = (i16)(player.x + kx);
+                            i16 ny = (i16)(player.y + ky);
+                            if (!room_tile_walkable(room_tile_at_px(nx + 1, ny + 1))
+                                || !room_tile_walkable(room_tile_at_px(nx + 6, ny + 1))
+                                || !room_tile_walkable(room_tile_at_px(nx + 1, ny + 6))
+                                || !room_tile_walkable(room_tile_at_px(nx + 6, ny + 6))) {
+                                break;
+                            }
+                            player.x = (ppos_t)nx;
+                            player.y = (ppos_t)ny;
+                        }
+                    }
                 } else {
                     player.hp = 0;
                     player_died = 1;
