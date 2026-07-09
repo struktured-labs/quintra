@@ -469,6 +469,11 @@ void room_enter(void) {
     if (*(volatile u8*)0xFFFC == 0xBB) {
         music_play_boss();
         sfx_play(SFX_ROAR);
+        // Entry drama: the arena starts dark and trembling, then the
+        // light pops as the fight begins.
+        room_apply_pause_palettes(1);
+        stage_fade = 30;
+        room_shake(1, 24);
     } else {
         music_play_stage(room_stage());
     }
@@ -820,6 +825,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 if (*(volatile u8*)0xFFFC == 0xBB) {
                     music_play_boss();
                     sfx_play(SFX_ROAR);
+                    // Entry drama: dark, trembling, then the light pops
+                    room_apply_pause_palettes(1);
+                    stage_fade = 30;
+                    room_shake(1, 24);
                 } else {
                     music_play_stage(room_stage());
                 }
