@@ -1,6 +1,7 @@
 #pragma bank 255
 #include <gb/gb.h>
 
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/enemy_ai.h"
@@ -241,12 +242,32 @@ void procgen_generate_current_room(void) BANKED {
     if (run_state.secret_pending) {
         run_state.secret_pending = 0;
         if (!is_boss_room) {
+            u8 i;
             *(volatile u8*)0xFFFC = 0x00;
+            // The vault: a shootable crystal ring guards the hoard —
+            // crack it open or slip around the corner gaps.
+            for (i = 7; i <= 12; ++i) {
+                room_tilemap[5][i]  = BGT_CRYSTAL;
+                room_tilemap[11][i] = BGT_CRYSTAL;
+            }
+            room_tilemap[7][6]  = BGT_CRYSTAL; room_tilemap[9][6]  = BGT_CRYSTAL;
+            room_tilemap[7][13] = BGT_CRYSTAL; room_tilemap[9][13] = BGT_CRYSTAL;
+            // The hoard: hearts, a stat item, a coin shower, and a
+            // 50% chance of a weapon orb to reroute the build.
             pickup_spawn(PICKUP_HEART_HALF, FIX8(72), FIX8(56));
             pickup_spawn(PICKUP_HEART_HALF, FIX8(88), FIX8(56));
             pickup_spawn(PICKUP_COIN_5,     FIX8(72), FIX8(72));
             pickup_spawn(PICKUP_COIN_5,     FIX8(88), FIX8(72));
+            pickup_spawn(PICKUP_COIN_1,     FIX8(64), FIX8(64));
+            pickup_spawn(PICKUP_COIN_1,     FIX8(96), FIX8(64));
+            pickup_spawn(PICKUP_COIN_1,     FIX8(80), FIX8(48));
             pickup_spawn_item((u8)(10 + rng_range(5)), FIX8(80), FIX8(64));
+            if (rng_next_u8() & 1) {
+                u8 w = (u8)rng_range(5);
+                if (w == player.starter_weapon) w = (u8)((w + 1) % 5);
+                pickup_spawn_weapon(w, FIX8(80), FIX8(80));
+            }
+            sfx_play(SFX_CLEAR);   // secret-found fanfare
             player.iframes = 60;
             return;
         }
