@@ -101,6 +101,17 @@ static const u16 s2_bass[8] = {
     B_A3, B_A3, B_G3, B_G3, B_C3, B_C3, B_D3, B_A3,
 };
 
+// Stage 3 — Gilded Halls: G-major processional, stately (~96 BPM => 10)
+static const u16 s3_melody[32] = {
+    N_G5, N_B5, N_D6, N_B5,   N_C6, N_B5, N_A5, N_G5,
+    N_E5, N_G5, N_A5, N_B5,   N_A5, N_G5, N_E5, REST,
+    N_G5, N_B5, N_D6, N_E6,   N_D6, N_B5, N_C6, N_A5,
+    N_B5, N_G5, N_A5, N_FS5,  N_G5, N_D5, N_G5, REST,
+};
+static const u16 s3_bass[8] = {
+    B_G3, B_G3, B_C3, B_C3, B_E3, B_E3, B_D3, B_G3,
+};
+
 static u8 playing;
 static u8 frame_div;
 static u8 row;
@@ -123,11 +134,12 @@ void music_play_caverns(void) {
 
 void music_play_stage(u8 stage) {
     load_wave();
-    // 9 stages rotate across the 3 exploration themes so consecutive stages
-    // always sound different (caverns / ember / void).
-    switch (stage % 3) {
+    // 9 stages rotate across the 4 exploration themes so consecutive stages
+    // always sound different (caverns / ember / void / gilded).
+    switch (stage & 0x03) {
         case 1:  cur_melody = s1_melody; cur_bass = s1_bass; frames_per_row = 7; break;
         case 2:  cur_melody = s2_melody; cur_bass = s2_bass; frames_per_row = 9; break;
+        case 3:  cur_melody = s3_melody; cur_bass = s3_bass; frames_per_row = 10; break;
         default: cur_melody = melody;    cur_bass = bassline; frames_per_row = 8; break;
     }
     playing  = 1;
