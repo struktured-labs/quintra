@@ -278,6 +278,23 @@ void procgen_generate_current_room(void) BANKED {
         u8 is_miniboss = (!is_boss_room && (run_state.room_counter % ROOMS_PER_STAGE) == 3) ? 1 : 0;
         u8 is_shop     = (!is_boss_room && !is_miniboss
                           && (run_state.room_counter % ROOMS_PER_STAGE) == 4) ? 1 : 0;
+        // Sanctuary: the room right before every stage boss. No enemies —
+        // a shrine, two hearts, and a full MP blessing. Breathe, then go.
+        u8 is_rest     = (!is_boss_room
+                          && (run_state.room_counter % ROOMS_PER_STAGE) == 5) ? 1 : 0;
+
+        if (is_rest) {
+            *(volatile u8*)0xFFFC = 0x00;
+            // Crystal shrine: four pylons around the room's heart, all
+            // outside the door lanes (cols 9-11 / rows 7-9 stay clear)
+            room_tilemap[6][7]   = BGT_CRYSTAL; room_tilemap[6][12]  = BGT_CRYSTAL;
+            room_tilemap[10][7]  = BGT_CRYSTAL; room_tilemap[10][12] = BGT_CRYSTAL;
+            pickup_spawn(PICKUP_HEART_HALF, FIX8(68), FIX8(64));
+            pickup_spawn(PICKUP_HEART_HALF, FIX8(92), FIX8(64));
+            player.mp = player.mp_max;   // the shrine's blessing
+            player.iframes = 60;
+            return;
+        }
 
         if (is_boss_room) {
             // EVERY stage ends with a LARGE (32x32) boss. Per-stage sprite is
