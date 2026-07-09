@@ -51,6 +51,17 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
+    if (idx != 0xFF) {
+        entities[idx].ai_data[1]  = weapon_index;
+        entities[idx].sprite_tile = SPR_ITEM_ORB;
+        entities[idx].palette     = 0x04;      // red orb = weapon
+        entities[idx].state       = 45;        // grace: no instant pickup
+    }
+    return idx;
+}
+
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     u8 r = rng_next_u8();
     if      (r < 0x40) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 25%
@@ -66,6 +77,13 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // Shop wares are permanent until bought; state counts a retry delay.
     // They never magnetize (flying wares would force accidental purchases).
     if (e->ai_data[0] == PICKUP_SHOP) {
+        if (e->state > 0) e->state--;
+        return;
+    }
+    // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
+    // (the swap drops your old weapon underfoot — without the grace you'd
+    // ping-pong between the two forever).
+    if (e->ai_data[0] == PICKUP_WEAPON) {
         if (e->state > 0) e->state--;
         return;
     }
@@ -163,6 +181,18 @@ u8 pickup_check_player_collision(void) BANKED {
                     apply_item_effects(entities[i].ai_data[1]);
                     sfx_play(SFX_HEART);
                     break;
+                case PICKUP_WEAPON: {
+                    // Swap A-weapons: take the orb's, drop yours in its
+                    // place (with grace so it isn't instantly re-grabbed).
+                    u8 old_w = player.starter_weapon;
+                    if (entities[i].state > 0) { any = 1; continue; }
+                    player.starter_weapon = entities[i].ai_data[1];
+                    sfx_play(SFX_DOOR);
+                    if (old_w < 5) {
+                        pickup_spawn_weapon(old_w, entities[i].x, entities[i].y);
+                    }
+                    break;
+                }
                 case PICKUP_SHOP: {
                     // Walk into a ware to buy it. Not enough coins → error
                     // beep with a retry delay so it doesn't spam.

@@ -99,10 +99,15 @@ u8 combat_resolve(void) BANKED {
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y + FIX8(16));
                         } else if (eid == 1) {
-                            // Mini-boss down: solid reward, no stage advance
+                            // Mini-boss down: solid reward, no stage advance.
+                            // Always drops a weapon orb you don't hold —
+                            // the run's main way to change your A-weapon.
+                            u8 w = (u8)rng_range(5);
+                            if (w == player.starter_weapon) w = (u8)((w + 1) % 5);
                             g_hitstop = 5;
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
+                            pickup_spawn_weapon(w, entities[j].x + FIX8(12), entities[j].y);
                         }
                     }
                     // Impact FX at enemy position

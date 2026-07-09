@@ -12,6 +12,7 @@
 #define PICKUP_COIN_5     2
 #define PICKUP_ITEM       3    // ai_data[1] = index into generated items[]
 #define PICKUP_SHOP       4    // shop ware: ai_data[1]=ware kind, ai_data[2]=price
+#define PICKUP_WEAPON     5    // ai_data[1] = weapon item index (0-4); swaps A-weapon
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -23,6 +24,10 @@ u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
 
 // Spawn a stat-boost item pickup (items[] table index)
 u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED;
+
+// Spawn a weapon orb (weapon index 0-4). Permanent, never magnetizes;
+// walking over it swaps the A-weapon and drops the old one in its place.
+u8   pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;
