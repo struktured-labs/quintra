@@ -84,6 +84,11 @@ void sfx_play(u8 id) {
             // a heartbeat under combat, not an alarm over it.
             ch1(0x00, 0x80, 0x62, 1985);
             break;
+        case SFX_TICK:
+            // Quiet high metallic click (noise 15-bit, fast clock,
+            // env 5-down-1) — the boss cocking the hammer.
+            ch4(0x24, 0x51);
+            break;
         default:
             break;
     }
