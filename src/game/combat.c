@@ -115,7 +115,14 @@ u8 combat_resolve(void) BANKED {
                     fx_spawn(SPR_FX_IMPACT, 2,
                         (i16)FIX8_TO_INT(entities[j].x),
                         (i16)FIX8_TO_INT(entities[j].y), 8);
-                    pickup_roll_drop(entities[j].x, entities[j].y);
+                    // Elites (boss-palette glow, non-boss) always pay out
+                    if (entities[j].palette == 0x06 && eid != 1) {
+                        pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y);
+                        run_state.score = (u16)(run_state.score
+                            + ((eid < N_ENEMIES) ? enemies[eid].stats.score : 0));
+                    } else {
+                        pickup_roll_drop(entities[j].x, entities[j].y);
+                    }
                     entity_kill(j);
                 }
                 // Impact FX at bullet position (spawn on every hit, even non-kill)

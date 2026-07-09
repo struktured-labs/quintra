@@ -367,7 +367,18 @@ void procgen_generate_current_room(void) BANKED {
                                 : ((rng_next_u8() & 1) ? 2 : 3);  // hornet / skeleton
                         }
                     }
-                    enemy_spawn(eid, tx, ty);
+                    {
+                        u8 idx = enemy_spawn(eid, tx, ty);
+                        // ~12% spawn ELITE: boss-palette glow, double HP,
+                        // +1 damage. The 0x06 palette doubles as the elite
+                        // marker (combat checks it for the reward) — all 8
+                        // ai_data slots are already spoken for.
+                        if (idx != 0xFF && rng_next_u8() < 31) {
+                            entities[idx].palette = 0x06;
+                            entities[idx].hp      = (u8)(entities[idx].hp << 1);
+                            entities[idx].damage  = (u8)(entities[idx].damage + 1);
+                        }
+                    }
                 }
             }
         }
