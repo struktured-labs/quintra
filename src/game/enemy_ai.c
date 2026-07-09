@@ -247,7 +247,13 @@ static void boss_tick(entity_t *e) {
         }
     }
 
-    if (e->ai_data[1] != 0) { e->ai_data[1]--; return; }
+    if (e->ai_data[1] != 0) {
+        e->ai_data[1]--;
+        // Telegraph: blink white ~8 frames before every volley (reuses
+        // the hit-flash pathway) so patterns read as dodgeable, not random.
+        if (e->ai_data[1] == 8 && e->ai_data[7] == 0) e->ai_data[7] = 8;
+        return;
+    }
 
     {
         u8 giant = e->ai_data[3];
