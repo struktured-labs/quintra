@@ -29,7 +29,13 @@ static u8 new_best;
 
 void victory_enter(void) {
     sram_clear_run();   // run over -> suspend save dies with it
-    new_best = sram_meta_record(run_state.score, 1);
+    // Record a WIN only on the true 9th boss. Endless-descent bosses
+    // (10th, 11th, ...) reopen this screen but shouldn't inflate the
+    // runs/wins counters — best score still updates via later deaths.
+    new_best = 0;
+    if (run_state.bosses_beaten == BOSSES_TO_WIN) {
+        new_best = sram_meta_record(run_state.score, 1);
+    }
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;
@@ -41,9 +47,15 @@ void victory_enter(void) {
     cls();
 
     gotoxy(6, 3);  printf("VICTORY!");
-    gotoxy(2, 6);  printf("9 colossi");
-    gotoxy(2, 7);  printf("felled. all");
-    gotoxy(2, 8);  printf("9 depths freed!");
+    if (run_state.bosses_beaten <= BOSSES_TO_WIN) {
+        gotoxy(2, 6);  printf("9 colossi");
+        gotoxy(2, 7);  printf("felled. all");
+        gotoxy(2, 8);  printf("9 depths freed!");
+    } else {
+        gotoxy(2, 6);  printf("colossus %u", (u16)run_state.bosses_beaten);
+        gotoxy(2, 7);  printf("falls. the void");
+        gotoxy(2, 8);  printf("goes deeper...");
+    }
 
     gotoxy(2, 11); printf("rooms   %u", (u16)run_state.room_counter);
     gotoxy(2, 12); printf("kills   %u", (u16)run_state.enemies_killed);
@@ -53,7 +65,7 @@ void victory_enter(void) {
     gotoxy(2, 15); printf("time    %u:%u%u", (u16)(run_state.run_timer / 60),
         (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
 
-    gotoxy(2, 16); printf("PRESS  START");
+    gotoxy(0, 16); printf("START=END A=DESCEND");
 
     pulse = 0;
     music_play_victory();
@@ -66,7 +78,13 @@ void victory_exit(void) {}
 screen_id_t victory_tick(u8 keys, u8 pressed) {
     keys;
     if (pressed & J_START) return SCREEN_TITLE;
-    if (pressed & J_A)     return SCREEN_TITLE;
+    // Endless descent: keep the run. The boss room regenerates as a
+    // normal room (counter/6 no longer exceeds bosses_beaten), doors
+    // open, and every 6th room from here is a max-scaled colossus.
+    if (pressed & J_A) {
+        run_state.victory = 0;
+        return SCREEN_ROOM;
+    }
     return SCREEN_SELF;
 }
 
