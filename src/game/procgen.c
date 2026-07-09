@@ -33,23 +33,6 @@ u8 boss_palette_for_stage(u8 stage) {
     return 0x06;
 }
 
-// Sample an enemy from the biome's enemy_pool using cumulative weights.
-static u8 pick_enemy_from_biome(const biome_def_t *bio) {
-    u16 total = 0;
-    u8 i;
-    for (i = 0; i < bio->n_enemy_pool; ++i) total = (u16)(total + bio->enemy_pool[i].weight);
-    if (total == 0) return bio->enemy_pool[0].enemy_id;
-    {
-        u16 roll = (u16)((rng_next() & 0xFFFFUL) % total);
-        u16 acc  = 0;
-        for (i = 0; i < bio->n_enemy_pool; ++i) {
-            acc = (u16)(acc + bio->enemy_pool[i].weight);
-            if (roll < acc) return bio->enemy_pool[i].enemy_id;
-        }
-    }
-    return bio->enemy_pool[0].enemy_id;
-}
-
 // Place player at the door opposite the one they entered from.
 static void place_player_after_entry(void) {
     u8 dir = run_state.entered_from;
@@ -61,6 +44,19 @@ static void place_player_after_entry(void) {
     else                   { tx = ROOM_W / 2; ty = ROOM_H / 2; }
     player.x = (ppos_t)((i16)tx * 8);
     player.y = (ppos_t)((i16)ty * 8);
+}
+
+// Weighted pick from this stage's roster (generated stage_pool tables;
+// stage wraps with the endless theme cycle). One rng draw per pick.
+static u8 pick_enemy_for_stage(u8 stage_raw) {
+    u8 st = (u8)(stage_raw % N_STAGES);
+    u8 r = rng_range(stage_pool_total[st]);
+    u8 k, acc = 0;
+    for (k = 0; k < stage_pool_n[st]; ++k) {
+        acc = (u8)(acc + stage_pool_w[st][k]);
+        if (r < acc) return stage_pool_ids[st][k];
+    }
+    return stage_pool_ids[st][0];
 }
 
 void procgen_generate_current_room(void) BANKED {
@@ -341,8 +337,7 @@ void procgen_generate_current_room(void) BANKED {
             {
                 u8 e;
                 for (e = 0; e < 2; ++e) {
-                    u8 eid = (stage >= 2) ? ((rng_next_u8() & 1) ? 4 : 5)
-                                          : ((rng_next_u8() & 1) ? 2 : 3);
+                    u8 eid = pick_enemy_for_stage(stage);
                     enemy_spawn(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
                 }
             }
@@ -406,29 +401,9 @@ void procgen_generate_current_room(void) BANKED {
                     if (dx < 3 && dy < 3) continue;
                 }
                 {
-                    u8 eid = pick_enemy_from_biome(&biomes[run_state.biome_id]);
-                    if (eid == 1) eid = 0;   // boss never spawns in normal rooms
-                    // Stage escalation: deeper stages upgrade weak crawlers
-                    // into tougher foes so the roster visibly hardens.
-                    // stage 1: crawler -> hornet/skeleton; stage 2: -> wisp/orc.
-                    {
-                        u8 stage = run_state.bosses_beaten;
-                        if (eid == 0 && stage >= 1 && (rng_next_u8() & 1)) {
-                            eid = (stage >= 2)
-                                ? ((rng_next_u8() & 1) ? 5 : 4)   // wisp / orc
-                                : ((rng_next_u8() & 1) ? 2 : 3);  // hornet / skeleton
-                        }
-                        // Stage 3+: some upgrades become Bombers (die angry)
-                        if (eid != 0 && eid != 1 && stage >= 3
-                            && (rng_next_u8() & 3) == 0) {
-                            eid = 6;
-                        }
-                        // Stage 5+: some become Shades (teleporting stalkers)
-                        if (eid != 0 && eid != 1 && eid != 6 && stage >= 5
-                            && (rng_next_u8() & 3) == 0) {
-                            eid = 7;
-                        }
-                    }
+                    // Roster comes from the generated per-stage pool —
+                    // designed in content/src/stages.rs, not hard-coded here.
+                    u8 eid = pick_enemy_for_stage(run_state.bosses_beaten);
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);
                         // ~12% spawn ELITE: boss-palette glow, double HP,

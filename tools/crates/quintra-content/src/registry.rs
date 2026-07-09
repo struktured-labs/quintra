@@ -54,6 +54,20 @@ impl Registry {
                         w[0].id, w[0].boss_hp_bonus));
                 }
             }
+            // Stage rosters must reference real enemies
+            if !self.enemies.is_empty() {
+                let ids: std::collections::HashSet<u8> =
+                    self.enemies.iter().map(|e| e.id.raw() as u8).collect();
+                for s in &self.stages {
+                    for &(eid, _) in s.enemy_pool {
+                        if !ids.contains(&eid) {
+                            errs.push(format!(
+                                "stage {} enemy_pool references missing enemy {}",
+                                s.id, eid));
+                        }
+                    }
+                }
+            }
         }
 
         // Cross-ref checks

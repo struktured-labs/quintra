@@ -53,9 +53,14 @@ pub struct StageTheme {
     /// value consumed by BOTH the art loader and the palette pick — the
     /// two hand-written C copies used to have to agree by comment.
     pub mb_variant: u8,
+    /// Weighted normal-room enemy roster for this stage: (enemy id, weight).
+    /// Replaces the old hard-coded C escalation chain. Weights must sum
+    /// to <= 255 (picked with an 8-bit roll on cart).
+    pub enemy_pool: &'static [(u8, u8)],
 }
 
 pub const MB_VARIANTS: u8 = 3;
+pub const MAX_POOL: usize = 4;
 
 impl StageTheme {
     pub fn validate(&self) -> Result<(), String> {
@@ -76,6 +81,24 @@ impl StageTheme {
         if self.mb_variant >= MB_VARIANTS {
             return Err(format!("stage {} mb_variant {} out of range (0..{})",
                 self.id, self.mb_variant, MB_VARIANTS));
+        }
+        if self.enemy_pool.is_empty() || self.enemy_pool.len() > MAX_POOL {
+            return Err(format!("stage {} enemy_pool size {} out of range 1..={}",
+                self.id, self.enemy_pool.len(), MAX_POOL));
+        }
+        let sum: u32 = self.enemy_pool.iter().map(|&(_, w)| w as u32).sum();
+        if sum == 0 || sum > 255 {
+            return Err(format!("stage {} enemy_pool weights sum {} not in 1..=255",
+                self.id, sum));
+        }
+        for &(eid, w) in self.enemy_pool {
+            if w == 0 {
+                return Err(format!("stage {} enemy {} has zero weight", self.id, eid));
+            }
+            if eid == 1 {
+                return Err(format!("stage {} enemy_pool contains the boss id (1)",
+                    self.id));
+            }
         }
         Ok(())
     }

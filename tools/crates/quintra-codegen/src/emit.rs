@@ -628,6 +628,13 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          /* Mini-boss silhouette per stage: 0 Sentinel, 1 Orc, 2 Skeleton.\n\
             Single source for BOTH the art loader and the palette pick. */\n\
          extern const u8 stage_mb_variant[N_STAGES];\n\
+         /* Weighted normal-room rosters per stage (ids + weights,\n\
+            stage_pool_n entries each; weights sum <= 255) */\n\
+         #define STAGE_POOL_MAX 4\n\
+         extern const u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX];\n\
+         extern const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX];\n\
+         extern const u8 stage_pool_n[N_STAGES];\n\
+         extern const u8 stage_pool_total[N_STAGES];\n\
          #endif\n");
     fs::write(out.join("stages.h"), h).context("write stages.h")?;
 
@@ -668,6 +675,25 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
         list(&|s| s.boss_dmg_bonus)));
     c.push_str(&format!("const u8 stage_mb_variant[N_STAGES] = {{ {} }};\n",
         list(&|s| s.mb_variant)));
+
+    c.push_str("\nconst u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX] = {\n");
+    for s in &reg.stages {
+        let mut ids = [0u8; 4];
+        for (i, &(eid, _)) in s.enemy_pool.iter().enumerate() { ids[i] = eid; }
+        c.push_str(&format!("    {{ {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3]));
+    }
+    c.push_str("};\n");
+    c.push_str("const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX] = {\n");
+    for s in &reg.stages {
+        let mut ws = [0u8; 4];
+        for (i, &(_, w)) in s.enemy_pool.iter().enumerate() { ws[i] = w; }
+        c.push_str(&format!("    {{ {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3]));
+    }
+    c.push_str("};\n");
+    c.push_str(&format!("const u8 stage_pool_n[N_STAGES] = {{ {} }};\n",
+        list(&|s| s.enemy_pool.len() as u8)));
+    c.push_str(&format!("const u8 stage_pool_total[N_STAGES] = {{ {} }};\n",
+        list(&|s| s.enemy_pool.iter().map(|&(_, w)| w).sum::<u8>())));
 
     fs::write(out.join("stages.c"), c).context("write stages.c")?;
     let _ = n;
