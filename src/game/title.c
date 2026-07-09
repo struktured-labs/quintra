@@ -79,6 +79,14 @@ static void render_records(void) {
     gotoxy(2, 7);  printf("RUNS       %u", runs);
     gotoxy(2, 9);  printf("WINS       %u", wins);
     gotoxy(2, 11); printf("FALLEN     %u", (u16)(runs - wins));
+    {
+        u16 bt = sram_meta_best_time();
+        if (bt != 0xFFFF) {
+            gotoxy(2, 13);
+            printf("FAST WIN   %u:%u%u", (u16)(bt / 60),
+                (u16)((bt % 60) / 10), (u16)(bt % 10));
+        }
+    }
     gotoxy(2, 14); printf("ONLY KNOWLEDGE");
     gotoxy(2, 15); printf("PERSISTS.");
     gotoxy(2, 17); printf("SELECT/B = BACK");

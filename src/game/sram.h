@@ -16,6 +16,9 @@ void sram_clear_run(void);   // invalidate (death / victory / new run)
 u16  sram_meta_best(void);           // best score ever (0 on fresh cart)
 u16  sram_meta_wins(void);           // total victorious runs
 u16  sram_meta_runs(void);           // total runs ended (win or death)
-u8   sram_meta_record(u16 score, u8 won);   // returns 1 if new best
+u16  sram_meta_best_time(void);      // fastest WIN in seconds (0xFFFF = none)
+// Record a run's end. Returns flag bits: 1 = new best score,
+// 2 = new fastest win (only possible when won).
+u8   sram_meta_record(u16 score, u8 won, u16 time_s);
 
 #endif

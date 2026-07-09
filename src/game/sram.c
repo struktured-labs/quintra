@@ -82,29 +82,33 @@ void sram_clear_run(void) {
 }
 
 // ---- Meta-progress: SRAM bank 1 (per the engine design's bank plan).
-// Layout: 'Q' 'M' version | best u16 | runs u16 | wins u16 | checksum.
+// Layout v2: 'Q' 'M' ver | best u16 | runs u16 | wins u16 |
+//            best_win_time u16 (seconds; 0xFFFF = no win yet) | checksum.
+// A version bump invalidates old meta (acceptable pre-1.0).
 
-#define META_VERSION 1
+#define META_VERSION 2
+#define META_NO_TIME 0xFFFF
 
 static void meta_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(1); }
 
 static u8 meta_sum(void) {
     u8 s = 0, i;
-    for (i = 3; i < 9; ++i) s = (u8)(s + SRAM_BASE[i]);
+    for (i = 3; i < 11; ++i) s = (u8)(s + SRAM_BASE[i]);
     return s;
 }
 
 static u8 meta_valid(void) {
     return (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'M'
         && SRAM_BASE[2] == META_VERSION
-        && SRAM_BASE[9] == meta_sum()) ? 1 : 0;
+        && SRAM_BASE[11] == meta_sum()) ? 1 : 0;
 }
 
 static void meta_reset(void) {
     u8 i;
     SRAM_BASE[0] = 'Q'; SRAM_BASE[1] = 'M'; SRAM_BASE[2] = META_VERSION;
     for (i = 3; i < 9; ++i) SRAM_BASE[i] = 0;
-    SRAM_BASE[9] = meta_sum();
+    SRAM_BASE[9] = 0xFF; SRAM_BASE[10] = 0xFF;   // no win time yet
+    SRAM_BASE[11] = meta_sum();
 }
 
 static u16 meta_get16(u8 off) {
@@ -140,14 +144,25 @@ u16 sram_meta_wins(void) {
     return v;
 }
 
-u8 sram_meta_record(u16 score, u8 won) {
-    u8 is_best = 0;
+u16 sram_meta_best_time(void) {
+    u16 v;
+    meta_open();
+    v = meta_valid() ? meta_get16(9) : META_NO_TIME;
+    sram_close();
+    return v;
+}
+
+u8 sram_meta_record(u16 score, u8 won, u16 time_s) {
+    u8 flags = 0;
     meta_open();
     if (!meta_valid()) meta_reset();
-    if (score > meta_get16(3)) { meta_put16(3, score); is_best = 1; }
+    if (score > meta_get16(3)) { meta_put16(3, score); flags |= 1; }
     meta_put16(5, (u16)(meta_get16(5) + 1));
-    if (won) meta_put16(7, (u16)(meta_get16(7) + 1));
-    SRAM_BASE[9] = meta_sum();
+    if (won) {
+        meta_put16(7, (u16)(meta_get16(7) + 1));
+        if (time_s < meta_get16(9)) { meta_put16(9, time_s); flags |= 2; }
+    }
+    SRAM_BASE[11] = meta_sum();
     sram_close();
-    return is_best;
+    return flags;
 }

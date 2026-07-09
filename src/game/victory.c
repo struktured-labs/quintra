@@ -34,7 +34,7 @@ void victory_enter(void) {
     // runs/wins counters — best score still updates via later deaths.
     new_best = 0;
     if (run_state.bosses_beaten == BOSSES_TO_WIN) {
-        new_best = sram_meta_record(run_state.score, 1);
+        new_best = sram_meta_record(run_state.score, 1, run_state.run_timer);
     }
     DISPLAY_OFF;
     HIDE_SPRITES;
@@ -60,10 +60,11 @@ void victory_enter(void) {
     gotoxy(2, 11); printf("rooms   %u", (u16)run_state.room_counter);
     gotoxy(2, 12); printf("kills   %u", (u16)run_state.enemies_killed);
     gotoxy(2, 13); printf("score   %u%s", (u16)run_state.score,
-        new_best ? " NEW!" : "");
+        (new_best & 1) ? " NEW!" : "");
     gotoxy(2, 14); printf("best    %u", sram_meta_best());
-    gotoxy(2, 15); printf("time    %u:%u%u", (u16)(run_state.run_timer / 60),
-        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
+    gotoxy(2, 15); printf("time    %u:%u%u%s", (u16)(run_state.run_timer / 60),
+        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10),
+        (new_best & 2) ? " FAST!" : "");
 
     gotoxy(0, 16); printf("START=END A=DESCEND");
 
