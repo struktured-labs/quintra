@@ -16,11 +16,18 @@ fi
 mkdir -p "$OUT_DIR"
 rm -f "$OUT_DIR"/h_*.png
 
-echo "[smoke] running $ROM under headless mGBA..."
+# Resolve run_state's WRAM address from the linker map so the Lua
+# harness can drive by GAME STATE (room counter) instead of fixed
+# frame counts — code-size changes shift timing and made timed walks
+# land in the wrong rooms.
+RS_ADDR=$(grep 'DEF _run_state ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+PL_ADDR=$(grep 'DEF _player ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+
+echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
 QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
-    QUINTRA_OUT_DIR="$OUT_DIR" \
-    timeout 30 xvfb-run -a mgba-qt "$ROM" \
+    QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" \
+    timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 2>&1 | grep -v 'Window\|Qt\|libpng' || true
 

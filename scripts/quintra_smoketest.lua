@@ -49,9 +49,30 @@ end
 local function press(key, frames_held) hold(key, frames_held or 4) end
 local function tap(key) hold(key, 2) end
 
--- Walk through one door. Hold direction long enough to cross the room.
-local function walk_through_door(dir_key)
-    hold(dir_key, 220)
+-- run_state / player WRAM addresses, resolved from the .noi by
+-- test_smoke.sh. room_counter is run_state+1; player hp is player+2.
+local RS_ADDR = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
+local PL_ADDR = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
+
+local function room_counter()
+    if RS_ADDR == 0 then return 0xFF end
+    return emu:read8(RS_ADDR + 1)
+end
+
+-- Walk south until the room counter reads exactly `target`. Short
+-- 20-frame bursts so a crossing can't overshoot two rooms (which the
+-- old fixed 220-frame hold did whenever code-size changes shifted
+-- frame alignment). The runner is topped up each burst: this harness
+-- verifies screens are REACHABLE, not that a bot survives bullet hell.
+local function walk_to_room(target)
+    for _ = 1, 80 do
+        if room_counter() == target then break end
+        if PL_ADDR ~= 0 then
+            emu:write8(PL_ADDR + 2, 12)    -- hp: stay alive
+            emu:write8(PL_ADDR + 15, 60)   -- iframes: no knockback ping-pong
+        end
+        hold(KEY_DOWN, 20)
+    end
     tick(20)
 end
 
@@ -67,12 +88,13 @@ tap(KEY_DOWN); tick(15); shot("02e_vespine")
 tap(KEY_DOWN); tick(15)  -- wraps back to Wolfkin
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
--- Walk through 5 doors to reach boss room (run_state.room_counter == 5)
-walk_through_door(KEY_DOWN);  shot("04_room1")
-walk_through_door(KEY_DOWN);  shot("05_room2")
-walk_through_door(KEY_DOWN);  shot("06_room3")
-walk_through_door(KEY_DOWN);  shot("07_room4")
-walk_through_door(KEY_DOWN);  shot("08_BOSS_room")
+-- Descend by room counter: 1,2,3 (mini-boss), 4 (shop), then the
+-- stage-boss room at 6.
+walk_to_room(1);  shot("04_room1")
+walk_to_room(2);  shot("05_room2")
+walk_to_room(3);  shot("06_room3")
+walk_to_room(4);  shot("07_room4")
+walk_to_room(6);  shot("08_BOSS_room")
 
 -- After 5 walks, player ends up at bottom of boss room (walked into south wall).
 -- Boss is at center (y=72). Player at ~y=128. Fire UP at boss.
