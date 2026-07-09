@@ -29,6 +29,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 4: return SPR_ENEMY_ORC;
         case 5: return SPR_ENEMY_WISP;
         case 6: return SPR_ENEMY_BOMBER;
+        case 7: return SPR_ENEMY_SHADE;
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -44,6 +45,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 4:  return 0x07;
         case 5:  return 0x00;
         case 6:  return 0x04;   // Bomber: red shell, amber fuse (danger!)
+        case 7:  return 0x00;   // Shade: pale ghost-bone
         default: return 0x03;
     }
 }
@@ -208,6 +210,48 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
     }
 }
 
+// ---------------- Teleporter: vanish, reappear beside the player ---------
+// ai_data[1] = phase timer, ai_data[2] = phase (0 present, 1 gone).
+// While gone the shade parks at y=200 — offscreen, uncollidable,
+// unhittable — then materializes a fair distance from the player.
+
+static void teleport_tick(entity_t *e, const enemy_def_t *def) {
+    if (e->ai_data[2] == 0) {
+        chaser_tick(e, 48);                       // slow stalk
+        if (++e->ai_data[1] >= def->ai_p0) {      // blink_rate
+            e->ai_data[1] = 0;
+            e->ai_data[2] = 1;
+            fx_spawn(SPR_FX_IMPACT, 2,
+                (i16)FIX8_TO_INT(e->x), (i16)FIX8_TO_INT(e->y), 8);
+            e->x = FIX8(80);
+            e->y = FIX8(200);                     // limbo
+        }
+    } else if (++e->ai_data[1] >= 45) {           // gone ~0.75s, then try
+        u8 tries = 8;
+        e->ai_data[1] = 0;
+        while (tries--) {
+            u8 span = (u8)(def->ai_p1 << 1);      // appear_dist each way
+            i16 nx = (i16)player.x
+                + (i16)(rng_next_u8() % span) - (i16)def->ai_p1;
+            i16 ny = (i16)player.y
+                + (i16)(rng_next_u8() % span) - (i16)def->ai_p1;
+            i16 adx = nx - (i16)player.x; if (adx < 0) adx = -adx;
+            i16 ady = ny - (i16)player.y; if (ady < 0) ady = -ady;
+            if (adx + ady < 16) continue;          // never on top of you
+            if (nx < 8 || nx >= (i16)((ROOM_W - 1) * 8)) continue;
+            if (ny < 8 || ny >= (i16)((ROOM_H - 1) * 8)) continue;
+            if (!room_tile_walkable(room_tile_at_px(nx + 4, ny + 4))) continue;
+            e->x = FIX8(nx);
+            e->y = FIX8(ny);
+            e->ai_data[2] = 0;
+            e->ai_data[7] = 6;                    // materialize shimmer
+            fx_spawn(SPR_FX_IMPACT, 2, nx, ny, 8);
+            break;
+        }
+        // No spot found: stay gone, retry in another 45 frames
+    }
+}
+
 // ---------------- Boss: bullet-hell patterns -----------------------------
 // Slow chase + volleys. Each of the 9 large stage bosses fires a distinct
 // pattern (ai_data[2] = pattern id = stage), so they read differently even
@@ -353,6 +397,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
         case AI_SHOOTER: shooter_tick(e, def);             break;
+        case AI_TELEPORT: teleport_tick(e, def);           break;
         default:         walker_tick(e);                   break;
     }
 }

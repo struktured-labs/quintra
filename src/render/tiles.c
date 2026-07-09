@@ -129,6 +129,7 @@ void tiles_load_all_enemy_sprites(void) BANKED {
     set_sprite_data(SPR_ENEMY_SKELETON, 1, sprite_enemy_skeleton);
     set_sprite_data(SPR_ENEMY_ORC,      1, sprite_enemy_orc);
     set_sprite_data(SPR_ENEMY_BOMBER,   1, sprite_enemy_bomber);
+    set_sprite_data(SPR_ENEMY_SHADE,    1, sprite_enemy_shade);
 }
 
 void tiles_load_miniboss(u8 stage) BANKED {

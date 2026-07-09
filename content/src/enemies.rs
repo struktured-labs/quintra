@@ -101,6 +101,19 @@ pub const BOMBER: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const SHADE: Enemy = Enemy {
+    id:         ENEMY_SHADE,
+    name:       "Shade",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    // Fragile ambusher: vanishes, reappears beside you, strikes. Weak to
+    // shadow (Corvin unmakes what hides in the dark).
+    stats: EnemyStats { hp: 3, damage: 2, speed: 48, score: 45, weakness: 0x08, poise: 0 },
+    ai_script:  AiScriptId::Teleporter { blink_rate: 110, appear_dist: 28 },
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -109,4 +122,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(ORC.clone());
     r.add_enemy(WISP.clone());
     r.add_enemy(BOMBER.clone());
+    r.add_enemy(SHADE.clone());
 }

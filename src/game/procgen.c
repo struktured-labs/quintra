@@ -423,6 +423,11 @@ void procgen_generate_current_room(void) BANKED {
                             && (rng_next_u8() & 3) == 0) {
                             eid = 6;
                         }
+                        // Stage 5+: some become Shades (teleporting stalkers)
+                        if (eid != 0 && eid != 1 && eid != 6 && stage >= 5
+                            && (rng_next_u8() & 3) == 0) {
+                            eid = 7;
+                        }
                     }
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);

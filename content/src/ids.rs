@@ -40,6 +40,7 @@ pub const ENEMY_SKELETON:        EnemyId = EnemyId::new(3);    // chaser
 pub const ENEMY_ORC:             EnemyId = EnemyId::new(4);    // tank
 pub const ENEMY_WISP:            EnemyId = EnemyId::new(5);    // ranged shooter
 pub const ENEMY_BOMBER:          EnemyId = EnemyId::new(6);    // walker; detonates on death
+pub const ENEMY_SHADE:           EnemyId = EnemyId::new(7);    // teleporting stalker
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
