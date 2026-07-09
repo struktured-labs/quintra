@@ -36,6 +36,54 @@ static const u16 title_palette_steady[4] = {
     BGR555(30, 30, 31),    // 3: near-white
 };
 
+// 0 = main title, 1 = records page (SELECT toggles)
+static u8 showing_records;
+
+static void render_title(void) {
+    cls();
+    // Layout: 20 cols × 18 rows. Center "QUINTRA" (7 chars) at col 6.
+    gotoxy(6, 4);
+    printf("QUINTRA");
+    gotoxy(5, 6);
+    printf("THE  ROGUELIKE");
+    if (has_save) {
+        gotoxy(4, 11);
+        printf("A     CONTINUE");
+        gotoxy(4, 13);
+        printf("START NEW RUN");
+    } else {
+        gotoxy(4, 12);
+        printf("PRESS  START");
+    }
+    gotoxy(1, 17); printf("SELECT=RECORDS");
+    gotoxy(15, 17); printf("v0.9");
+    {
+        u16 best = sram_meta_best();
+        if (best > 0) {
+            gotoxy(3, 15);
+            printf("BEST %u", best);
+            {
+                u16 w = sram_meta_wins();
+                if (w > 0) printf("  WINS %u", w);
+            }
+        }
+    }
+}
+
+static void render_records(void) {
+    u16 runs = sram_meta_runs();
+    u16 wins = sram_meta_wins();
+    cls();
+    gotoxy(5, 2);  printf("- RECORDS -");
+    gotoxy(2, 5);  printf("BEST SCORE %u", sram_meta_best());
+    gotoxy(2, 7);  printf("RUNS       %u", runs);
+    gotoxy(2, 9);  printf("WINS       %u", wins);
+    gotoxy(2, 11); printf("FALLEN     %u", (u16)(runs - wins));
+    gotoxy(2, 14); printf("ONLY KNOWLEDGE");
+    gotoxy(2, 15); printf("PERSISTS.");
+    gotoxy(2, 17); printf("SELECT/B = BACK");
+}
+
 void title_enter(void) {
     DISPLAY_OFF;
 
@@ -49,37 +97,9 @@ void title_enter(void) {
         font_set(f);
     }
 
-    // Clear screen (font_set may leave junk)
-    cls();
-
-    // Layout: 20 cols × 18 rows. Center "QUINTRA" (7 chars) at col 6.
-    gotoxy(6, 4);
-    printf("QUINTRA");
-    gotoxy(5, 6);
-    printf("THE  ROGUELIKE");
     has_save = sram_run_valid();
-    if (has_save) {
-        gotoxy(4, 11);
-        printf("A     CONTINUE");
-        gotoxy(4, 13);
-        printf("START NEW RUN");
-    } else {
-        gotoxy(4, 12);
-        printf("PRESS  START");
-    }
-    gotoxy(6, 16);
-    printf("v0.9");
-    {
-        u16 best = sram_meta_best();
-        if (best > 0) {
-            gotoxy(3, 14);
-            printf("BEST %u", best);
-            {
-                u16 w = sram_meta_wins();
-                if (w > 0) printf("  WINS %u", w);
-            }
-        }
-    }
+    showing_records = 0;
+    render_title();
 
     pulse_phase         = 0;
     last_palette_color2 = title_palette_steady[2];
@@ -95,6 +115,22 @@ void title_exit(void) {
 
 screen_id_t title_tick(u8 keys, u8 pressed) {
     keys;
+    // Records page: SELECT toggles, B backs out. Blocks run-start inputs
+    // so a stray START on the stats page doesn't launch a game.
+    if (showing_records) {
+        if (pressed & (J_SELECT | J_B | J_START)) {
+            showing_records = 0;
+            sfx_play(SFX_COIN);
+            render_title();
+        }
+        return SCREEN_SELF;
+    }
+    if (pressed & J_SELECT) {
+        showing_records = 1;
+        sfx_play(SFX_COIN);
+        render_records();
+        return SCREEN_SELF;
+    }
     // Resume the suspended run (room regenerates from the saved seed +
     // counter; hud_init runs in room_enter, so RUN_INIT is skippable).
     if ((pressed & J_A) && has_save && sram_load_run()) {
