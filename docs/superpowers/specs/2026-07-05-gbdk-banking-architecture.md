@@ -202,6 +202,27 @@ Don't scatter raw banked-pointer dereferences.
   `mgba_run_sequence` (inline freeze/OAM report) as the source of truth, and
   memory reads (`0x9800` BG map, `.noi` symbols) for detail.
 
+## 10.5 Post-conversion measurement: the room loop was ALREADY ~30fps
+
+Measured via `loop_frame_counter` deltas under PyBoy (300 real frames):
+
+| build                | title       | room (combat load) |
+|----------------------|-------------|--------------------|
+| pre-banking 63aef2e  | 300/300     | **172/300 (~34fps)** |
+| banked v0.9          | 300/300     | 163/300 (~33fps)   |
+
+The room loop overruns one vblank per iteration under normal load and has
+since long before banking (trampolines cost ~5%). All movement speeds,
+fire cadences, and music tempo have been implicitly tuned at this rate —
+"fixing" it to 60fps would double game speed and needs a coordinated
+re-tune, not a quick patch. Consequences handled so far:
+- The run clock counts REAL seconds via a VBL-ISR tick (`g_vbl_ticks` in
+  loop.c), not loop iterations.
+- Music ticks from the main loop, so tempo in rooms is ~half the tempo on
+  the title screen. Tracks were authored against in-room playback.
+Future optimization targets if a 60fps push ever happens: combat's
+O(projectiles x enemies) sweep, per-entity AI dispatch, OAM rewrite.
+
 ## 11. Payoff
 
 Once home is under 16 KB: the full **2 MB (or up to 8 MB)** opens up. Sprite art,

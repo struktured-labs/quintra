@@ -50,6 +50,8 @@ void victory_enter(void) {
     gotoxy(2, 13); printf("score   %u%s", (u16)run_state.score,
         new_best ? " NEW!" : "");
     gotoxy(2, 14); printf("best    %u", sram_meta_best());
+    gotoxy(2, 15); printf("time    %u:%u%u", (u16)(run_state.run_timer / 60),
+        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
 
     gotoxy(2, 16); printf("PRESS  START");
 

@@ -395,6 +395,7 @@ static u8 facing_to_dir8(u8 facing) {
 }
 
 void room_enter(void) {
+    g_vbl_ticks = 0;   // run clock: don't count time spent off-room
     DISPLAY_OFF;
 
     {
@@ -514,12 +515,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         room_paused ^= 1;
         room_apply_pause_palettes(room_paused);
     }
-    if (room_paused) return SCREEN_SELF;
+    if (room_paused) { g_vbl_ticks = 0; return SCREEN_SELF; }   // clock holds
 
     // ---- Stage-entry reveal: hold dimmed palettes briefly, then pop to
     // full brightness — a beat of "emerging into somewhere new".
     if (stage_fade) {
         if (--stage_fade == 0) room_apply_pause_palettes(0);
+    }
+
+    // ---- Run clock: counts REAL seconds of active room play via the
+    // VBL ISR tick (the room loop overruns vblanks under load, so loop
+    // iterations are not wall time). Pause/pack drain the ticks instead.
+    while (g_vbl_ticks >= 60) {
+        g_vbl_ticks = (u8)(g_vbl_ticks - 60);
+        if (run_state.run_timer < 65535) run_state.run_timer++;
     }
 
     // ---- Hit-stop: freeze the world a few frames on impact for weight,

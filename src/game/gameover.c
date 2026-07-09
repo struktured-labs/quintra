@@ -44,6 +44,8 @@ void gameover_enter(void) {
     gotoxy(2, 9);  printf("score   %u%s", (u16)run_state.score,
         new_best ? " NEW!" : "");
     gotoxy(2, 10); printf("best    %u", sram_meta_best());
+    gotoxy(2, 11); printf("time    %u:%u%u", (u16)(run_state.run_timer / 60),
+        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
     gotoxy(2, 14); printf("PRESS  START");
 
     music_play_gameover();

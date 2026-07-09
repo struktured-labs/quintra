@@ -16,6 +16,13 @@
 screen_id_t loop_current_screen = SCREEN_BOOT;
 u16         loop_frame_counter  = 0;
 
+// True-60Hz tick source (see loop.h). ISRs must live in home and stay
+// tiny: one increment.
+volatile u8 g_vbl_ticks = 0;
+static void loop_vbl_isr(void) NONBANKED {
+    g_vbl_ticks++;
+}
+
 // Bank references for the banked screen files (each defines a matching
 // BANKREF(); bankpack patches these to the real assigned bank numbers).
 BANKREF_EXTERN(title_enter)
@@ -53,6 +60,9 @@ static void screen_map(screen_id_t s) {
 void loop_init(screen_id_t start) {
     loop_current_screen = start;
     loop_frame_counter  = 0;
+    CRITICAL {
+        add_VBL(loop_vbl_isr);
+    }
     screen_map(start);
     if (screens[start].enter) screens[start].enter();
 }
