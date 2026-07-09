@@ -224,7 +224,9 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
 
 u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
-         || t == BGT_RUBBLE || t == BGT_DOOR);
+         || t == BGT_RUBBLE || t == BGT_DOOR
+         // Shop price tags are painted floor (coin glyph + digits)
+         || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
 }
 
 static u8 is_walkable_at(i16 px, i16 py) {
@@ -306,7 +308,12 @@ static u8 attr_for_tile(u8 t) {
         case BGT_BLOCK:   return BGPAL_DOOR;       // gold-ish, reads as interactive
         case BGT_CRYSTAL: return BGPAL_CRYSTAL;
         case BGT_DOOR:    return BGPAL_DOOR;
-        default:          return BGPAL_FLOOR;
+        default:
+            // Shop price tags glow amber (crack palette) for readability
+            if (t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9)) {
+                return BGPAL_CRACK;
+            }
+            return BGPAL_FLOOR;
     }
 }
 

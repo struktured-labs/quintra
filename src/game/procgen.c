@@ -356,6 +356,18 @@ void procgen_generate_current_room(void) BANKED {
                     entities[s2].sprite_tile = SPR_ITEM_ORB;
                     entities[s2].palette = 0x04;
                 }
+                // Price tags painted on the floor under each ware:
+                // [coin][d][d], amber, walkable. Wares sit at tile y=8;
+                // tags at y=10 leave a step of space.
+                room_tilemap[10][6]  = HUD_COIN;
+                room_tilemap[10][7]  = (u8)(HUD_DIGIT_0 + 1);
+                room_tilemap[10][8]  = (u8)(HUD_DIGIT_0 + 0);
+                room_tilemap[10][9]  = HUD_COIN;
+                room_tilemap[10][10] = (u8)(HUD_DIGIT_0 + 2);
+                room_tilemap[10][11] = (u8)(HUD_DIGIT_0 + 5);
+                room_tilemap[10][12] = HUD_COIN;
+                room_tilemap[10][13] = (u8)(HUD_DIGIT_0 + 4);
+                room_tilemap[10][14] = (u8)(HUD_DIGIT_0 + 0);
             }
         } else {
             *(volatile u8*)0xFFFC = 0x00;
