@@ -64,87 +64,17 @@ void room_shake(u8 mag, u8 frames) BANKED {
 
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
 
-// Nine stage themes, indexed by run_state.bosses_beaten (clamped 0-8). Each
-// defines floor / wall / crystal / door palettes; the crack palette stays
-// amber across stages so the "shoot me" signal is consistent.
-// [stage][floor|wall|crystal|door][color 0-3]
-#define STAGE_COUNT 9
-static const u16 stage_pal[STAGE_COUNT][4][4] = {
-    // 0 — Crystal Caverns (cool blue)
-    {
-        { BGR555( 4, 3, 6), BGR555(11,10,15), BGR555(17,16,22), BGR555(23,22,28) },
-        { BGR555( 1, 1, 3), BGR555( 5, 5,11), BGR555( 9,10,17), BGR555(16,18,26) },
-        { BGR555( 2, 0, 5), BGR555(16, 5,22), BGR555(10,22,29), BGR555(31,30,31) },
-        { BGR555( 1, 1, 2), BGR555(10, 7, 2), BGR555(18,13, 3), BGR555(28,21, 6) },
-    },
-    // 1 — Verdant Hollow (mossy green)
-    {
-        { BGR555( 3, 6, 3), BGR555( 8,14, 7), BGR555(13,20,11), BGR555(20,26,16) },
-        { BGR555( 1, 3, 1), BGR555( 4, 9, 3), BGR555( 7,14, 6), BGR555(13,22,11) },
-        { BGR555( 1, 4, 0), BGR555( 8,24, 4), BGR555(18,31,10), BGR555(30,31,22) },
-        { BGR555( 2, 2, 1), BGR555(11, 8, 2), BGR555(20,14, 3), BGR555(30,24, 8) },
-    },
-    // 2 — Ember Depths (molten red/orange)
-    {
-        { BGR555( 7, 2, 2), BGR555(16, 7, 5), BGR555(23,12, 7), BGR555(30,20,12) },
-        { BGR555( 3, 0, 0), BGR555(11, 3, 2), BGR555(17, 6, 3), BGR555(26,12, 6) },
-        { BGR555( 5, 1, 0), BGR555(28,10, 2), BGR555(31,22, 4), BGR555(31,31,20) },
-        { BGR555( 2, 1, 0), BGR555(12, 8, 2), BGR555(22,15, 3), BGR555(31,26, 8) },
-    },
-    // 3 — Frost Vault (icy cyan/white)
-    {
-        { BGR555( 6, 9,12), BGR555(14,19,23), BGR555(20,26,29), BGR555(27,31,31) },
-        { BGR555( 3, 5, 8), BGR555( 8,13,18), BGR555(13,20,25), BGR555(20,27,31) },
-        { BGR555( 4, 8,12), BGR555(12,26,31), BGR555(22,31,31), BGR555(31,31,31) },
-        { BGR555( 2, 3, 4), BGR555(10, 9, 4), BGR555(20,16, 6), BGR555(30,26,12) },
-    },
-    // 4 — Toxic Mire (sickly yellow-green)
-    {
-        { BGR555( 5, 6, 1), BGR555(12,14, 3), BGR555(18,20, 6), BGR555(24,26,10) },
-        { BGR555( 2, 3, 0), BGR555( 7, 8, 1), BGR555(11,13, 3), BGR555(17,19, 6) },
-        { BGR555( 3, 5, 0), BGR555(16,26, 2), BGR555(26,31, 6), BGR555(31,31,18) },
-        { BGR555( 2, 2, 0), BGR555(11, 9, 2), BGR555(20,16, 4), BGR555(29,25, 9) },
-    },
-    // 5 — Shadow Keep (cold grey/violet)
-    {
-        { BGR555( 4, 4, 6), BGR555(10,10,13), BGR555(15,15,19), BGR555(21,21,26) },
-        { BGR555( 2, 2, 3), BGR555( 6, 6, 9), BGR555(10,10,14), BGR555(16,16,22) },
-        { BGR555( 3, 1, 5), BGR555(14, 8,22), BGR555(22,16,30), BGR555(30,28,31) },
-        { BGR555( 2, 2, 3), BGR555(10, 8, 6), BGR555(19,15, 8), BGR555(28,24,14) },
-    },
-    // 6 — Golden Temple (warm gold/sand)
-    {
-        { BGR555( 8, 6, 2), BGR555(18,14, 6), BGR555(25,20, 9), BGR555(31,27,15) },
-        { BGR555( 4, 3, 1), BGR555(12, 9, 3), BGR555(18,14, 5), BGR555(26,21, 9) },
-        { BGR555( 6, 4, 0), BGR555(28,22, 4), BGR555(31,29, 8), BGR555(31,31,22) },
-        { BGR555( 3, 2, 0), BGR555(14,11, 2), BGR555(24,19, 4), BGR555(31,28,10) },
-    },
-    // 7 — Bloodmoon (crimson/black)
-    {
-        { BGR555( 6, 1, 2), BGR555(13, 3, 5), BGR555(19, 5, 8), BGR555(26,10,12) },
-        { BGR555( 3, 0, 1), BGR555( 8, 1, 2), BGR555(13, 2, 4), BGR555(20, 6, 8) },
-        { BGR555( 5, 0, 1), BGR555(24, 2, 6), BGR555(31, 6,10), BGR555(31,22,20) },
-        { BGR555( 3, 1, 1), BGR555(13, 6, 3), BGR555(23,12, 5), BGR555(31,22,10) },
-    },
-    // 8 — Void Sanctum (deep purple/toxic green, final)
-    {
-        { BGR555( 4, 2, 7), BGR555(10, 6,14), BGR555(15,11,20), BGR555(20,16,26) },
-        { BGR555( 2, 0, 4), BGR555( 7, 2,10), BGR555(11, 5,15), BGR555(18,10,24) },
-        { BGR555( 0, 4, 2), BGR555( 6,22, 8), BGR555(14,31,12), BGR555(28,31,24) },
-        { BGR555( 2, 0, 3), BGR555( 8, 4,10), BGR555(16,10,20), BGR555(26,18,30) },
-    },
-};
-// Cracked secret wall — warm amber, constant across stages.
-static const u16 pal_crack[4] = {
-    BGR555( 6,  2,  1), BGR555(22, 11,  3), BGR555(30, 18,  4), BGR555(31, 28, 12),
-};
+// Stage themes now live in the Rust content layer (content/src/stages.rs)
+// and arrive as generated BGR555 tables: stage_pal / boss_stage_pal /
+// stage_pal_crack / stage_names (see src/generated/stages.h). Invalid
+// colors or a wrong stage count fail at cargo build, never here.
 
 static u8 room_stage(void) {
     // Endless descent (10th+ boss): the nine themes cycle again —
     // Crystal Caverns at double power, and on down. Stats stay maxed
     // (procgen clamps power separately); this drives look + music.
     u8 s = run_state.bosses_beaten;
-    return (s < STAGE_COUNT) ? s : (u8)(s % STAGE_COUNT);
+    return (s < N_STAGES) ? s : (u8)(s % N_STAGES);
 }
 
 // Crawler (enemy) palette — blue, with one accent
@@ -179,20 +109,8 @@ static const u16 sentinel_palette[4] = {
     BGR555(28, 24, 14),
 };
 
-// Per-stage LARGE boss palette (OBJ slot 6): [_, rim, body-dark, glowing].
-// Bodies are kept DARK with a bright stage-hued rim + glowing accent so the
-// boss reads clearly against ANY stage floor (light frost/gold included).
-static const u16 boss_stage_pal[STAGE_COUNT][4] = {
-    { BGR555(0,0,0), BGR555(10,13,22), BGR555( 2, 3, 8), BGR555(22,29,31) }, // 0 blue
-    { BGR555(0,0,0), BGR555( 9,19, 7), BGR555( 2, 6, 2), BGR555(26,31,14) }, // 1 green
-    { BGR555(0,0,0), BGR555(22, 9, 4), BGR555( 6, 2, 1), BGR555(31,27,10) }, // 2 ember
-    { BGR555(0,0,0), BGR555(12,18,24), BGR555( 3, 5, 9), BGR555(31,31,31) }, // 3 frost
-    { BGR555(0,0,0), BGR555(16,20, 4), BGR555( 4, 6, 1), BGR555(31,31,14) }, // 4 toxic
-    { BGR555(0,0,0), BGR555(13,11,20), BGR555( 3, 3, 6), BGR555(28,22,31) }, // 5 shadow
-    { BGR555(0,0,0), BGR555(22,17, 5), BGR555( 6, 4, 1), BGR555(31,30,18) }, // 6 gold
-    { BGR555(0,0,0), BGR555(20, 4, 6), BGR555( 6, 1, 2), BGR555(31,20,16) }, // 7 blood
-    { BGR555(0,0,0), BGR555(13, 6,20), BGR555( 3, 1, 7), BGR555(20,31,18) }, // 8 void
-};
+// (Per-stage large-boss palettes now come from the generated stage
+// tables — boss_stage_pal in stages.h.)
 
 // Bullet palette — bright gold
 static const u16 bullet_palette[4] = {
@@ -430,7 +348,7 @@ void room_enter(void) {
         palette_bg_load(BGPAL_CRYSTAL, sp[2]);
         palette_bg_load(BGPAL_DOOR,    sp[3]);
     }
-    palette_bg_load(BGPAL_CRACK,   pal_crack);
+    palette_bg_load(BGPAL_CRACK,   stage_pal_crack);
     palette_obj_load(0, skeleton_palette);
     palette_obj_load(1, class_obj_palettes[player.class_id < 5 ? player.class_id : 0]);
     palette_obj_load(2, bullet_palette);

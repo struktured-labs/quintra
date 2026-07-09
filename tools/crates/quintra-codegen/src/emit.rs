@@ -21,6 +21,7 @@ pub fn write_all(out: &Path, reg: &Registry) -> Result<()> {
     write_enemies(out, reg)?;
     write_biomes(out, reg)?;
     write_rooms(out, reg)?;
+    write_stages(out, reg)?;
     write_umbrella(out, reg)?;
     Ok(())
 }
@@ -584,9 +585,73 @@ fn write_umbrella(out: &Path, _reg: &Registry) -> Result<()> {
          #include \"enemies.h\"\n\
          #include \"biomes.h\"\n\
          #include \"rooms.h\"\n\
+         #include \"stages.h\"\n\
          #endif\n",
     );
     fs::write(out.join("content.h"), body).context("write content.h")?;
+    Ok(())
+}
+
+
+// ---------------------------------------------------------------- stages
+
+fn emit_pal4(p: &[quintra_content::Rgb5; 4]) -> String {
+    format!("{{ 0x{:04X}, 0x{:04X}, 0x{:04X}, 0x{:04X} }}",
+        p[0].to_bgr555(), p[1].to_bgr555(), p[2].to_bgr555(), p[3].to_bgr555())
+}
+
+fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
+    let n = reg.stages.len();
+
+    let h = format!(
+        "{HEADER_NOTE}\
+         #ifndef QUINTRA_GEN_STAGES_H\n\
+         #define QUINTRA_GEN_STAGES_H\n\
+         #include \"core/types.h\"\n\
+         \n\
+         #define N_STAGES {n}\n\
+         \n\
+         /* [stage][floor|wall|crystal|door][color 0-3], BGR555 */\n\
+         extern const u16 stage_pal[N_STAGES][4][4];\n\
+         /* Large-boss OBJ tint per stage: [_, rim, body-dark, glow] */\n\
+         extern const u16 boss_stage_pal[N_STAGES][4];\n\
+         /* Cracked-wall palette — constant across stages */\n\
+         extern const u16 stage_pal_crack[4];\n\
+         /* Display names (PACK screen) */\n\
+         extern const char *const stage_names[N_STAGES];\n\
+         #endif\n");
+    fs::write(out.join("stages.h"), h).context("write stages.h")?;
+
+    let mut c = String::from(HEADER_NOTE);
+    c.push_str("#include \"stages.h\"\n\n");
+
+    c.push_str(&format!("const u16 stage_pal[N_STAGES][4][4] = {{\n"));
+    for s in &reg.stages {
+        c.push_str(&format!("    /* {} — {} */\n    {{\n", s.id, esc(s.name)));
+        for pal in [&s.floor, &s.wall, &s.crystal, &s.door] {
+            c.push_str(&format!("        {},\n", emit_pal4(pal)));
+        }
+        c.push_str("    },\n");
+    }
+    c.push_str("};\n\n");
+
+    c.push_str("const u16 boss_stage_pal[N_STAGES][4] = {\n");
+    for s in &reg.stages {
+        c.push_str(&format!("    {},   /* {} */\n", emit_pal4(&s.boss), esc(s.name)));
+    }
+    c.push_str("};\n\n");
+
+    let crack = quintra_game_content::stages::CRACK_PAL;
+    c.push_str(&format!("const u16 stage_pal_crack[4] = {};\n\n", emit_pal4(&crack)));
+
+    c.push_str("const char *const stage_names[N_STAGES] = {\n");
+    for s in &reg.stages {
+        c.push_str(&format!("    \"{}\",\n", esc(s.name)));
+    }
+    c.push_str("};\n");
+
+    fs::write(out.join("stages.c"), c).context("write stages.c")?;
+    let _ = n;
     Ok(())
 }
 

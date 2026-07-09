@@ -16,6 +16,7 @@ pub mod items;
 pub mod enemies;
 pub mod biomes;
 pub mod rooms;
+pub mod stages;
 
 use quintra_content::Registry;
 
@@ -26,6 +27,7 @@ pub fn registry() -> Registry {
     rooms::register(&mut r);          // rooms before biomes (biomes reference rooms)
     enemies::register(&mut r);        // enemies before biomes
     biomes::register(&mut r);
+    stages::register(&mut r);         // the 9 themed stages (order = progression)
     r
 }
 
@@ -49,5 +51,15 @@ mod tests {
         assert_eq!(r.n_enemies(),        6);   // Crawler+Sentinel+Hornet+Skeleton+Orc+Wisp
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_room_templates(), 1);
+        assert_eq!(r.n_stages(),         9);   // the whole run, in order
+    }
+
+    #[test]
+    fn stage_bgr555_encoding_matches_hardware_layout() {
+        use quintra_content::Rgb5;
+        // BGR555: red in bits 0-4, green 5-9, blue 10-14
+        assert_eq!(Rgb5(31, 0, 0).to_bgr555(), 0x001F);
+        assert_eq!(Rgb5(0, 31, 0).to_bgr555(), 0x03E0);
+        assert_eq!(Rgb5(0, 0, 31).to_bgr555(), 0x7C00);
     }
 }

@@ -1,6 +1,7 @@
 //! Content registry — collects all defined content for validation + codegen.
 
-use crate::{Biome, Class, Enemy, Item, RoomTemplate};
+use crate::stage::N_STAGES;
+use crate::{Biome, Class, Enemy, Item, RoomTemplate, StageTheme};
 
 #[derive(Clone, Debug, Default)]
 pub struct Registry {
@@ -9,6 +10,7 @@ pub struct Registry {
     pub enemies:        Vec<Enemy>,
     pub biomes:         Vec<Biome>,
     pub room_templates: Vec<RoomTemplate>,
+    pub stages:         Vec<StageTheme>,
 }
 
 impl Registry {
@@ -19,6 +21,7 @@ impl Registry {
     pub fn add_enemy(&mut self, e: Enemy)        -> &mut Self { self.enemies.push(e); self }
     pub fn add_biome(&mut self, b: Biome)        -> &mut Self { self.biomes.push(b); self }
     pub fn add_room(&mut self, r: RoomTemplate)  -> &mut Self { self.room_templates.push(r); self }
+    pub fn add_stage(&mut self, s: StageTheme)   -> &mut Self { self.stages.push(s); self }
 
     /// Validate every entry + check cross-references resolve.
     pub fn validate(&self) -> Result<(), Vec<String>> {
@@ -29,6 +32,21 @@ impl Registry {
         for e_ in &self.enemies       { if let Err(e) = e_.validate()       { errs.push(e); } }
         for b in &self.biomes         { if let Err(e) = b.validate()        { errs.push(e); } }
         for r in &self.room_templates { if let Err(e) = r.validate()        { errs.push(e); } }
+        for s in &self.stages         { if let Err(e) = s.validate()        { errs.push(e); } }
+
+        // Stage structure: the run is exactly N_STAGES themed stages, in order.
+        if !self.stages.is_empty() {
+            if self.stages.len() != N_STAGES {
+                errs.push(format!("expected exactly {} stages, found {}",
+                    N_STAGES, self.stages.len()));
+            }
+            for (i, s) in self.stages.iter().enumerate() {
+                if s.id as usize != i {
+                    errs.push(format!("stage at position {} has id {} (must be in order)",
+                        i, s.id));
+                }
+            }
+        }
 
         // Cross-ref checks
         let item_ids: std::collections::HashSet<_> = self.items.iter().map(|i| i.id).collect();
@@ -79,4 +97,5 @@ impl Registry {
     pub fn n_enemies(&self) -> usize        { self.enemies.len() }
     pub fn n_biomes(&self) -> usize         { self.biomes.len() }
     pub fn n_room_templates(&self) -> usize { self.room_templates.len() }
+    pub fn n_stages(&self) -> usize         { self.stages.len() }
 }

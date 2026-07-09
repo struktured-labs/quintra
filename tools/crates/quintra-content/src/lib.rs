@@ -21,6 +21,7 @@ pub mod item;
 pub mod enemy;
 pub mod biome;
 pub mod room;
+pub mod stage;
 pub mod registry;
 
 pub use class::{Class, FormTheme};
@@ -30,6 +31,7 @@ pub use biome::Biome;
 pub use room::{RoomTemplate, RoomSize, RoomKind, DoorMask, SpawnSlot, SpawnRole};
 pub use effects::{Effect, Trigger, Status, Stat, ProjectileKind};
 pub use stats::BaseStats;
+pub use stage::{StageTheme, Rgb5, N_STAGES, MAX_STAGE_NAME};
 pub use refs::{
     ClassId, ItemId, EnemyId, BiomeId, BossId, RoomTemplateId,
     PaletteRef, SpriteRef, TilesetRef, TilemapId, MusicRef, DropTableId,

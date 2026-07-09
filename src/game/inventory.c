@@ -32,12 +32,7 @@ static const char *class_name(u8 id) {
     return "?";
 }
 
-// Stage names — one per palette theme in room.c's stage_pal table.
-static const char *const stage_names[9] = {
-    "CRYSTAL CAVERNS", "VERDANT HOLLOW", "EMBER DEPTHS",
-    "FROST VAULT",     "TOXIC MIRE",     "SHADOW KEEP",
-    "GOLDEN TEMPLE",   "BLOODMOON",      "VOID SANCTUM",
-};
+// stage_names now comes from the generated stage tables (stages.h).
 
 // items[] is keyed by array position but item.id != index beyond the 5
 // starters — resolve the real entry by id (small table, linear scan is fine).
