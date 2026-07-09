@@ -47,7 +47,7 @@ mod tests {
     fn registry_counts() {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
-        assert_eq!(r.n_items(),         15);   // 5 weapons + 5 actives + 5 passives
+        assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
         assert_eq!(r.n_enemies(),        8);   // ...+Bomber+Shade
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_room_templates(), 1);

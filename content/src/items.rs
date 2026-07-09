@@ -153,6 +153,55 @@ pub const LUCKY_COIN: Item = Item {
     effects: &[Effect::StatBoost { stat: Stat::Lck, delta: 2 }],
 };
 
+pub const MANA_GEM: Item = Item {
+    id: ITEM_MANA_GEM, name: "Mana Gem",
+    description: "+2 max MP.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Uncommon,
+    effects: &[Effect::StatBoost { stat: Stat::Mp, delta: 2 }],
+};
+
+pub const WARD_CHARM: Item = Item {
+    id: ITEM_WARD_CHARM, name: "Ward Charm",
+    description: "+1 DEF, +1 LCK.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
+    effects: &[
+        Effect::StatBoost { stat: Stat::Def, delta: 1 },
+        Effect::StatBoost { stat: Stat::Lck, delta: 1 },
+    ],
+};
+
+pub const SWIFT_FANG: Item = Item {
+    id: ITEM_SWIFT_FANG, name: "Swift Fang",
+    description: "+1 SPD, +1 ATK.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
+    effects: &[
+        Effect::StatBoost { stat: Stat::Spd, delta: 1 },
+        Effect::StatBoost { stat: Stat::Atk, delta: 1 },
+    ],
+};
+
+pub const HUNTERS_EYE: Item = Item {
+    id: ITEM_HUNTERS_EYE, name: "HuntersEye",
+    description: "+3 LCK. Fortune favors the watcher.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
+    effects: &[Effect::StatBoost { stat: Stat::Lck, delta: 3 }],
+};
+
+pub const BLOOD_SIGIL: Item = Item {
+    id: ITEM_BLOOD_SIGIL, name: "BloodSigil",
+    description: "+1 ATK, +1 max HP.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
+    effects: &[
+        Effect::StatBoost { stat: Stat::Atk, delta: 1 },
+        Effect::StatBoost { stat: Stat::Hp, delta: 1 },
+    ],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_item(CLAW_COMBO.clone());
     r.add_item(TAIL_SPIKE.clone());
@@ -169,4 +218,9 @@ pub fn register(r: &mut Registry) {
     r.add_item(POWER_STONE.clone());
     r.add_item(TOUGH_SKIN.clone());
     r.add_item(LUCKY_COIN.clone());
+    r.add_item(MANA_GEM.clone());
+    r.add_item(WARD_CHARM.clone());
+    r.add_item(SWIFT_FANG.clone());
+    r.add_item(HUNTERS_EYE.clone());
+    r.add_item(BLOOD_SIGIL.clone());
 }

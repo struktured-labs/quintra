@@ -76,8 +76,8 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     if      (r < 0x40) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 25%
     else if (r < 0xB3) pickup_spawn(PICKUP_COIN_1,     x, y);   // 45%
     else if (r < 0xCC) {                                        // 10%: item
-        // Passive stat-boosters live at items[] indices 10..14
-        pickup_spawn_item((u8)(10 + rng_range(5)), x, y);
+        // Passive stat-boosters live at items[] indices 10..19
+        pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
     }
     // else: no drop (20%)
 }
@@ -223,7 +223,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 hud_redraw_hp();
                                 break;
                             case WARE_ITEM:
-                                apply_item_effects((u8)(10 + rng_range(5)));
+                                apply_item_effects((u8)(10 + rng_range(10)));
                                 break;
                             case WARE_BIG:
                                 apply_item_effects(10);   // Iron Heart

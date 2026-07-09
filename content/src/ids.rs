@@ -31,6 +31,11 @@ pub const ITEM_SPEED_RING:   ItemId = ItemId::new(21);   // +1 SPD
 pub const ITEM_POWER_STONE:  ItemId = ItemId::new(22);   // +1 ATK
 pub const ITEM_TOUGH_SKIN:   ItemId = ItemId::new(23);   // +1 DEF
 pub const ITEM_LUCKY_COIN:   ItemId = ItemId::new(24);   // +2 LCK
+pub const ITEM_MANA_GEM:     ItemId = ItemId::new(25);   // +2 MP
+pub const ITEM_WARD_CHARM:   ItemId = ItemId::new(26);   // +1 DEF +1 LCK
+pub const ITEM_SWIFT_FANG:   ItemId = ItemId::new(27);   // +1 SPD +1 ATK
+pub const ITEM_HUNTERS_EYE:  ItemId = ItemId::new(28);   // +3 LCK
+pub const ITEM_BLOOD_SIGIL:  ItemId = ItemId::new(29);   // +1 ATK +1 HP
 
 // ----- Enemies
 pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);
