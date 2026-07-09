@@ -114,6 +114,14 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
             entity_kill(idx);
             return;
         }
+        // Crystals shatter under PLAYER fire (mana nodes); they still
+        // block enemy shots, so they double as destructible cover.
+        if (t == BGT_CRYSTAL && (e->flags & EF_PLAYER_PROJ)) {
+            room_break_crystal((u8)(sx >> 3), (u8)(sy >> 3));
+            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+            entity_kill(idx);
+            return;
+        }
         if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_CRYSTAL
             || t == BGT_WALL_CRACK) {
             fx_spawn(SPR_FX_IMPACT, 2, px, py, 4);

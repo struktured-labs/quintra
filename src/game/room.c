@@ -297,6 +297,18 @@ static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
     VBK_REG = 0;
 }
 
+void room_break_crystal(u8 tx, u8 ty) BANKED {
+    // Shatter a crystal tile: floor it, ~25% of shards hold a +1 MP wisp
+    // (crystals are the world's mana nodes).
+    if (tx >= ROOM_W || ty >= ROOM_H) return;
+    if (room_tilemap[ty][tx] != BGT_CRYSTAL) return;
+    room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
+    sfx_play(SFX_HIT);
+    if (rng_next_u8() < 64) {
+        pickup_spawn_mp(FIX8((i16)tx * 8), FIX8((i16)ty * 8));
+    }
+}
+
 void room_open_secret(u8 tx, u8 ty) BANKED {
     if (tx >= ROOM_W || ty >= ROOM_H) return;
     room_set_tile_vbl(tx, ty, BGT_DOOR, BGPAL_DOOR);

@@ -21,6 +21,8 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED;
 u8 room_tile_walkable(u8 t) BANKED;
 // A player shot hit a cracked wall: convert it to a secret door.
 void room_open_secret(u8 tx, u8 ty) BANKED;
+// A player shot shattered a crystal: floor it, maybe drop a +1 MP wisp.
+void room_break_crystal(u8 tx, u8 ty) BANKED;
 
 // Impact shake: wiggle the BG scroll (HUD unaffected) for a few frames.
 // mag = pixels (1-2 sensible); longer of current/new duration wins.

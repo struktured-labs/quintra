@@ -51,6 +51,15 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_MP, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_ENEMY_WISP;
+        entities[idx].palette     = 0x06;   // stage-glow: reads as magic
+    }
+    return idx;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {
@@ -179,6 +188,13 @@ u8 pickup_check_player_collision(void) BANKED {
                     break;
                 case PICKUP_ITEM:
                     apply_item_effects(entities[i].ai_data[1]);
+                    sfx_play(SFX_HEART);
+                    break;
+                case PICKUP_MP:
+                    if (player.mp < player.mp_max) {
+                        player.mp++;
+                        hud_redraw_mp();
+                    }
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_WEAPON: {
