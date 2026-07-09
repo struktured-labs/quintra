@@ -161,7 +161,12 @@ static void charger_tick(entity_t *e, const enemy_def_t *def) {
             }
         }
     } else if (mode == CHG_TELEGRAPH) {
-        // Wind-up: hold still (visible pause reads as the tell)
+        // Wind-up: hold still + blink white + click, same language as
+        // the boss volley tells (a pause alone reads as idling)
+        if (e->ai_data[3] == def->ai_p0 && e->ai_data[7] == 0) {
+            e->ai_data[7] = (u8)(def->ai_p0 > 20 ? 20 : def->ai_p0);
+            sfx_play(SFX_TICK);
+        }
         if (--e->ai_data[3] == 0) {
             e->ai_data[2] = CHG_CHARGE;
             e->ai_data[3] = 60;   // max charge duration
