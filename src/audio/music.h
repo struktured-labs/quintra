@@ -7,7 +7,7 @@
 
 void music_play_caverns(void);
 void music_play_stage(u8 stage);   // 0=caverns 1=ember 2=void
-void music_play_boss(void);
+void music_play_boss(u8 stage);   // stage picks the theme (6-9 = harder)
 void music_play_title(void);
 void music_play_victory(void);
 void music_play_gameover(void);

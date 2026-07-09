@@ -101,6 +101,17 @@ static const u16 s2_bass[8] = {
     B_A3, B_A3, B_G3, B_G3, B_C3, B_C3, B_D3, B_A3,
 };
 
+// Deep boss (stages 6-9) — A-minor hammer, relentless (~168 BPM => 5)
+static const u16 boss2_melody[32] = {
+    N_A5, N_A5, N_C6, N_A5,   N_E6, N_D6, N_C6, N_B5,
+    N_A5, N_A5, N_C6, N_A5,   N_G5, N_A5, N_B5, N_C6,
+    N_A5, N_C6, N_E6, N_A5,   N_E6, N_D6, N_C6, N_B5,
+    N_G5, N_B5, N_D6, N_G5,   N_A5, N_E5, N_A5, REST,
+};
+static const u16 boss2_bass[8] = {
+    B_A3, B_A3, B_G3, B_G3, B_C3, B_C3, B_E3, B_A3,
+};
+
 // Stage 3 — Gilded Halls: G-major processional, stately (~96 BPM => 10)
 static const u16 s3_melody[32] = {
     N_G5, N_B5, N_D6, N_B5,   N_C6, N_B5, N_A5, N_G5,
@@ -147,11 +158,18 @@ void music_play_stage(u8 stage) {
     row      = 0;
 }
 
-void music_play_boss(void) {
+void music_play_boss(u8 stage) {
     load_wave();
-    cur_melody = boss_melody;
-    cur_bass   = boss_bass;
-    frames_per_row = 6;      // faster tempo
+    // Stages 6-9 (and their endless echoes) get the harder hammer
+    if ((stage % 9) >= 5) {
+        cur_melody = boss2_melody;
+        cur_bass   = boss2_bass;
+        frames_per_row = 5;
+    } else {
+        cur_melody = boss_melody;
+        cur_bass   = boss_bass;
+        frames_per_row = 6;      // faster tempo
+    }
     playing  = 1;
     frame_div = 0;
     row      = 0;
