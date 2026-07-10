@@ -180,7 +180,7 @@ u8 pickup_check_player_collision(void) BANKED {
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) continue;
         if (entities[i].type != ENT_PICKUP)   continue;
-        if (aabb_overlap_player(&entities[i])) {
+        if (aabb_overlap_player_wide(&entities[i])) {
             switch (entities[i].ai_data[0]) {
                 case PICKUP_HEART_HALF:
                     if (player.hp < player.hp_max) {

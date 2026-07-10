@@ -65,14 +65,31 @@ u8 aabb_overlap_ee(const entity_t *a, const entity_t *b) {
     return 1;
 }
 
+// HURTBOX: small box at the body's center of mass (x+5..x+10,
+// y+9..y+14). Bullet-hell fairness: the 16x16 body is generous to look
+// at, stingy to hit — standard shmup design.
 u8 aabb_overlap_player(const entity_t *e) {
     i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
     i16 px = (i16)player.x, py = (i16)player.y;     // player is i16 pixels
     u8  ew = hitbox_w(e), eh = hitbox_h(e);
-    px += 1; py += 1;
+    px += 5; py += 9;
     if (px + 6 <= ex) return 0;
     if (ex + (i16)ew <= px) return 0;
     if (py + 6 <= ey) return 0;
+    if (ey + (i16)eh <= py) return 0;
+    return 1;
+}
+
+// PICKUP box: the full feet-anchored body (x+2..x+13, y+8..y+15) —
+// generous for loot, matches the wall-collision silhouette.
+u8 aabb_overlap_player_wide(const entity_t *e) {
+    i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
+    i16 px = (i16)player.x, py = (i16)player.y;
+    u8  ew = hitbox_w(e), eh = hitbox_h(e);
+    px += 2; py += 8;
+    if (px + 12 <= ex) return 0;
+    if (ex + (i16)ew <= px) return 0;
+    if (py + 8 <= ey) return 0;
     if (ey + (i16)eh <= py) return 0;
     return 1;
 }

@@ -35,15 +35,16 @@ u8 boss_palette_for_stage(u8 stage) {
 
 // Place player at the door opposite the one they entered from.
 static void place_player_after_entry(void) {
+    // Spawn just inside the door opposite the exit. The player's WALL box
+    // is the feet half (x+2..x+13, y+8..y+15), so x=72 centers the body
+    // on the 2-wide N/S doors (cols 9-10) and y=60 on the E/W pair
+    // (rows 8-9).
     u8 dir = run_state.entered_from;
-    u8 tx, ty;
-    if (dir == DIR_N)      { tx = ROOM_W / 2; ty = ROOM_H - 3; }
-    else if (dir == DIR_S) { tx = ROOM_W / 2; ty = 2; }
-    else if (dir == DIR_E) { tx = 2;          ty = ROOM_H / 2; }
-    else if (dir == DIR_W) { tx = ROOM_W - 3; ty = ROOM_H / 2; }
-    else                   { tx = ROOM_W / 2; ty = ROOM_H / 2; }
-    player.x = (ppos_t)((i16)tx * 8);
-    player.y = (ppos_t)((i16)ty * 8);
+    if (dir == DIR_N)      { player.x = 72;  player.y = 112; }
+    else if (dir == DIR_S) { player.x = 72;  player.y = 8;   }
+    else if (dir == DIR_E) { player.x = 8;   player.y = 60;  }
+    else if (dir == DIR_W) { player.x = 136; player.y = 60;  }
+    else                   { player.x = 72;  player.y = 60;  }
 }
 
 // Weighted pick from this stage's roster (generated stage_pool tables;
@@ -90,10 +91,16 @@ void procgen_generate_current_room(void) BANKED {
         }
 
         if (!is_boss_room) {
-            room_tilemap[0][ROOM_W / 2]            = BGT_DOOR;
-            room_tilemap[ROOM_H - 1][ROOM_W / 2]   = BGT_DOOR;
-            room_tilemap[ROOM_H / 2][0]            = BGT_DOOR;
-            room_tilemap[ROOM_H / 2][ROOM_W - 1]   = BGT_DOOR;
+            // Doors are 2 tiles (16px) wide — hero-sized, and wide
+            // enough for the feet-anchored 12px collision box.
+            room_tilemap[0][9]            = BGT_DOOR;
+            room_tilemap[0][10]           = BGT_DOOR;
+            room_tilemap[ROOM_H - 1][9]   = BGT_DOOR;
+            room_tilemap[ROOM_H - 1][10]  = BGT_DOOR;
+            room_tilemap[8][0]            = BGT_DOOR;
+            room_tilemap[9][0]            = BGT_DOOR;
+            room_tilemap[8][ROOM_W - 1]   = BGT_DOOR;
+            room_tilemap[9][ROOM_W - 1]   = BGT_DOOR;
 
             // Interior obstacles. Door lanes stay clear (cols 9-11 for the
             // N/S door at col 10; rows 7-9 for the E/W door at row 8) so
@@ -206,16 +213,16 @@ void procgen_generate_current_room(void) BANKED {
                 u8 pos;
                 if (side == 0) {          // north wall
                     pos = (u8)(2 + rng_range(ROOM_W - 4));
-                    if (pos != ROOM_W / 2) room_tilemap[0][pos] = BGT_WALL_CRACK;
+                    if (pos != 9 && pos != 10) room_tilemap[0][pos] = BGT_WALL_CRACK;
                 } else if (side == 1) {   // south wall
                     pos = (u8)(2 + rng_range(ROOM_W - 4));
-                    if (pos != ROOM_W / 2) room_tilemap[ROOM_H - 1][pos] = BGT_WALL_CRACK;
+                    if (pos != 9 && pos != 10) room_tilemap[ROOM_H - 1][pos] = BGT_WALL_CRACK;
                 } else if (side == 2) {   // west wall
                     pos = (u8)(2 + rng_range(ROOM_H - 4));
-                    if (pos != ROOM_H / 2) room_tilemap[pos][0] = BGT_WALL_CRACK;
+                    if (pos != 8 && pos != 9) room_tilemap[pos][0] = BGT_WALL_CRACK;
                 } else {                  // east wall
                     pos = (u8)(2 + rng_range(ROOM_H - 4));
-                    if (pos != ROOM_H / 2) room_tilemap[pos][ROOM_W - 1] = BGT_WALL_CRACK;
+                    if (pos != 8 && pos != 9) room_tilemap[pos][ROOM_W - 1] = BGT_WALL_CRACK;
                 }
             }
         }

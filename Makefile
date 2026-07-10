@@ -84,6 +84,7 @@ test: all
 # procgen parity check (Rust reference vs the ROM's WRAM).
 verify: all
 	cargo test -q
+	cargo build --release -q -p quintra-procgen
 	bash scripts/test_smoke.sh
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 

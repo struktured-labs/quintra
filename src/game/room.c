@@ -37,6 +37,8 @@ static u8 room_resume_flag;   // set by room_request_resume: skip procgen next e
 // Secret door opened by shooting a cracked wall this room (0xFF = none)
 static u8 secret_door_x = 0xFF;
 static u8 secret_door_y = 0xFF;
+static u8 secret_door_x2 = 0xFF;   // secret doors open as a 2-tile pair
+static u8 secret_door_y2 = 0xFF;   // (the wide feet box needs 16px)
 // Block-push state: current lean direction + how long it's been held.
 static u8 push_dir = DIR_NONE;
 static u8 push_timer;
@@ -184,23 +186,17 @@ static void room_apply_pause_palettes(u8 dim) {
 // Rewrite the 4 cardinal door tiles after a boss seal is lifted.
 // Called at the top of vblank so the handful of VRAM writes land safely.
 static void room_unseal_doors(void) {
-    room_tilemap[0][ROOM_W / 2]          = BGT_DOOR;
-    room_tilemap[ROOM_H - 1][ROOM_W / 2] = BGT_DOOR;
-    room_tilemap[ROOM_H / 2][0]          = BGT_DOOR;
-    room_tilemap[ROOM_H / 2][ROOM_W - 1] = BGT_DOOR;
+    static const u8 dxs[8] = { 9, 10, 9, 10, 0, 0, ROOM_W - 1, ROOM_W - 1 };
+    static const u8 dys[8] = { 0, 0, ROOM_H - 1, ROOM_H - 1, 8, 9, 8, 9 };
+    u8 i;
+    for (i = 0; i < 8; ++i) room_tilemap[dys[i]][dxs[i]] = BGT_DOOR;
     wait_vbl_done();
     {
         u8 door = BGT_DOOR, attr = BGPAL_DOOR;
         VBK_REG = 0;
-        set_bkg_tiles(ROOM_W / 2, 0,          1, 1, &door);
-        set_bkg_tiles(ROOM_W / 2, ROOM_H - 1, 1, 1, &door);
-        set_bkg_tiles(0,          ROOM_H / 2, 1, 1, &door);
-        set_bkg_tiles(ROOM_W - 1, ROOM_H / 2, 1, 1, &door);
+        for (i = 0; i < 8; ++i) set_bkg_tiles(dxs[i], dys[i], 1, 1, &door);
         VBK_REG = 1;
-        set_bkg_tiles(ROOM_W / 2, 0,          1, 1, &attr);
-        set_bkg_tiles(ROOM_W / 2, ROOM_H - 1, 1, 1, &attr);
-        set_bkg_tiles(0,          ROOM_H / 2, 1, 1, &attr);
-        set_bkg_tiles(ROOM_W - 1, ROOM_H / 2, 1, 1, &attr);
+        for (i = 0; i < 8; ++i) set_bkg_tiles(dxs[i], dys[i], 1, 1, &attr);
         VBK_REG = 0;
     }
 }
@@ -229,10 +225,16 @@ void room_break_crystal(u8 tx, u8 ty) BANKED {
 }
 
 void room_open_secret(u8 tx, u8 ty) BANKED {
+    u8 tx2 = tx, ty2 = ty;
     if (tx >= ROOM_W || ty >= ROOM_H) return;
+    // Open a second tile along the wall so the doorway is 16px wide
+    // (cracks spawn at 2..N-3, so the +1 neighbor is never a corner).
+    if (ty == 0 || ty == ROOM_H - 1) tx2 = (u8)(tx + 1);
+    else                             ty2 = (u8)(ty + 1);
     room_set_tile_vbl(tx, ty, BGT_DOOR, BGPAL_DOOR);
-    secret_door_x = tx;
-    secret_door_y = ty;
+    room_set_tile_vbl(tx2, ty2, BGT_DOOR, BGPAL_DOOR);
+    secret_door_x = tx;   secret_door_y = ty;
+    secret_door_x2 = tx2; secret_door_y2 = ty2;
     sfx_play(SFX_DOOR);
 }
 
@@ -409,6 +411,7 @@ void room_enter(void) {
     place_player_sprite();
 
     secret_door_x = secret_door_y = 0xFF;
+    secret_door_x2 = secret_door_y2 = 0xFF;
     player.active_charge = 0;
     if (*(volatile u8*)0xFFFC == 0xBB) {
         music_play_boss(room_stage());
@@ -547,13 +550,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // flush against a block, these land inside its tile.
                 i16 p1x, p1y, p2x, p2y;
                 if (dx) {
-                    i16 ex = (i16)(player.x + ((dx > 0) ? 7 : 0));
-                    p1x = ex; p1y = (i16)(player.y + 1);
-                    p2x = ex; p2y = (i16)(player.y + 6);
+                    i16 ex = (i16)(player.x + ((dx > 0) ? 14 : 1));
+                    p1x = ex; p1y = (i16)(player.y + 9);
+                    p2x = ex; p2y = (i16)(player.y + 14);
                 } else {
-                    i16 ey = (i16)(player.y + ((dy > 0) ? 7 : 0));
-                    p1x = (i16)(player.x + 1); p1y = ey;
-                    p2x = (i16)(player.x + 6); p2y = ey;
+                    i16 ey = (i16)(player.y + ((dy > 0) ? 16 : 7));
+                    p1x = (i16)(player.x + 3); p1y = ey;
+                    p2x = (i16)(player.x + 12); p2y = ey;
                 }
                 cur = (u8)((dy != 0) ? ((dy < 0) ? DIR_N : DIR_S)
                                      : ((dx < 0) ? DIR_W : DIR_E));
@@ -604,21 +607,24 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         while (player.move_acc >= 5) { player.move_acc -= 5; steps++; }
 
         while (steps--) {
+            // Feet-anchored wall box (Zelda convention): x+2..x+13 wide,
+            // y+8..y+15 — the bottom half of the 16x16 body. The head
+            // overhangs walls above; the body never buries into terrain.
             if (dx) {
                 ppos_t nx = (ppos_t)(player.x + dx);
-                if (is_walkable_at(nx + 1, player.y + 1)
-                    && is_walkable_at(nx + 6, player.y + 1)
-                    && is_walkable_at(nx + 1, player.y + 6)
-                    && is_walkable_at(nx + 6, player.y + 6)) {
+                if (is_walkable_at(nx + 2,  player.y + 8)
+                    && is_walkable_at(nx + 13, player.y + 8)
+                    && is_walkable_at(nx + 2,  player.y + 15)
+                    && is_walkable_at(nx + 13, player.y + 15)) {
                     player.x = nx;
                 }
             }
             if (dy) {
                 ppos_t ny = (ppos_t)(player.y + dy);
-                if (is_walkable_at(player.x + 1, ny + 1)
-                    && is_walkable_at(player.x + 6, ny + 1)
-                    && is_walkable_at(player.x + 1, ny + 6)
-                    && is_walkable_at(player.x + 6, ny + 6)) {
+                if (is_walkable_at(player.x + 2,  ny + 8)
+                    && is_walkable_at(player.x + 13, ny + 8)
+                    && is_walkable_at(player.x + 2,  ny + 15)
+                    && is_walkable_at(player.x + 13, ny + 15)) {
                     player.y = ny;
                 }
             }
@@ -805,8 +811,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Rubble poking: walking over rubble kicks it apart (Zelda bush-cut)
     {
-        u8 rtx = (u8)((player.x + 4) >> 3);
-        u8 rty = (u8)((player.y + 4) >> 3);
+        u8 rtx = (u8)((player.x + 8) >> 3);
+        u8 rty = (u8)((player.y + 12) >> 3);
         if (rtx < ROOM_W && rty < ROOM_H
             && room_tilemap[rty][rtx] == BGT_RUBBLE) {
             room_set_tile_vbl(rtx, rty, BGT_FLOOR, BGPAL_FLOOR);
@@ -818,10 +824,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
     }
 
-    // ---- Door detection: if player stands on a door, advance to next room
+    // ---- Door detection: if the feet-box center stands on a door,
+    // advance to the next room
     {
-        i16 px = player.x + 4;
-        i16 py = player.y + 4;
+        i16 px = player.x + 8;
+        i16 py = player.y + 12;
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
 
@@ -835,10 +842,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
             if (dir != DIR_NONE) {
                 // Leaving through a shot-open secret door → treasure room
-                if (tx == secret_door_x && ty == secret_door_y) {
+                if ((tx == secret_door_x && ty == secret_door_y)
+                    || (tx == secret_door_x2 && ty == secret_door_y2)) {
                     run_state.secret_pending = 1;
                 }
                 secret_door_x = secret_door_y = 0xFF;
+                secret_door_x2 = secret_door_y2 = 0xFF;
                 // Sticky dungeon: room layout is a pure function of room_counter,
                 // so treat the counter as a position on a corridor. Leaving
                 // through the door we came in (opposite of entered_from) walks

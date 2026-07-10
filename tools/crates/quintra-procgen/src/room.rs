@@ -90,10 +90,16 @@ pub fn generate_tilemap(
     }
 
     if !kind.boss {
-        m[0][ROOM_W / 2] = BGT_DOOR;
-        m[ROOM_H - 1][ROOM_W / 2] = BGT_DOOR;
-        m[ROOM_H / 2][0] = BGT_DOOR;
-        m[ROOM_H / 2][ROOM_W - 1] = BGT_DOOR;
+        // Doors are 2 tiles (16px) wide — hero-sized, and wide enough
+        // for the feet-anchored 12px collision box.
+        m[0][9] = BGT_DOOR;
+        m[0][10] = BGT_DOOR;
+        m[ROOM_H - 1][9] = BGT_DOOR;
+        m[ROOM_H - 1][10] = BGT_DOOR;
+        m[8][0] = BGT_DOOR;
+        m[9][0] = BGT_DOOR;
+        m[8][ROOM_W - 1] = BGT_DOOR;
+        m[9][ROOM_W - 1] = BGT_DOOR;
 
         // ---- Interior shape (8 layouts; lanes cols 9-11 / rows 7-9 clear)
         let shape = rng.next_u8() & 0x07;
@@ -187,19 +193,19 @@ pub fn generate_tilemap(
             match side {
                 0 => {
                     let pos = (2 + rng.range_u8(ROOM_W as u8 - 4)) as usize;
-                    if pos != ROOM_W / 2 { m[0][pos] = BGT_WALL_CRACK; }
+                    if pos != 9 && pos != 10 { m[0][pos] = BGT_WALL_CRACK; }
                 }
                 1 => {
                     let pos = (2 + rng.range_u8(ROOM_W as u8 - 4)) as usize;
-                    if pos != ROOM_W / 2 { m[ROOM_H - 1][pos] = BGT_WALL_CRACK; }
+                    if pos != 9 && pos != 10 { m[ROOM_H - 1][pos] = BGT_WALL_CRACK; }
                 }
                 2 => {
                     let pos = (2 + rng.range_u8(ROOM_H as u8 - 4)) as usize;
-                    if pos != ROOM_H / 2 { m[pos][0] = BGT_WALL_CRACK; }
+                    if pos != 8 && pos != 9 { m[pos][0] = BGT_WALL_CRACK; }
                 }
                 _ => {
                     let pos = (2 + rng.range_u8(ROOM_H as u8 - 4)) as usize;
-                    if pos != ROOM_H / 2 { m[pos][ROOM_W - 1] = BGT_WALL_CRACK; }
+                    if pos != 8 && pos != 9 { m[pos][ROOM_W - 1] = BGT_WALL_CRACK; }
                 }
             }
         }
@@ -280,11 +286,11 @@ mod tests {
         seen
     }
 
-    const DOORS: [(usize, usize); 4] = [
-        (0, ROOM_W / 2),
-        (ROOM_H - 1, ROOM_W / 2),
-        (ROOM_H / 2, 0),
-        (ROOM_H / 2, ROOM_W - 1),
+    const DOORS: [(usize, usize); 8] = [
+        (0, 9), (0, 10),
+        (ROOM_H - 1, 9), (ROOM_H - 1, 10),
+        (8, 0), (9, 0),
+        (8, ROOM_W - 1), (9, ROOM_W - 1),
     ];
 
     #[test]

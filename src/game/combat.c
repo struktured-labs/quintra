@@ -195,10 +195,10 @@ u8 combat_resolve(void) BANKED {
                         for (n = 0; n < 6; ++n) {
                             i16 nx = (i16)(player.x + kx);
                             i16 ny = (i16)(player.y + ky);
-                            if (!room_tile_walkable(room_tile_at_px(nx + 1, ny + 1))
-                                || !room_tile_walkable(room_tile_at_px(nx + 6, ny + 1))
-                                || !room_tile_walkable(room_tile_at_px(nx + 1, ny + 6))
-                                || !room_tile_walkable(room_tile_at_px(nx + 6, ny + 6))) {
+                            if (!room_tile_walkable(room_tile_at_px(nx + 2,  ny + 8))
+                                || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 8))
+                                || !room_tile_walkable(room_tile_at_px(nx + 2,  ny + 15))
+                                || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 15))) {
                                 break;
                             }
                             player.x = (ppos_t)nx;

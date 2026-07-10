@@ -73,16 +73,31 @@ def main():
         pb.memory[rs + 11] = 0            # bosses_beaten
         pb.memory[rs + 13] = 0            # secret_pending
 
-        # Walk through the S door -> counter increments -> C procgen runs
-        guard = 0
-        while pb.memory[rs + 1] != counter and guard < 80:
+        # Walk through the S door -> counter increments -> C procgen runs.
+        # Check the counter EVERY frame and release input the moment we
+        # cross: walking on into the fresh room can kick its rubble, and
+        # sampling mid-regeneration reads a half-built map (both showed up
+        # as phantom parity failures).
+        pb.button_press("down")
+        for _ in range(80 * 22):
             pb.memory[pl + 2] = 12        # hp
             pb.memory[pl + 15] = 60       # iframes (no knockback stalls)
-            pb.button_press("down"); tick(20); pb.button_release("down"); tick(2)
-            guard += 1
-        tick(5)
+            pb.tick()
+            if pb.memory[rs + 1] == counter:
+                break
+        pb.button_release("down")
+        # Let generation finish: wait until the tilemap is stable 10 frames
+        prev = None
+        stable = 0
+        for _ in range(240):
+            pb.tick()
+            cur = bytes(pb.memory[tm + i] for i in range(ROOM_W * ROOM_H))
+            stable = stable + 1 if cur == prev else 0
+            prev = cur
+            if stable >= 10:
+                break
 
-        got = [pb.memory[tm + i] for i in range(ROOM_W * ROOM_H)]
+        got = list(prev)
         want = reference(seed, counter)
         pb.stop(save=False)
 
