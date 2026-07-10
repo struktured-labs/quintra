@@ -531,37 +531,73 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             player.move_acc = (u8)(player.move_acc + player.spd);
         }
 
-        // --- Pushable blocks: lean into a block (pure cardinal move) and, if
-        //     the tile behind it is open floor, it slides one tile. A short
-        //     hold requirement keeps it deliberate rather than a nudge. ---
-        if (moved && ((dx != 0) != (dy != 0))) {
-            u8 ptx = (u8)((player.x + 4) >> 3);
-            u8 pty = (u8)((player.y + 4) >> 3);
-            u8 fx  = (u8)(ptx + dx);
-            u8 fy  = (u8)(pty + dy);
-            u8 cur = (u8)((dy != 0) ? ((dy < 0) ? DIR_N : DIR_S)
-                                    : ((dx < 0) ? DIR_W : DIR_E));
-            if (fx < ROOM_W && fy < ROOM_H && room_tilemap[fy][fx] == BGT_BLOCK) {
+        // --- Pushable blocks: press against a block (cardinal move) and,
+        //     if the tile behind it is open floor, it slides one tile.
+        //     Detection probes the player's LEADING EDGE corners (not the
+        //     center tile), so contact counts whenever you're actually
+        //     grinding on the block, at any off-axis alignment. Input
+        //     noise (a 1-frame diagonal brush) DECAYS the hold instead of
+        //     restarting it — d-pads are messy. ---
+        {
+            u8 qualified = 0;
+            u8 fx = 0, fy = 0, cur = 0;
+            if (moved && ((dx != 0) != (dy != 0))) {
+                // Leading-edge probes: 1px beyond the 1..6 collision box
+                // on the facing side, at both cross-axis corners. When
+                // flush against a block, these land inside its tile.
+                i16 p1x, p1y, p2x, p2y;
+                if (dx) {
+                    i16 ex = (i16)(player.x + ((dx > 0) ? 7 : 0));
+                    p1x = ex; p1y = (i16)(player.y + 1);
+                    p2x = ex; p2y = (i16)(player.y + 6);
+                } else {
+                    i16 ey = (i16)(player.y + ((dy > 0) ? 7 : 0));
+                    p1x = (i16)(player.x + 1); p1y = ey;
+                    p2x = (i16)(player.x + 6); p2y = ey;
+                }
+                cur = (u8)((dy != 0) ? ((dy < 0) ? DIR_N : DIR_S)
+                                     : ((dx < 0) ? DIR_W : DIR_E));
+                if (room_tile_at_px(p1x, p1y) == BGT_BLOCK) {
+                    fx = (u8)(p1x >> 3); fy = (u8)(p1y >> 3); qualified = 1;
+                } else if (room_tile_at_px(p2x, p2y) == BGT_BLOCK) {
+                    fx = (u8)(p2x >> 3); fy = (u8)(p2y >> 3); qualified = 1;
+                }
+            }
+            if (qualified) {
                 u8 bx = (u8)(fx + dx);
                 u8 by = (u8)(fy + dy);
                 u8 beyond = (bx < ROOM_W && by < ROOM_H) ? room_tilemap[by][bx] : BGT_WALL;
-                if (beyond == BGT_FLOOR || beyond == BGT_FLOOR2 || beyond == BGT_FLOOR3) {
+                u8 open = (beyond == BGT_FLOOR || beyond == BGT_FLOOR2
+                        || beyond == BGT_FLOOR3);
+                // Never entomb a live enemy under a sliding block
+                if (open) {
+                    u8 k;
+                    for (k = 0; k < MAX_ENTITIES; ++k) {
+                        if ((entities[k].flags & EF_ACTIVE)
+                            && entities[k].type == ENT_ENEMY
+                            && (u8)((FIX8_TO_INT(entities[k].x) + 4) >> 3) == bx
+                            && (u8)((FIX8_TO_INT(entities[k].y) + 4) >> 3) == by) {
+                            open = 0;
+                            break;
+                        }
+                    }
+                }
+                if (open) {
                     if (push_dir == cur) push_timer++;
-                    else { push_dir = cur; push_timer = 0; }
+                    else { push_dir = cur; push_timer = 1; }
                     if (push_timer >= 10) {
                         room_set_tile_vbl(fx, fy, BGT_FLOOR, BGPAL_FLOOR);
                         room_set_tile_vbl(bx, by, BGT_BLOCK, BGPAL_DOOR);
                         sfx_play(SFX_DOOR);
                         push_timer = 0;
                     }
-                } else {
-                    push_dir = DIR_NONE;
+                } else if (push_timer) {
+                    push_timer--;
                 }
-            } else {
-                push_dir = DIR_NONE;
+            } else if (push_timer) {
+                push_timer--;              // noise decays, never hard-resets
+                if (push_timer == 0) push_dir = DIR_NONE;
             }
-        } else {
-            push_dir = DIR_NONE;
         }
 
         steps = 0;
