@@ -31,7 +31,10 @@
 #define BGT_CRYSTAL 22   // solid glowing obstacle
 #define BGT_RUBBLE  23   // walkable decoration
 #define BGT_WALL_CRACK 24  // secret wall: solid until shot, then becomes a door
-#define BGT_BLOCK      25  // pushable crate (solid; slides one tile when shoved)
+#define BGT_BLOCK      25  // pushable crate TL quadrant (16x16 crate = 4 tiles)
+#define BGT_BLOCK_TR   28  // crate top-right
+#define BGT_BLOCK_BL   29  // crate bottom-left
+#define BGT_BLOCK_BR   30  // crate bottom-right
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0

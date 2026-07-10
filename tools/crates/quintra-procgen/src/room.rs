@@ -26,7 +26,10 @@ pub const BGT_PILLAR: u8 = 21;
 pub const BGT_CRYSTAL: u8 = 22;
 pub const BGT_RUBBLE: u8 = 23;
 pub const BGT_WALL_CRACK: u8 = 24;
-pub const BGT_BLOCK: u8 = 25;
+pub const BGT_BLOCK: u8 = 25;      // crate TL quadrant
+pub const BGT_BLOCK_TR: u8 = 28;
+pub const BGT_BLOCK_BL: u8 = 29;
+pub const BGT_BLOCK_BR: u8 = 30;
 
 pub const ROOMS_PER_STAGE: u8 = 6;
 
@@ -174,16 +177,26 @@ pub fn generate_tilemap(
             }
         }
 
-        // ---- Pushable blocks 0-2
+        // ---- Pushable crates 0-2, hero-sized (2x2 tiles)
         let nb = rng.next_u8() % 3;
         for _ in 0..nb {
             let bx = (3 + rng.range_u8(ROOM_W as u8 - 6)) as usize;
             let by = (3 + rng.range_u8(ROOM_H as u8 - 6)) as usize;
-            if (9..=11).contains(&bx) || (7..=9).contains(&by) {
+            if (8..=11).contains(&bx) || (6..=9).contains(&by) {
                 continue;
             }
-            if m[by][bx] == BGT_FLOOR {
+            if bx + 1 >= ROOM_W - 1 || by + 1 >= ROOM_H - 1 {
+                continue;
+            }
+            if m[by][bx] == BGT_FLOOR
+                && m[by][bx + 1] == BGT_FLOOR
+                && m[by + 1][bx] == BGT_FLOOR
+                && m[by + 1][bx + 1] == BGT_FLOOR
+            {
                 m[by][bx] = BGT_BLOCK;
+                m[by][bx + 1] = BGT_BLOCK_TR;
+                m[by + 1][bx] = BGT_BLOCK_BL;
+                m[by + 1][bx + 1] = BGT_BLOCK_BR;
             }
         }
 

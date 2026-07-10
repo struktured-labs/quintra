@@ -188,18 +188,25 @@ void procgen_generate_current_room(void) BANKED {
                 }
             }
 
-            // Pushable blocks — 0-2 per room, kept in the interior away from
-            // the door lanes so they can always be walked around or shoved.
+            // Pushable crates — 0-2 per room, hero-sized (2x2 tiles),
+            // kept clear of the door lanes so they never wall a door.
             {
                 u8 nb = (u8)(rng_next_u8() % 3);
                 u8 i;
                 for (i = 0; i < nb; ++i) {
                     u8 bx = (u8)(3 + rng_range(ROOM_W - 6));
                     u8 by = (u8)(3 + rng_range(ROOM_H - 6));
-                    if (bx >= 9 && bx <= 11) continue;   // clear N/S door lane
-                    if (by >= 7 && by <= 9)  continue;   // clear E/W door lane
-                    if (room_tilemap[by][bx] == BGT_FLOOR) {
-                        room_tilemap[by][bx] = BGT_BLOCK;
+                    if (bx >= 8 && bx <= 11) continue;   // cols bx..bx+1 vs lane 9-11
+                    if (by >= 6 && by <= 9)  continue;   // rows by..by+1 vs lane 7-9
+                    if (bx + 1 >= ROOM_W - 1 || by + 1 >= ROOM_H - 1) continue;
+                    if (room_tilemap[by][bx] == BGT_FLOOR
+                        && room_tilemap[by][bx + 1] == BGT_FLOOR
+                        && room_tilemap[by + 1][bx] == BGT_FLOOR
+                        && room_tilemap[by + 1][bx + 1] == BGT_FLOOR) {
+                        room_tilemap[by][bx]         = BGT_BLOCK;
+                        room_tilemap[by][bx + 1]     = BGT_BLOCK_TR;
+                        room_tilemap[by + 1][bx]     = BGT_BLOCK_BL;
+                        room_tilemap[by + 1][bx + 1] = BGT_BLOCK_BR;
                     }
                 }
             }

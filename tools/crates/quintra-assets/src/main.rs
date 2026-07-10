@@ -67,6 +67,17 @@ pub fn generate() -> String {
             &format!("bgt_{name}"), &tile_2bpp_bytes(&grid)));
     }
 
+    // Pushable block: a 16x16 hero-sized crate — scale2x of the classic
+    // 8x8 art, emitted as 4 BG quadrant tiles (TL/TR/BL/BR).
+    {
+        let big = scale2x(&parse_grid(&grids::BGT_BLOCK));
+        let tiles = sprite_to_tiles(&big, 16, 16);
+        for (i, suffix) in ["tl", "tr", "bl", "br"].iter().enumerate() {
+            let _ = writeln!(o, "{}", emit_tile_c_array(
+                &format!("bgt_block16_{suffix}"), &tile_2bpp_bytes(&tiles[i])));
+        }
+    }
+
     // Mini-boss Sentinel (16x16)
     {
         let grid = parse_grid(&grids::BOSS_SENTINEL);

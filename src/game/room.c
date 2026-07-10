@@ -244,7 +244,10 @@ static u8 attr_for_tile(u8 t) {
         case BGT_WALL:
         case BGT_PILLAR:  return BGPAL_WALL;
         case BGT_WALL_CRACK: return BGPAL_CRACK;   // glowing — obviously special
-        case BGT_BLOCK:   return BGPAL_DOOR;       // gold-ish, reads as interactive
+        case BGT_BLOCK:
+        case BGT_BLOCK_TR:
+        case BGT_BLOCK_BL:
+        case BGT_BLOCK_BR: return BGPAL_DOOR;      // gold-ish, reads as interactive
         case BGT_CRYSTAL: return BGPAL_CRYSTAL;
         case BGT_DOOR:    return BGPAL_DOOR;
         default:
@@ -560,26 +563,52 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 }
                 cur = (u8)((dy != 0) ? ((dy < 0) ? DIR_N : DIR_S)
                                      : ((dx < 0) ? DIR_W : DIR_E));
-                if (room_tile_at_px(p1x, p1y) == BGT_BLOCK) {
-                    fx = (u8)(p1x >> 3); fy = (u8)(p1y >> 3); qualified = 1;
-                } else if (room_tile_at_px(p2x, p2y) == BGT_BLOCK) {
-                    fx = (u8)(p2x >> 3); fy = (u8)(p2y >> 3); qualified = 1;
+                {
+                    u8 q1 = room_tile_at_px(p1x, p1y);
+                    u8 q2 = room_tile_at_px(p2x, p2y);
+                    if (q1 == BGT_BLOCK || q1 == BGT_BLOCK_TR
+                        || q1 == BGT_BLOCK_BL || q1 == BGT_BLOCK_BR) {
+                        fx = (u8)(p1x >> 3); fy = (u8)(p1y >> 3); qualified = 1;
+                    } else if (q2 == BGT_BLOCK || q2 == BGT_BLOCK_TR
+                        || q2 == BGT_BLOCK_BL || q2 == BGT_BLOCK_BR) {
+                        fx = (u8)(p2x >> 3); fy = (u8)(p2y >> 3); qualified = 1;
+                    }
                 }
             }
             if (qualified) {
-                u8 bx = (u8)(fx + dx);
-                u8 by = (u8)(fy + dy);
-                u8 beyond = (bx < ROOM_W && by < ROOM_H) ? room_tilemap[by][bx] : BGT_WALL;
-                u8 open = (beyond == BGT_FLOOR || beyond == BGT_FLOOR2
-                        || beyond == BGT_FLOOR3);
-                // Never entomb a live enemy under a sliding block
+                // Resolve the crate's ORIGIN (top-left) from whichever
+                // quadrant the probe touched.
+                u8 ox = fx, oy = fy;
+                {
+                    u8 q = room_tilemap[fy][fx];
+                    if (q == BGT_BLOCK_TR)      { ox = (u8)(fx - 1); }
+                    else if (q == BGT_BLOCK_BL) { oy = (u8)(fy - 1); }
+                    else if (q == BGT_BLOCK_BR) { ox = (u8)(fx - 1); oy = (u8)(fy - 1); }
+                }
+                {
+                // Leading edge after an 8px slide: two cells to check
+                u8 t1x, t1y, t2x, t2y;
+                u8 open;
+                if (dx > 0)      { t1x = (u8)(ox + 2); t1y = oy; t2x = t1x; t2y = (u8)(oy + 1); }
+                else if (dx < 0) { t1x = (u8)(ox - 1); t1y = oy; t2x = t1x; t2y = (u8)(oy + 1); }
+                else if (dy > 0) { t1x = ox; t1y = (u8)(oy + 2); t2x = (u8)(ox + 1); t2y = t1y; }
+                else             { t1x = ox; t1y = (u8)(oy - 1); t2x = (u8)(ox + 1); t2y = t1y; }
+                open = (t1x < ROOM_W && t1y < ROOM_H && t2x < ROOM_W && t2y < ROOM_H);
+                if (open) {
+                    u8 a = room_tilemap[t1y][t1x], b = room_tilemap[t2y][t2x];
+                    open = (a == BGT_FLOOR || a == BGT_FLOOR2 || a == BGT_FLOOR3)
+                        && (b == BGT_FLOOR || b == BGT_FLOOR2 || b == BGT_FLOOR3);
+                }
+                // Never entomb a live enemy under the sliding crate
                 if (open) {
                     u8 k;
                     for (k = 0; k < MAX_ENTITIES; ++k) {
-                        if ((entities[k].flags & EF_ACTIVE)
-                            && entities[k].type == ENT_ENEMY
-                            && (u8)((FIX8_TO_INT(entities[k].x) + 4) >> 3) == bx
-                            && (u8)((FIX8_TO_INT(entities[k].y) + 4) >> 3) == by) {
+                        u8 etx, ety;
+                        if (!(entities[k].flags & EF_ACTIVE)
+                            || entities[k].type != ENT_ENEMY) continue;
+                        etx = (u8)((FIX8_TO_INT(entities[k].x) + 4) >> 3);
+                        ety = (u8)((FIX8_TO_INT(entities[k].y) + 4) >> 3);
+                        if ((etx == t1x && ety == t1y) || (etx == t2x && ety == t2y)) {
                             open = 0;
                             break;
                         }
@@ -589,13 +618,42 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     if (push_dir == cur) push_timer++;
                     else { push_dir = cur; push_timer = 1; }
                     if (push_timer >= 10) {
-                        room_set_tile_vbl(fx, fy, BGT_FLOOR, BGPAL_FLOOR);
-                        room_set_tile_vbl(bx, by, BGT_BLOCK, BGPAL_DOOR);
+                        u8 nox = (u8)(ox + dx), noy = (u8)(oy + dy);
+                        // One vblank, eight tile writes: clear the old
+                        // 2x2, draw the crate at its new origin.
+                        room_tilemap[oy][ox]         = BGT_FLOOR;
+                        room_tilemap[oy][ox + 1]     = BGT_FLOOR;
+                        room_tilemap[oy + 1][ox]     = BGT_FLOOR;
+                        room_tilemap[oy + 1][ox + 1] = BGT_FLOOR;
+                        room_tilemap[noy][nox]         = BGT_BLOCK;
+                        room_tilemap[noy][nox + 1]     = BGT_BLOCK_TR;
+                        room_tilemap[noy + 1][nox]     = BGT_BLOCK_BL;
+                        room_tilemap[noy + 1][nox + 1] = BGT_BLOCK_BR;
+                        wait_vbl_done();
+                        {
+                            u8 yy, xx;
+                            u8 x0 = (dx < 0) ? nox : ox;
+                            u8 y0 = (dy < 0) ? noy : oy;
+                            VBK_REG = 0;
+                            for (yy = 0; yy < 3; ++yy)
+                                for (xx = 0; xx < 3; ++xx)
+                                    set_bkg_tiles((u8)(x0 + xx), (u8)(y0 + yy),
+                                        1, 1, &room_tilemap[y0 + yy][x0 + xx]);
+                            VBK_REG = 1;
+                            for (yy = 0; yy < 3; ++yy)
+                                for (xx = 0; xx < 3; ++xx) {
+                                    u8 at = attr_for_tile(room_tilemap[y0 + yy][x0 + xx]);
+                                    set_bkg_tiles((u8)(x0 + xx), (u8)(y0 + yy),
+                                        1, 1, &at);
+                                }
+                            VBK_REG = 0;
+                        }
                         sfx_play(SFX_DOOR);
                         push_timer = 0;
                     }
                 } else if (push_timer) {
                     push_timer--;
+                }
                 }
             } else if (push_timer) {
                 push_timer--;              // noise decays, never hard-resets
