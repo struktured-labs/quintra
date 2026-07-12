@@ -61,6 +61,9 @@ u8 combat_resolve(void) BANKED {
                 if (player.class_id == 4) dmg++;
             }
             if (rng_range(100) < (u8)(player.lck * 5)) dmg = (u8)(dmg << 1);
+            // Last Stand: down to your final heart (the low-HP pulse zone),
+            // desperation lends +1 damage — a comeback edge one hit from death.
+            if (player.hp <= 2 && player.hp > 0) dmg++;
             if (dmg == 0) dmg = 1;
 
             {
