@@ -429,3 +429,11 @@ pub const MINIBOSS_SRC: [(&str, &[&str]); 2] = [
     ("orc", &ORC),
     ("skeleton", &SKELETON),
 ];
+
+// Bruiser tier: heavy enemies rendered at player size (16x16). The C side
+// loads these into 4-tile blocks and flags eids 4/6/8 as big16.
+pub const BRUISER_SRC: [(&str, &[&str]); 3] = [
+    ("orc", &ORC),
+    ("bomber", &BOMBER),
+    ("warlock", &WARLOCK),
+];

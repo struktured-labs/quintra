@@ -93,6 +93,15 @@ pub fn generate() -> String {
             &format!("sprite_miniboss_{name}"), &tiles));
     }
 
+    // Bruiser tier: heavy enemies rendered player-sized (16x16). 2x-scale
+    // of the 8x8 art so size reads as threat, in the same chunky style.
+    for (name, lines) in grids::BRUISER_SRC {
+        let big = scale2x(&parse_grid(lines));
+        let tiles = sprite_to_tiles(&big, 16, 16);
+        let _ = writeln!(o, "{}", emit_metasprite_c_array(
+            &format!("sprite_bruiser_{name}"), &tiles));
+    }
+
     // Nine distinct 32x32 stage bosses (stage 0 is the Colossus)
     for (i, grid) in bosses::boss_stages().iter().enumerate() {
         let tiles = sprite_to_tiles(grid, 32, 32);

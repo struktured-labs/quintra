@@ -26,11 +26,11 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 1: return SPR_BOSS;
         case 2: return SPR_ENEMY_HORNET;
         case 3: return SPR_ENEMY_SKELETON;
-        case 4: return SPR_ENEMY_ORC;
+        case 4: return SPR_BRUISER_ORC;      // 16x16 heavy
         case 5: return SPR_ENEMY_WISP;
-        case 6: return SPR_ENEMY_BOMBER;
+        case 6: return SPR_BRUISER_BOMBER;   // 16x16 heavy
         case 7: return SPR_ENEMY_SHADE;
-        case 8: return SPR_ENEMY_WARLOCK;
+        case 8: return SPR_BRUISER_WARLOCK;  // 16x16 heavy
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -72,7 +72,15 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         e->ai_data[0]  = enemy_content_id;
         e->state       = (u8)(rng_next_u8() & 0x07);
         e->state_timer = 30;
-        e->hitbox      = (6 << 4) | 6;
+        // Bruiser tier (orc 4, bomber 6, warlock 8) and the Sentinel
+        // mini-boss (1) render 16x16 — give them a bigger hitbox so the
+        // larger body is hittable and its contact reach matches its size.
+        if (enemy_content_id == 1 || enemy_content_id == 4
+            || enemy_content_id == 6 || enemy_content_id == 8) {
+            e->hitbox = (13 << 4) | 13;
+        } else {
+            e->hitbox = (6 << 4) | 6;
+        }
     }
     return idx;
 }

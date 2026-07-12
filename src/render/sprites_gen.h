@@ -35,6 +35,9 @@ extern const u8 sprite_boss_sentinel[64];
 // 16x16 mini-boss variants (2x-scaled enemy art)
 extern const u8 sprite_miniboss_orc[64];
 extern const u8 sprite_miniboss_skeleton[64];
+extern const u8 sprite_bruiser_orc[64];
+extern const u8 sprite_bruiser_bomber[64];
+extern const u8 sprite_bruiser_warlock[64];
 
 // 9 distinct 32x32 stage bosses (16 tiles each; stage 0 is the Colossus)
 extern const u8 sprite_boss_stage0[256];

@@ -130,78 +130,90 @@ void fx_update(entity_t *e, u8 idx) {
     e->state_timer--;
 }
 
+// 16x16 enemies (2x2 tiles): the mini-boss Sentinel and the bruiser tier
+// (orc 4, bomber 6, warlock 8). Their sprite_tile points at a 4-tile block
+// TL,TR,BL,BR. The 32x32 Colossus (giant flag) is handled separately.
+static u8 enemy_is_big16(const entity_t *e) {
+    u8 eid = e->ai_data[0];
+    if (e->type != ENT_ENEMY) return 0;
+    if (eid == 1) return 1;                     // Sentinel mini-boss
+    return (eid == 4 || eid == 6 || eid == 8);  // orc / bomber / warlock
+}
+
+// Per-frame OAM allocator. Player owns 0-3; entities are laid out from a
+// cursor starting at 4 each frame (giant=16 tiles, 16x16=4, else 1), so no
+// entity is pinned to a fixed slot — which also fixes the old latent overlap
+// between the entity range and the boss overlay block. Past OAM 40 we simply
+// stop drawing (GB-authentic drop); unused slots are parked off-screen.
 void entity_draw_all(void) {
     u8 i;
-    u8 boss_drawn = 0;
+    u8 oam = 4;
     g_enemy_anim++;
     for (i = 0; i < MAX_ENTITIES; ++i) {
-        if (!(entities[i].flags & EF_ACTIVE)) {
+        entity_t *e = &entities[i];
+        u8 sx, sy, pal, flash;
+        if (!(e->flags & EF_ACTIVE)) continue;
+        sx  = (u8)(FIX8_TO_INT(e->x) + 8);
+        sy  = (u8)(FIX8_TO_INT(e->y) + 16);
+        pal = e->palette;
+        flash = (e->type == ENT_ENEMY && e->ai_data[7]) ? 1 : 0;
+
+        // 32x32 Colossus — 16 tiles, row-major 4x4
+        if (e->type == ENT_ENEMY && e->ai_data[0] == 1 && e->ai_data[3]) {
+            u8 r, c, tile = e->sprite_tile;
+            if (flash) e->ai_data[7]--;
+            if (oam + 16 > 40) continue;
+            for (r = 0; r < 4; ++r) {
+                for (c = 0; c < 4; ++c) {
+                    set_sprite_tile(oam, tile);
+                    set_sprite_prop(oam, pal);
+                    if (flash && (e->ai_data[7] & 1)) move_sprite(oam, 0, 0);
+                    else move_sprite(oam, (u8)(sx + c * 8), (u8)(sy + r * 8));
+                    oam++; tile++;
+                }
+            }
             continue;
         }
-        // Boss (enemy content id 1). The Sentinel is 16x16 on OAM 36-39;
-        // the final Colossus is 32x32 (4x4 tiles) on OAM 24-39. The entity's
-        // own OAM slot stays hidden either way.
-        if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == 1) {
-            u8 sx = (u8)(FIX8_TO_INT(entities[i].x) + 8);
-            u8 sy = (u8)(FIX8_TO_INT(entities[i].y) + 16);
-            u8 pal = entities[i].palette;
-            u8 flash = (entities[i].ai_data[7]) ? 1 : 0;
-            move_sprite(entities[i].oam_slot, 0, 0);
-            if (flash) entities[i].ai_data[7]--;
-            if (entities[i].ai_data[3]) {
-                // 32x32 Colossus: 16 tiles, row-major 4x4, OAM 24..39
-                u8 r, c, oam = 24, tile = entities[i].sprite_tile;
-                for (r = 0; r < 4; ++r) {
-                    for (c = 0; c < 4; ++c) {
-                        set_sprite_tile(oam, tile);
-                        set_sprite_prop(oam, pal);
-                        if (flash && (entities[i].ai_data[7] & 1))
-                            move_sprite(oam, 0, 0);
-                        else
-                            move_sprite(oam, (u8)(sx + c * 8), (u8)(sy + r * 8));
-                        oam++; tile++;
-                    }
-                }
+
+        // 16x16 — mini-boss or bruiser, 2x2 tiles
+        if (enemy_is_big16(e)) {
+            u8 t = e->sprite_tile;
+            if (flash) e->ai_data[7]--;
+            if (oam + 4 > 40) continue;
+            if (flash && (e->ai_data[7] & 1)) {
+                move_sprite(oam, 0, 0);     move_sprite((u8)(oam+1), 0, 0);
+                move_sprite((u8)(oam+2), 0, 0); move_sprite((u8)(oam+3), 0, 0);
             } else {
-                set_sprite_tile(36, entities[i].sprite_tile);
-                set_sprite_tile(37, (u8)(entities[i].sprite_tile + 1));
-                set_sprite_tile(38, (u8)(entities[i].sprite_tile + 2));
-                set_sprite_tile(39, (u8)(entities[i].sprite_tile + 3));
-                set_sprite_prop(36, pal); set_sprite_prop(37, pal);
-                set_sprite_prop(38, pal); set_sprite_prop(39, pal);
-                if (flash && (entities[i].ai_data[7] & 1)) {
-                    move_sprite(36, 0, 0); move_sprite(37, 0, 0);
-                    move_sprite(38, 0, 0); move_sprite(39, 0, 0);
-                } else {
-                    move_sprite(36, sx,         sy);
-                    move_sprite(37, (u8)(sx+8), sy);
-                    move_sprite(38, sx,         (u8)(sy+8));
-                    move_sprite(39, (u8)(sx+8), (u8)(sy+8));
-                }
+                set_sprite_tile(oam,        t);
+                set_sprite_tile((u8)(oam+1), (u8)(t+1));
+                set_sprite_tile((u8)(oam+2), (u8)(t+2));
+                set_sprite_tile((u8)(oam+3), (u8)(t+3));
+                set_sprite_prop(oam, pal);        set_sprite_prop((u8)(oam+1), pal);
+                set_sprite_prop((u8)(oam+2), pal); set_sprite_prop((u8)(oam+3), pal);
+                move_sprite(oam,         sx,         sy);
+                move_sprite((u8)(oam+1), (u8)(sx+8), sy);
+                move_sprite((u8)(oam+2), sx,         (u8)(sy+8));
+                move_sprite((u8)(oam+3), (u8)(sx+8), (u8)(sy+8));
             }
-            boss_drawn = 1;
+            oam += 4;
             continue;
         }
-        // Hit-flash: enemies blink out for a couple frames when struck
-        if (entities[i].type == ENT_ENEMY && entities[i].ai_data[7]) {
-            entities[i].ai_data[7]--;
-            if (entities[i].ai_data[7] & 0x01) {
-                move_sprite(entities[i].oam_slot, 0, 0);
-                continue;
-            }
+
+        // 8x8 — everything else (small enemies, projectiles, pickups, fx)
+        if (oam >= 40) continue;
+        if (flash) {
+            e->ai_data[7]--;
+            if (e->ai_data[7] & 0x01) continue;   // blink: skip drawing (slot parked below)
         }
-        set_sprite_tile(entities[i].oam_slot, entities[i].sprite_tile);
+        set_sprite_tile(oam, e->sprite_tile);
         {
-            u8 prop = entities[i].palette;
-            if (entities[i].type == ENT_ENEMY && (g_enemy_anim & 0x10)) prop |= S_FLIPX;
-            set_sprite_prop(entities[i].oam_slot, prop);
+            u8 prop = pal;
+            if (e->type == ENT_ENEMY && (g_enemy_anim & 0x10)) prop |= S_FLIPX;
+            set_sprite_prop(oam, prop);
         }
-        move_sprite(entities[i].oam_slot,
-            (u8)(FIX8_TO_INT(entities[i].x) + 8),
-            (u8)(FIX8_TO_INT(entities[i].y) + 16));
+        move_sprite(oam, sx, sy);
+        oam++;
     }
-    if (!boss_drawn) {
-        u8 s;
-        for (s = 24; s < 40; ++s) move_sprite(s, 0, 0);  // clear any boss OAM
-    }
+    // Park every unused OAM slot off-screen
+    while (oam < 40) { move_sprite(oam, 0, 0); oam++; }
 }
