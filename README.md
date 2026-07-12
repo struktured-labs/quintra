@@ -32,17 +32,22 @@ tables at build time.
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
   **endless descent**: beat the 9th colossus and dive again at full power.
 - **9 large-sprite bosses** (32×32 metasprites, distinct bullet patterns,
-  telegraphed volleys) plus **mini-bosses** (weapon-swap orb drops),
-  **merchants** with priced wares, and a **sanctuary** breather before every
-  boss.
-- **8 enemy archetypes** — walkers, chasers, chargers, shooters, elite
-  variants, exploding Bombers, teleporting Shades.
-- **Two-weapon combat**: `A` = your class's primary, `B` = its signature move
-  (costs MP; MP regens, crystals shatter into mana wisps).
+  telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
+  colour, and attack), **merchants** with priced wares, and a **sanctuary**
+  breather before every boss.
+- **10 enemies across a size hierarchy** — small swarm critters (crawler,
+  hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
+  exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
+  slither then bee-line at you) — so size reads as threat.
+- **Two-weapon combat + dodge dash**: `A` = your class's primary, `B` = its
+  signature move (costs MP), and a double-tap **dodge-dash** with i-frames to
+  weave through bullet hell.
 - **RPG layer**: HP/MP/ATK/DEF/SPD/LCK, elemental weakness bonuses, crits,
   hit-flash / hit-stop / knockback / screen shake for weight.
-- **Zelda-style secrets**: shoot the glowing amber cracked walls to open
-  treasure vaults; kick apart rubble; shove crates.
+- **Interactive dungeons**: shoot glowing cracked walls for treasure vaults,
+  smash **pots** and shatter **crystals** for loot, kick apart rubble, shove
+  crates, and pick your way around **spike floors** — across 11 procgen room
+  shapes.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever.
