@@ -141,8 +141,9 @@ void tiles_load_miniboss(u8 stage) BANKED {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
     // stage's mini-boss looks distinct. Variant table must match the palette
     // table in procgen.c (miniboss spawn). 0=sentinel,1=orc,2=skel,3=crawl,4=hornet
-    static const u8 *const mb[3] = {
+    static const u8 *const mb[5] = {
         sprite_boss_sentinel, sprite_miniboss_orc, sprite_miniboss_skeleton,
+        sprite_bruiser_bomber, sprite_bruiser_warlock,
     };
     set_sprite_data(SPR_BOSS, 4, mb[stage_mb_variant[stage < 9 ? stage : 8]]);
 }

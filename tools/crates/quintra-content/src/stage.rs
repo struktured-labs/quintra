@@ -49,7 +49,8 @@ pub struct StageTheme {
     /// Registry enforces hp monotonically non-decreasing across stages.
     pub boss_hp_bonus:  u8,
     pub boss_dmg_bonus: u8,
-    /// Mini-boss silhouette: 0 = Sentinel, 1 = Orc, 2 = Skeleton. One
+    /// Mini-boss silhouette: 0 Sentinel / 1 Orc / 2 Skeleton /
+    /// 3 Bomber / 4 Warlock. One
     /// value consumed by BOTH the art loader and the palette pick — the
     /// two hand-written C copies used to have to agree by comment.
     pub mb_variant: u8,
@@ -59,7 +60,7 @@ pub struct StageTheme {
     pub enemy_pool: &'static [(u8, u8)],
 }
 
-pub const MB_VARIANTS: u8 = 3;
+pub const MB_VARIANTS: u8 = 5;
 pub const MAX_POOL: usize = 4;
 
 impl StageTheme {

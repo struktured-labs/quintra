@@ -381,6 +381,20 @@ static void boss_tick(entity_t *e) {
                     for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 2, dmg);
                     cadence = 90;
                     break;
+                case 3:   // Bomber — fast rotating cross that sweeps the room
+                    for (k = 0; k < 4; ++k)
+                        boss_shot(cx, cy, (u8)((e->ai_data[5] * 3 + k * 2) & 7), 2, dmg);
+                    cadence = 34;
+                    break;
+                case 4:   // Warlock — aimed 5-shot cone (spread bolt volley)
+                    d = aim_dir8(cx, cy);
+                    boss_shot(cx, cy, d, 2, dmg);
+                    boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
+                    boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
+                    boss_shot(cx, cy, (u8)((d + 2) & 7), 2, dmg);
+                    boss_shot(cx, cy, (u8)((d + 6) & 7), 2, dmg);
+                    cadence = 58;
+                    break;
                 case 0:   // Sentinel — steady alternating half-ring zoner
                 default:
                     for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))

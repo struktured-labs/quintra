@@ -339,7 +339,7 @@ void procgen_generate_current_room(void) BANKED {
                     // Silhouette comes from the generated stage table —
                     // ONE source shared with tiles_load_miniboss, so art and
                     // palette can't drift apart. HP power clamps (u8 overflow).
-                    static const u8 mb_pal[3] = { 0x06, 0x07, 0x00 };
+                    static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
                     u8 mb_pow = (stage < 9) ? stage : 8;
                     u8 mb_var = stage_mb_variant[stage % 9];
                     entities[idx].sprite_tile = SPR_BOSS;

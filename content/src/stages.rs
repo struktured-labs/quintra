@@ -48,7 +48,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 4, 8,12), c(12,26,31), c(22,31,31), c(31,31,31)],
         door:    [c( 2, 3, 4), c(10, 9, 4), c(20,16, 6), c(30,26,12)],
         boss:    [c(0,0,0), c(12,18,24), c( 3, 5, 9), c(31,31,31)],
-        boss_hp_bonus: 106, boss_dmg_bonus: 2, mb_variant: 0,
+        boss_hp_bonus: 106, boss_dmg_bonus: 2, mb_variant: 3,
         enemy_pool: &[(5, 35), (3, 35), (6, 30)],
     },
     // 4 — Toxic Mire (sickly yellow-green)
@@ -59,7 +59,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 3, 5, 0), c(16,26, 2), c(26,31, 6), c(31,31,18)],
         door:    [c( 2, 2, 0), c(11, 9, 2), c(20,16, 4), c(29,25, 9)],
         boss:    [c(0,0,0), c(16,20, 4), c( 4, 6, 1), c(31,31,14)],
-        boss_hp_bonus: 128, boss_dmg_bonus: 3, mb_variant: 1,
+        boss_hp_bonus: 128, boss_dmg_bonus: 3, mb_variant: 4,
         enemy_pool: &[(2, 30), (5, 30), (6, 40)],
     },
     // 5 — Shadow Keep (cold grey/violet)
@@ -81,7 +81,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 6, 4, 0), c(28,22, 4), c(31,29, 8), c(31,31,22)],
         door:    [c( 3, 2, 0), c(14,11, 2), c(24,19, 4), c(31,28,10)],
         boss:    [c(0,0,0), c(22,17, 5), c( 6, 4, 1), c(31,30,18)],
-        boss_hp_bonus: 172, boss_dmg_bonus: 4, mb_variant: 1,
+        boss_hp_bonus: 172, boss_dmg_bonus: 4, mb_variant: 3,
         enemy_pool: &[(4, 35), (6, 35), (7, 30)],
     },
     // 7 — Bloodmoon (crimson/black)
@@ -92,7 +92,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 5, 0, 1), c(24, 2, 6), c(31, 6,10), c(31,22,20)],
         door:    [c( 3, 1, 1), c(13, 6, 3), c(23,12, 5), c(31,22,10)],
         boss:    [c(0,0,0), c(20, 4, 6), c( 6, 1, 2), c(31,20,16)],
-        boss_hp_bonus: 194, boss_dmg_bonus: 4, mb_variant: 2,
+        boss_hp_bonus: 194, boss_dmg_bonus: 4, mb_variant: 0,
         enemy_pool: &[(3, 35), (7, 30), (2, 20), (8, 15)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
@@ -103,7 +103,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 0, 4, 2), c( 6,22, 8), c(14,31,12), c(28,31,24)],
         door:    [c( 2, 0, 3), c( 8, 4,10), c(16,10,20), c(26,18,30)],
         boss:    [c(0,0,0), c(13, 6,20), c( 3, 1, 7), c(20,31,18)],
-        boss_hp_bonus: 216, boss_dmg_bonus: 5, mb_variant: 0,
+        boss_hp_bonus: 216, boss_dmg_bonus: 5, mb_variant: 4,
         enemy_pool: &[(7, 30), (6, 30), (5, 20), (8, 20)],
     },
 ];
