@@ -341,9 +341,13 @@ void procgen_generate_current_room(void) BANKED {
                     // palette can't drift apart. HP power clamps (u8 overflow).
                     static const u8 mb_pal[3] = { 0x06, 0x07, 0x00 };
                     u8 mb_pow = (stage < 9) ? stage : 8;
+                    u8 mb_var = stage_mb_variant[stage % 9];
                     entities[idx].sprite_tile = SPR_BOSS;
-                    entities[idx].palette     = mb_pal[stage_mb_variant[stage % 9]];
+                    entities[idx].palette     = mb_pal[mb_var];
                     entities[idx].hitbox      = (14 << 4) | 14;
+                    // ai_data[2] = variant → boss_tick picks the matching
+                    // attack archetype (0 Sentinel / 1 Orc / 2 Skeleton).
+                    entities[idx].ai_data[2]  = mb_var;
                     entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
                 }
             }

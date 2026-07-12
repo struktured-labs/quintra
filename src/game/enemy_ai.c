@@ -360,15 +360,34 @@ static void boss_tick(entity_t *e) {
         u8 giant = e->ai_data[3];
         u8 dmg   = e->damage;
         u8 d, k;
-        i16 cx = FIX8_TO_INT(e->x) + (giant ? 12 : 4);
-        i16 cy = FIX8_TO_INT(e->y) + (giant ? 12 : 4);
+        // Both mini-boss and giant are 16x16+; center the volley origin.
+        i16 cx = FIX8_TO_INT(e->x) + (giant ? 12 : 8);
+        i16 cy = FIX8_TO_INT(e->y) + (giant ? 12 : 8);
         u8 cadence;
 
         if (!giant) {
-            // Mini-boss Sentinel: 4 shots, alternating cardinal/diagonal.
-            for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
-                boss_shot(cx, cy, d, 2, dmg);
-            cadence = 70;
+            // Three distinct mini-boss archetypes (ai_data[2] = variant:
+            // 0 Sentinel / 1 Orc / 2 Skeleton) so they play differently,
+            // not just recolored. Enrage tightens the slow ones below.
+            switch (e->ai_data[2]) {
+                case 1:   // Orc — relentless aimed 3-shot spear, fast & heavy
+                    d = aim_dir8(cx, cy);
+                    boss_shot(cx, cy, d, 3, dmg);
+                    boss_shot(cx, cy, (u8)((d + 1) & 7), 3, dmg);
+                    boss_shot(cx, cy, (u8)((d + 7) & 7), 3, dmg);
+                    cadence = 46;
+                    break;
+                case 2:   // Skeleton — slow dense full 8-ring to weave through
+                    for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 2, dmg);
+                    cadence = 90;
+                    break;
+                case 0:   // Sentinel — steady alternating half-ring zoner
+                default:
+                    for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
+                        boss_shot(cx, cy, d, 2, dmg);
+                    cadence = 70;
+                    break;
+            }
         } else switch (e->ai_data[2]) {
             case 1:   // Serpent — rotating 4-cross (sweeps a spiral)
                 for (k = 0; k < 4; ++k)
