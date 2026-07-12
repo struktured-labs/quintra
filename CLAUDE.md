@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Lineage:** this project began as a Penta Dragon DX colorization effort (that history lives in the separate `penta-dragon-dx` repo) and pivoted into Quintra, a Penta-inspired but wholly original game.
 
-**Current Status:** v0.13 — 9-stage roguelike, playable end to end, **banked
+**Current Status:** v0.15 — 9-stage roguelike, playable end to end, **banked
 ROM** (autobank; see the 2026-07-05 banking spec — new gameplay files need
 `#pragma bank 255` + `BANKED`, and `scripts/check_rom_layout.py` gates every
 link). TITLE (pulsing + music, CONTINUE when a suspend save exists, BEST
