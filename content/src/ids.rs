@@ -48,6 +48,7 @@ pub const ENEMY_BOMBER:          EnemyId = EnemyId::new(6);    // walker; detona
 pub const ENEMY_SHADE:           EnemyId = EnemyId::new(7);    // teleporting stalker
 pub const ENEMY_WARLOCK:         EnemyId = EnemyId::new(8);    // fan-fire caster
 pub const ENEMY_ROPE:            EnemyId = EnemyId::new(9);    // snake: wander then bee-line charge
+pub const ENEMY_SENTRY:          EnemyId = EnemyId::new(10);   // stationary rotating turret
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);

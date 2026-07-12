@@ -196,6 +196,17 @@ pub const ROPE: [&str; 8] = [   // snake: S-slither with a raised head
     "22......",
 ];
 
+pub const SENTRY: [&str; 8] = [   // turret orb: 4 cardinal cannon ports
+    "...33...",
+    "..2112..",
+    ".211112.",
+    "32111123",
+    "32111123",
+    ".211112.",
+    "..2112..",
+    "...33...",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -430,7 +441,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 8] = [
+pub const ENEMIES_8: [(&str, &[&str]); 9] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -439,6 +450,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 8] = [
     ("shade", &SHADE),
     ("warlock", &WARLOCK),
     ("rope", &ROPE),
+    ("sentry", &SENTRY),
 ];
 
 pub const FX_8: [(&str, &[&str]); 6] = [

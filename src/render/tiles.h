@@ -65,6 +65,7 @@
 #define SPR_ENEMY_SHADE    37
 #define SPR_ENEMY_WARLOCK  38
 #define SPR_ENEMY_ROPE     39
+#define SPR_ENEMY_SENTRY   68  // stationary turret (after bruiser blocks)
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59

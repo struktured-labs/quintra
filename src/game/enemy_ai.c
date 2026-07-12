@@ -32,6 +32,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 7: return SPR_ENEMY_SHADE;
         case 8: return SPR_BRUISER_WARLOCK;  // 16x16 heavy
         case 9: return SPR_ENEMY_ROPE;       // snake (8x8)
+        case 10: return SPR_ENEMY_SENTRY;    // stationary turret
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -50,6 +51,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 7:  return 0x00;   // Shade: pale ghost-bone
         case 8:  return 0x07;   // Warlock: green robes (0x06 = elite marker)
         case 9:  return 0x07;   // Rope: snake green
+        case 10: return 0x03;   // Sentry: cold blue-steel
         default: return 0x03;
     }
 }
@@ -260,6 +262,30 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
     } else {
         e->ai_data[1]--;
     }
+}
+
+// ---------------- Turret: stationary rotating-spread bullet-hell zoner ----
+// Doesn't move. Fires a 4-way cross that rotates each volley by ai_p0, on
+// an ai_p1-frame cadence, with the standard white-blink + click telegraph.
+// ai_data[1] = fire cooldown, ai_data[5] = rotation counter.
+static void turret_tick(entity_t *e, const enemy_def_t *def) {
+    i16 cx = FIX8_TO_INT(e->x) + 4;
+    i16 cy = FIX8_TO_INT(e->y) + 4;
+    if (e->ai_data[1] != 0) {
+        e->ai_data[1]--;
+        if (e->ai_data[1] == 8 && e->ai_data[7] == 0) {
+            e->ai_data[7] = 8;
+            sfx_play(SFX_TICK);
+        }
+        return;
+    }
+    {
+        u8 k;
+        for (k = 0; k < 4; ++k)
+            boss_shot(cx, cy, (u8)((e->ai_data[5] + k * 2) & 7), 2, def->stats.damage);
+    }
+    e->ai_data[5] = (u8)(e->ai_data[5] + (def->ai_p0 ? def->ai_p0 : 1));
+    e->ai_data[1] = def->ai_p1 ? def->ai_p1 : 55;   // fire_rate
 }
 
 // ---------------- Teleporter: vanish, reappear beside the player ---------
@@ -483,6 +509,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_CHARGER: charger_tick(e, def);             break;
         case AI_SHOOTER: shooter_tick(e, def);             break;
         case AI_TELEPORT: teleport_tick(e, def);           break;
+        case AI_TURRET:   turret_tick(e, def);             break;
         default:         walker_tick(e);                   break;
     }
 }

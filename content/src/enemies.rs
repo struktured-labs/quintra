@@ -145,6 +145,20 @@ pub const ROPE: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const SENTRY: Enemy = Enemy {
+    id:         ENEMY_SENTRY,
+    name:       "Sentry",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    // Stationary turret: never moves, fires a rotating 4-way cross that
+    // sweeps the room. Deny-space zoner; lightning-weak, moderate HP so
+    // it's a persistent hazard you route around or burn down.
+    stats: EnemyStats { hp: 6, damage: 2, speed: 0, score: 40, weakness: 0x04, poise: 4 },
+    ai_script:  AiScriptId::Turret { rotation: 1, fire_rate: 55 },
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -156,4 +170,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(SHADE.clone());
     r.add_enemy(WARLOCK.clone());
     r.add_enemy(ROPE.clone());
+    r.add_enemy(SENTRY.clone());
 }
