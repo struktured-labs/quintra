@@ -131,6 +131,20 @@ pub const WARLOCK: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const ROPE: Enemy = Enemy {
+    id:         ENEMY_ROPE,
+    name:       "Rope",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    // Classic Zelda snake: slithers idly, then bee-lines straight at you
+    // when you share its row or column. Pure contact damage, no shots.
+    // Fragile but fast on the charge — a short telegraph keeps it fair.
+    stats: EnemyStats { hp: 3, damage: 2, speed: 64, score: 20, weakness: 0x01, poise: 0 },
+    ai_script:  AiScriptId::Charger { telegraph_ticks: 14, charge_speed: 96 },
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -141,4 +155,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(BOMBER.clone());
     r.add_enemy(SHADE.clone());
     r.add_enemy(WARLOCK.clone());
+    r.add_enemy(ROPE.clone());
 }

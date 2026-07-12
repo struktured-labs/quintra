@@ -31,6 +31,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 6: return SPR_BRUISER_BOMBER;   // 16x16 heavy
         case 7: return SPR_ENEMY_SHADE;
         case 8: return SPR_BRUISER_WARLOCK;  // 16x16 heavy
+        case 9: return SPR_ENEMY_ROPE;       // snake (8x8)
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -48,6 +49,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 6:  return 0x04;   // Bomber: red shell, amber fuse (danger!)
         case 7:  return 0x00;   // Shade: pale ghost-bone
         case 8:  return 0x07;   // Warlock: green robes (0x06 = elite marker)
+        case 9:  return 0x07;   // Rope: snake green
         default: return 0x03;
     }
 }

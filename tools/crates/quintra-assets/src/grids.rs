@@ -185,6 +185,17 @@ pub const WARLOCK: [&str; 8] = [
     "11.11.11",
 ];
 
+pub const ROPE: [&str; 8] = [   // snake: S-slither with a raised head
+    ".22.....",
+    "21132...",
+    "211122..",
+    ".221122.",
+    "...21112",
+    "..2112..",
+    ".2112...",
+    "22......",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -393,7 +404,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 7] = [
+pub const ENEMIES_8: [(&str, &[&str]); 8] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -401,6 +412,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 7] = [
     ("bomber", &BOMBER),
     ("shade", &SHADE),
     ("warlock", &WARLOCK),
+    ("rope", &ROPE),
 ];
 
 pub const FX_8: [(&str, &[&str]); 6] = [

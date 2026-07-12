@@ -16,7 +16,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 1, 1, 2), c(10, 7, 2), c(18,13, 3), c(28,21, 6)],
         boss:    [c(0,0,0), c(10,13,22), c( 2, 3, 8), c(22,29,31)],
         boss_hp_bonus: 40, boss_dmg_bonus: 1, mb_variant: 0,
-        enemy_pool: &[(0, 50), (2, 25), (3, 25)],
+        enemy_pool: &[(0, 40), (2, 22), (3, 20), (9, 18)],
     },
     // 1 — Verdant Hollow (mossy green)
     StageTheme {
@@ -27,7 +27,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 1), c(11, 8, 2), c(20,14, 3), c(30,24, 8)],
         boss:    [c(0,0,0), c( 9,19, 7), c( 2, 6, 2), c(26,31,14)],
         boss_hp_bonus: 62, boss_dmg_bonus: 1, mb_variant: 1,
-        enemy_pool: &[(0, 30), (2, 40), (4, 30)],
+        enemy_pool: &[(0, 25), (2, 30), (4, 25), (9, 20)],
     },
     // 2 — Ember Depths (molten red/orange)
     StageTheme {
