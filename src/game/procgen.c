@@ -500,6 +500,18 @@ void procgen_generate_current_room(void) BANKED {
                     }
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);
+                        // Stage scaling: deeper stages toughen normal foes so
+                        // the run's rising player power (items, weapon swaps)
+                        // meets rising resistance instead of trivializing late
+                        // stages. Gentle +1 HP per 2 stages, capped so endless
+                        // descent stays brisk, not spongy. Consumes NO rng —
+                        // procgen C<->Rust parity (draw order) is untouched.
+                        if (idx != 0xFF) {
+                            u8 st = run_state.bosses_beaten;
+                            if (st > 24) st = 24;
+                            entities[idx].hp =
+                                (u8)(entities[idx].hp + (u8)(st >> 1));
+                        }
                         // ~12% spawn ELITE: boss-palette glow, double HP,
                         // +1 damage, EF_ELITE flag (combat pays the bonus).
                         if (idx != 0xFF && rng_next_u8() < 31) {
