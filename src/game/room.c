@@ -59,6 +59,15 @@ static u8 shake_mag;
 // Death sequence: frames left in the fall-down beat before GAMEOVER.
 static u8 death_timer;
 
+// Dodge dash (double-tap a direction): a fast i-frame lunge on a short
+// cooldown. tap_dir/tap_age detect the double-tap; dash_timer runs the
+// lunge; dash_cd gates re-use.
+static u8 tap_dir;       // last freshly-pressed cardinal ('L'/'R'/'U'/'D')
+static u8 tap_age;       // frames since that press
+static u8 dash_timer;    // frames left in the current dash
+static u8 dash_cd;       // cooldown before the next dash
+static i8 dash_dx, dash_dy;
+
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
@@ -536,6 +545,61 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
         if (moved) {
             player.move_acc = (u8)(player.move_acc + player.spd);
+        }
+
+        // ---- Dodge dash: double-tap a cardinal within ~12 frames to lunge
+        // fast in that direction with brief i-frames, then a short cooldown.
+        {
+            u8 td = (pressed & J_LEFT)  ? (u8)'L'
+                  : (pressed & J_RIGHT) ? (u8)'R'
+                  : (pressed & J_UP)    ? (u8)'U'
+                  : (pressed & J_DOWN)  ? (u8)'D' : 0;
+            if (td) {
+                if (td == tap_dir && tap_age <= 12
+                    && dash_cd == 0 && dash_timer == 0) {
+                    dash_timer = 7;
+                    dash_cd    = 30;
+                    if (player.iframes < 14) player.iframes = 14;
+                    dash_dx = (td == 'L') ? -1 : (td == 'R') ? 1 : 0;
+                    dash_dy = (td == 'U') ? -1 : (td == 'D') ? 1 : 0;
+                    sfx_play(SFX_DOOR);   // whoosh
+                    tap_dir = 0;
+                } else {
+                    tap_dir = td;
+                    tap_age = 0;
+                }
+            }
+            if (tap_age < 255) tap_age++;
+            if (dash_cd) dash_cd--;
+        }
+
+        // While dashing, override player control with a fast wall-checked
+        // lunge (3 px/frame). The rest of room_tick still runs — enemies
+        // and bullets keep moving so the dash actually dodges them; the
+        // dash's i-frames keep you safe. Normal movement + block-push are
+        // neutralized below via moved/move_acc = 0.
+        if (dash_timer) {
+            u8 s;
+            dash_timer--;
+            for (s = 0; s < 3; ++s) {
+                if (dash_dx) {
+                    ppos_t nx = (ppos_t)(player.x + dash_dx);
+                    if (is_walkable_at(nx + 2,  player.y + 8)
+                        && is_walkable_at(nx + 13, player.y + 8)
+                        && is_walkable_at(nx + 2,  player.y + 15)
+                        && is_walkable_at(nx + 13, player.y + 15))
+                        player.x = nx;
+                }
+                if (dash_dy) {
+                    ppos_t ny = (ppos_t)(player.y + dash_dy);
+                    if (is_walkable_at(player.x + 2,  ny + 8)
+                        && is_walkable_at(player.x + 13, ny + 8)
+                        && is_walkable_at(player.x + 2,  ny + 15)
+                        && is_walkable_at(player.x + 13, ny + 15))
+                        player.y = ny;
+                }
+            }
+            dx = 0; dy = 0; moved = 0; player.move_acc = 0;
         }
 
         // --- Pushable blocks: press against a block (cardinal move) and,

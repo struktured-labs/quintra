@@ -53,7 +53,7 @@ tables at build time.
 
 | Input | Action |
 |---|---|
-| **D-pad** | Move (8-way aim while firing) |
+| **D-pad** | Move (8-way aim while firing); double-tap a direction to dodge-dash |
 | **A** | Primary weapon · continue a suspended run (title) |
 | **B** | Class signature move (2 MP) |
 | **START** | Pack screen (stats, loadout, run clock) |

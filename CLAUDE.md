@@ -34,9 +34,10 @@ all compiled from typed Rust content; `make verify` runs cargo tests,
 the gameplay smoke, and the C<->Rust procgen parity check.
 
 ### Controls
-- D-pad move · A primary weapon · B signature move (2 MP) · START pack
-  screen · SELECT quick-pause · shoot the glowing amber cracked walls for
-  secrets · title: A = continue a suspended run.
+- D-pad move (double-tap a direction to dodge-dash with i-frames) · A
+  primary weapon · B signature move (2 MP) · START pack screen · SELECT
+  quick-pause · shoot the glowing amber cracked walls for secrets · title:
+  A = continue a suspended run.
 
 ### Toolchain
 
