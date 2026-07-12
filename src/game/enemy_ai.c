@@ -86,14 +86,21 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
 }
 
 // Try to move an enemy 1px by (dx,dy); blocked by solid tiles + room bounds.
-// Returns 1 if moved.
+// Returns 1 if moved. Checks all four corners of the body's footprint so a
+// 16x16 bruiser can't sink half into a wall the way an 8x8 center-point
+// check allowed. Footprint size comes from the hitbox width: >=10 = 16px
+// body, else 8px.
 u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 nx = (i16)(FIX8_TO_INT(e->x) + dx);
     i16 ny = (i16)(FIX8_TO_INT(e->y) + dy);
-    if (nx < 8 || nx >= (i16)((ROOM_W - 1) * 8)) return 0;
-    if (ny < 8 || ny >= (i16)((ROOM_H - 1) * 8)) return 0;
-    // Center-point tile check (cheap; 8x8 bodies)
-    if (!room_tile_walkable(room_tile_at_px(nx + 4, ny + 4))) return 0;
+    i16 ext = ((e->hitbox >> 4) >= 10) ? 14 : 6;   // far-corner inset
+    if (nx < 8 || ny < 8) return 0;
+    if (nx + ext >= (i16)((ROOM_W - 1) * 8 + 8)
+        || ny + ext >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;
+    if (!room_tile_walkable(room_tile_at_px(nx + 1,   ny + 1))
+        || !room_tile_walkable(room_tile_at_px(nx + ext, ny + 1))
+        || !room_tile_walkable(room_tile_at_px(nx + 1,   ny + ext))
+        || !room_tile_walkable(room_tile_at_px(nx + ext, ny + ext))) return 0;
     e->x = FIX8(nx);
     e->y = FIX8(ny);
     return 1;
