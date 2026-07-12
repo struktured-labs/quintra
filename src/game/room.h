@@ -23,6 +23,8 @@ u8 room_tile_walkable(u8 t) BANKED;
 void room_open_secret(u8 tx, u8 ty) BANKED;
 // A player shot shattered a crystal: floor it, maybe drop a +1 MP wisp.
 void room_break_crystal(u8 tx, u8 ty) BANKED;
+// A player shot smashed a pot: floor it and roll a loot drop.
+void room_break_pot(u8 tx, u8 ty) BANKED;
 
 // Impact shake: wiggle the BG scroll (HUD unaffected) for a few frames.
 // mag = pixels (1-2 sensible); longer of current/new duration wins.

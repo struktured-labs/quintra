@@ -28,6 +28,7 @@ pub const BGT_RUBBLE: u8 = 23;
 pub const BGT_WALL_CRACK: u8 = 24;
 pub const BGT_BLOCK: u8 = 25;      // crate TL quadrant
 pub const BGT_SPIKES: u8 = 31;
+pub const BGT_POT: u8 = 32;
 pub const BGT_BLOCK_TR: u8 = 28;
 pub const BGT_BLOCK_BL: u8 = 29;
 pub const BGT_BLOCK_BR: u8 = 30;
@@ -268,6 +269,23 @@ pub fn generate_tilemap(
                             m[spy + sdy][spx + sdx] = BGT_SPIKES;
                         }
                     }
+                }
+            }
+        }
+
+        // ---- Breakable pots (0-2): interior floor, lanes clear. One count
+        // draw + 2 per pot — must match procgen.c exactly.
+        {
+            let np = rng.next_u8() % 3;
+            for _ in 0..np {
+                let ptx = (2 + rng.range_u8(ROOM_W as u8 - 4)) as usize;
+                let pty = (2 + rng.range_u8(ROOM_H as u8 - 4)) as usize;
+                if (9..=11).contains(&ptx) || (7..=9).contains(&pty) {
+                    continue;
+                }
+                let ft = m[pty][ptx];
+                if ft == BGT_FLOOR || ft == BGT_FLOOR2 || ft == BGT_FLOOR3 {
+                    m[pty][ptx] = BGT_POT;
                 }
             }
         }

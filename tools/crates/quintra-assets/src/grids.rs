@@ -387,6 +387,19 @@ pub const BGT_SPIKES: [&str; 8] = [
     "00000000",
 ];
 
+
+// Breakable clay pot: shoot it for loot. Solid until destroyed.
+pub const BGT_POT: [&str; 8] = [
+    "..2222..",
+    ".231132.",
+    "21111112",
+    "21111112",
+    "21311312",
+    "21111112",
+    ".211112.",
+    "..2222..",
+];
+
 // 16x16 mini-boss (Stone Sentinel), hand-drawn
 pub const BOSS_SENTINEL: [&str; 16] = [
     "....111111111...",
@@ -437,7 +450,7 @@ pub const FX_8: [(&str, &[&str]); 6] = [
     ("item_orb", &ITEM_ORB),
 ];
 
-pub const DUNGEON_TILES: [(&str, &[&str]); 11] = [
+pub const DUNGEON_TILES: [(&str, &[&str]); 12] = [
     ("floor_plain", &BGT_FLOOR_PLAIN),
     ("floor_crack", &BGT_FLOOR_CRACK),
     ("floor_pebble", &BGT_FLOOR_PEBBLE),
@@ -449,6 +462,7 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 11] = [
     ("wall_crack", &BGT_WALL_CRACK),
     ("block", &BGT_BLOCK),
     ("spikes", &BGT_SPIKES),
+    ("pot", &BGT_POT),
 ];
 
 // Mini-boss silhouettes: 2x-scaled enemy art (order matters — indexed by

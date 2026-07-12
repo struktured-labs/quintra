@@ -36,6 +36,7 @@
 #define BGT_BLOCK_BL   29  // crate bottom-left
 #define BGT_BLOCK_BR   30  // crate bottom-right
 #define BGT_SPIKES     31  // floor hazard: walkable but damages on contact
+#define BGT_POT        32  // breakable clay pot: solid, shoot for loot
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0

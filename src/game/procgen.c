@@ -279,6 +279,25 @@ void procgen_generate_current_room(void) BANKED {
                         }
                 }
             }
+
+            // Breakable pots — 0-2 clay pots on interior floor, clear of
+            // door lanes. Shoot them for loot. One count draw + 2 per pot
+            // (mirror exactly in the Rust procgen reference).
+            {
+                u8 np = (u8)(rng_next_u8() % 3);
+                u8 i;
+                for (i = 0; i < np; ++i) {
+                    u8 ptx = (u8)(2 + rng_range(ROOM_W - 4));
+                    u8 pty = (u8)(2 + rng_range(ROOM_H - 4));
+                    if (ptx >= 9 && ptx <= 11) continue;
+                    if (pty >= 7 && pty <= 9)  continue;
+                    {
+                        u8 ft = room_tilemap[pty][ptx];
+                        if (ft == BGT_FLOOR || ft == BGT_FLOOR2 || ft == BGT_FLOOR3)
+                            room_tilemap[pty][ptx] = BGT_POT;
+                    }
+                }
+            }
         }
     }
 

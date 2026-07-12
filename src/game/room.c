@@ -233,6 +233,22 @@ void room_break_crystal(u8 tx, u8 ty) BANKED {
     }
 }
 
+void room_break_pot(u8 tx, u8 ty) BANKED {
+    // Smash a pot: floor it and roll a drop (heart / coin / nothing).
+    if (tx >= ROOM_W || ty >= ROOM_H) return;
+    if (room_tilemap[ty][tx] != BGT_POT) return;
+    room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
+    sfx_play(SFX_HIT);
+    {
+        u8 r = rng_next_u8();
+        if (r < 0x50)      pickup_spawn(PICKUP_HEART_HALF,
+                               FIX8((i16)tx * 8), FIX8((i16)ty * 8));   // 31%
+        else if (r < 0xC0) pickup_spawn(PICKUP_COIN_1,
+                               FIX8((i16)tx * 8), FIX8((i16)ty * 8));   // 44%
+        // else nothing (25%)
+    }
+}
+
 void room_open_secret(u8 tx, u8 ty) BANKED {
     u8 tx2 = tx, ty2 = ty;
     if (tx >= ROOM_W || ty >= ROOM_H) return;
@@ -257,7 +273,8 @@ static u8 attr_for_tile(u8 t) {
         case BGT_BLOCK:
         case BGT_BLOCK_TR:
         case BGT_BLOCK_BL:
-        case BGT_BLOCK_BR: return BGPAL_DOOR;      // gold-ish, reads as interactive
+        case BGT_BLOCK_BR:
+        case BGT_POT:     return BGPAL_DOOR;      // gold-ish, reads as interactive
         case BGT_CRYSTAL: return BGPAL_CRYSTAL;
         case BGT_DOOR:    return BGPAL_DOOR;
         default:
