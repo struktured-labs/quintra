@@ -55,7 +55,8 @@ u8 combat_resolve(void) BANKED {
             // projectile ai_data[1]) + crit x2 (LCK * 5% chance).
             // Vespine's venom synergy (perk 5): elemental hits bite +1.
             dmg = entities[i].damage;
-            if (entities[i].ai_data[1] & weakness) {
+            u8 weak = (entities[i].ai_data[1] & weakness) ? 1 : 0;
+            if (weak) {
                 dmg = (u8)(dmg << 1);
                 if (player.class_id == 4) dmg++;
             }
@@ -66,12 +67,25 @@ u8 combat_resolve(void) BANKED {
                 // Apply damage
                 if (entities[j].hp > dmg) {
                     entities[j].hp = (u8)(entities[j].hp - dmg);
-                    entities[j].ai_data[7] = 4;    // hit-flash frames
+                    entities[j].ai_data[7] = weak ? 7 : 4;  // hit-flash frames
                     knockback_enemy(&entities[j], entities[i].vx, entities[i].vy, poise);
-                    if (g_hitstop < 1) g_hitstop = 1;
-                    sfx_play(SFX_HIT);
+                    if (g_hitstop < (weak ? 2 : 1)) g_hitstop = weak ? 2 : 1;
+                    if (weak) {
+                        // "Super effective": bright spark at the hit + crystal ping
+                        i16 hx = FIX8_TO_INT(entities[j].x) + 4;
+                        i16 hy = FIX8_TO_INT(entities[j].y) + 4;
+                        fx_spawn(SPR_FX_IMPACT, 3, hx, hy, 10);
+                        sfx_play(SFX_WEAK);
+                    } else {
+                        sfx_play(SFX_HIT);
+                    }
                 } else {
                     sfx_play(SFX_DEATH);
+                    if (weak) {
+                        fx_spawn(SPR_FX_IMPACT, 3,
+                                 FIX8_TO_INT(entities[j].x) + 4,
+                                 FIX8_TO_INT(entities[j].y) + 4, 10);
+                    }
                     if (g_hitstop < 2) g_hitstop = 2;
                     {
                         if (eid < N_ENEMIES) {

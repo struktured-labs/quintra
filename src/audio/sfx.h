@@ -18,6 +18,7 @@ enum {
     SFX_CLEAR,        // room cleared: G5 -> B5 -> E6 rising arpeggio
     SFX_LOWHP,        // danger pulse: single soft high blip
     SFX_TICK,         // boss telegraph: quiet mechanical click
+    SFX_WEAK,         // elemental super-effective: bright rising crystal ping
 };
 
 void sfx_play(u8 id);

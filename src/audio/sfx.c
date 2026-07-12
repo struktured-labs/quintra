@@ -12,6 +12,7 @@
 #define PEND_DEATH_BUMP 3
 #define PEND_CLEAR_NOTE2 4
 #define PEND_CLEAR_NOTE3 5
+#define PEND_WEAK_NOTE2  6
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -89,6 +90,13 @@ void sfx_play(u8 id) {
             // env 5-down-1) — the boss cocking the hammer.
             ch4(0x24, 0x51);
             break;
+        case SFX_WEAK:
+            // "Super effective" — bright crystal ping, duty 50%, high C7,
+            // env (11,down,1) short & sparkly, then a higher note chained.
+            ch1(0x00, 0x80, 0xB1, 1985);
+            pend_kind = PEND_WEAK_NOTE2;
+            pend_timer = 2;
+            break;
         default:
             break;
     }
@@ -119,6 +127,11 @@ void sfx_tick(void) {
             NR12_REG = 0xD4;                           // fresh, longer env
             NR13_REG = (u8)(1949 & 0xFF);              // E6
             NR14_REG = (u8)(0x80 | (1949 >> 8));
+            break;
+        case PEND_WEAK_NOTE2:
+            NR12_REG = 0xA1;                           // brief, bright
+            NR13_REG = (u8)(2010 & 0xFF);              // up an octave-ish
+            NR14_REG = (u8)(0x80 | (2010 >> 8));
             break;
     }
     pend_kind = PEND_NONE;
