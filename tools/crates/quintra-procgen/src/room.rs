@@ -27,6 +27,7 @@ pub const BGT_CRYSTAL: u8 = 22;
 pub const BGT_RUBBLE: u8 = 23;
 pub const BGT_WALL_CRACK: u8 = 24;
 pub const BGT_BLOCK: u8 = 25;      // crate TL quadrant
+pub const BGT_SPIKES: u8 = 31;
 pub const BGT_BLOCK_TR: u8 = 28;
 pub const BGT_BLOCK_BL: u8 = 29;
 pub const BGT_BLOCK_BR: u8 = 30;
@@ -222,6 +223,23 @@ pub fn generate_tilemap(
                 }
             }
         }
+
+        // ---- Spike patch (~1/4 of rooms): 2x2 hazard cluster, lanes clear.
+        // One roll + two position draws — must match procgen.c exactly.
+        if rng.next_u8() & 0x03 == 0 {
+            let spx = (3 + rng.range_u8(ROOM_W as u8 - 7)) as usize;
+            let spy = (3 + rng.range_u8(ROOM_H as u8 - 7)) as usize;
+            if !(8..=11).contains(&spx) && !(6..=9).contains(&spy) {
+                for sdy in 0..2 {
+                    for sdx in 0..2 {
+                        let ft = m[spy + sdy][spx + sdx];
+                        if ft == BGT_FLOOR || ft == BGT_FLOOR2 || ft == BGT_FLOOR3 {
+                            m[spy + sdy][spx + sdx] = BGT_SPIKES;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // ---- Post-base overlays (seed-independent tile stamps), same order
@@ -268,6 +286,7 @@ pub fn walkable(t: u8) -> bool {
         || t == BGT_FLOOR3
         || t == BGT_RUBBLE
         || t == BGT_DOOR
+        || t == BGT_SPIKES
         || t == HUD_COIN
         || (HUD_DIGIT_0..=HUD_DIGIT_0 + 9).contains(&t)
 }

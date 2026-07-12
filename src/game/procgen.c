@@ -232,6 +232,23 @@ void procgen_generate_current_room(void) BANKED {
                     if (pos != 8 && pos != 9) room_tilemap[pos][ROOM_W - 1] = BGT_WALL_CRACK;
                 }
             }
+
+            // Spike patch — ~1/4 of rooms grow a 2x2 hazard cluster in the
+            // interior, clear of the door lanes. One roll + two position
+            // draws (mirror this exactly in the Rust procgen reference).
+            if ((rng_next_u8() & 0x03) == 0) {
+                u8 spx = (u8)(3 + rng_range(ROOM_W - 7));
+                u8 spy = (u8)(3 + rng_range(ROOM_H - 7));
+                if (!(spx >= 8 && spx <= 11) && !(spy >= 6 && spy <= 9)) {
+                    u8 sdx, sdy;
+                    for (sdy = 0; sdy < 2; ++sdy)
+                        for (sdx = 0; sdx < 2; ++sdx) {
+                            u8 ft = room_tilemap[spy + sdy][spx + sdx];
+                            if (ft == BGT_FLOOR || ft == BGT_FLOOR2 || ft == BGT_FLOOR3)
+                                room_tilemap[spy + sdy][spx + sdx] = BGT_SPIKES;
+                        }
+                }
+            }
         }
     }
 

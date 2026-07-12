@@ -374,6 +374,19 @@ pub const BGT_BLOCK: [&str; 8] = [
     "33333333",
 ];
 
+// Spike-floor hazard: rows of upward metal points on the amber danger
+// palette (glyph 3 = pale tip, 1 = amber body, 0 = dark gap).
+pub const BGT_SPIKES: [&str; 8] = [
+    "30300303",
+    "12122121",
+    "11111111",
+    "00000000",
+    "03030303",
+    "21211212",
+    "11111111",
+    "00000000",
+];
+
 // 16x16 mini-boss (Stone Sentinel), hand-drawn
 pub const BOSS_SENTINEL: [&str; 16] = [
     "....111111111...",
@@ -424,7 +437,7 @@ pub const FX_8: [(&str, &[&str]); 6] = [
     ("item_orb", &ITEM_ORB),
 ];
 
-pub const DUNGEON_TILES: [(&str, &[&str]); 10] = [
+pub const DUNGEON_TILES: [(&str, &[&str]); 11] = [
     ("floor_plain", &BGT_FLOOR_PLAIN),
     ("floor_crack", &BGT_FLOOR_CRACK),
     ("floor_pebble", &BGT_FLOOR_PEBBLE),
@@ -435,6 +448,7 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 10] = [
     ("rubble", &BGT_RUBBLE),
     ("wall_crack", &BGT_WALL_CRACK),
     ("block", &BGT_BLOCK),
+    ("spikes", &BGT_SPIKES),
 ];
 
 // Mini-boss silhouettes: 2x-scaled enemy art (order matters — indexed by

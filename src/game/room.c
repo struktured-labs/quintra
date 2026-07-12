@@ -151,7 +151,7 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
 
 u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
-         || t == BGT_RUBBLE || t == BGT_DOOR
+         || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES
          // Shop price tags are painted floor (coin glyph + digits)
          || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
 }
@@ -243,7 +243,8 @@ static u8 attr_for_tile(u8 t) {
     switch (t) {
         case BGT_WALL:
         case BGT_PILLAR:  return BGPAL_WALL;
-        case BGT_WALL_CRACK: return BGPAL_CRACK;   // glowing — obviously special
+        case BGT_WALL_CRACK:
+        case BGT_SPIKES:  return BGPAL_CRACK;   // amber danger signal
         case BGT_BLOCK:
         case BGT_BLOCK_TR:
         case BGT_BLOCK_BL:
@@ -878,6 +879,25 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             if (rng_next_u8() < 100) {   // ~40%: hidden coin
                 pickup_spawn(PICKUP_COIN_1,
                     FIX8((i16)rtx * 8), FIX8((i16)rty * 8));
+            }
+        }
+        // ---- Spike floor: walkable but bites when the feet-box center
+        // rests on it. DEF soaks it (min 1), then iframes + a jolt so you
+        // can cross but pay for lingering.
+        else if (rtx < ROOM_W && rty < ROOM_H
+            && room_tilemap[rty][rtx] == BGT_SPIKES
+            && player.iframes == 0) {
+            u8 taken = (player.def < 1) ? 1 : 1;   // spikes always sting 1
+            if (player.hp > taken) {
+                player.hp = (u8)(player.hp - taken);
+                player.iframes = 40;
+                g_hitstop = 2;
+                room_shake(1, 6);
+                sfx_play(SFX_HURT);
+                hud_redraw_hp();
+            } else {
+                player.hp = 0;
+                return SCREEN_GAMEOVER;
             }
         }
     }

@@ -186,4 +186,5 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_BLOCK_TR, 1, bgt_block16_tr);
     set_bkg_data(BGT_BLOCK_BL, 1, bgt_block16_bl);
     set_bkg_data(BGT_BLOCK_BR, 1, bgt_block16_br);
+    set_bkg_data(BGT_SPIKES,   1, bgt_spikes);
 }
