@@ -422,6 +422,16 @@ void procgen_generate_current_room(void) BANKED {
                     // Roster comes from the generated per-stage pool —
                     // designed in content/src/stages.rs, not hard-coded here.
                     u8 eid = pick_enemy_for_stage(run_state.bosses_beaten);
+                    // Big-tier enemies (orc 4, bomber 6, warlock 8) are 16x16;
+                    // their 2x2 footprint must be clear or the body spawns
+                    // half-buried in a pillar/wall. Skip the spawn if blocked.
+                    if ((eid == 4 || eid == 6 || eid == 8)
+                        && (tx + 1 >= ROOM_W - 1 || ty + 1 >= ROOM_H - 1
+                            || !room_tile_walkable(room_tilemap[ty][tx + 1])
+                            || !room_tile_walkable(room_tilemap[ty + 1][tx])
+                            || !room_tile_walkable(room_tilemap[ty + 1][tx + 1]))) {
+                        continue;
+                    }
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);
                         // ~12% spawn ELITE: boss-palette glow, double HP,
