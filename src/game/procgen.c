@@ -106,7 +106,7 @@ void procgen_generate_current_room(void) BANKED {
             // N/S door at col 10; rows 7-9 for the E/W door at row 8) so
             // every door remains reachable regardless of pattern.
             {
-                u8 shape = (u8)(rng_next_u8() & 0x07);
+                u8 shape = (u8)rng_range(11);   // 11 interior layouts
                 if (shape == 1) {
                     // Four pillars at quarter points
                     room_tilemap[4][4]   = BGT_PILLAR;
@@ -172,8 +172,38 @@ void procgen_generate_current_room(void) BANKED {
                         room_tilemap[5][col_x[i]]  = BGT_PILLAR;
                         room_tilemap[11][col_x[i]] = BGT_PILLAR;
                     }
+                } else if (shape == 8) {
+                    // Serpentine: two staggered half-walls, N/S lane (cols
+                    // 9-11) kept clear — weave an S around them.
+                    u8 i;
+                    for (i = 2; i <= 12; ++i)
+                        if (i < 9 || i > 11) room_tilemap[5][i]  = BGT_PILLAR;
+                    for (i = 7; i <= 17; ++i)
+                        if (i < 9 || i > 11) room_tilemap[11][i] = BGT_PILLAR;
+                } else if (shape == 9) {
+                    // Pillar grid: a regular hall of columns (lanes clear).
+                    static const u8 gx[4] = { 4, 8, 12, 16 };
+                    u8 i;
+                    for (i = 0; i < 4; ++i) {
+                        room_tilemap[4][gx[i]]  = BGT_PILLAR;
+                        room_tilemap[12][gx[i]] = BGT_PILLAR;
+                    }
+                } else if (shape == 10) {
+                    // Central chamber: a pillar ring around the middle with
+                    // openings at every door lane (cols 9-11, rows 7-9).
+                    u8 i;
+                    for (i = 6; i <= 13; ++i)
+                        if (i < 9 || i > 11) {
+                            room_tilemap[6][i]  = BGT_PILLAR;
+                            room_tilemap[10][i] = BGT_PILLAR;
+                        }
+                    for (i = 6; i <= 10; ++i)
+                        if (i < 7 || i > 9) {
+                            room_tilemap[i][6]  = BGT_PILLAR;
+                            room_tilemap[i][13] = BGT_PILLAR;
+                        }
                 }
-                // shape 0: open room (now 1-in-8 — variety rules)
+                // shape 0: open room (1-in-11 — variety rules)
             }
 
             // Rubble decoration (walkable) — 3 scatter spots

@@ -106,7 +106,7 @@ pub fn generate_tilemap(
         m[9][ROOM_W - 1] = BGT_DOOR;
 
         // ---- Interior shape (8 layouts; lanes cols 9-11 / rows 7-9 clear)
-        let shape = rng.next_u8() & 0x07;
+        let shape = rng.range_u8(11);   // 11 interior layouts
         match shape {
             1 => {
                 for (y, x) in [(4, 4), (4, 15), (13, 4), (13, 15)] {
@@ -164,6 +164,37 @@ pub fn generate_tilemap(
                 for x in [3usize, 5, 7, 13, 15, 17] {
                     m[5][x] = BGT_PILLAR;
                     m[11][x] = BGT_PILLAR;
+                }
+            }
+            8 => {
+                // Serpentine: two staggered half-walls, N/S lane (9-11) clear.
+                for i in 2..=12usize {
+                    if i < 9 || i > 11 { m[5][i] = BGT_PILLAR; }
+                }
+                for i in 7..=17usize {
+                    if i < 9 || i > 11 { m[11][i] = BGT_PILLAR; }
+                }
+            }
+            9 => {
+                for x in [4usize, 8, 12, 16] {
+                    m[4][x] = BGT_PILLAR;
+                    m[12][x] = BGT_PILLAR;
+                }
+            }
+            10 => {
+                // Central chamber: pillar ring with door-lane openings
+                // (cols 9-11, rows 7-9).
+                for i in 6..=13usize {
+                    if i < 9 || i > 11 {
+                        m[6][i] = BGT_PILLAR;
+                        m[10][i] = BGT_PILLAR;
+                    }
+                }
+                for i in 6..=10usize {
+                    if i < 7 || i > 9 {
+                        m[i][6] = BGT_PILLAR;
+                        m[i][13] = BGT_PILLAR;
+                    }
                 }
             }
             _ => {} // 0: open room
