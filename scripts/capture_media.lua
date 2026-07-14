@@ -6,6 +6,7 @@
 local OUT  = os.getenv("QUINTRA_MEDIA_DIR") or "/tmp/quintra-media"
 local RS   = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL   = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
+local EN   = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 -- "shots" = discrete screenshots only; "gif" = the frame burst only.
 -- Split because per-frame screenshot IO is slow enough under xvfb to
 -- starve everything scheduled after the burst.
@@ -32,25 +33,60 @@ local function walk_to_room(target)
 end
 
 if MODE == "gif" then
-  -- Boot straight into a run and record the burst, nothing else.
-  tick(140)
-  hold(KEY_START, 2); tick(40)
-  hold(KEY_A, 2); tick(60)
+  -- A compact release-reel: animated lore title, champion select, combat,
+  -- then the dungeon -> Riftwild -> nonlinear vault-staircase cadence.
+  -- Progression setup uses the same WRAM contract as test_overworld.py;
+  -- every pictured transition and animation is still executed by the ROM.
   local gi = 0
+  local function frame(key, n, stride)
+    for i=1,n do
+      emu:setKeys(key or 0); emu:runFrame()
+      if (i % (stride or 2)) == 0 then
+        gi = gi + 1
+        emu:screenshot(string.format("%s/gif_%03d.png", OUT, gi))
+      end
+    end
+    emu:setKeys(0)
+  end
+  local function put16(p, v)
+    emu:write8(p, v & 255); emu:write8(p + 1, (v >> 8) & 255)
+  end
+  local function clear_hostiles()
+    if EN == 0 then return end
+    for i=0,31 do
+      local p = EN + i * 28
+      if emu:read8(p) == 2 then emu:write8(p, 0); emu:write8(p + 1, 0) end
+    end
+  end
+  local function warp(x, y)
+    clear_hostiles(); put16(PL + 9, x); put16(PL + 11, y); tick(45)
+  end
+
+  tick(110); frame(0, 30, 3)                 -- five-spirit title animation
+  hold(KEY_START, 2); tick(20); frame(KEY_DOWN, 12, 2)
+  frame(KEY_UP, 8, 2); hold(KEY_A, 2); tick(50)
   local seq = {
-    {KEY_A|KEY_RIGHT, 18}, {KEY_A|KEY_DOWN, 18}, {KEY_A|KEY_LEFT, 18},
-    {KEY_A|KEY_UP, 18}, {KEY_B|KEY_RIGHT, 10}, {KEY_A|KEY_DOWN, 16},
-    {KEY_RIGHT, 10}, {KEY_A|KEY_UP, 16},
+    {KEY_A|KEY_RIGHT, 16}, {KEY_A|KEY_DOWN, 16},
+    {KEY_B|KEY_LEFT, 10}, {KEY_A|KEY_UP, 16},
   }
   for _,step in ipairs(seq) do
-    local key, frames = step[1], step[2]
-    for _=1,frames do
-      if PL ~= 0 then emu:write8(PL + 2, 12) end
-      emu:setKeys(key); emu:runFrame()
+    for _=1,step[2] do
+      if PL ~= 0 then emu:write8(PL + 2, 12) end -- keep reel combat readable
+      emu:setKeys(step[1]); emu:runFrame()
       gi = gi + 1
       emu:screenshot(string.format("%s/gif_%03d.png", OUT, gi))
     end
   end
+  emu:setKeys(0)
+
+  -- Stage-one boss is already beaten for this edit; leaving the boss room
+  -- performs the real runtime handoff into overworld screen zero.
+  emu:write8(RS + 1, 6); emu:write8(RS + 11, 1)
+  warp(72, 120); frame(KEY_A|KEY_RIGHT, 20, 2)
+  warp(144, 60); frame(KEY_RIGHT, 12, 2)      -- Riftwild 0 -> 1
+  warp(144, 60); frame(KEY_A|KEY_DOWN, 16, 2) -- Riftwild 1 -> cave 2
+  warp(72, 52); frame(0, 24, 2)              -- cave 2 -> distant vault 15
+
   emu:setKeys(0)
   console:log("MEDIA CAPTURE DONE frames=" .. gi)
   emu.frontend:quit()

@@ -11,7 +11,13 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
+[Download the latest ROM — v0.17.0: Riftwild Expanse](https://github.com/struktured-labs/quintra/releases/latest)
+
 ![Quintra gameplay](docs/media/gameplay.gif)
+
+The v0.17 reel shows the animated five-spirit prologue, champion selection,
+live dungeon combat, the Riftwild overworld, and a nonlinear cave-to-vault
+teleport. The transitions shown are executed by the cartridge runtime.
 
 ## Screens
 
@@ -76,7 +82,7 @@ tables at build time.
 | **B** | Class signature move (2 MP; Sauran: shield) |
 | **A+B** | Spirit Convergence when MP is full |
 | **START** | Pack screen (stats, loadout, run clock) |
-| **SELECT** | Spirit Compass (region, dungeon depth, distance to town) |
+| **SELECT** | Spirit Compass (dungeon/town progress; Riftwild coordinates, exits, and landmark hint) |
 
 Shoot the glowing amber wall tiles — they hide secret rooms.
 
@@ -98,7 +104,8 @@ agents, one per champion. They may read combat state to aim, but they only
 send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, or alter progression. Treat their CSV as a repeatable balance
 baseline, not a substitute for human playtests. `make verify` also enforces a
-128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space.
+128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
+v0.17.0 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
 
 Cart spec: **MBC5 + RAM + battery, CGB-only, banked ROM** (autobank; 2 MB
 address space open).
