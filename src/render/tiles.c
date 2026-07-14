@@ -41,6 +41,7 @@ const u8 sprite_tile_coin[16] = {
 void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
+    set_sprite_data(SPR_VILLAGER, 1, sprite_fx_villager);
 }
 
 // HUD tiles — full heart, half heart, empty heart, coin glyph, blank,

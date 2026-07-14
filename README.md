@@ -54,7 +54,8 @@ tables at build time.
   floors**. Seeded nonlinear **rift wells** disorientingly bounce between
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
 - **Generated world cadence**: three six-room dungeons form a region, followed
-  by a safe procedural town with healing and seeded merchant stock. Lore is a
+  by a safe procedural town with a resident elder, sanctuary blessing, and
+  seeded merchant stock. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill.

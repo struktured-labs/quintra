@@ -12,7 +12,6 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
-#include "core/types.h"
 #include "content.h"
 
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
@@ -58,6 +57,19 @@ static u8 pick_enemy_for_stage(u8 stage_raw) {
         if (r < acc) return stage_pool_ids[st][k];
     }
     return stage_pool_ids[st][0];
+}
+
+// One source for town and dungeon merchant entities. Prices differ by venue;
+// visual and ware wiring do not.
+static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
+    u8 idx = pickup_spawn(PICKUP_SHOP, FIX8(px), FIX8(py));
+    if (idx == 0xFF) return idx;
+    entities[idx].ai_data[0] = PICKUP_SHOP;
+    entities[idx].ai_data[1] = ware;
+    entities[idx].ai_data[2] = price;
+    entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART : SPR_ITEM_ORB;
+    entities[idx].palette = (ware == WARE_ITEM) ? 0x05 : 0x04;
+    return idx;
 }
 
 void procgen_generate_current_room(void) BANKED {
@@ -436,16 +448,11 @@ void procgen_generate_current_room(void) BANKED {
             // Towns are full sanctuary hubs: healing, magic, and three fairer
             // market stalls. Lore anchors can later replace selected region
             // towns without changing this procedural fallback.
-            u8 s0, s1, s2;
             *(volatile u8*)0xFFFC = 0x54; // 'T' debug landmark
-            player.hp = player.hp_max;
-            player.mp = player.mp_max;
-            s0 = pickup_spawn(PICKUP_SHOP, FIX8(48), FIX8(72));
-            s1 = pickup_spawn(PICKUP_SHOP, FIX8(80), FIX8(72));
-            s2 = pickup_spawn(PICKUP_SHOP, FIX8(112), FIX8(72));
-            if (s0 != 0xFF) { entities[s0].ai_data[0] = PICKUP_SHOP; entities[s0].ai_data[1] = WARE_HEART; entities[s0].ai_data[2] = 5; entities[s0].sprite_tile = SPR_HEART; entities[s0].palette = 0x04; }
-            if (s1 != 0xFF) { entities[s1].ai_data[0] = PICKUP_SHOP; entities[s1].ai_data[1] = WARE_ITEM; entities[s1].ai_data[2] = 20; entities[s1].sprite_tile = SPR_ITEM_ORB; entities[s1].palette = 0x05; }
-            if (s2 != 0xFF) { entities[s2].ai_data[0] = PICKUP_SHOP; entities[s2].ai_data[1] = WARE_BIG; entities[s2].ai_data[2] = 35; entities[s2].sprite_tile = SPR_ITEM_ORB; entities[s2].palette = 0x04; }
+            pickup_spawn_villager(FIX8(80), FIX8(48));
+            spawn_shop_ware(48, 72, WARE_HEART, 5);
+            spawn_shop_ware(80, 72, WARE_ITEM, 20);
+            spawn_shop_ware(112, 72, WARE_BIG, 35);
             player.iframes = 60;
             return;
         }
@@ -526,30 +533,9 @@ void procgen_generate_current_room(void) BANKED {
             // with enough coins to buy (heart 10 / stat item 25 / +2 max HP 40).
             *(volatile u8*)0xFFFC = 0x00;
             {
-                u8 s0 = pickup_spawn(PICKUP_SHOP, FIX8(56),  FIX8(64));
-                u8 s1 = pickup_spawn(PICKUP_SHOP, FIX8(80),  FIX8(64));
-                u8 s2 = pickup_spawn(PICKUP_SHOP, FIX8(104), FIX8(64));
-                if (s0 != 0xFF) {
-                    entities[s0].ai_data[0] = PICKUP_SHOP;
-                    entities[s0].ai_data[1] = WARE_HEART;
-                    entities[s0].ai_data[2] = 10;
-                    entities[s0].sprite_tile = SPR_HEART;
-                    entities[s0].palette = 0x04;
-                }
-                if (s1 != 0xFF) {
-                    entities[s1].ai_data[0] = PICKUP_SHOP;
-                    entities[s1].ai_data[1] = WARE_ITEM;
-                    entities[s1].ai_data[2] = 25;
-                    entities[s1].sprite_tile = SPR_ITEM_ORB;
-                    entities[s1].palette = 0x05;
-                }
-                if (s2 != 0xFF) {
-                    entities[s2].ai_data[0] = PICKUP_SHOP;
-                    entities[s2].ai_data[1] = WARE_BIG;
-                    entities[s2].ai_data[2] = 40;
-                    entities[s2].sprite_tile = SPR_ITEM_ORB;
-                    entities[s2].palette = 0x04;
-                }
+                spawn_shop_ware(56, 64, WARE_HEART, 10);
+                spawn_shop_ware(80, 64, WARE_ITEM, 25);
+                spawn_shop_ware(104, 64, WARE_BIG, 40);
                 // Price tags painted on the floor under each ware:
                 // [coin][d][d], amber, walkable. Wares sit at tile y=8;
                 // tags at y=10 leave a step of space.

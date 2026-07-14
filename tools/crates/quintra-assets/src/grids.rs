@@ -273,6 +273,18 @@ pub const ITEM_ORB: [&str; 8] = [
     "........",
 ];
 
+// Town elder: hooded face and crooked staff, readable at true GB scale.
+pub const VILLAGER: [&str; 8] = [
+    "..222...",
+    ".21112..",
+    ".21312..",
+    ".21112..",
+    "..212.3.",
+    ".211123.",
+    ".212.3..",
+    ".2.2.3..",
+];
+
 // ---- Dungeon BG tiles (glyph 0 = palette c0, opaque) ----
 
 pub const BGT_FLOOR_PLAIN: [&str; 8] = [
@@ -478,13 +490,14 @@ pub const ENEMIES_8: [(&str, &[&str]); 9] = [
     ("sentry", &SENTRY),
 ];
 
-pub const FX_8: [(&str, &[&str]); 6] = [
+pub const FX_8: [(&str, &[&str]); 7] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
     ("impact", &IMPACT),
     ("wisp", &WISP),
     ("item_orb", &ITEM_ORB),
+    ("villager", &VILLAGER),
 ];
 
 pub const DUNGEON_TILES: [(&str, &[&str]); 14] = [

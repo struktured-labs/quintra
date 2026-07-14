@@ -75,6 +75,17 @@ u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_VILLAGER, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_VILLAGER;
+        entities[idx].palette = 0x05;
+        entities[idx].hitbox = (8 << 4) | 8;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {
@@ -104,6 +115,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
+    if (e->ai_data[0] == PICKUP_VILLAGER) return;
     // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
     // (the swap drops your old weapon underfoot — without the grace you'd
     // ping-pong between the two forever).
@@ -262,6 +274,21 @@ u8 pickup_check_player_collision(void) BANKED {
                     any = 1;
                     continue;
                 }
+                case PICKUP_VILLAGER:
+                    // Town healing is embodied by a resident instead of
+                    // firing invisibly on room entry. State prevents chime
+                    // spam while the player remains in contact.
+                    if (entities[i].state == 0) {
+                        player.hp = player.hp_max;
+                        player.mp = player.mp_max;
+                        player.iframes = 90;
+                        entities[i].state = 1;
+                        entities[i].palette = 0x06;
+                        hud_redraw_all();
+                        sfx_play(SFX_HEART);
+                    }
+                    any = 1;
+                    continue;
             }
             entity_kill(i);
             any = 1;

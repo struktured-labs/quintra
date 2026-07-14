@@ -88,6 +88,8 @@ verify: all
 	cargo build --release -q -p quintra-procgen
 	bash scripts/test_smoke.sh
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
+	uv run --quiet --with pyboy python scripts/test_town.py
+	uv run --quiet --with pyboy python scripts/test_doors.py
 
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.

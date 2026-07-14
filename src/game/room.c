@@ -1060,23 +1060,23 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
     }
 
-    // ---- Door detection: if the feet-box center stands on a door,
-    // advance to the next room
+    // ---- Door detection. Near (N/W) boundaries cannot be reached by the
+    // feet-box CENTER without putting part of the body outside the map, so
+    // detect all four sides symmetrically from the body's leading edge.
     {
-        i16 px = player.x + 8;
-        i16 py = player.y + 12;
-        u8 tx = (u8)(px >> 3);
-        u8 ty = (u8)(py >> 3);
+        u8 tx = 0xFF, ty = 0xFF;
+        u8 dir = DIR_NONE;
+        if (player.y <= 0 && player.x + 13 >= 72 && player.x + 2 < 88) {
+            dir = DIR_N; tx = 10; ty = 0;
+        } else if (player.y >= 120 && player.x + 13 >= 72 && player.x + 2 < 88) {
+            dir = DIR_S; tx = 10; ty = ROOM_H - 1;
+        } else if (player.x <= 0 && player.y + 15 >= 64 && player.y + 8 < 80) {
+            dir = DIR_W; tx = 0; ty = 9;
+        } else if (player.x >= 144 && player.y + 15 >= 64 && player.y + 8 < 80) {
+            dir = DIR_E; tx = ROOM_W - 1; ty = 9;
+        }
 
-        if (tx < ROOM_W && ty < ROOM_H && room_tilemap[ty][tx] == BGT_DOOR) {
-            // Determine which door
-            u8 dir = DIR_NONE;
-            if      (ty == 0)              dir = DIR_N;
-            else if (ty == ROOM_H - 1)     dir = DIR_S;
-            else if (tx == 0)              dir = DIR_W;
-            else if (tx == ROOM_W - 1)     dir = DIR_E;
-
-            if (dir != DIR_NONE) {
+        if (dir != DIR_NONE && room_tilemap[ty][tx] == BGT_DOOR) {
                 u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
                 // Combat rooms gate unexplored exits, Zelda-style. Retreat
                 // through the entry door remains possible, preventing a bad
@@ -1141,7 +1141,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 }
                 sram_save_run();   // suspend save on every room entry
                 return SCREEN_SELF;
-            }
         }
     }
 
