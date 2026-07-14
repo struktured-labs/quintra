@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.0: Riftwild Expanse](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.1: Balanced Rift](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -105,7 +105,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, or alter progression. Treat their CSV as a repeatable balance
 baseline, not a substitute for human playtests. `make verify` also enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.0 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
+v0.17.1 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
 
 Cart spec: **MBC5 + RAM + battery, CGB-only, banked ROM** (autobank; 2 MB
 address space open).

@@ -71,7 +71,9 @@ static void render_title(void) {
         gotoxy(4, 12);
         printf("PRESS  START");
     }
-    gotoxy(1, 17); printf("SELECT=RECORDS");
+    // Leave a real gutter before the version. The old 14-column label ended
+    // immediately beside it and rendered as the misleading "RECORDSv0.17".
+    gotoxy(1, 17); printf("SEL RECORDS");
     gotoxy(15, 17); printf("v0.17");
     {
         u16 best = sram_meta_best();

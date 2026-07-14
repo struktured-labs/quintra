@@ -13,6 +13,16 @@ local CLASS = tonumber(os.getenv("QUINTRA_BOT_CLASS") or "0") or 0
 local RUN = tonumber(os.getenv("QUINTRA_BOT_RUN") or "0") or 0
 local LIMIT = tonumber(os.getenv("QUINTRA_BOT_FRAMES") or "10800") or 10800
 local OUT = os.getenv("QUINTRA_BOT_OUT") or "/tmp/quintra-balance.csv"
+local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
+local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
+
+local function debug_log(line)
+    console:log(line)
+    if DEBUG_OUT then
+        local df = io.open(DEBUG_OUT, "a")
+        if df then df:write(line .. "\n"); df:close() end
+    end
+end
 
 local function tick(keys)
     emu:setKeys(keys or 0)
@@ -101,14 +111,25 @@ local function door_step(px, py)
         end
     end
     if not target then return KEY_DOWN end
+    -- Tile-center BFS is not precise enough at a two-tile door: the player's
+    -- 12px body can occupy the correct 8px cell while its shoulder still
+    -- clips the adjacent wall. Center on the runtime's known-safe top-left
+    -- coordinate before taking the final boundary step.
+    if (target_dir == 0 or target_dir == 2) and math.abs(ty - sy) <= 1 then
+        if px < 70 then return KEY_RIGHT end
+        if px > 74 then return KEY_LEFT end
+    elseif (target_dir == 1 or target_dir == 3) and math.abs(tx - sx) <= 1 then
+        if py < 56 then return KEY_DOWN end
+        if py > 64 then return KEY_UP end
+    end
     if target == start then
         if target_dir == 4 then return 0 end
         if target_dir == 0 or target_dir == 2 then
-            if px < 72 then return KEY_RIGHT end
-            if px > 72 then return KEY_LEFT end
+            if px < 70 then return KEY_RIGHT end
+            if px > 74 then return KEY_LEFT end
         else
-            if py < 60 then return KEY_DOWN end
-            if py > 60 then return KEY_UP end
+            if py < 56 then return KEY_DOWN end
+            if py > 64 then return KEY_UP end
         end
         return ({KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT})[target_dir + 1]
     end
@@ -133,17 +154,25 @@ for _ = 1, 45 do tick(0) end
 
 local frames, max_room, start_hp, min_hp = 0, 0, 0, 255
 local rooms_seen, last_room = 1, 0
+local room_enter_frame = 0
+local last_px, last_py, still_frames = 255, 255, 0
+local escape_timer, escape_dir, escape_flip = 0, KEY_UP, false
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     if frames == 0 then start_hp = hp end
     if hp < min_hp then min_hp = hp end
     if room > max_room then max_room = room end
-    if room ~= last_room then rooms_seen, last_room = rooms_seen + 1, room end
+    if room ~= last_room then
+        rooms_seen, last_room, room_enter_frame = rooms_seen + 1, room, frames
+    end
     if hp == 0 then break end
 
     -- player.x/y are signed 16-bit pixels at offsets 9 and 11.
     local px, py = emu:read8(PL + 9), emu:read8(PL + 11)
+    if px == last_px and py == last_py then still_frames = still_frames + 1
+    else still_frames = 0 end
+    last_px, last_py = px, py
     local target = enemy_target(px, py)
     local keys
     if target then
@@ -173,6 +202,29 @@ while frames < LIMIT do
     else
         keys = door_step(px, py) + KEY_A
     end
+    -- Tile routes and direct melee pursuit can both disagree with the
+    -- runtime's pixel body collision. Make a sustained perpendicular
+    -- sidestep after a short stationary interval instead of repeating a
+    -- blocked input forever. This remains controller-only play.
+    if escape_timer == 0 and still_frames > 20 then
+        local move = keys & 0xF0
+        escape_flip = not escape_flip
+        if move == KEY_LEFT or move == KEY_RIGHT then
+            escape_dir = escape_flip and KEY_UP or KEY_DOWN
+        else
+            escape_dir = escape_flip and KEY_LEFT or KEY_RIGHT
+        end
+        escape_timer = 30
+        still_frames = 0
+    end
+    if escape_timer > 0 then
+        keys = escape_dir + KEY_A
+        escape_timer = escape_timer - 1
+    end
+    if DEBUG and frames % 600 == 0 then
+        debug_log(string.format("BOTDBG f=%d room=%d hp=%d pos=%d,%d target=%s keys=%02X",
+            frames, room, hp, px, py, target and "enemy" or "door", keys))
+    end
     tick(keys)
     frames = frames + 1
 end
@@ -186,6 +238,16 @@ local final_x = PL ~= 0 and emu:read8(PL + 9) or 0
 local final_y = PL ~= 0 and emu:read8(PL + 11) or 0
 local final_world = RS ~= 0 and emu:read8(RS + 17) or 0
 local final_screen = RS ~= 0 and emu:read8(RS + 18) or 0
+local hostiles, last_enemy = 0, 255
+if EN ~= 0 then
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1 then
+            hostiles = hostiles + 1
+            last_enemy = emu:read8(p + 17) -- ai_data[0] / content enemy id
+        end
+    end
+end
 local seed = 0
 if RS ~= 0 then
     seed = emu:read8(RS + 2)
@@ -195,9 +257,10 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
-        bosses, start_hp - hp, min_hp, final_x, final_y, final_world, final_screen))
+        bosses, start_hp - hp, min_hp, final_x, final_y, final_world, final_screen,
+        frames - room_enter_frame, hostiles, last_enemy))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",
