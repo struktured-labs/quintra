@@ -16,6 +16,9 @@ void run_state_clear(void) {
     run_state.secret_pending = 0;
     run_state.score          = 0;
     run_state.enemies_killed = 0;
+    run_state.world_mode = 0;
+    run_state.world_screen = 0;
+    run_state.world_return_screen = 0;
 }
 
 void run_state_init(u32 seed) {

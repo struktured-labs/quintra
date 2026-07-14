@@ -855,8 +855,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         projectile_spawn_player(dir8_dx[d], dir8_dy[d], dmg, PROJ_SPIKE);
                     }
                     break;
-                case 1:   // Sauran STONESKIN: 1.5s of iframes
-                    player.shield_timer = 75;
+                case 1:   // Sauran STONESKIN: brief, timed projectile shield
+                    player.shield_timer = 60;
                     player.iframes = 8; // cover the raising animation
                     break;
                 case 2:   // Corvin MURDER: 3-way shuriken spread
@@ -909,10 +909,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
 
         // Sauran's scaled hide (perk 2): slow HP regen, one half-heart
-        // per ~40s of active play.
+        // per ~53s of active play.
         if (player.class_id == 1 && player.hp < player.hp_max) {
             static u16 hp_regen;
-            if (++hp_regen >= 1350) {
+            if (++hp_regen >= 1800) {
                 hp_regen = 0;
                 player.hp++;
                 hud_redraw_hp();
@@ -1021,10 +1021,24 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
         else if (rtx < ROOM_W && rty < ROOM_H
             && room_tilemap[rty][rtx] == BGT_PORTAL) {
-            u16 base = (u16)(run_state.room_counter
-                - (run_state.room_counter % ROOMS_PER_STAGE));
-            u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
-            run_state.room_counter = (u16)(base + ((local == 2) ? 4 : 2));
+            if (run_state.world_mode) {
+                const zelda_screen_t *cell =
+                    &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
+                if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
+                    run_state.world_mode = 0;
+                    run_state.room_counter++;
+                } else if (cell->kind == ZELDA_CELL_VAULT) {
+                    run_state.world_screen = run_state.world_return_screen;
+                } else if (cell->stairs != ID_NONE_U8) {
+                    run_state.world_return_screen = run_state.world_screen;
+                    run_state.world_screen = cell->stairs;
+                }
+            } else {
+                u16 base = (u16)(run_state.room_counter
+                    - (run_state.room_counter % ROOMS_PER_STAGE));
+                u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
+                run_state.room_counter = (u16)(base + ((local == 2) ? 4 : 2));
+            }
             // Edge arrival prevents an immediate return and muddles orientation.
             run_state.entered_from = (run_state.run_seed & 1) ? DIR_N : DIR_W;
             sfx_play(SFX_DOOR);
@@ -1104,7 +1118,21 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // any other door advances. entered_from = exit dir works for
                 // both (the player spawns at the opposite door either way).
                 {
-                    if (run_state.entered_from != DIR_NONE
+                    if (run_state.world_mode) {
+                        if (dir == DIR_N) run_state.world_screen -= 4;
+                        else if (dir == DIR_E) run_state.world_screen++;
+                        else if (dir == DIR_S) run_state.world_screen += 4;
+                        else run_state.world_screen--;
+                    } else if (run_state.room_counter > 0
+                        && (run_state.room_counter % ROOMS_PER_STAGE) == 0
+                        && run_state.bosses_beaten
+                            == (u8)(run_state.room_counter / ROOMS_PER_STAGE)) {
+                        // A defeated dungeon opens into a nonlinear overworld;
+                        // locate its authored dungeon gate to begin the next.
+                        run_state.world_mode = 1;
+                        run_state.world_screen = 0;
+                        run_state.world_return_screen = 0;
+                    } else if (run_state.entered_from != DIR_NONE
                         && dir == back_dir
                         && run_state.room_counter > 0) {
                         run_state.room_counter--;

@@ -56,6 +56,7 @@ pub const ENEMY_CINDER_MAW:      EnemyId = EnemyId::new(14);   // Ember Depths a
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
+pub const BIOME_ZELDA_OVERWORLD: BiomeId = BiomeId::new(1);
 
 // ----- Bosses (placeholder — boss data currently lives in enemies table)
 pub const BOSS_NONE:             BossId = BossId::new(0);

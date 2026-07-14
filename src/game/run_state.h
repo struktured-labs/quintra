@@ -38,6 +38,9 @@ typedef struct {
     u8  secret_pending;      // next room is a secret treasure room
     u16 score;               // points scored from kills
     u8  enemies_killed;      // run total
+    u8  world_mode;          // 1 while traversing the generated 4x4 overworld
+    u8  world_screen;        // current overworld screen, row-major 0..15
+    u8  world_return_screen; // cave/vault staircase return anchor
 } run_state_t;
 
 extern run_state_t run_state;

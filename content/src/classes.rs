@@ -32,7 +32,7 @@ pub const SAURAN: Class = Class {
     starter_weapon: ITEM_TAIL_SPIKE,
     signature_active: ITEM_STONESKIN,
     passive_perk:  PERK_HP_PLUS_2_SLOW_REGEN,
-    base_stats: BaseStats { hp_max: 12, mp_max: 3, atk: 2, def: 3, spd: 4 },
+    base_stats: BaseStats { hp_max: 10, mp_max: 3, atk: 2, def: 2, spd: 4 },
 };
 
 pub const CORVIN: Class = Class {

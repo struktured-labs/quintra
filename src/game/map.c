@@ -9,6 +9,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/palette.h"
+#include "content.h"
 
 BANKREF(map_enter)
 
@@ -26,6 +27,29 @@ void map_enter(void) {
     font_init(); { font_t f = font_load(font_min); font_set(f); }
     cls();
     gotoxy(3,0); printf("- SPIRIT COMPASS -");
+    if (run_state.world_mode) {
+        const zelda_screen_t *cell =
+            &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
+        gotoxy(1,2); printf("OPEN WORLD  %u,%u",
+            (u16)((run_state.world_screen & 3) + 1),
+            (u16)((run_state.world_screen >> 2) + 1));
+        gotoxy(1,4); printf("EXITS ");
+        if (cell->edges & 1) printf("N");
+        if (cell->edges & 2) printf("E");
+        if (cell->edges & 4) printf("S");
+        if (cell->edges & 8) printf("W");
+        gotoxy(1,6); printf("LANDMARK ");
+        if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) printf("DUNGEON");
+        else if (cell->kind == ZELDA_CELL_CAVE_ENTRANCE) printf("CAVE");
+        else if (cell->kind == ZELDA_CELL_VAULT) printf("VAULT");
+        else if (cell->kind == ZELDA_CELL_BOSS) printf("CHAMPION");
+        else printf("WILDS");
+        gotoxy(1,9); printf("DEPTH HELD AT %u", (u16)run_state.room_counter);
+        gotoxy(1,11); printf("FIND THE GOLDEN GATE");
+        gotoxy(2,17); printf("SELECT/B = RETURN");
+        SHOW_BKG; DISPLAY_ON;
+        return;
+    }
     gotoxy(1,2); printf("REGION %u", (u16)(run_state.bosses_beaten / 3 + 1));
     gotoxy(1,4); printf("DUNGEON %u OF 3", (u16)(dungeon + 1));
     gotoxy(1,5); printf("DEPTH   %u OF 6", (u16)(room + 1));

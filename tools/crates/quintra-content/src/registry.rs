@@ -1,7 +1,7 @@
 //! Content registry — collects all defined content for validation + codegen.
 
 use crate::stage::N_STAGES;
-use crate::{Biome, Class, Enemy, Item, RoomTemplate, StageTheme};
+use crate::{Biome, Class, Enemy, Item, RoomTemplate, StageTheme, ZeldaOverworldBiome};
 
 #[derive(Clone, Debug, Default)]
 pub struct Registry {
@@ -9,6 +9,7 @@ pub struct Registry {
     pub items:          Vec<Item>,
     pub enemies:        Vec<Enemy>,
     pub biomes:         Vec<Biome>,
+    pub zelda_overworlds: Vec<ZeldaOverworldBiome>,
     pub room_templates: Vec<RoomTemplate>,
     pub stages:         Vec<StageTheme>,
 }
@@ -20,6 +21,10 @@ impl Registry {
     pub fn add_item(&mut self, i: Item)          -> &mut Self { self.items.push(i); self }
     pub fn add_enemy(&mut self, e: Enemy)        -> &mut Self { self.enemies.push(e); self }
     pub fn add_biome(&mut self, b: Biome)        -> &mut Self { self.biomes.push(b); self }
+    pub fn add_zelda_overworld(&mut self, z: ZeldaOverworldBiome) -> &mut Self {
+        self.zelda_overworlds.push(z);
+        self
+    }
     pub fn add_room(&mut self, r: RoomTemplate)  -> &mut Self { self.room_templates.push(r); self }
     pub fn add_stage(&mut self, s: StageTheme)   -> &mut Self { self.stages.push(s); self }
 
@@ -31,6 +36,11 @@ impl Registry {
         for i in &self.items          { if let Err(e) = i.validate()        { errs.push(e); } }
         for e_ in &self.enemies       { if let Err(e) = e_.validate()       { errs.push(e); } }
         for b in &self.biomes         { if let Err(e) = b.validate()        { errs.push(e); } }
+        for z in &self.zelda_overworlds {
+            if let Err(z_errs) = z.validate() {
+                errs.extend(z_errs);
+            }
+        }
         for r in &self.room_templates { if let Err(e) = r.validate()        { errs.push(e); } }
         for s in &self.stages         { if let Err(e) = s.validate()        { errs.push(e); } }
 
@@ -74,6 +84,8 @@ impl Registry {
         let item_ids: std::collections::HashSet<_> = self.items.iter().map(|i| i.id).collect();
         let enemy_ids: std::collections::HashSet<_> = self.enemies.iter().map(|e| e.id).collect();
         let biome_ids: std::collections::HashSet<_> = self.biomes.iter().map(|b| b.id).collect();
+        let zelda_overworld_ids: std::collections::HashSet<_> =
+            self.zelda_overworlds.iter().map(|z| z.id).collect();
         let room_ids: std::collections::HashSet<_> = self.room_templates.iter().map(|r| r.id).collect();
 
         for c in &self.classes {
@@ -89,7 +101,7 @@ impl Registry {
 
         for e in &self.enemies {
             for b in e.biomes {
-                if !biome_ids.contains(b) {
+                if !biome_ids.contains(b) && !zelda_overworld_ids.contains(b) {
                     errs.push(format!("enemy {} references missing biome {}",
                         e.id.raw(), b.raw()));
                 }
@@ -111,6 +123,18 @@ impl Registry {
             }
         }
 
+        for z in &self.zelda_overworlds {
+            for tid in z.referenced_room_templates() {
+                if !room_ids.contains(&tid) {
+                    errs.push(format!(
+                        "zelda_overworld {} references missing room template {}",
+                        z.id.raw(),
+                        tid.raw(),
+                    ));
+                }
+            }
+        }
+
         if errs.is_empty() { Ok(()) } else { Err(errs) }
     }
 
@@ -118,6 +142,7 @@ impl Registry {
     pub fn n_items(&self) -> usize          { self.items.len() }
     pub fn n_enemies(&self) -> usize        { self.enemies.len() }
     pub fn n_biomes(&self) -> usize         { self.biomes.len() }
+    pub fn n_zelda_overworlds(&self) -> usize { self.zelda_overworlds.len() }
     pub fn n_room_templates(&self) -> usize { self.room_templates.len() }
     pub fn n_stages(&self) -> usize         { self.stages.len() }
 }

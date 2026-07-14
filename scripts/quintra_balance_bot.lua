@@ -61,6 +61,11 @@ local function door_step(px, py)
     if sy < 0 then sy = 0 elseif sy > 16 then sy = 16 end
     local entered = emu:read8(RS + 6)
     local back = entered ~= 255 and ((entered + 2) % 4) or 255
+    local in_world = emu:read8(RS + 17) == 1
+    local world_screen = emu:read8(RS + 18)
+    -- Shortest authored route to dungeon gate screen 6.
+    local world_route = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
+    local wanted = in_world and world_route[world_screen + 1] or nil
     local qx, qy, head, tail = {}, {}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
     local start = sy * 20 + sx
@@ -69,13 +74,18 @@ local function door_step(px, py)
     local dx, dy = {0, 1, 0, -1}, {-1, 0, 1, 0}
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
+        if in_world and world_screen == 6 and x == 10 and y == 8 then
+            target, target_dir, tx, ty = y * 20 + x, 4, x, y
+            break
+        end
         -- Nodes represent the feet center. Near-side exits trigger at inner
         -- cells (N y=1 / W x=1); verify their boundary tile is a door.
         local dir = (y == 1 and x == 10 and emu:read8(TM + 10) == 3) and 0
             or ((x == 19 and y == 9 and emu:read8(TM + 9 * 20 + 19) == 3) and 1
             or ((y == 16 and x == 10 and emu:read8(TM + 16 * 20 + 10) == 3) and 2
             or ((x == 1 and y == 9 and emu:read8(TM + 9 * 20) == 3) and 3 or 255)))
-        if dir ~= 255 and dir ~= back then
+        if dir ~= 255 and ((in_world and dir == wanted)
+            or (not in_world and dir ~= back)) then
             target, target_dir, tx, ty = y * 20 + x, dir, x, y
             break
         end
@@ -92,6 +102,7 @@ local function door_step(px, py)
     end
     if not target then return KEY_DOWN end
     if target == start then
+        if target_dir == 4 then return 0 end
         if target_dir == 0 or target_dir == 2 then
             if px < 72 then return KEY_RIGHT end
             if px > 72 then return KEY_LEFT end
@@ -173,6 +184,8 @@ local kills = RS ~= 0 and emu:read8(RS + 16) or 0
 local hp = PL ~= 0 and emu:read8(PL + 2) or 0
 local final_x = PL ~= 0 and emu:read8(PL + 9) or 0
 local final_y = PL ~= 0 and emu:read8(PL + 11) or 0
+local final_world = RS ~= 0 and emu:read8(RS + 17) or 0
+local final_screen = RS ~= 0 and emu:read8(RS + 18) or 0
 local seed = 0
 if RS ~= 0 then
     seed = emu:read8(RS + 2)
@@ -182,9 +195,9 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
-        bosses, start_hp - hp, min_hp, final_x, final_y))
+        bosses, start_hp - hp, min_hp, final_x, final_y, final_world, final_screen))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

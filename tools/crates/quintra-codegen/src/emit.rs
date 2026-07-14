@@ -7,7 +7,8 @@ use anyhow::{Context, Result};
 use quintra_content::{
     AiScriptId, BaseStats, Class, DoorMask, Effect, Enemy, EnemyStats, FormTheme,
     Item, ItemKind, ProjectileKind, Rarity, Registry, RoomKind, RoomSize, RoomTemplate,
-    ShotPattern, SpawnRole, SpawnSlot, Status, Stat, Trigger,
+    ScreenCellKind, ShotPattern, SpawnRole, SpawnSlot, Status, Stat, Trigger,
+    ZeldaOverworldBiome,
 };
 
 const HEADER_NOTE: &str =
@@ -20,6 +21,7 @@ pub fn write_all(out: &Path, reg: &Registry) -> Result<()> {
     write_items(out, reg)?;
     write_enemies(out, reg)?;
     write_biomes(out, reg)?;
+    write_zelda_overworld(out, reg)?;
     write_rooms(out, reg)?;
     write_stages(out, reg)?;
     write_umbrella(out, reg)?;
@@ -578,6 +580,76 @@ fn emit_room(r: &RoomTemplate) -> String {
     )
 }
 
+// ---------------------------------------------------------------- zelda overworld
+
+fn write_zelda_overworld(out: &Path, reg: &Registry) -> Result<()> {
+    let mut h = String::from(HEADER_NOTE);
+    h.push_str(
+        "#ifndef QUINTRA_GEN_ZELDA_OVERWORLD_H\n\
+         #define QUINTRA_GEN_ZELDA_OVERWORLD_H\n\
+         #include \"core/types.h\"\n\
+         #include \"enums.h\"\n\
+         \n\
+         #define ZELDA_CELL_OVERWORLD       0\n\
+         #define ZELDA_CELL_CAVE_ENTRANCE   1\n\
+         #define ZELDA_CELL_DUNGEON_ENTRANCE 2\n\
+         #define ZELDA_CELL_VAULT           3\n\
+         #define ZELDA_CELL_BOSS            4\n\
+         \n\
+         typedef struct {\n\
+         \x20\x20\x20\x20u8 kind;\n\
+         \x20\x20\x20\x20u8 edges;\n\
+         \x20\x20\x20\x20u16 room_tpl;\n\
+         \x20\x20\x20\x20screen_id_t secret;\n\
+         \x20\x20\x20\x20screen_id_t stairs;\n\
+         } zelda_screen_t;\n\
+         \n\
+         typedef struct {\n\
+         \x20\x20\x20\x20biome_id_t id;\n\
+         \x20\x20\x20\x20const char* name;\n\
+         \x20\x20\x20\x20const zelda_screen_t* screen_grid;\n\
+         } zelda_overworld_def_t;\n\
+         \n",
+    );
+    h.push_str(&format!("#define N_ZELDA_OVERWORLDS {}\n", reg.n_zelda_overworlds()));
+    h.push_str("extern const zelda_overworld_def_t zelda_overworlds[];\n#endif\n");
+    fs::write(out.join("zelda_overworld.h"), h)?;
+
+    let mut c = String::from(HEADER_NOTE);
+    c.push_str("#include \"zelda_overworld.h\"\n\n");
+    for z in &reg.zelda_overworlds {
+        c.push_str(&format!("static const zelda_screen_t _zelda_grid_{}[16] = {{\n", z.id.raw()));
+        for idx in 0..16 {
+            c.push_str(&format!("    {},\n", emit_zelda_screen(z, idx)));
+        }
+        c.push_str("};\n\n");
+    }
+    c.push_str("const zelda_overworld_def_t zelda_overworlds[] = {\n");
+    for z in &reg.zelda_overworlds {
+        c.push_str(&format!(
+            "    {{ .id={}, .name=\"{}\", .screen_grid=_zelda_grid_{} }},\n",
+            z.id.raw(),
+            esc(z.name),
+            z.id.raw(),
+        ));
+    }
+    c.push_str("};\n");
+    fs::write(out.join("zelda_overworld.c"), c)?;
+    Ok(())
+}
+
+fn emit_zelda_screen(z: &ZeldaOverworldBiome, idx: usize) -> String {
+    let cell = z.cell(idx);
+    format!(
+        "{{ .kind={}, .edges={}, .room_tpl={}, .secret={}, .stairs={} }}",
+        zelda_cell_kind(cell.cell_kind),
+        cell.edges.raw(),
+        cell.room_tpl_id.raw(),
+        opt_screen_id(cell.secret_to),
+        opt_screen_id(cell.staircase_to),
+    )
+}
+
 // ---------------------------------------------------------------- umbrella
 
 fn write_umbrella(out: &Path, _reg: &Registry) -> Result<()> {
@@ -590,6 +662,7 @@ fn write_umbrella(out: &Path, _reg: &Registry) -> Result<()> {
          #include \"items.h\"\n\
          #include \"enemies.h\"\n\
          #include \"biomes.h\"\n\
+         #include \"zelda_overworld.h\"\n\
          #include \"rooms.h\"\n\
          #include \"stages.h\"\n\
          #endif\n",
@@ -760,6 +833,23 @@ fn status_disc(s: Status) -> u8 {
         Status::Stunned  => 4,
         Status::Cursed   => 5,
         Status::Marked   => 6,
+    }
+}
+
+fn zelda_cell_kind(kind: ScreenCellKind) -> &'static str {
+    match kind {
+        ScreenCellKind::Overworld => "ZELDA_CELL_OVERWORLD",
+        ScreenCellKind::CaveEntrance => "ZELDA_CELL_CAVE_ENTRANCE",
+        ScreenCellKind::DungeonEntrance => "ZELDA_CELL_DUNGEON_ENTRANCE",
+        ScreenCellKind::Vault => "ZELDA_CELL_VAULT",
+        ScreenCellKind::Boss => "ZELDA_CELL_BOSS",
+    }
+}
+
+fn opt_screen_id(id: Option<u8>) -> String {
+    match id {
+        Some(id) => id.to_string(),
+        None => "ID_NONE_U8".to_string(),
     }
 }
 

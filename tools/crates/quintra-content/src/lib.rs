@@ -22,6 +22,7 @@ pub mod enemy;
 pub mod biome;
 pub mod room;
 pub mod stage;
+pub mod zelda_overworld;
 pub mod registry;
 
 pub use class::{Class, FormTheme};
@@ -32,6 +33,10 @@ pub use room::{RoomTemplate, RoomSize, RoomKind, DoorMask, SpawnSlot, SpawnRole}
 pub use effects::{Effect, Trigger, Status, Stat, ProjectileKind};
 pub use stats::BaseStats;
 pub use stage::{StageTheme, Rgb5, N_STAGES, MAX_STAGE_NAME};
+pub use zelda_overworld::{
+    ROOM_TPL_VOID, SCREEN_QUAD_H, SCREEN_QUAD_LEN, SCREEN_QUAD_W, ScreenCell,
+    ScreenCellKind, ScreenQuad, ZeldaOverworldBiome,
+};
 pub use refs::{
     ClassId, ItemId, EnemyId, BiomeId, BossId, RoomTemplateId,
     PaletteRef, SpriteRef, TilesetRef, TilemapId, MusicRef, DropTableId,

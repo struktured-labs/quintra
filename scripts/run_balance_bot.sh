@@ -14,7 +14,7 @@ PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
-echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y" > "$OUT"
+echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen" > "$OUT"
 
 unset DISPLAY WAYLAND_DISPLAY
 for run in $(seq 1 "$REPS"); do

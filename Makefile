@@ -90,6 +90,7 @@ verify: all
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 	uv run --quiet --with pyboy python scripts/test_town.py
 	uv run --quiet --with pyboy python scripts/test_doors.py
+	uv run --quiet --with pyboy python scripts/test_overworld.py
 
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.

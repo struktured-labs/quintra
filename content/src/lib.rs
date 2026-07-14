@@ -17,6 +17,7 @@ pub mod enemies;
 pub mod biomes;
 pub mod rooms;
 pub mod stages;
+pub mod zelda_overworld;
 
 use quintra_content::Registry;
 
@@ -27,6 +28,7 @@ pub fn registry() -> Registry {
     rooms::register(&mut r);          // rooms before biomes (biomes reference rooms)
     enemies::register(&mut r);        // enemies before biomes
     biomes::register(&mut r);
+    zelda_overworld::register(&mut r);
     stages::register(&mut r);         // the 9 themed stages (order = progression)
     r
 }
@@ -50,6 +52,7 @@ mod tests {
         assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
         assert_eq!(r.n_enemies(),       15);   // includes stage-2 Cinder Maw
         assert_eq!(r.n_biomes(),         1);
+        assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
         assert_eq!(r.n_stages(),         9);   // the whole run, in order
     }

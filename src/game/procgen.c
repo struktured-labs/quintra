@@ -74,17 +74,23 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
 
 void procgen_generate_current_room(void) BANKED {
     const biome_def_t *bio = &biomes[run_state.biome_id];
-    u32 seed = procgen_room_seed(run_state.run_seed, run_state.biome_id, run_state.room_counter);
+    u8 world_kind = run_state.world_mode
+        ? zelda_overworlds[0].screen_grid[run_state.world_screen & 15].kind
+        : ZELDA_CELL_OVERWORLD;
+    u8 seed_room = run_state.world_mode
+        ? (u8)(0x80 | (run_state.world_screen & 15))
+        : run_state.room_counter;
+    u32 seed = procgen_room_seed(run_state.run_seed, run_state.biome_id, seed_room);
     // A boss guards every Nth room until BOSSES_TO_WIN are down. Computed
     // once at function scope so door-drawing, the secret-room guard, and
     // enemy spawning all agree (a mismatch here soft-locked boss rooms).
-    u8 is_boss_room = (run_state.room_counter > 0
+    u8 is_boss_room = (!run_state.world_mode && run_state.room_counter > 0
         && (run_state.room_counter % BOSS_EVERY_N_ROOMS) == 0
         && (u8)(run_state.room_counter / BOSS_EVERY_N_ROOMS) > run_state.bosses_beaten) ? 1 : 0;
     // A village clearing follows every third dungeon: rooms 19, 37, 55...
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
-    u8 is_town = (run_state.room_counter > ROOMS_PER_REGION
+    u8 is_town = (!run_state.world_mode && run_state.room_counter > ROOMS_PER_REGION
         && (run_state.room_counter % ROOMS_PER_REGION) == 1) ? 1 : 0;
     rng_seed(seed);
 
@@ -118,6 +124,15 @@ void procgen_generate_current_room(void) BANKED {
             room_tilemap[9][0]            = BGT_DOOR;
             room_tilemap[8][ROOM_W - 1]   = BGT_DOOR;
             room_tilemap[9][ROOM_W - 1]   = BGT_DOOR;
+
+            // Overworld screens expose only authored reciprocal graph edges.
+            if (run_state.world_mode) {
+                u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen & 15].edges;
+                if (!(edges & 0x01)) { room_tilemap[0][9] = BGT_WALL; room_tilemap[0][10] = BGT_WALL; }
+                if (!(edges & 0x02)) { room_tilemap[8][ROOM_W - 1] = BGT_WALL; room_tilemap[9][ROOM_W - 1] = BGT_WALL; }
+                if (!(edges & 0x04)) { room_tilemap[ROOM_H - 1][9] = BGT_WALL; room_tilemap[ROOM_H - 1][10] = BGT_WALL; }
+                if (!(edges & 0x08)) { room_tilemap[8][0] = BGT_WALL; room_tilemap[9][0] = BGT_WALL; }
+            }
 
             // Interior obstacles. Door lanes stay clear (cols 9-11 for the
             // N/S door at col 10; rows 7-9 for the E/W door at row 8) so
@@ -263,6 +278,7 @@ void procgen_generate_current_room(void) BANKED {
             // or the crate can press it; room.c consumes it and pays a cache.
             // Towns are redrawn below and never inherit dungeon puzzles.
             if (!is_town && run_state.room_counter > 0
+                && !run_state.world_mode
                 && (run_state.room_counter % 7) == 0) {
                 // Coordinate comes from the already-derived room seed rather
                 // than consuming RNG draws; adding puzzle content must not
@@ -289,6 +305,7 @@ void procgen_generate_current_room(void) BANKED {
             // A seed-stable nonlinear pair inside this stage. It starts after
             // the tutorial stage and can never target a boss, town, or region.
             if (!is_town && run_state.room_counter > 6
+                && !run_state.world_mode
                 && ((run_state.room_counter % ROOMS_PER_STAGE) == 2
                     || (run_state.room_counter % ROOMS_PER_STAGE) == 4)) {
                 u8 px = (seed & 4) ? 5 : 14;
@@ -296,6 +313,14 @@ void procgen_generate_current_room(void) BANKED {
                 if (room_tile_walkable(room_tilemap[py][px])) {
                     room_tilemap[py][px] = BGT_PORTAL;
                 }
+            }
+
+            // Entrances and vault staircases are explicit graph fixtures.
+            if (run_state.world_mode
+                && (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
+                    || world_kind == ZELDA_CELL_VAULT
+                    || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)) {
+                room_tilemap[8][10] = BGT_PORTAL;
             }
 
 
@@ -436,12 +461,15 @@ void procgen_generate_current_room(void) BANKED {
     }
 
     {
-        u8 is_miniboss = (!is_boss_room && (run_state.room_counter % ROOMS_PER_STAGE) == 3) ? 1 : 0;
+        u8 is_miniboss = run_state.world_mode
+            ? (world_kind == ZELDA_CELL_BOSS)
+            : ((!is_boss_room && (run_state.room_counter % ROOMS_PER_STAGE) == 3) ? 1 : 0);
         u8 is_shop     = (!is_boss_room && !is_miniboss
                           && (run_state.room_counter % ROOMS_PER_STAGE) == 4) ? 1 : 0;
         // Sanctuary: the room right before every stage boss. No enemies —
         // a shrine, two hearts, and a full MP blessing. Breathe, then go.
         u8 is_rest     = (!is_boss_room
+                          && !run_state.world_mode
                           && (run_state.room_counter % ROOMS_PER_STAGE) == 5) ? 1 : 0;
 
         if (is_town) {
@@ -453,6 +481,22 @@ void procgen_generate_current_room(void) BANKED {
             spawn_shop_ware(48, 72, WARE_HEART, 5);
             spawn_shop_ware(80, 72, WARE_ITEM, 20);
             spawn_shop_ware(112, 72, WARE_BIG, 35);
+            player.iframes = 60;
+            return;
+        }
+
+        if (run_state.world_mode
+            && world_kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
+            *(volatile u8*)0xFFFC = 0x4F; // 'O' overworld gate
+            player.iframes = 60;
+            return;
+        }
+
+        if (run_state.world_mode && world_kind == ZELDA_CELL_VAULT) {
+            *(volatile u8*)0xFFFC = 0x56; // 'V'
+            pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
+            pickup_spawn(PICKUP_COIN_5, FIX8(64), FIX8(72));
+            pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));
             player.iframes = 60;
             return;
         }
