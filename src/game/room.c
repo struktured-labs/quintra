@@ -12,7 +12,6 @@
 #include "core/rng.h"
 #include "game/combat.h"
 #include "game/entity.h"
-#include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/loop.h"
 #include "game/pickup.h"
@@ -50,6 +49,8 @@ static u8 stage_fade;
 // Room-clear chime: hostiles seen alive this room (reset on every room
 // generation so walking into an empty room never false-fires the chime).
 static u8 hostiles_prev;
+static u8 hostiles_now;
+static u8 door_bump_cd;
 
 // Screen shake (BG scroll wiggle; the WINDOW HUD stays put). Set by
 // combat via room_shake() on boss kills / player hits.
@@ -469,6 +470,8 @@ void room_enter(void) {
     }
 
     hostiles_prev = 0;   // fresh room: re-arm the clear chime
+    hostiles_now = 0;
+    door_bump_cd = 0;
 
     // Stage-entry reveal: first room of a new stage (or of a fresh run)
     // starts with dimmed palettes and pops to full ~0.4s in.
@@ -502,6 +505,7 @@ void room_exit(void) {
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
+    if (door_bump_cd) door_bump_cd--;
     // ---- START opens PACK; SELECT opens the generated field compass.
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
@@ -973,11 +977,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (alive == 0 && hostiles_prev != 0
             && !run_state.pending_unseal && !run_state.victory) {
             sfx_play(SFX_CLEAR);
+            if (run_state.rooms_cleared < 255) run_state.rooms_cleared++;
             if (player.mp < player.mp_max) {
                 player.mp++;
                 hud_redraw_mp();
             }
         }
+        hostiles_now = alive;
         hostiles_prev = alive;
     }
 
@@ -1071,6 +1077,19 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             else if (tx == ROOM_W - 1)     dir = DIR_E;
 
             if (dir != DIR_NONE) {
+                u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
+                // Combat rooms gate unexplored exits, Zelda-style. Retreat
+                // through the entry door remains possible, preventing a bad
+                // matchup from turning into an unavoidable run loss.
+                if (hostiles_now != 0
+                    && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
+                    if (door_bump_cd == 0) {
+                        door_bump_cd = 20;
+                        sfx_play(SFX_HIT);
+                        room_shake(1, 4);
+                    }
+                    return SCREEN_SELF;
+                }
                 // Leaving through a shot-open secret door → treasure room
                 if ((tx == secret_door_x && ty == secret_door_y)
                     || (tx == secret_door_x2 && ty == secret_door_y2)) {
@@ -1085,7 +1104,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // any other door advances. entered_from = exit dir works for
                 // both (the player spawns at the opposite door either way).
                 {
-                    u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
                     if (run_state.entered_from != DIR_NONE
                         && dir == back_dir
                         && run_state.room_counter > 0) {

@@ -56,6 +56,7 @@ def main():
 
     rs = noi_addr("_run_state")
     pl = noi_addr("_player")
+    en = noi_addr("_entities")
     tm = noi_addr("_room_tilemap")
 
     failures = 0
@@ -82,6 +83,13 @@ def main():
         for _ in range(80 * 22):
             pb.memory[pl + 2] = 12        # hp
             pb.memory[pl + 15] = 60       # iframes (no knockback stalls)
+            # Parity validates generation, not combat. Remove hostiles so the
+            # clear-gated forward door can be crossed deterministically.
+            for i in range(32):
+                ep = en + i * 28
+                if pb.memory[ep] == 2:
+                    pb.memory[ep] = 0
+                    pb.memory[ep + 1] = 0
             pb.tick()
             if pb.memory[rs + 1] == counter:
                 break

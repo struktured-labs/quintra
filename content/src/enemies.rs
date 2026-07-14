@@ -189,6 +189,21 @@ pub const GLOAM_LEECH: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const CINDER_MAW: Enemy = Enemy {
+    id: ENEMY_CINDER_MAW, name: "CinderMaw", sprite_set: SPRITE_CRAWLER,
+    palette: OBJ_PAL_CRAWLER,
+    // Stage-2 specialist: a durable, slow caster whose three-way volleys
+    // turn Ember Depths into a routing problem without adding contact speed.
+    stats: EnemyStats { hp: 6, damage: 2, speed: 24, score: 50, weakness: 0x02, poise: 2 },
+    ai_script: AiScriptId::Shooter {
+        fire_rate: 105,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Fan(3),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -204,4 +219,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(FOLDING_STAR.clone());
     r.add_enemy(FLUTTERBAT.clone());
     r.add_enemy(GLOAM_LEECH.clone());
+    r.add_enemy(CINDER_MAW.clone());
 }

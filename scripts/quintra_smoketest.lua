@@ -53,6 +53,20 @@ local function tap(key) hold(key, 2) end
 -- test_smoke.sh. room_counter is run_state+1; player hp is player+2.
 local RS_ADDR = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL_ADDR = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
+local EN_ADDR = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
+
+-- This is a reachability smoke test, not the balance bot. Clear enemies so
+-- Zelda-style combat gates cannot make screenshot coverage timing-dependent.
+local function clear_hostiles()
+    if EN_ADDR == 0 then return end
+    for i = 0, 31 do
+        local p = EN_ADDR + i * 28
+        if emu:read8(p) == 2 then
+            emu:write8(p, 0)
+            emu:write8(p + 1, 0)
+        end
+    end
+end
 
 local function room_counter()
     if RS_ADDR == 0 then return 0xFF end
@@ -71,6 +85,7 @@ local function walk_to_room(target)
             emu:write8(PL_ADDR + 2, 12)    -- hp: stay alive
             emu:write8(PL_ADDR + 15, 60)   -- iframes: no knockback ping-pong
         end
+        clear_hostiles()
         hold(KEY_DOWN, 20)
     end
     tick(20)

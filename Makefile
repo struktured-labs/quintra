@@ -27,7 +27,7 @@ LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify balance play info
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -83,10 +83,16 @@ test: all
 # headless gameplay smoke (pixel + state asserts), and the cross-seam
 # procgen parity check (Rust reference vs the ROM's WRAM).
 verify: all
+	python3 scripts/report_budget.py $(BINDIR)/$(PROJECT)
 	cargo test -q
 	cargo build --release -q -p quintra-procgen
 	bash scripts/test_smoke.sh
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
+
+# Controller-only heuristic agents. Unlike smoke tests, these receive no HP
+# or entity writes and produce comparable per-class run telemetry.
+balance: all
+	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
 
 # Human play
 play: all

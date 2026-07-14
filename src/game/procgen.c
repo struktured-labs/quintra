@@ -479,8 +479,13 @@ void procgen_generate_current_room(void) BANKED {
                     entities[idx].hitbox      = (15 << 4) | 15;
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
-                    entities[idx].hp = (u8)(entities[idx].hp
-                        + stage_boss_hp[pow]);
+                    // HP is one byte. The final 216 bonus plus the 50 HP
+                    // base used to wrap to 10, making the finale trivial.
+                    if (stage_boss_hp[pow] > (u8)(255 - entities[idx].hp))
+                        entities[idx].hp = 255;
+                    else
+                        entities[idx].hp = (u8)(entities[idx].hp
+                            + stage_boss_hp[pow]);
                     entities[idx].damage = (u8)(entities[idx].damage
                         + stage_boss_dmg[pow]);
                 }

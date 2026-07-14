@@ -35,7 +35,7 @@ tables at build time.
   telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   breather before every boss.
-- **14 enemies across a size hierarchy** — small swarm critters (crawler,
+- **15 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
@@ -86,8 +86,16 @@ and a stable Rust toolchain (host-side only — Rust never ships in the ROM).
 make            # cargo codegen + sprite pipeline → SDCC → rom/working/quintra.gbc
 make play       # build + launch in mGBA
 make verify     # cargo tests + gameplay smoke + C<->Rust procgen parity
+make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make info       # print build summary
 ```
+
+`make balance` runs the actual cartridge under mGBA with five heuristic
+agents, one per champion. They may read combat state to aim, but they only
+send controller input—unlike reachability smoke tests, they never refill HP,
+delete enemies, or alter progression. Treat their CSV as a repeatable balance
+baseline, not a substitute for human playtests. `make verify` also enforces a
+128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space.
 
 Cart spec: **MBC5 + RAM + battery, CGB-only, banked ROM** (autobank; 2 MB
 address space open).

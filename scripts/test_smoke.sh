@@ -22,11 +22,12 @@ rm -f "$OUT_DIR"/h_*.png
 # land in the wrong rooms.
 RS_ADDR=$(grep 'DEF _run_state ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 PL_ADDR=$(grep 'DEF _player ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+EN_ADDR=$(grep 'DEF _entities ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
 QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
-    QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" \
+    QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" QUINTRA_EN_ADDR="$EN_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 2>&1 | grep -v 'Window\|Qt\|libpng' || true
