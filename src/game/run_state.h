@@ -18,6 +18,13 @@ enum {
 #define BOSSES_TO_WIN      9   // 9 stages -> 9 large bosses to clear the run
 #define MINIBOSS_EVERY     3   // rooms 3,9,15... (that aren't stage-boss rooms)
 
+// World cadence: three six-room dungeons make one region. The first room
+// after each region is a safe procedural town. This gives the run a Zelda-I
+// rhythm (dangerous free-roaming ruins separated by inhabited clearings)
+// without abandoning deterministic room generation.
+#define DUNGEONS_PER_REGION 3
+#define ROOMS_PER_REGION    (ROOMS_PER_STAGE * DUNGEONS_PER_REGION)
+
 typedef struct {
     u8  biome_id;            // current biome
     u8  room_counter;        // number of rooms entered this run

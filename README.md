@@ -1,6 +1,6 @@
 # Quintra
 
-**A 9-stage top-down action roguelike for the Game Boy Color.**
+**A procedural Zelda-like action roguelike for the Game Boy Color.**
 
 Native CGB. Five monster-human classes, procgen dungeons every run, bullet-hell
 bosses, and item-driven builds. Heavy [Penta Dragon](https://en.wikipedia.org/wiki/Penta_Dragon)
@@ -27,7 +27,7 @@ tables at build time.
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
-- **9 distinct stages**, each with its own palette, music rotation, and enemy
+- **9 distinct dungeon themes**, each with its own palette, music rotation, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
   **endless descent**: beat the 9th colossus and dive again at full power.
@@ -35,19 +35,29 @@ tables at build time.
   telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   breather before every boss.
-- **10 enemies across a size hierarchy** — small swarm critters (crawler,
+- **14 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
-  slither then bee-line at you) — so size reads as threat.
-- **Two-weapon combat + dodge dash**: `A` = your class's primary, `B` = its
-  signature move (costs MP), and a double-tap **dodge-dash** with i-frames to
-  weave through bullet hell.
+  slither then bee-line at you), rotating Sentries, invulnerable-expanding
+  **Folding Stars**, Keese-like **Flutterbats**, and life-draining
+  **Gloom Leeches** — so movement and silhouette both communicate threat.
+- **Distinct champion combat + dodge dash**: Wolfkin is a true close-range
+  melee fighter; `A` uses each class primary, `B` uses its signature, Sauran
+  raises a projectile-breaking cooldown shield, and full-MP `A+B` unleashes
+  **Spirit Convergence**. A double-tap **dodge-dash** grants i-frames for
+  weaving through bullet hell.
 - **RPG layer**: HP/MP/ATK/DEF/SPD/LCK, elemental weakness bonuses, crits,
   hit-flash / hit-stop / knockback / screen shake for weight.
 - **Interactive dungeons**: shoot glowing cracked walls for treasure vaults,
   smash **pots** and shatter **crystals** for loot, kick apart rubble, shove
-  crates, and pick your way around **spike floors** — across 11 procgen room
-  shapes.
+  crates onto rewarding **pressure plates**, and pick your way around **spike
+  floors**. Seeded nonlinear **rift wells** disorientingly bounce between
+  nonadjacent rooms within the same stage—all across 11 procgen room shapes.
+- **Generated world cadence**: three six-room dungeons form a region, followed
+  by a safe procedural town with healing and seeded merchant stock. Lore is a
+  set of fuzzy generated fixtures—not a fixed campaign replacing the run.
+- **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
+  vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever.
@@ -59,10 +69,11 @@ tables at build time.
 | Input | Action |
 |---|---|
 | **D-pad** | Move (8-way aim while firing); double-tap a direction to dodge-dash |
-| **A** | Primary weapon · continue a suspended run (title) |
-| **B** | Class signature move (2 MP) |
+| **A** | Primary weapon (Wolfkin: melee) · continue a suspended run (title) |
+| **B** | Class signature move (2 MP; Sauran: shield) |
+| **A+B** | Spirit Convergence when MP is full |
 | **START** | Pack screen (stats, loadout, run clock) |
-| **SELECT** | Quick pause |
+| **SELECT** | Spirit Compass (region, dungeon depth, distance to town) |
 
 Shoot the glowing amber wall tiles — they hide secret rooms.
 

@@ -81,7 +81,7 @@ pub const STINGER: Item = Item {
 
 pub const STONESKIN: Item = Item {
     id: ITEM_STONESKIN, name: "Stoneskin",
-    description: "3 seconds of invulnerability.",
+    description: "Raise a shield that blocks bodies and destroys shots.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -192,8 +192,8 @@ pub const HUNTERS_EYE: Item = Item {
 };
 
 pub const BLOOD_SIGIL: Item = Item {
-    id: ITEM_BLOOD_SIGIL, name: "BloodSigil",
-    description: "+1 ATK, +1 max HP.",
+    id: ITEM_BLOOD_SIGIL, name: "VampSigil",
+    description: "+1 ATK, +1 max HP. Heal every fifth kill.",
     kind: ItemKind::Passive,
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[

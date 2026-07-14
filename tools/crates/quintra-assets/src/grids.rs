@@ -411,6 +411,31 @@ pub const BGT_POT: [&str; 8] = [
     "..2222..",
 ];
 
+// Recessed floor pressure plate. The bright center and dark rim make it
+// readable without borrowing the spike/rubble semantics used by procgen.
+pub const BGT_SWITCH: [&str; 8] = [
+    "22222222",
+    "21111112",
+    "21333312",
+    "21322312",
+    "21322312",
+    "21333312",
+    "21111112",
+    "22222222",
+];
+
+// An asymmetric spiral makes orientation intentionally difficult after a hop.
+pub const BGT_PORTAL: [&str; 8] = [
+    "..1221..",
+    ".133331.",
+    "132..231",
+    "13.22.31",
+    "13.21.31",
+    "132..231",
+    ".133331.",
+    "..1221..",
+];
+
 // 16x16 mini-boss (Stone Sentinel), hand-drawn
 pub const BOSS_SENTINEL: [&str; 16] = [
     "....111111111...",
@@ -462,7 +487,7 @@ pub const FX_8: [(&str, &[&str]); 6] = [
     ("item_orb", &ITEM_ORB),
 ];
 
-pub const DUNGEON_TILES: [(&str, &[&str]); 12] = [
+pub const DUNGEON_TILES: [(&str, &[&str]); 14] = [
     ("floor_plain", &BGT_FLOOR_PLAIN),
     ("floor_crack", &BGT_FLOOR_CRACK),
     ("floor_pebble", &BGT_FLOOR_PEBBLE),
@@ -475,6 +500,8 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 12] = [
     ("block", &BGT_BLOCK),
     ("spikes", &BGT_SPIKES),
     ("pot", &BGT_POT),
+    ("switch", &BGT_SWITCH),
+    ("portal", &BGT_PORTAL),
 ];
 
 // Mini-boss silhouettes: 2x-scaled enemy art (order matters — indexed by

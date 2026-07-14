@@ -92,6 +92,7 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_SHOOTER    3\n\
          #define AI_SPINNER    4\n\
          #define AI_TURRET     5\n\
+         #define AI_REPLICATOR 9\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -396,6 +397,8 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_AIMEDBURST", burst_size, recovery_ticks, 0),
         AiScriptId::Teleporter { blink_rate, appear_dist } =>
             ("AI_TELEPORT", blink_rate, appear_dist, 0),
+        AiScriptId::Replicator { open_ticks, closed_ticks } =>
+            ("AI_REPLICATOR", open_ticks, closed_ticks, 0),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\

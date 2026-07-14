@@ -37,6 +37,8 @@
 #define BGT_BLOCK_BR   30  // crate bottom-right
 #define BGT_SPIKES     31  // floor hazard: walkable but damages on contact
 #define BGT_POT        32  // breakable clay pot: solid, shoot for loot
+#define BGT_SWITCH     33  // one-shot pressure plate: player or block activates it
+#define BGT_PORTAL     34  // nonlinear intra-stage rift well
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0

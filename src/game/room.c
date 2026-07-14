@@ -161,6 +161,7 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
 u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
          || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES
+         || t == BGT_SWITCH || t == BGT_PORTAL
          // Shop price tags are painted floor (coin glyph + digits)
          || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
 }
@@ -274,8 +275,10 @@ static u8 attr_for_tile(u8 t) {
         case BGT_BLOCK_TR:
         case BGT_BLOCK_BL:
         case BGT_BLOCK_BR:
-        case BGT_POT:     return BGPAL_DOOR;      // gold-ish, reads as interactive
-        case BGT_CRYSTAL: return BGPAL_CRYSTAL;
+        case BGT_POT:
+        case BGT_SWITCH:  return BGPAL_DOOR;      // gold-ish, reads as interactive
+        case BGT_CRYSTAL:
+        case BGT_PORTAL:  return BGPAL_CRYSTAL;
         case BGT_DOOR:    return BGPAL_DOOR;
         default:
             // Shop price tags glow amber (crack palette) for readability
@@ -284,6 +287,16 @@ static u8 attr_for_tile(u8 t) {
             }
             return BGPAL_FLOOR;
     }
+}
+
+// One-shot puzzle payoff shared by hero-pressed and crate-pressed plates.
+// The seed has already fixed the room, while the activation position keeps
+// the reward legible and makes plates useful even before keyed doors arrive.
+static void activate_switch(u8 tx, u8 ty) {
+    room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
+    pickup_spawn((rng_next_u8() & 1) ? PICKUP_COIN_5 : PICKUP_HEART_HALF,
+        FIX8((i16)tx * 8), FIX8((i16)ty * 8));
+    sfx_play(SFX_CLEAR);
 }
 
 static void draw_room_tilemap(void) {
@@ -489,13 +502,12 @@ void room_exit(void) {
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
-    // ---- START opens the PACK (stats + items); SELECT quick-pauses (dim).
+    // ---- START opens PACK; SELECT opens the generated field compass.
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
     }
     if (pressed & J_SELECT) {
-        room_paused ^= 1;
-        room_apply_pause_palettes(room_paused);
+        return SCREEN_MAP;
     }
     if (room_paused) { g_vbl_ticks = 0; return SCREEN_SELF; }   // clock holds
 
@@ -678,8 +690,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 open = (t1x < ROOM_W && t1y < ROOM_H && t2x < ROOM_W && t2y < ROOM_H);
                 if (open) {
                     u8 a = room_tilemap[t1y][t1x], b = room_tilemap[t2y][t2x];
-                    open = (a == BGT_FLOOR || a == BGT_FLOOR2 || a == BGT_FLOOR3)
-                        && (b == BGT_FLOOR || b == BGT_FLOOR2 || b == BGT_FLOOR3);
+                    open = (a == BGT_FLOOR || a == BGT_FLOOR2 || a == BGT_FLOOR3
+                            || a == BGT_SWITCH)
+                        && (b == BGT_FLOOR || b == BGT_FLOOR2 || b == BGT_FLOOR3
+                            || b == BGT_SWITCH);
                 }
                 // Never entomb a live enemy under the sliding crate
                 if (open) {
@@ -701,6 +715,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     else { push_dir = cur; push_timer = 1; }
                     if (push_timer >= 10) {
                         u8 nox = (u8)(ox + dx), noy = (u8)(oy + dy);
+                        u8 pressed_switch = (u8)(room_tilemap[t1y][t1x] == BGT_SWITCH
+                                              || room_tilemap[t2y][t2x] == BGT_SWITCH);
+                        u8 switch_x = (room_tilemap[t1y][t1x] == BGT_SWITCH) ? t1x : t2x;
+                        u8 switch_y = (room_tilemap[t1y][t1x] == BGT_SWITCH) ? t1y : t2y;
                         // One vblank, eight tile writes: clear the old
                         // 2x2, draw the crate at its new origin.
                         room_tilemap[oy][ox]         = BGT_FLOOR;
@@ -731,6 +749,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             VBK_REG = 0;
                         }
                         sfx_play(SFX_DOOR);
+                        if (pressed_switch) activate_switch(switch_x, switch_y);
                         push_timer = 0;
                     }
                 } else if (push_timer) {
@@ -786,7 +805,25 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             &items[player.starter_weapon < N_ITEMS ? player.starter_weapon : 0];
         g_shot_element = class_element[player.class_id < 5 ? player.class_id : 0];
 
-        if ((keys & J_A) && player.fire_cooldown == 0) {
+        // A+B at full MP: SPIRIT CONVERGENCE. This is deliberately shared
+        // across all five vessels—the common oath underneath their different
+        // kits. Full-meter requirement prevents accidental chord activation.
+        if ((pressed & (J_A | J_B)) == (J_A | J_B)
+            && player.mp == player.mp_max && player.active_charge == 0) {
+            u8 sd;
+            for (sd = 0; sd < 8; ++sd)
+                projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
+                    (u8)(w->p1 + player.atk + 2), PROJ_SPIKE);
+            player.mp = 0;
+            if (player.hp < player.hp_max) player.hp++;
+            player.iframes = 45;
+            player.active_charge = 180;
+            room_shake(1, 18);
+            sfx_play(SFX_ROAR);
+            hud_redraw_hp(); hud_redraw_mp();
+        }
+
+        if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + player.atk);   // ATK adds linearly
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
@@ -798,11 +835,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // ---- Weapon 2 (B, edge): class signature move. Costs MP_COST_B
         // magic on top of the ~2.3s cooldown; no MP -> error beep.
         #define MP_COST_B 2
-        if ((pressed & J_B) && player.active_charge == 0
+        if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
             && player.mp < MP_COST_B) {
             sfx_play(SFX_HURT);   // out of magic
         }
-        if ((pressed & J_B) && player.active_charge == 0
+        if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
             && player.mp >= MP_COST_B) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + 1 + player.atk);
@@ -815,7 +852,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     }
                     break;
                 case 1:   // Sauran STONESKIN: 1.5s of iframes
-                    player.iframes = 90;
+                    player.shield_timer = 75;
+                    player.iframes = 8; // cover the raising animation
                     break;
                 case 2:   // Corvin MURDER: 3-way shuriken spread
                     projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SHURIKEN);
@@ -846,6 +884,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             hud_redraw_mp();
         }
         if (player.active_charge > 0) player.active_charge--;
+        if (player.shield_timer > 0) {
+            player.shield_timer--;
+            if ((player.shield_timer & 7) == 0)
+                fx_spawn(SPR_FX_IMPACT, 1,
+                    (i16)player.x + ((player.shield_timer & 8) ? 12 : -4),
+                    (i16)player.y + ((player.shield_timer & 16) ? 12 : -4), 8);
+        }
 
         // MP trickle: +1 every ~3.2s while below max — Picsean's
         // MP-attuned passive (perk 4) regenerates twice as fast.
@@ -876,7 +921,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     entity_update_all(keys, pressed);
 
     // ---- Combat
-    if (combat_resolve()) {
+    if (combat_resolve() || player.hp == 0) {
         // Player died: don't hard-cut — a beat of shake, bursts, and a
         // flickering hero falling before the GAMEOVER screen takes over.
         death_timer = 50;
@@ -954,6 +999,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         u8 rtx = (u8)((player.x + 8) >> 3);
         u8 rty = (u8)((player.y + 12) >> 3);
         if (rtx < ROOM_W && rty < ROOM_H
+            && room_tilemap[rty][rtx] == BGT_SWITCH) {
+            // One-shot plate: consuming the marker prevents a per-frame chime
+            // and means a crate can cover it without a hidden terrain layer.
+            activate_switch(rtx, rty);
+        }
+        else if (rtx < ROOM_W && rty < ROOM_H
             && room_tilemap[rty][rtx] == BGT_RUBBLE) {
             room_set_tile_vbl(rtx, rty, BGT_FLOOR, BGPAL_FLOOR);
             sfx_play(SFX_HIT);
@@ -961,6 +1012,26 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 pickup_spawn(PICKUP_COIN_1,
                     FIX8((i16)rtx * 8), FIX8((i16)rty * 8));
             }
+        }
+        else if (rtx < ROOM_W && rty < ROOM_H
+            && room_tilemap[rty][rtx] == BGT_PORTAL) {
+            u16 base = (u16)(run_state.room_counter
+                - (run_state.room_counter % ROOMS_PER_STAGE));
+            u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
+            run_state.room_counter = (u16)(base + ((local == 2) ? 4 : 2));
+            // Edge arrival prevents an immediate return and muddles orientation.
+            run_state.entered_from = (run_state.run_seed & 1) ? DIR_N : DIR_W;
+            sfx_play(SFX_DOOR);
+            DISPLAY_OFF;
+            procgen_generate_current_room();
+            draw_room_tilemap();
+            place_player_sprite();
+            hud_redraw_all();
+            DISPLAY_ON;
+            music_play_stage(room_stage());
+            hostiles_prev = 0;
+            sram_save_run();
+            return SCREEN_SELF;
         }
         // ---- Spike floor: walkable but bites when the feet-box center
         // rests on it. DEF soaks it (min 1), then iframes + a jolt so you

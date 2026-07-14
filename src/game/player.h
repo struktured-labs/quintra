@@ -28,6 +28,7 @@ typedef struct {
     u16    coins;
     u8     active_item;  // item_id_t LSB (Phase 4 — extend to u16 later)
     u8     active_charge;
+    u8     shield_timer;  // Sauran B guard; active_charge is its cooldown
     u8     starter_weapon;
     u8     fire_cooldown;                // ticks until next shot allowed
     u8     move_acc;                     // sub-pixel movement accumulator (5 = 1px)

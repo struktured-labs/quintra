@@ -19,6 +19,7 @@ void player_clear(void) {
     player.coins = 0;
     player.active_item    = 0xFF;
     player.active_charge  = 0;
+    player.shield_timer   = 0;
     player.starter_weapon = 0xFF;
     player.fire_cooldown  = 0;
     player.move_acc       = 0;

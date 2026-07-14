@@ -141,6 +141,15 @@ static void apply_item_effects(u8 item_idx) {
     u8 k;
     if (item_idx >= N_ITEMS) return;
     it = &items[item_idx];
+    // Passive relics persist for this run and remain inspectable by behavioral
+    // hooks (vampirism, future on-kill/on-dash effects). Stat boosts still
+    // stack; record each copy while inventory capacity remains.
+    for (k = 0; k < INVENTORY_SLOTS; ++k) {
+        if (player.inventory[k] == 0xFF) {
+            player.inventory[k] = (u8)it->id;
+            break;
+        }
+    }
     for (k = 0; k < it->n_effects; ++k) {
         const effect_t *ef = &it->effects[k];
         if (ef->kind != EFFECT_STAT_BOOST) continue;

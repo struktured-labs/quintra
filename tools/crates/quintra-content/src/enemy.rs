@@ -37,6 +37,9 @@ pub enum AiScriptId {
     AimedBurst   { burst_size: u8, recovery_ticks: u8 },
     /// Vanish, reappear near the player, strike-window, repeat.
     Teleporter   { blink_rate: u8, appear_dist: u8 },
+    /// Expands into diagonal echoes on an irregular cadence, then contracts
+    /// into a short vulnerable phase.
+    Replicator   { open_ticks: u8, closed_ticks: u8 },
 }
 
 // Container with &'static str and &'static [BiomeId] — no serde.

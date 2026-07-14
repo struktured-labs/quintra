@@ -24,7 +24,11 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     // Kind shapes the projectile's physics:
     switch (kind) {
         case PROJ_SPIKE:      // melee slash: fast, very short reach
-            speed = 4; ttl = 12; pierce = 1; break;
+            // Wolfkin is the dedicated melee champion: its claw occupies only
+            // adjacent body space. Other spike weapons retain a short lunge.
+            if (player.class_id == 0) { speed = 1; ttl = 7; pierce = 2; }
+            else { speed = 4; ttl = 12; pierce = 1; }
+            break;
         case PROJ_SHURIKEN:   // pierces 2 enemies
             speed = 3; ttl = 60; pierce = 2; break;
         case PROJ_BUBBLE:     // slow drifting, pierces, long-lived
@@ -39,6 +43,10 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->flags      |= EF_PLAYER_PROJ;
     e->x           = FIX8((i16)player.x + 2);
     e->y           = FIX8((i16)player.y + 2);
+    if (player.class_id == 0 && kind == PROJ_SPIKE) {
+        e->x = (fix8_t)(e->x + ((i32)dx << 10)); // 4px forward
+        e->y = (fix8_t)(e->y + ((i32)dy << 10));
+    }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);
     e->sprite_tile = SPR_BULLET;

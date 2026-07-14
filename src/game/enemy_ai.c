@@ -9,6 +9,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
+#include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -33,6 +34,9 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 8: return SPR_BRUISER_WARLOCK;  // 16x16 heavy
         case 9: return SPR_ENEMY_ROPE;       // snake (8x8)
         case 10: return SPR_ENEMY_SENTRY;    // stationary turret
+        case 11: return SPR_ENEMY_SHADE;     // folding star / diagonal echoes
+        case 12: return SPR_ENEMY_HORNET;    // flutterbat
+        case 13: return SPR_ENEMY_WISP;      // gloam leech
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -52,6 +56,9 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 8:  return 0x07;   // Warlock: green robes (0x06 = elite marker)
         case 9:  return 0x07;   // Rope: snake green
         case 10: return 0x03;   // Sentry: cold blue-steel
+        case 11: return 0x05;   // Folding Star: uncanny amber geometry
+        case 12: return 0x00;   // Flutterbat: cave-dark
+        case 13: return 0x04;   // Gloam Leech: hungry red
         default: return 0x03;
     }
 }
@@ -113,6 +120,7 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
 // Bullet helpers (defined with the boss section below)
 static u8 aim_dir8(i16 cx, i16 cy);
 static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg);
+static void chaser_tick(entity_t *e, u8 speed);
 
 // ---------------- Walker: random 8-dir wander --------------------------
 
@@ -129,6 +137,92 @@ static void walker_tick(entity_t *e) {
         if (!enemy_try_step(e, dx, dy)) {
             e->state_timer = 0;   // blocked — pick a new direction next tick
         }
+    }
+}
+
+// ---------------- Folding Star: diagonal replication -------------------
+
+static void replicator_tick(entity_t *e, const enemy_def_t *def) {
+    // state 0 = contracted and vulnerable; state 1 = expanded/untouchable.
+    // ai_data[1] is the phase clock, ai_data[2] selects the odd 7/13/9 beat,
+    // ai_data[3] rotates the diagonal sequence.
+    static const u8 beat[3] = { 7, 13, 9 };
+    if (e->ai_data[1] == 0) {
+        if (e->state == 0) {
+            e->state = 1;
+            e->ai_data[1] = def->ai_p0;
+            e->palette = 0x00; // pale and diffuse while expanded
+        } else {
+            e->state = 0;
+            e->ai_data[1] = def->ai_p1;
+            e->palette = 0x05; // bright core announces damage window
+            sfx_play(SFX_WEAK);
+        }
+    }
+    e->ai_data[1]--;
+
+    if (e->state == 0) {
+        // Contract toward the player: a slow, readable diagonal hunt.
+        if ((e->ai_data[1] & 3) == 0) {
+            i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
+            i8 dx = (player.x > ex) ? 1 : -1;
+            i8 dy = (player.y > ey) ? 1 : -1;
+            enemy_try_step(e, dx, dy);
+        }
+        return;
+    }
+
+    // Expanded: shed four short-lived replicas on diagonal rays. They are FX,
+    // not extra hostiles, so room-clear accounting and the 32-entity budget
+    // remain stable. The core itself steps through the same diagonal sequence.
+    if ((e->ai_data[1] % beat[e->ai_data[2] % 3]) == 0) {
+        i16 x = FIX8_TO_INT(e->x), y = FIX8_TO_INT(e->y);
+        u8 d = (u8)(6 + ((e->ai_data[3] & 3) << 1));
+        fx_spawn(e->sprite_tile, 0x05, x - d, y - d, 16);
+        fx_spawn(e->sprite_tile, 0x05, x + d, y - d, 16);
+        fx_spawn(e->sprite_tile, 0x05, x - d, y + d, 16);
+        fx_spawn(e->sprite_tile, 0x05, x + d, y + d, 16);
+        e->ai_data[2] = (u8)((e->ai_data[2] + 1) % 3);
+        e->ai_data[3]++;
+        enemy_try_step(e, dir8_dx[(u8)((e->ai_data[3] * 2 + 1) & 7)],
+                          dir8_dy[(u8)((e->ai_data[3] * 2 + 1) & 7)]);
+    }
+}
+
+// Keese-like cadence: cling motionless, flutter diagonally, dart, settle.
+static void flutterbat_tick(entity_t *e) {
+    if (e->state_timer == 0) {
+        e->state = (u8)((e->state + 1) % 3);
+        e->state_timer = (e->state == 0) ? (u8)(28 + (rng_next_u8() & 31))
+                       : (e->state == 1) ? (u8)(36 + (rng_next_u8() & 15)) : 14;
+        e->ai_data[2] = (u8)(rng_next_u8() | 1); // diagonal direction seed
+    }
+    e->state_timer--;
+    if (e->state == 0) return;
+    if ((e->state_timer & ((e->state == 2) ? 1 : 3)) == 0) {
+        u8 d = (u8)((e->ai_data[2] + ((e->state_timer >> 2) & 2)) & 7);
+        if (!enemy_try_step(e, dir8_dx[d], dir8_dy[d])) e->state_timer = 0;
+    }
+}
+
+// Metroid-like latch: pursue, attach, pulse-drain, and ride the hero until
+// killed. Dashing shakes it loose through the hero's extended iframes.
+static void leech_tick(entity_t *e) {
+    if (e->ai_data[6]) {
+        e->x = FIX8((i16)player.x + 4);
+        e->y = FIX8((i16)player.y + 1);
+        if (player.iframes >= 12) { // dodge dash shakes the latch
+            e->ai_data[6] = 0; e->state_timer = 30; return;
+        }
+        if (++e->ai_data[5] >= 45) {
+            e->ai_data[5] = 0;
+            if (player.hp > 1) { player.hp--; hud_redraw_hp(); sfx_play(SFX_HURT); }
+        }
+        return;
+    }
+    chaser_tick(e, 72);
+    if (e->state_timer == 0 && aabb_overlap_player(e)) {
+        e->ai_data[6] = 1; e->ai_data[5] = 0; sfx_play(SFX_HURT);
     }
 }
 
@@ -273,6 +367,16 @@ static void turret_tick(entity_t *e, const enemy_def_t *def) {
     i16 cy = FIX8_TO_INT(e->y) + 4;
     if (e->ai_data[1] != 0) {
         e->ai_data[1]--;
+        // Void Lord world-collapse telegraph: one flickering safe pocket.
+        // ai_data[4]=1 while charging; ai_data[5] selects a corner.
+        if (e->ai_data[3] && e->ai_data[2] == 8 && e->ai_data[4]
+            && (e->ai_data[1] & 7) == 0) {
+            static const u8 safe_x[4] = { 20, 124, 20, 124 };
+            static const u8 safe_y[4] = { 20, 20, 100, 100 };
+            fx_spawn(SPR_FX_IMPACT, 1, safe_x[e->ai_data[5] & 3],
+                safe_y[e->ai_data[5] & 3], 10);
+            sfx_play(SFX_TICK);
+        }
         if (e->ai_data[1] == 8 && e->ai_data[7] == 0) {
             e->ai_data[7] = 8;
             sfx_play(SFX_TICK);
@@ -474,12 +578,31 @@ static void boss_tick(entity_t *e) {
                 boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
                 cadence = 24;
                 break;
-            case 8:   // Void Lord — rotating fast cross + diagonal ring + aimed
-                for (k = 0; k < 4; ++k)
-                    boss_shot(cx, cy, (u8)((e->ai_data[5] + k * 2) & 7), 3, dmg);
-                for (d = 1; d < 8; d = (u8)(d + 2)) boss_shot(cx, cy, d, 1, dmg);
-                boss_shot(cx, cy, aim_dir8(cx, cy), 2, dmg);
-                cadence = 30;
+            case 8:   // Void Lord — WORLD COLLAPSE, room-wide except one pocket
+                if (!e->ai_data[4]) {
+                    e->ai_data[4] = 1;
+                    e->ai_data[5] = (u8)rng_range(4);
+                    cadence = 96; // long warning; marker pulses twelve times
+                } else {
+                    static const u8 safe_x[4] = { 20, 124, 20, 124 };
+                    static const u8 safe_y[4] = { 20, 20, 100, 100 };
+                    i16 dx = (i16)player.x - safe_x[e->ai_data[5] & 3];
+                    i16 dy = (i16)player.y - safe_y[e->ai_data[5] & 3];
+                    if (dx < 0) dx = -dx; if (dy < 0) dy = -dy;
+                    room_shake(3, 40);
+                    for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 3, dmg);
+                    if ((u16)(dx + dy) > 20 && player.shield_timer == 0) {
+                        u8 blast = (u8)(dmg + 4);
+                        player.hp = (player.hp > blast) ? (u8)(player.hp - blast) : 0;
+                        player.iframes = 60;
+                        hud_redraw_hp();
+                        sfx_play(SFX_DEATH);
+                    } else {
+                        sfx_play(SFX_CLEAR);
+                    }
+                    e->ai_data[4] = 0;
+                    cadence = 150;
+                }
                 break;
             case 0:   // Colossus — full ring + aimed (the classic)
             default:
@@ -504,12 +627,15 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     const enemy_def_t *def = &enemies[e->ai_data[0]];
     idx;
     if (e->ai_data[0] == 1) { boss_tick(e); return; }   // Sentinel
+    if (e->ai_data[0] == 12) { flutterbat_tick(e); return; }
+    if (e->ai_data[0] == 13) { leech_tick(e); return; }
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
         case AI_SHOOTER: shooter_tick(e, def);             break;
         case AI_TELEPORT: teleport_tick(e, def);           break;
         case AI_TURRET:   turret_tick(e, def);             break;
+        case AI_REPLICATOR: replicator_tick(e, def);        break;
         default:         walker_tick(e);                   break;
     }
 }

@@ -38,6 +38,21 @@ static const u16 title_palette_steady[4] = {
 
 // 0 = main title, 1 = records page (SELECT toggles)
 static u8 showing_records;
+static u8 lore_beat;
+
+static void render_lore_beat(void) {
+    // Five champions, five rotating vows. Kept on the live title instead of
+    // an unskippable prologue so boot remains quick and repeat play friendly.
+    gotoxy(1, 8); printf("                  ");
+    gotoxy(1, 9); printf("                  ");
+    switch (lore_beat) {
+        case 0: gotoxy(2, 8); printf("FIVE SPIRITS WAKE"); gotoxy(2, 9); printf("ONE WORLD BELOW"); break;
+        case 1: gotoxy(2, 8); printf("FANG GUARDS FLAME"); gotoxy(2, 9); printf("SCALE HOLDS STONE"); break;
+        case 2: gotoxy(2, 8); printf("WING READS SHADOW"); gotoxy(2, 9); printf("FIN REMEMBERS TIDE"); break;
+        case 3: gotoxy(2, 8); printf("STING DEFIES ROT"); gotoxy(2, 9); printf("FIVE SEAL THE RIFT"); break;
+        default: gotoxy(2, 8); printf("CHOOSE A CHAMPION"); gotoxy(2, 9); printf("REKINDLE THE DAWN"); break;
+    }
+}
 
 static void render_title(void) {
     cls();
@@ -46,6 +61,7 @@ static void render_title(void) {
     printf("QUINTRA");
     gotoxy(5, 6);
     printf("THE  ROGUELIKE");
+    render_lore_beat();
     if (has_save) {
         gotoxy(4, 11);
         printf("A     CONTINUE");
@@ -56,7 +72,7 @@ static void render_title(void) {
         printf("PRESS  START");
     }
     gotoxy(1, 17); printf("SELECT=RECORDS");
-    gotoxy(15, 17); printf("v0.15");
+    gotoxy(15, 17); printf("v0.16");
     {
         u16 best = sram_meta_best();
         if (best > 0) {
@@ -107,6 +123,7 @@ void title_enter(void) {
 
     has_save = sram_run_valid();
     showing_records = 0;
+    lore_beat = 0;
     render_title();
 
     pulse_phase         = 0;
@@ -155,6 +172,17 @@ void title_draw(void) {
     // Triangle wave: 0..45 magenta-ish, 45..89 cyan-ish.
     pulse_phase = (u8)(pulse_phase + 1);
     if (pulse_phase >= 90) pulse_phase = 0;
+
+    // Change the vow every three pulse cycles. The palette continues moving
+    // between beats, giving the lore tableau a simple hardware-cheap animation.
+    if (pulse_phase == 0 && !showing_records) {
+        static u8 lore_hold;
+        if (++lore_hold >= 3) {
+            lore_hold = 0;
+            lore_beat = (u8)((lore_beat + 1) % 5);
+            render_lore_beat();
+        }
+    }
 
     {
         u8  phase    = pulse_phase < 45 ? pulse_phase : (u8)(89 - pulse_phase);

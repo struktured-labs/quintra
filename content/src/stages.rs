@@ -16,7 +16,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 1, 1, 2), c(10, 7, 2), c(18,13, 3), c(28,21, 6)],
         boss:    [c(0,0,0), c(10,13,22), c( 2, 3, 8), c(22,29,31)],
         boss_hp_bonus: 40, boss_dmg_bonus: 1, mb_variant: 0,
-        enemy_pool: &[(0, 40), (2, 22), (3, 20), (9, 18)],
+        enemy_pool: &[(0, 35), (12, 30), (9, 20), (13, 15)],
     },
     // 1 — Verdant Hollow (mossy green)
     StageTheme {
@@ -27,7 +27,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 1), c(11, 8, 2), c(20,14, 3), c(30,24, 8)],
         boss:    [c(0,0,0), c( 9,19, 7), c( 2, 6, 2), c(26,31,14)],
         boss_hp_bonus: 62, boss_dmg_bonus: 1, mb_variant: 1,
-        enemy_pool: &[(0, 25), (2, 30), (4, 25), (9, 20)],
+        enemy_pool: &[(12, 30), (4, 30), (9, 20), (13, 20)],
     },
     // 2 — Ember Depths (molten red/orange)
     StageTheme {
@@ -60,7 +60,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 0), c(11, 9, 2), c(20,16, 4), c(29,25, 9)],
         boss:    [c(0,0,0), c(16,20, 4), c( 4, 6, 1), c(31,31,14)],
         boss_hp_bonus: 128, boss_dmg_bonus: 3, mb_variant: 4,
-        enemy_pool: &[(2, 30), (5, 30), (6, 40)],
+        enemy_pool: &[(12, 25), (5, 25), (6, 30), (13, 20)],
     },
     // 5 — Shadow Keep (cold grey/violet)
     StageTheme {
@@ -71,7 +71,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 3), c(10, 8, 6), c(19,15, 8), c(28,24,14)],
         boss:    [c(0,0,0), c(13,11,20), c( 3, 3, 6), c(28,22,31)],
         boss_hp_bonus: 150, boss_dmg_bonus: 3, mb_variant: 2,
-        enemy_pool: &[(7, 40), (3, 30), (5, 30)],
+        enemy_pool: &[(7, 30), (3, 25), (5, 25), (11, 20)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {
@@ -93,7 +93,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 3, 1, 1), c(13, 6, 3), c(23,12, 5), c(31,22,10)],
         boss:    [c(0,0,0), c(20, 4, 6), c( 6, 1, 2), c(31,20,16)],
         boss_hp_bonus: 194, boss_dmg_bonus: 4, mb_variant: 0,
-        enemy_pool: &[(3, 35), (7, 30), (2, 20), (8, 15)],
+        enemy_pool: &[(3, 25), (7, 25), (11, 25), (8, 25)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
     StageTheme {
@@ -104,7 +104,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 0, 3), c( 8, 4,10), c(16,10,20), c(26,18,30)],
         boss:    [c(0,0,0), c(13, 6,20), c( 3, 1, 7), c(20,31,18)],
         boss_hp_bonus: 216, boss_dmg_bonus: 5, mb_variant: 4,
-        enemy_pool: &[(7, 25), (6, 25), (10, 25), (8, 25)],
+        enemy_pool: &[(7, 20), (11, 30), (10, 25), (8, 25)],
     },
 ];
 

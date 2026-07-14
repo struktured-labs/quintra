@@ -159,6 +159,36 @@ pub const SENTRY: Enemy = Enemy {
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const FOLDING_STAR: Enemy = Enemy {
+    id:         ENEMY_FOLDING_STAR,
+    name:       "Fold Star",
+    sprite_set: SPRITE_CRAWLER,
+    palette:    OBJ_PAL_CRAWLER,
+    // A spatial timing enemy: it blooms into untouchable diagonal echoes in
+    // a deliberately lopsided rhythm, then contracts for a brief damage
+    // window. Shadow cuts through its false geometry most effectively.
+    stats: EnemyStats { hp: 7, damage: 2, speed: 56, score: 60, weakness: 0x08, poise: 2 },
+    ai_script:  AiScriptId::Replicator { open_ticks: 83, closed_ticks: 29 },
+    drop_table: DROP_SMALL_COIN,
+    biomes:     &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const FLUTTERBAT: Enemy = Enemy {
+    id: ENEMY_FLUTTERBAT, name: "Flutterbat", sprite_set: SPRITE_CRAWLER,
+    palette: OBJ_PAL_CRAWLER,
+    stats: EnemyStats { hp: 2, damage: 1, speed: 80, score: 18, weakness: 0x04, poise: 0 },
+    ai_script: AiScriptId::Walker, drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const GLOAM_LEECH: Enemy = Enemy {
+    id: ENEMY_GLOAM_LEECH, name: "GloomLeech", sprite_set: SPRITE_CRAWLER,
+    palette: OBJ_PAL_CRAWLER,
+    stats: EnemyStats { hp: 4, damage: 1, speed: 72, score: 35, weakness: 0x02, poise: 0 },
+    ai_script: AiScriptId::Chaser, drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -171,4 +201,7 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(WARLOCK.clone());
     r.add_enemy(ROPE.clone());
     r.add_enemy(SENTRY.clone());
+    r.add_enemy(FOLDING_STAR.clone());
+    r.add_enemy(FLUTTERBAT.clone());
+    r.add_enemy(GLOAM_LEECH.clone());
 }

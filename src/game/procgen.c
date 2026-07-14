@@ -69,6 +69,11 @@ void procgen_generate_current_room(void) BANKED {
     u8 is_boss_room = (run_state.room_counter > 0
         && (run_state.room_counter % BOSS_EVERY_N_ROOMS) == 0
         && (u8)(run_state.room_counter / BOSS_EVERY_N_ROOMS) > run_state.bosses_beaten) ? 1 : 0;
+    // A village clearing follows every third dungeon: rooms 19, 37, 55...
+    // It remains a pure function of room_counter, so suspend/resume and
+    // backtracking regenerate the same world landmark.
+    u8 is_town = (run_state.room_counter > ROOMS_PER_REGION
+        && (run_state.room_counter % ROOMS_PER_REGION) == 1) ? 1 : 0;
     rng_seed(seed);
 
     bio;
@@ -241,6 +246,46 @@ void procgen_generate_current_room(void) BANKED {
                 }
             }
 
+            // Pressure-plate puzzle. A deterministic subset of ordinary
+            // rooms gets a visible plate and a nearby crate. Either the hero
+            // or the crate can press it; room.c consumes it and pays a cache.
+            // Towns are redrawn below and never inherit dungeon puzzles.
+            if (!is_town && run_state.room_counter > 0
+                && (run_state.room_counter % 7) == 0) {
+                // Coordinate comes from the already-derived room seed rather
+                // than consuming RNG draws; adding puzzle content must not
+                // reshuffle every later decoration/enemy in the same seed.
+                u8 sx = (seed & 1) ? 7 : 12;
+                u8 sy = (seed & 2) ? 5 : 11;
+                if (room_tile_walkable(room_tilemap[sy][sx])) {
+                    room_tilemap[sy][sx] = BGT_SWITCH;
+                    // Guarantee one pushable block in the same local puzzle
+                    // when the 2x2 footprint is clear.
+                    if (sx > 3
+                        && room_tile_walkable(room_tilemap[sy][sx - 2])
+                        && room_tile_walkable(room_tilemap[sy][sx - 1])
+                        && room_tile_walkable(room_tilemap[sy + 1][sx - 2])
+                        && room_tile_walkable(room_tilemap[sy + 1][sx - 1])) {
+                        room_tilemap[sy][sx - 2] = BGT_BLOCK;
+                        room_tilemap[sy][sx - 1] = BGT_BLOCK_TR;
+                        room_tilemap[sy + 1][sx - 2] = BGT_BLOCK_BL;
+                        room_tilemap[sy + 1][sx - 1] = BGT_BLOCK_BR;
+                    }
+                }
+            }
+
+            // A seed-stable nonlinear pair inside this stage. It starts after
+            // the tutorial stage and can never target a boss, town, or region.
+            if (!is_town && run_state.room_counter > 6
+                && ((run_state.room_counter % ROOMS_PER_STAGE) == 2
+                    || (run_state.room_counter % ROOMS_PER_STAGE) == 4)) {
+                u8 px = (seed & 4) ? 5 : 14;
+                u8 py = (seed & 8) ? 4 : 12;
+                if (room_tile_walkable(room_tilemap[py][px])) {
+                    room_tilemap[py][px] = BGT_PORTAL;
+                }
+            }
+
 
             // Secret cracked wall — ~half of rooms hide one on a border
             // (never on a door or the E/W door row). Rendered on its own
@@ -301,6 +346,34 @@ void procgen_generate_current_room(void) BANKED {
         }
     }
 
+    // Procedural town landmark. Clear the combat geometry into a broad plaza,
+    // then build two compact houses and a central shrine. The four exits keep
+    // it connected to the same free-roaming room graph as every dungeon.
+    if (is_town) {
+        u8 x, y;
+        for (y = 1; y < ROOM_H - 1; ++y)
+            for (x = 1; x < ROOM_W - 1; ++x)
+                room_tilemap[y][x] = ((x + y) & 3) ? BGT_FLOOR : BGT_FLOOR3;
+        for (x = 2; x <= 7; ++x) {
+            room_tilemap[3][x] = BGT_PILLAR;
+            room_tilemap[6][x] = BGT_PILLAR;
+            room_tilemap[11][x + 10] = BGT_PILLAR;
+            room_tilemap[14][x + 10] = BGT_PILLAR;
+        }
+        for (y = 3; y <= 6; ++y) {
+            room_tilemap[y][2] = BGT_PILLAR;
+            room_tilemap[y][7] = BGT_PILLAR;
+            room_tilemap[y + 8][12] = BGT_PILLAR;
+            room_tilemap[y + 8][17] = BGT_PILLAR;
+        }
+        room_tilemap[6][4] = BGT_DOOR; room_tilemap[6][5] = BGT_DOOR;
+        room_tilemap[11][14] = BGT_DOOR; room_tilemap[11][15] = BGT_DOOR;
+        room_tilemap[7][9] = BGT_CRYSTAL;
+        room_tilemap[7][10] = BGT_CRYSTAL;
+        room_tilemap[10][9] = BGT_CRYSTAL;
+        room_tilemap[10][10] = BGT_CRYSTAL;
+    }
+
     // Clear entity table — fresh enemies per room
     entity_init_all();
 
@@ -358,6 +431,24 @@ void procgen_generate_current_room(void) BANKED {
         // a shrine, two hearts, and a full MP blessing. Breathe, then go.
         u8 is_rest     = (!is_boss_room
                           && (run_state.room_counter % ROOMS_PER_STAGE) == 5) ? 1 : 0;
+
+        if (is_town) {
+            // Towns are full sanctuary hubs: healing, magic, and three fairer
+            // market stalls. Lore anchors can later replace selected region
+            // towns without changing this procedural fallback.
+            u8 s0, s1, s2;
+            *(volatile u8*)0xFFFC = 0x54; // 'T' debug landmark
+            player.hp = player.hp_max;
+            player.mp = player.mp_max;
+            s0 = pickup_spawn(PICKUP_SHOP, FIX8(48), FIX8(72));
+            s1 = pickup_spawn(PICKUP_SHOP, FIX8(80), FIX8(72));
+            s2 = pickup_spawn(PICKUP_SHOP, FIX8(112), FIX8(72));
+            if (s0 != 0xFF) { entities[s0].ai_data[0] = PICKUP_SHOP; entities[s0].ai_data[1] = WARE_HEART; entities[s0].ai_data[2] = 5; entities[s0].sprite_tile = SPR_HEART; entities[s0].palette = 0x04; }
+            if (s1 != 0xFF) { entities[s1].ai_data[0] = PICKUP_SHOP; entities[s1].ai_data[1] = WARE_ITEM; entities[s1].ai_data[2] = 20; entities[s1].sprite_tile = SPR_ITEM_ORB; entities[s1].palette = 0x05; }
+            if (s2 != 0xFF) { entities[s2].ai_data[0] = PICKUP_SHOP; entities[s2].ai_data[1] = WARE_BIG; entities[s2].ai_data[2] = 35; entities[s2].sprite_tile = SPR_ITEM_ORB; entities[s2].palette = 0x04; }
+            player.iframes = 60;
+            return;
+        }
 
         if (is_rest) {
             *(volatile u8*)0xFFFC = 0x00;

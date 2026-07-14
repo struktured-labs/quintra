@@ -11,6 +11,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
+#include "render/hud.h"
 #include "content.h"
 
 // Global hit-stop: freezes the room loop for a few frames on impact for weight.
@@ -48,6 +49,16 @@ u8 combat_resolve(void) BANKED {
             if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
+            // Folding Star: expanded geometry is an invulnerable projection.
+            // Shots still burst on contact, teaching the player to wait for
+            // the bright contracted core rather than passing through it.
+            if (eid == 11 && entities[j].state != 0) {
+                sfx_play(SFX_HIT);
+                fx_spawn(SPR_FX_IMPACT, 0,
+                    FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 5);
+                entity_kill(i);
+                break;
+            }
             weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
             poise    = (eid < N_ENEMIES) ? enemies[eid].stats.poise    : 0;
 
@@ -98,6 +109,21 @@ u8 combat_resolve(void) BANKED {
                             run_state.score = (u16)(run_state.score + pts);
                         }
                         run_state.enemies_killed++;
+                        // Vampiric Sigil (item id 29): slow dungeon sustain.
+                        // Multiple copies keep their stat boosts but do not
+                        // multiply the heal, avoiding runaway immortality.
+                        if ((run_state.enemies_killed % 5) == 0
+                            && player.hp < player.hp_max) {
+                            u8 vi;
+                            for (vi = 0; vi < INVENTORY_SLOTS; ++vi) {
+                                if (player.inventory[vi] == 29) {
+                                    player.hp++;
+                                    hud_redraw_hp();
+                                    sfx_play(SFX_HEART);
+                                    break;
+                                }
+                            }
+                        }
                         // Enemy id 1 is used by BOTH the large stage boss
                         // (giant flag ai_data[3]=1) and the room-3 mini-boss.
                         // Only the GIANT advances the stage — a mini-boss kill
@@ -180,8 +206,24 @@ u8 combat_resolve(void) BANKED {
     // 2) Pickup collisions (always processed; doesn't require iframes)
     pickup_check_player_collision();
 
-    // 3) Enemy bodies AND enemy projectiles -> player (respects iframes)
-    if (player.iframes == 0) {
+    // Sauran shield catches hostile shots; contact bodies are harmless while
+    // it is raised. active_charge supplies the post-use cooldown.
+    if (player.shield_timer > 0) {
+        for (i = 0; i < MAX_ENTITIES; ++i) {
+            if ((entities[i].flags & EF_ACTIVE)
+                && entities[i].type == ENT_PROJECTILE
+                && !(entities[i].flags & EF_PLAYER_PROJ)
+                && aabb_overlap_player_wide(&entities[i])) {
+                fx_spawn(SPR_FX_IMPACT, 1,
+                    FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 7);
+                entity_kill(i);
+                sfx_play(SFX_HIT);
+            }
+        }
+    }
+
+    // 3) Enemy bodies AND enemy projectiles -> player
+    if (player.iframes == 0 && player.shield_timer == 0) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
             u8 hostile;
             if (!(entities[i].flags & EF_ACTIVE)) continue;
@@ -189,6 +231,10 @@ u8 combat_resolve(void) BANKED {
                 || (entities[i].type == ENT_PROJECTILE
                     && !(entities[i].flags & EF_PLAYER_PROJ));
             if (!hostile) continue;
+            // An attached Gloam Leech uses its own timed drain; ordinary body
+            // collision would double-charge damage every iframe cycle.
+            if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == 13
+                && entities[i].ai_data[6]) continue;
             if (aabb_overlap_player(&entities[i])) {
                 u8 was_projectile = (entities[i].type == ENT_PROJECTILE);
                 // DEF soaks incoming damage (min 1 half-heart gets through)
