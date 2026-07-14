@@ -88,7 +88,7 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         // larger body is hittable and its contact reach matches its size.
         if (enemy_content_id == 1 || enemy_content_id == 4
             || enemy_content_id == 6 || enemy_content_id == 8) {
-            e->hitbox = (13 << 4) | 13;
+            e->hitbox = (u8)0xDD;
         } else {
             e->hitbox = (6 << 4) | 6;
         }

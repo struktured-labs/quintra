@@ -125,7 +125,7 @@ void hud_redraw_depth(void) {
     row[1] = (u8)(HUD_DIGIT_0 + (d % 10));
     VBK_REG = 0;
     set_win_tiles(8, 0, 2, 1, row);
-    row[0] = (u8)(HUD_DIGIT_0 + (s > 9 ? 9 : s));
+    row[0] = (u8)(HUD_DIGIT_0 + s);
     set_win_tiles(19, 0, 1, 1, row);
 }
 

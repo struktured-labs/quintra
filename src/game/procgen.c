@@ -289,8 +289,7 @@ void procgen_generate_current_room(void) BANKED {
                     room_tilemap[sy][sx] = BGT_SWITCH;
                     // Guarantee one pushable block in the same local puzzle
                     // when the 2x2 footprint is clear.
-                    if (sx > 3
-                        && room_tile_walkable(room_tilemap[sy][sx - 2])
+                    if (room_tile_walkable(room_tilemap[sy][sx - 2])
                         && room_tile_walkable(room_tilemap[sy][sx - 1])
                         && room_tile_walkable(room_tilemap[sy + 1][sx - 2])
                         && room_tile_walkable(room_tilemap[sy + 1][sx - 1])) {
@@ -527,7 +526,7 @@ void procgen_generate_current_room(void) BANKED {
                 if (idx != 0xFF) {
                     entities[idx].sprite_tile = boss_sprite_for_stage(skin);
                     entities[idx].palette     = boss_palette_for_stage(skin);
-                    entities[idx].hitbox      = (15 << 4) | 15;
+                    entities[idx].hitbox      = (u8)0xFF;
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
                     // HP is one byte. The final 216 bonus plus the 50 HP
@@ -557,7 +556,7 @@ void procgen_generate_current_room(void) BANKED {
                     u8 mb_var = stage_mb_variant[stage % 9];
                     entities[idx].sprite_tile = SPR_BOSS;
                     entities[idx].palette     = mb_pal[mb_var];
-                    entities[idx].hitbox      = (14 << 4) | 14;
+                    entities[idx].hitbox      = (u8)0xEE;
                     // ai_data[2] = variant → boss_tick picks the matching
                     // attack archetype (0 Sentinel / 1 Orc / 2 Skeleton).
                     entities[idx].ai_data[2]  = mb_var;

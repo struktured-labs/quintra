@@ -24,17 +24,14 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
         e->damage     = 0;
         e->hp         = 1;
         e->state_timer = 240;    // despawn after 4 seconds
-        switch (kind) {
-            case PICKUP_HEART_HALF:
-                e->sprite_tile = SPR_HEART;
-                e->palette     = 0x04;   // OBJ palette 4 (heart red)
-                break;
-            case PICKUP_COIN_1:
-            case PICKUP_COIN_5:
-            default:
-                e->sprite_tile = SPR_COIN;
-                e->palette     = 0x05;   // OBJ palette 5 (coin gold)
-                break;
+        // Specialized pickup constructors replace this default art below;
+        // only hearts differ from the coin/orb placeholder here.
+        if (kind == PICKUP_HEART_HALF) {
+            e->sprite_tile = SPR_HEART;
+            e->palette     = 0x04;   // OBJ palette 4 (heart red)
+        } else {
+            e->sprite_tile = SPR_COIN;
+            e->palette     = 0x05;   // OBJ palette 5 (coin gold)
         }
     }
     return idx;
@@ -80,7 +77,7 @@ u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
     if (idx != 0xFF) {
         entities[idx].sprite_tile = SPR_VILLAGER;
         entities[idx].palette = 0x05;
-        entities[idx].hitbox = (8 << 4) | 8;
+        entities[idx].hitbox = (u8)0x88;
         entities[idx].state_timer = 0;
     }
     return idx;
