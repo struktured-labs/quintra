@@ -114,4 +114,4 @@ impl StageTheme {
     }
 }
 
-pub const ROOM_ARCHETYPES: u8 = 8;
+pub const ROOM_ARCHETYPES: u8 = 9;

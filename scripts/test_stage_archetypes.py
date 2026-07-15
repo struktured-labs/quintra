@@ -8,7 +8,7 @@ from pyboy import PyBoy
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
-ROOM_W, ROOM_H = 20, 18
+ROOM_W, ROOM_H = 20, 17
 BGT_PILLAR, BGT_CRYSTAL, BGT_SPIKES = 21, 22, 31
 
 
@@ -269,7 +269,8 @@ def main():
     blood_spikes = sum(tile(blood, x, y) == BGT_SPIKES
                        for x, y in blood_sites)
     assert blood_spikes == 8, (
-        f"Bloodmoon ritual cuts missing ({blood_spikes}/8)"
+        f"Bloodmoon ritual cuts missing ({blood_spikes}/8): "
+        f"{[(site, tile(blood, *site)) for site in blood_sites]}"
     )
     assert all(tile(blood, x, y) != BGT_SPIKES
                for x in (9, 10) for y in range(3, 15))
@@ -277,12 +278,43 @@ def main():
                for x in range(3, 17) for y in (8, 9))
     blood_exits = reachable_exits(blood, (18, 9))
     assert len(blood_exits) == 4, f"Bloodmoon disconnected exits: {blood_exits}"
+
+    void_signatures = []
+    void_sites = []
+    for i in (4, 5):
+        void_sites.extend(((i, i - 1), (19 - i, i - 1),
+                           (i, 17 - i), (19 - i, 17 - i)))
+    for index, seed in enumerate((0xA01D0000, 0xA01D0001,
+                                  0xA01D0002, 0xA01D0003)):
+        void = generated_room(
+            8, seed,
+            screenshot=ROOT / "tmp" / "void-sanctum.png" if index == 0 else None,
+        )
+        signature = tuple(tile(void, x, y) for x, y in void_sites)
+        assert all(t in (BGT_PILLAR, BGT_CRYSTAL) for t in signature), (
+            f"Void event horizon missing seed={seed:#x}"
+        )
+        assert signature.count(BGT_PILLAR) == 4
+        assert signature.count(BGT_CRYSTAL) == 4
+        assert all(tile(void, x, y) not in (BGT_PILLAR, BGT_CRYSTAL)
+                   for x in (9, 10) for y in range(3, 15))
+        assert all(tile(void, x, y) not in (BGT_PILLAR, BGT_CRYSTAL)
+                   for x in range(3, 17) for y in (8, 9))
+        void_exits = reachable_exits(void, (18, 9))
+        assert len(void_exits) == 4, (
+            f"Void Sanctum disconnected seed={seed:#x} exits: {void_exits}"
+        )
+        void_signatures.append(signature)
+    assert len(set(void_signatures)) == 2, (
+        "Void Sanctum seed variants collapsed or became unstable"
+    )
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
           f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
           f"Toxic pools={min(mire_counts)}-{max(mire_counts)}/36 across 4 mirrors, "
           f"Shadow portcullises={min(keep_counts)}-{max(keep_counts)}/16, "
           "Golden colonnades=12/12 + court=4/4 across 2 insets, "
           f"Blood cuts={blood_spikes}/8, "
+          "Void horizon=8/8 across 4 mirrored seeds, "
           "all exits reachable")
 
 

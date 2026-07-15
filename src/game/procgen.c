@@ -196,6 +196,25 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
             room_tilemap[17 - i][i] = BGT_SPIKES;
             room_tilemap[17 - i][19 - i] = BGT_SPIKES;
         }
+    } else if (archetype == STAGE_ARCH_VOID) {
+        // Void: mirrored broken arcs close around an open event horizon.
+        // Alternating hard silhouettes reverse with the seed, while the
+        // cardinal cross guarantees that its apparent trap always has exits.
+        for (i = 4; i <= 5; ++i) {
+            u8 t = ((u8)seed + i) & 1 ? BGT_PILLAR : BGT_CRYSTAL;
+            room_tilemap[i - 1][i] = t;
+            room_tilemap[i - 1][19 - i] = t;
+            room_tilemap[17 - i][i] = t;
+            room_tilemap[17 - i][19 - i] = t;
+        }
+        for (i = 3; i <= 16; ++i) {
+            room_tilemap[8][i] = BGT_FLOOR;
+            room_tilemap[9][i] = BGT_FLOOR;
+            if (i <= 14) {
+                room_tilemap[i][9] = BGT_FLOOR;
+                room_tilemap[i][10] = BGT_FLOOR;
+            }
+        }
     }
 }
 

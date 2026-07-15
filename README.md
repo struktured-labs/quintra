@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.28: No Second Chances](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.29: Event Horizon](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -52,7 +52,8 @@ the cartridge runtime.
   zig-zag through hard cover; Golden Temple opens into a broad processional
   aisle and transept framed by seeded colonnades and an inner crystal court;
   Bloodmoon carves four broken diagonal hazard cuts into a crimson ritual
-  sigil while leaving its central cross safe. All exits remain preserved by
+  sigil; Void Sanctum closes the run with mirrored pillar-and-crystal arcs
+  folding around an open event horizon. All exits remain preserved by
   construction across procedural variants.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
   Vow of the five champion spirits; victory resolves through three moving
@@ -161,7 +162,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.28 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
+v0.17.29 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25

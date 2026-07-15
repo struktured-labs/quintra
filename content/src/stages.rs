@@ -103,7 +103,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 0, 4, 2), c( 6,22, 8), c(14,31,12), c(28,31,24)],
         door:    [c( 2, 0, 3), c( 8, 4,10), c(16,10,20), c(26,18,30)],
         boss:    [c(0,0,0), c(13, 6,20), c( 3, 1, 7), c(20,31,18)],
-        boss_hp_bonus: 216, boss_dmg_bonus: 5, mb_variant: 4, room_archetype: 1,
+        boss_hp_bonus: 216, boss_dmg_bonus: 5, mb_variant: 4, room_archetype: 8,
         enemy_pool: &[(7, 20), (11, 30), (10, 25), (8, 25)],
     },
 ];
