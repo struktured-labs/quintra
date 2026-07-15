@@ -88,7 +88,7 @@ the cartridge runtime.
 
 | Input | Action |
 |---|---|
-| **D-pad** | Move (8-way aim while firing); double-tap a direction to dodge-dash |
+| **D-pad** | Move (8-way aim while firing); double-tap to dodge-dash and shake off attached Gloom Leeches |
 | **A** | Primary weapon (Wolfkin: melee) · continue a suspended run (title) |
 | **B** | Class signature move (2 MP; Sauran: shield) |
 | **A+B** | Spirit Convergence when MP is full |
@@ -136,7 +136,8 @@ route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
 used in balance runs. Its cleared-room recovery gives tile-path alignment more
 time than combat pursuit, preventing collision nudges from defeating its own
-shortest-path route.
+shortest-path route. Short-range champions also path around cover to engage,
+and the agent performs a real double-tap dash when a Gloom Leech attaches.
 
 Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**. A GB Operator
 can upload the `.gbc` through **Data → Upload Homebrew** to a compatible

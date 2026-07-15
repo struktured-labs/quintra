@@ -4,6 +4,8 @@
 local KEY_A, KEY_B = 0x01, 0x02
 local KEY_START = 0x08
 local KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN = 0x10, 0x20, 0x40, 0x80
+local CARD_DX, CARD_DY = {0, 1, 0, -1}, {-1, 0, 1, 0}
+local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
 
 local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
@@ -49,6 +51,18 @@ local function enemy_target(px, py)
     return best
 end
 
+local function leech_attached()
+    if EN == 0 then return false end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 13 and emu:read8(p + 23) ~= 0 then
+            return true
+        end
+    end
+    return false
+end
+
 -- Hearts, currency, passive relics, and MP are part of the run economy.
 -- Ignore shops (the policy has no purchasing model), weapon swaps (which
 -- change range policy), and permanent villagers.
@@ -86,6 +100,40 @@ local function body_walkable(cx, cy)
         and walkable(emu:read8(TM + cy * 20 + cx))
 end
 
+-- Controller-only melee pursuit around procgen cover. Ranged champions can
+-- fire over a useful standoff distance, but short weapons must first route to
+-- a body-valid cell near the target instead of clawing into the intervening
+-- pillar forever.
+local function target_step(px, py, ex, ey, fallback)
+    if TM == 0 then return fallback end
+    local sx, sy = math.floor((px + 8) / 8), math.floor((py + 12) / 8)
+    local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
+    local qx, qy, head, tail = {sx}, {sy}, 1, 1
+    local seen, prev, prevkey = {}, {}, {}
+    local start = sy * 20 + sx
+    seen[start] = true
+    local target
+    while head <= tail do
+        local x, y = qx[head], qy[head]; head = head + 1
+        if math.abs(x - gx) + math.abs(y - gy) <= 2 then
+            target = y * 20 + x
+            break
+        end
+        for d = 1, 4 do
+            local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
+            local nk = ny * 20 + nx
+            if nx >= 1 and nx <= 19 and ny >= 1 and ny <= 16
+                and not seen[nk] and body_walkable(nx, ny) then
+                seen[nk], prev[nk], prevkey[nk] = true, y * 20 + x, d
+                tail = tail + 1; qx[tail], qy[tail] = nx, ny
+            end
+        end
+    end
+    if not target or target == start then return fallback end
+    while prev[target] and prev[target] ~= start do target = prev[target] end
+    return CARD_KEYS[prevkey[target]] or fallback
+end
+
 -- Shortest-path step to any boundary door except the door we entered from.
 -- Recomputed only in cleared rooms; 340 cells is tiny compared with emulation.
 local function door_step(px, py)
@@ -105,7 +153,6 @@ local function door_step(px, py)
     local start = sy * 20 + sx
     qx[1], qy[1], seen[start] = sx, sy, true
     local tx, ty, target, target_dir = sx, sy, nil, nil
-    local dx, dy = {0, 1, 0, -1}, {-1, 0, 1, 0}
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
         if in_world and world_screen == 6 and x == 10 and y == 8 then
@@ -124,7 +171,7 @@ local function door_step(px, py)
             break
         end
         for d = 1, 4 do
-            local nx, ny = x + dx[d], y + dy[d]
+            local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
             if nx >= 0 and nx < 20 and ny >= 0 and ny < 17 then
                 local nk = ny * 20 + nx
                 if not seen[nk] and body_walkable(nx, ny) then
@@ -155,11 +202,11 @@ local function door_step(px, py)
             if py < 56 then return KEY_DOWN end
             if py > 64 then return KEY_UP end
         end
-        return ({KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT})[target_dir + 1]
+        return CARD_KEYS[target_dir + 1]
     end
     while prev[target] and prev[target] ~= start do target = prev[target] end
     local d = prevkey[target]
-    return ({KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT})[d] or KEY_DOWN
+    return CARD_KEYS[d] or KEY_DOWN
 end
 
 -- Boot, choose a class, start a fresh run.
@@ -176,11 +223,12 @@ for _ = 1, ((4 - CLASS) * 12) do tick(0) end
 tap(KEY_A)
 for _ = 1, 45 do tick(0) end
 
-local frames, max_room, start_hp, min_hp = 0, 0, 0, 255
+local frames, max_room, last_hp, damage_taken, min_hp = 0, 0, 0, 0, 255
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
 local last_px, last_py, still_frames = 255, 255, 0
 local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
+local shake_phase = 0
 local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
 while frames < LIMIT do
@@ -190,7 +238,9 @@ while frames < LIMIT do
     local active_charge = PL ~= 0 and emu:read8(PL + 18) or 0
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     local won = RS ~= 0 and emu:read8(RS + 10) or 0
-    if frames == 0 then start_hp = hp end
+    if frames == 0 then last_hp = hp end
+    if hp < last_hp then damage_taken = damage_taken + (last_hp - hp) end
+    last_hp = hp
     if hp < min_hp then min_hp = hp end
     if room > max_room then max_room = room end
     if room ~= last_room then
@@ -238,7 +288,7 @@ while frames < LIMIT do
         -- Wolfkin's claw is true melee and Vespine's Stinger is a short lunge:
         -- both must close distance instead of orbiting outside weapon reach.
         if CLASS == 0 or CLASS == 4 then
-            keys = KEY_A + aim
+            keys = KEY_A + target_step(px, py, target.x, target.y, aim)
         else
             -- Separate firing and strafing frames. Holding perpendicular
             -- directions together aimed diagonal shots past cardinal targets.
@@ -289,6 +339,20 @@ while frames < LIMIT do
         keys = escape_dir + KEY_A
         escape_timer = escape_timer - 1
     end
+    -- Gloom Leeches are intentionally shaken loose by a double-tap dash.
+    -- Exercise that public controller mechanic instead of letting a latched
+    -- enemy bias melee samples when its body overlaps nearby terrain.
+    if leech_attached() or shake_phase ~= 0 then
+        if shake_phase == 0 then
+            keys, shake_phase = KEY_RIGHT, 1
+        elseif shake_phase == 1 then
+            keys, shake_phase = 0, 2
+        elseif shake_phase == 2 then
+            keys, shake_phase = KEY_RIGHT, 3
+        else
+            keys, shake_phase = 0, 0
+        end
+    end
     if DEBUG and frames % 600 == 0 then
         debug_log(string.format("BOTDBG f=%d room=%d hp=%d pos=%d,%d target=%s keys=%02X",
             frames, room, hp, px, py,
@@ -337,7 +401,7 @@ local f = io.open(OUT, "a")
 if f then
     f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
-        bosses, start_hp - hp, min_hp, final_x, final_y, final_world, final_screen,
+        bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, hostiles, last_enemy, towns_seen, world_hops,
         won, ui_screen))
     f:close()
