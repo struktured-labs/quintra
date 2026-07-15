@@ -486,7 +486,7 @@ void room_enter(void) {
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
     player.active_charge = 0;
-    if (*(volatile u8*)0xFFFC == 0xBB) {
+    if (procgen_current_room_is_boss) {
         sfx_play(SFX_ROAR);
         // Entry drama: the arena starts dark and trembling, then the
         // light pops as the fight begins.
@@ -1192,7 +1192,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 place_player_sprite();
                 hud_redraw_all();
                 DISPLAY_ON;
-                if (*(volatile u8*)0xFFFC == 0xBB) {
+                if (procgen_current_room_is_boss) {
                     sfx_play(SFX_ROAR);
                     // Entry drama: dark, trembling, then the light pops
                     room_apply_pause_palettes(1);

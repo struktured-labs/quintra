@@ -14,6 +14,8 @@
 #include "render/tiles.h"
 #include "content.h"
 
+u8 procgen_current_room_is_boss;
+
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
     return run_seed ^ ((u32)biome_id << 16) ^ ((u32)room_counter * 0x9E3779B9UL);
 }
@@ -167,6 +169,7 @@ void procgen_generate_current_room(void) BANKED {
     u8 is_boss_room = (!run_state.world_mode && run_state.room_counter > 0
         && (run_state.room_counter % BOSS_EVERY_N_ROOMS) == 0
         && (u8)(run_state.room_counter / BOSS_EVERY_N_ROOMS) > run_state.bosses_beaten) ? 1 : 0;
+    procgen_current_room_is_boss = is_boss_room;
     // A village clearing follows every third dungeon: rooms 19, 37, 55...
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
@@ -505,10 +508,6 @@ void procgen_generate_current_room(void) BANKED {
     // Player position FIRST so spawn-avoidance checks the real tile
     place_player_after_entry();
 
-    // Debug markers (HRAM)
-    *(volatile u8*)0xFFFE = run_state.room_counter;
-    *(volatile u8*)0xFFFD = run_state.victory;
-
     // Secret treasure room: no enemies, loot piled in the middle. Always
     // clear the flag (else it leaks into every future room). Only take the
     // early-return when this is NOT also a boss room — otherwise the sealed,
@@ -517,7 +516,6 @@ void procgen_generate_current_room(void) BANKED {
         run_state.secret_pending = 0;
         if (!is_boss_room) {
             u8 i;
-            *(volatile u8*)0xFFFC = 0x00;
             // The vault: a shootable crystal ring guards the hoard —
             // crack it open or slip around the corner gaps.
             for (i = 7; i <= 12; ++i) {
@@ -565,7 +563,6 @@ void procgen_generate_current_room(void) BANKED {
             // Towns are full sanctuary hubs: healing, magic, and three fairer
             // market stalls. Lore anchors can later replace selected region
             // towns without changing this procedural fallback.
-            *(volatile u8*)0xFFFC = 0x54; // 'T' debug landmark
             pickup_spawn_villager(FIX8(80), FIX8(48));
             pickup_spawn_merchant(FIX8(80), FIX8(96));
             pickup_spawn_smith(FIX8(136), FIX8(48));
@@ -579,13 +576,11 @@ void procgen_generate_current_room(void) BANKED {
 
         if (run_state.world_mode
             && world_kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
-            *(volatile u8*)0xFFFC = 0x4F; // 'O' overworld gate
             player.iframes = 60;
             return;
         }
 
         if (run_state.world_mode && world_kind == ZELDA_CELL_VAULT) {
-            *(volatile u8*)0xFFFC = 0x56; // 'V'
             pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
             pickup_spawn(PICKUP_COIN_5, FIX8(64), FIX8(72));
             pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));
@@ -594,7 +589,6 @@ void procgen_generate_current_room(void) BANKED {
         }
 
         if (is_rest) {
-            *(volatile u8*)0xFFFC = 0x00;
             // Crystal shrine: four pylons around the room's heart, all
             // outside the door lanes (cols 9-11 / rows 7-9 stay clear)
             room_tilemap[6][7]   = BGT_CRYSTAL; room_tilemap[6][12]  = BGT_CRYSTAL;
@@ -612,7 +606,6 @@ void procgen_generate_current_room(void) BANKED {
             u8 stage = run_state.bosses_beaten;
             u8 pow  = (stage < 9) ? stage : 8;
             u8 skin = (u8)(stage % 9);
-            *(volatile u8*)0xFFFC = 0xBB;
             {
                 u8 idx = enemy_spawn(1, (ROOM_W / 2) - 2, (ROOM_H / 2) - 2);
                 if (idx != 0xFF) {
@@ -636,7 +629,6 @@ void procgen_generate_current_room(void) BANKED {
             // MINI-BOSS: a beefed 16x16 Sentinel + a small escort. Tougher than
             // a normal room, a step below the stage boss.
             u8 stage = run_state.bosses_beaten;
-            *(volatile u8*)0xFFFC = 0x00;
             {
                 u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
@@ -666,7 +658,6 @@ void procgen_generate_current_room(void) BANKED {
         } else if (is_shop) {
             // MERCHANT room: three wares, no enemies. Walk into a ware
             // with enough coins to buy (heart 10 / stat item 25 / +2 max HP 40).
-            *(volatile u8*)0xFFFC = 0x00;
             {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(56, 64, WARE_HEART, 10);
@@ -686,7 +677,6 @@ void procgen_generate_current_room(void) BANKED {
                 room_tilemap[10][14] = (u8)(HUD_DIGIT_0 + 0);
             }
         } else {
-            *(volatile u8*)0xFFFC = 0x00;
             // Enemy count scales with depth (1-4 early, up to 6 deep)
             u8 depth_bonus = (u8)(run_state.room_counter / 6);
             u8 enemy_count = (u8)(1 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));

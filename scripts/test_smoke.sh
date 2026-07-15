@@ -23,11 +23,13 @@ rm -f "$OUT_DIR"/h_*.png
 RS_ADDR=$(grep 'DEF _run_state ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 PL_ADDR=$(grep 'DEF _player ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 EN_ADDR=$(grep 'DEF _entities ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+TM_ADDR=$(grep 'DEF _room_tilemap ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
 QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
-    QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" QUINTRA_EN_ADDR="$EN_ADDR" \
+    QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" \
+    QUINTRA_EN_ADDR="$EN_ADDR" QUINTRA_TM_ADDR="$TM_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 >"$OUT_DIR/emulator.log" 2>&1 &
@@ -103,10 +105,15 @@ check 10_boss_mid_fight       3
 check 11_after_long_assault   3
 check 12_paused               3      # dimmed palettes collapse colors
 check 13_unpaused             3
-# Game-state assertions: boss-room flag (0xFFFC == 0xBB) must be OFF in
-# the first room and ON once the walk sequence reaches the boss.
-assert_log 03_room0_enter     'boss=0x00'
-assert_log 08_BOSS_room       'boss=0xBB'
+# Exact state assertions use linker-resolved WRAM, not test-only sentinels.
+# They prove every requested room was reached and the final room owns one
+# active giant boss rather than merely resembling a boss screenshot.
+assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=8'
+assert_log 04_room1           'room=1 '
+assert_log 05_room2           'room=2 '
+assert_log 06_room3           'room=3 '
+assert_log 07_room4           'room=4 '
+assert_log 08_BOSS_room       'room=6 .*giants=1 '
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

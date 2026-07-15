@@ -6,6 +6,10 @@
 #include <gb/gb.h>
 #include "core/types.h"
 
+// Identity of the currently generated room. Entry presentation reads this
+// explicit state instead of an undocumented HRAM scratch byte.
+extern u8 procgen_current_room_is_boss;
+
 // Compute the per-room RNG seed from (run_seed, biome, room_counter).
 // Must match the reference impl in quintra-procgen if/when we pin it.
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED;

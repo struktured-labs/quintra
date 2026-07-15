@@ -13,23 +13,45 @@ local KEY_LEFT   = 0x20
 local KEY_UP     = 0x40
 local KEY_DOWN   = 0x80
 
+-- Runtime WRAM addresses are resolved from the current linker's .noi file.
+-- Never fall back to historical 0xFFF* debug scratch bytes: those are not
+-- game state and previously made every screenshot claim room=5 / hp=0.
+local RS_ADDR = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
+local PL_ADDR = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
+local EN_ADDR = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
+local TM_ADDR = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
+
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
 
 local function shot(name)
     emu:screenshot(OUT_DIR .. "/h_" .. name .. ".png")
-    local rc_proc = emu:read8(0xFFFE)
-    local rc_room = emu:read8(0xFFFB)
-    local vic     = emu:read8(0xFFFD)
-    local in_boss = emu:read8(0xFFFC)
-    local py      = emu:read8(0xFFFA)
-    local px      = emu:read8(0xFFF9)
-    local tile    = emu:read8(0xFFF8)
-    local hp     = emu:read8(0xFFE4)
-    local ifr    = emu:read8(0xFFE5)
+    local rc_room = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 1) or 0xFF
+    local vic     = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 10) or 0xFF
+    local px      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 9) or 0xFF
+    local py      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 11) or 0xFF
+    local hp      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 2) or 0xFF
+    local ifr     = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 15) or 0xFF
+    local tile = 0xFF
+    if TM_ADDR ~= 0 and px < 152 and py < 128 then
+        local tx, ty = math.floor((px + 8) / 8), math.floor((py + 12) / 8)
+        if tx < 20 and ty < 18 then tile = emu:read8(TM_ADDR + ty * 20 + tx) end
+    end
+    local hostiles, giants = 0, 0
+    if EN_ADDR ~= 0 then
+        for i = 0, 31 do
+            local p = EN_ADDR + i * 28
+            if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1 then
+                hostiles = hostiles + 1
+                if emu:read8(p + 17) == 1 and emu:read8(p + 20) ~= 0 then
+                    giants = giants + 1
+                end
+            end
+        end
+    end
     local line = string.format(
-        "SHOT %-25s  room=%d vic=%d boss=0x%02X  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
-        name, rc_room, vic, in_boss, px, py, tile, hp, ifr)
+        "SHOT %-25s  room=%d vic=%d hostiles=%d giants=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, rc_room, vic, hostiles, giants, px, py, tile, hp, ifr)
     if log_fh then log_fh:write(line); log_fh:flush() end
     console:log(line)
 end
@@ -48,12 +70,6 @@ end
 
 local function press(key, frames_held) hold(key, frames_held or 4) end
 local function tap(key) hold(key, 2) end
-
--- run_state / player WRAM addresses, resolved from the .noi by
--- test_smoke.sh. room_counter is run_state+1; player hp is player+2.
-local RS_ADDR = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
-local PL_ADDR = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
-local EN_ADDR = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 
 -- This is a reachability smoke test, not the balance bot. Clear enemies so
 -- Zelda-style combat gates cannot make screenshot coverage timing-dependent.
