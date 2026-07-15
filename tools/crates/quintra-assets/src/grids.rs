@@ -207,6 +207,50 @@ pub const SENTRY: [&str; 8] = [   // turret orb: 4 cardinal cannon ports
     "...33...",
 ];
 
+pub const FOLD_STAR: [&str; 8] = [ // contracted diamond with four false rays
+    "1..22..1",
+    ".1.22.1.",
+    "..2332..",
+    "22311322",
+    "22311322",
+    "..2332..",
+    ".1.22.1.",
+    "1..22..1",
+];
+
+pub const FLUTTERBAT: [&str; 8] = [ // Keese-like swept wings and tiny eyes
+    "11....11",
+    "111..111",
+    "13122131",
+    ".112211.",
+    "..2332..",
+    ".11..11.",
+    "11....11",
+    ".1....1.",
+];
+
+pub const GLOAM_LEECH: [&str; 8] = [ // grasping crescent around a red maw
+    "..2222..",
+    ".231132.",
+    "231..132",
+    "21.33.12",
+    "21.33.12",
+    "231..132",
+    ".231132.",
+    "..2..2..",
+];
+
+pub const CINDER_MAW: [&str; 8] = [ // furnace shell with bright open jaws
+    "...33...",
+    "..3223..",
+    ".321123.",
+    "32133123",
+    "32133123",
+    ".321123.",
+    "..3113..",
+    ".3.11.3.",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -504,7 +548,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 9] = [
+pub const ENEMIES_8: [(&str, &[&str]); 13] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -514,6 +558,10 @@ pub const ENEMIES_8: [(&str, &[&str]); 9] = [
     ("warlock", &WARLOCK),
     ("rope", &ROPE),
     ("sentry", &SENTRY),
+    ("fold_star", &FOLD_STAR),
+    ("flutterbat", &FLUTTERBAT),
+    ("gloam_leech", &GLOAM_LEECH),
+    ("cinder_maw", &CINDER_MAW),
 ];
 
 pub const FX_8: [(&str, &[&str]); 9] = [

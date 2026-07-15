@@ -22,6 +22,10 @@ extern const u8 sprite_enemy_shade[16];
 extern const u8 sprite_enemy_warlock[16];
 extern const u8 sprite_enemy_rope[16];
 extern const u8 sprite_enemy_sentry[16];
+extern const u8 sprite_enemy_fold_star[16];
+extern const u8 sprite_enemy_flutterbat[16];
+extern const u8 sprite_enemy_gloam_leech[16];
+extern const u8 sprite_enemy_cinder_maw[16];
 
 // 8x8 FX sprites
 extern const u8 sprite_fx_bullet_a[16];

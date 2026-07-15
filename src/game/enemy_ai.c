@@ -34,9 +34,10 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 8: return SPR_BRUISER_WARLOCK;  // 16x16 heavy
         case 9: return SPR_ENEMY_ROPE;       // snake (8x8)
         case 10: return SPR_ENEMY_SENTRY;    // stationary turret
-        case 11: return SPR_ENEMY_SHADE;     // folding star / diagonal echoes
-        case 12: return SPR_ENEMY_HORNET;    // flutterbat
-        case 13: return SPR_ENEMY_WISP;      // gloam leech
+        case 11: return SPR_ENEMY_FOLD_STAR;
+        case 12: return SPR_ENEMY_FLUTTERBAT;
+        case 13: return SPR_ENEMY_GLOAM_LEECH;
+        case 14: return SPR_ENEMY_CINDER_MAW;
         default: return SPR_ENEMY_CRAWLER;
     }
 }

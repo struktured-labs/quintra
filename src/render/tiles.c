@@ -136,6 +136,10 @@ void tiles_load_all_enemy_sprites(void) BANKED {
     set_sprite_data(SPR_ENEMY_WARLOCK,  1, sprite_enemy_warlock);
     set_sprite_data(SPR_ENEMY_ROPE,     1, sprite_enemy_rope);
     set_sprite_data(SPR_ENEMY_SENTRY,   1, sprite_enemy_sentry);
+    set_sprite_data(SPR_ENEMY_FOLD_STAR, 1, sprite_enemy_fold_star);
+    set_sprite_data(SPR_ENEMY_FLUTTERBAT, 1, sprite_enemy_flutterbat);
+    set_sprite_data(SPR_ENEMY_GLOAM_LEECH, 1, sprite_enemy_gloam_leech);
+    set_sprite_data(SPR_ENEMY_CINDER_MAW, 1, sprite_enemy_cinder_maw);
     // Bruiser tier: 16x16 (4 tiles each) for the heavy enemies
     set_sprite_data(SPR_BRUISER_ORC,     4, sprite_bruiser_orc);
     set_sprite_data(SPR_BRUISER_BOMBER,  4, sprite_bruiser_bomber);

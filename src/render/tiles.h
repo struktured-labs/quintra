@@ -70,6 +70,10 @@
 #define SPR_VILLAGER       69  // town elder / sanctuary keeper
 #define SPR_MERCHANT       70  // town/dungeon shopkeeper
 #define SPR_SMITH          71  // village forge keeper
+#define SPR_ENEMY_FOLD_STAR 72 // contracted/expanded diagonal replicator
+#define SPR_ENEMY_FLUTTERBAT 73 // Keese-like flyer
+#define SPR_ENEMY_GLOAM_LEECH 74 // attaching life-drain creature
+#define SPR_ENEMY_CINDER_MAW 75 // Ember area-denial caster
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59

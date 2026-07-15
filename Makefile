@@ -100,6 +100,7 @@ verify: all
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	uv run --quiet --with pyboy python scripts/test_boss_identity.py
+	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
 	uv run --quiet --with pyboy python scripts/test_doors.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	uv run --quiet --with pyboy python scripts/test_victory.py

@@ -198,4 +198,23 @@ mod tests {
         assert_ne!(smith, merchant);
         assert_ne!(elder, merchant);
     }
+
+    #[test]
+    fn specialist_enemies_do_not_reuse_legacy_silhouettes() {
+        let specialists = [
+            tile_2bpp_bytes(&parse_grid(&grids::FOLD_STAR)),
+            tile_2bpp_bytes(&parse_grid(&grids::FLUTTERBAT)),
+            tile_2bpp_bytes(&parse_grid(&grids::GLOAM_LEECH)),
+            tile_2bpp_bytes(&parse_grid(&grids::CINDER_MAW)),
+        ];
+        for i in 0..specialists.len() {
+            for j in i + 1..specialists.len() {
+                assert_ne!(specialists[i], specialists[j]);
+            }
+        }
+        assert_ne!(specialists[0], tile_2bpp_bytes(&parse_grid(&grids::SHADE)));
+        assert_ne!(specialists[1], tile_2bpp_bytes(&parse_grid(&grids::HORNET)));
+        assert_ne!(specialists[2], tile_2bpp_bytes(&parse_grid(&grids::WISP)));
+        assert_ne!(specialists[3], tile_2bpp_bytes(&parse_grid(&grids::CRAWLER)));
+    }
 }

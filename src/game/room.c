@@ -427,7 +427,7 @@ void room_enter(void) {
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
-    tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
+    tiles_load_all_enemy_sprites();       // small, specialist, and bruiser art
     tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
     hud_init();
