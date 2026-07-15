@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.39: Bloom Warning](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.40: Paired Pixels](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -189,7 +189,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.39 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
+v0.17.40 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -199,13 +199,17 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. The spore behavior lives in bank 3, leaving
 323 bytes free in the formerly crowded fixed bank 2.
+Sprite arrays and their C declarations are emitted together from the same
+typed Rust asset lists. Golden tests pin both files and require exactly one
+declaration per generated array, so adding art can no longer leave a stale
+hand-maintained header that breaks only during the ROM build.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.39 paired-seed baseline records 11/15 full clears: 2/3 for Wolfkin,
+v0.17.40 retains the paired-seed baseline of 11/15 full clears: 2/3 for Wolfkin,
 Sauran, Picsean, and Vespine and 3/3 for Corvin, with four real permadeaths and zero
 combat or route stalls. That small failure rate is healthier roguelike pressure than a
 perfect agent sweep while retaining the two-clear conference floor. Successful

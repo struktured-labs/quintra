@@ -56,7 +56,8 @@ gen:
 		echo "[gen] FATAL: Rust tooling failed to build"; exit 1; \
 	fi
 	@target/release/quintra-codegen --content content --out $(GENDIR)
-	@target/release/quintra-assets --out $(SRCDIR)/render/sprites_gen.c
+	@target/release/quintra-assets --out $(SRCDIR)/render/sprites_gen.c \
+		--header-out $(SRCDIR)/render/sprites_gen.h
 
 # All headers under src/ (+ generated). lcc/SDCC can't emit .d dep files here,
 # so use a coarse dependency: any header change rebuilds every object. Slower
