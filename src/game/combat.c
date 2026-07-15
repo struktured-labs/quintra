@@ -49,6 +49,7 @@ u8 combat_resolve(void) BANKED {
         if (!(entities[i].flags & EF_PLAYER_PROJ)) continue;
         for (j = 0; j < MAX_ENTITIES; ++j) {
             u8 eid, weakness, poise, dmg;
+            u8 shot_spent_for_split = 0;
             if (j == i) continue;
             if (!(entities[j].flags & EF_ACTIVE)) continue;
             if (entities[j].type != ENT_ENEMY) continue;
@@ -207,6 +208,13 @@ u8 combat_resolve(void) BANKED {
                         u8 sy = (u8)(FIX8_TO_INT(entities[j].y) >> 3);
                         entity_kill(j);
                         if (split) {
+                            // Generic pierce cleanup happens later, but its
+                            // lethal shot is the second free slot we need at
+                            // entity capacity. Retire it before fragment spawn.
+                            if (entities[i].hp <= 1) {
+                                entity_kill(i);
+                                shot_spent_for_split = 1;
+                            }
                             u8 a = enemy_spawn(0, sx, sy);
                             u8 b = enemy_spawn(0, sx, sy);
                             if (a != 0xFF) {
@@ -220,6 +228,7 @@ u8 combat_resolve(void) BANKED {
                         }
                     }
                 }
+                if (shot_spent_for_split) break;
                 // Impact FX at bullet position (spawn on every hit, even non-kill)
                 fx_spawn(SPR_FX_IMPACT, 2,
                     (i16)FIX8_TO_INT(entities[i].x),

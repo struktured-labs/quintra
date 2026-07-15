@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.34: The Ooze Divides](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.35: Every Shard](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -72,6 +72,8 @@ the cartridge runtime.
   **Folding Stars**, Keese-like **Flutterbats**, and life-draining
   **Gloom Leeches**, Ember's area-denial **Cinder Maws**, and late-stage
   **Rift Oozes** that split into two fragile crawler fragments when slain.
+  Both fragments are guaranteed even when the fixed 32-entity table is full;
+  a spent lethal projectile yields its slot before the split resolves.
   Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, and Rift Oozes have dedicated silhouettes
   instead of borrowing older monsters' art, so movement and shape both
   communicate threat. Folding Stars remain invulnerable while expanded but
@@ -181,7 +183,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.34 occupies 64 KiB with 1,231 bytes of bank-0 headroom. Gameplay files
+v0.17.35 occupies 64 KiB with 1,231 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.

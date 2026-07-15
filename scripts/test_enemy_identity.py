@@ -143,6 +143,13 @@ def main():
         pb.memory[tilemap + i] = 1
     ooze = entities
     shot = entities + 28
+    # Saturate all other slots with harmless long-lived FX. Both fragments
+    # must still appear, proving the lethal shot is released early enough.
+    for i in range(2, 32):
+        filler = entities + i * 28
+        pb.memory[filler] = 4
+        pb.memory[filler + 1] = 3
+        pb.memory[filler + 16] = 100
     pb.memory[ooze] = 2
     pb.memory[ooze + 1] = 3
     put_fix8(pb, ooze + 2, 80)
