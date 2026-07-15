@@ -41,7 +41,7 @@ penta-dragon-remake/
 │       ├── quintra-codegen/      # content → C tables + binary blobs emitter
 │       ├── quintra-assets/       # PNG→tiles, palette quantize, music convert
 │       ├── quintra-procgen/      # reference procgen impl + visualizer + balance tooling
-│       └── quintra-mgba/         # mGBA MCP bridge (TUI introspection)
+│       └── quintra-mgba/         # typed controller-agent telemetry reports
 ├── content/                      # human-authored content (Rust source, type-checked)
 │   ├── classes.rs                # 5 starting classes
 │   ├── items.rs                  # ~80-120 items

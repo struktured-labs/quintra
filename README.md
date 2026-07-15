@@ -138,7 +138,10 @@ make info       # print build summary
 agents, one per champion. They may read combat state to aim, but they only
 send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, or alter progression. Treat their CSV as a repeatable balance
-baseline, not a substitute for human playtests. A controller-only Wolfkin
+baseline, not a substitute for human playtests. The `quintra-mgba` host tool
+parses that telemetry by named columns, prints per-class medians, and enforces
+report-count and victory-floor gates; the runner contains no duplicate inline
+report implementation. A controller-only Wolfkin
 reference run completes all nine bosses and reaches the rendered ending in
 36,459 gameplay frames (**10:08** at 60 Hz). Expect roughly **25–45 minutes**
 for a first successful human run and **15–25 minutes** once practiced; deaths
