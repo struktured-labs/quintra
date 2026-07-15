@@ -146,7 +146,10 @@ make info       # print build summary
 `make balance` runs the actual cartridge under mGBA with five heuristic
 agents, one per champion. They may read combat state to aim, but they only
 send controller input—unlike reachability smoke tests, they never refill HP,
-delete enemies, or alter progression. Treat their CSV as a repeatable balance
+delete enemies, alter currency, or alter progression. They make affordable,
+health-aware purchases through real movement and report purchase counts, so
+the endurance gate proves every sample exercises the procedural economy.
+Treat their CSV as a repeatable balance
 baseline, not a substitute for human playtests. The `quintra-mgba` host tool
 parses that telemetry by named columns, prints per-class medians, and enforces
 report-count and victory-floor gates; the runner contains no duplicate inline
@@ -169,9 +172,10 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.27 baseline records 12/15 full clears—3/3 for Wolfkin and Vespine, and
-2/3 for Sauran, Corvin, and Picsean—with zero combat or route stalls. This
-deliberately preserves meaningful seed risk instead of tuning every vessel
+v0.17.29 economy-aware baseline records 12/15 full clears—3/3 for Sauran and
+Vespine, and 2/3 for Wolfkin, Corvin, and Picsean—with zero combat or route
+stalls. Every run makes 4–12 real purchases rather than bypassing merchants.
+This deliberately preserves meaningful seed risk instead of tuning every vessel
 toward automatic victory.
 
 The agents use each champion's actual weapon range and B ability, collect

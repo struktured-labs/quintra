@@ -8,6 +8,7 @@ OUT="${QUINTRA_BALANCE_OUT:-$ROOT/tmp/balance-runs.csv}"
 FRAMES="${QUINTRA_BALANCE_FRAMES:-10800}"
 REPS="${QUINTRA_BALANCE_REPS:-3}"
 MIN_WINS="${QUINTRA_BALANCE_MIN_WINS:-0}"
+MIN_SHOP_RUNS="${QUINTRA_BALANCE_MIN_SHOP_RUNS:-0}"
 STALL_FRAMES="${QUINTRA_BALANCE_STALL_FRAMES:-3600}"
 MAX_COMBAT_STALLS="${QUINTRA_BALANCE_MAX_COMBAT_STALLS:-}"
 MAX_ROUTE_STALLS="${QUINTRA_BALANCE_MAX_ROUTE_STALLS:-}"
@@ -25,7 +26,7 @@ EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
-echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,towns,world_hops,victory,ui_screen,dodges" > "$OUT"
+echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,towns,world_hops,victory,ui_screen,dodges,purchases" > "$OUT"
 
 unset DISPLAY WAYLAND_DISPLAY
 for run in "${RUN_IDS[@]}"; do
@@ -57,7 +58,8 @@ for run in "${RUN_IDS[@]}"; do
   done
 done
 REPORT_ARGS=(report "$OUT" --runs "${#RUN_IDS[@]}" --classes "${#CLASS_IDS[@]}" \
-  --min-wins "$MIN_WINS" --stall-frames "$STALL_FRAMES")
+  --min-wins "$MIN_WINS" --min-shop-runs "$MIN_SHOP_RUNS" \
+  --stall-frames "$STALL_FRAMES")
 if [ -n "$MAX_COMBAT_STALLS" ]; then
   REPORT_ARGS+=(--max-combat-stalls "$MAX_COMBAT_STALLS")
 fi

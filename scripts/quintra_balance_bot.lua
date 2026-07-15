@@ -92,8 +92,9 @@ local function projectile_threat(px, py)
 end
 
 -- Hearts, currency, passive relics, and MP are part of the run economy.
--- Ignore shops (purchases consume procgen RNG and need a separate comparable
--- policy), weapon swaps (which change range policy), and permanent NPCs.
+-- Weapon swaps remain outside the comparable class policy; shops are handled
+-- separately below so purchases can be measured without treating wares as
+-- free loot.
 local function pickup_target(px, py)
     local best, bestd = nil, 65535
     if EN == 0 then return nil end
@@ -112,6 +113,34 @@ local function pickup_target(px, py)
             if ex <= 152 and ey <= 128 and not boundary_drop then
                 local d = math.abs(ex - px) + math.abs(ey - py)
                 if d < bestd then best, bestd = {x=ex, y=ey}, d end
+            end
+        end
+    end
+    return best
+end
+
+-- Choose an affordable ware through the public walk-into purchase mechanic.
+-- Missing health wins; otherwise prefer deterministic attack/max-HP upgrades
+-- over the seeded general relic. This reads state to decide, but—as with aim
+-- and routing—changes the cartridge only through controller input.
+local function shop_target(px, py, hp, hp_max, coins)
+    local best, best_score, bestd = nil, -1, 65535
+    if EN == 0 then return nil end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 4 then
+            local ware, price = emu:read8(p + 18), emu:read8(p + 19)
+            if coins >= price then
+                local score = (ware == 0 and hp + 1 < hp_max) and 100
+                    or (ware == 3 and 90)
+                    or (ware == 2 and hp_max < 16 and 80)
+                    or (ware == 1 and 70) or -1
+                local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+                local d = math.abs(ex - px) + math.abs(ey - py)
+                if score > best_score or (score == best_score and d < bestd) then
+                    best, best_score, bestd = {x=ex, y=ey}, score, d
+                end
             end
         end
     end
@@ -348,10 +377,12 @@ local no_damage_frames, flank_timer = 0, 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 local last_active_charge = 0
+local purchases, last_coins = 0, 0
 local max_combat_frames, max_route_frames = 0, 0
 local max_combat_room, max_combat_enemy, max_route_room = 0, 255, 0
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
+    local hp_max = PL ~= 0 and emu:read8(PL + 1) or 0
     local mp = PL ~= 0 and emu:read8(PL + 4) or 0
     local mp_max = PL ~= 0 and emu:read8(PL + 3) or 0
     local iframes = PL ~= 0 and emu:read8(PL + 15) or 0
@@ -359,6 +390,9 @@ while frames < LIMIT do
     -- every class look permanently on cooldown and silently disabled all B
     -- abilities and Spirit Convergence in automated play.
     local active_charge = PL ~= 0 and emu:read8(PL + 19) or 0
+    local coins = PL ~= 0 and (emu:read8(PL + 16) + emu:read8(PL + 17) * 256) or 0
+    if frames > 0 and coins < last_coins then purchases = purchases + 1 end
+    last_coins = coins
     if DEBUG and active_charge > 0 and last_active_charge == 0 then
         debug_log(string.format("BOTABILITY f=%d class=%d charge=%d", frames, CLASS, active_charge))
     end
@@ -410,6 +444,8 @@ while frames < LIMIT do
         last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
     end
     local loot = (not target and world_mode == 0) and pickup_target(px, py) or nil
+    local shop = (not target and not loot and world_mode == 0)
+        and shop_target(px, py, hp, hp_max, coins) or nil
     local room_age = frames - room_enter_frame
     if world_mode == 0 and target and room_age > max_combat_frames then
         max_combat_frames = room_age
@@ -496,6 +532,15 @@ while frames < LIMIT do
         elseif not waiting_star and active_charge == 0 and mp == mp_max and frames % 600 == 0 then
             keys = KEY_A + KEY_B + aim
         end
+    elseif shop then
+        local dx, dy = shop.x - px, shop.y - py
+        local direct
+        if math.abs(dx) > math.abs(dy) then
+            direct = dx > 0 and KEY_RIGHT or KEY_LEFT
+        else
+            direct = dy > 0 and KEY_DOWN or KEY_UP
+        end
+        keys = target_step(px, py, shop.x, shop.y, direct, 0)
     elseif loot then
         local dx, dy = loot.x - px, loot.y - py
         if math.abs(dx) > math.abs(dy) then
@@ -510,7 +555,7 @@ while frames < LIMIT do
     -- pillar corner. After the stall threshold, follow that solid edge for at
     -- least one body width and until the planned cardinal is truly open, then
     -- return to BFS.
-    if not target and not loot and world_mode == 0
+    if not target and not loot and not shop and world_mode == 0
         and (wall_follow_dir ~= 0 or frames - room_enter_frame > 3600) then
         local planned = direction_from_keys(keys)
         if wall_follow_dir ~= 0 then
@@ -549,12 +594,12 @@ while frames < LIMIT do
     -- tile corridor. Do not mistake that precision work for a combat wedge:
     -- give routing longer, then use a shorter nudge so the planned path gets
     -- most frames. Direct pursuit still recovers aggressively.
-    local stuck_limit = (not target and not loot) and 60 or 20
+    local stuck_limit = (not target and not loot and not shop) and 60 or 20
     if escape_timer == 0 and still_frames > stuck_limit then
         -- A wall pocket can block the intended direction AND both
         -- perpendiculars. Cycle all four cardinals across recovery attempts
         -- so the agent eventually backs out instead of oscillating forever.
-        if not target and not loot then
+        if not target and not loot and not shop then
             local route_escape_dirs = {
                 KEY_RIGHT + KEY_DOWN, KEY_LEFT + KEY_DOWN,
                 KEY_LEFT + KEY_UP, KEY_RIGHT + KEY_UP,
@@ -627,7 +672,8 @@ while frames < LIMIT do
             target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
                     target.kind, target.x, target.y, target.hp, target.state,
                     target.clock, target.state6)
-                or (loot and string.format("loot:%d,%d", loot.x, loot.y) or "door"), keys))
+                or (loot and string.format("loot:%d,%d", loot.x, loot.y)
+                    or (shop and string.format("shop:%d,%d", shop.x, shop.y) or "door")), keys))
     end
     if DEBUG_SCREEN and debug_shot_room ~= room
         and frames - room_enter_frame > 3600 then
@@ -674,13 +720,13 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, towns_seen, world_hops,
-        won, ui_screen, dodge_count))
+        won, ui_screen, dodge_count, purchases))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

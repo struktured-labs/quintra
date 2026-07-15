@@ -25,6 +25,9 @@ enum Command {
         classes: usize,
         #[arg(long, default_value_t = 0)]
         min_wins: usize,
+        /// Minimum runs per class that must complete a real shop purchase.
+        #[arg(long, default_value_t = 0)]
+        min_shop_runs: usize,
         /// Per-room frame count above which a live run is classified stalled.
         #[arg(long, default_value_t = 3600)]
         stall_frames: u32,
@@ -51,6 +54,7 @@ struct Row {
     victory: u32,
     ui_screen: u32,
     dodges: u32,
+    purchases: u32,
 }
 
 fn field<'a>(record: &'a [&str], columns: &HashMap<&str, usize>, name: &str) -> Result<&'a str> {
@@ -111,6 +115,11 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                 victory: number(&record, &columns, "victory")?,
                 ui_screen: number(&record, &columns, "ui_screen")?,
                 dodges: number(&record, &columns, "dodges")?,
+                purchases: columns
+                    .contains_key("purchases")
+                    .then(|| number(&record, &columns, "purchases"))
+                    .transpose()?
+                    .unwrap_or(0),
             })
         })()
         .with_context(|| format!("invalid balance CSV row {}", line_index + 2))?;
@@ -139,6 +148,7 @@ fn report(
     runs: usize,
     classes: usize,
     min_wins: usize,
+    min_shop_runs: usize,
     stall_frames: u32,
     max_combat_stalls: Option<usize>,
     max_route_stalls: Option<usize>,
@@ -163,6 +173,7 @@ fn report(
             .filter(|row| row.victory != 0 && row.ui_screen == 12)
             .count();
         let deaths = sample.iter().filter(|row| row.min_hp == 0).count();
+        let shop_runs = sample.iter().filter(|row| row.purchases > 0).count();
         let boss_clears = sample.iter().filter(|row| row.bosses > 0).count();
         let combat_stalls = sample
             .iter()
@@ -176,7 +187,7 @@ fn report(
         total_route_stalls += route_stalls;
         println!(
             "[balance] {name:7} n={} room_med={} clear_med={} kill_med={} boss_med={} \
-             boss1={boss_clears}/{} town_med={} dodge_med={} wins={wins} endings={endings} \
+             boss1={boss_clears}/{} town_med={} buy_med={} buyers={shop_runs}/{} dodge_med={} wins={wins} endings={endings} \
              deaths={deaths} combat_stalls={combat_stalls} route_stalls={route_stalls}",
             sample.len(),
             median(sample.iter().map(|row| row.max_room)),
@@ -185,10 +196,17 @@ fn report(
             median(sample.iter().map(|row| row.bosses)),
             sample.len(),
             median(sample.iter().map(|row| row.towns)),
+            median(sample.iter().map(|row| row.purchases)),
+            sample.len(),
             median(sample.iter().map(|row| row.dodges)),
         );
         if wins < min_wins {
             failures.push(format!("{name} wins {wins}/{} < required {min_wins}", sample.len()));
+        }
+        if shop_runs < min_shop_runs {
+            failures.push(format!(
+                "{name} shop runs {shop_runs}/{} < required {min_shop_runs}", sample.len()
+            ));
         }
     }
 
@@ -223,6 +241,7 @@ fn main() -> Result<()> {
             runs,
             classes,
             min_wins,
+            min_shop_runs,
             stall_frames,
             max_combat_stalls,
             max_route_stalls,
@@ -231,6 +250,7 @@ fn main() -> Result<()> {
             runs,
             classes,
             min_wins,
+            min_shop_runs,
             stall_frames,
             max_combat_stalls,
             max_route_stalls,
@@ -258,6 +278,15 @@ mod tests {
         assert_eq!(rows[0].class, 2);
         assert_eq!(rows[0].bosses, 9);
         assert_eq!(rows[0].dodges, 89);
+        assert_eq!(rows[0].purchases, 0, "historical reports default purchases");
+    }
+
+    #[test]
+    fn parser_tracks_controller_only_shop_purchases() {
+        let csv = "class,victory,ui_screen,min_hp,max_room,rooms_cleared,kills,bosses,room_frames,hostiles,towns,dodges,purchases\n\
+                   4,1,12,2,54,30,121,9,90,0,2,77,3\n";
+        let rows = parse_rows(csv).unwrap();
+        assert_eq!(rows[0].purchases, 3);
     }
 
     #[test]
