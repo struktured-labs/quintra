@@ -15,6 +15,7 @@
 #define PICKUP_WEAPON     5    // ai_data[1] = weapon item index (0-4); swaps A-weapon
 #define PICKUP_MP         6    // +1 MP wisp (dropped by shattered crystals)
 #define PICKUP_VILLAGER   7    // permanent town elder; touch for sanctuary blessing
+#define PICKUP_MERCHANT   8    // permanent visual shopkeeper; non-collectible
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -36,6 +37,7 @@ u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;
 
 // Spawn a permanent town elder who restores HP/MP once per room visit.
 u8   pickup_spawn_villager(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;

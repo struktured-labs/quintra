@@ -83,6 +83,17 @@ u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_MERCHANT, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_MERCHANT;
+        entities[idx].palette = 0x04;
+        entities[idx].hitbox = (u8)0x88;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {
@@ -112,7 +123,8 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
-    if (e->ai_data[0] == PICKUP_VILLAGER) return;
+    if (e->ai_data[0] == PICKUP_VILLAGER
+        || e->ai_data[0] == PICKUP_MERCHANT) return;
     // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
     // (the swap drops your old weapon underfoot — without the grace you'd
     // ping-pong between the two forever).
@@ -284,6 +296,10 @@ u8 pickup_check_player_collision(void) BANKED {
                         hud_redraw_all();
                         sfx_play(SFX_HEART);
                     }
+                    any = 1;
+                    continue;
+                case PICKUP_MERCHANT:
+                    // Visual anchor for the stall; wares own purchases.
                     any = 1;
                     continue;
             }

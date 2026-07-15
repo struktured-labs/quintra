@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.10: Stage Scores](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.11: Market Faces](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -71,8 +71,9 @@ the cartridge runtime.
   floors**. Seeded nonlinear **rift wells** disorientingly bounce between
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
 - **Generated world cadence**: three six-room dungeons form a region, followed
-  by a safe procedural town with a resident elder, sanctuary blessing, and
-  seeded merchant stock. Cleared dungeons open into an authored 4x4 nonlinear
+  by a safe procedural town with a resident elder, a visually distinct staffed
+  market, sanctuary blessing, and seeded merchant stock. Dungeon shops have
+  their own broad-hatted merchant too. Cleared dungeons open into an authored 4x4 nonlinear
   overworld graph with caves, vaults, champion encounters, and a discoverable
   gate to the next dungeon. Riftwild fights are optional and its exits remain
   fleeable, unlike sealed dungeon arenas. Lore is a
@@ -128,7 +129,7 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.10 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
+v0.17.11 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It fails if any agent does not produce telemetry, while

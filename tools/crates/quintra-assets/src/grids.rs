@@ -285,6 +285,19 @@ pub const VILLAGER: [&str; 8] = [
     ".2.2.3..",
 ];
 
+// Travelling merchant: broad hat, bright face, striped apron. Deliberately
+// distinct from the elder's narrow hood/staff silhouette at 1x scale.
+pub const MERCHANT: [&str; 8] = [
+    ".333333.",
+    "33333333",
+    "..2112..",
+    ".213312.",
+    ".211112.",
+    "..2332..",
+    ".231132.",
+    ".2.11.2.",
+];
+
 // ---- Dungeon BG tiles (glyph 0 = palette c0, opaque) ----
 
 pub const BGT_FLOOR_PLAIN: [&str; 8] = [
@@ -490,7 +503,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 9] = [
     ("sentry", &SENTRY),
 ];
 
-pub const FX_8: [(&str, &[&str]); 7] = [
+pub const FX_8: [(&str, &[&str]); 8] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -498,6 +511,7 @@ pub const FX_8: [(&str, &[&str]); 7] = [
     ("wisp", &WISP),
     ("item_orb", &ITEM_ORB),
     ("villager", &VILLAGER),
+    ("merchant", &MERCHANT),
 ];
 
 pub const DUNGEON_TILES: [(&str, &[&str]); 14] = [

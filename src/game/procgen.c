@@ -523,6 +523,7 @@ void procgen_generate_current_room(void) BANKED {
             // towns without changing this procedural fallback.
             *(volatile u8*)0xFFFC = 0x54; // 'T' debug landmark
             pickup_spawn_villager(FIX8(80), FIX8(48));
+            pickup_spawn_merchant(FIX8(80), FIX8(96));
             spawn_shop_ware(48, 72, WARE_HEART, 5);
             spawn_shop_ware(80, 72, WARE_ITEM, 20);
             spawn_shop_ware(112, 72, WARE_BIG, 35);
@@ -621,6 +622,7 @@ void procgen_generate_current_room(void) BANKED {
             // with enough coins to buy (heart 10 / stat item 25 / +2 max HP 40).
             *(volatile u8*)0xFFFC = 0x00;
             {
+                pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(56, 64, WARE_HEART, 10);
                 spawn_shop_ware(80, 64, WARE_ITEM, 25);
                 spawn_shop_ware(104, 64, WARE_BIG, 40);
