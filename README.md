@@ -36,7 +36,7 @@ teleport. The transitions shown are executed by the cartridge runtime.
 - **9 distinct dungeon themes**, each with its own palette, music rotation, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
-  **endless descent**: beat the 9th colossus and dive again at full power.
+  the ninth colossus, ending, and permanent win record.
 - **9 large-sprite bosses** (32×32 metasprites, distinct bullet patterns,
   telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
@@ -104,12 +104,23 @@ make info       # print build summary
 agents, one per champion. They may read combat state to aim, but they only
 send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, or alter progression. Treat their CSV as a repeatable balance
-baseline, not a substitute for human playtests. `make verify` also enforces a
+baseline, not a substitute for human playtests. A controller-only Wolfkin
+reference run completes all nine bosses and reaches the rendered ending in
+36,459 gameplay frames (**10:08** at 60 Hz). Expect roughly **25–45 minutes**
+for a first successful human run and **15–25 minutes** once practiced; deaths
+and procedural seeds make total session length variable. `make verify` also
+boots the ending, checks its battery-SRAM win record, and returns to the title.
+It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
 v0.17.3 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
 
-Cart spec: **MBC5 + RAM + battery, CGB-only, banked ROM** (autobank; 2 MB
-address space open).
+Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**. A GB Operator
+can upload the `.gbc` through **Data → Upload Homebrew** to a compatible
+rewritable MBC5 flash/reproduction cartridge. It cannot overwrite the mask ROM
+inside a normal original retail cartridge. Verify suspend/resume on hardware:
+some reproduction boards implement save RAM differently despite accepting the
+ROM image. For an EverDrive, skip the Operator and copy `quintra.gbc` directly
+to the cartridge's microSD card.
 
 ## Architecture
 

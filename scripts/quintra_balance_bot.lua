@@ -9,6 +9,7 @@ local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
+local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local CLASS = tonumber(os.getenv("QUINTRA_BOT_CLASS") or "0") or 0
 local RUN = tonumber(os.getenv("QUINTRA_BOT_RUN") or "0") or 0
 local LIMIT = tonumber(os.getenv("QUINTRA_BOT_FRAMES") or "10800") or 10800
@@ -162,6 +163,7 @@ local world_hops, last_world_key = 0, -1
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
+    local won = RS ~= 0 and emu:read8(RS + 10) or 0
     if frames == 0 then start_hp = hp end
     if hp < min_hp then min_hp = hp end
     if room > max_room then max_room = room end
@@ -178,7 +180,7 @@ while frames < LIMIT do
         if last_world_key >= 0 or world_key >= 0 then world_hops = world_hops + 1 end
         last_world_key = world_key
     end
-    if hp == 0 then break end
+    if hp == 0 or won ~= 0 then break end
 
     -- player.x/y are signed 16-bit pixels at offsets 9 and 11.
     local px, py = emu:read8(PL + 9), emu:read8(PL + 11)
@@ -246,7 +248,15 @@ while frames < LIMIT do
 end
 emu:setKeys(0)
 
+-- Let a true win execute room_tick -> victory_enter, including the rendered
+-- ending, suspend invalidation, and meta-record write, before sampling it.
+if RS ~= 0 and emu:read8(RS + 10) ~= 0 then
+    for _ = 1, 120 do tick(0) end
+end
+
 local bosses = RS ~= 0 and emu:read8(RS + 11) or 0
+local won = RS ~= 0 and emu:read8(RS + 10) or 0
+local ui_screen = LS ~= 0 and emu:read8(LS) or 255
 local clears = RS ~= 0 and emu:read8(RS + 9) or 0
 local kills = RS ~= 0 and emu:read8(RS + 16) or 0
 local hp = PL ~= 0 and emu:read8(PL + 2) or 0
@@ -273,10 +283,11 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, start_hp - hp, min_hp, final_x, final_y, final_world, final_screen,
-        frames - room_enter_frame, hostiles, last_enemy, towns_seen, world_hops))
+        frames - room_enter_frame, hostiles, last_enemy, towns_seen, world_hops,
+        won, ui_screen))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",
