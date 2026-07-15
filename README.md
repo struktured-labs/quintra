@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.19: Shadow Gates](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.20: Golden Aisle](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -49,8 +49,9 @@ the cartridge runtime.
   hazard-seam gauntlets, Frost's four-entry crystalline arena rings, and Toxic
   Mire's four ragged poison-pool islands around a safe central cross. Shadow
   Keep then introduces mirrored, offset portcullises that force a three-court
-  zig-zag through hard cover, with all exits preserved by construction across
-  procedural variants.
+  zig-zag through hard cover; Golden Temple opens into a broad processional
+  aisle and transept framed by seeded colonnades and an inner crystal court.
+  All exits remain preserved by construction across procedural variants.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
   Vow of the five champion spirits; victory resolves through three moving
   epilogue tableaux before revealing run statistics. Both keep controls live,
@@ -145,13 +146,13 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.19 occupies 64 KiB with 1,201 bytes of bank-0 headroom.
+v0.17.20 occupies 64 KiB with 1,201 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and
-rendered endings per champion, in addition to complete telemetry. The v0.17.19
-baseline records 12/15 full clears—3/3 for Sauran and Vespine, and 2/3 for
-Wolfkin, Corvin, and Picsean—with zero combat or route stalls. This deliberately
+rendered endings per champion, in addition to complete telemetry. The v0.17.20
+baseline records 12/15 full clears—3/3 for Sauran and Picsean, and 2/3 for
+Wolfkin, Corvin, and Vespine—with zero combat or route stalls. This deliberately
 preserves meaningful seed risk instead of tuning every vessel toward automatic
 victory.
 

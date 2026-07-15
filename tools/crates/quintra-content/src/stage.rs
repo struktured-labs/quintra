@@ -55,7 +55,8 @@ pub struct StageTheme {
     /// two hand-written C copies used to have to agree by comment.
     pub mb_variant: u8,
     /// Procedural room architecture: 0 cavern, 1 grove, 2 hazard gauntlet,
-    /// 3 broken vault ring, 4 toxic island pools, 5 staggered portcullises.
+    /// 3 broken vault ring, 4 toxic island pools, 5 staggered portcullises,
+    /// 6 processional colonnades.
     /// This makes stage identity affect traversal, not only palettes/rosters.
     pub room_archetype: u8,
     /// Weighted normal-room enemy roster for this stage: (enemy id, weight).
@@ -113,4 +114,4 @@ impl StageTheme {
     }
 }
 
-pub const ROOM_ARCHETYPES: u8 = 6;
+pub const ROOM_ARCHETYPES: u8 = 7;

@@ -157,13 +157,41 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
         // zig-zag through hard cover. Seed mirroring swaps the route without
         // changing its length or sealing any of the four door approaches.
         u8 upper_gate = (seed & 1) ? 5 : 11;
-        u8 lower_gate = (upper_gate == 5) ? 11 : 5;
+        u8 lower_gate = (u8)(16 - upper_gate);
         for (i = 4; i <= 15; ++i) {
             if (i < upper_gate || i > (u8)(upper_gate + 3))
                 room_tilemap[6][i] = BGT_PILLAR;
+            else
+                room_tilemap[6][i] = BGT_FLOOR;
             if (i < lower_gate || i > (u8)(lower_gate + 3))
                 room_tilemap[11][i] = BGT_PILLAR;
+            else
+                room_tilemap[11][i] = BGT_FLOOR;
         }
+    } else if (archetype == STAGE_ARCH_TEMPLE) {
+        // Temple: paired colonnades frame a broad north/south processional
+        // aisle, while the east/west transept stays completely open. Four
+        // gold-tinted crystals mark the inner court; their seeded inset gives
+        // the arcade two silhouettes without changing combat clearance.
+        u8 inner_l = (seed & 1) ? 7 : 6;
+        // Clear the authored circulation cross before adding the arcade so a
+        // shared random room shape can never contradict the temple fixture.
+        for (i = 3; i <= 14; ++i) {
+            room_tilemap[i][9] = BGT_FLOOR;
+            room_tilemap[i][10] = BGT_FLOOR;
+            if ((i > 3 && i < 7) || (i > 10 && i < 14)) {
+                room_tilemap[i][5] = BGT_PILLAR;
+                room_tilemap[i][14] = BGT_PILLAR;
+            }
+        }
+        for (i = 3; i <= 16; ++i) {
+            room_tilemap[8][i] = BGT_FLOOR;
+            room_tilemap[9][i] = BGT_FLOOR;
+        }
+        room_tilemap[5][inner_l] = BGT_CRYSTAL;
+        room_tilemap[5][19 - inner_l] = BGT_CRYSTAL;
+        room_tilemap[12][inner_l] = BGT_CRYSTAL;
+        room_tilemap[12][19 - inner_l] = BGT_CRYSTAL;
     }
 }
 

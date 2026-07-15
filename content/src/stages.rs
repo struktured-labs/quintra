@@ -81,7 +81,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 6, 4, 0), c(28,22, 4), c(31,29, 8), c(31,31,22)],
         door:    [c( 3, 2, 0), c(14,11, 2), c(24,19, 4), c(31,28,10)],
         boss:    [c(0,0,0), c(22,17, 5), c( 6, 4, 1), c(31,30,18)],
-        boss_hp_bonus: 172, boss_dmg_bonus: 4, mb_variant: 3, room_archetype: 0,
+        boss_hp_bonus: 172, boss_dmg_bonus: 4, mb_variant: 3, room_archetype: 6,
         enemy_pool: &[(4, 30), (6, 25), (7, 25), (10, 20)],
     },
     // 7 — Bloodmoon (crimson/black)

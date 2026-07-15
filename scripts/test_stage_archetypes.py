@@ -38,10 +38,13 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None):
     for _ in range(60):
         pb.tick()
 
-    # Each three-dungeon region inserts a town room before the next stage.
-    # Account for those interludes instead of accidentally inspecting rooms
-    # 19/37/55 as if they were stage combat rooms.
-    target = stage * 6 + 1 + stage // 3
+    # Bosses stay on absolute six-room boundaries. A town occupies the first
+    # post-boss room at the start of each three-dungeon region (19, 37...),
+    # but does not cumulatively shift later room numbers. Inspect the first
+    # actual combat room after that town; all other stages begin at +1.
+    target = stage * 6 + 1
+    if stage > 0 and stage % 3 == 0:
+        target += 1
     # Enter through the authored Riftwild dungeon gate. This follows the
     # cartridge's real between-dungeon transition without fighting prior
     # bosses merely to inspect deterministic stage geometry.
@@ -203,7 +206,10 @@ def main():
         assert keep_pillars == 16, (
             f"Shadow Keep portcullises missing seed={seed:#x} ({keep_pillars}/16)"
         )
-        upper_gate = 5 if seed & 1 else 11
+        upper_gate = next((g for g in (5, 11)
+                           if all(tile(keep, x, 6) != BGT_PILLAR
+                                  for x in range(g, g + 4))), None)
+        assert upper_gate is not None, "Shadow Keep upper gate disappeared"
         lower_gate = 11 if upper_gate == 5 else 5
         assert all(tile(keep, x, 6) != BGT_PILLAR
                    for x in range(upper_gate, upper_gate + 4))
@@ -213,10 +219,51 @@ def main():
         assert len(keep_exits) == 4, (
             f"Shadow Keep disconnected seed={seed:#x} exits: {keep_exits}"
         )
+
+    temple_signatures = []
+    for index, seed in enumerate((0x601D0000, 0x601D0001)):
+        temple = generated_room(
+            6, seed,
+            screenshot=ROOT / "tmp" / "golden-temple.png" if index == 0 else None,
+        )
+        colonnade_sites = [
+            (x, y) for x in (5, 14) for y in (4, 5, 6, 11, 12, 13)
+        ]
+        pillars = sum(tile(temple, x, y) == BGT_PILLAR
+                      for x, y in colonnade_sites)
+        assert pillars == 12, (
+            f"Golden Temple colonnades missing seed={seed:#x} ({pillars}/12)"
+        )
+        inner_l = next((x for x in (6, 7)
+                        if tile(temple, x, 5) == BGT_CRYSTAL), None)
+        assert inner_l is not None, "Golden Temple left court marker disappeared"
+        inner_r = 19 - inner_l
+        crystal_sites = [(inner_l, 5), (inner_r, 5),
+                         (inner_l, 12), (inner_r, 12)]
+        crystals = sum(tile(temple, x, y) == BGT_CRYSTAL
+                       for x, y in crystal_sites)
+        assert crystals == 4, (
+            f"Golden Temple inner court missing seed={seed:#x} ({crystals}/4)"
+        )
+        # The processional aisle and transept are the archetype's safety and
+        # visual contracts: a broad luminous cross remains unobstructed.
+        assert all(tile(temple, x, y) not in (BGT_PILLAR, BGT_CRYSTAL)
+                   for x in (9, 10) for y in range(3, 15))
+        assert all(tile(temple, x, y) not in (BGT_PILLAR, BGT_CRYSTAL)
+                   for x in range(3, 17) for y in (8, 9))
+        temple_exits = reachable_exits(temple, (18, 9))
+        assert len(temple_exits) == 4, (
+            f"Golden Temple disconnected seed={seed:#x} exits: {temple_exits}"
+        )
+        temple_signatures.append((pillars, crystals, inner_l))
+    assert temple_signatures[0] != temple_signatures[1], (
+        "Golden Temple seed variants collapsed to one inner-court layout"
+    )
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
           f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
           f"Toxic pools={min(mire_counts)}-{max(mire_counts)}/36 across 4 mirrors, "
           f"Shadow portcullises={min(keep_counts)}-{max(keep_counts)}/16, "
+          "Golden colonnades=12/12 + court=4/4 across 2 insets, "
           "all exits reachable")
 
 
