@@ -29,8 +29,26 @@ def press(pb, button, held=4, released=4):
 
 def main():
     rs = addr("_run_state")
+    pl = addr("_player")
+    en = addr("_entities")
     screen = addr("_loop_current_screen")
     pb = PyBoy(str(ROM), window="null", cgb=True)
+
+    def clear_hostiles():
+        for i in range(32):
+            entity = en + i * 28
+            if pb.memory[entity] == 2:
+                pb.memory[entity] = pb.memory[entity + 1] = 0
+
+    def exit_at(x, y, clear=True):
+        if clear:
+            clear_hostiles()
+        pb.memory[pl + 9] = x & 0xFF
+        pb.memory[pl + 10] = (x >> 8) & 0xFF
+        pb.memory[pl + 11] = y & 0xFF
+        pb.memory[pl + 12] = (y >> 8) & 0xFF
+        for _ in range(45):
+            pb.tick()
     for _ in range(60):
         pb.tick()
     title_page_0 = bytes(pb.memory[0x9800:0x9C00])
@@ -88,6 +106,28 @@ def main():
         pb.tick()
     assert pb.memory[screen] == 5, "A did not enter endless descent from results"
     assert pb.memory[rs + 10] == 0, "endless descent left victory flag latched"
+
+    # Dawn's Verge is not dead postgame lore: leave the cleared ninth-boss
+    # room, cross the authored Riftwild 0->1->2->6 route, and use its gate.
+    exit_at(72, 120)
+    assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 0, (
+        "post-victory descent did not reopen Riftwild"
+    )
+    exit_at(144, 60, clear=False)
+    assert pb.memory[rs + 18] == 1
+    exit_at(144, 60)
+    assert pb.memory[rs + 18] == 2
+    exit_at(72, 120)
+    assert pb.memory[rs + 18] == 6
+    pb.memory[pl + 9] = 72
+    pb.memory[pl + 10] = 0
+    pb.memory[pl + 11] = 52
+    pb.memory[pl + 12] = 0
+    for _ in range(12):
+        pb.tick()
+    assert pb.memory[rs + 17] == 0 and pb.memory[rs + 1] == 55, (
+        "post-victory Riftwild gate did not reach final town"
+    )
     pb.stop(save=False)
 
     # A fresh cartridge session proves the advertised early-skip contract:
@@ -118,7 +158,7 @@ def main():
     press(skip, "start")
     assert skip.memory[screen] == 1, "second START did not retire to title"
     skip.stop(save=False)
-    print("[victory] PASS full ending + safe skip + endless/title result choices")
+    print("[victory] PASS ending + safe skip + endless route to final town")
 
 
 if __name__ == "__main__":

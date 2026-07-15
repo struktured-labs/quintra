@@ -108,7 +108,9 @@ the cartridge runtime.
   The Spirit Compass gives each regional settlement a fixed remembered name—
   Emberford, Gloamharbor, or Dawn's Verge—but chooses its local warning from
   the run seed, making the place persistent while its account of the Rift
-  remains deliberately uncertain.
+  remains deliberately uncertain. Dawn's Verge waits beyond the optional
+  post-victory descent through Riftwild, making it a discoverable epilogue
+  settlement rather than an interruption before the ending.
   Cleared dungeons open into an authored 4x4
   nonlinear overworld graph with caves, vaults, champion encounters, and a discoverable
   gate to the next dungeon. Riftwild fights are optional and its exits remain

@@ -117,6 +117,15 @@ def main():
     assert town_name_region2 != town_name_region1, "second region reused the first town identity"
     press("b")
     tick(8)
+    pb.memory[rs + 1] = 55
+    press("select")
+    tick(60)
+    town_name_region3 = bytes(pb.memory[0x9800 + 4 * 32:0x9800 + 4 * 32 + 20])
+    assert town_name_region3 not in (town_name_region1, town_name_region2), (
+        "final region reused an earlier town identity"
+    )
+    press("b")
+    tick(8)
     pb.memory[rs + 1] = 19
     for i, value in enumerate(original_seed):
         pb.memory[rs + 2 + i] = value
