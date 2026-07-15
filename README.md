@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.42: Rune Counter](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.43: Bank Balance](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -197,16 +197,20 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.42 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
+v0.17.43 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
-The layout gate also rejects any fixed switchable bank over 16 KiB instead of
-allowing GBDK's warning-only cross-bank overwrite to produce a corrupt ROM.
+The layout gate rejects any fixed switchable bank with less than 1 KiB free,
+well before GBDK's warning-only cross-bank overwrite could produce a corrupt
+ROM.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
-tiles to 0–127 and palettes to 0–7. The spore behavior lives in bank 3, leaving
-294 bytes free in the formerly crowded fixed bank 2.
+tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
+and pickups, while the dispatcher-owned Pack screen moved out of the crowded
+room/procgen bank. Switchable headroom is now 1,225 bytes in bank 1, 2,820 in
+bank 2, and 2,088 in bank 3 instead of leaving any bank within 294 bytes of
+overflow.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one
 declaration per generated array, so adding art can no longer leave a stale
@@ -217,7 +221,7 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.42 records a paired-seed baseline of 14/15 full clears: 3/3 for Wolfkin,
+v0.17.43 retains the paired-seed baseline of 14/15 full clears: 3/3 for Wolfkin,
 Sauran, Corvin, and Vespine and 2/3 for Picsean, with one real Stone Sentinel
 permadeath and zero combat or route stalls. That failure preserves some
 roguelike pressure while every champion remains above the two-clear conference

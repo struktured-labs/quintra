@@ -16,9 +16,10 @@ Checks (banked build):
      If it's in the switchable window it unmaps itself on bank switch.
   3. The ROM must have >= 3 populated banks (autobank actually worked;
      a broken flag set collapses everything to banks 0-1).
-  4. Every fixed switchable _CODE_N area must fit its 16 KiB bank. The
-     linker only warns when one crosses into the next bank, producing a ROM
-     that can pass header tests while containing overwritten code.
+  4. Every fixed switchable _CODE_N area must fit its 16 KiB bank and retain
+     1 KiB of conference-development headroom. The linker only warns when one
+     crosses into the next bank, producing a ROM that can pass header tests
+     while containing overwritten code.
 """
 import re
 import sys
@@ -48,13 +49,18 @@ def main(stem):
 
     # Fixed bank areas are reported with linearized addresses (bank N at
     # N*0x10000 + 0x4000), but their size must still never exceed 0x4000.
+    fixed_headroom = {}
     for m in re.finditer(
         r"^(_CODE_(\d+))\s+([0-9A-Fa-f]{8})\s+([0-9A-Fa-f]{8})\s+=",
         text, re.M):
-        name, size = m.group(1), int(m.group(4), 16)
+        name, bank, size = m.group(1), int(m.group(2)), int(m.group(4), 16)
         if size > 0x4000:
             fail(f"area {name} is {size} bytes -- overflows its 16 KiB "
-                 "switchable bank by {size - 0x4000} bytes")
+                 f"switchable bank by {size - 0x4000} bytes")
+        fixed_headroom[bank] = 0x4000 - size
+        if fixed_headroom[bank] < 1024:
+            fail(f"area {name} has only {fixed_headroom[bank]} bytes free -- "
+                 "less than the 1 KiB conference-development floor")
 
     # ---- 2. trampoline must be in bank 0
     try:
@@ -84,8 +90,9 @@ def main(stem):
         fail(f"only banks {banks} populated -- autobank collapsed "
              f"(check for a stray -Wm-yo flag; playbook section 5).")
 
+    free = ", ".join(f"bank {bank} free {size}" for bank, size in sorted(fixed_headroom.items()))
     print(f"[layout] OK: home ends 0x{worst_home_end:04X}, "
-          f"trampoline {tramp}, banks {banks}")
+          f"trampoline {tramp}, banks {banks}; {free}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

@@ -1,4 +1,4 @@
-#pragma bank 2
+#pragma bank 3
 #include "audio/sfx.h"
 #include "core/rng.h"
 #include "core/types.h"
