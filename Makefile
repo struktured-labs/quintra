@@ -31,9 +31,10 @@ LCCFLAGS += -autobank
 LCCFLAGS += -Wm-yt0x1B          # MBC5 + RAM + BATTERY (set via makebin header byte)
 LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
+LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify balance endurance play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify preflight balance endurance play info
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -90,6 +91,7 @@ test: all
 # procgen parity check (Rust reference vs the ROM's WRAM).
 verify: all
 	python3 scripts/report_budget.py $(BINDIR)/$(PROJECT)
+	python3 scripts/check_cartridge.py $(BINDIR)/$(PROJECT).gbc
 	cargo test -q
 	cargo build --release -q -p quintra-procgen
 	bash scripts/test_smoke.sh
@@ -99,6 +101,12 @@ verify: all
 	uv run --quiet --with pyboy python scripts/test_doors.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
+
+# Release/hardware gate: static cartridge header plus a true battery-backed
+# suspend across emulator process restart. Safe to run before GB Operator flash.
+preflight: all
+	python3 scripts/check_cartridge.py $(BINDIR)/$(PROJECT).gbc
+	uv run --quiet --with pyboy python scripts/test_suspend.py
 
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.

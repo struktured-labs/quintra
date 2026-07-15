@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.8: Fairer Spirits](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.9: Cart Ready](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -108,6 +108,7 @@ and a stable Rust toolchain (host-side only — Rust never ships in the ROM).
 make            # cargo codegen + sprite pipeline → SDCC → rom/working/quintra.gbc
 make play       # build + launch in mGBA
 make verify     # cargo tests + gameplay smoke + C<->Rust procgen parity
+make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
 make info       # print build summary
@@ -125,7 +126,7 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.8 currently occupies 64 KiB with 1,293 bytes of bank-0 headroom.
+v0.17.9 currently occupies 64 KiB with 1,293 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It fails if any agent does not produce telemetry, while
@@ -141,7 +142,11 @@ time than combat pursuit, preventing collision nudges from defeating its own
 shortest-path route. Short-range champions also path around cover to engage,
 and the agent performs a real double-tap dash when a Gloom Leech attaches.
 
-Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**. A GB Operator
+Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
+validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,
+mapper/size flags, header and global checksums, then writes a live suspend to
+SRAM and resumes it in a fresh emulator instance—the software equivalent of a
+power cycle. A GB Operator
 can upload the `.gbc` through **Data → Upload Homebrew** to a compatible
 rewritable MBC5 flash/reproduction cartridge. It cannot overwrite the mask ROM
 inside a normal original retail cartridge. Verify suspend/resume on hardware:
