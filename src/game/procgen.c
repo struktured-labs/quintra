@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 1
 #include <gb/gb.h>
 
 #include "audio/sfx.h"

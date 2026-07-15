@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 1
 // ROOM — top-down gameplay scene. Phase 5: spawns N enemies, supports
 // 4-dir movement, 8-dir B-button fire, wall collision, combat resolution.
 // Phase 7 wires procgen to fill from biome.room_template_pool.

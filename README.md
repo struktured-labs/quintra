@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.32: Uncornered Wings](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.33: Same Oath, Same Bytes](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -150,6 +150,7 @@ make            # cargo codegen + sprite pipeline → SDCC → rom/working/quint
 make play       # build + launch in mGBA
 make verify     # tests + exact room/boss-state smoke + C<->Rust procgen parity
 make preflight  # cart header/checksums + real battery-SRAM power-cycle test
+make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
 make media      # recapture the README reel from the current ROM
@@ -179,14 +180,17 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.32 occupies 64 KiB with 1,261 bytes of bank-0 headroom.
+v0.17.33 occupies 64 KiB with 1,261 bytes of bank-0 headroom. Gameplay files
+use an explicit validated bank map and the source manifest is sorted; the
+preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
+GBDK autobank assignments that otherwise vary with an absolute checkout path.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.32's paired-seed baseline records 15/15 full clears—3/3 for every
+v0.17.33's paired-seed baseline records 15/15 full clears—3/3 for every
 champion—with zero deaths, combat stalls, or route stalls. Every run makes
 7–12 real purchases rather than bypassing merchants, and no run exceeds 57
 Riftwild transitions. The gate now proves every class faces the same three

@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 2
 // GAMEOVER — death stats screen, returns to TITLE.
 
 #include <gb/gb.h>

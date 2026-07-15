@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 3
 // TITLE screen — "QUINTRA" + "PRESS START". Pulses palette so the screen
 // feels alive while waiting on player input.
 

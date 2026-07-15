@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 3
 // VICTORY — boss-defeated screen, returns to TITLE.
 
 #include <gb/gb.h>

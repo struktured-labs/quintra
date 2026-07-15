@@ -18,12 +18,15 @@ UV_CACHE_DIR ?= $(CURDIR)/tmp/uv-cache
 export UV_CACHE_DIR
 
 # All .c under src/ (including generated)
-SRCS = $(shell find $(SRCDIR) -name '*.c' 2>/dev/null)
+# Link order affects autobank placement and therefore the ROM hash. `find`
+# order varies by filesystem/copy history, so sort the manifest explicitly.
+SRCS = $(sort $(shell find $(SRCDIR) -name '*.c' 2>/dev/null))
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 
 # GBDK / SDCC flags — BANKED build (see docs/superpowers/specs/
 # 2026-07-05-gbdk-banking-architecture.md). -autobank runs bankpack, which
-# assigns every '#pragma bank 255' file a real bank and auto-sizes the ROM.
+# still auto-sizes the ROM. Gameplay banks are pinned explicitly: autobank's
+# assignment heuristic depends on absolute checkout paths and changed hashes.
 # DO NOT add -Wm-yo<n>: a fixed bank count suppresses the auto sizing and
 # collapses all banked code back into banks 0-1 (silent boot-breakage).
 LCCFLAGS  = -Wa-l -Wl-m -Wl-j
@@ -34,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify preflight balance endurance media media-check play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify preflight repro-check balance endurance media media-check play info
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -68,7 +71,7 @@ $(OBJDIR)/%.o: %.c $(HDRS)
 # Link to ROM, then verify the memory layout. The layout check exists
 # because the linker SILENTLY placed init code past 0x8000 when the flat
 # 32KB image overflowed (white screen at boot, shipped 6 broken commits).
-$(BINDIR)/$(PROJECT).gbc: $(OBJS)
+$(BINDIR)/$(PROJECT).gbc: $(OBJS) Makefile
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	@python3 scripts/check_rom_layout.py $(BINDIR)/$(PROJECT)
 
@@ -112,10 +115,15 @@ verify: all
 
 # Release/hardware gate: static cartridge header plus a true battery-backed
 # suspend across emulator process restart. Safe to run before GB Operator flash.
-preflight: all
+preflight: all repro-check
 	python3 scripts/check_cartridge.py $(BINDIR)/$(PROJECT).gbc
 	uv run --quiet --with pyboy python scripts/test_suspend.py
 	uv run --quiet --with pillow python scripts/check_media.py
+
+# Fresh-copy determinism: rebuild without obj/target/current ROM and demand
+# exact cartridge bytes. This catches filesystem-dependent source/link order.
+repro-check: all
+	bash scripts/check_reproducible.sh
 
 media: all
 	bash scripts/capture_media.sh

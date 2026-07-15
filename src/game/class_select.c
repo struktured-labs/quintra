@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 3
 // CLASS_SELECT — pick a class for this run.
 // Five-vessel class selection with live generated loadout previews.
 
