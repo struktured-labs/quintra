@@ -83,12 +83,42 @@ def main():
     assert wins >= 1, "victory did not persist a win"
     pb.memory[0x0000] = 0
 
-    press(pb, "start")
+    press(pb, "a")
     for _ in range(12):
         pb.tick()
-    assert pb.memory[screen] == 1, "START did not return victory screen to title"
+    assert pb.memory[screen] == 5, "A did not enter endless descent from results"
+    assert pb.memory[rs + 10] == 0, "endless descent left victory flag latched"
     pb.stop(save=False)
-    print("[victory] PASS animated intro + 3-beat ending + SRAM record + title return")
+
+    # A fresh cartridge session proves the advertised early-skip contract:
+    # START advances to results without leaving victory, A cannot accidentally
+    # enter endless descent during a tableau, and a second START retires.
+    skip = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240):
+        skip.tick()
+    press(skip, "start")
+    for _ in range(22):
+        skip.tick()
+    press(skip, "a")
+    for _ in range(52):
+        skip.tick()
+    skip.memory[rs + 1] = 54
+    skip.memory[rs + 10] = 1
+    skip.memory[rs + 11] = 9
+    for _ in range(20):
+        skip.tick()
+    assert skip.memory[screen] == 12, "skip fixture did not enter victory"
+    tableau = bytes(skip.memory[0x9800:0x9C00])
+    press(skip, "a")
+    assert skip.memory[screen] == 12, "A entered endless descent before results"
+    press(skip, "start")
+    assert skip.memory[screen] == 12, "START skipped past results to title"
+    results = bytes(skip.memory[0x9800:0x9C00])
+    assert results != tableau, "START did not advance ending to results"
+    press(skip, "start")
+    assert skip.memory[screen] == 1, "second START did not retire to title"
+    skip.stop(save=False)
+    print("[victory] PASS full ending + safe skip + endless/title result choices")
 
 
 if __name__ == "__main__":

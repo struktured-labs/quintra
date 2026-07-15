@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.25: Town Bearings](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.26: Ending Choice](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -56,8 +56,9 @@ the cartridge runtime.
   construction across procedural variants.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
   Vow of the five champion spirits; victory resolves through three moving
-  epilogue tableaux before revealing run statistics. Both keep controls live,
-  so repeat runs never wait on a cutscene.
+  epilogue tableaux before revealing run statistics. START skips tableaux to
+  results rather than past them; only the results page accepts A for endless
+  descent or START to retire, preventing accidental choices during lore.
 - **9 large-sprite bosses** (32×32 metasprites, distinct runtime silhouettes
   and bullet patterns, with a crowned final Void Lord and telegraphed volleys)
   plus **5 mini-boss types** (each its own sprite,
@@ -156,7 +157,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.25 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
+v0.17.26 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and

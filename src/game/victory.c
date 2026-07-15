@@ -109,11 +109,19 @@ void victory_exit(void) {}
 
 screen_id_t victory_tick(u8 keys, u8 pressed) {
     keys;
-    if (pressed & J_START) return SCREEN_TITLE;
+    if (pressed & J_START) {
+        if (ending_beat < 3) {
+            ending_beat = 3;
+            ending_frames = 0;
+            render_ending();
+            return SCREEN_SELF;
+        }
+        return SCREEN_TITLE;
+    }
     // Endless descent: keep the run. The boss room regenerates as a
     // normal room (counter/6 no longer exceeds bosses_beaten), doors
     // open, and every 6th room from here is a max-scaled colossus.
-    if (pressed & J_A) {
+    if ((pressed & J_A) && ending_beat >= 3) {
         run_state.victory = 0;
         return SCREEN_ROOM;
     }
