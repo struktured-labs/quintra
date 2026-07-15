@@ -119,12 +119,19 @@ local function walkable(tile)
         or tile == 7 or (tile >= 9 and tile <= 18)
 end
 
+-- Strategic routes avoid known floor hazards when a safe lane exists. Pixel
+-- collision still treats spikes as physically walkable, so an emergency
+-- dodge or a hero already standing on one can always escape.
+local function path_walkable(tile)
+    return tile ~= 31 and walkable(tile)
+end
+
 local function body_walkable(cx, cy)
     if cx < 1 or cx > 19 or cy < 1 or cy > 16 then return false end
-    return walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
-        and walkable(emu:read8(TM + (cy - 1) * 20 + cx))
-        and walkable(emu:read8(TM + cy * 20 + (cx - 1)))
-        and walkable(emu:read8(TM + cy * 20 + cx))
+    return path_walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
+        and path_walkable(emu:read8(TM + (cy - 1) * 20 + cx))
+        and path_walkable(emu:read8(TM + cy * 20 + (cx - 1)))
+        and path_walkable(emu:read8(TM + cy * 20 + cx))
 end
 
 -- Mirror room.c's feet-anchored collision box for one prospective pixel.

@@ -125,6 +125,30 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
             if (room_tile_walkable(room_tilemap[y][x]))
                 room_tilemap[y][x] = BGT_CRYSTAL;
         }
+    } else if (archetype == STAGE_ARCH_MIRE) {
+        // Mire: four irregular toxic pools create island-to-island movement
+        // instead of Ember's continuous seams. Their inner-corner breaks face
+        // the safe central cross, so every door remains connected without
+        // forcing damage. Seed mirroring changes each pool's ragged shoreline.
+        static const u8 mx[28] = {
+            4,5,6, 4,5, 4,5,
+            13,14,15, 14,15, 14,15,
+            4,5, 4,5, 4,5,6,
+            14,15, 14,15, 13,14,15
+        };
+        static const u8 my[28] = {
+            4,4,4, 5,5, 6,6,
+            4,4,4, 5,5, 6,6,
+            11,11, 12,12, 13,13,13,
+            11,11, 12,12, 13,13,13
+        };
+        for (i = 0; i < 28; ++i) {
+            u8 x = (seed & 1) ? mx[i] : (u8)(19 - mx[i]);
+            u8 y = (seed & 2) ? my[i] : (u8)(17 - my[i]);
+            // Pools supersede the shared room skeleton at these safe sites;
+            // otherwise pillar-heavy shapes can erase most of the mire.
+            room_tilemap[y][x] = BGT_SPIKES;
+        }
     }
 }
 

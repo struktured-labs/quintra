@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.15: Forged Village](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.16: Mire Islands](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -37,7 +37,8 @@ the cartridge runtime.
   Conference endurance floors give ranged Corvin six hearts, Picsean five,
   and close-range Vespine four-and-a-half
   while preserving their low-DEF specialist identities; Picsean's Tidal Wave
-  raises a brief water barrier while its three bubble lanes erupt.
+  raises a brief water barrier while its three bubble lanes erupt, and its
+  swim passive crosses Toxic Mire pools without damage.
 - **9 distinct dungeon themes**, each with its own palette, numbered music variant, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
@@ -45,8 +46,9 @@ the cartridge runtime.
   retire to the title or choose an optional max-scaled endless descent.
 - **Stage-specific traversal architecture** is content-authored alongside each
   theme: cavern layouts give way to Verdant crystal groves, Ember's broken
-  hazard-seam gauntlets, and Frost's four-entry crystalline arena rings, with
-  safe crossings preserved by construction.
+  hazard-seam gauntlets, Frost's four-entry crystalline arena rings, and Toxic
+  Mire's four ragged poison-pool islands around a safe central cross, with all
+  exits preserved by construction across mirrored procedural variants.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
   Vow of the five champion spirits; victory resolves through three moving
   epilogue tableaux before revealing run statistics. Both keep controls live,
@@ -134,11 +136,11 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.15 currently occupies 64 KiB with 1,201 bytes of bank-0 headroom.
+v0.17.16 currently occupies 64 KiB with 1,201 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and
-rendered endings per champion, in addition to complete telemetry. The v0.17.15
+rendered endings per champion, in addition to complete telemetry. The v0.17.16
 baseline records 11/15 full clears—2/3 for Wolfkin, Sauran, Corvin, and
 Picsean; 3/3 for Vespine—with zero route stalls. This deliberately preserves
 meaningful seed risk instead of tuning every vessel toward automatic victory.

@@ -1088,15 +1088,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             sram_save_run();
             return SCREEN_SELF;
         }
-        // ---- Spike floor: walkable but bites when the feet-box center
-        // rests on it. DEF soaks it (min 1), then iframes + a jolt so you
-        // can cross but pay for lingering.
+        // ---- Hazard floor: walkable but bites when the feet-box center
+        // rests on it. Picsean's swim passive crosses Toxic Mire pools safely;
+        // other stages remain dangerous to every vessel.
         else if (rtx < ROOM_W && rty < ROOM_H
             && room_tilemap[rty][rtx] == BGT_SPIKES
+            && !(player.class_id == 3 && room_stage() == 4)
             && player.iframes == 0) {
-            u8 taken = (player.def < 1) ? 1 : 1;   // spikes always sting 1
-            if (player.hp > taken) {
-                player.hp = (u8)(player.hp - taken);
+            if (player.hp > 1) {
+                player.hp--;
                 player.iframes = 40;
                 g_hitstop = 2;
                 room_shake(1, 6);

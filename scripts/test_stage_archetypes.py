@@ -27,7 +27,7 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
-def generated_room(stage, seed=0xCAFE1234, screenshot=None):
+def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -71,6 +71,8 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None):
     if screenshot is not None:
         screenshot.parent.mkdir(exist_ok=True)
         pb.screen.image.save(screenshot)
+    if probe is not None:
+        probe(pb, tiles)
     pb.stop(save=False)
     return tiles
 
@@ -137,8 +139,58 @@ def main():
     ))
     frost_exits = reachable_exits(frost, (18, 9))
     assert len(frost_exits) == 4, f"Frost vault disconnected exits: {frost_exits}"
+
+    def assert_mire_swim_passive(pb, tiles):
+        # Remove combat noise, stand the feet-center on an actual pool tile,
+        # and prove the class-specific hazard contract in the running ROM.
+        for i in range(32):
+            ep = EN + i * 28
+            if pb.memory[ep] == 2:
+                pb.memory[ep] = pb.memory[ep + 1] = 0
+        site = next((x, y) for y in range(4, 14) for x in range(4, 16)
+                    if tile(tiles, x, y) == BGT_SPIKES)
+        put16(pb, PL + 9, site[0] * 8 - 8)
+        put16(pb, PL + 11, site[1] * 8 - 12)
+        pb.memory[PL] = 3       # Picsean
+        pb.memory[PL + 2] = 10
+        pb.memory[PL + 15] = 0
+        pb.tick(2)
+        assert pb.memory[PL + 2] == 10, "Picsean swim passive did not cross mire safely"
+        pb.memory[PL] = 1       # Sauran control: same tile must still hurt
+        pb.memory[PL + 2] = 10
+        pb.memory[PL + 15] = 0
+        pb.tick(2)
+        assert pb.memory[PL + 2] == 9, "mire hazard stopped damaging non-Picsean classes"
+
+    mire_counts = []
+    for index, seed in enumerate((0xCAFE1234, 0xCAFE1235, 0xCAFE1236, 0xCAFE1237)):
+        mire = generated_room(
+            4, seed,
+            screenshot=ROOT / "tmp" / "toxic-mire.png" if index == 0 else None,
+            probe=assert_mire_swim_passive if index == 0 else None,
+        )
+        mire_spikes = sum(
+            tile(mire, x, y) == BGT_SPIKES
+            for x in (*range(4, 7), *range(13, 16))
+            for y in (*range(4, 7), *range(11, 14))
+        )
+        mire_counts.append(mire_spikes)
+        assert mire_spikes >= 24, (
+            f"Toxic Mire island pools missing seed={seed:#x} ({mire_spikes}/36)"
+        )
+        # Unlike Ember's crossing seams, the bogs leave a broad central cross:
+        # players can route between all four islands without mandatory damage.
+        assert all(tile(mire, x, y) != BGT_SPIKES
+                   for x in range(3, 17) for y in (8, 9))
+        assert all(tile(mire, x, y) != BGT_SPIKES
+                   for x in (9, 10) for y in range(3, 15))
+        mire_exits = reachable_exits(mire, (18, 9))
+        assert len(mire_exits) == 4, (
+            f"Toxic Mire disconnected seed={seed:#x} exits: {mire_exits}"
+        )
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
           f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
+          f"Toxic pools={min(mire_counts)}-{max(mire_counts)}/36 across 4 mirrors, "
           "all exits reachable")
 
 
