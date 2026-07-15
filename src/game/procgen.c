@@ -72,6 +72,42 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     return idx;
 }
 
+// Layer stage-authored traversal identity over the shared reachable room
+// skeleton. No RNG is consumed: the same seed remains stable when content is
+// added, and door lanes remain clear. Only the first two combat rooms of each
+// stage receive these stronger silhouettes, keeping shops/rest rooms safe.
+static void apply_stage_archetype(u8 stage, u32 seed) {
+    u8 archetype = stage_room_archetype[stage % N_STAGES];
+    u8 i;
+    if (archetype == STAGE_ARCH_GROVE) {
+        // Grove: paired crystal thickets form four cover islands. Stage
+        // palettes turn the common crystal art into luminous vegetation.
+        static const u8 gx[8] = { 4, 5, 14, 15, 4, 5, 14, 15 };
+        static const u8 gy[8] = { 4, 4, 4, 4, 12, 12, 12, 12 };
+        for (i = 0; i < 8; ++i) {
+            u8 x = (seed & 1) ? gx[i] : (u8)(19 - gx[i]);
+            u8 y = gy[i];
+            room_tilemap[y][x] = BGT_CRYSTAL;
+        }
+    } else if (archetype == STAGE_ARCH_GAUNTLET) {
+        // Gauntlet: two broken magma/spike seams make lateral positioning
+        // matter without blocking any route. Three-tile gaps alternate per
+        // seed, and spike iframes make crossing costly rather than fatal.
+        u8 gap_a = (seed & 1) ? 5 : 11;
+        u8 gap_b = (gap_a == 5) ? 11 : 5;
+        for (i = 3; i <= 14; ++i) {
+            if (i < gap_a || i > (u8)(gap_a + 2)) {
+                if (room_tile_walkable(room_tilemap[i][5]))
+                    room_tilemap[i][5] = BGT_SPIKES;
+            }
+            if (i < gap_b || i > (u8)(gap_b + 2)) {
+                if (room_tile_walkable(room_tilemap[i][14]))
+                    room_tilemap[i][14] = BGT_SPIKES;
+            }
+        }
+    }
+}
+
 void procgen_generate_current_room(void) BANKED {
     const biome_def_t *bio = &biomes[run_state.biome_id];
     u8 world_kind = run_state.world_mode
@@ -238,6 +274,14 @@ void procgen_generate_current_room(void) BANKED {
                 // shape 0: open room (1-in-11 — variety rules)
             }
 
+            // Stage architecture is laid down before loose props so crates,
+            // pots, and rubble respect its silhouette instead of erasing it.
+            if (!is_town && !run_state.world_mode
+                && ((run_state.room_counter % ROOMS_PER_STAGE) == 1
+                    || (run_state.room_counter % ROOMS_PER_STAGE) == 2)) {
+                apply_stage_archetype(run_state.bosses_beaten, seed);
+            }
+
             // Rubble decoration (walkable) — 3 scatter spots
             {
                 u8 i;
@@ -379,6 +423,7 @@ void procgen_generate_current_room(void) BANKED {
                     }
                 }
             }
+
         }
     }
 

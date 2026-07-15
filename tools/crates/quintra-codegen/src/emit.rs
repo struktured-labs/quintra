@@ -704,6 +704,11 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          /* Mini-boss silhouette per stage: 0 Sentinel, 1 Orc, 2 Skeleton.\n\
             Single source for BOTH the art loader and the palette pick. */\n\
          extern const u8 stage_mb_variant[N_STAGES];\n\
+         /* Traversal architecture generated from each StageTheme */\n\
+         #define STAGE_ARCH_CAVERN 0\n\
+         #define STAGE_ARCH_GROVE 1\n\
+         #define STAGE_ARCH_GAUNTLET 2\n\
+         extern const u8 stage_room_archetype[N_STAGES];\n\
          /* Weighted normal-room rosters per stage (ids + weights,\n\
             stage_pool_n entries each; weights sum <= 255) */\n\
          #define STAGE_POOL_MAX 4\n\
@@ -751,6 +756,8 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
         list(&|s| s.boss_dmg_bonus)));
     c.push_str(&format!("const u8 stage_mb_variant[N_STAGES] = {{ {} }};\n",
         list(&|s| s.mb_variant)));
+    c.push_str(&format!("const u8 stage_room_archetype[N_STAGES] = {{ {} }};\n",
+        list(&|s| s.room_archetype)));
 
     c.push_str("\nconst u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {

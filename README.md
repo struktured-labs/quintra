@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.6: Room to Grow](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.7: Living Dungeons](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -39,6 +39,9 @@ the cartridge runtime.
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
   the ninth colossus, animated ending, and permanent win record. Victors may
   retire to the title or choose an optional max-scaled endless descent.
+- **Stage-specific traversal architecture** is content-authored alongside each
+  theme: cavern layouts give way to Verdant crystal groves and Ember's broken
+  hazard-seam gauntlets, with safe crossings preserved by construction.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
   Vow of the five champion spirits; victory resolves through three moving
   epilogue tableaux before revealing run statistics. Both keep controls live,
@@ -120,7 +123,7 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.6 currently occupies 64 KiB with 1,302 bytes of bank-0 headroom.
+v0.17.7 currently occupies 64 KiB with 1,293 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It fails if any agent does not produce telemetry, while
@@ -131,7 +134,9 @@ The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
 route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
-used in balance runs.
+used in balance runs. Its cleared-room recovery gives tile-path alignment more
+time than combat pursuit, preventing collision nudges from defeating its own
+shortest-path route.
 
 Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**. A GB Operator
 can upload the `.gbc` through **Data → Upload Homebrew** to a compatible

@@ -270,14 +270,19 @@ while frames < LIMIT do
     -- runtime's pixel body collision. Make a sustained perpendicular
     -- sidestep after a short stationary interval instead of repeating a
     -- blocked input forever. This remains controller-only play.
-    if escape_timer == 0 and still_frames > 20 then
+    -- Cleared-room BFS often pauses briefly to align a 12px body with an 8px
+    -- tile corridor. Do not mistake that precision work for a combat wedge:
+    -- give routing longer, then use a shorter nudge so the planned path gets
+    -- most frames. Direct pursuit still recovers aggressively.
+    local stuck_limit = (not target and not loot) and 60 or 20
+    if escape_timer == 0 and still_frames > stuck_limit then
         -- A wall pocket can block the intended direction AND both
         -- perpendiculars. Cycle all four cardinals across recovery attempts
         -- so the agent eventually backs out instead of oscillating forever.
         local escape_dirs = {KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP}
         escape_index = (escape_index % 4) + 1
         escape_dir = escape_dirs[escape_index]
-        escape_timer = 30
+        escape_timer = (not target and not loot) and 12 or 30
         still_frames = 0
     end
     if escape_timer > 0 then

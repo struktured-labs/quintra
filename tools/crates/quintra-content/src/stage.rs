@@ -54,6 +54,9 @@ pub struct StageTheme {
     /// value consumed by BOTH the art loader and the palette pick — the
     /// two hand-written C copies used to have to agree by comment.
     pub mb_variant: u8,
+    /// Procedural room architecture: 0 cavern, 1 grove, 2 hazard gauntlet.
+    /// This makes stage identity affect traversal, not only palettes/rosters.
+    pub room_archetype: u8,
     /// Weighted normal-room enemy roster for this stage: (enemy id, weight).
     /// Replaces the old hard-coded C escalation chain. Weights must sum
     /// to <= 255 (picked with an 8-bit roll on cart).
@@ -83,6 +86,10 @@ impl StageTheme {
             return Err(format!("stage {} mb_variant {} out of range (0..{})",
                 self.id, self.mb_variant, MB_VARIANTS));
         }
+        if self.room_archetype >= ROOM_ARCHETYPES {
+            return Err(format!("stage {} room_archetype {} out of range (0..{})",
+                self.id, self.room_archetype, ROOM_ARCHETYPES));
+        }
         if self.enemy_pool.is_empty() || self.enemy_pool.len() > MAX_POOL {
             return Err(format!("stage {} enemy_pool size {} out of range 1..={}",
                 self.id, self.enemy_pool.len(), MAX_POOL));
@@ -104,3 +111,5 @@ impl StageTheme {
         Ok(())
     }
 }
+
+pub const ROOM_ARCHETYPES: u8 = 3;
