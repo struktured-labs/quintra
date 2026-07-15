@@ -18,6 +18,7 @@ local LIMIT = tonumber(os.getenv("QUINTRA_BOT_FRAMES") or "10800") or 10800
 local OUT = os.getenv("QUINTRA_BOT_OUT") or "/tmp/quintra-balance.csv"
 local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
 local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
+local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 
 local function debug_log(line)
     console:log(line)
@@ -260,6 +261,9 @@ local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
 local shake_phase = 0
 local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
+local debug_shot_room = -1
+local last_target_slot, last_target_hp = -1, 255
+local no_damage_frames, flank_timer, flank_dir = 0, 0, KEY_LEFT
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local mp = PL ~= 0 and emu:read8(PL + 4) or 0
@@ -297,6 +301,16 @@ while frames < LIMIT do
     -- authored route while firing instead of treating every screen as a
     -- mandatory clear; dungeon combat remains fully engaged.
     if world_mode == 1 then target = nil end
+    if target then
+        if target.slot == last_target_slot and target.hp >= last_target_hp then
+            no_damage_frames = no_damage_frames + 1
+        else
+            no_damage_frames = 0
+        end
+        last_target_slot, last_target_hp = target.slot, target.hp
+    else
+        last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
+    end
     local loot = (not target and world_mode == 0) and pickup_target(px, py) or nil
     local keys
     if target then
@@ -321,7 +335,22 @@ while frames < LIMIT do
             -- last few pixels of perpendicular alignment before attacking.
             -- Small enemy hurtboxes make a same-tile diagonal slash miss even
             -- though both sprites appear adjacent.
-            if math.abs(dx) <= 24 and math.abs(dy) <= 24 then
+            if flank_timer > 0 then
+                keys = flank_dir + KEY_A
+                flank_timer = flank_timer - 1
+            elseif no_damage_frames > 240 then
+                -- If an apparently lined-up melee target takes no damage for
+                -- four seconds, cover is probably between the sprites. Make
+                -- a sustained perpendicular flank, then reacquire through
+                -- the normal BFS instead of slashing into that cover forever.
+                if math.abs(dx) >= math.abs(dy) then
+                    flank_dir = (frames % 2 == 0) and KEY_UP or KEY_DOWN
+                else
+                    flank_dir = (frames % 2 == 0) and KEY_LEFT or KEY_RIGHT
+                end
+                flank_timer, no_damage_frames = 90, 0
+                keys = flank_dir + KEY_A
+            elseif math.abs(dx) <= 24 and math.abs(dy) <= 24 then
                 if math.abs(dx) >= math.abs(dy) and math.abs(dy) > 2 then
                     keys = dy > 0 and KEY_DOWN or KEY_UP
                 elseif math.abs(dy) > math.abs(dx) and math.abs(dx) > 2 then
@@ -402,6 +431,11 @@ while frames < LIMIT do
             target and string.format("enemy:%d@%d,%d hp=%d s6=%d",
                     target.kind, target.x, target.y, target.hp, target.state6)
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y) or "door"), keys))
+    end
+    if DEBUG_SCREEN and debug_shot_room ~= room
+        and frames - room_enter_frame > 3600 then
+        emu:screenshot(string.format("%s-r%d.png", DEBUG_SCREEN, room))
+        debug_shot_room = room
     end
     tick(keys)
     frames = frames + 1

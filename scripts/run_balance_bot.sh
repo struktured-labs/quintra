@@ -70,7 +70,8 @@ for cls, name in enumerate(names):
     wins = sum(int(r['victory']) != 0 for r in sample)
     endings = sum(int(r['victory']) != 0 and int(r['ui_screen']) == 12 for r in sample)
     boss_clears = sum(b > 0 for b in bosses)
-    combat_stalls = sum(int(r['room_frames']) > 3600 and int(r['hostiles']) > 0 for r in sample)
+    combat_stalls = sum(int(r['room_frames']) > 3600 and int(r['hostiles']) > 0
+                        and int(r['min_hp']) > 0 and int(r['victory']) == 0 for r in sample)
     route_stalls = sum(int(r['room_frames']) > 3600 and int(r['hostiles']) == 0
                        and int(r['victory']) == 0 for r in sample)
     print(f"[balance] {name:7s} n={len(sample)} room_med={statistics.median(rooms):g} "
