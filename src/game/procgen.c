@@ -11,6 +11,7 @@
 #include "game/procgen.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/spawn_reach.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -749,10 +750,11 @@ void procgen_generate_current_room(void) BANKED {
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
             u8 i;
+            mark_spawn_reachable();
             for (i = 0; i < enemy_count; ++i) {
                 u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
                 u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
-                if (!room_tile_walkable(room_tilemap[ty][tx])) continue;
+                if (!(room_tilemap[ty][tx] & 0x80)) continue;
                 {
                     u8 dx = (tx > ptx) ? (u8)(tx - ptx) : (u8)(ptx - tx);
                     u8 dy = (ty > pty) ? (u8)(ty - pty) : (u8)(pty - ty);
@@ -762,16 +764,6 @@ void procgen_generate_current_room(void) BANKED {
                     // Roster comes from the generated per-stage pool —
                     // designed in content/src/stages.rs, not hard-coded here.
                     u8 eid = pick_enemy_for_stage(run_state.bosses_beaten);
-                    // Big-tier enemies (orc 4, bomber 6, warlock 8) are 16x16;
-                    // their 2x2 footprint must be clear or the body spawns
-                    // half-buried in a pillar/wall. Skip the spawn if blocked.
-                    if ((eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK)
-                        && (tx + 1 >= ROOM_W - 1 || ty + 1 >= ROOM_H - 1
-                            || !room_tile_walkable(room_tilemap[ty][tx + 1])
-                            || !room_tile_walkable(room_tilemap[ty + 1][tx])
-                            || !room_tile_walkable(room_tilemap[ty + 1][tx + 1]))) {
-                        continue;
-                    }
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);
                         // Stage scaling: deeper stages toughen normal foes so
@@ -797,6 +789,7 @@ void procgen_generate_current_room(void) BANKED {
                     }
                 }
             }
+            clear_spawn_reachable();
         }
     }
 

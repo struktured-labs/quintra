@@ -40,6 +40,9 @@ enum Command {
         /// Maximum authored overworld transitions in any one run.
         #[arg(long)]
         max_world_hops: Option<u32>,
+        /// Enemy content ID that must appear in at least one live ROM run.
+        #[arg(long = "require-enemy")]
+        required_enemies: Vec<u8>,
     },
 }
 
@@ -62,6 +65,7 @@ struct Row {
     purchases: u32,
     world_hops: u32,
     death_source: u32,
+    enemy_mask: u32,
 }
 
 fn field<'a>(record: &'a [&str], columns: &HashMap<&str, usize>, name: &str) -> Result<&'a str> {
@@ -147,6 +151,11 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                     .then(|| number(&record, &columns, "death_source"))
                     .transpose()?
                     .unwrap_or(255),
+                enemy_mask: columns
+                    .contains_key("enemy_mask")
+                    .then(|| number(&record, &columns, "enemy_mask"))
+                    .transpose()?
+                    .unwrap_or(0),
             })
         })()
         .with_context(|| format!("invalid balance CSV row {}", line_index + 2))?;
@@ -180,6 +189,7 @@ fn report(
     max_combat_stalls: Option<usize>,
     max_route_stalls: Option<usize>,
     max_world_hops: Option<u32>,
+    required_enemies: Vec<u8>,
 ) -> Result<()> {
     let text = fs::read_to_string(&csv)
         .with_context(|| format!("failed to read {}", csv.display()))?;
@@ -207,6 +217,15 @@ fn report(
     }
     let mut total_combat_stalls = 0;
     let mut total_route_stalls = 0;
+    let enemy_mask = rows.iter().fold(0, |mask, row| mask | row.enemy_mask);
+    if enemy_mask != 0 {
+        let ids = (0..31)
+            .filter(|id| enemy_mask & (1 << id) != 0)
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>()
+            .join("|");
+        println!("[balance] encountered enemy ids={ids}");
+    }
     for (class, name) in CLASS_NAMES.iter().enumerate() {
         let sample: Vec<_> = rows.iter().filter(|row| row.class == class).collect();
         if sample.is_empty() {
@@ -293,6 +312,11 @@ fn report(
             }
         }
     }
+    for enemy in required_enemies {
+        if enemy >= 31 || enemy_mask & (1u32 << enemy) == 0 {
+            failures.push(format!("required enemy {enemy} was never encountered"));
+        }
+    }
     if !failures.is_empty() {
         bail!("endurance gate FAILED: {}", failures.join("; "));
     }
@@ -312,6 +336,7 @@ fn main() -> Result<()> {
             max_combat_stalls,
             max_route_stalls,
             max_world_hops,
+            required_enemies,
         } => report(
             csv,
             runs,
@@ -322,6 +347,7 @@ fn main() -> Result<()> {
             max_combat_stalls,
             max_route_stalls,
             max_world_hops,
+            required_enemies,
         ),
     }
 }
@@ -348,6 +374,7 @@ mod tests {
         assert_eq!(rows[0].dodges, 89);
         assert_eq!(rows[0].purchases, 0, "historical reports default purchases");
         assert_eq!(rows[0].death_source, 255, "historical reports default cause");
+        assert_eq!(rows[0].enemy_mask, 0, "historical reports default coverage");
     }
 
     #[test]
@@ -356,6 +383,14 @@ mod tests {
                    4,1,12,2,54,30,121,9,90,0,2,77,3\n";
         let rows = parse_rows(csv).unwrap();
         assert_eq!(rows[0].purchases, 3);
+    }
+
+    #[test]
+    fn parser_tracks_procedural_enemy_coverage() {
+        let csv = "class,victory,ui_screen,min_hp,max_room,rooms_cleared,kills,bosses,room_frames,hostiles,towns,dodges,enemy_mask\n\
+                   4,1,12,2,54,30,121,9,90,0,2,77,262147\n";
+        let rows = parse_rows(csv).unwrap();
+        assert_eq!(rows[0].enemy_mask, (1 << 18) | (1 << 1) | 1);
     }
 
     #[test]

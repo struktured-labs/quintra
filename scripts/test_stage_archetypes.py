@@ -27,6 +27,22 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
+def wait_for_generated_room(pb):
+    """Return only after the cartridge has committed and displayed the room."""
+    previous = None
+    stable = 0
+    for _ in range(240):
+        pb.tick()
+        tiles = bytes(pb.memory[TM + i] for i in range(ROOM_W * ROOM_H))
+        lcd_on = bool(pb.memory[0xFF40] & 0x80)
+        committed = not any(value & 0x80 for value in tiles)
+        stable = stable + 1 if lcd_on and committed and tiles == previous else 0
+        previous = tiles
+        if stable >= 10:
+            return list(tiles)
+    raise AssertionError("room generation did not settle within 240 frames")
+
+
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
@@ -68,9 +84,7 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None):
         if pb.memory[RS + 1] == target:
             break
     assert pb.memory[RS + 1] == target, f"could not enter stage {stage} room"
-    for _ in range(20):
-        pb.tick()
-    tiles = [pb.memory[TM + i] for i in range(ROOM_W * ROOM_H)]
+    tiles = wait_for_generated_room(pb)
     if screenshot is not None:
         screenshot.parent.mkdir(exist_ok=True)
         pb.screen.image.save(screenshot)

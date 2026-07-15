@@ -25,7 +25,35 @@ local LS_ADDR = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
 
+-- Room generation intentionally blanks the LCD and temporarily uses bit 7 of
+-- the room tilemap for its body-reachability flood fill. Code-size and layout
+-- changes can make that transaction span a different number of host frames,
+-- so never capture from a fixed delay in the middle of it. Four consecutive
+-- ready frames also give the frontend time to present the first rendered one.
+local function settle_display()
+    local ready_frames = 0
+    for _ = 1, 180 do
+        local ready = emu:read8(0xFF40) >= 0x80
+        if ready and TM_ADDR ~= 0 then
+            for i = 0, 359 do
+                if emu:read8(TM_ADDR + i) >= 0x80 then
+                    ready = false
+                    break
+                end
+            end
+        end
+        if ready then
+            ready_frames = ready_frames + 1
+            if ready_frames >= 4 then return end
+        else
+            ready_frames = 0
+        end
+        emu:runFrame()
+    end
+end
+
 local function shot(name)
+    settle_display()
     emu:screenshot(OUT_DIR .. "/h_" .. name .. ".png")
     local rc_room = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 1) or 0xFF
     local vic     = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 10) or 0xFF

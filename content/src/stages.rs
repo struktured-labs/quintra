@@ -27,7 +27,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 1), c(11, 8, 2), c(20,14, 3), c(30,24, 8)],
         boss:    [c(0,0,0), c( 9,19, 7), c( 2, 6, 2), c(26,31,14)],
         boss_hp_bonus: 62, boss_dmg_bonus: 1, mb_variant: 1, room_archetype: 1,
-        enemy_pool: &[(12, 30), (4, 30), (9, 20), (13, 20)],
+        enemy_pool: &[(12, 25), (2, 15), (4, 25), (9, 15), (13, 20)],
     },
     // 2 — Ember Depths (molten red/orange)
     StageTheme {

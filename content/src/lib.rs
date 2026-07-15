@@ -90,7 +90,7 @@ mod tests {
     fn champion_endurance_survival_floors_do_not_drift() {
         assert_eq!(classes::WOLFKIN.base_stats.hp_max, 10); // five hearts, true melee
         assert_eq!(classes::CORVIN.base_stats.hp_max, 12);  // six hearts
-        assert_eq!(classes::PICSEAN.base_stats.hp_max, 13); // six and a half hearts
+        assert_eq!(classes::PICSEAN.base_stats.hp_max, 14); // seven hearts, defensive caster
         assert_eq!(classes::VESPINE.base_stats.hp_max, 11); // five and a half hearts
     }
 
@@ -126,5 +126,19 @@ mod tests {
         assert_eq!(temple.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::ECHO_GUARD.ai_script,
             quintra_content::AiScriptId::CounterGuard { guard_cooldown: 100, rush_ticks: 24 });
+    }
+
+    #[test]
+    fn every_non_boss_enemy_is_reachable_from_a_procedural_stage_pool() {
+        let r = registry();
+        let pooled = |id| stages::STAGES.iter()
+            .any(|stage| stage.enemy_pool.iter().any(|&(enemy, _)| enemy == id));
+        for enemy in &r.enemies {
+            let id = enemy.id.raw();
+            if id != ids::ENEMY_STONE_SENTINEL.raw() {
+                assert!(pooled(id), "enemy {} ({}) is unreachable from every stage pool",
+                    id, enemy.name);
+            }
+        }
     }
 }

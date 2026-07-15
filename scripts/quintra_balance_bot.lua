@@ -6,6 +6,9 @@ local KEY_START = 0x08
 local KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN = 0x10, 0x20, 0x40, 0x80
 local CARD_DX, CARD_DY = {0, 1, 0, -1}, {-1, 0, 1, 0}
 local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
+-- Per-screen shortest authored exit toward dungeon gate screen 6; 4 means
+-- use the central staircase rather than a boundary door.
+local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
 
 local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
@@ -23,6 +26,7 @@ local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
+local enemy_mask, enemy_seen = 0, {}
 
 local function debug_log(line)
     console:log(line)
@@ -57,19 +61,29 @@ local function read16(address)
     return emu:read8(address) + emu:read8(address + 1) * 256
 end
 
+local function read_i16(address)
+    local value = read16(address)
+    return value >= 0x8000 and value - 0x10000 or value
+end
+
 local function enemy_target(px, py)
     local best, bestd = nil, 65535
     if EN == 0 then return nil end
     for i = 0, 31 do
         local p = EN + i * 28
         if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1 then
+            local kind = emu:read8(p + 17)
+            if kind < 31 and not enemy_seen[kind] then
+                enemy_seen[kind] = true
+                enemy_mask = enemy_mask + 2 ^ kind
+            end
             -- fix8_t is signed 24.8 here; byte +1 is the on-screen integer.
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             local d = math.abs(ex - px) + math.abs(ey - py)
             if d < bestd then
                 best, bestd = {
                     x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
-                    kind=emu:read8(p + 17), state=emu:read8(p + 15),
+                    kind=kind, state=emu:read8(p + 15),
                     clock=emu:read8(p + 18), state6=emu:read8(p + 23)
                 }, d
             end
@@ -188,6 +202,14 @@ local function body_walkable(cx, cy)
         and path_walkable(emu:read8(TM + cy * 20 + cx))
 end
 
+local function world_body_walkable(cx, cy)
+    if cx < 1 or cx > 19 or cy < 1 or cy > 16 then return false end
+    return walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
+        and walkable(emu:read8(TM + (cy - 1) * 20 + cx))
+        and walkable(emu:read8(TM + cy * 20 + (cx - 1)))
+        and walkable(emu:read8(TM + cy * 20 + cx))
+end
+
 -- Mirror room.c's feet-anchored collision box for one prospective pixel.
 -- Tile BFS plans globally; this answers whether its immediate controller
 -- input is physically possible from the body's current sub-tile offset.
@@ -236,6 +258,24 @@ local function aligned_step(d, sx, sy, px, py, fallback)
     return CARD_KEYS[d] or fallback
 end
 
+local function clear_cardinal_lane(x, y, gx, gy)
+    if x == gx then
+        local lo, hi = math.min(y, gy) + 1, math.max(y, gy) - 1
+        for ty = lo, hi do
+            if not path_walkable(emu:read8(TM + ty * 20 + x)) then return false end
+        end
+        return true
+    end
+    if y == gy then
+        local lo, hi = math.min(x, gx) + 1, math.max(x, gx) - 1
+        for tx = lo, hi do
+            if not path_walkable(emu:read8(TM + y * 20 + tx)) then return false end
+        end
+        return true
+    end
+    return false
+end
+
 -- Controller-only melee pursuit around procgen cover. Ranged champions can
 -- fire over a useful standoff distance, but short weapons must first route to
 -- a body-valid cell near the target instead of clawing into the intervening
@@ -258,8 +298,9 @@ local function target_step(px, py, ex, ey, fallback, near_tiles)
         -- repeatedly slashing past one corner of the enemy hitbox.
         -- Stop within one tile: Sauran's Tail Spike and Vespine's Stinger
         -- cannot connect from the old two-tile stopping cell.
-        if (x == gx and math.abs(y - gy) <= reach)
-            or (y == gy and math.abs(x - gx) <= reach) then
+        if ((x == gx and math.abs(y - gy) <= reach)
+            or (y == gy and math.abs(x - gx) <= reach))
+            and clear_cardinal_lane(x, y, gx, gy) then
             target = y * 20 + x
             break
         end
@@ -290,8 +331,35 @@ local function door_step(px, py)
     local in_world = emu:read8(RS + 17) == 1
     local world_screen = emu:read8(RS + 18)
     -- Shortest authored route to dungeon gate screen 6.
-    local world_route = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
-    local wanted = in_world and world_route[world_screen + 1] or nil
+    local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
+    if in_world and world_screen == 6 then
+        local dx, dy = 72 - px, 52 - py
+        if math.abs(dx) <= 2 and math.abs(dy) <= 2 then return 0 end
+        local primary = math.abs(dx) >= math.abs(dy)
+            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+            or (dy > 0 and KEY_DOWN or KEY_UP)
+        local secondary = math.abs(dx) < math.abs(dy)
+            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+            or (dy > 0 and KEY_DOWN or KEY_UP)
+        if can_step(px, py, primary) then return primary end
+        if can_step(px, py, secondary) then return secondary end
+        return primary
+    end
+    if in_world and world_screen ~= 6 then
+        local direct = CARD_KEYS[wanted + 1]
+        if can_step(px, py, direct) then return direct end
+        local side_a, side_b
+        if wanted == 1 or wanted == 3 then
+            side_a = py < 60 and KEY_DOWN or KEY_UP
+            side_b = side_a == KEY_DOWN and KEY_UP or KEY_DOWN
+        else
+            side_a = px < 72 and KEY_RIGHT or KEY_LEFT
+            side_b = side_a == KEY_RIGHT and KEY_LEFT or KEY_RIGHT
+        end
+        if can_step(px, py, side_a) then return side_a end
+        if can_step(px, py, side_b) then return side_b end
+        return direct
+    end
     local qx, qy, head, tail = {}, {}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
     local start = sy * 20 + sx
@@ -318,7 +386,8 @@ local function door_step(px, py)
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
             if nx >= 0 and nx < 20 and ny >= 0 and ny < 17 then
                 local nk = ny * 20 + nx
-                if not seen[nk] and body_walkable(nx, ny) then
+                if not seen[nk] and ((in_world and world_body_walkable(nx, ny))
+                    or (not in_world and body_walkable(nx, ny))) then
                     seen[nk], prev[nk], prevkey[nk] = true, y * 20 + x, d
                     tail = tail + 1; qx[tail], qy[tail] = nx, ny
                 end
@@ -464,11 +533,12 @@ while frames < LIMIT do
         if last_world_key >= 0 or world_key >= 0 then world_hops = world_hops + 1 end
         last_world_key = world_key
         wall_follow_dir, wall_follow_min = 0, 0
+        dodge_phase, escape_timer = 0, 0
     end
     if hp == 0 or won ~= 0 then break end
 
     -- player.x/y are signed 16-bit pixels at offsets 9 and 11.
-    local px, py = emu:read8(PL + 9), emu:read8(PL + 11)
+    local px, py = read_i16(PL + 9), read_i16(PL + 11)
     if dodge_cooldown > 0 then dodge_cooldown = dodge_cooldown - 1 end
     if px == last_px and py == last_py then still_frames = still_frames + 1
     else still_frames = 0 end
@@ -520,6 +590,7 @@ while frames < LIMIT do
         elseif aim == KEY_LEFT then move = clockwise and KEY_UP or KEY_DOWN
         else move = clockwise and KEY_DOWN or KEY_UP end
         local waiting_star = target.kind == 11 and target.state ~= 0
+        local routed_reach = (CLASS == 2 or CLASS == 3) and 6 or 1
         -- Any weapon can spend shots into cover. After four seconds without
         -- changing target HP, reposition perpendicular and reacquire.
         -- Folding Stars are intentionally invulnerable while expanded. Route
@@ -535,16 +606,16 @@ while frames < LIMIT do
             -- Flutterbats repeatedly settle after diagonal bursts. Closing to
             -- a cardinal firing lane during that pause is reliable; orbiting
             -- at arbitrary range can keep every ranged shot behind a pillar.
-            keys = target_step(px, py, target.x, target.y, aim, 0) + KEY_A
+            keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
             -- reach a clear one-tile firing lane through the actual opening.
-            keys = target_step(px, py, target.x, target.y, aim, 0) + KEY_A
+            keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
             flank_timer = flank_timer - 1
         elseif no_damage_frames > 240 then
             flank_timer, no_damage_frames = 240, 0
-            keys = target_step(px, py, target.x, target.y, aim, 0) + KEY_A
+            keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
         -- Wolfkin's Claw is true melee; Sauran's Tail Spike and Vespine's
         -- Stinger are short lunges. All three must close and align instead of
         -- orbiting outside their actual weapon geometry.
@@ -692,7 +763,7 @@ while frames < LIMIT do
     if (CLASS == 1 or CLASS == 3) and threat and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         dodge_phase, dodge_cooldown = 0, 30
-    elseif dodge_phase == 0 and dodge_cooldown == 0 and threat then
+    elseif world_mode == 0 and dodge_phase == 0 and dodge_cooldown == 0 and threat then
         local dx, dy = px - threat.x, py - threat.y
         if math.abs(dx) >= math.abs(dy) then
             dodge_dir = dx >= 0 and KEY_RIGHT or KEY_LEFT
@@ -731,6 +802,22 @@ while frames < LIMIT do
         elseif shake_phase == 5 then keys, shake_phase = KEY_RIGHT, 6
         elseif shake_phase == 6 then keys, shake_phase = 0, 7
         else keys, shake_phase = 0, 0
+        end
+    end
+    -- A dodge may override door_step for several frames. Keep it from
+    -- carrying the agent through a non-route Riftwild boundary and undoing
+    -- an entire authored graph hop; preserve A/B while steering inward.
+    if world_mode == 1 then
+        local wanted = WORLD_ROUTE[world_screen + 1]
+        local actions = keys % 16
+        if wanted ~= 0 and py < 32 and math.floor(keys / KEY_UP) % 2 == 1 then
+            keys = actions + KEY_DOWN
+        elseif wanted ~= 2 and py > 88 and math.floor(keys / KEY_DOWN) % 2 == 1 then
+            keys = actions + KEY_UP
+        elseif wanted ~= 3 and px < 32 and math.floor(keys / KEY_LEFT) % 2 == 1 then
+            keys = actions + KEY_RIGHT
+        elseif wanted ~= 1 and px > 112 and math.floor(keys / KEY_RIGHT) % 2 == 1 then
+            keys = actions + KEY_LEFT
         end
     end
     -- Riftwild portals place the hero beside the dungeon return door. A
@@ -819,13 +906,13 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
-        won, ui_screen, dodge_count, purchases))
+        won, ui_screen, dodge_count, purchases, enemy_mask))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

@@ -63,9 +63,9 @@ pub const PICSEAN: Class = Class {
     signature_active: ITEM_TIDAL_WAVE,
     passive_perk:  PERK_MP_REGEN_SWIM,
     // Slow piercing shots require prolonged spacing and carry the roster's
-    // lowest ATK. Six-and-a-half hearts offsets its long projectile commitment while
+    // lowest ATK. Seven hearts offset its long projectile commitment while
     // low ATK/DEF preserve the fragile control-mage identity.
-    base_stats: BaseStats { hp_max: 13, mp_max: 10, atk: 1, def: 1, spd: 5 },
+    base_stats: BaseStats { hp_max: 14, mp_max: 10, atk: 1, def: 1, spd: 5 },
 };
 
 pub const VESPINE: Class = Class {

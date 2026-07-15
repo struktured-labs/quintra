@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.45: Golden Counter](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.46: Living Roster](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -35,7 +35,7 @@ the cartridge runtime.
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
   Conference endurance floors give true-melee Wolfkin five hearts, ranged
-  Corvin six, Picsean six-and-a-half, and close-range Vespine five-and-a-half
+  Corvin six, Picsean seven, and close-range Vespine five-and-a-half
   while preserving their low-DEF specialist identities; Picsean's Tidal Wave
   raises a brief water barrier while its three bubble lanes erupt, and its
   swim passive crosses Toxic Mire pools without damage.
@@ -79,6 +79,8 @@ the cartridge runtime.
   Golden Temple's **Echo Guards** parry the first careless attack, rush the
   attacker, then turn pale and vulnerable until their shield recovers; poison
   remains a class-readable answer to their heavy armor.
+  Verdant Hollow once again fields fast pursuing Hornets; typed content tests
+  now reject any registered non-boss monster missing from every stage pool.
   Both fragments are guaranteed even when the fixed 32-entity table is full;
   a spent lethal projectile yields its slot before the split resolves.
   Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, Rift Oozes,
@@ -183,7 +185,10 @@ agents, one per champion. They may read combat state to aim, but they only
 send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
-the endurance gate proves every sample exercises the procedural economy.
+the endurance gate proves every sample exercises the procedural economy. A
+live encounter bitmask also requires the complete generated roster (IDs 0–18)
+to appear somewhere in the paired-seed matrix, preventing a valid but
+procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance
 baseline, not a substitute for human playtests. The `quintra-mgba` host tool
 parses that telemetry by named columns, prints per-class medians, and enforces
@@ -206,7 +211,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.45 occupies 64 KiB with 1,119 bytes of bank-0 headroom. Gameplay files
+v0.17.46 occupies 64 KiB with 1,119 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -217,7 +222,7 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen bank. Switchable headroom is now 1,161 bytes in bank 1, 2,183 in
+room/procgen bank. Switchable headroom is now 1,221 bytes in bank 1, 1,638 in
 bank 2, and 1,642 in bank 3 instead of leaving any bank within 294 bytes of
 overflow.
 Sprite arrays and their C declarations are emitted together from the same
@@ -230,14 +235,15 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.45 raises the paired-seed baseline to 15/15 full clears: 3/3 for every
-champion, all nine bosses and both towns reached, with zero deaths, combat
-stalls, or route stalls. Runs make 8–11 real purchases rather than bypassing
-merchants, and no run exceeds 53 Riftwild transitions. The gate now proves
-every class faces the same three
+v0.17.46 records 14/15 full clears: 3/3 for Wolfkin, Sauran, Picsean, and
+Vespine and 2/3 for Corvin, whose remaining failure is a real boss death rather
+than a timeout. Every enemy ID 0–18 appears in live cartridge state; combat
+and route stalls remain zero. Runs make 7–11 real purchases rather than
+bypassing merchants, and no run exceeds 70 Riftwild transitions. The gate now
+proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
-low as one heart and vary from roughly 4:57 to 9:06 active play, so
+low as one half-heart and vary from roughly 4:45 to 11:47 active play, so
 the sample retains pressure and meaningful build/seed variance.
 
 The agents use each champion's actual weapon range and B ability, collect

@@ -31,8 +31,23 @@ def main():
     rs = addr("_run_state")
     pl = addr("_player")
     en = addr("_entities")
+    tm = addr("_room_tilemap")
     screen = addr("_loop_current_screen")
     pb = PyBoy(str(ROM), window="null", cgb=True)
+
+    def wait_for_room():
+        previous = None
+        stable = 0
+        for _ in range(240):
+            pb.tick()
+            tiles = bytes(pb.memory[tm + i] for i in range(20 * 17))
+            lcd_on = bool(pb.memory[0xFF40] & 0x80)
+            committed = not any(value & 0x80 for value in tiles)
+            stable = stable + 1 if lcd_on and committed and tiles == previous else 0
+            previous = tiles
+            if stable >= 10:
+                return
+        raise AssertionError("post-victory room generation did not settle")
 
     def clear_hostiles():
         for i in range(32):
@@ -106,12 +121,15 @@ def main():
         pb.tick()
     assert pb.memory[screen] == 5, "A did not enter endless descent from results"
     assert pb.memory[rs + 10] == 0, "endless descent left victory flag latched"
+    wait_for_room()
 
     # Dawn's Verge is not dead postgame lore: leave the cleared ninth-boss
     # room, cross the authored Riftwild 0->1->2->6 route, and use its gate.
     exit_at(72, 120)
     assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 0, (
-        "post-victory descent did not reopen Riftwild"
+        "post-victory descent did not reopen Riftwild "
+        f"(room={pb.memory[rs + 1]} world={pb.memory[rs + 17]} "
+        f"cell={pb.memory[rs + 18]} screen={pb.memory[screen]})"
     )
     exit_at(144, 60, clear=False)
     assert pb.memory[rs + 18] == 1

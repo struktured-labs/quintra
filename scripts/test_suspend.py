@@ -70,11 +70,29 @@ def main():
             if first.memory[RS + 1] == 1:
                 break
         assert first.memory[RS + 1] == 1, "could not create room-entry suspend"
-        # The counter changes near the beginning of room_enter(); allow the
-        # transition to finish so its final sram_save() has reached cartridge
-        # RAM before inspecting or powering down.
-        for _ in range(30):
+        # The counter changes near the beginning of room_enter(). Wait on the
+        # actual SRAM payload rather than a host-frame delay: reachability work
+        # deliberately makes room-generation duration layout-dependent.
+        saved = False
+        for _ in range(240):
             first.tick()
+            first.memory[0x0000] = 0x0A
+            first.memory[0x4000] = 0
+            rs_len = first.memory[0xA003]
+            run_off = 0xA005
+            player_off = run_off + rs_len
+            saved = (
+                bytes(first.memory[0xA000:0xA002]) == b"QS"
+                and first.memory[run_off + 1] == 1
+                and first.memory[run_off + 14] == 0x34
+                and first.memory[run_off + 15] == 0x12
+                and first.memory[player_off + 16] == 0x41
+                and first.memory[player_off + 17] == 0x01
+            )
+            first.memory[0x0000] = 0
+            if saved:
+                break
+        assert saved, "room-entry SRAM transaction did not commit"
         assert first.memory[RS + 1] == 1, "room advanced again during suspend setup"
 
         # Inspect the cartridge bytes, not merely the C globals.
