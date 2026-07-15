@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.46: Living Roster](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.47: Honest Market](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -110,6 +110,9 @@ the cartridge runtime.
   Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.
+  Stock alternates between its item silhouette and a hanging price tag, so it
+  cannot be mistaken for loose coins; unaffordable wares buzz once per contact
+  instead of nagging while the hero stands over them.
   The Spirit Compass gives each regional settlement a fixed remembered name—
   Emberford, Gloamharbor, or Dawn's Verge—but chooses its local warning from
   the run seed, making the place persistent while its account of the Rift
@@ -211,7 +214,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.46 occupies 64 KiB with 1,119 bytes of bank-0 headroom. Gameplay files
+v0.17.47 occupies 64 KiB with 1,119 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -222,8 +225,8 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen bank. Switchable headroom is now 1,221 bytes in bank 1, 1,638 in
-bank 2, and 1,642 in bank 3 instead of leaving any bank within 294 bytes of
+room/procgen bank. Switchable headroom is now 1,066 bytes in bank 1, 1,609 in
+bank 2, and 1,565 in bank 3 instead of leaving any bank within 294 bytes of
 overflow.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one

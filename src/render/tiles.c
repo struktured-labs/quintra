@@ -179,6 +179,7 @@ void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_FX_IMPACT,  1, sprite_fx_impact);
     set_sprite_data(SPR_ENEMY_WISP, 1, sprite_fx_wisp);
     set_sprite_data(SPR_ITEM_ORB,   1, sprite_fx_item_orb);
+    set_sprite_data(SPR_SHOP_TAG,   1, sprite_fx_shop_tag);
 }
 
 void tiles_load_dungeon_bg(void) BANKED {

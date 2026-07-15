@@ -37,6 +37,7 @@ extern const u8 sprite_fx_muzzle[16];
 extern const u8 sprite_fx_impact[16];
 extern const u8 sprite_fx_wisp[16];
 extern const u8 sprite_fx_item_orb[16];
+extern const u8 sprite_fx_shop_tag[16];
 extern const u8 sprite_fx_villager[16];
 extern const u8 sprite_fx_merchant[16];
 extern const u8 sprite_fx_smith[16];

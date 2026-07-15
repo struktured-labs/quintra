@@ -73,6 +73,33 @@ def locked_north_holds():
     pb.stop(save=False)
     return room == 0 and y == 0
 
+def blocked_crate_north_face_holds():
+    """Walking upward cannot hide the hero's head under a stationary crate."""
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240): pb.tick()
+    pb.button("start")
+    for _ in range(30): pb.tick()
+    pb.button("a")
+    for _ in range(60): pb.tick()
+    for i in range(32 * 28): pb.memory[EN + i] = 0
+    # A 2x2 crate at pixels 72,64 with walls immediately north so it cannot
+    # slide. The visible 16px hero must stop at y=80, not overlap to y=72.
+    for x in (9, 10): pb.memory[TM + 7 * 20 + x] = 2
+    pb.memory[TM + 8 * 20 + 9] = 25
+    pb.memory[TM + 8 * 20 + 10] = 28
+    pb.memory[TM + 9 * 20 + 9] = 29
+    pb.memory[TM + 9 * 20 + 10] = 30
+    put16(pb, PL + 9, 72)
+    put16(pb, PL + 11, 96)
+    pb.button_press("up")
+    for _ in range(90): pb.tick()
+    pb.button_release("up")
+    y = pb.memory[PL + 11] | (pb.memory[PL + 12] << 8)
+    intact = tuple(pb.memory[TM + y0 * 20 + x0]
+                   for y0 in (8, 9) for x0 in (9, 10)) == (25, 28, 29, 30)
+    pb.stop(save=False)
+    return y == 80 and intact
+
 def main():
     positions = {
         "north": (72, 0, None), "east": (144, 60, None),
@@ -84,7 +111,8 @@ def main():
     }
     failed = [name for name, args in positions.items() if not crosses(*args)]
     if not locked_north_holds(): failed.append("locked-north-boundary")
+    if not blocked_crate_north_face_holds(): failed.append("blocked-crate-north-face")
     if failed: raise SystemExit(f"[doors] FAIL unreachable: {', '.join(failed)}")
-    print("[doors] PASS cardinal/secret traversal + locked combat boundary")
+    print("[doors] PASS cardinal/secret traversal + locked combat/crate boundaries")
 
 if __name__ == "__main__": main()

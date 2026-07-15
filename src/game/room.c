@@ -205,6 +205,12 @@ static u8 is_walkable_at(i16 px, i16 py) {
     return room_tile_walkable(room_tile_at_px(px, py));
 }
 
+static u8 is_block_at(i16 px, i16 py) {
+    u8 t = room_tile_at_px(px, py);
+    return (t == BGT_BLOCK || t == BGT_BLOCK_TR
+         || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
+}
+
 // Halve each 5-bit channel: pause-dim without storing dim palettes.
 static void palette_bg_load_dimmed(u8 slot, const u16 *pal) {
     u16 tmp[4];
@@ -669,7 +675,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     if (is_walkable_at(player.x + 2,  ny + 8)
                         && is_walkable_at(player.x + 13, ny + 8)
                         && is_walkable_at(player.x + 2,  ny + 15)
-                        && is_walkable_at(player.x + 13, ny + 15))
+                        && is_walkable_at(player.x + 13, ny + 15)
+                        && (dash_dy > 0 || (!is_block_at(player.x + 2, ny)
+                            && !is_block_at(player.x + 13, ny))))
                         player.y = ny;
                 }
             }
@@ -696,7 +704,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     p1x = ex; p1y = (i16)(player.y + 9);
                     p2x = ex; p2y = (i16)(player.y + 14);
                 } else {
-                    i16 ey = (i16)(player.y + ((dy > 0) ? 16 : 7));
+                    // Crates own a full-body north face. Walls remain
+                    // feet-anchored, but approaching a crate from below must
+                    // probe just above the visible head rather than waiting
+                    // for the feet box to overlap half its sprite.
+                    i16 ey = (i16)(player.y + ((dy > 0) ? 16 : -1));
                     p1x = (i16)(player.x + 3); p1y = ey;
                     p2x = (i16)(player.x + 12); p2y = ey;
                 }
@@ -828,7 +840,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 if (is_walkable_at(player.x + 2,  ny + 8)
                     && is_walkable_at(player.x + 13, ny + 8)
                     && is_walkable_at(player.x + 2,  ny + 15)
-                    && is_walkable_at(player.x + 13, ny + 15)) {
+                    && is_walkable_at(player.x + 13, ny + 15)
+                    && (dy > 0 || (!is_block_at(player.x + 2, ny)
+                        && !is_block_at(player.x + 13, ny)))) {
                     player.y = ny;
                 }
             }

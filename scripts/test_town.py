@@ -59,6 +59,7 @@ def main():
     merchant = None
     smith = None
     apothecary = None
+    shop_wares = []
     for i in range(32):
         ep = en + i * 28
         if pb.memory[ep] == 3 and pb.memory[ep + 17] == 7:
@@ -69,6 +70,8 @@ def main():
             smith = ep
         elif pb.memory[ep] == 3 and pb.memory[ep + 17] == 10:
             apothecary = ep
+        elif pb.memory[ep] == 3 and pb.memory[ep + 17] == 4:
+            shop_wares.append(ep)
     assert elder is not None, "town has no PICKUP_VILLAGER resident"
     assert pb.memory[elder + 12] == 69, "resident is not using villager art"
     assert merchant is not None, "town has no PICKUP_MERCHANT resident"
@@ -84,6 +87,34 @@ def main():
                 pb.memory[smith + 12], pb.memory[apothecary + 12]}) == 4, (
         "all four village roles must retain distinct silhouettes"
     )
+
+    # Store stock must not masquerade as loose currency. It alternates its
+    # actual item art with the dedicated hanging-tag tile, and an unaffordable
+    # contact latches until the player steps away instead of buzzing forever.
+    assert len(shop_wares) == 5, f"town has {len(shop_wares)} wares, expected 5"
+    ware = shop_wares[0]
+    for off, value in ((9, 72), (10, 0), (11, 112), (12, 0)):
+        pb.memory[pl + off] = value
+    ware_frames = set()
+    for _ in range(72):
+        pb.tick()
+        ware_frames.add(pb.memory[ware + 12])
+    assert 81 in ware_frames and 30 in ware_frames, (
+        f"heart ware did not alternate item/tag art: {sorted(ware_frames)}"
+    )
+    pb.memory[pl + 16] = pb.memory[pl + 17] = 0
+    px = pb.memory[ware + 3]
+    py = (pb.memory[ware + 7] - 8) & 0xFF
+    for off, value in ((9, px), (10, 0), (11, py), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(8)
+    assert pb.memory[ware] == 3 and pb.memory[ware + 21] == 1, (
+        "unaffordable ware was consumed or did not latch contact"
+    )
+    for off, value in ((9, 72), (10, 0), (11, 112), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(2)
+    assert pb.memory[ware + 21] == 0, "shop contact latch did not reset after leaving"
 
     # SELECT in a town must show town context, not the mathematically wrapped
     # "Dungeon 1 / Depth 2" labels that used to contradict YOU ARE HERE.

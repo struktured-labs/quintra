@@ -361,6 +361,19 @@ pub const ITEM_ORB: [&str; 8] = [
     "........",
 ];
 
+// Hanging market tag: the cut corner and bright center read as merchandise,
+// not loose currency, when alternated with a ware's ordinary pickup icon.
+pub const SHOP_TAG: [&str; 8] = [
+    "..222...",
+    ".21112..",
+    "2111112.",
+    "2113312.",
+    "2113312.",
+    ".21112..",
+    "..222...",
+    "........",
+];
+
 // Town elder: hooded face and crooked staff, readable at true GB scale.
 pub const VILLAGER: [&str; 8] = [
     "..222...",
@@ -624,13 +637,14 @@ pub const ENEMIES_8: [(&str, &[&str]); 17] = [
     ("echo_guard", &ECHO_GUARD),
 ];
 
-pub const FX_8: [(&str, &[&str]); 10] = [
+pub const FX_8: [(&str, &[&str]); 11] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
     ("impact", &IMPACT),
     ("wisp", &WISP),
     ("item_orb", &ITEM_ORB),
+    ("shop_tag", &SHOP_TAG),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),

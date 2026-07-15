@@ -38,7 +38,7 @@ void map_enter(void) {
     palette_bg_load(0, map_pal); palette_bg_load(7, map_pal);
     font_init(); { font_t f = font_load(font_min); font_set(f); }
     cls();
-    gotoxy(3,0); printf("- SPIRIT COMPASS -");
+    gotoxy(1,0); printf("- SPIRIT COMPASS -");
     if (run_state.world_mode) {
         const zelda_screen_t *cell =
             &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
@@ -57,7 +57,7 @@ void map_enter(void) {
         else if (cell->kind == ZELDA_CELL_BOSS) printf("CHAMPION");
         else printf("WILDS");
         gotoxy(1,9); printf("DEPTH HELD AT %u", (u16)run_state.room_counter);
-        gotoxy(1,11); printf("FIND THE GOLDEN GATE");
+        gotoxy(1,11); printf("FIND THE GOLD GATE");
         gotoxy(2,17); printf("SELECT/B = RETURN");
         SHOW_BKG; DISPLAY_ON;
         return;
@@ -87,7 +87,7 @@ void map_enter(void) {
     else printf("IN %u ROOMS", (u16)to_town);
     gotoxy(1,11); printf("SEED %u:%u", (u16)(run_state.run_seed >> 16), (u16)run_state.run_seed);
     gotoxy(1,13); printf("THE ROAD REMEMBERS");
-    gotoxy(1,14); printf("DIFFERENTLY EACH RUN");
+    gotoxy(1,14); printf("CHANGES EVERY RUN");
     gotoxy(2,17); printf("SELECT/B = RETURN");
     SHOW_BKG; DISPLAY_ON;
 }

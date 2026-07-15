@@ -142,6 +142,14 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // Shop wares are permanent until bought; state counts a retry delay.
     // They never magnetize (flying wares would force accidental purchases).
     if (e->ai_data[0] == PICKUP_SHOP) {
+        // Alternate item art with a hanging tag so an orb cannot be mistaken
+        // for loose currency. ai_data[4] is a contact latch for the reject
+        // buzz; reset it only after the player actually steps away.
+        e->ai_data[3]++;
+        if (e->ai_data[3] & 0x20) e->sprite_tile = SPR_SHOP_TAG;
+        else e->sprite_tile = (e->ai_data[1] == WARE_HEART)
+            ? SPR_HEART : SPR_ITEM_ORB;
+        if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
         if (e->state > 0) e->state--;
         return;
     }
@@ -307,9 +315,9 @@ u8 pickup_check_player_collision(void) BANKED {
                         }
                         sfx_play(SFX_COIN);
                         entity_kill(i);
-                    } else if (entities[i].state == 0) {
+                    } else if (entities[i].ai_data[4] == 0) {
                         sfx_play(SFX_HURT);
-                        entities[i].state = 45;   // retry delay
+                        entities[i].ai_data[4] = 1; // once until contact ends
                     }
                     any = 1;
                     continue;
