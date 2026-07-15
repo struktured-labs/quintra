@@ -14,6 +14,7 @@
 #include "game/loop.h"
 #include "game/sram.h"
 #include "game/title.h"
+#include "game/version.h"
 #include "render/palette.h"
 
 BANKREF(title_enter)
@@ -76,10 +77,10 @@ static void render_title(void) {
         gotoxy(4, 12);
         printf("PRESS  START");
     }
-    // Leave a real gutter before the version. The old 14-column label ended
-    // immediately beside it and rendered as the misleading "RECORDSv0.17".
-    gotoxy(1, 17); printf("SEL RECORDS");
-    gotoxy(15, 17); printf("v0.17");
+    // Never print the bottom-right cell: gbdk console wraps and scrolls the
+    // entire title when column 19 is filled on row 17.
+    gotoxy(0, 17); printf("SEL RECORD");
+    gotoxy(11, 17); printf(QUINTRA_VERSION);
     {
         u16 best = sram_meta_best();
         if (best > 0) {

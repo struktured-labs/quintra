@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.23: Scorekeeper](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.24: True Version](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -154,7 +154,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.23 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
+v0.17.24 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and
