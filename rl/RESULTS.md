@@ -1,0 +1,498 @@
+# BC + PPO Results — Day 5 Pipeline Validation
+
+## Disclosure: Privileged-State RL (Not Pure RL)
+
+**This is not a fair Game Boy agent.** Our PentaEnv reads WRAM/HRAM/OAM directly,
+giving the policy information the human player doesn't have access to (boss HP, scene
+flags, internal state machine bytes, sprite slot data). This is "asymmetric" or
+"state-aware" RL — useful for:
+
+- Verifying game mechanics hypotheses (e.g., boss 16 collision claim)
+- Prototyping reward functions
+- Finding ROM-patch effects
+- Building intuition about state-machine transitions
+
+It is NOT:
+- A vision-based agent that could play the unmodified game from screen pixels
+- A "fair" RL benchmark
+- Transferable to a real human-input-only setting
+
+A true pixel-based agent would use `pyboy.screen` (160×144 framebuffer) + a CNN
+frontend. That's a different (much harder, much slower) project. For our reverse-
+engineering goals, privileged-state is the right tool — we're using RL to explore
+the state space the architecture doc describes.
+
+
+
+## Summary
+
+Built and validated a full imitation learning + reinforcement learning pipeline for Penta Dragon DX. **BC+PPO achieves 2.64× random baseline return** in mini-boss combat.
+
+## Pipeline
+
+1. **Recording** (`scripts/probes/autoplay_record.lua`): mgba-qt headless runs the existing `autoplay_full_game.lua` for 30 minutes. Logs `(state_vector, action_idx)` JSONL every 4 frames.
+2. **Dataset** (`penta_rl/bc_data.py`): Converts JSONL → numpy arrays matching `PentaEnv.state_to_vector` schema exactly (59-dim float32 obs, 12-action int target).
+3. **Behavioral cloning** (`penta_rl/bc_train.py`): Cross-entropy loss on `PolicyValueNet` policy head, class-weighted to combat action imbalance (autoplay heavily uses A button + UP+A combo).
+4. **PPO fine-tune** (`penta_rl/train_bc_ppo.py`): Loads BC weights, runs combat-focused PPO at reduced learning rate (1e-4) to preserve learned features.
+5. **Eval** (`penta_rl/bc_eval.py`): Random vs BC-sample vs BC-deterministic comparison on `gargoyle.state` save state.
+
+## Empirical Results (gargoyle save state, 5 episodes each)
+
+| Policy | Mean Return | Boss Kills | Mean Steps | vs Random |
+|--------|-------------|------------|------------|-----------|
+| **Random** | 31.86 | 0 | 1372.6 (dies early) | 1.0× |
+| **BC only (det)** | 47.21 | 0 | 1500.0 (survives) | 1.48× |
+| **BC + PPO (sample)** | 69.65 | 0 | 1348.6 | 2.19× |
+| **BC + PPO (det)** | **84.25** | 0 | 1500.0 (survives) | **2.64×** |
+
+## Key Findings
+
+### What worked
+
+- **End-to-end pipeline runs** in ~35 minutes total: 30 min record + 3s BC train + 38s PPO fine-tune.
+- **BC initialization dramatically reduces PPO entropy** (BC+PPO starts at ent~1.4 vs fresh PPO ent~2.5) — policy is focused from epoch 1.
+- **BC policy survives full episodes** while random policy dies. The learned defensive movement is real.
+- **PPO improves on BC** (47 → 84 reward) — RL fine-tuning extracts more value from BC's foundation.
+
+### What didn't crack
+
+- **Zero boss kills** — but this isn't a pipeline failure. The autoplay expert (`autoplay_full_game.lua`) **also killed zero bosses** in our recording session (encountered Gargoyle but couldn't damage it in 30 minutes). The student can't surpass a teacher who never demonstrated the skill.
+
+### Action distribution (autoplay, 27000 frames)
+
+| Action | Buttons | Frequency |
+|--------|---------|-----------|
+| 0 | A | 38% |
+| 8 | UP+A | 33% |
+| 9 | DOWN+A | 23% |
+| 6 | U | 6% |
+| 4, 5, 7 | R, L, D | <1% each |
+| 1, 2, 3, 10, 11 | B, Sel, Start, L+B, R+B | 0% |
+
+The autoplay expert essentially never uses the B button or the menu actions. Class weighting in BC training compensates so the model still learns to use them.
+
+## Why The Expert Couldn't Kill
+
+Looking at autoplay log: encountered Gargoyle at f=6281 (~105s), tracked it for the remaining 28 minutes, but never landed enough projectiles. Possible reasons:
+
+1. **Combat positioning is hard** — gargoyle moves fast; even with centroid tracking the autoplay's heuristic is too coarse
+2. **Phase-reset mechanics** — DCBB rebounds at <0x80 (+0x80) and <0xC0 (+0x40) per architecture doc, requires sustained hits
+3. **Random exploration not enough** — autoplay's A-every-2/3-frames may miss the boss most of the time
+
+To get successful kill demos, we'd need either:
+- A better autoplay (with smarter projectile aim)
+- Use cheats: ROM-patch DCBB to start very low (0x10) so any hit kills
+- Hand-record human demos via mgba
+
+## Day 6: All-Approaches Iteration
+
+User asked to try **all** approaches in parallel: long PPO, DAgger, cheat-ROM, combined datasets.
+
+### Approaches tested
+
+| Approach | Outcome |
+|----------|---------|
+| **Long PPO (3000 epochs)** from BC checkpoint | Best deterministic: 89.63 ret, 1/50 sample kills (2%) |
+| **DAgger** (3 iters, beta 0.5→0.0) | Aggregated 39K pairs, BC acc 72.6%; det worse (21.84) but 1/10 sample kills |
+| **Cheat-ROM v1** (DCBB init=0x10) | Phase resets compensated; only 11 kills in 18 min; transfer failed |
+| **Cheat-ROM v2** (no phase reset + low init) | 12 kills in ~30 min; transfer to real ROM lost (24.75 ret) |
+| **Combined dataset** (v9.6 + cheat2) | val acc 72%, but transfer hurt (20.5 ret) |
+
+### Final eval (50 episodes, gargoyle save state)
+
+```
+Random:     ret=31.02  kills=0/50   dies @ step 1320
+BC+PPO det: ret=89.63  kills=0/50   survives full 1500 steps
+BC+PPO smp: ret=62.39  kills=1/50   (2% kill rate)
+```
+
+### Diagnosis: kill-frame rarity
+
+In 27000-frame v9.6 expert dataset, only **35 kill events** = ~0.13% of training frames are "the moment of kill." BC and PPO learn to imitate the *survival* behavior (95%+ of frames) but the precise kill-trigger sequence is rare enough that the policy can't reliably reproduce it.
+
+Sample policy beats deterministic on kill rate because stochasticity occasionally explores the right action sequence; deterministic locks into a single action chain that approaches but never crosses the kill threshold.
+
+### What would work but wasn't tried
+
+1. **Kill-frame oversampling**: weight BC loss to over-emphasize the 100 frames preceding each kill event. Would need to reprocess JSONL with kill-time annotations.
+2. **Mixed expert+policy at inference time** (DAgger-at-test): use expert action when DCBB hasn't dropped in N frames.
+3. **Bigger network**: current PolicyValueNet is 256-hidden 3-layer; 512×4 might capture finer patterns.
+4. **RNN/LSTM**: the kill is a multi-frame pattern; recurrent state could help.
+
+## Day 5+ Final: First Mini-Boss Kill
+
+**🎉 BC+PPO with OAM-extended state vector killed a mini-boss.**
+
+| Policy | Mean Return | Mean Mini-boss Kills | Notes |
+|--------|-------------|----------------------|-------|
+| Random | 31.86 | 0 | dies at step 1373 |
+| BC+PPO (no OAM, v11.0 demos) | 84.25 (det) | 0 | survives but doesn't kill |
+| BC+PPO (no OAM, v9.6 demos) | 56.98 (det) | 0 | worse — OOD action chains |
+| BC+PPO (OAM, v9.6 demos) sample | 52.49 | **0.2** | **1 kill in 5 eps** |
+| BC+PPO (OAM, v9.6 demos) det | 38.83 | 0 | deterministic gets stuck |
+
+The kill: episode 2, step 1354, agent killed mini-boss then died (scene=0x17 cinematic).
+
+### What changed
+
+1. State vector: 59 → 71 dims, adding 12 OAM-derived features (Sara position, boss centroid, nearest enemy, projectile count, signed boss-relative offsets, has_boss flag)
+2. Expert demos: 26966 frames from v9.6 autoplay (35 expert kills, Gargoyle + Spider cycle)
+3. BC val accuracy: 33% → 64% → 77% across iterations
+4. Sample policy gets the kill; deterministic doesn't (entropy > 0 needed for exploration)
+
+### Why deterministic still fails
+
+After BC overfitting to specific (state, action) pairs, det policy picks the same action in OOD states from the save state. Only sample policy (with stochasticity) explores enough to reach the kill condition. This is classic BC compounding-error.
+
+## Day 5+ Update: v9.6 expert recording
+
+**v11.0 autoplay (originally used) was a regression — got 0 kills in 30 min.**
+**v9.6 autoplay (`tmp/autoplay_level1.lua`, 1085 lines) kills mini-bosses fluidly:**
+
+In a 30-min recording session with v9.6:
+- **35 mini-boss kills** (Gargoyle + Spider on cycle, ROM-patched entry 2)
+- 26294 state-action pairs recorded
+- BC val accuracy: **64%** (vs 33% on v11.0 demos)
+
+But BC + BC+PPO eval still got **0 mini-boss kills** at inference time. Why?
+
+**Root cause: state vector is incomplete.** The autoplay's expert decisions condition on:
+- `saraX, saraY` — Sara's screen position (averaged from OAM sprite slots 0-3)
+- `bossSprites` centroid — OAM-derived boss position
+- `nearX, nearY, nearDist` — nearest enemy sprite
+
+Our PentaEnv state vector has only WRAM bytes (entity slots DC85+, scene flags). The OAM-derived screen-space positions the expert actually needs aren't in the observation. The BC model is trying to learn "press UP+A in this WRAM state" from a signal that doesn't include the screen position the expert was actually reacting to.
+
+This is also why the v9.6 BC policy got LOWER returns than random (20.51 vs 31.86) — it confidently picks suboptimal actions because its state vector hides the relevant info.
+
+**Confirmation: spinning + spamming A "should" kill Gargoyle.** A trivial bot would work — what's blocking the RL agent is the state representation, not the combat mechanics or the demonstrations.
+
+## Recommended Next Steps
+
+### IMMEDIATE: Extend state vector with OAM-derived sprite positions
+
+Add to `state.py`:
+- Sara screen position (average of OAM slots 0-3 X/Y, normalized to [0,1])
+- Per-enemy slot screen position (OAM 4-39, take 8 bytes from each, encode tile+Y+X)
+- Distance to nearest enemy
+- Boss centroid (average position of sprites with tile in 0x30-0x7F range)
+
+This brings the state vector from 59 → ~120 dims and gives BC the same info the expert had. Then re-train BC+PPO. Expected: BC alone should approach expert kill rate (~60% of episodes within 1500 steps).
+
+### Other improvements
+
+1. **Cheat-based kill recording**: still useful for accelerated learning
+
+1. **Cheat-based kill recording**: Patch ROM at 0x4101 (DCBB init) to 0x10 instead of 0xFF. Record autoplay against this — every encounter dies in 1 hit, dataset has thousands of "DCBB→0" trajectories. Then train BC on those, fine-tune PPO without the cheat. The policy learns "approach + fire" without needing to learn "fire 16 times."
+
+2. **Self-play from BC checkpoint**: Use BC+PPO as initial policy for autoplay's combat phase. The policy decides movement, autoplay handles cheats. Self-improving loop.
+
+3. **Action-space expansion**: Add `[A+L, A+R, B+U, B+D, NOOP]` actions. Currently many useful directional+attack combos collapse to single A button.
+
+4. **Domain expert reward shaping**: The current reward function is generic. Adding specific bonuses like "projectile sprite within 16 pixels of boss centroid" would densify the signal.
+
+5. **Imitation learning with successful kills**: Use the v9.5 autoplay (which memory says killed all 16 bosses) or hand-craft kill demos with state writes.
+
+## 2026-05-06 — CRITICAL BUG: kill detection broken since v3 reward redesign
+
+**Symptom**: 7 consecutive iterations (v6-v12c) reported 0 kills despite varied configs and even cheat-ROM training.
+
+**Root cause** (found via diagnostic in `rl/diagnose_kill.py`, `rl/diagnose_ffbf.py`):
+
+1. `reward.py` kill detection condition was:
+   ```python
+   if prev.section in (2, 5) and state.section != prev.section and prev.miniboss != 0:
+   ```
+   But the game flow is: **FFBF clears ~6 frames BEFORE DCB8 advances**. So at the section-advance frame, `prev.miniboss == 0` already, and the condition never fires.
+
+2. The "cheat ROM" (`A-fix-cheat-noPhase.gb`) didn't make bosses die in 1 hit — DCBB is *primarily* a level/corridor death timer, only secondarily boss-HP-during-fight. Init=0x10 caused Sara to die from level-timeout cinematic in ~150 frames every episode. Cheat ROM was actively HARMFUL.
+
+**Fix**: Use the canonical signal from `scripts/probes/autoplay_record.lua` — `prev.miniboss != 0 and state.miniboss == 0` (FFBF transition non-zero → zero). One-line change in `reward.py`.
+
+**Re-eval of v12c policy with fixed reward** (real ROM, gargoyle.state, max 10000 steps, 30 eps):
+- sample mode: **30/30 kill_eps (100%), mean_ret=96.67**
+- det mode: **30/30 kill_eps (100%), ret=51.70 (deterministic, 746 steps to kill)**
+- random baseline (seed 42): **30/30 kill_eps (100%), mean_ret=80.02**
+
+The "100% kill rate" is CALIBRATED by random — gargoyle.state is easy enough that any policy with reasonable entropy kills the first boss. The honest signal is **multi-kill** (gargoyle THEN spider in same episode), which prior work never tracked.
+
+**Implications**:
+- v6-v12c training metrics are unreliable (kill detection broken throughout)
+- Policy quality cannot be assessed from training-time kill counts
+- Frontier metric: multi-kill rate (eval pending with longer episodes)
+
+## 2026-05-06 v13 — REGRESSION (resume from v12c, max_steps=12000)
+
+| ckpt | mode | single-kill | multi-kill | mean ret |
+|---|---|---|---|---|
+| v13 | sample | 20/20 | **0/20** ↓ from v12c 2/20 | 82.08 |
+| v13 | det | **0/20** ↓ from v12c 30/30 | 0/20 | 1.43 |
+| random | — | 20/20 | 0/20 | 81.73 |
+
+**Diagnosis**: v13 entropy stayed at 2.3 (near-uniform random). The deterministic policy collapsed because logits were too flat — argmax picks an arbitrary single action. Sample policy's multi-kill regressed because the longer episodes (12000 vs 3000) flooded gradient with post-kill exploration noise, diluting combat signal.
+
+**Second bug found**: `vec_env.py` worker overwrote `info` after `env.reset()` on episode end, losing the kill count from the killed-boss episode. Training metrics showed `cum_kills=0` even when reward correctly fired. Fixed (commit pending).
+
+## v14 — fresh + short eps + entropy=0.02 → REGRESSION
+
+| ckpt | mode | single-kill | multi-kill | mean ret |
+|---|---|---|---|---|
+| v14 | sample | 20/20 | 0/20 | 70.09 (worse than random!) |
+| v14 | det | **0/20** | 0/20 | 37.08 |
+| random | — | 20/20 | 0/20 | 81.34 |
+
+Training trajectory: peaked at ep 212 (mean_ret=102.7, max_ret=176, entropy=2.4). Then drifted DOWN to mean_ret=67 at ep 500 (entropy=1.9). Recovered to 88 by ep 2000. **Pure PPO with random init oscillates and never crystallizes a multi-kill strategy.**
+
+Det collapse same as v13: high entropy (2.0-2.4) → flat logits → argmax picks arbitrary action. Sample mode now WORSE than random — policy is biased away from kill.
+
+## v15 (running) — RESUME v14, max_steps=8000, entropy=0.005
+
+Hypothesis: v14 has gargoyle expertise; longer eps + much lower entropy_coef will preserve gargoyle policy AND let multi-kill emerge.
+
+## v17 → KILLED (reward hack discovered)
+
+v17 (BC + PPO with low entropy) found a reward exploit:
+- Stay in mini-boss fight forever (FFBF != 0)
+- Spam fire button (action 0)
+- Get +0.05 per A-press × 8000 steps = **+400** vs +50 for actual kill
+- v17 mean_ret climbed to 228, max 422, with cum_kills only 10 in 528 eps
+
+Confirmed via `peek_v17.py`: episodes lasted 8000 steps without dying, with no kills,
+just `phase_2/3/4` damage milestones + room exploration. The fire_in_combat reward
+turned PPO into a reward hacker.
+
+v15 (running parallel, fresh PPO from v14) didn't find this exploit because it
+inherited gargoyle-killer behavior from v14 — but v15 was also stuck at 87% kill rate
+single-only (no multi-kill emerging).
+
+## Reward v4 — fix exploits
+
+Removed per-frame rewards that PPO can farm:
+- `fire_in_combat`: 0.05 → **0** (the exploit signal)
+- `b_button`: 0.02 → **0**
+- `dragon_active_step`: 0.005 → **0**
+
+Increased event-based kill rewards to dominate:
+- `boss_kill`: 50 → **100**
+- `boss_kill_chain`: 75 → **200** (multi-kill should be the biggest reward!)
+- `boss_phase_2/3/4`: 5/10/15 → **10/20/40**
+- `boss_damage`: 2.0 → **0.5** (DCBB delta is noisy from level timer dual purpose)
+
+Random baseline with reward v4: 30/30 single kills, mean_ret=150 (was 80).
+Expected max ret for multi-kill: 100 (kill1) + 200 (chain) + 70 (phases) + ... ≈ 400+.
+Stage boss kill: +200. Stage boss splash: +5. Final boss: +1000.
+
+## v18 — BC + PPO with reward v4 → BREAKTHROUGH
+
+| ckpt | mode | single-kill | **multi-kill** | total kills | mean ret |
+|---|---|---|---|---|---|
+| v18 | sample | 30/30 | **21/30 (70%)** | 51 | 304.32 |
+| v18 | det | 0/30 | 0/30 | 0 | 57.48 |
+| random | — | 30/30 | 0/30 | 30 | 152.26 |
+
+**7x improvement over v12c** (2/20 = 10% multi-kill). Crosses /loop breakthrough threshold (>5/50 = >10%).
+
+Training trajectory: multi100 metric in last 100 eps climbed 1→2→7→10→11→12→13 over 1500 epochs. Smooth convergence — no instability or collapse. Mean ret 220, max 430 (4-kill territory? or kill+stage_arena).
+
+**Det mode collapse persists** — argmax picks an arbitrary action with the highest logit, even though sample-mode is 70% successful. Suggests the policy mode is some "common but harmless" action (NOOP-like) and the sampled rare-but-effective actions (A, U+A, etc) are what actually kill. Solving det collapse is separate from solving multi-kill.
+
+**Setup**:
+- BC pretrained init (model trained on autoplay v96 expert data, all 16 mini-bosses)
+- Real ROM, gargoyle.state save state
+- max_steps=8000, entropy_coef=0.005, pi_lr=1e-4 (preserve BC features)
+- 1500 epochs in 21.5 min
+
+## v19 — resume v18, max_steps=15000, pi_lr=5e-5 → COLLAPSE late, but ep200 = 🚨GOLDEN🚨
+
+Training trajectory:
+| ep | cum_kills | multi100 | mean_ret | max_ret | entropy |
+|----|----|----|----|----|----|
+| 149 | 180 | **30** | 204 | 367 | 0.52 |
+| 304 | 363 | 17 | 215 | 360 | 0.85 |
+| 455 | 534 | 4 | 82 | 353 | 0.21 |
+| 600 | 570 | 0 | 58 | 58 | 0.002 |
+
+Late-stage entropy collapsed to 0.002 → policy became mode-only → mode = no-kill action → collapse.
+
+### v19 ep200 eval (30 eps, 15000 max_steps)
+| Mode | single | **multi** | total | mean ret |
+|---|---|---|---|---|
+| **det** | 30/30 | **30/30 (100%)** | 60 | 354.43 |
+| sample | 30/30 | 0/30 | 30 | 159.79 |
+| random | 30/30 | 0/30 | 30 | 153.18 |
+
+**Holy grail.** Det mode at v19 ep200 reliably kills BOTH mini-bosses (gargoyle + spider) in every single episode.
+
+Why does det work here when sample doesn't? At ep200 the policy was crystallizing — mode action is correct multi-kill, but stochastic sampling of other actions throws off the precise sequencing.
+
+This means: best-of-iterations checkpoint is not always final. Need early-stopping on multi-kill metric, OR mid-training eval to find the actual peak.
+
+## v22 + v23 — Reproducibility test (failed to replicate v19 ep200)
+
+v22: same as v18 setup (BC + PPO from gargoyle.state, max_steps=8000), unseeded but different env stochasticity. Trained 1500 epochs, peaked at ep1300 (sample 18/20 single, 0/20 multi). v22 NEVER reached multi-kill at any det checkpoint. Final cum_kills=154 vs v18's 806 (5x worse).
+
+v23: resume v22 ep1300 with v19 setup (max_steps=15000, 500 epochs). Hit sustained training-time multi100=12-13 at ep 100-176 (similar to v19's pattern). But eval shows none of the ckpts have det multi-kill — sample is 12-20/20 single, det is 0/20 single.
+
+**Conclusion**: v19 ep200's 100% det multi-kill is a one-off lucky checkpoint, not a reliably reproducible recipe. The training-time multi100 metric is stochastic — getting `det = argmax(logits)` to align with kill behavior requires lucky weight alignment that's hard to reproduce.
+
+## v19 ep200 GENERALIZATION (good news)
+
+| Save state | det multi-kill | det total kills | mode |
+|---|---|---|---|
+| gargoyle.state (training distribution) | 10/10 | 20 | det |
+| **spider.state** (different boss engaged) | **10/10** | **20** | det |
+| gameplay_start.state (level 1 start, navigation required) | 0/10 | 10 (gargoyle only) | det |
+
+The policy is robust at FIGHTING — works from any save state where Sara is already in a fight, including a different mini-boss type. But fails from corridor states because it never learned navigation (BC training data was fight-focused with section-cycling cheats).
+
+This is more useful than expected — v19 ep200 is a deployable "combat policy" that can be combined with a navigation policy or save-state curriculum.
+
+## v24 — BC + PPO trained from gameplay_start.state (level 1 start)
+
+Goal: train a nav+combat policy that handles full level 1 from start. 1500 epochs, max_steps=18000, entropy_coef=0.01.
+
+Checkpoint sweep (ep200/400/600/800/1000/1200/final):
+| ckpt | det total kills (10 eps) | det multi |
+|---|---|---|
+| 200-1000 | 0 | 0 |
+| **1200** | **10** | **0** |
+| final | 0 | 0 |
+
+v24 ep1200 = 100% det single-kill (gargoyle only) from gameplay_start.state. Doesn't reach spider. Same fundamental wall as v19 ep200 generalization test — corridor traversal between mini-bosses is the bottleneck.
+
+## Final Status (2026-05-06 ~12:50)
+
+**Two complementary deployable policies**:
+
+| Checkpoint | Strength | From save state | det multi-kill |
+|---|---|---|---|
+| `ppo_v19_resume18_ep200.pt` | combat | gargoyle.state OR spider.state | 50/50 (100%) |
+| `ppo_v24_nav_ep1200.pt` | nav + combat | gameplay_start.state | 0/10 (only single) |
+| `ppo_v25_combat_nav_ep1000.pt` | nav + combat (resume v19) | gameplay_start.state | 0/10 (only single) |
+
+**Major wins this session**:
+1. Fixed kill detection (FFBF transition, was DCB8 advance — silent bug for 7 iterations)
+2. Fixed vec_env info-loss bug (overwrote n_unique_bosses on episode reset)
+3. Closed reward exploit (fire_in_combat farmed +400/ep)
+4. Reward v4 — event-based dominates per-frame
+5. Discovered eval-intermediate-ckpts is critical (v19 ep200 was 1-of-1500 lucky alignment)
+6. v19 ep200 generalizes across boss-engaged save states (gargoyle + spider both 100% multi-kill det)
+
+**Open frontiers** (not addressed this session):
+1. **Reproducible multi-kill training** — v19 ep200 not replicable across seeds (v22, v23 attempts failed)
+2. **Stage boss arena entry** — blocked at scene 0xb after 2nd kill from gargoyle.state. Requires game RE work (FFBA advance trigger) not RL hyperparameter tuning
+3. **Full level 1 multi-kill** — gameplay_start to spider kill is corridor-traversal bottleneck. v19 ep200 dies post-gargoyle, v24 ep1200 only single-kills
+4. **Final boss / Penta Dragon** — requires solving all of above + 7 more level transitions
+
+**Iteration count post-bug-fix**: v13, v14, v15 (killed early), v17 (killed — reward hack), v18 ✓, v19 ✓, v20, v22, v23, v24, v25 = 11 iterations. Three scored production-quality wins (v18/v19/v24).
+
+## v26 / v26b — Reward shaping for corridor navigation (FAILED)
+
+Hypothesis: bump section_advance from 0.3 to 25.0 to give corridor navigation a strong reward signal.
+
+**v26 (section_advance=25)**: 0 kills in 649 epochs! Policy found a reward exploit — oscillate between sections to farm +25 per change. mean_ret=195 from oscillation alone, no kills, ent=0.001. Killed run.
+
+**v26b (section_advance=0, section_max_reached=50, room_change=0)**: only forward section reach counted. 1500 epochs, 125 cum kills. Best ckpt ep950 sample 7/10 single (gameplay_start), 0 multi. Worse than v24 ep1200's 10/10 single.
+
+Reverted reward to v4 — v5/v5b experiments hurt the policy. Even bounded section bonuses bias too strongly away from boss kills.
+
+**Lesson saved**: any bidirectional state-change reward is exploitable in long episodes. Use unique-state-bounded signals only.
+
+## v25 — RESUME v19 ep200, train on gameplay_start.state (1000 epochs)
+
+Hypothesis: combat policy from v19 ep200 + corridor experience from gameplay_start would teach nav while preserving combat. Goal: multi-kill from level 1 start.
+
+| ckpt | det total kills (10 eps) | det multi-kill | sample multi |
+|---|---|---|---|
+| ep600 | 10 | 0/10 | 0/10 |
+| ep800 | 0 | 0/10 | 0/10 (collapsed) |
+| ep1000 | 10 | 0/10 | 0/10 |
+
+Result: v25 matches v19 ep200's level 1 generalization (single kill only) but did NOT learn multi-kill from corridor save state. Same wall as v24. **Corridor → spider section traversal is the bottleneck.** Mini-bosses both die when engaged but reaching second mini-boss from a corridor requires HP/dodge skills the policy doesn't have.
+
+## v40 — Stage Boss Arena Captures + Shalamar Trainer (2026-05-07)
+
+### Arena Entry Mechanism (SOLVED)
+- Stage boss arenas correspond to D880 = 0x0C-0x14, one per FFBA value 0-8.
+- ROM disassembly: 9 arena setup routines at 0x886E, 0x88F8, 0x8999, 0x8A0D, 0x8A76, 0x8AED, 0x8B61, 0x8BD5, 0x8C46.
+- Each routine writes: D880=arena_value, FFB7=arena_value, DD85/86=boss_x, DD87/88=boss_y, then CALL 0x063E (common init → JP 0x02CF).
+- Boss positions per arena (extracted from ROM):
+  - FFBA=0/0xC: x=0xA0 y=0xF0
+  - FFBA=1/0xD (Shalamar): x=0x80 y=0xC0
+  - FFBA=2/0xE (Riff): x=0x60 y=0x60
+  - FFBA=3/0xF (Crystal): x=0x88 y=0xE0
+  - FFBA=4/0x10 (Cameo): x=0xA0 y=0xA0
+  - FFBA=5/0x11 (Ted): x=0xA0 y=0xC0
+  - FFBA=6/0x12 (Troop): x=0x90 y=0xC0
+  - FFBA=7/0x13 (Faze): x=0xA8 y=0x90
+  - FFBA=8/0x14 (Penta): x=0xA0 y=0xE0
+
+### Captured Arena Save States (rl/saves/curriculum/)
+| FFBA | Boss | D880 | OAM | Source | Verdict |
+|------|------|------|-----|--------|---------|
+| 1 | Shalamar | 0xD | 40 | FFD3=4 trigger | ✓ stable, used for training |
+| 2 | Riff | 0xE | 40 | full_init | ✓ stable in arena |
+| 3 | Crystal | 0xF | 20 | FFD3=1 trigger | drops to 0x17 in random play |
+| 4 | Cameo | 0x10 | 12 | FFD3=6 trigger | drops to 0x17 |
+| 5 | Ted | 0x11 | 38 | full_init | ✓ stable |
+| 6 | Troop | 0x12 | 40 | full_init | drops to 0xA (mini-boss scene) |
+| 7 | Faze | 0x13 | 12 | FFD3=7 trigger | drops to 0x17 |
+| 8 | Penta | 0x14 | 28 | FFD3=7 trigger | drops to 0x17 |
+
+### Shalamar Trainer (v1-v6 iterations)
+
+**Hangs root-caused (after 3 days of bisection):**
+- `torch.distributions.Categorical.sample()` deadlocks with PyBoy threads
+- Even with `torch.set_num_threads(1)` + OMP/MKL env vars, intermittent hangs persist after ~3 epochs
+- Workaround: pure numpy MLP forward pass for inference. Torch only for gradient updates.
+- Workaround #2: chunked training (`train_loop_chunks.sh`) — each chunk = 2 epochs with 60s timeout. ~50% chunks succeed, others hung→killed→retry. Per-epoch checkpointing preserves progress.
+
+**Critical reward fixes:**
+- v1-v3 had `godmode_step` healing the boss every tick (DCBB pumped to 0xFF when FFBF==0; but FFBF tracks mini-bosses, not stage bosses → boss healed during arena). Fixed in v4: only pump DCBB when NOT in stage arena (D880 outside 0x0C-0x14).
+- Default `RewardTracker.boss_damage` only fires for mini-bosses. Added custom DCBB-drop reward in `ShalamarArenaEnv.step` (+0.2 per unit dropped). Full damage = +51 reward + 500 success bonus.
+- v6: godmode allows D880=0x17 in boss arena context (FFB7 set) — boss death cinematic may transition through 0x17 before reaching 0x18/0x16.
+
+**Training progress (v6 — entropy=0.03):**
+| epoch | mean_return | max_return | adv (kills) | ent |
+|-------|-------------|------------|-------------|-----|
+| 1     | -29.77      | -29.77     | 0           | 2.48 |
+| 13    | 5.63        | 24.00      | 0           | 2.46 |
+| 30    | 50          | 86.56      | 0           | 2.36 |
+| 42    | 50          | 92.93      | 0           | 2.39 |
+| 79    | 37          | 63.71      | 0           | 2.33 |
+
+**Eval of v6 latest ckpt (deterministic argmax):** Episode reward 55.81. min DCBB = 0x01 (almost killed!). Action distribution: 94.3% A, 5.6% U+A, 0.1% R. **Policy converged to "spam A" — drops boss HP to nearly 0 but doesn't trigger FFBA advance.**
+
+**Training v_explore (entropy=0.10, started 21:29):**
+| epoch | mean_return | max_return | adv | ent |
+|-------|-------------|------------|-----|-----|
+| 12    | 41          | 65.49      | 0   | 2.40 |
+| 31    | 45          | 78.87      | 0   | 2.44 |
+
+**FINAL training results (after 200-chunk run for each):**
+- v6 (entropy=0.03): 316 total epochs. Final eval: 0/10 kills, mean_ret=27.1, min_DCBB=1.0
+- explore2 (entropy=0.10): 274 total epochs. Final eval: 0/10 kills, mean_ret=25.9, min_DCBB=0.0
+
+**Both policies converge to "spam attacks" — drive boss DCBB to 0x00-0x01 but NEVER trigger FFBA advance.**
+
+This proves the boss kill condition is NOT just DCBB=0. Some other state must be the trigger (positional, timing, item-based, or tile-based — per user's hint about "specific damage spots/moments"). Without user demo of the actual kill pattern, RL exploration won't find it in 300+ epochs.
+
+User has been engaged with diagnosis (`rl/SHALAMAR_FINDINGS.md`). Awaiting demo of:
+1. Natural arena door entry from level 1 dungeon
+2. Boss kill mechanism (positional pattern, special action, or hidden HP location)
+
+Agent consistently dealing 250+ DCBB damage per episode (out of 255 max). NO FFBA advances yet.
+
+**User hint:** "Some stage bosses have very specific spots or moments they can be damaged."
+This explains why spam_a / random damage hits a wall around DCBB ~0x09 — boss has phase resets that require specific positioning/timing to overcome.
+
+## Artifacts
+
+- `rl/bc_data/expert_trajectories.jsonl` — 27000 expert (state, action) pairs (gitignored)
+- `rl/bc_pretrained.pt` — BC checkpoint (gitignored)
+- `rl/ppo_bc_ppo_final.pt` — BC+PPO checkpoint (gitignored)
+- `scripts/probes/autoplay_record.lua` — Recording script (committed)
+- `rl/penta_rl/bc_data.py`, `bc_train.py`, `bc_eval.py`, `train_bc_ppo.py` — pipeline (committed)
+- `rl/saves/curriculum/arena_*.state` — 8 stage boss arena save states (gitignored)
+- `rl/capture_arenas_full_init.py`, `verify_arenas_v2.py`, `train_shalamar.py` — arena pipeline (committed)
+- `rl/RESULTS.md` — this document

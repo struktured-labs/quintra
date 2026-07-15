@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "mgba": {
+      "command": "uv",
+      "args": ["run", "--directory", "/home/struktured/projects/penta-dragon-dx-claude/mgba-mcp", "mgba-mcp"],
+      "env": {
+        "TMPDIR": "/home/struktured/projects/penta-dragon-dx-claude/tmp",
+        "SDL_AUDIODRIVER": "dummy"
+      }
+    },
+    "misterclaw": {
+      "command": "/usr/local/bin/misterclaw-mcp",
+      "args": ["--host", "MiSTer"]
+    }
+  }
+}

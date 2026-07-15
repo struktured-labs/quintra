@@ -1,0 +1,54 @@
+# ROM files (copyrighted, cannot be in public repo)
+*.gb
+*.gbc
+*.gba
+rom/**/*.gb
+rom/**/*.gbc
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Build artifacts
+CMakeCache.txt
+CMakeFiles/
+
+# Temporary files
+tmp/
+test_output/
+logs/
+
+# Debug output
+debug_*.png
+*.log
+tests/results/
+DONE
+DONE_*
+
+# Top-level scratch artifacts (probe outputs, sample captures, etc.)
+/output.json
+/output.txt
+/screenshot.png
+/test.sav
+/verify_boot_report.json
+/yellow_flashing_moving_tiles.mp4
+/claude-conversation-*.txt
+/claude-conversatoion-*.txt
+
+rl/saves/curriculum/
+rl/bc_data/expert_human_curriculum.jsonl
+
+# Probe baseline cache
+scripts/probes/.phantom_d887_baseline.json
+rl/saves/user_demo/*.ss
+rl/saves/user_demo/*.sav
+!rl/saves/user_demo/MANIFEST.md
+
+# mGBA-emitted ROM-side screenshots and save files (transient)
+rom/working/*.png
+rom/working/*.sav
+rom/working/*.ss*
+
+# Letta agent workspace
+.letta/

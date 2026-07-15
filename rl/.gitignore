@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pt
+*.pth
+smoke_results.json
+ppo_*_metrics.json
+ppo_*.pt
+runs/
+checkpoints/
+*.egg-info/
+bc_data/
+saves/
+bc_pretrained_history.json
+bc_pretrained_eval.json
+*_eval.json
+*_eval3.json

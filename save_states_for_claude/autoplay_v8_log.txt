@@ -1,0 +1,891 @@
+f00000: === PENTA DRAGON AUTO-PLAY v8 ===
+f00000: Position-aware | Entity-scanning | State-driven
+f00339: *** GAME STARTED ***
+f00339:   room=05 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(80,72)
+f00339: SAVE[1]: start
+f00339: STATE: title_menu -> playing_explore (game started)
+f00559: NEW ROOM 03 (from 05) #1
+f00559:   room=03 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f00559: SAVE[2]: new_room_03
+f00568: NEW ROOM 02 (from 03) #2
+f00568:   room=02 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f00568: SAVE[3]: new_room_02
+f00586: ROOM 03<-02 #3
+f00586:   room=03 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f00603: ROOM 02<-03 #4
+f00603:   room=02 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f00612: NEW ROOM 04 (from 02) #5
+f00612:   room=04 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f00612: SAVE[4]: new_room_04
+f00623: ROOM 05<-04 #6
+f00623:   room=05 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f00727: NEW ROOM 01 (from 05) #7
+f00727:   room=01 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f00727: SAVE[5]: new_room_01
+f00851: ROOM 05<-01 #8
+f00851:   room=05 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f00970: ROOM 01<-05 #9
+f00970:   room=01 boss=00 form=W prog=0F dd04=00 dd05=00 pw=00 sara=(76,68)
+f01086: ROOM 05<-01 #10
+f01086:   room=05 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01204: STATE: playing_explore -> playing_stuck (osc=60)
+f01213: STATE: playing_stuck -> playing_explore (new room found)
+f01213: NEW ROOM 08 (from 01) #12
+f01213:   room=08 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01213: SAVE[6]: new_room_08
+f01232: ROOM 01<-02 #14
+f01232:   room=01 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01250: STATE: playing_explore -> playing_combat (enemy@38px)
+f01281: STATE: playing_combat -> playing_explore (enemies cleared)
+f01334: ROOM 05<-01 #15
+f01334:   room=05 boss=00 form=W prog=16 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01451: ROOM 01<-05 #16
+f01451:   room=01 boss=00 form=W prog=17 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01574: ROOM 05<-01 #17
+f01574:   room=05 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f01691: ROOM 01<-05 #18
+f01691:   room=01 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f01800: [STATUS 24s] room=01 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_explore osc=45
+f01800:   rooms=18 uniq=6[01 02 03 04 05 08 ] kills=0 ents=0 maxProg=1D dd05stall=1380
+f01807: STATE: playing_explore -> playing_stuck (osc=60)
+f01817: STATE: playing_stuck -> playing_explore (new room found)
+f01817: NEW ROOM 07 (from 05) #20
+f01817:   room=07 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f01817: SAVE[7]: new_room_07
+f01838: ROOM 05<-04 #22
+f01838:   room=05 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f01906: STATE: playing_explore -> playing_combat (enemy@39px)
+f01913: ROOM 07<-05 #23
+f01913:   room=07 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f01933: PROG milestone: 20
+f01948: ROOM 08<-07 #24
+f01948:   room=08 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01956: ROOM 07<-08 #25
+f01956:   room=07 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f01998: ROOM 05<-07 #26
+f01998:   room=05 boss=00 form=W prog=21 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02025: STATE: playing_combat -> playing_explore (enemies cleared)
+f02031: ROOM 03<-05 #27
+f02031:   room=03 boss=00 form=W prog=21 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02066: PROG reset (was 22)
+f02074: ROOM 04<-03 #28
+f02074:   room=04 boss=00 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02108: ROOM 03<-04 #29
+f02108:   room=03 boss=00 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02116: ROOM 02<-03 #30
+f02116:   room=02 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02167: ROOM 01<-02 #31
+f02167:   room=01 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02246: STATE: playing_explore -> playing_combat (enemy@39px)
+f02276: STATE: playing_combat -> playing_explore (enemies cleared)
+f02285: ROOM 05<-01 #32
+f02285:   room=05 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02410: ROOM 01<-05 #33
+f02410:   room=01 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02532: ROOM 05<-01 #34
+f02532:   room=05 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02635: STATE: playing_explore -> playing_combat (enemy@39px)
+f02646: ROOM 08<-05 #35
+f02646:   room=08 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f02679: ROOM 07<-08 #36
+f02679:   room=07 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f02688: ROOM 08<-07 #37
+f02688:   room=08 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f02696: ROOM 01<-08 #38
+f02696:   room=01 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f02710: STATE: playing_combat -> playing_explore (enemies cleared)
+f02721: ROOM 03<-01 #39
+f02721:   room=03 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f02738: ROOM 05<-03 #40
+f02738:   room=05 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f02756: ROOM 03<-05 #41
+f02756:   room=03 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f02765: ROOM 04<-03 #42
+f02765:   room=04 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f02774: ROOM 03<-04 #43
+f02774:   room=03 boss=00 form=W prog=0C dd04=00 dd05=00 pw=00 sara=(76,68)
+f02793: ROOM 05<-03 #44
+f02793:   room=05 boss=00 form=W prog=0C dd04=00 dd05=00 pw=00 sara=(76,68)
+f02843: STATE: playing_explore -> playing_combat (enemy@39px)
+f02850: ROOM 07<-05 #45
+f02850:   room=07 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f02859: ROOM 08<-07 #46
+f02859:   room=08 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f02867: NEW ROOM 06 (from 08) #47
+f02867:   room=06 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f02867: SAVE[8]: new_room_06
+f02876: ROOM 07<-06 #48
+f02876:   room=07 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f02885: ROOM 06<-07 #49
+f02885:   room=06 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f02893: ROOM 05<-06 #50
+f02893:   room=05 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f02910: ROOM 06<-05 #51
+f02910:   room=06 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f02918: ROOM 07<-06 #52
+f02918:   room=07 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f02926: ROOM 08<-07 #53
+f02926:   room=08 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f02943: ROOM 01<-08 #54
+f02943:   room=01 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f02951: ROOM 02<-01 #55
+f02951:   room=02 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f02976: ROOM 03<-02 #56
+f02976:   room=03 boss=00 form=W prog=0F dd04=00 dd05=00 pw=00 sara=(76,68)
+f02978: STATE: playing_combat -> playing_explore (enemies cleared)
+f02992: ROOM 02<-03 #57
+f02992:   room=02 boss=00 form=W prog=0F dd04=00 dd05=00 pw=00 sara=(76,68)
+f03010: ROOM 04<-02 #58
+f03010:   room=04 boss=00 form=W prog=0F dd04=00 dd05=00 pw=00 sara=(76,68)
+f03030: ROOM 05<-04 #59
+f03030:   room=05 boss=00 form=W prog=10 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03124: ROOM 01<-05 #60
+f03124:   room=01 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03246: ROOM 05<-01 #61
+f03246:   room=05 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03372: ROOM 01<-05 #62
+f03372:   room=01 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03485: ROOM 05<-01 #63
+f03485:   room=05 boss=00 form=W prog=17 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03487: STATE: playing_explore -> playing_combat (enemy@38px)
+f03495: ROOM 06<-05 #64
+f03495:   room=06 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03504: ROOM 08<-06 #65
+f03504:   room=08 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03513: ROOM 07<-08 #66
+f03513:   room=07 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03522: ROOM 06<-07 #67
+f03522:   room=06 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03529: ROOM 05<-06 #68
+f03529:   room=05 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03538: ROOM 08<-05 #69
+f03538:   room=08 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03571: ROOM 07<-08 #70
+f03571:   room=07 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03577: STATE: playing_combat -> playing_explore (enemies cleared)
+f03587: ROOM 03<-07 #71
+f03587:   room=03 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03596: ROOM 02<-03 #72
+f03596:   room=02 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03600: [STATUS 54s] room=02 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_explore osc=0
+f03600:   rooms=72 uniq=8[01 02 03 04 05 06 07 08 ] kills=0 ents=3 maxProg=22 dd05stall=3180
+f03605: ROOM 04<-02 #73
+f03605:   room=04 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f03614: ROOM 02<-04 #74
+f03614:   room=02 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f03623: ROOM 03<-02 #75
+f03623:   room=03 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f03632: ROOM 01<-03 #76
+f03632:   room=01 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f03672: ROOM 05<-01 #77
+f03672:   room=05 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f03727: ROOM 04<-05 #78
+f03727:   room=04 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f03736: ROOM 03<-04 #79
+f03736:   room=03 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f03744: ROOM 04<-03 #80
+f03744:   room=04 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f03764: ROOM 05<-04 #81
+f03764:   room=05 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f03844: ROOM 01<-05 #82
+f03844:   room=01 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f03973: PROG milestone: 20
+f03974: ROOM 05<-01 #83
+f03974:   room=05 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04087: ROOM 01<-05 #84
+f04087:   room=01 boss=00 form=W prog=21 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04134: STATE: playing_explore -> playing_combat (enemy@39px)
+f04148: ROOM 07<-01 #85
+f04148:   room=07 boss=00 form=W prog=22 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04177: ROOM 06<-07 #86
+f04177:   room=06 boss=00 form=W prog=23 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04186: ROOM 05<-06 #87
+f04186:   room=05 boss=00 form=W prog=23 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04203: STATE: playing_combat -> playing_explore (enemies cleared)
+f04210: ROOM 04<-05 #88
+f04210:   room=04 boss=00 form=W prog=23 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04227: ROOM 03<-04 #89
+f04227:   room=03 boss=00 form=W prog=24 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04236: STATE: playing_explore -> boss_fight (Gargoyle)
+f04236: ROOM 04<-03 #90
+f04236:   room=04 boss=01 form=W prog=24 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04236: BOSS: Gargoyle (1)
+f04236:   room=04 boss=01 form=W prog=24 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04236: SAVE[9]: boss_Gargoyle
+f04244: PROG reset (was 24)
+f04261: ROOM 05<-04 #91
+f04261:   room=05 boss=01 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04329: ROOM 01<-05 #92
+f04329:   room=01 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04415: ROOM 05<-01 #93
+f04415:   room=05 boss=01 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f04511: ROOM 01<-05 #94
+f04511:   room=01 boss=01 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f05400: [STATUS 84s] room=05 boss=01 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f05400:   rooms=103 uniq=8[01 02 03 04 05 06 07 08 ] kills=0 ents=0 maxProg=24 dd05stall=4980
+f06344: STATE: boss_fight -> post_boss (boss killed)
+f06344: KILL: Gargoyle #1
+f06344:   room=05 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(80,72)
+f06465: STATE: post_boss -> playing_explore (post-boss timeout)
+f06466: STATE: playing_explore -> playing_stuck (osc=60)
+f06471: ROOM 07<-03 #111
+f06471:   room=07 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f06487: ROOM 08<-07 #112
+f06487:   room=08 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f06504: ROOM 07<-08 #113
+f06504:   room=07 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f06531: STATE: playing_stuck -> playing_combat (enemy@39px)
+f06537: ROOM 08<-07 #114
+f06537:   room=08 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f06556: STATE: playing_combat -> playing_explore (enemies cleared)
+f06562: ROOM 03<-07 #116
+f06562:   room=03 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f06580: ROOM 02<-03 #117
+f06580:   room=02 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f06607: ROOM 04<-03 #119
+f06607:   room=04 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f06633: ROOM 03<-04 #120
+f06633:   room=03 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f06641: ROOM 04<-03 #121
+f06641:   room=04 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f06658: PROG reset (was 1E)
+f06725: ROOM 01<-04 #122
+f06725:   room=01 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f06847: ROOM 05<-01 #123
+f06847:   room=05 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f06921: STATE: playing_explore -> playing_combat (enemy@38px)
+f06928: ROOM 06<-05 #124
+f06928:   room=06 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f06945: ROOM 08<-06 #125
+f06945:   room=08 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f06953: ROOM 07<-08 #126
+f06953:   room=07 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f06976: STATE: playing_combat -> playing_explore (enemies cleared)
+f06986: ROOM 02<-07 #127
+f06986:   room=02 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f06995: ROOM 03<-02 #128
+f06995:   room=03 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07003: ROOM 02<-03 #129
+f07003:   room=02 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07029: ROOM 03<-02 #130
+f07029:   room=03 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07091: ROOM 05<-03 #131
+f07091:   room=05 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07177: STATE: playing_explore -> playing_combat (enemy@38px)
+f07188: ROOM 07<-05 #132
+f07188:   room=07 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07196: ROOM 01<-07 #133
+f07196:   room=01 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07200: [STATUS 114s] room=01 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_combat osc=30
+f07200:   rooms=133 uniq=8[01 02 03 04 05 06 07 08 ] kills=1 ents=0 maxProg=24 dd05stall=6780
+f07223: ROOM 08<-01 #134
+f07223:   room=08 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f07231: ROOM 01<-08 #135
+f07231:   room=01 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f07281: ROOM 06<-01 #136
+f07281:   room=06 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f07289: ROOM 07<-06 #137
+f07289:   room=07 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f07307: STATE: playing_combat -> playing_explore (enemies cleared)
+f07314: ROOM 03<-07 #138
+f07314:   room=03 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f07331: ROOM 04<-03 #139
+f07331:   room=04 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f07376: ROOM 05<-04 #140
+f07376:   room=05 boss=00 form=W prog=0C dd04=00 dd05=00 pw=00 sara=(76,68)
+f07447: ROOM 01<-05 #141
+f07447:   room=01 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f07568: ROOM 05<-01 #142
+f07568:   room=05 boss=00 form=W prog=0F dd04=00 dd05=00 pw=00 sara=(76,68)
+f07615: STATE: playing_explore -> playing_combat (enemy@37px)
+f07624: ROOM 06<-05 #143
+f07624:   room=06 boss=00 form=W prog=10 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07640: ROOM 05<-06 #144
+f07640:   room=05 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07649: ROOM 07<-05 #145
+f07649:   room=07 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07665: ROOM 08<-07 #146
+f07665:   room=08 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07688: STATE: playing_combat -> playing_explore (enemies cleared)
+f07690: ROOM 07<-08 #147
+f07690:   room=07 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07699: ROOM 02<-07 #148
+f07699:   room=02 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07707: ROOM 03<-02 #149
+f07707:   room=03 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07716: ROOM 02<-03 #150
+f07716:   room=02 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07742: ROOM 03<-02 #151
+f07742:   room=03 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07751: STATE: playing_explore -> playing_stuck (osc=60)
+f07760: ROOM 08<-02 #153
+f07760:   room=08 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07768: ROOM 07<-08 #154
+f07768:   room=07 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07798: STATE: playing_stuck -> playing_combat (enemy@38px)
+f07827: ROOM 01<-07 #155
+f07827:   room=01 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07870: STATE: playing_combat -> playing_explore (enemies cleared)
+f07877: ROOM 03<-01 #156
+f07877:   room=03 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07894: ROOM 02<-03 #157
+f07894:   room=02 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07900: STATE: playing_explore -> playing_combat (enemy@36px)
+f07903: ROOM 03<-02 #158
+f07903:   room=03 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07921: ROOM 05<-03 #159
+f07921:   room=05 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07940: ROOM 01<-05 #160
+f07940:   room=01 boss=00 form=W prog=16 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07960: ROOM 05<-01 #161
+f07960:   room=05 boss=00 form=W prog=16 dd04=00 dd05=00 pw=00 sara=(76,68)
+f07979: ROOM 01<-05 #162
+f07979:   room=01 boss=00 form=W prog=16 dd04=00 dd05=00 pw=00 sara=(76,68)
+f08086: ROOM 05<-06 #168
+f08086:   room=05 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f08129: STATE: playing_combat -> playing_explore (enemies cleared)
+f08135: ROOM 03<-05 #169
+f08135:   room=03 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f08161: ROOM 02<-03 #170
+f08161:   room=02 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f08178: ROOM 01<-02 #171
+f08178:   room=01 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f08287: ROOM 05<-01 #172
+f08287:   room=05 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f08301: STATE: playing_explore -> playing_combat (enemy@38px)
+f08309: ROOM 07<-05 #173
+f08309:   room=07 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f08334: ROOM 06<-07 #174
+f08334:   room=06 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f08351: ROOM 05<-06 #175
+f08351:   room=05 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f08367: ROOM 06<-05 #176
+f08367:   room=06 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f08384: ROOM 07<-06 #177
+f08384:   room=07 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f08400: ROOM 05<-07 #178
+f08400:   room=05 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f08417: ROOM 06<-05 #179
+f08417:   room=06 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f08435: STATE: playing_combat -> playing_explore (enemies cleared)
+f08441: ROOM 02<-06 #180
+f08441:   room=02 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f08458: ROOM 03<-02 #181
+f08458:   room=03 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f08467: STATE: playing_explore -> boss_fight (Gargoyle)
+f08467: BOSS: Gargoyle (1)
+f08467:   room=03 boss=01 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f08475: PROG reset (was 1F)
+f08482: ROOM 02<-03 #182
+f08482:   room=02 boss=01 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f08491: ROOM 03<-02 #183
+f08491:   room=03 boss=01 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f08498: ROOM 02<-03 #184
+f08498:   room=02 boss=01 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f09000: [STATUS 144s] room=05 boss=01 form=W prog=08 dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=60
+f09000:   rooms=191 uniq=8[01 02 03 04 05 06 07 08 ] kills=1 ents=0 maxProg=24 dd05stall=8580
+f10393: PROG milestone: 20
+f10800: [STATUS 174s] room=05 boss=01 form=W prog=26 dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f10800:   rooms=211 uniq=8[01 02 03 04 05 06 07 08 ] kills=1 ents=0 maxProg=26 dd05stall=10380
+f12338: STATE: boss_fight -> post_boss (boss killed)
+f12338: KILL: Gargoyle #2
+f12338:   room=05 boss=00 form=W prog=35 dd04=00 dd05=00 pw=00 sara=(80,72)
+f12405: PROG reset (was 36)
+f12459: STATE: post_boss -> playing_explore (post-boss timeout)
+f12460: STATE: playing_explore -> playing_stuck (osc=60)
+f12467: ROOM 07<-03 #225
+f12467:   room=07 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12483: ROOM 08<-07 #226
+f12483:   room=08 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12497: STATE: playing_stuck -> playing_combat (enemy@36px)
+f12508: ROOM 07<-08 #227
+f12508:   room=07 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12514: STATE: playing_combat -> playing_explore (enemies cleared)
+f12517: ROOM 06<-07 #228
+f12517:   room=06 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12525: ROOM 02<-06 #229
+f12525:   room=02 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12551: ROOM 03<-02 #230
+f12551:   room=03 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12569: ROOM 02<-03 #231
+f12569:   room=02 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12571: STATE: playing_explore -> playing_combat (enemy@39px)
+f12577: ROOM 01<-02 #232
+f12577:   room=01 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12586: ROOM 08<-01 #233
+f12586:   room=08 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12594: ROOM 01<-08 #234
+f12594:   room=01 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12600: [STATUS 204s] room=01 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_combat osc=30
+f12600:   rooms=234 uniq=8[01 02 03 04 05 06 07 08 ] kills=2 ents=0 maxProg=36 dd05stall=12180
+f12612: STATE: playing_combat -> playing_explore (enemies cleared)
+f12619: ROOM 04<-01 #235
+f12619:   room=04 boss=00 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12629: ROOM 05<-04 #236
+f12629:   room=05 boss=00 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12731: ROOM 01<-05 #237
+f12731:   room=01 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12758: STATE: playing_explore -> playing_combat (enemy@39px)
+f12770: ROOM 07<-01 #238
+f12770:   room=07 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12778: ROOM 08<-07 #239
+f12778:   room=08 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12787: ROOM 07<-08 #240
+f12787:   room=07 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12795: ROOM 08<-07 #241
+f12795:   room=08 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12803: ROOM 07<-08 #242
+f12803:   room=07 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12850: STATE: playing_combat -> playing_explore (enemies cleared)
+f12905: ROOM 03<-04 #246
+f12905:   room=03 boss=00 form=W prog=08 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12922: ROOM 02<-03 #247
+f12922:   room=02 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f12966: ROOM 01<-02 #248
+f12966:   room=01 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13085: ROOM 05<-01 #249
+f13085:   room=05 boss=00 form=W prog=0B dd04=00 dd05=00 pw=00 sara=(76,68)
+f13211: ROOM 01<-05 #250
+f13211:   room=01 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f13333: ROOM 05<-01 #251
+f13333:   room=05 boss=00 form=W prog=10 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13386: STATE: playing_explore -> playing_combat (enemy@39px)
+f13397: ROOM 07<-05 #252
+f13397:   room=07 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13405: ROOM 06<-07 #253
+f13405:   room=06 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13424: ROOM 08<-06 #254
+f13424:   room=08 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13449: ROOM 01<-08 #255
+f13449:   room=01 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13459: STATE: playing_combat -> playing_explore (enemies cleared)
+f13466: ROOM 02<-01 #256
+f13466:   room=02 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13474: ROOM 03<-02 #257
+f13474:   room=03 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13482: ROOM 02<-03 #258
+f13482:   room=02 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13493: ROOM 03<-02 #259
+f13493:   room=03 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13566: ROOM 05<-03 #260
+f13566:   room=05 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13692: ROOM 01<-05 #261
+f13692:   room=01 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13792: STATE: playing_explore -> playing_combat (enemy@36px)
+f13803: ROOM 06<-01 #262
+f13803:   room=06 boss=00 form=W prog=17 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13820: ROOM 07<-06 #263
+f13820:   room=07 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13845: ROOM 06<-07 #264
+f13845:   room=06 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13859: STATE: playing_combat -> playing_explore (enemies cleared)
+f13862: ROOM 05<-06 #265
+f13862:   room=05 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13870: ROOM 03<-05 #266
+f13870:   room=03 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13887: ROOM 02<-03 #267
+f13887:   room=02 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13905: ROOM 03<-02 #268
+f13905:   room=03 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f13914: ROOM 02<-03 #269
+f13914:   room=02 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14054: ROOM 05<-02 #270
+f14054:   room=05 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f14152: STATE: playing_explore -> playing_combat (enemy@39px)
+f14160: ROOM 07<-05 #271
+f14160:   room=07 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f14169: ROOM 08<-07 #272
+f14169:   room=08 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f14178: ROOM 07<-08 #273
+f14178:   room=07 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f14212: ROOM 08<-07 #274
+f14212:   room=08 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f14213: STATE: playing_combat -> playing_explore (enemies cleared)
+f14220: ROOM 02<-08 #275
+f14220:   room=02 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f14228: ROOM 03<-02 #276
+f14228:   room=03 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f14246: ROOM 02<-03 #277
+f14246:   room=02 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f14263: STATE: playing_explore -> playing_stuck (osc=60)
+f14272: ROOM 07<-03 #279
+f14272:   room=07 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f14288: ROOM 08<-07 #280
+f14288:   room=08 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f14293: PROG milestone: 20
+f14304: ROOM 07<-08 #281
+f14304:   room=07 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14338: ROOM 05<-07 #282
+f14338:   room=05 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14348: ROOM 01<-05 #283
+f14348:   room=01 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14367: ROOM 05<-01 #284
+f14367:   room=05 boss=00 form=W prog=21 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14394: ROOM 07<-05 #285
+f14394:   room=07 boss=00 form=W prog=21 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14400: [STATUS 234s] room=07 boss=00 form=W prog=21 dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_stuck osc=30
+f14400:   rooms=285 uniq=8[01 02 03 04 05 06 07 08 ] kills=2 ents=10 maxProg=36 dd05stall=13980
+f14444: STUCK phase=1 (1)
+f14450: ROOM 03<-07 #286
+f14450:   room=03 boss=00 form=W prog=22 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14492: ROOM 02<-03 #287
+f14492:   room=02 boss=00 form=W prog=23 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14497: STATE: playing_stuck -> boss_fight (Gargoyle)
+f14497: BOSS: Gargoyle (1)
+f14497:   room=02 boss=01 form=W prog=23 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14505: PROG reset (was 23)
+f14508: ROOM 04<-02 #288
+f14508:   room=04 boss=01 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14540: ROOM 03<-04 #289
+f14540:   room=03 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14556: ROOM 02<-03 #290
+f14556:   room=02 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14573: ROOM 03<-02 #291
+f14573:   room=03 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14676: ROOM 05<-03 #292
+f14676:   room=05 boss=01 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14771: ROOM 01<-05 #293
+f14771:   room=01 boss=01 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14864: ROOM 05<-01 #294
+f14864:   room=05 boss=01 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f14951: ROOM 01<-05 #295
+f14951:   room=01 boss=01 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f16200: [STATUS 264s] room=05 boss=01 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f16200:   rooms=308 uniq=8[01 02 03 04 05 06 07 08 ] kills=2 ents=0 maxProg=36 dd05stall=15780
+f16393: PROG milestone: 20
+f17679: STATE: boss_fight -> post_boss (boss killed)
+f17679: KILL: Gargoyle #3
+f17679:   room=05 boss=00 form=W prog=2A dd04=00 dd05=00 pw=00 sara=(80,72)
+f17746: PROG reset (was 2B)
+f17800: STATE: post_boss -> playing_explore (post-boss timeout)
+f17801: STATE: playing_explore -> playing_stuck (osc=60)
+f17811: ROOM 07<-03 #322
+f17811:   room=07 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17827: ROOM 08<-07 #323
+f17827:   room=08 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17837: STATE: playing_stuck -> playing_combat (enemy@39px)
+f17845: ROOM 06<-08 #324
+f17845:   room=06 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17858: STATE: playing_combat -> playing_explore (enemies cleared)
+f17861: ROOM 07<-06 #325
+f17861:   room=07 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17869: ROOM 03<-07 #326
+f17869:   room=03 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17877: ROOM 02<-03 #327
+f17877:   room=02 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17886: ROOM 03<-02 #328
+f17886:   room=03 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17896: ROOM 04<-03 #329
+f17896:   room=04 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17913: ROOM 03<-04 #330
+f17913:   room=03 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f17933: ROOM 05<-03 #331
+f17933:   room=05 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18000: [STATUS 294s] room=05 boss=00 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_explore osc=30
+f18000:   rooms=331 uniq=8[01 02 03 04 05 06 07 08 ] kills=3 ents=0 maxProg=36 dd05stall=17580
+f18013: ROOM 01<-05 #332
+f18013:   room=01 boss=00 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18133: ROOM 05<-01 #333
+f18133:   room=05 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18246: STATE: playing_explore -> playing_combat (enemy@39px)
+f18249: ROOM 01<-05 #334
+f18249:   room=01 boss=00 form=W prog=08 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18258: ROOM 07<-01 #335
+f18258:   room=07 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18267: ROOM 08<-07 #336
+f18267:   room=08 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18275: ROOM 07<-08 #337
+f18275:   room=07 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18284: ROOM 05<-07 #338
+f18284:   room=05 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18327: STATE: playing_combat -> playing_explore (enemies cleared)
+f18334: ROOM 03<-05 #339
+f18334:   room=03 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f18351: ROOM 02<-03 #340
+f18351:   room=02 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f18370: ROOM 05<-02 #341
+f18370:   room=05 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f18484: ROOM 01<-05 #342
+f18484:   room=01 boss=00 form=W prog=0C dd04=00 dd05=00 pw=00 sara=(76,68)
+f18606: ROOM 05<-01 #343
+f18606:   room=05 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f18731: ROOM 01<-05 #344
+f18731:   room=01 boss=00 form=W prog=10 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18818: STATE: playing_explore -> playing_combat (enemy@39px)
+f18824: ROOM 06<-01 #345
+f18824:   room=06 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18849: ROOM 07<-06 #346
+f18849:   room=07 boss=00 form=W prog=12 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18858: ROOM 08<-07 #347
+f18858:   room=08 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18874: ROOM 01<-08 #348
+f18874:   room=01 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18883: ROOM 06<-01 #349
+f18883:   room=06 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18891: ROOM 05<-06 #350
+f18891:   room=05 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18905: STATE: playing_combat -> playing_explore (enemies cleared)
+f18916: ROOM 03<-05 #351
+f18916:   room=03 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18933: ROOM 02<-03 #352
+f18933:   room=02 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18950: ROOM 03<-02 #353
+f18950:   room=03 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18968: ROOM 02<-03 #354
+f18968:   room=02 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18978: ROOM 01<-02 #355
+f18978:   room=01 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f18985: STATE: playing_explore -> playing_combat (enemy@35px)
+f18997: ROOM 08<-01 #356
+f18997:   room=08 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19003: STATE: playing_combat -> playing_explore (enemies cleared)
+f19005: ROOM 01<-08 #357
+f19005:   room=01 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19014: ROOM 02<-01 #358
+f19014:   room=02 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19024: ROOM 01<-02 #359
+f19024:   room=01 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19094: ROOM 05<-01 #360
+f19094:   room=05 boss=00 form=W prog=17 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19209: ROOM 01<-05 #361
+f19209:   room=01 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19242: STATE: playing_explore -> playing_combat (enemy@39px)
+f19250: ROOM 08<-01 #362
+f19250:   room=08 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19258: ROOM 07<-08 #363
+f19258:   room=07 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19292: ROOM 06<-07 #364
+f19292:   room=06 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f19301: ROOM 05<-06 #365
+f19301:   room=05 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f19325: ROOM 08<-05 #366
+f19325:   room=08 boss=00 form=W prog=1A dd04=00 dd05=00 pw=00 sara=(76,68)
+f19333: ROOM 01<-08 #367
+f19333:   room=01 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f19359: STATE: playing_combat -> playing_explore (enemies cleared)
+f19366: ROOM 04<-01 #368
+f19366:   room=04 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f19383: ROOM 02<-04 #369
+f19383:   room=02 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f19392: ROOM 03<-02 #370
+f19392:   room=03 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f19418: ROOM 02<-03 #371
+f19418:   room=02 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f19444: ROOM 01<-02 #372
+f19444:   room=01 boss=00 form=W prog=1C dd04=00 dd05=00 pw=00 sara=(76,68)
+f19539: STATE: playing_explore -> playing_combat (enemy@38px)
+f19546: ROOM 07<-01 #373
+f19546:   room=07 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f19566: ROOM 03<-07 #374
+f19566:   room=03 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f19586: ROOM 07<-03 #375
+f19586:   room=07 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f19605: ROOM 03<-07 #376
+f19605:   room=03 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f19614: ROOM 07<-03 #377
+f19614:   room=07 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f19633: PROG milestone: 20
+f19653: STATE: playing_combat -> playing_explore (enemies cleared)
+f19654: STATE: playing_explore -> playing_stuck (osc=75)
+f19684: STATE: playing_stuck -> boss_fight (Gargoyle)
+f19684: BOSS: Gargoyle (1)
+f19684:   room=08 boss=01 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19692: PROG reset (was 20)
+f19699: ROOM 03<-08 #383
+f19699:   room=03 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19708: ROOM 02<-03 #384
+f19708:   room=02 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19715: ROOM 03<-02 #385
+f19715:   room=03 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19725: ROOM 05<-03 #386
+f19725:   room=05 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19753: ROOM 03<-05 #387
+f19753:   room=03 boss=01 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19770: ROOM 02<-03 #388
+f19770:   room=02 boss=01 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19781: ROOM 03<-02 #389
+f19781:   room=03 boss=01 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19800: [STATUS 324s] room=03 boss=01 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=45
+f19800:   rooms=389 uniq=8[01 02 03 04 05 06 07 08 ] kills=3 ents=0 maxProg=36 dd05stall=19380
+f19902: ROOM 05<-03 #390
+f19902:   room=05 boss=01 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f19988: ROOM 01<-05 #391
+f19988:   room=01 boss=01 form=W prog=05 dd04=00 dd05=00 pw=00 sara=(76,68)
+f20082: ROOM 05<-01 #392
+f20082:   room=05 boss=01 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f20166: ROOM 01<-05 #393
+f20166:   room=01 boss=01 form=W prog=08 dd04=00 dd05=00 pw=00 sara=(76,68)
+f21553: PROG milestone: 20
+f21600: [STATUS 354s] room=05 boss=01 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f21600:   rooms=408 uniq=8[01 02 03 04 05 06 07 08 ] kills=3 ents=0 maxProg=36 dd05stall=21180
+f23400: [STATUS 384s] room=05 boss=01 form=W prog=3E dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f23400:   rooms=428 uniq=8[01 02 03 04 05 06 07 08 ] kills=3 ents=0 maxProg=3E dd05stall=22980
+f23473: PROG milestone: 40
+f25085: BOSS TIMEOUT: reverting to explore (still fighting)
+f25085: STATE: boss_fight -> playing_explore (boss timeout 90s)
+f25086: STATE: playing_explore -> boss_fight (Gargoyle)
+f25200: [STATUS 414s] room=05 boss=01 form=W prog=5B dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f25200:   rooms=446 uniq=8[01 02 03 04 05 06 07 08 ] kills=3 ents=0 maxProg=5B dd05stall=24780
+f25784: STATE: boss_fight -> post_boss (boss killed)
+f25784: KILL: Gargoyle #4
+f25784:   room=05 boss=00 form=W prog=5C dd04=00 dd05=00 pw=00 sara=(80,72)
+f25851: PROG reset (was 5D)
+f25905: STATE: post_boss -> playing_explore (post-boss timeout)
+f25906: STATE: playing_explore -> playing_stuck (osc=60)
+f25912: ROOM 07<-03 #452
+f25912:   room=07 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f25929: ROOM 08<-07 #453
+f25929:   room=08 boss=00 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f25945: ROOM 07<-08 #454
+f25945:   room=07 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f25967: STATE: playing_stuck -> playing_combat (enemy@38px)
+f25978: ROOM 06<-07 #455
+f25978:   room=06 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f25987: ROOM 07<-06 #456
+f25987:   room=07 boss=00 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f25992: STATE: playing_combat -> playing_explore (enemies cleared)
+f26003: ROOM 03<-07 #457
+f26003:   room=03 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26012: ROOM 02<-03 #458
+f26012:   room=02 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26029: ROOM 03<-02 #459
+f26029:   room=03 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26047: ROOM 04<-03 #460
+f26047:   room=04 boss=00 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26092: ROOM 05<-04 #461
+f26092:   room=05 boss=00 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26173: ROOM 01<-05 #462
+f26173:   room=01 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26195: STATE: playing_explore -> playing_combat (enemy@37px)
+f26221: ROOM 06<-01 #463
+f26221:   room=06 boss=00 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26246: ROOM 07<-06 #464
+f26246:   room=07 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26279: ROOM 01<-07 #465
+f26279:   room=01 boss=00 form=W prog=07 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26304: ROOM 08<-01 #466
+f26304:   room=08 boss=00 form=W prog=08 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26312: ROOM 07<-08 #467
+f26312:   room=07 boss=00 form=W prog=08 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26347: STATE: playing_combat -> playing_explore (enemies cleared)
+f26354: ROOM 03<-07 #468
+f26354:   room=03 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26371: ROOM 02<-03 #469
+f26371:   room=02 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26380: ROOM 03<-02 #470
+f26380:   room=03 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26406: ROOM 02<-03 #471
+f26406:   room=02 boss=00 form=W prog=09 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26433: ROOM 03<-02 #472
+f26433:   room=03 boss=00 form=W prog=0A dd04=00 dd05=00 pw=00 sara=(76,68)
+f26499: STATE: playing_explore -> playing_combat (enemy@39px)
+f26525: STATE: playing_combat -> playing_explore (enemies cleared)
+f26526: STATE: playing_explore -> playing_stuck (osc=75)
+f26545: STATE: playing_stuck -> playing_combat (enemy@38px)
+f26577: ROOM 01<-07 #478
+f26577:   room=01 boss=00 form=W prog=0C dd04=00 dd05=00 pw=00 sara=(76,68)
+f26613: STATE: playing_combat -> playing_explore (enemies cleared)
+f26619: ROOM 03<-01 #479
+f26619:   room=03 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f26636: ROOM 02<-03 #480
+f26636:   room=02 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f26644: ROOM 04<-02 #481
+f26644:   room=04 boss=00 form=W prog=0D dd04=00 dd05=00 pw=00 sara=(76,68)
+f26654: ROOM 01<-04 #482
+f26654:   room=01 boss=00 form=W prog=0E dd04=00 dd05=00 pw=00 sara=(76,68)
+f26759: ROOM 03<-01 #483
+f26759:   room=03 boss=00 form=W prog=0F dd04=00 dd05=00 pw=00 sara=(76,68)
+f26888: ROOM 01<-03 #484
+f26888:   room=01 boss=00 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26945: STATE: playing_explore -> playing_combat (enemy@38px)
+f26958: ROOM 07<-01 #485
+f26958:   room=07 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f26977: STATE: playing_combat -> playing_explore (enemies cleared)
+f26980: ROOM 03<-07 #486
+f26980:   room=03 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27000: [STATUS 444s] room=03 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68) state=playing_explore osc=15
+f27000:   rooms=486 uniq=8[01 02 03 04 05 06 07 08 ] kills=4 ents=0 maxProg=5D dd05stall=26580
+f27008: ROOM 05<-03 #487
+f27008:   room=05 boss=00 form=W prog=13 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27027: STATE: playing_explore -> playing_combat (enemy@38px)
+f27039: ROOM 06<-05 #488
+f27039:   room=06 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27047: ROOM 07<-06 #489
+f27047:   room=07 boss=00 form=W prog=14 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27081: ROOM 05<-07 #490
+f27081:   room=05 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27082: STATE: playing_combat -> playing_explore (enemies cleared)
+f27089: ROOM 03<-05 #491
+f27089:   room=03 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27098: ROOM 01<-03 #492
+f27098:   room=01 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27107: ROOM 03<-01 #493
+f27107:   room=03 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27116: ROOM 02<-03 #494
+f27116:   room=02 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27124: ROOM 04<-02 #495
+f27124:   room=04 boss=00 form=W prog=15 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27133: ROOM 02<-04 #496
+f27133:   room=02 boss=00 form=W prog=16 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27143: ROOM 01<-02 #497
+f27143:   room=01 boss=00 form=W prog=16 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27253: ROOM 05<-01 #498
+f27253:   room=05 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27260: STATE: playing_explore -> playing_combat (enemy@38px)
+f27272: ROOM 06<-05 #499
+f27272:   room=06 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27278: STATE: playing_combat -> playing_explore (enemies cleared)
+f27288: ROOM 04<-06 #500
+f27288:   room=04 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27299: ROOM 03<-04 #501
+f27299:   room=03 boss=00 form=W prog=18 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27367: ROOM 01<-03 #502
+f27367:   room=01 boss=00 form=W prog=19 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27487: ROOM 05<-01 #503
+f27487:   room=05 boss=00 form=W prog=1B dd04=00 dd05=00 pw=00 sara=(76,68)
+f27612: ROOM 01<-05 #504
+f27612:   room=01 boss=00 form=W prog=1D dd04=00 dd05=00 pw=00 sara=(76,68)
+f27629: STATE: playing_explore -> playing_combat (enemy@38px)
+f27642: ROOM 08<-01 #505
+f27642:   room=08 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f27650: ROOM 07<-08 #506
+f27650:   room=07 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f27659: ROOM 06<-07 #507
+f27659:   room=06 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f27668: ROOM 07<-06 #508
+f27668:   room=07 boss=00 form=W prog=1E dd04=00 dd05=00 pw=00 sara=(76,68)
+f27693: ROOM 06<-07 #509
+f27693:   room=06 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f27709: ROOM 05<-06 #510
+f27709:   room=05 boss=00 form=W prog=1F dd04=00 dd05=00 pw=00 sara=(76,68)
+f27731: STATE: playing_combat -> playing_explore (enemies cleared)
+f27742: ROOM 04<-05 #511
+f27742:   room=04 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27759: ROOM 03<-04 #512
+f27759:   room=03 boss=00 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27764: STATE: playing_explore -> boss_fight (Gargoyle)
+f27764: BOSS: Gargoyle (1)
+f27764:   room=03 boss=01 form=W prog=20 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27772: PROG reset (was 20)
+f27784: ROOM 01<-03 #513
+f27784:   room=01 boss=01 form=W prog=00 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27821: ROOM 05<-01 #514
+f27821:   room=05 boss=01 form=W prog=01 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27862: ROOM 01<-05 #515
+f27862:   room=01 boss=01 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27905: ROOM 02<-01 #516
+f27905:   room=02 boss=01 form=W prog=02 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27913: ROOM 03<-02 #517
+f27913:   room=03 boss=01 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27921: ROOM 02<-03 #518
+f27921:   room=02 boss=01 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27946: ROOM 01<-02 #519
+f27946:   room=01 boss=01 form=W prog=03 dd04=00 dd05=00 pw=00 sara=(76,68)
+f27997: ROOM 05<-01 #520
+f27997:   room=05 boss=01 form=W prog=04 dd04=00 dd05=00 pw=00 sara=(76,68)
+f28093: ROOM 01<-05 #521
+f28093:   room=01 boss=01 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f28144: ROOM 05<-01 #522
+f28144:   room=05 boss=01 form=W prog=06 dd04=00 dd05=00 pw=00 sara=(76,68)
+f28800: [STATUS 474s] room=05 boss=01 form=W prog=11 dd04=00 dd05=00 pw=00 sara=(76,68) state=boss_fight osc=100
+f28800:   rooms=528 uniq=8[01 02 03 04 05 06 07 08 ] kills=4 ents=0 maxProg=5D dd05stall=28380
