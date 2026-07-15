@@ -39,18 +39,23 @@ static const u16 title_palette_steady[4] = {
 // 0 = main title, 1 = records page (SELECT toggles)
 static u8 showing_records;
 static u8 lore_beat;
+static u8 lore_hold;
+
+#define N_LORE_BEATS 7
 
 static void render_lore_beat(void) {
-    // Five champions, five rotating vows. Kept on the live title instead of
-    // an unskippable prologue so boot remains quick and repeat play friendly.
+    // The founding myth as a tiny, animated intro story. It lives on the title
+    // so START can skip it immediately and repeat runs never inherit a cutscene.
     gotoxy(1, 8); printf("                  ");
     gotoxy(1, 9); printf("                  ");
     switch (lore_beat) {
-        case 0: gotoxy(2, 8); printf("FIVE SPIRITS WAKE"); gotoxy(2, 9); printf("ONE WORLD BELOW"); break;
-        case 1: gotoxy(2, 8); printf("FANG GUARDS FLAME"); gotoxy(2, 9); printf("SCALE HOLDS STONE"); break;
-        case 2: gotoxy(2, 8); printf("WING READS SHADOW"); gotoxy(2, 9); printf("FIN REMEMBERS TIDE"); break;
-        case 3: gotoxy(2, 8); printf("STING DEFIES ROT"); gotoxy(2, 9); printf("FIVE SEAL THE RIFT"); break;
-        default: gotoxy(2, 8); printf("CHOOSE A CHAMPION"); gotoxy(2, 9); printf("REKINDLE THE DAWN"); break;
+        case 0: gotoxy(2, 8); printf("WHEN THE SKY TORE"); gotoxy(2, 9); printf("FIVE SPIRITS WOKE"); break;
+        case 1: gotoxy(2, 8); printf("BEAR FIVE SPARKS"); gotoxy(1, 9); printf("TO THE WORLD BELOW"); break;
+        case 2: gotoxy(3, 8); printf("BIND THE RIFT"); gotoxy(1, 9); printf("ERE ALL NAMES FADE"); break;
+        case 3: gotoxy(2, 8); printf("FANG GUARDS FLAME"); gotoxy(2, 9); printf("SCALE HOLDS STONE"); break;
+        case 4: gotoxy(2, 8); printf("WING READS SHADOW"); gotoxy(1, 9); printf("FIN REMEMBERS TIDE"); break;
+        case 5: gotoxy(2, 8); printf("STING DEFIES ROT"); gotoxy(2, 9); printf("FIVE SEAL THE RIFT"); break;
+        default: gotoxy(1, 8); printf("CHOOSE YOUR VESSEL"); gotoxy(2, 9); printf("REKINDLE THE DAWN"); break;
     }
 }
 
@@ -126,6 +131,7 @@ void title_enter(void) {
     has_save = sram_run_valid();
     showing_records = 0;
     lore_beat = 0;
+    lore_hold = 0;
     render_title();
 
     pulse_phase         = 0;
@@ -178,10 +184,9 @@ void title_draw(void) {
     // Change the vow every three pulse cycles. The palette continues moving
     // between beats, giving the lore tableau a simple hardware-cheap animation.
     if (pulse_phase == 0 && !showing_records) {
-        static u8 lore_hold;
         if (++lore_hold >= 3) {
             lore_hold = 0;
-            lore_beat = (u8)((lore_beat + 1) % 5);
+            lore_beat = (u8)((lore_beat + 1) % N_LORE_BEATS);
             render_lore_beat();
         }
     }

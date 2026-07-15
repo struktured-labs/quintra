@@ -17,6 +17,9 @@
 BANKREF(victory_enter)
 
 static u8 pulse;
+static u8 ending_beat;
+static u8 spark_pose;
+static u16 ending_frames;
 
 static const u16 victory_palette[4] = {
     BGR555( 0,  4,  2),    // 0: deep emerald
@@ -26,6 +29,49 @@ static const u16 victory_palette[4] = {
 };
 
 static u8 new_best;
+
+static void render_ending(void) {
+    cls();
+    gotoxy(2, 16); printf("START SKIPS ENDING");
+
+    if (ending_beat == 0) {
+        gotoxy(3, 3);  printf("THE RIFT IS BOUND");
+        gotoxy(2, 8);  printf("NINE COLOSSI FALL");
+        gotoxy(2, 11); printf("FIVE SPARKS RISE");
+    } else if (ending_beat == 1) {
+        gotoxy(3, 3);  printf("THE SPIRITS WAKE");
+        gotoxy(2, 8);  printf("FANG SCALE WING");
+        gotoxy(2, 10); printf("FIN STING RETURN");
+    } else if (ending_beat == 2) {
+        gotoxy(2, 3);  printf("THE ROADS REMEMBER");
+        gotoxy(3, 8);  printf("DAWN HAS A NAME");
+        gotoxy(4, 11); printf("QUINTRA ENDURES");
+    } else {
+        gotoxy(6, 2);  printf("VICTORY!");
+        gotoxy(2, 5);  printf("9 depths freed");
+        gotoxy(2, 8);  printf("rooms   %u", (u16)run_state.room_counter);
+        gotoxy(2, 9);  printf("kills   %u", (u16)run_state.enemies_killed);
+        gotoxy(2, 10); printf("score   %u%s", (u16)run_state.score,
+            (new_best & 1) ? " NEW!" : "");
+        gotoxy(2, 11); printf("best    %u", sram_meta_best());
+        gotoxy(2, 12); printf("time    %u:%u%u%s", (u16)(run_state.run_timer / 60),
+            (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10),
+            (new_best & 2) ? " FAST!" : "");
+        gotoxy(0, 15); printf("START=END A=DESCEND");
+        gotoxy(2, 16); printf("                  ");
+    }
+}
+
+static void render_sparks(void) {
+    if (ending_beat >= 3) return;
+    // Draw in place: font_min's blank glyph does not share the console's CGB
+    // backdrop colour, so clearing a moving row exposes ugly black bars.
+    if (spark_pose) {
+        gotoxy(4, 5); printf("O + O + O + O");
+    } else {
+        gotoxy(4, 5); printf("+ O + O + O +");
+    }
+}
 
 void victory_enter(void) {
     sram_clear_run();   // run over -> suspend save dies with it
@@ -46,29 +92,14 @@ void victory_enter(void) {
     { font_t f = font_load(font_min); font_set(f); }
     cls();
 
-    gotoxy(6, 3);  printf("VICTORY!");
-    if (run_state.bosses_beaten <= BOSSES_TO_WIN) {
-        gotoxy(2, 6);  printf("9 colossi");
-        gotoxy(2, 7);  printf("felled. all");
-        gotoxy(2, 8);  printf("9 depths freed!");
-    } else {
-        gotoxy(2, 6);  printf("colossus %u", (u16)run_state.bosses_beaten);
-        gotoxy(2, 7);  printf("falls. the void");
-        gotoxy(2, 8);  printf("goes deeper...");
-    }
-
-    gotoxy(2, 11); printf("rooms   %u", (u16)run_state.room_counter);
-    gotoxy(2, 12); printf("kills   %u", (u16)run_state.enemies_killed);
-    gotoxy(2, 13); printf("score   %u%s", (u16)run_state.score,
-        (new_best & 1) ? " NEW!" : "");
-    gotoxy(2, 14); printf("best    %u", sram_meta_best());
-    gotoxy(2, 15); printf("time    %u:%u%u%s", (u16)(run_state.run_timer / 60),
-        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10),
-        (new_best & 2) ? " FAST!" : "");
-
-    gotoxy(0, 16); printf("START=END A=DESCEND");
-
     pulse = 0;
+    // The founding epilogue belongs to the canonical ninth-boss clear. Later
+    // optional endless-descent colossi go straight to their results page.
+    ending_beat = (run_state.bosses_beaten == BOSSES_TO_WIN) ? 0 : 3;
+    spark_pose = 0;
+    ending_frames = 0;
+    render_ending();
+    render_sparks();
     music_play_victory();
     SHOW_BKG;
     DISPLAY_ON;
@@ -93,6 +124,23 @@ void victory_draw(void) {
     // Pulse color index 2 between green-yellow and pale-gold
     pulse = (u8)(pulse + 1);
     if (pulse >= 90) pulse = 0;
+
+    // Three skippable three-second epilogue tableaux, then settle on results.
+    // The five rising glyphs shift every half-second as a cheap, legible GBC
+    // animation; START and A remain responsive throughout.
+    if (ending_beat < 3) {
+        ending_frames++;
+        if ((ending_frames % 30) == 0) {
+            spark_pose ^= 1;
+            render_sparks();
+        }
+        if (ending_frames >= 180) {
+            ending_frames = 0;
+            ending_beat++;
+            render_ending();
+            render_sparks();
+        }
+    }
     {
         u8 phase = pulse < 45 ? pulse : (u8)(89 - pulse);
         u8 r     = (u8)(24 - (phase >> 1));

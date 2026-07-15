@@ -11,13 +11,14 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.3: Open Roads](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.4: The Old Vow](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
 The v0.17 reel shows the animated five-spirit prologue, champion selection,
-live dungeon combat, the Riftwild overworld, and a nonlinear cave-to-vault
-teleport. The transitions shown are executed by the cartridge runtime.
+live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
+teleport, and the animated epilogue. The transitions shown are executed by
+the cartridge runtime.
 
 ## Screens
 
@@ -36,7 +37,12 @@ teleport. The transitions shown are executed by the cartridge runtime.
 - **9 distinct dungeon themes**, each with its own palette, music rotation, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
-  the ninth colossus, ending, and permanent win record.
+  the ninth colossus, animated ending, and permanent win record. Victors may
+  retire to the title or choose an optional max-scaled endless descent.
+- **Skippable cartridge storytelling**: the title animates the seven-beat Old
+  Vow of the five champion spirits; victory resolves through three moving
+  epilogue tableaux before revealing run statistics. Both keep controls live,
+  so repeat runs never wait on a cutscene.
 - **9 large-sprite bosses** (32×32 metasprites, distinct bullet patterns,
   telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**

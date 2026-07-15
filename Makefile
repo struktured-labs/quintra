@@ -11,6 +11,12 @@ OBJDIR  = obj
 BINDIR  = rom/working
 GENDIR  = $(SRCDIR)/generated
 
+# Keep uv self-contained inside the ignored workspace cache. Linked worktrees
+# may expose a read-only home cache, and verification should never require
+# system installs or writable global state.
+UV_CACHE_DIR ?= $(CURDIR)/tmp/uv-cache
+export UV_CACHE_DIR
+
 # All .c under src/ (including generated)
 SRCS = $(shell find $(SRCDIR) -name '*.c' 2>/dev/null)
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)

@@ -87,6 +87,15 @@ if MODE == "gif" then
   warp(144, 60); frame(KEY_A|KEY_DOWN, 16, 2) -- Riftwild 1 -> cave 2
   warp(72, 52); frame(0, 24, 2)              -- cave 2 -> distant vault 15
 
+  -- Close on the real three-tableau ending. State setup skips eight stages
+  -- for capture speed; room_tick, victory_enter, animation, and rendering are
+  -- all cartridge code (the victory regression independently proves SRAM).
+  emu:write8(RS + 1, 54)
+  emu:write8(RS + 10, 1)
+  emu:write8(RS + 11, 9)
+  tick(8)
+  frame(0, 600, 10)
+
   emu:setKeys(0)
   console:log("MEDIA CAPTURE DONE frames=" .. gi)
   emu.frontend:quit()
