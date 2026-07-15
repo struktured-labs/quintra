@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.30: Full Speed Ahead](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.31: Honest Time](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -119,6 +119,11 @@ the cartridge runtime.
   rooms hold 60/60 simulation Hz; the verification gate keeps a synthetic
   12-projectile bullet-hell room above 80% video rate instead of collapsing
   from a tiny overrun directly to 30 Hz.
+- **Honest active-play timing**: the run clock follows hardware VBlanks even
+  in dense combat, pauses in PACK and the Spirit Compass, and retains the
+  subsecond earned before opening either screen. Menu tapping therefore cannot
+  erase fractions from a timed run. A cartridge regression enforces ordinary,
+  overloaded, inventory, and compass timing paths.
 
 ## Controls
 
@@ -172,14 +177,14 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.30 occupies 64 KiB with 1,283 bytes of bank-0 headroom.
+v0.17.31 occupies 64 KiB with 1,283 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.30 full-speed baseline records 13/15 full clears—3/3 for Wolfkin,
+v0.17.31 full-speed baseline records 13/15 full clears—3/3 for Wolfkin,
 Sauran, and Corvin, and 2/3 for Picsean and Vespine—with zero combat or route
 stalls. Every run makes 8–11 real purchases rather than bypassing merchants.
 This deliberately preserves meaningful seed risk instead of tuning every vessel

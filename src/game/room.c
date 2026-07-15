@@ -33,6 +33,10 @@ u8 room_tilemap[ROOM_H][ROOM_W];
 
 static u8 room_paused;
 static u8 room_resume_flag;   // set by room_request_resume: skip procgen next enter
+// Active VBlanks below one whole second. Keep this across pack/map visits so
+// menu tapping cannot erase time; g_vbl_ticks itself is cleared on re-entry so
+// time spent reading those screens remains paused.
+static u8 run_clock_fraction;
 // Secret door opened by shooting a cracked wall this room (0xFF = none)
 static u8 secret_door_x = 0xFF;
 static u8 secret_door_y = 0xFF;
@@ -75,6 +79,16 @@ void room_shake(u8 mag, u8 frames) BANKED {
 }
 
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
+
+static void room_clock_consume(void) {
+    u8 elapsed = g_vbl_ticks;
+    g_vbl_ticks = 0;
+    run_clock_fraction = (u8)(run_clock_fraction + elapsed);
+    while (run_clock_fraction >= 60) {
+        run_clock_fraction = (u8)(run_clock_fraction - 60);
+        if (run_state.run_timer < 65535) run_state.run_timer++;
+    }
+}
 
 // Stage themes now live in the Rust content layer (content/src/stages.rs)
 // and arrive as generated BGR555 tables: stage_pal / boss_stage_pal /
@@ -464,6 +478,11 @@ void room_enter(void) {
         return;
     }
 
+    // A brand-new run owns a brand-new fractional clock. Normal room changes
+    // retain it so transition screens cannot shave partial seconds either.
+    if (run_state.room_counter == 0 && run_state.run_timer == 0)
+        run_clock_fraction = 0;
+
     player.iframes       = 0;
 
     // Select audio before the banked generator. The destination counter is
@@ -533,6 +552,9 @@ void room_exit(void) {
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
     if (door_bump_cd) door_bump_cd--;
+    // Consume active-room wall time before any route can leave this screen.
+    // This preserves the fraction earned before START/SELECT was pressed.
+    room_clock_consume();
     // ---- START opens PACK; SELECT opens the generated field compass.
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
@@ -540,7 +562,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (pressed & J_SELECT) {
         return SCREEN_MAP;
     }
-    if (room_paused) { g_vbl_ticks = 0; return SCREEN_SELF; }   // clock holds
+    if (room_paused) return SCREEN_SELF;
 
     // ---- Death beat: the world keeps animating (bullets fly, bursts
     // pop, screen shakes) but the hero is done — then GAMEOVER.
@@ -557,14 +579,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // full brightness — a beat of "emerging into somewhere new".
     if (stage_fade) {
         if (--stage_fade == 0) room_apply_pause_palettes(0);
-    }
-
-    // ---- Run clock: counts REAL seconds of active room play via the
-    // VBL ISR tick (the room loop overruns vblanks under load, so loop
-    // iterations are not wall time). Pause/pack drain the ticks instead.
-    while (g_vbl_ticks >= 60) {
-        g_vbl_ticks = (u8)(g_vbl_ticks - 60);
-        if (run_state.run_timer < 65535) run_state.run_timer++;
     }
 
     // ---- Low-HP danger: at one heart the HUD hearts pulse white-hot

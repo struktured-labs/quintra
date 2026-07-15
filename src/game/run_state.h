@@ -30,7 +30,7 @@ typedef struct {
     u8  room_counter;        // number of rooms entered this run
     u32 run_seed;            // run-level seed (combined w/ room_counter for per-room RNG)
     u8  entered_from;        // DIR_* — which door the player just came through
-    u16 run_timer;           // total ticks since run started (1/60 sec)
+    u16 run_timer;           // active-play seconds since the run started
     u8  rooms_cleared;       // count of rooms where all enemies were defeated
     u8  victory;             // 1 only when BOSSES_TO_WIN bosses are down (final win)
     u8  bosses_beaten;       // bosses defeated so far this run
