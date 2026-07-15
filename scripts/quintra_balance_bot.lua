@@ -106,6 +106,35 @@ local function body_walkable(cx, cy)
         and walkable(emu:read8(TM + cy * 20 + cx))
 end
 
+-- Mirror room.c's feet-anchored collision box for one prospective pixel.
+-- Tile BFS plans globally; this answers whether its immediate controller
+-- input is physically possible from the body's current sub-tile offset.
+local function pixel_walkable(x, y)
+    if x < 0 or x >= 160 or y < 0 or y >= 136 then return false end
+    return walkable(emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8)))
+end
+
+local function can_step(px, py, key)
+    local nx, ny = px, py
+    if key == KEY_RIGHT then nx = nx + 1
+    elseif key == KEY_LEFT then nx = nx - 1
+    elseif key == KEY_DOWN then ny = ny + 1
+    elseif key == KEY_UP then ny = ny - 1
+    else return true end
+    return pixel_walkable(nx + 2, ny + 8)
+        and pixel_walkable(nx + 13, ny + 8)
+        and pixel_walkable(nx + 2, ny + 15)
+        and pixel_walkable(nx + 13, ny + 15)
+end
+
+local function direction_from_keys(keys)
+    if keys % 0x20 >= KEY_RIGHT then return KEY_RIGHT end
+    if keys % 0x40 >= KEY_LEFT then return KEY_LEFT end
+    if keys % 0x80 >= KEY_UP then return KEY_UP end
+    if keys >= KEY_DOWN then return KEY_DOWN end
+    return 0
+end
+
 -- Convert a tile-BFS direction into collision-safe pixel input. A 12px body
 -- can occupy the same nominal tile cell at several offsets; before moving
 -- through a narrow gap, center the perpendicular axis on the cell represented
@@ -264,6 +293,7 @@ local world_hops, last_world_key = 0, -1
 local debug_shot_room = -1
 local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer, flank_dir = 0, 0, KEY_LEFT
+local wall_follow_dir, wall_follow_min = 0, 0
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local mp = PL ~= 0 and emu:read8(PL + 4) or 0
@@ -278,6 +308,7 @@ while frames < LIMIT do
     if room > max_room then max_room = room end
     if room ~= last_room then
         rooms_seen, last_room, room_enter_frame = rooms_seen + 1, room, frames
+        wall_follow_dir, wall_follow_min = 0, 0
         if room > 18 and room % 18 == 1 and not town_rooms[room] then
             town_rooms[room], towns_seen = true, towns_seen + 1
         end
@@ -288,6 +319,7 @@ while frames < LIMIT do
     if world_key ~= last_world_key then
         if last_world_key >= 0 or world_key >= 0 then world_hops = world_hops + 1 end
         last_world_key = world_key
+        wall_follow_dir, wall_follow_min = 0, 0
     end
     if hp == 0 or won ~= 0 then break end
 
@@ -387,6 +419,41 @@ while frames < LIMIT do
         end
     else
         keys = door_step(px, py) + KEY_A
+    end
+    -- The tile path can point through a locally blocked feet-box state near a
+    -- pillar corner. After the stall threshold, follow that solid edge for at
+    -- least one body width and until the planned cardinal is truly open, then
+    -- return to BFS.
+    if not target and not loot and world_mode == 0
+        and (wall_follow_dir ~= 0 or frames - room_enter_frame > 3600) then
+        local planned = direction_from_keys(keys)
+        if wall_follow_dir ~= 0 then
+            if wall_follow_min > 0 then wall_follow_min = wall_follow_min - 1 end
+            if wall_follow_min == 0 and planned ~= 0 and can_step(px, py, planned) then
+                wall_follow_dir = 0
+            elseif can_step(px, py, wall_follow_dir) then
+                keys = wall_follow_dir + KEY_A
+            else
+                wall_follow_dir = (wall_follow_dir == KEY_UP) and KEY_DOWN
+                    or (wall_follow_dir == KEY_DOWN) and KEY_UP
+                    or (wall_follow_dir == KEY_LEFT) and KEY_RIGHT or KEY_LEFT
+                if can_step(px, py, wall_follow_dir) then
+                    keys = wall_follow_dir + KEY_A
+                else
+                    wall_follow_dir = 0
+                end
+            end
+        elseif planned ~= 0 and not can_step(px, py, planned) then
+            if planned == KEY_LEFT or planned == KEY_RIGHT then
+                wall_follow_dir = can_step(px, py, KEY_UP) and KEY_UP or KEY_DOWN
+            else
+                wall_follow_dir = can_step(px, py, KEY_LEFT) and KEY_LEFT or KEY_RIGHT
+            end
+            wall_follow_min = 24
+            if can_step(px, py, wall_follow_dir) then keys = wall_follow_dir + KEY_A end
+        end
+    else
+        wall_follow_dir, wall_follow_min = 0, 0
     end
     -- Tile routes and direct melee pursuit can both disagree with the
     -- runtime's pixel body collision. Make a sustained perpendicular
