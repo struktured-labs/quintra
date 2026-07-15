@@ -105,6 +105,25 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
                     room_tilemap[i][14] = BGT_SPIKES;
             }
         }
+    } else if (archetype == STAGE_ARCH_VAULT) {
+        // Vault: a broken octagonal crystal ring creates an icy central
+        // arena with four broad entrances. The ring provides cover without
+        // sealing the centre or any door lane; seed rotation varies which
+        // corners are doubled while preserving the same fair traversal.
+        static const u8 vx[16] = {
+            7, 8, 11, 12, 7, 8, 11, 12,
+            5, 5, 5, 5, 14, 14, 14, 14
+        };
+        static const u8 vy[16] = {
+            5, 5, 5, 5, 12, 12, 12, 12,
+            6, 7, 10, 11, 6, 7, 10, 11
+        };
+        for (i = 0; i < 16; ++i) {
+            u8 x = (seed & 1) ? vx[i] : (u8)(19 - vx[i]);
+            u8 y = (seed & 2) ? vy[i] : (u8)(17 - vy[i]);
+            if (room_tile_walkable(room_tilemap[y][x]))
+                room_tilemap[y][x] = BGT_CRYSTAL;
+        }
     }
 }
 

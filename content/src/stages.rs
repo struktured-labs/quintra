@@ -48,7 +48,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 4, 8,12), c(12,26,31), c(22,31,31), c(31,31,31)],
         door:    [c( 2, 3, 4), c(10, 9, 4), c(20,16, 6), c(30,26,12)],
         boss:    [c(0,0,0), c(12,18,24), c( 3, 5, 9), c(31,31,31)],
-        boss_hp_bonus: 106, boss_dmg_bonus: 2, mb_variant: 3, room_archetype: 0,
+        boss_hp_bonus: 106, boss_dmg_bonus: 2, mb_variant: 3, room_archetype: 3,
         enemy_pool: &[(5, 35), (3, 35), (6, 30)],
     },
     // 4 — Toxic Mire (sickly yellow-green)

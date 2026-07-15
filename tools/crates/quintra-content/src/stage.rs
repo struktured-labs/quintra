@@ -54,7 +54,8 @@ pub struct StageTheme {
     /// value consumed by BOTH the art loader and the palette pick — the
     /// two hand-written C copies used to have to agree by comment.
     pub mb_variant: u8,
-    /// Procedural room architecture: 0 cavern, 1 grove, 2 hazard gauntlet.
+    /// Procedural room architecture: 0 cavern, 1 grove, 2 hazard gauntlet,
+    /// 3 broken vault ring.
     /// This makes stage identity affect traversal, not only palettes/rosters.
     pub room_archetype: u8,
     /// Weighted normal-room enemy roster for this stage: (enemy id, weight).
@@ -112,4 +113,4 @@ impl StageTheme {
     }
 }
 
-pub const ROOM_ARCHETYPES: u8 = 3;
+pub const ROOM_ARCHETYPES: u8 = 4;

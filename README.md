@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.11: Market Faces](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.12: Frost Vaults](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -42,8 +42,9 @@ the cartridge runtime.
   the ninth colossus, animated ending, and permanent win record. Victors may
   retire to the title or choose an optional max-scaled endless descent.
 - **Stage-specific traversal architecture** is content-authored alongside each
-  theme: cavern layouts give way to Verdant crystal groves and Ember's broken
-  hazard-seam gauntlets, with safe crossings preserved by construction.
+  theme: cavern layouts give way to Verdant crystal groves, Ember's broken
+  hazard-seam gauntlets, and Frost's four-entry crystalline arena rings, with
+  safe crossings preserved by construction.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
   Vow of the five champion spirits; victory resolves through three moving
   epilogue tableaux before revealing run statistics. Both keep controls live,
@@ -129,7 +130,7 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.11 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
+v0.17.12 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It fails if any agent does not produce telemetry, while

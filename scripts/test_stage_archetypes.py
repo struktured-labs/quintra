@@ -27,7 +27,7 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
-def generated_room(stage, seed=0xCAFE1234):
+def generated_room(stage, seed=0xCAFE1234, screenshot=None):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -38,7 +38,10 @@ def generated_room(stage, seed=0xCAFE1234):
     for _ in range(60):
         pb.tick()
 
-    target = stage * 6 + 1
+    # Each three-dungeon region inserts a town room before the next stage.
+    # Account for those interludes instead of accidentally inspecting rooms
+    # 19/37/55 as if they were stage combat rooms.
+    target = stage * 6 + 1 + stage // 3
     # Enter through the authored Riftwild dungeon gate. This follows the
     # cartridge's real between-dungeon transition without fighting prior
     # bosses merely to inspect deterministic stage geometry.
@@ -65,6 +68,9 @@ def generated_room(stage, seed=0xCAFE1234):
     for _ in range(20):
         pb.tick()
     tiles = [pb.memory[TM + i] for i in range(ROOM_W * ROOM_H)]
+    if screenshot is not None:
+        screenshot.parent.mkdir(exist_ok=True)
+        pb.screen.image.save(screenshot)
     pb.stop(save=False)
     return tiles
 
@@ -114,8 +120,26 @@ def main():
     assert any(tile(ember, 14, y) != BGT_SPIKES for y in range(4, 14))
     ember_exits = reachable_exits(ember, (18, 9))
     assert len(ember_exits) == 4, f"Ember gauntlet disconnected exits: {ember_exits}"
+
+    frost = generated_room(3, screenshot=ROOT / "tmp" / "frost-vault.png")
+    vault_sites = [
+        (7, 5), (8, 5), (11, 5), (12, 5),
+        (7, 12), (8, 12), (11, 12), (12, 12),
+        (5, 6), (5, 7), (5, 10), (5, 11),
+        (14, 6), (14, 7), (14, 10), (14, 11),
+    ]
+    vault_crystals = sum(tile(frost, x, y) == BGT_CRYSTAL for x, y in vault_sites)
+    assert vault_crystals >= 12, f"Frost vault ring missing ({vault_crystals}/16)"
+    # The four axial breaks are the visual language and the safety contract.
+    assert all(tile(frost, x, y) != BGT_CRYSTAL for x, y in (
+        (9, 5), (10, 5), (9, 12), (10, 12),
+        (5, 8), (5, 9), (14, 8), (14, 9),
+    ))
+    frost_exits = reachable_exits(frost, (18, 9))
+    assert len(frost_exits) == 4, f"Frost vault disconnected exits: {frost_exits}"
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
-          f"Ember seams={seam_spikes}/24, all exits reachable")
+          f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
+          "all exits reachable")
 
 
 if __name__ == "__main__":
