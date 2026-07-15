@@ -230,6 +230,17 @@ pub const RIFT_OOZE: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const MIRROR_MOTH: Enemy = Enemy {
+    id: ENEMY_MIRROR_MOTH, symbol: "MIRROR_MOTH", name: "Mirror Moth", sprite_set: SPRITE_CRAWLER,
+    palette: OBJ_PAL_CRAWLER,
+    // Frost Vault controller: it reverses the hero's last movement instead
+    // of homing, then sends a slow reflected bolt down the resulting lane.
+    stats: EnemyStats { hp: 4, damage: 1, speed: 48, score: 38, weakness: 0x01, poise: 1 },
+    ai_script: AiScriptId::Mirror { fire_rate: 120 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -247,4 +258,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(GLOAM_LEECH.clone());
     r.add_enemy(CINDER_MAW.clone());
     r.add_enemy(RIFT_OOZE.clone());
+    r.add_enemy(MIRROR_MOTH.clone());
 }

@@ -40,6 +40,9 @@ pub enum AiScriptId {
     /// Expands into diagonal echoes on an irregular cadence, then contracts
     /// into a short vulnerable phase.
     Replicator   { open_ticks: u8, closed_ticks: u8 },
+    /// Tracks the hero's last movement in reverse and periodically reflects
+    /// an aimed bolt back through the room.
+    Mirror       { fire_rate: u8 },
 }
 
 // Container with &'static str and &'static [BiomeId] — no serde.

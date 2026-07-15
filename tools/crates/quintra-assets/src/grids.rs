@@ -262,6 +262,17 @@ pub const RIFT_OOZE: [&str; 8] = [ // unstable blob with two budding fragments
     "2......2",
 ];
 
+pub const MIRROR_MOTH: [&str; 8] = [ // bilateral wings around an icy mirror core
+    "1..22..1",
+    "11.22.11",
+    ".132231.",
+    "..1331..",
+    "..2332..",
+    ".13..31.",
+    "11....11",
+    "1......1",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -559,7 +570,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 14] = [
+pub const ENEMIES_8: [(&str, &[&str]); 15] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -574,6 +585,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 14] = [
     ("gloam_leech", &GLOAM_LEECH),
     ("cinder_maw", &CINDER_MAW),
     ("rift_ooze", &RIFT_OOZE),
+    ("mirror_moth", &MIRROR_MOTH),
 ];
 
 pub const FX_8: [(&str, &[&str]); 9] = [

@@ -17,6 +17,7 @@ SPECIALISTS = {
     13: (74, 34, "GLOAM_LEECH", "SPR_ENEMY_GLOAM_LEECH", "gloam-leech"),
     14: (75, 20, "CINDER_MAW", "SPR_ENEMY_CINDER_MAW", "cinder-maw"),
     15: (76, 20, "RIFT_OOZE", "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
+    16: (77, 21, "MIRROR_MOTH", "SPR_ENEMY_MIRROR_MOTH", "mirror-moth"),
 }
 
 
@@ -137,6 +138,43 @@ def main():
         f"{pb.memory[bat + 3]},{pb.memory[bat + 7]}"
     )
 
+    # Mirror Moth runs through its typed AI_MIRROR dispatch in bank 3. Real
+    # controller movement to the right must make it step left, and its authored
+    # fire clock must produce a hostile reflected bolt without direct writes.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 64)
+    put16(pb, player + 11, 72)
+    pb.memory[player + 2] = 20
+    moth = entities
+    pb.memory[moth] = 2
+    pb.memory[moth + 1] = 3
+    put_fix8(pb, moth + 2, 112)
+    put_fix8(pb, moth + 6, 72)
+    pb.memory[moth + 14] = 4
+    pb.memory[moth + 17] = 16
+    pb.memory[moth + 18] = 116      # four ticks from reflected fire
+    pb.memory[moth + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()                        # initialize last-player sample
+    player_x0, moth_x0 = pb.memory[player + 9], pb.memory[moth + 3]
+    pb.button_press("right")
+    for _ in range(18):
+        pb.tick()
+    pb.button_release("right")
+    assert pb.memory[player + 9] > player_x0, "controller did not move hero right"
+    assert pb.memory[moth + 3] < moth_x0, (
+        f"Mirror Moth did not reverse hero movement: {moth_x0}->{pb.memory[moth + 3]}"
+    )
+    reflected = []
+    for i in range(1, 32):
+        ep = entities + i * 28
+        if pb.memory[ep] == 1 and pb.memory[ep + 1] & 1:
+            reflected.append((pb.memory[ep + 5], pb.memory[ep + 9]))
+    assert reflected, "Mirror Moth did not fire its reflected hostile bolt"
+
     # Kill a Rift Ooze through the real projectile/combat loop. The corpse
     # must become two fragile crawler fragments, not merely claim to split in
     # authored data or a unit-test-only helper.
@@ -183,7 +221,7 @@ def main():
         f"dead Rift Ooze remained active: {fragments}"
     )
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + leech routing + flutterbat escape + ooze split")
+    print("[enemy-id] PASS specialist art + leech routing + flutterbat escape + mirror motion/fire + ooze split")
 
 
 if __name__ == "__main__":

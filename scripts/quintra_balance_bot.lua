@@ -557,7 +557,7 @@ while frames < LIMIT do
         -- Exercise the actual class kit. Signatures require a clean B edge
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
         -- agent never raised Sauran's shield or fired the ranged signatures.
-        local signature_period = (CLASS == 3) and 90 or 180
+        local signature_period = (CLASS == 3) and 90 or (CLASS == 4) and 120 or 180
         if not waiting_star and active_charge == 0 and mp >= 2 and frames % signature_period == 0 then
             keys = KEY_B + aim
         -- Spirit Convergence requires A and B to become pressed together.

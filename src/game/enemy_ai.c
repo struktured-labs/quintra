@@ -6,6 +6,7 @@
 #include "core/rng.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_mirror.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
@@ -39,6 +40,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case ENEMY_GLOAM_LEECH: return SPR_ENEMY_GLOAM_LEECH;
         case ENEMY_CINDER_MAW: return SPR_ENEMY_CINDER_MAW;
         case ENEMY_RIFT_OOZE: return SPR_ENEMY_RIFT_OOZE;
+        case ENEMY_MIRROR_MOTH: return SPR_ENEMY_MIRROR_MOTH;
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -62,6 +64,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case ENEMY_FLUTTERBAT: return 0x00;
         case ENEMY_GLOAM_LEECH: return 0x04;
         case ENEMY_RIFT_OOZE: return 0x07;
+        case ENEMY_MIRROR_MOTH: return 0x00;
         default: return 0x03;
     }
 }
@@ -661,6 +664,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_TELEPORT: teleport_tick(e, def);           break;
         case AI_TURRET:   turret_tick(e, def);             break;
         case AI_REPLICATOR: replicator_tick(e, def);        break;
+        case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
         default:         walker_tick(e);                   break;
     }
 }

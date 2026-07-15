@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.36: No Dark Corners](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.37: Reflections in Ice](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -65,22 +65,26 @@ the cartridge runtime.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **16 enemies across a size hierarchy** — small swarm critters (crawler,
+- **17 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
   **Folding Stars**, Keese-like **Flutterbats**, and life-draining
   **Gloom Leeches**, Ember's area-denial **Cinder Maws**, and late-stage
-  **Rift Oozes** that split into two fragile crawler fragments when slain.
+  **Rift Oozes** that split into two fragile crawler fragments when slain,
+  and Frost Vault **Mirror Moths** that reverse the champion's last movement
+  vector before firing a slow reflected bolt down the new lane.
   Both fragments are guaranteed even when the fixed 32-entity table is full;
   a spent lethal projectile yields its slot before the split resolves.
-  Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, and Rift Oozes have dedicated silhouettes
+  Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, Rift Oozes, and
+  Mirror Moths have dedicated silhouettes
   instead of borrowing older monsters' art, so movement and shape both
   communicate threat. Folding Stars remain invulnerable while expanded but
   now contract for a full one-second punish window, and pursuing monsters
   edge-follow around procgen pillars instead of wedging behind them forever.
-  Flutterbat diagonals resolve by axis, preventing an 8px flyer from cutting
-  into a corner that no 12px champion can enter and softlocking a sealed room.
+  Flutterbat diagonals resolve by axis and use champion-sized navigation
+  clearance, preventing an 8px flyer from entering geometry no 12px champion
+  can reach and softlocking a sealed room.
 - **Distinct champion combat + dodge dash**: Wolfkin is a true close-range
   melee fighter; `A` uses each class primary, `B` uses its signature, Sauran
   raises a projectile-breaking cooldown shield, and full-MP `A+B` unleashes
@@ -183,7 +187,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.36 occupies 64 KiB with 1,231 bytes of bank-0 headroom. Gameplay files
+v0.17.37 occupies 64 KiB with 1,199 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -195,16 +199,16 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.36's paired-seed baseline records 14/15 full clears: 3/3 for four
-champions and 2/3 for Picsean, with one real permadeath and zero combat or
-route stalls. That small failure rate is healthier roguelike pressure than a
+v0.17.37's paired-seed baseline records 13/15 full clears: 3/3 for three
+champions and 2/3 for Picsean and Vespine, with two real permadeaths and zero
+combat or route stalls. That small failure rate is healthier roguelike pressure than a
 perfect agent sweep while retaining the two-clear conference floor. Successful
-runs make 8–11 real purchases rather than bypassing merchants; the lone early
-permadeath still made two, and no run exceeds 52
+runs make 8–12 real purchases rather than bypassing merchants; both early
+permadeaths still made two, and no run exceeds 55
 Riftwild transitions. The gate now proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
-low as three half-hearts and vary from roughly 4:59 to 8:45 active play, so
+low as one half-heart and vary from roughly 4:37 to 8:47 active play, so
 the sample retains pressure and meaningful build/seed variance.
 
 The agents use each champion's actual weapon range and B ability, collect
@@ -214,7 +218,7 @@ route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 used in balance runs. Telemetry retains the worst combat and route dwell from
 the entire run—not merely its final room—and identifies the responsible room
 and enemy for reproducible failures. Death attribution is inferred entirely by
-the emulator observer, so it cannot perturb cartridge timing: values 0–15 name
+the emulator observer, so it cannot perturb cartridge timing: values 0–16 name
 the nearest hostile, 254 denotes floor hazards, and 253 is an unresolved hostile
 hit. Two-frame press/release beats ensure real
 cartridge polls observe dodge double-taps; stalled firing lanes use the same

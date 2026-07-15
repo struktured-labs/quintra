@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       16);   // includes Cinder Maw + splitting Rift Ooze
+        assert_eq!(r.n_enemies(),       17);   // includes Rift Ooze + Frost's Mirror Moth
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -87,5 +87,12 @@ mod tests {
         assert_eq!(Rgb5(31, 0, 0).to_bgr555(), 0x001F);
         assert_eq!(Rgb5(0, 31, 0).to_bgr555(), 0x03E0);
         assert_eq!(Rgb5(0, 0, 31).to_bgr555(), 0x7C00);
+    }
+
+    #[test]
+    fn frost_vault_authors_the_mirror_moth_without_weight_inflation() {
+        let frost = &stages::STAGES[3];
+        assert!(frost.enemy_pool.iter().any(|&(id, _)| id == 16));
+        assert_eq!(frost.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
     }
 }
