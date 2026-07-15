@@ -153,6 +153,36 @@ def main():
     assert pb.memory[pl + 5] == old_atk + 1, "forge did not grant +1 ATK"
     assert pb.memory[pl + 16] == 0 and pb.memory[pl + 17] == 0, "forge did not deduct coins"
 
+    # Multi-point relic boosts must saturate at their advertised runtime cap.
+    # Hunter's Eye is generated item index 18 and grants +3 LCK; the former
+    # check-before-add implementation allowed 9 + 3 to leak through as 12.
+    relic = next(en + i * 28 for i in range(32) if pb.memory[en + i * 28] == 0)
+    for off in range(28):
+        pb.memory[relic + off] = 0
+    pb.memory[relic] = 3             # ENT_PICKUP
+    pb.memory[relic + 1] = 3         # EF_ACTIVE | EF_ALIVE
+    pb.memory[relic + 3] = 80        # fix8 x integer byte
+    pb.memory[relic + 7] = 48        # fix8 y integer byte
+    pb.memory[relic + 16] = 255      # linger
+    pb.memory[relic + 17] = 3        # PICKUP_ITEM
+    pb.memory[relic + 18] = 18       # Hunter's Eye array index
+    pb.memory[relic + 25] = 0x66     # pickup hitbox
+    pb.memory[pl + 8] = 9
+    for off, value in ((9, 80), (10, 0), (11, 40), (12, 0)):
+        pb.memory[pl + off] = value
+    relic_lck_trace = []
+    for _ in range(4):
+        pb.tick()
+        relic_lck_trace.append(pb.memory[pl + 8])
+    assert pb.memory[pl + 8] == 10, (
+        f"Hunter's Eye cap/pickup failed (lck={pb.memory[pl + 8]}, "
+        f"entity={pb.memory[relic]}/{pb.memory[relic + 1]}, "
+        f"kind={pb.memory[relic + 17]}, item={pb.memory[relic + 18]}, "
+        f"epos={pb.memory[relic + 3]},{pb.memory[relic + 7]}, "
+        f"ppos={pb.memory[pl + 9]},{pb.memory[pl + 11]}, "
+        f"trace={relic_lck_trace})"
+    )
+
     # Ordinary dungeon shops are staffed too, not only the larger town hubs.
     enter_from_previous(22)
     shop_merchant = None
@@ -164,7 +194,7 @@ def main():
     assert shop_merchant is not None, "ordinary shop has no merchant"
     assert pb.memory[shop_merchant + 12] == 70, "shop merchant art drifted"
     pb.stop(save=False)
-    print("[town] PASS sanctuary + elder/merchant/smith art + forge + Sauran Iron Heart growth")
+    print("[town] PASS sanctuary + staffed shops + forge + capped run relics")
 
 if __name__ == "__main__":
     main()

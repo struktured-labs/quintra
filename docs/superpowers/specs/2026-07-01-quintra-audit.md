@@ -1,5 +1,10 @@
 # Quintra v0.3 Deep Audit — 2026-07-01
 
+> Historical snapshot, not the current backlog. The listed P0–P2 findings
+> were subsequently implemented or superseded; use the current README,
+> executable verification suite, and cartridge budget report as authoritative
+> evidence. This document remains to preserve the reasoning that led there.
+
 Triggered by user playtest feedback: *"where is the dungeon? I just saw a single
 blank background."* Full pass over gameplay code, rendering, content, and test
 harness. Findings ranked by player impact.

@@ -168,6 +168,11 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     }
 }
 
+static u8 add_capped(u8 value, u8 delta, u8 cap) {
+    if (value >= cap || delta >= (u8)(cap - value)) return cap;
+    return (u8)(value + delta);
+}
+
 // Apply a generated item's StatBoost effects to the live player.
 static void apply_item_effects(u8 item_idx) {
     const item_def_t *it;
@@ -188,28 +193,24 @@ static void apply_item_effects(u8 item_idx) {
         if (ef->kind != EFFECT_STAT_BOOST) continue;
         switch (ef->d0) {
             case STAT_HP:
-                player.hp_max = (u8)(player.hp_max + ef->d1);
-                if (player.hp_max > HP_CAP) player.hp_max = HP_CAP;
-                player.hp = (u8)(player.hp + ef->d1);
-                if (player.hp > player.hp_max) player.hp = player.hp_max;
+                player.hp_max = add_capped(player.hp_max, ef->d1, HP_CAP);
+                player.hp = add_capped(player.hp, ef->d1, player.hp_max);
                 break;
             case STAT_MP:
-                player.mp_max = (u8)(player.mp_max + ef->d1);
-                if (player.mp_max > 20) player.mp_max = 20;
-                player.mp = (u8)(player.mp + ef->d1);
-                if (player.mp > player.mp_max) player.mp = player.mp_max;
+                player.mp_max = add_capped(player.mp_max, ef->d1, 20);
+                player.mp = add_capped(player.mp, ef->d1, player.mp_max);
                 break;
             case STAT_ATK:
-                if (player.atk < 15) player.atk = (u8)(player.atk + ef->d1);
+                player.atk = add_capped(player.atk, ef->d1, 15);
                 break;
             case STAT_DEF:
-                if (player.def < 10) player.def = (u8)(player.def + ef->d1);
+                player.def = add_capped(player.def, ef->d1, 10);
                 break;
             case STAT_SPD:
-                if (player.spd < 9) player.spd = (u8)(player.spd + ef->d1);
+                player.spd = add_capped(player.spd, ef->d1, 9);
                 break;
             case STAT_LCK:
-                if (player.lck < 10) player.lck = (u8)(player.lck + ef->d1);
+                player.lck = add_capped(player.lck, ef->d1, 10);
                 break;
         }
     }

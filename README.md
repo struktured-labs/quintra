@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.21: Blood Sigil](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.22: Honest Relics](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -95,7 +95,9 @@ the cartridge runtime.
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill;
-  an eight-heart cap leaves upgrade room even for six-heart Sauran.
+  an eight-heart cap leaves upgrade room even for six-heart Sauran. All relic
+  boosts saturate at their displayed stat caps, including multi-point luck
+  relics near the cap.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever.
@@ -148,11 +150,11 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.21 occupies 64 KiB with 1,201 bytes of bank-0 headroom.
+v0.17.22 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and
-rendered endings per champion, in addition to complete telemetry. The v0.17.21
+rendered endings per champion, in addition to complete telemetry. The v0.17.22
 baseline records 11/15 full clears—3/3 for Wolfkin and Vespine, and 2/3 for
 Sauran, Corvin, and Picsean—with zero combat or route stalls. This deliberately
 preserves meaningful seed risk instead of tuning every vessel toward automatic

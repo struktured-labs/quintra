@@ -37,6 +37,11 @@ impl Item {
         if self.description.len() > 64 {
             return Err(format!("item {} description length {} > 64", self.id.raw(), self.description.len()));
         }
+        if self.effects.iter().any(|effect| {
+            matches!(effect, Effect::StatBoost { delta: 0, .. })
+        }) {
+            return Err(format!("item {} contains a zero-delta stat boost", self.id.raw()));
+        }
         Ok(())
     }
 }

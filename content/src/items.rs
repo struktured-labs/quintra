@@ -30,13 +30,10 @@ pub const HOWL: Item = Item {
     icon_sprite: SPRITE_ITEM_HOWL,
     palette:     OBJ_PAL_ITEM_GOLD,
     rarity:      Rarity::Rare,
-    effects: &[
-        Effect::OnRoomClear(Trigger::ApplyStatus {
-            status: Status::Stunned,
-            duration_ticks: 60,
-        }),
-        Effect::StatBoost { stat: Stat::Spd, delta: 0 },  // placeholder
-    ],
+    effects: &[Effect::OnRoomClear(Trigger::ApplyStatus {
+        status: Status::Stunned,
+        duration_ticks: 60,
+    })],
 };
 
 // --- Other starter weapons (one per class)
