@@ -29,6 +29,12 @@ static void knockback_enemy(entity_t *e, i8 bvx, i8 bvy, u8 poise) {
     }
 }
 
+static void score_add(u16 points) {
+    u16 before = run_state.score;
+    run_state.score = (u16)(before + points);
+    if (run_state.score < before) run_state.score = 0xFFFF;
+}
+
 u8 combat_resolve(void) BANKED {
     u8 i, j;
     u8 player_died = 0;
@@ -112,7 +118,7 @@ u8 combat_resolve(void) BANKED {
                             // Endless descent pays double
                             u16 pts = enemies[eid].stats.score;
                             if (run_state.bosses_beaten >= BOSSES_TO_WIN) pts = (u16)(pts << 1);
-                            run_state.score = (u16)(run_state.score + pts);
+                            score_add(pts);
                         }
                         run_state.enemies_killed++;
                         // Vampiric Sigil (item id 29): slow dungeon sustain.
@@ -187,8 +193,7 @@ u8 combat_resolve(void) BANKED {
                     // Elites always pay out
                     if (entities[j].flags & EF_ELITE) {
                         pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y);
-                        run_state.score = (u16)(run_state.score
-                            + ((eid < N_ENEMIES) ? enemies[eid].stats.score : 0));
+                        score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
                     } else {
                         pickup_roll_drop(entities[j].x, entities[j].y);
                     }
