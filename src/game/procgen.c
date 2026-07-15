@@ -88,9 +88,7 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
         static const u8 gx[8] = { 4, 5, 14, 15, 4, 5, 14, 15 };
         static const u8 gy[8] = { 4, 4, 4, 4, 12, 12, 12, 12 };
         for (i = 0; i < 8; ++i) {
-            u8 x = (seed & 1) ? gx[i] : (u8)(19 - gx[i]);
-            u8 y = gy[i];
-            room_tilemap[y][x] = BGT_CRYSTAL;
+            room_tilemap[gy[i]][gx[i]] = BGT_CRYSTAL;
         }
     } else if (archetype == STAGE_ARCH_GAUNTLET) {
         // Gauntlet: two broken magma/spike seams make lateral positioning
@@ -111,8 +109,8 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
     } else if (archetype == STAGE_ARCH_VAULT) {
         // Vault: a broken octagonal crystal ring creates an icy central
         // arena with four broad entrances. The ring provides cover without
-        // sealing the centre or any door lane; seed rotation varies which
-        // corners are doubled while preserving the same fair traversal.
+        // sealing the centre or any door lane; the shared seeded room shape
+        // underneath still varies the space outside this authored ring.
         static const u8 vx[16] = {
             7, 8, 11, 12, 7, 8, 11, 12,
             5, 5, 5, 5, 14, 14, 14, 14
@@ -122,16 +120,14 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
             6, 7, 10, 11, 6, 7, 10, 11
         };
         for (i = 0; i < 16; ++i) {
-            u8 x = (seed & 1) ? vx[i] : (u8)(19 - vx[i]);
-            u8 y = (seed & 2) ? vy[i] : (u8)(17 - vy[i]);
-            if (room_tile_walkable(room_tilemap[y][x]))
-                room_tilemap[y][x] = BGT_CRYSTAL;
+            if (room_tile_walkable(room_tilemap[vy[i]][vx[i]]))
+                room_tilemap[vy[i]][vx[i]] = BGT_CRYSTAL;
         }
     } else if (archetype == STAGE_ARCH_MIRE) {
         // Mire: four irregular toxic pools create island-to-island movement
         // instead of Ember's continuous seams. Their inner-corner breaks face
         // the safe central cross, so every door remains connected without
-        // forcing damage. Seed mirroring changes each pool's ragged shoreline.
+        // forcing damage. Seeded base geometry and props vary their shores.
         static const u8 mx[28] = {
             4,5,6, 4,5, 4,5,
             13,14,15, 14,15, 14,15,
@@ -145,11 +141,9 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
             11,11, 12,12, 13,13,13
         };
         for (i = 0; i < 28; ++i) {
-            u8 x = (seed & 1) ? mx[i] : (u8)(19 - mx[i]);
-            u8 y = (seed & 2) ? my[i] : (u8)(17 - my[i]);
             // Pools supersede the shared room skeleton at these safe sites;
             // otherwise pillar-heavy shapes can erase most of the mire.
-            room_tilemap[y][x] = BGT_SPIKES;
+            room_tilemap[my[i]][mx[i]] = BGT_SPIKES;
         }
     } else if (archetype == STAGE_ARCH_KEEP) {
         // Keep: two broken portcullis rows split the room into three courts.
@@ -192,6 +186,16 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
         room_tilemap[5][19 - inner_l] = BGT_CRYSTAL;
         room_tilemap[12][inner_l] = BGT_CRYSTAL;
         room_tilemap[12][19 - inner_l] = BGT_CRYSTAL;
+    } else if (archetype == STAGE_ARCH_BLOODMOON) {
+        // Bloodmoon: four diagonal ritual cuts advance from the corners but
+        // stop before the broad central cross. They read as one crimson sigil
+        // while leaving every cardinal route damage-free.
+        for (i = 4; i <= 6; i += 2) {
+            room_tilemap[i][i] = BGT_SPIKES;
+            room_tilemap[i][19 - i] = BGT_SPIKES;
+            room_tilemap[17 - i][i] = BGT_SPIKES;
+            room_tilemap[17 - i][19 - i] = BGT_SPIKES;
+        }
     }
 }
 

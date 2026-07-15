@@ -1115,17 +1115,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     {
         u8 tx = 0xFF, ty = 0xFF;
         u8 dir = DIR_NONE;
-        if (player.y <= 0 && player.x + 13 >= 72 && player.x + 2 < 88) {
-            dir = DIR_N; tx = 10; ty = 0;
-        } else if (player.y >= 120 && player.x + 13 >= 72 && player.x + 2 < 88) {
-            dir = DIR_S; tx = 10; ty = ROOM_H - 1;
-        } else if (player.x <= 0 && player.y + 15 >= 64 && player.y + 8 < 80) {
-            dir = DIR_W; tx = 0; ty = 9;
-        } else if (player.x >= 144 && player.y + 15 >= 64 && player.y + 8 < 80) {
-            dir = DIR_E; tx = ROOM_W - 1; ty = 9;
+        if (player.y <= 0) {
+            dir = DIR_N; tx = (u8)((player.x + 8) >> 3); ty = 0;
+        } else if (player.y >= 120) {
+            dir = DIR_S; tx = (u8)((player.x + 8) >> 3); ty = ROOM_H - 1;
+        } else if (player.x <= 0) {
+            dir = DIR_W; tx = 0; ty = (u8)((player.y + 12) >> 3);
+        } else if (player.x >= 144) {
+            dir = DIR_E; tx = ROOM_W - 1; ty = (u8)((player.y + 12) >> 3);
         }
 
-        if (dir != DIR_NONE && room_tilemap[ty][tx] == BGT_DOOR) {
+        if (dir != DIR_NONE && tx < ROOM_W && ty < ROOM_H
+            && room_tilemap[ty][tx] == BGT_DOOR) {
                 u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
                 // Dungeon combat rooms gate unexplored exits. Riftwild is an
                 // overworld, not a chain of arenas: its fights are optional

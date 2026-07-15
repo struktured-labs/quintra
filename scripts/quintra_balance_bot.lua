@@ -104,7 +104,11 @@ local function pickup_target(px, py)
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             -- Byte values above the visible bounds represent negative/off-map
             -- drops (for example, an enemy dying against the north wall).
-            if ex <= 152 and ey <= 128 then
+            local boundary_drop = (ey < 24 and (ex < 64 or ex > 88))
+                or (ey > 104 and (ex < 64 or ex > 88))
+                or (ex < 24 and (ey < 52 or ey > 76))
+                or (ex > 136 and (ey < 52 or ey > 76))
+            if ex <= 152 and ey <= 128 and not boundary_drop then
                 local d = math.abs(ex - px) + math.abs(ey - py)
                 if d < bestd then best, bestd = {x=ex, y=ey}, d end
             end
@@ -529,10 +533,21 @@ while frames < LIMIT do
         -- A wall pocket can block the intended direction AND both
         -- perpendiculars. Cycle all four cardinals across recovery attempts
         -- so the agent eventually backs out instead of oscillating forever.
-        local escape_dirs = {KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP}
-        escape_index = (escape_index % 4) + 1
-        escape_dir = escape_dirs[escape_index]
-        escape_timer = (not target and not loot) and 12 or 30
+        if not target and not loot then
+            local route_escape_dirs = {
+                KEY_RIGHT + KEY_DOWN, KEY_LEFT + KEY_DOWN,
+                KEY_LEFT + KEY_UP, KEY_RIGHT + KEY_UP,
+                KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP,
+            }
+            escape_index = (escape_index % 8) + 1
+            escape_dir = route_escape_dirs[escape_index]
+            escape_timer = 60
+        else
+            local combat_escape_dirs = {KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP}
+            escape_index = (escape_index % 4) + 1
+            escape_dir = combat_escape_dirs[escape_index]
+            escape_timer = 30
+        end
         still_frames = 0
     end
     if escape_timer > 0 then
@@ -579,8 +594,9 @@ while frames < LIMIT do
         end
     end
     if DEBUG and frames % 600 == 0 then
-        debug_log(string.format("BOTDBG f=%d room=%d hp=%d mp=%d charge=%d pos=%d,%d target=%s keys=%02X",
-            frames, room, hp, mp, active_charge, px, py,
+        debug_log(string.format("BOTDBG f=%d room=%d hp=%d mp=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
+            frames, room, hp, mp, active_charge,
+            px, emu:read8(PL + 10), py, emu:read8(PL + 12),
             target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
                     target.kind, target.x, target.y, target.hp, target.state,
                     target.clock, target.state6)

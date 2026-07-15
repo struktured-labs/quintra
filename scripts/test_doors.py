@@ -13,13 +13,13 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN = addr("_run_state"), addr("_player"), addr("_entities")
+RS, PL, EN, TM = map(addr, ("_run_state", "_player", "_entities", "_room_tilemap"))
 
 def put16(pb, address, value):
     pb.memory[address] = value & 0xFF
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
-def crosses(x, y):
+def crosses(x, y, synthetic_door=None):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240): pb.tick()
     pb.button("start")
@@ -30,6 +30,14 @@ def crosses(x, y):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
+    if synthetic_door is not None:
+        tx, ty = synthetic_door
+        pb.memory[TM + ty * 20 + tx] = 3
+        # Secret doors are always two tiles wide along their wall.
+        if ty in (0, 17):
+            pb.memory[TM + ty * 20 + tx + 1] = 3
+        else:
+            pb.memory[TM + (ty + 1) * 20 + tx] = 3
     put16(pb, PL + 9, x); put16(pb, PL + 11, y)
     for _ in range(8): pb.tick()
     result = pb.memory[RS + 1]
@@ -37,10 +45,16 @@ def crosses(x, y):
     return result == 1
 
 def main():
-    positions = {"north": (72, 0), "east": (144, 60),
-                 "south": (72, 120), "west": (0, 60)}
-    failed = [name for name, pos in positions.items() if not crosses(*pos)]
+    positions = {
+        "north": (72, 0, None), "east": (144, 60, None),
+        "south": (72, 120, None), "west": (0, 60, None),
+        # A shot-open secret can occur away from the centered main doors.
+        # This exact geometry previously let the hero walk to signed y=-8
+        # without transitioning, softlocking an otherwise cleared room.
+        "off-center-secret": (36, 0, (5, 0)),
+    }
+    failed = [name for name, args in positions.items() if not crosses(*args)]
     if failed: raise SystemExit(f"[doors] FAIL unreachable: {', '.join(failed)}")
-    print("[doors] PASS north/east/south/west")
+    print("[doors] PASS north/east/south/west + off-center secret")
 
 if __name__ == "__main__": main()

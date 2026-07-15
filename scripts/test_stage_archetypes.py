@@ -259,11 +259,30 @@ def main():
     assert temple_signatures[0] != temple_signatures[1], (
         "Golden Temple seed variants collapsed to one inner-court layout"
     )
+
+    blood = generated_room(7, 0xB100D007,
+                           screenshot=ROOT / "tmp" / "bloodmoon-sigil.png")
+    blood_sites = []
+    for i in (4, 6):
+        blood_sites.extend(((i, i), (19 - i, i),
+                            (i, 17 - i), (19 - i, 17 - i)))
+    blood_spikes = sum(tile(blood, x, y) == BGT_SPIKES
+                       for x, y in blood_sites)
+    assert blood_spikes == 8, (
+        f"Bloodmoon ritual cuts missing ({blood_spikes}/8)"
+    )
+    assert all(tile(blood, x, y) != BGT_SPIKES
+               for x in (9, 10) for y in range(3, 15))
+    assert all(tile(blood, x, y) != BGT_SPIKES
+               for x in range(3, 17) for y in (8, 9))
+    blood_exits = reachable_exits(blood, (18, 9))
+    assert len(blood_exits) == 4, f"Bloodmoon disconnected exits: {blood_exits}"
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
           f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
           f"Toxic pools={min(mire_counts)}-{max(mire_counts)}/36 across 4 mirrors, "
           f"Shadow portcullises={min(keep_counts)}-{max(keep_counts)}/16, "
           "Golden colonnades=12/12 + court=4/4 across 2 insets, "
+          f"Blood cuts={blood_spikes}/8, "
           "all exits reachable")
 
 
