@@ -142,7 +142,7 @@ end
 -- Missing health wins; otherwise prefer deterministic attack/max-HP upgrades
 -- over the seeded general relic. This reads state to decide, but—as with aim
 -- and routing—changes the cartridge only through controller input.
-local function shop_target(px, py, hp, hp_max, coins)
+local function shop_target(px, py, hp, hp_max, mp_max, coins)
     local best, best_score, bestd = nil, -1, 65535
     if EN == 0 then return nil end
     for i = 0, 31 do
@@ -153,6 +153,7 @@ local function shop_target(px, py, hp, hp_max, coins)
             if coins >= price then
                 local score = (ware == 0 and hp + 1 < hp_max) and 100
                     or (ware == 3 and 90)
+                    or (ware == 4 and mp_max < 20 and 85)
                     or (ware == 2 and hp_max < 16 and 80)
                     or (ware == 1 and 70) or -1
                 local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
@@ -489,7 +490,7 @@ while frames < LIMIT do
     end
     local loot = (not target and world_mode == 0) and pickup_target(px, py) or nil
     local shop = (not target and not loot and world_mode == 0)
-        and shop_target(px, py, hp, hp_max, coins) or nil
+        and shop_target(px, py, hp, hp_max, mp_max, coins) or nil
     local room_age = frames - room_enter_frame
     if world_mode == 0 and target and room_age > max_combat_frames then
         max_combat_frames = room_age
@@ -564,9 +565,20 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim)
             end
         else
-            -- Separate firing and movement frames. Holding perpendicular
-            -- directions together aimed diagonal shots past cardinal targets.
-            keys = (frames % 3 == 0) and move or (KEY_A + aim)
+            -- Ranged shots are cardinal. At close diagonal range, first step
+            -- onto the target's row/column; otherwise a vessel can orbit a
+            -- large boss forever while every shot passes its corner.
+            if math.abs(dx) <= 32 and math.abs(dy) <= 32
+                and ((aim == KEY_UP or aim == KEY_DOWN) and math.abs(dx) > 5) then
+                keys = dx > 0 and KEY_RIGHT or KEY_LEFT
+            elseif math.abs(dx) <= 32 and math.abs(dy) <= 32
+                and ((aim == KEY_LEFT or aim == KEY_RIGHT) and math.abs(dy) > 5) then
+                keys = dy > 0 and KEY_DOWN or KEY_UP
+            else
+                -- Separate firing and movement frames. Holding perpendicular
+                -- directions together aimed diagonal shots past cardinal targets.
+                keys = (frames % 3 == 0) and move or (KEY_A + aim)
+            end
         end
         -- Exercise the actual class kit. Signatures require a clean B edge
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the

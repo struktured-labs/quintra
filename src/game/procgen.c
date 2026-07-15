@@ -630,10 +630,12 @@ void procgen_generate_current_room(void) BANKED {
             pickup_spawn_villager(FIX8(80), FIX8(48));
             pickup_spawn_merchant(FIX8(80), FIX8(96));
             pickup_spawn_smith(FIX8(136), FIX8(48));
+            pickup_spawn_apothecary(FIX8(24), FIX8(48));
             spawn_shop_ware(48, 72, WARE_HEART, 5);
             spawn_shop_ware(80, 72, WARE_ITEM, 20);
             spawn_shop_ware(112, 72, WARE_BIG, 35);
             spawn_shop_ware(136, 72, WARE_FORGE, 30);
+            spawn_shop_ware(24, 72, WARE_RUNE, 30);
             player.iframes = 60;
             return;
         }

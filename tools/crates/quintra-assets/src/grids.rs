@@ -388,6 +388,18 @@ pub const SMITH: [&str; 8] = [
     ".2.11.2.",
 ];
 
+// Village rune keeper: tall vial-cap, bright lenses, and hanging satchel.
+pub const APOTHECARY: [&str; 8] = [
+    "...11...",
+    "..1331..",
+    ".132231.",
+    ".131131.",
+    "..1221..",
+    ".113311.",
+    ".13..31.",
+    "..1..1..",
+];
+
 // ---- Dungeon BG tiles (glyph 0 = palette c0, opaque) ----
 
 pub const BGT_FLOOR_PLAIN: [&str; 8] = [
@@ -600,7 +612,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 16] = [
     ("mire_spore", &MIRE_SPORE),
 ];
 
-pub const FX_8: [(&str, &[&str]); 9] = [
+pub const FX_8: [(&str, &[&str]); 10] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -610,6 +622,7 @@ pub const FX_8: [(&str, &[&str]); 9] = [
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),
+    ("apothecary", &APOTHECARY),
 ];
 
 pub const DUNGEON_TILES: [(&str, &[&str]); 14] = [

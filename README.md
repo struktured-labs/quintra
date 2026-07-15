@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.41: Ghost Controller](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.42: Rune Counter](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -100,10 +100,12 @@ the cartridge runtime.
   floors**. Seeded nonlinear **rift wells** disorientingly bounce between
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
 - **Generated world cadence**: three six-room dungeons form a region, followed
-  by a safe procedural town with a resident elder, a visually distinct staffed
-  market, sanctuary blessing, and seeded merchant stock. A distinct masked
-  smith staffs a 30-coin Power Stone forge, while dungeon shops retain their
-  own broad-hatted merchant. Cleared dungeons open into an authored 4x4
+  by a safe procedural town with four visually distinct residents: elder,
+  merchant, masked smith, and apothecary. The smith staffs a 30-coin Power
+  Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
+  MP for the run, while dungeon shops retain their own broad-hatted merchant.
+  Sanctuary blessing and seeded general stock round out the town economy.
+  Cleared dungeons open into an authored 4x4
   nonlinear overworld graph with caves, vaults, champion encounters, and a discoverable
   gate to the next dungeon. Riftwild fights are optional and its exits remain
   fleeable, unlike sealed dungeon arenas. In town, the Spirit Compass switches
@@ -195,7 +197,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.41 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
+v0.17.42 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -204,7 +206,7 @@ allowing GBDK's warning-only cross-bank overwrite to produce a corrupt ROM.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. The spore behavior lives in bank 3, leaving
-323 bytes free in the formerly crowded fixed bank 2.
+294 bytes free in the formerly crowded fixed bank 2.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one
 declaration per generated array, so adding art can no longer leave a stale
@@ -215,12 +217,12 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.41 retains the paired-seed baseline of 11/15 full clears: 2/3 for Wolfkin,
-Sauran, Picsean, and Vespine and 3/3 for Corvin, with four real permadeaths and zero
-combat or route stalls. That small failure rate is healthier roguelike pressure than a
-perfect agent sweep while retaining the two-clear conference floor. Successful
-runs make 8–12 real purchases rather than bypassing merchants; the deaths
-still made 2–3, and no run exceeds 55
+v0.17.42 records a paired-seed baseline of 14/15 full clears: 3/3 for Wolfkin,
+Sauran, Corvin, and Vespine and 2/3 for Picsean, with one real Stone Sentinel
+permadeath and zero combat or route stalls. That failure preserves some
+roguelike pressure while every champion remains above the two-clear conference
+floor. Successful runs make 8–11 real purchases rather than bypassing merchants;
+the death still made nine, and no run exceeds 66
 Riftwild transitions. The gate now proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
@@ -243,7 +245,9 @@ cover forever. Its cleared-room recovery gives tile-path alignment more
 time than combat pursuit, preventing collision nudges from defeating its own
 shortest-path route. Short-range champions also path around cover to engage,
 then line up their final few pixels on the target's cardinal axis before
-striking. If cover absorbs four seconds of any weapon's attacks, they flank and
+striking. Ranged champions also step onto a close boss's row or column instead
+of orbiting at a perfect diagonal and sending cardinal shots past its corner.
+If cover absorbs four seconds of any weapon's attacks, they flank and
 reacquire instead of attacking the wall forever. Debug runs can emit a
 one-shot screenshot when a room exceeds the stall threshold by setting
 `QUINTRA_BOT_DEBUG_SCREEN=/tmp/quintra-stall`, and the agent

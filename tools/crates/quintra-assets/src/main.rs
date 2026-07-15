@@ -248,9 +248,13 @@ mod tests {
         let elder = tile_2bpp_bytes(&parse_grid(&grids::VILLAGER));
         let merchant = tile_2bpp_bytes(&parse_grid(&grids::MERCHANT));
         let smith = tile_2bpp_bytes(&parse_grid(&grids::SMITH));
+        let apothecary = tile_2bpp_bytes(&parse_grid(&grids::APOTHECARY));
         assert_ne!(smith, elder);
         assert_ne!(smith, merchant);
         assert_ne!(elder, merchant);
+        assert_ne!(apothecary, elder);
+        assert_ne!(apothecary, merchant);
+        assert_ne!(apothecary, smith);
     }
 
     #[test]

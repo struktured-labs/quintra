@@ -44,6 +44,7 @@ void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_VILLAGER, 1, sprite_fx_villager);
     set_sprite_data(SPR_MERCHANT, 1, sprite_fx_merchant);
     set_sprite_data(SPR_SMITH, 1, sprite_fx_smith);
+    set_sprite_data(SPR_APOTHECARY, 1, sprite_fx_apothecary);
 }
 
 // HUD tiles — full heart, half heart, empty heart, coin glyph, blank,

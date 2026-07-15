@@ -39,6 +39,7 @@ extern const u8 sprite_fx_item_orb[16];
 extern const u8 sprite_fx_villager[16];
 extern const u8 sprite_fx_merchant[16];
 extern const u8 sprite_fx_smith[16];
+extern const u8 sprite_fx_apothecary[16];
 
 // 8x8 dungeon background tiles
 extern const u8 bgt_floor_plain[16];

@@ -58,6 +58,7 @@ def main():
     elder = None
     merchant = None
     smith = None
+    apothecary = None
     for i in range(32):
         ep = en + i * 28
         if pb.memory[ep] == 3 and pb.memory[ep + 17] == 7:
@@ -66,6 +67,8 @@ def main():
             merchant = ep
         elif pb.memory[ep] == 3 and pb.memory[ep + 17] == 9:
             smith = ep
+        elif pb.memory[ep] == 3 and pb.memory[ep + 17] == 10:
+            apothecary = ep
     assert elder is not None, "town has no PICKUP_VILLAGER resident"
     assert pb.memory[elder + 12] == 69, "resident is not using villager art"
     assert merchant is not None, "town has no PICKUP_MERCHANT resident"
@@ -75,8 +78,11 @@ def main():
     )
     assert smith is not None, "town has no PICKUP_SMITH forge keeper"
     assert pb.memory[smith + 12] == 71, "smith is not using forge-keeper art"
-    assert len({pb.memory[elder + 12], pb.memory[merchant + 12], pb.memory[smith + 12]}) == 3, (
-        "elder, merchant, and smith silhouettes must remain distinct"
+    assert apothecary is not None, "town has no PICKUP_APOTHECARY rune keeper"
+    assert pb.memory[apothecary + 12] == 79, "rune keeper is not using apothecary art"
+    assert len({pb.memory[elder + 12], pb.memory[merchant + 12],
+                pb.memory[smith + 12], pb.memory[apothecary + 12]}) == 4, (
+        "all four village roles must retain distinct silhouettes"
     )
 
     # SELECT in a town must show town context, not the mathematically wrapped
@@ -110,6 +116,15 @@ def main():
     tick(4)
     assert pb.memory[smith] == 3 and pb.memory[smith + 17] == 9, (
         "smith disappeared when touched"
+    )
+
+    ax = pb.memory[apothecary + 3]
+    ay = (pb.memory[apothecary + 7] - 8) & 0xFF
+    for off, value in ((9, ax), (10, 0), (11, ay), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(4)
+    assert pb.memory[apothecary] == 3 and pb.memory[apothecary + 17] == 10, (
+        "apothecary disappeared when touched"
     )
 
     shot = ROOT / "tmp" / "town-merchant.png"
@@ -174,6 +189,27 @@ def main():
     assert pb.memory[pl + 5] == old_atk + 1, "forge did not grant +1 ATK"
     assert pb.memory[pl + 16] == 0 and pb.memory[pl + 17] == 0, "forge did not deduct coins"
 
+    rune = None
+    for i in range(32):
+        ep = en + i * 28
+        if (pb.memory[ep] == 3 and pb.memory[ep + 17] == 4
+                and pb.memory[ep + 18] == 4):
+            rune = ep
+            break
+    assert rune is not None, "town has no WARE_RUNE Mana Gem counter"
+    old_mp_max = pb.memory[pl + 3]
+    price = pb.memory[rune + 19]
+    pb.memory[pl + 16] = price
+    pb.memory[pl + 17] = 0
+    px = pb.memory[rune + 3]
+    py = (pb.memory[rune + 7] - 8) & 0xFF
+    for off, value in ((9, px), (10, 0), (11, py), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(4)
+    assert pb.memory[pl + 3] == old_mp_max + 2, "rune shop did not grant +2 max MP"
+    assert pb.memory[pl + 4] == pb.memory[pl + 3], "Mana Gem did not fill new MP"
+    assert pb.memory[pl + 16] == 0 and pb.memory[pl + 17] == 0, "rune shop did not deduct coins"
+
     # Multi-point relic boosts must saturate at their advertised runtime cap.
     # Hunter's Eye is generated item index 18 and grants +3 LCK; the former
     # check-before-add implementation allowed 9 + 3 to leak through as 12.
@@ -215,7 +251,7 @@ def main():
     assert shop_merchant is not None, "ordinary shop has no merchant"
     assert pb.memory[shop_merchant + 12] == 70, "shop merchant art drifted"
     pb.stop(save=False)
-    print("[town] PASS sanctuary + staffed shops + forge + capped run relics")
+    print("[town] PASS sanctuary + market/forge/rune shops + four distinct residents")
 
 if __name__ == "__main__":
     main()

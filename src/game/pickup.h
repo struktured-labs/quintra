@@ -17,12 +17,14 @@
 #define PICKUP_VILLAGER   7    // permanent town elder; touch for sanctuary blessing
 #define PICKUP_MERCHANT   8    // permanent visual shopkeeper; non-collectible
 #define PICKUP_SMITH      9    // permanent village forge keeper; non-collectible
+#define PICKUP_APOTHECARY 10   // permanent village rune keeper; non-collectible
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
 #define WARE_ITEM    1   // random stat item, 25 coins
 #define WARE_BIG     2   // Iron Heart (+2 max HP), 40 coins
 #define WARE_FORGE   3   // Power Stone (+1 ATK), village forge only
+#define WARE_RUNE    4   // Mana Gem (+2 max MP), village apothecary only
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
@@ -41,6 +43,7 @@ u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_villager(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_smith(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;
