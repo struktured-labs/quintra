@@ -28,6 +28,7 @@ extern const u8 sprite_enemy_gloam_leech[16];
 extern const u8 sprite_enemy_cinder_maw[16];
 extern const u8 sprite_enemy_rift_ooze[16];
 extern const u8 sprite_enemy_mirror_moth[16];
+extern const u8 sprite_enemy_mire_spore[16];
 
 // 8x8 FX sprites
 extern const u8 sprite_fx_bullet_a[16];

@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       17);   // includes Rift Ooze + Frost's Mirror Moth
+        assert_eq!(r.n_enemies(),       18);   // includes Frost's moth + Toxic Mire's spore
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -90,8 +90,8 @@ mod tests {
     fn champion_endurance_survival_floors_do_not_drift() {
         assert_eq!(classes::WOLFKIN.base_stats.hp_max, 10); // five hearts, true melee
         assert_eq!(classes::CORVIN.base_stats.hp_max, 12);  // six hearts
-        assert_eq!(classes::PICSEAN.base_stats.hp_max, 12); // six hearts
-        assert_eq!(classes::VESPINE.base_stats.hp_max, 9);  // four and a half
+        assert_eq!(classes::PICSEAN.base_stats.hp_max, 13); // six and a half hearts
+        assert_eq!(classes::VESPINE.base_stats.hp_max, 11); // five and a half hearts
     }
 
     #[test]
@@ -108,5 +108,14 @@ mod tests {
         let frost = &stages::STAGES[3];
         assert!(frost.enemy_pool.iter().any(|&(id, _)| id == 16));
         assert_eq!(frost.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+    }
+
+    #[test]
+    fn toxic_mire_authors_the_mire_spore_without_weight_inflation() {
+        let mire = &stages::STAGES[4];
+        assert!(mire.enemy_pool.iter().any(|&(id, _)| id == 17));
+        assert_eq!(mire.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::MIRE_SPORE.ai_script,
+            quintra_content::AiScriptId::SporeMine { trigger_radius: 40, fuse_ticks: 36 });
     }
 }

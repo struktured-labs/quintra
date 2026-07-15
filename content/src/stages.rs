@@ -60,7 +60,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 0), c(11, 9, 2), c(20,16, 4), c(29,25, 9)],
         boss:    [c(0,0,0), c(16,20, 4), c( 4, 6, 1), c(31,31,14)],
         boss_hp_bonus: 128, boss_dmg_bonus: 3, mb_variant: 4, room_archetype: 4,
-        enemy_pool: &[(12, 20), (5, 20), (6, 25), (15, 35)],
+        enemy_pool: &[(12, 15), (5, 15), (6, 20), (15, 25), (17, 25)],
     },
     // 5 — Shadow Keep (cold grey/violet)
     StageTheme {

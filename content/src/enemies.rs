@@ -241,6 +241,18 @@ pub const MIRROR_MOTH: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const MIRE_SPORE: Enemy = Enemy {
+    id: ENEMY_MIRE_SPORE, symbol: "MIRE_SPORE", name: "Mire Spore", sprite_set: SPRITE_MIRE_SPORE,
+    palette: OBJ_PAL_GREEN,
+    // Toxic Mire's pressure enemy: harmless while folded, then a clear fuse
+    // converts close pursuit into an eight-lane dodge. Its long recovery is a
+    // real punish window, especially for melee champions.
+    stats: EnemyStats { hp: 5, damage: 1, speed: 0, score: 42, weakness: 0x02, poise: 1 },
+    ai_script: AiScriptId::SporeMine { trigger_radius: 40, fuse_ticks: 36 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -259,4 +271,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(CINDER_MAW.clone());
     r.add_enemy(RIFT_OOZE.clone());
     r.add_enemy(MIRROR_MOTH.clone());
+    r.add_enemy(MIRE_SPORE.clone());
 }

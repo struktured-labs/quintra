@@ -16,7 +16,7 @@ IDENTITIES = {
     0: (20, 3), 1: (24, 6), 2: (21, 5), 3: (22, 0), 4: (56, 7),
     5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
-    14: (75, 3), 15: (76, 7), 16: (77, 0),
+    14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
 }
 
 SPECIALISTS = {
@@ -26,6 +26,7 @@ SPECIALISTS = {
     14: (75, 20, "CINDER_MAW", "SPR_ENEMY_CINDER_MAW", "cinder-maw"),
     15: (76, 20, "RIFT_OOZE", "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
     16: (77, 21, "MIRROR_MOTH", "SPR_ENEMY_MIRROR_MOTH", "mirror-moth"),
+    17: (78, 20, "MIRE_SPORE", "SPR_ENEMY_MIRE_SPORE", "mire-spore"),
 }
 
 
@@ -194,6 +195,42 @@ def main():
             reflected.append((pb.memory[ep + 5], pb.memory[ep + 9]))
     assert reflected, "Mirror Moth did not fire its reflected hostile bolt"
 
+    # A Mire Spore must remain inert at range, arm only inside its authored
+    # 40px Manhattan radius, honor the 36-frame tell, then produce all eight
+    # hostile lanes through the actual banked dispatch.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 32)
+    put16(pb, player + 11, 32)
+    pb.memory[player + 2] = 20
+    spore = entities
+    pb.memory[spore] = 2
+    pb.memory[spore + 1] = 3
+    put_fix8(pb, spore + 2, 112)
+    put_fix8(pb, spore + 6, 80)
+    pb.memory[spore + 14] = 5
+    pb.memory[spore + 17] = 17
+    pb.memory[spore + 25] = 0x66
+    for _ in range(20):
+        pb.tick()
+    assert pb.memory[spore + 15] == 0, "Mire Spore armed outside trigger radius"
+    put16(pb, player + 9, 88)
+    put16(pb, player + 11, 80)
+    pb.tick()
+    assert pb.memory[spore + 15] == 1, "Mire Spore did not arm near hero"
+    assert pb.memory[spore + 18] >= 34, "Mire Spore skipped its readable fuse"
+    for _ in range(40):
+        pb.tick()
+    spores = []
+    for i in range(1, 32):
+        ep = entities + i * 28
+        if pb.memory[ep] == 1 and pb.memory[ep + 1] & 1:
+            spores.append((pb.memory[ep + 5], pb.memory[ep + 9]))
+    assert len(spores) == 8, f"Mire Spore radial burst drifted: {spores}"
+    assert pb.memory[spore + 15] == 2, "Mire Spore did not enter punish recovery"
+
     # Kill a Rift Ooze through the real projectile/combat loop. The corpse
     # must become two fragile crawler fragments, not merely claim to split in
     # authored data or a unit-test-only helper.
@@ -240,7 +277,7 @@ def main():
         f"dead Rift Ooze remained active: {fragments}"
     )
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + leech routing + flutterbat escape + mirror motion/fire + ooze split")
+    print("[enemy-id] PASS specialist art + leech/flutter/mirror/spore behavior + ooze split")
 
 
 if __name__ == "__main__":

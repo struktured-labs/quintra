@@ -7,6 +7,7 @@
 #include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/enemy_mirror.h"
+#include "game/enemy_spore.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
@@ -616,6 +617,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_TURRET:   turret_tick(e, def);             break;
         case AI_REPLICATOR: replicator_tick(e, def);        break;
         case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
+        case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
         default:         walker_tick(e);                   break;
     }
 }

@@ -66,7 +66,9 @@ pub struct StageTheme {
 }
 
 pub const MB_VARIANTS: u8 = 5;
-pub const MAX_POOL: usize = 4;
+// Five entries lets a stage keep a readable core roster while reserving one
+// slot for its signature specialist; generated C stores variable-length pools.
+pub const MAX_POOL: usize = 5;
 
 impl StageTheme {
     pub fn validate(&self) -> Result<(), String> {

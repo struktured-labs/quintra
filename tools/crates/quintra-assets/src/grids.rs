@@ -273,6 +273,17 @@ pub const MIRROR_MOTH: [&str; 8] = [ // bilateral wings around an icy mirror cor
     "1......1",
 ];
 
+pub const MIRE_SPORE: [&str; 8] = [ // folded cap, bright volatile core, rootlets
+    "...11...",
+    "..1221..",
+    ".123321.",
+    "12333321",
+    ".122221.",
+    "..1331..",
+    ".1.11.1.",
+    "1..11..1",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -570,7 +581,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 15] = [
+pub const ENEMIES_8: [(&str, &[&str]); 16] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -586,6 +597,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 15] = [
     ("cinder_maw", &CINDER_MAW),
     ("rift_ooze", &RIFT_OOZE),
     ("mirror_moth", &MIRROR_MOTH),
+    ("mire_spore", &MIRE_SPORE),
 ];
 
 pub const FX_8: [(&str, &[&str]); 9] = [

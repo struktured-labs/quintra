@@ -76,6 +76,7 @@
 #define SPR_ENEMY_CINDER_MAW 75 // Ember area-denial caster
 #define SPR_ENEMY_RIFT_OOZE  76 // splitting late-stage blob
 #define SPR_ENEMY_MIRROR_MOTH 77 // Frost Vault movement-reflecting flyer
+#define SPR_ENEMY_MIRE_SPORE  78 // Toxic Mire proximity-armed radial mine
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59

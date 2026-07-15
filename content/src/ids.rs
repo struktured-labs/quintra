@@ -55,6 +55,7 @@ pub const ENEMY_GLOAM_LEECH:     EnemyId = EnemyId::new(13);   // attaches and d
 pub const ENEMY_CINDER_MAW:      EnemyId = EnemyId::new(14);   // Ember Depths area-denial caster
 pub const ENEMY_RIFT_OOZE:       EnemyId = EnemyId::new(15);   // splits into two crawler fragments
 pub const ENEMY_MIRROR_MOTH:     EnemyId = EnemyId::new(16);   // mirrors hero motion, fires reflected bolts
+pub const ENEMY_MIRE_SPORE:      EnemyId = EnemyId::new(17);   // proximity-armed radial burst mine
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -117,6 +118,7 @@ pub const SPRITE_GLOAM_LEECH: SpriteRef = SpriteRef::new(74);
 pub const SPRITE_CINDER_MAW:  SpriteRef = SpriteRef::new(75);
 pub const SPRITE_RIFT_OOZE:   SpriteRef = SpriteRef::new(76);
 pub const SPRITE_MIRROR_MOTH: SpriteRef = SpriteRef::new(77);
+pub const SPRITE_MIRE_SPORE:  SpriteRef = SpriteRef::new(78);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

@@ -96,6 +96,7 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_TURRET     5\n\
          #define AI_REPLICATOR 9\n\
          #define AI_MIRROR    10\n\
+         #define AI_SPORE_MINE 11\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -413,6 +414,8 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_REPLICATOR", open_ticks, closed_ticks, 0),
         AiScriptId::Mirror { fire_rate } =>
             ("AI_MIRROR", fire_rate, 0, 0),
+        AiScriptId::SporeMine { trigger_radius, fuse_ticks } =>
+            ("AI_SPORE_MINE", trigger_radius, fuse_ticks, 0),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\
@@ -729,7 +732,7 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          extern const u8 stage_room_archetype[N_STAGES];\n\
          /* Weighted normal-room rosters per stage (ids + weights,\n\
             stage_pool_n entries each; weights sum <= 255) */\n\
-         #define STAGE_POOL_MAX 4\n\
+         #define STAGE_POOL_MAX 5\n\
          extern const u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_n[N_STAGES];\n\
@@ -779,16 +782,16 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
 
     c.push_str("\nconst u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ids = [0u8; 4];
+        let mut ids = [0u8; 5];
         for (i, &(eid, _)) in s.enemy_pool.iter().enumerate() { ids[i] = eid; }
-        c.push_str(&format!("    {{ {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4]));
     }
     c.push_str("};\n");
     c.push_str("const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ws = [0u8; 4];
+        let mut ws = [0u8; 5];
         for (i, &(_, w)) in s.enemy_pool.iter().enumerate() { ws[i] = w; }
-        c.push_str(&format!("    {{ {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4]));
     }
     c.push_str("};\n");
     c.push_str(&format!("const u8 stage_pool_n[N_STAGES] = {{ {} }};\n",

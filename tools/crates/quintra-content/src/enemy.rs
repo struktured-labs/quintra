@@ -43,6 +43,9 @@ pub enum AiScriptId {
     /// Tracks the hero's last movement in reverse and periodically reflects
     /// an aimed bolt back through the room.
     Mirror       { fire_rate: u8 },
+    /// Dormant proximity mine: arms when approached, telegraphs, then emits
+    /// a radial burst and spends a recovery window harmlessly regrowing.
+    SporeMine    { trigger_radius: u8, fuse_ticks: u8 },
 }
 
 // Container with &'static str and &'static [BiomeId] — no serde.

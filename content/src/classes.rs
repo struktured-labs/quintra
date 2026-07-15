@@ -63,9 +63,9 @@ pub const PICSEAN: Class = Class {
     signature_active: ITEM_TIDAL_WAVE,
     passive_perk:  PERK_MP_REGEN_SWIM,
     // Slow piercing shots require prolonged spacing and carry the roster's
-    // lowest ATK. Six hearts matches Corvin's ranged survival floor while
+    // lowest ATK. Six-and-a-half hearts offsets its long projectile commitment while
     // low ATK/DEF preserve the fragile control-mage identity.
-    base_stats: BaseStats { hp_max: 12, mp_max: 10, atk: 1, def: 1, spd: 5 },
+    base_stats: BaseStats { hp_max: 13, mp_max: 10, atk: 1, def: 1, spd: 5 },
 };
 
 pub const VESPINE: Class = Class {
@@ -78,9 +78,9 @@ pub const VESPINE: Class = Class {
     signature_active: ITEM_SWARM,
     passive_perk:  PERK_POISON_SYNERGY,
     // The close-range Stinger exposes Vespine to contact damage despite her
-    // speed. Four-and-a-half hearts keeps her the lightest melee vessel while
+    // speed. Five-and-a-half hearts keeps her below the ranged vessels while
     // preventing a single late-room mistake from erasing an otherwise sound run.
-    base_stats: BaseStats { hp_max: 9, mp_max: 5, atk: 3, def: 1, spd: 7 },
+    base_stats: BaseStats { hp_max: 11, mp_max: 5, atk: 3, def: 1, spd: 7 },
 };
 
 pub fn register(r: &mut Registry) {
