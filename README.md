@@ -145,6 +145,8 @@ make verify     # tests + exact room/boss-state smoke + C<->Rust procgen parity
 make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
+make media      # recapture the README reel from the current ROM
+make media-check # prove reel version/hash/frame budget match the ROM
 make info       # print build summary
 ```
 

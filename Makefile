@@ -34,7 +34,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify preflight balance endurance play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify preflight balance endurance media media-check play info
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -114,6 +114,13 @@ verify: all
 preflight: all
 	python3 scripts/check_cartridge.py $(BINDIR)/$(PROJECT).gbc
 	uv run --quiet --with pyboy python scripts/test_suspend.py
+	uv run --quiet --with pillow python scripts/check_media.py
+
+media: all
+	bash scripts/capture_media.sh
+
+media-check: all
+	uv run --quiet --with pillow python scripts/check_media.py
 
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.
