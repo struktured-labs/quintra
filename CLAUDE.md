@@ -35,19 +35,22 @@ md5 `dd617b7e83d1fef30b07d70be0a13586`). Re-synced to v3.01 on
 > `docs/FINDINGS_2026_06_07_gdma_is_dead_code.md`;
 > corrected cost picture: `docs/v301_performance.md`.
 
-## Critical instructions
+## CRITICAL: Verification Standards (Hard Gate)
 
-- **NEVER bank-switch by writing FF99 outside of the original game's
-  own writes.** FF99 is the sound engine's bank-restore byte. Custom
-  writes to it caused the v2.85-v2.89 phantom-sound regression.
-  See `docs/inline_hook_analysis_v300.md` for the diagnosis chain.
-- **NEVER hold DI for more than ~1 Timer period (~7000 T-cycles).**
-  Long DI windows let Timer interrupts pile up, and on `EI` the
-  backlog collapses through the sound engine's D887 consume loop
-  in inconsistent state → phantom sounds.
-- **Always verify against the five probes in `scripts/probes/`
-  before declaring a build good.** The user's eyes are the final
-  judge, but no-probe regressions waste their time.
+- **PyBoy memory-register dumps are NEVER sufficient for timing bugs.** PyBoy does not enforce VBlank/STAT mode-3 write blocking. Writes that miss their VBlank window land cleanly in PyBoy's virtual memory. This means any test that only reads OAM/attribute registers and asserts "no orange" is fundamentally broken for flicker verification.
+
+- **All flicker/timing/rendering verification MUST go through mGBA's accurate pixel pipeline.** Use the mgba-mcp MCP tools to:
+  1. `mgba_run` to advance frames
+  2. `mgba_read_memory` on hardware OAM (0xFE00) to check actual displayed sprite attributes
+  3. `mgba_run_lua` to run the existing Lua probes in probes/diagnostics/
+  
+- **The 5 probes in scripts/probes/ are a MINIMUM, not a guarantee.** Passing them does not mean the build is good. The user's eyes are the final judge.
+
+- **Any fix that claims "0% orange flicker" must be verified using `scripts/diagnostics/verify_sprite_flicker.py` inside PyBoy AND pass all 5 probes.** Accepting one without the other is a gate failure.
+
+- **The hwoam_recolor floor-through for tiles 0x10-0x1F is a KNOWN, DOCUMENTED, UNSOLVED timing issue.** See build_v301_teleport.py lines 548-580. DO NOT claim it's fixed without also confirming the fix does NOT cause fresh-boot CRAM regressions (run a cold-boot probe). The B=20 attempt (iter 277) was reverted for this exact reason.
+
+- **The golden check: build the ROM, launch it in mGBA-qt with the NVIDIA GL driver override (`QT_QPA_PLATFORM=xcb __GLX_VENDOR_LIBRARY_NAME=nvidia`), navigate to Stage 1 gameplay, and visually confirm zero orange flicker on Sara and monsters across 5 seconds of gameplay.** No automated test replaces this.
 - **Colorize VBlank timing: keep custom WRAM scratch OUT of
   `0xDF10–0xDF2F`** (bg_sweep's per-frame swept-row buffer — anything
   there is clobbered every frame). A cache byte at `0xDF23` collided
@@ -236,3 +239,8 @@ before any RL eval. Highlights:
   tried hard to give you tooling to do so." — use the agent system
   for parallel investigations; use the probes to self-verify; ship
   candidates with backups; iterate.
+
+## Active Hardware Alert (July 13, 2026)
+* **The MiSTer FPGA is ONLINE:** The physical MiSTer console (port 9900) is online right now. You are encouraged to run `/mister-deploy` to test your builds on cycle-accurate GBC silicon after completing headless verification!
+* **Maximize Headless Testing:** Verify all builds headlessly against the 5 probes before physical deployment.
+

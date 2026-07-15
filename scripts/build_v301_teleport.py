@@ -127,6 +127,39 @@ LAVA_OVERRIDE_ADDR = 0x7E00
 # multi-tone ("color bleed"). scene_detect swaps this all-pal0 table into 0xDA00
 # on the splash so every splash tile resolves to one palette (clean letters).
 SPLASH_TABLE_ADDR = 0x7E40
+<<<<<<< Updated upstream
+=======
+# Post-DMA HW-OAM recolor (items 3,4,6,11): enemies render OBJ pal0 (blue/black)
+# because the colorizer assigns the right palette in the SHADOW buffer but the
+# game's main-loop OAM rebuild + the double-buffer DMA leave the DISPLAYED HW OAM
+# at pal0. This routine runs in the wrapper AFTER colorize+DMA and re-stamps the
+# palette bits of HW OAM (0xFE00) by tile range, reusing the existing colorizer
+# at 0x6A10. mGBA-verified only; VBlank-budget/hardware risk -> teleport build
+# (opt-in branch) only. See docs/audit/obj_enemy_color_race.md.
+HWOAM_RECOLOR_ADDR = 0x6B27       # iter 278e: pure relocation test (same 49-byte routine at new addr)
+
+# Banner colorize override (showcase, D880=0x1B). Per-monster preview is
+# infeasible (the cycled names are a shared font, no monster sprites), so this
+# just gives the title banner intentional colors: "PENTA DRAGON" art (0xE0-0xFF)
+# -> p4 cyan (NO red, so it can't re-trigger the old red-bands complaint), monster
+# name glyphs (0x80-0x99) -> p5 gold, JAM logo (0xCA-0xCF/0xDA-0xDE) -> p1 red.
+# Patches 0xDA00 (loaded all-p0 by scene_detect at 0x1B) every frame at 0x1B.
+BANNER_OVERRIDE_ADDR = 0x7F70
+# Intro cutscene overlay (D880=0x15: opening "treasure scroll", "Sara face closeup",
+# "dragon eyes", and Japanese-text textbox panels — all share one D880 value, per
+# the 2026-06-15 cutscene probe). The dungeon table's 0x80-0xDF->pal1 (red font)
+# rule floods every panel red. This overlay (called every frame from teleport)
+# patches the WRAM bg_table after scene_detect's copy: textbox border (0x6B-0x72)
+# -> pal4 cyan, font glyphs + Sara portrait band (0x80-0xC9) -> pal2 warm beige
+# (legible on white textbox AND reads as skin tones for Sara's portrait), dragon-
+# eye highlights (0xF0-0xFF) -> pal1 red. Scroll/brick low-band art (0x10-0x4F)
+# -> pal3 parchment/gold (matches the cap-110 scroll). No-op at other scenes.
+CUTSCENE_OVERRIDE_ADDR = 0x7FB0   # right after BANNER_OVERRIDE (~63 bytes ends 0x7FB0 incl. burst-sweep loop)
+OBJ_COLORIZER_ADDR = 0x6A10      # create_tile_based_colorizer install addr (gdma)
+OBJ_PAL_TABLE_ADDR = 0x6B00      # O(1) 256-byte tile→palette lookup table
+OBJ_STAMPER_ADDR = 0x6DB0        # HW-OAM stamper code (replaces hwoam_recolor)
+BOSS_SLOT_TABLE_ADDR = 0x68C0    # boss_slot_addr (gdma)
+>>>>>>> Stashed changes
 # Per-stage molten tile IDs (probe_lava_ffba.lua histograms + docs/audit/stage2_lava.md):
 LAVA_STAGE5_IDS = [0x02, 0x03, 0x04, 0x05, 0x12, 0x13, 0x14, 0x15]  # FFBA=4 (stage 5)
 LAVA_STAGE7_IDS = [0x19, 0x1A]                                       # FFBA=6 (stage 7)
@@ -418,6 +451,213 @@ def build_levelsel_attr_clear_stub() -> bytes:
     return bytes(c)
 
 
+<<<<<<< Updated upstream
+=======
+def build_obj_pal_table() -> bytes:
+    """256-byte tile→CGB OBJ palette lookup table.
+
+    Maps tile IDs to CGB OBJ palette indices. 0xFF = use Sara form palette
+    (caller provides in D register: 0→pal2, else→pal1).
+
+    Mapping (matches the old tile-range cascade in bg_experiment.py):
+      Tiles 0x00-0x01 → pal 3 (projectiles)
+      Tiles 0x02-0x0F → pal 0 (effects)
+      Tiles 0x10-0x2F → 0xFF (Sara form palette: caller D)
+      Tiles 0x30-0x4F → pal 3 (enemies)
+      Tiles 0x50-0x5F → pal 4 (Hornets)
+      Tiles 0x60-0x6F → pal 5
+      Tiles 0x70-0x7F → pal 6
+      Tiles 0x80+     → pal 4 (default high-tile)
+    """
+    table = bytearray(256)
+    for t in range(256):
+        if t <= 0x01:
+            table[t] = 3
+        elif t <= 0x0F:
+            table[t] = 0
+        elif t <= 0x2F:
+            table[t] = 0xFF  # Sara form palette marker
+        elif t <= 0x4F:
+            table[t] = 3     # enemies
+        elif t <= 0x5F:
+            table[t] = 4     # Hornets
+        elif t <= 0x6F:
+            table[t] = 5
+        elif t <= 0x7F:
+            table[t] = 6
+        else:
+            table[t] = 4     # default high-tile
+    return bytes(table)
+
+
+def build_hwoam_stamper() -> bytes:
+    """O(1) HW-OAM stamper: 256-byte lookup table, no tile-range cascade.
+
+    Replaces the old hwoam_recolor which cost ~53K cycles due to the
+    tile-range cascade. This stamper uses a 256-byte ROM lookup table
+    at OBJ_PAL_TABLE_ADDR (0x6B00) and processes all 40 HW-OAM slots
+    in ~600 cycles (vs 53K).
+
+    Flow per slot:
+      1. Read tile from $FE+2, check for empty (tile==0 → skip)
+      2. Look up table[tile] (0xFF = use D = Sara form palette)
+      3. Merge palette bits (0-2) into attr byte, preserving bits 3-7
+      4. Advance 4 bytes to next slot
+
+    Entry condition: bank 13 mapped, no register assumptions.
+    Modifies: A, B, C, D, E, H, L
+    """
+    TABLE_HI = (OBJ_PAL_TABLE_ADDR >> 8) & 0xFF  # = 0x6B
+    assert (OBJ_PAL_TABLE_ADDR & 0xFF) == 0, "palette table must be page-aligned"
+
+    code = bytearray()
+
+    # ---- Setup: D = Sara form palette (FFBE==0→pal2, else→pal1) ----
+    code.extend([0xF0, 0xBE])               # LDH A, [FFBE]
+    code.extend([0xB7])                      # OR A
+    code.extend([0x16, 0x02, 0x28, 0x03, 0x16, 0x01])  # LD D,2; JR Z,+3; LD D,1
+
+    # ---- Setup: E = boss slot (FFBF==0→0, else boss_slot_table[FFBF-1]) ----
+    code.extend([0xF0, 0xBF, 0xB7, 0x1E, 0x00])
+    e_done = len(code)
+    code.extend([0x28, 0x00])                # JR Z, setup_done
+    code.extend([0x3D, 0x4F, 0x06, 0x00])    # DEC A; LD C,A; LD B,0
+    code.extend([0x21, BOSS_SLOT_TABLE_ADDR & 0xFF, (BOSS_SLOT_TABLE_ADDR >> 8) & 0xFF])
+    code.extend([0x09, 0x5E])                # ADD HL,BC; LD E,[HL]
+    code[e_done + 1] = (len(code) - e_done - 2) & 0xFF
+
+    # ---- Loop setup: HL = first HW-OAM attr byte ----
+    code.extend([0x21, 0x03, 0xFE])          # LD HL, 0xFE03
+    code.extend([0x06, 0x28])                # LD B, 40
+    loop_start = len(code)
+
+    # ---- Per-slot: read tile, skip if empty ----
+    code.extend([0x2B, 0x7E, 0x23, 0xB7])   # DEC HL; LD A,[HL]; INC HL; OR A
+    skip_addr = len(code)
+    code.extend([0x28, 0x00])                # JR Z, advance (empty slot)
+
+    # ---- Lookup palette in table[HL] ----
+    code.extend([0xE5])                      # PUSH HL  (save attr address)
+    code.extend([0x6F, 0x26, TABLE_HI])      # LD L,A; LD H,TABLE_HI → HL = table + tile
+    code.extend([0x7E])                      # LD A,[HL] (palette or 0xFF)
+    code.extend([0xFE, 0xFF])                # CP 0xFF
+    sara_addr = len(code)
+    code.extend([0x28, 0x00])                # JR Z, use_sara
+
+    # ---- Normal palette value (A = palette 0..6) ----
+    code.extend([0xE1])                      # POP HL  (restore attr address)
+    code.extend([0x4F, 0x7E, 0xE6, 0xF8, 0xB1, 0x77])  # LD C,A; LD A,[HL]; AND $F8; OR C; LD [HL],A
+
+    # ---- Advance: HL = next slot's attr byte ----
+    advance_start = len(code)
+    code.extend([0x23, 0x23, 0x23, 0x23])    # INC HL × 4
+    code.extend([0x05])                      # DEC B
+    loop_abs = OBJ_STAMPER_ADDR + loop_start
+    code.extend([0xC2, loop_abs & 0xFF, (loop_abs >> 8) & 0xFF])  # JP NZ, loop
+    code.extend([0xC9])                      # RET
+
+    # use_sara: restore stack, use D as palette
+    code.extend([0xE1])                      # POP HL (discard saved HL)
+    code.extend([0x7A, 0x4F, 0x7E, 0xE6, 0xF8, 0xB1, 0x77])  # LD A,D; LD C,A; LD A,[HL]; AND $F8; OR C; LD [HL],A
+    jr_off = advance_start - (len(code) + 2)
+    code.extend([0x18, jr_off & 0xFF])       # JR advance
+
+    # Patch forward reference JR offsets
+    code[skip_addr + 1] = (advance_start - (skip_addr + 2)) & 0xFF
+    code[sara_addr + 1] = ((len(code) - 2) - (sara_addr + 2)) & 0xFF
+
+    return bytes(code)
+
+
+def build_banner_override() -> bytes:
+    """At D880=0x1B (title banner), patch 0xDA00 so the showcase has intentional
+    colors. CALLed every frame from the teleport routine (after the splash table
+    is in 0xDA00); no-op at any other scene. Letters use cyan (p4, no red)."""
+    c = bytearray()
+    c.extend([0xFA, 0x80, 0xD8])          # LD A,[D880]
+    c.extend([0xFE, 0x1B])                # CP 0x1B
+    c.extend([0xC0])                      # RET NZ
+    def fill(lo, n, pal):                 # 0xDA00+lo .. +lo+n-1 = pal
+        c.extend([0x3E, pal])             # LD A, pal
+        c.extend([0x21, lo, 0xDA])        # LD HL, 0xDA00+lo
+        c.extend([0x06, n])               # LD B, n
+        lp = len(c)
+        c.extend([0x22, 0x05])            # LD [HL+],A; DEC B
+        c.extend([0x20, (lp - (len(c) + 2)) & 0xFF])  # JR NZ, lp
+    # Banner-readable palette assignment:
+    # - Letters (0xE0-0xFF) → pal6 BG (white/blue-gray/dark-slate/black) reads
+    #   as bold blue-gray on white — vibrant, distinct from red JAM logo, and
+    #   doesn't reuse pal4 (which is YAML-cyan/white-white-teal-black — invisible
+    #   on the white banner backdrop, per the 2026-06-15 banner probe).
+    # - Names (0x80-0x99) → pal3 BG (white/forest-green/dark-green/black) — green
+    #   names POP against the blue-gray letters and red JAM logo, no need for a
+    #   per-scene CRAM rewrite (which would consume bank13 space we don't have).
+    # - JAM logo (0xCA-0xCF, 0xDA-0xDE) → pal1 red (unchanged).
+    fill(0xE0, 0x20, 6)
+    fill(0x80, 0x1A, 3)
+    fill(0xCA, 0x06, 1)
+    fill(0xDA, 0x05, 1)
+
+    # Burst bg_sweep: call BG_SWEEP_ADDR 4 extra times so the VRAM attr plane
+    # catches up to 0xDA00 changes within ~4 frames instead of bg_sweep's
+    # default ~18 frames. Without this, mid-cycle tile-data rewrites (the
+    # cycled monster name + scroll-in animation) show transient checkered
+    # palettes because bg_sweep is rate-limited to 1 row/frame. Banner is
+    # non-gameplay so the extra VBlank cost (~2700 cycles) is safe.
+    # Loop form (9 bytes vs 12 unrolled) — saves space for cutscene_override.
+    c.extend([0x06, 0x04])                # LD B, 4
+    burst_loop = len(c)
+    c.extend([0xC5])                      # PUSH BC   (bg_sweep clobbers BC)
+    c.extend([0xCD, BG_SWEEP_ADDR & 0xFF, (BG_SWEEP_ADDR >> 8) & 0xFF])
+    c.extend([0xC1])                      # POP BC
+    c.extend([0x05])                      # DEC B
+    c.extend([0x20, (burst_loop - (len(c) + 2)) & 0xFF])  # JR NZ, burst_loop
+
+    c.extend([0xC9])                      # RET
+    return bytes(c)
+
+
+def build_cutscene_override() -> bytes:
+    """At D880=0x15 (intro cutscenes: treasure scroll, Sara face closeup,
+    dragon eyes, Japanese-text textbox — all 4 share one D880 value per the
+    2026-06-15 probe), patch 0xDA00 to give panels intentional palettes
+    instead of red-flooding (the dungeon table's 0x80-0xDF->pal1 rule).
+
+    Per-panel art is in low tile bands (treasure 0x01-0x5B, dragon 0x01-0x2D
+    + 0xF0-0xFC). Textbox border (0x6B-0x72) and font/portrait band
+    (0x80-0xC9) are present in EVERY panel, safe to color with one stable
+    overlay. CALLed every frame from teleport routine; cheap no-op at other
+    scenes (CP+RET in 6 cycles).
+    """
+    c = bytearray()
+    c.extend([0xFA, 0x80, 0xD8])          # LD A,[D880]
+    c.extend([0xFE, 0x15])                # CP 0x15
+    c.extend([0xC0])                      # RET NZ (no-op at any other scene)
+
+    def fill(lo, n, pal):                 # 0xDA00+lo .. +lo+n-1 = pal
+        c.extend([0x3E, pal])             # LD A, pal
+        c.extend([0x21, lo, 0xDA])        # LD HL, 0xDA00+lo
+        c.extend([0x06, n])               # LD B, n
+        lp = len(c)
+        c.extend([0x22, 0x05])            # LD [HL+],A; DEC B
+        c.extend([0x20, (lp - (len(c) + 2)) & 0xFF])  # JR NZ, lp
+
+    # Textbox border tiles (cyan) — visible blue outline on all panels
+    fill(0x6B, 0x08, 4)
+    # Font glyphs + Sara portrait band (warm beige — legible on white textbox
+    # AND reads as skin tones for the Sara portrait that shares this tile band)
+    fill(0x80, 0x4A, 2)
+    # Dragon-eye highlights + JAM-logo art (red).
+    # Dungeon table already maps 0xF0-0xFF to pal1 (red), so this matches
+    # without an explicit fill — saved 11 bytes for bank13 layout.
+    # Treasure scroll low-range art (0x10-0x4F) intentionally NOT overridden;
+    # falls through to dungeon table mapping (mostly readable, no red flood
+    # because the dungeon table only maps 0x80-0xDF to red).
+    c.extend([0xC9])                      # RET
+    return bytes(c)
+
+
+>>>>>>> Stashed changes
 def build_landing_pad() -> bytes:
     """Executable code that runs in main-loop context AFTER the RETI.
 
@@ -744,6 +984,60 @@ def main():
     rom[off:off + 256] = bytes(256)   # all pal0
     print(f"  splash table: 256 bytes (all pal0) at bank13:0x{SPLASH_TABLE_ADDR:04X}")
 
+<<<<<<< Updated upstream
+=======
+    # ---- O(1) OBJ palette lookup table (replaces tile_pal_subroutine) ----
+    pal_table = build_obj_pal_table()
+    assert len(pal_table) == 256
+    off = BANK13 + (OBJ_PAL_TABLE_ADDR - 0x4000)
+    rom[off:off + 256] = pal_table
+    print(f"  OBJ palette lookup table: 256 bytes at bank13:0x{OBJ_PAL_TABLE_ADDR:04X}")
+
+    # ---- O(1) HW-OAM stamper (replaces hwoam_recolor) ----
+    stamper = build_hwoam_stamper()
+    assert OBJ_STAMPER_ADDR + len(stamper) <= 0x6E00, \
+        f"stamper 0x{OBJ_STAMPER_ADDR + len(stamper):04X} overruns colorize handler at 0x6E00"
+    off = BANK13 + (OBJ_STAMPER_ADDR - 0x4000)
+    # Verify the destination is free (zeros)
+    for i in range(len(stamper)):
+        assert rom[off + i] == 0x00, \
+            f"stamper site at 0x{OBJ_STAMPER_ADDR + i:04X} not free (byte {rom[off + i]:02X})"
+    rom[off:off + len(stamper)] = stamper
+    print(f"  O(1) HW-OAM stamper: {len(stamper)} bytes at bank13:0x{OBJ_STAMPER_ADDR:04X}")
+
+    # ---- Step 3: NOP out DMG palette register writes (FF47-FF49) ----
+    # On CGB, writes to FF47/FF48/FF49 are ignored (DMG-only registers).
+    # They're left in the original game code but are dead cycles. NOPing them
+    # saves a few T-cycles and prevents any DMG-interference edge cases.
+    # Replace each "LDH [FF4x],A" (E0 4x, 2 bytes) with "NOP; NOP" (00 00).
+    dmg_nop_count = 0
+    for addr_reg in [0x47, 0x48, 0x49]:
+        for i in range(len(rom) - 1):
+            if rom[i] == 0xE0 and rom[i+1] == addr_reg:
+                rom[i] = 0x00
+                rom[i+1] = 0x00
+                dmg_nop_count += 1
+    print(f"  DMG palette NOPs: {dmg_nop_count} writes to FF47-FF49 replaced with NOPs")
+
+    # Banner colorize override (showcase, D880=0x1B), CALLed from teleport routine.
+    banner = build_banner_override()
+    assert BANNER_OVERRIDE_ADDR + len(banner) <= POSMAP_PTR_TABLE, \
+        f"banner override 0x{BANNER_OVERRIDE_ADDR + len(banner):04X} overruns posmap ptr table 0x{POSMAP_PTR_TABLE:04X}"
+    off = BANK13 + (BANNER_OVERRIDE_ADDR - 0x4000)
+    rom[off:off + len(banner)] = banner
+    print(f"  banner override: {len(banner)} bytes at bank13:0x{BANNER_OVERRIDE_ADDR:04X}")
+
+    # Cutscene colorize override (D880=0x15 intro panels), CALLed from teleport routine.
+    cutscene = build_cutscene_override()
+    assert BANNER_OVERRIDE_ADDR + len(banner) <= CUTSCENE_OVERRIDE_ADDR, \
+        f"banner 0x{BANNER_OVERRIDE_ADDR + len(banner):04X} overruns cutscene 0x{CUTSCENE_OVERRIDE_ADDR:04X}"
+    assert CUTSCENE_OVERRIDE_ADDR + len(cutscene) <= POSMAP_PTR_TABLE, \
+        f"cutscene override 0x{CUTSCENE_OVERRIDE_ADDR + len(cutscene):04X} overruns posmap ptr table 0x{POSMAP_PTR_TABLE:04X}"
+    off = BANK13 + (CUTSCENE_OVERRIDE_ADDR - 0x4000)
+    rom[off:off + len(cutscene)] = cutscene
+    print(f"  cutscene override: {len(cutscene)} bytes at bank13:0x{CUTSCENE_OVERRIDE_ADDR:04X}")
+
+>>>>>>> Stashed changes
     # 2b. Re-patch bg_sweep to read the PER-SCENE WRAM table (0xDA00) instead
     # of the ROM dungeon table (0x7000). The base build bakes the sweep with
     # the dungeon table, so in arenas the sweep wrote dungeon-palette attrs for
@@ -888,6 +1182,12 @@ def main():
         # --- CALL Teleport routine ---
         0xCD, TELEPORT_ADDR & 0xFF, (TELEPORT_ADDR >> 8) & 0xFF,
 
+<<<<<<< Updated upstream
+=======
+        # --- Post-DMA HW-OAM stamper (O(1) table lookup, replaces hwoam_recolor) ---
+        0xCD, OBJ_STAMPER_ADDR & 0xFF, (OBJ_STAMPER_ADDR >> 8) & 0xFF,
+
+>>>>>>> Stashed changes
         # --- RESTORE REGISTERS ---
         0xE1,                                 # POP HL
         0xD1,                                 # POP DE

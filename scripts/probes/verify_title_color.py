@@ -23,10 +23,10 @@ def capture_title(rom_path: str, frame_at: int, lua_script: str) -> str:
     env = os.environ.copy()
     env["STATE_PATH"] = out_png
     env["FRAME_AT"] = str(frame_at)
-    env["QT_QPA_PLATFORM"] = "offscreen"
+    env["DISPLAY"] = ":0"
+    env["QT_QPA_PLATFORM"] = "xcb"
     env["SDL_AUDIODRIVER"] = "dummy"
     cmd = [
-        "xvfb-run", "-a",
         "mgba-qt", rom_path,
         "--script", lua_script,
         "-l", "0",

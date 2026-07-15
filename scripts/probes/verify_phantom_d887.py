@@ -37,7 +37,7 @@ def run_d887(rom_path: str, frames: int) -> dict:
     env["MEASURE_FRAMES"] = str(frames)
     env["QT_QPA_PLATFORM"] = "offscreen"
     env["SDL_AUDIODRIVER"] = "dummy"
-    cmd = ["xvfb-run", "-a", "mgba-qt", rom_path,
+    cmd = ["mgba-qt", rom_path,
            "--script", "scripts/probes/phantom_d887.lua", "-l", "0"]
     try:
         proc = subprocess.run(cmd, env=env, capture_output=True, timeout=180)

@@ -52,7 +52,8 @@ from datetime import datetime
 
 # === Configuration ===
 
-MISTER_HOST = "MiSTer"
+import os
+MISTER_HOST = os.environ.get("MISTER_HOST", "MiSTer")
 MISTER_USER = "root"
 BLACKMAGE_USER = "struktured"
 BLACKMAGE_HOST = "blackmage"
@@ -108,7 +109,7 @@ KEY_MAP = {
 
 def ssh(cmd: str, timeout: int = 30) -> subprocess.CompletedProcess:
     """Run a command on MiSTer via SSH."""
-    full_cmd = ["ssh", "-o", "ConnectTimeout=5", f"{MISTER_USER}@{MISTER_HOST}", cmd]
+    full_cmd = ["ssh", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", f"{MISTER_USER}@{MISTER_HOST}", cmd]
     return subprocess.run(full_cmd, capture_output=True, text=True, timeout=timeout)
 
 
@@ -122,7 +123,7 @@ def ssh_check(cmd: str, timeout: int = 30) -> str:
 
 def scp_to_mister(local_path: Path, remote_path: str) -> None:
     """Copy a file to MiSTer."""
-    cmd = ["scp", str(local_path), f"{MISTER_USER}@{MISTER_HOST}:{remote_path}"]
+    cmd = ["scp", "-o", "StrictHostKeyChecking=accept-new", str(local_path), f"{MISTER_USER}@{MISTER_HOST}:{remote_path}"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     if result.returncode != 0:
         raise RuntimeError(f"SCP to MiSTer failed: {result.stderr}")
@@ -132,7 +133,7 @@ def scp_to_mister(local_path: Path, remote_path: str) -> None:
 def scp_from_mister(remote_path: str, local_path: Path) -> None:
     """Copy a file from MiSTer."""
     local_path.parent.mkdir(parents=True, exist_ok=True)
-    cmd = ["scp", f"{MISTER_USER}@{MISTER_HOST}:{remote_path}", str(local_path)]
+    cmd = ["scp", "-o", "StrictHostKeyChecking=accept-new", f"{MISTER_USER}@{MISTER_HOST}:{remote_path}", str(local_path)]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     if result.returncode != 0:
         raise RuntimeError(f"SCP from MiSTer failed: {result.stderr}")

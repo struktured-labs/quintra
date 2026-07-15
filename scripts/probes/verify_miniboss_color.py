@@ -136,7 +136,7 @@ def run_probe(rom_path: str, force_spawn: bool = True) -> dict:
     env["FORCE_SPAWN"] = "1" if force_spawn else "0"
     env["QT_QPA_PLATFORM"] = "offscreen"
     env["SDL_AUDIODRIVER"] = "dummy"
-    cmd = ["xvfb-run", "-a", "mgba-qt", rom_path, "--script", lua.name, "-l", "0"]
+    cmd = ["mgba-qt", rom_path, "--script", lua.name, "-l", "0"]
     # Natural-spawn mode runs the in-game state machine for thousands of
     # frames; bump the wall-clock budget proportionally.
     timeout = 600 if not force_spawn else 180

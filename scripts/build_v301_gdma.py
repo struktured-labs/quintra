@@ -275,6 +275,99 @@ def create_inline_tile_copy_tileonly(arena_neutralize_d880=None) -> bytes:
     return bytes(code)
 
 
+def create_inline_tile_copy_pure_tileonly() -> bytes:
+    """PURE tile-only inline hook: copies tiles ONLY, no attr writes.
+
+    Single STAT wait. ~vanilla speed. No VBK=1 writes, no bg_table lookup.
+    Attrs are handled by bg_sweep + position sweep in the VBlank handler.
+
+    Replaces 0x42A7..0x436D. H pre-set to 0x98 or 0x9C by entry point.
+    24 rows x 6 groups x 4 tiles = 576 tiles.
+    Same L/E/HL advancement as the tile phase of the full version.
+    """
+    code = bytearray()
+    targets = {}
+
+    def emit(opcodes):
+        if isinstance(opcodes, (list, bytes, bytearray)):
+            code.extend(opcodes)
+        else:
+            code.append(opcodes)
+
+    def mark(name):
+        targets[name] = len(code)
+
+    def emit_jr_back(opcode, name):
+        offset = targets[name] - (len(code) + 2)
+        assert -128 <= offset <= 127
+        emit([opcode, offset & 0xFF])
+
+    def emit_jr_fwd(opcode):
+        pos = len(code) + 1
+        emit([opcode, 0x00])
+        return pos
+
+    def patch_jr_fwd(pos):
+        offset = len(code) - (pos + 1)
+        assert -128 <= offset <= 127
+        code[pos] = offset & 0xFF
+
+    # Setup (H pre-set by entry point to 0x98 or 0x9C)
+    emit([0x2E, 0x00])               # LD L, 0x00
+    emit([0x11, 0xA0, 0xC1])         # LD DE, 0xC1A0 (WRAM tile source)
+
+    # Row counter
+    emit([0x3E, 0x18])               # LD A, 24
+    emit([0xF5])                     # PUSH AF
+
+    mark("row_loop")
+    emit([0x0E, 0x06])               # LD C, 6 (groups per row)
+
+    mark("group_loop")
+    # STAT wait (MODE 3 then 0 - single phase)
+    emit([0xF3])                     # DI
+    mark("stat3")
+    emit([0xF0, 0x41])               # LDH A,[FF41]
+    emit([0xE6, 0x03])               # AND 3
+    emit([0xFE, 0x03])               # CP 3
+    emit_jr_back(0x20, "stat3")      # JR NZ, stat3
+    mark("stat0")
+    emit([0xF0, 0x41])               # LDH A,[FF41]
+    emit([0xE6, 0x03])               # AND 3
+    emit_jr_back(0x20, "stat0")      # JR NZ, stat0
+    # 4 tile writes
+    for _ in range(4):
+        emit([0x1A, 0x13, 0x22])     # LD A,[DE]; INC DE; LD [HL+],A
+    emit([0xFB])                     # EI
+
+    # Group counter
+    emit([0x0D])                     # DEC C
+    emit_jr_back(0x20, "group_loop") # JR NZ, group_loop
+
+    # Row end: HL += 8
+    emit([0x7D])                     # LD A, L
+    emit([0xC6, 0x08])               # ADD 8
+    emit([0x6F])                     # LD L, A
+    emit([0x30, 0x01])               # JR NC, +1
+    emit([0x24])                     # INC H
+
+    # Row counter
+    emit([0xF1])                     # POP AF
+    emit([0x3D])                     # DEC A
+    j_done = emit_jr_fwd(0x28)       # JR Z, done
+    emit([0xF5])                     # PUSH AF
+    offset = targets["row_loop"] - (len(code) + 2)
+    if -128 <= offset <= 127:
+        emit([0x18, offset & 0xFF])
+    else:
+        target_addr = 0x42A7 + targets["row_loop"]
+        emit([0xC3, target_addr & 0xFF, (target_addr >> 8) & 0xFF])
+
+    patch_jr_fwd(j_done)
+    emit([0xC9])                     # RET
+    return bytes(code)
+
+
 def create_gdma_transfer() -> bytes:
     """GDMA 1024 bytes from WRAM bank 2:D000 to displayed tilemap VBK=1.
 
@@ -743,9 +836,9 @@ def build_v301():
     rom[0x003B] = 0xC9
 
     # ============================================================
-    # INLINE TILE-ONLY HOOK at bank1:0x42A7
+    # INLINE PURE TILE-ONLY HOOK at bank1:0x42A7
     # ============================================================
-    inline_code = create_inline_tile_copy_tileonly()
+    inline_code = create_inline_tile_copy_pure_tileonly()
     available = 0x436D - 0x42A7 + 1  # 199 bytes
     assert len(inline_code) <= available, \
         f"inline tile copy too big: {len(inline_code)} > {available}"
