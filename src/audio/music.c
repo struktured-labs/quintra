@@ -129,6 +129,42 @@ static u8 row;
 static u8 frames_per_row = 8;
 static const u16 *cur_melody = melody;
 static const u16 *cur_bass   = bassline;
+u8 music_track_id = MUSIC_STOPPED;
+u8 music_stage_number;
+
+typedef struct {
+    const u16 *melody;
+    const u16 *bass;
+    u8 tempo;
+} music_variant_t;
+
+// Stable stage numbers 0..8. A few stages deliberately reprise a melodic
+// family, but no two use the same melody/tempo combination; every new theme
+// therefore has its own audible pacing and observable track id.
+static const music_variant_t stage_music[MUSIC_STAGE_COUNT] = {
+    { melody,    bassline, 8  }, // Crystal Caverns
+    { s1_melody, s1_bass,  7  }, // Verdant Hollow
+    { s2_melody, s2_bass,  9  }, // Ember Depths
+    { s3_melody, s3_bass,  10 }, // Frost Vault
+    { melody,    bassline, 6  }, // Toxic Mire
+    { s1_melody, s1_bass,  9  }, // Shadow Keep
+    { s2_melody, s2_bass,  7  }, // Golden Temple
+    { s3_melody, s3_bass,  8  }, // Bloodmoon
+    { melody,    bassline, 10 }, // Void Sanctum
+};
+
+// Bosses have their own number and a distinct driving variant per stage.
+static const music_variant_t boss_music[MUSIC_STAGE_COUNT] = {
+    { boss_melody,  boss_bass,  7 },
+    { boss2_melody, boss2_bass, 7 },
+    { boss_melody,  boss_bass,  6 },
+    { boss2_melody, boss2_bass, 6 },
+    { boss_melody,  boss_bass,  5 },
+    { boss2_melody, boss2_bass, 5 },
+    { boss_melody,  boss_bass,  4 },
+    { boss2_melody, boss2_bass, 4 },
+    { boss2_melody, boss2_bass, 3 },
+};
 
 static void load_wave(void) {
     u8 i;
@@ -140,36 +176,31 @@ static void load_wave(void) {
 }
 
 void music_play_caverns(void) {
-    music_play_stage(0);
+    music_stage_number = 0;
+    music_play_stage();
 }
 
-void music_play_stage(u8 stage) {
+void music_play_stage(void) {
+    u8 stage = music_stage_number;
+    const music_variant_t *v;
     load_wave();
-    // 9 stages rotate across the 4 exploration themes so consecutive stages
-    // always sound different (caverns / ember / void / gilded).
-    switch (stage & 0x03) {
-        case 1:  cur_melody = s1_melody; cur_bass = s1_bass; frames_per_row = 7; break;
-        case 2:  cur_melody = s2_melody; cur_bass = s2_bass; frames_per_row = 9; break;
-        case 3:  cur_melody = s3_melody; cur_bass = s3_bass; frames_per_row = 10; break;
-        default: cur_melody = melody;    cur_bass = bassline; frames_per_row = 8; break;
-    }
+    while (stage >= MUSIC_STAGE_COUNT) stage -= MUSIC_STAGE_COUNT;
+    v = &stage_music[stage];
+    cur_melody = v->melody; cur_bass = v->bass; frames_per_row = v->tempo;
+    music_track_id = stage;
     playing  = 1;
     frame_div = 0;
     row      = 0;
 }
 
-void music_play_boss(u8 stage) {
+void music_play_boss(void) {
+    u8 stage = music_stage_number;
+    const music_variant_t *v;
     load_wave();
-    // Stages 6-9 (and their endless echoes) get the harder hammer
-    if ((stage % 9) >= 5) {
-        cur_melody = boss2_melody;
-        cur_bass   = boss2_bass;
-        frames_per_row = 5;
-    } else {
-        cur_melody = boss_melody;
-        cur_bass   = boss_bass;
-        frames_per_row = 6;      // faster tempo
-    }
+    while (stage >= MUSIC_STAGE_COUNT) stage -= MUSIC_STAGE_COUNT;
+    v = &boss_music[stage];
+    cur_melody = v->melody; cur_bass = v->bass; frames_per_row = v->tempo;
+    music_track_id = (u8)(MUSIC_BOSS_BASE + stage);
     playing  = 1;
     frame_div = 0;
     row      = 0;
@@ -180,6 +211,7 @@ void music_play_title(void) {
     cur_melody = title_melody;
     cur_bass   = title_bass;
     frames_per_row = 10;     // slow, haunting
+    music_track_id = MUSIC_TITLE;
     playing  = 1;
     frame_div = 0;
     row      = 0;
@@ -190,6 +222,7 @@ void music_play_victory(void) {
     cur_melody = vic_melody;
     cur_bass   = boss_bass;
     frames_per_row = 6;
+    music_track_id = MUSIC_VICTORY;
     playing  = 1;
     frame_div = 0;
     row      = 0;
@@ -200,6 +233,7 @@ void music_play_gameover(void) {
     cur_melody = go_melody;
     cur_bass   = title_bass;
     frames_per_row = 12;     // dirge
+    music_track_id = MUSIC_GAMEOVER;
     playing  = 1;
     frame_div = 0;
     row      = 0;
@@ -207,6 +241,7 @@ void music_play_gameover(void) {
 
 void music_stop(void) {
     playing = 0;
+    music_track_id = MUSIC_STOPPED;
     NR22_REG = 0x00; NR24_REG = 0x80;      // melody off
     NR30_REG = 0x00;                       // wave DAC off
 }

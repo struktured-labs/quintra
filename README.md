@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.9: Cart Ready](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.10: Stage Scores](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -36,7 +36,7 @@ the cartridge runtime.
   with its own stats, primary weapon, signature move, and a live passive perk.
   Conference endurance floors give fragile Corvin four hearts and Picsean five
   while preserving their low-DEF ranged identities.
-- **9 distinct dungeon themes**, each with its own palette, music rotation, and enemy
+- **9 distinct dungeon themes**, each with its own palette, numbered music variant, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
   the ninth colossus, animated ending, and permanent win record. Victors may
@@ -83,8 +83,10 @@ the cartridge runtime.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever.
-- **Full chiptune audio**: four rotating exploration themes, a driving boss
-  theme, title / victory / gameover tracks, and 10 register-level SFX.
+- **Full chiptune audio**: nine numbered exploration variants and nine
+  dedicated boss variants, plus title / victory / gameover tracks and 10
+  register-level SFX. Reprised melodic families change tempo and pacing, so
+  every stage/boss pairing remains audibly distinct within the ROM budget.
 
 ## Controls
 
@@ -126,7 +128,7 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.9 currently occupies 64 KiB with 1,293 bytes of bank-0 headroom.
+v0.17.10 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It fails if any agent does not produce telemetry, while
@@ -141,7 +143,7 @@ used in balance runs. Its cleared-room recovery gives tile-path alignment more
 time than combat pursuit, preventing collision nudges from defeating its own
 shortest-path route. Short-range champions also path around cover to engage,
 then line up their final few pixels on the target's cardinal axis before
-striking. If cover absorbs four seconds of short-range attacks, they flank and
+striking. If cover absorbs four seconds of any weapon's attacks, they flank and
 reacquire instead of attacking the wall forever. Debug runs can emit a
 one-shot screenshot when a room exceeds the stall threshold by setting
 `QUINTRA_BOT_DEBUG_SCREEN=/tmp/quintra-stall`, and the agent

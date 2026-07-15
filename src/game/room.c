@@ -89,6 +89,16 @@ static u8 room_stage(void) {
     return (s < N_STAGES) ? s : (u8)(s % N_STAGES);
 }
 
+static void play_stage_music(void) {
+    music_stage_number = run_state.bosses_beaten;
+    music_play_stage();
+}
+
+static void play_boss_music(void) {
+    music_stage_number = run_state.bosses_beaten;
+    music_play_boss();
+}
+
 // Crawler (enemy) palette — blue, with one accent
 static const u16 crawler_palette[4] = {
     BGR555( 0,  0,  0),
@@ -449,6 +459,18 @@ void room_enter(void) {
 
     player.iframes       = 0;
 
+    // Select audio before the banked generator. The destination counter is
+    // already authoritative, while post-bcall audio calls are unreliable on
+    // this SDCC build (and previously collapsed later stages to track 0).
+    if (!run_state.world_mode && run_state.room_counter > 0
+        && (run_state.room_counter % ROOMS_PER_STAGE) == 0
+        && (u8)(run_state.room_counter / ROOMS_PER_STAGE)
+            > run_state.bosses_beaten) {
+        play_boss_music();
+    } else {
+        play_stage_music();
+    }
+
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
     draw_room_tilemap();
@@ -458,15 +480,12 @@ void room_enter(void) {
     secret_door_x2 = secret_door_y2 = 0xFF;
     player.active_charge = 0;
     if (*(volatile u8*)0xFFFC == 0xBB) {
-        music_play_boss(room_stage());
         sfx_play(SFX_ROAR);
         // Entry drama: the arena starts dark and trembling, then the
         // light pops as the fight begins.
         room_apply_pause_palettes(1);
         stage_fade = 30;
         room_shake(1, 24);
-    } else {
-        music_play_stage(room_stage());
     }
 
     hostiles_prev = 0;   // fresh room: re-arm the clear chime
@@ -992,7 +1011,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (run_state.pending_unseal) {
         run_state.pending_unseal = 0;
         room_unseal_doors();
-        music_play_stage(room_stage());
+        play_stage_music();
     }
 
     // ---- Final victory: all bosses down
@@ -1042,13 +1061,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // Edge arrival prevents an immediate return and muddles orientation.
             run_state.entered_from = (run_state.run_seed & 1) ? DIR_N : DIR_W;
             sfx_play(SFX_DOOR);
+            // Select before the banked generator. On hardware/SDCC the
+            // post-bcall path could skip the later selector, leaving every
+            // Riftwild dungeon entrance on stage 0 music.
+            play_stage_music();
             DISPLAY_OFF;
             procgen_generate_current_room();
             draw_room_tilemap();
             place_player_sprite();
             hud_redraw_all();
             DISPLAY_ON;
-            music_play_stage(room_stage());
             hostiles_prev = 0;
             sram_save_run();
             return SCREEN_SELF;
@@ -1142,6 +1164,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 }
                 run_state.entered_from = dir;
                 sfx_play(SFX_DOOR);
+                if (!run_state.world_mode && run_state.room_counter > 0
+                    && (run_state.room_counter % ROOMS_PER_STAGE) == 0
+                    && (u8)(run_state.room_counter / ROOMS_PER_STAGE)
+                        > run_state.bosses_beaten) {
+                    play_boss_music();
+                } else {
+                    play_stage_music();
+                }
                 // Regenerate room in-place (skip full screen exit/enter)
                 DISPLAY_OFF;
                 procgen_generate_current_room();
@@ -1150,14 +1180,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 hud_redraw_all();
                 DISPLAY_ON;
                 if (*(volatile u8*)0xFFFC == 0xBB) {
-                    music_play_boss(room_stage());
                     sfx_play(SFX_ROAR);
                     // Entry drama: dark, trembling, then the light pops
                     room_apply_pause_palettes(1);
                     stage_fade = 30;
                     room_shake(1, 24);
-                } else {
-                    music_play_stage(room_stage());
                 }
                 hostiles_prev = 0;   // fresh room: re-arm the clear chime
                 // Stage-entry reveal (door path — stage changes land here

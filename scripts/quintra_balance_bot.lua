@@ -49,7 +49,8 @@ local function enemy_target(px, py)
             if d < bestd then
                 best, bestd = {
                     x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
-                    kind=emu:read8(p + 17), state6=emu:read8(p + 23)
+                    kind=emu:read8(p + 17), state=emu:read8(p + 15),
+                    clock=emu:read8(p + 18), state6=emu:read8(p + 23)
                 }, d
             end
         end
@@ -360,29 +361,28 @@ while frames < LIMIT do
         elseif aim == KEY_DOWN then move = clockwise and KEY_LEFT or KEY_RIGHT
         elseif aim == KEY_LEFT then move = clockwise and KEY_UP or KEY_DOWN
         else move = clockwise and KEY_DOWN or KEY_UP end
-        -- Wolfkin's claw is true melee and Vespine's Stinger is a short lunge:
-        -- both must close distance instead of orbiting outside weapon reach.
-        if CLASS == 0 or CLASS == 4 then
+        -- Any weapon can spend shots into cover. After four seconds without
+        -- changing target HP, reposition perpendicular and reacquire.
+        if flank_timer > 0 then
+            keys = flank_dir + KEY_A
+            flank_timer = flank_timer - 1
+        elseif no_damage_frames > 240 then
+            if math.abs(dx) >= math.abs(dy) then
+                flank_dir = (frames % 2 == 0) and KEY_UP or KEY_DOWN
+            else
+                flank_dir = (frames % 2 == 0) and KEY_LEFT or KEY_RIGHT
+            end
+            flank_timer, no_damage_frames = 90, 0
+            keys = flank_dir + KEY_A
+        -- Wolfkin's Claw is true melee; Sauran's Tail Spike and Vespine's
+        -- Stinger are short lunges. All three must close and align instead of
+        -- orbiting outside their actual weapon geometry.
+        elseif CLASS == 0 or CLASS == 1 or CLASS == 4 then
             -- Tile BFS gets us around cover; at striking distance, finish the
             -- last few pixels of perpendicular alignment before attacking.
             -- Small enemy hurtboxes make a same-tile diagonal slash miss even
             -- though both sprites appear adjacent.
-            if flank_timer > 0 then
-                keys = flank_dir + KEY_A
-                flank_timer = flank_timer - 1
-            elseif no_damage_frames > 240 then
-                -- If an apparently lined-up melee target takes no damage for
-                -- four seconds, cover is probably between the sprites. Make
-                -- a sustained perpendicular flank, then reacquire through
-                -- the normal BFS instead of slashing into that cover forever.
-                if math.abs(dx) >= math.abs(dy) then
-                    flank_dir = (frames % 2 == 0) and KEY_UP or KEY_DOWN
-                else
-                    flank_dir = (frames % 2 == 0) and KEY_LEFT or KEY_RIGHT
-                end
-                flank_timer, no_damage_frames = 90, 0
-                keys = flank_dir + KEY_A
-            elseif math.abs(dx) <= 24 and math.abs(dy) <= 24 then
+            if math.abs(dx) <= 24 and math.abs(dy) <= 24 then
                 if math.abs(dx) >= math.abs(dy) and math.abs(dy) > 2 then
                     keys = dy > 0 and KEY_DOWN or KEY_UP
                 elseif math.abs(dy) > math.abs(dx) and math.abs(dx) > 2 then
@@ -495,8 +495,9 @@ while frames < LIMIT do
     if DEBUG and frames % 600 == 0 then
         debug_log(string.format("BOTDBG f=%d room=%d hp=%d pos=%d,%d target=%s keys=%02X",
             frames, room, hp, px, py,
-            target and string.format("enemy:%d@%d,%d hp=%d s6=%d",
-                    target.kind, target.x, target.y, target.hp, target.state6)
+            target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
+                    target.kind, target.x, target.y, target.hp, target.state,
+                    target.clock, target.state6)
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y) or "door"), keys))
     end
     if DEBUG_SCREEN and debug_shot_room ~= room
