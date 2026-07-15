@@ -14,6 +14,7 @@ MAX_COMBAT_STALLS="${QUINTRA_BALANCE_MAX_COMBAT_STALLS:-}"
 MAX_ROUTE_STALLS="${QUINTRA_BALANCE_MAX_ROUTE_STALLS:-}"
 MAX_WORLD_HOPS="${QUINTRA_BALANCE_MAX_WORLD_HOPS:-}"
 HOST_TIMEOUT="${QUINTRA_BALANCE_HOST_TIMEOUT:-180}"
+TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
 read -r -a CLASS_IDS <<< "${QUINTRA_BALANCE_CLASSES:-0 1 2 3 4}"
 if [ -n "${QUINTRA_BALANCE_RUNS:-}" ]; then
   read -r -a RUN_IDS <<< "$QUINTRA_BALANCE_RUNS"
@@ -29,6 +30,7 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
+if [ -n "$TRACE_DIR" ]; then mkdir -p "$TRACE_DIR"; fi
 echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,purchases" > "$OUT"
 
 unset DISPLAY WAYLAND_DISPLAY
@@ -37,7 +39,11 @@ for run in "${RUN_IDS[@]}"; do
     echo "[balance] run $run/$REPS class $class"
     before=$(wc -l < "$OUT")
     log="/tmp/quintra-balance-$run-$class.log"
-    QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
+    trace_env=()
+    if [ -n "$TRACE_DIR" ]; then
+      trace_env+=("QUINTRA_BOT_TRACE_OUT=$TRACE_DIR/run-$run-class-$class.trace")
+    fi
+    env "${trace_env[@]}" QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
       QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" QUINTRA_TM_ADDR="$TM" \
       QUINTRA_SCREEN_ADDR="$LS" \
       QUINTRA_FRAME_ADDR="$FC" \

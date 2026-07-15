@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.40: Paired Pixels](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.41: Ghost Controller](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -157,7 +157,7 @@ and a stable Rust toolchain (host-side only — Rust never ships in the ROM).
 ```bash
 make            # cargo codegen + sprite pipeline → SDCC → rom/working/quintra.gbc
 make play       # build + launch in mGBA
-make verify     # tests + exact room/boss-state smoke + C<->Rust procgen parity
+make verify     # ROM tests + procgen parity + deterministic input replay
 make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
@@ -187,9 +187,15 @@ Its smoke pass resolves WRAM symbols from the current linker output and asserts
 rooms 0→1→2→3→4→6, defeats a live giant through real A-button shots, then
 proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
+Set `QUINTRA_BALANCE_TRACE_DIR=tmp/traces` to retain RLE-compressed joypad
+transitions for selected balance runs. `make verify` records a Corvin run,
+boots a second untouched emulator, replays only those controller states, and
+requires seed, room, clears, kills, bosses, HP, outcome, screen, and total host
+frames to match exactly. This turns a reported death or stall into a portable,
+frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.40 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
+v0.17.41 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -209,7 +215,7 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.40 retains the paired-seed baseline of 11/15 full clears: 2/3 for Wolfkin,
+v0.17.41 retains the paired-seed baseline of 11/15 full clears: 2/3 for Wolfkin,
 Sauran, Picsean, and Vespine and 3/3 for Corvin, with four real permadeaths and zero
 combat or route stalls. That small failure rate is healthier roguelike pressure than a
 perfect agent sweep while retaining the two-clear conference floor. Successful

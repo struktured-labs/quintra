@@ -21,6 +21,8 @@ local OUT = os.getenv("QUINTRA_BOT_OUT") or "/tmp/quintra-balance.csv"
 local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
 local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
+local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
+local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 
 local function debug_log(line)
     console:log(line)
@@ -31,7 +33,19 @@ local function debug_log(line)
 end
 
 local function tick(keys)
-    emu:setKeys(keys or 0)
+    keys = keys or 0
+    if TRACE_OUT then
+        if trace_last == nil then
+            trace_last, trace_count = keys, 1
+        elseif keys == trace_last then
+            trace_count = trace_count + 1
+        else
+            trace_rows[#trace_rows + 1] = string.format("%d,%d", trace_count, trace_last)
+            trace_last, trace_count = keys, 1
+        end
+        trace_frames = trace_frames + 1
+    end
+    emu:setKeys(keys)
     emu:runFrame()
 end
 
@@ -777,6 +791,19 @@ if RS ~= 0 then
         + emu:read8(RS + 3) * 256
         + emu:read8(RS + 4) * 65536
         + emu:read8(RS + 5) * 16777216
+end
+if TRACE_OUT then
+    if trace_count > 0 then
+        trace_rows[#trace_rows + 1] = string.format("%d,%d", trace_count, trace_last)
+    end
+    local tf = io.open(TRACE_OUT, "w")
+    if tf then
+        tf:write("# quintra-input-trace-v1\n")
+        tf:write(string.format("# outcome seed=%.0f room=%d clears=%d kills=%d bosses=%d hp=%d won=%d screen=%d frames=%d\n",
+            seed, emu:read8(RS + 1), clears, kills, bosses, hp, won, ui_screen, trace_frames))
+        for _, row in ipairs(trace_rows) do tf:write(row .. "\n") end
+        tf:close()
+    end
 end
 local f = io.open(OUT, "a")
 if f then
