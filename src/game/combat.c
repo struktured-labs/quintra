@@ -56,6 +56,21 @@ u8 combat_resolve(void) BANKED {
             if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
+            // Echo Guard: the first hit is a readable shield parry. It spends
+            // the projectile, launches a short rush, then exposes the guard
+            // for the remainder of its authored cooldown.
+            if (eid == ENEMY_ECHO_GUARD && entities[j].state == 0) {
+                entities[j].state = 1;
+                entities[j].state_timer = enemies[eid].ai_p1;
+                entities[j].ai_data[6] = enemies[eid].ai_p0;
+                entities[j].palette = 4;
+                entities[j].ai_data[7] = 10;
+                fx_spawn(SPR_FX_IMPACT, 3,
+                    FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 8);
+                sfx_play(SFX_WEAK);
+                entity_kill(i);
+                break;
+            }
             // Folding Star: expanded geometry is an invulnerable projection.
             // Shots still burst on contact, teaching the player to wait for
             // the bright contracted core rather than passing through it.

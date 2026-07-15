@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       18);   // includes Frost's moth + Toxic Mire's spore
+        assert_eq!(r.n_enemies(),       19);   // adds Golden Temple's reactive Echo Guard
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -117,5 +117,14 @@ mod tests {
         assert_eq!(mire.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::MIRE_SPORE.ai_script,
             quintra_content::AiScriptId::SporeMine { trigger_radius: 40, fuse_ticks: 36 });
+    }
+
+    #[test]
+    fn golden_temple_authors_the_echo_guard_without_weight_inflation() {
+        let temple = &stages::STAGES[6];
+        assert!(temple.enemy_pool.iter().any(|&(id, _)| id == 18));
+        assert_eq!(temple.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::ECHO_GUARD.ai_script,
+            quintra_content::AiScriptId::CounterGuard { guard_cooldown: 100, rush_ticks: 24 });
     }
 }

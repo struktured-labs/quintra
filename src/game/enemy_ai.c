@@ -225,6 +225,42 @@ static void chaser_tick(entity_t *e, u8 speed) {
     }
 }
 
+// First hit raises a counter-rush (armed by combat.c), followed by a long,
+// pale punish window. ai_data[6]=guard cooldown; state 0=ready, 1=rushing,
+// 2=exposed. ai_data[1] is a private movement divider.
+static void counter_guard_tick(entity_t *e, const enemy_def_t *def) {
+    if (e->ai_data[6] > 0) e->ai_data[6]--;
+    if (e->state == 1) {
+        if (e->state_timer > 0) e->state_timer--;
+        if ((e->state_timer & 1) == 0) {
+            i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
+            i16 dx = (i16)player.x - ex, dy = (i16)player.y - ey;
+            i16 ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+            if (ax >= ay) enemy_try_step(e, dx > 0 ? 1 : -1, 0);
+            else enemy_try_step(e, 0, dy > 0 ? 1 : -1);
+        }
+        if (e->state_timer == 0) {
+            e->state = 2;
+            e->palette = 0;       // pale = shield down, safe to punish
+        }
+        return;
+    }
+    if (e->state == 2) {
+        if (e->ai_data[6] == 0) {
+            e->state = 0;
+            e->palette = def->palette;
+            sfx_play(SFX_TICK);
+        } else if ((++e->ai_data[1] & 7) == 0) {
+            // Keep light pressure without erasing the exposed opening.
+            chaser_tick(e, 48);
+        }
+        return;
+    }
+    // Shield-ready stance advances deliberately; the bright gold silhouette
+    // and first blocked hit teach the bait-then-punish rhythm.
+    if ((++e->ai_data[1] & 3) == 0) chaser_tick(e, def->stats.speed);
+}
+
 // ---------------- Charger: telegraph then dash --------------------------
 
 #define CHG_WANDER    0
@@ -618,6 +654,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_REPLICATOR: replicator_tick(e, def);        break;
         case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
         case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
+        case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;
         default:         walker_tick(e);                   break;
     }
 }

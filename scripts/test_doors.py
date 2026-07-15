@@ -44,6 +44,35 @@ def crosses(x, y, synthetic_door=None):
     pb.stop(save=False)
     return result == 1
 
+def locked_north_holds():
+    """A live hostile must not let repeated north input escape to signed y=-8."""
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240): pb.tick()
+    pb.button("start")
+    for _ in range(30): pb.tick()
+    pb.button("a")
+    for _ in range(60): pb.tick()
+    for i in range(32 * 28): pb.memory[EN + i] = 0
+    enemy = EN
+    pb.memory[enemy] = 2
+    pb.memory[enemy + 1] = 3
+    pb.memory[enemy + 3] = 104
+    pb.memory[enemy + 7] = 72
+    pb.memory[enemy + 14] = 8
+    pb.memory[enemy + 17] = 0
+    pb.memory[enemy + 25] = 0x88
+    pb.memory[TM + 9] = pb.memory[TM + 10] = 3
+    pb.memory[RS + 6] = 0  # north is a gated forward exit, not the return door
+    put16(pb, PL + 9, 72)
+    put16(pb, PL + 11, 0)
+    pb.button_press("up")
+    for _ in range(30): pb.tick()
+    pb.button_release("up")
+    y = pb.memory[PL + 11] | (pb.memory[PL + 12] << 8)
+    room = pb.memory[RS + 1]
+    pb.stop(save=False)
+    return room == 0 and y == 0
+
 def main():
     positions = {
         "north": (72, 0, None), "east": (144, 60, None),
@@ -54,7 +83,8 @@ def main():
         "off-center-secret": (36, 0, (5, 0)),
     }
     failed = [name for name, args in positions.items() if not crosses(*args)]
+    if not locked_north_holds(): failed.append("locked-north-boundary")
     if failed: raise SystemExit(f"[doors] FAIL unreachable: {', '.join(failed)}")
-    print("[doors] PASS north/east/south/west + off-center secret")
+    print("[doors] PASS cardinal/secret traversal + locked combat boundary")
 
 if __name__ == "__main__": main()

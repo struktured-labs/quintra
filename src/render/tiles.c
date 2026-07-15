@@ -144,6 +144,7 @@ void tiles_load_all_enemy_sprites(void) BANKED {
     set_sprite_data(SPR_ENEMY_RIFT_OOZE, 1, sprite_enemy_rift_ooze);
     set_sprite_data(SPR_ENEMY_MIRROR_MOTH, 1, sprite_enemy_mirror_moth);
     set_sprite_data(SPR_ENEMY_MIRE_SPORE, 1, sprite_enemy_mire_spore);
+    set_sprite_data(SPR_ENEMY_ECHO_GUARD, 1, sprite_enemy_echo_guard);
     // Bruiser tier: 16x16 (4 tiles each) for the heavy enemies
     set_sprite_data(SPR_BRUISER_ORC,     4, sprite_bruiser_orc);
     set_sprite_data(SPR_BRUISER_BOMBER,  4, sprite_bruiser_bomber);

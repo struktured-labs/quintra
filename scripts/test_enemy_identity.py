@@ -17,6 +17,7 @@ IDENTITIES = {
     5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
     14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
+    18: (80, 5),
 }
 
 SPECIALISTS = {
@@ -27,6 +28,7 @@ SPECIALISTS = {
     15: (76, 20, "RIFT_OOZE", "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
     16: (77, 21, "MIRROR_MOTH", "SPR_ENEMY_MIRROR_MOTH", "mirror-moth"),
     17: (78, 20, "MIRE_SPORE", "SPR_ENEMY_MIRE_SPORE", "mire-spore"),
+    18: (80, 68, "ECHO_GUARD", "SPR_ENEMY_ECHO_GUARD", "echo-guard"),
 }
 
 
@@ -231,6 +233,61 @@ def main():
     assert len(spores) == 8, f"Mire Spore radial burst drifted: {spores}"
     assert pb.memory[spore + 15] == 2, "Mire Spore did not enter punish recovery"
 
+    # Echo Guard must consume the first real player attack without losing HP,
+    # rush toward the attacker, then accept damage while its shield is down.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 120)
+    put16(pb, player + 11, 72)
+    pb.memory[player + 2] = 20
+    pb.memory[player + 8] = 0       # no crit chance
+    guard = entities
+    shot = entities + 28
+    pb.memory[guard] = 2
+    pb.memory[guard + 1] = 3
+    put_fix8(pb, guard + 2, 80)
+    put_fix8(pb, guard + 6, 72)
+    pb.memory[guard + 12] = 80
+    pb.memory[guard + 13] = 5
+    pb.memory[guard + 14] = 7
+    pb.memory[guard + 17] = 18
+    pb.memory[guard + 25] = 0x66
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 80)
+    put_fix8(pb, shot + 6, 72)
+    pb.memory[shot + 14] = 2
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 17] = 0
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 27] = 1
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    assert pb.memory[guard + 14] == 7, "Echo Guard's ready shield leaked damage"
+    assert pb.memory[guard + 15] == 1 and pb.memory[guard + 23] > 90, (
+        "Echo Guard did not enter its counter cooldown: "
+        f"state={pb.memory[guard + 15]} cooldown={pb.memory[guard + 23]} "
+        f"shot_flags={pb.memory[shot + 1]}"
+    )
+    assert not (pb.memory[shot + 1] & 1), "Echo Guard did not spend the parried shot"
+    guard_x0 = pb.memory[guard + 3]
+    for _ in range(10):
+        pb.tick()
+    assert pb.memory[guard + 3] > guard_x0, "Echo Guard did not rush the attacker"
+    put_fix8(pb, shot + 2, pb.memory[guard + 3])
+    put_fix8(pb, shot + 6, pb.memory[guard + 7])
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    pb.memory[shot + 14] = 2
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 17] = 0
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 27] = 1
+    pb.tick()
+    assert pb.memory[guard + 14] < 7, "Echo Guard stayed invulnerable after its parry"
+
     # Kill a Rift Ooze through the real projectile/combat loop. The corpse
     # must become two fragile crawler fragments, not merely claim to split in
     # authored data or a unit-test-only helper.
@@ -277,7 +334,7 @@ def main():
         f"dead Rift Ooze remained active: {fragments}"
     )
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + leech/flutter/mirror/spore behavior + ooze split")
+    print("[enemy-id] PASS specialist art + reactive guard/spore/mirror/leech behavior + ooze split")
 
 
 if __name__ == "__main__":

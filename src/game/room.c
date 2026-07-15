@@ -1147,6 +1147,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // and every authored graph exit remains fleeable.
                 if (!run_state.world_mode && hostiles_now != 0
                     && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
+                    // A locked doorway is still walkable terrain so the hero
+                    // can cross it after a clear. Hold the signed position at
+                    // the legal room edge while combat keeps it locked;
+                    // otherwise repeated input can drift to -8/152 offscreen
+                    // and leave every remaining enemy impossible to hit.
+                    if (dir == DIR_N) player.y = 0;
+                    else if (dir == DIR_S) player.y = 120;
+                    else if (dir == DIR_W) player.x = 0;
+                    else player.x = 144;
                     if (door_bump_cd == 0) {
                         door_bump_cd = 20;
                         sfx_play(SFX_HIT);

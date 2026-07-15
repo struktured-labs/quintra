@@ -253,6 +253,18 @@ pub const MIRE_SPORE: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const ECHO_GUARD: Enemy = Enemy {
+    id: ENEMY_ECHO_GUARD, symbol: "ECHO_GUARD", name: "Echo Guard", sprite_set: SPRITE_ECHO_GUARD,
+    palette: OBJ_PAL_GOLD,
+    // Golden Temple duelist: the first hit rings off its shield and provokes
+    // a short rush. The pale cooldown stance is a generous punish window;
+    // poison prevents Vespine's short-range kit from being crowded out.
+    stats: EnemyStats { hp: 7, damage: 2, speed: 56, score: 58, weakness: 0x10, poise: 3 },
+    ai_script: AiScriptId::CounterGuard { guard_cooldown: 100, rush_ticks: 24 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -272,4 +284,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(RIFT_OOZE.clone());
     r.add_enemy(MIRROR_MOTH.clone());
     r.add_enemy(MIRE_SPORE.clone());
+    r.add_enemy(ECHO_GUARD.clone());
 }

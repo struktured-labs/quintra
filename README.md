@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.44: Whispered Roads](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.45: Golden Counter](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -65,7 +65,7 @@ the cartridge runtime.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **18 enemies across a size hierarchy** — small swarm critters (crawler,
+- **19 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
@@ -76,6 +76,9 @@ the cartridge runtime.
   vector before firing a slow reflected bolt down the new lane. Toxic Mire's
   **Mire Spores** lie dormant until approached, flash through a 36-frame fuse,
   erupt across eight lanes, then expose a 90-frame melee punish window.
+  Golden Temple's **Echo Guards** parry the first careless attack, rush the
+  attacker, then turn pale and vulnerable until their shield recovers; poison
+  remains a class-readable answer to their heavy armor.
   Both fragments are guaranteed even when the fixed 32-entity table is full;
   a spent lethal projectile yields its slot before the split resolves.
   Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, Rift Oozes,
@@ -203,7 +206,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.44 occupies 64 KiB with 1,150 bytes of bank-0 headroom. Gameplay files
+v0.17.45 occupies 64 KiB with 1,119 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -214,8 +217,8 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen bank. Switchable headroom is now 1,225 bytes in bank 1, 2,820 in
-bank 2, and 1,765 in bank 3 instead of leaving any bank within 294 bytes of
+room/procgen bank. Switchable headroom is now 1,161 bytes in bank 1, 2,183 in
+bank 2, and 1,642 in bank 3 instead of leaving any bank within 294 bytes of
 overflow.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one
@@ -227,16 +230,14 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.44 retains the paired-seed baseline of 14/15 full clears: 3/3 for Wolfkin,
-Sauran, Corvin, and Vespine and 2/3 for Picsean, with one real Stone Sentinel
-permadeath and zero combat or route stalls. That failure preserves some
-roguelike pressure while every champion remains above the two-clear conference
-floor. Successful runs make 8–11 real purchases rather than bypassing merchants;
-the death still made nine, and no run exceeds 66
-Riftwild transitions. The gate now proves every class faces the same three
+v0.17.45 raises the paired-seed baseline to 15/15 full clears: 3/3 for every
+champion, all nine bosses and both towns reached, with zero deaths, combat
+stalls, or route stalls. Runs make 8–11 real purchases rather than bypassing
+merchants, and no run exceeds 53 Riftwild transitions. The gate now proves
+every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
-low as one half-heart and vary from roughly 4:36 to 8:48 active play, so
+low as one heart and vary from roughly 4:57 to 9:06 active play, so
 the sample retains pressure and meaningful build/seed variance.
 
 The agents use each champion's actual weapon range and B ability, collect

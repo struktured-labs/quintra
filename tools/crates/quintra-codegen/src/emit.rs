@@ -97,6 +97,7 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_REPLICATOR 9\n\
          #define AI_MIRROR    10\n\
          #define AI_SPORE_MINE 11\n\
+         #define AI_COUNTER_GUARD 12\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -416,6 +417,8 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_MIRROR", fire_rate, 0, 0),
         AiScriptId::SporeMine { trigger_radius, fuse_ticks } =>
             ("AI_SPORE_MINE", trigger_radius, fuse_ticks, 0),
+        AiScriptId::CounterGuard { guard_cooldown, rush_ticks } =>
+            ("AI_COUNTER_GUARD", guard_cooldown, rush_ticks, 0),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\

@@ -284,6 +284,17 @@ pub const MIRE_SPORE: [&str; 8] = [ // folded cap, bright volatile core, rootlet
     "1..11..1",
 ];
 
+pub const ECHO_GUARD: [&str; 8] = [ // tall shield, eye slit, countering spear
+    "..111.3.",
+    ".1222133",
+    "1233323.",
+    "1231323.",
+    "1233323.",
+    ".1222133",
+    "..111.3.",
+    ".1.1..3.",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -593,7 +604,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 16] = [
+pub const ENEMIES_8: [(&str, &[&str]); 17] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -610,6 +621,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 16] = [
     ("rift_ooze", &RIFT_OOZE),
     ("mirror_moth", &MIRROR_MOTH),
     ("mire_spore", &MIRE_SPORE),
+    ("echo_guard", &ECHO_GUARD),
 ];
 
 pub const FX_8: [(&str, &[&str]); 10] = [

@@ -46,6 +46,9 @@ pub enum AiScriptId {
     /// Dormant proximity mine: arms when approached, telegraphs, then emits
     /// a radial burst and spends a recovery window harmlessly regrowing.
     SporeMine    { trigger_radius: u8, fuse_ticks: u8 },
+    /// Blocks the first incoming attack, rushes its source, then stays exposed
+    /// until the guard cooldown completes.
+    CounterGuard { guard_cooldown: u8, rush_ticks: u8 },
 }
 
 // Container with &'static str and &'static [BiomeId] — no serde.
