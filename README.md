@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.7: Living Dungeons](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.8: Fairer Spirits](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -34,6 +34,8 @@ the cartridge runtime.
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
+  Conference endurance floors give fragile Corvin four hearts and Picsean five
+  while preserving their low-DEF ranged identities.
 - **9 distinct dungeon themes**, each with its own palette, music rotation, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
@@ -123,7 +125,7 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.7 currently occupies 64 KiB with 1,293 bytes of bank-0 headroom.
+v0.17.8 currently occupies 64 KiB with 1,293 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It fails if any agent does not produce telemetry, while

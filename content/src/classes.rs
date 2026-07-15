@@ -46,7 +46,10 @@ pub const CORVIN: Class = Class {
     starter_weapon: ITEM_FEATHER_SHURI,
     signature_active: ITEM_MURDER,
     passive_perk:  PERK_SEE_HP_REVEAL,
-    base_stats: BaseStats { hp_max: 6, mp_max: 8, atk: 2, def: 1, spd: 5 },
+    // The three-heart glass-cannon start produced two deaths in three
+    // controller-only endurance seeds even after route policy was corrected.
+    // Four hearts preserves low DEF while allowing one positioning error.
+    base_stats: BaseStats { hp_max: 8, mp_max: 8, atk: 2, def: 1, spd: 5 },
 };
 
 pub const PICSEAN: Class = Class {
@@ -59,8 +62,9 @@ pub const PICSEAN: Class = Class {
     signature_active: ITEM_TIDAL_WAVE,
     passive_perk:  PERK_MP_REGEN_SWIM,
     // Slow piercing shots and the roster's lowest ATK require enough health
-    // to survive a positioning mistake; retain the mage identity via low DEF.
-    base_stats: BaseStats { hp_max: 8, mp_max: 10, atk: 1, def: 1, spd: 5 },
+    // to survive positioning mistakes. Five hearts answers a 0/3 endurance
+    // survival result while retaining the mage identity through low DEF.
+    base_stats: BaseStats { hp_max: 10, mp_max: 10, atk: 1, def: 1, spd: 5 },
 };
 
 pub const VESPINE: Class = Class {

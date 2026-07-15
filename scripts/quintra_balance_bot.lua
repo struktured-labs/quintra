@@ -100,13 +100,32 @@ local function body_walkable(cx, cy)
         and walkable(emu:read8(TM + cy * 20 + cx))
 end
 
+-- Convert a tile-BFS direction into collision-safe pixel input. A 12px body
+-- can occupy the same nominal tile cell at several offsets; before moving
+-- through a narrow gap, center the perpendicular axis on the cell represented
+-- by BFS. This closes the tile-vs-pixel mismatch without touching game state.
+local function aligned_step(d, sx, sy, px, py, fallback)
+    if not d then return fallback end
+    if d == 1 or d == 3 then
+        local want_x = sx * 8 - 9
+        if px < want_x - 1 then return KEY_RIGHT end
+        if px > want_x + 1 then return KEY_LEFT end
+    else
+        local want_y = sy * 8 - 11
+        if want_y < 0 then want_y = 0 elseif want_y > 120 then want_y = 120 end
+        if py < want_y - 1 then return KEY_DOWN end
+        if py > want_y + 1 then return KEY_UP end
+    end
+    return CARD_KEYS[d] or fallback
+end
+
 -- Controller-only melee pursuit around procgen cover. Ranged champions can
 -- fire over a useful standoff distance, but short weapons must first route to
 -- a body-valid cell near the target instead of clawing into the intervening
 -- pillar forever.
 local function target_step(px, py, ex, ey, fallback)
     if TM == 0 then return fallback end
-    local sx, sy = math.floor((px + 8) / 8), math.floor((py + 12) / 8)
+    local sx, sy = math.floor((px + 13) / 8), math.floor((py + 15) / 8)
     local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
     local qx, qy, head, tail = {sx}, {sy}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
@@ -131,14 +150,14 @@ local function target_step(px, py, ex, ey, fallback)
     end
     if not target or target == start then return fallback end
     while prev[target] and prev[target] ~= start do target = prev[target] end
-    return CARD_KEYS[prevkey[target]] or fallback
+    return aligned_step(prevkey[target], sx, sy, px, py, fallback)
 end
 
 -- Shortest-path step to any boundary door except the door we entered from.
 -- Recomputed only in cleared rooms; 340 cells is tiny compared with emulation.
 local function door_step(px, py)
     if TM == 0 then return KEY_DOWN end
-    local sx, sy = math.floor((px + 8) / 8), math.floor((py + 12) / 8)
+    local sx, sy = math.floor((px + 13) / 8), math.floor((py + 15) / 8)
     if sx < 0 then sx = 0 elseif sx > 19 then sx = 19 end
     if sy < 0 then sy = 0 elseif sy > 16 then sy = 16 end
     local entered = emu:read8(RS + 6)
@@ -206,7 +225,7 @@ local function door_step(px, py)
     end
     while prev[target] and prev[target] ~= start do target = prev[target] end
     local d = prevkey[target]
-    return CARD_KEYS[d] or KEY_DOWN
+    return aligned_step(d, sx, sy, px, py, KEY_DOWN)
 end
 
 -- Boot, choose a class, start a fresh run.
