@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.27: Honest Endurance](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.28: No Second Chances](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -106,7 +106,9 @@ the cartridge runtime.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever. High and endless-run scores saturate at 65,535 instead of
-  wrapping back through zero.
+  wrapping back through zero. The cartridge regression suite delivers a real
+  fatal hostile shot, waits through the animated game-over entry, power-cycles
+  SRAM, proves the dead run cannot resume, and starts a clean replacement run.
 - **Full chiptune audio**: nine numbered exploration variants and nine
   dedicated boss variants, plus title / victory / gameover tracks and 10
   register-level SFX. Reprised melodic families change tempo and pacing, so
@@ -159,7 +161,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.27 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
+v0.17.28 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25

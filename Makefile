@@ -106,6 +106,7 @@ verify: all
 	uv run --quiet --with pyboy python scripts/test_doors.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
+	uv run --quiet --with pyboy python scripts/test_gameover.py
 
 # Release/hardware gate: static cartridge header plus a true battery-backed
 # suspend across emulator process restart. Safe to run before GB Operator flash.
