@@ -86,10 +86,15 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         e->ai_data[0]  = enemy_content_id;
         e->state       = (u8)(rng_next_u8() & 0x07);
         e->state_timer = 30;
+        // Flutterbats need champion-sized navigation clearance. Their old
+        // 8px footprint could enter one-tile pockets that a 12px hero could
+        // neither enter nor reliably reach with a cardinal melee attack.
+        if (enemy_content_id == ENEMY_FLUTTERBAT) {
+            e->hitbox = (u8)0xAA;
         // Bruiser tier (orc 4, bomber 6, warlock 8) and the Sentinel
         // mini-boss (1) render 16x16 — give them a bigger hitbox so the
         // larger body is hittable and its contact reach matches its size.
-        if (enemy_content_id == ENEMY_STONE_SENTINEL || enemy_content_id == ENEMY_ORC
+        } else if (enemy_content_id == ENEMY_STONE_SENTINEL || enemy_content_id == ENEMY_ORC
             || enemy_content_id == ENEMY_BOMBER || enemy_content_id == ENEMY_WARLOCK) {
             e->hitbox = (u8)0xDD;
         } else {

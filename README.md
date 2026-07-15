@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.35: Every Shard](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.36: No Dark Corners](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -183,7 +183,7 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.35 occupies 64 KiB with 1,231 bytes of bank-0 headroom. Gameplay files
+v0.17.36 occupies 64 KiB with 1,231 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -195,15 +195,16 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.34's paired-seed baseline records 14/15 full clears: 3/3 for four
+v0.17.36's paired-seed baseline records 14/15 full clears: 3/3 for four
 champions and 2/3 for Picsean, with one real permadeath and zero combat or
 route stalls. That small failure rate is healthier roguelike pressure than a
-perfect agent sweep while retaining the two-clear conference floor. Every run makes
-7–12 real purchases rather than bypassing merchants, and no run exceeds 57
+perfect agent sweep while retaining the two-clear conference floor. Successful
+runs make 8–11 real purchases rather than bypassing merchants; the lone early
+permadeath still made two, and no run exceeds 52
 Riftwild transitions. The gate now proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
-low as three half-hearts and vary from roughly 4:44 to 8:43 active play, so
+low as three half-hearts and vary from roughly 4:59 to 8:45 active play, so
 the sample retains pressure and meaningful build/seed variance.
 
 The agents use each champion's actual weapon range and B ability, collect
@@ -212,7 +213,10 @@ route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
 used in balance runs. Telemetry retains the worst combat and route dwell from
 the entire run—not merely its final room—and identifies the responsible room
-and enemy for reproducible failures. Two-frame press/release beats ensure real
+and enemy for reproducible failures. Death attribution is inferred entirely by
+the emulator observer, so it cannot perturb cartridge timing: values 0–15 name
+the nearest hostile, 254 denotes floor hazards, and 253 is an unresolved hostile
+hit. Two-frame press/release beats ensure real
 cartridge polls observe dodge double-taps; stalled firing lanes use the same
 collision-aware BFS as melee pursuit instead of orbiting outside U-shaped
 cover forever. Its cleared-room recovery gives tile-path alignment more

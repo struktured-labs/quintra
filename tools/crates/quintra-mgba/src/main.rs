@@ -61,6 +61,7 @@ struct Row {
     dodges: u32,
     purchases: u32,
     world_hops: u32,
+    death_source: u32,
 }
 
 fn field<'a>(record: &'a [&str], columns: &HashMap<&str, usize>, name: &str) -> Result<&'a str> {
@@ -141,6 +142,11 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                     .then(|| number(&record, &columns, "world_hops"))
                     .transpose()?
                     .unwrap_or(0),
+                death_source: columns
+                    .contains_key("death_source")
+                    .then(|| number(&record, &columns, "death_source"))
+                    .transpose()?
+                    .unwrap_or(255),
             })
         })()
         .with_context(|| format!("invalid balance CSV row {}", line_index + 2))?;
@@ -212,6 +218,14 @@ fn report(
             .filter(|row| row.victory != 0 && row.ui_screen == 12)
             .count();
         let deaths = sample.iter().filter(|row| row.min_hp == 0).count();
+        let death_sources = {
+            let values: Vec<_> = sample
+                .iter()
+                .filter(|row| row.min_hp == 0)
+                .map(|row| row.death_source.to_string())
+                .collect();
+            if values.is_empty() { "-".to_string() } else { values.join("|") }
+        };
         let shop_runs = sample.iter().filter(|row| row.purchases > 0).count();
         let boss_clears = sample.iter().filter(|row| row.bosses > 0).count();
         let combat_stalls = sample
@@ -227,7 +241,7 @@ fn report(
         println!(
             "[balance] {name:7} n={} room_med={} clear_med={} kill_med={} boss_med={} \
              boss1={boss_clears}/{} town_med={} buy_med={} buyers={shop_runs}/{} dodge_med={} wins={wins} endings={endings} \
-             deaths={deaths} combat_stalls={combat_stalls} route_stalls={route_stalls}",
+             deaths={deaths} death_src={death_sources} combat_stalls={combat_stalls} route_stalls={route_stalls}",
             sample.len(),
             median(sample.iter().map(|row| row.max_room)),
             median(sample.iter().map(|row| row.rooms_cleared)),
@@ -333,6 +347,7 @@ mod tests {
         assert_eq!(rows[0].bosses, 9);
         assert_eq!(rows[0].dodges, 89);
         assert_eq!(rows[0].purchases, 0, "historical reports default purchases");
+        assert_eq!(rows[0].death_source, 255, "historical reports default cause");
     }
 
     #[test]
@@ -341,6 +356,14 @@ mod tests {
                    4,1,12,2,54,30,121,9,90,0,2,77,3\n";
         let rows = parse_rows(csv).unwrap();
         assert_eq!(rows[0].purchases, 3);
+    }
+
+    #[test]
+    fn parser_tracks_runtime_death_source() {
+        let csv = "class,victory,ui_screen,min_hp,max_room,rooms_cleared,kills,bosses,room_frames,hostiles,towns,dodges,death_source\n\
+                   3,0,11,0,43,21,92,7,166,0,2,42,7\n";
+        let rows = parse_rows(csv).unwrap();
+        assert_eq!(rows[0].death_source, 7);
     }
 
     #[test]

@@ -376,6 +376,7 @@ tap(KEY_A)
 for _ = 1, 45 do tick(0) end
 
 local frames, max_room, last_hp, damage_taken, min_hp = 0, 0, 0, 0, 255
+local last_damage_source = 255 -- enemy id, 254=hazard, 253=unresolved hostile
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
 local route_start_frame = 0
@@ -413,7 +414,23 @@ while frames < LIMIT do
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     local won = RS ~= 0 and emu:read8(RS + 10) or 0
     if frames == 0 then last_hp = hp end
-    if hp < last_hp then damage_taken = damage_taken + (last_hp - hp) end
+    if hp < last_hp then
+        damage_taken = damage_taken + (last_hp - hp)
+        -- Read-only attribution: infer from the runtime state after the hit.
+        -- This deliberately avoids cartridge instrumentation, whose extra
+        -- instructions changed dense-frame pacing in endurance sampling.
+        local hit_x = PL ~= 0 and emu:read8(PL + 9) or 0
+        local hit_y = PL ~= 0 and emu:read8(PL + 11) or 0
+        local tx = math.floor((hit_x + 8) / 8)
+        local ty = math.floor((hit_y + 12) / 8)
+        if TM ~= 0 and tx >= 0 and tx < 20 and ty >= 0 and ty < 17
+            and emu:read8(TM + ty * 20 + tx) == 31 then
+            last_damage_source = 254
+        else
+            local threat = enemy_target(hit_x, hit_y)
+            last_damage_source = threat and threat.kind or 253
+        end
+    end
     last_hp = hp
     if hp < min_hp then min_hp = hp end
     if room > max_room then max_room = room end
@@ -499,6 +516,11 @@ while frames < LIMIT do
             -- every brief vulnerable window opens behind a pillar.
             keys = target_step(px, py, target.x, target.y, move)
             no_damage_frames = 0
+        elseif target.kind == 12 then
+            -- Flutterbats repeatedly settle after diagonal bursts. Closing to
+            -- a cardinal firing lane during that pause is reliable; orbiting
+            -- at arbitrary range can keep every ranged shot behind a pillar.
+            keys = target_step(px, py, target.x, target.y, aim, 0) + KEY_A
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
@@ -739,6 +761,7 @@ local final_y = PL ~= 0 and emu:read8(PL + 11) or 0
 local final_world = RS ~= 0 and emu:read8(RS + 17) or 0
 local final_screen = RS ~= 0 and emu:read8(RS + 18) or 0
 local hostiles, last_enemy = 0, 255
+local death_source = min_hp == 0 and last_damage_source or 255
 if EN ~= 0 then
     for i = 0, 31 do
         local p = EN + i * 28
@@ -757,12 +780,12 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
-        hostiles, last_enemy, towns_seen, world_hops,
+        hostiles, last_enemy, death_source, towns_seen, world_hops,
         won, ui_screen, dodge_count, purchases))
     f:close()
 end
