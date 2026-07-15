@@ -207,6 +207,17 @@ pub const CINDER_MAW: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const RIFT_OOZE: Enemy = Enemy {
+    id: ENEMY_RIFT_OOZE, name: "Rift Ooze", sprite_set: SPRITE_CRAWLER,
+    palette: OBJ_PAL_CRAWLER,
+    // A modest body with a dangerous second beat: combat.c cracks it into
+    // two 2-HP crawler fragments on death. Its low contact damage keeps the
+    // surprise readable instead of turning one kill into unavoidable burst.
+    stats: EnemyStats { hp: 6, damage: 1, speed: 40, score: 45, weakness: 0x01, poise: 2 },
+    ai_script: AiScriptId::Walker, drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -223,4 +234,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(FLUTTERBAT.clone());
     r.add_enemy(GLOAM_LEECH.clone());
     r.add_enemy(CINDER_MAW.clone());
+    r.add_enemy(RIFT_OOZE.clone());
 }

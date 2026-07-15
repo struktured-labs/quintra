@@ -197,7 +197,28 @@ u8 combat_resolve(void) BANKED {
                     } else {
                         pickup_roll_drop(entities[j].x, entities[j].y);
                     }
-                    entity_kill(j);
+                    {
+                        // Rift Ooze: the apparent kill is only phase one.
+                        // Free its slot first so a full entity table still
+                        // guarantees at least one fragment, then seed two
+                        // fragile crawlers on opposite sides of the corpse.
+                        u8 split = (eid == 15);
+                        u8 sx = (u8)(FIX8_TO_INT(entities[j].x) >> 3);
+                        u8 sy = (u8)(FIX8_TO_INT(entities[j].y) >> 3);
+                        entity_kill(j);
+                        if (split) {
+                            u8 a = enemy_spawn(0, sx, sy);
+                            u8 b = enemy_spawn(0, sx, sy);
+                            if (a != 0xFF) {
+                                entities[a].hp = 2;
+                                enemy_try_step(&entities[a], -1, 0);
+                            }
+                            if (b != 0xFF) {
+                                entities[b].hp = 2;
+                                enemy_try_step(&entities[b], 1, 0);
+                            }
+                        }
+                    }
                 }
                 // Impact FX at bullet position (spawn on every hit, even non-kill)
                 fx_spawn(SPR_FX_IMPACT, 2,

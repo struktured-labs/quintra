@@ -15,6 +15,7 @@ SPECIALISTS = {
     12: (73, 21, "SPR_ENEMY_FLUTTERBAT", "flutterbat"),
     13: (74, 34, "SPR_ENEMY_GLOAM_LEECH", "gloam-leech"),
     14: (75, 20, "SPR_ENEMY_CINDER_MAW", "cinder-maw"),
+    15: (76, 20, "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
 }
 
 
@@ -62,7 +63,7 @@ def main():
         assert any(tile), f"{name} OBJ tile is blank in runtime VRAM"
         assert tile != legacy, f"{name} still aliases its legacy silhouette"
         tiles[enemy_id] = tile
-    assert len(set(tiles.values())) == 4, "specialist OBJ silhouettes are not unique"
+    assert len(set(tiles.values())) == len(SPECIALISTS), "specialist OBJ silhouettes are not unique"
 
     # Put a live leech across a long pillar wall from the player. Its edge
     # slide must route around cover through the real enemy update loop;
@@ -132,8 +133,47 @@ def main():
         f"Flutterbat did not cardinal-fallback out of notch: "
         f"{pb.memory[bat + 3]},{pb.memory[bat + 7]}"
     )
+
+    # Kill a Rift Ooze through the real projectile/combat loop. The corpse
+    # must become two fragile crawler fragments, not merely claim to split in
+    # authored data or a unit-test-only helper.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    ooze = entities
+    shot = entities + 28
+    pb.memory[ooze] = 2
+    pb.memory[ooze + 1] = 3
+    put_fix8(pb, ooze + 2, 80)
+    put_fix8(pb, ooze + 6, 72)
+    pb.memory[ooze + 14] = 1
+    pb.memory[ooze + 16] = 30
+    pb.memory[ooze + 17] = 15
+    pb.memory[ooze + 25] = 0x66
+    pb.memory[ooze + 27] = 1
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 80)
+    put_fix8(pb, shot + 6, 72)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 10
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 27] = 1
+    pb.memory[addr("_g_hitstop")] = 0
+    for _ in range(4):
+        pb.tick()
+    fragments = []
+    for i in range(32):
+        e = entities + i * 28
+        if pb.memory[e] == 2 and pb.memory[e + 1] & 1:
+            fragments.append((pb.memory[e + 17], pb.memory[e + 14]))
+    assert fragments.count((0, 2)) == 2, f"Rift Ooze split drifted: {fragments}"
+    assert all(enemy_id != 15 for enemy_id, _ in fragments), (
+        f"dead Rift Ooze remained active: {fragments}"
+    )
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + leech routing + flutterbat notch escape")
+    print("[enemy-id] PASS specialist art + leech routing + flutterbat escape + ooze split")
 
 
 if __name__ == "__main__":

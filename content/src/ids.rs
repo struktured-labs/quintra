@@ -53,6 +53,7 @@ pub const ENEMY_FOLDING_STAR:    EnemyId = EnemyId::new(11);   // diagonal echo 
 pub const ENEMY_FLUTTERBAT:      EnemyId = EnemyId::new(12);   // rest/flutter/dart flyer
 pub const ENEMY_GLOAM_LEECH:     EnemyId = EnemyId::new(13);   // attaches and drains life
 pub const ENEMY_CINDER_MAW:      EnemyId = EnemyId::new(14);   // Ember Depths area-denial caster
+pub const ENEMY_RIFT_OOZE:       EnemyId = EnemyId::new(15);   // splits into two crawler fragments
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);

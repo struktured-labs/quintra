@@ -251,6 +251,17 @@ pub const CINDER_MAW: [&str; 8] = [ // furnace shell with bright open jaws
     ".3.11.3.",
 ];
 
+pub const RIFT_OOZE: [&str; 8] = [ // unstable blob with two budding fragments
+    "..1..1..",
+    ".122221.",
+    "12322321",
+    "12233221",
+    ".123321.",
+    "..2222..",
+    ".22..22.",
+    "2......2",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -548,7 +559,7 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 13] = [
+pub const ENEMIES_8: [(&str, &[&str]); 14] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -562,6 +573,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 13] = [
     ("flutterbat", &FLUTTERBAT),
     ("gloam_leech", &GLOAM_LEECH),
     ("cinder_maw", &CINDER_MAW),
+    ("rift_ooze", &RIFT_OOZE),
 ];
 
 pub const FX_8: [(&str, &[&str]); 9] = [

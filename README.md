@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.33: Same Oath, Same Bytes](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.34: The Ooze Divides](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -65,13 +65,14 @@ the cartridge runtime.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **15 enemies across a size hierarchy** — small swarm critters (crawler,
+- **16 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
   **Folding Stars**, Keese-like **Flutterbats**, and life-draining
-  **Gloom Leeches**, plus Ember's area-denial **Cinder Maws**. Folding Stars,
-  Flutterbats, Gloom Leeches, and Cinder Maws now have dedicated silhouettes
+  **Gloom Leeches**, Ember's area-denial **Cinder Maws**, and late-stage
+  **Rift Oozes** that split into two fragile crawler fragments when slain.
+  Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, and Rift Oozes have dedicated silhouettes
   instead of borrowing older monsters' art, so movement and shape both
   communicate threat. Folding Stars remain invulnerable while expanded but
   now contract for a full one-second punish window, and pursuing monsters
@@ -180,18 +181,22 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.33 occupies 64 KiB with 1,261 bytes of bank-0 headroom. Gameplay files
+v0.17.34 occupies 64 KiB with 1,231 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
+The layout gate also rejects any fixed switchable bank over 16 KiB instead of
+allowing GBDK's warning-only cross-bank overwrite to produce a corrupt ROM.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.33's paired-seed baseline records 15/15 full clears—3/3 for every
-champion—with zero deaths, combat stalls, or route stalls. Every run makes
+v0.17.34's paired-seed baseline records 14/15 full clears: 3/3 for four
+champions and 2/3 for Picsean, with one real permadeath and zero combat or
+route stalls. That small failure rate is healthier roguelike pressure than a
+perfect agent sweep while retaining the two-clear conference floor. Every run makes
 7–12 real purchases rather than bypassing merchants, and no run exceeds 57
 Riftwild transitions. The gate now proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced

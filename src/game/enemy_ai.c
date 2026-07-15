@@ -38,6 +38,7 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
         case 12: return SPR_ENEMY_FLUTTERBAT;
         case 13: return SPR_ENEMY_GLOAM_LEECH;
         case 14: return SPR_ENEMY_CINDER_MAW;
+        case 15: return SPR_ENEMY_RIFT_OOZE;
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -60,6 +61,7 @@ static u8 palette_for_enemy(u8 enemy_content_id) {
         case 11: return 0x05;   // Folding Star: uncanny amber geometry
         case 12: return 0x00;   // Flutterbat: cave-dark
         case 13: return 0x04;   // Gloam Leech: hungry red
+        case 15: return 0x07;   // Rift Ooze: toxic green split-body
         default: return 0x03;
     }
 }

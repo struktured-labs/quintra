@@ -206,6 +206,7 @@ mod tests {
             tile_2bpp_bytes(&parse_grid(&grids::FLUTTERBAT)),
             tile_2bpp_bytes(&parse_grid(&grids::GLOAM_LEECH)),
             tile_2bpp_bytes(&parse_grid(&grids::CINDER_MAW)),
+            tile_2bpp_bytes(&parse_grid(&grids::RIFT_OOZE)),
         ];
         for i in 0..specialists.len() {
             for j in i + 1..specialists.len() {

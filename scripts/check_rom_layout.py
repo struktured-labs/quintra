@@ -16,6 +16,9 @@ Checks (banked build):
      If it's in the switchable window it unmaps itself on bank switch.
   3. The ROM must have >= 3 populated banks (autobank actually worked;
      a broken flag set collapses everything to banks 0-1).
+  4. Every fixed switchable _CODE_N area must fit its 16 KiB bank. The
+     linker only warns when one crosses into the next bank, producing a ROM
+     that can pass header tests while containing overwritten code.
 """
 import re
 import sys
@@ -42,6 +45,16 @@ def main(stem):
             fail(f"area {name} ends at 0x{end:04X} -- past the 0x8000 ROM "
                  f"window. Code/init would execute from open bus at boot.")
         worst_home_end = max(worst_home_end, end)
+
+    # Fixed bank areas are reported with linearized addresses (bank N at
+    # N*0x10000 + 0x4000), but their size must still never exceed 0x4000.
+    for m in re.finditer(
+        r"^(_CODE_(\d+))\s+([0-9A-Fa-f]{8})\s+([0-9A-Fa-f]{8})\s+=",
+        text, re.M):
+        name, size = m.group(1), int(m.group(4), 16)
+        if size > 0x4000:
+            fail(f"area {name} is {size} bytes -- overflows its 16 KiB "
+                 "switchable bank by {size - 0x4000} bytes")
 
     # ---- 2. trampoline must be in bank 0
     try:

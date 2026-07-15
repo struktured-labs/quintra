@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       15);   // includes stage-2 Cinder Maw
+        assert_eq!(r.n_enemies(),       16);   // includes Cinder Maw + splitting Rift Ooze
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
