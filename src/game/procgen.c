@@ -240,6 +240,7 @@ void procgen_generate_current_room(void) BANKED {
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && run_state.room_counter > ROOMS_PER_REGION
         && (run_state.room_counter % ROOMS_PER_REGION) == 1) ? 1 : 0;
+    run_state_mark_visited();
     rng_seed(seed);
 
     bio;

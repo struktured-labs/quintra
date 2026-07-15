@@ -53,8 +53,25 @@ def open_menu(pb, button, expected):
     for _ in range(20):
         pb.tick()
         if pb.memory[SCREEN] == expected:
+            pb.tick(20)  # allow the new screen's entry renderer to commit VRAM
             return
     raise AssertionError(f"{button} did not open screen {expected}")
+
+
+def assert_uniform_menu_palette(pb, button):
+    # Read CGB VRAM bank 1 with the LCD disabled so active-transfer blocking
+    # cannot turn cells into false 0xFF samples.
+    lcdc = pb.memory[0xFF40]
+    bg_map = 0x9C00 if lcdc & 0x08 else 0x9800
+    pb.memory[0xFF40] = lcdc & 0x7F
+    pb.memory[0xFF4F] = 1
+    attrs = {
+        pb.memory[bg_map + y * 32 + x]
+        for y in range(18) for x in range(20)
+    }
+    pb.memory[0xFF4F] = 0
+    pb.memory[0xFF40] = lcdc
+    assert attrs == {0}, f"{button} menu inherited mixed CGB palettes: {attrs}"
 
 
 def resume(pb):
@@ -71,6 +88,7 @@ def test_menu_fraction(button, expected):
     base = align_second(pb)
     pb.tick(40)                  # bank a visible subsecond fraction
     open_menu(pb, button, expected)
+    assert_uniform_menu_palette(pb, button)
     entered = timer(pb)
     pb.tick(180)                 # three seconds reading: clock must hold
     assert timer(pb) == entered, f"{button} menu counted paused time"
@@ -117,7 +135,7 @@ def main():
     test_menu_fraction("start", SCREEN_INVENTORY)
     test_menu_fraction("select", SCREEN_MAP)
     test_dense_wall_time()
-    print("[run-clock] PASS inventory=paused map=paused fractions=retained dense=3s")
+    print("[run-clock] PASS menus uniform+paused fractions=retained dense=3s")
 
 
 if __name__ == "__main__":

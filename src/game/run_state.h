@@ -41,11 +41,16 @@ typedef struct {
     u8  world_mode;          // 1 while traversing the generated 4x4 overworld
     u8  world_screen;        // current overworld screen, row-major 0..15
     u8  world_return_screen; // cave/vault staircase return anchor
+    u8  dungeon_seen;        // bit 0..5: rooms revealed in current dungeon
+    u16 world_seen;          // bit 0..15: Riftwild cells revealed this stage
 } run_state_t;
 
 extern run_state_t run_state;
 
 void run_state_init(u32 seed);
 void run_state_clear(void);
+void run_state_mark_visited(void);
+void run_state_begin_world(void);
+void run_state_begin_dungeon(void);
 
 #endif

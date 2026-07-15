@@ -13,7 +13,9 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM = map(addr, ("_run_state", "_player", "_entities", "_room_tilemap"))
+RS, PL, EN, TM, SCREEN = map(addr, (
+    "_run_state", "_player", "_entities", "_room_tilemap", "_loop_current_screen"
+))
 
 def put16(pb, p, v):
     pb.memory[p] = v & 255; pb.memory[p + 1] = (v >> 8) & 255
@@ -70,12 +72,25 @@ def main():
     assert pb.memory[RS + 18] == 2, "vault staircase did not return"
     exit_at(pb, 72, 120); assert pb.memory[RS + 18] == 6, pb.memory[RS + 18]
     assert pb.memory[TM + 8 * 20 + 10] == 34, "dungeon gate has no portal"
+    seen = pb.memory[RS + 21] | (pb.memory[RS + 22] << 8)
+    expected_seen = sum(1 << cell for cell in (0, 1, 2, 6, 15))
+    assert seen == expected_seen, (
+        f"Riftwild map did not reveal exact visited cells: {seen:#06x}"
+    )
+    pb.button("select"); pb.tick(24)
+    assert pb.memory[SCREEN] == 8, "SELECT did not open visited Riftwild map"
+    map_shot = ROOT / "tmp" / "riftwild-map.png"
+    map_shot.parent.mkdir(exist_ok=True)
+    pb.screen.image.save(map_shot)
+    pb.button("b"); pb.tick(24)
+    assert pb.memory[SCREEN] == 5, "map did not resume Riftwild"
 
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(8): pb.tick()
     assert pb.memory[RS + 17] == 0, "gate did not return to dungeon mode"
     assert pb.memory[RS + 1] == 7, "next dungeon did not advance depth"
+    assert pb.memory[RS + 20] == 1, "new dungeon map did not reset to entry cell"
     pb.stop(save=False)
-    print("[overworld] PASS boss exit -> 4x4 graph -> dungeon gate")
+    print("[overworld] PASS boss exit -> visited 4x4 map -> dungeon gate")
 
 if __name__ == "__main__": main()

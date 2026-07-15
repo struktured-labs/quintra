@@ -28,37 +28,86 @@ static const char *const town_rumors[4] = {
     "FIVE SHADOWS WALK", "THE RIFT KNOWS YOU"
 };
 
+static char world_cell_glyph(u8 cell) {
+    const zelda_screen_t *z = &zelda_overworlds[0].screen_grid[cell];
+    if (cell == (run_state.world_screen & 15)) return '@';
+    if (!(run_state.world_seen & (u16)(1u << cell))) return '?';
+    if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE) return 'D';
+    if (z->kind == ZELDA_CELL_VAULT) return 'V';
+    if (z->kind == ZELDA_CELL_BOSS) return 'C';
+    if (z->kind == ZELDA_CELL_CAVE_ENTRANCE) return 'A';
+    return 'O';
+}
+
+static void draw_world_grid(void) {
+    u8 r, c;
+    gotoxy(1, 1); printf("RIFTWILD 4x4 MAP");
+    for (r = 0; r < 4; ++r) {
+        for (c = 0; c < 4; ++c) {
+            u8 cell = (u8)(r * 4 + c);
+            u8 x = (u8)(1 + c * 5);
+            u8 y = (u8)(3 + r * 3);
+            gotoxy(x, y); printf("[%c]", world_cell_glyph(cell));
+            if (c < 3 && (run_state.world_seen & (u16)(1u << cell))
+                && (run_state.world_seen & (u16)(1u << (cell + 1)))
+                && (zelda_overworlds[0].screen_grid[cell].edges & 2)) {
+                gotoxy((u8)(x + 3), y); printf("==");
+            }
+            if (r < 3 && (run_state.world_seen & (u16)(1u << cell))
+                && (run_state.world_seen & (u16)(1u << (cell + 4)))
+                && (zelda_overworlds[0].screen_grid[cell].edges & 4)) {
+                gotoxy((u8)(x + 1), (u8)(y + 1)); printf("I");
+                gotoxy((u8)(x + 1), (u8)(y + 2)); printf("I");
+            }
+        }
+    }
+    gotoxy(1,15); printf("@YOU D:GATE ?:HIDDEN");
+}
+
+static void draw_dungeon_grid(void) {
+    static const u8 gx[6] = { 2, 8, 14, 14, 8, 2 };
+    static const u8 gy[6] = { 4, 4, 4, 9, 9, 9 };
+    u8 i;
+    u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
+    u8 here = (local == 0 && run_state.room_counter > 0) ? 5
+        : ((run_state.bosses_beaten > 0 && local > 0)
+            ? (u8)(local - 1) : local);
+    gotoxy(1,1); printf("DUNGEON %u  VISITED", (u16)(run_state.bosses_beaten + 1));
+    for (i = 0; i < 6; ++i) {
+        char g = (i == here) ? '@'
+            : ((run_state.dungeon_seen & (u8)(1u << i)) ? 'O' : '?');
+        gotoxy(gx[i], gy[i]); printf("[%c]", g);
+        if (i < 2 && (run_state.dungeon_seen & (u8)(3u << i)) == (u8)(3u << i)) {
+            gotoxy((u8)(gx[i] + 3), gy[i]); printf("===");
+        }
+        if (i == 2 && (run_state.dungeon_seen & 0x0C) == 0x0C) {
+            gotoxy(15,5); printf("I"); gotoxy(15,6); printf("I");
+            gotoxy(15,7); printf("I"); gotoxy(15,8); printf("I");
+        }
+        if (i >= 3 && i < 5
+            && (run_state.dungeon_seen & (u8)((1u << i) | (1u << (i + 1))))
+                == (u8)((1u << i) | (1u << (i + 1)))) {
+            gotoxy((u8)(gx[i + 1] + 3), gy[i]); printf("===");
+        }
+    }
+    gotoxy(1,12); printf("@ YOU   ? UNSEEN");
+    gotoxy(1,14); printf("BOSS AT FINAL CELL");
+}
+
 void map_enter(void) {
     u8 in_region = (u8)(run_state.room_counter % ROOMS_PER_REGION);
-    u8 dungeon = (u8)(in_region / ROOMS_PER_STAGE);
-    u8 room = (u8)(in_region % ROOMS_PER_STAGE);
-    u8 to_town = (in_region <= 1) ? 0 : (u8)(ROOMS_PER_REGION + 1 - in_region);
     u8 is_town = (run_state.room_counter > ROOMS_PER_REGION && in_region == 1);
     DISPLAY_OFF; HIDE_SPRITES; HIDE_WIN;
     palette_bg_load(0, map_pal); palette_bg_load(7, map_pal);
-    font_init(); { font_t f = font_load(font_min); font_set(f); }
+    // The Compass needs brackets and line glyphs for its actual room grid;
+    // font_min silently drops them and turns the map into scattered letters.
+    font_init(); { font_t f = font_load(font_ibm); font_set(f); }
     cls();
     gotoxy(1,0); printf("- SPIRIT COMPASS -");
     if (run_state.world_mode) {
-        const zelda_screen_t *cell =
-            &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
-        gotoxy(1,2); printf("OPEN WORLD  %u,%u",
-            (u16)((run_state.world_screen & 3) + 1),
-            (u16)((run_state.world_screen >> 2) + 1));
-        gotoxy(1,4); printf("EXITS ");
-        if (cell->edges & 1) printf("N");
-        if (cell->edges & 2) printf("E");
-        if (cell->edges & 4) printf("S");
-        if (cell->edges & 8) printf("W");
-        gotoxy(1,6); printf("LANDMARK ");
-        if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) printf("DUNGEON");
-        else if (cell->kind == ZELDA_CELL_CAVE_ENTRANCE) printf("CAVE");
-        else if (cell->kind == ZELDA_CELL_VAULT) printf("VAULT");
-        else if (cell->kind == ZELDA_CELL_BOSS) printf("CHAMPION");
-        else printf("WILDS");
-        gotoxy(1,9); printf("DEPTH HELD AT %u", (u16)run_state.room_counter);
-        gotoxy(1,11); printf("FIND THE GOLD GATE");
+        draw_world_grid();
         gotoxy(2,17); printf("SELECT/B = RETURN");
+        palette_bg_fill_attrs(0);
         SHOW_BKG; DISPLAY_ON;
         return;
     }
@@ -75,20 +124,13 @@ void map_enter(void) {
         gotoxy(1,12); printf("%s", town_rumors[rumor]);
         gotoxy(1,14); printf("LORE SHIFTS BY SEED");
         gotoxy(2,17); printf("SELECT/B = RETURN");
+        palette_bg_fill_attrs(0);
         SHOW_BKG; DISPLAY_ON;
         return;
     }
-    gotoxy(1,2); printf("REGION %u", (u16)(run_state.bosses_beaten / 3 + 1));
-    gotoxy(1,4); printf("DUNGEON %u OF 3", (u16)(dungeon + 1));
-    gotoxy(1,5); printf("DEPTH   %u OF 6", (u16)(room + 1));
-    gotoxy(1,7); printf("PATH  o-o-o-B");
-    gotoxy(1,9); printf("TOWN ");
-    if (in_region == 1) printf("YOU ARE HERE");
-    else printf("IN %u ROOMS", (u16)to_town);
-    gotoxy(1,11); printf("SEED %u:%u", (u16)(run_state.run_seed >> 16), (u16)run_state.run_seed);
-    gotoxy(1,13); printf("THE ROAD REMEMBERS");
-    gotoxy(1,14); printf("CHANGES EVERY RUN");
+    draw_dungeon_grid();
     gotoxy(2,17); printf("SELECT/B = RETURN");
+    palette_bg_fill_attrs(0);
     SHOW_BKG; DISPLAY_ON;
 }
 void map_exit(void) {}

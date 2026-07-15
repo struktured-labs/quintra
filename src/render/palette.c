@@ -34,3 +34,17 @@ void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors) {
         palette_bg_load((u8)(first_slot + i), colors + (u16)(i * 4));
     }
 }
+
+void palette_bg_fill_attrs(u8 slot) {
+    u8 row[20];
+    u8 x, y;
+    u8 *map = (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
+    slot &= 7;
+    for (x = 0; x < 20; ++x) row[x] = slot;
+    VBK_REG = 1;
+    // set_bkg_tiles honors the console's global font tile offset, which is
+    // correct for glyph IDs but corrupts raw attribute zeroes. set_tiles uses
+    // the explicit map address and writes the palette bytes verbatim.
+    for (y = 0; y < 18; ++y) set_tiles(0, y, 20, 1, map, row);
+    VBK_REG = 0;
+}

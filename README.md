@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.47: Honest Market](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.48: Cartographer](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -122,7 +122,9 @@ the cartridge runtime.
   Cleared dungeons open into an authored 4x4
   nonlinear overworld graph with caves, vaults, champion encounters, and a discoverable
   gate to the next dungeon. Riftwild fights are optional and its exits remain
-  fleeable, unlike sealed dungeon arenas. In town, the Spirit Compass switches
+  fleeable, unlike sealed dungeon arenas. SELECT now draws a real linked 4×4
+  Riftwild map and a 3×2 dungeon route: visited cells persist in battery SRAM,
+  the current cell is marked `@`, and unseen cells remain `?`. In town, the Spirit Compass switches
   to sanctuary context: completed/next region, elder restoration, and seeded
   market guidance instead of contradictory dungeon/depth labels. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
@@ -214,7 +216,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.47 occupies 64 KiB with 1,119 bytes of bank-0 headroom. Gameplay files
+v0.17.48 occupies 64 KiB with 776 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -225,8 +227,8 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen bank. Switchable headroom is now 1,066 bytes in bank 1, 1,609 in
-bank 2, and 1,565 in bank 3 instead of leaving any bank within 294 bytes of
+room/procgen bank. Switchable headroom is now 1,029 bytes in bank 1, 1,605 in
+bank 2, and 1,388 in bank 3 instead of leaving any bank within 294 bytes of
 overflow.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one

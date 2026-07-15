@@ -97,6 +97,7 @@ void inventory_enter(void) {
 
     gotoxy(2, 17); printf("START/B = resume");
 
+    palette_bg_fill_attrs(0);
     SHOW_BKG;
     DISPLAY_ON;
 }

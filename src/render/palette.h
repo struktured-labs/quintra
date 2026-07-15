@@ -16,4 +16,8 @@ void palette_obj_load(u8 slot, const u16 *colors);
 // Load N consecutive BG palettes starting at slot
 void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors);
 
+// Set every visible background cell to one known CGB palette. Text screens
+// must call this after font setup so dungeon attributes cannot leak through.
+void palette_bg_fill_attrs(u8 slot);
+
 #endif

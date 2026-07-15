@@ -16,6 +16,7 @@
 #define SRAM_BASE     ((volatile u8 *)0xA000)
 #define SAVE_VERSION  1
 #define HDR_SIZE      5   // 'Q' 'S' version len_rs len_pl
+#define LEGACY_RS_SIZE 20 // v0.17.47 and earlier, before visited-map fields
 
 static void sram_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(0); }
 static void sram_close(void) { DISABLE_RAM_MBC5; }
@@ -25,9 +26,10 @@ u8 sram_run_valid(void) {
     sram_open();
     if (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'S'
         && SRAM_BASE[2] == SAVE_VERSION
-        && SRAM_BASE[3] == (u8)sizeof(run_state_t)
+        && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
+            || SRAM_BASE[3] == LEGACY_RS_SIZE)
         && SRAM_BASE[4] == (u8)sizeof(player_state_t)) {
-        u8 n = (u8)(sizeof(run_state_t) + sizeof(player_state_t));
+        u8 n = (u8)(SRAM_BASE[3] + SRAM_BASE[4]);
         u8 sum = 0, i;
         for (i = 0; i < n; ++i) sum = (u8)(sum + SRAM_BASE[HDR_SIZE + i]);
         ok = (sum == SRAM_BASE[HDR_SIZE + n]) ? 1 : 0;
@@ -62,13 +64,20 @@ void sram_save_run(void) {
 u8 sram_load_run(void) {
     u8 *rs = (u8 *)&run_state;
     u8 *pl = (u8 *)&player;
-    u8 i;
+    u8 i, saved_rs;
     u16 off = HDR_SIZE;
     if (!sram_run_valid()) return 0;
     sram_open();
-    for (i = 0; i < (u8)sizeof(run_state_t); ++i, ++off) rs[i] = SRAM_BASE[off];
+    saved_rs = SRAM_BASE[3];
+    for (i = 0; i < (u8)sizeof(run_state_t); ++i) rs[i] = 0;
+    for (i = 0; i < saved_rs; ++i, ++off) rs[i] = SRAM_BASE[off];
     for (i = 0; i < (u8)sizeof(player_state_t); ++i, ++off) pl[i] = SRAM_BASE[off];
     sram_close();
+    if (saved_rs == LEGACY_RS_SIZE) {
+        run_state.dungeon_seen = 0;
+        run_state.world_seen = 0;
+        run_state_mark_visited();
+    }
     // A mid-fight suspend must not resume inside a half-resolved boss kill
     run_state.pending_unseal = 0;
     run_state.victory = 0;

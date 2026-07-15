@@ -1085,7 +1085,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 const zelda_screen_t *cell =
                     &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
                 if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
-                    run_state.world_mode = 0;
+                    run_state_begin_dungeon();
                     run_state.room_counter++;
                 } else if (cell->kind == ZELDA_CELL_VAULT) {
                     run_state.world_screen = run_state.world_return_screen;
@@ -1202,9 +1202,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             == (u8)(run_state.room_counter / ROOMS_PER_STAGE)) {
                         // A defeated dungeon opens into a nonlinear overworld;
                         // locate its authored dungeon gate to begin the next.
-                        run_state.world_mode = 1;
-                        run_state.world_screen = 0;
-                        run_state.world_return_screen = 0;
+                        run_state_begin_world();
                     } else if (run_state.entered_from != DIR_NONE
                         && dir == back_dir
                         && run_state.room_counter > 0) {

@@ -104,7 +104,7 @@ check 08_BOSS_room            10
 check 09_boss_under_fire      3
 check 10_boss_mid_fight       3
 check 11_after_long_assault   3
-check 12_pack                 3      # Pack screen after START
+check 12_pack                 2      # uniform menu palette is intentionally two-tone
 check 13_room_return          3
 # Exact state assertions use linker-resolved WRAM, not test-only sentinels.
 # They prove every requested room was reached and the final room owns one

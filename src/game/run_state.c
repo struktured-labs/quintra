@@ -19,10 +19,36 @@ void run_state_clear(void) {
     run_state.world_mode = 0;
     run_state.world_screen = 0;
     run_state.world_return_screen = 0;
+    run_state.dungeon_seen = 1;
+    run_state.world_seen = 0;
 }
 
 void run_state_init(u32 seed) {
     run_state_clear();
     run_state.run_seed = (seed == 0UL) ? 0xCAFE1234UL : seed;
     run_state.biome_id = 0;     // Phase 7: only one biome — Crystal Caverns
+}
+
+void run_state_mark_visited(void) {
+    if (run_state.world_mode) {
+        run_state.world_seen |= (u16)(1u << (run_state.world_screen & 15));
+    } else {
+        u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
+        u8 cell = (local == 0 && run_state.room_counter > 0) ? 5
+            : ((run_state.bosses_beaten > 0 && local > 0)
+                ? (u8)(local - 1) : (local < 6 ? local : 5));
+        run_state.dungeon_seen |= (u8)(1u << cell);
+    }
+}
+
+void run_state_begin_world(void) {
+    run_state.world_mode = 1;
+    run_state.world_screen = 0;
+    run_state.world_return_screen = 0;
+    run_state.world_seen = 1;
+}
+
+void run_state_begin_dungeon(void) {
+    run_state.world_mode = 0;
+    run_state.dungeon_seen = 0;
 }
