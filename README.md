@@ -140,7 +140,9 @@ route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 used in balance runs. Its cleared-room recovery gives tile-path alignment more
 time than combat pursuit, preventing collision nudges from defeating its own
 shortest-path route. Short-range champions also path around cover to engage,
-and the agent performs a real double-tap dash when a Gloom Leech attaches.
+then line up their final few pixels on the target's cardinal axis before
+striking; the agent also performs a real double-tap dash when a Gloom Leech
+attaches.
 
 Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,

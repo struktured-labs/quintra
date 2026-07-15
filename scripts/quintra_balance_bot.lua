@@ -45,7 +45,12 @@ local function enemy_target(px, py)
             -- fix8_t is signed 24.8 here; byte +1 is the on-screen integer.
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             local d = math.abs(ex - px) + math.abs(ey - py)
-            if d < bestd then best, bestd = {x=ex, y=ey}, d end
+            if d < bestd then
+                best, bestd = {
+                    x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
+                    kind=emu:read8(p + 17), state6=emu:read8(p + 23)
+                }, d
+            end
         end
     end
     return best
@@ -134,7 +139,12 @@ local function target_step(px, py, ex, ey, fallback)
     local target
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
-        if math.abs(x - gx) + math.abs(y - gy) <= 2 then
+        -- Cardinal weapons cannot connect from a diagonal stopping cell.
+        -- Finish on the target's row or column, within two tiles, so the
+        -- subsequent aim input describes a real melee line instead of
+        -- repeatedly slashing past one corner of the enemy hitbox.
+        if (x == gx and math.abs(y - gy) <= 2)
+            or (y == gy and math.abs(x - gx) <= 2) then
             target = y * 20 + x
             break
         end
@@ -307,7 +317,21 @@ while frames < LIMIT do
         -- Wolfkin's claw is true melee and Vespine's Stinger is a short lunge:
         -- both must close distance instead of orbiting outside weapon reach.
         if CLASS == 0 or CLASS == 4 then
-            keys = KEY_A + target_step(px, py, target.x, target.y, aim)
+            -- Tile BFS gets us around cover; at striking distance, finish the
+            -- last few pixels of perpendicular alignment before attacking.
+            -- Small enemy hurtboxes make a same-tile diagonal slash miss even
+            -- though both sprites appear adjacent.
+            if math.abs(dx) <= 24 and math.abs(dy) <= 24 then
+                if math.abs(dx) >= math.abs(dy) and math.abs(dy) > 2 then
+                    keys = dy > 0 and KEY_DOWN or KEY_UP
+                elseif math.abs(dy) > math.abs(dx) and math.abs(dx) > 2 then
+                    keys = dx > 0 and KEY_RIGHT or KEY_LEFT
+                else
+                    keys = KEY_A + aim
+                end
+            else
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim)
+            end
         else
             -- Separate firing and strafing frames. Holding perpendicular
             -- directions together aimed diagonal shots past cardinal targets.
@@ -375,7 +399,8 @@ while frames < LIMIT do
     if DEBUG and frames % 600 == 0 then
         debug_log(string.format("BOTDBG f=%d room=%d hp=%d pos=%d,%d target=%s keys=%02X",
             frames, room, hp, px, py,
-            target and string.format("enemy:%d,%d", target.x, target.y)
+            target and string.format("enemy:%d@%d,%d hp=%d s6=%d",
+                    target.kind, target.x, target.y, target.hp, target.state6)
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y) or "door"), keys))
     end
     tick(keys)
