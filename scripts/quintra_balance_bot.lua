@@ -157,6 +157,8 @@ local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
 local last_px, last_py, still_frames = 255, 255, 0
 local escape_timer, escape_dir, escape_flip = 0, KEY_UP, false
+local towns_seen, town_rooms = 0, {}
+local world_hops, last_world_key = 0, -1
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
@@ -165,6 +167,16 @@ while frames < LIMIT do
     if room > max_room then max_room = room end
     if room ~= last_room then
         rooms_seen, last_room, room_enter_frame = rooms_seen + 1, room, frames
+        if room > 18 and room % 18 == 1 and not town_rooms[room] then
+            town_rooms[room], towns_seen = true, towns_seen + 1
+        end
+    end
+    local world_mode = RS ~= 0 and emu:read8(RS + 17) or 0
+    local world_screen = RS ~= 0 and emu:read8(RS + 18) or 0
+    local world_key = world_mode == 1 and world_screen or -1
+    if world_key ~= last_world_key then
+        if last_world_key >= 0 or world_key >= 0 then world_hops = world_hops + 1 end
+        last_world_key = world_key
     end
     if hp == 0 then break end
 
@@ -174,6 +186,10 @@ while frames < LIMIT do
     else still_frames = 0 end
     last_px, last_py = px, py
     local target = enemy_target(px, py)
+    -- Overworld encounters are optional traversal pressure. Follow the
+    -- authored route while firing instead of treating every screen as a
+    -- mandatory clear; dungeon combat remains fully engaged.
+    if world_mode == 1 then target = nil end
     local keys
     if target then
         local dx, dy = target.x - px, target.y - py
@@ -257,10 +273,10 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, start_hp - hp, min_hp, final_x, final_y, final_world, final_screen,
-        frames - room_enter_frame, hostiles, last_enemy))
+        frames - room_enter_frame, hostiles, last_enemy, towns_seen, world_hops))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

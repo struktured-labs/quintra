@@ -44,7 +44,7 @@ pub const CORVIN: Class = Class {
     starter_weapon: ITEM_FEATHER_SHURI,
     signature_active: ITEM_MURDER,
     passive_perk:  PERK_SEE_HP_REVEAL,
-    base_stats: BaseStats { hp_max: 6, mp_max: 8, atk: 2, def: 0, spd: 5 },
+    base_stats: BaseStats { hp_max: 6, mp_max: 8, atk: 2, def: 1, spd: 5 },
 };
 
 pub const PICSEAN: Class = Class {

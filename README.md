@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.2: Clean Signal](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.3: Open Roads](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -40,7 +40,7 @@ teleport. The transitions shown are executed by the cartridge runtime.
 - **9 large-sprite bosses** (32×32 metasprites, distinct bullet patterns,
   telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
-  breather before every boss.
+  that fully restores HP/MP before every boss.
 - **15 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
@@ -63,7 +63,8 @@ teleport. The transitions shown are executed by the cartridge runtime.
   by a safe procedural town with a resident elder, sanctuary blessing, and
   seeded merchant stock. Cleared dungeons open into an authored 4x4 nonlinear
   overworld graph with caves, vaults, champion encounters, and a discoverable
-  gate to the next dungeon. Lore is a
+  gate to the next dungeon. Riftwild fights are optional and its exits remain
+  fleeable, unlike sealed dungeon arenas. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill.
@@ -105,7 +106,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, or alter progression. Treat their CSV as a repeatable balance
 baseline, not a substitute for human playtests. `make verify` also enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.2 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
+v0.17.3 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
 
 Cart spec: **MBC5 + RAM + battery, CGB-only, banked ROM** (autobank; 2 MB
 address space open).

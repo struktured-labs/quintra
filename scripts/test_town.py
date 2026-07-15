@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM-level town contract: resident exists and grants the sanctuary blessing."""
+"""ROM-level sanctuary and town healing contracts."""
 import re
 from pathlib import Path
 
@@ -20,19 +20,27 @@ def main():
     tick = lambda n: [pb.tick() for _ in range(n)]
     tick(240); pb.button("start"); tick(30); pb.button("a"); tick(60)
 
-    # Stand one room before the first town and clear the reachability-only
-    # hostiles. Walking through the door invokes the cartridge generator.
-    pb.memory[rs + 1] = 18
-    for i in range(32):
-        ep = en + i * 28
-        if pb.memory[ep] == 2:
-            pb.memory[ep] = pb.memory[ep + 1] = 0
-    pb.button_press("down")
-    for _ in range(1800):
-        pb.tick()
-        if pb.memory[rs + 1] == 19:
-            break
-    pb.button_release("down"); tick(20)
+    def enter_from_previous(target):
+        pb.memory[rs + 1] = target - 1
+        for i in range(32):
+            ep = en + i * 28
+            if pb.memory[ep] == 2:
+                pb.memory[ep] = pb.memory[ep + 1] = 0
+        for off, value in ((9, 72), (10, 0), (11, 120), (12, 0)):
+            pb.memory[pl + off] = value
+        tick(45)
+        assert pb.memory[rs + 1] == target, f"could not enter room {target}"
+
+    # Every pre-boss sanctuary is a guaranteed full reset, not two optional
+    # half-heart drops. This keeps deep bosses fair for fragile champions.
+    pb.memory[pl + 2] = 1
+    pb.memory[pl + 4] = 0
+    enter_from_previous(5)
+    assert pb.memory[pl + 2] == pb.memory[pl + 1], "sanctuary did not restore HP"
+    assert pb.memory[pl + 4] == pb.memory[pl + 3], "sanctuary did not restore MP"
+
+    # Enter the first post-region town and verify its resident blessing too.
+    enter_from_previous(19)
     assert pb.memory[rs + 1] == 19, "could not enter first town"
 
     elder = None
@@ -54,7 +62,7 @@ def main():
     assert pb.memory[pl + 4] == pb.memory[pl + 3], "elder did not restore MP"
     assert pb.memory[elder + 15] == 1, "elder blessing did not latch"
     pb.stop(save=False)
-    print("[town] PASS resident sprite + sanctuary blessing")
+    print("[town] PASS pre-boss sanctuary + resident sprite/blessing")
 
 if __name__ == "__main__":
     main()

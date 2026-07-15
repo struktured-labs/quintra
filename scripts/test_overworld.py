@@ -23,8 +23,12 @@ def clear_hostiles(pb):
         p = EN + i * 28
         if pb.memory[p] == 2: pb.memory[p] = pb.memory[p + 1] = 0
 
-def exit_at(pb, x, y):
-    clear_hostiles(pb); put16(pb, PL + 9, x); put16(pb, PL + 11, y)
+def hostile_count(pb):
+    return sum(pb.memory[EN + i * 28] == 2 for i in range(32))
+
+def exit_at(pb, x, y, clear=True):
+    if clear: clear_hostiles(pb)
+    put16(pb, PL + 9, x); put16(pb, PL + 11, y)
     assert pb.memory[PL + 9] == (x & 255) and pb.memory[PL + 11] == (y & 255)
     # A full generated-room swap can straddle several video frames.
     for _ in range(45): pb.tick()
@@ -52,8 +56,10 @@ def main():
     assert pb.memory[TM + 10] == 2 and pb.memory[TM + 9 * 20] == 2
     assert pb.memory[TM + 9 * 20 + 19] == 3 and pb.memory[TM + 16 * 20 + 10] == 3
 
-    # Follow authored graph 0 --E--> 1 --E--> 2 --S--> dungeon gate 6.
-    exit_at(pb, 144, 60); assert pb.memory[RS + 18] == 1, pb.memory[RS + 18]
+    # Riftwild encounters never seal exits: leave screen 0 with its generated
+    # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.
+    assert hostile_count(pb) > 0, "test seed produced no overworld encounter"
+    exit_at(pb, 144, 60, clear=False); assert pb.memory[RS + 18] == 1, pb.memory[RS + 18]
     exit_at(pb, 144, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
     # Screen 2's cave staircase is a nonlinear hop to vault 15 and back.
     clear_hostiles(pb); put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)

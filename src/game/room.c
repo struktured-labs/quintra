@@ -1092,10 +1092,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
         if (dir != DIR_NONE && room_tilemap[ty][tx] == BGT_DOOR) {
                 u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
-                // Combat rooms gate unexplored exits, Zelda-style. Retreat
-                // through the entry door remains possible, preventing a bad
-                // matchup from turning into an unavoidable run loss.
-                if (hostiles_now != 0
+                // Dungeon combat rooms gate unexplored exits. Riftwild is an
+                // overworld, not a chain of arenas: its fights are optional
+                // and every authored graph exit remains fleeable.
+                if (!run_state.world_mode && hostiles_now != 0
                     && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
                     if (door_bump_cd == 0) {
                         door_bump_cd = 20;
