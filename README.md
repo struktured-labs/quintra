@@ -135,7 +135,8 @@ for a first successful human run and **15–25 minutes** once practiced; deaths
 and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 Its smoke pass resolves WRAM symbols from the current linker output and asserts
-rooms 0→1→2→3→4→6 plus a live giant boss; it does not trust fixed debug
+rooms 0→1→2→3→4→6, defeats a live giant through real A-button shots, then
+proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;

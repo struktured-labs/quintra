@@ -20,6 +20,7 @@ local RS_ADDR = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL_ADDR = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN_ADDR = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM_ADDR = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
+local LS_ADDR = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
@@ -28,6 +29,8 @@ local function shot(name)
     emu:screenshot(OUT_DIR .. "/h_" .. name .. ".png")
     local rc_room = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 1) or 0xFF
     local vic     = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 10) or 0xFF
+    local bosses  = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 11) or 0xFF
+    local screen  = LS_ADDR ~= 0 and emu:read8(LS_ADDR) or 0xFF
     local px      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 9) or 0xFF
     local py      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 11) or 0xFF
     local hp      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 2) or 0xFF
@@ -37,7 +40,7 @@ local function shot(name)
         local tx, ty = math.floor((px + 8) / 8), math.floor((py + 12) / 8)
         if tx < 20 and ty < 18 then tile = emu:read8(TM_ADDR + ty * 20 + tx) end
     end
-    local hostiles, giants = 0, 0
+    local hostiles, giants, giant_hp = 0, 0, 0
     if EN_ADDR ~= 0 then
         for i = 0, 31 do
             local p = EN_ADDR + i * 28
@@ -45,13 +48,14 @@ local function shot(name)
                 hostiles = hostiles + 1
                 if emu:read8(p + 17) == 1 and emu:read8(p + 20) ~= 0 then
                     giants = giants + 1
+                    giant_hp = emu:read8(p + 14)
                 end
             end
         end
     end
     local line = string.format(
-        "SHOT %-25s  room=%d vic=%d hostiles=%d giants=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
-        name, rc_room, vic, hostiles, giants, px, py, tile, hp, ifr)
+        "SHOT %-25s  screen=%d room=%d vic=%d bosses=%d hostiles=%d giants=%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, screen, rc_room, vic, bosses, hostiles, giants, giant_hp, px, py, tile, hp, ifr)
     if log_fh then log_fh:write(line); log_fh:flush() end
     console:log(line)
 end
@@ -82,6 +86,35 @@ local function clear_hostiles()
             emu:write8(p + 1, 0)
         end
     end
+end
+
+local function giant_alive()
+    if EN_ADDR == 0 then return false end
+    for i = 0, 31 do
+        local p = EN_ADDR + i * 28
+        if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 1 and emu:read8(p + 20) ~= 0 then
+            return true
+        end
+    end
+    return false
+end
+
+-- Fire from a stable lane above the giant. This reachability harness may
+-- refill HP/iframes and correct position, but damage is delivered only by
+-- ordinary A-button weapon shots through the real combat path.
+local function assault_boss(frames)
+    for _ = 1, frames do
+        if not giant_alive() then break end
+        emu:write8(PL_ADDR + 2, 8)
+        emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
+        emu:write8(PL_ADDR + 11, 16); emu:write8(PL_ADDR + 12, 0)
+        emu:write8(PL_ADDR + 15, 60)
+        emu:setKeys(KEY_A + KEY_DOWN)
+        emu:runFrame()
+    end
+    emu:setKeys(0)
+    tick(20)
 end
 
 local function room_counter()
@@ -127,23 +160,19 @@ walk_to_room(3);  shot("06_room3")
 walk_to_room(4);  shot("07_room4")
 walk_to_room(6);  shot("08_BOSS_room")
 
--- After 5 walks, player ends up at bottom of boss room (walked into south wall).
--- Boss is at center (y=72). Player at ~y=128. Fire UP at boss.
-hold(KEY_A + KEY_UP, 200)
+-- Damage the first giant through real controller shots, sampling the fight.
+assault_boss(80)
 shot("09_boss_under_fire")
 
-tick(30)
+assault_boss(80)
 shot("10_boss_mid_fight")
 
--- Long sustained assault — boss has 50 HP, 2 dmg/shot, fire every 12 ticks
--- ~16 shots / 200 frames = ~32 damage. Two presses to finish (66 dmg total).
-hold(KEY_A + KEY_UP, 400)
-tick(60)
+assault_boss(600)
 shot("11_after_long_assault")
 
--- START now PAUSES (dims palettes) instead of exiting
-press(KEY_START, 4); tick(20); shot("12_paused")
-press(KEY_START, 4); tick(20); shot("13_unpaused")
+-- START opens the Pack screen; START again returns to the live room.
+press(KEY_START, 4); tick(20); shot("12_pack")
+press(KEY_START, 4); tick(20); shot("13_room_return")
 
 console:log("SMOKETEST DONE")
 emu.frontend:quit()

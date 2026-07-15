@@ -24,12 +24,13 @@ RS_ADDR=$(grep 'DEF _run_state ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}
 PL_ADDR=$(grep 'DEF _player ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 EN_ADDR=$(grep 'DEF _entities ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 TM_ADDR=$(grep 'DEF _room_tilemap ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+LS_ADDR=$(grep 'DEF _loop_current_screen ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
 QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
     QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" \
-    QUINTRA_EN_ADDR="$EN_ADDR" QUINTRA_TM_ADDR="$TM_ADDR" \
+    QUINTRA_EN_ADDR="$EN_ADDR" QUINTRA_TM_ADDR="$TM_ADDR" QUINTRA_SCREEN_ADDR="$LS_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 >"$OUT_DIR/emulator.log" 2>&1 &
@@ -38,7 +39,7 @@ EMU_PID=$!
 # This mGBA build ignores Lua's frontend:quit. The final capture is the
 # transaction boundary, so stop waiting as soon as the harness produced it.
 for _ in $(seq 1 240); do
-    if [ -f "$OUT_DIR/h_13_unpaused.png" ]; then break; fi
+    if [ -f "$OUT_DIR/h_13_room_return.png" ]; then break; fi
     if ! kill -0 "$EMU_PID" 2>/dev/null; then break; fi
     sleep 0.25
 done
@@ -103,8 +104,8 @@ check 08_BOSS_room            10
 check 09_boss_under_fire      3
 check 10_boss_mid_fight       3
 check 11_after_long_assault   3
-check 12_paused               3      # dimmed palettes collapse colors
-check 13_unpaused             3
+check 12_pack                 3      # Pack screen after START
+check 13_room_return          3
 # Exact state assertions use linker-resolved WRAM, not test-only sentinels.
 # They prove every requested room was reached and the final room owns one
 # active giant boss rather than merely resembling a boss screenshot.
@@ -114,6 +115,9 @@ assert_log 05_room2           'room=2 '
 assert_log 06_room3           'room=3 '
 assert_log 07_room4           'room=4 '
 assert_log 08_BOSS_room       'room=6 .*giants=1 '
+assert_log 11_after_long_assault 'screen=5 .*room=6 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 12_pack            'screen=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 13_room_return     'screen=5 .*bosses=1 .*giants=0 .*hp=[1-9]'
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi
