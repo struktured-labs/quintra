@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn fragile_ranged_classes_keep_endurance_survival_floors() {
-        assert_eq!(classes::CORVIN.base_stats.hp_max, 8);   // four hearts
+        assert_eq!(classes::CORVIN.base_stats.hp_max, 10);  // five hearts
         assert_eq!(classes::PICSEAN.base_stats.hp_max, 10); // five hearts
     }
 

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.12: Frost Vaults](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.13: Endurance Gate](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -34,7 +34,7 @@ the cartridge runtime.
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
-  Conference endurance floors give fragile Corvin four hearts and Picsean five
+  Conference endurance floors give fragile Corvin and Picsean five hearts
   while preserving their low-DEF ranged identities.
 - **9 distinct dungeon themes**, each with its own palette, numbered music variant, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
@@ -130,12 +130,13 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.12 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
+v0.17.13 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
-for every champion. It fails if any agent does not produce telemetry, while
-leaving win rate and route/combat stalls visible in the CSV for human review;
-heuristic navigation is deliberately not treated as a release gate.
+for every champion. It requires at least two complete nine-boss victories and
+rendered endings per champion, in addition to complete telemetry. The v0.17.13
+baseline records 13/15 full clears: Wolfkin, Sauran, and Vespine 3/3; Corvin
+and Picsean 2/3; with zero combat or route stalls.
 
 The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from

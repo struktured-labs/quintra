@@ -7,6 +7,7 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="${QUINTRA_BALANCE_OUT:-$ROOT/tmp/balance-runs.csv}"
 FRAMES="${QUINTRA_BALANCE_FRAMES:-10800}"
 REPS="${QUINTRA_BALANCE_REPS:-3}"
+MIN_WINS="${QUINTRA_BALANCE_MIN_WINS:-0}"
 read -r -a CLASS_IDS <<< "${QUINTRA_BALANCE_CLASSES:-0 1 2 3 4}"
 if [ -n "${QUINTRA_BALANCE_RUNS:-}" ]; then
   read -r -a RUN_IDS <<< "$QUINTRA_BALANCE_RUNS"
@@ -52,10 +53,12 @@ for run in "${RUN_IDS[@]}"; do
 done
 pkill -9 -f 'Xvfb :' 2>/dev/null || true
 
-python3 - "$OUT" "${#RUN_IDS[@]}" "${#CLASS_IDS[@]}" <<'PY'
+python3 - "$OUT" "${#RUN_IDS[@]}" "${#CLASS_IDS[@]}" "$MIN_WINS" <<'PY'
 import csv, statistics, sys
 rows = list(csv.DictReader(open(sys.argv[1])))
 expected = int(sys.argv[2]) * int(sys.argv[3])
+min_wins = int(sys.argv[4])
+failed = []
 print(f"[balance] {len(rows)}/{expected} agents reported")
 names = ["Wolfkin", "Sauran", "Corvin", "Picsean", "Vespine"]
 for cls, name in enumerate(names):
@@ -79,7 +82,11 @@ for cls, name in enumerate(names):
           f"boss_med={statistics.median(bosses):g} boss1={boss_clears}/{len(sample)} "
           f"town_med={statistics.median(towns):g} wins={wins} endings={endings} "
           f"deaths={deaths} combat_stalls={combat_stalls} route_stalls={route_stalls}")
+    if wins < min_wins:
+        failed.append(f"{name} wins {wins}/{len(sample)} < required {min_wins}")
 if len(rows) != expected:
     raise SystemExit(1)
+if failed:
+    raise SystemExit("[balance] endurance gate FAILED: " + "; ".join(failed))
 PY
 echo "[balance] raw data: $OUT"

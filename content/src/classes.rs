@@ -46,10 +46,11 @@ pub const CORVIN: Class = Class {
     starter_weapon: ITEM_FEATHER_SHURI,
     signature_active: ITEM_MURDER,
     passive_perk:  PERK_SEE_HP_REVEAL,
-    // The three-heart glass-cannon start produced two deaths in three
-    // controller-only endurance seeds even after route policy was corrected.
-    // Four hearts preserves low DEF while allowing one positioning error.
-    base_stats: BaseStats { hp_max: 8, mp_max: 8, atk: 2, def: 1, spd: 5 },
+    // Four hearts still produced two deaths in three full-run controller-only
+    // endurance seeds after route policy was corrected. Five hearts preserves
+    // low DEF and the ranged glass-cannon identity while surviving one more
+    // late-game positioning error.
+    base_stats: BaseStats { hp_max: 10, mp_max: 8, atk: 2, def: 1, spd: 5 },
 };
 
 pub const PICSEAN: Class = Class {

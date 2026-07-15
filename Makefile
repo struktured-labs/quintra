@@ -119,6 +119,7 @@ balance: all
 # brittle win-rate gate; missing agent reports still fail the target.
 endurance: all
 	QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_FRAMES=72000 \
+	QUINTRA_BALANCE_MIN_WINS=2 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
 
