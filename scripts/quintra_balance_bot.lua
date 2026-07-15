@@ -14,6 +14,7 @@ local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local CLASS = tonumber(os.getenv("QUINTRA_BOT_CLASS") or "0") or 0
 local RUN = tonumber(os.getenv("QUINTRA_BOT_RUN") or "0") or 0
+local BOOT_EXTRA = tonumber(os.getenv("QUINTRA_BOT_BOOT_EXTRA") or "0") or 0
 local LIMIT = tonumber(os.getenv("QUINTRA_BOT_FRAMES") or "10800") or 10800
 local OUT = os.getenv("QUINTRA_BOT_OUT") or "/tmp/quintra-balance.csv"
 local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
@@ -190,8 +191,9 @@ end
 -- fire over a useful standoff distance, but short weapons must first route to
 -- a body-valid cell near the target instead of clawing into the intervening
 -- pillar forever.
-local function target_step(px, py, ex, ey, fallback)
+local function target_step(px, py, ex, ey, fallback, near_tiles)
     if TM == 0 then return fallback end
+    local reach = near_tiles or 1
     local sx, sy = math.floor((px + 13) / 8), math.floor((py + 15) / 8)
     local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
     local qx, qy, head, tail = {sx}, {sy}, 1, 1
@@ -205,8 +207,10 @@ local function target_step(px, py, ex, ey, fallback)
         -- Finish on the target's row or column, within two tiles, so the
         -- subsequent aim input describes a real melee line instead of
         -- repeatedly slashing past one corner of the enemy hitbox.
-        if (x == gx and math.abs(y - gy) <= 2)
-            or (y == gy and math.abs(x - gx) <= 2) then
+        -- Stop within one tile: Sauran's Tail Spike and Vespine's Stinger
+        -- cannot connect from the old two-tile stopping cell.
+        if (x == gx and math.abs(y - gy) <= reach)
+            or (y == gy and math.abs(x - gx) <= reach) then
             target = y * 20 + x
             break
         end
@@ -316,7 +320,9 @@ end
 -- Boot, choose a class, start a fresh run.
 -- RUN varies title-idle entropy; the class-selection padding below keeps all
 -- five champions on the same seed within a run for an apples-to-apples trial.
-for _ = 1, (120 + RUN * 37) do tick(0) end
+-- BOOT_EXTRA narrows an entropy-dependent failure without touching cartridge
+-- RNG or game state: it is literally extra title-idle time a player could wait.
+for _ = 1, (120 + RUN * 37 + BOOT_EXTRA) do tick(0) end
 tap(KEY_START)
 for _ = 1, 40 do tick(0) end
 for _ = 1, CLASS do
@@ -330,6 +336,7 @@ for _ = 1, 45 do tick(0) end
 local frames, max_room, last_hp, damage_taken, min_hp = 0, 0, 0, 0, 255
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
+local route_start_frame = 0
 local last_px, last_py, still_frames = 255, 255, 0
 local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
 local shake_phase = 0
@@ -337,14 +344,17 @@ local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
 local debug_shot_room = -1
 local last_target_slot, last_target_hp = -1, 255
-local no_damage_frames, flank_timer, flank_dir = 0, 0, KEY_LEFT
+local no_damage_frames, flank_timer = 0, 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 local last_active_charge = 0
+local max_combat_frames, max_route_frames = 0, 0
+local max_combat_room, max_combat_enemy, max_route_room = 0, 255, 0
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local mp = PL ~= 0 and emu:read8(PL + 4) or 0
     local mp_max = PL ~= 0 and emu:read8(PL + 3) or 0
+    local iframes = PL ~= 0 and emu:read8(PL + 15) or 0
     -- player_state_t: +18 active_item, +19 active_charge. Reading +18 made
     -- every class look permanently on cooldown and silently disabled all B
     -- abilities and Spirit Convergence in automated play.
@@ -362,6 +372,7 @@ while frames < LIMIT do
     if room > max_room then max_room = room end
     if room ~= last_room then
         rooms_seen, last_room, room_enter_frame = rooms_seen + 1, room, frames
+        route_start_frame = frames
         wall_follow_dir, wall_follow_min = 0, 0
         if room > 18 and room % 18 == 1 and not town_rooms[room] then
             town_rooms[room], towns_seen = true, towns_seen + 1
@@ -399,6 +410,18 @@ while frames < LIMIT do
         last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
     end
     local loot = (not target and world_mode == 0) and pickup_target(px, py) or nil
+    local room_age = frames - room_enter_frame
+    if world_mode == 0 and target and room_age > max_combat_frames then
+        max_combat_frames = room_age
+        max_combat_room, max_combat_enemy = room, target.kind
+        route_start_frame = frames
+    elseif world_mode == 0 and loot then
+        route_start_frame = frames
+    elseif world_mode == 0 and not target and not loot
+        and frames - route_start_frame > max_route_frames then
+        max_route_frames = frames - route_start_frame
+        max_route_room = room
+    end
     local keys
     if target then
         local dx, dy = target.x - px, target.y - py
@@ -428,16 +451,14 @@ while frames < LIMIT do
             keys = target_step(px, py, target.x, target.y, move)
             no_damage_frames = 0
         elseif flank_timer > 0 then
-            keys = flank_dir + KEY_A
+            -- A blind perpendicular strafe can circle the outside of a
+            -- U-shaped court forever. Reuse the collision-aware melee BFS to
+            -- reach a clear one-tile firing lane through the actual opening.
+            keys = target_step(px, py, target.x, target.y, aim, 0) + KEY_A
             flank_timer = flank_timer - 1
         elseif no_damage_frames > 240 then
-            if math.abs(dx) >= math.abs(dy) then
-                flank_dir = (frames % 2 == 0) and KEY_UP or KEY_DOWN
-            else
-                flank_dir = (frames % 2 == 0) and KEY_LEFT or KEY_RIGHT
-            end
-            flank_timer, no_damage_frames = 90, 0
-            keys = flank_dir + KEY_A
+            flank_timer, no_damage_frames = 240, 0
+            keys = target_step(px, py, target.x, target.y, aim, 0) + KEY_A
         -- Wolfkin's Claw is true melee; Sauran's Tail Spike and Vespine's
         -- Stinger are short lunges. All three must close and align instead of
         -- orbiting outside their actual weapon geometry.
@@ -573,29 +594,35 @@ while frames < LIMIT do
         end
         dodge_phase, dodge_count = 1, dodge_count + 1
     end
+    -- The CGB loop may poll once across two emulator frames. Hold every beat
+    -- for two frames so neither press edge can fall between cartridge polls.
     if dodge_phase == 1 then keys, dodge_phase = dodge_dir, 2
-    elseif dodge_phase == 2 then keys, dodge_phase = 0, 3
-    elseif dodge_phase == 3 then keys, dodge_phase = dodge_dir, 4
-    elseif dodge_phase == 4 then
+    elseif dodge_phase == 2 then keys, dodge_phase = dodge_dir, 3
+    elseif dodge_phase == 3 then keys, dodge_phase = 0, 4
+    elseif dodge_phase == 4 then keys, dodge_phase = 0, 5
+    elseif dodge_phase == 5 then keys, dodge_phase = dodge_dir, 6
+    elseif dodge_phase == 6 then keys, dodge_phase = dodge_dir, 7
+    elseif dodge_phase == 7 then keys, dodge_phase = 0, 8
+    elseif dodge_phase == 8 then
         keys, dodge_phase, dodge_cooldown = 0, 0, 60
     end
     -- Gloom Leeches are intentionally shaken loose by a double-tap dash.
     -- Exercise that public controller mechanic instead of letting a latched
     -- enemy bias melee samples when its body overlaps nearby terrain.
     if leech_attached() or shake_phase ~= 0 then
-        if shake_phase == 0 then
-            keys, shake_phase = KEY_RIGHT, 1
-        elseif shake_phase == 1 then
-            keys, shake_phase = 0, 2
-        elseif shake_phase == 2 then
-            keys, shake_phase = KEY_RIGHT, 3
-        else
-            keys, shake_phase = 0, 0
+        if shake_phase == 0 then keys, shake_phase = KEY_RIGHT, 1
+        elseif shake_phase == 1 then keys, shake_phase = KEY_RIGHT, 2
+        elseif shake_phase == 2 then keys, shake_phase = 0, 3
+        elseif shake_phase == 3 then keys, shake_phase = 0, 4
+        elseif shake_phase == 4 then keys, shake_phase = KEY_RIGHT, 5
+        elseif shake_phase == 5 then keys, shake_phase = KEY_RIGHT, 6
+        elseif shake_phase == 6 then keys, shake_phase = 0, 7
+        else keys, shake_phase = 0, 0
         end
     end
     if DEBUG and frames % 600 == 0 then
-        debug_log(string.format("BOTDBG f=%d room=%d hp=%d mp=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
-            frames, room, hp, mp, active_charge,
+        debug_log(string.format("BOTDBG f=%d room=%d hp=%d mp=%d ifr=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
+            frames, room, hp, mp, iframes, active_charge,
             px, emu:read8(PL + 10), py, emu:read8(PL + 12),
             target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
                     target.kind, target.x, target.y, target.hp, target.state,
@@ -647,10 +674,12 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
-        frames - room_enter_frame, hostiles, last_enemy, towns_seen, world_hops,
+        frames - room_enter_frame, max_combat_frames, max_combat_room,
+        max_combat_enemy, max_route_frames, max_route_room,
+        hostiles, last_enemy, towns_seen, world_hops,
         won, ui_screen, dodge_count))
     f:close()
 end

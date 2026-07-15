@@ -239,10 +239,15 @@ static void chaser_tick(entity_t *e, u8 speed) {
         i16 ey = FIX8_TO_INT(e->y);
         i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
         i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
-        // Step each axis independently; if the diagonal is blocked one axis
-        // still slides along the obstacle.
-        if (sx) enemy_try_step(e, sx, 0);
-        if (sy) enemy_try_step(e, 0, sy);
+        // Pursue one axis at a time. If it blocks, keep one perpendicular
+        // edge-follow direction until the pursuit axis opens; reverse only
+        // when that slide also blocks. This avoids pillar oscillation.
+        u8 moved = sx ? enemy_try_step(e, sx, 0)
+                      : (sy ? enemy_try_step(e, 0, sy) : 1);
+        if (!moved) {
+            i8 side = (e->state & 1) ? 1 : -1;
+            if (!enemy_try_step(e, sx ? 0 : side, sx ? side : 0)) e->state++;
+        }
     }
 }
 

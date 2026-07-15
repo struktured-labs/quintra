@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.26: Ending Choice](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.27: Honest Endurance](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -72,7 +72,9 @@ the cartridge runtime.
   **Gloom Leeches**, plus Ember's area-denial **Cinder Maws**. Folding Stars,
   Flutterbats, Gloom Leeches, and Cinder Maws now have dedicated silhouettes
   instead of borrowing older monsters' art, so movement and shape both
-  communicate threat.
+  communicate threat. Folding Stars remain invulnerable while expanded but
+  now contract for a full one-second punish window, and pursuing monsters
+  edge-follow around procgen pillars instead of wedging behind them forever.
 - **Distinct champion combat + dodge dash**: Wolfkin is a true close-range
   melee fighter; `A` uses each class primary, `B` uses its signature, Sauran
   raises a projectile-breaking cooldown shield, and full-MP `A+B` unleashes
@@ -157,21 +159,28 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.26 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
+v0.17.27 occupies 64 KiB with 1,205 bytes of bank-0 headroom.
 
-Before a show build, `make endurance` runs three deterministic long-form seeds
-for every champion. It requires at least two complete nine-boss victories and
-rendered endings per champion, in addition to complete telemetry. The v0.17.22
-baseline records 11/15 full clears—3/3 for Wolfkin and Vespine, and 2/3 for
-Sauran, Corvin, and Picsean—with zero combat or route stalls. This deliberately
-preserves meaningful seed risk instead of tuning every vessel toward automatic
-victory.
+Before a show build, `make endurance` runs three long-form entropy samples for
+every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
+minutes at 60 Hz). It requires at least two complete nine-boss victories and
+rendered endings per champion, complete telemetry, and zero rooms that retain
+combat or cleared-route control for more than 7,200 frames (two minutes). The
+v0.17.27 baseline records 12/15 full clears—3/3 for Wolfkin and Vespine, and
+2/3 for Sauran, Corvin, and Picsean—with zero combat or route stalls. This
+deliberately preserves meaningful seed risk instead of tuning every vessel
+toward automatic victory.
 
 The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
 route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
-used in balance runs. Its cleared-room recovery gives tile-path alignment more
+used in balance runs. Telemetry retains the worst combat and route dwell from
+the entire run—not merely its final room—and identifies the responsible room
+and enemy for reproducible failures. Two-frame press/release beats ensure real
+cartridge polls observe dodge double-taps; stalled firing lanes use the same
+collision-aware BFS as melee pursuit instead of orbiting outside U-shaped
+cover forever. Its cleared-room recovery gives tile-path alignment more
 time than combat pursuit, preventing collision nudges from defeating its own
 shortest-path route. Short-range champions also path around cover to engage,
 then line up their final few pixels on the target's cardinal axis before

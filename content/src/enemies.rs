@@ -168,7 +168,10 @@ pub const FOLDING_STAR: Enemy = Enemy {
     // a deliberately lopsided rhythm, then contracts for a brief damage
     // window. Shadow cuts through its false geometry most effectively.
     stats: EnemyStats { hp: 7, damage: 2, speed: 56, score: 60, weakness: 0x08, poise: 2 },
-    ai_script:  AiScriptId::Replicator { open_ticks: 83, closed_ticks: 29 },
+    // One full second contracted gives slow melee champions a real punish
+    // window after reading the 83-frame bloom; damage is still rejected for
+    // the entire expanded phase.
+    ai_script:  AiScriptId::Replicator { open_ticks: 83, closed_ticks: 60 },
     drop_table: DROP_SMALL_COIN,
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };
