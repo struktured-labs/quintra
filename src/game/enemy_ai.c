@@ -21,54 +21,6 @@
 //   Charger: ai_data[2] = mode (0 wander 1 telegraph 2 charge 3 recover),
 //            ai_data[3] = mode timer, ai_data[4] = locked dir8
 
-// Map content enemy_id to OBJ tile slot in VRAM.
-static u8 sprite_for_enemy(u8 enemy_content_id) {
-    switch (enemy_content_id) {
-        case ENEMY_BLUE_CRAWLER: return SPR_ENEMY_CRAWLER;
-        case ENEMY_STONE_SENTINEL: return SPR_BOSS;
-        case ENEMY_HORNET: return SPR_ENEMY_HORNET;
-        case ENEMY_SKELETON: return SPR_ENEMY_SKELETON;
-        case ENEMY_ORC: return SPR_BRUISER_ORC;
-        case ENEMY_WISP: return SPR_ENEMY_WISP;
-        case ENEMY_BOMBER: return SPR_BRUISER_BOMBER;
-        case ENEMY_SHADE: return SPR_ENEMY_SHADE;
-        case ENEMY_WARLOCK: return SPR_BRUISER_WARLOCK;
-        case ENEMY_ROPE: return SPR_ENEMY_ROPE;
-        case ENEMY_SENTRY: return SPR_ENEMY_SENTRY;
-        case ENEMY_FOLD_STAR: return SPR_ENEMY_FOLD_STAR;
-        case ENEMY_FLUTTERBAT: return SPR_ENEMY_FLUTTERBAT;
-        case ENEMY_GLOAM_LEECH: return SPR_ENEMY_GLOAM_LEECH;
-        case ENEMY_CINDER_MAW: return SPR_ENEMY_CINDER_MAW;
-        case ENEMY_RIFT_OOZE: return SPR_ENEMY_RIFT_OOZE;
-        case ENEMY_MIRROR_MOTH: return SPR_ENEMY_MIRROR_MOTH;
-        default: return SPR_ENEMY_CRAWLER;
-    }
-}
-
-// Per-enemy OBJ palette (loaded in room_enter): crawler blue(3),
-// hornet amber(5, shares coin gold), skeleton bone(0), orc green(7),
-// sentinel granite(6), wisp bone-ghost(0).
-static u8 palette_for_enemy(u8 enemy_content_id) {
-    switch (enemy_content_id) {
-        case ENEMY_STONE_SENTINEL: return 0x06;
-        case ENEMY_HORNET: return 0x05;
-        case ENEMY_SKELETON: return 0x00;
-        case ENEMY_ORC: return 0x07;
-        case ENEMY_WISP: return 0x00;
-        case ENEMY_BOMBER: return 0x04;
-        case ENEMY_SHADE: return 0x00;
-        case ENEMY_WARLOCK: return 0x07;
-        case ENEMY_ROPE: return 0x07;
-        case ENEMY_SENTRY: return 0x03;
-        case ENEMY_FOLD_STAR: return 0x05;
-        case ENEMY_FLUTTERBAT: return 0x00;
-        case ENEMY_GLOAM_LEECH: return 0x04;
-        case ENEMY_RIFT_OOZE: return 0x07;
-        case ENEMY_MIRROR_MOTH: return 0x00;
-        default: return 0x03;
-    }
-}
-
 u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
     u8 idx;
     entity_t *e;
@@ -81,9 +33,8 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         e->x           = FIX8((i16)tile_x * 8);
         e->y           = FIX8((i16)tile_y * 8);
         e->vx = e->vy  = 0;
-        e->sprite_tile = sprite_for_enemy(enemy_content_id);
-        e->palette     = palette_for_enemy(enemy_content_id);
-        def;
+        e->sprite_tile = def->sprite_set;
+        e->palette     = def->palette;
         e->hp          = def->stats.hp;
         e->damage      = def->stats.damage;
         e->ai_data[0]  = enemy_content_id;

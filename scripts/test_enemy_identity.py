@@ -8,8 +8,16 @@ from pyboy import PyBoy
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
-AI_SOURCE = (ROOT / "src/game/enemy_ai.c").read_text()
 ENEMY_HEADER = (ROOT / "src/generated/enemies.h").read_text()
+ENEMY_SOURCE = (ROOT / "src/generated/enemies.c").read_text()
+SPAWN_SOURCE = (ROOT / "src/game/enemy_ai.c").read_text()
+
+IDENTITIES = {
+    0: (20, 3), 1: (24, 6), 2: (21, 5), 3: (22, 0), 4: (56, 7),
+    5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
+    10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
+    14: (75, 3), 15: (76, 7), 16: (77, 0),
+}
 
 SPECIALISTS = {
     11: (72, 37, "FOLD_STAR", "SPR_ENEMY_FOLD_STAR", "fold-star"),
@@ -40,13 +48,24 @@ def addr(name):
 
 
 def main():
-    # Guard the content-ID dispatch itself. This catches accidental fallback to
-    # a legacy monster even before the cartridge is built.
-    for enemy_id, (_, _, enemy_symbol, sprite_symbol, name) in SPECIALISTS.items():
+    assert "e->sprite_tile = def->sprite_set;" in SPAWN_SOURCE
+    assert "e->palette     = def->palette;" in SPAWN_SOURCE
+    assert "sprite_for_enemy" not in SPAWN_SOURCE
+    assert "palette_for_enemy" not in SPAWN_SOURCE
+    # Generated content is the sole runtime identity source. Pin every roster
+    # entry's hardware OBJ slot/palette so no hand-written C switch can drift.
+    for enemy_id, (slot, palette) in IDENTITIES.items():
+        enemy_symbol = next(v[2] for k, v in SPECIALISTS.items() if k == enemy_id) \
+            if enemy_id in SPECIALISTS else None
+        if enemy_symbol:
+            id_pattern = rf"#define\s+ENEMY_{enemy_symbol}\s+{enemy_id}\b"
+            assert re.search(id_pattern, ENEMY_HEADER), f"enemy {enemy_id} generated ID drifted"
+        record = rf'\{{ \.id={enemy_id}, \.name="[^"]+", \.sprite_set={slot}, \.palette={palette},'
+        assert re.search(record, ENEMY_SOURCE), f"enemy {enemy_id} generated identity drifted"
+
+    for enemy_id, (_, _, enemy_symbol, _, name) in SPECIALISTS.items():
         id_pattern = rf"#define\s+ENEMY_{enemy_symbol}\s+{enemy_id}\b"
         assert re.search(id_pattern, ENEMY_HEADER), f"{name} generated ID drifted"
-        pattern = rf"case\s+ENEMY_{enemy_symbol}\s*:\s*return\s+{sprite_symbol}\s*;"
-        assert re.search(pattern, AI_SOURCE), f"{name} ID mapping drifted"
 
     # Boot the real cartridge so room_enter loads OBJ VRAM through the same
     # loader used by gameplay, then compare the compiled 2bpp tiles.

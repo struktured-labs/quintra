@@ -66,6 +66,20 @@ mod tests {
     }
 
     #[test]
+    fn enemy_runtime_identity_respects_obj_hardware_ranges() {
+        use quintra_content::{PaletteRef, SpriteRef};
+        let mut bad_tile = registry();
+        bad_tile.enemies[0].sprite_set = SpriteRef::new(128);
+        let errors = bad_tile.validate().expect_err("out-of-range OBJ tile was accepted");
+        assert!(errors.iter().any(|e| e.contains("OBJ tile is outside")));
+
+        let mut bad_palette = registry();
+        bad_palette.enemies[0].palette = PaletteRef::new(8);
+        let errors = bad_palette.validate().expect_err("out-of-range OBJ palette was accepted");
+        assert!(errors.iter().any(|e| e.contains("OBJ palette is outside")));
+    }
+
+    #[test]
     fn sauran_scaled_hide_includes_promised_hp_bonus() {
         // player.c defines the passive contract as pre-baked into a
         // 12-half-heart base; keep authored content from silently drifting.

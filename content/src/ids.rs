@@ -80,7 +80,12 @@ pub const PERK_POISON_SYNERGY:      PerkId = PerkId::new(5);  // Vespine
 
 // ----- Palettes / sprites / tilesets / music (engine-side index)
 pub const OBJ_PAL_WOLFKIN:    PaletteRef = PaletteRef::new(1);
-pub const OBJ_PAL_CRAWLER:    PaletteRef = PaletteRef::new(2);
+pub const OBJ_PAL_CRAWLER:    PaletteRef = PaletteRef::new(3);
+pub const OBJ_PAL_BONE:       PaletteRef = PaletteRef::new(0);
+pub const OBJ_PAL_RED:        PaletteRef = PaletteRef::new(4);
+pub const OBJ_PAL_GOLD:       PaletteRef = PaletteRef::new(5);
+pub const OBJ_PAL_MAGIC:      PaletteRef = PaletteRef::new(6);
+pub const OBJ_PAL_GREEN:      PaletteRef = PaletteRef::new(7);
 pub const OBJ_PAL_ITEM_GOLD:  PaletteRef = PaletteRef::new(3);
 pub const OBJ_PAL_SAURAN:     PaletteRef = PaletteRef::new(1);    // reuses pal 1 (green tint at runtime)
 pub const OBJ_PAL_CORVIN:     PaletteRef = PaletteRef::new(1);
@@ -92,8 +97,26 @@ pub const BG_PAL_CAVERN_ALT:  PaletteRef = PaletteRef::new(2);
 pub const BG_PAL_CAVERN_HI:   PaletteRef = PaletteRef::new(3);
 
 pub const SPRITE_WOLFKIN:     SpriteRef = SpriteRef::new(0);
-pub const SPRITE_CRAWLER:     SpriteRef = SpriteRef::new(1);
-pub const SPRITE_SENTINEL:    SpriteRef = SpriteRef::new(4);
+// Enemy SpriteRef values are the actual OBJ tile slots consumed by runtime.
+// Keep these aligned with render/tiles.h; content validation constrains them
+// to the 0..127 hardware OBJ tile range.
+pub const SPRITE_CRAWLER:     SpriteRef = SpriteRef::new(20);
+pub const SPRITE_HORNET:      SpriteRef = SpriteRef::new(21);
+pub const SPRITE_SKELETON:    SpriteRef = SpriteRef::new(22);
+pub const SPRITE_SENTINEL:    SpriteRef = SpriteRef::new(24);
+pub const SPRITE_WISP:        SpriteRef = SpriteRef::new(34);
+pub const SPRITE_SHADE:       SpriteRef = SpriteRef::new(37);
+pub const SPRITE_ROPE:        SpriteRef = SpriteRef::new(39);
+pub const SPRITE_ORC:         SpriteRef = SpriteRef::new(56);
+pub const SPRITE_BOMBER:      SpriteRef = SpriteRef::new(60);
+pub const SPRITE_WARLOCK:     SpriteRef = SpriteRef::new(64);
+pub const SPRITE_SENTRY:      SpriteRef = SpriteRef::new(68);
+pub const SPRITE_FOLD_STAR:   SpriteRef = SpriteRef::new(72);
+pub const SPRITE_FLUTTERBAT:  SpriteRef = SpriteRef::new(73);
+pub const SPRITE_GLOAM_LEECH: SpriteRef = SpriteRef::new(74);
+pub const SPRITE_CINDER_MAW:  SpriteRef = SpriteRef::new(75);
+pub const SPRITE_RIFT_OOZE:   SpriteRef = SpriteRef::new(76);
+pub const SPRITE_MIRROR_MOTH: SpriteRef = SpriteRef::new(77);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

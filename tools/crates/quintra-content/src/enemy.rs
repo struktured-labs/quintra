@@ -78,6 +78,12 @@ impl Enemy {
         if self.stats.hp == 0 {
             return Err(format!("enemy {} hp is 0", self.id.raw()));
         }
+        if self.sprite_set.raw() >= 128 {
+            return Err(format!("enemy {} OBJ tile is outside 0..127", self.id.raw()));
+        }
+        if self.palette.raw() >= 8 {
+            return Err(format!("enemy {} OBJ palette is outside 0..7", self.id.raw()));
+        }
         Ok(())
     }
 }

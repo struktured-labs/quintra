@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.37: Reflections in Ice](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.38: One True Roster](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -187,28 +187,32 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.37 occupies 64 KiB with 1,199 bytes of bank-0 headroom. Gameplay files
+v0.17.38 occupies 64 KiB with 1,199 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate also rejects any fixed switchable bank over 16 KiB instead of
 allowing GBDK's warning-only cross-bank overwrite to produce a corrupt ROM.
+Enemy OBJ tile and palette identity now comes directly from validated generated
+content rather than duplicate runtime switches. Hardware-range validation pins
+tiles to 0–127 and palettes to 0–7; the simplification leaves 386 bytes free in
+the formerly crowded fixed bank 2.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.37's paired-seed baseline records 13/15 full clears: 3/3 for three
-champions and 2/3 for Picsean and Vespine, with two real permadeaths and zero
+v0.17.38's paired-seed baseline records 12/15 full clears: 3/3 for Wolfkin and
+Sauran and 2/3 for Corvin, Picsean, and Vespine, with three real permadeaths and zero
 combat or route stalls. That small failure rate is healthier roguelike pressure than a
 perfect agent sweep while retaining the two-clear conference floor. Successful
-runs make 8–12 real purchases rather than bypassing merchants; both early
-permadeaths still made two, and no run exceeds 55
+runs make 8–12 real purchases rather than bypassing merchants; the deaths
+still made 2–3, and no run exceeds 55
 Riftwild transitions. The gate now proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
-low as one half-heart and vary from roughly 4:37 to 8:47 active play, so
+low as one half-heart and vary from roughly 4:36 to 8:48 active play, so
 the sample retains pressure and meaningful build/seed variance.
 
 The agents use each champion's actual weapon range and B ability, collect
