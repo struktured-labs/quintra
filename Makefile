@@ -126,6 +126,9 @@ media-check: all
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.
 balance: all
+	QUINTRA_BALANCE_MIN_SHOP_RUNS=2 \
+	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 \
+	QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
 
 # Long-form pre-show soak: three entropy samples per champion and enough
@@ -135,7 +138,8 @@ endurance: all
 	QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_FRAMES=90000 \
 	QUINTRA_BALANCE_MIN_WINS=2 QUINTRA_BALANCE_MIN_SHOP_RUNS=3 \
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 \
-	QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 QUINTRA_BALANCE_STALL_FRAMES=7200 \
+	QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
+	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
 

@@ -94,7 +94,7 @@ pub const MURDER: Item = Item {
 
 pub const TIDAL_WAVE: Item = Item {
     id: ITEM_TIDAL_WAVE, name: "TidalWave",
-    description: "Sweeping line attack.",
+    description: "Three-lane wave plus a brief water barrier.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],

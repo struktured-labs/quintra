@@ -202,7 +202,19 @@ static void flutterbat_tick(entity_t *e) {
     if (e->state == 0) return;
     if ((e->state_timer & ((e->state == 2) ? 1 : 3)) == 0) {
         u8 d = (u8)((e->ai_data[2] + ((e->state_timer >> 2) & 2)) & 7);
-        if (!enemy_try_step(e, dir8_dx[d], dir8_dy[d])) e->state_timer = 0;
+        i8 dx = dir8_dx[d], dy = dir8_dy[d];
+        u8 moved;
+        // Resolve diagonals by axis. A direct diagonal lets this 8px flyer cut
+        // across two solid corners into a notch no 12px champion can enter;
+        // axis motion keeps the Keese-like slant in open space and slides the
+        // bat along either wall when only one component is legal.
+        if (dx && dy) {
+            moved = enemy_try_step(e, dx, 0);
+            if (enemy_try_step(e, 0, dy)) moved = 1;
+        } else {
+            moved = enemy_try_step(e, dx, dy);
+        }
+        if (!moved) e->state_timer = 0;
     }
 }
 

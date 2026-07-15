@@ -13,8 +13,11 @@ pub const WOLFKIN: Class = Class {
     starter_weapon: ITEM_CLAW_COMBO,
     signature_active: ITEM_HOWL,
     passive_perk:  PERK_MOVE_SPEED_PLUS_20,
+    // Claw Combo requires sustained body-range contact. Five hearts keeps the
+    // dedicated melee champion sturdier than the faster, harder-hitting
+    // Vespine without approaching Sauran's six-heart tank identity.
     base_stats: BaseStats {
-        hp_max: 8,   // 4 hearts
+        hp_max: 10,  // 5 hearts
         mp_max: 4,
         atk:    2,
         def:    1,
@@ -59,9 +62,10 @@ pub const PICSEAN: Class = Class {
     starter_weapon: ITEM_BUBBLE_BOLT,
     signature_active: ITEM_TIDAL_WAVE,
     passive_perk:  PERK_MP_REGEN_SWIM,
-    // Slow piercing shots require spacing; five hearts retains a survivable
-    // mage floor while low ATK/DEF preserve the fragile ranged identity.
-    base_stats: BaseStats { hp_max: 10, mp_max: 10, atk: 1, def: 1, spd: 5 },
+    // Slow piercing shots require prolonged spacing and carry the roster's
+    // lowest ATK. Six hearts matches Corvin's ranged survival floor while
+    // low ATK/DEF preserve the fragile control-mage identity.
+    base_stats: BaseStats { hp_max: 12, mp_max: 10, atk: 1, def: 1, spd: 5 },
 };
 
 pub const VESPINE: Class = Class {

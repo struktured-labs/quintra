@@ -37,11 +37,16 @@ enum Command {
         /// Maximum allowed cleared-room route stalls across the complete matrix.
         #[arg(long)]
         max_route_stalls: Option<usize>,
+        /// Maximum authored overworld transitions in any one run.
+        #[arg(long)]
+        max_world_hops: Option<u32>,
     },
 }
 
 #[derive(Clone, Debug)]
 struct Row {
+    run: u32,
+    seed: u32,
     class: usize,
     max_room: u32,
     rooms_cleared: u32,
@@ -55,6 +60,7 @@ struct Row {
     ui_screen: u32,
     dodges: u32,
     purchases: u32,
+    world_hops: u32,
 }
 
 fn field<'a>(record: &'a [&str], columns: &HashMap<&str, usize>, name: &str) -> Result<&'a str> {
@@ -89,6 +95,16 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
             let has_run_maxima = columns.contains_key("max_combat_frames");
             let final_room_frames = number(&record, &columns, "room_frames")?;
             Ok(Row {
+                run: columns
+                    .contains_key("run")
+                    .then(|| number(&record, &columns, "run"))
+                    .transpose()?
+                    .unwrap_or(0),
+                seed: columns
+                    .contains_key("seed")
+                    .then(|| number(&record, &columns, "seed"))
+                    .transpose()?
+                    .unwrap_or(0),
                 class: number(&record, &columns, "class")? as usize,
                 max_room: number(&record, &columns, "max_room")?,
                 rooms_cleared: number(&record, &columns, "rooms_cleared")?,
@@ -118,6 +134,11 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                 purchases: columns
                     .contains_key("purchases")
                     .then(|| number(&record, &columns, "purchases"))
+                    .transpose()?
+                    .unwrap_or(0),
+                world_hops: columns
+                    .contains_key("world_hops")
+                    .then(|| number(&record, &columns, "world_hops"))
                     .transpose()?
                     .unwrap_or(0),
             })
@@ -152,6 +173,7 @@ fn report(
     stall_frames: u32,
     max_combat_stalls: Option<usize>,
     max_route_stalls: Option<usize>,
+    max_world_hops: Option<u32>,
 ) -> Result<()> {
     let text = fs::read_to_string(&csv)
         .with_context(|| format!("failed to read {}", csv.display()))?;
@@ -160,6 +182,23 @@ fn report(
     println!("[balance] {}/{} agents reported", rows.len(), expected);
 
     let mut failures = Vec::new();
+    if rows.iter().any(|row| row.run != 0 || row.seed != 0) {
+        let mut seeds_by_run: HashMap<u32, u32> = HashMap::new();
+        for row in &rows {
+            if let Some(seed) = seeds_by_run.insert(row.run, row.seed) {
+                if seed != row.seed {
+                    failures.push(format!(
+                        "run {} is not seed-paired across classes: {} != {}",
+                        row.run, seed, row.seed
+                    ));
+                    break;
+                }
+            }
+        }
+        if failures.is_empty() {
+            println!("[balance] paired seeds verified across all classes");
+        }
+    }
     let mut total_combat_stalls = 0;
     let mut total_route_stalls = 0;
     for (class, name) in CLASS_NAMES.iter().enumerate() {
@@ -227,6 +266,19 @@ fn report(
             ));
         }
     }
+    if let Some(maximum) = max_world_hops {
+        for row in &rows {
+            if row.world_hops > maximum {
+                failures.push(format!(
+                    "class {} run {} overworld hops {} > allowed {}",
+                    CLASS_NAMES.get(row.class).unwrap_or(&"unknown"),
+                    row.run,
+                    row.world_hops,
+                    maximum
+                ));
+            }
+        }
+    }
     if !failures.is_empty() {
         bail!("endurance gate FAILED: {}", failures.join("; "));
     }
@@ -245,6 +297,7 @@ fn main() -> Result<()> {
             stall_frames,
             max_combat_stalls,
             max_route_stalls,
+            max_world_hops,
         } => report(
             csv,
             runs,
@@ -254,6 +307,7 @@ fn main() -> Result<()> {
             stall_frames,
             max_combat_stalls,
             max_route_stalls,
+            max_world_hops,
         ),
     }
 }

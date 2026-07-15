@@ -916,7 +916,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     // Undertow guard: the wave wraps its caster in a brief
                     // water barrier, paid for by the normal MP/cooldown. It
                     // blocks bodies and destroys shots like other barriers.
-                    if (player.shield_timer < 45) player.shield_timer = 45;
+                    if (player.shield_timer < 75) player.shield_timer = 75;
                     if (player.iframes < 8) player.iframes = 8;
                     break;
                 default:  // Vespine SWARM: 4-stinger fan burst

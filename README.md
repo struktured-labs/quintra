@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.31: Honest Time](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.32: Uncornered Wings](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -34,8 +34,8 @@ the cartridge runtime.
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
-  Conference endurance floors give ranged Corvin six hearts, Picsean five,
-  and close-range Vespine four-and-a-half
+  Conference endurance floors give true-melee Wolfkin five hearts, ranged
+  Corvin and Picsean six, and close-range Vespine four-and-a-half
   while preserving their low-DEF specialist identities; Picsean's Tidal Wave
   raises a brief water barrier while its three bubble lanes erupt, and its
   swim passive crosses Toxic Mire pools without damage.
@@ -76,6 +76,8 @@ the cartridge runtime.
   communicate threat. Folding Stars remain invulnerable while expanded but
   now contract for a full one-second punish window, and pursuing monsters
   edge-follow around procgen pillars instead of wedging behind them forever.
+  Flutterbat diagonals resolve by axis, preventing an 8px flyer from cutting
+  into a corner that no 12px champion can enter and softlocking a sealed room.
 - **Distinct champion combat + dodge dash**: Wolfkin is a true close-range
   melee fighter; `A` uses each class primary, `B` uses its signature, Sauran
   raises a projectile-breaking cooldown shield, and full-MP `A+B` unleashes
@@ -177,18 +179,21 @@ proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.31 occupies 64 KiB with 1,283 bytes of bank-0 headroom.
+v0.17.32 occupies 64 KiB with 1,261 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.31 full-speed baseline records 13/15 full clears—3/3 for Wolfkin,
-Sauran, and Corvin, and 2/3 for Picsean and Vespine—with zero combat or route
-stalls. Every run makes 8–11 real purchases rather than bypassing merchants.
-This deliberately preserves meaningful seed risk instead of tuning every vessel
-toward automatic victory.
+v0.17.32's paired-seed baseline records 15/15 full clears—3/3 for every
+champion—with zero deaths, combat stalls, or route stalls. Every run makes
+7–12 real purchases rather than bypassing merchants, and no run exceeds 57
+Riftwild transitions. The gate now proves every class faces the same three
+procedural worlds; its former fixed host-frame padding silently produced
+different seeds after class-select redraws. Successful agents still fall as
+low as three half-hearts and vary from roughly 4:44 to 8:43 active play, so
+the sample retains pressure and meaningful build/seed variance.
 
 The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from

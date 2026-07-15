@@ -101,8 +101,39 @@ def main():
         f"hitstop={pb.memory[addr('_g_hitstop')]} pause={pb.memory[tilemap + 340]}"
         f" loop_frames={before_frames}->{after_frames}"
     )
+
+    # A Flutterbat can fit into a diagonal notch that the champion's wider
+    # feet-box cannot enter. Recreate that exact corner: NE is blocked by the
+    # tile above, while east is open. Its cardinal fallback must escape rather
+    # than repeatedly settling there and softlocking a sealed melee room.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    pb.memory[tilemap + 9 * 20 + 10] = 2
+    bat = entities
+    pb.memory[bat] = 2
+    pb.memory[bat + 1] = 3
+    put_fix8(pb, bat + 2, 80)
+    put_fix8(pb, bat + 6, 79)
+    pb.memory[bat + 14] = 2
+    pb.memory[bat + 15] = 1       # flutter phase
+    pb.memory[bat + 16] = 1       # move on the next update
+    pb.memory[bat + 17] = 12
+    pb.memory[bat + 19] = 1       # NE diagonal seed
+    pb.memory[bat + 25] = 0x66
+    pb.memory[player + 2] = 20
+    pb.memory[addr("_g_hitstop")] = 0
+    for _ in range(20):
+        pb.tick()
+        if pb.memory[bat + 3] != 80 or pb.memory[bat + 7] != 79:
+            break
+    assert pb.memory[bat + 3] > 80 and pb.memory[bat + 7] == 79, (
+        f"Flutterbat did not cardinal-fallback out of notch: "
+        f"{pb.memory[bat + 3]},{pb.memory[bat + 7]}"
+    )
     pb.stop(save=False)
-    print("[enemy-id] PASS unique specialist art + trapped leech edge recovery")
+    print("[enemy-id] PASS specialist art + leech routing + flutterbat notch escape")
 
 
 if __name__ == "__main__":

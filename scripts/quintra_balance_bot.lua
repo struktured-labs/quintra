@@ -12,6 +12,7 @@ local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
+local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 local CLASS = tonumber(os.getenv("QUINTRA_BOT_CLASS") or "0") or 0
 local RUN = tonumber(os.getenv("QUINTRA_BOT_RUN") or "0") or 0
 local BOOT_EXTRA = tonumber(os.getenv("QUINTRA_BOT_BOOT_EXTRA") or "0") or 0
@@ -36,6 +37,10 @@ end
 
 local function tap(key)
     tick(key); tick(key); tick(0); tick(0)
+end
+
+local function read16(address)
+    return emu:read8(address) + emu:read8(address + 1) * 256
 end
 
 local function enemy_target(px, py)
@@ -347,18 +352,26 @@ local function door_step(px, py)
 end
 
 -- Boot, choose a class, start a fresh run.
--- RUN varies title-idle entropy; the class-selection padding below keeps all
--- five champions on the same seed within a run for an apples-to-apples trial.
+-- RUN varies title-idle entropy. Confirm every champion at the same cartridge
+-- loop counter: cursor redraws have class-dependent cost, so fixed host-frame
+-- padding only looked fair while silently producing five different seeds.
 -- BOOT_EXTRA narrows an entropy-dependent failure without touching cartridge
 -- RNG or game state: it is literally extra title-idle time a player could wait.
 for _ = 1, (120 + RUN * 37 + BOOT_EXTRA) do tick(0) end
 tap(KEY_START)
 for _ = 1, 40 do tick(0) end
+local select_base = FC ~= 0 and read16(FC) or 0
 for _ = 1, CLASS do
     tap(KEY_DOWN)
     for _ = 1, 12 do tick(0) end
 end
-for _ = 1, ((4 - CLASS) * 12) do tick(0) end
+if FC ~= 0 then
+    local confirm_at = (select_base + 160) % 65536
+    while read16(FC) ~= confirm_at do tick(0) end
+else
+    -- Compatibility fallback for an old linker map.
+    for _ = 1, ((4 - CLASS) * 16) do tick(0) end
+end
 tap(KEY_A)
 for _ = 1, 45 do tick(0) end
 
@@ -628,7 +641,7 @@ while frames < LIMIT do
     -- simulation speed, repeatedly dashing around optional Riftwild shots
     -- could pull the slower vessel off its authored route for an entire run.
     -- Use the actual shield edge instead; its cooldown prevents spam.
-    if CLASS == 1 and threat and active_charge == 0 and mp >= 2 then
+    if (CLASS == 1 or CLASS == 3) and threat and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         dodge_phase, dodge_cooldown = 0, 30
     elseif dodge_phase == 0 and dodge_cooldown == 0 and threat then
@@ -672,9 +685,26 @@ while frames < LIMIT do
         else keys, shake_phase = 0, 0
         end
     end
+    -- Riftwild portals place the hero beside the dungeon return door. A
+    -- projectile dodge can otherwise cross that permitted backtracking edge
+    -- before room 25 is clear, creating a boss-room/Riftwild loop. While a
+    -- hostile is live, keep movement inward at only that arrival lip.
+    if target and world_mode == 0 then
+        local entered = emu:read8(RS + 6)
+        local actions = keys % 16
+        if entered == 0 and py > 108 and math.floor(keys / KEY_DOWN) % 2 == 1 then
+            keys = actions + KEY_UP
+        elseif entered == 2 and py < 12 and math.floor(keys / KEY_UP) % 2 == 1 then
+            keys = actions + KEY_DOWN
+        elseif entered == 1 and px < 12 and math.floor(keys / KEY_LEFT) % 2 == 1 then
+            keys = actions + KEY_RIGHT
+        elseif entered == 3 and px > 128 and math.floor(keys / KEY_RIGHT) % 2 == 1 then
+            keys = actions + KEY_LEFT
+        end
+    end
     if DEBUG and frames % 600 == 0 then
-        debug_log(string.format("BOTDBG f=%d room=%d hp=%d mp=%d ifr=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
-            frames, room, hp, mp, iframes, active_charge,
+        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d hp=%d mp=%d ifr=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
+            frames, room, world_mode, world_screen, hp, mp, iframes, active_charge,
             px, emu:read8(PL + 10), py, emu:read8(PL + 12),
             target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
                     target.kind, target.x, target.y, target.hp, target.state,

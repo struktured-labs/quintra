@@ -65,9 +65,10 @@ mod tests {
     }
 
     #[test]
-    fn fragile_classes_keep_endurance_survival_floors() {
+    fn champion_endurance_survival_floors_do_not_drift() {
+        assert_eq!(classes::WOLFKIN.base_stats.hp_max, 10); // five hearts, true melee
         assert_eq!(classes::CORVIN.base_stats.hp_max, 12);  // six hearts
-        assert_eq!(classes::PICSEAN.base_stats.hp_max, 10); // five hearts
+        assert_eq!(classes::PICSEAN.base_stats.hp_max, 12); // six hearts
         assert_eq!(classes::VESPINE.base_stats.hp_max, 9);  // four and a half
     }
 

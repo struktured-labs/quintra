@@ -109,7 +109,7 @@ check 13_room_return          3
 # Exact state assertions use linker-resolved WRAM, not test-only sentinels.
 # They prove every requested room was reached and the final room owns one
 # active giant boss rather than merely resembling a boss screenshot.
-assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=8'
+assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=10'
 assert_log 04_room1           'room=1 '
 assert_log 05_room2           'room=2 '
 assert_log 06_room3           'room=3 '
