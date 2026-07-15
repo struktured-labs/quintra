@@ -49,6 +49,29 @@ local function enemy_target(px, py)
     return best
 end
 
+-- Hearts, currency, passive relics, and MP are part of the run economy.
+-- Ignore shops (the policy has no purchasing model), weapon swaps (which
+-- change range policy), and permanent villagers.
+local function pickup_target(px, py)
+    local best, bestd = nil, 65535
+    if EN == 0 then return nil end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        local kind = emu:read8(p + 17)
+        if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
+            and (kind <= 3 or kind == 6) then
+            local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+            -- Byte values above the visible bounds represent negative/off-map
+            -- drops (for example, an enemy dying against the north wall).
+            if ex <= 152 and ey <= 128 then
+                local d = math.abs(ex - px) + math.abs(ey - py)
+                if d < bestd then best, bestd = {x=ex, y=ey}, d end
+            end
+        end
+    end
+    return best
+end
+
 local function walkable(tile)
     return tile == 1 or tile == 3 or tile == 19 or tile == 20
         or tile == 23 or tile == 31 or tile == 33 or tile == 34
@@ -157,11 +180,14 @@ local frames, max_room, start_hp, min_hp = 0, 0, 0, 255
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
 local last_px, last_py, still_frames = 255, 255, 0
-local escape_timer, escape_dir, escape_flip = 0, KEY_UP, false
+local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
 local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
+    local mp = PL ~= 0 and emu:read8(PL + 4) or 0
+    local mp_max = PL ~= 0 and emu:read8(PL + 3) or 0
+    local active_charge = PL ~= 0 and emu:read8(PL + 18) or 0
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     local won = RS ~= 0 and emu:read8(RS + 10) or 0
     if frames == 0 then start_hp = hp end
@@ -192,6 +218,7 @@ while frames < LIMIT do
     -- authored route while firing instead of treating every screen as a
     -- mandatory clear; dungeon combat remains fully engaged.
     if world_mode == 1 then target = nil end
+    local loot = (not target and world_mode == 0) and pickup_target(px, py) or nil
     local keys
     if target then
         local dx, dy = target.x - px, target.y - py
@@ -208,15 +235,34 @@ while frames < LIMIT do
         elseif aim == KEY_DOWN then move = clockwise and KEY_LEFT or KEY_RIGHT
         elseif aim == KEY_LEFT then move = clockwise and KEY_UP or KEY_DOWN
         else move = clockwise and KEY_DOWN or KEY_UP end
-        -- Wolfkin's primary is true melee: close distance instead of kiting.
-        if CLASS == 0 then
+        -- Wolfkin's claw is true melee and Vespine's Stinger is a short lunge:
+        -- both must close distance instead of orbiting outside weapon reach.
+        if CLASS == 0 or CLASS == 4 then
             keys = KEY_A + aim
         else
             -- Separate firing and strafing frames. Holding perpendicular
             -- directions together aimed diagonal shots past cardinal targets.
             keys = (frames % 3 == 0) and move or (KEY_A + aim)
         end
-        if frames % 240 < 2 and keys % 2 == 1 then keys = keys + KEY_B end
+        -- Exercise the actual class kit. Signatures require a clean B edge
+        -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
+        -- agent never raised Sauran's shield or fired the ranged signatures.
+        if active_charge == 0 and mp >= 2 and frames % 180 == 0 then
+            keys = KEY_B + aim
+        -- Spirit Convergence requires A and B to become pressed together.
+        -- Release both on the preceding frame so the next chord has two edges.
+        elseif active_charge == 0 and mp == mp_max and frames % 600 == 599 then
+            keys = 0
+        elseif active_charge == 0 and mp == mp_max and frames % 600 == 0 then
+            keys = KEY_A + KEY_B + aim
+        end
+    elseif loot then
+        local dx, dy = loot.x - px, loot.y - py
+        if math.abs(dx) > math.abs(dy) then
+            keys = dx > 0 and KEY_RIGHT or KEY_LEFT
+        else
+            keys = dy > 0 and KEY_DOWN or KEY_UP
+        end
     else
         keys = door_step(px, py) + KEY_A
     end
@@ -225,13 +271,12 @@ while frames < LIMIT do
     -- sidestep after a short stationary interval instead of repeating a
     -- blocked input forever. This remains controller-only play.
     if escape_timer == 0 and still_frames > 20 then
-        local move = keys & 0xF0
-        escape_flip = not escape_flip
-        if move == KEY_LEFT or move == KEY_RIGHT then
-            escape_dir = escape_flip and KEY_UP or KEY_DOWN
-        else
-            escape_dir = escape_flip and KEY_LEFT or KEY_RIGHT
-        end
+        -- A wall pocket can block the intended direction AND both
+        -- perpendiculars. Cycle all four cardinals across recovery attempts
+        -- so the agent eventually backs out instead of oscillating forever.
+        local escape_dirs = {KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP}
+        escape_index = (escape_index % 4) + 1
+        escape_dir = escape_dirs[escape_index]
         escape_timer = 30
         still_frames = 0
     end
@@ -241,7 +286,9 @@ while frames < LIMIT do
     end
     if DEBUG and frames % 600 == 0 then
         debug_log(string.format("BOTDBG f=%d room=%d hp=%d pos=%d,%d target=%s keys=%02X",
-            frames, room, hp, px, py, target and "enemy" or "door", keys))
+            frames, room, hp, px, py,
+            target and string.format("enemy:%d,%d", target.x, target.y)
+                or (loot and string.format("loot:%d,%d", loot.x, loot.y) or "door"), keys))
     end
     tick(keys)
     frames = frames + 1

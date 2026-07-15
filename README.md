@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.4: The Old Vow](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.5: Fair Vessels](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -118,7 +118,13 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.3 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
+v0.17.5 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
+
+The agents use each champion's actual weapon range and B ability, collect
+finite hearts/MP/relics after combat, and report combat stalls separately from
+route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
+`QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
+used in balance runs.
 
 Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**. A GB Operator
 can upload the `.gbc` through **Data → Upload Homebrew** to a compatible

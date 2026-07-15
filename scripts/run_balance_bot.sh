@@ -7,6 +7,12 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="${QUINTRA_BALANCE_OUT:-$ROOT/tmp/balance-runs.csv}"
 FRAMES="${QUINTRA_BALANCE_FRAMES:-10800}"
 REPS="${QUINTRA_BALANCE_REPS:-3}"
+read -r -a CLASS_IDS <<< "${QUINTRA_BALANCE_CLASSES:-0 1 2 3 4}"
+if [ -n "${QUINTRA_BALANCE_RUNS:-}" ]; then
+  read -r -a RUN_IDS <<< "$QUINTRA_BALANCE_RUNS"
+else
+  mapfile -t RUN_IDS < <(seq 1 "$REPS")
+fi
 NOI="${ROM%.gbc}.noi"
 
 RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
@@ -18,8 +24,8 @@ mkdir -p "$(dirname "$OUT")"
 echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,hostiles,last_enemy,towns,world_hops,victory,ui_screen" > "$OUT"
 
 unset DISPLAY WAYLAND_DISPLAY
-for run in $(seq 1 "$REPS"); do
-  for class in 0 1 2 3 4; do
+for run in "${RUN_IDS[@]}"; do
+  for class in "${CLASS_IDS[@]}"; do
     echo "[balance] run $run/$REPS class $class"
     before=$(wc -l < "$OUT")
     log="/tmp/quintra-balance-$run-$class.log"
@@ -46,10 +52,10 @@ for run in $(seq 1 "$REPS"); do
 done
 pkill -9 -f 'Xvfb :' 2>/dev/null || true
 
-python3 - "$OUT" "$REPS" <<'PY'
+python3 - "$OUT" "${#RUN_IDS[@]}" "${#CLASS_IDS[@]}" <<'PY'
 import csv, statistics, sys
 rows = list(csv.DictReader(open(sys.argv[1])))
-expected = 5 * int(sys.argv[2])
+expected = int(sys.argv[2]) * int(sys.argv[3])
 print(f"[balance] {len(rows)}/{expected} agents reported")
 names = ["Wolfkin", "Sauran", "Corvin", "Picsean", "Vespine"]
 for cls, name in enumerate(names):
@@ -64,12 +70,14 @@ for cls, name in enumerate(names):
     wins = sum(int(r['victory']) != 0 for r in sample)
     endings = sum(int(r['victory']) != 0 and int(r['ui_screen']) == 12 for r in sample)
     boss_clears = sum(b > 0 for b in bosses)
-    stalled = sum(int(r['room_frames']) > 3600 and int(r['hostiles']) > 0 for r in sample)
+    combat_stalls = sum(int(r['room_frames']) > 3600 and int(r['hostiles']) > 0 for r in sample)
+    route_stalls = sum(int(r['room_frames']) > 3600 and int(r['hostiles']) == 0
+                       and int(r['victory']) == 0 for r in sample)
     print(f"[balance] {name:7s} n={len(sample)} room_med={statistics.median(rooms):g} "
           f"clear_med={statistics.median(clears):g} kill_med={statistics.median(kills):g} "
           f"boss_med={statistics.median(bosses):g} boss1={boss_clears}/{len(sample)} "
           f"town_med={statistics.median(towns):g} wins={wins} endings={endings} "
-          f"deaths={deaths} stalls={stalled}")
+          f"deaths={deaths} combat_stalls={combat_stalls} route_stalls={route_stalls}")
 if len(rows) != expected:
     raise SystemExit(1)
 PY

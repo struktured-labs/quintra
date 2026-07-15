@@ -32,7 +32,9 @@ pub const SAURAN: Class = Class {
     starter_weapon: ITEM_TAIL_SPIKE,
     signature_active: ITEM_STONESKIN,
     passive_perk:  PERK_HP_PLUS_2_SLOW_REGEN,
-    base_stats: BaseStats { hp_max: 10, mp_max: 3, atk: 2, def: 2, spd: 4 },
+    // Scaled Hide promises +2 HP over the four-heart baseline. Keep the
+    // authored stat aligned with player.c's pre-baked-passive contract.
+    base_stats: BaseStats { hp_max: 12, mp_max: 3, atk: 2, def: 2, spd: 4 },
 };
 
 pub const CORVIN: Class = Class {
@@ -56,7 +58,9 @@ pub const PICSEAN: Class = Class {
     starter_weapon: ITEM_BUBBLE_BOLT,
     signature_active: ITEM_TIDAL_WAVE,
     passive_perk:  PERK_MP_REGEN_SWIM,
-    base_stats: BaseStats { hp_max: 6, mp_max: 10, atk: 1, def: 1, spd: 5 },
+    // Slow piercing shots and the roster's lowest ATK require enough health
+    // to survive a positioning mistake; retain the mage identity via low DEF.
+    base_stats: BaseStats { hp_max: 8, mp_max: 10, atk: 1, def: 1, spd: 5 },
 };
 
 pub const VESPINE: Class = Class {

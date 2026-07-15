@@ -58,6 +58,18 @@ mod tests {
     }
 
     #[test]
+    fn sauran_scaled_hide_includes_promised_hp_bonus() {
+        // player.c defines the passive contract as pre-baked into a
+        // 12-half-heart base; keep authored content from silently drifting.
+        assert_eq!(classes::SAURAN.base_stats.hp_max, 12);
+    }
+
+    #[test]
+    fn picsean_has_four_heart_survival_floor() {
+        assert_eq!(classes::PICSEAN.base_stats.hp_max, 8);
+    }
+
+    #[test]
     fn stage_bgr555_encoding_matches_hardware_layout() {
         use quintra_content::Rgb5;
         // BGR555: red in bits 0-4, green 5-9, blue 10-14
