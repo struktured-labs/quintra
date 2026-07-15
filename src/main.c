@@ -24,6 +24,11 @@ const u8 quintra_n_rooms   = N_ROOM_TEMPLATES;
 void main(void) {
     DISPLAY_OFF;
 
+    // Quintra is CGB-only, so use the hardware's 8.38 MHz double-speed mode.
+    // Dense rooms otherwise finish only every second VBlank (~30 Hz), even
+    // though movement, cooldowns, telegraphs, and music are authored at 60 Hz.
+    cpu_fast();
+
     // Engine subsystems
     input_init();
     audio_init();

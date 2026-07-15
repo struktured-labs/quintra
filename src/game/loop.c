@@ -19,8 +19,10 @@ u16         loop_frame_counter  = 0;
 // True-60Hz tick source (see loop.h). ISRs must live in home and stay
 // tiny: one increment.
 volatile u8 g_vbl_ticks = 0;
+static volatile u8 g_vbl_epoch = 0;
 static void loop_vbl_isr(void) NONBANKED {
     g_vbl_ticks++;
+    g_vbl_epoch++;
 }
 
 // Bank references for the banked screen files (each defines a matching
@@ -72,6 +74,10 @@ void loop_run(void) {
     screen_id_t next;
 
     for (;;) {
+        // If this iteration itself crosses VBlank, do not then wait for a
+        // second one. The old unconditional wait quantized any tiny overrun
+        // straight from 60 to 30 Hz in modest bullet-heavy rooms.
+        u8 vbl_at_start = g_vbl_epoch;
         input_poll();
 
         screen_map(cur);
@@ -90,7 +96,7 @@ void loop_run(void) {
 
         audio_tick();
 
-        wait_vbl_done();
+        if (g_vbl_epoch == vbl_at_start) wait_vbl_done();
         loop_frame_counter++;
         // Mix a bit of the frame counter into the RNG state for entropy
         if ((loop_frame_counter & 0x3FFF) == 0) rng_next();

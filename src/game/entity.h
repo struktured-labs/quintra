@@ -27,7 +27,15 @@ enum {
 typedef struct {
     u8     type;
     u8     flags;
-    fix8_t x, y;            // 8.8 fixed-point world coords (pixels) — i32 each
+    // Signed pixel positions. One leading/trailing compatibility byte per
+    // axis preserves the historical 28-byte WRAM/debug layout (integer bytes
+    // remain at +3/+7) while hot gameplay uses cheap 16-bit arithmetic.
+    u8     x_frac;
+    ppos_t x;
+    u8     x_pad;
+    u8     y_frac;
+    ppos_t y;
+    u8     y_pad;
     i8     vx, vy;           // per-tick velocity delta (pixels, scaled)
     u8     sprite_tile;
     u8     palette;          // CGB OBJ palette index 0-7
@@ -39,7 +47,8 @@ typedef struct {
     u8     damage;
     u8     oam_slot;         // OAM index (1..32; 0 reserved for player)
 } entity_t;
-// entity_t is now 28 bytes (was 24) due to i32 fix8_t.
+// entity_t remains 28 bytes so emulator instrumentation stays compatible.
+typedef char entity_layout_must_remain_28_bytes[(sizeof(entity_t) == 28) ? 1 : -1];
 
 extern entity_t entities[MAX_ENTITIES];
 

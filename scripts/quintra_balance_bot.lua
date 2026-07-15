@@ -624,7 +624,14 @@ while frames < LIMIT do
     -- This is still controller-only: read instrumentation chooses an escape
     -- direction, then performs the same press/release/double-tap as a player.
     local threat = projectile_threat(px, py)
-    if dodge_phase == 0 and dodge_cooldown == 0 and threat then
+    -- Sauran's class answer is its projectile-breaking B shield. At full
+    -- simulation speed, repeatedly dashing around optional Riftwild shots
+    -- could pull the slower vessel off its authored route for an entire run.
+    -- Use the actual shield edge instead; its cooldown prevents spam.
+    if CLASS == 1 and threat and active_charge == 0 and mp >= 2 then
+        keys = KEY_B
+        dodge_phase, dodge_cooldown = 0, 30
+    elseif dodge_phase == 0 and dodge_cooldown == 0 and threat then
         local dx, dy = px - threat.x, py - threat.y
         if math.abs(dx) >= math.abs(dy) then
             dodge_dir = dx >= 0 and KEY_RIGHT or KEY_LEFT

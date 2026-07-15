@@ -50,8 +50,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->x           = FIX8((i16)player.x + 2);
     e->y           = FIX8((i16)player.y + 2);
     if (player.class_id == 0 && kind == PROJ_SPIKE) {
-        e->x = (fix8_t)(e->x + ((i32)dx << 10)); // 4px forward
-        e->y = (fix8_t)(e->y + ((i32)dy << 10));
+        e->x = (ppos_t)(e->x + (i16)dx * 4); // 4px forward
+        e->y = (ppos_t)(e->y + (i16)dy * 4);
     }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);
@@ -100,8 +100,8 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 
-    e->x = (fix8_t)(e->x + ((i32)e->vx << 8));   // integer px/tick, fix8 units
-    e->y = (fix8_t)(e->y + ((i32)e->vy << 8));
+    e->x = (ppos_t)(e->x + e->vx);
+    e->y = (ppos_t)(e->y + e->vy);
 
     // Player bullets shimmer between 2 frames; enemy bullets stay static
     if (e->flags & EF_PLAYER_PROJ) {
