@@ -70,7 +70,7 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 3, 1, 5), c(14, 8,22), c(22,16,30), c(30,28,31)],
         door:    [c( 2, 2, 3), c(10, 8, 6), c(19,15, 8), c(28,24,14)],
         boss:    [c(0,0,0), c(13,11,20), c( 3, 3, 6), c(28,22,31)],
-        boss_hp_bonus: 150, boss_dmg_bonus: 3, mb_variant: 2, room_archetype: 1,
+        boss_hp_bonus: 150, boss_dmg_bonus: 3, mb_variant: 2, room_archetype: 5,
         enemy_pool: &[(7, 30), (3, 25), (5, 25), (11, 20)],
     },
     // 6 — Golden Temple (warm gold/sand)

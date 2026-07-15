@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 ROOM_W, ROOM_H = 20, 18
-BGT_CRYSTAL, BGT_SPIKES = 22, 31
+BGT_PILLAR, BGT_CRYSTAL, BGT_SPIKES = 21, 22, 31
 
 
 def addr(name):
@@ -188,9 +188,35 @@ def main():
         assert len(mire_exits) == 4, (
             f"Toxic Mire disconnected seed={seed:#x} exits: {mire_exits}"
         )
+
+    keep_counts = []
+    for index, seed in enumerate((0x5A0D0000, 0x5A0D0001)):
+        keep = generated_room(
+            5, seed,
+            screenshot=ROOT / "tmp" / "shadow-keep.png" if index == 0 else None,
+        )
+        keep_pillars = sum(
+            tile(keep, x, y) == BGT_PILLAR
+            for x in range(4, 16) for y in (6, 11)
+        )
+        keep_counts.append(keep_pillars)
+        assert keep_pillars == 16, (
+            f"Shadow Keep portcullises missing seed={seed:#x} ({keep_pillars}/16)"
+        )
+        upper_gate = 5 if seed & 1 else 11
+        lower_gate = 11 if upper_gate == 5 else 5
+        assert all(tile(keep, x, 6) != BGT_PILLAR
+                   for x in range(upper_gate, upper_gate + 4))
+        assert all(tile(keep, x, 11) != BGT_PILLAR
+                   for x in range(lower_gate, lower_gate + 4))
+        keep_exits = reachable_exits(keep, (18, 9))
+        assert len(keep_exits) == 4, (
+            f"Shadow Keep disconnected seed={seed:#x} exits: {keep_exits}"
+        )
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
           f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
           f"Toxic pools={min(mire_counts)}-{max(mire_counts)}/36 across 4 mirrors, "
+          f"Shadow portcullises={min(keep_counts)}-{max(keep_counts)}/16, "
           "all exits reachable")
 
 

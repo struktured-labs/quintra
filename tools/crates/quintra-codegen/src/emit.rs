@@ -710,6 +710,7 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          #define STAGE_ARCH_GAUNTLET 2\n\
          #define STAGE_ARCH_VAULT 3\n\
          #define STAGE_ARCH_MIRE 4\n\
+         #define STAGE_ARCH_KEEP 5\n\
          extern const u8 stage_room_archetype[N_STAGES];\n\
          /* Weighted normal-room rosters per stage (ids + weights,\n\
             stage_pool_n entries each; weights sum <= 255) */\n\

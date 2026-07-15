@@ -151,6 +151,19 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
             // otherwise pillar-heavy shapes can erase most of the mire.
             room_tilemap[y][x] = BGT_SPIKES;
         }
+    } else if (archetype == STAGE_ARCH_KEEP) {
+        // Keep: two broken portcullis rows split the room into three courts.
+        // Their four-tile gates sit on opposite sides, creating a readable
+        // zig-zag through hard cover. Seed mirroring swaps the route without
+        // changing its length or sealing any of the four door approaches.
+        u8 upper_gate = (seed & 1) ? 5 : 11;
+        u8 lower_gate = (upper_gate == 5) ? 11 : 5;
+        for (i = 4; i <= 15; ++i) {
+            if (i < upper_gate || i > (u8)(upper_gate + 3))
+                room_tilemap[6][i] = BGT_PILLAR;
+            if (i < lower_gate || i > (u8)(lower_gate + 3))
+                room_tilemap[11][i] = BGT_PILLAR;
+        }
     }
 }
 
