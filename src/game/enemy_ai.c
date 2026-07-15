@@ -23,22 +23,22 @@
 // Map content enemy_id to OBJ tile slot in VRAM.
 static u8 sprite_for_enemy(u8 enemy_content_id) {
     switch (enemy_content_id) {
-        case 0: return SPR_ENEMY_CRAWLER;
-        case 1: return SPR_BOSS;
-        case 2: return SPR_ENEMY_HORNET;
-        case 3: return SPR_ENEMY_SKELETON;
-        case 4: return SPR_BRUISER_ORC;      // 16x16 heavy
-        case 5: return SPR_ENEMY_WISP;
-        case 6: return SPR_BRUISER_BOMBER;   // 16x16 heavy
-        case 7: return SPR_ENEMY_SHADE;
-        case 8: return SPR_BRUISER_WARLOCK;  // 16x16 heavy
-        case 9: return SPR_ENEMY_ROPE;       // snake (8x8)
-        case 10: return SPR_ENEMY_SENTRY;    // stationary turret
-        case 11: return SPR_ENEMY_FOLD_STAR;
-        case 12: return SPR_ENEMY_FLUTTERBAT;
-        case 13: return SPR_ENEMY_GLOAM_LEECH;
-        case 14: return SPR_ENEMY_CINDER_MAW;
-        case 15: return SPR_ENEMY_RIFT_OOZE;
+        case ENEMY_BLUE_CRAWLER: return SPR_ENEMY_CRAWLER;
+        case ENEMY_STONE_SENTINEL: return SPR_BOSS;
+        case ENEMY_HORNET: return SPR_ENEMY_HORNET;
+        case ENEMY_SKELETON: return SPR_ENEMY_SKELETON;
+        case ENEMY_ORC: return SPR_BRUISER_ORC;
+        case ENEMY_WISP: return SPR_ENEMY_WISP;
+        case ENEMY_BOMBER: return SPR_BRUISER_BOMBER;
+        case ENEMY_SHADE: return SPR_ENEMY_SHADE;
+        case ENEMY_WARLOCK: return SPR_BRUISER_WARLOCK;
+        case ENEMY_ROPE: return SPR_ENEMY_ROPE;
+        case ENEMY_SENTRY: return SPR_ENEMY_SENTRY;
+        case ENEMY_FOLD_STAR: return SPR_ENEMY_FOLD_STAR;
+        case ENEMY_FLUTTERBAT: return SPR_ENEMY_FLUTTERBAT;
+        case ENEMY_GLOAM_LEECH: return SPR_ENEMY_GLOAM_LEECH;
+        case ENEMY_CINDER_MAW: return SPR_ENEMY_CINDER_MAW;
+        case ENEMY_RIFT_OOZE: return SPR_ENEMY_RIFT_OOZE;
         default: return SPR_ENEMY_CRAWLER;
     }
 }
@@ -48,20 +48,20 @@ static u8 sprite_for_enemy(u8 enemy_content_id) {
 // sentinel granite(6), wisp bone-ghost(0).
 static u8 palette_for_enemy(u8 enemy_content_id) {
     switch (enemy_content_id) {
-        case 1:  return 0x06;
-        case 2:  return 0x05;
-        case 3:  return 0x00;
-        case 4:  return 0x07;
-        case 5:  return 0x00;
-        case 6:  return 0x04;   // Bomber: red shell, amber fuse (danger!)
-        case 7:  return 0x00;   // Shade: pale ghost-bone
-        case 8:  return 0x07;   // Warlock: green robes (0x06 = elite marker)
-        case 9:  return 0x07;   // Rope: snake green
-        case 10: return 0x03;   // Sentry: cold blue-steel
-        case 11: return 0x05;   // Folding Star: uncanny amber geometry
-        case 12: return 0x00;   // Flutterbat: cave-dark
-        case 13: return 0x04;   // Gloam Leech: hungry red
-        case 15: return 0x07;   // Rift Ooze: toxic green split-body
+        case ENEMY_STONE_SENTINEL: return 0x06;
+        case ENEMY_HORNET: return 0x05;
+        case ENEMY_SKELETON: return 0x00;
+        case ENEMY_ORC: return 0x07;
+        case ENEMY_WISP: return 0x00;
+        case ENEMY_BOMBER: return 0x04;
+        case ENEMY_SHADE: return 0x00;
+        case ENEMY_WARLOCK: return 0x07;
+        case ENEMY_ROPE: return 0x07;
+        case ENEMY_SENTRY: return 0x03;
+        case ENEMY_FOLD_STAR: return 0x05;
+        case ENEMY_FLUTTERBAT: return 0x00;
+        case ENEMY_GLOAM_LEECH: return 0x04;
+        case ENEMY_RIFT_OOZE: return 0x07;
         default: return 0x03;
     }
 }
@@ -89,8 +89,8 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         // Bruiser tier (orc 4, bomber 6, warlock 8) and the Sentinel
         // mini-boss (1) render 16x16 — give them a bigger hitbox so the
         // larger body is hittable and its contact reach matches its size.
-        if (enemy_content_id == 1 || enemy_content_id == 4
-            || enemy_content_id == 6 || enemy_content_id == 8) {
+        if (enemy_content_id == ENEMY_STONE_SENTINEL || enemy_content_id == ENEMY_ORC
+            || enemy_content_id == ENEMY_BOMBER || enemy_content_id == ENEMY_WARLOCK) {
             e->hitbox = (u8)0xDD;
         } else {
             e->hitbox = (6 << 4) | 6;
@@ -646,9 +646,9 @@ static void boss_tick(entity_t *e) {
 void enemy_update(entity_t *e, u8 idx) BANKED {
     const enemy_def_t *def = &enemies[e->ai_data[0]];
     idx;
-    if (e->ai_data[0] == 1) { boss_tick(e); return; }   // Sentinel
-    if (e->ai_data[0] == 12) { flutterbat_tick(e); return; }
-    if (e->ai_data[0] == 13) { leech_tick(e); return; }
+    if (e->ai_data[0] == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
+    if (e->ai_data[0] == ENEMY_FLUTTERBAT) { flutterbat_tick(e); return; }
+    if (e->ai_data[0] == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;

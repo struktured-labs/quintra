@@ -46,6 +46,8 @@ pub enum AiScriptId {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Enemy {
     pub id: EnemyId,
+    /// Stable C-facing identifier without the ENEMY_ prefix.
+    pub symbol: &'static str,
     pub name: &'static str,
     pub sprite_set: SpriteRef,
     pub palette: PaletteRef,
@@ -57,6 +59,16 @@ pub struct Enemy {
 
 impl Enemy {
     pub fn validate(&self) -> Result<(), String> {
+        if self.symbol.is_empty()
+            || self.symbol.bytes().any(|b| {
+                !(b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
+            })
+        {
+            return Err(format!(
+                "enemy {} symbol is not uppercase C identifier text",
+                self.id.raw()
+            ));
+        }
         if self.name.is_empty() || self.name.len() > 12 {
             return Err(format!("enemy {} name length out of range", self.id.raw()));
         }

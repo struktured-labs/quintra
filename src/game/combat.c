@@ -59,7 +59,7 @@ u8 combat_resolve(void) BANKED {
             // Folding Star: expanded geometry is an invulnerable projection.
             // Shots still burst on contact, teaching the player to wait for
             // the bright contracted core rather than passing through it.
-            if (eid == 11 && entities[j].state != 0) {
+            if (eid == ENEMY_FOLD_STAR && entities[j].state != 0) {
                 sfx_play(SFX_HIT);
                 fx_spawn(SPR_FX_IMPACT, 0,
                     FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 5);
@@ -72,7 +72,7 @@ u8 combat_resolve(void) BANKED {
             // Doing so gave Sauran double damage against all nine colossi.
             // Bosses instead resonate with every champion element; ordinary
             // enemies and mini-bosses retain their authored matchups.
-            if (eid == 1 && entities[j].ai_data[3]) weakness = 0x1F;
+            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) weakness = 0x1F;
             poise    = (eid < N_ENEMIES) ? enemies[eid].stats.poise    : 0;
 
             // Per-hit damage: base + elemental x2 (weapon element in
@@ -141,7 +141,7 @@ u8 combat_resolve(void) BANKED {
                         // (giant flag ai_data[3]=1) and the room-3 mini-boss.
                         // Only the GIANT advances the stage — a mini-boss kill
                         // must not skip the stage boss (bug: it used to).
-                        if (eid == 1 && entities[j].ai_data[3]) {
+                        if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) {
                             i16 bx = FIX8_TO_INT(entities[j].x) + 12;
                             i16 by = FIX8_TO_INT(entities[j].y) + 12;
                             g_hitstop = 8;   // boss kill: big freeze
@@ -166,7 +166,7 @@ u8 combat_resolve(void) BANKED {
                             // run's guaranteed power curve (indices 10..19)
                             pickup_spawn_item((u8)(10 + rng_range(10)),
                                 entities[j].x + FIX8(4), entities[j].y + FIX8(4));
-                        } else if (eid == 6) {
+                        } else if (eid == ENEMY_BOMBER) {
                             // Bomber: death detonation — a 4-way revenge
                             // burst. Kill it from a diagonal, or eat sparks.
                             i16 dx2 = FIX8_TO_INT(entities[j].x);
@@ -175,7 +175,7 @@ u8 combat_resolve(void) BANKED {
                             projectile_spawn_enemy(dx2, dy2, 0,  2, entities[j].damage);
                             projectile_spawn_enemy(dx2, dy2, -2, 0, entities[j].damage);
                             projectile_spawn_enemy(dx2, dy2,  2, 0, entities[j].damage);
-                        } else if (eid == 1) {
+                        } else if (eid == ENEMY_STONE_SENTINEL) {
                             // Mini-boss down: solid reward, no stage advance.
                             // Always drops a weapon orb you don't hold —
                             // the run's main way to change your A-weapon.
@@ -203,7 +203,7 @@ u8 combat_resolve(void) BANKED {
                         // Free its slot first so a full entity table still
                         // guarantees at least one fragment, then seed two
                         // fragile crawlers on opposite sides of the corpse.
-                        u8 split = (eid == 15);
+                        u8 split = (eid == ENEMY_RIFT_OOZE);
                         u8 sx = (u8)(FIX8_TO_INT(entities[j].x) >> 3);
                         u8 sy = (u8)(FIX8_TO_INT(entities[j].y) >> 3);
                         entity_kill(j);
@@ -215,8 +215,8 @@ u8 combat_resolve(void) BANKED {
                                 entity_kill(i);
                                 shot_spent_for_split = 1;
                             }
-                            u8 a = enemy_spawn(0, sx, sy);
-                            u8 b = enemy_spawn(0, sx, sy);
+                            u8 a = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
+                            u8 b = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
                             if (a != 0xFF) {
                                 entities[a].hp = 2;
                                 enemy_try_step(&entities[a], -1, 0);
@@ -274,7 +274,7 @@ u8 combat_resolve(void) BANKED {
             if (!hostile) continue;
             // An attached Gloam Leech uses its own timed drain; ordinary body
             // collision would double-charge damage every iframe cycle.
-            if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == 13
+            if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == ENEMY_GLOAM_LEECH
                 && entities[i].ai_data[6]) continue;
             if (aabb_overlap_player(&entities[i])) {
                 u8 was_projectile = (entities[i].type == ENT_PROJECTILE);

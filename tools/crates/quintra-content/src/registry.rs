@@ -44,6 +44,22 @@ impl Registry {
         for r in &self.room_templates { if let Err(e) = r.validate()        { errs.push(e); } }
         for s in &self.stages         { if let Err(e) = s.validate()        { errs.push(e); } }
 
+        // Enemy IDs and generated C symbols are both runtime identities.
+        // Reject aliases here, before codegen can emit an ambiguous table or
+        // duplicate #define that silently wires behavior to the wrong entry.
+        {
+            let mut ids = std::collections::HashSet::new();
+            let mut symbols = std::collections::HashSet::new();
+            for enemy in &self.enemies {
+                if !ids.insert(enemy.id) {
+                    errs.push(format!("duplicate enemy id {}", enemy.id.raw()));
+                }
+                if !symbols.insert(enemy.symbol) {
+                    errs.push(format!("duplicate enemy symbol {}", enemy.symbol));
+                }
+            }
+        }
+
         // Stage structure: the run is exactly N_STAGES themed stages, in order.
         if !self.stages.is_empty() {
             if self.stages.len() != N_STAGES {

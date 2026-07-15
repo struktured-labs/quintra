@@ -995,7 +995,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             if (entities[i].type != ENT_ENEMY)    continue;
             alive++;
             if (corvin_i == 0xFF) corvin_i = i;
-            if (!found && entities[i].ai_data[0] == 1) {
+            if (!found && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL) {
                 // ai_data[6] = remembered max HP (set on first boss tick);
                 // fall back to current hp for the very first frame.
                 u8 max = entities[i].ai_data[6];

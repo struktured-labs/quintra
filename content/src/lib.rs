@@ -58,6 +58,14 @@ mod tests {
     }
 
     #[test]
+    fn enemy_machine_symbols_are_unique_and_validated() {
+        let mut r = registry();
+        r.enemies[1].symbol = r.enemies[0].symbol;
+        let errors = r.validate().expect_err("duplicate enemy symbol was accepted");
+        assert!(errors.iter().any(|e| e.contains("duplicate enemy symbol")));
+    }
+
+    #[test]
     fn sauran_scaled_hide_includes_promised_hp_bonus() {
         // player.c defines the passive contract as pre-baked into a
         // 12-half-heart base; keep authored content from silently drifting.

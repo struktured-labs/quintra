@@ -7,6 +7,7 @@
 #include "game/projectile.h"
 #include "game/enemy_ai.h"
 #include "game/pickup.h"
+#include "content.h"
 
 entity_t entities[MAX_ENTITIES];
 
@@ -136,8 +137,8 @@ void fx_update(entity_t *e, u8 idx) {
 static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];
     if (e->type != ENT_ENEMY) return 0;
-    if (eid == 1) return 1;                     // Sentinel mini-boss
-    return (eid == 4 || eid == 6 || eid == 8);  // orc / bomber / warlock
+    if (eid == ENEMY_STONE_SENTINEL) return 1;
+    return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK);
 }
 
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a
@@ -159,7 +160,7 @@ void entity_draw_all(void) {
         flash = (e->type == ENT_ENEMY && e->ai_data[7]) ? 1 : 0;
 
         // 32x32 Colossus — 16 tiles, row-major 4x4
-        if (e->type == ENT_ENEMY && e->ai_data[0] == 1 && e->ai_data[3]) {
+        if (e->type == ENT_ENEMY && e->ai_data[0] == ENEMY_STONE_SENTINEL && e->ai_data[3]) {
             u8 r, c, tile = e->sprite_tile;
             if (flash) e->ai_data[7]--;
             if (oam + 16 > 40) continue;

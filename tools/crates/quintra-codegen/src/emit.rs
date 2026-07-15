@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use quintra_content::{
     AiScriptId, BaseStats, Class, DoorMask, Effect, Enemy, EnemyStats, FormTheme,
     Item, ItemKind, ProjectileKind, Rarity, Registry, RoomKind, RoomSize, RoomTemplate,
@@ -360,7 +360,16 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
          } enemy_def_t;\n\
          \n",
     );
-    h.push_str(&format!("#define N_ENEMIES {}\n", reg.n_enemies()));
+    let mut emitted_names = std::collections::HashSet::new();
+    h.push_str("/* Stable content IDs: gameplay must not duplicate raw roster numbers. */\n");
+    for enemy in &reg.enemies {
+        let name = format!("ENEMY_{}", enemy.symbol);
+        if !emitted_names.insert(name.clone()) {
+            bail!("enemy names collide as generated C constant {name}");
+        }
+        h.push_str(&format!("#define {name:<24} {}\n", enemy.id.raw()));
+    }
+    h.push_str(&format!("\n#define N_ENEMIES {}\n", reg.n_enemies()));
     h.push_str("extern const enemy_def_t enemies[];\n#endif\n");
     write_if_changed(out.join("enemies.h"), h)?;
 

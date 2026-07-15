@@ -6,6 +6,7 @@ use crate::ids::*;
 
 pub const BLUE_CRAWLER: Enemy = Enemy {
     id:         ENEMY_BLUE_CRAWLER,
+    symbol:     "BLUE_CRAWLER",
     name:       "B. Crawler",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -24,6 +25,7 @@ pub const BLUE_CRAWLER: Enemy = Enemy {
 
 pub const STONE_SENTINEL: Enemy = Enemy {
     id:         ENEMY_STONE_SENTINEL,
+    symbol:     "STONE_SENTINEL",
     name:       "S.Sentinel",
     sprite_set: SPRITE_SENTINEL,
     palette:    OBJ_PAL_SENTINEL,
@@ -42,6 +44,7 @@ pub const STONE_SENTINEL: Enemy = Enemy {
 
 pub const HORNET: Enemy = Enemy {
     id:         ENEMY_HORNET,
+    symbol:     "HORNET",
     name:       "Hornet",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -53,6 +56,7 @@ pub const HORNET: Enemy = Enemy {
 
 pub const SKELETON: Enemy = Enemy {
     id:         ENEMY_SKELETON,
+    symbol:     "SKELETON",
     name:       "Skeleton",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -64,6 +68,7 @@ pub const SKELETON: Enemy = Enemy {
 
 pub const ORC: Enemy = Enemy {
     id:         ENEMY_ORC,
+    symbol:     "ORC",
     name:       "Orc",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -75,6 +80,7 @@ pub const ORC: Enemy = Enemy {
 
 pub const WISP: Enemy = Enemy {
     id:         ENEMY_WISP,
+    symbol:     "WISP",
     name:       "Wisp",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -90,6 +96,7 @@ pub const WISP: Enemy = Enemy {
 
 pub const BOMBER: Enemy = Enemy {
     id:         ENEMY_BOMBER,
+    symbol:     "BOMBER",
     name:       "Bomber",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -103,6 +110,7 @@ pub const BOMBER: Enemy = Enemy {
 
 pub const SHADE: Enemy = Enemy {
     id:         ENEMY_SHADE,
+    symbol:     "SHADE",
     name:       "Shade",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -116,6 +124,7 @@ pub const SHADE: Enemy = Enemy {
 
 pub const WARLOCK: Enemy = Enemy {
     id:         ENEMY_WARLOCK,
+    symbol:     "WARLOCK",
     name:       "Warlock",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -133,6 +142,7 @@ pub const WARLOCK: Enemy = Enemy {
 
 pub const ROPE: Enemy = Enemy {
     id:         ENEMY_ROPE,
+    symbol:     "ROPE",
     name:       "Rope",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -147,6 +157,7 @@ pub const ROPE: Enemy = Enemy {
 
 pub const SENTRY: Enemy = Enemy {
     id:         ENEMY_SENTRY,
+    symbol:     "SENTRY",
     name:       "Sentry",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -161,6 +172,7 @@ pub const SENTRY: Enemy = Enemy {
 
 pub const FOLDING_STAR: Enemy = Enemy {
     id:         ENEMY_FOLDING_STAR,
+    symbol:     "FOLD_STAR",
     name:       "Fold Star",
     sprite_set: SPRITE_CRAWLER,
     palette:    OBJ_PAL_CRAWLER,
@@ -177,7 +189,7 @@ pub const FOLDING_STAR: Enemy = Enemy {
 };
 
 pub const FLUTTERBAT: Enemy = Enemy {
-    id: ENEMY_FLUTTERBAT, name: "Flutterbat", sprite_set: SPRITE_CRAWLER,
+    id: ENEMY_FLUTTERBAT, symbol: "FLUTTERBAT", name: "Flutterbat", sprite_set: SPRITE_CRAWLER,
     palette: OBJ_PAL_CRAWLER,
     stats: EnemyStats { hp: 2, damage: 1, speed: 80, score: 18, weakness: 0x04, poise: 0 },
     ai_script: AiScriptId::Walker, drop_table: DROP_SMALL_COIN,
@@ -185,7 +197,7 @@ pub const FLUTTERBAT: Enemy = Enemy {
 };
 
 pub const GLOAM_LEECH: Enemy = Enemy {
-    id: ENEMY_GLOAM_LEECH, name: "GloomLeech", sprite_set: SPRITE_CRAWLER,
+    id: ENEMY_GLOAM_LEECH, symbol: "GLOAM_LEECH", name: "GloomLeech", sprite_set: SPRITE_CRAWLER,
     palette: OBJ_PAL_CRAWLER,
     stats: EnemyStats { hp: 4, damage: 1, speed: 72, score: 35, weakness: 0x02, poise: 0 },
     ai_script: AiScriptId::Chaser, drop_table: DROP_SMALL_COIN,
@@ -193,7 +205,7 @@ pub const GLOAM_LEECH: Enemy = Enemy {
 };
 
 pub const CINDER_MAW: Enemy = Enemy {
-    id: ENEMY_CINDER_MAW, name: "CinderMaw", sprite_set: SPRITE_CRAWLER,
+    id: ENEMY_CINDER_MAW, symbol: "CINDER_MAW", name: "CinderMaw", sprite_set: SPRITE_CRAWLER,
     palette: OBJ_PAL_CRAWLER,
     // Stage-2 specialist: a durable, slow caster whose three-way volleys
     // turn Ember Depths into a routing problem without adding contact speed.
@@ -208,7 +220,7 @@ pub const CINDER_MAW: Enemy = Enemy {
 };
 
 pub const RIFT_OOZE: Enemy = Enemy {
-    id: ENEMY_RIFT_OOZE, name: "Rift Ooze", sprite_set: SPRITE_CRAWLER,
+    id: ENEMY_RIFT_OOZE, symbol: "RIFT_OOZE", name: "Rift Ooze", sprite_set: SPRITE_CRAWLER,
     palette: OBJ_PAL_CRAWLER,
     // A modest body with a dangerous second beat: combat.c cracks it into
     // two 2-HP crawler fragments on death. Its low contact damage keeps the

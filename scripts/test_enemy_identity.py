@@ -9,13 +9,14 @@ ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 AI_SOURCE = (ROOT / "src/game/enemy_ai.c").read_text()
+ENEMY_HEADER = (ROOT / "src/generated/enemies.h").read_text()
 
 SPECIALISTS = {
-    11: (72, 37, "SPR_ENEMY_FOLD_STAR", "fold-star"),
-    12: (73, 21, "SPR_ENEMY_FLUTTERBAT", "flutterbat"),
-    13: (74, 34, "SPR_ENEMY_GLOAM_LEECH", "gloam-leech"),
-    14: (75, 20, "SPR_ENEMY_CINDER_MAW", "cinder-maw"),
-    15: (76, 20, "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
+    11: (72, 37, "FOLD_STAR", "SPR_ENEMY_FOLD_STAR", "fold-star"),
+    12: (73, 21, "FLUTTERBAT", "SPR_ENEMY_FLUTTERBAT", "flutterbat"),
+    13: (74, 34, "GLOAM_LEECH", "SPR_ENEMY_GLOAM_LEECH", "gloam-leech"),
+    14: (75, 20, "CINDER_MAW", "SPR_ENEMY_CINDER_MAW", "cinder-maw"),
+    15: (76, 20, "RIFT_OOZE", "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
 }
 
 
@@ -40,8 +41,10 @@ def addr(name):
 def main():
     # Guard the content-ID dispatch itself. This catches accidental fallback to
     # a legacy monster even before the cartridge is built.
-    for enemy_id, (_, _, symbol, name) in SPECIALISTS.items():
-        pattern = rf"case\s+{enemy_id}\s*:\s*return\s+{symbol}\s*;"
+    for enemy_id, (_, _, enemy_symbol, sprite_symbol, name) in SPECIALISTS.items():
+        id_pattern = rf"#define\s+ENEMY_{enemy_symbol}\s+{enemy_id}\b"
+        assert re.search(id_pattern, ENEMY_HEADER), f"{name} generated ID drifted"
+        pattern = rf"case\s+ENEMY_{enemy_symbol}\s*:\s*return\s+{sprite_symbol}\s*;"
         assert re.search(pattern, AI_SOURCE), f"{name} ID mapping drifted"
 
     # Boot the real cartridge so room_enter loads OBJ VRAM through the same
@@ -57,7 +60,7 @@ def main():
     for _ in range(240):
         pb.tick()
     tiles = {}
-    for enemy_id, (slot, legacy_slot, _, name) in SPECIALISTS.items():
+    for enemy_id, (slot, legacy_slot, _, _, name) in SPECIALISTS.items():
         tile = bytes(pb.memory[0x8000 + slot * 16 + i] for i in range(16))
         legacy = bytes(pb.memory[0x8000 + legacy_slot * 16 + i] for i in range(16))
         assert any(tile), f"{name} OBJ tile is blank in runtime VRAM"

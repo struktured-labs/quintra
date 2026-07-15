@@ -671,7 +671,7 @@ void procgen_generate_current_room(void) BANKED {
             u8 pow  = (stage < 9) ? stage : 8;
             u8 skin = (u8)(stage % 9);
             {
-                u8 idx = enemy_spawn(1, (ROOM_W / 2) - 2, (ROOM_H / 2) - 2);
+                u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 2, (ROOM_H / 2) - 2);
                 if (idx != 0xFF) {
                     entities[idx].sprite_tile = boss_sprite_for_stage(skin);
                     entities[idx].palette     = boss_palette_for_stage(skin);
@@ -694,7 +694,7 @@ void procgen_generate_current_room(void) BANKED {
             // a normal room, a step below the stage boss.
             u8 stage = run_state.bosses_beaten;
             {
-                u8 idx = enemy_spawn(1, (ROOM_W / 2) - 1, 3);
+                u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
                     // Silhouette comes from the generated stage table —
                     // ONE source shared with tiles_load_miniboss, so art and
@@ -763,7 +763,7 @@ void procgen_generate_current_room(void) BANKED {
                     // Big-tier enemies (orc 4, bomber 6, warlock 8) are 16x16;
                     // their 2x2 footprint must be clear or the body spawns
                     // half-buried in a pillar/wall. Skip the spawn if blocked.
-                    if ((eid == 4 || eid == 6 || eid == 8)
+                    if ((eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK)
                         && (tx + 1 >= ROOM_W - 1 || ty + 1 >= ROOM_H - 1
                             || !room_tile_walkable(room_tilemap[ty][tx + 1])
                             || !room_tile_walkable(room_tilemap[ty + 1][tx])
