@@ -155,12 +155,11 @@ void tiles_load_miniboss(u8 stage) BANKED {
 void tiles_load_boss_big(u8 stage) BANKED {
     // Load the current stage's distinct 32x32 boss into the fixed 16-tile
     // slot range (SPR_BOSS_BIG). Only the active stage's art is resident.
-    static const u8 *const bosses[9] = {
-        sprite_boss_stage0, sprite_boss_stage1, sprite_boss_stage2,
-        sprite_boss_stage3, sprite_boss_stage4, sprite_boss_stage5,
-        sprite_boss_stage6, sprite_boss_stage7, sprite_boss_stage8,
-    };
-    set_sprite_data(SPR_BOSS_BIG, 16, bosses[stage < 9 ? stage : 8]);
+    stage = (stage < 9) ? stage : 8;
+    // Cast before shifting: SDCC otherwise keeps the u8 arithmetic and a
+    // 256-byte row stride wraps to zero, selecting stage 0 every time.
+    set_sprite_data(SPR_BOSS_BIG, 16,
+        sprite_boss_stages + (((u16)stage) << 8));
 }
 
 void tiles_load_fx_sprites(void) BANKED {

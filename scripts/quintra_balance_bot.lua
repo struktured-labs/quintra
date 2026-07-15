@@ -70,9 +70,29 @@ local function leech_attached()
     return false
 end
 
+local function projectile_threat(px, py)
+    local best, bestd = nil, 33
+    if EN == 0 then return nil end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        local flags = emu:read8(p + 1)
+        if emu:read8(p) == 1 and flags % 2 == 1
+            and math.floor(flags / 16) % 2 == 0 then
+            local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+            local vx, vy = emu:read8(p + 10), emu:read8(p + 11)
+            if vx >= 128 then vx = vx - 256 end
+            if vy >= 128 then vy = vy - 256 end
+            local d = math.abs(ex - px) + math.abs(ey - py)
+            local approaching = (px - ex) * vx + (py - ey) * vy > 0
+            if approaching and d < bestd then best, bestd = {x=ex, y=ey}, d end
+        end
+    end
+    return best
+end
+
 -- Hearts, currency, passive relics, and MP are part of the run economy.
--- Ignore shops (the policy has no purchasing model), weapon swaps (which
--- change range policy), and permanent villagers.
+-- Ignore shops (purchases consume procgen RNG and need a separate comparable
+-- policy), weapon swaps (which change range policy), and permanent NPCs.
 local function pickup_target(px, py)
     local best, bestd = nil, 65535
     if EN == 0 then return nil end
@@ -247,9 +267,22 @@ local function door_step(px, py)
     -- clips the adjacent wall. Center on the runtime's known-safe top-left
     -- coordinate before taking the final boundary step.
     if (target_dir == 0 or target_dir == 2) and math.abs(ty - sy) <= 1 then
+        -- If we crossed into the doorway lip off-center, the shoulders can
+        -- block both horizontal corrections. Back into the room first, then
+        -- center and make a clean second approach.
+        if target_dir == 0 and (px < 70 or px > 74) and py < 4 then
+            return KEY_DOWN
+        elseif target_dir == 2 and (px < 70 or px > 74) and py > 116 then
+            return KEY_UP
+        end
         if px < 70 then return KEY_RIGHT end
         if px > 74 then return KEY_LEFT end
     elseif (target_dir == 1 or target_dir == 3) and math.abs(tx - sx) <= 1 then
+        if target_dir == 3 and (py < 56 or py > 64) and px < 4 then
+            return KEY_RIGHT
+        elseif target_dir == 1 and (py < 56 or py > 64) and px > 140 then
+            return KEY_LEFT
+        end
         if py < 56 then return KEY_DOWN end
         if py > 64 then return KEY_UP end
     end
@@ -295,11 +328,20 @@ local debug_shot_room = -1
 local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer, flank_dir = 0, 0, KEY_LEFT
 local wall_follow_dir, wall_follow_min = 0, 0
+local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
+local last_active_charge = 0
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local mp = PL ~= 0 and emu:read8(PL + 4) or 0
     local mp_max = PL ~= 0 and emu:read8(PL + 3) or 0
-    local active_charge = PL ~= 0 and emu:read8(PL + 18) or 0
+    -- player_state_t: +18 active_item, +19 active_charge. Reading +18 made
+    -- every class look permanently on cooldown and silently disabled all B
+    -- abilities and Spirit Convergence in automated play.
+    local active_charge = PL ~= 0 and emu:read8(PL + 19) or 0
+    if DEBUG and active_charge > 0 and last_active_charge == 0 then
+        debug_log(string.format("BOTABILITY f=%d class=%d charge=%d", frames, CLASS, active_charge))
+    end
+    last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     local won = RS ~= 0 and emu:read8(RS + 10) or 0
     if frames == 0 then last_hp = hp end
@@ -326,6 +368,7 @@ while frames < LIMIT do
 
     -- player.x/y are signed 16-bit pixels at offsets 9 and 11.
     local px, py = emu:read8(PL + 9), emu:read8(PL + 11)
+    if dodge_cooldown > 0 then dodge_cooldown = dodge_cooldown - 1 end
     if px == last_px and py == last_py then still_frames = still_frames + 1
     else still_frames = 0 end
     last_px, last_py = px, py
@@ -394,14 +437,15 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim)
             end
         else
-            -- Separate firing and strafing frames. Holding perpendicular
+            -- Separate firing and movement frames. Holding perpendicular
             -- directions together aimed diagonal shots past cardinal targets.
             keys = (frames % 3 == 0) and move or (KEY_A + aim)
         end
         -- Exercise the actual class kit. Signatures require a clean B edge
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
         -- agent never raised Sauran's shield or fired the ranged signatures.
-        if active_charge == 0 and mp >= 2 and frames % 180 == 0 then
+        local signature_period = (CLASS == 3) and 90 or 180
+        if active_charge == 0 and mp >= 2 and frames % signature_period == 0 then
             keys = KEY_B + aim
         -- Spirit Convergence requires A and B to become pressed together.
         -- Release both on the preceding frame so the next chord has two edges.
@@ -478,6 +522,31 @@ while frames < LIMIT do
         keys = escape_dir + KEY_A
         escape_timer = escape_timer - 1
     end
+    -- Proactively use the public dodge-dash against nearby hostile bullets.
+    -- This is still controller-only: read instrumentation chooses an escape
+    -- direction, then performs the same press/release/double-tap as a player.
+    local threat = projectile_threat(px, py)
+    if dodge_phase == 0 and dodge_cooldown == 0 and threat then
+        local dx, dy = px - threat.x, py - threat.y
+        if math.abs(dx) >= math.abs(dy) then
+            dodge_dir = dx >= 0 and KEY_RIGHT or KEY_LEFT
+            if not can_step(px, py, dodge_dir) then
+                dodge_dir = can_step(px, py, KEY_UP) and KEY_UP or KEY_DOWN
+            end
+        else
+            dodge_dir = dy >= 0 and KEY_DOWN or KEY_UP
+            if not can_step(px, py, dodge_dir) then
+                dodge_dir = can_step(px, py, KEY_LEFT) and KEY_LEFT or KEY_RIGHT
+            end
+        end
+        dodge_phase, dodge_count = 1, dodge_count + 1
+    end
+    if dodge_phase == 1 then keys, dodge_phase = dodge_dir, 2
+    elseif dodge_phase == 2 then keys, dodge_phase = 0, 3
+    elseif dodge_phase == 3 then keys, dodge_phase = dodge_dir, 4
+    elseif dodge_phase == 4 then
+        keys, dodge_phase, dodge_cooldown = 0, 0, 60
+    end
     -- Gloom Leeches are intentionally shaken loose by a double-tap dash.
     -- Exercise that public controller mechanic instead of letting a latched
     -- enemy bias melee samples when its body overlaps nearby terrain.
@@ -493,8 +562,8 @@ while frames < LIMIT do
         end
     end
     if DEBUG and frames % 600 == 0 then
-        debug_log(string.format("BOTDBG f=%d room=%d hp=%d pos=%d,%d target=%s keys=%02X",
-            frames, room, hp, px, py,
+        debug_log(string.format("BOTDBG f=%d room=%d hp=%d mp=%d charge=%d pos=%d,%d target=%s keys=%02X",
+            frames, room, hp, mp, active_charge, px, py,
             target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
                     target.kind, target.x, target.y, target.hp, target.state,
                     target.clock, target.state6)
@@ -545,11 +614,11 @@ if RS ~= 0 then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, hostiles, last_enemy, towns_seen, world_hops,
-        won, ui_screen))
+        won, ui_screen, dodge_count))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

@@ -46,11 +46,9 @@ pub const CORVIN: Class = Class {
     starter_weapon: ITEM_FEATHER_SHURI,
     signature_active: ITEM_MURDER,
     passive_perk:  PERK_SEE_HP_REVEAL,
-    // Four hearts still produced two deaths in three full-run controller-only
-    // endurance seeds after route policy was corrected. Five hearts preserves
-    // low DEF and the ranged glass-cannon identity while surviving one more
-    // late-game positioning error.
-    base_stats: BaseStats { hp_max: 10, mp_max: 8, atk: 2, def: 1, spd: 5 },
+    // Featherbarb's returning arc demands sustained positioning time. Six
+    // hearts compensate for low DEF without raising its strong ranged damage.
+    base_stats: BaseStats { hp_max: 12, mp_max: 8, atk: 2, def: 1, spd: 5 },
 };
 
 pub const PICSEAN: Class = Class {
@@ -62,9 +60,8 @@ pub const PICSEAN: Class = Class {
     starter_weapon: ITEM_BUBBLE_BOLT,
     signature_active: ITEM_TIDAL_WAVE,
     passive_perk:  PERK_MP_REGEN_SWIM,
-    // Slow piercing shots and the roster's lowest ATK require enough health
-    // to survive positioning mistakes. Five hearts answers a 0/3 endurance
-    // survival result while retaining the mage identity through low DEF.
+    // Slow piercing shots require spacing; five hearts retains a survivable
+    // mage floor while low ATK/DEF preserve the fragile ranged identity.
     base_stats: BaseStats { hp_max: 10, mp_max: 10, atk: 1, def: 1, spd: 5 },
 };
 
@@ -77,7 +74,10 @@ pub const VESPINE: Class = Class {
     starter_weapon: ITEM_STINGER,
     signature_active: ITEM_SWARM,
     passive_perk:  PERK_POISON_SYNERGY,
-    base_stats: BaseStats { hp_max: 7, mp_max: 5, atk: 3, def: 1, spd: 7 },
+    // The close-range Stinger exposes Vespine to contact damage despite her
+    // speed. Four-and-a-half hearts keeps her the lightest melee vessel while
+    // preventing a single late-room mistake from erasing an otherwise sound run.
+    base_stats: BaseStats { hp_max: 9, mp_max: 5, atk: 3, def: 1, spd: 7 },
 };
 
 pub fn register(r: &mut Registry) {

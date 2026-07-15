@@ -238,14 +238,15 @@ fn boss_hydra() -> Grid {
 }
 
 /// Stage 8 — Void Lord (final): the Colossus + spiked crown.
-/// NOTE: the crown loop is dead code as originally authored (x steps
-/// 4,7,10,... none satisfy x % 6 == 3) — kept verbatim for fidelity.
 fn boss_voidlord() -> Grid {
     let mut g = make_boss_big();
-    for x in (4..28usize).step_by(3) {
-        for y in 0..4usize {
-            if (x as i32 % 6 - 3).abs() < 1 {
-                g[y][x] = 1;
+    // Four widening crown spikes. The old modulo condition never matched
+    // its step sequence, leaving the final boss byte-identical to stage 0.
+    for (cx, height) in [(6usize, 4usize), (12, 6), (19, 6), (25, 4)] {
+        for y in 0..height {
+            let half = y / 2;
+            for x in (cx - half)..=(cx + half) {
+                g[y][x] = if y == 0 { 3 } else { 1 };
             }
         }
     }

@@ -102,12 +102,16 @@ pub fn generate() -> String {
             &format!("sprite_bruiser_{name}"), &tiles));
     }
 
-    // Nine distinct 32x32 stage bosses (stage 0 is the Colossus)
-    for (i, grid) in bosses::boss_stages().iter().enumerate() {
-        let tiles = sprite_to_tiles(grid, 32, 32);
-        let _ = writeln!(o, "{}", emit_metasprite_c_array(
-            &format!("sprite_boss_stage{i}"), &tiles));
+    // One contiguous atlas avoids SDCC bank-local pointer relocation tables,
+    // which collapsed every indexed boss pointer to stage 0 on cartridge.
+    let mut boss_bytes = Vec::with_capacity(9 * 256);
+    for grid in bosses::boss_stages() {
+        let tiles = sprite_to_tiles(&grid, 32, 32);
+        boss_bytes.extend(tiles.iter().flat_map(|t| tile_2bpp_bytes(t)));
     }
+    let body = boss_bytes.iter().map(|b| format!("0x{b:02X}"))
+        .collect::<Vec<_>>().join(", ");
+    let _ = writeln!(o, "const u8 sprite_boss_stages[2304] = {{ {body} }};");
 
     o
 }
@@ -161,6 +165,17 @@ mod tests {
             assert_eq!(g.len(), 32, "boss {i} height");
             assert!(g.iter().all(|r| r.len() == 32), "boss {i} width");
         }
+    }
+
+    #[test]
+    fn void_lord_has_a_real_crown_and_is_not_the_first_boss() {
+        let stages = bosses::boss_stages();
+        assert_ne!(stages[8], stages[0],
+            "final Void Lord art collapsed to the stage-0 Colossus");
+        let crown_pixels = stages[8][0..6].iter().flatten()
+            .filter(|&&pixel| pixel != 0).count();
+        assert!(crown_pixels >= 28,
+            "Void Lord crown silhouette is too sparse: {crown_pixels} pixels");
     }
 
     #[test]

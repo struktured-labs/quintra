@@ -18,8 +18,9 @@ u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
     return run_seed ^ ((u32)biome_id << 16) ^ ((u32)room_counter * 0x9E3779B9UL);
 }
 
-// Large boss OBJ tile per stage. Wave B gives each of the 9 stages a distinct
-// 32x32 sprite; for now every stage's boss uses the Colossus metasprite.
+// All nine large bosses load their distinct 32x32 art into one shared VRAM
+// slot, so the entity tile number is constant even though the silhouettes are
+// not. This helper keeps that implementation detail out of spawn wiring.
 u8 boss_sprite_for_stage(u8 stage) {
     stage;
     return SPR_BOSS_BIG;

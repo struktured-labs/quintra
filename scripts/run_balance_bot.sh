@@ -22,7 +22,7 @@ EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
-echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,hostiles,last_enemy,towns,world_hops,victory,ui_screen" > "$OUT"
+echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,hostiles,last_enemy,towns,world_hops,victory,ui_screen,dodges" > "$OUT"
 
 unset DISPLAY WAYLAND_DISPLAY
 for run in "${RUN_IDS[@]}"; do
@@ -69,6 +69,7 @@ for cls, name in enumerate(names):
     kills = [int(r['kills']) for r in sample]
     bosses = [int(r['bosses']) for r in sample]
     towns = [int(r['towns']) for r in sample]
+    dodges = [int(r['dodges']) for r in sample]
     deaths = sum(int(r['min_hp']) == 0 for r in sample)
     wins = sum(int(r['victory']) != 0 for r in sample)
     endings = sum(int(r['victory']) != 0 and int(r['ui_screen']) == 12 for r in sample)
@@ -80,7 +81,8 @@ for cls, name in enumerate(names):
     print(f"[balance] {name:7s} n={len(sample)} room_med={statistics.median(rooms):g} "
           f"clear_med={statistics.median(clears):g} kill_med={statistics.median(kills):g} "
           f"boss_med={statistics.median(bosses):g} boss1={boss_clears}/{len(sample)} "
-          f"town_med={statistics.median(towns):g} wins={wins} endings={endings} "
+          f"town_med={statistics.median(towns):g} dodge_med={statistics.median(dodges):g} "
+          f"wins={wins} endings={endings} "
           f"deaths={deaths} combat_stalls={combat_stalls} route_stalls={route_stalls}")
     if wins < min_wins:
         failed.append(f"{name} wins {wins}/{len(sample)} < required {min_wins}")

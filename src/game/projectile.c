@@ -34,8 +34,11 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
             break;
         case PROJ_SHURIKEN:   // pierces 2 enemies
             speed = 3; ttl = 60; pierce = 2; break;
-        case PROJ_BUBBLE:     // slow drifting, pierces, long-lived
-            speed = 2; ttl = 120; pierce = 2; break;
+        case PROJ_BUBBLE:     // slow drifting, pierces across one full room
+            // 120 ticks kept ~17 rapid-fire bubbles resident and starved the
+            // 32-entity pool of Tidal Wave/enemy slots. 80 ticks still travels
+            // 160px—the full viewport—without pathological saturation.
+            speed = 2; ttl = 80; pierce = 2; break;
         default:              // bullet/bolt baseline
             speed = 3; ttl = 75; pierce = 1; break;
     }

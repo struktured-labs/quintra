@@ -30,7 +30,19 @@ QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
     QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" QUINTRA_EN_ADDR="$EN_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
-        -l 0 2>&1 | grep -v 'Window\|Qt\|libpng' || true
+        -l 0 >"$OUT_DIR/emulator.log" 2>&1 &
+EMU_PID=$!
+
+# This mGBA build ignores Lua's frontend:quit. The final capture is the
+# transaction boundary, so stop waiting as soon as the harness produced it.
+for _ in $(seq 1 240); do
+    if [ -f "$OUT_DIR/h_13_unpaused.png" ]; then break; fi
+    if ! kill -0 "$EMU_PID" 2>/dev/null; then break; fi
+    sleep 0.25
+done
+kill "$EMU_PID" 2>/dev/null || true
+wait "$EMU_PID" 2>/dev/null || true
+grep -v 'Window\|Qt\|libpng' "$OUT_DIR/emulator.log" || true
 
 pkill -9 -f 'Xvfb :' 2>/dev/null || true
 

@@ -43,16 +43,8 @@ extern const u8 sprite_bruiser_orc[64];
 extern const u8 sprite_bruiser_bomber[64];
 extern const u8 sprite_bruiser_warlock[64];
 
-// 9 distinct 32x32 stage bosses (16 tiles each; stage 0 is the Colossus)
-extern const u8 sprite_boss_stage0[256];
-extern const u8 sprite_boss_stage1[256];
-extern const u8 sprite_boss_stage2[256];
-extern const u8 sprite_boss_stage3[256];
-extern const u8 sprite_boss_stage4[256];
-extern const u8 sprite_boss_stage5[256];
-extern const u8 sprite_boss_stage6[256];
-extern const u8 sprite_boss_stage7[256];
-extern const u8 sprite_boss_stage8[256];
+// 9 distinct 32x32 stage bosses (16 tiles / 256 bytes each).
+extern const u8 sprite_boss_stages[2304];
 
 // 8x8 dungeon BG tiles
 extern const u8 bgt_floor_plain[16];

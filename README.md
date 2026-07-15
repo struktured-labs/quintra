@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.13: Endurance Gate](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.14: Crowned Nine](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -34,8 +34,10 @@ the cartridge runtime.
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
-  Conference endurance floors give fragile Corvin and Picsean five hearts
-  while preserving their low-DEF ranged identities.
+  Conference endurance floors give ranged Corvin six hearts, Picsean five,
+  and close-range Vespine four-and-a-half
+  while preserving their low-DEF specialist identities; Picsean's Tidal Wave
+  raises a brief water barrier while its three bubble lanes erupt.
 - **9 distinct dungeon themes**, each with its own palette, numbered music variant, and enemy
   roster: Crystal Caverns → Verdant Hollow → Ember Depths → Frost Vault →
   Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon → Void Sanctum — then
@@ -49,8 +51,9 @@ the cartridge runtime.
   Vow of the five champion spirits; victory resolves through three moving
   epilogue tableaux before revealing run statistics. Both keep controls live,
   so repeat runs never wait on a cutscene.
-- **9 large-sprite bosses** (32×32 metasprites, distinct bullet patterns,
-  telegraphed volleys) plus **5 mini-boss types** (each its own sprite,
+- **9 large-sprite bosses** (32×32 metasprites, distinct runtime silhouettes
+  and bullet patterns, with a crowned final Void Lord and telegraphed volleys)
+  plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
 - **15 enemies across a size hierarchy** — small swarm critters (crawler,
@@ -130,13 +133,14 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.13 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
+v0.17.14 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and
-rendered endings per champion, in addition to complete telemetry. The v0.17.13
-baseline records 13/15 full clears: Wolfkin, Sauran, and Vespine 3/3; Corvin
-and Picsean 2/3; with zero combat or route stalls.
+rendered endings per champion, in addition to complete telemetry. The v0.17.14
+baseline records 10/15 full clears—2/3 for every champion—with zero route
+stalls in successful runs. This deliberately preserves meaningful seed risk
+instead of tuning every vessel toward automatic victory.
 
 The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from

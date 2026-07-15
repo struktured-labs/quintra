@@ -89,6 +89,16 @@ static u8 room_stage(void) {
     return (s < N_STAGES) ? s : (u8)(s % N_STAGES);
 }
 
+// Stage-specific OBJ identity is independent of the shared enemy/player
+// tiles. In-place room transitions must refresh it explicitly; otherwise the
+// stage-0 Colossus art and tint remain resident for the entire run.
+static void room_load_stage_obj_identity(void) {
+    u8 stage = room_stage();
+    palette_obj_load(6, boss_stage_pal[stage]);
+    tiles_load_miniboss(stage);
+    tiles_load_boss_big(stage);
+}
+
 static void play_stage_music(void) {
     music_stage_number = run_state.bosses_beaten;
     music_play_stage();
@@ -412,15 +422,12 @@ void room_enter(void) {
     palette_obj_load(3, crawler_palette);
     palette_obj_load(4, heart_palette);
     palette_obj_load(5, coin_palette);
-    palette_obj_load(6, boss_stage_pal[room_stage()]);   // stage-tinted large boss
     palette_obj_load(7, orc_palette);
 
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // 4 enemy tiles (slots 20..23)
-    tiles_load_miniboss(room_stage());    // this stage's distinct 16x16 mini-boss (slots 24..27)
-    tiles_load_boss_big(room_stage());    // this stage's 32x32 boss (slots 40..55)
     tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
     hud_init();
@@ -497,6 +504,7 @@ void room_enter(void) {
     if (run_state.room_counter == 0) stage_seen = 0xFF;
     if (room_stage() != stage_seen) {
         stage_seen = room_stage();
+        room_load_stage_obj_identity();
         stage_fade = 26;
         room_apply_pause_palettes(1);   // start dimmed
     }
@@ -891,6 +899,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         dir8_dy[(u8)((dir + 2) & 7)], dmg, PROJ_BUBBLE);
                     projectile_spawn_player(dir8_dx[(u8)((dir + 6) & 7)],
                         dir8_dy[(u8)((dir + 6) & 7)], dmg, PROJ_BUBBLE);
+                    // Undertow guard: the wave wraps its caster in a brief
+                    // water barrier, paid for by the normal MP/cooldown. It
+                    // blocks bodies and destroys shots like other barriers.
+                    if (player.shield_timer < 45) player.shield_timer = 45;
+                    if (player.iframes < 8) player.iframes = 8;
                     break;
                 default:  // Vespine SWARM: 4-stinger fan burst
                     projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
@@ -1191,6 +1204,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // after a boss kill, not via room_enter)
                 if (room_stage() != stage_seen) {
                     stage_seen = room_stage();
+                    room_load_stage_obj_identity();
                     stage_fade = 26;
                     room_apply_pause_palettes(1);
                 }
