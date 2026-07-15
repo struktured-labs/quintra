@@ -22,6 +22,7 @@ void map_enter(void) {
     u8 dungeon = (u8)(in_region / ROOMS_PER_STAGE);
     u8 room = (u8)(in_region % ROOMS_PER_STAGE);
     u8 to_town = (in_region <= 1) ? 0 : (u8)(ROOMS_PER_REGION + 1 - in_region);
+    u8 is_town = (run_state.room_counter > ROOMS_PER_REGION && in_region == 1);
     DISPLAY_OFF; HIDE_SPRITES; HIDE_WIN;
     palette_bg_load(0, map_pal); palette_bg_load(7, map_pal);
     font_init(); { font_t f = font_load(font_min); font_set(f); }
@@ -46,6 +47,19 @@ void map_enter(void) {
         else printf("WILDS");
         gotoxy(1,9); printf("DEPTH HELD AT %u", (u16)run_state.room_counter);
         gotoxy(1,11); printf("FIND THE GOLDEN GATE");
+        gotoxy(2,17); printf("SELECT/B = RETURN");
+        SHOW_BKG; DISPLAY_ON;
+        return;
+    }
+    if (is_town) {
+        u8 completed = (u8)((run_state.room_counter - 1) / ROOMS_PER_REGION);
+        gotoxy(1,2);  printf("REGION %u COMPLETE", (u16)completed);
+        gotoxy(1,4);  printf("TOWN SANCTUARY");
+        gotoxy(1,6);  printf("NEXT REGION %u", (u16)(completed + 1));
+        gotoxy(1,9);  printf("ELDER RESTORES ALL");
+        gotoxy(1,11); printf("MARKET STOCK SEEDED");
+        gotoxy(1,13); printf("THE ROAD REMEMBERS");
+        gotoxy(1,14); printf("DIFFERENTLY EACH RUN");
         gotoxy(2,17); printf("SELECT/B = RETURN");
         SHOW_BKG; DISPLAY_ON;
         return;

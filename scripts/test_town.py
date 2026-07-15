@@ -15,9 +15,17 @@ def addr(name):
 
 def main():
     from pyboy import PyBoy
-    rs, pl, en = addr("_run_state"), addr("_player"), addr("_entities")
+    rs, pl, en, screen = (
+        addr("_run_state"), addr("_player"), addr("_entities"),
+        addr("_loop_current_screen")
+    )
     pb = PyBoy(str(ROM), window="null", cgb=True)
     tick = lambda n: [pb.tick() for _ in range(n)]
+    def press(button):
+        pb.button_press(button)
+        tick(4)
+        pb.button_release(button)
+        tick(4)
     tick(240); pb.button("start"); tick(30)
     pb.button("down"); tick(8)  # Sauran: six-heart melee tank
     pb.button("a"); tick(60)
@@ -69,6 +77,19 @@ def main():
     assert pb.memory[smith + 12] == 71, "smith is not using forge-keeper art"
     assert len({pb.memory[elder + 12], pb.memory[merchant + 12], pb.memory[smith + 12]}) == 3, (
         "elder, merchant, and smith silhouettes must remain distinct"
+    )
+
+    # SELECT in a town must show town context, not the mathematically wrapped
+    # "Dungeon 1 / Depth 2" labels that used to contradict YOU ARE HERE.
+    press("select")
+    tick(60)
+    assert pb.memory[screen] == 8, "town SELECT did not open Spirit Compass"
+    compass_shot = ROOT / "tmp" / "town-compass.png"
+    pb.screen.image.save(compass_shot)
+    press("b")
+    tick(8)
+    assert pb.memory[screen] == 5 and pb.memory[rs + 1] == 19, (
+        "town compass did not resume the same town"
     )
 
     # Merchants are permanent scenery/NPCs rather than collectible pickups.
