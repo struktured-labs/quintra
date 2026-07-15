@@ -49,18 +49,26 @@ def main():
 
     elder = None
     merchant = None
+    smith = None
     for i in range(32):
         ep = en + i * 28
         if pb.memory[ep] == 3 and pb.memory[ep + 17] == 7:
             elder = ep
         elif pb.memory[ep] == 3 and pb.memory[ep + 17] == 8:
             merchant = ep
+        elif pb.memory[ep] == 3 and pb.memory[ep + 17] == 9:
+            smith = ep
     assert elder is not None, "town has no PICKUP_VILLAGER resident"
     assert pb.memory[elder + 12] == 69, "resident is not using villager art"
     assert merchant is not None, "town has no PICKUP_MERCHANT resident"
     assert pb.memory[merchant + 12] == 70, "merchant is not using merchant art"
     assert pb.memory[merchant + 12] != pb.memory[elder + 12], (
         "elder and merchant must remain visually distinct"
+    )
+    assert smith is not None, "town has no PICKUP_SMITH forge keeper"
+    assert pb.memory[smith + 12] == 71, "smith is not using forge-keeper art"
+    assert len({pb.memory[elder + 12], pb.memory[merchant + 12], pb.memory[smith + 12]}) == 3, (
+        "elder, merchant, and smith silhouettes must remain distinct"
     )
 
     # Merchants are permanent scenery/NPCs rather than collectible pickups.
@@ -71,6 +79,16 @@ def main():
     tick(4)
     assert pb.memory[merchant] == 3 and pb.memory[merchant + 17] == 8, (
         "merchant disappeared when touched"
+    )
+
+    # The smith is also permanent; the adjacent forge ware owns the purchase.
+    sx = pb.memory[smith + 3]
+    sy = (pb.memory[smith + 7] - 8) & 0xFF
+    for off, value in ((9, sx), (10, 0), (11, sy), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(4)
+    assert pb.memory[smith] == 3 and pb.memory[smith + 17] == 9, (
+        "smith disappeared when touched"
     )
 
     shot = ROOT / "tmp" / "town-merchant.png"
@@ -115,6 +133,26 @@ def main():
     assert pb.memory[pl + 2] == 14, "Iron Heart did not fill the new heart"
     assert pb.memory[pl + 16] == 0 and pb.memory[pl + 17] == 0, "purchase did not deduct coins"
 
+    forge = None
+    for i in range(32):
+        ep = en + i * 28
+        if (pb.memory[ep] == 3 and pb.memory[ep + 17] == 4
+                and pb.memory[ep + 18] == 3):
+            forge = ep
+            break
+    assert forge is not None, "town has no WARE_FORGE Power Stone stall"
+    old_atk = pb.memory[pl + 5]
+    price = pb.memory[forge + 19]
+    pb.memory[pl + 16] = price
+    pb.memory[pl + 17] = 0
+    px = pb.memory[forge + 3]
+    py = (pb.memory[forge + 7] - 8) & 0xFF
+    for off, value in ((9, px), (10, 0), (11, py), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(4)
+    assert pb.memory[pl + 5] == old_atk + 1, "forge did not grant +1 ATK"
+    assert pb.memory[pl + 16] == 0 and pb.memory[pl + 17] == 0, "forge did not deduct coins"
+
     # Ordinary dungeon shops are staffed too, not only the larger town hubs.
     enter_from_previous(22)
     shop_merchant = None
@@ -126,7 +164,7 @@ def main():
     assert shop_merchant is not None, "ordinary shop has no merchant"
     assert pb.memory[shop_merchant + 12] == 70, "shop merchant art drifted"
     pb.stop(save=False)
-    print("[town] PASS sanctuary + staffed town/shop + resident blessing + Sauran Iron Heart growth")
+    print("[town] PASS sanctuary + elder/merchant/smith art + forge + Sauran Iron Heart growth")
 
 if __name__ == "__main__":
     main()

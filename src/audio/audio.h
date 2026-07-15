@@ -1,5 +1,4 @@
-// Audio — Phase 3 stub. Phase 11 will port the GB music engine from
-// the archived Penta-DX project (or replace with hUGEDriver).
+// Register-level music sequencer and sound-effect dispatcher.
 #ifndef QUINTRA_AUDIO_H
 #define QUINTRA_AUDIO_H
 

@@ -1,4 +1,4 @@
-//! Enemy roster. Phase 2: 1 enemy (Blue Crawler — slow walker, fire-weak).
+//! Enemy roster and stage-pool combat parameters.
 
 use quintra_content::{AiScriptId, Enemy, EnemyStats, ProjectileKind, Registry, ShotPattern};
 

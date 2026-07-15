@@ -404,9 +404,19 @@ while frames < LIMIT do
         elseif aim == KEY_DOWN then move = clockwise and KEY_LEFT or KEY_RIGHT
         elseif aim == KEY_LEFT then move = clockwise and KEY_UP or KEY_DOWN
         else move = clockwise and KEY_DOWN or KEY_UP end
+        local waiting_star = target.kind == 11 and target.state ~= 0
         -- Any weapon can spend shots into cover. After four seconds without
         -- changing target HP, reposition perpendicular and reacquire.
-        if flank_timer > 0 then
+        -- Folding Stars are intentionally invulnerable while expanded. Route
+        -- around their echoes without filling the entity pool with doomed shots;
+        -- resume attacks as soon as the bright contracted core returns.
+        if waiting_star then
+            -- Still path around cover toward a cardinal firing lane. Pure
+            -- orbiting can pin a ranged vessel against the outer wall while
+            -- every brief vulnerable window opens behind a pillar.
+            keys = target_step(px, py, target.x, target.y, move)
+            no_damage_frames = 0
+        elseif flank_timer > 0 then
             keys = flank_dir + KEY_A
             flank_timer = flank_timer - 1
         elseif no_damage_frames > 240 then
@@ -445,13 +455,13 @@ while frames < LIMIT do
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
         -- agent never raised Sauran's shield or fired the ranged signatures.
         local signature_period = (CLASS == 3) and 90 or 180
-        if active_charge == 0 and mp >= 2 and frames % signature_period == 0 then
+        if not waiting_star and active_charge == 0 and mp >= 2 and frames % signature_period == 0 then
             keys = KEY_B + aim
         -- Spirit Convergence requires A and B to become pressed together.
         -- Release both on the preceding frame so the next chord has two edges.
-        elseif active_charge == 0 and mp == mp_max and frames % 600 == 599 then
+        elseif not waiting_star and active_charge == 0 and mp == mp_max and frames % 600 == 599 then
             keys = 0
-        elseif active_charge == 0 and mp == mp_max and frames % 600 == 0 then
+        elseif not waiting_star and active_charge == 0 and mp == mp_max and frames % 600 == 0 then
             keys = KEY_A + KEY_B + aim
         end
     elseif loot then

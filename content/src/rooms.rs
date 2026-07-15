@@ -1,5 +1,4 @@
-//! Room template library. Phase 2: 1 placeholder template (empty small room
-//! with all 4 doors). Real authored rooms arrive in Phase 4.
+//! Base room templates consumed by the on-cartridge procedural decorator.
 
 use quintra_content::{DoorMask, Registry, RoomKind, RoomSize, RoomTemplate};
 

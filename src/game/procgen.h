@@ -1,4 +1,4 @@
-// On-cart procgen — Phase 7: per-room reroll. Phase 9+ adds room graphs.
+// Deterministic on-cartridge room, landmark, and encounter generation.
 #ifndef QUINTRA_GAME_PROCGEN_H
 #define QUINTRA_GAME_PROCGEN_H
 

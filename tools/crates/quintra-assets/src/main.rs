@@ -188,4 +188,14 @@ mod tests {
         let b = tile_2bpp_bytes(&tile);
         assert_eq!(&b[0..6], &[0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF]);
     }
+
+    #[test]
+    fn village_roles_have_distinct_runtime_tiles() {
+        let elder = tile_2bpp_bytes(&parse_grid(&grids::VILLAGER));
+        let merchant = tile_2bpp_bytes(&parse_grid(&grids::MERCHANT));
+        let smith = tile_2bpp_bytes(&parse_grid(&grids::SMITH));
+        assert_ne!(smith, elder);
+        assert_ne!(smith, merchant);
+        assert_ne!(elder, merchant);
+    }
 }

@@ -1,5 +1,4 @@
-//! Class definitions. Phase 2: 1 class (Wolfkin). Phases later add the
-//! remaining four (Sauran, Corvin, Picsean, Vespine).
+//! Five playable champion vessels and their starting kits.
 
 use quintra_content::{BaseStats, Class, FormTheme, Registry};
 
@@ -47,7 +46,7 @@ pub const CORVIN: Class = Class {
     signature_active: ITEM_MURDER,
     passive_perk:  PERK_SEE_HP_REVEAL,
     // Featherbarb's returning arc demands sustained positioning time. Six
-    // hearts compensate for low DEF without raising its strong ranged damage.
+    // hearts compensate for low DEF without inflating its safe ranged damage.
     base_stats: BaseStats { hp_max: 12, mp_max: 8, atk: 2, def: 1, spd: 5 },
 };
 

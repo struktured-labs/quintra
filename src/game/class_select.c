@@ -1,7 +1,6 @@
 #pragma bank 255
 // CLASS_SELECT — pick a class for this run.
-// Phase 4: shows the 1 unlocked class (Wolfkin). Future content phases
-// will fill out the roster.
+// Five-vessel class selection with live generated loadout previews.
 
 #include <gb/gb.h>
 #include <gb/cgb.h>

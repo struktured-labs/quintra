@@ -19,7 +19,6 @@ enum {
     SCREEN_DIALOG,
     SCREEN_GAMEOVER,
     SCREEN_VICTORY,
-    SCREEN_SCRATCH,          // Phase 3: placeholder destination after TITLE
     SCREEN_COUNT,
 };
 

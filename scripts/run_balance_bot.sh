@@ -35,7 +35,7 @@ for run in "${RUN_IDS[@]}"; do
       QUINTRA_SCREEN_ADDR="$LS" \
       QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
       QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$OUT" \
-      timeout 90 xvfb-run -a mgba-qt "$ROM" --fastforward --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
+      setsid timeout 90 xvfb-run -a mgba-qt "$ROM" --fastforward --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
       >"$log" 2>&1 &
     pid=$!
     # This mGBA build does not honor frontend:quit from Lua reliably. The
@@ -46,13 +46,13 @@ for run in "${RUN_IDS[@]}"; do
         if ! kill -0 "$pid" 2>/dev/null; then break; fi
         sleep 0.25
     done
-    kill "$pid" 2>/dev/null || true
+    # Each trial owns its Xvfb/mGBA process group. Never use a global pkill:
+    # it races other class trials and used to truncate parallel matrices.
+    kill -- -"$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
     grep 'BALANCE' "$log" || true
   done
 done
-pkill -9 -f 'Xvfb :' 2>/dev/null || true
-
 python3 - "$OUT" "${#RUN_IDS[@]}" "${#CLASS_IDS[@]}" "$MIN_WINS" <<'PY'
 import csv, statistics, sys
 rows = list(csv.DictReader(open(sys.argv[1])))

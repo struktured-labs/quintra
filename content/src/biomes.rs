@@ -1,4 +1,4 @@
-//! Biome definitions. Phase 2: 1 biome (Crystal Caverns — starting zone).
+//! Shared biome-level generation parameters; stage identity lives in stages.rs.
 
 use quintra_content::{Biome, Registry};
 

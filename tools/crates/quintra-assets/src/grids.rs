@@ -298,6 +298,19 @@ pub const MERCHANT: [&str; 8] = [
     ".2.11.2.",
 ];
 
+// Village smith: horned welding mask, bright hammer, heavy apron. The broad
+// hammer-side silhouette distinguishes the forge from both hood and hat NPCs.
+pub const SMITH: [&str; 8] = [
+    ".2....2.",
+    "..2222.3",
+    ".23113.3",
+    ".21112.3",
+    "..233.33",
+    ".231133.",
+    ".231132.",
+    ".2.11.2.",
+];
+
 // ---- Dungeon BG tiles (glyph 0 = palette c0, opaque) ----
 
 pub const BGT_FLOOR_PLAIN: [&str; 8] = [
@@ -503,7 +516,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 9] = [
     ("sentry", &SENTRY),
 ];
 
-pub const FX_8: [(&str, &[&str]); 8] = [
+pub const FX_8: [(&str, &[&str]); 9] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -512,6 +525,7 @@ pub const FX_8: [(&str, &[&str]); 8] = [
     ("item_orb", &ITEM_ORB),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
+    ("smith", &SMITH),
 ];
 
 pub const DUNGEON_TILES: [(&str, &[&str]); 14] = [

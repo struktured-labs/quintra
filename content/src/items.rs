@@ -1,4 +1,4 @@
-//! Item definitions. Phase 2: 2 items (Wolfkin's starter melee + active).
+//! Champion weapons, signature actives, and run-long relics.
 
 use quintra_content::{
     Effect, Item, ItemKind, ProjectileKind, Rarity, Registry, Stat, Status, Trigger,

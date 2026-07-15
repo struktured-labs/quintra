@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.14: Crowned Nine](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.15: Forged Village](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -76,9 +76,10 @@ the cartridge runtime.
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
 - **Generated world cadence**: three six-room dungeons form a region, followed
   by a safe procedural town with a resident elder, a visually distinct staffed
-  market, sanctuary blessing, and seeded merchant stock. Dungeon shops have
-  their own broad-hatted merchant too. Cleared dungeons open into an authored 4x4 nonlinear
-  overworld graph with caves, vaults, champion encounters, and a discoverable
+  market, sanctuary blessing, and seeded merchant stock. A distinct masked
+  smith staffs a 30-coin Power Stone forge, while dungeon shops retain their
+  own broad-hatted merchant. Cleared dungeons open into an authored 4x4
+  nonlinear overworld graph with caves, vaults, champion encounters, and a discoverable
   gate to the next dungeon. Riftwild fights are optional and its exits remain
   fleeable, unlike sealed dungeon arenas. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
@@ -133,14 +134,14 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.14 currently occupies 64 KiB with 1,192 bytes of bank-0 headroom.
+v0.17.15 currently occupies 64 KiB with 1,201 bytes of bank-0 headroom.
 
 Before a show build, `make endurance` runs three deterministic long-form seeds
 for every champion. It requires at least two complete nine-boss victories and
-rendered endings per champion, in addition to complete telemetry. The v0.17.14
-baseline records 10/15 full clears—2/3 for every champion—with zero route
-stalls in successful runs. This deliberately preserves meaningful seed risk
-instead of tuning every vessel toward automatic victory.
+rendered endings per champion, in addition to complete telemetry. The v0.17.15
+baseline records 11/15 full clears—2/3 for Wolfkin, Sauran, Corvin, and
+Picsean; 3/3 for Vespine—with zero route stalls. This deliberately preserves
+meaningful seed risk instead of tuning every vessel toward automatic victory.
 
 The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from

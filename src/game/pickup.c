@@ -94,6 +94,17 @@ u8 pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_smith(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_SMITH, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_SMITH;
+        entities[idx].palette = 0x06;
+        entities[idx].hitbox = (u8)0x88;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {
@@ -124,7 +135,8 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         return;
     }
     if (e->ai_data[0] == PICKUP_VILLAGER
-        || e->ai_data[0] == PICKUP_MERCHANT) return;
+        || e->ai_data[0] == PICKUP_MERCHANT
+        || e->ai_data[0] == PICKUP_SMITH) return;
     // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
     // (the swap drops your old weapon underfoot — without the grace you'd
     // ping-pong between the two forever).
@@ -273,6 +285,9 @@ u8 pickup_check_player_collision(void) BANKED {
                             case WARE_BIG:
                                 apply_item_effects(10);   // Iron Heart
                                 break;
+                            case WARE_FORGE:
+                                apply_item_effects(12);   // Power Stone
+                                break;
                         }
                         sfx_play(SFX_COIN);
                         entity_kill(i);
@@ -300,6 +315,10 @@ u8 pickup_check_player_collision(void) BANKED {
                     continue;
                 case PICKUP_MERCHANT:
                     // Visual anchor for the stall; wares own purchases.
+                    any = 1;
+                    continue;
+                case PICKUP_SMITH:
+                    // Visual anchor for the forge; its Power Stone owns the sale.
                     any = 1;
                     continue;
             }

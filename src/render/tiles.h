@@ -1,5 +1,4 @@
-// Tile / sprite primitives — Phase 4 placeholder graphics.
-// Phase 7+ will replace these with real biome-themed assets via quintra-assets.
+// Runtime tile slots and generated sprite-loading contracts.
 #ifndef QUINTRA_RENDER_TILES_H
 #define QUINTRA_RENDER_TILES_H
 
@@ -70,6 +69,7 @@
 #define SPR_ENEMY_SENTRY   68  // stationary turret (after bruiser blocks)
 #define SPR_VILLAGER       69  // town elder / sanctuary keeper
 #define SPR_MERCHANT       70  // town/dungeon shopkeeper
+#define SPR_SMITH          71  // village forge keeper
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59

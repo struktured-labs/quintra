@@ -32,6 +32,7 @@ extern const u8 sprite_fx_wisp[16];
 extern const u8 sprite_fx_item_orb[16];
 extern const u8 sprite_fx_villager[16];
 extern const u8 sprite_fx_merchant[16];
+extern const u8 sprite_fx_smith[16];
 
 // 16x16 boss metasprite
 extern const u8 sprite_boss_sentinel[64];

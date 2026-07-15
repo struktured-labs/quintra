@@ -5,7 +5,6 @@
 #include "audio/audio.h"
 #include "game/loop.h"
 #include "game/title.h"
-#include "game/scratch.h"
 #include "game/class_select.h"
 #include "game/run_init.h"
 #include "game/room.h"
@@ -33,7 +32,6 @@ BANKREF_EXTERN(inventory_enter)
 BANKREF_EXTERN(map_enter)
 BANKREF_EXTERN(gameover_enter)
 BANKREF_EXTERN(victory_enter)
-BANKREF_EXTERN(scratch_enter)
 
 // The screen table. Each screen lives in its own translation unit; banked
 // screens carry their BANK(fn) so the dispatcher can map them first.
@@ -51,7 +49,6 @@ const screen_t screens[SCREEN_COUNT] = {
     [SCREEN_DIALOG]       = { 0, 0, 0, 0, 0 },
     [SCREEN_GAMEOVER]     = { BANK(gameover_enter), gameover_enter, gameover_exit, gameover_tick, gameover_draw },
     [SCREEN_VICTORY]      = { BANK(victory_enter), victory_enter,  victory_exit,  victory_tick,  victory_draw  },
-    [SCREEN_SCRATCH]      = { BANK(scratch_enter), scratch_enter, scratch_exit, scratch_tick, scratch_draw },
 };
 
 // Map a screen's bank before touching its function pointers (bank 0 =
