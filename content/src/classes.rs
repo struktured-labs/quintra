@@ -32,8 +32,8 @@ pub const SAURAN: Class = Class {
     starter_weapon: ITEM_TAIL_SPIKE,
     signature_active: ITEM_STONESKIN,
     passive_perk:  PERK_HP_PLUS_2_SLOW_REGEN,
-    // Scaled Hide promises +2 HP over the four-heart baseline. Keep the
-    // authored stat aligned with player.c's pre-baked-passive contract.
+    // Scaled Hide is pre-baked into the starting stats. Keep this authored
+    // value aligned with player.c's six-heart melee-tank contract.
     base_stats: BaseStats { hp_max: 12, mp_max: 3, atk: 2, def: 2, spd: 4 },
 };
 

@@ -1,14 +1,14 @@
-// HUD — top-row strip rendered via the GBC WINDOW layer.
-// Shows: hearts (HP) | blank | coin icon + 3-digit coin count
+// HUD — bottom-row strip rendered via the GBC WINDOW layer.
+// Shows: hearts (HP) | MP | depth | boss health | coins
 #ifndef QUINTRA_RENDER_HUD_H
 #define QUINTRA_RENDER_HUD_H
 
 #include "core/types.h"
 
-// 6 hearts = 12 half-hearts, the run's HP cap. Every point of HP is shown,
-// so a hit always visibly registers (fixes the &gt;5-heart misread).
-#define HUD_MAX_HEARTS 6
-#define HP_CAP        12     // half-hearts; enforced on all HP gains
+// 8 hearts = 16 half-hearts. Sauran starts at six hearts, leaving room for
+// procedural Iron Heart / Vampiric Sigil upgrades like every other vessel.
+#define HUD_MAX_HEARTS 8
+#define HP_CAP        16     // half-hearts; enforced on all HP gains
 
 void hud_init(void);          // load tiles + position window + initial draw
 void hud_show(void);          // SHOW_WIN
@@ -17,7 +17,7 @@ void hud_redraw_hp(void);     // call when player.hp / hp_max changes
 void hud_redraw_mp(void);     // call when player.mp changes (blue digits)
 void hud_redraw_coins(void);  // call when player.coins changes
 void hud_redraw_depth(void);  // call when run_state.room_counter changes
-// Boss HP as a 5-segment bar (cols 10-14). max==0 clears the bar.
+// Boss HP as a 4-segment bar (cols 12-15). max==0 clears the bar.
 // Caches internally: cheap to call every frame.
 void hud_redraw_boss(u8 cur, u8 max);
 // Low-HP danger pulse: phase 1 flashes the heart color white-hot,

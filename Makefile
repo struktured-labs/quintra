@@ -33,7 +33,7 @@ LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify balance play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify balance endurance play info
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -102,6 +102,14 @@ verify: all
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.
 balance: all
+	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
+
+# Long-form pre-show soak: three deterministic seeds per champion and enough
+# emulated time for a cautious full clear. This is a telemetry report, not a
+# brittle win-rate gate; missing agent reports still fail the target.
+endurance: all
+	QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_FRAMES=72000 \
+	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
 
 # Human play

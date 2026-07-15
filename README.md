@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.5: Fair Vessels](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.6: Room to Grow](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -73,7 +73,8 @@ the cartridge runtime.
   fleeable, unlike sealed dungeon arenas. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
-  vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill.
+  vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill;
+  an eight-heart cap leaves upgrade room even for six-heart Sauran.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever.
@@ -103,6 +104,7 @@ make            # cargo codegen + sprite pipeline → SDCC → rom/working/quint
 make play       # build + launch in mGBA
 make verify     # cargo tests + gameplay smoke + C<->Rust procgen parity
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
+make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
 make info       # print build summary
 ```
 
@@ -118,7 +120,12 @@ and procedural seeds make total session length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.5 currently occupies 64 KiB with 1,265 bytes of bank-0 headroom.
+v0.17.6 currently occupies 64 KiB with 1,302 bytes of bank-0 headroom.
+
+Before a show build, `make endurance` runs three deterministic long-form seeds
+for every champion. It fails if any agent does not produce telemetry, while
+leaving win rate and route/combat stalls visible in the CSV for human review;
+heuristic navigation is deliberately not treated as a release gate.
 
 The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
