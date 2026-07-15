@@ -87,9 +87,15 @@ def main():
 
     # SELECT in a town must show town context, not the mathematically wrapped
     # "Dungeon 1 / Depth 2" labels that used to contradict YOU ARE HERE.
+    # Regional identity is fixed lore, while the rumor must vary by run seed.
+    original_seed = bytes(pb.memory[rs + 2:rs + 6])
+    for i in range(4):
+        pb.memory[rs + 2 + i] = 0
     press("select")
     tick(60)
     assert pb.memory[screen] == 8, "town SELECT did not open Spirit Compass"
+    town_name_region1 = bytes(pb.memory[0x9800 + 4 * 32:0x9800 + 4 * 32 + 20])
+    rumor_seed0 = bytes(pb.memory[0x9800 + 12 * 32:0x9800 + 12 * 32 + 20])
     compass_shot = ROOT / "tmp" / "town-compass.png"
     pb.screen.image.save(compass_shot)
     press("b")
@@ -97,6 +103,23 @@ def main():
     assert pb.memory[screen] == 5 and pb.memory[rs + 1] == 19, (
         "town compass did not resume the same town"
     )
+    pb.memory[rs + 2] = 1
+    press("select")
+    tick(60)
+    rumor_seed1 = bytes(pb.memory[0x9800 + 12 * 32:0x9800 + 12 * 32 + 20])
+    assert rumor_seed1 != rumor_seed0, "town rumor did not vary with run seed"
+    press("b")
+    tick(8)
+    pb.memory[rs + 1] = 37
+    press("select")
+    tick(60)
+    town_name_region2 = bytes(pb.memory[0x9800 + 4 * 32:0x9800 + 4 * 32 + 20])
+    assert town_name_region2 != town_name_region1, "second region reused the first town identity"
+    press("b")
+    tick(8)
+    pb.memory[rs + 1] = 19
+    for i, value in enumerate(original_seed):
+        pb.memory[rs + 2 + i] = value
 
     # Merchants are permanent scenery/NPCs rather than collectible pickups.
     mx = pb.memory[merchant + 3]
@@ -251,7 +274,7 @@ def main():
     assert shop_merchant is not None, "ordinary shop has no merchant"
     assert pb.memory[shop_merchant + 12] == 70, "shop merchant art drifted"
     pb.stop(save=False)
-    print("[town] PASS sanctuary + market/forge/rune shops + four distinct residents")
+    print("[town] PASS named seed-fuzzy sanctuary + three shops + four distinct residents")
 
 if __name__ == "__main__":
     main()

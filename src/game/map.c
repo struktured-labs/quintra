@@ -17,6 +17,17 @@ static const u16 map_pal[4] = {
     BGR555(1,3,2), BGR555(4,12,8), BGR555(16,23,12), BGR555(30,31,24)
 };
 
+// Town names are lore fixtures; the whispered line is seed-fuzzy. A region
+// remains memorable across runs without turning the roguelike into one fixed
+// account of what happened there.
+static const char *const town_names[3] = {
+    "EMBERFORD", "GLOAMHARBOR", "DAWN'S VERGE"
+};
+static const char *const town_rumors[4] = {
+    "THE WELL DREAMS", "BELLS FEAR DEPTH",
+    "FIVE SHADOWS WALK", "THE RIFT KNOWS YOU"
+};
+
 void map_enter(void) {
     u8 in_region = (u8)(run_state.room_counter % ROOMS_PER_REGION);
     u8 dungeon = (u8)(in_region / ROOMS_PER_STAGE);
@@ -53,13 +64,16 @@ void map_enter(void) {
     }
     if (is_town) {
         u8 completed = (u8)((run_state.room_counter - 1) / ROOMS_PER_REGION);
+        u8 town = (completed > 0 && completed <= 3) ? (u8)(completed - 1) : 0;
+        u8 rumor = (u8)(run_state.run_seed ^ (run_state.run_seed >> 8)
+            ^ (run_state.run_seed >> 16) ^ completed) & 3;
         gotoxy(1,2);  printf("REGION %u COMPLETE", (u16)completed);
-        gotoxy(1,4);  printf("TOWN SANCTUARY");
-        gotoxy(1,6);  printf("NEXT REGION %u", (u16)(completed + 1));
-        gotoxy(1,9);  printf("ELDER RESTORES ALL");
-        gotoxy(1,11); printf("MARKET STOCK SEEDED");
-        gotoxy(1,13); printf("THE ROAD REMEMBERS");
-        gotoxy(1,14); printf("DIFFERENTLY EACH RUN");
+        gotoxy(1,4);  printf("%s", town_names[town]);
+        gotoxy(1,6);  printf("SANCTUARY & MARKET");
+        gotoxy(1,8);  printf("NEXT REGION %u", (u16)(completed + 1));
+        gotoxy(1,10); printf("ELDER RESTORES ALL");
+        gotoxy(1,12); printf("%s", town_rumors[rumor]);
+        gotoxy(1,14); printf("LORE SHIFTS BY SEED");
         gotoxy(2,17); printf("SELECT/B = RETURN");
         SHOW_BKG; DISPLAY_ON;
         return;

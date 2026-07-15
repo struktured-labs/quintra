@@ -624,9 +624,9 @@ void procgen_generate_current_room(void) BANKED {
                           && (run_state.room_counter % ROOMS_PER_STAGE) == 5) ? 1 : 0;
 
         if (is_town) {
-            // Towns are full sanctuary hubs: healing, magic, and three fairer
-            // market stalls. Lore anchors can later replace selected region
-            // towns without changing this procedural fallback.
+            // Towns are full sanctuary hubs: healing, magic, and five fairer
+            // market stalls. Their regional name and seed-fuzzy lore live in
+            // the Spirit Compass without changing this procedural plaza.
             pickup_spawn_villager(FIX8(80), FIX8(48));
             pickup_spawn_merchant(FIX8(80), FIX8(96));
             pickup_spawn_smith(FIX8(136), FIX8(48));

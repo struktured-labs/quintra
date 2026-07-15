@@ -13,6 +13,8 @@ from failed runs makes the next expedition smarter.
 - Three dungeons form a region.
 - A procedural town follows each region (rooms 19, 37, 55...).
 - Towns fully restore HP/MP, offer a market, and act as emotional punctuation.
+- Regional town names are fixed memory anchors; their Compass rumor is chosen
+  from the run seed, so place persists while testimony remains uncertain.
 - Most rooms, routes, puzzles, towns, and encounters derive from the run seed.
 - Lore fixtures occupy deterministic landmark slots, but the run interprets
   them. Symbols and dramatic roles persist; names, order, location, witnesses,
