@@ -1,7 +1,7 @@
 //! C emit — translates the validated `Registry` into GBDK-compatible C tables.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use quintra_content::{
@@ -143,7 +143,7 @@ fn write_enums(out: &Path) -> Result<()> {
          \n\
          #endif\n",
     );
-    fs::write(out.join("enums.h"), body)?;
+    write_if_changed(out.join("enums.h"), body)?;
     Ok(())
 }
 
@@ -180,13 +180,13 @@ fn write_classes(out: &Path, reg: &Registry) -> Result<()> {
     );
     header.push_str(&format!("#define N_CLASSES {}\n", reg.n_classes()));
     header.push_str("extern const class_def_t classes[];\n#endif\n");
-    fs::write(out.join("classes.h"), header)?;
+    write_if_changed(out.join("classes.h"), header)?;
 
     let mut body = String::from(HEADER_NOTE);
     body.push_str("#include \"classes.h\"\n\nconst class_def_t classes[] = {\n");
     for c in &reg.classes { body.push_str(&emit_class(c)); }
     body.push_str("};\n");
-    fs::write(out.join("classes.c"), body)?;
+    write_if_changed(out.join("classes.c"), body)?;
     Ok(())
 }
 
@@ -238,7 +238,7 @@ fn write_items(out: &Path, reg: &Registry) -> Result<()> {
     );
     h.push_str(&format!("#define N_ITEMS {}\n", reg.n_items()));
     h.push_str("extern const item_def_t items[];\n#endif\n");
-    fs::write(out.join("items.h"), h)?;
+    write_if_changed(out.join("items.h"), h)?;
 
     let mut b = String::from(HEADER_NOTE);
     b.push_str("#include \"items.h\"\n\n");
@@ -252,7 +252,7 @@ fn write_items(out: &Path, reg: &Registry) -> Result<()> {
     b.push_str("const item_def_t items[] = {\n");
     for item in &reg.items { b.push_str(&emit_item(item)); }
     b.push_str("};\n");
-    fs::write(out.join("items.c"), b)?;
+    write_if_changed(out.join("items.c"), b)?;
     Ok(())
 }
 
@@ -362,7 +362,7 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
     );
     h.push_str(&format!("#define N_ENEMIES {}\n", reg.n_enemies()));
     h.push_str("extern const enemy_def_t enemies[];\n#endif\n");
-    fs::write(out.join("enemies.h"), h)?;
+    write_if_changed(out.join("enemies.h"), h)?;
 
     let mut b = String::from(HEADER_NOTE);
     b.push_str("#include \"enemies.h\"\n\n");
@@ -375,7 +375,7 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
     b.push_str("const enemy_def_t enemies[] = {\n");
     for e in &reg.enemies { b.push_str(&emit_enemy(e)); }
     b.push_str("};\n");
-    fs::write(out.join("enemies.c"), b)?;
+    write_if_changed(out.join("enemies.c"), b)?;
     Ok(())
 }
 
@@ -463,7 +463,7 @@ fn write_biomes(out: &Path, reg: &Registry) -> Result<()> {
     );
     h.push_str(&format!("#define N_BIOMES {}\n", reg.n_biomes()));
     h.push_str("extern const biome_def_t biomes[];\n#endif\n");
-    fs::write(out.join("biomes.h"), h)?;
+    write_if_changed(out.join("biomes.h"), h)?;
 
     let mut b = String::from(HEADER_NOTE);
     b.push_str("#include \"biomes.h\"\n\n");
@@ -484,7 +484,7 @@ fn write_biomes(out: &Path, reg: &Registry) -> Result<()> {
     b.push_str("const biome_def_t biomes[] = {\n");
     for bi in &reg.biomes { b.push_str(&emit_biome(bi)); }
     b.push_str("};\n");
-    fs::write(out.join("biomes.c"), b)?;
+    write_if_changed(out.join("biomes.c"), b)?;
     Ok(())
 }
 
@@ -533,7 +533,7 @@ fn write_rooms(out: &Path, reg: &Registry) -> Result<()> {
     );
     h.push_str(&format!("#define N_ROOM_TEMPLATES {}\n", reg.n_room_templates()));
     h.push_str("extern const room_tpl_t room_templates[];\n#endif\n");
-    fs::write(out.join("rooms.h"), h)?;
+    write_if_changed(out.join("rooms.h"), h)?;
 
     let mut b = String::from(HEADER_NOTE);
     b.push_str("#include \"rooms.h\"\n\n");
@@ -548,7 +548,7 @@ fn write_rooms(out: &Path, reg: &Registry) -> Result<()> {
     b.push_str("const room_tpl_t room_templates[] = {\n");
     for r in &reg.room_templates { b.push_str(&emit_room(r)); }
     b.push_str("};\n");
-    fs::write(out.join("rooms.c"), b)?;
+    write_if_changed(out.join("rooms.c"), b)?;
     Ok(())
 }
 
@@ -613,7 +613,7 @@ fn write_zelda_overworld(out: &Path, reg: &Registry) -> Result<()> {
     );
     h.push_str(&format!("#define N_ZELDA_OVERWORLDS {}\n", reg.n_zelda_overworlds()));
     h.push_str("extern const zelda_overworld_def_t zelda_overworlds[];\n#endif\n");
-    fs::write(out.join("zelda_overworld.h"), h)?;
+    write_if_changed(out.join("zelda_overworld.h"), h)?;
 
     let mut c = String::from(HEADER_NOTE);
     c.push_str("#include \"zelda_overworld.h\"\n\n");
@@ -634,7 +634,7 @@ fn write_zelda_overworld(out: &Path, reg: &Registry) -> Result<()> {
         ));
     }
     c.push_str("};\n");
-    fs::write(out.join("zelda_overworld.c"), c)?;
+    write_if_changed(out.join("zelda_overworld.c"), c)?;
     Ok(())
 }
 
@@ -667,7 +667,7 @@ fn write_umbrella(out: &Path, _reg: &Registry) -> Result<()> {
          #include \"stages.h\"\n\
          #endif\n",
     );
-    fs::write(out.join("content.h"), body).context("write content.h")?;
+    write_if_changed(out.join("content.h"), body).context("write content.h")?;
     Ok(())
 }
 
@@ -712,7 +712,7 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          extern const u8 stage_pool_n[N_STAGES];\n\
          extern const u8 stage_pool_total[N_STAGES];\n\
          #endif\n");
-    fs::write(out.join("stages.h"), h).context("write stages.h")?;
+    write_if_changed(out.join("stages.h"), h).context("write stages.h")?;
 
     let mut c = String::from(HEADER_NOTE);
     c.push_str("#include \"stages.h\"\n\n");
@@ -771,12 +771,24 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
     c.push_str(&format!("const u8 stage_pool_total[N_STAGES] = {{ {} }};\n",
         list(&|s| s.enemy_pool.iter().map(|&(_, w)| w).sum::<u8>())));
 
-    fs::write(out.join("stages.c"), c).context("write stages.c")?;
+    write_if_changed(out.join("stages.c"), c).context("write stages.c")?;
     let _ = n;
     Ok(())
 }
 
 // ---------------------------------------------------------------- helpers
+
+/// Replace a generated file only when its bytes changed. Besides avoiding
+/// needless disk churn, preserving the mtime is part of the build contract:
+/// all cartridge objects conservatively depend on all generated headers.
+fn write_if_changed(path: PathBuf, contents: impl AsRef<[u8]>) -> Result<bool> {
+    let contents = contents.as_ref();
+    if fs::read(&path).map(|current| current == contents).unwrap_or(false) {
+        return Ok(false);
+    }
+    fs::write(&path, contents).with_context(|| format!("write {}", path.display()))?;
+    Ok(true)
+}
 
 fn esc(s: &str) -> String {
     s.chars().flat_map(|c| match c {
@@ -879,4 +891,25 @@ fn door_mask(d: DoorMask) -> u8 { d.raw() }
 #[allow(dead_code)]
 fn spawn_slot(s: SpawnSlot) -> String {
     format!("{}, {}, {}", s.x, s.y, spawn_role(s.role))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_if_changed;
+    use std::fs;
+
+    #[test]
+    fn unchanged_output_is_not_rewritten() {
+        let path = std::env::temp_dir().join(format!(
+            "quintra-codegen-idempotent-{}-{}",
+            std::process::id(),
+            std::thread::current().name().unwrap_or("test")
+        ));
+        let _ = fs::remove_file(&path);
+        assert!(write_if_changed(path.clone(), b"first").unwrap());
+        assert!(!write_if_changed(path.clone(), b"first").unwrap());
+        assert!(write_if_changed(path.clone(), b"second").unwrap());
+        assert_eq!(fs::read(&path).unwrap(), b"second");
+        let _ = fs::remove_file(path);
+    }
 }
