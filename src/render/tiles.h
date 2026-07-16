@@ -38,6 +38,11 @@
 #define BGT_POT        32  // breakable clay pot: solid, shoot for loot
 #define BGT_SWITCH     33  // one-shot pressure plate: player or block activates it
 #define BGT_PORTAL     34  // nonlinear intra-stage rift well
+#define BGT_GRASS      35  // outdoor ground: Riftwild + villages
+#define BGT_PATH       36  // worn civic/wilderness trail
+#define BGT_ROOF       37  // village shingle roof
+#define BGT_FENCE      38  // solid timber boundary
+#define BGT_TREE       39  // solid outdoor canopy/trunk silhouette
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0

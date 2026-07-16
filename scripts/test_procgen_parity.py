@@ -73,6 +73,10 @@ def main():
         pb.memory[rs + 1] = counter - 1   # room_counter
         pb.memory[rs + 11] = 0            # bosses_beaten
         pb.memory[rs + 13] = 0            # secret_pending
+        # Boss-room parity is about generated geometry, so satisfy the new
+        # player-facing progression prerequisite before crossing room 5.
+        pb.memory[rs + 23] = 1 if counter == 6 else 0  # Rift Sigil stage bit
+        pb.memory[rs + 24] = 0
 
         # Walk through the S door -> counter increments -> C procgen runs.
         # Check the counter EVERY frame and release input the moment we

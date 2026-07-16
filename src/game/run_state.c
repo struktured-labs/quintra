@@ -21,6 +21,7 @@ void run_state_clear(void) {
     run_state.world_return_screen = 0;
     run_state.dungeon_seen = 1;
     run_state.world_seen = 0;
+    run_state.rift_sigils = 0;
 }
 
 void run_state_init(u32 seed) {

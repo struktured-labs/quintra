@@ -1,4 +1,4 @@
-#pragma bank 2
+#pragma bank 6
 #include <gb/gb.h>
 
 #include "core/types.h"
@@ -192,6 +192,30 @@ void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_SHOP_TAG,   1, sprite_fx_shop_tag);
 }
 
+// Compact hand-authored outdoor vocabulary. These are deliberately runtime
+// tiles rather than font glyphs: villages and Riftwild must read as a world,
+// not recolored dungeon masonry.
+static const u8 bgt_grass[16] = {
+    0x00,0x00, 0x10,0x00, 0x00,0x00, 0x02,0x00,
+    0x00,0x00, 0x40,0x00, 0x00,0x00, 0x08,0x00
+};
+static const u8 bgt_path[16] = {
+    0x55,0x00, 0x00,0x22, 0x11,0x00, 0x00,0x88,
+    0x44,0x00, 0x00,0x11, 0x22,0x00, 0x00,0x44
+};
+static const u8 bgt_roof[16] = {
+    0xFF,0x00, 0x81,0x7E, 0xFF,0x00, 0x18,0xE7,
+    0xFF,0x00, 0x81,0x7E, 0xFF,0x00, 0x18,0xE7
+};
+static const u8 bgt_fence[16] = {
+    0x24,0x24, 0x24,0x24, 0xFF,0xDB, 0xFF,0xDB,
+    0x24,0x24, 0x24,0x24, 0xFF,0xDB, 0xFF,0xDB
+};
+static const u8 bgt_tree[16] = {
+    0x18,0x18, 0x7E,0x66, 0xFF,0xBD, 0xDB,0xFF,
+    0x7E,0x66, 0x3C,0x24, 0x18,0x18, 0x18,0x00
+};
+
 void tiles_load_dungeon_bg(void) BANKED {
     // Authored dungeon tileset (slot 0 = void/black; the rest overwrite the
     // former flat placeholders).
@@ -213,4 +237,9 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_POT,      1, bgt_pot);
     set_bkg_data(BGT_SWITCH,   1, bgt_switch);
     set_bkg_data(BGT_PORTAL,   1, bgt_portal);
+    set_bkg_data(BGT_GRASS,    1, bgt_grass);
+    set_bkg_data(BGT_PATH,     1, bgt_path);
+    set_bkg_data(BGT_ROOF,     1, bgt_roof);
+    set_bkg_data(BGT_FENCE,    1, bgt_fence);
+    set_bkg_data(BGT_TREE,     1, bgt_tree);
 }

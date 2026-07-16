@@ -55,6 +55,8 @@ static u8 stage_fade;
 static u8 hostiles_prev;
 static u8 hostiles_now;
 static u8 door_bump_cd;
+u8 room_combat_sealed;
+u8 room_sigil_status;
 
 // Screen shake (BG scroll wiggle; the WINDOW HUD stays put). Set by
 // combat via room_shake() on boss kills / player hits.
@@ -105,6 +107,50 @@ static u8 room_stage(void) {
     // (procgen clamps power separately); this drives look + music.
     u8 s = run_state.bosses_beaten;
     return (s < N_STAGES) ? s : (u8)(s % N_STAGES);
+}
+
+// One ordinary seal encounter per six-room dungeon, selected by the run seed,
+// plus the authored miniboss and boss. Shops, sanctuaries, towns, Riftwild,
+// and the opening room remain fleeable. This preserves the satisfying Zelda
+// arena-clear beat without turning every generated room into a compulsory
+// extermination chamber.
+static u8 room_should_combat_seal(void) {
+    u8 local;
+    u8 chosen;
+    if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)) return 0;
+    local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
+    if (local == 0) return run_state.room_counter ? 1 : 0;
+    if (local == 3) return 1;
+    if (local >= 4) return 0;
+    chosen = (u8)(1 + ((run_state.run_seed
+        ^ (u32)(run_state.bosses_beaten * 0x5D)) & 1));
+    return (local == chosen) ? 1 : 0;
+}
+
+// Progression fixtures belong to room orchestration, after procgen has fully
+// populated combat slots. Keeping them here prevents geometry/encounter code
+// from accidentally erasing a required key and makes the invariant testable.
+static void room_spawn_progression_fixture(void) {
+    room_sigil_status = 1;
+    if (run_state.world_mode) return;
+    room_sigil_status = 2;
+    // Each six-room dungeon puts its persistent objective in local room 2.
+    // This must be modulo-based: stage two and beyond have their own Sigil,
+    // rather than inheriting the opening dungeon's one-time fixture.
+    if ((run_state.room_counter % ROOMS_PER_STAGE) != 2) return;
+    room_sigil_status = 3;
+    if (run_state.rift_sigils
+        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) return;
+    room_sigil_status = 4;
+    {
+        u8 sigil = pickup_spawn(PICKUP_RIFT_SIGIL, FIX8(80), FIX8(64));
+        if (sigil != 0xFF) {
+            room_sigil_status = 5;
+            entities[sigil].sprite_tile = SPR_ITEM_ORB;
+            entities[sigil].palette = 0x06;
+            entities[sigil].state_timer = 0;
+        }
+    }
 }
 
 // Stage-specific OBJ identity is independent of the shared enemy/player
@@ -199,6 +245,7 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
 
 u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
+         || t == BGT_GRASS || t == BGT_PATH
          || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES
          || t == BGT_SWITCH || t == BGT_PORTAL
          // Shop price tags are painted floor (coin glyph + digits)
@@ -215,6 +262,43 @@ static u8 is_block_at(i16 px, i16 py) {
          || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
 }
 
+static const u16 outdoor_floor_pal[4] = {
+    BGR555(2,5,2), BGR555(6,15,6), BGR555(12,23,9), BGR555(22,29,16)
+};
+static const u16 outdoor_wall_pal[4] = {
+    BGR555(1,4,2), BGR555(4,10,4), BGR555(8,18,7), BGR555(18,25,11)
+};
+static const u16 outdoor_crystal_pal[4] = {
+    BGR555(1,5,6), BGR555(4,14,18), BGR555(10,24,29), BGR555(27,31,31)
+};
+static const u16 outdoor_door_pal[4] = {
+    BGR555(4,2,1), BGR555(11,6,2), BGR555(21,13,5), BGR555(31,24,12)
+};
+static const u16 outdoor_alert_pal[4] = {
+    BGR555(4,2,0), BGR555(14,7,1), BGR555(27,16,3), BGR555(31,29,14)
+};
+
+static u8 room_is_outdoor(void) {
+    return (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
+}
+
+static void room_load_environment_palettes(void) {
+    if (room_is_outdoor()) {
+        palette_bg_load(BGPAL_FLOOR, outdoor_floor_pal);
+        palette_bg_load(BGPAL_WALL, outdoor_wall_pal);
+        palette_bg_load(BGPAL_CRYSTAL, outdoor_crystal_pal);
+        palette_bg_load(BGPAL_DOOR, outdoor_door_pal);
+        palette_bg_load(BGPAL_CRACK, outdoor_alert_pal);
+    } else {
+        const u16 (*sp)[4] = stage_pal[room_stage()];
+        palette_bg_load(BGPAL_FLOOR, sp[0]);
+        palette_bg_load(BGPAL_WALL, sp[1]);
+        palette_bg_load(BGPAL_CRYSTAL, sp[2]);
+        palette_bg_load(BGPAL_DOOR, sp[3]);
+        palette_bg_load(BGPAL_CRACK, stage_pal_crack);
+    }
+}
+
 // Halve each 5-bit channel: pause-dim without storing dim palettes.
 static void palette_bg_load_dimmed(u8 slot, const u16 *pal) {
     u16 tmp[4];
@@ -225,6 +309,17 @@ static void palette_bg_load_dimmed(u8 slot, const u16 *pal) {
 
 static void room_apply_pause_palettes(u8 dim) {
     const u16 (*sp)[4] = stage_pal[room_stage()];
+    if (room_is_outdoor()) {
+        if (dim) {
+            palette_bg_load_dimmed(BGPAL_FLOOR, outdoor_floor_pal);
+            palette_bg_load_dimmed(BGPAL_WALL, outdoor_wall_pal);
+            palette_bg_load_dimmed(BGPAL_CRYSTAL, outdoor_crystal_pal);
+            palette_bg_load_dimmed(BGPAL_DOOR, outdoor_door_pal);
+        } else {
+            room_load_environment_palettes();
+        }
+        return;
+    }
     if (dim) {
         palette_bg_load_dimmed(BGPAL_FLOOR,   sp[0]);
         palette_bg_load_dimmed(BGPAL_WALL,    sp[1]);
@@ -313,7 +408,10 @@ void room_open_secret(u8 tx, u8 ty) BANKED {
 static u8 attr_for_tile(u8 t) {
     switch (t) {
         case BGT_WALL:
-        case BGT_PILLAR:  return BGPAL_WALL;
+        case BGT_PILLAR:
+        case BGT_ROOF:
+        case BGT_FENCE:
+        case BGT_TREE:    return BGPAL_WALL;
         case BGT_WALL_CRACK:
         case BGT_SPIKES:  return BGPAL_CRACK;   // amber danger signal
         case BGT_BLOCK:
@@ -324,7 +422,9 @@ static u8 attr_for_tile(u8 t) {
         case BGT_SWITCH:  return BGPAL_DOOR;      // gold-ish, reads as interactive
         case BGT_CRYSTAL:
         case BGT_PORTAL:  return BGPAL_CRYSTAL;
-        case BGT_DOOR:    return BGPAL_DOOR;
+        case BGT_DOOR:    return room_combat_sealed ? BGPAL_CRACK : BGPAL_DOOR;
+        case BGT_GRASS:
+        case BGT_PATH:    return BGPAL_FLOOR;
         default:
             // Shop price tags glow amber (crack palette) for readability
             if (t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9)) {
@@ -424,14 +524,7 @@ void room_enter(void) {
     g_vbl_ticks = 0;   // run clock: don't count time spent off-room
     DISPLAY_OFF;
 
-    {
-        const u16 (*sp)[4] = stage_pal[room_stage()];
-        palette_bg_load(BGPAL_FLOOR,   sp[0]);
-        palette_bg_load(BGPAL_WALL,    sp[1]);
-        palette_bg_load(BGPAL_CRYSTAL, sp[2]);
-        palette_bg_load(BGPAL_DOOR,    sp[3]);
-    }
-    palette_bg_load(BGPAL_CRACK,   stage_pal_crack);
+    room_load_environment_palettes();
     palette_obj_load(0, skeleton_palette);
     palette_obj_load(1, class_obj_palettes[player.class_id < 5 ? player.class_id : 0]);
     palette_obj_load(2, bullet_palette);
@@ -501,6 +594,9 @@ void room_enter(void) {
 
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
+    room_spawn_progression_fixture();
+    room_combat_sealed = room_should_combat_seal();
+    room_load_environment_palettes();
     draw_room_tilemap();
     place_player_sprite();
 
@@ -1034,6 +1130,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (alive == 0 && hostiles_prev != 0
             && !run_state.pending_unseal && !run_state.victory) {
             sfx_play(SFX_CLEAR);
+            if (room_combat_sealed) {
+                room_combat_sealed = 0;
+                room_unseal_doors();
+            }
             if (run_state.rooms_cleared < 255) run_state.rooms_cleared++;
             if (player.mp < player.mp_max) {
                 player.mp++;
@@ -1105,6 +1205,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             play_stage_music();
             DISPLAY_OFF;
             procgen_generate_current_room();
+            room_spawn_progression_fixture();
+            room_combat_sealed = room_should_combat_seal();
+            room_load_environment_palettes();
             draw_room_tilemap();
             place_player_sprite();
             hud_redraw_all();
@@ -1153,10 +1256,29 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (dir != DIR_NONE && tx < ROOM_W && ty < ROOM_H
             && room_tilemap[ty][tx] == BGT_DOOR) {
                 u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
+                // The sanctuary's forward threshold rejects the hero until
+                // this dungeon's lore fixture is recovered. Its return door
+                // remains open, guaranteeing a route back to the objective.
+                if (!run_state.world_mode
+                    && (run_state.room_counter % ROOMS_PER_STAGE) == 5
+                    && !(run_state.rift_sigils
+                        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
+                    && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
+                    if (dir == DIR_N) player.y = 0;
+                    else if (dir == DIR_S) player.y = 120;
+                    else if (dir == DIR_W) player.x = 0;
+                    else player.x = 144;
+                    if (door_bump_cd == 0) {
+                        door_bump_cd = 20;
+                        sfx_play(SFX_HURT);
+                        room_shake(1, 6);
+                    }
+                    return SCREEN_SELF;
+                }
                 // Dungeon combat rooms gate unexplored exits. Riftwild is an
                 // overworld, not a chain of arenas: its fights are optional
                 // and every authored graph exit remains fleeable.
-                if (!run_state.world_mode && hostiles_now != 0
+                if (room_combat_sealed && hostiles_now != 0
                     && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
                     // A locked doorway is still walkable terrain so the hero
                     // can cross it after a clear. Hold the signed position at
@@ -1229,6 +1351,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // Regenerate room in-place (skip full screen exit/enter)
                 DISPLAY_OFF;
                 procgen_generate_current_room();
+                room_spawn_progression_fixture();
+                room_combat_sealed = room_should_combat_seal();
+                room_load_environment_palettes();
                 draw_room_tilemap();
                 place_player_sprite();
                 hud_redraw_all();

@@ -18,6 +18,7 @@
 #define PICKUP_MERCHANT   8    // permanent visual shopkeeper; non-collectible
 #define PICKUP_SMITH      9    // permanent village forge keeper; non-collectible
 #define PICKUP_APOTHECARY 10   // permanent village rune keeper; non-collectible
+#define PICKUP_RIFT_SIGIL 11   // stage objective; unlocks its colossus threshold
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins

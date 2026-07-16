@@ -17,6 +17,7 @@
 #define SAVE_VERSION  1
 #define HDR_SIZE      5   // 'Q' 'S' version len_rs len_pl
 #define LEGACY_RS_SIZE 20 // v0.17.47 and earlier, before visited-map fields
+#define PRE_SIGIL_RS_SIZE 23 // v0.17.48-v0.17.51
 
 static void sram_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(0); }
 static void sram_close(void) { DISABLE_RAM_MBC5; }
@@ -27,6 +28,7 @@ u8 sram_run_valid(void) {
     if (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'S'
         && SRAM_BASE[2] == SAVE_VERSION
         && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
+            || SRAM_BASE[3] == PRE_SIGIL_RS_SIZE
             || SRAM_BASE[3] == LEGACY_RS_SIZE)
         && SRAM_BASE[4] == (u8)sizeof(player_state_t)) {
         u8 n = (u8)(SRAM_BASE[3] + SRAM_BASE[4]);

@@ -54,9 +54,12 @@ def main():
     exit_at(pb, 72, 120)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
     assert pb.memory[RS + 1] == 6, "overworld traversal consumed dungeon depth"
-    # Screen 0 is authored E+S only.
-    assert pb.memory[TM + 10] == 2 and pb.memory[TM + 9 * 20] == 2
+    # Screen 0 is authored E+S only, now bounded by a real tree line rather
+    # than dungeon brick. Its reciprocal exits remain door tiles.
+    assert pb.memory[TM + 10] == 39 and pb.memory[TM + 9 * 20] == 39
     assert pb.memory[TM + 9 * 20 + 19] == 3 and pb.memory[TM + 16 * 20 + 10] == 3
+    assert pb.memory[TM + 8 * 20 + 10] == 36, "Riftwild center lacks path terrain"
+    pb.screen.image.save(ROOT / "tmp" / "riftwild-arrival.png")
 
     # Riftwild encounters never seal exits: leave screen 0 with its generated
     # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.
@@ -72,6 +75,8 @@ def main():
     assert pb.memory[RS + 18] == 2, "vault staircase did not return"
     exit_at(pb, 72, 120); assert pb.memory[RS + 18] == 6, pb.memory[RS + 18]
     assert pb.memory[TM + 8 * 20 + 10] == 34, "dungeon gate has no portal"
+    for _ in range(60): pb.tick()
+    pb.screen.image.save(ROOT / "tmp" / "riftwild-gate.png")
     seen = pb.memory[RS + 21] | (pb.memory[RS + 22] << 8)
     expected_seen = sum(1 << cell for cell in (0, 1, 2, 6, 15))
     assert seen == expected_seen, (
@@ -79,6 +84,14 @@ def main():
     )
     pb.button("select"); pb.tick(24)
     assert pb.memory[SCREEN] == 8, "SELECT did not open visited Riftwild map"
+    # Tile rendering is a deliberate multi-VBlank transaction on real CGB
+    # hardware; wait for DISPLAY_ON before judging the composed screen.
+    for _ in range(90): pb.tick()
+    pb.memory[0xFF4F] = 0
+    bg = 0x9800
+    assert pb.memory[bg + 6 * 32 + 10] == 33, "current cell lacks tile icon"
+    assert pb.memory[bg + 14 * 32 + 14] == 22, "visited vault lacks crystal icon"
+    assert pb.memory[bg + 2 * 32 + 14] == 0, "unseen cell was pre-drawn"
     map_shot = ROOT / "tmp" / "riftwild-map.png"
     map_shot.parent.mkdir(exist_ok=True)
     pb.screen.image.save(map_shot)

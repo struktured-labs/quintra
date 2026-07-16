@@ -9,6 +9,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/palette.h"
+#include "render/tiles.h"
 #include "content.h"
 
 BANKREF(map_enter)
@@ -28,86 +29,123 @@ static const char *const town_rumors[4] = {
     "FIVE SHADOWS WALK", "THE RIFT KNOWS YOU"
 };
 
-static char world_cell_glyph(u8 cell) {
-    const zelda_screen_t *z = &zelda_overworlds[0].screen_grid[cell];
-    if (cell == (run_state.world_screen & 15)) return '@';
-    if (!(run_state.world_seen & (u16)(1u << cell))) return '?';
-    if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE) return 'D';
-    if (z->kind == ZELDA_CELL_VAULT) return 'V';
-    if (z->kind == ZELDA_CELL_BOSS) return 'C';
-    if (z->kind == ZELDA_CELL_CAVE_ENTRANCE) return 'A';
-    return 'O';
+static u8 map_attr(u8 tile) {
+    if (tile == BGT_WALL || tile == BGT_PILLAR || tile == BGT_ROOF
+        || tile == BGT_FENCE || tile == BGT_TREE) return BGPAL_WALL;
+    if (tile == BGT_CRYSTAL || tile == BGT_PORTAL) return BGPAL_CRYSTAL;
+    if (tile == BGT_DOOR || tile == BGT_SWITCH) return BGPAL_DOOR;
+    if (tile == BGT_WALL_CRACK || tile == BGT_SPIKES) return BGPAL_CRACK;
+    return BGPAL_FLOOR;
+}
+
+static void map_put(u8 x, u8 y, u8 tile) {
+    u8 attr = map_attr(tile);
+    VBK_REG = 0; set_bkg_tiles(x, y, 1, 1, &tile);
+    VBK_REG = 1; set_bkg_tiles(x, y, 1, 1, &attr);
+    VBK_REG = 0;
+}
+
+static void map_clear_tiles(void) {
+    u8 row[20];
+    u8 attrs[20];
+    u8 x, y;
+    for (x = 0; x < 20; ++x) { row[x] = BGT_VOID; attrs[x] = BGPAL_FLOOR; }
+    for (y = 0; y < 18; ++y) {
+        VBK_REG = 0; set_bkg_tiles(0, y, 20, 1, row);
+        VBK_REG = 1; set_bkg_tiles(0, y, 20, 1, attrs);
+    }
+    VBK_REG = 0;
+}
+
+static void map_room_box(u8 x, u8 y, u8 center, u8 seen) {
+    u8 dx, dy;
+    if (!seen) return; // the tile-built graph literally fills as explored
+    for (dy = 0; dy < 3; ++dy) {
+        for (dx = 0; dx < 3; ++dx) {
+            u8 edge = (dx == 0 || dx == 2 || dy == 0 || dy == 2);
+            map_put((u8)(x + dx), (u8)(y + dy), edge ? BGT_WALL : BGT_FLOOR);
+        }
+    }
+    map_put((u8)(x + 1), (u8)(y + 1), center);
 }
 
 static void draw_world_grid(void) {
     u8 r, c;
-    gotoxy(1, 1); printf("RIFTWILD 4x4 MAP");
     for (r = 0; r < 4; ++r) {
         for (c = 0; c < 4; ++c) {
             u8 cell = (u8)(r * 4 + c);
-            u8 x = (u8)(1 + c * 5);
-            u8 y = (u8)(3 + r * 3);
-            gotoxy(x, y); printf("[%c]", world_cell_glyph(cell));
+            u8 x = (u8)(1 + c * 4);
+            u8 y = (u8)(1 + r * 4);
+            u8 seen = (run_state.world_seen & (u16)(1u << cell)) ? 1 : 0;
+            u8 icon = BGT_FLOOR3;
+            const zelda_screen_t *z = &zelda_overworlds[0].screen_grid[cell];
+            if (cell == (run_state.world_screen & 15)) icon = BGT_SWITCH;
+            else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE) icon = BGT_PORTAL;
+            else if (z->kind == ZELDA_CELL_VAULT) icon = BGT_CRYSTAL;
+            else if (z->kind == ZELDA_CELL_BOSS) icon = BGT_SPIKES;
+            else if (z->kind == ZELDA_CELL_CAVE_ENTRANCE) icon = BGT_DOOR;
+            map_room_box(x, y, icon, seen);
             if (c < 3 && (run_state.world_seen & (u16)(1u << cell))
                 && (run_state.world_seen & (u16)(1u << (cell + 1)))
                 && (zelda_overworlds[0].screen_grid[cell].edges & 2)) {
-                gotoxy((u8)(x + 3), y); printf("==");
+                map_put((u8)(x + 3), (u8)(y + 1), BGT_FLOOR2);
             }
             if (r < 3 && (run_state.world_seen & (u16)(1u << cell))
                 && (run_state.world_seen & (u16)(1u << (cell + 4)))
                 && (zelda_overworlds[0].screen_grid[cell].edges & 4)) {
-                gotoxy((u8)(x + 1), (u8)(y + 1)); printf("I");
-                gotoxy((u8)(x + 1), (u8)(y + 2)); printf("I");
+                map_put((u8)(x + 1), (u8)(y + 3), BGT_FLOOR2);
             }
         }
     }
-    gotoxy(1,15); printf("@YOU D:GATE ?:HIDDEN");
 }
 
 static void draw_dungeon_grid(void) {
-    static const u8 gx[6] = { 2, 8, 14, 14, 8, 2 };
-    static const u8 gy[6] = { 4, 4, 4, 9, 9, 9 };
+    static const u8 gx[6] = { 1, 7, 13, 13, 7, 1 };
+    static const u8 gy[6] = { 3, 3, 3, 10, 10, 10 };
     u8 i;
     u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
     u8 here = (local == 0 && run_state.room_counter > 0) ? 5
         : ((run_state.bosses_beaten > 0 && local > 0)
             ? (u8)(local - 1) : local);
-    gotoxy(1,1); printf("DUNGEON %u  VISITED", (u16)(run_state.bosses_beaten + 1));
     for (i = 0; i < 6; ++i) {
-        char g = (i == here) ? '@'
-            : ((run_state.dungeon_seen & (u8)(1u << i)) ? 'O' : '?');
-        gotoxy(gx[i], gy[i]); printf("[%c]", g);
+        u8 seen = (run_state.dungeon_seen & (u8)(1u << i)) ? 1 : 0;
+        u8 icon = (i == here) ? BGT_SWITCH : (i == 5 ? BGT_SPIKES : BGT_FLOOR3);
+        map_room_box(gx[i], gy[i], icon, seen);
         if (i < 2 && (run_state.dungeon_seen & (u8)(3u << i)) == (u8)(3u << i)) {
-            gotoxy((u8)(gx[i] + 3), gy[i]); printf("===");
+            map_put((u8)(gx[i] + 3), (u8)(gy[i] + 1), BGT_FLOOR2);
+            map_put((u8)(gx[i] + 4), (u8)(gy[i] + 1), BGT_FLOOR2);
+            map_put((u8)(gx[i] + 5), (u8)(gy[i] + 1), BGT_FLOOR2);
         }
         if (i == 2 && (run_state.dungeon_seen & 0x0C) == 0x0C) {
-            gotoxy(15,5); printf("I"); gotoxy(15,6); printf("I");
-            gotoxy(15,7); printf("I"); gotoxy(15,8); printf("I");
+            map_put(14,6,BGT_FLOOR2); map_put(14,7,BGT_FLOOR2);
+            map_put(14,8,BGT_FLOOR2); map_put(14,9,BGT_FLOOR2);
         }
         if (i >= 3 && i < 5
             && (run_state.dungeon_seen & (u8)((1u << i) | (1u << (i + 1))))
                 == (u8)((1u << i) | (1u << (i + 1)))) {
-            gotoxy((u8)(gx[i + 1] + 3), gy[i]); printf("===");
+            map_put((u8)(gx[i + 1] + 3), (u8)(gy[i] + 1), BGT_FLOOR2);
+            map_put((u8)(gx[i + 1] + 4), (u8)(gy[i] + 1), BGT_FLOOR2);
+            map_put((u8)(gx[i + 1] + 5), (u8)(gy[i] + 1), BGT_FLOOR2);
         }
     }
-    gotoxy(1,12); printf("@ YOU   ? UNSEEN");
-    gotoxy(1,14); printf("BOSS AT FINAL CELL");
+    // A large physical Sigil marker occupies the map's center: crystal when
+    // recovered, cracked stone while the boss threshold remains locked.
+    if (run_state.rift_sigils & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
+        map_put(9,8,BGT_CRYSTAL);
+    else
+        map_put(9,8,BGT_WALL_CRACK);
 }
 
 void map_enter(void) {
     u8 in_region = (u8)(run_state.room_counter % ROOMS_PER_REGION);
     u8 is_town = (run_state.room_counter > ROOMS_PER_REGION && in_region == 1);
     DISPLAY_OFF; HIDE_SPRITES; HIDE_WIN;
-    palette_bg_load(0, map_pal); palette_bg_load(7, map_pal);
-    // The Compass needs brackets and line glyphs for its actual room grid;
-    // font_min silently drops them and turns the map into scattered letters.
-    font_init(); { font_t f = font_load(font_ibm); font_set(f); }
-    cls();
-    gotoxy(1,0); printf("- SPIRIT COMPASS -");
+    palette_bg_load(0, map_pal); palette_bg_load(1, map_pal);
+    palette_bg_load(2, map_pal); palette_bg_load(3, map_pal);
+    palette_bg_load(4, map_pal); palette_bg_load(7, map_pal);
     if (run_state.world_mode) {
+        tiles_load_dungeon_bg(); map_clear_tiles();
         draw_world_grid();
-        gotoxy(2,17); printf("SELECT/B = RETURN");
-        palette_bg_fill_attrs(0);
         SHOW_BKG; DISPLAY_ON;
         return;
     }
@@ -116,6 +154,9 @@ void map_enter(void) {
         u8 town = (completed > 0 && completed <= 3) ? (u8)(completed - 1) : 0;
         u8 rumor = (u8)(run_state.run_seed ^ (run_state.run_seed >> 8)
             ^ (run_state.run_seed >> 16) ^ completed) & 3;
+        font_init(); { font_t f = font_load(font_ibm); font_set(f); }
+        cls();
+        gotoxy(1,0); printf("- SPIRIT COMPASS -");
         gotoxy(1,2);  printf("REGION %u COMPLETE", (u16)completed);
         gotoxy(1,4);  printf("%s", town_names[town]);
         gotoxy(1,6);  printf("SANCTUARY & MARKET");
@@ -128,9 +169,8 @@ void map_enter(void) {
         SHOW_BKG; DISPLAY_ON;
         return;
     }
+    tiles_load_dungeon_bg(); map_clear_tiles();
     draw_dungeon_grid();
-    gotoxy(2,17); printf("SELECT/B = RETURN");
-    palette_bg_fill_attrs(0);
     SHOW_BKG; DISPLAY_ON;
 }
 void map_exit(void) {}

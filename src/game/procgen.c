@@ -539,44 +539,85 @@ void procgen_generate_current_room(void) BANKED {
         }
     }
 
+    // Riftwild is genuinely outdoors, not a dungeon graph with a different
+    // name: tree line, grass, worn trails, and landmark wells replace every
+    // inherited brick/prop tile while preserving authored reciprocal edges.
+    if (run_state.world_mode) {
+        u8 x, y;
+        u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen & 15].edges;
+        for (y = 0; y < ROOM_H; ++y)
+            for (x = 0; x < ROOM_W; ++x)
+                room_tilemap[y][x] = (y == 0 || y == ROOM_H - 1
+                    || x == 0 || x == ROOM_W - 1) ? BGT_TREE : BGT_GRASS;
+        // Trails reach only real graph exits, meeting at the clearing center.
+        if (edges & 0x01) for (y = 0; y <= 8; ++y)
+            room_tilemap[y][9] = room_tilemap[y][10] = BGT_PATH;
+        if (edges & 0x04) for (y = 8; y < ROOM_H; ++y)
+            room_tilemap[y][9] = room_tilemap[y][10] = BGT_PATH;
+        if (edges & 0x08) for (x = 0; x <= 10; ++x)
+            room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
+        if (edges & 0x02) for (x = 9; x < ROOM_W; ++x)
+            room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
+        if (edges & 0x01) room_tilemap[0][9] = room_tilemap[0][10] = BGT_DOOR;
+        if (edges & 0x04) room_tilemap[ROOM_H-1][9] = room_tilemap[ROOM_H-1][10] = BGT_DOOR;
+        if (edges & 0x08) room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
+        if (edges & 0x02) room_tilemap[8][ROOM_W-1] = room_tilemap[9][ROOM_W-1] = BGT_DOOR;
+        // Seed-stable groves provide outdoor cover without consuming RNG.
+        room_tilemap[3 + (seed & 3)][3] = BGT_TREE;
+        room_tilemap[11 + ((seed >> 2) & 1)][16] = BGT_TREE;
+        room_tilemap[3][6] = BGT_TREE;
+        room_tilemap[4][16] = BGT_TREE;
+        room_tilemap[12][4] = BGT_TREE;
+        room_tilemap[13][13] = BGT_TREE;
+        if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
+            || world_kind == ZELDA_CELL_VAULT
+            || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)
+            room_tilemap[8][10] = BGT_PORTAL;
+    }
+
     // Three-screen village: arrival square branches west to the elder/forge
     // quarter and east to the market; only its north gate continues the run.
     if (is_town) {
         u8 x, y;
-        for (y = 1; y < ROOM_H - 1; ++y)
-            for (x = 1; x < ROOM_W - 1; ++x)
-                room_tilemap[y][x] = ((x + y) & 3) ? BGT_FLOOR : BGT_FLOOR3;
+        for (y = 0; y < ROOM_H; ++y)
+            for (x = 0; x < ROOM_W; ++x)
+                room_tilemap[y][x] = (y == 0 || y == ROOM_H - 1
+                    || x == 0 || x == ROOM_W - 1) ? BGT_FENCE : BGT_GRASS;
         // Close the generic four exits, then expose only authored town edges.
-        room_tilemap[0][9] = room_tilemap[0][10] = BGT_WALL;
-        room_tilemap[ROOM_H - 1][9] = room_tilemap[ROOM_H - 1][10] = BGT_WALL;
-        room_tilemap[8][0] = room_tilemap[9][0] = BGT_WALL;
-        room_tilemap[8][ROOM_W - 1] = room_tilemap[9][ROOM_W - 1] = BGT_WALL;
         if (run_state.world_return_screen == TOWN_ARRIVAL) {
             room_tilemap[0][9] = room_tilemap[0][10] = BGT_DOOR;
             room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
             room_tilemap[8][ROOM_W - 1] = room_tilemap[9][ROOM_W - 1] = BGT_DOOR;
             // Fountain and processional road make arrival unmistakably civic.
-            for (y = 2; y < ROOM_H - 1; ++y)
-                room_tilemap[y][9] = room_tilemap[y][10] = BGT_FLOOR2;
+            for (y = 1; y < ROOM_H - 1; ++y)
+                room_tilemap[y][9] = room_tilemap[y][10] = BGT_PATH;
+            for (x = 1; x < ROOM_W - 1; ++x)
+                room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
             room_tilemap[7][8] = room_tilemap[7][11] = BGT_CRYSTAL;
             room_tilemap[10][8] = room_tilemap[10][11] = BGT_CRYSTAL;
+            room_tilemap[3][3] = room_tilemap[3][16] = BGT_TREE;
+            room_tilemap[13][3] = room_tilemap[13][16] = BGT_TREE;
         } else if (run_state.world_return_screen == TOWN_MARKET) {
             room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
             // Two roofed stall rows around an open shopping lane.
             for (x = 3; x <= 16; ++x) {
                 if (x == 6 || x == 10 || x == 14) continue;
-                room_tilemap[4][x] = BGT_PILLAR;
-                room_tilemap[12][x] = BGT_PILLAR;
+                room_tilemap[4][x] = BGT_ROOF;
+                room_tilemap[12][x] = BGT_ROOF;
             }
+            for (x = 1; x <= 10; ++x)
+                room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
         } else {
             room_tilemap[8][ROOM_W - 1] = room_tilemap[9][ROOM_W - 1] = BGT_DOOR;
             // Forge and apothecary houses face a small shared courtyard.
             for (x = 2; x <= 7; ++x) {
-                room_tilemap[3][x] = room_tilemap[7][x] = BGT_PILLAR;
-                room_tilemap[10][x + 10] = room_tilemap[14][x + 10] = BGT_PILLAR;
+                room_tilemap[3][x] = room_tilemap[4][x] = BGT_ROOF;
+                room_tilemap[11][x + 10] = room_tilemap[12][x + 10] = BGT_ROOF;
             }
-            room_tilemap[7][4] = room_tilemap[7][5] = BGT_DOOR;
+            room_tilemap[5][4] = room_tilemap[5][5] = BGT_DOOR;
             room_tilemap[10][14] = room_tilemap[10][15] = BGT_DOOR;
+            for (x = 9; x < ROOM_W - 1; ++x)
+                room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
         }
     }
 

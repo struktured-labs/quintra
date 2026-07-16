@@ -13,7 +13,9 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM = map(addr, ("_run_state", "_player", "_entities", "_room_tilemap"))
+RS, PL, EN, TM, SEALED = map(addr, (
+    "_run_state", "_player", "_entities", "_room_tilemap",
+    "_room_combat_sealed"))
 
 def put16(pb, address, value):
     pb.memory[address] = value & 0xFF
@@ -62,6 +64,7 @@ def locked_north_holds():
     pb.memory[enemy + 17] = 0
     pb.memory[enemy + 25] = 0x88
     pb.memory[TM + 9] = pb.memory[TM + 10] = 3
+    pb.memory[SEALED] = 1
     pb.memory[RS + 6] = 0  # north is a gated forward exit, not the return door
     put16(pb, PL + 9, 72)
     put16(pb, PL + 11, 0)
@@ -72,6 +75,31 @@ def locked_north_holds():
     room = pb.memory[RS + 1]
     pb.stop(save=False)
     return room == 0 and y == 0
+
+def open_room_with_hostile_allows_exit():
+    """A non-seal combat room remains fleeable even with a live hostile."""
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240): pb.tick()
+    pb.button("start")
+    for _ in range(30): pb.tick()
+    pb.button("a")
+    for _ in range(60): pb.tick()
+    for i in range(32 * 28): pb.memory[EN + i] = 0
+    pb.memory[EN] = 2
+    pb.memory[EN + 1] = 3
+    pb.memory[EN + 3] = 104
+    pb.memory[EN + 7] = 72
+    pb.memory[EN + 14] = 8
+    pb.memory[EN + 25] = 0x88
+    pb.memory[TM + 9] = pb.memory[TM + 10] = 3
+    pb.memory[RS + 6] = 0
+    pb.memory[SEALED] = 0
+    put16(pb, PL + 9, 72)
+    put16(pb, PL + 11, 0)
+    for _ in range(8): pb.tick()
+    room = pb.memory[RS + 1]
+    pb.stop(save=False)
+    return room == 1
 
 def blocked_crate_north_face_holds():
     """Walking upward cannot hide the hero's head under a stationary crate."""
@@ -111,8 +139,9 @@ def main():
     }
     failed = [name for name, args in positions.items() if not crosses(*args)]
     if not locked_north_holds(): failed.append("locked-north-boundary")
+    if not open_room_with_hostile_allows_exit(): failed.append("open-combat-exit")
     if not blocked_crate_north_face_holds(): failed.append("blocked-crate-north-face")
     if failed: raise SystemExit(f"[doors] FAIL unreachable: {', '.join(failed)}")
-    print("[doors] PASS cardinal/secret traversal + locked combat/crate boundaries")
+    print("[doors] PASS cardinal/secret traversal + selective seals + crate boundaries")
 
 if __name__ == "__main__": main()

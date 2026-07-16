@@ -1,4 +1,4 @@
-#pragma bank 3
+#pragma bank 5
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
@@ -7,6 +7,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/run_state.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -155,6 +156,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         || e->ai_data[0] == PICKUP_MERCHANT
         || e->ai_data[0] == PICKUP_SMITH
         || e->ai_data[0] == PICKUP_APOTHECARY) return;
+    if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
     // (the swap drops your old weapon underfoot — without the grace you'd
     // ping-pong between the two forever).
@@ -272,6 +274,10 @@ u8 pickup_check_player_collision(void) BANKED {
                         hud_redraw_mp();
                     }
                     sfx_play(SFX_HEART);
+                    break;
+                case PICKUP_RIFT_SIGIL:
+                    run_state.rift_sigils |= RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten);
+                    sfx_play(SFX_CLEAR);
                     break;
                 case PICKUP_WEAPON: {
                     // Swap A-weapons: take the orb's, drop yours in its

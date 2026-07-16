@@ -110,6 +110,7 @@ verify: all
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
 	uv run --quiet --with pyboy python scripts/test_score.py
 	uv run --quiet --with pyboy python scripts/test_doors.py
+	uv run --quiet --with pyboy python scripts/test_rift_sigil.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py

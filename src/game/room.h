@@ -15,6 +15,12 @@
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
 extern u8 room_transform_ticks;
+// Runtime contract exposed for emulator instrumentation: only authored seal
+// encounters lock unexplored exits while hostiles remain.
+extern u8 room_combat_sealed;
+// Progression-fixture transaction marker for emulator contract tests.
+// 5 means the current dungeon's Rift Sigil was successfully placed.
+extern u8 room_sigil_status;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;

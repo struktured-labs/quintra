@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.51: Three Lanterns](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.52: Wild Signals](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -124,12 +124,15 @@ the cartridge runtime.
   remains deliberately uncertain. Dawn's Verge waits beyond the optional
   post-victory descent through Riftwild, making it a discoverable epilogue
   settlement rather than an interruption before the ending.
-  Cleared dungeons open into an authored 4x4
-  nonlinear overworld graph with caves, vaults, champion encounters, and a discoverable
-  gate to the next dungeon. Riftwild fights are optional and its exits remain
-  fleeable, unlike sealed dungeon arenas. SELECT now draws a real linked 4×4
-  Riftwild map and a 3×2 dungeon route: visited cells persist in battery SRAM,
-  the current cell is marked `@`, and unseen cells remain `?`. In town, the Spirit Compass switches
+  Cleared dungeons open into the grassy, tree-lined **Riftwild**: an authored
+  4×4 nonlinear overworld with trails, caves, vaults, champion encounters, and
+  a discoverable gate to the next dungeon. Riftwild fights are optional and
+  its exits remain fleeable, unlike selected sealed dungeon arenas. Every
+  dungeon hides a recoverable **Rift Sigil** in its second room; its sanctuary
+  threshold rejects forward progress until that stage's Sigil is claimed.
+  SELECT draws tile-based linked 4×4 Riftwild and 3×2 dungeon maps: visited
+  cells persist in battery SRAM, the current cell is a bright marker, and
+  unseen cells remain blank. In town, the Spirit Compass switches
   to sanctuary context: completed/next region, elder restoration, and seeded
   market guidance instead of contradictory dungeon/depth labels. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
