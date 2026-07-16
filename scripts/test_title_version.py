@@ -41,6 +41,15 @@ def main():
         f"rendered title version drifted: expected {expected}, got {rendered}"
     )
     assert pb.memory[title_row + 19] == 0, "title footer touched scrolling corner"
+
+    # Cycle past the long beat "FIVE SEAL THE RIFT", whose final T occupies
+    # column 19. The following beat must erase that edge cell completely.
+    for _ in range(1500):
+        pb.tick()
+    assert pb.memory[0x9800 + 8 * 32 + 19] == 0, \
+        "intro lore left a glyph at the upper right edge"
+    assert pb.memory[0x9800 + 9 * 32 + 19] == 0, \
+        "intro lore left the trailing T from FIVE SEAL THE RIFT"
     screenshot = ROOT / "tmp" / "title-current-version.png"
     screenshot.parent.mkdir(exist_ok=True)
     pb.screen.image.save(screenshot)

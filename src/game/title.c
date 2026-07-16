@@ -47,8 +47,11 @@ static u8 lore_hold;
 static void render_lore_beat(void) {
     // The founding myth as a tiny, animated intro story. It lives on the title
     // so START can skip it immediately and repeat runs never inherit a cutscene.
-    gotoxy(1, 8); printf("                  ");
-    gotoxy(1, 9); printf("                  ");
+    // Clear the complete rows. "FIVE SEAL THE RIFT" begins at x=2 and its
+    // final T reaches column 19; the former x=1/18-cell erase left that T
+    // attached to later beats (for example "ERE ALL NAMES FADET").
+    gotoxy(0, 8); printf("                    ");
+    gotoxy(0, 9); printf("                    ");
     switch (lore_beat) {
         case 0: gotoxy(2, 8); printf("WHEN THE SKY TORE"); gotoxy(2, 9); printf("FIVE SPIRITS WOKE"); break;
         case 1: gotoxy(2, 8); printf("BEAR FIVE SPARKS"); gotoxy(1, 9); printf("TO THE WORLD BELOW"); break;
