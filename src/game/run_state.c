@@ -50,5 +50,6 @@ void run_state_begin_world(void) {
 
 void run_state_begin_dungeon(void) {
     run_state.world_mode = 0;
+    run_state.world_return_screen = TOWN_ARRIVAL;
     run_state.dungeon_seen = 0;
 }

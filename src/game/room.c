@@ -1193,6 +1193,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         else if (dir == DIR_E) run_state.world_screen++;
                         else if (dir == DIR_S) run_state.world_screen += 4;
                         else run_state.world_screen--;
+                    } else if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+                        if (run_state.world_return_screen == TOWN_ARRIVAL) {
+                            if (dir == DIR_E) run_state.world_return_screen = TOWN_MARKET;
+                            else if (dir == DIR_W) run_state.world_return_screen = TOWN_QUARTER;
+                            else { run_state.world_return_screen = TOWN_ARRIVAL; run_state.room_counter++; }
+                        } else {
+                            run_state.world_return_screen = TOWN_ARRIVAL;
+                        }
                     } else if (run_state.room_counter > 0
                         && (run_state.room_counter % ROOMS_PER_STAGE) == 0
                         && run_state.bosses_beaten

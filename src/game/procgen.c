@@ -1,4 +1,4 @@
-#pragma bank 1
+#pragma bank 4
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
@@ -238,8 +238,7 @@ void procgen_generate_current_room(void) BANKED {
     // A village clearing follows every third dungeon: rooms 19, 37, 55...
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
-    u8 is_town = (!run_state.world_mode && run_state.room_counter > ROOMS_PER_REGION
-        && (run_state.room_counter % ROOMS_PER_REGION) == 1) ? 1 : 0;
+    u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
     run_state_mark_visited();
     rng_seed(seed);
 
@@ -540,32 +539,45 @@ void procgen_generate_current_room(void) BANKED {
         }
     }
 
-    // Procedural town landmark. Clear the combat geometry into a broad plaza,
-    // then build two compact houses and a central shrine. The four exits keep
-    // it connected to the same free-roaming room graph as every dungeon.
+    // Three-screen village: arrival square branches west to the elder/forge
+    // quarter and east to the market; only its north gate continues the run.
     if (is_town) {
         u8 x, y;
         for (y = 1; y < ROOM_H - 1; ++y)
             for (x = 1; x < ROOM_W - 1; ++x)
                 room_tilemap[y][x] = ((x + y) & 3) ? BGT_FLOOR : BGT_FLOOR3;
-        for (x = 2; x <= 7; ++x) {
-            room_tilemap[3][x] = BGT_PILLAR;
-            room_tilemap[6][x] = BGT_PILLAR;
-            room_tilemap[11][x + 10] = BGT_PILLAR;
-            room_tilemap[14][x + 10] = BGT_PILLAR;
+        // Close the generic four exits, then expose only authored town edges.
+        room_tilemap[0][9] = room_tilemap[0][10] = BGT_WALL;
+        room_tilemap[ROOM_H - 1][9] = room_tilemap[ROOM_H - 1][10] = BGT_WALL;
+        room_tilemap[8][0] = room_tilemap[9][0] = BGT_WALL;
+        room_tilemap[8][ROOM_W - 1] = room_tilemap[9][ROOM_W - 1] = BGT_WALL;
+        if (run_state.world_return_screen == TOWN_ARRIVAL) {
+            room_tilemap[0][9] = room_tilemap[0][10] = BGT_DOOR;
+            room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
+            room_tilemap[8][ROOM_W - 1] = room_tilemap[9][ROOM_W - 1] = BGT_DOOR;
+            // Fountain and processional road make arrival unmistakably civic.
+            for (y = 2; y < ROOM_H - 1; ++y)
+                room_tilemap[y][9] = room_tilemap[y][10] = BGT_FLOOR2;
+            room_tilemap[7][8] = room_tilemap[7][11] = BGT_CRYSTAL;
+            room_tilemap[10][8] = room_tilemap[10][11] = BGT_CRYSTAL;
+        } else if (run_state.world_return_screen == TOWN_MARKET) {
+            room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
+            // Two roofed stall rows around an open shopping lane.
+            for (x = 3; x <= 16; ++x) {
+                if (x == 6 || x == 10 || x == 14) continue;
+                room_tilemap[4][x] = BGT_PILLAR;
+                room_tilemap[12][x] = BGT_PILLAR;
+            }
+        } else {
+            room_tilemap[8][ROOM_W - 1] = room_tilemap[9][ROOM_W - 1] = BGT_DOOR;
+            // Forge and apothecary houses face a small shared courtyard.
+            for (x = 2; x <= 7; ++x) {
+                room_tilemap[3][x] = room_tilemap[7][x] = BGT_PILLAR;
+                room_tilemap[10][x + 10] = room_tilemap[14][x + 10] = BGT_PILLAR;
+            }
+            room_tilemap[7][4] = room_tilemap[7][5] = BGT_DOOR;
+            room_tilemap[10][14] = room_tilemap[10][15] = BGT_DOOR;
         }
-        for (y = 3; y <= 6; ++y) {
-            room_tilemap[y][2] = BGT_PILLAR;
-            room_tilemap[y][7] = BGT_PILLAR;
-            room_tilemap[y + 8][12] = BGT_PILLAR;
-            room_tilemap[y + 8][17] = BGT_PILLAR;
-        }
-        room_tilemap[6][4] = BGT_DOOR; room_tilemap[6][5] = BGT_DOOR;
-        room_tilemap[11][14] = BGT_DOOR; room_tilemap[11][15] = BGT_DOOR;
-        room_tilemap[7][9] = BGT_CRYSTAL;
-        room_tilemap[7][10] = BGT_CRYSTAL;
-        room_tilemap[10][9] = BGT_CRYSTAL;
-        room_tilemap[10][10] = BGT_CRYSTAL;
     }
 
     // Clear entity table — fresh enemies per room
@@ -626,18 +638,19 @@ void procgen_generate_current_room(void) BANKED {
                           && (run_state.room_counter % ROOMS_PER_STAGE) == 5) ? 1 : 0;
 
         if (is_town) {
-            // Towns are full sanctuary hubs: healing, magic, and five fairer
-            // market stalls. Their regional name and seed-fuzzy lore live in
-            // the Spirit Compass without changing this procedural plaza.
-            pickup_spawn_villager(FIX8(80), FIX8(48));
-            pickup_spawn_merchant(FIX8(80), FIX8(96));
-            pickup_spawn_smith(FIX8(136), FIX8(48));
-            pickup_spawn_apothecary(FIX8(24), FIX8(48));
-            spawn_shop_ware(48, 72, WARE_HEART, 5);
-            spawn_shop_ware(80, 72, WARE_ITEM, 20);
-            spawn_shop_ware(112, 72, WARE_BIG, 35);
-            spawn_shop_ware(136, 72, WARE_FORGE, 30);
-            spawn_shop_ware(24, 72, WARE_RUNE, 30);
+            if (run_state.world_return_screen == TOWN_ARRIVAL) {
+                pickup_spawn_villager(FIX8(80), FIX8(64));
+            } else if (run_state.world_return_screen == TOWN_MARKET) {
+                pickup_spawn_merchant(FIX8(80), FIX8(40));
+                spawn_shop_ware(48, 72, WARE_HEART, 5);
+                spawn_shop_ware(80, 72, WARE_ITEM, 20);
+                spawn_shop_ware(112, 72, WARE_BIG, 35);
+            } else {
+                pickup_spawn_smith(FIX8(40), FIX8(48));
+                pickup_spawn_apothecary(FIX8(120), FIX8(96));
+                spawn_shop_ware(40, 80, WARE_FORGE, 30);
+                spawn_shop_ware(120, 64, WARE_RUNE, 30);
+            }
             player.iframes = 60;
             return;
         }

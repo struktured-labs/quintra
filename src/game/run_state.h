@@ -24,6 +24,13 @@ enum {
 // without abandoning deterministic room generation.
 #define DUNGEONS_PER_REGION 3
 #define ROOMS_PER_REGION    (ROOMS_PER_STAGE * DUNGEONS_PER_REGION)
+#define RUN_ROOM_IS_TOWN(n) ((n) > ROOMS_PER_REGION && ((n) % ROOMS_PER_REGION) == 1)
+
+// During a town, world_return_screen is safely reused as a local plaza index;
+// it is reset before entering either a dungeon or Riftwild cave traversal.
+#define TOWN_ARRIVAL 0
+#define TOWN_MARKET  1
+#define TOWN_QUARTER 2
 
 typedef struct {
     u8  biome_id;            // current biome

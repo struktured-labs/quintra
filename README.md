@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.50: Clean Vow](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.51: Three Lanterns](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -109,8 +109,9 @@ the cartridge runtime.
   floors**. Seeded nonlinear **rift wells** disorientingly bounce between
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
 - **Generated world cadence**: three six-room dungeons form a region, followed
-  by a safe procedural town with four visually distinct residents: elder,
-  merchant, masked smith, and apothecary. The smith staffs a 30-coin Power
+  by a safe, connected three-screen village: an elder's fountain square, a
+  dedicated market, and a forge/apothecary quarter. Its four visually distinct
+  residents are the elder, merchant, masked smith, and apothecary. The smith staffs a 30-coin Power
   Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.
@@ -220,7 +221,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.50 occupies 64 KiB with 632 bytes of bank-0 headroom. Gameplay files
+The current development cartridge occupies 128 KiB with 632 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -231,8 +232,9 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen bank. Switchable headroom is now 1,042 bytes in bank 1, 1,043 in
-bank 2, and 1,027 in bank 3. Ascended champion art is emitted into a separate
+room/procgen code now has a dedicated bank. Switchable headroom is currently
+7,136 bytes in bank 1, 1,043 in bank 2, 1,025 in bank 3, and 10,073 in bank 4.
+Ascended champion art is emitted into a separate
 bank-3 translation unit so GBDK cannot silently pack it into constrained bank 2.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one
@@ -282,7 +284,7 @@ dungeon rooms that genuinely exceed that threshold switch to a pixel-exact
 feet-box edge follow for one body width, escaping pillar corners that the
 coarser tile route cannot represent; overworld routing remains authored.
 
-Cart spec: **64 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
+Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,
 mapper/size flags, header and global checksums, then writes a live suspend to
 SRAM and resumes it in a fresh emulator instance—the software equivalent of a

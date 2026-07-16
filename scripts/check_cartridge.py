@@ -15,8 +15,8 @@ def fail(message):
 
 def main(path):
     rom = Path(path).read_bytes()
-    if len(rom) != 64 * 1024:
-        fail(f"expected current 64 KiB image, got {len(rom)} bytes")
+    if len(rom) != 128 * 1024:
+        fail(f"expected current 128 KiB image, got {len(rom)} bytes")
     if rom[0x104:0x134] != LOGO:
         fail("Nintendo boot-logo block is invalid")
     title = rom[0x134:0x143].split(b"\0", 1)[0]
@@ -25,7 +25,7 @@ def main(path):
     expected = {
         0x143: (0xC0, "CGB-only flag"),
         0x147: (0x1B, "MBC5+RAM+battery mapper"),
-        0x148: (0x01, "64 KiB ROM size code"),
+        0x148: (0x02, "128 KiB ROM size code"),
         0x149: (0x03, "32 KiB RAM size code"),
     }
     for offset, (value, label) in expected.items():
@@ -40,7 +40,7 @@ def main(path):
     stored_global = int.from_bytes(rom[0x14E:0x150], "big")
     if global_sum != stored_global:
         fail(f"global checksum 0x{stored_global:04X}, calculated 0x{global_sum:04X}")
-    print("[cartridge] PASS QUINTRA, CGB-only, MBC5+32KiB battery RAM, checksums valid")
+    print("[cartridge] PASS QUINTRA, 128KiB CGB-only, MBC5+32KiB battery RAM, checksums valid")
 
 
 if __name__ == "__main__":
