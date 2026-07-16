@@ -96,7 +96,7 @@ u8 combat_resolve(void) BANKED {
             dmg = entities[i].damage;
             u8 weak = (entities[i].ai_data[1] & weakness) ? 1 : 0;
             if (weak) {
-                dmg = (u8)(dmg << 1);
+                dmg = (u8)(dmg + ((dmg + 1) >> 1));
                 if (player.class_id == 4) dmg++;
             }
             if (rng_range(100) < (u8)(player.lck * 5)) dmg = (u8)(dmg << 1);
@@ -328,6 +328,10 @@ u8 combat_resolve(void) BANKED {
                     player.hp = 0;
                     player_died = 1;
                 }
+                // HP mutation and its visible contract belong to the same hit.
+                // Without this, ordinary contact/projectile damage stayed on
+                // the old heart row until a later pickup or room redraw.
+                hud_redraw_hp();
                 if (was_projectile) entity_kill(i);   // bullet spent
                 break;   // one hit per frame
             }

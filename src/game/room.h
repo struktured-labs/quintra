@@ -14,6 +14,7 @@
 #define ROOM_H 17
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
+extern u8 room_transform_ticks;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;

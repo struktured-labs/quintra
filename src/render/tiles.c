@@ -125,6 +125,16 @@ void tiles_load_all_class_sprites(void) BANKED {
     set_sprite_data((u8)(SPR_CLASS_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin);
     set_sprite_data((u8)(SPR_CLASS_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean);
     set_sprite_data((u8)(SPR_CLASS_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine);
+    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin_walk);
+    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 1 * SPR_CLASS_STRIDE), 4, sprite_class_sauran_walk);
+    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin_walk);
+    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean_walk);
+    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine_walk);
+    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin_ascended);
+    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 1 * SPR_CLASS_STRIDE), 4, sprite_class_sauran_ascended);
+    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin_ascended);
+    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean_ascended);
+    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine_ascended);
 }
 
 void tiles_load_all_enemy_sprites(void) BANKED {

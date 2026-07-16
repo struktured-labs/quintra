@@ -72,6 +72,10 @@ static u8 tap_age;       // frames since that press
 static u8 dash_timer;    // frames left in the current dash
 static u8 dash_cd;       // cooldown before the next dash
 static i8 dash_dx, dash_dy;
+// Spirit Convergence lasts 135 eighth-second ticks (~18 seconds). Keeping the
+// timer here avoids inflating suspend-save payloads; ordinary room transitions
+// do not reset it.
+u8 room_transform_ticks;
 
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
@@ -365,30 +369,22 @@ static void place_player_sprite(void) {
     } else {
         u8 sx = (u8)(player.x + 8);
         u8 sy = (u8)(player.y + 16);
-        u8 base = (u8)(SPR_CLASS_BASE
-                       + (u8)(((player.class_id < 5) ? player.class_id : 0) * SPR_CLASS_STRIDE));
-        // Walk cycle without extra tile art: for half of the anim counter,
-        // swap the two leg tiles left<->right and X-flip them (OAM attr bit 5)
-        // so the legs step. anim_frame only advances while moving, so a still
-        // hero holds the neutral pose. Top row (head/torso) never changes.
+        u8 class_id = (player.class_id < 5) ? player.class_id : 0;
         u8 step = (player.anim_frame & 0x04) ? 1 : 0;
+        u8 pose_base = room_transform_ticks ? SPR_CLASS_ASCENDED_BASE
+            : (step ? SPR_CLASS_WALK_BASE : SPR_CLASS_BASE);
+        u8 base = (u8)(pose_base
+                       + (u8)(class_id * SPR_CLASS_STRIDE));
         set_sprite_tile(0, (u8)(base + 0));
         set_sprite_tile(1, (u8)(base + 1));
         set_sprite_prop(0, 0x01);
         set_sprite_prop(1, 0x01);
         move_sprite(0, sx,         sy);
         move_sprite(1, (u8)(sx+8), sy);
-        if (step) {
-            set_sprite_tile(2, (u8)(base + 3));   // BR art on the left, flipped
-            set_sprite_tile(3, (u8)(base + 2));   // BL art on the right, flipped
-            set_sprite_prop(2, 0x01 | S_FLIPX);
-            set_sprite_prop(3, 0x01 | S_FLIPX);
-        } else {
-            set_sprite_tile(2, (u8)(base + 2));
-            set_sprite_tile(3, (u8)(base + 3));
-            set_sprite_prop(2, 0x01);
-            set_sprite_prop(3, 0x01);
-        }
+        set_sprite_tile(2, (u8)(base + 2));
+        set_sprite_tile(3, (u8)(base + 3));
+        set_sprite_prop(2, 0x01);
+        set_sprite_prop(3, 0x01);
         move_sprite(2, sx,         (u8)(sy+8));
         move_sprite(3, (u8)(sx+8), (u8)(sy+8));
     }
@@ -510,7 +506,6 @@ void room_enter(void) {
 
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
-    player.active_charge = 0;
     if (procgen_current_room_is_boss) {
         sfx_play(SFX_ROAR);
         // Entry drama: the arena starts dark and trembling, then the
@@ -874,22 +869,22 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
                     (u8)(w->p1 + player.atk + 2), PROJ_SPIKE);
             player.mp = 0;
-            if (player.hp < player.hp_max) player.hp++;
             player.iframes = 45;
             player.active_charge = 180;
+            room_transform_ticks = 135; // 135 * 8 frames = 18 seconds at 60 Hz
             room_shake(1, 18);
             sfx_play(SFX_ROAR);
-            hud_redraw_hp(); hud_redraw_mp();
+            hud_redraw_mp();
         }
 
         if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
             u8 dir = input_to_dir8(keys);
-            u8 dmg = (u8)(w->p1 + player.atk);   // ATK adds linearly
+            u8 dmg = (u8)(w->p1 + player.atk);
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
             projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, w->p2);
-            player.fire_cooldown = (u8)(w->p0 >> 1);
+            player.fire_cooldown = player_fire_delay(w->p0);
         }
-        if (player.fire_cooldown > 0) player.fire_cooldown--;
+        if (player.fire_cooldown) player.fire_cooldown--;
 
         // ---- Weapon 2 (B, edge): class signature move. Costs MP_COST_B
         // magic on top of the ~2.3s cooldown; no MP -> error beep.
@@ -948,6 +943,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             hud_redraw_mp();
         }
         if (player.active_charge > 0) player.active_charge--;
+        if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0)
+            room_transform_ticks--;
         if (player.shield_timer > 0) {
             player.shield_timer--;
             if ((player.shield_timer & 7) == 0)

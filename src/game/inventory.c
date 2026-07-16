@@ -90,8 +90,14 @@ void inventory_enter(void) {
     printf("%s", perk_names[player.class_id < 5 ? player.class_id : 0]);
 
     gotoxy(1, 14); printf("coins %u", (u16)player.coins);
-    gotoxy(11, 14); printf("T %u:%u%u", (u16)(run_state.run_timer / 60),
-        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
+    gotoxy(10, 14);
+    if (run_state.run_timer < 6000) {
+        printf("TIME %u:%u%u", (u16)(run_state.run_timer / 60),
+            (u16)((run_state.run_timer % 60) / 10),
+            (u16)(run_state.run_timer % 10));
+    } else {
+        printf("TIME 99+");
+    }
     gotoxy(1, 15); printf("bosses %u/%u", (u16)run_state.bosses_beaten, (u16)BOSSES_TO_WIN);
     gotoxy(1, 16); printf("kills %u", (u16)run_state.enemies_killed);
 

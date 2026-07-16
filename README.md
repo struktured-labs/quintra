@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.48: Cartographer](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.49: Ascendant](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -95,8 +95,12 @@ the cartridge runtime.
 - **Distinct champion combat + dodge dash**: Wolfkin is a true close-range
   melee fighter; `A` uses each class primary, `B` uses its signature, Sauran
   raises a projectile-breaking cooldown shield, and full-MP `A+B` unleashes
-  **Spirit Convergence**. A double-tap **dodge-dash** grants i-frames for
-  weaving through bullet hell.
+  **Spirit Convergence**: an opening eight-way burst followed by an 18-second
+  class-specific full-sprite ascended form. Neutral and walk poses are now
+  separately authored instead of mirroring whole sprite quadrants. Turbo fire
+  remains hold-to-use but starts deliberately slower; run-earned SPD reduces
+  the interval by two frames per point, making attack-speed growth visible.
+  A double-tap **dodge-dash** grants i-frames for weaving through bullet hell.
 - **RPG layer**: HP/MP/ATK/DEF/SPD/LCK, elemental weakness bonuses, crits,
   hit-flash / hit-stop / knockback / screen shake for weight.
 - **Interactive dungeons**: shoot glowing cracked walls for treasure vaults,
@@ -110,9 +114,9 @@ the cartridge runtime.
   Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.
-  Stock alternates between its item silhouette and a hanging price tag, so it
-  cannot be mistaken for loose coins; unaffordable wares buzz once per contact
-  instead of nagging while the hero stands over them.
+  Stock holds a hanging price tag continuously so it cannot be mistaken for
+  loose coins; contact prints the exact price in the HUD, and unaffordable
+  wares buzz once instead of nagging while the hero stands over them.
   The Spirit Compass gives each regional settlement a fixed remembered name—
   Emberford, Gloamharbor, or Dawn's Verge—but chooses its local warning from
   the run seed, making the place persistent while its account of the Rift
@@ -216,7 +220,7 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-v0.17.48 occupies 64 KiB with 776 bytes of bank-0 headroom. Gameplay files
+v0.17.49 occupies 64 KiB with 632 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
@@ -227,9 +231,9 @@ Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen bank. Switchable headroom is now 1,029 bytes in bank 1, 1,605 in
-bank 2, and 1,388 in bank 3 instead of leaving any bank within 294 bytes of
-overflow.
+room/procgen bank. Switchable headroom is now 1,042 bytes in bank 1, 1,043 in
+bank 2, and 1,027 in bank 3. Ascended champion art is emitted into a separate
+bank-3 translation unit so GBDK cannot silently pack it into constrained bank 2.
 Sprite arrays and their C declarations are emitted together from the same
 typed Rust asset lists. Golden tests pin both files and require exactly one
 declaration per generated array, so adding art can no longer leave a stale

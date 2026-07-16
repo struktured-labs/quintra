@@ -11,7 +11,7 @@ pub const CLAW_COMBO: Item = Item {
     name:        "Claw Combo",
     description: "3-hit melee combo. Hold B to chain.",
     kind: ItemKind::Weapon {
-        fire_rate:  12,    // ticks between shots
+        fire_rate:  24,    // no-upgrade cadence; run-earned SPD accelerates it
         damage:     2,
         projectile: ProjectileKind::Spike,
         mp_cost:    0,
@@ -42,7 +42,7 @@ pub const TAIL_SPIKE: Item = Item {
     id:          ITEM_TAIL_SPIKE,
     name:        "Tail Spike",
     description: "Short heavy strike. Bonus damage on hit.",
-    kind: ItemKind::Weapon { fire_rate: 15, damage: 3, projectile: ProjectileKind::Spike, mp_cost: 0 },
+    kind: ItemKind::Weapon { fire_rate: 28, damage: 3, projectile: ProjectileKind::Spike, mp_cost: 0 },
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Common,
     effects: &[],
 };
@@ -51,7 +51,7 @@ pub const FEATHER_SHURIKEN: Item = Item {
     id:          ITEM_FEATHER_SHURI,
     name:        "Featherbarb",
     description: "Ranged shuriken. Returns after hit.",
-    kind: ItemKind::Weapon { fire_rate: 10, damage: 1, projectile: ProjectileKind::Shuriken, mp_cost: 0 },
+    kind: ItemKind::Weapon { fire_rate: 22, damage: 1, projectile: ProjectileKind::Shuriken, mp_cost: 0 },
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Common,
     effects: &[],
 };
@@ -60,7 +60,7 @@ pub const BUBBLE_BOLT: Item = Item {
     id:          ITEM_BUBBLE_BOLT,
     name:        "BubbleBolt",
     description: "Slow piercing bubble.",
-    kind: ItemKind::Weapon { fire_rate: 15, damage: 2, projectile: ProjectileKind::Bubble, mp_cost: 0 },
+    kind: ItemKind::Weapon { fire_rate: 28, damage: 2, projectile: ProjectileKind::Bubble, mp_cost: 0 },
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Common,
     effects: &[],
 };
@@ -69,7 +69,7 @@ pub const STINGER: Item = Item {
     id:          ITEM_STINGER,
     name:        "Stinger",
     description: "Fast strike. High critical chance.",
-    kind: ItemKind::Weapon { fire_rate: 8, damage: 2, projectile: ProjectileKind::Spike, mp_cost: 0 },
+    kind: ItemKind::Weapon { fire_rate: 20, damage: 2, projectile: ProjectileKind::Spike, mp_cost: 0 },
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Common,
     effects: &[Effect::StatBoost { stat: Stat::Lck, delta: 3 }],
 };

@@ -40,5 +40,6 @@ extern player_state_t player;
 
 void player_init_from_class(u8 class_id);
 void player_clear(void);
+u8 player_fire_delay(u8 base) BANKED;
 
 #endif

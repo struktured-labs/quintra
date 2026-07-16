@@ -2,6 +2,7 @@
 
 #include "core/types.h"
 #include "game/player.h"
+#include "game/room.h"
 #include "content.h"
 
 player_state_t player;
@@ -23,6 +24,7 @@ void player_clear(void) {
     player.starter_weapon = 0xFF;
     player.fire_cooldown  = 0;
     player.move_acc       = 0;
+    room_transform_ticks  = 0;
     for (i = 0; i < INVENTORY_SLOTS; ++i) player.inventory[i] = 0xFF;
     player.score_lo = player.score_hi = 0;
 }
@@ -56,4 +58,17 @@ void player_init_from_class(u8 class_id) {
             // his 12-half-heart base; the regen half ticks in room.c.
         }
     }
+}
+
+// Starter cadence is authored as the no-upgrade baseline. SPD earned during
+// the run removes two frames per point, with a six-frame floor so turbo fire
+// stays controllable and attack-speed relics have an obvious payoff.
+u8 player_fire_delay(u8 base) BANKED {
+    u8 start_spd;
+    u8 haste;
+    if (player.class_id >= N_CLASSES) return base;
+    start_spd = classes[player.class_id].base_stats.spd;
+    haste = (player.spd > start_spd) ? (u8)(player.spd - start_spd) : 0;
+    haste = (u8)(haste << 1);
+    return (base > (u8)(haste + 6)) ? (u8)(base - haste) : 6;
 }

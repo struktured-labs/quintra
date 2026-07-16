@@ -10,6 +10,16 @@ extern const u8 sprite_class_sauran[64];
 extern const u8 sprite_class_corvin[64];
 extern const u8 sprite_class_picsean[64];
 extern const u8 sprite_class_vespine[64];
+extern const u8 sprite_class_wolfkin_walk[64];
+extern const u8 sprite_class_sauran_walk[64];
+extern const u8 sprite_class_corvin_walk[64];
+extern const u8 sprite_class_picsean_walk[64];
+extern const u8 sprite_class_vespine_walk[64];
+extern const u8 sprite_class_wolfkin_ascended[64];
+extern const u8 sprite_class_sauran_ascended[64];
+extern const u8 sprite_class_corvin_ascended[64];
+extern const u8 sprite_class_picsean_ascended[64];
+extern const u8 sprite_class_vespine_ascended[64];
 
 // 8x8 enemy sprites
 extern const u8 sprite_enemy_crawler[16];

@@ -123,6 +123,16 @@ void hud_redraw_depth(void) {
     set_win_tiles(10, 0, 2, 1, row);
 }
 
+void hud_show_offer(u8 price) {
+    u8 row[4];
+    row[0] = HUD_COIN;
+    row[1] = (price >= 100) ? (u8)(HUD_DIGIT_0 + price / 100) : HUD_BLANK;
+    row[2] = (u8)(HUD_DIGIT_0 + (price / 10) % 10);
+    row[3] = (u8)(HUD_DIGIT_0 + price % 10);
+    VBK_REG = 0;
+    set_win_tiles(12, 0, 4, 1, row);
+}
+
 void hud_redraw_boss(u8 cur, u8 max) {
     // 4 segments, each worth max/4 HP (rounded up). Cached so per-frame
     // polling only writes VRAM when the segment count actually changes.

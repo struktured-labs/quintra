@@ -49,6 +49,8 @@
 // OBJ tile slots — 5 classes × 4 tiles each (metasprite) + 4 enemies + 4 boss tiles + pickups + bullet
 #define SPR_CLASS_BASE     0     // 5 classes × 4 tiles = 0..19
 #define SPR_CLASS_STRIDE   4
+#define SPR_CLASS_WALK_BASE 82  // 5 authored step poses: 82..101
+#define SPR_CLASS_ASCENDED_BASE 102 // 5 Spirit Convergence forms: 102..121
 #define SPR_ENEMY_CRAWLER  20
 #define SPR_ENEMY_HORNET   21
 #define SPR_ENEMY_SKELETON 22

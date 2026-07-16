@@ -88,20 +88,16 @@ def main():
         "all four village roles must retain distinct silhouettes"
     )
 
-    # Store stock must not masquerade as loose currency. It alternates its
-    # actual item art with the dedicated hanging-tag tile, and an unaffordable
+    # Store stock must not masquerade as loose currency. It holds the dedicated
+    # hanging-tag tile continuously, and an unaffordable
     # contact latches until the player steps away instead of buzzing forever.
     assert len(shop_wares) == 5, f"town has {len(shop_wares)} wares, expected 5"
     ware = shop_wares[0]
     for off, value in ((9, 72), (10, 0), (11, 112), (12, 0)):
         pb.memory[pl + off] = value
-    ware_frames = set()
     for _ in range(72):
         pb.tick()
-        ware_frames.add(pb.memory[ware + 12])
-    assert 81 in ware_frames and 30 in ware_frames, (
-        f"heart ware did not alternate item/tag art: {sorted(ware_frames)}"
-    )
+        assert pb.memory[ware + 12] == 81, "shop ware stopped showing its price tag"
     pb.memory[pl + 16] = pb.memory[pl + 17] = 0
     px = pb.memory[ware + 3]
     py = (pb.memory[ware + 7] - 8) & 0xFF
@@ -111,6 +107,12 @@ def main():
     assert pb.memory[ware] == 3 and pb.memory[ware + 21] == 1, (
         "unaffordable ware was consumed or did not latch contact"
     )
+    pb.memory[0xFF4F] = 0
+    price = pb.memory[ware + 19]
+    offer = bytes(pb.memory[0x9C00 + 12:0x9C00 + 16])
+    expected = bytes([7, 8 if price < 100 else 9 + price // 100,
+                      9 + (price // 10) % 10, 9 + price % 10])
+    assert offer == expected, f"contact did not expose ware price: {offer} != {expected}"
     for off, value in ((9, 72), (10, 0), (11, 112), (12, 0)):
         pb.memory[pl + off] = value
     tick(2)

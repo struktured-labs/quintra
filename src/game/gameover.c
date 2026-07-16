@@ -48,6 +48,10 @@ void gameover_enter(void) {
         (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
     gotoxy(2, 14); printf("PRESS  START");
 
+    // Console glyph writes touch tile ids only; stale CGB attribute bytes from
+    // gameplay otherwise color arbitrary digits differently.
+    palette_bg_fill_attrs(0);
+
     music_play_gameover();
     SHOW_BKG;
     DISPLAY_ON;
@@ -57,8 +61,7 @@ void gameover_exit(void) {}
 
 screen_id_t gameover_tick(u8 keys, u8 pressed) {
     keys;
-    if (pressed & J_START) return SCREEN_TITLE;
-    if (pressed & J_A)     return SCREEN_TITLE;
+    if (pressed & (J_START | J_A)) return SCREEN_TITLE;
     return SCREEN_SELF;
 }
 

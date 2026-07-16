@@ -345,26 +345,32 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
             i16 ey = FIX8_TO_INT(e->y);
             u8 pat = (u8)(def->ai_p2 & 0x0F);
             u8 n   = (u8)(def->ai_p2 >> 4);
+            // Shooter identities also differ kinetically: wisps cast slow
+            // readable motes, warlocks own the baseline, Cinder Maws spit
+            // fast bolts. Pattern density and bullet speed are independent.
+            u8 shot_speed = (e->ai_data[0] == ENEMY_WISP) ? 1
+                : (e->ai_data[0] == ENEMY_CINDER_MAW) ? 3 : 2;
             u8 d, k;
             switch (pat) {
                 case 1:   // Fan(n): aimed center + (n-1)/2 each side
                     d = aim_dir8(ex, ey);
-                    boss_shot(ex, ey, d, 2, def->stats.damage);
+                    boss_shot(ex, ey, d, shot_speed, def->stats.damage);
                     for (k = 1; k <= (u8)(n >> 1); ++k) {
-                        boss_shot(ex, ey, (u8)((d + k) & 7), 2, def->stats.damage);
-                        boss_shot(ex, ey, (u8)((d + 8 - k) & 7), 2, def->stats.damage);
+                        boss_shot(ex, ey, (u8)((d + k) & 7), shot_speed, def->stats.damage);
+                        boss_shot(ex, ey, (u8)((d + 8 - k) & 7), shot_speed, def->stats.damage);
                     }
                     break;
                 case 2: { // Ring(n): n of the 8 directions, evenly spaced
                     u8 step = (n != 0 && n <= 8) ? (u8)(8 / n) : 2;
                     for (d = 0; d < 8; d = (u8)(d + step))
-                        boss_shot(ex, ey, d, 2, def->stats.damage);
+                        boss_shot(ex, ey, d, shot_speed, def->stats.damage);
                     break;
                 }
                 default: { // Single: aimed sign-step (original behavior)
                     i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
                     i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
-                    projectile_spawn_enemy(ex, ey, sx, sy, def->stats.damage);
+                    projectile_spawn_enemy_v(ex, ey,
+                        (i8)(sx * shot_speed), (i8)(sy * shot_speed), def->stats.damage);
                     break;
                 }
             }

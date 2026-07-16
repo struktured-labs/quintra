@@ -113,6 +113,7 @@ verify: all
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
+	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	bash scripts/test_balance_replay.sh $(BINDIR)/$(PROJECT).gbc
 
 # Release/hardware gate: static cartridge header plus a true battery-backed
