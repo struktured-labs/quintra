@@ -38,7 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from build_v301_gdma import build_v301, create_inline_tile_copy_tileonly
+from build_v301_gdma import build_v301
 from build_v296_phantomsafe import create_bg_sweep_viewport_gated
 from arena_position import (
     parse_footprint_posmaps, rle_encode_posmap, create_rle_expander,
@@ -742,12 +742,20 @@ def main():
         + [0x04, 0x0A] + _txt("GAME    START") + [E]
         + [0x00, 0x0E, 0xC0, E]                                 # (c) glyph
         + [0x00, 0x0F] + JAM + [E]                              # JAPAN ART MEDIA
-        + [0x03, 0x11] + _txt("STRUKTURED LABS") + [0x00, 0x00, 0x00, 0xD0, 0xDC, 0xD1, 0xDC, E]
+        + [0x03, 0x11] + _txt("STRUKTURED LABS") + [0x00, 0xD0, 0xDC, 0xD1, 0xDC, E]  # + @2026 (2 spaces, short)
     )
-    assert len(title_list) <= 126, f"title list {len(title_list)} > 126 (overruns region)"
+    assert len(title_list) <= 125, f"title list {len(title_list)} > 125 (need room for trailing 0x9A terminator)"
     assert rom[0x4EA5:0x4EA7] == bytes([0x07, 0x03]), "title list head moved"
     rom[0x4EA5:0x4EA5 + len(title_list)] = title_list
-    print(f"  title: PENTA DRAGON DX header + STRUKTURED LABS ({len(title_list)}/126 bytes @0x4EA5)")
+    # Ensure the trailing 0x9A (list terminator for the parser — it reads [HL],
+    # CP 0x9A, RET Z) is NOT overwritten. The title parser reads the list from
+    # 0x4EA5: each entry ends with 0x9A, then the NEXT byte is checked: if it's
+    # also 0x9A the parser returns. If we fill all 126 bytes, the byte at 0x4F22
+    # (which was the terminator from the original game) gets overwritten, and
+    # the parser reads garbage at 0x4F23 (code byte 0xE5) as [col], corrupting
+    # VRAM. Keep the list ≤ 125 bytes to preserve the terminator at 0x4F22.
+    print(f"  title: PENTA DRAGON DX header + STRUKTURED LABS ({len(title_list)}/125 bytes @0x4EA5)"
+          f" — preserving terminator 0x9A at 0x4F22")
 
     # 2. Write the landing pad source bytes in bank13 ROM at LANDING_PAD_ROM_ADDR
     lp = build_landing_pad()
@@ -917,16 +925,17 @@ def main():
     # [DISABLED: Using standard tile-ID bg_sweep directly for clean background/claws separation]
     patched_sweep = True
 
-    # 2d. Neutralize the inline hook's ATTR writes in arenas.
-    assert rom[0x42A0:0x42A7] == bytearray([0x26, 0x9C, 0xC3, 0xA7, 0x42, 0x26, 0x98]), \
-        "inline hook entry point changed — neutralize would corrupt it"
-    neut = create_inline_tile_copy_tileonly(arena_neutralize_d880=None)
-    hook_budget = 0x436D - 0x42A7 + 1   # 199 bytes
-    assert len(neut) <= hook_budget, f"neutralized hook too big: {len(neut)} > {hook_budget}"
-    rom[0x42A7:0x42A7 + len(neut)] = neut
-    if 0x42A7 + len(neut) < 0x436E:      # re-pad leftover tail with zeros
-        rom[0x42A7 + len(neut):0x436E] = bytes(0x436E - (0x42A7 + len(neut)))
-    print(f"  inline hook restored (full tile+attr copy) in arenas: {len(neut)} bytes at 0x42A7")
+    # 2d. INLINE HOOK: keep the base v301's pure tile-only hook (build_v301()
+    # produces a tile-only hook at 0x42A7). DO NOT replace it with the full
+    # tile+attr version — the full version's attr writes fight with bg_sweep's
+    # attrs on the title screen, producing garbled rendering (random black/white/
+    # lavender blocks instead of the correct YANOMAN logo and menu text).
+    # teleport_fixed.gb proved this fix: reverting to tile-only restores the
+    # title screen. See docs/audit/title_garbage_teleport.md.
+    #
+    # [REMOVED: full tile+attr inline hook replaced the pure tile-only version,
+    #  causing title screen corruption.]
+    print(f"  inline hook: keeping base v301's pure tile-only (no attr writes)")
 
     # 3. Write the teleport routine at bank13:0x6E80, ending with JP COLORIZE
     tp = build_teleport_routine()
