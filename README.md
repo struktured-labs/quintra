@@ -616,21 +616,15 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes).
-The freshly rerun v0.18.1 15/15 matrix has complete telemetry and encounters
-every roster member, but does **not** pass this gate yet: before the current
-controller repair, Picsean reached 2/3 complete nine-boss endings and its
-remaining seed time-capped on a stationary Toxic Mire Spore. The exact
-three-seed Picsean recheck now reaches all three endings (45,777–77,453
-gameplay frames) after the input-only pilot learned a pixel-stable mine-safe
-firing lane and clears the room's Sentinel before its Spore escort. Sauran
-now reaches one complete ending in three samples after its 48px Tail Spike
-boss orbit learned a two-beat pressure lane. Vespine clears its first boss and
-reaches six bosses in separate three-seed samples after its 48px Stinger leaves
-the old cardinal baseline for a 36px two-beat orbit-fire lane, but remains 0/3
-for endings. Wolfkin and Corvin are still 0/3 in the latest all-class
-matrix, although Wolfkin now clears the first boss in all three seeds; there
-are no route stalls. A fresh matrix must still reach the full per-class
-victory floor to pass the delivery gate.
+The freshly rerun v0.18.2 15/15 matrix has complete telemetry, encounters
+every roster member, and has **zero** controller combat or route stalls, but
+does **not** pass this gate yet. Picsean reaches two complete nine-boss
+endings in three samples; Wolfkin clears its first boss in all three seeds but
+remains 0/3 for endings; Sauran and Corvin clear a first boss in one sample
+each; and Vespine does so in two. The old exact three-ending Picsean recheck
+remains useful controller research, but it is not substituted for this fresh
+all-class matrix. A future matrix must still reach the full per-class victory
+floor to pass the delivery gate.
 It is therefore not a show build. The v0.17.46 14/15 result remains a
 historical benchmark only. The gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
