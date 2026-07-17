@@ -605,6 +605,30 @@ scripts/search_boss_policy.sh`. `QUINTRA_BOSS_SEARCH_RETREAT_RANGES` accepts
 either spaces or commas (for example, `20 28 36` or `20,28,36`) for a matched
 sweep.
 
+## World Retro delivery bar — September 12, 2026
+
+The conference build is a deliberately bounded, cartridge-first target: one
+complete nine-boss route, the five champions, villages/Riftwild between dungeon
+regions, procedural rooms with authored lore fixtures, and a real ending. The
+goal is a confident 20–30 minute first clear, not an endless pile of systems.
+
+Every gameplay candidate must clear three gates before it earns a ROM release:
+
+1. `make preflight` validates the mapper, checksums, SRAM suspend/resume, and
+   ROM-bank headroom.
+2. Targeted PyBoy contracts prove the new interaction in the live cartridge,
+   not just in C source or a debug poke.
+3. The isolated Picsean endurance gate runs seeds 13–16 using only controller
+   input. A completed row is a real loss or win; a missing row retries once in
+   isolation because headless mGBA can occasionally bus-error under parallel
+   load. The current baseline clears all four seeds in 47k–56k frames.
+
+The final stretch prioritizes readability and playability: room-transition
+feel, merchant/tutorial clarity, late-boss patterns that are harder without
+turning early runs into a wall, and physical-cart smoke testing. New content
+is welcome only when it fits that budget and keeps the reproducible route
+healthy.
+
 Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,
 mapper/size flags, header and global checksums, then writes a live suspend to
