@@ -790,10 +790,11 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   header validation, a cold-boot SRAM suspend/resume, and the checked-in
   174-frame GitHub gameplay reel. The released ROM hash is
   `b2ecee3c15aae51a9c177c28b1e1d54f4e62e69249b4c4a38f3cfddf8c079073`.
-- This is **not yet a show-build sign-off**: the fresh all-class 15-run
-  endurance matrix has zero controller combat/route stalls and observes every
-  enemy, but only Picsean reached two nine-boss endings. The final delivery
-  floor remains two endings per champion over three entropy samples.
+- This is **not yet a show-build sign-off**: the fresh v0.18.4 all-class
+  15-run endurance matrix observed every enemy, but produced only one
+  Picsean nine-boss ending, no endings for the other four champions, and two
+  Picsean combat stalls. The final delivery floor remains two endings per
+  champion over three entropy samples with zero combat/route stalls.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without

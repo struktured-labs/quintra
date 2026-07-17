@@ -613,22 +613,60 @@ local function spore_safe_step(px, py, ex, ey, fallback)
     return aligned_step(prevkey[target], sx, sy, px, py, fallback)
 end
 
--- Stationary Spores are worth the same exact feet-box route used for a Rift
--- Sigil.  A tile BFS can nominate a visually clear lane that a 12px body
--- cannot actually enter at its current pixel offset; cache a pixel route to
--- a safe, cardinal firing cell and keep every Spore's trigger radius out of
--- the path. This is intentionally for projectile kits: claws use the visible
--- post-blast punish window and keep the ordinary close-combat policy below.
+-- Stationary Spores need the same exact feet-box route used for a Rift Sigil.
+-- A tile row is not automatically a projectile row: the shot starts at
+-- player+2 with a 7px hitbox, so a hero can be "aligned" by tile while every
+-- bubble harmlessly travels beside an 8px Spore. Route to a pixel-valid firing
+-- lane, keep every Spore's trigger radius out of the path, and only fire once
+-- that lane exists. Claws retain the visible post-blast punish policy below.
 local spore_pixel_route = nil
-local function spore_pixel_step(room, px, py, ex, ey, fallback)
-    if TM == 0 or EN == 0 then return fallback end
+local function spore_shot_lane(px, py, ex, ey, max_range)
+    local sx, sy = px + 6, py + 6 -- player shot's 7px hitbox center
+    local gx, gy = ex + 4, ey + 4
+    local function clear_shot_line(x0, y0, x1, y1)
+        if x0 == x1 then
+            local lo, hi = math.min(y0, y1), math.max(y0, y1)
+            for y = lo, hi do
+                if not path_walkable(tile_at_px(x0, y)) then return false end
+            end
+        elseif y0 == y1 then
+            local lo, hi = math.min(x0, x1), math.max(x0, x1)
+            for x = lo, hi do
+                if not path_walkable(tile_at_px(x, y0)) then return false end
+            end
+        else
+            return false
+        end
+        return true
+    end
+    -- Match mire_spore_update's actual trigger origin: player top-left to the
+    -- Spore center. Never solve a firing lane by stepping into the fuse.
+    if math.abs(px - gx) + math.abs(py - gy) < 48 then return nil end
+    -- AABB overlap matches combat.c exactly: [shot, shot+7) against [enemy,
+    -- enemy+8). The beam itself may be a few pixels off the Spore center.
+    if py + 9 > ey and ey + 8 > py + 2
+        and math.abs(gx - sx) <= max_range and clear_shot_line(sx, sy, gx, sy) then
+        return gx > sx and KEY_RIGHT or KEY_LEFT
+    end
+    if px + 9 > ex and ex + 8 > px + 2
+        and math.abs(gy - sy) <= max_range and clear_shot_line(sx, sy, sx, gy) then
+        return gy > sy and KEY_DOWN or KEY_UP
+    end
+    return nil
+end
+
+local function spore_pixel_step(room, px, py, ex, ey, fallback, max_range)
+    if TM == 0 or EN == 0 then return fallback, true end
     local start = py * 160 + px
     if spore_pixel_route and spore_pixel_route.room == room
-        and spore_pixel_route.x == ex and spore_pixel_route.y == ey
-        and spore_pixel_route.dirs[start] then
-        return spore_pixel_route.dirs[start]
+        and spore_pixel_route.x == ex and spore_pixel_route.y == ey then
+        if spore_pixel_route.dirs[start] then
+            return spore_pixel_route.dirs[start], false
+        end
+        if spore_pixel_route.aims[start] then
+            return spore_pixel_route.aims[start], true
+        end
     end
-    local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
     local function safely_outside_all_spores(x, y)
         for i = 0, 31 do
             local p = EN + i * 28
@@ -645,14 +683,13 @@ local function spore_pixel_step(room, px, py, ex, ey, fallback)
     end
     local qx, qy, head, tail = {px}, {py}, 1, 1
     local seen, previous, step = {[start] = true}, {}, {}
-    local found = nil
+    local found, found_aim = nil, nil
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
-        local cx, cy = math.floor((x + 13) / 8), math.floor((y + 15) / 8)
-        local dist = math.abs(cx - gx) + math.abs(cy - gy)
-        if dist >= 7 and dist <= 15 and (cx == gx or cy == gy)
-            and clear_cardinal_lane(cx, cy, gx, gy) then
+        local aim = spore_shot_lane(x, y, ex, ey, max_range)
+        if aim then
             found = y * 160 + x
+            found_aim = aim
             break
         end
         for d = 1, 4 do
@@ -667,14 +704,16 @@ local function spore_pixel_step(room, px, py, ex, ey, fallback)
             end
         end
     end
-    if not found then return fallback end
+    if not found then return fallback, true end
     local dirs, node = {}, found
     while previous[node] do
         dirs[previous[node]] = step[node]
         node = previous[node]
     end
-    spore_pixel_route = {room=room, x=ex, y=ey, dirs=dirs}
-    return dirs[start] or fallback
+    local aims = {[found] = found_aim}
+    spore_pixel_route = {room=room, x=ex, y=ey, dirs=dirs, aims=aims}
+    if dirs[start] then return dirs[start], false end
+    return aims[start] or fallback, true
 end
 
 -- A procedural weapon orb replaces player.starter_weapon at runtime.  The
@@ -1155,9 +1194,12 @@ while frames < LIMIT do
             end
         end
         debug_log(string.format(
-            "BOTSTATE f=%d room=%d local=%d stage=%d sigils=%d pos=%d,%d target=%d portal=%d,%d",
+            "BOTSTATE f=%d room=%d local=%d stage=%d sigils=%d pos=%d,%d target=%d@%d,%d hp=%d state=%d clock=%d portal=%d,%d",
             frames, room, room % 6, emu:read8(RS + 11), read16(RS + 23),
-            px, py, target and target.kind or 255, portal_x, portal_y))
+            px, py, target and target.kind or 255, target and target.x or 255,
+            target and target.y or 255, target and target.hp or 255,
+            target and target.state or 255, target and target.clock or 255,
+            portal_x, portal_y))
     end
     -- A boss fight is measured from the first real giant observation through
     -- its actual disappearance, not by room residency.  That excludes the
@@ -1314,8 +1356,18 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim, 6)
             end
         elseif target.kind == 17 then
-            if held_style == "ranged" then
-                keys = KEY_A + spore_pixel_step(room, px, py, target.x, target.y, aim)
+            if held_style ~= "claw" then
+                local spore_range = held_style == "spear" and 90
+                    or held_style == "flail" and 55
+                    or held_style == "lunge" and 52 or 160
+                local spore_step, spore_ready = spore_pixel_step(
+                    room, px, py, target.x, target.y, aim, spore_range)
+                -- Do not spend a shot while walking into a lane: the D-pad
+                -- steers both motion and aim, so a route's sideways step used
+                -- to fire past the mine. This applies to swapped long weapons
+                -- too: Tail Spike and Flail can punish from outside the fuse,
+                -- while the true-melee Claw still takes the post-blast route.
+                keys = spore_ready and (KEY_A + spore_step) or spore_step
             else
                 keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
             end
