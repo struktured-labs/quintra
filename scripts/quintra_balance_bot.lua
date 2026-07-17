@@ -149,7 +149,13 @@ local function pickup_target(px, py)
                 or (ex > 136 and (ey < 52 or ey > 76))
             if ex <= 152 and ey <= 128 and not boundary_drop then
                 local d = math.abs(ex - px) + math.abs(ey - py)
-                if d < bestd then best, bestd = {x=ex, y=ey}, d end
+                // Player coordinates are feet-anchored; ordinary drops drift
+                // into that box, but a persistent Rift Sigil does not. Aim
+                // its contact point eight pixels above the sprite origin so
+                // the controller actually overlaps it instead of camping one
+                // pixel below forever.
+                local target_y = (kind == 11) and (ey - 8) or ey
+                if d < bestd then best, bestd = {x=ex, y=target_y}, d end
             end
         end
     end
