@@ -1289,6 +1289,11 @@ while frames < LIMIT do
                     -- build shape and earns its own long-lane policy.
                     or (held_style == "lunge" and CLASS ~= 4) and "orbit_fire"
                     or (held_style == "flail" or held_style == "spear") and "orbit_fire"
+                    -- Wolfkin may replace the Claw with Corvin's Feather
+                    -- Shuri. Once holding that actual ranged weapon, retain
+                    -- a projectile-safe orbit rather than the claw's
+                    -- baseline contact policy.
+                    or (held_style == "ranged" and CLASS == 0) and "orbit_fire"
                     or (CLASS == 1 or CLASS == 2 or CLASS == 3)
                         and "orbit_fire" or "baseline"
             end
