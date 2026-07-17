@@ -83,73 +83,48 @@ static void pickup_spawn_surge(fix8_t x, fix8_t y) {
     }
 }
 
-u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_VILLAGER, x, y);
+// Town residents are all persistent, wide collision anchors. Keeping their
+// common construction here avoids six nearly identical code paths consuming
+// bank-5 space while public spawn functions retain their semantic names.
+static u8 pickup_spawn_resident(u8 kind, u8 sprite_tile, u8 palette,
+    fix8_t x, fix8_t y) {
+    u8 idx = pickup_spawn(kind, x, y);
     if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_VILLAGER;
-        entities[idx].palette = 0x05;
+        entities[idx].sprite_tile = sprite_tile;
+        entities[idx].palette = palette;
         entities[idx].hitbox = (u8)0x88;
         entities[idx].state_timer = 0;
     }
     return idx;
 }
 
+u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
+    return pickup_spawn_resident(PICKUP_VILLAGER, SPR_VILLAGER, 0x05, x, y);
+}
+
 u8 pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_MERCHANT, x, y);
-    if (idx != 0xFF) {
-        // A merchant owns the shared callout tile. This also repairs the OBJ
-        // slot after an in-place transition from a Dread Bell combat room.
-        tiles_load_merchant_callout_sprite();
-        entities[idx].sprite_tile = SPR_MERCHANT;
-        entities[idx].palette = 0x04;
-        entities[idx].hitbox = (u8)0x88;
-        entities[idx].state_timer = 0;
-    }
+    u8 idx;
+    // A merchant owns the shared callout tile. This also repairs the OBJ slot
+    // after an in-place transition from a Dread Bell combat room.
+    idx = pickup_spawn_resident(PICKUP_MERCHANT, SPR_MERCHANT, 0x04, x, y);
+    if (idx != 0xFF) tiles_load_merchant_callout_sprite();
     return idx;
 }
 
 u8 pickup_spawn_smith(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_SMITH, x, y);
-    if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_SMITH;
-        entities[idx].palette = 0x06;
-        entities[idx].hitbox = (u8)0x88;
-        entities[idx].state_timer = 0;
-    }
-    return idx;
+    return pickup_spawn_resident(PICKUP_SMITH, SPR_SMITH, 0x06, x, y);
 }
 
 u8 pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_APOTHECARY, x, y);
-    if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_APOTHECARY;
-        entities[idx].palette = 0x07;
-        entities[idx].hitbox = (u8)0x88;
-        entities[idx].state_timer = 0;
-    }
-    return idx;
+    return pickup_spawn_resident(PICKUP_APOTHECARY, SPR_APOTHECARY, 0x07, x, y);
 }
 
 u8 pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_CARTOGRAPHER, x, y);
-    if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_CARTOGRAPHER;
-        entities[idx].palette = 0x06;
-        entities[idx].hitbox = (u8)0x88;
-        entities[idx].state_timer = 0;
-    }
-    return idx;
+    return pickup_spawn_resident(PICKUP_CARTOGRAPHER, SPR_CARTOGRAPHER, 0x06, x, y);
 }
 
 u8 pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_WAYKEEPER, x, y);
-    if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_TOWN_WAYKEEPER;
-        entities[idx].palette = 0x06;
-        entities[idx].hitbox = (u8)0x88;
-        entities[idx].state_timer = 0;
-    }
-    return idx;
+    return pickup_spawn_resident(PICKUP_WAYKEEPER, SPR_TOWN_WAYKEEPER, 0x06, x, y);
 }
 
 u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.3: Honest Pickup Feedback](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.4: Town Runtime Headroom](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,12 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.4 simplifies the persistent-town runtime: all six resident constructors
+now share one internal spawn path while preserving their unique art, palettes,
+and merchant callout repair. That recovers **211 bytes** in bank 5—space for
+future conference polish without changing village behavior. Live-ROM town and
+resident-art contracts cover the refactor.
 
 v0.18.3 fixes a misleading pickup edge case: **MP wisps now remain on the
 floor at full MP** instead of disappearing with a reward sound while changing
@@ -776,14 +782,14 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.3)
+### Current conference evidence (v0.18.4)
 
 - `make verify` passed the full cartridge, content, visual, progression,
   pickup, boss-policy, and controller-replay suite.
 - `make preflight` passed a byte-identical clean rebuild, CGB/MBC5+battery
   header validation, a cold-boot SRAM suspend/resume, and the checked-in
   174-frame GitHub gameplay reel. The released ROM hash is
-  `fa23362e697e19e235f291d06a1243c6f32cec32463057d94a284c17e5b84b4c`.
+  `b2ecee3c15aae51a9c177c28b1e1d54f4e62e69249b4c4a38f3cfddf8c079073`.
 - This is **not yet a show-build sign-off**: the fresh all-class 15-run
   endurance matrix has zero controller combat/route stalls and observes every
   enemy, but only Picsean reached two nine-boss endings. The final delivery
