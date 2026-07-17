@@ -108,6 +108,17 @@ def main():
     )
     differing = sum(a != b for a, b in zip(colossus, void_lord))
     assert differing >= 8, f"Void Lord crown is not visually substantial ({differing} bytes)"
+    pb, void_lord = enter_boss(8, keep_open=True)
+    # The final encounter remains armored and substantially longer than a
+    # normal boss, but its 220-HP cap avoids a deterministic late-collapse loss
+    # after the full World Collapse positioning test.
+    assert pb.memory[void_lord + 14] == 220, (
+        f"Void Lord HP balance cap drifted: {pb.memory[void_lord + 14]}")
+    pb.stop(save=False)
+    pb, temple = enter_boss(6, keep_open=True)
+    assert pb.memory[temple + 14] == 230, (
+        f"Golden Temple HP balance cap drifted: {pb.memory[temple + 14]}")
+    pb.stop(save=False)
     pb, boss = enter_boss(0, keep_open=True)
     max_hp = pb.memory[boss + 23]  # ai_data[6], captured by boss_tick
     assert max_hp > 1, "boss never captured its starting HP for enrage"

@@ -850,38 +850,103 @@ void procgen_generate_current_room(void) BANKED {
                     else
                         entities[idx].hp = (u8)(entities[idx].hp
                             + stage_boss_hp[pow]);
+                    // Golden Temple already adds the six-enemy roster and
+                    // Bellwarden pre-boss check. Its 255-cap colossus left a
+                    // fully provisioned controller 27 HP short after a long
+                    // pattern read; 230 preserves a late-game giant without
+                    // stacking every Temple pressure system into attrition.
+                    if (skin == 6 && entities[idx].hp > 230)
+                        entities[idx].hp = 230;
+                    // The Void Lord's raw 255 cap created a one-hit cliff:
+                    // a fully provisioned controller could survive the
+                    // Collapse positioning test yet reach the last 30 HP
+                    // only after its recovery budget was exhausted. Keep
+                    // the finale armored and longer than a normal boss, but
+                    // cap it at a 220-damage window that rewards sustained
+                    // positioning instead of demanding a near-perfect final
+                    // minute after every prior stage.
+                    if (skin == 8 && entities[idx].hp > 220)
+                        entities[idx].hp = 220;
                     entities[idx].damage = (u8)(entities[idx].damage
                         + stage_boss_dmg[pow]);
                 }
             }
         } else if (is_miniboss) {
-            // MINI-BOSS: a beefed 16x16 Sentinel + a small escort. Tougher than
-            // a normal room, a step below the stage boss.
+            // MINI-BOSS: early dungeons use a beefed 16x16 Sentinel and two
+            // escorts. Golden Temple onward instead gets the Bellwarden: a
+            // stage-tinted Dread Bell plus one Rift Warden. That is a
+            // guaranteed, readable pre-boss bullet-hell check—not a late
+            // roster roll the player might never see—while the sanctuary in
+            // the next room still turns its reward into boss preparation.
             u8 stage = run_state.bosses_beaten;
-            {
-                u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 1, 3);
+            if (stage >= 6) {
+                u8 idx = enemy_spawn(ENEMY_DREAD_BELL, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
-                    // Silhouette comes from the generated stage table —
-                    // ONE source shared with tiles_load_miniboss, so art and
-                    // palette can't drift apart. HP power clamps (u8 overflow).
-                    static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
-                    u8 mb_pow = (stage < 9) ? stage : 8;
-                    u8 mb_var = stage_mb_variant[stage % 9];
-                    entities[idx].sprite_tile = SPR_BOSS;
-                    entities[idx].palette     = mb_pal[mb_var];
-                    entities[idx].hitbox      = (u8)0xEE;
-                    // ai_data[2] = variant → boss_tick picks the matching
-                    // attack archetype (0 Sentinel / 1 Orc / 2 Skeleton).
-                    entities[idx].ai_data[2]  = mb_var;
-                    entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
+                    // Palette 6 is the generated boss tint already loaded
+                    // for this stage. The bell therefore reads as an elite
+                    // encounter in gold, blood, and void themes rather than
+                    // a reused red random foe.
+                    entities[idx].palette = 0x06;
+                    // Base 17 HP + 22/26/30 makes the Bellwarden survive a
+                    // real positioning cycle even on a powered run, without
+                    // taking enough health from the final approach to turn
+                    // the Void Lord into an attrition lottery.
+                    entities[idx].hp = (u8)(entities[idx].hp + 22
+                        + (u8)((stage - 6) * 4));
+                    // Preserve a short arrival telegraph before its first
+                    // eight-way peal, not the opening frame. Contact stays
+                    // at the ordinary two damage on all three stages; the
+                    // added threat is lane control, not invisible scaling.
+                    entities[idx].ai_data[1] = 42;
                 }
-            }
-            // two escorts drawn from the stage roster
-            {
-                u8 e;
-                for (e = 0; e < 2; ++e) {
-                    u8 eid = pick_enemy_for_stage(stage);
-                    spawn_escort_safely(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
+                // The five-lane fan turns the Bell's cardinal/diagonal gaps
+                // into a movement puzzle. One escort keeps the room fair and
+                // visually parseable on original CGB resolution.
+                {
+                    // The shared random silhouette can occupy every nearby
+                    // 2x2 candidate in a dense Temple/Void room. Reserve one
+                    // small lower-right apron before the safe search so this
+                    // authored two-enemy encounter never degrades into a
+                    // lone Bell. It is well inside the border and away from
+                    // the cardinal door lanes.
+                    room_tilemap[12][15] = BGT_FLOOR;
+                    room_tilemap[12][16] = BGT_FLOOR;
+                    room_tilemap[13][15] = BGT_FLOOR;
+                    room_tilemap[13][16] = BGT_FLOOR;
+                    // The apron itself is the safety proof, so use its
+                    // exact origin rather than allowing a weighted nearest
+                    // search to return no slot in an unusually dense room.
+                    u8 warden = enemy_spawn(ENEMY_RIFT_WARDEN, 15, 12);
+                    if (warden != 0xFF) {
+                        entities[warden].ai_data[1] = 54;
+                    }
+                }
+            } else {
+                {
+                    u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 1, 3);
+                    if (idx != 0xFF) {
+                        // Silhouette comes from the generated stage table —
+                        // ONE source shared with tiles_load_miniboss, so art and
+                        // palette can't drift apart. HP power clamps (u8 overflow).
+                        static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
+                        u8 mb_pow = (stage < 9) ? stage : 8;
+                        u8 mb_var = stage_mb_variant[stage % 9];
+                        entities[idx].sprite_tile = SPR_BOSS;
+                        entities[idx].palette     = mb_pal[mb_var];
+                        entities[idx].hitbox      = (u8)0xEE;
+                        // ai_data[2] = variant → boss_tick picks the matching
+                        // attack archetype (0 Sentinel / 1 Orc / 2 Skeleton).
+                        entities[idx].ai_data[2]  = mb_var;
+                        entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
+                    }
+                }
+                // two escorts drawn from the stage roster
+                {
+                    u8 e;
+                    for (e = 0; e < 2; ++e) {
+                        u8 eid = pick_enemy_for_stage(stage);
+                        spawn_escort_safely(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
+                    }
                 }
             }
         } else if (is_shop) {

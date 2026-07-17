@@ -323,6 +323,31 @@ static u8 is_block_at(i16 px, i16 py) {
          || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
 }
 
+// A spike is a readable positional tax, never a soft-lock. Contact can occur
+// after an enemy knockback or at a sub-tile seam where the player's attempted
+// escape is still resolving. When an immediately adjacent body position is
+// clear of spikes, stumble there with the same one-time hit that started the
+// recovery window. Dense spike fields retain their danger—this only prevents
+// repeated unavoidable damage while a safe lane is already beside the hero.
+static void room_stumble_off_hazard(void) {
+    static const i8 dx[4] = { 0, 8, 0, -8 };
+    static const i8 dy[4] = { -8, 0, 8, 0 };
+    u8 i;
+    for (i = 0; i < 4; ++i) {
+        ppos_t nx = (ppos_t)(player.x + dx[i]);
+        ppos_t ny = (ppos_t)(player.y + dy[i]);
+        if (room_tile_at_px(nx + 8, ny + 12) == BGT_SPIKES) continue;
+        if (is_walkable_at(nx + 2,  ny + 8)
+            && is_walkable_at(nx + 13, ny + 8)
+            && is_walkable_at(nx + 2,  ny + 15)
+            && is_walkable_at(nx + 13, ny + 15)) {
+            player.x = nx;
+            player.y = ny;
+            return;
+        }
+    }
+}
+
 static const u16 outdoor_floor_pal[4] = {
     BGR555(2,5,2), BGR555(6,15,6), BGR555(12,23,9), BGR555(22,29,16)
 };
@@ -1440,6 +1465,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             if (player.hp > 1) {
                 player.hp--;
                 player.iframes = 40;
+                room_stumble_off_hazard();
                 g_hitstop = 2;
                 room_shake(1, 6);
                 sfx_play(SFX_HURT);

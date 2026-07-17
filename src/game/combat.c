@@ -230,6 +230,23 @@ u8 combat_resolve(void) BANKED {
                             entity_kill(j);
                             boss_retired_for_rewards = 1;
                             boss_clear_hostile_projectiles();
+                            // A stage clear is the run's deliberate recovery
+                            // beat. Grant one visible heart immediately so a
+                            // player who won the fight at low health enters
+                            // the next procedurally dangerous room with a
+                            // buffer, while the two physical heart drops
+                            // below still reward careful positioning and can
+                            // be saved at full health. This is sustain, not
+                            // a boss-fight heal: it happens only after the
+                            // colossus and its bullet storm are gone.
+                            if (player.hp < player.hp_max) {
+                                if (player.hp <= (u8)(player.hp_max - 2))
+                                    player.hp = (u8)(player.hp + 2);
+                                else
+                                    player.hp = player.hp_max;
+                                hud_redraw_hp();
+                                sfx_play(SFX_HEART);
+                            }
                             pickup_spawn(PICKUP_HEART_HALF, boss_x - FIX8(8), boss_y);
                             pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y);
                             pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8));
@@ -374,7 +391,16 @@ u8 combat_resolve(void) BANKED {
                     && entities[i].ai_data[3]) taken = 1;
                 if (player.hp > taken) {
                     player.hp = (u8)(player.hp - taken);
-                    player.iframes = 30;
+                    // Riftwild is traversal pressure, not a sealed combat
+                    // arena. A doubled recovery beat there prevents one
+                    // optional body from re-contacting at the exact moment
+                    // the normal 30-frame knockback grace expires, while
+                    // dungeon and boss hit pacing remains unchanged.
+                    player.iframes = run_state.world_mode ? 60
+                        : (entities[i].type == ENT_ENEMY
+                           && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
+                           && (entities[i].ai_data[3] & 1)
+                           && entities[i].ai_data[2] == 8) ? 45 : 30;
                     g_hitstop = 3;
                     room_shake(1, 6);   // small jolt: that one hurt
                     sfx_play(SFX_HURT);

@@ -1234,11 +1234,24 @@ while frames < LIMIT do
     local world_flee = 0
     if overworld_threat then
         local dx, dy = overworld_threat.x - px, overworld_threat.y - py
-        if math.max(math.abs(dx), math.abs(dy)) < 36 then
+        -- Optional Riftwild fights are never worth a trade. Keep a wide
+        -- body-and-projectile buffer at every health level, then resume the
+        -- authored exit route as soon as the nearby threat is behind us.
+        local flee_radius = 56
+        if math.max(math.abs(dx), math.abs(dy)) < flee_radius then
             local flee
-            if math.abs(dx) >= math.abs(dy) then
+            -- If the next authored exit is physically open, taking it beats
+            -- a local sidestep: a monster behind the hero cannot keep dealing
+            -- contact damage across a screen boundary. This preserves the
+            -- public graph rather than inventing an evasive shortcut.
+            local wanted = WORLD_ROUTE[world_screen + 1]
+            local forward = wanted and CARD_KEYS[wanted + 1] or 0
+            if forward ~= 0 and can_step(px, py, forward) then
+                flee = forward
+            end
+            if flee == nil and math.abs(dx) >= math.abs(dy) then
                 flee = dx >= 0 and KEY_LEFT or KEY_RIGHT
-            else
+            elseif flee == nil then
                 flee = dy >= 0 and KEY_UP or KEY_DOWN
             end
             if not can_step(px, py, flee) then
@@ -1352,10 +1365,12 @@ while frames < LIMIT do
     -- into the border indefinitely. Preserve the authored exit input only
     -- for that observed emergency; this is controller policy, never a ROM
     -- immunity or entity mutation.
+    local world_guard_requested = false
     if ABILITY_POLICY == "smart" and CLASS == 3 and world_body_close
         and not (world_on_grass and world_contact_hits >= 3)
         and active_charge == 0 and mp >= 2 then
         keys = KEY_B
+        world_guard_requested = true
         dodge_phase, dodge_cooldown = 0, 30
     elseif ABILITY_POLICY == "smart" and (CLASS == 1 or CLASS == 3)
         and threat and active_charge == 0 and mp >= 2 then
@@ -1412,7 +1427,7 @@ while frames < LIMIT do
     -- Generic unstick/dodge recovery is useful in a sealed dungeon room, but
     -- must not erase a real Riftwild body-avoidance decision. Reapply the
     -- collision-checked flee step immediately before the world-edge guard.
-    if world_flee ~= 0 then keys = world_flee + KEY_A end
+    if world_flee ~= 0 and not world_guard_requested then keys = world_flee + KEY_A end
     -- A dodge may override door_step for several frames. Keep it from
     -- carrying the agent through a non-route Riftwild boundary and undoing
     -- an entire authored graph hop; preserve A/B while steering inward.
@@ -1459,13 +1474,17 @@ while frames < LIMIT do
     -- already on a hazard, temporarily keep moving toward a safe full-body
     -- position instead of suppressing the escape input.
     if not sigil_pixel_active and body_on_spike(px, py) then
-        local action = keys % 16
+        local spike_keys = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
         if DEBUG then
             local candidates = {}
-            for d = 1, 4 do
-                local nx, ny = px + CARD_DX[d] * 8, py + CARD_DY[d] * 8
+            for _, candidate in ipairs(spike_keys) do
+                local dx = candidate == KEY_RIGHT and 8
+                    or candidate == KEY_LEFT and -8 or 0
+                local dy = candidate == KEY_DOWN and 8
+                    or candidate == KEY_UP and -8 or 0
+                local nx, ny = px + dx, py + dy
                 candidates[#candidates + 1] = string.format("%02X:%d/%d",
-                    CARD_KEYS[d], can_step(px, py, CARD_KEYS[d]) and 1 or 0,
+                    candidate, can_step(px, py, candidate) and 1 or 0,
                     body_on_spike(nx, ny) and 1 or 0)
             end
             debug_log(string.format("BOTSPIKE f=%d room=%d pos=%d,%d cand=%s",
@@ -1483,13 +1502,16 @@ while frames < LIMIT do
             return not body_on_spike(sx, sy)
         end
         if spike_escape_dir ~= 0 and can_step(px, py, spike_escape_dir) then
-            keys = action + spike_escape_dir
+            -- A signature press can consume the D-pad edge on this frame.
+            -- Standing on a hazard is the one case where movement must win
+            -- outright; resume firing/casting only after the feet clear it.
+            keys = spike_escape_dir
         else
             spike_escape_dir = 0
-            for d = 1, 4 do
-                if clears_spike_lane(CARD_KEYS[d]) then
-                    spike_escape_dir = CARD_KEYS[d]
-                    keys = action + spike_escape_dir
+            for _, candidate in ipairs(spike_keys) do
+                if clears_spike_lane(candidate) then
+                    spike_escape_dir = candidate
+                    keys = spike_escape_dir
                     break
                 end
             end
@@ -1497,9 +1519,9 @@ while frames < LIMIT do
                 -- No complete eight-pixel lane is open. Keep a legal nudge
                 -- rather than freezing on the damage tile; a later frame may
                 -- open a lane as the nearest hostile moves.
-                for d = 1, 4 do
-                    if can_step(px, py, CARD_KEYS[d]) then
-                        keys = action + CARD_KEYS[d]
+                for _, candidate in ipairs(spike_keys) do
+                    if can_step(px, py, candidate) then
+                        keys = candidate
                         break
                     end
                 end

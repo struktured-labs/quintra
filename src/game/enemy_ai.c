@@ -507,9 +507,13 @@ static void boss_tick(entity_t *e) {
         return;
     }
 
-    // Creep toward the player (1px every 3rd tick)
+    // Creep toward the player. The Void Lord keeps its pressure through
+    // bullets and World Collapse; moving its 32px body every third tick made
+    // that body-pin a harsher, less readable threat than either intended
+    // mechanic. Its slower fifth-tick drift preserves the closing silhouette
+    // without invalidating ranged positioning.
     e->state_timer++;
-    if (e->state_timer >= 3) {
+    if (e->state_timer >= ((e->ai_data[3] & 1) && e->ai_data[2] == 8 ? 5 : 3)) {
         e->state_timer = 0;
         {
             i16 ex = FIX8_TO_INT(e->x);
@@ -627,7 +631,12 @@ static void boss_tick(entity_t *e) {
                 if (!e->ai_data[4]) {
                     e->ai_data[4] = 1;
                     e->ai_data[5] = (u8)rng_range(4);
-                    cadence = 96; // long warning; marker pulses twelve times
+                    // A diagonal-to-diagonal safe pocket can demand a full
+                    // room crossing. 132 frames keeps World Collapse nearly
+                    // unavoidable once it resolves, but makes its visible
+                    // corner marker a reachable positional test instead of
+                    // depending on which RNG corner happened to be nearby.
+                    cadence = 132;
                 } else {
                     static const u8 safe_x[4] = { 20, 124, 20, 124 };
                     static const u8 safe_y[4] = { 20, 20, 100, 100 };

@@ -20,6 +20,19 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
+v0.17.96 makes late-run pressure fair instead of brittle. **Golden Temple**
+onward now has the guaranteed **Bellwarden** miniboss: one stage-tinted Dread
+Bell and one Rift Warden in a reserved safe apron, rather than another random
+Sentinel roll. A boss clear immediately restores one heart (while its two
+physical hearts, coins, and relic still remain on the floor), and a hero hurt
+by spikes stumbles one safe body-width away when an adjacent lane exists. The
+Golden Temple colossus is capped at 230 HP and the armored **Void Lord** at
+220 HP; their patterns, Rift Armor, World Collapse, and long fights remain.
+Live-ROM contracts cover the encounters, reward recovery, hazard escape, and
+the 30/60/45-frame dungeon/Riftwild/Void-contact recovery beats. Four
+controller-only seeds (13–16) complete all nine bosses with no route or
+combat stalls.
+
 v0.17.95 removes the full formatted-I/O runtime from the cartridge and
 replaces it with a tiny native text writer shared by title, records, class
 select, Pack, game-over, and ending screens. The same words, live numbers,

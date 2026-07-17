@@ -30,6 +30,10 @@ def main():
     pb, boss = enter_boss(0, keep_open=True)
     boss_x, boss_y = pb.memory[boss + 3], pb.memory[boss + 7]
     pb.memory[boss + 14] = 1
+    # The post-fight recovery beat is distinct from physical floor hearts:
+    # park the hero away from rewards and prove the clear itself restores one
+    # heart, capped by normal max-HP rules.
+    pb.memory[PL + 2] = 4
 
     # Fill every other slot with real hostile projectiles, then use one of
     # those slots as the lethal player shot. Before the regression fix, the
@@ -75,11 +79,13 @@ def main():
         f"shot_flags={pb.memory[shot + 1]:02x})"
     )
     assert hostile_shots == 0, "boss-death bullet clear left hostile shots alive"
+    assert pb.memory[PL + 2] == 6, (
+        f"boss clear did not grant its one-heart recovery: hp={pb.memory[PL + 2]}")
     assert kinds.count(PICKUP_HEART_HALF) >= 2, f"missing boss hearts: {kinds}"
     assert kinds.count(PICKUP_COIN_5) >= 2, f"missing boss coins: {kinds}"
     assert PICKUP_ITEM in kinds, f"missing guaranteed boss relic: {kinds}"
     pb.stop(save=False)
-    print(f"[boss-rewards] PASS saturated kill pays hearts/coins/relic ({kinds})")
+    print(f"[boss-rewards] PASS recovery heart + saturated hearts/coins/relic ({kinds})")
 
 
 if __name__ == "__main__":
