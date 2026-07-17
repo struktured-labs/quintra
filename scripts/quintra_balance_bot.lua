@@ -130,6 +130,7 @@ end
 -- free loot.
 local function pickup_target(px, py)
     local best, bestd = nil, 65535
+    local sigil, sigild = nil, 65535
     if EN == 0 then return nil end
     for i = 0, 31 do
         local p = EN + i * 28
@@ -155,11 +156,19 @@ local function pickup_target(px, py)
                 -- the controller actually overlaps it instead of camping one
                 -- pixel below forever.
                 local target_y = (kind == 11) and (ey - 8) or ey
-                if d < bestd then best, bestd = {x=ex, y=target_y}, d end
+                -- A Sigil is a hard gate, not just high-value loot.  Choose
+                -- it before any nearby coin/heart so the bot cannot leave
+                -- its fixture room and later mistake the sanctuary lock for
+                -- a navigation failure.
+                if kind == 11 then
+                    if d < sigild then sigil, sigild = {x=ex, y=target_y}, d end
+                elseif d < bestd then
+                    best, bestd = {x=ex, y=target_y}, d
+                end
             end
         end
     end
-    return best
+    return sigil or best
 end
 
 -- Choose an affordable ware through the public walk-into purchase mechanic.
