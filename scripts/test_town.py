@@ -89,6 +89,11 @@ def main():
     assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 123
     assert len(waykeeper) == 1 and pb.memory[waykeeper[0] + 12] == 124, \
         "arrival square lacks its dedicated north-gate Waykeeper"
+    # The Waykeeper safely borrows the Rune Lantern's 8x8 VRAM slot only in a
+    # town. Keep the exact town bytes so the transition below proves a normal
+    # dungeon entry restores combat art rather than merely despawning the NPC.
+    pb.memory[0xFF4F] = 0
+    waykeeper_tile = bytes(pb.memory[0x8000 + 124 * 16:0x8000 + 125 * 16])
     assert not entities(4), "arrival square still crams market stock into one room"
     arrival = bytes(pb.memory[addr("_room_tilemap"):addr("_room_tilemap") + 340])
     assert arrival.count(3) == 6, "arrival square does not expose N/E/W village gates"
@@ -213,6 +218,10 @@ def main():
     leave("north")
     assert pb.memory[rs + 1] == 20, "north village gate did not continue the run"
     assert pb.memory[rs + 19] == 0, "town-local screen leaked into dungeon state"
+    pb.memory[0xFF4F] = 0
+    lantern_tile = bytes(pb.memory[0x8000 + 124 * 16:0x8000 + 125 * 16])
+    assert lantern_tile != waykeeper_tile, \
+        "Waykeeper art leaked from town into the Rune Lantern combat slot"
 
     pb.stop(save=False)
     print("[town] PASS connected arrival + market + forge quarter + north continuation")
