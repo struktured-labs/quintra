@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: Wolfkin's melee is visibly an arc, not a bullet."""
+"""ROM contract: every melee starter is visibly an arc, never a bullet."""
 import re
 from pathlib import Path
 
@@ -42,17 +42,22 @@ def first_player_shot(pb, entities):
 
 def main():
     entities = addr("_entities")
-    wolf = boot()
-    shot = first_player_shot(wolf, entities)
-    assert wolf.memory[shot + 12] == 122, "Wolfkin shot is not claw-arc art"
-    assert wolf.memory[shot + 16] <= 9, "Wolfkin claw is not short lived"
-    wolf.stop(save=False)
+    for moves, name, max_ttl in (
+        (0, "Wolfkin", 9),
+        (1, "Sauran", 12),
+        (4, "Vespine", 12),
+    ):
+        hero = boot(moves)
+        shot = first_player_shot(hero, entities)
+        assert hero.memory[shot + 12] == 122, f"{name} melee is not arc art"
+        assert hero.memory[shot + 16] <= max_ttl, f"{name} melee is not short lived"
+        hero.stop(save=False)
 
     corvin = boot(2)
     shot = first_player_shot(corvin, entities)
     assert corvin.memory[shot + 12] in (28, 29), "ranged champion lost bullet art"
     corvin.stop(save=False)
-    print("[melee-visual] PASS Wolfkin arc + ranged bullet identity")
+    print("[melee-visual] PASS melee arcs + ranged bullet identity")
 
 
 if __name__ == "__main__":

@@ -49,14 +49,16 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->flags      |= EF_PLAYER_PROJ;
     e->x           = FIX8((i16)player.x + 2);
     e->y           = FIX8((i16)player.y + 2);
-    if (player.class_id == 0 && kind == PROJ_SPIKE) {
+    // A spike is a physical weapon regardless of who equipped it. Keeping
+    // the forward origin shared prevents Tail Spike/Stinger from reading as
+    // invisible long-range bullets when another champion swaps into melee.
+    if (kind == PROJ_SPIKE) {
         e->x = (ppos_t)(e->x + (i16)dx * 4); // 4px forward
         e->y = (ppos_t)(e->y + (i16)dy * 4);
     }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);
-    e->sprite_tile = (player.class_id == 0 && kind == PROJ_SPIKE)
-        ? SPR_FX_SWING : SPR_BULLET;
+    e->sprite_tile = (kind == PROJ_SPIKE) ? SPR_FX_SWING : SPR_BULLET;
     e->palette     = 2;
     e->hp          = pierce;
     e->state_timer = ttl;
@@ -64,7 +66,7 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->damage      = damage;
     e->ai_data[0]  = 0;              // anim phase
     e->ai_data[1]  = g_shot_element; // element for weakness bonus
-    e->ai_data[2]  = (player.class_id == 0 && kind == PROJ_SPIKE) ? 1 : 0;
+    e->ai_data[2]  = (kind == PROJ_SPIKE) ? 1 : 0; // physical arc: no shimmer
     fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
     sfx_play(SFX_FIRE);
     return idx;
@@ -105,9 +107,9 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
     e->x = (ppos_t)(e->x + e->vx);
     e->y = (ppos_t)(e->y + e->vy);
 
-    // Player bullets shimmer between 2 frames; enemy bullets stay static
-    if ((e->flags & EF_PLAYER_PROJ)
-        && !(player.class_id == 0 && e->ai_data[2] == 1)) {
+    // Player bullets shimmer between 2 frames; physical melee arcs and enemy
+    // bullets remain static so range and weapon category read immediately.
+    if ((e->flags & EF_PLAYER_PROJ) && e->ai_data[2] == 0) {
         e->ai_data[0] = (u8)(e->ai_data[0] + 1);
         e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
     }
