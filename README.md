@@ -500,6 +500,10 @@ If it reaches a Sigil-gated sanctuary without that stage's fixture, it now
 backs through the local dungeon to recover the objective rather than treating
 the deliberately locked forward door as a route stall; a deterministic Sauran
 regression covers that return route.
+Picsean also uses the actual Tidal Wave Undertow guard when a nearby Riftwild
+body cannot be sidestepped in the authored exit lane; a paired live-ROM run
+must cross that world passage, clear the second boss, and reach the next
+dungeon without controller-only state edits.
 Vespine's 48px Stinger receives the same six-tile Flutterbat pursuit lane as
 the ranged champions; a three-seed live-ROM regression requires it to clear
 that moving-target room and reach the first boss threshold without a stall.

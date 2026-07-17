@@ -1037,6 +1037,7 @@ while frames < LIMIT do
     -- Still, marching through a Hornet's body until the next doorway is not
     -- meaningful route play. Briefly step away from nearby bodies while
     -- keeping A held, then resume the authored gate route next beat.
+    local world_flee = 0
     if overworld_threat then
         local dx, dy = overworld_threat.x - px, overworld_threat.y - py
         if math.max(math.abs(dx), math.abs(dy)) < 36 then
@@ -1055,7 +1056,7 @@ while frames < LIMIT do
                     end
                 end
             end
-            if can_step(px, py, flee) then keys = flee + KEY_A end
+            if can_step(px, py, flee) then world_flee = flee end
         end
     end
     -- The tile path can point through a locally blocked feet-box state near a
@@ -1131,11 +1132,23 @@ while frames < LIMIT do
     -- This is still controller-only: read instrumentation chooses an escape
     -- direction, then performs the same press/release/double-tap as a player.
     local threat = projectile_threat(px, py)
+    -- Picsean's Tidal Wave grants a brief body-blocking Undertow guard. In
+    -- Riftwild, encounters are optional and the route can narrow to a single
+    -- exit lane, so use that real B ability to cross a nearby body instead of
+    -- repeatedly trying to sidestep into a wall. This is not a game-state
+    -- edit: it is the same two-MP button press available to a player.
+    local world_body_close = overworld_threat
+        and math.max(math.abs(overworld_threat.x - px),
+            math.abs(overworld_threat.y - py)) <= 32
     -- Sauran's class answer is its projectile-breaking B shield. At full
     -- simulation speed, repeatedly dashing around optional Riftwild shots
     -- could pull the slower vessel off its authored route for an entire run.
     -- Use the actual shield edge instead; its cooldown prevents spam.
-    if ABILITY_POLICY == "smart" and (CLASS == 1 or CLASS == 3)
+    if ABILITY_POLICY == "smart" and CLASS == 3 and world_body_close
+        and active_charge == 0 and mp >= 2 then
+        keys = KEY_B
+        dodge_phase, dodge_cooldown = 0, 30
+    elseif ABILITY_POLICY == "smart" and (CLASS == 1 or CLASS == 3)
         and threat and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         dodge_phase, dodge_cooldown = 0, 30
@@ -1187,19 +1200,29 @@ while frames < LIMIT do
         else keys, shake_phase = 0, 0
         end
     end
+    -- Generic unstick/dodge recovery is useful in a sealed dungeon room, but
+    -- must not erase a real Riftwild body-avoidance decision. Reapply the
+    -- collision-checked flee step immediately before the world-edge guard.
+    if world_flee ~= 0 then keys = world_flee + KEY_A end
     -- A dodge may override door_step for several frames. Keep it from
     -- carrying the agent through a non-route Riftwild boundary and undoing
     -- an entire authored graph hop; preserve A/B while steering inward.
     if world_mode == 1 then
         local wanted = WORLD_ROUTE[world_screen + 1]
         local actions = keys % 16
-        if wanted ~= 0 and py < 32 and math.floor(keys / KEY_UP) % 2 == 1 then
+        -- An enemy can pin the hero toward a non-route boundary. Let the
+        -- evasive sidestep use the last safe body-width near that edge, then
+        -- turn inward before it accidentally crosses into another world cell.
+        local near_guard = world_flee ~= 0 and 4 or 32
+        local vertical_guard = world_flee ~= 0 and 116 or 88
+        local horizontal_guard = world_flee ~= 0 and 140 or 112
+        if wanted ~= 0 and py < near_guard and math.floor(keys / KEY_UP) % 2 == 1 then
             keys = actions + KEY_DOWN
-        elseif wanted ~= 2 and py > 88 and math.floor(keys / KEY_DOWN) % 2 == 1 then
+        elseif wanted ~= 2 and py > vertical_guard and math.floor(keys / KEY_DOWN) % 2 == 1 then
             keys = actions + KEY_UP
-        elseif wanted ~= 3 and px < 32 and math.floor(keys / KEY_LEFT) % 2 == 1 then
+        elseif wanted ~= 3 and px < near_guard and math.floor(keys / KEY_LEFT) % 2 == 1 then
             keys = actions + KEY_RIGHT
-        elseif wanted ~= 1 and px > 112 and math.floor(keys / KEY_RIGHT) % 2 == 1 then
+        elseif wanted ~= 1 and px > horizontal_guard and math.floor(keys / KEY_RIGHT) % 2 == 1 then
             keys = actions + KEY_LEFT
         end
     end
@@ -1272,12 +1295,17 @@ while frames < LIMIT do
     end
     if DEBUG and (frames % 600 == 0
         or (target and target.giant ~= 0 and frames % 60 == 0)) then
+        -- World traversal deliberately clears `target` so combat does not
+        -- become mandatory, but debug output still needs the nearest hostile
+        -- to explain an overworld hit or an avoidance choice.
+        local debug_target = target or overworld_threat
         debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d hp=%d mp=%d ifr=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
             frames, room, world_mode, world_screen, hp, mp, iframes, active_charge,
             px, emu:read8(PL + 10), py, emu:read8(PL + 12),
-            target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
-                    target.kind, target.x, target.y, target.hp, target.state,
-                    target.clock, target.state6)
+            debug_target and string.format("enemy:%d@%d,%d hp=%d state=%d clk=%d s6=%d",
+                    debug_target.kind, debug_target.x, debug_target.y,
+                    debug_target.hp, debug_target.state, debug_target.clock,
+                    debug_target.state6)
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y)
                     or (shop and string.format("shop:%d,%d", shop.x, shop.y) or "door")), keys))
     end
