@@ -1174,7 +1174,12 @@ while frames < LIMIT do
         for d = 1, 4 do
             local nx, ny = px + CARD_DX[d] * 8, py + CARD_DY[d] * 8
             if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
-                and not body_on_spike(nx, ny) then
+                and not body_on_spike(nx, ny)
+                -- A visually safe tile can still be behind a crate or wall.
+                -- On a damage floor, favor an actually traversable escape so
+                -- the controller cannot repeatedly select a blocked edge and
+                -- spend every iframe interval on the same spike.
+                and can_step(px, py, CARD_KEYS[d]) then
                 keys = action + CARD_KEYS[d]
                 break
             end
@@ -1188,6 +1193,25 @@ while frames < LIMIT do
             and body_on_spike(px, py + 1) then keys = keys - KEY_DOWN end
         if math.floor(keys / KEY_UP) % 2 == 1
             and body_on_spike(px, py - 1) then keys = keys - KEY_UP end
+        -- A dash/recovery may hold a horizontal and vertical direction in the
+        -- same game frame. The four checks above protect each cardinal step,
+        -- but `(x+1,y+1)` can still land the feet center on a spike even when
+        -- either axis alone is safe. Prefer the safe cardinal component; only
+        -- cancel movement altogether when neither component clears the tile.
+        local step_x = math.floor(keys / KEY_RIGHT) % 2 == 1 and 1
+            or (math.floor(keys / KEY_LEFT) % 2 == 1 and -1 or 0)
+        local step_y = math.floor(keys / KEY_DOWN) % 2 == 1 and 1
+            or (math.floor(keys / KEY_UP) % 2 == 1 and -1 or 0)
+        if step_x ~= 0 and step_y ~= 0 and body_on_spike(px + step_x, py + step_y) then
+            if not body_on_spike(px + step_x, py) then
+                keys = step_y > 0 and keys - KEY_DOWN or keys - KEY_UP
+            elseif not body_on_spike(px, py + step_y) then
+                keys = step_x > 0 and keys - KEY_RIGHT or keys - KEY_LEFT
+            else
+                keys = (step_x > 0 and keys - KEY_RIGHT or keys - KEY_LEFT)
+                keys = (step_y > 0 and keys - KEY_DOWN or keys - KEY_UP)
+            end
+        end
     end
     if DEBUG and (frames % 600 == 0
         or (target and target.giant ~= 0 and frames % 60 == 0)) then
