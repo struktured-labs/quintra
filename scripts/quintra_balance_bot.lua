@@ -531,7 +531,11 @@ while frames < LIMIT do
     -- abilities and Spirit Convergence in automated play.
     local active_charge = PL ~= 0 and emu:read8(PL + 19) or 0
     local coins = PL ~= 0 and (emu:read8(PL + 16) + emu:read8(PL + 17) * 256) or 0
-    if frames > 0 and coins < last_coins then purchases = purchases + 1 end
+    if frames > 0 and coins < last_coins then
+        purchases = purchases + 1
+        if DEBUG then debug_log(string.format("BOTBUY f=%d room=%d coins=%d->%d",
+            frames, RS ~= 0 and emu:read8(RS + 1) or 0, last_coins, coins)) end
+    end
     last_coins = coins
     if DEBUG and active_charge > 0 and last_active_charge == 0 then
         debug_log(string.format("BOTABILITY f=%d class=%d charge=%d", frames, CLASS, active_charge))
@@ -556,11 +560,18 @@ while frames < LIMIT do
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
         end
+        if DEBUG then
+            debug_log(string.format(
+                "BOTHIT f=%d room=%d hp=%d->%d src=%d pos=%d,%d ifr=%d",
+                frames, room, last_hp, hp, last_damage_source, hit_x, hit_y, iframes))
+        end
     end
     last_hp = hp
     if hp < min_hp then min_hp = hp end
     if room > max_room then max_room = room end
     if room ~= last_room then
+        if DEBUG then debug_log(string.format("BOTROOM f=%d %d->%d entered=%d",
+            frames, last_room, room, RS ~= 0 and emu:read8(RS + 6) or 255)) end
         rooms_seen, last_room, room_enter_frame = rooms_seen + 1, room, frames
         route_start_frame = frames
         wall_follow_dir, wall_follow_min = 0, 0
@@ -894,11 +905,12 @@ while frames < LIMIT do
             keys = actions + KEY_LEFT
         end
     end
-    -- Riftwild portals place the hero beside the dungeon return door. A
-    -- projectile dodge can otherwise cross that permitted backtracking edge
-    -- before room 25 is clear, creating a boss-room/Riftwild loop. While a
-    -- hostile is live, keep movement inward at only that arrival lip.
-    if target and world_mode == 0 then
+    -- A dungeon arrival places the hero beside the return door. A recovery
+    -- nudge can otherwise cross that edge while pursuing a hostile, a sigil,
+    -- or shop stock, sending the controller back into a just-cleared
+    -- miniboss room instead of finishing the current objective. Keep it
+    -- inward only at that arrival lip; ordinary forward doors stay available.
+    if (target or loot or shop) and world_mode == 0 then
         local entered = emu:read8(RS + 6)
         local actions = keys % 16
         if entered == 0 and py > 108 and math.floor(keys / KEY_DOWN) % 2 == 1 then
