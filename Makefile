@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot
+.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -175,6 +175,12 @@ balance: all check-balance-bot
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 \
 	QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
+
+# Turn retained QUINTRA_BALANCE_DEBUG_DIR event logs into an actionable
+# collision/ability summary. Example: make agent-events AGENT_EVENTS_DIR=tmp/agent-debug
+agent-events:
+	@test -n "$(AGENT_EVENTS_DIR)" || (echo "set AGENT_EVENTS_DIR=tmp/agent-debug" >&2; exit 2)
+	python3 scripts/report_agent_events.py "$(AGENT_EVENTS_DIR)"
 
 # Controller-only policy search: compares giant-fight movement policies using
 # the real ROM and ordinary inputs. Defaults to Sauran + Corvin; override the
