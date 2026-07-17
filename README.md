@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.55: Roomstream](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.56: Safe Escorts](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,10 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.56 hardens seeded mini-boss rooms: escorts now choose the nearest clear,
+champion-sized floor space after props are placed, so a crate can never create
+an unreachable live enemy and seal progression.
 
 ## Screens
 

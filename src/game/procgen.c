@@ -76,6 +76,54 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     return idx;
 }
 
+// Fixed mini-boss escorts are chosen after props have been placed. Their old
+// hard-coded coordinates could land inside a seeded 2x2 crate, creating a
+// sealed room with an unreachable live enemy. Pick the nearest champion-sized
+// clear cell without consuming RNG, so procedural parity and room seeds stay
+// stable.
+static u8 escort_cell_open(u8 tx, u8 ty) {
+    if (tx < 1 || ty < 1 || tx + 1 >= ROOM_W - 1 || ty + 1 >= ROOM_H - 1) return 0;
+    return room_tile_walkable(room_tilemap[ty][tx])
+        && room_tile_walkable(room_tilemap[ty][tx + 1])
+        && room_tile_walkable(room_tilemap[ty + 1][tx])
+        && room_tile_walkable(room_tilemap[ty + 1][tx + 1]);
+}
+
+static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
+    u8 i;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        i16 ex, ey;
+        if (!(entities[i].flags & EF_ACTIVE) || entities[i].type != ENT_ENEMY) continue;
+        ex = FIX8_TO_INT(entities[i].x);
+        ey = FIX8_TO_INT(entities[i].y);
+        if (ex < 0 || ey < 0) continue;
+        {
+            u8 etx = (u8)((ex + 4) >> 3);
+            u8 ety = (u8)((ey + 4) >> 3);
+            if (tx < (u8)(etx + 2) && (u8)(tx + 2) > etx
+                && ty < (u8)(ety + 2) && (u8)(ty + 2) > ety) return 0;
+        }
+    }
+    return 1;
+}
+
+static u8 spawn_escort_safely(u8 eid, u8 preferred_x, u8 preferred_y) {
+    u8 tx, ty, best_x = 0, best_y = 0, found = 0, best_distance = 0xFF;
+    for (ty = 1; ty < ROOM_H - 2; ++ty) {
+        for (tx = 1; tx < ROOM_W - 2; ++tx) {
+            u8 dx, dy, distance;
+            if (!escort_cell_open(tx, ty) || !escort_cell_unoccupied(tx, ty)) continue;
+            dx = tx > preferred_x ? (u8)(tx - preferred_x) : (u8)(preferred_x - tx);
+            dy = ty > preferred_y ? (u8)(ty - preferred_y) : (u8)(preferred_y - ty);
+            distance = (u8)(dx + dy);
+            if (!found || distance < best_distance) {
+                best_x = tx; best_y = ty; best_distance = distance; found = 1;
+            }
+        }
+    }
+    return found ? enemy_spawn(eid, best_x, best_y) : 0xFF;
+}
+
 // Layer stage-authored traversal identity over the shared reachable room
 // skeleton. No RNG is consumed: the same seed remains stable when content is
 // added, and door lanes remain clear. Only the first two combat rooms of each
@@ -774,7 +822,7 @@ void procgen_generate_current_room(void) BANKED {
                 u8 e;
                 for (e = 0; e < 2; ++e) {
                     u8 eid = pick_enemy_for_stage(stage);
-                    enemy_spawn(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
+                    spawn_escort_safely(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
                 }
             }
         } else if (is_shop) {
