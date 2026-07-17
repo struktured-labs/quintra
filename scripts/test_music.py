@@ -50,6 +50,14 @@ def runtime_track(stage, boss):
     pb.memory[RS + 11] = stage       # bosses_beaten drives stage identity
     pb.memory[RS + 12] = 0
     pb.memory[RS + 13] = 0
+    # Boss-route injection starts at the sanctuary.  Mirror a legitimate
+    # completed room-2 objective so the persistent Rift Sigil gate admits
+    # the synthetic traversal instead of making music coverage bypass it.
+    if boss:
+        sigils = pb.memory[RS + 23] | (pb.memory[RS + 24] << 8)
+        sigils |= (1 << stage)
+        pb.memory[RS + 23] = sigils & 0xFF
+        pb.memory[RS + 24] = sigils >> 8
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:

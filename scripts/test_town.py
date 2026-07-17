@@ -94,7 +94,9 @@ def main():
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
     assert pb.memory[elder[0]] == 3
 
-    # East branch: dedicated market with merchant and three tagged wares.
+    # East branch: dedicated market with merchant and three visually distinct
+    # wares. Stock must retain its own heart/relic art rather than collapsing
+    # into the old ambiguous orange tag sprite.
     leave("east")
     assert pb.memory[rs + 1] == 19 and pb.memory[rs + 19] == 1
     merchant, wares = entities(8), entities(4)
@@ -102,8 +104,9 @@ def main():
     assert len(wares) == 3
     assert {pb.memory[w + 18] for w in wares} == {0, 1, 2}
     tick(70)
-    assert all(pb.memory[w + 12] == 81 for w in wares), \
-        "market goods stopped reading as priced merchandise"
+    assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
+    assert all(pb.memory[w + 12] == 35 for w in wares[1:]), \
+        "relic stock lost its orb art"
     # Touch one unaffordable offer: it survives, latches one buzz, and prints price.
     ware = wares[0]
     pb.memory[pl + 16] = pb.memory[pl + 17] = 0

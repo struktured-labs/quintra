@@ -135,7 +135,11 @@ local function pickup_target(px, py)
         local p = EN + i * 28
         local kind = emu:read8(p + 17)
         if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
-            and (kind <= 3 or kind == 6) then
+            -- Rift Sigils are a hard progression objective, not ordinary
+            -- loot: skipping one makes the sanctuary gate correctly refuse
+            -- the boss. The controller-only agent must seek it just like a
+            -- heart or relic before it can make a meaningful balance claim.
+            and (kind <= 3 or kind == 6 or kind == 11) then
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             -- Byte values above the visible bounds represent negative/off-map
             -- drops (for example, an enemy dying against the north wall).

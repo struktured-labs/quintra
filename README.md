@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.52: Wild Signals](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.53: Clear Signals](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -136,6 +136,9 @@ the cartridge runtime.
   to sanctuary context: completed/next region, elder restoration, and seeded
   market guidance instead of contradictory dungeon/depth labels. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
+  Exploration music now continues through ordinary doorways instead of
+  restarting every screen, and market stock keeps its actual heart/relic art
+  while the HUD shows its price on contact.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill;
   an eight-heart cap leaves upgrade room even for six-heart Sauran. All relic

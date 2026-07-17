@@ -164,12 +164,20 @@ static void room_load_stage_obj_identity(void) {
 }
 
 static void play_stage_music(void) {
-    music_stage_number = run_state.bosses_beaten;
+    u8 stage = (u8)(run_state.bosses_beaten % MUSIC_STAGE_COUNT);
+    // Doorways within a stage must not reset the exploration loop.  Besides
+    // sounding repetitive, the reset made a long room-to-room trek feel like
+    // a string of disconnected screens.  A real track change (boss exit,
+    // world gate, new stage) still takes effect immediately below.
+    if (music_track_id == stage) return;
+    music_stage_number = stage;
     music_play_stage();
 }
 
 static void play_boss_music(void) {
-    music_stage_number = run_state.bosses_beaten;
+    u8 stage = (u8)(run_state.bosses_beaten % MUSIC_STAGE_COUNT);
+    if (music_track_id == (u8)(MUSIC_BOSS_BASE + stage)) return;
+    music_stage_number = stage;
     music_play_boss();
 }
 

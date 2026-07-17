@@ -143,11 +143,11 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // Shop wares are permanent until bought; state counts a retry delay.
     // They never magnetize (flying wares would force accidental purchases).
     if (e->ai_data[0] == PICKUP_SHOP) {
-        // A persistent hanging tag prevents merchandise from spending half
-        // its animation looking exactly like loose, collectible currency.
-        // ai_data[4] is a contact latch for the reject
+        // Keep the actual heart/relic art assigned by the shop generator.
+        // Older builds overwrote every ware with the same orange sale glyph,
+        // making paid stock look like broken loose currency. ai_data[4] is a
+        // contact latch for the reject
         // buzz; reset it only after the player actually steps away.
-        e->sprite_tile = SPR_SHOP_TAG;
         if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
         if (e->state > 0) e->state--;
         return;
