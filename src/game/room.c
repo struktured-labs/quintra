@@ -684,6 +684,8 @@ void room_enter(void) {
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // small, specialist, and bruiser art
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter))
+        tiles_load_town_waykeeper_sprite(); // safe town-only Rune Lantern slot reuse
     tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
     hud_init();

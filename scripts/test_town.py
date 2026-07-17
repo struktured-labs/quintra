@@ -84,8 +84,11 @@ def main():
     assert pb.memory[rs + 19] == 0, "town did not begin in arrival square"
     elder = entities(7)
     chartwright = entities(12)
+    waykeeper = entities(15)
     assert len(elder) == 1 and pb.memory[elder[0] + 12] == 69
     assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 123
+    assert len(waykeeper) == 1 and pb.memory[waykeeper[0] + 12] == 124, \
+        "arrival square lacks its dedicated north-gate Waykeeper"
     assert not entities(4), "arrival square still crams market stock into one room"
     arrival = bytes(pb.memory[addr("_room_tilemap"):addr("_room_tilemap") + 340])
     assert arrival.count(3) == 6, "arrival square does not expose N/E/W village gates"

@@ -90,6 +90,9 @@
 #define SPR_FX_SWING        122 // Wolfkin's adjacent claw/weapon arc
 #define SPR_CARTOGRAPHER    123 // village chartwright; reveals the next route
 #define SPR_ENEMY_RUNE_LANTERN 124 // late drifting four-lane ring caster
+// Town-only reuse: villages never spawn Rune Lanterns, and each dungeon room
+// reloads the normal lantern art before enemies exist.
+#define SPR_TOWN_WAYKEEPER   SPR_ENEMY_RUNE_LANTERN
 #define SPR_MERCHANT_CALLOUT 125 // proximity trade speech bubble
 #define SPR_SURGE_ORB        126 // temporary weapon-speed/damage pickup
 #define SPR_SHIELD_AURA      127 // Sauran Stoneskin orbiting ward shard
@@ -111,6 +114,7 @@ extern const u8 hud_tiles[][16];
 #define HUD_TILE_COUNT 15
 
 void tiles_load_pickup_sprites(void) BANKED;
+void tiles_load_town_waykeeper_sprite(void) BANKED;
 void tiles_load_hud(void) BANKED;
 
 // Phase 12 metasprite loaders

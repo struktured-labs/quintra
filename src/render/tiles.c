@@ -45,6 +45,14 @@ static const u8 sprite_fx_cartographer[16] = {
     0x7E, 0x42, 0x3C, 0x3C, 0x24, 0x3C, 0x42, 0x42,
 };
 
+// Village Waykeeper: peaked hood, bright lantern, and a long gate staff.
+// It occupies the Rune Lantern slot only in a town; room_enter reloads every
+// enemy atlas before a combat room can render that slot again.
+static const u8 sprite_fx_waykeeper[16] = {
+    0x18, 0x18, 0x3C, 0x24, 0x5A, 0x66, 0x5A, 0x7E,
+    0x3C, 0x7E, 0x24, 0x3C, 0x24, 0x3C, 0x42, 0x42,
+};
+
 void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
@@ -53,6 +61,10 @@ void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_SMITH, 1, sprite_fx_smith);
     set_sprite_data(SPR_APOTHECARY, 1, sprite_fx_apothecary);
     set_sprite_data(SPR_CARTOGRAPHER, 1, sprite_fx_cartographer);
+}
+
+void tiles_load_town_waykeeper_sprite(void) BANKED {
+    set_sprite_data(SPR_TOWN_WAYKEEPER, 1, sprite_fx_waykeeper);
 }
 
 void tiles_load_all_class_sprites(void) BANKED {

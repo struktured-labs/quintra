@@ -138,6 +138,17 @@ u8 pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_WAYKEEPER, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_TOWN_WAYKEEPER;
+        entities[idx].palette = 0x06;
+        entities[idx].hitbox = (u8)0x88;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_SHOP_TAG, x, y);
     if (idx != 0xFF) {
@@ -151,7 +162,7 @@ u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
 
 static u8 pickup_is_town_resident(u8 kind) {
     return (kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY)
-        || kind == PICKUP_CARTOGRAPHER;
+        || kind == PICKUP_CARTOGRAPHER || kind == PICKUP_WAYKEEPER;
 }
 
 // Context, not a purchase: reveal the nearest ware's price before the player
@@ -474,6 +485,12 @@ u8 pickup_check_player_collision(void) BANKED {
                         entities[i].palette = 0x02;
                         sfx_play(SFX_CLEAR);
                     }
+                    any = 1;
+                    continue;
+                case PICKUP_WAYKEEPER:
+                    // A visual north-gate anchor. Unlike the healer and
+                    // chartwright it never consumes a blessing or blocks a
+                    // player who brushes past on the way to the next region.
                     any = 1;
                     continue;
             }

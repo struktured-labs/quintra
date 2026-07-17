@@ -22,6 +22,7 @@
 #define PICKUP_CARTOGRAPHER 12 // village chartwright; reveals nearby route
 #define PICKUP_SHOP_TAG     13 // inert gold sale marker, floats above a ware
 #define PICKUP_SURGE        14 // temporary primary-weapon burst (about 15s)
+#define PICKUP_WAYKEEPER    15 // permanent town north-gate resident
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -55,6 +56,7 @@ u8   pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_smith(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
