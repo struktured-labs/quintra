@@ -201,7 +201,7 @@ end
 -- Weapon swaps remain outside the comparable class policy; shops are handled
 -- separately below so purchases can be measured without treating wares as
 -- free loot.
-local function pickup_target(px, py)
+local function pickup_target(px, py, hp, hp_max)
     local best, bestd = nil, 65535
     local sigil, sigild = nil, 65535
     if EN == 0 then return nil end
@@ -213,7 +213,12 @@ local function pickup_target(px, py)
             -- loot: skipping one makes the sanctuary gate correctly refuse
             -- the boss. The controller-only agent must seek it just like a
             -- heart or relic before it can make a meaningful balance claim.
-            and (kind <= 3 or kind == 6 or kind == 11 or kind == 14) then
+            and (kind <= 3 or kind == 6 or kind == 11 or kind == 14)
+            -- Full-health hearts intentionally remain on the floor: the
+            -- cartridge preserves their value rather than consuming them
+            -- with a misleading chime. Do not route an agent forever toward
+            -- a reward that the real collision rule will correctly refuse.
+            and (kind ~= 0 or hp < hp_max) then
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             -- Byte values above the visible bounds represent negative/off-map
             -- drops (for example, an enemy dying against the north wall).
@@ -886,7 +891,7 @@ while frames < LIMIT do
     else
         last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
     end
-    local loot = (not target and world_mode == 0) and pickup_target(px, py) or nil
+    local loot = (not target and world_mode == 0) and pickup_target(px, py, hp, hp_max) or nil
     local shop = (not target and not loot and world_mode == 0)
         and shop_target(px, py, hp, hp_max, mp_max, coins) or nil
     local room_age = frames - room_enter_frame
