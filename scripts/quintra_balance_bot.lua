@@ -554,6 +554,26 @@ local function target_step(px, py, ex, ey, fallback, near_tiles)
     return aligned_step(prevkey[target], sx, sy, px, py, fallback)
 end
 
+-- A procedural weapon orb replaces player.starter_weapon at runtime.  The
+-- controller must therefore classify the held A weapon, not infer its reach
+-- from the vessel chosen on the title screen.  These are generated-table
+-- indices for the seven weapon entries (0..4 starters, 20 Rift Flail, 21
+-- Astral Spear); active/passive indices deliberately fall back to ranged if
+-- a malformed save ever exposes one.
+local function weapon_style(index)
+    if index == 0 then return "claw" end
+    if index == 1 or index == 4 then return "lunge" end
+    if index == 20 then return "flail" end
+    if index == 21 then return "spear" end
+    return "ranged"
+end
+
+local function weapon_route_tiles(style)
+    if style == "claw" then return 1 end
+    if style == "spear" then return 10 end -- 4px * 22 ticks = 88px
+    return 6 -- Tail/Stinger, Flail, and projectile kits all clear a lane here
+end
+
 -- The Void Lord's World Collapse deliberately covers almost the entire room.
 -- Its marker is honest: ai_data[4] marks the long warning and ai_data[5]
 -- selects one corner, modulo four. Read that public runtime state and steer
@@ -849,6 +869,7 @@ local purchases, last_coins = 0, 0
 local shop_visits, visited_shop_rooms = 0, {}
 local max_combat_frames, max_route_frames = 0, 0
 local max_combat_room, max_combat_enemy, max_route_room = 0, 255, 0
+local last_weapon = 255
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local hp_max = PL ~= 0 and emu:read8(PL + 1) or 0
@@ -859,6 +880,17 @@ while frames < LIMIT do
     -- every class look permanently on cooldown and silently disabled all B
     -- abilities and Spirit Convergence in automated play.
     local active_charge = PL ~= 0 and emu:read8(PL + 19) or 0
+    local equipped_weapon = PL ~= 0 and emu:read8(PL + 21) or 0
+    local held_style = weapon_style(equipped_weapon)
+    local starter_lunge = (CLASS == 1 and equipped_weapon == 1)
+        or (CLASS == 4 and equipped_weapon == 4)
+    if equipped_weapon ~= last_weapon then
+        if DEBUG then debug_log(string.format(
+            "BOTWEAPON f=%d room=%d item=%d style=%s",
+            frames, RS ~= 0 and emu:read8(RS + 1) or 0,
+            equipped_weapon, held_style)) end
+        last_weapon = equipped_weapon
+    end
     local coins = PL ~= 0 and (emu:read8(PL + 16) + emu:read8(PL + 17) * 256) or 0
     if frames > 0 and coins < last_coins then
         purchases = purchases + 1
@@ -1072,12 +1104,17 @@ while frames < LIMIT do
         elseif aim == KEY_LEFT then move = clockwise and KEY_UP or KEY_DOWN
         else move = clockwise and KEY_DOWN or KEY_UP end
         local waiting_star = target.kind == 11 and target.state ~= 0
-        -- Corvin/Picsean are ranged, and Vespine's Stinger is a 48px lunge.
-        -- Giving the latter Wolfkin's adjacent-only target lane stranded the
-        -- controller against Flutterbat-room cover while it fired from safely
-        -- out of range. Six tiles matches the real Stinger reach without
-        -- changing the cartridge's collision or projectile physics.
-        local routed_reach = (CLASS == 2 or CLASS == 3 or CLASS == 4) and 6 or 1
+        -- The held A weapon, not the vessel, defines the valid firing lane.
+        -- This lets a Picsean or Wolfkin that takes an Astral Spear hold its
+        -- real ten-tile line instead of walking into claw range, while a
+        -- ranged champion that takes a Flail still uses a reachable lane.
+        local routed_reach = weapon_route_tiles(held_style)
+        -- Keep each starter lunge's measured special-target lane: Sauran
+        -- used one tile while Vespine's Flutterbat handling used six. Their
+        -- ordinary covered-combat endpoint remains one tile below.
+        if starter_lunge then
+            routed_reach = CLASS == 4 and 6 or 1
+        end
         -- Any weapon can spend shots into cover. After four seconds without
         -- changing target HP, reposition perpendicular and reacquire.
         -- Folding Stars are intentionally invulnerable while expanded. Route
@@ -1173,11 +1210,28 @@ while frames < LIMIT do
                 -- retreat beat to a Sentinel body. Vespine's Stinger remains
                 -- on its separately measured cardinal baseline; pulses there
                 -- cleared 0/3 while baseline cleared two full bosses.
-                giant_mode = (CLASS == 0) and "pulse_fire"
+                giant_mode = (held_style == "claw") and "pulse_fire"
+                    -- Vespine's starter Stinger remains on its separately
+                    -- measured baseline. A swapped Flail/Spear changes the
+                    -- build shape and earns its own long-lane policy.
+                    or (held_style == "lunge" and CLASS ~= 4) and "orbit_fire"
+                    or (held_style == "flail" or held_style == "spear") and "orbit_fire"
                     or (CLASS == 1 or CLASS == 2 or CLASS == 3)
                         and "orbit_fire" or "baseline"
             end
-            if target.giant ~= 0 and giant_mode ~= "baseline" and reach < 36 then
+            local giant_retreat = GIANT_RETREAT_RANGE
+            local giant_fire_range = 48
+            -- Existing orbit policies deliberately hold a 36px body buffer,
+            -- even when their ordinary retreat floor is 28px. Preserve that
+            -- measured Sauran/Corvin/Picsean behavior; Spear owns a longer
+            -- committed lane because its real thrust reaches 88px.
+            local giant_orbit_floor = 36
+            if held_style == "spear" then
+                giant_retreat, giant_fire_range, giant_orbit_floor = 52, 80, 52
+            elseif held_style == "flail" or (held_style == "lunge" and CLASS ~= 4) then
+                giant_retreat = 28
+            end
+            if target.giant ~= 0 and giant_mode ~= "baseline" and reach < giant_orbit_floor then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
@@ -1193,35 +1247,40 @@ while frames < LIMIT do
                         and frames % GIANT_FIRE_CADENCE == 0)
                         and (KEY_A + aim) or orbit
                 end
-            elseif reach < GIANT_RETREAT_RANGE then
+            elseif reach < giant_retreat then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
                 keys = retreat
-            elseif reach <= 48 and offaxis <= 5 then
+            elseif reach <= giant_fire_range and offaxis <= 5 then
                 keys = KEY_A + aim
             else
-                keys = KEY_A + target_step(px, py, target.x, target.y, aim, 5)
+                local giant_route_tiles = held_style == "spear" and 10
+                    or held_style == "flail" and 6 or 5
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim, giant_route_tiles)
             end
-        elseif CLASS == 1 or CLASS == 4 then
+        elseif held_style == "lunge" or held_style == "flail" or held_style == "spear" then
             local adx, ady = math.abs(dx), math.abs(dy)
             local reach = (adx > ady) and adx or ady
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
-            if reach <= 52 and offaxis > 5 then
-                keys = target_step(px, py, target.x, target.y, aim)
-            elseif reach <= 28 then
+            local near_range = held_style == "spear" and 36 or 28
+            local fire_range = held_style == "spear" and 80 or 52
+            local weapon_endpoint = starter_lunge and 1 or routed_reach
+            if reach <= fire_range and offaxis > 5 then
+                keys = target_step(px, py, target.x, target.y, aim, weapon_endpoint)
+            elseif reach <= near_range then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
                 keys = (frames % 3 == 0) and retreat or (KEY_A + aim)
-            elseif reach <= 52 then
+            elseif reach <= fire_range then
                 keys = KEY_A + aim
             else
-                keys = KEY_A + target_step(px, py, target.x, target.y, aim)
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim, weapon_endpoint)
             end
-        -- Wolfkin's Claw is the roster's true melee weapon. It must close and
+        -- Claw Combo is the roster's true melee weapon. It must close and
         -- align instead of orbiting outside its adjacent swing geometry.
-        elseif CLASS == 0 then
+        elseif held_style == "claw" then
             -- Tile BFS gets us around cover; at striking distance, finish the
             -- last few pixels of perpendicular alignment before attacking.
             -- Small enemy hurtboxes make a same-tile diagonal slash miss even
@@ -1256,15 +1315,19 @@ while frames < LIMIT do
         -- A human can feel when a small hostile has entered their hurtbox;
         -- the old pilot only had projectile avoidance and therefore let the
         -- Tail Spike/Stinger kits repeatedly trade contact at point blank.
-        -- Those weapons both reach well beyond a body width, so preserve a
-        -- small retreat buffer and fire backward through it. Wolfkin alone
-        -- gets a tighter threshold because its Claw Combo is the roster's
-        -- deliberately true melee kit. This is read-only controller policy,
-        -- not a cartridge-side damage or immunity adjustment.
-        if target.giant == 0 and (CLASS == 0 or CLASS == 2) and not waiting_star then
+        -- Physical builds need a body buffer; Corvin retains its measured
+        -- ranged panic behavior. This is read-only controller policy, not a
+        -- cartridge-side damage or immunity adjustment.
+        if target.giant == 0 and not waiting_star then
             local body_range = math.max(math.abs(dx), math.abs(dy))
-            local panic_range = (CLASS == 0) and 12 or (CLASS == 3) and 0 or 24
-            if body_range <= panic_range then
+            local panic_range = held_style == "claw" and 12
+                -- Preserve the measured Sauran/Vespine starter lanes; this
+                -- is for Wolfkin only after a lunge-weapon swap.
+                or (held_style == "lunge" and CLASS == 0) and 24
+                or held_style == "flail" and 24
+                or held_style == "spear" and 32
+                or (CLASS == 2 and 24 or 0)
+            if panic_range > 0 and body_range <= panic_range then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT

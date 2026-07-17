@@ -28,6 +28,7 @@ if [ -n "$MGBA_SAVE_DIR" ]; then
 fi
 TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
 DEBUG_DIR="${QUINTRA_BALANCE_DEBUG_DIR:-}"
+DEBUG="${QUINTRA_BALANCE_DEBUG:-0}"
 APPEND="${QUINTRA_BALANCE_APPEND:-0}"
 SKIP_REPORT="${QUINTRA_BALANCE_SKIP_REPORT:-0}"
 read -r -a CLASS_IDS <<< "${QUINTRA_BALANCE_CLASSES:-0 1 2 3 4}"
@@ -89,6 +90,7 @@ for run in "${RUN_IDS[@]}"; do
         debug_env+=("QUINTRA_BOT_DEBUG_OUT=$DEBUG_DIR/run-$run-class-$class-$attempt.log")
       fi
       env "${trace_env[@]}" "${debug_env[@]}" \
+        QUINTRA_BOT_DEBUG="$DEBUG" \
         QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" QUINTRA_TM_ADDR="$TM" \
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \

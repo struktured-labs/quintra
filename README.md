@@ -578,16 +578,16 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; v0.17.86 occupies 128 KiB with 571 bytes of bank-0 headroom.
+bank space; v0.18.1 occupies 128 KiB with 1,494 bytes of bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.17.86 release has 4,179 bytes in bank 1, 1,742 in bank 2,
-3,274 in bank 3, 7,369 in bank 4, 12,749 in bank 5, and 14,928 in bank 6;
-the always-mapped bank retains 571 bytes of headroom.
+ROM. The v0.18.1 release has 3,610 bytes in bank 1, 1,630 in bank 2,
+3,334 in bank 3, 7,041 in bank 4, 12,719 in bank 5, and 14,811 in bank 6;
+the always-mapped bank retains 1,494 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -617,7 +617,10 @@ different seeds after class-select redraws. Successful agents still fall as
 low as one half-heart and vary from roughly 4:45 to 11:47 active play, so
 the sample retains pressure and meaningful build/seed variance.
 
-The agents use each champion's actual weapon range and B ability, collect
+The agents read the held A-weapon every frame—not just the selected champion—so
+a procedural Flail or Astral Spear swap changes its route/spacing policy to
+the real build shape; starter lunge routes retain their separately measured
+cover-safe behavior. They use each champion's B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
 route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
@@ -710,8 +713,9 @@ one-shot screenshot when a room exceeds the stall threshold by setting
 `QUINTRA_BOT_DEBUG_SCREEN=/tmp/quintra-stall`; with `QUINTRA_BOT_DEBUG=1`,
 active giant fights are also sampled once per second so a corner pin can be
 reproduced from controller input rather than guessed from a final CSV row.
-Set `QUINTRA_BALANCE_DEBUG_DIR=tmp/agent-debug` on the wrapper to retain
-per-trial `BOTROOM`, `BOTHIT`, ability, and position events after mGBA exits;
+Set `QUINTRA_BALANCE_DEBUG=1 QUINTRA_BALANCE_DEBUG_DIR=tmp/agent-debug` on the
+wrapper to retain per-trial `BOTROOM`, `BOTWEAPON`, `BOTHIT`, ability, and
+position events after mGBA exits;
 run `make agent-events AGENT_EVENTS_DIR=tmp/agent-debug` to summarize each
 trial's early-room and boss damage by source. The ordinary CSV remains the
 compact release metric. The agent
