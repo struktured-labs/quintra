@@ -445,6 +445,9 @@ u8 pickup_check_player_collision(void) BANKED {
                             case WARE_RUNE:
                                 apply_item_effects(15);   // Mana Gem
                                 break;
+                            case WARE_SURGE:
+                                room_start_weapon_surge();
+                                break;
                         }
                         sfx_play(SFX_COIN);
                         entity_kill(i);

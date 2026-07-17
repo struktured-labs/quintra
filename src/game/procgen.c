@@ -71,8 +71,10 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     entities[idx].ai_data[0] = PICKUP_SHOP;
     entities[idx].ai_data[1] = ware;
     entities[idx].ai_data[2] = price;
-    entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART : SPR_ITEM_ORB;
-    entities[idx].palette = (ware == WARE_ITEM) ? 0x05 : 0x04;
+    entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART
+        : (ware == WARE_SURGE) ? SPR_SURGE_ORB : SPR_ITEM_ORB;
+    entities[idx].palette = (ware == WARE_ITEM) ? 0x05
+        : (ware == WARE_SURGE) ? 0x06 : 0x04;
     // Keep the stock's heart/relic sprite intact and put the dedicated gold
     // sale tag above it. This answers "can I pick this up?" before the player
     // has to walk into a ware or discover the bottom-HUD price convention.
@@ -81,6 +83,25 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
         if (tag != 0xFF) entities[tag].ai_data[1] = idx;
     }
     return idx;
+}
+
+// The dungeon's premium shelf is seed-stable without consuming RNG: some
+// expeditions offer permanent vitality, others let a cash-rich player buy a
+// short pre-boss damage/speed window. The player can read both the cyan orb
+// and the dedicated lightning HUD glyph before touching either stock.
+static u8 dungeon_premium_ware(void) {
+    return (((u8)run_state.run_seed ^ run_state.bosses_beaten) & 1)
+        ? WARE_SURGE : WARE_BIG;
+}
+
+static u8 dungeon_premium_price(u8 ware) {
+    return (ware == WARE_SURGE) ? 20 : 40;
+}
+
+static void paint_shop_price(u8 tx, u8 price) {
+    room_tilemap[10][tx]     = HUD_COIN;
+    room_tilemap[10][tx + 1] = (price >= 10) ? (u8)(HUD_DIGIT_0 + price / 10) : HUD_BLANK;
+    room_tilemap[10][tx + 2] = (u8)(HUD_DIGIT_0 + price % 10);
 }
 
 // Fixed mini-boss escorts are chosen after props have been placed. Their old
@@ -846,25 +867,20 @@ void procgen_generate_current_room(void) BANKED {
                 }
             }
         } else if (is_shop) {
-            // MERCHANT room: three wares, no enemies. Walk into a ware
-            // with enough coins to buy (heart 10 / stat item 25 / +2 max HP 40).
+            // MERCHANT room: three wares, no enemies. The premium shelf is
+            // seed-stable: a permanent Iron Heart or a cheap, temporary Surge.
             {
+                u8 premium = dungeon_premium_ware();
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(56, 64, WARE_HEART, 10);
                 spawn_shop_ware(80, 64, WARE_ITEM, 25);
-                spawn_shop_ware(104, 64, WARE_BIG, 40);
+                spawn_shop_ware(104, 64, premium, dungeon_premium_price(premium));
                 // Price tags painted on the floor under each ware:
                 // [coin][d][d], amber, walkable. Wares sit at tile y=8;
                 // tags at y=10 leave a step of space.
-                room_tilemap[10][6]  = HUD_COIN;
-                room_tilemap[10][7]  = (u8)(HUD_DIGIT_0 + 1);
-                room_tilemap[10][8]  = (u8)(HUD_DIGIT_0 + 0);
-                room_tilemap[10][9]  = HUD_COIN;
-                room_tilemap[10][10] = (u8)(HUD_DIGIT_0 + 2);
-                room_tilemap[10][11] = (u8)(HUD_DIGIT_0 + 5);
-                room_tilemap[10][12] = HUD_COIN;
-                room_tilemap[10][13] = (u8)(HUD_DIGIT_0 + 4);
-                room_tilemap[10][14] = (u8)(HUD_DIGIT_0 + 0);
+                paint_shop_price(6, 10);
+                paint_shop_price(9, 25);
+                paint_shop_price(12, dungeon_premium_price(premium));
             }
         } else {
             // Enemy count scales with depth. One lone crawler made too many

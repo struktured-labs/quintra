@@ -314,6 +314,15 @@ pub fn generate_tilemap(
     }
 
     if kind.shop {
+        // Mirror procgen.c's non-RNG premium shelf: the run seed chooses
+        // temporary Surge ($20) or permanent vitality ($40), while the other
+        // two offers stay fixed. This is tile-level parity only; entities are
+        // validated by the live shop contract.
+        let premium_price = if (((run_seed as u8) ^ bosses_beaten) & 1) != 0 {
+            20
+        } else {
+            40
+        };
         m[10][6] = HUD_COIN;
         m[10][7] = HUD_DIGIT_0 + 1;
         m[10][8] = HUD_DIGIT_0;
@@ -321,7 +330,7 @@ pub fn generate_tilemap(
         m[10][10] = HUD_DIGIT_0 + 2;
         m[10][11] = HUD_DIGIT_0 + 5;
         m[10][12] = HUD_COIN;
-        m[10][13] = HUD_DIGIT_0 + 4;
+        m[10][13] = HUD_DIGIT_0 + premium_price / 10;
         m[10][14] = HUD_DIGIT_0;
     }
 
