@@ -588,11 +588,11 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes).
-The v0.17.84 15/15 matrix has complete telemetry but does **not** pass this
-gate yet: only the current Picsean policy reaches late stages, and the sampled
-paths have not encountered every roster member. It is therefore not a show
-build. The v0.17.46 14/15 result remains a historical benchmark only. The
-gate proves every class faces the same three
+The latest v0.17.99 15/15 matrix has complete telemetry and encounters every
+roster member, but does **not** pass this gate yet: Picsean wins 2/3 complete
+nine-boss runs, while Wolfkin, Sauran, Corvin, and Vespine are still 0/3.
+It is therefore not a show build. The v0.17.46 14/15 result remains a
+historical benchmark only. The gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
 low as one half-heart and vary from roughly 4:45 to 11:47 active play, so
