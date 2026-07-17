@@ -25,6 +25,11 @@ extern u8 room_combat_sealed;
 // 5 means the current dungeon's Rift Sigil was successfully placed.
 extern u8 room_sigil_status;
 
+// Called immediately after procgen clears the entity table, before optional
+// combat/loot population can consume every slot. Idempotent on later room
+// orchestration passes.
+void room_spawn_progression_fixture(void) BANKED;
+
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.

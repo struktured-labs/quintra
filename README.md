@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.86: Boss Reward Reliability](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.87: Sigil Integrity + Boss Chord Balance](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.87 reserves every stage's **Rift Sigil** before dense procgen combat and
+loot can fill the fixed entity table. A live reproduction of the formerly
+crowded stage-three room proves its required objective always exists and can
+be collected. It also prevents **Spirit Convergence** from applying all eight
+overlapping arcs to a 32×32 colossus in one frame: the eight-way crowd burst
+remains intact, but a boss receives at most four hits per chord. Live-ROM
+coverage proves the 28-damage cap while ordinary eight-shot damage remains 56;
+the controller still completes all nine bosses on the canonical seed.
 
 v0.17.86 fixes a dense boss-kill reward loss. The giant and its hostile shots
 now release their entity slots before visual effects, so the two recovery

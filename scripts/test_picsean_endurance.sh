@@ -12,6 +12,7 @@ for RUN in 13 14 15 16; do
   OUT="$TMP/run-$RUN.csv"
   QUINTRA_BALANCE_RUNS="$RUN" QUINTRA_BALANCE_CLASSES=3 \
     QUINTRA_BALANCE_FRAMES=90000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
+    QUINTRA_MGBA_SAVE_DIR="$TMP/save-$RUN" \
     QUINTRA_BALANCE_OUT="$OUT" \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null &
   PIDS+=("$!")

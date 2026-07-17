@@ -168,7 +168,8 @@ static void room_load_dynamic_fx_identity(void) {
 // Progression fixtures belong to room orchestration, after procgen has fully
 // populated combat slots. Keeping them here prevents geometry/encounter code
 // from accidentally erasing a required key and makes the invariant testable.
-static void room_spawn_progression_fixture(void) {
+void room_spawn_progression_fixture(void) BANKED {
+    u8 i;
     room_sigil_status = 1;
     if (run_state.world_mode) return;
     room_sigil_status = 2;
@@ -180,6 +181,18 @@ static void room_spawn_progression_fixture(void) {
     if (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) return;
     room_sigil_status = 4;
+    // This is normally called by procgen immediately after entity_init_all,
+    // before optional enemies/loot can occupy the fixed 32-slot table. The
+    // later orchestration calls are intentionally idempotent: never duplicate
+    // an unclaimed fixture while a room is redrawn or resumed.
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        if ((entities[i].flags & EF_ACTIVE)
+            && entities[i].type == ENT_PICKUP
+            && entities[i].ai_data[0] == PICKUP_RIFT_SIGIL) {
+            room_sigil_status = 5;
+            return;
+        }
+    }
     {
         u8 sigil = pickup_spawn(PICKUP_RIFT_SIGIL, FIX8(80), FIX8(64));
         if (sigil != 0xFF) {
@@ -1130,9 +1143,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if ((pressed & (J_A | J_B)) == (J_A | J_B)
             && player.mp == player.mp_max && player.active_charge == 0) {
             u8 sd;
-            for (sd = 0; sd < 8; ++sd)
-                projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
+            for (sd = 0; sd < 8; ++sd) {
+                u8 shot = projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
                     (u8)(w->p1 + player.atk + 2), PROJ_SPIKE);
+                if (shot != 0xFF) {
+                    entities[shot].ai_data[3] |= PROJ_FLAG_CONVERGENCE;
+                }
+            }
             player.mp = 0;
             player.iframes = 45;
             player.active_charge = 180;

@@ -29,6 +29,11 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
+def put32(pb, address, value):
+    for i in range(4):
+        pb.memory[address + i] = (value >> (i * 8)) & 0xFF
+
+
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
@@ -116,7 +121,10 @@ def main():
     # kissing its corner. This stays stable if the hero feet box is refined.
     put16(pb, PL + 9, (pb.memory[ep + 3] - 2) & 0xFF)
     put16(pb, PL + 11, (pb.memory[ep + 7] - 9) & 0xFF)
-    for _ in range(6):
+    # A banked fixture reservation runs during the same in-place room
+    # transition as its slide/fade. Give that presentation transaction a
+    # complete short settle window before asserting the ordinary walk-over.
+    for _ in range(30):
         pb.tick()
     assert pb.memory[RS + RS_SIGILS] & 1, (
         "Sigil pickup did not persist stage bit "
@@ -191,6 +199,67 @@ def main():
     for _ in range(45):
         pb.tick()
     assert pb.memory[RS + 1] == 12, "stage-two Sigil did not unlock its boss"
+
+    # Stage three caught a historical controller stall in room 14. Exercise
+    # the real room-13 -> room-14 transaction so every early-stage objective,
+    # not only the first two, is guaranteed to survive procgen population.
+    clear_entities()
+    pb.memory[RS + 1] = 13
+    pb.memory[RS + RS_BOSSES] = 2
+    pb.memory[RS + RS_SIGILS] &= 0xFB
+    pb.memory[RS + 6] = 0xFF
+    pb.memory[SEALED] = 0
+    south_door()
+    for _ in range(240):
+        pb.tick()
+        if pb.memory[SIGIL_STATUS] == 5:
+            break
+    assert pb.memory[RS + 1] == 14 and pb.memory[SIGIL_STATUS] == 5, (
+        "stage-three room 2 did not receive its Rift Sigil")
+    assert sum(
+        pb.memory[EN + i * 28] == 3 and pb.memory[EN + i * 28 + 17] == 11
+        for i in range(32)
+    ) == 1, "stage-three Rift Sigil was not spawned exactly once"
+
+    # A real high-population seed once filled the 32-slot table before room.c
+    # tried to add this fixture, silently omitting the required stage-three
+    # Sigil. Pin that exact transaction: the objective must exist alongside
+    # all authored combat/loot pressure, not merely in an empty debug room.
+    # Start the recorded transaction from a clean cartridge. Rewinding the
+    # room counter in the prior live scene would retain its tile transition
+    # internals and would not exercise procgen for room 14 at all.
+    pb.stop(save=False)
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240):
+        pb.tick()
+    pb.button("start")
+    for _ in range(30):
+        pb.tick()
+    pb.button("a")
+    for _ in range(60):
+        pb.tick()
+
+    clear_entities()
+    put32(pb, RS + 2, 2064128116)
+    pb.memory[RS + 1] = 13
+    pb.memory[RS + RS_BOSSES] = 2
+    pb.memory[RS + RS_SIGILS] = 3
+    pb.memory[RS + RS_SIGILS + 1] = 0
+    pb.memory[RS + 6] = 0xFF
+    pb.memory[SEALED] = 0
+    south_door()
+    for _ in range(240):
+        pb.tick()
+        if pb.memory[SIGIL_STATUS] == 5:
+            break
+    assert pb.memory[RS + 1] == 14 and pb.memory[SIGIL_STATUS] == 5, (
+        "dense stage-three room did not reserve its Rift Sigil "
+        f"(room={pb.memory[RS + 1]} status={pb.memory[SIGIL_STATUS]} "
+        f"sealed={pb.memory[SEALED]} hitstop={pb.memory[HITSTOP]})")
+    assert sum(
+        pb.memory[EN + i * 28] == 3 and pb.memory[EN + i * 28 + 17] == 11
+        for i in range(32)
+    ) == 1, "dense stage-three room lost its reserved Rift Sigil"
 
     pb.stop(save=False)
     print("[rift-sigil] PASS every dungeon has a recoverable room-2 Sigil + boss gate")

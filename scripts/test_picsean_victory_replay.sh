@@ -23,6 +23,7 @@ FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 
 QUINTRA_BALANCE_RUNS=13 QUINTRA_BALANCE_CLASSES=3 \
   QUINTRA_BALANCE_FRAMES=90000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
+  QUINTRA_MGBA_SAVE_DIR="$TMP/save" \
   QUINTRA_BALANCE_TRACE_DIR="$TRACE_DIR" QUINTRA_BALANCE_OUT="$CSV" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
@@ -46,7 +47,7 @@ test -s "$TRACE"
 env QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
   QUINTRA_TM_ADDR="$TM" QUINTRA_SCREEN_ADDR="$LS" QUINTRA_FRAME_ADDR="$FC" \
   QUINTRA_REPLAY_TRACE="$TRACE" QUINTRA_REPLAY_RESULT="$RESULT" \
-  "$MGBA_BIN" "$ROM" --script "$ROOT/scripts/quintra_replay.lua" -l 0 \
+  "$MGBA_BIN" -C "savegamePath=$TMP/replay-save" "$ROM" --script "$ROOT/scripts/quintra_replay.lua" -l 0 \
   >/dev/null 2>&1 &
 REPLAY_PID=$!
 for _ in $(seq 1 480); do

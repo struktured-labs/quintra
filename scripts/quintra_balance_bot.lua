@@ -26,9 +26,9 @@ local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
 -- A class-aware default keeps the proven baseline for close/short-range
--- champions while Picsean's slow piercing bubbles use the independently
--- measured orbit-and-fire spacing plan.  Explicit environment modes remain
--- available to the offline policy search below.
+-- champions while Picsean's slow piercing bubbles use independently measured
+-- orbit-and-fire spacing. A late-phase fallback below changes only the final
+-- few giant HP, where that orbit otherwise risks never taking a cardinal hit.
 local GIANT_POLICY = os.getenv("QUINTRA_BOT_GIANT_POLICY") or "classwise"
 if GIANT_POLICY ~= "baseline" and GIANT_POLICY ~= "orbit"
     and GIANT_POLICY ~= "orbit_fire" and GIANT_POLICY ~= "pulse_fire"
@@ -463,6 +463,28 @@ end
 
 -- Shortest-path step to any boundary door except the door we entered from.
 -- Recomputed only in cleared rooms; 340 cells is tiny compared with emulation.
+local function rift_portal_step(px, py)
+    if TM == 0 then return nil end
+    for ty = 1, 15 do
+        for tx = 1, 18 do
+            if emu:read8(TM + ty * 20 + tx) == 34 then -- BGT_PORTAL
+                -- room.c tests the feet center at player + (8,12). Aim that
+                -- point at the generated portal tile instead of assuming a
+                -- central staircase.
+                local gx, gy = tx * 8 - 8, ty * 8 - 12
+                if math.abs(gx - px) <= 2 and math.abs(gy - py) <= 2 then
+                    return 0
+                end
+                if math.abs(gx - px) >= math.abs(gy - py) then
+                    return gx > px and KEY_RIGHT or KEY_LEFT
+                end
+                return gy > py and KEY_DOWN or KEY_UP
+            end
+        end
+    end
+    return nil
+end
+
 local function door_step(px, py)
     if TM == 0 then return KEY_DOWN end
     -- This helper runs outside the main sampling loop, so it must not capture
@@ -490,6 +512,13 @@ local function door_step(px, py)
     local local_room = room % 6
     local return_for_sigil = not in_world and not in_town
         and local_room > 2 and stage_sigil_missing()
+    -- Local room 2 is the Sigil vault. Once its objective is collected, its
+    -- seed-positioned nonlinear rift is a valid forward route to local room
+    -- 4. Locate the actual generated tile rather than assuming a center exit.
+    if not in_world and local_room == 2 and not stage_sigil_missing() then
+        local portal = rift_portal_step(px, py)
+        if portal ~= nil then return portal end
+    end
     -- Shortest authored route to dungeon gate screen 6.
     local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
     if in_town then
@@ -782,6 +811,22 @@ while frames < LIMIT do
     -- mandatory clear; dungeon combat remains fully engaged.
     local overworld_threat = world_mode == 1 and target or nil
     if world_mode == 1 then target = nil end
+    if DEBUG and frames % 600 == 0 and RS ~= 0 then
+        local portal_x, portal_y = -1, -1
+        if TM ~= 0 then
+            for ty = 1, 15 do
+                for tx = 1, 18 do
+                    if emu:read8(TM + ty * 20 + tx) == 34 then
+                        portal_x, portal_y = tx, ty
+                    end
+                end
+            end
+        end
+        debug_log(string.format(
+            "BOTSTATE f=%d room=%d local=%d stage=%d sigils=%d pos=%d,%d target=%d portal=%d,%d",
+            frames, room, room % 6, emu:read8(RS + 11), read16(RS + 23),
+            px, py, target and target.kind or 255, portal_x, portal_y))
+    end
     -- A boss fight is measured from the first real giant observation through
     -- its actual disappearance, not by room residency.  That excludes the
     -- sanctuary/door animation and records a death during an active boss as
@@ -910,12 +955,16 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Paired controller trials favor orbit-and-fire against
-                -- giants for Sauran's 48px Tail Spike and Picsean's slow
-                -- bubbles. Wolfkin, Corvin, and Vespine retain baseline
-                -- spacing until a mode beats it on the same seeds.
+                -- Sauran's Tail Spike and Picsean's slow bubbles favor
+                -- orbit-and-fire through a live bullet pattern. Once a
+                -- Picsean giant is nearly down, force the ordinary cardinal
+                -- lane: otherwise orbiting past a 1-2 HP body can continue
+                -- forever without another aimed bubble contact.
                 giant_mode = (CLASS == 1 or CLASS == 3)
                     and "orbit_fire" or "baseline"
+                if target.giant ~= 0 and CLASS == 3 and target.hp <= 8 then
+                    giant_mode = "baseline"
+                end
             end
             if target.giant ~= 0 and giant_mode ~= "baseline" and reach < 36 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)

@@ -682,6 +682,11 @@ void procgen_generate_current_room(void) BANKED {
     // Player position FIRST so spawn-avoidance checks the real tile
     place_player_after_entry();
 
+    // The stage objective is progression-critical. Reserve its real pickup
+    // before this room's optional enemy, shop, and decoration spawns can fill
+    // the 32-slot table; later room orchestration calls are idempotent.
+    room_spawn_progression_fixture();
+
     // Secret treasure room: no enemies, loot piled in the middle. Always
     // clear the flag (else it leaks into every future room). Only take the
     // early-return when this is NOT also a boss room — otherwise the sealed,

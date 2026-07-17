@@ -24,8 +24,9 @@ COMMON=(QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN"
 command -v "$MGBA_BIN" >/dev/null
 env "${COMMON[@]}" \
   QUINTRA_BOT_RUN=1 QUINTRA_BOT_CLASS=2 QUINTRA_BOT_FRAMES=2400 \
+  QUINTRA_MGBA_SAVE_DIR="$TMP/save" \
   QUINTRA_BOT_OUT="$CSV" QUINTRA_BOT_TRACE_OUT="$TRACE" \
-  "$MGBA_BIN" "$ROM" \
+  "$MGBA_BIN" -C "savegamePath=$TMP/save" "$ROM" \
   --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 >/dev/null 2>&1 &
 AGENT_PID=$!
 for _ in $(seq 1 180); do
@@ -39,7 +40,7 @@ test -s "$TRACE"
 awk -F, 'NR == 2 { exit NF == 39 ? 0 : 1 } END { if (NR < 2) exit 1 }' "$CSV"
 env "${COMMON[@]}" \
   QUINTRA_REPLAY_TRACE="$TRACE" QUINTRA_REPLAY_RESULT="$RESULT" \
-  "$MGBA_BIN" "$ROM" \
+  "$MGBA_BIN" -C "savegamePath=$TMP/replay-save" "$ROM" \
   --script "$ROOT/scripts/quintra_replay.lua" -l 0 >/dev/null 2>&1 &
 REPLAY_PID=$!
 for _ in $(seq 1 180); do

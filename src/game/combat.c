@@ -52,6 +52,13 @@ static void boss_clear_hostile_projectiles(void) {
 u8 combat_resolve(void) BANKED {
     u8 i, j;
     u8 player_died = 0;
+    // One Convergence chord launches eight arcs at once. A giant's 32x32
+    // collision body used to overlap every arc in this same sweep, turning a
+    // crowd-control crescendo into an accidental eightfold boss delete.
+    // This counter is local to the sweep: the chord still hits every ordinary
+    // enemy it reaches, while a colossus receives at most four readable
+    // hits per cast rather than all eight overlapping arcs.
+    u8 convergence_giant_hits = 0;
 
     // Tick down per-frame timers
     if (player.iframes > 0) player.iframes--;
@@ -95,6 +102,17 @@ u8 combat_resolve(void) BANKED {
                     FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 5);
                 entity_kill(i);
                 break;
+            }
+            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
+                && (entities[i].ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
+                if (convergence_giant_hits >= 4) {
+                    // The spectacle has already landed on this colossus;
+                    // spend the overlapping duplicate instead of applying
+                    // another simultaneous full-damage arc.
+                    entity_kill(i);
+                    break;
+                }
+                convergence_giant_hits++;
             }
             weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
             // Large bosses reuse the Stone Sentinel entity definition for
