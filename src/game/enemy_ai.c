@@ -463,7 +463,8 @@ static void teleport_tick(entity_t *e, const enemy_def_t *def) {
 // alternating-spread. Cadence tightens below half HP (enrage).
 //
 // Boss ai_data layout:
-//   [0]=content id  [1]=volley timer  [2]=pattern id (0..8)  [3]=giant flag
+//   [0]=content id  [1]=volley timer  [2]=pattern id (0..8)
+//   [3]=bit0 giant flag; bit7 one-time giant phase break
 //   [4]=burst counter (Reaper)  [5]=rotation counter  [6]=max hp (enrage)
 
 // Index into dir8_* that points from (cx,cy) toward the player.
@@ -483,6 +484,27 @@ static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
 
 static void boss_tick(entity_t *e) {
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
+
+    // A boss used to turn its below-half enrage into a nearly invisible
+    // cadence subtraction.  Give every large encounter one readable second
+    // phase instead: the slow four-way riftbreak is announced by a shake and
+    // bright flash, then the existing pattern resumes in its faster state.
+    // The marker shares the giant byte's high bit—mini-boss counters and all
+    // instrumentation keep their established entity layout.
+    if ((e->ai_data[3] & 1) && !(e->ai_data[3] & 0x80)
+        && e->hp <= (u8)(e->ai_data[6] >> 1)) {
+        i16 bx = FIX8_TO_INT(e->x) + 12;
+        i16 by = FIX8_TO_INT(e->y) + 12;
+        u8 d;
+        e->ai_data[3] |= 0x80;
+        e->ai_data[1] = 30;   // readable beat before the normal next volley
+        e->ai_data[7] = 20;   // visible white riftbreak flash
+        room_shake(1, 12);
+        sfx_play(SFX_ROAR);
+        for (d = 0; d < 8; d = (u8)(d + 2))
+            boss_shot(bx, by, d, 1, e->damage);
+        return;
+    }
 
     // Creep toward the player (1px every 3rd tick)
     e->state_timer++;
@@ -511,7 +533,7 @@ static void boss_tick(entity_t *e) {
     }
 
     {
-        u8 giant = e->ai_data[3];
+        u8 giant = e->ai_data[3] & 1;
         u8 dmg   = e->damage;
         u8 d, k;
         // Both mini-boss and giant are 16x16+; center the volley origin.

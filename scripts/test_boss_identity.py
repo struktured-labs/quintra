@@ -27,7 +27,7 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
-def enter_boss(stage):
+def enter_boss(stage, keep_open=False):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -77,7 +77,7 @@ def enter_boss(stage):
     ]
     assert boss is not None, f"stage {stage} did not spawn its large boss: {active}"
     assert pb.memory[boss + 12] == SPR_BOSS_BIG, "large boss tile slot drifted"
-    assert pb.memory[boss + 20] == 1, "boss giant flag missing"
+    assert pb.memory[boss + 20] & 1, "boss giant flag missing"
     assert pb.memory[boss + 19] == stage, "boss attack variant does not match stage"
 
     # CPU-visible VRAM reads are blocked during active LCD transfer. This
@@ -90,6 +90,10 @@ def enter_boss(stage):
     pb.memory[0xFF4F] = 0  # OBJ tile bytes live in VRAM bank 0
     art = bytes(pb.memory[0x8000 + SPR_BOSS_BIG * 16:
                           0x8000 + (SPR_BOSS_BIG + 16) * 16])
+    if keep_open:
+        # Restore LCD before handing the live encounter to the phase test.
+        pb.memory[0xFF40] = pb.memory[0xFF40] | 0x80
+        return pb, boss
     pb.stop(save=False)
     return art
 
@@ -104,8 +108,27 @@ def main():
     )
     differing = sum(a != b for a, b in zip(colossus, void_lord))
     assert differing >= 8, f"Void Lord crown is not visually substantial ({differing} bytes)"
+    pb, boss = enter_boss(0, keep_open=True)
+    max_hp = pb.memory[boss + 23]  # ai_data[6], captured by boss_tick
+    assert max_hp > 1, "boss never captured its starting HP for enrage"
+    hostile_count = lambda: sum(
+        pb.memory[EN + i * 28] == 1
+        and pb.memory[EN + i * 28 + 1] & 1
+        and not (pb.memory[EN + i * 28 + 1] & 0x10)
+        for i in range(32)
+    )
+    before_rift_shots = hostile_count()
+    pb.memory[boss + 14] = max_hp // 2
+    for _ in range(2):
+        pb.tick()
+    assert pb.memory[boss + 20] & 0x80, "boss did not enter its half-health riftbreak"
+    assert pb.memory[boss + 18] >= 20, "riftbreak did not grant a readable recovery beat"
+    rift_shot_delta = hostile_count() - before_rift_shots
+    assert rift_shot_delta >= 4, "riftbreak did not emit its slow four-way warning"
+    pb.stop(save=False)
     print(f"[boss-id] PASS 9/9 distinct runtime silhouettes; "
-          f"Colossus vs crowned Void Lord differs {differing}/256 bytes; variants 0..8")
+          f"Colossus vs crowned Void Lord differs {differing}/256 bytes; "
+          f"variants 0..8; riftbreak adds {rift_shot_delta} warning shots")
 
 
 if __name__ == "__main__":

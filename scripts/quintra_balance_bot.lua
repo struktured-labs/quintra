@@ -124,6 +124,22 @@ local function hostile_count_near(px, py, radius)
     return count
 end
 
+-- Boss timing must not depend on aim selection: a minion, a temporary target
+-- loss while navigating cover, or a player shot can make enemy_target nil for
+-- a frame even though the large boss is still alive.  The giant marker lives
+-- in ai_data[3] at entity byte +20.
+local function giant_active()
+    if EN == 0 then return false end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 1 and emu:read8(p + 20) ~= 0 then
+            return true
+        end
+    end
+    return false
+end
+
 local function leech_attached()
     if EN == 0 then return false end
     for i = 0, 31 do
@@ -551,6 +567,8 @@ for _ = 1, 45 do tick(0) end
 
 local frames, max_room, last_hp, damage_taken, min_hp = 0, 0, 0, 0, 255
 local min_giant_hp = 255
+local boss_start_frame, boss_start_beaten = -1, 0
+local boss_attempts, boss_attempt_frames, boss_clear_frames = 0, 0, 0
 local last_damage_source = 255 -- enemy id, 254=hazard, 253=unresolved hostile
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
@@ -648,8 +666,6 @@ while frames < LIMIT do
         wall_follow_dir, wall_follow_min = 0, 0
         dodge_phase, escape_timer = 0, 0
     end
-    if hp == 0 or won ~= 0 then break end
-
     -- player.x/y are signed 16-bit pixels at offsets 9 and 11.
     local px, py = read_i16(PL + 9), read_i16(PL + 11)
     if dodge_cooldown > 0 then dodge_cooldown = dodge_cooldown - 1 end
@@ -666,6 +682,27 @@ while frames < LIMIT do
     -- mandatory clear; dungeon combat remains fully engaged.
     local overworld_threat = world_mode == 1 and target or nil
     if world_mode == 1 then target = nil end
+    -- A boss fight is measured from the first real giant observation through
+    -- its actual disappearance, not by room residency.  That excludes the
+    -- sanctuary/door animation and records a death during an active boss as
+    -- an attempt without pretending it was a clear.
+    local bosses_now = RS ~= 0 and emu:read8(RS + 11) or 0
+    if giant_active() then
+        if boss_start_frame < 0 then
+            boss_start_frame, boss_start_beaten = frames, bosses_now
+        end
+    elseif boss_start_frame >= 0 then
+        local elapsed = frames - boss_start_frame
+        boss_attempts = boss_attempts + 1
+        boss_attempt_frames = boss_attempt_frames + elapsed
+        if bosses_now > boss_start_beaten then
+            boss_clear_frames = boss_clear_frames + elapsed
+        end
+        boss_start_frame = -1
+    end
+    -- Do this after boss telemetry: the kill frame can set victory before
+    -- this observer would otherwise see the giant disappear.
+    if hp == 0 or won ~= 0 then break end
     if target then
         if target.giant ~= 0 and target.hp < min_giant_hp then
             min_giant_hp = target.hp
@@ -1117,6 +1154,13 @@ if RS ~= 0 then
         + emu:read8(RS + 4) * 65536
         + emu:read8(RS + 5) * 16777216
 end
+if boss_start_frame >= 0 then
+    -- The run ended while a giant was still alive (normally player death or
+    -- the configured frame ceiling). Keep its lived encounter time visible
+    -- in attempts, but never call it a clear.
+    boss_attempts = boss_attempts + 1
+    boss_attempt_frames = boss_attempt_frames + (frames - boss_start_frame)
+end
 if TRACE_OUT then
     if trace_count > 0 then
         trace_rows[#trace_rows + 1] = string.format("%d,%d", trace_count, trace_last)
@@ -1132,13 +1176,14 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
-        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses))
+        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses,
+        boss_attempts, boss_attempt_frames, boss_clear_frames))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

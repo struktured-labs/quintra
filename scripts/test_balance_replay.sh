@@ -14,22 +14,40 @@ EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
-HEADER="run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp,b_uses"
+HEADER="run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp,b_uses,boss_attempts,boss_attempt_frames,boss_clear_frames"
 echo "$HEADER" > "$CSV"
+: > "$TRACE"
+: > "$RESULT"
 COMMON=(QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN"
   QUINTRA_TM_ADDR="$TM" QUINTRA_SCREEN_ADDR="$LS" QUINTRA_FRAME_ADDR="$FC")
 unset DISPLAY WAYLAND_DISPLAY
 env "${COMMON[@]}" QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
   QUINTRA_BOT_RUN=1 QUINTRA_BOT_CLASS=2 QUINTRA_BOT_FRAMES=2400 \
   QUINTRA_BOT_OUT="$CSV" QUINTRA_BOT_TRACE_OUT="$TRACE" \
-  timeout 45 xvfb-run -a mgba-qt "$ROM" --fastforward \
-  --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 >/dev/null 2>&1 || true
+  setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
+  --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 >/dev/null 2>&1 &
+AGENT_PID=$!
+for _ in $(seq 1 180); do
+  test "$(wc -l < "$CSV")" -gt 1 && break
+  kill -0 "$AGENT_PID" 2>/dev/null || break
+  sleep 0.25
+done
+kill -- -"$AGENT_PID" 2>/dev/null || true
+wait "$AGENT_PID" 2>/dev/null || true
 test -s "$TRACE"
-awk -F, 'NR == 2 { exit NF == 34 ? 0 : 1 } END { if (NR < 2) exit 1 }' "$CSV"
+awk -F, 'NR == 2 { exit NF == 37 ? 0 : 1 } END { if (NR < 2) exit 1 }' "$CSV"
 env "${COMMON[@]}" QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
   QUINTRA_REPLAY_TRACE="$TRACE" QUINTRA_REPLAY_RESULT="$RESULT" \
-  timeout 45 xvfb-run -a mgba-qt "$ROM" --fastforward \
-  --script "$ROOT/scripts/quintra_replay.lua" -l 0 >/dev/null 2>&1 || true
+  setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
+  --script "$ROOT/scripts/quintra_replay.lua" -l 0 >/dev/null 2>&1 &
+REPLAY_PID=$!
+for _ in $(seq 1 180); do
+  test -s "$RESULT" && break
+  kill -0 "$REPLAY_PID" 2>/dev/null || break
+  sleep 0.25
+done
+kill -- -"$REPLAY_PID" 2>/dev/null || true
+wait "$REPLAY_PID" 2>/dev/null || true
 test -s "$RESULT"
 grep -q '^PASS ' "$RESULT"
 transitions=$(grep -vc '^#' "$TRACE")

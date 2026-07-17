@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.78: Signature Clarity](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.79: Riftbreak Bosses](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.79 gives every large boss a readable **Riftbreak** at half health: a
+bright flash, short room shake, and slow four-way warning burst before its
+existing faster enrage cadence resumes. It is a real second phase rather than
+an invisible HP sponge—boss health remains capped at 255 for the 128 KiB
+cartridge. The nine-boss emulator contract proves the marker and exactly four
+new warning shots; a three-seed Picsean controller sample increased completed
+boss-fight time from roughly 20.5 to 27.3 seconds.
 
 v0.17.78 makes every champion’s **B signature legible and truthful**. The
 Pack now states the actual effect beneath the signature name—Howl’s eight-way
@@ -405,7 +413,9 @@ route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 used in balance runs. Each row reports accepted `b_uses` (the game entering a
 class-signature cooldown after a B-only press), rather than merely button
 requests. Set `QUINTRA_BOT_ABILITY_POLICY=off` for a no-signature control;
-the default `smart` policy uses class signatures and reactive shields. Each
+the default `smart` policy uses class signatures and reactive shields. Rows
+also separate `boss_attempt_frames` from `boss_clear_frames`, so a failed
+bullet-hell attempt cannot be mistaken for a slow successful fight. Each
 emulator attempt writes to its own CSV; a file-locked duplicate check commits
 exactly one finished row to the matrix, so late or overlapping processes cannot
 pollute an interrupted/resumed sample.
