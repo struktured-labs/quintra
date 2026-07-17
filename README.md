@@ -484,7 +484,8 @@ also separate `boss_attempt_frames` from `boss_clear_frames`, so a failed
 bullet-hell attempt cannot be mistaken for a slow successful fight. The
 semicolon-separated `boss_clear_durations` field exposes every successful
 boss individually, so stage-specific tuning is measurable instead of averaged
-away. Each
+away. The typed balance report prints the per-stage clear medians directly.
+Each
 emulator attempt writes to its own CSV; a file-locked duplicate check commits
 exactly one finished row to the matrix, so late or overlapping processes cannot
 pollute an interrupted/resumed sample. `giant_overlap_damage` separately

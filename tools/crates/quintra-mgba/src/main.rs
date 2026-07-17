@@ -68,6 +68,7 @@ struct Row {
     world_hops: u32,
     death_source: u32,
     enemy_mask: u32,
+    boss_clear_durations: Vec<u32>,
 }
 
 fn field<'a>(record: &'a [&str], columns: &HashMap<&str, usize>, name: &str) -> Result<&'a str> {
@@ -84,6 +85,20 @@ fn number(record: &[&str], columns: &HashMap<&str, usize>, name: &str) -> Result
     field(record, columns, name)?
         .parse()
         .with_context(|| format!("balance CSV has non-numeric {name}"))
+}
+
+fn durations(record: &[&str], columns: &HashMap<&str, usize>) -> Result<Vec<u32>> {
+    if !columns.contains_key("boss_clear_durations") {
+        return Ok(Vec::new());
+    }
+    let value = field(record, columns, "boss_clear_durations")?;
+    if value.is_empty() {
+        return Ok(Vec::new());
+    }
+    value
+        .split(';')
+        .map(|entry| entry.parse().context("balance CSV has non-numeric boss_clear_durations"))
+        .collect()
 }
 
 fn parse_rows(text: &str) -> Result<Vec<Row>> {
@@ -168,6 +183,7 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                     .then(|| number(&record, &columns, "enemy_mask"))
                     .transpose()?
                     .unwrap_or(0),
+                boss_clear_durations: durations(&record, &columns)?,
             })
         })()
         .with_context(|| format!("invalid balance CSV row {}", line_index + 2))?;
@@ -237,6 +253,24 @@ fn report(
             .collect::<Vec<_>>()
             .join("|");
         println!("[balance] encountered enemy ids={ids}");
+    }
+    let mut boss_stage_times: Vec<Vec<u32>> = Vec::new();
+    for row in &rows {
+        for (stage, duration) in row.boss_clear_durations.iter().enumerate() {
+            if boss_stage_times.len() <= stage {
+                boss_stage_times.resize_with(stage + 1, Vec::new);
+            }
+            boss_stage_times[stage].push(*duration);
+        }
+    }
+    if !boss_stage_times.is_empty() {
+        let medians = boss_stage_times
+            .iter()
+            .enumerate()
+            .map(|(stage, durations)| format!("s{}={}", stage + 1, median(durations.iter().copied())))
+            .collect::<Vec<_>>()
+            .join(" ");
+        println!("[balance] boss_clear_med_frames {medians}");
     }
     for (class, name) in CLASS_NAMES.iter().enumerate() {
         let sample: Vec<_> = rows.iter().filter(|row| row.class == class).collect();
@@ -397,6 +431,16 @@ mod tests {
                    4,1,12,2,54,30,121,9,90,0,2,77,3\n";
         let rows = parse_rows(csv).unwrap();
         assert_eq!(rows[0].purchases, 3);
+    }
+
+    #[test]
+    fn parser_retains_each_completed_boss_duration() {
+        let csv = "class,victory,ui_screen,min_hp,max_room,rooms_cleared,kills,bosses,room_frames,hostiles,towns,dodges,boss_clear_durations\n\
+                   3,1,12,7,54,32,226,9,98,0,2,182,622;551;570;597;208;233;108;264;94\n";
+        let rows = parse_rows(csv).unwrap();
+        assert_eq!(rows[0].boss_clear_durations.len(), 9);
+        assert_eq!(rows[0].boss_clear_durations[0], 622);
+        assert_eq!(rows[0].boss_clear_durations[8], 94);
     }
 
     #[test]
