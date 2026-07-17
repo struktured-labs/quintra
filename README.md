@@ -607,10 +607,15 @@ minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes).
 The freshly rerun v0.18.1 15/15 matrix has complete telemetry and encounters
-every roster member, but does **not** pass this gate yet: Picsean reaches 2/3
-complete nine-boss endings; its remaining seed time-caps on a stationary Toxic
-Mire Spore. Wolfkin, Sauran, Corvin, and Vespine are still 0/3, with no route
-stalls in the matrix.
+every roster member, but does **not** pass this gate yet: before the current
+controller repair, Picsean reached 2/3 complete nine-boss endings and its
+remaining seed time-capped on a stationary Toxic Mire Spore. The exact
+three-seed Picsean recheck now reaches all three endings (47,508–77,453
+gameplay frames) after the input-only pilot learned a mine-safe firing lane
+and clears the room's Sentinel before its Spore escort. Wolfkin, Sauran,
+Corvin, and Vespine are still 0/3 in the last all-class matrix, with no route
+stalls there; a fresh 15-run matrix is still required to pass the delivery
+gate.
 It is therefore not a show build. The v0.17.46 14/15 result remains a
 historical benchmark only. The gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced

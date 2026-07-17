@@ -112,7 +112,7 @@ local function read_i16(address)
     return value >= 0x8000 and value - 0x10000 or value
 end
 
-local function enemy_target(px, py)
+local function enemy_target(px, py, preferred_kind)
     local best, bestd = nil, 65535
     if EN == 0 then return nil end
     for i = 0, 31 do
@@ -124,18 +124,20 @@ local function enemy_target(px, py)
                 enemy_mask = enemy_mask + 2 ^ kind
             end
             -- fix8_t is signed 24.8 here; byte +1 is the on-screen integer.
-            local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
-            local d = math.abs(ex - px) + math.abs(ey - py)
-            if d < bestd then
-                best, bestd = {
-                    x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
-                    kind=kind, state=emu:read8(p + 15),
-                    clock=emu:read8(p + 18), state6=emu:read8(p + 23),
-                    giant=(kind == 1) and emu:read8(p + 20) or 0,
-                    pattern=emu:read8(p + 19),
-                    collapse=emu:read8(p + 21),
-                    safe_slot=emu:read8(p + 22)
-                }, d
+            if preferred_kind == nil or kind == preferred_kind then
+                local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+                local d = math.abs(ex - px) + math.abs(ey - py)
+                if d < bestd then
+                    best, bestd = {
+                        x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
+                        kind=kind, state=emu:read8(p + 15),
+                        clock=emu:read8(p + 18), state6=emu:read8(p + 23),
+                        giant=(kind == 1) and emu:read8(p + 20) or 0,
+                        pattern=emu:read8(p + 19),
+                        collapse=emu:read8(p + 21),
+                        safe_slot=emu:read8(p + 22)
+                    }, d
+                end
             end
         end
     end
@@ -565,6 +567,42 @@ local function target_step(px, py, ex, ey, fallback, near_tiles)
             local nk = ny * 20 + nx
             if nx >= 1 and nx <= 19 and ny >= 1 and ny <= 16
                 and not seen[nk] and body_walkable(nx, ny) then
+                seen[nk], prev[nk], prevkey[nk] = true, y * 20 + x, d
+                tail = tail + 1; qx[tail], qy[tail] = nx, ny
+            end
+        end
+    end
+    if not target or target == start then return fallback end
+    while prev[target] and prev[target] ~= start do target = prev[target] end
+    return aligned_step(prevkey[target], sx, sy, px, py, fallback)
+end
+
+-- A Mire Spore is a proximity mine, not a pursuer. Find a body-valid
+-- cardinal firing lane while treating its 40px arming radius as forbidden
+-- space. Seven tile cells give a small human-scale margin (56px) beyond that
+-- radius; the projectile kits can still attack from there.
+local function spore_safe_step(px, py, ex, ey, fallback)
+    if TM == 0 then return fallback end
+    local sx, sy = math.floor((px + 13) / 8), math.floor((py + 15) / 8)
+    local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
+    local qx, qy, head, tail = {sx}, {sy}, 1, 1
+    local seen, prev, prevkey = {}, {}, {}
+    local start, target = sy * 20 + sx, nil
+    seen[start] = true
+    while head <= tail do
+        local x, y = qx[head], qy[head]; head = head + 1
+        local dist = math.abs(x - gx) + math.abs(y - gy)
+        if dist >= 7 and dist <= 15 and (x == gx or y == gy)
+            and clear_cardinal_lane(x, y, gx, gy) then
+            target = y * 20 + x
+            break
+        end
+        for d = 1, 4 do
+            local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
+            local nk = ny * 20 + nx
+            local safe = math.abs(nx - gx) + math.abs(ny - gy) >= 6
+            if nx >= 1 and nx <= 19 and ny >= 1 and ny <= 16
+                and safe and not seen[nk] and body_walkable(nx, ny) then
                 seen[nk], prev[nk], prevkey[nk] = true, y * 20 + x, d
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
             end
@@ -1025,6 +1063,13 @@ while frames < LIMIT do
         visited_shop_rooms[room], shop_visits = true, shop_visits + 1
     end
     local target = enemy_target(px, py)
+    -- Room 3 is the authored miniboss check. If a stationary Spore escort is
+    -- closer than its Sentinel, clear the actual miniboss first; only then is
+    -- it sensible to spend time locating a mine-safe firing lane.
+    if target and target.kind == 17 and room % 6 == 3 then
+        local miniboss = enemy_target(px, py, 1)
+        if miniboss then target = miniboss end
+    end
     if target and target.kind == 17 and DEBUG and debug_spore_room ~= room then
         debug_spore_tilemap(frames, room, px, py, target)
         debug_spore_room = room
@@ -1204,6 +1249,8 @@ while frames < LIMIT do
             else
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim, 6)
             end
+        elseif target.kind == 17 then
+            keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
