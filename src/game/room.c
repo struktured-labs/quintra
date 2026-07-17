@@ -467,6 +467,121 @@ static void draw_room_tilemap(void) {
     VBK_REG = 0;
 }
 
+// A 20-tile room is wider than half the 32-tile BG map, so two complete
+// screens cannot simply sit side by side. For an eastward slide, stage the
+// first 12 destination columns at map x=20..31; once the first 8 source
+// columns have scrolled offscreen, recycle x=0..7 for the remaining columns.
+// This is the same streamed-map trick used by hardware-era room scrollers.
+static void room_slide_east(void) {
+    u8 y, x, step;
+    u8 attrs[12];
+    for (y = 0; y < ROOM_H; ++y) {
+        for (x = 0; x < 12; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+        wait_vbl_done();
+        VBK_REG = 0; set_bkg_tiles(20, y, 12, 1, room_tilemap[y]);
+        VBK_REG = 1; set_bkg_tiles(20, y, 12, 1, attrs);
+    }
+    VBK_REG = 0;
+    for (step = 1; step <= 20; ++step) {
+        if (step == 8) {
+            for (y = 0; y < ROOM_H; ++y) {
+                for (x = 0; x < 8; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x + 12]);
+                VBK_REG = 0; set_bkg_tiles(0, y, 8, 1, &room_tilemap[y][12]);
+                VBK_REG = 1; set_bkg_tiles(0, y, 8, 1, attrs);
+            }
+            VBK_REG = 0;
+        }
+        wait_vbl_done();
+        SCX_REG = (u8)(step << 3);
+    }
+    // Normalize the streamed map while blanked so gameplay updates retain
+    // their straightforward x=0..19 coordinate system after the slide.
+    DISPLAY_OFF;
+    SCX_REG = 0;
+    draw_room_tilemap();
+}
+
+// Mirrored westward streamer. Destination columns 8..19 live at x=20..31
+// until the camera has moved 96px left; source x=12..19 are then safely
+// behind the viewport and become destination columns 0..7.
+static void room_slide_west(void) {
+    u8 y, x, step;
+    u8 attrs[12];
+    for (y = 0; y < ROOM_H; ++y) {
+        for (x = 0; x < 12; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x + 8]);
+        wait_vbl_done();
+        VBK_REG = 0; set_bkg_tiles(20, y, 12, 1, &room_tilemap[y][8]);
+        VBK_REG = 1; set_bkg_tiles(20, y, 12, 1, attrs);
+    }
+    VBK_REG = 0;
+    for (step = 1; step <= 20; ++step) {
+        if (step == 12) {
+            for (y = 0; y < ROOM_H; ++y) {
+                for (x = 0; x < 8; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+                VBK_REG = 0; set_bkg_tiles(12, y, 8, 1, room_tilemap[y]);
+                VBK_REG = 1; set_bkg_tiles(12, y, 8, 1, attrs);
+            }
+            VBK_REG = 0;
+        }
+        wait_vbl_done();
+        SCX_REG = (u8)(0 - (i16)(step << 3));
+    }
+    DISPLAY_OFF;
+    SCX_REG = 0;
+    draw_room_tilemap();
+}
+
+// Vertical rooms are 17 tiles high, leaving 15 free map rows. Stage those
+// first, then recycle the two source rows once the scroll has carried them
+// offscreen. The HUD is a WINDOW layer, so it remains fixed during the slide.
+static void room_slide_south(void) {
+    u8 y, x, step, attrs[ROOM_W];
+    for (y = 0; y < 15; ++y) {
+        for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+        wait_vbl_done();
+        VBK_REG = 0; set_bkg_tiles(0, (u8)(y + 17), ROOM_W, 1, room_tilemap[y]);
+        VBK_REG = 1; set_bkg_tiles(0, (u8)(y + 17), ROOM_W, 1, attrs);
+    }
+    VBK_REG = 0;
+    for (step = 1; step <= 17; ++step) {
+        if (step == 2) {
+            for (y = 15; y < 17; ++y) {
+                for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+                VBK_REG = 0; set_bkg_tiles(0, (u8)(y - 15), ROOM_W, 1, room_tilemap[y]);
+                VBK_REG = 1; set_bkg_tiles(0, (u8)(y - 15), ROOM_W, 1, attrs);
+            }
+            VBK_REG = 0;
+        }
+        wait_vbl_done();
+        SCY_REG = (u8)(step << 3);
+    }
+    DISPLAY_OFF; SCY_REG = 0; draw_room_tilemap();
+}
+
+static void room_slide_north(void) {
+    u8 y, x, step, attrs[ROOM_W];
+    for (y = 2; y < 17; ++y) {
+        for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+        wait_vbl_done();
+        VBK_REG = 0; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, room_tilemap[y]);
+        VBK_REG = 1; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, attrs);
+    }
+    VBK_REG = 0;
+    for (step = 1; step <= 17; ++step) {
+        if (step == 2) {
+            for (y = 0; y < 2; ++y) {
+                for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+                VBK_REG = 0; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, room_tilemap[y]);
+                VBK_REG = 1; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, attrs);
+            }
+            VBK_REG = 0;
+        }
+        wait_vbl_done();
+        SCY_REG = (u8)(0 - (i16)(step << 3));
+    }
+    DISPLAY_OFF; SCY_REG = 0; draw_room_tilemap();
+}
+
 static void place_player_sprite(void) {
     // 16x16 player metasprite — 4 OAM slots, anchored at (x+8, y+16) per GBDK
     if (player.iframes > 0 && (player.iframes & 0x04)) {
@@ -1356,13 +1471,38 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 } else {
                     play_stage_music();
                 }
-                // Regenerate room in-place (skip full screen exit/enter)
-                DISPLAY_OFF;
+                // Regenerate room in-place (skip full screen exit/enter).
+                // Ordinary eastward dungeon doors get the streamed Zelda-like
+                // slide; palette-changing boss/world/town boundaries retain
+                // the safe blanked rebuild path.
                 procgen_generate_current_room();
                 room_spawn_progression_fixture();
                 room_combat_sealed = room_should_combat_seal();
+                if (!run_state.world_mode && dir == DIR_E
+                    && !procgen_current_room_is_boss
+                    && room_stage() == stage_seen) {
+                    HIDE_SPRITES;
+                    room_slide_east();
+                } else if (!run_state.world_mode && dir == DIR_W
+                    && !procgen_current_room_is_boss
+                    && room_stage() == stage_seen) {
+                    HIDE_SPRITES;
+                    room_slide_west();
+                } else if (!run_state.world_mode && dir == DIR_S
+                    && !procgen_current_room_is_boss
+                    && room_stage() == stage_seen) {
+                    HIDE_SPRITES;
+                    room_slide_south();
+                } else if (!run_state.world_mode && dir == DIR_N
+                    && !procgen_current_room_is_boss
+                    && room_stage() == stage_seen) {
+                    HIDE_SPRITES;
+                    room_slide_north();
+                } else {
+                    DISPLAY_OFF;
+                    draw_room_tilemap();
+                }
                 room_load_environment_palettes();
-                draw_room_tilemap();
                 place_player_sprite();
                 hud_redraw_all();
                 DISPLAY_ON;

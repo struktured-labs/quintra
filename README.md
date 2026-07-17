@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.54: Claw Arc](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.55: Roomstream](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -140,6 +140,9 @@ the cartridge runtime.
   restarting every screen, and market stock keeps its actual heart/relic art
   while the HUD shows its price on contact. Wolfkin's close-range claw now
   renders as a distinct sweeping weapon arc instead of a generic bullet.
+  Ordinary same-stage dungeon doors now stream the next room across the screen
+  in all four cardinal directions; boss, town, and Riftwild boundaries retain
+  their deliberate palette-safe transition.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill;
   an eight-heart cap leaves upgrade room even for six-heart Sauran. All relic
