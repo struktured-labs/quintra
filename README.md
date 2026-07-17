@@ -51,9 +51,9 @@ Corvin feather lane, broadens and deepens Picsean bubbles, and lets Vespine's
 sting pierce. The shop/drop remains temporary and its price/stat rules do not
 change. A live-ROM contract boots all five champions, collects a real Spark,
 and proves every style plus expiry. The controller agent now uses exact
-feet-box routes for every required Rift Sigil and aligns against wall-clinging
-Gloom Leeches rather than stalling on them; the five-class paired balance gate
-again reports zero combat and route stalls.
+feet-box routes for every required Rift Sigil and stationary-Spore firing lane,
+and aligns against wall-clinging Gloom Leeches rather than stalling on them;
+the five-class paired balance gate again reports zero combat and route stalls.
 
 v0.17.97 fixes a late-run progression bug: the guaranteed **Bellwarden** was
 visually and mechanically a miniboss, but because it reuses the Dread Bell
@@ -610,12 +610,13 @@ The freshly rerun v0.18.1 15/15 matrix has complete telemetry and encounters
 every roster member, but does **not** pass this gate yet: before the current
 controller repair, Picsean reached 2/3 complete nine-boss endings and its
 remaining seed time-capped on a stationary Toxic Mire Spore. The exact
-three-seed Picsean recheck now reaches all three endings (47,508–77,453
-gameplay frames) after the input-only pilot learned a mine-safe firing lane
-and clears the room's Sentinel before its Spore escort. Wolfkin, Sauran,
-Corvin, and Vespine are still 0/3 in the last all-class matrix, with no route
-stalls there; a fresh 15-run matrix is still required to pass the delivery
-gate.
+three-seed Picsean recheck now reaches all three endings (45,777–77,453
+gameplay frames) after the input-only pilot learned a pixel-stable mine-safe
+firing lane and clears the room's Sentinel before its Spore escort. Wolfkin,
+Sauran, Corvin, and Vespine are still 0/3 in the latest all-class matrix,
+although Wolfkin now clears the first boss in all three seeds; there are no
+route stalls. A fresh matrix must still reach the full per-class victory floor
+to pass the delivery gate.
 It is therefore not a show build. The v0.17.46 14/15 result remains a
 historical benchmark only. The gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced

@@ -613,6 +613,70 @@ local function spore_safe_step(px, py, ex, ey, fallback)
     return aligned_step(prevkey[target], sx, sy, px, py, fallback)
 end
 
+-- Stationary Spores are worth the same exact feet-box route used for a Rift
+-- Sigil.  A tile BFS can nominate a visually clear lane that a 12px body
+-- cannot actually enter at its current pixel offset; cache a pixel route to
+-- a safe, cardinal firing cell and keep every Spore's trigger radius out of
+-- the path. This is intentionally for projectile kits: claws use the visible
+-- post-blast punish window and keep the ordinary close-combat policy below.
+local spore_pixel_route = nil
+local function spore_pixel_step(room, px, py, ex, ey, fallback)
+    if TM == 0 or EN == 0 then return fallback end
+    local start = py * 160 + px
+    if spore_pixel_route and spore_pixel_route.room == room
+        and spore_pixel_route.x == ex and spore_pixel_route.y == ey
+        and spore_pixel_route.dirs[start] then
+        return spore_pixel_route.dirs[start]
+    end
+    local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
+    local function safely_outside_all_spores(x, y)
+        for i = 0, 31 do
+            local p = EN + i * 28
+            if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1
+                and emu:read8(p + 17) == 17 then
+                local sx = emu:read8(p + 3) + 4
+                local sy = emu:read8(p + 7) + 4
+                if math.abs(x + 8 - sx) + math.abs(y + 12 - sy) < 48 then
+                    return false
+                end
+            end
+        end
+        return true
+    end
+    local qx, qy, head, tail = {px}, {py}, 1, 1
+    local seen, previous, step = {[start] = true}, {}, {}
+    local found = nil
+    while head <= tail do
+        local x, y = qx[head], qy[head]; head = head + 1
+        local cx, cy = math.floor((x + 13) / 8), math.floor((y + 15) / 8)
+        local dist = math.abs(cx - gx) + math.abs(cy - gy)
+        if dist >= 7 and dist <= 15 and (cx == gx or cy == gy)
+            and clear_cardinal_lane(cx, cy, gx, gy) then
+            found = y * 160 + x
+            break
+        end
+        for d = 1, 4 do
+            local dir = CARD_KEYS[d]
+            local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
+            local nk = ny * 160 + nx
+            if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
+                and not seen[nk] and can_step(x, y, dir)
+                and safely_outside_all_spores(nx, ny) then
+                seen[nk], previous[nk], step[nk] = true, y * 160 + x, dir
+                tail = tail + 1; qx[tail], qy[tail] = nx, ny
+            end
+        end
+    end
+    if not found then return fallback end
+    local dirs, node = {}, found
+    while previous[node] do
+        dirs[previous[node]] = step[node]
+        node = previous[node]
+    end
+    spore_pixel_route = {room=room, x=ex, y=ey, dirs=dirs}
+    return dirs[start] or fallback
+end
+
 -- A procedural weapon orb replaces player.starter_weapon at runtime.  The
 -- controller must therefore classify the held A weapon, not infer its reach
 -- from the vessel chosen on the title screen.  These are generated-table
@@ -1250,7 +1314,11 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim, 6)
             end
         elseif target.kind == 17 then
-            keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
+            if held_style == "ranged" then
+                keys = KEY_A + spore_pixel_step(room, px, py, target.x, target.y, aim)
+            else
+                keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
+            end
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
