@@ -693,11 +693,14 @@ while frames < LIMIT do
         keys = target_step(px, py, shop.x, shop.y, direct, 0)
     elseif loot then
         local dx, dy = loot.x - px, loot.y - py
-        if math.abs(dx) > math.abs(dy) then
-            keys = dx > 0 and KEY_RIGHT or KEY_LEFT
-        else
-            keys = dy > 0 and KEY_DOWN or KEY_UP
-        end
+        local direct = math.abs(dx) > math.abs(dy)
+            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+            or (dy > 0 and KEY_DOWN or KEY_UP)
+        -- Persistent objectives (notably the Rift Sigil) do not magnetize.
+        -- A direct D-pad line can press into a pillar forever, so route the
+        -- full champion body to the pickup's tile before its normal contact
+        -- box finishes collection.
+        keys = target_step(px, py, loot.x, loot.y, direct, 0)
     else
         keys = door_step(px, py) + KEY_A
     end
