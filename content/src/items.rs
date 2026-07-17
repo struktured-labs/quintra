@@ -1,8 +1,6 @@
 //! Champion weapons, signature actives, and run-long relics.
 
-use quintra_content::{
-    Effect, Item, ItemKind, ProjectileKind, Rarity, Registry, Stat, Status, Trigger,
-};
+use quintra_content::{Effect, Item, ItemKind, ProjectileKind, Rarity, Registry, Stat};
 
 use crate::ids::*;
 
@@ -25,15 +23,15 @@ pub const CLAW_COMBO: Item = Item {
 pub const HOWL: Item = Item {
     id:          ITEM_HOWL,
     name:        "Howl",
-    description: "Stun all enemies in radius for 1 second.",
+    description: "8-way close burst.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL,
     palette:     OBJ_PAL_ITEM_GOLD,
     rarity:      Rarity::Rare,
-    effects: &[Effect::OnRoomClear(Trigger::ApplyStatus {
-        status: Status::Stunned,
-        duration_ticks: 60,
-    })],
+    // B is implemented by room.c as an immediate eight-spike ring.  Keep
+    // generated content truthful rather than advertising an unused room-clear
+    // stun effect to the player.
+    effects: &[],
 };
 
 // --- Other starter weapons (one per class)
@@ -78,7 +76,7 @@ pub const STINGER: Item = Item {
 
 pub const STONESKIN: Item = Item {
     id: ITEM_STONESKIN, name: "Stoneskin",
-    description: "Raise a shield that blocks bodies and destroys shots.",
+    description: "Block shots & bodies.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -86,15 +84,17 @@ pub const STONESKIN: Item = Item {
 
 pub const MURDER: Item = Item {
     id: ITEM_MURDER, name: "Murder",
-    description: "Conjure 3 homing crow shards.",
+    description: "3-way shard burst.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
-    effects: &[Effect::OnRoomClear(Trigger::SpawnProjectile { kind: ProjectileKind::Homing, count: 3 })],
+    // Runtime fires a three-way shuriken spread on B; it does not spawn
+    // homing shards after a clear.
+    effects: &[],
 };
 
 pub const TIDAL_WAVE: Item = Item {
     id: ITEM_TIDAL_WAVE, name: "TidalWave",
-    description: "Three-lane wave plus a brief water barrier.",
+    description: "3 bubbles + water guard.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -102,7 +102,7 @@ pub const TIDAL_WAVE: Item = Item {
 
 pub const SWARM: Item = Item {
     id: ITEM_SWARM, name: "Swarm",
-    description: "3 seconds of auto-aim drones.",
+    description: "4-stinger fan burst.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],

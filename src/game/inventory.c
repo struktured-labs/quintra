@@ -1,4 +1,4 @@
-#pragma bank 2
+#pragma bank 4
 // INVENTORY / STATS pause screen. Opened with START from a room; shows the
 // hero's class, live stats, held weapon + signature, coins, and run depth.
 // Returns to the room via a resume flag so the room is NOT regenerated.
@@ -54,6 +54,14 @@ static const char *item_name_by_id(u16 id) {
     return "-";
 }
 
+static const char *item_description_by_id(u16 id) {
+    u8 i;
+    for (i = 0; i < N_ITEMS; ++i) {
+        if (items[i].id == id) return items[i].description;
+    }
+    return "-";
+}
+
 static const char *item_name_by_index(u8 index) {
     return index < N_ITEMS ? items[index].name : "-";
 }
@@ -92,6 +100,7 @@ void inventory_enter(void) {
     printf("%s", item_name_by_id(player.active_item));
     gotoxy(1, 12); printf("PERK  ");
     printf("%s", perk_names[player.class_id < 5 ? player.class_id : 0]);
+    gotoxy(1, 13); printf("B %s", item_description_by_id(player.active_item));
 
     gotoxy(1, 14); printf("coins %u", (u16)player.coins);
     gotoxy(10, 14);

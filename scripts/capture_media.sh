@@ -16,16 +16,28 @@ PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 
 status=0
+# mGBA occasionally ignores Lua's frontend:quit, which made a successful
+# 174-frame reel wait the full 120-second host timeout.  Put this capture in
+# its own process group and treat its complete frame set as the transaction
+# boundary, like the smoke and balance harnesses do.  Never kill a global
+# Xvfb/mGBA process: users may be playing or debugging another ROM.
 QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
 QUINTRA_MEDIA_DIR="$TMP" QUINTRA_MEDIA_MODE=gif \
 QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
-timeout 120 xvfb-run -a mgba-qt "$ROM" --fastforward \
-  --script "$ROOT/scripts/capture_media.lua" -l 0 || status=$?
-# This mGBA frontend sometimes ignores the Lua quit request; a complete
-# 174-frame transaction followed by timeout is still a successful capture.
-if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-frames=$(find "$TMP" -maxdepth 1 -name 'gif_*.png' | wc -l)
+setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
+  --script "$ROOT/scripts/capture_media.lua" -l 0 >"$TMP/emulator.log" 2>&1 &
+EMU_PID=$!
+frames=0
+for _ in $(seq 1 480); do
+  frames=$(find "$TMP" -maxdepth 1 -name 'gif_*.png' | wc -l)
+  if [ "$frames" -eq 174 ]; then break; fi
+  if ! kill -0 "$EMU_PID" 2>/dev/null; then break; fi
+  sleep 0.25
+done
+kill -- -"$EMU_PID" 2>/dev/null || true
+wait "$EMU_PID" 2>/dev/null || status=$?
 if [ "$frames" -ne 174 ]; then
+  grep -v 'Window\|Qt\|libpng' "$TMP/emulator.log" >&2 || true
   echo "[media] expected 174 captured frames, found $frames" >&2
   exit 1
 fi

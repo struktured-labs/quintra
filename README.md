@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.77: Village Waykeeper](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.78: Signature Clarity](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.78 makes every champion’s **B signature legible and truthful**. The
+Pack now states the actual effect beneath the signature name—Howl’s eight-way
+burst, Stoneskin’s shot/body guard, Murder’s three-way shard burst, Tidal
+Wave’s bubble guard, and Swarm’s four-stinger fan. The generated content no
+longer promises unused stuns, homing crows, or auto-aim drones. This also moves
+the isolated Pack screen out of constrained bank 2, restoring over 2 KiB of
+conference-development headroom there while keeping the 128 KiB ROM budget.
 
 v0.17.77 gives every village arrival square a distinctive **Waykeeper** at
 the north gate: a hooded lantern bearer who makes the onward route read as a
