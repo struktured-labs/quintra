@@ -91,6 +91,23 @@ def main():
     assert arrival.count(3) == 6, "arrival square does not expose N/E/W village gates"
     pb.screen.image.save(ROOT / "tmp" / "town-arrival.png")
 
+    # SELECT stays a graphical compass in a village too. The old text-only
+    # town report made a three-screen settlement read like one strange room;
+    # this tile graph exposes its craft quarter, arrival square, market, and
+    # onward north gate at a glance.
+    pb.button("select"); tick(120)
+    assert pb.memory[screen] == 8, "SELECT did not open town compass"
+    pb.memory[0xFF4F] = 0
+    bg = 0x9800
+    assert pb.memory[bg + 9 * 32 + 9] == 33, \
+        f"arrival square lacks current marker (got {pb.memory[bg + 9 * 32 + 9]})"
+    assert pb.memory[bg + 9 * 32 + 3] == 37, "craft quarter lacks roof marker"
+    assert pb.memory[bg + 9 * 32 + 15] == 22, "market lacks crystal marker"
+    assert pb.memory[bg + 4 * 32 + 9] == 3, "town compass lacks north gate"
+    pb.screen.image.save(ROOT / "tmp" / "town-tile-map.png")
+    pb.button("b"); tick(30)
+    assert pb.memory[screen] == 5, "town compass did not resume arrival square"
+
     # Elder is a visible, permanent full blessing.
     pb.memory[pl + 2] = 1
     pb.memory[pl + 4] = 0

@@ -1,9 +1,6 @@
 #pragma bank 3
 #include <gb/gb.h>
 #include <gb/cgb.h>
-#include <gbdk/console.h>
-#include <gbdk/font.h>
-#include <stdio.h>
 #include "audio/sfx.h"
 #include "game/map.h"
 #include "game/room.h"
@@ -16,17 +13,6 @@ BANKREF(map_enter)
 
 static const u16 map_pal[4] = {
     BGR555(1,3,2), BGR555(4,12,8), BGR555(16,23,12), BGR555(30,31,24)
-};
-
-// Town names are lore fixtures; the whispered line is seed-fuzzy. A region
-// remains memorable across runs without turning the roguelike into one fixed
-// account of what happened there.
-static const char *const town_names[3] = {
-    "EMBERFORD", "GLOAMHARBOR", "DAWN'S VERGE"
-};
-static const char *const town_rumors[4] = {
-    "THE WELL DREAMS", "BELLS FEAR DEPTH",
-    "FIVE SHADOWS WALK", "THE RIFT KNOWS YOU"
 };
 
 static u8 map_attr(u8 tile) {
@@ -142,9 +128,39 @@ static void draw_dungeon_grid(void) {
     }
 }
 
+// Towns are a fixed, legible respite between procedural regions. Unlike a
+// dungeon's fogged graph, show all three civic nodes at once: their routes
+// are safe information, and the player should never mistake a village for a
+// single merchant room.  The centre icon moves with the hero; roof, crystal,
+// and door respectively mean craft quarter, market, and onward gate.
+static void draw_town_grid(void) {
+    static const u8 tx[3] = { 2, 8, 14 };
+    static const u8 ty[3] = { 8, 8, 8 };
+    static const u8 icon[3] = { BGT_ROOF, BGT_FLOOR3, BGT_CRYSTAL };
+    // Local IDs follow travel dispatch (arrival=0, market=1, quarter=2),
+    // whereas the visual order is quarter, arrival, market.
+    static const u8 plaza_node[3] = { 1, 2, 0 };
+    u8 plaza = run_state.world_return_screen;
+    u8 here;
+    u8 i;
+    if (plaza > TOWN_QUARTER) plaza = TOWN_ARRIVAL;
+    here = plaza_node[plaza];
+    for (i = 0; i < 3; ++i) {
+        map_room_box(tx[i], ty[i], i == here ? BGT_SWITCH : icon[i], 1);
+    }
+    // East/west civic lanes and the north route back into the next dungeon.
+    for (i = 0; i < 3; ++i) {
+        map_put((u8)(5 + i), 9, BGT_FLOOR2);
+        map_put((u8)(11 + i), 9, BGT_FLOOR2);
+    }
+    map_put(9, 4, BGT_DOOR);
+    map_put(9, 5, BGT_FLOOR2);
+    map_put(9, 6, BGT_FLOOR2);
+    map_put(9, 7, BGT_FLOOR2);
+}
+
 void map_enter(void) {
-    u8 in_region = (u8)(run_state.room_counter % ROOMS_PER_REGION);
-    u8 is_town = (run_state.room_counter > ROOMS_PER_REGION && in_region == 1);
+    u8 is_town = RUN_ROOM_IS_TOWN(run_state.room_counter) ? 1 : 0;
     DISPLAY_OFF; HIDE_SPRITES; HIDE_WIN;
     palette_bg_load(0, map_pal); palette_bg_load(1, map_pal);
     palette_bg_load(2, map_pal); palette_bg_load(3, map_pal);
@@ -156,23 +172,8 @@ void map_enter(void) {
         return;
     }
     if (is_town) {
-        u8 completed = (u8)((run_state.room_counter - 1) / ROOMS_PER_REGION);
-        u8 town = (completed > 0 && completed <= 3) ? (u8)(completed - 1) : 0;
-        u8 rumor = (u8)(run_state.run_seed ^ (run_state.run_seed >> 8)
-            ^ (run_state.run_seed >> 16) ^ completed) & 3;
-        font_init(); { font_t f = font_load(font_ibm); font_set(f); }
-        cls();
-        gotoxy(1,0); printf("- SPIRIT COMPASS -");
-        gotoxy(1,2);  printf("REGION %u COMPLETE", (u16)completed);
-        gotoxy(1,4);  printf("%s", town_names[town]);
-        gotoxy(1,6);  printf("SANCTUARY & MARKET");
-        gotoxy(1,8);  printf("NEXT REGION %u", (u16)(completed + 1));
-        gotoxy(1,10); printf("ELDER RESTORES ALL");
-        gotoxy(1,11); printf("CHARTWRIGHT MARKS PATH");
-        gotoxy(1,13); printf("%s", town_rumors[rumor]);
-        gotoxy(1,15); printf("LORE SHIFTS BY SEED");
-        gotoxy(2,17); printf("SELECT/B = RETURN");
-        palette_bg_fill_attrs(0);
+        tiles_load_dungeon_bg(); map_clear_tiles();
+        draw_town_grid();
         SHOW_BKG; DISPLAY_ON;
         return;
     }

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.75: Rift Flail](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.76: Town Compass](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.76 makes the **Spirit Compass** fully graphical in towns as well as
+dungeons and the Riftwild. Select now shows the connected craft quarter,
+arrival square, market, and northward gate as a tile-built civic map, with the
+hero’s current plaza marked by the same bright cursor used everywhere else.
+This replaces the misleading text-only town report, removes its font path from
+the runtime, and saves bank space. A PyBoy contract verifies the four real map
+nodes and returning to the live village.
 
 v0.17.75 adds the **Rift Flail**, a rare A-weapon swap that can appear from
 miniboss and vault weapon orbs. It is a slow, physical 3-pierce sweep: a
