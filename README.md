@@ -620,11 +620,12 @@ records HP lost on frames where the actual giant hurtbox overlaps the hero;
 this distinguishes boss body-pinning from projectile pressure without writing
 to cartridge state.
 
-Giant spacing defaults to a measured classwise policy: Sauran and Picsean use
-`orbit_fire` for large bosses, while Wolfkin, Corvin, and Vespine retain
-baseline movement. On paired three-seed searches, Picsean's policy raised its
-boss clears from two to six with no deaths, while Sauran's Tail Spike gained a
-first-boss clear where baseline gained none. Override it with
+Giant spacing defaults to a measured classwise policy: Sauran, Corvin, and
+Picsean use `orbit_fire` for large bosses; Wolfkin uses conservative pulses,
+and Vespine retains cardinal movement. On paired three-seed searches,
+Picsean's policy raised its boss clears from two to six with no deaths, while
+orbit-fire gained four Sauran and four Corvin clears where their prior policies
+managed two and one. Override it with
 `QUINTRA_BOT_GIANT_POLICY=baseline` when comparing a candidate.
 Wolfkin's classwise giant-retreat buffer is 32px (the other baseline kits use
 28px): its paired three-seed first-boss sample improved from one to two clears

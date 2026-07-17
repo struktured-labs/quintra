@@ -1159,15 +1159,16 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Wolfkin's Claw and Sauran's Tail Spike need a conservative
-                -- pulse-fire lane. Vespine's longer Stinger is different:
-                -- paired 18k-frame samples after the exact-Sigil route
-                -- cleared 0/3 first bosses with pulses but two full bosses
-                -- on the ordinary cardinal baseline, so preserve that real
-                -- reach instead of making the agent retreat between every
-                -- strike. Picsean's slow bubbles favor orbit-and-fire.
-                giant_mode = (CLASS == 0 or CLASS == 1) and "pulse_fire"
-                    or (CLASS == 3) and "orbit_fire" or "baseline"
+                -- Wolfkin's Claw needs a conservative pulse lane. Three-seed
+                -- live-ROM sweeps give Tail Spike and Featherbarb materially
+                -- more boss clears with orbit-and-fire: their real reach lets
+                -- them pressure while sidestepping instead of donating every
+                -- retreat beat to a Sentinel body. Vespine's Stinger remains
+                -- on its separately measured cardinal baseline; pulses there
+                -- cleared 0/3 while baseline cleared two full bosses.
+                giant_mode = (CLASS == 0) and "pulse_fire"
+                    or (CLASS == 1 or CLASS == 2 or CLASS == 3)
+                        and "orbit_fire" or "baseline"
             end
             if target.giant ~= 0 and giant_mode ~= "baseline" and reach < 36 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
