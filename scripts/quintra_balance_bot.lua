@@ -969,7 +969,8 @@ while frames < LIMIT do
             keys = actions + KEY_LEFT
         end
     end
-    if DEBUG and frames % 600 == 0 then
+    if DEBUG and (frames % 600 == 0
+        or (target and target.giant ~= 0 and frames % 60 == 0)) then
         debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d hp=%d mp=%d ifr=%d charge=%d pos=%d:%02X,%d:%02X target=%s keys=%02X",
             frames, room, world_mode, world_screen, hp, mp, iframes, active_charge,
             px, emu:read8(PL + 10), py, emu:read8(PL + 12),
