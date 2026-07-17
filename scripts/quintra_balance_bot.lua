@@ -694,7 +694,11 @@ while frames < LIMIT do
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
         -- agent never raised Sauran's shield or fired the ranged signatures.
         local signature_period = (CLASS == 3) and 90 or (CLASS == 4) and 120 or 180
-        if not waiting_star and active_charge == 0 and mp >= 2 and frames % signature_period == 0 then
+        -- Stoneskin is a reactive guard, not a generic damage signature.
+        -- Spending it on a global cadence (including the opening room) left
+        -- the tank without its defining answer when a miniboss volley began.
+        if CLASS ~= 1 and not waiting_star and active_charge == 0 and mp >= 2
+            and frames % signature_period == 0 then
             keys = KEY_B + aim
         -- Spirit Convergence requires A and B to become pressed together.
         -- Release both on the preceding frame so the next chord has two edges.

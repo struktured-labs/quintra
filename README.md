@@ -265,13 +265,10 @@ Before a show build, `make endurance` runs three long-form entropy samples for
 every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
-combat or cleared-route control for more than 7,200 frames (two minutes). The
-v0.17.46 records 14/15 full clears: 3/3 for Wolfkin, Sauran, Picsean, and
-Vespine and 2/3 for Corvin, whose remaining failure is a real boss death rather
-than a timeout. Every enemy ID 0–18 appears in live cartridge state; combat
-and route stalls remain zero. Runs make 7–11 real purchases rather than
-bypassing merchants, and no run exceeds 70 Riftwild transitions. The gate now
-proves every class faces the same three
+combat or cleared-route control for more than 7,200 frames (two minutes).
+The v0.17.46 14/15 result is retained as a historical benchmark, not current
+certification: the current build must pass this gate anew before it is called a
+show build. The gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
 low as one half-heart and vary from roughly 4:45 to 11:47 active play, so
