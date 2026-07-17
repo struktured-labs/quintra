@@ -5,7 +5,6 @@
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
-#include <stdio.h>
 
 #include "audio/music.h"
 #include "core/types.h"
@@ -13,6 +12,7 @@
 #include "game/sram.h"
 #include "game/victory.h"
 #include "render/palette.h"
+#include "render/text.h"
 
 BANKREF(victory_enter)
 
@@ -32,33 +32,34 @@ static u8 new_best;
 
 static void render_ending(void) {
     cls();
-    gotoxy(2, 16); printf("START SKIPS ENDING");
+    gotoxy(2, 16); text_write("START SKIPS ENDING");
 
     if (ending_beat == 0) {
-        gotoxy(3, 3);  printf("THE RIFT IS BOUND");
-        gotoxy(2, 8);  printf("NINE COLOSSI FALL");
-        gotoxy(2, 11); printf("FIVE SPARKS RISE");
+        gotoxy(3, 3);  text_write("THE RIFT IS BOUND");
+        gotoxy(2, 8);  text_write("NINE COLOSSI FALL");
+        gotoxy(2, 11); text_write("FIVE SPARKS RISE");
     } else if (ending_beat == 1) {
-        gotoxy(3, 3);  printf("THE SPIRITS WAKE");
-        gotoxy(2, 8);  printf("FANG SCALE WING");
-        gotoxy(2, 10); printf("FIN STING RETURN");
+        gotoxy(3, 3);  text_write("THE SPIRITS WAKE");
+        gotoxy(2, 8);  text_write("FANG SCALE WING");
+        gotoxy(2, 10); text_write("FIN STING RETURN");
     } else if (ending_beat == 2) {
-        gotoxy(2, 3);  printf("THE ROADS REMEMBER");
-        gotoxy(3, 8);  printf("DAWN HAS A NAME");
-        gotoxy(4, 11); printf("QUINTRA ENDURES");
+        gotoxy(2, 3);  text_write("THE ROADS REMEMBER");
+        gotoxy(3, 8);  text_write("DAWN HAS A NAME");
+        gotoxy(4, 11); text_write("QUINTRA ENDURES");
     } else {
-        gotoxy(6, 2);  printf("VICTORY!");
-        gotoxy(2, 5);  printf("9 depths freed");
-        gotoxy(2, 8);  printf("rooms   %u", (u16)run_state.room_counter);
-        gotoxy(2, 9);  printf("kills   %u", (u16)run_state.enemies_killed);
-        gotoxy(2, 10); printf("score   %u%s", (u16)run_state.score,
-            (new_best & 1) ? " NEW!" : "");
-        gotoxy(2, 11); printf("best    %u", sram_meta_best());
-        gotoxy(2, 12); printf("time    %u:%u%u%s", (u16)(run_state.run_timer / 60),
-            (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10),
-            (new_best & 2) ? " FAST!" : "");
-        gotoxy(0, 15); printf("START=END A=DESCEND");
-        gotoxy(2, 16); printf("                  ");
+        gotoxy(6, 2);  text_write("VICTORY!");
+        gotoxy(2, 5);  text_write("9 depths freed");
+        gotoxy(2, 8);  text_write("rooms   "); text_u16((u16)run_state.room_counter);
+        gotoxy(2, 9);  text_write("kills   "); text_u16((u16)run_state.enemies_killed);
+        gotoxy(2, 10); text_write("score   "); text_u16((u16)run_state.score);
+        if (new_best & 1) text_write(" NEW!");
+        gotoxy(2, 11); text_write("best    "); text_u16(sram_meta_best());
+        gotoxy(2, 12); text_write("time    "); text_u16((u16)(run_state.run_timer / 60));
+        text_write(":"); text_digit((u8)((run_state.run_timer % 60) / 10));
+        text_digit((u8)(run_state.run_timer % 10));
+        if (new_best & 2) text_write(" FAST!");
+        gotoxy(0, 15); text_write("START=END A=DESCEND");
+        gotoxy(2, 16); text_write("                  ");
     }
 }
 
@@ -67,9 +68,9 @@ static void render_sparks(void) {
     // Draw in place: font_min's blank glyph does not share the console's CGB
     // backdrop colour, so clearing a moving row exposes ugly black bars.
     if (spark_pose) {
-        gotoxy(4, 5); printf("O + O + O + O");
+        gotoxy(4, 5); text_write("O + O + O + O");
     } else {
-        gotoxy(4, 5); printf("+ O + O + O +");
+        gotoxy(4, 5); text_write("+ O + O + O +");
     }
 }
 

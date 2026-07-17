@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.94: Village Surge](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.95: Lean UI](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.95 removes the full formatted-I/O runtime from the cartridge and
+replaces it with a tiny native text writer shared by title, records, class
+select, Pack, game-over, and ending screens. The same words, live numbers,
+and lore panels remain on screen, but bank-0 headroom rises from **540** to
+**1,552 bytes**—enough room to keep adding World Retro-era encounters without
+living one edit away from a banking failure. Live ROM contracts cover title,
+game-over, ending, Pack, and the full gameplay smoke route.
 
 v0.17.94 makes a village stop an active build decision: the market's new far
 shelf always sells a **Surge Tonic** for 20 coins. Its cyan orb and lightning

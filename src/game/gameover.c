@@ -5,7 +5,6 @@
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
-#include <stdio.h>
 
 #include "audio/music.h"
 #include "core/types.h"
@@ -13,6 +12,7 @@
 #include "game/sram.h"
 #include "game/run_state.h"
 #include "render/palette.h"
+#include "render/text.h"
 
 BANKREF(gameover_enter)
 
@@ -38,15 +38,16 @@ void gameover_enter(void) {
     { font_t f = font_load(font_min); font_set(f); }
     cls();
 
-    gotoxy(6, 3);  printf("GAME  OVER");
-    gotoxy(2, 7);  printf("rooms   %u", (u16)run_state.room_counter);
-    gotoxy(2, 8);  printf("kills   %u", (u16)run_state.enemies_killed);
-    gotoxy(2, 9);  printf("score   %u%s", (u16)run_state.score,
-        (new_best & 1) ? " NEW!" : "");
-    gotoxy(2, 10); printf("best    %u", sram_meta_best());
-    gotoxy(2, 11); printf("time    %u:%u%u", (u16)(run_state.run_timer / 60),
-        (u16)((run_state.run_timer % 60) / 10), (u16)(run_state.run_timer % 10));
-    gotoxy(2, 14); printf("PRESS  START");
+    gotoxy(6, 3);  text_write("GAME  OVER");
+    gotoxy(2, 7);  text_write("rooms   "); text_u16((u16)run_state.room_counter);
+    gotoxy(2, 8);  text_write("kills   "); text_u16((u16)run_state.enemies_killed);
+    gotoxy(2, 9);  text_write("score   "); text_u16((u16)run_state.score);
+    if (new_best & 1) text_write(" NEW!");
+    gotoxy(2, 10); text_write("best    "); text_u16(sram_meta_best());
+    gotoxy(2, 11); text_write("time    "); text_u16((u16)(run_state.run_timer / 60));
+    text_write(":"); text_digit((u8)((run_state.run_timer % 60) / 10));
+    text_digit((u8)(run_state.run_timer % 10));
+    gotoxy(2, 14); text_write("PRESS  START");
 
     // Console glyph writes touch tile ids only; stale CGB attribute bytes from
     // gameplay otherwise color arbitrary digits differently.

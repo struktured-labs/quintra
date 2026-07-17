@@ -6,7 +6,6 @@
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
-#include <stdio.h>
 
 #include "audio/music.h"
 #include "audio/sfx.h"
@@ -16,6 +15,7 @@
 #include "game/title.h"
 #include "game/version.h"
 #include "render/palette.h"
+#include "render/text.h"
 
 BANKREF(title_enter)
 
@@ -50,16 +50,16 @@ static void render_lore_beat(void) {
     // Clear the complete rows. "FIVE SEAL THE RIFT" begins at x=2 and its
     // final T reaches column 19; the former x=1/18-cell erase left that T
     // attached to later beats (for example "ERE ALL NAMES FADET").
-    gotoxy(0, 8); printf("                    ");
-    gotoxy(0, 9); printf("                    ");
+    gotoxy(0, 8); text_write("                    ");
+    gotoxy(0, 9); text_write("                    ");
     switch (lore_beat) {
-        case 0: gotoxy(2, 8); printf("WHEN THE SKY TORE"); gotoxy(2, 9); printf("FIVE SPIRITS WOKE"); break;
-        case 1: gotoxy(2, 8); printf("BEAR FIVE SPARKS"); gotoxy(1, 9); printf("TO THE WORLD BELOW"); break;
-        case 2: gotoxy(3, 8); printf("BIND THE RIFT"); gotoxy(1, 9); printf("ERE ALL NAMES FADE"); break;
-        case 3: gotoxy(2, 8); printf("FANG GUARDS FLAME"); gotoxy(2, 9); printf("SCALE HOLDS STONE"); break;
-        case 4: gotoxy(2, 8); printf("WING READS SHADOW"); gotoxy(1, 9); printf("FIN REMEMBERS TIDE"); break;
-        case 5: gotoxy(2, 8); printf("STING DEFIES ROT"); gotoxy(2, 9); printf("FIVE SEAL THE RIFT"); break;
-        default: gotoxy(1, 8); printf("CHOOSE YOUR VESSEL"); gotoxy(2, 9); printf("REKINDLE THE DAWN"); break;
+        case 0: gotoxy(2, 8); text_write("WHEN THE SKY TORE"); gotoxy(2, 9); text_write("FIVE SPIRITS WOKE"); break;
+        case 1: gotoxy(2, 8); text_write("BEAR FIVE SPARKS"); gotoxy(1, 9); text_write("TO THE WORLD BELOW"); break;
+        case 2: gotoxy(3, 8); text_write("BIND THE RIFT"); gotoxy(1, 9); text_write("ERE ALL NAMES FADE"); break;
+        case 3: gotoxy(2, 8); text_write("FANG GUARDS FLAME"); gotoxy(2, 9); text_write("SCALE HOLDS STONE"); break;
+        case 4: gotoxy(2, 8); text_write("WING READS SHADOW"); gotoxy(1, 9); text_write("FIN REMEMBERS TIDE"); break;
+        case 5: gotoxy(2, 8); text_write("STING DEFIES ROT"); gotoxy(2, 9); text_write("FIVE SEAL THE RIFT"); break;
+        default: gotoxy(1, 8); text_write("CHOOSE YOUR VESSEL"); gotoxy(2, 9); text_write("REKINDLE THE DAWN"); break;
     }
 }
 
@@ -67,31 +67,31 @@ static void render_title(void) {
     cls();
     // Layout: 20 cols × 18 rows. Center "QUINTRA" (7 chars) at col 6.
     gotoxy(6, 4);
-    printf("QUINTRA");
+    text_write("QUINTRA");
     gotoxy(5, 6);
-    printf("THE  ROGUELIKE");
+    text_write("THE  ROGUELIKE");
     render_lore_beat();
     if (has_save) {
         gotoxy(4, 11);
-        printf("A     CONTINUE");
+        text_write("A     CONTINUE");
         gotoxy(4, 13);
-        printf("START NEW RUN");
+        text_write("START NEW RUN");
     } else {
         gotoxy(4, 12);
-        printf("PRESS  START");
+        text_write("PRESS  START");
     }
     // Never print the bottom-right cell: gbdk console wraps and scrolls the
     // entire title when column 19 is filled on row 17.
-    gotoxy(0, 17); printf("SEL RECORD");
-    gotoxy(11, 17); printf(QUINTRA_VERSION);
+    gotoxy(0, 17); text_write("SEL RECORD");
+    gotoxy(11, 17); text_write(QUINTRA_VERSION);
     {
         u16 best = sram_meta_best();
         if (best > 0) {
             gotoxy(3, 15);
-            printf("BEST %u", best);
+            text_write("BEST "); text_u16(best);
             {
                 u16 w = sram_meta_wins();
-                if (w > 0) printf("  WINS %u", w);
+                if (w > 0) { text_write("  WINS "); text_u16(w); }
             }
         }
     }
@@ -101,22 +101,22 @@ static void render_records(void) {
     u16 runs = sram_meta_runs();
     u16 wins = sram_meta_wins();
     cls();
-    gotoxy(5, 2);  printf("- RECORDS -");
-    gotoxy(2, 5);  printf("BEST SCORE %u", sram_meta_best());
-    gotoxy(2, 7);  printf("RUNS       %u", runs);
-    gotoxy(2, 9);  printf("WINS       %u", wins);
-    gotoxy(2, 11); printf("FALLEN     %u", (u16)(runs - wins));
+    gotoxy(5, 2);  text_write("- RECORDS -");
+    gotoxy(2, 5);  text_write("BEST SCORE "); text_u16(sram_meta_best());
+    gotoxy(2, 7);  text_write("RUNS       "); text_u16(runs);
+    gotoxy(2, 9);  text_write("WINS       "); text_u16(wins);
+    gotoxy(2, 11); text_write("FALLEN     "); text_u16((u16)(runs - wins));
     {
         u16 bt = sram_meta_best_time();
         if (bt != 0xFFFF) {
             gotoxy(2, 13);
-            printf("FAST WIN   %u:%u%u", (u16)(bt / 60),
-                (u16)((bt % 60) / 10), (u16)(bt % 10));
+            text_write("FAST WIN   "); text_u16((u16)(bt / 60)); text_write(":");
+            text_digit((u8)((bt % 60) / 10)); text_digit((u8)(bt % 10));
         }
     }
-    gotoxy(2, 14); printf("ONLY KNOWLEDGE");
-    gotoxy(2, 15); printf("PERSISTS.");
-    gotoxy(2, 17); printf("SELECT/B = BACK");
+    gotoxy(2, 14); text_write("ONLY KNOWLEDGE");
+    gotoxy(2, 15); text_write("PERSISTS.");
+    gotoxy(2, 17); text_write("SELECT/B = BACK");
 }
 
 void title_enter(void) {

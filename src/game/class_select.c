@@ -6,7 +6,6 @@
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
-#include <stdio.h>
 
 #include "audio/sfx.h"
 #include "core/types.h"
@@ -14,6 +13,7 @@
 #include "game/player.h"
 #include "render/class_palettes.h"
 #include "render/palette.h"
+#include "render/text.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -59,25 +59,26 @@ static void update_preview(void) {
 
 static void render(void) {
     cls();
-    gotoxy(5, 1);  printf("CHOOSE  CLASS");
+    gotoxy(5, 1);  text_write("CHOOSE  CLASS");
 
     {
         u8 i;
         for (i = 0; i < N_CLASSES; ++i) {
             const class_def_t *c = &classes[i];
             gotoxy(2, (u8)(3 + i));
-            if (i == class_select_cursor) printf("> ");
-            else                          printf("  ");
-            printf("%s", c->name);
+            if (i == class_select_cursor) text_write("> ");
+            else                          text_write("  ");
+            text_write(c->name);
         }
     }
 
     {
         const class_def_t *c = &classes[class_select_cursor];
-        gotoxy(1, 11); printf("HP %u  MP %u",
-            (u16)c->base_stats.hp_max, (u16)c->base_stats.mp_max);
-        gotoxy(1, 12); printf("AT %u  DF %u  SP %u",
-            (u16)c->base_stats.atk, (u16)c->base_stats.def, (u16)c->base_stats.spd);
+        gotoxy(1, 11); text_write("HP "); text_u16((u16)c->base_stats.hp_max);
+        text_write("  MP "); text_u16((u16)c->base_stats.mp_max);
+        gotoxy(1, 12); text_write("AT "); text_u16((u16)c->base_stats.atk);
+        text_write("  DF "); text_u16((u16)c->base_stats.def);
+        text_write("  SP "); text_u16((u16)c->base_stats.spd);
         // Loadout preview: this class's A weapon + B signature (by id —
         // item.id != items[] index beyond the starters)
         {
@@ -87,12 +88,12 @@ static void render(void) {
                 if (items[i].id == c->starter_weapon)   wn = items[i].name;
                 if (items[i].id == c->signature_active) sn = items[i].name;
             }
-            gotoxy(1, 13); printf("A %s", wn);
-            gotoxy(1, 14); printf("B %s", sn);
+            gotoxy(1, 13); text_write("A "); text_write(wn);
+            gotoxy(1, 14); text_write("B "); text_write(sn);
         }
     }
 
-    gotoxy(2, 16); printf("A=START  B=BACK");
+    gotoxy(2, 16); text_write("A=START  B=BACK");
 }
 
 void class_select_enter(void) {

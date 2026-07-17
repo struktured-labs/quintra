@@ -7,7 +7,6 @@
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
-#include <stdio.h>
 
 #include "audio/sfx.h"
 #include "core/types.h"
@@ -16,6 +15,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/palette.h"
+#include "render/text.h"
 #include "content.h"
 
 BANKREF(inventory_enter)
@@ -77,44 +77,45 @@ void inventory_enter(void) {
     { font_t f = font_load(font_min); font_set(f); }
     cls();
 
-    gotoxy(5, 0);  printf("- PACK -");
-    gotoxy(1, 2);  printf("%s", class_name(player.class_id));
-    gotoxy(11, 2); printf("stage %u", (u16)(run_state.bosses_beaten + 1));
+    gotoxy(5, 0);  text_write("- PACK -");
+    gotoxy(1, 2);  text_write(class_name(player.class_id));
+    gotoxy(11, 2); text_write("stage "); text_u16((u16)(run_state.bosses_beaten + 1));
     {
         // Endless descent wraps the theme cycle — name what you see
         u8 s = (u8)(run_state.bosses_beaten % 9);
         gotoxy(1, 3);
-        printf("%s", stage_names[s]);
+        text_write(stage_names[s]);
     }
 
-    gotoxy(1, 4);  printf("HP %u/%u", (u16)player.hp, (u16)player.hp_max);
-    gotoxy(11, 4); printf("MP %u/%u", (u16)player.mp, (u16)player.mp_max);
-    gotoxy(1, 6);  printf("ATK %u", (u16)player.atk);
-    gotoxy(8, 6);  printf("DEF %u", (u16)player.def);
-    gotoxy(1, 8);  printf("SPD %u", (u16)player.spd);
-    gotoxy(8, 8);  printf("LCK %u", (u16)player.lck);
+    gotoxy(1, 4);  text_write("HP "); text_u16((u16)player.hp); text_write("/"); text_u16((u16)player.hp_max);
+    gotoxy(11, 4); text_write("MP "); text_u16((u16)player.mp); text_write("/"); text_u16((u16)player.mp_max);
+    gotoxy(1, 6);  text_write("ATK "); text_u16((u16)player.atk);
+    gotoxy(8, 6);  text_write("DEF "); text_u16((u16)player.def);
+    gotoxy(1, 8);  text_write("SPD "); text_u16((u16)player.spd);
+    gotoxy(8, 8);  text_write("LCK "); text_u16((u16)player.lck);
 
-    gotoxy(1, 10); printf("WPN A:");
-    printf("%s", item_name_by_index(player.starter_weapon));
-    gotoxy(1, 11); printf("SIG B:");
-    printf("%s", item_name_by_id(player.active_item));
-    gotoxy(1, 12); printf("PERK  ");
-    printf("%s", perk_names[player.class_id < 5 ? player.class_id : 0]);
-    gotoxy(1, 13); printf("B %s", item_description_by_id(player.active_item));
+    gotoxy(1, 10); text_write("WPN A:");
+    text_write(item_name_by_index(player.starter_weapon));
+    gotoxy(1, 11); text_write("SIG B:");
+    text_write(item_name_by_id(player.active_item));
+    gotoxy(1, 12); text_write("PERK  ");
+    text_write(perk_names[player.class_id < 5 ? player.class_id : 0]);
+    gotoxy(1, 13); text_write("B "); text_write(item_description_by_id(player.active_item));
 
-    gotoxy(1, 14); printf("coins %u", (u16)player.coins);
+    gotoxy(1, 14); text_write("coins "); text_u16((u16)player.coins);
     gotoxy(10, 14);
     if (run_state.run_timer < 6000) {
-        printf("TIME %u:%u%u", (u16)(run_state.run_timer / 60),
-            (u16)((run_state.run_timer % 60) / 10),
-            (u16)(run_state.run_timer % 10));
+        text_write("TIME "); text_u16((u16)(run_state.run_timer / 60)); text_write(":");
+        text_digit((u8)((run_state.run_timer % 60) / 10));
+        text_digit((u8)(run_state.run_timer % 10));
     } else {
-        printf("TIME 99+");
+        text_write("TIME 99+");
     }
-    gotoxy(1, 15); printf("bosses %u/%u", (u16)run_state.bosses_beaten, (u16)BOSSES_TO_WIN);
-    gotoxy(1, 16); printf("kills %u", (u16)run_state.enemies_killed);
+    gotoxy(1, 15); text_write("bosses "); text_u16((u16)run_state.bosses_beaten);
+    text_write("/"); text_u16((u16)BOSSES_TO_WIN);
+    gotoxy(1, 16); text_write("kills "); text_u16((u16)run_state.enemies_killed);
 
-    gotoxy(2, 17); printf("START/B = resume");
+    gotoxy(2, 17); text_write("START/B = resume");
 
     palette_bg_fill_attrs(0);
     SHOW_BKG;
