@@ -478,6 +478,9 @@ Corvin, and Vespine retain the baseline movement, while Picsean uses
 raised Picsean from two boss clears and two deaths to six clears and zero
 deaths, without changing the other four classes' matched outcomes. Override
 it with `QUINTRA_BOT_GIANT_POLICY=baseline` when comparing a candidate.
+Wolfkin's classwise giant-retreat buffer is 32px (the other baseline kits use
+28px): its paired three-seed first-boss sample improved from one to two clears
+at 32px. Set `QUINTRA_BOT_GIANT_RETREAT_RANGE` explicitly for a matched sweep.
 
 Long-form routing treats the Riftwild dungeon gate and nonlinear cave vault
 as their real central staircase nodes, follows the town's north/return civic

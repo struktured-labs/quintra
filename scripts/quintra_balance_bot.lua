@@ -35,6 +35,15 @@ if GIANT_POLICY ~= "baseline" and GIANT_POLICY ~= "orbit"
     and GIANT_POLICY ~= "classwise" then
     GIANT_POLICY = "classwise"
 end
+-- Wolfkin's claw requires the tightest giant lane, but paired controller-only
+-- trials clear two first bosses at 32px versus one at 28px. The ranged/tank
+-- kits did not improve with the wider buffer, so classwise play keeps their
+-- established 28px retreat. An explicit environment value always wins for
+-- offline policy search.
+local GIANT_RETREAT_RANGE = tonumber(os.getenv("QUINTRA_BOT_GIANT_RETREAT_RANGE")
+    or ((GIANT_POLICY == "classwise" and CLASS == 0) and "32" or "28")) or 28
+if GIANT_RETREAT_RANGE < 16 then GIANT_RETREAT_RANGE = 16 end
+if GIANT_RETREAT_RANGE > 56 then GIANT_RETREAT_RANGE = 56 end
 -- Keep the established controller behavior as the default, but expose an
 -- explicit no-signature control.  This lets a balance experiment distinguish
 -- the value of real B ability use from unrelated navigation/aim changes.
@@ -883,7 +892,7 @@ while frames < LIMIT do
                     keys = (giant_mode == "orbit_fire" and frames % 3 == 0)
                         and (KEY_A + aim) or orbit
                 end
-            elseif reach < 28 then
+            elseif reach < GIANT_RETREAT_RANGE then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
