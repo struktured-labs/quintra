@@ -470,15 +470,24 @@ local function rift_portal_step(px, py)
             if emu:read8(TM + ty * 20 + tx) == 34 then -- BGT_PORTAL
                 -- room.c tests the feet center at player + (8,12). Aim that
                 -- point at the generated portal tile instead of assuming a
-                -- central staircase.
+                -- central staircase.  A portal can be behind a generated
+                -- pillar seam, so use the normal body-aware BFS rather than
+                -- repeatedly steering along the largest direct axis.
                 local gx, gy = tx * 8 - 8, ty * 8 - 12
                 if math.abs(gx - px) <= 2 and math.abs(gy - py) <= 2 then
                     return 0
                 end
-                if math.abs(gx - px) >= math.abs(gy - py) then
-                    return gx > px and KEY_RIGHT or KEY_LEFT
-                end
-                return gy > py and KEY_DOWN or KEY_UP
+                local direct = math.abs(gx - px) >= math.abs(gy - py)
+                    and (gx > px and KEY_RIGHT or KEY_LEFT)
+                    or (gy > py and KEY_DOWN or KEY_UP)
+                -- `target_step`'s coarse location is the bottom-right tile
+                -- of the player's feet box.  Its prior portal coordinates
+                -- were the hero's top-left target, off by one tile in both
+                -- axes, so the BFS stopped beside the rift then fell back to
+                -- a wall-bound direct steer.  Route to the footprint whose
+                -- bottom-right corner is the actual portal tile.
+                return target_step(px, py, tx * 8 - 4, ty * 8 - 4,
+                    direct, 0)
             end
         end
     end

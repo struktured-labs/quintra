@@ -221,6 +221,33 @@ def main():
         for i in range(32)
     ) == 1, "stage-three Rift Sigil was not spawned exactly once"
 
+    # The same room carries the nonlinear rift to local room 4. Its bright
+    # tile alone is not enough: the feet-box needs a full 2x2 walkable path
+    # from the actual entry point, or a player can see a mandatory route that
+    # cannot be entered. Flood the real WRAM tilemap at hero-footprint scale.
+    walkable = {1, 3, 7, *range(9, 19), 19, 20, 23, 31, 33, 34}
+    portals = [(x, y) for y in range(17) for x in range(20)
+               if pb.memory[TM + y * 20 + x] == 34]
+    assert len(portals) == 1, f"stage-three rift missing or duplicated: {portals}"
+    tx, ty = portals[0]
+
+    def body_open(x, y):
+        return (0 <= x < 19 and 0 <= y < 16 and
+                all(pb.memory[TM + yy * 20 + xx] in walkable
+                    for xx, yy in ((x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1))))
+
+    start = ((pb.memory[PL + 9] + 2) // 8, (pb.memory[PL + 11] + 8) // 8)
+    goal = (tx - 1, ty - 1)
+    seen, queue = {start}, [start]
+    while queue:
+        x, y = queue.pop(0)
+        for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+            if (nx, ny) not in seen and body_open(nx, ny):
+                seen.add((nx, ny))
+                queue.append((nx, ny))
+    assert goal in seen, (
+        f"rift at {(tx, ty)} has no hero-footprint route from {start}")
+
     # A real high-population seed once filled the 32-slot table before room.c
     # tried to add this fixture, silently omitting the required stage-three
     # Sigil. Pin that exact transaction: the objective must exist alongside

@@ -32,6 +32,7 @@ pub const BGT_POT: u8 = 32;
 pub const BGT_BLOCK_TR: u8 = 28;
 pub const BGT_BLOCK_BL: u8 = 29;
 pub const BGT_BLOCK_BR: u8 = 30;
+pub const BGT_PORTAL: u8 = 34;
 
 pub const ROOMS_PER_STAGE: u8 = 6;
 
@@ -73,7 +74,8 @@ pub fn generate_tilemap(
     secret_pending: bool,
 ) -> Tilemap {
     let kind = room_kind(room_counter, bosses_beaten);
-    let mut rng = Xorshift32::new(room_seed(run_seed, biome_id, room_counter));
+    let seed = room_seed(run_seed, biome_id, room_counter);
+    let mut rng = Xorshift32::new(seed);
     let mut m: Tilemap = [[0; ROOM_W]; ROOM_H];
 
     // ---- Base: border walls + textured floor (one draw per floor cell)
@@ -334,6 +336,21 @@ pub fn generate_tilemap(
         m[10][14] = HUD_DIGIT_0;
     }
 
+    // Mirror procgen.c's rift apron. The portal's feet-center activation
+    // requires the surrounding 2x2 hero footprint to be clear as well.
+    if room_counter > 6
+        && (room_counter % ROOMS_PER_STAGE == 2 || room_counter % ROOMS_PER_STAGE == 4)
+    {
+        let px = if seed & 4 != 0 { 5 } else { 14 };
+        let py = if seed & 8 != 0 { 4 } else { 12 };
+        for y in py - 2..=py {
+            for x in px - 2..=px {
+                m[y as usize][x as usize] = BGT_FLOOR;
+            }
+        }
+        m[py as usize][px as usize] = BGT_PORTAL;
+    }
+
     m
 }
 
@@ -345,6 +362,7 @@ pub fn walkable(t: u8) -> bool {
         || t == BGT_RUBBLE
         || t == BGT_DOOR
         || t == BGT_SPIKES
+        || t == BGT_PORTAL
         || t == HUD_COIN
         || (HUD_DIGIT_0..=HUD_DIGIT_0 + 9).contains(&t)
 }
@@ -454,6 +472,27 @@ mod tests {
         let m = generate_tilemap(0xABCD, 0, 6, 0, false);
         for d in DOORS {
             assert_eq!(m[d.0][d.1], BGT_WALL, "boss room has an open door at {d:?}");
+        }
+    }
+
+    #[test]
+    fn nonlinear_rifts_have_a_clear_hero_footprint() {
+        for seed in 0..400u32 {
+            for counter in [8u8, 10] {
+                let m = generate_tilemap(seed.wrapping_mul(97) + 13, 0, counter, 1, false);
+                let portal = (0..ROOM_H).flat_map(|y| (0..ROOM_W).map(move |x| (y, x)))
+                    .find(|&(y, x)| m[y][x] == BGT_PORTAL)
+                    .expect("late dungeon rift missing");
+                let (py, px) = portal;
+                assert!(px >= 1 && py >= 1);
+                for y in py - 1..=py {
+                    for x in px - 1..=px {
+                        assert!(walkable(m[y][x]),
+                            "seed {seed} room {counter}: rift footprint blocked at ({y},{x})\\n{}",
+                            dump(&m));
+                    }
+                }
+            }
         }
     }
 

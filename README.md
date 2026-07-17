@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.89: Rift Warden Pressure](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.90: Reachable Rift Wells](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -20,7 +20,13 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
-v0.17.89 adds the **Rift Warden** to Golden Temple, Bloodmoon, and Void
+v0.17.90 fixes a real procedural soft-lock risk: every nonlinear **Rift Well**
+now carves a small hero-footprint landing apron, so the glowing exit is always
+physically reachable rather than only visible. The live ROM contract floods
+the actual 2x2 feet-box path to the rift, and the controller’s deterministic
+seed-14 endurance route now advances past it with zero route stalls.
+
+v0.17.89 added the **Rift Warden** to Golden Temple, Bloodmoon, and Void
 Sanctum pools. This cyan split-mask caster fires a deliberate five-way fan:
 it closes the center and adjacent diagonal lanes while preserving readable
 outer-diagonal escapes. Its authored combat-only sprite safely reuses the

@@ -117,6 +117,19 @@ static u8 escort_cell_open(u8 tx, u8 ty) {
         && room_tile_walkable(room_tilemap[ty + 1][tx + 1]);
 }
 
+// A rift is activated by the hero's feet center, but movement validates a
+// 12x8px feet box.  Stamping only the glowing tile could leave its required
+// 2x2 standing footprint half inside a procedurally placed pillar or crate.
+// Carve a small deterministic apron so every nonlinear exit is physically
+// reachable, not merely visible on the map.
+static void stamp_rift_portal(u8 px, u8 py) {
+    u8 x, y;
+    for (y = (u8)(py - 2); y <= py; ++y)
+        for (x = (u8)(px - 2); x <= px; ++x)
+            room_tilemap[y][x] = BGT_FLOOR;
+    room_tilemap[py][px] = BGT_PORTAL;
+}
+
 static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
     u8 i;
     for (i = 0; i < MAX_ENTITIES; ++i) {
@@ -541,9 +554,7 @@ void procgen_generate_current_room(void) BANKED {
                     || (run_state.room_counter % ROOMS_PER_STAGE) == 4)) {
                 u8 px = (seed & 4) ? 5 : 14;
                 u8 py = (seed & 8) ? 4 : 12;
-                if (room_tile_walkable(room_tilemap[py][px])) {
-                    room_tilemap[py][px] = BGT_PORTAL;
-                }
+                stamp_rift_portal(px, py);
             }
 
             // Entrances and vault staircases are explicit graph fixtures.
