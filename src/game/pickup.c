@@ -206,7 +206,18 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
-    if (e->ai_data[0] == PICKUP_SHOP_TAG) return;
+    if (e->ai_data[0] == PICKUP_SHOP_TAG) {
+        // ai_data[1] names the ware slot this tag advertises. A sale marker
+        // must vanish with sold stock rather than leaving a ghost price over
+        // an empty tile (or over a later entity that reuses the slot).
+        u8 ware = e->ai_data[1];
+        if (ware >= MAX_ENTITIES || !(entities[ware].flags & EF_ACTIVE)
+            || entities[ware].type != ENT_PICKUP
+            || entities[ware].ai_data[0] != PICKUP_SHOP) {
+            entity_kill(idx);
+        }
+        return;
+    }
     // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
     // (the swap drops your old weapon underfoot — without the grace you'd
     // ping-pong between the two forever).

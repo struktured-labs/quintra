@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.69: Marked for Trade](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.70: Honest Stalls](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,10 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.70 fixes sale-marker cleanup: purchasing a ware now removes its exact
+gold marker too, so a market never leaves a phantom price over an empty tile
+or a later entity that happens to reuse the same slot.
 
 v0.17.69 makes shops readable at a glance: every heart or relic ware now keeps
 its own icon while a persistent gold sale marker floats above it. The normal

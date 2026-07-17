@@ -118,6 +118,9 @@ def main():
     assert len(wares) == 3
     assert len(tags) == 3 and all(pb.memory[t + 12] == 81 for t in tags), \
         "market stock lacks persistent gold sale markers"
+    assert {pb.memory[t + 18] for t in tags} == {
+        (w - en) // 28 for w in wares
+    }, "sale markers are not bound to their wares"
     assert {pb.memory[w + 18] for w in wares} == {0, 1, 2}
     tick(70)
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
@@ -147,6 +150,16 @@ def main():
     pb.memory[0xFF4F] = 0
     assert pb.memory[0x9C00 + 12] == 7, "market contact did not show coin/price HUD"
     pb.screen.image.save(ROOT / "tmp" / "town-market.png")
+
+    # A sold ware removes its own marker. Restore currency only for this
+    # contract check; the purchase itself remains the game's normal walk-into
+    # interaction, with no UI-only shortcut.
+    pb.memory[pl + 16] = 99
+    pb.memory[pl + 17] = 0
+    tick(6)
+    assert pb.memory[ware] == 0, "purchased market ware remained active"
+    tick(2)
+    assert len(entities(13)) == 2, "sale marker remained after its ware sold"
 
     # West back to arrival, then west again: forge/apothecary quarter.
     leave("west")
