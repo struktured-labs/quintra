@@ -1307,10 +1307,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
         }
         if (!found) {
-            u8 price;
+            u8 ware, price;
             hud_redraw_boss(0, 0);
-            if (room_has_shop_wares && pickup_nearby_shop_price(&price)) {
-                hud_show_offer(price);
+            if (room_has_shop_wares && pickup_nearby_shop_offer(&ware, &price)) {
+                hud_show_offer(ware, price);
                 shop_offer_visible = 1;
             } else if (shop_offer_visible) {
                 hud_clear_offer();

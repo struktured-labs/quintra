@@ -67,6 +67,6 @@ void pickup_update(entity_t *e, u8 idx) BANKED;
 
 // Player touch check + apply effect; returns 1 if anything was picked up
 u8   pickup_check_player_collision(void) BANKED;
-u8   pickup_nearby_shop_price(u8 *price_out) BANKED;
+u8   pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED;
 
 #endif

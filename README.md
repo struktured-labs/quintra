@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.84: Merchant Callouts](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.85: Merchant Offers](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.85 makes merchant stock readable before purchase. Approaching a ware
+now replaces the generic price prompt with a semantic HUD icon plus its coin
+cost: healing heart, relic, max-vitality, forge attack, or mana rune. It keeps
+the physical item art, floor price, and walk-into buying intact—no modal shop
+menu or accidental transaction. The town ROM contract checks both the healing
+icon and `$5` price at proximity and at contact.
 
 v0.17.84 fixes a Dread Bell transition bug: entering a merchant room after
 combat could leave the shared OBJ tile showing the bell instead of the nearby
@@ -320,7 +327,8 @@ an unreachable live enemy and seal progression.
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
   Exploration music now continues through ordinary doorways instead of
   restarting every screen, and market stock keeps its actual heart/relic art
-  while the HUD shows its price on contact. Wolfkin's close-range claw now
+  while the HUD previews its semantic offer icon and price before contact.
+  Wolfkin's close-range claw now
   renders as a distinct sweeping weapon arc instead of a generic bullet.
   Ordinary same-stage dungeon doors now stream the next room across the screen
   in all four cardinal directions; boss, town, and Riftwild boundaries retain
@@ -425,8 +433,9 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.17.84 release has 4,209 bytes in bank 1, 1,742 in bank 2,
-3,318 in bank 3, 7,369 in bank 4, 12,803 in bank 5, and 15,112 in bank 6.
+ROM. The v0.17.85 release has 4,179 bytes in bank 1, 1,742 in bank 2,
+3,318 in bank 3, 7,369 in bank 4, 12,749 in bank 5, and 14,928 in bank 6;
+the always-mapped bank retains 571 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

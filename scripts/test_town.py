@@ -173,7 +173,10 @@ def main():
         pb.memory[pl + off] = value
     tick(6)
     pb.memory[0xFF4F] = 0
-    assert pb.memory[0x9C00 + 12] == 7, "nearby market ware did not show price HUD"
+    assert pb.memory[0x9C00 + 12] == 40, \
+        "nearby heart stock did not show the healing offer icon"
+    assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 8, 14)), \
+        "nearby heart stock did not show its $5 price beside the offer icon"
     for off, value in ((9, 16), (10, 0), (11, 16), (12, 0)):
         pb.memory[pl + off] = value
     tick(6)
@@ -186,7 +189,8 @@ def main():
     tick(6)
     assert pb.memory[ware] == 3 and pb.memory[ware + 21] == 1
     pb.memory[0xFF4F] = 0
-    assert pb.memory[0x9C00 + 12] == 7, "market contact did not show coin/price HUD"
+    assert pb.memory[0x9C00 + 12] == 40, \
+        "market contact did not preserve the healing offer icon"
     pb.screen.image.save(ROOT / "tmp" / "town-market.png")
 
     # A sold ware removes its own marker. Restore currency only for this

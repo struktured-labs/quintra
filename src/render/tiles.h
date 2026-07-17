@@ -22,6 +22,13 @@
 // Boss HP bar segments (loaded with the HUD set; slots after dungeon tiles)
 #define HUD_BAR_FULL   26
 #define HUD_BAR_EMPTY  27
+// Merchant proximity offer icons. These live only on the WINDOW HUD, so the
+// dungeon tilemap never interprets them as terrain.
+#define HUD_OFFER_HEAL   40
+#define HUD_OFFER_RELIC  41
+#define HUD_OFFER_VITAL  42
+#define HUD_OFFER_FORGE  43
+#define HUD_OFFER_RUNE   44
 
 // Dungeon tile slots (after HUD block)
 #define BGT_FLOOR2  19   // cracked floor variant

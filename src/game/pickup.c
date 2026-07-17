@@ -171,7 +171,7 @@ static u8 pickup_is_town_resident(u8 kind) {
 // Context, not a purchase: reveal the nearest ware's price before the player
 // touches it. This makes the merchant's offer legible without a costly modal
 // screen or an accidental walk-into purchase.
-u8 pickup_nearby_shop_price(u8 *price_out) BANKED {
+u8 pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED {
     u8 i, found = 0, best_distance = 0xFF;
     for (i = 0; i < MAX_ENTITIES; ++i) {
         i16 dx, dy;
@@ -186,6 +186,7 @@ u8 pickup_nearby_shop_price(u8 *price_out) BANKED {
         distance = (u8)(dx + dy);
         if (!found || distance < best_distance) {
             best_distance = distance;
+            *ware_out = entities[i].ai_data[1];
             *price_out = entities[i].ai_data[2];
             found = 1;
         }
@@ -422,7 +423,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // Walk into a ware to buy it. Not enough coins → error
                     // beep with a retry delay so it doesn't spam.
                     u8 price = entities[i].ai_data[2];
-                    hud_show_offer(price);
+                    hud_show_offer(entities[i].ai_data[1], price);
                     if (player.coins >= price) {
                         player.coins = (u16)(player.coins - price);
                         hud_redraw_coins();

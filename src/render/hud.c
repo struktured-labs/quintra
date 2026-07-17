@@ -30,6 +30,7 @@ static const u16 hud_palette_mp[4] = {
 // Shops call hud_show_offer every frame while the hero is nearby. Cache the
 // rendered price so this context hint costs no repeated VRAM traffic.
 static u8 offer_price = 0xFF;
+static u8 offer_ware = 0xFF;
 
 // 1-row HUD layout (20 tiles wide):
 //
@@ -129,13 +130,25 @@ void hud_redraw_depth(void) BANKED {
     set_win_tiles(10, 0, 2, 1, row);
 }
 
-void hud_show_offer(u8 price) BANKED {
+void hud_show_offer(u8 ware, u8 price) BANKED {
     u8 row[4];
-    if (price == offer_price) return;
+    u8 icon;
+    if (price == offer_price && ware == offer_ware) return;
     offer_price = price;
-    row[0] = HUD_COIN;
-    row[1] = (price >= 100) ? (u8)(HUD_DIGIT_0 + price / 100) : HUD_BLANK;
-    row[2] = (u8)(HUD_DIGIT_0 + (price / 10) % 10);
+    offer_ware = ware;
+    // Stock prices are deliberately two-digit (5..40), leaving one HUD cell
+    // for a semantic icon. The nearby heart/orb already shows physical art;
+    // this tells the player what the purchase does before contact.
+    switch (ware) {
+        case 0:  icon = HUD_OFFER_HEAL;  break; // WARE_HEART
+        case 2:  icon = HUD_OFFER_VITAL; break; // WARE_BIG
+        case 3:  icon = HUD_OFFER_FORGE; break; // WARE_FORGE
+        case 4:  icon = HUD_OFFER_RUNE;  break; // WARE_RUNE
+        default: icon = HUD_OFFER_RELIC; break; // WARE_ITEM / future relics
+    }
+    row[0] = icon;
+    row[1] = HUD_COIN;
+    row[2] = (price >= 10) ? (u8)(HUD_DIGIT_0 + price / 10) : HUD_BLANK;
     row[3] = (u8)(HUD_DIGIT_0 + price % 10);
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
@@ -145,6 +158,7 @@ void hud_clear_offer(void) BANKED {
     static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
     if (offer_price == 0xFF) return;
     offer_price = 0xFF;
+    offer_ware = 0xFF;
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
 }
