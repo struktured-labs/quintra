@@ -94,13 +94,37 @@ def runtime_track(stage, boss):
     return track
 
 
+def table_pairs(name):
+    """Return (melody, bass) source pairs from the compiled-in lookup table.
+
+    GBC audio-register reads are not observable in every PyBoy backend.  The
+    ROM traversal above proves each route enters its runtime track; this small
+    source contract prevents an otherwise invisible regression where those
+    routes use distinct IDs but point back to the same authored phrase.
+    """
+    text = (ROOT / "src/audio/music.c").read_text()
+    match = re.search(
+        rf"static const music_variant_t {name}\[MUSIC_STAGE_COUNT\] = \{{(.*?)\n\}};",
+        text,
+        re.S,
+    )
+    assert match, f"missing {name} table"
+    pairs = re.findall(r"\{\s*(\w+),\s*(\w+),\s*\d+\s*\}", match.group(1))
+    assert len(pairs) == 9, f"{name} table changed shape: {pairs}"
+    return pairs
+
+
 def main():
     stages = [runtime_track(stage, False) for stage in range(9)]
     bosses = [runtime_track(stage, True) for stage in range(9)]
+    stage_phrases = table_pairs("stage_music")
+    boss_phrases = table_pairs("boss_music")
     assert stages == list(range(9)), f"stage music numbers drifted: {stages}"
     assert bosses == list(range(9, 18)), f"boss music numbers drifted: {bosses}"
     assert set(stages).isdisjoint(bosses), "boss music reused an exploration id"
-    print(f"[music] PASS stages={stages}, bosses={bosses}, title=18")
+    assert len(set(stage_phrases)) == 9, f"stage phrases overlap: {stage_phrases}"
+    assert len(set(boss_phrases)) == 9, f"boss phrases overlap: {boss_phrases}"
+    print(f"[music] PASS stages={stages}, bosses={bosses}, distinct phrases=18, title=18")
 
 
 if __name__ == "__main__":

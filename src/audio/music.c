@@ -25,6 +25,7 @@ static const u16 melody[32] = {
 // Wave-channel bass, one note per 4 rows. f = 65536/(2048-x).
 #define B_D3  1601
 #define B_C3  1547
+#define B_F3  1673
 #define B_G3  1713
 #define B_A3  1750
 static const u16 bassline[8] = {
@@ -123,6 +124,134 @@ static const u16 s3_bass[8] = {
     B_G3, B_G3, B_C3, B_C3, B_E3, B_E3, B_D3, B_G3,
 };
 
+// Stage 4 — Toxic Mire: sinking F-minor steps, deliberately sparse.
+static const u16 s4_melody[32] = {
+    N_F5, REST, N_A5, N_C6,   N_A5, N_F5, N_E5, REST,
+    N_F5, N_G5, N_A5, N_G5,   N_F5, N_E5, N_D5, REST,
+    N_C5, N_F5, N_A5, N_C6,   N_D6, N_C6, N_A5, N_G5,
+    N_F5, REST, N_E5, N_F5,   N_C5, REST, REST, REST,
+};
+static const u16 s4_bass[8] = {
+    B_C3, B_C3, B_F3, B_F3, B_C3, B_A3, B_G3, B_C3,
+};
+
+// Stage 5 — Shadow Keep: D-minor chase, with a short answering phrase.
+static const u16 s5_melody[32] = {
+    N_D5, N_F5, N_A5, N_F5,   N_D5, N_E5, N_F5, N_G5,
+    N_A5, N_G5, N_F5, N_E5,   N_D5, REST, N_C5, REST,
+    N_D5, N_F5, N_A5, N_C6,   N_A5, N_G5, N_F5, N_E5,
+    N_D5, N_C5, N_D5, N_E5,   N_F5, REST, REST, REST,
+};
+static const u16 s5_bass[8] = {
+    B_D3, B_D3, B_A3, B_A3, B_C3, B_C3, B_G3, B_D3,
+};
+
+// Stage 6 — Golden Temple: bright C-major fanfare, not a tempo reprise.
+static const u16 s6_melody[32] = {
+    N_C5, N_E5, N_G5, N_C6,   N_E6, N_C6, N_G5, N_E5,
+    N_D5, N_F5, N_A5, N_D6,   N_C6, N_A5, N_F5, N_D5,
+    N_C5, N_E5, N_G5, N_C6,   N_G5, N_E5, N_D5, N_B5,
+    N_C6, N_D6, N_E6, N_D6,   N_C6, REST, REST, REST,
+};
+static const u16 s6_bass[8] = {
+    B_C3, B_C3, B_G3, B_G3, B_A3, B_A3, B_F3, B_C3,
+};
+
+// Stage 7 — Bloodmoon: a clipped A-minor ritual in a faster meter.
+static const u16 s7_melody[32] = {
+    N_A5, N_C6, N_A5, N_E5,   N_A5, N_C6, N_D6, N_C6,
+    N_G5, N_B5, N_G5, N_E5,   N_G5, N_A5, N_B5, N_A5,
+    N_A5, N_E6, N_D6, N_C6,   N_B5, N_A5, N_G5, N_E5,
+    N_D5, N_E5, N_G5, N_A5,   REST, REST, REST, REST,
+};
+static const u16 s7_bass[8] = {
+    B_A3, B_A3, B_E3, B_E3, B_G3, B_G3, B_D3, B_A3,
+};
+
+// Stage 8 — Void Sanctum: fractured ascending intervals, then silence.
+static const u16 s8_melody[32] = {
+    N_C5, REST, N_E5, N_G5,   REST, N_C6, N_B5, REST,
+    N_A5, N_F5, REST, N_D5,   N_E5, REST, N_G5, N_A5,
+    N_C6, REST, N_D6, N_E6,   REST, N_D6, N_C6, N_A5,
+    N_G5, REST, N_E5, N_C5,   REST, REST, REST, REST,
+};
+static const u16 s8_bass[8] = {
+    B_C3, B_G3, B_A3, B_E3, B_C3, B_D3, B_G3, B_C3,
+};
+
+// Boss variants remain compact but each stage receives a separate combat
+// phrase.  A player should be able to hear a new threat before identifying
+// its sprite or attack pattern.
+static const u16 boss3_melody[32] = {
+    N_D5, N_D5, N_F5, N_A5,   N_D6, N_A5, N_F5, N_E5,
+    N_D5, N_F5, N_A5, N_C6,   N_D6, N_C6, N_A5, N_F5,
+    N_E5, N_G5, N_B5, N_D6,   N_C6, N_B5, N_A5, N_G5,
+    N_F5, N_E5, N_D5, N_C5,   N_D5, REST, REST, REST,
+};
+static const u16 boss3_bass[8] = {
+    B_D3, B_D3, B_A3, B_A3, B_C3, B_C3, B_G3, B_D3,
+};
+
+static const u16 boss4_melody[32] = {
+    N_F5, N_A5, N_C6, N_A5,   N_F5, N_E5, N_F5, N_G5,
+    N_A5, N_C6, N_D6, N_C6,   N_A5, N_G5, N_F5, N_E5,
+    N_F5, N_F5, N_A5, N_C6,   N_E6, N_D6, N_C6, N_A5,
+    N_G5, N_F5, N_E5, N_D5,   N_C5, REST, REST, REST,
+};
+static const u16 boss4_bass[8] = {
+    B_F3, B_F3, B_C3, B_C3, B_A3, B_A3, B_G3, B_F3,
+};
+
+static const u16 boss5_melody[32] = {
+    N_G5, N_B5, N_D6, N_B5,   N_G5, N_A5, N_B5, N_D6,
+    N_E6, N_D6, N_B5, N_A5,   N_G5, N_E5, N_G5, N_A5,
+    N_B5, N_D6, N_E6, N_D6,   N_B5, N_A5, N_G5, N_E5,
+    N_D5, N_E5, N_G5, N_B5,   N_G5, REST, REST, REST,
+};
+static const u16 boss5_bass[8] = {
+    B_G3, B_G3, B_D3, B_D3, B_E3, B_E3, B_C3, B_G3,
+};
+
+static const u16 boss6_melody[32] = {
+    N_C5, N_C5, N_E5, N_G5,   N_C6, N_G5, N_E5, N_D5,
+    N_C5, N_E5, N_G5, N_C6,   N_E6, N_D6, N_C6, N_B5,
+    N_A5, N_C6, N_E6, N_C6,   N_A5, N_G5, N_E5, N_D5,
+    N_C5, N_D5, N_E5, N_G5,   N_C6, REST, REST, REST,
+};
+static const u16 boss6_bass[8] = {
+    B_C3, B_C3, B_G3, B_G3, B_A3, B_A3, B_F3, B_C3,
+};
+
+static const u16 boss7_melody[32] = {
+    N_A5, N_G5, N_A5, N_C6,   N_E6, N_C6, N_A5, N_G5,
+    N_F5, N_E5, N_F5, N_A5,   N_D6, N_A5, N_F5, N_E5,
+    N_A5, N_C6, N_E6, N_D6,   N_C6, N_B5, N_A5, N_G5,
+    N_E5, N_D5, N_E5, N_G5,   N_A5, REST, REST, REST,
+};
+static const u16 boss7_bass[8] = {
+    B_A3, B_A3, B_E3, B_E3, B_F3, B_F3, B_G3, B_A3,
+};
+
+static const u16 boss8_melody[32] = {
+    N_E5, N_G5, N_B5, N_E6,   N_B5, N_G5, N_E5, N_FS5,
+    N_A5, N_C6, N_E6, N_C6,   N_A5, N_G5, N_FS5, N_E5,
+    N_D5, N_FS5, N_A5, N_D6,  N_A5, N_FS5, N_E5, N_D5,
+    N_E5, N_G5, N_B5, N_E6,   N_E5, REST, REST, REST,
+};
+static const u16 boss8_bass[8] = {
+    B_E3, B_E3, B_B3, B_B3, B_A3, B_A3, B_D3, B_E3,
+};
+
+static const u16 boss9_melody[32] = {
+    N_C5, N_E5, N_G5, N_B5,   N_D6, N_B5, N_G5, N_E5,
+    N_F5, N_A5, N_C6, N_E6,   N_D6, N_C6, N_A5, N_F5,
+    N_E5, N_G5, N_B5, N_D6,   N_E6, N_D6, N_B5, N_G5,
+    N_F5, N_E5, N_D5, N_C5,   N_C6, REST, REST, REST,
+};
+static const u16 boss9_bass[8] = {
+    B_C3, B_C3, B_G3, B_G3, B_A3, B_A3, B_D3, B_C3,
+};
+
 static u8 playing;
 static u8 frame_div;
 static u8 row;
@@ -138,32 +267,31 @@ typedef struct {
     u8 tempo;
 } music_variant_t;
 
-// Stable stage numbers 0..8. A few stages deliberately reprise a melodic
-// family, but no two use the same melody/tempo combination; every new theme
-// therefore has its own audible pacing and observable track id.
+// Stable stage numbers 0..8.  Each biome owns its melodic phrase as well as
+// its track id, so moving between biomes is audible instead of just faster.
 static const music_variant_t stage_music[MUSIC_STAGE_COUNT] = {
     { melody,    bassline, 8  }, // Crystal Caverns
     { s1_melody, s1_bass,  7  }, // Verdant Hollow
     { s2_melody, s2_bass,  9  }, // Ember Depths
     { s3_melody, s3_bass,  10 }, // Frost Vault
-    { melody,    bassline, 6  }, // Toxic Mire
-    { s1_melody, s1_bass,  9  }, // Shadow Keep
-    { s2_melody, s2_bass,  7  }, // Golden Temple
-    { s3_melody, s3_bass,  8  }, // Bloodmoon
-    { melody,    bassline, 10 }, // Void Sanctum
+    { s4_melody, s4_bass,  6  }, // Toxic Mire
+    { s5_melody, s5_bass,  9  }, // Shadow Keep
+    { s6_melody, s6_bass,  7  }, // Golden Temple
+    { s7_melody, s7_bass,  8  }, // Bloodmoon
+    { s8_melody, s8_bass,  10 }, // Void Sanctum
 };
 
-// Bosses have their own number and a distinct driving variant per stage.
+// Every boss has its own number and its own driving phrase.
 static const music_variant_t boss_music[MUSIC_STAGE_COUNT] = {
     { boss_melody,  boss_bass,  7 },
     { boss2_melody, boss2_bass, 7 },
-    { boss_melody,  boss_bass,  6 },
-    { boss2_melody, boss2_bass, 6 },
-    { boss_melody,  boss_bass,  5 },
-    { boss2_melody, boss2_bass, 5 },
-    { boss_melody,  boss_bass,  4 },
-    { boss2_melody, boss2_bass, 4 },
-    { boss2_melody, boss2_bass, 3 },
+    { boss3_melody, boss3_bass, 6 },
+    { boss4_melody, boss4_bass, 6 },
+    { boss5_melody, boss5_bass, 5 },
+    { boss6_melody, boss6_bass, 5 },
+    { boss7_melody, boss7_bass, 4 },
+    { boss8_melody, boss8_bass, 4 },
+    { boss9_melody, boss9_bass, 3 },
 };
 
 static void load_wave(void) {

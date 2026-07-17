@@ -1,5 +1,5 @@
-// Tiny 2-voice music sequencer: CH2 pulse melody + CH3 wave bass.
-// Placeholder engine until hUGEDriver + cowir-music's composed tracks land.
+// Compact 2-voice music sequencer: CH2 pulse melody + CH3 wave bass.
+// Per-biome and per-boss phrases are kept deliberately small for a 128 KiB ROM.
 #ifndef QUINTRA_AUDIO_MUSIC_H
 #define QUINTRA_AUDIO_MUSIC_H
 

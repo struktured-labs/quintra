@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.73: Stoneskin Ward](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.74: Biome Voices](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.74 gives all nine dungeon biomes and all nine boss routes their own
+compact musical phrases. The sequencer remains deliberately tiny—two voices
+and a 128 KiB cartridge—but a move into Toxic Mire, Shadow Keep, Bloodmoon,
+or the Void no longer just changes the tempo of an earlier loop. The music
+regression now verifies both the live route IDs and all eighteen distinct
+authored phrase pairs.
 
 v0.17.73 makes Sauran's Stoneskin unmissable: four small ward shards orbit
 the champion while the B shield is active. The existing body/projectile guard,
