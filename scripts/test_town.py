@@ -36,6 +36,10 @@ def main():
                 out.append(ep)
         return out
 
+    def entities_by_type(entity_type):
+        return [en + i * 28 for i in range(32)
+                if pb.memory[en + i * 28] == entity_type]
+
     def clear_hostiles():
         for i in range(32):
             ep = en + i * 28
@@ -126,6 +130,15 @@ def main():
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
     assert all(pb.memory[w + 12] == 35 for w in wares[1:]), \
         "relic stock lost its orb art"
+    # A nearby merchant speaks visually before the player risks walking into
+    # stock: a coin speech bubble makes the NPC's purpose legible even on a
+    # busy market screen.
+    mx, my = pb.memory[merchant[0] + 3], (pb.memory[merchant[0] + 7] - 8) & 0xFF
+    for off, value in ((9, mx), (10, 0), (11, my + 24), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(3)
+    assert any(pb.memory[fx + 12] == 125 for fx in entities_by_type(4)), \
+        "nearby merchant did not show its trade callout"
     # Approach a ware without touching it: the market announces its price
     # before a walk-into purchase. Leaving the stall clears the context hint.
     ware = wares[0]

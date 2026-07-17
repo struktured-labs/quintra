@@ -390,6 +390,20 @@ pub const SHOP_TAG: [&str; 8] = [
     "........",
 ];
 
+// Merchant callout: a compact speech bubble with a gold coin. It appears only
+// while the champion is close enough to trade, so market NPCs communicate
+// without turning every room into a modal dialogue screen.
+pub const MERCHANT_CALLOUT: [&str; 8] = [
+    ".11111..",
+    "1222221.",
+    "12.33.21",
+    "12333321",
+    "12333321",
+    "1222221.",
+    ".111.1..",
+    "....1...",
+];
+
 // Town elder: hooded face and crooked staff, readable at true GB scale.
 pub const VILLAGER: [&str; 8] = [
     "..222...",
@@ -670,7 +684,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 18] = [
     ("rune_lantern", &RUNE_LANTERN),
 ];
 
-pub const FX_8: [(&str, &[&str]); 11] = [
+pub const FX_8: [(&str, &[&str]); 12] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -678,6 +692,7 @@ pub const FX_8: [(&str, &[&str]); 11] = [
     ("wisp", &WISP),
     ("item_orb", &ITEM_ORB),
     ("shop_tag", &SHOP_TAG),
+    ("merchant_callout", &MERCHANT_CALLOUT),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),

@@ -90,6 +90,7 @@
 #define SPR_FX_SWING        122 // Wolfkin's adjacent claw/weapon arc
 #define SPR_CARTOGRAPHER    123 // village chartwright; reveals the next route
 #define SPR_ENEMY_RUNE_LANTERN 124 // late drifting four-lane ring caster
+#define SPR_MERCHANT_CALLOUT 125 // proximity trade speech bubble
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59

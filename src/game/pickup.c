@@ -204,6 +204,25 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
+    if (e->ai_data[0] == PICKUP_MERCHANT) {
+        // The floor labels and HUD identify each price; this one small thought
+        // bubble tells a nearby player that the character is actually a
+        // trader. state_timer is otherwise unused by permanent residents.
+        if (e->state_timer != 0) {
+            e->state_timer--;
+        } else {
+            i16 dx = FIX8_TO_INT(e->x) - (i16)player.x;
+            i16 dy = FIX8_TO_INT(e->y) - (i16)player.y;
+            if (dx < 0) dx = -dx;
+            if (dy < 0) dy = -dy;
+            if (dx <= 32 && dy <= 32
+                && fx_spawn(SPR_MERCHANT_CALLOUT, 0x05,
+                    FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 10, 45) != 0xFF) {
+                e->state_timer = 105; // visible for 0.75s, then a short rest
+            }
+        }
+        return;
+    }
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     if (e->ai_data[0] == PICKUP_SHOP_TAG) {
