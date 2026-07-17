@@ -107,6 +107,7 @@ verify: all check-balance-bot
 	bash scripts/test_smoke.sh
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 	uv run --quiet --with pyboy python scripts/test_town.py
+	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
