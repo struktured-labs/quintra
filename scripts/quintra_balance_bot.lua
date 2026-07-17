@@ -6,6 +6,7 @@ local KEY_START = 0x08
 local KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN = 0x10, 0x20, 0x40, 0x80
 local CARD_DX, CARD_DY = {0, 1, 0, -1}, {-1, 0, 1, 0}
 local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
+local VOID_SAFE_X, VOID_SAFE_Y = {20, 124, 20, 124}, {20, 20, 100, 100}
 -- Per-screen shortest authored exit toward dungeon gate screen 6; 4 means
 -- use the central staircase rather than a boundary door.
 local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
@@ -122,7 +123,10 @@ local function enemy_target(px, py)
                     x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
                     kind=kind, state=emu:read8(p + 15),
                     clock=emu:read8(p + 18), state6=emu:read8(p + 23),
-                    giant=(kind == 1) and emu:read8(p + 20) or 0
+                    giant=(kind == 1) and emu:read8(p + 20) or 0,
+                    pattern=emu:read8(p + 19),
+                    collapse=emu:read8(p + 21),
+                    safe_slot=emu:read8(p + 22)
                 }, d
             end
         end
@@ -464,6 +468,26 @@ local function target_step(px, py, ex, ey, fallback, near_tiles)
     if not target or target == start then return fallback end
     while prev[target] and prev[target] ~= start do target = prev[target] end
     return aligned_step(prevkey[target], sx, sy, px, py, fallback)
+end
+
+-- The Void Lord's World Collapse deliberately covers almost the entire room.
+-- Its marker is honest: ai_data[4] marks the long warning and ai_data[5]
+-- selects one corner, modulo four. Read that public runtime state and steer
+-- only with ordinary D-pad input; the player still has to reach the pocket
+-- before the blast and receives no immunity from the controller.
+local function void_safe_pocket_step(px, py, target)
+    if not target or target.kind ~= 1 or target.giant == 0
+        or target.pattern ~= 8 or target.collapse == 0 then
+        return nil
+    end
+    local slot = (target.safe_slot % 4) + 1
+    local sx, sy = VOID_SAFE_X[slot], VOID_SAFE_Y[slot]
+    local dx, dy = sx - px, sy - py
+    if math.abs(dx) + math.abs(dy) <= 16 then return 0 end
+    local direct = math.abs(dx) >= math.abs(dy)
+        and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+        or (dy > 0 and KEY_DOWN or KEY_UP)
+    return target_step(px, py, sx, sy, direct, 0)
 end
 
 -- Shortest-path step to any boundary door except the door we entered from.
@@ -1437,6 +1461,11 @@ while frames < LIMIT do
             end
         end
     end
+    -- This final override comes after generic bullet dodges and unsticks so a
+    -- one-frame evasive input cannot erase the final boss's only safe route.
+    -- It applies to this specific announced phase, never to ordinary bosses.
+    local collapse_keys = void_safe_pocket_step(px, py, target)
+    if collapse_keys ~= nil then keys = collapse_keys end
     if DEBUG and (frames % 600 == 0
         or (target and target.giant ~= 0 and frames % 60 == 0)) then
         -- World traversal deliberately clears `target` so combat does not
