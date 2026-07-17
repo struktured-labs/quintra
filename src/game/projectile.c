@@ -55,7 +55,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);
-    e->sprite_tile = SPR_BULLET;
+    e->sprite_tile = (player.class_id == 0 && kind == PROJ_SPIKE)
+        ? SPR_FX_SWING : SPR_BULLET;
     e->palette     = 2;
     e->hp          = pierce;
     e->state_timer = ttl;
@@ -63,6 +64,7 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->damage      = damage;
     e->ai_data[0]  = 0;              // anim phase
     e->ai_data[1]  = g_shot_element; // element for weakness bonus
+    e->ai_data[2]  = (player.class_id == 0 && kind == PROJ_SPIKE) ? 1 : 0;
     fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
     sfx_play(SFX_FIRE);
     return idx;
@@ -104,7 +106,8 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
     e->y = (ppos_t)(e->y + e->vy);
 
     // Player bullets shimmer between 2 frames; enemy bullets stay static
-    if (e->flags & EF_PLAYER_PROJ) {
+    if ((e->flags & EF_PLAYER_PROJ)
+        && !(player.class_id == 0 && e->ai_data[2] == 1)) {
         e->ai_data[0] = (u8)(e->ai_data[0] + 1);
         e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
     }

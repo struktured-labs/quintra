@@ -190,6 +190,16 @@ void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_ENEMY_WISP, 1, sprite_fx_wisp);
     set_sprite_data(SPR_ITEM_ORB,   1, sprite_fx_item_orb);
     set_sprite_data(SPR_SHOP_TAG,   1, sprite_fx_shop_tag);
+    // Bold diagonal sweep: this is deliberately separate from the bullet
+    // pair so Wolfkin's melee attack reads as a physical claw/weapon arc,
+    // not an inexplicably slow ranged shot.
+    {
+        static const u8 swing[16] = {
+            0x03,0x03, 0x07,0x07, 0x0E,0x0E, 0x1C,0x1C,
+            0x38,0x38, 0x70,0x70, 0xE0,0xE0, 0xC0,0xC0,
+        };
+        set_sprite_data(SPR_FX_SWING, 1, swing);
+    }
 }
 
 // Compact hand-authored outdoor vocabulary. These are deliberately runtime
