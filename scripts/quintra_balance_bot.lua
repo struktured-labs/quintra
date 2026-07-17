@@ -777,6 +777,7 @@ local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
 local shake_phase = 0
 local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
+local world_contact_hits = 0
 local debug_shot_room = -1
 local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer = 0, 0
@@ -827,6 +828,9 @@ while frames < LIMIT do
     if hp < last_hp then
         local taken = last_hp - hp
         damage_taken = damage_taken + taken
+        if RS ~= 0 and emu:read8(RS + 17) == 1 then
+            world_contact_hits = world_contact_hits + taken
+        end
         -- Read-only attribution: infer from the runtime state after the hit.
         -- This deliberately avoids cartridge instrumentation, whose extra
         -- instructions changed dense-frame pacing in endurance sampling.
@@ -884,6 +888,7 @@ while frames < LIMIT do
     if world_key ~= last_world_key then
         if last_world_key >= 0 or world_key >= 0 then world_hops = world_hops + 1 end
         last_world_key = world_key
+        world_contact_hits = 0
         wall_follow_dir, wall_follow_min = 0, 0
         dodge_phase, escape_timer = 0, 0
     end
@@ -1337,11 +1342,18 @@ while frames < LIMIT do
     local world_body_close = overworld_threat
         and math.max(math.abs(overworld_threat.x - px),
             math.abs(overworld_threat.y - py)) <= 32
+    local world_on_grass = tile_at_px(px + 8, py + 12) == 35
     -- Sauran's class answer is its projectile-breaking B shield. At full
     -- simulation speed, repeatedly dashing around optional Riftwild shots
     -- could pull the slower vessel off its authored route for an entire run.
     -- Use the actual shield edge instead; its cooldown prevents spam.
+    -- Tidal Wave is valuable on the trail, but a stationary cast after three
+    -- real hits on the same grass screen let an optional body push the pilot
+    -- into the border indefinitely. Preserve the authored exit input only
+    -- for that observed emergency; this is controller policy, never a ROM
+    -- immunity or entity mutation.
     if ABILITY_POLICY == "smart" and CLASS == 3 and world_body_close
+        and not (world_on_grass and world_contact_hits >= 3)
         and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         dodge_phase, dodge_cooldown = 0, 30
