@@ -782,6 +782,11 @@ void procgen_generate_current_room(void) BANKED {
                 spawn_shop_ware(48, 72, WARE_HEART, 5);
                 spawn_shop_ware(80, 72, WARE_ITEM, 20);
                 spawn_shop_ware(112, 72, WARE_BIG, 35);
+                // A village stop is an intentional build choice, not just a
+                // refill. The far shelf makes the temporary attack-speed and
+                // damage burst reliably purchasable before the next dungeon.
+                spawn_shop_ware(144, 72, WARE_SURGE, 20);
+                paint_shop_price(16, 20);
             } else {
                 pickup_spawn_smith(FIX8(40), FIX8(48));
                 pickup_spawn_apothecary(FIX8(120), FIX8(96));

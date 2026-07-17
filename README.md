@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.93: Void Armor](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.94: Village Surge](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,12 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.94 makes a village stop an active build decision: the market's new far
+shelf always sells a **Surge Tonic** for 20 coins. Its cyan orb and lightning
+offer glyph make the temporary faster, harder-hitting primary weapon legible
+before purchase. The existing heart, relic, and Iron Heart stock remains;
+the full controller-only nine-boss route still completes and replays cleanly.
 
 v0.17.93 completes the late-game **Rift Armor** rule: the final **Void Lord**
 also caps a single hit at three damage, so a powered-up run cannot erase its

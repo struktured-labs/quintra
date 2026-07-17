@@ -137,24 +137,28 @@ def main():
     assert pb.memory[rs + 20] & 0x03 == 0x03, "Chartwright did not mark two route rooms"
     assert pb.memory[chartwright[0] + 15] == 1, "Chartwright blessing did not latch"
 
-    # East branch: dedicated market with merchant and three visually distinct
+    # East branch: dedicated market with merchant and four visually distinct
     # wares. Stock must retain its own heart/relic art rather than collapsing
     # into the old ambiguous orange tag sprite.
     leave("east")
     assert pb.memory[rs + 1] == 19 and pb.memory[rs + 19] == 1
     merchant, wares, tags = entities(8), entities(4), entities(13)
     assert len(merchant) == 1 and pb.memory[merchant[0] + 12] == 70
-    assert len(wares) == 3
-    assert len(tags) == 3 and all(pb.memory[t + 12] == 81 for t in tags), \
+    assert len(wares) == 4
+    assert len(tags) == 4 and all(pb.memory[t + 12] == 81 for t in tags), \
         "market stock lacks persistent gold sale markers"
     assert {pb.memory[t + 18] for t in tags} == {
         (w - en) // 28 for w in wares
     }, "sale markers are not bound to their wares"
-    assert {pb.memory[w + 18] for w in wares} == {0, 1, 2}
+    assert {pb.memory[w + 18] for w in wares} == {0, 1, 2, 5}
     tick(70)
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
-    assert all(pb.memory[w + 12] == 35 for w in wares[1:]), \
+    assert all(pb.memory[w + 12] == 35 for w in wares
+               if pb.memory[w + 18] in {1, 2}), \
         "relic stock lost its orb art"
+    surge = next(w for w in wares if pb.memory[w + 18] == 5)
+    assert pb.memory[surge + 12] == 126 and pb.memory[surge + 13] == 6, \
+        "market lacks its cyan Surge Tonic shelf"
     # A nearby merchant speaks visually before the player risks walking into
     # stock: a coin speech bubble makes the NPC's purpose legible even on a
     # busy market screen.
@@ -183,6 +187,17 @@ def main():
     pb.memory[0xFF4F] = 0
     assert pb.memory[0x9C00 + 12] == 8, "market price HUD stayed after leaving stall"
 
+    # The dedicated tonic has its own cyan stock sprite and lightning offer
+    # glyph, so it reads as a temporary weapon burst rather than a mystery orb.
+    sx, sy = pb.memory[surge + 3], (pb.memory[surge + 7] - 8) & 0xFF
+    for off, value in ((9, sx), (10, 0), (11, sy - 24), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    pb.memory[0xFF4F] = 0
+    assert pb.memory[0x9C00 + 12] == 45, "nearby Surge Tonic lacks lightning offer icon"
+    assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 11, 9)), \
+        "nearby Surge Tonic did not show its $20 price"
+
     # Touch one unaffordable offer: it survives and latches one reject buzz.
     for off, value in ((9, wx), (10, 0), (11, wy), (12, 0)):
         pb.memory[pl + off] = value
@@ -201,7 +216,7 @@ def main():
     tick(6)
     assert pb.memory[ware] == 0, "purchased market ware remained active"
     tick(2)
-    assert len(entities(13)) == 2, "sale marker remained after its ware sold"
+    assert len(entities(13)) == 3, "sale marker remained after its ware sold"
 
     # West back to arrival, then west again: forge/apothecary quarter.
     leave("west")
