@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="${QUINTRA_BALANCE_OUT:-$ROOT/tmp/balance-runs.csv}"
+TRIAL_DIR="${QUINTRA_BALANCE_TRIAL_DIR:-$(dirname "$OUT")/balance-trials}"
 FRAMES="${QUINTRA_BALANCE_FRAMES:-10800}"
 REPS="${QUINTRA_BALANCE_REPS:-3}"
 MIN_WINS="${QUINTRA_BALANCE_MIN_WINS:-0}"
@@ -33,21 +34,39 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
+mkdir -p "$TRIAL_DIR"
 if [ -n "$TRACE_DIR" ]; then mkdir -p "$TRACE_DIR"; fi
+HEADER="run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp,b_uses"
 if [ "$APPEND" != 1 ] || [ ! -s "$OUT" ]; then
-  echo "run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp" > "$OUT"
+  echo "$HEADER" > "$OUT"
 fi
 
 unset DISPLAY WAYLAND_DISPLAY
 for run in "${RUN_IDS[@]}"; do
   for class in "${CLASS_IDS[@]}"; do
+    # Resume is idempotent.  A host timeout can arrive after mGBA's final CSV
+    # append but before the wrapper reports completion; never run that same
+    # deterministic seed/class pair twice when an experiment is resumed.
+    if [ "$APPEND" = 1 ] && awk -F, -v run="$run" -v class="$class" '
+      NR > 1 && $1 == run && $2 == class { found = 1; exit }
+      END { exit found ? 0 : 1 }
+    ' "$OUT"; then
+      echo "[balance] run $run class $class already recorded; skipping"
+      continue
+    fi
     echo "[balance] run $run/$REPS class $class"
     completed=false
     # mGBA occasionally drops the Lua process before its final CSV append.
     # Retry just that controller-only trial once; a matrix is never silently
     # reported with a missing class/seed row.
     for attempt in 1 2; do
-      before=$(wc -l < "$OUT")
+      # Never let a late mGBA process write into the shared matrix.  A row is
+      # committed only after this attempt's own CSV has completed, which makes
+      # interruption/resume deterministic instead of producing duplicate or
+      # missing seed/class pairs.
+      trial_csv=$(mktemp "$TRIAL_DIR/balance-$run-$class-attempt-$attempt.XXXXXX")
+      echo "$HEADER" > "$trial_csv"
+      before=$(wc -l < "$trial_csv")
       log="/tmp/quintra-balance-$run-$class-$attempt.log"
       trace_env=()
       if [ -n "$TRACE_DIR" ]; then
@@ -58,14 +77,14 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
-        QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$OUT" \
+        QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \
         setsid timeout "$HOST_TIMEOUT" xvfb-run -a mgba-qt "$ROM" --fastforward --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
         >"$log" 2>&1 &
       pid=$!
       # This mGBA build does not honor frontend:quit from Lua reliably. The
       # completed CSV row is the transaction boundary; stop the wrapper then.
       for _ in $(seq 1 $((HOST_TIMEOUT * 4))); do
-          now=$(wc -l < "$OUT")
+          now=$(wc -l < "$trial_csv")
           if [ "$now" -gt "$before" ]; then break; fi
           if ! kill -0 "$pid" 2>/dev/null; then break; fi
           sleep 0.25
@@ -75,11 +94,33 @@ for run in "${RUN_IDS[@]}"; do
       kill -- -"$pid" 2>/dev/null || true
       wait "$pid" 2>/dev/null || true
       grep 'BALANCE' "$log" || true
-      if [ "$now" -gt "$before" ]; then
-        completed=true
-        break
+      if [ "$now" -eq $((before + 1)) ]; then
+        # A previous wrapper can finish while a resumed wrapper is already in
+        # flight.  Serialize the final check-and-append: one and only one
+        # controller process may commit a deterministic (run,class) result.
+        if (
+          flock -x 9
+          if awk -F, -v run="$run" -v class="$class" '
+            NR > 1 && $1 == run && $2 == class { found = 1; exit }
+            END { exit found ? 0 : 1 }
+          ' "$OUT"; then
+            exit 2
+          fi
+          tail -n 1 "$trial_csv" >> "$OUT"
+        ) 9>>"$OUT.lock"; then
+          completed=true
+          break
+        else
+          commit_status=$?
+          if [ "$commit_status" -eq 2 ]; then
+            echo "[balance] run $run class $class committed by another wrapper; skipping"
+            completed=true
+            break
+          fi
+          echo "[balance] ERROR could not commit run $run class $class" >&2
+        fi
       fi
-      echo "[balance] missing CSV row; retrying run $run class $class (attempt $attempt/2)" >&2
+      echo "[balance] missing or duplicate trial row; retrying run $run class $class (attempt $attempt/2)" >&2
     done
     if [ "$completed" != true ]; then
       echo "[balance] ERROR no CSV row for run $run class $class after retry" >&2

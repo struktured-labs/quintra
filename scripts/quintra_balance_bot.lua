@@ -30,6 +30,13 @@ if GIANT_POLICY ~= "baseline" and GIANT_POLICY ~= "orbit"
     and GIANT_POLICY ~= "orbit_fire" and GIANT_POLICY ~= "pulse_fire" then
     GIANT_POLICY = "baseline"
 end
+-- Keep the established controller behavior as the default, but expose an
+-- explicit no-signature control.  This lets a balance experiment distinguish
+-- the value of real B ability use from unrelated navigation/aim changes.
+local ABILITY_POLICY = os.getenv("QUINTRA_BOT_ABILITY_POLICY") or "smart"
+if ABILITY_POLICY ~= "off" and ABILITY_POLICY ~= "smart" then
+    ABILITY_POLICY = "smart"
+end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 local enemy_mask, enemy_seen = 0, {}
 
@@ -96,6 +103,25 @@ local function enemy_target(px, py)
         end
     end
     return best
+end
+
+-- A class signature is not always a single-target attack.  The Wolfkin's
+-- eight-way Howl is best spent into a crowd (or a boss at claw range), so the
+-- observer needs a small, read-only local population count rather than waiting
+-- for an arbitrary global timer to happen during a fight.
+local function hostile_count_near(px, py, radius)
+    local count = 0
+    if EN == 0 then return 0 end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1 then
+            local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+            if math.max(math.abs(ex - px), math.abs(ey - py)) <= radius then
+                count = count + 1
+            end
+        end
+    end
+    return count
 end
 
 local function leech_attached()
@@ -540,6 +566,7 @@ local no_damage_frames, flank_timer = 0, 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 local last_active_charge = 0
+local last_input_keys, b_uses = 0, 0
 local purchases, last_coins = 0, 0
 local shop_visits, visited_shop_rooms = 0, {}
 local max_combat_frames, max_route_frames = 0, 0
@@ -561,8 +588,17 @@ while frames < LIMIT do
             frames, RS ~= 0 and emu:read8(RS + 1) or 0, last_coins, coins)) end
     end
     last_coins = coins
-    if DEBUG and active_charge > 0 and last_active_charge == 0 then
-        debug_log(string.format("BOTABILITY f=%d class=%d charge=%d", frames, CLASS, active_charge))
+    -- Count accepted signature presses, not requested controller inputs.  The
+    -- game owns the edge/cooldown/MP rules; this observer only sees whether a
+    -- B-only press actually entered its 140-frame class cooldown.  A+B Spirit
+    -- Convergence deliberately remains separate from this metric.
+    if active_charge > 0 and last_active_charge == 0
+        and (last_input_keys % 4) == KEY_B then
+        b_uses = b_uses + 1
+        if DEBUG then
+            debug_log(string.format("BOTABILITY f=%d class=%d charge=%d uses=%d",
+                frames, CLASS, active_charge, b_uses))
+        end
     end
     last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
@@ -796,17 +832,30 @@ while frames < LIMIT do
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
         -- agent never raised Sauran's shield or fired the ranged signatures.
         local signature_period = (CLASS == 3) and 90 or (CLASS == 4) and 120 or 180
+        local nearby_hostiles = hostile_count_near(px, py, 32)
         -- Stoneskin is a reactive guard, not a generic damage signature.
         -- Spending it on a global cadence (including the opening room) left
         -- the tank without its defining answer when a miniboss volley began.
-        if CLASS ~= 1 and not waiting_star and active_charge == 0 and mp >= 2
+        -- Howl is a melee ring, so a distant every-three-second timer was
+        -- effectively never exercised in short Wolfkin fights.  Take its
+        -- controller-realistic opportunity when two bodies crowd the hero or
+        -- a boss is actually within the ring's useful 48px range.
+        if ABILITY_POLICY == "smart" and CLASS == 0 and not waiting_star
+            and active_charge == 0 and mp >= 2
+            and (nearby_hostiles >= 2
+                or (target.giant ~= 0 and math.max(math.abs(dx), math.abs(dy)) <= 48)) then
+            keys = KEY_B + aim
+        elseif ABILITY_POLICY == "smart" and CLASS ~= 1 and not waiting_star
+            and active_charge == 0 and mp >= 2
             and frames % signature_period == 0 then
             keys = KEY_B + aim
         -- Spirit Convergence requires A and B to become pressed together.
         -- Release both on the preceding frame so the next chord has two edges.
-        elseif not waiting_star and active_charge == 0 and mp == mp_max and frames % 600 == 599 then
+        elseif ABILITY_POLICY == "smart" and not waiting_star and active_charge == 0
+            and mp == mp_max and frames % 600 == 599 then
             keys = 0
-        elseif not waiting_star and active_charge == 0 and mp == mp_max and frames % 600 == 0 then
+        elseif ABILITY_POLICY == "smart" and not waiting_star and active_charge == 0
+            and mp == mp_max and frames % 600 == 0 then
             keys = KEY_A + KEY_B + aim
         end
     elseif shop then
@@ -933,7 +982,8 @@ while frames < LIMIT do
     -- simulation speed, repeatedly dashing around optional Riftwild shots
     -- could pull the slower vessel off its authored route for an entire run.
     -- Use the actual shield edge instead; its cooldown prevents spam.
-    if (CLASS == 1 or CLASS == 3) and threat and active_charge == 0 and mp >= 2 then
+    if ABILITY_POLICY == "smart" and (CLASS == 1 or CLASS == 3)
+        and threat and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         dodge_phase, dodge_cooldown = 0, 30
     elseif dodge_phase == 0 and dodge_cooldown == 0 and threat then
@@ -1027,6 +1077,7 @@ while frames < LIMIT do
         emu:screenshot(string.format("%s-r%d.png", DEBUG_SCREEN, room))
         debug_shot_room = room
     end
+    last_input_keys = keys
     tick(keys)
     frames = frames + 1
 end
@@ -1081,13 +1132,13 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
-        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp))
+        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

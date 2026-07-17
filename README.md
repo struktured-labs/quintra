@@ -394,7 +394,14 @@ The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
 route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
-used in balance runs. Constrained hosts can split a matrix into seed batches
+used in balance runs. Each row reports accepted `b_uses` (the game entering a
+class-signature cooldown after a B-only press), rather than merely button
+requests. Set `QUINTRA_BOT_ABILITY_POLICY=off` for a no-signature control;
+the default `smart` policy uses class signatures and reactive shields. Each
+emulator attempt writes to its own CSV; a file-locked duplicate check commits
+exactly one finished row to the matrix, so late or overlapping processes cannot
+pollute an interrupted/resumed sample.
+Constrained hosts can split a matrix into seed batches
 with `QUINTRA_BALANCE_APPEND=1` and `QUINTRA_BALANCE_SKIP_REPORT=1`, then run
 one final report against the accumulated CSV; every class/seed row is still
 required before that report succeeds. Shop reachability and purchases are separate telemetry:
