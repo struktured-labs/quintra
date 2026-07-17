@@ -130,6 +130,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_surge.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_rift_sigil_pathing.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_sigil_sanctuary_return.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_vespine_flutterbat_pathing.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_balance_replay.sh $(BINDIR)/$(PROJECT).gbc

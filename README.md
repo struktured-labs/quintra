@@ -426,7 +426,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; v0.17.75 occupies 128 KiB with 527 bytes of bank-0 headroom.
+bank space; v0.17.85 occupies 128 KiB with 571 bytes of bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
@@ -496,6 +496,10 @@ as their real central staircase nodes, follows the town's north/return civic
 lanes explicitly, and mirrors the cartridge's feet-center spike test before
 allowing a tactical dodge or attack movement. These are controller-only safety
 rules: the agent still changes the run solely through normal button input.
+If it reaches a Sigil-gated sanctuary without that stage's fixture, it now
+backs through the local dungeon to recover the objective rather than treating
+the deliberately locked forward door as a route stall; a deterministic Sauran
+regression covers that return route.
 Vespine's 48px Stinger receives the same six-tile Flutterbat pursuit lane as
 the ranged champions; a three-seed live-ROM regression requires it to clear
 that moving-target room and reach the first boss threshold without a stall.

@@ -87,6 +87,17 @@ local function read16(address)
     return emu:read8(address) + emu:read8(address + 1) * 256
 end
 
+-- The stage objective is a real progression gate.  Reading it lets this
+-- controller retrace to the Sigil room instead of grinding against the
+-- sanctuary's intentionally locked forward door.  The offsets mirror
+-- run_state_t: bosses_beaten at 11 and rift_sigils at 23.
+local function stage_sigil_missing()
+    if RS == 0 then return false end
+    local stage = emu:read8(RS + 11) % 9
+    local bit = 2 ^ stage
+    return math.floor(read16(RS + 23) / bit) % 2 == 0
+end
+
 local function read_i16(address)
     local value = read16(address)
     return value >= 0x8000 and value - 0x10000 or value
@@ -473,6 +484,12 @@ local function door_step(px, py)
     local in_town = not in_world and room > 18 and room % 18 == 1
     local town_wanted = in_town
         and (emu:read8(RS + 19) == 0 and 0 or 3) or nil
+    -- The Sigil sits in local room 2. If the sanctuary is reached without it,
+    -- route back through rooms 4 and 3 to the objective instead of repeatedly
+    -- pressing the forward threshold that correctly refuses entry.
+    local local_room = room % 6
+    local return_for_sigil = not in_world and not in_town
+        and local_room > 2 and stage_sigil_missing()
     -- Shortest authored route to dungeon gate screen 6.
     local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
     if in_town then
@@ -546,9 +563,11 @@ local function door_step(px, py)
             or ((x == 19 and y == 9 and emu:read8(TM + 9 * 20 + 19) == 3) and 1
             or ((y == 16 and x == 10 and emu:read8(TM + 16 * 20 + 10) == 3) and 2
             or ((x == 1 and y == 9 and emu:read8(TM + 9 * 20) == 3) and 3 or 255)))
-        if dir ~= 255 and ((in_world and dir == wanted)
+        if dir ~= 255 and ((return_for_sigil and dir == back)
+            or (in_world and dir == wanted)
             or (in_town and dir == town_wanted)
-            or (not in_world and not in_town and dir ~= back)) then
+            or (not in_world and not in_town and not return_for_sigil
+                and dir ~= back)) then
             target, target_dir, tx, ty = y * 20 + x, dir, x, y
             break
         end
