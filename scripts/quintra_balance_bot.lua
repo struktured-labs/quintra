@@ -27,7 +27,7 @@ local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
 local GIANT_POLICY = os.getenv("QUINTRA_BOT_GIANT_POLICY") or "baseline"
 if GIANT_POLICY ~= "baseline" and GIANT_POLICY ~= "orbit"
-    and GIANT_POLICY ~= "orbit_fire" then
+    and GIANT_POLICY ~= "orbit_fire" and GIANT_POLICY ~= "pulse_fire" then
     GIANT_POLICY = "baseline"
 end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
@@ -722,8 +722,16 @@ while frames < LIMIT do
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
                 local orbit = giant_orbit_step(px, py, aim, retreat)
-                keys = (GIANT_POLICY == "orbit_fire" and frames % 3 == 0)
-                    and (KEY_A + aim) or orbit
+                if GIANT_POLICY == "pulse_fire" then
+                    -- One aimed beat, then four retreat beats: this is a
+                    -- controller-realistic way for short-range champions to
+                    -- keep pressure without turning every shot into another
+                    -- pixel of contact.  It exists only for offline search.
+                    keys = (frames % 5 == 0) and (KEY_A + aim) or retreat
+                else
+                    keys = (GIANT_POLICY == "orbit_fire" and frames % 3 == 0)
+                        and (KEY_A + aim) or orbit
+                end
             elseif reach < 28 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)

@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT_DIR="${QUINTRA_BOSS_SEARCH_OUT:-$ROOT/tmp/boss-policy-search}"
-MODES="${QUINTRA_BOSS_SEARCH_MODES:-baseline orbit orbit_fire}"
+MODES="${QUINTRA_BOSS_SEARCH_MODES:-baseline orbit orbit_fire pulse_fire}"
 RUNS="${QUINTRA_BOSS_SEARCH_RUNS:-1}"
 CLASSES="${QUINTRA_BOSS_SEARCH_CLASSES:-1}"
 FRAMES="${QUINTRA_BOSS_SEARCH_FRAMES:-18000}"
