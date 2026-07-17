@@ -124,6 +124,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_score.py
 	uv run --quiet --with pyboy python scripts/test_doors.py
 	uv run --quiet --with pyboy python scripts/test_rift_sigil.py
+	uv run --quiet --with pyboy python scripts/test_stage8_sigil_path.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
