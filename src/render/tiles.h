@@ -100,6 +100,9 @@
 #define SPR_ENEMY_RIFT_WARDEN SPR_SHOP_TAG // combat-only late five-way caster
 #define SPR_FX_SWING        122 // Wolfkin's adjacent claw/weapon arc
 #define SPR_CARTOGRAPHER    123 // village chartwright; reveals the next route
+// Slot 123 is Chartwright art in towns and the Astral Spear only in combat
+// rooms; those populations never coexist, preserving the OBJ VRAM budget.
+#define SPR_FX_SPEAR        SPR_CARTOGRAPHER
 #define SPR_ENEMY_RUNE_LANTERN 124 // late drifting four-lane ring caster
 // Town-only reuse: villages never spawn Rune Lanterns, and each dungeon room
 // reloads the normal lantern art before enemies exist.
@@ -136,6 +139,7 @@ void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
 void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-tag slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
+void tiles_load_spear_sprite(void) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact

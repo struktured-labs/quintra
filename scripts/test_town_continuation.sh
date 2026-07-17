@@ -28,7 +28,11 @@ awk -F, '
       print "[town-continuation] did not visit both town build-choice screens" > "/dev/stderr"
       exit 1
     }
-    if ($(col["max_room"]) < 22) {
+    # The town-19 north gate enters room 20, the first room of the next
+    # dungeon. Requiring room 22 accidentally coupled this gate regression
+    # to surviving two subsequent randomized combat rooms and to whichever
+    # optional weapon build the controller happened to take.
+    if ($(col["max_room"]) < 20) {
       print "[town-continuation] north gate did not continue the run" > "/dev/stderr"
       exit 1
     }

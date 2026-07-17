@@ -453,6 +453,19 @@ pub const SHIELD_AURA: [&str; 8] = [
     "...11...",
 ];
 
+// Astral Spear: an asymmetric pointed shaft, intentionally unlike the broad
+// claw arc. It occupies a town-only NPC tile while dungeon combat is active.
+pub const SPEAR: [&str; 8] = [
+    ".......3",
+    "......33",
+    ".....32.",
+    "....32..",
+    "...32...",
+    "..32....",
+    ".32.....",
+    "33......",
+];
+
 // Town elder: hooded face and crooked staff, readable at true GB scale.
 pub const VILLAGER: [&str; 8] = [
     "..222...",
@@ -735,7 +748,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 20] = [
     ("rift_warden", &RIFT_WARDEN),
 ];
 
-pub const FX_8: [(&str, &[&str]); 14] = [
+pub const FX_8: [(&str, &[&str]); 15] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -746,6 +759,7 @@ pub const FX_8: [(&str, &[&str]); 14] = [
     ("merchant_callout", &MERCHANT_CALLOUT),
     ("surge_orb", &SURGE_ORB),
     ("shield_aura", &SHIELD_AURA),
+    ("spear", &SPEAR),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),

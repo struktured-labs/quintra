@@ -214,6 +214,21 @@ pub const RIFT_FLAIL: Item = Item {
     effects:     &[],
 };
 
+// A deliberate counterpart to the Flail: it is not a wide crowd-clearer.
+// Astral Spear takes a slower, committed thrust down one lane, reaches well
+// beyond the Wolfkin claw, and rewards a player who lines up a dangerous
+// enemy instead of firing freely into a crowd.
+pub const ASTRAL_SPEAR: Item = Item {
+    id:          ITEM_ASTRAL_SPEAR,
+    name:        "Astral Spear",
+    description: "Long precise thrust.",
+    kind: ItemKind::Weapon { fire_rate: 42, damage: 4, projectile: ProjectileKind::Spear, mp_cost: 0 },
+    icon_sprite: SPRITE_ITEM_CLAW,
+    palette:     OBJ_PAL_ITEM_GOLD,
+    rarity:      Rarity::Rare,
+    effects:     &[],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_item(CLAW_COMBO.clone());
     r.add_item(TAIL_SPIKE.clone());
@@ -236,4 +251,5 @@ pub fn register(r: &mut Registry) {
     r.add_item(HUNTERS_EYE.clone());
     r.add_item(BLOOD_SIGIL.clone());
     r.add_item(RIFT_FLAIL.clone());
+    r.add_item(ASTRAL_SPEAR.clone());
 }

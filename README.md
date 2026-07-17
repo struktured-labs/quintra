@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.0: Cartographer's Chart](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.1: Astral Spear](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.1 adds the rare **Astral Spear** to the weapon-orb pool. It is a slow,
+long, single-target physical thrust—the deliberate counterpoint to Rift
+Flail's broad three-target sweep. It has its own pointed in-game sprite while
+reusing the Cartographer's OBJ slot only in dungeon combat, so towns retain
+their resident art and the 128 KiB cartridge budget stays intact. A live-ROM
+contract collects it through normal pickup collision and verifies its swap,
+art, reach, damage, and non-cleaving identity.
 
 v0.18.0 fixes village route knowledge and makes it a visible, purchasable
 choice. The free **Chartwright** now correctly scouts the first two rooms of

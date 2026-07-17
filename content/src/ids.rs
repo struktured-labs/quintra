@@ -37,6 +37,7 @@ pub const ITEM_SWIFT_FANG:   ItemId = ItemId::new(27);   // +1 SPD +1 ATK
 pub const ITEM_HUNTERS_EYE:  ItemId = ItemId::new(28);   // +3 LCK
 pub const ITEM_BLOOD_SIGIL:  ItemId = ItemId::new(29);   // +1 ATK +1 HP
 pub const ITEM_RIFT_FLAIL:   ItemId = ItemId::new(30);   // rare physical weapon swap
+pub const ITEM_ASTRAL_SPEAR: ItemId = ItemId::new(31);   // rare long-reach weapon swap
 
 // ----- Enemies
 pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);

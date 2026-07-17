@@ -36,6 +36,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
             speed = 3; ttl = 60; pierce = 2; break;
         case PROJ_FLAIL:      // broad physical sweep: mid-range, three targets
             speed = 3; ttl = 17; pierce = 3; break;
+        case PROJ_SPEAR:      // narrow, committed long-reach physical thrust
+            speed = 4; ttl = 22; pierce = 1; break;
         case PROJ_BUBBLE:     // slow drifting, pierces across one full room
             // 120 ticks kept ~17 rapid-fire bubbles resident and starved the
             // 32-entity pool of Tidal Wave/enemy slots. 80 ticks still travels
@@ -61,8 +63,9 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);
-    e->sprite_tile = (kind == PROJ_SPIKE || kind == PROJ_FLAIL)
-        ? SPR_FX_SWING : SPR_BULLET;
+    e->sprite_tile = (kind == PROJ_SPEAR) ? SPR_FX_SPEAR
+        : (kind == PROJ_SPIKE || kind == PROJ_FLAIL) ? SPR_FX_SWING
+        : SPR_BULLET;
     e->palette     = 2;
     e->hp          = pierce;
     e->state_timer = ttl;
@@ -70,7 +73,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->damage      = damage;
     e->ai_data[0]  = 0;              // anim phase
     e->ai_data[1]  = g_shot_element; // element for weakness bonus
-    e->ai_data[2]  = (kind == PROJ_SPIKE || kind == PROJ_FLAIL) ? 1 : 0;
+    e->ai_data[2]  = (kind == PROJ_SPIKE || kind == PROJ_FLAIL
+        || kind == PROJ_SPEAR) ? 1 : 0;
     // physical arc: no shimmer
     fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
     sfx_play(SFX_FIRE);

@@ -129,6 +129,12 @@ void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }
 
+void tiles_load_spear_sprite(void) BANKED {
+    // In dungeon rooms slot 123 has no resident NPC. Reclaim it for a real
+    // long-shaft silhouette instead of making Astral Spear look like a claw.
+    set_sprite_data(SPR_FX_SPEAR, 1, sprite_fx_spear);
+}
+
 void tiles_load_miniboss(u8 stage) BANKED {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
     // stage's mini-boss looks distinct. Variant table must match the palette
