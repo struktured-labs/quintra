@@ -144,11 +144,25 @@ static u8 room_should_combat_seal(void) {
 // Store availability is a room property, not an every-frame discovery job.
 // This is refreshed on both full room entry and the in-place door/portal
 // regeneration paths.
-static void room_refresh_shop_wares(void) {
-    room_has_shop_wares = (!run_state.world_mode
+static u8 room_state_has_shop_wares(void) {
+    return (!run_state.world_mode
             && (run_state.room_counter % ROOMS_PER_STAGE) == 4)
         || (RUN_ROOM_IS_TOWN(run_state.room_counter)
             && run_state.world_return_screen != TOWN_ARRIVAL);
+}
+
+static void room_refresh_shop_wares(void) {
+    room_has_shop_wares = room_state_has_shop_wares();
+}
+
+// Slot 125 is intentionally multiplexed: merchant rooms need the proximity
+// callout, while all other dungeon rooms may use the Dread Bell silhouette.
+// Both full screen entry and in-place door/portal regeneration must come
+// through this helper; otherwise a prior room's tile data can leak forward.
+static void room_load_dynamic_fx_identity(void) {
+    tiles_load_fx_sprites();
+    if (!run_state.world_mode && !room_state_has_shop_wares())
+        tiles_load_dread_bell_sprite();
 }
 
 // Progression fixtures belong to room orchestration, after procgen has fully
@@ -686,7 +700,6 @@ void room_enter(void) {
     tiles_load_all_enemy_sprites();       // small, specialist, and bruiser art
     if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         tiles_load_town_waykeeper_sprite(); // safe town-only Rune Lantern slot reuse
-    tiles_load_fx_sprites();              // bullet A/B, muzzle, impact
 
     hud_init();
     hud_show();
@@ -714,6 +727,8 @@ void room_enter(void) {
         // Returning from the pack screen: keep the existing tilemap, entities
         // and player position — just redraw. Do NOT regenerate or restart music.
         room_resume_flag = 0;
+        room_refresh_shop_wares();
+        room_load_dynamic_fx_identity();
         draw_room_tilemap();
         entity_draw_all();
         place_player_sprite();
@@ -746,11 +761,8 @@ void room_enter(void) {
 
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
-    // Combat-only Dread Bell art reuses the merchant speech-bubble slot.
-    // The two entity types cannot coexist: shops/towns retain the callout.
-    if (!run_state.world_mode && !room_has_shop_wares)
-        tiles_load_dread_bell_sprite();
     room_refresh_shop_wares();
+    room_load_dynamic_fx_identity();
     room_spawn_progression_fixture();
     room_combat_sealed = room_should_combat_seal();
     room_load_environment_palettes();
@@ -1387,6 +1399,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             DISPLAY_OFF;
             procgen_generate_current_room();
             room_refresh_shop_wares();
+            room_load_dynamic_fx_identity();
             room_spawn_progression_fixture();
             room_combat_sealed = room_should_combat_seal();
             room_load_environment_palettes();
@@ -1536,6 +1549,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // the safe blanked rebuild path.
                 procgen_generate_current_room();
                 room_refresh_shop_wares();
+                room_load_dynamic_fx_identity();
                 room_spawn_progression_fixture();
                 room_combat_sealed = room_should_combat_seal();
                 if (!run_state.world_mode && dir == DIR_E

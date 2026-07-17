@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.83: Dread Bell](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.84: Merchant Callouts](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.84 fixes a Dread Bell transition bug: entering a merchant room after
+combat could leave the shared OBJ tile showing the bell instead of the nearby
+merchant's speech bubble. Room-role tile loading is now centralized, and a
+merchant explicitly restores its own callout tile when spawned. A live
+cartridge regression crosses that exact portal boundary, waits for the real
+store to populate, and verifies its VRAM art before testing the rest of the
+enemy roster.
 
 v0.17.83 adds the **Dread Bell**, a late-game iron caster that tolls an
 eight-way, fast projectile peal on a deliberately slow cadence. It enters
@@ -415,8 +423,8 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.17.83 release has 4,225 bytes in bank 1, 1,751 in bank 2,
-3,318 in bank 3, 7,369 in bank 4, 12,813 in bank 5, and 15,112 in bank 6.
+ROM. The v0.17.84 release has 4,209 bytes in bank 1, 1,742 in bank 2,
+3,318 in bank 3, 7,369 in bank 4, 12,803 in bank 5, and 15,112 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

@@ -97,6 +97,9 @@ u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
 u8 pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_MERCHANT, x, y);
     if (idx != 0xFF) {
+        // A merchant owns the shared callout tile. This also repairs the OBJ
+        // slot after an in-place transition from a Dread Bell combat room.
+        tiles_load_merchant_callout_sprite();
         entities[idx].sprite_tile = SPR_MERCHANT;
         entities[idx].palette = 0x04;
         entities[idx].hitbox = (u8)0x88;

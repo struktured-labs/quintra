@@ -118,6 +118,10 @@ void tiles_load_dread_bell_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_DREAD_BELL, 1, sprite_enemy_dread_bell);
 }
 
+void tiles_load_merchant_callout_sprite(void) BANKED {
+    set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
+}
+
 void tiles_load_miniboss(u8 stage) BANKED {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
     // stage's mini-boss looks distinct. Variant table must match the palette
@@ -147,7 +151,7 @@ void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_ENEMY_WISP, 1, sprite_fx_wisp);
     set_sprite_data(SPR_ITEM_ORB,   1, sprite_fx_item_orb);
     set_sprite_data(SPR_SHOP_TAG,   1, sprite_fx_shop_tag);
-    set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
+    tiles_load_merchant_callout_sprite();
     set_sprite_data(SPR_SURGE_ORB,  1, sprite_fx_surge_orb);
     set_sprite_data(SPR_SHIELD_AURA, 1, sprite_fx_shield_aura);
     // Bold diagonal sweep: this is deliberately separate from the bullet

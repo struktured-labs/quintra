@@ -11,6 +11,7 @@ NOI = ROM.with_suffix(".noi").read_text()
 ENEMY_HEADER = (ROOT / "src/generated/enemies.h").read_text()
 ENEMY_SOURCE = (ROOT / "src/generated/enemies.c").read_text()
 SPAWN_SOURCE = (ROOT / "src/game/enemy_ai.c").read_text()
+SPRITE_SOURCE = (ROOT / "src/render/sprites_gen.c").read_text()
 
 IDENTITIES = {
     0: (20, 3), 1: (24, 6), 2: (21, 5), 3: (22, 0), 4: (56, 7),
@@ -52,13 +53,20 @@ def addr(name):
     return int(match.group(1), 16)
 
 
+def generated_sprite(name):
+    match = re.search(rf"const u8 {name}\[16\] = \{{([^}}]+)\}};", SPRITE_SOURCE)
+    if not match:
+        raise RuntimeError(f"missing generated sprite {name}")
+    return bytes(int(token.strip(), 0) for token in match.group(1).split(",") if token.strip())
+
+
 def main():
     assert "e->sprite_tile = def->sprite_set;" in SPAWN_SOURCE
     assert "e->palette     = def->palette;" in SPAWN_SOURCE
     assert "sprite_for_enemy" not in SPAWN_SOURCE
     assert "palette_for_enemy" not in SPAWN_SOURCE
     assert "tiles_load_dread_bell_sprite" in (ROOT / "src/game/room.c").read_text()
-    assert "!room_has_shop_wares" in (ROOT / "src/game/room.c").read_text()
+    assert "room_state_has_shop_wares" in (ROOT / "src/game/room.c").read_text()
     # Generated content is the sole runtime identity source. Pin every roster
     # entry's hardware OBJ slot/palette so no hand-written C switch can drift.
     for enemy_id, (slot, palette) in IDENTITIES.items():
@@ -94,6 +102,45 @@ def main():
         assert tile != legacy, f"{name} still aliases its legacy silhouette"
         tiles[enemy_id] = tile
     assert len(set(tiles.values())) == len(SPECIALISTS), "specialist OBJ silhouettes are not unique"
+
+    # Slot 125 is deliberately multiplexed.  In combat it holds Dread Bell
+    # art, but the real room transition into a merchant room must restore the
+    # proximity-callout sprite. This catches a loader-order regression that a
+    # static source guard cannot see.
+    dread_tile = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
+    assert dread_tile == tiles[20], "combat room did not install Dread Bell art"
+    pb.memory[addr("_run_state") + 1] = 3
+    pb.memory[addr("_run_state") + 17] = 1
+    pb.memory[addr("_run_state") + 18] = 6
+    put16(pb, addr("_player") + 9, 72)
+    put16(pb, addr("_player") + 11, 60)
+    pb.memory[addr("_room_tilemap") + 9 * 20 + 10] = 34
+    for _ in range(30):
+        pb.tick()
+        if pb.memory[addr("_run_state") + 1] == 4:
+            break
+    assert pb.memory[addr("_run_state") + 1] == 4, "could not enter merchant room"
+    entities = addr("_entities")
+    merchant_count = 0
+    for _ in range(60):
+        pb.tick()
+        merchant_count = sum(
+            pb.memory[entities + i * 28] == 3
+            and pb.memory[entities + i * 28 + 1] & 1
+            and pb.memory[entities + i * 28 + 17] == 8
+            for i in range(32)
+        )
+        if merchant_count == 1:
+            break
+    assert merchant_count == 1, f"room 4 did not generate its merchant: {merchant_count}"
+    callout = generated_sprite("sprite_fx_merchant_callout")
+    actual_callout = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
+    assert actual_callout == callout, (
+        "merchant room retained Dread Bell art in callout slot: "
+        f"got={actual_callout.hex()} expected={callout.hex()} "
+        f"room={pb.memory[addr('_run_state') + 1]} "
+        f"world={pb.memory[addr('_run_state') + 17]}"
+    )
 
     # Put a live leech across a long pillar wall from the player. Its edge
     # slide must route around cover through the real enemy update loop;

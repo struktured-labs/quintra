@@ -123,6 +123,7 @@ void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles 
 void tiles_load_ascended_sprites(void) BANKED;    // bank-3 transform atlas -> fixed OBJ slots
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
+void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
