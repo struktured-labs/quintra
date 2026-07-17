@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.59: First Beat](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.60: Melee Space](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.60 makes a colossus body collision one half-heart while leaving its
+projectile damage, HP, patterns, and cadence unchanged. This gives melee
+champions room to make a lunge without turning dense boss arenas into
+contact-damage races.
 
 v0.17.59 gives every stage colossus a short, audible opening telegraph before
 its first volley. HP, damage, bullet patterns, and later cadence are unchanged:

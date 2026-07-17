@@ -293,9 +293,17 @@ u8 combat_resolve(void) BANKED {
                 && entities[i].ai_data[6]) continue;
             if (aabb_overlap_player(&entities[i])) {
                 u8 was_projectile = (entities[i].type == ENT_PROJECTILE);
-                // DEF soaks incoming damage (min 1 half-heart gets through)
+                // DEF soaks incoming damage (min 1 half-heart gets through).
+                // A giant colossus is already a moving wall inside a dense
+                // bullet pattern. Its body is a positioning tax, not a
+                // second full-strength projectile: keep contact at one
+                // half-heart so close-range champions can trade a lunge for
+                // space while the actual bullet-hell damage still escalates.
                 u8 taken = (entities[i].damage > player.def)
                     ? (u8)(entities[i].damage - player.def) : 1;
+                if (entities[i].type == ENT_ENEMY
+                    && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
+                    && entities[i].ai_data[3]) taken = 1;
                 if (player.hp > taken) {
                     player.hp = (u8)(player.hp - taken);
                     player.iframes = 30;
