@@ -197,6 +197,15 @@ def main():
     assert pb.memory[0x9C00 + 12] == 45, "nearby Surge Tonic lacks lightning offer icon"
     assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 11, 9)), \
         "nearby Surge Tonic did not show its $20 price"
+    # The far shelf must be a real reachable purchase, not a decorative
+    # fourth icon against the border. Buy it through the ordinary walk-into
+    # interaction; the generic Surge contract covers its timed combat effect.
+    pb.memory[pl + 16], pb.memory[pl + 17] = 20, 0
+    for off, value in ((9, sx), (10, 0), (11, sy), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    assert pb.memory[surge] == 0, "far market Surge Tonic could not be purchased"
+    assert len(entities(13)) == 3, "Surge sale marker remained after purchase"
 
     # Touch one unaffordable offer: it survives and latches one reject buzz.
     for off, value in ((9, wx), (10, 0), (11, wy), (12, 0)):
@@ -216,7 +225,7 @@ def main():
     tick(6)
     assert pb.memory[ware] == 0, "purchased market ware remained active"
     tick(2)
-    assert len(entities(13)) == 3, "sale marker remained after its ware sold"
+    assert len(entities(13)) == 2, "sale marker remained after its ware sold"
 
     # West back to arrival, then west again: forge/apothecary quarter.
     leave("west")
