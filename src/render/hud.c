@@ -1,3 +1,5 @@
+#pragma bank 6
+
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
@@ -34,7 +36,7 @@ static u8 offer_price = 0xFF;
 //   col:  0.......7 8 9 10 11 12.....15 16 17 18 19
 //        [hearts ×8][MP] [depth] [boss×4] [$] [coins]
 
-void hud_init(void) {
+void hud_init(void) BANKED {
     tiles_load_hud();
     // Place HUD on BG palette slot 7 (won't collide with room pal 0);
     // slot 6 is the blue MP variant for the MP digit columns.
@@ -65,10 +67,10 @@ void hud_init(void) {
     hud_redraw_all();
 }
 
-void hud_show(void) { SHOW_WIN; }
-void hud_hide(void) { HIDE_WIN; }
+void hud_show(void) BANKED { SHOW_WIN; }
+void hud_hide(void) BANKED { HIDE_WIN; }
 
-void hud_redraw_hp(void) {
+void hud_redraw_hp(void) BANKED {
     u8 row[HUD_MAX_HEARTS];
     u8 hearts_total = player.hp_max;     // half-hearts
     u8 hearts_filled = player.hp;
@@ -91,7 +93,7 @@ void hud_redraw_hp(void) {
     set_win_tiles(0, 0, HUD_MAX_HEARTS, 1, row);
 }
 
-void hud_redraw_coins(void) {
+void hud_redraw_coins(void) BANKED {
     u8 row[4];
     u16 c = player.coins;
     if (c > 999) c = 999;
@@ -103,7 +105,7 @@ void hud_redraw_coins(void) {
     set_win_tiles(16, 0, 4, 1, row);
 }
 
-void hud_redraw_mp(void) {
+void hud_redraw_mp(void) BANKED {
     // MP as blue digits (cols 8-9), right-aligned; hidden for MP-less state
     u8 row[2];
     u8 m = player.mp;
@@ -114,7 +116,7 @@ void hud_redraw_mp(void) {
     set_win_tiles(8, 0, 2, 1, row);
 }
 
-void hud_redraw_depth(void) {
+void hud_redraw_depth(void) BANKED {
     // Room depth as 2 digits (cols 10-11). Stage identity remains available
     // from biome art and the pack screen; the old redundant digit made max-HP
     // relics impossible to display for Sauran.
@@ -127,7 +129,7 @@ void hud_redraw_depth(void) {
     set_win_tiles(10, 0, 2, 1, row);
 }
 
-void hud_show_offer(u8 price) {
+void hud_show_offer(u8 price) BANKED {
     u8 row[4];
     if (price == offer_price) return;
     offer_price = price;
@@ -139,7 +141,7 @@ void hud_show_offer(u8 price) {
     set_win_tiles(12, 0, 4, 1, row);
 }
 
-void hud_clear_offer(void) {
+void hud_clear_offer(void) BANKED {
     static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
     if (offer_price == 0xFF) return;
     offer_price = 0xFF;
@@ -147,7 +149,7 @@ void hud_clear_offer(void) {
     set_win_tiles(12, 0, 4, 1, row);
 }
 
-void hud_redraw_boss(u8 cur, u8 max) {
+void hud_redraw_boss(u8 cur, u8 max) BANKED {
     // 4 segments, each worth max/4 HP (rounded up). Cached so per-frame
     // polling only writes VRAM when the segment count actually changes.
     static u8 last_segs = 0xFF;
@@ -174,7 +176,7 @@ void hud_redraw_boss(u8 cur, u8 max) {
     set_win_tiles(12, 0, 4, 1, row);
 }
 
-void hud_low_hp_pulse(u8 phase) {
+void hud_low_hp_pulse(u8 phase) BANKED {
     // Swap HUD palette color 3 (heart red) between normal and white-hot.
     static u8 last_phase = 0xFF;
     u16 pal[4];
@@ -186,7 +188,7 @@ void hud_low_hp_pulse(u8 phase) {
     palette_bg_load(7, pal);
 }
 
-void hud_redraw_all(void) {
+void hud_redraw_all(void) BANKED {
     hud_redraw_hp();
     hud_redraw_mp();
     hud_redraw_coins();

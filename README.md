@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.62: True Compass](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.63: Room to Breathe](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.63 moves the live HUD code out of the always-mapped bank without changing
+its gameplay behavior. This restores 1,547 bytes of bank-0 headroom (up from
+569), keeping the 128 KiB cartridge comfortable for future stages, monsters,
+and polish rather than making every feature a banking gamble.
 
 v0.17.62 makes the tile-built Spirit Compass place the Rift Sigil icon inside
 the exact room that contains it: cracked stone means it is still required and
