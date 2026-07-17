@@ -784,6 +784,12 @@ void procgen_generate_current_room(void) BANKED {
                     entities[idx].hitbox      = (u8)0xFF;
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
+                    // A stage transition must never resolve into an instant
+                    // ring on the hero's arrival tile. The boss still closes
+                    // and keeps its full HP/damage/pattern, but this 0.8s
+                    // opening telegraph gives the player one readable beat
+                    // to choose a lane before the first bullet wall.
+                    entities[idx].ai_data[1]  = 48;
                     // HP is one byte. The final 216 bonus plus the 50 HP
                     // base used to wrap to 10, making the finale trivial.
                     if (stage_boss_hp[pow] > (u8)(255 - entities[idx].hp))
