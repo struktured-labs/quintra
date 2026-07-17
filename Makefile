@@ -176,6 +176,12 @@ balance: all check-balance-bot
 	QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
 
+# Controller-only policy search: compares giant-fight movement policies using
+# the real ROM and ordinary inputs. Defaults to Sauran + Corvin; override the
+# QUINTRA_POLICY_* environment variables to widen the experiment.
+policy-sweep: all check-balance-bot
+	bash scripts/sweep_giant_policy.sh $(BINDIR)/$(PROJECT).gbc
+
 # Long-form pre-show soak: three entropy samples per champion and enough
 # emulated time for a cautious full clear. Every champion must clear twice;
 # missing reports, skipped economies, and live-enemy/route stalls fail the target.

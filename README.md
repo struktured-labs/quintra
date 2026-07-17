@@ -505,6 +505,7 @@ make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
+make policy-sweep # compare Sauran/Corvin giant-fight input policies
 make final-sigil-proof # seed-14 final-Sigil controller completion proof
 make picsean-endurance # four completed multi-seed Picsean controller runs
 make victory-proof # full nine-boss Picsean run + clean-emulator input replay
@@ -619,6 +620,16 @@ pollute an interrupted/resumed sample. `giant_overlap_damage` separately
 records HP lost on frames where the actual giant hurtbox overlaps the hero;
 this distinguishes boss body-pinning from projectile pressure without writing
 to cartridge state.
+
+`make policy-sweep` is the reproducible controller-search loop: it runs the
+baseline, orbit, orbit-fire, and pulse-fire giant policies through ordinary
+inputs and emits one CSV per class/policy under `tmp/policy-sweep/`, plus a
+compact table of boss clears, wins, deepest room, minimum HP, and stalls. It
+defaults to Sauran and Corvin; set `QUINTRA_POLICY_CLASSES`,
+`QUINTRA_POLICY_POLICIES`, `QUINTRA_POLICY_REPS`, or
+`QUINTRA_POLICY_FRAMES` to widen an experiment. It is deliberately a
+read-only-ROM evaluator, so an apparent improvement must survive a fresh
+input-only replay before becoming the default policy.
 
 Giant spacing defaults to a measured classwise policy: Sauran, Corvin, and
 Picsean use `orbit_fire` for large bosses; Wolfkin uses conservative pulses,
