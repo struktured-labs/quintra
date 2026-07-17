@@ -42,7 +42,7 @@ pub const TAIL_SPIKE: Item = Item {
     id:          ITEM_TAIL_SPIKE,
     name:        "Tail Spike",
     description: "Short heavy strike. Bonus damage on hit.",
-    kind: ItemKind::Weapon { fire_rate: 28, damage: 3, projectile: ProjectileKind::Spike, mp_cost: 0 },
+    kind: ItemKind::Weapon { fire_rate: 28, damage: 4, projectile: ProjectileKind::Spike, mp_cost: 0 },
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Common,
     effects: &[],
 };
