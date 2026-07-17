@@ -862,19 +862,27 @@ void procgen_generate_current_room(void) BANKED {
                 room_tilemap[10][14] = (u8)(HUD_DIGIT_0 + 0);
             }
         } else {
-            // Enemy count scales with depth. The authored room layouts and
-            // projectile patterns already supply the opening pressure; do not
-            // stack a mandatory extra body here or the melee tank becomes a
-            // controller-bot death spiral before the first boss.
+            // Enemy count scales with depth. One lone crawler made too many
+            // early rooms read as a target practice hall; start at two bodies
+            // so positioning and the champion's B kit matter immediately.
+            // Keep the existing shallow ramp rather than raising every HP
+            // value into a sponge fight.
             u8 depth_bonus = (u8)(run_state.room_counter / 6);
-            u8 enemy_count = (u8)(1 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));
+            u8 enemy_count = (u8)(2 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
-            u8 i;
+            u8 spawned = 0;
+            u8 attempts = 0;
             mark_spawn_reachable();
-            for (i = 0; i < enemy_count; ++i) {
+            // `enemy_count` used to mean attempts, not bodies: a pillar or
+            // entrance-safety rejection could quietly turn the intended
+            // two-enemy floor back into one crawler. Retry a bounded four
+            // sites per desired body; this remains deterministic and never
+            // risks an unbounded procgen loop in a dense room archetype.
+            while (spawned < enemy_count && attempts < (u8)(enemy_count << 2)) {
                 u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
                 u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
+                attempts++;
                 if (!(room_tilemap[ty][tx] & 0x80)) continue;
                 {
                     u8 dx = (tx > ptx) ? (u8)(tx - ptx) : (u8)(ptx - tx);
@@ -906,6 +914,7 @@ void procgen_generate_current_room(void) BANKED {
                             entities[idx].hp      = (u8)(entities[idx].hp << 1);
                             entities[idx].damage  = (u8)(entities[idx].damage + 1);
                         }
+                        if (idx != 0xFF) spawned++;
                     }
                 }
             }

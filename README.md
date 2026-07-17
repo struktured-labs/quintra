@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.79: Riftbreak Bosses](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.80: Rift Pressure](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.80 makes ordinary dungeon rooms carry **Rift Pressure** from the start.
+Combat rooms now place at least two real monsters, with bounded retries around
+pillars and entrance lanes so the floor cannot silently collapse to one
+crawler. The depth ramp and enemy HP stay intact: this is more positioning and
+target-priority pressure, not a sponge-health increase. Procgen parity, all
+stage-route contracts, and a four-seed early-room density contract pass.
 
 v0.17.79 gives every large boss a readable **Riftbreak** at half health: a
 bright flash, short room shake, and slow four-way warning burst before its
