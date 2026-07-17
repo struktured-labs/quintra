@@ -664,10 +664,30 @@ while frames < LIMIT do
         elseif no_damage_frames > 240 then
             flank_timer, no_damage_frames = 240, 0
             keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
-        -- Wolfkin's Claw is true melee; Sauran's Tail Spike and Vespine's
-        -- Stinger are short lunges. All three must close and align instead of
+        -- Vespine's stinger is a fast 48px lunge, not Wolfkin's adjacent
+        -- claw. Treating both as true melee walked the quick, fragile class
+        -- into contact damage and understated the actual kit. Hold a clear
+        -- firing lane, dart back only when crowded, and fire the other beats.
+        elseif CLASS == 4 then
+            local adx, ady = math.abs(dx), math.abs(dy)
+            local reach = (adx > ady) and adx or ady
+            local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
+            if reach <= 52 and offaxis > 5 then
+                keys = target_step(px, py, target.x, target.y, aim)
+            elseif reach <= 28 then
+                local retreat = (aim == KEY_UP and KEY_DOWN)
+                    or (aim == KEY_DOWN and KEY_UP)
+                    or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
+                keys = (frames % 3 == 0) and retreat or (KEY_A + aim)
+            elseif reach <= 52 then
+                keys = KEY_A + aim
+            else
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim)
+            end
+        -- Wolfkin's Claw is true melee and Sauran's Tail Spike rewards a
+        -- committed close lunge, so both must close and align instead of
         -- orbiting outside their actual weapon geometry.
-        elseif CLASS == 0 or CLASS == 1 or CLASS == 4 then
+        elseif CLASS == 0 or CLASS == 1 then
             -- Tile BFS gets us around cover; at striking distance, finish the
             -- last few pixels of perpendicular alignment before attacking.
             -- Small enemy hurtboxes make a same-tile diagonal slash miss even
