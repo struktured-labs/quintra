@@ -306,13 +306,14 @@ frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 It enforces a
 128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-The current development cartridge occupies 128 KiB with 632 bytes of bank-0 headroom. Gameplay files
+the current development cartridge occupies 128 KiB with 1,515 bytes of bank-0 headroom. Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM.
+ROM. Current switchable headroom is 4,431 bytes in bank 1, 1,192 in bank 2,
+2,893 in bank 3, 8,617 in bank 4, 13,156 in bank 5, and 15,112 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -343,7 +344,10 @@ The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
 route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
-used in balance runs. Shop reachability and purchases are separate telemetry:
+used in balance runs. Constrained hosts can split a matrix into seed batches
+with `QUINTRA_BALANCE_APPEND=1` and `QUINTRA_BALANCE_SKIP_REPORT=1`, then run
+one final report against the accumulated CSV; every class/seed row is still
+required before that report succeeds. Shop reachability and purchases are separate telemetry:
 a stocked merchant room counts as a visit even if the agent cannot afford—or
 does not need—its wares. Telemetry retains the worst combat and route dwell from
 the entire run—not merely its final room—and identifies the responsible room
