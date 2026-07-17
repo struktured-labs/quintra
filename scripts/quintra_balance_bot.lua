@@ -693,6 +693,9 @@ local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer = 0, 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
+-- Once a feet box lands on spikes, keep one escape lane until it has truly
+-- crossed a safe tile. Re-choosing every pixel can ping-pong on a wall seam.
+local spike_escape_dir = 0
 local last_active_charge = 0
 local last_input_keys, b_uses = 0, 0
 local purchases, last_coins = 0, 0
@@ -1311,20 +1314,53 @@ while frames < LIMIT do
     -- position instead of suppressing the escape input.
     if body_on_spike(px, py) then
         local action = keys % 16
-        for d = 1, 4 do
-            local nx, ny = px + CARD_DX[d] * 8, py + CARD_DY[d] * 8
-            if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
-                and not body_on_spike(nx, ny)
-                -- A visually safe tile can still be behind a crate or wall.
-                -- On a damage floor, favor an actually traversable escape so
-                -- the controller cannot repeatedly select a blocked edge and
-                -- spend every iframe interval on the same spike.
-                and can_step(px, py, CARD_KEYS[d]) then
-                keys = action + CARD_KEYS[d]
-                break
+        if DEBUG then
+            local candidates = {}
+            for d = 1, 4 do
+                local nx, ny = px + CARD_DX[d] * 8, py + CARD_DY[d] * 8
+                candidates[#candidates + 1] = string.format("%02X:%d/%d",
+                    CARD_KEYS[d], can_step(px, py, CARD_KEYS[d]) and 1 or 0,
+                    body_on_spike(nx, ny) and 1 or 0)
+            end
+            debug_log(string.format("BOTSPIKE f=%d room=%d pos=%d,%d cand=%s",
+                frames, room, px, py, table.concat(candidates, ",")))
+        end
+        local function clears_spike_lane(key)
+            local sx, sy = px, py
+            local dx = key == KEY_RIGHT and 1 or key == KEY_LEFT and -1 or 0
+            local dy = key == KEY_DOWN and 1 or key == KEY_UP and -1 or 0
+            local step
+            for step = 1, 8 do
+                if not can_step(sx, sy, key) then return false end
+                sx, sy = sx + dx, sy + dy
+            end
+            return not body_on_spike(sx, sy)
+        end
+        if spike_escape_dir ~= 0 and can_step(px, py, spike_escape_dir) then
+            keys = action + spike_escape_dir
+        else
+            spike_escape_dir = 0
+            for d = 1, 4 do
+                if clears_spike_lane(CARD_KEYS[d]) then
+                    spike_escape_dir = CARD_KEYS[d]
+                    keys = action + spike_escape_dir
+                    break
+                end
+            end
+            if spike_escape_dir == 0 then
+                -- No complete eight-pixel lane is open. Keep a legal nudge
+                -- rather than freezing on the damage tile; a later frame may
+                -- open a lane as the nearest hostile moves.
+                for d = 1, 4 do
+                    if can_step(px, py, CARD_KEYS[d]) then
+                        keys = action + CARD_KEYS[d]
+                        break
+                    end
+                end
             end
         end
     else
+        spike_escape_dir = 0
         if math.floor(keys / KEY_RIGHT) % 2 == 1
             and body_on_spike(px + 1, py) then keys = keys - KEY_RIGHT end
         if math.floor(keys / KEY_LEFT) % 2 == 1
