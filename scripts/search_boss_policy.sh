@@ -19,8 +19,12 @@ for mode in $MODES; do
   # Give every candidate an unguessable output path so a late write from an
   # abandoned experiment can never contaminate this comparison.
   trial_csv="$(mktemp "$OUT_DIR/.boss-policy-${mode}.XXXXXX.csv")"
+  # RUNS is a sample count for this search, not one literal run ID. The
+  # balance runner reserves QUINTRA_BALANCE_RUNS for an explicit ID list;
+  # passing `3` there silently produced only run/seed 3.
   QUINTRA_BOT_GIANT_POLICY="$mode" \
-    QUINTRA_BALANCE_RUNS="$RUNS" QUINTRA_BALANCE_CLASSES="$CLASSES" \
+    QUINTRA_BALANCE_REPS="$RUNS" QUINTRA_BALANCE_RUNS="" \
+    QUINTRA_BALANCE_CLASSES="$CLASSES" \
     QUINTRA_BALANCE_FRAMES="$FRAMES" QUINTRA_BALANCE_OUT="$trial_csv" \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
   awk -F, -v mode="$mode" '
