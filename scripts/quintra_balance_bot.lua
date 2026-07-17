@@ -347,6 +347,27 @@ local function body_walkable(cx, cy)
         and navigation_walkable(emu:read8(TM + cy * 20 + cx))
 end
 
+-- Headless mGBA can crash while taking a screenshot. For a stationary-mine
+-- controller repro, a compact tile snapshot is more useful anyway: it records
+-- the actual collision vocabulary the next policy must respect, without
+-- writing ROM/RAM or requiring a frontend.
+local function debug_spore_tilemap(frame, room, px, py, target)
+    local rows = {}
+    if not DEBUG or TM == 0 then return end
+    for y = 0, 16 do
+        local row = {}
+        for x = 0, 19 do
+            row[#row + 1] = string.format("%02X", emu:read8(TM + y * 20 + x))
+        end
+        rows[#rows + 1] = table.concat(row, "")
+    end
+    debug_log(string.format(
+        "BOTSPOTILES f=%d room=%d p=%d,%d cell=%d,%d spore=%d,%d cell=%d,%d map=%s",
+        frame, room, px, py, math.floor((px + 8) / 8), math.floor((py + 12) / 8),
+        target.x, target.y, math.floor((target.x + 4) / 8),
+        math.floor((target.y + 4) / 8), table.concat(rows, "/")))
+end
+
 local function world_body_walkable(cx, cy)
     if cx < 1 or cx > 19 or cy < 1 or cy > 16 then return false end
     return walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
@@ -856,6 +877,7 @@ local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
 local world_contact_hits = 0
 local debug_shot_room = -1
+local debug_spore_room = -1
 local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer = 0, 0
 local wall_follow_dir, wall_follow_min = 0, 0
@@ -1003,6 +1025,10 @@ while frames < LIMIT do
         visited_shop_rooms[room], shop_visits = true, shop_visits + 1
     end
     local target = enemy_target(px, py)
+    if target and target.kind == 17 and DEBUG and debug_spore_room ~= room then
+        debug_spore_tilemap(frames, room, px, py, target)
+        debug_spore_room = room
+    end
     -- Overworld encounters are optional traversal pressure. Follow the
     -- authored route while firing instead of treating every screen as a
     -- mandatory clear; dungeon combat remains fully engaged.
