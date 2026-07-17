@@ -612,11 +612,12 @@ controller repair, Picsean reached 2/3 complete nine-boss endings and its
 remaining seed time-capped on a stationary Toxic Mire Spore. The exact
 three-seed Picsean recheck now reaches all three endings (45,777–77,453
 gameplay frames) after the input-only pilot learned a pixel-stable mine-safe
-firing lane and clears the room's Sentinel before its Spore escort. Wolfkin,
-Sauran, Corvin, and Vespine are still 0/3 in the latest all-class matrix,
-although Wolfkin now clears the first boss in all three seeds; there are no
-route stalls. A fresh matrix must still reach the full per-class victory floor
-to pass the delivery gate.
+firing lane and clears the room's Sentinel before its Spore escort. Sauran
+now reaches one complete ending in three samples after its 48px Tail Spike
+boss orbit learned a two-beat pressure lane. Wolfkin, Corvin, and Vespine are
+still 0/3 in the latest all-class matrix, although Wolfkin now clears the
+first boss in all three seeds; there are no route stalls. A fresh matrix must
+still reach the full per-class victory floor to pass the delivery gate.
 It is therefore not a show build. The v0.17.46 14/15 result remains a
 historical benchmark only. The gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced

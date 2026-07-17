@@ -1367,6 +1367,7 @@ while frames < LIMIT do
             end
             local giant_retreat = GIANT_RETREAT_RANGE
             local giant_fire_range = 48
+            local giant_fire_cadence = GIANT_FIRE_CADENCE
             -- Existing orbit policies deliberately hold a 36px body buffer,
             -- even when their ordinary retreat floor is 28px. Preserve that
             -- measured Sauran/Corvin/Picsean behavior; Spear owns a longer
@@ -1374,6 +1375,13 @@ while frames < LIMIT do
             local giant_orbit_floor = 36
             if held_style == "spear" then
                 giant_retreat, giant_fire_range, giant_orbit_floor = 52, 80, 52
+            elseif held_style == "lunge" and CLASS == 1 then
+                giant_retreat, giant_fire_range, giant_orbit_floor = 48, 52, 48
+                -- This is the measured Tail Spike pressure lane: it keeps
+                -- Sauran beyond a 32px colossus body yet takes every second
+                -- aimed beat. The generic three-beat cadence left its deep
+                -- deterministic seed a full boss behind before the limit.
+                giant_fire_cadence = 2
             elseif held_style == "flail" or (held_style == "lunge" and CLASS ~= 4) then
                 giant_retreat = 28
             end
@@ -1390,7 +1398,7 @@ while frames < LIMIT do
                     keys = (frames % 5 == 0) and (KEY_A + aim) or retreat
                 else
                     keys = (giant_mode == "orbit_fire"
-                        and frames % GIANT_FIRE_CADENCE == 0)
+                        and frames % giant_fire_cadence == 0)
                         and (KEY_A + aim) or orbit
                 end
             elseif reach < giant_retreat then
