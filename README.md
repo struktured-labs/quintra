@@ -504,6 +504,10 @@ Picsean also uses the actual Tidal Wave Undertow guard when a nearby Riftwild
 body cannot be sidestepped in the authored exit lane; a paired live-ROM run
 must cross that world passage, clear the second boss, and reach the next
 dungeon without controller-only state edits.
+The same long-form run must leave the three-screen town through its real north
+gate and reach the next dungeon—its controller route centers on the civic lane
+then presses through the door lip, rather than targeting a blocked point just
+inside the gate.
 Vespine's 48px Stinger receives the same six-tile Flutterbat pursuit lane as
 the ranged champions; a three-seed live-ROM regression requires it to clear
 that moving-target room and reach the first boss threshold without a stall.

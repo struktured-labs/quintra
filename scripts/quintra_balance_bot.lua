@@ -493,25 +493,19 @@ local function door_step(px, py)
     -- Shortest authored route to dungeon gate screen 6.
     local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
     if in_town then
-        -- These civic lanes are intentionally straight and wide. Do not run
-        -- a 340-node dungeon BFS every frame here: the arrival fountain has
-        -- a clear north processional to the next dungeon, while the market
-        -- and forge each have a clear west return lane.
-        local gx = town_wanted == 0 and 72 or 8
-        local gy = town_wanted == 0 and 8 or 60
-        local dx, dy = gx - px, gy - py
-        if math.abs(dx) <= 2 and math.abs(dy) <= 2 then
-            return town_wanted == 0 and KEY_UP or KEY_LEFT
+        -- These civic lanes are intentionally straight and wide. The north
+        -- gate triggers at the boundary, not at a point just inside it: the
+        -- old y=8 target made a hero at y=5 walk back down forever against
+        -- the gate lip. Center first, then keep pressing through the actual
+        -- exit; the market and forge similarly use their west lane.
+        if town_wanted == 0 then
+            if px < 70 then return KEY_RIGHT end
+            if px > 74 then return KEY_LEFT end
+            return KEY_UP
         end
-        local primary = math.abs(dx) >= math.abs(dy)
-            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
-            or (dy > 0 and KEY_DOWN or KEY_UP)
-        local secondary = math.abs(dx) < math.abs(dy)
-            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
-            or (dy > 0 and KEY_DOWN or KEY_UP)
-        if can_step(px, py, primary) then return primary end
-        if can_step(px, py, secondary) then return secondary end
-        return primary
+        if py < 56 then return KEY_DOWN end
+        if py > 64 then return KEY_UP end
+        return KEY_LEFT
     end
     -- The dungeon gate (6) and the nonlinear cave vault (15) are both
     -- central interactable nodes, not boundary exits.  Treating the vault as
