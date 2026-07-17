@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.97: Bellwarden Reward Fix](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.98: Five Surge Styles](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,17 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.98 turns the cyan **Surge Spark/Tonic** into a real class-shaped
+temporary build choice. Its fifteen-second shared damage and cadence lift now
+also makes Wolfkin claws cleave, lengthens Sauran's tail strike, opens a second
+Corvin feather lane, broadens and deepens Picsean bubbles, and lets Vespine's
+sting pierce. The shop/drop remains temporary and its price/stat rules do not
+change. A live-ROM contract boots all five champions, collects a real Spark,
+and proves every style plus expiry. The controller agent now uses exact
+feet-box routes for every required Rift Sigil and aligns against wall-clinging
+Gloom Leeches rather than stalling on them; the five-class paired balance gate
+again reports zero combat and route stalls.
 
 v0.17.97 fixes a late-run progression bug: the guaranteed **Bellwarden** was
 visually and mechanically a miniboss, but because it reuses the Dread Bell

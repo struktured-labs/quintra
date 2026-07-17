@@ -42,7 +42,8 @@ end
 -- established 28px retreat. An explicit environment value always wins for
 -- offline policy search.
 local GIANT_RETREAT_RANGE = tonumber(os.getenv("QUINTRA_BOT_GIANT_RETREAT_RANGE")
-    or ((GIANT_POLICY == "classwise" and CLASS == 0) and "32" or "28")) or 28
+    or ((GIANT_POLICY == "classwise" and (CLASS == 0 or CLASS == 4))
+        and (CLASS == 4 and "36" or "32") or "28")) or 28
 if GIANT_RETREAT_RANGE < 16 then GIANT_RETREAT_RANGE = 16 end
 if GIANT_RETREAT_RANGE > 56 then GIANT_RETREAT_RANGE = 56 end
 -- Keep the established controller behavior as the default, but expose an
@@ -1028,6 +1029,26 @@ while frames < LIMIT do
             -- flank route: that route sees the shared tile as already solved
             -- and repeatedly fires past the bat forever.
             keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
+        elseif target.kind == 13 and math.abs(dx) <= 24 and math.abs(dy) <= 24 then
+            -- Gloom Leeches can cling to the top or side wall while their
+            -- 8px body is a couple of pixels off the champion's cardinal
+            -- firing line.  At that range a generic Stinger retreat can
+            -- repeatedly skim the edge forever. Align tightly first, then
+            -- fire; an actually attached Leech still triggers the dash-shake
+            -- override later in this controller frame.
+            if CLASS == 4 and active_charge == 0 and mp >= 2 then
+                -- Vespine's real B fan is the intended close-range answer:
+                -- it clears a wall-clinging Leech before a careful A-only
+                -- alignment turns the encounter into attrition before the
+                -- first colossus.
+                keys = KEY_B + aim
+            elseif math.abs(dx) >= math.abs(dy) and math.abs(dy) > 1 then
+                keys = dy > 0 and KEY_DOWN or KEY_UP
+            elseif math.abs(dy) > math.abs(dx) and math.abs(dx) > 1 then
+                keys = dx > 0 and KEY_RIGHT or KEY_LEFT
+            else
+                keys = KEY_A + aim
+            end
         elseif target.kind == 10 then
             -- Sentries do not chase. The generic ranged orbit therefore
             -- keeps a champion circling the same blocked corner forever
@@ -1356,19 +1377,18 @@ while frames < LIMIT do
     local world_body_close = overworld_threat
         and math.max(math.abs(overworld_threat.x - px),
             math.abs(overworld_threat.y - py)) <= 32
-    local world_on_grass = tile_at_px(px + 8, py + 12) == 35
     -- Sauran's class answer is its projectile-breaking B shield. At full
     -- simulation speed, repeatedly dashing around optional Riftwild shots
     -- could pull the slower vessel off its authored route for an entire run.
     -- Use the actual shield edge instead; its cooldown prevents spam.
-    -- Tidal Wave is valuable on the trail, but a stationary cast after three
-    -- real hits on the same grass screen let an optional body push the pilot
-    -- into the border indefinitely. Preserve the authored exit input only
-    -- for that observed emergency; this is controller policy, never a ROM
-    -- immunity or entity mutation.
+    -- Tidal Wave is valuable on the trail, but a stationary cast after two
+    -- real hits on one screen lets an optional body pin the pilot regardless
+    -- of whether the local path tile happens to be grass or stone. Preserve
+    -- the authored exit input for that observed emergency; this is controller
+    -- policy, never a ROM immunity or entity mutation.
     local world_guard_requested = false
     if ABILITY_POLICY == "smart" and CLASS == 3 and world_body_close
-        and not (world_on_grass and world_contact_hits >= 3)
+        and world_contact_hits < 2
         and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         world_guard_requested = true

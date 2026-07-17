@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: Surge Spark is a visible, temporary primary-weapon boon."""
+"""ROM contract: Surge Spark is visible, temporary, and class-shaped."""
 import re
 from pathlib import Path
 
@@ -31,25 +31,37 @@ def first_player_shot(pb, entities):
     raise AssertionError("no player projectile")
 
 
-def main():
-    player, entities, screen = map(addr, ("_player", "_entities", "_loop_current_screen"))
-    surge_ticks = addr("_room_weapon_surge_ticks")
+def player_shots(pb, entities):
+    return [entities + i * 28 for i in range(32)
+            if pb.memory[entities + i * 28] == 1
+            and pb.memory[entities + i * 28 + 1] & 0x10]
+
+
+def clear_entities(pb, entities):
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    pb.tick()
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+
+
+def boot_class(class_id, screen, player):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240): pb.tick()
     pb.button("start")
     for _ in range(30): pb.tick()
+    for _ in range(class_id):
+        pb.button("down")
+        for _ in range(16): pb.tick()
     pb.button("a")
     for _ in range(80): pb.tick()
-    assert pb.memory[screen] == 5
+    assert pb.memory[screen] == 5 and pb.memory[player] == class_id, (
+        f"could not enter live class-{class_id} room")
+    return pb
 
-    # Keep the interaction isolated: the temporary pickup still travels
-    # through the real pickup/combat path, rather than a test-only timer write.
-    for i in range(32 * 28): pb.memory[entities + i] = 0
-    # PyBoy presents WRAM on a VBlank boundary; one previously scheduled
-    # entity update can still finish with registers from the old room. Let
-    # that frame drain, then inject into an empty table on a clean boundary.
-    pb.tick()
-    for i in range(32 * 28): pb.memory[entities + i] = 0
+
+def collect_surge(pb, player, entities, surge_ticks):
+    clear_entities(pb, entities)
     px = pb.memory[player + 9] | (pb.memory[player + 10] << 8)
     py = pb.memory[player + 11] | (pb.memory[player + 12] << 8)
     surge = entities
@@ -68,27 +80,59 @@ def main():
     assert any(pb.memory[0x8000 + 126 * 16 + i] for i in range(16)), \
         "Surge Spark OBJ art was not loaded"
 
-    # Wolfkin's normal primary damage is item 2 + ATK 2. While surged it is
-    # exactly one higher; nothing permanent is written to the ATK stat.
-    base_atk = pb.memory[player + 5]
-    pb.memory[player + 22] = 0
-    pb.button("a")
-    for _ in range(3): pb.tick()
-    shot = first_player_shot(pb, entities)
-    assert pb.memory[shot + 26] == base_atk + 3, "surged A attack lacked +1 damage"
-    assert pb.memory[player + 5] == base_atk, "Surge Spark mutated permanent ATK"
 
-    # The effect expires in active gameplay and normal primary damage returns.
-    for _ in range(1200): pb.tick()
-    assert pb.memory[surge_ticks] == 0, "Surge Spark timer did not expire"
-    for i in range(32 * 28): pb.memory[entities + i] = 0
-    pb.memory[player + 22] = 0
-    pb.button("a")
-    for _ in range(3): pb.tick()
-    shot = first_player_shot(pb, entities)
-    assert pb.memory[shot + 26] == base_atk + 2, "expired Surge Spark still boosted damage"
-    pb.stop(save=False)
-    print("[surge] PASS temporary primary damage + expiry + unique art")
+def main():
+    player, entities, screen = map(addr, ("_player", "_entities", "_loop_current_screen"))
+    surge_ticks = addr("_room_weapon_surge_ticks")
+    # Item-authored base A damages for Wolfkin, Sauran, Corvin, Picsean,
+    # Vespine.  Every one receives the shared +1 damage, then its own
+    # geometry expression below.  Permanent ATK must never change.
+    base_weapon_damage = (2, 4, 1, 2, 2)
+    for class_id in range(5):
+        pb = boot_class(class_id, screen, player)
+        collect_surge(pb, player, entities, surge_ticks)
+        base_atk = pb.memory[player + 5]
+        pb.memory[player + 22] = 0
+        pb.button("a")
+        for _ in range(3): pb.tick()
+        shots = player_shots(pb, entities)
+        assert shots, f"class-{class_id} did not fire a surged A attack"
+        assert all(pb.memory[shot + 26] == base_atk + base_weapon_damage[class_id] + 1
+                   for shot in shots), f"class-{class_id} lacked shared Surge damage"
+        assert pb.memory[player + 5] == base_atk, "Surge Spark mutated permanent ATK"
+        if class_id == 0:
+            assert len(shots) == 1 and pb.memory[shots[0] + 14] == 3, \
+                "Wolfkin Razor Surge did not cleave an extra body"
+        elif class_id == 1:
+            # The live assertion arrives three frames after firing, so the
+            # 12-frame spike + four Surge frames reads as 13 remaining.
+            assert len(shots) == 1 and pb.memory[shots[0] + 16] == 13, \
+                "Sauran Longtail Surge lost its extra reach"
+        elif class_id == 2:
+            assert len(shots) == 2, "Corvin Gale Surge did not open a feather lane"
+            velocities = {(pb.memory[shot + 10], pb.memory[shot + 11]) for shot in shots}
+            assert len(velocities) == 2, "Corvin Surge feathers overlap instead of widening"
+        elif class_id == 3:
+            assert len(shots) == 1 and pb.memory[shots[0] + 14] == 3 \
+                and pb.memory[shots[0] + 25] == 0x99, \
+                "Picsean Tide Surge lost its broad piercing bubble"
+        else:
+            assert len(shots) == 1 and pb.memory[shots[0] + 14] == 2, \
+                "Vespine Thorn Surge did not pierce a second target"
+
+        # One class also proves the boon really expires in live gameplay.
+        if class_id == 0:
+            for _ in range(1200): pb.tick()
+            assert pb.memory[surge_ticks] == 0, "Surge Spark timer did not expire"
+            clear_entities(pb, entities)
+            pb.memory[player + 22] = 0
+            pb.button("a")
+            for _ in range(3): pb.tick()
+            shot = first_player_shot(pb, entities)
+            assert pb.memory[shot + 26] == base_atk + 2, \
+                "expired Surge Spark still boosted damage"
+        pb.stop(save=False)
+    print("[surge] PASS shared temporary damage + five class-shaped A boons + expiry")
 
 
 if __name__ == "__main__":

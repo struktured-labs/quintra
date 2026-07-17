@@ -1198,7 +1198,36 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 cooldown = (cooldown > 10) ? (u8)(cooldown - 4) : 6;
             }
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
-            projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, w->p2);
+            {
+                u8 shot = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, w->p2);
+                if (room_weapon_surge_ticks && shot != 0xFF) {
+                    // Surge is one purchasable/drop-based power window, but
+                    // it should amplify the shape of the vessel's actual A
+                    // weapon rather than make five champions feel identical.
+                    // The shared +damage/+cadence above stays deliberately
+                    // modest; these are short 15-second expressions of the
+                    // kits, not permanent build inflation.
+                    switch (player.class_id) {
+                        case 0: // Wolfkin: Razor Surge cleaves one more body.
+                            entities[shot].hp++;
+                            break;
+                        case 1: // Sauran: Longtail Surge adds 16px of reach.
+                            entities[shot].state_timer = (u8)(entities[shot].state_timer + 4);
+                            break;
+                        case 2: // Corvin: Gale Surge opens a second feather lane.
+                            projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
+                                dir8_dy[(u8)((dir + 1) & 7)], dmg, PROJ_SHURIKEN);
+                            break;
+                        case 3: // Picsean: Tide Surge makes the bubble broader and deeper.
+                            entities[shot].hp++;
+                            entities[shot].hitbox = 0x99;
+                            break;
+                        default: // Vespine: Thorn Surge pierces a second target.
+                            entities[shot].hp++;
+                            break;
+                    }
+                }
+            }
             player.fire_cooldown = cooldown;
         }
         if (player.fire_cooldown) player.fire_cooldown--;
