@@ -880,7 +880,12 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                giant_mode = (CLASS == 3) and "orbit_fire" or "baseline"
+                -- Paired controller trials favor orbit-and-fire against
+                -- giants for Sauran's 48px Tail Spike and Picsean's slow
+                -- bubbles. Wolfkin, Corvin, and Vespine retain baseline
+                -- spacing until a mode beats it on the same seeds.
+                giant_mode = (CLASS == 1 or CLASS == 3)
+                    and "orbit_fire" or "baseline"
             end
             if target.giant ~= 0 and giant_mode ~= "baseline" and reach < 36 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
