@@ -445,6 +445,9 @@ u8 pickup_check_player_collision(void) BANKED {
                             case WARE_RUNE:
                                 apply_item_effects(15);   // Mana Gem
                                 break;
+                            case WARE_VAMP:
+                                apply_item_effects(19);   // Vampiric Sigil
+                                break;
                             case WARE_SURGE:
                                 room_start_weapon_surge();
                                 break;

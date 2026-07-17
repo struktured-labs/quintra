@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.98: Five Surge Styles](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.99: Apothecary's Fangs](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.99 makes the village **Apothecary** a real run-building stop. Alongside
+its Mana Gem, the crimson **Vampiric Sigil** shelf is always purchasable for
+35 coins. Its new fangs offer glyph distinguishes a fifth-kill half-heart
+recovery build from generic relics before purchase; it also grants +1 ATK and
++1 max HP for the run. Live-ROM coverage walks into the actual town shelf,
+checks its art, price, semantic HUD glyph, and permanent stats, then resolves
+real enemy kills to prove healing occurs exactly on every fifth kill.
 
 v0.17.98 turns the cyan **Surge Spark/Tonic** into a real class-shaped
 temporary build choice. Its fifteen-second shared damage and cadence lift now

@@ -236,8 +236,31 @@ def main():
     assert len(smith) == len(apothecary) == 1
     assert pb.memory[smith[0] + 12] == 71
     assert pb.memory[apothecary[0] + 12] == 79
-    assert len(wares) == 2 and {pb.memory[w + 18] for w in wares} == {3, 4}
+    assert len(wares) == 3 and {pb.memory[w + 18] for w in wares} == {3, 4, 6}
     assert len({69, 70, pb.memory[smith[0] + 12], pb.memory[apothecary[0] + 12]}) == 4
+    # The apothecary's crimson shelf makes the fifth-kill Vampiric Sigil an
+    # intentional run-long sustain purchase instead of a barely-seen random
+    # drop. Check the semantic fangs HUD before buying through normal contact.
+    vamp = next(w for w in wares if pb.memory[w + 18] == 6)
+    assert pb.memory[vamp + 12] == 35 and pb.memory[vamp + 13] == 4
+    assert pb.memory[vamp + 19] == 35, "Vampiric Sigil price drifted"
+    vx, vy = pb.memory[vamp + 3], (pb.memory[vamp + 7] - 8) & 0xFF
+    for off, value in ((9, vx), (10, 0), (11, vy - 24), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    pb.memory[0xFF4F] = 0
+    assert pb.memory[0x9C00 + 12] == 46, \
+        "nearby Vampiric Sigil lacks the fangs offer glyph"
+    assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 12, 14)), \
+        "nearby Vampiric Sigil did not show its $35 price"
+    old_hp_max, old_atk = pb.memory[pl + 1], pb.memory[pl + 5]
+    pb.memory[pl + 16], pb.memory[pl + 17] = 99, 0
+    for off, value in ((9, vx), (10, 0), (11, vy), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    assert pb.memory[vamp] == 0, "Vampiric Sigil shelf could not be purchased"
+    assert pb.memory[pl + 1] == old_hp_max + 1 and pb.memory[pl + 5] == old_atk + 1, \
+        "Vampiric Sigil did not apply its permanent health/attack build effects"
     pb.screen.image.save(ROOT / "tmp" / "town-quarter.png")
 
     # Return to arrival and leave north: only now does dungeon depth advance.

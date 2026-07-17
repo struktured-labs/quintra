@@ -791,6 +791,12 @@ void procgen_generate_current_room(void) BANKED {
                 pickup_spawn_smith(FIX8(40), FIX8(48));
                 pickup_spawn_apothecary(FIX8(120), FIX8(96));
                 spawn_shop_ware(40, 80, WARE_FORGE, 30);
+                // The apothecary is more than a Mana counter: its crimson
+                // shelf gives every three-dungeon village a legible chance
+                // to buy the run-long sustain build the roguelike promises.
+                // Unlike a random relic roll, the player can plan around
+                // its fifth-kill half-heart rhythm before the next region.
+                spawn_shop_ware(88, 64, WARE_VAMP, 35);
                 spawn_shop_ware(120, 64, WARE_RUNE, 30);
             }
             player.iframes = 60;

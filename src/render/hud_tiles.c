@@ -48,6 +48,12 @@ void tiles_load_hud(void) BANKED {
         0x18,0x18, 0x3C,0x3C, 0x18,0x18, 0x08,0x08,
         0x1C,0x1C, 0x10,0x10, 0x00,0x00, 0x00,0x00,
     };
+    // Two descending fangs: the apothecary's red orb is a sustained
+    // on-kill recovery relic, not another generic permanent-stat offer.
+    static const u8 offer_vamp[16] = {
+        0x42,0x42, 0x66,0x66, 0x3C,0x3C, 0x18,0x18,
+        0x18,0x18, 0x24,0x24, 0x24,0x24, 0x00,0x00,
+    };
     u8 i;
     for (i = 0; i < HUD_TILE_COUNT; ++i)
         set_bkg_data((u8)(HUD_HEART_FULL + i), 1, hud_tiles[i]);
@@ -59,4 +65,5 @@ void tiles_load_hud(void) BANKED {
     set_bkg_data(HUD_OFFER_FORGE, 1, offer_forge);
     set_bkg_data(HUD_OFFER_RUNE,  1, offer_rune);
     set_bkg_data(HUD_OFFER_SURGE, 1, offer_surge);
+    set_bkg_data(HUD_OFFER_VAMP,  1, offer_vamp);
 }
