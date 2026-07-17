@@ -140,7 +140,7 @@ local function pickup_target(px, py)
             -- loot: skipping one makes the sanctuary gate correctly refuse
             -- the boss. The controller-only agent must seek it just like a
             -- heart or relic before it can make a meaningful balance claim.
-            and (kind <= 3 or kind == 6 or kind == 11) then
+            and (kind <= 3 or kind == 6 or kind == 11 or kind == 14) then
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             -- Byte values above the visible bounds represent negative/off-map
             -- drops (for example, an enemy dying against the north wall).
@@ -604,6 +604,7 @@ while frames < LIMIT do
     -- Overworld encounters are optional traversal pressure. Follow the
     -- authored route while firing instead of treating every screen as a
     -- mandatory clear; dungeon combat remains fully engaged.
+    local overworld_threat = world_mode == 1 and target or nil
     if world_mode == 1 then target = nil end
     if target then
         if target.slot == last_target_slot and target.hp >= last_target_hp then
@@ -679,6 +680,26 @@ while frames < LIMIT do
         -- Wolfkin's adjacent claw. Treating all three as true melee walked
         -- these kits into contact damage and understated them. Hold a clear
         -- firing lane, dart back only when crowded, and fire the other beats.
+        elseif target.kind == 1 then
+            -- The Stone Sentinel is a 16px colossus. Treating its origin as
+            -- an 8px crawler makes any class (especially the real-melee
+            -- Wolfkin) stand inside the body while trying to fire. Keep one
+            -- claw-length of cardinal space: the primary weapon can still
+            -- connect, but contact damage cannot repeat through every
+            -- iframe window.
+            local adx, ady = math.abs(dx), math.abs(dy)
+            local reach = (adx > ady) and adx or ady
+            local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
+            if reach < 28 then
+                local retreat = (aim == KEY_UP and KEY_DOWN)
+                    or (aim == KEY_DOWN and KEY_UP)
+                    or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
+                keys = retreat
+            elseif reach <= 48 and offaxis <= 5 then
+                keys = KEY_A + aim
+            else
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim, 5)
+            end
         elseif CLASS == 1 or CLASS == 4 then
             local adx, ady = math.abs(dx), math.abs(dy)
             local reach = (adx > ady) and adx or ady
@@ -768,6 +789,31 @@ while frames < LIMIT do
     else
         keys = door_step(px, py) + KEY_A
     end
+    -- Riftwild rooms are traversal pressure, not mandatory combat clears.
+    -- Still, marching through a Hornet's body until the next doorway is not
+    -- meaningful route play. Briefly step away from nearby bodies while
+    -- keeping A held, then resume the authored gate route next beat.
+    if overworld_threat then
+        local dx, dy = overworld_threat.x - px, overworld_threat.y - py
+        if math.max(math.abs(dx), math.abs(dy)) < 36 then
+            local flee
+            if math.abs(dx) >= math.abs(dy) then
+                flee = dx >= 0 and KEY_LEFT or KEY_RIGHT
+            else
+                flee = dy >= 0 and KEY_UP or KEY_DOWN
+            end
+            if not can_step(px, py, flee) then
+                local alternatives = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
+                for _, candidate in ipairs(alternatives) do
+                    if can_step(px, py, candidate) then
+                        flee = candidate
+                        break
+                    end
+                end
+            end
+            if can_step(px, py, flee) then keys = flee + KEY_A end
+        end
+    end
     -- The tile path can point through a locally blocked feet-box state near a
     -- pillar corner. After the stall threshold, follow that solid edge for at
     -- least one body width and until the planned cardinal is truly open, then
@@ -848,7 +894,7 @@ while frames < LIMIT do
     if (CLASS == 1 or CLASS == 3) and threat and active_charge == 0 and mp >= 2 then
         keys = KEY_B
         dodge_phase, dodge_cooldown = 0, 30
-    elseif world_mode == 0 and dodge_phase == 0 and dodge_cooldown == 0 and threat then
+    elseif dodge_phase == 0 and dodge_cooldown == 0 and threat then
         local dx, dy = px - threat.x, py - threat.y
         if math.abs(dx) >= math.abs(dy) then
             dodge_dir = dx >= 0 and KEY_RIGHT or KEY_LEFT
