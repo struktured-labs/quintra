@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance victory-proof media media-check play info check-balance-bot
+.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance picsean-endurance victory-proof media media-check play info check-balance-bot
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -178,6 +178,10 @@ endurance: all check-balance-bot
 	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
+
+# Four completed Picsean seeds; complements the all-class soak above.
+picsean-endurance: all check-balance-bot
+	bash scripts/test_picsean_endurance.sh $(BINDIR)/$(PROJECT).gbc
 
 # Deterministic all-nine-boss controller proof plus clean-emulator replay.
 victory-proof: all check-balance-bot
