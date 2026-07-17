@@ -73,6 +73,10 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     entities[idx].ai_data[2] = price;
     entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART : SPR_ITEM_ORB;
     entities[idx].palette = (ware == WARE_ITEM) ? 0x05 : 0x04;
+    // Keep the stock's heart/relic sprite intact and put the dedicated gold
+    // sale tag above it. This answers "can I pick this up?" before the player
+    // has to walk into a ware or discover the bottom-HUD price convention.
+    pickup_spawn_shop_tag(FIX8(px), FIX8((i16)py - 12));
     return idx;
 }
 

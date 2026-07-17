@@ -113,9 +113,11 @@ def main():
     # into the old ambiguous orange tag sprite.
     leave("east")
     assert pb.memory[rs + 1] == 19 and pb.memory[rs + 19] == 1
-    merchant, wares = entities(8), entities(4)
+    merchant, wares, tags = entities(8), entities(4), entities(13)
     assert len(merchant) == 1 and pb.memory[merchant[0] + 12] == 70
     assert len(wares) == 3
+    assert len(tags) == 3 and all(pb.memory[t + 12] == 81 for t in tags), \
+        "market stock lacks persistent gold sale markers"
     assert {pb.memory[w + 18] for w in wares} == {0, 1, 2}
     tick(70)
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.68: Lanterns in the Deep](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.69: Marked for Trade](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.69 makes shops readable at a glance: every heart or relic ware now keeps
+its own icon while a persistent gold sale marker floats above it. The normal
+nearby-price HUD and walk-into purchase remain unchanged, so nothing that
+looks like a loose pickup is silently a purchase.
 
 v0.17.68 adds the **Rune Lantern** to Shadow Keep and Void Sanctum pools. It
 drifts through cover and telegraphs slow four-way cardinal rings: the diagonals
