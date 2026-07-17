@@ -385,6 +385,7 @@ make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
+make victory-proof # full nine-boss Picsean run + clean-emulator input replay
 make media      # recapture the README reel from the current ROM
 make media-check # prove reel version/hash/frame budget match the ROM
 make info       # print build summary
@@ -406,8 +407,12 @@ parses that telemetry by named columns, prints per-class medians, and enforces
 report-count and victory-floor gates; the runner contains no duplicate inline
 report implementation. An older controller-only Wolfkin reference run
 completed all nine bosses in 20,686 gameplay frames (**5:45** at 60 Hz), but
-it is historical data—not certification for the current ROM. `make endurance`
-must pass again before quoting a current automated completion time. Expect
+it is historical data. The current deterministic proof is Picsean seed 4:
+all nine bosses in 55,459 gameplay frames (**15:24** at 60 Hz), verified by
+replaying the recorded controller trace in a fresh emulator with matching seed,
+room, HP, and victory state. Run `make victory-proof` to reproduce that proof;
+it is one certified seed, not a substitute for a multi-seed endurance floor.
+Expect
 roughly **20–35 minutes** for a first successful human run and **10–20
 minutes** once practiced; deaths and procedural seeds make total session
 length variable. `make verify` also
