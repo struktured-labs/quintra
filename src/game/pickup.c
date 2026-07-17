@@ -121,6 +121,31 @@ static u8 pickup_is_town_resident(u8 kind) {
     return kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY;
 }
 
+// Context, not a purchase: reveal the nearest ware's price before the player
+// touches it. This makes the merchant's offer legible without a costly modal
+// screen or an accidental walk-into purchase.
+u8 pickup_nearby_shop_price(u8 *price_out) BANKED {
+    u8 i, found = 0, best_distance = 0xFF;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        i16 dx, dy;
+        u8 distance;
+        if (!(entities[i].flags & EF_ACTIVE) || entities[i].type != ENT_PICKUP
+            || entities[i].ai_data[0] != PICKUP_SHOP) continue;
+        dx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
+        dy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx > 32 || dy > 32) continue;
+        distance = (u8)(dx + dy);
+        if (!found || distance < best_distance) {
+            best_distance = distance;
+            *price_out = entities[i].ai_data[2];
+            found = 1;
+        }
+    }
+    return found;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {

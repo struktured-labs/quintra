@@ -17,7 +17,8 @@ void hud_redraw_hp(void);     // call when player.hp / hp_max changes
 void hud_redraw_mp(void);     // call when player.mp changes (blue digits)
 void hud_redraw_coins(void);  // call when player.coins changes
 void hud_redraw_depth(void);  // call when run_state.room_counter changes
-void hud_show_offer(u8 price); // temporarily show market price in cols 12..15
+void hud_show_offer(u8 price); // show market price in cols 12..15
+void hud_clear_offer(void);    // clear a proximity price after leaving the stall
 // Boss HP as a 4-segment bar (cols 12-15). max==0 clears the bar.
 // Caches internally: cheap to call every frame.
 void hud_redraw_boss(u8 cur, u8 max);

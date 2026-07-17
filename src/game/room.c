@@ -55,6 +55,7 @@ static u8 stage_fade;
 static u8 hostiles_prev;
 static u8 hostiles_now;
 static u8 door_bump_cd;
+static u8 shop_offer_visible;
 u8 room_combat_sealed;
 u8 room_sigil_status;
 
@@ -664,6 +665,8 @@ void room_enter(void) {
 
     hud_init();
     hud_show();
+    shop_offer_visible = 0;
+    hud_clear_offer();
 
     // Player metasprite — 4 tiles starting at class-specific base
     {
@@ -1246,7 +1249,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 found = 1;
             }
         }
-        if (!found) hud_redraw_boss(0, 0);
+        if (!found) {
+            u8 price;
+            hud_redraw_boss(0, 0);
+            if (pickup_nearby_shop_price(&price)) {
+                hud_show_offer(price);
+                shop_offer_visible = 1;
+            } else if (shop_offer_visible) {
+                hud_clear_offer();
+                shop_offer_visible = 0;
+            }
+        }
 
         // Last hostile down → rising chime + 1 MP back. Boss kills keep
         // their own fanfare (roar/explosion), so skip when one just landed.

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.56: Safe Escorts](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.57: Market Sense](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -120,8 +120,9 @@ an unreachable live enemy and seal progression.
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.
   Stock holds a hanging price tag continuously so it cannot be mistaken for
-  loose coins; contact prints the exact price in the HUD, and unaffordable
-  wares buzz once instead of nagging while the hero stands over them.
+  loose coins; approaching a ware previews its exact HUD price before contact,
+  and unaffordable wares buzz once instead of nagging while the hero stands
+  over them.
   The Spirit Compass gives each regional settlement a fixed remembered name—
   Emberford, Gloamharbor, or Dawn's Verge—but chooses its local warning from
   the run seed, making the place persistent while its account of the Rift

@@ -25,6 +25,10 @@ static const u16 hud_palette_mp[4] = {
     BGR555( 8, 22, 31),    // 3: MP blue
 };
 
+// Shops call hud_show_offer every frame while the hero is nearby. Cache the
+// rendered price so this context hint costs no repeated VRAM traffic.
+static u8 offer_price = 0xFF;
+
 // 1-row HUD layout (20 tiles wide):
 //
 //   col:  0.......7 8 9 10 11 12.....15 16 17 18 19
@@ -125,10 +129,20 @@ void hud_redraw_depth(void) {
 
 void hud_show_offer(u8 price) {
     u8 row[4];
+    if (price == offer_price) return;
+    offer_price = price;
     row[0] = HUD_COIN;
     row[1] = (price >= 100) ? (u8)(HUD_DIGIT_0 + price / 100) : HUD_BLANK;
     row[2] = (u8)(HUD_DIGIT_0 + (price / 10) % 10);
     row[3] = (u8)(HUD_DIGIT_0 + price % 10);
+    VBK_REG = 0;
+    set_win_tiles(12, 0, 4, 1, row);
+}
+
+void hud_clear_offer(void) {
+    static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
+    if (offer_price == 0xFF) return;
+    offer_price = 0xFF;
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
 }

@@ -107,10 +107,23 @@ def main():
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
     assert all(pb.memory[w + 12] == 35 for w in wares[1:]), \
         "relic stock lost its orb art"
-    # Touch one unaffordable offer: it survives, latches one buzz, and prints price.
+    # Approach a ware without touching it: the market announces its price
+    # before a walk-into purchase. Leaving the stall clears the context hint.
     ware = wares[0]
     pb.memory[pl + 16] = pb.memory[pl + 17] = 0
     wx, wy = pb.memory[ware + 3], (pb.memory[ware + 7] - 8) & 0xFF
+    for off, value in ((9, wx), (10, 0), (11, wy - 24), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    pb.memory[0xFF4F] = 0
+    assert pb.memory[0x9C00 + 12] == 7, "nearby market ware did not show price HUD"
+    for off, value in ((9, 16), (10, 0), (11, 16), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    pb.memory[0xFF4F] = 0
+    assert pb.memory[0x9C00 + 12] == 8, "market price HUD stayed after leaving stall"
+
+    # Touch one unaffordable offer: it survives and latches one reject buzz.
     for off, value in ((9, wx), (10, 0), (11, wy), (12, 0)):
         pb.memory[pl + off] = value
     tick(6)
