@@ -854,7 +854,10 @@ void procgen_generate_current_room(void) BANKED {
                 room_tilemap[10][14] = (u8)(HUD_DIGIT_0 + 0);
             }
         } else {
-            // Enemy count scales with depth (1-4 early, up to 6 deep)
+            // Enemy count scales with depth. The authored room layouts and
+            // projectile patterns already supply the opening pressure; do not
+            // stack a mandatory extra body here or the melee tank becomes a
+            // controller-bot death spiral before the first boss.
             u8 depth_bonus = (u8)(run_state.room_counter / 6);
             u8 enemy_count = (u8)(1 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));
             u8 ptx = (u8)(player.x >> 3);
@@ -876,17 +879,16 @@ void procgen_generate_current_room(void) BANKED {
                     u8 eid = pick_enemy_for_stage(run_state.bosses_beaten);
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);
-                        // Stage scaling: deeper stages toughen normal foes so
-                        // the run's rising player power (items, weapon swaps)
-                        // meets rising resistance instead of trivializing late
-                        // stages. Gentle +1 HP per 2 stages, capped so endless
-                        // descent stays brisk, not spongy. Consumes NO rng —
-                        // procgen C<->Rust parity (draw order) is untouched.
+                        // Every regular foe survives one more starter hit;
+                        // deeper stages then gain another HP per two bosses.
+                        // This makes enemy AI matter without turning the run
+                        // into a sponge fight. It consumes NO RNG, so procgen
+                        // C<->Rust parity (draw order) is untouched.
                         if (idx != 0xFF) {
                             u8 st = run_state.bosses_beaten;
                             if (st > 24) st = 24;
                             entities[idx].hp =
-                                (u8)(entities[idx].hp + (u8)(st >> 1));
+                                (u8)(entities[idx].hp + 1 + (u8)(st >> 1));
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,
                         // +1 damage, EF_ELITE flag (combat pays the bonus).

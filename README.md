@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.64: Charted Roads](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.65: Trial by Fire](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.65 makes the opening run ask more of the player without changing its
+controls: regular enemies survive one additional starter hit, while colossi no
+longer receive the hidden all-elements vulnerability that shortened every boss
+fight by a third. A controller-only, two-seed sample across all five champions
+still progresses, visits shops, defeats early bosses, and records no combat or
+route stalls.
 
 v0.17.64 gives every village arrival square a distinct Chartwright resident.
 Touching them marks the first two rooms of the route ahead on the tile-built

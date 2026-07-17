@@ -84,10 +84,12 @@ u8 combat_resolve(void) BANKED {
             weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
             // Large bosses reuse the Stone Sentinel entity definition for
             // storage/AI, but must not inherit its lightning-only weakness.
-            // Doing so gave Sauran double damage against all nine colossi.
-            // Bosses instead resonate with every champion element; ordinary
-            // enemies and mini-bosses retain their authored matchups.
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) weakness = 0x1F;
+            // They also deliberately have no elemental weakness: making every
+            // boss weak to every champion was an invisible 50% damage bonus
+            // and let an untouched starter kit erase early colossi before
+            // their patterns could become a fight. Ordinary enemies and
+            // mini-bosses retain their authored matchups.
+            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) weakness = 0;
             poise    = (eid < N_ENEMIES) ? enemies[eid].stats.poise    : 0;
 
             // Per-hit damage: base + elemental x2 (weapon element in
