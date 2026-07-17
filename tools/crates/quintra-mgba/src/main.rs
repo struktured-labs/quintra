@@ -25,7 +25,7 @@ enum Command {
         classes: usize,
         #[arg(long, default_value_t = 0)]
         min_wins: usize,
-        /// Minimum runs per class that must complete a real shop purchase.
+        /// Minimum runs per class that must reach a stocked shop.
         #[arg(long, default_value_t = 0)]
         min_shop_runs: usize,
         /// Per-room frame count above which a live run is classified stalled.
@@ -62,6 +62,7 @@ struct Row {
     victory: u32,
     ui_screen: u32,
     dodges: u32,
+    shop_visits: u32,
     purchases: u32,
     world_hops: u32,
     death_source: u32,
@@ -136,6 +137,11 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                 victory: number(&record, &columns, "victory")?,
                 ui_screen: number(&record, &columns, "ui_screen")?,
                 dodges: number(&record, &columns, "dodges")?,
+                shop_visits: columns
+                    .contains_key("shop_visits")
+                    .then(|| number(&record, &columns, "shop_visits"))
+                    .transpose()?
+                    .unwrap_or(0),
                 purchases: columns
                     .contains_key("purchases")
                     .then(|| number(&record, &columns, "purchases"))
@@ -245,7 +251,7 @@ fn report(
                 .collect();
             if values.is_empty() { "-".to_string() } else { values.join("|") }
         };
-        let shop_runs = sample.iter().filter(|row| row.purchases > 0).count();
+        let shop_runs = sample.iter().filter(|row| row.shop_visits > 0).count();
         let boss_clears = sample.iter().filter(|row| row.bosses > 0).count();
         let combat_stalls = sample
             .iter()
@@ -259,7 +265,7 @@ fn report(
         total_route_stalls += route_stalls;
         println!(
             "[balance] {name:7} n={} room_med={} clear_med={} kill_med={} boss_med={} \
-             boss1={boss_clears}/{} town_med={} buy_med={} buyers={shop_runs}/{} dodge_med={} wins={wins} endings={endings} \
+             boss1={boss_clears}/{} town_med={} shop_med={} buy_med={} shoppers={shop_runs}/{} dodge_med={} wins={wins} endings={endings} \
              deaths={deaths} death_src={death_sources} combat_stalls={combat_stalls} route_stalls={route_stalls}",
             sample.len(),
             median(sample.iter().map(|row| row.max_room)),
@@ -268,6 +274,7 @@ fn report(
             median(sample.iter().map(|row| row.bosses)),
             sample.len(),
             median(sample.iter().map(|row| row.towns)),
+            median(sample.iter().map(|row| row.shop_visits)),
             median(sample.iter().map(|row| row.purchases)),
             sample.len(),
             median(sample.iter().map(|row| row.dodges)),

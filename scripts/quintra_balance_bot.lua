@@ -191,6 +191,22 @@ local function shop_target(px, py, hp, hp_max, mp_max, coins)
     return best
 end
 
+-- Record whether the controller actually reached a stocked shop, independent
+-- of whether it can yet afford (or needs) an item there. Purchases remain a
+-- separate outcome so the endurance gate measures shop reachability rather
+-- than a particular class's economy preference.
+local function room_has_shop_ware()
+    if EN == 0 then return false end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 4 then
+            return true
+        end
+    end
+    return false
+end
+
 local function walkable(tile)
     return tile == 1 or tile == 3 or tile == 19 or tile == 20
         or tile == 23 or tile == 31 or tile == 33 or tile == 34
@@ -492,6 +508,7 @@ local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 local last_active_charge = 0
 local purchases, last_coins = 0, 0
+local shop_visits, visited_shop_rooms = 0, {}
 local max_combat_frames, max_route_frames = 0, 0
 local max_combat_room, max_combat_enemy, max_route_room = 0, 255, 0
 while frames < LIMIT do
@@ -559,6 +576,10 @@ while frames < LIMIT do
     if px == last_px and py == last_py then still_frames = still_frames + 1
     else still_frames = 0 end
     last_px, last_py = px, py
+    local shop_here = world_mode == 0 and room_has_shop_ware()
+    if shop_here and not visited_shop_rooms[room] then
+        visited_shop_rooms[room], shop_visits = true, shop_visits + 1
+    end
     local target = enemy_target(px, py)
     -- Overworld encounters are optional traversal pressure. Follow the
     -- authored route while firing instead of treating every screen as a
@@ -927,13 +948,13 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
-        won, ui_screen, dodge_count, purchases, enemy_mask))
+        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",
