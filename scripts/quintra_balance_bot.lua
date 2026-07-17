@@ -958,13 +958,15 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Sauran's Tail Spike and Picsean's slow bubbles favor
-                -- orbit-and-fire through a live bullet pattern. Once a
+                -- Sauran's Tail Spike needs a conservative pulse-fire lane:
+                -- measured same-seed trials clear a first giant while the
+                -- old orbit loop repeatedly body-traded into it. Picsean's
+                -- slow bubbles still favor orbit-and-fire. Once a
                 -- Picsean giant is nearly down, force the ordinary cardinal
                 -- lane: otherwise orbiting past a 1-2 HP body can continue
                 -- forever without another aimed bubble contact.
-                giant_mode = (CLASS == 1 or CLASS == 3)
-                    and "orbit_fire" or "baseline"
+                giant_mode = (CLASS == 1) and "pulse_fire"
+                    or (CLASS == 3) and "orbit_fire" or "baseline"
                 if target.giant ~= 0 and CLASS == 3 and target.hp <= 8 then
                     giant_mode = "baseline"
                 end
