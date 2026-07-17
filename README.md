@@ -614,9 +614,10 @@ three-seed Picsean recheck now reaches all three endings (45,777–77,453
 gameplay frames) after the input-only pilot learned a pixel-stable mine-safe
 firing lane and clears the room's Sentinel before its Spore escort. Sauran
 now reaches one complete ending in three samples after its 48px Tail Spike
-boss orbit learned a two-beat pressure lane. Vespine also reaches one ending
-after its 48px Stinger leaves the old cardinal baseline for a 36px two-beat
-orbit-fire lane. Wolfkin and Corvin are still 0/3 in the latest all-class
+boss orbit learned a two-beat pressure lane. Vespine clears its first boss and
+reaches six bosses in separate three-seed samples after its 48px Stinger leaves
+the old cardinal baseline for a 36px two-beat orbit-fire lane, but remains 0/3
+for endings. Wolfkin and Corvin are still 0/3 in the latest all-class
 matrix, although Wolfkin now clears the first boss in all three seeds; there
 are no route stalls. A fresh matrix must still reach the full per-class
 victory floor to pass the delivery gate.
@@ -662,9 +663,9 @@ defaults to Sauran and Corvin; set `QUINTRA_POLICY_CLASSES`,
 read-only-ROM evaluator, so an apparent improvement must survive a fresh
 input-only replay before becoming the default policy.
 
-Giant spacing defaults to a measured classwise policy: Sauran, Corvin, and
-Picsean use `orbit_fire` for large bosses; Wolfkin uses conservative pulses,
-and Vespine retains cardinal movement. On paired three-seed searches,
+Giant spacing defaults to a measured classwise policy: Sauran, Corvin,
+Picsean, and Vespine use `orbit_fire` for large bosses; Wolfkin uses
+conservative pulses. On paired three-seed searches,
 Picsean's policy raised its boss clears from two to six with no deaths, while
 orbit-fire gained four Sauran and four Corvin clears where their prior policies
 managed two and one. Override it with
