@@ -394,10 +394,13 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_MP:
-                    if (player.mp < player.mp_max) {
-                        player.mp++;
-                        hud_redraw_mp();
-                    }
+                    // Match the heart rule above: consuming a full-MP wisp
+                    // with a cheerful chime but no visible HUD change reads
+                    // as a broken pickup. Leave it available until it can
+                    // actually restore one point.
+                    if (player.mp >= player.mp_max) continue;
+                    player.mp++;
+                    hud_redraw_mp();
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_SURGE:

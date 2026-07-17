@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: a full-health heart remains available instead of fake-picking."""
+"""ROM contract: capped heart/MP pickups remain available until useful."""
 import re
 from pathlib import Path
 
@@ -86,8 +86,33 @@ def main():
          f"hp={pb.memory[PL + 2]}/{pb.memory[PL + 1]} "
          f"player={list(pb.memory[PL + 9:PL + 13])} "
          f"heart={list(pb.memory[heart + 2:heart + 18])})")
+
+    # MP wisps follow the same no-fake-pickup rule. Previously the orb
+    # vanished and played a reward sound at full MP even though no HUD value
+    # changed, which was indistinguishable from a failed collection.
+    mp = EN
+    pb.memory[mp] = 3
+    pb.memory[mp + 1] = 3
+    put16(pb, mp + 3, px + 4)
+    put16(pb, mp + 7, py + 8)
+    pb.memory[mp + 14] = 1
+    pb.memory[mp + 16] = 240
+    pb.memory[mp + 17] = 6  # PICKUP_MP
+    pb.memory[mp + 25] = 0x66
+    pb.memory[PL + 3] = 4
+    pb.memory[PL + 4] = 4
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[mp] == 3 and pb.memory[PL + 4] == 4, \
+        "full-MP wisp was consumed without restoring a point"
+
+    pb.memory[PL + 4] = 3
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[mp] == 0 and pb.memory[PL + 4] == 4, \
+        "MP wisp did not restore and consume once MP was missing"
     pb.stop(save=False)
-    print("[heart-pickup] PASS full heart waits, damaged hero heals")
+    print("[heart-pickup] PASS capped heart/MP pickups wait, missing stats restore")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.2: Prism Skitter](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.3: Honest Pickup Feedback](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.3 fixes a misleading pickup edge case: **MP wisps now remain on the
+floor at full MP** instead of disappearing with a reward sound while changing
+nothing. They collect normally as soon as one MP is missing, matching the
+already-established full-health heart behavior. The live-ROM pickup contract
+covers both capped resources, and the pre-show endurance gate now requires
+every released enemy ID—including Prism Skitter—before it can pass.
 
 v0.18.2 adds the **Prism Skitter**, a Shadow Keep positional caster. It
 maintains a readable ring around the hero, reverses cleanly around procedural
