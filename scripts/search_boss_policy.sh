@@ -11,6 +11,10 @@ RUNS="${QUINTRA_BOSS_SEARCH_RUNS:-1}"
 CLASSES="${QUINTRA_BOSS_SEARCH_CLASSES:-1}"
 FRAMES="${QUINTRA_BOSS_SEARCH_FRAMES:-18000}"
 RETREAT_RANGES="${QUINTRA_BOSS_SEARCH_RETREAT_RANGES:-28}"
+# Accept the copy/paste-friendly `20,28,36` form as well as shell-separated
+# values. Before normalization that string was one invalid numeric override,
+# silently falling back to the bot default and invalidating a policy sweep.
+RETREAT_RANGES="${RETREAT_RANGES//,/ }"
 mkdir -p "$OUT_DIR"
 
 printf 'mode retreat_range rows boss_clears deaths min_giant_hp total_player_damage\n'
