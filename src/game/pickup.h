@@ -12,7 +12,7 @@
 #define PICKUP_COIN_5     2
 #define PICKUP_ITEM       3    // ai_data[1] = index into generated items[]
 #define PICKUP_SHOP       4    // shop ware: ai_data[1]=ware kind, ai_data[2]=price
-#define PICKUP_WEAPON     5    // ai_data[1] = weapon item index (0-4); swaps A-weapon
+#define PICKUP_WEAPON     5    // ai_data[1] = weapon item index; swaps A-weapon
 #define PICKUP_MP         6    // +1 MP wisp (dropped by shattered crystals)
 #define PICKUP_VILLAGER   7    // permanent town elder; touch for sanctuary blessing
 #define PICKUP_MERCHANT   8    // permanent visual shopkeeper; non-collectible
@@ -36,9 +36,15 @@ u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
 // Spawn a stat-boost item pickup (items[] table index)
 u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED;
 
-// Spawn a weapon orb (weapon index 0-4). Permanent, never magnetizes;
+// Spawn a weapon orb (generated weapon item index). Permanent, never magnetizes;
 // walking over it swaps the A-weapon and drops the old one in its place.
 u8   pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED;
+
+// Content-driven weapon-orb selection. These avoid assuming weapon entries
+// occupy a contiguous prefix of items[] as the roster grows.
+u8   pickup_weapon_count(void) BANKED;
+u8   pickup_weapon_from_roll(u8 roll) BANKED;
+u8   pickup_next_weapon(u8 current) BANKED;
 
 // Spawn a +1 MP wisp (shattered-crystal drop)
 u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;

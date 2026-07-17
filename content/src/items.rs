@@ -9,7 +9,7 @@ use crate::ids::*;
 pub const CLAW_COMBO: Item = Item {
     id:          ITEM_CLAW_COMBO,
     name:        "Claw Combo",
-    description: "3-hit melee combo. Hold B to chain.",
+    description: "Fast melee.",
     kind: ItemKind::Weapon {
         fire_rate:  24,    // no-upgrade cadence; run-earned SPD accelerates it
         damage:     2,
@@ -199,6 +199,21 @@ pub const BLOOD_SIGIL: Item = Item {
     ],
 };
 
+// A run-changing physical weapon rather than another starter reskin.  It
+// swings farther than a claw, cleaves a small pack, and pays for that reach
+// with the slowest authored A cadence.  It can appear from miniboss and vault
+// weapon orbs for every champion, including the ranged vessels.
+pub const RIFT_FLAIL: Item = Item {
+    id:          ITEM_RIFT_FLAIL,
+    name:        "Rift Flail",
+    description: "3-pierce slow sweep.",
+    kind: ItemKind::Weapon { fire_rate: 36, damage: 3, projectile: ProjectileKind::Flail, mp_cost: 0 },
+    icon_sprite: SPRITE_ITEM_CLAW,
+    palette:     OBJ_PAL_ITEM_GOLD,
+    rarity:      Rarity::Rare,
+    effects:     &[],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_item(CLAW_COMBO.clone());
     r.add_item(TAIL_SPIKE.clone());
@@ -220,4 +235,5 @@ pub fn register(r: &mut Registry) {
     r.add_item(SWIFT_FANG.clone());
     r.add_item(HUNTERS_EYE.clone());
     r.add_item(BLOOD_SIGIL.clone());
+    r.add_item(RIFT_FLAIL.clone());
 }

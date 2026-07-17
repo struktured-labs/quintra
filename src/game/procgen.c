@@ -709,8 +709,8 @@ void procgen_generate_current_room(void) BANKED {
             pickup_spawn(PICKUP_COIN_1,     FIX8(80), FIX8(48));
             pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
             if (rng_next_u8() & 1) {
-                u8 w = (u8)rng_range(5);
-                if (w == player.starter_weapon) w = (u8)((w + 1) % 5);
+                u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
+                if (w == player.starter_weapon) w = pickup_next_weapon(w);
                 pickup_spawn_weapon(w, FIX8(80), FIX8(80));
             }
             sfx_play(SFX_CLEAR);   // secret-found fanfare

@@ -54,6 +54,10 @@ static const char *item_name_by_id(u16 id) {
     return "-";
 }
 
+static const char *item_name_by_index(u8 index) {
+    return index < N_ITEMS ? items[index].name : "-";
+}
+
 void inventory_enter(void) {
     DISPLAY_OFF;
     HIDE_SPRITES;
@@ -83,7 +87,7 @@ void inventory_enter(void) {
     gotoxy(8, 8);  printf("LCK %u", (u16)player.lck);
 
     gotoxy(1, 10); printf("WPN A:");
-    printf("%s", item_name_by_id(player.starter_weapon));
+    printf("%s", item_name_by_index(player.starter_weapon));
     gotoxy(1, 11); printf("SIG B:");
     printf("%s", item_name_by_id(player.active_item));
     gotoxy(1, 12); printf("PERK  ");

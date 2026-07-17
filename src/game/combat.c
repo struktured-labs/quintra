@@ -196,8 +196,8 @@ u8 combat_resolve(void) BANKED {
                             // Mini-boss down: solid reward, no stage advance.
                             // Always drops a weapon orb you don't hold —
                             // the run's main way to change your A-weapon.
-                            u8 w = (u8)rng_range(5);
-                            if (w == player.starter_weapon) w = (u8)((w + 1) % 5);
+                            u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
+                            if (w == player.starter_weapon) w = pickup_next_weapon(w);
                             g_hitstop = 5;
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));

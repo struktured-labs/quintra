@@ -179,8 +179,39 @@ u8 pickup_nearby_shop_price(u8 *price_out) BANKED {
     return found;
 }
 
+u8 pickup_weapon_count(void) BANKED {
+    u8 i, count = 0;
+    for (i = 0; i < N_ITEMS; ++i)
+        if (items[i].kind == ITEM_KIND_WEAPON) count++;
+    return count;
+}
+
+u8 pickup_weapon_from_roll(u8 roll) BANKED {
+    u8 i;
+    for (i = 0; i < N_ITEMS; ++i) {
+        if (items[i].kind != ITEM_KIND_WEAPON) continue;
+        if (roll == 0) return i;
+        roll--;
+    }
+    return 0;
+}
+
+u8 pickup_next_weapon(u8 current) BANKED {
+    u8 i, found = 0, first = 0xFF;
+    for (i = 0; i < N_ITEMS; ++i) {
+        if (items[i].kind != ITEM_KIND_WEAPON) continue;
+        if (first == 0xFF) first = i;
+        if (found) return i;
+        if (i == current) found = 1;
+    }
+    return first == 0xFF ? 0 : first;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
+    u8 idx;
+    if (weapon_index >= N_ITEMS || items[weapon_index].kind != ITEM_KIND_WEAPON)
+        return 0xFF;
+    idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {
         entities[idx].ai_data[1]  = weapon_index;
         entities[idx].sprite_tile = SPR_ITEM_ORB;
@@ -365,7 +396,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (entities[i].state > 0) { any = 1; continue; }
                     player.starter_weapon = entities[i].ai_data[1];
                     sfx_play(SFX_DOOR);
-                    if (old_w < 5) {
+                    if (old_w < N_ITEMS && items[old_w].kind == ITEM_KIND_WEAPON) {
                         pickup_spawn_weapon(old_w, entities[i].x, entities[i].y);
                     }
                     break;

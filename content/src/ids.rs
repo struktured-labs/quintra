@@ -36,6 +36,7 @@ pub const ITEM_WARD_CHARM:   ItemId = ItemId::new(26);   // +1 DEF +1 LCK
 pub const ITEM_SWIFT_FANG:   ItemId = ItemId::new(27);   // +1 SPD +1 ATK
 pub const ITEM_HUNTERS_EYE:  ItemId = ItemId::new(28);   // +3 LCK
 pub const ITEM_BLOOD_SIGIL:  ItemId = ItemId::new(29);   // +1 ATK +1 HP
+pub const ITEM_RIFT_FLAIL:   ItemId = ItemId::new(30);   // rare physical weapon swap
 
 // ----- Enemies
 pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);

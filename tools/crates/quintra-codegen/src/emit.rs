@@ -69,6 +69,7 @@ fn write_enums(out: &Path) -> Result<()> {
          #define PROJ_BUBBLE    9\n\
          #define PROJ_SPIKE     10\n\
          #define PROJ_SHURIKEN  11\n\
+         #define PROJ_FLAIL     12\n\
          \n\
          /* Status */\n\
          #define STATUS_NONE     0\n\
@@ -864,6 +865,7 @@ fn proj_kind(p: ProjectileKind) -> u8 {
         ProjectileKind::Bubble    => 9,
         ProjectileKind::Spike     => 10,
         ProjectileKind::Shuriken  => 11,
+        ProjectileKind::Flail     => 12,
     }
 }
 

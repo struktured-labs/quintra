@@ -19,6 +19,7 @@ pub enum ProjectileKind {
     Bubble,        // slow, pierces water tiles
     Spike,         // melee range, short forward thrust
     Shuriken,      // homing-lite, returns after hit
+    Flail,         // sweeping mid-range physical arc, pierces a small pack
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]

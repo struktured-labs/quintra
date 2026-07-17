@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.74: Biome Voices](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.75: Rift Flail](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.75 adds the **Rift Flail**, a rare A-weapon swap that can appear from
+miniboss and vault weapon orbs. It is a slow, physical 3-pierce sweep: a
+genuinely different melee build for any champion, rather than a starter-weapon
+reskin. Weapon-orb selection now derives from generated content instead of a
+hard-coded five-entry prefix, and the Pack screen correctly resolves a held
+weapon by table index. An emulator contract covers real collection, swap,
+physical art, reach, pierce, and damage.
 
 v0.17.74 gives all nine dungeon biomes and all nine boss routes their own
 compact musical phrases. The sequencer remains deliberately tiny—two voices
@@ -331,22 +339,22 @@ boots a second untouched emulator, replays only those controller states, and
 requires seed, room, clears, kills, bosses, HP, outcome, screen, and total host
 frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
-It enforces a
-128 KiB ROM ceiling and at least 512 bytes of free always-mapped bank space;
-the current development cartridge occupies 128 KiB with 1,515 bytes of bank-0 headroom. Gameplay files
+It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
+bank space; v0.17.75 occupies 128 KiB with 527 bytes of bank-0 headroom.
+Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. Current switchable headroom is 4,431 bytes in bank 1, 1,192 in bank 2,
-2,893 in bank 3, 8,617 in bank 4, 13,156 in bank 5, and 15,112 in bank 6.
+ROM. Current switchable headroom is 4,268 bytes in bank 1, 1,078 in bank 2,
+2,873 in bank 3, 8,599 in bank 4, 12,898 in bank 5, and 15,112 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
 and pickups, while the dispatcher-owned Pack screen moved out of the crowded
-room/procgen code now has a dedicated bank. Switchable headroom is currently
-7,136 bytes in bank 1, 1,043 in bank 2, 1,025 in bank 3, and 10,073 in bank 4.
+room/procgen code now has a dedicated bank. `make verify` remains the
+authoritative layout report; the figures above are the current release build.
 Ascended champion art is emitted into a separate
 bank-3 translation unit so GBDK cannot silently pack it into constrained bank 2.
 Sprite arrays and their C declarations are emitted together from the same
