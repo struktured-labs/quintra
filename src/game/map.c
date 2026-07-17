@@ -89,16 +89,10 @@ static void draw_dungeon_grid(void) {
     static const u8 gx[6] = { 1, 7, 13, 13, 7, 1 };
     static const u8 gy[6] = { 3, 3, 3, 10, 10, 10 };
     u8 i;
-    u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
-    // The opening dungeon includes its entry room in the diagram. Later
-    // dungeons begin after an overworld gate, so their local rooms are
-    // shifted left by one (the same mapping used by dungeon_seen below).
     u8 sigil_cell = run_state.bosses_beaten ? 1 : 2;
     u8 sigil_found = (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
-    u8 here = (local == 0 && run_state.room_counter > 0) ? 5
-        : ((run_state.bosses_beaten > 0 && local > 0)
-            ? (u8)(local - 1) : local);
+    u8 here = run_state_dungeon_cell();
     for (i = 0; i < 6; ++i) {
         u8 seen = (run_state.dungeon_seen & (u8)(1u << i)) ? 1 : 0;
         u8 icon = (i == here) ? BGT_SWITCH : (i == 5 ? BGT_SPIKES : BGT_FLOOR3);

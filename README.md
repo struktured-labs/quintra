@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.80: Rift Pressure](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.81: Compass Contract](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.81 centralizes the dungeon **Compass Contract**: map rendering and
+fog-of-war now ask one run-state helper which of the six dungeon cells is
+current. That removes duplicated stage-transition math that could drift as
+the run crosses a boss, Riftwild, or town boundary. The boss-to-Riftwild
+handoff, the sigil compass marker, and the connected town compass all pass
+their live ROM contracts.
 
 v0.17.80 makes ordinary dungeon rooms carry **Rift Pressure** from the start.
 Combat rooms now place at least two real monsters, with bounded retries around

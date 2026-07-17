@@ -59,6 +59,9 @@ extern run_state_t run_state;
 
 void run_state_init(u32 seed);
 void run_state_clear(void);
+// Current six-cell compass position for the active dungeon. Both map drawing
+// and fog-of-war use this so stage transitions cannot drift between them.
+u8   run_state_dungeon_cell(void);
 void run_state_mark_visited(void);
 void run_state_begin_world(void);
 void run_state_begin_dungeon(void);
