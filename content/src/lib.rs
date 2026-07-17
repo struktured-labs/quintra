@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         20);   // 5 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       19);   // adds Golden Temple's reactive Echo Guard
+        assert_eq!(r.n_enemies(),       20);   // adds Shadow/Void's Rune Lantern caster
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -126,6 +126,20 @@ mod tests {
         assert_eq!(temple.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::ECHO_GUARD.ai_script,
             quintra_content::AiScriptId::CounterGuard { guard_cooldown: 100, rush_ticks: 24 });
+    }
+
+    #[test]
+    fn shadow_and_void_author_the_rune_lantern_without_weight_inflation() {
+        for stage in [&stages::STAGES[5], &stages::STAGES[8]] {
+            assert!(stage.enemy_pool.iter().any(|&(id, _)| id == 19));
+            assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        }
+        assert_eq!(enemies::RUNE_LANTERN.ai_script,
+            quintra_content::AiScriptId::Shooter {
+                fire_rate: 84,
+                projectile: quintra_content::ProjectileKind::Bullet,
+                pattern: quintra_content::ShotPattern::Ring(4),
+            });
     }
 
     #[test]
