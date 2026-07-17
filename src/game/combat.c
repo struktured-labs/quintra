@@ -140,6 +140,25 @@ u8 combat_resolve(void) BANKED {
             if (player.hp <= 2 && player.hp > 0) dmg++;
             if (dmg == 0) dmg = 1;
 
+            // A fully built run can otherwise erase the one-byte (255 HP)
+            // late bosses in a few rapid-fire beats.  Golden Temple onward,
+            // their Rift Armor turns a huge single projectile into a readable
+            // sequence of hits rather than pretending the cartridge can hold
+            // ever-larger HP values. Golden Temple and Bloodmoon receive the
+            // 3-damage cap; the Void Lord keeps its distinct World Collapse
+            // fight until controller safe-pocket navigation is trained rather
+            // than silently turning that positional test into attrition.
+            // This intentionally applies only to giant stage bosses; normal
+            // enemies, mini-bosses, and the first six bosses keep their full
+            // weapon/elemental payoff.
+            if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
+                && entities[j].ai_data[3]
+                && entities[j].ai_data[2] >= 6
+                && entities[j].ai_data[2] <= 7) {
+                u8 cap = 3;
+                if (dmg > cap) dmg = cap;
+            }
+
             {
                 // Apply damage
                 if (entities[j].hp > dmg) {

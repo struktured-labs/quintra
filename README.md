@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.91: Frost Sentry Watch](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.92: Rift Armor](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.92 makes the late-game bosses earn their screen time. **Golden Temple**
+and **Bloodmoon** colossi now have Rift Armor that caps a single projectile at
+three damage. The **Void Lord** retains its distinct World Collapse positional
+test. Ordinary enemies, mini-bosses,
+and the first six bosses retain full weapon/elemental damage. That is a
+cartridge-sized answer to runaway late-run power: the same automated seed-15
+run now clears bosses 7–8 in 1,080/970 frames (formerly 189/137), while the
+full campaign remains completable with no combat stalls.
 
 v0.17.91 fixes the **Frost Vault** roster gap: the stationary Sentry turret
 now appears there as a rare, readable rotating-cross lane hazard among the

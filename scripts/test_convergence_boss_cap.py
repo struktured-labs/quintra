@@ -24,8 +24,8 @@ def setup_shot(pb, address, x, y, *, convergence=False):
     pb.memory[address + 26] = 7
 
 
-def hit_boss(*, convergence):
-    pb, boss = enter_boss(0, keep_open=True)
+def hit_boss(*, convergence, stage=0):
+    pb, boss = enter_boss(stage, keep_open=True)
     boss_x, boss_y = pb.memory[boss + 3], pb.memory[boss + 7]
     pb.memory[boss + 14] = 100
     # Keep the hero out of the constructed collision and above Last Stand's
@@ -55,13 +55,17 @@ def hit_boss(*, convergence):
 def main():
     chord_damage = hit_boss(convergence=True)
     ordinary_damage = hit_boss(convergence=False)
+    void_damage = hit_boss(convergence=False, stage=8)
     assert chord_damage == 28, (
         f"Convergence chord landed {chord_damage} boss damage; expected four 7-damage hits"
     )
     assert ordinary_damage == 56, (
         f"ordinary projectiles changed unexpectedly ({ordinary_damage}, expected 56)"
     )
-    print("[convergence-cap] PASS chord=28; ordinary-eight=56")
+    assert void_damage == 56, (
+        f"Void Lord should retain its positional burst fight ({void_damage}, expected 56)"
+    )
+    print("[convergence-cap] PASS chord=28; ordinary-eight=56; void-eight=56")
 
 
 if __name__ == "__main__":
