@@ -145,16 +145,17 @@ u8 combat_resolve(void) BANKED {
             // their Rift Armor turns a huge single projectile into a readable
             // sequence of hits rather than pretending the cartridge can hold
             // ever-larger HP values. Golden Temple and Bloodmoon receive the
-            // 3-damage cap; the Void Lord keeps its distinct World Collapse
-            // fight until controller safe-pocket navigation is trained rather
-            // than silently turning that positional test into attrition.
+            // 3-damage cap. The Void Lord is included now that the controller
+            // has a tested, controller-only response to its announced World
+            // Collapse pocket; it can no longer be erased before that
+            // positional fight happens.
             // This intentionally applies only to giant stage bosses; normal
             // enemies, mini-bosses, and the first six bosses keep their full
             // weapon/elemental payoff.
             if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
                 && entities[j].ai_data[3]
                 && entities[j].ai_data[2] >= 6
-                && entities[j].ai_data[2] <= 7) {
+                && entities[j].ai_data[2] <= 8) {
                 u8 cap = 3;
                 if (dmg > cap) dmg = cap;
             }

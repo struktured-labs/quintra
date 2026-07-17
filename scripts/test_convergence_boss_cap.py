@@ -62,10 +62,10 @@ def main():
     assert ordinary_damage == 56, (
         f"ordinary projectiles changed unexpectedly ({ordinary_damage}, expected 56)"
     )
-    assert void_damage == 56, (
-        f"Void Lord should retain its positional burst fight ({void_damage}, expected 56)"
+    assert void_damage == 24, (
+        f"Void Lord Rift Armor should cap eight ordinary hits at 24, got {void_damage}"
     )
-    print("[convergence-cap] PASS chord=28; ordinary-eight=56; void-eight=56")
+    print("[convergence-cap] PASS chord=28; ordinary-eight=56; void-eight=24")
 
 
 if __name__ == "__main__":
