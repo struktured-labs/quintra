@@ -117,6 +117,10 @@ u8 pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+static u8 pickup_is_town_resident(u8 kind) {
+    return kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY;
+}
+
 u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WEAPON, x, y);
     if (idx != 0xFF) {
@@ -152,10 +156,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
-    if (e->ai_data[0] == PICKUP_VILLAGER
-        || e->ai_data[0] == PICKUP_MERCHANT
-        || e->ai_data[0] == PICKUP_SMITH
-        || e->ai_data[0] == PICKUP_APOTHECARY) return;
+    if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
     // (the swap drops your old weapon underfoot — without the grace you'd
