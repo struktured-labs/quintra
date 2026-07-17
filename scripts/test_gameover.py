@@ -124,6 +124,15 @@ def main():
         )
         assert enter_frames <= 120, \
             f"game-over entry remained blank too long: {enter_frames} frames"
+        # Console glyph writes change tile IDs only. A game-over screen must
+        # also clear the CGB attribute plane, otherwise dungeon palette bytes
+        # leak through and make arbitrary score digits appear red/oddly tinted.
+        bg_map = 0x9C00 if (first.memory[0xFF40] & 0x08) else 0x9800
+        first.memory[0xFF4F] = 1
+        attrs = bytes(first.memory[bg_map:bg_map + 20 * 18])
+        first.memory[0xFF4F] = 0
+        assert attrs == bytes(20 * 18), \
+            "game-over retained stale CGB text palette attributes"
 
         first.memory[0x0000] = 0x0A
         first.memory[0x4000] = 0
