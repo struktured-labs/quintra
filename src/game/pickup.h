@@ -19,6 +19,7 @@
 #define PICKUP_SMITH      9    // permanent village forge keeper; non-collectible
 #define PICKUP_APOTHECARY 10   // permanent village rune keeper; non-collectible
 #define PICKUP_RIFT_SIGIL 11   // stage objective; unlocks its colossus threshold
+#define PICKUP_CARTOGRAPHER 12 // village chartwright; reveals nearby route
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -45,6 +46,7 @@ u8   pickup_spawn_villager(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_smith(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;

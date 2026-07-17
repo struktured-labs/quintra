@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.63: Room to Breathe](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.64: Charted Roads](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.64 gives every village arrival square a distinct Chartwright resident.
+Touching them marks the first two rooms of the route ahead on the tile-built
+Spirit Compass: a small, deterministic scouting blessing that makes town stops
+useful while leaving the rest of each procgen dungeon unknown.
 
 v0.17.63 moves the live HUD code out of the always-mapped bank without changing
 its gameplay behavior. This restores 1,547 bytes of bank-0 headroom (up from
@@ -144,7 +149,9 @@ an unreachable live enemy and seal progression.
 - **Generated world cadence**: three six-room dungeons form a region, followed
   by a safe, connected three-screen village: an elder's fountain square, a
   dedicated market, and a forge/apothecary quarter. Its four visually distinct
-  residents are the elder, merchant, masked smith, and apothecary. The smith staffs a 30-coin Power
+  residents are the elder, Chartwright, merchant, masked smith, and apothecary.
+  The Chartwright marks the next two route rooms on the Spirit Compass once per
+  town visit. The smith staffs a 30-coin Power
   Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.

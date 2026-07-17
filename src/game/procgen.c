@@ -729,6 +729,7 @@ void procgen_generate_current_room(void) BANKED {
         if (is_town) {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
                 pickup_spawn_villager(FIX8(80), FIX8(64));
+                pickup_spawn_cartographer(FIX8(48), FIX8(64));
             } else if (run_state.world_return_screen == TOWN_MARKET) {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(48, 72, WARE_HEART, 5);

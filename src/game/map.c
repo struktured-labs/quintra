@@ -168,8 +168,9 @@ void map_enter(void) {
         gotoxy(1,6);  printf("SANCTUARY & MARKET");
         gotoxy(1,8);  printf("NEXT REGION %u", (u16)(completed + 1));
         gotoxy(1,10); printf("ELDER RESTORES ALL");
-        gotoxy(1,12); printf("%s", town_rumors[rumor]);
-        gotoxy(1,14); printf("LORE SHIFTS BY SEED");
+        gotoxy(1,11); printf("CHARTWRIGHT MARKS PATH");
+        gotoxy(1,13); printf("%s", town_rumors[rumor]);
+        gotoxy(1,15); printf("LORE SHIFTS BY SEED");
         gotoxy(2,17); printf("SELECT/B = RETURN");
         palette_bg_fill_attrs(0);
         SHOW_BKG; DISPLAY_ON;

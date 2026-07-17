@@ -38,6 +38,13 @@ const u8 sprite_tile_coin[16] = {
     0x00, 0x00,
 };
 
+// A hooded chartwright with a pale map held open. Kept at one tile so the
+// village gains a distinct resident without evicting any combat OBJ art.
+static const u8 sprite_fx_cartographer[16] = {
+    0x18, 0x18, 0x3C, 0x24, 0x7E, 0x42, 0x5A, 0x66,
+    0x7E, 0x42, 0x3C, 0x3C, 0x24, 0x3C, 0x42, 0x42,
+};
+
 void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
@@ -45,6 +52,7 @@ void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_MERCHANT, 1, sprite_fx_merchant);
     set_sprite_data(SPR_SMITH, 1, sprite_fx_smith);
     set_sprite_data(SPR_APOTHECARY, 1, sprite_fx_apothecary);
+    set_sprite_data(SPR_CARTOGRAPHER, 1, sprite_fx_cartographer);
 }
 
 void tiles_load_all_class_sprites(void) BANKED {

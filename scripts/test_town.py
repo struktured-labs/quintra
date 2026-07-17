@@ -73,11 +73,15 @@ def main():
     assert pb.memory[pl + 2] == pb.memory[pl + 1]
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
 
-    # Screen 0: named arrival square, elder/fountain, three authored exits.
+    # Screen 0: named arrival square, elder/fountain, chartwright, three
+    # authored exits. The chartwright gives a small route-reading blessing,
+    # so villages are useful between procgen dungeons rather than scenery.
     enter_from_previous(19)
     assert pb.memory[rs + 19] == 0, "town did not begin in arrival square"
     elder = entities(7)
+    chartwright = entities(12)
     assert len(elder) == 1 and pb.memory[elder[0] + 12] == 69
+    assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 123
     assert not entities(4), "arrival square still crams market stock into one room"
     arrival = bytes(pb.memory[addr("_room_tilemap"):addr("_room_tilemap") + 340])
     assert arrival.count(3) == 6, "arrival square does not expose N/E/W village gates"
@@ -93,6 +97,16 @@ def main():
     assert pb.memory[pl + 2] == pb.memory[pl + 1]
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
     assert pb.memory[elder[0]] == 3
+
+    # The Chartwright marks the first two rooms of the next route without
+    # turning the procedural map into a fully revealed spoiler.
+    pb.memory[rs + 20] = 0
+    ex, ey = pb.memory[chartwright[0] + 3], (pb.memory[chartwright[0] + 7] - 8) & 0xFF
+    for off, value in ((9, ex), (10, 0), (11, ey), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(5)
+    assert pb.memory[rs + 20] & 0x03 == 0x03, "Chartwright did not mark two route rooms"
+    assert pb.memory[chartwright[0] + 15] == 1, "Chartwright blessing did not latch"
 
     # East branch: dedicated market with merchant and three visually distinct
     # wares. Stock must retain its own heart/relic art rather than collapsing

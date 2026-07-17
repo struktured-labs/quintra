@@ -117,8 +117,20 @@ u8 pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_CARTOGRAPHER, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_CARTOGRAPHER;
+        entities[idx].palette = 0x06;
+        entities[idx].hitbox = (u8)0x88;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 static u8 pickup_is_town_resident(u8 kind) {
-    return kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY;
+    return (kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY)
+        || kind == PICKUP_CARTOGRAPHER;
 }
 
 // Context, not a purchase: reveal the nearest ware's price before the player
@@ -378,6 +390,18 @@ u8 pickup_check_player_collision(void) BANKED {
                     continue;
                 case PICKUP_APOTHECARY:
                     // Visual anchor for the rune counter; the Mana Gem owns the sale.
+                    any = 1;
+                    continue;
+                case PICKUP_CARTOGRAPHER:
+                    // One free town blessing: reveal the first two chambers
+                    // of the route ahead. This preserves a fogged procgen
+                    // map while making villages tactically meaningful.
+                    if (entities[i].state == 0) {
+                        run_state.dungeon_seen |= 0x03;
+                        entities[i].state = 1;
+                        entities[i].palette = 0x02;
+                        sfx_play(SFX_CLEAR);
+                    }
                     any = 1;
                     continue;
             }
