@@ -716,9 +716,11 @@ over the same seed/class grid and compares boss clears, deaths, minimum giant
 HP, and damage taken. It does not silently adopt a candidate; a policy earns
 adoption only after it beats baseline on reproducible evidence. For a quick Sauran sample,
 run `QUINTRA_BOSS_SEARCH_RUNS=1 QUINTRA_BOSS_SEARCH_CLASSES=1 bash
-scripts/search_boss_policy.sh`. `QUINTRA_BOSS_SEARCH_RETREAT_RANGES` accepts
-either spaces or commas (for example, `20 28 36` or `20,28,36`) for a matched
-sweep.
+scripts/search_boss_policy.sh`. `QUINTRA_BOSS_SEARCH_RETREAT_RANGES` and
+`QUINTRA_BOSS_SEARCH_FIRE_CADENCES` accept either spaces or commas (for
+example, `20 28 36` or `20,28,36`) for a matched sweep. The latter compares
+how often `orbit_fire` takes an aimed beat while otherwise preserving its
+collision-safe orbit; it changes only controller input, never game state.
 
 ## World Retro delivery bar — September 12, 2026
 

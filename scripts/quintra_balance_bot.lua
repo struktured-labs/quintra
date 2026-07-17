@@ -46,6 +46,13 @@ local GIANT_RETREAT_RANGE = tonumber(os.getenv("QUINTRA_BOT_GIANT_RETREAT_RANGE"
         and (CLASS == 4 and "36" or "32") or "28")) or 28
 if GIANT_RETREAT_RANGE < 16 then GIANT_RETREAT_RANGE = 16 end
 if GIANT_RETREAT_RANGE > 56 then GIANT_RETREAT_RANGE = 56 end
+-- Orbit-fire is deliberately not continuous point-blank DPS. Expose its
+-- aimed beat cadence so offline controller research can compare pressure
+-- against body-contact safety without changing combat code or save state.
+local GIANT_FIRE_CADENCE = tonumber(os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE")
+    or "3") or 3
+if GIANT_FIRE_CADENCE < 2 then GIANT_FIRE_CADENCE = 2 end
+if GIANT_FIRE_CADENCE > 8 then GIANT_FIRE_CADENCE = 8 end
 -- Keep the established controller behavior as the default, but expose an
 -- explicit no-signature control.  This lets a balance experiment distinguish
 -- the value of real B ability use from unrelated navigation/aim changes.
@@ -1182,7 +1189,8 @@ while frames < LIMIT do
                     -- pixel of contact.  It exists only for offline search.
                     keys = (frames % 5 == 0) and (KEY_A + aim) or retreat
                 else
-                    keys = (giant_mode == "orbit_fire" and frames % 3 == 0)
+                    keys = (giant_mode == "orbit_fire"
+                        and frames % GIANT_FIRE_CADENCE == 0)
                         and (KEY_A + aim) or orbit
                 end
             elseif reach < GIANT_RETREAT_RANGE then
