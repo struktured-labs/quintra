@@ -664,11 +664,11 @@ while frames < LIMIT do
         elseif no_damage_frames > 240 then
             flank_timer, no_damage_frames = 240, 0
             keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
-        -- Vespine's stinger is a fast 48px lunge, not Wolfkin's adjacent
-        -- claw. Treating both as true melee walked the quick, fragile class
-        -- into contact damage and understated the actual kit. Hold a clear
+        -- Sauran's Tail Spike and Vespine's Stinger are 48px lunges, not
+        -- Wolfkin's adjacent claw. Treating all three as true melee walked
+        -- these kits into contact damage and understated them. Hold a clear
         -- firing lane, dart back only when crowded, and fire the other beats.
-        elseif CLASS == 4 then
+        elseif CLASS == 1 or CLASS == 4 then
             local adx, ady = math.abs(dx), math.abs(dy)
             local reach = (adx > ady) and adx or ady
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
@@ -684,10 +684,9 @@ while frames < LIMIT do
             else
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim)
             end
-        -- Wolfkin's Claw is true melee and Sauran's Tail Spike rewards a
-        -- committed close lunge, so both must close and align instead of
-        -- orbiting outside their actual weapon geometry.
-        elseif CLASS == 0 or CLASS == 1 then
+        -- Wolfkin's Claw is the roster's true melee weapon. It must close and
+        -- align instead of orbiting outside its adjacent swing geometry.
+        elseif CLASS == 0 then
             -- Tile BFS gets us around cover; at striking distance, finish the
             -- last few pixels of perpendicular alignment before attacking.
             -- Small enemy hurtboxes make a same-tile diagonal slash miss even
