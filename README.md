@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.61: Heavy Tail](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.62: True Compass](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.62 makes the tile-built Spirit Compass place the Rift Sigil icon inside
+the exact room that contains it: cracked stone means it is still required and
+a crystal means it was recovered. This replaces the old floating marker, which
+could read as decoration rather than a clear route to an otherwise locked boss.
 
 v0.17.61 raises Sauran's Tail Spike from three to four damage. Its deliberate
 28-frame cadence, shield cooldown, and MP cost are unchanged; the tank now

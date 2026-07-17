@@ -104,12 +104,24 @@ static void draw_dungeon_grid(void) {
     static const u8 gy[6] = { 3, 3, 3, 10, 10, 10 };
     u8 i;
     u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
+    // The opening dungeon includes its entry room in the diagram. Later
+    // dungeons begin after an overworld gate, so their local rooms are
+    // shifted left by one (the same mapping used by dungeon_seen below).
+    u8 sigil_cell = run_state.bosses_beaten ? 1 : 2;
+    u8 sigil_found = (run_state.rift_sigils
+        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
     u8 here = (local == 0 && run_state.room_counter > 0) ? 5
         : ((run_state.bosses_beaten > 0 && local > 0)
             ? (u8)(local - 1) : local);
     for (i = 0; i < 6; ++i) {
         u8 seen = (run_state.dungeon_seen & (u8)(1u << i)) ? 1 : 0;
         u8 icon = (i == here) ? BGT_SWITCH : (i == 5 ? BGT_SPIKES : BGT_FLOOR3);
+        // Put the objective in the room that actually owns it. The older
+        // free-floating center marker looked like decoration, so players
+        // could reach the sanctuary without realizing which room held the
+        // required Rift Sigil.
+        if (i == sigil_cell && i != here)
+            icon = sigil_found ? BGT_CRYSTAL : BGT_WALL_CRACK;
         map_room_box(gx[i], gy[i], icon, seen);
         if (i < 2 && (run_state.dungeon_seen & (u8)(3u << i)) == (u8)(3u << i)) {
             map_put((u8)(gx[i] + 3), (u8)(gy[i] + 1), BGT_FLOOR2);
@@ -128,12 +140,6 @@ static void draw_dungeon_grid(void) {
             map_put((u8)(gx[i + 1] + 5), (u8)(gy[i] + 1), BGT_FLOOR2);
         }
     }
-    // A large physical Sigil marker occupies the map's center: crystal when
-    // recovered, cracked stone while the boss threshold remains locked.
-    if (run_state.rift_sigils & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
-        map_put(9,8,BGT_CRYSTAL);
-    else
-        map_put(9,8,BGT_WALL_CRACK);
 }
 
 void map_enter(void) {

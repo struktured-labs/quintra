@@ -126,16 +126,20 @@ def main():
         f"screen={pb.memory[SCREEN]} hitstop={pb.memory[HITSTOP]} "
         f"frame={pb.memory[FRAME_COUNTER] | pb.memory[FRAME_COUNTER + 1] << 8}")
 
-    # SELECT is a graphical tile map: current-room and recovered-Sigil icons
-    # are physical dungeon tiles, while unseen rooms remain genuinely blank.
+    # SELECT is a graphical tile map. Move the displayed cursor one room past
+    # the recovered fixture so its icon can be asserted in the room that owns
+    # it, rather than at the old confusing floating center marker.
+    pb.memory[RS + 1] = 3
     pb.button("select")
     for _ in range(120):
         pb.tick()
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    assert pb.memory[bg + 4 * 32 + 14] == 33, "current dungeon cell lacks icon"
-    assert pb.memory[bg + 8 * 32 + 9] == 22, "found Sigil lacks crystal icon"
+    assert pb.memory[bg + 4 * 32 + 14] == 22, \
+        "found Sigil lacks a crystal icon in its fixture room"
+    assert pb.memory[bg + 8 * 32 + 9] == 0, \
+        "Sigil still uses the misleading floating map marker"
     assert pb.memory[bg + 11 * 32 + 2] == 0, "unseen boss cell was pre-drawn"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")
