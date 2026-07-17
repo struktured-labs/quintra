@@ -74,7 +74,7 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART
         : (ware == WARE_SURGE) ? SPR_SURGE_ORB : SPR_ITEM_ORB;
     entities[idx].palette = (ware == WARE_ITEM) ? 0x05
-        : (ware == WARE_SURGE) ? 0x06 : 0x04;
+        : (ware == WARE_SURGE || ware == WARE_CHART) ? 0x06 : 0x04;
     // Keep the stock's heart/relic sprite intact and put the dedicated gold
     // sale tag above it. This answers "can I pick this up?" before the player
     // has to walk into a ware or discover the bottom-HUD price convention.
@@ -776,6 +776,10 @@ void procgen_generate_current_room(void) BANKED {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
                 pickup_spawn_villager(FIX8(80), FIX8(64));
                 pickup_spawn_cartographer(FIX8(48), FIX8(64));
+                // A one-dungeon full chart is a tactical alternative to
+                // raw stats: it lets a cash-rich player plan every branch,
+                // while the chartwright's free touch still scouts two cells.
+                spawn_shop_ware(48, 96, WARE_CHART, 15);
                 pickup_spawn_waykeeper(FIX8(80), FIX8(24));
             } else if (run_state.world_return_screen == TOWN_MARKET) {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));

@@ -147,8 +147,10 @@ static u8 room_should_combat_seal(void) {
 static u8 room_state_has_shop_wares(void) {
     return (!run_state.world_mode
             && (run_state.room_counter % ROOMS_PER_STAGE) == 4)
-        || (RUN_ROOM_IS_TOWN(run_state.room_counter)
-            && run_state.world_return_screen != TOWN_ARRIVAL);
+        // The Cartographer sells a Chart in the arrival square too. Keep all
+        // town shelves on the same proximity-HUD path so no paid ware looks
+        // like a mysterious loose pickup.
+        || RUN_ROOM_IS_TOWN(run_state.room_counter);
 }
 
 static void room_refresh_shop_wares(void) {
@@ -1588,7 +1590,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         if (run_state.world_return_screen == TOWN_ARRIVAL) {
                             if (dir == DIR_E) run_state.world_return_screen = TOWN_MARKET;
                             else if (dir == DIR_W) run_state.world_return_screen = TOWN_QUARTER;
-                            else { run_state.world_return_screen = TOWN_ARRIVAL; run_state.room_counter++; }
+                            else {
+                                // Town route knowledge is queued separately
+                                // from the current compass. Entering north is
+                                // a genuine dungeon transition, so consume it
+                                // here just as Riftwild cave gates do.
+                                run_state_begin_dungeon();
+                                run_state.room_counter++;
+                            }
                         } else {
                             run_state.world_return_screen = TOWN_ARRIVAL;
                         }

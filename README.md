@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.99: Apothecary's Fangs](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.0: Cartographer's Chart](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.0 fixes village route knowledge and makes it a visible, purchasable
+choice. The free **Chartwright** now correctly scouts the first two rooms of
+the *next* dungeon instead of losing that blessing at the north gate. A blue
+**Cartographer's Chart** shelf in the arrival square costs 15 coins and reveals
+all six rooms for that one following dungeon; its folded-map HUD glyph and
+price appear before contact. The live-ROM town contract buys the Chart through
+ordinary collision and proves the full compass arrives exactly once.
 
 v0.17.99 makes the village **Apothecary** a real run-building stop. Alongside
 its Mana Gem, the crimson **Vampiric Sigil** shelf is always purchasable for
@@ -416,10 +424,11 @@ an unreachable live enemy and seal progression.
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
 - **Generated world cadence**: three six-room dungeons form a region, followed
   by a safe, connected three-screen village: an elder's fountain square, a
-  dedicated market, and a forge/apothecary quarter. Its four visually distinct
+  dedicated market, and a forge/apothecary quarter. Its five visually distinct
   residents are the elder, Chartwright, merchant, masked smith, and apothecary.
-  The Chartwright marks the next two route rooms on the Spirit Compass once per
-  town visit. The smith staffs a 30-coin Power
+  The Chartwright scouts the first two rooms of the *next* route once per town
+  visit; a 15-coin Cartographer's Chart in the arrival square instead reveals
+  all six rooms for that following dungeon. The smith staffs a 30-coin Power
   Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.
@@ -589,7 +598,8 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes).
-The latest v0.17.99 15/15 matrix has complete telemetry and encounters every
+The current v0.18.0 baseline retains the v0.17.99 15/15 matrix's complete
+telemetry and encounters every
 roster member, but does **not** pass this gate yet: Picsean wins 2/3 complete
 nine-boss runs, while Wolfkin, Sauran, Corvin, and Vespine are still 0/3.
 It is therefore not a show build. The v0.17.46 14/15 result remains a

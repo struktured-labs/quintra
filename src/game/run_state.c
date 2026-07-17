@@ -22,6 +22,7 @@ void run_state_clear(void) {
     run_state.dungeon_seen = 1;
     run_state.world_seen = 0;
     run_state.rift_sigils = 0;
+    run_state.next_dungeon_reveal = 0;
 }
 
 void run_state_init(u32 seed) {
@@ -58,5 +59,9 @@ void run_state_begin_world(void) {
 void run_state_begin_dungeon(void) {
     run_state.world_mode = 0;
     run_state.world_return_screen = TOWN_ARRIVAL;
-    run_state.dungeon_seen = 0;
+    // Town chart knowledge intentionally survives the doorway. The prior
+    // chartwright wrote directly to dungeon_seen here, so its visible
+    // blessing was silently erased during the transition.
+    run_state.dungeon_seen = run_state.next_dungeon_reveal;
+    run_state.next_dungeon_reveal = 0;
 }

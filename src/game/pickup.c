@@ -448,6 +448,12 @@ u8 pickup_check_player_collision(void) BANKED {
                             case WARE_VAMP:
                                 apply_item_effects(19);   // Vampiric Sigil
                                 break;
+                            case WARE_CHART:
+                                // Full route knowledge is deliberately a
+                                // one-dungeon service: coins buy planning
+                                // power without permanently removing fog.
+                                run_state.next_dungeon_reveal = 0x3F;
+                                break;
                             case WARE_SURGE:
                                 room_start_weapon_surge();
                                 break;
@@ -489,11 +495,12 @@ u8 pickup_check_player_collision(void) BANKED {
                     any = 1;
                     continue;
                 case PICKUP_CARTOGRAPHER:
-                    // One free town blessing: reveal the first two chambers
-                    // of the route ahead. This preserves a fogged procgen
-                    // map while making villages tactically meaningful.
+                    // One free town blessing: scout the first two chambers
+                    // of the route ahead. It must be stored for the next
+                    // dungeon; dungeon_seen belongs to the current screen
+                    // and is reset at the north gate.
                     if (entities[i].state == 0) {
-                        run_state.dungeon_seen |= 0x03;
+                        run_state.next_dungeon_reveal |= 0x03;
                         entities[i].state = 1;
                         entities[i].palette = 0x02;
                         sfx_play(SFX_CLEAR);

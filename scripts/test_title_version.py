@@ -16,7 +16,7 @@ def main():
     match = re.search(r'#define QUINTRA_VERSION "([^"]+)"', HEADER.read_text())
     assert match, "missing QUINTRA_VERSION"
     version = match.group(1)
-    assert len(version) == 8, f"title version must fill exactly 8 columns: {version}"
+    assert len(version) <= 8, f"title version exceeds title-footer space: {version}"
     assert version in README.read_text(), "README latest version drifted from cartridge"
 
     pb = PyBoy(str(ROM), window="null", cgb=True)
@@ -36,10 +36,13 @@ def main():
         "title SELECT prompt drifted"
     )
     assert pb.memory[title_row + 10] == 0, "title footer lost its version gutter"
-    rendered = list(pb.memory[title_row + 11:title_row + 19])
+    rendered = list(pb.memory[title_row + 11:title_row + 11 + len(version)])
     assert rendered == expected, (
         f"rendered title version drifted: expected {expected}, got {rendered}"
     )
+    assert all(pb.memory[title_row + 11 + len(version) + i] == 0
+               for i in range(8 - len(version))), \
+        "title footer left stale version glyphs in its gutter"
     assert pb.memory[title_row + 19] == 0, "title footer touched scrolling corner"
 
     # Cycle past the long beat "FIVE SEAL THE RIFT", whose final T occupies

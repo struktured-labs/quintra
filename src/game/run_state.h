@@ -51,6 +51,9 @@ typedef struct {
     u8  dungeon_seen;        // bit 0..5: rooms revealed in current dungeon
     u16 world_seen;          // bit 0..15: Riftwild cells revealed this stage
     u16 rift_sigils;         // bit 0..8: stage sigil claimed this run
+    // Route knowledge purchased or earned in a town applies when the hero
+    // next enters a six-room dungeon, not to the town's own compass.
+    u8  next_dungeon_reveal; // bit 0..5: cells to reveal on next entry
 } run_state_t;
 
 #define RUN_STAGE_SIGIL_BIT(stage) ((u16)(1u << ((stage) % BOSSES_TO_WIN)))

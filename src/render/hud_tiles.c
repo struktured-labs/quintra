@@ -54,6 +54,11 @@ void tiles_load_hud(void) BANKED {
         0x42,0x42, 0x66,0x66, 0x3C,0x3C, 0x18,0x18,
         0x18,0x18, 0x24,0x24, 0x24,0x24, 0x00,0x00,
     };
+    // Folded route parchment: this is information, not another stat orb.
+    static const u8 offer_chart[16] = {
+        0xFF,0xFF, 0x81,0x81, 0xBD,0xBD, 0xA5,0xA5,
+        0xA5,0xA5, 0xBD,0xBD, 0x81,0x81, 0xFF,0xFF,
+    };
     u8 i;
     for (i = 0; i < HUD_TILE_COUNT; ++i)
         set_bkg_data((u8)(HUD_HEART_FULL + i), 1, hud_tiles[i]);
@@ -66,4 +71,5 @@ void tiles_load_hud(void) BANKED {
     set_bkg_data(HUD_OFFER_RUNE,  1, offer_rune);
     set_bkg_data(HUD_OFFER_SURGE, 1, offer_surge);
     set_bkg_data(HUD_OFFER_VAMP,  1, offer_vamp);
+    set_bkg_data(HUD_OFFER_CHART, 1, offer_chart);
 }

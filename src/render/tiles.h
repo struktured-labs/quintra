@@ -31,6 +31,7 @@
 #define HUD_OFFER_RUNE   44
 #define HUD_OFFER_SURGE  45
 #define HUD_OFFER_VAMP   46
+#define HUD_OFFER_CHART  47
 
 // Dungeon tile slots (after HUD block)
 #define BGT_FLOOR2  19   // cracked floor variant

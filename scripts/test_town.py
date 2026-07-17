@@ -77,9 +77,10 @@ def main():
     assert pb.memory[pl + 2] == pb.memory[pl + 1]
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
 
-    # Screen 0: named arrival square, elder/fountain, chartwright, three
-    # authored exits. The chartwright gives a small route-reading blessing,
-    # so villages are useful between procgen dungeons rather than scenery.
+    # Screen 0: named arrival square, elder/fountain, chartwright, a paid
+    # full-route chart, and three authored exits. The two route-reading
+    # choices make villages useful between procgen dungeons rather than
+    # scenery.
     enter_from_previous(19)
     assert pb.memory[rs + 19] == 0, "town did not begin in arrival square"
     elder = entities(7)
@@ -94,7 +95,12 @@ def main():
     # dungeon entry restores combat art rather than merely despawning the NPC.
     pb.memory[0xFF4F] = 0
     waykeeper_tile = bytes(pb.memory[0x8000 + 124 * 16:0x8000 + 125 * 16])
-    assert not entities(4), "arrival square still crams market stock into one room"
+    arrival_wares = entities(4)
+    assert len(arrival_wares) == 1 and pb.memory[arrival_wares[0] + 18] == 7, \
+        "arrival square lacks its dedicated Cartographer's Chart"
+    chart_ware = arrival_wares[0]
+    assert pb.memory[chart_ware + 12] == 35 and pb.memory[chart_ware + 13] == 6
+    assert pb.memory[chart_ware + 19] == 15, "Cartographer's Chart price drifted"
     arrival = bytes(pb.memory[addr("_room_tilemap"):addr("_room_tilemap") + 340])
     assert arrival.count(3) == 6, "arrival square does not expose N/E/W village gates"
     pb.screen.image.save(ROOT / "tmp" / "town-arrival.png")
@@ -127,15 +133,34 @@ def main():
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
     assert pb.memory[elder[0]] == 3
 
-    # The Chartwright marks the first two rooms of the next route without
-    # turning the procedural map into a fully revealed spoiler.
-    pb.memory[rs + 20] = 0
+    # The Chartwright scouts the first two rooms of the next route without
+    # turning the procedural map into a fully revealed spoiler. Route
+    # knowledge survives the north gate separately from the town compass.
+    pb.memory[rs + 25] = 0
     ex, ey = pb.memory[chartwright[0] + 3], (pb.memory[chartwright[0] + 7] - 8) & 0xFF
     for off, value in ((9, ex), (10, 0), (11, ey), (12, 0)):
         pb.memory[pl + off] = value
     tick(5)
-    assert pb.memory[rs + 20] & 0x03 == 0x03, "Chartwright did not mark two route rooms"
+    assert pb.memory[rs + 25] == 0x03, "Chartwright did not scout two route rooms"
     assert pb.memory[chartwright[0] + 15] == 1, "Chartwright blessing did not latch"
+    # The paid chart is a stronger, clearly signposted town service. Its map
+    # glyph and price must appear before contact; buying it through ordinary
+    # collision upgrades the stored two-room scout to the full six-room route.
+    cx, cy = pb.memory[chart_ware + 3], (pb.memory[chart_ware + 7] - 8) & 0xFF
+    for off, value in ((9, cx), (10, 0), (11, cy - 24), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    pb.memory[0xFF4F] = 0
+    assert pb.memory[0x9C00 + 12] == 47, \
+        f"nearby Chart lacks route-map offer glyph (got {pb.memory[0x9C00 + 12]})"
+    assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 10, 14)), \
+        "nearby Chart did not show its $15 price"
+    pb.memory[pl + 16], pb.memory[pl + 17] = 15, 0
+    for off, value in ((9, cx), (10, 0), (11, cy), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    assert pb.memory[chart_ware] == 0, "Cartographer's Chart could not be purchased"
+    assert pb.memory[rs + 25] == 0x3F, "paid Chart did not reveal all route cells"
 
     # East branch: dedicated market with merchant and four visually distinct
     # wares. Stock must retain its own heart/relic art rather than collapsing
@@ -269,6 +294,8 @@ def main():
     leave("north")
     assert pb.memory[rs + 1] == 20, "north village gate did not continue the run"
     assert pb.memory[rs + 19] == 0, "town-local screen leaked into dungeon state"
+    assert pb.memory[rs + 20] == 0x3F and pb.memory[rs + 25] == 0, \
+        f"paid Chart did not become a one-dungeon full compass reveal (seen={pb.memory[rs + 20]:02x}, queued={pb.memory[rs + 25]:02x})"
     pb.memory[0xFF4F] = 0
     lantern_tile = bytes(pb.memory[0x8000 + 124 * 16:0x8000 + 125 * 16])
     assert lantern_tile != waykeeper_tile, \
