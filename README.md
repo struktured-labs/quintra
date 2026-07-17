@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.88: Seeded Surge Shops](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.89: Rift Warden Pressure](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.89 adds the **Rift Warden** to Golden Temple, Bloodmoon, and Void
+Sanctum pools. This cyan split-mask caster fires a deliberate five-way fan:
+it closes the center and adjacent diagonal lanes while preserving readable
+outer-diagonal escapes. Its authored combat-only sprite safely reuses the
+merchant sale-tag VRAM slot only outside shops and towns. Typed content checks
+prove it is in all three late pools without raising their total spawn weight;
+live-ROM coverage proves its sprite handoff and five real projectile lanes.
+A complete nine-boss controller replay still wins after the new threat.
 
 v0.17.88 gives every dungeon merchant a seed-stable premium choice: some runs
 offer the permanent **Iron Heart** as before, while others offer a cyan
@@ -270,7 +279,7 @@ an unreachable live enemy and seal progression.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **21 enemies across a size hierarchy** — small swarm critters (crawler,
+- **22 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
@@ -288,7 +297,9 @@ an unreachable live enemy and seal progression.
   cardinal rings force readable lane changes while leaving diagonal exits.
   Golden Temple onward also fields **Dread Bells**: slow-moving iron casters
   with a visible long cadence and a fast eight-way peal that makes every lane
-  a decision instead of simply inflating enemy health.
+  a decision instead of simply inflating enemy health. Those same late pools
+  add **Rift Wardens**, five-way fan casters that pressure the central route
+  without erasing the far-diagonal dodge lanes.
   Verdant Hollow once again fields fast pursuing Hornets; typed content tests
   now reject any registered non-boss monster missing from every stage pool.
   Both fragments are guaranteed even when the fixed 32-entity table is full;
@@ -423,7 +434,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
 the endurance gate proves every sample exercises the procedural economy. A
-live encounter bitmask requires every generated enemy (IDs 0–20) to appear
+live encounter bitmask requires every generated enemy (IDs 0–21) to appear
 somewhere in the paired-seed endurance matrix, preventing a valid but
 procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance

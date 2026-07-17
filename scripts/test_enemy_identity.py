@@ -18,7 +18,7 @@ IDENTITIES = {
     5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
     14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
-    18: (80, 5), 19: (124, 6), 20: (125, 4),
+    18: (80, 5), 19: (124, 6), 20: (125, 4), 21: (81, 6),
 }
 
 SPECIALISTS = {
@@ -32,6 +32,7 @@ SPECIALISTS = {
     18: (80, 68, "ECHO_GUARD", "SPR_ENEMY_ECHO_GUARD", "echo-guard"),
     19: (124, 75, "RUNE_LANTERN", "SPR_ENEMY_RUNE_LANTERN", "rune-lantern"),
     20: (125, 124, "DREAD_BELL", "SPR_ENEMY_DREAD_BELL", "dread-bell"),
+    21: (81, 35, "RIFT_WARDEN", "SPR_ENEMY_RIFT_WARDEN", "rift-warden"),
 }
 
 
@@ -452,8 +453,41 @@ def main():
         (3, 0), (3, 3), (0, 3), (-3, 3),
         (-3, 0), (-3, -3), (0, -3), (3, -3),
     }, f"Dread Bell eight-way fast peal drifted: {peal}"
+
+    # Rift Warden is the new late-stage center-lane breaker. Its five-way fan
+    # must differ from both the Lantern's cardinal ring and the Bell's full
+    # peal, while slot 81 proves combat safely reclaims merchant-only tag art.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 32)
+    put16(pb, player + 11, 72)
+    pb.memory[player + 2] = 20
+    warden = entities
+    pb.memory[warden] = 2
+    pb.memory[warden + 1] = 3
+    put_fix8(pb, warden + 2, 88)
+    put_fix8(pb, warden + 6, 72)
+    pb.memory[warden + 12] = 81
+    pb.memory[warden + 14] = 16
+    pb.memory[warden + 16] = 1       # keep the pre-fire aim on a clean row
+    pb.memory[warden + 17] = 21
+    pb.memory[warden + 18] = 0       # fan immediately
+    pb.memory[warden + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    fan = []
+    for i in range(1, 32):
+        ep = entities + i * 28
+        if pb.memory[ep] == 1 and pb.memory[ep + 1] & 1:
+            vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
+            fan.append((vx - 256 if vx >= 128 else vx,
+                        vy - 256 if vy >= 128 else vy))
+    assert set(fan) == {(-2, -2), (-2, 0), (-2, 2), (0, -2), (0, 2)}, (
+        f"Rift Warden five-way fan drifted: {fan}")
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern/bell behavior + ooze split")
+    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern/bell/warden behavior + ooze split")
 
 
 if __name__ == "__main__":

@@ -118,6 +118,13 @@ void tiles_load_dread_bell_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_DREAD_BELL, 1, sprite_enemy_dread_bell);
 }
 
+void tiles_load_rift_warden_sprite(void) BANKED {
+    // The for-sale tag exists only in merchant/town rooms, which never
+    // contain combat hostiles. Reclaim its slot in dungeon combat so this
+    // additional enemy costs no permanent OBJ VRAM.
+    set_sprite_data(SPR_ENEMY_RIFT_WARDEN, 1, sprite_enemy_rift_warden);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

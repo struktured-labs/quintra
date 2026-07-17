@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         21);   // 6 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       21);   // adds the late eight-way Dread Bell
+        assert_eq!(r.n_enemies(),       22);   // adds Dread Bell + Rift Warden lane breaker
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -139,6 +139,20 @@ mod tests {
                 fire_rate: 108,
                 projectile: quintra_content::ProjectileKind::Bullet,
                 pattern: quintra_content::ShotPattern::Ring(8),
+            });
+    }
+
+    #[test]
+    fn rift_warden_adds_late_fan_pressure_without_weight_inflation() {
+        for stage in [&stages::STAGES[6], &stages::STAGES[7], &stages::STAGES[8]] {
+            assert!(stage.enemy_pool.iter().any(|&(id, _)| id == 21));
+            assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        }
+        assert_eq!(enemies::RIFT_WARDEN.ai_script,
+            quintra_content::AiScriptId::Shooter {
+                fire_rate: 92,
+                projectile: quintra_content::ProjectileKind::Bullet,
+                pattern: quintra_content::ShotPattern::Fan(5),
             });
     }
 

@@ -322,6 +322,17 @@ pub const DREAD_BELL: [&str; 8] = [ // hanging iron bell; pale clapper reads at 
     ".3.22.3.",
 ];
 
+pub const RIFT_WARDEN: [&str; 8] = [ // split-mask sentinel, open outer lanes
+    "...33...",
+    "..3223..",
+    ".321123.",
+    "32133123",
+    "32133123",
+    ".312213.",
+    "..31.13.",
+    ".3.1..3.",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -701,7 +712,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 19] = [
+pub const ENEMIES_8: [(&str, &[&str]); 20] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -721,6 +732,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 19] = [
     ("echo_guard", &ECHO_GUARD),
     ("rune_lantern", &RUNE_LANTERN),
     ("dread_bell", &DREAD_BELL),
+    ("rift_warden", &RIFT_WARDEN),
 ];
 
 pub const FX_8: [(&str, &[&str]); 14] = [

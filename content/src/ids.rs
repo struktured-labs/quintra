@@ -60,6 +60,7 @@ pub const ENEMY_MIRE_SPORE:      EnemyId = EnemyId::new(17);   // proximity-arme
 pub const ENEMY_ECHO_GUARD:      EnemyId = EnemyId::new(18);   // blocks one hit, counters, then opens
 pub const ENEMY_RUNE_LANTERN:    EnemyId = EnemyId::new(19);   // drifting four-lane ring caster
 pub const ENEMY_DREAD_BELL:      EnemyId = EnemyId::new(20);   // late-stage eight-way peal caster
+pub const ENEMY_RIFT_WARDEN:     EnemyId = EnemyId::new(21);   // late-stage five-way lane breaker
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -128,6 +129,9 @@ pub const SPRITE_RUNE_LANTERN: SpriteRef = SpriteRef::new(124);
 // Slot 125 is a dungeon-only multiplex: combat rooms load Dread Bell art;
 // merchant/town rooms retain the proximity callout in that slot.
 pub const SPRITE_DREAD_BELL:    SpriteRef = SpriteRef::new(125);
+// Dungeon combat may reuse the merchant-only sale-tag tile. Shop/town rooms
+// never spawn a Rift Warden and keep this slot's gold marker intact.
+pub const SPRITE_RIFT_WARDEN:   SpriteRef = SpriteRef::new(81);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

@@ -161,8 +161,10 @@ static void room_refresh_shop_wares(void) {
 // through this helper; otherwise a prior room's tile data can leak forward.
 static void room_load_dynamic_fx_identity(void) {
     tiles_load_fx_sprites();
-    if (!run_state.world_mode && !room_state_has_shop_wares())
+    if (!run_state.world_mode && !room_state_has_shop_wares()) {
         tiles_load_dread_bell_sprite();
+        tiles_load_rift_warden_sprite();
+    }
 }
 
 // Progression fixtures belong to room orchestration, after procgen has fully

@@ -297,6 +297,22 @@ pub const DREAD_BELL: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const RIFT_WARDEN: Enemy = Enemy {
+    id: ENEMY_RIFT_WARDEN, symbol: "RIFT_WARDEN", name: "RiftWarden",
+    sprite_set: SPRITE_RIFT_WARDEN, palette: OBJ_PAL_MAGIC,
+    // Late-stage lane breaker: a deliberate five-shot fan claims the center
+    // and two adjacent diagonals, but leaves the outer diagonals readable.
+    // It adds pressure without copying the Bell's room-wide eight-way peal.
+    stats: EnemyStats { hp: 16, damage: 2, speed: 32, score: 70, weakness: 0x04, poise: 2 },
+    ai_script: AiScriptId::Shooter {
+        fire_rate: 92,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Fan(5),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -319,4 +335,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(ECHO_GUARD.clone());
     r.add_enemy(RUNE_LANTERN.clone());
     r.add_enemy(DREAD_BELL.clone());
+    r.add_enemy(RIFT_WARDEN.clone());
 }

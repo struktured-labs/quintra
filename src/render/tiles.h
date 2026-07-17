@@ -95,6 +95,7 @@
 #define SPR_APOTHECARY        79 // village rune keeper
 #define SPR_ENEMY_ECHO_GUARD  80 // Golden Temple shield-counter duelist
 #define SPR_SHOP_TAG         81 // animated for-sale marker; never loose currency
+#define SPR_ENEMY_RIFT_WARDEN SPR_SHOP_TAG // combat-only late five-way caster
 #define SPR_FX_SWING        122 // Wolfkin's adjacent claw/weapon arc
 #define SPR_CARTOGRAPHER    123 // village chartwright; reveals the next route
 #define SPR_ENEMY_RUNE_LANTERN 124 // late drifting four-lane ring caster
@@ -131,6 +132,7 @@ void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles 
 void tiles_load_ascended_sprites(void) BANKED;    // bank-3 transform atlas -> fixed OBJ slots
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
+void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-tag slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)

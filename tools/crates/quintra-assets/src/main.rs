@@ -382,6 +382,7 @@ mod tests {
             tile_2bpp_bytes(&parse_grid(&grids::CINDER_MAW)),
             tile_2bpp_bytes(&parse_grid(&grids::RIFT_OOZE)),
             tile_2bpp_bytes(&parse_grid(&grids::DREAD_BELL)),
+            tile_2bpp_bytes(&parse_grid(&grids::RIFT_WARDEN)),
         ];
         for i in 0..specialists.len() {
             for j in i + 1..specialists.len() {
@@ -393,5 +394,6 @@ mod tests {
         assert_ne!(specialists[2], tile_2bpp_bytes(&parse_grid(&grids::WISP)));
         assert_ne!(specialists[3], tile_2bpp_bytes(&parse_grid(&grids::CRAWLER)));
         assert_ne!(specialists[5], tile_2bpp_bytes(&parse_grid(&grids::RUNE_LANTERN)));
+        assert_ne!(specialists[6], tile_2bpp_bytes(&parse_grid(&grids::SHOP_TAG)));
     }
 }
