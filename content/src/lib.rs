@@ -95,6 +95,47 @@ mod tests {
     }
 
     #[test]
+    fn starter_boss_time_envelope_stays_tense_but_finite() {
+        use quintra_content::ItemKind;
+
+        // Mirror procgen.c's one-byte boss construction: a 50-HP Sentinel
+        // receives its stage bonus, ordinary stages saturate at 255, and the
+        // two authored late-game caps prevent Temple/Void from becoming an
+        // attrition wall. This is an *ideal uninterrupted lane* estimate;
+        // real bullet patterns, crits, signatures, and run upgrades make a
+        // fight more dynamic than this floor, but it catches accidental
+        // content edits that make starter bosses a five-second joke or an
+        // unreasonably long no-upgrade check.
+        let boss_hp = |stage: usize| -> u16 {
+            let mut hp = 50u16 + stages::STAGES[stage].boss_hp_bonus as u16;
+            hp = hp.min(255);
+            if stage == 6 { hp = hp.min(230); }
+            if stage == 8 { hp = hp.min(220); }
+            hp
+        };
+
+        let r = registry();
+        for champion in &r.classes {
+            let weapon = r.items.iter()
+                .find(|item| item.id == champion.starter_weapon)
+                .expect("registered champion starter weapon");
+            let ItemKind::Weapon { fire_rate, damage, .. } = weapon.kind else {
+                panic!("{} starter is not a weapon", champion.name);
+            };
+            for stage in 0..stages::STAGES.len() {
+                let shots = (boss_hp(stage) + damage as u16 - 1) / damage as u16;
+                let ideal_frames = shots * fire_rate as u16;
+                assert!(ideal_frames >= 1_200,
+                    "{} stage {} boss is a trivial {:.1}s starter kill",
+                    champion.name, stage, ideal_frames as f32 / 60.0);
+                assert!(ideal_frames <= 5_760,
+                    "{} stage {} boss is an excessive {:.1}s starter kill",
+                    champion.name, stage, ideal_frames as f32 / 60.0);
+            }
+        }
+    }
+
+    #[test]
     fn stage_bgr555_encoding_matches_hardware_layout() {
         use quintra_content::Rgb5;
         // BGR555: red in bits 0-4, green 5-9, blue 10-14
