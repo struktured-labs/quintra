@@ -42,7 +42,11 @@ def enter_boss(stage):
     pb.memory[RS + 1] = target - 1
     pb.memory[RS + 11] = stage
     pb.memory[RS + 6] = 0xFF
-    pb.memory[RS + 17] = 0
+    # The sanctuary before each boss correctly requires that stage's Rift
+    # Sigil. This identity harness is sampling an already-qualified stage,
+    # so grant that objective instead of mistaking its progression gate for
+    # a failed room transition.
+    put16(pb, RS + 23, 1 << stage)
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:

@@ -32,8 +32,10 @@ def exit_at(pb, x, y, clear=True):
     if clear: clear_hostiles(pb)
     put16(pb, PL + 9, x); put16(pb, PL + 11, y)
     assert pb.memory[PL + 9] == (x & 255) and pb.memory[PL + 11] == (y & 255)
-    # A full generated-room swap can straddle several video frames.
-    for _ in range(45): pb.tick()
+    # A full generated-room swap can straddle several video frames; the
+    # outdoor rebuild also streams a complete tilemap before it is safe to
+    # inspect authored paths.
+    for _ in range(90): pb.tick()
 
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)

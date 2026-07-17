@@ -56,6 +56,9 @@ static u8 hostiles_prev;
 static u8 hostiles_now;
 static u8 door_bump_cd;
 static u8 shop_offer_visible;
+// Set once when a room is generated.  Price proximity must never put a
+// 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
+static u8 room_has_shop_wares;
 u8 room_combat_sealed;
 u8 room_sigil_status;
 
@@ -126,6 +129,16 @@ static u8 room_should_combat_seal(void) {
     chosen = (u8)(1 + ((run_state.run_seed
         ^ (u32)(run_state.bosses_beaten * 0x5D)) & 1));
     return (local == chosen) ? 1 : 0;
+}
+
+// Store availability is a room property, not an every-frame discovery job.
+// This is refreshed on both full room entry and the in-place door/portal
+// regeneration paths.
+static void room_refresh_shop_wares(void) {
+    room_has_shop_wares = (!run_state.world_mode
+            && (run_state.room_counter % ROOMS_PER_STAGE) == 4)
+        || (RUN_ROOM_IS_TOWN(run_state.room_counter)
+            && run_state.world_return_screen != TOWN_ARRIVAL);
 }
 
 // Progression fixtures belong to room orchestration, after procgen has fully
@@ -666,6 +679,7 @@ void room_enter(void) {
     hud_init();
     hud_show();
     shop_offer_visible = 0;
+    room_has_shop_wares = 0;
     hud_clear_offer();
 
     // Player metasprite — 4 tiles starting at class-specific base
@@ -720,6 +734,7 @@ void room_enter(void) {
 
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
+    room_refresh_shop_wares();
     room_spawn_progression_fixture();
     room_combat_sealed = room_should_combat_seal();
     room_load_environment_palettes();
@@ -1252,7 +1267,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (!found) {
             u8 price;
             hud_redraw_boss(0, 0);
-            if (pickup_nearby_shop_price(&price)) {
+            if (room_has_shop_wares && pickup_nearby_shop_price(&price)) {
                 hud_show_offer(price);
                 shop_offer_visible = 1;
             } else if (shop_offer_visible) {
@@ -1341,6 +1356,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             play_stage_music();
             DISPLAY_OFF;
             procgen_generate_current_room();
+            room_refresh_shop_wares();
             room_spawn_progression_fixture();
             room_combat_sealed = room_should_combat_seal();
             room_load_environment_palettes();
@@ -1489,6 +1505,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // slide; palette-changing boss/world/town boundaries retain
                 // the safe blanked rebuild path.
                 procgen_generate_current_room();
+                room_refresh_shop_wares();
                 room_spawn_progression_fixture();
                 room_combat_sealed = room_should_combat_seal();
                 if (!run_state.world_mode && dir == DIR_E

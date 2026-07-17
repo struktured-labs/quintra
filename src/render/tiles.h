@@ -110,6 +110,7 @@ void tiles_load_hud(void) BANKED;
 
 // Phase 12 metasprite loaders
 void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles = 20 OBJ tiles
+void tiles_load_ascended_sprites(void) BANKED;    // bank-3 transform atlas -> fixed OBJ slots
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)

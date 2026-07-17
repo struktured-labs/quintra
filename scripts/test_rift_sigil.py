@@ -17,9 +17,9 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN = map(addr, (
+RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN, HITSTOP, FRAME_COUNTER = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
-    "_room_combat_sealed", "_room_sigil_status", "_loop_current_screen"))
+    "_room_combat_sealed", "_room_sigil_status", "_loop_current_screen", "_g_hitstop", "_loop_frame_counter"))
 RS_SIGILS = 23
 RS_BOSSES = 11
 
@@ -100,22 +100,31 @@ def main():
         "room 2 did not contain exactly one Rift Sigil: "
         f"status={pb.memory[SIGIL_STATUS]} rs={list(pb.memory[RS:RS + 26])} "
         f"entities={[list(pb.memory[EN + i * 28:EN + i * 28 + 20]) for i in range(10)]}")
+    # The generator has already published the Sigil by this point, but an
+    # in-place Zelda-style slide may still be consuming VBlanks inside the
+    # transition call. Let it finish before exercising normal room updates.
+    for _ in range(60):
+        pb.tick()
     ep = sigils[0]
     for i in range(32):
         other = EN + i * 28
         if other != ep:
             pb.memory[other] = pb.memory[other + 1] = 0
     pb.memory[PL + 2] = pb.memory[PL + 1]
-    pb.memory[PL + 15] = 60
-    put16(pb, PL + 9, pb.memory[ep + 3])
-    put16(pb, PL + 11, (pb.memory[ep + 7] - 8) & 0xFF)
+    pb.memory[PL + 15] = 0
+    # Put the full pickup box *inside* the 6x6 Sigil, rather than merely
+    # kissing its corner. This stays stable if the hero feet box is refined.
+    put16(pb, PL + 9, (pb.memory[ep + 3] - 2) & 0xFF)
+    put16(pb, PL + 11, (pb.memory[ep + 7] - 9) & 0xFF)
     for _ in range(6):
         pb.tick()
     assert pb.memory[RS + RS_SIGILS] & 1, (
         "Sigil pickup did not persist stage bit "
         f"rs={list(pb.memory[RS:RS + 28])} "
         f"player={list(pb.memory[PL + 9:PL + 16])} "
-        f"entity={list(pb.memory[ep:ep + 22])}")
+        f"entity={list(pb.memory[ep:ep + 22])} hitbox=0x{pb.memory[ep + 25]:02X} "
+        f"screen={pb.memory[SCREEN]} hitstop={pb.memory[HITSTOP]} "
+        f"frame={pb.memory[FRAME_COUNTER] | pb.memory[FRAME_COUNTER + 1] << 8}")
 
     # SELECT is a graphical tile map: current-room and recovered-Sigil icons
     # are physical dungeon tiles, while unseen rooms remain genuinely blank.

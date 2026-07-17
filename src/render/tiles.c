@@ -1,4 +1,4 @@
-#pragma bank 6
+#pragma bank 2
 #include <gb/gb.h>
 
 #include "core/types.h"
@@ -46,6 +46,8 @@ void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_SMITH, 1, sprite_fx_smith);
     set_sprite_data(SPR_APOTHECARY, 1, sprite_fx_apothecary);
 }
+
+#if 0 // HUD glyphs live with their bank-6 loader in hud_tiles.c.
 
 // HUD tiles — full heart, half heart, empty heart, coin glyph, blank,
 // digits 0-9. 15 tiles total, loaded into BG slots HUD_HEART_FULL..+14.
@@ -117,6 +119,8 @@ void tiles_load_hud(void) BANKED {
     set_bkg_data(HUD_BAR_EMPTY, 1, hud_bar_empty);
 }
 
+#endif
+
 void tiles_load_all_class_sprites(void) BANKED {
     // Each class metasprite = 4 tiles (64 bytes). Load all 5 contiguously
     // at SPR_CLASS_BASE so class N's first tile is SPR_CLASS_BASE + N*4.
@@ -130,11 +134,10 @@ void tiles_load_all_class_sprites(void) BANKED {
     set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin_walk);
     set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean_walk);
     set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine_walk);
-    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin_ascended);
-    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 1 * SPR_CLASS_STRIDE), 4, sprite_class_sauran_ascended);
-    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin_ascended);
-    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean_ascended);
-    set_sprite_data((u8)(SPR_CLASS_ASCENDED_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine_ascended);
+    // The ascended atlas resides in bank 3, so its own banked loader performs
+    // the VRAM copies. Direct pointers here would read whatever bank 2 has at
+    // the same address rather than the transformed forms.
+    tiles_load_ascended_sprites();
 }
 
 void tiles_load_all_enemy_sprites(void) BANKED {

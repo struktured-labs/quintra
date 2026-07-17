@@ -58,7 +58,7 @@ def open_menu(pb, button, expected):
     raise AssertionError(f"{button} did not open screen {expected}")
 
 
-def assert_uniform_menu_palette(pb, button):
+def assert_menu_palette_contract(pb, button):
     # Read CGB VRAM bank 1 with the LCD disabled so active-transfer blocking
     # cannot turn cells into false 0xFF samples.
     lcdc = pb.memory[0xFF40]
@@ -71,7 +71,14 @@ def assert_uniform_menu_palette(pb, button):
     }
     pb.memory[0xFF4F] = 0
     pb.memory[0xFF40] = lcdc
-    assert attrs == {0}, f"{button} menu inherited mixed CGB palettes: {attrs}"
+    # Inventory text is deliberately uniform. The SELECT field map is a
+    # tile-built diagram: floor, walls, the current-room marker, and the
+    # unrecovered Sigil intentionally use its four authored palette slots.
+    # Require that exact set so stale room attributes cannot leak through.
+    expected = {0} if button == "start" else {0, 1, 3, 4}
+    assert attrs == expected, (
+        f"{button} menu palette contract changed: expected {expected}, got {attrs}"
+    )
 
 
 def resume(pb):
@@ -88,7 +95,7 @@ def test_menu_fraction(button, expected):
     base = align_second(pb)
     pb.tick(40)                  # bank a visible subsecond fraction
     open_menu(pb, button, expected)
-    assert_uniform_menu_palette(pb, button)
+    assert_menu_palette_contract(pb, button)
     entered = timer(pb)
     pb.tick(180)                 # three seconds reading: clock must hold
     assert timer(pb) == entered, f"{button} menu counted paused time"
@@ -135,7 +142,7 @@ def main():
     test_menu_fraction("start", SCREEN_INVENTORY)
     test_menu_fraction("select", SCREEN_MAP)
     test_dense_wall_time()
-    print("[run-clock] PASS menus uniform+paused fractions=retained dense=3s")
+    print("[run-clock] PASS menus palette contracts + paused fractions=retained dense=3s")
 
 
 if __name__ == "__main__":

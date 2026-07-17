@@ -186,7 +186,9 @@ walk_to_room(1);  shot("04_room1")
 walk_to_room(2);  shot("05_room2")
 walk_to_room(3);  shot("06_room3")
 walk_to_room(4);  shot("07_room4")
-walk_to_room(6);  shot("08_BOSS_room")
+-- A new stage deliberately fades its palette in. Wait it out so this is a
+-- useful boss-arena capture rather than an intended near-black transition.
+walk_to_room(6);  tick(36); shot("08_BOSS_room")
 
 -- Damage the first giant through real controller shots, sampling the fight.
 assault_boss(80)
