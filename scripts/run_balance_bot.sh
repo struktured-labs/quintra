@@ -16,6 +16,7 @@ MAX_ROUTE_STALLS="${QUINTRA_BALANCE_MAX_ROUTE_STALLS:-}"
 MAX_WORLD_HOPS="${QUINTRA_BALANCE_MAX_WORLD_HOPS:-}"
 REQUIRED_ENEMIES="${QUINTRA_BALANCE_REQUIRED_ENEMIES:-}"
 HOST_TIMEOUT="${QUINTRA_BALANCE_HOST_TIMEOUT:-180}"
+MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
 TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
 APPEND="${QUINTRA_BALANCE_APPEND:-0}"
 SKIP_REPORT="${QUINTRA_BALANCE_SKIP_REPORT:-0}"
@@ -41,7 +42,7 @@ if [ "$APPEND" != 1 ] || [ ! -s "$OUT" ]; then
   echo "$HEADER" > "$OUT"
 fi
 
-unset DISPLAY WAYLAND_DISPLAY
+command -v "$MGBA_BIN" >/dev/null
 for run in "${RUN_IDS[@]}"; do
   for class in "${CLASS_IDS[@]}"; do
     # Resume is idempotent.  A host timeout can arrive after mGBA's final CSV
@@ -72,13 +73,13 @@ for run in "${RUN_IDS[@]}"; do
       if [ -n "$TRACE_DIR" ]; then
         trace_env+=("QUINTRA_BOT_TRACE_OUT=$TRACE_DIR/run-$run-class-$class-$attempt.trace")
       fi
-      env "${trace_env[@]}" QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
+      env "${trace_env[@]}" \
         QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" QUINTRA_TM_ADDR="$TM" \
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
         QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \
-        setsid timeout "$HOST_TIMEOUT" xvfb-run -a mgba-qt "$ROM" --fastforward --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
+        timeout "$HOST_TIMEOUT" "$MGBA_BIN" "$ROM" --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
         >"$log" 2>&1 &
       pid=$!
       # This mGBA build does not honor frontend:quit from Lua reliably. The
@@ -89,9 +90,10 @@ for run in "${RUN_IDS[@]}"; do
           if ! kill -0 "$pid" 2>/dev/null; then break; fi
           sleep 0.25
       done
-      # Each trial owns its Xvfb/mGBA process group. Never use a global pkill:
-      # it races other class trials and used to truncate parallel matrices.
-      kill -- -"$pid" 2>/dev/null || true
+      # Headless mGBA exits once the Lua observer returns.  The timeout process
+      # is the direct child here; avoiding background setsid prevents us from
+      # mistaking its forked parent for a completed emulator.
+      kill "$pid" 2>/dev/null || true
       wait "$pid" 2>/dev/null || true
       grep 'BALANCE' "$log" || true
       if [ "$now" -eq $((before + 1)) ]; then

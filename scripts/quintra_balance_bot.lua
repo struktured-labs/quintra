@@ -445,6 +445,10 @@ end
 -- Recomputed only in cleared rooms; 340 cells is tiny compared with emulation.
 local function door_step(px, py)
     if TM == 0 then return KEY_DOWN end
+    -- This helper runs outside the main sampling loop, so it must not capture
+    -- that loop's local `room` value (which is out of scope here). Read the
+    -- same cartridge byte directly for town topology decisions.
+    local room = emu:read8(RS + 1)
     local sx, sy = math.floor((px + 13) / 8), math.floor((py + 15) / 8)
     if sx < 0 then sx = 0 elseif sx > 19 then sx = 19 end
     if sy < 0 then sy = 0 elseif sy > 16 then sy = 16 end
@@ -1275,4 +1279,7 @@ if f then
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",
     CLASS, frames, max_room, clears, kills, bosses, hp))
-emu.frontend:quit()
+-- The Qt frontend exposes quit(), while mgba-headless deliberately has no
+-- frontend object.  The latter exits naturally once this script returns and
+-- is substantially faster for controller-only balance certification.
+if emu.frontend and emu.frontend.quit then emu.frontend:quit() end

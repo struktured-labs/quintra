@@ -8,6 +8,7 @@ mkdir -p "$TMP"
 TRACE="$TMP/run.trace"
 RESULT="$TMP/replay.result"
 CSV="$TMP/run.csv"
+MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
 RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
 PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")
@@ -20,11 +21,11 @@ echo "$HEADER" > "$CSV"
 : > "$RESULT"
 COMMON=(QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN"
   QUINTRA_TM_ADDR="$TM" QUINTRA_SCREEN_ADDR="$LS" QUINTRA_FRAME_ADDR="$FC")
-unset DISPLAY WAYLAND_DISPLAY
-env "${COMMON[@]}" QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
+command -v "$MGBA_BIN" >/dev/null
+env "${COMMON[@]}" \
   QUINTRA_BOT_RUN=1 QUINTRA_BOT_CLASS=2 QUINTRA_BOT_FRAMES=2400 \
   QUINTRA_BOT_OUT="$CSV" QUINTRA_BOT_TRACE_OUT="$TRACE" \
-  setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
+  "$MGBA_BIN" "$ROM" \
   --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 >/dev/null 2>&1 &
 AGENT_PID=$!
 for _ in $(seq 1 180); do
@@ -32,13 +33,13 @@ for _ in $(seq 1 180); do
   kill -0 "$AGENT_PID" 2>/dev/null || break
   sleep 0.25
 done
-kill -- -"$AGENT_PID" 2>/dev/null || true
+kill "$AGENT_PID" 2>/dev/null || true
 wait "$AGENT_PID" 2>/dev/null || true
 test -s "$TRACE"
 awk -F, 'NR == 2 { exit NF == 37 ? 0 : 1 } END { if (NR < 2) exit 1 }' "$CSV"
-env "${COMMON[@]}" QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
+env "${COMMON[@]}" \
   QUINTRA_REPLAY_TRACE="$TRACE" QUINTRA_REPLAY_RESULT="$RESULT" \
-  setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
+  "$MGBA_BIN" "$ROM" \
   --script "$ROOT/scripts/quintra_replay.lua" -l 0 >/dev/null 2>&1 &
 REPLAY_PID=$!
 for _ in $(seq 1 180); do
@@ -46,7 +47,7 @@ for _ in $(seq 1 180); do
   kill -0 "$REPLAY_PID" 2>/dev/null || break
   sleep 0.25
 done
-kill -- -"$REPLAY_PID" 2>/dev/null || true
+kill "$REPLAY_PID" 2>/dev/null || true
 wait "$REPLAY_PID" 2>/dev/null || true
 test -s "$RESULT"
 grep -q '^PASS ' "$RESULT"

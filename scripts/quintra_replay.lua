@@ -49,4 +49,6 @@ else
     out:write("FAIL " .. table.concat(mismatch, " ") .. "\n")
 end
 out:close()
-emu.frontend:quit()
+-- See quintra_balance_bot.lua: headless has no frontend object and exits once
+-- the deterministic replay observer returns.
+if emu.frontend and emu.frontend.quit then emu.frontend:quit() end

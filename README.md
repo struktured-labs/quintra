@@ -355,7 +355,8 @@ make media-check # prove reel version/hash/frame budget match the ROM
 make info       # print build summary
 ```
 
-`make balance` runs the actual cartridge under mGBA with five heuristic
+`make balance` runs the actual cartridge under **mGBA headless** with five
+heuristic
 agents, one per champion. They may read combat state to aim, but they only
 send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
@@ -384,6 +385,9 @@ boots a second untouched emulator, replays only those controller states, and
 requires seed, room, clears, kills, bosses, HP, outcome, screen, and total host
 frames to match exactly. This turns a reported death or stall into a portable,
 frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
+The default headless backend keeps these controller-only checks fast and
+display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
+when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
 bank space; v0.17.75 occupies 128 KiB with 527 bytes of bank-0 headroom.
 Gameplay files
