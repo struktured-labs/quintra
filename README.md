@@ -701,7 +701,10 @@ reacquire instead of attacking the wall forever. Debug runs can emit a
 one-shot screenshot when a room exceeds the stall threshold by setting
 `QUINTRA_BOT_DEBUG_SCREEN=/tmp/quintra-stall`; with `QUINTRA_BOT_DEBUG=1`,
 active giant fights are also sampled once per second so a corner pin can be
-reproduced from controller input rather than guessed from a final CSV row. The agent
+reproduced from controller input rather than guessed from a final CSV row.
+Set `QUINTRA_BALANCE_DEBUG_DIR=tmp/agent-debug` on the wrapper to retain
+per-trial `BOTROOM`, `BOTHIT`, ability, and position events after mGBA exits;
+the ordinary CSV remains the compact release metric. The agent
 also performs a real double-tap dash when a Gloom Leech attaches. Cleared
 dungeon rooms that genuinely exceed that threshold switch to a pixel-exact
 feet-box edge follow for one body width, escaping pillar corners that the

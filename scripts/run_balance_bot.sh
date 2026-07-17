@@ -27,6 +27,7 @@ if [ -n "$MGBA_SAVE_DIR" ]; then
   MGBA_SAVE_ARGS=(-C "savegamePath=$MGBA_SAVE_DIR")
 fi
 TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
+DEBUG_DIR="${QUINTRA_BALANCE_DEBUG_DIR:-}"
 APPEND="${QUINTRA_BALANCE_APPEND:-0}"
 SKIP_REPORT="${QUINTRA_BALANCE_SKIP_REPORT:-0}"
 read -r -a CLASS_IDS <<< "${QUINTRA_BALANCE_CLASSES:-0 1 2 3 4}"
@@ -46,6 +47,7 @@ FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
 mkdir -p "$TRIAL_DIR"
 if [ -n "$TRACE_DIR" ]; then mkdir -p "$TRACE_DIR"; fi
+if [ -n "$DEBUG_DIR" ]; then mkdir -p "$DEBUG_DIR"; fi
 HEADER="run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,giant_overlap_damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp,b_uses,boss_attempts,boss_attempt_frames,boss_clear_frames,town_market_visits,town_quarter_visits,boss_clear_durations"
 if [ "$APPEND" != 1 ] || [ ! -s "$OUT" ]; then
   echo "$HEADER" > "$OUT"
@@ -79,10 +81,14 @@ for run in "${RUN_IDS[@]}"; do
       before=$(wc -l < "$trial_csv")
       log="/tmp/quintra-balance-$run-$class-$attempt.log"
       trace_env=()
+      debug_env=()
       if [ -n "$TRACE_DIR" ]; then
         trace_env+=("QUINTRA_BOT_TRACE_OUT=$TRACE_DIR/run-$run-class-$class-$attempt.trace")
       fi
-      env "${trace_env[@]}" \
+      if [ -n "$DEBUG_DIR" ]; then
+        debug_env+=("QUINTRA_BOT_DEBUG_OUT=$DEBUG_DIR/run-$run-class-$class-$attempt.log")
+      fi
+      env "${trace_env[@]}" "${debug_env[@]}" \
         QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" QUINTRA_TM_ADDR="$TM" \
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \
