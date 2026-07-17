@@ -467,7 +467,10 @@ also separate `boss_attempt_frames` from `boss_clear_frames`, so a failed
 bullet-hell attempt cannot be mistaken for a slow successful fight. Each
 emulator attempt writes to its own CSV; a file-locked duplicate check commits
 exactly one finished row to the matrix, so late or overlapping processes cannot
-pollute an interrupted/resumed sample.
+pollute an interrupted/resumed sample. `giant_overlap_damage` separately
+records HP lost on frames where the actual giant hurtbox overlaps the hero;
+this distinguishes boss body-pinning from projectile pressure without writing
+to cartridge state.
 
 Giant spacing defaults to a measured classwise policy: Wolfkin, Sauran,
 Corvin, and Vespine retain the baseline movement, while Picsean uses

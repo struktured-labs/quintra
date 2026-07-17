@@ -620,7 +620,7 @@ end
 tap(KEY_A)
 for _ = 1, 45 do tick(0) end
 
-local frames, max_room, last_hp, damage_taken, min_hp = 0, 0, 0, 0, 255
+local frames, max_room, last_hp, damage_taken, giant_overlap_damage, min_hp = 0, 0, 0, 0, 0, 255
 local min_giant_hp = 255
 local boss_start_frame, boss_start_beaten = -1, 0
 local boss_attempts, boss_attempt_frames, boss_clear_frames = 0, 0, 0
@@ -678,7 +678,8 @@ while frames < LIMIT do
     local won = RS ~= 0 and emu:read8(RS + 10) or 0
     if frames == 0 then last_hp = hp end
     if hp < last_hp then
-        damage_taken = damage_taken + (last_hp - hp)
+        local taken = last_hp - hp
+        damage_taken = damage_taken + taken
         -- Read-only attribution: infer from the runtime state after the hit.
         -- This deliberately avoids cartridge instrumentation, whose extra
         -- instructions changed dense-frame pacing in endurance sampling.
@@ -692,6 +693,24 @@ while frames < LIMIT do
         else
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
+        end
+        -- This does not guess the exact source of a mixed collision frame.
+        -- It records the narrower, actionable fact that the player hurtbox
+        -- overlapped a giant body when damage landed. That separates boss
+        -- body-pinning from a pure projectile-spacing problem without any
+        -- RAM writes or cartridge-side instrumentation.
+        for i = 0, 31 do
+            local p = EN + i * 28
+            if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1
+                and emu:read8(p + 17) == 1
+                and emu:read8(p + 20) % 2 == 1 then
+                local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+                if hit_x + 11 > ex and ex + 15 > hit_x + 5
+                    and hit_y + 15 > ey and ey + 15 > hit_y + 9 then
+                    giant_overlap_damage = giant_overlap_damage + taken
+                    break
+                end
+            end
         end
         if DEBUG then
             debug_log(string.format(
@@ -1291,9 +1310,9 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
-        bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
+        bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
