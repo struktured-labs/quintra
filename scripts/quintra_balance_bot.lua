@@ -958,15 +958,15 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Wolfkin's Claw and Sauran's Tail Spike both need a
-                -- conservative pulse-fire lane: paired same-seed trials
-                -- clear a first giant while the old direct/orbit loops
-                -- repeatedly body-traded into it. Picsean's slow bubbles
-                -- still favor orbit-and-fire. Once a
+                -- Wolfkin's Claw, Sauran's Tail Spike, and Vespine's Stinger
+                -- all need a conservative pulse-fire lane: paired same-seed
+                -- trials clear a first giant while the old direct/orbit
+                -- loops repeatedly body-traded into it. Picsean's slow
+                -- bubbles still favor orbit-and-fire. Once a
                 -- Picsean giant is nearly down, force the ordinary cardinal
                 -- lane: otherwise orbiting past a 1-2 HP body can continue
                 -- forever without another aimed bubble contact.
-                giant_mode = (CLASS == 0 or CLASS == 1) and "pulse_fire"
+                giant_mode = (CLASS == 0 or CLASS == 1 or CLASS == 4) and "pulse_fire"
                     or (CLASS == 3) and "orbit_fire" or "baseline"
                 if target.giant ~= 0 and CLASS == 3 and target.hp <= 8 then
                     giant_mode = "baseline"
