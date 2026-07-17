@@ -417,6 +417,20 @@ pub const SURGE_ORB: [&str; 8] = [
     "...3....",
 ];
 
+// A small hollow ward shard. Four of these orbit Sauran while Stoneskin is
+// active, so the body/projectile immunity reads at a glance rather than as a
+// generic impact flash.
+pub const SHIELD_AURA: [&str; 8] = [
+    "...11...",
+    "..1331..",
+    ".13..31.",
+    "13....31",
+    "13....31",
+    ".13..31.",
+    "..1331..",
+    "...11...",
+];
+
 // Town elder: hooded face and crooked staff, readable at true GB scale.
 pub const VILLAGER: [&str; 8] = [
     "..222...",
@@ -697,7 +711,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 18] = [
     ("rune_lantern", &RUNE_LANTERN),
 ];
 
-pub const FX_8: [(&str, &[&str]); 13] = [
+pub const FX_8: [(&str, &[&str]); 14] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -707,6 +721,7 @@ pub const FX_8: [(&str, &[&str]); 13] = [
     ("shop_tag", &SHOP_TAG),
     ("merchant_callout", &MERCHANT_CALLOUT),
     ("surge_orb", &SURGE_ORB),
+    ("shield_aura", &SHIELD_AURA),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),

@@ -1209,7 +1209,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (player.shield_timer > 0) {
             player.shield_timer--;
             if ((player.shield_timer & 7) == 0)
-                fx_spawn(SPR_FX_IMPACT, 1,
+                fx_spawn(SPR_SHIELD_AURA, 1,
                     (i16)player.x + ((player.shield_timer & 8) ? 12 : -4),
                     (i16)player.y + ((player.shield_timer & 16) ? 12 : -4), 8);
         }

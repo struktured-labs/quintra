@@ -51,6 +51,14 @@ def main():
     pb.button_release("b")
     pb.tick()
     assert pb.memory[player + 20] > 50, "Sauran B did not raise a shield"
+    assert any(pb.memory[0x8000 + 127 * 16 + i] for i in range(16)), \
+        "Sauran shield aura art was not loaded"
+    for _ in range(8): pb.tick()
+    assert any(
+        pb.memory[entities + i * 28] == 4
+        and pb.memory[entities + i * 28 + 12] == 127
+        for i in range(32)
+    ), "Sauran shield did not emit its ward aura"
 
     px = pb.memory[player + 9] | (pb.memory[player + 10] << 8)
     py = pb.memory[player + 11] | (pb.memory[player + 12] << 8)

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.72: Surge Sparks](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.73: Stoneskin Ward](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,12 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.73 makes Sauran's Stoneskin unmissable: four small ward shards orbit
+the champion while the B shield is active. The existing body/projectile guard,
+cooldown, and duration are unchanged; this is legibility for live play, backed
+by an emulator test that proves the controller input, loaded art, spawned aura,
+contact immunity, and expiry together.
 
 v0.17.72 adds **Surge Sparks**, rare cyan lightning drops that give every
 champion about fifteen seconds of a harder-hitting, faster-cycling primary
