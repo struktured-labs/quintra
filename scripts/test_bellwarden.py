@@ -13,10 +13,15 @@ ROOM_W = 20
 ENTITY_SIZE = 28
 ENT_ENEMY = 2
 ENT_PROJECTILE = 1
+ENT_PICKUP = 3
 ENEMY_STONE_SENTINEL = 1
 ENEMY_DREAD_BELL = 20
 ENEMY_RIFT_WARDEN = 21
 SPR_DREAD_BELL = 125
+ENEMY_AUX_BELLWARDEN = 0xB1
+EF_ACTIVE_ALIVE = 0x03
+EF_PLAYER_PROJ = 0x10
+PICKUP_WEAPON = 5
 
 
 def addr(name):
@@ -82,6 +87,30 @@ def enemies(pb):
             and pb.memory[EN + i * ENTITY_SIZE + 1] & 1]
 
 
+def kill_bellwarden_for_reward(pb, bell):
+    """Deliver a real lethal player shot; only the tagged Bell may pay a weapon."""
+    shot = next(EN + i * ENTITY_SIZE for i in range(32)
+                if not (pb.memory[EN + i * ENTITY_SIZE + 1] & 1))
+    bell_x, bell_y = pb.memory[bell + 3], pb.memory[bell + 7]
+    pb.memory[bell + 14] = 1
+    pb.memory[shot] = ENT_PROJECTILE
+    pb.memory[shot + 1] = EF_ACTIVE_ALIVE | EF_PLAYER_PROJ
+    put16(pb, shot + 3, bell_x)
+    put16(pb, shot + 7, bell_y)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 90
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 26] = 1
+    put16(pb, PL + 9, 144)
+    put16(pb, PL + 11, 112)
+    pb.tick(8)
+    kinds = [pb.memory[EN + i * ENTITY_SIZE + 17] for i in range(32)
+             if pb.memory[EN + i * ENTITY_SIZE] == ENT_PICKUP
+             and pb.memory[EN + i * ENTITY_SIZE + 1] & 1]
+    assert PICKUP_WEAPON in kinds, (
+        f"Bellwarden paid ordinary Bell drops instead of a weapon orb: {kinds}")
+
+
 def main():
     # Earlier stages retain their varied, large Sentinel miniboss identity.
     early = boot_to_miniboss(5)
@@ -107,6 +136,8 @@ def main():
         expected_bell_damage = 2
         assert pb.memory[bell + 12] == SPR_DREAD_BELL, "Bellwarden lost Dread Bell art"
         assert pb.memory[bell + 13] == 6, "Bellwarden is not stage-tinted"
+        assert pb.memory[bell + 19] == ENEMY_AUX_BELLWARDEN, (
+            "Bellwarden lost its explicit miniboss-reward identity")
         assert pb.memory[bell + 14] == expected_bell_hp, (
             f"stage {stage} Bellwarden HP={pb.memory[bell + 14]}, "
             f"expected {expected_bell_hp}; live bosses={pb.memory[RS + 11]}")
@@ -120,9 +151,11 @@ def main():
         assert pb.memory[warden + 14] == 16, (
             f"stage {stage} Warden HP drifted")
         assert 0 < pb.memory[warden + 18] <= 92, "Warden lost fan cadence"
+        if stage == 6:
+            kill_bellwarden_for_reward(pb, bell)
         pb.stop(save=False)
 
-    print("[bellwarden] PASS Sentinel early; guaranteed tinted Bell + Warden stages 6-8")
+    print("[bellwarden] PASS Sentinel early; tagged Bell + Warden stages 6-8; weapon reward")
 
 
 if __name__ == "__main__":

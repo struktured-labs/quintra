@@ -272,10 +272,14 @@ u8 combat_resolve(void) BANKED {
                             projectile_spawn_enemy(dx2, dy2, 0,  2, entities[j].damage);
                             projectile_spawn_enemy(dx2, dy2, -2, 0, entities[j].damage);
                             projectile_spawn_enemy(dx2, dy2,  2, 0, entities[j].damage);
-                        } else if (eid == ENEMY_STONE_SENTINEL) {
+                        } else if ((eid == ENEMY_STONE_SENTINEL)
+                                   || (eid == ENEMY_DREAD_BELL
+                                       && entities[j].ai_data[2] == ENEMY_AUX_BELLWARDEN)) {
                             // Mini-boss down: solid reward, no stage advance.
-                            // Always drops a weapon orb you don't hold —
-                            // the run's main way to change your A-weapon.
+                            // Bellwarden is a Dread Bell mechanically, but it
+                            // is tagged by procgen so it receives this same
+                            // weapon-orb preparation reward. Ordinary late
+                            // roster Bells remain ordinary enemy drops.
                             u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
                             if (w == player.starter_weapon) w = pickup_next_weapon(w);
                             g_hitstop = 5;

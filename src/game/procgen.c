@@ -887,6 +887,11 @@ void procgen_generate_current_room(void) BANKED {
                     // encounter in gold, blood, and void themes rather than
                     // a reused red random foe.
                     entities[idx].palette = 0x06;
+                    // Dread Bells also appear in the ordinary late roster.
+                    // Tag this guaranteed room-3 champion explicitly so its
+                    // kill pays the miniboss weapon reward, without turning
+                    // every random Bell into a weapon piñata.
+                    entities[idx].ai_data[2] = ENEMY_AUX_BELLWARDEN;
                     // Base 17 HP + 22/26/30 makes the Bellwarden survive a
                     // real positioning cycle even on a powered run, without
                     // taking enough health from the final approach to turn

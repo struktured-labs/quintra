@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.96: Bellwarden & Fair Descent](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.97: Bellwarden Reward Fix](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.97 fixes a late-run progression bug: the guaranteed **Bellwarden** was
+visually and mechanically a miniboss, but because it reuses the Dread Bell
+enemy it missed the Sentinel-only weapon-orb reward. Bellwarden now carries an
+explicit encounter tag and always pays that weapon choice on defeat; ordinary
+late-roster Dread Bells retain their normal drops. A live-ROM regression
+delivers a real lethal shot to the stage-6 Bellwarden and proves the weapon orb
+appears.
 
 v0.17.96 makes late-run pressure fair instead of brittle. **Golden Temple**
 onward now has the guaranteed **Bellwarden** miniboss: one stage-tinted Dread

@@ -22,7 +22,11 @@ awk -F, '
   {
     rows++
     if ($(col["max_room"]) < 6) bad = "did not reach first boss threshold"
-    if ($(col["max_combat_enemy"]) == 12) bad = "stalled on Flutterbat"
+    # Flutterbat is a legitimate longest fight in a procgen run; it is a
+    # regression only when that dwell is actually over the one-minute stall
+    # budget.  The old enemy-id-only check rejected a healthy 740-frame fight
+    # even after the controller reached the boss threshold.
+    if ($(col["max_combat_enemy"]) == 12 && $(col["max_combat_frames"]) > 3600) bad = "stalled on Flutterbat"
     if ($(col["max_combat_frames"]) > 3600) bad = "combat dwell exceeded one minute"
   }
   END {

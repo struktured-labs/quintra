@@ -24,6 +24,12 @@ enum {
 #define EF_PLAYER_PROJ 0x10   // player-owned projectile (vs enemy projectile)
 #define EF_ELITE       0x20   // elite enemy: boss-glow, 2x HP, sure loot
 
+// `ai_data[2]` is unused by Shooter enemies.  Procgen tags the guaranteed
+// late-game Dread Bell encounter with this value so combat can distinguish the
+// Bellwarden miniboss from ordinary roster Dread Bells without adding another
+// entity flag (the flags byte is already gameplay-facing).
+#define ENEMY_AUX_BELLWARDEN 0xB1
+
 typedef struct {
     u8     type;
     u8     flags;

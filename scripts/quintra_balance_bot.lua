@@ -1078,15 +1078,14 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Wolfkin's Claw, Sauran's Tail Spike, and Vespine's Stinger
-                -- all need a conservative pulse-fire lane: paired same-seed
-                -- trials clear a first giant while the old direct/orbit
-                -- loops repeatedly body-traded into it. Picsean's slow
-                -- bubbles still favor orbit-and-fire through the kill. A
-                -- former low-HP fallback to the ordinary cardinal lane
-                -- repeatedly converted a nearly won boss into body contact
-                -- on the long seed-14/15/16 endurance set.
-                giant_mode = (CLASS == 0 or CLASS == 1 or CLASS == 4) and "pulse_fire"
+                -- Wolfkin's Claw and Sauran's Tail Spike need a conservative
+                -- pulse-fire lane. Vespine's longer Stinger is different:
+                -- paired 18k-frame samples after the exact-Sigil route
+                -- cleared 0/3 first bosses with pulses but two full bosses
+                -- on the ordinary cardinal baseline, so preserve that real
+                -- reach instead of making the agent retreat between every
+                -- strike. Picsean's slow bubbles favor orbit-and-fire.
+                giant_mode = (CLASS == 0 or CLASS == 1) and "pulse_fire"
                     or (CLASS == 3) and "orbit_fire" or "baseline"
             end
             if target.giant ~= 0 and giant_mode ~= "baseline" and reach < 36 then
@@ -1213,11 +1212,13 @@ while frames < LIMIT do
         -- A direct D-pad line can press into a pillar forever, so route the
         -- full champion body to the pickup's tile before its normal contact
         -- box finishes collection.
-        -- The coarse planner remains the established policy for ordinary
-        -- Sigils.  The exact footprint route is reserved for the final Void
-        -- Sanctum fixture, whose authored spike/cover geometry exposed the
-        -- tile-to-pixel mismatch without perturbing earlier seeded timings.
-        if loot.kind == 11 and RS ~= 0 and emu:read8(RS + 11) == 8 then
+        -- Sigils are hard gates, so every stage deserves the same exact
+        -- feet-box route.  A seed-2 Vespine run exposed the old stage-8-only
+        -- exception: a visible early Sigil behind procgen cover could make a
+        -- coarse tile plan loop forever around its real collision footprint.
+        -- This remains pure controller input; it merely gives the agent the
+        -- same body-valid path a player has to the required fixture.
+        if loot.kind == 11 then
             keys = sigil_pixel_step(room, px, py, loot.x, loot.y)
             if keys ~= nil then sigil_pixel_active = true
             else keys = target_step(px, py, loot.x, loot.y, direct, 0) end
