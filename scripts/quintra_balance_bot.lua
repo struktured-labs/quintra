@@ -25,6 +25,11 @@ local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
 local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
+local GIANT_POLICY = os.getenv("QUINTRA_BOT_GIANT_POLICY") or "baseline"
+if GIANT_POLICY ~= "baseline" and GIANT_POLICY ~= "orbit"
+    and GIANT_POLICY ~= "orbit_fire" then
+    GIANT_POLICY = "baseline"
+end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 local enemy_mask, enemy_seen = 0, {}
 
@@ -84,7 +89,8 @@ local function enemy_target(px, py)
                 best, bestd = {
                     x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
                     kind=kind, state=emu:read8(p + 15),
-                    clock=emu:read8(p + 18), state6=emu:read8(p + 23)
+                    clock=emu:read8(p + 18), state6=emu:read8(p + 23),
+                    giant=(kind == 1) and emu:read8(p + 20) or 0
                 }, d
             end
         end
@@ -264,6 +270,23 @@ local function can_step(px, py, key)
         and pixel_walkable(nx + 13, ny + 8)
         and pixel_walkable(nx + 2, ny + 15)
         and pixel_walkable(nx + 13, ny + 15)
+end
+
+-- Candidate policy used only by offline search. Its mode is selected through
+-- an environment variable, never by ROM state or test writes; the default
+-- remains the proven baseline below.
+local function giant_orbit_step(px, py, aim, retreat)
+    local primary, secondary
+    if aim == KEY_LEFT or aim == KEY_RIGHT then
+        primary = py > 64 and KEY_UP or KEY_DOWN
+        secondary = primary == KEY_UP and KEY_DOWN or KEY_UP
+    else
+        primary = px > 72 and KEY_LEFT or KEY_RIGHT
+        secondary = primary == KEY_LEFT and KEY_RIGHT or KEY_LEFT
+    end
+    if can_step(px, py, primary) then return primary end
+    if can_step(px, py, secondary) then return secondary end
+    return retreat
 end
 
 local function direction_from_keys(keys)
@@ -501,6 +524,7 @@ tap(KEY_A)
 for _ = 1, 45 do tick(0) end
 
 local frames, max_room, last_hp, damage_taken, min_hp = 0, 0, 0, 0, 255
+local min_giant_hp = 255
 local last_damage_source = 255 -- enemy id, 254=hazard, 253=unresolved hostile
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
@@ -607,6 +631,9 @@ while frames < LIMIT do
     local overworld_threat = world_mode == 1 and target or nil
     if world_mode == 1 then target = nil end
     if target then
+        if target.giant ~= 0 and target.hp < min_giant_hp then
+            min_giant_hp = target.hp
+        end
         if target.slot == last_target_slot and target.hp >= last_target_hp then
             no_damage_frames = no_damage_frames + 1
         else
@@ -690,7 +717,14 @@ while frames < LIMIT do
             local adx, ady = math.abs(dx), math.abs(dy)
             local reach = (adx > ady) and adx or ady
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
-            if reach < 28 then
+            if target.giant ~= 0 and GIANT_POLICY ~= "baseline" and reach < 36 then
+                local retreat = (aim == KEY_UP and KEY_DOWN)
+                    or (aim == KEY_DOWN and KEY_UP)
+                    or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
+                local orbit = giant_orbit_step(px, py, aim, retreat)
+                keys = (GIANT_POLICY == "orbit_fire" and frames % 3 == 0)
+                    and (KEY_A + aim) or orbit
+            elseif reach < 28 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
@@ -1039,13 +1073,13 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
-        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask))
+        won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

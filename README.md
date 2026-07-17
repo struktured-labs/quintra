@@ -409,6 +409,14 @@ dungeon rooms that genuinely exceed that threshold switch to a pixel-exact
 feet-box edge follow for one body width, escaping pillar corners that the
 coarser tile route cannot represent; overworld routing remains authored.
 
+`scripts/search_boss_policy.sh` is the offline policy harness: it evaluates
+`baseline`, `orbit`, and `orbit_fire` button-only giant policies over the same
+seed/class grid and compares boss clears, deaths, minimum giant HP, and damage
+taken. It does not silently adopt a candidate; a policy earns adoption only
+after it beats baseline on reproducible evidence. For a quick Sauran sample,
+run `QUINTRA_BOSS_SEARCH_RUNS=1 QUINTRA_BOSS_SEARCH_CLASSES=1 bash
+scripts/search_boss_policy.sh`.
+
 Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,
 mapper/size flags, header and global checksums, then writes a live suspend to
