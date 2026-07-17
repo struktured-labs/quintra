@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance picsean-endurance victory-proof media media-check play info check-balance-bot
+.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -193,6 +193,10 @@ picsean-endurance: all check-balance-bot
 # Deterministic all-nine-boss controller proof plus clean-emulator replay.
 victory-proof: all check-balance-bot
 	bash scripts/test_picsean_victory_replay.sh $(BINDIR)/$(PROJECT).gbc
+
+# Targeted controller proof for the formerly-stalled final mandatory fixture.
+final-sigil-proof: all check-balance-bot
+	bash scripts/test_final_sigil_controller.sh $(BINDIR)/$(PROJECT).gbc
 
 # Human play
 play: all

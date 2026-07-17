@@ -465,7 +465,8 @@ make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
-make picsean-endurance # four completed multi-seed Picsean controller runs
+make final-sigil-proof # seed-14 final-Sigil controller completion proof
+make picsean-endurance # aspirational four-seed Picsean soak gate
 make victory-proof # full nine-boss Picsean run + clean-emulator input replay
 make media      # recapture the README reel from the current ROM
 make media-check # prove reel version/hash/frame budget match the ROM
@@ -492,8 +493,11 @@ it is historical data. The current deterministic proof is Picsean seed 13:
 all nine bosses in 53,415 gameplay frames (**14:50** at 60 Hz), verified by
 replaying the recorded controller trace in a fresh emulator with matching seed,
 room, HP, and victory state. Run `make victory-proof` to reproduce that proof;
-it is one certified seed. `make picsean-endurance` additionally completes four
-consecutive Picsean seeds (13, 14, 15, and 16) through all nine bosses; the
+it is one certified seed. `make final-sigil-proof` additionally proves that
+the formerly stalled seed-14 final Sigil reaches a nine-boss victory through
+ordinary controller input. The broader `make picsean-endurance` 13–16 soak is
+an active quality gate, not a current certification: seed 15 still dies around
+boss 3, while seeds 13, 14, and 16 complete their nine-boss routes. The
 all-class `make endurance` target remains the stricter conference soak floor.
 Expect
 roughly **20–35 minutes** for a first successful human run and **10–20
@@ -660,7 +664,9 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
 3. The isolated Picsean endurance gate runs seeds 13–16 using only controller
    input. A completed row is a real loss or win; a missing row retries once in
    isolation because headless mGBA can occasionally bus-error under parallel
-   load. The current baseline clears all four seeds in 47k–56k frames.
+   load. The current route clears seeds 13, 14, and 16; seed 15's early
+   boss-3 death is a named remaining combat-policy issue, not hidden by a
+   passing aggregate.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without

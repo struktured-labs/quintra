@@ -243,7 +243,9 @@ local function pickup_target(px, py, hp, hp_max)
                 -- its fixture room and later mistake the sanctuary lock for
                 -- a navigation failure.
                 if kind == 11 then
-                    if d < sigild then sigil, sigild = {x=ex, y=target_y}, d end
+                    if d < sigild then
+                        sigil, sigild = {x=ex, y=target_y, kind=kind}, d
+                    end
                 elseif d < bestd then
                     best, bestd = {x=ex, y=target_y}, d
                 end
@@ -357,6 +359,55 @@ local function body_on_spike(px, py)
     -- Mirror room.c's hazard test exactly: spikes use the feet-box center,
     -- whereas ordinary wall collision probes four corners.
     return tile_at_px(px + 8, py + 12) == 31
+end
+
+-- Mandatory fixtures deserve the same exact body route the cartridge uses,
+-- rather than a coarse tile plan plus an unrelated recovery nudge.  Cache a
+-- one-pixel route for the current Sigil and rebuild only if the real pickup
+-- moves toward the hero.  First seek a wholly safe path; only use spikes if
+-- the level genuinely leaves no other physical route to progression.
+local sigil_pixel_route = nil
+local function sigil_pixel_step(room, px, py, ex, ey)
+    local goal_x, goal_y = ex - 2, ey - 1
+    local start = py * 160 + px
+    if px == goal_x and py == goal_y then return 0 end
+    if sigil_pixel_route and sigil_pixel_route.room == room
+        and sigil_pixel_route.goal_x == goal_x and sigil_pixel_route.goal_y == goal_y
+        and sigil_pixel_route.dirs[start] then
+        return sigil_pixel_route.dirs[start]
+    end
+    local function build(allow_spikes)
+        local qx, qy, head, tail = {px}, {py}, 1, 1
+        local seen, previous, step = {[start] = true}, {}, {}
+        local found = nil
+        while head <= tail do
+            local x, y = qx[head], qy[head]; head = head + 1
+            local key = y * 160 + x
+            if x == goal_x and y == goal_y then found = key; break end
+            for d = 1, 4 do
+                local dir = CARD_KEYS[d]
+                local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
+                local next_key = ny * 160 + nx
+                if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
+                    and not seen[next_key] and can_step(x, y, dir)
+                    and (allow_spikes or not body_on_spike(nx, ny)) then
+                    seen[next_key], previous[next_key], step[next_key] = true, key, dir
+                    tail = tail + 1; qx[tail], qy[tail] = nx, ny
+                end
+            end
+        end
+        if not found then return nil end
+        local dirs, node = {}, found
+        while previous[node] do
+            dirs[previous[node]] = step[node]
+            node = previous[node]
+        end
+        return dirs
+    end
+    local dirs = build(false) or build(true)
+    if not dirs then return nil end
+    sigil_pixel_route = {room=room, goal_x=goal_x, goal_y=goal_y, dirs=dirs}
+    return dirs[start]
 end
 
 -- Candidate policy used only by offline search. Its mode is selected through
@@ -931,6 +982,7 @@ while frames < LIMIT do
         max_route_room = room
     end
     local keys
+    local sigil_pixel_active = false
     if target then
         local dx, dy = target.x - px, target.y - py
         local aim
@@ -1156,7 +1208,17 @@ while frames < LIMIT do
         -- A direct D-pad line can press into a pillar forever, so route the
         -- full champion body to the pickup's tile before its normal contact
         -- box finishes collection.
-        keys = target_step(px, py, loot.x, loot.y, direct, 0)
+        -- The coarse planner remains the established policy for ordinary
+        -- Sigils.  The exact footprint route is reserved for the final Void
+        -- Sanctum fixture, whose authored spike/cover geometry exposed the
+        -- tile-to-pixel mismatch without perturbing earlier seeded timings.
+        if loot.kind == 11 and RS ~= 0 and emu:read8(RS + 11) == 8 then
+            keys = sigil_pixel_step(room, px, py, loot.x, loot.y)
+            if keys ~= nil then sigil_pixel_active = true
+            else keys = target_step(px, py, loot.x, loot.y, direct, 0) end
+        else
+            keys = target_step(px, py, loot.x, loot.y, direct, 0)
+        end
     else
         keys = door_step(px, py) + KEY_A
     end
@@ -1384,7 +1446,7 @@ while frames < LIMIT do
     -- feet-center spike tile the cartridge itself damages. If the body is
     -- already on a hazard, temporarily keep moving toward a safe full-body
     -- position instead of suppressing the escape input.
-    if body_on_spike(px, py) then
+    if not sigil_pixel_active and body_on_spike(px, py) then
         local action = keys % 16
         if DEBUG then
             local candidates = {}
@@ -1431,7 +1493,7 @@ while frames < LIMIT do
                 end
             end
         end
-    else
+    elseif not sigil_pixel_active then
         spike_escape_dir = 0
         if math.floor(keys / KEY_RIGHT) % 2 == 1
             and body_on_spike(px + 1, py) then keys = keys - KEY_RIGHT end
