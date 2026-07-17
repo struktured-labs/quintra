@@ -17,7 +17,7 @@ IDENTITIES = {
     5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
     14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
-    18: (80, 5),
+    18: (80, 5), 19: (124, 6),
 }
 
 SPECIALISTS = {
@@ -29,6 +29,7 @@ SPECIALISTS = {
     16: (77, 21, "MIRROR_MOTH", "SPR_ENEMY_MIRROR_MOTH", "mirror-moth"),
     17: (78, 20, "MIRE_SPORE", "SPR_ENEMY_MIRE_SPORE", "mire-spore"),
     18: (80, 68, "ECHO_GUARD", "SPR_ENEMY_ECHO_GUARD", "echo-guard"),
+    19: (124, 75, "RUNE_LANTERN", "SPR_ENEMY_RUNE_LANTERN", "rune-lantern"),
 }
 
 
@@ -333,8 +334,41 @@ def main():
     assert all(enemy_id != 15 for enemy_id, _ in fragments), (
         f"dead Rift Ooze remained active: {fragments}"
     )
+
+    # Rune Lantern is the late-game moving ring caster. Its authored four
+    # cardinal lanes must emerge from the real AI_SHOOTER dispatch, leaving
+    # the diagonals as visible escape paths instead of becoming a data-only
+    # roster entry or a generic single-shot wisp.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 32)
+    put16(pb, player + 11, 32)
+    pb.memory[player + 2] = 20
+    lantern = entities
+    pb.memory[lantern] = 2
+    pb.memory[lantern + 1] = 3
+    put_fix8(pb, lantern + 2, 88)
+    put_fix8(pb, lantern + 6, 72)
+    pb.memory[lantern + 14] = 8
+    pb.memory[lantern + 17] = 19
+    pb.memory[lantern + 18] = 0       # fire immediately
+    pb.memory[lantern + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    ring = []
+    for i in range(1, 32):
+        ep = entities + i * 28
+        if pb.memory[ep] == 1 and pb.memory[ep + 1] & 1:
+            vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
+            ring.append((vx - 256 if vx >= 128 else vx,
+                         vy - 256 if vy >= 128 else vy))
+    assert set(ring) == {(2, 0), (-2, 0), (0, 2), (0, -2)}, (
+        f"Rune Lantern cardinal ring drifted: {ring}"
+    )
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + reactive guard/spore/mirror/leech behavior + ooze split")
+    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern behavior + ooze split")
 
 
 if __name__ == "__main__":

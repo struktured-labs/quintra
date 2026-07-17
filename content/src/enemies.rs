@@ -265,6 +265,22 @@ pub const ECHO_GUARD: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const RUNE_LANTERN: Enemy = Enemy {
+    id: ENEMY_RUNE_LANTERN, symbol: "RUNE_LANTERN", name: "RuneLantern",
+    sprite_set: SPRITE_RUNE_LANTERN, palette: OBJ_PAL_MAGIC,
+    // Shadow/Void pressure caster: it drifts between cover and releases a
+    // slow cardinal ring. The open diagonals stay readable, while the next
+    // ring changes the player's safe lane instead of just adding raw damage.
+    stats: EnemyStats { hp: 15, damage: 1, speed: 32, score: 52, weakness: 0x01, poise: 1 },
+    ai_script: AiScriptId::Shooter {
+        fire_rate: 84,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Ring(4),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -285,4 +301,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(MIRROR_MOTH.clone());
     r.add_enemy(MIRE_SPORE.clone());
     r.add_enemy(ECHO_GUARD.clone());
+    r.add_enemy(RUNE_LANTERN.clone());
 }

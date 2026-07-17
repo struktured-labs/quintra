@@ -39,6 +39,7 @@ extern const u8 sprite_enemy_rift_ooze[16];
 extern const u8 sprite_enemy_mirror_moth[16];
 extern const u8 sprite_enemy_mire_spore[16];
 extern const u8 sprite_enemy_echo_guard[16];
+extern const u8 sprite_enemy_rune_lantern[16];
 
 // 8x8 effects and village roles
 extern const u8 sprite_fx_bullet_a[16];

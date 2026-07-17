@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.67: Measured Reach](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.68: Lanterns in the Deep](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,12 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.68 adds the **Rune Lantern** to Shadow Keep and Void Sanctum pools. It
+drifts through cover and telegraphs slow four-way cardinal rings: the diagonals
+remain deliberately open, but each volley makes the player choose a new lane.
+Its generated content, unique runtime sprite, and exact four-lane output are
+covered by the cartridge regression suite.
 
 v0.17.67 is a measured melee hotfix: Tail Spike and Stinger keep their
 established projectile origin and range while retaining their new physical arc
@@ -120,7 +126,7 @@ an unreachable live enemy and seal progression.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **19 enemies across a size hierarchy** — small swarm critters (crawler,
+- **20 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
@@ -134,6 +140,8 @@ an unreachable live enemy and seal progression.
   Golden Temple's **Echo Guards** parry the first careless attack, rush the
   attacker, then turn pale and vulnerable until their shield recovers; poison
   remains a class-readable answer to their heavy armor.
+  Shadow Keep and Void Sanctum add drifting **Rune Lanterns**, whose slow
+  cardinal rings force readable lane changes while leaving diagonal exits.
   Verdant Hollow once again fields fast pursuing Hornets; typed content tests
   now reject any registered non-boss monster missing from every stage pool.
   Both fragments are guaranteed even when the fixed 32-entity table is full;

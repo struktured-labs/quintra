@@ -300,6 +300,17 @@ pub const ECHO_GUARD: [&str; 8] = [ // tall shield, eye slit, countering spear
     ".1.1..3.",
 ];
 
+pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
+    "...33...",
+    "..3223..",
+    ".321123.",
+    "32133123",
+    "21133112",
+    ".123321.",
+    "..3113..",
+    ".3.11.3.",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -638,7 +649,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 17] = [
+pub const ENEMIES_8: [(&str, &[&str]); 18] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -656,6 +667,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 17] = [
     ("mirror_moth", &MIRROR_MOTH),
     ("mire_spore", &MIRE_SPORE),
     ("echo_guard", &ECHO_GUARD),
+    ("rune_lantern", &RUNE_LANTERN),
 ];
 
 pub const FX_8: [(&str, &[&str]); 11] = [
