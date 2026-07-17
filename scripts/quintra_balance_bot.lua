@@ -271,6 +271,10 @@ local function shop_target(px, py, hp, hp_max, mp_max, coins)
             if coins >= price then
                 local score = (ware == 0 and hp + 1 < hp_max) and 100
                     or (ware == 3 and 90)
+                    -- The village Vampiric Sigil is a sustain build choice,
+                    -- not decorative shop stock the controller always skips.
+                    or (ware == 6 and hp + 2 < hp_max and 92)
+                    or (ware == 6 and 82)
                     or (ware == 4 and mp_max < 20 and 85)
                     or (ware == 2 and hp_max < 16 and 80)
                     or (ware == 1 and 70) or -1
@@ -314,12 +318,26 @@ local function path_walkable(tile)
     return tile ~= 31 and walkable(tile)
 end
 
+-- Towns intentionally use grass and paths as their open floor. Keep that
+-- knowledge scoped here rather than broadening the Riftwild policy: outdoor
+-- combat routes still need their established conservative collision model.
+local function town_navigation_active()
+    if RS == 0 or emu:read8(RS + 17) ~= 0 then return false end
+    local room = emu:read8(RS + 1)
+    return room > 18 and room % 18 == 1
+end
+
+local function navigation_walkable(tile)
+    return path_walkable(tile)
+        or (town_navigation_active() and (tile == 35 or tile == 36))
+end
+
 local function body_walkable(cx, cy)
     if cx < 1 or cx > 19 or cy < 1 or cy > 16 then return false end
-    return path_walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
-        and path_walkable(emu:read8(TM + (cy - 1) * 20 + cx))
-        and path_walkable(emu:read8(TM + cy * 20 + (cx - 1)))
-        and path_walkable(emu:read8(TM + cy * 20 + cx))
+    return navigation_walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
+        and navigation_walkable(emu:read8(TM + (cy - 1) * 20 + cx))
+        and navigation_walkable(emu:read8(TM + cy * 20 + (cx - 1)))
+        and navigation_walkable(emu:read8(TM + cy * 20 + cx))
 end
 
 local function world_body_walkable(cx, cy)
@@ -335,7 +353,14 @@ end
 -- input is physically possible from the body's current sub-tile offset.
 local function pixel_walkable(x, y)
     if x < 0 or x >= 160 or y < 0 or y >= 136 then return false end
-    return walkable(emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8)))
+    local tile = emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
+    -- Keep the established Riftwild collision policy intact, but mirror the
+    -- cartridge's walkable grass/trail specifically for village lanes. The
+    -- controller previously entered a town through direct input, then its
+    -- pixel-safety check called the return doorway blocked and overwrote the
+    -- correct west/east input with an unstick drift.
+    return walkable(tile)
+        or (town_navigation_active() and (tile == 35 or tile == 36))
 end
 
 local function can_step(px, py, key)
@@ -575,6 +600,12 @@ local function rift_portal_step(px, py)
     return nil
 end
 
+-- These are controller-observed town branches, deliberately separate from
+-- cartridge state. The pilot must experience both shops before it can claim
+-- a long run considered village build choices.
+local town_market_seen, town_quarter_seen = {}, {}
+local town_market_visits, town_quarter_visits = 0, 0
+
 local function door_step(px, py)
     if TM == 0 then return KEY_DOWN end
     -- This helper runs outside the main sampling loop, so it must not capture
@@ -589,13 +620,20 @@ local function door_step(px, py)
     local in_world = emu:read8(RS + 17) == 1
     local world_screen = emu:read8(RS + 18)
     -- Town room 19 (then every 18 rooms) is a three-screen civic hub, not a
-    -- symmetric dungeon. From the arrival square use the north gate to the
-    -- next region; market/forge screens return west to arrival. Without this
-    -- explicit target the generic "any exit but back" chooser can keep an
-    -- endurance controller pacing between civic doors forever.
+    -- symmetric dungeon. Visit the market and forge/apothecary quarter once,
+    -- then take the north gate; branch screens return west to arrival.
     local in_town = not in_world and room > 18 and room % 18 == 1
-    local town_wanted = in_town
-        and (emu:read8(RS + 19) == 0 and 0 or 3) or nil
+    local town_screen = in_town and emu:read8(RS + 19) or 0
+    local town_wanted = nil
+    if in_town then
+        if town_screen == 0 then
+            if not town_market_seen[room] then town_wanted = 1
+            elseif not town_quarter_seen[room] then town_wanted = 3
+            else town_wanted = 0 end
+        else
+            town_wanted = 3
+        end
+    end
     -- The Sigil sits in local room 2. If the sanctuary is reached without it,
     -- route back through rooms 4 and 3 to the objective instead of repeatedly
     -- pressing the forward threshold that correctly refuses entry.
@@ -612,19 +650,30 @@ local function door_step(px, py)
     -- Shortest authored route to dungeon gate screen 6.
     local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
     if in_town then
-        -- These civic lanes are intentionally straight and wide. The north
-        -- gate triggers at the boundary, not at a point just inside it: the
-        -- old y=8 target made a hero at y=5 walk back down forever against
-        -- the gate lip. Center first, then keep pressing through the actual
-        -- exit; the market and forge similarly use their west lane.
-        if town_wanted == 0 then
+        -- Town roads are authored lanes, not procgen maze geometry. Using the
+        -- generic feet-box BFS here occasionally failed to seed a market
+        -- route and fell into its DOWN fallback forever. Centre on the lane
+        -- and cross its actual boundary instead. The two return doors are
+        -- intentionally asymmetric: market returns west, while the forge /
+        -- apothecary quarter returns east.
+        if town_screen == 0 then
+            if town_wanted == 1 then
+                if py < 56 then return KEY_DOWN end
+                if py > 64 then return KEY_UP end
+                return KEY_RIGHT
+            end
+            if town_wanted == 3 then
+                if py < 56 then return KEY_DOWN end
+                if py > 64 then return KEY_UP end
+                return KEY_LEFT
+            end
             if px < 70 then return KEY_RIGHT end
             if px > 74 then return KEY_LEFT end
             return KEY_UP
         end
         if py < 56 then return KEY_DOWN end
         if py > 64 then return KEY_UP end
-        return KEY_LEFT
+        return town_screen == 1 and KEY_LEFT or KEY_RIGHT
     end
     -- The dungeon gate (6) and the nonlinear cave vault (15) are both
     -- central interactable nodes, not boundary exits.  Treating the vault as
@@ -824,6 +873,17 @@ while frames < LIMIT do
     end
     last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
+    if room > 18 and room % 18 == 1 then
+        -- `world_return_screen` is a plaza index only in a town. Mark each
+        -- side street when its real room has loaded so the next arrival visit
+        -- advances the itinerary instead of pacing between civic doors.
+        local town_screen = emu:read8(RS + 19)
+        if town_screen == 1 and not town_market_seen[room] then
+            town_market_seen[room], town_market_visits = true, town_market_visits + 1
+        elseif town_screen == 2 and not town_quarter_seen[room] then
+            town_quarter_seen[room], town_quarter_visits = true, town_quarter_visits + 1
+        end
+    end
     local won = RS ~= 0 and emu:read8(RS + 10) or 0
     if frames == 0 then last_hp = hp end
     if hp < last_hp then
@@ -1184,6 +1244,35 @@ while frames < LIMIT do
                 keys = (frames % 3 == 0) and move or (KEY_A + aim)
             end
         end
+        -- A human can feel when a small hostile has entered their hurtbox;
+        -- the old pilot only had projectile avoidance and therefore let the
+        -- Tail Spike/Stinger kits repeatedly trade contact at point blank.
+        -- Those weapons both reach well beyond a body width, so preserve a
+        -- small retreat buffer and fire backward through it. Wolfkin alone
+        -- gets a tighter threshold because its Claw Combo is the roster's
+        -- deliberately true melee kit. This is read-only controller policy,
+        -- not a cartridge-side damage or immunity adjustment.
+        if target.giant == 0 and (CLASS == 0 or CLASS == 2) and not waiting_star then
+            local body_range = math.max(math.abs(dx), math.abs(dy))
+            local panic_range = (CLASS == 0) and 12 or (CLASS == 3) and 0 or 24
+            if body_range <= panic_range then
+                local retreat = (aim == KEY_UP and KEY_DOWN)
+                    or (aim == KEY_DOWN and KEY_UP)
+                    or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
+                local side_a = (retreat == KEY_UP or retreat == KEY_DOWN)
+                    and KEY_LEFT or KEY_UP
+                local side_b = (side_a == KEY_LEFT) and KEY_RIGHT
+                    or (side_a == KEY_RIGHT) and KEY_LEFT
+                    or (side_a == KEY_UP) and KEY_DOWN or KEY_UP
+                if can_step(px, py, retreat) then
+                    keys = KEY_A + retreat
+                elseif can_step(px, py, side_a) then
+                    keys = KEY_A + side_a
+                elseif can_step(px, py, side_b) then
+                    keys = KEY_A + side_b
+                end
+            end
+        end
         -- Exercise the actual class kit. Signatures require a clean B edge
         -- WITHOUT A; the old A+B chord was rejected by room.c and meant the
         -- agent never raised Sauran's shield or fired the ranged signatures.
@@ -1200,6 +1289,17 @@ while frames < LIMIT do
             and active_charge == 0 and mp >= 2
             and (nearby_hostiles >= 2
                 or (target.giant ~= 0 and math.max(math.abs(dx), math.abs(dy)) <= 48)) then
+            keys = KEY_B + aim
+        -- Featherbarb's three-way burst is Corvin's escape valve. Use it on
+        -- an actual close pack, not only a distant wall-clock cadence that
+        -- can leave the slow returning weapon saving MP while bodies already
+        -- occupy its firing lane. Vespine retains her independently measured
+        -- cadence: advancing the fan changes her early economy enough to
+        -- weaken its paired boss route.
+        elseif ABILITY_POLICY == "smart" and CLASS == 2
+            and not waiting_star and active_charge == 0 and mp >= 2
+            and (nearby_hostiles >= 2
+                or math.max(math.abs(dx), math.abs(dy)) <= 28) then
             keys = KEY_B + aim
         elseif ABILITY_POLICY == "smart" and CLASS ~= 1 and target.kind ~= 10
             and not waiting_star
@@ -1667,14 +1767,15 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
         won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses,
-        boss_attempts, boss_attempt_frames, boss_clear_frames, boss_clear_series))
+        boss_attempts, boss_attempt_frames, boss_clear_frames,
+        town_market_visits, town_quarter_visits, boss_clear_series))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

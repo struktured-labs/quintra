@@ -605,7 +605,8 @@ route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 used in balance runs. Each row reports accepted `b_uses` (the game entering a
 class-signature cooldown after a B-only press), rather than merely button
 requests. Set `QUINTRA_BOT_ABILITY_POLICY=off` for a no-signature control;
-the default `smart` policy uses class signatures and reactive shields. Rows
+the default `smart` policy uses reactive shields and Corvin's close-pack
+burst. Rows
 also separate `boss_attempt_frames` from `boss_clear_frames`, so a failed
 bullet-hell attempt cannot be mistaken for a slow successful fight. The
 semicolon-separated `boss_clear_durations` field exposes every successful
@@ -630,9 +631,13 @@ Wolfkin's classwise giant-retreat buffer is 32px (the other baseline kits use
 at 32px. Set `QUINTRA_BOT_GIANT_RETREAT_RANGE` explicitly for a matched sweep.
 
 Long-form routing treats the Riftwild dungeon gate and nonlinear cave vault
-as their real central staircase nodes, follows the town's north/return civic
-lanes explicitly, and mirrors the cartridge's feet-center spike test before
-allowing a tactical dodge or attack movement. These are controller-only safety
+as their real central staircase nodes, visits both the market and the
+forge/apothecary quarter before taking a town's north gate, and records
+`town_market_visits` / `town_quarter_visits` separately so that choice is
+verifiable. It mirrors the cartridge's feet-center spike test before allowing
+a tactical dodge or attack movement, and creates space from ordinary bodies
+before short-range champions are forced into repeated contact trades. These
+are controller-only safety
 rules: the agent still changes the run solely through normal button input.
 If it reaches a Sigil-gated sanctuary without that stage's fixture, it now
 backs through the local dungeon to recover the objective rather than treating
