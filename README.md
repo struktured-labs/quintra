@@ -392,8 +392,8 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. Current switchable headroom is 4,268 bytes in bank 1, 1,078 in bank 2,
-2,873 in bank 3, 8,599 in bank 4, 12,898 in bank 5, and 15,112 in bank 6.
+ROM. The v0.17.81 release has 4,245 bytes in bank 1, 1,788 in bank 2,
+3,324 in bank 3, 7,372 in bank 4, 12,814 in bank 5, and 15,112 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -433,6 +433,14 @@ bullet-hell attempt cannot be mistaken for a slow successful fight. Each
 emulator attempt writes to its own CSV; a file-locked duplicate check commits
 exactly one finished row to the matrix, so late or overlapping processes cannot
 pollute an interrupted/resumed sample.
+
+Giant spacing defaults to a measured classwise policy: Wolfkin, Sauran,
+Corvin, and Vespine retain the baseline movement, while Picsean uses
+`orbit_fire` for large bosses. On the same three 10,800-frame seeds this
+raised Picsean from two boss clears and two deaths to six clears and zero
+deaths, without changing the other four classes' matched outcomes. Override
+it with `QUINTRA_BOT_GIANT_POLICY=baseline` when comparing a candidate.
+
 Constrained hosts can split a matrix into seed batches
 with `QUINTRA_BALANCE_APPEND=1` and `QUINTRA_BALANCE_SKIP_REPORT=1`, then run
 one final report against the accumulated CSV; every class/seed row is still

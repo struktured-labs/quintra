@@ -25,10 +25,15 @@ local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
 local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
-local GIANT_POLICY = os.getenv("QUINTRA_BOT_GIANT_POLICY") or "baseline"
+-- A class-aware default keeps the proven baseline for close/short-range
+-- champions while Picsean's slow piercing bubbles use the independently
+-- measured orbit-and-fire spacing plan.  Explicit environment modes remain
+-- available to the offline policy search below.
+local GIANT_POLICY = os.getenv("QUINTRA_BOT_GIANT_POLICY") or "classwise"
 if GIANT_POLICY ~= "baseline" and GIANT_POLICY ~= "orbit"
-    and GIANT_POLICY ~= "orbit_fire" and GIANT_POLICY ~= "pulse_fire" then
-    GIANT_POLICY = "baseline"
+    and GIANT_POLICY ~= "orbit_fire" and GIANT_POLICY ~= "pulse_fire"
+    and GIANT_POLICY ~= "classwise" then
+    GIANT_POLICY = "classwise"
 end
 -- Keep the established controller behavior as the default, but expose an
 -- explicit no-signature control.  This lets a balance experiment distinguish
@@ -790,19 +795,23 @@ while frames < LIMIT do
             local adx, ady = math.abs(dx), math.abs(dy)
             local reach = (adx > ady) and adx or ady
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
-            if target.giant ~= 0 and GIANT_POLICY ~= "baseline" and reach < 36 then
+            local giant_mode = GIANT_POLICY
+            if giant_mode == "classwise" then
+                giant_mode = (CLASS == 3) and "orbit_fire" or "baseline"
+            end
+            if target.giant ~= 0 and giant_mode ~= "baseline" and reach < 36 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
                 local orbit = giant_orbit_step(px, py, aim, retreat)
-                if GIANT_POLICY == "pulse_fire" then
+                if giant_mode == "pulse_fire" then
                     -- One aimed beat, then four retreat beats: this is a
                     -- controller-realistic way for short-range champions to
                     -- keep pressure without turning every shot into another
                     -- pixel of contact.  It exists only for offline search.
                     keys = (frames % 5 == 0) and (KEY_A + aim) or retreat
                 else
-                    keys = (GIANT_POLICY == "orbit_fire" and frames % 3 == 0)
+                    keys = (giant_mode == "orbit_fire" and frames % 3 == 0)
                         and (KEY_A + aim) or orbit
                 end
             elseif reach < 28 then
