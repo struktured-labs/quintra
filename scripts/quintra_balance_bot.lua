@@ -831,7 +831,12 @@ while frames < LIMIT do
         elseif aim == KEY_LEFT then move = clockwise and KEY_UP or KEY_DOWN
         else move = clockwise and KEY_DOWN or KEY_UP end
         local waiting_star = target.kind == 11 and target.state ~= 0
-        local routed_reach = (CLASS == 2 or CLASS == 3) and 6 or 1
+        -- Corvin/Picsean are ranged, and Vespine's Stinger is a 48px lunge.
+        -- Giving the latter Wolfkin's adjacent-only target lane stranded the
+        -- controller against Flutterbat-room cover while it fired from safely
+        -- out of range. Six tiles matches the real Stinger reach without
+        -- changing the cartridge's collision or projectile physics.
+        local routed_reach = (CLASS == 2 or CLASS == 3 or CLASS == 4) and 6 or 1
         -- Any weapon can spend shots into cover. After four seconds without
         -- changing target HP, reposition perpendicular and reacquire.
         -- Folding Stars are intentionally invulnerable while expanded. Route

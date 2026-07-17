@@ -496,6 +496,9 @@ as their real central staircase nodes, follows the town's north/return civic
 lanes explicitly, and mirrors the cartridge's feet-center spike test before
 allowing a tactical dodge or attack movement. These are controller-only safety
 rules: the agent still changes the run solely through normal button input.
+Vespine's 48px Stinger receives the same six-tile Flutterbat pursuit lane as
+the ranged champions; a three-seed live-ROM regression requires it to clear
+that moving-target room and reach the first boss threshold without a stall.
 
 Constrained hosts can split a matrix into seed batches
 with `QUINTRA_BALANCE_APPEND=1` and `QUINTRA_BALANCE_SKIP_REPORT=1`, then run
