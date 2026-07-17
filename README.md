@@ -776,6 +776,19 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
+### Current conference evidence (v0.18.3)
+
+- `make verify` passed the full cartridge, content, visual, progression,
+  pickup, boss-policy, and controller-replay suite.
+- `make preflight` passed a byte-identical clean rebuild, CGB/MBC5+battery
+  header validation, a cold-boot SRAM suspend/resume, and the checked-in
+  174-frame GitHub gameplay reel. The released ROM hash is
+  `fa23362e697e19e235f291d06a1243c6f32cec32463057d94a284c17e5b84b4c`.
+- This is **not yet a show-build sign-off**: the fresh all-class 15-run
+  endurance matrix has zero controller combat/route stalls and observes every
+  enemy, but only Picsean reached two nine-boss endings. The final delivery
+  floor remains two endings per champion over three entropy samples.
+
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
 turning early runs into a wall, and physical-cart smoke testing. New content
