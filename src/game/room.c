@@ -82,10 +82,20 @@ static i8 dash_dx, dash_dy;
 // timer here avoids inflating suspend-save payloads; ordinary room transitions
 // do not reset it.
 u8 room_transform_ticks;
+// Surge Spark lasts 120 eighth-second beats (about 15 seconds). It is room
+// runtime state, like Spirit Convergence, rather than permanent save data.
+u8 room_weapon_surge_ticks;
 
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
+}
+
+void room_start_weapon_surge(void) BANKED {
+    room_weapon_surge_ticks = 120;
+    room_shake(1, 10);
+    fx_spawn(SPR_SURGE_ORB, 0x06, (i16)player.x + 4, (i16)player.y - 6, 18);
+    sfx_play(SFX_ROAR);
 }
 
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
@@ -1117,9 +1127,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + player.atk);
+            u8 cooldown = player_fire_delay(w->p0);
+            if (room_weapon_surge_ticks) {
+                // Surge Spark is an earned short burst, not a permanent stat:
+                // it makes every class's actual A weapon hit harder and cycle
+                // four frames faster without changing their geometry or B kit.
+                dmg++;
+                cooldown = (cooldown > 10) ? (u8)(cooldown - 4) : 6;
+            }
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
             projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, w->p2);
-            player.fire_cooldown = player_fire_delay(w->p0);
+            player.fire_cooldown = cooldown;
         }
         if (player.fire_cooldown) player.fire_cooldown--;
 
@@ -1182,6 +1200,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (player.active_charge > 0) player.active_charge--;
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0)
             room_transform_ticks--;
+        if (room_weapon_surge_ticks > 0 && (run_clock_fraction & 7) == 0) {
+            room_weapon_surge_ticks--;
+            if ((room_weapon_surge_ticks & 0x0F) == 0)
+                fx_spawn(SPR_FX_IMPACT, 0x06, (i16)player.x + 4,
+                    (i16)player.y + 2, 12);
+        }
         if (player.shield_timer > 0) {
             player.shield_timer--;
             if ((player.shield_timer & 7) == 0)

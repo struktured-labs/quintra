@@ -15,6 +15,9 @@
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
 extern u8 room_transform_ticks;
+// Temporary combat boon: decremented in active gameplay only, so menus do
+// not consume it and it never needs to inflate the suspend-save payload.
+extern u8 room_weapon_surge_ticks;
 // Runtime contract exposed for emulator instrumentation: only authored seal
 // encounters lock unexplored exits while hostiles remain.
 extern u8 room_combat_sealed;
@@ -36,6 +39,7 @@ void room_break_pot(u8 tx, u8 ty) BANKED;
 // Impact shake: wiggle the BG scroll (HUD unaffected) for a few frames.
 // mag = pixels (1-2 sensible); longer of current/new duration wins.
 void room_shake(u8 mag, u8 frames) BANKED;
+void room_start_weapon_surge(void) BANKED;
 
 // Request that the next room_enter resume the CURRENT room (skip procgen)
 // instead of generating a new one — used when returning from the pack screen.

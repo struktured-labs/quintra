@@ -21,6 +21,7 @@
 #define PICKUP_RIFT_SIGIL 11   // stage objective; unlocks its colossus threshold
 #define PICKUP_CARTOGRAPHER 12 // village chartwright; reveals nearby route
 #define PICKUP_SHOP_TAG     13 // inert gold sale marker, floats above a ware
+#define PICKUP_SURGE        14 // temporary primary-weapon burst (about 15s)
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins

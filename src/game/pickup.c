@@ -7,6 +7,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
 #include "render/tiles.h"
@@ -71,6 +72,15 @@ u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
         entities[idx].palette     = 0x06;   // stage-glow: reads as magic
     }
     return idx;
+}
+
+static void pickup_spawn_surge(fix8_t x, fix8_t y) {
+    u8 idx = pickup_spawn(PICKUP_SURGE, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_SURGE_ORB;
+        entities[idx].palette     = 0x06;  // cyan magic, distinct from coin gold
+        entities[idx].state_timer = 255;
+    }
 }
 
 u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
@@ -188,7 +198,8 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
         // Passive stat-boosters live at items[] indices 10..19
         pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
     }
-    // else: no drop (20%)
+    else if (r < 0xD9) pickup_spawn_surge(x, y);                // 5%: temporary burst
+    // else: no drop (15%)
 }
 
 void pickup_update(entity_t *e, u8 idx) BANKED {
@@ -247,25 +258,10 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 
-    // Magnetism: within a ~28px box of the player, drift 1px/frame toward
-    // them (2px when very close) — loot hoovers itself up, Zelda-style.
-    {
-        i16 ex = FIX8_TO_INT(e->x);
-        i16 ey = FIX8_TO_INT(e->y);
-        i16 dx = (i16)player.x - ex;
-        i16 dy = (i16)player.y - ey;
-        i16 adx = dx < 0 ? -dx : dx;
-        i16 ady = dy < 0 ? -dy : dy;
-        if (adx < 28 && ady < 28) {
-            u8 step = (adx < 12 && ady < 12) ? 2 : 1;
-            if (dx > 0)      ex += step;
-            else if (dx < 0) ex -= step;
-            if (dy > 0)      ey += step;
-            else if (dy < 0) ey -= step;
-            e->x = FIX8(ex);
-            e->y = FIX8(ey);
-        }
-    }
+    // Pickups deliberately stay where they drop. The former magnet routine
+    // could corrupt coordinates in the banked update path, making a visible
+    // reward jump away just as the player reached it. The generous collision
+    // box still makes a direct walk-over collection reliable and predictable.
 }
 
 static u8 add_capped(u8 value, u8 delta, u8 cap) {
@@ -354,6 +350,9 @@ u8 pickup_check_player_collision(void) BANKED {
                         hud_redraw_mp();
                     }
                     sfx_play(SFX_HEART);
+                    break;
+                case PICKUP_SURGE:
+                    room_start_weapon_surge();
                     break;
                 case PICKUP_RIFT_SIGIL:
                     run_state.rift_sigils |= RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten);

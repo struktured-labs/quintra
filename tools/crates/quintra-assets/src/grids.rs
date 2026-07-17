@@ -404,6 +404,19 @@ pub const MERCHANT_CALLOUT: [&str; 8] = [
     "....1...",
 ];
 
+// Cyan lightning in a faceted orb: a rare short-lived combat boon, distinct
+// from gold currency and the permanent relic orb.
+pub const SURGE_ORB: [&str; 8] = [
+    "...3....",
+    "..323...",
+    ".32123..",
+    "1231231.",
+    ".123321.",
+    "..3123..",
+    ".321.3..",
+    "...3....",
+];
+
 // Town elder: hooded face and crooked staff, readable at true GB scale.
 pub const VILLAGER: [&str; 8] = [
     "..222...",
@@ -684,7 +697,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 18] = [
     ("rune_lantern", &RUNE_LANTERN),
 ];
 
-pub const FX_8: [(&str, &[&str]); 12] = [
+pub const FX_8: [(&str, &[&str]); 13] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -693,6 +706,7 @@ pub const FX_8: [(&str, &[&str]); 12] = [
     ("item_orb", &ITEM_ORB),
     ("shop_tag", &SHOP_TAG),
     ("merchant_callout", &MERCHANT_CALLOUT),
+    ("surge_orb", &SURGE_ORB),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),

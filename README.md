@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.71: Merchant Voices](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.72: Surge Sparks](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.72 adds **Surge Sparks**, rare cyan lightning drops that give every
+champion about fifteen seconds of a harder-hitting, faster-cycling primary
+weapon. It is deliberately temporary—no permanent stat is changed, menus do
+not consume its timer, and an emulator contract proves its unique sprite,
+damage lift, and expiry. This release also removes a fragile pickup-magnet
+routine that could move a reward away at contact; drops now stay put and use
+the existing generous walk-over collection box.
 
 v0.17.71 gives merchants a small gold trade speech bubble when the champion
 steps close. The existing persistent sale markers and nearby HUD price then

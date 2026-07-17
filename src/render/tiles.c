@@ -129,6 +129,7 @@ void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_ITEM_ORB,   1, sprite_fx_item_orb);
     set_sprite_data(SPR_SHOP_TAG,   1, sprite_fx_shop_tag);
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
+    set_sprite_data(SPR_SURGE_ORB,  1, sprite_fx_surge_orb);
     // Bold diagonal sweep: this is deliberately separate from the bullet
     // pair so Wolfkin's melee attack reads as a physical claw/weapon arc,
     // not an inexplicably slow ranged shot.
