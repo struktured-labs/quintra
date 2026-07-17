@@ -1037,6 +1037,13 @@ while frames < LIMIT do
             end
         end
         dodge_phase, dodge_count = 1, dodge_count + 1
+        if DEBUG then
+            debug_log(string.format(
+                "BOTDODGE f=%d room=%d pos=%d,%d shot=%d,%d target=%s dir=%02X",
+                frames, room, px, py, threat.x, threat.y,
+                target and string.format("%d@%d,%d", target.kind, target.x, target.y)
+                    or "-", dodge_dir))
+        end
     end
     -- The CGB loop may poll once across two emulator frames. Hold every beat
     -- for two frames so neither press edge can fall between cartridge polls.
