@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify preflight repro-check balance endurance media media-check play info check-balance-bot
+.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance media media-check play info check-balance-bot
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -72,7 +72,13 @@ $(OBJDIR)/%.o: %.c $(HDRS)
 # Link to ROM, then verify the memory layout. The layout check exists
 # because the linker SILENTLY placed init code past 0x8000 when the flat
 # 32KB image overflowed (white screen at boot, shipped 6 broken commits).
-$(BINDIR)/$(PROJECT).gbc: $(OBJS) Makefile
+# Always perform the final link. GBDK's map/NOI side artifacts and coarse
+# generated-header dependencies can otherwise leave a newly compiled object
+# newer than an apparently-current ROM, which is unacceptable for a flash or
+# GitHub release build.
+force-link:
+
+$(BINDIR)/$(PROJECT).gbc: $(OBJS) Makefile force-link
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	@python3 scripts/check_rom_layout.py $(BINDIR)/$(PROJECT)
 
