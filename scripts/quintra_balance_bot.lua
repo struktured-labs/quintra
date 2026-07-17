@@ -1348,13 +1348,10 @@ while frames < LIMIT do
                 -- live-ROM sweeps give Tail Spike and Featherbarb materially
                 -- more boss clears with orbit-and-fire: their real reach lets
                 -- them pressure while sidestepping instead of donating every
-                -- retreat beat to a Sentinel body. Vespine's Stinger remains
-                -- on its separately measured cardinal baseline; pulses there
-                -- cleared 0/3 while baseline cleared two full bosses.
+                -- retreat beat to a Sentinel body.
                 giant_mode = (held_style == "claw") and "pulse_fire"
-                    -- Vespine's starter Stinger remains on its separately
-                    -- measured baseline. A swapped Flail/Spear changes the
-                    -- build shape and earns its own long-lane policy.
+                    -- A swapped Flail/Spear changes the build shape and
+                    -- earns its own long-lane policy.
                     or (held_style == "lunge" and CLASS ~= 4) and "orbit_fire"
                     or (held_style == "flail" or held_style == "spear") and "orbit_fire"
                     -- Wolfkin may replace the Claw with Corvin's Feather
@@ -1362,7 +1359,7 @@ while frames < LIMIT do
                     -- a projectile-safe orbit rather than the claw's
                     -- baseline contact policy.
                     or (held_style == "ranged" and CLASS == 0) and "orbit_fire"
-                    or (CLASS == 1 or CLASS == 2 or CLASS == 3)
+                    or (CLASS == 1 or CLASS == 2 or CLASS == 3 or CLASS == 4)
                         and "orbit_fire" or "baseline"
             end
             local giant_retreat = GIANT_RETREAT_RANGE
@@ -1381,6 +1378,12 @@ while frames < LIMIT do
                 -- Sauran beyond a 32px colossus body yet takes every second
                 -- aimed beat. The generic three-beat cadence left its deep
                 -- deterministic seed a full boss behind before the limit.
+                giant_fire_cadence = 2
+            elseif held_style == "lunge" and CLASS == 4 then
+                -- The Stinger's 48px reach can pressure from the established
+                -- 36px boss orbit. A two-beat firing cadence produced one
+                -- complete ending and a six-boss route in its paired search;
+                -- its prior cardinal baseline cleared neither.
                 giant_fire_cadence = 2
             elseif held_style == "flail" or (held_style == "lunge" and CLASS ~= 4) then
                 giant_retreat = 28
