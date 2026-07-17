@@ -82,7 +82,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 3, 2, 0), c(14,11, 2), c(24,19, 4), c(31,28,10)],
         boss:    [c(0,0,0), c(22,17, 5), c( 6, 4, 1), c(31,30,18)],
         boss_hp_bonus: 240, boss_dmg_bonus: 4, mb_variant: 3, room_archetype: 6,
-        enemy_pool: &[(4, 25), (6, 20), (7, 20), (10, 15), (18, 20)],
+        enemy_pool: &[(4, 20), (6, 20), (7, 15), (10, 15), (18, 15), (20, 15)],
     },
     // 7 — Bloodmoon (crimson/black)
     StageTheme {
@@ -93,7 +93,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 3, 1, 1), c(13, 6, 3), c(23,12, 5), c(31,22,10)],
         boss:    [c(0,0,0), c(20, 4, 6), c( 6, 1, 2), c(31,20,16)],
         boss_hp_bonus: 248, boss_dmg_bonus: 4, mb_variant: 0, room_archetype: 7,
-        enemy_pool: &[(3, 25), (7, 25), (11, 25), (8, 25)],
+        enemy_pool: &[(3, 20), (7, 20), (11, 25), (8, 20), (20, 15)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
     StageTheme {
@@ -104,7 +104,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 0, 3), c( 8, 4,10), c(16,10,20), c(26,18,30)],
         boss:    [c(0,0,0), c(13, 6,20), c( 3, 1, 7), c(20,31,18)],
         boss_hp_bonus: 255, boss_dmg_bonus: 5, mb_variant: 4, room_archetype: 8,
-        enemy_pool: &[(7, 15), (11, 20), (15, 25), (8, 20), (19, 20)],
+        enemy_pool: &[(7, 15), (11, 15), (15, 20), (8, 15), (19, 20), (20, 15)],
     },
 ];
 

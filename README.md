@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.82: Patient Hearts](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.83: Dread Bell](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.83 adds the **Dread Bell**, a late-game iron caster that tolls an
+eight-way, fast projectile peal on a deliberately slow cadence. It enters
+Golden Temple, Bloodmoon, and Void Sanctum pools without displacing each
+stage's core threats. Its new authored silhouette shares the merchant's
+speech-bubble VRAM slot only in non-merchant combat rooms, with live cartridge
+coverage proving both the eight lanes and the tile boundary. This release also
+removes dead class `sprite_set` data: five champion idle and walk atlases are
+now protected by a runtime animation contract instead of a misleading field.
 
 v0.17.82 makes dropped **hearts patient**: brushing a heart at full HP no
 longer plays a pickup chime, removes the sprite, and leaves the HUD unchanged.
@@ -222,7 +231,7 @@ an unreachable live enemy and seal progression.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **20 enemies across a size hierarchy** — small swarm critters (crawler,
+- **21 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
@@ -238,6 +247,9 @@ an unreachable live enemy and seal progression.
   remains a class-readable answer to their heavy armor.
   Shadow Keep and Void Sanctum add drifting **Rune Lanterns**, whose slow
   cardinal rings force readable lane changes while leaving diagonal exits.
+  Golden Temple onward also fields **Dread Bells**: slow-moving iron casters
+  with a visible long cadence and a fast eight-way peal that makes every lane
+  a decision instead of simply inflating enemy health.
   Verdant Hollow once again fields fast pursuing Hornets; typed content tests
   now reject any registered non-boss monster missing from every stage pool.
   Both fragments are guaranteed even when the fixed 32-entity table is full;
@@ -403,8 +415,8 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.17.82 release has 4,245 bytes in bank 1, 1,788 in bank 2,
-3,324 in bank 3, 7,372 in bank 4, 12,813 in bank 5, and 15,112 in bank 6.
+ROM. The v0.17.83 release has 4,225 bytes in bank 1, 1,751 in bank 2,
+3,318 in bank 3, 7,369 in bank 4, 12,813 in bank 5, and 15,112 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

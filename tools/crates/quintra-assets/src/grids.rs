@@ -311,6 +311,17 @@ pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
     ".3.11.3.",
 ];
 
+pub const DREAD_BELL: [&str; 8] = [ // hanging iron bell; pale clapper reads at a glance
+    "...33...",
+    "..3223..",
+    ".321112.",
+    "32111123",
+    "32111123",
+    ".233332.",
+    "..2112..",
+    ".3.22.3.",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -690,7 +701,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 18] = [
+pub const ENEMIES_8: [(&str, &[&str]); 19] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -709,6 +720,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 18] = [
     ("mire_spore", &MIRE_SPORE),
     ("echo_guard", &ECHO_GUARD),
     ("rune_lantern", &RUNE_LANTERN),
+    ("dread_bell", &DREAD_BELL),
 ];
 
 pub const FX_8: [(&str, &[&str]); 14] = [

@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         21);   // 6 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       20);   // adds Shadow/Void's Rune Lantern caster
+        assert_eq!(r.n_enemies(),       21);   // adds the late eight-way Dread Bell
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -126,6 +126,20 @@ mod tests {
         assert_eq!(temple.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::ECHO_GUARD.ai_script,
             quintra_content::AiScriptId::CounterGuard { guard_cooldown: 100, rush_ticks: 24 });
+    }
+
+    #[test]
+    fn late_stages_author_the_dread_bell_without_weight_inflation() {
+        for stage in [&stages::STAGES[6], &stages::STAGES[7], &stages::STAGES[8]] {
+            assert!(stage.enemy_pool.iter().any(|&(id, _)| id == 20));
+            assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        }
+        assert_eq!(enemies::DREAD_BELL.ai_script,
+            quintra_content::AiScriptId::Shooter {
+                fire_rate: 108,
+                projectile: quintra_content::ProjectileKind::Bullet,
+                pattern: quintra_content::ShotPattern::Ring(8),
+            });
     }
 
     #[test]

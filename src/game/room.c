@@ -746,6 +746,10 @@ void room_enter(void) {
 
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
+    // Combat-only Dread Bell art reuses the merchant speech-bubble slot.
+    // The two entity types cannot coexist: shops/towns retain the callout.
+    if (!run_state.world_mode && !room_has_shop_wares)
+        tiles_load_dread_bell_sprite();
     room_refresh_shop_wares();
     room_spawn_progression_fixture();
     room_combat_sealed = room_should_combat_seal();

@@ -23,7 +23,9 @@ pub struct Class {
     pub name: &'static str,                // ≤8 chars (HUD constraint)
     pub form_theme: FormTheme,
     pub palette: PaletteRef,               // OBJ palette index
-    pub sprite_set: SpriteRef,             // 8 tiles: 4-dir idle + 4-dir walk
+    // Player art is not content data: the renderer owns three fixed,
+    // class-indexed atlases (idle, walk, ascended) so it can change poses
+    // without duplicating tile-slot knowledge in every class declaration.
     pub starter_weapon: ItemId,            // bound to B, can't drop
     pub signature_active: ItemId,          // bound to A, 1-slot, recharges
     pub passive_perk: PerkId,

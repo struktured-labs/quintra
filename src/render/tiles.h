@@ -94,6 +94,7 @@
 // reloads the normal lantern art before enemies exist.
 #define SPR_TOWN_WAYKEEPER   SPR_ENEMY_RUNE_LANTERN
 #define SPR_MERCHANT_CALLOUT 125 // proximity trade speech bubble
+#define SPR_ENEMY_DREAD_BELL SPR_MERCHANT_CALLOUT // combat-only late eight-way caster
 #define SPR_SURGE_ORB        126 // temporary weapon-speed/damage pickup
 #define SPR_SHIELD_AURA      127 // Sauran Stoneskin orbiting ward shard
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
@@ -121,6 +122,7 @@ void tiles_load_hud(void) BANKED;
 void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles = 20 OBJ tiles
 void tiles_load_ascended_sprites(void) BANKED;    // bank-3 transform atlas -> fixed OBJ slots
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
+void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact

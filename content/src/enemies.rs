@@ -281,6 +281,22 @@ pub const RUNE_LANTERN: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const DREAD_BELL: Enemy = Enemy {
+    id: ENEMY_DREAD_BELL, symbol: "DREAD_BELL", name: "Dread Bell",
+    sprite_set: SPRITE_DREAD_BELL, palette: OBJ_PAL_RED,
+    // A slow, heavy bell that telegraphs a full eight-lane peal. It is a
+    // lane-changing threat rather than a fast surprise shot: move after the
+    // chime and use the diagonal gaps before its next 108-frame toll.
+    stats: EnemyStats { hp: 17, damage: 2, speed: 24, score: 65, weakness: 0x04, poise: 2 },
+    ai_script: AiScriptId::Shooter {
+        fire_rate: 108,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Ring(8),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -302,4 +318,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(MIRE_SPORE.clone());
     r.add_enemy(ECHO_GUARD.clone());
     r.add_enemy(RUNE_LANTERN.clone());
+    r.add_enemy(DREAD_BELL.clone());
 }

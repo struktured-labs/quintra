@@ -349,7 +349,8 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
             // readable motes, warlocks own the baseline, Cinder Maws spit
             // fast bolts. Pattern density and bullet speed are independent.
             u8 shot_speed = (e->ai_data[0] == ENEMY_WISP) ? 1
-                : (e->ai_data[0] == ENEMY_CINDER_MAW) ? 3 : 2;
+                : (e->ai_data[0] == ENEMY_CINDER_MAW
+                   || e->ai_data[0] == ENEMY_DREAD_BELL) ? 3 : 2;
             u8 d, k;
             switch (pat) {
                 case 1:   // Fan(n): aimed center + (n-1)/2 each side

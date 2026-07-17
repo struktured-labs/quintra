@@ -17,7 +17,7 @@ IDENTITIES = {
     5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
     14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
-    18: (80, 5), 19: (124, 6),
+    18: (80, 5), 19: (124, 6), 20: (125, 4),
 }
 
 SPECIALISTS = {
@@ -30,6 +30,7 @@ SPECIALISTS = {
     17: (78, 20, "MIRE_SPORE", "SPR_ENEMY_MIRE_SPORE", "mire-spore"),
     18: (80, 68, "ECHO_GUARD", "SPR_ENEMY_ECHO_GUARD", "echo-guard"),
     19: (124, 75, "RUNE_LANTERN", "SPR_ENEMY_RUNE_LANTERN", "rune-lantern"),
+    20: (125, 124, "DREAD_BELL", "SPR_ENEMY_DREAD_BELL", "dread-bell"),
 }
 
 
@@ -56,6 +57,8 @@ def main():
     assert "e->palette     = def->palette;" in SPAWN_SOURCE
     assert "sprite_for_enemy" not in SPAWN_SOURCE
     assert "palette_for_enemy" not in SPAWN_SOURCE
+    assert "tiles_load_dread_bell_sprite" in (ROOT / "src/game/room.c").read_text()
+    assert "!room_has_shop_wares" in (ROOT / "src/game/room.c").read_text()
     # Generated content is the sole runtime identity source. Pin every roster
     # entry's hardware OBJ slot/palette so no hand-written C switch can drift.
     for enemy_id, (slot, palette) in IDENTITIES.items():
@@ -367,8 +370,43 @@ def main():
     assert set(ring) == {(2, 0), (-2, 0), (0, 2), (0, -2)}, (
         f"Rune Lantern cardinal ring drifted: {ring}"
     )
+
+    # Dread Bell is the heavier late-game lane check: a deliberately slow
+    # cadence, but a full fast eight-way peal. It must exercise the generated
+    # Ring(8) data and its special 3px/tick velocity through live AI, rather
+    # than only occupying a weighted roster slot.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 32)
+    put16(pb, player + 11, 32)
+    pb.memory[player + 2] = 20
+    bell = entities
+    pb.memory[bell] = 2
+    pb.memory[bell + 1] = 3
+    put_fix8(pb, bell + 2, 88)
+    put_fix8(pb, bell + 6, 72)
+    pb.memory[bell + 12] = 125
+    pb.memory[bell + 14] = 17
+    pb.memory[bell + 17] = 20
+    pb.memory[bell + 18] = 0          # peal immediately
+    pb.memory[bell + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    peal = []
+    for i in range(1, 32):
+        ep = entities + i * 28
+        if pb.memory[ep] == 1 and pb.memory[ep + 1] & 1:
+            vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
+            peal.append((vx - 256 if vx >= 128 else vx,
+                         vy - 256 if vy >= 128 else vy))
+    assert set(peal) == {
+        (3, 0), (3, 3), (0, 3), (-3, 3),
+        (-3, 0), (-3, -3), (0, -3), (3, -3),
+    }, f"Dread Bell eight-way fast peal drifted: {peal}"
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern behavior + ooze split")
+    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern/bell behavior + ooze split")
 
 
 if __name__ == "__main__":

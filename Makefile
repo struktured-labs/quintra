@@ -104,6 +104,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
+	uv run --quiet --with pyboy python scripts/test_champion_animation.py
 	uv run --quiet --with pyboy python scripts/test_rift_flail.py
 	uv run --quiet --with pyboy python scripts/test_performance.py
 	uv run --quiet --with pyboy python scripts/test_run_clock.py

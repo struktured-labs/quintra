@@ -174,7 +174,6 @@ fn write_classes(out: &Path, reg: &Registry) -> Result<()> {
          \x20\x20\x20\x20const char*  name;\n\
          \x20\x20\x20\x20u8           form_theme;\n\
          \x20\x20\x20\x20u8           palette;\n\
-         \x20\x20\x20\x20u8           sprite_set;\n\
          \x20\x20\x20\x20u16          starter_weapon;\n\
          \x20\x20\x20\x20u16          signature_active;\n\
          \x20\x20\x20\x20u8           passive_perk;\n\
@@ -196,10 +195,10 @@ fn write_classes(out: &Path, reg: &Registry) -> Result<()> {
 
 fn emit_class(c: &Class) -> String {
     format!(
-        "    {{ .id={}, .name=\"{}\", .form_theme={}, .palette={}, .sprite_set={},\n\
+        "    {{ .id={}, .name=\"{}\", .form_theme={}, .palette={},\n\
         \x20     .starter_weapon={}, .signature_active={}, .passive_perk={},\n\
         \x20     .base_stats={{ {} }} }},\n",
-        c.id.raw(), esc(c.name), form(c.form_theme), c.palette.raw(), c.sprite_set.raw(),
+        c.id.raw(), esc(c.name), form(c.form_theme), c.palette.raw(),
         c.starter_weapon.raw(), c.signature_active.raw(), c.passive_perk.raw(),
         emit_base_stats(c.base_stats),
     )
@@ -736,7 +735,7 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          extern const u8 stage_room_archetype[N_STAGES];\n\
          /* Weighted normal-room rosters per stage (ids + weights,\n\
             stage_pool_n entries each; weights sum <= 255) */\n\
-         #define STAGE_POOL_MAX 5\n\
+         #define STAGE_POOL_MAX 6\n\
          extern const u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_n[N_STAGES];\n\
@@ -786,16 +785,16 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
 
     c.push_str("\nconst u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ids = [0u8; 5];
+        let mut ids = [0u8; 6];
         for (i, &(eid, _)) in s.enemy_pool.iter().enumerate() { ids[i] = eid; }
-        c.push_str(&format!("    {{ {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4], ids[5]));
     }
     c.push_str("};\n");
     c.push_str("const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ws = [0u8; 5];
+        let mut ws = [0u8; 6];
         for (i, &(_, w)) in s.enemy_pool.iter().enumerate() { ws[i] = w; }
-        c.push_str(&format!("    {{ {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4], ws[5]));
     }
     c.push_str("};\n");
     c.push_str(&format!("const u8 stage_pool_n[N_STAGES] = {{ {} }};\n",

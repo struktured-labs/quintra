@@ -59,6 +59,7 @@ pub const ENEMY_MIRROR_MOTH:     EnemyId = EnemyId::new(16);   // mirrors hero m
 pub const ENEMY_MIRE_SPORE:      EnemyId = EnemyId::new(17);   // proximity-armed radial burst mine
 pub const ENEMY_ECHO_GUARD:      EnemyId = EnemyId::new(18);   // blocks one hit, counters, then opens
 pub const ENEMY_RUNE_LANTERN:    EnemyId = EnemyId::new(19);   // drifting four-lane ring caster
+pub const ENEMY_DREAD_BELL:      EnemyId = EnemyId::new(20);   // late-stage eight-way peal caster
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -124,6 +125,9 @@ pub const SPRITE_MIRROR_MOTH: SpriteRef = SpriteRef::new(77);
 pub const SPRITE_MIRE_SPORE:  SpriteRef = SpriteRef::new(78);
 pub const SPRITE_ECHO_GUARD:  SpriteRef = SpriteRef::new(80);
 pub const SPRITE_RUNE_LANTERN: SpriteRef = SpriteRef::new(124);
+// Slot 125 is a dungeon-only multiplex: combat rooms load Dread Bell art;
+// merchant/town rooms retain the proximity callout in that slot.
+pub const SPRITE_DREAD_BELL:    SpriteRef = SpriteRef::new(125);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

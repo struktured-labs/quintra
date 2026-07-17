@@ -111,6 +111,13 @@ void tiles_load_all_enemy_sprites(void) BANKED {
     set_sprite_data(SPR_BRUISER_WARLOCK, 4, sprite_bruiser_warlock);
 }
 
+void tiles_load_dread_bell_sprite(void) BANKED {
+    // OBJ VRAM is full. Normal dungeon combat never contains a merchant,
+    // so it may safely repurpose the merchant-callout tile. Shop and town
+    // rooms deliberately do not call this loader and keep their speech cue.
+    set_sprite_data(SPR_ENEMY_DREAD_BELL, 1, sprite_enemy_dread_bell);
+}
+
 void tiles_load_miniboss(u8 stage) BANKED {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
     // stage's mini-boss looks distinct. Variant table must match the palette
