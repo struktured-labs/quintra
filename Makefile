@@ -118,6 +118,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
+	uv run --quiet --with pyboy python scripts/test_heart_pickup.py
 	uv run --quiet --with pyboy python scripts/test_sauran_shield.py
 	uv run --quiet --with pyboy python scripts/test_surge.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc

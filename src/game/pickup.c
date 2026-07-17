@@ -364,11 +364,14 @@ u8 pickup_check_player_collision(void) BANKED {
         if (aabb_overlap_player_wide(&entities[i])) {
             switch (entities[i].ai_data[0]) {
                 case PICKUP_HEART_HALF:
-                    if (player.hp < player.hp_max) {
-                        player.hp = (u8)(player.hp + 1);
-                        if (player.hp > player.hp_max) player.hp = player.hp_max;
-                        hud_redraw_hp();
-                    }
+                    // A full-health walk-over used to consume the heart and
+                    // play its happy chime without changing the HUD. It read
+                    // as a broken pickup. Leave the finite drop in place so
+                    // a player can come back after taking a hit.
+                    if (player.hp >= player.hp_max) continue;
+                    player.hp = (u8)(player.hp + 1);
+                    if (player.hp > player.hp_max) player.hp = player.hp_max;
+                    hud_redraw_hp();
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_COIN_1:

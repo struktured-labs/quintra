@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.81: Compass Contract](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.82: Patient Hearts](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.82 makes dropped **hearts patient**: brushing a heart at full HP no
+longer plays a pickup chime, removes the sprite, and leaves the HUD unchanged.
+The heart stays on the floor until the champion has a missing half-heart, then
+heals normally. This turns a confusing apparent failed pickup into a readable
+choice to return for recovery. A live ROM regression covers both full-health
+and damaged collection, alongside the immediate damage-HUD contract.
 
 v0.17.81 centralizes the dungeon **Compass Contract**: map rendering and
 fog-of-war now ask one run-state helper which of the six dungeon cells is
@@ -396,8 +403,8 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.17.81 release has 4,245 bytes in bank 1, 1,788 in bank 2,
-3,324 in bank 3, 7,372 in bank 4, 12,814 in bank 5, and 15,112 in bank 6.
+ROM. The v0.17.82 release has 4,245 bytes in bank 1, 1,788 in bank 2,
+3,324 in bank 3, 7,372 in bank 4, 12,813 in bank 5, and 15,112 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
