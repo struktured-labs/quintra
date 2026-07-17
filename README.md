@@ -389,18 +389,20 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
 the endurance gate proves every sample exercises the procedural economy. A
-live encounter bitmask also requires the complete generated roster (IDs 0–18)
-to appear somewhere in the paired-seed matrix, preventing a valid but
+live encounter bitmask requires every generated enemy (IDs 0–20) to appear
+somewhere in the paired-seed endurance matrix, preventing a valid but
 procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance
 baseline, not a substitute for human playtests. The `quintra-mgba` host tool
 parses that telemetry by named columns, prints per-class medians, and enforces
 report-count and victory-floor gates; the runner contains no duplicate inline
-report implementation. A controller-only Wolfkin
-reference run completes all nine bosses and reaches the rendered ending in
-20,686 gameplay frames (**5:45** at 60 Hz). Expect roughly **20–35 minutes**
-for a first successful human run and **10–20 minutes** once practiced; deaths
-and procedural seeds make total session length variable. `make verify` also
+report implementation. An older controller-only Wolfkin reference run
+completed all nine bosses in 20,686 gameplay frames (**5:45** at 60 Hz), but
+it is historical data—not certification for the current ROM. `make endurance`
+must pass again before quoting a current automated completion time. Expect
+roughly **20–35 minutes** for a first successful human run and **10–20
+minutes** once practiced; deaths and procedural seeds make total session
+length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 Its smoke pass resolves WRAM symbols from the current linker output and asserts
 rooms 0→1→2→3→4→6, defeats a live giant through real A-button shots, then
@@ -443,9 +445,11 @@ every champion, with a practiced-run ceiling of 90,000 gameplay frames (25
 minutes at 60 Hz). It requires at least two complete nine-boss victories and
 rendered endings per champion, complete telemetry, and zero rooms that retain
 combat or cleared-route control for more than 7,200 frames (two minutes).
-The v0.17.46 14/15 result is retained as a historical benchmark, not current
-certification: the current build must pass this gate anew before it is called a
-show build. The gate proves every class faces the same three
+The v0.17.84 15/15 matrix has complete telemetry but does **not** pass this
+gate yet: only the current Picsean policy reaches late stages, and the sampled
+paths have not encountered every roster member. It is therefore not a show
+build. The v0.17.46 14/15 result remains a historical benchmark only. The
+gate proves every class faces the same three
 procedural worlds; its former fixed host-frame padding silently produced
 different seeds after class-select redraws. Successful agents still fall as
 low as one half-heart and vary from roughly 4:45 to 11:47 active play, so
