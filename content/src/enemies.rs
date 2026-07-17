@@ -313,6 +313,19 @@ pub const RIFT_WARDEN: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const PRISM_SKITTER: Enemy = Enemy {
+    id: ENEMY_PRISM_SKITTER, symbol: "PRISM_SKITTER", name: "PrismSkitt",
+    sprite_set: SPRITE_PRISM_SKITTER, palette: OBJ_PAL_MAGIC,
+    // Shadow Keep's new positional specialist maintains a readable ring
+    // around the hero, then sends a slow rotating opposite pair through the
+    // center. It creates a moving lane puzzle without copying the Bell's
+    // eight-way flood or the Warden's aimed fan.
+    stats: EnemyStats { hp: 14, damage: 2, speed: 56, score: 68, weakness: 0x08, poise: 1 },
+    ai_script: AiScriptId::Spinner { radius: 40, fire_rate: 84 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -336,4 +349,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(RUNE_LANTERN.clone());
     r.add_enemy(DREAD_BELL.clone());
     r.add_enemy(RIFT_WARDEN.clone());
+    r.add_enemy(PRISM_SKITTER.clone());
 }

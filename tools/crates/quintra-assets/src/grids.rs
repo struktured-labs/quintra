@@ -333,6 +333,17 @@ pub const RIFT_WARDEN: [&str; 8] = [ // split-mask sentinel, open outer lanes
     ".3.1..3.",
 ];
 
+pub const PRISM_SKITTER: [&str; 8] = [ // faceted core with asymmetric orbit fins
+    "...3.3..",
+    "..32132.",
+    ".3211123",
+    "32133123",
+    "21133112",
+    ".3211123",
+    "..31213.",
+    ".3...23.",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -725,7 +736,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 20] = [
+pub const ENEMIES_8: [(&str, &[&str]); 21] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -746,6 +757,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 20] = [
     ("rune_lantern", &RUNE_LANTERN),
     ("dread_bell", &DREAD_BELL),
     ("rift_warden", &RIFT_WARDEN),
+    ("prism_skitter", &PRISM_SKITTER),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [

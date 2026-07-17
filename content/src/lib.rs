@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       22);   // adds Dread Bell + Rift Warden lane breaker
+        assert_eq!(r.n_enemies(),       23);   // adds Dread Bell, Rift Warden, Prism Skitter
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -168,6 +168,15 @@ mod tests {
                 projectile: quintra_content::ProjectileKind::Bullet,
                 pattern: quintra_content::ShotPattern::Ring(4),
             });
+    }
+
+    #[test]
+    fn shadow_keep_adds_prism_skitter_without_weight_inflation() {
+        let stage = &stages::STAGES[5];
+        assert!(stage.enemy_pool.iter().any(|&(id, w)| id == 22 && w == 15));
+        assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::PRISM_SKITTER.ai_script,
+            quintra_content::AiScriptId::Spinner { radius: 40, fire_rate: 84 });
     }
 
     #[test]

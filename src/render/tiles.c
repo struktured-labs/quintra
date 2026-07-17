@@ -125,6 +125,13 @@ void tiles_load_rift_warden_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_RIFT_WARDEN, 1, sprite_enemy_rift_warden);
 }
 
+void tiles_load_prism_skitter_sprite(void) BANKED {
+    // The elder/sanctuary tile exists only in peaceful rooms. A combat room
+    // can reclaim it for the Skitter without evicting a live NPC or growing
+    // the fixed OBJ atlas.
+    set_sprite_data(SPR_ENEMY_PRISM_SKITTER, 1, sprite_enemy_prism_skitter);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

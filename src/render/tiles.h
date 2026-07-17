@@ -85,6 +85,7 @@
 #define SPR_ENEMY_ROPE     39
 #define SPR_ENEMY_SENTRY   68  // stationary turret (after bruiser blocks)
 #define SPR_VILLAGER       69  // town elder / sanctuary keeper
+#define SPR_ENEMY_PRISM_SKITTER SPR_VILLAGER // dungeon-only orbiting caster
 #define SPR_MERCHANT       70  // town/dungeon shopkeeper
 #define SPR_SMITH          71  // village forge keeper
 #define SPR_ENEMY_FOLD_STAR 72 // contracted/expanded diagonal replicator
@@ -138,6 +139,7 @@ void tiles_load_ascended_sprites(void) BANKED;    // bank-3 transform atlas -> f
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
 void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-tag slot
+void tiles_load_prism_skitter_sprite(void) BANKED; // combat-only reuse of elder slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_spear_sprite(void) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS

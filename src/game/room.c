@@ -169,6 +169,7 @@ static void room_load_dynamic_fx_identity(void) {
     if (!run_state.world_mode && !room_state_has_shop_wares()) {
         tiles_load_dread_bell_sprite();
         tiles_load_rift_warden_sprite();
+        tiles_load_prism_skitter_sprite();
     }
 }
 

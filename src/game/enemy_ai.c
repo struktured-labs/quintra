@@ -687,6 +687,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
         case AI_SHOOTER: shooter_tick(e, def);             break;
+        case AI_SPINNER: spinner_update(e, def);           break;
         case AI_TELEPORT: teleport_tick(e, def);           break;
         case AI_TURRET:   turret_tick(e, def);             break;
         case AI_REPLICATOR: replicator_tick(e, def);        break;

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.1: Astral Spear](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.2: Prism Skitter](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,16 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.2 adds the **Prism Skitter**, a Shadow Keep positional caster. It
+maintains a readable ring around the hero, reverses cleanly around procedural
+cover, and sends a slow rotating opposite pair through the room—two changing
+lanes rather than another fan or full-ring flood. Its faceted sprite reuses
+the peaceful elder OBJ slot only during dungeon combat, and its compact
+`AI_SPINNER` behavior lives in an uncongested switchable bank. A live-ROM
+contract proves the loaded art, a tangential orbit step, and the exact
+two-lane projectile pair. The cartridge remains 128 KiB with 1,463 bytes of
+fixed-bank headroom and every switchable bank above the 1 KiB safety floor.
 
 v0.18.1 adds the rare **Astral Spear** to the weapon-orb pool. It is a slow,
 long, single-target physical thrust—the deliberate counterpoint to Rift
@@ -578,16 +588,16 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; v0.18.1 occupies 128 KiB with 1,494 bytes of bank-0 headroom.
+bank space; v0.18.2 occupies 128 KiB with 1,463 bytes of bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.18.1 release has 3,610 bytes in bank 1, 1,630 in bank 2,
-3,334 in bank 3, 7,041 in bank 4, 12,719 in bank 5, and 14,811 in bank 6;
-the always-mapped bank retains 1,494 bytes of headroom.
+ROM. The v0.18.2 release has 3,602 bytes in bank 1, 1,582 in bank 2,
+3,334 in bank 3, 7,041 in bank 4, 11,775 in bank 5, and 14,811 in bank 6;
+the always-mapped bank retains 1,463 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

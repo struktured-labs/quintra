@@ -1423,7 +1423,18 @@ while frames < LIMIT do
             local near_range = held_style == "spear" and 36 or 28
             local fire_range = held_style == "spear" and 80 or 52
             local weapon_endpoint = starter_lunge and 1 or routed_reach
-            if reach <= fire_range and offaxis > 5 then
+            if CLASS == 0 and held_style == "lunge"
+                and reach <= fire_range and offaxis > 5 and offaxis <= 12 then
+                -- `target_step` deliberately works in 8px cells. Near an
+                -- outer wall, a lunge can share that cell with a Wisp yet
+                -- still miss by a full 11px. Finish the last perpendicular
+                -- alignment in pixels before trusting the physical strike.
+                if aim == KEY_UP or aim == KEY_DOWN then
+                    keys = dx > 0 and KEY_RIGHT or KEY_LEFT
+                else
+                    keys = dy > 0 and KEY_DOWN or KEY_UP
+                end
+            elseif reach <= fire_range and offaxis > 5 then
                 keys = target_step(px, py, target.x, target.y, aim, weapon_endpoint)
             elseif reach <= near_range then
                 local retreat = (aim == KEY_UP and KEY_DOWN)

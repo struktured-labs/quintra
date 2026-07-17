@@ -19,6 +19,7 @@ IDENTITIES = {
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
     14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
     18: (80, 5), 19: (124, 6), 20: (125, 4), 21: (81, 6),
+    22: (69, 6),
 }
 
 SPECIALISTS = {
@@ -33,6 +34,7 @@ SPECIALISTS = {
     19: (124, 75, "RUNE_LANTERN", "SPR_ENEMY_RUNE_LANTERN", "rune-lantern"),
     20: (125, 124, "DREAD_BELL", "SPR_ENEMY_DREAD_BELL", "dread-bell"),
     21: (81, 35, "RIFT_WARDEN", "SPR_ENEMY_RIFT_WARDEN", "rift-warden"),
+    22: (69, 20, "PRISM_SKITTER", "SPR_ENEMY_PRISM_SKITTER", "prism-skitter"),
 }
 
 
@@ -486,8 +488,48 @@ def main():
                         vy - 256 if vy >= 128 else vy))
     assert set(fan) == {(-2, -2), (-2, 0), (-2, 2), (0, -2), (0, 2)}, (
         f"Rift Warden five-way fan drifted: {fan}")
+
+    # Prism Skitter activates the previously-unused typed AI_SPINNER path.
+    # Its job is positional rather than another dense volley: at its authored
+    # 40px ring it takes a tangential step, then rotates a sparse opposite
+    # pair. This proves both movement and projectile identity through the
+    # real banked enemy dispatch, not merely generated content metadata.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 80)
+    put16(pb, player + 11, 72)
+    pb.memory[player + 2] = 20
+    skitter = entities
+    pb.memory[skitter] = 2
+    pb.memory[skitter + 1] = 3
+    put_fix8(pb, skitter + 2, 40)
+    put_fix8(pb, skitter + 6, 72)
+    pb.memory[skitter + 12] = 69
+    pb.memory[skitter + 14] = 14
+    pb.memory[skitter + 16] = 2       # orbit step on the next update
+    pb.memory[skitter + 17] = 22
+    pb.memory[skitter + 18] = 0       # rotating pair immediately
+    pb.memory[skitter + 19] = 0       # first pair is N/S
+    pb.memory[skitter + 25] = 0x66
+    pb.memory[skitter + 26] = 2
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    assert pb.memory[skitter + 7] < 72, (
+        f"Prism Skitter did not take a tangential orbit step: "
+        f"{pb.memory[skitter + 3]},{pb.memory[skitter + 7]}")
+    skitter_pair = []
+    for i in range(1, 32):
+        ep = entities + i * 28
+        if pb.memory[ep] == 1 and pb.memory[ep + 1] & 1:
+            vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
+            skitter_pair.append((vx - 256 if vx >= 128 else vx,
+                                 vy - 256 if vy >= 128 else vy))
+    assert set(skitter_pair) == {(0, -2), (0, 2)}, (
+        f"Prism Skitter opposite pair drifted: {skitter_pair}")
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern/bell/warden behavior + ooze split")
+    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern/bell/warden/skitter behavior + ooze split")
 
 
 if __name__ == "__main__":
