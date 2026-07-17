@@ -646,6 +646,10 @@ local frames, max_room, last_hp, damage_taken, giant_overlap_damage, min_hp = 0,
 local min_giant_hp = 255
 local boss_start_frame, boss_start_beaten = -1, 0
 local boss_attempts, boss_attempt_frames, boss_clear_frames = 0, 0, 0
+-- Semicolon-separated at CSV write time: one elapsed-frame value for every
+-- actual stage-boss kill. Keeping it in the host observer gives balance
+-- analysis per-encounter timing without changing cartridge RAM or pacing.
+local boss_clear_durations = {}
 local last_damage_source = 255 -- enemy id, 254=hazard, 253=unresolved hostile
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
@@ -793,7 +797,20 @@ while frames < LIMIT do
         boss_attempt_frames = boss_attempt_frames + elapsed
         if bosses_now > boss_start_beaten then
             boss_clear_frames = boss_clear_frames + elapsed
+            table.insert(boss_clear_durations, elapsed)
         end
+        boss_start_frame = -1
+    end
+    -- The cartridge switches to victory immediately on the final kill, before
+    -- the entity sweep necessarily observes that giant as gone. Count that
+    -- last encounter as a clear here rather than dropping it from the
+    -- per-boss series (or later misclassifying it as a merely-lived attempt).
+    if won ~= 0 and boss_start_frame >= 0 then
+        local elapsed = frames - boss_start_frame
+        boss_attempts = boss_attempts + 1
+        boss_attempt_frames = boss_attempt_frames + elapsed
+        boss_clear_frames = boss_clear_frames + elapsed
+        table.insert(boss_clear_durations, elapsed)
         boss_start_frame = -1
     end
     -- Do this after boss telemetry: the kill frame can set victory before
@@ -1355,6 +1372,7 @@ if boss_start_frame >= 0 then
     boss_attempts = boss_attempts + 1
     boss_attempt_frames = boss_attempt_frames + (frames - boss_start_frame)
 end
+local boss_clear_series = table.concat(boss_clear_durations, ";")
 if TRACE_OUT then
     if trace_count > 0 then
         trace_rows[#trace_rows + 1] = string.format("%d,%d", trace_count, trace_last)
@@ -1370,14 +1388,14 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
         won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses,
-        boss_attempts, boss_attempt_frames, boss_clear_frames))
+        boss_attempts, boss_attempt_frames, boss_clear_frames, boss_clear_series))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",
