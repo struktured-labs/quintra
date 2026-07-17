@@ -72,10 +72,11 @@ def assert_menu_palette_contract(pb, button):
     pb.memory[0xFF4F] = 0
     pb.memory[0xFF40] = lcdc
     # Inventory text is deliberately uniform. The SELECT field map is a
-    # tile-built diagram: floor, walls, the current-room marker, and the
-    # unrecovered Sigil intentionally use its four authored palette slots.
-    # Require that exact set so stale room attributes cannot leak through.
-    expected = {0} if button == "start" else {0, 1, 3, 4}
+    # tile-built diagram: floor, walls, and the current-room marker. The
+    # unrecovered Sigil now lives in its actual (still-unseen) fixture room,
+    # rather than leaking a floating crack marker into every map view.
+    # Require the exact set so stale room attributes cannot leak through.
+    expected = {0} if button == "start" else {0, 1, 3}
     assert attrs == expected, (
         f"{button} menu palette contract changed: expected {expected}, got {attrs}"
     )
