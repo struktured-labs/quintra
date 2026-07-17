@@ -25,7 +25,7 @@ local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
 local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
--- A class-aware default keeps the proven baseline for close/short-range
+-- A class-aware default uses measured pulse lanes for close/short-range
 -- champions while Picsean's slow piercing bubbles use independently measured
 -- orbit-and-fire spacing. A late-phase fallback below changes only the final
 -- few giant HP, where that orbit otherwise risks never taking a cardinal hit.
@@ -958,14 +958,15 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Sauran's Tail Spike needs a conservative pulse-fire lane:
-                -- measured same-seed trials clear a first giant while the
-                -- old orbit loop repeatedly body-traded into it. Picsean's
-                -- slow bubbles still favor orbit-and-fire. Once a
+                -- Wolfkin's Claw and Sauran's Tail Spike both need a
+                -- conservative pulse-fire lane: paired same-seed trials
+                -- clear a first giant while the old direct/orbit loops
+                -- repeatedly body-traded into it. Picsean's slow bubbles
+                -- still favor orbit-and-fire. Once a
                 -- Picsean giant is nearly down, force the ordinary cardinal
                 -- lane: otherwise orbiting past a 1-2 HP body can continue
                 -- forever without another aimed bubble contact.
-                giant_mode = (CLASS == 1) and "pulse_fire"
+                giant_mode = (CLASS == 0 or CLASS == 1) and "pulse_fire"
                     or (CLASS == 3) and "orbit_fire" or "baseline"
                 if target.giant ~= 0 and CLASS == 3 and target.hp <= 8 then
                     giant_mode = "baseline"

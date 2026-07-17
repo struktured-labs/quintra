@@ -135,6 +135,7 @@ verify: all check-balance-bot
 	bash scripts/test_sigil_sanctuary_return.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_picsean_riftwild_guard.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_town_continuation.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_wolfkin_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_vespine_flutterbat_pathing.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_balance_replay.sh $(BINDIR)/$(PROJECT).gbc
