@@ -281,7 +281,9 @@ The agents use each champion's actual weapon range and B ability, collect
 finite hearts/MP/relics after combat, and report combat stalls separately from
 route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
-used in balance runs. Telemetry retains the worst combat and route dwell from
+used in balance runs. Shop reachability and purchases are separate telemetry:
+a stocked merchant room counts as a visit even if the agent cannot afford—or
+does not need—its wares. Telemetry retains the worst combat and route dwell from
 the entire run—not merely its final room—and identifies the responsible room
 and enemy for reproducible failures. Death attribution is inferred entirely by
 the emulator observer, so it cannot perturb cartridge timing: values 0–17 name
