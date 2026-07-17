@@ -209,10 +209,12 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
             5, 5, 5, 5, 12, 12, 12, 12,
             6, 7, 10, 11, 6, 7, 10, 11
         };
-        for (i = 0; i < 16; ++i) {
-            if (room_tile_walkable(room_tilemap[vy[i]][vx[i]]))
-                room_tilemap[vy[i]][vx[i]] = BGT_CRYSTAL;
-        }
+        // This ring is the stage's authored identity, not optional
+        // decoration. Shared procgen may already have a pillar at a ring
+        // coordinate; overwrite it just as Mire overwrites its pool sites,
+        // while the eight axial breaks retain every cardinal route.
+        for (i = 0; i < 16; ++i)
+            room_tilemap[vy[i]][vx[i]] = BGT_CRYSTAL;
     } else if (archetype == STAGE_ARCH_MIRE) {
         // Mire: four irregular toxic pools create island-to-island movement
         // instead of Ember's continuous seams. Their inner-corner breaks face

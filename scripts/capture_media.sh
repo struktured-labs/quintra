@@ -10,7 +10,10 @@ META="$ROOT/docs/media/gameplay.json"
 TMP="$(mktemp -d /tmp/quintra-media.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 
-make -C "$ROOT" all
+if [ ! -f "$ROM" ] || [ ! -f "$NOI" ]; then
+  echo "[media] missing built ROM/symbol map; run make media" >&2
+  exit 1
+fi
 RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
 PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")

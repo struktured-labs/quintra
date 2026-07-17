@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # Regression: a controller that reaches the Sigil-gated sanctuary without its
 # stage objective must retrace to the fixture instead of pressing the locked
-# forward doorway forever. This paired Sauran seed formerly spent 57k frames
-# in local room 5 despite having no live enemies.
+# forward doorway forever. This paired Picsean seed is deliberately the
+# controller-stable probe: the short-range/tank pilots can die in the room-3
+# miniboss before they exercise the sanctuary branch, making them a combat
+# test rather than a navigation regression.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-sigil-return.XXXXXX)"
 
-QUINTRA_BALANCE_RUNS=0 QUINTRA_BALANCE_CLASSES=1 \
+QUINTRA_BALANCE_RUNS=0 QUINTRA_BALANCE_CLASSES=3 \
   QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

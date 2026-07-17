@@ -947,6 +947,31 @@ while frames < LIMIT do
             -- flank route: that route sees the shared tile as already solved
             -- and repeatedly fires past the bat forever.
             keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
+        elseif target.kind == 10 then
+            -- Sentries do not chase. The generic ranged orbit therefore
+            -- keeps a champion circling the same blocked corner forever
+            -- while the turret remains on the other side of cover. Route to
+            -- a real cardinal shot lane, then hold it at a six-tile safe
+            -- standoff; this is exactly the lane-reading behavior the Frost
+            -- hazard is intended to teach a player.
+            local adx, ady = math.abs(dx), math.abs(dy)
+            local reach = (adx > ady) and adx or ady
+            local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
+            if reach <= 52 and offaxis <= 5 then
+                keys = KEY_A + aim
+            elseif reach <= 56 then
+                -- `target_step` is deliberately tile-coarse. In the same
+                -- 8px row it can validly return its fallback even though a
+                -- 12px hero is still visibly off the turret's pixel firing
+                -- lane. Finish that last perpendicular alignment here.
+                if aim == KEY_LEFT or aim == KEY_RIGHT then
+                    keys = dy > 0 and KEY_DOWN or KEY_UP
+                else
+                    keys = dx > 0 and KEY_RIGHT or KEY_LEFT
+                end
+            else
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim, 6)
+            end
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
@@ -1075,7 +1100,8 @@ while frames < LIMIT do
             and (nearby_hostiles >= 2
                 or (target.giant ~= 0 and math.max(math.abs(dx), math.abs(dy)) <= 48)) then
             keys = KEY_B + aim
-        elseif ABILITY_POLICY == "smart" and CLASS ~= 1 and not waiting_star
+        elseif ABILITY_POLICY == "smart" and CLASS ~= 1 and target.kind ~= 10
+            and not waiting_star
             and active_charge == 0 and mp >= 2
             and frames % signature_period == 0 then
             keys = KEY_B + aim
@@ -1208,7 +1234,15 @@ while frames < LIMIT do
     -- Proactively use the public dodge-dash against nearby hostile bullets.
     -- This is still controller-only: read instrumentation chooses an escape
     -- direction, then performs the same press/release/double-tap as a player.
-    local threat = projectile_threat(px, py)
+    -- Once a Sentry is selected, commit to the BFS-selected lane instead of
+    -- letting each of its telegraphed crossfire shots restart the route. Its
+    -- low damage and long cadence make this an honest controller trade: the
+    -- pilot may still take a hit, but it can now demonstrate whether the
+    -- hazard is killable rather than endlessly dodging at the room's edge.
+    local threat = nil
+    if not target or target.kind ~= 10 then
+        threat = projectile_threat(px, py)
+    end
     -- Picsean's Tidal Wave grants a brief body-blocking Undertow guard. In
     -- Riftwild, encounters are optional and the route can narrow to a single
     -- exit lane, so use that real B ability to cross a nearby body instead of

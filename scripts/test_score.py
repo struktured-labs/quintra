@@ -27,15 +27,14 @@ def press(pb, button, held=4, released=4):
         pb.tick()
 
 
-def put_fix8(pb, address, pixels):
-    value = pixels << 8
-    for offset in range(4):
-        pb.memory[address + offset] = (value >> (offset * 8)) & 0xFF
+def put16(pb, address, pixels):
+    pb.memory[address] = pixels & 0xFF
+    pb.memory[address + 1] = (pixels >> 8) & 0xFF
 
 
 def main():
-    rs, pl, entities, tilemap = map(
-        addr, ("_run_state", "_player", "_entities", "_room_tilemap")
+    rs, pl, entities, screen = map(
+        addr, ("_run_state", "_player", "_entities", "_loop_current_screen")
     )
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
@@ -44,19 +43,20 @@ def main():
     for _ in range(30):
         pb.tick()
     press(pb, "a")
+    for _ in range(80):
+        pb.tick()
+    assert pb.memory[screen] == 5, "did not reach the live room"
+    # Slide/fade room entry can still be publishing its spawn in the first
+    # visible frames. Let that finish before replacing the entity table;
+    # otherwise this test races a transition instead of exercising combat.
     for _ in range(60):
         pb.tick()
 
-    # Pick an interior walkable tile so projectile_update cannot consume the
-    # injected shot against cover before combat resolves it.
-    walkable = {1, 3, 7, 19, 20, 23, 31, 33, 34, *range(9, 19)}
-    target = next(
-        (x, y)
-        for y in range(3, 14)
-        for x in range(3, 17)
-        if pb.memory[tilemap + y * 20 + x] in walkable
-    )
-    px, py = target[0] * 8, target[1] * 8
+    # Use the settled player location. It is necessarily a collision-valid
+    # interior point, so projectile movement cannot eat the injected shot on
+    # cover before combat_resolve sees the overlap.
+    px = pb.memory[pl + 9] | (pb.memory[pl + 10] << 8)
+    py = pb.memory[pl + 11] | (pb.memory[pl + 12] << 8)
 
     for i in range(32 * 28):
         pb.memory[entities + i] = 0
@@ -64,8 +64,8 @@ def main():
     enemy = entities
     pb.memory[enemy] = 2          # ENT_ENEMY
     pb.memory[enemy + 1] = 3      # EF_ACTIVE | EF_ALIVE
-    put_fix8(pb, enemy + 2, px)
-    put_fix8(pb, enemy + 6, py)
+    put16(pb, enemy + 3, px)
+    put16(pb, enemy + 7, py)
     pb.memory[enemy + 14] = 1     # one-hit crawler
     pb.memory[enemy + 17] = 0     # generated enemy id 0, worth 10
     pb.memory[enemy + 25] = 0x88
@@ -73,8 +73,8 @@ def main():
     shot = entities + 28
     pb.memory[shot] = 1           # ENT_PROJECTILE
     pb.memory[shot + 1] = 0x13    # active, alive, player-owned
-    put_fix8(pb, shot + 2, px)
-    put_fix8(pb, shot + 6, py)
+    put16(pb, shot + 3, px)
+    put16(pb, shot + 7, py)
     pb.memory[shot + 14] = 1      # one pierce
     pb.memory[shot + 16] = 30     # live long enough to resolve
     pb.memory[shot + 25] = 0x77

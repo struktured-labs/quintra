@@ -162,10 +162,10 @@ pub const SENTRY: Enemy = Enemy {
     sprite_set: SPRITE_SENTRY,
     palette:    OBJ_PAL_CRAWLER,
     // Stationary turret: never moves, fires a rotating 4-way cross that
-    // sweeps the room. Deny-space zoner; lightning-weak, moderate HP so
-    // it's a persistent hazard you route around or burn down.
-    stats: EnemyStats { hp: 16, damage: 2, speed: 0, score: 40, weakness: 0x04, poise: 4 },
-    ai_script:  AiScriptId::Turret { rotation: 1, fire_rate: 55 },
+    // sweeps the room. A 10% Frost Vault hazard teaches lane routing without
+    // stacking enough unavoidable chip damage to erase a long roguelike run.
+    stats: EnemyStats { hp: 12, damage: 1, speed: 0, score: 40, weakness: 0x04, poise: 4 },
+    ai_script:  AiScriptId::Turret { rotation: 1, fire_rate: 70 },
     drop_table: DROP_SMALL_COIN,
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
 };

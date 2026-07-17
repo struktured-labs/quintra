@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.90: Reachable Rift Wells](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.91: Frost Sentry Watch](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.91 fixes the **Frost Vault** roster gap: the stationary Sentry turret
+now appears there as a rare, readable rotating-cross lane hazard among the
+moving threats. It also makes the vault's authored crystal
+ring authoritative over the shared room skeleton, while preserving the
+nonlinear Rift Well's hero-footprint landing apron where the two fixtures
+overlap. Typed content validation proves every registered non-boss enemy is
+reachable from at least one stage pool; live-ROM stage tests prove Frost,
+Temple, and Rift paths remain connected.
 
 v0.17.90 fixes a real procedural soft-lock risk: every nonlinear **Rift Well**
 now carves a small hero-footprint landing apron, so the glowing exit is always

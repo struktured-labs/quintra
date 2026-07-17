@@ -171,6 +171,15 @@ mod tests {
     }
 
     #[test]
+    fn frost_vault_authors_the_stationary_sentry_without_weight_inflation() {
+        let stage = &stages::STAGES[3];
+        assert!(stage.enemy_pool.iter().any(|&(id, _)| id == 10));
+        assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::SENTRY.ai_script,
+            quintra_content::AiScriptId::Turret { rotation: 1, fire_rate: 70 });
+    }
+
+    #[test]
     fn every_non_boss_enemy_is_reachable_from_a_procedural_stage_pool() {
         let r = registry();
         let pooled = |id| stages::STAGES.iter()

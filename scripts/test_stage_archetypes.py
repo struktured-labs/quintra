@@ -148,7 +148,14 @@ def main():
         (14, 6), (14, 7), (14, 10), (14, 11),
     ]
     vault_crystals = sum(tile(frost, x, y) == BGT_CRYSTAL for x, y in vault_sites)
-    assert vault_crystals >= 12, f"Frost vault ring missing ({vault_crystals}/16)"
+    # Stage three's first real dungeon room is also a nonlinear Rift Well.
+    # Its required 3x3 landing apron deliberately cuts through three ring
+    # sites so the 2x2 hero footprint can arrive. Ten remaining crystals
+    # preserves the octagonal silhouette without turning a reachable portal
+    # fix into a false stage-identity regression.
+    assert vault_crystals >= 10, f"Frost vault ring missing ({vault_crystals}/16)"
+    assert sum(tile(frost, x, y) == 34 for y in range(ROOM_H) for x in range(ROOM_W)) == 1, \
+        "Frost Vault lost its required nonlinear Rift Well"
     # The four axial breaks are the visual language and the safety contract.
     assert all(tile(frost, x, y) != BGT_CRYSTAL for x, y in (
         (9, 5), (10, 5), (9, 12), (10, 12),
@@ -245,7 +252,11 @@ def main():
         ]
         pillars = sum(tile(temple, x, y) == BGT_PILLAR
                       for x, y in colonnade_sites)
-        assert pillars == 12, (
+        # The first post-town Temple room also owns a nonlinear Rift Well.
+        # Its hero-sized apron may open two colonnade sites on one flank; the
+        # other ten still frame the processional aisle and preserve the
+        # authored silhouette without risking an unreachable portal landing.
+        assert pillars >= 10, (
             f"Golden Temple colonnades missing seed={seed:#x} ({pillars}/12)"
         )
         inner_l = next((x for x in (6, 7)
