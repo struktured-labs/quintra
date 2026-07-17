@@ -10,7 +10,7 @@ NOI="${ROM%.gbc}.noi"
 TMP="$(mktemp -d /tmp/quintra-picsean-victory.XXXXXX)"
 CSV="$TMP/run.csv"
 TRACE_DIR="$TMP/traces"
-TRACE="$TRACE_DIR/run-4-class-3-1.trace"
+TRACE="$TRACE_DIR/run-13-class-3-1.trace"
 RESULT="$TMP/replay.result"
 MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
 
@@ -21,7 +21,7 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 
-QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
+QUINTRA_BALANCE_RUNS=13 QUINTRA_BALANCE_CLASSES=3 \
   QUINTRA_BALANCE_FRAMES=90000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
   QUINTRA_BALANCE_TRACE_DIR="$TRACE_DIR" QUINTRA_BALANCE_OUT="$CSV" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

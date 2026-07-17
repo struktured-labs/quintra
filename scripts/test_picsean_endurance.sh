@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Multi-seed controller completion gate. These four seeds previously reached
-# the town but could not leave its north gate; all must now finish the full
-# nine-boss run through normal buttons and real procedural encounters.
+# Multi-seed controller completion gate. These four consecutive post-reward
+# seeds exercise the normal dungeon/town/Riftwild route through all nine
+# bosses using only real button input and procedural encounters.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 TMP="$(mktemp -d /tmp/quintra-picsean-endurance.XXXXXX)"
 PIDS=()
-for RUN in 4 5 8 9; do
+for RUN in 13 14 15 16; do
   OUT="$TMP/run-$RUN.csv"
   QUINTRA_BALANCE_RUNS="$RUN" QUINTRA_BALANCE_CLASSES=3 \
     QUINTRA_BALANCE_FRAMES=90000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \

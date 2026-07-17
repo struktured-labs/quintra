@@ -35,6 +35,20 @@ static void score_add(u16 points) {
     if (run_state.score < before) run_state.score = 0xFFFF;
 }
 
+// A bullet-hell kill must leave room for its guaranteed rewards.  Retiring
+// hostile shots at the death beat is both a readable clear signal and avoids
+// a full 32-slot entity table letting explosion FX crowd out hearts/relics.
+static void boss_clear_hostile_projectiles(void) {
+    u8 k;
+    for (k = 0; k < MAX_ENTITIES; ++k) {
+        if ((entities[k].flags & EF_ACTIVE)
+            && entities[k].type == ENT_PROJECTILE
+            && !(entities[k].flags & EF_PLAYER_PROJ)) {
+            entity_kill(k);
+        }
+    }
+}
+
 u8 combat_resolve(void) BANKED {
     u8 i, j;
     u8 player_died = 0;
@@ -50,6 +64,7 @@ u8 combat_resolve(void) BANKED {
         for (j = 0; j < MAX_ENTITIES; ++j) {
             u8 eid, weakness, poise, dmg;
             u8 shot_spent_for_split = 0;
+            u8 boss_retired_for_rewards = 0;
             if (j == i) continue;
             if (!(entities[j].flags & EF_ACTIVE)) continue;
             if (entities[j].type != ENT_ENEMY) continue;
@@ -159,6 +174,8 @@ u8 combat_resolve(void) BANKED {
                         // Only the GIANT advances the stage — a mini-boss kill
                         // must not skip the stage boss (bug: it used to).
                         if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) {
+                            fix8_t boss_x = entities[j].x;
+                            fix8_t boss_y = entities[j].y;
                             i16 bx = FIX8_TO_INT(entities[j].x) + 12;
                             i16 by = FIX8_TO_INT(entities[j].y) + 12;
                             g_hitstop = 8;   // boss kill: big freeze
@@ -169,20 +186,28 @@ u8 combat_resolve(void) BANKED {
                             } else {
                                 run_state.pending_unseal = 1;
                             }
-                            // Death explosion: staggered ring of impact FX
+                            // The giant and its bullets release their slots
+                            // before effects. Rewards therefore remain real
+                            // pickups even in a completely saturated fight.
+                            entity_kill(j);
+                            boss_retired_for_rewards = 1;
+                            boss_clear_hostile_projectiles();
+                            pickup_spawn(PICKUP_HEART_HALF, boss_x - FIX8(8), boss_y);
+                            pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y);
+                            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8));
+                            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y + FIX8(16));
+                            // Every colossus yields a passive item — the
+                            // run's guaranteed power curve (indices 10..19).
+                            pickup_spawn_item((u8)(10 + rng_range(10)),
+                                boss_x + FIX8(4), boss_y + FIX8(4));
+                            // Death explosion: staggered ring of impact FX.
+                            // These are allowed to drop if a later effect
+                            // burst fills the table; the rewards are not.
                             fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by - 10, 14);
                             fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by - 10, 18);
                             fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by + 10, 22);
                             fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by + 10, 26);
                             fx_spawn(SPR_FX_IMPACT, 2, bx,      by,      30);
-                            pickup_spawn(PICKUP_HEART_HALF, entities[j].x - FIX8(8), entities[j].y);
-                            pickup_spawn(PICKUP_HEART_HALF, entities[j].x + FIX8(16), entities[j].y);
-                            pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y - FIX8(8));
-                            pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y + FIX8(16));
-                            // Every colossus yields a passive item — the
-                            // run's guaranteed power curve (indices 10..19)
-                            pickup_spawn_item((u8)(10 + rng_range(10)),
-                                entities[j].x + FIX8(4), entities[j].y + FIX8(4));
                         } else if (eid == ENEMY_BOMBER) {
                             // Bomber: death detonation — a 4-way revenge
                             // burst. Kill it from a diagonal, or eat sparks.
@@ -223,7 +248,10 @@ u8 combat_resolve(void) BANKED {
                         u8 split = (eid == ENEMY_RIFT_OOZE);
                         u8 sx = (u8)(FIX8_TO_INT(entities[j].x) >> 3);
                         u8 sy = (u8)(FIX8_TO_INT(entities[j].y) >> 3);
-                        entity_kill(j);
+                        // Boss rewards can occupy the just-freed boss slot.
+                        // Do not erase that first heart/item in the generic
+                        // cleanup after the giant has already been retired.
+                        if (!boss_retired_for_rewards) entity_kill(j);
                         if (split) {
                             // Generic pierce cleanup happens later, but its
                             // lethal shot is the second free slot we need at

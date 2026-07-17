@@ -116,6 +116,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_run_clock.py
 	uv run --quiet --with pyboy python scripts/test_title_version.py
 	uv run --quiet --with pyboy python scripts/test_boss_identity.py
+	uv run --quiet --with pyboy python scripts/test_boss_rewards.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py
 	uv run --quiet --with pyboy python scripts/test_score.py

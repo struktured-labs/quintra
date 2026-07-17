@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.17.85: Merchant Offers](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.17.86: Boss Reward Reliability](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The v0.17 reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.17.86 fixes a dense boss-kill reward loss. The giant and its hostile shots
+now release their entity slots before visual effects, so the two recovery
+hearts, two coins, and guaranteed relic remain physical pickups even when a
+32-slot bullet storm is full. A live-ROM saturation test proves that exact
+failure case; the controller certification uses four consecutive seeds (13–16)
+that each complete the corrected nine-boss route.
 
 v0.17.85 makes merchant stock readable before purchase. Approaching a ware
 now replaces the generic price prompt with a semantic HUD icon plus its coin
@@ -408,12 +415,12 @@ parses that telemetry by named columns, prints per-class medians, and enforces
 report-count and victory-floor gates; the runner contains no duplicate inline
 report implementation. An older controller-only Wolfkin reference run
 completed all nine bosses in 20,686 gameplay frames (**5:45** at 60 Hz), but
-it is historical data. The current deterministic proof is Picsean seed 4:
-all nine bosses in 55,459 gameplay frames (**15:24** at 60 Hz), verified by
+it is historical data. The current deterministic proof is Picsean seed 13:
+all nine bosses in 53,415 gameplay frames (**14:50** at 60 Hz), verified by
 replaying the recorded controller trace in a fresh emulator with matching seed,
 room, HP, and victory state. Run `make victory-proof` to reproduce that proof;
 it is one certified seed. `make picsean-endurance` additionally completes four
-independent Picsean seeds (4, 5, 8, and 9) through all nine bosses; the
+consecutive Picsean seeds (13, 14, 15, and 16) through all nine bosses; the
 all-class `make endurance` target remains the stricter conference soak floor.
 Expect
 roughly **20–35 minutes** for a first successful human run and **10–20
@@ -434,15 +441,15 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; v0.17.85 occupies 128 KiB with 571 bytes of bank-0 headroom.
+bank space; v0.17.86 occupies 128 KiB with 571 bytes of bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.17.85 release has 4,179 bytes in bank 1, 1,742 in bank 2,
-3,318 in bank 3, 7,369 in bank 4, 12,749 in bank 5, and 14,928 in bank 6;
+ROM. The v0.17.86 release has 4,179 bytes in bank 1, 1,742 in bank 2,
+3,274 in bank 3, 7,369 in bank 4, 12,749 in bank 5, and 14,928 in bank 6;
 the always-mapped bank retains 571 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
