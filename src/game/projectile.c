@@ -49,10 +49,11 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->flags      |= EF_PLAYER_PROJ;
     e->x           = FIX8((i16)player.x + 2);
     e->y           = FIX8((i16)player.y + 2);
-    // A spike is a physical weapon regardless of who equipped it. Keeping
-    // the forward origin shared prevents Tail Spike/Stinger from reading as
-    // invisible long-range bullets when another champion swaps into melee.
-    if (kind == PROJ_SPIKE) {
+    // The true-melee Wolfkin claw begins at the weapon edge. Tail Spike and
+    // Stinger keep their established projectile origin/range; they now share
+    // the physical arc ART below without silently changing their seeded
+    // combat geometry or wall-clearance behaviour.
+    if (player.class_id == 0 && kind == PROJ_SPIKE) {
         e->x = (ppos_t)(e->x + (i16)dx * 4); // 4px forward
         e->y = (ppos_t)(e->y + (i16)dy * 4);
     }
