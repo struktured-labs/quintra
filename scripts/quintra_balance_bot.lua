@@ -319,6 +319,17 @@ local function can_step(px, py, key)
         and pixel_walkable(nx + 13, ny + 15)
 end
 
+local function tile_at_px(x, y)
+    if x < 0 or x >= 160 or y < 0 or y >= 136 then return 0 end
+    return emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
+end
+
+local function body_on_spike(px, py)
+    -- Mirror room.c's hazard test exactly: spikes use the feet-box center,
+    -- whereas ordinary wall collision probes four corners.
+    return tile_at_px(px + 8, py + 12) == 31
+end
+
 -- Candidate policy used only by offline search. Its mode is selected through
 -- an environment variable, never by ROM state or test writes; the default
 -- remains the proven baseline below.
@@ -441,9 +452,43 @@ local function door_step(px, py)
     local back = entered ~= 255 and ((entered + 2) % 4) or 255
     local in_world = emu:read8(RS + 17) == 1
     local world_screen = emu:read8(RS + 18)
+    -- Town room 19 (then every 18 rooms) is a three-screen civic hub, not a
+    -- symmetric dungeon. From the arrival square use the north gate to the
+    -- next region; market/forge screens return west to arrival. Without this
+    -- explicit target the generic "any exit but back" chooser can keep an
+    -- endurance controller pacing between civic doors forever.
+    local in_town = not in_world and room > 18 and room % 18 == 1
+    local town_wanted = in_town
+        and (emu:read8(RS + 19) == 0 and 0 or 3) or nil
     -- Shortest authored route to dungeon gate screen 6.
     local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
-    if in_world and world_screen == 6 then
+    if in_town then
+        -- These civic lanes are intentionally straight and wide. Do not run
+        -- a 340-node dungeon BFS every frame here: the arrival fountain has
+        -- a clear north processional to the next dungeon, while the market
+        -- and forge each have a clear west return lane.
+        local gx = town_wanted == 0 and 72 or 8
+        local gy = town_wanted == 0 and 8 or 60
+        local dx, dy = gx - px, gy - py
+        if math.abs(dx) <= 2 and math.abs(dy) <= 2 then
+            return town_wanted == 0 and KEY_UP or KEY_LEFT
+        end
+        local primary = math.abs(dx) >= math.abs(dy)
+            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+            or (dy > 0 and KEY_DOWN or KEY_UP)
+        local secondary = math.abs(dx) < math.abs(dy)
+            and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+            or (dy > 0 and KEY_DOWN or KEY_UP)
+        if can_step(px, py, primary) then return primary end
+        if can_step(px, py, secondary) then return secondary end
+        return primary
+    end
+    -- The dungeon gate (6) and the nonlinear cave vault (15) are both
+    -- central interactable nodes, not boundary exits.  Treating the vault as
+    -- a normal world screen made a long-form controller run walk into its
+    -- wall forever after the screen-2 cave hop instead of stepping back onto
+    -- the return staircase at 72,52.
+    if in_world and (world_screen == 6 or world_screen == 15) then
         local dx, dy = 72 - px, 52 - py
         if math.abs(dx) <= 2 and math.abs(dy) <= 2 then return 0 end
         local primary = math.abs(dx) >= math.abs(dy)
@@ -489,7 +534,8 @@ local function door_step(px, py)
             or ((y == 16 and x == 10 and emu:read8(TM + 16 * 20 + 10) == 3) and 2
             or ((x == 1 and y == 9 and emu:read8(TM + 9 * 20) == 3) and 3 or 255)))
         if dir ~= 255 and ((in_world and dir == wanted)
-            or (not in_world and dir ~= back)) then
+            or (in_town and dir == town_wanted)
+            or (not in_world and not in_town and dir ~= back)) then
             target, target_dir, tx, ty = y * 20 + x, dir, x, y
             break
         end
@@ -1113,6 +1159,31 @@ while frames < LIMIT do
         elseif entered == 3 and px > 128 and math.floor(keys / KEY_RIGHT) % 2 == 1 then
             keys = actions + KEY_LEFT
         end
+    end
+    -- Direct combat, dodge, and dash inputs do not all travel through the
+    -- tile BFS. Keep those tactical overrides from newly entering the exact
+    -- feet-center spike tile the cartridge itself damages. If the body is
+    -- already on a hazard, temporarily keep moving toward a safe full-body
+    -- position instead of suppressing the escape input.
+    if body_on_spike(px, py) then
+        local action = keys % 16
+        for d = 1, 4 do
+            local nx, ny = px + CARD_DX[d] * 8, py + CARD_DY[d] * 8
+            if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
+                and not body_on_spike(nx, ny) then
+                keys = action + CARD_KEYS[d]
+                break
+            end
+        end
+    else
+        if math.floor(keys / KEY_RIGHT) % 2 == 1
+            and body_on_spike(px + 1, py) then keys = keys - KEY_RIGHT end
+        if math.floor(keys / KEY_LEFT) % 2 == 1
+            and body_on_spike(px - 1, py) then keys = keys - KEY_LEFT end
+        if math.floor(keys / KEY_DOWN) % 2 == 1
+            and body_on_spike(px, py + 1) then keys = keys - KEY_DOWN end
+        if math.floor(keys / KEY_UP) % 2 == 1
+            and body_on_spike(px, py - 1) then keys = keys - KEY_UP end
     end
     if DEBUG and (frames % 600 == 0
         or (target and target.giant ~= 0 and frames % 60 == 0)) then

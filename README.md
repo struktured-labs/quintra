@@ -441,6 +441,12 @@ raised Picsean from two boss clears and two deaths to six clears and zero
 deaths, without changing the other four classes' matched outcomes. Override
 it with `QUINTRA_BOT_GIANT_POLICY=baseline` when comparing a candidate.
 
+Long-form routing treats the Riftwild dungeon gate and nonlinear cave vault
+as their real central staircase nodes, follows the town's north/return civic
+lanes explicitly, and mirrors the cartridge's feet-center spike test before
+allowing a tactical dodge or attack movement. These are controller-only safety
+rules: the agent still changes the run solely through normal button input.
+
 Constrained hosts can split a matrix into seed batches
 with `QUINTRA_BALANCE_APPEND=1` and `QUINTRA_BALANCE_SKIP_REPORT=1`, then run
 one final report against the accumulated CSV; every class/seed row is still
