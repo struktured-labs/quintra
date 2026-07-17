@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build test verify preflight repro-check balance endurance media media-check play info
+.PHONY: all clean cleangen cleanall dirs gen build test verify preflight repro-check balance endurance media media-check play info check-balance-bot
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -93,7 +93,7 @@ test: all
 # The whole verification stack: Rust unit/property/golden tests, the
 # headless gameplay smoke (pixel + state asserts), and the cross-seam
 # procgen parity check (Rust reference vs the ROM's WRAM).
-verify: all
+verify: all check-balance-bot
 	python3 scripts/report_budget.py $(BINDIR)/$(PROJECT)
 	python3 scripts/check_cartridge.py $(BINDIR)/$(PROJECT).gbc
 	cargo test -q
@@ -138,7 +138,10 @@ media-check: all
 
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.
-balance: all
+check-balance-bot:
+	@luac -p scripts/quintra_balance_bot.lua
+
+balance: all check-balance-bot
 	QUINTRA_BALANCE_MIN_SHOP_RUNS=2 \
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 \
 	QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
@@ -147,7 +150,7 @@ balance: all
 # Long-form pre-show soak: three entropy samples per champion and enough
 # emulated time for a cautious full clear. Every champion must clear twice;
 # missing reports, skipped economies, and live-enemy/route stalls fail the target.
-endurance: all
+endurance: all check-balance-bot
 	QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_FRAMES=90000 \
 	QUINTRA_BALANCE_MIN_WINS=2 QUINTRA_BALANCE_MIN_SHOP_RUNS=3 \
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 \

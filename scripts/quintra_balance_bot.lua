@@ -149,11 +149,11 @@ local function pickup_target(px, py)
                 or (ex > 136 and (ey < 52 or ey > 76))
             if ex <= 152 and ey <= 128 and not boundary_drop then
                 local d = math.abs(ex - px) + math.abs(ey - py)
-                // Player coordinates are feet-anchored; ordinary drops drift
-                // into that box, but a persistent Rift Sigil does not. Aim
-                // its contact point eight pixels above the sprite origin so
-                // the controller actually overlaps it instead of camping one
-                // pixel below forever.
+                -- Player coordinates are feet-anchored; ordinary drops drift
+                -- into that box, but a persistent Rift Sigil does not. Aim
+                -- its contact point eight pixels above the sprite origin so
+                -- the controller actually overlaps it instead of camping one
+                -- pixel below forever.
                 local target_y = (kind == 11) and (ey - 8) or ey
                 if d < bestd then best, bestd = {x=ex, y=target_y}, d end
             end
@@ -310,7 +310,13 @@ local function target_step(px, py, ex, ey, fallback, near_tiles)
         -- cannot connect from the old two-tile stopping cell.
         if ((x == gx and math.abs(y - gy) <= reach)
             or (y == gy and math.abs(x - gx) <= reach))
-            and clear_cardinal_lane(x, y, gx, gy) then
+            and clear_cardinal_lane(x, y, gx, gy)
+            -- Sharing a coarse 8px tile is not a firing lane: the hero's
+            -- body can be on the opposite side of a pillar seam, with the
+            -- target still diagonally offset by a full hurtbox. Continue BFS
+            -- to a neighboring body-valid lane until pixel aim can finish.
+            and (x ~= sx or y ~= sy
+                or math.abs(ex - px) <= 5 or math.abs(ey - py) <= 5) then
             target = y * 20 + x
             break
         end
@@ -613,10 +619,12 @@ while frames < LIMIT do
             keys = target_step(px, py, target.x, target.y, move)
             no_damage_frames = 0
         elseif target.kind == 12 then
-            -- Flutterbats repeatedly settle after diagonal bursts. Closing to
-            -- a cardinal firing lane during that pause is reliable; orbiting
-            -- at arbitrary range can keep every ranged shot behind a pillar.
-            keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
+            -- A Flutterbat may share the agent's nominal 8px tile while
+            -- remaining several pixels diagonal from its cardinal shot lane.
+            -- Do pixel alignment here, rather than the generic no-damage
+            -- flank route: that route sees the shared tile as already solved
+            -- and repeatedly fires past the bat forever.
+            keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
