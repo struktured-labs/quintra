@@ -70,7 +70,7 @@ def assert_spike_stumble(pb):
         f"spike recovery left hero on hazard at {px},{py}, tile={center_tile}")
 
 
-def take_hostile_hit(pb, world_mode=0, void_lord_body=False):
+def take_hostile_hit(pb, world_mode=0, boss_body=False, void_lord_body=False):
     """Inject one real overlapping hostile and return the resulting iframe count."""
     clear_entities(pb)
     pb.memory[RS + 17] = world_mode
@@ -80,13 +80,13 @@ def take_hostile_hit(pb, world_mode=0, void_lord_body=False):
     px = pb.memory[PL + 9] | (pb.memory[PL + 10] << 8)
     py = pb.memory[PL + 11] | (pb.memory[PL + 12] << 8)
     hostile = EN
-    if void_lord_body:
+    if boss_body or void_lord_body:
         pb.memory[hostile] = 2           # ENT_ENEMY
         pb.memory[hostile + 1] = 3       # active + alive
         pb.memory[hostile + 14] = 10
         pb.memory[hostile + 25] = 0xEE   # 16x16/32x32-style collision body
         pb.memory[hostile + 17] = 1      # ENEMY_STONE_SENTINEL
-        pb.memory[hostile + 19] = 8      # stage-8 boss skin
+        pb.memory[hostile + 19] = 8 if void_lord_body else 0
         pb.memory[hostile + 20] = 1      # giant boss flag
         pb.memory[hostile + 26] = 2
     else:
@@ -99,8 +99,8 @@ def take_hostile_hit(pb, world_mode=0, void_lord_body=False):
     # A projectile's tiny 5x5 footprint needs its origin at the hero's
     # center; the giant body instead begins at the hero origin so the real
     # 6x6 center hurtbox is strictly inside its 14x14 collision box.
-    put_fix8(pb, hostile + 2, px if void_lord_body else px + 5)
-    put_fix8(pb, hostile + 6, py if void_lord_body else py + 9)
+    put_fix8(pb, hostile + 2, px if (boss_body or void_lord_body) else px + 5)
+    put_fix8(pb, hostile + 6, py if (boss_body or void_lord_body) else py + 9)
     for _ in range(60):
         pb.tick()
         if pb.memory[PL + 2] == 7:
@@ -156,9 +156,11 @@ def main():
     # long enough to leave a body-pin before the next contact check.
     assert take_hostile_hit(pb, world_mode=1) == 60, \
         "Riftwild contact recovery is no longer the promised 60 frames"
-    # The giant final body is still dangerous, but its projectile pattern and
-    # Collapse are the main tests. A 45-frame grace prevents unreadable
-    # re-contact without weakening ordinary bosses.
+    # A giant body is still dangerous, but its projectile pattern is the main
+    # test. A 45-frame grace prevents unreadable re-contact without weakening
+    # normal enemies or projectiles.
+    assert take_hostile_hit(pb, boss_body=True) == 45, \
+        "ordinary giant body-contact recovery is no longer 45 frames"
     assert take_hostile_hit(pb, void_lord_body=True) == 45, \
         "Void Lord body-contact recovery is no longer the promised 45 frames"
     assert_spike_stumble(pb)

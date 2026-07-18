@@ -403,8 +403,7 @@ u8 combat_resolve(void) BANKED {
                     player.iframes = run_state.world_mode ? 60
                         : (entities[i].type == ENT_ENEMY
                            && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
-                           && (entities[i].ai_data[3] & 1)
-                           && entities[i].ai_data[2] == 8) ? 45 : 30;
+                           && entities[i].ai_data[3]) ? 45 : 30;
                     g_hitstop = 3;
                     room_shake(1, 6);   // small jolt: that one hurt
                     sfx_play(SFX_HURT);

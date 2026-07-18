@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.6: First-Colossus Pacing](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.7: Colossus Contact Fairness](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,17 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.7 makes every giant boss's body contact grant **45 recovery frames**,
+matching the final Void Lord. Boss HP, chase cadence, bullet density, and
+patterns are unchanged: this only prevents a knockback from turning into an
+immediate second unavoidable collision. Live-ROM coverage now tests both an
+ordinary Colossus and the Void Lord. In a complete 15-run controller-only
+matrix, Picsean rises from one to **two nine-boss endings** with zero combat or
+route stalls, while every champion clears the first boss in at least two of
+three entropy samples. The full all-class endurance bar is still deliberately
+unmet, so this is an evidence-backed fairness release rather than a show-build
+sign-off.
 
 v0.18.6 retunes the first Colossus from **200 HP to 140 HP**. It remains a
 real pattern fight—15 seconds minimum even in an uninterrupted starter lane—
@@ -799,17 +810,18 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.6)
+### Current conference evidence (v0.18.7)
 
 - Functional ROM contracts pass, including the first-Colossus health budget,
-  Skeleton clearance, score/Sigil stability, and the full boss identity suite.
+  giant body-contact recovery, Skeleton clearance, score/Sigil stability, and
+  the full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel is hash-checked against the release ROM in `docs/media/gameplay.json`.
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
-  with zero combat/route stalls. Current autonomous evidence has a proven
-  Picsean completion path but does not establish that floor for the other four
-  champions.
+  with zero combat/route stalls. Picsean now meets that floor (2/3 wins,
+  zero stalls); the other four champions do not yet, which keeps the next
+  balance work focused on their long-run survivability.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
