@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Regression: Sauran's 48px Tail Spike benefits from the measured orbit-fire
-# giant policy. On the paired seeds baseline reached zero first-boss clears;
-# classwise policy must retain at least one without a live-combat stall.
+# Regression: Sauran's 48px Tail Spike benefits from the measured close
+# four-beat orbit-fire lane. Its paired seed policy must retain at least four
+# boss clears without a live-combat stall.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,7 +26,7 @@ awk -F, '
   }
   END {
     if (rows != 3) { print "[sauran-boss] missing paired rows" > "/dev/stderr"; exit 1 }
-    if (bosses < 1) { print "[sauran-boss] classwise policy cleared no first boss" > "/dev/stderr"; exit 1 }
+    if (bosses < 4) { print "[sauran-boss] close orbit policy cleared fewer than four bosses" > "/dev/stderr"; exit 1 }
     if (stalled) { print "[sauran-boss] live-combat stall" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"

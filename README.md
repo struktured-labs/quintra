@@ -791,7 +791,8 @@ scripts/search_boss_policy.sh`. `QUINTRA_BOSS_SEARCH_RETREAT_RANGES` and
 `QUINTRA_BOSS_SEARCH_FIRE_CADENCES` accept either spaces or commas (for
 example, `20 28 36` or `20,28,36`) for a matched sweep. The latter compares
 how often `orbit_fire` takes an aimed beat while otherwise preserving its
-collision-safe orbit; it changes only controller input, never game state.
+collision-safe orbit. Explicit search values take precedence over class
+defaults; the harness changes only controller input, never game state.
 
 ## World Retro delivery bar — September 12, 2026
 

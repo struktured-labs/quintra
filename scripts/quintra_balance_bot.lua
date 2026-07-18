@@ -41,7 +41,8 @@ end
 -- kits did not improve with the wider buffer, so classwise play keeps their
 -- established 28px retreat. An explicit environment value always wins for
 -- offline policy search.
-local GIANT_RETREAT_RANGE = tonumber(os.getenv("QUINTRA_BOT_GIANT_RETREAT_RANGE")
+local GIANT_RETREAT_RANGE_ENV = os.getenv("QUINTRA_BOT_GIANT_RETREAT_RANGE")
+local GIANT_RETREAT_RANGE = tonumber(GIANT_RETREAT_RANGE_ENV
     or ((GIANT_POLICY == "classwise" and (CLASS == 0 or CLASS == 4))
         and (CLASS == 4 and "36" or "32") or "28")) or 28
 if GIANT_RETREAT_RANGE < 16 then GIANT_RETREAT_RANGE = 16 end
@@ -49,7 +50,8 @@ if GIANT_RETREAT_RANGE > 56 then GIANT_RETREAT_RANGE = 56 end
 -- Orbit-fire is deliberately not continuous point-blank DPS. Expose its
 -- aimed beat cadence so offline controller research can compare pressure
 -- against body-contact safety without changing combat code or save state.
-local GIANT_FIRE_CADENCE = tonumber(os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE")
+local GIANT_FIRE_CADENCE_ENV = os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE")
+local GIANT_FIRE_CADENCE = tonumber(GIANT_FIRE_CADENCE_ENV
     or "3") or 3
 if GIANT_FIRE_CADENCE < 2 then GIANT_FIRE_CADENCE = 2 end
 if GIANT_FIRE_CADENCE > 8 then GIANT_FIRE_CADENCE = 8 end
@@ -1437,20 +1439,26 @@ while frames < LIMIT do
             if held_style == "spear" then
                 giant_retreat, giant_fire_range, giant_orbit_floor = 52, 80, 52
             elseif held_style == "lunge" and CLASS == 1 then
-                giant_retreat, giant_fire_range, giant_orbit_floor = 48, 52, 48
-                -- This is the measured Tail Spike pressure lane: it keeps
-                -- Sauran beyond a 32px colossus body yet takes every second
-                -- aimed beat. The generic three-beat cadence left its deep
-                -- deterministic seed a full boss behind before the limit.
-                giant_fire_cadence = 2
+                if GIANT_RETREAT_RANGE_ENV == nil then
+                    giant_retreat = 24
+                    giant_orbit_floor = 24
+                else
+                    giant_orbit_floor = giant_retreat
+                end
+                giant_fire_range = 52
+                -- Tail Spike's 48px reach can exploit a close four-beat
+                -- orbit. The former 48px/second-beat lane took prolonged
+                -- body trades; the paired three-seed search reaches six
+                -- boss clears at 24px/four beats versus two before it.
+                if GIANT_FIRE_CADENCE_ENV == nil then giant_fire_cadence = 4 end
             elseif held_style == "lunge" and CLASS == 4 then
                 -- The Stinger's 48px reach can pressure from the established
                 -- 36px boss orbit. A two-beat firing cadence produced one
                 -- complete ending and a six-boss route in its paired search;
                 -- its prior cardinal baseline cleared neither.
-                giant_fire_cadence = 2
+                if GIANT_FIRE_CADENCE_ENV == nil then giant_fire_cadence = 2 end
             elseif held_style == "flail" or (held_style == "lunge" and CLASS ~= 4) then
-                giant_retreat = 28
+                if GIANT_RETREAT_RANGE_ENV == nil then giant_retreat = 28 end
             end
             if target.giant ~= 0 and giant_mode ~= "baseline" and reach < giant_orbit_floor then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
