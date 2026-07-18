@@ -10,7 +10,10 @@ from collections import Counter
 from pathlib import Path
 
 
-HIT = re.compile(r"BOTHIT f=(\d+) room=(\d+) hp=(\d+)->(\d+) src=(\d+)")
+HIT = re.compile(
+    r"BOTHIT f=(\d+) room=(\d+)(?: world=(\d+):(\d+))? "
+    r"hp=(\d+)->(\d+) src=(\d+)"
+)
 ABILITY = re.compile(r"BOTABILITY f=(\d+) class=(\d+) charge=(\d+) uses=(\d+)")
 
 
@@ -19,20 +22,24 @@ def describe(path: Path) -> str:
     abilities = 0
     for line in path.read_text(errors="replace").splitlines():
         if match := HIT.search(line):
-            frame, room, before, after, source = map(int, match.groups())
-            hits.append((frame, room, before - after, source))
+            frame, room, world, _screen, before, after, source = match.groups()
+            hits.append((int(frame), int(room), int(before) - int(after),
+                         int(source), int(world or 0)))
         elif ABILITY.search(line):
             abilities += 1
 
     damage = sum(hit[2] for hit in hits)
-    early = sum(hit[2] for hit in hits if hit[1] <= 2)
-    boss = sum(hit[2] for hit in hits if hit[1] > 0 and hit[1] % 6 == 0)
+    early = sum(hit[2] for hit in hits if hit[1] <= 2 and hit[4] == 0)
+    boss = sum(hit[2] for hit in hits if hit[1] > 0 and hit[1] % 6 == 0 and hit[4] == 0)
+    world = sum(hit[2] for hit in hits if hit[4] != 0)
+    dungeon = damage - world
     rooms = Counter(hit[1] for hit in hits)
     sources = Counter(hit[3] for hit in hits)
     room_text = "|".join(f"{room}:{count}" for room, count in sorted(rooms.items())) or "-"
     source_text = "|".join(f"{source}:{count}" for source, count in sorted(sources.items())) or "-"
-    return (f"{path.name}: hits={len(hits)} damage={damage} early={early} "
-            f"boss={boss} ability_uses={abilities} rooms={room_text} sources={source_text}")
+    return (f"{path.name}: hits={len(hits)} damage={damage} dungeon={dungeon} "
+            f"riftwild={world} early={early} boss={boss} ability_uses={abilities} "
+            f"rooms={room_text} sources={source_text}")
 
 
 def main() -> None:

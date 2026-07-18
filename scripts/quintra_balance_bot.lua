@@ -1137,8 +1137,11 @@ while frames < LIMIT do
         end
         if DEBUG then
             debug_log(string.format(
-                "BOTHIT f=%d room=%d hp=%d->%d src=%d pos=%d,%d ifr=%d",
-                frames, room, last_hp, hp, last_damage_source, hit_x, hit_y, iframes))
+                "BOTHIT f=%d room=%d world=%d:%d hp=%d->%d src=%d pos=%d,%d ifr=%d target=%d",
+                frames, room, RS ~= 0 and emu:read8(RS + 17) or 0,
+                RS ~= 0 and emu:read8(RS + 18) or 0,
+                last_hp, hp, last_damage_source, hit_x, hit_y, iframes,
+                threat and threat.kind or 255))
         end
     end
     last_hp = hp

@@ -771,9 +771,10 @@ active giant fights are also sampled once per second so a corner pin can be
 reproduced from controller input rather than guessed from a final CSV row.
 Set `QUINTRA_BALANCE_DEBUG=1 QUINTRA_BALANCE_DEBUG_DIR=tmp/agent-debug` on the
 wrapper to retain per-trial `BOTROOM`, `BOTWEAPON`, `BOTHIT`, ability, and
-position events after mGBA exits;
+position events after mGBA exits. `BOTHIT` now records dungeon/Riftwild
+context as well as its inferred source;
 run `make agent-events AGENT_EVENTS_DIR=tmp/agent-debug` to summarize each
-trial's early-room and boss damage by source. The ordinary CSV remains the
+trial's dungeon, Riftwild, early-room, and boss damage by source. The ordinary CSV remains the
 compact release metric. The agent
 also performs a real double-tap dash when a Gloom Leech attaches. Cleared
 dungeon rooms that genuinely exceed that threshold switch to a pixel-exact
