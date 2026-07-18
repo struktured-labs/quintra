@@ -1469,8 +1469,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
                 run_state.room_counter = (u16)(base + ((local == 2) ? 4 : 2));
             }
-            // Edge arrival prevents an immediate return and muddles orientation.
-            run_state.entered_from = (run_state.run_seed & 1) ? DIR_N : DIR_W;
+            // A rift/stair is not a cardinal doorway. Pretending it came
+            // through a random edge can spawn the hero on a destination's
+            // non-existent east/south exit (notably vault 15), where the
+            // sprite appears to vanish into the tree line. DIR_NONE makes
+            // procgen use its safe center arrival, clear of the portal tile
+            // and valid regardless of the destination's authored edges.
+            run_state.entered_from = DIR_NONE;
             sfx_play(SFX_DOOR);
             // Select before the banked generator. On hardware/SDCC the
             // post-bcall path could skip the later selector, leaving every
