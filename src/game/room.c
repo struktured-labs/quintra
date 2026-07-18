@@ -1672,6 +1672,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_environment_palettes();
                 place_player_sprite();
                 hud_redraw_all();
+                // The Zelda-style slide hides OBJ for the scroll so neither
+                // room's actors float across the seam. Restore it before the
+                // rebuilt room is shown; otherwise the player state is live
+                // but the entire sprite layer remains disabled after a door.
+                SHOW_SPRITES;
                 DISPLAY_ON;
                 if (procgen_current_room_is_boss) {
                     sfx_play(SFX_ROAR);

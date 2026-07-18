@@ -43,8 +43,12 @@ def crosses(x, y, synthetic_door=None):
     put16(pb, PL + 9, x); put16(pb, PL + 11, y)
     for _ in range(8): pb.tick()
     result = pb.memory[RS + 1]
+    # Bit 1 of LCDC is the OBJ/sprite-enable bit. Sliding room transitions
+    # intentionally hide sprites while streaming tilemaps, then must restore
+    # them before gameplay resumes or the hero appears to vanish.
+    sprites_visible = (pb.memory[0xFF40] & 0x02) != 0
     pb.stop(save=False)
-    return result == 1
+    return result == 1 and sprites_visible
 
 def locked_north_holds():
     """A live hostile must not let repeated north input escape to signed y=-8."""
@@ -141,7 +145,7 @@ def main():
     if not locked_north_holds(): failed.append("locked-north-boundary")
     if not open_room_with_hostile_allows_exit(): failed.append("open-combat-exit")
     if not blocked_crate_north_face_holds(): failed.append("blocked-crate-north-face")
-    if failed: raise SystemExit(f"[doors] FAIL unreachable: {', '.join(failed)}")
-    print("[doors] PASS cardinal/secret traversal + selective seals + crate boundaries")
+    if failed: raise SystemExit(f"[doors] FAIL unreachable or sprites hidden: {', '.join(failed)}")
+    print("[doors] PASS cardinal/secret traversal + visible sprite layer + selective seals + crate boundaries")
 
 if __name__ == "__main__": main()

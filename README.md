@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.9: Safe Rift Arrivals](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.10: Visible Door Arrivals](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -20,7 +20,11 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
-v0.18.9 fixes a portal-arrival bug that could spawn the hero on a nonexistent
+v0.18.10 fixes the ordinary-door counterpart: the room-slide animation
+temporarily disabled the sprite layer but did not restore it, leaving the
+hero apparently missing after a cardinal door transition. Every door now
+restores the sprite layer before gameplay resumes, with live-ROM coverage for
+all four directions. v0.18.9 fixes a portal-arrival bug that could spawn the hero on a nonexistent
 edge of the destination screen—most visibly, off the east side of the
 north/west-only vault—making the sprite appear to disappear. Rifts, stairs,
 and dungeon gates now always arrive at the safe screen center, clear of the
