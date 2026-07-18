@@ -10,9 +10,12 @@ Penta Dragon DX is a Game Boy Color colorization of the DMG game
 the original gameplay, sound, and timing.
 
 **Current production**: `rom/working/penta_dragon_dx_FIXED.gb` is
-v3.01 (`scripts/build_v301_gdma.py`; `FIXED.gb` == `v301.gb`,
-md5 `dd617b7e83d1fef30b07d70be0a13586`). Re-synced to v3.01 on
-2026-06-07 (old stale v3.00 inline build → `FIXED.v300c.backup.gb`).
+v3.02 (`scripts/build_v302_title_fix.py`; `FIXED.gb` == `v302.gb`,
+md5 `f4ac6367f75d50765cf018661f7c5e8c`). Overwrote v3.01 on
+2026-07-18 (old v3.01 teleport-era build had title screen regressions:
+cursor 'A' at tile 0x73 was missing due to D880-gated inline hook and
+OBJ palette LUT assigning pal 6 instead of pal 7). FIXED.gb.v300c.backup.gb
+is the pre-teleport base; FIXED.gb.v302.gb is the new v3.02 build.
 
 > **Naming caveat (verified 2026-06-07):** the "GDMA" in
 > `build_v301_gdma.py` is a misnomer. It *writes* a GDMA routine
@@ -73,7 +76,16 @@ md5 `dd617b7e83d1fef30b07d70be0a13586`). Re-synced to v3.01 on
 ## Where things live
 
 ### Build pipeline
-- `scripts/build_v301_gdma.py` — **current production builder** (see the
+- `scripts/build_v302_title_fix.py` — **current production builder** (v3.02).
+  Builds on the teleport infrastructure (scene_detect, position sweep, arena
+  bg_tables, teleport combo) with two critical fixes:
+  - **Ungated inline hook**: writes tile+attr on the title screen (was tile-only
+    due to D880 gate in teleport build, causing cursor to go missing).
+  - **OBJ palette LUT**: tiles 0x70-0x7F → pal 7 (was pal 6), matching the
+    original CP-cascade that cursor 'A' (tile 0x73) depends on.
+  Preserves DMG NOP removal (bg_sweep runs on title), O(1) OAM intercept,
+  and all teleport features.
+- `scripts/build_v301_gdma.py` — v3.01 base builder (see the
   naming caveat above: the GDMA/attr_comp routines it emits are dead code;
   the shipping path is the inline 0x42A7 hook + bg_sweep + attr-cleaner)
 - `scripts/build_v300_inline_hook.py` — historical v3.00 inline-hook builder
@@ -89,6 +101,10 @@ md5 `dd617b7e83d1fef30b07d70be0a13586`). Re-synced to v3.01 on
   The calibrated/minimal tables live inline in the v296/v299 builders.
 
 ### Verification (the trust-me-not-the-user loop)
+- `scripts/probes/verify_title_screen_integration.py` — boots in PyBoy,
+  captures title screen, verifies text presence (PENTA DRAGON DX, JAPAN ART
+  MEDIA, STRUKTURED LABS), non-white screen, and no garbage artifacts.
+  0=PASS 1=FAIL 2=harness error
 - `scripts/probes/verify_title_color.py` — 0=PASS 1=FAIL
 - `scripts/probes/verify_phantom_d887.py` — vanilla-baselined
 - `scripts/probes/verify_gameplay_palette.py` — auto-presses start,
