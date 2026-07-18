@@ -15,7 +15,12 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 2, 0, 5), c(16, 5,22), c(10,22,29), c(31,30,31)],
         door:    [c( 1, 1, 2), c(10, 7, 2), c(18,13, 3), c(28,21, 6)],
         boss:    [c(0,0,0), c(10,13,22), c( 2, 3, 8), c(22,29,31)],
-        boss_hp_bonus: 150, boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
+        // The first Colossus is a pattern lesson, not a 200-HP attrition
+        // wall before the run has earned a relic or a shop build.  With the
+        // Sentinel's 50 base this lands at 140 HP: long enough to teach the
+        // opening, ring, and body-spacing beats without turning one early
+        // contact sequence into an unwinnable first expedition.
+        boss_hp_bonus: 90, boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
         enemy_pool: &[(0, 35), (12, 30), (9, 20), (13, 15)],
     },
     // 1 — Verdant Hollow (mossy green)

@@ -120,6 +120,8 @@ def main():
         f"Golden Temple HP balance cap drifted: {pb.memory[temple + 14]}")
     pb.stop(save=False)
     pb, boss = enter_boss(0, keep_open=True)
+    assert pb.memory[boss + 14] == 140, (
+        f"starter Colossus pacing drifted: {pb.memory[boss + 14]}")
     max_hp = pb.memory[boss + 23]  # ai_data[6], captured by boss_tick
     assert max_hp > 1, "boss never captured its starting HP for enrage"
     hostile_count = lambda: sum(

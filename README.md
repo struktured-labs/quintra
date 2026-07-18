@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.5: Sealed-Room Fairness](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.6: First-Colossus Pacing](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.6 retunes the first Colossus from **200 HP to 140 HP**. It remains a
+real pattern fight—15 seconds minimum even in an uninterrupted starter lane—
+but no longer asks an unbuilt run to survive a full attrition wall before its
+first relic. Every later boss retains its existing HP, damage, and patterns.
+Live-ROM and content contracts pin that opening health budget. In the first
+controller seed, all four non-Picsean starters now clear the first boss; the
+second seed remains intentionally variable, so this is onboarding tuning, not
+a substitute for the full endurance delivery gate.
 
 v0.18.5 fixes a real sealed-room fairness failure: **Skeletons can no longer
 chase into one-tile lanes that the champion's 12px feet box cannot enter**.
@@ -790,14 +799,12 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.5)
+### Current conference evidence (v0.18.6)
 
-- `make verify` passed the full cartridge, content, visual, progression,
-  pickup, boss-policy, and controller-replay suite, including the Skeleton
-  clearance and stabilized score/Sigil contracts.
+- Functional ROM contracts pass, including the first-Colossus health budget,
+  Skeleton clearance, score/Sigil stability, and the full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
-  reel is hash-checked against this ROM. Its SHA-256 is
-  `facbe3488e49d395562a81b05551d2c214b6ba1398b4ab4e03c74a481a360989`.
+  reel is hash-checked against the release ROM in `docs/media/gameplay.json`.
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
   with zero combat/route stalls. Current autonomous evidence has a proven

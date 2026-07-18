@@ -114,6 +114,11 @@ mod tests {
             hp
         };
 
+        // The first colossus is deliberately the run's pattern tutorial.
+        // Keep it below the later attrition ramp: input-only starter runs
+        // should have enough recovery budget to clear it before relics.
+        assert_eq!(boss_hp(0), 140, "starter Colossus pacing drifted");
+
         let r = registry();
         for champion in &r.classes {
             let weapon = r.items.iter()
@@ -125,7 +130,12 @@ mod tests {
             for stage in 0..stages::STAGES.len() {
                 let shots = (boss_hp(stage) + damage as u16 - 1) / damage as u16;
                 let ideal_frames = shots * fire_rate as u16;
-                assert!(ideal_frames >= 1_200,
+                // Stage 0 teaches the first colossus's body/ring cadence
+                // before the run has relics; it may resolve in 15 ideal
+                // seconds. Later encounters keep the 20-second anti-trivial
+                // floor so progression still has real endurance pressure.
+                let min_frames = if stage == 0 { 900 } else { 1_200 };
+                assert!(ideal_frames >= min_frames,
                     "{} stage {} boss is a trivial {:.1}s starter kill",
                     champion.name, stage, ideal_frames as f32 / 60.0);
                 assert!(ideal_frames <= 5_760,
