@@ -32,6 +32,17 @@ enum {
 #define TOWN_MARKET  1
 #define TOWN_QUARTER 2
 
+// Every post-boss Riftwild opens on screen zero and reaches the next dungeon
+// through screen one.  Pinning the restorative landmark there makes it a
+// readable, lore-like fixture between otherwise generated expeditions rather
+// than a hidden roll the player can never reasonably plan around.
+#define RIFTWELL_WORLD_SCREEN 1
+// While in Riftwild, world_return_screen is a 0..15 cave/vault return
+// anchor. Its high bit is otherwise unused and keeps the one-use landmark
+// state out of the packed run-state ABI (which is shared with SRAM/tools).
+#define RIFTWELL_USED_FLAG 0x80
+#define RUN_RIFTWELL_USED() (run_state.world_return_screen & RIFTWELL_USED_FLAG)
+
 typedef struct {
     u8  biome_id;            // current biome
     u8  room_counter;        // number of rooms entered this run

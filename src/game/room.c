@@ -1457,9 +1457,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     run_state_begin_dungeon();
                     run_state.room_counter++;
                 } else if (cell->kind == ZELDA_CELL_VAULT) {
-                    run_state.world_screen = run_state.world_return_screen;
+                    run_state.world_screen = (u8)(run_state.world_return_screen & 15);
                 } else if (cell->stairs != ID_NONE_U8) {
-                    run_state.world_return_screen = run_state.world_screen;
+                    run_state.world_return_screen = (u8)(run_state.world_screen
+                        | (run_state.world_return_screen & RIFTWELL_USED_FLAG));
                     run_state.world_screen = cell->stairs;
                 }
             } else {

@@ -66,6 +66,8 @@ static void draw_world_grid(void) {
             u8 icon = BGT_FLOOR3;
             const zelda_screen_t *z = &zelda_overworlds[0].screen_grid[cell];
             if (cell == (run_state.world_screen & 15)) icon = BGT_SWITCH;
+            else if (cell == RIFTWELL_WORLD_SCREEN)
+                icon = RUN_RIFTWELL_USED() ? BGT_RUBBLE : BGT_CRYSTAL;
             else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE) icon = BGT_PORTAL;
             else if (z->kind == ZELDA_CELL_VAULT) icon = BGT_CRYSTAL;
             else if (z->kind == ZELDA_CELL_BOSS) icon = BGT_SPIKES;

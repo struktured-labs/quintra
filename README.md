@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.7: Colossus Contact Fairness](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.8: Riftwild Waystation](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,18 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.8 adds the **Riftwell**, a visible cyan Waystation at the first Riftwild
+fork after every boss. Touch it once to restore one heart and two MP; it stays
+lit at full resources instead of pretending to grant an invisible reward, and
+cannot be farmed by backtracking or by the cave-to-vault shortcut. Its crystal
+marker on the tile-built Compass turns to rubble after use. The feature adds no
+new sprite slot or enemy-table pressure: it reuses the existing Surge-orb art,
+and its one-use bit occupies unused state in the existing Riftwild return
+anchor. Live-ROM coverage proves recovery, persistence, cave/vault safety, and
+ordinary capped-pickup behavior. A five-champion controller pilot completed
+without route stalls; it is deliberately a modest cross-stage sustain choice,
+not a claim that the unfinished all-class endurance gate is solved.
 
 v0.18.7 makes every giant boss's body contact grant **45 recovery frames**,
 matching the final Void Lord. Boss HP, chase cadence, bullet density, and
@@ -503,7 +515,9 @@ an unreachable live enemy and seal progression.
   settlement rather than an interruption before the ending.
   Cleared dungeons open into the grassy, tree-lined **Riftwild**: an authored
   4×4 nonlinear overworld with trails, caves, vaults, champion encounters, and
-  a discoverable gate to the next dungeon. Riftwild fights are optional and
+  a discoverable gate to the next dungeon. Its first fork always holds a cyan
+  **Riftwell** Waystation: a one-use one-heart/two-MP recovery that persists
+  through backtracking and turns to spent rubble on the Compass. Riftwild fights are optional and
   its exits remain fleeable, unlike selected sealed dungeon arenas. Every
   dungeon hides a recoverable **Rift Sigil** in its second room; its sanctuary
   threshold rejects forward progress until that stage's Sigil is claimed.

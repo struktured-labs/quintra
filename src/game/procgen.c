@@ -821,6 +821,25 @@ void procgen_generate_current_room(void) BANKED {
             return;
         }
 
+        if (run_state.world_mode
+            && (run_state.world_screen & 15) == RIFTWELL_WORLD_SCREEN) {
+            // The first fork in every Riftwild has a fixed lore landmark so
+            // the player learns that overworld travel can be restorative as
+            // well as dangerous. Its one-use state lives in run_state, so a
+            // backtrack cannot farm the regeneration-created entity.
+            room_tilemap[5][8]  = BGT_CRYSTAL;
+            room_tilemap[5][12] = BGT_CRYSTAL;
+            room_tilemap[10][8] = BGT_CRYSTAL;
+            room_tilemap[10][12] = BGT_CRYSTAL;
+            if (!RUN_RIFTWELL_USED())
+                // Sit in the crossing itself: the player's pickup box is
+                // feet-anchored, so y=64 is deliberately on the east/west
+                // trail rather than visually near it but uncollectible.
+                pickup_spawn_riftwell(FIX8(80), FIX8(64));
+            player.iframes = 60;
+            return;
+        }
+
         if (is_rest) {
             // Crystal shrine: four pylons around the room's heart, all
             // outside the door lanes (cols 9-11 / rows 7-9 stay clear)

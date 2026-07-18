@@ -127,6 +127,20 @@ u8 pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED {
     return pickup_spawn_resident(PICKUP_WAYKEEPER, SPR_TOWN_WAYKEEPER, 0x06, x, y);
 }
 
+u8 pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_RIFTWELL, x, y);
+    if (idx != 0xFF) {
+        // The cyan Surge orb is already loaded in every room's FX atlas. A
+        // persistent, distinct tint makes the well read as a landmark rather
+        // than a loose coin without consuming another OBJ tile slot.
+        entities[idx].sprite_tile = SPR_SURGE_ORB;
+        entities[idx].palette = 0x06;
+        entities[idx].hitbox = (u8)0x88;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_SHOP_TAG, x, y);
     if (idx != 0xFF) {
@@ -256,6 +270,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         return;
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
+    if (e->ai_data[0] == PICKUP_RIFTWELL) return;
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     if (e->ai_data[0] == PICKUP_SHOP_TAG) {
         // ai_data[1] names the ware slot this tag advertises. A sale marker
@@ -491,6 +506,18 @@ u8 pickup_check_player_collision(void) BANKED {
                     // player who brushes past on the way to the next region.
                     any = 1;
                     continue;
+                case PICKUP_RIFTWELL:
+                    // A Riftwell is a visible once-per-overworld recovery
+                    // choice, not a fake reward at full resources. Leave it
+                    // lit until it can actually restore HP or MP.
+                    if (player.hp >= player.hp_max && player.mp >= player.mp_max)
+                        continue;
+                    player.hp = add_capped(player.hp, 2, player.hp_max);
+                    player.mp = add_capped(player.mp, 2, player.mp_max);
+                    run_state.world_return_screen |= RIFTWELL_USED_FLAG;
+                    hud_redraw_all();
+                    sfx_play(SFX_CLEAR);
+                    break;
             }
             entity_kill(i);
             any = 1;
