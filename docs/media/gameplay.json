@@ -1,8 +1,8 @@
 {
-  "version": "v0.18.4",
-  "rom_sha256": "b2ecee3c15aae51a9c177c28b1e1d54f4e62e69249b4c4a38f3cfddf8c079073",
+  "version": "v0.18.5",
+  "rom_sha256": "facbe3488e49d395562a81b05551d2c214b6ba1398b4ab4e03c74a481a360989",
   "capture_sha256": "2cd4fb2aab6f55b4cfa577386fd198d98dd0f7574337afe190848831145a389c",
-  "gif_sha256": "686de2906a4a72d5864fd49898cea913d2e1866ead4899a13ae62857bfd5ee73",
+  "gif_sha256": "d3243fcc9856204cb27487c7161ac6faf1af2e54d8c9da756b49aa99b2a8ded3",
   "frames": 174,
   "width": 480,
   "height": 432,

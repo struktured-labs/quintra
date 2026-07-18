@@ -81,6 +81,11 @@ def main():
     for _ in range(140):
         pb.tick()
     assert pb.memory[SCREEN] == 5, "did not reach a live room"
+    # PyBoy can expose SCREEN_ROOM one frame before room_enter has finished
+    # publishing procgen entities. Cross that frame before replacing the
+    # table with the two-entity combat fixture.
+    pb.tick()
+    assert pb.memory[SCREEN] == 5, "room changed while settling sigil fixture"
 
     # This test isolates the on-kill behavior. The town contract buys the
     # real shelf; here the Sigil is equipped so every kill goes through the

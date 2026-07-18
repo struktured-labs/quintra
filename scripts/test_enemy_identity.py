@@ -214,6 +214,37 @@ def main():
         f"{pb.memory[bat + 3]},{pb.memory[bat + 7]}"
     )
 
+    # A persistent Skeleton chaser must not enter a one-tile lane that the
+    # hero's 12px feet box cannot occupy.  Before the Skeleton-specific
+    # clearance, it could pursue through this lane and strand a melee run in
+    # a sealed room.  The same direct chase also exercises both perpendicular
+    # fallback attempts rather than only a static collision predicate.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    for tx in range(1, 19):
+        pb.memory[tilemap + 7 * 20 + tx] = 2
+        pb.memory[tilemap + 9 * 20 + tx] = 2
+    put16(pb, player + 9, 120)
+    put16(pb, player + 11, 64)
+    skeleton = entities
+    pb.memory[skeleton] = 2
+    pb.memory[skeleton + 1] = 3
+    put_fix8(pb, skeleton + 2, 64)
+    put_fix8(pb, skeleton + 6, 64)
+    pb.memory[skeleton + 14] = 10
+    pb.memory[skeleton + 16] = 2  # Skeleton (speed 64) steps next tick
+    pb.memory[skeleton + 17] = 3
+    pb.memory[skeleton + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    for _ in range(20):
+        pb.tick()
+    assert (pb.memory[skeleton + 3], pb.memory[skeleton + 7]) == (64, 64), (
+        "Skeleton entered a champion-inaccessible one-tile lane: "
+        f"{pb.memory[skeleton + 3]},{pb.memory[skeleton + 7]}"
+    )
+
     # Mirror Moth runs through its typed AI_MIRROR dispatch in bank 3. Real
     # controller movement to the right must make it step left, and its authored
     # fire clock must produce a hostile reflected bolt without direct writes.

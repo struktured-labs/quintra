@@ -60,14 +60,16 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
 }
 
 // Try to move an enemy 1px by (dx,dy); blocked by solid tiles + room bounds.
-// Returns 1 if moved. Checks all four corners of the body's footprint so a
-// 16x16 bruiser can't sink half into a wall the way an 8x8 center-point
-// check allowed. Footprint size comes from the hitbox width: >=10 = 16px
-// body, else 8px.
+// Returns 1 if moved. The Skeleton uses the hero's 12px feet-box clearance:
+// it is a persistent chaser and can otherwise enter a one-tile pocket a
+// melee hero cannot enter, turning a sealed room into an unwinnable softlock.
+// Large bruisers retain their wider 16px movement envelope; other small
+// enemies keep their authored, more agile movement identities.
 u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 nx = (i16)(FIX8_TO_INT(e->x) + dx);
     i16 ny = (i16)(FIX8_TO_INT(e->y) + dy);
-    i16 ext = ((e->hitbox >> 4) >= 10) ? 14 : 6;   // far-corner inset
+    i16 ext = ((e->hitbox >> 4) >= 10) ? 14
+        : (e->ai_data[0] == ENEMY_SKELETON) ? 13 : 6; // far-corner inset
     if (nx < 8 || ny < 8) return 0;
     if (nx + ext >= (i16)((ROOM_W - 1) * 8 + 8)
         || ny + ext >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;

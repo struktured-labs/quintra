@@ -11,14 +11,22 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.4: Town Runtime Headroom](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.5: Sealed-Room Fairness](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
-The v0.17 reel shows the animated five-spirit prologue, champion selection,
+The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.5 fixes a real sealed-room fairness failure: **Skeletons can no longer
+chase into one-tile lanes that the champion's 12px feet box cannot enter**.
+That removes a potential melee softlock while retaining the authored agile
+movement of other small monsters. The controller pilot also now checks the
+actual projectile centerline before committing short weapons to wall seams.
+Live-ROM regressions cover the inaccessible lane, score saturation, and
+Vampiric Sigil kill timing after room-entry publication has settled.
 
 v0.18.4 simplifies the persistent-town runtime: all six resident constructors
 now share one internal spawn path while preserving their unique art, palettes,
@@ -782,19 +790,19 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.4)
+### Current conference evidence (v0.18.5)
 
 - `make verify` passed the full cartridge, content, visual, progression,
-  pickup, boss-policy, and controller-replay suite.
-- `make preflight` passed a byte-identical clean rebuild, CGB/MBC5+battery
-  header validation, a cold-boot SRAM suspend/resume, and the checked-in
-  174-frame GitHub gameplay reel. The released ROM hash is
-  `b2ecee3c15aae51a9c177c28b1e1d54f4e62e69249b4c4a38f3cfddf8c079073`.
-- This is **not yet a show-build sign-off**: the fresh v0.18.4 all-class
-  15-run endurance matrix observed every enemy, but produced only one
-  Picsean nine-boss ending, no endings for the other four champions, and two
-  Picsean combat stalls. The final delivery floor remains two endings per
-  champion over three entropy samples with zero combat/route stalls.
+  pickup, boss-policy, and controller-replay suite, including the Skeleton
+  clearance and stabilized score/Sigil contracts.
+- Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
+  reel is hash-checked against this ROM. Its SHA-256 is
+  `facbe3488e49d395562a81b05551d2c214b6ba1398b4ab4e03c74a481a360989`.
+- This is **not yet a show-build sign-off**: the all-class endurance delivery
+  gate remains two nine-boss endings per champion over three entropy samples
+  with zero combat/route stalls. Current autonomous evidence has a proven
+  Picsean completion path but does not establish that floor for the other four
+  champions.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without

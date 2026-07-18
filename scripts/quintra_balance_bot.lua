@@ -411,6 +411,29 @@ local function tile_at_px(x, y)
     return emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
 end
 
+-- Player shots originate at +2 with a 7px hitbox. A direction that looks
+-- cardinal from sprite origins can still start inside a wall seam (or sail
+-- beside an 8px foe), so use the projectile's real centerline before asking
+-- a short weapon to commit to a shot.
+local function projectile_lane_clear(px, py, ex, ey, aim)
+    local sx, sy = px + 6, py + 6
+    local gx, gy = ex + 4, ey + 4
+    if aim == KEY_LEFT or aim == KEY_RIGHT then
+        if py + 9 <= ey or ey + 8 <= py + 2 then return false end
+        local lo, hi = math.min(sx, gx), math.max(sx, gx)
+        for x = lo, hi do
+            if not path_walkable(tile_at_px(x, sy)) then return false end
+        end
+        return true
+    end
+    if px + 9 <= ex or ex + 8 <= px + 2 then return false end
+    local lo, hi = math.min(sy, gy), math.max(sy, gy)
+    for y = lo, hi do
+        if not path_walkable(tile_at_px(sx, y)) then return false end
+    end
+    return true
+end
+
 local function body_on_spike(px, py)
     -- Mirror room.c's hazard test exactly: spikes use the feet-box center,
     -- whereas ordinary wall collision probes four corners.
@@ -623,33 +646,19 @@ local spore_pixel_route = nil
 local function spore_shot_lane(px, py, ex, ey, max_range)
     local sx, sy = px + 6, py + 6 -- player shot's 7px hitbox center
     local gx, gy = ex + 4, ey + 4
-    local function clear_shot_line(x0, y0, x1, y1)
-        if x0 == x1 then
-            local lo, hi = math.min(y0, y1), math.max(y0, y1)
-            for y = lo, hi do
-                if not path_walkable(tile_at_px(x0, y)) then return false end
-            end
-        elseif y0 == y1 then
-            local lo, hi = math.min(x0, x1), math.max(x0, x1)
-            for x = lo, hi do
-                if not path_walkable(tile_at_px(x, y0)) then return false end
-            end
-        else
-            return false
-        end
-        return true
-    end
     -- Match mire_spore_update's actual trigger origin: player top-left to the
     -- Spore center. Never solve a firing lane by stepping into the fuse.
     if math.abs(px - gx) + math.abs(py - gy) < 48 then return nil end
     -- AABB overlap matches combat.c exactly: [shot, shot+7) against [enemy,
     -- enemy+8). The beam itself may be a few pixels off the Spore center.
     if py + 9 > ey and ey + 8 > py + 2
-        and math.abs(gx - sx) <= max_range and clear_shot_line(sx, sy, gx, sy) then
+        and math.abs(gx - sx) <= max_range
+        and projectile_lane_clear(px, py, ex, ey, gx > sx and KEY_RIGHT or KEY_LEFT) then
         return gx > sx and KEY_RIGHT or KEY_LEFT
     end
     if px + 9 > ex and ex + 8 > px + 2
-        and math.abs(gy - sy) <= max_range and clear_shot_line(sx, sy, sx, gy) then
+        and math.abs(gy - sy) <= max_range
+        and projectile_lane_clear(px, py, ex, ey, gy > sy and KEY_DOWN or KEY_UP) then
         return gy > sy and KEY_DOWN or KEY_UP
     end
     return nil
@@ -1475,7 +1484,13 @@ while frames < LIMIT do
             local near_range = held_style == "spear" and 36 or 28
             local fire_range = held_style == "spear" and 80 or 52
             local weapon_endpoint = starter_lunge and 1 or routed_reach
-            if CLASS == 0 and held_style == "lunge"
+            if not projectile_lane_clear(px, py, target.x, target.y, aim) then
+                -- A Zelda-style feet box may let the hero stand below a wall
+                -- while their weapon's origin is still inside it. Do not
+                -- alternate retreat/attack into that seam forever: take the
+                -- collision-aware route to a genuine projectile lane first.
+                keys = target_step(px, py, target.x, target.y, aim, weapon_endpoint)
+            elseif CLASS == 0 and held_style == "lunge"
                 and reach <= fire_range and offaxis > 5 and offaxis <= 12 then
                 -- `target_step` deliberately works in 8px cells. Near an
                 -- outer wall, a lunge can share that cell with a Wisp yet
