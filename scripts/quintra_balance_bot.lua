@@ -1440,17 +1440,17 @@ while frames < LIMIT do
                 giant_retreat, giant_fire_range, giant_orbit_floor = 52, 80, 52
             elseif held_style == "lunge" and CLASS == 1 then
                 if GIANT_RETREAT_RANGE_ENV == nil then
-                    giant_retreat = 24
-                    giant_orbit_floor = 24
+                    giant_retreat = 48
+                    giant_orbit_floor = 48
                 else
                     giant_orbit_floor = giant_retreat
                 end
                 giant_fire_range = 52
-                -- Tail Spike's 48px reach can exploit a close four-beat
-                -- orbit. The former 48px/second-beat lane took prolonged
-                -- body trades; the paired three-seed search reaches six
-                -- boss clears at 24px/four beats versus two before it.
-                if GIANT_FIRE_CADENCE_ENV == nil then giant_fire_cadence = 4 end
+                -- This is the measured Tail Spike pressure lane: it keeps
+                -- Sauran beyond a 32px colossus body yet takes every second
+                -- aimed beat. The generic three-beat cadence left its deep
+                -- deterministic seed a full boss behind before the limit.
+                if GIANT_FIRE_CADENCE_ENV == nil then giant_fire_cadence = 2 end
             elseif held_style == "lunge" and CLASS == 4 then
                 -- The Stinger's 48px reach can pressure from the established
                 -- 36px boss orbit. A two-beat firing cadence produced one
