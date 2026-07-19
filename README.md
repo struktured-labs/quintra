@@ -877,7 +877,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
 the endurance gate proves every sample exercises the procedural economy. A
-live encounter bitmask requires every generated enemy (IDs 0–27) to appear
+live encounter bitmask requires every generated enemy (IDs 0–29) to appear
 somewhere in the paired-seed endurance matrix, preventing a valid but
 procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance
@@ -1206,7 +1206,8 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   **0/3**. Median boss clears are 6, 1, 6, 9, and 6 respectively; Wolfkin,
   Corvin, Picsean, and Vespine clear boss one in all three samples, while
   Sauran does so in two. It exercised all **30** released enemy IDs—including
-  Frost Lancer—and procedural shops, with **zero** combat or route stalls.
+  Frost Lancer and Vine Coil—and procedural shops, with **zero** combat or
+  route stalls.
   Giant body contact remains a leading observed pressure source for the
   non-completing close-range kits. The remaining delivery-bar problem is
   therefore long-run survival and controller routing, not an enemy-coverage or

@@ -23,7 +23,12 @@ MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
 # (or a prior trial's suspended run), making nominally paired seeds depend on
 # launch order. A caller may choose the parent directory, but never shares one
 # save file across (run, class, attempt) rows.
-MGBA_SAVE_ROOT="${QUINTRA_MGBA_SAVE_DIR:-$TRIAL_DIR/savegames}"
+# A trial directory may be deliberately retained for CSV/debug inspection, but
+# its battery SRAM must never be reused by a later invocation with the same
+# run/class numbers. A process-unique child keeps every wrapper launch cold;
+# callers that intentionally need a replayable save location may still supply
+# QUINTRA_MGBA_SAVE_DIR explicitly.
+MGBA_SAVE_ROOT="${QUINTRA_MGBA_SAVE_DIR:-$TRIAL_DIR/savegames-$$}"
 mkdir -p "$MGBA_SAVE_ROOT"
 TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
 DEBUG_DIR="${QUINTRA_BALANCE_DEBUG_DIR:-}"
