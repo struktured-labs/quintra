@@ -188,15 +188,21 @@ def main():
     assert {pb.memory[t + 18] for t in tags} == {
         (w - en) // 28 for w in wares
     }, "sale markers are not bound to their wares"
-    assert {pb.memory[w + 18] for w in wares} == {0, 1, 2, 5}
+    assert {pb.memory[w + 18] for w in wares} == {0, 2, 5, 8}
     tick(70)
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
     assert all(pb.memory[w + 12] == 35 for w in wares
-               if pb.memory[w + 18] in {1, 2}), \
+               if pb.memory[w + 18] in {2, 8}), \
         "relic stock lost its orb art"
     surge = next(w for w in wares if pb.memory[w + 18] == 5)
+    weapon = next(w for w in wares if pb.memory[w + 18] == 8)
     assert pb.memory[surge + 12] == 126 and pb.memory[surge + 13] == 6, \
         "market lacks its cyan Surge Tonic shelf"
+    assert pb.memory[weapon + 12] == 35 and pb.memory[weapon + 13] == 4, \
+        "market weapon trade lacks its distinct red weapon-orb art"
+    assert pb.memory[weapon + 19] == 30, "market weapon trade price drifted"
+    assert pb.memory[weapon + 20] in {20, 21}, \
+        "market weapon trade did not stock a special flail/spear index"
     # A nearby merchant speaks visually before the player risks walking into
     # stock: a coin speech bubble makes the NPC's purpose legible even on a
     # busy market screen.
@@ -211,7 +217,9 @@ def main():
     ware = wares[0]
     pb.memory[pl + 16] = pb.memory[pl + 17] = 0
     wx, wy = pb.memory[ware + 3], (pb.memory[ware + 7] - 8) & 0xFF
-    for off, value in ((9, wx), (10, 0), (11, wy - 24), (12, 0)):
+    # The lower shelf sits below the market's roof line. Stand one tile above
+    # its feet-anchor: close enough for the HUD context, but not a purchase.
+    for off, value in ((9, wx), (10, 0), (11, wy - 8), (12, 0)):
         pb.memory[pl + off] = value
     tick(6)
     pb.memory[0xFF4F] = 0
@@ -264,6 +272,30 @@ def main():
     assert pb.memory[ware] == 0, "purchased market ware remained active"
     tick(2)
     assert len(entities(13)) == 2, "sale marker remained after its ware sold"
+
+    # The market's central shelf is a paid A-weapon trade, not a random stat
+    # orb. Its dedicated HUD blade glyph and ordinary collision transaction
+    # must expose a seed-stable special weapon and never drop the old weapon
+    # back onto the counter for a free re-swap.
+    old_weapon = pb.memory[pl + 21]
+    advertised_weapon = pb.memory[weapon + 20]
+    wx, wy = pb.memory[weapon + 3], (pb.memory[weapon + 7] - 8) & 0xFF
+    for off, value in ((9, wx), (10, 0), (11, wy - 8), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    pb.memory[0xFF4F] = 0
+    assert pb.memory[0x9C00 + 12] == 48, \
+        "nearby market weapon trade lacks its blade offer glyph"
+    assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 12, 9)), \
+        "nearby market weapon trade did not show its $30 price"
+    pb.memory[pl + 16], pb.memory[pl + 17] = 30, 0
+    for off, value in ((9, wx), (10, 0), (11, wy), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(6)
+    assert pb.memory[weapon] == 0 and pb.memory[pl + 21] == advertised_weapon \
+        and advertised_weapon != old_weapon, "market weapon trade did not replace A weapon"
+    assert not entities(5), "market weapon trade dropped an old weapon for free"
+    assert len(entities(13)) == 1, "weapon sale marker remained after trade"
 
     # West back to arrival, then west again: forge/apothecary quarter.
     leave("west")

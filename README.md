@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.31: Signature Call](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.32: Market Arms](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,16 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.32 makes the village market a real build fork. Every three-dungeon town
+now replaces its generic random-relic shelf with a seed-stable **Rift Flail**
+or **Astral Spear** for 30 coins. Its red weapon orb, gold sale marker, blade
+HUD glyph, and price make the trade readable before contact. Buying it replaces
+A without dropping the old weapon back onto the counter, so it is a deliberate
+paid choice rather than a free swap loop. The town remains a three-screen safe
+respite; it still has four offers, with no added enemy, RNG draw, or permanent
+stat inflation. A live cartridge contract verifies the visible offer, exact
+price, weapon replacement, sale-marker cleanup, and controller-route budget.
 
 v0.18.31 makes the champion choice actionable before the first dangerous
 room: the class screen now states the highlighted champion’s concrete

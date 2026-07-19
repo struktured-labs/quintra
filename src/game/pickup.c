@@ -457,6 +457,17 @@ u8 pickup_check_player_collision(void) BANKED {
                                 // power without permanently removing fog.
                                 run_state.next_dungeon_reveal = 0x3F;
                                 break;
+                            case WARE_WEAPON: {
+                                u8 weapon = entities[i].ai_data[3];
+                                // Unlike a loose dungeon orb this is a paid
+                                // merchant trade: retain the new A weapon and
+                                // do not scatter the old one back on the same
+                                // counter for an accidental free re-swap.
+                                if (weapon < N_ITEMS
+                                    && items[weapon].kind == ITEM_KIND_WEAPON)
+                                    player.starter_weapon = weapon;
+                                break;
+                            }
                             case WARE_SURGE:
                                 room_start_weapon_surge();
                                 break;

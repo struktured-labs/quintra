@@ -147,6 +147,7 @@ void hud_show_offer(u8 ware, u8 price) BANKED {
         case 5:  icon = HUD_OFFER_SURGE; break; // WARE_SURGE
         case 6:  icon = HUD_OFFER_VAMP;  break; // WARE_VAMP
         case 7:  icon = HUD_OFFER_CHART; break; // WARE_CHART
+        case 8:  icon = HUD_OFFER_WEAPON; break; // WARE_WEAPON
         default: icon = HUD_OFFER_RELIC; break; // WARE_ITEM / future relics
     }
     row[0] = icon;

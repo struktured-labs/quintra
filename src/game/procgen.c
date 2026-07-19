@@ -36,6 +36,20 @@ u8 boss_palette_for_stage(u8 stage) {
     return 0x06;
 }
 
+// Every town market makes one build-shaped weapon trade available.  Pick from
+// the two special physical weapons without consuming the run RNG, so a player
+// can plan around the shelf while generated combat and future room rolls stay
+// exactly deterministic.  If the champion already carries the rolled weapon,
+// offer its counterpart rather than charging coins for a no-op.
+static u8 town_market_weapon(void) {
+    u8 count = pickup_weapon_count();
+    u8 pick;
+    if (count < 2) return player.starter_weapon;
+    pick = pickup_weapon_from_roll((u8)(count - 2
+        + (((u8)run_state.run_seed ^ run_state.bosses_beaten) & 1)));
+    return (pick == player.starter_weapon) ? pickup_next_weapon(pick) : pick;
+}
+
 // Place player at the door opposite the one they entered from.
 static void place_player_after_entry(void) {
     // Spawn just inside the door opposite the exit. The player's WALL box
@@ -71,6 +85,7 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     entities[idx].ai_data[0] = PICKUP_SHOP;
     entities[idx].ai_data[1] = ware;
     entities[idx].ai_data[2] = price;
+    if (ware == WARE_WEAPON) entities[idx].ai_data[3] = town_market_weapon();
     entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART
         : (ware == WARE_SURGE) ? SPR_SURGE_ORB : SPR_ITEM_ORB;
     entities[idx].palette = (ware == WARE_ITEM) ? 0x05
@@ -789,7 +804,12 @@ void procgen_generate_current_room(void) BANKED {
             } else if (run_state.world_return_screen == TOWN_MARKET) {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(48, 72, WARE_HEART, 5);
-                spawn_shop_ware(80, 72, WARE_ITEM, 20);
+                // A visible, seed-stable weapon trade replaces the former
+                // generic random-relic shelf. The market keeps four offers,
+                // so both town entity pressure and the established route
+                // geometry remain stable while the player gains a deliberate
+                // Flail-or-Spear build fork.
+                spawn_shop_ware(80, 72, WARE_WEAPON, 30);
                 spawn_shop_ware(112, 72, WARE_BIG, 35);
                 // A village stop is an intentional build choice, not just a
                 // refill. The far shelf makes the temporary attack-speed and
