@@ -19,7 +19,7 @@ QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=1 \
 awk -F, '
   NR == 1 {
     for (i = 1; i <= NF; ++i) col[$i] = i
-    if (!(("death_room" in col) && ("death_bosses" in col) && ("death_giant" in col))) exit 1
+    if (!(("death_source" in col) && ("death_room" in col) && ("death_bosses" in col) && ("death_giant" in col) && ("death_giant_overlap" in col))) exit 1
     next
   }
   NR == 2 {
@@ -28,11 +28,14 @@ awk -F, '
       if ($(col["death_room"]) == 255) bad = 1
       if ($(col["death_bosses"]) > $(col["bosses"])) bad = 1
       if ($(col["death_giant"]) != 0 && $(col["death_giant"]) != 1) bad = 1
-    } else if ($(col["death_room"]) != 255 || $(col["death_bosses"]) != 0 || $(col["death_giant"]) != 0) {
+      if ($(col["death_giant_overlap"]) != 0 && $(col["death_giant_overlap"]) != 1) bad = 1
+      if ($(col["death_giant_overlap"]) > $(col["death_giant"])) bad = 1
+      if ($(col["death_source"]) == 255) bad = 1
+    } else if ($(col["death_source"]) != 255 || $(col["death_room"]) != 255 || $(col["death_bosses"]) != 0 || $(col["death_giant"]) != 0 || $(col["death_giant_overlap"]) != 0) {
       bad = 1
     }
   }
   END { exit (rows == 1 && !bad) ? 0 : 1 }
 ' "$OUT"
 
-echo "[death-telemetry] PASS fatal room/boss/giant context is internally consistent"
+echo "[death-telemetry] PASS fatal source/room/boss/giant/body context is internally consistent"

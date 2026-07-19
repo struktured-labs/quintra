@@ -1094,7 +1094,8 @@ local last_damage_source = 255 -- enemy id, 254=hazard, 253=unresolved hostile
 -- Keep the fatal-event context outside the main local scope: mGBA Lua caps
 -- the number of locals in this controller's large top-level loop. These are
 -- observation-only fields, never cartridge writes.
-death_room, death_bosses, death_giant = 255, 0, 0
+death_room, death_bosses, death_giant, death_giant_overlap = 255, 0, 0, 0
+last_damage_giant_overlap = 0
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
 local route_start_frame = 0
@@ -1189,6 +1190,7 @@ while frames < LIMIT do
     if frames == 0 then last_hp = hp end
     if hp < last_hp then
         local taken = last_hp - hp
+        last_damage_giant_overlap = 0
         damage_taken = damage_taken + taken
         if RS ~= 0 and emu:read8(RS + 17) == 1 then
             world_contact_hits = world_contact_hits + taken
@@ -1238,6 +1240,7 @@ while frames < LIMIT do
                 if hit_x + 11 > ex and ex + 15 > hit_x + 5
                     and hit_y + 15 > ey and ey + 15 > hit_y + 9 then
                     giant_overlap_damage = giant_overlap_damage + taken
+                    last_damage_giant_overlap = 1
                     break
                 end
             end
@@ -1254,6 +1257,7 @@ while frames < LIMIT do
             death_room = RS ~= 0 and emu:read8(RS + 1) or 255
             death_bosses = RS ~= 0 and emu:read8(RS + 11) or 0
             death_giant = giant_active() and 1 or 0
+            death_giant_overlap = last_damage_giant_overlap
         end
     end
     last_hp = hp
@@ -2460,7 +2464,7 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
@@ -2470,7 +2474,7 @@ if f then
         won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses,
         boss_attempts, boss_attempt_frames, boss_clear_frames,
         town_market_visits, town_quarter_visits, boss_clear_series,
-        death_room, death_bosses, death_giant))
+        death_room, death_bosses, death_giant, death_giant_overlap))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

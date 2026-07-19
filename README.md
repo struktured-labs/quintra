@@ -881,10 +881,13 @@ bullet-hell attempt cannot be mistaken for a slow successful fight. The
 semicolon-separated `boss_clear_durations` field exposes every successful
 boss individually, so stage-specific tuning is measurable instead of averaged
 away. The typed balance report prints the per-stage clear medians directly.
-Fatal rows also record the death room, bosses already cleared, and whether a
-giant was active, so a late-run loss can be triaged without adding any ROM-side
-debug hooks or mutating cartridge state. Run `make fatal-report` after an
-endurance matrix for the per-champion fatal-context summary.
+Fatal rows also record the inferred killing source, death room, bosses already
+cleared, whether a giant was active, and whether that giant's actual hurtbox
+overlapped the hero on the fatal frame. That separates a boss-body pin from a
+projectile-pattern loss without adding any ROM-side debug hooks or mutating
+cartridge state.
+`make fatal-report` decodes the compact enemy ID into roster names—for example,
+`S. Sentinel` versus `floor hazard`—alongside each champion's fatal context.
 Each
 emulator attempt writes to its own CSV; a file-locked duplicate check commits
 exactly one finished row to the matrix, so late or overlapping processes cannot
