@@ -285,6 +285,29 @@ local function pickup_target(px, py, hp, hp_max)
     return sigil or best
 end
 
+-- Riftwild is intentionally not a loot-clear arena: ordinary drops there
+-- would make controller telemetry depend on optional fights.  Its one
+-- authored exception is the Riftwell, a visible once-per-region recovery
+-- landmark.  Seeking it when a resource is genuinely missing exercises the
+-- same walk-into interaction a player uses, rather than falsely treating
+-- every post-boss crossing as a no-healing gauntlet.
+local function riftwell_target(px, py, hp, hp_max, mp, mp_max)
+    local best, bestd = nil, 65535
+    if EN == 0 or (hp >= hp_max and mp >= mp_max) then return nil end
+    for i = 0, 31 do
+        local p = EN + i * 28
+        if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 16 then
+            local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
+            local d = math.abs(ex - px) + math.abs(ey - py)
+            if ex <= 152 and ey <= 128 and d < bestd then
+                best, bestd = {x=ex, y=ey, kind=16}, d
+            end
+        end
+    end
+    return best
+end
+
 -- Choose an affordable ware through the public walk-into purchase mechanic.
 -- Missing health wins; otherwise prefer deterministic attack/max-HP upgrades
 -- over the seeded general relic. This reads state to decide, but—as with aim
@@ -1282,7 +1305,11 @@ while frames < LIMIT do
     else
         last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
     end
-    local loot = (not target and world_mode == 0) and pickup_target(px, py, hp, hp_max) or nil
+    -- Dungeon rooms use normal loot/objective routing.  Riftwild intentionally
+    -- ignores optional drops, but the one fixed Riftwell is a public recovery
+    -- mechanic and must be part of an honest long-run policy.
+    local loot = not target and ((world_mode == 0 and pickup_target(px, py, hp, hp_max))
+        or (world_mode == 1 and riftwell_target(px, py, hp, hp_max, mp, mp_max))) or nil
     local shop = (not target and not loot and world_mode == 0)
         and shop_target(px, py, hp, hp_max, mp_max, coins) or nil
     local room_age = frames - room_enter_frame

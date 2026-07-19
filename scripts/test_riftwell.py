@@ -74,7 +74,7 @@ def main():
     # Player y is the sprite top while pickup collision uses feet at y+8.
     put16(pb, PL + 11, pb.memory[well + 7] - 8)
     tick(pb, 4)
-    assert pb.memory[PL + 2] == 7 and pb.memory[PL + 4] == 6, (
+    assert pb.memory[PL + 2] == 8 and pb.memory[PL + 4] == 6, (
         f"Riftwell recovery wrong hp/mp={pb.memory[PL + 2]}/{pb.memory[PL + 4]}"
     )
     assert pb.memory[RS + WORLD_RETURN_OFFSET] & RIFTWELL_USED_FLAG, \

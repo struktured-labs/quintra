@@ -512,12 +512,15 @@ u8 pickup_check_player_collision(void) BANKED {
                     any = 1;
                     continue;
                 case PICKUP_RIFTWELL:
-                    // A Riftwell is a visible once-per-overworld recovery
-                    // choice, not a fake reward at full resources. Leave it
-                    // lit until it can actually restore HP or MP.
+                    // A Riftwell is the one fixed post-boss refuge in each
+                    // Riftwild crossing. Two hearts are enough to turn a
+                    // battered boss clear into a recoverable expedition,
+                    // without replacing the later town healer or making the
+                    // landmark farmable. Leave it lit at full resources so
+                    // it never pretends to grant an invisible reward.
                     if (player.hp >= player.hp_max && player.mp >= player.mp_max)
                         continue;
-                    player.hp = add_capped(player.hp, 2, player.hp_max);
+                    player.hp = add_capped(player.hp, 4, player.hp_max);
                     player.mp = add_capped(player.mp, 2, player.mp_max);
                     run_state.world_return_screen |= RIFTWELL_USED_FLAG;
                     hud_redraw_all();
