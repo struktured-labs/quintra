@@ -1021,7 +1021,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.28)
+### Current conference evidence (v0.18.29 release; v0.18.28 endurance baseline)
 
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
@@ -1056,6 +1056,11 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   remaining delivery-bar problem is therefore long-run survival and one
   controller route, not a progression deadlock, and the next balance work
   remains focused there rather than declaring the route complete.
+- v0.18.29's fixed-world diagnostic directly removes Wolfkin's former
+  room-25 Mire Spore stall: that champion now completes all nine bosses in
+  36,331 gameplay frames, while the other fixed-world outcomes remain useful
+  diagnosis rather than a substitute for the three-seed all-class endurance
+  requirement.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without

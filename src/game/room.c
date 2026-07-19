@@ -1286,7 +1286,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     }
                     room_special_guard(24);
                     break;
-                case 1:   // Sauran STONESKIN: brief, timed projectile shield
+                case 1:   // Sauran STONESKIN: brief, timed shot/body shield
                     player.shield_timer = 60;
                     player.iframes = 8; // cover the raising animation
                     break;
