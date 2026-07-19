@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events stall-maps
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events stall-maps
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -226,7 +226,7 @@ policy-sweep: all check-balance-bot
 # Long-form pre-show soak: three entropy samples per champion and enough
 # emulated time for a cautious full clear. Every champion must clear twice;
 # missing reports, skipped economies, and live-enemy/route stalls fail the target.
-# Every released enemy ID through Shadow Keep's Gloam Bramble (27) must appear
+# Every released enemy ID through Frost Vault's Frost Lancer (28) must appear
 # in the fresh controller matrix. This prevents a passing soak from silently
 # omitting a newly released procedural encounter from coverage.
 endurance: all check-balance-bot
@@ -234,7 +234,7 @@ endurance: all check-balance-bot
 	QUINTRA_BALANCE_MIN_WINS=2 QUINTRA_BALANCE_MIN_SHOP_RUNS=3 \
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 \
 	QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
-	QUINTRA_BALANCE_REQUIRED_ENEMIES='0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27' \
+	QUINTRA_BALANCE_REQUIRED_ENEMIES='0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28' \
 	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
@@ -247,6 +247,15 @@ fatal-report:
 # than claiming the current balance already meets the endurance delivery bar.
 fixed-controller-matrix: all check-balance-bot
 	bash scripts/fixed_controller_matrix.sh $(BINDIR)/$(PROJECT).gbc
+
+# Human-facing boss tuning starts with observed cartridge timing, not only
+# health math. This reuses the paired fixed-world pilot and prints per-stage
+# median clear frames with the class/fatal context alongside it. Its very high
+# stall threshold makes it a diagnostic report; `endurance` remains the gate.
+boss-pacing: fixed-controller-matrix
+	cargo run --quiet --manifest-path Cargo.toml -p quintra-mgba -- \
+		report $(CURDIR)/tmp/fixed-controller-matrix.csv --runs 1 --classes 5 \
+		--min-wins 0 --min-shop-runs 0 --stall-frames 999999
 
 # Four completed Picsean seeds; complements the all-class soak above.
 picsean-endurance: all check-balance-bot
