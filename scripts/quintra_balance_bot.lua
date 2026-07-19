@@ -1959,27 +1959,25 @@ while frames < LIMIT do
             keys = KEY_A + KEY_B + aim
         end
         -- Ordinary dungeon encounters are deliberately not all arena locks.
-        -- On this paired Wolfkin route, a Hornet can edge-follow into a
-        -- generated shelf that the full hero body cannot enter.  Persisting
-        -- with the adjacent Claw turns that optional fight into a multi-minute
-        -- no-progress loop, even though the forward door is open.  After a
-        -- real six-second no-damage observation, take the same authored exit
-        -- a player can take.  Keep every sealed room, miniboss, boss, town,
-        -- and required Sigil room under its normal combat/objective policy.
+        -- Wolfkin's adjacent Claw can spend minutes chasing a fast flyer or
+        -- a Hornet around generated cover even though the forward door is
+        -- open. After a real six-second no-damage observation, take that
+        -- authored exit from either optional opening room. Keep the required
+        -- Sigil room (2), miniboss (3), shop/rest choices, bosses, and towns
+        -- under their normal combat/objective policy.
         optional_local_room = room % 6
         optional_room_is_town = room > 18 and room % 18 == 1
         -- A legitimate weapon pickup can turn Wolfkin's Claw into a lunge
-        -- before this room, but it does not make a Hornet behind cover
-        -- hittable. Scope the recovery to the champion, not its starter.
-        optional_hornet = CLASS == 0
-            and target.kind == 2 and target.giant == 0
+        -- before this room, but it does not make every open-room pursuit
+        -- mandatory. Scope this navigation recovery to the champion, not its
+        -- starter weapon or a guessed monster identity.
+        optional_open_room = CLASS == 0
+            and target.giant == 0
             and world_mode == 0 and not optional_room_is_town
-            -- Local room 1 is always before the stage's required Sigil vault
-            -- (local room 2), so its open forward exit cannot skip an
-            -- objective. The old guessed seed-parity seal test was wrong for
-            -- this live route and withheld the recovery from that open door.
-            and optional_local_room == 1
-        if optional_hornet and target_stall_frames > 360 then
+            -- Local rooms 0 and 1 are before the required Sigil vault (2),
+            -- so their open forward exits cannot skip a run objective.
+            and optional_local_room < 2
+        if optional_open_room and target_stall_frames > 360 then
             keys = door_step(px, py) + KEY_A
         end
     elseif shop then
