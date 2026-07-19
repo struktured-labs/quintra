@@ -10,7 +10,7 @@ Fixes:
    due to D880 gate). Arena still tile-only for position sweep compatibility.
 2. **OBJ palette LUT** — tiles 0x70-0x7F → pal 7 (was pal 6), matching the
    proven CP-cascade assignment. Cursor 'A' at tile 0x73 needs pal 7.
-3. **bg_sweep** — re-patched to WRAM 0xDA00 with FFC1 gate NOP'd (DMG NOPs
+3. **bg_sweep** — re-patched to WRAM 0xCC00 with FFC1 gate NOP'd (DMG NOPs
    remain removed as intended).
 """
 import sys
@@ -51,15 +51,15 @@ OUTPUT_PATH = Path("rom/working/penta_dragon_dx_FIXED.gb")  # Overwrite FIXED.gb
 # Reuse all the same constants
 BANK13 = 13 * 0x4000
 BG_SWEEP_ADDR = 0x6CD0
-WRAM_BG_TABLE = 0xDA00
+WRAM_BG_TABLE = 0xCC00
 COLORIZE_ADDR = 0x6E00
 TELEPORT_ADDR = 0x6E80
 OBJ_PAL_TABLE_ADDR = 0x6B00
 WRAPPER_ADDR = 0x6F30
 LANDING_PAD_ROM_ADDR = 0x6F80
-LANDING_PAD_WRAM = 0xDB00
+LANDING_PAD_WRAM = 0xCF90
 LEVELSEL_STUB_ROM_ADDR = 0x53C2
-LEVELSEL_STUB_WRAM = 0xDB28
+LEVELSEL_STUB_WRAM = 0xCFB0
 LEVELSEL_PATCH_ADDR = 0x3B47
 LEVELSEL_STUB_MAX = 36
 SCENE_DETECT_ADDR = 0x6FB0
@@ -213,7 +213,7 @@ def main():
     print(f"  OBJ palette LUT: 256 bytes at bank13:0x{OBJ_PAL_TABLE_ADDR:04X} "
           f"(tiles 0x70-0x7F → pal 7 [cursor fix])")
 
-    # 10. Re-patch bg_sweep to read WRAM 0xDA00 (per-scene) with FFC1 NOP'd
+    # 10. Re-patch bg_sweep to read WRAM 0xCC00 (per-scene) with FFC1 NOP'd
     sweep = bytearray(create_bg_sweep_viewport_gated(WRAM_BG_TABLE, BG_SWEEP_ADDR))
     assert sweep[:4] == bytearray([0xF0, 0xC1, 0xB7, 0xC8])
     sweep[0:4] = bytearray([0x00, 0x00, 0x00, 0x00])  # DMG NOPs removed
@@ -291,6 +291,7 @@ def main():
     # 14. VBlank wrapper at 0x6F30
     assert TELEPORT_ADDR + len(tp) <= WRAPPER_ADDR
     wrapper = bytearray([
+        0xF5,                                 # PUSH AF  (save for sound engine compat)
         0xC5,                                 # PUSH BC
         0xD5,                                 # PUSH DE
         0xE5,                                 # PUSH HL
@@ -321,9 +322,11 @@ def main():
         0xE0, 0x00,                           # LDH [FF00], A
         0x78,                                 # LD A, B
         0xCD, TELEPORT_ADDR & 0xFF, (TELEPORT_ADDR >> 8) & 0xFF,  # CALL teleport
+        0xCD, 0x80, 0xFF,                     # CALL 0xFF80  — sound engine VBlank update
         0xE1,                                 # POP HL
         0xD1,                                 # POP DE
         0xC1,                                 # POP BC
+        0xF1,                                 # POP AF
         0xC9,                                 # RET
     ])
     assert WRAPPER_ADDR + len(wrapper) <= LANDING_PAD_ROM_ADDR

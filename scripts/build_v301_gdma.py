@@ -4,11 +4,11 @@
 Replaces v3.00's dual-STAT-wait inline hook with:
   1. Tile-only inline hook (single STAT wait, vanilla speed)
   2. VBlank attr computation: read tiles from C1A0, lookup bg_table,
-     write 1024-byte attr buffer to WRAM bank 2 (D000-D3FF)
-  3. GDMA transfer: hardware DMA 1024 bytes from WRAM bank 2 to
+     write a 256-byte attr buffer to WRAM bank 0 (CC80-CCFF)
+  3. GDMA transfer: hardware DMA 256 bytes from WRAM bank 0 to
      VRAM tilemap VBK=1 every VBlank (~2048T)
 
-WRAM bank 2 confirmed safe — game never writes FF70 in code.
+All runtime WRAM code/data uses bank 0, which is accessible without FF70.
 bg_sweep retained as safety net (mini-boss probe timing dependency).
 
 Palette mapping (bg_table):
@@ -83,9 +83,9 @@ def _bg_table() -> bytes:
 
 
 BG_TABLE_BYTES = _bg_table()
-WRAM_BG_TABLE = 0xDA00
+WRAM_BG_TABLE = 0xCC00
 WRAM_BG_TABLE_HI = (WRAM_BG_TABLE >> 8) & 0xFF
-ATTR_BUFFER = 0xD000  # WRAM bank 2 (DA00 alternative tested, made no difference)
+ATTR_BUFFER = 0xCC80  # WRAM bank 0 (dead-code attr buffer, kept consistent)
 
 
 def create_inline_tile_copy_tileonly(arena_neutralize_d880=None,
@@ -199,7 +199,7 @@ def create_inline_tile_copy_tileonly(arena_neutralize_d880=None,
     emit([0x5F])                     # LD E, A
     emit([0x30, 0x01])               # JR NC, +1
     emit([0x15])                     # DEC D
-    emit([0x06, WRAM_BG_TABLE_HI])   # LD B, 0xDA (bg_table_hi in WRAM)
+    emit([0x06, WRAM_BG_TABLE_HI])   # LD B, 0xCC (bg_table_hi in WRAM)
     emit([0x3E, 0x01])               # LD A, 1
     emit([0xE0, 0x4F])               # LDH [FF4F], A (VBK=1 attr bank)
 
@@ -387,9 +387,9 @@ def create_inline_tile_copy_pure_tileonly() -> bytes:
 
 
 def create_gdma_transfer() -> bytes:
-    """GDMA 1024 bytes from WRAM bank 2:D000 to displayed tilemap VBK=1.
+    """GDMA 256 bytes from WRAM bank 0:CC80 to displayed tilemap VBK=1.
 
-    Must run during VBlank. ~2048T. DI around FF70 switch.
+    Must run during VBlank. DI protects the general-mode transfer.
     Checks LCDC bit 3 for tilemap base (0x9800 or 0x9C00).
     """
     code = bytearray()
@@ -397,15 +397,12 @@ def create_gdma_transfer() -> bytes:
     # VBK=1
     code.extend([0x3E, 0x01, 0xE0, 0x4F])
 
-    # DI — protect FF70 switch from Timer ISR
+    # DI — protect general-mode GDMA from Timer ISR
     code.extend([0xF3])
 
-    # FF70=2 (WRAM bank 2)
-    code.extend([0x3E, 0x02, 0xE0, 0x70])
-
-    # HDMA source = D000
-    code.extend([0x3E, 0xD0, 0xE0, 0x51])   # HDMA1 = 0xD0
-    code.extend([0xAF, 0xE0, 0x52])          # HDMA2 = 0x00
+    # HDMA source = CC80 (WRAM bank 0, always accessible)
+    code.extend([0x3E, 0xCC, 0xE0, 0x51])   # HDMA1 = 0xCC
+    code.extend([0x3E, 0x80, 0xE0, 0x52])   # HDMA2 = 0x80
 
     # HDMA dest = tilemap base (check LCDC bit 3)
     code.extend([0xF0, 0x40])               # LDH A,[LCDC]
@@ -429,8 +426,7 @@ def create_gdma_transfer() -> bytes:
     # transfer, and preserves bg_sweep's writes to VRAM rows 8-31.
     code.extend([0x3E, 0x0F, 0xE0, 0x55])   # HDMA5 = 0x0F → general mode 256 bytes
 
-    # GDMA done. Restore FF70=1, EI, VBK=0
-    code.extend([0x3E, 0x01, 0xE0, 0x70])   # FF70=1
+    # GDMA done. Restore interrupts and VBK=0.
     code.extend([0xFB])                     # EI
     code.extend([0xAF, 0xE0, 0x4F])         # VBK=0
     code.extend([0xC9])                     # RET
@@ -439,11 +435,11 @@ def create_gdma_transfer() -> bytes:
 
 
 def create_attr_computation(bg_table_addr: int) -> bytes:
-    """Compute 1024-byte attr buffer in WRAM bank 2 from tile buffer.
+    """Compute an attr buffer in WRAM bank 0 from the tile buffer.
 
     Reads tiles from WRAM 0xC1A0 (bank 0, always accessible).
     Looks up bg_table from ROM bank 13 (active during VBlank handler).
-    Writes to WRAM bank 2:D000-D3FF.
+    Writes to WRAM bank 0:CC80 onward.
 
     18 rows × 24 tiles + 8 padding cols. Each ROW gets its own DI window.
 
@@ -465,7 +461,7 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
       B  = bg_table high byte (0x70)
       C  = scratch (tile ID for [BC] lookup)
       HL = tile source (C1A0+, bank 0 — unaffected by FF70)
-      DE = attr dest (D000+, bank 2 — requires FF70=2)
+      DE = attr dest (CC80+, bank 0 — always accessible)
       FFE0 (HRAM scratch) = row counter (avoids DI-internal PUSH/POP nesting)
     """
     bg_table_hi = (bg_table_addr >> 8) & 0xFF
@@ -473,13 +469,12 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
 
     code.extend([0xC5, 0xD5, 0xE5, 0xF5])  # PUSH BC, DE, HL, AF
     code.extend([0x21, 0xA0, 0xC1])         # LD HL, 0xC1A0
-    code.extend([0x11, 0x00, 0xD0])         # LD DE, 0xD000 (attr buffer)
+    code.extend([0x11, ATTR_BUFFER & 0xFF, (ATTR_BUFFER >> 8) & 0xFF])  # LD DE, 0xCC80 (attr buffer)
     code.extend([0x3E, 0x08])               # LD A, 8 (gameplay-safe cliff; preserves mini-boss + room progression)
     code.extend([0xE0, 0xE0])               # LDH [FFE0], A (row counter in HRAM)
 
     row_loop = len(code)
     code.extend([0xF3])                     # DI
-    code.extend([0x3E, 0x02, 0xE0, 0x70])   # FF70 = 2
     code.extend([0x06, bg_table_hi])        # LD B, bg_table_hi
     code.extend([0x3E, 0x18])               # LD A, 24 (tile counter)
 
@@ -494,7 +489,6 @@ def create_attr_computation(bg_table_addr: int) -> bytes:
     code.extend([0x3D])                     # DEC A
     code.extend([0x20, (tile_loop - (len(code) + 2)) & 0xFF])
 
-    code.extend([0x3E, 0x01, 0xE0, 0x70])   # FF70 = 1
     code.extend([0xFB])                     # EI
 
     # DE += 8 (skip padding cols) — outside DI
@@ -652,7 +646,7 @@ def build_v301():
     # Brings v3.01 cold-boot bytes to match v3.00 baseline exactly.
     # code.extend([0xAF, 0xEA, 0x03, 0xDF])
 
-    # Copy bg_table ROM → WRAM 0xDA00 (for inline hook compatibility — not
+    # Copy bg_table ROM → WRAM 0xCC00 (for inline hook compatibility — not
     # strictly needed for v3.01 since inline hook no longer reads it, but
     # keeping it doesn't hurt and allows fallback)
     code.extend([0x21, bg_table_addr & 0xFF, (bg_table_addr >> 8) & 0xFF])

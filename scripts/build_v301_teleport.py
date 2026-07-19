@@ -14,16 +14,16 @@ execute the teleport AFTER the RETI, from a WRAM landing pad.
 
 Architecture:
   1. Cold-boot once: copy the ~37-byte landing pad code from bank 13 ROM
-     to WRAM 0xDB00 (which is executable on CGB). Sentinel: DF1E = 0x5A.
+     to WRAM 0xCF82 (which is executable on CGB). Sentinel: DF1E = 0x5A.
   2. Teleport routine (called every VBlank from our hook): detect combo,
      debounce, cycle boss counter, set FFBA/FFBF. Then modify the stack:
        - Read the CPU-pushed PC at SP+14 (main-loop return), save to DF20/21.
-       - Overwrite SP+14 with 0xDB00 (landing pad address).
+       - Overwrite SP+14 with 0xCF82 (landing pad address).
      RET normally.
   3. The IRQ chain unwinds: our routine RETs → hook tail RETs → 0x06D1
-     pops its 4 saved regs → RETI. CPU pops the modified PC (= 0xDB00),
+     pops its 4 saved regs → RETI. CPU pops the modified PC (= 0xCF82),
      execution resumes at the landing pad — in MAIN-LOOP context (IME=1).
-  4. Landing pad at DB00: disables VBlank IRQ (so the colorize handler
+  4. Landing pad at CF82: disables VBlank IRQ (so the colorize handler
      can't re-enter the teleport), keeps other IRQs, maps bank 3, EIs,
      CALLs 0x1A2B (proven safe in main-loop context). If 0x1A2B returns,
      restore IE and JP the saved main-loop PC.
@@ -32,6 +32,11 @@ WRAM allocation (DF1E-DF22):
   DF1E — landing pad copy sentinel (0x5A = copied)
   DF20/21 — saved main-loop PC low/high (for the JP back)
   DF22 — saved IE
+
+CRITICAL: All WRAM destinations (LUT, trampolines, landing pad, levelsel stub)
+must reside in WRAM bank 0 (0xC000-0xCFFF) which is always accessible regardless
+of FF70. DO NOT use 0xD000-0xDFFF (banked WRAM): the boot ROM sets FF70=1 and
+the game never switches to bank 2, so code/data in bank 2 is garbage on real GBC.
 """
 import sys
 from pathlib import Path
@@ -60,8 +65,8 @@ TP_OUT = Path("rom/working/penta_dragon_dx_teleport.gb")
 import yaml
 
 OBJ_PAL_TABLE_ADDR = 0x6B00   # bank13 address of the 256-byte LUT
-OBJ_PAL_WRAM = 0xD900         # WRAM copy (cold-boot copy target)
-OBJ_PAL_WRAM_HI = 0xD9
+OBJ_PAL_WRAM = 0xCE00         # WRAM bank 0 (always accessible, no FF70 needed)
+OBJ_PAL_WRAM_HI = 0xCE
 
 
 def build_obj_pal_table() -> bytes:
@@ -130,8 +135,8 @@ def build_obj_pal_table() -> bytes:
 BANK13 = 13 * 0x4000
 COLORIZE_ADDR = 0x6E00
 OBJ_STAMPER_ADDR = 0x6A10     # old OBJ tile colorizer (CALL removed in OAM intercept)
-BG_SWEEP_ADDR = 0x6CD0     # bg_sweep safety-net (re-patched to read WRAM 0xDA00)
-WRAM_BG_TABLE = 0xDA00     # per-scene table kept current by scene_detect
+BG_SWEEP_ADDR = 0x6CD0     # bg_sweep safety-net (re-patched to read WRAM 0xCC00)
+WRAM_BG_TABLE = 0xCC00     # per-scene table kept current by scene_detect (bank 0)
 
 # Position-sweep (holy-grail path) layout in bank 13:
 POSSWEEP_ADDR = 0x7100     # position sweep code (reuses dead attr_comp space)
@@ -148,11 +153,11 @@ FOOTPRINT_LOG = "scripts/diagnostics/posmap_maps.log"
 ARENA_ORDER = ["shalamar", "riff", "crystal_dragon", "cameo", "ted",
                "troop", "faze", "angela", "penta_dragon"]
 TELEPORT_ADDR = 0x6E80     # teleport check + state setup + stack redirect
-LANDING_PAD_ROM_ADDR = 0x6F80  # landing pad source (gets copied to WRAM DB00)
+LANDING_PAD_ROM_ADDR = 0x6F80  # landing pad source (gets copied to WRAM CF82)
                               # — moved from 0x6F00 because the teleport
                               # routine grew past 128 bytes and was
                               # overwriting the landing pad source.
-LANDING_PAD_WRAM = 0xDB00      # runtime landing pad location
+LANDING_PAD_WRAM = 0xCF82      # WRAM bank 0 (right after trampolines at 0xCF00..0xCF81)
 # Level-select score-screen attr-clear stub. The game's GAME-START path
 # (DCFD != 0) JPs to bank1:0x7393 which runs its own DI'd input loop, so our
 # VBlank colorizer is dark while shown. Stale attrs from earlier screens
@@ -161,7 +166,7 @@ LANDING_PAD_WRAM = 0xDB00      # runtime landing pad location
 # to the original 0x7393. Diagnosed in commit 306f73e / docs/audit/levelselect_score_bleed.md.
 LEVELSEL_STUB_ROM_ADDR = 0x53C2  # 36-byte free run in bank 13 (not contiguous
                                  # with landing pad — separate cold-boot copy)
-LEVELSEL_STUB_WRAM = 0xDB28      # 0xDB00 + 40 — right after landing pad in WRAM
+LEVELSEL_STUB_WRAM = 0xCFAA      # 0xCF82 + 40 = 0xCFAA
 LEVELSEL_PATCH_ADDR = 0x3B47     # bank0 (always-mapped); JP NZ target
 LEVELSEL_STUB_MAX = 36           # size cap (the free run is 36 bytes)
 
@@ -364,7 +369,7 @@ def build_scene_detect(dungeon_addr: int, arena_base_addr: int,
     c[j_copy_splash] = (copy_pos - j_copy_splash - 1) & 0xFF
 
     # Copy 256 bytes: HL → DE = 0xDA00
-    c.extend([0x11, 0x00, 0xDA])          # LD DE, 0xDA00
+    c.extend([0x11, 0x00, 0xCC])          # LD DE, 0xCC00 (WRAM bank 0, always accessible)
     c.extend([0x06, 0x00])                # LD B, 0   (256 iterations)
     copy_loop = len(c)
     c.extend([0x2A, 0x12, 0x13, 0x05])    # LD A,[HL+]; LD [DE],A; INC DE; DEC B
@@ -428,7 +433,7 @@ def build_lava_override(base_addr: int) -> bytes:
     c.extend([0xFE, 0xFF])                # CP 0xFF
     c.extend([0xC8])                      # RET Z         (end of list)
     c.extend([0x5F])                      # LD E, A
-    c.extend([0x16, 0xDA])                # LD D, 0xDA    (DE = 0xDA00 + id)
+    c.extend([0x16, 0xCC])                # LD D, 0xCC    (DE = 0xCC00 + id, WRAM bank 0)
     c.extend([0x3E, 0x05])                # LD A, 5       (pal5 = lava)
     c.extend([0x12])                      # LD [DE], A
     off = loop_pos - (len(c) + 2)
@@ -561,13 +566,13 @@ def build_teleport_routine() -> bytes:
     # copied the dungeon table) and before the colorize cold-boot copy. ----
     c.extend([0xCD, LAVA_OVERRIDE_ADDR & 0xFF, (LAVA_OVERRIDE_ADDR >> 8) & 0xFF])
 
-    # ---- One-shot: ensure landing pad is copied to WRAM 0xDB00 ----
+    # ---- One-shot: ensure landing pad is copied to WRAM 0xCF82 ----
     # Check sentinel DF1E
     c.extend([0xFA, 0x0E, 0xDF])          # LD A, [DF1E]
     c.extend([0xFE, 0x5A])                # CP 0x5A
     j_copy_done = len(c) + 1
     c.extend([0x28, 0x00])                # JR Z, copy_done
-    # Copy 40 bytes (landing pad) from bank13 ROM to WRAM DB00.
+    # Copy 40 bytes (landing pad) from bank13 ROM to WRAM CF82.
     c.extend([0x21, LANDING_PAD_ROM_ADDR & 0xFF, (LANDING_PAD_ROM_ADDR >> 8) & 0xFF])  # LD HL, ROM_SRC
     c.extend([0x11, LANDING_PAD_WRAM & 0xFF, (LANDING_PAD_WRAM >> 8) & 0xFF])          # LD DE, WRAM_DST
     c.extend([0x06, 40])                  # LD B, 40
