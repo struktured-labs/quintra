@@ -858,6 +858,9 @@ managed two and one. Override it with
 Wolfkin's classwise giant-retreat buffer is 32px (the other baseline kits use
 28px): its paired three-seed first-boss sample improved from one to two clears
 at 32px. Set `QUINTRA_BOT_GIANT_RETREAT_RANGE` explicitly for a matched sweep.
+Sauran's Tail Spike uses a 40px orbit-fire lane: the same three-seed replay
+kept all three first-boss clears and produced five total giant clears with one
+death, compared with three clears and three deaths at its former 48px lane.
 
 Long-form routing treats the Riftwild dungeon gate and nonlinear cave vault
 as their real central staircase nodes, visits both the market and the
