@@ -1086,7 +1086,7 @@ local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 -- request after an observed body hit; the input phase below turns it into the
 -- same double-tap dash available to a player.  This is deliberately not an
 -- HP, position, or iframe write.
-local body_dash_frames, body_dash_source = 0, 255
+local body_dash_frames, body_dash_source, body_dash_giant = 0, 255, false
 local last_body_hit_source, last_body_hit_frame, body_hit_streak = 255, -120, 0
 -- Once a feet box lands on spikes, keep one escape lane until it has truly
 -- crossed a safe tile. Re-choosing every pixel can ping-pong on a wall seam.
@@ -1170,7 +1170,7 @@ while frames < LIMIT do
         else
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
-            if CLASS == 4 and threat and threat.giant == 0 then
+            if threat and (threat.giant ~= 0 or CLASS == 4) then
                 -- One ordinary scrape is part of the intended pressure. A
                 -- repeated hit from this same body within 90 frames is the
                 -- wall-pin signature: dash only then, so a successful lane
@@ -1184,6 +1184,7 @@ while frames < LIMIT do
                 last_body_hit_source, last_body_hit_frame = threat.kind, frames
                 if body_hit_streak >= 2 then
                     body_dash_frames, body_dash_source = 16, threat.kind
+                    body_dash_giant = threat.giant ~= 0
                     body_hit_streak = 0
                 end
             end
@@ -1265,8 +1266,11 @@ while frames < LIMIT do
     -- emergency dash.  A distant shooter/projectile may share an enemy ID,
     -- but should continue through the normal projectile-dodge policy.
     local body_dash_ready = body_dash_frames > 0 and target
-        and target.giant == 0 and target.kind == body_dash_source
-        and math.max(math.abs(target.x - px), math.abs(target.y - py)) <= 20
+        and target.kind == body_dash_source
+        and ((body_dash_giant and target.giant ~= 0
+                and math.max(math.abs(target.x - px), math.abs(target.y - py)) <= 48)
+            or (not body_dash_giant and target.giant == 0
+                and math.max(math.abs(target.x - px), math.abs(target.y - py)) <= 20))
     if body_dash_frames > 0 then body_dash_frames = body_dash_frames - 1 end
     -- Overworld encounters are optional traversal pressure. Follow the
     -- authored route while firing instead of treating every screen as a
@@ -2044,7 +2048,7 @@ while frames < LIMIT do
             end
         end
         dodge_phase, dodge_count = 1, dodge_count + 1
-        body_dash_frames, body_dash_source = 0, 255
+        body_dash_frames, body_dash_source, body_dash_giant = 0, 255, false
         if DEBUG then
             debug_log(string.format(
                 "BOTBODYDASH f=%d room=%d pos=%d,%d target=%d@%d,%d dir=%02X",
