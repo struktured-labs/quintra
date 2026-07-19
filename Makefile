@@ -156,6 +156,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_vampiric_sigil.py
 	uv run --quiet --with pyboy python scripts/test_shop_surge.py
 	uv run --quiet --with pyboy python scripts/test_sauran_shield.py
+	uv run --quiet --with pyboy python scripts/test_sauran_regen.py
 	uv run --quiet --with pyboy python scripts/test_surge.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_rift_sigil_pathing.sh $(BINDIR)/$(PROJECT).gbc
