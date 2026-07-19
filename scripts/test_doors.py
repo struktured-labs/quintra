@@ -132,6 +132,37 @@ def blocked_crate_north_face_holds():
     pb.stop(save=False)
     return y == 80 and intact
 
+def pressure_plate_reveals_secret():
+    """A cairn/plate puzzle opens a usable side passage, not a loose pickup."""
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240): pb.tick()
+    pb.button("start")
+    for _ in range(30): pb.tick()
+    pb.button("a")
+    for _ in range(60): pb.tick()
+    for i in range(32 * 28): pb.memory[EN + i] = 0
+    # This is the authored puzzle coordinate family in procgen: x=7 or 12.
+    # x=7 creates north-wall doors at 7/8, safely beside the main 9/10 door.
+    sx, sy = 7, 5
+    pb.memory[TM + sy * 20 + sx] = 33  # BGT_SWITCH
+    pb.memory[TM + sx] = 2             # BGT_WALL, before the reveal
+    pb.memory[TM + sx + 1] = 2
+    # The class-select handoff completes one final eastward spawn nudge on
+    # this controller fixture; start 8px west so its settled feet land on 7.
+    put16(pb, PL + 9, sx * 8 - 8)
+    put16(pb, PL + 11, sy * 8 - 12)
+    for _ in range(8): pb.tick()
+    opened = (pb.memory[TM + sx] == 3 and pb.memory[TM + sx + 1] == 3)
+    consumed = pb.memory[TM + sy * 20 + sx] == 1  # BGT_FLOOR
+    tiles = (pb.memory[TM + sx], pb.memory[TM + sx + 1],
+             pb.memory[TM + sy * 20 + sx])
+    player_xy = (pb.memory[PL + 9] | (pb.memory[PL + 10] << 8),
+                 pb.memory[PL + 11] | (pb.memory[PL + 12] << 8))
+    pb.stop(save=False)
+    if not (opened and consumed):
+        raise AssertionError(f"plate did not reveal secret: north/switch={tiles} player={player_xy}")
+    return opened and consumed
+
 def main():
     positions = {
         "north": (72, 0, None), "east": (144, 60, None),
@@ -145,6 +176,7 @@ def main():
     if not locked_north_holds(): failed.append("locked-north-boundary")
     if not open_room_with_hostile_allows_exit(): failed.append("open-combat-exit")
     if not blocked_crate_north_face_holds(): failed.append("blocked-crate-north-face")
+    if not pressure_plate_reveals_secret(): failed.append("pressure-plate-secret")
     if failed: raise SystemExit(f"[doors] FAIL unreachable or sprites hidden: {', '.join(failed)}")
     print("[doors] PASS cardinal/secret traversal + visible sprite layer + selective seals + crate boundaries")
 

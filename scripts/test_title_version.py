@@ -45,6 +45,14 @@ def main():
         "title footer left stale version glyphs in its gutter"
     assert pb.memory[title_row + 19] == 0, "title footer touched scrolling corner"
 
+    # Best score belongs to the SELECT → Records screen. The title used to
+    # leave a bare number (for example "831") on row 15, which read as a
+    # broken glyph in the lore tableau. Prove the live cartridge has an empty
+    # row there rather than merely trusting the C source.
+    title_score_row = 0x9800 + 15 * 32
+    assert all(pb.memory[title_score_row + col] == 0 for col in range(20)), \
+        "title retained a stray best-score number; it belongs in Records"
+
     # The lore is now a real procession: five existing champion metasprites
     # line up above the logo, each in either its idle or walk pose. Checking
     # OAM rather than a screenshot makes this a cartridge contract even when

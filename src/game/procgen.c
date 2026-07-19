@@ -536,8 +536,9 @@ void procgen_generate_current_room(void) BANKED {
             }
 
             // Pressure-plate puzzle. A deterministic subset of ordinary
-            // rooms gets a visible plate and a nearby crate. Either the hero
-            // or the crate can press it; room.c consumes it and pays a cache.
+            // rooms gets a visible plate and a nearby cairn. Either the hero
+            // or the cairn can press it; room.c consumes it and opens a
+            // two-tile side passage to the generated secret cache.
             // Towns are redrawn below and never inherit dungeon puzzles.
             if (!is_town && run_state.room_counter > 0
                 && !run_state.world_mode

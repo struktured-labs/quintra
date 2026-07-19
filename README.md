@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.41: Wolfkin Fang Forms](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.42: Revealed Cache Puzzles](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.42 makes pressure-plate puzzles open a real, two-tile side passage into
+a generated secret cache. The plate is one-shot, the nearby 2×2 cairn remains
+part of the room's landscape until moved, and the solved puzzle gets its own
+discovery jingle. The title now reserves its lore tableau for lore: personal
+scores live only on **SELECT → Records**, with live-ROM coverage guarding
+against a stranded number such as `831` reappearing.
 
 v0.18.41 turns Wolfkin into a true input-shaped melee kit: **A + direction**
 is a precise contact stab, neutral **A** is a wide sweep, and holding A builds

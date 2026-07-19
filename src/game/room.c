@@ -577,12 +577,14 @@ static u8 attr_for_tile(u8 t) {
 }
 
 // One-shot puzzle payoff shared by hero-pressed and crate-pressed plates.
-// The seed has already fixed the room, while the activation position keeps
-// the reward legible and makes plates useful even before keyed doors arrive.
+// The pressure plates are deliberately placed at x=7 or x=12 by procgen:
+// opening the matching two-wide north-wall gap therefore never overlaps the
+// centered progression door. The result is a real Zelda-style discovery --
+// a side passage to the generated secret cache -- instead of a loose coin
+// that makes the nearby cairn read as an arbitrary movable prop.
 static void activate_switch(u8 tx, u8 ty) {
     room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
-    pickup_spawn((rng_next_u8() & 1) ? PICKUP_COIN_5 : PICKUP_HEART_HALF,
-        FIX8((i16)tx * 8), FIX8((i16)ty * 8));
+    room_open_secret(tx, 0);
     sfx_play(SFX_PUZZLE);
 }
 
