@@ -1369,7 +1369,31 @@ while frames < LIMIT do
             -- Do pixel alignment here, rather than the generic no-damage
             -- flank route: that route sees the shared tile as already solved
             -- and repeatedly fires past the bat forever.
-            keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
+            local bat_range = math.max(math.abs(dx), math.abs(dy))
+            if bat_range <= 16 then
+                -- Unlike a grounded chaser, a Keese-like bat can cross the
+                -- hero's line while it is in the last few pixels of a claw
+                -- swing. Do not keep walking straight into a second contact
+                -- during the 30-frame hurt cooldown. Sidestep first, then
+                -- reacquire its (changing) cardinal lane on the next beat.
+                -- This is controller-only survival policy: no ROM damage,
+                -- collision, RNG, or movement state is altered.
+                local side_a = (aim == KEY_UP or aim == KEY_DOWN)
+                    and KEY_LEFT or KEY_UP
+                local side_b = (side_a == KEY_LEFT) and KEY_RIGHT
+                    or (side_a == KEY_RIGHT) and KEY_LEFT
+                    or (side_a == KEY_UP) and KEY_DOWN or KEY_UP
+                if can_step(px, py, side_a) then
+                    keys = side_a
+                elseif can_step(px, py, side_b) then
+                    keys = side_b
+                else
+                    keys = KEY_A + target_step(px, py, target.x, target.y,
+                        aim, routed_reach)
+                end
+            else
+                keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
+            end
         elseif target.kind == 13 and math.abs(dx) <= 24 and math.abs(dy) <= 24 then
             -- Gloom Leeches can cling to the top or side wall while their
             -- 8px body is a couple of pixels off the champion's cardinal
