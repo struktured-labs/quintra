@@ -770,7 +770,11 @@ away. The typed balance report prints the per-stage clear medians directly.
 Each
 emulator attempt writes to its own CSV; a file-locked duplicate check commits
 exactly one finished row to the matrix, so late or overlapping processes cannot
-pollute an interrupted/resumed sample. `giant_overlap_damage` separately
+pollute an interrupted/resumed sample. Every attempt also boots with its own
+blank battery-save directory, so no row can inherit a suspend state from a
+previous seed. Short-range routing treats a cover-blocked Leech lane as a real
+pathfinding problem and will only fire after it reaches a legal cardinal lane.
+`giant_overlap_damage` separately
 records HP lost on frames where the actual giant hurtbox overlaps the hero;
 this distinguishes boss body-pinning from projectile pressure without writing
 to cartridge state.

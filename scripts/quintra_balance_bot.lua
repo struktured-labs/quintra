@@ -1205,7 +1205,8 @@ while frames < LIMIT do
         local miniboss = enemy_target(px, py, 1)
         if miniboss then target = miniboss end
     end
-    if target and target.kind == 17 and DEBUG and debug_spore_room ~= room then
+    if target and (target.kind == 17 or target.kind == 13)
+        and DEBUG and debug_spore_room ~= room then
         debug_spore_tilemap(frames, room, px, py, target)
         debug_spore_room = room
     end
@@ -1325,6 +1326,9 @@ while frames < LIMIT do
         if starter_lunge then
             routed_reach = CLASS == 4 and 6 or 1
         end
+        -- Retained through the body-safety pass below: a Leech behind cover
+        -- needs an actual route, not the generic close-range retreat.
+        local leech_needs_lane = false
         -- Any weapon can spend shots into cover. After four seconds without
         -- changing target HP, reposition perpendicular and reacquire.
         -- Folding Stars are intentionally invulnerable while expanded. Route
@@ -1350,7 +1354,30 @@ while frames < LIMIT do
             -- repeatedly skim the edge forever. Align tightly first, then
             -- fire; an actually attached Leech still triggers the dash-shake
             -- override later in this controller frame.
-            if CLASS == 4 and active_charge == 0 and mp >= 2 then
+            local leech_lane = projectile_lane_clear(px, py, target.x, target.y, aim)
+            local leech_range = math.max(math.abs(dx), math.abs(dy))
+            if DEBUG and frames % 120 == 0 then
+                debug_log(string.format(
+                    "BOTLEECH f=%d pos=%d,%d target=%d,%d d=%d,%d aim=%02X range=%d lane=%d",
+                    frames, px, py, target.x, target.y, dx, dy, aim,
+                    leech_range, leech_lane and 1 or 0))
+            end
+            -- Tail Spike can reach well beyond the contact box. Do not make
+            -- Sauran walk into a perfectly straight Leech lane just to align
+            -- again: the old policy maintained a 16px panic gap forever and
+            -- never issued an A press, despite the 48px lunge being able to
+            -- finish the fight safely from here.
+            if CLASS == 1 and held_style == "lunge" and leech_lane
+                and leech_range > 8 then
+                keys = KEY_A + aim
+            elseif not leech_lane then
+                -- A Leech can cross an 8px opening that a 12px champion
+                -- cannot shoot through. Ask the same body-valid BFS used by
+                -- every other short weapon for a cardinal lane around that
+                -- fixture instead of repeatedly slashing the wall.
+                leech_needs_lane = true
+                keys = target_step(px, py, target.x, target.y, aim, 6)
+            elseif CLASS == 4 and active_charge == 0 and mp >= 2 then
                 -- Vespine's real B fan is the intended close-range answer:
                 -- it clears a wall-clinging Leech before a careful A-only
                 -- alignment turns the encounter into attrition before the
@@ -1596,7 +1623,13 @@ while frames < LIMIT do
                 or held_style == "flail" and 24
                 or held_style == "spear" and 32
                 or (CLASS == 2 and 24 or 0)
-            if panic_range > 0 and body_range <= panic_range then
+            local leech_strike_lane = target.kind == 13
+                and held_style == "lunge"
+                and body_range > 8
+                and projectile_lane_clear(px, py, target.x, target.y, aim)
+            if panic_range > 0 and body_range <= panic_range
+                and not leech_strike_lane
+                and not leech_needs_lane then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)
                     or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
