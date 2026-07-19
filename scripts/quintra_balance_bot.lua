@@ -937,10 +937,14 @@ local function door_step(px, py)
     local local_room = room % 6
     local return_for_sigil = not in_world and not in_town
         and local_room > 2 and stage_sigil_missing()
-    -- Local room 2 is the Sigil vault. Once its objective is collected, its
-    -- seed-positioned nonlinear rift is a valid forward route to local room
-    -- 4. Locate the actual generated tile rather than assuming a center exit.
-    if not in_world and local_room == 2 and not stage_sigil_missing() then
+    -- Local rooms 2 and 4 form a paired nonlinear rift.  Room 2 can skip
+    -- forward after its Sigil is collected; if the pilot skipped it, room 4
+    -- must take the paired rift back instead of wandering through the shop
+    -- and sanctuary looking for a cardinal "back" door (portal arrivals
+    -- deliberately have DIR_NONE).  This is controller-only routing over
+    -- the cartridge's existing reversible fixture.
+    if not in_world and ((local_room == 2 and not stage_sigil_missing())
+        or (local_room == 4 and stage_sigil_missing())) then
         local portal = rift_portal_step(px, py)
         if portal ~= nil then return portal end
     end
