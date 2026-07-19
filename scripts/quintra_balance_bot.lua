@@ -1748,7 +1748,19 @@ while frames < LIMIT do
             -- Ranged shots are cardinal. At close diagonal range, first step
             -- onto the target's row/column; otherwise a vessel can orbit a
             -- large boss forever while every shot passes its corner.
-            if math.abs(dx) <= 32 and math.abs(dy) <= 32
+            -- A roaming caster behind procgen cover is the inverse problem:
+            -- the old perpendicular orbit can keep pressing into one wall
+            -- while the target drifts along another, even though a valid
+            -- body route to a cardinal bubble lane exists.  Route only the
+            -- ranged-caster family to that lane; chasers retain their more
+            -- responsive close-orbit behavior.
+            local lane_caster = target.kind == 5 or target.kind == 8
+                or target.kind == 19 or target.kind == 20 or target.kind == 21
+                or target.kind == 23 or target.kind == 25
+            if held_style == "ranged" and lane_caster
+                and not projectile_lane_clear(px, py, target.x, target.y, aim) then
+                keys = target_step(px, py, target.x, target.y, aim, 6)
+            elseif math.abs(dx) <= 32 and math.abs(dy) <= 32
                 and ((aim == KEY_UP or aim == KEY_DOWN) and math.abs(dx) > 5) then
                 keys = dx > 0 and KEY_RIGHT or KEY_LEFT
             elseif math.abs(dx) <= 32 and math.abs(dy) <= 32
