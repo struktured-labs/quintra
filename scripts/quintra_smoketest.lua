@@ -138,7 +138,12 @@ local function assault_boss(frames)
         emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
         emu:write8(PL_ADDR + 11, 16); emu:write8(PL_ADDR + 12, 0)
         emu:write8(PL_ADDR + 15, 60)
-        emu:setKeys(KEY_A + KEY_DOWN)
+        -- Wolfkin's A is intentionally edge-triggered (stab/sweep), unlike
+        -- the ranged held-fire kits. Pulse it every 18 frames so this still
+        -- drives the real contact attack without regressing the game into a
+        -- flying-sword stream just to satisfy smoke coverage.
+        if (_ % 18) < 2 then emu:setKeys(KEY_A + KEY_DOWN)
+        else emu:setKeys(KEY_DOWN) end
         emu:runFrame()
     end
     emu:setKeys(0)

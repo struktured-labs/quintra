@@ -108,10 +108,10 @@ static void render(void) {
     // Explain the selected signature in concrete play terms, rather than
     // making the player infer it from a lore-flavoured item name in a live
     // bullet room.  Every signature has the same MP cost/cooldown contract.
-    gotoxy(1, 15); text_write("B ");
+    gotoxy(1, 15); text_write("SIG ");
     text_write(signature_tips[class_select_cursor]);
-    gotoxy(1, 16); text_write("B USES 2 MP, THEN CD");
-    gotoxy(2, 17); text_write("A=START  B=BACK");
+    gotoxy(1, 16); text_write("COST 2 MP / COOLDOWN");
+    gotoxy(2, 17); text_write("A START   B BACK");
 }
 
 void class_select_enter(void) {

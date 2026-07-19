@@ -19,6 +19,7 @@ enum {
     SFX_LOWHP,        // danger pulse: single soft high blip
     SFX_TICK,         // boss telegraph: quiet mechanical click
     SFX_WEAK,         // elemental super-effective: bright rising crystal ping
+    SFX_PUZZLE,       // landscape secret: distinct bright discovery cue
 };
 
 void sfx_play(u8 id);

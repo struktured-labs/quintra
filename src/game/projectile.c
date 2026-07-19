@@ -23,13 +23,14 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
 
     // Kind shapes the projectile's physics:
     switch (kind) {
-        case PROJ_SPIKE:      // melee slash: fast, very short reach
+        case PROJ_SPIKE:      // melee arc: stationary, genuinely adjacent
             // Wolfkin is the dedicated melee champion: its claw occupies only
             // adjacent body space. Other spike weapons retain a short lunge.
-            // About one hero body of reach after the 4px forward spawn. The
-            // former 11px total routinely missed even slow enemies while the
-            // player was closing, making the melee champion nonfunctional.
-            if (player.class_id == 0) { speed = 2; ttl = 9; pierce = 2; }
+            // Wolfkin's form is now a contact weapon rather than a tiny
+            // sword-shaped shot.  Its arc stays at the weapon edge for six
+            // frames; the broad/slash versus narrow/stab choice is shaped by
+            // room.c's input handling, not by projectile travel distance.
+            if (player.class_id == 0) { speed = 0; ttl = 6; pierce = 2; }
             else { speed = 4; ttl = 12; pierce = 1; }
             break;
         case PROJ_SHURIKEN:   // pierces 2 enemies

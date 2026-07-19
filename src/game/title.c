@@ -130,17 +130,9 @@ static void render_title(void) {
     // entire title when column 19 is filled on row 17.
     gotoxy(0, 17); text_write("SEL RECORD");
     gotoxy(11, 17); text_write(QUINTRA_VERSION);
-    {
-        u16 best = sram_meta_best();
-        if (best > 0) {
-            gotoxy(3, 15);
-            text_write("BEST "); text_u16(best);
-            {
-                u16 w = sram_meta_wins();
-                if (w > 0) { text_write("  WINS "); text_u16(w); }
-            }
-        }
-    }
+    // Personal score belongs on SELECT → Records. Keeping it off the title
+    // preserves the lore tableau instead of leaving a bare persistent number
+    // stranded in the lower middle of the screen.
 }
 
 static void render_records(void) {

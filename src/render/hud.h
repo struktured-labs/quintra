@@ -23,6 +23,9 @@ void hud_clear_offer(void) BANKED;    // clear a proximity price after leaving t
 // Boss HP as a 4-segment bar (cols 12-15). max==0 clears the bar.
 // Caches internally: cheap to call every frame.
 void hud_redraw_boss(u8 cur, u8 max) BANKED;
+// A four-segment ready bar in the same contextual HUD lane as boss health.
+// The caller owns priority: boss and nearby-shop prompts supersede it.
+void hud_redraw_action_charge(u8 cur, u8 max) BANKED;
 // Low-HP danger pulse: phase 1 flashes the heart color white-hot,
 // phase 0 restores it. Cached — safe to call every frame.
 void hud_low_hp_pulse(u8 phase) BANKED;

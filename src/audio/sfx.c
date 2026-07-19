@@ -97,6 +97,11 @@ void sfx_play(u8 id) {
             pend_kind = PEND_WEAK_NOTE2;
             pend_timer = 2;
             break;
+        case SFX_PUZZLE:
+            ch1(0x00, 0x80, 0xB2, 2007);
+            pend_kind = PEND_WEAK_NOTE2;
+            pend_timer = 3;
+            break;
         default:
             break;
     }

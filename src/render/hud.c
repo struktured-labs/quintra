@@ -194,6 +194,21 @@ void hud_redraw_boss(u8 cur, u8 max) BANKED {
     set_win_tiles(12, 0, 4, 1, row);
 }
 
+void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
+    u8 row[4];
+    u8 segs, i;
+    if (max == 0) return;
+    segs = (u8)(((u16)cur * 4u) / max);
+    if (segs > 4) segs = 4;
+    for (i = 0; i < 4; ++i)
+        row[i] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
+    // This lane can be replaced by a shop offer immediately after the hero
+    // moves. Four WINDOW tiles per normal Wolfkin frame is intentionally
+    // cheap and avoids a stale cached charge bar after that context change.
+    VBK_REG = 0;
+    set_win_tiles(12, 0, 4, 1, row);
+}
+
 void hud_low_hp_pulse(u8 phase) BANKED {
     // Swap HUD palette color 3 (heart red) between normal and white-hot.
     static u8 last_phase = 0xFF;

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.40: Verdant Vine Coil](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.41: Wolfkin Fang Forms](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -20,7 +20,12 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
-v0.18.40 adds the **Vine Coil** to Verdant Hollow: a distinct thorned seed
+v0.18.41 turns Wolfkin into a true input-shaped melee kit: **A + direction**
+is a precise contact stab, neutral **A** is a wide sweep, and holding A builds
+the cooldown-gated **Max Strike** dash. Its four-segment HUD bar fills as the
+dash recovers; bosses and nearby shop offers take priority in that same lane.
+The old travelling slash no longer serves as the base weapon. v0.18.40 adds
+the **Vine Coil** to Verdant Hollow: a distinct thorned seed
 creature that holds a small orbit and sends a slow opposite-pair volley through
 the room. It replaces 8% of that stage's Flutterbat pool—no added monsters,
 enemy HP, damage, or procgen draw count—and reuses Verdant's phase-safe OBJ

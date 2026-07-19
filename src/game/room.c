@@ -83,6 +83,11 @@ static u8 tap_age;       // frames since that press
 static u8 dash_timer;    // frames left in the current dash
 static u8 dash_cd;       // cooldown before the next dash
 static i8 dash_dx, dash_dy;
+// Wolfkin's A kit is deliberately input-shaped rather than a held-button
+// projectile stream: a directed tap stabs, an undirected tap sweeps, and a
+// committed hold becomes a cooldown-gated Max Strike dash.
+static u8 wolfkin_a_hold;
+static u8 wolfkin_max_cd;
 // Spirit Convergence lasts 135 eighth-second ticks (~18 seconds). Keeping the
 // timer here avoids inflating suspend-save payloads; ordinary room transitions
 // do not reset it.
@@ -115,6 +120,8 @@ void room_start_weapon_surge(void) BANKED {
 void room_reset_passive_timers(void) BANKED {
     mp_regen = 0;
     hp_regen = 0;
+    wolfkin_a_hold = 0;
+    wolfkin_max_cd = 0;
 }
 
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
@@ -552,6 +559,7 @@ static u8 attr_for_tile(u8 t) {
         case BGT_BLOCK_TR:
         case BGT_BLOCK_BL:
         case BGT_BLOCK_BR:
+            return BGPAL_WALL;      // secret cairns blend into the landscape
         case BGT_POT:
         case BGT_SWITCH:  return BGPAL_DOOR;      // gold-ish, reads as interactive
         case BGT_CRYSTAL:
@@ -575,7 +583,7 @@ static void activate_switch(u8 tx, u8 ty) {
     room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
     pickup_spawn((rng_next_u8() & 1) ? PICKUP_COIN_5 : PICKUP_HEART_HALF,
         FIX8((i16)tx * 8), FIX8((i16)ty * 8));
-    sfx_play(SFX_CLEAR);
+    sfx_play(SFX_PUZZLE);
 }
 
 static void draw_room_tilemap(void) {
@@ -1030,8 +1038,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         && is_walkable_at(player.x + 13, ny + 8)
                         && is_walkable_at(player.x + 2,  ny + 15)
                         && is_walkable_at(player.x + 13, ny + 15)
-                        && (dash_dy > 0 || (!is_block_at(player.x + 2, ny)
-                            && !is_block_at(player.x + 13, ny))))
+                        && !is_block_at(player.x + 2, ny)
+                        && !is_block_at(player.x + 13, ny)
+                        && !is_block_at(player.x + 2, ny + 7)
+                        && !is_block_at(player.x + 13, ny + 7))
                         player.y = ny;
                 }
             }
@@ -1195,8 +1205,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     && is_walkable_at(player.x + 13, ny + 8)
                     && is_walkable_at(player.x + 2,  ny + 15)
                     && is_walkable_at(player.x + 13, ny + 15)
-                    && (dy > 0 || (!is_block_at(player.x + 2, ny)
-                        && !is_block_at(player.x + 13, ny)))) {
+                    && !is_block_at(player.x + 2, ny)
+                    && !is_block_at(player.x + 13, ny)
+                    && !is_block_at(player.x + 2, ny + 7)
+                    && !is_block_at(player.x + 13, ny + 7)) {
                     player.y = ny;
                 }
             }
@@ -1240,7 +1252,51 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             hud_redraw_mp();
         }
 
-        if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
+        // Wolfkin is a true contact kit, not the same held-A fire stream as
+        // the ranged champions. A directed tap is the precise Fang Stab;
+        // neutral A is a wider two-target Sweep. Holding through the tell
+        // commits to a Max Strike dash, then must recharge before it can be
+        // used again. Weapon swaps keep their authored projectile behaviour.
+        if (player.class_id == 0 && w->p2 == PROJ_SPIKE && !(keys & J_B)) {
+            u8 dir = input_to_dir8(keys);
+            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+            if (wolfkin_max_cd) wolfkin_max_cd--;
+            if (keys & J_A) {
+                if (wolfkin_a_hold < 255) wolfkin_a_hold++;
+                if (wolfkin_a_hold == 20 && wolfkin_max_cd == 0) {
+                    // The dash is the hero's committed FF-style lane break:
+                    // a visible spear-like thrust travels with the body, not
+                    // a permanent replacement for their contact weapon.
+                    projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
+                        (u8)(w->p1 + player.atk + 3), PROJ_SPEAR);
+                    dash_timer = 11;
+                    dash_cd = 45;
+                    dash_dx = dir8_dx[dir];
+                    dash_dy = dir8_dy[dir];
+                    if (player.iframes < 18) player.iframes = 18;
+                    wolfkin_max_cd = 150;
+                    room_shake(1, 8);
+                    sfx_play(SFX_ROAR);
+                }
+            } else {
+                wolfkin_a_hold = 0;
+            }
+
+            if ((pressed & J_A) && player.fire_cooldown == 0) {
+                u8 dmg = (u8)(w->p1 + player.atk);
+                u8 shot;
+                if (room_weapon_surge_ticks) dmg++;
+                shot = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
+                    dmg, PROJ_SPIKE);
+                if (shot != 0xFF && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
+                    // Neutral A sweeps a noticeably wider close arc. It is
+                    // still one hitbox, so a boss cannot be blendered by
+                    // several overlapping pseudo-projectiles in one frame.
+                    entities[shot].hitbox = 0xBB;
+                }
+                player.fire_cooldown = 16;
+            }
+        } else if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + player.atk);
             u8 cooldown = player_fire_delay(w->p0);
@@ -1451,6 +1507,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             } else if (shop_offer_visible) {
                 hud_clear_offer();
                 shop_offer_visible = 0;
+            }
+            // The contextual four-slot lane is otherwise empty. Wolfkin's
+            // Max Strike uses it as a filling cooldown bar: full means the
+            // held-A dash is ready, empty means it has just been spent.
+            if (!room_has_shop_wares && player.class_id == 0
+                && player.starter_weapon == classes[0].starter_weapon) {
+                hud_redraw_action_charge((u8)(150 - wolfkin_max_cd), 150);
             }
         }
 
