@@ -86,6 +86,15 @@ u8 room_transform_ticks;
 // runtime state, like Spirit Convergence, rather than permanent save data.
 u8 room_weapon_surge_ticks;
 
+// Wolfkin's Howl and Vespine's Swarm are committed close-range burst
+// abilities. Their activation ward is deliberately not a shield: it neither
+// deletes shots nor lasts through a whole pattern. It merely gives the two
+// melee kits a readable beat to spend their MP burst inside a boss body or
+// lane without trading the same frame for damage.
+static void room_special_guard(u8 frames) {
+    if (player.iframes < frames) player.iframes = frames;
+}
+
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
@@ -1262,6 +1271,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     for (d = 0; d < 8; ++d) {
                         projectile_spawn_player(dir8_dx[d], dir8_dy[d], dmg, PROJ_SPIKE);
                     }
+                    room_special_guard(24);
                     break;
                 case 1:   // Sauran STONESKIN: brief, timed projectile shield
                     player.shield_timer = 60;
@@ -1293,6 +1303,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         dir8_dy[(u8)((dir + 1) & 7)], dmg, PROJ_BULLET);
                     projectile_spawn_player(dir8_dx[(u8)((dir + 7) & 7)],
                         dir8_dy[(u8)((dir + 7) & 7)], dmg, PROJ_BULLET);
+                    room_special_guard(18);
                     break;
             }
             sfx_play(SFX_ROAR);

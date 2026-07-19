@@ -23,14 +23,13 @@ pub const CLAW_COMBO: Item = Item {
 pub const HOWL: Item = Item {
     id:          ITEM_HOWL,
     name:        "Howl",
-    description: "8-way close burst.",
+    description: "8-way burst + brief ward.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL,
     palette:     OBJ_PAL_ITEM_GOLD,
     rarity:      Rarity::Rare,
-    // B is implemented by room.c as an immediate eight-spike ring.  Keep
-    // generated content truthful rather than advertising an unused room-clear
-    // stun effect to the player.
+    // B is an immediate eight-spike ring plus a very short activation ward;
+    // it is not a room-clear stun or a durable projectile shield.
     effects: &[],
 };
 
@@ -102,7 +101,7 @@ pub const TIDAL_WAVE: Item = Item {
 
 pub const SWARM: Item = Item {
     id: ITEM_SWARM, name: "Swarm",
-    description: "4-stinger fan burst.",
+    description: "4-stinger fan + brief ward.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],

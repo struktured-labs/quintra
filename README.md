@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.20: Riftwell Refuge](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.21: Predator's Beat](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,16 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.21 gives the close-range champions a precise defensive timing tool:
+**Wolfkin's Howl** has a 24-frame activation ward and **Vespine's Swarm** an
+18-frame ward. Both still cost two MP and retain the usual cooldown; they do
+not erase bullets or create a persistent shield. Controller traces showed
+Wolfkin reaching the first Colossus healthy but losing with only 6 HP left,
+while Vespine often cleared it without enough recovery budget. These brief
+wards make a committed burst a tactical answer instead of a same-frame trade,
+without changing boss health, boss damage, or ranged kits. A live-ROM contract
+proves the B-input guard and confirms neither ability became a shield.
 
 v0.18.20 makes the fixed **Riftwell** between each boss and the next dungeon
 a meaningful refuge: it now restores two hearts and two MP, up from one heart
@@ -927,7 +937,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.20)
+### Current conference evidence (v0.18.21)
 
 - Functional ROM contracts pass, including honest capped coin pickups,
   Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the
@@ -946,8 +956,10 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   with zero combat/route stalls. The current private-SRAM sample keeps
   Picsean at that floor (2/3 wins); Sauran has one nine-boss ending but one
   combat stall, and Wolfkin, Corvin, and Vespine remain below the target.
-  The next balance work is therefore still focused on their long-run
-  survivability, not on declaring the route solved.
+  The new short paired first-boss pilot improves Wolfkin to 2/3 clears and
+  Vespine to 3/3 without a stall, but that is an onboarding signal, not a
+  replacement for the long-run gate. The next balance work is therefore still
+  focused on their long-run survivability, not on declaring the route solved.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
