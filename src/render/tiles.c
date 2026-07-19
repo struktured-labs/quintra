@@ -164,6 +164,12 @@ void tiles_load_cinder_kite_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_CINDER_KITE, 1, sprite_enemy_cinder_kite);
 }
 
+void tiles_load_bog_toad_sprite(void) BANKED {
+    // Toxic Mire cannot contain any other slot-79 specialist, so keep the
+    // new pounce silhouette out of the permanently resident CGB OBJ atlas.
+    set_sprite_data(SPR_ENEMY_BOG_TOAD, 1, sprite_enemy_bog_toad);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

@@ -377,6 +377,17 @@ pub const CINDER_KITE: [&str; 8] = [ // wide ember wings, suspended furnace core
     "...33...",
 ];
 
+pub const BOG_TOAD: [&str; 8] = [ // squat mire toad, wide eyes and pounce legs
+    ".3....3.",
+    ".321123.",
+    "32133123",
+    "21111112",
+    ".122221.",
+    "..2112..",
+    ".21..12.",
+    "2......2",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -769,7 +780,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 24] = [
+pub const ENEMIES_8: [(&str, &[&str]); 25] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -794,6 +805,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 24] = [
     ("dusk_midge", &DUSK_MIDGE),
     ("sunwheel", &SUNWHEEL),
     ("cinder_kite", &CINDER_KITE),
+    ("bog_toad", &BOG_TOAD),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [

@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       26);   // adds Bell, Warden, Skitter, Midge, Sunwheel, Kite
+        assert_eq!(r.n_enemies(),       27);   // adds Bell, Warden, Skitter, Midge, Sunwheel, Kite, Toad
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -189,12 +189,15 @@ mod tests {
     }
 
     #[test]
-    fn toxic_mire_authors_the_mire_spore_without_weight_inflation() {
+    fn toxic_mire_authors_mine_and_pounce_without_weight_inflation() {
         let mire = &stages::STAGES[4];
         assert!(mire.enemy_pool.iter().any(|&(id, _)| id == 17));
+        assert!(mire.enemy_pool.iter().any(|&(id, _)| id == 26));
         assert_eq!(mire.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::MIRE_SPORE.ai_script,
             quintra_content::AiScriptId::SporeMine { trigger_radius: 40, fuse_ticks: 36 });
+        assert_eq!(enemies::BOG_TOAD.ai_script,
+            quintra_content::AiScriptId::Charger { telegraph_ticks: 28, charge_speed: 120 });
     }
 
     #[test]

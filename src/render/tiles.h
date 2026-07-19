@@ -99,6 +99,7 @@
 #define SPR_ENEMY_DUSK_MIDGE  SPR_APOTHECARY // combat-only fast fan harrier
 #define SPR_ENEMY_SUNWHEEL    SPR_APOTHECARY // Golden Temple-only orbiting lane shaper
 #define SPR_ENEMY_CINDER_KITE SPR_APOTHECARY // Ember-only fast fan harrier
+#define SPR_ENEMY_BOG_TOAD    SPR_APOTHECARY // Toxic Mire-only pounce bruiser
 #define SPR_ENEMY_ECHO_GUARD  80 // Golden Temple shield-counter duelist
 #define SPR_SHOP_TAG         81 // animated for-sale marker; never loose currency
 #define SPR_ENEMY_RIFT_WARDEN SPR_SHOP_TAG // combat-only late five-way caster
@@ -147,6 +148,7 @@ void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-t
 void tiles_load_prism_skitter_sprite(void) BANKED; // combat-only reuse of elder slot
 void tiles_load_dusk_midge_sprite(void) BANKED;    // combat-only reuse of apothecary slot
 void tiles_load_cinder_kite_sprite(void) BANKED;   // Ember-only reuse of apothecary slot
+void tiles_load_bog_toad_sprite(void) BANKED;      // Toxic Mire reuse of apothecary slot
 void tiles_load_sunwheel_sprite(void) BANKED;      // Golden Temple reuse of that slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_spear_sprite(void) BANKED;

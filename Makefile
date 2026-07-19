@@ -135,6 +135,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
 	uv run --quiet --with pyboy python scripts/test_dusk_midge.py
 	uv run --quiet --with pyboy python scripts/test_cinder_kite.py
+	uv run --quiet --with pyboy python scripts/test_bog_toad.py
 	uv run --quiet --with pyboy python scripts/test_sunwheel.py
 	uv run --quiet --with pyboy python scripts/test_bellwarden.py
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py

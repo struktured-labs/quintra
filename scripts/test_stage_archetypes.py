@@ -169,8 +169,11 @@ def main():
         # and prove the class-specific hazard contract in the running ROM.
         for i in range(32):
             ep = EN + i * 28
-            if pb.memory[ep] == 2:
-                pb.memory[ep] = pb.memory[ep + 1] = 0
+            # A newly added pouncer can already have spawned its telegraph
+            # effect/projectile; this terrain contract must clear *all*
+            # non-player entity types rather than assuming only enemies can
+            # interfere with the two-frame damage observation.
+            pb.memory[ep] = pb.memory[ep + 1] = 0
         site = next((x, y) for y in range(4, 14) for x in range(4, 16)
                     if tile(tiles, x, y) == BGT_SPIKES)
         put16(pb, PL + 9, site[0] * 8 - 8)

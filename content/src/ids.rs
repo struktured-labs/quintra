@@ -66,6 +66,7 @@ pub const ENEMY_PRISM_SKITTER:   EnemyId = EnemyId::new(22);   // orbiting late-
 pub const ENEMY_DUSK_MIDGE:      EnemyId = EnemyId::new(23);   // fast late-game fan-fire harrier
 pub const ENEMY_SUNWHEEL:        EnemyId = EnemyId::new(24);   // Golden Temple orbiting lane shaper
 pub const ENEMY_CINDER_KITE:     EnemyId = EnemyId::new(25);   // Ember fast fan-fire harrier
+pub const ENEMY_BOG_TOAD:        EnemyId = EnemyId::new(26);   // Toxic Mire telegraphed pounce bruiser
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -149,6 +150,9 @@ pub const SPRITE_SUNWHEEL:       SpriteRef = SpriteRef::new(79);
 // Ember Depths never shares a room with Sunwheels or Dusk Midges, so its
 // Cinder Kite can use the same phase-safe apothecary slot.
 pub const SPRITE_CINDER_KITE:    SpriteRef = SpriteRef::new(79);
+// Toxic Mire never shares a combat room with Ember/Bloodmoon/Temple harriers,
+// so its Bog Toad reclaims the same phase-safe apothecary OBJ slot.
+pub const SPRITE_BOG_TOAD:       SpriteRef = SpriteRef::new(79);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

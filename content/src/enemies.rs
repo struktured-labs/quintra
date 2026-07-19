@@ -372,6 +372,18 @@ pub const CINDER_KITE: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const BOG_TOAD: Enemy = Enemy {
+    id: ENEMY_BOG_TOAD, symbol: "BOG_TOAD", name: "Bog Toad",
+    sprite_set: SPRITE_BOG_TOAD, palette: OBJ_PAL_GREEN,
+    // Toxic Mire's mobile threat: it crouches for a readable half-second,
+    // then commits to a quick pounce. It replaces pool weight rather than
+    // adding bodies, forcing a lane decision between mines and walkers.
+    stats: EnemyStats { hp: 15, damage: 2, speed: 48, score: 54, weakness: 0x04, poise: 2 },
+    ai_script: AiScriptId::Charger { telegraph_ticks: 28, charge_speed: 120 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -399,4 +411,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(DUSK_MIDGE.clone());
     r.add_enemy(SUNWHEEL.clone());
     r.add_enemy(CINDER_KITE.clone());
+    r.add_enemy(BOG_TOAD.clone());
 }

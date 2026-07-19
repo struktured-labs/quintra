@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.26: Earn the Tempo](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.27: Mire Pounce](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,12 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.27 adds the **Bog Toad** to Toxic Mire: a 15-HP, telegraphed pounce
+bruiser with a distinct squat silhouette. It takes only the upper 8% of the
+former Mire Spore roll band, preserving every earlier deterministic pool roll
+and never raising room population. Its runtime art, procedural reachability,
+and all five controller routes are tested in the cartridge.
 
 v0.18.26 gives Picsean's fast durable opening weapon a measured **two-frame
 slower cadence**: BubbleBolt now asks for a little more
@@ -990,7 +996,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.26)
+### Current conference evidence (v0.18.27)
 
 - Functional ROM contracts pass, including the starter-cadence contract and
   Cinder Kite's Ember-only
