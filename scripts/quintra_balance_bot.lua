@@ -1226,11 +1226,12 @@ while frames < LIMIT do
             end
         end
         debug_log(string.format(
-            "BOTSTATE f=%d room=%d local=%d stage=%d sigils=%d pos=%d,%d target=%d@%d,%d hp=%d state=%d clock=%d portal=%d,%d",
+            "BOTSTATE f=%d room=%d local=%d stage=%d sigils=%d pos=%d,%d target=%d@%d,%d hp=%d state=%d clock=%d slot=%d stuck=%d portal=%d,%d",
             frames, room, room % 6, emu:read8(RS + 11), read16(RS + 23),
             px, py, target and target.kind or 255, target and target.x or 255,
             target and target.y or 255, target and target.hp or 255,
             target and target.state or 255, target and target.clock or 255,
+            target and target.slot or 255, no_damage_frames,
             portal_x, portal_y))
     end
     -- A boss fight is measured from the first real giant observation through
