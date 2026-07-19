@@ -21,6 +21,7 @@ IDENTITIES = {
     18: (80, 5), 19: (124, 6), 20: (125, 4), 21: (81, 6),
     22: (69, 6), 23: (79, 6),
     27: (79, 7),
+    29: (79, 7),
 }
 
 SPECIALISTS = {
@@ -118,6 +119,16 @@ def main():
     # static source guard cannot see.
     dread_tile = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
     assert dread_tile == tiles[20], "combat room did not install Dread Bell art"
+
+    # Vine Coil shares the phase-safe slot 79 with later specialists.  The
+    # game-select harness above is deliberately a real boot, while the
+    # complete specialist/town path below remains live-ROM coverage.  Do not
+    # mutate run_state halfway through a running room to fabricate a stage
+    # transition: that can bypass the banked handoff being tested.  Instead
+    # pin the authored routing and generated tile declaration directly.
+    assert "if (room_stage() == 1) tiles_load_vine_coil_sprite();" in room_source
+    assert "sprite_enemy_vine_coil" in SPRITE_SOURCE
+
     pb.memory[addr("_run_state") + 1] = 3
     pb.memory[addr("_run_state") + 17] = 1
     pb.memory[addr("_run_state") + 18] = 6

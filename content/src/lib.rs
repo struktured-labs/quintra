@@ -189,6 +189,15 @@ mod tests {
     }
 
     #[test]
+    fn verdant_hollow_authors_vine_coil_without_weight_inflation() {
+        let verdant = &stages::STAGES[1];
+        assert!(verdant.enemy_pool.iter().any(|&(id, w)| id == 29 && w == 8));
+        assert_eq!(verdant.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::VINE_COIL.ai_script,
+            quintra_content::AiScriptId::Spinner { radius: 32, fire_rate: 124 });
+    }
+
+    #[test]
     fn shadow_keep_adds_bramble_sprite_without_weight_inflation() {
         let keep = &stages::STAGES[5];
         assert!(keep.enemy_pool.iter().any(|&(id, w)| id == 27 && w == 5));

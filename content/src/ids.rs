@@ -69,6 +69,7 @@ pub const ENEMY_CINDER_KITE:     EnemyId = EnemyId::new(25);   // Ember fast fan
 pub const ENEMY_BOG_TOAD:        EnemyId = EnemyId::new(26);   // Toxic Mire telegraphed pounce bruiser
 pub const ENEMY_BRAMBLE_SPRITE:  EnemyId = EnemyId::new(27);   // Shadow Keep orbiting thorn pair
 pub const ENEMY_FROST_LANCER:    EnemyId = EnemyId::new(28);   // Frost Vault telegraphed ice charge
+pub const ENEMY_VINE_COIL:       EnemyId = EnemyId::new(29);   // Verdant Hollow orbiting seed-pair caster
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -161,6 +162,9 @@ pub const SPRITE_BRAMBLE_SPRITE: SpriteRef = SpriteRef::new(79);
 // Frost Vault never shares a room with the other stage-specific slot-79
 // enemies, so its Lancer can keep a distinct silhouette at no OBJ cost.
 pub const SPRITE_FROST_LANCER:   SpriteRef = SpriteRef::new(79);
+// Verdant Hollow has no other slot-79 specialist, so this living seed coil
+// can use the same phase-safe tile without expanding the fixed OBJ atlas.
+pub const SPRITE_VINE_COIL:      SpriteRef = SpriteRef::new(79);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

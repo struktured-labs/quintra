@@ -311,6 +311,17 @@ pub const FROST_LANCER: [&str; 8] = [ // icy visor, raised lance, split skates
     "3..3...3",
 ];
 
+pub const VINE_COIL: [&str; 8] = [ // coiled vine bulb, thorned leaf crown
+    "...2.2..",
+    "..23232.",
+    ".2311132",
+    "23122132",
+    "23133132",
+    ".2311132",
+    "..23232.",
+    "...2.2..",
+];
+
 pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
     "...33...",
     "..3223..",
@@ -802,7 +813,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 27] = [
+pub const ENEMIES_8: [(&str, &[&str]); 28] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -830,6 +841,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 27] = [
     ("bog_toad", &BOG_TOAD),
     ("bramble_sprite", &BRAMBLE_SPRITE),
     ("frost_lancer", &FROST_LANCER),
+    ("vine_coil", &VINE_COIL),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [

@@ -79,12 +79,22 @@ void inventory_enter(void) {
 
     gotoxy(5, 0);  text_write("- PACK -");
     gotoxy(1, 2);  text_write(class_name(player.class_id));
-    gotoxy(11, 2); text_write("stage "); text_u16((u16)(run_state.bosses_beaten + 1));
     {
         // Endless descent wraps the theme cycle — name what you see
         u8 s = (u8)(run_state.bosses_beaten % 9);
-        gotoxy(1, 3);
-        text_write(stage_names[s]);
+        // Riftwild is an outdoors connector, not a dungeon stage.  Naming
+        // both its current mode and destination keeps the green path from
+        // reading as an unexplained "Stage N".
+        if (run_state.world_mode) {
+            gotoxy(11, 2); text_write("RIFTWILD");
+            gotoxy(0, 3);  text_write("NEXT "); text_write(stage_names[s]);
+        } else if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+            gotoxy(11, 2); text_write("VILLAGE");
+            gotoxy(1, 3);  text_write("SAFE HAVEN");
+        } else {
+            gotoxy(11, 2); text_write("stage "); text_u16((u16)(run_state.bosses_beaten + 1));
+            gotoxy(1, 3);  text_write(stage_names[s]);
+        }
     }
 
     gotoxy(1, 4);  text_write("HP "); text_u16((u16)player.hp); text_write("/"); text_u16((u16)player.hp_max);

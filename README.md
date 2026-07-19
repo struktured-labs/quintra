@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.39: Authored Pounce Speed](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.40: Verdant Vine Coil](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,19 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.40 adds the **Vine Coil** to Verdant Hollow: a distinct thorned seed
+creature that holds a small orbit and sends a slow opposite-pair volley through
+the room. It replaces 8% of that stage's Flutterbat pool—no added monsters,
+enemy HP, damage, or procgen draw count—and reuses Verdant's phase-safe OBJ
+slot, so it does not expand the fixed CGB sprite atlas. The stage-transition
+loader now refreshes every phase-safe combat tile after a new boss/miniboss
+atlas upload, preventing the previous stage's specialist art from lingering
+for the first room. PACK now labels the outdoor connector **RIFTWILD** and
+names its next destination instead of presenting it as an ordinary numbered
+stage. Live-ROM coverage verifies the actual Verdant VRAM upload;
+the 128 KiB cartridge retains 1,209 bytes of home-bank and 1,260 bytes of its
+tightest switchable-bank headroom.
 
 v0.18.39 fixes a silent enemy-authoring bug: **charge speed now matters**.
 Rope and Frost Lancer retain their established, readable two-pixel dash, while
@@ -1180,7 +1193,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   Picsean at **2/3 endings** and Wolfkin, Sauran, Corvin, and Vespine at
   **0/3**. Median boss clears are 6, 1, 6, 9, and 6 respectively; Wolfkin,
   Corvin, Picsean, and Vespine clear boss one in all three samples, while
-  Sauran does so in two. It exercised all **29** released enemy IDs—including
+  Sauran does so in two. It exercised all **30** released enemy IDs—including
   Frost Lancer—and procedural shops, with **zero** combat or route stalls.
   Giant body contact remains a leading observed pressure source for the
   non-completing close-range kits. The remaining delivery-bar problem is

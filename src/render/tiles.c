@@ -182,6 +182,12 @@ void tiles_load_frost_lancer_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_FROST_LANCER, 1, sprite_enemy_frost_lancer);
 }
 
+void tiles_load_vine_coil_sprite(void) BANKED {
+    // Verdant Hollow is the only stage that carries the Vine Coil, so its
+    // living-seed silhouette can reclaim the town-only apothecary tile.
+    set_sprite_data(SPR_ENEMY_VINE_COIL, 1, sprite_enemy_vine_coil);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

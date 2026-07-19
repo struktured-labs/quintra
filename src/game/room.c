@@ -182,6 +182,20 @@ static void room_refresh_shop_wares(void) {
 // through this helper; otherwise a prior room's tile data can leak forward.
 static void room_load_dynamic_fx_identity(void) {
     tiles_load_fx_sprites();
+    // Slot 79 is phase-safe across stages, but its owner must not be tied to
+    // the shop test below: that test is about the sale-callout slots, while
+    // a fresh room-entry can still have its shop cache in flight.  Choose the
+    // stage specialist first, then let a town resident reclaim its tile in
+    // the town-specific loader.
+    if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        if (room_stage() == 1) tiles_load_vine_coil_sprite();
+        else if (room_stage() == 2) tiles_load_cinder_kite_sprite();
+        else if (room_stage() == 3) tiles_load_frost_lancer_sprite();
+        else if (room_stage() == 4) tiles_load_bog_toad_sprite();
+        else if (room_stage() == 5) tiles_load_bramble_sprite();
+        else if (room_stage() == 6) tiles_load_sunwheel_sprite();
+        else tiles_load_dusk_midge_sprite();
+    }
     // Chartwright occupies this slot only in towns. Dungeon rooms reclaim it
     // for Astral Spear; no gameplay population can require both at once.
     if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) tiles_load_spear_sprite();
@@ -191,15 +205,6 @@ static void room_load_dynamic_fx_identity(void) {
         tiles_load_dread_bell_sprite();
         tiles_load_rift_warden_sprite();
         tiles_load_prism_skitter_sprite();
-        // Slot 79 is a phase-safe multiplex: each stage owns at most one of
-        // these specialist silhouettes, so one OBJ tile carries them without
-        // growing the fixed CGB atlas.
-        if (room_stage() == 2) tiles_load_cinder_kite_sprite();
-        else if (room_stage() == 3) tiles_load_frost_lancer_sprite();
-        else if (room_stage() == 4) tiles_load_bog_toad_sprite();
-        else if (room_stage() == 5) tiles_load_bramble_sprite();
-        else if (room_stage() == 6) tiles_load_sunwheel_sprite();
-        else tiles_load_dusk_midge_sprite();
     }
 }
 
@@ -874,6 +879,11 @@ void room_enter(void) {
     if (room_stage() != stage_seen) {
         stage_seen = room_stage();
         room_load_stage_obj_identity();
+        // The stage upload changes several multiplexed OBJ ranges. Restore
+        // the current combat identity afterward so a streamed stage boundary
+        // cannot retain the previous stage's slot-79 specialist (or a town
+        // callout) for the first room of the new dungeon.
+        room_load_dynamic_fx_identity();
         stage_fade = 26;
         room_apply_pause_palettes(1);   // start dimmed
     }
@@ -1747,6 +1757,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 if (room_stage() != stage_seen) {
                     stage_seen = room_stage();
                     room_load_stage_obj_identity();
+                    // Stage art is uploaded after the ordinary room refresh
+                    // on this path. Reapply the phase-safe enemy/callout
+                    // identity so it always wins the final OBJ write.
+                    room_load_dynamic_fx_identity();
                     stage_fade = 26;
                     room_apply_pause_palettes(1);
                 }

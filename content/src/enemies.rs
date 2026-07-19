@@ -410,6 +410,20 @@ pub const FROST_LANCER: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const VINE_COIL: Enemy = Enemy {
+    id: ENEMY_VINE_COIL, symbol: "VINE_COIL", name: "Vine Coil",
+    sprite_set: SPRITE_VINE_COIL, palette: OBJ_PAL_GREEN,
+    // Verdant Hollow's stage-exclusive lane lesson. It holds a modest ring
+    // around the champion and releases one slow opposite seed pair at a
+    // time, so the player learns to change lanes without an early bullet
+    // flood. Its eight-point pool slice replaces Flutterbats rather than
+    // increasing room population or draw count.
+    stats: EnemyStats { hp: 10, damage: 1, speed: 48, score: 42, weakness: 0x01, poise: 1 },
+    ai_script: AiScriptId::Spinner { radius: 32, fire_rate: 124 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -440,4 +454,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(BOG_TOAD.clone());
     r.add_enemy(BRAMBLE_SPRITE.clone());
     r.add_enemy(FROST_LANCER.clone());
+    r.add_enemy(VINE_COIL.clone());
 }
