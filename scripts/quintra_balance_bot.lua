@@ -70,6 +70,15 @@ local LUNGE_PANIC_RANGE = tonumber(os.getenv("QUINTRA_BOT_LUNGE_PANIC_RANGE")
     or "0") or 0
 if LUNGE_PANIC_RANGE < 0 then LUNGE_PANIC_RANGE = 0 end
 if LUNGE_PANIC_RANGE > 24 then LUNGE_PANIC_RANGE = 24 end
+-- Stoneskin is Sauran's authored answer to body contact as well as bullets,
+-- but the established pilot only raised it for a projectile threat. Keep the
+-- shipped policy at zero and expose a matched-seed research knob for a boss
+-- entering a measured body-danger radius. This still sends only B through
+-- the controller; it never alters the shield timer, HP, or entity state.
+local SAURAN_BODY_SHIELD_RANGE = tonumber(os.getenv("QUINTRA_BOT_SAURAN_BODY_SHIELD_RANGE")
+    or "0") or 0
+if SAURAN_BODY_SHIELD_RANGE < 0 then SAURAN_BODY_SHIELD_RANGE = 0 end
+if SAURAN_BODY_SHIELD_RANGE > 64 then SAURAN_BODY_SHIELD_RANGE = 64 end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 local enemy_mask, enemy_seen = 0, {}
 
@@ -1631,6 +1640,15 @@ while frames < LIMIT do
             and not waiting_star and active_charge == 0 and mp >= 2
             and (nearby_hostiles >= 2
                 or math.max(math.abs(dx), math.abs(dy)) <= 28) then
+            keys = KEY_B + aim
+        -- Sauran's shield blocks hostile bodies. This is intentionally an
+        -- opt-in research policy until matched seeds prove it improves boss
+        -- survival rather than merely consuming the two-MP cooldown early.
+        elseif ABILITY_POLICY == "smart" and CLASS == 1
+            and SAURAN_BODY_SHIELD_RANGE > 0
+            and target.giant ~= 0 and not waiting_star
+            and active_charge == 0 and mp >= 2
+            and math.max(math.abs(dx), math.abs(dy)) <= SAURAN_BODY_SHIELD_RANGE then
             keys = KEY_B + aim
         elseif ABILITY_POLICY == "smart" and CLASS ~= 1 and target.kind ~= 10
             and not waiting_star

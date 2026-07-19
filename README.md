@@ -830,7 +830,10 @@ an opt-in close-body retreat buffer on matched seeds; the default `0` preserves
 the shipped policy until a candidate beats it reproducibly. `make policy-sweep
 QUINTRA_POLICY_POLICIES=classwise QUINTRA_POLICY_CLASSES='1 4'
 QUINTRA_POLICY_LUNGE_PANIC_RANGES='0 4 8 12'` compares those buffers without
-touching cartridge state.
+touching cartridge state. Sauran's real Stoneskin B can likewise be swept at
+`QUINTRA_POLICY_SAURAN_BODY_SHIELD_RANGES='0 36 48 60'`; zero keeps the
+controller from spending the shield on a giant's close body until matched
+seeds demonstrate that the timed guard is a net survival improvement.
 
 ## World Retro delivery bar — September 12, 2026
 
