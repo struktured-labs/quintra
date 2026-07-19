@@ -39,6 +39,7 @@ if [ -n "${QUINTRA_BALANCE_RUNS:-}" ]; then
 else
   mapfile -t RUN_IDS < <(seq 1 "$REPS")
 fi
+RUN_COUNT="${#RUN_IDS[@]}"
 NOI="${ROM%.gbc}.noi"
 
 RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
@@ -70,7 +71,10 @@ for run in "${RUN_IDS[@]}"; do
       echo "[balance] run $run class $class already recorded; skipping"
       continue
     fi
-    echo "[balance] run $run/$REPS class $class"
+    # `REPS` is the entropy-sample default, not necessarily the number of
+    # literal replay IDs.  Fixed-world proofs commonly request just run 4;
+    # report that as 4/1 rather than the misleading historical 4/3.
+    echo "[balance] run $run/$RUN_COUNT class $class"
     completed=false
     # mGBA occasionally drops the Lua process before its final CSV append.
     # Retry just that controller-only trial once; a matrix is never silently
