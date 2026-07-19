@@ -149,6 +149,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
+	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py
 	uv run --quiet --with pyboy python scripts/test_heart_pickup.py
 	uv run --quiet --with pyboy python scripts/test_vampiric_sigil.py
 	uv run --quiet --with pyboy python scripts/test_shop_surge.py

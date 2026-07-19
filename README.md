@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.29: Readable Mire](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.30: True Sight](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.30 fixes Corvin's **Raven Sight** boss bar for ordinary late-dungeon
+enemies: it now uses the enemy's actual procgen-scaled maximum HP, so a full
+Skeleton no longer appears pre-damaged and each segment falls on the hit the
+player expects. A live-ROM HUD contract covers the scaled regular-enemy case.
+The controller telemetry also now separates a long but productive multi-enemy
+room from a true unchanged-target stall; the Wolfkin pilot can leave an
+unsealed Hornet that has wedged behind generated cover, while sealed rooms,
+bosses, towns, and Sigil objectives remain mandatory.
 
 v0.18.29 makes **Toxic Mire** fairer without making it gentler. A stationary
 **Mire Spore** now needs a six-tile-by-six-tile buffer from a room entrance;
@@ -801,7 +810,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; the current v0.18.29 ROM occupies 128 KiB with 1,280 bytes of
+bank space; the current v0.18.30 ROM occupies 128 KiB with 1,280 bytes of
 bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
@@ -809,7 +818,7 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.29 build has 3,493 bytes in bank 1, 1,344 in bank 2,
+ROM. The current v0.18.30 build has 3,283 bytes in bank 1, 1,344 in bank 2,
 2,952 in bank 3, 6,886 in bank 4, 11,783 in bank 5, and 14,811 in bank 6;
 the always-mapped bank retains 1,280 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
@@ -850,8 +859,8 @@ The agents read the held A-weapon every frame—not just the selected champion�
 a procedural Flail or Astral Spear swap changes its route/spacing policy to
 the real build shape; starter lunge routes retain their separately measured
 cover-safe behavior. They use each champion's B ability, collect
-finite hearts/MP/relics after combat, and report combat stalls separately from
-route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
+finite hearts/MP/relics after combat, and report unchanged-target combat stalls
+separately from whole-room combat dwell and route stalls. Narrow a reproduction with `QUINTRA_BALANCE_CLASSES='3 4'` and
 `QUINTRA_BALANCE_RUNS='2'`; no health, enemy, RNG, or progression writes are
 used in balance runs. Each row reports accepted `b_uses` (the game entering a
 class-signature cooldown after a B-only press), rather than merely button
@@ -1028,7 +1037,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.29 release and fresh endurance matrix)
+### Current conference evidence (v0.18.30 candidate and fresh endurance matrix)
 
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm

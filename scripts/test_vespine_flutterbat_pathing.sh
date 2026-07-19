@@ -26,8 +26,8 @@ awk -F, '
     # regression only when that dwell is actually over the one-minute stall
     # budget.  The old enemy-id-only check rejected a healthy 740-frame fight
     # even after the controller reached the boss threshold.
-    if ($(col["max_combat_enemy"]) == 12 && $(col["max_combat_frames"]) > 3600) bad = "stalled on Flutterbat"
-    if ($(col["max_combat_frames"]) > 3600) bad = "combat dwell exceeded one minute"
+    if ($(col["max_target_stall_enemy"]) == 12 && $(col["max_target_stall_frames"]) > 3600) bad = "stalled on Flutterbat"
+    if ($(col["max_target_stall_frames"]) > 3600) bad = "combat no-progress exceeded one minute"
   }
   END {
     if (rows != 3) { print "[vespine-flutter] missing paired rows" > "/dev/stderr"; exit 1 }

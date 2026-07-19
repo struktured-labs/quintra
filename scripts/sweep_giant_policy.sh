@@ -57,7 +57,7 @@ for class in $CLASSES; do
         wins += $(col["victory"])
         if ($(col["max_room"]) > max_room) max_room = $(col["max_room"])
         if (rows == 1 || $(col["min_hp"]) < min_hp) min_hp = $(col["min_hp"])
-        if ($(col["max_combat_frames"]) > 3600 && $(col["min_hp"]) > 0) combat_stalls++
+        if ($(col["max_target_stall_frames"]) > 3600 && $(col["min_hp"]) > 0) combat_stalls++
         if ($(col["max_route_frames"]) > 3600) route_stalls++
       }
       END {

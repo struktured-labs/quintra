@@ -24,7 +24,7 @@ awk -F, '
     rows++
     if ($(col["max_room"]) < 32) weak = 1
     if ($(col["bosses"]) < 5) weak = 1
-    if ($(col["max_combat_frames"]) > 3600 && $(col["min_hp"]) > 0) stalled = 1
+    if ($(col["max_target_stall_frames"]) > 3600 && $(col["min_hp"]) > 0) stalled = 1
   }
   END {
     if (rows != 1) { print "[corvin-spore] missing deterministic row" > "/dev/stderr"; exit 1 }

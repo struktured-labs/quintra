@@ -58,6 +58,7 @@ struct Row {
     min_hp: u32,
     giant_overlap_damage: u32,
     max_combat_frames: u32,
+    max_target_stall_frames: u32,
     max_route_frames: u32,
     towns: u32,
     victory: u32,
@@ -141,6 +142,18 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                 // Old reports only retained the final room's dwell. Preserve
                 // their old end-state classification for historical summaries.
                 max_combat_frames: if has_run_maxima {
+                    number(&record, &columns, "max_combat_frames")?
+                } else if hostiles > 0 {
+                    final_room_frames
+                } else {
+                    0
+                },
+                // v0.18.30+ distinguishes true no-progress time on one
+                // hostile from whole-room combat residence. Older reports
+                // preserve their historical whole-room value as a fallback.
+                max_target_stall_frames: if columns.contains_key("max_target_stall_frames") {
+                    number(&record, &columns, "max_target_stall_frames")?
+                } else if has_run_maxima {
                     number(&record, &columns, "max_combat_frames")?
                 } else if hostiles > 0 {
                     final_room_frames
@@ -295,7 +308,7 @@ fn report(
         let boss_clears = sample.iter().filter(|row| row.bosses > 0).count();
         let combat_stalls = sample
             .iter()
-            .filter(|row| row.max_combat_frames > stall_frames && row.min_hp > 0)
+            .filter(|row| row.max_target_stall_frames > stall_frames && row.min_hp > 0)
             .count();
         let route_stalls = sample
             .iter()
@@ -306,7 +319,7 @@ fn report(
         println!(
             "[balance] {name:7} n={} room_med={} clear_med={} kill_med={} boss_med={} \
              boss1={boss_clears}/{} town_med={} shop_med={} buy_med={} shoppers={shop_runs}/{} dodge_med={} wins={wins} endings={endings} \
-             deaths={deaths} death_src={death_sources} boss_body_dmg_med={} combat_stalls={combat_stalls} route_stalls={route_stalls}",
+             deaths={deaths} death_src={death_sources} boss_body_dmg_med={} combat_dwell_med={} combat_stalls={combat_stalls} route_stalls={route_stalls}",
             sample.len(),
             median(sample.iter().map(|row| row.max_room)),
             median(sample.iter().map(|row| row.rooms_cleared)),
@@ -319,6 +332,7 @@ fn report(
             sample.len(),
             median(sample.iter().map(|row| row.dodges)),
             median(sample.iter().map(|row| row.giant_overlap_damage)),
+            median(sample.iter().map(|row| row.max_combat_frames)),
         );
         if wins < min_wins {
             failures.push(format!("{name} wins {wins}/{} < required {min_wins}", sample.len()));

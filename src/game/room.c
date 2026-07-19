@@ -1404,11 +1404,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
         }
         // Corvin's raven sight (perk 3): with no boss around, the bar
-        // reads a regular enemy's HP instead (max from the content table).
+        // reads a regular enemy's real spawn HP. The old content-table value
+        // ignored procgen's regular-room stage bonus, making a fully healthy
+        // late enemy look already chipped and delaying each bar segment's
+        // visible loss by several true hits.
         if (!found && player.class_id == 2 && corvin_i != 0xFF) {
             u8 eid = entities[corvin_i].ai_data[0];
             u8 max = (eid < N_ENEMIES) ? enemies[eid].stats.hp : 0;
             if (max) {
+                if (!run_state.world_mode
+                    && (run_state.room_counter % ROOMS_PER_STAGE) < 3) {
+                    u8 st = run_state.bosses_beaten;
+                    if (st > 24) st = 24;
+                    max = (u8)(max + 1 + (u8)(st >> 1));
+                }
                 // Elites carry doubled HP — double the reference too
                 if (entities[corvin_i].flags & EF_ELITE) max = (u8)(max << 1);
                 hud_redraw_boss(entities[corvin_i].hp, max);

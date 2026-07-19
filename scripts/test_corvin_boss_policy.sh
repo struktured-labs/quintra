@@ -21,7 +21,7 @@ awk -F, '
   {
     rows++
     bosses += $(col["bosses"])
-    if ($(col["max_combat_frames"]) > 3600 && $(col["min_hp"]) > 0)
+    if ($(col["max_target_stall_frames"]) > 3600 && $(col["min_hp"]) > 0)
       stalled = 1
   }
   END {

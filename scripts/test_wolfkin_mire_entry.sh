@@ -25,7 +25,7 @@ awk -F, '
     if ($(col["seed"]) != 2064128647) wrong_seed = 1
     if ($(col["max_room"]) < 29) stranded = 1
     if ($(col["min_hp"]) == 0) died = 1
-    if ($(col["max_combat_frames"]) > 7200) stalled = 1
+    if ($(col["max_target_stall_frames"]) > 7200) stalled = 1
   }
   END {
     if (rows != 1) { print "[wolfkin-mire-entry] missing fixed controller row" > "/dev/stderr"; exit 1 }

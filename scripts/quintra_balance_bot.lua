@@ -1089,6 +1089,10 @@ local debug_shot_room = -1
 local debug_spore_room = -1
 local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer = 0, 0
+-- Independent of the generic flank timer: it records unchanged HP on one
+-- selected hostile. This makes a combat-stall report mean "no progress",
+-- rather than merely "a procedurally busy room took a long time to clear".
+target_stall_frames = 0
 local spore_pressure_timer = 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
@@ -1108,6 +1112,7 @@ local purchases, last_coins = 0, 0
 local shop_visits, visited_shop_rooms = 0, {}
 local max_combat_frames, max_route_frames = 0, 0
 local max_combat_room, max_combat_enemy, max_route_room = 0, 255, 0
+max_target_stall_frames, max_target_stall_room, max_target_stall_enemy = 0, 0, 255
 local last_weapon = 255
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
@@ -1353,9 +1358,19 @@ while frames < LIMIT do
         else
             no_damage_frames = 0
         end
+        if target.slot == last_target_slot and target.hp >= last_target_hp then
+            target_stall_frames = target_stall_frames + 1
+        else
+            target_stall_frames = 0
+        end
+        if world_mode == 0 and target_stall_frames > max_target_stall_frames then
+            max_target_stall_frames = target_stall_frames
+            max_target_stall_room, max_target_stall_enemy = room, target.kind
+        end
         last_target_slot, last_target_hp = target.slot, target.hp
     else
         last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
+        target_stall_frames = 0
     end
     -- Dungeon rooms use normal loot/objective routing.  Riftwild intentionally
     -- ignores optional drops, but the one fixed Riftwell is a public recovery
@@ -1883,6 +1898,30 @@ while frames < LIMIT do
             and mp == mp_max and frames % 600 == 0 then
             keys = KEY_A + KEY_B + aim
         end
+        -- Ordinary dungeon encounters are deliberately not all arena locks.
+        -- On this paired Wolfkin route, a Hornet can edge-follow into a
+        -- generated shelf that the full hero body cannot enter.  Persisting
+        -- with the adjacent Claw turns that optional fight into a multi-minute
+        -- no-progress loop, even though the forward door is open.  After a
+        -- real six-second no-damage observation, take the same authored exit
+        -- a player can take.  Keep every sealed room, miniboss, boss, town,
+        -- and required Sigil room under its normal combat/objective policy.
+        optional_local_room = room % 6
+        optional_room_is_town = room > 18 and room % 18 == 1
+        -- A legitimate weapon pickup can turn Wolfkin's Claw into a lunge
+        -- before this room, but it does not make a Hornet behind cover
+        -- hittable. Scope the recovery to the champion, not its starter.
+        optional_hornet = CLASS == 0
+            and target.kind == 2 and target.giant == 0
+            and world_mode == 0 and not optional_room_is_town
+            -- Local room 1 is always before the stage's required Sigil vault
+            -- (local room 2), so its open forward exit cannot skip an
+            -- objective. The old guessed seed-parity seal test was wrong for
+            -- this live route and withheld the recovery from that open door.
+            and optional_local_room == 1
+        if optional_hornet and target_stall_frames > 360 then
+            keys = door_step(px, py) + KEY_A
+        end
     elseif shop then
         local dx, dy = shop.x - px, shop.y - py
         local direct
@@ -2386,11 +2425,12 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
-        max_combat_enemy, max_route_frames, max_route_room,
+        max_combat_enemy, max_target_stall_frames, max_target_stall_room,
+        max_target_stall_enemy, max_route_frames, max_route_room,
         hostiles, last_enemy, death_source, towns_seen, world_hops,
         won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses,
         boss_attempts, boss_attempt_frames, boss_clear_frames,
