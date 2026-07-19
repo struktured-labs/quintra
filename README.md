@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.30: True Sight](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.31: Signature Call](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.31 makes the champion choice actionable before the first dangerous
+room: the class screen now states the highlighted champion’s concrete
+**B-signature**—such as Sauran’s hit-blocking shield or Corvin’s three-way
+fan—and spells out the shared two-MP, cooldown-limited contract. The tutorial
+fits the native 20-column display without clipping, retains the live sprite
+preview and A/B controls, and is covered by the headless screen flow. This is
+clarity, not a stealth balance buff: damage, cooldown values, and every
+procedural encounter are unchanged.
 
 v0.18.30 fixes Corvin's **Raven Sight** boss bar for ordinary late-dungeon
 enemies: it now uses the enemy's actual procgen-scaled maximum HP, so a full

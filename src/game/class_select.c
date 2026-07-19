@@ -36,6 +36,18 @@ static const u16 cursor_palette[4] = {
     BGR555(31, 31,  4),
 };
 
+// The loadout names identify the controls, but they do not say what a first
+// B press actually does.  Keep these deliberately short: the class screen is
+// the only uninterrupted moment before the first room, and its 20-column
+// Game Boy text grid must not clip a tutorial sentence.
+static const char *const signature_tips[N_CLASSES] = {
+    "HOWL: 8-WAY WARD",      // Wolfkin
+    "SHIELD: BLOCK HITS",    // Sauran
+    "MURDER: 3-WAY FAN",     // Corvin
+    "WAVE: 3-BUBBLE",        // Picsean
+    "SWARM: FAN+WARD",       // Vespine
+};
+
 // Live 16x16 preview of the highlighted class, in its own colors.
 static void update_preview(void) {
     u8 base = (u8)(SPR_CLASS_BASE + (u8)(class_select_cursor * SPR_CLASS_STRIDE));
@@ -93,7 +105,13 @@ static void render(void) {
         }
     }
 
-    gotoxy(2, 16); text_write("A=START  B=BACK");
+    // Explain the selected signature in concrete play terms, rather than
+    // making the player infer it from a lore-flavoured item name in a live
+    // bullet room.  Every signature has the same MP cost/cooldown contract.
+    gotoxy(1, 15); text_write("B ");
+    text_write(signature_tips[class_select_cursor]);
+    gotoxy(1, 16); text_write("B USES 2 MP, THEN CD");
+    gotoxy(2, 17); text_write("A=START  B=BACK");
 }
 
 void class_select_enter(void) {
