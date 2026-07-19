@@ -113,6 +113,7 @@
 #define SPR_MERCHANT_CALLOUT 125 // proximity trade speech bubble
 #define SPR_ENEMY_DREAD_BELL SPR_MERCHANT_CALLOUT // combat-only late eight-way caster
 #define SPR_SURGE_ORB        126 // temporary weapon-speed/damage pickup
+#define SPR_TOWN_LOREKEEPER  SPR_SURGE_ORB // town-arrival storyteller; no active Surge there
 #define SPR_SHIELD_AURA      127 // Sauran Stoneskin orbiting ward shard
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
@@ -133,6 +134,7 @@ extern const u8 hud_tiles[][16];
 
 void tiles_load_pickup_sprites(void) BANKED;
 void tiles_load_town_waykeeper_sprite(void) BANKED;
+void tiles_load_town_lorekeeper_sprite(void) BANKED;
 void tiles_load_hud(void) BANKED;
 
 // Phase 12 metasprite loaders

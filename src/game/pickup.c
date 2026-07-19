@@ -127,6 +127,10 @@ u8 pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED {
     return pickup_spawn_resident(PICKUP_WAYKEEPER, SPR_TOWN_WAYKEEPER, 0x06, x, y);
 }
 
+u8 pickup_spawn_lorekeeper(fix8_t x, fix8_t y) BANKED {
+    return pickup_spawn_resident(PICKUP_LOREKEEPER, SPR_TOWN_LOREKEEPER, 0x05, x, y);
+}
+
 u8 pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_RIFTWELL, x, y);
     if (idx != 0xFF) {
@@ -154,7 +158,8 @@ u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
 
 static u8 pickup_is_town_resident(u8 kind) {
     return (kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY)
-        || kind == PICKUP_CARTOGRAPHER || kind == PICKUP_WAYKEEPER;
+        || kind == PICKUP_CARTOGRAPHER || kind == PICKUP_WAYKEEPER
+        || kind == PICKUP_LOREKEEPER;
 }
 
 // Context, not a purchase: reveal the nearest ware's price before the player
@@ -509,6 +514,13 @@ u8 pickup_check_player_collision(void) BANKED {
                     // A visual north-gate anchor. Unlike the healer and
                     // chartwright it never consumes a blessing or blocks a
                     // player who brushes past on the way to the next region.
+                    any = 1;
+                    continue;
+                case PICKUP_LOREKEEPER:
+                    // Town arrival gains a fourth civic silhouette without
+                    // another upgrade or hidden interaction. The Lorekeeper
+                    // is an authored lore fixture; the player-composed music
+                    // pass remains deliberately separate from this sprite.
                     any = 1;
                     continue;
                 case PICKUP_RIFTWELL:

@@ -781,6 +781,11 @@ void procgen_generate_current_room(void) BANKED {
                 // while the chartwright's free touch still scouts two cells.
                 spawn_shop_ware(48, 96, WARE_CHART, 15);
                 pickup_spawn_waykeeper(FIX8(80), FIX8(24));
+                // The arrival square now carries four distinct civic roles:
+                // healer, route reader, gate guide, and lore witness. This
+                // is deliberately visual-only—no additional free economy or
+                // combat power is hidden behind a background resident.
+                pickup_spawn_lorekeeper(FIX8(128), FIX8(112));
             } else if (run_state.world_return_screen == TOWN_MARKET) {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(48, 72, WARE_HEART, 5);

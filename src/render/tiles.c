@@ -53,6 +53,14 @@ static const u8 sprite_fx_waykeeper[16] = {
     0x3C, 0x7E, 0x24, 0x3C, 0x24, 0x3C, 0x42, 0x42,
 };
 
+// Town Lorekeeper: hood, raised quill, and a bright open scroll. The arrival
+// square has no active Surge pickup, so its temporary-orb slot becomes a
+// distinct civic resident without growing the CGB's full OBJ atlas.
+static const u8 sprite_fx_lorekeeper[16] = {
+    0x10, 0x10, 0x38, 0x28, 0x7C, 0x44, 0x5A, 0x66,
+    0x3C, 0x7E, 0x2C, 0x3C, 0x52, 0x52, 0x42, 0x42,
+};
+
 void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
@@ -65,6 +73,10 @@ void tiles_load_pickup_sprites(void) BANKED {
 
 void tiles_load_town_waykeeper_sprite(void) BANKED {
     set_sprite_data(SPR_TOWN_WAYKEEPER, 1, sprite_fx_waykeeper);
+}
+
+void tiles_load_town_lorekeeper_sprite(void) BANKED {
+    set_sprite_data(SPR_TOWN_LOREKEEPER, 1, sprite_fx_lorekeeper);
 }
 
 void tiles_load_all_class_sprites(void) BANKED {

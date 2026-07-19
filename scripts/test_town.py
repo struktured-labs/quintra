@@ -78,23 +78,36 @@ def main():
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
 
     # Screen 0: named arrival square, elder/fountain, chartwright, a paid
-    # full-route chart, and three authored exits. The two route-reading
-    # choices make villages useful between procgen dungeons rather than
-    # scenery.
+    # full-route chart, Lorekeeper, and three authored exits. The two route-
+    # reading choices make villages useful between procgen dungeons rather
+    # than scenery, while the fourth resident makes the civic space feel
+    # inhabited without changing the economy.
     enter_from_previous(19)
     assert pb.memory[rs + 19] == 0, "town did not begin in arrival square"
     elder = entities(7)
     chartwright = entities(12)
     waykeeper = entities(15)
+    lorekeeper = entities(17)
     assert len(elder) == 1 and pb.memory[elder[0] + 12] == 69
     assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 123
     assert len(waykeeper) == 1 and pb.memory[waykeeper[0] + 12] == 124, \
         "arrival square lacks its dedicated north-gate Waykeeper"
+    assert len(lorekeeper) == 1 and pb.memory[lorekeeper[0] + 12] == 126, \
+        "arrival square lacks its dedicated scroll-bearing Lorekeeper"
     # The Waykeeper safely borrows the Rune Lantern's 8x8 VRAM slot only in a
     # town. Keep the exact town bytes so the transition below proves a normal
     # dungeon entry restores combat art rather than merely despawning the NPC.
     pb.memory[0xFF4F] = 0
     waykeeper_tile = bytes(pb.memory[0x8000 + 124 * 16:0x8000 + 125 * 16])
+    assert waykeeper_tile == bytes((
+        0x18, 0x18, 0x3C, 0x24, 0x5A, 0x66, 0x5A, 0x7E,
+        0x3C, 0x7E, 0x24, 0x3C, 0x24, 0x3C, 0x42, 0x42,
+    )), f"town arrival did not load Waykeeper art: {waykeeper_tile.hex()}"
+    lorekeeper_tile = bytes(pb.memory[0x8000 + 126 * 16:0x8000 + 127 * 16])
+    assert lorekeeper_tile == bytes((
+        0x10, 0x10, 0x38, 0x28, 0x7C, 0x44, 0x5A, 0x66,
+        0x3C, 0x7E, 0x2C, 0x3C, 0x52, 0x52, 0x42, 0x42,
+    )), f"town arrival did not load Lorekeeper art into the Surge-orb slot: {lorekeeper_tile.hex()}"
     arrival_wares = entities(4)
     assert len(arrival_wares) == 1 and pb.memory[arrival_wares[0] + 18] == 7, \
         "arrival square lacks its dedicated Cartographer's Chart"
@@ -296,11 +309,6 @@ def main():
     assert pb.memory[rs + 19] == 0, "town-local screen leaked into dungeon state"
     assert pb.memory[rs + 20] == 0x3F and pb.memory[rs + 25] == 0, \
         f"paid Chart did not become a one-dungeon full compass reveal (seen={pb.memory[rs + 20]:02x}, queued={pb.memory[rs + 25]:02x})"
-    pb.memory[0xFF4F] = 0
-    lantern_tile = bytes(pb.memory[0x8000 + 124 * 16:0x8000 + 125 * 16])
-    assert lantern_tile != waykeeper_tile, \
-        "Waykeeper art leaked from town into the Rune Lantern combat slot"
-
     pb.stop(save=False)
     print("[town] PASS connected arrival + market + forge quarter + north continuation")
 

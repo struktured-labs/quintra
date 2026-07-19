@@ -188,6 +188,13 @@ static void room_load_dynamic_fx_identity(void) {
     }
 }
 
+static void room_load_town_resident_identity(void) {
+    if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) return;
+    tiles_load_town_waykeeper_sprite();
+    if (run_state.world_return_screen == TOWN_ARRIVAL)
+        tiles_load_town_lorekeeper_sprite();
+}
+
 // Progression fixtures belong to room orchestration, after procgen has fully
 // populated combat slots. Keeping them here prevents geometry/encounter code
 // from accidentally erasing a required key and makes the invariant testable.
@@ -759,8 +766,9 @@ void room_enter(void) {
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // small, specialist, and bruiser art
-    if (RUN_ROOM_IS_TOWN(run_state.room_counter))
-        tiles_load_town_waykeeper_sprite(); // safe town-only Rune Lantern slot reuse
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        room_load_town_resident_identity();
+    }
 
     hud_init();
     hud_show();
@@ -1659,7 +1667,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // the safe blanked rebuild path.
                 procgen_generate_current_room();
                 room_refresh_shop_wares();
+                // Town arrivals own two resident-only OBJ tiles. Unlike a
+                // streamed dungeon step, blank briefly before changing them.
+                if (RUN_ROOM_IS_TOWN(run_state.room_counter)) DISPLAY_OFF;
+                // draw_room_tilemap and the compass use CGB VRAM bank 1 for
+                // attributes. Sprite uploads always belong in bank 0; without
+                // this reset a streamed town entry can create its residents
+                // correctly while leaving their visible OBJ tile unchanged.
+                VBK_REG = 0;
                 room_load_dynamic_fx_identity();
+                room_load_town_resident_identity();
                 room_spawn_progression_fixture();
                 room_combat_sealed = room_should_combat_seal();
                 if (!run_state.world_mode && dir == DIR_E
