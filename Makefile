@@ -164,6 +164,7 @@ verify: all check-balance-bot
 	bash scripts/test_vespine_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_vespine_flutterbat_pathing.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_vespine_rope_escape.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_vespine_mirror_moth.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_balance_replay.sh $(BINDIR)/$(PROJECT).gbc
 
 # Release/hardware gate: static cartridge header plus a true battery-backed

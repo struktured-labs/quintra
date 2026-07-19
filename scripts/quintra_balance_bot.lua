@@ -1511,6 +1511,24 @@ while frames < LIMIT do
             else
                 keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
             end
+        elseif target.kind == 16 then
+            -- Mirror Moths move opposite the hero's last cardinal input.
+            -- They only step every third tick, so sustained pursuit closes
+            -- the gap despite that reflection. Their slow bolt is the real
+            -- trap: ordinary dodge input repeatedly abandons the pursuit and
+            -- leaves a short weapon outside its lane. Hold the body-valid
+            -- chase until the real weapon has a cardinal shot.
+            local adx, ady = math.abs(dx), math.abs(dy)
+            local reach = adx > ady and adx or ady
+            local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
+            local mirror_range = held_style == "spear" and 88
+                or held_style == "lunge" and 52
+                or held_style == "flail" and 56 or 60
+            if reach <= mirror_range and offaxis <= 5 then
+                keys = KEY_A + aim
+            else
+                keys = target_step(px, py, target.x, target.y, aim, 0)
+            end
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
@@ -1927,7 +1945,7 @@ while frames < LIMIT do
     -- pilot may still take a hit, but it can now demonstrate whether the
     -- hazard is killable rather than endlessly dodging at the room's edge.
     local threat = nil
-    if not target or target.kind ~= 10 then
+    if not target or (target.kind ~= 10 and target.kind ~= 16) then
         threat = projectile_threat(px, py)
     end
     -- Picsean's Tidal Wave grants a brief body-blocking Undertow guard. In
