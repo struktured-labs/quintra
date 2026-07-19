@@ -323,9 +323,13 @@ static void charger_tick(entity_t *e, const enemy_def_t *def) {
 // ---------------- Shooter: drift + aimed shots ---------------------------
 
 static void shooter_tick(entity_t *e, const enemy_def_t *def) {
-    // Slow wander (half walker cadence) + fire toward player on a timer.
+    // Slow wander + fire toward player on a timer. Authoring speed normally
+    // describes the body, but Shooters historically ignored it and every
+    // caster drifted at the same rate. Fast (72+) harriers now move every
+    // four ticks; established casters retain the original eight-tick beat.
     // ai_data[1] = fire countdown.
-    if ((e->state_timer & 0x07) == 0) {
+    u8 drift_mask = (def->stats.speed >= 72) ? 0x03 : 0x07;
+    if ((e->state_timer & drift_mask) == 0) {
         i8 dx = dir8_dx[e->state & 0x07];
         i8 dy = dir8_dy[e->state & 0x07];
         if (!enemy_try_step(e, dx, dy)) {

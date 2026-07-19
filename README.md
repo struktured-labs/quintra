@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.11: Dusk Midge](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.12: Fast Midge](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.12 fixes a Dusk Midge identity bug: its authored **80 speed** now drives
+its Shooter drift, so it changes lanes twice as often as established casters
+instead of only claiming to be fast in its data. The threshold is intentionally
+narrow—only 72+ speed Shooter harriers accelerate—so existing Wisp, Warlock,
+Cinder Maw, Rune Lantern, Dread Bell, and Rift Warden cadence is unchanged.
+Live-ROM coverage now proves a procedurally spawned Bloodmoon Midge, its
+three-lane fan, and its real two-step/eight-tick drift.
 
 v0.18.11 adds the **Dusk Midge**, a fragile late-run harrier that drifts fast
 and fires a narrow three-shot fan. It appears at a deliberately low 7–8%
@@ -853,7 +861,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.11)
+### Current conference evidence (v0.18.12)
 
 - Functional ROM contracts pass, including the first-Colossus health budget,
   giant body-contact recovery, Skeleton clearance, score/Sigil stability, and

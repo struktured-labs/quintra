@@ -53,6 +53,8 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, midge + 2, 64)
         put_fix8(pb, midge + 6, 64)
+        pb.memory[midge + 15] = 2  # state: east; dir8[2] is +X.
+        pb.memory[midge + 16] = 0  # state_timer: start a measured drift beat.
         pb.memory[midge + 18] = 0  # Shooter ai_data[1]: fire this update.
         put16(pb, PL + 9, 112)
         put16(pb, PL + 11, 64)
@@ -69,6 +71,16 @@ def main():
                                 vy - 256 if vy >= 128 else vy))
         assert len(hostile) == 3, f"Dusk Midge fan emitted {len(hostile)} shots: {hostile}"
         assert len(set(hostile)) == 3, f"Dusk Midge fan lost its three lanes: {hostile}"
+
+        # The Midge's authored 80 speed must affect the shared Shooter AI,
+        # rather than merely looking "fast" in generated content. Eight
+        # ticks include its first and fifth body beats: exactly two eastward
+        # pixels, while legacy casters retain their one-per-eight cadence.
+        for _ in range(7):
+            pb.tick()
+        assert pb.memory[midge + 3] == 66, (
+            f"Dusk Midge ignored its fast drift cadence: x={pb.memory[midge + 3]}"
+        )
 
     for seed in (
         0xD05C0000, 0xD05C0001, 0xD05C0002, 0xD05C0003,
