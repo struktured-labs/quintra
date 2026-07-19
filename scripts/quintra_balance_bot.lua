@@ -1085,6 +1085,7 @@ local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 -- same double-tap dash available to a player.  This is deliberately not an
 -- HP, position, or iframe write.
 local body_dash_frames, body_dash_source = 0, 255
+local last_body_hit_source, last_body_hit_frame, body_hit_streak = 255, -120, 0
 -- Once a feet box lands on spikes, keep one escape lane until it has truly
 -- crossed a safe tile. Re-choosing every pixel can ping-pong on a wall seam.
 local spike_escape_dir = 0
@@ -1168,7 +1169,21 @@ while frames < LIMIT do
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
             if threat and threat.giant == 0 then
-                body_dash_frames, body_dash_source = 16, threat.kind
+                -- One ordinary scrape is part of the intended pressure. A
+                -- repeated hit from this same body within 90 frames is the
+                -- wall-pin signature: dash only then, so a successful lane
+                -- is not needlessly diverted by its first contact mistake.
+                if threat.kind == last_body_hit_source
+                    and frames - last_body_hit_frame <= 90 then
+                    body_hit_streak = body_hit_streak + 1
+                else
+                    body_hit_streak = 1
+                end
+                last_body_hit_source, last_body_hit_frame = threat.kind, frames
+                if body_hit_streak >= 2 then
+                    body_dash_frames, body_dash_source = 16, threat.kind
+                    body_hit_streak = 0
+                end
             end
         end
         -- This does not guess the exact source of a mixed collision frame.
