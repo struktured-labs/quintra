@@ -1036,6 +1036,19 @@ void procgen_generate_current_room(void) BANKED {
                     // Roster comes from the generated per-stage pool —
                     // designed in content/src/stages.rs, not hard-coded here.
                     u8 eid = pick_enemy_for_stage(run_state.bosses_beaten);
+                    // Mire Spores arm inside a 40px Manhattan radius. An
+                    // ordinary three-tile entry rejection can still place a
+                    // mine roughly 24px from the arriving feet box, forcing
+                    // its fuse before the player has a readable first move.
+                    // Keep this stationary hazard six tile cells away on
+                    // both axes; other enemies retain the denser normal
+                    // entrance rule, and a rejected mine simply consumes one
+                    // bounded placement attempt rather than reshuffling room
+                    // geometry or the stage roster.
+                    if (eid == ENEMY_MIRE_SPORE
+                        && (tx > ptx ? (u8)(tx - ptx) : (u8)(ptx - tx)) < 6
+                        && (ty > pty ? (u8)(ty - pty) : (u8)(pty - ty)) < 6)
+                        continue;
                     {
                         u8 idx = enemy_spawn(eid, tx, ty);
                         // Every regular foe survives one more starter hit;

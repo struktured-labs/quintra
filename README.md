@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.28: Gloam Bramble](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.29: Readable Mire](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,16 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.29 makes **Toxic Mire** fairer without making it gentler. A stationary
+**Mire Spore** now needs a six-tile-by-six-tile buffer from a room entrance;
+the old general spawn rule could place a mine close enough to arm during the
+arrival step, particularly punishing Wolfkin's actual-melee route before a
+player could read the room. Other foes retain their normal three-tile entry
+rule, room density and stage pools are unchanged, and rejected mine placements
+use the existing bounded retry budget. A fixed-seed, live-controller cartridge
+test reproduces the affected route and requires it to pass the Mire entry,
+stay alive, and avoid a combat stall.
 
 v0.18.28 gives **Shadow Keep** a new low-weight procedural enemy: the
 **Gloam Bramble**. It circles at a generous 44px thorn-ring and sends a slow,
