@@ -457,7 +457,9 @@ end
 -- Player shots originate at +2 with a 7px hitbox. A direction that looks
 -- cardinal from sprite origins can still start inside a wall seam (or sail
 -- beside an 8px foe), so use the projectile's real centerline before asking
--- a short weapon to commit to a shot.
+-- a short weapon to commit to a shot. Spikes are walkable hazard floor, not
+-- projectile cover: body routing avoids them, but a bolt may correctly cross
+-- a Toxic Mire pool to punish a mine planted inside it.
 local function projectile_lane_clear(px, py, ex, ey, aim)
     local sx, sy = px + 6, py + 6
     local gx, gy = ex + 4, ey + 4
@@ -465,14 +467,14 @@ local function projectile_lane_clear(px, py, ex, ey, aim)
         if py + 9 <= ey or ey + 8 <= py + 2 then return false end
         local lo, hi = math.min(sx, gx), math.max(sx, gx)
         for x = lo, hi do
-            if not path_walkable(tile_at_px(x, sy)) then return false end
+            if not walkable(tile_at_px(x, sy)) then return false end
         end
         return true
     end
     if px + 9 <= ex or ex + 8 <= px + 2 then return false end
     local lo, hi = math.min(sy, gy), math.max(sy, gy)
     for y = lo, hi do
-        if not path_walkable(tile_at_px(sx, y)) then return false end
+        if not walkable(tile_at_px(sx, y)) then return false end
     end
     return true
 end
@@ -580,14 +582,15 @@ local function clear_cardinal_lane(x, y, gx, gy)
     if x == gx then
         local lo, hi = math.min(y, gy) + 1, math.max(y, gy) - 1
         for ty = lo, hi do
-            if not path_walkable(emu:read8(TM + ty * 20 + x)) then return false end
+            -- Spikes constrain feet routes, not a weapon's line of fire.
+            if not walkable(emu:read8(TM + ty * 20 + x)) then return false end
         end
         return true
     end
     if y == gy then
         local lo, hi = math.min(x, gx) + 1, math.max(x, gx) - 1
         for tx = lo, hi do
-            if not path_walkable(emu:read8(TM + y * 20 + tx)) then return false end
+            if not walkable(emu:read8(TM + y * 20 + tx)) then return false end
         end
         return true
     end
@@ -1073,6 +1076,7 @@ local debug_shot_room = -1
 local debug_spore_room = -1
 local last_target_slot, last_target_hp = -1, 255
 local no_damage_frames, flank_timer = 0, 0
+local spore_pressure_timer = 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
 -- Once a feet box lands on spikes, keep one escape lane until it has truly
@@ -1467,14 +1471,27 @@ while frames < LIMIT do
                 local spore_range = held_style == "spear" and 90
                     or held_style == "flail" and 55
                     or held_style == "lunge" and 52 or 160
-                local spore_step, spore_ready = spore_pixel_step(
-                    room, px, py, target.x, target.y, aim, spore_range)
-                -- Do not spend a shot while walking into a lane: the D-pad
-                -- steers both motion and aim, so a route's sideways step used
-                -- to fire past the mine. This applies to swapped long weapons
-                -- too: Tail Spike and Flail can punish from outside the fuse,
-                -- while the true-melee Claw still takes the post-blast route.
-                keys = spore_ready and (KEY_A + spore_step) or spore_step
+                if no_damage_frames > 240 then
+                    -- A pixel-perfect mine-safe route can oscillate around
+                    -- generated cover without ever exposing a firing lane.
+                    -- Break it only after four seconds of unchanged HP, then
+                    -- retry safety once the bounded body-valid reroute ends.
+                    no_damage_frames, spore_pressure_timer = 0, 180
+                    spore_pixel_route = nil
+                end
+                if spore_pressure_timer > 0 then
+                    spore_pressure_timer = spore_pressure_timer - 1
+                    keys = KEY_A + target_step(px, py, target.x, target.y, aim, 12)
+                else
+                    local spore_step, spore_ready = spore_pixel_step(
+                        room, px, py, target.x, target.y, aim, spore_range)
+                    -- Do not spend a shot while walking into a lane: the D-pad
+                    -- steers both motion and aim, so a route's sideways step used
+                    -- to fire past the mine. This applies to swapped long weapons
+                    -- too: Tail Spike and Flail can punish from outside the fuse,
+                    -- while the true-melee Claw still takes the post-blast route.
+                    keys = spore_ready and (KEY_A + spore_step) or spore_step
+                end
             else
                 keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
             end
