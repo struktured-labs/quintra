@@ -1972,6 +1972,24 @@ while frames < LIMIT do
             keys = actions + KEY_LEFT
         end
     end
+    -- A small hostile can share the outer sprite strip while the champion's
+    -- feet are clipped against the screen border. Cardinal aim then points
+    -- along the wall and a short melee weapon repeatedly spends its attack
+    -- into the boundary. Step one body-width inward before resuming combat;
+    -- this is normal D-pad play and applies only when both bodies are in the
+    -- same champion-width edge strip, never during an ordinary doorway
+    -- crossing.
+    if target and world_mode == 0 then
+        if py <= 12 and target.y <= 12 then
+            keys = KEY_DOWN
+        elseif py >= 116 and target.y >= 116 then
+            keys = KEY_UP
+        elseif px <= 12 and target.x <= 12 then
+            keys = KEY_RIGHT
+        elseif px >= 132 and target.x >= 132 then
+            keys = KEY_LEFT
+        end
+    end
     -- Direct combat, dodge, and dash inputs do not all travel through the
     -- tile BFS. Keep those tactical overrides from newly entering the exact
     -- feet-center spike tile the cartridge itself damages. If the body is

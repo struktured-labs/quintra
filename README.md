@@ -812,7 +812,9 @@ forge/apothecary quarter before taking a town's north gate, and records
 `town_market_visits` / `town_quarter_visits` separately so that choice is
 verifiable. It mirrors the cartridge's feet-center spike test before allowing
 a tactical dodge or attack movement, and creates space from ordinary bodies
-before short-range champions are forced into repeated contact trades. These
+before short-range champions are forced into repeated contact trades. When a
+hostile shares the champion's outer 12px screen strip, it first steps back
+into the room rather than aiming a short weapon into the boundary. These
 are controller-only safety
 rules: the agent still changes the run solely through normal button input.
 If it reaches a Sigil-gated sanctuary without that stage's fixture, it now
