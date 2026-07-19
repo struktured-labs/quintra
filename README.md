@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.34: Tighter Colossi](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.35: Fresh Run Clocks](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.35 fixes a hidden fresh-run fairness issue: partial passive-regeneration
+clocks can no longer survive a death or completed run and alter the next
+champion's timing. MP trickle and Sauran's **Scaled Hide** still retain their
+partial cadence across ordinary doors and menus within a run; `player_clear`
+now resets them only before a newly selected champion is initialized. A live
+cartridge regression advances Scaled Hide halfway, dies through a real hostile
+projectile, returns through GAME OVER and title, reselects Sauran, and proves
+that the next half-heart arrives on the new full 1,800-frame cadence.
 
 v0.18.34 makes **Frost Vault onward** fairer at close range without turning
 bosses into lower-pressure encounters. Their 32px sprites, HP, projectile
@@ -1089,7 +1098,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.34 release and fresh endurance matrix)
+### Current conference evidence (v0.18.35 release; v0.18.34 fresh endurance matrix)
 
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
@@ -1100,7 +1109,8 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   first-Colossus health budget, giant body-contact recovery, Skeleton
   clearance, score/Sigil stability, two-heart one-use Riftwell recovery,
   Frost Lancer's Frost Vault spawn/art/charge, the later-Colossus contact-body
-  contract, and the full boss identity suite.
+  contract, the fresh-run passive-clock reset, and the full boss identity
+  suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel and live title capture are hash-checked against the release ROM in
   `docs/media/gameplay.json`.

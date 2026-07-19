@@ -9,6 +9,9 @@ player_state_t player;
 
 void player_clear(void) {
     u8 i;
+    // Passive clocks are gameplay progress within one run, never hidden
+    // carryover from the previous champion/death screen.
+    room_reset_passive_timers();
     player.class_id = 0xFF;
     player.hp_max = player.hp = 0;
     player.mp_max = player.mp = 0;

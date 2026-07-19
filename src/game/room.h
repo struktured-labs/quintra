@@ -45,6 +45,9 @@ void room_break_pot(u8 tx, u8 ty) BANKED;
 // mag = pixels (1-2 sensible); longer of current/new duration wins.
 void room_shake(u8 mag, u8 frames) BANKED;
 void room_start_weapon_surge(void) BANKED;
+// Passive HP/MP clocks continue through ordinary rooms but must never carry
+// from a dead/completed run into a newly initialized champion.
+void room_reset_passive_timers(void) BANKED;
 
 // Request that the next room_enter resume the CURRENT room (skip procgen)
 // instead of generating a new one — used when returning from the pack screen.

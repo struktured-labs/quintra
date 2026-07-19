@@ -59,6 +59,11 @@ static u8 shop_offer_visible;
 // Set once when a room is generated.  Price proximity must never put a
 // 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
 static u8 room_has_shop_wares;
+// These are run-scoped, not room-scoped: passive trickles should retain their
+// partial progress through doors/menus, but player_clear resets them before a
+// brand-new champion is initialized.
+static u8 mp_regen;
+static u16 hp_regen;
 u8 room_combat_sealed;
 u8 room_sigil_status;
 
@@ -105,6 +110,11 @@ void room_start_weapon_surge(void) BANKED {
     room_shake(1, 10);
     fx_spawn(SPR_SURGE_ORB, 0x06, (i16)player.x + 4, (i16)player.y - 6, 18);
     sfx_play(SFX_ROAR);
+}
+
+void room_reset_passive_timers(void) BANKED {
+    mp_regen = 0;
+    hp_regen = 0;
 }
 
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
@@ -1344,7 +1354,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // MP trickle: +1 every ~3.2s while below max — Picsean's
         // MP-attuned passive (perk 4) regenerates twice as fast.
         if (player.mp < player.mp_max) {
-            static u8 mp_regen;
             u8 thresh = (player.class_id == 3) ? 96 : 192;
             if (++mp_regen >= thresh) {
                 mp_regen = 0;
@@ -1356,7 +1365,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // Sauran's scaled hide (perk 2): slow HP regen, one half-heart
         // per ~53s of active play.
         if (player.class_id == 1 && player.hp < player.hp_max) {
-            static u16 hp_regen;
             if (++hp_regen >= 1800) {
                 hp_regen = 0;
                 player.hp++;
