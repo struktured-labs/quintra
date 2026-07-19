@@ -361,6 +361,10 @@ local function walkable(tile)
     return tile == 1 or tile == 3 or tile == 19 or tile == 20
         or tile == 23 or tile == 31 or tile == 33 or tile == 34
         or tile == 7 or (tile >= 9 and tile <= 18)
+        -- Match room_tile_walkable() in the actual ROM: both villages and
+        -- Riftwild use these outdoor surfaces.  Treating them as town-only
+        -- made the input agent believe its valid wilderness route was solid.
+        or tile == 35 or tile == 36
 end
 
 -- Strategic routes avoid known floor hazards when a safe lane exists. Pixel
@@ -370,18 +374,8 @@ local function path_walkable(tile)
     return tile ~= 31 and walkable(tile)
 end
 
--- Towns intentionally use grass and paths as their open floor. Keep that
--- knowledge scoped here rather than broadening the Riftwild policy: outdoor
--- combat routes still need their established conservative collision model.
-local function town_navigation_active()
-    if RS == 0 or emu:read8(RS + 17) ~= 0 then return false end
-    local room = emu:read8(RS + 1)
-    return room > 18 and room % 18 == 1
-end
-
 local function navigation_walkable(tile)
     return path_walkable(tile)
-        or (town_navigation_active() and (tile == 35 or tile == 36))
 end
 
 local function body_walkable(cx, cy)
@@ -427,13 +421,7 @@ end
 local function pixel_walkable(x, y)
     if x < 0 or x >= 160 or y < 0 or y >= 136 then return false end
     local tile = emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
-    -- Keep the established Riftwild collision policy intact, but mirror the
-    -- cartridge's walkable grass/trail specifically for village lanes. The
-    -- controller previously entered a town through direct input, then its
-    -- pixel-safety check called the return doorway blocked and overwrote the
-    -- correct west/east input with an unstick drift.
     return walkable(tile)
-        or (town_navigation_active() and (tile == 35 or tile == 36))
 end
 
 local function can_step(px, py, key)
@@ -937,21 +925,12 @@ local function door_step(px, py)
         if can_step(px, py, secondary) then return secondary end
         return primary
     end
-    if in_world and world_screen ~= 6 then
-        local direct = CARD_KEYS[wanted + 1]
-        if can_step(px, py, direct) then return direct end
-        local side_a, side_b
-        if wanted == 1 or wanted == 3 then
-            side_a = py < 60 and KEY_DOWN or KEY_UP
-            side_b = side_a == KEY_DOWN and KEY_UP or KEY_DOWN
-        else
-            side_a = px < 72 and KEY_RIGHT or KEY_LEFT
-            side_b = side_a == KEY_RIGHT and KEY_LEFT or KEY_RIGHT
-        end
-        if can_step(px, py, side_a) then return side_a end
-        if can_step(px, py, side_b) then return side_b end
-        return direct
-    end
+    -- Outdoor screens use the same small body-aware BFS as a dungeon room.
+    -- Holding the coarse cardinal toward an east/west exit works in open
+    -- grass, but can strand the controller against a tree line above or
+    -- below the two-tile doorway while a Hornet keeps contact pressure on.
+    -- The graph target below retains the authored route; its final approach
+    -- centers the real feet box before crossing the screen boundary.
     local qx, qy, head, tail = {}, {}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
     local start = sy * 20 + sx
@@ -1268,9 +1247,15 @@ while frames < LIMIT do
     if body_dash_frames > 0 then body_dash_frames = body_dash_frames - 1 end
     -- Overworld encounters are optional traversal pressure. Follow the
     -- authored route while firing instead of treating every screen as a
-    -- mandatory clear; dungeon combat remains fully engaged.
+    -- mandatory clear.  Corvin's slow returning blade is the one measured
+    -- exception: a body that has actually entered its 16px lane physically
+    -- prevents progress, so engage only that blocker until the route opens.
+    -- The melee champions retain their independently tested flee policies.
     local overworld_threat = world_mode == 1 and target or nil
-    if world_mode == 1 then target = nil end
+    local world_blocker = CLASS == 2 and overworld_threat
+        and math.max(math.abs(overworld_threat.x - px),
+            math.abs(overworld_threat.y - py)) <= 16
+    if world_mode == 1 then target = world_blocker and overworld_threat or nil end
     if DEBUG and frames % 600 == 0 and RS ~= 0 then
         local portal_x, portal_y = -1, -1
         if TM ~= 0 then
@@ -1841,15 +1826,12 @@ while frames < LIMIT do
         local flee_radius = 56
         if math.max(math.abs(dx), math.abs(dy)) < flee_radius then
             local flee
-            -- If the next authored exit is physically open, taking it beats
-            -- a local sidestep: a monster behind the hero cannot keep dealing
-            -- contact damage across a screen boundary. This preserves the
-            -- public graph rather than inventing an evasive shortcut.
-            local wanted = WORLD_ROUTE[world_screen + 1]
-            local forward = wanted and CARD_KEYS[wanted + 1] or 0
-            if forward ~= 0 and can_step(px, py, forward) then
-                flee = forward
-            end
+            -- Prefer the graph-aware exit step over a local flee.  It has
+            -- already selected and centered the actual door; a raw "away"
+            -- move can keep the pilot in the enemy's lane forever instead
+            -- of ending this optional encounter by crossing the boundary.
+            local route = door_step(px, py)
+            if route ~= 0 and can_step(px, py, route) then flee = route end
             if flee == nil and math.abs(dx) >= math.abs(dy) then
                 flee = dx >= 0 and KEY_LEFT or KEY_RIGHT
             elseif flee == nil then
@@ -2047,7 +2029,9 @@ while frames < LIMIT do
     -- Generic unstick/dodge recovery is useful in a sealed dungeon room, but
     -- must not erase a real Riftwild body-avoidance decision. Reapply the
     -- collision-checked flee step immediately before the world-edge guard.
-    if world_flee ~= 0 and not world_guard_requested then keys = world_flee + KEY_A end
+    if world_flee ~= 0 and not world_guard_requested and not world_blocker then
+        keys = world_flee + KEY_A
+    end
     -- A dodge may override door_step for several frames. Keep it from
     -- carrying the agent through a non-route Riftwild boundary and undoing
     -- an entire authored graph hop; preserve A/B while steering inward.
