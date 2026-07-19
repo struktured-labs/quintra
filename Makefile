@@ -215,15 +215,15 @@ policy-sweep: all check-balance-bot
 # Long-form pre-show soak: three entropy samples per champion and enough
 # emulated time for a cautious full clear. Every champion must clear twice;
 # missing reports, skipped economies, and live-enemy/route stalls fail the target.
-# Every released enemy ID through Toxic Mire's Bog Toad (26) must appear in
-# the fresh controller matrix. This prevents a passing soak from silently
+# Every released enemy ID through Shadow Keep's Gloam Bramble (27) must appear
+# in the fresh controller matrix. This prevents a passing soak from silently
 # omitting a newly released procedural encounter from coverage.
 endurance: all check-balance-bot
 	QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_FRAMES=90000 \
 	QUINTRA_BALANCE_MIN_WINS=2 QUINTRA_BALANCE_MIN_SHOP_RUNS=3 \
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 \
 	QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
-	QUINTRA_BALANCE_REQUIRED_ENEMIES='0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26' \
+	QUINTRA_BALANCE_REQUIRED_ENEMIES='0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27' \
 	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc

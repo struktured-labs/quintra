@@ -1031,16 +1031,16 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   gate remains two nine-boss endings per champion over three entropy samples
   with zero combat/route stalls. The latest 15-row, private-SRAM,
   controller-only matrix (three 90k-frame entropy samples per champion) has
-  Picsean at **3/3 endings**, Wolfkin and Sauran at **1/3**, and Corvin and
+  Picsean at **2/3 endings**, Wolfkin and Sauran at **1/3**, and Corvin and
   Vespine at **0/3**. Median boss clears are 6, 2, 7, 9, and 6 respectively;
-  every champion clears boss one in all three samples. The combined matrix
-  exercised the full enemy roster and procedural shops with **zero combat or
-  route stalls**: the prior Picsean Rune-Lantern cover orbit is repaired by a
-  collision-aware input route to a valid cardinal lane. Giant body contact is
+  every champion clears boss one in all three samples. The refreshed matrix
+  exercised all **28** released enemy IDs—including Shadow Keep's Gloam
+  Bramble—and procedural shops. It recorded zero route stalls and one
+  Picsean combat dwell above the strict threshold. Giant body contact remains
   the leading observed death source for the four non-completing kits. The
-  remaining delivery-bar problem is therefore long-run survival, not a
-  progression or automation deadlock, and the next balance work remains
-  focused there rather than declaring the route complete.
+  remaining delivery-bar problem is therefore long-run survival and one
+  controller route, not a progression deadlock, and the next balance work
+  remains focused there rather than declaring the route complete.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
