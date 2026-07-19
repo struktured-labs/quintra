@@ -166,8 +166,9 @@ static void room_load_dynamic_fx_identity(void) {
     // Chartwright occupies this slot only in towns. Dungeon rooms reclaim it
     // for Astral Spear; no gameplay population can require both at once.
     if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) tiles_load_spear_sprite();
-    if (!run_state.world_mode && !RUN_ROOM_IS_TOWN(run_state.room_counter)
-        && !room_state_has_shop_wares()) {
+    // room_state_has_shop_wares() already covers towns as well as dungeon
+    // shops, so it is the single exclusion for this combat-only sprite set.
+    if (!run_state.world_mode && !room_state_has_shop_wares()) {
         tiles_load_dread_bell_sprite();
         tiles_load_rift_warden_sprite();
         tiles_load_prism_skitter_sprite();
