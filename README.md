@@ -1114,7 +1114,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.35 release; v0.18.34 fresh endurance matrix)
+### Current conference evidence (v0.18.36 release; v0.18.35 all-class matrix)
 
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
@@ -1130,6 +1130,13 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel and live title capture are hash-checked against the release ROM in
   `docs/media/gameplay.json`.
+- **v0.18.36 late-boss validation:** three fresh-SRAM, 90k-frame Picsean
+  routes all reached boss nine and **2/3** reached the ending—the same ending
+  rate as the prior baseline. From Frost Vault onward, median boss-clear time
+  is now **1,084–1,791 frames** (about 18–30 seconds), rather than a powered
+  build deleting the back half in a few rapid-fire beats. The live cartridge
+  regression also proves the three-damage Rift Armor cap at both Frost Vault
+  and the Void Lord.
 - The current cart has been smoke-tested on an **Analogue Pocket** and an
   **IPS-modded Game Boy Color**, in addition to emulator coverage.
 - **Music composition remains a creator-owned release task**: the current
