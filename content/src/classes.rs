@@ -12,11 +12,11 @@ pub const WOLFKIN: Class = Class {
     starter_weapon: ITEM_CLAW_COMBO,
     signature_active: ITEM_HOWL,
     passive_perk:  PERK_MOVE_SPEED_PLUS_20,
-    // Claw Combo requires sustained body-range contact. Five hearts keeps the
+    // Claw Combo requires sustained body-range contact. Six hearts keeps the
     // dedicated melee champion sturdier than the faster, harder-hitting
-    // Vespine without approaching Sauran's seven-heart tank identity.
+    // Vespine while remaining below Sauran's seven-heart tank identity.
     base_stats: BaseStats {
-        hp_max: 10,  // 5 hearts
+        hp_max: 12,  // 6 hearts
         mp_max: 4,
         atk:    2,
         def:    1,

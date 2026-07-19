@@ -3,6 +3,6 @@
 
 // Single cartridge-facing release string. It has at most eight characters so
 // it shares the title footer with "SEL RECORDS" on the 20-column display.
-#define QUINTRA_VERSION "v0.18.22"
+#define QUINTRA_VERSION "v0.18.23"
 
 #endif

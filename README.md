@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.22: The Lorekeeper](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.23: Six Hearts, One Claw](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.23 gives **Wolfkin** a sixth starting heart. The dedicated true-melee
+champion still stays below Sauran's seven-heart tank reserve, but now has one
+more readable recovery beat when body-range combat and stage hazards overlap.
+Matched controller-only endurance samples improve Wolfkin from a four-boss
+plateau to seven bosses on two seeds, with no combat or route stalls; the
+third seed still provides meaningful early-run pressure. Howl remains the
+same two-MP, short-ward commitment—not a stealth shield or damage increase.
 
 v0.18.22 gives every three-dungeon town arrival a fourth civic resident: the
 **Lorekeeper**, a scroll-bearing witness to Quintra's five-spirit myth. It is
@@ -512,7 +520,7 @@ an unreachable live enemy and seal progression.
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
-  Conference endurance floors give true-melee Wolfkin five hearts, ranged
+  Conference endurance floors give true-melee Wolfkin six hearts, ranged
   Corvin six, Picsean seven, and close-range Vespine five-and-a-half
   while preserving their low-DEF specialist identities; Picsean's Tidal Wave
   raises a brief water barrier while its three bubble lanes erupt, and its
@@ -946,7 +954,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.22)
+### Current conference evidence (v0.18.23)
 
 - Functional ROM contracts pass, including honest capped coin pickups,
   Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the
@@ -966,11 +974,12 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   Picsean at that floor (2/3 wins). After correcting Sauran's Tail Spike pilot
   to honor its 48px lane, its three fresh long seeds contain one nine-boss
   ending and **zero** combat/route stalls; the other two are real deaths.
-  Wolfkin, Corvin, and Vespine remain below the target.
-  The new short paired first-boss pilot improves Wolfkin to 2/3 clears and
-  Vespine to 3/3 without a stall, but that is an onboarding signal, not a
-  replacement for the long-run gate. The next balance work is therefore still
-  focused on their long-run survivability, not on declaring the route solved.
+  Wolfkin, Corvin, and Vespine remain below the target. Wolfkin's sixth heart
+  raises fresh matched long samples to seven, seven, and three boss clears
+  (the first two reach the second town) with zero stalls; that is a material
+  true-melee fairness improvement, not a claim that the nine-boss ending gate
+  is solved. The next balance work remains focused on their long-run
+  survivability rather than declaring the route complete.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without

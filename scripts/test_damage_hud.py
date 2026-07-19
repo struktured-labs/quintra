@@ -128,6 +128,10 @@ def main():
     for _ in range(80):
         pb.tick()
     assert pb.memory[SCREEN] == 5
+    assert (pb.memory[PL], pb.memory[PL + 1], pb.memory[PL + 2]) == (0, 12, 12), (
+        "Wolfkin no longer starts with the promised six-heart reserve: "
+        f"class={pb.memory[PL]} hp_max={pb.memory[PL + 1]} hp={pb.memory[PL + 2]}"
+    )
 
     # Force a known four-heart state and let the public HUD redraw path settle.
     pb.memory[PL + 1] = 8
@@ -165,7 +169,8 @@ def main():
         "Void Lord body-contact recovery is no longer the promised 45 frames"
     assert_spike_stumble(pb)
     pb.stop(save=False)
-    print("[damage-hud] OK: heart redraw, 30/60/45-frame recovery, safe spike stumble")
+    print("[damage-hud] OK: Wolfkin six-heart start, heart redraw, "
+          "30/60/45-frame recovery, safe spike stumble")
 
 
 if __name__ == "__main__":
