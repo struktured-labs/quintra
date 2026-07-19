@@ -144,7 +144,7 @@ mod tests {
         // The first colossus is deliberately the run's pattern tutorial.
         // Keep it below the later attrition ramp: input-only starter runs
         // should have enough recovery budget to clear it before relics.
-        assert_eq!(boss_hp(0), 160, "starter Colossus pacing drifted");
+        assert_eq!(boss_hp(0), 200, "starter Colossus pacing drifted");
 
         let r = registry();
         for champion in &r.classes {

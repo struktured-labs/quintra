@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.36: Frost Rift Armor](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.37: First Colossus Pacing](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.37 gives the opening **Crystal Colossus** 200 HP, up from 160. It is
+still the run's accessible pattern lesson—damage, body contact, projectiles,
+and rewards are unchanged—but a shop/relic-assisted run now has to see its
+ring, spacing, and phase-break beats rather than deleting it immediately.
+Matched Picsean controller samples retain all three first-boss clears while
+raising the median clear from 432 to 558 frames (about 7.2 to 9.3 seconds).
 
 v0.18.36 makes **Frost Vault onward** bosses resist burst damage without
 making the first three Colossi harder to learn. A giant's individual hit is

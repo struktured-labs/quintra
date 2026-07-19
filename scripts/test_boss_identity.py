@@ -120,7 +120,7 @@ def main():
         f"Golden Temple HP balance cap drifted: {pb.memory[temple + 14]}")
     pb.stop(save=False)
     pb, boss = enter_boss(0, keep_open=True)
-    assert pb.memory[boss + 14] == 160, (
+    assert pb.memory[boss + 14] == 200, (
         f"starter Colossus pacing drifted: {pb.memory[boss + 14]}")
     assert pb.memory[boss + 25] == 0xFF, "early Colossus contact body drifted"
     max_hp = pb.memory[boss + 23]  # ai_data[6], captured by boss_tick
