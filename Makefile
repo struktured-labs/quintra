@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link test verify preflight repro-check balance endurance picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -68,6 +68,14 @@ HDRS = $(shell find $(SRCDIR) -name '*.h' 2>/dev/null)
 $(OBJDIR)/%.o: %.c $(HDRS)
 	@mkdir -p $(dir $@)
 	$(LCC) $(LCCFLAGS) -c -o $@ $<
+
+# The title renders QUINTRA_VERSION directly from version.h. A version edit
+# made within the same one-second filesystem timestamp as a prior build can
+# otherwise leave title.o looking newer than its header. Recompile this tiny
+# unit every build so a release ROM can never advertise its previous tag.
+force-title:
+
+$(OBJDIR)/src/game/title.o: force-title
 
 # Link to ROM, then verify the memory layout. The layout check exists
 # because the linker SILENTLY placed init code past 0x8000 when the flat
