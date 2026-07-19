@@ -818,6 +818,9 @@ example, `20 28 36` or `20,28,36`) for a matched sweep. The latter compares
 how often `orbit_fire` takes an aimed beat while otherwise preserving its
 collision-safe orbit. Explicit search values take precedence over class
 defaults; the harness changes only controller input, never game state.
+For Tail Spike/Stinger research, `QUINTRA_BOT_LUNGE_PANIC_RANGE=0..24` adds
+an opt-in close-body retreat buffer on matched seeds; the default `0` preserves
+the shipped policy until a candidate beats it reproducibly.
 
 ## World Retro delivery bar — September 12, 2026
 
@@ -837,13 +840,18 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.7)
+### Current conference evidence (v0.18.10)
 
 - Functional ROM contracts pass, including the first-Colossus health budget,
   giant body-contact recovery, Skeleton clearance, score/Sigil stability, and
   the full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel is hash-checked against the release ROM in `docs/media/gameplay.json`.
+- The current cart has been smoke-tested on an **Analogue Pocket** and an
+  **IPS-modded Game Boy Color**, in addition to emulator coverage.
+- **Music composition remains a creator-owned release task**: the current
+  compact phrases prove the two-voice cartridge pipeline, while the final
+  stage, boss, title, and ending themes still need their composed pass.
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
   with zero combat/route stalls. Picsean now meets that floor (2/3 wins,
@@ -852,9 +860,9 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
-turning early runs into a wall, and physical-cart smoke testing. New content
-is welcome only when it fits that budget and keeps the reproducible route
-healthy.
+turning early runs into a wall, and the creator's music-composition pass. New
+content is welcome only when it fits that budget and keeps the reproducible
+route healthy.
 
 Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,

@@ -62,6 +62,14 @@ local ABILITY_POLICY = os.getenv("QUINTRA_BOT_ABILITY_POLICY") or "smart"
 if ABILITY_POLICY ~= "off" and ABILITY_POLICY ~= "smart" then
     ABILITY_POLICY = "smart"
 end
+-- Close-range weapons need a separate experiment from their generic combat
+-- policy. Default zero preserves the established Sauran/Vespine behavior;
+-- an offline sample can opt into a small, read-only body buffer without
+-- changing cartridge balance or conflating it with boss-orbit policy.
+local LUNGE_PANIC_RANGE = tonumber(os.getenv("QUINTRA_BOT_LUNGE_PANIC_RANGE")
+    or "0") or 0
+if LUNGE_PANIC_RANGE < 0 then LUNGE_PANIC_RANGE = 0 end
+if LUNGE_PANIC_RANGE > 24 then LUNGE_PANIC_RANGE = 24 end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 local enemy_mask, enemy_seen = 0, {}
 
@@ -1570,6 +1578,11 @@ while frames < LIMIT do
                 -- Preserve the measured Sauran/Vespine starter lanes; this
                 -- is for Wolfkin only after a lunge-weapon swap.
                 or (held_style == "lunge" and CLASS == 0) and 24
+                -- Explicit experiments may grant Tail Spike/Stinger a small
+                -- contact buffer. It is disabled by default so every trial
+                -- can be compared with the shipped policy on the same seed.
+                or (held_style == "lunge" and LUNGE_PANIC_RANGE > 0)
+                    and LUNGE_PANIC_RANGE
                 or held_style == "flail" and 24
                 or held_style == "spear" and 32
                 or (CLASS == 2 and 24 or 0)
