@@ -2316,7 +2316,13 @@ while frames < LIMIT do
     -- this is normal D-pad play and applies only when both bodies are in the
     -- same champion-width edge strip, never during an ordinary doorway
     -- crossing.
-    if target and world_mode == 0 then
+    -- A Gloam Leech can latch while the champion is pinned against a room
+    -- edge.  Its authored escape is the double-tap dash assembled above.
+    -- Do not let this generic "step inward" cosmetic-safety rule consume
+    -- either press of that sequence: it used to leave close-range champions
+    -- permanently latched at the north wall, making their balance sample a
+    -- controller artifact rather than a real encounter result.
+    if target and world_mode == 0 and shake_phase == 0 and not leech_attached() then
         if py <= 12 and target.y <= 12 then
             keys = KEY_DOWN
         elseif py >= 116 and target.y >= 116 then

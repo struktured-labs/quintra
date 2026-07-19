@@ -168,6 +168,7 @@ verify: all check-balance-bot
 	bash scripts/test_town_continuation.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_wolfkin_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_wolfkin_mire_entry.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_wolfkin_leech_edge_escape.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_rope_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_edge_lane.sh $(BINDIR)/$(PROJECT).gbc
