@@ -20,6 +20,12 @@ local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 local CLASS = tonumber(os.getenv("QUINTRA_BOT_CLASS") or "0") or 0
 local RUN = tonumber(os.getenv("QUINTRA_BOT_RUN") or "0") or 0
 local BOOT_EXTRA = tonumber(os.getenv("QUINTRA_BOT_BOOT_EXTRA") or "0") or 0
+-- Optional exact run-init frame for replayable controller proof. This only
+-- waits on the title/class-select screen and then presses the normal A button;
+-- it never writes the game's RNG or run state. Without it, long-form balance
+-- samples keep their intentional title-idle entropy.
+local TARGET_FRAME = tonumber(os.getenv("QUINTRA_BOT_TARGET_FRAME") or "")
+if TARGET_FRAME then TARGET_FRAME = TARGET_FRAME % 65536 end
 local LIMIT = tonumber(os.getenv("QUINTRA_BOT_FRAMES") or "10800") or 10800
 local OUT = os.getenv("QUINTRA_BOT_OUT") or "/tmp/quintra-balance.csv"
 local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
@@ -1046,7 +1052,12 @@ for _ = 1, CLASS do
     tap(KEY_DOWN)
     for _ = 1, 12 do tick(0) end
 end
-if FC ~= 0 then
+if FC ~= 0 and TARGET_FRAME then
+    -- run_init_enter seeds the run from this exact pre-confirm loop frame.
+    -- Absolute alignment—not a delay relative to class-select entry—is what
+    -- makes a saved controller trace genuinely reproducible across launches.
+    while read16(FC) ~= TARGET_FRAME do tick(0) end
+elseif FC ~= 0 then
     local confirm_at = (select_base + 160) % 65536
     while read16(FC) ~= confirm_at do tick(0) end
 else

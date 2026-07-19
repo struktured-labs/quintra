@@ -27,6 +27,10 @@ mkdir -p "$MGBA_SAVE_ROOT"
 TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
 DEBUG_DIR="${QUINTRA_BALANCE_DEBUG_DIR:-}"
 DEBUG="${QUINTRA_BALANCE_DEBUG:-0}"
+# Optional exact pre-confirm loop frame for a controller replay. The wrapper
+# forwards it unchanged; ordinary endurance samples leave it unset and retain
+# their title-idle entropy.
+TARGET_FRAME="${QUINTRA_BALANCE_TARGET_FRAME:-}"
 APPEND="${QUINTRA_BALANCE_APPEND:-0}"
 SKIP_REPORT="${QUINTRA_BALANCE_SKIP_REPORT:-0}"
 read -r -a CLASS_IDS <<< "${QUINTRA_BALANCE_CLASSES:-0 1 2 3 4}"
@@ -55,9 +59,10 @@ fi
 command -v "$MGBA_BIN" >/dev/null
 for run in "${RUN_IDS[@]}"; do
   for class in "${CLASS_IDS[@]}"; do
-    # Resume is idempotent.  A host timeout can arrive after mGBA's final CSV
-    # append but before the wrapper reports completion; never run that same
-    # deterministic seed/class pair twice when an experiment is resumed.
+    # Resume is idempotent. A host timeout can arrive after mGBA's final CSV
+    # append but before the wrapper reports completion; never run the same
+    # numbered trial/class pair twice when an experiment is resumed. Ordinary
+    # trials intentionally derive a fresh seed from title-idle timing.
     if [ "$APPEND" = 1 ] && awk -F, -v run="$run" -v class="$class" '
       NR > 1 && $1 == run && $2 == class { found = 1; exit }
       END { exit found ? 0 : 1 }
@@ -96,6 +101,7 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
+        QUINTRA_BOT_TARGET_FRAME="$TARGET_FRAME" \
         QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \
         timeout "$HOST_TIMEOUT" "$MGBA_BIN" "${mgba_save_args[@]}" "$ROM" --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
         >"$log" 2>&1 &

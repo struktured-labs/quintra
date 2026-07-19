@@ -758,18 +758,19 @@ parses that telemetry by named columns, prints per-class medians, and enforces
 report-count and victory-floor gates; the runner contains no duplicate inline
 report implementation. An older controller-only Wolfkin reference run
 completed all nine bosses in 20,686 gameplay frames (**5:45** at 60 Hz), but
-it is historical data. The current deterministic proof is Picsean seed 13:
-all nine bosses in 53,415 gameplay frames (**14:50** at 60 Hz), verified by
-replaying the recorded controller trace in a fresh emulator with matching seed,
-room, HP, and victory state. Run `make victory-proof` to reproduce that proof;
-it is one certified seed. `make final-sigil-proof` additionally proves that
-the formerly stalled seed-14 final Sigil reaches a nine-boss victory through
-ordinary controller input. `make picsean-endurance` now completes all four
-consecutive Picsean seeds (13–16) through all nine bosses in 44k–55k frames.
-Its Riftwild policy keeps the real B shield for normal close passes but resumes
-the authored exit input after repeated grass-screen body contact, preventing
-an optional enemy from pinning the pilot at the border. The all-class `make
-endurance` target remains the stricter conference soak floor.
+it is historical data. The current deterministic proof is Picsean's fixed
+title/class-select frame 460: it clears all nine bosses in 43,350 gameplay
+frames (**12:03** at 60 Hz), then a fresh emulator replays the recorded buttons
+with matching seed, room, HP, and victory state. Run `make victory-proof` to
+reproduce that controller-only proof; the run seed is frame-derived by the
+cartridge, never written by the harness. `make final-sigil-proof` additionally
+proves that the formerly stalled final-Sigil route reaches a nine-boss victory
+through ordinary controller input. `make picsean-endurance` is a four-trial,
+entropy-sampled diagnostic: its numbered runs (13–16) record their actual
+generated seed rather than claiming the numbers are fixed worlds. A fresh
+sample must earn all four wins; it is useful controller research, not a
+delivery proof. The all-class `make endurance` target remains the stricter
+conference soak floor.
 Expect
 roughly **20–35 minutes** for a first successful human run and **10–20
 minutes** once practiced; deaths and procedural seeds make total session
@@ -1001,10 +1002,13 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    ROM-bank headroom.
 2. Targeted PyBoy contracts prove the new interaction in the live cartridge,
    not just in C source or a debug poke.
-3. The isolated Picsean endurance gate runs seeds 13–16 using only controller
-   input. A completed row is a real loss or win; a missing row retries once in
-   isolation because headless mGBA can occasionally bus-error under parallel
-   load. The current baseline clears all four seeds in 44k–55k frames.
+3. The isolated Picsean endurance gate runs four numbered entropy samples
+   (13–16) using only controller input and records each actual seed. A
+   completed row is a real loss or win; a missing row retries once in isolation
+   because headless mGBA can occasionally bus-error under parallel load. It is
+   a rolling reliability diagnostic, not a fixed-seed certification; the
+   separate `make victory-proof` locks the public frame-derived seed and
+   replays its complete controller trace in a fresh emulator.
 
 ### Current conference evidence (v0.18.28)
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Multi-seed controller completion gate. These four consecutive post-reward
-# seeds exercise the normal dungeon/town/Riftwild route through all nine
-# bosses using only real button input and procedural encounters.
+# Four-trial entropy-sampled controller completion gate. The numbered trials
+# exercise the normal dungeon/town/Riftwild route through all nine bosses using
+# only real button input and procedural encounters; their exact generated seed
+# is recorded in each CSV row. Use test_picsean_victory_replay.sh for the
+# separate fixed-frame deterministic proof.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
