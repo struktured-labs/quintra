@@ -852,16 +852,20 @@ defaults to Sauran and Corvin; set `QUINTRA_POLICY_CLASSES`,
 read-only-ROM evaluator, so an apparent improvement must survive a fresh
 input-only replay before becoming the default policy.
 
-Giant spacing defaults to a measured classwise policy: Sauran, Corvin,
-Picsean, and Vespine use `orbit_fire` for large bosses; Wolfkin uses
-conservative pulses. On paired three-seed searches,
+Giant spacing defaults to a measured classwise policy: all five champions use
+their own `orbit_fire` spacing for large bosses, with Wolfkin's true-melee
+Claw holding a wider 36px lane and Corvin's Featherbarb holding a tighter
+32px lane. On paired three-seed searches,
 Picsean's policy raised its boss clears from two to six with no deaths, while
 orbit-fire gained four Sauran and four Corvin clears where their prior policies
 managed two and one. Override it with
 `QUINTRA_BOT_GIANT_POLICY=baseline` when comparing a candidate.
-Wolfkin's classwise giant-retreat buffer is 32px (the other baseline kits use
-28px): its paired three-seed first-boss sample improved from one to two clears
-at 32px. Set `QUINTRA_BOT_GIANT_RETREAT_RANGE` explicitly for a matched sweep.
+Wolfkin's 36px claw lane produced fourteen total giant clears with no deaths;
+its prior 32px pulse lane produced nine with one death. Set
+`QUINTRA_BOT_GIANT_RETREAT_RANGE` explicitly for a matched sweep.
+On Corvin's long seed-two route, the 32px Featherbarb lane survived through
+eight giants; 24px and 36px died at the second giant, while wider lanes lost
+too much attack pressure.
 Sauran's Tail Spike uses a 40px orbit-fire lane: the same three-seed replay
 kept all three first-boss clears and produced five total giant clears with one
 death, compared with three clears and three deaths at its former 48px lane.

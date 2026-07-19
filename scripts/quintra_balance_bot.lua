@@ -1577,7 +1577,7 @@ while frames < LIMIT do
         -- Wolfkin's adjacent claw. Treating all three as true melee walked
         -- these kits into contact damage and understated them. Hold a clear
         -- firing lane, dart back only when crowded, and fire the other beats.
-        elseif target.kind == 1 then
+        elseif target.kind == 1 and target.giant ~= 0 then
             -- The Stone Sentinel is a 16px colossus. Treating its origin as
             -- an 8px crawler makes any class (especially the real-melee
             -- Wolfkin) stand inside the body while trying to fire. Keep one
@@ -1589,12 +1589,12 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local giant_mode = GIANT_POLICY
             if giant_mode == "classwise" then
-                -- Wolfkin's Claw needs a conservative pulse lane. Three-seed
-                -- live-ROM sweeps give Tail Spike and Featherbarb materially
-                -- more boss clears with orbit-and-fire: their real reach lets
-                -- them pressure while sidestepping instead of donating every
-                -- retreat beat to a Sentinel body.
-                giant_mode = (held_style == "claw") and "pulse_fire"
+                -- Wolfkin's Claw is true melee, but its measured 36px
+                -- orbit-fire lane uses the attack beat to close safely rather
+                -- than donating every retreat beat to a Sentinel body. Tail
+                -- Spike and Featherbarb use the same pressure shape because
+                -- their real reach can connect while sidestepping.
+                giant_mode = (held_style == "claw") and "orbit_fire"
                     -- A swapped Flail/Spear changes the build shape and
                     -- earns its own long-lane policy.
                     or (held_style == "lunge" and CLASS ~= 4) and "orbit_fire"
@@ -1614,9 +1614,31 @@ while frames < LIMIT do
             -- even when their ordinary retreat floor is 28px. Preserve that
             -- measured Sauran/Corvin/Picsean behavior; Spear owns a longer
             -- committed lane because its real thrust reaches 88px.
-            local giant_orbit_floor = 36
+            -- An explicit retreat override is a policy-search control: keep
+            -- its orbit floor coupled to the requested distance. Previously
+            -- Corvin/Picsean sweeps changed only a branch hidden behind the
+            -- fixed 36px orbit floor, producing identical "candidates".
+            local giant_orbit_floor = GIANT_RETREAT_RANGE_ENV and giant_retreat or 36
             if held_style == "spear" then
                 giant_retreat, giant_fire_range, giant_orbit_floor = 52, 80, 52
+            elseif held_style == "claw" and CLASS == 0 then
+                if GIANT_RETREAT_RANGE_ENV == nil then giant_retreat = 36 end
+            elseif held_style == "claw" and CLASS == 2 then
+                -- This seed can trade Featherbarb for a real Claw before
+                -- boss two. Keep Corvin's proven 32px orbit geometry across
+                -- that build swap instead of silently reverting to the
+                -- generic 36px floor.
+                if GIANT_RETREAT_RANGE_ENV == nil then
+                    giant_retreat, giant_orbit_floor = 32, 32
+                end
+            elseif held_style == "ranged" and CLASS == 2 then
+                -- Featherbarb's short returning lane needs a closer orbit
+                -- than the generic 36px floor. On the long matched route,
+                -- 32px survived through eight giants; 24px/36px died at the
+                -- second boss and wider lanes surrendered too much pressure.
+                if GIANT_RETREAT_RANGE_ENV == nil then
+                    giant_retreat, giant_orbit_floor = 32, 32
+                end
             elseif held_style == "lunge" and CLASS == 1 then
                 if GIANT_RETREAT_RANGE_ENV == nil then
                     giant_retreat = 40

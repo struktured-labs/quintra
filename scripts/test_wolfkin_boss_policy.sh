@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression: Wolfkin's adjacent Claw needs a measured pulse-fire giant lane
+# Regression: Wolfkin's adjacent Claw needs a measured orbit-fire giant lane
 # and a contact-range Howl. On paired deterministic seeds, each route must
 # now clear three bosses without a live-combat stall; spending Howl before its
 # ring could connect left the real-melee pilot without its activation ward.

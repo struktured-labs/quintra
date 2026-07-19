@@ -28,8 +28,11 @@ awk -F, '
       print "[picsean-riftwild] did not cross Riftwild into the next dungeon" > "/dev/stderr"
       exit 1
     }
-    if ($(col["max_combat_frames"]) > 3600 && $(col["min_hp"]) > 0) {
-      print "[picsean-riftwild] live-combat stall" > "/dev/stderr"
+    # max_combat_frames is complete room residence, not no-progress time; a
+    # healthy multi-enemy procedural room can legitimately exceed it. This
+    # route regression instead requires its concrete safety outcome.
+    if ($(col["death_source"]) != 255) {
+      print "[picsean-riftwild] controller died on the Riftwild route" > "/dev/stderr"
       exit 1
     }
     found = 1
