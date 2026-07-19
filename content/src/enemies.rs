@@ -355,6 +355,23 @@ pub const SUNWHEEL: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const CINDER_KITE: Enemy = Enemy {
+    id: ENEMY_CINDER_KITE, symbol: "CINDER_KITE", name: "CinderKite",
+    sprite_set: SPRITE_CINDER_KITE, palette: OBJ_PAL_RED,
+    // Ember's mobile counterpoint to the rooted Cinder Maw. It drifts on a
+    // quick, visible beat and releases a low-damage three-lane fan slowly
+    // enough to dodge between, so the added roster variety raises positioning
+    // pressure without turning the early roguelike into bullet spam.
+    stats: EnemyStats { hp: 12, damage: 1, speed: 80, score: 44, weakness: 0x04, poise: 0 },
+    ai_script: AiScriptId::Shooter {
+        fire_rate: 126,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Fan(3),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -381,4 +398,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(PRISM_SKITTER.clone());
     r.add_enemy(DUSK_MIDGE.clone());
     r.add_enemy(SUNWHEEL.clone());
+    r.add_enemy(CINDER_KITE.clone());
 }

@@ -65,6 +65,7 @@ pub const ENEMY_RIFT_WARDEN:     EnemyId = EnemyId::new(21);   // late-stage fiv
 pub const ENEMY_PRISM_SKITTER:   EnemyId = EnemyId::new(22);   // orbiting late-stage lane splitter
 pub const ENEMY_DUSK_MIDGE:      EnemyId = EnemyId::new(23);   // fast late-game fan-fire harrier
 pub const ENEMY_SUNWHEEL:        EnemyId = EnemyId::new(24);   // Golden Temple orbiting lane shaper
+pub const ENEMY_CINDER_KITE:     EnemyId = EnemyId::new(25);   // Ember fast fan-fire harrier
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -145,6 +146,9 @@ pub const SPRITE_DUSK_MIDGE:     SpriteRef = SpriteRef::new(79);
 // Golden Temple never spawns Dusk Midges, so its combat-only Sunwheel can
 // reclaim the same apothecary slot without expanding the fixed OBJ atlas.
 pub const SPRITE_SUNWHEEL:       SpriteRef = SpriteRef::new(79);
+// Ember Depths never shares a room with Sunwheels or Dusk Midges, so its
+// Cinder Kite can use the same phase-safe apothecary slot.
+pub const SPRITE_CINDER_KITE:    SpriteRef = SpriteRef::new(79);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

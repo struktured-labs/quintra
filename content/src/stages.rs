@@ -44,7 +44,10 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 1, 0), c(12, 8, 2), c(22,15, 3), c(31,26, 8)],
         boss:    [c(0,0,0), c(22, 9, 4), c( 6, 2, 1), c(31,27,10)],
         boss_hp_bonus: 190, boss_dmg_bonus: 2, mb_variant: 2, room_archetype: 2,
-        enemy_pool: &[(3, 20), (6, 30), (4, 25), (14, 25)],
+        // Cinder Kites add a mobile, low-damage fan to the heavy Maw's
+        // stationary three-way pressure. The total remains exactly 100, so
+        // this is a new encounter identity rather than density inflation.
+        enemy_pool: &[(3, 20), (6, 30), (4, 22), (14, 16), (25, 12)],
     },
     // 3 — Frost Vault (icy cyan/white)
     StageTheme {

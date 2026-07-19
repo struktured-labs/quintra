@@ -157,6 +157,13 @@ void tiles_load_sunwheel_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_SUNWHEEL, 1, sprite_enemy_sunwheel);
 }
 
+void tiles_load_cinder_kite_sprite(void) BANKED {
+    // Ember comes long before Bloodmoon and never hosts a Sunwheel. Reclaim
+    // the same town-only apothecary slot for its mobile harrier instead of
+    // spending another permanently resident OBJ tile.
+    set_sprite_data(SPR_ENEMY_CINDER_KITE, 1, sprite_enemy_cinder_kite);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

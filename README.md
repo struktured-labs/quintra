@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.23: Six Hearts, One Claw](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.24: Ember Takes Wing](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.24 gives **Ember Depths** its own mobile harrier: the low-weight
+**Cinder Kite**. It has an ember-wing silhouette, drifts quickly, and sends a
+slow three-lane fan across the furnace seams. Its one-damage bolts and 12%
+pool weight deliberately replace existing Ember encounters rather than raising
+room density: the Cinder Maw remains the durable, fast-bolt anchor while the
+Kite asks for a readable lane change. A live-ROM contract proves procedural
+spawn, runtime art loading, its three fan lanes, and its fast drift cadence.
 
 v0.18.23 gives **Wolfkin** a sixth starting heart. The dedicated true-melee
 champion still stays below Sauran's seven-heart tank reserve, but now has one
@@ -551,12 +559,13 @@ an unreachable live enemy and seal progression.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **22 enemies across a size hierarchy** — small swarm critters (crawler,
+- **26 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
   **Folding Stars**, Keese-like **Flutterbats**, and life-draining
-  **Gloom Leeches**, Ember's area-denial **Cinder Maws**, and late-stage
+  **Gloom Leeches**, Ember's area-denial **Cinder Maws** and swift
+  **Cinder Kites**, and late-stage
   **Rift Oozes** that split into two fragile crawler fragments when slain,
   and Frost Vault **Mirror Moths** that reverse the champion's last movement
   vector before firing a slow reflected bolt down the new lane. Toxic Mire's
@@ -576,7 +585,7 @@ an unreachable live enemy and seal progression.
   now reject any registered non-boss monster missing from every stage pool.
   Both fragments are guaranteed even when the fixed 32-entity table is full;
   a spent lethal projectile yields its slot before the split resolves.
-  Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, Rift Oozes,
+  Folding Stars, Flutterbats, Gloom Leeches, Cinder Maws, Cinder Kites, Rift Oozes,
   Mirror Moths, and Mire Spores have dedicated silhouettes
   instead of borrowing older monsters' art, so movement and shape both
   communicate threat. Folding Stars remain invulnerable while expanded but
@@ -954,10 +963,12 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.23)
+### Current conference evidence (v0.18.24)
 
-- Functional ROM contracts pass, including honest capped coin pickups,
-  Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the
+- Functional ROM contracts pass, including Cinder Kite's Ember-only
+  procedural spawn, distinct runtime art, fast body cadence, and readable
+  three-lane fan; honest capped coin pickups, Sunwheel’s Golden Temple spawn,
+  art, and two-lane pattern; the
   first-Colossus health budget, giant body-contact recovery, Skeleton
   clearance, score/Sigil stability, two-heart one-use Riftwell recovery,
   and the full boss identity suite.

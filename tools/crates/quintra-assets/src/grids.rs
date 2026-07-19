@@ -366,6 +366,17 @@ pub const SUNWHEEL: [&str; 8] = [ // radiant ring, offset spokes, dark core
     "..3.3...",
 ];
 
+pub const CINDER_KITE: [&str; 8] = [ // swept ember wings, bright furnace core
+    "...3.3..",
+    "..32132.",
+    ".3211123",
+    "32133123",
+    ".2111112",
+    "..32123.",
+    ".3.2.2.3",
+    "3.......",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -758,7 +769,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 23] = [
+pub const ENEMIES_8: [(&str, &[&str]); 24] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -782,6 +793,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 23] = [
     ("prism_skitter", &PRISM_SKITTER),
     ("dusk_midge", &DUSK_MIDGE),
     ("sunwheel", &SUNWHEEL),
+    ("cinder_kite", &CINDER_KITE),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [
