@@ -443,6 +443,21 @@ local function can_step(px, py, key)
         and pixel_walkable(nx + 13, ny + 15)
 end
 
+-- Keep this helper outside the controller's large top-level loop: mGBA's Lua
+-- has a strict local-variable limit for that loop, while the helper gets its
+-- own small local scope.
+function quintra_leech_shake_dir(px, py, cycle)
+    local shake_dirs = {KEY_LEFT, KEY_UP, KEY_DOWN, KEY_RIGHT}
+    local direction = shake_dirs[(cycle % #shake_dirs) + 1]
+    for offset = 0, #shake_dirs - 1 do
+        local candidate = shake_dirs[((cycle + offset) % #shake_dirs) + 1]
+        if can_step(px, py, candidate) then
+            return candidate
+        end
+    end
+    return direction
+end
+
 local function tile_at_px(x, y)
     if x < 0 or x >= 160 or y < 0 or y >= 136 then return 0 end
     return emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
@@ -1082,6 +1097,7 @@ local route_start_frame = 0
 local last_px, last_py, still_frames = 255, 255, 0
 local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
 local shake_phase = 0
+shake_dir, shake_cycle = KEY_RIGHT, 0
 local towns_seen, town_rooms = 0, {}
 local world_hops, last_world_key = 0, -1
 local world_contact_hits = 0
@@ -1186,11 +1202,11 @@ while frames < LIMIT do
         else
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
-            if CLASS == 4 and threat and threat.giant == 0 then
-                -- One ordinary scrape is part of the intended pressure. A
-                -- repeated hit from this same body within 90 frames is the
-                -- wall-pin signature: dash only then, so a successful lane
-                -- is not needlessly diverted by its first contact mistake.
+            if CLASS == 4 and threat then
+                -- One scrape is part of the intended pressure. A repeated
+                -- hit from this same body within 90 frames is the wall-pin
+                -- signature, including a Colossus body: dash only then, so
+                -- a successful lane is not diverted by its first mistake.
                 if threat.kind == last_body_hit_source
                     and frames - last_body_hit_frame <= 90 then
                     body_hit_streak = body_hit_streak + 1
@@ -1278,10 +1294,10 @@ while frames < LIMIT do
         debug_spore_room = room
     end
     -- Only an immediately observed, close body is allowed to request the
-    -- emergency dash.  A distant shooter/projectile may share an enemy ID,
+    -- emergency dash. A distant shooter/projectile may share an enemy ID,
     -- but should continue through the normal projectile-dodge policy.
     local body_dash_ready = body_dash_frames > 0 and target
-        and target.giant == 0 and target.kind == body_dash_source
+        and target.kind == body_dash_source
         and math.max(math.abs(target.x - px), math.abs(target.y - py)) <= 20
     if body_dash_frames > 0 then body_dash_frames = body_dash_frames - 1 end
     -- Overworld encounters are optional traversal pressure. Follow the
@@ -2160,14 +2176,24 @@ while frames < LIMIT do
     -- Exercise that public controller mechanic instead of letting a latched
     -- enemy bias melee samples when its body overlaps nearby terrain.
     if leech_attached() or shake_phase ~= 0 then
-        if shake_phase == 0 then keys, shake_phase = KEY_RIGHT, 1
-        elseif shake_phase == 1 then keys, shake_phase = KEY_RIGHT, 2
+        if shake_phase == 0 then
+            -- Preserve the established rightward shake for every champion's
+            -- paired replay. Picsean alone has the measured edge-latch
+            -- failure: only after her first dash fails to detach the leech
+            -- does she choose a walkable double-tap direction.
+            shake_dir = (CLASS == 3 and shake_cycle ~= 0)
+                and quintra_leech_shake_dir(px, py, shake_cycle - 1)
+                or KEY_RIGHT
+            keys, shake_phase = shake_dir, 1
+        elseif shake_phase == 1 then keys, shake_phase = shake_dir, 2
         elseif shake_phase == 2 then keys, shake_phase = 0, 3
         elseif shake_phase == 3 then keys, shake_phase = 0, 4
-        elseif shake_phase == 4 then keys, shake_phase = KEY_RIGHT, 5
-        elseif shake_phase == 5 then keys, shake_phase = KEY_RIGHT, 6
+        elseif shake_phase == 4 then keys, shake_phase = shake_dir, 5
+        elseif shake_phase == 5 then keys, shake_phase = shake_dir, 6
         elseif shake_phase == 6 then keys, shake_phase = 0, 7
-        else keys, shake_phase = 0, 0
+        else
+            keys, shake_phase = 0, 0
+            shake_cycle = shake_cycle + 1
         end
     end
     -- Generic unstick/dodge recovery is useful in a sealed dungeon room, but
