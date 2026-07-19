@@ -12,6 +12,8 @@ ROM = ROOT / "rom/working/quintra.gbc"
 GIF = ROOT / "docs/media/gameplay.gif"
 META = ROOT / "docs/media/gameplay.json"
 CAPTURE = ROOT / "scripts/capture_media.lua"
+TITLE = ROOT / "docs/media/title.png"
+TITLE_CAPTURE = ROOT / "scripts/capture_title_media.py"
 VERSION = ROOT / "src/game/version.h"
 
 
@@ -27,6 +29,8 @@ def main():
     assert meta["rom_sha256"] == sha256(ROM), "gameplay reel ROM hash is stale"
     assert meta["capture_sha256"] == sha256(CAPTURE), "capture recipe changed"
     assert meta["gif_sha256"] == sha256(GIF), "gameplay GIF changed without metadata"
+    assert meta["title_sha256"] == sha256(TITLE), "README title image is stale"
+    assert meta["title_capture_sha256"] == sha256(TITLE_CAPTURE), "title capture recipe changed"
     assert GIF.stat().st_size <= 256 * 1024, "gameplay GIF exceeds 256 KiB"
 
     with Image.open(GIF) as image:
@@ -37,6 +41,8 @@ def main():
             assert image.info.get("duration") == meta["frame_ms"], (
                 f"gameplay frame {frame} duration drifted"
             )
+    with Image.open(TITLE) as image:
+        assert image.size == (160, 144), "README title image has wrong dimensions"
     print(f"[media] PASS {meta['version']} {meta['frames']} frames, "
           f"{GIF.stat().st_size} bytes, ROM/reel/recipe hashes current")
 

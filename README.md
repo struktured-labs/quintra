@@ -962,7 +962,8 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   clearance, score/Sigil stability, two-heart one-use Riftwell recovery,
   and the full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
-  reel is hash-checked against the release ROM in `docs/media/gameplay.json`.
+  reel and live title capture are hash-checked against the release ROM in
+  `docs/media/gameplay.json`.
 - The current cart has been smoke-tested on an **Analogue Pocket** and an
   **IPS-modded Game Boy Color**, in addition to emulator coverage.
 - **Music composition remains a creator-owned release task**: the current

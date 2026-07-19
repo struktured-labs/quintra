@@ -47,11 +47,15 @@ fi
 
 magick -delay 10 -loop 0 "$TMP"/gif_*.png -filter point -resize 300% \
   -layers Optimize "$OUT"
+UV_CACHE_DIR="${UV_CACHE_DIR:-$ROOT/tmp/uv-cache}" \
+  uv run --quiet --with pyboy python "$ROOT/scripts/capture_title_media.py"
 version=$(sed -n 's/.*QUINTRA_VERSION "\([^"]*\)".*/\1/p' "$ROOT/src/game/version.h")
 rom_sha=$(sha256sum "$ROM" | cut -d' ' -f1)
 capture_sha=$(sha256sum "$ROOT/scripts/capture_media.lua" | cut -d' ' -f1)
 gif_sha=$(sha256sum "$OUT" | cut -d' ' -f1)
+title_sha=$(sha256sum "$ROOT/docs/media/title.png" | cut -d' ' -f1)
+title_capture_sha=$(sha256sum "$ROOT/scripts/capture_title_media.py" | cut -d' ' -f1)
 bytes=$(stat -c %s "$OUT")
-printf '{\n  "version": "%s",\n  "rom_sha256": "%s",\n  "capture_sha256": "%s",\n  "gif_sha256": "%s",\n  "frames": 174,\n  "width": 480,\n  "height": 432,\n  "frame_ms": 100\n}\n' \
-  "$version" "$rom_sha" "$capture_sha" "$gif_sha" > "$META"
+printf '{\n  "version": "%s",\n  "rom_sha256": "%s",\n  "capture_sha256": "%s",\n  "gif_sha256": "%s",\n  "title_sha256": "%s",\n  "title_capture_sha256": "%s",\n  "frames": 174,\n  "width": 480,\n  "height": 432,\n  "frame_ms": 100\n}\n' \
+  "$version" "$rom_sha" "$capture_sha" "$gif_sha" "$title_sha" "$title_capture_sha" > "$META"
 echo "[media] wrote $OUT ($bytes bytes, 174 frames)"
