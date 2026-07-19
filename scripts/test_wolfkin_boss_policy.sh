@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Regression: Wolfkin's adjacent Claw needs a measured pulse-fire giant lane.
-# On paired deterministic seeds, the direct baseline cleared no first boss;
-# classwise play must clear at least one without a live-combat stall.
+# Regression: Wolfkin's adjacent Claw needs a measured pulse-fire giant lane
+# and a close Flutterbat sidestep. On paired deterministic seeds, each route
+# must now clear two bosses without a live-combat stall; the old straight-ahead
+# bat pursuit bled the real-melee pilot out before that meaningful threshold.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,13 +22,15 @@ awk -F, '
   {
     rows++
     bosses += $(col["bosses"])
+    if ($(col["bosses"]) < 2)
+      weak = 1
     if ($(col["max_combat_frames"]) > 3600 && $(col["min_hp"]) > 0)
       stalled = 1
   }
   END {
     if (rows != 3) { print "[wolfkin-boss] missing paired rows" > "/dev/stderr"; exit 1 }
-    if (bosses < 1) { print "[wolfkin-boss] classwise policy cleared no first boss" > "/dev/stderr"; exit 1 }
+    if (weak || bosses < 6) { print "[wolfkin-boss] a paired route did not clear two bosses" > "/dev/stderr"; exit 1 }
     if (stalled) { print "[wolfkin-boss] live-combat stall" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[wolfkin-boss] PASS paired policy cleared a boss without a stall"
+echo "[wolfkin-boss] PASS all paired routes cleared two bosses without a stall"
