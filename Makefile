@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fixed-controller-matrix picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -227,6 +227,12 @@ endurance: all check-balance-bot
 	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
+
+# Fixed-world all-champion diagnostic: every vessel uses controller input to
+# enter the same frame-derived procgen run. It reports honest outcomes rather
+# than claiming the current balance already meets the endurance delivery bar.
+fixed-controller-matrix: all check-balance-bot
+	bash scripts/fixed_controller_matrix.sh $(BINDIR)/$(PROJECT).gbc
 
 # Four completed Picsean seeds; complements the all-class soak above.
 picsean-endurance: all check-balance-bot

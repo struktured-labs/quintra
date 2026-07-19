@@ -733,6 +733,7 @@ make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
+make fixed-controller-matrix # reproducible same-world all-champion baseline
 make policy-sweep # compare Sauran/Corvin giant-fight input policies
 make final-sigil-proof # seed-14 final-Sigil controller completion proof
 make picsean-endurance # four completed multi-seed Picsean controller runs
