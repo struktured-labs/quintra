@@ -836,7 +836,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; the current v0.18.30 ROM occupies 128 KiB with 1,280 bytes of
+bank space; the current v0.18.33 ROM occupies 128 KiB with 1,247 bytes of
 bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
@@ -844,9 +844,9 @@ preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.30 build has 3,283 bytes in bank 1, 1,344 in bank 2,
-2,952 in bank 3, 6,886 in bank 4, 11,783 in bank 5, and 14,811 in bank 6;
-the always-mapped bank retains 1,280 bytes of headroom.
+ROM. The current v0.18.33 build has 3,268 bytes in bank 1, 1,314 in bank 2,
+2,790 in bank 3, 6,808 in bank 4, 11,739 in bank 5, and 14,776 in bank 6;
+the always-mapped bank retains 1,247 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -1070,7 +1070,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.30 candidate and fresh endurance matrix)
+### Current conference evidence (v0.18.33 release and prior full endurance matrix)
 
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
@@ -1080,7 +1080,8 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   art, and two-lane pattern; the
   first-Colossus health budget, giant body-contact recovery, Skeleton
   clearance, score/Sigil stability, two-heart one-use Riftwell recovery,
-  and the full boss identity suite.
+  Frost Lancer's Frost Vault spawn/art/charge, and the full boss identity
+  suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel and live title capture are hash-checked against the release ROM in
   `docs/media/gameplay.json`.
@@ -1093,19 +1094,22 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   [the music worksheet](docs/music-composition.md).
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
-  with zero combat/route stalls. The latest fresh 15-row, private-SRAM,
-  controller-only matrix (three 90k-frame entropy samples per champion) has
+  with zero combat/route stalls. The last complete 15-row, private-SRAM,
+  controller-only matrix (three 90k-frame entropy samples per champion, before
+  v0.18.33's Frost Lancer) has
   Picsean at **2/3 endings**, Corvin at **1/3**, and Wolfkin, Sauran, and
   Vespine at **0/3**. Median boss clears are 8, 1, 8, 9, and 6 respectively;
   Wolfkin, Corvin, Picsean, and Vespine clear boss one in all three samples,
-  while Sauran does so in two. The refreshed matrix exercised all **28**
-  released enemy IDs—including Shadow Keep's Gloam Bramble—and procedural
-  shops. It recorded zero route stalls and two combat dwells above the strict
-  threshold (both Picsean). Giant body contact remains a leading observed
-  pressure source for the non-completing close-range kits. The remaining
-  delivery-bar problem is therefore long-run survival and controller routing,
-  not early enemy durability or a progression deadlock; the next balance work
-  remains focused there rather than declaring the route complete.
+  while Sauran does so in two. That matrix exercised all **28** enemy IDs
+  released at the time—including Shadow Keep's Gloam Bramble—and procedural
+  shops. v0.18.33 adds Frost Lancer as enemy 29; its dedicated live-ROM
+  contract proves the encounter, and subsequent endurance runs require it in
+  coverage. The matrix recorded zero route stalls and two combat dwells above
+  the strict threshold (both Picsean). Giant body contact remains a leading
+  observed pressure source for the non-completing close-range kits. The
+  remaining delivery-bar problem is therefore long-run survival and controller
+  routing, not early enemy durability or a progression deadlock; the next
+  balance work remains focused there rather than declaring the route complete.
 - v0.18.29's fixed-world diagnostic directly removes Wolfkin's former
   room-25 Mire Spore stall: that champion now completes all nine bosses in
   36,331 gameplay frames, while the other fixed-world outcomes remain useful
