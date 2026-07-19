@@ -14,8 +14,10 @@
 #include "game/sram.h"
 #include "game/title.h"
 #include "game/version.h"
+#include "render/class_palettes.h"
 #include "render/palette.h"
 #include "render/text.h"
+#include "render/tiles.h"
 
 BANKREF(title_enter)
 
@@ -43,6 +45,50 @@ static u8 lore_beat;
 static u8 lore_hold;
 
 #define N_LORE_BEATS 7
+#define TITLE_SPIRIT_COUNT 5
+#define TITLE_SPIRIT_SPRITES 4
+
+// A living lineup makes the opening myth about people rather than only text.
+// Five complete 16x16 metasprites fit above the logo, reuse the in-game hero
+// atlas, and are parked on every exit so no title OAM leaks into class select.
+static const u8 title_spirit_x[TITLE_SPIRIT_COUNT] = { 24, 52, 80, 108, 136 };
+
+static void title_hide_spirits(void) {
+    u8 i;
+    for (i = 0; i < (u8)(TITLE_SPIRIT_COUNT * TITLE_SPIRIT_SPRITES); ++i)
+        move_sprite(i, 0, 0);
+}
+
+static void title_draw_spirits(void) {
+    u8 spirit, part;
+    // Staggered step poses and a one-pixel wave give the five champions a
+    // quiet procession without consuming runtime entities or animation data.
+    for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit) {
+        u8 id = (u8)(spirit * TITLE_SPIRIT_SPRITES);
+        u8 base = (u8)(((pulse_phase + spirit * 9u) & 0x10)
+            ? SPR_CLASS_WALK_BASE : SPR_CLASS_BASE);
+        u8 y = (u8)(31 + (((pulse_phase + spirit * 13u) & 0x18) == 0x18));
+        base = (u8)(base + spirit * SPR_CLASS_STRIDE);
+        for (part = 0; part < TITLE_SPIRIT_SPRITES; ++part) {
+            set_sprite_tile((u8)(id + part), (u8)(base + part));
+            move_sprite((u8)(id + part),
+                (u8)(title_spirit_x[spirit] + ((part & 1) ? 8 : 0)),
+                (u8)(y + ((part >= 2) ? 8 : 0)));
+        }
+    }
+}
+
+static void title_init_spirits(void) {
+    u8 spirit, part;
+    tiles_load_all_class_sprites();
+    for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit) {
+        u8 id = (u8)(spirit * TITLE_SPIRIT_SPRITES);
+        palette_obj_load((u8)(spirit + 1), class_obj_palettes[spirit]);
+        for (part = 0; part < TITLE_SPIRIT_SPRITES; ++part)
+            set_sprite_prop((u8)(id + part), (u8)(spirit + 1));
+    }
+    title_draw_spirits();
+}
 
 static void render_lore_beat(void) {
     // The founding myth as a tiny, animated intro story. It lives on the title
@@ -140,14 +186,17 @@ void title_enter(void) {
 
     pulse_phase         = 0;
     last_palette_color2 = title_palette_steady[2];
+    title_hide_spirits();
+    title_init_spirits();
 
     music_play_title();
+    SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
 }
 
 void title_exit(void) {
-    // No-op for now.
+    title_hide_spirits();
 }
 
 screen_id_t title_tick(u8 keys, u8 pressed) {
@@ -184,6 +233,10 @@ void title_draw(void) {
     // Triangle wave: 0..45 magenta-ish, 45..89 cyan-ish.
     pulse_phase = (u8)(pulse_phase + 1);
     if (pulse_phase >= 90) pulse_phase = 0;
+
+    // OAM updates are deliberately coarse: the tableau reads as a living
+    // procession at 7.5 Hz while leaving nearly all title frames untouched.
+    if ((pulse_phase & 7) == 0) title_draw_spirits();
 
     // Change the vow every three pulse cycles. The palette continues moving
     // between beats, giving the lore tableau a simple hardware-cheap animation.

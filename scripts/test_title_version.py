@@ -45,6 +45,23 @@ def main():
         "title footer left stale version glyphs in its gutter"
     assert pb.memory[title_row + 19] == 0, "title footer touched scrolling corner"
 
+    # The lore is now a real procession: five existing champion metasprites
+    # line up above the logo, each in either its idle or walk pose. Checking
+    # OAM rather than a screenshot makes this a cartridge contract even when
+    # a host's palette conversion differs.
+    class_base, walk_base, stride = 0, 82, 4
+    for champion in range(5):
+        oam = 0xFE00 + champion * 4 * 4
+        top_left = pb.memory[oam + 2]
+        expected_idle = class_base + champion * stride
+        expected_walk = walk_base + champion * stride
+        assert top_left in (expected_idle, expected_walk), (
+            f"title champion {champion} missing from spirit procession: tile={top_left}"
+        )
+        assert pb.memory[oam] >= 31 and pb.memory[oam + 1] >= 24, (
+            f"title champion {champion} was parked instead of displayed"
+        )
+
     # Cycle past the long beat "FIVE SEAL THE RIFT", whose final T occupies
     # column 19. The following beat must erase that edge cell completely.
     for _ in range(1500):
@@ -56,6 +73,17 @@ def main():
     screenshot = ROOT / "tmp" / "title-current-version.png"
     screenshot.parent.mkdir(exist_ok=True)
     pb.screen.image.save(screenshot)
+
+    # The title owns OAM 0..19, whereas class select owns only 0..4. Leaving
+    # the remaining procession sprites live would make ghost heroes appear on
+    # the selection screen, so the real START transition must park them.
+    pb.button("start")
+    pb.tick(20)
+    for sprite in range(5, 20):
+        oam = 0xFE00 + sprite * 4
+        assert pb.memory[oam] == 0 and pb.memory[oam + 1] == 0, (
+            f"title spirit OAM {sprite} leaked into class select"
+        )
     pb.stop(save=False)
     print(f"[title-version] PASS rendered {version} and README agree")
 
