@@ -1702,13 +1702,14 @@ while frames < LIMIT do
         -- Stoneskin is a reactive guard, not a generic damage signature.
         -- Spending it on a global cadence (including the opening room) left
         -- the tank without its defining answer when a miniboss volley began.
-        -- Howl is a melee ring, so a distant every-three-second timer was
-        -- effectively never exercised in short Wolfkin fights.  Take its
-        -- controller-realistic opportunity when two bodies crowd the hero or
-        -- a boss is actually within the ring's useful 48px range.
+        -- Howl is a melee ring. A population count alone is not enough: the
+        -- old policy spent it as soon as two hostiles happened to share a
+        -- 32px neighborhood, often before either had reached the 24px burst
+        -- and activation-ward range. Commit when the selected body is truly
+        -- close, or when a boss is within the ring's useful 48px range.
         if ABILITY_POLICY == "smart" and CLASS == 0 and not waiting_star
             and active_charge == 0 and mp >= 2
-            and (nearby_hostiles >= 2
+            and ((nearby_hostiles >= 2 and math.max(math.abs(dx), math.abs(dy)) <= 24)
                 or (target.giant ~= 0 and math.max(math.abs(dx), math.abs(dy)) <= 48)) then
             keys = KEY_B + aim
         -- Featherbarb's three-way burst is Corvin's escape valve. Use it on
