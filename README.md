@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.33: Frost Lancer](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.34: Tighter Colossi](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,17 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.34 makes **Frost Vault onward** fairer at close range without turning
+bosses into lower-pressure encounters. Their 32px sprites, HP, projectile
+patterns, movement cadence, and one-half-heart body damage are unchanged, but
+their actual late-game contact body now uses the established 13px bruiser size
+instead of the early Colossus's 15px body. Near-misses no longer read as a
+full-sprite-edge hit; early Colossi deliberately keep their wider body so the
+melee opening still teaches close pressure. Live-ROM identity coverage pins
+both bodies, every class's early boss policy passes, and a new 15-run soak
+removes its prior controller stall while bringing Picsean to two nine-boss
+endings. The all-class endurance target remains open.
 
 v0.18.33 adds the **Frost Lancer** to Frost Vault: an icy, telegraphed lane
 charger with its own sprite and a deliberately durable body. It replaces only
@@ -1070,7 +1081,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.33 release and prior full endurance matrix)
+### Current conference evidence (v0.18.34 release and fresh endurance matrix)
 
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
@@ -1080,8 +1091,8 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   art, and two-lane pattern; the
   first-Colossus health budget, giant body-contact recovery, Skeleton
   clearance, score/Sigil stability, two-heart one-use Riftwell recovery,
-  Frost Lancer's Frost Vault spawn/art/charge, and the full boss identity
-  suite.
+  Frost Lancer's Frost Vault spawn/art/charge, the later-Colossus contact-body
+  contract, and the full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel and live title capture are hash-checked against the release ROM in
   `docs/media/gameplay.json`.
@@ -1094,22 +1105,18 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   [the music worksheet](docs/music-composition.md).
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
-  with zero combat/route stalls. The last complete 15-row, private-SRAM,
-  controller-only matrix (three 90k-frame entropy samples per champion, before
-  v0.18.33's Frost Lancer) has
-  Picsean at **2/3 endings**, Corvin at **1/3**, and Wolfkin, Sauran, and
-  Vespine at **0/3**. Median boss clears are 8, 1, 8, 9, and 6 respectively;
-  Wolfkin, Corvin, Picsean, and Vespine clear boss one in all three samples,
-  while Sauran does so in two. That matrix exercised all **28** enemy IDs
-  released at the time—including Shadow Keep's Gloam Bramble—and procedural
-  shops. v0.18.33 adds Frost Lancer as enemy 29; its dedicated live-ROM
-  contract proves the encounter, and subsequent endurance runs require it in
-  coverage. The matrix recorded zero route stalls and two combat dwells above
-  the strict threshold (both Picsean). Giant body contact remains a leading
-  observed pressure source for the non-completing close-range kits. The
-  remaining delivery-bar problem is therefore long-run survival and controller
-  routing, not early enemy durability or a progression deadlock; the next
-  balance work remains focused there rather than declaring the route complete.
+  with zero combat/route stalls. The fresh 15-row, private-SRAM,
+  controller-only matrix (three 90k-frame entropy samples per champion) has
+  Picsean at **2/3 endings** and Wolfkin, Sauran, Corvin, and Vespine at
+  **0/3**. Median boss clears are 6, 1, 6, 9, and 6 respectively; Wolfkin,
+  Corvin, Picsean, and Vespine clear boss one in all three samples, while
+  Sauran does so in two. It exercised all **29** released enemy IDs—including
+  Frost Lancer—and procedural shops, with **zero** combat or route stalls.
+  Giant body contact remains a leading observed pressure source for the
+  non-completing close-range kits. The remaining delivery-bar problem is
+  therefore long-run survival and controller routing, not an enemy-coverage or
+  progression deadlock; the next balance work remains focused there rather
+  than declaring the route complete.
 - v0.18.29's fixed-world diagnostic directly removes Wolfkin's former
   room-25 Mire Spore stall: that champion now completes all nine bosses in
   36,331 gameplay frames, while the other fixed-world outcomes remain useful

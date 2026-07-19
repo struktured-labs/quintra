@@ -122,6 +122,7 @@ def main():
     pb, boss = enter_boss(0, keep_open=True)
     assert pb.memory[boss + 14] == 160, (
         f"starter Colossus pacing drifted: {pb.memory[boss + 14]}")
+    assert pb.memory[boss + 25] == 0xFF, "early Colossus contact body drifted"
     max_hp = pb.memory[boss + 23]  # ai_data[6], captured by boss_tick
     assert max_hp > 1, "boss never captured its starting HP for enrage"
     hostile_count = lambda: sum(
@@ -138,6 +139,10 @@ def main():
     assert pb.memory[boss + 18] >= 20, "riftbreak did not grant a readable recovery beat"
     rift_shot_delta = hostile_count() - before_rift_shots
     assert rift_shot_delta >= 4, "riftbreak did not emit its slow four-way warning"
+    pb.stop(save=False)
+    pb, frost = enter_boss(3, keep_open=True)
+    assert pb.memory[frost + 25] == 0xDD, (
+        "Frost Vault giant did not receive its tighter late-run contact body")
     pb.stop(save=False)
     print(f"[boss-id] PASS 9/9 distinct runtime silhouettes; "
           f"Colossus vs crowned Void Lord differs {differing}/256 bytes; "

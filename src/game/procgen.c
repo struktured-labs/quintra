@@ -888,7 +888,13 @@ void procgen_generate_current_room(void) BANKED {
                 if (idx != 0xFF) {
                     entities[idx].sprite_tile = boss_sprite_for_stage(skin);
                     entities[idx].palette     = boss_palette_for_stage(skin);
-                    entities[idx].hitbox      = (u8)0xFF;
+                    // Early Colossi keep the broad 15px contact body used
+                    // to teach close-range pressure. Frost Vault onward uses
+                    // the established 13px bruiser body: the late giant
+                    // still fills lanes and keeps its full projectile/HP
+                    // budget, but a near-miss does not read as a 32px sprite
+                    // edge dealing unavoidable contact damage.
+                    entities[idx].hitbox      = (skin >= 3) ? (u8)0xDD : (u8)0xFF;
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
                     // A stage transition must never resolve into an instant
