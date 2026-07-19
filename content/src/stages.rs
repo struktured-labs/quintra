@@ -88,7 +88,10 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 2, 3), c(10, 8, 6), c(19,15, 8), c(28,24,14)],
         boss:    [c(0,0,0), c(13,11,20), c( 3, 3, 6), c(28,22,31)],
         boss_hp_bonus: 230, boss_dmg_bonus: 3, mb_variant: 2, room_archetype: 5,
-        enemy_pool: &[(7, 20), (3, 20), (5, 15), (11, 15), (19, 15), (22, 15)],
+        // Gloam Bramble replaces a small Prism Skitter slice with a slower
+        // opposite-lane orbit. Shadow Keep stays a deliberate positioning
+        // test without increasing generated body count.
+        enemy_pool: &[(7, 20), (3, 20), (5, 15), (11, 15), (19, 15), (22, 10), (27, 5)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {

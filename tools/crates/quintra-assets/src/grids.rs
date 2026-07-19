@@ -388,6 +388,17 @@ pub const BOG_TOAD: [&str; 8] = [ // squat mire toad, wide eyes and pounce legs
     "2......2",
 ];
 
+pub const BRAMBLE_SPRITE: [&str; 8] = [ // thorned leaf halo, bright seed core
+    "...2.2..",
+    ".231132.",
+    "231..132",
+    "21.33.12",
+    "21.33.12",
+    "231..132",
+    ".213312.",
+    "..2.2...",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -780,7 +791,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 25] = [
+pub const ENEMIES_8: [(&str, &[&str]); 26] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -806,6 +817,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 25] = [
     ("sunwheel", &SUNWHEEL),
     ("cinder_kite", &CINDER_KITE),
     ("bog_toad", &BOG_TOAD),
+    ("bramble_sprite", &BRAMBLE_SPRITE),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [

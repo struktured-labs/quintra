@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       27);   // adds Bell, Warden, Skitter, Midge, Sunwheel, Kite, Toad
+        assert_eq!(r.n_enemies(),       28);   // adds grove Bramble Sprite after the late specialists
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -189,6 +189,15 @@ mod tests {
     }
 
     #[test]
+    fn shadow_keep_adds_bramble_sprite_without_weight_inflation() {
+        let keep = &stages::STAGES[5];
+        assert!(keep.enemy_pool.iter().any(|&(id, w)| id == 27 && w == 5));
+        assert_eq!(keep.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::BRAMBLE_SPRITE.ai_script,
+            quintra_content::AiScriptId::Spinner { radius: 44, fire_rate: 132 });
+    }
+
+    #[test]
     fn toxic_mire_authors_mine_and_pounce_without_weight_inflation() {
         let mire = &stages::STAGES[4];
         assert!(mire.enemy_pool.iter().any(|&(id, _)| id == 17));
@@ -254,7 +263,7 @@ mod tests {
     #[test]
     fn shadow_keep_adds_prism_skitter_without_weight_inflation() {
         let stage = &stages::STAGES[5];
-        assert!(stage.enemy_pool.iter().any(|&(id, w)| id == 22 && w == 15));
+        assert!(stage.enemy_pool.iter().any(|&(id, w)| id == 22 && w == 10));
         assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::PRISM_SKITTER.ai_script,
             quintra_content::AiScriptId::Spinner { radius: 40, fire_rate: 84 });

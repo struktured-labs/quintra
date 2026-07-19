@@ -170,6 +170,12 @@ void tiles_load_bog_toad_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_BOG_TOAD, 1, sprite_enemy_bog_toad);
 }
 
+void tiles_load_bramble_sprite(void) BANKED {
+    // Shadow Keep cannot contain the other phase-safe slot-79 specialists.
+    // Reuse this town-only tile so the new procedural enemy costs no OBJ VRAM.
+    set_sprite_data(SPR_ENEMY_BRAMBLE_SPRITE, 1, sprite_enemy_bramble_sprite);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

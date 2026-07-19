@@ -187,6 +187,7 @@ static void room_load_dynamic_fx_identity(void) {
         // all four art identities without growing the fixed CGB atlas.
         if (room_stage() == 2) tiles_load_cinder_kite_sprite();
         else if (room_stage() == 4) tiles_load_bog_toad_sprite();
+        else if (room_stage() == 5) tiles_load_bramble_sprite();
         else if (room_stage() == 6) tiles_load_sunwheel_sprite();
         else tiles_load_dusk_midge_sprite();
     }

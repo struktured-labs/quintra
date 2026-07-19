@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.27: Mire Pounce](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.28: Gloam Bramble](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,16 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.28 gives **Shadow Keep** a new low-weight procedural enemy: the
+**Gloam Bramble**. It circles at a generous 44px thorn-ring and sends a slow,
+opposite thorn pair through the centre every 132 frames. Its distinct thorned
+seed silhouette reuses the town apothecary OBJ tile only in Shadow combat,
+where no town resident or other slot-79 specialist can exist. The 5% pool
+weight replaces Prism Skitter weight rather than adding bodies, preserving the
+stage's population budget. A live-ROM contract proves spawn, runtime art, and
+the exact two-lane attack; all cartridge bank headroom remains above the
+conference gate.
 
 v0.18.27 adds the **Bog Toad** to Toxic Mire: a 15-HP, telegraphed pounce
 bruiser with a distinct squat silhouette. It takes only the upper 8% of the
@@ -996,10 +1006,11 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.27)
+### Current conference evidence (v0.18.28)
 
-- Functional ROM contracts pass, including the starter-cadence contract and
-  Cinder Kite's Ember-only
+- Functional ROM contracts pass, including the starter-cadence contract,
+  Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
+  two-lane thorn pair; Cinder Kite's Ember-only
   procedural spawn, distinct runtime art, fast body cadence, and readable
   three-lane fan; honest capped coin pickups, Sunwheel’s Golden Temple spawn,
   art, and two-lane pattern; the

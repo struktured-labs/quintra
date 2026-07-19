@@ -47,6 +47,7 @@ extern const u8 sprite_enemy_dusk_midge[16];
 extern const u8 sprite_enemy_sunwheel[16];
 extern const u8 sprite_enemy_cinder_kite[16];
 extern const u8 sprite_enemy_bog_toad[16];
+extern const u8 sprite_enemy_bramble_sprite[16];
 
 // 8x8 effects and village roles
 extern const u8 sprite_fx_bullet_a[16];

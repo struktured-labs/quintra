@@ -384,6 +384,19 @@ pub const BOG_TOAD: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const BRAMBLE_SPRITE: Enemy = Enemy {
+    id: ENEMY_BRAMBLE_SPRITE, symbol: "BRAMBLE_SPRITE", name: "BrambleSpr",
+    sprite_set: SPRITE_BRAMBLE_SPRITE, palette: OBJ_PAL_GREEN,
+    // Shadow Keep's Gloam Bramble keeps a broad thorn-ring around the
+    // champion and sends a slow opposite pair through the centre. Its
+    // generous cadence and one damage make it a readable late lane prompt,
+    // while its leaf silhouette differs from Sunwheel and Prism Skitter.
+    stats: EnemyStats { hp: 11, damage: 1, speed: 56, score: 46, weakness: 0x02, poise: 1 },
+    ai_script: AiScriptId::Spinner { radius: 44, fire_rate: 132 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -412,4 +425,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(SUNWHEEL.clone());
     r.add_enemy(CINDER_KITE.clone());
     r.add_enemy(BOG_TOAD.clone());
+    r.add_enemy(BRAMBLE_SPRITE.clone());
 }
