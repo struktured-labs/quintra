@@ -181,11 +181,11 @@ static void room_load_dynamic_fx_identity(void) {
         tiles_load_dread_bell_sprite();
         tiles_load_rift_warden_sprite();
         tiles_load_prism_skitter_sprite();
-        // Slot 79 is a phase-safe multiplex: Cinder Kite is Ember-only, Bog
-        // Toad is Mire-only, Sunwheel is Temple-only, and Dusk Midge starts
-        // in Bloodmoon. No stage pool combines them, so one OBJ tile carries
-        // all four art identities without growing the fixed CGB atlas.
+        // Slot 79 is a phase-safe multiplex: each stage owns at most one of
+        // these specialist silhouettes, so one OBJ tile carries them without
+        // growing the fixed CGB atlas.
         if (room_stage() == 2) tiles_load_cinder_kite_sprite();
+        else if (room_stage() == 3) tiles_load_frost_lancer_sprite();
         else if (room_stage() == 4) tiles_load_bog_toad_sprite();
         else if (room_stage() == 5) tiles_load_bramble_sprite();
         else if (room_stage() == 6) tiles_load_sunwheel_sprite();

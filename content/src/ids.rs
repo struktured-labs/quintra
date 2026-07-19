@@ -68,6 +68,7 @@ pub const ENEMY_SUNWHEEL:        EnemyId = EnemyId::new(24);   // Golden Temple 
 pub const ENEMY_CINDER_KITE:     EnemyId = EnemyId::new(25);   // Ember fast fan-fire harrier
 pub const ENEMY_BOG_TOAD:        EnemyId = EnemyId::new(26);   // Toxic Mire telegraphed pounce bruiser
 pub const ENEMY_BRAMBLE_SPRITE:  EnemyId = EnemyId::new(27);   // Shadow Keep orbiting thorn pair
+pub const ENEMY_FROST_LANCER:    EnemyId = EnemyId::new(28);   // Frost Vault telegraphed ice charge
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -157,6 +158,9 @@ pub const SPRITE_BOG_TOAD:       SpriteRef = SpriteRef::new(79);
 // Shadow Keep never shares a room with Ember/Mire/Temple/Bloodmoon
 // specialists, so the Bramble Sprite also reclaims the apothecary tile.
 pub const SPRITE_BRAMBLE_SPRITE: SpriteRef = SpriteRef::new(79);
+// Frost Vault never shares a room with the other stage-specific slot-79
+// enemies, so its Lancer can keep a distinct silhouette at no OBJ cost.
+pub const SPRITE_FROST_LANCER:   SpriteRef = SpriteRef::new(79);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

@@ -20,6 +20,7 @@ ENEMY_NAMES = (
     "Mire Spore", "Echo Guard", "Rune Lantern", "Dread Bell", "Rift Warden",
     "Prism Skitter", "Dusk Midge", "Sunwheel", "Cinder Kite", "Bog Toad",
     "Gloam Bramble",
+    "Frost Lancer",
 )
 
 

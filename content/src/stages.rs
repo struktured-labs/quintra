@@ -59,8 +59,10 @@ pub const STAGES: [StageTheme; 9] = [
         boss:    [c(0,0,0), c(12,18,24), c( 3, 5, 9), c(31,31,31)],
         boss_hp_bonus: 205, boss_dmg_bonus: 2, mb_variant: 3, room_archetype: 3,
         // Frost is led by moving pressure; its 10% rotating Sentry is a
-        // readable lane hazard, not enough turret density to exhaust a run.
-        enemy_pool: &[(5, 23), (3, 23), (6, 22), (10, 10), (16, 22)],
+        // readable lane hazard, while Frost Lancers take the upper 8% of the
+        // old Wisp band. The total stays 100: a new lane decision, not more
+        // bodies or a changed procgen draw count.
+        enemy_pool: &[(5, 15), (28, 8), (3, 23), (6, 22), (10, 10), (16, 22)],
     },
     // 4 — Toxic Mire (sickly yellow-green)
     StageTheme {

@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       28);   // adds grove Bramble Sprite after the late specialists
+        assert_eq!(r.n_enemies(),       29);   // Frost Lancer joins the late specialists
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);

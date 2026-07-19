@@ -102,6 +102,7 @@
 #define SPR_ENEMY_CINDER_KITE SPR_APOTHECARY // Ember-only fast fan harrier
 #define SPR_ENEMY_BOG_TOAD    SPR_APOTHECARY // Toxic Mire-only pounce bruiser
 #define SPR_ENEMY_BRAMBLE_SPRITE SPR_APOTHECARY // Shadow-only thorn orbit pair
+#define SPR_ENEMY_FROST_LANCER SPR_APOTHECARY // Frost-only telegraphed charge
 #define SPR_ENEMY_ECHO_GUARD  80 // Golden Temple shield-counter duelist
 #define SPR_SHOP_TAG         81 // animated for-sale marker; never loose currency
 #define SPR_ENEMY_RIFT_WARDEN SPR_SHOP_TAG // combat-only late five-way caster
@@ -152,6 +153,7 @@ void tiles_load_dusk_midge_sprite(void) BANKED;    // combat-only reuse of apoth
 void tiles_load_cinder_kite_sprite(void) BANKED;   // Ember-only reuse of apothecary slot
 void tiles_load_bog_toad_sprite(void) BANKED;      // Toxic Mire reuse of apothecary slot
 void tiles_load_bramble_sprite(void) BANKED;       // Shadow Keep reuse of that slot
+void tiles_load_frost_lancer_sprite(void) BANKED;  // Frost Vault reuse of that slot
 void tiles_load_sunwheel_sprite(void) BANKED;      // Golden Temple reuse of that slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_spear_sprite(void) BANKED;

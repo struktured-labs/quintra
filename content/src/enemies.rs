@@ -397,6 +397,19 @@ pub const BRAMBLE_SPRITE: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const FROST_LANCER: Enemy = Enemy {
+    id: ENEMY_FROST_LANCER, symbol: "FROST_LANCER", name: "Frost Lancer",
+    sprite_set: SPRITE_FROST_LANCER, palette: OBJ_PAL_MAGIC,
+    // Frost Vault's deliberate line-breaker: it pauses with an icy tell,
+    // then commits to a two-pixel lane charge. It replaces a slice of the
+    // existing Wisp weight instead of increasing body density, so the player
+    // reads one positional threat rather than a surprise swarm.
+    stats: EnemyStats { hp: 13, damage: 2, speed: 48, score: 52, weakness: 0x02, poise: 1 },
+    ai_script: AiScriptId::Charger { telegraph_ticks: 34, charge_speed: 96 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -426,4 +439,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(CINDER_KITE.clone());
     r.add_enemy(BOG_TOAD.clone());
     r.add_enemy(BRAMBLE_SPRITE.clone());
+    r.add_enemy(FROST_LANCER.clone());
 }

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.32: Market Arms](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.33: Frost Lancer](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.33 adds the **Frost Lancer** to Frost Vault: an icy, telegraphed lane
+charger with its own sprite and a deliberately durable body. It replaces only
+the upper 8% of that stage's prior Wisp weight, so enemy count, seeded draw
+count, and the rest of the pool remain stable. The new sprite reuses the
+Frost-only phase-safe OBJ slot—no permanent graphics-memory cost—and a live
+ROM contract checks spawn, art loading, and its readable charge.
 
 v0.18.32 makes the village market a real build fork. Every three-dungeon town
 now replaces its generic random-relic shelf with a seed-stable **Rift Flail**

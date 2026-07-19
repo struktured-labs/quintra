@@ -176,6 +176,12 @@ void tiles_load_bramble_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_BRAMBLE_SPRITE, 1, sprite_enemy_bramble_sprite);
 }
 
+void tiles_load_frost_lancer_sprite(void) BANKED {
+    // Frost Vault cannot contain any other slot-79 specialist. Reuse the
+    // phase-safe town slot so this new silhouette has no permanent OBJ cost.
+    set_sprite_data(SPR_ENEMY_FROST_LANCER, 1, sprite_enemy_frost_lancer);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

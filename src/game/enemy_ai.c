@@ -306,7 +306,9 @@ static void charger_tick(entity_t *e, const enemy_def_t *def) {
     } else if (mode == CHG_CHARGE) {
         i8 dx = dir8_dx[e->ai_data[4] & 0x07];
         i8 dy = dir8_dy[e->ai_data[4] & 0x07];
-        // 2 px per tick dash
+        // Two pixels per tick dash. Charger speed is deliberately a future
+        // authored hook: keep the established cadence stable until a matched
+        // controller policy proves a variable-speed lane is safe to ship.
         u8 ok = enemy_try_step(e, dx, dy);
         if (ok) ok = enemy_try_step(e, dx, dy);
         if (!ok || --e->ai_data[3] == 0) {

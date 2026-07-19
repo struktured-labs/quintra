@@ -300,6 +300,17 @@ pub const ECHO_GUARD: [&str; 8] = [ // tall shield, eye slit, countering spear
     ".1.1..3.",
 ];
 
+pub const FROST_LANCER: [&str; 8] = [ // icy visor, raised lance, split skates
+    "...3.3..",
+    "..3223..",
+    ".321123.",
+    "32111123",
+    ".123321.",
+    "..1331..",
+    ".31..13.",
+    "3..3...3",
+];
+
 pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
     "...33...",
     "..3223..",
@@ -791,7 +802,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 26] = [
+pub const ENEMIES_8: [(&str, &[&str]); 27] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -818,6 +829,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 26] = [
     ("cinder_kite", &CINDER_KITE),
     ("bog_toad", &BOG_TOAD),
     ("bramble_sprite", &BRAMBLE_SPRITE),
+    ("frost_lancer", &FROST_LANCER),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [
