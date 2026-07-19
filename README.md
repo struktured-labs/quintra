@@ -971,15 +971,16 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   stage, boss, title, and ending themes still need their composed pass.
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
-  with zero combat/route stalls. The current private-SRAM sample keeps
-  Picsean at that floor (2/3 wins). After correcting Sauran's Tail Spike pilot
-  to honor its 48px lane, its three fresh long seeds contain one nine-boss
-  ending and **zero** combat/route stalls; the other two are real deaths.
-  Wolfkin, Corvin, and Vespine remain below the target. Wolfkin's sixth heart
-  raises fresh matched long samples to seven, seven, and three boss clears
-  (the first two reach the second town) with zero stalls; that is a material
-  true-melee fairness improvement, not a claim that the nine-boss ending gate
-  is solved. The next balance work remains focused on their long-run
+  with zero combat/route stalls. The current 15-row, private-SRAM,
+  controller-only matrix (three 90k-frame entropy samples per champion) has
+  Picsean at 2/3 endings; Wolfkin at a median two bosses, Sauran at one,
+  Corvin at six, and Vespine at three. Every row exercised the full enemy
+  roster and procedural shops. It exposed one honest Vespine/Mirror Moth
+  combat stall in Frost Vault; the pilot now keeps Stinger pursuit through
+  that moth's slow reflected bolts and the exact seed reaches room 42 / six
+  bosses with no stall. That fix is protected by a deterministic regression,
+  but the full five-class delivery matrix must be rerun after it before any
+  endurance claim changes. The next balance work remains focused on long-run
   survivability rather than declaring the route complete.
 
 The final stretch prioritizes readability and playability: room-transition
