@@ -833,11 +833,13 @@ example, `20 28 36` or `20,28,36`) for a matched sweep. The latter compares
 how often `orbit_fire` takes an aimed beat while otherwise preserving its
 collision-safe orbit. Explicit search values take precedence over class
 defaults; the harness changes only controller input, never game state.
-For Tail Spike/Stinger research, `QUINTRA_BOT_LUNGE_PANIC_RANGE=0..24` adds
-an opt-in close-body retreat buffer on matched seeds; the default `0` preserves
-the shipped policy until a candidate beats it reproducibly. `make policy-sweep
+For Tail Spike/Stinger research, `QUINTRA_BOT_LUNGE_PANIC_RANGE=0..24` controls
+the close-body retreat buffer on matched seeds. The default `16` earned adoption
+after paired three-seed samples improved Sauran from one to two median boss
+clears and room depth from 12 to 18, while Vespine improved from room depth 8 to
+10; neither sample introduced a combat or route stall. `make policy-sweep
 QUINTRA_POLICY_POLICIES=classwise QUINTRA_POLICY_CLASSES='1 4'
-QUINTRA_POLICY_LUNGE_PANIC_RANGES='0 4 8 12'` compares those buffers without
+QUINTRA_POLICY_LUNGE_PANIC_RANGES='0 8 16 24'` compares those buffers without
 touching cartridge state. Sauran's real Stoneskin B can likewise be swept at
 `QUINTRA_POLICY_SAURAN_BODY_SHIELD_RANGES='0 36 48 60'`; zero keeps the
 controller from spending the shield on a giant's close body until matched

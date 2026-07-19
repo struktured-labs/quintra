@@ -62,12 +62,13 @@ local ABILITY_POLICY = os.getenv("QUINTRA_BOT_ABILITY_POLICY") or "smart"
 if ABILITY_POLICY ~= "off" and ABILITY_POLICY ~= "smart" then
     ABILITY_POLICY = "smart"
 end
--- Close-range weapons need a separate experiment from their generic combat
--- policy. Default zero preserves the established Sauran/Vespine behavior;
--- an offline sample can opt into a small, read-only body buffer without
--- changing cartridge balance or conflating it with boss-orbit policy.
+-- Close-range weapons need a separate body-safety rule from their generic
+-- combat policy. Matched three-seed runs improved both Tail Spike and Stinger
+-- routes at 16px with no combat or route stalls, so that is the controller
+-- baseline. An environment override still permits a clean A/B comparison
+-- without changing cartridge balance or conflating it with boss-orbit policy.
 local LUNGE_PANIC_RANGE = tonumber(os.getenv("QUINTRA_BOT_LUNGE_PANIC_RANGE")
-    or "0") or 0
+    or "16") or 16
 if LUNGE_PANIC_RANGE < 0 then LUNGE_PANIC_RANGE = 0 end
 if LUNGE_PANIC_RANGE > 24 then LUNGE_PANIC_RANGE = 24 end
 -- Stoneskin is Sauran's authored answer to body contact as well as bullets,
@@ -1584,12 +1585,11 @@ while frames < LIMIT do
         if target.giant == 0 and not waiting_star then
             local body_range = math.max(math.abs(dx), math.abs(dy))
             local panic_range = held_style == "claw" and 12
-                -- Preserve the measured Sauran/Vespine starter lanes; this
-                -- is for Wolfkin only after a lunge-weapon swap.
+                -- Preserve the measured Sauran/Vespine body buffer; this
+                -- wider lane is for Wolfkin only after a lunge-weapon swap.
                 or (held_style == "lunge" and CLASS == 0) and 24
-                -- Explicit experiments may grant Tail Spike/Stinger a small
-                -- contact buffer. It is disabled by default so every trial
-                -- can be compared with the shipped policy on the same seed.
+                -- Tail Spike/Stinger keep their measured 16px contact buffer.
+                -- Explicit experiments may still override it on matched seeds.
                 or (held_style == "lunge" and LUNGE_PANIC_RANGE > 0)
                     and LUNGE_PANIC_RANGE
                 or held_style == "flail" and 24
