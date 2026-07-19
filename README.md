@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.24: Ember Takes Wing](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.25: Ember Takes Wing](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.25 sharpens the **Cinder Kite** silhouette into broad ember wings around
+a suspended furnace core. It now reads independently of the late-game Dusk
+Midge at a glance, and the asset pipeline rejects any future specialist-art
+alias. Its movement, shots, pool weight, and balance remain unchanged.
 
 v0.18.24 gives **Ember Depths** its own mobile harrier: the low-weight
 **Cinder Kite**. It has an ember-wing silhouette, drifts quickly, and sends a
@@ -963,7 +968,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.24)
+### Current conference evidence (v0.18.25)
 
 - Functional ROM contracts pass, including Cinder Kite's Ember-only
   procedural spawn, distinct runtime art, fast body cadence, and readable

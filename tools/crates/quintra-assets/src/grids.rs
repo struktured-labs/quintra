@@ -366,15 +366,15 @@ pub const SUNWHEEL: [&str; 8] = [ // radiant ring, offset spokes, dark core
     "..3.3...",
 ];
 
-pub const CINDER_KITE: [&str; 8] = [ // swept ember wings, bright furnace core
-    "...3.3..",
-    "..32132.",
-    ".3211123",
+pub const CINDER_KITE: [&str; 8] = [ // wide ember wings, suspended furnace core
+    "3......3",
+    ".3....3.",
+    "..3223..",
+    ".321123.",
     "32133123",
-    ".2111112",
-    "..32123.",
-    ".3.2.2.3",
-    "3.......",
+    ".321123.",
+    "..3..3..",
+    "...33...",
 ];
 
 pub const BULLET_A: [&str; 8] = [

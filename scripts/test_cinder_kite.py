@@ -49,6 +49,8 @@ def main():
         assert actual == expected, "Ember Depths did not install Cinder Kite OBJ art"
         assert actual != generated_sprite("sprite_enemy_cinder_maw"), \
             "Cinder Kite reused the rooted Cinder Maw silhouette"
+        assert actual != generated_sprite("sprite_enemy_dusk_midge"), \
+            "Cinder Kite reused the later Dusk Midge silhouette"
 
         # Exercise the real generated entity on an open board. Its fast body
         # drifts east every four ticks and its three normal-speed fan leaves
