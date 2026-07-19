@@ -369,11 +369,16 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_COIN_1:
-                    if (player.coins < 999) player.coins++;
+                    // Match capped hearts/MP: a full purse must not eat a
+                    // visible coin, play the happy chime, and leave the HUD
+                    // unchanged. Keep it available until the player spends.
+                    if (player.coins >= 999) continue;
+                    player.coins++;
                     hud_redraw_coins();
                     sfx_play(SFX_COIN);
                     break;
                 case PICKUP_COIN_5:
+                    if (player.coins >= 999) continue;
                     player.coins = (u16)(player.coins + 5);
                     if (player.coins > 999) player.coins = 999;
                     hud_redraw_coins();

@@ -111,8 +111,51 @@ def main():
         pb.tick()
     assert pb.memory[mp] == 0 and pb.memory[PL + 4] == 4, \
         "MP wisp did not restore and consume once MP was missing"
+
+    # Coins follow the same no-fake-pickup contract. At the 999 purse cap,
+    # both ordinary and five-coin drops must remain visible rather than play a
+    # pickup sound while producing no HUD change. A lower purse then collects
+    # and clamps normally through the real collision path.
+    coin = EN
+    pb.memory[coin] = 3
+    pb.memory[coin + 1] = 3
+    put16(pb, coin + 3, px + 4)
+    put16(pb, coin + 7, py + 8)
+    pb.memory[coin + 14] = 1
+    pb.memory[coin + 16] = 240
+    pb.memory[coin + 17] = 1  # PICKUP_COIN_1
+    pb.memory[coin + 25] = 0x66
+    pb.memory[PL + 16], pb.memory[PL + 17] = 0xE7, 0x03  # 999
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[coin] == 3 and (pb.memory[PL + 16] | (pb.memory[PL + 17] << 8)) == 999, \
+        "full-purse coin was consumed without a visible gain"
+    pb.memory[PL + 16], pb.memory[PL + 17] = 0xE6, 0x03  # 998
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[coin] == 0 and (pb.memory[PL + 16] | (pb.memory[PL + 17] << 8)) == 999, \
+        "ordinary coin did not collect to the purse cap"
+
+    coin5 = EN
+    pb.memory[coin5] = 3
+    pb.memory[coin5 + 1] = 3
+    put16(pb, coin5 + 3, px + 4)
+    put16(pb, coin5 + 7, py + 8)
+    pb.memory[coin5 + 14] = 1
+    pb.memory[coin5 + 16] = 240
+    pb.memory[coin5 + 17] = 2  # PICKUP_COIN_5
+    pb.memory[coin5 + 25] = 0x66
+    pb.memory[PL + 16], pb.memory[PL + 17] = 0xE7, 0x03
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[coin5] == 3, "full-purse five-coin drop was consumed"
+    pb.memory[PL + 16], pb.memory[PL + 17] = 0xE4, 0x03  # 996
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[coin5] == 0 and (pb.memory[PL + 16] | (pb.memory[PL + 17] << 8)) == 999, \
+        "five-coin drop did not clamp and collect correctly"
     pb.stop(save=False)
-    print("[heart-pickup] PASS capped heart/MP pickups wait, missing stats restore")
+    print("[heart-pickup] PASS capped heart/MP/coins wait, missing stats restore")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.15: Sunwheel](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.16: Honest Purse](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.16 fixes a visible capped-pickup lie: at the **999-coin purse cap**,
+ordinary and five-coin drops no longer vanish with a pickup chime while the
+HUD remains unchanged. Like full-health hearts and full-MP wisps, capped coins
+stay visible until spending makes them useful. Live-ROM coverage proves both
+coin values remain at cap and collect/clamp correctly below it, alongside the
+shop purchase contract.
 
 v0.18.15 adds the **Sunwheel**, a Golden Temple-only orbiting lane shaper. It
 holds a compact ring around the champion and throws a slow opposite pair
@@ -885,12 +892,12 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.15)
+### Current conference evidence (v0.18.16)
 
-- Functional ROM contracts pass, including the Sunwheel’s Golden Temple spawn,
-  art, and two-lane pattern; the first-Colossus health budget, giant
-  body-contact recovery, Skeleton clearance, score/Sigil stability, and the
-  full boss identity suite.
+- Functional ROM contracts pass, including honest capped coin pickups,
+  Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the
+  first-Colossus health budget, giant body-contact recovery, Skeleton
+  clearance, score/Sigil stability, and the full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel is hash-checked against the release ROM in `docs/media/gameplay.json`.
 - The current cart has been smoke-tested on an **Analogue Pocket** and an
