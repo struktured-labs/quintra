@@ -97,7 +97,7 @@ void hud_redraw_hp(void) BANKED {
 void hud_redraw_coins(void) BANKED {
     u8 row[4];
     u16 c = player.coins;
-    if (c > 999) c = 999;
+    if (c > COIN_CAP) c = COIN_CAP;
     row[0] = HUD_COIN;
     row[1] = (u8)(HUD_DIGIT_0 + (c / 100));
     row[2] = (u8)(HUD_DIGIT_0 + ((c / 10) % 10));

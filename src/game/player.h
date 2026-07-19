@@ -5,6 +5,7 @@
 #include "core/types.h"
 
 #define INVENTORY_SLOTS 16   // Phase 4-5; bumped to 64 in Phase 6+
+#define COIN_CAP        999  // HUD width and shop economy contract
 
 // Facing direction (4-dir, mapped to D-pad bits in tick fns)
 enum {
