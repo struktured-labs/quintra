@@ -974,14 +974,14 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   with zero combat/route stalls. The current 15-row, private-SRAM,
   controller-only matrix (three 90k-frame entropy samples per champion) has
   Picsean at 2/3 endings; Wolfkin at a median two bosses, Sauran at one,
-  Corvin at six, and Vespine at three. Every row exercised the full enemy
-  roster and procedural shops. It exposed one honest Vespine/Mirror Moth
-  combat stall in Frost Vault; the pilot now keeps Stinger pursuit through
-  that moth's slow reflected bolts and the exact seed reaches room 42 / six
-  bosses with no stall. That fix is protected by a deterministic regression,
-  but the full five-class delivery matrix must be rerun after it before any
-  endurance claim changes. The next balance work remains focused on long-run
-  survivability rather than declaring the route complete.
+  Corvin at six, and Vespine at six. Every row exercised the full enemy
+  roster and procedural shops, with **zero combat or route stalls**. The
+  Vespine/Mirror Moth Frost Vault stall is fixed by holding Stinger pursuit
+  through the moth's slow reflected bolts; that exact seed now reaches room
+  42 / six bosses, and the repaired full matrix confirms it without regressing
+  the other champions. The remaining delivery-bar problem is long-run
+  survival/endings, not an automation deadlock; the next balance work remains
+  focused there rather than declaring the route complete.
 
 The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
