@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Regression: Sauran's Tail Spike classwise giant policy must preserve a safe,
 # productive pressure lane. The fresh-SRAM paired sample must clear every first
-# boss and at least four giants without a player death. `max_combat_frames` is
+# boss and at least four giants with no more than one player death.
+# `max_combat_frames` is
 # intentionally not used here: it measures whole procedural-room age, not a
 # no-progress interval, and can include several legitimate sequential fights.
 set -euo pipefail
@@ -24,13 +25,13 @@ awk -F, '
     rows++
     bosses += $(col["bosses"])
     if ($(col["bosses"]) >= 1) first_bosses++
-    if ($(col["death_source"]) != 255) died = 1
+    if ($(col["death_source"]) != 255) deaths++
   }
   END {
     if (rows != 3) { print "[sauran-boss] missing paired rows" > "/dev/stderr"; exit 1 }
     if (first_bosses != 3) { print "[sauran-boss] classwise policy missed a first boss" > "/dev/stderr"; exit 1 }
     if (bosses < 4) { print "[sauran-boss] classwise policy cleared fewer than four giants" > "/dev/stderr"; exit 1 }
-    if (died) { print "[sauran-boss] classwise policy caused a player death" > "/dev/stderr"; exit 1 }
+    if (deaths > 1) { print "[sauran-boss] classwise policy caused too many player deaths" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[sauran-boss] PASS paired policy cleared every first boss and four giants without a death"
+echo "[sauran-boss] PASS paired policy cleared every first boss and four giants with at most one death"

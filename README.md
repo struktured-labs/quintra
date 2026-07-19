@@ -833,6 +833,10 @@ pollute an interrupted/resumed sample. Every attempt also boots with its own
 blank battery-save directory, so no row can inherit a suspend state from a
 previous seed. Short-range routing treats a cover-blocked Leech lane as a real
 pathfinding problem and will only fire after it reaches a legal cardinal lane.
+If a flying target remains behind unreachable procedural cover long enough to
+prove its sampled lane is blocked, the pilot side-steps to reacquire rather
+than firing into that wall forever; the deterministic Sauran north-wall
+regression pins this controller behavior.
 `giant_overlap_damage` separately
 records HP lost on frames where the actual giant hurtbox overlaps the hero;
 this distinguishes boss body-pinning from projectile pressure without writing

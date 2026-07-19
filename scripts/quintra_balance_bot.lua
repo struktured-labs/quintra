@@ -539,6 +539,29 @@ local function giant_orbit_step(px, py, aim, retreat)
     return retreat
 end
 
+-- A flying enemy can occupy an isolated side of generated cover: there is no
+-- body-valid route to its current tile, so a tile BFS correctly has no answer
+-- but an aimed fallback would keep firing into the same wall. After the normal
+-- no-damage watchdog has proved that this is not a brief alignment issue,
+-- step sideways to expose a new cardinal lane. This remains ordinary D-pad
+-- input and never assumes the enemy will stay at its sampled position.
+local function cover_recovery_step(px, py, aim, phase)
+    local first, second, retreat
+    if aim == KEY_UP or aim == KEY_DOWN then
+        first = (phase % 2 == 0) and KEY_LEFT or KEY_RIGHT
+        second = (first == KEY_LEFT) and KEY_RIGHT or KEY_LEFT
+        retreat = (aim == KEY_UP) and KEY_DOWN or KEY_UP
+    else
+        first = (phase % 2 == 0) and KEY_UP or KEY_DOWN
+        second = (first == KEY_UP) and KEY_DOWN or KEY_UP
+        retreat = (aim == KEY_LEFT) and KEY_RIGHT or KEY_LEFT
+    end
+    if can_step(px, py, first) then return first end
+    if can_step(px, py, second) then return second end
+    if can_step(px, py, retreat) then return retreat end
+    return aim
+end
+
 local function direction_from_keys(keys)
     if keys % 0x20 >= KEY_RIGHT then return KEY_RIGHT end
     if keys % 0x40 >= KEY_LEFT then return KEY_LEFT end
@@ -1535,11 +1558,21 @@ while frames < LIMIT do
             -- A blind perpendicular strafe can circle the outside of a
             -- U-shaped court forever. Reuse the collision-aware melee BFS to
             -- reach a clear one-tile firing lane through the actual opening.
-            keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
+            local route = target_step(px, py, target.x, target.y, aim, routed_reach)
+            if route == aim and not projectile_lane_clear(px, py, target.x, target.y, aim) then
+                keys = cover_recovery_step(px, py, aim, math.floor(frames / 60))
+            else
+                keys = route + KEY_A
+            end
             flank_timer = flank_timer - 1
         elseif no_damage_frames > 240 then
             flank_timer, no_damage_frames = 240, 0
-            keys = target_step(px, py, target.x, target.y, aim, routed_reach) + KEY_A
+            local route = target_step(px, py, target.x, target.y, aim, routed_reach)
+            if route == aim and not projectile_lane_clear(px, py, target.x, target.y, aim) then
+                keys = cover_recovery_step(px, py, aim, math.floor(frames / 60))
+            else
+                keys = route + KEY_A
+            end
         -- Sauran's Tail Spike and Vespine's Stinger are 48px lunges, not
         -- Wolfkin's adjacent claw. Treating all three as true melee walked
         -- these kits into contact damage and understated them. Hold a clear
