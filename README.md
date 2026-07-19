@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.13: Spirit Procession](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.14: Clear Records](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,11 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.14 fixes a title-menu polish regression: opening **Records** now parks
+the Spirit Procession instead of leaving five hero sprites over the statistics,
+then restores it on return. Live-ROM coverage proves title → records → title →
+class-select ownership for every one of the 20 title OAM slots.
 
 v0.18.13 makes the title's founding myth visibly about the five champions:
 Wolfkin, Sauran, Corvin, Picsean, and Vespine now appear in a class-coloured,
@@ -871,7 +876,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.13)
+### Current conference evidence (v0.18.14)
 
 - Functional ROM contracts pass, including the first-Colossus health budget,
   giant body-contact recovery, Skeleton clearance, score/Sigil stability, and

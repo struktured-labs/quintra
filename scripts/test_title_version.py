@@ -62,14 +62,40 @@ def main():
             f"title champion {champion} was parked instead of displayed"
         )
 
-    # Cycle past the long beat "FIVE SEAL THE RIFT", whose final T occupies
-    # column 19. The following beat must erase that edge cell completely.
-    for _ in range(1500):
+    # SELECT replaces the lore tableau with a full records page. No title
+    # sprite may survive beneath those statistics; SELECT again must restore
+    # the same five-spirit presentation before START reaches class select.
+    pb.button("select")
+    pb.tick(20)
+    for sprite in range(20):
+        oam = 0xFE00 + sprite * 4
+        assert pb.memory[oam] == 0 and pb.memory[oam + 1] == 0, (
+            f"title spirit OAM {sprite} leaked into records"
+        )
+    pb.button("select")
+    pb.tick(20)
+    assert pb.memory[0xFE00 + 2] in (class_base, walk_base), \
+        "records exit did not restore the spirit procession"
+
+    # Observe the long beat "FIVE SEAL THE RIFT", whose final T occupies
+    # column 19, then prove its successor clears that exact edge. This is
+    # intentionally event-based: menu round trips should not make a fixed
+    # frame-count assertion accidentally sample the long beat itself.
+    lore_edge = 0x9800 + 9 * 32 + 19
+    for _ in range(2000):
         pb.tick()
+        if pb.memory[lore_edge] != 0:
+            break
+    else:
+        raise AssertionError("intro lore never rendered FIVE SEAL THE RIFT")
+    for _ in range(400):
+        pb.tick()
+        if pb.memory[lore_edge] == 0:
+            break
+    else:
+        raise AssertionError("intro lore left the trailing T from FIVE SEAL THE RIFT")
     assert pb.memory[0x9800 + 8 * 32 + 19] == 0, \
         "intro lore left a glyph at the upper right edge"
-    assert pb.memory[0x9800 + 9 * 32 + 19] == 0, \
-        "intro lore left the trailing T from FIVE SEAL THE RIFT"
     screenshot = ROOT / "tmp" / "title-current-version.png"
     screenshot.parent.mkdir(exist_ok=True)
     pb.screen.image.save(screenshot)

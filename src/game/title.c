@@ -208,12 +208,16 @@ screen_id_t title_tick(u8 keys, u8 pressed) {
             showing_records = 0;
             sfx_play(SFX_COIN);
             render_title();
+            title_draw_spirits();
         }
         return SCREEN_SELF;
     }
     if (pressed & J_SELECT) {
         showing_records = 1;
         sfx_play(SFX_COIN);
+        // The records page owns the whole text field. Park the title tableau
+        // instead of letting the five heroes float over personal statistics.
+        title_hide_spirits();
         render_records();
         return SCREEN_SELF;
     }
@@ -236,7 +240,7 @@ void title_draw(void) {
 
     // OAM updates are deliberately coarse: the tableau reads as a living
     // procession at 7.5 Hz while leaving nearly all title frames untouched.
-    if ((pulse_phase & 7) == 0) title_draw_spirits();
+    if (!showing_records && (pulse_phase & 7) == 0) title_draw_spirits();
 
     // Change the vow every three pulse cycles. The palette continues moving
     // between beats, giving the lore tableau a simple hardware-cheap animation.
