@@ -959,11 +959,14 @@ then line up their final few pixels on the target's cardinal axis before
 striking. Ranged champions also step onto a close boss's row or column instead
 of orbiting at a perfect diagonal and sending cardinal shots past its corner.
 If cover absorbs four seconds of any weapon's attacks, they flank and
-reacquire instead of attacking the wall forever. Debug runs can emit a
-one-shot screenshot when a room exceeds the stall threshold by setting
-`QUINTRA_BOT_DEBUG_SCREEN=/tmp/quintra-stall`; with `QUINTRA_BOT_DEBUG=1`,
-active giant fights are also sampled once per second so a corner pin can be
-reproduced from controller input rather than guessed from a final CSV row.
+reacquire instead of attacking the wall forever. Debug runs now retain a
+compact `BOTTILES` collision-map snapshot for **every** live-enemy room that
+exceeds the stall threshold, so a CSV failure always has a headless-safe,
+read-only geometry artifact; an optional one-shot screenshot remains available
+with `QUINTRA_BOT_DEBUG_SCREEN=/tmp/quintra-stall`. With
+`QUINTRA_BOT_DEBUG=1`, active giant fights are also sampled once per second so
+a corner pin can be reproduced from controller input rather than guessed from
+a final CSV row.
 Set `QUINTRA_BALANCE_DEBUG=1 QUINTRA_BALANCE_DEBUG_DIR=tmp/agent-debug` on the
 wrapper to retain per-trial `BOTROOM`, `BOTWEAPON`, `BOTHIT`, ability, and
 position events after mGBA exits. `BOTHIT` now records dungeon/Riftwild

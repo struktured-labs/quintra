@@ -392,11 +392,11 @@ local function body_walkable(cx, cy)
         and navigation_walkable(emu:read8(TM + cy * 20 + cx))
 end
 
--- Headless mGBA can crash while taking a screenshot. For a stationary-mine
--- controller repro, a compact tile snapshot is more useful anyway: it records
--- the actual collision vocabulary the next policy must respect, without
--- writing ROM/RAM or requiring a frontend.
-local function debug_spore_tilemap(frame, room, px, py, target)
+-- Headless mGBA can crash while taking a screenshot. For any controller
+-- repro, a compact tile snapshot is more useful anyway: it records the actual
+-- collision vocabulary the next policy must respect, without writing ROM/RAM
+-- or requiring a frontend.
+local function debug_tilemap(frame, room, px, py, target)
     local rows = {}
     if not DEBUG or TM == 0 then return end
     for y = 0, 16 do
@@ -407,9 +407,9 @@ local function debug_spore_tilemap(frame, room, px, py, target)
         rows[#rows + 1] = table.concat(row, "")
     end
     debug_log(string.format(
-        "BOTSPOTILES f=%d room=%d p=%d,%d cell=%d,%d spore=%d,%d cell=%d,%d map=%s",
+        "BOTTILES f=%d room=%d p=%d,%d cell=%d,%d target=%d@%d,%d cell=%d,%d map=%s",
         frame, room, px, py, math.floor((px + 8) / 8), math.floor((py + 12) / 8),
-        target.x, target.y, math.floor((target.x + 4) / 8),
+        target.kind, target.x, target.y, math.floor((target.x + 4) / 8),
         math.floor((target.y + 4) / 8), table.concat(rows, "/")))
 end
 
@@ -1269,7 +1269,7 @@ while frames < LIMIT do
     end
     if target and (target.kind == 17 or target.kind == 13)
         and DEBUG and debug_spore_room ~= room then
-        debug_spore_tilemap(frames, room, px, py, target)
+        debug_tilemap(frames, room, px, py, target)
         debug_spore_room = room
     end
     -- Only an immediately observed, close body is allowed to request the
@@ -2305,9 +2305,17 @@ while frames < LIMIT do
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y)
                     or (shop and string.format("shop:%d,%d", shop.x, shop.y) or "door")), keys))
     end
-    if DEBUG_SCREEN and debug_shot_room ~= room
+    -- Preserve one collision-map artifact for every long live-enemy room,
+    -- not only Mire Spore repros. This makes the CSV's combat-stall column
+    -- actionable during unattended balance matrices. A requested screenshot
+    -- is still captured on the same event, but the text map remains the
+    -- reliable headless artifact.
+    if (DEBUG or DEBUG_SCREEN) and target and debug_shot_room ~= room
         and frames - room_enter_frame > 3600 then
-        emu:screenshot(string.format("%s-r%d.png", DEBUG_SCREEN, room))
+        if DEBUG then debug_tilemap(frames, room, px, py, target) end
+        if DEBUG_SCREEN then
+            emu:screenshot(string.format("%s-r%d.png", DEBUG_SCREEN, room))
+        end
         debug_shot_room = room
     end
     last_input_keys = keys
