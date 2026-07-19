@@ -1168,7 +1168,7 @@ while frames < LIMIT do
         else
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
-            if threat and threat.giant == 0 then
+            if CLASS == 4 and threat and threat.giant == 0 then
                 -- One ordinary scrape is part of the intended pressure. A
                 -- repeated hit from this same body within 90 frames is the
                 -- wall-pin signature: dash only then, so a successful lane
