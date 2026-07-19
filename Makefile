@@ -99,10 +99,11 @@ cleangen:
 cleanall: clean cleangen
 	cargo clean
 
-# Headless test (build + boot + screenshots)
+# Fast live-cartridge test (build + boot + state-asserted screenshots).
+# Keep this honest: the old target swallowed a missing Phase-3 script and
+# reported success without exercising the ROM.
 test: all
-	@bash scripts/test_headless.sh $(BINDIR)/$(PROJECT).gbc 2>/dev/null || \
-		echo "[test] headless harness not yet wired (Phase 3)"
+	bash scripts/test_smoke.sh $(BINDIR)/$(PROJECT).gbc
 
 # The whole verification stack: Rust unit/property/golden tests, the
 # headless gameplay smoke (pixel + state asserts), and the cross-seam
