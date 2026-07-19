@@ -1079,6 +1079,12 @@ local no_damage_frames, flank_timer = 0, 0
 local spore_pressure_timer = 0
 local wall_follow_dir, wall_follow_min = 0, 0
 local dodge_phase, dodge_dir, dodge_cooldown, dodge_count = 0, KEY_RIGHT, 0, 0
+-- A close hostile can pin a champion against a wall before the ordinary
+-- projectile-only dodge heuristic notices it.  Keep a short, read-only
+-- request after an observed body hit; the input phase below turns it into the
+-- same double-tap dash available to a player.  This is deliberately not an
+-- HP, position, or iframe write.
+local body_dash_frames, body_dash_source = 0, 255
 -- Once a feet box lands on spikes, keep one escape lane until it has truly
 -- crossed a safe tile. Re-choosing every pixel can ping-pong on a wall seam.
 local spike_escape_dir = 0
@@ -1161,6 +1167,9 @@ while frames < LIMIT do
         else
             local threat = enemy_target(hit_x, hit_y)
             last_damage_source = threat and threat.kind or 253
+            if threat and threat.giant == 0 then
+                body_dash_frames, body_dash_source = 16, threat.kind
+            end
         end
         -- This does not guess the exact source of a mixed collision frame.
         -- It records the narrower, actionable fact that the player hurtbox
@@ -1235,6 +1244,13 @@ while frames < LIMIT do
         debug_spore_tilemap(frames, room, px, py, target)
         debug_spore_room = room
     end
+    -- Only an immediately observed, close body is allowed to request the
+    -- emergency dash.  A distant shooter/projectile may share an enemy ID,
+    -- but should continue through the normal projectile-dodge policy.
+    local body_dash_ready = body_dash_frames > 0 and target
+        and target.giant == 0 and target.kind == body_dash_source
+        and math.max(math.abs(target.x - px), math.abs(target.y - py)) <= 20
+    if body_dash_frames > 0 then body_dash_frames = body_dash_frames - 1 end
     -- Overworld encounters are optional traversal pressure. Follow the
     -- authored route while firing instead of treating every screen as a
     -- mandatory clear; dungeon combat remains fully engaged.
@@ -1935,7 +1951,27 @@ while frames < LIMIT do
     -- the authored exit input for that observed emergency; this is controller
     -- policy, never a ROM immunity or entity mutation.
     local world_guard_requested = false
-    if ABILITY_POLICY == "smart" and CLASS == 3 and world_body_close
+    if body_dash_ready and world_mode == 0 and dodge_phase == 0 then
+        local dx, dy = px - target.x, py - target.y
+        if math.abs(dx) >= math.abs(dy) then
+            dodge_dir = dx >= 0 and KEY_RIGHT or KEY_LEFT
+            if not can_step(px, py, dodge_dir) then
+                dodge_dir = can_step(px, py, KEY_UP) and KEY_UP or KEY_DOWN
+            end
+        else
+            dodge_dir = dy >= 0 and KEY_DOWN or KEY_UP
+            if not can_step(px, py, dodge_dir) then
+                dodge_dir = can_step(px, py, KEY_LEFT) and KEY_LEFT or KEY_RIGHT
+            end
+        end
+        dodge_phase, dodge_count = 1, dodge_count + 1
+        body_dash_frames, body_dash_source = 0, 255
+        if DEBUG then
+            debug_log(string.format(
+                "BOTBODYDASH f=%d room=%d pos=%d,%d target=%d@%d,%d dir=%02X",
+                frames, room, px, py, target.kind, target.x, target.y, dodge_dir))
+        end
+    elseif ABILITY_POLICY == "smart" and CLASS == 3 and world_body_close
         and world_contact_hits < 2
         and active_charge == 0 and mp >= 2 then
         keys = KEY_B
