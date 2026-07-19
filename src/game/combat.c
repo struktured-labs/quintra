@@ -141,7 +141,7 @@ u8 combat_resolve(void) BANKED {
             if (dmg == 0) dmg = 1;
 
             // A fully built run can otherwise erase the one-byte (255 HP)
-            // late bosses in a few rapid-fire beats. Frost Vault onward,
+            // late bosses in a few rapid-fire beats. Ember Depths onward,
             // their Rift Armor turns a huge single projectile into a readable
             // sequence of hits rather than pretending the cartridge can hold
             // ever-larger HP values. That leaves the first three encounters
@@ -151,11 +151,11 @@ u8 combat_resolve(void) BANKED {
             // to its announced World Collapse pocket; it can no longer be
             // erased before that positional fight happens.
             // This intentionally applies only to giant stage bosses; normal
-            // enemies, mini-bosses, and the first three bosses keep their full
+            // enemies, mini-bosses, and the first two bosses keep their full
             // weapon/elemental payoff.
             if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
                 && entities[j].ai_data[3]
-                && entities[j].ai_data[2] >= 3
+                && entities[j].ai_data[2] >= 2
                 && entities[j].ai_data[2] <= 8) {
                 u8 cap = 3;
                 if (dmg > cap) dmg = cap;

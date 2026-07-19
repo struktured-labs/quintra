@@ -60,9 +60,11 @@ gen:
 		--header-out $(SRCDIR)/render/sprites_gen.h
 
 # All headers under src/ (+ generated). lcc/SDCC can't emit .d dep files here,
-# so use a coarse dependency: any header change rebuilds every object. Slower
-# but correct — a stale-header build once shipped a wrong constant.
-HDRS = $(shell find $(SRCDIR) -name '*.h' 2>/dev/null)
+# so use a coarse dependency for ordinary headers. version.h is deliberately
+# title-only; keeping it in this global list makes a one-character release
+# footer bump rebuild the entire ROM even though no other translation unit can
+# observe it.
+HDRS = $(filter-out $(SRCDIR)/game/version.h,$(shell find $(SRCDIR) -name '*.h' 2>/dev/null))
 
 # Compile each .c under any subdir of src/
 $(OBJDIR)/%.o: %.c $(HDRS)
@@ -75,7 +77,7 @@ $(OBJDIR)/%.o: %.c $(HDRS)
 # unit every build so a release ROM can never advertise its previous tag.
 force-title:
 
-$(OBJDIR)/src/game/title.o: force-title
+$(OBJDIR)/src/game/title.o: force-title $(SRCDIR)/game/version.h
 
 # Link to ROM, then verify the memory layout. The layout check exists
 # because the linker SILENTLY placed init code past 0x8000 when the flat

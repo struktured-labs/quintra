@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.37: First Colossus Pacing](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.38: Ember Rift Armor](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.38 extends **Rift Armor** to the Ember Depths Colossus (boss three),
+which now caps a single hit at three damage just like later stage bosses. The
+first two Colossi retain full weapon/crit/elemental damage as approachable
+lessons. Matched Picsean samples preserve every first-boss clear and raise the
+third boss's median clear from 560 to 882 frames (about 9.3 to 14.7 seconds),
+with no deaths or controller stalls.
 
 v0.18.37 gives the opening **Crystal Colossus** 200 HP, up from 160. It is
 still the run's accessible pattern lesson—damage, body contact, projectiles,
