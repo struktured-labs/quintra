@@ -1511,7 +1511,9 @@ while frames < LIMIT do
             else
                 keys = spore_safe_step(px, py, target.x, target.y, KEY_A + aim)
             end
-        elseif target.kind == 16 then
+        elseif target.kind == 16 and CLASS == 4 then
+            -- Vespine's Stinger route against Mirror Moths needs its own
+            -- policy; Corvin's ranged lane has a separately verified flank.
             -- Mirror Moths move opposite the hero's last cardinal input.
             -- They only step every third tick, so sustained pursuit closes
             -- the gap despite that reflection. Their slow bolt is the real
@@ -1945,7 +1947,8 @@ while frames < LIMIT do
     -- pilot may still take a hit, but it can now demonstrate whether the
     -- hazard is killable rather than endlessly dodging at the room's edge.
     local threat = nil
-    if not target or (target.kind ~= 10 and target.kind ~= 16) then
+    if not target or target.kind ~= 10
+        and not (target.kind == 16 and CLASS == 4) then
         threat = projectile_threat(px, py)
     end
     -- Picsean's Tidal Wave grants a brief body-blocking Undertow guard. In
