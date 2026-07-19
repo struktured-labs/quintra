@@ -57,3 +57,22 @@ The engine restarts a track only when the stage or encounter changes; ordinary
 room doors preserve the current exploration phrase. Every submitted track is
 auditioned on the real 128 KiB ROM, checked against the bank budget, and tested
 for correct stage/boss selection before release.
+
+## Validate a draft locally
+
+Save a filled-in block as a plain-text file, then run:
+
+```sh
+python3 scripts/music_sheet.py path/to/my-track.txt
+```
+
+The checker accepts the numbered layout above (and ignores the row numbers),
+rejects wrong row counts and out-of-range notes, and prints the exact `u16`
+frequency tables that the Game Boy uses. It **does not modify the game**: send
+the sheet or its output back for a reviewed insertion and an emulator audition.
+Use `python3 scripts/music_sheet.py --self-test` to verify the helper itself.
+
+The printed loop time is the nominal musical duration: `tempo × 32 / 60`.
+For example, tempo 8 is roughly 4.3 seconds before a phrase repeats, so a
+slower 10–12 or strategically placed rests can give an atmospheric title cue
+more air without making the action music drag.
