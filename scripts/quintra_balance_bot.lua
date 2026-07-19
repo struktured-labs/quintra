@@ -1772,7 +1772,12 @@ while frames < LIMIT do
                 -- Preserve the measured Sauran/Vespine body buffer; this
                 -- wider lane is for Wolfkin only after a lunge-weapon swap.
                 or (held_style == "lunge" and CLASS == 0) and 24
-                -- Tail Spike/Stinger keep their measured 16px contact buffer.
+                -- Stinger's 48px reach must hold its firing lane against a
+                -- charging Rope. Its matched seed clears four bosses alive
+                -- at zero panic retreat; the generic 16px retreat walks
+                -- back into the Rope's reacquisition loop.
+                or (held_style == "lunge" and CLASS == 4) and 0
+                -- Tail Spike retains its separately measured 16px buffer.
                 -- Explicit experiments may still override it on matched seeds.
                 or (held_style == "lunge" and LUNGE_PANIC_RANGE > 0)
                     and LUNGE_PANIC_RANGE

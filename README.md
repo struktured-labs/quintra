@@ -866,6 +866,9 @@ its prior 32px pulse lane produced nine with one death. Set
 On Corvin's long seed-two route, the 32px Featherbarb lane survived through
 eight giants; 24px and 36px died at the second giant, while wider lanes lost
 too much attack pressure.
+Vespine's 48px Stinger instead holds its attack lane with no panic retreat:
+on its deterministic Rope route, zero buffer reached four bosses alive while
+the generic 16px buffer died in room seven.
 Sauran's Tail Spike uses a 40px orbit-fire lane: the same three-seed replay
 kept all three first-boss clears and produced five total giant clears with one
 death, compared with three clears and three deaths at its former 48px lane.
