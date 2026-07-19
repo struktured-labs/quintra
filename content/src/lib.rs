@@ -82,8 +82,8 @@ mod tests {
     #[test]
     fn sauran_scaled_hide_includes_promised_hp_bonus() {
         // player.c defines the passive contract as pre-baked into a
-        // 12-half-heart base; keep authored content from silently drifting.
-        assert_eq!(classes::SAURAN.base_stats.hp_max, 12);
+        // 14-half-heart base; keep authored content from silently drifting.
+        assert_eq!(classes::SAURAN.base_stats.hp_max, 14);
     }
 
     #[test]

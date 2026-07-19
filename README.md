@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.16: Honest Purse](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.17: Scaled Hide](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -26,6 +26,14 @@ HUD remains unchanged. Like full-health hearts and full-MP wisps, capped coins
 stay visible until spending makes them useful. Live-ROM coverage proves both
 coin values remain at cap and collect/clamp correctly below it, alongside the
 shop purchase contract.
+
+v0.18.17 gives **Sauran's Scaled Hide** a seven-heart starting reserve (up
+from six). Fresh controller-only runs showed the slow, close-range tank was
+too likely to lose an early contact cycle before its shield and positioning
+could matter; the extra heart is deliberately class-local, leaving boss health
+and every other champion's starting damage untouched. The same automation now
+launches every trial with private blank SRAM, so its comparisons cannot inherit
+another run's suspend state.
 
 v0.18.15 adds the **Sunwheel**, a Golden Temple-only orbiting lane shaper. It
 holds a compact ring around the champion and throws a slow opposite pair
@@ -592,7 +600,7 @@ an unreachable live enemy and seal progression.
   their deliberate palette-safe transition.
 - **Run-long relic builds**: permanent-for-the-run stat items appear in seeded
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill;
-  an eight-heart cap leaves upgrade room even for six-heart Sauran. All relic
+  an eight-heart cap leaves upgrade room even for seven-heart Sauran. All relic
   boosts saturate at their displayed stat caps, including multi-point luck
   relics near the cap.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
@@ -892,7 +900,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.16)
+### Current conference evidence (v0.18.17)
 
 - Functional ROM contracts pass, including honest capped coin pickups,
   Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the

@@ -14,7 +14,7 @@ pub const WOLFKIN: Class = Class {
     passive_perk:  PERK_MOVE_SPEED_PLUS_20,
     // Claw Combo requires sustained body-range contact. Five hearts keeps the
     // dedicated melee champion sturdier than the faster, harder-hitting
-    // Vespine without approaching Sauran's six-heart tank identity.
+    // Vespine without approaching Sauran's seven-heart tank identity.
     base_stats: BaseStats {
         hp_max: 10,  // 5 hearts
         mp_max: 4,
@@ -32,9 +32,10 @@ pub const SAURAN: Class = Class {
     starter_weapon: ITEM_TAIL_SPIKE,
     signature_active: ITEM_STONESKIN,
     passive_perk:  PERK_HP_PLUS_2_SLOW_REGEN,
-    // Scaled Hide is pre-baked into the starting stats. Keep this authored
-    // value aligned with player.c's six-heart melee-tank contract.
-    base_stats: BaseStats { hp_max: 12, mp_max: 3, atk: 2, def: 2, spd: 4 },
+    // Scaled Hide is pre-baked into the starting stats. Seven hearts lets the
+    // slow melee tank absorb one early Sentinel contact cycle while still
+    // relying on Stoneskin and positioning for projectile patterns.
+    base_stats: BaseStats { hp_max: 14, mp_max: 3, atk: 2, def: 2, spd: 4 },
 };
 
 pub const CORVIN: Class = Class {

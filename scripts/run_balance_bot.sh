@@ -17,15 +17,13 @@ MAX_WORLD_HOPS="${QUINTRA_BALANCE_MAX_WORLD_HOPS:-}"
 REQUIRED_ENEMIES="${QUINTRA_BALANCE_REQUIRED_ENEMIES:-}"
 HOST_TIMEOUT="${QUINTRA_BALANCE_HOST_TIMEOUT:-180}"
 MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
-# GBC cartridges are battery-backed. Test agents must not share the ROM's
-# adjacent .sav file (or a player's manual save) when several mGBA processes
-# run at once. Point mGBA at a caller-owned directory when requested.
-MGBA_SAVE_DIR="${QUINTRA_MGBA_SAVE_DIR:-}"
-MGBA_SAVE_ARGS=()
-if [ -n "$MGBA_SAVE_DIR" ]; then
-  mkdir -p "$MGBA_SAVE_DIR"
-  MGBA_SAVE_ARGS=(-C "savegamePath=$MGBA_SAVE_DIR")
-fi
+# GBC cartridges are battery-backed. Every controller trial gets an isolated
+# save directory by default: otherwise mGBA can reuse the ROM-adjacent .sav
+# (or a prior trial's suspended run), making nominally paired seeds depend on
+# launch order. A caller may choose the parent directory, but never shares one
+# save file across (run, class, attempt) rows.
+MGBA_SAVE_ROOT="${QUINTRA_MGBA_SAVE_DIR:-$TRIAL_DIR/savegames}"
+mkdir -p "$MGBA_SAVE_ROOT"
 TRACE_DIR="${QUINTRA_BALANCE_TRACE_DIR:-}"
 DEBUG_DIR="${QUINTRA_BALANCE_DEBUG_DIR:-}"
 DEBUG="${QUINTRA_BALANCE_DEBUG:-0}"
@@ -81,6 +79,9 @@ for run in "${RUN_IDS[@]}"; do
       echo "$HEADER" > "$trial_csv"
       before=$(wc -l < "$trial_csv")
       log="/tmp/quintra-balance-$run-$class-$attempt.log"
+      save_dir="$MGBA_SAVE_ROOT/run-$run-class-$class-attempt-$attempt"
+      mkdir -p "$save_dir"
+      mgba_save_args=(-C "savegamePath=$save_dir")
       trace_env=()
       debug_env=()
       if [ -n "$TRACE_DIR" ]; then
@@ -96,7 +97,7 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_FRAME_ADDR="$FC" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
         QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \
-        timeout "$HOST_TIMEOUT" "$MGBA_BIN" "${MGBA_SAVE_ARGS[@]}" "$ROM" --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
+        timeout "$HOST_TIMEOUT" "$MGBA_BIN" "${mgba_save_args[@]}" "$ROM" --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
         >"$log" 2>&1 &
       pid=$!
       # This mGBA build does not honor frontend:quit from Lua reliably. The

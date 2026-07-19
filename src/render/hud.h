@@ -6,7 +6,7 @@
 #include <gb/gb.h>
 #include "core/types.h"
 
-// 8 hearts = 16 half-hearts. Sauran starts at six hearts, leaving room for
+// 8 hearts = 16 half-hearts. Sauran starts at seven hearts, leaving room for
 // procedural Iron Heart / Vampiric Sigil upgrades like every other vessel.
 #define HUD_MAX_HEARTS 8
 #define HP_CAP        16     // half-hearts; enforced on all HP gains
