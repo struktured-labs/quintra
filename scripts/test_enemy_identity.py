@@ -250,6 +250,36 @@ def main():
         f"{pb.memory[skeleton + 3]},{pb.memory[skeleton + 7]}"
     )
 
+    # Gloom Leeches are also persistent chasers, but their old 8px movement
+    # envelope could cross this exact one-tile lane and latch from a pocket
+    # a champion cannot physically enter. Their Metroid-like drain remains
+    # dangerous in open rooms; this only preserves a fair player-sized route.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    for tx in range(1, 19):
+        pb.memory[tilemap + 7 * 20 + tx] = 2
+        pb.memory[tilemap + 9 * 20 + tx] = 2
+    put16(pb, player + 9, 120)
+    put16(pb, player + 11, 64)
+    leech = entities
+    pb.memory[leech] = 2
+    pb.memory[leech + 1] = 3
+    put_fix8(pb, leech + 2, 64)
+    put_fix8(pb, leech + 6, 64)
+    pb.memory[leech + 14] = 10
+    pb.memory[leech + 16] = 2  # Gloom Leech (speed 72) steps next tick
+    pb.memory[leech + 17] = 13
+    pb.memory[leech + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    for _ in range(20):
+        pb.tick()
+    assert (pb.memory[leech + 3], pb.memory[leech + 7]) == (64, 64), (
+        "Gloom Leech entered a champion-inaccessible one-tile lane: "
+        f"{pb.memory[leech + 3]},{pb.memory[leech + 7]}"
+    )
+
     # Mirror Moth runs through its typed AI_MIRROR dispatch in bank 3. Real
     # controller movement to the right must make it step left, and its authored
     # fire clock must produce a hostile reflected bolt without direct writes.

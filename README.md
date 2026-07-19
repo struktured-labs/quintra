@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.17: Scaled Hide](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.18: Fair Hunt](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -34,6 +34,12 @@ could matter; the extra heart is deliberately class-local, leaving boss health
 and every other champion's starting damage untouched. The same automation now
 launches every trial with private blank SRAM, so its comparisons cannot inherit
 another run's suspend state.
+
+v0.18.18 fixes a procedural-combat fairness edge: **Gloom Leeches** now use
+the champion's 12px navigation clearance. They still pursue, attach, and drain
+in open rooms, but can no longer slip into a one-tile corridor that the player
+cannot enter or reliably fight from. A live-ROM collision fixture proves both
+the existing cover-route behavior and the new narrow-lane exclusion.
 
 v0.18.15 adds the **Sunwheel**, a Golden Temple-only orbiting lane shaper. It
 holds a compact ring around the champion and throws a slow opposite pair
@@ -904,7 +910,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.17)
+### Current conference evidence (v0.18.18)
 
 - Functional ROM contracts pass, including honest capped coin pickups,
   Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the
