@@ -939,7 +939,10 @@ regression pins this controller behavior.
 `giant_overlap_damage` separately
 records HP lost on frames where the actual giant hurtbox overlaps the hero;
 this distinguishes boss body-pinning from projectile pressure without writing
-to cartridge state.
+to cartridge state. `giant_close_frames` also records every controller frame
+spent within the giant's 32-pixel safety envelope, making it possible to tell
+whether a dodge policy avoids the boss consistently or merely gets lucky on
+the collision frames.
 
 `make policy-sweep` is the reproducible controller-search loop: it runs the
 baseline, orbit, orbit-fire, and pulse-fire giant policies through ordinary

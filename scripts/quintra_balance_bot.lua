@@ -104,6 +104,11 @@ if SAURAN_GIANT_SHIELD_PERIOD < 0 then SAURAN_GIANT_SHIELD_PERIOD = 0 end
 if SAURAN_GIANT_SHIELD_PERIOD > 240 then SAURAN_GIANT_SHIELD_PERIOD = 240 end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 local enemy_mask, enemy_seen = 0, {}
+-- Host-only accumulation: frames spent inside the giant's 32px safety
+-- envelope.  It complements collision-confirmed giant_overlap_damage so a
+-- controller experiment can distinguish "too close often" from "too close
+-- and actually pinned" without consuming cartridge RAM.
+enemy_seen.giant_close_frames = 0
 
 local function debug_log(line)
     console:log(line)
@@ -1398,6 +1403,10 @@ while frames < LIMIT do
         if target.giant ~= 0 and target.hp < min_giant_hp then
             min_giant_hp = target.hp
         end
+        if target.giant ~= 0
+            and math.max(math.abs(target.x - px), math.abs(target.y - py)) <= 32 then
+            enemy_seen.giant_close_frames = enemy_seen.giant_close_frames + 1
+        end
         if target.slot == last_target_slot and target.hp >= last_target_hp then
             no_damage_frames = no_damage_frames + 1
         else
@@ -2505,9 +2514,9 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d,%d\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
-        bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
+        bosses, damage_taken, giant_overlap_damage, enemy_seen.giant_close_frames, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
         max_combat_enemy, max_target_stall_frames, max_target_stall_room,
         max_target_stall_enemy, max_route_frames, max_route_room,

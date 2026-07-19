@@ -57,6 +57,7 @@ struct Row {
     bosses: u32,
     min_hp: u32,
     giant_overlap_damage: u32,
+    giant_close_frames: u32,
     max_combat_frames: u32,
     max_target_stall_frames: u32,
     max_route_frames: u32,
@@ -137,6 +138,11 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
                 giant_overlap_damage: columns
                     .contains_key("giant_overlap_damage")
                     .then(|| number(&record, &columns, "giant_overlap_damage"))
+                    .transpose()?
+                    .unwrap_or(0),
+                giant_close_frames: columns
+                    .contains_key("giant_close_frames")
+                    .then(|| number(&record, &columns, "giant_close_frames"))
                     .transpose()?
                     .unwrap_or(0),
                 // Old reports only retained the final room's dwell. Preserve
@@ -319,7 +325,7 @@ fn report(
         println!(
             "[balance] {name:7} n={} room_med={} clear_med={} kill_med={} boss_med={} \
              boss1={boss_clears}/{} town_med={} shop_med={} buy_med={} shoppers={shop_runs}/{} dodge_med={} wins={wins} endings={endings} \
-             deaths={deaths} death_src={death_sources} boss_body_dmg_med={} combat_dwell_med={} combat_stalls={combat_stalls} route_stalls={route_stalls}",
+             deaths={deaths} death_src={death_sources} boss_body_dmg_med={} boss_close_med={} combat_dwell_med={} combat_stalls={combat_stalls} route_stalls={route_stalls}",
             sample.len(),
             median(sample.iter().map(|row| row.max_room)),
             median(sample.iter().map(|row| row.rooms_cleared)),
@@ -332,6 +338,7 @@ fn report(
             sample.len(),
             median(sample.iter().map(|row| row.dodges)),
             median(sample.iter().map(|row| row.giant_overlap_damage)),
+            median(sample.iter().map(|row| row.giant_close_frames)),
             median(sample.iter().map(|row| row.max_combat_frames)),
         );
         if wins < min_wins {

@@ -52,7 +52,7 @@ mkdir -p "$(dirname "$OUT")"
 mkdir -p "$TRIAL_DIR"
 if [ -n "$TRACE_DIR" ]; then mkdir -p "$TRACE_DIR"; fi
 if [ -n "$DEBUG_DIR" ]; then mkdir -p "$DEBUG_DIR"; fi
-HEADER="run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,giant_overlap_damage,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_target_stall_frames,max_target_stall_room,max_target_stall_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp,b_uses,boss_attempts,boss_attempt_frames,boss_clear_frames,town_market_visits,town_quarter_visits,boss_clear_durations,death_room,death_bosses,death_giant,death_giant_overlap"
+HEADER="run,class,seed,frames,max_room,rooms_seen,rooms_cleared,kills,bosses,damage,giant_overlap_damage,giant_close_frames,min_hp,final_x,final_y,world_mode,world_screen,room_frames,max_combat_frames,max_combat_room,max_combat_enemy,max_target_stall_frames,max_target_stall_room,max_target_stall_enemy,max_route_frames,max_route_room,hostiles,last_enemy,death_source,towns,world_hops,victory,ui_screen,dodges,shop_visits,purchases,enemy_mask,min_giant_hp,b_uses,boss_attempts,boss_attempt_frames,boss_clear_frames,town_market_visits,town_quarter_visits,boss_clear_durations,death_room,death_bosses,death_giant,death_giant_overlap"
 if [ "$APPEND" != 1 ] || [ ! -s "$OUT" ]; then
   echo "$HEADER" > "$OUT"
 fi
