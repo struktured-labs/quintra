@@ -820,7 +820,10 @@ collision-safe orbit. Explicit search values take precedence over class
 defaults; the harness changes only controller input, never game state.
 For Tail Spike/Stinger research, `QUINTRA_BOT_LUNGE_PANIC_RANGE=0..24` adds
 an opt-in close-body retreat buffer on matched seeds; the default `0` preserves
-the shipped policy until a candidate beats it reproducibly.
+the shipped policy until a candidate beats it reproducibly. `make policy-sweep
+QUINTRA_POLICY_POLICIES=classwise QUINTRA_POLICY_CLASSES='1 4'
+QUINTRA_POLICY_LUNGE_PANIC_RANGES='0 4 8 12'` compares those buffers without
+touching cartridge state.
 
 ## World Retro delivery bar — September 12, 2026
 

@@ -185,9 +185,9 @@ agent-events:
 	@test -n "$(AGENT_EVENTS_DIR)" || (echo "set AGENT_EVENTS_DIR=tmp/agent-debug" >&2; exit 2)
 	python3 scripts/report_agent_events.py "$(AGENT_EVENTS_DIR)"
 
-# Controller-only policy search: compares giant-fight movement policies using
-# the real ROM and ordinary inputs. Defaults to Sauran + Corvin; override the
-# QUINTRA_POLICY_* environment variables to widen the experiment.
+# Controller-only policy search: compares giant movement and optional lunge
+# body-buffer policies using the real ROM and ordinary inputs. Defaults to
+# Sauran + Corvin; override QUINTRA_POLICY_* to widen the experiment.
 policy-sweep: all check-balance-bot
 	bash scripts/sweep_giant_policy.sh $(BINDIR)/$(PROJECT).gbc
 
