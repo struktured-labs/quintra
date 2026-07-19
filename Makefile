@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fixed-controller-matrix picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events stall-maps
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events stall-maps
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -237,6 +237,9 @@ endurance: all check-balance-bot
 	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
+
+fatal-report:
+	python3 scripts/report_fatal_context.py tmp/endurance-runs.csv
 
 # Fixed-world all-champion diagnostic: every vessel uses controller input to
 # enter the same frame-derived procgen run. It reports honest outcomes rather
