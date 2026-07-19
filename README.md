@@ -1016,16 +1016,16 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   stage, boss, title, and ending themes still need their composed pass.
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
-  with zero combat/route stalls. The current 15-row, private-SRAM,
+  with zero combat/route stalls. The latest 15-row, private-SRAM,
   controller-only matrix (three 90k-frame entropy samples per champion) has
-  Picsean at 2/3 endings; Wolfkin at a median two bosses, Sauran at one,
-  Corvin at six, and Vespine at six. Every row exercised the full enemy
-  roster and procedural shops, with **zero combat or route stalls**. The
-  Vespine/Mirror Moth Frost Vault stall is fixed by holding Stinger pursuit
-  through the moth's slow reflected bolts; that exact seed now reaches room
-  42 / six bosses, and the repaired full matrix confirms it without regressing
-  the other champions. The remaining delivery-bar problem is long-run
-  survival/endings, not an automation deadlock; the next balance work remains
+  Picsean at **3/3 endings**, Wolfkin at **1/3**, and Sauran, Corvin, and
+  Vespine at **0/3**. Median boss clears are 8, 2, 7, 9, and 6 respectively;
+  every champion clears boss one in all three samples. The combined matrix
+  exercised the full enemy roster and procedural shops, but recorded one
+  Picsean combat stall. Giant body contact is the leading observed death
+  source for the four non-completing kits. The remaining delivery-bar problem
+  is therefore long-run survival and one reproducible late-run controller
+  stall—not a missing-progression route—and the next balance work remains
   focused there rather than declaring the route complete.
 
 The final stretch prioritizes readability and playability: room-transition
