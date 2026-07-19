@@ -1075,7 +1075,12 @@ six giant clears at 120 frames versus three with no cadence; 90 and 180 were
 worse. Set `QUINTRA_BOT_SAURAN_GIANT_SHIELD_PERIOD=0` to reproduce the old
 no-cadence pilot or supply another value for further controller research. This
 is host-side input policy only—it does not alter shield duration, MP, HP, or
-the cartridge ROM.
+the cartridge ROM. `QUINTRA_BOT_GIANT_DODGE_FLOOR=32` or `40` additionally
+tests a one-step guard against a projectile dodge steering into the selected
+Colossus. In the current matched Sauran samples it cuts median boss-body
+damage from 15 to 6 but does not yet increase boss clears, so the shipping
+controller keeps the guard disabled (`0`) while the trace hook remains
+available for further policy work.
 
 ## World Retro delivery bar — September 12, 2026
 

@@ -56,11 +56,19 @@ if GIANT_RETREAT_RANGE > 56 then GIANT_RETREAT_RANGE = 56 end
 -- Orbit-fire is deliberately not continuous point-blank DPS. Expose its
 -- aimed beat cadence so offline controller research can compare pressure
 -- against body-contact safety without changing combat code or save state.
-local GIANT_FIRE_CADENCE_ENV = os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE")
-local GIANT_FIRE_CADENCE = tonumber(GIANT_FIRE_CADENCE_ENV
+local GIANT_FIRE_CADENCE = tonumber(os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE")
     or "3") or 3
 if GIANT_FIRE_CADENCE < 2 then GIANT_FIRE_CADENCE = 2 end
 if GIANT_FIRE_CADENCE > 8 then GIANT_FIRE_CADENCE = 8 end
+-- Optional research guard for a blind projectile dodge during a boss fight.
+-- The normal dodge logic chooses the direction furthest from the incoming
+-- shot, which can still step a short-range champion toward the Colossus.
+-- Keep shipping behavior at zero; a matched policy trial may request a
+-- minimum giant clearance and compare it without touching cartridge state.
+local GIANT_DODGE_FLOOR = tonumber(os.getenv("QUINTRA_BOT_GIANT_DODGE_FLOOR")
+    or "0") or 0
+if GIANT_DODGE_FLOOR < 0 then GIANT_DODGE_FLOOR = 0 end
+if GIANT_DODGE_FLOOR > 56 then GIANT_DODGE_FLOOR = 56 end
 -- Keep the established controller behavior as the default, but expose an
 -- explicit no-signature control.  This lets a balance experiment distinguish
 -- the value of real B ability use from unrelated navigation/aim changes.
@@ -1715,13 +1723,13 @@ while frames < LIMIT do
                 -- On matched three-seed input replays, 40px kept all three
                 -- first-boss clears and produced five giant clears / one
                 -- death, versus three clears / three deaths at 48px.
-                if GIANT_FIRE_CADENCE_ENV == nil then giant_fire_cadence = 2 end
+                if os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE") == nil then giant_fire_cadence = 2 end
             elseif held_style == "lunge" and CLASS == 4 then
                 -- The Stinger's 48px reach can pressure from the established
                 -- 36px boss orbit. A two-beat firing cadence produced one
                 -- complete ending and a six-boss route in its paired search;
                 -- its prior cardinal baseline cleared neither.
-                if GIANT_FIRE_CADENCE_ENV == nil then giant_fire_cadence = 2 end
+                if os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE") == nil then giant_fire_cadence = 2 end
             elseif held_style == "flail" or (held_style == "lunge" and CLASS ~= 4) then
                 if GIANT_RETREAT_RANGE_ENV == nil then giant_retreat = 28 end
             end
@@ -2172,6 +2180,29 @@ while frames < LIMIT do
             dodge_dir = dy >= 0 and KEY_DOWN or KEY_UP
             if not can_step(px, py, dodge_dir) then
                 dodge_dir = can_step(px, py, KEY_LEFT) and KEY_LEFT or KEY_RIGHT
+            end
+        end
+        -- A boss's 32px visual pressure is a different hazard from an 8px
+        -- bullet. When this opt-in research floor is active, do not let a
+        -- bullet-only choice steer directly into the selected giant body.
+        -- It evaluates only the next ordinary D-pad step and keeps the
+        -- original dodge untouched whenever it already maintains clearance.
+        if GIANT_DODGE_FLOOR > 0 and target and target.kind == 1
+            and target.giant ~= 0 then
+            local function giant_dodge_clearance(key)
+                local nx = px + (key == KEY_RIGHT and 1 or key == KEY_LEFT and -1 or 0)
+                local ny = py + (key == KEY_DOWN and 1 or key == KEY_UP and -1 or 0)
+                return math.max(math.abs(nx - target.x), math.abs(ny - target.y))
+            end
+            if giant_dodge_clearance(dodge_dir) < GIANT_DODGE_FLOOR then
+                local candidate, best = dodge_dir, giant_dodge_clearance(dodge_dir)
+                for _, key in ipairs({KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}) do
+                    local clear = giant_dodge_clearance(key)
+                    if can_step(px, py, key) and clear > best then
+                        candidate, best = key, clear
+                    end
+                end
+                dodge_dir = candidate
             end
         end
         dodge_phase, dodge_count = 1, dodge_count + 1
