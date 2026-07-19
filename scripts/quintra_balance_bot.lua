@@ -1097,8 +1097,6 @@ while frames < LIMIT do
     local active_charge = PL ~= 0 and emu:read8(PL + 19) or 0
     local equipped_weapon = PL ~= 0 and emu:read8(PL + 21) or 0
     local held_style = weapon_style(equipped_weapon)
-    local starter_lunge = (CLASS == 1 and equipped_weapon == 1)
-        or (CLASS == 4 and equipped_weapon == 4)
     if equipped_weapon ~= last_weapon then
         if DEBUG then debug_log(string.format(
             "BOTWEAPON f=%d room=%d item=%d style=%s",
@@ -1347,12 +1345,10 @@ while frames < LIMIT do
         -- real ten-tile line instead of walking into claw range, while a
         -- ranged champion that takes a Flail still uses a reachable lane.
         local routed_reach = weapon_route_tiles(held_style)
-        -- Keep each starter lunge's measured special-target lane: Sauran
-        -- used one tile while Vespine's Flutterbat handling used six. Their
-        -- ordinary covered-combat endpoint remains one tile below.
-        if starter_lunge then
-            routed_reach = CLASS == 4 and 6 or 1
-        end
+        -- Both starter lunges carry 48px.  Do not collapse Sauran's Tail
+        -- Spike to the adjacent-claw route: that made the input-only pilot
+        -- chase Ropes all the way into the north wall even when it already
+        -- held a clear, valid thrust lane.
         -- Retained through the body-safety pass below: a Leech behind cover
         -- needs an actual route, not the generic close-range retreat.
         local leech_needs_lane = false
@@ -1567,7 +1563,7 @@ while frames < LIMIT do
             local offaxis = (aim == KEY_UP or aim == KEY_DOWN) and adx or ady
             local near_range = held_style == "spear" and 36 or 28
             local fire_range = held_style == "spear" and 80 or 52
-            local weapon_endpoint = starter_lunge and 1 or routed_reach
+            local weapon_endpoint = routed_reach
             if not projectile_lane_clear(px, py, target.x, target.y, aim) then
                 -- A Zelda-style feet box may let the hero stand below a wall
                 -- while their weapon's origin is still inside it. Do not
