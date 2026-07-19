@@ -1091,6 +1091,10 @@ local boss_attempts, boss_attempt_frames, boss_clear_frames = 0, 0, 0
 -- analysis per-encounter timing without changing cartridge RAM or pacing.
 local boss_clear_durations = {}
 local last_damage_source = 255 -- enemy id, 254=hazard, 253=unresolved hostile
+-- Keep the fatal-event context outside the main local scope: mGBA Lua caps
+-- the number of locals in this controller's large top-level loop. These are
+-- observation-only fields, never cartridge writes.
+death_room, death_bosses, death_giant = 255, 0, 0
 local rooms_seen, last_room = 1, 0
 local room_enter_frame = 0
 local route_start_frame = 0
@@ -1245,6 +1249,11 @@ while frames < LIMIT do
                 RS ~= 0 and emu:read8(RS + 18) or 0,
                 last_hp, hp, last_damage_source, hit_x, hit_y, iframes,
                 threat and threat.kind or 255))
+        end
+        if hp == 0 and death_room == 255 then
+            death_room = RS ~= 0 and emu:read8(RS + 1) or 255
+            death_bosses = RS ~= 0 and emu:read8(RS + 11) or 0
+            death_giant = giant_active() and 1 or 0
         end
     end
     last_hp = hp
@@ -2451,7 +2460,7 @@ if TRACE_OUT then
 end
 local f = io.open(OUT, "a")
 if f then
-    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
+    f:write(string.format("%d,%d,%.0f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%d,%d\n",
         RUN, CLASS, seed, frames, max_room, rooms_seen, clears, kills,
         bosses, damage_taken, giant_overlap_damage, min_hp, final_x, final_y, final_world, final_screen,
         frames - room_enter_frame, max_combat_frames, max_combat_room,
@@ -2460,7 +2469,8 @@ if f then
         hostiles, last_enemy, death_source, towns_seen, world_hops,
         won, ui_screen, dodge_count, shop_visits, purchases, enemy_mask, min_giant_hp, b_uses,
         boss_attempts, boss_attempt_frames, boss_clear_frames,
-        town_market_visits, town_quarter_visits, boss_clear_series))
+        town_market_visits, town_quarter_visits, boss_clear_series,
+        death_room, death_bosses, death_giant))
     f:close()
 end
 console:log(string.format("BALANCE class=%d frames=%d room=%d clears=%d kills=%d bosses=%d hp=%d",

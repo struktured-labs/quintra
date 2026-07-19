@@ -165,6 +165,7 @@ verify: all check-balance-bot
 	bash scripts/test_sauran_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_rope_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_edge_lane.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_death_telemetry.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_corvin_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_corvin_spore_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_corvin_riftwild_pathing.sh $(BINDIR)/$(PROJECT).gbc
