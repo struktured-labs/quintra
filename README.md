@@ -974,7 +974,10 @@ position events after mGBA exits. `BOTHIT` now records dungeon/Riftwild
 context as well as its inferred source;
 run `make agent-events AGENT_EVENTS_DIR=tmp/agent-debug` to summarize each
 trial's dungeon, Riftwild, early-room, and boss damage by source. The ordinary CSV remains the
-compact release metric. The agent
+compact release metric. Long live-enemy rooms also retain a compact `BOTTILES`
+geometry record; run `make stall-maps STALL_MAP_DIR=tmp/agent-debug` to render
+the final snapshot from each trial as a readable ASCII room with player and
+target markers. The agent
 also performs a real double-tap dash when a Gloom Leech attaches. Cleared
 dungeon rooms that genuinely exceed that threshold switch to a pixel-exact
 feet-box edge follow for one body width, escaping pillar corners that the

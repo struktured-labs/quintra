@@ -37,7 +37,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fixed-controller-matrix picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fixed-controller-matrix picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events stall-maps
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -207,6 +207,12 @@ balance: all check-balance-bot
 agent-events:
 	@test -n "$(AGENT_EVENTS_DIR)" || (echo "set AGENT_EVENTS_DIR=tmp/agent-debug" >&2; exit 2)
 	python3 scripts/report_agent_events.py "$(AGENT_EVENTS_DIR)"
+
+# Decode the read-only controller watchdog's compact geometry artifacts.
+# Example: make stall-maps STALL_MAP_DIR=tmp/agent-debug
+stall-maps:
+	@test -n "$(STALL_MAP_DIR)" || (echo "set STALL_MAP_DIR=tmp/agent-debug" >&2; exit 2)
+	python3 scripts/report_stall_maps.py "$(STALL_MAP_DIR)" --last
 
 # Controller-only policy search: compares giant movement plus optional lunge
 # and Sauran-shield body-buffer policies using real ROM and ordinary inputs.
