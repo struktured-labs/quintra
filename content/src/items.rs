@@ -9,7 +9,7 @@ pub const CLAW_COMBO: Item = Item {
     name:        "Claw Combo",
     description: "Fast melee.",
     kind: ItemKind::Weapon {
-        fire_rate:  24,    // no-upgrade cadence; run-earned SPD accelerates it
+        fire_rate:  24,    // deliberate no-upgrade cadence; run-earned SPD accelerates it
         damage:     2,
         projectile: ProjectileKind::Spike,
         mp_cost:    0,
@@ -57,7 +57,7 @@ pub const BUBBLE_BOLT: Item = Item {
     id:          ITEM_BUBBLE_BOLT,
     name:        "BubbleBolt",
     description: "Slow piercing bubble.",
-    kind: ItemKind::Weapon { fire_rate: 28, damage: 2, projectile: ProjectileKind::Bubble, mp_cost: 0 },
+    kind: ItemKind::Weapon { fire_rate: 30, damage: 2, projectile: ProjectileKind::Bubble, mp_cost: 0 },
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Common,
     effects: &[],
 };

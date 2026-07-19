@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.25: Ember Takes Wing](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.26: Earn the Tempo](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.26 gives Picsean's fast durable opening weapon a measured **two-frame
+slower cadence**: BubbleBolt now asks for a little more
+intentional positioning before run-earned SPD relics build them back up. Held
+A remains turbo-friendly. Wolfkin's Claw Combo, Sauran's Tail Spike, Corvin's
+low-damage Featherbarb, and Vespine's close-range Stinger keep their
+established cadences because paired controller-only runs showed those survival
+lanes were already tight. This is pacing pressure, not a global boss-HP tax.
 
 v0.18.25 sharpens the **Cinder Kite** silhouette into broad ember wings around
 a suspended furnace core. It now reads independently of the late-game Dusk
@@ -982,9 +990,10 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.25)
+### Current conference evidence (v0.18.26)
 
-- Functional ROM contracts pass, including Cinder Kite's Ember-only
+- Functional ROM contracts pass, including the starter-cadence contract and
+  Cinder Kite's Ember-only
   procedural spawn, distinct runtime art, fast body cadence, and readable
   three-lane fan; honest capped coin pickups, Sunwheel’s Golden Temple spawn,
   art, and two-lane pattern; the

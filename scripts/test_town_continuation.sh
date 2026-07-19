@@ -20,6 +20,7 @@ awk -F, '
     next
   }
   NR == 2 {
+    found = 1
     if ($(col["towns"]) < 1) {
       print "[town-continuation] did not reach the town" > "/dev/stderr"
       exit 1
@@ -36,11 +37,13 @@ awk -F, '
       print "[town-continuation] north gate did not continue the run" > "/dev/stderr"
       exit 1
     }
-    if ($(col["max_route_frames"]) > 3600) {
-      print "[town-continuation] town route stall" > "/dev/stderr"
+    # `max_route_frames` covers the rest of the run too. Only a prolonged
+    # dwell in room 19 is evidence that the actual town north gate failed;
+    # a later procedural dungeon route must not be mislabeled as this gate.
+    if ($(col["max_route_room"]) == 19 && $(col["max_route_frames"]) > 3600) {
+      print "[town-continuation] town north-gate route stall" > "/dev/stderr"
       exit 1
     }
-    found = 1
   }
   END {
     if (!found) {

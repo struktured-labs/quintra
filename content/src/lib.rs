@@ -95,6 +95,33 @@ mod tests {
     }
 
     #[test]
+    fn starter_cadence_leaves_room_for_run_earned_speed() {
+        use quintra_content::ItemKind;
+
+        // A held A button remains turbo-friendly, but the opening kit must
+        // not erase the first room before SPD relics have a chance to matter.
+        // Keep Claw Combo, Featherbarb, and the deliberately close-range
+        // Stinger at their proven survival cadences; BubbleBolt starts two
+        // frames slower and speed upgrades subtract two frames in player.c.
+        let expected = [
+            (classes::WOLFKIN.starter_weapon, 24),
+            (classes::SAURAN.starter_weapon, 28),
+            (classes::CORVIN.starter_weapon, 22),
+            (classes::PICSEAN.starter_weapon, 30),
+            (classes::VESPINE.starter_weapon, 20),
+        ];
+        let r = registry();
+        for (id, cadence) in expected {
+            let item = r.items.iter().find(|item| item.id == id)
+                .expect("registered champion starter weapon");
+            let ItemKind::Weapon { fire_rate, .. } = item.kind else {
+                panic!("starter item is not a weapon");
+            };
+            assert_eq!(fire_rate, cadence, "starter cadence drifted for {}", item.name);
+        }
+    }
+
+    #[test]
     fn starter_boss_time_envelope_stays_tense_but_finite() {
         use quintra_content::ItemKind;
 

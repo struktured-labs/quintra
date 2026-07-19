@@ -11,7 +11,7 @@ OUT="$(mktemp /tmp/quintra-miniboss-escort.XXXXXX)"
 
 # Room slides, the Sigil detour, and a real shop purchase all consume
 # controller time before the boss threshold. This is still a short escort-path
-# regression window, but 3000 frames cut off a healthy run immediately before
+# regression window, but 3000 frames cuts off a healthy run immediately before
 # room 6 on the current cartridge pacing.
 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_FRAMES=3600 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
