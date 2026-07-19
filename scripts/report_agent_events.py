@@ -15,11 +15,13 @@ HIT = re.compile(
     r"hp=(\d+)->(\d+) src=(\d+)"
 )
 ABILITY = re.compile(r"BOTABILITY f=(\d+) class=(\d+) charge=(\d+) uses=(\d+)")
+STATE = re.compile(r"BOTSTATE f=(\d+) room=(\d+).*?target=(\d+)@.*? slot=(\d+) stuck=(\d+)")
 
 
 def describe(path: Path) -> str:
     hits = []
     abilities = 0
+    worst_stuck = None
     for line in path.read_text(errors="replace").splitlines():
         if match := HIT.search(line):
             frame, room, world, _screen, before, after, source = match.groups()
@@ -27,6 +29,10 @@ def describe(path: Path) -> str:
                          int(source), int(world or 0)))
         elif ABILITY.search(line):
             abilities += 1
+        elif match := STATE.search(line):
+            frame, room, kind, slot, stuck = map(int, match.groups())
+            if worst_stuck is None or stuck > worst_stuck[-1]:
+                worst_stuck = (frame, room, kind, slot, stuck)
 
     damage = sum(hit[2] for hit in hits)
     early = sum(hit[2] for hit in hits if hit[1] <= 2 and hit[4] == 0)
@@ -37,9 +43,12 @@ def describe(path: Path) -> str:
     sources = Counter(hit[3] for hit in hits)
     room_text = "|".join(f"{room}:{count}" for room, count in sorted(rooms.items())) or "-"
     source_text = "|".join(f"{source}:{count}" for source, count in sorted(sources.items())) or "-"
+    stuck_text = "-" if worst_stuck is None else (
+        f"f{worst_stuck[0]} r{worst_stuck[1]} e{worst_stuck[2]}"
+        f"#{worst_stuck[3]}:{worst_stuck[4]}")
     return (f"{path.name}: hits={len(hits)} damage={damage} dungeon={dungeon} "
             f"riftwild={world} early={early} boss={boss} ability_uses={abilities} "
-            f"rooms={room_text} sources={source_text}")
+            f"rooms={room_text} sources={source_text} worst_stuck={stuck_text}")
 
 
 def main() -> None:
