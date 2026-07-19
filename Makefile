@@ -122,6 +122,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_boss_rewards.py
 	uv run --quiet --with pyboy python scripts/test_convergence_boss_cap.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
+	uv run --quiet --with pyboy python scripts/test_dusk_midge.py
 	uv run --quiet --with pyboy python scripts/test_bellwarden.py
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py
 	uv run --quiet --with pyboy python scripts/test_score.py
