@@ -227,7 +227,7 @@ policy-sweep: all check-balance-bot
 # Long-form pre-show soak: three entropy samples per champion and enough
 # emulated time for a cautious full clear. Every champion must clear twice;
 # missing reports, skipped economies, and live-enemy/route stalls fail the target.
-# Every released enemy ID through Frost Vault's Frost Lancer (28) must appear
+# Every released enemy ID through Frost Vault's Frost Lancer (29) must appear
 # in the fresh controller matrix. This prevents a passing soak from silently
 # omitting a newly released procedural encounter from coverage.
 endurance: all check-balance-bot
