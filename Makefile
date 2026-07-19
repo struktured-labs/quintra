@@ -124,6 +124,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_astral_spear.py
 	uv run --quiet --with pyboy python scripts/test_performance.py
 	uv run --quiet --with pyboy python scripts/test_run_clock.py
+	uv run --quiet --with pyboy python scripts/test_compass_map.py
 	uv run --quiet --with pyboy python scripts/test_title_version.py
 	uv run --quiet --with pyboy python scripts/test_boss_identity.py
 	uv run --quiet --with pyboy python scripts/test_void_collapse.py
