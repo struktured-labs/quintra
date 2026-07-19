@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.35: Fresh Run Clocks](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.36: Frost Rift Armor](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.36 makes **Frost Vault onward** bosses resist burst damage without
+making the first three Colossi harder to learn. A giant's individual hit is
+capped at three damage from stage four forward, so an upgraded run must engage
+each later pattern and its phase break instead of erasing it in a few rapid
+fire beats. Normal enemies, mini-bosses, and Crystal/Verdant/Ember bosses keep
+their full weapon, crit, and elemental payoff. Live-ROM coverage now verifies
+the cap at Frost Vault as well as the Void Lord.
 
 v0.18.35 fixes a hidden fresh-run fairness issue: partial passive-regeneration
 clocks can no longer survive a death or completed run and alter the next

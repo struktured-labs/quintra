@@ -55,6 +55,7 @@ def hit_boss(*, convergence, stage=0):
 def main():
     chord_damage = hit_boss(convergence=True)
     ordinary_damage = hit_boss(convergence=False)
+    frost_damage = hit_boss(convergence=False, stage=3)
     void_damage = hit_boss(convergence=False, stage=8)
     assert chord_damage == 28, (
         f"Convergence chord landed {chord_damage} boss damage; expected four 7-damage hits"
@@ -62,10 +63,13 @@ def main():
     assert ordinary_damage == 56, (
         f"ordinary projectiles changed unexpectedly ({ordinary_damage}, expected 56)"
     )
+    assert frost_damage == 24, (
+        f"Frost Vault Rift Armor should cap eight ordinary hits at 24, got {frost_damage}"
+    )
     assert void_damage == 24, (
         f"Void Lord Rift Armor should cap eight ordinary hits at 24, got {void_damage}"
     )
-    print("[convergence-cap] PASS chord=28; ordinary-eight=56; void-eight=24")
+    print("[convergence-cap] PASS chord=28; ordinary-eight=56; frost-eight=24; void-eight=24")
 
 
 if __name__ == "__main__":

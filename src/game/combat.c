@@ -141,20 +141,21 @@ u8 combat_resolve(void) BANKED {
             if (dmg == 0) dmg = 1;
 
             // A fully built run can otherwise erase the one-byte (255 HP)
-            // late bosses in a few rapid-fire beats.  Golden Temple onward,
+            // late bosses in a few rapid-fire beats. Frost Vault onward,
             // their Rift Armor turns a huge single projectile into a readable
             // sequence of hits rather than pretending the cartridge can hold
-            // ever-larger HP values. Golden Temple and Bloodmoon receive the
-            // 3-damage cap. The Void Lord is included now that the controller
-            // has a tested, controller-only response to its announced World
-            // Collapse pocket; it can no longer be erased before that
-            // positional fight happens.
+            // ever-larger HP values. That leaves the first three encounters
+            // as accessible pattern lessons, while every later Colossus gets
+            // time to show its authored phase break. The Void Lord is included
+            // now that the controller has a tested, controller-only response
+            // to its announced World Collapse pocket; it can no longer be
+            // erased before that positional fight happens.
             // This intentionally applies only to giant stage bosses; normal
-            // enemies, mini-bosses, and the first six bosses keep their full
+            // enemies, mini-bosses, and the first three bosses keep their full
             // weapon/elemental payoff.
             if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
                 && entities[j].ai_data[3]
-                && entities[j].ai_data[2] >= 6
+                && entities[j].ai_data[2] >= 3
                 && entities[j].ai_data[2] <= 8) {
                 u8 cap = 3;
                 if (dmg > cap) dmg = cap;
