@@ -1059,6 +1059,14 @@ touching cartridge state. Sauran's real Stoneskin B can likewise be swept at
 `QUINTRA_POLICY_SAURAN_BODY_SHIELD_RANGES='0 36 48 60'`; zero keeps the
 controller from spending the shield on a giant's close body until matched
 seeds demonstrate that the timed guard is a net survival improvement.
+Separate from that rejected body-range policy, the default controller raises
+Sauran's real projectile-breaking Stoneskin once every **120** giant-fight
+frames when MP and cooldown allow. A matched three-seed cadence sweep reached
+six giant clears at 120 frames versus three with no cadence; 90 and 180 were
+worse. Set `QUINTRA_BOT_SAURAN_GIANT_SHIELD_PERIOD=0` to reproduce the old
+no-cadence pilot or supply another value for further controller research. This
+is host-side input policy only—it does not alter shield duration, MP, HP, or
+the cartridge ROM.
 
 ## World Retro delivery bar — September 12, 2026
 

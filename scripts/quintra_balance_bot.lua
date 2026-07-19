@@ -86,6 +86,14 @@ local SAURAN_BODY_SHIELD_RANGE = tonumber(os.getenv("QUINTRA_BOT_SAURAN_BODY_SHI
     or "0") or 0
 if SAURAN_BODY_SHIELD_RANGE < 0 then SAURAN_BODY_SHIELD_RANGE = 0 end
 if SAURAN_BODY_SHIELD_RANGE > 64 then SAURAN_BODY_SHIELD_RANGE = 64 end
+-- Separate from body range: this measured cadence raises Sauran's real
+-- projectile-breaking shield during an active giant fight. A matched three
+-- seed sweep reached six giants at 120 frames (versus three with no cadence);
+-- 90 and 180 were worse. It remains overrideable for future research.
+local SAURAN_GIANT_SHIELD_PERIOD = tonumber(os.getenv("QUINTRA_BOT_SAURAN_GIANT_SHIELD_PERIOD")
+    or "120") or 0
+if SAURAN_GIANT_SHIELD_PERIOD < 0 then SAURAN_GIANT_SHIELD_PERIOD = 0 end
+if SAURAN_GIANT_SHIELD_PERIOD > 240 then SAURAN_GIANT_SHIELD_PERIOD = 240 end
 local trace_last, trace_count, trace_rows, trace_frames = nil, 0, {}, 0
 local enemy_mask, enemy_seen = 0, {}
 
@@ -1908,10 +1916,12 @@ while frames < LIMIT do
         -- opt-in research policy until matched seeds prove it improves boss
         -- survival rather than merely consuming the two-MP cooldown early.
         elseif ABILITY_POLICY == "smart" and CLASS == 1
-            and SAURAN_BODY_SHIELD_RANGE > 0
             and target.giant ~= 0 and not waiting_star
             and active_charge == 0 and mp >= 2
-            and math.max(math.abs(dx), math.abs(dy)) <= SAURAN_BODY_SHIELD_RANGE then
+            and ((SAURAN_BODY_SHIELD_RANGE > 0
+                    and math.max(math.abs(dx), math.abs(dy)) <= SAURAN_BODY_SHIELD_RANGE)
+                or (SAURAN_GIANT_SHIELD_PERIOD > 0
+                    and frames % SAURAN_GIANT_SHIELD_PERIOD == 0)) then
             keys = KEY_B + aim
         elseif ABILITY_POLICY == "smart" and CLASS ~= 1 and target.kind ~= 10
             and not waiting_star
