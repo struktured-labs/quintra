@@ -1013,7 +1013,9 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   **IPS-modded Game Boy Color**, in addition to emulator coverage.
 - **Music composition remains a creator-owned release task**: the current
   compact phrases prove the two-voice cartridge pipeline, while the final
-  stage, boss, title, and ending themes still need their composed pass.
+  stage, boss, title, and ending themes still need their composed pass. The
+  exact 32-row melody / 8-row bass handoff is in
+  [the music worksheet](docs/music-composition.md).
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
   with zero combat/route stalls. The latest 15-row, private-SRAM,
