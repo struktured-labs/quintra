@@ -132,6 +132,12 @@ void tiles_load_prism_skitter_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_PRISM_SKITTER, 1, sprite_enemy_prism_skitter);
 }
 
+void tiles_load_dusk_midge_sprite(void) BANKED {
+    // Apothecary art is resident only in a town. Dungeon rooms cannot contain
+    // that NPC, so reclaim its slot for the Midge without increasing OBJ VRAM.
+    set_sprite_data(SPR_ENEMY_DUSK_MIDGE, 1, sprite_enemy_dusk_midge);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

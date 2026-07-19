@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.10: Visible Door Arrivals](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.11: Dusk Midge](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,13 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.11 adds the **Dusk Midge**, a fragile late-run harrier that drifts fast
+and fires a narrow three-shot fan. It appears at a deliberately low 7–8%
+weight in Bloodmoon and Void rooms, where it changes lanes without creating a
+second projectile flood. Its generated sprite safely reuses the apothecary's
+OBJ slot only in combat rooms—the two can never coexist—and live ROM identity
+coverage verifies both the art and the slot contract.
 
 v0.18.10 fixes the ordinary-door counterpart: the room-slide animation
 temporarily disabled the sprite layer but did not restore it, leaving the
@@ -614,7 +621,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
 the endurance gate proves every sample exercises the procedural economy. A
-live encounter bitmask requires every generated enemy (IDs 0–21) to appear
+live encounter bitmask requires every generated enemy (IDs 0–23) to appear
 somewhere in the paired-seed endurance matrix, preventing a valid but
 procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance
@@ -843,7 +850,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.10)
+### Current conference evidence (v0.18.11)
 
 - Functional ROM contracts pass, including the first-Colossus health budget,
   giant body-contact recovery, Skeleton clearance, score/Sigil stability, and

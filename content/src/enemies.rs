@@ -326,6 +326,22 @@ pub const PRISM_SKITTER: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const DUSK_MIDGE: Enemy = Enemy {
+    id: ENEMY_DUSK_MIDGE, symbol: "DUSK_MIDGE", name: "Dusk Midge",
+    sprite_set: SPRITE_DUSK_MIDGE, palette: OBJ_PAL_MAGIC,
+    // A small late-run harrier: it drifts quickly and periodically releases
+    // a narrow three-shot fan. Its low HP and 6–8% roster weight make it a
+    // readable lane-change prompt, not another Dread-Bell-scale flood.
+    stats: EnemyStats { hp: 10, damage: 2, speed: 80, score: 56, weakness: 0x02, poise: 0 },
+    ai_script: AiScriptId::Shooter {
+        fire_rate: 96,
+        projectile: ProjectileKind::Bullet,
+        pattern: ShotPattern::Fan(3),
+    },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -350,4 +366,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(DREAD_BELL.clone());
     r.add_enemy(RIFT_WARDEN.clone());
     r.add_enemy(PRISM_SKITTER.clone());
+    r.add_enemy(DUSK_MIDGE.clone());
 }

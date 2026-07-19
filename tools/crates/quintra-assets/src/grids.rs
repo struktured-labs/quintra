@@ -344,6 +344,17 @@ pub const PRISM_SKITTER: [&str; 8] = [ // faceted core with asymmetric orbit fin
     ".3...23.",
 ];
 
+pub const DUSK_MIDGE: [&str; 8] = [ // forked wings, bright eyes, tail spark
+    "...3.3..",
+    "..32132.",
+    ".3211123",
+    "32133123",
+    "21111112",
+    ".321112.",
+    "..3.2.3.",
+    ".3.....3",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -736,7 +747,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 21] = [
+pub const ENEMIES_8: [(&str, &[&str]); 22] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -758,6 +769,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 21] = [
     ("dread_bell", &DREAD_BELL),
     ("rift_warden", &RIFT_WARDEN),
     ("prism_skitter", &PRISM_SKITTER),
+    ("dusk_midge", &DUSK_MIDGE),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [

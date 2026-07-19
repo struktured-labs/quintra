@@ -100,7 +100,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 3, 1, 1), c(13, 6, 3), c(23,12, 5), c(31,22,10)],
         boss:    [c(0,0,0), c(20, 4, 6), c( 6, 1, 2), c(31,20,16)],
         boss_hp_bonus: 248, boss_dmg_bonus: 4, mb_variant: 0, room_archetype: 7,
-        enemy_pool: &[(3, 18), (7, 18), (11, 22), (8, 17), (20, 13), (21, 12)],
+        enemy_pool: &[(3, 18), (7, 18), (11, 20), (8, 15), (20, 11), (21, 11), (23, 7)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
     StageTheme {
@@ -111,7 +111,7 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 2, 0, 3), c( 8, 4,10), c(16,10,20), c(26,18,30)],
         boss:    [c(0,0,0), c(13, 6,20), c( 3, 1, 7), c(20,31,18)],
         boss_hp_bonus: 255, boss_dmg_bonus: 5, mb_variant: 4, room_archetype: 8,
-        enemy_pool: &[(7, 17), (11, 17), (15, 20), (19, 18), (20, 15), (21, 13)],
+        enemy_pool: &[(7, 17), (11, 17), (15, 20), (19, 15), (20, 13), (21, 10), (23, 8)],
     },
 ];
 

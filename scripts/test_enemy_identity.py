@@ -19,7 +19,7 @@ IDENTITIES = {
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
     14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
     18: (80, 5), 19: (124, 6), 20: (125, 4), 21: (81, 6),
-    22: (69, 6),
+    22: (69, 6), 23: (79, 6),
 }
 
 SPECIALISTS = {
@@ -35,6 +35,7 @@ SPECIALISTS = {
     20: (125, 124, "DREAD_BELL", "SPR_ENEMY_DREAD_BELL", "dread-bell"),
     21: (81, 35, "RIFT_WARDEN", "SPR_ENEMY_RIFT_WARDEN", "rift-warden"),
     22: (69, 20, "PRISM_SKITTER", "SPR_ENEMY_PRISM_SKITTER", "prism-skitter"),
+    23: (79, 71, "DUSK_MIDGE", "SPR_ENEMY_DUSK_MIDGE", "dusk-midge"),
 }
 
 
@@ -68,8 +69,11 @@ def main():
     assert "e->palette     = def->palette;" in SPAWN_SOURCE
     assert "sprite_for_enemy" not in SPAWN_SOURCE
     assert "palette_for_enemy" not in SPAWN_SOURCE
-    assert "tiles_load_dread_bell_sprite" in (ROOT / "src/game/room.c").read_text()
-    assert "room_state_has_shop_wares" in (ROOT / "src/game/room.c").read_text()
+    room_source = (ROOT / "src/game/room.c").read_text()
+    assert "tiles_load_dread_bell_sprite" in room_source
+    assert "tiles_load_dusk_midge_sprite" in room_source
+    assert "!RUN_ROOM_IS_TOWN(run_state.room_counter)" in room_source
+    assert "room_state_has_shop_wares" in room_source
     # Generated content is the sole runtime identity source. Pin every roster
     # entry's hardware OBJ slot/palette so no hand-written C switch can drift.
     for enemy_id, (slot, palette) in IDENTITIES.items():
@@ -560,7 +564,8 @@ def main():
     assert set(skitter_pair) == {(0, -2), (0, 2)}, (
         f"Prism Skitter opposite pair drifted: {skitter_pair}")
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art + guard/spore/mirror/leech/lantern/bell/warden/skitter behavior + ooze split")
+    print("[enemy-id] PASS specialist art (including Dusk Midge) + "
+          "guard/spore/mirror/leech/lantern/bell/warden/skitter behavior + ooze split")
 
 
 if __name__ == "__main__":

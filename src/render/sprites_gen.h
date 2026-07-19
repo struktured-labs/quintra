@@ -43,6 +43,7 @@ extern const u8 sprite_enemy_rune_lantern[16];
 extern const u8 sprite_enemy_dread_bell[16];
 extern const u8 sprite_enemy_rift_warden[16];
 extern const u8 sprite_enemy_prism_skitter[16];
+extern const u8 sprite_enemy_dusk_midge[16];
 
 // 8x8 effects and village roles
 extern const u8 sprite_fx_bullet_a[16];

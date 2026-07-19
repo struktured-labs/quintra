@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       23);   // adds Dread Bell, Rift Warden, Prism Skitter
+        assert_eq!(r.n_enemies(),       24);   // adds Dread Bell, Rift Warden, Prism Skitter, Dusk Midge
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -228,6 +228,20 @@ mod tests {
         assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::PRISM_SKITTER.ai_script,
             quintra_content::AiScriptId::Spinner { radius: 40, fire_rate: 84 });
+    }
+
+    #[test]
+    fn bloodmoon_and_void_add_dusk_midge_without_weight_inflation() {
+        for stage in [&stages::STAGES[7], &stages::STAGES[8]] {
+            assert!(stage.enemy_pool.iter().any(|&(id, _)| id == 23));
+            assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        }
+        assert_eq!(enemies::DUSK_MIDGE.ai_script,
+            quintra_content::AiScriptId::Shooter {
+                fire_rate: 96,
+                projectile: quintra_content::ProjectileKind::Bullet,
+                pattern: quintra_content::ShotPattern::Fan(3),
+            });
     }
 
     #[test]
