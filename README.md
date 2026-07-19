@@ -760,7 +760,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
 the endurance gate proves every sample exercises the procedural economy. A
-live encounter bitmask requires every generated enemy (IDs 0–24) to appear
+live encounter bitmask requires every generated enemy (IDs 0–27) to appear
 somewhere in the paired-seed endurance matrix, preventing a valid but
 procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance
@@ -801,16 +801,17 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; v0.18.21 occupies 128 KiB with 1,371 bytes of bank-0 headroom.
+bank space; the current v0.18.29 ROM occupies 128 KiB with 1,280 bytes of
+bank-0 headroom.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The v0.18.21 release has 3,591 bytes in bank 1, 1,464 in bank 2,
-2,952 in bank 3, 6,955 in bank 4, 11,819 in bank 5, and 14,811 in bank 6;
-the always-mapped bank retains 1,371 bytes of headroom.
+ROM. The current v0.18.29 build has 3,493 bytes in bank 1, 1,344 in bank 2,
+2,952 in bank 3, 6,886 in bank 4, 11,783 in bank 5, and 14,811 in bank 6;
+the always-mapped bank retains 1,280 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
