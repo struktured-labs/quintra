@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.38: Ember Rift Armor](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.39: Authored Pounce Speed](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,14 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.39 fixes a silent enemy-authoring bug: **charge speed now matters**.
+Rope and Frost Lancer retain their established, readable two-pixel dash, while
+Toxic Mire's **Bog Toad** finally executes its authored 120-speed pounce at
+three pixels per frame. This gives the Toad its intended distinct lane threat
+without raising enemy count, damage, bullet density, or the 128 KiB cartridge
+budget. Live-ROM coverage proves both fast and standard charge cadences; a
+fresh controller-only sample encountered Toads with no deaths.
 
 v0.18.38 extends **Rift Armor** to the Ember Depths Colossus (boss three),
 which now caps a single hit at three damage just like later stage bosses. The

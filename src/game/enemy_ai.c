@@ -306,11 +306,16 @@ static void charger_tick(entity_t *e, const enemy_def_t *def) {
     } else if (mode == CHG_CHARGE) {
         i8 dx = dir8_dx[e->ai_data[4] & 0x07];
         i8 dy = dir8_dy[e->ai_data[4] & 0x07];
-        // Two pixels per tick dash. Charger speed is deliberately a future
-        // authored hook: keep the established cadence stable until a matched
-        // controller policy proves a variable-speed lane is safe to ship.
-        u8 ok = enemy_try_step(e, dx, dy);
-        if (ok) ok = enemy_try_step(e, dx, dy);
+        // The content table owns this cadence.  96 is the established
+        // two-pixel charger lane; 120 is the intentionally faster Bog Toad
+        // pounce.  Keeping the quantization tiny makes every lane readable
+        // on the 8px grid while finally honoring the authored charge_speed
+        // field instead of silently flattening every charger to the same AI.
+        u8 steps = (def->ai_p1 >= 112) ? 3 : 2;
+        u8 ok = 1;
+        while (steps--) {
+            if (!enemy_try_step(e, dx, dy)) { ok = 0; break; }
+        }
         if (!ok || --e->ai_data[3] == 0) {
             e->ai_data[2] = CHG_RECOVER;
             e->ai_data[3] = 25;
