@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.14: Clear Records](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.15: Sunwheel](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -19,6 +19,15 @@ The current reel shows the animated five-spirit prologue, champion selection,
 live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
+
+v0.18.15 adds the **Sunwheel**, a Golden Temple-only orbiting lane shaper. It
+holds a compact ring around the champion and throws a slow opposite pair
+through the centre every 112 frames, making a visible movement puzzle rather
+than a new bullet flood. It has a 10% roster weight, one contact damage, and a
+distinct generated gold silhouette. The cartridge reuses the apothecary OBJ
+tile only in Temple combat; Dusk Midge claims that same phase-safe slot only
+in the later Bloodmoon/Void pools. Live-ROM coverage proves both procedural
+spawn and the exact two-lane pattern and art identity.
 
 v0.18.14 fixes a title-menu polish regression: opening **Records** now parks
 the Spirit Procession instead of leaving five hero sprites over the statistics,
@@ -876,11 +885,12 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.14)
+### Current conference evidence (v0.18.15)
 
-- Functional ROM contracts pass, including the first-Colossus health budget,
-  giant body-contact recovery, Skeleton clearance, score/Sigil stability, and
-  the full boss identity suite.
+- Functional ROM contracts pass, including the Sunwheel’s Golden Temple spawn,
+  art, and two-lane pattern; the first-Colossus health budget, giant
+  body-contact recovery, Skeleton clearance, score/Sigil stability, and the
+  full boss identity suite.
 - Cartridge-header and cold-boot SRAM checks pass; the refreshed 174-frame
   reel is hash-checked against the release ROM in `docs/media/gameplay.json`.
 - The current cart has been smoke-tested on an **Analogue Pocket** and an

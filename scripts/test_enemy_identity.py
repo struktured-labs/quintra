@@ -72,6 +72,7 @@ def main():
     room_source = (ROOT / "src/game/room.c").read_text()
     assert "tiles_load_dread_bell_sprite" in room_source
     assert "tiles_load_dusk_midge_sprite" in room_source
+    assert "tiles_load_sunwheel_sprite" in room_source
     assert "!RUN_ROOM_IS_TOWN(run_state.room_counter)" in room_source
     assert "room_state_has_shop_wares" in room_source
     # Generated content is the sole runtime identity source. Pin every roster

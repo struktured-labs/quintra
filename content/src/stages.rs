@@ -89,7 +89,10 @@ pub const STAGES: [StageTheme; 9] = [
         door:    [c( 3, 2, 0), c(14,11, 2), c(24,19, 4), c(31,28,10)],
         boss:    [c(0,0,0), c(22,17, 5), c( 6, 4, 1), c(31,30,18)],
         boss_hp_bonus: 240, boss_dmg_bonus: 4, mb_variant: 3, room_archetype: 6,
-        enemy_pool: &[(4, 20), (6, 20), (7, 15), (18, 15), (20, 15), (21, 15)],
+        // The Sunwheel makes the Temple a positioning test: it maintains a
+        // compact orbit and marks a changing opposite lane, while the rest
+        // of the pool preserves room for melee and counter-play lessons.
+        enemy_pool: &[(4, 15), (6, 15), (7, 15), (18, 15), (20, 15), (21, 15), (24, 10)],
     },
     // 7 — Bloodmoon (crimson/black)
     StageTheme {

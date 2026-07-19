@@ -355,6 +355,17 @@ pub const DUSK_MIDGE: [&str; 8] = [ // forked wings, bright eyes, tail spark
     ".3.....3",
 ];
 
+pub const SUNWHEEL: [&str; 8] = [ // radiant ring, offset spokes, dark core
+    "...3.3..",
+    ".332123.",
+    ".3211123",
+    "32133123",
+    "21133112",
+    ".3211123",
+    ".312123.",
+    "..3.3...",
+];
+
 pub const BULLET_A: [&str; 8] = [
     "...11...",
     "..1331..",
@@ -747,7 +758,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 22] = [
+pub const ENEMIES_8: [(&str, &[&str]); 23] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -770,6 +781,7 @@ pub const ENEMIES_8: [(&str, &[&str]); 22] = [
     ("rift_warden", &RIFT_WARDEN),
     ("prism_skitter", &PRISM_SKITTER),
     ("dusk_midge", &DUSK_MIDGE),
+    ("sunwheel", &SUNWHEEL),
 ];
 
 pub const FX_8: [(&str, &[&str]); 15] = [

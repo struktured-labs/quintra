@@ -64,6 +64,7 @@ pub const ENEMY_DREAD_BELL:      EnemyId = EnemyId::new(20);   // late-stage eig
 pub const ENEMY_RIFT_WARDEN:     EnemyId = EnemyId::new(21);   // late-stage five-way lane breaker
 pub const ENEMY_PRISM_SKITTER:   EnemyId = EnemyId::new(22);   // orbiting late-stage lane splitter
 pub const ENEMY_DUSK_MIDGE:      EnemyId = EnemyId::new(23);   // fast late-game fan-fire harrier
+pub const ENEMY_SUNWHEEL:        EnemyId = EnemyId::new(24);   // Golden Temple orbiting lane shaper
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -141,6 +142,9 @@ pub const SPRITE_PRISM_SKITTER: SpriteRef = SpriteRef::new(69);
 // Town apothecaries never share a room with dungeon hostiles, so combat can
 // reuse their otherwise-resident tile without expanding the fixed OBJ atlas.
 pub const SPRITE_DUSK_MIDGE:     SpriteRef = SpriteRef::new(79);
+// Golden Temple never spawns Dusk Midges, so its combat-only Sunwheel can
+// reclaim the same apothecary slot without expanding the fixed OBJ atlas.
+pub const SPRITE_SUNWHEEL:       SpriteRef = SpriteRef::new(79);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

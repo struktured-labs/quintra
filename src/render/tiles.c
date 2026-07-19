@@ -138,6 +138,13 @@ void tiles_load_dusk_midge_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_DUSK_MIDGE, 1, sprite_enemy_dusk_midge);
 }
 
+void tiles_load_sunwheel_sprite(void) BANKED {
+    // Dusk Midges are only in Bloodmoon/Void. Golden Temple can therefore
+    // reclaim this town-only apothecary slot for a new silhouette without
+    // growing the full 128-tile OBJ atlas.
+    set_sprite_data(SPR_ENEMY_SUNWHEEL, 1, sprite_enemy_sunwheel);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }

@@ -342,6 +342,19 @@ pub const DUSK_MIDGE: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const SUNWHEEL: Enemy = Enemy {
+    id: ENEMY_SUNWHEEL, symbol: "SUNWHEEL", name: "Sunwheel",
+    sprite_set: SPRITE_SUNWHEEL, palette: OBJ_PAL_GOLD,
+    // Golden Temple's positional hazard. It keeps a compact orbit, then
+    // throws a slow opposite pair through the centre: a lane-shaping prompt,
+    // not another high-density projectile flood. Its apothecary OBJ slot is
+    // reused only here; Dusk Midges do not occur before Bloodmoon.
+    stats: EnemyStats { hp: 14, damage: 1, speed: 56, score: 62, weakness: 0x08, poise: 1 },
+    ai_script: AiScriptId::Spinner { radius: 36, fire_rate: 112 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -367,4 +380,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(RIFT_WARDEN.clone());
     r.add_enemy(PRISM_SKITTER.clone());
     r.add_enemy(DUSK_MIDGE.clone());
+    r.add_enemy(SUNWHEEL.clone());
 }

@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       24);   // adds Dread Bell, Rift Warden, Prism Skitter, Dusk Midge
+        assert_eq!(r.n_enemies(),       25);   // adds Bell, Warden, Skitter, Midge, Sunwheel
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -242,6 +242,15 @@ mod tests {
                 projectile: quintra_content::ProjectileKind::Bullet,
                 pattern: quintra_content::ShotPattern::Fan(3),
             });
+    }
+
+    #[test]
+    fn golden_temple_adds_sunwheel_without_weight_inflation() {
+        let stage = &stages::STAGES[6];
+        assert!(stage.enemy_pool.iter().any(|&(id, w)| id == 24 && w == 10));
+        assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::SUNWHEEL.ai_script,
+            quintra_content::AiScriptId::Spinner { radius: 36, fire_rate: 112 });
     }
 
     #[test]

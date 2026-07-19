@@ -172,7 +172,10 @@ static void room_load_dynamic_fx_identity(void) {
         tiles_load_dread_bell_sprite();
         tiles_load_rift_warden_sprite();
         tiles_load_prism_skitter_sprite();
-        tiles_load_dusk_midge_sprite();
+        // Slot 79 is a phase-safe multiplex: Sunwheel is Temple-only, while
+        // Dusk Midge starts in Bloodmoon. Never load both into one OBJ tile.
+        if (room_stage() == 6) tiles_load_sunwheel_sprite();
+        else tiles_load_dusk_midge_sprite();
     }
 }
 
