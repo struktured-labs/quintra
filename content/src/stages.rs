@@ -17,10 +17,11 @@ pub const STAGES: [StageTheme; 9] = [
         boss:    [c(0,0,0), c(10,13,22), c( 2, 3, 8), c(22,29,31)],
         // The first Colossus is a pattern lesson, not a 200-HP attrition
         // wall before the run has earned a relic or a shop build.  With the
-        // Sentinel's 50 base this lands at 140 HP: long enough to teach the
-        // opening, ring, and body-spacing beats without turning one early
-        // contact sequence into an unwinnable first expedition.
-        boss_hp_bonus: 90, boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
+        // Sentinel's 50 base this lands at 160 HP: enough time for a fast
+        // starter kit to actually see the opening, ring, and body-spacing
+        // beats before the phase break, without changing boss damage or
+        // turning one early contact sequence into an unwinnable expedition.
+        boss_hp_bonus: 110, boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
         enemy_pool: &[(0, 35), (12, 30), (9, 20), (13, 15)],
     },
     // 1 — Verdant Hollow (mossy green)

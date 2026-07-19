@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.18: Fair Hunt](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.19: First Riftbreak](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -40,6 +40,13 @@ the champion's 12px navigation clearance. They still pursue, attach, and drain
 in open rooms, but can no longer slip into a one-tile corridor that the player
 cannot enter or reliably fight from. A live-ROM collision fixture proves both
 the existing cover-route behavior and the new narrow-lane exclusion.
+
+v0.18.19 gives the first **Crystal Colossus** 160 HP, up from 140. Fast
+starter kits previously erased its opening pattern and below-half Riftbreak in
+roughly five to ten seconds; this is a health-only, first-stage adjustment—no
+new damage, projectile speed, or later-boss scaling. Fresh controller-only
+three-seed runs retain a first-boss clear for every champion, while the median
+clear gets enough time for the telegraph and phase break to matter.
 
 v0.18.15 adds the **Sunwheel**, a Golden Temple-only orbiting lane shaper. It
 holds a compact ring around the champion and throws a slow opposite pair
@@ -912,7 +919,7 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    isolation because headless mGBA can occasionally bus-error under parallel
    load. The current baseline clears all four seeds in 44k–55k frames.
 
-### Current conference evidence (v0.18.18)
+### Current conference evidence (v0.18.19)
 
 - Functional ROM contracts pass, including honest capped coin pickups,
   Sunwheel’s Golden Temple spawn, art, and two-lane pattern; the
