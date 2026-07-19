@@ -2191,7 +2191,12 @@ while frames < LIMIT do
             keys = KEY_UP
         elseif px <= 12 and target.x <= 12 then
             keys = KEY_RIGHT
-        elseif px >= 132 and target.x >= 132 then
+        elseif px >= 132 and target.x >= 132
+            -- Tail Spike already has a valid vertical 48px lane here. The
+            -- generic inward nudge would otherwise replace its attack with
+            -- LEFT forever just because both sprites share the right strip.
+            and not (CLASS == 1 and held_style == "lunge"
+                and math.abs(target.y - py) > 8) then
             keys = KEY_LEFT
         end
     end
