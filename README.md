@@ -816,6 +816,13 @@ make media-check # prove reel version/hash/frame budget match the ROM
 make info       # print build summary
 ```
 
+For a GitHub ROM milestone, commit the verified ROM/media first, write the
+release notes to a file, then run
+`scripts/release_rom.sh vX.Y.Z path/to/notes.md`. The helper runs preflight,
+refuses an uncommitted ROM, pins the remote tag to the exact `HEAD` commit,
+and uses GitHub's `--verify-tag` mode before uploading. This avoids a release
+silently tagging the repository's default branch instead of the build source.
+
 `make balance` runs the actual cartridge under **mGBA headless** with five
 heuristic
 agents, one per champion. They may read combat state to aim, but they only
