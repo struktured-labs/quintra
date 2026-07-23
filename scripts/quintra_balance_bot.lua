@@ -1968,7 +1968,12 @@ function door_step(px, py)
         end
         for d = 1, 4 do
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
-            if nx >= 0 and nx < 20 and ny >= 0 and ny < 17 then
+            -- Route nodes represent the champion's feet center, not a raw
+            -- background tile.  The actual transition lips are x=1/19 and
+            -- y=1/16; admitting row/column zero lets a shortest path choose
+            -- an impossible top-left body position beside cover, then hold
+            -- UP forever while the visible east/west door remains open.
+            if nx >= 1 and nx <= 19 and ny >= 1 and ny <= 16 then
                 local nk = ny * 20 + nx
                 if not seen[nk] and ((in_world and world_body_walkable(nx, ny))
                     or (not in_world and body_walkable(nx, ny)
@@ -1979,7 +1984,65 @@ function door_step(px, py)
             end
         end
     end
-    if not target then return KEY_DOWN end
+    local function immediate_border_escape(fallback)
+        local candidates = nil
+        if py <= 4 then candidates = {KEY_DOWN, KEY_RIGHT, KEY_LEFT}
+        elseif py >= 116 then candidates = {KEY_UP, KEY_RIGHT, KEY_LEFT}
+        elseif px <= 4 then candidates = {KEY_RIGHT, KEY_DOWN, KEY_UP}
+        elseif px >= 140 then candidates = {KEY_LEFT, KEY_DOWN, KEY_UP} end
+        if candidates then
+            for _, candidate in ipairs(candidates) do
+                if can_step(px, py, candidate) then return candidate end
+            end
+        end
+        return fallback
+    end
+    if not target then
+        -- Corvin's ranged orbit can land in the narrow top-edge cover seam
+        -- several pixels at a time; it needs the continuous lookahead below
+        -- to avoid reversing across that same seam. Other kits recover more
+        -- reliably one legal body step at a time, especially Wolfkin after a
+        -- melee knockback at the west edge.
+        if CLASS ~= 2 then return immediate_border_escape(KEY_DOWN) end
+        -- A knockback/dodge can leave the real 12px body in a legal border
+        -- pocket whose coarse feet cell is not part of the BFS graph. Scan
+        -- along the border for the nearest continuous path to an inward
+        -- step. This lookahead keeps a fast champion committed across the
+        -- few-pixel collision seam instead of reversing on the next sample.
+        local function border_escape(side_a, side_b, inward)
+            local a_open, b_open = true, true
+            for offset = 1, 80 do
+                local ax = px + (side_a == KEY_RIGHT and offset
+                    or side_a == KEY_LEFT and -offset or 0)
+                local ay = py + (side_a == KEY_DOWN and offset
+                    or side_a == KEY_UP and -offset or 0)
+                local bx = px + (side_b == KEY_RIGHT and offset
+                    or side_b == KEY_LEFT and -offset or 0)
+                local by = py + (side_b == KEY_DOWN and offset
+                    or side_b == KEY_UP and -offset or 0)
+                if a_open then
+                    a_open = can_step(ax - (side_a == KEY_RIGHT and 1
+                        or side_a == KEY_LEFT and -1 or 0),
+                        ay - (side_a == KEY_DOWN and 1
+                        or side_a == KEY_UP and -1 or 0), side_a)
+                    if a_open and can_step(ax, ay, inward) then return side_a end
+                end
+                if b_open then
+                    b_open = can_step(bx - (side_b == KEY_RIGHT and 1
+                        or side_b == KEY_LEFT and -1 or 0),
+                        by - (side_b == KEY_DOWN and 1
+                        or side_b == KEY_UP and -1 or 0), side_b)
+                    if b_open and can_step(bx, by, inward) then return side_b end
+                end
+            end
+            return inward
+        end
+        if py <= 4 then return border_escape(KEY_RIGHT, KEY_LEFT, KEY_DOWN) end
+        if py >= 116 then return border_escape(KEY_RIGHT, KEY_LEFT, KEY_UP) end
+        if px <= 4 then return border_escape(KEY_DOWN, KEY_UP, KEY_RIGHT) end
+        if px >= 140 then return border_escape(KEY_DOWN, KEY_UP, KEY_LEFT) end
+        return KEY_DOWN
+    end
     -- Tile-center BFS is not precise enough at a two-tile door: the player's
     -- 12px body can occupy the correct 8px cell while its shoulder still
     -- clips the adjacent wall. Center on the runtime's known-safe top-left
@@ -2017,7 +2080,9 @@ function door_step(px, py)
     end
     while prev[target] and prev[target] ~= start do target = prev[target] end
     local d = prevkey[target]
-    return aligned_step(d, sx, sy, px, py, KEY_DOWN)
+    local step = aligned_step(d, sx, sy, px, py, KEY_DOWN)
+    if not can_step(px, py, step) then return immediate_border_escape(step) end
+    return step
 end
 
 -- Keep signature choice out of the already dense frame loop.  This is still
@@ -2383,7 +2448,7 @@ local escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
 local shake_phase = 0
 shake_dir, shake_cycle = KEY_RIGHT, 0
 local towns_seen, town_rooms = 0, {}
-local world_hops, last_world_key = 0, -1
+local world_hops, last_world_key, last_town_key = 0, -1, -1
 local world_contact_hits = 0
 local debug_shot_room = -1
 local debug_spore_room = -1
@@ -2592,6 +2657,28 @@ while frames < LIMIT do
         world_contact_hits = 0
         wall_follow_dir, wall_follow_min = 0, 0
         dodge_phase, escape_timer = 0, 0
+    end
+    -- A town's arrival, market, and craft quarter deliberately share one
+    -- run-state room number.  Treat their plaza index as a real navigation
+    -- boundary anyway: carrying a market-side unstick/dodge through the
+    -- lateral transition can overwrite the arrival square's next itinerary
+    -- step and send the pilot north before it visits the other build shop.
+    local town_key = is_town_room(room)
+        and (room * 4 + emu:read8(RS + 19)) or -1
+    if town_key ~= last_town_key then
+        last_town_key = town_key
+        route_start_frame = frames
+        wall_follow_dir, wall_follow_min = 0, 0
+        dodge_phase, dodge_cooldown = 0, 0
+        escape_timer, escape_dir, escape_index = 0, KEY_UP, 0
+        still_frames = 0
+        if DEBUG and town_key >= 0 then
+            debug_log(string.format(
+                "BOTTOWN f=%d room=%d screen=%d market=%d quarter=%d",
+                frames, room, emu:read8(RS + 19),
+                town_market_seen[room] and 1 or 0,
+                town_quarter_seen[room] and 1 or 0))
+        end
     end
     -- player.x/y are signed 16-bit pixels at offsets 9 and 11.
     local px, py = read_i16(PL + 9), read_i16(PL + 11)
@@ -2984,6 +3071,54 @@ while frames < LIMIT do
                 -- fire while approaching a moving Keese.
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
             end
+        elseif target.kind == 1 and target.giant == 0
+            and (CLASS == 0 or CLASS == 1) then
+            -- The required Warden is stationary, large, and often placed
+            -- across a generated U-shaped court. A tile-coarse route can
+            -- alternate at the lower corner forever: one cell says LEFT is
+            -- the approach, while the pixel body cannot finish that first
+            -- step without committing around the wall. Use the exact
+            -- feet-box lane search already proven for other fixed hazards.
+            local warden_range = held_style == "spear" and 88
+                or held_style == "claw" and 64
+                or held_style == "ranged" and 140 or 52
+            local warden_step, warden_ready = fold_star_pixel_step(
+                room, px, py, target.x, target.y, aim, warden_range)
+            if DEBUG and frames % 120 == 0 then
+                local start = py * 160 + px
+                warden_player_shots = 0
+                warden_first_shot_x, warden_first_shot_y = 255, 255
+                for warden_scan = 0, 31 do
+                    warden_ptr = EN + warden_scan * 28
+                    if emu:read8(warden_ptr) == 1
+                        and emu:read8(warden_ptr + 1) % 32 >= 16 then
+                        warden_player_shots = warden_player_shots + 1
+                        if warden_first_shot_x == 255 then
+                            warden_first_shot_x = emu:read8(warden_ptr + 3)
+                            warden_first_shot_y = emu:read8(warden_ptr + 7)
+                        end
+                    end
+                end
+                debug_log(string.format(
+                    "BOTWARDEN f=%d pos=%d,%d target=%d,%d step=%02X ready=%d cached=%02X cd=%d shots=%d first=%d,%d",
+                    frames, px, py, target.x, target.y, warden_step or 0,
+                    warden_ready and 1 or 0,
+                    fold_star_pixel_route
+                        and (fold_star_pixel_route.dirs[start] or 0) or 0,
+                    emu:read8(PL + 22), warden_player_shots,
+                    warden_first_shot_x, warden_first_shot_y))
+            end
+            local warden_body_range = math.max(
+                math.abs(target.x - px), math.abs(target.y - py))
+            if warden_ready and held_style == "lunge"
+                and warden_body_range < 28 then
+                local retreat = (aim == KEY_UP and KEY_DOWN)
+                    or (aim == KEY_DOWN and KEY_UP)
+                    or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
+                keys = can_step(px, py, retreat) and retreat or warden_step
+            else
+                keys = warden_ready and (KEY_A + warden_step) or warden_step
+            end
         elseif target.kind == 13 and (
             (held_style == "claw" and CLASS == 0
                 and math.max(math.abs(dx), math.abs(dy)) <= 64)
@@ -3015,11 +3150,19 @@ while frames < LIMIT do
                 keys = KEY_A + aim
             elseif not leech_lane then
                 -- A Leech can cross an 8px opening that a 12px champion
-                -- cannot shoot through. Ask the same body-valid BFS used by
-                -- every other short weapon for a cardinal lane around that
-                -- fixture instead of repeatedly slashing the wall.
+                -- cannot shoot through. Its feet can also remain on legal
+                -- floor while the visible body overlaps the solid tile just
+                -- above it. In that case the coarse tile BFS believes the
+                -- current column is already usable even though every Fang
+                -- strike dies inside the cover. Find a pixel-valid cardinal
+                -- lane around the fixture, and attack only after reaching it.
                 leech_needs_lane = true
-                keys = target_step(px, py, target.x, target.y, aim, 6)
+                local leech_range = held_style == "spear" and 88
+                    or held_style == "claw" and 64
+                    or held_style == "ranged" and 140 or 52
+                local leech_step, leech_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, leech_range)
+                keys = leech_ready and (KEY_A + leech_step) or leech_step
             elseif CLASS == 4 and active_charge == 0 and mp >= 2 then
                 -- Vespine's real B fan is the intended close-range answer:
                 -- it clears a wall-clinging Leech before a careful A-only
@@ -3465,8 +3608,30 @@ while frames < LIMIT do
             keys = sigil_pixel_step(room, px, py, loot.x, loot.y)
             if keys ~= nil then sigil_pixel_active = true
             else keys = target_step(px, py, loot.x, loot.y, direct, 0) end
+        elseif boss_relic_pending ~= 0 and loot.kind == 3 then
+            -- Guaranteed colossus relics linger for only four seconds. Near
+            -- a top-edge boss projection, the coarse pickup route can call
+            -- an already-adjacent cell "close enough" and answer blocked UP
+            -- until the orb expires. Route the real feet box to a centered
+            -- overlap coordinate; collision collects it before that exact
+            -- endpoint if the generous pickup box is reached sooner.
+            local goal_x = loot.x - 6
+            local goal_y = loot.y - 10
+            if goal_x < 0 then goal_x = 0 elseif goal_x > 146 then goal_x = 146 end
+            if goal_y < 0 then goal_y = 0 elseif goal_y > 120 then goal_y = 120 end
+            keys = body_goal_step(px, py, goal_x, goal_y)
+            if DEBUG and frames % 60 == 0 then
+                debug_log(string.format(
+                    "BOTRELICROUTE f=%d room=%d pos=%d,%d relic=%d,%d goal=%d,%d step=%02X",
+                    frames, room, px, py, loot.x, loot.y, goal_x, goal_y, keys or 0))
+            end
         else
             keys = target_step(px, py, loot.x, loot.y, direct, 0)
+            if DEBUG and boss_relic_pending ~= 0 and frames % 120 == 0 then
+                debug_log(string.format(
+                    "BOTRELICROUTE f=%d room=%d pos=%d,%d relic=%d,%d step=%02X",
+                    frames, room, px, py, loot.x, loot.y, keys or 0))
+            end
         end
     else
         keys = door_step(px, py) + KEY_A
@@ -3766,7 +3931,9 @@ while frames < LIMIT do
             -- coarse UP route and overwrote the deliberate inward step.
             keys = KEY_DOWN
         else
-            keys = KEY_A + target_step(px, py, target.x, target.y, 0, 6)
+            local warden_step, warden_ready = fold_star_pixel_step(
+                room, px, py, target.x, target.y, 0, 52)
+            keys = warden_ready and (KEY_A + warden_step) or warden_step
         end
         dodge_phase = 0
     end
@@ -3827,7 +3994,12 @@ while frames < LIMIT do
     -- or shop stock, sending the controller back into a just-cleared
     -- miniboss room instead of finishing the current objective. Keep it
     -- inward only at that arrival lip; ordinary forward doors stay available.
-    if (target or loot or shop) and world_mode == 0 then
+    if (target or loot or shop) and world_mode == 0
+        -- A guaranteed boss relic can spawn in the safe top-edge strip well
+        -- away from the actual doorway. Its explicit priority already keeps
+        -- the pilot in the room, so do not bounce a valid pickup route off
+        -- the generic arrival lip.
+        and not (boss_relic_pending ~= 0 and loot and loot.kind == 3) then
         local entered = emu:read8(RS + 6)
         local actions = keys % 16
         if entered == 0 and py > 108 and math.floor(keys / KEY_DOWN) % 2 == 1 then
@@ -4001,7 +4173,10 @@ while frames < LIMIT do
             keys = keys - KEY_RIGHT + KEY_LEFT
         elseif back == 2 and py >= 88 and has(KEY_DOWN) then
             keys = keys - KEY_DOWN + KEY_UP
-        elseif back == 3 and px <= 24 and has(KEY_LEFT) then
+        -- Generated courts can require the leftmost two tile columns to
+        -- round a long wall. Claim only the true transition lip here: the
+        -- old 24px guard reversed a valid Warden route at x=23 forever.
+        elseif back == 3 and px <= 6 and has(KEY_LEFT) then
             keys = keys - KEY_LEFT + KEY_RIGHT
         end
     end
@@ -4041,7 +4216,7 @@ while frames < LIMIT do
         -- become mandatory, but debug output still needs the nearest hostile
         -- to explain an overworld hit or an avoidance choice.
         local debug_target = target or overworld_threat
-        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X route=%02X routeok=%d",
+        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X door=%02X route=%02X routeok=%d",
             frames, room, world_mode, world_screen,
             SEALED ~= 0 and emu:read8(SEALED) or 0,
             hp, mp, iframes, active_charge,
@@ -4055,6 +4230,7 @@ while frames < LIMIT do
                 no_damage_frames)
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y)
                     or (shop and string.format("shop:%d,%d", shop.x, shop.y) or "door")), keys,
+            door_step(px, py),
             target and target_step(px, py, target.x, target.y, 0,
                 weapon_route_tiles(held_style)) or 0,
             target and can_step(px, py, target_step(px, py, target.x, target.y, 0,

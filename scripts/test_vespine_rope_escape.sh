@@ -11,7 +11,7 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-vespine-rope.XXXXXX)"
 
 QUINTRA_BALANCE_RUNS=32 QUINTRA_BALANCE_CLASSES=4 \
-  QUINTRA_BALANCE_TARGET_FRAME=540 \
+  QUINTRA_BALANCE_TARGET_FRAME=400 \
   QUINTRA_BALANCE_FRAMES=16000 QUINTRA_BALANCE_HOST_TIMEOUT=45 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
@@ -22,7 +22,7 @@ awk -F, '
     next
   }
   NR == 2 {
-    if ($(col["seed"]) != 2064128343) {
+    if ($(col["seed"]) != 2064128731) {
       print "[vespine-rope] fixed controller world drifted" > "/dev/stderr"
       exit 1
     }

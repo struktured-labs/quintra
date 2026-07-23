@@ -30,6 +30,14 @@ static const u16 map_pal_boss[4] = {
 };
 
 static u8 map_attr(u8 tile) {
+    if (tile >= BGT_MAP_NODE_HERE_BASE
+        && tile < BGT_MAP_NODE_HERE_BASE + 4) return BGPAL_DOOR;
+    if ((tile >= BGT_MAP_NODE_BOSS_BASE
+            && tile < BGT_MAP_NODE_BOSS_BASE + 4)
+        || (tile >= BGT_MAP_NODE_TRIAL_BASE
+            && tile < BGT_MAP_NODE_TRIAL_BASE + 4)) return BGPAL_CRACK;
+    if (tile >= BGT_MAP_NODE_SIGIL_BASE
+        && tile < BGT_MAP_NODE_SIGIL_BASE + 4) return BGPAL_CRYSTAL;
     if (tile == BGT_WALL || tile == BGT_PILLAR || tile == BGT_ROOF
         || tile == BGT_FENCE || tile == BGT_TREE
         || tile == BGT_WILD_STONE) return BGPAL_WALL;
@@ -69,9 +77,9 @@ static void map_clear_tiles(void) {
 // compact graphical Compass while making the diagram immediately read as a
 // map in dungeons, villages, and Riftwild alike.
 static void draw_map_heading(void) {
-    map_put(8, 1, BGT_AREA_M);
-    map_put(9, 1, BGT_AREA_A);
-    map_put(10, 1, BGT_MAP_LABEL_P);
+    map_put(8, 0, BGT_AREA_M);
+    map_put(9, 0, BGT_AREA_A);
+    map_put(10, 0, BGT_MAP_LABEL_P);
 }
 
 static void map_room_box(u8 x, u8 y, u8 center, u8 seen) {
@@ -86,10 +94,21 @@ static void map_room_box(u8 x, u8 y, u8 center, u8 seen) {
     map_put((u8)(x + 1), (u8)(y + 1), center);
 }
 
-// A dungeon room is one self-bordered glyph. The fixed snake reads as an
-// abstract pocket map at a glance rather than sixteen miniature floorplans.
+// A dungeon room is one 16×16 self-bordered glyph. The earlier 8×8 cells
+// technically described the graph but left most of the LCD empty and read
+// like circuit pads. Four quadrants make each room unmistakably square while
+// the one-tile gaps retain a compact 6×5 Zelda-style pocket map.
 static void map_dungeon_node(u8 x, u8 y, u8 icon, u8 seen) {
-    map_put(x, y, seen ? icon : BGT_MAP_UNKNOWN);
+    u8 base = BGT_MAP_NODE_ROOM_BASE;
+    if (!seen) base = BGT_MAP_NODE_UNKNOWN_BASE;
+    else if (icon == BGT_MAP_HERE) base = BGT_MAP_NODE_HERE_BASE;
+    else if (icon == BGT_MAP_BOSS) base = BGT_MAP_NODE_BOSS_BASE;
+    else if (icon == BGT_MAP_SIGIL) base = BGT_MAP_NODE_SIGIL_BASE;
+    else if (icon == BGT_SWITCH) base = BGT_MAP_NODE_TRIAL_BASE;
+    map_put(x, y, base);
+    map_put((u8)(x + 1), y, (u8)(base + 1));
+    map_put(x, (u8)(y + 1), (u8)(base + 2));
+    map_put((u8)(x + 1), (u8)(y + 1), (u8)(base + 3));
 }
 
 static void draw_dungeon_legend(void) {
@@ -104,18 +123,18 @@ static void draw_dungeon_legend(void) {
         BGT_MAP_LABEL_B, BGT_MAP_LABEL_O, BGT_MAP_LABEL_S, BGT_MAP_LABEL_S
     };
     u8 i;
-    map_put(1, 15, BGT_MAP_HERE);
-    for (i = 0; i < 3; ++i) map_put((u8)(2 + i), 15, you[i]);
-    map_put(7, 15, BGT_MAP_SIGIL);
-    for (i = 0; i < 5; ++i) map_put((u8)(8 + i), 15, sigil[i]);
-    map_put(15, 15, BGT_MAP_BOSS);
-    for (i = 0; i < 4; ++i) map_put((u8)(16 + i), 15, boss[i]);
+    map_put(1, 16, BGT_MAP_HERE);
+    for (i = 0; i < 3; ++i) map_put((u8)(2 + i), 16, you[i]);
+    map_put(7, 16, BGT_MAP_SIGIL);
+    for (i = 0; i < 5; ++i) map_put((u8)(8 + i), 16, sigil[i]);
+    map_put(15, 16, BGT_MAP_BOSS);
+    for (i = 0; i < 4; ++i) map_put((u8)(16 + i), 16, boss[i]);
     if (run_state.bosses_beaten > 0) {
-        map_put(7, 13, BGT_MAP_RIFT);
-        map_put(8, 13, BGT_MAP_LABEL_R);
-        map_put(9, 13, BGT_MAP_LABEL_I);
-        map_put(10, 13, BGT_MAP_LABEL_F);
-        map_put(11, 13, BGT_MAP_LABEL_T);
+        map_put(7, 17, BGT_MAP_RIFT);
+        map_put(8, 17, BGT_MAP_LABEL_R);
+        map_put(9, 17, BGT_MAP_LABEL_I);
+        map_put(10, 17, BGT_MAP_LABEL_F);
+        map_put(11, 17, BGT_MAP_LABEL_T);
     }
 }
 
@@ -217,11 +236,11 @@ static void draw_dungeon_grid(void) {
         1, 4, 7, 10, 13, 16
     };
     static const u8 gy[MAX_DUNGEON_CELLS] = {
-        3, 3, 3, 3, 3, 3,
-        5, 5, 5, 5, 5, 5,
+        1, 1, 1, 1, 1, 1,
+        4, 4, 4, 4, 4, 4,
         7, 7, 7, 7, 7, 7,
-        9, 9, 9, 9, 9, 9,
-        11, 11, 11, 11, 11, 11
+        10, 10, 10, 10, 10, 10,
+        13, 13, 13, 13, 13, 13
     };
     u8 i, j;
     u8 size = run_state_dungeon_size();
@@ -236,11 +255,10 @@ static void draw_dungeon_grid(void) {
     u8 sigil_done = (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
     u8 next_trial = 0xFF;
-    u8 next_trial_icon = BGT_MAP_BOSS;
+    u8 next_trial_icon = BGT_SWITCH;
     if (sigil_done && !warden_done) next_trial = 3;
     else if (warden_done && size >= 12 && !waystone_done) {
         next_trial = 7;
-        next_trial_icon = BGT_SWITCH;
     } else if (warden_done && waystone_done
         && size >= 14 && !deep_warden_done) next_trial = 9;
     for (i = 0; i < size; ++i) {
@@ -279,7 +297,7 @@ static void draw_dungeon_grid(void) {
             u8 adjacent = (gy[i] == gy[j]
                     && (gx[i] + 3 == gx[j] || gx[j] + 3 == gx[i]))
                 || (gx[i] == gx[j]
-                    && (gy[i] + 2 == gy[j] || gy[j] + 2 == gy[i]));
+                    && (gy[i] + 3 == gy[j] || gy[j] + 3 == gy[i]));
             if (j == (u8)(size - 1)
                 && run_state_dungeon_cell_seen((u8)(size - 2))) b_seen = 1;
             if (next_trial != 0xFF) {
@@ -294,16 +312,16 @@ static void draw_dungeon_grid(void) {
                 u8 tile = (a_seen && b_seen)
                     ? BGT_MAP_PATH_H : BGT_MAP_PATH_H_DIM;
                 u8 p;
-                for (p = (u8)(left + 1); p < right; ++p)
-                    map_put(p, gy[i], tile);
+                for (p = (u8)(left + 2); p < right; ++p)
+                    map_put(p, (u8)(gy[i] + 1), tile);
             } else {
                 u8 top = gy[i] < gy[j] ? gy[i] : gy[j];
                 u8 bottom = gy[i] > gy[j] ? gy[i] : gy[j];
                 u8 tile = (a_seen && b_seen)
                     ? BGT_MAP_PATH_V : BGT_MAP_PATH_V_DIM;
                 u8 p;
-                for (p = (u8)(top + 1); p < bottom; ++p)
-                    map_put(gx[i], p, tile);
+                for (p = (u8)(top + 2); p < bottom; ++p)
+                    map_put((u8)(gx[i] + 1), p, tile);
             }
         }
     }
@@ -313,7 +331,7 @@ static void draw_dungeon_grid(void) {
     // once both are seen, the completed diagonal makes the nonlinear shortcut
     // explicit without pretending it is a cardinal hallway.
     if (run_state.bosses_beaten > 0) {
-        if (run_state_dungeon_cell_seen(2)) map_put(8, 4, BGT_MAP_RIFT);
+        if (run_state_dungeon_cell_seen(2)) map_put(9, 3, BGT_MAP_RIFT);
         if (run_state_dungeon_cell_seen(8)) map_put(9, 4, BGT_MAP_RIFT);
     }
     draw_dungeon_legend();

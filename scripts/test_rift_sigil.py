@@ -161,16 +161,21 @@ def main():
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    # The 6x5 Compass gives each dungeon room one glyph. Opening-stage fixture
-    # room 2 is node two at (7, 3); its nearby diagonal remains empty because
-    # the tutorial dungeon intentionally has no nonlinear rift.
-    assert pb.memory[bg + 3 * 32 + 7] == 52, \
-        "found Sigil lacks its dedicated glyph in the fixture room"
-    assert pb.memory[bg + 3 * 32 + 10] == 51, \
-        "claimed Sigil did not reveal the amber Warden objective"
-    assert pb.memory[bg + 4 * 32 + 8] == 0, \
+    # The 6x5 Compass gives each dungeon one 16x16 node. Opening-stage fixture
+    # room 2 owns violet quadrants 118..121 at (7,1); the revealed Warden owns
+    # amber exclamation quadrants 122..125 at (10,1). Their nearby diagonal
+    # remains empty because the tutorial dungeon has no nonlinear rift.
+    assert tuple(pb.memory[bg + y * 32 + x]
+                 for x, y in ((7, 1), (8, 1), (7, 2), (8, 2))) == \
+        (118, 119, 120, 121), \
+        "found Sigil lacks its 16x16 violet node"
+    assert tuple(pb.memory[bg + y * 32 + x]
+                 for x, y in ((10, 1), (11, 1), (10, 2), (11, 2))) == \
+        (122, 123, 124, 125), \
+        "claimed Sigil did not reveal the amber Warden trial"
+    assert pb.memory[bg + 3 * 32 + 9] == 0, \
         "Sigil still uses the misleading floating map marker"
-    assert pb.memory[bg + 9 * 32 + 13] == 95, \
+    assert pb.memory[bg + 10 * 32 + 13] == 106, \
         "unseen boss slot lost its dim identity-free placeholder"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")

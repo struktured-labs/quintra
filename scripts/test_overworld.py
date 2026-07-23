@@ -115,7 +115,7 @@ def main():
     # The field begins below the heading and uses the same compact one-glyph
     # graph language as the dungeon Compass. The old 3x3 terrain thumbnails
     # consumed the LCD without explaining the two colored squares.
-    assert bytes(pb.memory[bg + 1 * 32 + 8:bg + 1 * 32 + 11]) == bytes((87, 84, 94)), \
+    assert bytes(pb.memory[bg + 0 * 32 + 8:bg + 0 * 32 + 11]) == bytes((87, 84, 94)), \
         "Riftwild map heading was overwritten by its top row"
     assert pb.memory[bg + 7 * 32 + 7] == 50, "current cell lacks cyan HERE glyph"
     assert pb.memory[bg + 13 * 32 + 10] == 52, "visited vault lacks violet glyph"

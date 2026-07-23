@@ -138,6 +138,18 @@
 #define BGT_MAP_PATH_H_DIM 100
 #define BGT_MAP_PATH_V_DIM 101
 
+// Dungeon Compass 16×16 node quadrants. Each semantic node owns four
+// consecutive tiles in NW, NE, SW, SE order. The larger cells use the same
+// 6×5 footprint as gameplay but read as rooms rather than tiny circuit pads.
+// These map-only BG slots may numerically overlap OBJ slots: the CGB's signed
+// BG tile region is separate from the OBJ data region used by those IDs.
+#define BGT_MAP_NODE_ROOM_BASE    102
+#define BGT_MAP_NODE_UNKNOWN_BASE 106
+#define BGT_MAP_NODE_HERE_BASE    110
+#define BGT_MAP_NODE_BOSS_BASE    114
+#define BGT_MAP_NODE_SIGIL_BASE   118
+#define BGT_MAP_NODE_TRIAL_BASE   122
+
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
 #define BGPAL_WALL    1
