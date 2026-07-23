@@ -20,6 +20,812 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
+### Unreleased development work
+
+The current unreleased cartridge is **v0.18.58**. The v0.18.42 link above
+remains the latest published release until this shared worktree completes its
+full release gate.
+
+**Dungeon depth now comes from required fixtures, not padding.** The nine-stage route grows through
+10, 11, 12, 12, 13, 14, 14, 15, and 16 rooms including each Colossus arena:
+117 dungeon screens in one successful run, up from the former compact
+seven-to-twelve-room ramp. Every footprint is a reciprocal 4×4 spatial graph
+with loops and visible missing exits rather than a room-counter corridor. The
+Spirit Compass uses the same 4×4 grammar and
+illuminates only the active cells, so the added depth remains readable rather
+than becoming a text maze. Stages with twelve or more rooms gain a second
+seeded puzzle fixture; stages with fourteen or more gain a second miniboss
+lesson. Villages still break the route after dungeons three and six, and
+nonlinear Rift Wells retain their confusing shortcut identity while now
+clearing a champion-width route to both landings.
+Human testing correctly noted that raw room count still felt compact when a
+short graph route could bypass most authored beats. The route now unfolds as
+a visible fixture chain: room two's **Rift Sigil**, room three's mechanical
+**Warden Boon**, then—once a dungeon reaches twelve cells—the existing
+room-seven puzzle as its **Waystone**. Fourteen-cell and larger stages also
+require the existing room-nine **Deep Warden**. The Compass reveals one next
+trial at a time, and the sanctuary keeps its return route open until every
+fixture for that stage is earned. This makes late expeditions traverse their
+back half instead of cutting diagonally across the 4×4 graph. Normal keeps the
+full Warden HP and escort pressure; Easy halves required Warden HP and uses
+one escort so deep-route testing remains practical.
+
+**Dungeon locks are no longer synonymous with extermination.** Procedural
+dungeons rotate three non-combat room families alongside the existing selective
+arena seals. A normal-looking 16×16 cairn can be the keystone that releases a
+room when pushed; three floor runes demand one seed-stable walking order, with
+an ascending note and lit tile confirming every correct step and a visible
+reset on mistakes; paired phase switches persist into the following room,
+raising or lowering a colored wall there. Puzzle rooms remove mandatory
+hostiles, always preserve the return threshold, and persist their solved state
+through dungeon backtracking. A new low rumble and D–F–Ab–D discovery figure
+lets the final solve linger instead of sounding like another coin pickup.
+Room slides now advance both music and SFX on every transition VBlank, so the
+sequencer continues its phrase rather than droning one stale note between
+screens. The safe-spawn reachability flood is now a linear WRAM queue in the
+generator bank instead of a repeated full-room scan with thousands of
+cross-bank predicate calls. A measured same-stage doorway—including procgen,
+fixtures, the 18-frame slide, palettes, HUD, and restored sprites—fell from
+103 to 38 frames, and a live-ROM contract rejects regression above 45.
+
+**Riftwild now has the same pocket-map grammar as the dungeons.** SELECT draws
+its visited 4×4 topology as a compact one-glyph graph rather than sixteen
+large terrain thumbnails. Cyan `YOU`, violet `RIFT`, a marked `GATE`, and
+amber `BOSS` labels live beside the graph on the Game Boy screen. Sixteen dim
+hollow slots establish the 4×4 grid immediately; exploration replaces them
+with bright semantic nodes and reveals only the links actually travelled.
+Vaults retain the familiar violet objective diamond.
+This makes the next-dungeon route and nonlinear cave hops readable without a
+README legend or sacrificing fog of war.
+
+**Riftwild cells now have seed-stable geographic landmarks.** Every 4×4
+crossing contains four meadow, pond, standing-stone, and old-stump clearings;
+the run seed rotates which coordinates own each family. Backtracking therefore
+returns to a recognizable place, while a new expedition remixes the geography.
+All solid landmarks stay outside the two-tile trail cross, preserve every
+authored exit, and leave Normal/Easy encounters, HP, and routes identical. A
+live-ROM sweep crosses all sixteen cells, checks four instances of each family,
+and emits a native-resolution visual atlas.
+
+**Procgen variety is now a measured cartridge contract.** A 512-seed Rust
+corpus produces 393 distinct gameplay silhouettes after decorative floor
+textures are normalized, with optional crates, spikes, and pots; it also
+covers secret cracks on all four walls, both dungeon-shop premium forks, and
+all four nonlinear Rift Well anchors. A second test samples 108 rooms from the
+linked ROM after stage architecture and entity spawning: every stage produces
+12/12 distinct geometry and encounter signatures, exposes 5–7 enemy species,
+and varies ordinary-room population from two to seven. These checks protect
+meaningful cover, hazards, routes, rosters, and elite rolls—not merely palette
+or pebble differences.
+
+**Normal is the authored balance; Easy is a playtest assist.** On the champion
+screen, press **SELECT** to switch `SELECT MODE NORMAL` to `SELECT MODE EASY` before choosing
+with A. Normal keeps the intended enemy durability, projectile pressure, boss
+patterns, and progression. Easy is intentionally generous for deep testing:
+every champion starts with eight fully visible hearts, +4 ATK, +2 DEF, loses
+at most half a heart per impact, receives four times Normal's post-hit repositioning
+time, and suffers much slower attached-Leech drain.
+It deliberately uses the same procedural worlds and room geometry; required
+Wardens alone use half HP and one escort instead of Normal's two so the testing
+route remains viable. Fine Easy-mode balancing is deferred while Normal remains the
+design target. A live-ROM regression compares all 185 paired Normal/Easy
+entry, sanctuary, boss, Riftwild, and village checkpoints and pins identical generated
+tiles, route state, ordinary enemy placement/HP, and boss-pattern identity
+underneath the assist modifiers.
+Controller balance runs also default to Normal. Focused deep-fixture checks may
+set `QUINTRA_BOT_EASY=1`; this presses SELECT through ordinary input and never
+writes HP, progression, enemies, or RNG. It is for reaching the system under
+test, not evidence that Easy or Normal is balanced. The end-to-end victory
+replay deliberately uses this assist: it crosses the same seed, rooms,
+rosters, Sigils, villages, Riftwild, and nine bosses, then reproduces the exact
+buttons on a clean emulator. Normal remains the only balance acceptance mode.
+
+**Normal elites now repay risk instead of becoming pure attrition.** Their
+doubled HP, bonus damage, glow, spawn rate, and score are unchanged. Defeating
+one while wounded drops a visible half-heart; defeating one at full health
+keeps the established five-coin reward. This preserves hard-mode encounter
+pressure while giving the player a small, positional recovery opportunity
+after an unlucky early elite roll, borrowing Penta Dragon's plentiful pickup
+economy rather than weakening the enemy roster.
+
+**Spirit Convergence now teaches its own input.** The Pack's final line reads
+`FULL MP A B CHORD`, using only glyphs the cartridge font actually renders.
+At full MP the two HUD digits brighten from blue to icy white; spending B or
+the chord returns them to blue. The cue exposes the shared 18-second ascended
+form in play instead of leaving Quintra's defining Penta-style power spike in
+the README. Its duration, damage, MP cost, procgen, and Normal/Easy balance are
+unchanged.
+
+**Riftwild and the village now identify themselves in the live playfield.**
+Amber tile-native `RIFTWILD`, `VILLAGE`, `MARKET`, and `FORGE` landmarks sit
+over the underlying walkable grass/path cells, so the outdoor connector and
+three civic screens no longer rely on README knowledge or the Pack screen to
+explain what they are. Their display overlay changes no collision, room graph,
+procgen seed, encounter, or Normal/Easy balance. Live-ROM traversal tests pin
+all four labels, the Riftwild's 4×4 route and cave vault, and the village's
+three connected screens and northward continuation.
+
+**Dash-released Gloam Leeches now stay released.** A Leech shaken off at a
+north/left door edge is rehomed onto legal floor and receives a real 30-frame
+reattachment lockout. The old code put `30` in its movement-divider field, so
+the next AI update could reset the value and latch straight back onto the same
+feet box. The live-ROM contract covers both a normal double-tap shake-off and
+the legal edge placement.
+
+**Verdant Hollow's Storm Serpent keeps its Normal-mode threat without acting
+as a global difficulty switch.** Its 205 HP, damage, four simultaneous rotating
+lanes, and wall-bounce identity are unchanged; the body advances every four
+movement beats and each cross leaves 24 frames before the next refill. After
+repairing the expanded-route controller's mGBA compile, cairn-contact, and
+mandatory-Sigil routing defects, a fresh three-world/five-champion Normal
+matrix records all 15 rows with zero route stalls. Crystal is cleared in 14/15
+runs; median first/second Colossus windows are 676 and 1,475 frames (11.3 and
+24.6 seconds). The sample has two deaths and no full win. The deterministic
+Easy Picsean replay still proves the complete nine-boss systemic route, while
+this Normal matrix remains policy evidence for direct human testing—not a
+reason to globally weaken enemies or bosses.
+
+**The Spirit Compass is now a real abstract dungeon map.** SELECT renders each
+10-to-16-room dungeon as a centered 4×4 snake of self-bordered square room
+glyphs and short connecting lines, rather than scattering miniature
+floorplans across the LCD. Sixteen dim hollow slots establish the complete
+lattice immediately; only the cells active in that stage can brighten and
+connect as explored, and room identities stay fogged until discovery. Two
+persisted seen-room bytes cover the entire layout. It includes a bright current-room marker, the
+Rift Sigil objective, and an early revealed Colossus skull. A tile-native `MAP`
+heading keeps the diagram self-identifying at
+160×144 without reviving the old truncated text page. Cyan/violet/amber semantics
+remain visibly distinct on actual CGB output, and a tile-native
+`YOU / SIGIL / BOSS` key makes the symbols readable without README knowledge.
+From dungeon two onward, discovering one nonlinear well reveals one violet
+rift end-cap; visiting its paired room completes a four-diamond diagonal edge
+and a tile-native `RIFT` key. The Compass therefore describes the real
+room-2↔room-4 teleport instead of falsely presenting only the walking route.
+Riftwild's taller 4×4 variant begins below the tile-native `MAP` label instead
+of drawing its first row over `A/P` and leaving a stray `M`; the whole field
+still fits the native 160×144 display exactly.
+The village variant keeps its compact three-node civic graph but now labels
+the branches `FORGE`, `VILLAGE`, and `MARKET` with the same tile alphabet used
+by the live areas, removing the need to infer destinations from a roof or
+crystal icon.
+The sanctuary's forward commitment edges now project a dedicated 16×16 amber
+skull seal across the door and its walkable inner approach tile, then give a
+low roar and tremor in their approach band; the ordinary return edge remains
+the normal gold door. All four door orientations assemble the same four-part
+seal without changing collision or the generated room.
+
+**Deep testing now has progression-aware dungeon, Riftwild, and village checkpoints.**
+Every build emits Normal and Easy PyBoy states for all five champions at all
+nine stage entries, in all nine pre-boss sanctuaries, and inside all nine live
+boss rooms, after each of the first eight bosses in a fresh Riftwild arrival,
+and at the village arrivals after stages three and six: 370 external
+fixtures carrying a deterministic prior-boss relic curve instead of dropping a
+base-stat hero into late content. Sanctuary states arrive on the safe side of
+the room, before the marked gate's proximity roar, so warning and encounter can
+be tested as one continuous sequence.
+`make timed-states` additionally runs controller-driven Easy segments and
+captures a new state every five emulated minutes. A full interval without
+forward progress records a manifest-bound jump to the next stage entry, so the
+six files remain useful instead of cloning one stuck boss room. Both state sets
+use manifests that pin
+the ROM, PyBoy version, file hashes, restored stage, and checkpoint kind. Open
+an entry with `make play-state STAGE=3`, or jump straight to Golden Temple's
+boss as Sauran with `make play-state STAGE=7 CHECKPOINT=boss HERO=sauran`;
+start immediately before that marked gate with
+`make play-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran`;
+enter the fresh Riftwild immediately after the first boss with
+`make play-state STAGE=1 CHECKPOINT=riftwild DIFFICULTY=easy`;
+land directly in the first village with
+`make play-state STAGE=3 CHECKPOINT=village DIFFICULTY=easy`. For village
+checkpoints, `STAGE=3` or `STAGE=6` names the dungeon just cleared. Add
+`DIFFICULTY=easy` only when the broad test assist is useful. The launcher
+rejects a stale state or wrong ROM before opening its local SDL2 window. It
+opens the loaded checkpoint paused, so the hero cannot take damage while the
+tester finds and focuses the window; press any game control (or `P`) to begin.
+The first game-control press is consumed as readiness rather than making the
+hero move, fire, or open a menu. Only then does it
+passively record the actual human session under `tmp/human-playtests/`
+when the window closes: rooms crossed, HP lost/healed, maximum bodies and
+bullets, Compass/Pack opens, and each boss attempt's duration, remaining HP,
+and peak projectile pressure. The observer supplies no input and writes no
+cartridge state; its JSON ties feedback to the exact ROM hash and checkpoint.
+It atomically refreshes a session-unique `active-*.json` snapshot every five seconds and
+writes a timestamped final report on a clean close, so a graphics-driver crash
+or forcibly ended tool session cannot erase the entire playtest. The observer
+also counts the cartridge's post-poll joypad frames and press edges. Damage
+with no observed interaction is still labelled as unattended evidence instead
+of a human balance result.
+
+**The opening Crystal Colossus is now genuinely colossal.** A dedicated
+112×72 crystal guardian occupies 110 BG tiles—70% of the screen width—while
+the original 32×32 heart remains the sole vulnerable/collidable body and keeps
+its proven chase, 200 HP, ring-plus-aimed pattern, damage, and riftbreak. Its
+projection is walkable and uses runtime art distinct from Mire and Void. A
+slow 0–3px horizontal / 0–1px vertical arena orbit introduces Penta Dragon's
+moving-camera language in the first boss the player sees; it moves only the BG
+projection, never the hero, OBJ weak point, HUD, collision grid, or Normal
+balance. Every colossal room initializes its offscreen edge row and column so
+the sub-tile drift cannot reveal stale transition graphics. In
+the current three-world Normal matrix, 14 reach the fight and 13 clear it,
+with a 626-frame (10.4-second) median. One run falls in an ordinary room before
+the threshold and one falls to Crystal, so opening-room pressure and first-boss
+spectacle can be tuned separately during the next human balance pass.
+
+**Verdant Hollow's Storm Serpent now makes the arena move.** An 84-tile,
+112×64 hollow storm coil fills the BG plane while the original 32×32 OBJ
+remains its vulnerable bouncing head. Charge visibly travels through the coil,
+and a sub-tile 0–3px camera sway borrows Penta Dragon's moving-arena language
+without detaching walls from their collision cells. Its canonical Normal
+205 HP, damage, four rotating lanes, rebound cadence, and recovery remain
+unchanged. The live-ROM contract pins the hollow footprint, walkability,
+diagonal head bounce, electrical animation, and bounded camera motion.
+
+**Ember Depths' Cinder Maw is now a screen-scale furnace beast.** Its 96-tile,
+112×64 BG body opens its eyes and four-tile jaw through the existing breath
+and hard-lunge phases, then visibly clenches during the recovery opening. The
+original moving 32×32 core remains the only vulnerable/collidable body, and
+the canonical Normal fight keeps its 150 HP, damage, fast aimed three-shot
+breath, lunge distance, and cadence. A live-ROM contract pins the footprint,
+walkability, animated recovery, and real core lunge, making boss three a
+mechanically distinct room-scale encounter rather than a stat change.
+
+**Frost Vault's Spider now blinks through a giant charged web.** Its 94-tile,
+112×64 hollow BG body pulses its paired eyes and web strands while the
+original 32×32 OBJ remains the only vulnerable/collidable weak point. That
+core still performs the same warned 40px-plus flank blink and alternating
+four-lane web; its canonical Normal 150 HP keeps the strongest base kit above
+an eight-second ideal lane while damage, cadence, and the post-blink punish
+window remain unchanged. The live-ROM contract pins both hollow openings,
+walkability, a 51px forced blink, and synchronized web/eye animation. Bosses
+one through four now all deliver screen-scale presentation.
+
+**Golden Temple's guardian is now a monumental awakened idol.** Its 106-tile,
+112×72 gold BG body has a narrow crown, slab shoulders, split stone feet, and
+paired sun seals that dim while the statue sleeps and ignite as it wakes. The
+original moving 32×32 heart remains the sole vulnerable/collidable body and
+keeps Normal's existing HP, damage, slow heavy eight-way ring, and pursuit.
+The live-ROM contract pins the footprint, eye/seal animation, walkability, and
+moving weak point. With this form, all nine stage bosses now have distinct
+screen-scale bodies without spending the GBC's remaining OBJ budget.
+
+**Void Sanctum ends with Quintra's largest screen-scale Colossus.** The final
+arena draws a 128×80 astral body on the BG plane while the existing 32×32 OBJ
+core remains the vulnerable target, preserving the projectile/OAM budget. Its
+paired eyes blink, the body breathes through a subtle 0–3px camera drift, and
+the core holds readable punish windows before jumping among face and maw
+anchors. World Collapse now flickers the same corner that will survive its
+room-wide blast. A live-ROM contract pins the 144-tile footprint, traversable
+projection, anchor cadence, safe-pocket cue, blink frames, and camera motion;
+the dense twelve-projectile fixture remains above its 80% CGB video-rate floor.
+
+**Toxic Mire is a mechanically different screen-scale boss.** Its
+existing pulse state drives a live 64×48 clenched organism, a 96×64 expanded
+body, then contraction again; the stage's 32×32 OBJ heart remains the sole
+vulnerable and collidable target. A slow bounded 0–3px horizontal camera
+breath makes the whole arena inhale with that pulse without
+changing room-space collision. Dedicated Mire BG art shares the phase-safe
+projection slots with Void rather than consuming more of the GBC's 40-sprite
+budget. A live-ROM contract pins both footprints, the 36→84→36 tile pulse,
+camera range, and walkability. This changes the canonical Normal encounter's presentation and
+readability without adding an Easy-only pattern or lowering its 255 HP.
+
+**Shadow Keep's Dusk Reaper now phases through a giant spectral cloak.** Its
+96-tile, 112×64 BG body widens into a four-gap tattered hem while its face and
+void folds alternate between solid and phased frames. The original 32×32 OBJ
+remains the only vulnerable/collidable weak point and still performs the same
+warned hunt and flank re-entry; Normal keeps the existing 255 HP, damage,
+three-shot burst, and cadence. A live-ROM contract pins the footprint, hem,
+walkability, two-frame phase, and a forced 69px weak-point re-entry.
+
+**Bloodmoon's Hydra is one of Quintra's nine screen-scale bosses.** A dedicated
+112×64 three-headed coil occupies 100 BG tiles while the original moving
+32×32 core remains the only vulnerable and collidable target. The side heads
+and central maw alternate with the existing expand/contract rhythm. Its Normal
+window is now 150 HP—an 8.3-second ideal floor for the strongest base kit—while
+damage, slow weave, and five mixed-speed projectile streams are unchanged. A
+live-ROM contract pins the footprint, alternating head art,
+walkable projection, and moving weak point. The assisted Picsean system proof
+clears all nine bosses with ordinary input and replays the recorded input to
+the ending on a clean emulator; Normal boss identity and pressure remain
+covered separately and await attended balance acceptance.
+
+**Crystal Caverns gains Shard Crabs.** These low-weight shell creatures replace
+part of the opening Crawler pool rather than adding bodies to a room. Their
+first deflected hit becomes a short scuttle, then the shell opens into a pale
+punish window—one compact bait-and-answer lesson with a dedicated crystal
+silhouette. A live-ROM check covers their procgen appearance, OBJ art, parry,
+counter-rush, and vulnerable follow-up.
+
+**Required minibosses now use the same reachability-safe placement as their
+escorts.** A 2×2 Stone Sentinel previously retained a fixed upper-centre
+spawn even after a procgen pillar ring had closed that apron. The mandatory
+enemy could then shoot from behind scenery while a short weapon had no
+body-valid firing lane. The cartridge now selects the nearest reachable 2×2
+cell without consuming RNG, preserving deterministic layouts while ensuring
+the actual miniboss—rather than only its escorts—can be fought. Procgen
+parity, escort routing, Sauran's fixed Sentinel replay, and a direct 16-layout
+2×2 reachable-body sweep cover the change.
+
+**The current cartridge passes hardware preflight.** It is a byte-identical
+clean rebuild, has a valid CGB/MBC5-with-battery header and checksums, and
+retains its battery-backed suspended run across a cold emulator boot. The
+working image stays within the 128KiB budget with room left in every used bank.
+The refreshed release reel remains under its 256KiB repository cap, and 370
+external PyBoy checkpoints make every stage entry, sanctuary, boss, post-boss
+Riftwild arrival, and both village arrivals
+available in Normal or Easy for deep testing
+without implementing a second in-cartridge save system.
+
+**Dense bullet rooms now retain their video-rate budget.** Projectile collision
+uses the already-clamped local tilemap in its own bank instead of crossing into
+room code for every bullet every frame. The live twelve-bullet stress fixture
+improves from 141 to 148 of 180 loop frames, clearing its 80% CGB target; the
+ordinary-room result remains 180/180.
+
+**Procgen parity waits for a completed room slide.** The ROM increments its
+room counter before the Zelda-style destination transition has finished. The
+cross-seam fixture now settles that transition, explicitly rejects any leaked
+temporary spawn-reach marker, then compares the completed 20×17 map against
+the Rust reference across its fixed seed/room matrix.
+
+**Boss health windows now come from stage content.** The cartridge and typed
+content tests share the same first-run caps—200, 205, 150, 150, 255, 255, 230,
+150, and 220 HP—and the authored endless-repeat caps. The duration contract
+uses real runtime damage (weapon plus champion ATK), which exposed and closed
+the former 7.3-second Frost and 5-second Hydra ideal lanes without globally
+inflating the other seven encounters.
+
+**Colossus relics now advance each champion's actual build.** A boss still
+rolls one of three possible permanent boons, but its pool is class-attuned:
+Sauran can earn Iron Heart, Ward Charm, or Vampiric Sigil instead of a pure
+luck sidegrade, while the other four champions receive their own
+offense/defense/mobility branches. The live saturated-reward test now forces
+all five champion IDs through a boss death and verifies the spawned pool; the
+controller telemetry snapshots real death-build stats before GAME OVER clears
+them. This improves the guaranteed roguelike power curve, but it is not
+presented as a false resolution of the still-red deep right-edge Sauran
+endurance route.
+
+**Sauran now has room to reset his Tail Spike lane.** His class-local movement
+stat rises from four to five; health, defence, Tail Spike damage, Stoneskin,
+and all enemy/boss values are unchanged. In the fresh three-seed controller
+sample this raises first-boss clears from 1/3 to 3/3, median depth from room 6
+to room 9, and removes the Rope-specific combat stall. The current strict
+multi-boss rerun is being re-baselined after the required-Sentinel placement
+repair; it is not release sign-off, and the deeper right-edge route remains
+an explicit risk.
+
+**Tail Spike now uses its full reset lane in automated balance play.** The
+controller holds a 48px giant buffer, matching the lunge's actual travel,
+rather than sacrificing its outer eight pixels to body contact. On the fixed
+opening seed that turns a first-Colossus death with 56 HP remaining into a
+live clear; it changes only ordinary controller spacing, not Sauran, boss, or
+enemy values.
+
+**Sauran's close boss beat now commits every other frame.** The two-beat Tail
+Spike pulse clears every first boss and six total giants across the fixed
+three-world gate with one death; the former five-beat reset missed a first
+boss. The fresh 18,000-frame entropy sample still reaches two bosses, so this
+is a verified giant-fight correction, not a claim that Sauran's full-run
+delivery target is complete.
+
+**Wolfkin's pilot now commits to Fang, with a contextual Howl rather than a
+timer cast.** It spends the real full-meter burst only on a required Sentinel,
+a Colossus already inside Fang range, or a genuinely crowded sealed room;
+otherwise it preserves the held A/Max Strike combo. This is controller input
+discipline, not a player-stat or boss-value change. The fixed Fang cadence and
+miniboss route remain green; the separate three-route deep endurance gate is
+still an active diagnostic rather than release evidence.
+
+**Vespine now saves Swarm for a fight that needs it.** Her pilot no longer
+spends the repeated fan in the two exploratory rooms before the opening
+Sentinel; the optional full-meter conversion remains available once that
+mandatory encounter begins, while ordinary Swarm cadence resumes after the
+first Colossus. The paired boss, Rope-pin, and Flutterbat routes stay green.
+This is controller input discipline only: Vespine's player-facing Swarm,
+stats, enemy health, and boss patterns are unchanged.
+
+**Vespine now routes around cover before spending Stinger.** A Flutterbat can
+hover inside the lunge's coarse 48px radius while a generated cross-wall still
+blocks the actual weapon lane. The controller now commits to the nearer outer
+opening, follows a body-valid route, and holds ordinary A input until a real
+cardinal strike exists. The formerly stalled fixed world clears three bosses
+and reaches Riftwild; the three-run hard-Normal Flutterbat gate passes. This
+changes controller input only, not Vespine or the encounter.
+
+**Covered Sentinel lanes now finish instead of oscillating.** Once Sauran's
+controller has proved a required Sentinel's HP is unchanged, it keeps the
+real A-plus-body-BFS recovery input long enough to reacquire the authored Tail
+Spike lane rather than repeatedly replacing it with a shield/dodge beat. The
+debug trace records both the chosen route and its immediate pixel legality;
+the fixed Frost Vault replay clears that covered miniboss and reaches the
+fourth boss. This does not claim the fourth-boss survival gate is solved—the
+separate seven-boss endurance replay remains deliberately red.
+
+**Automation now sends real chords and records real evasions.** Picsean's
+pilot releases its held attack before pressing the full-MP **A+B** Spirit
+Convergence chord, matching the cartridge's simultaneous-edge requirement;
+when the live collision predictor sees an incoming bullet, it now preserves
+the ordinary double-tap dodge rather than spending Undertow blindly. The
+observation contract resolves trace fields by name, so future telemetry schema
+extensions cannot silently turn a projectile-velocity column into a fake
+ability assertion. The deterministic Convergence, dodge, rope-route, and
+Wolfkin-cadence checks pass. Sauran's fixed paired multi-boss gate uses a
+measured 60-frame Stoneskin rhythm and clears every opening giant, six total
+giants, with one death using only ordinary B input. The separate seven-boss
+right-edge replay currently dies after three bosses, so it remains a red
+release risk rather than evidence of full-run endurance.
+
+**Picsean now keeps a real BubbleBolt lane.** Her controller holds a 56px
+boss buffer—the weapon crosses the room, so standing inside a 40px body-reset
+band was needless contact damage. On the rebuilt fixed seed this raises the
+20,000-frame route from two bosses before death to four bosses alive, without
+changing her stats, projectile, Undertow, or any boss. Hydra is the one
+exception to her opening A+B policy: it preserves a full bar for the boss's
+mixed-speed streams. The current Normal policy evidence remains diagnostic;
+the assisted replay owns the full systemic completion contract.
+
+**Corvin now respects Featherbarb's ranged boss lane.** His controller holds
+a 48px Colossus buffer rather than the old 32px body-reset band. On the fixed
+route that cuts giant-overlap damage from eight to three and turns the second
+boss into a clear; the paired boss and Riftwild traversal contracts pass.
+This is input spacing only, not a Corvin stat buff or a boss nerf. The separate
+five-boss Mire-Spore endurance route remains an active diagnostic.
+
+**Expanded Fold Stars now receive a real retreat beat in automation.** An
+expanded core can bloom while another enemy is the nearest ordinary target;
+the pilot now gives that invulnerable echo hazard a legal outward step before
+resuming normal targeting on contraction. The deterministic Corvin route now
+reaches room 36 with five boss clears and passes the Mire-Spore endurance
+contract. This is state-aware controller input only—the Star's odd bloom,
+replicas, bright contracted punish window, and damage values are unchanged.
+
+**Endurance coverage now follows the generated roster.** The long-form matrix
+derives its required dense enemy-ID list from `N_ENEMIES`, rather than carrying
+a hand-maintained list that stopped at 29. Its configuration check now proves
+every generated enemy—including Shard Crab and Void Halo—must appear before a
+soak can pass.
+
+**Open rooms no longer make the Wolfkin pilot fight a fake gate.** A generated
+Ember room can intentionally leave a two-HP Crawler in an open doorway band.
+The controller correctly selected the forward exit, but late combat-only edge
+guards then overrode that choice and spent more than 11,000 frames pursuing the
+optional target. Its exit decision is now explicit through the final input
+pass; the fixed replay reaches Frost Vault instead of treating an unsealed
+enemy as a mandatory clear. This is controller routing only—the enemy remains
+alive, the room remains open, and the stricter deep Wolfkin/Sauran survival
+routes are still active release risks.
+
+**Open rooms now mean optional combat for every controller champion.** The
+same fixed Sauran world reaches an unsealed room-13 Rift Ooze after two
+Colossi. The former pilot kept fighting its split fragments indefinitely,
+despite the visible forward door. Every class now yields a genuinely open
+local-room-zero/one encounter after six seconds without damage progress (or an
+early meaningful health loss); Sigils, minibosses, bosses, shops, towns, and
+sealed rooms remain mandatory. The deterministic Sauran regression reaches
+room 18 without a room-13 Ooze stall. This improves controller fidelity only;
+it is not a claim that Sauran's third-boss survival gate is complete.
+
+**A dodge now has to fit its whole lane.** The controller formerly accepted a
+one-pixel step toward a wall, then committed the cartridge's eight-pixel
+double-tap dash into that boundary. Its shared projectile-dodge selector now
+checks each beat of the real lane before choosing a direction and retains a
+safe walk fallback for a genuinely sealed nook. This is a controller
+readability fix only; enemy bullet patterns, damage, and collision rules stay
+unchanged.
+
+**The title footer now says what it means.** The lore tableau keeps its own
+space while a centred `SELECT RECORDS` prompt sits above the cartridge version,
+rather than squeezing an abbreviated label and version into one cryptic
+bottom-row string. A live-ROM contract checks both text gutters, the version,
+and the protected bottom-right console cell.
+
+**Weapon trades are now deliberate.** Stand on a loose red weapon orb and
+press **A** to take it. Merely crossing an orb no longer silently replaces a
+champion's primary weapon in the middle of a fight or while exploring.
+
+**Door arrivals no longer make the champion blink out.** Room entry still has
+its 60-frame invulnerability buffer, but that safety grace is now distinct
+from damage flicker, so it no longer parks the hero's four OAM tiles at
+`(0,0)` immediately after a Zelda-style slide. A live-ROM regression crosses
+every cardinal and secret door, samples the active safety window, and verifies
+the on-screen metasprite coordinates as well as the OBJ-enable bit.
+
+**Crates now own their whole lower face.** A champion can no longer enter a
+16×16 pushable block through its bottom centre—either walking or using the
+real double-tap dodge. The crate remains movable from a valid side, preserving
+the landscape-puzzle/secret-discovery behavior; a live-ROM regression covers
+the blocked lower approach and dash.
+
+**Hornets now respect the champion's route.** Their old 6px movement box could
+let a persistent Hornet enter a one-tile corridor that a champion's 12px feet
+box could not follow, leaving a sealed encounter unfairly out of melee reach.
+Hornets now probe the same feet-anchored corners as the player while retaining
+their solo chase and swarm flanks; a live-ROM regression proves they cannot
+enter that lane.
+
+**Persistent ground enemies now share the champion's corridor clearance.** A
+Skeleton, ordinary Crawler, or Gloom Leech could still enter the same one-tile
+lane after Hornets were fixed, making a sealed melee room theoretically
+unfinishable. Those three persistent ground movers now use the champion's
+12px feet-corner probe; flyers and specialist motion retain their authored
+envelopes. The full live identity fixture covers all four enemy families, and
+the separate Hornet formation and Leech-release regressions remain green.
+
+**Miniboss escorts now share the player's reachable cave component.** They
+already avoided crates and overlapping bodies, but an open disconnected island
+could still hold a live escort behind generated cover and lock a sealed room.
+Their deterministic placement now uses the same 12px-body flood as ordinary
+procgen enemies, without adding RNG or reducing the two-escort encounter. The
+live replay again clears the formerly stalled Sauran route and reaches its
+Rope lane; the Shard Crab's separate counter/punish contract still passes.
+
+**A shaken Gloom Leech can no longer strand itself in a doorway.** When a
+dash releases a latch at the room edge, the enemy now rehomes onto a valid,
+player-reachable floor position instead of retaining its attached y=2 pixel
+coordinate above the navigation band. The regression covers both the real
+double-tap release and the north-edge placement; the formerly stalled
+Picsean entropy route clears that sealed room and reaches the next boss.
+
+**Wolfkin's Fang Stab now carries through its lane.** The full 8×8 steel blade
+starts at Wolfkin's weapon edge and advances three pixels for eighteen frames,
+giving the committed melee hero a compact 64px forward lane without a
+close-range dead zone or turning A into a
+ranged projectile. The neutral sweep remains broader, and the held attack
+still resolves into the distinct Max Strike dash; the cartridge regression
+verifies the physical art, hitbox, reach, cadence, and that a swapped Tail
+Spike retains its own long lunge.
+
+**Fang now owns both ends of its lane in automated play.** The prior 24px
+spawn offset left an adjacent Crawler physically unhittable even though the
+visible sword had long reach; the edge-starting thrust removes that gap.
+Wolfkin's boss pilot now separates diagonal alignment from attacking and
+alternates an aimed Fang beat with an outward step inside its 24–64px range.
+The three deterministic endurance routes each clear at least three Colossi,
+while the dedicated Leech and fixed cadence/miniboss contracts remain green.
+This is a weapon-geometry/controller correction, not a boss-health or damage
+reduction.
+
+**The Wolfkin controller now uses the weapon's actual pressure lane.** Its
+fixed deep-world pilot holds a 24px giant buffer—close enough to finish Frost
+before its MP expires, but outside repeated body contact—and now reaches room
+30 with five boss clears. This is input policy only: Frost's HP, damage, and
+bullet pattern remain intact.
+
+**A clear Gloom Leech lane no longer makes Wolfkin walk into an attachment.**
+When its cardinal path is open, the pilot recognizes Fang Stab's full 64px
+physical lane rather than treating the Leech as a 24px-only target. The fixed
+room-one replay clears that sealed enemy and reaches the required Sentinel;
+the regression locks the exact seed and rejects another long Leech stall.
+
+**Cinder Maw is a Stage-3 pattern fight, not a melee attrition wall.** Ember's
+Colossus keeps its fast aimed triple breath and telegraphed lunge, but breath
+now belongs only to its visible wind-up. The lunge retains real contact danger
+and the recovery is a genuine melee punish window; its 150-HP window and
+one-half-heart bolts no longer demand uninterrupted close-range endurance.
+
+**Howl now carries a half-second activation ward.** Wolfkin's eight-way burst
+still cannot block shots or substitute for Sauran's shield; the 30-frame
+invulnerability beat simply lets the committed melee burst resolve through a
+busy boss lane. The live guard check remains explicitly non-shielding. It
+improves the fixed deep controller route, while the stricter Toxic Mire
+survival gate remains red and is not presented as release-ready.
+
+**Close-range controller recovery now evaluates a full dash, not one pixel.**
+After a giant-body hit near a wall, the pilot previously chose the first
+one-pixel-legal away direction and could double-tap straight into the wall.
+It now scores the complete eight-pixel dash lane and picks the legal endpoint
+furthest from the live giant. Wolfkin's paired melee gate and Vespine's paired
+boss gate both retain their floors; the fixed Cinder Maw route takes less
+damage, while the broader late-boss endurance target remains open.
+
+**Frost Vault's Colossus is a movement fight, not an early HP wall.** Its raw
+stage scaling could saturate the one-byte health value at 255, making the
+fourth boss longer than the finale despite its tighter contact body and
+already-busy pattern. It now has a deliberate 150-HP window: the challenge is
+reading the mobile giant's space, alternating normal-speed web, and phase
+break rather than spending the run's recovery budget on a sponge. The Spider
+keeps its telegraphed blink, but no longer adds a fast aimed bolt that erases
+each web gap or lands inside a short weapon's immediate reset band. The
+post-blink beat is also a real re-engagement window before its next web.
+
+**Toxic Mire and Bloodmoon's late bullet hell now leave readable crossing
+beats.** Mire still throws its full six-bolt, mixed-speed scatter spray, but
+waits 34 frames before the next wave; Hydra keeps all five 1/2/3-speed streams
+and its diagonal pressure, with a 30-frame read-and-cross beat. Neither boss
+lost HP, damage, or its movement identity. Live-ROM movement coverage pins
+both recoveries alongside Cinder's wind-up-only breath and Frost's blink gap.
+
+**Picsean now treats Frost Spider's blink as a ranged opening.** BubbleBolt
+crosses the full screen, so its controller holds a 72px firing lane after the
+Spider's 44px flank instead of walking back into its next web. A fixed,
+controller-only regression proves it clears Frost and reaches boss five alive;
+the stricter complete-run replay remains a separate release gate.
+
+Boss-identity and live movement/web/flank/recovery regressions pin that
+window; the full automated balance gate remains an active release criterion.
+
+**Giant blinks now reserve their actual on-screen body.** Teleport placement
+previously used a Colossus's fair 13px combat hitbox as its edge clearance,
+which could leave the lower half of a 32×32 Spider beyond the room boundary.
+All giant warps now reserve their full visual footprint while retaining the
+same valid-tile checks; the live Frost blink contract proves both the visible
+room bounds and its fair 44px flank.
+
+**Dungeon music now carries across a real room slide.** The same-stage track
+guard already prevents an exploration loop from being reselected at every
+door; the cartridge now exposes its current sequencer row as read-only audio
+telemetry, and a PyBoy regression crosses a real door from row 17 to prove the
+phrase continues rather than silently restarting at row zero. Each of the nine
+stages and nine bosses still selects its own authored phrase.
+
+**Room slides now begin without a staging pause.** Their hidden destination
+tile rows are prepared in one LCD-off transaction before the 17–20-frame
+scroll, rather than waiting one VBlank for each of 12–15 rows. The visible
+Zelda-style movement and its safe streamed-map recycling are unchanged, but
+door crossings no longer feel like an extra loading beat before the camera
+starts moving.
+
+**Verdant Hornets now recognize a natural swarm.** A lone Hornet keeps its
+original direct pursuit, while a pair or trio already selected by the procgen
+roster adopts alternating flanking slots around the champion. This makes
+groups read as a moving formation rather than accidental sprite stacking,
+without adding enemies, changing the room's RNG, or consuming another entity
+slot. A fresh-boot cartridge regression verifies both the wing position and
+the restored solo behavior.
+
+**Village arrival squares now look like settlements.** The three-screen town
+already had a market and craft quarter; its central square now has two small
+roofed homes and doorstep paths framing the fountain, while preserving the
+real north continuation and east/west district gates. The live town route test
+checks those boundary gates separately from decorative house doors. Its
+scroll-bearing Lorekeeper now raises a distinct cyan open-scroll cue when the
+champion comes close—an explicit lore invitation, not another shop or hidden
+stat interaction—and reuses the arrival-only trade-bubble OBJ slot. A bronze
+**Bellkeeper** anchors the lower square as a visual-only civic landmark, using
+the apothecary's OBJ slot only on arrival and restoring it before the craft
+quarter loads.
+
+**Wolfkin's controller pilot now commits to a three-beat, 24px giant buffer
+under the 64px Fang-Stab lane.** This is input policy only—not a hidden player buff or a
+boss-health reduction. A matched search gets all three sampled Wolfkin routes
+through the first Colossus with no target stall. The broader fixed-seed
+all-class gate is currently being re-baselined after the slower Wolfkin combo
+and newer enemy movement work, so these controller observations are diagnostic
+rather than release evidence.
+The pilot now spends its ordinary dodge on Wolfkin's first confirmed body hit
+instead of waiting through the whole recovery beat for a second scrape. A fresh
+three-run sample improves the first-boss result from one clear to two, but the
+stricter three-boss regression remains intentionally red while that route is
+tuned.
+
+Wolfkin's normal controller profile also now predicts the real 6×6 hero
+hurtbox for the next eight frames before yielding an attack lane to a bullet.
+On matched samples that lifts its first-boss result to 3/3 and total clears
+from two to four. The same global policy made Corvin and Picsean worse, so it
+is intentionally scoped to Wolfkin rather than presented as a universal buff.
+
+Sauran's pilot treats a 20px Colossus approach as an emergency retreat, then
+uses a deliberate Tail Spike pulse lane: one aimed lunge followed by four reset
+beats. Its bullet response now predicts the real eight-frame hurtbox collision
+instead of dashing from every nearby bolt, and its real Stoneskin cadence is
+90 frames. The fixed three-seed gate clears every first Colossus, four total
+giants, and no more than one death. This is controller input policy, not a
+change to Stoneskin, boss health, or incoming damage; the stricter deep
+right-edge route remains separate release evidence.
+
+The controller also recognizes Sauran's room-three **Sentinel** as an immediate
+Stoneskin body threat. Previously it reserved B exclusively for giants, so a
+pin inside the Tail Spike lane could cost one half-heart per iframe cycle. The
+fixed replay now escapes that miniboss room and clears its first Colossus; the
+separate seven-boss right-edge endurance replay remains red and is not being
+claimed as solved.
+
+
+**Picsean’s controller now uses Undertow as the close-giant answer.** Tidal
+Wave’s three bubbles also provide its real 100-frame body-and-shot barrier, so
+the pilot spends the ordinary two-MP B only when a giant enters its measured
+44px warning envelope, and reserves a last-chance ward for ordinary bodies at
+four half-hearts or below. Its measured 40px giant lane now completes the
+fixed frame-460 campaign and cleanly replays the ending; the separate live-ROM
+Convergence contract continues to prove the shared full-MP A+B transformation.
+
+**Automated-play traces now include sampled observations as well as exact
+input.** Each balance run can emit its existing lossless input replay plus a
+read-only state/action CSV (champion, equipped weapon, active cooldown,
+invulnerability window, active barrier window, target, boss pattern, and the nearest predicted
+projectile impact time/position/velocity plus the nearest raw hostile shot,
+alongside the final controller mask). It is compact enough for unattended
+matrices and self-describing enough for offline replay analysis or future RL
+experiments; a live mGBA test guards the schema and state invariants.
+
+**The controller now acts on the projectile danger it records.** Its dodge
+pass previously read a block-local observation after that scope had ended, so
+Frost Spider shots appeared in the replay dataset while no dodge was issued.
+The shared observation now drives the real double-tap input. Picsean keeps a
+broad warning for its Undertow barrier but reserves movement dodges for a
+predicted hurtbox intersection. This is controller-only behavior: no enemy
+stats, collision, or cartridge RNG changed. The deterministic nine-boss
+Picsean deep-route proof now passes with the coarse Easy test assist; the
+Normal all-class endurance and attended playtests remain the release-facing
+balance evidence. The Hydra HP-window correction is a separate cartridge
+balance change documented below.
+
+**Fixed controller proofs synchronize to cartridge state, not render time.**
+After a title-frame seed is selected, the pilot waits for the first playable
+room and a consistent entry-invulnerability beat before recording input. A
+visual-only room renderer change can therefore take one more or fewer host
+frames without silently shifting the whole combat trace. The current Easy
+deep-route proof completes all nine bosses in 53,991 controller frames with
+15 HP, then reproduces the ending from those exact buttons on a clean emulator.
+It proves systemic completion, not Normal combat balance.
+
+**A collected Sigil now beats one specific optional fight in the controller
+route.** In a Mire Sigil room, a stationary Spore can remain after the real
+objective is collected; the pilot now takes the already-visible rift instead
+of grinding that non-blocking enemy. Other rift-room combat still retains its
+normal priority. The fixed assisted Picsean replay consequently completes all
+nine bosses without a route or combat stall. Broader Normal all-class
+completion remains an open late-game balance diagnostic.
+
+**Bloodmoon's Hydra is now a pattern-endurance boss rather than a five-second
+set piece.** Its slow five-beat weave, three staggered projectile streams, and
+late-game +4 damage remain untouched, but its damage window is capped at 150
+HP. Its 112×64 three-head coil also moves through a bounded 0–3px horizontal
+camera weave around the independently moving weak point, giving
+the late fight Penta Dragon's Faze-like arena pressure without changing room
+collision. The assisted fixed-input Picsean route still completes all nine bosses and
+replays the ending cleanly; the live-ROM boss identity contract pins the
+8.3-second strongest-base-kit floor while all-class endurance remains under
+tuning.
+
+**The PACK screen now explains B and Convergence cleanly.** It shows each
+signature's name once and then a compact action reminder such as
+`ACT 8WAY WARD`, rather than a second `B` label followed by a clipped prose
+description. Its final row says `FULL MP A B CHORD`; a live five-class screen
+check pins both reminders to the 20-column layout.
+
+**Mobile bosses no longer invalidate the smoke scenario.** Its boss-assault
+fixture reads the live giant position and corrects its test champion to a
+legal slash lane, while the damage remains ordinary held-A input through the
+cartridge. That keeps the reachability check meaningful for Serpent bounces,
+Maw lunges, and Spider blinks rather than silently relying on an old direct
+chase.
+
+**Rift Oozes now have a full split–swarm–reform loop.** Killing one still
+leaves two fragile Blue Crawler fragments, but ignored fragments visibly
+scatter, turn back toward each other, and merge into one eight-HP weakened
+Ooze. Destroy either fragment to prevent the return. The behavior uses the
+normal fixed entity table (including a full-table split), solid-tile movement,
+impact effect, and sound; a fresh-boot live-ROM regression exercises the
+complete cycle. Ember Depths now also replaces its former Skeleton slice with
+an 8% **Folding Star** band: its invulnerable bloom and bright contracted
+damage window teach timing beside the Ooze's split/reform movement before
+Frost Vault, without increasing density or changing the procgen draw count.
+A live roster contract proves both lessons can generate there. This remains
+unreleased while the broader controller-balance gate is still being improved.
+
+**Folding Star AI now has its own specialist module.** Its bloom/contract and
+four-echo diagonal behavior moved out of the general enemy dispatcher into
+bank 6 alongside the other movement specialists. This is a code-structure and
+banking change only: live identity, timing, and early-Ember procedural tests
+still exercise the same encounter. It raises bank-2 headroom from 1,798 to
+2,485 bytes, preserving room for future core combat fixes without growing the
+128 KiB cartridge.
+
+**Verdant Hollow's Storm Serpent is now a readable mobile boss, not an
+attrition chase.** It rebounds on a three-frame beat (still distinct from the
+Hydra's slower weave), has the fair 13px mobile-giant contact body, and carries
+205 HP. Crystal's 200-HP broad-body tutorial remains unchanged; Verdant is
+harder through motion and pattern rather than accidental sprite-edge trades.
+
+**The Golden Hydra now actually weaves more slowly than the Storm Serpent.**
+Its three staggered streams still make its late-game lanes dangerous, but its
+body moves on a five-frame bounce beat instead of inheriting Verdant's
+three-frame pinball cadence. A live boss-motion regression compares both
+encounters over the same window, so their intended movement identities cannot
+silently collapse back into palette-only variants.
+
 v0.18.42 makes pressure-plate puzzles open a real, two-tile side passage into
 a generated secret cache. The plate is one-shot, the nearby 2×2 cairn remains
 part of the room's landscape until moved, and the solved puzzle gets its own
@@ -27,11 +833,20 @@ discovery jingle. The title now reserves its lore tableau for lore: personal
 scores live only on **SELECT → Records**, with live-ROM coverage guarding
 against a stranded number such as `831` reappearing.
 
+The controller-only balance pilot now saves Vespine's **Swarm** ward for a
+Colossus inside its useful 48px lane instead of spending it on a wall-clock
+cadence in the preceding room. The paired three-seed boss-policy regression
+again clears its two-boss floor, and the compact observation/action trace
+remains read-only and replayable for later RL work.
+
 v0.18.41 turns Wolfkin into a true input-shaped melee kit: **A + direction**
-is a precise contact stab, neutral **A** is a wide sweep, and holding A builds
-the cooldown-gated **Max Strike** dash. Its four-segment HUD bar fills as the
-dash recovers; bosses and nearby shop offers take priority in that same lane.
-The old travelling slash no longer serves as the base weapon. v0.18.40 adds
+is a precise physical stab, neutral **A** is a wide sweep, and holding A builds
+the cooldown-gated **Max Strike** dash. The current Fang Stab begins at the
+weapon edge and advances three pixels per frame for eighteen frames: a
+committed 64px steel lane with an 8×8 contact box matching the blade art, rather than an
+ambiguous tiny impact mark or travelling shot. Its four-segment HUD bar fills
+as the dash recovers; bosses and nearby shop offers take priority in that same
+lane. The old travelling slash no longer serves as the base weapon. v0.18.40 adds
 the **Vine Coil** to Verdant Hollow: a distinct thorned seed
 creature that holds a small orbit and sends a slow opposite-pair volley through
 the room. It replaces 8% of that stage's Flutterbat pool—no added monsters,
@@ -665,20 +1480,49 @@ an unreachable live enemy and seal progression.
 
 ## Screens
 
-| Title | Class select | Dungeon | Pack / stats |
-|:---:|:---:|:---:|:---:|
-| ![title](docs/media/title.png) | ![class](docs/media/class.png) | ![dungeon](docs/media/dungeon.png) | ![pack](docs/media/pack.png) |
+| Title | Class select | Spirit Compass |
+|:---:|:---:|:---:|
+| ![title](docs/media/title.png) | ![class](docs/media/class.png) | ![compass](docs/media/compass.png) |
 
-| Stage boss | Merchant | Sanctuary | Ember Depths |
-|:---:|:---:|:---:|:---:|
-| ![boss](docs/media/boss.png) | ![shop](docs/media/shop.png) | ![sanctuary](docs/media/sanctuary.png) | ![ember](docs/media/ember.png) |
+| Dungeon | Stage colossus | Merchant |
+|:---:|:---:|:---:|
+| ![dungeon](docs/media/dungeon.png) | ![boss](docs/media/boss.png) | ![shop](docs/media/shop.png) |
+
+| Sanctuary | Ember Depths | Pack / stats |
+|:---:|:---:|:---:|
+| ![sanctuary](docs/media/sanctuary.png) | ![ember](docs/media/ember.png) | ![pack](docs/media/pack.png) |
+
+The separate outdoor Compass keeps the authored 4×4 topology and nonlinear
+vault hop visible without revealing unvisited identities or connections:
+
+![Riftwild pocket map](docs/media/riftwild-map.png)
+
+The first real civic stop is likewise captured from the running cartridge,
+including its outdoor label, residents, paths, and house frontage:
+
+![Village arrival square](docs/media/village.png)
+
+### Nine stage colossi
+
+![All nine live animated Quintra stage colossi](docs/media/boss-gallery.gif)
+
+[Open the maximum-footprint still atlas](docs/media/boss-gallery.png).
+
+Both galleries are captured from progression-matched Normal encounters in the
+current ROM. The animated atlas runs every fight through the same two-second
+window, exposing pursuit, bounce, lunge, blink, pulse, phase, head alternation,
+projectile rhythm, weak-point movement, and camera drift side by side. The
+still atlas selects each boss's maximum authored footprint. Vulnerable weak
+points, projectiles, palettes, and arena bodies are cartridge output rather
+than concept art.
 
 ## Features
 
 - **5 monster-human classes** — Wolfkin, Sauran, Corvin, Picsean, Vespine — each
   with its own stats, primary weapon, signature move, and a live passive perk.
-  Conference endurance floors give true-melee Wolfkin six hearts, ranged
-  Corvin six, Picsean seven, and close-range Vespine five-and-a-half
+  Conference endurance floors give shield-tank Sauran eight hearts,
+  true-melee Wolfkin seven hearts, ranged Corvin seven, Picsean seven, and
+  close-range Vespine six-and-a-half
   while preserving their low-DEF specialist identities; Picsean's Tidal Wave
   raises a brief water barrier while its three bubble lanes erupt, and its
   swim passive crosses Toxic Mire pools without damage.
@@ -699,7 +1543,8 @@ an unreachable live enemy and seal progression.
   folding around an open event horizon. All exits remain preserved by
   construction across procedural variants.
 - **Skippable cartridge storytelling**: the title animates the seven-beat Old
-  Vow of the five champion spirits; victory resolves through three moving
+  Vow: five chosen champion spirits bear the sparks to bind the Rift before
+  all names fade; victory resolves through three moving
   epilogue tableaux before revealing run statistics. START skips tableaux to
   results rather than past them; only the results page accepts A for endless
   descent or START to retire, preventing accidental choices during lore.
@@ -708,21 +1553,24 @@ an unreachable live enemy and seal progression.
   plus **5 mini-boss types** (each its own sprite,
   colour, and attack), **merchants** with priced wares, and a **sanctuary**
   that fully restores HP/MP before every boss.
-- **26 enemies across a size hierarchy** — small swarm critters (crawler,
+- **32 enemies across a size hierarchy** — small swarm critters (crawler,
   hornet, skeleton, wisp), player-sized 16×16 bruisers (orc, warlock),
   exploding **Bombers**, teleporting **Shades**, and **Ropes** (snakes that
   slither then bee-line at you), rotating Sentries, invulnerable-expanding
   **Folding Stars**, Keese-like **Flutterbats**, and life-draining
-  **Gloom Leeches**, Ember's area-denial **Cinder Maws** and swift
-  **Cinder Kites**, and late-stage
-  **Rift Oozes** that split into two fragile crawler fragments when slain,
+  **Gloom Leeches**, Ember's area-denial **Cinder Maws**, swift
+  **Cinder Kites**, and split/reform **Rift Oozes** that appear in Ember's
+  procedural pool and split into two fragile crawler fragments when slain,
   and Frost Vault **Mirror Moths** that reverse the champion's last movement
   vector before firing a slow reflected bolt down the new lane. Toxic Mire's
   **Mire Spores** lie dormant until approached, flash through a 36-frame fuse,
   erupt across eight lanes, then expose a 90-frame melee punish window.
   Golden Temple's **Echo Guards** parry the first careless attack, rush the
   attacker, then turn pale and vulnerable until their shield recovers; poison
-  remains a class-readable answer to their heavy armor.
+  remains a class-readable answer to their heavy armor. Void Sanctum replaces
+  its fast Midge slice with the **Void Halo**: a slower, wider orbit that
+  releases a single opposing pair, making a deliberate lane puzzle rather
+  than adding another projectile-density spike.
   Shadow Keep and Void Sanctum add drifting **Rune Lanterns**, whose slow
   cardinal rings force readable lane changes while leaving diagonal exits.
   Golden Temple onward also fields **Dread Bells**: slow-moving iron casters
@@ -759,13 +1607,15 @@ an unreachable live enemy and seal progression.
   crates onto rewarding **pressure plates**, and pick your way around **spike
   floors**. Seeded nonlinear **rift wells** disorientingly bounce between
   nonadjacent rooms within the same stage—all across 11 procgen room shapes.
-- **Generated world cadence**: three six-room dungeons form a region, followed
+- **Generated world cadence**: three increasingly deep procedural dungeons
+  form a region, followed
   by a safe, connected three-screen village: an elder's fountain square, a
-  dedicated market, and a forge/apothecary quarter. Its five visually distinct
-  residents are the elder, Chartwright, merchant, masked smith, and apothecary.
+  dedicated market, and a forge/apothecary quarter. Its eight visually distinct
+  residents are the elder, Chartwright, Waykeeper, Lorekeeper, Bellkeeper,
+  merchant, masked smith, and apothecary.
   The Chartwright scouts the first two rooms of the *next* route once per town
   visit; a 15-coin Cartographer's Chart in the arrival square instead reveals
-  all six rooms for that following dungeon. The smith staffs a 30-coin Power
+  every active room in that following dungeon. The smith staffs a 30-coin Power
   Stone forge; the apothecary's 30-coin Mana Gem permanently adds two maximum
   MP for the run, while dungeon shops retain their own broad-hatted merchant.
   Sanctuary blessing and seeded general stock round out the town economy.
@@ -785,13 +1635,18 @@ an unreachable live enemy and seal progression.
   **Riftwell** Waystation: a one-use one-heart/two-MP recovery that persists
   through backtracking and turns to spent rubble on the Compass. Riftwild fights are optional and
   its exits remain fleeable, unlike selected sealed dungeon arenas. Every
-  dungeon hides a recoverable **Rift Sigil** in its second room; its sanctuary
-  threshold rejects forward progress until that stage's Sigil is claimed.
-  SELECT draws tile-based linked 4×4 Riftwild and 3×2 dungeon maps: visited
-  cells persist in battery SRAM, the current cell is a bright marker, and
-  unseen cells remain blank. In town, the Spirit Compass switches
-  to sanctuary context: completed/next region, elder restoration, and seeded
-  market guidance instead of contradictory dungeon/depth labels. Lore is a
+  dungeon hides a recoverable **Rift Sigil** in its second room, then reveals
+  the amber room-three **Warden Boon** objective on the Compass. Its sanctuary
+  threshold rejects forward progress until both fixtures are claimed.
+  SELECT draws compact tile-based linked 4×4 Riftwild and dungeon maps:
+  visited cells persist in battery SRAM, the current cell is a cyan `YOU`
+  marker, Riftwild's nonlinear links/gate/boss have an on-screen legend, and
+  unseen cells remain dim hollow slots while their identities and links stay
+  fogged. In town, the Spirit Compass switches
+  to a fixed three-node civic graph showing the forge quarter, arrival square,
+  market, current position, and northward route. Amber `RIFTWILD`, `VILLAGE`,
+  `MARKET`, and `FORGE` playfield landmarks make those contexts readable even
+  before SELECT is pressed. Lore is a
   set of fuzzy generated fixtures—not a fixed campaign replacing the run.
   Exploration music now continues through ordinary doorways instead of
   restarting every screen, and market stock keeps its actual heart/relic art
@@ -838,7 +1693,9 @@ an unreachable live enemy and seal progression.
 | **START** | Pack screen (stats, loadout, run clock) |
 | **SELECT** | Spirit Compass (dungeon/town progress; Riftwild coordinates, exits, and landmark hint) |
 
-Shoot the glowing amber wall tiles — they hide secret rooms.
+Shoot glowing amber wall tiles to find secret rooms. In puzzle chambers, try
+moving an ordinary cairn, listen for ascending rune tones, and remember that a
+colored switch may change a wall in the next room rather than the current one.
 
 ## Build & run
 
@@ -850,18 +1707,112 @@ make            # cargo codegen + sprite pipeline → SDCC → rom/working/quint
 make play       # build + launch in mGBA
 make verify     # ROM tests + procgen parity + deterministic input replay
 make preflight  # cart header/checksums + real battery-SRAM power-cycle test
+make stage-states # 370 entry/sanctuary/boss/Riftwild/village checkpoints
+make timed-states # Easy pilot; new external checkpoint every five emulated minutes
+make play-timed-state TIMED_CHECKPOINT=25 # open the verified 25-minute state
 make repro-check # clean source copy must rebuild the exact same ROM bytes
 make balance    # five controller-only ROM agents -> tmp/balance-runs.csv
 make endurance  # 15 long controller-only runs -> tmp/endurance-runs.csv
 make fixed-controller-matrix # reproducible same-world all-champion baseline
+make room-curriculum-audit # Normal ordinary-room pressure at all nine stages
+make room-curriculum-audit AUDIT_DIFFICULTY=easy # compare the test assist
+make boss-curriculum-audit AUDIT_DIFFICULTY=easy # same bosses, assisted hero
 make policy-sweep # compare Sauran/Corvin giant-fight input policies
-make final-sigil-proof # seed-14 final-Sigil controller completion proof
-make picsean-endurance # four completed multi-seed Picsean controller runs
-make victory-proof # full nine-boss Picsean run + clean-emulator input replay
+make final-sigil-proof # non-gating historical Normal policy diagnostic
+make picsean-endurance # non-gating multi-seed Normal policy diagnostic
+make victory-proof # assisted nine-boss route + clean-emulator input replay
 make media      # recapture the README reel from the current ROM
 make media-check # prove reel version/hash/frame budget match the ROM
 make info       # print build summary
 ```
+
+### Deep-stage emulator checkpoints
+
+Every ROM build refreshes 370 deterministic **external PyBoy save states**:
+all five champions in Normal and Easy at the playable entry, pre-boss
+sanctuary, and live boss of each of nine stages; at fresh Riftwild arrivals
+after stages one through eight; and at the village arrivals after stages three
+and six, in `tmp/stage-states/`. Sanctuary states are saved
+after the room slide fully normalizes and before approaching the marked gate;
+walking north triggers its roar/tremor and then enters the live Colossus.
+Filenames include checkpoint and champion, such as
+`quintra-stage-07-boss-sauran.pyboy`; Easy adds `-easy` after the champion.
+Use `make play-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran` to test a
+warning and fight continuously, or change the checkpoint to `boss` to skip the
+threshold. Closing that SDL2 window writes a passive JSON report to
+`tmp/human-playtests/`, including room progress, HP loss, Compass/Pack use, and
+boss duration/remaining HP. Set `PLAYTEST_REPORT_DIR=/some/path` to retain the
+reports elsewhere. This observer never drives input or edits WRAM, so it is
+human evidence rather than another controller policy result. During play it
+also refreshes a crash-safe, session-unique `active-*.json` every five seconds; use that partial
+record if the SDL window or host session exits before the final writer. Raw
+post-poll joypad activity is summarized without recording an input replay, so
+an idle hero taking damage cannot masquerade as a human attempt.
+Open the overworld immediately after its first boss boundary with
+`make play-state STAGE=1 CHECKPOINT=riftwild DIFFICULTY=easy`. For a Riftwild
+checkpoint, `STAGE` names the dungeon just cleared and may be 1 through 8.
+Open a civic checkpoint with
+`make play-state STAGE=3 CHECKPOINT=village DIFFICULTY=easy`; for this
+checkpoint kind, `STAGE` is the dungeon just cleared and may be 3 or 6.
+`make stage-states` remains available as an explicit reminder or for an
+alternate `STATE_OUT`. Each deeper state applies a
+deterministic approximation of the relics and stats earned from its
+already-defeated bosses, so it tests that stage at a plausible power level
+rather than with a fresh hero. They are for RL runs and fast manual testing of
+late content;
+they do not add an in-game save system, change the cartridge, or touch battery
+SRAM. The generated
+`manifest.json` pins the ROM SHA-256, exact PyBoy version, listed state hashes,
+and restored stage/room. `QuintraPyBoyEnv.load_state()` rejects any mismatch,
+so regenerate after rebuilding the ROM. Load a matching state from
+PyBoy with `load_state`; use a separate mGBA or
+MiSTer fixture only when that emulator's native state format is specifically
+needed—savestate formats are emulator-specific and intentionally not mixed.
+
+`make timed-states` starts from the progression-matched stage-four Wolfkin
+Easy curriculum, runs ordinary controller input for 30 emulated minutes, and
+atomically writes a fresh checkpoint every five minutes to
+`tmp/timed-states/`. Override the duration with, for example,
+`make timed-states TIMED_MINUTES=60`, or override `TIMED_STATE_START` with any
+manifest-bound entry state. Open one with
+`make play-timed-state TIMED_CHECKPOINT=25`; like the direct curriculum
+launcher, it opens safely paused until the first game control (or `P`) and
+writes the same ROM-bound passive human report after play begins. The pilot
+can die and restart. If two consecutive
+checkpoints have made no forward room/world/boss progress, the external
+trainer loads the next matching stage-entry curriculum rather than saving six
+copies of one stuck boss room. The manifest records every such advance plus
+the exact stage, room, mode, frame, restart count, source-state hash, and
+controller-policy hash. This never writes game
+RAM or changes the cartridge; it is an automated testing aid, not a claim that
+Easy is balanced or that the pilot plays like a human.
+
+For short controller-learning rollouts, use
+`UV_CACHE_DIR=tmp/uv-cache uv run --with 'pyboy==2.7.0' python scripts/quintra_pyboy_env.py --class-id 0 --difficulty normal --steps 40`.
+It exposes normal six-bit D-pad/A/B actions, a JSON observation of the visible
+room, public stage/Riftwild context, live hostiles (including velocity, boss
+pattern, and phase timer), live hostile projectiles (position, signed velocity,
+damage, and lifetime), player/run state, progress/health reward, and terminal
+state—without writing cartridge RAM. Frameworks can import `QuintraPyBoyEnv`
+directly; no Gym dependency ships with the project. Start a late-game
+curriculum episode with
+`--state tmp/stage-states/quintra-stage-09-entry-wolfkin.pyboy`.
+Every `reset()` recreates the emulator before the normal title/class-select
+inputs, so episodes cannot inherit a prior run's state. Terminal output is
+pinned to the cartridge's actual Game Over/Victory screens, not historical
+screen-number assumptions.
+
+`make boss-curriculum-audit` samples all 45 progression-matched Normal boss
+fixtures (five champions by nine stages) with one controller decision per
+emulated frame. On v0.18.53 the corrected generic pilot clears 12/45 inside one
+minute and survives 14/45; Picsean owns six clears, Wolfkin three, Corvin two,
+Sauran one, and Vespine none. This is deliberately diagnostic rather than a release balance
+gate. It caught false diagonal “firing lanes,” attacks aimed along unrelated
+path steps, and unsafe straight-line retreats. The exact assisted Picsean
+nine-boss replay is the stronger systemic-completion proof, while attended
+Normal play remains the authority for whether combat is fun. Do not nerf
+Normal to satisfy this small heuristic pilot, and do not tune Easy beyond its
+coarse testing assist until Normal's intended curve is established.
 
 For a GitHub ROM milestone, commit the verified ROM/media first, write the
 release notes to a file, then run
@@ -877,7 +1828,7 @@ send controller input—unlike reachability smoke tests, they never refill HP,
 delete enemies, alter currency, or alter progression. They make affordable,
 health-aware purchases through real movement and report purchase counts, so
 the endurance gate proves every sample exercises the procedural economy. A
-live encounter bitmask requires every generated enemy (IDs 0–29) to appear
+live encounter bitmask requires every generated enemy (IDs 0–31) to appear
 somewhere in the paired-seed endurance matrix, preventing a valid but
 procedurally unreachable monster from hiding behind green completion tests.
 Treat their CSV as a repeatable balance
@@ -886,26 +1837,27 @@ parses that telemetry by named columns, prints per-class medians, and enforces
 report-count and victory-floor gates; the runner contains no duplicate inline
 report implementation. An older controller-only Wolfkin reference run
 completed all nine bosses in 20,686 gameplay frames (**5:45** at 60 Hz), but
-it is historical data. The current deterministic proof is Picsean's fixed
-title/class-select frame 460: it clears all nine bosses in 43,350 gameplay
-frames (**12:03** at 60 Hz), then a fresh emulator replays the recorded buttons
-with matching seed, room, HP, and victory state. Run `make victory-proof` to
-reproduce that controller-only proof; the run seed is frame-derived by the
-cartridge, never written by the harness. `make final-sigil-proof` additionally
-proves that the formerly stalled final-Sigil route reaches a nine-boss victory
-through ordinary controller input. `make picsean-endurance` is a four-trial,
+it is historical data. The deterministic frame-1040 Picsean proof now uses the
+coarse Easy tester assist and replays the ending in 89,900 controller frames
+(**24:58** at 60 Hz) on run seed 2064129883, with 9 HP remaining on the clean
+emulator. `make victory-proof` is therefore a whole-chain systemic regression:
+the run seed is frame-derived by the cartridge, never written by the harness,
+and the generated world/enemy/boss identities are shared with Normal. It is
+not a Normal balance pass. `make final-sigil-proof` and `make
+picsean-endurance` are Normal controller-policy diagnostics; the latter is a
+four-trial,
 entropy-sampled diagnostic: its numbered runs (13–16) record their actual
 generated seed rather than claiming the numbers are fixed worlds. A fresh
 sample must earn all four wins; it is useful controller research, not a
 delivery proof. The all-class `make endurance` target remains the stricter
 conference soak floor.
-Expect
-roughly **20–35 minutes** for a first successful human run and **10–20
-minutes** once practiced; deaths and procedural seeds make total session
+Expect roughly **30–50 minutes** for a first successful human run and **18–30
+minutes** once practiced; the expanded route now contains 117 dungeon rooms,
+and deaths and procedural seeds make total session
 length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
 Its smoke pass resolves WRAM symbols from the current linker output and asserts
-rooms 0→1→2→3→4→6, defeats a live giant through real A-button shots, then
+rooms 0→1→2→3→4→5→6, defeats a live giant through real A-button shots, then
 proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 Set `QUINTRA_BALANCE_TRACE_DIR=tmp/traces` to retain RLE-compressed joypad
@@ -918,17 +1870,25 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space; the current v0.18.33 ROM occupies 128 KiB with 1,247 bytes of
-bank-0 headroom.
+bank space. The current unreleased v0.18.58 development ROM occupies 128 KiB
+with 612 bytes of bank-0 headroom. Its media, 370 external stage checkpoints,
+cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
+stage-archetype, music, boss-identity, and transition-audio contracts passed
+on 2026-07-23; the current ROM SHA-256 is
+`da14ffddce2f3167d7945c421c48de08583c47be170fd960a9d07166ee527663`.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
 GBDK autobank assignments that otherwise vary with an absolute checkout path.
+`make repro-check` compiles that clean copy in four parallel jobs while keeping
+the source manifest and link order fixed; set `QUINTRA_REPRO_KEEP=1` to retain
+an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
+parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.33 build has 3,268 bytes in bank 1, 1,314 in bank 2,
-2,790 in bank 3, 6,808 in bank 4, 11,739 in bank 5, and 14,776 in bank 6;
-the always-mapped bank retains 1,247 bytes of headroom.
+ROM. The current v0.18.58 development build has 1,187 bytes in bank 1, 1,615
+in bank 2, 1,258 in bank 3, 3,444 in bank 4, 3,299 in bank 5, and 10,010 in
+bank 6; the always-mapped bank retains 612 bytes of headroom.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -985,6 +1945,14 @@ cleared, whether a giant was active, and whether that giant's actual hurtbox
 overlapped the hero on the fatal frame. That separates a boss-body pin from a
 projectile-pattern loss without adding any ROM-side debug hooks or mutating
 cartridge state.
+The pilot also exposes collision-course bullet avoidance for research: Corvin
+and Picsean can ignore nearby shots unless one will intersect the cartridge's
+real 6×6 hero hurtbox within eight frames. It raised the paired fixed-world
+total from six to eight boss clears, but regressed Corvin in the broader
+three-seed endurance matrix, so the shipping pilot keeps conservative
+proximity avoidance for every champion. Use
+`QUINTRA_BOT_THREAT_POLICY=collision` or `classwise` only for matched A/B
+work; neither changes ROM state or human-facing combat values.
 `make fatal-report` decodes the compact enemy ID into roster names—for example,
 `S. Sentinel` versus `floor hazard`—alongside each champion's fatal context.
 Each
@@ -1019,10 +1987,9 @@ input-only replay before becoming the default policy.
 Giant spacing defaults to a measured classwise policy: all five champions use
 their own `orbit_fire` spacing for large bosses, with Wolfkin's true-melee
 Claw holding a wider 36px lane and Corvin's Featherbarb holding a tighter
-32px lane. On paired three-seed searches,
-Picsean's policy raised its boss clears from two to six with no deaths, while
-orbit-fire gained four Sauran and four Corvin clears where their prior policies
-managed two and one. Override it with
+32px lane. The following paired-search figures are historical tuning evidence,
+not current release certification: later enemy and melee changes require each
+class gate to be replayed against the built ROM. Override the pilot with
 `QUINTRA_BOT_GIANT_POLICY=baseline` when comparing a candidate.
 Wolfkin's 36px claw lane produced fourteen total giant clears with no deaths;
 its prior 32px pulse lane produced nine with one death. Set
@@ -1033,9 +2000,11 @@ too much attack pressure.
 Vespine's 48px Stinger instead holds its attack lane with no panic retreat:
 on its deterministic Rope route, zero buffer reached four bosses alive while
 the generic 16px buffer died in room seven.
-Sauran's Tail Spike uses a 40px orbit-fire lane: the same three-seed replay
-kept all three first-boss clears and produced five total giant clears with one
-death, compared with three clears and three deaths at its former 48px lane.
+Sauran's Tail Spike holds a 40px pulse-fire lane: one aimed lunge followed by
+four reset beats. Those four-giant figures are historical tuning evidence,
+not a current pass: the rebuilt fixed-world gate presently clears each opening
+boss but reaches only three giants total, so the multi-boss endurance contract
+remains red until an input or game-balance change demonstrably improves it.
 
 Long-form routing treats the Riftwild dungeon gate and nonlinear cave vault
 as their real central staircase nodes, visits both the market and the
@@ -1063,8 +2032,8 @@ The same long-form run must leave the three-screen town through its real north
 gate and reach the next dungeon—its controller route centers on the civic lane
 then presses through the door lip, rather than targeting a blocked point just
 inside the gate.
-Vespine's 48px Stinger receives the same six-tile Flutterbat pursuit lane as
-the ranged champions; a three-seed live-ROM regression requires it to clear
+Vespine's 48px Stinger routes through real cover openings before accepting a
+Flutterbat firing lane; a three-seed live-ROM regression requires it to clear
 that moving-target room and reach the first boss threshold without a stall.
 
 Constrained hosts can split a matrix into seed batches
@@ -1133,19 +2102,33 @@ touching cartridge state. Sauran's real Stoneskin B can likewise be swept at
 `QUINTRA_POLICY_SAURAN_BODY_SHIELD_RANGES='0 36 48 60'`; zero keeps the
 controller from spending the shield on a giant's close body until matched
 seeds demonstrate that the timed guard is a net survival improvement.
+`QUINTRA_BOT_SAURAN_GIANT_PULSE_PERIOD=2..8` similarly sweeps the Tail Spike's
+close strike/reset beat without changing cartridge attack rate, boss health,
+or player state. The shipping default is two: the rebuilt fixed three-world
+replay clears every first boss, six total giants, and has one death, where the
+former five-beat reset missed a first boss. This remains controller evidence,
+not a cartridge-side damage or survivability change.
+In an earlier three-run Sauran classwise sweep, the default `0` radius reached
+four boss clears, versus zero at `32` and two at `40`; the pilot therefore
+keeps the shield for its measured projectile cadence rather than firing it
+reactively into a body approach. The current fixed right-edge replay is a
+stricter follow-up and remains red.
 Separate from that rejected body-range policy, the default controller raises
-Sauran's real projectile-breaking Stoneskin once every **120** giant-fight
-frames when MP and cooldown allow. A matched three-seed cadence sweep reached
-six giant clears at 120 frames versus three with no cadence; 90 and 180 were
-worse. Set `QUINTRA_BOT_SAURAN_GIANT_SHIELD_PERIOD=0` to reproduce the old
-no-cadence pilot or supply another value for further controller research. This
-is host-side input policy only—it does not alter shield duration, MP, HP, or
-the cartridge ROM. `QUINTRA_BOT_GIANT_DODGE_FLOOR=32` or `40` additionally
-tests a one-step guard against a projectile dodge steering into the selected
-Colossus. In the current matched Sauran samples it cuts median boss-body
-damage from 15 to 6 but does not yet increase boss clears, so the shipping
-controller keeps the guard disabled (`0`) while the trace hook remains
-available for further policy work.
+Sauran's real projectile-breaking Stoneskin once every **60** giant-fight
+frames when MP and cooldown allow. Earlier collision-predicted samples cleared
+every first giant and four total giants with at most one death; the current
+strict rerun is tracked separately while its miniboss-placement repair is
+re-baselined. The former 120-frame result belongs to the older broad-proximity
+dodge policy. Set
+`QUINTRA_BOT_SAURAN_GIANT_SHIELD_PERIOD=0` to reproduce a no-cadence pilot or
+supply another value for controller research. This is host-side input policy
+only—it does not alter shield duration, MP, HP, or the cartridge ROM.
+`QUINTRA_POLICY_GIANT_DODGE_FLOORS='0 24 32 40'` extends
+`make policy-sweep` with a one-step guard against a projectile dodge steering
+into the selected Colossus. The current rebuilt fixed-world matrix regressed
+at 32px overall (despite a Corvin improvement), so the shipping controller
+keeps this guard disabled (`0`) while the reproducible sweep remains available
+for further policy work.
 
 ## World Retro delivery bar — September 12, 2026
 
@@ -1168,8 +2151,16 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
    separate `make victory-proof` locks the public frame-derived seed and
    replays its complete controller trace in a fresh emulator.
 
-### Current conference evidence (v0.18.36 release; v0.18.35 all-class matrix)
+### Current conference evidence (through v0.18.58 development ROM)
 
+- **v0.18.42 follow-up:** Wolfkin's Fang Stab now starts at the weapon
+  edge instead of beyond a 24px close-range dead zone. Its rebuilt live-ROM
+  form/visual contracts, sealed-Leech route, fixed cadence/miniboss replay,
+  and all three deterministic three-boss endurance routes pass. A fresh
+  18,000-frame sample reaches four bosses alive for Wolfkin, four for Corvin,
+  three for Picsean and Vespine, and two for Sauran. This is material progress
+  on close-range reliability, not a substitute for the delivery bar's longer
+  multi-seed all-class completion requirement.
 - Functional ROM contracts pass, including the starter-cadence contract,
   Shadow Keep's Gloam Bramble spawn, distinct runtime art, and calm
   two-lane thorn pair; Cinder Kite's Ember-only
@@ -1205,7 +2196,8 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   Picsean at **2/3 endings** and Wolfkin, Sauran, Corvin, and Vespine at
   **0/3**. Median boss clears are 6, 1, 6, 9, and 6 respectively; Wolfkin,
   Corvin, Picsean, and Vespine clear boss one in all three samples, while
-  Sauran does so in two. It exercised all **30** released enemy IDs—including
+  Sauran does so in two. It exercised all **30** enemy IDs available to that
+  recorded run—including
   Frost Lancer and Vine Coil—and procedural shops, with **zero** combat or
   route stalls.
   Giant body contact remains a leading observed pressure source for the
@@ -1223,7 +2215,12 @@ The final stretch prioritizes readability and playability: room-transition
 feel, merchant/tutorial clarity, late-boss patterns that are harder without
 turning early runs into a wall, and the creator's music-composition pass. New
 content is welcome only when it fits that budget and keeps the reproducible
-route healthy.
+route healthy. The compact topology has now been replaced by a run-deepening
+10-to-16-room ramp, including each boss arena. It totals 117 dungeon screens,
+adds a second puzzle from twelve rooms and a second miniboss from fourteen,
+and retains the transition-latency budget so extra exploration does not restore
+the old doorway wait. Riftwild and the villages remain separate between-stage
+spaces.
 
 Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,

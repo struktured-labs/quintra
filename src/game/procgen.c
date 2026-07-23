@@ -119,30 +119,62 @@ static void paint_shop_price(u8 tx, u8 price) {
     room_tilemap[10][tx + 2] = (u8)(HUD_DIGIT_0 + price % 10);
 }
 
-// Fixed mini-boss escorts are chosen after props have been placed. Their old
-// hard-coded coordinates could land inside a seeded 2x2 crate, creating a
-// sealed room with an unreachable live enemy. Pick the nearest champion-sized
-// clear cell without consuming RNG, so procedural parity and room seeds stay
+// Fixed miniboss bodies and escorts are placed after props have been laid
+// down. A hard-coded 2x2 origin can land behind a seeded pillar ring, creating
+// a sealed room with a live enemy that the player cannot reach or shoot.
+// Pick the nearest champion-sized cell in the player's marked reachable
+// component without consuming RNG, so procedural parity and room seeds stay
 // stable.
 static u8 escort_cell_open(u8 tx, u8 ty) {
     if (tx < 1 || ty < 1 || tx + 1 >= ROOM_W - 1 || ty + 1 >= ROOM_H - 1) return 0;
-    return room_tile_walkable(room_tilemap[ty][tx])
-        && room_tile_walkable(room_tilemap[ty][tx + 1])
-        && room_tile_walkable(room_tilemap[ty + 1][tx])
-        && room_tile_walkable(room_tilemap[ty + 1][tx + 1]);
+    // mark_spawn_reachable() uses bit 7 as temporary player-component
+    // metadata. An escort in another open cave island can still make a
+    // sealed room impossible, so its origin must carry that mark as well as
+    // owning a real 2x2 walkable footprint.
+    return (room_tilemap[ty][tx] & 0x80)
+        && room_tile_walkable((u8)(room_tilemap[ty][tx] & 0x7F))
+        && room_tile_walkable((u8)(room_tilemap[ty][tx + 1] & 0x7F))
+        && room_tile_walkable((u8)(room_tilemap[ty + 1][tx] & 0x7F))
+        && room_tile_walkable((u8)(room_tilemap[ty + 1][tx + 1] & 0x7F));
 }
 
 // A rift is activated by the hero's feet center, but movement validates a
 // 12x8px feet box.  Stamping only the glowing tile could leave its required
 // 2x2 standing footprint half inside a procedurally placed pillar or crate.
-// Carve a small deterministic apron so every nonlinear exit is physically
-// reachable, not merely visible on the map.
+// Carve a deterministic apron plus a body-width L-shaped route to the central
+// door lane so stage architecture can never leave a visible nonlinear exit
+// isolated on its own walkable island.
 static void stamp_rift_portal(u8 px, u8 py) {
     u8 x, y;
+    u8 left = (px < 10) ? (u8)(px - 2) : 9;
+    u8 right = (px < 10) ? 10 : px;
+    u8 top = (py < 8) ? (u8)(py - 2) : 7;
+    u8 bottom = (py < 8) ? 8 : py;
+    for (y = (u8)(py - 2); y <= py; ++y)
+        for (x = left; x <= right; ++x)
+            room_tilemap[y][x] = BGT_FLOOR;
+    for (y = top; y <= bottom; ++y)
+        for (x = 9; x <= 11; ++x)
+            room_tilemap[y][x] = BGT_FLOOR;
     for (y = (u8)(py - 2); y <= py; ++y)
         for (x = (u8)(px - 2); x <= px; ++x)
             room_tilemap[y][x] = BGT_FLOOR;
     room_tilemap[py][px] = BGT_PORTAL;
+}
+
+// Give each Riftwild cell a memorable, gameplay-legible silhouette. The
+// four families rotate with the run seed, so landmarks stay stable while the
+// hero backtracks but do not pin every expedition to the same geography.
+// Every stamp remains outside the central two-tile trail cross; solid ponds,
+// stones, and stumps therefore add cover without disconnecting graph exits.
+static void stamp_world_landmark(u8 family) {
+    static const u8 lx[8] = { 5, 6, 5, 6, 13, 14, 13, 14 };
+    static const u8 ly[8] = { 4, 4, 5, 5, 11, 11, 12, 12 };
+    u8 i;
+    u8 tile = (family == 0) ? BGT_WILD_FLOWER
+        : (family == 1) ? BGT_WILD_WATER
+        : (family == 2) ? BGT_WILD_STONE : BGT_WILD_STUMP;
+    for (i = 0; i < 8; ++i) room_tilemap[ly[i]][lx[i]] = tile;
 }
 
 static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
@@ -163,7 +195,7 @@ static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
     return 1;
 }
 
-static u8 spawn_escort_safely(u8 eid, u8 preferred_x, u8 preferred_y) {
+static u8 spawn_reachable_enemy(u8 eid, u8 preferred_x, u8 preferred_y) {
     u8 tx, ty, best_x = 0, best_y = 0, found = 0, best_distance = 0xFF;
     for (ty = 1; ty < ROOM_H - 2; ++ty) {
         for (tx = 1; tx < ROOM_W - 2; ++tx) {
@@ -178,6 +210,26 @@ static u8 spawn_escort_safely(u8 eid, u8 preferred_x, u8 preferred_y) {
         }
     }
     return found ? enemy_spawn(eid, best_x, best_y) : 0xFF;
+}
+
+// Configure the compact Sentinel used by the early required miniboss rooms.
+// Keeping this out of procgen_generate() is not merely tidier: that function
+// already carries the room-generation state, and SDCC's optimiser can lose
+// conditional-flow precision when the full miniboss setup lives in that scope.
+static void configure_sentinel_miniboss(u8 idx, u8 stage) {
+    static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
+    u8 mb_pow = (stage < 9) ? stage : 8;
+    u8 mb_var = stage_mb_variant[stage % 9];
+    entities[idx].sprite_tile = SPR_BOSS;
+    entities[idx].palette     = mb_pal[mb_var];
+    entities[idx].hitbox      = (u8)0xEE;
+    // ai_data[2] = variant -> boss_tick picks the matching archetype.
+    entities[idx].ai_data[2]  = mb_var;
+    entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
+    // Easy exists primarily for deep-route testing. The Warden is now a
+    // required stage fixture, so halve only its Easy health burden while
+    // preserving every Normal pattern, damage value, and scaling step.
+    if (RUN_IS_EASY()) entities[idx].hp = (u8)((entities[idx].hp + 1) >> 1);
 }
 
 // Layer stage-authored traversal identity over the shared reachable room
@@ -337,9 +389,7 @@ void procgen_generate_current_room(void) BANKED {
     // A boss guards every Nth room until BOSSES_TO_WIN are down. Computed
     // once at function scope so door-drawing, the secret-room guard, and
     // enemy spawning all agree (a mismatch here soft-locked boss rooms).
-    u8 is_boss_room = (!run_state.world_mode && run_state.room_counter > 0
-        && (run_state.room_counter % BOSS_EVERY_N_ROOMS) == 0
-        && (u8)(run_state.room_counter / BOSS_EVERY_N_ROOMS) > run_state.bosses_beaten) ? 1 : 0;
+    u8 is_boss_room = run_state_is_boss_room();
     procgen_current_room_is_boss = is_boss_room;
     // A village clearing follows every third dungeon: rooms 19, 37, 55...
     // It remains a pure function of room_counter, so suspend/resume and
@@ -386,6 +436,27 @@ void procgen_generate_current_room(void) BANKED {
                 if (!(edges & 0x02)) { room_tilemap[8][ROOM_W - 1] = BGT_WALL; room_tilemap[9][ROOM_W - 1] = BGT_WALL; }
                 if (!(edges & 0x04)) { room_tilemap[ROOM_H - 1][9] = BGT_WALL; room_tilemap[ROOM_H - 1][10] = BGT_WALL; }
                 if (!(edges & 0x08)) { room_tilemap[8][0] = BGT_WALL; room_tilemap[9][0] = BGT_WALL; }
+            } else if (!is_town) {
+                // Dungeon cells now occupy the same reciprocal 4x4 geography
+                // shown by the Spirit Compass. Remove edges that leave the
+                // active prefix instead of presenting four fake choices that
+                // all advance one global counter.
+                if (run_state_dungeon_neighbor(DIR_N) == 0xFF) {
+                    room_tilemap[0][9] = BGT_WALL;
+                    room_tilemap[0][10] = BGT_WALL;
+                }
+                if (run_state_dungeon_neighbor(DIR_E) == 0xFF) {
+                    room_tilemap[8][ROOM_W - 1] = BGT_WALL;
+                    room_tilemap[9][ROOM_W - 1] = BGT_WALL;
+                }
+                if (run_state_dungeon_neighbor(DIR_S) == 0xFF) {
+                    room_tilemap[ROOM_H - 1][9] = BGT_WALL;
+                    room_tilemap[ROOM_H - 1][10] = BGT_WALL;
+                }
+                if (run_state_dungeon_neighbor(DIR_W) == 0xFF) {
+                    room_tilemap[8][0] = BGT_WALL;
+                    room_tilemap[9][0] = BGT_WALL;
+                }
             }
 
             // Interior obstacles. Door lanes stay clear (cols 9-11 for the
@@ -495,8 +566,10 @@ void procgen_generate_current_room(void) BANKED {
             // Stage architecture is laid down before loose props so crates,
             // pots, and rubble respect its silhouette instead of erasing it.
             if (!is_town && !run_state.world_mode
-                && ((run_state.room_counter % ROOMS_PER_STAGE) == 1
-                    || (run_state.room_counter % ROOMS_PER_STAGE) == 2)) {
+                && (run_state_dungeon_local() == 1
+                    || run_state_dungeon_local() == 2
+                    || (run_state_dungeon_local() == 7
+                        && run_state_dungeon_size() >= 12))) {
                 apply_stage_archetype(run_state.bosses_beaten, seed);
             }
 
@@ -535,41 +608,12 @@ void procgen_generate_current_room(void) BANKED {
                 }
             }
 
-            // Pressure-plate puzzle. A deterministic subset of ordinary
-            // rooms gets a visible plate and a nearby cairn. Either the hero
-            // or the cairn can press it; room.c consumes it and opens a
-            // two-tile side passage to the generated secret cache.
-            // Towns are redrawn below and never inherit dungeon puzzles.
-            if (!is_town && run_state.room_counter > 0
-                && !run_state.world_mode
-                && (run_state.room_counter % 7) == 0) {
-                // Coordinate comes from the already-derived room seed rather
-                // than consuming RNG draws; adding puzzle content must not
-                // reshuffle every later decoration/enemy in the same seed.
-                u8 sx = (seed & 1) ? 7 : 12;
-                u8 sy = (seed & 2) ? 5 : 11;
-                if (room_tile_walkable(room_tilemap[sy][sx])) {
-                    room_tilemap[sy][sx] = BGT_SWITCH;
-                    // Guarantee one pushable block in the same local puzzle
-                    // when the 2x2 footprint is clear.
-                    if (room_tile_walkable(room_tilemap[sy][sx - 2])
-                        && room_tile_walkable(room_tilemap[sy][sx - 1])
-                        && room_tile_walkable(room_tilemap[sy + 1][sx - 2])
-                        && room_tile_walkable(room_tilemap[sy + 1][sx - 1])) {
-                        room_tilemap[sy][sx - 2] = BGT_BLOCK;
-                        room_tilemap[sy][sx - 1] = BGT_BLOCK_TR;
-                        room_tilemap[sy + 1][sx - 2] = BGT_BLOCK_BL;
-                        room_tilemap[sy + 1][sx - 1] = BGT_BLOCK_BR;
-                    }
-                }
-            }
-
             // A seed-stable nonlinear pair inside this stage. It starts after
             // the tutorial stage and can never target a boss, town, or region.
-            if (!is_town && run_state.room_counter > 6
+            if (!is_town && run_state.bosses_beaten > 0
                 && !run_state.world_mode
-                && ((run_state.room_counter % ROOMS_PER_STAGE) == 2
-                    || (run_state.room_counter % ROOMS_PER_STAGE) == 4)) {
+                && (run_state_dungeon_local() == 2
+                    || run_state_dungeon_local() == 4)) {
                 u8 px = (seed & 4) ? 5 : 14;
                 u8 py = (seed & 8) ? 4 : 12;
                 stamp_rift_portal(px, py);
@@ -674,6 +718,11 @@ void procgen_generate_current_room(void) BANKED {
         room_tilemap[4][16] = BGT_TREE;
         room_tilemap[12][4] = BGT_TREE;
         room_tilemap[13][13] = BGT_TREE;
+        // All four landmark families occur exactly four times in a 4x4
+        // Riftwild. A different run seed rotates which coordinate owns which
+        // family, preserving both geographic memory and roguelike variation.
+        stamp_world_landmark((u8)(((u8)run_state.run_seed
+            + (run_state.world_screen & 15)) & 3));
         if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
             || world_kind == ZELDA_CELL_VAULT
             || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)
@@ -700,8 +749,24 @@ void procgen_generate_current_room(void) BANKED {
                 room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
             room_tilemap[7][8] = room_tilemap[7][11] = BGT_CRYSTAL;
             room_tilemap[10][8] = room_tilemap[10][11] = BGT_CRYSTAL;
-            room_tilemap[3][3] = room_tilemap[3][16] = BGT_TREE;
-            room_tilemap[13][3] = room_tilemap[13][16] = BGT_TREE;
+            // The square needs readable civic architecture, not only a
+            // grass-and-NPC clearing. These two small rooflines frame the
+            // fountain without blocking the north/market/forge routes; their
+            // doorstep paths make the arrival screen unmistakably a village.
+            for (x = 2; x <= 5; ++x) {
+                room_tilemap[3][x] = BGT_ROOF;
+                room_tilemap[4][x] = BGT_ROOF;
+            }
+            room_tilemap[5][3] = room_tilemap[5][4] = BGT_DOOR;
+            room_tilemap[6][3] = room_tilemap[6][4] = BGT_PATH;
+            for (x = 14; x <= 17; ++x) {
+                room_tilemap[12][x] = BGT_ROOF;
+                room_tilemap[13][x] = BGT_ROOF;
+            }
+            room_tilemap[14][15] = room_tilemap[14][16] = BGT_DOOR;
+            room_tilemap[11][15] = room_tilemap[11][16] = BGT_PATH;
+            room_tilemap[3][16] = BGT_TREE;
+            room_tilemap[13][3] = BGT_TREE;
         } else if (run_state.world_return_screen == TOWN_MARKET) {
             room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
             // Two roofed stall rows around an open shopping lane.
@@ -737,12 +802,15 @@ void procgen_generate_current_room(void) BANKED {
     // the 32-slot table; later room orchestration calls are idempotent.
     room_spawn_progression_fixture();
 
-    // Secret treasure room: no enemies, loot piled in the middle. Always
-    // clear the flag (else it leaks into every future room). Only take the
+    // Secret treasure room: no enemies, loot piled in the middle. State 1
+    // means "enter now"; state 2 keeps the vault overlay active until its
+    // return threshold is crossed. This lets a secret remain attached to its
+    // parent graph cell instead of stealing an unrelated spatial neighbour.
+    // Only take the
     // early-return when this is NOT also a boss room — otherwise the sealed,
     // door-less boss layout would have no boss to spawn = unrecoverable.
     if (run_state.secret_pending) {
-        run_state.secret_pending = 0;
+        run_state.secret_pending = 2;
         if (!is_boss_room) {
             u8 i;
             // The vault: a shootable crystal ring guards the hoard —
@@ -777,16 +845,12 @@ void procgen_generate_current_room(void) BANKED {
 
     {
         u8 is_miniboss = run_state.world_mode
-            ? (world_kind == ZELDA_CELL_BOSS)
-            : ((!is_boss_room && (run_state.room_counter % ROOMS_PER_STAGE) == 3) ? 1 : 0);
-        u8 is_shop     = (!is_boss_room && !is_miniboss
-                          && (run_state.room_counter % ROOMS_PER_STAGE) == 4) ? 1 : 0;
+            ? (world_kind == ZELDA_CELL_BOSS) : run_state_is_miniboss();
+        u8 is_shop = (!is_miniboss && run_state_is_shop()) ? 1 : 0;
         // Sanctuary: the room right before every stage boss. No enemies and
         // a guaranteed full blessing, so each escalating colossus tests the
         // build rather than leftover attrition from the preceding rooms.
-        u8 is_rest     = (!is_boss_room
-                          && !run_state.world_mode
-                          && (run_state.room_counter % ROOMS_PER_STAGE) == 5) ? 1 : 0;
+        u8 is_rest = run_state_is_sanctuary();
 
         if (is_town) {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
@@ -802,6 +866,11 @@ void procgen_generate_current_room(void) BANKED {
                 // is deliberately visual-only—no additional free economy or
                 // combat power is hidden behind a background resident.
                 pickup_spawn_lorekeeper(FIX8(128), FIX8(112));
+                // The lower-square Bellkeeper gives the village a civic
+                // landmark visible before any purchase or healing occurs.
+                // It is intentionally visual-only: pacing and economy stay
+                // unchanged while the town reads less like a shop room.
+                pickup_spawn_bellkeeper(FIX8(24), FIX8(112));
             } else if (run_state.world_return_screen == TOWN_MARKET) {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(48, 72, WARE_HEART, 5);
@@ -884,18 +953,24 @@ void procgen_generate_current_room(void) BANKED {
             u8 stage = run_state.bosses_beaten;
             u8 pow  = (stage < 9) ? stage : 8;
             u8 skin = (u8)(stage % 9);
+            // Content owns both first-campaign and endless-repeat windows.
+            // The base Sentinel HP still saturates first; this cap then
+            // shapes the specific pattern rather than leaving hand-written
+            // skin/power exceptions to drift from stage authoring.
+            u8 hp_cap = (stage < N_STAGES) ? stage_boss_hp_cap[pow]
+                : stage_boss_endless_hp_cap[skin];
             {
                 u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 2, (ROOM_H / 2) - 2);
                 if (idx != 0xFF) {
                     entities[idx].sprite_tile = boss_sprite_for_stage(skin);
                     entities[idx].palette     = boss_palette_for_stage(skin);
-                    // Early Colossi keep the broad 15px contact body used
-                    // to teach close-range pressure. Frost Vault onward uses
-                    // the established 13px bruiser body: the late giant
-                    // still fills lanes and keeps its full projectile/HP
-                    // budget, but a near-miss does not read as a 32px sprite
-                    // edge dealing unavoidable contact damage.
-                    entities[idx].hitbox      = (skin >= 3) ? (u8)0xDD : (u8)0xFF;
+                    // Crystal's stationary tutorial Colossus keeps the
+                    // broad 15px contact body used to teach close pressure.
+                    // Every mobile giant—including Verdant's rebound-heavy
+                    // Serpent—uses the established 13px bruiser body: the
+                    // sprite still fills a lane, but a visual near-miss is
+                    // not treated as an unavoidable collision.
+                    entities[idx].hitbox      = (skin == 0) ? (u8)0xFF : (u8)0xDD;
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
                     // A stage transition must never resolve into an instant
@@ -911,23 +986,7 @@ void procgen_generate_current_room(void) BANKED {
                     else
                         entities[idx].hp = (u8)(entities[idx].hp
                             + stage_boss_hp[pow]);
-                    // Golden Temple already adds the six-enemy roster and
-                    // Bellwarden pre-boss check. Its 255-cap colossus left a
-                    // fully provisioned controller 27 HP short after a long
-                    // pattern read; 230 preserves a late-game giant without
-                    // stacking every Temple pressure system into attrition.
-                    if (skin == 6 && entities[idx].hp > 230)
-                        entities[idx].hp = 230;
-                    // The Void Lord's raw 255 cap created a one-hit cliff:
-                    // a fully provisioned controller could survive the
-                    // Collapse positioning test yet reach the last 30 HP
-                    // only after its recovery budget was exhausted. Keep
-                    // the finale armored and longer than a normal boss, but
-                    // cap it at a 220-damage window that rewards sustained
-                    // positioning instead of demanding a near-perfect final
-                    // minute after every prior stage.
-                    if (skin == 8 && entities[idx].hp > 220)
-                        entities[idx].hp = 220;
+                    if (entities[idx].hp > hp_cap) entities[idx].hp = hp_cap;
                     entities[idx].damage = (u8)(entities[idx].damage
                         + stage_boss_dmg[pow]);
                 }
@@ -959,6 +1018,8 @@ void procgen_generate_current_room(void) BANKED {
                     // the Void Lord into an attrition lottery.
                     entities[idx].hp = (u8)(entities[idx].hp + 22
                         + (u8)((stage - 6) * 4));
+                    if (RUN_IS_EASY())
+                        entities[idx].hp = (u8)((entities[idx].hp + 1) >> 1);
                     // Preserve a short arrival telegraph before its first
                     // eight-way peal, not the opening frame. Contact stays
                     // at the ordinary two damage on all three stages; the
@@ -988,32 +1049,34 @@ void procgen_generate_current_room(void) BANKED {
                     }
                 }
             } else {
+                // The regular-room roster already uses this exact 12px-body
+                // flood before placement.  The mini-boss escorts must use it
+                // too: open-but-disconnected floor islands are valid scenery,
+                // not valid sealed-combat spawn sites.
+                mark_spawn_reachable();
                 {
-                    u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 1, 3);
+                    // The Sentinel is just as much a 2x2 fixed spawn as its
+                    // escorts. Keep its upper-centre presentation when that
+                    // apron is reachable, but never let an interior layout
+                    // cage the required miniboss behind its own pillars.
+                    u8 idx = spawn_reachable_enemy(ENEMY_STONE_SENTINEL,
+                        (ROOM_W / 2) - 1, 3);
                     if (idx != 0xFF) {
                         // Silhouette comes from the generated stage table —
                         // ONE source shared with tiles_load_miniboss, so art and
                         // palette can't drift apart. HP power clamps (u8 overflow).
-                        static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
-                        u8 mb_pow = (stage < 9) ? stage : 8;
-                        u8 mb_var = stage_mb_variant[stage % 9];
-                        entities[idx].sprite_tile = SPR_BOSS;
-                        entities[idx].palette     = mb_pal[mb_var];
-                        entities[idx].hitbox      = (u8)0xEE;
-                        // ai_data[2] = variant → boss_tick picks the matching
-                        // attack archetype (0 Sentinel / 1 Orc / 2 Skeleton).
-                        entities[idx].ai_data[2]  = mb_var;
-                        entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
+                        configure_sentinel_miniboss(idx, stage);
                     }
                 }
                 // two escorts drawn from the stage roster
                 {
                     u8 e;
-                    for (e = 0; e < 2; ++e) {
+                    for (e = 0; e < (RUN_IS_EASY() ? 1 : 2); ++e) {
                         u8 eid = pick_enemy_for_stage(stage);
-                        spawn_escort_safely(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
+                        spawn_reachable_enemy(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
                     }
                 }
+                clear_spawn_reachable();
             }
         } else if (is_shop) {
             // MERCHANT room: three wares, no enemies. The premium shelf is
@@ -1037,7 +1100,7 @@ void procgen_generate_current_room(void) BANKED {
             // so positioning and the champion's B kit matter immediately.
             // Keep the existing shallow ramp rather than raising every HP
             // value into a sponge fight.
-            u8 depth_bonus = (u8)(run_state.room_counter / 6);
+            u8 depth_bonus = run_state.bosses_beaten;
             u8 enemy_count = (u8)(2 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);

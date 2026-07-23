@@ -41,9 +41,12 @@ void gameover_enter(void) {
     gotoxy(6, 3);  text_write("GAME  OVER");
     gotoxy(2, 7);  text_write("rooms   "); text_u16((u16)run_state.room_counter);
     gotoxy(2, 8);  text_write("kills   "); text_u16((u16)run_state.enemies_killed);
-    gotoxy(2, 9);  text_write("score   "); text_u16((u16)run_state.score);
+    // These are deliberately distinct values. A plain "score" / "best"
+    // pair made the two adjacent numbers read like a duplicated score during
+    // a fast post-death glance, especially when a new-record tag followed.
+    gotoxy(2, 9);  text_write("run     "); text_u16((u16)run_state.score);
     if (new_best & 1) text_write(" NEW!");
-    gotoxy(2, 10); text_write("best    "); text_u16(sram_meta_best());
+    gotoxy(2, 10); text_write("record  "); text_u16(sram_meta_best());
     gotoxy(2, 11); text_write("time    "); text_u16((u16)(run_state.run_timer / 60));
     text_write(":"); text_digit((u8)((run_state.run_timer % 60) / 10));
     text_digit((u8)(run_state.run_timer % 10));

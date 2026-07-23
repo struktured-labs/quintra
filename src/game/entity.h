@@ -29,6 +29,9 @@ enum {
 // Bellwarden miniboss from ordinary roster Dread Bells without adding another
 // entity flag (the flags byte is already gameplay-facing).
 #define ENEMY_AUX_BELLWARDEN 0xB1
+// Rift Ooze fragments use the otherwise-free crawler aux byte. They roam as
+// two fragile bodies, then seek and reform if the player leaves them alive.
+#define ENEMY_AUX_OOZE_FRAGMENT 0x4F
 
 typedef struct {
     u8     type;

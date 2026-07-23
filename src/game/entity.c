@@ -210,6 +210,10 @@ void entity_draw_all(void) {
         {
             u8 prop = pal;
             if (e->type == ENT_ENEMY && (g_enemy_anim & 0x10)) prop |= S_FLIPX;
+            if (e->type == ENT_PROJECTILE) {
+                if (e->ai_data[4] & PROJ_VIS_FLIP_X) prop |= S_FLIPX;
+                if (e->ai_data[4] & PROJ_VIS_FLIP_Y) prop |= S_FLIPY;
+            }
             set_sprite_prop(oam, prop);
         }
         move_sprite(oam, sx, sy);

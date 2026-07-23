@@ -11,6 +11,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
+#include "game/run_state.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -59,22 +60,42 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
     return idx;
 }
 
+static u8 ground_navigation_enemy(const entity_t *e) {
+    // Persistent ground enemies must remain in spaces a champion's 12px feet
+    // box can re-enter. Hornets flank forever, Skeletons and Leeches chase
+    // through sealed rooms, and ordinary Crawlers can become the final live
+    // target; each could otherwise pass through a one-tile lane and strand
+    // melee play. Flying/specialist enemies retain their authored envelopes.
+    return e->ai_data[0] == ENEMY_HORNET
+        || e->ai_data[0] == ENEMY_SKELETON
+        || e->ai_data[0] == ENEMY_GLOAM_LEECH
+        || e->ai_data[0] == ENEMY_BLUE_CRAWLER;
+}
+
 // Try to move an enemy 1px by (dx,dy); blocked by solid tiles + room bounds.
-// Returns 1 if moved. Skeletons and Gloom Leeches use the hero's 12px
-// feet-box clearance: persistent chasers can otherwise enter a one-tile
-// pocket a melee hero cannot enter, turning a sealed room into an unwinnable
-// softlock. Large bruisers retain their wider 16px movement envelope; other
-// small enemies keep their authored, more agile movement identities.
+// Returns 1 if moved. Hornets use the hero's 12px feet-box clearance: a
+// persistent chaser can otherwise enter a one-tile pocket the melee hero
+// cannot enter, turning a sealed encounter into an unwinnable softlock. Its
+// movement must probe the same
+// feet-anchored corners as the player: a generic sprite rectangle can skip
+// over a one-tile wall between its top and bottom samples, admitting an enemy
+// to a corridor that the player cannot enter. Large bruisers retain their
+// wider 16px movement envelope; other small enemies keep their authored, more
+// agile movement identities.
 u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 nx = (i16)(FIX8_TO_INT(e->x) + dx);
     i16 ny = (i16)(FIX8_TO_INT(e->y) + dy);
-    i16 ext = ((e->hitbox >> 4) >= 10) ? 14
-        : (e->ai_data[0] == ENEMY_SKELETON
-           || e->ai_data[0] == ENEMY_GLOAM_LEECH) ? 13 : 6; // far-corner inset
+    u8 ground = ground_navigation_enemy(e);
+    i16 ext = ((e->hitbox >> 4) >= 10) ? 14 : 6;
     if (nx < 8 || ny < 8) return 0;
-    if (nx + ext >= (i16)((ROOM_W - 1) * 8 + 8)
-        || ny + ext >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;
-    if (!room_tile_walkable(room_tile_at_px(nx + 1,   ny + 1))
+    if (nx + (ground ? 15 : ext) >= (i16)((ROOM_W - 1) * 8 + 8)
+        || ny + (ground ? 15 : ext) >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;
+    if (ground) {
+        if (!room_tile_walkable(room_tile_at_px(nx + 2,  ny + 8))
+            || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 8))
+            || !room_tile_walkable(room_tile_at_px(nx + 2,  ny + 15))
+            || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 15))) return 0;
+    } else if (!room_tile_walkable(room_tile_at_px(nx + 1,   ny + 1))
         || !room_tile_walkable(room_tile_at_px(nx + ext, ny + 1))
         || !room_tile_walkable(room_tile_at_px(nx + 1,   ny + ext))
         || !room_tile_walkable(room_tile_at_px(nx + ext, ny + ext))) return 0;
@@ -106,101 +127,72 @@ static void walker_tick(entity_t *e) {
     }
 }
 
-// ---------------- Folding Star: diagonal replication -------------------
-
-static void replicator_tick(entity_t *e, const enemy_def_t *def) {
-    // state 0 = contracted and vulnerable; state 1 = expanded/untouchable.
-    // ai_data[1] is the phase clock, ai_data[2] selects the odd 7/13/9 beat,
-    // ai_data[3] rotates the diagonal sequence.
-    static const u8 beat[3] = { 7, 13, 9 };
-    if (e->ai_data[1] == 0) {
-        if (e->state == 0) {
-            e->state = 1;
-            e->ai_data[1] = def->ai_p0;
-            e->palette = 0x00; // pale and diffuse while expanded
-        } else {
-            e->state = 0;
-            e->ai_data[1] = def->ai_p1;
-            e->palette = 0x05; // bright core announces damage window
-            sfx_play(SFX_WEAK);
-        }
-    }
-    e->ai_data[1]--;
-
-    if (e->state == 0) {
-        // Contract toward the player: a slow, readable diagonal hunt.
-        if ((e->ai_data[1] & 3) == 0) {
-            i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
-            i8 dx = (player.x > ex) ? 1 : -1;
-            i8 dy = (player.y > ey) ? 1 : -1;
-            enemy_try_step(e, dx, dy);
-        }
-        return;
-    }
-
-    // Expanded: shed four short-lived replicas on diagonal rays. They are FX,
-    // not extra hostiles, so room-clear accounting and the 32-entity budget
-    // remain stable. The core itself steps through the same diagonal sequence.
-    if ((e->ai_data[1] % beat[e->ai_data[2] % 3]) == 0) {
-        i16 x = FIX8_TO_INT(e->x), y = FIX8_TO_INT(e->y);
-        u8 d = (u8)(6 + ((e->ai_data[3] & 3) << 1));
-        fx_spawn(e->sprite_tile, 0x05, x - d, y - d, 16);
-        fx_spawn(e->sprite_tile, 0x05, x + d, y - d, 16);
-        fx_spawn(e->sprite_tile, 0x05, x - d, y + d, 16);
-        fx_spawn(e->sprite_tile, 0x05, x + d, y + d, 16);
-        e->ai_data[2] = (u8)((e->ai_data[2] + 1) % 3);
-        e->ai_data[3]++;
-        enemy_try_step(e, dir8_dx[(u8)((e->ai_data[3] * 2 + 1) & 7)],
-                          dir8_dy[(u8)((e->ai_data[3] * 2 + 1) & 7)]);
-    }
-}
-
-// Keese-like cadence: cling motionless, flutter diagonally, dart, settle.
-static void flutterbat_tick(entity_t *e) {
-    if (e->state_timer == 0) {
-        e->state = (u8)((e->state + 1) % 3);
-        e->state_timer = (e->state == 0) ? (u8)(28 + (rng_next_u8() & 31))
-                       : (e->state == 1) ? (u8)(36 + (rng_next_u8() & 15)) : 14;
-        e->ai_data[2] = (u8)(rng_next_u8() | 1); // diagonal direction seed
-    }
-    e->state_timer--;
-    if (e->state == 0) return;
-    if ((e->state_timer & ((e->state == 2) ? 1 : 3)) == 0) {
-        u8 d = (u8)((e->ai_data[2] + ((e->state_timer >> 2) & 2)) & 7);
-        i8 dx = dir8_dx[d], dy = dir8_dy[d];
-        u8 moved;
-        // Resolve diagonals by axis. A direct diagonal lets this 8px flyer cut
-        // across two solid corners into a notch no 12px champion can enter;
-        // axis motion keeps the Keese-like slant in open space and slides the
-        // bat along either wall when only one component is legal.
-        if (dx && dy) {
-            moved = enemy_try_step(e, dx, 0);
-            if (enemy_try_step(e, 0, dy)) moved = 1;
-        } else {
-            moved = enemy_try_step(e, dx, dy);
-        }
-        if (!moved) e->state_timer = 0;
-    }
-}
-
 // Metroid-like latch: pursue, attach, pulse-drain, and ride the hero until
 // killed. Dashing shakes it loose through the hero's extended iframes.
+static u8 leech_release_place(entity_t *e, i16 nx, i16 ny) {
+    if (nx < 8 || ny < 8
+        || nx + 13 >= (i16)((ROOM_W - 1) * 8 + 8)
+        || ny + 13 >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;
+    if (!room_tile_walkable(room_tile_at_px(nx + 1,  ny + 1))
+        || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 1))
+        || !room_tile_walkable(room_tile_at_px(nx + 1,  ny + 13))
+        || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 13))) return 0;
+    e->x = FIX8(nx);
+    e->y = FIX8(ny);
+    return 1;
+}
+
+static void leech_release(entity_t *e) {
+    i16 nx = (i16)player.x + 4;
+    i16 ny = (i16)player.y + 1;
+    // A dash can detach a Leech while the champion occupies a door-edge
+    // pixel. Clamp its usual riding position back to the legal navigation
+    // band, then try nearby real floor before leaving it behind.
+    if (nx < 8) nx = 8;
+    if (ny < 8) ny = 8;
+    // We only need to repair the impossible top/left attachment release.
+    // At a normal in-bounds release preserve the exact former position and
+    // timing of every chaser; this avoids changing unrelated route entropy.
+    if (leech_release_place(e, nx, ny)) return;
+    if (leech_release_place(e, nx + 16, ny)) return;
+    if (leech_release_place(e, nx - 16, ny)) return;
+    if (leech_release_place(e, nx, ny + 16)) return;
+    (void)leech_release_place(e, nx, ny - 16);
+}
+
 static void leech_tick(entity_t *e) {
     if (e->ai_data[6]) {
         e->x = FIX8((i16)player.x + 4);
         e->y = FIX8((i16)player.y + 1);
-        if (player.iframes >= 12) { // dodge dash shakes the latch
-            e->ai_data[6] = 0; e->state_timer = 30; return;
+        // The dash begins at 14 recovery frames, but room/combat update
+        // ordering can present the Leech one or two beats later. Six frames
+        // still uniquely identifies the dodge window while avoiding a failed
+        // release when that dash starts at a sealed doorway edge.
+        if (player.iframes >= 6) {
+            e->ai_data[6] = 0;
+            // state_timer is the chaser movement divider, not a countdown:
+            // storing 30 there made the next update reset it to zero and let
+            // an edge-rehomed Leech immediately latch onto the same feet box.
+            // ai_data[4] is otherwise unused by this species and owns the
+            // real post-dash attach lockout.
+            e->state_timer = 0;
+            e->ai_data[4] = 30;
+            leech_release(e);
+            return;
         }
-        if (++e->ai_data[5] >= 45) {
+        if (++e->ai_data[5] >= (RUN_IS_EASY() ? 120 : 45)) {
             e->ai_data[5] = 0;
             if (player.hp > 1) { player.hp--; hud_redraw_hp(); sfx_play(SFX_HURT); }
         }
         return;
     }
-    chaser_tick(e, 72);
-    if (e->state_timer == 0 && aabb_overlap_player(e)) {
+    {
+        u8 attach_locked = e->ai_data[4];
+        if (attach_locked) e->ai_data[4]--;
+        chaser_tick(e, 72);
+        if (!attach_locked && e->state_timer == 0 && aabb_overlap_player(e)) {
         e->ai_data[6] = 1; e->ai_data[5] = 0; sfx_play(SFX_HURT);
+        }
     }
 }
 
@@ -226,6 +218,18 @@ static void chaser_tick(entity_t *e, u8 speed) {
             if (!enemy_try_step(e, sx ? 0 : side, sx ? side : 0)) e->state++;
         }
     }
+}
+
+// Counter guards reserve state for their shell cycle (ready/rush/exposed),
+// so they cannot borrow chaser_tick(): that helper uses state for wall-slide
+// direction. Keep their deliberately slow pressure state-safe instead.
+static void counter_guard_step(entity_t *e) {
+    i16 ex = FIX8_TO_INT(e->x);
+    i16 ey = FIX8_TO_INT(e->y);
+    i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
+    i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
+    if (sx && !enemy_try_step(e, sx, 0) && sy) enemy_try_step(e, 0, sy);
+    else if (!sx && sy) enemy_try_step(e, 0, sy);
 }
 
 // First hit raises a counter-rush (armed by combat.c), followed by a long,
@@ -255,13 +259,13 @@ static void counter_guard_tick(entity_t *e, const enemy_def_t *def) {
             sfx_play(SFX_TICK);
         } else if ((++e->ai_data[1] & 7) == 0) {
             // Keep light pressure without erasing the exposed opening.
-            chaser_tick(e, 48);
+            counter_guard_step(e);
         }
         return;
     }
     // Shield-ready stance advances deliberately; the bright gold silhouette
     // and first blocked hit teach the bait-then-punish rhythm.
-    if ((++e->ai_data[1] & 3) == 0) chaser_tick(e, def->stats.speed);
+    if ((++e->ai_data[1] & 3) == 0) counter_guard_step(e);
 }
 
 // ---------------- Charger: telegraph then dash --------------------------
@@ -404,16 +408,6 @@ static void turret_tick(entity_t *e, const enemy_def_t *def) {
     i16 cy = FIX8_TO_INT(e->y) + 4;
     if (e->ai_data[1] != 0) {
         e->ai_data[1]--;
-        // Void Lord world-collapse telegraph: one flickering safe pocket.
-        // ai_data[4]=1 while charging; ai_data[5] selects a corner.
-        if (e->ai_data[3] && e->ai_data[2] == 8 && e->ai_data[4]
-            && (e->ai_data[1] & 7) == 0) {
-            static const u8 safe_x[4] = { 20, 124, 20, 124 };
-            static const u8 safe_y[4] = { 20, 20, 100, 100 };
-            fx_spawn(SPR_FX_IMPACT, 1, safe_x[e->ai_data[5] & 3],
-                safe_y[e->ai_data[5] & 3], 10);
-            sfx_play(SFX_TICK);
-        }
         if (e->ai_data[1] == 8 && e->ai_data[7] == 0) {
             e->ai_data[7] = 8;
             sfx_play(SFX_TICK);
@@ -521,26 +515,21 @@ static void boss_tick(entity_t *e) {
         return;
     }
 
-    // Creep toward the player. The Void Lord keeps its pressure through
-    // bullets and World Collapse; moving its 32px body every third tick made
-    // that body-pin a harsher, less readable threat than either intended
-    // mechanic. Its slower fifth-tick drift preserves the closing silhouette
-    // without invalidating ranged positioning.
-    e->state_timer++;
-    if (e->state_timer >= ((e->ai_data[3] & 1) && e->ai_data[2] == 8 ? 5 : 3)) {
-        e->state_timer = 0;
-        {
-            i16 ex = FIX8_TO_INT(e->x);
-            i16 ey = FIX8_TO_INT(e->y);
-            i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
-            i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
-            if (sx) enemy_try_step(e, sx, 0);
-            if (sy) enemy_try_step(e, 0, sy);
-        }
-    }
+    boss_motion_tick(e);
 
     if (e->ai_data[1] != 0) {
         e->ai_data[1]--;
+        // World Collapse's one survivable corner flickers throughout the
+        // charge from the actual large-boss driver. ai_data[4] is the charge
+        // flag and ai_data[5] remains the announced/resolved corner slot.
+        if ((e->ai_data[3] & 1) && e->ai_data[2] == 8 && e->ai_data[4]
+            && (e->ai_data[1] & 7) == 0) {
+            static const u8 safe_x[4] = { 20, 124, 20, 124 };
+            static const u8 safe_y[4] = { 20, 20, 100, 100 };
+            fx_spawn(SPR_FX_IMPACT, 1, safe_x[e->ai_data[5] & 3],
+                safe_y[e->ai_data[5] & 3], 10);
+            sfx_play(SFX_TICK);
+        }
         // Telegraph: blink white + a quiet click ~8 frames before every
         // volley (reuses the hit-flash pathway) so patterns read as
         // dodgeable, not random.
@@ -601,25 +590,50 @@ static void boss_tick(entity_t *e) {
             case 1:   // Serpent — rotating 4-cross (sweeps a spiral)
                 for (k = 0; k < 4; ++k)
                     boss_shot(cx, cy, (u8)((e->ai_data[5] + k * 2) & 7), 2, dmg);
-                cadence = 20;
+                // Boss two remains a dense four-lane sweep, but the matched
+                // Normal matrix showed its old 20-frame refill combining with
+                // wall bounces into a class gate. Four extra frames expose the
+                // announced gap without reducing HP, damage, or lane count.
+                cadence = 24;
                 break;
-            case 2:   // Maw — fast aimed 3-shot breath
+            case 2:   // Maw — fast aimed 3-shot breath during its wind-up
+                // Cinder's motion owns three clear phases: telegraph, hard
+                // lunge, recover. Firing the same fast fan through all three
+                // made the apparent recovery a fake opening and reduced a
+                // close-range fight to projectile attrition. Keep the sharp
+                // three-lane breath, but restrict it to the visibly ticking
+                // wind-up; the lunge still threatens contact and recovery is
+                // the deliberate melee punish window.
+                if (e->state != 0) {
+                    cadence = 10; // poll the next motion phase without fire
+                    break;
+                }
                 d = aim_dir8(cx, cy);
-                boss_shot(cx, cy, d, 3, dmg);
-                boss_shot(cx, cy, (u8)((d + 1) & 7), 3, dmg);
-                boss_shot(cx, cy, (u8)((d + 7) & 7), 3, dmg);
-                cadence = 28;
+                boss_shot(cx, cy, d, 3, (u8)(dmg > 2 ? dmg - 2 : 1));
+                boss_shot(cx, cy, (u8)((d + 1) & 7), 3, (u8)(dmg > 2 ? dmg - 2 : 1));
+                boss_shot(cx, cy, (u8)((d + 7) & 7), 3, (u8)(dmg > 2 ? dmg - 2 : 1));
+                cadence = 34;
                 break;
-            case 3:   // Spider — alternating cardinal/diagonal web + aimed
+            case 3:   // Spider — alternating cardinal/diagonal web
+                // The Spider already changes the arena with a telegraphed
+                // blink. Layering a fast aimed bolt over every four-lane web
+                // erased the readable gap and made this movement lesson a
+                // projectile-tax fight. Keep the alternating web itself;
+                // its normal-speed lanes and slightly longer beat let the
+                // blink, dodge, and short-weapon re-engagement all matter.
                 for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
                     boss_shot(cx, cy, d, 2, dmg);
-                boss_shot(cx, cy, aim_dir8(cx, cy), 3, dmg);
-                cadence = 38;
+                cadence = 44;
                 break;
             case 4:   // Mire — chaotic scatter spray (random dir + speed)
                 for (k = 0; k < 6; ++k)
                     boss_shot(cx, cy, (u8)rng_range(8), (i8)(1 + rng_range(3)), dmg);
-                cadence = 26;
+                // Keep the full six-bolt, mixed-speed scatter identity, but
+                // leave a real lane-reading beat after each spray.  At 26
+                // frames this 255-HP boss repeatedly refilled the arena
+                // before a player could reposition; 34 remains bullet hell
+                // while making the gap actionable rather than attrition.
+                cadence = 34;
                 break;
             case 5:   // Reaper — 3-shot aimed burst, then a long pause
                 boss_shot(cx, cy, aim_dir8(cx, cy), 3, dmg);
@@ -639,7 +653,11 @@ static void boss_tick(entity_t *e) {
                 boss_shot(cx, cy, d, 3, dmg);
                 boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
                 boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
-                cadence = 24;
+                // The five mixed-speed streams remain Hydra's late-run
+                // bullet-hell identity. A 30-frame beat leaves enough room
+                // to read the 1/2/3-speed stack and cross one lane before
+                // the next wave, instead of refilling the arena at 24.
+                cadence = 30;
                 break;
             case 8:   // Void Lord — WORLD COLLAPSE, room-wide except one pocket
                 if (!e->ai_data[4]) {
@@ -661,6 +679,7 @@ static void boss_tick(entity_t *e) {
                     for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 3, dmg);
                     if ((u16)(dx + dy) > 20 && player.shield_timer == 0) {
                         u8 blast = (u8)(dmg + 4);
+                        if (RUN_IS_EASY()) blast = (u8)((blast + 1) >> 1);
                         player.hp = (player.hp > blast) ? (u8)(player.hp - blast) : 0;
                         player.iframes = 60;
                         hud_redraw_hp();
@@ -680,7 +699,10 @@ static void boss_tick(entity_t *e) {
                 break;
         }
 
-        e->ai_data[5]++;
+        // Void Lord reserves ai_data[5] for the announced safe-corner slot;
+        // rotating it after selection made the marker and resolved blast
+        // disagree by one corner. Other bosses retain their rotation counter.
+        if (e->ai_data[2] != 8) e->ai_data[5]++;
         // Enrage below half HP — only tighten the longer cadences so short
         // burst timers can't underflow.
         if (cadence > 34 && e->hp < (u8)(e->ai_data[6] >> 1))
@@ -692,11 +714,16 @@ static void boss_tick(entity_t *e) {
 // ---------------- Dispatch ----------------------------------------------
 
 void enemy_update(entity_t *e, u8 idx) BANKED {
-    const enemy_def_t *def = &enemies[e->ai_data[0]];
-    idx;
-    if (e->ai_data[0] == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
-    if (e->ai_data[0] == ENEMY_FLUTTERBAT) { flutterbat_tick(e); return; }
-    if (e->ai_data[0] == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
+    u8 id = e->ai_data[0];
+    const enemy_def_t *def = &enemies[id];
+    if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
+    if (id == ENEMY_HORNET && hornet_swarm_tick(e, idx)) return;
+    if (id == ENEMY_BLUE_CRAWLER
+        && e->ai_data[2] == ENEMY_AUX_OOZE_FRAGMENT) {
+        ooze_fragment_update(e, idx); return;
+    }
+    if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
+    if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
@@ -704,7 +731,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_SPINNER: spinner_update(e, def);           break;
         case AI_TELEPORT: teleport_tick(e, def);           break;
         case AI_TURRET:   turret_tick(e, def);             break;
-        case AI_REPLICATOR: replicator_tick(e, def);        break;
+        case AI_REPLICATOR: fold_star_update(e, def);        break;
         case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
         case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
         case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;

@@ -53,12 +53,29 @@ static const u8 sprite_fx_waykeeper[16] = {
     0x3C, 0x7E, 0x24, 0x3C, 0x24, 0x3C, 0x42, 0x42,
 };
 
+// Arrival-square Bellkeeper: hooded silhouette, hand rope, and a broad bronze
+// bell. It deliberately uses the apothecary slot only on this town screen;
+// the loader restores the normal resident atlas before the craft quarter.
+static const u8 sprite_fx_bellkeeper[16] = {
+    0x18, 0x18, 0x3C, 0x24, 0x5A, 0x66, 0x3C, 0x7E,
+    0x18, 0x7E, 0x3C, 0x7E, 0x24, 0x7E, 0x3C, 0x3C,
+};
+
 // Town Lorekeeper: hood, raised quill, and a bright open scroll. The arrival
 // square has no active Surge pickup, so its temporary-orb slot becomes a
 // distinct civic resident without growing the CGB's full OBJ atlas.
 static const u8 sprite_fx_lorekeeper[16] = {
     0x10, 0x10, 0x38, 0x28, 0x7C, 0x44, 0x5A, 0x66,
     0x3C, 0x7E, 0x2C, 0x3C, 0x52, 0x52, 0x42, 0x42,
+};
+
+// Arrival-only proximity cue for the Lorekeeper: an open scroll with a
+// bright rune, deliberately unlike the merchant's coin thought bubble. It
+// reuses that otherwise-idle OBJ slot and is replaced by trade art in market
+// rooms, so the village gains a readable lore interaction at no atlas cost.
+static const u8 sprite_fx_lore_callout[16] = {
+    0x3C, 0x00, 0x7E, 0x18, 0xC3, 0x24, 0xBD, 0x42,
+    0xBD, 0x42, 0xC3, 0x24, 0x7E, 0x18, 0x3C, 0x00,
 };
 
 void tiles_load_pickup_sprites(void) BANKED {
@@ -75,8 +92,16 @@ void tiles_load_town_waykeeper_sprite(void) BANKED {
     set_sprite_data(SPR_TOWN_WAYKEEPER, 1, sprite_fx_waykeeper);
 }
 
+void tiles_load_town_bellkeeper_sprite(void) BANKED {
+    set_sprite_data(SPR_TOWN_BELLKEEPER, 1, sprite_fx_bellkeeper);
+}
+
 void tiles_load_town_lorekeeper_sprite(void) BANKED {
     set_sprite_data(SPR_TOWN_LOREKEEPER, 1, sprite_fx_lorekeeper);
+}
+
+void tiles_load_town_lore_callout_sprite(void) BANKED {
+    set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_lore_callout);
 }
 
 void tiles_load_all_class_sprites(void) BANKED {
@@ -188,6 +213,18 @@ void tiles_load_vine_coil_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_VINE_COIL, 1, sprite_enemy_vine_coil);
 }
 
+void tiles_load_shard_crab_sprite(void) BANKED {
+    // Crystal Caverns has no other stage-specific slot-79 enemy, so the
+    // Shard Crab's shell silhouette reclaims the town-only tile for combat.
+    set_sprite_data(SPR_ENEMY_SHARD_CRAB, 1, sprite_enemy_shard_crab);
+}
+
+void tiles_load_void_halo_sprite(void) BANKED {
+    // Void Sanctum cannot host any other stage-local slot-79 specialist, so
+    // its wide orbit silhouette reuses the same phase-safe town tile.
+    set_sprite_data(SPR_ENEMY_VOID_HALO, 1, sprite_enemy_void_halo);
+}
+
 void tiles_load_merchant_callout_sprite(void) BANKED {
     set_sprite_data(SPR_MERCHANT_CALLOUT, 1, sprite_fx_merchant_callout);
 }
@@ -230,16 +267,9 @@ void tiles_load_fx_sprites(void) BANKED {
     tiles_load_merchant_callout_sprite();
     set_sprite_data(SPR_SURGE_ORB,  1, sprite_fx_surge_orb);
     set_sprite_data(SPR_SHIELD_AURA, 1, sprite_fx_shield_aura);
-    // Bold diagonal sweep: this is deliberately separate from the bullet
-    // pair so Wolfkin's melee attack reads as a physical claw/weapon arc,
-    // not an inexplicably slow ranged shot.
-    {
-        static const u8 swing[16] = {
-            0x03,0x03, 0x07,0x07, 0x0E,0x0E, 0x1C,0x1C,
-            0x38,0x38, 0x70,0x70, 0xE0,0xE0, 0xC0,0xC0,
-        };
-        set_sprite_data(SPR_FX_SWING, 1, swing);
-    }
+    // Wolfkin's physical attack is a readable steel sword, with a distinct
+    // point, blade, crossguard, and hilt—not a bullet or a tiny bare fist.
+    set_sprite_data(SPR_FX_SWING, 1, sprite_fx_sword);
 }
 
 // Compact hand-authored outdoor vocabulary. These are deliberately runtime
@@ -264,6 +294,22 @@ static const u8 bgt_fence[16] = {
 static const u8 bgt_tree[16] = {
     0x18,0x18, 0x7E,0x66, 0xFF,0xBD, 0xDB,0xFF,
     0x7E,0x66, 0x3C,0x24, 0x18,0x18, 0x18,0x00
+};
+static const u8 bgt_wild_flower[16] = {
+    0x00,0x00, 0x24,0x24, 0x18,0x18, 0x7E,0x24,
+    0x18,0x18, 0x24,0x24, 0x00,0x00, 0x10,0x00
+};
+static const u8 bgt_wild_water[16] = {
+    0x00,0x33, 0x66,0x99, 0xCC,0x33, 0x00,0x66,
+    0x33,0xCC, 0x99,0x66, 0x00,0x33, 0x66,0x99
+};
+static const u8 bgt_wild_stone[16] = {
+    0x18,0x18, 0x3C,0x24, 0x7E,0x42, 0x7E,0x5A,
+    0x7E,0x42, 0x7E,0x66, 0x3C,0x24, 0x18,0x18
+};
+static const u8 bgt_wild_stump[16] = {
+    0x00,0x00, 0x3C,0x3C, 0x7E,0x42, 0xFF,0xA5,
+    0x7E,0x5A, 0x3C,0x24, 0x3C,0x24, 0x7E,0x42
 };
 
 void tiles_load_dungeon_bg(void) BANKED {
@@ -292,4 +338,8 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_ROOF,     1, bgt_roof);
     set_bkg_data(BGT_FENCE,    1, bgt_fence);
     set_bkg_data(BGT_TREE,     1, bgt_tree);
+    set_bkg_data(BGT_WILD_FLOWER, 1, bgt_wild_flower);
+    set_bkg_data(BGT_WILD_WATER,  1, bgt_wild_water);
+    set_bkg_data(BGT_WILD_STONE,  1, bgt_wild_stone);
+    set_bkg_data(BGT_WILD_STUMP,  1, bgt_wild_stump);
 }

@@ -10,12 +10,22 @@ SRCDIR  = src
 OBJDIR  = obj
 BINDIR  = rom/working
 GENDIR  = $(SRCDIR)/generated
+# External PyBoy curriculum checkpoints are developer artifacts, never ROM or
+# SRAM data. Rebuild them after every linked cartridge so a tester never gets
+# an emulator state whose manifest belongs to the previous ROM bytes.
+STATE_OUT ?= $(CURDIR)/tmp/stage-states
+TIMED_STATE_OUT ?= $(CURDIR)/tmp/timed-states
+TIMED_MINUTES ?= 30
+TIMED_STATE_START ?= $(STATE_OUT)/quintra-stage-04-entry-wolfkin-easy.pyboy
+TIMED_CHECKPOINT ?= 30
 
 # Keep uv self-contained inside the ignored workspace cache. Linked worktrees
 # may expose a read-only home cache, and verification should never require
 # system installs or writable global state.
 UV_CACHE_DIR ?= $(CURDIR)/tmp/uv-cache
 export UV_CACHE_DIR
+PYBOY_SPEC ?= pyboy==2.7.0
+PYBOY_RUN = uv run --quiet --with "$(PYBOY_SPEC)" python
 
 # All .c under src/ (including generated)
 # Link order affects autobank placement and therefore the ROM hash. `find`
@@ -37,7 +47,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing picsean-endurance victory-proof final-sigil-proof media media-check play info check-balance-bot agent-events stall-maps
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-timed-state info check-balance-bot agent-events stall-maps stage-states timed-states
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -45,6 +55,8 @@ all: gen
 	@$(MAKE) --no-print-directory build
 
 build: dirs $(BINDIR)/$(PROJECT).gbc
+	@$(PYBOY_RUN) scripts/make_stage_states.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(STATE_OUT)"
 
 dirs:
 	@mkdir -p $(OBJDIR) $(BINDIR) $(GENDIR)
@@ -111,6 +123,8 @@ test: all
 # headless gameplay smoke (pixel + state asserts), and the cross-seam
 # procgen parity check (Rust reference vs the ROM's WRAM).
 verify: all check-balance-bot
+	bash scripts/capture_media.sh $(BINDIR)/$(PROJECT).gbc
+	python3 scripts/check_media.py $(BINDIR)/$(PROJECT).gbc
 	python3 scripts/report_budget.py $(BINDIR)/$(PROJECT)
 	python3 scripts/check_cartridge.py $(BINDIR)/$(PROJECT).gbc
 	cargo test -q
@@ -118,8 +132,10 @@ verify: all check-balance-bot
 	bash scripts/test_smoke.sh
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 	uv run --quiet --with pyboy python scripts/test_town.py
+	$(PYBOY_RUN) scripts/test_town_compass.py
 	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
+	$(PYBOY_RUN) scripts/test_procgen_variety.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
@@ -131,26 +147,55 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_performance.py
 	uv run --quiet --with pyboy python scripts/test_run_clock.py
 	uv run --quiet --with pyboy python scripts/test_compass_map.py
+	$(PYBOY_RUN) scripts/test_difficulty_mode.py
+	$(PYBOY_RUN) scripts/test_boss_threshold.py
+	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py
+	uv run --quiet --with pyboy python scripts/test_full_mp_hud.py
+	$(PYBOY_RUN) scripts/test_pyboy_env.py
+	python3 scripts/test_playtest_report.py
+	$(PYBOY_RUN) scripts/test_stage_states.py
+	$(PYBOY_RUN) scripts/test_puzzles.py
+	$(PYBOY_RUN) scripts/test_transition_audio.py
+	$(PYBOY_RUN) scripts/test_timed_states.py
+	$(PYBOY_RUN) scripts/test_controller_policy.py
 	uv run --quiet --with pyboy python scripts/test_title_version.py
 	uv run --quiet --with pyboy python scripts/test_boss_identity.py
+	uv run --quiet --with pyboy python scripts/test_boss_movement.py
+	$(PYBOY_RUN) scripts/test_colossal_crystal.py
+	$(PYBOY_RUN) scripts/test_colossal_serpent.py
+	$(PYBOY_RUN) scripts/test_colossal_cinder.py
+	$(PYBOY_RUN) scripts/test_colossal_spider.py
+	$(PYBOY_RUN) scripts/test_colossal_mire.py
+	$(PYBOY_RUN) scripts/test_colossal_reaper.py
+	$(PYBOY_RUN) scripts/test_colossal_golem.py
+	$(PYBOY_RUN) scripts/test_colossal_hydra.py
+	$(PYBOY_RUN) scripts/test_colossal_void.py
 	uv run --quiet --with pyboy python scripts/test_void_collapse.py
 	uv run --quiet --with pyboy python scripts/test_boss_rewards.py
 	uv run --quiet --with pyboy python scripts/test_convergence_boss_cap.py
 	uv run --quiet --with pyboy python scripts/test_convergence_transform.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
+	bash scripts/test_enemy_coverage_config.sh
+	uv run --quiet --with pyboy python scripts/test_hornet_swarm.py
+	uv run --quiet --with pyboy python scripts/test_ooze_cycle.py
+	uv run --quiet --with pyboy python scripts/test_ember_movement_roster.py
 	uv run --quiet --with pyboy python scripts/test_dusk_midge.py
 	uv run --quiet --with pyboy python scripts/test_cinder_kite.py
 	uv run --quiet --with pyboy python scripts/test_bog_toad.py
 	uv run --quiet --with pyboy python scripts/test_frost_lancer.py
 	uv run --quiet --with pyboy python scripts/test_bramble_sprite.py
+	uv run --quiet --with pyboy python scripts/test_shard_crab.py
+	uv run --quiet --with pyboy python scripts/test_void_halo.py
 	uv run --quiet --with pyboy python scripts/test_sunwheel.py
 	uv run --quiet --with pyboy python scripts/test_bellwarden.py
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py
 	uv run --quiet --with pyboy python scripts/test_score.py
+	uv run --quiet --with pyboy python scripts/test_block_lower_edge.py
 	uv run --quiet --with pyboy python scripts/test_doors.py
 	uv run --quiet --with pyboy python scripts/test_rift_sigil.py
 	uv run --quiet --with pyboy python scripts/test_stage8_sigil_path.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
+	$(PYBOY_RUN) scripts/test_riftwild_landmarks.py
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
@@ -163,16 +208,26 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_sauran_regen.py
 	uv run --quiet --with pyboy python scripts/test_surge.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc
+	uv run --quiet --with pyboy python scripts/test_miniboss_spawn_reach.py
 	bash scripts/test_rift_sigil_pathing.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sigil_sanctuary_return.sh $(BINDIR)/$(PROJECT).gbc
-	bash scripts/test_picsean_riftwild_guard.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_picsean_victory_replay.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_weapon_trade_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_town_continuation.sh $(BINDIR)/$(PROJECT).gbc
-	bash scripts/test_wolfkin_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_wolfkin_cadence_policy.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_wolfkin_leech_lane.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_wolfkin_unsealed_exit.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_giant_wall_dash.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_balance_observation_trace.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_picsean_convergence_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_wolfkin_mire_entry.sh $(BINDIR)/$(PROJECT).gbc
-	bash scripts/test_wolfkin_leech_edge_escape.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_boss_relic_collection.sh $(BINDIR)/$(PROJECT).gbc
+	uv run --quiet --with pyboy python scripts/test_leech_detach.py
 	bash scripts/test_sauran_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_sauran_miniboss_guard.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_sauran_frost_miniboss_lane.sh $(BINDIR)/$(PROJECT).gbc
+	bash scripts/test_sauran_open_room_exit.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_sauran_rope_policy.sh $(BINDIR)/$(PROJECT).gbc
-	bash scripts/test_sauran_edge_lane.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_death_telemetry.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_corvin_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_corvin_spore_policy.sh $(BINDIR)/$(PROJECT).gbc
@@ -180,7 +235,6 @@ verify: all check-balance-bot
 	bash scripts/test_vespine_boss_policy.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_vespine_flutterbat_pathing.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_vespine_rope_escape.sh $(BINDIR)/$(PROJECT).gbc
-	bash scripts/test_vespine_mirror_moth.sh $(BINDIR)/$(PROJECT).gbc
 	bash scripts/test_balance_replay.sh $(BINDIR)/$(PROJECT).gbc
 
 # Release/hardware gate: static cartridge header plus a true battery-backed
@@ -233,15 +287,14 @@ policy-sweep: all check-balance-bot
 # Long-form pre-show soak: three entropy samples per champion and enough
 # emulated time for a cautious full clear. Every champion must clear twice;
 # missing reports, skipped economies, and live-enemy/route stalls fail the target.
-# Every released enemy ID through Verdant Hollow's Vine Coil (30 total) must
-# appear in the fresh controller matrix. This prevents a passing soak from
-# silently omitting a newly released procedural encounter from coverage.
+# Every generated enemy ID must appear in the fresh controller matrix. The
+# list is derived from codegen, so a new monster cannot be silently omitted.
 endurance: all check-balance-bot
 	QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_FRAMES=90000 \
 	QUINTRA_BALANCE_MIN_WINS=2 QUINTRA_BALANCE_MIN_SHOP_RUNS=3 \
 	QUINTRA_BALANCE_MAX_COMBAT_STALLS=0 \
 	QUINTRA_BALANCE_MAX_ROUTE_STALLS=0 QUINTRA_BALANCE_MAX_WORLD_HOPS=150 \
-	QUINTRA_BALANCE_REQUIRED_ENEMIES='0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29' \
+	QUINTRA_BALANCE_REQUIRED_ENEMIES="$$(bash scripts/released_enemy_ids.sh)" \
 	QUINTRA_BALANCE_STALL_FRAMES=7200 \
 	QUINTRA_BALANCE_OUT=$(CURDIR)/tmp/endurance-runs.csv \
 	bash scripts/run_balance_bot.sh $(BINDIR)/$(PROJECT).gbc
@@ -264,6 +317,25 @@ boss-pacing: fixed-controller-matrix
 		report $(CURDIR)/tmp/fixed-controller-matrix.csv --runs 1 --classes 5 \
 		--min-wins 0 --min-shop-runs 0 --stall-frames 999999
 
+# Quick external-policy diagnostic over all progression-matched live bosses.
+# This is not a delivery balance gate: the mGBA controller/replay remains the
+# authoritative whole-run evidence, while this catches PyBoy curriculum and
+# observation regressions (walkability, class identity, projectile lanes).
+AUDIT_DIFFICULTY ?= normal
+boss-curriculum-audit: stage-states
+	@$(PYBOY_RUN) scripts/audit_boss_curriculum.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --state-dir "$(STATE_OUT)" \
+		--difficulty "$(AUDIT_DIFFICULTY)"
+
+# Complement the giant sample with the ordinary room at each progression-
+# matched Normal stage entry. Reports exits, deaths, HP loss, density, and
+# projectile pressure independently so boss and room tuning cannot mask one
+# another.
+room-curriculum-audit: stage-states
+	@$(PYBOY_RUN) scripts/audit_room_curriculum.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --state-dir "$(STATE_OUT)" \
+		--difficulty "$(AUDIT_DIFFICULTY)"
+
 # Four completed Picsean seeds; complements the all-class soak above.
 picsean-endurance: all check-balance-bot
 	bash scripts/test_picsean_endurance.sh $(BINDIR)/$(PROJECT).gbc
@@ -279,6 +351,51 @@ final-sigil-proof: all check-balance-bot
 # Human play
 play: all
 	@bash mgba-qt.sh $(BINDIR)/$(PROJECT).gbc
+
+# External emulator fixtures for testing/RL at dungeon, post-boss Riftwild,
+# and village milestones. These are PyBoy save states in tmp/, never ROM or
+# battery-SRAM data. `build` refreshes the
+# requested output after the ROM link; this target remains a discoverable
+# explicit command and accepts STATE_OUT for an alternate curriculum set.
+stage-states: all
+
+# Controller-driven periodic capture. The default begins from the plausible
+# stage-four Wolfkin Easy curriculum and emits a fresh PyBoy checkpoint every
+# five emulated minutes for thirty minutes. If an entire interval makes no
+# forward progress, the external trainer records a manifest-bound advance to
+# the next stage entry rather than publishing six copies of one stuck room.
+timed-states: all
+	@$(PYBOY_RUN) scripts/run_pyboy_checkpoints.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(TIMED_STATE_OUT)" \
+		--state "$(TIMED_STATE_START)" \
+		--minutes "$(TIMED_MINUTES)" --checkpoint-minutes 5
+
+# Open a manifest-verified external checkpoint for hands-on deep testing.
+# Closing the window writes passive room/HP/map/boss timing telemetry under
+# tmp/human-playtests; the observer never supplies input or mutates cartridge
+# state. Set PLAYTEST_REPORT_DIR to retain the JSON somewhere else.
+# Examples: `make play-state STAGE=3`,
+# `make play-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran`,
+# `make play-state STAGE=7 CHECKPOINT=boss HERO=sauran`, or
+# `make play-state STAGE=1 CHECKPOINT=riftwild DIFFICULTY=easy`, or
+# `make play-state STAGE=3 CHECKPOINT=village DIFFICULTY=easy`.
+STAGE ?= 1
+DIFFICULTY ?= normal
+CHECKPOINT ?= entry
+HERO ?= wolfkin
+PLAYTEST_REPORT_DIR ?= $(CURDIR)/tmp/human-playtests
+play-state:
+	@$(PYBOY_RUN) scripts/play_stage_state.py --rom "$(BINDIR)/$(PROJECT).gbc" \
+		--state-dir "$(STATE_OUT)" --stage "$(STAGE)" --difficulty "$(DIFFICULTY)" \
+		--checkpoint "$(CHECKPOINT)" --champion "$(HERO)" \
+		--report-dir "$(PLAYTEST_REPORT_DIR)"
+
+# Open one of the controller-produced five-minute checkpoints without a ROM
+# rebuild. The manifest rejects stale cartridge, PyBoy, or state bytes; the
+# same readiness pause and passive human report used by play-state apply here.
+play-timed-state:
+	@$(PYBOY_RUN) scripts/play_timed_state.py --rom "$(BINDIR)/$(PROJECT).gbc" \
+		--state-dir "$(TIMED_STATE_OUT)" --minutes "$(TIMED_CHECKPOINT)"
 
 info:
 	@echo "Quintra build info:"

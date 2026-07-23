@@ -119,11 +119,12 @@ screen_id_t victory_tick(u8 keys, u8 pressed) {
         }
         return SCREEN_TITLE;
     }
-    // Endless descent: keep the run. The boss room regenerates as a
-    // normal room (counter/6 no longer exceeds bosses_beaten), doors
-    // open, and every 6th room from here is a max-scaled colossus.
+    // Endless descent keeps the run but resumes in Riftwild. Explicit stage
+    // topology clamps boss identity at stage nine, so regenerating room 118
+    // would simply rebuild the sealed Void arena and trap the champion.
     if ((pressed & J_A) && ending_beat >= 3) {
         run_state.victory = 0;
+        run_state_begin_world();
         return SCREEN_ROOM;
     }
     return SCREEN_SELF;

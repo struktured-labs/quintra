@@ -6,6 +6,7 @@
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
+#include "audio/audio.h"
 #include "audio/music.h"
 #include "audio/sfx.h"
 #include "core/types.h"
@@ -18,6 +19,7 @@
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/projectile.h"
+#include "game/puzzle.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/sram.h"
@@ -55,7 +57,14 @@ static u8 stage_fade;
 static u8 hostiles_prev;
 static u8 hostiles_now;
 static u8 door_bump_cd;
+static u8 boss_threshold_warned;
 static u8 shop_offer_visible;
+// Cinder's projected furnace face only uploads its two animated tiles when
+// the existing wind-up/lunge/recovery state actually changes.
+static u8 cinder_projection_state = 0xFF;
+// Toxic Mire's BG organism redraws only when the boss changes pulse phase.
+// 0xFF forces the first live frame to reconcile VRAM with the entity state.
+static u8 mire_projection_state = 0xFF;
 // Set once when a room is generated.  Price proximity must never put a
 // 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
 static u8 room_has_shop_wares;
@@ -88,6 +97,10 @@ static i8 dash_dx, dash_dy;
 // committed hold becomes a cooldown-gated Max Strike dash.
 static u8 wolfkin_a_hold;
 static u8 wolfkin_max_cd;
+// Room transitions grant real invulnerability so a generated arrival cannot
+// immediately trade into a hostile. It is safety rather than damage, so it
+// must not inherit the alternating invisible damage-flicker.
+static u8 arrival_sprite_grace;
 // Spirit Convergence lasts 135 eighth-second ticks (~18 seconds). Keeping the
 // timer here avoids inflating suspend-save payloads; ordinary room transitions
 // do not reset it.
@@ -149,30 +162,75 @@ static u8 room_stage(void) {
     return (s < N_STAGES) ? s : (u8)(s % N_STAGES);
 }
 
-// One ordinary seal encounter per six-room dungeon, selected by the run seed,
-// plus the authored miniboss and boss. Shops, sanctuaries, towns, Riftwild,
-// and the opening room remain fleeable. This preserves the satisfying Zelda
-// arena-clear beat without turning every generated room into a compulsory
-// extermination chamber.
-static u8 room_should_combat_seal(void) {
-    u8 local;
-    u8 chosen;
-    if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)) return 0;
-    local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
-    if (local == 0) return run_state.room_counter ? 1 : 0;
-    if (local == 3) return 1;
-    if (local >= 4) return 0;
-    chosen = (u8)(1 + ((run_state.run_seed
-        ^ (u32)(run_state.bosses_beaten * 0x5D)) & 1));
-    return (local == chosen) ? 1 : 0;
+// Penta Dragon's memorable giants are arenas as much as sprites. The GBC has
+// only 40 hardware sprites and the existing 32x32 weak point already uses 16,
+// so all nine authored bosses project larger bodies into the BG plane.
+// The body is visual/lore space—only the mobile OBJ core is vulnerable or
+// collidable.
+static void room_apply_colossal_arena(void) {
+    if (!procgen_current_room_is_boss) return;
+    if (room_stage() == 0) {
+        tiles_paint_crystal_projection();
+        return;
+    }
+    if (room_stage() == 1) {
+        // Verdant's mobile OBJ is the vulnerable head; its coiled storm body
+        // fills the arena without changing rebound collision or shot lanes.
+        tiles_paint_serpent_projection();
+        return;
+    }
+    if (room_stage() == 2) {
+        // Ember's furnace-beast fills the arena while the original core owns
+        // the same telegraphed breath, hard lunge, and recovery opening.
+        tiles_paint_cinder_projection();
+        cinder_projection_state = 0xFF;
+        return;
+    }
+    if (room_stage() == 3) {
+        // Frost's astral web-spider fills the arena while the original weak
+        // point keeps its telegraphed flank blink and four-lane web attack.
+        tiles_paint_spider_projection();
+        return;
+    }
+    if (room_stage() == 4) {
+        // The Mire begins clenched around its mobile OBJ heart. Its existing
+        // 48-beat movement state later drives the full 64x48 <-> 96x64 pulse.
+        tiles_paint_mire_projection(0, 0);
+        mire_projection_state = 0xFF;
+        return;
+    }
+    if (room_stage() == 5) {
+        // Shadow's giant spectral cloak phases around the original weak point,
+        // which keeps its warned hunt and flank re-entry behavior.
+        tiles_paint_reaper_projection();
+        return;
+    }
+    if (room_stage() == 6) {
+        // Golden Temple's guardian is a monumental carved idol around the
+        // same moving OBJ heart that owns its heavy ring and damage contract.
+        tiles_paint_golem_projection();
+        return;
+    }
+    if (room_stage() == 7) {
+        // Bloodmoon's three-headed coil fills the late arena while its
+        // original OBJ core keeps the proven broad weave and damage window.
+        tiles_paint_hydra_projection();
+        return;
+    }
+    if (room_stage() == 8) tiles_paint_void_projection();
+}
+
+static void room_prepare_puzzle_role(void) {
+    puzzle_prepare_room();
+    room_combat_sealed = (room_puzzle_kind != PUZZLE_NONE)
+        ? 0 : puzzle_combat_seal_policy();
 }
 
 // Store availability is a room property, not an every-frame discovery job.
 // This is refreshed on both full room entry and the in-place door/portal
 // regeneration paths.
 static u8 room_state_has_shop_wares(void) {
-    return (!run_state.world_mode
-            && (run_state.room_counter % ROOMS_PER_STAGE) == 4)
+    return run_state_is_shop()
         // The Cartographer sells a Chart in the arrival square too. Keep all
         // town shelves on the same proximity-HUD path so no paid ware looks
         // like a mysterious loose pickup.
@@ -195,13 +253,15 @@ static void room_load_dynamic_fx_identity(void) {
     // stage specialist first, then let a town resident reclaim its tile in
     // the town-specific loader.
     if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-        if (room_stage() == 1) tiles_load_vine_coil_sprite();
+        if (room_stage() == 0) tiles_load_shard_crab_sprite();
+        else if (room_stage() == 1) tiles_load_vine_coil_sprite();
         else if (room_stage() == 2) tiles_load_cinder_kite_sprite();
         else if (room_stage() == 3) tiles_load_frost_lancer_sprite();
         else if (room_stage() == 4) tiles_load_bog_toad_sprite();
         else if (room_stage() == 5) tiles_load_bramble_sprite();
         else if (room_stage() == 6) tiles_load_sunwheel_sprite();
-        else tiles_load_dusk_midge_sprite();
+        else if (room_stage() == 7) tiles_load_dusk_midge_sprite();
+        else tiles_load_void_halo_sprite();
     }
     // Chartwright occupies this slot only in towns. Dungeon rooms reclaim it
     // for Astral Spear; no gameplay population can require both at once.
@@ -217,9 +277,17 @@ static void room_load_dynamic_fx_identity(void) {
 
 static void room_load_town_resident_identity(void) {
     if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) return;
+    // The Bellkeeper borrows the apothecary's slot on arrival. Restore the
+    // ordinary resident atlas on every town screen first, then apply only
+    // the screen-local identities below so a craft-quarter apothecary can
+    // never inherit the bell art after a lateral transition.
+    tiles_load_pickup_sprites();
     tiles_load_town_waykeeper_sprite();
-    if (run_state.world_return_screen == TOWN_ARRIVAL)
+    if (run_state.world_return_screen == TOWN_ARRIVAL) {
+        tiles_load_town_bellkeeper_sprite();
         tiles_load_town_lorekeeper_sprite();
+        tiles_load_town_lore_callout_sprite();
+    }
 }
 
 // Progression fixtures belong to room orchestration, after procgen has fully
@@ -227,13 +295,14 @@ static void room_load_town_resident_identity(void) {
 // from accidentally erasing a required key and makes the invariant testable.
 void room_spawn_progression_fixture(void) BANKED {
     u8 i;
+    room_apply_colossal_arena();
     room_sigil_status = 1;
     if (run_state.world_mode) return;
     room_sigil_status = 2;
     // Each six-room dungeon puts its persistent objective in local room 2.
     // This must be modulo-based: stage two and beyond have their own Sigil,
     // rather than inheriting the opening dungeon's one-time fixture.
-    if ((run_state.room_counter % ROOMS_PER_STAGE) != 2) return;
+    if (run_state_dungeon_local() != 2) return;
     room_sigil_status = 3;
     if (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) return;
@@ -361,9 +430,10 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
 
 u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
-         || t == BGT_GRASS || t == BGT_PATH
+         || t == BGT_GRASS || t == BGT_PATH || t == BGT_WILD_FLOWER
          || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES
          || t == BGT_SWITCH || t == BGT_PORTAL
+         || (t >= BGT_COLOSSUS_VOID && t <= BGT_COLOSSUS_HORN)
          // Shop price tags are painted floor (coin glyph + digits)
          || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
 }
@@ -372,9 +442,14 @@ static u8 is_walkable_at(i16 px, i16 py) {
     return room_tile_walkable(room_tile_at_px(px, py));
 }
 
-static u8 is_block_at(i16 px, i16 py) {
+// Most scenery deliberately uses a Zelda-style feet collision box, allowing
+// the upper sprite to overlap a wall.  Crates and the small stone pillars are
+// physical objects, though: entering either through its lower edge looks like
+// clipping through it.  Treat their whole visible body as solid.
+static u8 is_full_body_obstacle_at(i16 px, i16 py) {
     u8 t = room_tile_at_px(px, py);
-    return (t == BGT_BLOCK || t == BGT_BLOCK_TR
+    return (t == BGT_PILLAR
+         || t == BGT_BLOCK || t == BGT_BLOCK_TR
          || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
 }
 
@@ -474,20 +549,43 @@ static void room_apply_pause_palettes(u8 dim) {
     }
 }
 
-// Rewrite the 4 cardinal door tiles after a boss seal is lifted.
+// Rewrite authored cardinal thresholds after a seal is lifted. Ordinary graph
+// cells must not gain fake doors into nonexistent neighbours; a cleared boss
+// deliberately opens every edge because any threshold descends to Riftwild.
 // Called at the top of vblank so the handful of VRAM writes land safely.
 static void room_unseal_doors(void) {
-    static const u8 dxs[8] = { 9, 10, 9, 10, 0, 0, ROOM_W - 1, ROOM_W - 1 };
-    static const u8 dys[8] = { 0, 0, ROOM_H - 1, ROOM_H - 1, 8, 9, 8, 9 };
-    u8 i;
-    for (i = 0; i < 8; ++i) room_tilemap[dys[i]][dxs[i]] = BGT_DOOR;
+    static const u8 dxs[4][2] = {
+        { 9, 10 }, { ROOM_W - 1, ROOM_W - 1 },
+        { 9, 10 }, { 0, 0 },
+    };
+    static const u8 dys[4][2] = {
+        { 0, 0 }, { 8, 9 },
+        { ROOM_H - 1, ROOM_H - 1 }, { 8, 9 },
+    };
+    u8 dir, half;
+    for (dir = 0; dir < 4; ++dir) {
+        if (!run_state_was_cleared_boss()
+            && run_state_dungeon_neighbor(dir) == 0xFF) continue;
+        for (half = 0; half < 2; ++half)
+            room_tilemap[dys[dir][half]][dxs[dir][half]] = BGT_DOOR;
+    }
     wait_vbl_done();
     {
         u8 door = BGT_DOOR, attr = BGPAL_DOOR;
         VBK_REG = 0;
-        for (i = 0; i < 8; ++i) set_bkg_tiles(dxs[i], dys[i], 1, 1, &door);
+        for (dir = 0; dir < 4; ++dir) {
+            if (!run_state_was_cleared_boss()
+                && run_state_dungeon_neighbor(dir) == 0xFF) continue;
+            for (half = 0; half < 2; ++half)
+                set_bkg_tiles(dxs[dir][half], dys[dir][half], 1, 1, &door);
+        }
         VBK_REG = 1;
-        for (i = 0; i < 8; ++i) set_bkg_tiles(dxs[i], dys[i], 1, 1, &attr);
+        for (dir = 0; dir < 4; ++dir) {
+            if (!run_state_was_cleared_boss()
+                && run_state_dungeon_neighbor(dir) == 0xFF) continue;
+            for (half = 0; half < 2; ++half)
+                set_bkg_tiles(dxs[dir][half], dys[dir][half], 1, 1, &attr);
+        }
         VBK_REG = 0;
     }
 }
@@ -552,9 +650,15 @@ static u8 attr_for_tile(u8 t) {
         case BGT_PILLAR:
         case BGT_ROOF:
         case BGT_FENCE:
-        case BGT_TREE:    return BGPAL_WALL;
+        case BGT_TREE:
+        case BGT_WILD_STONE: return BGPAL_WALL;
         case BGT_WALL_CRACK:
-        case BGT_SPIKES:  return BGPAL_CRACK;   // amber danger signal
+        case BGT_SPIKES:
+        case BGT_BOSS_GATE_L:
+        case BGT_BOSS_GATE_R:
+        case BGT_BOSS_GATE_TOP:
+        case BGT_BOSS_GATE_BOTTOM:
+            return BGPAL_CRACK;   // amber danger signal
         case BGT_BLOCK:
         case BGT_BLOCK_TR:
         case BGT_BLOCK_BL:
@@ -563,10 +667,26 @@ static u8 attr_for_tile(u8 t) {
         case BGT_POT:
         case BGT_SWITCH:  return BGPAL_DOOR;      // gold-ish, reads as interactive
         case BGT_CRYSTAL:
-        case BGT_PORTAL:  return BGPAL_CRYSTAL;
-        case BGT_DOOR:    return room_combat_sealed ? BGPAL_CRACK : BGPAL_DOOR;
+        case BGT_PORTAL:
+        case BGT_WILD_FLOWER:
+        case BGT_WILD_WATER: return BGPAL_CRYSTAL;
+        case BGT_WILD_STUMP: return BGPAL_DOOR;
+        case BGT_DOOR:    return (room_combat_sealed || room_puzzle_locked)
+                                  ? BGPAL_CRACK : BGPAL_DOOR;
         case BGT_GRASS:
         case BGT_PATH:    return BGPAL_FLOOR;
+        case BGT_COLOSSUS_SCALE:
+        case BGT_COLOSSUS_EDGE_L:
+        case BGT_COLOSSUS_EDGE_R:
+        case BGT_COLOSSUS_HORN:
+            return BGPAL_WALL;
+        case BGT_COLOSSUS_VOID:
+        case BGT_COLOSSUS_RUNE:
+        case BGT_COLOSSUS_MAW:
+            return BGPAL_CRYSTAL;
+        case BGT_COLOSSUS_EYE:
+        case BGT_COLOSSUS_FANG:
+            return BGPAL_CRACK;
         default:
             // Shop price tags glow amber (crack palette) for readability
             if (t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9)) {
@@ -576,6 +696,47 @@ static u8 attr_for_tile(u8 t) {
     }
 }
 
+static u8 room_door_direction(u8 x, u8 y) {
+    if (y == 0) return DIR_N;
+    if (x == ROOM_W - 1) return DIR_E;
+    if (y == ROOM_H - 1) return DIR_S;
+    if (x == 0) return DIR_W;
+    return DIR_NONE;
+}
+
+static void room_hold_at_door(u8 dir, u8 sound, u8 shake_frames) {
+    if (dir == DIR_N) player.y = 0;
+    else if (dir == DIR_S) player.y = 120;
+    else if (dir == DIR_W) player.x = 0;
+    else player.x = 144;
+    if (door_bump_cd == 0) {
+        door_bump_cd = 20;
+        sfx_play(sound);
+        room_shake(1, shake_frames);
+    }
+}
+
+static u8 is_forward_boss_door(u8 x, u8 y, u8 tile) {
+    u8 dir;
+    if (tile != BGT_DOOR || run_state.world_mode
+        || RUN_ROOM_IS_TOWN(run_state.room_counter)) return 0;
+    dir = room_door_direction(x, y);
+    if (dir == DIR_NONE) return 0;
+    return run_state_dungeon_neighbor(dir)
+        == run_state_boss_room(run_state.bosses_beaten);
+}
+
+static u8 attr_for_room_tile(u8 x, u8 y, u8 tile) {
+    // The paired phase gate uses ordinary pillar/floor geometry with a
+    // persistent dungeon color. This keeps collision simple while making a
+    // switch in one room visibly raise/lower the wall in the next.
+    if (room_puzzle_kind == PUZZLE_PHASE_GATE
+        && y == room_puzzle_visual_y && x >= 2 && x < ROOM_W - 2)
+        return (run_state.dungeon_phase & RUN_PHASE_OPEN_BIT)
+            ? BGPAL_CRYSTAL : BGPAL_CRACK;
+    return attr_for_tile(tile);
+}
+
 // One-shot puzzle payoff shared by hero-pressed and crate-pressed plates.
 // The pressure plates are deliberately placed at x=7 or x=12 by procgen:
 // opening the matching two-wide north-wall gap therefore never overlaps the
@@ -583,7 +744,10 @@ static u8 attr_for_tile(u8 t) {
 // a side passage to the generated secret cache -- instead of a loose coin
 // that makes the nearby cairn read as an arbitrary movable prop.
 static void activate_switch(u8 tx, u8 ty) {
-    room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
+    // A cairn already occupies the plate when the legitimate solve arrives;
+    // do not punch an invisible floor quadrant through its freshly moved art.
+    if (room_tilemap[ty][tx] == BGT_SWITCH)
+        room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
     room_open_secret(tx, 0);
     sfx_play(SFX_PUZZLE);
 }
@@ -591,16 +755,37 @@ static void activate_switch(u8 tx, u8 ty) {
 static void draw_room_tilemap(void) {
     u8 x, y;
     u8 attr_row[ROOM_W];
+    u8 tile_row[ROOM_W];
     for (y = 0; y < ROOM_H; ++y) {
         // Tile indices (VRAM bank 0)
+        for (x = 0; x < ROOM_W; ++x)
+            tile_row[x] = room_tilemap[y][x];
         VBK_REG = 0;
-        set_bkg_tiles(0, y, ROOM_W, 1, room_tilemap[y]);
+        set_bkg_tiles(0, y, ROOM_W, 1, tile_row);
         // Palette attributes (VRAM bank 1)
-        for (x = 0; x < ROOM_W; ++x) attr_row[x] = attr_for_tile(room_tilemap[y][x]);
+        for (x = 0; x < ROOM_W; ++x)
+            attr_row[x] = attr_for_room_tile(x, y, room_tilemap[y][x]);
         VBK_REG = 1;
         set_bkg_tiles(0, y, ROOM_W, 1, attr_row);
     }
+    // The banked renderer scans only the four edges once, then projects the
+    // 16x16 seal over every forward threshold. Keeping presentation code out
+    // of this crowded bank preserves the cartridge headroom floor.
+    tiles_draw_boss_cue(run_state.entered_from);
+    // Colossal arenas may breathe through a bounded 0..3px camera drift.
+    // Populate the first offscreen column and row with wall art so Crystal,
+    // Serpent, and Void never expose stale streamed-room VRAM at the right or
+    // bottom edge. Keeping this common to every boss also makes future
+    // stage-specific camera choreography safe by construction.
+    if (procgen_current_room_is_boss) {
+        tiles_prepare_colossal_edges();
+    }
     VBK_REG = 0;
+    // Compose the outdoor identity after ordinary terrain. It remains a
+    // display-only overlay: room_tilemap still owns grass/path collision.
+    if (run_state.world_mode) tiles_draw_area_label(1);
+    else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
+        tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
 }
 
 // A 20-tile room is wider than half the 32-tile BG map, so two complete
@@ -608,26 +793,59 @@ static void draw_room_tilemap(void) {
 // first 12 destination columns at map x=20..31; once the first 8 source
 // columns have scrolled offscreen, recycle x=0..7 for the remaining columns.
 // This is the same streamed-map trick used by hardware-era room scrollers.
+// Both axes share the same hidden destination staging: LCD-off writes are
+// safe at any time and avoid spending one VBlank per row before the motion.
+static void room_stage_columns(u8 dst_x, u8 src_x, u8 width) {
+    u8 y, x, attrs[12];
+    DISPLAY_OFF;
+    for (y = 0; y < ROOM_H; ++y) {
+        for (x = 0; x < width; ++x)
+            attrs[x] = attr_for_room_tile((u8)(src_x + x), y,
+                room_tilemap[y][(u8)(src_x + x)]);
+        VBK_REG = 0; set_bkg_tiles(dst_x, y, width, 1, &room_tilemap[y][src_x]);
+        VBK_REG = 1; set_bkg_tiles(dst_x, y, width, 1, attrs);
+    }
+    VBK_REG = 0;
+    DISPLAY_ON;
+}
+
+static void room_stage_rows(u8 dst_y, u8 src_y, u8 height) {
+    u8 row, x, attrs[ROOM_W];
+    DISPLAY_OFF;
+    for (row = 0; row < height; ++row) {
+        u8 y = (u8)(src_y + row);
+        for (x = 0; x < ROOM_W; ++x)
+            attrs[x] = attr_for_room_tile(x, y, room_tilemap[y][x]);
+        VBK_REG = 0; set_bkg_tiles(0, (u8)(dst_y + row), ROOM_W, 1, room_tilemap[y]);
+        VBK_REG = 1; set_bkg_tiles(0, (u8)(dst_y + row), ROOM_W, 1, attrs);
+    }
+    VBK_REG = 0;
+    DISPLAY_ON;
+}
+
+// Slides are blocking room-code loops, so the outer game loop cannot reach
+// audio_tick() while they run. Advance the sequencers on each real VBlank;
+// otherwise CH2/CH3 sustain one stale note for the entire transition.
+static void room_transition_vbl(void) {
+    wait_vbl_done();
+    audio_tick();
+}
+
 static void room_slide_east(void) {
     u8 y, x, step;
     u8 attrs[12];
-    for (y = 0; y < ROOM_H; ++y) {
-        for (x = 0; x < 12; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
-        wait_vbl_done();
-        VBK_REG = 0; set_bkg_tiles(20, y, 12, 1, room_tilemap[y]);
-        VBK_REG = 1; set_bkg_tiles(20, y, 12, 1, attrs);
-    }
-    VBK_REG = 0;
+    room_stage_columns(20, 0, 12);
     for (step = 1; step <= 20; ++step) {
         if (step == 8) {
             for (y = 0; y < ROOM_H; ++y) {
-                for (x = 0; x < 8; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x + 12]);
+                for (x = 0; x < 8; ++x)
+                    attrs[x] = attr_for_room_tile((u8)(x + 12), y, room_tilemap[y][x + 12]);
                 VBK_REG = 0; set_bkg_tiles(0, y, 8, 1, &room_tilemap[y][12]);
                 VBK_REG = 1; set_bkg_tiles(0, y, 8, 1, attrs);
             }
             VBK_REG = 0;
         }
-        wait_vbl_done();
+        room_transition_vbl();
         SCX_REG = (u8)(step << 3);
     }
     // Normalize the streamed map while blanked so gameplay updates retain
@@ -643,23 +861,18 @@ static void room_slide_east(void) {
 static void room_slide_west(void) {
     u8 y, x, step;
     u8 attrs[12];
-    for (y = 0; y < ROOM_H; ++y) {
-        for (x = 0; x < 12; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x + 8]);
-        wait_vbl_done();
-        VBK_REG = 0; set_bkg_tiles(20, y, 12, 1, &room_tilemap[y][8]);
-        VBK_REG = 1; set_bkg_tiles(20, y, 12, 1, attrs);
-    }
-    VBK_REG = 0;
+    room_stage_columns(20, 8, 12);
     for (step = 1; step <= 20; ++step) {
         if (step == 12) {
             for (y = 0; y < ROOM_H; ++y) {
-                for (x = 0; x < 8; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+                for (x = 0; x < 8; ++x)
+                    attrs[x] = attr_for_room_tile(x, y, room_tilemap[y][x]);
                 VBK_REG = 0; set_bkg_tiles(12, y, 8, 1, room_tilemap[y]);
                 VBK_REG = 1; set_bkg_tiles(12, y, 8, 1, attrs);
             }
             VBK_REG = 0;
         }
-        wait_vbl_done();
+        room_transition_vbl();
         SCX_REG = (u8)(0 - (i16)(step << 3));
     }
     DISPLAY_OFF;
@@ -672,23 +885,18 @@ static void room_slide_west(void) {
 // offscreen. The HUD is a WINDOW layer, so it remains fixed during the slide.
 static void room_slide_south(void) {
     u8 y, x, step, attrs[ROOM_W];
-    for (y = 0; y < 15; ++y) {
-        for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
-        wait_vbl_done();
-        VBK_REG = 0; set_bkg_tiles(0, (u8)(y + 17), ROOM_W, 1, room_tilemap[y]);
-        VBK_REG = 1; set_bkg_tiles(0, (u8)(y + 17), ROOM_W, 1, attrs);
-    }
-    VBK_REG = 0;
+    room_stage_rows(17, 0, 15);
     for (step = 1; step <= 17; ++step) {
         if (step == 2) {
             for (y = 15; y < 17; ++y) {
-                for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+                for (x = 0; x < ROOM_W; ++x)
+                    attrs[x] = attr_for_room_tile(x, y, room_tilemap[y][x]);
                 VBK_REG = 0; set_bkg_tiles(0, (u8)(y - 15), ROOM_W, 1, room_tilemap[y]);
                 VBK_REG = 1; set_bkg_tiles(0, (u8)(y - 15), ROOM_W, 1, attrs);
             }
             VBK_REG = 0;
         }
-        wait_vbl_done();
+        room_transition_vbl();
         SCY_REG = (u8)(step << 3);
     }
     DISPLAY_OFF; SCY_REG = 0; draw_room_tilemap();
@@ -696,23 +904,18 @@ static void room_slide_south(void) {
 
 static void room_slide_north(void) {
     u8 y, x, step, attrs[ROOM_W];
-    for (y = 2; y < 17; ++y) {
-        for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
-        wait_vbl_done();
-        VBK_REG = 0; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, room_tilemap[y]);
-        VBK_REG = 1; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, attrs);
-    }
-    VBK_REG = 0;
+    room_stage_rows(17, 2, 15);
     for (step = 1; step <= 17; ++step) {
         if (step == 2) {
             for (y = 0; y < 2; ++y) {
-                for (x = 0; x < ROOM_W; ++x) attrs[x] = attr_for_tile(room_tilemap[y][x]);
+                for (x = 0; x < ROOM_W; ++x)
+                    attrs[x] = attr_for_room_tile(x, y, room_tilemap[y][x]);
                 VBK_REG = 0; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, room_tilemap[y]);
                 VBK_REG = 1; set_bkg_tiles(0, (u8)(y + 15), ROOM_W, 1, attrs);
             }
             VBK_REG = 0;
         }
-        wait_vbl_done();
+        room_transition_vbl();
         SCY_REG = (u8)(0 - (i16)(step << 3));
     }
     DISPLAY_OFF; SCY_REG = 0; draw_room_tilemap();
@@ -720,7 +923,8 @@ static void room_slide_north(void) {
 
 static void place_player_sprite(void) {
     // 16x16 player metasprite — 4 OAM slots, anchored at (x+8, y+16) per GBDK
-    if (player.iframes > 0 && (player.iframes & 0x04)) {
+    if (arrival_sprite_grace == 0 && player.iframes > 0
+        && (player.iframes & 0x04)) {
         move_sprite(0, 0, 0);
         move_sprite(1, 0, 0);
         move_sprite(2, 0, 0);
@@ -782,6 +986,7 @@ static u8 facing_to_dir8(u8 facing) {
 void room_enter(void) {
     g_vbl_ticks = 0;   // run clock: don't count time spent off-room
     DISPLAY_OFF;
+    room_paused = 0;
 
     room_load_environment_palettes();
     palette_obj_load(0, skeleton_palette);
@@ -793,6 +998,10 @@ void room_enter(void) {
     palette_obj_load(7, orc_palette);
 
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
+    tiles_load_boss_cue_bg();             // unmistakable sanctuary threshold
+    if (room_is_outdoor())
+        tiles_load_area_labels();         // live Riftwild/village identifiers
+    tiles_load_colossus_bg(room_stage()); // phase-specific BG projection atlas
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
     tiles_load_all_enemy_sprites();       // small, specialist, and bruiser art
@@ -820,7 +1029,6 @@ void room_enter(void) {
     }
     player.facing        = FACE_S;
     player.fire_cooldown = 0;
-    room_paused          = 0;
 
     if (room_resume_flag) {
         // Returning from the pack screen: keep the existing tilemap, entities
@@ -849,10 +1057,7 @@ void room_enter(void) {
     // Select audio before the banked generator. The destination counter is
     // already authoritative, while post-bcall audio calls are unreliable on
     // this SDCC build (and previously collapsed later stages to track 0).
-    if (!run_state.world_mode && run_state.room_counter > 0
-        && (run_state.room_counter % ROOMS_PER_STAGE) == 0
-        && (u8)(run_state.room_counter / ROOMS_PER_STAGE)
-            > run_state.bosses_beaten) {
+    if (run_state_is_boss_room()) {
         play_boss_music();
     } else {
         play_stage_music();
@@ -860,10 +1065,12 @@ void room_enter(void) {
 
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
+    arrival_sprite_grace = 60;
     room_refresh_shop_wares();
     room_load_dynamic_fx_identity();
     room_spawn_progression_fixture();
-    room_combat_sealed = room_should_combat_seal();
+    room_prepare_puzzle_role();
+    boss_threshold_warned = 0;
     room_load_environment_palettes();
     draw_room_tilemap();
     place_player_sprite();
@@ -922,6 +1129,7 @@ void room_exit(void) {
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
     if (door_bump_cd) door_bump_cd--;
+    if (arrival_sprite_grace) arrival_sprite_grace--;
     // Consume active-room wall time before any route can leave this screen.
     // This preserves the fraction earned before START/SELECT was pressed.
     room_clock_consume();
@@ -932,8 +1140,28 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (pressed & J_SELECT) {
         return SCREEN_MAP;
     }
+    // Entering the amber threshold's approach gives one low roar and tremor.
+    // The room itself is a full-heal sanctuary, so this is a fair commitment
+    // warning rather than an ambush or an extra confirmation dialog.
+    if (!boss_threshold_warned && !run_state.world_mode
+        && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        u8 near_n = (player.y <= 16) && is_forward_boss_door(
+            (u8)((player.x + 8) >> 3), 0, room_tilemap[0][(player.x + 8) >> 3]);
+        u8 near_s = (player.y >= 104) && is_forward_boss_door(
+            (u8)((player.x + 8) >> 3), ROOM_H - 1,
+            room_tilemap[ROOM_H - 1][(player.x + 8) >> 3]);
+        u8 near_w = (player.x <= 16) && is_forward_boss_door(
+            0, (u8)((player.y + 12) >> 3), room_tilemap[(player.y + 12) >> 3][0]);
+        u8 near_e = (player.x >= 128) && is_forward_boss_door(
+            ROOM_W - 1, (u8)((player.y + 12) >> 3),
+            room_tilemap[(player.y + 12) >> 3][ROOM_W - 1]);
+        if (near_n || near_s || near_w || near_e) {
+            boss_threshold_warned = 1;
+            sfx_play(SFX_ROAR);
+            room_shake(1, 12);
+        }
+    }
     if (room_paused) return SCREEN_SELF;
-
     // ---- Death beat: the world keeps animating (bullets fly, bursts
     // pop, screen shakes) but the hero is done — then GAMEOVER.
     if (death_timer) {
@@ -1040,10 +1268,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         && is_walkable_at(player.x + 13, ny + 8)
                         && is_walkable_at(player.x + 2,  ny + 15)
                         && is_walkable_at(player.x + 13, ny + 15)
-                        && !is_block_at(player.x + 2, ny)
-                        && !is_block_at(player.x + 13, ny)
-                        && !is_block_at(player.x + 2, ny + 7)
-                        && !is_block_at(player.x + 13, ny + 7))
+                        && !is_full_body_obstacle_at(player.x + 2, ny)
+                        && !is_full_body_obstacle_at(player.x + 13, ny)
+                        && !is_full_body_obstacle_at(player.x + 2, ny + 7)
+                        && !is_full_body_obstacle_at(player.x + 13, ny + 7))
                         player.y = ny;
                 }
             }
@@ -1165,7 +1393,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             VBK_REG = 1;
                             for (yy = 0; yy < 3; ++yy)
                                 for (xx = 0; xx < 3; ++xx) {
-                                    u8 at = attr_for_tile(room_tilemap[y0 + yy][x0 + xx]);
+                                    u8 at = attr_for_room_tile((u8)(x0 + xx),
+                                        (u8)(y0 + yy), room_tilemap[y0 + yy][x0 + xx]);
                                     set_bkg_tiles((u8)(x0 + xx), (u8)(y0 + yy),
                                         1, 1, &at);
                                 }
@@ -1173,6 +1402,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         }
                         sfx_play(SFX_DOOR);
                         if (pressed_switch) activate_switch(switch_x, switch_y);
+                        if (puzzle_on_block_moved(ox, oy)) room_unseal_doors();
                         push_timer = 0;
                     }
                 } else if (push_timer) {
@@ -1207,10 +1437,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     && is_walkable_at(player.x + 13, ny + 8)
                     && is_walkable_at(player.x + 2,  ny + 15)
                     && is_walkable_at(player.x + 13, ny + 15)
-                    && !is_block_at(player.x + 2, ny)
-                    && !is_block_at(player.x + 13, ny)
-                    && !is_block_at(player.x + 2, ny + 7)
-                    && !is_block_at(player.x + 13, ny + 7)) {
+                    && !is_full_body_obstacle_at(player.x + 2, ny)
+                    && !is_full_body_obstacle_at(player.x + 13, ny)
+                    && !is_full_body_obstacle_at(player.x + 2, ny + 7)
+                    && !is_full_body_obstacle_at(player.x + 13, ny + 7)) {
                     player.y = ny;
                 }
             }
@@ -1257,9 +1487,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // Wolfkin is a true contact kit, not the same held-A fire stream as
         // the ranged champions. A directed tap is the precise Fang Stab;
         // neutral A is a wider two-target Sweep. Holding through the tell
-        // commits to a Max Strike dash, then must recharge before it can be
-        // used again. Weapon swaps keep their authored projectile behaviour.
-        if (player.class_id == 0 && w->p2 == PROJ_SPIKE && !(keys & J_B)) {
+        // commits to a Max Strike dash, then settles into a deliberately
+        // slower combo cadence so turbo/held play never requires button
+        // mashing. Weapon swaps keep their authored projectile behaviour.
+        if (player.class_id == 0
+            && player.starter_weapon == classes[0].starter_weapon
+            && w->p2 == PROJ_SPIKE && !(keys & J_B)) {
             u8 dir = input_to_dir8(keys);
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
             if (wolfkin_max_cd) wolfkin_max_cd--;
@@ -1284,19 +1517,31 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 wolfkin_a_hold = 0;
             }
 
-            if ((pressed & J_A) && player.fire_cooldown == 0) {
+            // A held A is a deliberate physical combo, not a button-mashing
+            // tax: one contact arc every 24 frames (2.5/sec). That is slower
+            // than the old 16-frame tap rate; the 20-frame hold still layers
+            // the distinct Max Strike dash into the same sustained action.
+            if ((keys & J_A) && player.fire_cooldown == 0) {
                 u8 dmg = (u8)(w->p1 + player.atk);
                 u8 shot;
                 if (room_weapon_surge_ticks) dmg++;
                 shot = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
                     dmg, PROJ_SPIKE);
+                // Wolfkin takes the true-melee branch above, so its
+                // class-shaped Surge expression must live here rather than
+                // only in the ranged/shared branch below. The base claw
+                // already cleaves two bodies; Razor Surge deliberately adds
+                // exactly one more without widening the physical arc or
+                // changing permanent weapon stats.
+                if (room_weapon_surge_ticks && shot != 0xFF)
+                    entities[shot].hp++;
                 if (shot != 0xFF && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
                     // Neutral A sweeps a noticeably wider close arc. It is
                     // still one hitbox, so a boss cannot be blendered by
                     // several overlapping pseudo-projectiles in one frame.
                     entities[shot].hitbox = 0xBB;
                 }
-                player.fire_cooldown = 16;
+                player.fire_cooldown = 24;
             }
         } else if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
             u8 dir = input_to_dir8(keys);
@@ -1362,7 +1607,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     for (d = 0; d < 8; ++d) {
                         projectile_spawn_player(dir8_dx[d], dir8_dy[d], dmg, PROJ_SPIKE);
                     }
-                    room_special_guard(24);
+                    // This remains an activation ward rather than a shield:
+                    // half a second carries the committed burst through a
+                    // dense boss lane, but cannot erase a whole volley.
+                    room_special_guard(30);
                     break;
                 case 1:   // Sauran STONESKIN: brief, timed shot/body shield
                     player.shield_timer = 60;
@@ -1431,7 +1679,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
 
         // Sauran's scaled hide (perk 2): slow HP regen, one half-heart
-        // per ~53s of active play.
+        // per ~30s of active play.
         if (player.class_id == 1 && player.hp < player.hp_max) {
             if (++hp_regen >= 1800) {
                 hp_regen = 0;
@@ -1489,7 +1737,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             u8 max = (eid < N_ENEMIES) ? enemies[eid].stats.hp : 0;
             if (max) {
                 if (!run_state.world_mode
-                    && (run_state.room_counter % ROOMS_PER_STAGE) < 3) {
+                    && run_state_dungeon_local() < 3) {
                     u8 st = run_state.bosses_beaten;
                     if (st > 24) st = 24;
                     max = (u8)(max + 1 + (u8)(st >> 1));
@@ -1551,17 +1799,19 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         return SCREEN_VICTORY;
     }
 
-    // ---- Rubble poking: walking over rubble kicks it apart (Zelda bush-cut)
+    // Puzzle rooms replace the ordinary extermination seal. Ordered runes
+    // and paired dungeon switches react to feet contact; a completed seal
+    // releases every forward threshold immediately.
+    if (room_puzzle_kind != PUZZLE_NONE && puzzle_update_player())
+        room_unseal_doors();
+
+    // ---- Rubble poking: walking over rubble kicks it apart (Zelda bush-cut).
+    // Pressure plates deliberately do not activate under the hero: their
+    // oversized cairn and clear push lane communicate the actual solution.
     {
         u8 rtx = (u8)((player.x + 8) >> 3);
         u8 rty = (u8)((player.y + 12) >> 3);
         if (rtx < ROOM_W && rty < ROOM_H
-            && room_tilemap[rty][rtx] == BGT_SWITCH) {
-            // One-shot plate: consuming the marker prevents a per-frame chime
-            // and means a crate can cover it without a hidden terrain layer.
-            activate_switch(rtx, rty);
-        }
-        else if (rtx < ROOM_W && rty < ROOM_H
             && room_tilemap[rty][rtx] == BGT_RUBBLE) {
             room_set_tile_vbl(rtx, rty, BGT_FLOOR, BGPAL_FLOOR);
             sfx_play(SFX_HIT);
@@ -1586,10 +1836,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     run_state.world_screen = cell->stairs;
                 }
             } else {
-                u16 base = (u16)(run_state.room_counter
-                    - (run_state.room_counter % ROOMS_PER_STAGE));
-                u8 local = (u8)(run_state.room_counter % ROOMS_PER_STAGE);
-                run_state.room_counter = (u16)(base + ((local == 2) ? 4 : 2));
+                u8 base = run_state_stage_start(run_state.bosses_beaten);
+                u8 local = run_state_dungeon_local();
+                run_state.room_counter = (u8)(base + ((local == 2) ? 4 : 2));
             }
             // A rift/stair is not a cardinal doorway. Pretending it came
             // through a random edge can spawn the hero on a destination's
@@ -1605,10 +1854,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             play_stage_music();
             DISPLAY_OFF;
             procgen_generate_current_room();
+            arrival_sprite_grace = 60;
             room_refresh_shop_wares();
             room_load_dynamic_fx_identity();
+            // A post-region Riftwild gate can land directly in a village.
+            // Cardinal town transitions already restore resident-only OBJ
+            // slots; the portal path must do the same or the Waykeeper and
+            // Bellkeeper inherit stale combat sprites.
+            room_load_town_resident_identity();
             room_spawn_progression_fixture();
-            room_combat_sealed = room_should_combat_seal();
+            room_prepare_puzzle_role();
+            boss_threshold_warned = 0;
             room_load_environment_palettes();
             draw_room_tilemap();
             place_player_sprite();
@@ -1660,22 +1916,40 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             && room_tilemap[ty][tx] == BGT_DOOR) {
                 u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
                 // The sanctuary's forward threshold rejects the hero until
-                // this dungeon's lore fixture is recovered. Its return door
-                // remains open, guaranteeing a route back to the objective.
-                if (!run_state.world_mode
-                    && (run_state.room_counter % ROOMS_PER_STAGE) == 5
-                    && !(run_state.rift_sigils
-                        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
+                // this dungeon's route fixtures are recovered. Twelve-cell
+                // stages add the local-room-7 Waystone; fourteen-cell stages
+                // also require the existing local-room-9 deep Warden. The
+                // return door remains open, guaranteeing a route back to
+                // every visible objective.
+                if (is_forward_boss_door(tx, ty, room_tilemap[ty][tx])
+                    && (!(run_state.rift_sigils
+                            & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
+                        || !(run_state.dungeon_puzzles
+                            & RUN_WARDEN_BOON_BIT)
+                        || (run_state_dungeon_size() >= 12
+                            && !(run_state.dungeon_puzzles
+                                & RUN_WAYSTONE_BIT))
+                        || (run_state_dungeon_size() >= 14
+                            && !(run_state.dungeon_phase
+                                & RUN_DEEP_WARDEN_BIT)))) {
+                    room_hold_at_door(dir, SFX_HURT, 6);
+                    return SCREEN_SELF;
+                }
+                // A discovered cache is an overlay attached to its parent
+                // graph cell, not another campaign node. Its only exit is the
+                // threshold back to that parent.
+                if (run_state.secret_pending == 2
                     && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
-                    if (dir == DIR_N) player.y = 0;
-                    else if (dir == DIR_S) player.y = 120;
-                    else if (dir == DIR_W) player.x = 0;
-                    else player.x = 144;
-                    if (door_bump_cd == 0) {
-                        door_bump_cd = 20;
-                        sfx_play(SFX_HURT);
-                        room_shake(1, 6);
-                    }
+                    room_hold_at_door(dir, SFX_TICK, 4);
+                    return SCREEN_SELF;
+                }
+                // Procedural puzzle rooms preserve the return route but hold
+                // every unexplored exit until their landscape interaction is
+                // solved. This is independent of enemy count: these rooms are
+                // alternatives to the ordinary kill-everything seal.
+                if (room_puzzle_locked
+                    && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
+                    room_hold_at_door(dir, SFX_TICK, 4);
                     return SCREEN_SELF;
                 }
                 // Dungeon combat rooms gate unexplored exits. Riftwild is an
@@ -1688,15 +1962,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     // the legal room edge while combat keeps it locked;
                     // otherwise repeated input can drift to -8/152 offscreen
                     // and leave every remaining enemy impossible to hit.
-                    if (dir == DIR_N) player.y = 0;
-                    else if (dir == DIR_S) player.y = 120;
-                    else if (dir == DIR_W) player.x = 0;
-                    else player.x = 144;
-                    if (door_bump_cd == 0) {
-                        door_bump_cd = 20;
-                        sfx_play(SFX_HIT);
-                        room_shake(1, 4);
-                    }
+                    room_hold_at_door(dir, SFX_HIT, 4);
                     return SCREEN_SELF;
                 }
                 // Leaving through a shot-open secret door → treasure room
@@ -1733,36 +1999,36 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         } else {
                             run_state.world_return_screen = TOWN_ARRIVAL;
                         }
-                    } else if (run_state.room_counter > 0
-                        && (run_state.room_counter % ROOMS_PER_STAGE) == 0
-                        && run_state.bosses_beaten
-                            == (u8)(run_state.room_counter / ROOMS_PER_STAGE)) {
+                    } else if (run_state_was_cleared_boss()) {
                         // A defeated dungeon opens into a nonlinear overworld;
                         // locate its authored dungeon gate to begin the next.
                         run_state_begin_world();
-                    } else if (run_state.entered_from != DIR_NONE
-                        && dir == back_dir
-                        && run_state.room_counter > 0) {
-                        run_state.room_counter--;
+                    } else if (run_state.secret_pending == 1) {
+                        // Generate the cache over the current graph cell.
+                        // procgen promotes state 1 to persistent state 2.
+                    } else if (run_state.secret_pending == 2) {
+                        // Return from that overlay to the same stable cell.
+                        run_state.secret_pending = 0;
                     } else {
-                        run_state.room_counter++;
+                        u8 neighbor = run_state_dungeon_neighbor(dir);
+                        if (neighbor != 0xFF)
+                            run_state.room_counter = neighbor;
                     }
                 }
                 run_state.entered_from = dir;
                 sfx_play(SFX_DOOR);
-                if (!run_state.world_mode && run_state.room_counter > 0
-                    && (run_state.room_counter % ROOMS_PER_STAGE) == 0
-                    && (u8)(run_state.room_counter / ROOMS_PER_STAGE)
-                        > run_state.bosses_beaten) {
+                if (run_state_is_boss_room()) {
                     play_boss_music();
                 } else {
                     play_stage_music();
                 }
                 // Regenerate room in-place (skip full screen exit/enter).
-                // Ordinary eastward dungeon doors get the streamed Zelda-like
-                // slide; palette-changing boss/world/town boundaries retain
-                // the safe blanked rebuild path.
+                // Any same-stage outdoor or dungeon seam gets the streamed
+                // Zelda-like slide. Palette-changing boss/world/town
+                // boundaries retain the safe blanked rebuild path.
                 procgen_generate_current_room();
+                boss_threshold_warned = 0;
+                arrival_sprite_grace = 60;
                 room_refresh_shop_wares();
                 // Town arrivals own two resident-only OBJ tiles. Unlike a
                 // streamed dungeon step, blank briefly before changing them.
@@ -1775,29 +2041,35 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_dynamic_fx_identity();
                 room_load_town_resident_identity();
                 room_spawn_progression_fixture();
-                room_combat_sealed = room_should_combat_seal();
-                if (!run_state.world_mode && dir == DIR_E
+                room_prepare_puzzle_role();
+                if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_E
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_east();
-                } else if (!run_state.world_mode && dir == DIR_W
+                } else if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_W
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_west();
-                } else if (!run_state.world_mode && dir == DIR_S
+                } else if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_S
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_south();
-                } else if (!run_state.world_mode && dir == DIR_N
+                } else if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_N
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_north();
                 } else {
                     DISPLAY_OFF;
+                    // Reuse this path's existing blanking window for the tiny
+                    // outdoor atlas. Boss projections loaded below reclaim the
+                    // same combat-unused slots; Riftwild/towns retain them.
+                    tiles_load_area_labels();
+                    if (procgen_current_room_is_boss)
+                        tiles_load_colossus_bg(room_stage());
                     draw_room_tilemap();
                 }
                 room_load_environment_palettes();
@@ -1838,8 +2110,81 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 }
 
 void room_draw(void) {
+    if (procgen_current_room_is_boss && room_stage() == 2) {
+        u8 i;
+        for (i = 0; i < MAX_ENTITIES; ++i) {
+            entity_t *e = &entities[i];
+            if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
+                && e->ai_data[0] == ENEMY_STONE_SENTINEL
+                && (e->ai_data[3] & 1) && e->ai_data[2] == 2) {
+                // State 0 breathes, state 1 lunges, state 2 recovers.
+                u8 active = e->state != 2;
+                if (active != cinder_projection_state) {
+                    tiles_animate_cinder_bg(active);
+                    cinder_projection_state = active;
+                }
+                break;
+            }
+        }
+    }
+    if (procgen_current_room_is_boss && room_stage() == 4) {
+        u8 i;
+        for (i = 0; i < MAX_ENTITIES; ++i) {
+            entity_t *e = &entities[i];
+            if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
+                && e->ai_data[0] == ENEMY_STONE_SENTINEL
+                && (e->ai_data[3] & 1) && e->ai_data[2] == 4) {
+                u8 phase = (u8)(e->state & 1);
+                if (phase != mire_projection_state) {
+                    tiles_paint_mire_projection(phase, 1);
+                    mire_projection_state = phase;
+                }
+                break;
+            }
+        }
+    }
     place_player_sprite();
     entity_draw_all();
+
+    if (procgen_current_room_is_boss && room_stage() == 1
+        && (loop_frame_counter & 0x0F) == 0) {
+        // One shared BG tile makes charge visibly travel through the huge
+        // coil while the existing OBJ head owns all combat behavior.
+        tiles_animate_serpent_bg((loop_frame_counter & 0x20) != 0);
+    }
+
+    if (procgen_current_room_is_boss && room_stage() == 3
+        && (loop_frame_counter & 0x0F) == 0) {
+        // The web and paired eyes pulse together; the OBJ weak point's live
+        // warning/blink remains authoritative combat timing.
+        tiles_animate_spider_bg((loop_frame_counter & 0x20) != 0);
+    }
+
+    if (procgen_current_room_is_boss && room_stage() == 5
+        && (loop_frame_counter & 0x0F) == 0) {
+        tiles_animate_reaper_bg((loop_frame_counter & 0x20) != 0);
+    }
+
+    if (procgen_current_room_is_boss && room_stage() == 6
+        && (loop_frame_counter & 0x0F) == 0) {
+        // A brief stone sleep makes the paired sun-rune wake-up readable;
+        // projectile timing still comes entirely from the existing boss AI.
+        tiles_animate_golem_bg((loop_frame_counter & 0x7F) >= 0x60);
+    }
+
+    if (procgen_current_room_is_boss && room_stage() == 7
+        && (loop_frame_counter & 0x0F) == 0) {
+        // Side heads and centre head alternate their open breath posture. The
+        // existing five-stream volley remains authoritative combat timing.
+        tiles_animate_hydra_bg((loop_frame_counter & 0x20) != 0);
+    }
+
+    if (procgen_current_room_is_boss && room_stage() == 8
+        && (loop_frame_counter & 0x0F) == 0) {
+        // Brief synchronized blink: the background creature is alive, while
+        // the OBJ core remains the only vulnerable body.
+        tiles_animate_colossus_bg((loop_frame_counter & 0x7F) >= 0x70);
+    }
 
     // Impact shake: alternate the BG scroll a few px, settle back to 0.
     if (shake_timer) {
@@ -1851,5 +2196,43 @@ void room_draw(void) {
             SCX_REG = (shake_timer & 2) ? shake_mag : (u8)(256 - shake_mag);
             SCY_REG = (shake_timer & 4) ? 1 : 0xFF;
         }
+    } else if (procgen_current_room_is_boss && room_stage() == 0) {
+        // Penta Dragon introduces its moving-arena language with Shalamar's
+        // shifting first boss. Give Quintra's opening 112x72 guardian the
+        // same immediate sense of scale without a per-frame bank switch.
+        u8 phase = (u8)((loop_frame_counter >> 4) & 7);
+        SCX_REG = (phase < 4) ? phase : (u8)(7 - phase);
+        SCY_REG = (phase & 2) ? 1 : 0;
+    } else if (procgen_current_room_is_boss && room_stage() == 1) {
+        // Preserve Verdant's original inline timing: a banked call here costs
+        // enough cycles to perturb fixed controller replays in dense fights.
+        u8 phase = (u8)((loop_frame_counter >> 3) & 7);
+        SCX_REG = (phase < 4) ? phase : (u8)(7 - phase);
+        SCY_REG = (phase & 2) ? 1 : 0;
+    } else if (procgen_current_room_is_boss && room_stage() == 4) {
+        // Mire Heart is an expanding organism, so let its whole arena breathe
+        // on a slower eight-beat loop. This is the Penta-style camera language
+        // of Ted/Cameo rather than extra collision: the WINDOW HUD and the
+        // mobile OBJ heart stay authoritative while the huge BG body shifts
+        // by at most three horizontal pixels.
+        u8 phase = (u8)((loop_frame_counter >> 4) & 7);
+        SCX_REG = (phase < 4) ? phase : (u8)(7 - phase);
+        SCY_REG = 0;
+    } else if (procgen_current_room_is_boss && room_stage() == 7) {
+        // Blood Hydra is the late Faze-like moving arena: its three-head coil
+        // drifts around the independently weaving weak point. The second half
+        // of the 16-beat loop mirrors the vertical phase so this does not read
+        // as a copy of Verdant's faster eight-beat Serpent sway.
+        u8 phase = (u8)((loop_frame_counter >> 3) & 15);
+        u8 arc = (u8)(phase & 7);
+        SCX_REG = (arc < 4) ? arc : (u8)(7 - arc);
+        SCY_REG = 0;
+    } else if (procgen_current_room_is_boss && room_stage() == 8) {
+        u8 phase = (u8)((loop_frame_counter >> 4) & 7);
+        SCX_REG = (phase < 4) ? phase : (u8)(7 - phase);
+        SCY_REG = 0;
+    } else {
+        SCX_REG = 0;
+        SCY_REG = 0;
     }
 }

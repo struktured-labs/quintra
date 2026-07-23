@@ -104,9 +104,10 @@ def main():
             assert len(shots) == 1 and pb.memory[shots[0] + 14] == 3, \
                 "Wolfkin Razor Surge did not cleave an extra body"
         elif class_id == 1:
-            # The live assertion arrives three frames after firing, so the
-            # 12-frame spike + four Surge frames reads as 13 remaining.
-            assert len(shots) == 1 and pb.memory[shots[0] + 16] == 13, \
+            # PyBoy may expose the queued A edge on the first or second tick.
+            # Either sampling phase leaves 13/14 of the surged 16-frame life;
+            # an ordinary 12-frame spike cannot satisfy this contract.
+            assert len(shots) == 1 and pb.memory[shots[0] + 16] in (13, 14), \
                 "Sauran Longtail Surge lost its extra reach"
         elif class_id == 2:
             assert len(shots) == 2, "Corvin Gale Surge did not open a feather lane"

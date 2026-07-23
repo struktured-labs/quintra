@@ -14,6 +14,12 @@ extern u8 g_shot_element;
 // against crowds without counting eight overlapping arcs as eight boss hits.
 #define PROJ_FLAG_CONVERGENCE 0x01
 
+// ai_data[4] is visual-only for player projectiles. Physical sword/spear
+// tiles are authored pointing north-east; the renderer mirrors them around
+// the actual aim so a thrust reads in the direction the player chose.
+#define PROJ_VIS_FLIP_X 0x01
+#define PROJ_VIS_FLIP_Y 0x02
+
 // Spawn a player projectile at player.x/y in (dx,dy) direction (8-dir deltas)
 // with explicit damage + ProjectileKind (PROJ_* from generated enums.h) —
 // kind shapes speed/range/pierce so each class weapon feels distinct.

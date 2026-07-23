@@ -78,10 +78,12 @@ u8 combat_resolve(void) BANKED {
             if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
-            // Echo Guard: the first hit is a readable shield parry. It spends
-            // the projectile, launches a short rush, then exposes the guard
-            // for the remainder of its authored cooldown.
-            if (eid == ENEMY_ECHO_GUARD && entities[j].state == 0) {
+            // Counter guards (Echo Guard and Crystal's Shard Crab) parry the
+            // first hit, rush briefly, then expose a real punish window. The
+            // behavior is keyed to authored AI rather than a one-off enemy
+            // ID so future shell creatures do not duplicate combat rules.
+            if (eid < N_ENEMIES && enemies[eid].ai_kind == AI_COUNTER_GUARD
+                && entities[j].state == 0) {
                 entities[j].state = 1;
                 entities[j].state_timer = enemies[eid].ai_p1;
                 entities[j].ai_data[6] = enemies[eid].ai_p0;
@@ -220,10 +222,13 @@ u8 combat_resolve(void) BANKED {
                             g_hitstop = 8;   // boss kill: big freeze
                             room_shake(2, 26);   // the colossus hits the floor
                             run_state.bosses_beaten++;
+                            // Every defeated arena opens before its reward or
+                            // ending screen. The final boss used to jump
+                            // straight to Victory with every threshold still
+                            // sealed, trapping endless descent in the arena.
+                            run_state.pending_unseal = 1;
                             if (run_state.bosses_beaten >= BOSSES_TO_WIN) {
                                 run_state.victory = 1;
-                            } else {
-                                run_state.pending_unseal = 1;
                             }
                             // The giant and its bullets release their slots
                             // before effects. Rewards therefore remain real
@@ -252,9 +257,9 @@ u8 combat_resolve(void) BANKED {
                             pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y);
                             pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5, boss_x, boss_y + FIX8(16));
-                            // Every colossus yields a passive item — the
-                            // run's guaranteed power curve (indices 10..19).
-                            pickup_spawn_item((u8)(10 + rng_range(10)),
+                            // Every colossus yields a class-attuned passive
+                            // item — the run's guaranteed power curve.
+                            pickup_spawn_item(pickup_boss_relic_for_class(),
                                 boss_x + FIX8(4), boss_y + FIX8(4));
                             // Death explosion: staggered ring of impact FX.
                             // These are allowed to drop if a later effect
@@ -283,6 +288,18 @@ u8 combat_resolve(void) BANKED {
                             // roster Bells remain ordinary enemy drops.
                             u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
                             if (w == player.starter_weapon) w = pickup_next_weapon(w);
+                            // The first Warden is a meaningful stage fixture,
+                            // not an optional combat room. Its weapon orb is
+                            // the mechanical boon; this persistent mark tells
+                            // the sanctuary that the trial was completed.
+                            if (!run_state.world_mode) {
+                                u8 local = run_state_dungeon_local();
+                                if (local == 3)
+                                    run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+                                else if (local == 9
+                                    && run_state_dungeon_size() >= 14)
+                                    run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
+                            }
                             g_hitstop = 5;
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
@@ -293,9 +310,17 @@ u8 combat_resolve(void) BANKED {
                     fx_spawn(SPR_FX_IMPACT, 2,
                         (i16)FIX8_TO_INT(entities[j].x),
                         (i16)FIX8_TO_INT(entities[j].y), 8);
-                    // Elites always pay out
+                    // Elites always pay out. Preserve their doubled HP and
+                    // damage, but turn the sure reward into a small recovery
+                    // when the fight actually cost health. At full health the
+                    // same slot remains the established five-coin prize. This
+                    // keeps hard Normal encounters dangerous while making an
+                    // unlucky early elite a roguelike risk/reward beat instead
+                    // of pure run attrition.
                     if (entities[j].flags & EF_ELITE) {
-                        pickup_spawn(PICKUP_COIN_5, entities[j].x, entities[j].y);
+                        pickup_spawn((player.hp < player.hp_max)
+                            ? PICKUP_HEART_HALF : PICKUP_COIN_5,
+                            entities[j].x, entities[j].y);
                         score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
                     } else {
                         pickup_roll_drop(entities[j].x, entities[j].y);
@@ -324,10 +349,14 @@ u8 combat_resolve(void) BANKED {
                             u8 b = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
                             if (a != 0xFF) {
                                 entities[a].hp = 2;
+                                entities[a].ai_data[1] = 90; // scatter beat
+                                entities[a].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
                                 enemy_try_step(&entities[a], -1, 0);
                             }
                             if (b != 0xFF) {
                                 entities[b].hp = 2;
+                                entities[b].ai_data[1] = 90;
+                                entities[b].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
                                 enemy_try_step(&entities[b], 1, 0);
                             }
                         }
@@ -394,6 +423,10 @@ u8 combat_resolve(void) BANKED {
                 if (entities[i].type == ENT_ENEMY
                     && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
                     && entities[i].ai_data[3]) taken = 1;
+                // Tester Easy deliberately makes every impact legible but
+                // inexpensive: one half-heart, regardless of late-game power.
+                // Normal reaches this point unchanged.
+                if (RUN_IS_EASY()) taken = 1;
                 if (player.hp > taken) {
                     player.hp = (u8)(player.hp - taken);
                     // Riftwild is traversal pressure, not a sealed combat
@@ -401,10 +434,20 @@ u8 combat_resolve(void) BANKED {
                     // optional body from re-contacting at the exact moment
                     // the normal 30-frame knockback grace expires, while
                     // dungeon and boss hit pacing remains unchanged.
-                    player.iframes = run_state.world_mode ? 60
-                        : (entities[i].type == ENT_ENEMY
-                           && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
-                           && entities[i].ai_data[3]) ? 45 : 30;
+                    {
+                        u8 recovery = run_state.world_mode ? 60
+                            : (entities[i].type == ENT_ENEMY
+                               && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
+                               && entities[i].ai_data[3]) ? 45 : 30;
+                        // Easy is a deliberately coarse deep-test assist, not
+                        // a separately authored encounter table. The extended
+                        // post-hit read/reposition beat keeps late bullet hell
+                        // observable while Normal retains its exact cadence.
+                        if (RUN_IS_EASY()) {
+                            recovery = (u8)(recovery * EASY_IFRAME_MULTIPLIER);
+                        }
+                        player.iframes = recovery;
+                    }
                     g_hitstop = 3;
                     room_shake(1, 6);   // small jolt: that one hurt
                     sfx_play(SFX_HURT);

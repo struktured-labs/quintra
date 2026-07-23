@@ -254,7 +254,7 @@ static const u16 boss9_bass[8] = {
 
 static u8 playing;
 static u8 frame_div;
-static u8 row;
+u8 music_row;
 static u8 frames_per_row = 8;
 static const u16 *cur_melody = melody;
 static const u16 *cur_bass   = bassline;
@@ -318,7 +318,7 @@ void music_play_stage(void) {
     music_track_id = stage;
     playing  = 1;
     frame_div = 0;
-    row      = 0;
+    music_row = 0;
 }
 
 void music_play_boss(void) {
@@ -331,7 +331,7 @@ void music_play_boss(void) {
     music_track_id = (u8)(MUSIC_BOSS_BASE + stage);
     playing  = 1;
     frame_div = 0;
-    row      = 0;
+    music_row = 0;
 }
 
 void music_play_title(void) {
@@ -342,7 +342,7 @@ void music_play_title(void) {
     music_track_id = MUSIC_TITLE;
     playing  = 1;
     frame_div = 0;
-    row      = 0;
+    music_row = 0;
 }
 
 void music_play_victory(void) {
@@ -353,7 +353,7 @@ void music_play_victory(void) {
     music_track_id = MUSIC_VICTORY;
     playing  = 1;
     frame_div = 0;
-    row      = 0;
+    music_row = 0;
 }
 
 void music_play_gameover(void) {
@@ -364,7 +364,7 @@ void music_play_gameover(void) {
     music_track_id = MUSIC_GAMEOVER;
     playing  = 1;
     frame_div = 0;
-    row      = 0;
+    music_row = 0;
 }
 
 void music_stop(void) {
@@ -380,7 +380,7 @@ void music_tick(void) {
     frame_div = 0;
 
     {
-        u16 note = cur_melody[row];
+        u16 note = cur_melody[music_row];
         if (note != REST) {
             NR21_REG = 0x80;               // duty 50%
             NR22_REG = 0x63;               // vol 6, decay 3 — soft pluck
@@ -388,12 +388,12 @@ void music_tick(void) {
             NR24_REG = (u8)(0x80 | (note >> 8));
         }
     }
-    if ((row & 0x03) == 0) {
-        u16 b = cur_bass[row >> 2];
+    if ((music_row & 0x03) == 0) {
+        u16 b = cur_bass[music_row >> 2];
         NR31_REG = 0x00;
         NR32_REG = 0x40;                   // 50% output level
         NR33_REG = (u8)(b & 0xFF);
         NR34_REG = (u8)(0x80 | (b >> 8));
     }
-    row = (u8)((row + 1) & 0x1F);
+    music_row = (u8)((music_row + 1) & 0x1F);
 }

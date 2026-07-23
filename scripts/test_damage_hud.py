@@ -70,7 +70,8 @@ def assert_spike_stumble(pb):
         f"spike recovery left hero on hazard at {px},{py}, tile={center_tile}")
 
 
-def take_hostile_hit(pb, world_mode=0, boss_body=False, void_lord_body=False):
+def take_hostile_hit(pb, world_mode=0, boss_body=False, void_lord_body=False,
+                     damage=1):
     """Inject one real overlapping hostile and return the resulting iframe count."""
     clear_entities(pb)
     pb.memory[RS + 17] = world_mode
@@ -83,7 +84,7 @@ def take_hostile_hit(pb, world_mode=0, boss_body=False, void_lord_body=False):
     if boss_body or void_lord_body:
         pb.memory[hostile] = 2           # ENT_ENEMY
         pb.memory[hostile + 1] = 3       # active + alive
-        pb.memory[hostile + 14] = 10
+        pb.memory[hostile + 14] = damage
         pb.memory[hostile + 25] = 0xEE   # 16x16/32x32-style collision body
         pb.memory[hostile + 17] = 1      # ENEMY_STONE_SENTINEL
         pb.memory[hostile + 19] = 8 if void_lord_body else 0
@@ -92,7 +93,7 @@ def take_hostile_hit(pb, world_mode=0, boss_body=False, void_lord_body=False):
     else:
         pb.memory[hostile] = 1           # ENT_PROJECTILE
         pb.memory[hostile + 1] = 3       # active hostile projectile
-        pb.memory[hostile + 14] = 1
+        pb.memory[hostile + 14] = damage
         pb.memory[hostile + 16] = 20
         pb.memory[hostile + 25] = 0x77
         pb.memory[hostile + 26] = 1
@@ -128,8 +129,8 @@ def main():
     for _ in range(80):
         pb.tick()
     assert pb.memory[SCREEN] == 5
-    assert (pb.memory[PL], pb.memory[PL + 1], pb.memory[PL + 2]) == (0, 12, 12), (
-        "Wolfkin no longer starts with the promised six-heart reserve: "
+    assert (pb.memory[PL], pb.memory[PL + 1], pb.memory[PL + 2]) == (0, 14, 14), (
+        "Wolfkin no longer starts with the promised seven-heart reserve: "
         f"class={pb.memory[PL]} hp_max={pb.memory[PL + 1]} hp={pb.memory[PL + 2]}"
     )
 
@@ -169,7 +170,7 @@ def main():
         "Void Lord body-contact recovery is no longer the promised 45 frames"
     assert_spike_stumble(pb)
     pb.stop(save=False)
-    print("[damage-hud] OK: Wolfkin six-heart start, heart redraw, "
+    print("[damage-hud] OK: Wolfkin seven-heart start, heart redraw, "
           "30/60/45-frame recovery, safe spike stumble")
 
 

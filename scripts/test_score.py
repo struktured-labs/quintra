@@ -86,7 +86,7 @@ def main():
 
     enemy = entities
     pb.memory[enemy] = 2          # ENT_ENEMY
-    pb.memory[enemy + 1] = 3      # EF_ACTIVE | EF_ALIVE
+    pb.memory[enemy + 1] = 0x23   # EF_ACTIVE | EF_ALIVE | EF_ELITE
     put16(pb, enemy + 3, px)
     put16(pb, enemy + 7, py)
     pb.memory[enemy + 14] = 1     # one-hit crawler
@@ -108,6 +108,7 @@ def main():
 
     pb.memory[rs + 14] = 0xFA     # score = 65,530
     pb.memory[rs + 15] = 0xFF
+    pb.memory[pl + 2] = pb.memory[pl + 1] - 2  # elite should repay half a heart
     pb.memory[pl + 15] = 60       # avoid unrelated contact damage
     for _ in range(4):
         pb.tick()
@@ -121,8 +122,13 @@ def main():
         f"flags={pb.memory[shot + 1]} pos={pb.memory[shot + 3]},{pb.memory[shot + 7]} "
         f"box={pb.memory[shot + 25]:02x}")
     assert pb.memory[rs + 16] == 1, "injected enemy did not die through combat"
+    pickup_kinds = [pb.memory[entities + i * 28 + 17] for i in range(32)
+                    if pb.memory[entities + i * 28] == 3
+                    and pb.memory[entities + i * 28 + 1] & 1]
+    assert 0 in pickup_kinds or pb.memory[pl + 2] > pb.memory[pl + 1] - 2, (
+        f"wounded elite did not yield its half-heart recovery: {pickup_kinds}")
     pb.stop(save=False)
-    print("[score] PASS generated enemy award saturates at 65535")
+    print("[score] PASS elite recovery + generated enemy award saturates at 65535")
 
 
 if __name__ == "__main__":

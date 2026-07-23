@@ -27,6 +27,16 @@ static const u16 hud_palette_mp[4] = {
     BGR555( 8, 22, 31),    // 3: MP blue
 };
 
+// A full meter is also the readiness condition for the shared A/B Spirit
+// Convergence chord. Brighten only the existing MP digits so the HUD teaches
+// "charged" without consuming another tile lane or flashing the whole frame.
+static const u16 hud_palette_mp_full[4] = {
+    BGR555( 0,  0,  0),
+    BGR555(10, 14, 20),
+    BGR555(31, 20,  6),
+    BGR555(24, 31, 31),    // 3: icy-white, ready to ascend
+};
+
 // Shops call hud_show_offer every frame while the hero is nearby. Cache the
 // rendered price so this context hint costs no repeated VRAM traffic.
 static u8 offer_price = 0xFF;
@@ -115,6 +125,8 @@ void hud_redraw_mp(void) BANKED {
     row[1] = (u8)(HUD_DIGIT_0 + (m % 10));
     VBK_REG = 0;
     set_win_tiles(8, 0, 2, 1, row);
+    palette_bg_load(6, (player.mp_max && player.mp >= player.mp_max)
+        ? hud_palette_mp_full : hud_palette_mp);
 }
 
 void hud_redraw_depth(void) BANKED {

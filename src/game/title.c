@@ -100,7 +100,10 @@ static void render_lore_beat(void) {
     gotoxy(0, 9); text_write("                    ");
     switch (lore_beat) {
         case 0: gotoxy(2, 8); text_write("WHEN THE SKY TORE"); gotoxy(2, 9); text_write("FIVE SPIRITS WOKE"); break;
-        case 1: gotoxy(2, 8); text_write("BEAR FIVE SPARKS"); gotoxy(1, 9); text_write("TO THE WORLD BELOW"); break;
+        // State the five spirits' charge before naming the catastrophe they
+        // must stop.  This keeps the seven-beat procession readable even for
+        // a player who skips it after a single pass.
+        case 1: gotoxy(2, 8); text_write("FIVE ARE CHOSEN"); gotoxy(1, 9); text_write("TO BEAR THE SPARKS"); break;
         case 2: gotoxy(3, 8); text_write("BIND THE RIFT"); gotoxy(1, 9); text_write("ERE ALL NAMES FADE"); break;
         case 3: gotoxy(2, 8); text_write("FANG GUARDS FLAME"); gotoxy(2, 9); text_write("SCALE HOLDS STONE"); break;
         case 4: gotoxy(2, 8); text_write("WING READS SHADOW"); gotoxy(1, 9); text_write("FIN REMEMBERS TIDE"); break;
@@ -126,10 +129,13 @@ static void render_title(void) {
         gotoxy(4, 12);
         text_write("PRESS  START");
     }
-    // Never print the bottom-right cell: gbdk console wraps and scrolls the
-    // entire title when column 19 is filled on row 17.
-    gotoxy(0, 17); text_write("SEL RECORD");
-    gotoxy(11, 17); text_write(QUINTRA_VERSION);
+    // Keep the records affordance and version on separate centred rows.  The
+    // old packed "SEL RECORD v0..." footer read as broken leftover text and
+    // was easily mistaken for the stray glyph reported at the right edge.
+    // Neither line touches column 19: the GBDK console would wrap/scroll if
+    // the bottom-right cell were written.
+    gotoxy(3, 16); text_write("SELECT RECORDS");
+    gotoxy(6, 17); text_write(QUINTRA_VERSION);
     // Personal score belongs on SELECT → Records. Keeping it off the title
     // preserves the lore tableau instead of leaving a bare persistent number
     // stranded in the lower middle of the screen.

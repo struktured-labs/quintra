@@ -72,11 +72,11 @@ def assert_menu_palette_contract(pb, button):
     pb.memory[0xFF4F] = 0
     pb.memory[0xFF40] = lcdc
     # Inventory text is deliberately uniform. The SELECT field map is a
-    # tile-built diagram: floor, walls, and the current-room marker. The
-    # unrecovered Sigil now lives in its actual (still-unseen) fixture room,
-    # rather than leaking a floating crack marker into every map view.
-    # Require the exact set so stale room attributes cannot leak through.
-    expected = {0} if button == "start" else {0, 1, 3}
+    # tile-built diagram with four intentional semantic attribute classes:
+    # floor/path and the self-bordered room glyphs for violet Sigil, cyan HERE,
+    # and amber Boss. Require the exact set so stale room attributes cannot
+    # leak through; the old 3x3 cells alone needed a fifth wall class.
+    expected = {0} if button == "start" else {0, 2, 3, 4}
     assert attrs == expected, (
         f"{button} menu palette contract changed: expected {expected}, got {attrs}"
     )
@@ -101,7 +101,12 @@ def test_menu_fraction(button, expected):
     pb.tick(180)                 # three seconds reading: clock must hold
     assert timer(pb) == entered, f"{button} menu counted paused time"
     resume(pb)
-    pb.tick(25)                  # 40 + 25 active frames must cross a second
+    # Re-entering the room restores its VRAM while the display is blank. Those
+    # VBlanks are intentionally not active play and grew slightly when the
+    # colossal-boss atlas was added. Sixty wall VBlanks leave at least twenty
+    # active room VBlanks after that bounded restore: retained 40 + >=20 must
+    # cross exactly one second, while a discarded fraction still cannot.
+    pb.tick(60)
     gained = timer(pb) - base
     pb.stop(save=False)
     assert gained == 1, (

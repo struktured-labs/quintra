@@ -21,8 +21,12 @@ pub const STAGES: [StageTheme; 9] = [
         // ring, body-spacing, and phase break before the kill, without
         // changing boss damage or turning an early contact sequence into an
         // unwinnable expedition.
-        boss_hp_bonus: 150, boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
-        enemy_pool: &[(0, 35), (12, 30), (9, 20), (13, 15)],
+        boss_hp_bonus: 150, boss_hp_cap: 200, endless_boss_hp_cap: 255,
+        boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
+        // Shard Crabs replace a small crawler slice: their one-hit shell
+        // introduces a readable bait-and-punish beat without increasing the
+        // opening room body count or changing pool weight.
+        enemy_pool: &[(0, 29), (30, 6), (12, 30), (9, 20), (13, 15)],
     },
     // 1 — Verdant Hollow (mossy green)
     StageTheme {
@@ -32,7 +36,13 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 1, 4, 0), c( 8,24, 4), c(18,31,10), c(30,31,22)],
         door:    [c( 2, 2, 1), c(11, 8, 2), c(20,14, 3), c(30,24, 8)],
         boss:    [c(0,0,0), c( 9,19, 7), c( 2, 6, 2), c(26,31,14)],
-        boss_hp_bonus: 170, boss_dmg_bonus: 1, mb_variant: 1, room_archetype: 1,
+        // The Serpent remains tougher than Crystal in movement/pattern terms,
+        // but 220 HP plus continuous rebound movement turned the second boss
+        // into an attrition wall for a legitimate starter build. 205 leaves
+        // the first stage's 200-HP lesson below it while preserving a clear
+        // re-engagement-and-dodge fight instead of an extra damage lap.
+        boss_hp_bonus: 155, boss_hp_cap: 205, endless_boss_hp_cap: 255,
+        boss_dmg_bonus: 1, mb_variant: 1, room_archetype: 1,
         // Vine Coils replace part of the Flutterbat band with a slow,
         // readable opposite-pair lane prompt. The table remains exactly 100:
         // this makes Verdant Hollow more distinct without adding bodies,
@@ -47,11 +57,17 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 5, 1, 0), c(28,10, 2), c(31,22, 4), c(31,31,20)],
         door:    [c( 2, 1, 0), c(12, 8, 2), c(22,15, 3), c(31,26, 8)],
         boss:    [c(0,0,0), c(22, 9, 4), c( 6, 2, 1), c(31,27,10)],
-        boss_hp_bonus: 190, boss_dmg_bonus: 2, mb_variant: 2, room_archetype: 2,
+        // The Maw's fast aimed breath and lunge carry its difficulty; 150 HP
+        // prevents an early melee pattern lesson becoming an attrition wall.
+        boss_hp_bonus: 190, boss_hp_cap: 150, endless_boss_hp_cap: 150,
+        boss_dmg_bonus: 2, mb_variant: 2, room_archetype: 2,
         // Cinder Kites add a mobile, low-damage fan to the heavy Maw's
-        // stationary three-way pressure. The total remains exactly 100, so
-        // this is a new encounter identity rather than density inflation.
-        enemy_pool: &[(3, 20), (6, 30), (4, 22), (14, 16), (25, 12)],
+        // stationary three-way pressure.  Fold Stars and Rift Oozes give the
+        // third dungeon visible timing and movement lessons: the former
+        // blooms into invulnerable echoes then contracts, the latter splits,
+        // scatters, and reforms.  They replace the old Skeleton slice rather
+        // than adding bodies, HP, or a new procgen draw.
+        enemy_pool: &[(11, 8), (6, 30), (4, 22), (14, 16), (25, 12), (15, 12)],
     },
     // 3 — Frost Vault (icy cyan/white)
     StageTheme {
@@ -61,7 +77,13 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 4, 8,12), c(12,26,31), c(22,31,31), c(31,31,31)],
         door:    [c( 2, 3, 4), c(10, 9, 4), c(20,16, 6), c(30,26,12)],
         boss:    [c(0,0,0), c(12,18,24), c( 3, 5, 9), c(31,31,31)],
-        boss_hp_bonus: 205, boss_dmg_bonus: 2, mb_variant: 3, room_archetype: 3,
+        // Frost is a first-campaign movement lesson, but its former 130-HP
+        // cap let the strongest base kit erase the new screen-scale Spider
+        // in a 7.3-second uninterrupted lane. 150 preserves the blink/web
+        // danger while guaranteeing enough time to read more than one cycle.
+        // Its returning endless silhouette resumes the one-byte ceiling.
+        boss_hp_bonus: 205, boss_hp_cap: 150, endless_boss_hp_cap: 255,
+        boss_dmg_bonus: 2, mb_variant: 3, room_archetype: 3,
         // Frost is led by moving pressure; its 10% rotating Sentry is a
         // readable lane hazard, while Frost Lancers take the upper 8% of the
         // old Wisp band. The total stays 100: a new lane decision, not more
@@ -76,7 +98,8 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 3, 5, 0), c(16,26, 2), c(26,31, 6), c(31,31,18)],
         door:    [c( 2, 2, 0), c(11, 9, 2), c(20,16, 4), c(29,25, 9)],
         boss:    [c(0,0,0), c(16,20, 4), c( 4, 6, 1), c(31,31,14)],
-        boss_hp_bonus: 220, boss_dmg_bonus: 3, mb_variant: 4, room_archetype: 4,
+        boss_hp_bonus: 220, boss_hp_cap: 255, endless_boss_hp_cap: 255,
+        boss_dmg_bonus: 3, mb_variant: 4, room_archetype: 4,
         // Bog Toad replaces a slice of the old passive pool: a telegraphed
         // pounce changes positional decisions without increasing density.
         // Preserve the original table's first 92 roll values exactly; only
@@ -93,7 +116,8 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 3, 1, 5), c(14, 8,22), c(22,16,30), c(30,28,31)],
         door:    [c( 2, 2, 3), c(10, 8, 6), c(19,15, 8), c(28,24,14)],
         boss:    [c(0,0,0), c(13,11,20), c( 3, 3, 6), c(28,22,31)],
-        boss_hp_bonus: 230, boss_dmg_bonus: 3, mb_variant: 2, room_archetype: 5,
+        boss_hp_bonus: 230, boss_hp_cap: 255, endless_boss_hp_cap: 255,
+        boss_dmg_bonus: 3, mb_variant: 2, room_archetype: 5,
         // Gloam Bramble replaces a small Prism Skitter slice with a slower
         // opposite-lane orbit. Shadow Keep stays a deliberate positioning
         // test without increasing generated body count.
@@ -107,7 +131,8 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 6, 4, 0), c(28,22, 4), c(31,29, 8), c(31,31,22)],
         door:    [c( 3, 2, 0), c(14,11, 2), c(24,19, 4), c(31,28,10)],
         boss:    [c(0,0,0), c(22,17, 5), c( 6, 4, 1), c(31,30,18)],
-        boss_hp_bonus: 240, boss_dmg_bonus: 4, mb_variant: 3, room_archetype: 6,
+        boss_hp_bonus: 240, boss_hp_cap: 230, endless_boss_hp_cap: 230,
+        boss_dmg_bonus: 4, mb_variant: 3, room_archetype: 6,
         // The Sunwheel makes the Temple a positioning test: it maintains a
         // compact orbit and marks a changing opposite lane, while the rest
         // of the pool preserves room for melee and counter-play lessons.
@@ -121,7 +146,12 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 5, 0, 1), c(24, 2, 6), c(31, 6,10), c(31,22,20)],
         door:    [c( 3, 1, 1), c(13, 6, 3), c(23,12, 5), c(31,22,10)],
         boss:    [c(0,0,0), c(20, 4, 6), c( 6, 1, 2), c(31,20,16)],
-        boss_hp_bonus: 248, boss_dmg_bonus: 4, mb_variant: 0, room_archetype: 7,
+        // Hydra's five mixed-speed streams should create the late-game
+        // spectacle, not compensate for a five-second health window. A
+        // 150-HP cap gives the strongest base kit an 8.3-second ideal lane;
+        // real weaving and the three-head animation extend it naturally.
+        boss_hp_bonus: 248, boss_hp_cap: 150, endless_boss_hp_cap: 150,
+        boss_dmg_bonus: 4, mb_variant: 0, room_archetype: 7,
         enemy_pool: &[(3, 18), (7, 18), (11, 20), (8, 15), (20, 11), (21, 11), (23, 7)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
@@ -132,8 +162,13 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 0, 4, 2), c( 6,22, 8), c(14,31,12), c(28,31,24)],
         door:    [c( 2, 0, 3), c( 8, 4,10), c(16,10,20), c(26,18,30)],
         boss:    [c(0,0,0), c(13, 6,20), c( 3, 1, 7), c(20,31,18)],
-        boss_hp_bonus: 255, boss_dmg_bonus: 5, mb_variant: 4, room_archetype: 8,
-        enemy_pool: &[(7, 17), (11, 17), (15, 20), (19, 15), (20, 13), (21, 10), (23, 8)],
+        boss_hp_bonus: 255, boss_hp_cap: 220, endless_boss_hp_cap: 220,
+        boss_dmg_bonus: 5, mb_variant: 4, room_archetype: 8,
+        // Void Halo replaces Void Sanctum's fast Dusk Midge band with a
+        // wider, slower opposite-pair lane puzzle. Midge still owns its
+        // Bloodmoon encounter; the final pool remains seven entries and 100
+        // weight, so this changes neither body density nor procgen draw count.
+        enemy_pool: &[(7, 17), (11, 17), (15, 20), (19, 15), (20, 13), (21, 10), (31, 8)],
     },
 ];
 

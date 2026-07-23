@@ -70,6 +70,8 @@ pub const ENEMY_BOG_TOAD:        EnemyId = EnemyId::new(26);   // Toxic Mire tel
 pub const ENEMY_BRAMBLE_SPRITE:  EnemyId = EnemyId::new(27);   // Shadow Keep orbiting thorn pair
 pub const ENEMY_FROST_LANCER:    EnemyId = EnemyId::new(28);   // Frost Vault telegraphed ice charge
 pub const ENEMY_VINE_COIL:       EnemyId = EnemyId::new(29);   // Verdant Hollow orbiting seed-pair caster
+pub const ENEMY_SHARD_CRAB:      EnemyId = EnemyId::new(30);   // Crystal Caverns shell-counter skirmisher
+pub const ENEMY_VOID_HALO:       EnemyId = EnemyId::new(31);   // Void Sanctum wide-orbit lane shaper
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -165,6 +167,13 @@ pub const SPRITE_FROST_LANCER:   SpriteRef = SpriteRef::new(79);
 // Verdant Hollow has no other slot-79 specialist, so this living seed coil
 // can use the same phase-safe tile without expanding the fixed OBJ atlas.
 pub const SPRITE_VINE_COIL:      SpriteRef = SpriteRef::new(79);
+// Crystal Caverns has no other stage-exclusive slot-79 enemy, so the Shard
+// Crab can use the same phase-safe tile without increasing the OBJ atlas.
+pub const SPRITE_SHARD_CRAB:     SpriteRef = SpriteRef::new(79);
+// Void Sanctum never shares a combat room with the other stage-local slot-79
+// specialists, so its final-region orbit silhouette costs no permanent OBJ
+// atlas slot.
+pub const SPRITE_VOID_HALO:      SpriteRef = SpriteRef::new(79);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

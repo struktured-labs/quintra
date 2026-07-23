@@ -48,6 +48,14 @@ pub struct StageTheme {
     /// Large-boss stats: added on top of the base enemy entry.
     /// Registry enforces hp monotonically non-decreasing across stages.
     pub boss_hp_bonus:  u8,
+    /// Final first-run HP after the base boss plus `boss_hp_bonus` has
+    /// saturated to one byte. This keeps pattern-specific pacing caps in
+    /// authored content rather than a divergent procgen.c switch.
+    pub boss_hp_cap: u8,
+    /// Final HP cap for this boss silhouette when it returns in endless
+    /// descent. Frost's early 130-HP teaching cap is intentionally not
+    /// repeated after the first nine-stage campaign.
+    pub endless_boss_hp_cap: u8,
     pub boss_dmg_bonus: u8,
     /// Mini-boss silhouette: 0 Sentinel / 1 Orc / 2 Skeleton /
     /// 3 Bomber / 4 Warlock. One
@@ -93,6 +101,10 @@ impl StageTheme {
         if self.room_archetype >= ROOM_ARCHETYPES {
             return Err(format!("stage {} room_archetype {} out of range (0..{})",
                 self.id, self.room_archetype, ROOM_ARCHETYPES));
+        }
+        if self.boss_hp_cap < 50 || self.endless_boss_hp_cap < 50 {
+            return Err(format!("stage {} boss HP cap must be at least base HP 50",
+                self.id));
         }
         if self.enemy_pool.is_empty() || self.enemy_pool.len() > MAX_POOL {
             return Err(format!("stage {} enemy_pool size {} out of range 1..={}",

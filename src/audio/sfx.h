@@ -19,10 +19,12 @@ enum {
     SFX_LOWHP,        // danger pulse: single soft high blip
     SFX_TICK,         // boss telegraph: quiet mechanical click
     SFX_WEAK,         // elemental super-effective: bright rising crystal ping
-    SFX_PUZZLE,       // landscape secret: distinct bright discovery cue
+    SFX_PUZZLE,       // landscape secret: long spooky four-note discovery cue
 };
 
 void sfx_play(u8 id);
+// Ordered floor runes answer with a rising pitch before the full solve cue.
+void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps
 
 #endif

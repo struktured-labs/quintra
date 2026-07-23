@@ -54,6 +54,10 @@ EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
+GH=$(awk '/DEF _g_hitstop / {print $3}' "$NOI")
+SEALED=$(awk '/DEF _room_combat_sealed / {print $3}' "$NOI")
+PUZZLE_KIND=$(awk '/DEF _room_puzzle_kind / {print $3}' "$NOI")
+PUZZLE_LOCKED=$(awk '/DEF _room_puzzle_locked / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
 mkdir -p "$TRIAL_DIR"
 if [ -n "$TRACE_DIR" ]; then mkdir -p "$TRACE_DIR"; fi
@@ -101,6 +105,7 @@ for run in "${RUN_IDS[@]}"; do
       debug_env=()
       if [ -n "$TRACE_DIR" ]; then
         trace_env+=("QUINTRA_BOT_TRACE_OUT=$TRACE_DIR/run-$run-class-$class-$attempt.trace")
+        trace_env+=("QUINTRA_BOT_OBS_TRACE_OUT=$TRACE_DIR/run-$run-class-$class-$attempt.obs.csv")
       fi
       if [ -n "$DEBUG_DIR" ]; then
         debug_env+=("QUINTRA_BOT_DEBUG_OUT=$DEBUG_DIR/run-$run-class-$class-$attempt.log")
@@ -110,6 +115,10 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" QUINTRA_TM_ADDR="$TM" \
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \
+        QUINTRA_HITSTOP_ADDR="$GH" \
+        QUINTRA_SEALED_ADDR="$SEALED" \
+        QUINTRA_PUZZLE_KIND_ADDR="$PUZZLE_KIND" \
+        QUINTRA_PUZZLE_LOCKED_ADDR="$PUZZLE_LOCKED" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
         QUINTRA_BOT_TARGET_FRAME="$TARGET_FRAME" \
         QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \

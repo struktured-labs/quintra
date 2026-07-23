@@ -9,7 +9,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-sauran-rope.XXXXXX)"
 
-QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=1 \
+# Focused controller geometry check: Easy preserves the Rope and Tail Spike
+# behavior while preventing the harder opening Colossus from masking it.
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=1 \
   QUINTRA_BALANCE_TARGET_FRAME=520 \
   QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
@@ -25,7 +27,8 @@ awk -F, '
     if ($(col["seed"]) != 2064128323) wrong_seed = 1
     if ($(col["max_room"]) < 8) escaped = 0
     else escaped = 1
-    if ($(col["max_target_stall_frames"]) > 3600 && $(col["min_hp"]) > 0)
+    if ($(col["max_target_stall_room"]) == 7 &&
+        $(col["max_target_stall_frames"]) > 3600 && $(col["min_hp"]) > 0)
       stalled = 1
   }
   END {

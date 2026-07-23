@@ -14,6 +14,7 @@
 
 extern u8 music_track_id;       // observable stable music number
 extern u8 music_stage_number;   // requested stage, normalized by player
+extern u8 music_row;            // current 0..31 sequencer row (read-only telemetry)
 
 void music_play_caverns(void);
 void music_play_stage(void);    // unique ids 0..8

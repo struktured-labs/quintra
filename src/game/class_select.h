@@ -7,6 +7,7 @@
 #include "game/screen.h"
 
 extern u8 class_select_cursor;   // 0..N_CLASSES-1
+extern u8 class_select_easy_mode;
 
 void        class_select_enter(void);
 void        class_select_exit(void);

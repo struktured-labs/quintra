@@ -54,7 +54,11 @@ def main():
         put_fix8(pb, midge + 2, 64)
         put_fix8(pb, midge + 6, 64)
         pb.memory[midge + 15] = 2  # state: east; dir8[2] is +X.
-        pb.memory[midge + 16] = 0  # state_timer: start a measured drift beat.
+        # Start just before a harrier beat. This avoids conflating the first
+        # post-room-update frame with the cadence itself: an 80-speed Midge
+        # must step twice in eight updates, while an eight-tick caster gets
+        # only one step in that same measured lane.
+        pb.memory[midge + 16] = 3
         pb.memory[midge + 18] = 0  # Shooter ai_data[1]: fire this update.
         put16(pb, PL + 9, 112)
         put16(pb, PL + 11, 64)
@@ -74,12 +78,15 @@ def main():
 
         # The Midge's authored 80 speed must affect the shared Shooter AI,
         # rather than merely looking "fast" in generated content. Eight
-        # ticks include its first and fifth body beats: exactly two eastward
-        # pixels, while legacy casters retain their one-per-eight cadence.
+        # ticks span two four-tick harrier beats; legacy casters retain only
+        # one eight-tick body beat in that same lane.
+        positions = [pb.memory[midge + 3]]
         for _ in range(7):
             pb.tick()
+            positions.append(pb.memory[midge + 3])
         assert pb.memory[midge + 3] == 66, (
-            f"Dusk Midge ignored its fast drift cadence: x={pb.memory[midge + 3]}"
+            f"Dusk Midge ignored its fast drift cadence: x={pb.memory[midge + 3]}, "
+            f"positions={positions}, timer={pb.memory[midge + 16]}, state={pb.memory[midge + 15]}"
         )
 
     for seed in (

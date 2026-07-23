@@ -43,7 +43,11 @@ def first_player_shot(pb, entities):
 def main():
     entities = addr("_entities")
     for moves, name, max_ttl in (
-        (0, "Wolfkin", 9),
+        # Wolfkin's physical Fang forms deliberately live for 18 frames:
+        # their compact forward lane is the melee kit's needed reach, not a
+        # ranged shot stream. The dedicated forms contract also pins the
+        # directed stab's 64px maximum lane.
+        (0, "Wolfkin", 18),
         (1, "Sauran", 12),
         (4, "Vespine", 12),
     ):

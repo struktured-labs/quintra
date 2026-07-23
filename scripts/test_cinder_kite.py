@@ -92,7 +92,9 @@ def main():
     # Fixed seeds retain reproducibility while allowing its 12% pool weight
     # to demonstrate that this is reachable procedural content, not dead data.
     for seed in range(0xC1DE0000, 0xC1DE0010):
-        generated_room(2, seed, probe=probe)
+        # Local 2 is Ember's deliberately hostile-free phase gate. Sample
+        # ordinary graph cell 4 for the procedural harrier contract.
+        generated_room(2, seed, probe=probe, local_room=4)
         if seen:
             break
     assert seen, "Cinder Kite did not appear in 16 fixed Ember procgen seeds"

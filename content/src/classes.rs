@@ -12,13 +12,15 @@ pub const WOLFKIN: Class = Class {
     starter_weapon: ITEM_CLAW_COMBO,
     signature_active: ITEM_HOWL,
     passive_perk:  PERK_MOVE_SPEED_PLUS_20,
-    // Claw Combo requires sustained body-range contact. Six hearts keeps the
-    // dedicated melee champion sturdier than the faster, harder-hitting
-    // Vespine while remaining below Sauran's seven-heart tank identity.
+    // Claw Combo requires sustained body-range contact. Seven hearts and a
+    // four-ATK Fang Stab give the dedicated melee champion one real recovery
+    // beat to finish a close boss exchange; Sauran remains the tank through
+    // higher DEF and its projectile-breaking Stoneskin, while Vespine retains
+    // the faster, harder-hitting fragile pressure role.
     base_stats: BaseStats {
-        hp_max: 12,  // 6 hearts
+        hp_max: 14,  // 7 hearts
         mp_max: 4,
-        atk:    2,
+        atk:    4,
         def:    1,
         spd:    6,
     },
@@ -32,10 +34,12 @@ pub const SAURAN: Class = Class {
     starter_weapon: ITEM_TAIL_SPIKE,
     signature_active: ITEM_STONESKIN,
     passive_perk:  PERK_HP_PLUS_2_SLOW_REGEN,
-    // Scaled Hide is pre-baked into the starting stats. Seven hearts lets the
-    // slow melee tank absorb one early Sentinel contact cycle while still
-    // relying on Stoneskin and positioning for projectile patterns.
-    base_stats: BaseStats { hp_max: 14, mp_max: 3, atk: 2, def: 2, spd: 4 },
+    // Scaled Hide is pre-baked into the starting stats. Eight hearts and a
+    // measured five-speed let the tank reset from a boss-body approach; four
+    // speed left its long Tail Spike recovery unable to reclaim a safe lane
+    // before the next contact cycle. Stoneskin and positioning remain the
+    // answer to projectile patterns, not a global enemy-stat concession.
+    base_stats: BaseStats { hp_max: 16, mp_max: 3, atk: 2, def: 2, spd: 5 },
 };
 
 pub const CORVIN: Class = Class {
@@ -46,9 +50,10 @@ pub const CORVIN: Class = Class {
     starter_weapon: ITEM_FEATHER_SHURI,
     signature_active: ITEM_MURDER,
     passive_perk:  PERK_SEE_HP_REVEAL,
-    // Featherbarb's returning arc demands sustained positioning time. Six
-    // hearts compensate for low DEF without inflating its safe ranged damage.
-    base_stats: BaseStats { hp_max: 12, mp_max: 8, atk: 2, def: 1, spd: 5 },
+    // Featherbarb's returning arc demands sustained positioning time. Seven
+    // hearts compensate for low DEF through the first Riftwild crossing
+    // without inflating its safe ranged damage.
+    base_stats: BaseStats { hp_max: 14, mp_max: 8, atk: 2, def: 1, spd: 5 },
 };
 
 pub const PICSEAN: Class = Class {
@@ -74,9 +79,10 @@ pub const VESPINE: Class = Class {
     signature_active: ITEM_SWARM,
     passive_perk:  PERK_POISON_SYNERGY,
     // The close-range Stinger exposes Vespine to contact damage despite her
-    // speed. Five-and-a-half hearts keeps her below the ranged vessels while
-    // preventing a single late-room mistake from erasing an otherwise sound run.
-    base_stats: BaseStats { hp_max: 11, mp_max: 5, atk: 3, def: 1, spd: 7 },
+    // speed. Six-and-a-half hearts keeps her below both durable melee
+    // vessels while giving Swarm's committed finish window one real exchange
+    // instead of asking the player to end an opening boss at one hit.
+    base_stats: BaseStats { hp_max: 13, mp_max: 5, atk: 4, def: 1, spd: 7 },
 };
 
 pub fn register(r: &mut Registry) {

@@ -55,6 +55,83 @@
 #define BGT_FENCE      38  // solid timber boundary
 #define BGT_TREE       39  // solid outdoor canopy/trunk silhouette
 
+// Spirit Compass-only glyphs. Dedicated symbols keep the SELECT screen an
+// abstract map instead of making it look like a tiny dungeon screenshot.
+#define BGT_MAP_ROOM    49
+#define BGT_MAP_HERE    50
+#define BGT_MAP_BOSS    51
+#define BGT_MAP_SIGIL   52
+#define BGT_MAP_PATH_H  53
+#define BGT_MAP_PATH_V  54
+
+// Void Sanctum's final Colossus uses the BG plane for a screen-scale astral
+// body while its 32x32 OBJ remains the vulnerable moving core. These tiles
+// are walkable projection art, not invisible collision walls.
+#define BGT_COLOSSUS_VOID   55
+#define BGT_COLOSSUS_SCALE  56
+#define BGT_COLOSSUS_EDGE_L 57
+#define BGT_COLOSSUS_EDGE_R 58
+#define BGT_COLOSSUS_EYE    59
+#define BGT_COLOSSUS_FANG   60
+#define BGT_COLOSSUS_RUNE   61
+#define BGT_COLOSSUS_MAW    62
+#define BGT_COLOSSUS_HORN   63
+
+// Compass-only 8px legend letters. Keeping these as authored BG tiles avoids
+// invoking the console/font system or turning the map back into a text page.
+#define BGT_MAP_LABEL_Y 64
+#define BGT_MAP_LABEL_O 65
+#define BGT_MAP_LABEL_U 66
+#define BGT_MAP_LABEL_S 67
+#define BGT_MAP_LABEL_I 68
+#define BGT_MAP_LABEL_G 69
+#define BGT_MAP_LABEL_L 70
+#define BGT_MAP_LABEL_B 71
+
+// Sanctuary-only boss threshold art. The room tilemap retains BGT_DOOR for
+// collision/progression; rendering substitutes these unmistakable gate tiles.
+#define BGT_BOSS_GATE_L      72
+#define BGT_BOSS_GATE_R      73
+#define BGT_BOSS_GATE_TOP    74
+#define BGT_BOSS_GATE_BOTTOM 75
+
+// In-play area labels. These are tile-native landmarks rather than a modal
+// font screen: Riftwild and each village quarter identify themselves while
+// the hero keeps moving. Room collision continues to use the underlying
+// grass/path tile; draw_room_tilemap substitutes these only for display.
+#define BGT_AREA_R 76
+#define BGT_AREA_I 77
+#define BGT_AREA_F 78
+#define BGT_AREA_T 79
+#define BGT_AREA_W 80
+#define BGT_AREA_L 81
+#define BGT_AREA_D 82
+#define BGT_AREA_V 83
+#define BGT_AREA_A 84
+#define BGT_AREA_G 85
+#define BGT_AREA_E 86
+#define BGT_AREA_M 87
+#define BGT_AREA_K 88
+#define BGT_AREA_O 89
+
+// Compass-only nonlinear edge. Rooms 2 and 4 in later dungeons are joined by
+// a rift well in addition to the ordinary walking route; the map draws this
+// violet diagonal only as each endpoint is discovered.
+#define BGT_MAP_RIFT    90
+#define BGT_MAP_LABEL_R 91
+#define BGT_MAP_LABEL_F 92
+#define BGT_MAP_LABEL_T 93
+#define BGT_MAP_LABEL_P 94
+#define BGT_MAP_UNKNOWN 95 // dim slot; reveals grid shape, never room identity/link
+
+// Riftwild-only geographic vocabulary. A run rotates four landmark families
+// across the authored 4x4 graph, making a cell recognizable without replacing
+// procgen or exposing its Compass identity through fog of war.
+#define BGT_WILD_FLOWER  96 // walkable meadow color
+#define BGT_WILD_WATER   97 // solid pond edge / streamlet
+#define BGT_WILD_STONE   98 // solid weathered standing stone
+#define BGT_WILD_STUMP   99 // solid old-growth stump
+
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
 #define BGPAL_WALL    1
@@ -104,10 +181,16 @@
 #define SPR_ENEMY_BRAMBLE_SPRITE SPR_APOTHECARY // Shadow-only thorn orbit pair
 #define SPR_ENEMY_FROST_LANCER SPR_APOTHECARY // Frost-only telegraphed charge
 #define SPR_ENEMY_VINE_COIL    SPR_APOTHECARY // Verdant-only orbiting seed-pair caster
+#define SPR_ENEMY_SHARD_CRAB   SPR_APOTHECARY // Crystal-only shell-counter skirmisher
+#define SPR_ENEMY_VOID_HALO    SPR_APOTHECARY // Void-only wide orbit lane shaper
+// Arrival-square only reuse: the Bellkeeper is a civic landmark, while the
+// apothecary owns this tile in the craft quarter. Those residents never share
+// a town screen, and dungeon entry reloads the stage specialist before combat.
+#define SPR_TOWN_BELLKEEPER    SPR_APOTHECARY
 #define SPR_ENEMY_ECHO_GUARD  80 // Golden Temple shield-counter duelist
 #define SPR_SHOP_TAG         81 // animated for-sale marker; never loose currency
 #define SPR_ENEMY_RIFT_WARDEN SPR_SHOP_TAG // combat-only late five-way caster
-#define SPR_FX_SWING        122 // Wolfkin's adjacent claw/weapon arc
+#define SPR_FX_SWING        122 // Wolfkin's physical sword strike
 #define SPR_CARTOGRAPHER    123 // village chartwright; reveals the next route
 // Slot 123 is Chartwright art in towns and the Astral Spear only in combat
 // rooms; those populations never coexist, preserving the OBJ VRAM budget.
@@ -116,7 +199,7 @@
 // Town-only reuse: villages never spawn Rune Lanterns, and each dungeon room
 // reloads the normal lantern art before enemies exist.
 #define SPR_TOWN_WAYKEEPER   SPR_ENEMY_RUNE_LANTERN
-#define SPR_MERCHANT_CALLOUT 125 // proximity trade speech bubble
+#define SPR_MERCHANT_CALLOUT 125 // town-local proximity bubble (trade or lore)
 #define SPR_ENEMY_DREAD_BELL SPR_MERCHANT_CALLOUT // combat-only late eight-way caster
 #define SPR_SURGE_ORB        126 // temporary weapon-speed/damage pickup
 #define SPR_TOWN_LOREKEEPER  SPR_SURGE_ORB // town-arrival storyteller; no active Surge there
@@ -140,7 +223,9 @@ extern const u8 hud_tiles[][16];
 
 void tiles_load_pickup_sprites(void) BANKED;
 void tiles_load_town_waykeeper_sprite(void) BANKED;
+void tiles_load_town_bellkeeper_sprite(void) BANKED;
 void tiles_load_town_lorekeeper_sprite(void) BANKED;
+void tiles_load_town_lore_callout_sprite(void) BANKED;
 void tiles_load_hud(void) BANKED;
 
 // Phase 12 metasprite loaders
@@ -156,6 +241,8 @@ void tiles_load_bog_toad_sprite(void) BANKED;      // Toxic Mire reuse of apothe
 void tiles_load_bramble_sprite(void) BANKED;       // Shadow Keep reuse of that slot
 void tiles_load_frost_lancer_sprite(void) BANKED;  // Frost Vault reuse of that slot
 void tiles_load_vine_coil_sprite(void) BANKED;     // Verdant Hollow reuse of that slot
+void tiles_load_shard_crab_sprite(void) BANKED;    // Crystal Caverns reuse of that slot
+void tiles_load_void_halo_sprite(void) BANKED;     // Void Sanctum reuse of that slot
 void tiles_load_sunwheel_sprite(void) BANKED;      // Golden Temple reuse of that slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_spear_sprite(void) BANKED;
@@ -163,5 +250,28 @@ void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
 void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
+void tiles_load_map_bg(void) BANKED;              // dungeon set + Compass glyphs
+void tiles_load_colossus_bg(u8 stage) BANKED;     // nine screen-scale boss bodies
+void tiles_paint_crystal_projection(void) BANKED;
+void tiles_paint_serpent_projection(void) BANKED;
+void tiles_paint_cinder_projection(void) BANKED;
+void tiles_paint_spider_projection(void) BANKED;
+void tiles_paint_reaper_projection(void) BANKED;
+void tiles_paint_golem_projection(void) BANKED;
+void tiles_paint_mire_projection(u8 expanded, u8 draw_vram) BANKED;
+void tiles_paint_hydra_projection(void) BANKED;
+void tiles_paint_void_projection(void) BANKED;
+void tiles_prepare_colossal_edges(void) BANKED; // safe 0..3px camera overscan
+void tiles_load_boss_cue_bg(void) BANKED;         // sanctuary skull/barred threshold
+void tiles_draw_boss_cue(u8 entered_from) BANKED; // project its 16x16 edge seal
+void tiles_load_area_labels(void) BANKED;          // RIFTWILD + village quarter landmarks
+void tiles_draw_area_label(u8 kind) BANKED;        // 1 Riftwild, 2 Village, 3 Market, 4 Forge
+void tiles_animate_colossus_bg(u8 closed) BANKED; // blink the BG-plane eyes
+void tiles_animate_serpent_bg(u8 alternate) BANKED; // electric coil travel
+void tiles_animate_cinder_bg(u8 active) BANKED;   // breath/lunge vs recovery jaw
+void tiles_animate_spider_bg(u8 closed) BANKED;   // web charge + eye pulse
+void tiles_animate_reaper_bg(u8 phased) BANKED;   // spectral cloak fade
+void tiles_animate_golem_bg(u8 dormant) BANKED;   // stone sleep / sun-rune wake
+void tiles_animate_hydra_bg(u8 center_open) BANKED;
 
 #endif

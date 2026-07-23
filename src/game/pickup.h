@@ -12,7 +12,7 @@
 #define PICKUP_COIN_5     2
 #define PICKUP_ITEM       3    // ai_data[1] = index into generated items[]
 #define PICKUP_SHOP       4    // shop ware: ai_data[1]=ware kind, ai_data[2]=price
-#define PICKUP_WEAPON     5    // ai_data[1] = weapon item index; swaps A-weapon
+#define PICKUP_WEAPON     5    // ai_data[1] = weapon item index; A confirms A-weapon swap
 #define PICKUP_MP         6    // +1 MP wisp (dropped by shattered crystals)
 #define PICKUP_VILLAGER   7    // permanent town elder; touch for sanctuary blessing
 #define PICKUP_MERCHANT   8    // permanent visual shopkeeper; non-collectible
@@ -25,6 +25,7 @@
 #define PICKUP_WAYKEEPER    15 // permanent town north-gate resident
 #define PICKUP_RIFTWELL     16 // one-use overworld restoration landmark
 #define PICKUP_LOREKEEPER   17 // permanent town storyteller / lore fixture
+#define PICKUP_BELLKEEPER    18 // permanent town arrival-square bellkeeper
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -43,8 +44,12 @@ u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
 // Spawn a stat-boost item pickup (items[] table index)
 u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED;
 
+// Guaranteed colossus reward: roll from the active champion's small, useful
+// relic pool instead of allowing a first boss to pay only a luck-sidegrade.
+u8   pickup_boss_relic_for_class(void) BANKED;
+
 // Spawn a weapon orb (generated weapon item index). Permanent, never magnetizes;
-// walking over it swaps the A-weapon and drops the old one in its place.
+// overlap it and press A to swap the A-weapon, dropping the old one in place.
 u8   pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED;
 
 // Content-driven weapon-orb selection. These avoid assuming weapon entries
@@ -64,6 +69,7 @@ u8   pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_lorekeeper(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED;
 

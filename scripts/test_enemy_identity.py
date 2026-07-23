@@ -22,6 +22,7 @@ IDENTITIES = {
     22: (69, 6), 23: (79, 6),
     27: (79, 7),
     29: (79, 7),
+    31: (79, 6),
 }
 
 SPECIALISTS = {
@@ -75,6 +76,7 @@ def main():
     assert "tiles_load_dread_bell_sprite" in room_source
     assert "tiles_load_dusk_midge_sprite" in room_source
     assert "tiles_load_sunwheel_sprite" in room_source
+    assert "tiles_load_void_halo_sprite" in room_source
     assert "!RUN_ROOM_IS_TOWN(run_state.room_counter)" in room_source
     assert "room_state_has_shop_wares" in room_source
     # Generated content is the sole runtime identity source. Pin every roster
@@ -129,7 +131,9 @@ def main():
     assert "if (room_stage() == 1) tiles_load_vine_coil_sprite();" in room_source
     assert "sprite_enemy_vine_coil" in SPRITE_SOURCE
 
-    pb.memory[addr("_run_state") + 1] = 3
+    # The opening shop now occupies local graph cell 7, after the branch and
+    # Sigil route, rather than the retired corridor's room 4.
+    pb.memory[addr("_run_state") + 1] = 6
     pb.memory[addr("_run_state") + 17] = 1
     pb.memory[addr("_run_state") + 18] = 6
     put16(pb, addr("_player") + 9, 72)
@@ -137,9 +141,9 @@ def main():
     pb.memory[addr("_room_tilemap") + 9 * 20 + 10] = 34
     for _ in range(30):
         pb.tick()
-        if pb.memory[addr("_run_state") + 1] == 4:
+        if pb.memory[addr("_run_state") + 1] == 7:
             break
-    assert pb.memory[addr("_run_state") + 1] == 4, "could not enter merchant room"
+    assert pb.memory[addr("_run_state") + 1] == 7, "could not enter merchant room"
     entities = addr("_entities")
     merchant_count = 0
     for _ in range(60):
@@ -152,7 +156,7 @@ def main():
         )
         if merchant_count == 1:
             break
-    assert merchant_count == 1, f"room 4 did not generate its merchant: {merchant_count}"
+    assert merchant_count == 1, f"room 7 did not generate its merchant: {merchant_count}"
     callout = generated_sprite("sprite_fx_merchant_callout")
     actual_callout = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
     assert actual_callout == callout, (
@@ -262,6 +266,36 @@ def main():
         f"{pb.memory[skeleton + 3]},{pb.memory[skeleton + 7]}"
     )
 
+    # Blue Crawlers are small Walker enemies, but their older 6px movement
+    # envelope could randomly wander into this same one-tile lane. Unlike a
+    # transient projectile, a live crawler can then become the final target
+    # of a sealed encounter while a 12px champion has no melee route to it.
+    # Start a real eastward walker update at the lane mouth: its feet-box must
+    # reject that move before the walker can get stranded.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    for tx in range(1, 19):
+        pb.memory[tilemap + 7 * 20 + tx] = 2
+        pb.memory[tilemap + 9 * 20 + tx] = 2
+    crawler = entities
+    pb.memory[crawler] = 2
+    pb.memory[crawler + 1] = 3
+    put_fix8(pb, crawler + 2, 64)
+    put_fix8(pb, crawler + 6, 64)
+    pb.memory[crawler + 14] = 2
+    pb.memory[crawler + 15] = 2  # east; Walker moves when its timer hits zero
+    pb.memory[crawler + 16] = 1
+    pb.memory[crawler + 17] = 0  # Blue Crawler
+    pb.memory[crawler + 25] = 0x66
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    assert (pb.memory[crawler + 3], pb.memory[crawler + 7]) == (64, 64), (
+        "Blue Crawler entered a champion-inaccessible one-tile lane: "
+        f"{pb.memory[crawler + 3]},{pb.memory[crawler + 7]}"
+    )
+
     # Gloom Leeches are also persistent chasers, but their old 8px movement
     # envelope could cross this exact one-tile lane and latch from a pocket
     # a champion cannot physically enter. Their Metroid-like drain remains
@@ -352,9 +386,14 @@ def main():
     assert pb.memory[spore + 15] == 0, "Mire Spore armed outside trigger radius"
     put16(pb, player + 9, 88)
     put16(pb, player + 11, 80)
-    pb.tick()
+    # A preceding live fixture may leave at most a couple of ordinary
+    # hit-stop frames. Give the banked enemy dispatch a bounded four-frame
+    # window rather than turning its exact presentation phase into the
+    # gameplay contract; the 36-frame tell must still be essentially intact.
+    for _ in range(4):
+        pb.tick()
     assert pb.memory[spore + 15] == 1, "Mire Spore did not arm near hero"
-    assert pb.memory[spore + 18] >= 34, "Mire Spore skipped its readable fuse"
+    assert pb.memory[spore + 18] >= 32, "Mire Spore skipped its readable fuse"
     for _ in range(40):
         pb.tick()
     spores = []

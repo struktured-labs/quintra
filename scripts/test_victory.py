@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import STAGE_BOSS_ROOM
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -81,9 +82,10 @@ def main():
     # The endurance bot proves a controller-only ninth-boss clear. Here we
     # isolate the ending contract by presenting the exact post-kill state to
     # room_tick, then inspect the cartridge's UI and MBC5 SRAM side effects.
-    pb.memory[rs + 1] = 54       # final boss room
+    pb.memory[rs + 1] = STAGE_BOSS_ROOM[-1]
     pb.memory[rs + 10] = 1      # victory flag set by combat
     pb.memory[rs + 11] = 9      # BOSSES_TO_WIN
+    pb.memory[rs + 12] = 1      # same boss-kill transaction opens descent
     for _ in range(20):
         pb.tick()
     assert pb.memory[screen] == 12, "victory flag did not enter SCREEN_VICTORY"
@@ -123,9 +125,9 @@ def main():
     assert pb.memory[rs + 10] == 0, "endless descent left victory flag latched"
     wait_for_room()
 
-    # Dawn's Verge is not dead postgame lore: leave the cleared ninth-boss
-    # room, cross the authored Riftwild 0->1->2->6 route, and use its gate.
-    exit_at(72, 120)
+    # Dawn's Verge is not dead postgame lore: results reopen Riftwild screen
+    # zero directly, avoiding a regenerated/clamped final-boss arena. Cross
+    # the authored 0->1->2->6 route and use its gate.
     assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 0, (
         "post-victory descent did not reopen Riftwild "
         f"(room={pb.memory[rs + 1]} world={pb.memory[rs + 17]} "
@@ -143,7 +145,8 @@ def main():
     pb.memory[pl + 12] = 0
     for _ in range(12):
         pb.tick()
-    assert pb.memory[rs + 17] == 0 and pb.memory[rs + 1] == 55, (
+    assert pb.memory[rs + 17] == 0 \
+        and pb.memory[rs + 1] == STAGE_BOSS_ROOM[-1] + 1, (
         "post-victory Riftwild gate did not reach final town"
     )
     pb.stop(save=False)
@@ -160,9 +163,10 @@ def main():
     press(skip, "a")
     for _ in range(52):
         skip.tick()
-    skip.memory[rs + 1] = 54
+    skip.memory[rs + 1] = STAGE_BOSS_ROOM[-1]
     skip.memory[rs + 10] = 1
     skip.memory[rs + 11] = 9
+    skip.memory[rs + 12] = 1
     for _ in range(20):
         skip.tick()
     assert skip.memory[screen] == 12, "skip fixture did not enter victory"

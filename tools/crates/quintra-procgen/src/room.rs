@@ -33,8 +33,17 @@ pub const BGT_BLOCK_TR: u8 = 28;
 pub const BGT_BLOCK_BL: u8 = 29;
 pub const BGT_BLOCK_BR: u8 = 30;
 pub const BGT_PORTAL: u8 = 34;
+pub const BGT_COLOSSUS_VOID: u8 = 55;
+pub const BGT_COLOSSUS_SCALE: u8 = 56;
+pub const BGT_COLOSSUS_EDGE_L: u8 = 57;
+pub const BGT_COLOSSUS_EDGE_R: u8 = 58;
+pub const BGT_COLOSSUS_EYE: u8 = 59;
+pub const BGT_COLOSSUS_RUNE: u8 = 61;
+pub const BGT_COLOSSUS_MAW: u8 = 62;
+pub const BGT_COLOSSUS_HORN: u8 = 63;
 
-pub const ROOMS_PER_STAGE: u8 = 6;
+pub const STAGE_START: [u8; 9] = [0, 10, 21, 34, 46, 59, 74, 88, 103];
+pub const STAGE_BOSS_ROOM: [u8; 9] = [9, 20, 32, 45, 58, 72, 87, 102, 118];
 
 pub type Tilemap = [[u8; ROOM_W]; ROOM_H];
 
@@ -55,13 +64,31 @@ pub struct RoomKind {
 }
 
 pub fn room_kind(room_counter: u8, bosses_beaten: u8) -> RoomKind {
-    let boss = room_counter > 0
-        && room_counter % ROOMS_PER_STAGE == 0
-        && room_counter / ROOMS_PER_STAGE > bosses_beaten;
-    let miniboss = !boss && room_counter % ROOMS_PER_STAGE == 3;
-    let shop = !boss && !miniboss && room_counter % ROOMS_PER_STAGE == 4;
-    let rest = !boss && room_counter % ROOMS_PER_STAGE == 5;
+    let stage = usize::from(bosses_beaten.min(8));
+    let start = STAGE_START[stage];
+    let boss_room = STAGE_BOSS_ROOM[stage];
+    let local = room_counter.saturating_sub(start);
+    let size = boss_room - start + 1;
+    let boss = room_counter == boss_room;
+    let miniboss = !boss && (local == 3 || (size >= 14 && local == 9));
+    let shop = !boss && !miniboss && local == size - 3;
+    let rest = !boss && room_counter == boss_room - 1;
     RoomKind { boss, miniboss, shop, rest }
+}
+
+fn dungeon_neighbor(local: u8, size: u8, dir: u8) -> Option<u8> {
+    let mut row = local / 4;
+    let offset = local % 4;
+    let mut col = if row & 1 != 0 { 3 - offset } else { offset };
+    match dir {
+        0 if row > 0 => row -= 1,
+        1 if col < 3 => col += 1,
+        2 if row < 3 => row += 1,
+        3 if col > 0 => col -= 1,
+        _ => return None,
+    }
+    let next = row * 4 + if row & 1 != 0 { 3 - col } else { col };
+    (next < size).then_some(next)
 }
 
 /// Generate the room tilemap for the given run state — the reference for
@@ -107,6 +134,29 @@ pub fn generate_tilemap(
         m[9][0] = BGT_DOOR;
         m[8][ROOM_W - 1] = BGT_DOOR;
         m[9][ROOM_W - 1] = BGT_DOOR;
+
+        // The dungeon uses the reciprocal 4x4 geography shown on the
+        // cartridge Compass. Prefix cells outside the active stage are walls,
+        // not four cosmetic doors that all advance one counter.
+        let stage = usize::from(bosses_beaten.min(8));
+        let local = room_counter.saturating_sub(STAGE_START[stage]);
+        let size = STAGE_BOSS_ROOM[stage] - STAGE_START[stage] + 1;
+        if dungeon_neighbor(local, size, 0).is_none() {
+            m[0][9] = BGT_WALL;
+            m[0][10] = BGT_WALL;
+        }
+        if dungeon_neighbor(local, size, 1).is_none() {
+            m[8][ROOM_W - 1] = BGT_WALL;
+            m[9][ROOM_W - 1] = BGT_WALL;
+        }
+        if dungeon_neighbor(local, size, 2).is_none() {
+            m[ROOM_H - 1][9] = BGT_WALL;
+            m[ROOM_H - 1][10] = BGT_WALL;
+        }
+        if dungeon_neighbor(local, size, 3).is_none() {
+            m[8][0] = BGT_WALL;
+            m[9][0] = BGT_WALL;
+        }
 
         // ---- Interior shape (8 layouts; lanes cols 9-11 / rows 7-9 clear)
         let shape = rng.range_u8(11);   // 11 interior layouts
@@ -336,19 +386,64 @@ pub fn generate_tilemap(
         m[10][14] = HUD_DIGIT_0;
     }
 
-    // Mirror procgen.c's rift apron. The portal's feet-center activation
-    // requires the surrounding 2x2 hero footprint to be clear as well.
-    if room_counter > 6
-        && (room_counter % ROOMS_PER_STAGE == 2 || room_counter % ROOMS_PER_STAGE == 4)
+    // Mirror procgen.c's rift apron and body-width route to the central lane.
+    let stage = usize::from(bosses_beaten.min(8));
+    let local = room_counter.saturating_sub(STAGE_START[stage]);
+    if bosses_beaten > 0 && (local == 2 || local == 4)
     {
         let px = if seed & 4 != 0 { 5 } else { 14 };
         let py = if seed & 8 != 0 { 4 } else { 12 };
+        let (left, right) = if px < 10 { (px - 2, 10) } else { (9, px) };
+        let (top, bottom) = if py < 8 { (py - 2, 8) } else { (7, py) };
+        for y in py - 2..=py {
+            for x in left..=right {
+                m[y as usize][x as usize] = BGT_FLOOR;
+            }
+        }
+        for y in top..=bottom {
+            for x in 9..=11 {
+                m[y as usize][x as usize] = BGT_FLOOR;
+            }
+        }
         for y in py - 2..=py {
             for x in px - 2..=px {
                 m[y as usize][x as usize] = BGT_FLOOR;
             }
         }
         m[py as usize][px as usize] = BGT_PORTAL;
+    }
+
+    // room.c applies the opening Crystal Colossus's projection after the
+    // procgen base is complete. The parity dump represents the final exposed
+    // WRAM tilemap, so mirror that deterministic 112x72 stamp here rather
+    // than exempting boss tiles in the cross-language check. Mire is dynamic
+    // and Void has its own live-ROM contracts; neither is part of this fixed
+    // stage-zero reference case.
+    if kind.boss && bosses_beaten % 9 == 0 {
+        let widths = [8usize, 12, 14, 14, 14, 14, 14, 12, 8];
+        for (y, &width) in widths.iter().enumerate() {
+            let left = 10 - width / 2;
+            for x in 0..width {
+                let tile = if x == 0 {
+                    BGT_COLOSSUS_EDGE_L
+                } else if x == width - 1 {
+                    BGT_COLOSSUS_EDGE_R
+                } else if y == 0 && (x == 1 || x == width - 2) {
+                    BGT_COLOSSUS_HORN
+                } else if y == 2 && (x == 3 || x == width - 4) {
+                    BGT_COLOSSUS_EYE
+                } else if y == 4 && x >= width / 2 - 2 && x <= width / 2 + 1 {
+                    BGT_COLOSSUS_MAW
+                } else if y >= 6 && (x + y) & 2 != 0 {
+                    BGT_COLOSSUS_VOID
+                } else if (x + y) & 3 == 0 {
+                    BGT_COLOSSUS_RUNE
+                } else {
+                    BGT_COLOSSUS_SCALE
+                };
+                m[y + 3][left + x] = tile;
+            }
+        }
     }
 
     m
@@ -363,6 +458,7 @@ pub fn walkable(t: u8) -> bool {
         || t == BGT_DOOR
         || t == BGT_SPIKES
         || t == BGT_PORTAL
+        || (BGT_COLOSSUS_VOID..=BGT_COLOSSUS_HORN).contains(&t)
         || t == HUD_COIN
         || (HUD_DIGIT_0..=HUD_DIGIT_0 + 9).contains(&t)
 }
@@ -375,6 +471,7 @@ pub fn passable_with_shots(t: u8) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     fn flood(m: &Tilemap, start: (usize, usize), pass: fn(u8) -> bool) -> Vec<(usize, usize)> {
         let mut seen = vec![start];
@@ -401,6 +498,10 @@ mod tests {
         (8, ROOM_W - 1), (9, ROOM_W - 1),
     ];
 
+    fn open_doors(m: &Tilemap) -> Vec<(usize, usize)> {
+        DOORS.into_iter().filter(|&(y, x)| m[y][x] == BGT_DOOR).collect()
+    }
+
     #[test]
     fn deterministic() {
         for seed in [1u32, 0xDEADBEEF, 12345] {
@@ -411,8 +512,8 @@ mod tests {
         }
     }
 
-    /// The load-bearing invariant behind every room shape: all four doors
-    /// stay mutually reachable in every non-boss room, for any seed —
+    /// The load-bearing invariant behind every room shape: every authored
+    /// reciprocal graph door stays mutually reachable in every non-boss room —
     /// counting crystals as passable (the player can always shoot through).
     #[test]
     fn all_doors_reachable_across_seeds_and_roles() {
@@ -421,8 +522,10 @@ mod tests {
                 let kind = room_kind(counter, 0);
                 if kind.boss { continue; }
                 let m = generate_tilemap(seed.wrapping_mul(2654435761) + 7, 0, counter, 0, false);
-                let reach = flood(&m, DOORS[0], passable_with_shots);
-                for d in DOORS {
+                let doors = open_doors(&m);
+                assert!(!doors.is_empty());
+                let reach = flood(&m, doors[0], passable_with_shots);
+                for d in doors {
                     assert!(reach.contains(&d),
                         "seed {seed} counter {counter}: door {d:?} unreachable\n{}",
                         dump(&m));
@@ -431,13 +534,16 @@ mod tests {
         }
     }
 
-    /// Vault overlays may block lanes with crystals, but never seal doors.
+    /// Vault overlays may block lanes with crystals, but never seal authored
+    /// graph doors.
     #[test]
     fn vault_rooms_stay_passable() {
         for seed in 0..200u32 {
             let m = generate_tilemap(seed * 31 + 5, 0, 2, 0, true);
-            let reach = flood(&m, DOORS[0], passable_with_shots);
-            for d in DOORS {
+            let doors = open_doors(&m);
+            assert!(!doors.is_empty());
+            let reach = flood(&m, doors[0], passable_with_shots);
+            for d in doors {
                 assert!(reach.contains(&d), "vault seed {seed}: door {d:?} sealed\n{}", dump(&m));
             }
         }
@@ -469,7 +575,7 @@ mod tests {
     /// Boss rooms are sealed: base walls only, no doors, no decor.
     #[test]
     fn boss_rooms_are_sealed() {
-        let m = generate_tilemap(0xABCD, 0, 6, 0, false);
+        let m = generate_tilemap(0xABCD, 0, STAGE_BOSS_ROOM[0], 0, false);
         for d in DOORS {
             assert_eq!(m[d.0][d.1], BGT_WALL, "boss room has an open door at {d:?}");
         }
@@ -478,7 +584,7 @@ mod tests {
     #[test]
     fn nonlinear_rifts_have_a_clear_hero_footprint() {
         for seed in 0..400u32 {
-            for counter in [8u8, 10] {
+            for counter in [STAGE_START[1] + 2, STAGE_START[1] + 4] {
                 let m = generate_tilemap(seed.wrapping_mul(97) + 13, 0, counter, 1, false);
                 let portal = (0..ROOM_H).flat_map(|y| (0..ROOM_W).map(move |x| (y, x)))
                     .find(|&(y, x)| m[y][x] == BGT_PORTAL)
@@ -494,6 +600,79 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Procgen must change decisions that affect play, not merely repaint the
+    /// floor texture.  Keep this deliberately statistical and conservative:
+    /// exact seeds remain deterministic, while a broad seed corpus must cover
+    /// secrets on every wall, both merchant forks, all four nonlinear-rift
+    /// anchors, and a healthy number of distinct obstacle/prop silhouettes.
+    #[test]
+    fn seed_corpus_has_meaningful_variety() {
+        let mut room_signatures = BTreeSet::new();
+        let mut secret_sides = BTreeSet::new();
+        let mut premium_prices = BTreeSet::new();
+        let mut rift_anchors = BTreeSet::new();
+        let mut crate_rooms = 0;
+        let mut spike_rooms = 0;
+        let mut pot_rooms = 0;
+
+        for ordinal in 0..512u32 {
+            let seed = ordinal.wrapping_mul(0x9E37_79B9).wrapping_add(7);
+            let room = generate_tilemap(seed, 0, 1, 0, false);
+            let mut signature = [0u8; ROOM_W * ROOM_H];
+            for (index, &tile) in room.iter().flatten().enumerate() {
+                // Floor texture and walkable rubble are visual seasoning.
+                // Everything else changes cover, collision, interaction, or
+                // route knowledge and therefore belongs in the signature.
+                signature[index] = match tile {
+                    BGT_FLOOR | BGT_FLOOR2 | BGT_FLOOR3 | BGT_RUBBLE => BGT_FLOOR,
+                    _ => tile,
+                };
+            }
+            room_signatures.insert(signature);
+            crate_rooms += usize::from(room.iter().flatten().any(|&t| t == BGT_BLOCK));
+            spike_rooms += usize::from(room.iter().flatten().any(|&t| t == BGT_SPIKES));
+            pot_rooms += usize::from(room.iter().flatten().any(|&t| t == BGT_POT));
+
+            if room[0].contains(&BGT_WALL_CRACK) { secret_sides.insert(0u8); }
+            if room[ROOM_H - 1].contains(&BGT_WALL_CRACK) { secret_sides.insert(1u8); }
+            if room.iter().any(|row| row[0] == BGT_WALL_CRACK) { secret_sides.insert(2u8); }
+            if room.iter().any(|row| row[ROOM_W - 1] == BGT_WALL_CRACK) {
+                secret_sides.insert(3u8);
+            }
+
+            let shop = generate_tilemap(seed, 0, STAGE_BOSS_ROOM[0] - 2, 0, false);
+            premium_prices.insert((shop[10][13] - HUD_DIGIT_0) * 10
+                + (shop[10][14] - HUD_DIGIT_0));
+
+            let rift = generate_tilemap(seed, 0, STAGE_START[1] + 2, 1, false);
+            let anchor = (0..ROOM_H)
+                .flat_map(|y| (0..ROOM_W).map(move |x| (x, y)))
+                .find(|&(x, y)| rift[y][x] == BGT_PORTAL)
+                .expect("late dungeon rift missing");
+            rift_anchors.insert(anchor);
+        }
+
+        assert!(room_signatures.len() >= 128,
+            "seed corpus collapsed to {} meaningful room silhouettes",
+            room_signatures.len());
+        assert_eq!(secret_sides, BTreeSet::from([0, 1, 2, 3]));
+        assert_eq!(premium_prices, BTreeSet::from([20, 40]));
+        assert_eq!(rift_anchors,
+            BTreeSet::from([(5, 4), (5, 12), (14, 4), (14, 12)]));
+        // Loose props/hazards should be optional rather than universal, but
+        // common enough that a 512-seed run does not read as empty rooms.
+        for (label, count) in [("crates", crate_rooms), ("spikes", spike_rooms),
+                               ("pots", pot_rooms)] {
+            assert!((32..480).contains(&count),
+                "{label} appeared in {count}/512 rooms");
+        }
+
+        eprintln!(
+            "procgen variety: {} meaningful silhouettes/512, crates={}, spikes={}, pots={}, secrets=4 sides, shops=2 forks, rifts=4 anchors",
+            room_signatures.len(), crate_rooms, spike_rooms, pot_rooms,
+        );
     }
 
     fn dump(m: &Tilemap) -> String {

@@ -53,6 +53,7 @@ def main():
         pb.memory[entities + i] = 0
     px = pb.memory[player + 9] | (pb.memory[player + 10] << 8)
     py = pb.memory[player + 11] | (pb.memory[player + 12] << 8)
+    old_weapon = pb.memory[player + 21]
     orb = entities
     pb.memory[orb] = 3             # ENT_PICKUP
     pb.memory[orb + 1] = 3         # EF_ACTIVE | EF_ALIVE
@@ -63,6 +64,11 @@ def main():
     pb.memory[orb + 17] = 5        # PICKUP_WEAPON
     pb.memory[orb + 18] = 20       # Rift Flail's generated items[] index
     pb.memory[orb + 25] = 0x66     # normal walk-over pickup hitbox
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[player + 21] == old_weapon, "walking over an orb silently swapped A weapon"
+    assert pb.memory[orb + 1] & 0x01, "unconfirmed weapon orb vanished"
+    pb.button("a")
     for _ in range(3):
         pb.tick()
     assert pb.memory[player + 21] == 20, "Rift Flail orb did not swap A weapon"
@@ -82,7 +88,7 @@ def main():
     assert pb.memory[shot + 26] == pb.memory[player + 5] + 3, "Rift Flail damage drifted"
     assert pb.memory[shot + 19] == 1, "Rift Flail shimmered like a bullet"
     pb.stop(save=False)
-    print("[rift-flail] PASS real weapon swap + physical sweep stats")
+    print("[rift-flail] PASS confirmed weapon swap + physical sweep stats")
 
 
 if __name__ == "__main__":

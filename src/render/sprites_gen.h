@@ -50,6 +50,8 @@ extern const u8 sprite_enemy_bog_toad[16];
 extern const u8 sprite_enemy_bramble_sprite[16];
 extern const u8 sprite_enemy_frost_lancer[16];
 extern const u8 sprite_enemy_vine_coil[16];
+extern const u8 sprite_enemy_shard_crab[16];
+extern const u8 sprite_enemy_void_halo[16];
 
 // 8x8 effects and village roles
 extern const u8 sprite_fx_bullet_a[16];
@@ -62,6 +64,7 @@ extern const u8 sprite_fx_shop_tag[16];
 extern const u8 sprite_fx_merchant_callout[16];
 extern const u8 sprite_fx_surge_orb[16];
 extern const u8 sprite_fx_shield_aura[16];
+extern const u8 sprite_fx_sword[16];
 extern const u8 sprite_fx_spear[16];
 extern const u8 sprite_fx_villager[16];
 extern const u8 sprite_fx_merchant[16];

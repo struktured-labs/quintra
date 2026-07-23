@@ -20,6 +20,7 @@
 BANKREF(class_select_enter)
 
 u8 class_select_cursor;
+u8 class_select_easy_mode;
 
 static const u16 cs_palette[4] = {
     BGR555( 0,  2,  6),    // 0: deep blue
@@ -37,15 +38,15 @@ static const u16 cursor_palette[4] = {
 };
 
 // The loadout names identify the controls, but they do not say what a first
-// B press actually does.  Keep these deliberately short: the class screen is
-// the only uninterrupted moment before the first room, and its 20-column
-// Game Boy text grid must not clip a tutorial sentence.
+// B press actually does. These strings are intentionally 12 characters or
+// fewer: the class screen has a 20-column Game Boy grid, and they share a
+// line with the explicit EFFECT label below.
 static const char *const signature_tips[N_CLASSES] = {
-    "HOWL: 8-WAY WARD",      // Wolfkin
-    "SHIELD: BLOCK HITS",    // Sauran
-    "MURDER: 3-WAY FAN",     // Corvin
-    "WAVE: 3-BUBBLE",        // Picsean
-    "SWARM: FAN+WARD",       // Vespine
+    "8-WAY WARD",            // Wolfkin
+    "BLOCKS SHOTS",          // Sauran
+    "3-WAY FAN",             // Corvin
+    "3 BUBBLES",             // Picsean
+    "FAN + WARD",            // Vespine
 };
 
 // Live 16x16 preview of the highlighted class, in its own colors.
@@ -100,18 +101,19 @@ static void render(void) {
                 if (items[i].id == c->starter_weapon)   wn = items[i].name;
                 if (items[i].id == c->signature_active) sn = items[i].name;
             }
-            gotoxy(1, 13); text_write("A "); text_write(wn);
-            gotoxy(1, 14); text_write("B "); text_write(sn);
+            gotoxy(1, 13); text_write("A WPN "); text_write(wn);
+            gotoxy(1, 14); text_write("B SKILL "); text_write(sn);
         }
     }
 
-    // Explain the selected signature in concrete play terms, rather than
-    // making the player infer it from a lore-flavoured item name in a live
-    // bullet room.  Every signature has the same MP cost/cooldown contract.
-    gotoxy(1, 15); text_write("SIG ");
+    // Explain the skill in concrete play terms without presenting B as three
+    // different bindings. Every string fits the physical 20-column grid—
+    // unlike the former clipped tutorial.
+    gotoxy(1, 15); text_write("EFFECT ");
     text_write(signature_tips[class_select_cursor]);
-    gotoxy(1, 16); text_write("COST 2 MP / COOLDOWN");
-    gotoxy(2, 17); text_write("A START   B BACK");
+    gotoxy(1, 16); text_write("SELECT MODE ");
+    text_write(class_select_easy_mode ? "EASY" : "NORMAL");
+    gotoxy(1, 17); text_write("A START  B BACK");
 }
 
 void class_select_enter(void) {
@@ -128,6 +130,7 @@ void class_select_enter(void) {
     tiles_load_fx_sprites();
 
     class_select_cursor = 0;
+    class_select_easy_mode = 0;
     render();
     update_preview();
 
@@ -159,6 +162,13 @@ screen_id_t class_select_tick(u8 keys, u8 pressed) {
         render();
         update_preview();
         sfx_play(SFX_HIT);
+    }
+
+    if (pressed & J_SELECT) {
+        class_select_easy_mode = class_select_easy_mode ? 0 : 1;
+        render();
+        update_preview();
+        sfx_play(SFX_COIN);
     }
 
     if (pressed & J_A) {

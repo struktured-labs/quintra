@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       30);   // Vine Coil completes the current roster
+        assert_eq!(r.n_enemies(),       32);   // Void Halo completes the current roster
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -81,17 +81,24 @@ mod tests {
 
     #[test]
     fn sauran_scaled_hide_includes_promised_hp_bonus() {
-        // player.c defines the passive contract as pre-baked into a
-        // 14-half-heart base; keep authored content from silently drifting.
-        assert_eq!(classes::SAURAN.base_stats.hp_max, 14);
+        // player.c defines the passive contract as pre-baked into an
+        // eight-heart base; keep authored content from silently drifting.
+        assert_eq!(classes::SAURAN.base_stats.hp_max, 16);
     }
 
     #[test]
     fn champion_endurance_survival_floors_do_not_drift() {
-        assert_eq!(classes::WOLFKIN.base_stats.hp_max, 12); // six hearts, true melee
-        assert_eq!(classes::CORVIN.base_stats.hp_max, 12);  // six hearts
+        assert_eq!(classes::WOLFKIN.base_stats.hp_max, 14); // seven hearts, true melee
+        assert_eq!(classes::CORVIN.base_stats.hp_max, 14);  // seven hearts
         assert_eq!(classes::PICSEAN.base_stats.hp_max, 14); // seven hearts, defensive caster
-        assert_eq!(classes::VESPINE.base_stats.hp_max, 11); // five and a half hearts
+        assert_eq!(classes::VESPINE.base_stats.hp_max, 13); // six and a half hearts
+    }
+
+    #[test]
+    fn wolfkin_has_the_melee_damage_floor() {
+        // A physical sword must finish the opening Sentinel's full pattern
+        // without lowering its HP or turning the other champions into copies.
+        assert_eq!(classes::WOLFKIN.base_stats.atk, 4);
     }
 
     #[test]
@@ -126,9 +133,8 @@ mod tests {
         use quintra_content::ItemKind;
 
         // Mirror procgen.c's one-byte boss construction: a 50-HP Sentinel
-        // receives its stage bonus, ordinary stages saturate at 255, and the
-        // two authored late-game caps prevent Temple/Void from becoming an
-        // attrition wall. This is an *ideal uninterrupted lane* estimate;
+        // receives its stage bonus, saturates at 255, then takes the authored
+        // per-pattern cap. This is an *ideal uninterrupted lane* estimate;
         // real bullet patterns, crits, signatures, and run upgrades make a
         // fight more dynamic than this floor, but it catches accidental
         // content edits that make starter bosses a five-second joke or an
@@ -136,10 +142,19 @@ mod tests {
         let boss_hp = |stage: usize| -> u16 {
             let mut hp = 50u16 + stages::STAGES[stage].boss_hp_bonus as u16;
             hp = hp.min(255);
-            if stage == 6 { hp = hp.min(230); }
-            if stage == 8 { hp = hp.min(220); }
-            hp
+            hp.min(stages::STAGES[stage].boss_hp_cap as u16)
         };
+
+        assert_eq!(
+            stages::STAGES.map(|stage| stage.boss_hp_cap),
+            [200, 205, 150, 150, 255, 255, 230, 150, 220],
+            "first-run boss windows drifted from the authored pacing contract",
+        );
+        assert_eq!(
+            stages::STAGES.map(|stage| stage.endless_boss_hp_cap),
+            [255, 255, 150, 255, 255, 255, 230, 150, 220],
+            "endless boss windows drifted from the authored pacing contract",
+        );
 
         // The first colossus is deliberately the run's pattern tutorial.
         // Keep it below the later attrition ramp: input-only starter runs
@@ -155,13 +170,19 @@ mod tests {
                 panic!("{} starter is not a weapon", champion.name);
             };
             for stage in 0..stages::STAGES.len() {
-                let shots = (boss_hp(stage) + damage as u16 - 1) / damage as u16;
+                // Runtime damage is weapon damage plus champion ATK. The old
+                // estimate omitted ATK and therefore overstated every boss's
+                // ideal survival window, allowing a nominal ten-second
+                // contract to conceal five- and seven-second fights.
+                let hit = damage as u16 + champion.base_stats.atk as u16;
+                let shots = (boss_hp(stage) + hit - 1) / hit;
                 let ideal_frames = shots * fire_rate as u16;
-                // Stage 0 teaches the first colossus's body/ring cadence
-                // before the run has relics; it may resolve in 15 ideal
-                // seconds. Later encounters keep the 20-second anti-trivial
-                // floor so progression still has real endurance pressure.
-                let min_frames = if stage == 0 { 900 } else { 1_200 };
+                // Crystal and Verdant must retain a ten-second uninterrupted
+                // floor before signatures/crit variance. Pattern-first later
+                // bosses may be shorter, but never below eight seconds: that
+                // keeps their large-form movement visible without turning
+                // every mechanically sharp fight into a 255-HP attrition wall.
+                let min_frames = if stage < 2 { 600 } else { 480 };
                 assert!(ideal_frames >= min_frames,
                     "{} stage {} boss is a trivial {:.1}s starter kill",
                     champion.name, stage, ideal_frames as f32 / 60.0);
@@ -186,6 +207,25 @@ mod tests {
         let frost = &stages::STAGES[3];
         assert!(frost.enemy_pool.iter().any(|&(id, _)| id == 16));
         assert_eq!(frost.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+    }
+
+    #[test]
+    fn crystal_caverns_authors_shard_crab_without_weight_inflation() {
+        let crystal = &stages::STAGES[0];
+        assert!(crystal.enemy_pool.iter().any(|&(id, w)| id == 30 && w == 6));
+        assert_eq!(crystal.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::SHARD_CRAB.ai_script,
+            quintra_content::AiScriptId::CounterGuard { guard_cooldown: 96, rush_ticks: 18 });
+    }
+
+    #[test]
+    fn void_sanctum_authors_void_halo_without_weight_inflation() {
+        let void_sanctum = &stages::STAGES[8];
+        assert!(void_sanctum.enemy_pool.iter().any(|&(id, w)| id == 31 && w == 8));
+        assert_eq!(void_sanctum.enemy_pool.len(), 7);
+        assert_eq!(void_sanctum.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        assert_eq!(enemies::VOID_HALO.ai_script,
+            quintra_content::AiScriptId::Spinner { radius: 52, fire_rate: 150 });
     }
 
     #[test]
@@ -279,11 +319,10 @@ mod tests {
     }
 
     #[test]
-    fn bloodmoon_and_void_add_dusk_midge_without_weight_inflation() {
-        for stage in [&stages::STAGES[7], &stages::STAGES[8]] {
-            assert!(stage.enemy_pool.iter().any(|&(id, _)| id == 23));
-            assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
-        }
+    fn bloodmoon_keeps_dusk_midge_without_weight_inflation() {
+        let stage = &stages::STAGES[7];
+        assert!(stage.enemy_pool.iter().any(|&(id, w)| id == 23 && w == 7));
+        assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::DUSK_MIDGE.ai_script,
             quintra_content::AiScriptId::Shooter {
                 fire_rate: 96,

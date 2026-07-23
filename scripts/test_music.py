@@ -4,6 +4,9 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import (
+    STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -22,6 +25,7 @@ RS, PL, EN, TM, MUSIC, REQUEST = map(
     addr, ("_run_state", "_player", "_entities", "_room_tilemap",
            "_music_track_id", "_music_stage_number")
 )
+MUSIC_ROW = addr("_music_row")
 
 
 def put16(pb, address, value):
@@ -45,7 +49,8 @@ def boot_run():
 
 def runtime_track(stage, boss):
     pb = boot_run()
-    desired_room = (stage + 1) * 6 if boss else stage * 6 + 1
+    desired_room = STAGE_BOSS_ROOM[stage] if boss else (
+        1 if stage == 0 else STAGE_START[stage])
     pb.memory[RS + 1] = desired_room - 1
     pb.memory[RS + 11] = stage       # bosses_beaten drives stage identity
     pb.memory[RS + 12] = 0
@@ -58,6 +63,11 @@ def runtime_track(stage, boss):
         sigils |= (1 << stage)
         pb.memory[RS + 23] = sigils & 0xFF
         pb.memory[RS + 24] = sigils >> 8
+        pb.memory[RS + 27] = 1 << 3
+        if dungeon_size(stage) >= 12:
+            pb.memory[RS + 27] |= 1 << 7
+        if dungeon_size(stage) >= 14:
+            pb.memory[RS + 28] |= 1 << 7
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
@@ -66,9 +76,20 @@ def runtime_track(stage, boss):
     if boss:
         pb.memory[RS + 6] = 0xFF      # no backtracking direction
         pb.memory[RS + 17] = 0
-        pb.memory[TM + 9 * ROOM_W + 19] = 3  # east BGT_DOOR
-        put16(pb, PL + 9, 144)
-        put16(pb, PL + 11, 60)
+        source_local = desired_room - 1 - STAGE_START[stage]
+        target_local = desired_room - STAGE_START[stage]
+        direction = dungeon_direction(source_local, target_local)
+        for tx, ty in {
+            0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
+            2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
+        }[direction]:
+            pb.memory[TM + ty * ROOM_W + tx] = 3
+        x, y = {
+            0: (72, 0), 1: (144, 60),
+            2: (72, 120), 3: (0, 60),
+        }[direction]
+        put16(pb, PL + 9, x)
+        put16(pb, PL + 11, y)
     else:
         pb.memory[RS + 17] = 1        # Riftwild dungeon gate
         pb.memory[RS + 18] = 6
@@ -92,6 +113,33 @@ def runtime_track(stage, boss):
     )
     pb.stop(save=False)
     return track
+
+
+def stage_door_keeps_phrase():
+    """A real same-stage doorway must not restart the sequencer at row zero."""
+    pb = boot_run()
+    for i in range(32):
+        ep = EN + i * 28
+        pb.memory[ep] = pb.memory[ep + 1] = 0
+    # Start well away from the loop boundary. The slide takes enough frames
+    # for the row to advance a little, but a mistaken `music_play_stage()`
+    # would reset it near zero instead of preserving this phrase position.
+    pb.memory[MUSIC_ROW] = 17
+    pb.memory[TM + 9 * ROOM_W + 19] = 3  # east BGT_DOOR
+    put16(pb, PL + 9, 144)
+    put16(pb, PL + 11, 60)
+    for _ in range(80):
+        pb.tick()
+        if pb.memory[RS + 1] == 1:
+            break
+    assert pb.memory[RS + 1] == 1, "real east door did not enter room 1"
+    assert pb.memory[MUSIC] == 0, "same-stage door changed exploration track"
+    # 17 remains safely distinct from a reset row (0..2) across the short
+    # streamed transition. This also detects an accidental stop/restart.
+    assert pb.memory[MUSIC_ROW] >= 17, (
+        f"stage phrase restarted across door: row={pb.memory[MUSIC_ROW]}"
+    )
+    pb.stop(save=False)
 
 
 def table_pairs(name):
@@ -124,6 +172,7 @@ def main():
     assert set(stages).isdisjoint(bosses), "boss music reused an exploration id"
     assert len(set(stage_phrases)) == 9, f"stage phrases overlap: {stage_phrases}"
     assert len(set(boss_phrases)) == 9, f"boss phrases overlap: {boss_phrases}"
+    stage_door_keeps_phrase()
     print(f"[music] PASS stages={stages}, bosses={bosses}, distinct phrases=18, title=18")
 
 

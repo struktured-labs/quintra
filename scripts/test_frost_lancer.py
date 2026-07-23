@@ -50,18 +50,41 @@ def main():
         # and Frost-only spawn role make it a distinct readable lane prompt.
         for i in range(32):
             ep = EN + i * ENTITY_SIZE
-            if ep != lancer:
-                pb.memory[ep] = pb.memory[ep + 1] = 0
+            pb.memory[ep] = pb.memory[ep + 1] = 0
         for i in range(20 * 17):
             pb.memory[TM + i] = 1
+        # Retire any nested generation VBlank before publishing a disposable
+        # live Lancer in the now-empty table. Reusing the generated slot here
+        # lets an in-flight ordinary AI update republish its prior telegraph.
+        for _ in range(8):
+            pb.tick()
+        for i in range(32):
+            ep = EN + i * ENTITY_SIZE
+            pb.memory[ep] = pb.memory[ep + 1] = 0
+        for i in range(20 * 17):
+            pb.memory[TM + i] = 1
+        lancer = EN
+        pb.memory[lancer] = ENT_ENEMY
+        pb.memory[lancer + 1] = 3
         put_fix8(pb, lancer + 2, 64)
         put_fix8(pb, lancer + 6, 64)
+        pb.memory[lancer + 12] = SPR_FROST_LANCER
+        pb.memory[lancer + 13] = 6
+        pb.memory[lancer + 14] = 12
+        pb.memory[lancer + 17] = ENEMY_FROST_LANCER
+        pb.memory[lancer + 25] = 0x66
+        pb.memory[lancer + 27] = 2
         pb.memory[lancer + 19] = 2  # CHG_CHARGE
         pb.memory[lancer + 20] = 8  # charge duration
         pb.memory[lancer + 21] = 2  # east dir8
-        pb.tick()
+        for _ in range(4):
+            pb.tick()
+            if pb.memory[lancer + 3] != 64:
+                break
         assert pb.memory[lancer + 3] == 66, (
-            f"Frost Lancer lost its established two-pixel charge: x={pb.memory[lancer + 3]}")
+            f"Frost Lancer lost its established two-pixel charge: "
+            f"x={pb.memory[lancer + 3]} "
+            f"mode/timer/dir={list(pb.memory[lancer + 19:lancer + 22])}")
 
     table = (Path(__file__).resolve().parent.parent / "src/generated/enemies.c").read_text()
     assert '.id=28, .name="Frost Lancer", .sprite_set=79, .palette=6,' in table

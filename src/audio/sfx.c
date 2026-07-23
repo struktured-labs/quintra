@@ -13,6 +13,9 @@
 #define PEND_CLEAR_NOTE2 4
 #define PEND_CLEAR_NOTE3 5
 #define PEND_WEAK_NOTE2  6
+#define PEND_PUZZLE_NOTE2 7
+#define PEND_PUZZLE_NOTE3 8
+#define PEND_PUZZLE_NOTE4 9
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -98,13 +101,28 @@ void sfx_play(u8 id) {
             pend_timer = 2;
             break;
         case SFX_PUZZLE:
-            ch1(0x00, 0x80, 0xB2, 2007);
-            pend_kind = PEND_WEAK_NOTE2;
-            pend_timer = 3;
+            // A landscape secret should linger, not read as another pickup.
+            // Start with a stone-deep noise breath, then climb a deliberately
+            // uncanny diminished figure (D4-F4-Ab4) into a clear D5 resolve.
+            // At twelve frames between attacks the full reveal lasts roughly
+            // three quarters of a second before the final note decays.
+            ch4(0x5D, 0x84);
+            ch1(0x00, 0xC0, 0xA4, 1602);              // D4
+            pend_kind = PEND_PUZZLE_NOTE2;
+            pend_timer = 12;
             break;
         default:
             break;
     }
+}
+
+void sfx_play_rune(u8 step) {
+    // C5, E5, G5: unmistakable positive positional feedback without spending
+    // the longer SFX_PUZZLE fanfare until the complete order is correct.
+    static const u16 notes[3] = { 1798, 1849, 1881 };
+    if (step > 2) step = 2;
+    pend_kind = PEND_NONE;
+    ch1(0x00, 0x80, 0xA2, notes[step]);
 }
 
 void sfx_tick(void) {
@@ -137,6 +155,25 @@ void sfx_tick(void) {
             NR12_REG = 0xA1;                           // brief, bright
             NR13_REG = (u8)(2010 & 0xFF);              // up an octave-ish
             NR14_REG = (u8)(0x80 | (2010 >> 8));
+            break;
+        case PEND_PUZZLE_NOTE2:
+            NR12_REG = 0xA4;
+            NR13_REG = (u8)(1673 & 0xFF);              // F4
+            NR14_REG = (u8)(0x80 | (1673 >> 8));
+            pend_kind = PEND_PUZZLE_NOTE3;
+            pend_timer = 12;
+            return;
+        case PEND_PUZZLE_NOTE3:
+            NR12_REG = 0xB4;
+            NR13_REG = (u8)(1732 & 0xFF);              // Ab4
+            NR14_REG = (u8)(0x80 | (1732 >> 8));
+            pend_kind = PEND_PUZZLE_NOTE4;
+            pend_timer = 12;
+            return;
+        case PEND_PUZZLE_NOTE4:
+            NR12_REG = 0xD6;                           // long final glow
+            NR13_REG = (u8)(1825 & 0xFF);              // D5
+            NR14_REG = (u8)(0x80 | (1825 >> 8));
             break;
     }
     pend_kind = PEND_NONE;

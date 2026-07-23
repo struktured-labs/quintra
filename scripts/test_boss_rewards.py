@@ -26,6 +26,28 @@ def setup_projectile(pb, address, x, y, player_owned=False):
     pb.memory[address + 26] = 1
 
 
+def relic_for_class(class_id, stage=0):
+    """Kill a live stage boss after selecting the supplied runtime champion ID."""
+    pb, boss = enter_boss(stage, keep_open=True)
+    pb.memory[PL] = class_id
+    pb.memory[boss + 14] = 1
+    shot = next(EN + index * ENTITY_SIZE for index in range(32)
+                if EN + index * ENTITY_SIZE != boss)
+    setup_projectile(pb, shot, pb.memory[boss + 3], pb.memory[boss + 7], player_owned=True)
+    pb.memory[PL + 9] = 144
+    pb.memory[PL + 11] = 112
+    for _ in range(20):
+        pb.tick()
+    relics = [pb.memory[EN + index * ENTITY_SIZE + 18]
+              for index in range(32)
+              if pb.memory[EN + index * ENTITY_SIZE] == ENT_PICKUP
+              and pb.memory[EN + index * ENTITY_SIZE + 1] & 1
+              and pb.memory[EN + index * ENTITY_SIZE + 17] == PICKUP_ITEM]
+    pb.stop(save=False)
+    assert len(relics) == 1, f"class {class_id} spawned relics {relics}"
+    return relics[0]
+
+
 def main():
     pb, boss = enter_boss(0, keep_open=True)
     boss_x, boss_y = pb.memory[boss + 3], pb.memory[boss + 7]
@@ -59,6 +81,7 @@ def main():
         pb.tick()
 
     kinds = []
+    relic_indices = []
     hostile_shots = 0
     boss_active = False
     for index in range(32):
@@ -66,6 +89,8 @@ def main():
         active = pb.memory[address + 1] & 1
         if active and pb.memory[address] == ENT_PICKUP:
             kinds.append(pb.memory[address + 17])
+            if pb.memory[address + 17] == PICKUP_ITEM:
+                relic_indices.append(pb.memory[address + 18])
         if active and pb.memory[address] == ENT_PROJECTILE \
                 and not (pb.memory[address + 1] & EF_PLAYER_PROJ):
             hostile_shots += 1
@@ -84,8 +109,21 @@ def main():
     assert kinds.count(PICKUP_HEART_HALF) >= 2, f"missing boss hearts: {kinds}"
     assert kinds.count(PICKUP_COIN_5) >= 2, f"missing boss coins: {kinds}"
     assert PICKUP_ITEM in kinds, f"missing guaranteed boss relic: {kinds}"
+    assert any(relic in (12, 17, 19) for relic in relic_indices), (
+        f"Wolfkin boss reward ignored its combat-relic pool: {relic_indices}")
     pb.stop(save=False)
-    print(f"[boss-rewards] PASS recovery heart + saturated hearts/coins/relic ({kinds})")
+
+    pools = {
+        0: (12, 17, 19),
+        1: (10, 16, 19),
+        2: (11, 12, 17),
+        3: (12, 15, 16),
+        4: (12, 17, 19),
+    }
+    chosen = {class_id: relic_for_class(class_id) for class_id in pools}
+    assert all(chosen[class_id] in pool for class_id, pool in pools.items()), (
+        f"boss relic affinity drifted: {chosen}")
+    print(f"[boss-rewards] PASS recovery + saturated rewards; affinity {chosen}")
 
 
 if __name__ == "__main__":

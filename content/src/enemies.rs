@@ -424,6 +424,32 @@ pub const VINE_COIL: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const SHARD_CRAB: Enemy = Enemy {
+    id: ENEMY_SHARD_CRAB, symbol: "SHARD_CRAB", name: "Shard Crab",
+    sprite_set: SPRITE_SHARD_CRAB, palette: OBJ_PAL_MAGIC,
+    // Crystal Caverns' first deliberate bait-and-punish creature: its shell
+    // deflects one hasty hit, it scuttles forward briefly, then opens long
+    // enough for every starter weapon to answer. It replaces crawler weight,
+    // so early rooms gain a decision without gaining bodies or HP inflation.
+    stats: EnemyStats { hp: 9, damage: 1, speed: 48, score: 32, weakness: 0x04, poise: 1 },
+    ai_script: AiScriptId::CounterGuard { guard_cooldown: 96, rush_ticks: 18 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const VOID_HALO: Enemy = Enemy {
+    id: ENEMY_VOID_HALO, symbol: "VOID_HALO", name: "Void Halo",
+    sprite_set: SPRITE_VOID_HALO, palette: OBJ_PAL_MAGIC,
+    // Void Sanctum's wide, slow lane shaper. It holds a larger orbit than
+    // the Temple's Sunwheel and releases only one opposite pair at a time,
+    // replacing a fast Midge slice rather than raising room density or final
+    // stage projectile volume.
+    stats: EnemyStats { hp: 12, damage: 1, speed: 48, score: 64, weakness: 0x01, poise: 1 },
+    ai_script: AiScriptId::Spinner { radius: 52, fire_rate: 150 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -455,4 +481,6 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(BRAMBLE_SPRITE.clone());
     r.add_enemy(FROST_LANCER.clone());
     r.add_enemy(VINE_COIL.clone());
+    r.add_enemy(SHARD_CRAB.clone());
+    r.add_enemy(VOID_HALO.clone());
 }

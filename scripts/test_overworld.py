@@ -3,6 +3,7 @@
 import re
 from pathlib import Path
 from pyboy import PyBoy
+from quintra_topology import STAGE_BOSS_ROOM
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -36,6 +37,12 @@ def exit_at(pb, x, y, clear=True):
     # outdoor rebuild also streams a complete tilemap before it is safe to
     # inspect authored paths.
     for _ in range(90): pb.tick()
+    # Riftwild seams now use the same streamed slide as dungeon seams. The
+    # transition must settle its hardware scroll and restore OBJ afterwards;
+    # otherwise a successful graph hop can look like the hero vanished.
+    assert pb.memory[0xFF40] & 0x02, "Riftwild seam left sprites disabled"
+    assert pb.memory[0xFF43] == 0 and pb.memory[0xFF42] == 0, (
+        "Riftwild seam did not normalize BG scroll")
 
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
@@ -45,22 +52,27 @@ def main():
     pb.button("a")
     for _ in range(60): pb.tick()
 
-    # Room zero is divisible by six but is not a defeated boss room.
-    exit_at(pb, 72, 120)
-    assert pb.memory[RS + 1] == 1 and pb.memory[RS + 17] == 0
-    # Restore a neutral generated room before exercising the boss handoff.
-    pb.memory[RS + 1] = 0
-
     # Simulate a cleared first boss and leave through its south door.
-    pb.memory[RS + 1] = 6; pb.memory[RS + 11] = 1
+    pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]; pb.memory[RS + 11] = 1
     exit_at(pb, 72, 120)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
-    assert pb.memory[RS + 1] == 6, "overworld traversal consumed dungeon depth"
+    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \
+        "overworld traversal consumed dungeon depth"
     # Screen 0 is authored E+S only, now bounded by a real tree line rather
     # than dungeon brick. Its reciprocal exits remain door tiles.
     assert pb.memory[TM + 10] == 39 and pb.memory[TM + 9 * 20] == 39
     assert pb.memory[TM + 9 * 20 + 19] == 3 and pb.memory[TM + 16 * 20 + 10] == 3
     assert pb.memory[TM + 8 * 20 + 10] == 36, "Riftwild center lacks path terrain"
+    # The live playfield identifies the region without replacing the walkable
+    # grass/path data that collision and procgen parity consume.
+    pb.memory[0xFF4F] = 0
+    assert bytes(pb.memory[0x9800 + 1 * 32 + 6:0x9800 + 1 * 32 + 14]) == \
+        bytes((76, 77, 78, 79, 80, 77, 81, 82)), \
+        "Riftwild lacks its tile-native in-play landmark"
+    pb.memory[0xFF4F] = 1
+    assert all((pb.memory[0x9800 + 1 * 32 + x] & 7) == 3 for x in range(6, 14)), \
+        "Riftwild landmark is not using the amber door palette"
+    pb.memory[0xFF4F] = 0
     pb.screen.image.save(ROOT / "tmp" / "riftwild-arrival.png")
 
     # Riftwild encounters never seal exits: leave screen 0 with its generated
@@ -95,9 +107,39 @@ def main():
     for _ in range(90): pb.tick()
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    assert pb.memory[bg + 6 * 32 + 10] == 33, "current cell lacks tile icon"
-    assert pb.memory[bg + 14 * 32 + 14] == 22, "visited vault lacks crystal icon"
-    assert pb.memory[bg + 2 * 32 + 14] == 0, "unseen cell was pre-drawn"
+    # The field begins below the heading and uses the same compact one-glyph
+    # graph language as the dungeon Compass. The old 3x3 terrain thumbnails
+    # consumed the LCD without explaining the two colored squares.
+    assert bytes(pb.memory[bg + 1 * 32 + 8:bg + 1 * 32 + 11]) == bytes((87, 84, 94)), \
+        "Riftwild map heading was overwritten by its top row"
+    assert pb.memory[bg + 7 * 32 + 7] == 50, "current cell lacks cyan HERE glyph"
+    assert pb.memory[bg + 13 * 32 + 10] == 52, "visited vault lacks violet glyph"
+    assert pb.memory[bg + 4 * 32 + 10] == 95, \
+        "unseen cell lost its dim 4x4-grid placeholder"
+    assert sum(pb.memory[bg + y * 32 + x] == 95
+               for y in (4, 7, 10, 13) for x in (1, 4, 7, 10)) == 11, \
+        "Riftwild map did not expose all eleven unseen grid slots"
+    assert all(pb.memory[bg + 4 * 32 + x] == 53 for x in (2, 3, 5, 6)), \
+        "Riftwild graph lost its visited east-west links"
+    assert all(pb.memory[bg + y * 32 + 7] == 54 for y in (5, 6)), \
+        "Riftwild graph lost its visited south link"
+    # The route symbols explain themselves in the live 20x18 tilemap.
+    assert tuple(pb.memory[bg + 4 * 32 + x] for x in range(13, 17)) == \
+        (50, 64, 65, 66), "Riftwild map lost YOU legend"
+    assert tuple(pb.memory[bg + 7 * 32 + x] for x in range(13, 18)) == \
+        (34, 85, 84, 93, 86), "Riftwild map lost GATE legend"
+    assert tuple(pb.memory[bg + 10 * 32 + x] for x in range(13, 18)) == \
+        (90, 91, 68, 92, 93), "Riftwild map lost RIFT legend"
+    assert tuple(pb.memory[bg + 13 * 32 + x] for x in range(13, 18)) == \
+        (51, 71, 65, 67, 67), "Riftwild map lost BOSS legend"
+    # Semantic colors must survive actual CGB rendering, not just nominal
+    # palette attributes.
+    image = pb.screen.image
+    here_rgb = image.getpixel((7 * 8 + 4, 7 * 8 + 4))[:3]
+    rift_rgb = image.getpixel((13 * 8 + 2, 10 * 8 + 3))[:3]
+    boss_rgb = image.getpixel((13 * 8 + 4, 13 * 8 + 4))[:3]
+    assert len({here_rgb, rift_rgb, boss_rgb}) == 3, \
+        f"Riftwild semantic colors collapsed: {here_rgb}, {rift_rgb}, {boss_rgb}"
     map_shot = ROOT / "tmp" / "riftwild-map.png"
     map_shot.parent.mkdir(exist_ok=True)
     pb.screen.image.save(map_shot)
@@ -107,7 +149,8 @@ def main():
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(8): pb.tick()
     assert pb.memory[RS + 17] == 0, "gate did not return to dungeon mode"
-    assert pb.memory[RS + 1] == 7, "next dungeon did not advance depth"
+    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] + 1, \
+        "next dungeon did not advance depth"
     assert pb.memory[RS + 20] == 1, "new dungeon map did not reset to entry cell"
     pb.stop(save=False)
     print("[overworld] PASS boss exit -> visited 4x4 map -> dungeon gate")

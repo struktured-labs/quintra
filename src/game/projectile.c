@@ -23,14 +23,19 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
 
     // Kind shapes the projectile's physics:
     switch (kind) {
-        case PROJ_SPIKE:      // melee arc: stationary, genuinely adjacent
+        case PROJ_SPIKE:      // melee arc: a short, physical forward stroke
             // Wolfkin is the dedicated melee champion: its claw occupies only
             // adjacent body space. Other spike weapons retain a short lunge.
             // Wolfkin's form is now a contact weapon rather than a tiny
-            // sword-shaped shot.  Its arc stays at the weapon edge for six
-            // frames; the broad/slash versus narrow/stab choice is shaped by
-            // room.c's input handling, not by projectile travel distance.
-            if (player.class_id == 0) { speed = 0; ttl = 6; pierce = 2; }
+            // sword-shaped shot. Its blade starts at the weapon edge then
+            // advances three pixels per frame for eighteen frames: enough reach to
+            // strike across a deliberate lane, never enough to read as a
+            // ranged bullet. The broad/slash versus narrow/stab choice is
+            // shaped by room.c's input handling, not by projectile distance.
+            if (player.class_id == 0
+                && player.starter_weapon == classes[0].starter_weapon) {
+                speed = 3; ttl = 18; pierce = 2;
+            }
             else { speed = 4; ttl = 12; pierce = 1; }
             break;
         case PROJ_SHURIKEN:   // pierces 2 enemies
@@ -54,13 +59,18 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->flags      |= EF_PLAYER_PROJ;
     e->x           = FIX8((i16)player.x + 2);
     e->y           = FIX8((i16)player.y + 2);
-    // The true-melee Wolfkin claw begins at the weapon edge. Tail Spike and
-    // Stinger keep their established projectile origin/range; they now share
-    // the physical arc ART below without silently changing their seeded
-    // combat geometry or wall-clearance behaviour.
-    if (player.class_id == 0 && kind == PROJ_SPIKE) {
-        e->x = (ppos_t)(e->x + (i16)dx * 4); // 4px forward
-        e->y = (ppos_t)(e->y + (i16)dy * 4);
+    // Wolfkin's sword starts at the visible weapon edge, not in the middle of
+    // its fist and not beyond a dead 24px gap. An 8px lead plus eighteen
+    // three-pixel thrust beats gives Wolfkin a compact 64px steel lane that
+    // can strike both an adjacent body and a retreating target.
+    // turning the basic stab into a traveling projectile. Tail Spike and
+    // Stinger keep their established projectile origin/range; they share
+    // physical arc rendering without silently changing their seeded combat
+    // geometry or wall-clearance behaviour.
+    if (player.class_id == 0 && kind == PROJ_SPIKE
+        && player.starter_weapon == classes[0].starter_weapon) {
+        e->x = (ppos_t)(e->x + (i16)dx * 8);
+        e->y = (ppos_t)(e->y + (i16)dy * 8);
     }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);
@@ -70,12 +80,23 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->palette     = 2;
     e->hp          = pierce;
     e->state_timer = ttl;
-    e->hitbox      = (7 << 4) | 7;
+    // The Wolfkin blade art occupies its full 8x8 tile. Match the contact
+    // box to that visible edge so a diagonal Fang Stab does not appear to
+    // touch a small enemy while missing by the old one-pixel square gap.
+    // Other projectiles retain their established 7x7 collision geometry.
+    e->hitbox      = (player.class_id == 0 && kind == PROJ_SPIKE
+        && player.starter_weapon == classes[0].starter_weapon) ? 0x88 : 0x77;
     e->damage      = damage;
     e->ai_data[0]  = 0;              // anim phase
     e->ai_data[1]  = g_shot_element; // element for weakness bonus
     e->ai_data[2]  = (kind == PROJ_SPIKE || kind == PROJ_FLAIL
         || kind == PROJ_SPEAR) ? 1 : 0;
+    if ((kind == PROJ_SPIKE && player.class_id == 0
+            && player.starter_weapon == classes[0].starter_weapon)
+        || kind == PROJ_SPEAR) {
+        if (dx < 0) e->ai_data[4] |= PROJ_VIS_FLIP_X;
+        if (dy > 0) e->ai_data[4] |= PROJ_VIS_FLIP_Y;
+    }
     // physical arc: no shimmer
     fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
     sfx_play(SFX_FIRE);
@@ -135,7 +156,11 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
         u8 t;
         if (sx < 0) sx = 0; else if (sx > (ROOM_W * 8 - 1)) sx = ROOM_W * 8 - 1;
         if (sy < 0) sy = 0; else if (sy > (ROOM_H * 8 - 1)) sy = ROOM_H * 8 - 1;
-        t = room_tile_at_px(sx, sy);
+        // sx/sy are clamped to the room above, so this is exactly the
+        // in-bounds branch of room_tile_at_px().  Keep the hot projectile
+        // path in this bank instead of paying a banked helper call for every
+        // hostile bullet every frame.
+        t = room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)];
 
         if (t == BGT_WALL_CRACK && (e->flags & EF_PLAYER_PROJ)) {
             room_open_secret((u8)(sx >> 3), (u8)(sy >> 3));

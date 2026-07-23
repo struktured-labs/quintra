@@ -18,6 +18,9 @@
 #define HDR_SIZE      5   // 'Q' 'S' version len_rs len_pl
 #define LEGACY_RS_SIZE 20 // v0.17.47 and earlier, before visited-map fields
 #define PRE_SIGIL_RS_SIZE 23 // v0.17.48-v0.17.51
+#define PRE_DIFFICULTY_RS_SIZE 26 // v0.18.42 and earlier: implicit Normal
+#define PRE_PUZZLE_RS_SIZE 27 // v0.18.52 and earlier: no dungeon puzzle state
+#define PRE_WIDE_MAP_RS_SIZE 29 // v0.18.54 and earlier: six-cell topology
 
 static void sram_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(0); }
 static void sram_close(void) { DISABLE_RAM_MBC5; }
@@ -28,6 +31,9 @@ u8 sram_run_valid(void) {
     if (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'S'
         && SRAM_BASE[2] == SAVE_VERSION
         && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
+            || SRAM_BASE[3] == PRE_WIDE_MAP_RS_SIZE
+            || SRAM_BASE[3] == PRE_PUZZLE_RS_SIZE
+            || SRAM_BASE[3] == PRE_DIFFICULTY_RS_SIZE
             || SRAM_BASE[3] == PRE_SIGIL_RS_SIZE
             || SRAM_BASE[3] == LEGACY_RS_SIZE)
         && SRAM_BASE[4] == (u8)sizeof(player_state_t)) {
@@ -79,6 +85,27 @@ u8 sram_load_run(void) {
         run_state.dungeon_seen = 0;
         run_state.world_seen = 0;
         run_state_mark_visited();
+    }
+    if (saved_rs == PRE_WIDE_MAP_RS_SIZE && run_state.bosses_beaten < BOSSES_TO_WIN) {
+        // Preserve the player's approximate place inside an old six-room
+        // dungeon while migrating its absolute counter to the expanded table.
+        // World/town checkpoints map to their exact new campaign landmarks.
+        u8 stage = run_state.bosses_beaten;
+        if (run_state.world_mode && stage)
+            run_state.room_counter = run_state_boss_room((u8)(stage - 1));
+        else if (stage == 3 && run_state.room_counter == 19)
+            run_state.room_counter = 33;
+        else if (stage == 6 && run_state.room_counter == 37)
+            run_state.room_counter = 73;
+        else {
+            u8 old_start = stage ? (u8)(stage * 6 + 1) : 0;
+            u8 old_local = (run_state.room_counter > old_start)
+                ? (u8)(run_state.room_counter - old_start) : 0;
+            u8 new_last = (u8)(run_state_dungeon_size() - 1);
+            if (old_local > new_last) old_local = new_last;
+            run_state.room_counter =
+                (u8)(run_state_stage_start(stage) + old_local);
+        }
     }
     // A mid-fight suspend must not resume inside a half-resolved boss kill
     run_state.pending_unseal = 0;

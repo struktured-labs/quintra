@@ -9,9 +9,18 @@
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "input/input.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
+
+// These are authored content IDs, deliberately separate from the generated
+// `items[]` positions. Shops should keep selling the same relic if a future
+// content entry changes that table's ordering.
+#define ITEM_ID_IRON_HEART   20u
+#define ITEM_ID_POWER_STONE  22u
+#define ITEM_ID_MANA_GEM     25u
+#define ITEM_ID_BLOOD_SIGIL  29u
 
 u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
     u8 idx = entity_spawn(ENT_PICKUP);
@@ -63,6 +72,24 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
         entities[idx].state_timer = 255;       // items linger longest
     }
     return idx;
+}
+
+u8 pickup_boss_relic_for_class(void) BANKED {
+    // Boss rewards are the run's guaranteed power curve, not ordinary random
+    // trash drops. Each champion retains three meaningful build branches,
+    // while a pure-LCK result can no longer make a hard-earned first Colossus
+    // feel like it granted no immediate combat help. Values are authored
+    // `items[]` indices (the same representation pickup_spawn_item uses).
+    static const u8 relics[5][3] = {
+        { 12, 17, 19 }, // Wolfkin: PowerStone / Swift Fang / Vamp Sigil
+        { 10, 16, 19 }, // Sauran: Iron Heart / Ward Charm / Vamp Sigil
+        { 11, 12, 17 }, // Corvin: Speed Ring / PowerStone / Swift Fang
+        { 12, 15, 16 }, // Picsean: PowerStone / Mana Gem / Ward Charm
+        { 12, 17, 19 }  // Vespine: PowerStone / Swift Fang / Vamp Sigil
+    };
+    u8 class_id = player.class_id;
+    if (class_id >= 5) class_id = 0;
+    return relics[class_id][rng_range(3)];
 }
 
 u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
@@ -131,6 +158,10 @@ u8 pickup_spawn_lorekeeper(fix8_t x, fix8_t y) BANKED {
     return pickup_spawn_resident(PICKUP_LOREKEEPER, SPR_TOWN_LOREKEEPER, 0x05, x, y);
 }
 
+u8 pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED {
+    return pickup_spawn_resident(PICKUP_BELLKEEPER, SPR_TOWN_BELLKEEPER, 0x04, x, y);
+}
+
 u8 pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_RIFTWELL, x, y);
     if (idx != 0xFF) {
@@ -159,7 +190,17 @@ u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
 static u8 pickup_is_town_resident(u8 kind) {
     return (kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY)
         || kind == PICKUP_CARTOGRAPHER || kind == PICKUP_WAYKEEPER
-        || kind == PICKUP_LOREKEEPER;
+        || kind == PICKUP_LOREKEEPER || kind == PICKUP_BELLKEEPER;
+}
+
+// These residents provide visual context (and, in the merchant/Lorekeeper
+// cases, an update-time proximity cue) but no collision-time transaction.
+// Keep the healer and Chartwright out of this set: their one-per-visit
+// blessings are intentionally handled as explicit cases below.
+static u8 pickup_is_visual_town_resident(u8 kind) {
+    return kind == PICKUP_MERCHANT || kind == PICKUP_SMITH
+        || kind == PICKUP_APOTHECARY || kind == PICKUP_WAYKEEPER
+        || kind == PICKUP_LOREKEEPER || kind == PICKUP_BELLKEEPER;
 }
 
 // Context, not a purchase: reveal the nearest ware's price before the player
@@ -242,6 +283,25 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     // else: no drop (15%)
 }
 
+// Merchant and Lorekeeper both advertise their purpose only while nearby.
+// The active room chooses what tile slot 125 means (coin thought or scroll),
+// so this shared timing/geometry path keeps their interaction behavior in
+// sync without duplicating the same cooldown arithmetic for each resident.
+static void pickup_near_callout(entity_t *e, u8 palette) {
+    if (e->state_timer != 0) {
+        e->state_timer--;
+    } else {
+        i16 dx = FIX8_TO_INT(e->x) - (i16)player.x;
+        i16 dy = FIX8_TO_INT(e->y) - (i16)player.y;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx <= 32 && dy <= 32
+            && fx_spawn(SPR_MERCHANT_CALLOUT, palette,
+                FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 10, 45) != 0xFF)
+            e->state_timer = 105; // visible 0.75s, then a short rest
+    }
+}
+
 void pickup_update(entity_t *e, u8 idx) BANKED {
     // Shop wares are permanent until bought; state counts a retry delay.
     // They never magnetize (flying wares would force accidental purchases).
@@ -259,19 +319,15 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         // The floor labels and HUD identify each price; this one small thought
         // bubble tells a nearby player that the character is actually a
         // trader. state_timer is otherwise unused by permanent residents.
-        if (e->state_timer != 0) {
-            e->state_timer--;
-        } else {
-            i16 dx = FIX8_TO_INT(e->x) - (i16)player.x;
-            i16 dy = FIX8_TO_INT(e->y) - (i16)player.y;
-            if (dx < 0) dx = -dx;
-            if (dy < 0) dy = -dy;
-            if (dx <= 32 && dy <= 32
-                && fx_spawn(SPR_MERCHANT_CALLOUT, 0x05,
-                    FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 10, 45) != 0xFF) {
-                e->state_timer = 105; // visible for 0.75s, then a short rest
-            }
-        }
+        pickup_near_callout(e, 0x05);
+        return;
+    }
+    if (e->ai_data[0] == PICKUP_LOREKEEPER) {
+        // The arrival-only slot contains an open-scroll bubble here (rather
+        // than the merchant's coin). It makes the authored lore fixture read
+        // as someone worth approaching without adding a modal text screen or
+        // a new interaction economy.
+        pickup_near_callout(e, 0x06);
         return;
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
@@ -289,9 +345,9 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         }
         return;
     }
-    // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer
-    // (the swap drops your old weapon underfoot — without the grace you'd
-    // ping-pong between the two forever).
+    // Weapon orbs: permanent, stationary, guarded by a pickup-grace timer.
+    // They also require a fresh A press to trade: walking across a dropped
+    // orb must never silently replace a champion's primary weapon.
     if (e->ai_data[0] == PICKUP_WEAPON) {
         if (e->state > 0) e->state--;
         return;
@@ -354,6 +410,21 @@ static void apply_item_effects(u8 item_idx) {
     hud_redraw_all();
 }
 
+// Loose procedural pickups intentionally store an items[] index in their
+// entity payload. Merchant stock is semantic content, however: resolve its
+// stable item ID at the boundary instead of coupling shop behavior to table
+// order. Missing content becomes a harmless no-op rather than applying an
+// unrelated relic after a data reorder.
+static void apply_item_effects_by_id(u16 item_id) {
+    u8 item_idx;
+    for (item_idx = 0; item_idx < N_ITEMS; ++item_idx) {
+        if (items[item_idx].id == item_id) {
+            apply_item_effects(item_idx);
+            return;
+        }
+    }
+}
+
 u8 pickup_check_player_collision(void) BANKED {
     u8 i;
     u8 any = 0;
@@ -361,6 +432,13 @@ u8 pickup_check_player_collision(void) BANKED {
         if (!(entities[i].flags & EF_ACTIVE)) continue;
         if (entities[i].type != ENT_PICKUP)   continue;
         if (aabb_overlap_player_wide(&entities[i])) {
+            // Permanent visual residents never vanish on contact and have no
+            // purchase/blessing effect. Share this result instead of keeping
+            // one identical collision branch per civic silhouette.
+            if (pickup_is_visual_town_resident(entities[i].ai_data[0])) {
+                any = 1;
+                continue;
+            }
             switch (entities[i].ai_data[0]) {
                 case PICKUP_HEART_HALF:
                     // A full-health walk-over used to consume the heart and
@@ -411,10 +489,12 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_CLEAR);
                     break;
                 case PICKUP_WEAPON: {
-                    // Swap A-weapons: take the orb's, drop yours in its
-                    // place (with grace so it isn't instantly re-grabbed).
+                    // A deliberate A press trades weapons. The dropped old
+                    // weapon receives grace so a confirmation press cannot
+                    // immediately ping-pong between the two orbs.
                     u8 old_w = player.starter_weapon;
                     if (entities[i].state > 0) { any = 1; continue; }
+                    if (!(input_pressed & J_A)) { any = 1; continue; }
                     player.starter_weapon = entities[i].ai_data[1];
                     sfx_play(SFX_DOOR);
                     if (old_w < N_ITEMS && items[old_w].kind == ITEM_KIND_WEAPON) {
@@ -440,22 +520,23 @@ u8 pickup_check_player_collision(void) BANKED {
                                 apply_item_effects((u8)(10 + rng_range(10)));
                                 break;
                             case WARE_BIG:
-                                apply_item_effects(10);   // Iron Heart
+                                apply_item_effects_by_id(ITEM_ID_IRON_HEART);
                                 break;
                             case WARE_FORGE:
-                                apply_item_effects(12);   // Power Stone
+                                apply_item_effects_by_id(ITEM_ID_POWER_STONE);
                                 break;
                             case WARE_RUNE:
-                                apply_item_effects(15);   // Mana Gem
+                                apply_item_effects_by_id(ITEM_ID_MANA_GEM);
                                 break;
                             case WARE_VAMP:
-                                apply_item_effects(19);   // Vampiric Sigil
+                                apply_item_effects_by_id(ITEM_ID_BLOOD_SIGIL);
                                 break;
                             case WARE_CHART:
                                 // Full route knowledge is deliberately a
                                 // one-dungeon service: coins buy planning
                                 // power without permanently removing fog.
-                                run_state.next_dungeon_reveal = 0x3F;
+                                run_state.next_dungeon_reveal = 0xFF;
+                                run_state.next_dungeon_reveal_hi = 0xFF;
                                 break;
                             case WARE_WEAPON: {
                                 u8 weapon = entities[i].ai_data[3];
@@ -496,18 +577,6 @@ u8 pickup_check_player_collision(void) BANKED {
                     }
                     any = 1;
                     continue;
-                case PICKUP_MERCHANT:
-                    // Visual anchor for the stall; wares own purchases.
-                    any = 1;
-                    continue;
-                case PICKUP_SMITH:
-                    // Visual anchor for the forge; its Power Stone owns the sale.
-                    any = 1;
-                    continue;
-                case PICKUP_APOTHECARY:
-                    // Visual anchor for the rune counter; the Mana Gem owns the sale.
-                    any = 1;
-                    continue;
                 case PICKUP_CARTOGRAPHER:
                     // One free town blessing: scout the first two chambers
                     // of the route ahead. It must be stored for the next
@@ -519,19 +588,6 @@ u8 pickup_check_player_collision(void) BANKED {
                         entities[i].palette = 0x02;
                         sfx_play(SFX_CLEAR);
                     }
-                    any = 1;
-                    continue;
-                case PICKUP_WAYKEEPER:
-                    // A visual north-gate anchor. Unlike the healer and
-                    // chartwright it never consumes a blessing or blocks a
-                    // player who brushes past on the way to the next region.
-                    any = 1;
-                    continue;
-                case PICKUP_LOREKEEPER:
-                    // Town arrival gains a fourth civic silhouette without
-                    // another upgrade or hidden interaction. The Lorekeeper
-                    // is an authored lore fixture; the player-composed music
-                    // pass remains deliberately separate from this sprite.
                     any = 1;
                     continue;
                 case PICKUP_RIFTWELL:

@@ -719,6 +719,9 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          extern const char *const stage_names[N_STAGES];\n\
          /* Large-boss stat bonuses per stage (indexed by CLAMPED stage) */\n\
          extern const u8 stage_boss_hp[N_STAGES];\n\
+         /* Authored final boss HP caps: first campaign / endless return. */\n\
+         extern const u8 stage_boss_hp_cap[N_STAGES];\n\
+         extern const u8 stage_boss_endless_hp_cap[N_STAGES];\n\
          extern const u8 stage_boss_dmg[N_STAGES];\n\
          /* Mini-boss silhouette per stage: 0 Sentinel, 1 Orc, 2 Skeleton.\n\
             Single source for BOTH the art loader and the palette pick. */\n\
@@ -777,6 +780,10 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
     };
     c.push_str(&format!("const u8 stage_boss_hp[N_STAGES] = {{ {} }};\n",
         list(&|s| s.boss_hp_bonus)));
+    c.push_str(&format!("const u8 stage_boss_hp_cap[N_STAGES] = {{ {} }};\n",
+        list(&|s| s.boss_hp_cap)));
+    c.push_str(&format!("const u8 stage_boss_endless_hp_cap[N_STAGES] = {{ {} }};\n",
+        list(&|s| s.endless_boss_hp_cap)));
     c.push_str(&format!("const u8 stage_boss_dmg[N_STAGES] = {{ {} }};\n",
         list(&|s| s.boss_dmg_bonus)));
     c.push_str(&format!("const u8 stage_mb_variant[N_STAGES] = {{ {} }};\n",

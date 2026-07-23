@@ -1,6 +1,7 @@
--- Quintra Phase 9/10 smoke test.
--- Boots → TITLE → CLASS_SELECT → walks through 5 doors to the BOSS room
--- → fights → screenshot at each stage → exit.
+-- Quintra whole-cartridge smoke test.
+-- Boots → TITLE → CLASS_SELECT → follows the authored spatial graph through
+-- the room-two Rift Sigil, room-three Warden, and branching boss approach →
+-- fights → Pack → exit.
 
 local OUT_DIR = os.getenv("QUINTRA_OUT_DIR") or "/tmp/quintra-smoketest"
 
@@ -68,7 +69,7 @@ local function shot(name)
         local tx, ty = math.floor((px + 8) / 8), math.floor((py + 12) / 8)
         if tx < 20 and ty < 18 then tile = emu:read8(TM_ADDR + ty * 20 + tx) end
     end
-    local hostiles, giants, giant_hp = 0, 0, 0
+    local hostiles, giants, giant_hp, giant_x, giant_y = 0, 0, 0, 255, 255
     if EN_ADDR ~= 0 then
         for i = 0, 31 do
             local p = EN_ADDR + i * 28
@@ -77,13 +78,15 @@ local function shot(name)
                 if emu:read8(p + 17) == 1 and emu:read8(p + 20) ~= 0 then
                     giants = giants + 1
                     giant_hp = emu:read8(p + 14)
+                    giant_x = emu:read8(p + 3)
+                    giant_y = emu:read8(p + 7)
                 end
             end
         end
     end
     local line = string.format(
-        "SHOT %-25s  screen=%d room=%d vic=%d bosses=%d hostiles=%d giants=%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
-        name, screen, rc_room, vic, bosses, hostiles, giants, giant_hp, px, py, tile, hp, ifr)
+        "SHOT %-25s  screen=%d room=%d vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, screen, rc_room, vic, bosses, hostiles, giants, giant_x, giant_y, giant_hp, px, py, tile, hp, ifr)
     if log_fh then log_fh:write(line); log_fh:flush() end
     console:log(line)
 end
@@ -128,22 +131,50 @@ local function giant_alive()
     return false
 end
 
+-- Return the live giant's integer top-left.  The smoke runner is intentionally
+-- allowed to reposition the champion, but its damage still travels through
+-- normal controller A attacks.  Following the body keeps this reachability
+-- check valid for bosses that strafe, bounce, or blink instead of assuming the
+-- old generic beeline will stay under a fixed firing lane.
+local function giant_position()
+    if EN_ADDR == 0 then return nil, nil end
+    for i = 0, 31 do
+        local p = EN_ADDR + i * 28
+        if emu:read8(p) == 2 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 1 and emu:read8(p + 20) ~= 0 then
+            return emu:read8(p + 3), emu:read8(p + 7)
+        end
+    end
+    return nil, nil
+end
+
 -- Fire from a stable lane above the giant. This reachability harness may
 -- refill HP/iframes and correct position, but damage is delivered only by
 -- ordinary A-button weapon shots through the real combat path.
 local function assault_boss(frames)
     for _ = 1, frames do
         if not giant_alive() then break end
+        local bx, by = giant_position()
         emu:write8(PL_ADDR + 2, 8)
-        emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
-        emu:write8(PL_ADDR + 11, 16); emu:write8(PL_ADDR + 12, 0)
+        -- Stay one sword lane above the real giant whenever that lane fits.
+        -- A mobile Colossus can reach y=8, however; clamping the hero above
+        -- it at y=8 then made a downward thrust begin below the body. In that
+        -- edge case use the equally real below-body/upward stab instead.
+        local boss_x, boss_y = bx or 62, by or 36
+        local attack_dir = KEY_DOWN
+        emu:write8(PL_ADDR + 9, math.min(140, math.max(8, boss_x + 10))); emu:write8(PL_ADDR + 10, 0)
+        if boss_y < 28 then
+            emu:write8(PL_ADDR + 11, math.min(112, boss_y + 20)); emu:write8(PL_ADDR + 12, 0)
+            attack_dir = KEY_UP
+        else
+            emu:write8(PL_ADDR + 11, boss_y - 20); emu:write8(PL_ADDR + 12, 0)
+        end
         emu:write8(PL_ADDR + 15, 60)
-        -- Wolfkin's A is intentionally edge-triggered (stab/sweep), unlike
-        -- the ranged held-fire kits. Pulse it every 18 frames so this still
-        -- drives the real contact attack without regressing the game into a
-        -- flying-sword stream just to satisfy smoke coverage.
-        if (_ % 18) < 2 then emu:setKeys(KEY_A + KEY_DOWN)
-        else emu:setKeys(KEY_DOWN) end
+        -- Wolfkin now owns a slow, held-A physical combo (including its
+        -- cooldown-gated Max Strike). Keep A held so smoke covers the
+        -- player-facing turbo-friendly control path; the cartridge itself
+        -- enforces the 24-frame cadence, never this harness.
+        emu:setKeys(KEY_A + attack_dir)
         emu:runFrame()
     end
     emu:setKeys(0)
@@ -160,17 +191,83 @@ end
 -- old fixed 220-frame hold did whenever code-size changes shifted
 -- frame alignment). The runner is topped up each burst: this harness
 -- verifies screens are REACHABLE, not that a bot survives bullet hell.
-local function walk_to_room(target)
+local function walk_edge(target, key)
     for _ = 1, 80 do
         if room_counter() == target then break end
         if PL_ADDR ~= 0 then
             emu:write8(PL_ADDR + 2, 12)    -- hp: stay alive
             emu:write8(PL_ADDR + 15, 60)   -- iframes: no knockback ping-pong
+            -- Put the champion in the appropriate doorway lane. This smoke
+            -- harness may reposition the hero, but crosses every threshold
+            -- through the cartridge's real transition transaction.
+            if key == KEY_UP then
+                emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
+                emu:write8(PL_ADDR + 11, 8); emu:write8(PL_ADDR + 12, 0)
+            elseif key == KEY_RIGHT then
+                emu:write8(PL_ADDR + 9, 140); emu:write8(PL_ADDR + 10, 0)
+                emu:write8(PL_ADDR + 11, 60); emu:write8(PL_ADDR + 12, 0)
+            elseif key == KEY_DOWN then
+                emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
+                emu:write8(PL_ADDR + 11, 112); emu:write8(PL_ADDR + 12, 0)
+            else
+                emu:write8(PL_ADDR + 9, 8); emu:write8(PL_ADDR + 10, 0)
+                emu:write8(PL_ADDR + 11, 60); emu:write8(PL_ADDR + 12, 0)
+            end
         end
         clear_hostiles()
-        hold(KEY_DOWN, 20)
+        hold(key, 8)
     end
     tick(20)
+end
+
+local function collect_rift_sigil()
+    if EN_ADDR == 0 or PL_ADDR == 0 then return false end
+    for i = 0, 31 do
+        local p = EN_ADDR + i * 28
+        -- ENTITY_PICKUP with PICKUP_RIFT_SIGIL in ai_data[0].
+        if emu:read8(p) == 3 and emu:read8(p + 17) == 11 then
+            emu:write8(PL_ADDR + 9, math.max(0, emu:read8(p + 3) - 2))
+            emu:write8(PL_ADDR + 10, 0)
+            emu:write8(PL_ADDR + 11, math.max(0, emu:read8(p + 7) - 9))
+            emu:write8(PL_ADDR + 12, 0)
+            tick(30)
+            return true
+        end
+    end
+    return false
+end
+
+-- The smoke harness removes encounter entities to keep screenshot timing
+-- deterministic, so the normal enemy-death callback cannot record the
+-- room-three Warden Boon. Preserve the equivalent post-clear fixture state
+-- after visibly reaching that authored chamber; this is a reachability smoke,
+-- while controller-only tests separately prove the real Warden kill path.
+local function record_opening_warden_boon()
+    if RS_ADDR == 0 or room_counter() ~= 3 then return false end
+    local puzzles = emu:read8(RS_ADDR + 27)
+    if math.floor(puzzles / 8) % 2 == 0 then
+        emu:write8(RS_ADDR + 27, puzzles + 8)
+    end
+    return true
+end
+
+local function solve_opening_push_seal()
+    if TM_ADDR == 0 or PL_ADDR == 0 then return false end
+    for y = 1, 15 do
+        for x = 1, 18 do
+            if emu:read8(TM_ADDR + y * 20 + x) == 25 then
+                -- Approach the ordinary-looking 2x2 cairn from its left and
+                -- hold into it through the real ten-frame push threshold.
+                emu:write8(PL_ADDR + 9, math.max(0, x * 8 - 16))
+                emu:write8(PL_ADDR + 10, 0)
+                emu:write8(PL_ADDR + 11, math.max(0, y * 8 - 8))
+                emu:write8(PL_ADDR + 12, 0)
+                hold(KEY_RIGHT, 120)
+                return true
+            end
+        end
+    end
+    return false
 end
 
 -- Boot
@@ -185,15 +282,19 @@ tap(KEY_DOWN); tick(15); shot("02e_vespine")
 tap(KEY_DOWN); tick(15)  -- wraps back to Wolfkin
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
--- Descend by room counter: 1,2,3 (mini-boss), 4 (shop), then the
--- stage-boss room at 6.
-walk_to_room(1);  shot("04_room1")
-walk_to_room(2);  shot("05_room2")
-walk_to_room(3);  shot("06_room3")
-walk_to_room(4);  shot("07_room4")
+-- Opening graph route:
+-- 0 → 1 → 2 (Sigil) → 3 (Warden) → 4 → 5 → 6 → 9 (boss).
+-- This deliberately turns south and west instead of treating the compact
+-- 4x4 dungeon as the retired linear room-counter corridor.
+walk_edge(1, KEY_RIGHT); shot("04_room1"); solve_opening_push_seal()
+walk_edge(2, KEY_RIGHT); collect_rift_sigil(); shot("05_room2_sigil")
+walk_edge(3, KEY_RIGHT); record_opening_warden_boon()
+walk_edge(4, KEY_DOWN)
+walk_edge(5, KEY_LEFT);  shot("06_room5_branch")
+walk_edge(6, KEY_LEFT);  shot("07_room6_threshold")
 -- A new stage deliberately fades its palette in. Wait it out so this is a
 -- useful boss-arena capture rather than an intended near-black transition.
-walk_to_room(6);  tick(36); shot("08_BOSS_room")
+walk_edge(9, KEY_DOWN); tick(36); shot("08_BOSS_room")
 
 -- Damage the first giant through real controller shots, sampling the fight.
 assault_boss(80)
@@ -202,7 +303,11 @@ shot("09_boss_under_fire")
 assault_boss(80)
 shot("10_boss_mid_fight")
 
-assault_boss(600)
+-- The Colossus now has a 200-HP introductory pattern window. Keep the smoke
+-- runner on its real held-A path long enough to prove the complete reward /
+-- Pack / return sequence instead of mistaking the old 760-frame budget for
+-- a balance assertion. The loop exits immediately on a real boss death.
+assault_boss(2400)
 shot("11_after_long_assault")
 
 -- START opens the Pack screen; START again returns to the live room.

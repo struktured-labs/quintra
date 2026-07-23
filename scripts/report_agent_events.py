@@ -36,7 +36,9 @@ def describe(path: Path) -> str:
 
     damage = sum(hit[2] for hit in hits)
     early = sum(hit[2] for hit in hits if hit[1] <= 2 and hit[4] == 0)
-    boss = sum(hit[2] for hit in hits if hit[1] > 0 and hit[1] % 6 == 0 and hit[4] == 0)
+    boss_rooms = {9, 20, 32, 45, 58, 72, 87, 102, 118}
+    boss = sum(hit[2] for hit in hits
+               if hit[1] in boss_rooms and hit[4] == 0)
     world = sum(hit[2] for hit in hits if hit[4] != 0)
     dungeon = damage - world
     rooms = Counter(hit[1] for hit in hits)

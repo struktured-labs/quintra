@@ -1,12 +1,18 @@
 {
-  "version": "v0.18.39",
-  "rom_sha256": "a1c0c6870851506cf383fe479f0cc28e539d7f674023cde5a9f6701fe6b56a05",
-  "capture_sha256": "2cd4fb2aab6f55b4cfa577386fd198d98dd0f7574337afe190848831145a389c",
-  "gif_sha256": "a870640437b11e318de6ef7bdc46c5922743a443ec0609e3384b36ae085bcdc5",
-  "title_sha256": "48b0b7b8f4a6d8bf09fb4af463ba2b6e354296aa4e242ac50646073c316325c3",
+  "version": "v0.18.58",
+  "rom_sha256": "da14ffddce2f3167d7945c421c48de08583c47be170fd960a9d07166ee527663",
+  "capture_sha256": "59267b5010ef9c45000d3df7696bf131ac704ec3031353eeaf94edb66f0a3002",
+  "gif_sha256": "abee41c21dedec1b59833432f73ed1e3922251680a88e8001854a80968250e75",
+  "title_sha256": "588ab38f71e6d1155626d165e47328df5057dd966c2f8b1de9ca1db6c0f18653",
   "title_capture_sha256": "590f229533e67d1820c5fc345d1bc66fa6c873a3ee368f9bec40bce125266e90",
+  "boss_gallery_sha256": "0e3c68df02e6ddac5d09bef9a3f44b4c93d16d104018a139a0de3d5edb2ac845",
+  "boss_gallery_gif_sha256": "ef78b5f0b2853b649021bde587774a20ce629b26fd8d02eba33601a70ef72625",
+  "boss_gallery_capture_sha256": "0a3b45882f9af7b9261942c6aaa8fb08c75a5c5d838faef3a28a3a8b1bf1463f",
+  "stills_sha256": "c592da91d5515dd699ce5f6e8633c5dbb880c7d5e335e9b536b8475d546b7753",
   "frames": 174,
-  "width": 480,
-  "height": 432,
-  "frame_ms": 100
+  "width": 320,
+  "height": 288,
+  "frame_ms": 100,
+  "boss_gallery_frames": 16,
+  "boss_gallery_frame_ms": 120
 }

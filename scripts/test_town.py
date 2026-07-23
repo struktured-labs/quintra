@@ -4,6 +4,9 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import (
+    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_direction,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -18,8 +21,9 @@ def addr(name):
 
 
 def main():
-    rs, pl, en, screen = map(addr, (
-        "_run_state", "_player", "_entities", "_loop_current_screen"))
+    rs, pl, en, screen, tilemap = map(addr, (
+        "_run_state", "_player", "_entities", "_loop_current_screen",
+        "_room_tilemap"))
     pb = PyBoy(str(ROM), window="null", cgb=True)
 
     def tick(n):
@@ -47,9 +51,35 @@ def main():
                 pb.memory[ep] = pb.memory[ep + 1] = 0
 
     def enter_from_previous(target):
-        pb.memory[rs + 1] = target - 1
         clear_hostiles()
-        for off, value in ((9, 72), (10, 0), (11, 120), (12, 0)):
+        if target in VILLAGE_ROOM.values():
+            after_stage = next(stage for stage, room in VILLAGE_ROOM.items()
+                               if room == target)
+            pb.memory[rs + 1] = STAGE_BOSS_ROOM[after_stage - 1]
+            pb.memory[rs + 11] = after_stage
+            pb.memory[rs + 17] = 1
+            pb.memory[rs + 18] = 6
+            pb.memory[rs + 19] = 0
+            pb.memory[tilemap + 8 * 20 + 10] = 34
+            x, y = 72, 52
+        else:
+            stage = next(i for i, boss in enumerate(STAGE_BOSS_ROOM)
+                         if target == boss - 1)
+            source_local = target - 1 - STAGE_START[stage]
+            target_local = target - STAGE_START[stage]
+            direction = dungeon_direction(source_local, target_local)
+            pb.memory[rs + 1] = target - 1
+            pb.memory[rs + 11] = stage
+            x, y = {
+                0: (72, 0), 1: (144, 60),
+                2: (72, 120), 3: (0, 60),
+            }[direction]
+            for tx, ty in {
+                0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
+                2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
+            }[direction]:
+                pb.memory[tilemap + ty * 20 + tx] = 3
+        for off, value in ((9, x), (10, 0), (11, y), (12, 0)):
             pb.memory[pl + off] = value
         tick(45)
         assert pb.memory[rs + 1] == target, f"could not enter room {target}"
@@ -73,27 +103,32 @@ def main():
     # Every pre-boss sanctuary remains a guaranteed full reset.
     pb.memory[pl + 2] = 1
     pb.memory[pl + 4] = 0
-    enter_from_previous(5)
+    enter_from_previous(STAGE_BOSS_ROOM[0] - 1)
     assert pb.memory[pl + 2] == pb.memory[pl + 1]
     assert pb.memory[pl + 4] == pb.memory[pl + 3]
 
     # Screen 0: named arrival square, elder/fountain, chartwright, a paid
-    # full-route chart, Lorekeeper, and three authored exits. The two route-
+    # full-route chart, Lorekeeper, Bellkeeper, and three authored exits. The two route-
     # reading choices make villages useful between procgen dungeons rather
     # than scenery, while the fourth resident makes the civic space feel
     # inhabited without changing the economy.
-    enter_from_previous(19)
+    town_room = VILLAGE_ROOM[3]
+    next_room = STAGE_START[3]
+    enter_from_previous(town_room)
     assert pb.memory[rs + 19] == 0, "town did not begin in arrival square"
     elder = entities(7)
     chartwright = entities(12)
     waykeeper = entities(15)
     lorekeeper = entities(17)
+    bellkeeper = entities(18)
     assert len(elder) == 1 and pb.memory[elder[0] + 12] == 69
     assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 123
     assert len(waykeeper) == 1 and pb.memory[waykeeper[0] + 12] == 124, \
         "arrival square lacks its dedicated north-gate Waykeeper"
     assert len(lorekeeper) == 1 and pb.memory[lorekeeper[0] + 12] == 126, \
         "arrival square lacks its dedicated scroll-bearing Lorekeeper"
+    assert len(bellkeeper) == 1 and pb.memory[bellkeeper[0] + 12] == 79, \
+        "arrival square lacks its dedicated Bellkeeper landmark"
     # The Waykeeper safely borrows the Rune Lantern's 8x8 VRAM slot only in a
     # town. Keep the exact town bytes so the transition below proves a normal
     # dungeon entry restores combat art rather than merely despawning the NPC.
@@ -103,11 +138,21 @@ def main():
         0x18, 0x18, 0x3C, 0x24, 0x5A, 0x66, 0x5A, 0x7E,
         0x3C, 0x7E, 0x24, 0x3C, 0x24, 0x3C, 0x42, 0x42,
     )), f"town arrival did not load Waykeeper art: {waykeeper_tile.hex()}"
+    bellkeeper_tile = bytes(pb.memory[0x8000 + 79 * 16:0x8000 + 80 * 16])
+    assert bellkeeper_tile == bytes((
+        0x18, 0x18, 0x3C, 0x24, 0x5A, 0x66, 0x3C, 0x7E,
+        0x18, 0x7E, 0x3C, 0x7E, 0x24, 0x7E, 0x3C, 0x3C,
+    )), f"town arrival did not load Bellkeeper art: {bellkeeper_tile.hex()}"
     lorekeeper_tile = bytes(pb.memory[0x8000 + 126 * 16:0x8000 + 127 * 16])
     assert lorekeeper_tile == bytes((
         0x10, 0x10, 0x38, 0x28, 0x7C, 0x44, 0x5A, 0x66,
         0x3C, 0x7E, 0x2C, 0x3C, 0x52, 0x52, 0x42, 0x42,
     )), f"town arrival did not load Lorekeeper art into the Surge-orb slot: {lorekeeper_tile.hex()}"
+    lore_callout_tile = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
+    assert lore_callout_tile == bytes((
+        0x3C, 0x00, 0x7E, 0x18, 0xC3, 0x24, 0xBD, 0x42,
+        0xBD, 0x42, 0xC3, 0x24, 0x7E, 0x18, 0x3C, 0x00,
+    )), "town arrival did not load the Lorekeeper's scroll cue"
     arrival_wares = entities(4)
     assert len(arrival_wares) == 1 and pb.memory[arrival_wares[0] + 18] == 7, \
         "arrival square lacks its dedicated Cartographer's Chart"
@@ -115,8 +160,34 @@ def main():
     assert pb.memory[chart_ware + 12] == 35 and pb.memory[chart_ware + 13] == 6
     assert pb.memory[chart_ware + 19] == 15, "Cartographer's Chart price drifted"
     arrival = bytes(pb.memory[addr("_room_tilemap"):addr("_room_tilemap") + 340])
-    assert arrival.count(3) == 6, "arrival square does not expose N/E/W village gates"
+    arrival_gate_cells = (9, 10, 8 * 20, 8 * 20 + 19, 9 * 20, 9 * 20 + 19)
+    assert all(arrival[cell] == 3 for cell in arrival_gate_cells), \
+        "arrival square does not expose its N/E/W village gates"
+    assert arrival[16 * 20 + 9] != 3 and arrival[16 * 20 + 10] != 3, \
+        "arrival square unexpectedly gained a south gate"
+    # The arrival screen must visually read as a settlement, not just a
+    # grass clearing with NPCs. Its two small rooflines frame the fountain;
+    # doorstep paths keep the civic routes open around both buildings.
+    assert arrival.count(37) == 16, "arrival square lost its paired house roofs"
+    assert arrival[3 * 20 + 2] == arrival[4 * 20 + 5] == 37
+    assert arrival[12 * 20 + 14] == arrival[13 * 20 + 17] == 37
+    assert arrival[6 * 20 + 3] == arrival[11 * 20 + 16] == 36, \
+        "arrival square lost its house-to-fountain doorstep paths"
+    pb.memory[0xFF4F] = 0
+    assert bytes(pb.memory[0x9800 + 1 * 32 + 7:0x9800 + 1 * 32 + 14]) == \
+        bytes((83, 77, 81, 81, 84, 85, 86)), \
+        "arrival square lacks its VILLAGE playfield landmark"
     pb.screen.image.save(ROOT / "tmp" / "town-arrival.png")
+
+    # The Lorekeeper's distinct open-scroll cue appears nearby. This is a
+    # readable lore invitation, not a purchase or a hidden stat interaction.
+    lx, ly = pb.memory[lorekeeper[0] + 3], (pb.memory[lorekeeper[0] + 7] - 8) & 0xFF
+    for off, value in ((9, lx), (10, 0), (11, ly - 24), (12, 0)):
+        pb.memory[pl + off] = value
+    tick(4)
+    assert any(pb.memory[fx + 12] == 125 and pb.memory[fx + 13] == 6
+               for fx in entities_by_type(4)), \
+        "nearby Lorekeeper did not show its distinct scroll cue"
 
     # SELECT stays a graphical compass in a village too. The old text-only
     # town report made a three-screen settlement read like one strange room;
@@ -136,6 +207,11 @@ def main():
     assert pb.memory[screen] == 5, "town compass did not resume arrival square"
 
     # Elder is a visible, permanent full blessing.
+    # The real Riftwild gate arrives near the fountain and can legitimately
+    # trigger the one-per-visit blessing before this synthetic interaction.
+    # Re-arm only the resident's contact latch; HP/MP changes below still flow
+    # through the cartridge collision path under test.
+    pb.memory[elder[0] + 15] = 0
     pb.memory[pl + 2] = 1
     pb.memory[pl + 4] = 0
     ex, ey = pb.memory[elder[0] + 3], (pb.memory[elder[0] + 7] - 8) & 0xFF
@@ -173,13 +249,14 @@ def main():
         pb.memory[pl + off] = value
     tick(6)
     assert pb.memory[chart_ware] == 0, "Cartographer's Chart could not be purchased"
-    assert pb.memory[rs + 25] == 0x3F, "paid Chart did not reveal all route cells"
+    assert pb.memory[rs + 25] == 0xFF and pb.memory[rs + 30] == 0xFF, \
+        "paid Chart did not reveal the full sixteen-cell route"
 
     # East branch: dedicated market with merchant and four visually distinct
     # wares. Stock must retain its own heart/relic art rather than collapsing
     # into the old ambiguous orange tag sprite.
     leave("east")
-    assert pb.memory[rs + 1] == 19 and pb.memory[rs + 19] == 1
+    assert pb.memory[rs + 1] == town_room and pb.memory[rs + 19] == 1
     merchant, wares, tags = entities(8), entities(4), entities(13)
     assert len(merchant) == 1 and pb.memory[merchant[0] + 12] == 70
     assert len(wares) == 4
@@ -203,6 +280,10 @@ def main():
     assert pb.memory[weapon + 19] == 30, "market weapon trade price drifted"
     assert pb.memory[weapon + 20] in {20, 21}, \
         "market weapon trade did not stock a special flail/spear index"
+    pb.memory[0xFF4F] = 0
+    assert bytes(pb.memory[0x9800 + 1 * 32 + 7:0x9800 + 1 * 32 + 13]) == \
+        bytes((87, 84, 76, 88, 86, 79)), \
+        "east quarter lacks its MARKET playfield landmark"
     # A nearby merchant speaks visually before the player risks walking into
     # stock: a coin speech bubble makes the NPC's purpose legible even on a
     # busy market screen.
@@ -301,12 +382,24 @@ def main():
     leave("west")
     assert pb.memory[rs + 19] == 0
     leave("west")
-    assert pb.memory[rs + 1] == 19 and pb.memory[rs + 19] == 2
+    assert pb.memory[rs + 1] == town_room and pb.memory[rs + 19] == 2
     smith, apothecary, wares = entities(9), entities(10), entities(4)
     assert len(smith) == len(apothecary) == 1
     assert pb.memory[smith[0] + 12] == 71
     assert pb.memory[apothecary[0] + 12] == 79
+    # Arrival borrows slot 79 for the Bellkeeper. The craft quarter must
+    # reload the real apothecary art after two lateral town transitions;
+    # checking only the shared tile number would miss a visual identity leak.
+    apothecary_tile = bytes(pb.memory[0x8000 + 79 * 16:0x8000 + 80 * 16])
+    assert apothecary_tile == bytes((
+        0x18, 0x00, 0x3C, 0x18, 0x66, 0x3C, 0x7E, 0x24,
+        0x24, 0x18, 0x7E, 0x18, 0x66, 0x24, 0x24, 0x00,
+    )), "craft-quarter apothecary inherited Bellkeeper art"
     assert len(wares) == 3 and {pb.memory[w + 18] for w in wares} == {3, 4, 6}
+    pb.memory[0xFF4F] = 0
+    assert bytes(pb.memory[0x9800 + 1 * 32 + 8:0x9800 + 1 * 32 + 13]) == \
+        bytes((78, 89, 76, 85, 86)), \
+        "west quarter lacks its FORGE playfield landmark"
     assert len({69, 70, pb.memory[smith[0] + 12], pb.memory[apothecary[0] + 12]}) == 4
     # The apothecary's crimson shelf makes the fifth-kill Vampiric Sigil an
     # intentional run-long sustain purchase instead of a barely-seen random
@@ -329,17 +422,21 @@ def main():
         pb.memory[pl + off] = value
     tick(6)
     assert pb.memory[vamp] == 0, "Vampiric Sigil shelf could not be purchased"
-    assert pb.memory[pl + 1] == old_hp_max + 1 and pb.memory[pl + 5] == old_atk + 1, \
-        "Vampiric Sigil did not apply its permanent health/attack build effects"
+    assert (pb.memory[pl + 1] == min(16, old_hp_max + 1)
+            and pb.memory[pl + 5] == old_atk + 1), \
+        ("Vampiric Sigil did not apply its permanent health/attack build effects "
+         f"(hp_max {old_hp_max}->{pb.memory[pl + 1]}, atk {old_atk}->{pb.memory[pl + 5]})")
     pb.screen.image.save(ROOT / "tmp" / "town-quarter.png")
 
     # Return to arrival and leave north: only now does dungeon depth advance.
     leave("east")
-    assert pb.memory[rs + 19] == 0 and pb.memory[rs + 1] == 19
+    assert pb.memory[rs + 19] == 0 and pb.memory[rs + 1] == town_room
     leave("north")
-    assert pb.memory[rs + 1] == 20, "north village gate did not continue the run"
+    assert pb.memory[rs + 1] == next_room, \
+        "north village gate did not continue the run"
     assert pb.memory[rs + 19] == 0, "town-local screen leaked into dungeon state"
-    assert pb.memory[rs + 20] == 0x3F and pb.memory[rs + 25] == 0, \
+    assert (pb.memory[rs + 20] == 0xFF and pb.memory[rs + 29] == 0xFF
+            and pb.memory[rs + 25] == 0 and pb.memory[rs + 30] == 0), \
         f"paid Chart did not become a one-dungeon full compass reveal (seen={pb.memory[rs + 20]:02x}, queued={pb.memory[rs + 25]:02x})"
     pb.stop(save=False)
     print("[town] PASS connected arrival + market + forge quarter + north continuation")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: Sauran's Scaled Hide restores one half-heart per 1,800 room frames."""
+"""ROM contract: eight-heart Sauran restores one half-heart per 1,800 room frames."""
 import re
 from pathlib import Path
 
@@ -71,7 +71,19 @@ def main():
     for _ in range(240):
         pb.tick()
     enter_sauran(pb)
-    assert pb.memory[PLAYER + 1] == 14, "Sauran's seven-heart Scaled Hide base drifted"
+    assert pb.memory[PLAYER + 1] == 16, "Sauran's eight-heart Scaled Hide base drifted"
+
+    # The selection-to-room handoff can legitimately expose a newly selected
+    # Sauran to a live first-room body before this probe starts. Align to a
+    # real just-fired recovery edge first, then measure a complete interval;
+    # otherwise the assertion accidentally includes an unknown partial timer
+    # from that normal handoff.
+    pb.memory[PLAYER + 2] = 15
+    for _ in range(1800):
+        tick_safe(pb, 1)
+        if pb.memory[PLAYER + 2] == 16:
+            break
+    assert pb.memory[PLAYER + 2] == 16, "Scaled Hide did not establish a recovery epoch"
 
     pb.memory[PLAYER + 2] = 10
     tick_safe(pb, 1799)

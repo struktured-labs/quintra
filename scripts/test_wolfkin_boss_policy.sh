@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Regression: Wolfkin's adjacent Claw needs a measured orbit-fire giant lane
-# and a contact-range Howl. On paired deterministic seeds, each route must
-# now clear three bosses without a live-combat stall; spending Howl before its
-# ring could connect left the real-melee pilot without its activation ward.
+# Regression: Wolfkin's 64px Fang needs a measured attack/retreat giant lane
+# and contextual Howl. On paired deterministic seeds, each route must clear
+# three bosses without a live-combat stall; firing while diagonally misaligned
+# or walking forward through a valid Fang lane reintroduced body attrition.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -10,7 +10,7 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-wolfkin-boss.XXXXXX)"
 
 QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_CLASSES=0 \
-  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=60 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

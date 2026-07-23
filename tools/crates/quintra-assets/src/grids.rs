@@ -322,6 +322,28 @@ pub const VINE_COIL: [&str; 8] = [ // coiled vine bulb, thorned leaf crown
     "...2.2..",
 ];
 
+pub const SHARD_CRAB: [&str; 8] = [ // low crystal shell, bright cracked core
+    "...33...",
+    ".332233.",
+    "32111123",
+    "31122113",
+    "31233213",
+    "32111123",
+    ".33..33.",
+    "3.3..3.3",
+];
+
+pub const VOID_HALO: [&str; 8] = [ // fractured ring with a dark central void
+    "..1331..",
+    ".132231.",
+    "132..231",
+    "32.33.23",
+    "32.33.23",
+    "132..231",
+    ".132231.",
+    "..1331..",
+];
+
 pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
     "...33...",
     "..3223..",
@@ -541,8 +563,22 @@ pub const SHIELD_AURA: [&str; 8] = [
     "...11...",
 ];
 
+// Wolfkin's steel: an asymmetric pointed blade with a crossguard and hilt.
+// The runtime X/Y flips it around the aim vector, so the starting melee kit
+// reads as a sword thrust/slash rather than a tiny fist or slow bullet.
+pub const SWORD: [&str; 8] = [
+    ".......3",
+    "......33",
+    ".....32.",
+    "....32..",
+    "...32...",
+    "..322...",
+    ".3111...",
+    "33.3....",
+];
+
 // Astral Spear: an asymmetric pointed shaft, intentionally unlike the broad
-// claw arc. It occupies a town-only NPC tile while dungeon combat is active.
+// sword arc. It occupies a town-only NPC tile while dungeon combat is active.
 pub const SPEAR: [&str; 8] = [
     ".......3",
     "......33",
@@ -813,7 +849,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 28] = [
+pub const ENEMIES_8: [(&str, &[&str]); 30] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -842,9 +878,11 @@ pub const ENEMIES_8: [(&str, &[&str]); 28] = [
     ("bramble_sprite", &BRAMBLE_SPRITE),
     ("frost_lancer", &FROST_LANCER),
     ("vine_coil", &VINE_COIL),
+    ("shard_crab", &SHARD_CRAB),
+    ("void_halo", &VOID_HALO),
 ];
 
-pub const FX_8: [(&str, &[&str]); 15] = [
+pub const FX_8: [(&str, &[&str]); 16] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -855,6 +893,7 @@ pub const FX_8: [(&str, &[&str]); 15] = [
     ("merchant_callout", &MERCHANT_CALLOUT),
     ("surge_orb", &SURGE_ORB),
     ("shield_aura", &SHIELD_AURA),
+    ("sword", &SWORD),
     ("spear", &SPEAR),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),

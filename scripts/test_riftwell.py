@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import STAGE_BOSS_ROOM
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -56,7 +57,7 @@ def main():
     pb.button("a"); tick(pb, 90)
 
     # Simulate the real post-boss handoff, then cross authored 0 -> 1.
-    pb.memory[RS + 1] = 6
+    pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 120)
     tick(pb)

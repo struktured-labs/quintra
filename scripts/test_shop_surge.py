@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import dungeon_direction
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -38,19 +39,29 @@ def boot_shop(seed_low):
     for _ in range(90):
         pb.tick()
 
-    # Make the next real door transaction land in dungeon room 4. The low
+    # Make the next real graph transaction land in opening shop room 7. The low
     # seed byte alone selects premium vitality (even) versus Surge (odd).
-    pb.memory[RS + 1] = 3
+    source, target = 6, 7
+    pb.memory[RS + 1] = source
     pb.memory[RS + 2] = seed_low
     pb.memory[RS + 3] = pb.memory[RS + 4] = pb.memory[RS + 5] = 0
-    pb.memory[TM + 16 * 20 + 9] = pb.memory[TM + 16 * 20 + 10] = 3
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 120)
+    direction = dungeon_direction(source, target)
+    for tx, ty in {
+        0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
+        2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
+    }[direction]:
+        pb.memory[TM + ty * 20 + tx] = 3
+    x, y = {
+        0: (72, 0), 1: (144, 60),
+        2: (72, 120), 3: (0, 60),
+    }[direction]
+    put16(pb, PL + 9, x)
+    put16(pb, PL + 11, y)
     for _ in range(240):
         pb.tick()
-        if pb.memory[RS + 1] == 4:
+        if pb.memory[RS + 1] == target:
             break
-    assert pb.memory[RS + 1] == 4, "could not enter seeded merchant room"
+    assert pb.memory[RS + 1] == target, "could not enter seeded merchant room"
     for _ in range(60):
         pb.tick()
     return pb

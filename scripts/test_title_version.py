@@ -12,6 +12,19 @@ HEADER = ROOT / "src" / "game" / "version.h"
 README = ROOT / "README.md"
 
 
+def font_tiles(text):
+    """Encode the uppercase/digit subset exposed by GBDK's compact font."""
+    result = []
+    for char in text:
+        if "A" <= char <= "Z":
+            result.append(11 + ord(char) - ord("A"))
+        elif "0" <= char <= "9":
+            result.append(1 + ord(char) - ord("0"))
+        else:
+            result.append(0)
+    return result
+
+
 def main():
     match = re.search(r'#define QUINTRA_VERSION "([^"]+)"', HEADER.read_text())
     assert match, "missing QUINTRA_VERSION"
@@ -29,19 +42,21 @@ def main():
     # and lowercase 'v' to its compact-font V glyph at tile 32.
     expected = [32 if char == "v" else 0 if char == "." else int(char) + 1
                 for char in version]
+    records_row = 0x9800 + 16 * 32
     title_row = 0x9800 + 17 * 32
     # font_min uses a packed, non-alphabetic glyph table.
-    prompt = [29, 15, 22, 0, 28, 15, 13, 25, 28, 14]  # "SEL RECORD"
-    assert list(pb.memory[title_row:title_row + 10]) == prompt, (
+    prompt = [29, 15, 22, 15, 13, 30, 0, 28, 15, 13, 25, 28, 14, 29]  # "SELECT RECORDS"
+    assert list(pb.memory[records_row + 3:records_row + 17]) == prompt, (
         "title SELECT prompt drifted"
     )
-    assert pb.memory[title_row + 10] == 0, "title footer lost its version gutter"
-    rendered = list(pb.memory[title_row + 11:title_row + 11 + len(version)])
+    assert all(pb.memory[records_row + col] == 0 for col in (*range(3), *range(17, 20))), \
+        "title records prompt lost its side gutters"
+    rendered = list(pb.memory[title_row + 6:title_row + 6 + len(version)])
     assert rendered == expected, (
         f"rendered title version drifted: expected {expected}, got {rendered}"
     )
-    assert all(pb.memory[title_row + 11 + len(version) + i] == 0
-               for i in range(8 - len(version))), \
+    assert all(pb.memory[title_row + col] == 0
+               for col in (*range(6), *range(6 + len(version), 20))), \
         "title footer left stale version glyphs in its gutter"
     assert pb.memory[title_row + 19] == 0, "title footer touched scrolling corner"
 
@@ -118,6 +133,35 @@ def main():
         assert pb.memory[oam] == 0 and pb.memory[oam + 1] == 0, (
             f"title spirit OAM {sprite} leaked into class select"
         )
+
+    # The original selector described one B binding on three separate lines
+    # ("B", "B USE", then another B-oriented hint). Pin explicit input,
+    # role, and effect labels on the rendered 20-column cartridge screen.
+    class_rows = {
+        13: "A WPN FANG FORMS",
+        14: "B SKILL HOWL",
+        15: "EFFECT 8 WAY WARD",  # compact font renders '-' as a blank
+        16: "SELECT MODE NORMAL",
+    }
+    for row, label in class_rows.items():
+        expected_row = font_tiles(label)
+        rendered_row = list(pb.memory[
+            0x9800 + row * 32 + 1:0x9800 + row * 32 + 1 + len(expected_row)
+        ])
+        assert rendered_row == expected_row, (
+            f"class-select row {row} is ambiguous or clipped: {rendered_row}"
+        )
+        assert all(pb.memory[0x9800 + row * 32 + col] == 0
+                   for col in range(1 + len(expected_row), 20)), (
+            f"class-select row {row} left stale edge glyphs"
+        )
+    pb.button("select")
+    pb.tick(8)
+    easy_mode = font_tiles("SELECT MODE EASY")
+    assert list(pb.memory[0x9800 + 16 * 32 + 1:
+                          0x9800 + 16 * 32 + 1 + len(easy_mode)]) == easy_mode, (
+        "class-select SELECT did not expose Easy as an explicit mode"
+    )
     pb.stop(save=False)
     print(f"[title-version] PASS rendered {version} and README agree")
 

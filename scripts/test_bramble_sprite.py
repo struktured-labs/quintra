@@ -79,7 +79,9 @@ def main():
             f"Bramble Sprite lost its readable opposite lane: {hostile}")
 
     for seed in range(0xB4A60000, 0xB4A60010):
-        generated_room(5, seed, probe=probe)
+        # Shadow local 2 is the paired phase gate; ordinary cell 4 owns the
+        # procedural combat roster sampled here.
+        generated_room(5, seed, probe=probe, local_room=4)
         if seen:
             break
     assert seen, "Bramble Sprite did not appear in 16 fixed Shadow Keep procgen seeds"

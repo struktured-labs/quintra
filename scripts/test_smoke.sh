@@ -95,9 +95,9 @@ check 02d_picsean             4
 check 02e_vespine             4
 check 03_room0_enter          10
 check 04_room1                7
-check 05_room2                7
-check 06_room3                7
-check 07_room4                7
+check 05_room2_sigil          7
+check 06_room5_branch         7
+check 07_room6_threshold      7
 # The first boss uses an intentional six-color night arena; its active-giant
 # log assertion below verifies this is the actual encounter, not an empty UI.
 check 08_BOSS_room            6
@@ -112,17 +112,17 @@ check 13_room_return          3
 # Exact state assertions use linker-resolved WRAM, not test-only sentinels.
 # They prove every requested room was reached and the final room owns one
 # active giant boss rather than merely resembling a boss screenshot.
-# Wolfkin's six-heart conference floor is 12 half-hearts at the first
+# Wolfkin's seven-heart conference floor is 14 half-hearts at the first
 # controllable room; keep the smoke contract tied to the real starter reserve.
-assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=12'
+assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=14'
 assert_log 04_room1           'room=1 '
-assert_log 05_room2           'room=2 '
-assert_log 06_room3           'room=3 '
-assert_log 07_room4           'room=4 '
-assert_log 08_BOSS_room       'room=6 .*giants=1 '
-assert_log 11_after_long_assault 'screen=5 .*room=6 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 05_room2_sigil     'room=2 '
+assert_log 06_room5_branch    'room=5 '
+assert_log 07_room6_threshold 'room=6 '
+assert_log 08_BOSS_room       'room=9 .*giants=1 '
+assert_log 11_after_long_assault 'screen=5 .*room=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
 assert_log 12_pack            'screen=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
-assert_log 13_room_return     'screen=5 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 13_room_return     'screen=5 .*room=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

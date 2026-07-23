@@ -52,6 +52,7 @@ def main():
         pb.memory[entities + i] = 0
     px = pb.memory[player + 9] | (pb.memory[player + 10] << 8)
     py = pb.memory[player + 11] | (pb.memory[player + 12] << 8)
+    old_weapon = pb.memory[player + 21]
     orb = entities
     pb.memory[orb] = 3             # ENT_PICKUP
     pb.memory[orb + 1] = 3         # EF_ACTIVE | EF_ALIVE
@@ -62,6 +63,10 @@ def main():
     pb.memory[orb + 17] = 5        # PICKUP_WEAPON
     pb.memory[orb + 18] = 21       # Astral Spear generated items[] index
     pb.memory[orb + 25] = 0x66
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[player + 21] == old_weapon, "walking over an orb silently swapped A weapon"
+    pb.button("a")
     for _ in range(3):
         pb.tick()
     assert pb.memory[player + 21] == 21, "Astral Spear orb did not swap A weapon"

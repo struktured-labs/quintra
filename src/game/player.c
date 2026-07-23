@@ -59,7 +59,7 @@ void player_init_from_class(u8 class_id) {
                 if (player.spd < 9) player.spd++;
                 break;
             // case 2 (Sauran HP+2/slow regen): the +2 is pre-baked into
-            // his 12-half-heart base; the regen half ticks in room.c.
+            // his 16-half-heart base; the regen half ticks in room.c.
         }
     }
 }

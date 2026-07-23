@@ -5,6 +5,7 @@ from pathlib import Path
 from pyboy import PyBoy
 
 from test_boss_identity import EN, PL, RS, TM, put16
+from quintra_topology import STAGE_START, dungeon_direction
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,11 +38,11 @@ def main():
     for _ in range(60):
         pb.tick()
 
-    # Replay the real room-49 -> room-50 transaction of the seed that found
+    # Replay the final stage's local-room-1 -> local-room-2 transaction of the seed that found
     # the controller stall. Previous eight Sigils exist; only stage eight's
     # bit is absent, so the room must publish its final mandatory fixture.
     put32(pb, RS + 2, 2064128116)
-    pb.memory[RS + 1] = 49
+    pb.memory[RS + 1] = STAGE_START[8] + 1
     pb.memory[RS + 11] = 8
     pb.memory[RS + 23] = 0xFF
     pb.memory[RS + 24] = 0x00
@@ -49,14 +50,24 @@ def main():
     for i in range(32):
         entity = EN + i * ENTITY_SIZE
         pb.memory[entity] = pb.memory[entity + 1] = 0
-    pb.memory[TM + 16 * ROOM_W + 9] = pb.memory[TM + 16 * ROOM_W + 10] = 3
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 120)
+    direction = dungeon_direction(1, 2)
+    for tx, ty in {
+        0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
+        2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
+    }[direction]:
+        pb.memory[TM + ty * ROOM_W + tx] = 3
+    x, y = {
+        0: (72, 0), 1: (144, 60),
+        2: (72, 120), 3: (0, 60),
+    }[direction]
+    put16(pb, PL + 9, x)
+    put16(pb, PL + 11, y)
     for _ in range(240):
         pb.tick()
-        if pb.memory[RS + 1] == 50:
+        if pb.memory[RS + 1] == STAGE_START[8] + 2:
             break
-    assert pb.memory[RS + 1] == 50, "could not enter final-stage Sigil room"
+    assert pb.memory[RS + 1] == STAGE_START[8] + 2, \
+        "could not enter final-stage Sigil room"
     for _ in range(60):
         pb.tick()
 

@@ -10,8 +10,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-corvin-riftwild.XXXXXX)"
 
-QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=9000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+# Outdoor collision/pathing is identical in Easy; use the tester budget so
+# the harder opening boss cannot prevent this traversal fixture from running.
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=2 \
+  QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

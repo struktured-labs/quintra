@@ -54,12 +54,19 @@ static const char *item_name_by_id(u16 id) {
     return "-";
 }
 
-static const char *item_description_by_id(u16 id) {
-    u8 i;
-    for (i = 0; i < N_ITEMS; ++i) {
-        if (items[i].id == id) return items[i].description;
-    }
-    return "-";
+// The pause screen is only 20 columns wide. Full item descriptions belong in
+// content and shop context; these are one-line action reminders that never
+// clip or repeat the B label already shown above.
+static const char *const active_tips[5] = {
+    "8WAY WARD",      // Howl, item id 10
+    "BLOCK HITS",     // Stoneskin, 11
+    "3WAY FAN",       // Murder, 12
+    "3BUB WARD",      // Tidal Wave, 13
+    "4FAN WARD",      // Swarm, 14
+};
+
+static const char *active_tip_by_id(u16 id) {
+    return (id >= 10 && id < 15) ? active_tips[id - 10] : "SEE SIG";
 }
 
 static const char *item_name_by_index(u8 index) {
@@ -110,7 +117,7 @@ void inventory_enter(void) {
     text_write(item_name_by_id(player.active_item));
     gotoxy(1, 12); text_write("PERK  ");
     text_write(perk_names[player.class_id < 5 ? player.class_id : 0]);
-    gotoxy(1, 13); text_write("B "); text_write(item_description_by_id(player.active_item));
+    gotoxy(1, 13); text_write("ACT "); text_write(active_tip_by_id(player.active_item));
 
     gotoxy(1, 14); text_write("coins "); text_u16((u16)player.coins);
     gotoxy(10, 14);
@@ -124,8 +131,13 @@ void inventory_enter(void) {
     gotoxy(1, 15); text_write("bosses "); text_u16((u16)run_state.bosses_beaten);
     text_write("/"); text_u16((u16)BOSSES_TO_WIN);
     gotoxy(1, 16); text_write("kills "); text_u16((u16)run_state.enemies_killed);
+    gotoxy(13, 16); text_write(RUN_IS_EASY() ? "EASY" : "NORM");
 
-    gotoxy(2, 17); text_write("START/B = resume");
+    // Spirit Convergence is Quintra's defining Penta-style temporary power
+    // form, but a README-only chord is effectively a hidden mechanic. The
+    // same START/B input that opened this modal already makes resuming
+    // discoverable; spend the final row on the action players cannot infer.
+    gotoxy(1, 17); text_write("FULL MP A B CHORD");
 
     palette_bg_fill_attrs(0);
     SHOW_BKG;

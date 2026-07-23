@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Regression: in a fixed-frame run-three world, a Skeleton can share
-# Sauran's right-hand sprite strip while sitting in a valid vertical Tail
-# Spike lane. The generic inward-edge guard used to replace every thrust with
-# LEFT, leaving the pilot in room 31 for most of the run. This remains an
-# ordinary controller-only replay: it accepts the later procedural fight but
-# requires the real room-31 lane to advance through the seventh boss.  Pinning
-# the cartridge loop frame matters: a run number alone intentionally samples
-# title-idle entropy and therefore is not a regression replay.
+# Long-route regression: this fixed run-three world eventually presents a
+# Skeleton in Sauran's right-hand sprite strip with a valid vertical Tail
+# Spike lane. The former inward-edge guard replaced every thrust with LEFT and
+# stalled in room 31. Reaching that lane requires surviving the preceding
+# bosses, so this remains a deliberately strict end-to-end survival check;
+# it must not be presented as an isolated Skeleton fixture when an earlier
+# loss occurs. Pinning the cartridge loop frame matters: a run number alone
+# intentionally samples title-idle entropy and is not a regression replay.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -35,7 +35,7 @@ awk -F, '
   END {
     if (rows != 1) { print "[sauran-edge] missing deterministic row" > "/dev/stderr"; exit 1 }
     if (wrong_seed) { print "[sauran-edge] fixed controller world drifted" > "/dev/stderr"; exit 1 }
-    if (bosses < 7) { print "[sauran-edge] did not clear the right-edge Skeleton lane" > "/dev/stderr"; exit 1 }
+    if (bosses < 7) { print "[sauran-edge] did not survive to the right-edge Skeleton lane" > "/dev/stderr"; exit 1 }
     if (combat_room == 31) { print "[sauran-edge] still stalled in room 31" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"

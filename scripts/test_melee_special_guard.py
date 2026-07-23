@@ -46,7 +46,10 @@ def assert_guard(class_moves, class_id, name, minimum, player, entities):
     hp = pb.memory[player + 2]
 
     pb.button_press("b")
-    for _ in range(2): pb.tick()
+    # mGBA/PyBoy delivers the pressed edge on the third emulated frame. Give
+    # the cartridge one further frame so this asserts the active ward rather
+    # than a frontend-input latency detail.
+    for _ in range(4): pb.tick()
     pb.button_release("b")
     assert pb.memory[player + 15] >= minimum, (
         f"{name} B activation ward too short: {pb.memory[player + 15]}")
@@ -71,7 +74,7 @@ def assert_guard(class_moves, class_id, name, minimum, player, entities):
 
 def main():
     player, entities = map(addr, ("_player", "_entities"))
-    assert_guard(0, 0, "Wolfkin", 20, player, entities)
+    assert_guard(0, 0, "Wolfkin", 27, player, entities)
     assert_guard(4, 4, "Vespine", 14, player, entities)
     print("[melee-guard] PASS Wolfkin/Vespine B activation wards are short and non-shielding")
 
