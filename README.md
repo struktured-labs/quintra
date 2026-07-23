@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.60: Wider Ways](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.61: Native Depth](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,18 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.60**, published after the complete build,
+The current cartridge is **v0.18.61**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Deep checkpoints now open natively in mGBA-Qt.** The external curriculum
+matches the existing PyBoy coverage: all five champions in Normal and Easy at
+nine entries, nine sanctuaries, nine live Colossi, eight fresh Riftwild
+arrivals, and two villages—370 ROM-bound `.ss0` files. Generation restores
+every file inside mGBA and independently boots one state from each checkpoint
+family through mGBA's `-t` path. A hash-pinned manifest prevents stale states
+from opening against a rebuilt cartridge, and `make play-mgba-state` uses the
+project's software-rendered GUI wrapper. These remain development fixtures;
+the cartridge save system and battery SRAM are unchanged.
 
 The v0.18.59 Compass pass made the SELECT lattice
 legible before exploration: every active room and possible cardinal link is
@@ -1714,6 +1724,8 @@ make play       # build + launch in mGBA
 make verify     # ROM tests + procgen parity + deterministic input replay
 make preflight  # cart header/checksums + real battery-SRAM power-cycle test
 make stage-states # 370 entry/sanctuary/boss/Riftwild/village checkpoints
+make mgba-states # the same 370 checkpoints in native mGBA format
+make play-mgba-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran DIFFICULTY=easy
 make timed-states # Easy pilot; new external checkpoint every five emulated minutes
 make play-timed-state TIMED_CHECKPOINT=25 # open the verified 25-minute state
 make repro-check # clean source copy must rebuild the exact same ROM bytes
@@ -1770,10 +1782,20 @@ they do not add an in-game save system, change the cartridge, or touch battery
 SRAM. The generated
 `manifest.json` pins the ROM SHA-256, exact PyBoy version, listed state hashes,
 and restored stage/room. `QuintraPyBoyEnv.load_state()` rejects any mismatch,
-so regenerate after rebuilding the ROM. Load a matching state from
-PyBoy with `load_state`; use a separate mGBA or
-MiSTer fixture only when that emulator's native state format is specifically
-needed—savestate formats are emulator-specific and intentionally not mixed.
+so regenerate after rebuilding the ROM.
+
+For hands-on testing in the preferred emulator, `make mgba-states` generates
+the same 370-point curriculum as native mGBA `.ss0` files under
+`tmp/mgba-states/`. Every file is serialized and restored by mGBA itself; the
+generator then launches representative entry, sanctuary, boss, Riftwild, and
+village files through mGBA's independent `-t` startup path. Its manifest pins
+the ROM and every state hash. Open one through the software-rendered GUI
+wrapper with, for example,
+`make play-mgba-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran DIFFICULTY=easy`.
+Riftwild and village use the same `STAGE` meanings described above. The
+launcher refuses stale or altered files before starting mGBA-Qt. PyBoy,
+mGBA, and MiSTer formats remain separate; no state is relabeled or converted
+between emulators.
 
 `make timed-states` starts from the progression-matched stage-four Wolfkin
 Easy curriculum, runs ordinary controller input for 30 emulated minutes, and

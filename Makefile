@@ -14,6 +14,9 @@ GENDIR  = $(SRCDIR)/generated
 # SRAM data. Rebuild them after every linked cartridge so a tester never gets
 # an emulator state whose manifest belongs to the previous ROM bytes.
 STATE_OUT ?= $(CURDIR)/tmp/stage-states
+MGBA_STATE_OUT ?= $(CURDIR)/tmp/mgba-states
+MGBA_STATE_SMOKE_OUT ?= $(CURDIR)/tmp/mgba-states-smoke
+MGBA_BIN ?= mgba-headless
 TIMED_STATE_OUT ?= $(CURDIR)/tmp/timed-states
 TIMED_MINUTES ?= 30
 TIMED_STATE_START ?= $(STATE_OUT)/quintra-stage-04-entry-wolfkin-easy.pyboy
@@ -47,7 +50,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-timed-state info check-balance-bot agent-events stall-maps stage-states timed-states
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-mgba-state play-timed-state info check-balance-bot agent-events stall-maps stage-states mgba-states mgba-state-smoke timed-states
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -154,6 +157,9 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_pyboy_env.py
 	python3 scripts/test_playtest_report.py
 	$(PYBOY_RUN) scripts/test_stage_states.py
+	python3 scripts/make_mgba_states.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
+		--mgba "$(MGBA_BIN)" --champion wolfkin --difficulty easy
 	$(PYBOY_RUN) scripts/test_puzzles.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
 	$(PYBOY_RUN) scripts/test_timed_states.py
@@ -359,6 +365,20 @@ play: all
 # explicit command and accepts STATE_OUT for an alternate curriculum set.
 stage-states: all
 
+# Native mGBA equivalents for hands-on testing in mGBA-Qt. Generation covers
+# the same 370 champion/difficulty/checkpoint combinations as the PyBoy set and
+# independently starts one file from every family through mGBA's -t loader.
+mgba-states: all
+	@python3 scripts/make_mgba_states.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_OUT)" \
+		--mgba "$(MGBA_BIN)"
+
+# Fast native-format contract used by `make verify`.
+mgba-state-smoke:
+	@python3 scripts/make_mgba_states.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
+		--mgba "$(MGBA_BIN)" --champion wolfkin --difficulty easy
+
 # Controller-driven periodic capture. The default begins from the plausible
 # stage-four Wolfkin Easy curriculum and emits a fresh PyBoy checkpoint every
 # five emulated minutes for thirty minutes. If an entire interval makes no
@@ -389,6 +409,14 @@ play-state:
 		--state-dir "$(STATE_OUT)" --stage "$(STAGE)" --difficulty "$(DIFFICULTY)" \
 		--checkpoint "$(CHECKPOINT)" --champion "$(HERO)" \
 		--report-dir "$(PLAYTEST_REPORT_DIR)"
+
+# Open the matching ROM-bound native state in the project's software-rendered
+# mGBA-Qt wrapper. Unlike play-state this is the exact emulator the human uses.
+play-mgba-state:
+	@python3 scripts/play_mgba_state.py --rom "$(BINDIR)/$(PROJECT).gbc" \
+		--state-dir "$(MGBA_STATE_OUT)" --stage "$(STAGE)" \
+		--difficulty "$(DIFFICULTY)" --checkpoint "$(CHECKPOINT)" \
+		--champion "$(HERO)"
 
 # Open one of the controller-produced five-minute checkpoints without a ROM
 # rebuild. The manifest rejects stale cartridge, PyBoy, or state bytes; the
