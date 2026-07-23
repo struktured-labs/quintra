@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.42: Revealed Cache Puzzles](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.58: Deep Roads](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -20,11 +20,10 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
-### Unreleased development work
+### Current release
 
-The current unreleased cartridge is **v0.18.58**. The v0.18.42 link above
-remains the latest published release until this shared worktree completes its
-full release gate.
+The current cartridge is **v0.18.58**, published after the complete build,
+media, cartridge, checkpoint, gameplay, and controller verification gate.
 
 **Dungeon depth now comes from required fixtures, not padding.** The nine-stage route grows through
 10, 11, 12, 12, 13, 14, 14, 15, and 16 rooms including each Colossus arena:
@@ -802,8 +801,7 @@ complete cycle. Ember Depths now also replaces its former Skeleton slice with
 an 8% **Folding Star** band: its invulnerable bloom and bright contracted
 damage window teach timing beside the Ooze's split/reform movement before
 Frost Vault, without increasing density or changing the procgen draw count.
-A live roster contract proves both lessons can generate there. This remains
-unreleased while the broader controller-balance gate is still being improved.
+A live roster contract proves both lessons can generate there.
 
 **Folding Star AI now has its own specialist module.** Its bloom/contract and
 four-echo diagonal behavior moved out of the general enemy dispatcher into
@@ -1870,7 +1868,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and at least 512 bytes of free always-mapped
-bank space. The current unreleased v0.18.58 development ROM occupies 128 KiB
+bank space. The current v0.18.58 release ROM occupies 128 KiB
 with 612 bytes of bank-0 headroom. Its media, 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
