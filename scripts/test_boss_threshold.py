@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_neighbor,
+    STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_maze_neighbor,
     dungeon_size,
 )
 
@@ -87,9 +87,11 @@ def main() -> None:
     for i in range(32 * 28):
         pb.memory[entities + i] = 0
     pb.memory[sealed] = 0
-    # Local 11 sits immediately west of the opening sanctuary at local 12.
-    source, sanctuary = 11, 12
+    # Local 17 leads south into the opening sanctuary at local 18.
+    source, sanctuary = 17, 18
     approach = dungeon_direction(source, sanctuary)
+    boss_direction = dungeon_direction(sanctuary, sanctuary + 1)
+    return_direction = (approach + 2) & 3
     pb.memory[rs + 1] = STAGE_START[0] + source
     pb.memory[rs + 6] = 0xFF
     pb.memory[rs + 23] = 1
@@ -113,15 +115,22 @@ def main() -> None:
         if audio != before_audio:
             heard_roar = True
 
-    # The opening sanctuary's real boss neighbor is east; its north return
+    # The opening sanctuary's real boss neighbor is west; its north return
     # remains ordinary gold.
     pb.memory[0xFF4F] = 1
-    boss_attr = pb.memory[0x9800 + 8 * 32 + 19]
-    return_attr = pb.memory[0x9800 + 9]
+    boss_attr = pb.memory[
+        0x9800 + SEALS[boss_direction][0][1] * 32
+        + SEALS[boss_direction][0][0]
+    ]
+    return_attr = pb.memory[
+        0x9800 + DOORS[return_direction][0][1] * 32
+        + DOORS[return_direction][0][0]
+    ]
     pb.memory[0xFF4F] = 0
     boss_tiles = tuple(pb.memory[0x9800 + y * 32 + x]
-                       for x, y in SEALS[1])
-    return_tiles = (pb.memory[0x9800 + 9], pb.memory[0x9800 + 10])
+                       for x, y in SEALS[boss_direction])
+    return_tiles = tuple(pb.memory[0x9800 + y * 32 + x]
+                         for x, y in DOORS[return_direction])
     assert boss_tiles == (BGT_BOSS_GATE_L, BGT_BOSS_GATE_R,
                           BGT_BOSS_GATE_TOP, BGT_BOSS_GATE_BOTTOM), (
         f"east boss threshold lost 16x16 skull seal: {boss_tiles}")
@@ -140,7 +149,9 @@ def main() -> None:
         size, boss = dungeon_size(stage), dungeon_size(stage) - 1
         for source in range(size - 1):
             for direction in range(4):
-                if dungeon_neighbor(source, size, direction) != boss:
+                if dungeon_maze_neighbor(
+                    source, size, direction, 0xCAFE1234, stage
+                ) != boss:
                     continue
                 observed_directions.add(direction)
                 pb.memory[rs + 11] = stage
@@ -162,15 +173,15 @@ def main() -> None:
                     f"stage {stage + 1} direction {direction} lost amber: {attrs}")
     assert observed_directions == {1, 2, 3}, observed_directions
 
-    # Restore the opening sanctuary's east-facing fixture for proximity audio.
+    # Restore the opening sanctuary's west-facing fixture for proximity audio.
     pb.memory[rs + 11] = 0
     pb.memory[rs + 1] = STAGE_BOSS_ROOM[0] - 1
-    set_cardinal_fixture(pb, rs, tilemap, 1)
+    set_cardinal_fixture(pb, rs, tilemap, boss_direction)
 
     # Arrival can place the hero inside the 16-pixel approach band; in that
     # case the one-shot warning is heard immediately. Otherwise, approach the
     # forward threshold explicitly and require either probe to trigger it.
-    put16(pb, player + 9, 128); put16(pb, player + 11, 60)
+    put16(pb, player + 9, 16); put16(pb, player + 11, 60)
     before_audio = tuple(pb.memory[a] for a in (0xFF10, 0xFF11, 0xFF12,
                                                 0xFF42, 0xFF43))
     pb.tick()

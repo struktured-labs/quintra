@@ -150,6 +150,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_performance.py
 	uv run --quiet --with pyboy python scripts/test_run_clock.py
 	uv run --quiet --with pyboy python scripts/test_compass_map.py
+	python3 scripts/test_dungeon_topology.py
 	$(PYBOY_RUN) scripts/test_difficulty_mode.py
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
 	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py

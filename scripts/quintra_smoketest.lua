@@ -353,26 +353,31 @@ tap(KEY_DOWN); tick(15); shot("02e_vespine")
 tap(KEY_DOWN); tick(15)  -- wraps back to Wolfkin
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
--- Opening graph route:
--- 0 → 1 → 2 (Sigil) → 3 (Warden) → 4 → 5 → 6 → 7 → 8 → 9
---   → 10 → 11 → 12 → 13 (boss).
--- Follow the full 5x4 snake so smoke proves the wider stage is traversable
--- instead of silently retaining the retired compact-route assumptions.
+-- Opening graph route follows the guaranteed 6x5 snake spine all the way to
+-- the first boss. Seeded vertical seams add optional loops, but this complete
+-- controller route proves the twenty-room baseline cannot collapse into the
+-- old compact rectangle.
 walk_edge(1, KEY_RIGHT); shot("04_room1"); solve_opening_push_seal()
 walk_edge(2, KEY_RIGHT); collect_rift_sigil(); shot("05_room2_sigil")
 walk_edge(3, KEY_RIGHT); record_opening_warden_boon()
 walk_edge(4, KEY_RIGHT)
-walk_edge(5, KEY_DOWN);  shot("06_room5_branch")
-walk_edge(6, KEY_LEFT)
+walk_edge(5, KEY_RIGHT); shot("06_room5_branch")
+walk_edge(6, KEY_DOWN)
 walk_edge(7, KEY_LEFT); solve_waystone()
 walk_edge(8, KEY_LEFT)
 walk_edge(9, KEY_LEFT); record_deep_warden_boon(); shot("07_room9_threshold")
-walk_edge(10, KEY_DOWN)
-walk_edge(11, KEY_RIGHT)
-walk_edge(12, KEY_RIGHT)
+walk_edge(10, KEY_LEFT)
+walk_edge(11, KEY_LEFT)
+walk_edge(12, KEY_DOWN)
+walk_edge(13, KEY_RIGHT)
+walk_edge(14, KEY_RIGHT)
+walk_edge(15, KEY_RIGHT)
+walk_edge(16, KEY_RIGHT)
+walk_edge(17, KEY_RIGHT)
+walk_edge(18, KEY_DOWN)
 -- A new stage deliberately fades its palette in. Wait it out so this is a
 -- useful boss-arena capture rather than an intended near-black transition.
-walk_edge(13, KEY_RIGHT); tick(36); shot("08_BOSS_room")
+walk_edge(19, KEY_LEFT); tick(36); shot("08_BOSS_room")
 
 -- Damage the first giant through real controller shots, sampling the fight.
 assault_boss(80)

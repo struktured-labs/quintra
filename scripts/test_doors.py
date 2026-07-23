@@ -73,10 +73,10 @@ def crosses(direction, off_center=False):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
-    # Stage three local cell six is an interior 5x4 node with all four
-    # reciprocal neighbours active. This proves cardinal geometry without
-    # manufacturing exits that the graph intentionally walls off.
-    stage, cell, size = 2, 6, 16
+    # Exercise one guaranteed snake-spine edge in each direction. Seeded maze
+    # seams deliberately mean no single 6x5 cell owns four exits every run.
+    stage, size = 2, 22
+    cell = {0: 6, 1: 0, 2: 5, 3: 1}[direction]
     pb.memory[RS + 11] = stage
     pb.memory[RS + 1] = STAGE_START[stage] + cell
     pb.memory[RS + 6] = 0xFF
@@ -88,12 +88,22 @@ def crosses(direction, off_center=False):
         x = 36
         pb.memory[TM + 5] = pb.memory[TM + 6] = 3
     put16(pb, PL + 9, x); put16(pb, PL + 11, y)
+    target = dungeon_neighbor(cell, size, direction)
+    target_room = STAGE_START[stage] + target
     # A full cardinal slide streams its tilemap across many VBlanks. At least
     # one sampled beat must show the reconstructed hero while arrival safety
     # remains active; this directly catches "invulnerable but invisible".
     visible_during_arrival = False
-    for _ in range(240):
+    for _ in range(120):
         pb.tick()
+        # This suite owns transition geometry, not encounter survival. Clear
+        # the freshly generated destination hostiles before their knockback
+        # can throw an idle fixture back through its arrival threshold.
+        if pb.memory[RS + 1] == target_room:
+            for i in range(32):
+                entity = EN + i * 28
+                if pb.memory[entity] == 2:
+                    pb.memory[entity] = pb.memory[entity + 1] = 0
         if pb.memory[PL + 15] > 0 and player_oam_matches(pb):
             visible_during_arrival = True
     result = pb.memory[RS + 1]
@@ -104,7 +114,6 @@ def crosses(direction, off_center=False):
     assert visible_during_arrival, "arrival invulnerability hid the hero"
     assert_player_oam_visible(pb, f"door {x},{y}")
     pb.stop(save=False)
-    target = dungeon_neighbor(cell, size, direction)
     return result == STAGE_START[stage] + target and sprites_visible
 
 def locked_north_holds():
@@ -256,9 +265,17 @@ def pressure_plate_reveals_secret():
         if pb.memory[RS + 13] == 0:
             break
     returned_to_parent = pb.memory[RS + 13] == 0 and pb.memory[RS + 1] == parent_room
-    pb.stop(save=False)
     if not (hero_did_not_solve and opened and cairn_holds):
+        pb.stop(save=False)
         raise AssertionError(f"plate did not reveal secret: north/switch={tiles} player={player_xy}")
+    if not (entered_cache and returned_to_parent):
+        details = (pb.memory[RS + 1], pb.memory[RS + 13])
+        pb.stop(save=False)
+        raise AssertionError(
+            "pressure-plate cache traversal failed: "
+            f"entered={entered_cache} returned={returned_to_parent} "
+            f"parent={parent_room} room={details[0]} secret={details[1]}")
+    pb.stop(save=False)
     return (hero_did_not_solve and opened and cairn_holds
             and entered_cache and returned_to_parent)
 

@@ -107,7 +107,15 @@ static void prepare_push(u32 seed) {
 
 static void prepare_sequence(u32 seed) {
     u8 i;
-    u8 order = (u8)((seed >> 8) % 6);
+    u16 folded;
+    u8 order;
+    // Preserve (seed >> 8) % 6 without linking the generic 32-bit modulo
+    // helper into fixed ROM. Because 256^n % 6 == 4 for every n >= 1,
+    // folding the three significant bytes into a 16-bit value is exact.
+    folded = (u8)(seed >> 8);
+    folded += (u16)((u16)(u8)(seed >> 16) << 2);
+    folded += (u16)((u16)(u8)(seed >> 24) << 2);
+    order = (u8)(folded % 6);
     for (i = 0; i < 3; ++i) {
         floor_rect((u8)(rune_x[i] - 1), (u8)(rune_y[i] - 1), 3, 3);
         room_tilemap[rune_y[i]][rune_x[i]] = BGT_SWITCH;

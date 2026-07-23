@@ -35,7 +35,7 @@
 #define WARE_RUNE    4   // Mana Gem (+2 max MP), village apothecary only
 #define WARE_SURGE   5   // 15-second weapon burst, dungeon premium stock
 #define WARE_VAMP    6   // Vampiric Sigil (+ATK/+max HP; heal every fifth kill)
-#define WARE_CHART   7   // Cartographer's Chart (reveal next six-room dungeon)
+#define WARE_CHART   7   // Cartographer's Chart (reveal the next dungeon)
 #define WARE_WEAPON  8   // seed-stable alternate A-weapon; town market trade
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)

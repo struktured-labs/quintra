@@ -120,7 +120,7 @@ screen_id_t victory_tick(u8 keys, u8 pressed) {
         return SCREEN_TITLE;
     }
     // Endless descent keeps the run but resumes in Riftwild. Explicit stage
-    // topology clamps boss identity at stage nine, so regenerating room 154
+    // topology clamps boss identity at stage nine, so regenerating room 220
     // would simply rebuild the sealed Void arena and trap the champion.
     if ((pressed & J_A) && ending_beat >= 3) {
         run_state.victory = 0;

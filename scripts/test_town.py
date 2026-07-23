@@ -234,7 +234,7 @@ def main():
     assert pb.memory[chartwright[0] + 15] == 1, "Chartwright blessing did not latch"
     # The paid chart is a stronger, clearly signposted town service. Its map
     # glyph and price must appear before contact; buying it through ordinary
-    # collision upgrades the stored two-room scout to the full six-room route.
+    # collision upgrades the stored two-room scout to the full 6x5 route.
     cx, cy = pb.memory[chart_ware + 3], (pb.memory[chart_ware + 7] - 8) & 0xFF
     for off, value in ((9, cx), (10, 0), (11, cy - 24), (12, 0)):
         pb.memory[pl + off] = value
@@ -249,8 +249,11 @@ def main():
         pb.memory[pl + off] = value
     tick(6)
     assert pb.memory[chart_ware] == 0, "Cartographer's Chart could not be purchased"
-    assert pb.memory[rs + 25] == 0xFF and pb.memory[rs + 30] == 0xFF, \
-        "paid Chart did not reveal the full sixteen-cell route"
+    assert (pb.memory[rs + 25] == 0xFF
+            and pb.memory[rs + 30] == 0xFF
+            and pb.memory[rs + 32] == 0xFF
+            and pb.memory[rs + 34] == 0x3F), \
+        "paid Chart did not reveal the full thirty-cell route"
 
     # East branch: dedicated market with merchant and four visually distinct
     # wares. Stock must retain its own heart/relic art rather than collapsing
@@ -435,8 +438,14 @@ def main():
     assert pb.memory[rs + 1] == next_room, \
         "north village gate did not continue the run"
     assert pb.memory[rs + 19] == 0, "town-local screen leaked into dungeon state"
-    assert (pb.memory[rs + 20] == 0xFF and pb.memory[rs + 29] == 0xFF
-            and pb.memory[rs + 25] == 0 and pb.memory[rs + 30] == 0), \
+    assert (pb.memory[rs + 20] == 0xFF
+            and pb.memory[rs + 29] == 0xFF
+            and pb.memory[rs + 31] == 0xFF
+            and pb.memory[rs + 33] == 0x3F
+            and pb.memory[rs + 25] == 0
+            and pb.memory[rs + 30] == 0
+            and pb.memory[rs + 32] == 0
+            and pb.memory[rs + 34] == 0), \
         f"paid Chart did not become a one-dungeon full compass reveal (seen={pb.memory[rs + 20]:02x}, queued={pb.memory[rs + 25]:02x})"
     pb.stop(save=False)
     print("[town] PASS connected arrival + market + forge quarter + north continuation")

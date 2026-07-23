@@ -54,6 +54,11 @@ def main():
 
     # Simulate a cleared first boss and leave through its south door.
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]; pb.memory[RS + 11] = 1
+    # The currently rendered room is still opening cell 0, whose new 6x5
+    # maze has no south edge. Publish the defeated arena's unsealed threshold
+    # explicitly before exercising the real cleared-boss exit transaction.
+    pb.memory[TM + 16 * 20 + 9] = 3
+    pb.memory[TM + 16 * 20 + 10] = 3
     exit_at(pb, 72, 120)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \

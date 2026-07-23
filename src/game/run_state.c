@@ -3,16 +3,15 @@
 
 run_state_t run_state;
 
-// Total screens include the boss arena. Fourteen rooms gives the opening
-// dungeon enough space to establish an entry, puzzle, Sigil, miniboss, shop,
-// sanctuary, and genuine exploration between them. The campaign then grows
-// toward a twenty-room Void dungeon. Villages own explicit counters 45 and 97 and
-// never shorten the next dungeon by occupying a global modulo sequence.
+// Total screens include the boss arena. The opening dungeon now occupies
+// twenty cells and the campaign grows toward a thirty-room Void dungeon.
+// Villages own explicit counters 63 and 136 and never shorten the following
+// dungeon by occupying a global modulo sequence.
 static const u8 stage_start[BOSSES_TO_WIN] = {
-    0, 14, 29, 46, 62, 79, 98, 116, 135
+    0, 20, 41, 64, 87, 111, 137, 163, 191
 };
 static const u8 stage_boss_room[BOSSES_TO_WIN] = {
-    13, 28, 44, 61, 78, 96, 115, 134, 154
+    19, 40, 62, 86, 110, 135, 162, 190, 220
 };
 
 static u8 campaign_stage(u8 stage) {
@@ -75,7 +74,7 @@ u8 run_state_is_shop(void) {
 }
 
 u8 run_state_room_is_town(u8 room_counter) {
-    return (room_counter == 45 || room_counter == 97) ? 1 : 0;
+    return (room_counter == 63 || room_counter == 136) ? 1 : 0;
 }
 
 void run_state_clear(void) {
@@ -105,6 +104,8 @@ void run_state_clear(void) {
     run_state.next_dungeon_reveal_hi = 0;
     run_state.dungeon_seen_xhi = 0;
     run_state.next_dungeon_reveal_xhi = 0;
+    run_state.dungeon_seen_xxhi = 0;
+    run_state.next_dungeon_reveal_xxhi = 0;
 }
 
 void run_state_init(u32 seed) {
@@ -117,12 +118,26 @@ u8 run_state_dungeon_cell(void) {
     return run_state_dungeon_local();
 }
 
-u8 run_state_dungeon_neighbor(u8 dir) {
-    u8 local = run_state_dungeon_local();
-    u8 row = (u8)(local / DUNGEON_GRID_W);
-    u8 offset = (u8)(local % DUNGEON_GRID_W);
-    u8 col = (row & 1) ? (u8)((DUNGEON_GRID_W - 1) - offset) : offset;
-    u8 next;
+// Pick one extra vertical seam for each adjacent row pair. The snake's end
+// connection is always present, so this seam creates one loop rather than
+// becoming a required bridge. It is stable for a run/stage and changes across
+// expeditions without consuming gameplay RNG.
+static u8 dungeon_loop_col(u8 upper_row) {
+    u8 stage = campaign_stage(run_state.bosses_beaten);
+    u8 mix = (u8)run_state.run_seed
+        ^ (u8)(run_state.run_seed >> 8)
+        ^ (u8)(stage * 29)
+        ^ (u8)(upper_row * 47);
+    return (u8)(1 + (mix % (DUNGEON_GRID_W - 2)));
+}
+
+u8 run_state_dungeon_cell_neighbor(u8 local, u8 dir) {
+    u8 row, offset, col, old_row, next;
+    if (local >= run_state_dungeon_size()) return 0xFF;
+    row = (u8)(local / DUNGEON_GRID_W);
+    offset = (u8)(local % DUNGEON_GRID_W);
+    col = (row & 1) ? (u8)((DUNGEON_GRID_W - 1) - offset) : offset;
+    old_row = row;
     if (dir == DIR_N) {
         if (row == 0) return 0xFF;
         row--;
@@ -139,15 +154,38 @@ u8 run_state_dungeon_neighbor(u8 dir) {
     next = (u8)(row * DUNGEON_GRID_W
         + ((row & 1) ? ((DUNGEON_GRID_W - 1) - col) : col));
     if (next >= run_state_dungeon_size()) return 0xFF;
-    return (u8)(run_state_stage_start(run_state.bosses_beaten) + next);
+    if (dir == DIR_N || dir == DIR_S) {
+        u8 upper_row = (dir == DIR_N) ? row : old_row;
+        u8 turn_col = (upper_row & 1) ? 0 : (DUNGEON_GRID_W - 1);
+        if (col != turn_col && col != dungeon_loop_col(upper_row))
+            return 0xFF;
+    }
+    return next;
+}
+
+u8 run_state_dungeon_cells_connected(u8 a, u8 b) {
+    u8 dir;
+    if (a >= run_state_dungeon_size() || b >= run_state_dungeon_size())
+        return 0;
+    for (dir = DIR_N; dir <= DIR_W; ++dir)
+        if (run_state_dungeon_cell_neighbor(a, dir) == b) return 1;
+    return 0;
+}
+
+u8 run_state_dungeon_neighbor(u8 dir) {
+    u8 next = run_state_dungeon_cell_neighbor(run_state_dungeon_local(), dir);
+    return (next == 0xFF) ? 0xFF
+        : (u8)(run_state_stage_start(run_state.bosses_beaten) + next);
 }
 
 u8 run_state_dungeon_cell_seen(u8 cell) {
     if (cell < 8) return (run_state.dungeon_seen & (u8)(1u << cell)) ? 1 : 0;
+    if (cell < 16)
+        return (run_state.dungeon_seen_hi & (u8)(1u << (cell - 8))) ? 1 : 0;
+    if (cell < 24)
+        return (run_state.dungeon_seen_xhi & (u8)(1u << (cell - 16))) ? 1 : 0;
     if (cell < MAX_DUNGEON_CELLS)
-        return cell < 16
-            ? ((run_state.dungeon_seen_hi & (u8)(1u << (cell - 8))) ? 1 : 0)
-            : ((run_state.dungeon_seen_xhi & (u8)(1u << (cell - 16))) ? 1 : 0);
+        return (run_state.dungeon_seen_xxhi & (u8)(1u << (cell - 24))) ? 1 : 0;
     return 0;
 }
 
@@ -155,8 +193,10 @@ void run_state_reveal_dungeon_cell(u8 cell) {
     if (cell < 8) run_state.dungeon_seen |= (u8)(1u << cell);
     else if (cell < 16)
         run_state.dungeon_seen_hi |= (u8)(1u << (cell - 8));
-    else if (cell < MAX_DUNGEON_CELLS)
+    else if (cell < 24)
         run_state.dungeon_seen_xhi |= (u8)(1u << (cell - 16));
+    else if (cell < MAX_DUNGEON_CELLS)
+        run_state.dungeon_seen_xxhi |= (u8)(1u << (cell - 24));
 }
 
 void run_state_mark_visited(void) {
@@ -183,9 +223,11 @@ void run_state_begin_dungeon(void) {
     run_state.dungeon_seen = run_state.next_dungeon_reveal;
     run_state.dungeon_seen_hi = run_state.next_dungeon_reveal_hi;
     run_state.dungeon_seen_xhi = run_state.next_dungeon_reveal_xhi;
+    run_state.dungeon_seen_xxhi = run_state.next_dungeon_reveal_xxhi;
     run_state.next_dungeon_reveal = 0;
     run_state.next_dungeon_reveal_hi = 0;
     run_state.next_dungeon_reveal_xhi = 0;
+    run_state.next_dungeon_reveal_xxhi = 0;
     run_state.dungeon_puzzles = 0;
     run_state.dungeon_phase = 0;
 }

@@ -19,7 +19,9 @@ PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 PZ=$(awk '/DEF _room_puzzle_locked / {print $3}' "$NOI")
-if LC_ALL=C grep -aq 'v0.18.55' "$ROM"; then
+if LC_ALL=C grep -aqE 'v0\.18\.(62|63|64|65|66|67|68|69)' "$ROM"; then
+  MEDIA_TOPOLOGY=30
+elif LC_ALL=C grep -aq 'v0.18.55' "$ROM"; then
   MEDIA_TOPOLOGY=12
 elif LC_ALL=C grep -aqE 'v0\.18\.(58|59)' "$ROM"; then
   MEDIA_TOPOLOGY=16
@@ -101,7 +103,7 @@ cp "$TMP/shot_boss.png" "$ROOT/docs/media/boss.png"
 # The CGB capture uses fewer than 32 visible colours, but ImageMagick's GIF
 # writer otherwise allocates a 128-entry table. Pin the palette before delta
 # optimization so the conference reel stays below the repository size budget.
-magick -delay 10 -loop 0 "$TMP"/gif_*.png -filter point -resize 200% -dither None -colors 32 \
+magick -delay 10 -loop 0 "$TMP"/gif_*.png -dither None -colors 32 \
   -fuzz 1% -layers Optimize "$OUT"
 UV_CACHE_DIR="${UV_CACHE_DIR:-$ROOT/tmp/uv-cache}" \
   uv run --quiet --with pyboy python "$ROOT/scripts/capture_title_media.py"
@@ -132,7 +134,7 @@ stills_sha=$(cat \
   "$ROOT/docs/media/shop.png" \
   "$ROOT/docs/media/village.png" | sha256sum | cut -d' ' -f1)
 bytes=$(stat -c %s "$OUT")
-printf '{\n  "version": "%s",\n  "rom_sha256": "%s",\n  "capture_sha256": "%s",\n  "gif_sha256": "%s",\n  "title_sha256": "%s",\n  "title_capture_sha256": "%s",\n  "boss_gallery_sha256": "%s",\n  "boss_gallery_gif_sha256": "%s",\n  "boss_gallery_capture_sha256": "%s",\n  "stills_sha256": "%s",\n  "frames": 174,\n  "width": 320,\n  "height": 288,\n  "frame_ms": 100,\n  "boss_gallery_frames": 16,\n  "boss_gallery_frame_ms": 120\n}\n' \
+printf '{\n  "version": "%s",\n  "rom_sha256": "%s",\n  "capture_sha256": "%s",\n  "gif_sha256": "%s",\n  "title_sha256": "%s",\n  "title_capture_sha256": "%s",\n  "boss_gallery_sha256": "%s",\n  "boss_gallery_gif_sha256": "%s",\n  "boss_gallery_capture_sha256": "%s",\n  "stills_sha256": "%s",\n  "frames": 174,\n  "width": 160,\n  "height": 144,\n  "frame_ms": 100,\n  "boss_gallery_frames": 16,\n  "boss_gallery_frame_ms": 120\n}\n' \
   "$version" "$rom_sha" "$capture_sha" "$gif_sha" "$title_sha" \
   "$title_capture_sha" "$boss_gallery_sha" "$boss_gallery_gif_sha" \
   "$boss_gallery_capture_sha" "$stills_sha" > "$META"

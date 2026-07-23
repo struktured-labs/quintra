@@ -54,8 +54,7 @@ def main():
             pb.memory[EN + i] = 0
 
     def right_door():
-        # Local 1 -> 2 and the first three sanctuary -> boss edges all run
-        # east in the reciprocal 5x4 graph.
+        # The authored Sigil route always crosses local room 1 -> 2 east.
         pb.memory[TM + 8 * 20 + 19] = pb.memory[TM + 9 * 20 + 19] = 3
         put16(pb, PL + 9, 144)
         put16(pb, PL + 11, 60)
@@ -82,7 +81,7 @@ def main():
     pb.memory[RS + RS_SIGILS] = pb.memory[RS + RS_SIGILS + 1] = 0
     pb.memory[RS + RS_PUZZLES] = 1 << 3  # isolate the missing-Sigil contract
     pb.memory[SEALED] = 0
-    right_door()
+    boss_door(0)
     for _ in range(8):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
@@ -162,14 +161,14 @@ def main():
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    # The 5x4 Compass gives each dungeon room one glyph. Opening-stage fixture
-    # room 2 is node two at (9, 3); its nearby diagonal remains empty because
+    # The 6x5 Compass gives each dungeon room one glyph. Opening-stage fixture
+    # room 2 is node two at (7, 3); its nearby diagonal remains empty because
     # the tutorial dungeon intentionally has no nonlinear rift.
-    assert pb.memory[bg + 3 * 32 + 9] == 52, \
+    assert pb.memory[bg + 3 * 32 + 7] == 52, \
         "found Sigil lacks its dedicated glyph in the fixture room"
-    assert pb.memory[bg + 3 * 32 + 13] == 51, \
+    assert pb.memory[bg + 3 * 32 + 10] == 51, \
         "claimed Sigil did not reveal the amber Warden objective"
-    assert pb.memory[bg + 4 * 32 + 10] == 0, \
+    assert pb.memory[bg + 4 * 32 + 8] == 0, \
         "Sigil still uses the misleading floating map marker"
     assert pb.memory[bg + 9 * 32 + 13] == 95, \
         "unseen boss slot lost its dim identity-free placeholder"
@@ -186,7 +185,7 @@ def main():
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[SEALED] = 0
-    right_door()
+    boss_door(0)
     for _ in range(8):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
@@ -231,7 +230,7 @@ def main():
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[1] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[SEALED] = 0
-    right_door()
+    boss_door(1)
     for _ in range(8):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1] - 1, \

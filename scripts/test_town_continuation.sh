@@ -33,18 +33,18 @@ awk -F, '
       print "[town-continuation] did not visit both town build-choice screens" > "/dev/stderr"
       exit 1
     }
-    # The expanded town-45 north gate enters room 46, the first room of the
+    # The town-63 north gate enters room 64, the first room of the
     # next dungeon. Requiring later cells would accidentally couple this gate
     # to surviving two subsequent randomized combat rooms and to whichever
     # optional weapon build the controller happened to take.
-    if ($(col["max_room"]) < 46) {
+    if ($(col["max_room"]) < 64) {
       print "[town-continuation] north gate did not continue the run" > "/dev/stderr"
       exit 1
     }
     # `max_route_frames` covers the rest of the run too. Only a prolonged
-    # dwell in room 45 is evidence that the actual town north gate failed;
+    # dwell in room 63 is evidence that the actual town north gate failed;
     # a later procedural dungeon route must not be mislabeled as this gate.
-    if ($(col["max_route_room"]) == 45 && $(col["max_route_frames"]) > 3600) {
+    if ($(col["max_route_room"]) == 63 && $(col["max_route_frames"]) > 3600) {
       print "[town-continuation] town north-gate route stall" > "/dev/stderr"
       exit 1
     }

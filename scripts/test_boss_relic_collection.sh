@@ -10,8 +10,8 @@ OUT="$(mktemp /tmp/quintra-boss-relics.XXXXXX)"
 # Relic pickup behavior is the contract; multiple colossus wins are merely
 # setup. Keep that setup deterministic with the coarse tester assist.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=1 \
-  QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=18000 \
-  QUINTRA_BALANCE_HOST_TIMEOUT=45 QUINTRA_BALANCE_OUT="$OUT" \
+  QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=32000 \
+  QUINTRA_BALANCE_HOST_TIMEOUT=90 QUINTRA_BALANCE_OUT="$OUT" \
   QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

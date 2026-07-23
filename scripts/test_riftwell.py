@@ -28,7 +28,9 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN = map(addr, ("_run_state", "_player", "_entities"))
+RS, PL, EN, TM = map(
+    addr, ("_run_state", "_player", "_entities", "_room_tilemap")
+)
 
 
 def put16(pb, where, value):
@@ -59,6 +61,8 @@ def main():
     # Simulate the real post-boss handoff, then cross authored 0 -> 1.
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
+    pb.memory[TM + 16 * 20 + 9] = 3
+    pb.memory[TM + 16 * 20 + 10] = 3
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 120)
     tick(pb)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0

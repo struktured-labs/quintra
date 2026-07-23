@@ -122,10 +122,12 @@ assert_log 04_room1           'room=1 '
 assert_log 05_room2_sigil     'room=2 '
 assert_log 06_room5_branch    'room=5 '
 assert_log 07_room9_threshold 'room=9 '
-assert_log 08_BOSS_room       'room=13 .*giants=1 '
-assert_log 11_after_long_assault 'screen=5 .*room=13 .*bosses=1 .*giants=0 .*hp=[1-9]'
-assert_log 12_pack            'screen=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
-assert_log 13_room_return     'screen=5 .*room=13 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 08_BOSS_room       'room=19 .*giants=1 '
+# The assault must visibly cost health without killing the seven-heart
+# Wolfkin: accept every damaged-alive value (1..13), including two digits.
+assert_log 11_after_long_assault 'screen=5 .*room=19 .*bosses=1 .*giants=0 .*hp=\([1-9]\|1[0-3]\)'
+assert_log 12_pack            'screen=9 .*bosses=1 .*giants=0 .*hp=\([1-9]\|1[0-3]\)'
+assert_log 13_room_return     'screen=5 .*room=19 .*bosses=1 .*giants=0 .*hp=\([1-9]\|1[0-3]\)'
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

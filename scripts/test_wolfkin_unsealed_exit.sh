@@ -11,14 +11,15 @@ trap 'rm -f "$OUT" "$OUT.lock"' EXIT
 
 # The Penta-scale first two colossi now consume more of the deterministic
 # replay than the former small bosses. Keep the route assertion unchanged,
-# but give the controller enough frames to reach the stage-three room whose
-# optional boundary encounter this contract actually exercises.
+# but give the controller enough frames to traverse the new 20/21-room first
+# pair and reach the later optional boundary encounter this contract
+# actually exercises.
 # This is an exit-routing fixture. Use the coarse tester assist so surviving
 # two colossal bosses is only its setup, not an accidental Normal-balance
 # requirement.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=460 \
-  QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=24000 QUINTRA_BALANCE_HOST_TIMEOUT=70 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
@@ -27,7 +28,7 @@ awk -F, '
   {
     rows++
     if ($(col["seed"]) != 2064128647) wrong_seed = 1
-    if ($(col["max_room"]) < 14) stuck = 1
+    if ($(col["max_room"]) < 20) stuck = 1
     if ($(col["bosses"]) < 2) no_progress = 1
   }
   END {

@@ -18,9 +18,9 @@ local KEY_A, KEY_SELECT, KEY_START = 0x01, 0x04, 0x08
 local KEY_RIGHT, KEY_LEFT, KEY_DOWN = 0x10, 0x20, 0x80
 local BGT_FLOOR, BGT_DOOR, BGT_PORTAL = 1, 3, 34
 local SCREEN_ROOM = 5
-local STAGE_START = {0, 14, 29, 46, 62, 79, 98, 116, 135}
-local STAGE_BOSS = {13, 28, 44, 61, 78, 96, 115, 134, 154}
-local VILLAGE = {[3] = 45, [6] = 97}
+local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
+local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
+local VILLAGE = {[3] = 63, [6] = 136}
 
 local report = assert(io.open(REPORT, "w"))
 
@@ -156,7 +156,7 @@ local function restore_player(stage)
 end
 
 local function reset_run(stage)
-    for i = 0, 32 do emu:write8(RS + i, 0) end
+    for i = 0, 34 do emu:write8(RS + i, 0) end
     emu:write8(RS + 2, 0x0D)
     emu:write8(RS + 3, 0xD0)
     emu:write8(RS + 4, 0xA6)
@@ -177,14 +177,22 @@ local function mark_seen(local_room)
         emu:write8(RS + 20, (2 ^ (local_room + 1)) - 1)
         emu:write8(RS + 29, 0)
         emu:write8(RS + 31, 0)
+        emu:write8(RS + 33, 0)
     elseif local_room < 16 then
         emu:write8(RS + 20, 0xFF)
         emu:write8(RS + 29, (2 ^ (local_room - 7)) - 1)
         emu:write8(RS + 31, 0)
-    else
+        emu:write8(RS + 33, 0)
+    elseif local_room < 24 then
         emu:write8(RS + 20, 0xFF)
         emu:write8(RS + 29, 0xFF)
         emu:write8(RS + 31, (2 ^ (local_room - 15)) - 1)
+        emu:write8(RS + 33, 0)
+    else
+        emu:write8(RS + 20, 0xFF)
+        emu:write8(RS + 29, 0xFF)
+        emu:write8(RS + 31, 0xFF)
+        emu:write8(RS + 33, (2 ^ (local_room - 23)) - 1)
     end
 end
 

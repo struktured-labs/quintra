@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import STAGE_BOSS_ROOM
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -131,9 +132,10 @@ def main():
     assert "if (room_stage() == 1) tiles_load_vine_coil_sprite();" in room_source
     assert "sprite_enemy_vine_coil" in SPRITE_SOURCE
 
-    # The expanded opening shop occupies local graph cell 11, after the
-    # Waystone and deep-Warden route, rather than the compact graph's cell 7.
-    pb.memory[addr("_run_state") + 1] = 10
+    # The opening shop remains two cells before its boss, after the Waystone,
+    # both Wardens, and the expanded maze route.
+    shop_room = STAGE_BOSS_ROOM[0] - 2
+    pb.memory[addr("_run_state") + 1] = shop_room - 1
     pb.memory[addr("_run_state") + 17] = 1
     pb.memory[addr("_run_state") + 18] = 6
     put16(pb, addr("_player") + 9, 72)
@@ -141,9 +143,9 @@ def main():
     pb.memory[addr("_room_tilemap") + 9 * 20 + 10] = 34
     for _ in range(30):
         pb.tick()
-        if pb.memory[addr("_run_state") + 1] == 11:
+        if pb.memory[addr("_run_state") + 1] == shop_room:
             break
-    assert pb.memory[addr("_run_state") + 1] == 11, (
+    assert pb.memory[addr("_run_state") + 1] == shop_room, (
         "could not enter merchant room: "
         f"room={pb.memory[addr('_run_state') + 1]} "
         f"player={pb.memory[addr('_player') + 9]},{pb.memory[addr('_player') + 11]}"
@@ -160,7 +162,9 @@ def main():
         )
         if merchant_count == 1:
             break
-    assert merchant_count == 1, f"room 11 did not generate its merchant: {merchant_count}"
+    assert merchant_count == 1, (
+        f"room {shop_room} did not generate its merchant: {merchant_count}"
+    )
     callout = generated_sprite("sprite_fx_merchant_callout")
     actual_callout = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
     assert actual_callout == callout, (

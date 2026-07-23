@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import dungeon_direction
+from quintra_topology import STAGE_BOSS_ROOM, dungeon_direction
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -39,9 +39,10 @@ def boot_shop(seed_low):
     for _ in range(90):
         pb.tick()
 
-    # Make the next real graph transaction land in expanded opening shop room
-    # 11. The low seed byte alone selects vitality (even) versus Surge (odd).
-    source, target = 10, 11
+    # Make the next real graph transaction land in the opening shop two rooms
+    # before its boss. The low seed byte selects vitality versus Surge.
+    target = STAGE_BOSS_ROOM[0] - 2
+    source = target - 1
     pb.memory[RS + 1] = source
     pb.memory[RS + 2] = seed_low
     pb.memory[RS + 3] = pb.memory[RS + 4] = pb.memory[RS + 5] = 0

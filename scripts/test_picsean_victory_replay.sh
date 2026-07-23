@@ -17,8 +17,8 @@ TRACE="$TRACE_DIR/run-4-class-3-1.trace"
 RESULT="$TMP/replay.result"
 MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
 # `run_init_enter()` samples the next loop frame. This target produces the
-# known-clear Picsean world on the wider 14--20-room campaign
-# (run_seed 2064128163). Its controller-only route spans the 153-screen
+# known-clear Picsean world on the 20--30-room campaign
+# (run_seed 2064128163). Its controller-only route spans the 219-screen
 # campaign, both villages, and the Riftwilds before the ninth boss and ending.
 TARGET_FRAME="${QUINTRA_VICTORY_TARGET_FRAME:-1000}"
 EXPECTED_SEED="${QUINTRA_VICTORY_EXPECTED_SEED:-2064128163}"
@@ -36,7 +36,7 @@ LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 
 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_FRAMES=135000 QUINTRA_BALANCE_HOST_TIMEOUT=160 \
+  QUINTRA_BALANCE_FRAMES=210000 QUINTRA_BALANCE_HOST_TIMEOUT=320 \
   QUINTRA_BALANCE_TARGET_FRAME="$TARGET_FRAME" \
   QUINTRA_BOT_EASY="$EASY" \
   QUINTRA_BOT_THREAT_POLICY="$THREAT_POLICY" \
@@ -55,7 +55,7 @@ awk -F, -v expected_seed="$EXPECTED_SEED" '
       print "[picsean-victory] controller did not finish all nine bosses" > "/dev/stderr"
       exit 1
     }
-    if ($(col["frames"]) > 135000) {
+    if ($(col["frames"]) > 210000) {
       print "[picsean-victory] frame budget exceeded" > "/dev/stderr"
       exit 1
     }
@@ -71,7 +71,7 @@ env QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
   "$MGBA_BIN" -C "savegamePath=$TMP/replay-save" "$ROM" --script "$ROOT/scripts/quintra_replay.lua" -l 0 \
   >/dev/null 2>&1 &
 REPLAY_PID=$!
-for _ in $(seq 1 480); do
+for _ in $(seq 1 1440); do
   test -s "$RESULT" && break
   kill -0 "$REPLAY_PID" 2>/dev/null || break
   sleep 0.25

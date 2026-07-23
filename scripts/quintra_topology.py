@@ -1,9 +1,9 @@
 """Shared developer-side mirror of Quintra's cartridge campaign topology."""
 
-GRID_W, GRID_H = 5, 4
-STAGE_START = (0, 14, 29, 46, 62, 79, 98, 116, 135)
-STAGE_BOSS_ROOM = (13, 28, 44, 61, 78, 96, 115, 134, 154)
-VILLAGE_ROOM = {3: 45, 6: 97}
+GRID_W, GRID_H = 6, 5
+STAGE_START = (0, 20, 41, 64, 87, 111, 137, 163, 191)
+STAGE_BOSS_ROOM = (19, 40, 62, 86, 110, 135, 162, 190, 220)
+VILLAGE_ROOM = {3: 63, 6: 136}
 
 
 def dungeon_size(stage: int) -> int:
@@ -15,7 +15,7 @@ def dungeon_local(room: int, stage: int) -> int:
 
 
 def dungeon_cell_xy(cell: int) -> tuple[int, int]:
-    """Return the displayed 5x4 snake coordinate for one local room cell."""
+    """Return the displayed 6x5 snake coordinate for one local room cell."""
     row, offset = divmod(cell, GRID_W)
     return ((GRID_W - 1 - offset) if row & 1 else offset), row
 
@@ -36,6 +36,21 @@ def dungeon_neighbor(cell: int, size: int, direction: int) -> int | None:
     offset = (GRID_W - 1 - col) if row & 1 else col
     neighbor = row * GRID_W + offset
     return neighbor if neighbor < size else None
+
+
+def dungeon_maze_neighbor(cell: int, size: int, direction: int,
+                          run_seed: int, stage: int) -> int | None:
+    """Mirror the cartridge's winding spine plus seed-stable loop seams."""
+    col, row = dungeon_cell_xy(cell)
+    upper_row = row - 1 if direction == 0 else row
+    neighbor = dungeon_neighbor(cell, size, direction)
+    if neighbor is None or direction not in (0, 2):
+        return neighbor
+    turn_col = 0 if upper_row & 1 else GRID_W - 1
+    mix = ((run_seed & 0xFF) ^ ((run_seed >> 8) & 0xFF)
+           ^ ((stage * 29) & 0xFF) ^ ((upper_row * 47) & 0xFF))
+    loop_col = 1 + mix % (GRID_W - 2)
+    return neighbor if col in (turn_col, loop_col) else None
 
 
 def dungeon_direction(source: int, target: int) -> int:

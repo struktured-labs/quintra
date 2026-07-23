@@ -59,7 +59,13 @@ def main():
         pb.memory[toad + 19] = 2  # CHG_CHARGE
         pb.memory[toad + 20] = 8  # charge duration
         pb.memory[toad + 21] = 2  # east dir8
-        pb.tick()
+        # The entity scheduler can begin this probe on any slot after room
+        # generation. Give the live Toad one complete update sweep instead of
+        # assuming its slot is serviced on the very next emulator frame.
+        for _ in range(4):
+            pb.tick()
+            if pb.memory[toad + 3] != 64:
+                break
         assert pb.memory[toad + 3] == 67, (
             f"Bog Toad ignored its fast authored pounce: x={pb.memory[toad + 3]}")
 

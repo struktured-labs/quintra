@@ -197,23 +197,31 @@ static void draw_world_legend(void) {
 }
 
 static void draw_dungeon_grid(void) {
-    //  0 -- 1 -- 2 -- 3 -- 4
+    //  0 - 1 - 2 - 3 - 4 - 5
     //                      |
-    //  9 -- 8 -- 7 -- 6 -- 5
-    //  |
-    // 10 --11 --12 --13 --14
+    // 11 -10 - 9 - 8 - 7 - 6
+    // |
+    // 12 -13 -14 -15 -16 -17
     //                      |
-    // 19 --18 --17 --16 --15
-    // A fixed 5×4 abstract lattice makes the dungeon's eventual size obvious.
-    // Only the active stage prefix is drawn; later campaigns grow from
-    // fourteen toward twenty nodes without changing the map language.
+    // 23 -22 -21 -20 -19 -18
+    // |
+    // 24 -25 -26 -27 -28 -29
+    // The fixed 6×5 abstract lattice exposes the stage's eventual footprint.
+    // Every row owns the guaranteed winding spine; one seed-stable vertical
+    // seam per row pair adds loops and appears here only when it exists.
     static const u8 gx[MAX_DUNGEON_CELLS] = {
-        1, 5, 9, 13, 17, 17, 13, 9, 5, 1,
-        1, 5, 9, 13, 17, 17, 13, 9, 5, 1
+        1, 4, 7, 10, 13, 16,
+        16, 13, 10, 7, 4, 1,
+        1, 4, 7, 10, 13, 16,
+        16, 13, 10, 7, 4, 1,
+        1, 4, 7, 10, 13, 16
     };
     static const u8 gy[MAX_DUNGEON_CELLS] = {
-        3, 3, 3, 3, 3, 6, 6, 6, 6, 6,
-        9, 9, 9, 9, 9, 12, 12, 12, 12, 12
+        3, 3, 3, 3, 3, 3,
+        5, 5, 5, 5, 5, 5,
+        7, 7, 7, 7, 7, 7,
+        9, 9, 9, 9, 9, 9,
+        11, 11, 11, 11, 11, 11
     };
     u8 i, j;
     u8 size = run_state_dungeon_size();
@@ -260,26 +268,26 @@ static void draw_dungeon_grid(void) {
         }
         map_dungeon_node(gx[i], gy[i], icon, seen);
     }
-    // Draw every reciprocal cardinal edge in the active prefix, not merely
-    // the old numeric snake. Unknown links use subdued one-plane ink, making
-    // the compressed 5x4 structure obvious from the first room; once both
-    // endpoints are explored the same segment fills to bright ink. The boss
-    // threshold remains the one deliberate adjacent reveal.
+    // Draw only real reciprocal maze edges. Unknown links use subdued
+    // one-plane ink, so the full route shape is readable without revealing
+    // room identity; explored endpoints fill each segment to bright ink.
+    // The boss threshold remains the one deliberate adjacent reveal.
     for (i = 0; i < size; ++i) {
         u8 a_seen = run_state_dungeon_cell_seen(i);
         for (j = (u8)(i + 1); j < size; ++j) {
             u8 b_seen = run_state_dungeon_cell_seen(j);
             u8 adjacent = (gy[i] == gy[j]
-                    && (gx[i] + 4 == gx[j] || gx[j] + 4 == gx[i]))
+                    && (gx[i] + 3 == gx[j] || gx[j] + 3 == gx[i]))
                 || (gx[i] == gx[j]
-                    && (gy[i] + 3 == gy[j] || gy[j] + 3 == gy[i]));
+                    && (gy[i] + 2 == gy[j] || gy[j] + 2 == gy[i]));
             if (j == (u8)(size - 1)
                 && run_state_dungeon_cell_seen((u8)(size - 2))) b_seen = 1;
             if (next_trial != 0xFF) {
                 if (i == next_trial) a_seen = 1;
                 if (j == next_trial) b_seen = 1;
             }
-            if (!adjacent) continue;
+            if (!adjacent || !run_state_dungeon_cells_connected(i, j))
+                continue;
             if (gy[i] == gy[j]) {
                 u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
                 u8 right = gx[i] > gx[j] ? gx[i] : gx[j];
@@ -306,12 +314,7 @@ static void draw_dungeon_grid(void) {
     // explicit without pretending it is a cardinal hallway.
     if (run_state.bosses_beaten > 0) {
         if (run_state_dungeon_cell_seen(2)) map_put(8, 4, BGT_MAP_RIFT);
-        if (run_state_dungeon_cell_seen(8)) map_put(6, 5, BGT_MAP_RIFT);
-        if (run_state_dungeon_cell_seen(2)
-            && run_state_dungeon_cell_seen(8)) {
-            map_put(7, 4, BGT_MAP_RIFT);
-            map_put(7, 5, BGT_MAP_RIFT);
-        }
+        if (run_state_dungeon_cell_seen(8)) map_put(9, 4, BGT_MAP_RIFT);
     }
     draw_dungeon_legend();
 }

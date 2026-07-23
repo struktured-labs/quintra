@@ -11,7 +11,10 @@ local TM   = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local PZ   = tonumber(os.getenv("QUINTRA_PZ_ADDR") or "0") or 0
 local TOPOLOGY = tonumber(os.getenv("QUINTRA_MEDIA_TOPOLOGY") or "6") or 6
 local BOSS1, SHOP1, SANCTUARY1, TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS
-if TOPOLOGY >= 20 then
+if TOPOLOGY >= 30 then
+  BOSS1, SHOP1, SANCTUARY1 = 19, 17, 18
+  TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS = 63, 43, 26, 220
+elseif TOPOLOGY >= 20 then
   BOSS1, SHOP1, SANCTUARY1 = 13, 11, 12
   TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS = 45, 31, 18, 154
 elseif TOPOLOGY >= 16 then
@@ -54,7 +57,10 @@ local function warp(x, y)
   clear_hostiles(); put16(PL + 9, x); put16(PL + 11, y); tick(45)
 end
 local STAGE_START, STAGE_BOSS
-if TOPOLOGY >= 20 then
+if TOPOLOGY >= 30 then
+  STAGE_START = {0,20,41,64,87,111,137,163,191}
+  STAGE_BOSS = {19,40,62,86,110,135,162,190,220}
+elseif TOPOLOGY >= 20 then
   STAGE_START = {0,14,29,46,62,79,98,116,135}
   STAGE_BOSS = {13,28,44,61,78,96,115,134,154}
 else
@@ -68,7 +74,7 @@ local function stage_for_room(target)
   return 0
 end
 local function cell_xy(cell)
-  local width = (TOPOLOGY >= 20) and 5 or 4
+  local width = (TOPOLOGY >= 30) and 6 or ((TOPOLOGY >= 20) and 5 or 4)
   local row, offset = math.floor(cell / width), cell % width
   return (row % 2 == 1) and (width - 1 - offset) or offset, row
 end

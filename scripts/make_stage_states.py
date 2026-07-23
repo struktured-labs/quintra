@@ -36,7 +36,7 @@ SCREEN_ROOM = 5
 DIR_NONE = 0xFF
 BLANK_SRAM_BYTES = 32 * 1024
 CHAMPIONS = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
-DUNGEON_GRID_W = 5
+DUNGEON_GRID_W = 6
 
 
 def select_rom_topology(rom: Path) -> None:
@@ -72,6 +72,13 @@ def select_rom_topology(rom: Path) -> None:
         STAGE_START = (0, 10, 21, 34, 46, 59, 74, 88, 103)
         STAGE_BOSS_ROOM = (9, 20, 32, 45, 58, 72, 87, 102, 118)
         VILLAGE_ROOM = {3: 33, 6: 73}
+    elif b"v0.18.60" in image or b"v0.18.61" in image:
+        DUNGEON_GRID_W = 5
+        # The mandatory pre-link pass sees the last released 5x4 ROM before
+        # the 6x5 source has produced its first cartridge.
+        STAGE_START = (0, 14, 29, 46, 62, 79, 98, 116, 135)
+        STAGE_BOSS_ROOM = (13, 28, 44, 61, 78, 96, 115, 134, 154)
+        VILLAGE_ROOM = {3: 45, 6: 97}
 
 
 def sha256(path: Path) -> str:

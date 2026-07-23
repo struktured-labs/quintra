@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START, dungeon_neighbor, dungeon_size
+from quintra_topology import STAGE_START, dungeon_maze_neighbor, dungeon_size
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -123,17 +123,19 @@ def reachable_exits(tiles, start):
     return exits & seen
 
 
-def expected_graph_exits(stage, local_room):
+def expected_graph_exits(stage, local_room, seed):
     positions = ((10, 1), (19, 9), (10, 16), (1, 9))
     size = dungeon_size(stage)
     return {
         positions[direction] for direction in range(4)
-        if dungeon_neighbor(local_room, size, direction) is not None
+        if dungeon_maze_neighbor(
+            local_room, size, direction, seed, stage
+        ) is not None
     }
 
 
-def assert_graph_exits(label, exits, stage, local_room):
-    expected = expected_graph_exits(stage, local_room)
+def assert_graph_exits(label, exits, stage, local_room, seed=0xCAFE1234):
+    expected = expected_graph_exits(stage, local_room, seed)
     assert exits == expected, (
         f"{label} authored graph exits disconnected: "
         f"expected={expected} reached={exits}"
@@ -147,7 +149,7 @@ def main():
     grove_crystals = sum(tile(grove, x, y) == BGT_CRYSTAL for x, y in grove_sites)
     assert grove_crystals >= 4, f"Verdant grove silhouette missing ({grove_crystals}/8)"
     grove_exits = reachable_exits(grove, (18, 9))
-    assert_graph_exits("Verdant grove", grove_exits, 1, 4)
+    assert_graph_exits("Verdant grove", grove_exits, 1, 4, 2064128938)
 
     # Ember is a phase-family dungeon: room 1's compact central switch apron
     # leaves both authored hazard seams intact, whereas room 2 deliberately
@@ -237,7 +239,9 @@ def main():
         assert all(tile(mire, x, y) != BGT_SPIKES
                    for x in (9, 10) for y in range(3, 15))
         mire_exits = reachable_exits(mire, (18, 9))
-        assert_graph_exits(f"Toxic Mire seed={seed:#x}", mire_exits, 4, 4)
+        assert_graph_exits(
+            f"Toxic Mire seed={seed:#x}", mire_exits, 4, 4, seed
+        )
 
     keep_counts = []
     for index, seed in enumerate((0x5A0D0000, 0x5A0D0001)):
@@ -265,7 +269,9 @@ def main():
         assert all(tile(keep, x, 11) != BGT_PILLAR
                    for x in range(lower_gate, lower_gate + 4))
         keep_exits = reachable_exits(keep, (18, 9))
-        assert_graph_exits(f"Shadow Keep seed={seed:#x}", keep_exits, 5, 4)
+        assert_graph_exits(
+            f"Shadow Keep seed={seed:#x}", keep_exits, 5, 4, seed
+        )
 
     temple_signatures = []
     for index, seed in enumerate((0x601D0000, 0x601D0001)):
@@ -303,7 +309,7 @@ def main():
                    for x in range(3, 17) for y in (8, 9))
         temple_exits = reachable_exits(temple, (18, 9))
         assert_graph_exits(f"Golden Temple seed={seed:#x}",
-                           temple_exits, 6, 4)
+                           temple_exits, 6, 4, seed)
         temple_signatures.append((pillars, crystals, inner_l))
     assert temple_signatures[0] != temple_signatures[1], (
         "Golden Temple seed variants collapsed to one inner-court layout"
@@ -327,7 +333,7 @@ def main():
     assert all(tile(blood, x, y) != BGT_SPIKES
                for x in range(3, 17) for y in (8, 9))
     blood_exits = reachable_exits(blood, (18, 9))
-    assert_graph_exits("Bloodmoon", blood_exits, 7, 4)
+    assert_graph_exits("Bloodmoon", blood_exits, 7, 4, 0xB100D007)
 
     void_signatures = []
     void_sites = []
@@ -353,7 +359,7 @@ def main():
                    for x in range(3, 17) for y in (8, 9))
         void_exits = reachable_exits(void, (18, 9))
         assert_graph_exits(f"Void Sanctum seed={seed:#x}",
-                           void_exits, 8, 1)
+                           void_exits, 8, 1, seed)
         void_signatures.append(signature)
     assert len(set(void_signatures)) == 2, (
         "Void Sanctum seed variants collapsed or became unstable"

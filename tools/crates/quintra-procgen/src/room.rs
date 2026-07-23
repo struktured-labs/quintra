@@ -42,8 +42,8 @@ pub const BGT_COLOSSUS_RUNE: u8 = 61;
 pub const BGT_COLOSSUS_MAW: u8 = 62;
 pub const BGT_COLOSSUS_HORN: u8 = 63;
 
-pub const STAGE_START: [u8; 9] = [0, 14, 29, 46, 62, 79, 98, 116, 135];
-pub const STAGE_BOSS_ROOM: [u8; 9] = [13, 28, 44, 61, 78, 96, 115, 134, 154];
+pub const STAGE_START: [u8; 9] = [0, 20, 41, 64, 87, 111, 137, 163, 191];
+pub const STAGE_BOSS_ROOM: [u8; 9] = [19, 40, 62, 86, 110, 135, 162, 190, 220];
 
 pub type Tilemap = [[u8; ROOM_W]; ROOM_H];
 
@@ -78,19 +78,38 @@ pub fn room_kind(room_counter: u8, bosses_beaten: u8) -> RoomKind {
     RoomKind { boss, miniboss, shop, rest }
 }
 
-fn dungeon_neighbor(local: u8, size: u8, dir: u8) -> Option<u8> {
-    let mut row = local / 5;
-    let offset = local % 5;
-    let mut col = if row & 1 != 0 { 4 - offset } else { offset };
+fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> Option<u8> {
+    const GRID_W: u8 = 6;
+    const GRID_H: u8 = 5;
+    let mut row = local / GRID_W;
+    let offset = local % GRID_W;
+    let mut col = if row & 1 != 0 { GRID_W - 1 - offset } else { offset };
+    let old_row = row;
     match dir {
         0 if row > 0 => row -= 1,
-        1 if col < 4 => col += 1,
-        2 if row < 3 => row += 1,
+        1 if col < GRID_W - 1 => col += 1,
+        2 if row < GRID_H - 1 => row += 1,
         3 if col > 0 => col -= 1,
         _ => return None,
     }
-    let next = row * 5 + if row & 1 != 0 { 4 - col } else { col };
-    (next < size).then_some(next)
+    let next = row * GRID_W
+        + if row & 1 != 0 { GRID_W - 1 - col } else { col };
+    if next >= size {
+        return None;
+    }
+    if dir == 0 || dir == 2 {
+        let upper_row = if dir == 0 { row } else { old_row };
+        let turn_col = if upper_row & 1 != 0 { 0 } else { GRID_W - 1 };
+        let mix = run_seed as u8
+            ^ (run_seed >> 8) as u8
+            ^ stage.wrapping_mul(29)
+            ^ upper_row.wrapping_mul(47);
+        let loop_col = 1 + mix % (GRID_W - 2);
+        if col != turn_col && col != loop_col {
+            return None;
+        }
+    }
+    Some(next)
 }
 
 /// Generate the room tilemap for the given run state — the reference for
@@ -137,25 +156,25 @@ pub fn generate_tilemap(
         m[8][ROOM_W - 1] = BGT_DOOR;
         m[9][ROOM_W - 1] = BGT_DOOR;
 
-        // The dungeon uses the reciprocal 5x4 geography shown on the
-        // cartridge Compass. Prefix cells outside the active stage are walls,
-        // not four cosmetic doors that all advance one counter.
+        // The dungeon uses the reciprocal seeded 6x5 maze shown on the
+        // cartridge Compass. Prefix cells outside the active stage and
+        // geometric neighbors outside its snake spine/loop seams are walls.
         let stage = usize::from(bosses_beaten.min(8));
         let local = room_counter.saturating_sub(STAGE_START[stage]);
         let size = STAGE_BOSS_ROOM[stage] - STAGE_START[stage] + 1;
-        if dungeon_neighbor(local, size, 0).is_none() {
+        if dungeon_neighbor(local, size, 0, run_seed, stage as u8).is_none() {
             m[0][9] = BGT_WALL;
             m[0][10] = BGT_WALL;
         }
-        if dungeon_neighbor(local, size, 1).is_none() {
+        if dungeon_neighbor(local, size, 1, run_seed, stage as u8).is_none() {
             m[8][ROOM_W - 1] = BGT_WALL;
             m[9][ROOM_W - 1] = BGT_WALL;
         }
-        if dungeon_neighbor(local, size, 2).is_none() {
+        if dungeon_neighbor(local, size, 2, run_seed, stage as u8).is_none() {
             m[ROOM_H - 1][9] = BGT_WALL;
             m[ROOM_H - 1][10] = BGT_WALL;
         }
-        if dungeon_neighbor(local, size, 3).is_none() {
+        if dungeon_neighbor(local, size, 3, run_seed, stage as u8).is_none() {
             m[8][0] = BGT_WALL;
             m[9][0] = BGT_WALL;
         }

@@ -11,8 +11,17 @@ local VOID_SAFE_X, VOID_SAFE_Y = {20, 124, 20, 124}, {20, 20, 100, 100}
 -- Per-screen shortest authored exit toward dungeon gate screen 6; 4 means
 -- use the central staircase rather than a boundary door.
 local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
-local STAGE_START = {0, 14, 29, 46, 62, 79, 98, 116, 135}
-local STAGE_BOSS = {13, 28, 44, 61, 78, 96, 115, 134, 154}
+local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
+local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
+-- Declare linker-resolved addresses before the maze helpers. Lua's lexical
+-- scope begins at the declaration, so defining those helpers first would
+-- bind their RS reference to a nil global instead of this cartridge address.
+local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
+local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
+local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
+local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
+local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
+local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 
 function dungeon_local(room, stage)
     local index = math.min(stage, 8) + 1
@@ -25,25 +34,45 @@ function dungeon_size(stage)
     return STAGE_BOSS[index] - STAGE_START[index] + 1
 end
 
-function dungeon_neighbor_local(cell, size, dir)
-    local row, offset = math.floor(cell / 5), cell % 5
-    local col = (row % 2 == 1) and (4 - offset) or offset
+local function xor8(a, b)
+    local value, place = 0, 1
+    a, b = a % 256, b % 256
+    for _ = 1, 8 do
+        if (a % 2) ~= (b % 2) then value = value + place end
+        a, b, place = math.floor(a / 2), math.floor(b / 2), place * 2
+    end
+    return value
+end
+
+function dungeon_neighbor_local(cell, size, dir, stage)
+    local row, offset = math.floor(cell / 6), cell % 6
+    local col = (row % 2 == 1) and (5 - offset) or offset
+    local old_row = row
     if dir == 0 then row = row - 1
     elseif dir == 1 then col = col + 1
     elseif dir == 2 then row = row + 1
     elseif dir == 3 then col = col - 1 end
-    if row < 0 or row > 3 or col < 0 or col > 4 then return nil end
-    local next_cell = row * 5 + ((row % 2 == 1) and (4 - col) or col)
-    return next_cell < size and next_cell or nil
+    if row < 0 or row > 4 or col < 0 or col > 5 then return nil end
+    local next_cell = row * 6 + ((row % 2 == 1) and (5 - col) or col)
+    if next_cell >= size then return nil end
+    if dir == 0 or dir == 2 then
+        local upper = (dir == 0) and row or old_row
+        local turn = (upper % 2 == 1) and 0 or 5
+        local seed = xor8(xor8(emu:read8(RS + 2), emu:read8(RS + 3)),
+            xor8(((stage or 0) * 29) % 256, (upper * 47) % 256))
+        local seam = 1 + (seed % 4)
+        if col ~= turn and col ~= seam then return nil end
+    end
+    return next_cell
 end
 
-function dungeon_route_dir(start, goal, size)
+function dungeon_route_dir(start, goal, size, stage)
     if start == goal then return nil end
     local queue, head, seen, first = {start}, 1, {[start]=true}, {}
     while head <= #queue do
         local cell = queue[head]; head = head + 1
         for dir = 0, 3 do
-            local next_cell = dungeon_neighbor_local(cell, size, dir)
+            local next_cell = dungeon_neighbor_local(cell, size, dir, stage)
             if next_cell ~= nil and not seen[next_cell] then
                 seen[next_cell] = true
                 first[next_cell] = (cell == start) and dir or first[cell]
@@ -56,15 +85,9 @@ function dungeon_route_dir(start, goal, size)
 end
 
 function is_town_room(room)
-    return room == 45 or room == 97
+    return room == 63 or room == 136
 end
 
-local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
-local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
-local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
-local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
-local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
-local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 HITSTOP = tonumber(os.getenv("QUINTRA_HITSTOP_ADDR") or "0") or 0
 -- A public cartridge flag: read it so the controller only retreats through
 -- rooms the player is actually allowed to flee. It is never written.
@@ -799,6 +822,26 @@ function can_step(px, py, key)
                 and not pixel_full_body_obstacle(nx + 13, ny + 7)))
 end
 
+-- A tile node can be feet-valid while the hero's upper body is tucked under
+-- a pillar. Horizontal movement is intentionally feet-anchored, but turning
+-- north/south from that node may still be impossible. Validate the complete
+-- canonical eight-pixel vertical edge so dungeon BFS never plans a turn that
+-- the cartridge's full-body obstacle rule rejects on its first pixel.
+function dungeon_vertical_edge_walkable(cx, cy, direction)
+    if direction ~= 1 and direction ~= 3 then return true end
+    local px, py = cx * 8 - 9, cy * 8 - 11
+    -- Boundary doorway nodes deliberately use off-center canonical values;
+    -- their dedicated final-approach code handles the screen lip.
+    if px < 0 or px > 146 or py < 0 or py > 120 then return true end
+    local key = CARD_KEYS[direction]
+    local dy = direction == 1 and -1 or 1
+    for _ = 1, 8 do
+        if not can_step(px, py, key) then return false end
+        py = py + dy
+    end
+    return true
+end
+
 -- A body-hit recovery is a full double-tap dash, not a single walking pixel.
 -- Near a wall, the naive "away" direction can be legal for one frame yet
 -- consume the whole dash into the boundary while a 32px giant keeps contact.
@@ -1092,18 +1135,64 @@ end
 -- by BFS. This closes the tile-vs-pixel mismatch without touching game state.
 function aligned_step(d, sx, sy, px, py, fallback)
     if not d then return fallback end
+    -- Late-run speed upgrades can move the champion several pixels between
+    -- controller observations. Requiring a one-pixel centerline makes the
+    -- pilot overshoot and reverse forever beside long cover runs. A four-
+    -- pixel lane still keeps the 12px body inside a two-tile doorway while
+    -- allowing every authored movement tier to commit to the BFS step.
+    local lane_tolerance = 4
     if d == 1 or d == 3 then
         -- Direction indices are N/E/S/W, so vertical travel centers the
         -- horizontal body span before crossing a wall seam.
         local want_x = sx * 8 - 9
-        if px < want_x - 1 then return KEY_RIGHT end
-        if px > want_x + 1 then return KEY_LEFT end
+        if px < want_x - lane_tolerance then return KEY_RIGHT end
+        if px > want_x + lane_tolerance then return KEY_LEFT end
+        local travel = CARD_KEYS[d]
+        if not can_step(px, py, travel) then
+            -- Do not re-center until the intended lane is actually open.
+            -- A pillar may require several pixels of continuous side travel;
+            -- choosing "toward center" again after the first correction
+            -- creates a two-pixel oscillation beside that same corner.
+            local left_open, right_open = true, true
+            for offset = 1, 40 do
+                if left_open then
+                    left_open = can_step(px - offset + 1, py, KEY_LEFT)
+                    if left_open and can_step(px - offset, py, travel) then
+                        return KEY_LEFT
+                    end
+                end
+                if right_open then
+                    right_open = can_step(px + offset - 1, py, KEY_RIGHT)
+                    if right_open and can_step(px + offset, py, travel) then
+                        return KEY_RIGHT
+                    end
+                end
+            end
+        end
     else
         -- Mirrored rule for east/west travel.
         local want_y = sy * 8 - 11
         if want_y < 0 then want_y = 0 elseif want_y > 120 then want_y = 120 end
-        if py < want_y - 1 then return KEY_DOWN end
-        if py > want_y + 1 then return KEY_UP end
+        if py < want_y - lane_tolerance then return KEY_DOWN end
+        if py > want_y + lane_tolerance then return KEY_UP end
+        local travel = CARD_KEYS[d]
+        if not can_step(px, py, travel) then
+            local up_open, down_open = true, true
+            for offset = 1, 40 do
+                if up_open then
+                    up_open = can_step(px, py - offset + 1, KEY_UP)
+                    if up_open and can_step(px, py - offset, travel) then
+                        return KEY_UP
+                    end
+                end
+                if down_open then
+                    down_open = can_step(px, py + offset - 1, KEY_DOWN)
+                    if down_open and can_step(px, py + offset, travel) then
+                        return KEY_DOWN
+                    end
+                end
+            end
+        end
     end
     return CARD_KEYS[d] or fallback
 end
@@ -1194,10 +1283,17 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
     local start = py * 160 + px
     local start_feet_tx = math.floor((px + 8) / 8)
     local start_feet_ty = math.floor((py + 12) / 8)
+    local route_room = emu:read8(RS + 1)
+    local route_world = emu:read8(RS + 17)
+    local route_screen = route_world == 1 and emu:read8(RS + 18)
+        or emu:read8(RS + 19)
     if px == goal_x and py == goal_y then return 0 end
     if body_goal_pixel_route
         and body_goal_pixel_route.goal_x == goal_x
         and body_goal_pixel_route.goal_y == goal_y
+        and body_goal_pixel_route.room == route_room
+        and body_goal_pixel_route.world == route_world
+        and body_goal_pixel_route.screen == route_screen
         and body_goal_pixel_route.dirs[start] then
         return body_goal_pixel_route.dirs[start]
     end
@@ -1235,7 +1331,10 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
         dirs[previous[node]] = step[node]
         node = previous[node]
     end
-    body_goal_pixel_route = {goal_x=goal_x, goal_y=goal_y, dirs=dirs}
+    body_goal_pixel_route = {
+        goal_x=goal_x, goal_y=goal_y, room=route_room,
+        world=route_world, screen=route_screen, dirs=dirs
+    }
     return dirs[start]
 end
 
@@ -1364,6 +1463,24 @@ function puzzle_controller_step(room, px, py, frame)
         }
         local rune_x, rune_y = {5, 10, 14}, {8, 5, 10}
         local order = orders[(math.floor(puzzle_run_seed(room) / 256) % 6) + 1]
+        -- A wrong or high-speed contact visibly resets every rune to tile 33.
+        -- Keep the controller's objective synchronized with that public
+        -- feedback instead of retaining a stale third-rune index forever.
+        -- Conversely, a crystal-colored floor tile proves that the expected
+        -- prefix was accepted even if the pilot crossed it between samples.
+        local visible_progress = 0
+        for step_index = 1, 3 do
+            local visible_rune = order[step_index] + 1
+            local visible_tile = emu:read8(
+                TM + rune_y[visible_rune] * 20 + rune_x[visible_rune])
+            if visible_tile == 33 then break end
+            visible_progress = step_index
+        end
+        local visible_next = math.min(3, visible_progress + 1)
+        if puzzle_rune_index ~= visible_next then
+            puzzle_rune_index = visible_next
+            puzzle_rune_stepoff = false
+        end
         local rune = order[puzzle_rune_index] + 1
         local tx, ty = rune_x[rune], rune_y[rune]
         local goal_x = (puzzle_rune_stepoff and tx + 1 or tx) * 8 - 8
@@ -1708,7 +1825,7 @@ function door_step(px, py)
     local back = entered ~= 255 and ((entered + 2) % 4) or 255
     local in_world = emu:read8(RS + 17) == 1
     local world_screen = emu:read8(RS + 18)
-    -- Town rooms 45 and 97 are three-screen civic hubs, not a
+    -- Town rooms 63 and 136 are three-screen civic hubs, not a
     -- symmetric dungeon. Visit the market and forge/apothecary quarter once,
     -- then take the north gate; branch screens return west to arrival.
     local in_town = not in_world and is_town_room(room)
@@ -1746,11 +1863,12 @@ function door_step(px, py)
         local warden_missing = stage_warden_missing()
         local waystone_missing = stage_waystone_missing()
         local deep_warden_missing = stage_deep_warden_missing()
+        local stage = emu:read8(RS + 11)
         wanted = dungeon_route_dir(local_room,
             sigil_missing and 2
                 or (warden_missing and 3
                 or (waystone_missing and 7
-                or (deep_warden_missing and 9 or (size - 1)))), size)
+                or (deep_warden_missing and 9 or (size - 1)))), size, stage)
         if DEBUG and debug_route_room ~= room then
             debug_route_room = room
             debug_log(string.format(
@@ -1853,7 +1971,8 @@ function door_step(px, py)
             if nx >= 0 and nx < 20 and ny >= 0 and ny < 17 then
                 local nk = ny * 20 + nx
                 if not seen[nk] and ((in_world and world_body_walkable(nx, ny))
-                    or (not in_world and body_walkable(nx, ny))) then
+                    or (not in_world and body_walkable(nx, ny)
+                        and dungeon_vertical_edge_walkable(x, y, d))) then
                     seen[nk], prev[nk], prevkey[nk] = true, y * 20 + x, d
                     tail = tail + 1; qx[tail], qy[tail] = nx, ny
                 end
@@ -2661,6 +2780,12 @@ while frames < LIMIT do
         end
         last_target_slot, last_target_hp = target.slot, target.hp
     else
+        -- A temporarily diffuse Folding Star or a finished optional fight can
+        -- make the selected target disappear after a long combat residency.
+        -- Start cleared-room recovery from that observable transition, not
+        -- from the original room-entry frame; otherwise the stale 60-second
+        -- wall-follow watchdog overrides the first legitimate door route.
+        if last_target_slot >= 0 then route_start_frame = frames end
         last_target_slot, last_target_hp, no_damage_frames = -1, 255, 0
         target_stall_frames = 0
     end
@@ -3180,7 +3305,11 @@ while frames < LIMIT do
                     and LUNGE_PANIC_RANGE
                 or held_style == "flail" and 24
                 or held_style == "spear" and 32
-                or (CLASS == 2 and 24 or 0)
+                -- Corvin's returning blade owns a clean Warden lane at
+                -- 20..24px. Treat only true contact as panic range; the old
+                -- 24px generic buffer replaced every attack on the 32px
+                -- Sentinel body with a retreat at exactly its firing line.
+                or (CLASS == 2 and 16 or 0)
             local contact_strike_lane = projectile_lane_clear(px, py, target.x, target.y, aim)
                 and ((target.kind == 13 and held_style == "lunge" and body_range > 8)
                     -- Wolfkin's contact arc reaches the Leech safely from
@@ -3264,6 +3393,13 @@ while frames < LIMIT do
             and optional_local_room == 0
             and room_age > 180 and hp <= hp_max - 2
         if optional_open_room and (target_stall_frames > 360
+                -- Several mobile enemies can alternate as nearest target
+                -- without any one slot owning the six-second watchdog. An
+                -- open room is explicitly optional, so after fifteen seconds
+                -- take its visible route rather than donating the run to a
+                -- target-selection tie. Required fixtures and sealed arenas
+                -- are excluded above and still demand completion.
+                or room_age > 900
                 or opening_damage_bailout) then
             keys = door_step(px, py) + KEY_A
             optional_exit = true
@@ -3346,6 +3482,7 @@ while frames < LIMIT do
         -- the player to kill. This is ordinary controller input policy only.
         target, observed_threat = nil, nil
         dodge_phase, body_dash_ready = 0, false
+        escape_timer, wall_follow_dir, wall_follow_min = 0, 0, 0
     end
     -- Riftwild rooms are traversal pressure, not mandatory combat clears.
     -- Still, marching through a Hornet's body until the next doorway is not
@@ -3388,7 +3525,8 @@ while frames < LIMIT do
     -- least one body width and until the planned cardinal is truly open, then
     -- return to BFS.
     if not target and not loot and not shop and world_mode == 0
-        and (wall_follow_dir ~= 0 or frames - room_enter_frame > 3600) then
+        and not optional_exit
+        and (wall_follow_dir ~= 0 or frames - route_start_frame > 3600) then
         local planned = direction_from_keys(keys)
         if wall_follow_dir ~= 0 then
             if wall_follow_min > 0 then wall_follow_min = wall_follow_min - 1 end
@@ -3436,7 +3574,8 @@ while frames < LIMIT do
         -- loop. Let the exact objective route retain input priority.
         escape_timer = 0
         still_frames = 0
-    elseif escape_timer == 0 and still_frames > stuck_limit then
+    elseif escape_timer == 0 and not optional_exit
+        and still_frames > stuck_limit then
         -- A wall pocket can block the intended direction AND both
         -- perpendiculars. Cycle all four cardinals across recovery attempts
         -- so the agent eventually backs out instead of oscillating forever.
@@ -3457,7 +3596,7 @@ while frames < LIMIT do
         end
         still_frames = 0
     end
-    if escape_timer > 0 and not sigil_pixel_active then
+    if escape_timer > 0 and not sigil_pixel_active and not optional_exit then
         keys = escape_dir + KEY_A
         escape_timer = escape_timer - 1
     end
@@ -3926,6 +4065,11 @@ while frames < LIMIT do
     -- actionable during unattended balance matrices. A requested screenshot
     -- is still captured on the same event, but the text map remains the
     -- reliable headless artifact.
+    if DEBUG and not target and not loot and not shop
+        and debug_shot_room ~= room and frames - route_start_frame > 600 then
+        debug_tilemap(frames, room, px, py, nil)
+        debug_shot_room = room
+    end
     if (DEBUG or DEBUG_SCREEN) and (target or (DEBUG and room == 49))
         and debug_shot_room ~= room and frames - room_enter_frame > 3600 then
         if DEBUG then debug_tilemap(frames, room, px, py, target) end

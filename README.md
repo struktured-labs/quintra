@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.61: Native Depth](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.62: Maze Unbound](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,22 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.61**, published after the complete build,
+The current cartridge is **v0.18.62**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Dungeons no longer feel like compact rectangles.** The campaign now starts
+at 20 rooms and grows through 21, 22, 23, 24, 25, 26, 28, and 30 rooms,
+including each Colossus arena: **219 dungeon screens** in a successful run.
+Every dungeon inhabits a 6×5 footprint. A guaranteed winding spine makes the
+whole route traversable, while one run-seeded vertical seam per row pair adds
+different loops instead of opening every geometric neighbor and collapsing the
+maze into a short Manhattan walk. The SELECT Compass renders the same actual
+edges in a compressed tile-native 6×5 graph, including the full 30-room Void
+route. Nonlinear Rift Wells remain separate room-2/room-8 shortcuts.
+v0.18.60/v0.18.61 suspend saves migrate their stage, town, world anchor,
+sanctuary, or boss threshold into the larger campaign. Secret caches now
+author an explicit return doorway, so a passage revealed through a closed maze
+edge can never become a one-way trap.
 
 **Deep checkpoints now open natively in mGBA-Qt.** The external curriculum
 matches the existing PyBoy coverage: all five champions in Normal and Easy at
@@ -41,31 +55,24 @@ shown in subdued ink, while visited rooms and traversed links fill to bright
 ink. Fog still hides room identities, Sigils, Wardens, and boss information
 until those clues are earned.
 
-**Dungeon depth now comes from required fixtures, not padding.** The nine-stage
-route grows through 14, 15, 16, 16, 17, 18, 18, 19, and 20 rooms including
-each Colossus arena: 153 dungeon screens in one successful run. Every footprint
-is a reciprocal 5×4 spatial graph with loops and visible missing exits rather
-than a room-counter corridor. The Spirit Compass uses the same 5×4 grammar and
-illuminates only the active cells, so the added depth remains readable rather
-than becoming a text maze. Every stage contains the second seeded puzzle and
-deep-Warden lesson; the two largest routes add a third miniboss at local room
-15. Villages still break the route after dungeons three and six. Nonlinear
-Rift Wells now leap between rooms 2 and 8 and reserve a champion-width central
-cross to both landings. Each stage's authored terrain identity now returns in
-local room four as a full-strength landmark—grove, gauntlet, vault, mire,
-keep, temple, blood sigil, or void arc—so the added rooms do not read as
-generic padding.
+**Dungeon depth comes from required fixtures, not padding.** Every stage
+contains the second seeded puzzle and deep-Warden lesson; later routes add a
+third miniboss at local room 15. Villages still break the route after dungeons
+three and six. Rift Wells reserve a champion-width central cross to both
+landings. Each stage's authored terrain identity returns in local room four as
+a full-strength landmark—grove, gauntlet, vault, mire, keep, temple, blood
+sigil, or void arc—so the expanded route does not read as generic padding.
 Human testing correctly noted that raw room count still felt compact when a
-short graph route could bypass most authored beats. The route now unfolds as
+short fully connected graph could bypass most authored beats. The route now unfolds as
 a visible fixture chain: room two's **Rift Sigil**, room three's mechanical
 **Warden Boon**, the room-seven **Waystone**, and the room-nine **Deep
 Warden**. The Compass reveals one next trial at a time, and the sanctuary keeps
 its return route open until every fixture is earned. This makes expeditions
-traverse their back half instead of cutting diagonally across the 5×4 graph.
+traverse their back half instead of cutting diagonally across the old grid.
 Normal keeps the full Warden HP and escort pressure; Easy halves required
 Warden HP and uses one escort so deep-route testing remains practical.
-Suspend saves from the 10–16-room v0.18.58/v0.18.59 topology migrate to the
-equivalent stage, town, world anchor, sanctuary, or boss threshold.
+Suspend saves from every earlier explicit topology migrate to the equivalent
+stage, town, world anchor, sanctuary, or boss threshold.
 
 **Dungeon locks are no longer synonymous with extermination.** Procedural
 dungeons rotate three non-combat room families alongside the existing selective
@@ -183,12 +190,12 @@ this Normal matrix remains policy evidence for direct human testing—not a
 reason to globally weaken enemies or bosses.
 
 **The Spirit Compass is now a real abstract dungeon map.** SELECT renders each
-14-to-20-room dungeon as a centered 5×4 snake of self-bordered square room
-glyphs and short connecting lines, rather than scattering miniature
-floorplans across the LCD. Twenty dim hollow slots establish the complete
-lattice immediately; only the cells active in that stage can brighten and
-connect as explored, and room identities stay fogged until discovery. Two
-persisted bytes plus a four-bit extension cover the entire layout. It includes a bright current-room marker, the
+20-to-30-room dungeon as a centered 6×5 graph of room glyphs and short
+connecting lines, rather than scattering miniature floorplans across the LCD.
+Thirty dim hollow slots establish the complete lattice immediately; only the
+cells and actual seeded maze edges active in that stage can brighten as
+explored, and room identities stay fogged until discovery. Four persisted
+segments cover the entire layout. It includes a bright current-room marker, the
 Rift Sigil objective, and an early revealed Colossus skull. A tile-native `MAP`
 heading keeps the diagram self-identifying at
 160×144 without reviving the old truncated text page. Cyan/violet/amber semantics
@@ -1879,14 +1886,15 @@ generated seed rather than claiming the numbers are fixed worlds. A fresh
 sample must earn all four wins; it is useful controller research, not a
 delivery proof. The all-class `make endurance` target remains the stricter
 conference soak floor.
-The provisional target is roughly **40–65 minutes** for a first successful
-human run and **25–40 minutes** once practiced; the expanded route now contains
-153 dungeon rooms,
+The provisional target is roughly **55–90 minutes** for a first successful
+human run and **35–60 minutes** once practiced; the expanded route now contains
+219 dungeon rooms,
 and deaths and procedural seeds make total session
 length variable. `make verify` also
 boots the ending, checks its battery-SRAM win record, and returns to the title.
-Its smoke pass resolves WRAM symbols from the current linker output and asserts
-rooms 0→1→2→3→4→5→6, defeats a live giant through real A-button shots, then
+Its smoke pass resolves WRAM symbols from the current linker output, follows
+the complete room-0→room-19 opening spine, defeats a live giant through real
+A-button shots, then
 proves Pack-screen entry and room return; it does not trust fixed debug
 addresses or screenshot appearance alone.
 Set `QUINTRA_BALANCE_TRACE_DIR=tmp/traces` to retain RLE-compressed joypad
@@ -1899,7 +1907,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.60 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.62 release ROM occupies 128 KiB. Its media,
 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -1915,8 +1923,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.60 build has 1,115 bytes in bank 1, 1,615 in bank 2,
-1,239 in bank 3, 3,238 in bank 4, 3,236 in bank 5, and 9,671 in bank 6.
+ROM. The current v0.18.62 build has 1,115 bytes in bank 1, 1,615 in bank 2,
+1,248 in bank 3, 2,997 in bank 4, 3,231 in bank 5, and 9,442 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -2244,9 +2252,9 @@ feel, merchant/tutorial clarity, late-boss patterns that are harder without
 turning early runs into a wall, and the creator's music-composition pass. New
 content is welcome only when it fits that budget and keeps the reproducible
 route healthy. The compact topology has now been replaced by a run-deepening
-14-to-20-room ramp, including each boss arena. It totals 153 dungeon screens,
-requires the second puzzle and deep Warden in every stage, adds a third
-miniboss to the two largest routes,
+20-to-30-room ramp, including each boss arena. It totals 219 dungeon screens,
+uses a 6×5 winding maze with run-seeded loop seams, requires the second puzzle
+and deep Warden in every stage, adds a third miniboss to later routes,
 and retains the transition-latency budget so extra exploration does not restore
 the old doorway wait. Riftwild and the villages remain separate between-stage
 spaces.

@@ -32,6 +32,10 @@ def boot_world():
         pb.tick()
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
+    # The visible opening cell has no south maze edge; mirror the defeated
+    # arena's all-cardinal unseal before taking its real Riftwild exit.
+    pb.memory[TM + 16 * ROOM_W + 9] = 3
+    pb.memory[TM + 16 * ROOM_W + 10] = 3
     exit_at(pb, 72, 120)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
     return pb

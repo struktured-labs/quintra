@@ -18,7 +18,14 @@
 u8 procgen_current_room_is_boss;
 
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
-    return run_seed ^ ((u32)biome_id << 16) ^ ((u32)room_counter * 0x9E3779B9UL);
+    u32 room_mix = 0;
+    u8 rooms = room_counter;
+    // SDCC's 8-bit-by-32-bit expression pulls the 231-byte generic long
+    // multiplier into always-mapped ROM. Repeated unsigned addition is
+    // bit-identical modulo 2^32, runs only while entering a room, and keeps
+    // that scarce fixed bank available for interrupt-safe runtime support.
+    while (rooms--) room_mix += 0x9E3779B9UL;
+    return run_seed ^ ((u32)biome_id << 16) ^ room_mix;
 }
 
 // All nine large bosses load their distinct 32x32 art into one shared VRAM
@@ -168,7 +175,7 @@ static void stamp_rift_portal(u8 px, u8 py) {
     for (y = top; y <= bottom; ++y)
         for (x = 9; x <= 11; ++x)
             room_tilemap[y][x] = BGT_FLOOR;
-    // The larger 5x4 graph can enter a rift room from any cardinal side.
+    // The larger 6x5 graph can enter a rift room from any cardinal side.
     // Preserve a full hero-width central cross before joining the portal's
     // local apron; generated pillars may decorate it, but can never sever a
     // visible nonlinear route from the actual arrival threshold.
@@ -414,7 +421,7 @@ void procgen_generate_current_room(void) BANKED {
     // enemy spawning all agree (a mismatch here soft-locked boss rooms).
     u8 is_boss_room = run_state_is_boss_room();
     procgen_current_room_is_boss = is_boss_room;
-    // A village clearing follows every third dungeon: rooms 19, 37, 55...
+    // A village clearing follows every third dungeon at its explicit counter.
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
@@ -460,7 +467,7 @@ void procgen_generate_current_room(void) BANKED {
                 if (!(edges & 0x04)) { room_tilemap[ROOM_H - 1][9] = BGT_WALL; room_tilemap[ROOM_H - 1][10] = BGT_WALL; }
                 if (!(edges & 0x08)) { room_tilemap[8][0] = BGT_WALL; room_tilemap[9][0] = BGT_WALL; }
             } else if (!is_town) {
-                // Dungeon cells now occupy the same reciprocal 5x4 geography
+                // Dungeon cells now occupy the same reciprocal 6x5 maze
                 // shown by the Spirit Compass. Remove edges that leave the
                 // active prefix instead of presenting four fake choices that
                 // all advance one global counter.
@@ -837,6 +844,23 @@ void procgen_generate_current_room(void) BANKED {
         run_state.secret_pending = 2;
         if (!is_boss_room) {
             u8 i;
+            // A cache is an overlay, not a cardinal maze neighbour. Its
+            // entrance may have been revealed through a wall where the parent
+            // graph intentionally has no edge, so author the opposite return
+            // threshold explicitly instead of inheriting a sealed border.
+            if (run_state.entered_from == DIR_N) {
+                room_tilemap[ROOM_H - 1][9] = BGT_DOOR;
+                room_tilemap[ROOM_H - 1][10] = BGT_DOOR;
+            } else if (run_state.entered_from == DIR_S) {
+                room_tilemap[0][9] = BGT_DOOR;
+                room_tilemap[0][10] = BGT_DOOR;
+            } else if (run_state.entered_from == DIR_E) {
+                room_tilemap[8][0] = BGT_DOOR;
+                room_tilemap[9][0] = BGT_DOOR;
+            } else if (run_state.entered_from == DIR_W) {
+                room_tilemap[8][ROOM_W - 1] = BGT_DOOR;
+                room_tilemap[9][ROOM_W - 1] = BGT_DOOR;
+            }
             // The vault: a shootable crystal ring guards the hoard —
             // crack it open or slip around the corner gaps.
             for (i = 7; i <= 12; ++i) {
