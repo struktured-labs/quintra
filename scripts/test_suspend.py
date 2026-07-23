@@ -63,8 +63,11 @@ def main():
             ep = EN + i * 28
             if first.memory[ep] == 2:
                 first.memory[ep] = first.memory[ep + 1] = 0
-        put16(first, PL + 9, 72)
-        put16(first, PL + 11, 120)
+        # Dungeon zero's guaranteed maze spine begins eastward (cell 0→1).
+        # The old compact topology opened south here, so pinning that obsolete
+        # threshold could no longer exercise the room-entry SRAM transaction.
+        put16(first, PL + 9, 144)
+        put16(first, PL + 11, 60)
         for _ in range(60):
             first.tick()
             if first.memory[RS + 1] == 1:
