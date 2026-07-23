@@ -131,9 +131,9 @@ def main():
     assert "if (room_stage() == 1) tiles_load_vine_coil_sprite();" in room_source
     assert "sprite_enemy_vine_coil" in SPRITE_SOURCE
 
-    # The opening shop now occupies local graph cell 7, after the branch and
-    # Sigil route, rather than the retired corridor's room 4.
-    pb.memory[addr("_run_state") + 1] = 6
+    # The expanded opening shop occupies local graph cell 11, after the
+    # Waystone and deep-Warden route, rather than the compact graph's cell 7.
+    pb.memory[addr("_run_state") + 1] = 10
     pb.memory[addr("_run_state") + 17] = 1
     pb.memory[addr("_run_state") + 18] = 6
     put16(pb, addr("_player") + 9, 72)
@@ -141,9 +141,13 @@ def main():
     pb.memory[addr("_room_tilemap") + 9 * 20 + 10] = 34
     for _ in range(30):
         pb.tick()
-        if pb.memory[addr("_run_state") + 1] == 7:
+        if pb.memory[addr("_run_state") + 1] == 11:
             break
-    assert pb.memory[addr("_run_state") + 1] == 7, "could not enter merchant room"
+    assert pb.memory[addr("_run_state") + 1] == 11, (
+        "could not enter merchant room: "
+        f"room={pb.memory[addr('_run_state') + 1]} "
+        f"player={pb.memory[addr('_player') + 9]},{pb.memory[addr('_player') + 11]}"
+    )
     entities = addr("_entities")
     merchant_count = 0
     for _ in range(60):
@@ -156,7 +160,7 @@ def main():
         )
         if merchant_count == 1:
             break
-    assert merchant_count == 1, f"room 7 did not generate its merchant: {merchant_count}"
+    assert merchant_count == 1, f"room 11 did not generate its merchant: {merchant_count}"
     callout = generated_sprite("sprite_fx_merchant_callout")
     actual_callout = bytes(pb.memory[0x8000 + 125 * 16:0x8000 + 126 * 16])
     assert actual_callout == callout, (

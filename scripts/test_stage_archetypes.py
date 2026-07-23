@@ -45,7 +45,7 @@ def wait_for_generated_room(pb):
 
 
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
-                   local_room=2, dungeon_phase=0):
+                   local_room=4, dungeon_phase=0):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -56,11 +56,10 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
     for _ in range(60):
         pb.tick()
 
-    # Stage architecture currently lives in absolute local rooms 1 and 2.
-    # Prefer room 2 because most authored puzzle families occupy room 1; the
-    # two phase-family stages select room 1 explicitly below when their room-2
-    # wall would obscure the silhouette being audited. Towns occupy local 1
-    # after stages three and six, making local 2 the first actual dungeon room.
+    # Local room four is the dedicated full-silhouette landmark in every
+    # wider stage. Rooms 1/2 remain available to puzzle and Rift fixtures;
+    # auditing room four keeps those safety overlays from weakening the
+    # stage-identity contract.
     target = STAGE_START[stage] + local_room
     # Enter through the authored Riftwild dungeon gate. This follows the
     # cartridge's real between-dungeon transition without fighting prior
@@ -148,7 +147,7 @@ def main():
     grove_crystals = sum(tile(grove, x, y) == BGT_CRYSTAL for x, y in grove_sites)
     assert grove_crystals >= 4, f"Verdant grove silhouette missing ({grove_crystals}/8)"
     grove_exits = reachable_exits(grove, (18, 9))
-    assert_graph_exits("Verdant grove", grove_exits, 1, 2)
+    assert_graph_exits("Verdant grove", grove_exits, 1, 4)
 
     # Ember is a phase-family dungeon: room 1's compact central switch apron
     # leaves both authored hazard seams intact, whereas room 2 deliberately
@@ -166,7 +165,12 @@ def main():
     ember_exits = reachable_exits(ember, (18, 9))
     assert_graph_exits("Ember gauntlet", ember_exits, 2, 1)
 
-    frost = generated_room(3, screenshot=ROOT / "tmp" / "frost-vault.png")
+    # Sample a non-Rift chamber so this contract measures the complete
+    # octagonal vault silhouette. Rift landing geometry has its own live-ROM
+    # reachability suite and deliberately carves a broad cardinal cross.
+    frost = generated_room(
+        3, screenshot=ROOT / "tmp" / "frost-vault.png", local_room=4
+    )
     vault_sites = [
         (7, 5), (8, 5), (11, 5), (12, 5),
         (7, 12), (8, 12), (11, 12), (12, 12),
@@ -174,21 +178,16 @@ def main():
         (14, 6), (14, 7), (14, 10), (14, 11),
     ]
     vault_crystals = sum(tile(frost, x, y) == BGT_CRYSTAL for x, y in vault_sites)
-    # Stage three's first real dungeon room is also a nonlinear Rift Well.
-    # Its required 3x3 landing apron deliberately cuts through three ring
-    # sites so the 2x2 hero footprint can arrive. Ten remaining crystals
-    # preserves the octagonal silhouette without turning a reachable portal
-    # fix into a false stage-identity regression.
+    # The non-Rift sample preserves the complete silhouette while still
+    # allowing seed-dependent base decoration around it.
     assert vault_crystals >= 10, f"Frost vault ring missing ({vault_crystals}/16)"
-    assert sum(tile(frost, x, y) == 34 for y in range(ROOM_H) for x in range(ROOM_W)) == 1, \
-        "Frost Vault lost its required nonlinear Rift Well"
     # The four axial breaks are the visual language and the safety contract.
     assert all(tile(frost, x, y) != BGT_CRYSTAL for x, y in (
         (9, 5), (10, 5), (9, 12), (10, 12),
         (5, 8), (5, 9), (14, 8), (14, 9),
     ))
     frost_exits = reachable_exits(frost, (18, 9))
-    assert_graph_exits("Frost vault", frost_exits, 3, 2)
+    assert_graph_exits("Frost vault", frost_exits, 3, 4)
 
     def assert_mire_swim_passive(pb, tiles):
         # Remove combat noise, stand the feet-center on an actual pool tile,
@@ -238,25 +237,21 @@ def main():
         assert all(tile(mire, x, y) != BGT_SPIKES
                    for x in (9, 10) for y in range(3, 15))
         mire_exits = reachable_exits(mire, (18, 9))
-        assert_graph_exits(f"Toxic Mire seed={seed:#x}", mire_exits, 4, 2)
+        assert_graph_exits(f"Toxic Mire seed={seed:#x}", mire_exits, 4, 4)
 
     keep_counts = []
     for index, seed in enumerate((0x5A0D0000, 0x5A0D0001)):
         keep = generated_room(
             5, seed,
             screenshot=ROOT / "tmp" / "shadow-keep.png" if index == 0 else None,
-            dungeon_phase=1,
         )
         keep_pillars = sum(
             tile(keep, x, y) == BGT_PILLAR
             for x in range(4, 16) for y in (6, 11)
         )
         keep_counts.append(keep_pillars)
-        # This phase-family local room deliberately overlays row 11 with the
-        # paired open gate. The untouched upper portcullis therefore carries
-        # the Keep silhouette by itself: twelve sites minus its four-tile
-        # zig-zag opening leaves exactly eight hard bars. The nonlinear Rift
-        # Well may clear only outside that surviving row.
+        # Room four preserves both complete portcullises: each twelve-tile row
+        # owns a four-tile gate, leaving sixteen hard bars in the zig-zag keep.
         assert keep_pillars >= 8, (
             f"Shadow Keep portcullises missing seed={seed:#x} ({keep_pillars}/16)"
         )
@@ -270,7 +265,7 @@ def main():
         assert all(tile(keep, x, 11) != BGT_PILLAR
                    for x in range(lower_gate, lower_gate + 4))
         keep_exits = reachable_exits(keep, (18, 9))
-        assert_graph_exits(f"Shadow Keep seed={seed:#x}", keep_exits, 5, 2)
+        assert_graph_exits(f"Shadow Keep seed={seed:#x}", keep_exits, 5, 4)
 
     temple_signatures = []
     for index, seed in enumerate((0x601D0000, 0x601D0001)):
@@ -283,10 +278,8 @@ def main():
         ]
         pillars = sum(tile(temple, x, y) == BGT_PILLAR
                       for x, y in colonnade_sites)
-        # The first post-town Temple room also owns a nonlinear Rift Well.
-        # Its hero-sized apron may open two colonnade sites on one flank; the
-        # other ten still frame the processional aisle and preserve the
-        # authored silhouette without risking an unreachable portal landing.
+        # The room-four landmark preserves the complete colonnade while Rift
+        # landing safety remains covered independently in rooms two/eight.
         assert pillars >= 10, (
             f"Golden Temple colonnades missing seed={seed:#x} ({pillars}/12)"
         )
@@ -298,9 +291,7 @@ def main():
                          (inner_l, 12), (inner_r, 12)]
         crystals = sum(tile(temple, x, y) == BGT_CRYSTAL
                        for x, y in crystal_sites)
-        # The new absolute stage seed can place the required Rift Well apron
-        # through one inner marker as well as two outer columns. Three still
-        # preserve the asymmetric court while guaranteeing a legal landing.
+        # All four inner markers remain available in the dedicated landmark.
         assert crystals >= 3, (
             f"Golden Temple inner court missing seed={seed:#x} ({crystals}/4)"
         )
@@ -312,7 +303,7 @@ def main():
                    for x in range(3, 17) for y in (8, 9))
         temple_exits = reachable_exits(temple, (18, 9))
         assert_graph_exits(f"Golden Temple seed={seed:#x}",
-                           temple_exits, 6, 2)
+                           temple_exits, 6, 4)
         temple_signatures.append((pillars, crystals, inner_l))
     assert temple_signatures[0] != temple_signatures[1], (
         "Golden Temple seed variants collapsed to one inner-court layout"
@@ -326,8 +317,7 @@ def main():
                             (i, 17 - i), (19 - i, 17 - i)))
     blood_spikes = sum(tile(blood, x, y) == BGT_SPIKES
                        for x, y in blood_sites)
-    # A local-room-2 Rift Well may clear one ritual cut for its 2×2 landing
-    # footprint; the other seven retain the mirrored Bloodmoon identity.
+    # The dedicated landmark retains all eight mirrored ritual cuts.
     assert blood_spikes >= 7, (
         f"Bloodmoon ritual cuts missing ({blood_spikes}/8): "
         f"{[(site, tile(blood, *site)) for site in blood_sites]}"
@@ -337,7 +327,7 @@ def main():
     assert all(tile(blood, x, y) != BGT_SPIKES
                for x in range(3, 17) for y in (8, 9))
     blood_exits = reachable_exits(blood, (18, 9))
-    assert_graph_exits("Bloodmoon", blood_exits, 7, 2)
+    assert_graph_exits("Bloodmoon", blood_exits, 7, 4)
 
     void_signatures = []
     void_sites = []

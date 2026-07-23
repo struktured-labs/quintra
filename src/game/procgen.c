@@ -138,6 +138,18 @@ static u8 escort_cell_open(u8 tx, u8 ty) {
         && room_tile_walkable((u8)(room_tilemap[ty + 1][tx + 1] & 0x7F));
 }
 
+// Reachability marking runs in the pathfinding bank, but procgen owns the
+// marked tilemap and immediately streams it into VRAM. Clear bit 7 locally
+// before returning: a far-bank cleanup could leave valid collision geometry
+// carrying tile ids 128..255, which render as blank/corrupt art during a
+// Zelda-style slide even though collision masks the metadata correctly.
+static void clear_reach_marks_local(void) {
+    u8 x, y;
+    for (y = 0; y < ROOM_H; ++y)
+        for (x = 0; x < ROOM_W; ++x)
+            room_tilemap[y][x] &= 0x7F;
+}
+
 // A rift is activated by the hero's feet center, but movement validates a
 // 12x8px feet box.  Stamping only the glowing tile could leave its required
 // 2x2 standing footprint half inside a procedurally placed pillar or crate.
@@ -154,6 +166,16 @@ static void stamp_rift_portal(u8 px, u8 py) {
         for (x = left; x <= right; ++x)
             room_tilemap[y][x] = BGT_FLOOR;
     for (y = top; y <= bottom; ++y)
+        for (x = 9; x <= 11; ++x)
+            room_tilemap[y][x] = BGT_FLOOR;
+    // The larger 5x4 graph can enter a rift room from any cardinal side.
+    // Preserve a full hero-width central cross before joining the portal's
+    // local apron; generated pillars may decorate it, but can never sever a
+    // visible nonlinear route from the actual arrival threshold.
+    for (y = 7; y <= 9; ++y)
+        for (x = 1; x < ROOM_W - 1; ++x)
+            room_tilemap[y][x] = BGT_FLOOR;
+    for (y = 1; y < ROOM_H - 1; ++y)
         for (x = 9; x <= 11; ++x)
             room_tilemap[y][x] = BGT_FLOOR;
     for (y = (u8)(py - 2); y <= py; ++y)
@@ -234,8 +256,9 @@ static void configure_sentinel_miniboss(u8 idx, u8 stage) {
 
 // Layer stage-authored traversal identity over the shared reachable room
 // skeleton. No RNG is consumed: the same seed remains stable when content is
-// added, and door lanes remain clear. Only the first two combat rooms of each
-// stage receive these stronger silhouettes, keeping shops/rest rooms safe.
+// added, and door lanes remain clear. Early rooms plus local room four and
+// the late Waystone chamber receive these stronger silhouettes, spreading
+// stage identity through the wider route while keeping shops/rest rooms safe.
 static void apply_stage_archetype(u8 stage, u32 seed) {
     u8 archetype = stage_room_archetype[stage % N_STAGES];
     u8 i;
@@ -437,7 +460,7 @@ void procgen_generate_current_room(void) BANKED {
                 if (!(edges & 0x04)) { room_tilemap[ROOM_H - 1][9] = BGT_WALL; room_tilemap[ROOM_H - 1][10] = BGT_WALL; }
                 if (!(edges & 0x08)) { room_tilemap[8][0] = BGT_WALL; room_tilemap[9][0] = BGT_WALL; }
             } else if (!is_town) {
-                // Dungeon cells now occupy the same reciprocal 4x4 geography
+                // Dungeon cells now occupy the same reciprocal 5x4 geography
                 // shown by the Spirit Compass. Remove edges that leave the
                 // active prefix instead of presenting four fake choices that
                 // all advance one global counter.
@@ -568,6 +591,7 @@ void procgen_generate_current_room(void) BANKED {
             if (!is_town && !run_state.world_mode
                 && (run_state_dungeon_local() == 1
                     || run_state_dungeon_local() == 2
+                    || run_state_dungeon_local() == 4
                     || (run_state_dungeon_local() == 7
                         && run_state_dungeon_size() >= 12))) {
                 apply_stage_archetype(run_state.bosses_beaten, seed);
@@ -613,7 +637,7 @@ void procgen_generate_current_room(void) BANKED {
             if (!is_town && run_state.bosses_beaten > 0
                 && !run_state.world_mode
                 && (run_state_dungeon_local() == 2
-                    || run_state_dungeon_local() == 4)) {
+                    || run_state_dungeon_local() == 8)) {
                 u8 px = (seed & 4) ? 5 : 14;
                 u8 py = (seed & 8) ? 4 : 12;
                 stamp_rift_portal(px, py);
@@ -1076,7 +1100,7 @@ void procgen_generate_current_room(void) BANKED {
                         spawn_reachable_enemy(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
                     }
                 }
-                clear_spawn_reachable();
+                clear_reach_marks_local();
             }
         } else if (is_shop) {
             // MERCHANT room: three wares, no enemies. The premium shelf is
@@ -1164,7 +1188,7 @@ void procgen_generate_current_room(void) BANKED {
                     }
                 }
             }
-            clear_spawn_reachable();
+            clear_reach_marks_local();
         }
     }
 

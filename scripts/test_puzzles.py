@@ -239,7 +239,10 @@ def late_depth_puzzle_contract():
 
 def opening_shop_is_not_a_puzzle():
     pb = load(1)
-    target = STAGE_START[0] + 7
+    # The wider opening stage moves its size-3 merchant rest from local seven
+    # to local eleven. Room seven is now intentionally the Waystone puzzle;
+    # keep the exclusion pinned to the actual procedural shop role.
+    target = STAGE_START[0] + 11
     pb.memory[RS + 1] = target - 1
     for i in range(32):
         ep = EN + i * 28
@@ -247,7 +250,7 @@ def opening_shop_is_not_a_puzzle():
             pb.memory[ep] = pb.memory[ep + 1] = 0
     pb.memory[COMBAT] = 0
     pb.memory[LOCKED] = 0
-    cross_edge(pb, 6, 7)
+    cross_edge(pb, 10, 11)
     for _ in range(60):
         pb.tick()
         if pb.memory[RS + 1] == target and pb.memory[KIND] == 0:

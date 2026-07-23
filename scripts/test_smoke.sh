@@ -25,12 +25,15 @@ PL_ADDR=$(grep 'DEF _player ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 EN_ADDR=$(grep 'DEF _entities ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 TM_ADDR=$(grep 'DEF _room_tilemap ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 LS_ADDR=$(grep 'DEF _loop_current_screen ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+PK_ADDR=$(grep 'DEF _room_puzzle_kind ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+PLK_ADDR=$(grep 'DEF _room_puzzle_locked ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
 QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
     QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" \
     QUINTRA_EN_ADDR="$EN_ADDR" QUINTRA_TM_ADDR="$TM_ADDR" QUINTRA_SCREEN_ADDR="$LS_ADDR" \
+    QUINTRA_PUZZLE_KIND_ADDR="$PK_ADDR" QUINTRA_PUZZLE_LOCK_ADDR="$PLK_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 >"$OUT_DIR/emulator.log" 2>&1 &
@@ -97,7 +100,7 @@ check 03_room0_enter          10
 check 04_room1                7
 check 05_room2_sigil          7
 check 06_room5_branch         7
-check 07_room6_threshold      7
+check 07_room9_threshold      7
 # The first boss uses an intentional six-color night arena; its active-giant
 # log assertion below verifies this is the actual encounter, not an empty UI.
 check 08_BOSS_room            6
@@ -118,11 +121,11 @@ assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=14'
 assert_log 04_room1           'room=1 '
 assert_log 05_room2_sigil     'room=2 '
 assert_log 06_room5_branch    'room=5 '
-assert_log 07_room6_threshold 'room=6 '
-assert_log 08_BOSS_room       'room=9 .*giants=1 '
-assert_log 11_after_long_assault 'screen=5 .*room=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 07_room9_threshold 'room=9 '
+assert_log 08_BOSS_room       'room=13 .*giants=1 '
+assert_log 11_after_long_assault 'screen=5 .*room=13 .*bosses=1 .*giants=0 .*hp=[1-9]'
 assert_log 12_pack            'screen=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
-assert_log 13_room_return     'screen=5 .*room=9 .*bosses=1 .*giants=0 .*hp=[1-9]'
+assert_log 13_room_return     'screen=5 .*room=13 .*bosses=1 .*giants=0 .*hp=[1-9]'
 
 echo "[smoke] $PASS/$TOTAL passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

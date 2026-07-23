@@ -21,11 +21,10 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 PZ=$(awk '/DEF _room_puzzle_locked / {print $3}' "$NOI")
 if LC_ALL=C grep -aq 'v0.18.55' "$ROM"; then
   MEDIA_TOPOLOGY=12
-elif grep -q 'DEF _run_state_boss_room ' "$NOI"; then
-  # v0.18.56 and later retain the expanded 10..16-room campaign. Keying this
-  # to one exact current title string made every version bump silently capture
-  # the intermediate topology and stop the reel at 124/174 frames.
+elif LC_ALL=C grep -aqE 'v0\.18\.(58|59)' "$ROM"; then
   MEDIA_TOPOLOGY=16
+elif grep -q 'DEF _run_state_boss_room ' "$NOI"; then
+  MEDIA_TOPOLOGY=20
 else
   MEDIA_TOPOLOGY=6
 fi

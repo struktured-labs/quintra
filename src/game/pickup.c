@@ -537,6 +537,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 // power without permanently removing fog.
                                 run_state.next_dungeon_reveal = 0xFF;
                                 run_state.next_dungeon_reveal_hi = 0xFF;
+                                run_state.next_dungeon_reveal_xhi = 0x0F;
                                 break;
                             case WARE_WEAPON: {
                                 u8 weapon = entities[i].ai_data[3];

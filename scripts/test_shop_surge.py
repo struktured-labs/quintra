@@ -39,9 +39,9 @@ def boot_shop(seed_low):
     for _ in range(90):
         pb.tick()
 
-    # Make the next real graph transaction land in opening shop room 7. The low
-    # seed byte alone selects premium vitality (even) versus Surge (odd).
-    source, target = 6, 7
+    # Make the next real graph transaction land in expanded opening shop room
+    # 11. The low seed byte alone selects vitality (even) versus Surge (odd).
+    source, target = 10, 11
     pb.memory[RS + 1] = source
     pb.memory[RS + 2] = seed_low
     pb.memory[RS + 3] = pb.memory[RS + 4] = pb.memory[RS + 5] = 0

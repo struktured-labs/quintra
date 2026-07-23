@@ -42,8 +42,8 @@ pub const BGT_COLOSSUS_RUNE: u8 = 61;
 pub const BGT_COLOSSUS_MAW: u8 = 62;
 pub const BGT_COLOSSUS_HORN: u8 = 63;
 
-pub const STAGE_START: [u8; 9] = [0, 10, 21, 34, 46, 59, 74, 88, 103];
-pub const STAGE_BOSS_ROOM: [u8; 9] = [9, 20, 32, 45, 58, 72, 87, 102, 118];
+pub const STAGE_START: [u8; 9] = [0, 14, 29, 46, 62, 79, 98, 116, 135];
+pub const STAGE_BOSS_ROOM: [u8; 9] = [13, 28, 44, 61, 78, 96, 115, 134, 154];
 
 pub type Tilemap = [[u8; ROOM_W]; ROOM_H];
 
@@ -70,24 +70,26 @@ pub fn room_kind(room_counter: u8, bosses_beaten: u8) -> RoomKind {
     let local = room_counter.saturating_sub(start);
     let size = boss_room - start + 1;
     let boss = room_counter == boss_room;
-    let miniboss = !boss && (local == 3 || (size >= 14 && local == 9));
+    let miniboss = !boss && (local == 3
+        || (size >= 14 && local == 9)
+        || (size >= 19 && local == 15));
     let shop = !boss && !miniboss && local == size - 3;
     let rest = !boss && room_counter == boss_room - 1;
     RoomKind { boss, miniboss, shop, rest }
 }
 
 fn dungeon_neighbor(local: u8, size: u8, dir: u8) -> Option<u8> {
-    let mut row = local / 4;
-    let offset = local % 4;
-    let mut col = if row & 1 != 0 { 3 - offset } else { offset };
+    let mut row = local / 5;
+    let offset = local % 5;
+    let mut col = if row & 1 != 0 { 4 - offset } else { offset };
     match dir {
         0 if row > 0 => row -= 1,
-        1 if col < 3 => col += 1,
+        1 if col < 4 => col += 1,
         2 if row < 3 => row += 1,
         3 if col > 0 => col -= 1,
         _ => return None,
     }
-    let next = row * 4 + if row & 1 != 0 { 3 - col } else { col };
+    let next = row * 5 + if row & 1 != 0 { 4 - col } else { col };
     (next < size).then_some(next)
 }
 
@@ -135,7 +137,7 @@ pub fn generate_tilemap(
         m[8][ROOM_W - 1] = BGT_DOOR;
         m[9][ROOM_W - 1] = BGT_DOOR;
 
-        // The dungeon uses the reciprocal 4x4 geography shown on the
+        // The dungeon uses the reciprocal 5x4 geography shown on the
         // cartridge Compass. Prefix cells outside the active stage are walls,
         // not four cosmetic doors that all advance one counter.
         let stage = usize::from(bosses_beaten.min(8));
@@ -389,7 +391,7 @@ pub fn generate_tilemap(
     // Mirror procgen.c's rift apron and body-width route to the central lane.
     let stage = usize::from(bosses_beaten.min(8));
     let local = room_counter.saturating_sub(STAGE_START[stage]);
-    if bosses_beaten > 0 && (local == 2 || local == 4)
+    if bosses_beaten > 0 && (local == 2 || local == 8)
     {
         let px = if seed & 4 != 0 { 5 } else { 14 };
         let py = if seed & 8 != 0 { 4 } else { 12 };
@@ -584,7 +586,7 @@ mod tests {
     #[test]
     fn nonlinear_rifts_have_a_clear_hero_footprint() {
         for seed in 0..400u32 {
-            for counter in [STAGE_START[1] + 2, STAGE_START[1] + 4] {
+            for counter in [STAGE_START[1] + 2, STAGE_START[1] + 8] {
                 let m = generate_tilemap(seed.wrapping_mul(97) + 13, 0, counter, 1, false);
                 let portal = (0..ROOM_H).flat_map(|y| (0..ROOM_W).map(move |x| (y, x)))
                     .find(|&(y, x)| m[y][x] == BGT_PORTAL)

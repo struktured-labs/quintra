@@ -11,7 +11,10 @@ local TM   = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local PZ   = tonumber(os.getenv("QUINTRA_PZ_ADDR") or "0") or 0
 local TOPOLOGY = tonumber(os.getenv("QUINTRA_MEDIA_TOPOLOGY") or "6") or 6
 local BOSS1, SHOP1, SANCTUARY1, TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS
-if TOPOLOGY >= 16 then
+if TOPOLOGY >= 20 then
+  BOSS1, SHOP1, SANCTUARY1 = 13, 11, 12
+  TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS = 45, 31, 18, 154
+elseif TOPOLOGY >= 16 then
   BOSS1, SHOP1, SANCTUARY1 = 9, 7, 8
   TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS = 33, 23, 14, 118
 elseif TOPOLOGY >= 12 then
@@ -50,8 +53,14 @@ end
 local function warp(x, y)
   clear_hostiles(); put16(PL + 9, x); put16(PL + 11, y); tick(45)
 end
-local STAGE_START = {0,10,21,34,46,59,74,88,103}
-local STAGE_BOSS = {9,20,32,45,58,72,87,102,118}
+local STAGE_START, STAGE_BOSS
+if TOPOLOGY >= 20 then
+  STAGE_START = {0,14,29,46,62,79,98,116,135}
+  STAGE_BOSS = {13,28,44,61,78,96,115,134,154}
+else
+  STAGE_START = {0,10,21,34,46,59,74,88,103}
+  STAGE_BOSS = {9,20,32,45,58,72,87,102,118}
+end
 local function stage_for_room(target)
   for i=9,1,-1 do
     if target >= STAGE_START[i] then return i - 1 end
@@ -59,8 +68,9 @@ local function stage_for_room(target)
   return 0
 end
 local function cell_xy(cell)
-  local row, offset = math.floor(cell / 4), cell % 4
-  return (row % 2 == 1) and (3 - offset) or offset, row
+  local width = (TOPOLOGY >= 20) and 5 or 4
+  local row, offset = math.floor(cell / width), cell % width
+  return (row % 2 == 1) and (width - 1 - offset) or offset, row
 end
 local function enter_room(target)
   -- Deterministic developer-media setup: arrange the current room's real
@@ -166,7 +176,8 @@ if MODE == "gif" then
   -- Enter the real opening colossus through a live door and spend the reel's
   -- main action beat on its screen-scale BG body + vulnerable OBJ heart.
   put16(RS + 23, (emu:read8(RS + 23) | (emu:read8(RS + 24) << 8)) | 1)
-  emu:write8(RS + 27, emu:read8(RS + 27) | 8)
+  emu:write8(RS + 27, emu:read8(RS + 27) | 0x88)
+  emu:write8(RS + 28, emu:read8(RS + 28) | 0x80)
   if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
   -- Hold the firing lane for the reel. The boss still animates and attacks,
   -- while avoiding needless whole-sprite churn in every GIF delta frame.
@@ -230,7 +241,7 @@ hold(KEY_A, 2); tick(60); shot("shot_dungeon")
 hold(KEY_START, 2); tick(30); shot("shot_pack")
 hold(KEY_B, 2); tick(20)
 
--- Current 4x4 Spirit Compass, including the discovered nonlinear rift
+-- Current dungeon Spirit Compass, including the discovered nonlinear rift
 -- edge used from dungeon two onward.
 local prior_room = room()
 local prior_bosses = emu:read8(RS + 11)
@@ -289,7 +300,8 @@ tick(45); shot("shot_village")
 -- Stage boss (room 9): giant + HUD bar mid-fight
 emu:write8(RS + 11, 0)
 put16(RS + 23, (emu:read8(RS + 23) | (emu:read8(RS + 24) << 8)) | 1)
-emu:write8(RS + 27, emu:read8(RS + 27) | 8)
+emu:write8(RS + 27, emu:read8(RS + 27) | 0x88)
+emu:write8(RS + 28, emu:read8(RS + 28) | 0x80)
 if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
 tick(50)                       -- entry drama resolves, boss opens fire
 hold(KEY_A|KEY_UP, 40)         -- trade some shots for the action shot

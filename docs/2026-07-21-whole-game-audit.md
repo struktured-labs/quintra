@@ -1,5 +1,28 @@
 # Quintra whole-game audit — updated 2026-07-23
 
+## v0.18.60 wider-stage response
+
+Human playtesting still found the 10–16-room campaign compact. The nine-stage
+ramp is now 14, 15, 16, 16, 17, 18, 18, 19, and 20 rooms including each boss:
+153 dungeon screens in a successful run. Dungeons use a reciprocal 5×4 graph,
+and the Compass exposes all active nodes and possible cardinal links in dim
+ink before visited rooms and traversed links brighten. Rooms 2 and 8 own the
+farther nonlinear Rift Well pair.
+
+All stages now carry the full Sigil → Warden Boon → Waystone → Deep Warden
+fixture chain; the 19- and 20-room routes add a third miniboss. A west-entry
+Rift Well regression exposed both a severed 12px-body route and stale
+reachability metadata. Rift rooms now reserve a full central cross, rendered
+tilemaps sanitize scratch bits after puzzle authoring, and authoritative
+collision masks the same metadata. v0.18.58/v0.18.59 suspend saves migrate to
+equivalent stages and thresholds rather than being invalidated.
+
+Stage-authored terrain now also owns a dedicated local-room-four landmark.
+This preserves full grove, gauntlet, vault, mire, keep, temple, blood-sigil,
+and void silhouettes away from the safety apron carved around Rift Wells,
+giving the wider routes another strong spatial identity instead of padding
+their room count with only generic layouts.
+
 ## v0.18.58 dungeon-depth response
 
 The nine-stage ramp remains 10, 11, 12, 12, 13, 14, 14, 15, and 16 rooms

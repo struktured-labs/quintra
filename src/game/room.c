@@ -221,7 +221,16 @@ static void room_apply_colossal_arena(void) {
 }
 
 static void room_prepare_puzzle_role(void) {
+    u8 x, y;
     puzzle_prepare_room();
+    // Reachability uses bit 7 as scratch metadata while procgen chooses legal
+    // enemy cells. Puzzle preparation is the final tilemap authoring step
+    // before every full draw or streamed slide, so sanitize here as a hard
+    // rendering/collision boundary even if an earlier banked cleanup was
+    // interrupted. Tile ids 128..255 are never legal room terrain.
+    for (y = 0; y < ROOM_H; ++y)
+        for (x = 0; x < ROOM_W; ++x)
+            room_tilemap[y][x] &= 0x7F;
     room_combat_sealed = (room_puzzle_kind != PUZZLE_NONE)
         ? 0 : puzzle_combat_seal_policy();
 }
@@ -424,7 +433,10 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
         if (tx >= ROOM_W || ty >= ROOM_H) return BGT_WALL;
-        return room_tilemap[ty][tx];
+        // Bit 7 is generator-only reachability scratch. Room preparation
+        // clears it before rendering, but collision must remain correct even
+        // if a later diagnostic/placement pass marks the same WRAM tile.
+        return (u8)(room_tilemap[ty][tx] & 0x7F);
     }
 }
 
@@ -1838,7 +1850,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             } else {
                 u8 base = run_state_stage_start(run_state.bosses_beaten);
                 u8 local = run_state_dungeon_local();
-                run_state.room_counter = (u8)(base + ((local == 2) ? 4 : 2));
+                run_state.room_counter = (u8)(base + ((local == 2) ? 8 : 2));
             }
             // A rift/stair is not a cardinal doorway. Pretending it came
             // through a random edge can spawn the hero on a destination's

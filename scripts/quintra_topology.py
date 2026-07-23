@@ -1,8 +1,9 @@
 """Shared developer-side mirror of Quintra's cartridge campaign topology."""
 
-STAGE_START = (0, 10, 21, 34, 46, 59, 74, 88, 103)
-STAGE_BOSS_ROOM = (9, 20, 32, 45, 58, 72, 87, 102, 118)
-VILLAGE_ROOM = {3: 33, 6: 73}
+GRID_W, GRID_H = 5, 4
+STAGE_START = (0, 14, 29, 46, 62, 79, 98, 116, 135)
+STAGE_BOSS_ROOM = (13, 28, 44, 61, 78, 96, 115, 134, 154)
+VILLAGE_ROOM = {3: 45, 6: 97}
 
 
 def dungeon_size(stage: int) -> int:
@@ -14,9 +15,9 @@ def dungeon_local(room: int, stage: int) -> int:
 
 
 def dungeon_cell_xy(cell: int) -> tuple[int, int]:
-    """Return the displayed 4x4 snake coordinate for one local room cell."""
-    row, offset = divmod(cell, 4)
-    return ((3 - offset) if row & 1 else offset), row
+    """Return the displayed 5x4 snake coordinate for one local room cell."""
+    row, offset = divmod(cell, GRID_W)
+    return ((GRID_W - 1 - offset) if row & 1 else offset), row
 
 
 def dungeon_neighbor(cell: int, size: int, direction: int) -> int | None:
@@ -30,10 +31,10 @@ def dungeon_neighbor(cell: int, size: int, direction: int) -> int | None:
         row += 1
     elif direction == 3:
         col -= 1
-    if not (0 <= col < 4 and 0 <= row < 4):
+    if not (0 <= col < GRID_W and 0 <= row < GRID_H):
         return None
-    offset = (3 - col) if row & 1 else col
-    neighbor = row * 4 + offset
+    offset = (GRID_W - 1 - col) if row & 1 else col
+    neighbor = row * GRID_W + offset
     return neighbor if neighbor < size else None
 
 

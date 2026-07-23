@@ -87,8 +87,8 @@ def main() -> None:
     for i in range(32 * 28):
         pb.memory[entities + i] = 0
     pb.memory[sealed] = 0
-    # Local 7 sits immediately north of the opening sanctuary at local 8.
-    source, sanctuary = 7, 8
+    # Local 11 sits immediately west of the opening sanctuary at local 12.
+    source, sanctuary = 11, 12
     approach = dungeon_direction(source, sanctuary)
     pb.memory[rs + 1] = STAGE_START[0] + source
     pb.memory[rs + 6] = 0xFF

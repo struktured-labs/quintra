@@ -114,7 +114,7 @@
 #define BGT_AREA_K 88
 #define BGT_AREA_O 89
 
-// Compass-only nonlinear edge. Rooms 2 and 4 in later dungeons are joined by
+// Compass-only nonlinear edge. Rooms 2 and 8 in later dungeons are joined by
 // a rift well in addition to the ordinary walking route; the map draws this
 // violet diagonal only as each endpoint is discovered.
 #define BGT_MAP_RIFT    90
@@ -131,6 +131,12 @@
 #define BGT_WILD_WATER   97 // solid pond edge / streamlet
 #define BGT_WILD_STONE   98 // solid weathered standing stone
 #define BGT_WILD_STUMP   99 // solid old-growth stump
+
+// Compass-only dim connections. These expose the active dungeon lattice from
+// the first visit while discovered routes overwrite them with the bright
+// path tiles above. Slots 100–101 are otherwise unused by every map atlas.
+#define BGT_MAP_PATH_H_DIM 100
+#define BGT_MAP_PATH_V_DIM 101
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0

@@ -3,16 +3,16 @@
 
 run_state_t run_state;
 
-// Total screens include the boss arena. Ten rooms gives the opening dungeon
-// enough space to establish an entry, puzzle, Sigil, miniboss, shop, and
-// sanctuary without feeling like a corridor. The campaign then grows toward
-// a sixteen-room Void dungeon. Villages own explicit counters 33 and 73 and
+// Total screens include the boss arena. Fourteen rooms gives the opening
+// dungeon enough space to establish an entry, puzzle, Sigil, miniboss, shop,
+// sanctuary, and genuine exploration between them. The campaign then grows
+// toward a twenty-room Void dungeon. Villages own explicit counters 45 and 97 and
 // never shorten the next dungeon by occupying a global modulo sequence.
 static const u8 stage_start[BOSSES_TO_WIN] = {
-    0, 10, 21, 34, 46, 59, 74, 88, 103
+    0, 14, 29, 46, 62, 79, 98, 116, 135
 };
 static const u8 stage_boss_room[BOSSES_TO_WIN] = {
-    9, 20, 32, 45, 58, 72, 87, 102, 118
+    13, 28, 44, 61, 78, 96, 115, 134, 154
 };
 
 static u8 campaign_stage(u8 stage) {
@@ -64,7 +64,8 @@ u8 run_state_is_miniboss(void) {
     u8 local = run_state_dungeon_local();
     return (!run_state.world_mode && !run_state_is_boss_room()
         && (local == 3
-            || (run_state_dungeon_size() >= 14 && local == 9))) ? 1 : 0;
+            || (run_state_dungeon_size() >= 14 && local == 9)
+            || (run_state_dungeon_size() >= 19 && local == 15))) ? 1 : 0;
 }
 
 u8 run_state_is_shop(void) {
@@ -74,7 +75,7 @@ u8 run_state_is_shop(void) {
 }
 
 u8 run_state_room_is_town(u8 room_counter) {
-    return (room_counter == 33 || room_counter == 73) ? 1 : 0;
+    return (room_counter == 45 || room_counter == 97) ? 1 : 0;
 }
 
 void run_state_clear(void) {
@@ -102,6 +103,8 @@ void run_state_clear(void) {
     run_state.dungeon_phase = 0;
     run_state.dungeon_seen_hi = 0;
     run_state.next_dungeon_reveal_hi = 0;
+    run_state.dungeon_seen_xhi = 0;
+    run_state.next_dungeon_reveal_xhi = 0;
 }
 
 void run_state_init(u32 seed) {
@@ -116,24 +119,25 @@ u8 run_state_dungeon_cell(void) {
 
 u8 run_state_dungeon_neighbor(u8 dir) {
     u8 local = run_state_dungeon_local();
-    u8 row = (u8)(local >> 2);
-    u8 offset = (u8)(local & 3);
-    u8 col = (row & 1) ? (u8)(3 - offset) : offset;
+    u8 row = (u8)(local / DUNGEON_GRID_W);
+    u8 offset = (u8)(local % DUNGEON_GRID_W);
+    u8 col = (row & 1) ? (u8)((DUNGEON_GRID_W - 1) - offset) : offset;
     u8 next;
     if (dir == DIR_N) {
         if (row == 0) return 0xFF;
         row--;
     } else if (dir == DIR_E) {
-        if (col == 3) return 0xFF;
+        if (col == DUNGEON_GRID_W - 1) return 0xFF;
         col++;
     } else if (dir == DIR_S) {
-        if (row == 3) return 0xFF;
+        if (row == DUNGEON_GRID_H - 1) return 0xFF;
         row++;
     } else if (dir == DIR_W) {
         if (col == 0) return 0xFF;
         col--;
     } else return 0xFF;
-    next = (u8)((row << 2) + ((row & 1) ? (3 - col) : col));
+    next = (u8)(row * DUNGEON_GRID_W
+        + ((row & 1) ? ((DUNGEON_GRID_W - 1) - col) : col));
     if (next >= run_state_dungeon_size()) return 0xFF;
     return (u8)(run_state_stage_start(run_state.bosses_beaten) + next);
 }
@@ -141,14 +145,18 @@ u8 run_state_dungeon_neighbor(u8 dir) {
 u8 run_state_dungeon_cell_seen(u8 cell) {
     if (cell < 8) return (run_state.dungeon_seen & (u8)(1u << cell)) ? 1 : 0;
     if (cell < MAX_DUNGEON_CELLS)
-        return (run_state.dungeon_seen_hi & (u8)(1u << (cell - 8))) ? 1 : 0;
+        return cell < 16
+            ? ((run_state.dungeon_seen_hi & (u8)(1u << (cell - 8))) ? 1 : 0)
+            : ((run_state.dungeon_seen_xhi & (u8)(1u << (cell - 16))) ? 1 : 0);
     return 0;
 }
 
 void run_state_reveal_dungeon_cell(u8 cell) {
     if (cell < 8) run_state.dungeon_seen |= (u8)(1u << cell);
-    else if (cell < MAX_DUNGEON_CELLS)
+    else if (cell < 16)
         run_state.dungeon_seen_hi |= (u8)(1u << (cell - 8));
+    else if (cell < MAX_DUNGEON_CELLS)
+        run_state.dungeon_seen_xhi |= (u8)(1u << (cell - 16));
 }
 
 void run_state_mark_visited(void) {
@@ -174,8 +182,10 @@ void run_state_begin_dungeon(void) {
     // blessing was silently erased during the transition.
     run_state.dungeon_seen = run_state.next_dungeon_reveal;
     run_state.dungeon_seen_hi = run_state.next_dungeon_reveal_hi;
+    run_state.dungeon_seen_xhi = run_state.next_dungeon_reveal_xhi;
     run_state.next_dungeon_reveal = 0;
     run_state.next_dungeon_reveal_hi = 0;
+    run_state.next_dungeon_reveal_xhi = 0;
     run_state.dungeon_puzzles = 0;
     run_state.dungeon_phase = 0;
 }

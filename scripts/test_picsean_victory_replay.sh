@@ -17,11 +17,11 @@ TRACE="$TRACE_DIR/run-4-class-3-1.trace"
 RESULT="$TMP/replay.result"
 MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
 # `run_init_enter()` samples the next loop frame. This target produces the
-# known-clear Picsean world on the current ROM (run_seed 2064129883).
-# Its final-Sigil crawler uses the public Tidal Wave edge-lane policy before
-# the route continues through the ninth boss and ending.
-TARGET_FRAME="${QUINTRA_VICTORY_TARGET_FRAME:-1040}"
-EXPECTED_SEED="${QUINTRA_VICTORY_EXPECTED_SEED:-2064129883}"
+# known-clear Picsean world on the wider 14--20-room campaign
+# (run_seed 2064128163). Its controller-only route spans the 153-screen
+# campaign, both villages, and the Riftwilds before the ninth boss and ending.
+TARGET_FRAME="${QUINTRA_VICTORY_TARGET_FRAME:-1000}"
+EXPECTED_SEED="${QUINTRA_VICTORY_EXPECTED_SEED:-2064128163}"
 # Collision prediction avoids abandoning a valid route for a projectile whose
 # lane never intersects the actual 6x6 hurtbox. It changes controller input
 # only; the cartridge's Easy assist, enemies, procgen, and bosses remain real.

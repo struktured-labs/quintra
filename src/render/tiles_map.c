@@ -44,6 +44,17 @@ static const u8 bgt_map_unknown[16] = {
     0x7E,0x00, 0x42,0x00, 0x42,0x00, 0x42,0x00,
     0x42,0x00, 0x42,0x00, 0x42,0x00, 0x7E,0x00
 };
+// Same geometry as the bright connections, but only bitplane zero is set.
+// The Compass palette renders these as subdued planning lines until both
+// endpoint rooms have actually been explored.
+static const u8 bgt_map_path_h_dim[16] = {
+    0x00,0x00, 0x00,0x00, 0x00,0x00, 0xFF,0x00,
+    0xFF,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00
+};
+static const u8 bgt_map_path_v_dim[16] = {
+    0x18,0x00, 0x18,0x00, 0x18,0x00, 0x18,0x00,
+    0x18,0x00, 0x18,0x00, 0x18,0x00, 0x18,0x00
+};
 
 // Compact all-caps legend alphabet: YOU / SIGIL / BOSS. Each lit pixel uses
 // color 3 so the words remain crisp against the Compass's black field.
@@ -118,4 +129,6 @@ void tiles_load_map_bg(void) BANKED {
     set_bkg_data(BGT_MAP_LABEL_T, 1, bgt_map_label_t);
     set_bkg_data(BGT_MAP_LABEL_P, 1, bgt_map_label_p);
     set_bkg_data(BGT_MAP_UNKNOWN, 1, bgt_map_unknown);
+    set_bkg_data(BGT_MAP_PATH_H_DIM, 1, bgt_map_path_h_dim);
+    set_bkg_data(BGT_MAP_PATH_V_DIM, 1, bgt_map_path_v_dim);
 }

@@ -55,7 +55,7 @@ def main():
 
     def right_door():
         # Local 1 -> 2 and the first three sanctuary -> boss edges all run
-        # east in the reciprocal 4x4 graph.
+        # east in the reciprocal 5x4 graph.
         pb.memory[TM + 8 * 20 + 19] = pb.memory[TM + 9 * 20 + 19] = 3
         put16(pb, PL + 9, 144)
         put16(pb, PL + 11, 60)
@@ -162,16 +162,16 @@ def main():
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    # The 4x4 compass gives each dungeon room one glyph. Opening-stage fixture
-    # room 2 is node two at (12, 3); its nearby diagonal remains empty because
+    # The 5x4 Compass gives each dungeon room one glyph. Opening-stage fixture
+    # room 2 is node two at (9, 3); its nearby diagonal remains empty because
     # the tutorial dungeon intentionally has no nonlinear rift.
-    assert pb.memory[bg + 3 * 32 + 12] == 52, \
+    assert pb.memory[bg + 3 * 32 + 9] == 52, \
         "found Sigil lacks its dedicated glyph in the fixture room"
-    assert pb.memory[bg + 3 * 32 + 17] == 51, \
+    assert pb.memory[bg + 3 * 32 + 13] == 51, \
         "claimed Sigil did not reveal the amber Warden objective"
-    assert pb.memory[bg + 4 * 32 + 13] == 0, \
+    assert pb.memory[bg + 4 * 32 + 10] == 0, \
         "Sigil still uses the misleading floating map marker"
-    assert pb.memory[bg + 9 * 32 + 7] == 95, \
+    assert pb.memory[bg + 9 * 32 + 13] == 95, \
         "unseen boss slot lost its dim identity-free placeholder"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")
@@ -180,8 +180,8 @@ def main():
     assert pb.memory[SCREEN] == 5
 
     # The Sigil reveals the Warden but does not replace its trial. The exact
-    # same sanctuary threshold remains closed until local room 3's boon bit
-    # is earned, then admits the hero without requiring another room reload.
+    # same sanctuary threshold remains closed until local room 3's boon bit,
+    # the room-7 Waystone, and the deep Warden are earned in sequence.
     clear_entities()
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[RS + 6] = 0xFF
@@ -192,10 +192,17 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
         "claimed Sigil bypassed the missing Warden Boon"
     pb.memory[RS + RS_PUZZLES] |= 1 << 3
-    for _ in range(45):
-        pb.tick()
+    pb.tick(8)
+    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
+        "roomier opening route ignored the missing Waystone"
+    pb.memory[RS + RS_PUZZLES] |= 1 << 7
+    pb.tick(8)
+    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
+        "roomier opening route ignored the missing deep Warden"
+    pb.memory[RS + 28] |= 1 << 7
+    pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \
-        "Sigil plus Warden Boon did not unlock boss threshold"
+        "complete opening route did not unlock boss threshold"
 
     # The invariant repeats for every dungeon, not just the opening one.
     # Simulate a boss-1 clear, take local room 1 south into local room 2, and make
@@ -230,12 +237,14 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1] - 1, \
         "stage-two sanctuary ignored missing Sigil"
     pb.memory[RS + RS_SIGILS] |= 2
+    pb.memory[RS + RS_PUZZLES] = (1 << 3) | (1 << 7)
+    pb.memory[RS + 28] |= 1 << 7
     for _ in range(45):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1], \
         "stage-two Sigil did not unlock its boss"
 
-    # Twelve-room stages make their existing local-room-7 puzzle a required
+    # Roomier stages make their existing local-room-7 puzzle a required
     # Waystone. This lengthens the meaningful route instead of adding filler.
     clear_entities()
     pb.memory[RS + RS_BOSSES] = 2
@@ -243,18 +252,18 @@ def main():
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] |= 1 << 2
     pb.memory[RS + RS_PUZZLES] = 1 << 3
-    pb.memory[RS + 28] = 0
+    pb.memory[RS + 28] = 1 << 7
     pb.memory[SEALED] = 0
     boss_door(2)
     pb.tick(8)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[2] - 1, \
-        "twelve-room sanctuary ignored missing Waystone"
+        "roomier sanctuary ignored missing Waystone"
     pb.memory[RS + RS_PUZZLES] |= 1 << 7
     pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[2], \
-        "completed Waystone did not unlock twelve-room boss"
+        "completed Waystone did not unlock the isolated route gate"
 
-    # Fourteen-room stages additionally require the existing room-9 Warden.
+    # The existing room-9 Warden is independently required.
     clear_entities()
     pb.memory[RS + RS_BOSSES] = 5
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[5] - 1
@@ -294,7 +303,7 @@ def main():
         for i in range(32)
     ) == 1, "stage-three Rift Sigil was not spawned exactly once"
 
-    # The same room carries the nonlinear rift to local room 4. Its bright
+    # The same room carries the nonlinear rift to local room 8. Its bright
     # tile alone is not enough: the feet-box needs a full 2x2 walkable path
     # from the actual entry point, or a player can see a mandatory route that
     # cannot be entered. Flood the real WRAM tilemap at hero-footprint scale.
@@ -306,7 +315,7 @@ def main():
 
     def body_open(x, y):
         return (0 <= x < 19 and 0 <= y < 16 and
-                all(pb.memory[TM + yy * 20 + xx] in walkable
+                all((pb.memory[TM + yy * 20 + xx] & 0x7F) in walkable
                     for xx, yy in ((x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1))))
 
     start = ((pb.memory[PL + 9] + 2) // 8, (pb.memory[PL + 11] + 8) // 8)

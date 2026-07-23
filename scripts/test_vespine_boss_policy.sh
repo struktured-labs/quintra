@@ -9,10 +9,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-vespine-boss.XXXXXX)"
 
-QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_CLASSES=4 \
-  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=45 \
-  QUINTRA_MGBA_SAVE_DIR="${OUT}.save" QUINTRA_BALANCE_OUT="$OUT" \
-  bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
+for replay in '1 440 2064128755' '2 540 2064128343' '3 400 2064128731'; do
+  read -r run frame seed <<EOF
+$replay
+EOF
+  QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=4 \
+    QUINTRA_BALANCE_TARGET_FRAME="$frame" \
+    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=60 \
+    QUINTRA_MGBA_SAVE_DIR="${OUT}.save" QUINTRA_BALANCE_OUT="$OUT" \
+    QUINTRA_BALANCE_APPEND=1 QUINTRA_BALANCE_SKIP_REPORT=1 \
+    bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
+done
 
 awk -F, '
   NR == 1 {
@@ -21,10 +28,13 @@ awk -F, '
   }
   {
     rows++
+    if ($(col["seed"]) != (NR == 2 ? 2064128755 : NR == 3 ? 2064128343 : 2064128731))
+      wrong_seed = 1
     bosses += $(col["bosses"])
   }
   END {
     if (rows != 3) { print "[vespine-boss] missing paired rows" > "/dev/stderr"; exit 1 }
+    if (wrong_seed) { print "[vespine-boss] fixed controller world drifted" > "/dev/stderr"; exit 1 }
     if (bosses < 2) { print "[vespine-boss] classwise policy cleared fewer than two bosses" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"

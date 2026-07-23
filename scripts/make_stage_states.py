@@ -36,6 +36,7 @@ SCREEN_ROOM = 5
 DIR_NONE = 0xFF
 BLANK_SRAM_BYTES = 32 * 1024
 CHAMPIONS = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
+DUNGEON_GRID_W = 5
 
 
 def select_rom_topology(rom: Path) -> None:
@@ -45,14 +46,16 @@ def select_rom_topology(rom: Path) -> None:
     one is produced. Presence of the new topology helper in that ROM's linker
     symbols is stronger evidence than source version text.
     """
-    global STAGE_START, STAGE_BOSS_ROOM, VILLAGE_ROOM
+    global STAGE_START, STAGE_BOSS_ROOM, VILLAGE_ROOM, DUNGEON_GRID_W
     symbols = rom.with_suffix(".noi").read_text()
     image = rom.read_bytes()
     if "DEF _run_state_boss_room " not in symbols:
+        DUNGEON_GRID_W = 1
         STAGE_START = (0, 7, 13, 20, 25, 31, 38, 43, 49)
         STAGE_BOSS_ROOM = (6, 12, 18, 24, 30, 36, 42, 48, 54)
         VILLAGE_ROOM = {3: 19, 6: 37}
     elif b"v0.18.55" in image:
+        DUNGEON_GRID_W = 4
         # v0.18.55 introduced explicit topology and the wide Compass, then
         # the next milestone enlarged that topology again after playtesting.
         # The mandatory pre-link checkpoint pass must still understand the
@@ -62,6 +65,13 @@ def select_rom_topology(rom: Path) -> None:
         STAGE_START = (0, 7, 15, 25, 34, 44, 55, 66, 77)
         STAGE_BOSS_ROOM = (6, 14, 23, 33, 43, 53, 65, 76, 88)
         VILLAGE_ROOM = {3: 24, 6: 54}
+    elif b"v0.18.58" in image or b"v0.18.59" in image:
+        DUNGEON_GRID_W = 4
+        # Last released/development 4x4 ROMs. The mandatory pre-link state
+        # pass runs against them before v0.18.60's 5x4 source can be linked.
+        STAGE_START = (0, 10, 21, 34, 46, 59, 74, 88, 103)
+        STAGE_BOSS_ROOM = (9, 20, 32, 45, 58, 72, 87, 102, 118)
+        VILLAGE_ROOM = {3: 33, 6: 73}
 
 
 def sha256(path: Path) -> str:
@@ -101,8 +111,8 @@ def stage_entry_room(stage: int) -> int:
 
 
 def dungeon_cell_xy(cell: int) -> tuple[int, int]:
-    row, offset = divmod(cell, 4)
-    return ((3 - offset) if row & 1 else offset), row
+    row, offset = divmod(cell, DUNGEON_GRID_W)
+    return (((DUNGEON_GRID_W - 1 - offset) if row & 1 else offset), row)
 
 
 def graph_direction(source: int, target: int) -> str:

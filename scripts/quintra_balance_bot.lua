@@ -11,8 +11,8 @@ local VOID_SAFE_X, VOID_SAFE_Y = {20, 124, 20, 124}, {20, 20, 100, 100}
 -- Per-screen shortest authored exit toward dungeon gate screen 6; 4 means
 -- use the central staircase rather than a boundary door.
 local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
-local STAGE_START = {0, 10, 21, 34, 46, 59, 74, 88, 103}
-local STAGE_BOSS = {9, 20, 32, 45, 58, 72, 87, 102, 118}
+local STAGE_START = {0, 14, 29, 46, 62, 79, 98, 116, 135}
+local STAGE_BOSS = {13, 28, 44, 61, 78, 96, 115, 134, 154}
 
 function dungeon_local(room, stage)
     local index = math.min(stage, 8) + 1
@@ -26,14 +26,14 @@ function dungeon_size(stage)
 end
 
 function dungeon_neighbor_local(cell, size, dir)
-    local row, offset = math.floor(cell / 4), cell % 4
-    local col = (row % 2 == 1) and (3 - offset) or offset
+    local row, offset = math.floor(cell / 5), cell % 5
+    local col = (row % 2 == 1) and (4 - offset) or offset
     if dir == 0 then row = row - 1
     elseif dir == 1 then col = col + 1
     elseif dir == 2 then row = row + 1
     elseif dir == 3 then col = col - 1 end
-    if row < 0 or row > 3 or col < 0 or col > 3 then return nil end
-    local next_cell = row * 4 + ((row % 2 == 1) and (3 - col) or col)
+    if row < 0 or row > 3 or col < 0 or col > 4 then return nil end
+    local next_cell = row * 5 + ((row % 2 == 1) and (4 - col) or col)
     return next_cell < size and next_cell or nil
 end
 
@@ -56,7 +56,7 @@ function dungeon_route_dir(start, goal, size)
 end
 
 function is_town_room(room)
-    return room == 33 or room == 73
+    return room == 45 or room == 97
 end
 
 local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
@@ -806,11 +806,14 @@ end
 -- from the live giant. This is still ordinary D-pad input; it only prevents
 -- the controller from selecting a visibly doomed wall dash.
 function quintra_giant_body_dash_dir(px, py, target, fallback)
-    local best_key, best_clearance = fallback, -1
+    local best_key, best_clearance = nil, -1
     for _, key in ipairs({fallback, KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}) do
         local dx = key == KEY_RIGHT and 1 or key == KEY_LEFT and -1 or 0
         local dy = key == KEY_DOWN and 1 or key == KEY_UP and -1 or 0
-        local legal = true
+        local legal = not ((key == KEY_UP and py <= 7)
+            or (key == KEY_DOWN and py >= 120)
+            or (key == KEY_LEFT and px <= 7)
+            or (key == KEY_RIGHT and px >= 136))
         for step = 0, 7 do
             if not can_step(px + dx * step, py + dy * step, key) then
                 legal = false
@@ -825,7 +828,24 @@ function quintra_giant_body_dash_dir(px, py, target, fallback)
             end
         end
     end
-    return best_key
+    if best_key then return best_key end
+
+    -- A giant can pin every complete eight-pixel lane. In that emergency,
+    -- never preserve a fallback that points through the visible screen edge:
+    -- take the first legal one-pixel release and let the next recovery beat
+    -- rescore the room. This affects controller input only.
+    for _, key in ipairs({fallback, KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP}) do
+        local crosses_edge = (key == KEY_UP and py <= 7)
+            or (key == KEY_DOWN and py >= 120)
+            or (key == KEY_LEFT and px <= 7)
+            or (key == KEY_RIGHT and px >= 136)
+        if not crosses_edge and can_step(px, py, key) then return key end
+    end
+    if py <= 7 then return KEY_DOWN end
+    if py >= 120 then return KEY_UP end
+    if px <= 7 then return KEY_RIGHT end
+    if px >= 136 then return KEY_LEFT end
+    return fallback
 end
 
 -- Projectile dodges use the same ordinary eight-pixel double tap as a body
@@ -1688,7 +1708,7 @@ function door_step(px, py)
     local back = entered ~= 255 and ((entered + 2) % 4) or 255
     local in_world = emu:read8(RS + 17) == 1
     local world_screen = emu:read8(RS + 18)
-    -- Town rooms 33 and 73 are three-screen civic hubs, not a
+    -- Town rooms 45 and 97 are three-screen civic hubs, not a
     -- symmetric dungeon. Visit the market and forge/apothecary quarter once,
     -- then take the north gate; branch screens return west to arrival.
     local in_town = not in_world and is_town_room(room)
@@ -1706,15 +1726,15 @@ function door_step(px, py)
     -- The Sigil sits in local room 2. The spatial-graph policy below routes
     -- there before selecting any Colossus threshold.
     local local_room = dungeon_local(room, emu:read8(RS + 11))
-    -- Local rooms 2 and 4 form a paired nonlinear rift.  Room 2 can skip
-    -- forward after its Sigil is collected; if the pilot skipped it, room 4
+    -- Local rooms 2 and 8 form a paired nonlinear rift. Room 2 can skip
+    -- forward after its Sigil is collected; if the pilot skipped it, room 8
     -- must take the paired rift back instead of wandering through the shop
     -- and sanctuary looking for a cardinal "back" door (portal arrivals
     -- deliberately have DIR_NONE).  This is controller-only routing over
     -- the cartridge's existing reversible fixture.
     if not in_world and ((local_room == 2 and not stage_sigil_missing()
             and not stage_warden_missing())
-        or (local_room == 4 and stage_sigil_missing())) then
+        or (local_room == 8 and stage_sigil_missing())) then
         local portal = rift_portal_step(px, py)
         if portal ~= nil then return portal end
     end
@@ -3487,7 +3507,10 @@ while frames < LIMIT do
                 dodge_dir = can_step(px, py, KEY_LEFT) and KEY_LEFT or KEY_RIGHT
             end
         end
-        if target.giant ~= 0 then
+        -- Both full stage colossi and the required Warden use the giant
+        -- entity body (kind 1). The Warden has no colossal variant byte, but
+        -- can pin the same screen edge and needs the same full-lane check.
+        if target.kind == 1 then
             dodge_dir = quintra_giant_body_dash_dir(px, py, target, dodge_dir)
         end
         dodge_phase, dodge_count = 1, dodge_count + 1

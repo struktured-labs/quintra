@@ -24,16 +24,18 @@ DUMP = ROOT / "target/release/procgen-dump"
 
 ROOM_W, ROOM_H = 20, 17
 
-# (run_seed, target_counter) — covers puzzle, Sigil, miniboss, plain, shop,
-# sanctuary, and boss roles in the ten-room opening dungeon.
+# (run_seed, target_counter) — covers puzzle, Sigil, both minibosses, plain,
+# shop, sanctuary, and boss roles in the fourteen-room opening dungeon.
 CASES = [
     (123456789, 1),
     (123456789, 2),
     (987654321, 3),
     (555555555, 4),
     (42424242, 7),
-    (42424242, 8),
-    (1337, 9),
+    (42424242, 9),
+    (42424242, 11),
+    (42424242, 12),
+    (1337, 13),
 ]
 
 
@@ -54,8 +56,8 @@ def reference(seed, counter):
 
 
 def cell_xy(cell):
-    row, offset = divmod(cell, 4)
-    return ((3 - offset) if row & 1 else offset), row
+    row, offset = divmod(cell, 5)
+    return ((4 - offset) if row & 1 else offset), row
 
 
 def graph_step(source, target):
@@ -120,9 +122,10 @@ def main():
         pb.memory[rs + 13] = 0            # secret_pending
         # Boss-room parity is about generated geometry, so satisfy the
         # player-facing progression prerequisite before crossing its threshold.
-        pb.memory[rs + 23] = 1 if counter == 9 else 0  # Rift Sigil stage bit
+        pb.memory[rs + 23] = 1 if counter == 13 else 0  # Rift Sigil stage bit
         pb.memory[rs + 24] = 0
-        pb.memory[rs + 27] = (1 << 3) if counter == 9 else 0
+        pb.memory[rs + 27] = ((1 << 3) | (1 << 7)) if counter == 13 else 0
+        pb.memory[rs + 28] = (1 << 7) if counter == 13 else 0
 
         # Cross the real reciprocal edge from the prior snake cell so the C
         # procgen runs for the requested target counter.

@@ -22,6 +22,8 @@ local PL_ADDR = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN_ADDR = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM_ADDR = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local LS_ADDR = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
+local PK_ADDR = tonumber(os.getenv("QUINTRA_PUZZLE_KIND_ADDR") or "0") or 0
+local PLK_ADDR = tonumber(os.getenv("QUINTRA_PUZZLE_LOCK_ADDR") or "0") or 0
 
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
@@ -270,6 +272,75 @@ local function solve_opening_push_seal()
     return false
 end
 
+-- Local room seven is deliberately a second mechanical beat in every wider
+-- stage. Solve either authored vocabulary through ordinary champion contact
+-- so this smoke path proves the Waystone is obtainable, not just writable.
+local function solve_waystone()
+    if TM_ADDR == 0 or PL_ADDR == 0 or PK_ADDR == 0 or PLK_ADDR == 0 then
+        return false
+    end
+    local kind = emu:read8(PK_ADDR)
+    if emu:read8(PLK_ADDR) == 0 then return true end
+    if kind == 1 then
+        for y = 1, 15 do
+            for x = 1, 18 do
+                if emu:read8(TM_ADDR + y * 20 + x) == 25 then
+                    emu:write8(PL_ADDR + 9, math.max(0, x * 8 - 16))
+                    emu:write8(PL_ADDR + 10, 0)
+                    emu:write8(PL_ADDR + 11, math.max(0, y * 8 - 8))
+                    emu:write8(PL_ADDR + 12, 0)
+                    hold(KEY_RIGHT, 120)
+                    return emu:read8(PLK_ADDR) == 0
+                end
+            end
+        end
+    elseif kind == 2 then
+        local runes = {}
+        for y = 1, 15 do
+            for x = 1, 18 do
+                if emu:read8(TM_ADDR + y * 20 + x) == 33 then
+                    table.insert(runes, {x, y})
+                end
+            end
+        end
+        local orders = {
+            {1, 2, 3}, {1, 3, 2}, {2, 1, 3},
+            {2, 3, 1}, {3, 1, 2}, {3, 2, 1},
+        }
+        for _, order in ipairs(orders) do
+            for _, index in ipairs(order) do
+                local rune = runes[index]
+                if rune then
+                    emu:write8(PL_ADDR + 9, rune[1] * 8 - 8)
+                    emu:write8(PL_ADDR + 10, 0)
+                    emu:write8(PL_ADDR + 11, rune[2] * 8 - 12)
+                    emu:write8(PL_ADDR + 12, 0)
+                    tick(3)
+                    emu:write8(PL_ADDR + 9, 72)
+                    emu:write8(PL_ADDR + 10, 0)
+                    emu:write8(PL_ADDR + 11, 92)
+                    emu:write8(PL_ADDR + 12, 0)
+                    tick(3)
+                end
+                if emu:read8(PLK_ADDR) == 0 then return true end
+            end
+        end
+    end
+    return emu:read8(PLK_ADDR) == 0
+end
+
+-- This deterministic reachability runner clears combat entities. Mirror the
+-- deep Warden's normal death reward only after visibly reaching its authored
+-- chamber; controller-only combat tests own the real kill/reward contract.
+local function record_deep_warden_boon()
+    if RS_ADDR == 0 or room_counter() ~= 9 then return false end
+    local phase = emu:read8(RS_ADDR + 28)
+    if math.floor(phase / 128) % 2 == 0 then
+        emu:write8(RS_ADDR + 28, phase + 128)
+    end
+    return true
+end
+
 -- Boot
 tick(120); shot("01_title")
 tap(KEY_START); tick(40); shot("02_class_select")
@@ -283,18 +354,25 @@ tap(KEY_DOWN); tick(15)  -- wraps back to Wolfkin
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
 -- Opening graph route:
--- 0 → 1 → 2 (Sigil) → 3 (Warden) → 4 → 5 → 6 → 9 (boss).
--- This deliberately turns south and west instead of treating the compact
--- 4x4 dungeon as the retired linear room-counter corridor.
+-- 0 → 1 → 2 (Sigil) → 3 (Warden) → 4 → 5 → 6 → 7 → 8 → 9
+--   → 10 → 11 → 12 → 13 (boss).
+-- Follow the full 5x4 snake so smoke proves the wider stage is traversable
+-- instead of silently retaining the retired compact-route assumptions.
 walk_edge(1, KEY_RIGHT); shot("04_room1"); solve_opening_push_seal()
 walk_edge(2, KEY_RIGHT); collect_rift_sigil(); shot("05_room2_sigil")
 walk_edge(3, KEY_RIGHT); record_opening_warden_boon()
-walk_edge(4, KEY_DOWN)
-walk_edge(5, KEY_LEFT);  shot("06_room5_branch")
-walk_edge(6, KEY_LEFT);  shot("07_room6_threshold")
+walk_edge(4, KEY_RIGHT)
+walk_edge(5, KEY_DOWN);  shot("06_room5_branch")
+walk_edge(6, KEY_LEFT)
+walk_edge(7, KEY_LEFT); solve_waystone()
+walk_edge(8, KEY_LEFT)
+walk_edge(9, KEY_LEFT); record_deep_warden_boon(); shot("07_room9_threshold")
+walk_edge(10, KEY_DOWN)
+walk_edge(11, KEY_RIGHT)
+walk_edge(12, KEY_RIGHT)
 -- A new stage deliberately fades its palette in. Wait it out so this is a
 -- useful boss-arena capture rather than an intended near-black transition.
-walk_edge(9, KEY_DOWN); tick(36); shot("08_BOSS_room")
+walk_edge(13, KEY_RIGHT); tick(36); shot("08_BOSS_room")
 
 -- Damage the first giant through real controller shots, sampling the fight.
 assault_boss(80)

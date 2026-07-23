@@ -13,7 +13,8 @@ OUT="$(mktemp /tmp/quintra-town-continuation.XXXXXX)"
 # Keep its route stable with the coarse tester assist while Normal remains
 # covered by the dedicated boss and whole-run victory policies.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_FRAMES=30000 QUINTRA_BALANCE_HOST_TIMEOUT=90 \
+  QUINTRA_BALANCE_FRAMES=45000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
+  QUINTRA_BALANCE_TARGET_FRAME=1000 QUINTRA_BOT_THREAT_POLICY=collision \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
@@ -32,18 +33,18 @@ awk -F, '
       print "[town-continuation] did not visit both town build-choice screens" > "/dev/stderr"
       exit 1
     }
-    # The town-19 north gate enters room 20, the first room of the next
-    # dungeon. Requiring room 22 accidentally coupled this gate regression
+    # The expanded town-45 north gate enters room 46, the first room of the
+    # next dungeon. Requiring later cells would accidentally couple this gate
     # to surviving two subsequent randomized combat rooms and to whichever
     # optional weapon build the controller happened to take.
-    if ($(col["max_room"]) < 20) {
+    if ($(col["max_room"]) < 46) {
       print "[town-continuation] north gate did not continue the run" > "/dev/stderr"
       exit 1
     }
     # `max_route_frames` covers the rest of the run too. Only a prolonged
-    # dwell in room 19 is evidence that the actual town north gate failed;
+    # dwell in room 45 is evidence that the actual town north gate failed;
     # a later procedural dungeon route must not be mislabeled as this gate.
-    if ($(col["max_route_room"]) == 19 && $(col["max_route_frames"]) > 3600) {
+    if ($(col["max_route_room"]) == 45 && $(col["max_route_frames"]) > 3600) {
       print "[town-continuation] town north-gate route stall" > "/dev/stderr"
       exit 1
     }

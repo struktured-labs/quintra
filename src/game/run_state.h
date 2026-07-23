@@ -14,7 +14,9 @@ enum {
 };
 
 #define ROOMS_PER_STAGE    6   // legacy pre-topology save/reference constant
-#define MAX_DUNGEON_CELLS 16
+#define DUNGEON_GRID_W     5
+#define DUNGEON_GRID_H     4
+#define MAX_DUNGEON_CELLS 20
 #define BOSSES_TO_WIN      9   // 9 stages -> 9 large bosses to clear the run
 #define MINIBOSS_EVERY     3   // rooms 3,9,15... (that aren't stage-boss rooms)
 
@@ -80,6 +82,8 @@ typedef struct {
     u8  dungeon_phase;       // bit 0: phase wall; bit 7: deep-Warden clear
     u8  dungeon_seen_hi;     // bit 0..7: visited dungeon cells 8..15
     u8  next_dungeon_reveal_hi; // queued chart knowledge for cells 8..15
+    u8  dungeon_seen_xhi;    // bit 0..3: visited dungeon cells 16..19
+    u8  next_dungeon_reveal_xhi; // queued chart knowledge for cells 16..19
 } run_state_t;
 
 #define RUN_IS_EASY() (run_state.difficulty == DIFFICULTY_EASY)
@@ -110,7 +114,7 @@ u8   run_state_boss_room(u8 stage);
 u8   run_state_dungeon_size(void);
 u8   run_state_dungeon_local(void);
 u8   run_state_dungeon_cell(void);
-// Return the global room counter of the reciprocal 4x4 neighbour in `dir`,
+// Return the global room counter of the reciprocal 5x4 neighbour in `dir`,
 // or 0xFF when that edge leaves the active stage footprint.
 u8   run_state_dungeon_neighbor(u8 dir);
 u8   run_state_is_boss_room(void);

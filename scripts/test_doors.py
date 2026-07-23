@@ -73,10 +73,10 @@ def crosses(direction, off_center=False):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
-    # Stage three local cell five is an interior 4x4 node with all four
+    # Stage three local cell six is an interior 5x4 node with all four
     # reciprocal neighbours active. This proves cardinal geometry without
     # manufacturing exits that the graph intentionally walls off.
-    stage, cell, size = 2, 5, 12
+    stage, cell, size = 2, 6, 16
     pb.memory[RS + 11] = stage
     pb.memory[RS + 1] = STAGE_START[stage] + cell
     pb.memory[RS + 6] = 0xFF

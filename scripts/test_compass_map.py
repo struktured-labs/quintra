@@ -32,12 +32,14 @@ BGT_AREA_M = 87
 BGT_AREA_A = 84
 BGT_MAP_LABEL_P = 94
 BGT_MAP_UNKNOWN = 95
+BGT_MAP_PATH_H_DIM = 100
+BGT_MAP_PATH_V_DIM = 101
 BGT_SWITCH = 33
 
-GX = (2, 7, 12, 17, 17, 12, 7, 2,
-      2, 7, 12, 17, 17, 12, 7, 2)
-GY = (3, 3, 3, 3, 6, 6, 6, 6,
-      9, 9, 9, 9, 12, 12, 12, 12)
+GX = (1, 5, 9, 13, 17, 17, 13, 9, 5, 1,
+      1, 5, 9, 13, 17, 17, 13, 9, 5, 1)
+GY = (3, 3, 3, 3, 3, 6, 6, 6, 6, 6,
+      9, 9, 9, 9, 9, 12, 12, 12, 12, 12)
 
 
 def addr(name: str) -> int:
@@ -73,14 +75,20 @@ def main() -> None:
         pb.tick()
     assert pb.memory[screen] == SCREEN_MAP, "SELECT did not enter Spirit Compass"
 
-    # The first room is one bright glyph in the fixed 4x4 abstract lattice.
-    # This ten-room opening stage exposes nine dim destinations without
-    # leaking their identities or drawing routes through unexplored space.
+    # The first room is one bright glyph in the fixed 5x4 abstract lattice.
+    # This fourteen-room opening stage exposes thirteen dim destinations and its
+    # compressed lattice without leaking room identities. Traversed links
+    # replace these subdued planning lines with the bright path glyphs.
     assert map_tile(pb, GX[0], GY[0]) == BGT_MAP_HERE, \
         "Compass lost current-room glyph"
     assert map_tile(pb, GX[1], GY[1]) == BGT_MAP_UNKNOWN, \
         "Compass lost its dim unexplored-room slot"
-    assert map_tile(pb, 3, 3) == BGT_VOID, "Compass drew a route to unseen space"
+    assert all(map_tile(pb, x, 3) == BGT_MAP_PATH_H_DIM
+               for x in (2, 3, 4)), \
+        "Compass lost the dim unexplored horizontal lattice"
+    assert all(map_tile(pb, 1, y) == BGT_MAP_PATH_V_DIM
+               for y in (4, 5)), \
+        "Compass lost the dim unexplored vertical lattice"
     assert map_tile(pb, 0, 0) == BGT_VOID, "Compass retained text-page background"
     assert (map_tile(pb, 8, 1), map_tile(pb, 9, 1), map_tile(pb, 10, 1)) == (
         BGT_AREA_M, BGT_AREA_A, BGT_MAP_LABEL_P), \
@@ -90,9 +98,9 @@ def main() -> None:
     assert map_tile(pb, 15, 15) == BGT_MAP_BOSS, "Compass lost BOSS legend icon"
     assert map_tile(pb, 16, 15) == BGT_MAP_LABEL_B, "Compass lost BOSS legend"
     assert sum(map_tile(pb, GX[i], GY[i]) == BGT_MAP_UNKNOWN
-               for i in range(10)) == 9, \
-        "Compass did not expose the ten-slot opening lattice"
-    assert map_tile(pb, GX[10], GY[10]) == BGT_VOID, \
+               for i in range(14)) == 13, \
+        "Compass did not expose the fourteen-slot opening lattice"
+    assert map_tile(pb, GX[14], GY[14]) == BGT_VOID, \
         "opening Compass leaked an inactive late-stage node"
     pb.screen.image.save(ROOT / "tmp" / "compass-first-room.png")
 
@@ -105,15 +113,17 @@ def main() -> None:
     # connecting line before the player commits to the boss room.
     pb.memory[rs + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[rs + 20] = 0xFF
-    pb.memory[rs + 29] = 0x01
+    pb.memory[rs + 29] = 0x1F
     pb.button("select")
     for _ in range(30):
         pb.tick()
-    assert map_tile(pb, GX[8], GY[8]) == BGT_MAP_HERE, \
-        "sanctuary current marker is misplaced"
-    assert map_tile(pb, GX[9], GY[9]) == BGT_MAP_BOSS, \
+    assert map_tile(pb, GX[12], GY[12]) == BGT_MAP_HERE, \
+        (f"sanctuary current marker is misplaced: room={pb.memory[rs + 1]} "
+         f"bosses={pb.memory[rs + 11]} tile={map_tile(pb, GX[12], GY[12])} "
+         f"here={[(x, y) for y in range(15) for x in range(20) if map_tile(pb, x, y) == BGT_MAP_HERE]}")
+    assert map_tile(pb, GX[13], GY[13]) == BGT_MAP_BOSS, \
         "Compass did not hint the boss node"
-    assert all(map_tile(pb, x, 9) == BGT_MAP_PATH_H for x in (3, 4, 5, 6)), \
+    assert all(map_tile(pb, x, 9) == BGT_MAP_PATH_H for x in (10, 11, 12)), \
         "Compass did not connect sanctuary to the hinted boss"
     assert map_tile(pb, GX[2], GY[2]) == BGT_MAP_SIGIL, \
         "Compass did not place the Rift Sigil in its owning room"
@@ -121,15 +131,15 @@ def main() -> None:
         "visited room lost its square glyph"
     assert all(map_tile(pb, 17, y) == BGT_MAP_PATH_V for y in (4, 5)), \
         "Compass vertical turn is not obvious"
-    assert map_tile(pb, 1, 3) == BGT_VOID and map_tile(pb, 18, 9) == BGT_VOID, \
+    assert map_tile(pb, 0, 3) == BGT_VOID and map_tile(pb, 18, 9) == BGT_VOID, \
         "dungeon graph escaped its active lattice"
 
     # Semantic nodes must be distinguishable in the rendered CGB image, not
     # merely assigned nominally different attribute bytes that all load the
     # same palette. Each glyph's center is a color-3 pixel.
     image = pb.screen.image
-    here_rgb = image.getpixel((GX[8] * 8 + 4, GY[8] * 8 + 4))[:3]
-    boss_rgb = image.getpixel((GX[9] * 8 + 4, GY[9] * 8 + 4))[:3]
+    here_rgb = image.getpixel((GX[12] * 8 + 4, GY[12] * 8 + 4))[:3]
+    boss_rgb = image.getpixel((GX[13] * 8 + 4, GY[13] * 8 + 4))[:3]
     sigil_rgb = image.getpixel((GX[2] * 8 + 4, GY[2] * 8 + 4))[:3]
     assert len({here_rgb, boss_rgb, sigil_rgb}) == 3, (
         f"Compass semantic colors collapsed: here={here_rgb} "
@@ -138,7 +148,7 @@ def main() -> None:
     image.save(shot)
 
     # Later dungeons own a reversible nonlinear link between local rooms 2
-    # and 4. Seeing the first endpoint reveals only its violet end-cap; after
+    # and 8. Seeing the first endpoint reveals only its violet end-cap; after
     # both rooms are known, a diagonal chain describes the real teleport edge
     # without mislabeling it as a cardinal corridor.
     pb.button("b")
@@ -151,10 +161,10 @@ def main() -> None:
     pb.button("select")
     for _ in range(30):
         pb.tick()
-    assert map_tile(pb, 13, 4) == BGT_MAP_RIFT, \
+    assert map_tile(pb, 8, 4) == BGT_MAP_RIFT, \
         "Compass did not reveal the discovered rift endpoint"
     assert all(map_tile(pb, x, y) == BGT_VOID
-               for x, y in ((14, 4), (15, 5), (16, 5))), \
+               for x, y in ((7, 4), (7, 5), (6, 5))), \
         "Compass revealed an undiscovered rift destination"
     assert map_tile(pb, 7, 13) == BGT_MAP_RIFT, "Compass lost RIFT legend icon"
     assert (map_tile(pb, 8, 13), map_tile(pb, 9, 13),
@@ -166,17 +176,18 @@ def main() -> None:
     pb.button("b")
     for _ in range(30):
         pb.tick()
-    pb.memory[rs + 1] = STAGE_START[1] + 4
-    pb.memory[rs + 20] = 0x17    # cells 0, 1, 2, and 4 seen
+    pb.memory[rs + 1] = STAGE_START[1] + 8
+    pb.memory[rs + 20] = 0x07    # cells 0, 1, and 2 seen
+    pb.memory[rs + 29] = 0x01    # cell 8 seen
     pb.button("select")
     for _ in range(30):
         pb.tick()
     assert all(map_tile(pb, x, y) == BGT_MAP_RIFT
-               for x, y in ((13, 4), (14, 4), (15, 5), (16, 5))), \
+               for x, y in ((8, 4), (7, 4), (7, 5), (6, 5))), \
         "Compass did not connect both discovered rift endpoints"
     # The diamond is intentionally hollow at its exact centre; sample one of
     # its authored lit pixels rather than mistaking that hole for palette loss.
-    rift_rgb = pb.screen.image.getpixel((14 * 8 + 2, 4 * 8 + 3))[:3]
+    rift_rgb = pb.screen.image.getpixel((7 * 8 + 2, 4 * 8 + 3))[:3]
     assert rift_rgb == sigil_rgb, (
         f"rift edge lost its violet semantic color: {rift_rgb} != {sigil_rgb}")
     pb.screen.image.save(ROOT / "tmp" / "compass-rift-link.png")
@@ -213,8 +224,8 @@ def main() -> None:
     assert map_tile(pb, GX[9], GY[9]) == BGT_MAP_BOSS, \
         "completed Waystone did not reveal the deep Warden"
 
-    # The final dungeon must exercise both explored-room bytes. A fully
-    # explored sanctuary shows all sixteen cells, the high-byte current
+    # The final dungeon must exercise all three explored-room bytes. A fully
+    # explored sanctuary shows all twenty cells, the extra-byte current
     # marker, and the adjacent Void boss hint.
     pb.button("b")
     for _ in range(30):
@@ -222,20 +233,21 @@ def main() -> None:
     pb.memory[rs + 11] = 8
     pb.memory[rs + 1] = STAGE_BOSS_ROOM[8] - 1
     pb.memory[rs + 20] = 0xFF
-    pb.memory[rs + 29] = 0x7F
+    pb.memory[rs + 29] = 0xFF
+    pb.memory[rs + 31] = 0x07
     pb.button("select")
     for _ in range(30):
         pb.tick()
-    assert map_tile(pb, GX[14], GY[14]) == BGT_MAP_HERE, \
-        "high-byte sanctuary marker is misplaced"
-    assert map_tile(pb, GX[15], GY[15]) == BGT_MAP_BOSS, \
-        "sixteen-room Compass lost the final boss hint"
+    assert map_tile(pb, GX[18], GY[18]) == BGT_MAP_HERE, \
+        "extra-byte sanctuary marker is misplaced"
+    assert map_tile(pb, GX[19], GY[19]) == BGT_MAP_BOSS, \
+        "twenty-room Compass lost the final boss hint"
     assert all(map_tile(pb, GX[i], GY[i]) != BGT_MAP_UNKNOWN
-               for i in range(16)), \
-        "sixteen-room Compass failed to render explored high-byte cells"
-    pb.screen.image.save(ROOT / "tmp" / "compass-sixteen-room.png")
+               for i in range(20)), \
+        "twenty-room Compass failed to render explored extra-byte cells"
+    pb.screen.image.save(ROOT / "tmp" / "compass-twenty-room.png")
     pb.stop(save=False)
-    print(f"[compass-map] PASS 10→16 room 4x4 glyph grid + staged route cues "
+    print(f"[compass-map] PASS 14→20 room 5x4 glyph grid + staged route cues "
           f"+ semantic colors "
           f"here={here_rgb} sigil/rift={sigil_rgb} boss={boss_rgb} "
           "+ nonlinear link + high-byte exploration")
