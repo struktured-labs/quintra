@@ -14,13 +14,20 @@
 #define ROOM_W 20
 #define ROOM_H 17
 #define ROOM_VIEW_W_PX (ROOM_W * 8)
-#define ROOM_CRYSTAL_W_TILES 28
-#define ROOM_CRYSTAL_W_PX (ROOM_CRYSTAL_W_TILES * 8)
+#define ROOM_WIDE_W_TILES 28
+#define ROOM_WIDE_W_PX (ROOM_WIDE_W_TILES * 8)
+#define ROOM_WIDE_EXT_TILES (ROOM_WIDE_W_TILES - ROOM_W)
+#define ROOM_CRYSTAL_W_TILES ROOM_WIDE_W_TILES
+#define ROOM_CRYSTAL_W_PX ROOM_WIDE_W_PX
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
+// The compact 20x17 map remains ABI-stable for existing tooling. Scrolling
+// Riftwild fields keep their authored columns 20..27 in a separate strip so
+// collision, renderer, and controller instrumentation share the same terrain.
+extern u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
 // World-space contract shared by collision, projectiles, OBJ projection, and
-// emulator instrumentation. Ordinary rooms are 160 px; Crystal's proving
-// arena is 224 px with a bounded 0..64 px camera.
+// emulator instrumentation. Ordinary rooms are 160 px; Riftwild fields and
+// Crystal's proving arena are 224 px with a bounded 0..64 px camera.
 extern u8 room_world_width;
 extern u8 room_camera_x;
 extern u8 room_transform_ticks;

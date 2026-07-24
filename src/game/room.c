@@ -32,6 +32,7 @@
 BANKREF(room_enter)
 
 u8 room_tilemap[ROOM_H][ROOM_W];
+u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
 u8 room_world_width = ROOM_VIEW_W_PX;
 u8 room_camera_x;
 
@@ -172,8 +173,14 @@ static u8 room_stage(void) {
 static void room_apply_colossal_arena(void) {
     // Generation always returns to the one-screen contract first. The pack
     // resume path skips this function, preserving a live wide-arena camera.
-    room_world_width = ROOM_VIEW_W_PX;
-    room_camera_x = 0;
+    room_world_width = run_state.world_mode ? ROOM_WIDE_W_PX : ROOM_VIEW_W_PX;
+    // Entering a wide Riftwild cell from its eastern neighbour must reveal
+    // the arrival immediately. Starting SCX at zero would park the hero 64px
+    // beyond the viewport until the follow camera caught up.
+    room_camera_x = (run_state.world_mode
+        && run_state.entered_from == DIR_W)
+        ? (ROOM_WIDE_W_PX - ROOM_VIEW_W_PX) : 0;
+    if (run_state.world_mode) return;
     if (!procgen_current_room_is_boss) return;
     if (room_stage() == 0) {
         room_world_width = ROOM_CRYSTAL_W_PX;
@@ -436,43 +443,6 @@ static const u16 coin_palette[4] = {
     BGR555(31, 31, 14),
 };
 
-u8 room_tile_at_px(i16 px, i16 py) BANKED {
-    if (px < 0 || py < 0) return BGT_WALL;
-    {
-        u8 tx = (u8)(px >> 3);
-        u8 ty = (u8)(py >> 3);
-        if (ty >= ROOM_H) return BGT_WALL;
-        if (tx >= ROOM_W) {
-            if (room_world_width <= ROOM_VIEW_W_PX
-                || tx >= ROOM_CRYSTAL_W_TILES) return BGT_WALL;
-            // The far east threshold replaces the obsolete viewport seam
-            // after Crystal falls. Before then it remains a real arena wall.
-            if (tx == ROOM_CRYSTAL_W_TILES - 1) {
-                if ((ty == 8 || ty == 9) && run_state_was_cleared_boss())
-                    return BGT_DOOR;
-                return BGT_WALL;
-            }
-            if (ty == 0 || ty == ROOM_H - 1) return BGT_WALL;
-            // Extension projection tiles are visual, walkable spirit-space.
-            return BGT_FLOOR;
-        }
-        // Bit 7 is generator-only reachability scratch. Room preparation
-        // clears it before rendering, but collision must remain correct even
-        // if a later diagnostic/placement pass marks the same WRAM tile.
-        return (u8)(room_tilemap[ty][tx] & 0x7F);
-    }
-}
-
-u8 room_tile_walkable(u8 t) BANKED {
-    return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
-         || t == BGT_GRASS || t == BGT_PATH || t == BGT_WILD_FLOWER
-         || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES
-         || t == BGT_SWITCH || t == BGT_PORTAL
-         || (t >= BGT_COLOSSUS_VOID && t <= BGT_COLOSSUS_HORN)
-         // Shop price tags are painted floor (coin glyph + digits)
-         || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
-}
-
 static u8 is_walkable_at(i16 px, i16 py) {
     return room_tile_walkable(room_tile_at_px(px, py));
 }
@@ -678,7 +648,8 @@ static void room_unseal_doors(void) {
         }
         VBK_REG = 0;
     }
-    if (room_world_width > ROOM_VIEW_W_PX)
+    if (procgen_current_room_is_boss
+        && room_world_width > ROOM_VIEW_W_PX)
         tiles_open_crystal_far_exit();
 }
 
@@ -800,7 +771,7 @@ static void room_hold_at_door(u8 dir, u8 sound, u8 shake_frames) {
     if (dir == DIR_N) player.y = 0;
     else if (dir == DIR_S) player.y = 120;
     else if (dir == DIR_W) player.x = 0;
-    else player.x = 144;
+    else player.x = (ppos_t)(room_world_width - 16);
     if (door_bump_cd == 0) {
         door_bump_cd = 20;
         sfx_play(sound);
@@ -869,7 +840,9 @@ static void draw_room_tilemap(void) {
     // Serpent, and Void never expose stale streamed-room VRAM at the right or
     // bottom edge. Keeping this common to every boss also makes future
     // stage-specific camera choreography safe by construction.
-    if (procgen_current_room_is_boss && room_world_width > ROOM_VIEW_W_PX) {
+    if (run_state.world_mode) {
+        tiles_prepare_riftwild_wide_field();
+    } else if (procgen_current_room_is_boss && room_world_width > ROOM_VIEW_W_PX) {
         tiles_prepare_crystal_wide_arena();
     } else if (procgen_current_room_is_boss) {
         tiles_prepare_colossal_edges();
@@ -945,7 +918,7 @@ static void room_slide_east(void) {
     // Normalize the streamed map while blanked so gameplay updates retain
     // their straightforward x=0..19 coordinate system after the slide.
     DISPLAY_OFF;
-    SCX_REG = 0;
+    SCX_REG = room_camera_x;
     draw_room_tilemap();
 }
 
@@ -970,7 +943,7 @@ static void room_slide_west(void) {
         SCX_REG = (u8)(0 - (i16)(step << 3));
     }
     DISPLAY_OFF;
-    SCX_REG = 0;
+    SCX_REG = room_camera_x;
     draw_room_tilemap();
 }
 
@@ -993,7 +966,7 @@ static void room_slide_south(void) {
         room_transition_vbl();
         SCY_REG = (u8)(step << 3);
     }
-    DISPLAY_OFF; SCY_REG = 0; draw_room_tilemap();
+    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = 0; draw_room_tilemap();
 }
 
 static void room_slide_north(void) {
@@ -1012,7 +985,7 @@ static void room_slide_north(void) {
         room_transition_vbl();
         SCY_REG = (u8)(0 - (i16)(step << 3));
     }
-    DISPLAY_OFF; SCY_REG = 0; draw_room_tilemap();
+    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = 0; draw_room_tilemap();
 }
 
 static void place_player_sprite(void) {
@@ -1990,6 +1963,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     {
         u8 tx = 0xFF, ty = 0xFF;
         u8 dir = DIR_NONE;
+        u8 source_was_wide = (room_world_width > ROOM_VIEW_W_PX);
         if (player.y <= 0) {
             dir = DIR_N; tx = (u8)((player.x + 8) >> 3); ty = 0;
         } else if (player.y >= 120) {
@@ -2131,22 +2105,37 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_town_resident_identity();
                 room_spawn_progression_fixture();
                 room_prepare_puzzle_role();
-                if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_E
+                // A 224px source already occupies BG columns 0..27; the
+                // 20-column streamer would overwrite eight still-visible
+                // source columns while staging its destination at 20..31.
+                // Wide fields therefore use the shorter blanked rebuild.
+                // Their internal 64px camera travel removes far more loading
+                // than the obsolete one-screen-per-cell cadence, and entering
+                // from the east now starts at SCX 64 with the hero visible.
+                if (!source_was_wide
+                    && room_world_width <= ROOM_VIEW_W_PX
+                    && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_E
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_east();
-                } else if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_W
+                } else if (!source_was_wide
+                    && room_world_width <= ROOM_VIEW_W_PX
+                    && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_W
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_west();
-                } else if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_S
+                } else if (!source_was_wide
+                    && room_world_width <= ROOM_VIEW_W_PX
+                    && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_S
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
                     room_slide_south();
-                } else if (!RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_N
+                } else if (!source_was_wide
+                    && room_world_width <= ROOM_VIEW_W_PX
+                    && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_N
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
                     HIDE_SPRITES;
@@ -2233,7 +2222,7 @@ void room_draw(void) {
         }
     }
     room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
-        ? tiles_crystal_camera_step(room_camera_x, player.x) : 0;
+        ? tiles_world_camera_step(room_camera_x, player.x) : 0;
     place_player_sprite();
     entity_draw_all();
 
@@ -2295,9 +2284,8 @@ void room_draw(void) {
             SCY_REG = (room_world_width > ROOM_VIEW_W_PX)
                 ? 0 : ((shake_timer & 4) ? 1 : 0xFF);
         }
-    } else if (procgen_current_room_is_boss && room_stage() == 0) {
-        // Crystal is the first genuinely wider encounter: SCX follows a
-        // 224px world rather than applying the old decorative 0..3px sway.
+    } else if (room_world_width > ROOM_VIEW_W_PX) {
+        // Crystal and every Riftwild cell share the real 224px world camera.
         SCX_REG = room_camera_x;
         SCY_REG = 0;
     } else if (procgen_current_room_is_boss && room_stage() == 1) {

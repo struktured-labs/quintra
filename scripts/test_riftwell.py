@@ -66,7 +66,7 @@ def main():
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 120)
     tick(pb)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
-    put16(pb, PL + 9, 144); put16(pb, PL + 11, 60)
+    put16(pb, PL + 9, 208); put16(pb, PL + 11, 60)
     tick(pb)
     assert pb.memory[RS + 18] == 1, "did not reach the Riftwell screen"
 
@@ -90,7 +90,7 @@ def main():
     # spent instead of returning from procedural regeneration.
     put16(pb, PL + 9, 0); put16(pb, PL + 11, 60); tick(pb)
     assert pb.memory[RS + 18] == 0
-    put16(pb, PL + 9, 144); put16(pb, PL + 11, 60); tick(pb)
+    put16(pb, PL + 9, 208); put16(pb, PL + 11, 60); tick(pb)
     assert pb.memory[RS + 18] == 1 and riftwell(pb) is None, \
         "spent Riftwell respawned after backtracking"
     pb.stop(save=False)

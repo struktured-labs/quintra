@@ -269,7 +269,8 @@ void tiles_paint_hydra_projection(void) BANKED;
 void tiles_paint_void_projection(void) BANKED;
 void tiles_prepare_colossal_edges(void) BANKED; // safe 0..3px camera overscan
 void tiles_prepare_crystal_wide_arena(void) BANKED; // BG cols 20..28 for 224px arena
-u8 tiles_crystal_camera_step(u8 current, i16 player_x) BANKED;
+void tiles_prepare_riftwild_wide_field(void) BANKED; // authored BG cols 20..28
+u8 tiles_world_camera_step(u8 current, i16 player_x) BANKED;
 void tiles_open_crystal_far_exit(void) BANKED;
 void tiles_load_boss_cue_bg(void) BANKED;         // sanctuary skull/barred threshold
 void tiles_draw_boss_cue(u8 entered_from) BANKED; // project its 16x16 edge seal

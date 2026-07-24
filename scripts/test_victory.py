@@ -133,9 +133,9 @@ def main():
         f"(room={pb.memory[rs + 1]} world={pb.memory[rs + 17]} "
         f"cell={pb.memory[rs + 18]} screen={pb.memory[screen]})"
     )
-    exit_at(144, 60, clear=False)
+    exit_at(208, 60, clear=False)
     assert pb.memory[rs + 18] == 1
-    exit_at(144, 60)
+    exit_at(208, 60)
     assert pb.memory[rs + 18] == 2
     exit_at(72, 120)
     assert pb.memory[rs + 18] == 6

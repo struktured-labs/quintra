@@ -14,8 +14,9 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM, SCREEN = map(addr, (
-    "_run_state", "_player", "_entities", "_room_tilemap", "_loop_current_screen"
+RS, PL, EN, TM, SCREEN, WORLD_W, CAMERA_X, WORLD_EXT = map(addr, (
+    "_run_state", "_player", "_entities", "_room_tilemap", "_loop_current_screen",
+    "_room_world_width", "_room_camera_x", "_room_world_extension",
 ))
 
 def put16(pb, p, v):
@@ -41,8 +42,9 @@ def exit_at(pb, x, y, clear=True):
     # transition must settle its hardware scroll and restore OBJ afterwards;
     # otherwise a successful graph hop can look like the hero vanished.
     assert pb.memory[0xFF40] & 0x02, "Riftwild seam left sprites disabled"
-    assert pb.memory[0xFF43] == 0 and pb.memory[0xFF42] == 0, (
-        "Riftwild seam did not normalize BG scroll")
+    expected_camera = 64 if x == 0 else 0
+    assert pb.memory[0xFF43] == expected_camera and pb.memory[0xFF42] == 0, (
+        f"Riftwild seam camera wrong: {pb.memory[0xFF43]} != {expected_camera}")
 
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
@@ -64,9 +66,14 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \
         "overworld traversal consumed dungeon depth"
     # Screen 0 is authored E+S only, now bounded by a real tree line rather
-    # than dungeon brick. Its reciprocal exits remain door tiles.
+    # than dungeon brick. The old x=152 threshold is a traversable seam into
+    # the field; the reciprocal east exit lives at the true x=216 boundary.
+    assert pb.memory[WORLD_W] == 224 and pb.memory[CAMERA_X] == 0
     assert pb.memory[TM + 10] == 39 and pb.memory[TM + 9 * 20] == 39
-    assert pb.memory[TM + 9 * 20 + 19] == 3 and pb.memory[TM + 16 * 20 + 10] == 3
+    assert pb.memory[TM + 9 * 20 + 19] == 36
+    assert pb.memory[TM + 16 * 20 + 10] == 3
+    assert pb.memory[WORLD_EXT + 8 * 8 + 7] == 3
+    assert pb.memory[WORLD_EXT + 9 * 8 + 7] == 3
     assert pb.memory[TM + 8 * 20 + 10] == 36, "Riftwild center lacks path terrain"
     # The live playfield identifies the region without replacing the walkable
     # grass/path data that collision and procgen parity consume.
@@ -80,11 +87,30 @@ def main():
     pb.memory[0xFF4F] = 0
     pb.screen.image.save(ROOT / "tmp" / "riftwild-arrival.png")
 
+    # The generated encounter inhabits both halves of the field. Follow the
+    # camera across the obsolete viewport edge and capture the paired landmark.
+    hostile_positions = [
+        (pb.memory[EN + i * 28 + 3] | pb.memory[EN + i * 28 + 4] << 8,
+         pb.memory[EN + i * 28 + 5] | pb.memory[EN + i * 28 + 6] << 8)
+        for i in range(32) if pb.memory[EN + i * 28] == 2
+    ]
+    assert any(x >= 160 for x, _ in hostile_positions), \
+        f"Riftwild spawned no far-field hostile: {hostile_positions}"
+    put16(pb, PL + 9, 192); put16(pb, PL + 11, 60)
+    pb.memory[PL + 15] = 120
+    for _ in range(40): pb.tick()
+    assert pb.memory[CAMERA_X] == 64 and pb.memory[0xFF43] == 64, \
+        "Riftwild camera did not reach its far bound"
+    pb.screen.image.save(ROOT / "tmp" / "riftwild-far-field.png")
+    put16(pb, PL + 9, 72)
+    for _ in range(40): pb.tick()
+    assert pb.memory[CAMERA_X] == 0 and pb.memory[0xFF43] == 0
+
     # Riftwild encounters never seal exits: leave screen 0 with its generated
     # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.
     assert hostile_count(pb) > 0, "test seed produced no overworld encounter"
-    exit_at(pb, 144, 60, clear=False); assert pb.memory[RS + 18] == 1, pb.memory[RS + 18]
-    exit_at(pb, 144, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
+    exit_at(pb, 208, 60, clear=False); assert pb.memory[RS + 18] == 1, pb.memory[RS + 18]
+    exit_at(pb, 208, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
     # Screen 2's cave staircase is a nonlinear hop to vault 15 and back.
     clear_hostiles(pb); put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
@@ -158,6 +184,6 @@ def main():
         "next dungeon did not advance depth"
     assert pb.memory[RS + 20] == 1, "new dungeon map did not reset to entry cell"
     pb.stop(save=False)
-    print("[overworld] PASS boss exit -> visited 4x4 map -> dungeon gate")
+    print("[overworld] PASS 224px field + camera + visited 4x4 map -> dungeon gate")
 
 if __name__ == "__main__": main()

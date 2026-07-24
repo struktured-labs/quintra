@@ -567,7 +567,8 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         "alive": pyboy.memory[player + 2] > 0,
         "difficulty": pyboy.memory[rs + 26] == (difficulty == "easy"),
         "champion": pyboy.memory[player] == class_id,
-        "x": 0 <= (pyboy.memory[player + 9] | pyboy.memory[player + 10] << 8) <= 144,
+        "x": 0 <= (pyboy.memory[player + 9] | pyboy.memory[player + 10] << 8)
+             <= (208 if is_riftwild else 144),
         "y": 0 <= (pyboy.memory[player + 11] | pyboy.memory[player + 12] << 8) <= 120,
     }
     if checkpoint == "riftwild":

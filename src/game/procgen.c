@@ -67,7 +67,10 @@ static void place_player_after_entry(void) {
     if (dir == DIR_N)      { player.x = 72;  player.y = 112; }
     else if (dir == DIR_S) { player.x = 72;  player.y = 8;   }
     else if (dir == DIR_E) { player.x = 8;   player.y = 60;  }
-    else if (dir == DIR_W) { player.x = 136; player.y = 60;  }
+    else if (dir == DIR_W) {
+        player.x = run_state.world_mode ? (ROOM_WIDE_W_PX - 24) : 136;
+        player.y = 60;
+    }
     else                   { player.x = 72;  player.y = 60;  }
 }
 
@@ -204,6 +207,41 @@ static void stamp_world_landmark(u8 family) {
         : (family == 1) ? BGT_WILD_WATER
         : (family == 2) ? BGT_WILD_STONE : BGT_WILD_STUMP;
     for (i = 0; i < 8; ++i) room_tilemap[ly[i]][lx[i]] = tile;
+}
+
+// Columns 20..27 turn every Riftwild node into a 224px field. The compact
+// room_tilemap remains stable for old cartridge tooling; this authored strip
+// is nevertheless real collision terrain, not a visual panorama. Its paired
+// landmark makes crossing the former screen boundary lead somewhere distinct.
+static void generate_world_extension(u8 edges, u8 family, u32 seed) {
+    static const u8 lx[8] = { 1, 2, 1, 2, 4, 5, 4, 5 };
+    static const u8 ly[8] = { 4, 4, 5, 5, 11, 11, 12, 12 };
+    u8 x, y;
+    u8 tile = (family == 0) ? BGT_WILD_FLOWER
+        : (family == 1) ? BGT_WILD_WATER
+        : (family == 2) ? BGT_WILD_STONE : BGT_WILD_STUMP;
+    for (y = 0; y < ROOM_H; ++y) {
+        for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x) {
+            room_world_extension[y][x] =
+                (y == 0 || y == ROOM_H - 1
+                    || x == ROOM_WIDE_EXT_TILES - 1)
+                ? BGT_TREE : BGT_GRASS;
+        }
+    }
+    // A real east graph edge follows the worn trail to the true x=216 door.
+    if (edges & 0x02) {
+        for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x)
+            room_world_extension[8][x] =
+                room_world_extension[9][x] = BGT_PATH;
+        room_world_extension[8][ROOM_WIDE_EXT_TILES - 1] =
+            room_world_extension[9][ROOM_WIDE_EXT_TILES - 1] = BGT_DOOR;
+    }
+    for (x = 0; x < 8; ++x)
+        room_world_extension[ly[x]][lx[x]] = tile;
+    // Two seed-stable trees break the rectangular silhouette without touching
+    // the landmark blocks or the broad center traversal lanes.
+    room_world_extension[3 + ((seed >> 3) & 3)][6] = BGT_TREE;
+    room_world_extension[10 + ((seed >> 5) & 3)][0] = BGT_TREE;
 }
 
 static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
@@ -762,6 +800,8 @@ void procgen_generate_current_room(void) BANKED {
     if (run_state.world_mode) {
         u8 x, y;
         u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen & 15].edges;
+        u8 family = (u8)(((u8)run_state.run_seed
+            + (run_state.world_screen & 15)) & 3);
         for (y = 0; y < ROOM_H; ++y)
             for (x = 0; x < ROOM_W; ++x)
                 room_tilemap[y][x] = (y == 0 || y == ROOM_H - 1
@@ -778,7 +818,13 @@ void procgen_generate_current_room(void) BANKED {
         if (edges & 0x01) room_tilemap[0][9] = room_tilemap[0][10] = BGT_DOOR;
         if (edges & 0x04) room_tilemap[ROOM_H-1][9] = room_tilemap[ROOM_H-1][10] = BGT_DOOR;
         if (edges & 0x08) room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
-        if (edges & 0x02) room_tilemap[8][ROOM_W-1] = room_tilemap[9][ROOM_W-1] = BGT_DOOR;
+        // Column 19 is no longer a cardinal boundary. Open the whole old seam
+        // into the side field; only column 27 can advance east.
+        for (y = 1; y < ROOM_H - 1; ++y)
+            room_tilemap[y][ROOM_W - 1] = BGT_GRASS;
+        if (edges & 0x02)
+            room_tilemap[8][ROOM_W - 1] =
+                room_tilemap[9][ROOM_W - 1] = BGT_PATH;
         // Seed-stable groves provide outdoor cover without consuming RNG.
         room_tilemap[3 + (seed & 3)][3] = BGT_TREE;
         room_tilemap[11 + ((seed >> 2) & 1)][16] = BGT_TREE;
@@ -789,8 +835,8 @@ void procgen_generate_current_room(void) BANKED {
         // All four landmark families occur exactly four times in a 4x4
         // Riftwild. A different run seed rotates which coordinate owns which
         // family, preserving both geographic memory and roguelike variation.
-        stamp_world_landmark((u8)(((u8)run_state.run_seed
-            + (run_state.world_screen & 15)) & 3));
+        stamp_world_landmark(family);
+        generate_world_extension(edges, family, seed);
         if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
             || world_kind == ZELDA_CELL_VAULT
             || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)
@@ -1255,6 +1301,18 @@ void procgen_generate_current_room(void) BANKED {
                             if (st > 24) st = 24;
                             entities[idx].hp =
                                 (u8)(entities[idx].hp + 1 + (u8)(st >> 1));
+                            // Optional outdoor pressure should inhabit the new
+                            // territory instead of clustering in the original
+                            // viewport. Alternate successful bodies between
+                            // the old clearing and two guaranteed-open far
+                            // lanes; no extra RNG is consumed.
+                            if (run_state.world_mode && (spawned & 1)) {
+                                // Start deep enough into the extension that a
+                                // fast chaser remains visibly beyond the old
+                                // 160px screen after the arrival settles.
+                                entities[idx].x = FIX8(192);
+                                entities[idx].y = FIX8((spawned & 2) ? 80 : 56);
+                            }
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,
                         // +1 damage, EF_ELITE flag (combat pays the bonus).

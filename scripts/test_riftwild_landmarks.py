@@ -5,7 +5,9 @@ from collections import Counter
 from PIL import Image, ImageDraw
 from pyboy import PyBoy
 
-from test_overworld import EN, PL, ROM, ROOT, RS, TM, exit_at, put16
+from test_overworld import (
+    CAMERA_X, EN, PL, ROM, ROOT, RS, TM, WORLD_EXT, WORLD_W, exit_at, put16,
+)
 from quintra_topology import STAGE_BOSS_ROOM
 
 
@@ -13,9 +15,9 @@ ROOM_W, ROOM_H = 20, 17
 LANDMARKS = (96, 97, 98, 99)
 # Visit all sixteen cells through real reciprocal seams in a compact snake.
 ROUTE = (
-    (1, 144, 60), (2, 144, 60), (3, 144, 60),
+    (1, 208, 60), (2, 208, 60), (3, 208, 60),
     (7, 72, 120), (6, 0, 60), (5, 0, 60), (4, 0, 60),
-    (8, 72, 120), (9, 144, 60), (10, 144, 60), (11, 144, 60),
+    (8, 72, 120), (9, 208, 60), (10, 208, 60), (11, 208, 60),
     (15, 72, 120), (14, 0, 60), (13, 0, 60), (12, 0, 60),
 )
 
@@ -45,10 +47,17 @@ def inspect_cell(pb, screen, seed_low, seen_families, shots):
     assert pb.memory[RS + 18] == screen
     tiles = list(pb.memory[TM:TM + ROOM_W * ROOM_H])
     counts = Counter(tile for tile in tiles if tile in LANDMARKS)
+    extension = list(pb.memory[WORLD_EXT:WORLD_EXT + 8 * ROOM_H])
+    extension_counts = Counter(tile for tile in extension if tile in LANDMARKS)
     expected = LANDMARKS[(seed_low + screen) & 3]
     assert counts == Counter({expected: 8}), (
         f"Riftwild cell {screen} expected landmark {expected}, got {counts}"
     )
+    assert extension_counts == Counter({expected: 8}), (
+        f"Riftwild far field {screen} expected landmark {expected}, "
+        f"got {extension_counts}"
+    )
+    assert pb.memory[WORLD_W] == 224
     # Every solid family stays outside the broad trail cross. The center and
     # all four arms therefore remain visibly connected even when a route does
     # not expose every cardinal graph edge.
@@ -60,6 +69,16 @@ def inspect_cell(pb, screen, seed_low, seen_families, shots):
                for y in (8, 9) for x in range(1, ROOM_W - 1)), (
         f"cell {screen} landmark interrupted east/west trail"
     )
+    assert all(tiles[y * ROOM_W + 19] in (35, 36)
+               for y in range(1, ROOM_H - 1)), (
+        f"cell {screen} retained a wall at the old viewport seam"
+    )
+    # Move the real camera into the added terrain before taking review media.
+    put16(pb, PL + 9, 192); put16(pb, PL + 11, 60)
+    pb.memory[PL + 15] = 120
+    for _ in range(40):
+        pb.tick()
+    assert pb.memory[CAMERA_X] == 64 and pb.memory[0xFF43] == 64
     seen_families[expected] += 1
     shots[screen] = pb.screen.image.copy()
 
@@ -78,7 +97,7 @@ def cross_to(pb, target, x, y):
         ready = (pb.memory[RS + 17] == 1
                  and pb.memory[RS + 18] == target
                  and pb.memory[0xFF40] & 0x02
-                 and pb.memory[0xFF43] == 0
+                 and pb.memory[0xFF43] == (64 if x == 0 else 0)
                  and pb.memory[0xFF42] == 0
                  and sum(tile == expected for tile in tiles) == 8
                  and not any(tile & 0x80 for tile in tiles))
@@ -89,7 +108,7 @@ def cross_to(pb, target, x, y):
         f"Riftwild seam did not settle at {target}: "
         f"cell={pb.memory[RS + 18]} screen={pb.memory[RS + 17]} "
         f"lcdc={pb.memory[0xFF40]:02x} scx={pb.memory[0xFF43]} "
-        f"scy={pb.memory[0xFF42]}"
+        f"scy={pb.memory[0xFF42]} expected_camera={64 if x == 0 else 0}"
     )
 
 
@@ -122,8 +141,8 @@ def main():
     out.parent.mkdir(exist_ok=True)
     sheet.save(out)
     print(
-        "[riftwild-landmarks] PASS four seed-rotated families x4, "
-        "16/16 real seams, central trails clear"
+        "[riftwild-landmarks] PASS 16 scrolling 224px fields, paired "
+        "seed-rotated landmarks, real seams, central trails clear"
     )
 
 

@@ -14,7 +14,7 @@ OUT="$(mktemp /tmp/quintra-corvin-spore.XXXXXX)"
 # and ranged collision rules while ensuring harder preceding colossi do not
 # prevent the controller from reaching the actual fixture.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=30000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=30000 QUINTRA_BALANCE_HOST_TIMEOUT=90 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

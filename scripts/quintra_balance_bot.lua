@@ -24,6 +24,7 @@ local RS = tonumber(os.getenv("QUINTRA_RS_ADDR") or "0") or 0
 local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
+local WX = tonumber(os.getenv("QUINTRA_WORLD_EXT_ADDR") or "0") or 0
 local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 
@@ -817,11 +818,7 @@ function debug_tilemap(frame, room, px, py, target)
 end
 
 function world_body_walkable(cx, cy)
-    if cx < 1 or cx > 19 or cy < 1 or cy > 16 then return false end
-    return walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
-        and walkable(emu:read8(TM + (cy - 1) * 20 + cx))
-        and walkable(emu:read8(TM + cy * 20 + (cx - 1)))
-        and walkable(emu:read8(TM + cy * 20 + cx))
+    return body_walkable(cx, cy)
 end
 
 -- Mirror room.c's feet-anchored collision box for one prospective pixel.
@@ -1043,9 +1040,14 @@ end
 function tile_at_px(x, y)
     if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= 136 then return 0 end
     if x >= 160 then
-        -- The ROM keeps the extension out of its compact 20x17 WRAM map.
-        -- Columns 20..26 are walkable projection/floor; column 27 becomes
-        -- the east door only after the opening Colossus is defeated.
+        -- Riftwild and Crystal keep their extensions out of the compact
+        -- 20x17 WRAM map. Outdoor columns are real generated terrain exposed
+        -- through a second public strip; Crystal retains its authored floor
+        -- and post-clear far-door contract.
+        if RS ~= 0 and emu:read8(RS + 17) == 1 and WX ~= 0 then
+            local tx, ty = math.floor(x / 8), math.floor(y / 8)
+            return emu:read8(WX + ty * 8 + (tx - 20))
+        end
         if x >= 216 then
             if y >= 64 and y < 80 and RS ~= 0 and emu:read8(RS + 11) > 0 then
                 return 3
@@ -2047,6 +2049,27 @@ function door_step(px, py)
         if can_step(px, py, secondary) then return secondary end
         return primary
     end
+    if in_world and wanted ~= nil then
+        -- Every Riftwild cell is 224px wide. Route the real feet box through
+        -- its generated side field to the actual cardinal threshold instead
+        -- of planning against the obsolete 20-column viewport.
+        local goal_x = wanted == 1 and 208 or (wanted == 3 and 0 or 72)
+        local goal_y = wanted == 0 and 0 or (wanted == 2 and 120 or 60)
+        if wanted == 0 and py <= 1 and px >= 70 and px <= 74 then return KEY_UP end
+        if wanted == 1 and px >= 207 and py >= 56 and py <= 64 then return KEY_RIGHT end
+        if wanted == 2 and py >= 119 and px >= 70 and px <= 74 then return KEY_DOWN end
+        if wanted == 3 and px <= 1 and py >= 56 and py <= 64 then return KEY_LEFT end
+        local step = exact_body_goal_step(px, py, goal_x, goal_y)
+        if step ~= nil and step ~= 0 then return step end
+        if wanted == 0 or wanted == 2 then
+            if px < 70 then return KEY_RIGHT end
+            if px > 74 then return KEY_LEFT end
+        else
+            if py < 56 then return KEY_DOWN end
+            if py > 64 then return KEY_UP end
+        end
+        return CARD_KEYS[wanted + 1]
+    end
     -- Outdoor screens use the same small body-aware BFS as a dungeon room.
     -- Holding the coarse cardinal toward an east/west exit works in open
     -- grass, but can strand the controller against a tree line above or
@@ -2667,7 +2690,8 @@ while frames < LIMIT do
     end
     last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
-    QUINTRA_ARENA_W = (room == STAGE_BOSS[1]) and 224 or 160
+    QUINTRA_ARENA_W = (room == STAGE_BOSS[1]
+        or (RS ~= 0 and emu:read8(RS + 17) == 1)) and 224 or 160
     if is_town_room(room) then
         -- `world_return_screen` is a plaza index only in a town. Mark each
         -- side street when its real room has loaded so the next arrival visit
@@ -4133,7 +4157,8 @@ while frames < LIMIT do
         -- turn inward before it accidentally crosses into another world cell.
         local near_guard = world_flee ~= 0 and 4 or 32
         local vertical_guard = world_flee ~= 0 and 116 or 88
-        local horizontal_guard = world_flee ~= 0 and 140 or 112
+        local horizontal_guard = world_flee ~= 0
+            and (QUINTRA_ARENA_W - 20) or (QUINTRA_ARENA_W - 48)
         if wanted ~= 0 and py < near_guard and math.floor(keys / KEY_UP) % 2 == 1 then
             keys = actions + KEY_DOWN
         elseif wanted ~= 2 and py > vertical_guard and math.floor(keys / KEY_DOWN) % 2 == 1 then

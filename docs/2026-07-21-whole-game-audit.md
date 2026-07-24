@@ -1,4 +1,30 @@
-# Quintra whole-game audit — updated 2026-07-23
+# Quintra whole-game audit — updated 2026-07-24
+
+## v0.18.69 Riftwild scale response
+
+The first reusable wide-world implementation now extends beyond its Crystal
+boss proof. All sixteen Riftwild cells occupy a real 224×136 world behind the
+160×136 LCD viewport. The old x=160 east boundary is traversable terrain; a
+tracking camera reveals eight additional generated columns, and only the
+x=216 threshold follows an eastern graph edge. Entering from the east starts
+at SCX 64 so the champion is never hidden beyond the viewport.
+
+The extension is not panorama art. Each seed-stable cell owns a second
+landmark, trees, paths, collision, and encounter placement in a 136-byte WRAM
+terrain strip used by the renderer, collision system, projectiles, enemy AI,
+and controller instrumentation. The 4×4 region therefore grows from a
+640×544 arrangement of fixed playfields to 896×544 logical pixels with
+horizontal camera travel, while nonlinear Rift Wells and the existing
+learnable graph remain intact. Live-ROM coverage traverses all sixteen cells,
+checks both landmark halves and the old seam, proves reciprocal arrivals at
+both camera bounds, and follows the boss-to-world-to-next-dungeon route.
+
+This directly answers the latest playtest report that stages still feel
+compact, but it is not presented as the final open-field engine. Logical-cell
+and north/south crossings still rebuild a generated field. The next structural
+step is to join larger groups of cells—or an entire outdoor stratum—without a
+load transition, then use that same world-space foundation for distinct,
+spatially meaningful dungeon wings rather than inflating room counts.
 
 ## v0.18.68 perceived-scale response
 
