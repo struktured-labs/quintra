@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Live-ROM regression: Void Lord World Collapse has one real safe pocket."""
-from test_boss_identity import EN, PL, enter_boss, put16
+from test_boss_identity import EN, PL, RS, enter_boss, put16
 
 
 ENTITY_SIZE = 28
@@ -25,7 +25,7 @@ def clear_projectiles(pb):
             pb.memory[entity] = pb.memory[entity + 1] = 0
 
 
-def resolve_collapse(x, y, safe_slot):
+def resolve_collapse(x, y, safe_slot, easy=False):
     pb, boss = enter_boss(8, keep_open=True)
     clear_projectiles(pb)
     put16(pb, PL + 9, x)
@@ -33,6 +33,7 @@ def resolve_collapse(x, y, safe_slot):
     pb.memory[PLAYER_HP_MAX] = pb.memory[PLAYER_HP] = 20
     pb.memory[PLAYER_IFRAMES] = 0
     pb.memory[PLAYER_SHIELD] = 0
+    pb.memory[RS + 26] = 1 if easy else 0
 
     # Drive the actual charged branch on the next emulated frame. Slot 4 is
     # intentional: the game must wrap it to the same top-left pocket as 0.
@@ -60,6 +61,7 @@ def resolve_collapse(x, y, safe_slot):
 def main():
     safe_before, safe_after, blast, safe_state = resolve_collapse(20, 20, 4)
     unsafe_before, unsafe_after, _, unsafe_state = resolve_collapse(80, 64, 0)
+    easy_before, easy_after, _, easy_state = resolve_collapse(80, 64, 0, easy=True)
     assert safe_after == safe_before, (
         f"top-left safe pocket took damage ({safe_before}->{safe_after})"
     )
@@ -68,8 +70,12 @@ def main():
         f"got {unsafe_before}->{unsafe_after}; post-state={unsafe_state}, "
         f"safe-state={safe_state}"
     )
+    assert easy_after == easy_before - 1, (
+        f"Easy World Collapse should preserve deep testing with one damage; "
+        f"got {easy_before}->{easy_after}; post-state={easy_state}"
+    )
     print(f"[void-collapse] PASS slot4 wraps to top-left; safe={safe_after}; "
-          f"unsafe blast={blast}")
+          f"unsafe blast={blast}; easy blast=1")
 
 
 if __name__ == "__main__":

@@ -132,6 +132,15 @@ local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
 -- emulated frames plus meaningful room/HP/target changes, avoiding an
 -- unbounded per-frame log during long unattended endurance runs.
 OBS_TRACE_OUT = os.getenv("QUINTRA_BOT_OBS_TRACE_OUT")
+-- Optional native mGBA training snapshots. Saving an emulator buffer is a
+-- host-side observation, just like the CSV/trace outputs: it never edits ROM,
+-- SRAM, HP, RNG, or progression. A due snapshot waits for a stable live room
+-- instead of serializing a half-streamed transition, then records the small
+-- public context needed to verify and choose it later.
+STATE_DIR = os.getenv("QUINTRA_BOT_STATE_DIR")
+STATE_REPORT = os.getenv("QUINTRA_BOT_STATE_REPORT")
+STATE_INTERVAL = tonumber(os.getenv("QUINTRA_BOT_STATE_INTERVAL") or "0") or 0
+STATE_NEXT = STATE_INTERVAL
 -- A class-aware default uses measured pulse lanes for close/short-range
 -- champions while Picsean's slow piercing bubbles use independently measured
 -- orbit-and-fire spacing. A late-phase fallback below changes only the final
@@ -278,6 +287,44 @@ function tick(keys)
     end
     emu:setKeys(keys)
     emu:runFrame()
+end
+
+function periodic_state(frame)
+    if not STATE_DIR or not STATE_REPORT or STATE_INTERVAL <= 0
+        or frame < STATE_NEXT or RS == 0 or PL == 0 or LS == 0
+        or emu:read8(LS) ~= 5 or emu:read8(PL + 2) == 0 then return end
+    -- Generated room tiles use only 0..127. A high scratch bit proves the
+    -- procgen/streaming transaction has not reached a save-safe frame yet.
+    if TM ~= 0 then
+        for i = 0, 339 do
+            if emu:read8(TM + i) >= 128 then return end
+        end
+    end
+    local scheduled = STATE_NEXT
+    while STATE_NEXT <= frame do STATE_NEXT = STATE_NEXT + STATE_INTERVAL end
+    local minutes = math.floor(scheduled / 3600)
+    local name = string.format("quintra-training-%04dm.ss0", minutes)
+    local path = STATE_DIR .. "/" .. name
+    emu:setKeys(0)
+    local state = emu:saveStateBuffer(0)
+    if not state then error("mGBA could not serialize " .. path) end
+    local sf = assert(io.open(path, "wb"))
+    sf:write(state)
+    sf:close()
+    local report = assert(io.open(STATE_REPORT, "a"))
+    report:write(string.format(
+        "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+        name, scheduled, frame, emu:read8(RS + 1), emu:read8(RS + 11),
+        emu:read8(PL + 2), emu:read8(RS + 17), emu:read8(RS + 18),
+        emu:read8(LS), emu:read8(RS + 26), emu:read8(PL), read16(RS + 7)))
+    report:close()
+end
+
+function finish_periodic_states()
+    if not STATE_REPORT then return end
+    local report = assert(io.open(STATE_REPORT, "a"))
+    report:write("DONE\n")
+    report:close()
 end
 
 function observe_trace(frame, room, world_mode, world_screen, px, py,
@@ -4286,8 +4333,10 @@ while frames < LIMIT do
     last_input_keys = keys
     tick(keys)
     frames = frames + 1
+    periodic_state(frames)
 end
 emu:setKeys(0)
+finish_periodic_states()
 
 -- Let a true win execute room_tick -> victory_enter, including the rendered
 -- ending, suspend invalidation, and meta-record write, before sampling it.

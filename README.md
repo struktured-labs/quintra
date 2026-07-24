@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.64: Long Wings](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.65: Unfolding Compass](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,35 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.64**, published after the complete build,
+The current cartridge is **v0.18.65**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The Compass now unfolds as the dungeon is explored.** SELECT begins with
+only the current 16×16 room square and one hollow reachable frontier square.
+Walked rooms and links fill into the 6×5 tile grid; deeper rooms and corridors
+remain genuinely blank instead of presenting a subdued, pre-solved circuit.
+Earned Sigil, Warden/Waystone, boss-threshold, and Rift Well clues still appear
+in their semantic violet, amber, and cyan colors. The resulting pocket map is
+an exploration record as well as a route aid.
+
+**Native mGBA training states now follow one continuous playthrough.**
+`make timed-mgba-states` drives an Easy Picsean run with ordinary controller
+input and saves real `.ss0` files at 5, 10, 15, 20, 25, and 30 emulated
+minutes. Every state is hash-bound to its ROM and cold-loaded through mGBA
+before publication. `make play-timed-mgba-state TIMED_CHECKPOINT=25` opens a
+selected beat in the software-rendered mGBA-Qt wrapper. The final Void Lord's
+World Collapse retains its full 11-HP positional punishment on Normal, but
+obeys Easy's one-damage inspection contract so the test mode can actually
+reach and study the ending.
+
+**Raw room count is not the same thing as perceived scale.** Stage one owns
+20 screens and roughly 12 entrance-to-boss steps; later stages grow to 30
+screens and 27 steps. A measured Easy controller run can still reach stage
+three by minute five, and each dungeon room remains a single 160×144 field.
+The result can therefore feel compact despite the larger topology. Longer
+continuous outdoor fields, spatially meaningful side wings, and true
+scrolling Penta-style boss arenas remain active design work; this release does
+not pretend that padding the room counter solves them.
 
 **Dungeon room count now becomes real traversal distance.** The former graph
 added a vertical shortcut between every adjacent row, collapsing nominal
@@ -39,11 +66,11 @@ dungeon cell is now a 16×16 outlined square—four times the rendered area of
 the former one-tile circuit pad—while the one-tile corridors keep the complete
 6×5 maze on one 160×144 screen. The current room carries a large cyan diamond;
 the Rift Sigil owns a violet rune; the Colossus room owns an amber skull; and
-the next required trial owns an amber exclamation mark. Dim outlined squares
-still reveal the eventual footprint without leaking their identities, while
-visited links brighten exactly as they are traversed. The full 30-room Void
-maze, `YOU / SIGIL / BOSS` key, and conditional `RIFT` key all remain visible
-at once.
+the next required trial owns an amber exclamation mark. A single dim outlined
+square reveals the immediate route frontier, while visited rooms and links
+brighten exactly as they are traversed. The full 30-room Void maze can fill
+the grid over the expedition; the `YOU / SIGIL / BOSS` key and conditional
+`RIFT` key remain visible.
 
 **Dungeons have both a larger room budget and longer critical paths.** The
 campaign starts at 20 rooms and grows through 21, 22,
@@ -70,11 +97,11 @@ from opening against a rebuilt cartridge, and `make play-mgba-state` uses the
 project's software-rendered GUI wrapper. These remain development fixtures;
 the cartridge save system and battery SRAM are unchanged.
 
-The v0.18.64 Compass retains the SELECT lattice
-legible before exploration: every active room and possible cardinal link is
-shown in subdued ink, while visited rooms and traversed links fill to bright
-ink. Fog still hides room identities, Sigils, Wardens, and boss information
-until those clues are earned.
+The v0.18.65 Compass keeps SELECT legible before exploration without revealing
+the complete lattice: one hollow adjacent room and its dim link show where the
+route can continue, while visited rooms and traversed links fill to bright
+ink. Fog hides deeper topology, room identities, Sigils, Wardens, and boss
+information until those clues are earned.
 
 **Dungeon depth comes from required fixtures, not padding.** Every stage
 contains the second seeded puzzle and deep-Warden lesson; later routes add a
@@ -1849,6 +1876,15 @@ controller-policy hash. This never writes game
 RAM or changes the cartridge; it is an automated testing aid, not a claim that
 Easy is balanced or that the pilot plays like a human.
 
+For native mGBA checkpoints from one continuous run, use
+`make timed-mgba-states`. The default Easy Picsean controller writes six real
+mGBA states under `tmp/timed-mgba-states/`, one every five minutes through
+minute 30. The manifest binds the ROM, controller, generator, state hashes,
+room, stage, HP, and difficulty; every state must independently reload through
+mGBA's `-t` path. Open a beat with
+`make play-timed-mgba-state TIMED_CHECKPOINT=20`. These files are emulator
+fixtures only and do not alter cartridge SRAM or add an in-game save system.
+
 For short controller-learning rollouts, use
 `UV_CACHE_DIR=tmp/uv-cache uv run --with 'pyboy==2.7.0' python scripts/quintra_pyboy_env.py --class-id 0 --difficulty normal --steps 40`.
 It exposes normal six-bit D-pad/A/B actions, a JSON observation of the visible
@@ -1934,7 +1970,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.64 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.65 release ROM occupies 128 KiB. Its media,
 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -1950,8 +1986,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.64 build has 1,058 bytes in bank 1, 1,615 in bank 2,
-1,095 in bank 3, 2,824 in bank 4, 2,769 in bank 5, and 9,442 in bank 6.
+ROM. The current v0.18.65 build has 1,058 bytes in bank 1, 1,619 in bank 2,
+1,024 in bank 3, 2,824 in bank 4, 2,769 in bank 5, and 9,442 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

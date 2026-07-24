@@ -130,9 +130,11 @@ def verify_cli_state(mgba: str, rom: Path, out: Path, addrs: dict[str, int],
         "QUINTRA_EXPECT_ROOM": str(record["room_counter"]),
         # The public bosses_beaten byte is zero-based for dungeon checkpoints
         # and equals after_stage for outdoor/village checkpoints.
-        "QUINTRA_EXPECT_STAGE": str(
-            record["after_stage"] if record["checkpoint"] in ("riftwild", "village")
-            else record["stage"] - 1),
+        "QUINTRA_EXPECT_STAGE": str(record.get(
+            "bosses_beaten",
+            record["after_stage"]
+            if record["checkpoint"] in ("riftwild", "village")
+            else record["stage"] - 1)),
         "QUINTRA_EXPECT_WORLD": str(record["world_mode"]),
         "QUINTRA_EXPECT_CLASS": str(record["class_id"]),
         "QUINTRA_EXPECT_DIFFICULTY": str(record["difficulty"] == "easy" and 1 or 0),

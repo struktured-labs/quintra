@@ -18,6 +18,7 @@ MGBA_STATE_OUT ?= $(CURDIR)/tmp/mgba-states
 MGBA_STATE_SMOKE_OUT ?= $(CURDIR)/tmp/mgba-states-smoke
 MGBA_BIN ?= mgba-headless
 TIMED_STATE_OUT ?= $(CURDIR)/tmp/timed-states
+TIMED_MGBA_STATE_OUT ?= $(CURDIR)/tmp/timed-mgba-states
 TIMED_MINUTES ?= 30
 TIMED_STATE_START ?= $(STATE_OUT)/quintra-stage-04-entry-wolfkin-easy.pyboy
 TIMED_CHECKPOINT ?= 30
@@ -50,7 +51,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-mgba-state play-timed-state info check-balance-bot agent-events stall-maps stage-states mgba-states mgba-state-smoke timed-states
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states mgba-states mgba-state-smoke timed-states timed-mgba-states
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -391,6 +392,15 @@ timed-states: all
 		--state "$(TIMED_STATE_START)" \
 		--minutes "$(TIMED_MINUTES)" --checkpoint-minutes 5
 
+# Preferred hands-on training set: the real mGBA controller plays one fixed
+# Easy Picsean expedition and serializes native states every five emulated
+# minutes. Every file is then cold-loaded through mGBA's -t startup path.
+timed-mgba-states: all check-balance-bot
+	@python3 scripts/make_timed_mgba_states.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(TIMED_MGBA_STATE_OUT)" \
+		--mgba "$(MGBA_BIN)" --minutes "$(TIMED_MINUTES)" \
+		--checkpoint-minutes 5
+
 # Open a manifest-verified external checkpoint for hands-on deep testing.
 # Closing the window writes passive room/HP/map/boss timing telemetry under
 # tmp/human-playtests; the observer never supplies input or mutates cartridge
@@ -425,6 +435,11 @@ play-mgba-state:
 play-timed-state:
 	@$(PYBOY_RUN) scripts/play_timed_state.py --rom "$(BINDIR)/$(PROJECT).gbc" \
 		--state-dir "$(TIMED_STATE_OUT)" --minutes "$(TIMED_CHECKPOINT)"
+
+# Open the equivalent native mGBA training beat (5, 10, ... 30 minutes).
+play-timed-mgba-state:
+	@python3 scripts/play_timed_mgba_state.py --rom "$(BINDIR)/$(PROJECT).gbc" \
+		--state-dir "$(TIMED_MGBA_STATE_OUT)" --minutes "$(TIMED_CHECKPOINT)"
 
 info:
 	@echo "Quintra build info:"

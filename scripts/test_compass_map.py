@@ -98,17 +98,19 @@ def main() -> None:
     assert pb.memory[screen] == SCREEN_MAP, "SELECT did not enter Spirit Compass"
 
     # Every room is a true 16x16 square in the fixed 6x5 abstract lattice.
-    # The opening stage exposes nineteen dim destinations without leaking room
-    # identities. Traversed links replace subdued planning lines with bright
-    # path glyphs in the single-tile gaps.
+    # The opening map shows the current room and just its immediate hollow
+    # frontier. Deeper cells/links remain blank until exploration reaches
+    # them, so SELECT reads as travel history rather than a solved circuit.
     assert node_tiles(pb, 0) == expected_node(BGT_MAP_NODE_HERE_BASE), \
         "Compass lost its 16x16 current-room node"
     assert node_tiles(pb, 1) == expected_node(BGT_MAP_NODE_UNKNOWN_BASE), \
-        "Compass lost its 16x16 unexplored-room node"
+        "Compass lost its immediate 16x16 frontier room"
     assert map_tile(pb, 3, 2) == BGT_MAP_PATH_H_DIM, \
-        "Compass lost the dim unexplored horizontal lattice"
-    assert map_tile(pb, 17, 3) == BGT_MAP_PATH_V_DIM, \
-        "Compass lost the dim unexplored vertical lattice"
+        "Compass lost the dim frontier connection"
+    assert map_tile(pb, GX[2], GY[2]) == BGT_VOID, \
+        "Compass revealed a room beyond the immediate frontier"
+    assert map_tile(pb, 17, 3) == BGT_VOID, \
+        "Compass revealed a disconnected deeper vertical route"
     assert map_tile(pb, 0, 0) == BGT_VOID, "Compass retained text-page background"
     assert (map_tile(pb, 8, 0), map_tile(pb, 9, 0), map_tile(pb, 10, 0)) == (
         BGT_AREA_M, BGT_AREA_A, BGT_MAP_LABEL_P), \
@@ -118,8 +120,8 @@ def main() -> None:
     assert map_tile(pb, 15, 16) == BGT_MAP_BOSS, "Compass lost BOSS legend icon"
     assert map_tile(pb, 16, 16) == BGT_MAP_LABEL_B, "Compass lost BOSS legend"
     assert sum(map_tile(pb, GX[i], GY[i]) == BGT_MAP_NODE_UNKNOWN_BASE
-               for i in range(20)) == 19, \
-        "Compass did not expose the twenty-slot opening lattice"
+               for i in range(20)) == 1, \
+        "Compass opening frontier is not a single readable next room"
     assert map_tile(pb, GX[20], GY[20]) == BGT_VOID, \
         "opening Compass leaked an inactive late-stage node"
     pb.screen.image.save(ROOT / "tmp" / "compass-first-room.png")

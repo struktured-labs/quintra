@@ -679,7 +679,12 @@ static void boss_tick(entity_t *e) {
                     for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 3, dmg);
                     if ((u16)(dx + dy) > 20 && player.shield_timer == 0) {
                         u8 blast = (u8)(dmg + 4);
-                        if (RUN_IS_EASY()) blast = (u8)((blast + 1) >> 1);
+                        // Tester Easy is a route/content inspection aid. The
+                        // canonical blast still demands the announced pocket
+                        // on Normal, while Easy matches its one-damage impact
+                        // contract instead of deleting a full test run in
+                        // three scripted pulses.
+                        if (RUN_IS_EASY()) blast = 1;
                         player.hp = (player.hp > blast) ? (u8)(player.hp - blast) : 0;
                         player.iframes = 60;
                         hud_redraw_hp();

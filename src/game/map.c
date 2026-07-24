@@ -82,9 +82,8 @@ static void draw_map_heading(void) {
     map_put(10, 0, BGT_MAP_LABEL_P);
 }
 
-static void map_room_box(u8 x, u8 y, u8 center, u8 seen) {
+static void map_room_box(u8 x, u8 y, u8 center) {
     u8 dx, dy;
-    if (!seen) return; // the tile-built graph literally fills as explored
     for (dy = 0; dy < 3; ++dy) {
         for (dx = 0; dx < 3; ++dx) {
             u8 edge = (dx == 0 || dx == 2 || dy == 0 || dy == 2);
@@ -98,9 +97,11 @@ static void map_room_box(u8 x, u8 y, u8 center, u8 seen) {
 // technically described the graph but left most of the LCD empty and read
 // like circuit pads. Four quadrants make each room unmistakably square while
 // the one-tile gaps retain a compact 6×5 Zelda-style pocket map.
-static void map_dungeon_node(u8 x, u8 y, u8 icon, u8 seen) {
+// knowledge: 0 hidden, 1 hollow frontier, 2 explored/objective.
+static void map_dungeon_node(u8 x, u8 y, u8 icon, u8 knowledge) {
     u8 base = BGT_MAP_NODE_ROOM_BASE;
-    if (!seen) base = BGT_MAP_NODE_UNKNOWN_BASE;
+    if (!knowledge) return;
+    if (knowledge == 1) base = BGT_MAP_NODE_UNKNOWN_BASE;
     else if (icon == BGT_MAP_HERE) base = BGT_MAP_NODE_HERE_BASE;
     else if (icon == BGT_MAP_BOSS) base = BGT_MAP_NODE_BOSS_BASE;
     else if (icon == BGT_MAP_SIGIL) base = BGT_MAP_NODE_SIGIL_BASE;
@@ -109,6 +110,22 @@ static void map_dungeon_node(u8 x, u8 y, u8 icon, u8 seen) {
     map_put((u8)(x + 1), y, (u8)(base + 1));
     map_put(x, (u8)(y + 1), (u8)(base + 2));
     map_put((u8)(x + 1), (u8)(y + 1), (u8)(base + 3));
+}
+
+// A pocket map should grow from the route the player actually walked, not
+// present the entire dungeon as a dim circuit diagram on the first screen.
+// Keep one layer of adjacent exits visible as hollow frontier rooms. This
+// communicates "you can go here next" without revealing the rest of the
+// generated maze or making explored and unexplored paths compete visually.
+static u8 dungeon_cell_frontier(u8 cell, u8 size) {
+    // Every dungeon owns the sequential snake spine. Optional loop exits
+    // become obvious when their destination is actually visited; keeping the
+    // frontier to the guaranteed predecessor/successor is both clearer and
+    // much cheaper in this tight ROM bank than four graph queries per cell.
+    if (cell && run_state_dungeon_cell_seen((u8)(cell - 1))) return 1;
+    if ((u8)(cell + 1) < size
+        && run_state_dungeon_cell_seen((u8)(cell + 1))) return 1;
+    return 0;
 }
 
 static void draw_dungeon_legend(void) {
@@ -244,7 +261,6 @@ static void draw_dungeon_grid(void) {
     };
     u8 i, j;
     u8 size = run_state_dungeon_size();
-    u8 sigil_cell = 2;
     u8 here = run_state_dungeon_cell();
     u8 warden_done = (run_state.dungeon_puzzles
         & RUN_WARDEN_BOON_BIT) ? 1 : 0;
@@ -255,7 +271,6 @@ static void draw_dungeon_grid(void) {
     u8 sigil_done = (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
     u8 next_trial = 0xFF;
-    u8 next_trial_icon = BGT_SWITCH;
     if (sigil_done && !warden_done) next_trial = 3;
     else if (warden_done && size >= 12 && !waystone_done) {
         next_trial = 7;
@@ -263,32 +278,36 @@ static void draw_dungeon_grid(void) {
         && size >= 14 && !deep_warden_done) next_trial = 9;
     for (i = 0; i < size; ++i) {
         u8 seen = run_state_dungeon_cell_seen(i);
+        u8 knowledge = seen ? 2 : dungeon_cell_frontier(i, size);
         u8 icon = (i == here) ? BGT_MAP_HERE
             : (i == (u8)(size - 1) ? BGT_MAP_BOSS : BGT_MAP_ROOM);
         // Reaching the sanctuary reveals the adjacent boss threshold even
         // before it is crossed. The amber danger node is the map equivalent
         // of Zelda's compass hint and matches the marked in-room boss doors.
         if (i == (u8)(size - 1)
-            && run_state_dungeon_cell_seen((u8)(size - 2))) seen = 1;
+            && run_state_dungeon_cell_seen((u8)(size - 2))) {
+            knowledge = 2;
+        }
         // Put the objective in the room that actually owns it. The older
         // free-floating center marker looked like decoration, so players
         // could reach the sanctuary without realizing which room held the
         // required Rift Sigil.
-        if (i == sigil_cell && i != here)
+        if (i == 2 && i != here)
             icon = BGT_MAP_SIGIL;
         // Each completed fixture reveals exactly one next trial. The switch
         // glyph distinguishes the Waystone puzzle from amber Warden fights;
         // late maps therefore teach the route without exposing unrelated
         // procedural rooms or returning to a truncated text page.
         if (i == next_trial && i != here) {
-            icon = next_trial_icon;
-            seen = 1;
+            icon = BGT_SWITCH;
+            knowledge = 2;
         }
-        map_dungeon_node(gx[i], gy[i], icon, seen);
+        map_dungeon_node(gx[i], gy[i], icon, knowledge);
     }
-    // Draw only real reciprocal maze edges. Unknown links use subdued
-    // one-plane ink, so the full route shape is readable without revealing
-    // room identity; explored endpoints fill each segment to bright ink.
+    // Draw only real reciprocal maze edges that touch explored knowledge.
+    // A bright segment joins two known rooms; a subdued segment points from
+    // the walked route to its one-room frontier. Deeper links remain blank,
+    // so each SELECT press shows travel history instead of a solved circuit.
     // The boss threshold remains the one deliberate adjacent reveal.
     for (i = 0; i < size; ++i) {
         u8 a_seen = run_state_dungeon_cell_seen(i);
@@ -298,14 +317,21 @@ static void draw_dungeon_grid(void) {
                     && (gx[i] + 3 == gx[j] || gx[j] + 3 == gx[i]))
                 || (gx[i] == gx[j]
                     && (gy[i] + 3 == gy[j] || gy[j] + 3 == gy[i]));
+            if (i == (u8)(size - 1)
+                && run_state_dungeon_cell_seen((u8)(size - 2))) {
+                a_seen = 1;
+            }
             if (j == (u8)(size - 1)
-                && run_state_dungeon_cell_seen((u8)(size - 2))) b_seen = 1;
+                && run_state_dungeon_cell_seen((u8)(size - 2))) {
+                b_seen = 1;
+            }
             if (next_trial != 0xFF) {
                 if (i == next_trial) a_seen = 1;
                 if (j == next_trial) b_seen = 1;
             }
             if (!adjacent || !run_state_dungeon_cells_connected(i, j))
                 continue;
+            if (!a_seen && !b_seen) continue;
             if (gy[i] == gy[j]) {
                 u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
                 u8 right = gx[i] > gx[j] ? gx[i] : gx[j];
@@ -366,7 +392,7 @@ static void draw_town_grid(void) {
     if (plaza > TOWN_QUARTER) plaza = TOWN_ARRIVAL;
     here = plaza_node[plaza];
     for (i = 0; i < 3; ++i) {
-        map_room_box(tx[i], ty[i], i == here ? BGT_SWITCH : icon[i], 1);
+        map_room_box(tx[i], ty[i], i == here ? BGT_SWITCH : icon[i]);
     }
     // East/west civic lanes and the north route back into the next dungeon.
     for (i = 0; i < 3; ++i) {

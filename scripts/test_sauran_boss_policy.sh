@@ -15,7 +15,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-sauran-boss.XXXXXX)"
 
-for replay in '11 500 2064128703' '12 520 2064128323' '13 400 2064128731'; do
+for replay in '11 500 2064128703' '12 520 2064128323' '13 420 2064128751'; do
   read -r run frame seed <<EOF
 $replay
 EOF
@@ -34,7 +34,7 @@ awk -F, '
   }
   {
     rows++
-    if ($(col["seed"]) != (NR == 2 ? 2064128703 : NR == 3 ? 2064128323 : 2064128731))
+    if ($(col["seed"]) != (NR == 2 ? 2064128703 : NR == 3 ? 2064128323 : 2064128751))
       wrong_seed = 1
     bosses += $(col["bosses"])
     if ($(col["bosses"]) >= 1) first_bosses++

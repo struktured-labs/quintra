@@ -175,8 +175,8 @@ def main():
         "claimed Sigil did not reveal the amber Warden trial"
     assert pb.memory[bg + 3 * 32 + 9] == 0, \
         "Sigil still uses the misleading floating map marker"
-    assert pb.memory[bg + 10 * 32 + 13] == 106, \
-        "unseen boss slot lost its dim identity-free placeholder"
+    assert pb.memory[bg + 10 * 32 + 13] == 0, \
+        "unseen boss slot leaked through the exploration-first Compass"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")
     for _ in range(30):
