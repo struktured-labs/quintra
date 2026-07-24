@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.71: Dungeon Horizons](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.72: The Sigil Key](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,23 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.71**, published after the complete build,
+The current cartridge is **v0.18.72**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The game now plainly tells a new player what its controls and objectives
+mean.** Champion selection says `SELECT OPENS MAP` and `START OPENS PACK`
+before the run begins. The Pack now carries one live quest line derived from
+the cartridge's real progression state: find the **Sigil key**, clear the
+Warden, wake the Waystone, complete the Deep Ward, then seek the marked skull
+gate. It changes to `FIND DUNGEON`, `REST THEN NORTH`, or `BREAK COLOSSUS` in
+Riftwild, villages, and boss arenas.
+
+This guidance is not a second quest system and never guesses from room order.
+It reads the same persisted Sigil, Warden, Waystone, Deep Warden, world,
+village, and Colossus flags that actually gate play. It therefore stays
+correct after backtracking, nonlinear Rift Wells, suspend/resume, and direct
+deep checkpoints. The information lives in the existing Pack instead of
+adding a forced tutorial modal to every roguelike run.
 
 **Dungeon wings now contain sustained scrolling spaces, not only more room
 counters.** Every completed snake row can end in a paired 224×200 wing behind
@@ -2068,7 +2083,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.71 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.72 release ROM occupies 128 KiB. Its media,
 460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -2084,8 +2099,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.71 build has 1,032 bytes in bank 1, 1,538 in bank 2,
-1,845 in bank 3, 1,547 in bank 4, 1,253 in bank 5, and 6,484 in bank 6.
+ROM. The current v0.18.72 build has 1,032 bytes in bank 1, 1,538 in bank 2,
+1,783 in bank 3, 1,148 in bank 4, 1,253 in bank 5, and 6,361 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

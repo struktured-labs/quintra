@@ -106,6 +106,13 @@ static void render(void) {
         }
     }
 
+    // Teach the two navigation controls before the first room. They are
+    // intentionally separate, plain-language lines: the former bottom-row
+    // control cluster explained selection but left new players to discover
+    // the dungeon map and Pack by accident.
+    gotoxy(2, 9);  text_write("SELECT OPENS MAP");
+    gotoxy(2, 10); text_write("START OPENS PACK");
+
     // Explain the skill in concrete play terms without presenting B as three
     // different bindings. Every string fits the physical 20-column grid—
     // unlike the former clipped tutorial.

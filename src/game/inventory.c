@@ -73,6 +73,34 @@ static const char *item_name_by_index(u8 index) {
     return index < N_ITEMS ? items[index].name : "-";
 }
 
+// One progression-aware line turns the Pack into a useful "what do I do
+// next?" screen. In particular, calling the stage key only a Sigil made its
+// purpose opaque to a first-time player even after the Compass correctly
+// marked its room. Every phrase fits the physical 20-column LCD exactly.
+static void write_current_goal(void) {
+    gotoxy(0, 9);
+    if (run_state.world_mode) {
+        text_write("GOAL FIND DUNGEON");
+    } else if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        text_write("GOAL REST THEN NORTH");
+    } else if (run_state_is_boss_room()) {
+        text_write("GOAL BREAK COLOSSUS");
+    } else if (!(run_state.rift_sigils
+            & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))) {
+        text_write("GOAL FIND SIGIL KEY");
+    } else if (!(run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT)) {
+        text_write("GOAL CLEAR WARDEN");
+    } else if (run_state_dungeon_size() >= 12
+            && !(run_state.dungeon_puzzles & RUN_WAYSTONE_BIT)) {
+        text_write("GOAL WAKE WAYSTONE");
+    } else if (run_state_dungeon_size() >= 14
+            && !(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT)) {
+        text_write("GOAL CLEAR DEEP WARD");
+    } else {
+        text_write("GOAL SEEK SKULL GATE");
+    }
+}
+
 void inventory_enter(void) {
     DISPLAY_OFF;
     HIDE_SPRITES;
@@ -110,6 +138,7 @@ void inventory_enter(void) {
     gotoxy(8, 6);  text_write("DEF "); text_u16((u16)player.def);
     gotoxy(1, 8);  text_write("SPD "); text_u16((u16)player.spd);
     gotoxy(8, 8);  text_write("LCK "); text_u16((u16)player.lck);
+    write_current_goal();
 
     gotoxy(1, 10); text_write("WPN A:");
     text_write(item_name_by_index(player.starter_weapon));

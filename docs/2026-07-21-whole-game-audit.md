@@ -1,5 +1,27 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.72 first-play quest-language response
+
+The live visual audit found that the v0.18.67 pocket grid and v0.18.71
+scrolling wings now communicate geography, but the game still used **Sigil**
+as unexplained lore vocabulary. A player could see the cyan marker and skull
+gate without being told that the Rift Sigil is the dungeon's key or which
+required fixture followed it.
+
+Champion selection now teaches `SELECT OPENS MAP` and `START OPENS PACK`
+before committing to a run. The Pack's formerly empty ninth row now names the
+next objective from authoritative persisted state: find the Sigil key, clear
+the first Warden, wake the Waystone when the stage requires it, clear the Deep
+Ward when present, then seek the skull gate. Riftwild, villages, and live
+Colossus arenas instead say to find the dungeon, rest and leave north, or
+break the Colossus.
+
+This is passive, backtracking-safe guidance rather than a forced tutorial or
+a duplicate quest tracker. A linked-ROM contract advances every exact fixture
+bit and verifies all eight messages, plus both menu-control prompts, directly
+from the native tilemap. It therefore explains the lore term without weakening
+Normal, changing procgen, or interrupting repeat roguelike runs.
+
 ## v0.18.71 dungeon-scale response
 
 The report that the stages still feel compact remains correct even after the
@@ -90,7 +112,7 @@ and post-clear exit moved to BG column 27. Live-ROM coverage crosses the seam,
 pins the far wall before the kill, verifies the distant warp and full camera
 range, exits to Riftwild after unseal, and proves the next Colossus did not
 inherit wide state. Dense performance remains 147/180 updates with 12/12
-entities active, the complete 370-state curriculum was regenerated, and the
+entities active, the complete checkpoint curriculum was regenerated, and the
 input-only pilot collects far-side boss relics and leaves the arena.
 Passive duplicates also coalesce their presence record while retaining stacked
 stats, preventing a long-run inventory registry from dropping a later
@@ -256,7 +278,7 @@ yet ready to call 1.0.
   It deliberately does not claim that a heuristic bot has balanced Normal.
 - The final 2026-07-22 `make verify` pass completed uninterrupted after the
   mandatory media/state regeneration. It covers the cartridge header and
-  layout, Rust/linked-ROM procgen parity and variety, 370 hash-bound
+  layout, Rust/linked-ROM procgen parity and variety, 460 hash-bound
   Normal/Easy checkpoints, all nine colossal encounters, all 32 enemy IDs,
   overworld/village/Sigil routes, HUD/pickups/shops, combat abilities, exact
   Easy victory replay, focused hard-Normal policies, and deterministic input
@@ -301,7 +323,7 @@ yet ready to call 1.0.
   reward instead becomes a half-heart when the player is wounded (five coins
   at full health), converting that spike into recoverable risk/reward without
   globally lowering Normal.
-- All 370 direct checkpoints and the six automatic 5/10/15/20/25/30-minute
+- All 460 direct checkpoints and the six automatic 5/10/15/20/25/30-minute
   training checkpoints now name the same current ROM hash. The periodic set
   had still pointed at an older cartridge despite loading correctly when it
   was first created; it has been regenerated and fresh-emulator verified from
@@ -321,7 +343,7 @@ Leech drain interval. It deliberately
 traverses the same generated game. Easy-mode tuning
 should wait until Normal's target curve is stable; otherwise two moving targets
 will hide whether encounter design or the assist layer caused a result.
-The paired-state live-ROM contract checks all 185 Normal/Easy checkpoint pairs
+The paired-state live-ROM contract checks all 230 Normal/Easy checkpoint pairs
 and requires identical generated tiles, route/progression state, hostile
 placement and HP, and boss-pattern identity. Easy may soften the hero-facing
 numbers and timing allowances, but it may not author different content.
@@ -611,8 +633,8 @@ do not enlarge or depopulate the world until a fresh player tests this rhythm.
 
 ## Checkpoint/testing workflow
 
-Every build produces 370 manifest-bound PyBoy states: all five champions in
-Normal and Easy at entry, pre-boss sanctuary, and live-boss checkpoints for
+Every build produces 460 manifest-bound PyBoy states: all five champions in
+Normal and Easy at entry, scrolling-court, pre-boss sanctuary, and live-boss checkpoints for
 all nine stages, fresh Riftwild arrivals after stages one through eight, plus
 the village arrivals after stages three and six. The
 sanctuary fixture settles the entire streamed room slide, arrives before the
