@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Live-ROM regression: Spirit Convergence is capped below eight boss hits."""
-from test_boss_identity import EN, PL, enter_boss
+"""Live-ROM regression: Spirit Convergence and Rift Armor damage contracts."""
+from test_boss_identity import EN, PL, RS, enter_boss
 
 
 ENTITY_SIZE = 28
@@ -24,8 +24,12 @@ def setup_shot(pb, address, x, y, *, convergence=False):
     pb.memory[address + 26] = 7
 
 
-def hit_boss(*, convergence, stage=0):
+def hit_boss(*, convergence, stage=0, easy=False):
     pb, boss = enter_boss(stage, keep_open=True)
+    # Difficulty is run_state offset 26. The boss and its arena are already
+    # progression-matched; switching only this public mode byte isolates the
+    # late-Rift-Armor tester assist from checkpoint/player-stat differences.
+    pb.memory[RS + 26] = 1 if easy else 0
     boss_x, boss_y = pb.memory[boss + 3], pb.memory[boss + 7]
     pb.memory[boss + 14] = 100
     # Keep the hero out of the constructed collision and above Last Stand's
@@ -58,6 +62,8 @@ def main():
     ember_damage = hit_boss(convergence=False, stage=2)
     frost_damage = hit_boss(convergence=False, stage=3)
     void_damage = hit_boss(convergence=False, stage=8)
+    easy_ember_damage = hit_boss(convergence=False, stage=2, easy=True)
+    easy_void_damage = hit_boss(convergence=False, stage=8, easy=True)
     assert chord_damage == 28, (
         f"Convergence chord landed {chord_damage} boss damage; expected four 7-damage hits"
     )
@@ -73,7 +79,14 @@ def main():
     assert void_damage == 24, (
         f"Void Lord Rift Armor should cap eight ordinary hits at 24, got {void_damage}"
     )
-    print("[convergence-cap] PASS chord=28; ordinary-eight=56; ember-eight=24; frost-eight=24; void-eight=24")
+    assert easy_ember_damage == 40, (
+        "Easy tester damage should pierce Ember Rift Armor for five per hit, "
+        f"got {easy_ember_damage}")
+    assert easy_void_damage == 40, (
+        "Easy tester damage should pierce Void Rift Armor for five per hit, "
+        f"got {easy_void_damage}")
+    print("[convergence-cap] PASS chord=28; ordinary-eight=56; "
+          "Normal Rift Armor eight=24; Easy tester eight=40")
 
 
 if __name__ == "__main__":

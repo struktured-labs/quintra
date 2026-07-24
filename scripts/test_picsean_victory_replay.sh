@@ -35,8 +35,12 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 
+# Keep the cartridge-side 210,000-frame budget authoritative.  The host may
+# need longer than real time when a developer is simultaneously running an
+# emulator and the full verification suite; killing a still-progressing proof
+# at 320 seconds produced no CSV result and looked like a route regression.
 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_FRAMES=210000 QUINTRA_BALANCE_HOST_TIMEOUT=320 \
+  QUINTRA_BALANCE_FRAMES=210000 QUINTRA_BALANCE_HOST_TIMEOUT=600 \
   QUINTRA_BALANCE_TARGET_FRAME="$TARGET_FRAME" \
   QUINTRA_BOT_EASY="$EASY" \
   QUINTRA_BOT_THREAT_POLICY="$THREAT_POLICY" \

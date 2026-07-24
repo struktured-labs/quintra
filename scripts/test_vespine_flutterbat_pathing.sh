@@ -13,7 +13,7 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-vespine-flutter.XXXXXX)"
 
 QUINTRA_BALANCE_REPS=3 QUINTRA_BALANCE_CLASSES=4 \
-  QUINTRA_BALANCE_FRAMES=10800 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=10800 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

@@ -1,5 +1,27 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.74 Easy deep-boss response
+
+The first current-ROM paired curriculum refresh separates dungeon attrition
+from boss inspection more cleanly. On Normal, every one of the 45
+progression-matched stage-entry fixtures survives its 30-second sample; 20
+resolve by clearing or exiting and 25 remain under pressure. The old five
+entry deaths are gone. Golden Temple remains the attended-test lead: its
+Picsean fixture survives at 1/16 HP after losing fifteen half-hearts, while the
+other four survive or resolve. That is a reason to watch one specific late
+foyer, not to reduce every Normal enemy.
+
+The paired boss diagnostic exposes a different Easy-mode gap. Before this
+pass, the generic pilot cleared 34/45 Easy Colossi, but Sauran and Vespine
+still died with only 19 and 37 HP left on Void Lord. Easy now lets player hits
+deal up to five damage through Ember-and-later Rift Armor; Normal retains its
+three-damage cap. Boss HP, generated arenas, movement, projectile patterns,
+incoming damage behavior, and World Collapse are identical between modes.
+The matched rerun clears 42/45, leaves the other three alive at timeout, and
+clears Void Lord with all five champions. This makes Easy a more useful
+mechanic-inspection mode without presenting its input policy as human balance
+evidence.
+
 ## v0.18.73 perceived-scale and arrival-pacing response
 
 The latest attended report is correct: 20–30 logical rooms still feel compact

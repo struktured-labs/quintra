@@ -16,7 +16,7 @@ OUT="$(mktemp /tmp/quintra-wolfkin-mire-entry.XXXXXX)"
 # heavier on the host; the cartridge frame cap and room-29 contract stay exact.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=460 \
-  QUINTRA_BALANCE_FRAMES=32000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
+  QUINTRA_BALANCE_FRAMES=32000 QUINTRA_BALANCE_HOST_TIMEOUT=240 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

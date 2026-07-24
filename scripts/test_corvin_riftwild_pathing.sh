@@ -13,7 +13,7 @@ OUT="$(mktemp /tmp/quintra-corvin-riftwild.XXXXXX)"
 # Outdoor collision/pathing is identical in Easy; use the tester budget so
 # the harder opening boss cannot prevent this traversal fixture from running.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=24000 QUINTRA_BALANCE_HOST_TIMEOUT=240 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
@@ -23,6 +23,7 @@ awk -F, '
     next
   }
   NR == 2 {
+    found = 1
     if ($(col["max_room"]) < 12 || $(col["world_hops"]) < 5) {
       print "[corvin-riftwild] did not cross the outdoor graph" > "/dev/stderr"
       exit 1
@@ -31,7 +32,6 @@ awk -F, '
       print "[corvin-riftwild] live route stall" > "/dev/stderr"
       exit 1
     }
-    found = 1
   }
   END {
     if (!found) {

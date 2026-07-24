@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.73: The Long Halls](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.74: Tester’s Edge](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,18 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.73**, published after the complete build,
+The current cartridge is **v0.18.74**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Easy now finishes deep boss inspections without changing the authored
+game.** Normal remains untouched: late Colossi still cap one hit at three
+damage, retain their full HP, movement, projectile patterns, and World
+Collapse. Easy keeps those exact encounters and generated worlds but lets the
+strengthened tester kit pierce Rift Armor for five damage per hit. In the
+paired one-minute diagnostic this raises Easy clears from 34/45 to 42/45,
+clears the finale with all five champions instead of three, and leaves the
+other three policies alive at timeout. This is deliberately a testing aid,
+not a second balance target or a hidden Normal nerf.
 
 **Dungeon scale now persists through scrolling districts.** A snake turn no
 longer contains only an isolated pair of wide rooms. Its final two cells flow

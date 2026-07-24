@@ -159,7 +159,13 @@ u8 combat_resolve(void) BANKED {
                 && entities[j].ai_data[3]
                 && entities[j].ai_data[2] >= 2
                 && entities[j].ai_data[2] <= 8) {
-                u8 cap = 3;
+                // Easy is the hands-on deep-content mode. Keep the same
+                // Colossus HP, patterns, arena, and one-hit damage contract,
+                // but let the strengthened tester kit pierce more Rift Armor
+                // so a late mechanic can be replayed without every attempt
+                // ending a few hits short. Normal retains its authored
+                // three-damage endurance cap.
+                u8 cap = RUN_IS_EASY() ? 5 : 3;
                 if (dmg > cap) dmg = cap;
             }
 

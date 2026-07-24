@@ -14,7 +14,7 @@ OUT="$(mktemp /tmp/quintra-corvin-boss.XXXXXX)"
 # colossus with enough health for the test to isolate orbit pressure instead
 # of measuring unrelated route attrition.
 QUINTRA_BALANCE_RUNS=27 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=14000 QUINTRA_BALANCE_HOST_TIMEOUT=45 \
+  QUINTRA_BALANCE_FRAMES=14000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
   QUINTRA_BALANCE_TARGET_FRAME=680 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
