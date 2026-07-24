@@ -1346,6 +1346,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // Leading edge after an 8px slide: two cells to check
                 u8 t1x, t1y, t2x, t2y;
                 u8 open;
+                u8 nox = (u8)(ox + dx), noy = (u8)(oy + dy);
                 if (dx > 0)      { t1x = (u8)(ox + 2); t1y = oy; t2x = t1x; t2y = (u8)(oy + 1); }
                 else if (dx < 0) { t1x = (u8)(ox - 1); t1y = oy; t2x = t1x; t2y = (u8)(oy + 1); }
                 else if (dy > 0) { t1x = ox; t1y = (u8)(oy + 2); t2x = (u8)(ox + 1); t2y = t1y; }
@@ -1357,6 +1358,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             || a == BGT_SWITCH)
                         && (b == BGT_FLOOR || b == BGT_FLOOR2 || b == BGT_FLOOR3
                             || b == BGT_SWITCH);
+                }
+                // A 2x2 cairn needs two clear body tiles between it and a
+                // threshold. Otherwise a legal shove can leave the visible
+                // gold frame open but reduce its approach to an impassable
+                // eight-pixel slit.
+                if (open
+                    && ((((nox <= 3 || nox >= 15)
+                            && noy <= 10 && (u8)(noy + 1) >= 7))
+                        || (((noy <= 3 || noy >= 12)
+                            && nox <= 12 && (u8)(nox + 1) >= 7)))) {
+                    open = 0;
                 }
                 // Never entomb a live enemy under the sliding crate
                 if (open) {
@@ -1377,7 +1389,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     if (push_dir == cur) push_timer++;
                     else { push_dir = cur; push_timer = 1; }
                     if (push_timer >= 10) {
-                        u8 nox = (u8)(ox + dx), noy = (u8)(oy + dy);
                         u8 pressed_switch = (u8)(room_tilemap[t1y][t1x] == BGT_SWITCH
                                               || room_tilemap[t2y][t2x] == BGT_SWITCH);
                         u8 switch_x = (room_tilemap[t1y][t1x] == BGT_SWITCH) ? t1x : t2x;

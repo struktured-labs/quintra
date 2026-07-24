@@ -131,6 +131,16 @@ for run in "${RUN_IDS[@]}"; do
           now=$(wc -l < "$trial_csv")
           if [ "$now" -gt "$before" ]; then break; fi
           if ! kill -0 "$pid" 2>/dev/null; then break; fi
+          # A crashed mGBA can leave the background timeout wrapper as an
+          # unreaped zombie. `kill -0` still reports that PID as alive, which
+          # formerly turned an immediate frontend drop into a full five-minute
+          # silent wait before the existing second-attempt retry. Detect that
+          # terminal state without reaping it early; the wait below remains
+          # the single process cleanup point.
+          if [ -r "/proc/$pid/stat" ]; then
+            read -r _ _ process_state _ < "/proc/$pid/stat"
+            if [ "$process_state" = Z ]; then break; fi
+          fi
           sleep 0.25
       done
       # Headless mGBA exits once the Lua observer returns.  The timeout process

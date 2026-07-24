@@ -407,6 +407,22 @@ static void apply_stage_archetype(u8 stage, u32 seed) {
     }
 }
 
+// Authored silhouettes are layered over a random room shape. Even when both
+// layers are independently traversable, their hard tiles can overlap into a
+// one-way underhang: horizontal feet-box movement admits the 16px champion,
+// then the full-sprite vertical rule cannot get them back out. Two body-wide
+// side rails make every landmark's peripheral pockets reversible without
+// erasing its central stage identity or cardinal door lanes.
+static void carve_stage_escape_rails(void) {
+    u8 y;
+    for (y = 2; y <= 14; ++y) {
+        room_tilemap[y][2] = BGT_FLOOR;
+        room_tilemap[y][3] = BGT_FLOOR;
+        room_tilemap[y][16] = BGT_FLOOR;
+        room_tilemap[y][17] = BGT_FLOOR;
+    }
+}
+
 void procgen_generate_current_room(void) BANKED {
     const biome_def_t *bio = &biomes[run_state.biome_id];
     u8 world_kind = run_state.world_mode
@@ -600,7 +616,12 @@ void procgen_generate_current_room(void) BANKED {
                     || run_state_dungeon_local() == 2
                     || run_state_dungeon_local() == 4
                     || (run_state_dungeon_local() == 7
-                        && run_state_dungeon_size() >= 12))) {
+                        && run_state_dungeon_size() >= 12)
+                    // Each later snake row begins with another authored
+                    // stage court. These wing landmarks keep a long route
+                    // from reading as generic procgen after its first third.
+                    || run_state_dungeon_local() == 11
+                    || run_state_dungeon_local() == 17)) {
                 apply_stage_archetype(run_state.bosses_beaten, seed);
             }
 
@@ -714,6 +735,22 @@ void procgen_generate_current_room(void) BANKED {
                             room_tilemap[pty][ptx] = BGT_POT;
                     }
                 }
+            }
+
+            // Apply this after loose props so a crate or pot cannot silently
+            // rebuild the same underhang that the authored circulation rail
+            // removed. Crystal Caverns has no stage overlay and retains the
+            // untouched Rust-parity base generator.
+            if (stage_room_archetype[run_state.bosses_beaten % N_STAGES]
+                    != STAGE_ARCH_CAVERN
+                && (run_state_dungeon_local() == 1
+                    || run_state_dungeon_local() == 2
+                    || run_state_dungeon_local() == 4
+                    || (run_state_dungeon_local() == 7
+                        && run_state_dungeon_size() >= 12)
+                    || run_state_dungeon_local() == 11
+                    || run_state_dungeon_local() == 17)) {
+                carve_stage_escape_rails();
             }
 
         }
@@ -899,6 +936,15 @@ void procgen_generate_current_room(void) BANKED {
         // a guaranteed full blessing, so each escalating colossus tests the
         // build rather than leftover attrition from the preceding rooms.
         u8 is_rest = run_state_is_sanctuary();
+        // Recurring turn courts separate the long snake rows into readable
+        // wings. They retain combat, but cap it at a
+        // deliberate pair so the enlarged maze has pacing contrast rather
+        // than becoming an uninterrupted sequence of dense arenas.
+        u8 is_waypoint = (!is_boss_room && !is_miniboss && !is_shop
+            && !is_rest && !run_state.world_mode
+            && (run_state_dungeon_local() == 5
+                || run_state_dungeon_local() == 11
+                || run_state_dungeon_local() == 17)) ? 1 : 0;
 
         if (is_town) {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
@@ -1149,7 +1195,9 @@ void procgen_generate_current_room(void) BANKED {
             // Keep the existing shallow ramp rather than raising every HP
             // value into a sponge fight.
             u8 depth_bonus = run_state.bosses_beaten;
-            u8 enemy_count = (u8)(2 + rng_range(4) + (depth_bonus > 2 ? 2 : depth_bonus));
+            u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 1 : 2)
+                : (u8)(2 + rng_range(4)
+                    + (depth_bonus > 2 ? 2 : depth_bonus));
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
             u8 spawned = 0;

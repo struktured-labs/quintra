@@ -198,6 +198,43 @@ def blocked_crate_north_face_holds():
     pb.stop(save=False)
     return y == 80 and intact
 
+def block_cannot_jam_east_threshold():
+    """A movable cairn must retain a hero-width lane beside a real door."""
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240): pb.tick()
+    pb.button("start")
+    for _ in range(30): pb.tick()
+    pb.button("a")
+    for _ in range(60): pb.tick()
+    for i in range(32 * 28): pb.memory[EN + i] = 0
+    # Exact geometry from the full-run regression: moving this origin from
+    # x=15 to x=16 would leave only the single x=18 tile between the 2x2
+    # cairn and the east threshold—too narrow for the champion.
+    bx, by = 15, 8
+    for y in range(5, 13):
+        for x in range(11, 20):
+            pb.memory[TM + y * 20 + x] = 1
+    pb.memory[TM + 8 * 20 + 19] = 3
+    pb.memory[TM + 9 * 20 + 19] = 3
+    pb.memory[TM + by * 20 + bx] = 25
+    pb.memory[TM + by * 20 + bx + 1] = 28
+    pb.memory[TM + (by + 1) * 20 + bx] = 29
+    pb.memory[TM + (by + 1) * 20 + bx + 1] = 30
+    put16(pb, PL + 9, bx * 8 - 16)
+    put16(pb, PL + 11, by * 8 - 8)
+    pb.button_press("right")
+    for _ in range(90): pb.tick()
+    pb.button_release("right")
+    intact = tuple(
+        pb.memory[TM + y * 20 + x]
+        for y in (by, by + 1) for x in (bx, bx + 1)
+    ) == (25, 28, 29, 30)
+    # BGT_BLOCK is the authoritative top-left origin; x=16 legitimately
+    # contains the original x=15 cairn's top-right quadrant.
+    jammed = pb.memory[TM + by * 20 + 16] == 25
+    pb.stop(save=False)
+    return intact and not jammed
+
 def pressure_plate_reveals_secret():
     """Only a cairn—not the hero—holds a plate and opens its side passage."""
     pb = PyBoy(str(ROM), window="null", cgb=True)
@@ -292,6 +329,7 @@ def main():
     if not locked_north_holds(): failed.append("locked-north-boundary")
     if not open_room_with_hostile_allows_exit(): failed.append("open-combat-exit")
     if not blocked_crate_north_face_holds(): failed.append("blocked-crate-north-face")
+    if not block_cannot_jam_east_threshold(): failed.append("crate-door-jam")
     if not pressure_plate_reveals_secret(): failed.append("pressure-plate-secret")
     if failed: raise SystemExit(f"[doors] FAIL unreachable or sprites hidden: {', '.join(failed)}")
     print("[doors] PASS cardinal/secret traversal + visible sprite layer + selective seals + crate boundaries")

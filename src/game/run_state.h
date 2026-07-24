@@ -118,8 +118,8 @@ u8   run_state_dungeon_local(void);
 u8   run_state_dungeon_cell(void);
 // Return the local cell of the reciprocal 6x5 maze neighbour in `dir`, or
 // 0xFF when that edge is absent. The graph always owns a winding snake spine;
-// a seed-stable vertical seam per row pair adds loops without restoring the
-// compact fully connected rectangle.
+// one seed-stable vertical seam adds a loop without restoring the compact
+// fully connected rectangle.
 u8   run_state_dungeon_cell_neighbor(u8 cell, u8 dir);
 u8   run_state_dungeon_cells_connected(u8 a, u8 b);
 // Return the global room counter of the reciprocal 6x5 neighbour in `dir`,

@@ -22,6 +22,22 @@ def distances(size: int, seed: int, stage: int) -> dict[int, int]:
     return result
 
 
+def distance(size: int, seed: int, stage: int, start: int, goal: int) -> int:
+    queue = deque([start])
+    result = {start: 0}
+    while queue:
+        cell = queue.popleft()
+        if cell == goal:
+            return result[cell]
+        for direction in range(4):
+            neighbor = dungeon_maze_neighbor(
+                cell, size, direction, seed, stage)
+            if neighbor is not None and neighbor not in result:
+                result[neighbor] = result[cell] + 1
+                queue.append(neighbor)
+    raise AssertionError(f"no route {start}->{goal}")
+
+
 def main() -> None:
     sizes = tuple(dungeon_size(stage) for stage in range(9))
     assert (GRID_W, GRID_H) == (6, 5)
@@ -32,6 +48,7 @@ def main() -> None:
                for i in range(9))
 
     route_lengths = []
+    required_lengths = []
     loop_signatures = set()
     for stage, size in enumerate(sizes):
         for seed in (0xCAFE1234, 0xCAFE1235, 0x51A6D00D, 0xDEADBEEF):
@@ -45,16 +62,48 @@ def main() -> None:
                     for direction in range(4))
                 for cell in range(size - 1))
             route_lengths.append(seen[size - 1])
+            # One and only one non-turn vertical edge creates the dungeon's
+            # seeded loop. More seams collapse the long rows back into a
+            # compact Manhattan grid; zero seams would erase run variation.
+            extra_seams = 0
+            for cell in range(size):
+                col, row = divmod(cell, GRID_W)[1], cell // GRID_W
+                if row & 1:
+                    col = GRID_W - 1 - col
+                neighbor = dungeon_maze_neighbor(
+                    cell, size, 2, seed, stage)
+                turn_col = GRID_W - 1 if row % 2 == 0 else 0
+                if neighbor is not None and col != turn_col:
+                    extra_seams += 1
+            assert extra_seams == 1, (
+                f"stage {stage + 1} seed {seed:08x} has "
+                f"{extra_seams} extra vertical seams")
+
+            # The actual progression route visits the staged Sigil, Wardens,
+            # and Waystone before the boss. It must occupy almost the full
+            # room budget rather than letting cardinal shortcuts turn a
+            # 30-room dungeon into a fifteen-room playthrough.
+            goals = (2, 3, 7, 9, 15, size - 1)
+            cursor = 0
+            required = 0
+            for goal in goals:
+                required += distance(size, seed, stage, cursor, goal)
+                cursor = goal
+            required_lengths.append(required)
+            assert required >= size - 5, (
+                f"stage {stage + 1} seed {seed:08x} required route "
+                f"collapsed to {required}/{size}")
             loop_signatures.add(tuple(
                 dungeon_maze_neighbor(cell, size, 2, seed, stage)
                 for cell in range(size)))
 
     assert len(loop_signatures) >= 8, "maze seams do not vary across runs/stages"
-    assert min(route_lengths) >= 7, (
+    assert min(route_lengths) >= 11, (
         f"procedural seams collapsed a boss route to {min(route_lengths)} rooms")
     print("[dungeon-topology] PASS 20→30 rooms, 219-screen campaign, "
-          f"seeded loop variants={len(loop_signatures)}, "
-          f"boss distance={min(route_lengths)}..{max(route_lengths)}")
+          f"one seeded loop, variants={len(loop_signatures)}, "
+          f"boss distance={min(route_lengths)}..{max(route_lengths)}, "
+          f"required route={min(required_lengths)}..{max(required_lengths)}")
 
 
 if __name__ == "__main__":

@@ -227,7 +227,7 @@ static void draw_dungeon_grid(void) {
     // 24 -25 -26 -27 -28 -29
     // The fixed 6×5 abstract lattice exposes the stage's eventual footprint.
     // Every row owns the guaranteed winding spine; one seed-stable vertical
-    // seam per row pair adds loops and appears here only when it exists.
+    // seam for the entire dungeon adds one loop and appears only where it exists.
     static const u8 gx[MAX_DUNGEON_CELLS] = {
         1, 4, 7, 10, 13, 16,
         16, 13, 10, 7, 4, 1,

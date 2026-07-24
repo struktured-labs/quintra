@@ -40,17 +40,22 @@ def dungeon_neighbor(cell: int, size: int, direction: int) -> int | None:
 
 def dungeon_maze_neighbor(cell: int, size: int, direction: int,
                           run_seed: int, stage: int) -> int | None:
-    """Mirror the cartridge's winding spine plus seed-stable loop seams."""
+    """Mirror the cartridge's winding spine plus its one seeded loop seam."""
     col, row = dungeon_cell_xy(cell)
     upper_row = row - 1 if direction == 0 else row
     neighbor = dungeon_neighbor(cell, size, direction)
     if neighbor is None or direction not in (0, 2):
         return neighbor
     turn_col = 0 if upper_row & 1 else GRID_W - 1
+    loop_row_mix = (((run_seed >> 16) & 0xFF)
+                    ^ ((run_seed >> 24) & 0xFF)
+                    ^ ((stage * 17) & 0xFF))
+    loop_row = loop_row_mix & 1
     mix = ((run_seed & 0xFF) ^ ((run_seed >> 8) & 0xFF)
            ^ ((stage * 29) & 0xFF) ^ ((upper_row * 47) & 0xFF))
     loop_col = 1 + mix % (GRID_W - 2)
-    return neighbor if col in (turn_col, loop_col) else None
+    return neighbor if (col == turn_col
+                        or (upper_row == loop_row and col == loop_col)) else None
 
 
 def dungeon_direction(source: int, target: int) -> int:

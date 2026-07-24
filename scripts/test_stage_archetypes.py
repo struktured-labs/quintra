@@ -11,6 +11,7 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 ROOM_W, ROOM_H = 20, 17
 BGT_PILLAR, BGT_CRYSTAL, BGT_SPIKES = 21, 22, 31
+STAGE_RAIL_X = (2, 3, 16, 17)
 
 
 def addr(name):
@@ -141,8 +142,29 @@ def assert_graph_exits(label, exits, stage, local_room, seed=0xCAFE1234):
         f"expected={expected} reached={exits}"
     )
 
+def assert_escape_rails(label, tiles):
+    hard = {21, 22, 25, 28, 29, 30, 32}
+    blocked = [
+        (x, y, tile(tiles, x, y))
+        for y in range(2, 15) for x in STAGE_RAIL_X
+        if tile(tiles, x, y) in hard
+    ]
+    assert not blocked, (
+        f"{label} layered geometry rebuilt a one-way body pocket: {blocked[:4]}"
+    )
+
 
 def main():
+    def assert_waypoint_pair(pb, _tiles):
+        enemies = sum(
+            pb.memory[EN + i * 28] == 2
+            and pb.memory[EN + i * 28 + 1] & 1
+            for i in range(32)
+        )
+        assert 1 <= enemies <= 2, (
+            f"wing landmark lost its two-enemy pacing beat ({enemies})"
+        )
+
     grove = generated_room(1, 2064128938)  # controller-agent seed 1
     grove_sites = [(4, 4), (5, 4), (14, 4), (15, 4),
                    (4, 12), (5, 12), (14, 12), (15, 12)]
@@ -150,6 +172,22 @@ def main():
     assert grove_crystals >= 4, f"Verdant grove silhouette missing ({grove_crystals}/8)"
     grove_exits = reachable_exits(grove, (18, 9))
     assert_graph_exits("Verdant grove", grove_exits, 1, 4, 2064128938)
+    # Room eleven begins the second long wing. It must repeat the stage's
+    # authored identity and use a lighter combat pair, not fall back to an
+    # anonymous dense procgen room.
+    grove_wing = generated_room(
+        1, 2064128938, local_room=11, probe=assert_waypoint_pair
+    )
+    grove_wing_crystals = sum(
+        tile(grove_wing, x, y) == BGT_CRYSTAL for x, y in grove_sites
+    )
+    assert grove_wing_crystals >= 4, (
+        f"Verdant second-wing landmark missing ({grove_wing_crystals}/8)"
+    )
+    assert_graph_exits(
+        "Verdant second wing",
+        reachable_exits(grove_wing, (18, 9)), 1, 11, 2064128938
+    )
 
     # Ember is a phase-family dungeon: room 1's compact central switch apron
     # leaves both authored hazard seams intact, whereas room 2 deliberately
@@ -190,6 +228,20 @@ def main():
     ))
     frost_exits = reachable_exits(frost, (18, 9))
     assert_graph_exits("Frost vault", frost_exits, 3, 4)
+    # Room seventeen is the later wing threshold. Sampling a different
+    # archetype here proves both landmark slots survive into deep traversal.
+    frost_wing = generated_room(
+        3, local_room=17, probe=assert_waypoint_pair
+    )
+    frost_wing_crystals = sum(
+        tile(frost_wing, x, y) == BGT_CRYSTAL for x, y in vault_sites
+    )
+    assert frost_wing_crystals >= 10, (
+        f"Frost late-wing vault missing ({frost_wing_crystals}/16)"
+    )
+    assert_graph_exits(
+        "Frost late wing", reachable_exits(frost_wing, (18, 9)), 3, 17
+    )
 
     def assert_mire_swim_passive(pb, tiles):
         # Remove combat noise, stand the feet-center on an actual pool tile,
@@ -360,12 +412,25 @@ def main():
         void_exits = reachable_exits(void, (18, 9))
         assert_graph_exits(f"Void Sanctum seed={seed:#x}",
                            void_exits, 8, 1, seed)
+        assert_escape_rails(f"Void Sanctum seed={seed:#x}", void)
         void_signatures.append(signature)
+    # This is the exact final-stage landmark/seed that exposed a peripheral
+    # underhang in the full controller replay: the hero could be knocked into
+    # the lower-right pocket but full-sprite vertical collision could not
+    # release them. Keep the room-four regression explicit.
+    void_trap = generated_room(8, 2064128163, local_room=4)
+    assert_escape_rails("Void Sanctum room-four replay", void_trap)
+    assert_graph_exits(
+        "Void Sanctum room-four replay",
+        reachable_exits(void_trap, (18, 9)), 8, 4, 2064128163
+    )
     assert len(set(void_signatures)) == 2, (
         "Void Sanctum seed variants collapsed or became unstable"
     )
     print(f"[stage-types] PASS Verdant grove={grove_crystals}/8, "
+          f"wing={grove_wing_crystals}/8, "
           f"Ember seams={seam_spikes}/24, Frost vault={vault_crystals}/16, "
+          f"late-wing={frost_wing_crystals}/16, "
           f"Toxic pools={min(mire_counts)}-{max(mire_counts)}/36 across 4 mirrors, "
           f"Shadow portcullises={min(keep_counts)}-{max(keep_counts)}/16, "
           "Golden colonnades=12/12 + court=4/4 across 2 insets, "

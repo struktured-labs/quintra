@@ -58,10 +58,12 @@ function dungeon_neighbor_local(cell, size, dir, stage)
     if dir == 0 or dir == 2 then
         local upper = (dir == 0) and row or old_row
         local turn = (upper % 2 == 1) and 0 or 5
+        local loop_row = xor8(xor8(emu:read8(RS + 4), emu:read8(RS + 5)),
+            ((stage or 0) * 17) % 256) % 2
         local seed = xor8(xor8(emu:read8(RS + 2), emu:read8(RS + 3)),
             xor8(((stage or 0) * 29) % 256, (upper * 47) % 256))
         local seam = 1 + (seed % 4)
-        if col ~= turn and col ~= seam then return nil end
+        if col ~= turn and (upper ~= loop_row or col ~= seam) then return nil end
     end
     return next_cell
 end
@@ -829,6 +831,16 @@ end
 -- the cartridge's full-body obstacle rule rejects on its first pixel.
 function dungeon_vertical_edge_walkable(cx, cy, direction)
     if direction ~= 1 and direction ~= 3 then return true end
+    -- Door targets live on the first/last feet row. Their canonical tile
+    -- centres intentionally put part of the 16px sprite beyond the room
+    -- border; the pixel-precise centring/crossing code below the BFS owns
+    -- those final few pixels. Running the ordinary eight-pixel body proof
+    -- here rejects every N/S threshold (cy 2->1 or 15->16), which can leave
+    -- a controller at the opposite wall even though the visible route is
+    -- completely open.
+    if (direction == 1 and cy <= 2) or (direction == 3 and cy >= 15) then
+        return true
+    end
     local px, py = cx * 8 - 9, cy * 8 - 11
     -- Boundary doorway nodes deliberately use off-center canonical values;
     -- their dedicated final-approach code handles the screen lip.
@@ -1823,6 +1835,7 @@ function door_step(px, py)
     if sy < 0 then sy = 0 elseif sy > 16 then sy = 16 end
     local entered = emu:read8(RS + 6)
     local back = entered ~= 255 and ((entered + 2) % 4) or 255
+    local inside_cache = emu:read8(RS + 13) == 2
     local in_world = emu:read8(RS + 17) == 1
     local world_screen = emu:read8(RS + 18)
     -- Town rooms 63 and 136 are three-screen civic hubs, not a
@@ -1849,15 +1862,28 @@ function door_step(px, py)
     -- and sanctuary looking for a cardinal "back" door (portal arrivals
     -- deliberately have DIR_NONE).  This is controller-only routing over
     -- the cartridge's existing reversible fixture.
-    if not in_world and ((local_room == 2 and not stage_sigil_missing()
-            and not stage_warden_missing())
+    if not in_world and ((local_room == 2
+            -- A nonlinear arrival uses DIR_NONE. If room 8's physical route
+            -- brushes its well after the objectives are complete, the paired
+            -- jump lands back in room 2; immediately selecting the room-2
+            -- well again creates an endless 2<->8 routing loop. Only use the
+            -- forward shortcut after an ordinary cardinal arrival.
+            and entered ~= 255
+            and not stage_sigil_missing() and not stage_warden_missing())
         or (local_room == 8 and stage_sigil_missing())) then
         local portal = rift_portal_step(px, py)
         if portal ~= nil then return portal end
     end
     -- Shortest authored route to dungeon gate screen 6.
     local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
-    if not in_world and not in_town then
+    if not in_world and not in_town and inside_cache then
+        -- A discovered cache overlays its parent graph cell, so the room
+        -- counter deliberately does not change. The cartridge exposes state
+        -- 2 while inside and permits only the threshold opposite the entry
+        -- direction. Following the parent maze route here can hold the pilot
+        -- against a locked gold frame forever after it shoots open a crack.
+        wanted = back ~= 255 and back or nil
+    elseif not in_world and not in_town then
         local size = dungeon_size(emu:read8(RS + 11))
         local sigil_missing = stage_sigil_missing()
         local warden_missing = stage_warden_missing()
