@@ -25,6 +25,39 @@ through a 21-frame slide inside a 42-frame total transaction. Twelve seeds per
 later stage retain at least six procedural foyer rosters with no elite
 promotion.
 
+## Penta Dragon boss-scale reference check
+
+The original game supports the requested direction more specifically than
+"make the boss sprite bigger." The [complete boss and enemy sheet
+index](https://www.spriters-resource.com/game_boy_gbc/pentadrag/) shows a
+campaign built around unusually large silhouettes, while the surviving
+160×144 fight captures make their screen share measurable. Faze occupies
+roughly four fifths of the LCD width and more than half of the active
+playfield; Penta Dragon has a similarly dominant, tall silhouette rather than
+a 32×32 body floating in an ordinary room.
+
+The [contemporary walkthrough
+description](https://gamefaqs.gamespot.com/gameboy/569778-penta-dragon/faqs/68202)
+also resolves the camera question. Crystal Dragon enters and exits distant
+holes and the camera follows it; Faze combines sheer size with a moving camera;
+Penta Dragon's size and camera movement can pin the player in a corner. The
+important reference behavior is therefore a large readable creature, a mobile
+target or weak point, and selective arena/camera choreography—not mandatory
+full scrolling on every fight.
+
+The current cartridge is already close to that presentation target. Void
+Lord's authored BG body is 128×80 pixels (the same four-fifths screen width);
+Crystal is 112×72 plus a mobile 32×32 heart in a true 224×136 arena with
+64 pixels of camera travel; Golden Temple is 112×72; and the other projected
+forms range from 64×48 to 112×64 while retaining independently moving weak
+points. Native gallery review confirms all nine read as creatures rather than
+decorative backdrops. Expanding every arena would currently make several weak
+points detach from their projected bodies and create empty safe acreage, so it
+would reduce reference fidelity. Keep Crystal as the explicit scrolling-warp
+fight, the late Hydra/Void camera drift as moving-arena language, and require
+attended Normal testing before choosing another form for true world-space
+expansion.
+
 ## v0.18.72 first-play quest-language response
 
 The live visual audit found that the v0.18.67 pocket grid and v0.18.71
