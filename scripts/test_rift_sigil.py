@@ -26,6 +26,10 @@ RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN, HITSTOP, FRAME_COUNTER = map(addr,
 RS_SIGILS = 23
 RS_BOSSES = 11
 RS_PUZZLES = 27
+BGT_VOID = 0
+BGT_SWITCH = 33
+BGT_MAP_SIGIL = 52
+BGT_MAP_UNKNOWN = 95
 
 
 def put16(pb, address, value):
@@ -161,22 +165,19 @@ def main():
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    # The 6x5 Compass gives each dungeon one 16x16 node. Opening-stage fixture
-    # room 2 owns violet quadrants 118..121 at (7,1); the revealed Warden owns
-    # amber exclamation quadrants 122..125 at (10,1). Their nearby diagonal
-    # remains empty because the tutorial dungeon has no nonlinear rift.
-    assert tuple(pb.memory[bg + y * 32 + x]
-                 for x, y in ((7, 1), (8, 1), (7, 2), (8, 2))) == \
-        (118, 119, 120, 121), \
-        "found Sigil lacks its 16x16 violet node"
-    assert tuple(pb.memory[bg + y * 32 + x]
-                 for x, y in ((10, 1), (11, 1), (10, 2), (11, 2))) == \
-        (122, 123, 124, 125), \
+    # The Pocket Grid gives each room one square tile. Opening-stage room 2
+    # owns the violet Sigil at (5,2), while its recovery reveals room 3's
+    # amber Warden trial at (7,2). The tutorial has no nonlinear rift at the
+    # later dungeons' (6,3) midpoint, and the full footprint keeps the unseen
+    # boss cell visible only as an anonymous dim square.
+    assert pb.memory[bg + 2 * 32 + 5] == BGT_MAP_SIGIL, \
+        "found Sigil lacks its one-tile violet node"
+    assert pb.memory[bg + 2 * 32 + 7] == BGT_SWITCH, \
         "claimed Sigil did not reveal the amber Warden trial"
-    assert pb.memory[bg + 3 * 32 + 9] == 0, \
-        "Sigil still uses the misleading floating map marker"
-    assert pb.memory[bg + 10 * 32 + 13] == 0, \
-        "unseen boss slot leaked through the exploration-first Compass"
+    assert pb.memory[bg + 3 * 32 + 6] == BGT_VOID, \
+        "tutorial Compass incorrectly revealed a nonlinear Rift link"
+    assert pb.memory[bg + 8 * 32 + 9] == BGT_MAP_UNKNOWN, \
+        "unseen boss cell leaked its identity through the dim footprint"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")
     for _ in range(30):

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.66: Objective Wings](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.67: Pocket Grid](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,18 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.66**, published after the complete build,
+The current cartridge is **v0.18.67**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**SELECT now opens an actual compressed pocket grid.** The dungeon occupies
+the left side as a complete faint 6×5 lattice: one 8×8 square per room and one
+8×8 segment per real corridor. Visited rooms and traversed links brighten as
+the run progresses, while cyan, violet, and amber marks identify the current
+room, Sigil, trial, and warned Colossus threshold. A permanent right-hand key
+labels `YOU / ROOM / SIGIL / TRIAL / BOSS / RIFT`, so the screen no longer
+depends on README knowledge or asks one oversized square to explain itself.
+Only the active 20–30-room footprint appears; the map shows geography without
+inventing inactive cells.
 
 **Dungeons now contain a real macro-scale junction instead of only a long
 corridor.** Local room one branches east around the Sigil/Warden/Waystone
@@ -46,19 +56,11 @@ knocked partly into scenery can still move out until the exceptional overlap
 clears, preventing collision correctness from becoming a new soft-lock.
 
 **The Compass exposes the junction in the same visual language used in play.**
-After room one, SELECT shows the current cyan square plus two hollow frontier
-squares—east toward the visible violet Sigil and south toward the deep route.
-Both connecting lines are drawn from the cartridge's reciprocal door graph.
-This is direct evidence that the abstract squares represent rooms and exits,
-not a disguised stage counter.
-
-**The Compass now unfolds as the dungeon is explored.** SELECT begins with
-only the current 16×16 room square and one hollow reachable frontier square.
-Walked rooms and links fill into the 6×5 tile grid; deeper rooms and corridors
-remain genuinely blank instead of presenting a subdued, pre-solved circuit.
-Earned Sigil, Warden/Waystone, boss-threshold, and Rift Well clues still appear
-in their semantic violet, amber, and cyan colors. The resulting pocket map is
-an exploration record as well as a route aid.
+At room one, the bright route splits east toward the objective wing and south
+toward the deep route inside the faint complete grid. Both connecting lines
+come from the same reciprocal graph that owns the cartridge's physical doors.
+This makes the squares read as rooms and exits rather than a decorated stage
+counter, while the explored path still fills visibly over the expedition.
 
 **Native mGBA training states now follow one continuous playthrough.**
 `make timed-mgba-states` drives an Easy Picsean run with ordinary controller
@@ -71,9 +73,10 @@ obeys Easy's one-damage inspection contract so the test mode can actually
 reach and study the ending.
 
 **Raw room count is not the same thing as perceived scale.** Stage one owns
-20 screens and roughly 12 entrance-to-boss steps; later stages grow to 30
-screens and 27 steps. A measured Easy controller run can still reach stage
-three by minute five, and each dungeon room remains a single 160×144 field.
+20 screens and 12 entrance-to-boss room visits; later stages grow to 30
+screens and 22 direct room visits, or 29 required-objective transitions.
+A measured Easy controller run can still reach stage three by minute five,
+and each dungeon room remains a single 160×144 field.
 The result can therefore feel compact despite the larger topology. Longer
 continuous outdoor fields, spatially meaningful side wings, and true
 scrolling Penta-style boss arenas remain active design work; this release does
@@ -88,16 +91,12 @@ required Sigil/Warden/Waystone expedition spans 19–29 transitions. Long snake
 rows become recognizable wings instead of a compact rectangle, while retaining
 the nonlinear room-2/room-8 Rift Well pair.
 
-**The SELECT Compass reads as a room map on the native LCD.** Each
-dungeon cell is now a 16×16 outlined square—four times the rendered area of
-the former one-tile circuit pad—while the one-tile corridors keep the complete
-6×5 maze on one 160×144 screen. The current room carries a large cyan diamond;
-the Rift Sigil owns a violet rune; the Colossus room owns an amber skull; and
-the next required trial owns an amber exclamation mark. A single dim outlined
-square reveals the immediate route frontier, while visited rooms and links
-brighten exactly as they are traversed. The full 30-room Void maze can fill
-the grid over the expedition; the `YOU / SIGIL / BOSS` key and conditional
-`RIFT` key remain visible.
+**The SELECT Compass reads as a room map on the native LCD.** Each dungeon
+cell is one outlined tile in a compact 6×5 grid, with one-tile corridors
+between actual neighbours. The current room is cyan; the Rift Sigil is violet;
+the Colossus room and next required trial are amber. Every active cell begins
+as a dim square and visited rooms and links brighten exactly as traversed. The
+full 30-room Void maze fits beside the permanent six-symbol legend.
 
 **Dungeons have both a larger room budget and longer critical paths.** The
 campaign starts at 20 rooms and grows through 21, 22,
@@ -125,11 +124,10 @@ from opening against a rebuilt cartridge, and `make play-mgba-state` uses the
 project's software-rendered GUI wrapper. These remain development fixtures;
 the cartridge save system and battery SRAM are unchanged.
 
-The v0.18.65 Compass keeps SELECT legible before exploration without revealing
-the complete lattice: one hollow adjacent room and its dim link show where the
-route can continue, while visited rooms and traversed links fill to bright
-ink. Fog hides deeper topology, room identities, Sigils, Wardens, and boss
-information until those clues are earned.
+The v0.18.67 Compass supersedes v0.18.65's large frontier-only boxes. It shows
+the complete active lattice in dim ink so the screen is immediately
+recognizable as a map, while room identities, Sigils, Wardens, and boss
+information remain hidden until those clues are earned.
 
 **Dungeon depth comes from required fixtures, not padding.** Every stage
 contains the second seeded puzzle and deep-Warden lesson; later routes add a
@@ -272,20 +270,18 @@ this Normal matrix remains policy evidence for direct human testing—not a
 reason to globally weaken enemies or bosses.
 
 **The Spirit Compass is now a real abstract dungeon map.** SELECT renders each
-20-to-30-room dungeon as a centered 6×5 graph of 16×16 square rooms and short
-connecting lines, rather than scattering miniature floorplans across the LCD.
-Thirty dim hollow slots establish the complete lattice immediately; only the
-cells and actual seeded maze edges active in that stage can brighten as
-explored, and room identities stay fogged until discovery. Four persisted
-segments cover the entire layout. It includes a bright current-room marker, the
-Rift Sigil objective, and an early revealed Colossus skull. A tile-native `MAP`
-heading keeps the diagram self-identifying at
-160×144 without reviving the old truncated text page. Cyan/violet/amber semantics
-remain visibly distinct on actual CGB output, and a tile-native
-`YOU / SIGIL / BOSS` key makes the symbols readable without README knowledge.
-From dungeon two onward, discovering one nonlinear well reveals one violet
-rift end-cap; visiting its paired room completes a violet nonlinear edge
-and a tile-native `RIFT` key. The Compass therefore describes the real
+20-to-30-room dungeon as a compact 6×5 graph of one-tile square rooms and
+one-tile connections, rather than scattering miniature floorplans across the
+LCD. Dim hollow slots establish the complete active lattice immediately;
+visited cells and actual reciprocal maze edges brighten while room identities
+stay fogged until discovery. Four persisted segments cover the entire layout.
+It includes a bright current-room marker, the Rift Sigil objective, the next
+trial, and an earned Colossus warning. A tile-native `MAP` heading keeps the
+diagram self-identifying at 160×144 without reviving the old truncated text
+page. Cyan/violet/amber semantics remain visibly distinct on actual CGB
+output, and a permanent `YOU / ROOM / SIGIL / TRIAL / BOSS / RIFT` key makes
+the symbols readable without README knowledge. From dungeon two onward,
+discovering either endpoint reveals the violet midpoint for the real
 room-2↔room-8 teleport instead of falsely presenting only the walking route.
 Riftwild's taller 4×4 variant begins below the tile-native `MAP` label instead
 of drawing its first row over `A/P` and leaving a stray `M`; the whole field
@@ -1998,7 +1994,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.66 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.67 release ROM occupies 128 KiB. Its media,
 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -2014,8 +2010,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.66 build has 1,362 bytes in bank 1, 1,619 in bank 2,
-1,727 in bank 3, 2,824 in bank 4, 2,769 in bank 5, and 8,699 in bank 6.
+ROM. The current v0.18.67 build has 1,362 bytes in bank 1, 1,619 in bank 2,
+2,006 in bank 3, 2,824 in bank 4, 3,231 in bank 5, and 8,699 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

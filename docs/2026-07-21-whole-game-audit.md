@@ -1,5 +1,35 @@
 # Quintra whole-game audit — updated 2026-07-23
 
+## v0.18.67 pocket-grid response
+
+The 16×16 Compass nodes were individually legible but made a 20–30-room
+dungeon look like a few isolated boxes because only the explored frontier
+appeared. SELECT now renders the complete active 6×5 footprint as one-tile
+rooms and one-tile reciprocal corridors. Unknown geography is dim; visited
+rooms and links brighten; objective identity remains earned. A permanent
+right-hand `YOU / ROOM / SIGIL / TRIAL / BOSS / RIFT` key makes the abstract
+language self-explanatory on the cartridge rather than in this audit.
+
+The current Normal curriculum still supports the user's report that the run
+can become difficult early, but not a global nerf. The same generic policy
+clears 10/45 progression-matched Colossus checkpoints and survives 11; stage
+five and the finale defeat all five policies. In ordinary entry rooms it
+resolves 14/45, with four deaths concentrated in Golden Temple's seven-body
+154-HP pack. Stage-three pressure ranges from no damage for Wolfkin to twelve
+half-hearts for Vespine. These are targeting-policy diagnostics, not human
+balance verdicts, but together with the attended stage-three feedback they
+identify attrition and class readability as higher priorities than another
+global enemy-HP increase. Every pre-boss sanctuary already restores full HP
+and MP, so boss duration and dungeon attrition can be tuned independently.
+
+Fresh attended feedback also confirms that the enlarged dungeons still
+*feel compact*. The opening dungeon owns 20 screens but its direct route is
+only 12 room visits; the 30-screen finale is 22 direct visits, or 29
+transitions when sweeping the required Sigil, Wardens, and Waystone in order.
+More room counters are therefore not the next scale fix. Continuous outdoor
+fields, distinctive side-wing landmarks, and arenas with real camera travel
+are the active structural gap.
+
 ## v0.18.60 wider-stage response
 
 Human playtesting still found the 10–16-room campaign compact. The nine-stage
