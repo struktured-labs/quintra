@@ -15,6 +15,7 @@ SCREEN_MAP = 8
 BGT_VOID = 0
 BGT_FLOOR = 1
 BGT_WALL = 2
+HUD_DIGIT_0 = 9
 BGT_MAP_ROOM = 49
 BGT_MAP_HERE = 50
 BGT_MAP_BOSS = 51
@@ -22,6 +23,7 @@ BGT_MAP_SIGIL = 52
 BGT_MAP_PATH_H = 53
 BGT_MAP_PATH_V = 54
 BGT_MAP_LABEL_Y = 64
+BGT_MAP_LABEL_S = 67
 BGT_MAP_LABEL_I = 68
 BGT_MAP_LABEL_B = 71
 BGT_MAP_RIFT = 90
@@ -98,9 +100,12 @@ def main() -> None:
     assert node_tile(pb, 19) == BGT_MAP_UNKNOWN, \
         "Compass did not expose the opening dungeon's full abstract footprint"
     assert map_tile(pb, 0, 0) == BGT_VOID, "Compass retained text-page background"
-    assert (map_tile(pb, 8, 0), map_tile(pb, 9, 0), map_tile(pb, 10, 0)) == (
-        BGT_AREA_M, BGT_AREA_A, BGT_MAP_LABEL_P), \
-        "Compass lost its tile-native MAP heading"
+    assert (map_tile(pb, 6, 0), map_tile(pb, 7, 0),
+            map_tile(pb, 9, 0), map_tile(pb, 10, 0),
+            map_tile(pb, 11, 0)) == (
+                BGT_MAP_LABEL_S, HUD_DIGIT_0 + 1,
+                BGT_AREA_M, BGT_AREA_A, BGT_MAP_LABEL_P), \
+        "Compass lost its tile-native S1 MAP heading"
     assert map_tile(pb, 13, 2) == BGT_MAP_HERE, "Compass lost YOU legend icon"
     assert map_tile(pb, 14, 2) == BGT_MAP_LABEL_Y, "Compass lost YOU legend"
     assert map_tile(pb, 13, 4) == BGT_MAP_ROOM, "Compass lost ROOM legend icon"
@@ -284,6 +289,8 @@ def main() -> None:
         "extra-byte sanctuary marker is misplaced"
     assert node_tile(pb, 29) == BGT_MAP_BOSS, \
         "thirty-room Compass lost the final boss hint"
+    assert map_tile(pb, 7, 0) == HUD_DIGIT_0 + 9, \
+        "final Compass heading did not identify stage nine"
     assert all(node_tile(pb, i) != BGT_MAP_UNKNOWN for i in range(30)), \
         "thirty-room Compass failed to render explored extra-byte cells"
     pb.screen.image.save(ROOT / "tmp" / "compass-thirty-room.png")

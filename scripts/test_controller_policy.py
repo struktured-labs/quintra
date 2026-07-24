@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pure policy contracts for the controller-only checkpoint trainer."""
 
-from quintra_pyboy_env import ACTION_A, ACTION_DOWN
+from quintra_pyboy_env import ACTION_A, ACTION_DOWN, ACTION_LEFT
 from run_pyboy_checkpoints import (
     ACTION_RIGHT, controller_action, giant_orbit_action,
     hostile_firing_action, ordinary_retreat_action, route_to_hostile,
@@ -83,6 +83,18 @@ def main() -> None:
     assert ordinary_retreat_action(live, live["hostiles"][0]) == ACTION_RIGHT, \
         "unblocked ordinary retreat should still move directly away"
 
+    # A room-range champion trapped inside preferred spacing must still take
+    # brief, honestly aligned shots. Otherwise a chasing pack can make the
+    # audit pilot flee forever while reporting zero player damage.
+    live["class_id"] = 3
+    live["x"], live["y"] = 40, 56
+    live["hostiles"][0]["x"], live["hostiles"][0]["y"] = 80, 56
+    assert controller_action(live, 0) == ACTION_RIGHT | ACTION_A, \
+        "Picsean close kite lost its aimed firing beat"
+    assert controller_action(live, 1) == ACTION_LEFT, \
+        "Picsean close kite lost its retreat beat"
+
+    live["class_id"] = 0
     live["x"], live["y"] = 40, 32
     live["hostiles"][0]["x"], live["hostiles"][0]["y"] = 80, 56
     assert not controller_action(live, 8) & ACTION_A, \

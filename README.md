@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.74: Tester’s Edge](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.75: True Bearings](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,22 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.74**, published after the complete build,
+The current cartridge is **v0.18.75**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The Spirit Compass now carries stage context without giving up its compact
+grid.** Dungeon SELECT screens say `S1 MAP` through `S9 MAP` above the
+graphical 6×5 pocket map, so screenshots and deep save states no longer look
+detached from their campaign position. The cyan current room, bright explored
+route, dim unknown footprint, violet Sigil/rift, trial switch, amber boss hint,
+and permanent right-hand legend remain tile-native and visible together.
+
+The Normal room audit is also more honest. Corvin and Picsean's external
+training pilot now takes brief cardinal firing beats while kiting a close
+pack, instead of fleeing without ever attacking. The corrected 45-room sample
+resolves 29 fixtures, exits 17, and records zero deaths. Golden Temple's
+former 1/16-HP Picsean outlier now reaches its already-open exit at 15/16 HP;
+the ROM's Normal enemies and combat values were not nerfed.
 
 **Easy now finishes deep boss inspections without changing the authored
 game.** Normal remains untouched: late Colossi still cap one hit at three

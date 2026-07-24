@@ -414,6 +414,16 @@ def controller_action(obs: dict, elapsed: int) -> int:
                 if lane and elapsed % (3 if class_id == 0 else 2) == 0:
                     return lane | ACTION_A
                 return giant_orbit_action(obs, enemy, aim)
+            # Corvin and Picsean are room-range attackers. Four contact
+            # enemies can keep them permanently inside their preferred
+            # spacing; blindly retreating then records zero damage while the
+            # pilot scrapes the boundary until death. When a real cardinal
+            # lane is already open, spend one beat in four facing/firing and
+            # use the other three to preserve space. This is ordinary
+            # controller kiting, not hidden aim or a cartridge-side assist.
+            lane = hostile_firing_action(obs, enemy, fire_ranges[class_id])
+            if class_id in (2, 3) and lane and elapsed % 4 == 0:
+                return lane | ACTION_A
             # Retreating while holding A aims the attack away from the target.
             # Preserve spacing first, then reacquire a cardinal lane.
             return ordinary_retreat_action(obs, enemy)

@@ -1,5 +1,30 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.75 Compass context and corrected room evidence
+
+The dungeon Compass remains the requested compressed abstract grid rather
+than a text status page: one tile per room, one tile per link, the complete
+6×5 active footprint, bright explored routes, dim unknown routes, semantic
+colors, a staged objective, nonlinear rift edge, and an amber pre-entry boss
+hint. Its heading now adds the missing run context as `S1 MAP` through
+`S9 MAP`. This keeps screenshots and native deep-test states self-identifying
+without displacing the graph or its permanent legend.
+
+The earlier Golden Temple warning was partly a controller artifact. Corvin
+and Picsean's PyBoy training policy retreated whenever a contact pack entered
+preferred range, even when it already owned a clear cardinal firing lane.
+Four chasers could therefore make the pilot deal zero damage and scrape the
+room edge until death. The policy now spends one beat in four on an honestly
+aligned shot and the other three preserving space; no ROM values, hidden aim,
+or future state are used.
+
+The corrected 30-second Normal room matrix resolves 29/45 fixtures, with 17
+exits and zero deaths. Golden Temple Picsean reaches the open exit in 692
+frames at 15/16 HP and Corvin exits in 570 frames untouched. Sauran remains
+the useful pressure lead: at 60 seconds he has removed 52/84 hostile HP,
+defeated two enemies, regenerated once, and survives at 4/18 HP. That is
+productive late-game combat pressure, not evidence for a global Normal nerf.
+
 ## v0.18.74 Easy deep-boss response
 
 The first current-ROM paired curriculum refresh separates dungeon attrition

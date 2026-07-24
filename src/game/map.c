@@ -74,6 +74,20 @@ static void draw_map_heading(void) {
     map_put(10, 0, BGT_MAP_LABEL_P);
 }
 
+// Dungeon screenshots and deep-test states need immediate campaign context.
+// Keep the heading tile-native and compact: "S7 MAP" identifies the current
+// procedural stage without taking any room away from the 6x5 graph or
+// returning to the old truncated prose page.
+static void draw_dungeon_heading(void) {
+    u8 stage = (u8)(run_state.bosses_beaten + 1);
+    if (stage > 9) stage = 9;
+    map_put(6, 0, BGT_MAP_LABEL_S);
+    map_put(7, 0, (u8)(HUD_DIGIT_0 + stage));
+    map_put(9, 0, BGT_AREA_M);
+    map_put(10, 0, BGT_AREA_A);
+    map_put(11, 0, BGT_MAP_LABEL_P);
+}
+
 static void map_room_box(u8 x, u8 y, u8 center) {
     u8 dx, dy;
     for (dy = 0; dy < 3; ++dy) {
@@ -394,8 +408,9 @@ void map_enter(void) {
         SHOW_BKG; DISPLAY_ON;
         return;
     }
-    tiles_load_map_bg(); tiles_load_area_labels(); map_clear_tiles();
-    draw_map_heading();
+    tiles_load_map_bg(); tiles_load_area_labels(); tiles_load_hud();
+    map_clear_tiles();
+    draw_dungeon_heading();
     draw_dungeon_grid();
     SHOW_BKG; DISPLAY_ON;
 }
