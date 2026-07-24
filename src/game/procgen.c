@@ -16,6 +16,7 @@
 #include "content.h"
 
 u8 procgen_current_room_is_boss;
+u8 procgen_current_room_is_large;
 
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
     u32 room_mix = 0;
@@ -64,19 +65,25 @@ static void place_player_after_entry(void) {
     // on the 2-wide N/S doors (cols 9-10) and y=60 on the E/W pair
     // (rows 8-9).
     u8 dir = run_state.entered_from;
+    u8 large = (run_state.world_mode || procgen_current_room_is_large) ? 1 : 0;
     if (dir == DIR_N) {
         player.x = 72;
-        player.y = run_state.world_mode ? (ROOM_WIDE_H_PX - 24) : 112;
+        player.y = large ? (ROOM_WIDE_H_PX - 24) : 112;
     }
     else if (dir == DIR_S) { player.x = 72;  player.y = 8;   }
     else if (dir == DIR_E) { player.x = 8;   player.y = 60;  }
     else if (dir == DIR_W) {
-        player.x = run_state.world_mode ? (ROOM_WIDE_W_PX - 24) : 136;
+        player.x = large ? (ROOM_WIDE_W_PX - 24) : 136;
         player.y = 60;
     }
     else {
+        // Direct developer/checkpoint portals can target a court even though
+        // normal play reaches it through a cardinal door. Keep that fallback
+        // on the guaranteed x=9..10 central trail; x=104 overlapped the
+        // seed-variant southeast ruin's top-left wall and could suppress the
+        // entire reachable encounter component.
         player.x = 72;
-        player.y = run_state.world_mode ? 92 : 60;
+        player.y = large ? 92 : 60;
     }
 }
 
@@ -518,6 +525,21 @@ void procgen_generate_current_room(void) BANKED {
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
+    {
+        u8 local = run_state_dungeon_local();
+        // Each snake row ends in a two-room scrolling wing: a dense approach
+        // expanse (4/10/16/22) followed by its lighter turn court
+        // (5/11/17/23).  Pairing them makes dungeon scale persist for a real
+        // traversal beat instead of appearing as one isolated large room.
+        procgen_current_room_is_large = (!run_state.world_mode
+            && !is_boss_room && !is_town && !run_state.secret_pending
+            && !run_state_is_miniboss() && !run_state_is_shop()
+            && !run_state_is_sanctuary()
+            && (local == 4 || local == 5
+                || local == 10 || local == 11
+                || local == 16 || local == 17
+                || local == 22 || local == 23)) ? 1 : 0;
+    }
     run_state_mark_visited();
     rng_seed(seed);
 
@@ -890,6 +912,24 @@ void procgen_generate_current_room(void) BANKED {
             room_tilemap[8][10] = BGT_PORTAL;
     }
 
+    // Each long dungeon row resolves into a true scrolling turn court. The
+    // base generator above still consumes its exact established RNG sequence;
+    // this deterministic role layer then authors the complete 28x25 field
+    // without creating a second random stream.
+    if (procgen_current_room_is_large) {
+        room_generate_dungeon_court(seed);
+        // The court replaces the complete base map, so restore the stage's
+        // authored silhouette over its western sector afterward. Otherwise
+        // Verdant/Frost/etc. wing landmarks disappear beneath generic ruins
+        // precisely where the long route should reinforce place identity.
+        // Archetypes consume no RNG and preserve the central cardinal cross.
+        if (stage_room_archetype[run_state.bosses_beaten % N_STAGES]
+                != STAGE_ARCH_CAVERN) {
+            apply_stage_archetype(run_state.bosses_beaten, seed);
+            carve_stage_escape_rails();
+        }
+    }
+
     // Three-screen village: arrival square branches west to the elder/forge
     // quarter and east to the market; only its north gate continues the run.
     if (is_town) {
@@ -1029,15 +1069,17 @@ void procgen_generate_current_room(void) BANKED {
         // a guaranteed full blessing, so each escalating colossus tests the
         // build rather than leftover attrition from the preceding rooms.
         u8 is_rest = run_state_is_sanctuary();
-        // Recurring turn courts separate the long snake rows into readable
-        // wings. They retain combat, but cap it at a
+        // Recurring turn courts close each large two-room wing. They retain
+        // combat, but cap it at a
         // deliberate pair so the enlarged maze has pacing contrast rather
-        // than becoming an uninterrupted sequence of dense arenas.
+        // than becoming an uninterrupted sequence of dense arenas. Their
+        // preceding 4/10/16/22 expanses keep the normal encounter budget.
         u8 is_waypoint = (!is_boss_room && !is_miniboss && !is_shop
             && !is_rest && !run_state.world_mode
             && (run_state_dungeon_local() == 5
                 || run_state_dungeon_local() == 11
-                || run_state_dungeon_local() == 17)) ? 1 : 0;
+                || run_state_dungeon_local() == 17
+                || run_state_dungeon_local() == 23)) ? 1 : 0;
 
         if (is_town) {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
@@ -1356,6 +1398,12 @@ void procgen_generate_current_room(void) BANKED {
                             if (run_state.world_mode && (spawned & 1)) {
                                 entities[idx].x = FIX8(192);
                                 entities[idx].y = FIX8(160);
+                            } else if (procgen_current_room_is_large) {
+                                // The small pacing encounter occupies both
+                                // the middle and far field, proving this is
+                                // gameplay space rather than empty overscan.
+                                entities[idx].x = FIX8(spawned ? 168 : 184);
+                                entities[idx].y = FIX8(spawned ? 48 : 152);
                             }
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,

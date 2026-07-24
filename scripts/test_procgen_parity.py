@@ -24,13 +24,15 @@ DUMP = ROOT / "target/release/procgen-dump"
 
 ROOM_W, ROOM_H = 20, 17
 
-# (run_seed, target_counter) — covers puzzle, Sigil, both minibosses, plain,
-# shop, sanctuary, and boss roles in the twenty-room opening dungeon.
+# (run_seed, target_counter) — covers puzzle, Sigil, both minibosses, a wide
+# approach, an exact compact plain room, shop, sanctuary, and boss roles in
+# the twenty-room opening dungeon.
 CASES = [
     (123456789, 1),
     (123456789, 2),
     (987654321, 3),
     (555555555, 4),
+    (555555555, 6),
     (42424242, 7),
     (42424242, 9),
     (42424242, 15),
@@ -79,12 +81,19 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     cairn in the room-role layer. Puzzle mechanics have their own live-ROM
     contract; parity still compares every unaffected base-generator cell.
 
+    Paired 224×200 dungeon wings deliberately replace the complete compact
+    base plane after consuming its established RNG sequence. Their dedicated
+    live-ROM contract validates the whole 28×25 field; parity separates all
+    340 legacy cells here and retains room 6 as an exact compact control.
+
     The opening boss similarly composes its giant Crystal projection after
     base generation. Its new column-19 seam is also authored world geometry:
     the real combat wall now lives in the offscreen extension at column 27.
     The colossal-arena test owns those cells and the 224px camera contract.
     """
     overlay = set()
+    if bosses_beaten == 0 and counter in (4, 5, 10, 11, 16):
+        return set(range(ROOM_W * ROOM_H))
     if counter == 19 and bosses_beaten == 0:
         overlay.update(row * ROOM_W + (ROOM_W - 1)
                        for row in range(1, ROOM_H - 1))

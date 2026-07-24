@@ -14,6 +14,10 @@ RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
 PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
+WX=$(awk '/DEF _room_world_extension / {print $3}' "$NOI")
+WB=$(awk '/DEF _room_world_bottom / {print $3}' "$NOI")
+WW=$(awk '/DEF _room_world_width / {print $3}' "$NOI")
+WH=$(awk '/DEF _room_world_height / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 HEADER="$(quintra_balance_csv_header)"
@@ -21,7 +25,10 @@ echo "$HEADER" > "$CSV"
 : > "$TRACE"
 : > "$RESULT"
 COMMON=(QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN"
-  QUINTRA_TM_ADDR="$TM" QUINTRA_SCREEN_ADDR="$LS" QUINTRA_FRAME_ADDR="$FC")
+  QUINTRA_TM_ADDR="$TM" QUINTRA_WORLD_EXT_ADDR="$WX"
+  QUINTRA_WORLD_BOTTOM_ADDR="$WB" QUINTRA_WORLD_WIDTH_ADDR="$WW"
+  QUINTRA_WORLD_HEIGHT_ADDR="$WH" QUINTRA_SCREEN_ADDR="$LS"
+  QUINTRA_FRAME_ADDR="$FC")
 command -v "$MGBA_BIN" >/dev/null
 env "${COMMON[@]}" \
   QUINTRA_BOT_RUN=1 QUINTRA_BOT_CLASS=2 QUINTRA_BOT_FRAMES=2400 \

@@ -155,16 +155,26 @@ if MODE == "gif" then
   hold(KEY_START, 2); tick(20); frame(KEY_DOWN, 12, 2)
   frame(KEY_UP, 8, 2); hold(KEY_A, 2); tick(50)
 
+  -- The first action scene is now a generated 224x200 dungeon court. Enter
+  -- through its real local-4 -> local-5 edge, then place the capture camera in
+  -- the southeast combat sector so the reel visibly demonstrates dungeon
+  -- scale rather than showing another fixed 20x17 room.
+  if not enter_room(STAGE_START[1] + 5) then
+    error("media could not enter stage-one turn court")
+  end
+
   -- Show the current abstract Compass rather than the obsolete prose page.
   -- Fully explored fixtures keep the three semantic landmarks legible in a
   -- short release reel without pretending this is organic run progression.
-  clear_hostiles(); tick(20)
+  if PL ~= 0 then emu:write8(PL + 2, 12) end
+  tick(20)
   local prior_room = room()
   emu:write8(RS + 1, BOSS1 - 1); emu:write8(RS + 20, 0xFF)
   if TOPOLOGY >= 12 then emu:write8(RS + 29, 0x01) end
   hold(KEY_SELECT, 2); tick(30); frame(0, 24, 2); hold(KEY_B, 2); tick(20)
   emu:write8(RS + 1, prior_room)
 
+  put16(PL + 9, 192); put16(PL + 11, 160); tick(24)
   local seq = {
     {KEY_A|KEY_RIGHT, 8}, {KEY_A|KEY_DOWN, 8},
     {KEY_B|KEY_LEFT, 8},
@@ -240,8 +250,15 @@ hold(KEY_DOWN, 2); tick(20)
 hold(KEY_DOWN, 2); tick(20); shot("shot_class2")
 hold(KEY_UP, 2); tick(10); hold(KEY_UP, 2); tick(10)   -- back to Wolfkin
 
--- Enter the dungeon
-hold(KEY_A, 2); tick(60); shot("shot_dungeon")
+-- Enter the dungeon, then photograph the first true 224x200 turn court from
+-- its southeast camera bound. This still is generated and rendered by the
+-- live cartridge; the media setup only deep-links to its ordinary graph edge.
+hold(KEY_A, 2); tick(60)
+if not enter_room(STAGE_START[1] + 5) then
+  error("media could not enter stage-one turn court")
+end
+put16(PL + 9, 192); put16(PL + 11, 160); tick(30)
+shot("shot_dungeon")
 
 -- Pack / stats screen (stage name, loadout, run clock)
 hold(KEY_START, 2); tick(30); shot("shot_pack")
@@ -270,6 +287,19 @@ hold(KEY_B, 2); tick(20)
 emu:write8(RS + 17, prior_world_mode)
 emu:write8(RS + 18, prior_world_screen)
 emu:write8(RS + 21, prior_seen_lo); emu:write8(RS + 22, prior_seen_hi)
+
+-- The dungeon still deliberately leaves the live room/camera in a 224x200
+-- court. Return through its true far south door before the remaining gallery
+-- deep-links use ordinary 160x136 thresholds.
+clear_hostiles()
+local court_room = room()
+put16(PL + 9, 72); put16(PL + 11, 184)
+for _=1,120 do
+  emu:setKeys(KEY_DOWN); emu:runFrame()
+  if room() ~= court_room then break end
+end
+emu:setKeys(0); tick(45)
+if room() == court_room then error("media could not leave turn court") end
 
 -- A deeper stage's look: bump bosses_beaten so the NEXT room generates
 -- with Ember Depths palettes, shoot it, then restore (must happen before

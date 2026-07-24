@@ -152,6 +152,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_run_clock.py
 	uv run --quiet --with pyboy python scripts/test_compass_map.py
 	python3 scripts/test_dungeon_topology.py
+	$(PYBOY_RUN) scripts/test_dungeon_courts.py
 	$(PYBOY_RUN) scripts/test_difficulty_mode.py
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
 	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py
@@ -368,7 +369,7 @@ play: all
 stage-states: all
 
 # Native mGBA equivalents for hands-on testing in mGBA-Qt. Generation covers
-# the same 370 champion/difficulty/checkpoint combinations as the PyBoy set and
+# the same 460 champion/difficulty/checkpoint combinations as the PyBoy set and
 # independently starts one file from every family through mGBA's -t loader.
 mgba-states: all
 	@python3 scripts/make_mgba_states.py \
@@ -406,6 +407,7 @@ timed-mgba-states: all check-balance-bot
 # tmp/human-playtests; the observer never supplies input or mutates cartridge
 # state. Set PLAYTEST_REPORT_DIR to retain the JSON somewhere else.
 # Examples: `make play-state STAGE=3`,
+# `make play-state STAGE=3 CHECKPOINT=court DIFFICULTY=easy`,
 # `make play-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran`,
 # `make play-state STAGE=7 CHECKPOINT=boss HERO=sauran`, or
 # `make play-state STAGE=1 CHECKPOINT=riftwild DIFFICULTY=easy`, or

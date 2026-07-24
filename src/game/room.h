@@ -26,15 +26,15 @@
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
 // The compact 20x17 map remains ABI-stable for existing tooling. Scrolling
-// Riftwild fields keep their authored columns 20..27 in a separate strip so
-// collision, renderer, and controller instrumentation share the same terrain.
+// Scrolling generated fields keep their authored columns 20..27 in a separate
+// strip so collision, renderer, and controller instrumentation share terrain.
 extern u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
-// Rows 17..24 span the complete 28-column outdoor world. Keeping them
-// separate preserves the compact room_tilemap ABI used by dungeon tooling.
+// Rows 17..24 span the complete 28-column generated world. Keeping them
+// separate preserves the compact room_tilemap ABI used by existing tooling.
 extern u8 room_world_bottom[ROOM_WIDE_BOTTOM_ROWS][ROOM_WIDE_W_TILES];
 // World-space contract shared by collision, projectiles, OBJ projection, and
 // emulator instrumentation. Ordinary rooms are 160x136 px; Riftwild fields
-// are 224x200 px and Crystal's proving arena is 224x136 px.
+// and dungeon turn courts are 224x200 px; Crystal is 224x136 px.
 extern u8 room_world_width;
 extern u8 room_world_height;
 extern u8 room_camera_x;
@@ -57,6 +57,8 @@ void room_spawn_progression_fixture(void) BANKED;
 // Reset the world-space camera contract and project an authored boss arena.
 // Returns its stage index, or 0xFF for ordinary/world rooms.
 u8 room_apply_world_arena(void) BANKED;
+// Build deterministic off-viewport terrain for a large dungeon turn court.
+void room_generate_dungeon_court(u32 seed) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;

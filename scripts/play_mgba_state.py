@@ -25,7 +25,8 @@ def main() -> None:
                         default=ROOT / "tmp/mgba-states")
     parser.add_argument("--stage", type=int, default=1)
     parser.add_argument("--checkpoint",
-                        choices=("entry", "sanctuary", "boss", "riftwild", "village"),
+                        choices=("entry", "court", "sanctuary", "boss",
+                                 "riftwild", "village"),
                         default="entry")
     parser.add_argument("--difficulty", choices=("normal", "easy"), default="easy")
     parser.add_argument("--champion", choices=CHAMPIONS, default="wolfkin")

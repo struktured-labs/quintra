@@ -13,9 +13,12 @@ for replay in '1 520 2064128323' '2 540 2064128343' '3 560 2064128379'; do
   read -r run frame seed <<EOF
 $replay
 EOF
+  # Paired 224x200 wings make the input-only pilot's pixel-route search
+  # materially heavier on seed three. Keep the exact 18,000 cartridge frames
+  # and combat requirements; this is only a host-process watchdog.
   QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=0 \
     QUINTRA_BALANCE_TARGET_FRAME="$frame" \
-    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=45 \
+    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=75 \
     QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_APPEND=1 \
     QUINTRA_BALANCE_SKIP_REPORT=1 \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

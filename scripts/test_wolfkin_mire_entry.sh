@@ -12,9 +12,11 @@ OUT="$(mktemp /tmp/quintra-wolfkin-mire-entry.XXXXXX)"
 # This is a deep fixture/reachability contract, not a Normal balance proof.
 # Use the tester assist so the newly formidable first four colossi cannot end
 # the deterministic run before it reaches the Mire Spore under test.
+# Six/eight 224x200 wings make this 32,000-frame input-only route substantially
+# heavier on the host; the cartridge frame cap and room-29 contract stay exact.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=460 \
-  QUINTRA_BALANCE_FRAMES=32000 QUINTRA_BALANCE_HOST_TIMEOUT=55 \
+  QUINTRA_BALANCE_FRAMES=32000 QUINTRA_BALANCE_HOST_TIMEOUT=120 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

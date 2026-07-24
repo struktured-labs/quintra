@@ -9,6 +9,9 @@ local PL = assert(tonumber(os.getenv("QUINTRA_PL_ADDR")))
 local EN = assert(tonumber(os.getenv("QUINTRA_EN_ADDR")))
 local TM = assert(tonumber(os.getenv("QUINTRA_TM_ADDR")))
 local LS = assert(tonumber(os.getenv("QUINTRA_SCREEN_ADDR")))
+local WW = assert(tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR")))
+local WH = assert(tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR")))
+local LR = assert(tonumber(os.getenv("QUINTRA_LARGE_ROOM_ADDR")))
 local CLASS_ID = assert(tonumber(os.getenv("QUINTRA_STATE_CLASS")))
 local CHAMPION = assert(os.getenv("QUINTRA_STATE_CHAMPION"))
 local DIFFICULTY = assert(os.getenv("QUINTRA_STATE_DIFFICULTY"))
@@ -202,7 +205,7 @@ local function qualify_stage(stage)
     emu:write8(RS + 28, 0x80) -- deep Warden
 end
 
-local function enter_dungeon(target, stage, qualified)
+local function enter_dungeon(target, stage, qualified, normalize_scroll)
     clear_entities()
     reset_run(stage)
     if qualified then qualify_stage(stage) end
@@ -227,7 +230,10 @@ local function enter_dungeon(target, stage, qualified)
     end
     if qualified then qualify_stage(stage) end
     mark_seen(target - STAGE_START[stage + 1])
-    settle(target ~= STAGE_BOSS[stage + 1])
+    if normalize_scroll == nil then
+        normalize_scroll = target ~= STAGE_BOSS[stage + 1]
+    end
+    settle(normalize_scroll)
     emu:write8(PL + 2, emu:read8(PL + 1))
     emu:write8(PL + 4, emu:read8(PL + 3))
     emu:write8(PL + 15, 60)
@@ -261,6 +267,10 @@ local function verify_loaded(checkpoint, stage, room, world_mode)
     end
     if checkpoint == "boss" and not live_colossus() then
         error("boss checkpoint restored without a live Colossus")
+    elseif checkpoint == "court"
+        and (emu:read8(LR) == 0 or emu:read8(WW) ~= 224
+            or emu:read8(WH) ~= 200) then
+        error("court checkpoint restored without its 224x200 dungeon field")
     elseif checkpoint == "sanctuary" and hostile_count() ~= 0 then
         error("sanctuary checkpoint restored with hostiles")
     elseif checkpoint == "riftwild" and emu:read8(RS + 18) ~= 0 then
@@ -308,6 +318,10 @@ for stage = 0, 8 do
     local entry = stage == 0 and 1 or STAGE_START[stage + 1]
     enter_dungeon(entry, stage, false)
     save_checkpoint("entry", stage + 1, stage)
+
+    enter_dungeon(STAGE_START[stage + 1] + 5, stage, false, false)
+    mark_seen(5)
+    save_checkpoint("court", stage + 1, stage)
 
     enter_dungeon(STAGE_BOSS[stage + 1] - 1, stage, true)
     save_checkpoint("sanctuary", stage + 1, stage)
@@ -392,6 +406,6 @@ end
 report:write("DONE\n")
 report:close()
 console:log(string.format(
-    "MGBA STATES DONE champion=%s difficulty=%s count=37",
+    "MGBA STATES DONE champion=%s difficulty=%s count=46",
     CHAMPION, DIFFICULTY))
 emu.frontend:quit()

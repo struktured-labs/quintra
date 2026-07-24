@@ -63,7 +63,8 @@ def main() -> None:
     parser.add_argument("--difficulty", choices=("normal", "easy"),
                         default="normal")
     parser.add_argument("--checkpoint",
-                        choices=("entry", "sanctuary", "boss", "riftwild", "village"),
+                        choices=("entry", "court", "sanctuary", "boss",
+                                 "riftwild", "village"),
                         default="entry")
     parser.add_argument("--champion", choices=CHAMPIONS, default="wolfkin")
     parser.add_argument("--check", action="store_true",

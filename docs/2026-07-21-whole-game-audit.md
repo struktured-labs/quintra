@@ -1,5 +1,33 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.71 dungeon-scale response
+
+The report that the stages still feel compact remains correct even after the
+6×5 topology work. v0.18.71 therefore changes physical room scale: every
+complete snake row ends in a two-room generated wing. Dense approach expanses
+4/10/16/22 flow into lighter turn courts 5/11/17/23; all are true 224×200
+fields with a 0–64px camera on both axes. Stage one therefore contains six
+scrolling dungeon fields and late stages contain eight. Their former 160×136
+edge is interior terrain; reciprocal graph doors live only on the 28×25
+field's far perimeter. Authored objectives, shops, secrets, sanctuaries,
+minibosses, and Colossi keep their own roles, producing a deliberate
+compact-room / sustained broad-wing rhythm.
+
+The halls are not empty overscan. Seed-shifted ruin rings, pillar clusters,
+stage-colored accents, firing lanes, and encounters occupy the added eastern
+and southern sectors. Player collision, enemy routing, projectiles, renderer,
+doors, camera, and controller observation share the same world coordinates.
+A live-ROM contract reaches camera (64,64), proves all real doors connected,
+crosses both obsolete seams and a wide-to-wide graph threshold, exits to an
+ordinary 160×136 room, and re-enters at the correct far camera bound.
+
+One direct `court` checkpoint per stage, hero, and difficulty grows both
+external curricula to 460 states. Every court restores as 224×200, all 230
+Normal/Easy pairs retain identical generated geometry and encounters, and
+native mGBA cold-loads all six checkpoint families. This is the first
+spatially meaningful dungeon-wing milestone; continuous multi-node regions
+remain the next larger engine boundary.
+
 ## v0.18.70 two-axis Riftwild response
 
 Riftwild now grows vertically as well as horizontally. Every logical cell is

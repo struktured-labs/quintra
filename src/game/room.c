@@ -764,9 +764,8 @@ static void draw_room_tilemap(void) {
     // Serpent, and Void never expose stale streamed-room VRAM at the right or
     // bottom edge. Keeping this common to every boss also makes future
     // stage-specific camera choreography safe by construction.
-    if (run_state.world_mode) {
-        tiles_prepare_riftwild_wide_field();
-    } else if (procgen_current_room_is_boss && room_world_width > ROOM_VIEW_W_PX) {
+    tiles_prepare_wide_field();
+    if (procgen_current_room_is_boss && room_world_width > ROOM_VIEW_W_PX) {
         tiles_prepare_crystal_wide_arena();
     } else if (procgen_current_room_is_boss) {
         tiles_prepare_colossal_edges();

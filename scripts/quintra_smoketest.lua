@@ -24,6 +24,8 @@ local TM_ADDR = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local LS_ADDR = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local PK_ADDR = tonumber(os.getenv("QUINTRA_PUZZLE_KIND_ADDR") or "0") or 0
 local PLK_ADDR = tonumber(os.getenv("QUINTRA_PUZZLE_LOCK_ADDR") or "0") or 0
+local WW_ADDR = tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR") or "0") or 0
+local WH_ADDR = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
 
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
@@ -206,11 +208,15 @@ local function walk_edge(target, key)
                 emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
                 emu:write8(PL_ADDR + 11, 8); emu:write8(PL_ADDR + 12, 0)
             elseif key == KEY_RIGHT then
-                emu:write8(PL_ADDR + 9, 140); emu:write8(PL_ADDR + 10, 0)
+                local world_width = WW_ADDR ~= 0 and emu:read8(WW_ADDR) or 160
+                emu:write8(PL_ADDR + 9, world_width - 20)
+                emu:write8(PL_ADDR + 10, 0)
                 emu:write8(PL_ADDR + 11, 60); emu:write8(PL_ADDR + 12, 0)
             elseif key == KEY_DOWN then
+                local world_height = WH_ADDR ~= 0 and emu:read8(WH_ADDR) or 136
                 emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
-                emu:write8(PL_ADDR + 11, 112); emu:write8(PL_ADDR + 12, 0)
+                emu:write8(PL_ADDR + 11, world_height - 24)
+                emu:write8(PL_ADDR + 12, 0)
             else
                 emu:write8(PL_ADDR + 9, 8); emu:write8(PL_ADDR + 10, 0)
                 emu:write8(PL_ADDR + 11, 60); emu:write8(PL_ADDR + 12, 0)

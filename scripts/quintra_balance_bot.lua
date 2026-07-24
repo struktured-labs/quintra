@@ -27,6 +27,8 @@ local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local WX = tonumber(os.getenv("QUINTRA_WORLD_EXT_ADDR") or "0") or 0
 local WB = tonumber(os.getenv("QUINTRA_WORLD_BOTTOM_ADDR") or "0") or 0
+WW = tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR") or "0") or 0
+WH = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
 local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 
@@ -1043,7 +1045,7 @@ end
 function tile_at_px(x, y)
     if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= QUINTRA_ARENA_H then return 0 end
     if y >= 136 then
-        if RS ~= 0 and emu:read8(RS + 17) == 1 and WB ~= 0 then
+        if QUINTRA_ARENA_H > 136 and WB ~= 0 then
             local tx, ty = math.floor(x / 8), math.floor(y / 8)
             return emu:read8(WB + (ty - 17) * 28 + tx)
         end
@@ -1054,7 +1056,7 @@ function tile_at_px(x, y)
         -- 20x17 WRAM map. Outdoor columns are real generated terrain exposed
         -- through a second public strip; Crystal retains its authored floor
         -- and post-clear far-door contract.
-        if RS ~= 0 and emu:read8(RS + 17) == 1 and WX ~= 0 then
+        if QUINTRA_ARENA_H > 136 and WX ~= 0 then
             local tx, ty = math.floor(x / 8), math.floor(y / 8)
             return emu:read8(WX + ty * 8 + (tx - 20))
         end
@@ -2068,10 +2070,11 @@ function door_step(px, py)
         if can_step(px, py, secondary) then return secondary end
         return primary
     end
-    if in_world and wanted ~= nil then
-        -- Every Riftwild cell is a 224x200 field. Route the real feet box
-        -- through its generated side/lower terrain to the actual cardinal
-        -- threshold instead of planning against the obsolete viewport.
+    if wanted ~= nil and (in_world
+        or (not in_town and QUINTRA_ARENA_H > 136)) then
+        -- Riftwild cells and dungeon turn courts are 224x200 fields. Route
+        -- the real feet box through generated side/lower terrain to the true
+        -- cardinal threshold instead of planning against the old viewport.
         local goal_x = wanted == 1 and 208 or (wanted == 3 and 0 or 72)
         local goal_y = wanted == 0 and 0 or (wanted == 2 and 184 or 60)
         if wanted == 0 and py <= 1 and px >= 70 and px <= 74 then return KEY_UP end
@@ -2458,6 +2461,18 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
         if held_style == "ranged" and target.pattern == 3 then
             giant_retreat, giant_orbit_floor = 32, 32
             giant_fire_range, giant_fire_cadence = 72, 2
+        -- Mire's six mixed-speed shots punish a close body-orbit differently
+        -- from Spider's readable four-lane web.  BubbleBolt reaches across
+        -- the room, so establish a genuinely distant lane before firing
+        -- instead of spending every second input correcting scatter pressure.
+        -- The cartridge still owns all damage, cadence, and collision; this
+        -- only makes the offline pilot use Picsean's authored range.
+        elseif held_style == "ranged" and target.pattern == 4 then
+            -- A 72px reset cannot always exist once the moving 24px boss and
+            -- arena edge share an axis.  Forty-eight is outside the dense
+            -- body/scatter knot while leaving a real cardinal firing lane.
+            giant_retreat, giant_orbit_floor = 52, 48
+            giant_fire_range, giant_fire_cadence = 96, 2
         -- Hydra launches five mixed-speed bubbles, but Picsean's BubbleBolt
         -- reaches across the entire room.  Keep the pilot outside the
         -- crossfire instead of treating this ranged duel like a body-orbit:
@@ -2489,6 +2504,13 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
         or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
     if held_style == "lunge" and CLASS == 1 and reach < SAURAN_GIANT_ESCAPE_RANGE then
         return retreat
+    elseif held_style == "ranged" and CLASS == 3 and target.pattern == 4
+        and reach < giant_orbit_floor then
+        -- A scatter wave can force the lane search to orbit forever if the
+        -- pilot keeps attacking from inside it.  Gain distance first; orbit
+        -- only when the direct escape edge is physically blocked.
+        return can_step(px, py, retreat)
+            and retreat or giant_orbit_step(px, py, aim, retreat)
     elseif target.giant ~= 0 and giant_mode ~= "baseline" and reach < giant_orbit_floor then
         local orbit = giant_orbit_step(px, py, aim, retreat)
         if giant_mode == "pulse_fire" then
@@ -2709,9 +2731,11 @@ while frames < LIMIT do
     end
     last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
-    QUINTRA_ARENA_W = (room == STAGE_BOSS[1]
-        or (RS ~= 0 and emu:read8(RS + 17) == 1)) and 224 or 160
-    QUINTRA_ARENA_H = (RS ~= 0 and emu:read8(RS + 17) == 1) and 200 or 136
+    QUINTRA_ARENA_W = WW ~= 0 and emu:read8(WW)
+        or ((room == STAGE_BOSS[1]
+            or (RS ~= 0 and emu:read8(RS + 17) == 1)) and 224 or 160)
+    QUINTRA_ARENA_H = WH ~= 0 and emu:read8(WH)
+        or ((RS ~= 0 and emu:read8(RS + 17) == 1) and 200 or 136)
     if is_town_room(room) then
         -- `world_return_screen` is a plaza index only in a town. Mark each
         -- side street when its real room has loaded so the next arrival visit
@@ -4203,13 +4227,15 @@ while frames < LIMIT do
         and not (boss_relic_pending ~= 0 and loot and loot.kind == 3) then
         local entered = emu:read8(RS + 6)
         local actions = keys % 16
-        if entered == 0 and py > 108 and math.floor(keys / KEY_DOWN) % 2 == 1 then
+        if entered == 0 and py > QUINTRA_ARENA_H - 28
+            and math.floor(keys / KEY_DOWN) % 2 == 1 then
             keys = actions + KEY_UP
         elseif entered == 2 and py < 12 and math.floor(keys / KEY_UP) % 2 == 1 then
             keys = actions + KEY_DOWN
         elseif entered == 1 and px < 12 and math.floor(keys / KEY_LEFT) % 2 == 1 then
             keys = actions + KEY_RIGHT
-        elseif entered == 3 and px > 128 and math.floor(keys / KEY_RIGHT) % 2 == 1 then
+        elseif entered == 3 and px > QUINTRA_ARENA_W - 32
+            and math.floor(keys / KEY_RIGHT) % 2 == 1 then
             keys = actions + KEY_LEFT
         end
     end

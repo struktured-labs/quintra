@@ -3,6 +3,7 @@
 #include <gb/cgb.h>
 
 #include "game/room.h"
+#include "game/run_state.h"
 #include "render/tiles.h"
 
 // Compact all-caps outdoor signage. Every lit pixel uses colour 3 so the
@@ -57,23 +58,36 @@ void tiles_load_area_labels(void) BANKED {
     set_bkg_data(BGT_AREA_R, 14, area_letters[0]);
 }
 
-void tiles_prepare_riftwild_wide_field(void) BANKED {
+static u8 wide_attr(u8 tile, u8 outdoor) {
+    if (outdoor) {
+        return (tile == BGT_TREE || tile == BGT_WILD_STONE)
+            ? BGPAL_WALL
+            : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER)
+                ? BGPAL_CRYSTAL
+                : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
+                    ? BGPAL_DOOR : BGPAL_FLOOR;
+    }
+    if (tile == BGT_WALL || tile == BGT_PILLAR) return BGPAL_WALL;
+    if (tile == BGT_SPIKES || tile == BGT_WALL_CRACK) return BGPAL_CRACK;
+    if (tile == BGT_DOOR || tile == BGT_SWITCH) return BGPAL_DOOR;
+    if (tile == BGT_CRYSTAL || tile == BGT_PORTAL) return BGPAL_CRYSTAL;
+    return BGPAL_FLOOR;
+}
+
+void tiles_prepare_wide_field(void) BANKED {
     u8 x, y;
+    u8 outdoor = run_state.world_mode;
     u8 tiles[ROOM_WIDE_W_TILES + 1];
     u8 attrs[ROOM_WIDE_W_TILES + 1];
+    if (!(room_world_height & 0x40)) return;
     for (y = 0; y < ROOM_H; ++y) {
         for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x) {
             u8 tile = room_world_extension[y][x];
             tiles[x] = tile;
-            attrs[x] = (tile == BGT_TREE || tile == BGT_WILD_STONE)
-                ? BGPAL_WALL
-                : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER)
-                    ? BGPAL_CRYSTAL
-                    : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
-                        ? BGPAL_DOOR : BGPAL_FLOOR;
+            attrs[x] = wide_attr(tile, outdoor);
         }
         // Column 28 is deterministic camera/shake overscan.
-        tiles[ROOM_WIDE_EXT_TILES] = BGT_TREE;
+        tiles[ROOM_WIDE_EXT_TILES] = outdoor ? BGT_TREE : BGT_WALL;
         attrs[ROOM_WIDE_EXT_TILES] = BGPAL_WALL;
         VBK_REG = 0;
         set_bkg_tiles(ROOM_W, y, ROOM_WIDE_EXT_TILES + 1, 1, tiles);
@@ -86,14 +100,9 @@ void tiles_prepare_riftwild_wide_field(void) BANKED {
         for (x = 0; x < ROOM_WIDE_W_TILES; ++x) {
             u8 tile = room_world_bottom[y][x];
             tiles[x] = tile;
-            attrs[x] = (tile == BGT_TREE || tile == BGT_WILD_STONE)
-                ? BGPAL_WALL
-                : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER)
-                    ? BGPAL_CRYSTAL
-                    : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
-                        ? BGPAL_DOOR : BGPAL_FLOOR;
+            attrs[x] = wide_attr(tile, outdoor);
         }
-        tiles[ROOM_WIDE_W_TILES] = BGT_TREE;
+        tiles[ROOM_WIDE_W_TILES] = outdoor ? BGT_TREE : BGT_WALL;
         attrs[ROOM_WIDE_W_TILES] = BGPAL_WALL;
         VBK_REG = 0;
         set_bkg_tiles(0, (u8)(ROOM_H + y), ROOM_WIDE_W_TILES + 1, 1, tiles);
@@ -102,7 +111,7 @@ void tiles_prepare_riftwild_wide_field(void) BANKED {
     }
     // Row 25 and column 28 are deterministic camera/shake overscan.
     for (x = 0; x <= ROOM_WIDE_W_TILES; ++x) {
-        tiles[x] = BGT_TREE;
+        tiles[x] = outdoor ? BGT_TREE : BGT_WALL;
         attrs[x] = BGPAL_WALL;
     }
     VBK_REG = 0;

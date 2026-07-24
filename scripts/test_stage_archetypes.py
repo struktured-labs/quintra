@@ -135,8 +135,16 @@ def expected_graph_exits(stage, local_room, seed):
     }
 
 
-def assert_graph_exits(label, exits, stage, local_room, seed=0xCAFE1234):
+def assert_graph_exits(label, exits, stage, local_room, seed=0xCAFE1234,
+                       *, wide=False):
     expected = expected_graph_exits(stage, local_room, seed)
+    wide = wide or local_room in (4, 5, 10, 11, 16, 17, 22, 23)
+    if wide:
+        # A 224x200 approach/court extends east and south from the legacy
+        # 20x17 storage plane. Those two old edge samples are therefore
+        # mandatory interior seams, regardless of whether the real graph owns
+        # a far east/south door at x=27/y=24.
+        expected |= {(19, 9), (10, 16)}
     assert exits == expected, (
         f"{label} authored graph exits disconnected: "
         f"expected={expected} reached={exits}"
@@ -186,7 +194,7 @@ def main():
     )
     assert_graph_exits(
         "Verdant second wing",
-        reachable_exits(grove_wing, (18, 9)), 1, 11, 2064128938
+        reachable_exits(grove_wing, (18, 9)), 1, 11, 2064128938, wide=True
     )
 
     # Ember is a phase-family dungeon: room 1's compact central switch apron
@@ -240,7 +248,8 @@ def main():
         f"Frost late-wing vault missing ({frost_wing_crystals}/16)"
     )
     assert_graph_exits(
-        "Frost late wing", reachable_exits(frost_wing, (18, 9)), 3, 17
+        "Frost late wing", reachable_exits(frost_wing, (18, 9)), 3, 17,
+        wide=True
     )
 
     def assert_mire_swim_passive(pb, tiles):

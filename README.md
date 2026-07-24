@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.70: Riftwild Deepens](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.71: Dungeon Horizons](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,38 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.70**, published after the complete build,
+The current cartridge is **v0.18.71**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Dungeon wings now contain sustained scrolling spaces, not only more room
+counters.** Every completed snake row can end in a paired 224×200 wing behind
+the 160×136 viewport: dense approach expanses at local cells 4/10/16/22 flow
+directly into lighter turn courts at 5/11/17/23. Stage one therefore has six
+scrolling dungeon fields and later stages can have eight. Each field retains
+one-node Compass semantics but contains 28×25 tiles of actual collision,
+combat, cover, and camera travel. The former x=160 and y=136 edges are
+interior floor; only the far x=216 and y=184 perimeter owns graph doors.
+Important fixtures—Sigils, Wardens, shops, sanctuaries, secrets, and
+Colossi—keep their distinct roles.
+
+Each paired wing has seed-variant ruin halls, landmark clusters, stage-colored
+rubble or hazards, preserved cardinal trails, and encounter pressure in the
+added field. The approach keeps a full encounter budget while the turn court
+caps its pressure for contrast. The renderer, player and projectile collision,
+enemy AI, door routing, input-only controller, and two-axis camera all consume
+the same generated world coordinates. Entering from the east or south starts
+at the matching far camera bound; crossing between the paired fields retains
+wide-world state; leaving for an ordinary room restores the 160×136 contract.
+This creates a rhythm of compact puzzle/combat chambers and sustained broader
+expeditions rather than making every dungeon screen uniformly oversized.
+
+**Deep testing can open the new scale directly.** `CHECKPOINT=court` is now
+available for every stage, champion, and difficulty in both PyBoy and native
+mGBA formats. The ROM-bound curriculum grows from 370 to 460 states. All 230
+Normal/Easy pairs preserve identical generated geometry and encounters, while
+the native smoke set cold-loads entry, court, sanctuary, boss, Riftwild, and
+village families independently through mGBA. The release reel and dungeon
+still now show a live southeast court sector instead of another fixed room.
 
 **Riftwild is now a two-axis scrolling field rather than sixteen fixed
 boxes.** Every one of its 4×4 logical cells is a 224×200 world behind the
@@ -113,13 +143,14 @@ reach and study the ending.
 20 screens and 12 entrance-to-boss room visits; later stages grow to 30
 screens and 22 direct room visits, or 29 required-objective transitions.
 A measured Easy controller run can still reach stage three by minute five,
-and ordinary dungeon rooms remain single 160×136 playfields beneath the HUD.
-The result can therefore still feel compact despite the larger topology.
+and most ordinary dungeon rooms remain single 160×136 playfields beneath the
+HUD. That result correctly felt compact despite the larger topology.
 v0.18.68 delivered the first true scrolling Penta-style arena and the shared
 world/camera path behind it. v0.18.69 applied horizontal travel across all
 sixteen Riftwild cells; v0.18.70 expands every one to 224×200 with a real
-two-axis camera. Larger uninterrupted regions and spatially meaningful dungeon
-side wings remain the next scale work. Adding room counters alone is
+two-axis camera. v0.18.71 applies the same contract to paired scrolling wings:
+six large fields in stage one and as many as eight later. Fully continuous
+multi-room regions remain future scale work; adding room counters alone is
 explicitly not the answer.
 
 **Dungeon room count now becomes real traversal distance.** The former graph
@@ -156,8 +187,8 @@ edge can never become a one-way trap.
 
 **Deep checkpoints now open natively in mGBA-Qt.** The external curriculum
 matches the existing PyBoy coverage: all five champions in Normal and Easy at
-nine entries, nine sanctuaries, nine live Colossi, eight fresh Riftwild
-arrivals, and two villages—370 ROM-bound `.ss0` files. Generation restores
+nine entries, nine scrolling turn courts, nine sanctuaries, nine live Colossi,
+eight fresh Riftwild arrivals, and two villages—460 ROM-bound `.ss0` files. Generation restores
 every file inside mGBA and independently boots one state from each checkpoint
 family through mGBA's `-t` path. A hash-pinned manifest prevents stale states
 from opening against a rebuilt cartridge, and `make play-mgba-state` uses the
@@ -182,11 +213,14 @@ a visible fixture chain: room two's **Rift Sigil**, room three's mechanical
 **Warden Boon**, the room-seven **Waystone**, and the room-nine **Deep
 Warden**. The Compass reveals one next trial at a time, and the sanctuary keeps
 its return route open until every fixture is earned. Authored stage
-architecture now repeats in local rooms 11 and 17, while rooms 5, 11, and 17
-become lighter one/two-enemy turn courts that break the route into recognizable
-wings. Body-wide side rails prevent layered random and authored geometry from
-forming one-way underhang pockets. Pushable cairns also reject only those final
-moves that would jam a cardinal threshold into an impassable eight-pixel slit.
+architecture now repeats in local rooms 11 and 17. Every complete snake row
+ends in a sustained two-room 224×200 wing: dense approach expanses
+4/10/16/22 flow into lighter one/two-enemy turn courts 5/11/17/23. Stage one
+therefore has six scrolling dungeon fields and late stages have eight, without
+padding the already 20–30-cell graph. Body-wide side rails prevent layered
+random and authored geometry from forming one-way underhang pockets. Pushable
+cairns also reject only those final moves that would jam a cardinal threshold
+into an impassable eight-pixel slit.
 This makes expeditions
 traverse their back half instead of cutting diagonally across the old grid.
 Normal keeps the full Warden HP and escort pressure; Easy halves required
@@ -252,8 +286,8 @@ time, and suffers much slower attached-Leech drain.
 It deliberately uses the same procedural worlds and room geometry; required
 Wardens alone use half HP and one escort instead of Normal's two so the testing
 route remains viable. Fine Easy-mode balancing is deferred while Normal remains the
-design target. A live-ROM regression compares all 185 paired Normal/Easy
-entry, sanctuary, boss, Riftwild, and village checkpoints and pins identical generated
+design target. A live-ROM regression compares all 230 paired Normal/Easy
+entry, court, sanctuary, boss, Riftwild, and village checkpoints and pins identical generated
 tiles, route state, ordinary enemy placement/HP, and boss-pattern identity
 underneath the assist modifiers.
 Controller balance runs also default to Normal. Focused deep-fixture checks may
@@ -340,7 +374,7 @@ seal without changing collision or the generated room.
 Every build emits Normal and Easy PyBoy states for all five champions at all
 nine stage entries, in all nine pre-boss sanctuaries, and inside all nine live
 boss rooms, after each of the first eight bosses in a fresh Riftwild arrival,
-and at the village arrivals after stages three and six: 370 external
+and at the village arrivals after stages three and six: 460 external
 fixtures carrying a deterministic prior-boss relic curve instead of dropping a
 base-stat hero into late content. Sanctuary states arrive on the safe side of
 the room, before the marked gate's proximity roar, so warning and encounter can
@@ -489,8 +523,8 @@ parity, escort routing, Sauran's fixed Sentinel replay, and a direct 16-layout
 clean rebuild, has a valid CGB/MBC5-with-battery header and checksums, and
 retains its battery-backed suspended run across a cold emulator boot. The
 working image stays within the 128KiB budget with room left in every used bank.
-The refreshed release reel remains under its 256KiB repository cap, and 370
-external PyBoy checkpoints make every stage entry, sanctuary, boss, post-boss
+The refreshed release reel remains under its 256KiB repository cap, and 460
+external PyBoy checkpoints make every stage entry, scrolling court, sanctuary, boss, post-boss
 Riftwild arrival, and both village arrivals
 available in Normal or Easy for deep testing
 without implementing a second in-cartridge save system.
@@ -1845,8 +1879,9 @@ make            # cargo codegen + sprite pipeline → SDCC → rom/working/quint
 make play       # build + launch in mGBA
 make verify     # ROM tests + procgen parity + deterministic input replay
 make preflight  # cart header/checksums + real battery-SRAM power-cycle test
-make stage-states # 370 entry/sanctuary/boss/Riftwild/village checkpoints
-make mgba-states # the same 370 checkpoints in native mGBA format
+make stage-states # 460 entry/court/sanctuary/boss/Riftwild/village checkpoints
+make mgba-states # the same 460 checkpoints in native mGBA format
+make play-mgba-state STAGE=3 CHECKPOINT=court HERO=wolfkin DIFFICULTY=easy
 make play-mgba-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran DIFFICULTY=easy
 make timed-states # Easy pilot; new external checkpoint every five emulated minutes
 make play-timed-state TIMED_CHECKPOINT=25 # open the verified 25-minute state
@@ -1868,9 +1903,9 @@ make info       # print build summary
 
 ### Deep-stage emulator checkpoints
 
-Every ROM build refreshes 370 deterministic **external PyBoy save states**:
-all five champions in Normal and Easy at the playable entry, pre-boss
-sanctuary, and live boss of each of nine stages; at fresh Riftwild arrivals
+Every ROM build refreshes 460 deterministic **external PyBoy save states**:
+all five champions in Normal and Easy at the playable entry, first scrolling
+turn court, pre-boss sanctuary, and live boss of each of nine stages; at fresh Riftwild arrivals
 after stages one through eight; and at the village arrivals after stages three
 and six, in `tmp/stage-states/`. Sanctuary states are saved
 after the room slide fully normalizes and before approaching the marked gate;
@@ -1891,6 +1926,8 @@ an idle hero taking damage cannot masquerade as a human attempt.
 Open the overworld immediately after its first boss boundary with
 `make play-state STAGE=1 CHECKPOINT=riftwild DIFFICULTY=easy`. For a Riftwild
 checkpoint, `STAGE` names the dungeon just cleared and may be 1 through 8.
+Open a stage's first 224×200 dungeon hall with
+`make play-state STAGE=3 CHECKPOINT=court DIFFICULTY=easy`.
 Open a civic checkpoint with
 `make play-state STAGE=3 CHECKPOINT=village DIFFICULTY=easy`; for this
 checkpoint kind, `STAGE` is the dungeon just cleared and may be 3 or 6.
@@ -1907,10 +1944,10 @@ and restored stage/room. `QuintraPyBoyEnv.load_state()` rejects any mismatch,
 so regenerate after rebuilding the ROM.
 
 For hands-on testing in the preferred emulator, `make mgba-states` generates
-the same 370-point curriculum as native mGBA `.ss0` files under
+the same 460-point curriculum as native mGBA `.ss0` files under
 `tmp/mgba-states/`. Every file is serialized and restored by mGBA itself; the
-generator then launches representative entry, sanctuary, boss, Riftwild, and
-village files through mGBA's independent `-t` startup path. Its manifest pins
+generator then launches representative entry, court, sanctuary, boss,
+Riftwild, and village files through mGBA's independent `-t` startup path. Its manifest pins
 the ROM and every state hash. Open one through the software-rendered GUI
 wrapper with, for example,
 `make play-mgba-state STAGE=7 CHECKPOINT=sanctuary HERO=sauran DIFFICULTY=easy`.
@@ -2031,8 +2068,8 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.70 release ROM occupies 128 KiB. Its media,
-370 external stage checkpoints,
+headroom floor. The current v0.18.71 release ROM occupies 128 KiB. Its media,
+460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
 on 2026-07-24; the release SHA-256 is recorded by the attached artifact and
@@ -2047,8 +2084,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.70 build has 1,024 bytes in bank 1, 1,538 in bank 2,
-1,845 in bank 3, 1,741 in bank 4, 1,397 in bank 5, and 7,377 in bank 6.
+ROM. The current v0.18.71 build has 1,032 bytes in bank 1, 1,538 in bank 2,
+1,845 in bank 3, 1,547 in bank 4, 1,253 in bank 5, and 6,484 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

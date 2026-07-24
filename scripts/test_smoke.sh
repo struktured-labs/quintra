@@ -27,6 +27,8 @@ TM_ADDR=$(grep 'DEF _room_tilemap ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print 
 LS_ADDR=$(grep 'DEF _loop_current_screen ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 PK_ADDR=$(grep 'DEF _room_puzzle_kind ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 PLK_ADDR=$(grep 'DEF _room_puzzle_locked ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+WW_ADDR=$(grep 'DEF _room_world_width ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+WH_ADDR=$(grep 'DEF _room_world_height ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
@@ -34,6 +36,7 @@ QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
     QUINTRA_OUT_DIR="$OUT_DIR" QUINTRA_RS_ADDR="$RS_ADDR" QUINTRA_PL_ADDR="$PL_ADDR" \
     QUINTRA_EN_ADDR="$EN_ADDR" QUINTRA_TM_ADDR="$TM_ADDR" QUINTRA_SCREEN_ADDR="$LS_ADDR" \
     QUINTRA_PUZZLE_KIND_ADDR="$PK_ADDR" QUINTRA_PUZZLE_LOCK_ADDR="$PLK_ADDR" \
+    QUINTRA_WORLD_WIDTH_ADDR="$WW_ADDR" QUINTRA_WORLD_HEIGHT_ADDR="$WH_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 >"$OUT_DIR/emulator.log" 2>&1 &

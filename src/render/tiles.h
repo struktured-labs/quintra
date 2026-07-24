@@ -269,7 +269,7 @@ void tiles_paint_hydra_projection(void) BANKED;
 void tiles_paint_void_projection(void) BANKED;
 void tiles_prepare_colossal_edges(void) BANKED; // safe 0..3px camera overscan
 void tiles_prepare_crystal_wide_arena(void) BANKED; // BG cols 20..28 for 224px arena
-void tiles_prepare_riftwild_wide_field(void) BANKED; // authored BG cols 20..28
+void tiles_prepare_wide_field(void) BANKED; // generated BG cols/rows through 28x25
 u8 tiles_world_camera_step(u8 current, i16 player_pos,
                            u8 world_extent, u8 view_extent) BANKED;
 void tiles_open_crystal_far_exit(void) BANKED;

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from itertools import product
 from pathlib import Path
 
@@ -10,7 +11,8 @@ from quintra_pyboy_env import (
     ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT, ACTION_UP, QuintraPyBoyEnv,
 )
 from quintra_topology import (
-    STAGE_BOSS_ROOM, VILLAGE_ROOM, dungeon_direction, dungeon_size,
+    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_direction,
+    dungeon_size,
 )
 
 
@@ -22,19 +24,31 @@ CHAMPIONS = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
 def main() -> None:
     manifest = json.loads((STATE_DIR / "manifest.json").read_text())
     records = manifest["states"]
+    noi = (ROOT / "rom/working/quintra.noi").read_text()
+
+    def address(name: str) -> int:
+        match = re.search(
+            rf"DEF {re.escape(name)} 0x([0-9A-Fa-f]+)", noi)
+        assert match, f"missing {name}"
+        return int(match.group(1), 16)
+
+    large_room = address("_procgen_current_room_is_large")
+    world_width = address("_room_world_width")
+    world_height = address("_room_world_height")
     expected_stage = set(product(range(1, 10), CHAMPIONS,
                                  ("normal", "easy"),
-                                 ("entry", "sanctuary", "boss")))
+                                 ("entry", "court", "sanctuary", "boss")))
     actual_stage = {(r["stage"], r.get("champion"), r["difficulty"],
                      r.get("checkpoint")) for r in records
-                    if r.get("checkpoint") in ("entry", "sanctuary", "boss")}
+                    if r.get("checkpoint")
+                    in ("entry", "court", "sanctuary", "boss")}
     expected_riftwild = set(product(range(1, 9), CHAMPIONS, ("normal", "easy")))
     actual_riftwild = {(r.get("after_stage"), r.get("champion"), r["difficulty"])
                        for r in records if r.get("checkpoint") == "riftwild"}
     expected_village = set(product((3, 6), CHAMPIONS, ("normal", "easy")))
     actual_village = {(r.get("after_stage"), r.get("champion"), r["difficulty"])
                       for r in records if r.get("checkpoint") == "village"}
-    assert (len(records) == 370 and actual_stage == expected_stage
+    assert (len(records) == 460 and actual_stage == expected_stage
             and actual_riftwild == expected_riftwild
             and actual_village == expected_village), (
         f"checkpoint curriculum drifted: {len(records)} records, "
@@ -72,6 +86,13 @@ def main() -> None:
                     f"{state.name}: expected one live giant, got {len(giants)}")
                 assert giants[0]["pattern"] == stage - 1, (
                     f"{state.name}: wrong boss pattern {giants[0]['pattern']}")
+            elif record["checkpoint"] == "court":
+                assert record["room_counter"] == STAGE_START[stage - 1] + 5
+                assert not obs["world_mode"]
+                assert env.pb is not None
+                assert env.pb.memory[large_room]
+                assert env.pb.memory[world_width] == 224
+                assert env.pb.memory[world_height] == 200
             elif record["checkpoint"] == "sanctuary":
                 assert record["room_counter"] == STAGE_BOSS_ROOM[stage - 1] - 1
                 assert not obs["hostiles"] and not giants
@@ -139,8 +160,9 @@ def main() -> None:
     finally:
         env.close()
 
-    print("[stage-states] PASS 370 hash-bound five-champion Normal/Easy "
-          "entry+sanctuary+boss+Riftwild+village states, all nine live boss patterns")
+    print("[stage-states] PASS 460 hash-bound five-champion Normal/Easy "
+          "entry+court+sanctuary+boss+Riftwild+village states, "
+          "all nine live boss patterns")
 
 
 if __name__ == "__main__":

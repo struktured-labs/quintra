@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROM = ROOT / "rom/working/quintra.gbc"
 DEFAULT_OUT = ROOT / "tmp/mgba-states"
 CHAMPIONS = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
-CHECKPOINTS = ("entry", "sanctuary", "boss", "riftwild", "village")
+CHECKPOINTS = ("entry", "court", "sanctuary", "boss", "riftwild", "village")
 
 
 def sha256(path: Path) -> str:
@@ -27,7 +27,8 @@ def symbols(rom: Path) -> dict[str, int]:
     text = rom.with_suffix(".noi").read_text()
     result = {}
     for name in ("_run_state", "_player", "_entities", "_room_tilemap",
-                 "_loop_current_screen"):
+                 "_loop_current_screen", "_room_world_width",
+                 "_room_world_height", "_procgen_current_room_is_large"):
         match = re.search(rf"DEF {re.escape(name)} 0x([0-9A-Fa-f]+)", text)
         if not match:
             raise RuntimeError(f"missing {name} in {rom.with_suffix('.noi')}")
@@ -78,6 +79,10 @@ def launch_generator(mgba: str, rom: Path, out: Path, addrs: dict[str, int],
         "QUINTRA_EN_ADDR": str(addrs["_entities"]),
         "QUINTRA_TM_ADDR": str(addrs["_room_tilemap"]),
         "QUINTRA_SCREEN_ADDR": str(addrs["_loop_current_screen"]),
+        "QUINTRA_WORLD_WIDTH_ADDR": str(addrs["_room_world_width"]),
+        "QUINTRA_WORLD_HEIGHT_ADDR": str(addrs["_room_world_height"]),
+        "QUINTRA_LARGE_ROOM_ADDR": str(
+            addrs["_procgen_current_room_is_large"]),
         "QUINTRA_STATE_CLASS": str(class_id),
         "QUINTRA_STATE_CHAMPION": champion,
         "QUINTRA_STATE_DIFFICULTY": difficulty,
@@ -111,9 +116,9 @@ def launch_generator(mgba: str, rom: Path, out: Path, addrs: dict[str, int],
             "bytes": state.stat().st_size,
             "sha256": sha256(state),
         })
-    if len(records) != 37:
+    if len(records) != 46:
         raise RuntimeError(
-            f"{champion} {difficulty} produced {len(records)} states, expected 37")
+            f"{champion} {difficulty} produced {len(records)} states, expected 46")
     return records
 
 
@@ -199,7 +204,7 @@ def main() -> None:
     temp.write_text(json.dumps(manifest, indent=2) + "\n")
     temp.replace(manifest_path)
     print(f"[mgba-states] PASS {len(records)} native states; "
-          f"five checkpoint families reload through mGBA -t")
+          f"six checkpoint families reload through mGBA -t")
 
 
 if __name__ == "__main__":

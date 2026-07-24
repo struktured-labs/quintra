@@ -10,17 +10,19 @@
 
 u8 room_apply_world_arena(void) BANKED {
     u8 stage;
+    u8 generated_wide = (run_state.world_mode
+        || procgen_current_room_is_large) ? 1 : 0;
     // Generation always returns to the one-screen contract first. The pack
     // resume path skips this function, preserving a live scrolling camera.
-    room_world_width = run_state.world_mode ? ROOM_WIDE_W_PX : ROOM_VIEW_W_PX;
-    room_world_height = run_state.world_mode ? ROOM_WIDE_H_PX : ROOM_VIEW_H_PX;
+    room_world_width = generated_wide ? ROOM_WIDE_W_PX : ROOM_VIEW_W_PX;
+    room_world_height = generated_wide ? ROOM_WIDE_H_PX : ROOM_VIEW_H_PX;
     // Entering a field from its eastern/northern neighbour must reveal the
     // arrival immediately rather than parking the hero beyond the viewport.
-    room_camera_x = (run_state.world_mode && run_state.entered_from == DIR_W)
+    room_camera_x = (generated_wide && run_state.entered_from == DIR_W)
         ? (ROOM_WIDE_W_PX - ROOM_VIEW_W_PX) : 0;
-    room_camera_y = (run_state.world_mode && run_state.entered_from == DIR_N)
+    room_camera_y = (generated_wide && run_state.entered_from == DIR_N)
         ? (ROOM_WIDE_H_PX - ROOM_VIEW_H_PX) : 0;
-    if (run_state.world_mode || !procgen_current_room_is_boss) return 0xFF;
+    if (generated_wide || !procgen_current_room_is_boss) return 0xFF;
 
     stage = run_state.bosses_beaten;
     if (stage >= N_STAGES) stage = (u8)(stage % N_STAGES);
@@ -54,7 +56,7 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
     {
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
-        if (run_state.world_mode && ty >= ROOM_H) {
+        if (room_world_height > ROOM_VIEW_H_PX && ty >= ROOM_H) {
             if (tx >= ROOM_WIDE_W_TILES || ty >= ROOM_WIDE_H_TILES)
                 return BGT_WALL;
             return (u8)(room_world_bottom[ty - ROOM_H][tx] & 0x7F);
@@ -63,7 +65,7 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
         if (tx >= ROOM_W) {
             if (room_world_width <= ROOM_VIEW_W_PX
                 || tx >= ROOM_WIDE_W_TILES) return BGT_WALL;
-            if (run_state.world_mode)
+            if (room_world_height > ROOM_VIEW_H_PX)
                 return (u8)(room_world_extension[ty][tx - ROOM_W] & 0x7F);
             // The far east threshold replaces the obsolete viewport seam
             // after Crystal falls. Before then it remains a real arena wall.

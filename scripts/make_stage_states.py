@@ -4,9 +4,9 @@
 The fixtures are external developer saves, never cartridge saves.  Each one
 boots a blank-SRAM cartridge, uses the real title/class/dungeon-entry flow,
 adds a deterministic version of the guaranteed prior-boss reward curve, and
-publishes stage-entry, pre-boss sanctuary, live-boss, post-boss Riftwild, and
-village checkpoints in a manifest binding ROM, emulator version, filename,
-and state hash.
+publishes stage-entry, scrolling dungeon-court, pre-boss sanctuary, live-boss,
+post-boss Riftwild, and village checkpoints in a manifest binding ROM,
+emulator version, filename, and state hash.
 """
 from __future__ import annotations
 
@@ -91,7 +91,8 @@ def symbol_addresses(rom: Path) -> dict[str, int]:
     result: dict[str, int] = {}
     for name in ("_run_state", "_player", "_entities", "_room_tilemap",
                  "_loop_current_screen", "_room_puzzle_kind",
-                 "_room_puzzle_locked"):
+                 "_room_puzzle_locked", "_room_world_width",
+                 "_room_world_height", "_procgen_current_room_is_large"):
         match = re.search(rf"DEF {re.escape(name)} 0x([0-9A-Fa-f]+)", text)
         if not match:
             raise RuntimeError(f"missing ROM symbol {name} in {noi}")
@@ -289,6 +290,45 @@ def solve_entry_puzzle(pyboy: PyBoy, addrs: dict[str, int]) -> None:
         if not pyboy.memory[locked]:
             return
     raise RuntimeError(f"could not solve entry puzzle kind {kind}")
+
+
+def advance_to_court(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:
+    """Cross a real graph edge into the stage's first scrolling turn court.
+
+    The checkpoint stays procgen-first: external setup only positions the
+    already-qualified run at local room four, then ordinary controller input
+    asks the cartridge to generate local room five, its 224x200 architecture,
+    far encounter, camera, reciprocal doors, and stage presentation.
+    """
+    rs, player = addrs["_run_state"], addrs["_player"]
+    entities, tilemap = addrs["_entities"], addrs["_room_tilemap"]
+    solve_entry_puzzle(pyboy, addrs)
+    target = STAGE_START[stage] + 5
+    pyboy.memory[rs + 1] = target - 1
+    pyboy.memory[rs + 6] = DIR_NONE
+    # A hands-on court checkpoint should show the route that led there on the
+    # Compass rather than an isolated current square.
+    pyboy.memory[rs + 20] = 0x3F
+    for i in range(32):
+        entity = entities + i * 28
+        if pyboy.memory[entity] == 2:
+            pyboy.memory[entity] = pyboy.memory[entity + 1] = 0
+    direction = graph_direction(4, 5)
+    cross_graph_edge(pyboy, player, tilemap, direction)
+    try:
+        for _ in range(120):
+            pyboy.tick()
+            if pyboy.memory[rs + 1] == target:
+                break
+    finally:
+        pyboy.button_release(direction)
+    if pyboy.memory[rs + 1] != target:
+        raise RuntimeError(f"could not enter dungeon court {stage + 1}")
+    # The centered no-direction fallback is valid live gameplay and can
+    # already own nonzero camera scroll in a two-axis room.
+    settle_room(pyboy, tilemap, normalize_scroll=False)
+    pyboy.memory[player + 2] = pyboy.memory[player + 1]
+    return target
 
 
 def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:
@@ -559,6 +599,9 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
     with path.open("rb") as saved:
         pyboy.load_state(saved)
     is_riftwild = checkpoint == "riftwild"
+    is_court = checkpoint == "court"
+    world_width = pyboy.memory[addrs["_room_world_width"]]
+    world_height = pyboy.memory[addrs["_room_world_height"]]
     checks = {
         "room": pyboy.memory[rs + 1] == room,
         "stage": pyboy.memory[rs + 11] == stage,
@@ -568,8 +611,9 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         "difficulty": pyboy.memory[rs + 26] == (difficulty == "easy"),
         "champion": pyboy.memory[player] == class_id,
         "x": 0 <= (pyboy.memory[player + 9] | pyboy.memory[player + 10] << 8)
-             <= (208 if is_riftwild else 144),
-        "y": 0 <= (pyboy.memory[player + 11] | pyboy.memory[player + 12] << 8) <= 120,
+             <= world_width - 16,
+        "y": 0 <= (pyboy.memory[player + 11] | pyboy.memory[player + 12] << 8)
+             <= world_height - 16,
     }
     if checkpoint == "riftwild":
         entities = addrs["_entities"]
@@ -589,6 +633,13 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
             and pyboy.memory[entities + i * 28 + 1] & 1
             and pyboy.memory[entities + i * 28 + 20] & 1
             for i in range(32))
+    elif checkpoint == "court":
+        checks["court_room"] = room == STAGE_START[stage] + 5
+        checks["large_role"] = bool(
+            pyboy.memory[addrs["_procgen_current_room_is_large"]])
+        checks["wide"] = world_width == 224
+        checks["deep"] = world_height == 200
+        checks["dungeon_context"] = not pyboy.memory[rs + 17]
     elif checkpoint == "sanctuary":
         entities = addrs["_entities"]
         checks["sanctuary_room"] = room == STAGE_BOSS_ROOM[stage] - 1
@@ -651,8 +702,18 @@ def main() -> None:
                 pyboy, ram, room = boot_to_stage(
                     args.rom, addrs, stage, difficulty, class_id)
                 suffix = "" if difficulty == "normal" else "-easy"
-                for checkpoint in ("entry", "sanctuary", "boss"):
-                    if checkpoint == "sanctuary":
+                for checkpoint in ("entry", "court", "sanctuary", "boss"):
+                    if checkpoint == "court":
+                        room = advance_to_court(pyboy, addrs, stage)
+                    elif checkpoint == "sanctuary":
+                        # A court may finish with nonzero two-axis camera and
+                        # wide source bounds. Start a fresh real stage entry
+                        # before routing the independent sanctuary fixture so
+                        # no synthetic ordinary threshold is interpreted as
+                        # the retained court's far edge.
+                        pyboy.stop(save=False)
+                        pyboy, ram, room = boot_to_stage(
+                            args.rom, addrs, stage, difficulty, class_id)
                         room = advance_to_sanctuary(pyboy, addrs, stage)
                     elif checkpoint == "boss":
                         room = advance_to_boss(pyboy, addrs, stage)

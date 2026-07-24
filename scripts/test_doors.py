@@ -14,9 +14,10 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM, SEALED, SHADOW_OAM = map(addr, (
+RS, PL, EN, TM, SEALED, SHADOW_OAM, CAMERA_X, CAMERA_Y = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
-    "_room_combat_sealed", "_shadow_OAM"))
+    "_room_combat_sealed", "_shadow_OAM", "_room_camera_x",
+    "_room_camera_y"))
 
 def put16(pb, address, value):
     pb.memory[address] = value & 0xFF
@@ -28,8 +29,9 @@ def read16(pb, address):
 def player_oam_matches(pb):
     """Return whether all four player metasprite tiles match player state."""
     px, py = read16(pb, PL + 9), read16(pb, PL + 11)
-    expected = ((py + 16, px + 8), (py + 16, px + 16),
-                (py + 24, px + 8), (py + 24, px + 16))
+    sx, sy = px - pb.memory[CAMERA_X], py - pb.memory[CAMERA_Y]
+    expected = ((sy + 16, sx + 8), (sy + 16, sx + 16),
+                (sy + 24, sx + 8), (sy + 24, sx + 16))
     # GBDK writes sprite positions through shadow OAM during VBlank. This is
     # the authoritative game-side buffer (and stable across PyBoy backends),
     # whereas hardware OAM can be momentarily inaccessible during a PPU tick.
@@ -40,8 +42,9 @@ def player_oam_matches(pb):
 def assert_player_oam_visible(pb, label):
     """The post-slide hero must be on-screen, not merely OBJ-enabled."""
     px, py = read16(pb, PL + 9), read16(pb, PL + 11)
-    expected = ((py + 16, px + 8), (py + 16, px + 16),
-                (py + 24, px + 8), (py + 24, px + 16))
+    sx, sy = px - pb.memory[CAMERA_X], py - pb.memory[CAMERA_Y]
+    expected = ((sy + 16, sx + 8), (sy + 16, sx + 16),
+                (sy + 24, sx + 8), (sy + 24, sx + 16))
     actual = tuple((pb.memory[SHADOW_OAM + i * 4],
                     pb.memory[SHADOW_OAM + i * 4 + 1]) for i in range(4))
     assert player_oam_matches(pb), (
