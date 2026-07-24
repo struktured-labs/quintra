@@ -156,12 +156,14 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
         u8 t;
         if (sx < 0) sx = 0;
         else if (sx > (i16)(room_world_width - 1)) sx = room_world_width - 1;
-        if (sy < 0) sy = 0; else if (sy > (ROOM_H * 8 - 1)) sy = ROOM_H * 8 - 1;
+        if (sy < 0) sy = 0;
+        else if (sy > (i16)(room_world_height - 1))
+            sy = room_world_height - 1;
         // sx/sy are clamped to the room above, so this is exactly the
         // in-bounds branch of room_tile_at_px().  Keep the hot projectile
         // path in this bank instead of paying a banked helper call for every
         // hostile bullet every frame.
-        t = (sx < ROOM_VIEW_W_PX)
+        t = (sx < ROOM_VIEW_W_PX && sy < ROOM_VIEW_H_PX)
             ? room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)]
             : room_tile_at_px(sx, sy);
 
@@ -193,7 +195,7 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
         }
         // Off-screen / past the room edge: despawn
         if (px < 8 || px > (i16)(room_world_width - 8)
-            || py < 8 || py > (ROOM_H * 8 - 8)) {
+            || py < 8 || py > (i16)(room_world_height - 8)) {
             entity_kill(idx);
             return;
         }

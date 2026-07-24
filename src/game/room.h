@@ -14,9 +14,13 @@
 #define ROOM_W 20
 #define ROOM_H 17
 #define ROOM_VIEW_W_PX (ROOM_W * 8)
+#define ROOM_VIEW_H_PX (ROOM_H * 8)
 #define ROOM_WIDE_W_TILES 28
 #define ROOM_WIDE_W_PX (ROOM_WIDE_W_TILES * 8)
 #define ROOM_WIDE_EXT_TILES (ROOM_WIDE_W_TILES - ROOM_W)
+#define ROOM_WIDE_H_TILES 25
+#define ROOM_WIDE_H_PX (ROOM_WIDE_H_TILES * 8)
+#define ROOM_WIDE_BOTTOM_ROWS (ROOM_WIDE_H_TILES - ROOM_H)
 #define ROOM_CRYSTAL_W_TILES ROOM_WIDE_W_TILES
 #define ROOM_CRYSTAL_W_PX ROOM_WIDE_W_PX
 
@@ -25,11 +29,16 @@ extern u8 room_tilemap[ROOM_H][ROOM_W];
 // Riftwild fields keep their authored columns 20..27 in a separate strip so
 // collision, renderer, and controller instrumentation share the same terrain.
 extern u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
+// Rows 17..24 span the complete 28-column outdoor world. Keeping them
+// separate preserves the compact room_tilemap ABI used by dungeon tooling.
+extern u8 room_world_bottom[ROOM_WIDE_BOTTOM_ROWS][ROOM_WIDE_W_TILES];
 // World-space contract shared by collision, projectiles, OBJ projection, and
-// emulator instrumentation. Ordinary rooms are 160 px; Riftwild fields and
-// Crystal's proving arena are 224 px with a bounded 0..64 px camera.
+// emulator instrumentation. Ordinary rooms are 160x136 px; Riftwild fields
+// are 224x200 px and Crystal's proving arena is 224x136 px.
 extern u8 room_world_width;
+extern u8 room_world_height;
 extern u8 room_camera_x;
+extern u8 room_camera_y;
 extern u8 room_transform_ticks;
 // Temporary combat boon: decremented in active gameplay only, so menus do
 // not consume it and it never needs to inflate the suspend-save payload.
@@ -45,6 +54,9 @@ extern u8 room_sigil_status;
 // combat/loot population can consume every slot. Idempotent on later room
 // orchestration passes.
 void room_spawn_progression_fixture(void) BANKED;
+// Reset the world-space camera contract and project an authored boss arena.
+// Returns its stage index, or 0xFF for ordinary/world rooms.
+u8 room_apply_world_arena(void) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;

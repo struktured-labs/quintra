@@ -869,9 +869,11 @@ void tiles_prepare_crystal_wide_arena(void) BANKED {
     VBK_REG = 0;
 }
 
-u8 tiles_world_camera_step(u8 current, i16 player_x) BANKED {
-    u8 desired = (player_x > 72) ? (u8)(player_x - 72) : 0;
-    u8 max_camera = ROOM_WIDE_W_PX - ROOM_VIEW_W_PX;
+u8 tiles_world_camera_step(u8 current, i16 player_pos,
+                           u8 world_extent, u8 view_extent) BANKED {
+    u8 anchor = (u8)((view_extent - 16) >> 1);
+    u8 desired = (player_pos > anchor) ? (u8)(player_pos - anchor) : 0;
+    u8 max_camera = world_extent - view_extent;
     if (desired > max_camera) desired = max_camera;
     if (current < desired) {
         current = (u8)(current + 2);

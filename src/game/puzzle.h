@@ -19,6 +19,9 @@ extern u8 room_puzzle_visual_y;
 
 // Deterministically layer this dungeon's puzzle fixture over procgen.
 void puzzle_prepare_room(void) BANKED;
+// Final room-authoring boundary: prepare a fixture, sanitize procgen marks,
+// and publish whether ordinary combat sealing applies.
+void puzzle_prepare_room_role(void) BANKED;
 u8 puzzle_combat_seal_policy(void) BANKED;
 
 // Returns 1 exactly when a sealed room has just been solved.

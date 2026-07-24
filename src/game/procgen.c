@@ -64,14 +64,20 @@ static void place_player_after_entry(void) {
     // on the 2-wide N/S doors (cols 9-10) and y=60 on the E/W pair
     // (rows 8-9).
     u8 dir = run_state.entered_from;
-    if (dir == DIR_N)      { player.x = 72;  player.y = 112; }
+    if (dir == DIR_N) {
+        player.x = 72;
+        player.y = run_state.world_mode ? (ROOM_WIDE_H_PX - 24) : 112;
+    }
     else if (dir == DIR_S) { player.x = 72;  player.y = 8;   }
     else if (dir == DIR_E) { player.x = 8;   player.y = 60;  }
     else if (dir == DIR_W) {
         player.x = run_state.world_mode ? (ROOM_WIDE_W_PX - 24) : 136;
         player.y = 60;
     }
-    else                   { player.x = 72;  player.y = 60;  }
+    else {
+        player.x = 72;
+        player.y = run_state.world_mode ? 92 : 60;
+    }
 }
 
 // Weighted pick from this stage's roster (generated stage_pool tables;
@@ -242,6 +248,39 @@ static void generate_world_extension(u8 edges, u8 family, u32 seed) {
     // the landmark blocks or the broad center traversal lanes.
     room_world_extension[3 + ((seed >> 3) & 3)][6] = BGT_TREE;
     room_world_extension[10 + ((seed >> 5) & 3)][0] = BGT_TREE;
+}
+
+// Rows 17..24 extend the same logical cell southward behind a real vertical
+// camera. The central trail crosses the obsolete row-16 boundary; only the
+// true global row 24 can advance to a southern graph neighbour.
+static void generate_world_bottom(u8 edges, u8 family, u32 seed) {
+    u8 x, y;
+    u8 tile = (family == 0) ? BGT_WILD_FLOWER
+        : (family == 1) ? BGT_WILD_WATER
+        : (family == 2) ? BGT_WILD_STONE : BGT_WILD_STUMP;
+    for (y = 0; y < ROOM_WIDE_BOTTOM_ROWS; ++y) {
+        for (x = 0; x < ROOM_WIDE_W_TILES; ++x) {
+            room_world_bottom[y][x] =
+                (x == 0 || x == ROOM_WIDE_W_TILES - 1
+                    || y == ROOM_WIDE_BOTTOM_ROWS - 1)
+                ? BGT_TREE : BGT_GRASS;
+        }
+    }
+    // The vertical trail remains broad enough for the champion's 12px body.
+    for (y = 0; y < ROOM_WIDE_BOTTOM_ROWS; ++y)
+        room_world_bottom[y][9] = room_world_bottom[y][10] = BGT_PATH;
+    if (edges & 0x04) {
+        room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][9] =
+            room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][10] = BGT_DOOR;
+    } else {
+        room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][9] =
+            room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][10] = BGT_TREE;
+    }
+    // A third landmark makes the southern reveal a destination, not padding.
+    room_world_bottom[2][14] = room_world_bottom[2][15] =
+        room_world_bottom[3][14] = room_world_bottom[3][15] = tile;
+    room_world_bottom[4 + ((seed >> 7) & 1)][22] = BGT_TREE;
+    room_world_bottom[1 + ((seed >> 9) & 1)][4] = BGT_TREE;
 }
 
 static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
@@ -816,7 +855,11 @@ void procgen_generate_current_room(void) BANKED {
         if (edges & 0x02) for (x = 9; x < ROOM_W; ++x)
             room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
         if (edges & 0x01) room_tilemap[0][9] = room_tilemap[0][10] = BGT_DOOR;
-        if (edges & 0x04) room_tilemap[ROOM_H-1][9] = room_tilemap[ROOM_H-1][10] = BGT_DOOR;
+        // Row 16 is now an internal seam into the southern field. It remains
+        // open regardless of graph direction; the true door lives at row 24.
+        for (x = 1; x < ROOM_W - 1; ++x)
+            room_tilemap[ROOM_H - 1][x] = BGT_GRASS;
+        room_tilemap[ROOM_H - 1][9] = room_tilemap[ROOM_H - 1][10] = BGT_PATH;
         if (edges & 0x08) room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
         // Column 19 is no longer a cardinal boundary. Open the whole old seam
         // into the side field; only column 27 can advance east.
@@ -837,6 +880,10 @@ void procgen_generate_current_room(void) BANKED {
         // family, preserving both geographic memory and roguelike variation.
         stamp_world_landmark(family);
         generate_world_extension(edges, family, seed);
+        // The side strip's old bottom wall is also an internal seam.
+        for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x)
+            room_world_extension[ROOM_H - 1][x] = BGT_GRASS;
+        generate_world_bottom(edges, family, seed);
         if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
             || world_kind == ZELDA_CELL_VAULT
             || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)
@@ -1303,15 +1350,12 @@ void procgen_generate_current_room(void) BANKED {
                                 (u8)(entities[idx].hp + 1 + (u8)(st >> 1));
                             // Optional outdoor pressure should inhabit the new
                             // territory instead of clustering in the original
-                            // viewport. Alternate successful bodies between
-                            // the old clearing and two guaranteed-open far
-                            // lanes; no extra RNG is consumed.
+                            // viewport. Every second successful body uses the
+                            // guaranteed-open southeast trail, beyond BOTH old
+                            // viewport seams; no extra RNG is consumed.
                             if (run_state.world_mode && (spawned & 1)) {
-                                // Start deep enough into the extension that a
-                                // fast chaser remains visibly beyond the old
-                                // 160px screen after the arrival settles.
                                 entities[idx].x = FIX8(192);
-                                entities[idx].y = FIX8((spawned & 2) ? 80 : 56);
+                                entities[idx].y = FIX8(160);
                             }
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,

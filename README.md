@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.69: Riftwild Unbound](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.70: Riftwild Deepens](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,31 +22,32 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.69**, published after the complete build,
+The current cartridge is **v0.18.70**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
-**Riftwild is now a scrolling field rather than sixteen fixed boxes.** Every
-one of its 4×4 logical cells is a 224×136 world behind the 160×136 LCD
-viewport. Walking through the former x=160 room edge now pans into another
-64px of generated terrain with a paired landmark, cover, and encounter
-pressure; only the true x=216 threshold advances to an eastern neighbour.
-Westward arrivals begin at the far camera bound with the champion visible.
-Together, the authored graph now spans 896×544 traversable logical pixels
-before its nonlinear Rift Wells, up from 640×544, while retaining the
-learnable 4×4 geography and seed-rotated fixtures.
+**Riftwild is now a two-axis scrolling field rather than sixteen fixed
+boxes.** Every one of its 4×4 logical cells is a 224×200 world behind the
+160×136 LCD viewport. Walking through either former screen edge now pans into
+another 64px of generated terrain; only the true x=216 or y=184 threshold
+advances to a neighbouring cell. East and south arrivals begin at the
+matching far camera bound with the champion visible. Together, the authored
+graph spans 896×800 traversable logical pixels before its nonlinear Rift
+Wells, up from the original 640×544, while retaining learnable 4×4 geography
+and seed-rotated fixtures.
 
 The added field is first-class gameplay terrain. Its tiles live in WRAM and
 are shared by rendering, player and projectile collision, enemy movement, the
-input-only controller, camera tests, and generated checkpoints. A far-side
-hostile and second landmark keep the added space from reading as empty
-overscan. The obsolete seam is grass or path, the actual far boundary follows
-the overworld graph, and outdoor transitions use a safe full rebuild because
-the wide source already occupies 28 of the Game Boy background's 32 columns.
+input-only controller, camera tests, and generated checkpoints. Each cell has
+three seed-stable landmark clusters across its original, eastern, and southern
+terrain, plus encounter pressure in the southeast beyond both old seams. The
+obsolete edges are grass or path, the actual far boundaries follow the
+overworld graph, and outdoor transitions use a safe full rebuild because the
+wide source already occupies 28 of the Game Boy background's 32 columns.
 
 This is a material reduction in screen-change cadence, not the final
-continuous-overworld architecture. North/south and logical-cell boundaries
-still load generated cells; the longer-term target remains a broad field with
-larger uninterrupted regions. The 224px slice deliberately reuses the proven
+continuous-overworld architecture. Logical-cell boundaries still load
+generated cells; the longer-term target remains broader uninterrupted regions
+and larger dungeon wings. The 224×200 slice deliberately reuses the proven
 Crystal world/camera contract so scale grows without splitting collision,
 art, controller, and cartridge behavior into competing implementations.
 
@@ -115,8 +116,9 @@ A measured Easy controller run can still reach stage three by minute five,
 and ordinary dungeon rooms remain single 160×136 playfields beneath the HUD.
 The result can therefore still feel compact despite the larger topology.
 v0.18.68 delivered the first true scrolling Penta-style arena and the shared
-world/camera path behind it. v0.18.69 applies that path across all sixteen
-Riftwild cells; larger uninterrupted regions and spatially meaningful dungeon
+world/camera path behind it. v0.18.69 applied horizontal travel across all
+sixteen Riftwild cells; v0.18.70 expands every one to 224×200 with a real
+two-axis camera. Larger uninterrupted regions and spatially meaningful dungeon
 side wings remain the next scale work. Adding room counters alone is
 explicitly not the answer.
 
@@ -2029,7 +2031,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.69 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.70 release ROM occupies 128 KiB. Its media,
 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -2045,8 +2047,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.69 build has 1,133 bytes in bank 1, 1,586 in bank 2,
-1,902 in bank 3, 2,079 in bank 4, 1,934 in bank 5, and 8,699 in bank 6.
+ROM. The current v0.18.70 build has 1,024 bytes in bank 1, 1,538 in bank 2,
+1,845 in bank 3, 1,741 in bank 4, 1,397 in bank 5, and 7,377 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

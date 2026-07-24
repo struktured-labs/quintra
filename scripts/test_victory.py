@@ -137,7 +137,7 @@ def main():
     assert pb.memory[rs + 18] == 1
     exit_at(208, 60)
     assert pb.memory[rs + 18] == 2
-    exit_at(72, 120)
+    exit_at(72, 184)
     assert pb.memory[rs + 18] == 6
     pb.memory[pl + 9] = 72
     pb.memory[pl + 10] = 0

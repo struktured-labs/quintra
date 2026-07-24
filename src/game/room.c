@@ -33,8 +33,11 @@ BANKREF(room_enter)
 
 u8 room_tilemap[ROOM_H][ROOM_W];
 u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
+u8 room_world_bottom[ROOM_WIDE_BOTTOM_ROWS][ROOM_WIDE_W_TILES];
 u8 room_world_width = ROOM_VIEW_W_PX;
+u8 room_world_height = ROOM_VIEW_H_PX;
 u8 room_camera_x;
+u8 room_camera_y;
 
 static u8 room_paused;
 static u8 room_resume_flag;   // set by room_request_resume: skip procgen next enter
@@ -170,87 +173,6 @@ static u8 room_stage(void) {
 // so all nine authored bosses project larger bodies into the BG plane.
 // The body is visual/lore space—only the mobile OBJ core is vulnerable or
 // collidable.
-static void room_apply_colossal_arena(void) {
-    // Generation always returns to the one-screen contract first. The pack
-    // resume path skips this function, preserving a live wide-arena camera.
-    room_world_width = run_state.world_mode ? ROOM_WIDE_W_PX : ROOM_VIEW_W_PX;
-    // Entering a wide Riftwild cell from its eastern neighbour must reveal
-    // the arrival immediately. Starting SCX at zero would park the hero 64px
-    // beyond the viewport until the follow camera caught up.
-    room_camera_x = (run_state.world_mode
-        && run_state.entered_from == DIR_W)
-        ? (ROOM_WIDE_W_PX - ROOM_VIEW_W_PX) : 0;
-    if (run_state.world_mode) return;
-    if (!procgen_current_room_is_boss) return;
-    if (room_stage() == 0) {
-        room_world_width = ROOM_CRYSTAL_W_PX;
-        // Column 19 used to be the immutable right wall. It is now the seam
-        // into the hardware BG's authored extension; the true wall is x=27.
-        tiles_paint_crystal_projection();
-        return;
-    }
-    if (room_stage() == 1) {
-        // Verdant's mobile OBJ is the vulnerable head; its coiled storm body
-        // fills the arena without changing rebound collision or shot lanes.
-        tiles_paint_serpent_projection();
-        return;
-    }
-    if (room_stage() == 2) {
-        // Ember's furnace-beast fills the arena while the original core owns
-        // the same telegraphed breath, hard lunge, and recovery opening.
-        tiles_paint_cinder_projection();
-        cinder_projection_state = 0xFF;
-        return;
-    }
-    if (room_stage() == 3) {
-        // Frost's astral web-spider fills the arena while the original weak
-        // point keeps its telegraphed flank blink and four-lane web attack.
-        tiles_paint_spider_projection();
-        return;
-    }
-    if (room_stage() == 4) {
-        // The Mire begins clenched around its mobile OBJ heart. Its existing
-        // 48-beat movement state later drives the full 64x48 <-> 96x64 pulse.
-        tiles_paint_mire_projection(0, 0);
-        mire_projection_state = 0xFF;
-        return;
-    }
-    if (room_stage() == 5) {
-        // Shadow's giant spectral cloak phases around the original weak point,
-        // which keeps its warned hunt and flank re-entry behavior.
-        tiles_paint_reaper_projection();
-        return;
-    }
-    if (room_stage() == 6) {
-        // Golden Temple's guardian is a monumental carved idol around the
-        // same moving OBJ heart that owns its heavy ring and damage contract.
-        tiles_paint_golem_projection();
-        return;
-    }
-    if (room_stage() == 7) {
-        // Bloodmoon's three-headed coil fills the late arena while its
-        // original OBJ core keeps the proven broad weave and damage window.
-        tiles_paint_hydra_projection();
-        return;
-    }
-    if (room_stage() == 8) tiles_paint_void_projection();
-}
-
-static void room_prepare_puzzle_role(void) {
-    u8 x, y;
-    puzzle_prepare_room();
-    // Reachability uses bit 7 as scratch metadata while procgen chooses legal
-    // enemy cells. Puzzle preparation is the final tilemap authoring step
-    // before every full draw or streamed slide, so sanitize here as a hard
-    // rendering/collision boundary even if an earlier banked cleanup was
-    // interrupted. Tile ids 128..255 are never legal room terrain.
-    for (y = 0; y < ROOM_H; ++y)
-        for (x = 0; x < ROOM_W; ++x)
-            room_tilemap[y][x] &= 0x7F;
-    room_combat_sealed = (room_puzzle_kind != PUZZLE_NONE)
-        ? 0 : puzzle_combat_seal_policy();
-}
-
 // Store availability is a room property, not an every-frame discovery job.
 // This is refreshed on both full room entry and the in-place door/portal
 // regeneration paths.
@@ -320,7 +242,9 @@ static void room_load_town_resident_identity(void) {
 // from accidentally erasing a required key and makes the invariant testable.
 void room_spawn_progression_fixture(void) BANKED {
     u8 i;
-    room_apply_colossal_arena();
+    u8 arena_stage = room_apply_world_arena();
+    if (arena_stage == 2) cinder_projection_state = 0xFF;
+    if (arena_stage == 4) mire_projection_state = 0xFF;
     room_sigil_status = 1;
     if (run_state.world_mode) return;
     room_sigil_status = 2;
@@ -769,7 +693,7 @@ static u8 room_door_direction(u8 x, u8 y) {
 
 static void room_hold_at_door(u8 dir, u8 sound, u8 shake_frames) {
     if (dir == DIR_N) player.y = 0;
-    else if (dir == DIR_S) player.y = 120;
+    else if (dir == DIR_S) player.y = (ppos_t)(room_world_height - 16);
     else if (dir == DIR_W) player.x = 0;
     else player.x = (ppos_t)(room_world_width - 16);
     if (door_bump_cd == 0) {
@@ -966,7 +890,7 @@ static void room_slide_south(void) {
         room_transition_vbl();
         SCY_REG = (u8)(step << 3);
     }
-    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = 0; draw_room_tilemap();
+    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = room_camera_y; draw_room_tilemap();
 }
 
 static void room_slide_north(void) {
@@ -985,7 +909,7 @@ static void room_slide_north(void) {
         room_transition_vbl();
         SCY_REG = (u8)(0 - (i16)(step << 3));
     }
-    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = 0; draw_room_tilemap();
+    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = room_camera_y; draw_room_tilemap();
 }
 
 static void place_player_sprite(void) {
@@ -998,7 +922,7 @@ static void place_player_sprite(void) {
         move_sprite(3, 0, 0);
     } else {
         u8 sx = (u8)((i16)player.x - room_camera_x + 8);
-        u8 sy = (u8)(player.y + 16);
+        u8 sy = (u8)((i16)player.y - room_camera_y + 16);
         u8 class_id = (player.class_id < 5) ? player.class_id : 0;
         u8 step = (player.anim_frame & 0x04) ? 1 : 0;
         u8 pose_base = room_transform_ticks ? SPR_CLASS_ASCENDED_BASE
@@ -1104,10 +1028,10 @@ void room_enter(void) {
         room_refresh_shop_wares();
         room_load_dynamic_fx_identity();
         draw_room_tilemap();
-        entity_draw_all();
+        entity_draw_all_world();
         place_player_sprite();
         SCX_REG = room_camera_x;
-        SCY_REG = 0;
+        SCY_REG = room_camera_y;
         // Music kept running through the pack screen (room_exit no longer stops
         // it), so there's nothing to restart here — resume is seamless.
         SHOW_SPRITES;
@@ -1138,7 +1062,7 @@ void room_enter(void) {
     room_refresh_shop_wares();
     room_load_dynamic_fx_identity();
     room_spawn_progression_fixture();
-    room_prepare_puzzle_role();
+    puzzle_prepare_room_role();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
     draw_room_tilemap();
@@ -1239,7 +1163,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (player.iframes) player.iframes--;   // drives the flicker
         entity_update_all(0, 0);
         place_player_sprite();
-        entity_draw_all();
+        entity_draw_all_world();
         return SCREEN_SELF;
     }
 
@@ -1268,7 +1192,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (g_hitstop) {
         g_hitstop--;
         place_player_sprite();
-        entity_draw_all();
+        entity_draw_all_world();
         return SCREEN_SELF;
     }
 
@@ -1924,7 +1848,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // Bellkeeper inherit stale combat sprites.
             room_load_town_resident_identity();
             room_spawn_progression_fixture();
-            room_prepare_puzzle_role();
+            puzzle_prepare_room_role();
             boss_threshold_warned = 0;
             room_load_environment_palettes();
             draw_room_tilemap();
@@ -1963,11 +1887,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     {
         u8 tx = 0xFF, ty = 0xFF;
         u8 dir = DIR_NONE;
-        u8 source_was_wide = (room_world_width > ROOM_VIEW_W_PX);
+        u8 source_was_wide = (room_world_width > ROOM_VIEW_W_PX
+            || room_world_height > ROOM_VIEW_H_PX);
         if (player.y <= 0) {
             dir = DIR_N; tx = (u8)((player.x + 8) >> 3); ty = 0;
-        } else if (player.y >= 120) {
-            dir = DIR_S; tx = (u8)((player.x + 8) >> 3); ty = ROOM_H - 1;
+        } else if (player.y >= (ppos_t)(room_world_height - 16)) {
+            dir = DIR_S; tx = (u8)((player.x + 8) >> 3);
+            ty = (u8)((room_world_height >> 3) - 1);
         } else if (player.x <= 0) {
             dir = DIR_W; tx = 0; ty = (u8)((player.y + 12) >> 3);
         } else if (player.x >= (ppos_t)(room_world_width - 16)) {
@@ -1975,7 +1901,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             ty = (u8)((player.y + 12) >> 3);
         }
 
-        if (dir != DIR_NONE && ty < ROOM_H
+        if (dir != DIR_NONE && ty < (u8)(room_world_height >> 3)
             && room_tile_at_px((i16)tx << 3, (i16)ty << 3) == BGT_DOOR) {
             u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
                 // The sanctuary's forward threshold rejects the hero until
@@ -2104,7 +2030,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_dynamic_fx_identity();
                 room_load_town_resident_identity();
                 room_spawn_progression_fixture();
-                room_prepare_puzzle_role();
+                puzzle_prepare_room_role();
                 // A 224px source already occupies BG columns 0..27; the
                 // 20-column streamer would overwrite eight still-visible
                 // source columns while staging its destination at 20..31.
@@ -2114,6 +2040,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // from the east now starts at SCX 64 with the hero visible.
                 if (!source_was_wide
                     && room_world_width <= ROOM_VIEW_W_PX
+                    && room_world_height <= ROOM_VIEW_H_PX
                     && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_E
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
@@ -2121,6 +2048,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     room_slide_east();
                 } else if (!source_was_wide
                     && room_world_width <= ROOM_VIEW_W_PX
+                    && room_world_height <= ROOM_VIEW_H_PX
                     && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_W
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
@@ -2128,6 +2056,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     room_slide_west();
                 } else if (!source_was_wide
                     && room_world_width <= ROOM_VIEW_W_PX
+                    && room_world_height <= ROOM_VIEW_H_PX
                     && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_S
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
@@ -2135,6 +2064,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     room_slide_south();
                 } else if (!source_was_wide
                     && room_world_width <= ROOM_VIEW_W_PX
+                    && room_world_height <= ROOM_VIEW_H_PX
                     && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_N
                     && !procgen_current_room_is_boss
                     && room_stage() == stage_seen) {
@@ -2222,9 +2152,14 @@ void room_draw(void) {
         }
     }
     room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
-        ? tiles_world_camera_step(room_camera_x, player.x) : 0;
+        ? tiles_world_camera_step(room_camera_x, player.x,
+            room_world_width, ROOM_VIEW_W_PX) : 0;
+    room_camera_y = (room_world_height > ROOM_VIEW_H_PX)
+        ? tiles_world_camera_step(room_camera_y, player.y,
+            room_world_height, ROOM_VIEW_H_PX) : 0;
     place_player_sprite();
-    entity_draw_all();
+    if (room_world_height > ROOM_VIEW_H_PX) entity_draw_all_world();
+    else entity_draw_all();
 
     if (procgen_current_room_is_boss && room_stage() == 1
         && (loop_frame_counter & 0x0F) == 0) {
@@ -2271,7 +2206,7 @@ void room_draw(void) {
         shake_timer--;
         if (shake_timer == 0) {
             SCX_REG = room_camera_x;
-            SCY_REG = 0;
+            SCY_REG = room_camera_y;
         } else {
             if (shake_timer & 2) {
                 u8 max_camera = (u8)(room_world_width - ROOM_VIEW_W_PX);
@@ -2281,13 +2216,24 @@ void room_draw(void) {
                 SCX_REG = (room_camera_x > shake_mag)
                     ? (u8)(room_camera_x - shake_mag) : 0;
             }
-            SCY_REG = (room_world_width > ROOM_VIEW_W_PX)
-                ? 0 : ((shake_timer & 4) ? 1 : 0xFF);
+            if (room_world_height > ROOM_VIEW_H_PX) {
+                u8 max_camera_y = (u8)(room_world_height - ROOM_VIEW_H_PX);
+                if (shake_timer & 4)
+                    SCY_REG = (room_camera_y + shake_mag > max_camera_y)
+                        ? max_camera_y : (u8)(room_camera_y + shake_mag);
+                else
+                    SCY_REG = (room_camera_y > shake_mag)
+                        ? (u8)(room_camera_y - shake_mag) : 0;
+            } else {
+                SCY_REG = (room_world_width > ROOM_VIEW_W_PX)
+                    ? 0 : ((shake_timer & 4) ? 1 : 0xFF);
+            }
         }
-    } else if (room_world_width > ROOM_VIEW_W_PX) {
-        // Crystal and every Riftwild cell share the real 224px world camera.
+    } else if (room_world_width > ROOM_VIEW_W_PX
+        || room_world_height > ROOM_VIEW_H_PX) {
+        // Crystal and every Riftwild cell share the real world camera.
         SCX_REG = room_camera_x;
-        SCY_REG = 0;
+        SCY_REG = room_camera_y;
     } else if (procgen_current_room_is_boss && room_stage() == 1) {
         // Preserve Verdant's original inline timing: a banked call here costs
         // enough cycles to perturb fixed controller replays in dense fights.

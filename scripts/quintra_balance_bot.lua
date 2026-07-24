@@ -13,9 +13,10 @@ local VOID_SAFE_X, VOID_SAFE_Y = {20, 124, 20, 124}, {20, 20, 100, 100}
 local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
--- Controller-side mirror of the cartridge's runtime world width. Stage one's
--- Crystal arena occupies 28 BG columns; every other current room remains 20.
+-- Controller-side mirror of the cartridge's runtime world extents. Stage
+-- one's Crystal arena is 224x136; Riftwild cells are 224x200.
 QUINTRA_ARENA_W = 160
+QUINTRA_ARENA_H = 136
 DASH_SELFTEST = os.getenv("QUINTRA_BOT_DASH_SELFTEST") == "1"
 -- Declare linker-resolved addresses before the maze helpers. Lua's lexical
 -- scope begins at the declaration, so defining those helpers first would
@@ -25,6 +26,7 @@ local PL = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local WX = tonumber(os.getenv("QUINTRA_WORLD_EXT_ADDR") or "0") or 0
+local WB = tonumber(os.getenv("QUINTRA_WORLD_BOTTOM_ADDR") or "0") or 0
 local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 
@@ -788,7 +790,8 @@ end
 
 function body_walkable(cx, cy)
     local cols = math.floor(QUINTRA_ARENA_W / 8)
-    if cx < 1 or cx > cols - 1 or cy < 1 or cy > 16 then return false end
+    local rows = math.floor(QUINTRA_ARENA_H / 8)
+    if cx < 1 or cx > cols - 1 or cy < 1 or cy > rows - 1 then return false end
     return navigation_walkable(tile_at_px((cx - 1) * 8, (cy - 1) * 8))
         and navigation_walkable(tile_at_px(cx * 8, (cy - 1) * 8))
         and navigation_walkable(tile_at_px((cx - 1) * 8, cy * 8))
@@ -829,7 +832,7 @@ function pixel_walkable(x, y)
 end
 
 function pixel_full_body_obstacle(x, y)
-    if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= 136 then return true end
+    if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= QUINTRA_ARENA_H then return true end
     local tile = tile_at_px(x, y) % 128
     return tile == 21 or tile == 25 or tile == 28 or tile == 29 or tile == 30
 end
@@ -919,7 +922,7 @@ function quintra_giant_body_dash_dir(px, py, target, fallback)
         local dx = key == KEY_RIGHT and 1 or key == KEY_LEFT and -1 or 0
         local dy = key == KEY_DOWN and 1 or key == KEY_UP and -1 or 0
         local legal = not ((key == KEY_UP and py <= 7)
-            or (key == KEY_DOWN and py >= 120)
+            or (key == KEY_DOWN and py >= QUINTRA_ARENA_H - 16)
             or (key == KEY_LEFT and px <= 7)
             or (key == KEY_RIGHT and px >= QUINTRA_ARENA_W - 24))
         for step = 0, 7 do
@@ -944,13 +947,13 @@ function quintra_giant_body_dash_dir(px, py, target, fallback)
     -- rescore the room. This affects controller input only.
     for _, key in ipairs({fallback, KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_UP}) do
         local crosses_edge = (key == KEY_UP and py <= 7)
-            or (key == KEY_DOWN and py >= 120)
+            or (key == KEY_DOWN and py >= QUINTRA_ARENA_H - 16)
             or (key == KEY_LEFT and px <= 7)
             or (key == KEY_RIGHT and px >= QUINTRA_ARENA_W - 24)
         if not crosses_edge and can_step(px, py, key) then return key end
     end
     if py <= 7 then return KEY_DOWN end
-    if py >= 120 then return KEY_UP end
+    if py >= QUINTRA_ARENA_H - 16 then return KEY_UP end
     if px <= 7 then return KEY_RIGHT end
     if px >= QUINTRA_ARENA_W - 24 then return KEY_LEFT end
     return fallback
@@ -1038,7 +1041,14 @@ function quintra_body_overlap_escape(px, py, ex, ey)
 end
 
 function tile_at_px(x, y)
-    if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= 136 then return 0 end
+    if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= QUINTRA_ARENA_H then return 0 end
+    if y >= 136 then
+        if RS ~= 0 and emu:read8(RS + 17) == 1 and WB ~= 0 then
+            local tx, ty = math.floor(x / 8), math.floor(y / 8)
+            return emu:read8(WB + (ty - 17) * 28 + tx)
+        end
+        return 0
+    end
     if x >= 160 then
         -- Riftwild and Crystal keep their extensions out of the compact
         -- 20x17 WRAM map. Outdoor columns are real generated terrain exposed
@@ -1254,7 +1264,10 @@ function aligned_step(d, sx, sy, px, py, fallback)
     else
         -- Mirrored rule for east/west travel.
         local want_y = sy * 8 - 11
-        if want_y < 0 then want_y = 0 elseif want_y > 120 then want_y = 120 end
+        if want_y < 0 then want_y = 0
+        elseif want_y > QUINTRA_ARENA_H - 16 then
+            want_y = QUINTRA_ARENA_H - 16
+        end
         if py < want_y - lane_tolerance then return KEY_DOWN end
         if py > want_y + lane_tolerance then return KEY_UP end
         local travel = CARD_KEYS[d]
@@ -1310,6 +1323,7 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
     local qx, qy, head, tail = {sx}, {sy}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
     local cols = math.floor(QUINTRA_ARENA_W / 8)
+    local rows = math.floor(QUINTRA_ARENA_H / 8)
     local start = sy * cols + sx
     seen[start] = true
     local target, best, best_dist = nil, nil, 0x7FFF
@@ -1344,7 +1358,7 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
         for d = 1, 4 do
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
             local nk = ny * cols + nx
-            if nx >= 1 and nx <= cols - 1 and ny >= 1 and ny <= 16
+            if nx >= 1 and nx <= cols - 1 and ny >= 1 and ny <= rows - 1
                 and not seen[nk] and body_walkable(nx, ny) then
                 seen[nk], prev[nk], prevkey[nk] = true, y * cols + x, d
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
@@ -1365,6 +1379,7 @@ local body_goal_pixel_route = nil
 function exact_body_goal_step(px, py, goal_x, goal_y)
     local stride = QUINTRA_ARENA_W
     local max_player_x = QUINTRA_ARENA_W - 14
+    local max_player_y = QUINTRA_ARENA_H - 16
     local start = py * stride + px
     local start_feet_tx = math.floor((px + 8) / 8)
     local start_feet_ty = math.floor((py + 12) / 8)
@@ -1401,7 +1416,7 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
             local crosses_other_rune = tile_at_px(nx + 8, ny + 12) == 33
                 and (feet_tx ~= start_feet_tx or feet_ty ~= start_feet_ty)
                 and (math.abs(nx - goal_x) > 1 or math.abs(ny - goal_y) > 1)
-            if nx >= 0 and nx <= max_player_x and ny >= 0 and ny <= 120
+            if nx >= 0 and nx <= max_player_x and ny >= 0 and ny <= max_player_y
                 and not seen[next_key] and can_step(x, y, dir)
                 and not body_on_spike(nx, ny) and not crosses_other_rune then
                 seen[next_key], previous[next_key], step[next_key] = true, key, dir
@@ -1662,7 +1677,9 @@ end
 
 function spore_pixel_step(room, px, py, ex, ey, fallback, max_range)
     if TM == 0 or EN == 0 then return fallback, true end
-    local start = py * 160 + px
+    local stride = QUINTRA_ARENA_W
+    local max_x, max_y = QUINTRA_ARENA_W - 14, QUINTRA_ARENA_H - 16
+    local start = py * stride + px
     if spore_pixel_route and spore_pixel_route.room == room
         and spore_pixel_route.x == ex and spore_pixel_route.y == ey then
         if spore_pixel_route.dirs[start] then
@@ -1693,18 +1710,18 @@ function spore_pixel_step(room, px, py, ex, ey, fallback, max_range)
         local x, y = qx[head], qy[head]; head = head + 1
         local aim = spore_shot_lane(x, y, ex, ey, max_range)
         if aim then
-            found = y * 160 + x
+            found = y * stride + x
             found_aim = aim
             break
         end
         for d = 1, 4 do
             local dir = CARD_KEYS[d]
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
-            local nk = ny * 160 + nx
-            if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
+            local nk = ny * stride + nx
+            if nx >= 0 and nx <= max_x and ny >= 0 and ny <= max_y
                 and not seen[nk] and can_step(x, y, dir)
                 and safely_outside_all_spores(nx, ny) then
-                seen[nk], previous[nk], step[nk] = true, y * 160 + x, dir
+                seen[nk], previous[nk], step[nk] = true, y * stride + x, dir
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
             end
         end
@@ -1763,7 +1780,9 @@ end
 
 function fold_star_pixel_step(room, px, py, ex, ey, fallback, max_range)
     if TM == 0 then return fallback, false end
-    local start = py * 160 + px
+    local stride = QUINTRA_ARENA_W
+    local max_x, max_y = QUINTRA_ARENA_W - 14, QUINTRA_ARENA_H - 16
+    local start = py * stride + px
     if fold_star_pixel_route and fold_star_pixel_route.room == room
         and fold_star_pixel_route.x == ex and fold_star_pixel_route.y == ey then
         if fold_star_pixel_route.dirs[start] then
@@ -1780,16 +1799,16 @@ function fold_star_pixel_step(room, px, py, ex, ey, fallback, max_range)
         local x, y = qx[head], qy[head]; head = head + 1
         local aim = fold_star_shot_lane(x, y, ex, ey, max_range)
         if aim then
-            found, found_aim = y * 160 + x, aim
+            found, found_aim = y * stride + x, aim
             break
         end
         for d = 1, 4 do
             local dir = CARD_KEYS[d]
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
-            local nk = ny * 160 + nx
-            if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
+            local nk = ny * stride + nx
+            if nx >= 0 and nx <= max_x and ny >= 0 and ny <= max_y
                 and not seen[nk] and can_step(x, y, dir) then
-                seen[nk], previous[nk], step[nk] = true, y * 160 + x, dir
+                seen[nk], previous[nk], step[nk] = true, y * stride + x, dir
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
             end
         end
@@ -2050,14 +2069,14 @@ function door_step(px, py)
         return primary
     end
     if in_world and wanted ~= nil then
-        -- Every Riftwild cell is 224px wide. Route the real feet box through
-        -- its generated side field to the actual cardinal threshold instead
-        -- of planning against the obsolete 20-column viewport.
+        -- Every Riftwild cell is a 224x200 field. Route the real feet box
+        -- through its generated side/lower terrain to the actual cardinal
+        -- threshold instead of planning against the obsolete viewport.
         local goal_x = wanted == 1 and 208 or (wanted == 3 and 0 or 72)
-        local goal_y = wanted == 0 and 0 or (wanted == 2 and 120 or 60)
+        local goal_y = wanted == 0 and 0 or (wanted == 2 and 184 or 60)
         if wanted == 0 and py <= 1 and px >= 70 and px <= 74 then return KEY_UP end
         if wanted == 1 and px >= 207 and py >= 56 and py <= 64 then return KEY_RIGHT end
-        if wanted == 2 and py >= 119 and px >= 70 and px <= 74 then return KEY_DOWN end
+        if wanted == 2 and py >= 183 and px >= 70 and px <= 74 then return KEY_DOWN end
         if wanted == 3 and px <= 1 and py >= 56 and py <= 64 then return KEY_LEFT end
         local step = exact_body_goal_step(px, py, goal_x, goal_y)
         if step ~= nil and step ~= 0 then return step end
@@ -2692,6 +2711,7 @@ while frames < LIMIT do
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     QUINTRA_ARENA_W = (room == STAGE_BOSS[1]
         or (RS ~= 0 and emu:read8(RS + 17) == 1)) and 224 or 160
+    QUINTRA_ARENA_H = (RS ~= 0 and emu:read8(RS + 17) == 1) and 200 or 136
     if is_town_room(room) then
         -- `world_return_screen` is a plaza index only in a town. Mark each
         -- side street when its real room has loaded so the next arrival visit
@@ -4156,7 +4176,8 @@ while frames < LIMIT do
         -- evasive sidestep use the last safe body-width near that edge, then
         -- turn inward before it accidentally crosses into another world cell.
         local near_guard = world_flee ~= 0 and 4 or 32
-        local vertical_guard = world_flee ~= 0 and 116 or 88
+        local vertical_guard = world_flee ~= 0
+            and (QUINTRA_ARENA_H - 20) or (QUINTRA_ARENA_H - 48)
         local horizontal_guard = world_flee ~= 0
             and (QUINTRA_ARENA_W - 20) or (QUINTRA_ARENA_W - 48)
         if wanted ~= 0 and py < near_guard and math.floor(keys / KEY_UP) % 2 == 1 then

@@ -1,10 +1,51 @@
 #pragma bank 5
 
 #include "core/types.h"
+#include "game/procgen.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
 #include "render/tiles.h"
+#include "content.h"
+
+u8 room_apply_world_arena(void) BANKED {
+    u8 stage;
+    // Generation always returns to the one-screen contract first. The pack
+    // resume path skips this function, preserving a live scrolling camera.
+    room_world_width = run_state.world_mode ? ROOM_WIDE_W_PX : ROOM_VIEW_W_PX;
+    room_world_height = run_state.world_mode ? ROOM_WIDE_H_PX : ROOM_VIEW_H_PX;
+    // Entering a field from its eastern/northern neighbour must reveal the
+    // arrival immediately rather than parking the hero beyond the viewport.
+    room_camera_x = (run_state.world_mode && run_state.entered_from == DIR_W)
+        ? (ROOM_WIDE_W_PX - ROOM_VIEW_W_PX) : 0;
+    room_camera_y = (run_state.world_mode && run_state.entered_from == DIR_N)
+        ? (ROOM_WIDE_H_PX - ROOM_VIEW_H_PX) : 0;
+    if (run_state.world_mode || !procgen_current_room_is_boss) return 0xFF;
+
+    stage = run_state.bosses_beaten;
+    if (stage >= N_STAGES) stage = (u8)(stage % N_STAGES);
+    if (stage == 0) {
+        room_world_width = ROOM_CRYSTAL_W_PX;
+        tiles_paint_crystal_projection();
+    } else if (stage == 1) {
+        tiles_paint_serpent_projection();
+    } else if (stage == 2) {
+        tiles_paint_cinder_projection();
+    } else if (stage == 3) {
+        tiles_paint_spider_projection();
+    } else if (stage == 4) {
+        tiles_paint_mire_projection(0, 0);
+    } else if (stage == 5) {
+        tiles_paint_reaper_projection();
+    } else if (stage == 6) {
+        tiles_paint_golem_projection();
+    } else if (stage == 7) {
+        tiles_paint_hydra_projection();
+    } else {
+        tiles_paint_void_projection();
+    }
+    return stage;
+}
 
 // Cold/banked world-coordinate queries live outside the crowded gameplay
 // bank. Every caller already uses the BANKED contract declared by room.h.
@@ -13,6 +54,11 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
     {
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
+        if (run_state.world_mode && ty >= ROOM_H) {
+            if (tx >= ROOM_WIDE_W_TILES || ty >= ROOM_WIDE_H_TILES)
+                return BGT_WALL;
+            return (u8)(room_world_bottom[ty - ROOM_H][tx] & 0x7F);
+        }
         if (ty >= ROOM_H) return BGT_WALL;
         if (tx >= ROOM_W) {
             if (room_world_width <= ROOM_VIEW_W_PX

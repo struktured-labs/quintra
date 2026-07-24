@@ -1,5 +1,25 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.70 two-axis Riftwild response
+
+Riftwild now grows vertically as well as horizontally. Every logical cell is
+a real 224×200 world behind the 160×136 LCD viewport, with camera travel from
+0–64px on both axes. The old y=136 edge is ordinary generated terrain; the
+real south graph threshold is y=184. Entering from the south starts at SCY 64,
+and entities, projectiles, collision, enemy routing, camera state, and
+controller observation all remain in shared world coordinates.
+
+Each cell now owns a third seed-stable landmark cluster in its southern strip,
+plus an encounter in the southeast beyond both former viewport seams. The
+complete 4×4 geography therefore covers 896×800 logical pixels before its
+nonlinear Rift Wells. Live-ROM coverage visits all sixteen cells through real
+reciprocal seams, reaches camera (64,64), checks the original/eastern/southern
+landmarks and true boundaries, and completes the gate route.
+
+This materially reduces the reported compactness outdoors. Ordinary dungeon
+rooms remain single-screen 160×136 spaces, however, so larger uninterrupted
+dungeon wings remain a separate structural milestone.
+
 ## v0.18.69 Riftwild scale response
 
 The first reusable wide-world implementation now extends beyond its Crystal

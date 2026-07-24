@@ -14,9 +14,10 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM, SCREEN, WORLD_W, CAMERA_X, WORLD_EXT = map(addr, (
+RS, PL, EN, TM, SCREEN, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, WORLD_EXT, WORLD_BOTTOM = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap", "_loop_current_screen",
-    "_room_world_width", "_room_camera_x", "_room_world_extension",
+    "_room_world_width", "_room_world_height", "_room_camera_x", "_room_camera_y",
+    "_room_world_extension", "_room_world_bottom",
 ))
 
 def put16(pb, p, v):
@@ -42,9 +43,12 @@ def exit_at(pb, x, y, clear=True):
     # transition must settle its hardware scroll and restore OBJ afterwards;
     # otherwise a successful graph hop can look like the hero vanished.
     assert pb.memory[0xFF40] & 0x02, "Riftwild seam left sprites disabled"
-    expected_camera = 64 if x == 0 else 0
-    assert pb.memory[0xFF43] == expected_camera and pb.memory[0xFF42] == 0, (
-        f"Riftwild seam camera wrong: {pb.memory[0xFF43]} != {expected_camera}")
+    entered_from = pb.memory[RS + 6]
+    expected_x = 64 if entered_from == 3 else 0
+    expected_y = 64 if entered_from == 0 else 0
+    assert pb.memory[0xFF43] == expected_x and pb.memory[0xFF42] == expected_y, (
+        f"Riftwild seam camera wrong: "
+        f"{pb.memory[0xFF43]},{pb.memory[0xFF42]} != {expected_x},{expected_y}")
 
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
@@ -68,13 +72,28 @@ def main():
     # Screen 0 is authored E+S only, now bounded by a real tree line rather
     # than dungeon brick. The old x=152 threshold is a traversable seam into
     # the field; the reciprocal east exit lives at the true x=216 boundary.
-    assert pb.memory[WORLD_W] == 224 and pb.memory[CAMERA_X] == 0
+    assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (224, 200)
+    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0), (
+        f"boss arrival camera is "
+        f"{pb.memory[CAMERA_X]},{pb.memory[CAMERA_Y]} "
+        f"from direction {pb.memory[RS + 6]}")
     assert pb.memory[TM + 10] == 39 and pb.memory[TM + 9 * 20] == 39
     assert pb.memory[TM + 9 * 20 + 19] == 36
-    assert pb.memory[TM + 16 * 20 + 10] == 3
+    assert pb.memory[TM + 16 * 20 + 10] == 36, \
+        "obsolete south viewport edge is not an open internal trail"
     assert pb.memory[WORLD_EXT + 8 * 8 + 7] == 3
     assert pb.memory[WORLD_EXT + 9 * 8 + 7] == 3
+    assert pb.memory[WORLD_BOTTOM + 7 * 28 + 9] == 3
+    assert pb.memory[WORLD_BOTTOM + 7 * 28 + 10] == 3
+    assert pb.memory[WORLD_BOTTOM + 2 * 28 + 14] == pb.memory[TM + 4 * 20 + 5], \
+        "southern field lost its seed-stable landmark family"
     assert pb.memory[TM + 8 * 20 + 10] == 36, "Riftwild center lacks path terrain"
+    # The boss exit arrives at the actual southern edge. Follow the camera
+    # north before judging the label placed in the top portion of the field.
+    put16(pb, PL + 11, 60)
+    pb.memory[PL + 15] = 120
+    for _ in range(40): pb.tick()
+    assert pb.memory[CAMERA_Y] == 0 and pb.memory[0xFF42] == 0
     # The live playfield identifies the region without replacing the walkable
     # grass/path data that collision and procgen parity consume.
     pb.memory[0xFF4F] = 0
@@ -91,20 +110,24 @@ def main():
     # camera across the obsolete viewport edge and capture the paired landmark.
     hostile_positions = [
         (pb.memory[EN + i * 28 + 3] | pb.memory[EN + i * 28 + 4] << 8,
-         pb.memory[EN + i * 28 + 5] | pb.memory[EN + i * 28 + 6] << 8)
+         pb.memory[EN + i * 28 + 7] | pb.memory[EN + i * 28 + 8] << 8)
         for i in range(32) if pb.memory[EN + i * 28] == 2
     ]
     assert any(x >= 160 for x, _ in hostile_positions), \
         f"Riftwild spawned no far-field hostile: {hostile_positions}"
-    put16(pb, PL + 9, 192); put16(pb, PL + 11, 60)
+    assert any(y >= 136 for _, y in hostile_positions), \
+        f"Riftwild spawned no southern-field hostile: {hostile_positions}"
+    put16(pb, PL + 9, 192); put16(pb, PL + 11, 160)
     pb.memory[PL + 15] = 120
     for _ in range(40): pb.tick()
-    assert pb.memory[CAMERA_X] == 64 and pb.memory[0xFF43] == 64, \
-        "Riftwild camera did not reach its far bound"
-    pb.screen.image.save(ROOT / "tmp" / "riftwild-far-field.png")
-    put16(pb, PL + 9, 72)
+    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (64, 64)
+    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (64, 64), \
+        "Riftwild camera did not reach its southeast bound"
+    pb.screen.image.save(ROOT / "tmp" / "riftwild-southeast-field.png")
+    put16(pb, PL + 9, 72); put16(pb, PL + 11, 40)
     for _ in range(40): pb.tick()
-    assert pb.memory[CAMERA_X] == 0 and pb.memory[0xFF43] == 0
+    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0)
+    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (0, 0)
 
     # Riftwild encounters never seal exits: leave screen 0 with its generated
     # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.
@@ -115,14 +138,14 @@ def main():
     clear_hostiles(pb); put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
     assert pb.memory[RS + 18] == 15 and pb.memory[RS + 19] == 2
-    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 60), \
-        "cave arrival did not use the safe visible center spawn"
+    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 92), \
+        "cave arrival did not use the safe world-center spawn"
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
     assert pb.memory[RS + 18] == 2, "vault staircase did not return"
-    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 60), \
-        "vault return did not use the safe visible center spawn"
-    exit_at(pb, 72, 120); assert pb.memory[RS + 18] == 6, pb.memory[RS + 18]
+    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 92), \
+        "vault return did not use the safe world-center spawn"
+    exit_at(pb, 72, 184); assert pb.memory[RS + 18] == 6, pb.memory[RS + 18]
     assert pb.memory[TM + 8 * 20 + 10] == 34, "dungeon gate has no portal"
     for _ in range(60): pb.tick()
     pb.screen.image.save(ROOT / "tmp" / "riftwild-gate.png")
@@ -184,6 +207,6 @@ def main():
         "next dungeon did not advance depth"
     assert pb.memory[RS + 20] == 1, "new dungeon map did not reset to entry cell"
     pb.stop(save=False)
-    print("[overworld] PASS 224px field + camera + visited 4x4 map -> dungeon gate")
+    print("[overworld] PASS 224x200 field + 2D camera + visited 4x4 map -> dungeon gate")
 
 if __name__ == "__main__": main()

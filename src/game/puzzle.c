@@ -29,6 +29,21 @@ static const u8 rune_orders[18] = {
     0,1,2, 0,2,1, 1,0,2, 1,2,0, 2,0,1, 2,1,0
 };
 
+void puzzle_prepare_room_role(void) BANKED {
+    u8 x, y;
+    puzzle_prepare_room();
+    // Reachability uses bit 7 as scratch metadata while procgen chooses legal
+    // enemy cells. Puzzle preparation is the final tilemap authoring step
+    // before every full draw or streamed slide, so sanitize here as a hard
+    // rendering/collision boundary even if an earlier banked cleanup was
+    // interrupted. Tile ids 128..255 are never legal room terrain.
+    for (y = 0; y < ROOM_H; ++y)
+        for (x = 0; x < ROOM_W; ++x)
+            room_tilemap[y][x] &= 0x7F;
+    room_combat_sealed = (room_puzzle_kind != PUZZLE_NONE)
+        ? 0 : puzzle_combat_seal_policy();
+}
+
 u8 puzzle_combat_seal_policy(void) BANKED {
     u8 local;
     u8 chosen;

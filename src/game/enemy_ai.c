@@ -89,7 +89,7 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 ext = ((e->hitbox >> 4) >= 10) ? 14 : 6;
     if (nx < 8 || ny < 8) return 0;
     if (nx + (ground ? 15 : ext) >= (i16)room_world_width
-        || ny + (ground ? 15 : ext) >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;
+        || ny + (ground ? 15 : ext) >= (i16)room_world_height) return 0;
     if (ground) {
         if (!room_tile_walkable(room_tile_at_px(nx + 2,  ny + 8))
             || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 8))
@@ -132,7 +132,7 @@ static void walker_tick(entity_t *e) {
 static u8 leech_release_place(entity_t *e, i16 nx, i16 ny) {
     if (nx < 8 || ny < 8
         || nx + 13 >= (i16)room_world_width
-        || ny + 13 >= (i16)((ROOM_H - 1) * 8 + 8)) return 0;
+        || ny + 13 >= (i16)room_world_height) return 0;
     if (!room_tile_walkable(room_tile_at_px(nx + 1,  ny + 1))
         || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 1))
         || !room_tile_walkable(room_tile_at_px(nx + 1,  ny + 13))
@@ -451,8 +451,8 @@ static void teleport_tick(entity_t *e, const enemy_def_t *def) {
             i16 adx = nx - (i16)player.x; if (adx < 0) adx = -adx;
             i16 ady = ny - (i16)player.y; if (ady < 0) ady = -ady;
             if (adx + ady < 16) continue;          // never on top of you
-            if (nx < 8 || nx >= (i16)((ROOM_W - 1) * 8)) continue;
-            if (ny < 8 || ny >= (i16)((ROOM_H - 1) * 8)) continue;
+            if (nx < 8 || nx >= (i16)(room_world_width - 8)) continue;
+            if (ny < 8 || ny >= (i16)(room_world_height - 8)) continue;
             if (!room_tile_walkable(room_tile_at_px(nx + 4, ny + 4))) continue;
             e->x = FIX8(nx);
             e->y = FIX8(ny);

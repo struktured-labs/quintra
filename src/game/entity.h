@@ -70,6 +70,8 @@ u8   entity_spawn(u8 type);        // returns idx, or 0xFF if no free slot
 void entity_kill(u8 idx);
 void entity_update_all(u8 keys, u8 pressed);
 void entity_draw_all(void);
+// Cold two-axis OAM projection used only by scrolling Riftwild fields.
+void entity_draw_all_world(void) BANKED;
 
 // AABB test: returns 1 if hitboxes overlap. Hitbox interpreted as
 // 4-bit w in high nibble, 4-bit h in low nibble; box anchored at (x,y).

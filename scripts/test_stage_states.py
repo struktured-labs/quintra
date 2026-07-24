@@ -115,11 +115,20 @@ def main() -> None:
                 # Release input and wait for the visible giant entity.
                 for _ in range(180):
                     giants = [enemy for enemy in obs["hostiles"] if enemy["giant"]]
-                    if giants:
+                    # entity_spawn publishes the active/giant bytes before
+                    # procgen finishes applying this stage's skin, pattern,
+                    # HP cap, and opening telegraph. A VBlank can land inside
+                    # that banked transaction, so a base pattern-0 Sentinel
+                    # is not yet a settled boss checkpoint.
+                    if (len(giants) == 1
+                            and giants[0]["pattern"] == stage - 1):
                         break
                     obs, _, terminal, _ = env.step(0, 1)
                 assert len(giants) == 1 and giants[0]["pattern"] == stage - 1, (
-                    f"{state.name}: sanctuary entered wrong live boss")
+                    f"{state.name}: sanctuary entered wrong live boss "
+                    f"stage={obs['stage']} room={obs['room']} "
+                    f"world={obs['world_mode']} terminal={terminal} "
+                    f"giants={giants}")
             elif record["checkpoint"] == "entry":
                 assert not giants, f"{state.name}: entry state already contains a giant"
             else:

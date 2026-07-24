@@ -59,8 +59,8 @@ void tiles_load_area_labels(void) BANKED {
 
 void tiles_prepare_riftwild_wide_field(void) BANKED {
     u8 x, y;
-    u8 tiles[ROOM_WIDE_EXT_TILES + 1];
-    u8 attrs[ROOM_WIDE_EXT_TILES + 1];
+    u8 tiles[ROOM_WIDE_W_TILES + 1];
+    u8 attrs[ROOM_WIDE_W_TILES + 1];
     for (y = 0; y < ROOM_H; ++y) {
         for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x) {
             u8 tile = room_world_extension[y][x];
@@ -80,14 +80,35 @@ void tiles_prepare_riftwild_wide_field(void) BANKED {
         VBK_REG = 1;
         set_bkg_tiles(ROOM_W, y, ROOM_WIDE_EXT_TILES + 1, 1, attrs);
     }
-    for (x = 0; x <= ROOM_WIDE_EXT_TILES; ++x) {
+    // Rows 17..24 are complete 28-column terrain, not merely right-side
+    // projection. They use the same outdoor palette language as the top.
+    for (y = 0; y < ROOM_WIDE_BOTTOM_ROWS; ++y) {
+        for (x = 0; x < ROOM_WIDE_W_TILES; ++x) {
+            u8 tile = room_world_bottom[y][x];
+            tiles[x] = tile;
+            attrs[x] = (tile == BGT_TREE || tile == BGT_WILD_STONE)
+                ? BGPAL_WALL
+                : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER)
+                    ? BGPAL_CRYSTAL
+                    : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
+                        ? BGPAL_DOOR : BGPAL_FLOOR;
+        }
+        tiles[ROOM_WIDE_W_TILES] = BGT_TREE;
+        attrs[ROOM_WIDE_W_TILES] = BGPAL_WALL;
+        VBK_REG = 0;
+        set_bkg_tiles(0, (u8)(ROOM_H + y), ROOM_WIDE_W_TILES + 1, 1, tiles);
+        VBK_REG = 1;
+        set_bkg_tiles(0, (u8)(ROOM_H + y), ROOM_WIDE_W_TILES + 1, 1, attrs);
+    }
+    // Row 25 and column 28 are deterministic camera/shake overscan.
+    for (x = 0; x <= ROOM_WIDE_W_TILES; ++x) {
         tiles[x] = BGT_TREE;
         attrs[x] = BGPAL_WALL;
     }
     VBK_REG = 0;
-    set_bkg_tiles(ROOM_W, ROOM_H, ROOM_WIDE_EXT_TILES + 1, 1, tiles);
+    set_bkg_tiles(0, ROOM_WIDE_H_TILES, ROOM_WIDE_W_TILES + 1, 1, tiles);
     VBK_REG = 1;
-    set_bkg_tiles(ROOM_W, ROOM_H, ROOM_WIDE_EXT_TILES + 1, 1, attrs);
+    set_bkg_tiles(0, ROOM_WIDE_H_TILES, ROOM_WIDE_W_TILES + 1, 1, attrs);
     VBK_REG = 0;
 }
 
