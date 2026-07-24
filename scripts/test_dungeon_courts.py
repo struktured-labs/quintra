@@ -156,18 +156,19 @@ def main():
         shot.parent.mkdir(exist_ok=True)
         pb.screen.image.save(shot)
 
-        # The true south door enters ordinary local room 6 and resets every
-        # world-space dimension/camera byte instead of leaking a large arena.
+        # The true south door continues into local room 6 without collapsing
+        # back to a one-screen field. A turn now reads as a scrolling district,
+        # not one isolated large room.
         put16(pb, PL + 9, 72)
         put16(pb, PL + 11, 184)
         settle(pb)
         assert pb.memory[RS + 1] == 6
-        assert pb.memory[LARGE] == 0
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (160, 136)
-        assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0)
+        assert pb.memory[LARGE] == 1
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (224, 200)
 
-        # Re-enter from the south neighbour. The champion belongs at the true
-        # lower edge and SCY=64 immediately, never hidden below the LCD.
+        # Re-enter local 5 from the scrolling south neighbour. The champion
+        # belongs at the true lower edge and SCY=64 immediately, never hidden
+        # below the LCD.
         clear_hostiles(pb)
         put16(pb, PL + 9, 72)
         put16(pb, PL + 11, 0)
@@ -178,12 +179,28 @@ def main():
         player_y = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
         assert player_y == 176, player_y
         assert pb.memory[CAMERA_Y] == 64 and pb.memory[0xFF42] == 64
+
+        # Local 7 is the authored Waystone fixture and deliberately returns
+        # to the compact presentation so its puzzle language remains legible.
+        clear_hostiles(pb)
+        put16(pb, PL + 9, 72)
+        put16(pb, PL + 11, 184)
+        settle(pb)
+        assert pb.memory[RS + 1] == 6
+        clear_hostiles(pb)
+        put16(pb, PL + 9, 0)
+        put16(pb, PL + 11, 60)
+        settle(pb)
+        assert pb.memory[RS + 1] == 7
+        assert pb.memory[LARGE] == 0
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (160, 136)
+        assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0)
     finally:
         pb.stop(save=False)
 
     print(
-        "[dungeon-courts] PASS paired 224x200 approach/court + wide-to-wide "
-        "threshold + southeast camera + ordinary reset + reciprocal arrival"
+        "[dungeon-courts] PASS scrolling 224x200 districts + wide-to-wide "
+        "turn + southeast camera + objective reset + reciprocal arrival"
     )
 
 

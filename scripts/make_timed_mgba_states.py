@@ -100,7 +100,12 @@ def main() -> None:
             # Allow ten seconds after the final due beat to reach a stable
             # generated room if minute thirty lands inside a slide.
             "QUINTRA_BALANCE_FRAMES": str(total_frames + 600),
-            "QUINTRA_BALANCE_HOST_TIMEOUT": "360",
+            # Expanded scrolling districts make the input-only controller
+            # spend more host time in body-aware wide-field routing. The
+            # 30-minute cartridge run now reaches its fifth checkpoint near
+            # the old six-minute host ceiling; allow ten minutes so the sixth
+            # state can commit instead of retrying an otherwise healthy run.
+            "QUINTRA_BALANCE_HOST_TIMEOUT": "600",
             "QUINTRA_BALANCE_TARGET_FRAME": str(args.target_frame),
             "QUINTRA_BALANCE_OUT": str(temp_path / "balance.csv"),
             "QUINTRA_BALANCE_TRIAL_DIR": str(temp_path / "trials"),

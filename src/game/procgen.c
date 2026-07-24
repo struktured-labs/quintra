@@ -527,18 +527,21 @@ void procgen_generate_current_room(void) BANKED {
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
     {
         u8 local = run_state_dungeon_local();
-        // Each snake row ends in a two-room scrolling wing: a dense approach
-        // expanse (4/10/16/22) followed by its lighter turn court
-        // (5/11/17/23).  Pairing them makes dungeon scale persist for a real
-        // traversal beat instead of appearing as one isolated large room.
+        // Each snake turn now owns a scrolling district rather than one
+        // isolated large room: the last two cells of a row flow into the
+        // first two cells of the next row. Objective fixtures at local 7 and
+        // the opening branch remain compact/readable, while ordinary cells
+        // 4/5/6, 10/11/12/13, 16/17/18/19, and 22/23/24/25 can sustain
+        // several consecutive 224x200 fields. This makes the existing
+        // 20..30-cell graph feel geographically large without padding it
+        // with more loading thresholds or filler counters.
         procgen_current_room_is_large = (!run_state.world_mode
             && !is_boss_room && !is_town && !run_state.secret_pending
             && !run_state_is_miniboss() && !run_state_is_shop()
             && !run_state_is_sanctuary()
-            && (local == 4 || local == 5
-                || local == 10 || local == 11
-                || local == 16 || local == 17
-                || local == 22 || local == 23)) ? 1 : 0;
+            && local >= 4 && local != 7
+            && ((local % DUNGEON_GRID_W) <= 1
+                || (local % DUNGEON_GRID_W) >= 4)) ? 1 : 0;
     }
     run_state_mark_visited();
     rng_seed(seed);
@@ -1338,9 +1341,21 @@ void procgen_generate_current_room(void) BANKED {
             // Keep the existing shallow ramp rather than raising every HP
             // value into a sponge fight.
             u8 depth_bonus = run_state.bosses_beaten;
+            // A new stage should establish its visual language before asking
+            // the player to solve the densest possible seven-body roll. This
+            // is especially important after a village/Riftwild handoff, where
+            // the first Golden Temple room could combine an elite Echo Guard
+            // with six escorts for 154 HP of immediate attrition. The foyer
+            // remains procedural combat, but caps at four non-elite bodies;
+            // every later ordinary room keeps the complete 2..7 budget and
+            // elite chance. Stage zero retains its existing tutorial seed.
+            u8 is_stage_foyer = (!run_state.world_mode
+                && run_state.bosses_beaten > 0
+                && run_state_dungeon_local() == 0) ? 1 : 0;
             u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 1 : 2)
                 : (u8)(2 + rng_range(4)
                     + (depth_bonus > 2 ? 2 : depth_bonus));
+            if (is_stage_foyer && enemy_count > 4) enemy_count = 4;
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
             u8 spawned = 0;
@@ -1408,11 +1423,20 @@ void procgen_generate_current_room(void) BANKED {
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,
                         // +1 damage, EF_ELITE flag (combat pays the bonus).
-                        if (idx != 0xFF && rng_next_u8() < 31) {
-                            entities[idx].flags  |= EF_ELITE;
-                            entities[idx].palette = 0x06;
-                            entities[idx].hp      = (u8)(entities[idx].hp << 1);
-                            entities[idx].damage  = (u8)(entities[idx].damage + 1);
+                        // Still consume the roll in a stage foyer so its
+                        // procedural draw contract stays deterministic; only
+                        // the elite promotion is deferred to later rooms.
+                        {
+                            u8 elite_roll = rng_next_u8();
+                            if (idx != 0xFF && !is_stage_foyer
+                                && elite_roll < 31) {
+                                entities[idx].flags  |= EF_ELITE;
+                                entities[idx].palette = 0x06;
+                                entities[idx].hp =
+                                    (u8)(entities[idx].hp << 1);
+                                entities[idx].damage =
+                                    (u8)(entities[idx].damage + 1);
+                            }
                         }
                         if (idx != 0xFF) spawned++;
                     }

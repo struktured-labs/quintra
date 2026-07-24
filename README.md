@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.72: The Sigil Key](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.73: The Long Halls](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,26 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.72**, published after the complete build,
+The current cartridge is **v0.18.73**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Dungeon scale now persists through scrolling districts.** A snake turn no
+longer contains only an isolated pair of wide rooms. Its final two cells flow
+into the first two ordinary cells of the next row as consecutive 224×200
+fields, while authored Waystones, Wardens, shops, sanctuaries, and Colossi
+return to a compact presentation for clarity. Stage one now contains eight
+scrolling fields instead of five, and the finale contains fifteen instead of
+eight. The stage count remains 20–30 rooms; this adds physical travel and
+camera time without padding the run with filler counters.
+
+**A new stage gets one readable arrival beat before full Normal pressure.**
+Stages two through nine retain procedural rosters but cap their first combat
+room at four non-elite bodies. Later rooms keep the complete 2–7-body budget
+and elite chance. In the matched Normal curriculum, Golden Temple's former
+seven-body, 154-HP entry became a four-body, 84-HP foyer; deaths across the
+stage 4/7/9 entry sample dropped from four to zero while resolved rooms rose
+from three to five. Easy remains the inspection mode and Normal remains the
+authored target.
 
 **The game now plainly tells a new player what its controls and objectives
 mean.** Champion selection says `SELECT OPENS MAP` and `START OPENS PACK`
@@ -41,23 +59,23 @@ deep checkpoints. The information lives in the existing Pack instead of
 adding a forced tutorial modal to every roguelike run.
 
 **Dungeon wings now contain sustained scrolling spaces, not only more room
-counters.** Every completed snake row can end in a paired 224×200 wing behind
-the 160×136 viewport: dense approach expanses at local cells 4/10/16/22 flow
-directly into lighter turn courts at 5/11/17/23. Stage one therefore has six
-scrolling dungeon fields and later stages can have eight. Each field retains
+counters.** Every snake turn can span a 224×200 district behind the 160×136
+viewport: cells 4/5/6, 10/11/12/13, 16/17/18/19, and 22/23/24/25 use the
+wide-field contract whenever an authored fixture does not own that room.
+Stage one therefore has eight scrolling dungeon fields and the finale has
+fifteen. Each field retains
 one-node Compass semantics but contains 28×25 tiles of actual collision,
 combat, cover, and camera travel. The former x=160 and y=136 edges are
 interior floor; only the far x=216 and y=184 perimeter owns graph doors.
 Important fixtures—Sigils, Wardens, shops, sanctuaries, secrets, and
 Colossi—keep their distinct roles.
 
-Each paired wing has seed-variant ruin halls, landmark clusters, stage-colored
+Each scrolling district has seed-variant ruin halls, landmark clusters, stage-colored
 rubble or hazards, preserved cardinal trails, and encounter pressure in the
-added field. The approach keeps a full encounter budget while the turn court
-caps its pressure for contrast. The renderer, player and projectile collision,
+added field. The renderer, player and projectile collision,
 enemy AI, door routing, input-only controller, and two-axis camera all consume
 the same generated world coordinates. Entering from the east or south starts
-at the matching far camera bound; crossing between the paired fields retains
+at the matching far camera bound; crossing between district fields retains
 wide-world state; leaving for an ordinary room restores the 160×136 contract.
 This creates a rhythm of compact puzzle/combat chambers and sustained broader
 expeditions rather than making every dungeon screen uniformly oversized.
@@ -2083,7 +2101,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.72 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.73 release ROM occupies 128 KiB. Its media,
 460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -2099,8 +2117,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.72 build has 1,032 bytes in bank 1, 1,538 in bank 2,
-1,783 in bank 3, 1,148 in bank 4, 1,253 in bank 5, and 6,361 in bank 6.
+ROM. The current v0.18.73 build has 1,032 bytes in bank 1, 1,538 in bank 2,
+1,783 in bank 3, 1,103 in bank 4, 1,253 in bank 5, and 6,361 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

@@ -140,6 +140,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
 	$(PYBOY_RUN) scripts/test_procgen_variety.py
+	$(PYBOY_RUN) scripts/test_stage_entry_pacing.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py

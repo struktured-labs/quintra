@@ -289,7 +289,8 @@ emu:write8(RS + 18, prior_world_screen)
 emu:write8(RS + 21, prior_seen_lo); emu:write8(RS + 22, prior_seen_hi)
 
 -- The dungeon still deliberately leaves the live room/camera in a 224x200
--- court. Return through its true far south door before the remaining gallery
+-- court. Return through its true far south door, then cross the next wide
+-- district cell into compact local room 7 before the remaining gallery
 -- deep-links use ordinary 160x136 thresholds.
 clear_hostiles()
 local court_room = room()
@@ -300,6 +301,9 @@ for _=1,120 do
 end
 emu:setKeys(0); tick(45)
 if room() == court_room then error("media could not leave turn court") end
+if not enter_room(STAGE_START[1] + 7) then
+  error("media could not leave scrolling district")
+end
 
 -- A deeper stage's look: bump bosses_beaten so the NEXT room generates
 -- with Ember Depths palettes, shoot it, then restore (must happen before

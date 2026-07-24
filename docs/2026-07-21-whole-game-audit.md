@@ -1,5 +1,30 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.73 perceived-scale and arrival-pacing response
+
+The latest attended report is correct: 20–30 logical rooms still feel compact
+when physical scale occurs only at isolated row ends. Each snake turn now
+forms a scrolling district. Its final two cells flow into the first two
+ordinary cells of the next row as consecutive 224×200 worlds; authored
+Waystones, Wardens, shops, sanctuaries, and Colossi retain compact role
+language. The number of wide dungeon fields rises from 5 to 8 in stage one
+and from 8 to 15 in the finale without adding room counters or weakening the
+Compass graph.
+
+The same pass addresses a concrete Normal outlier rather than globally
+nerfing enemies. Stages two through nine cap only their first combat room at
+four non-elite bodies; subsequent rooms retain the 2–7-body budget and elite
+roll. Golden Temple's entry drops from seven bodies/154 HP to four bodies/84
+HP. In matched stage 4/7/9 controller samples, deaths fall from 4/15 to 0/15
+and resolved entries rise from 3/15 to 5/15.
+
+Live-ROM coverage crosses three consecutive wide cells, reaches camera
+(64,64), re-enters at the correct far bound, and confirms that the Waystone
+returns to 160×136 with a zeroed camera. Transition music still advances
+through a 21-frame slide inside a 42-frame total transaction. Twelve seeds per
+later stage retain at least six procedural foyer rosters with no elite
+promotion.
+
 ## v0.18.72 first-play quest-language response
 
 The live visual audit found that the v0.18.67 pocket grid and v0.18.71

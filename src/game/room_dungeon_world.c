@@ -76,8 +76,8 @@ void room_generate_dungeon_court(u32 seed) BANKED {
         }
     }
 
-    // Four seed-shifted landmark pairs give each repeated two-room wing a
-    // stable silhouette without freezing every expedition to one arrangement.
+    // Four seed-shifted landmark pairs give each repeated scrolling district
+    // a stable silhouette without freezing every expedition to one arrangement.
     court_stamp_cluster((u8)(3 + shift), 3, accent);
     court_stamp_cluster((u8)(15 - shift), 4, accent);
     court_stamp_cluster((u8)(4 + shift), 19, accent);
