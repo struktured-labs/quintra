@@ -7,6 +7,7 @@
 #include "game/projectile.h"
 #include "game/enemy_ai.h"
 #include "game/pickup.h"
+#include "game/room.h"
 #include "content.h"
 
 entity_t entities[MAX_ENTITIES];
@@ -154,7 +155,7 @@ void entity_draw_all(void) {
         entity_t *e = &entities[i];
         u8 sx, sy, pal, flash;
         if (!(e->flags & EF_ACTIVE)) continue;
-        sx  = (u8)(FIX8_TO_INT(e->x) + 8);
+        sx  = (u8)(FIX8_TO_INT(e->x) - room_camera_x + 8);
         sy  = (u8)(FIX8_TO_INT(e->y) + 16);
         pal = e->palette;
         flash = (e->type == ENT_ENEMY && e->ai_data[7]) ? 1 : 0;

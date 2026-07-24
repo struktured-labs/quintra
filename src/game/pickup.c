@@ -374,11 +374,19 @@ static void apply_item_effects(u8 item_idx) {
     it = &items[item_idx];
     // Passive relics persist for this run and remain inspectable by behavioral
     // hooks (vampirism, future on-kill/on-dash effects). Stat boosts still
-    // stack; record each copy while inventory capacity remains.
+    // stack, but presence-based hooks do not need duplicate IDs. Coalescing
+    // copies keeps the ten passive families inside the 16-slot inventory so a
+    // late guaranteed boss relic cannot apply its stats and then vanish
+    // without being registered for its lasting mechanic.
     for (k = 0; k < INVENTORY_SLOTS; ++k) {
-        if (player.inventory[k] == 0xFF) {
-            player.inventory[k] = (u8)it->id;
-            break;
+        if (player.inventory[k] == (u8)it->id) break;
+    }
+    if (k == INVENTORY_SLOTS) {
+        for (k = 0; k < INVENTORY_SLOTS; ++k) {
+            if (player.inventory[k] == 0xFF) {
+                player.inventory[k] = (u8)it->id;
+                break;
+            }
         }
     }
     for (k = 0; k < it->n_effects; ++k) {

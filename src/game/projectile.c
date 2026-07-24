@@ -154,13 +154,16 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
         // ~half of all cracked walls unshootable.
         i16 sx = px + 4, sy = py + 4;
         u8 t;
-        if (sx < 0) sx = 0; else if (sx > (ROOM_W * 8 - 1)) sx = ROOM_W * 8 - 1;
+        if (sx < 0) sx = 0;
+        else if (sx > (i16)(room_world_width - 1)) sx = room_world_width - 1;
         if (sy < 0) sy = 0; else if (sy > (ROOM_H * 8 - 1)) sy = ROOM_H * 8 - 1;
         // sx/sy are clamped to the room above, so this is exactly the
         // in-bounds branch of room_tile_at_px().  Keep the hot projectile
         // path in this bank instead of paying a banked helper call for every
         // hostile bullet every frame.
-        t = room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)];
+        t = (sx < ROOM_VIEW_W_PX)
+            ? room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)]
+            : room_tile_at_px(sx, sy);
 
         if (t == BGT_WALL_CRACK && (e->flags & EF_PLAYER_PROJ)) {
             room_open_secret((u8)(sx >> 3), (u8)(sy >> 3));
@@ -189,7 +192,7 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
             return;
         }
         // Off-screen / past the room edge: despawn
-        if (px < 8 || px > (ROOM_W * 8 - 8)
+        if (px < 8 || px > (i16)(room_world_width - 8)
             || py < 8 || py > (ROOM_H * 8 - 8)) {
             entity_kill(idx);
             return;

@@ -78,10 +78,25 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     The push-seal family clears an 8×6 apron and stamps its ordinary-looking
     cairn in the room-role layer. Puzzle mechanics have their own live-ROM
     contract; parity still compares every unaffected base-generator cell.
+
+    The opening boss similarly composes its giant Crystal projection after
+    base generation. Its new column-19 seam is also authored world geometry:
+    the real combat wall now lives in the offscreen extension at column 27.
+    The colossal-arena test owns those cells and the 224px camera contract.
     """
+    overlay = set()
+    if counter == 19 and bosses_beaten == 0:
+        overlay.update(row * ROOM_W + (ROOM_W - 1)
+                       for row in range(1, ROOM_H - 1))
+        for y, width in enumerate((8, 12, 14, 14, 14, 14, 14, 12, 8)):
+            left = 10 - width // 2
+            overlay.update((y + 3) * ROOM_W + x
+                           for x in range(left, left + width))
+        return overlay
+
     local = counter
     if bosses_beaten % 3 != 0 or local not in (1, 7):
-        return set()
+        return overlay
     room_seed = (seed ^ ((counter * 0x9E3779B9) & 0xFFFFFFFF)) & 0xFFFFFFFF
     if local == 7 and not (room_seed & 1):
         return {
@@ -194,7 +209,7 @@ def main():
             failures += 1
         elif all(raw_got[i] == want[i]
                  for i in range(len(want)) if i not in overlay):
-            suffix = f" ({len(overlay)} authored puzzle cells separated)" if overlay else ""
+            suffix = f" ({len(overlay)} authored overlay cells separated)" if overlay else ""
             print(f"  PASS seed={seed} counter={counter}{suffix}")
         else:
             bad = next(i for i in range(len(want))

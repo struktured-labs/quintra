@@ -13,6 +13,10 @@ local VOID_SAFE_X, VOID_SAFE_Y = {20, 124, 20, 124}, {20, 20, 100, 100}
 local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
+-- Controller-side mirror of the cartridge's runtime world width. Stage one's
+-- Crystal arena occupies 28 BG columns; every other current room remains 20.
+QUINTRA_ARENA_W = 160
+DASH_SELFTEST = os.getenv("QUINTRA_BOT_DASH_SELFTEST") == "1"
 -- Declare linker-resolved addresses before the maze helpers. Lua's lexical
 -- scope begins at the declaration, so defining those helpers first would
 -- bind their RS reference to a nil global instead of this cartridge address.
@@ -584,8 +588,8 @@ function pickup_target(px, py, hp, hp_max, hearts_only)
             local boundary_drop = (ey < 24 and (ex < 64 or ex > 88))
                 or (ey > 104 and (ex < 64 or ex > 88))
                 or (ex < 24 and (ey < 52 or ey > 76))
-                or (ex > 136 and (ey < 52 or ey > 76))
-            if ex <= 152 and ey <= 128 and not boundary_drop then
+                or (ex > QUINTRA_ARENA_W - 24 and (ey < 52 or ey > 76))
+            if ex <= QUINTRA_ARENA_W - 8 and ey <= 128 and not boundary_drop then
                 local d = math.abs(ex - px) + math.abs(ey - py)
                 -- Player coordinates are feet-anchored; ordinary drops drift
                 -- into that box, but a persistent Rift Sigil does not. Aim
@@ -782,11 +786,12 @@ function navigation_walkable(tile)
 end
 
 function body_walkable(cx, cy)
-    if cx < 1 or cx > 19 or cy < 1 or cy > 16 then return false end
-    return navigation_walkable(emu:read8(TM + (cy - 1) * 20 + (cx - 1)))
-        and navigation_walkable(emu:read8(TM + (cy - 1) * 20 + cx))
-        and navigation_walkable(emu:read8(TM + cy * 20 + (cx - 1)))
-        and navigation_walkable(emu:read8(TM + cy * 20 + cx))
+    local cols = math.floor(QUINTRA_ARENA_W / 8)
+    if cx < 1 or cx > cols - 1 or cy < 1 or cy > 16 then return false end
+    return navigation_walkable(tile_at_px((cx - 1) * 8, (cy - 1) * 8))
+        and navigation_walkable(tile_at_px(cx * 8, (cy - 1) * 8))
+        and navigation_walkable(tile_at_px((cx - 1) * 8, cy * 8))
+        and navigation_walkable(tile_at_px(cx * 8, cy * 8))
 end
 
 -- Headless mGBA can crash while taking a screenshot. For any controller
@@ -823,14 +828,12 @@ end
 -- Tile BFS plans globally; this answers whether its immediate controller
 -- input is physically possible from the body's current sub-tile offset.
 function pixel_walkable(x, y)
-    if x < 0 or x >= 160 or y < 0 or y >= 136 then return false end
-    local tile = emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
-    return walkable(tile)
+    return walkable(tile_at_px(x, y))
 end
 
 function pixel_full_body_obstacle(x, y)
-    if x < 0 or x >= 160 or y < 0 or y >= 136 then return true end
-    local tile = emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8)) % 128
+    if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= 136 then return true end
+    local tile = tile_at_px(x, y) % 128
     return tile == 21 or tile == 25 or tile == 28 or tile == 29 or tile == 30
 end
 
@@ -921,7 +924,7 @@ function quintra_giant_body_dash_dir(px, py, target, fallback)
         local legal = not ((key == KEY_UP and py <= 7)
             or (key == KEY_DOWN and py >= 120)
             or (key == KEY_LEFT and px <= 7)
-            or (key == KEY_RIGHT and px >= 136))
+            or (key == KEY_RIGHT and px >= QUINTRA_ARENA_W - 24))
         for step = 0, 7 do
             if not can_step(px + dx * step, py + dy * step, key) then
                 legal = false
@@ -946,13 +949,13 @@ function quintra_giant_body_dash_dir(px, py, target, fallback)
         local crosses_edge = (key == KEY_UP and py <= 7)
             or (key == KEY_DOWN and py >= 120)
             or (key == KEY_LEFT and px <= 7)
-            or (key == KEY_RIGHT and px >= 136)
+            or (key == KEY_RIGHT and px >= QUINTRA_ARENA_W - 24)
         if not crosses_edge and can_step(px, py, key) then return key end
     end
     if py <= 7 then return KEY_DOWN end
     if py >= 120 then return KEY_UP end
     if px <= 7 then return KEY_RIGHT end
-    if px >= 136 then return KEY_LEFT end
+    if px >= QUINTRA_ARENA_W - 24 then return KEY_LEFT end
     return fallback
 end
 
@@ -1038,7 +1041,19 @@ function quintra_body_overlap_escape(px, py, ex, ey)
 end
 
 function tile_at_px(x, y)
-    if x < 0 or x >= 160 or y < 0 or y >= 136 then return 0 end
+    if x < 0 or x >= QUINTRA_ARENA_W or y < 0 or y >= 136 then return 0 end
+    if x >= 160 then
+        -- The ROM keeps the extension out of its compact 20x17 WRAM map.
+        -- Columns 20..26 are walkable projection/floor; column 27 becomes
+        -- the east door only after the opening Colossus is defeated.
+        if x >= 216 then
+            if y >= 64 and y < 80 and RS ~= 0 and emu:read8(RS + 11) > 0 then
+                return 3
+            end
+            return 0
+        end
+        return (y >= 8 and y < 128) and 1 or 0
+    end
     return emu:read8(TM + math.floor(y / 8) * 20 + math.floor(x / 8))
 end
 
@@ -1134,7 +1149,7 @@ function giant_orbit_step(px, py, aim, retreat)
         primary = py > 64 and KEY_UP or KEY_DOWN
         secondary = primary == KEY_UP and KEY_DOWN or KEY_UP
     else
-        primary = px > 72 and KEY_LEFT or KEY_RIGHT
+        primary = px > (QUINTRA_ARENA_W / 2 - 8) and KEY_LEFT or KEY_RIGHT
         secondary = primary == KEY_LEFT and KEY_RIGHT or KEY_LEFT
     end
     if can_step(px, py, primary) then return primary end
@@ -1267,14 +1282,14 @@ function clear_cardinal_lane(x, y, gx, gy)
         local lo, hi = math.min(y, gy) + 1, math.max(y, gy) - 1
         for ty = lo, hi do
             -- Spikes constrain feet routes, not a weapon's line of fire.
-            if not walkable(emu:read8(TM + ty * 20 + x)) then return false end
+            if not walkable(tile_at_px(x * 8, ty * 8)) then return false end
         end
         return true
     end
     if y == gy then
         local lo, hi = math.min(x, gx) + 1, math.max(x, gx) - 1
         for tx = lo, hi do
-            if not walkable(emu:read8(TM + y * 20 + tx)) then return false end
+            if not walkable(tile_at_px(tx * 8, y * 8)) then return false end
         end
         return true
     end
@@ -1292,7 +1307,8 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
     local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
     local qx, qy, head, tail = {sx}, {sy}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
-    local start = sy * 20 + sx
+    local cols = math.floor(QUINTRA_ARENA_W / 8)
+    local start = sy * cols + sx
     seen[start] = true
     local target, best, best_dist = nil, nil, 0x7FFF
     while head <= tail do
@@ -1303,7 +1319,7 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
         -- wall. The next frame recomputes against the enemy's live position.
         local dist = math.abs(x - gx) + math.abs(y - gy)
         if dist < best_dist then
-            best, best_dist = y * 20 + x, dist
+            best, best_dist = y * cols + x, dist
         end
         -- Cardinal weapons cannot connect from a diagonal stopping cell.
         -- Finish on the target's row or column, within two tiles, so the
@@ -1320,15 +1336,15 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
             -- to a neighboring body-valid lane until pixel aim can finish.
             and (x ~= sx or y ~= sy
                 or math.abs(ex - px) <= 5 or math.abs(ey - py) <= 5) then
-            target = y * 20 + x
+            target = y * cols + x
             break
         end
         for d = 1, 4 do
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
-            local nk = ny * 20 + nx
-            if nx >= 1 and nx <= 19 and ny >= 1 and ny <= 16
+            local nk = ny * cols + nx
+            if nx >= 1 and nx <= cols - 1 and ny >= 1 and ny <= 16
                 and not seen[nk] and body_walkable(nx, ny) then
-                seen[nk], prev[nk], prevkey[nk] = true, y * 20 + x, d
+                seen[nk], prev[nk], prevkey[nk] = true, y * cols + x, d
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
             end
         end
@@ -1345,7 +1361,9 @@ end
 -- intentionally too loose here.
 local body_goal_pixel_route = nil
 function exact_body_goal_step(px, py, goal_x, goal_y)
-    local start = py * 160 + px
+    local stride = QUINTRA_ARENA_W
+    local max_player_x = QUINTRA_ARENA_W - 14
+    local start = py * stride + px
     local start_feet_tx = math.floor((px + 8) / 8)
     local start_feet_ty = math.floor((py + 12) / 8)
     local route_room = emu:read8(RS + 1)
@@ -1367,7 +1385,7 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
     local found = nil
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
-        local key = y * 160 + x
+        local key = y * stride + x
         if x == goal_x and y == goal_y then
             found = key
             break
@@ -1375,13 +1393,13 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
         for d = 1, 4 do
             local dir = CARD_KEYS[d]
             local nx, ny = x + CARD_DX[d], y + CARD_DY[d]
-            local next_key = ny * 160 + nx
+            local next_key = ny * stride + nx
             local feet_tx = math.floor((nx + 8) / 8)
             local feet_ty = math.floor((ny + 12) / 8)
             local crosses_other_rune = tile_at_px(nx + 8, ny + 12) == 33
                 and (feet_tx ~= start_feet_tx or feet_ty ~= start_feet_ty)
                 and (math.abs(nx - goal_x) > 1 or math.abs(ny - goal_y) > 1)
-            if nx >= 0 and nx <= 146 and ny >= 0 and ny <= 120
+            if nx >= 0 and nx <= max_player_x and ny >= 0 and ny <= 120
                 and not seen[next_key] and can_step(x, y, dir)
                 and not body_on_spike(nx, ny) and not crosses_other_rune then
                 seen[next_key], previous[next_key], step[next_key] = true, key, dir
@@ -1906,6 +1924,19 @@ function door_step(px, py)
             town_wanted = 3
         end
     end
+    if not in_world and not in_town and room == STAGE_BOSS[1]
+        and emu:read8(RS + 11) > 0 then
+        -- Crystal's clear no longer reuses the old x=160 room edge. Route
+        -- the full champion body through the authored extension to the real
+        -- far door at x=216; scanning the compact 20x17 WRAM map can only
+        -- see the obsolete cardinal thresholds and will choose one forever.
+        if px >= 207 and py >= 56 and py <= 64 then return KEY_RIGHT end
+        local far_step = body_goal_step(px, py, 208, 60)
+        if far_step ~= nil and far_step ~= 0 then return far_step end
+        if py < 56 then return KEY_DOWN end
+        if py > 64 then return KEY_UP end
+        return KEY_RIGHT
+    end
     -- The Sigil sits in local room 2. The spatial-graph policy below routes
     -- there before selecting any Colossus threshold.
     local local_room = dungeon_local(room, emu:read8(RS + 11))
@@ -2351,12 +2382,21 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
     elseif held_style == "claw" and CLASS == 2 then
         if GIANT_RETREAT_RANGE_ENV == nil then giant_retreat, giant_orbit_floor = 32, 32 end
     elseif held_style == "ranged" and CLASS == 2 then
-        -- Featherbarb can damage a Colossus from a real ranged lane. Its old
-        -- 32px reset band repeatedly overlapped the moving Hydra body; 48px
-        -- cuts that observed contact sharply and turns the fixed route's
-        -- second boss from a death into a clear. Keep the environment knob
-        -- authoritative for offline policy sweeps.
-        if GIANT_RETREAT_RANGE_ENV == nil then giant_retreat, giant_orbit_floor = 48, 48 end
+        -- Featherbarb can damage a Colossus across the viewport. Crystal's
+        -- 224px arena makes the old 48px firing cap needlessly walk Corvin
+        -- back into the warping core after he has established a clean lane.
+        -- Hold a readable midrange orbit and use the weapon's actual reach;
+        -- this is input policy only, with the cartridge's cadence/damage
+        -- unchanged. Keep the environment knob authoritative for sweeps.
+        if GIANT_RETREAT_RANGE_ENV == nil then
+            giant_retreat, giant_orbit_floor = 56, 56
+        else
+            giant_orbit_floor = giant_retreat
+        end
+        giant_fire_range = 96
+        if os.getenv("QUINTRA_BOT_GIANT_FIRE_CADENCE") == nil then
+            giant_fire_cadence = 2
+        end
     elseif CLASS == 3 then
         if GIANT_RETREAT_RANGE_ENV == nil then
             -- BubbleBolt crosses a room, so Picsean need not trade body
@@ -2508,6 +2548,14 @@ if DEBUG then
     debug_log(string.format("BOTSTART class=%d frame=%d screen=%d",
         CLASS, FC ~= 0 and read16(FC) or 0, LS ~= 0 and emu:read8(LS) or 255))
 end
+if DASH_SELFTEST then
+    -- Read-only policy contract for a geometry that procedural play may not
+    -- happen to reproduce after a boss movement rewrite. This invokes the
+    -- same live collision helper on the loaded cartridge map and records the
+    -- ordinary D-pad answer; it never writes position, HP, entities, or RNG.
+    debug_log(string.format("BOTDASHSELFTEST dir=%02X",
+        quintra_giant_body_dash_dir(72, 7, {x=72, y=24}, KEY_UP)))
+end
 
 local frames, max_room, last_hp, damage_taken, giant_overlap_damage, min_hp = 0, 0, 0, 0, 0, 255
 local min_giant_hp = 255
@@ -2619,6 +2667,7 @@ while frames < LIMIT do
     end
     last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
+    QUINTRA_ARENA_W = (room == STAGE_BOSS[1]) and 224 or 160
     if is_town_room(room) then
         -- `world_return_screen` is a plaza index only in a town. Mark each
         -- side street when its real room has loaded so the next arrival visit
@@ -3206,7 +3255,17 @@ while frames < LIMIT do
             end
             local warden_body_range = math.max(
                 math.abs(target.x - px), math.abs(target.y - py))
-            if warden_ready and held_style == "lunge"
+            if held_style == "lunge" and CLASS == 1
+                and py < 8 and target.y <= 16
+                and math.abs(dx) > 20 and can_step(px, py, KEY_DOWN) then
+                -- Tail Spike originates above Sauran's feet. At the north
+                -- strip an otherwise valid horizontal line can therefore be
+                -- embedded in the wall: the lane solver reports "ready" but
+                -- every strike dies in the ceiling. Expose the weapon origin
+                -- with ordinary downward input before resuming that same
+                -- exact-pixel Warden policy.
+                keys = KEY_DOWN
+            elseif warden_ready and held_style == "lunge"
                 and warden_body_range < 28 then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
                     or (aim == KEY_DOWN and KEY_UP)

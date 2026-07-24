@@ -170,8 +170,12 @@ def main():
             pb.memory[ep] = pb.memory[ep + 1] = 0
     before_rift_shots = hostile_count()
     pb.memory[boss + 14] = max_hp // 2
-    for _ in range(2):
+    # Wide Crystal rendering can place one host tick between game updates in
+    # PyBoy. The phase break is an event contract, not a two-host-frame ABI.
+    for _ in range(6):
         pb.tick()
+        if pb.memory[boss + 20] & 0x80:
+            break
     assert pb.memory[boss + 20] & 0x80, "boss did not enter its half-health riftbreak"
     assert pb.memory[boss + 18] >= 20, "riftbreak did not grant a readable recovery beat"
     rift_shot_delta = hostile_count() - before_rift_shots

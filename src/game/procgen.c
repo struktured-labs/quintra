@@ -1067,6 +1067,14 @@ void procgen_generate_current_room(void) BANKED {
                     entities[idx].hitbox      = (skin == 0) ? (u8)0xFF : (u8)0xDD;
                     entities[idx].ai_data[3]  = 1;              // giant flag
                     entities[idx].ai_data[2]  = skin;          // boss attack pattern
+                    if (skin == 0) {
+                        // Begin in the middle Crystal well. Its movement bank
+                        // subsequently jumps among x=24/96/176 across the
+                        // true 224px arena instead of chasing in one screen.
+                        entities[idx].x = FIX8(96);
+                        entities[idx].y = FIX8(32);
+                        entities[idx].state = 1;
+                    }
                     // A stage transition must never resolve into an instant
                     // ring on the hero's arrival tile. The boss still closes
                     // and keeps its full HP/damage/pattern, but this 0.8s

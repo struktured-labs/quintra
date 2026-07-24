@@ -32,6 +32,8 @@
 BANKREF(room_enter)
 
 u8 room_tilemap[ROOM_H][ROOM_W];
+u8 room_world_width = ROOM_VIEW_W_PX;
+u8 room_camera_x;
 
 static u8 room_paused;
 static u8 room_resume_flag;   // set by room_request_resume: skip procgen next enter
@@ -168,8 +170,15 @@ static u8 room_stage(void) {
 // The body is visual/lore space—only the mobile OBJ core is vulnerable or
 // collidable.
 static void room_apply_colossal_arena(void) {
+    // Generation always returns to the one-screen contract first. The pack
+    // resume path skips this function, preserving a live wide-arena camera.
+    room_world_width = ROOM_VIEW_W_PX;
+    room_camera_x = 0;
     if (!procgen_current_room_is_boss) return;
     if (room_stage() == 0) {
+        room_world_width = ROOM_CRYSTAL_W_PX;
+        // Column 19 used to be the immutable right wall. It is now the seam
+        // into the hardware BG's authored extension; the true wall is x=27.
         tiles_paint_crystal_projection();
         return;
     }
@@ -432,7 +441,21 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
     {
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
-        if (tx >= ROOM_W || ty >= ROOM_H) return BGT_WALL;
+        if (ty >= ROOM_H) return BGT_WALL;
+        if (tx >= ROOM_W) {
+            if (room_world_width <= ROOM_VIEW_W_PX
+                || tx >= ROOM_CRYSTAL_W_TILES) return BGT_WALL;
+            // The far east threshold replaces the obsolete viewport seam
+            // after Crystal falls. Before then it remains a real arena wall.
+            if (tx == ROOM_CRYSTAL_W_TILES - 1) {
+                if ((ty == 8 || ty == 9) && run_state_was_cleared_boss())
+                    return BGT_DOOR;
+                return BGT_WALL;
+            }
+            if (ty == 0 || ty == ROOM_H - 1) return BGT_WALL;
+            // Extension projection tiles are visual, walkable spirit-space.
+            return BGT_FLOOR;
+        }
         // Bit 7 is generator-only reachability scratch. Room preparation
         // clears it before rendering, but collision must remain correct even
         // if a later diagnostic/placement pass marks the same WRAM tile.
@@ -630,6 +653,7 @@ static void room_unseal_doors(void) {
     for (dir = 0; dir < 4; ++dir) {
         if (!run_state_was_cleared_boss()
             && run_state_dungeon_neighbor(dir) == 0xFF) continue;
+        if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
         for (half = 0; half < 2; ++half)
             room_tilemap[dys[dir][half]][dxs[dir][half]] = BGT_DOOR;
     }
@@ -640,6 +664,7 @@ static void room_unseal_doors(void) {
         for (dir = 0; dir < 4; ++dir) {
             if (!run_state_was_cleared_boss()
                 && run_state_dungeon_neighbor(dir) == 0xFF) continue;
+            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
             for (half = 0; half < 2; ++half)
                 set_bkg_tiles(dxs[dir][half], dys[dir][half], 1, 1, &door);
         }
@@ -647,11 +672,14 @@ static void room_unseal_doors(void) {
         for (dir = 0; dir < 4; ++dir) {
             if (!run_state_was_cleared_boss()
                 && run_state_dungeon_neighbor(dir) == 0xFF) continue;
+            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
             for (half = 0; half < 2; ++half)
                 set_bkg_tiles(dxs[dir][half], dys[dir][half], 1, 1, &attr);
         }
         VBK_REG = 0;
     }
+    if (room_world_width > ROOM_VIEW_W_PX)
+        tiles_open_crystal_far_exit();
 }
 
 // Single-tile rewrite (tile + attr) at the top of vblank.
@@ -841,7 +869,9 @@ static void draw_room_tilemap(void) {
     // Serpent, and Void never expose stale streamed-room VRAM at the right or
     // bottom edge. Keeping this common to every boss also makes future
     // stage-specific camera choreography safe by construction.
-    if (procgen_current_room_is_boss) {
+    if (procgen_current_room_is_boss && room_world_width > ROOM_VIEW_W_PX) {
+        tiles_prepare_crystal_wide_arena();
+    } else if (procgen_current_room_is_boss) {
         tiles_prepare_colossal_edges();
     }
     VBK_REG = 0;
@@ -994,7 +1024,7 @@ static void place_player_sprite(void) {
         move_sprite(2, 0, 0);
         move_sprite(3, 0, 0);
     } else {
-        u8 sx = (u8)(player.x + 8);
+        u8 sx = (u8)((i16)player.x - room_camera_x + 8);
         u8 sy = (u8)(player.y + 16);
         u8 class_id = (player.class_id < 5) ? player.class_id : 0;
         u8 step = (player.anim_frame & 0x04) ? 1 : 0;
@@ -1103,6 +1133,8 @@ void room_enter(void) {
         draw_room_tilemap();
         entity_draw_all();
         place_player_sprite();
+        SCX_REG = room_camera_x;
+        SCY_REG = 0;
         // Music kept running through the pack screen (room_exit no longer stops
         // it), so there's nothing to restart here — resume is seamless.
         SHOW_SPRITES;
@@ -1207,7 +1239,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Entering the amber threshold's approach gives one low roar and tremor.
     // The room itself is a full-heal sanctuary, so this is a fair commitment
     // warning rather than an ambush or an extra confirmation dialog.
-    if (!boss_threshold_warned && !run_state.world_mode
+    if (!boss_threshold_warned && !procgen_current_room_is_boss
+        && !run_state.world_mode
         && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
         u8 near_n = (player.y <= 16) && is_forward_boss_door(
             (u8)((player.x + 8) >> 3), 0, room_tilemap[0][(player.x + 8) >> 3]);
@@ -1963,20 +1996,21 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             dir = DIR_S; tx = (u8)((player.x + 8) >> 3); ty = ROOM_H - 1;
         } else if (player.x <= 0) {
             dir = DIR_W; tx = 0; ty = (u8)((player.y + 12) >> 3);
-        } else if (player.x >= 144) {
-            dir = DIR_E; tx = ROOM_W - 1; ty = (u8)((player.y + 12) >> 3);
+        } else if (player.x >= (ppos_t)(room_world_width - 16)) {
+            dir = DIR_E; tx = (u8)((room_world_width >> 3) - 1);
+            ty = (u8)((player.y + 12) >> 3);
         }
 
-        if (dir != DIR_NONE && tx < ROOM_W && ty < ROOM_H
-            && room_tilemap[ty][tx] == BGT_DOOR) {
-                u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
+        if (dir != DIR_NONE && ty < ROOM_H
+            && room_tile_at_px((i16)tx << 3, (i16)ty << 3) == BGT_DOOR) {
+            u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
                 // The sanctuary's forward threshold rejects the hero until
                 // this dungeon's route fixtures are recovered. Twelve-cell
                 // stages add the local-room-7 Waystone; fourteen-cell stages
                 // also require the existing local-room-9 deep Warden. The
                 // return door remains open, guaranteeing a route back to
                 // every visible objective.
-                if (is_forward_boss_door(tx, ty, room_tilemap[ty][tx])
+                if (is_forward_boss_door(tx, ty, BGT_DOOR)
                     && (!(run_state.rift_sigils
                             & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
                         || !(run_state.dungeon_puzzles
@@ -2198,6 +2232,8 @@ void room_draw(void) {
             }
         }
     }
+    room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
+        ? tiles_crystal_camera_step(room_camera_x, player.x) : 0;
     place_player_sprite();
     entity_draw_all();
 
@@ -2241,23 +2277,29 @@ void room_draw(void) {
         tiles_animate_colossus_bg((loop_frame_counter & 0x7F) >= 0x70);
     }
 
-    // Impact shake: alternate the BG scroll a few px, settle back to 0.
+    // Impact shake is added to the real camera rather than replacing it.
     if (shake_timer) {
         shake_timer--;
         if (shake_timer == 0) {
-            SCX_REG = 0;
+            SCX_REG = room_camera_x;
             SCY_REG = 0;
         } else {
-            SCX_REG = (shake_timer & 2) ? shake_mag : (u8)(256 - shake_mag);
-            SCY_REG = (shake_timer & 4) ? 1 : 0xFF;
+            if (shake_timer & 2) {
+                u8 max_camera = (u8)(room_world_width - ROOM_VIEW_W_PX);
+                SCX_REG = (room_camera_x + shake_mag > max_camera)
+                    ? max_camera : (u8)(room_camera_x + shake_mag);
+            } else {
+                SCX_REG = (room_camera_x > shake_mag)
+                    ? (u8)(room_camera_x - shake_mag) : 0;
+            }
+            SCY_REG = (room_world_width > ROOM_VIEW_W_PX)
+                ? 0 : ((shake_timer & 4) ? 1 : 0xFF);
         }
     } else if (procgen_current_room_is_boss && room_stage() == 0) {
-        // Penta Dragon introduces its moving-arena language with Shalamar's
-        // shifting first boss. Give Quintra's opening 112x72 guardian the
-        // same immediate sense of scale without a per-frame bank switch.
-        u8 phase = (u8)((loop_frame_counter >> 4) & 7);
-        SCX_REG = (phase < 4) ? phase : (u8)(7 - phase);
-        SCY_REG = (phase & 2) ? 1 : 0;
+        // Crystal is the first genuinely wider encounter: SCX follows a
+        // 224px world rather than applying the old decorative 0..3px sway.
+        SCX_REG = room_camera_x;
+        SCY_REG = 0;
     } else if (procgen_current_room_is_boss && room_stage() == 1) {
         // Preserve Verdant's original inline timing: a banked call here costs
         // enough cycles to perturb fixed controller replays in dense fights.

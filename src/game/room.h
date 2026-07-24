@@ -8,12 +8,21 @@
 
 // Visible BG grid: 20 cols × 17 rows (136 px). The bottom 8 px of the
 // screen belong to the HUD WINDOW strip — GB windows extend to the bottom
-// of the frame, so the HUD must be the LAST rows, and the room must end
-// above it. No scrolling yet.
+// of the frame, so the HUD must be the LAST rows. Most rooms remain exactly
+// one viewport; authored arenas may expose more of the 32-tile hardware BG
+// through room_world_width and room_camera_x.
 #define ROOM_W 20
 #define ROOM_H 17
+#define ROOM_VIEW_W_PX (ROOM_W * 8)
+#define ROOM_CRYSTAL_W_TILES 28
+#define ROOM_CRYSTAL_W_PX (ROOM_CRYSTAL_W_TILES * 8)
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
+// World-space contract shared by collision, projectiles, OBJ projection, and
+// emulator instrumentation. Ordinary rooms are 160 px; Crystal's proving
+// arena is 224 px with a bounded 0..64 px camera.
+extern u8 room_world_width;
+extern u8 room_camera_x;
 extern u8 room_transform_ticks;
 // Temporary combat boon: decremented in active gameplay only, so menus do
 // not consume it and it never needs to inflate the suspend-save payload.

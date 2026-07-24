@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.67: Pocket Grid](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.68: Beyond the Frame](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,19 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.67**, published after the complete build,
+The current cartridge is **v0.18.68**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Quintra now has a world that is genuinely wider than the Game Boy
+screen.** The opening Crystal Colossus occupies a 224×136 arena—28 background
+columns behind a 20-column viewport—with a real 0–64px tracking camera. The
+champion, boss, bullets, melee arcs, drops, collision, and controller pilot all
+share world coordinates. Crossing x=160 reveals a second crystal mass and
+warp well rather than another room load. Crystal announces and jumps among
+three wells at x=24/96/176, and its east exit exists only at the true far wall
+after the kill. Every ordinary room and the other eight Colossi still reset to
+the proven 160px contract. This is the reusable engine slice for larger
+Riftwild fields and less compact stages, not a decorative camera sway.
 
 **SELECT now opens an actual compressed pocket grid.** The dungeon occupies
 the left side as a complete faint 6×5 lattice: one 8×8 square per room and one
@@ -76,11 +87,12 @@ reach and study the ending.
 20 screens and 12 entrance-to-boss room visits; later stages grow to 30
 screens and 22 direct room visits, or 29 required-objective transitions.
 A measured Easy controller run can still reach stage three by minute five,
-and each dungeon room remains a single 160×144 field.
-The result can therefore feel compact despite the larger topology. Longer
-continuous outdoor fields, spatially meaningful side wings, and true
-scrolling Penta-style boss arenas remain active design work; this release does
-not pretend that padding the room counter solves them.
+and ordinary dungeon rooms remain single 160×136 playfields beneath the HUD.
+The result can therefore still feel compact despite the larger topology.
+v0.18.68 delivers the first true scrolling Penta-style arena and the shared
+world/camera path behind it; longer continuous outdoor fields and spatially
+meaningful side wings remain the next scale work. Adding room counters alone
+is explicitly not the answer.
 
 **Dungeon room count now becomes real traversal distance.** The former graph
 added a vertical shortcut between every adjacent row, collapsing nominal
@@ -338,20 +350,17 @@ also counts the cartridge's post-poll joypad frames and press edges. Damage
 with no observed interaction is still labelled as unattended evidence instead
 of a human balance result.
 
-**The opening Crystal Colossus is now genuinely colossal.** A dedicated
-112×72 crystal guardian occupies 110 BG tiles—70% of the screen width—while
-the original 32×32 heart remains the sole vulnerable/collidable body and keeps
-its proven chase, 200 HP, ring-plus-aimed pattern, damage, and riftbreak. Its
-projection is walkable and uses runtime art distinct from Mire and Void. A
-slow 0–3px horizontal / 0–1px vertical arena orbit introduces Penta Dragon's
-moving-camera language in the first boss the player sees; it moves only the BG
-projection, never the hero, OBJ weak point, HUD, collision grid, or Normal
-balance. Every colossal room initializes its offscreen edge row and column so
-the sub-tile drift cannot reveal stale transition graphics. In
-the current three-world Normal matrix, 14 reach the fight and 13 clear it,
-with a 626-frame (10.4-second) median. One run falls in an ordinary room before
-the threshold and one falls to Crystal, so opening-room pressure and first-boss
-spectacle can be tuned separately during the next human balance pass.
+**The opening Crystal Colossus is now a camera-travelling encounter.** Its
+112×72 projected guardian still occupies 110 tiles and its 32×32 heart remains
+the sole vulnerable/collidable body with 200 HP, ring-plus-aimed pressure,
+damage, and riftbreak. The former 0–3px decorative sway is gone. The arena is
+224 pixels wide, the hero can cross the former x=160 seam to x=202, and SCX
+tracks across a full 64px range while every OBJ is projected back into screen
+space. The heart telegraphs before moving among three distant wells, including
+one at x=176 beyond the old room. A linked-ROM contract crosses the seam,
+pins the far combat wall, performs the off-screen warp, reaches the camera
+bound, opens the x=27 post-clear door, descends to Riftwild, and verifies the
+next Colossus returns to 160px/SCX 0.
 
 **Verdant Hollow's Storm Serpent now makes the arena move.** An 84-tile,
 112×64 hollow storm coil fills the BG plane while the original 32×32 OBJ
@@ -1994,7 +2003,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.67 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.68 release ROM occupies 128 KiB. Its media,
 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -2010,8 +2019,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.67 build has 1,362 bytes in bank 1, 1,619 in bank 2,
-2,006 in bank 3, 2,824 in bank 4, 3,231 in bank 5, and 8,699 in bank 6.
+ROM. The current v0.18.68 build has 1,036 bytes in bank 1, 1,586 in bank 2,
+1,902 in bank 3, 2,612 in bank 4, 2,491 in bank 5, and 8,699 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

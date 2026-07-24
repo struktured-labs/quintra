@@ -677,6 +677,8 @@ void tiles_paint_golem_projection(void) BANKED {
 void tiles_paint_crystal_projection(void) BANKED {
     static const u8 widths[9] = { 8,12,14,14,14,14,14,12,8 };
     u8 y, x;
+    for (y = 1; y < ROOM_H - 1; ++y)
+        room_tilemap[y][ROOM_W - 1] = BGT_FLOOR;
     for (y = 0; y < 9; ++y) {
         u8 width = widths[y];
         u8 left = (u8)(10 - (width >> 1));
@@ -817,6 +819,79 @@ void tiles_prepare_colossal_edges(void) BANKED {
         VBK_REG = 0; set_bkg_tiles(x, ROOM_H, 1, 1, &edge);
         VBK_REG = 1; set_bkg_tiles(x, ROOM_H, 1, 1, &edge_attr);
     }
+    VBK_REG = 0;
+}
+
+void tiles_prepare_crystal_wide_arena(void) BANKED {
+    u8 x, y;
+    u8 tiles[9], attrs[9];
+    // Columns 20..27 are real world; column 28 is one shake-overscan guard.
+    // The right-hand crystal mass is a second readable landmark/well, not
+    // repeated floor padding, so crossing the old seam visibly changes place.
+    for (y = 0; y < ROOM_H; ++y) {
+        for (x = 0; x < 9; ++x) {
+            u8 wx = (u8)(20 + x);
+            u8 tile;
+            if (y == 0 || y == ROOM_H - 1 || wx >= 27) {
+                tile = BGT_WALL;
+            } else if (y >= 3 && y <= 11 && wx <= 26) {
+                if (wx == 20) tile = BGT_COLOSSUS_EDGE_L;
+                else if (wx == 26) tile = BGT_COLOSSUS_EDGE_R;
+                else if (y == 3 && (wx == 21 || wx == 25))
+                    tile = BGT_COLOSSUS_HORN;
+                else if (y == 5 && (wx == 22 || wx == 24))
+                    tile = BGT_COLOSSUS_EYE;
+                else if (y >= 7 && y <= 9 && wx >= 22 && wx <= 24)
+                    tile = BGT_COLOSSUS_VOID;
+                else if (((u8)(wx + y) & 3) == 0)
+                    tile = BGT_COLOSSUS_RUNE;
+                else tile = BGT_COLOSSUS_SCALE;
+            } else {
+                tile = ((u8)(wx + y) & 1) ? BGT_FLOOR2 : BGT_FLOOR3;
+            }
+            tiles[x] = tile;
+            attrs[x] = (tile == BGT_WALL || tile == BGT_COLOSSUS_EDGE_L
+                || tile == BGT_COLOSSUS_EDGE_R || tile == BGT_COLOSSUS_SCALE
+                || tile == BGT_COLOSSUS_HORN) ? BGPAL_WALL
+                : (tile == BGT_COLOSSUS_EYE || tile == BGT_COLOSSUS_FANG)
+                    ? BGPAL_CRACK
+                    : (tile >= BGT_COLOSSUS_VOID && tile <= BGT_COLOSSUS_HORN)
+                        ? BGPAL_CRYSTAL : BGPAL_FLOOR;
+        }
+        VBK_REG = 0; set_bkg_tiles(20, y, 9, 1, tiles);
+        VBK_REG = 1; set_bkg_tiles(20, y, 9, 1, attrs);
+    }
+    // A positive vertical shake is not used in the wide arena, but keep the
+    // next row deterministic for debugger/manual SCY pokes.
+    for (x = 0; x < 9; ++x) { tiles[x] = BGT_WALL; attrs[x] = BGPAL_WALL; }
+    VBK_REG = 0; set_bkg_tiles(20, ROOM_H, 9, 1, tiles);
+    VBK_REG = 1; set_bkg_tiles(20, ROOM_H, 9, 1, attrs);
+    VBK_REG = 0;
+}
+
+u8 tiles_crystal_camera_step(u8 current, i16 player_x) BANKED {
+    u8 desired = (player_x > 72) ? (u8)(player_x - 72) : 0;
+    u8 max_camera = ROOM_CRYSTAL_W_PX - ROOM_VIEW_W_PX;
+    if (desired > max_camera) desired = max_camera;
+    if (current < desired) {
+        current = (u8)(current + 2);
+        if (current > desired) current = desired;
+    } else if (current > desired) {
+        current = (current >= 2) ? (u8)(current - 2) : 0;
+        if (current < desired) current = desired;
+    }
+    return current;
+}
+
+void tiles_open_crystal_far_exit(void) BANKED {
+    u8 far_x = ROOM_CRYSTAL_W_TILES - 1;
+    u8 door = BGT_DOOR, attr = BGPAL_DOOR;
+    VBK_REG = 0;
+    set_bkg_tiles(far_x, 8, 1, 1, &door);
+    set_bkg_tiles(far_x, 9, 1, 1, &door);
+    VBK_REG = 1;
+    set_bkg_tiles(far_x, 8, 1, 1, &attr);
+    set_bkg_tiles(far_x, 9, 1, 1, &attr);
     VBK_REG = 0;
 }
 

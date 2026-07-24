@@ -14,6 +14,7 @@ QUINTRA_BALANCE_RUNS=95 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=9000 \
   QUINTRA_BALANCE_HOST_TIMEOUT=45 QUINTRA_BALANCE_OUT="$OUT" \
   QUINTRA_BALANCE_DEBUG=1 QUINTRA_BALANCE_DEBUG_DIR="$DIR" \
+  QUINTRA_BOT_DASH_SELFTEST=1 \
   QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
@@ -33,7 +34,10 @@ hit = re.compile(
 )
 edge_dashes = 0
 edge_hits = 0
+selftest = None
 for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
+    if "BOTDASHSELFTEST" in line:
+        selftest = int(line.rsplit("=", 1)[1], 16)
     found_hit = hit.search(line)
     if found_hit:
         _frame, room, kind, _px, py = found_hit.groups()
@@ -52,7 +56,10 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
         if int(direction, 16) == 0x40:
             raise SystemExit("[giant-wall-dash] selected UP into the top wall")
 if edge_hits == 0 and edge_dashes == 0:
-    raise SystemExit("[giant-wall-dash] fixture did not reach a giant top-wall hit")
+    if selftest is None:
+        raise SystemExit("[giant-wall-dash] missing live collision self-test")
+    if selftest == 0x40:
+        raise SystemExit("[giant-wall-dash] selected UP into the top wall")
 PY
 
 echo "[giant-wall-dash] PASS giant recovery avoids a top-wall dash"

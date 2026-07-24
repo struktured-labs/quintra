@@ -1,5 +1,32 @@
 # Quintra whole-game audit — updated 2026-07-23
 
+## v0.18.68 perceived-scale response
+
+The report that stages still feel compact is correct. A 20–30-node topology
+does not feel large when every node is a fixed 160px box. This milestone
+therefore changes the engine boundary rather than adding counters: Crystal's
+arena is a real 224×136 world behind the 160×136 viewport. Player, entities,
+projectiles, collision, drops, exits, and the input-only balance pilot all use
+the wider coordinates; the camera travels 0–64px and every ordinary room
+resets to 160px.
+
+Crystal now telegraphs and jumps among three authored wells at x=24, 96, and
+176. The former right wall is a traversable seam, while the combat boundary
+and post-clear exit moved to BG column 27. Live-ROM coverage crosses the seam,
+pins the far wall before the kill, verifies the distant warp and full camera
+range, exits to Riftwild after unseal, and proves the next Colossus did not
+inherit wide state. Dense performance remains 147/180 updates with 12/12
+entities active, the complete 370-state curriculum was regenerated, and the
+input-only pilot collects far-side boss relics and leaves the arena.
+Passive duplicates also coalesce their presence record while retaining stacked
+stats, preventing a long-run inventory registry from dropping a later
+guaranteed boss relic's lasting behavior.
+
+This does not by itself make all stages spacious. It is the proving
+implementation for continuous Riftwild fields and larger landmarked dungeon
+wings. Those should now reuse a tested world/camera path instead of inventing
+screen-specific scroll tricks.
+
 ## v0.18.67 pocket-grid response
 
 The 16×16 Compass nodes were individually legible but made a 20–30-room

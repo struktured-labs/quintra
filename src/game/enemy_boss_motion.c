@@ -92,6 +92,31 @@ void boss_motion_tick(entity_t *e) BANKED {
     if (!(e->ai_data[3] & 1)) { boss_chase_tick(e, 3); return; }
 
     switch (e->ai_data[2]) {
+        case 0: { // Crystal Dragon: warned jumps among three distant wells
+            static const u8 anchor_x[3] = { 24, 96, 176 };
+            static const u8 anchor_y[3] = { 48, 32, 72 };
+            if (e->vx == 0) { e->vx = 96; e->state = 1; }
+            if (e->vx == 18) {
+                e->ai_data[7] = 12;
+                sfx_play(SFX_TICK);
+            }
+            if (--e->vx == 0) {
+                u8 next = (u8)((e->state + 1) % 3);
+                fx_spawn(SPR_FX_IMPACT, 2, FIX8_TO_INT(e->x) + 12,
+                    FIX8_TO_INT(e->y) + 12, 12);
+                e->state = next;
+                e->x = FIX8(anchor_x[next]);
+                e->y = FIX8(anchor_y[next]);
+                e->ai_data[7] = 12;
+                e->ai_data[1] = 32;
+                fx_spawn(SPR_FX_IMPACT, 2, anchor_x[next] + 12,
+                    anchor_y[next] + 12, 14);
+                e->vx = 96;
+                sfx_play(SFX_ROAR);
+            }
+            return;
+        }
+
         case 1: // Storm Serpent: diagonal wall bounces with attack windows
             // Two-frame movement made Verdant's 220-HP giant cross an entire
             // melee lane before Wolfkin could complete a single claw cycle.

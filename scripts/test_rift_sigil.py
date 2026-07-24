@@ -210,6 +210,22 @@ def main():
         "complete opening route did not unlock boss threshold"
 
     # The invariant repeats for every dungeon, not just the opening one.
+    # Start that contract from a fresh room runtime. The opening boss is now a
+    # real 224px arena; debugger-mutating its room counter would intentionally
+    # preserve that live wide-world boundary until a normal room transaction
+    # resets it, so x=144 would no longer be the east exit. Persistence is the
+    # behavior under test here, not leaked arena-private camera state.
+    pb.stop(save=False)
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    for _ in range(240):
+        pb.tick()
+    pb.button("start")
+    for _ in range(30):
+        pb.tick()
+    pb.button("a")
+    for _ in range(60):
+        pb.tick()
+
     # Simulate a boss-1 clear, take local room 1 south into local room 2, and make
     # sure that stage two receives a distinct objective and gate bit.
     clear_entities()
