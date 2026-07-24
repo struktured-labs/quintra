@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.65: Unfolding Compass](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.66: Objective Wings](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,35 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.65**, published after the complete build,
+The current cartridge is **v0.18.66**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Dungeons now contain a real macro-scale junction instead of only a long
+corridor.** Local room one branches east around the Sigil/Warden/Waystone
+objective wing and south into the deeper expedition. The two paths rejoin at
+room ten, forming one large, memorable loop on the actual 6×5 playfield.
+Following the staged objectives takes 19–29 room-to-room moves across the
+campaign, while a player who experiments with the deep branch can recognize
+the missed wing on SELECT and route back deliberately. Seeded room geometry,
+encounters, puzzles, rewards, and nonlinear Rift Wells remain roguelike; the
+large loop is a learnable geographic fixture rather than another random
+shortcut.
+
+**One-tile scenery is solid across the champion's complete width.** A 12px
+collision footprint can cover three 8px tiles, so the former two-corner test
+could miss a pillar directly under the hero's centre. That explained both the
+reported bottom-edge clipping and a deterministic top-wall pocket in the
+nine-stage controller run. Normal movement and dashes now sample left, centre,
+and right; a live-ROM regression attacks the exact centre-line gap. A hero
+knocked partly into scenery can still move out until the exceptional overlap
+clears, preventing collision correctness from becoming a new soft-lock.
+
+**The Compass exposes the junction in the same visual language used in play.**
+After room one, SELECT shows the current cyan square plus two hollow frontier
+squares—east toward the visible violet Sigil and south toward the deep route.
+Both connecting lines are drawn from the cartridge's reciprocal door graph.
+This is direct evidence that the abstract squares represent rooms and exits,
+not a disguised stage counter.
 
 **The Compass now unfolds as the dungeon is explored.** SELECT begins with
 only the current 16×16 room square and one hollow reachable frontier square.
@@ -55,11 +82,11 @@ not pretend that padding the room counter solves them.
 **Dungeon room count now becomes real traversal distance.** The former graph
 added a vertical shortcut between every adjacent row, collapsing nominal
 20–30-room stages into only 7–16 entrance-to-boss rooms. Each dungeon now owns
-one seed-stable loop total. Across the campaign, actual entrance-to-boss
-distance grows from 12 to 27 rooms and the required Sigil/Warden/Waystone route
-from 15 to 27 rooms. Long snake rows form distinct wings instead of a compact
-Manhattan grid, while retaining a roguelike loop and the nonlinear
-room-2/room-8 Rift Well pair.
+one large objective loop and no cross-map Manhattan seams. Across the
+campaign, the direct entrance-to-boss path spans 12–22 room visits, while the
+required Sigil/Warden/Waystone expedition spans 19–29 transitions. Long snake
+rows become recognizable wings instead of a compact rectangle, while retaining
+the nonlinear room-2/room-8 Rift Well pair.
 
 **The SELECT Compass reads as a room map on the native LCD.** Each
 dungeon cell is now a 16×16 outlined square—four times the rendered area of
@@ -77,11 +104,12 @@ campaign starts at 20 rooms and grows through 21, 22,
 23, 24, 25, 26, 28, and 30 rooms, including each Colossus arena: **219 dungeon
 screens** in a successful run.
 Every dungeon inhabits a 6×5 footprint. A guaranteed winding spine makes the
-whole route traversable, while one run-seeded vertical seam in the entire
-dungeon adds a different loop instead of opening every row pair and collapsing
-the maze into a short Manhattan walk. The SELECT Compass renders the same actual
-edges in a compressed tile-native 6×5 graph, including the full 30-room Void
-route. Nonlinear Rift Wells remain separate room-2/room-8 shortcuts.
+whole route traversable, while the fixed room-1/room-10 junction makes the
+first two rows a large objective loop instead of opening every row pair and
+collapsing the maze into a short Manhattan walk. The SELECT Compass renders
+the same actual edges in a compressed tile-native 6×5 graph, including the
+full 30-room Void route. Nonlinear Rift Wells remain seed-driven
+room-2/room-8 shortcuts.
 v0.18.60/v0.18.61 suspend saves migrate their stage, town, world anchor,
 sanctuary, or boss threshold into the larger campaign. Secret caches now
 author an explicit return doorway, so a passage revealed through a closed maze
@@ -1970,7 +1998,7 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.65 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.18.66 release ROM occupies 128 KiB. Its media,
 370 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, and transition-audio contracts passed
@@ -1986,8 +2014,8 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.65 build has 1,058 bytes in bank 1, 1,619 in bank 2,
-1,024 in bank 3, 2,824 in bank 4, 2,769 in bank 5, and 9,442 in bank 6.
+ROM. The current v0.18.66 build has 1,362 bytes in bank 1, 1,619 in bank 2,
+1,727 in bank 3, 2,824 in bank 4, 2,769 in bank 5, and 8,699 in bank 6.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -2316,8 +2344,8 @@ turning early runs into a wall, and the creator's music-composition pass. New
 content is welcome only when it fits that budget and keeps the reproducible
 route healthy. The compact topology has now been replaced by a run-deepening
 20-to-30-room ramp, including each boss arena. It totals 219 dungeon screens,
-uses a 6×5 winding maze with run-seeded loop seams, requires the second puzzle
-and deep Warden in every stage, adds a third miniboss to later routes,
+uses a 6×5 winding maze with a large objective-wing junction, requires the
+second puzzle and deep Warden in every stage, adds a third miniboss to later routes,
 and retains the transition-latency budget so extra exploration does not restore
 the old doorway wait. Riftwild and the villages remain separate between-stage
 spaces.

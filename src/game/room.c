@@ -465,6 +465,61 @@ static u8 is_full_body_obstacle_at(i16 px, i16 py) {
          || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
 }
 
+// A 12px-wide collision box can straddle three 8px tiles. Checking only its
+// corners lets a one-tile pillar sit invisibly beneath the body's centre:
+// the hero can walk through its lower edge and become trapped on the far
+// side. Sample the centre column as well as both edges for every move.
+static u8 player_feet_blocked_at(i16 x, i16 y) {
+    u8 n = 0;
+    if (!is_walkable_at(x + 2,  y + 8))  n++;
+    if (!is_walkable_at(x + 8,  y + 8))  n++;
+    if (!is_walkable_at(x + 13, y + 8))  n++;
+    if (!is_walkable_at(x + 2,  y + 15)) n++;
+    if (!is_walkable_at(x + 8,  y + 15)) n++;
+    if (!is_walkable_at(x + 13, y + 15)) n++;
+    return n;
+}
+
+static u8 player_body_obstacles_at(i16 x, i16 y) {
+    u8 n = 0;
+    if (is_full_body_obstacle_at(x + 2,  y))     n++;
+    if (is_full_body_obstacle_at(x + 8,  y))     n++;
+    if (is_full_body_obstacle_at(x + 13, y))     n++;
+    if (is_full_body_obstacle_at(x + 2,  y + 7)) n++;
+    if (is_full_body_obstacle_at(x + 8,  y + 7)) n++;
+    if (is_full_body_obstacle_at(x + 13, y + 7)) n++;
+    return n;
+}
+
+static u8 player_feet_walkable_at(i16 x, i16 y) {
+    return player_feet_blocked_at(x, y) == 0;
+}
+
+// Knockback can put a body a few pixels inside scenery even though ordinary
+// input cannot enter it. Permit movement until that exceptional overlap is
+// clear; an unobstructed player can still never take the first step into a
+// solid tile. Requiring the sampled overlap count to decrease every pixel
+// creates another trap when the left/centre/right probes change tile columns.
+static u8 player_horizontal_step_allowed(i16 nx, i16 y) {
+    u8 next = player_feet_blocked_at(nx, y);
+    if (next == 0) return 1;
+    {
+        u8 current = player_feet_blocked_at(player.x, y);
+        return current != 0;
+    }
+}
+
+static u8 player_vertical_step_allowed(i16 x, i16 ny) {
+    u8 next = (u8)(player_feet_blocked_at(x, ny)
+        + player_body_obstacles_at(x, ny));
+    if (next == 0) return 1;
+    {
+        u8 current = (u8)(player_feet_blocked_at(x, player.y)
+            + player_body_obstacles_at(x, player.y));
+        return current != 0;
+    }
+}
+
 // A spike is a readable positional tax, never a soft-lock. Contact can occur
 // after an enemy knockback or at a sub-tile seam where the player's attempted
 // escape is still resolving. When an immediately adjacent body position is
@@ -479,10 +534,7 @@ static void room_stumble_off_hazard(void) {
         ppos_t nx = (ppos_t)(player.x + dx[i]);
         ppos_t ny = (ppos_t)(player.y + dy[i]);
         if (room_tile_at_px(nx + 8, ny + 12) == BGT_SPIKES) continue;
-        if (is_walkable_at(nx + 2,  ny + 8)
-            && is_walkable_at(nx + 13, ny + 8)
-            && is_walkable_at(nx + 2,  ny + 15)
-            && is_walkable_at(nx + 13, ny + 15)) {
+        if (player_feet_walkable_at(nx, ny)) {
             player.x = nx;
             player.y = ny;
             return;
@@ -1268,22 +1320,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             for (s = 0; s < 3; ++s) {
                 if (dash_dx) {
                     ppos_t nx = (ppos_t)(player.x + dash_dx);
-                    if (is_walkable_at(nx + 2,  player.y + 8)
-                        && is_walkable_at(nx + 13, player.y + 8)
-                        && is_walkable_at(nx + 2,  player.y + 15)
-                        && is_walkable_at(nx + 13, player.y + 15))
+                    if (player_horizontal_step_allowed(nx, player.y))
                         player.x = nx;
                 }
                 if (dash_dy) {
                     ppos_t ny = (ppos_t)(player.y + dash_dy);
-                    if (is_walkable_at(player.x + 2,  ny + 8)
-                        && is_walkable_at(player.x + 13, ny + 8)
-                        && is_walkable_at(player.x + 2,  ny + 15)
-                        && is_walkable_at(player.x + 13, ny + 15)
-                        && !is_full_body_obstacle_at(player.x + 2, ny)
-                        && !is_full_body_obstacle_at(player.x + 13, ny)
-                        && !is_full_body_obstacle_at(player.x + 2, ny + 7)
-                        && !is_full_body_obstacle_at(player.x + 13, ny + 7))
+                    if (player_vertical_step_allowed(player.x, ny))
                         player.y = ny;
                 }
             }
@@ -1447,23 +1489,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // overhangs walls above; the body never buries into terrain.
             if (dx) {
                 ppos_t nx = (ppos_t)(player.x + dx);
-                if (is_walkable_at(nx + 2,  player.y + 8)
-                    && is_walkable_at(nx + 13, player.y + 8)
-                    && is_walkable_at(nx + 2,  player.y + 15)
-                    && is_walkable_at(nx + 13, player.y + 15)) {
+                if (player_horizontal_step_allowed(nx, player.y)) {
                     player.x = nx;
                 }
             }
             if (dy) {
                 ppos_t ny = (ppos_t)(player.y + dy);
-                if (is_walkable_at(player.x + 2,  ny + 8)
-                    && is_walkable_at(player.x + 13, ny + 8)
-                    && is_walkable_at(player.x + 2,  ny + 15)
-                    && is_walkable_at(player.x + 13, ny + 15)
-                    && !is_full_body_obstacle_at(player.x + 2, ny)
-                    && !is_full_body_obstacle_at(player.x + 13, ny)
-                    && !is_full_body_obstacle_at(player.x + 2, ny + 7)
-                    && !is_full_body_obstacle_at(player.x + 13, ny + 7)) {
+                if (player_vertical_step_allowed(player.x, ny)) {
                     player.y = ny;
                 }
             }

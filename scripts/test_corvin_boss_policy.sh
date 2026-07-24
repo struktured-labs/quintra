@@ -9,17 +9,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-corvin-boss.XXXXXX)"
 
-# Frame 740 with replay id 27 enters run seed 2064128431 on the current ROM.
+# Frame 680 with replay id 27 enters run seed 2064128483 on the current ROM.
 # It survives the expanded Sigil/Warden route and reaches a real Normal
 # colossus with enough health for the test to isolate orbit pressure instead
 # of measuring unrelated route attrition.
 QUINTRA_BALANCE_RUNS=27 QUINTRA_BALANCE_CLASSES=2 \
   QUINTRA_BALANCE_FRAMES=14000 QUINTRA_BALANCE_HOST_TIMEOUT=45 \
-  QUINTRA_BALANCE_TARGET_FRAME=740 \
+  QUINTRA_BALANCE_TARGET_FRAME=680 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
-awk -F, -v expected_seed=2064128431 '
+awk -F, -v expected_seed=2064128483 '
   NR == 1 {
     for (i = 1; i <= NF; ++i) col[$i] = i
     next

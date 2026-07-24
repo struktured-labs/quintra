@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Regression: Vespine's close Stinger benefits from the measured pulse-fire
 # giant lane. Paired baseline cleared one first boss; classwise play must
-# retain at least two. `max_combat_frames` is a whole-room dwell measure, so
-# a later cleared multi-enemy room is not treated as a boss-policy stall here.
+# retain at least two. Easy is setup only: it preserves movement and attack
+# patterns while keeping the expanded pre-boss route from turning this into
+# a Flutterbat attrition test. `max_combat_frames` is a whole-room dwell
+# measure, so a later cleared multi-enemy room is not treated as a boss-policy
+# stall here.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +16,7 @@ for replay in '1 440 2064128755' '2 540 2064128343' '3 400 2064128731'; do
   read -r run frame seed <<EOF
 $replay
 EOF
-  QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=4 \
+  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=4 \
     QUINTRA_BALANCE_TARGET_FRAME="$frame" \
     QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=60 \
     QUINTRA_MGBA_SAVE_DIR="${OUT}.save" QUINTRA_BALANCE_OUT="$OUT" \

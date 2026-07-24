@@ -49,22 +49,23 @@ def main() -> None:
 
     route_lengths = []
     required_lengths = []
-    loop_signatures = set()
     for stage, size in enumerate(sizes):
         for seed in (0xCAFE1234, 0xCAFE1235, 0x51A6D00D, 0xDEADBEEF):
             seen = distances(size, seed, stage)
             assert len(seen) == size, (
                 f"stage {stage + 1} seed {seed:08x} disconnected: "
                 f"{sorted(set(range(size)) - seen.keys())}")
-            # Consecutive cells are the guaranteed winding spine.
+            # Consecutive cells remain the guaranteed winding spine.
             assert all(any(dungeon_maze_neighbor(
                     cell, size, direction, seed, stage) == cell + 1
                     for direction in range(4))
                 for cell in range(size - 1))
+            assert dungeon_maze_neighbor(1, size, 2, seed, stage) == 10
+            assert dungeon_maze_neighbor(10, size, 0, seed, stage) == 1
             route_lengths.append(seen[size - 1])
-            # One and only one non-turn vertical edge creates the dungeon's
-            # seeded loop. More seams collapse the long rows back into a
-            # compact Manhattan grid; zero seams would erase run variation.
+            # The fixed 1<->10 seam creates one large objective wing. Keeping
+            # every other non-turn seam closed prevents the 6x5 field from
+            # collapsing back into a compact Manhattan grid.
             extra_seams = 0
             for cell in range(size):
                 col, row = divmod(cell, GRID_W)[1], cell // GRID_W
@@ -93,15 +94,10 @@ def main() -> None:
             assert required >= size - 5, (
                 f"stage {stage + 1} seed {seed:08x} required route "
                 f"collapsed to {required}/{size}")
-            loop_signatures.add(tuple(
-                dungeon_maze_neighbor(cell, size, 2, seed, stage)
-                for cell in range(size)))
-
-    assert len(loop_signatures) >= 8, "maze seams do not vary across runs/stages"
     assert min(route_lengths) >= 11, (
-        f"procedural seams collapsed a boss route to {min(route_lengths)} rooms")
+        f"objective junction collapsed a boss route to {min(route_lengths)} rooms")
     print("[dungeon-topology] PASS 20→30 rooms, 219-screen campaign, "
-          f"one seeded loop, variants={len(loop_signatures)}, "
+          "fixed objective wing, "
           f"boss distance={min(route_lengths)}..{max(route_lengths)}, "
           f"required route={min(required_lengths)}..{max(required_lengths)}")
 

@@ -78,7 +78,7 @@ pub fn room_kind(room_counter: u8, bosses_beaten: u8) -> RoomKind {
     RoomKind { boss, miniboss, shop, rest }
 }
 
-fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> Option<u8> {
+fn dungeon_neighbor(local: u8, size: u8, dir: u8, _run_seed: u32, _stage: u8) -> Option<u8> {
     const GRID_W: u8 = 6;
     const GRID_H: u8 = 5;
     let mut row = local / GRID_W;
@@ -100,15 +100,7 @@ fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> O
     if dir == 0 || dir == 2 {
         let upper_row = if dir == 0 { row } else { old_row };
         let turn_col = if upper_row & 1 != 0 { 0 } else { GRID_W - 1 };
-        let loop_row = (((run_seed >> 16) as u8
-            ^ (run_seed >> 24) as u8
-            ^ stage.wrapping_mul(17)) & 1) as u8;
-        let mix = run_seed as u8
-            ^ (run_seed >> 8) as u8
-            ^ stage.wrapping_mul(29)
-            ^ upper_row.wrapping_mul(47);
-        let loop_col = 1 + mix % (GRID_W - 2);
-        if col != turn_col && (upper_row != loop_row || col != loop_col) {
+        if col != turn_col && !(upper_row == 0 && col == 1) {
             return None;
         }
     }

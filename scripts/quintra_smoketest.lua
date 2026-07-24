@@ -353,10 +353,10 @@ tap(KEY_DOWN); tick(15); shot("02e_vespine")
 tap(KEY_DOWN); tick(15)  -- wraps back to Wolfkin
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
--- Opening graph route follows the guaranteed 6x5 snake spine all the way to
--- the first boss. Seeded vertical seams add optional loops, but this complete
--- controller route proves the twenty-room baseline cannot collapse into the
--- old compact rectangle.
+-- Opening graph route sweeps the Sigil/Warden/Waystone objective wing before
+-- it rejoins the deeper 6x5 spine at room ten. This complete controller route
+-- proves the twenty-room baseline cannot collapse into the old compact
+-- rectangle or skip the new geographic junction.
 walk_edge(1, KEY_RIGHT); shot("04_room1"); solve_opening_push_seal()
 walk_edge(2, KEY_RIGHT); collect_rift_sigil(); shot("05_room2_sigil")
 walk_edge(3, KEY_RIGHT); record_opening_warden_boon()

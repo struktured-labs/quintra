@@ -118,13 +118,16 @@ static void map_dungeon_node(u8 x, u8 y, u8 icon, u8 knowledge) {
 // communicates "you can go here next" without revealing the rest of the
 // generated maze or making explored and unexplored paths compete visually.
 static u8 dungeon_cell_frontier(u8 cell, u8 size) {
-    // Every dungeon owns the sequential snake spine. Optional loop exits
-    // become obvious when their destination is actually visited; keeping the
-    // frontier to the guaranteed predecessor/successor is both clearer and
-    // much cheaper in this tight ROM bank than four graph queries per cell.
+    // Frontier squares must reflect every real door. In particular, local
+    // room one is now a legible junction: the objective wing continues east
+    // while the deeper route branches south. Showing both hollow squares is
+    // the visual proof that the pocket map describes space rather than a
+    // disguised room counter.
     if (cell && run_state_dungeon_cell_seen((u8)(cell - 1))) return 1;
     if ((u8)(cell + 1) < size
         && run_state_dungeon_cell_seen((u8)(cell + 1))) return 1;
+    if (cell == 1 && run_state_dungeon_cell_seen(10)) return 1;
+    if (cell == 10 && run_state_dungeon_cell_seen(1)) return 1;
     return 0;
 }
 
@@ -243,8 +246,8 @@ static void draw_dungeon_grid(void) {
     // |
     // 24 -25 -26 -27 -28 -29
     // The fixed 6×5 abstract lattice exposes the stage's eventual footprint.
-    // Every row owns the guaranteed winding spine; one seed-stable vertical
-    // seam for the entire dungeon adds one loop and appears only where it exists.
+    // Every row owns the guaranteed winding spine. The opening objective wing
+    // creates one large readable loop, and only real connections appear here.
     static const u8 gx[MAX_DUNGEON_CELLS] = {
         1, 4, 7, 10, 13, 16,
         16, 13, 10, 7, 4, 1,

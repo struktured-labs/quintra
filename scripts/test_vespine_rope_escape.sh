@@ -5,14 +5,16 @@
 # combat-stall classification. The former run-32 room-7 sample now dies before
 # the first boss because the expanded maze correctly removed its row
 # shortcuts; use the paired long-wing sample that demonstrably encounters a
-# Rope and continues beyond a boss.
+# Rope and continues beyond a boss. Easy preserves the Rope's movement and
+# body-pin geometry while keeping the longer setup route from ending on
+# unrelated attrition.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-vespine-rope.XXXXXX)"
 
-QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=4 \
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=4 \
   QUINTRA_BALANCE_TARGET_FRAME=540 \
   QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=60 \
   QUINTRA_BALANCE_OUT="$OUT" \

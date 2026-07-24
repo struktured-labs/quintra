@@ -131,6 +131,38 @@ def main() -> None:
         pb.tick()
     assert pb.memory[screen] == SCREEN_ROOM, "B did not return from Spirit Compass"
 
+    # Room one is the dungeon's first true junction. The Sigil wing continues
+    # east while the deeper route branches south to room ten. Both real doors
+    # must appear as equally clear hollow frontier squares, proving that this
+    # is an abstract spatial map rather than a decorated linear room counter.
+    pb.memory[rs + 1] = STAGE_START[0] + 1
+    pb.memory[rs + 20] = 0x03
+    pb.memory[rs + 29] = 0
+    pb.memory[rs + 31] = 0
+    pb.memory[rs + 33] = 0
+    pb.button("select")
+    for _ in range(30):
+        pb.tick()
+    assert node_tiles(pb, 1) == expected_node(BGT_MAP_NODE_HERE_BASE), \
+        "Compass lost current marker at objective-wing junction"
+    assert node_tiles(pb, 2) == expected_node(BGT_MAP_NODE_UNKNOWN_BASE), \
+        "Compass lost eastward Sigil-wing frontier"
+    assert node_tiles(pb, 10) == expected_node(BGT_MAP_NODE_UNKNOWN_BASE), \
+        "Compass lost southward deep-route frontier"
+    assert map_tile(pb, 6, 2) == BGT_MAP_PATH_H_DIM, \
+        "Compass lost eastward junction link"
+    assert map_tile(pb, 5, 3) == BGT_MAP_PATH_V_DIM, \
+        "Compass lost southward junction link"
+    assert sum(map_tile(pb, GX[i], GY[i]) == BGT_MAP_NODE_UNKNOWN_BASE
+               for i in range(20)) == 2, \
+        "Compass junction does not expose exactly two route choices"
+    pb.screen.image.save(ROOT / "tmp" / "compass-objective-junction.png")
+    pb.button("b")
+    for _ in range(30):
+        pb.tick()
+    assert pb.memory[screen] == SCREEN_ROOM, \
+        "B did not return from objective-wing Compass"
+
     # Visiting the sanctuary cell reveals the adjacent danger node and the
     # connecting line before the player commits to the boss room.
     pb.memory[rs + 1] = STAGE_BOSS_ROOM[0] - 1

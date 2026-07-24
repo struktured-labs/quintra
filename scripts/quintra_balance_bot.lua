@@ -34,16 +34,6 @@ function dungeon_size(stage)
     return STAGE_BOSS[index] - STAGE_START[index] + 1
 end
 
-local function xor8(a, b)
-    local value, place = 0, 1
-    a, b = a % 256, b % 256
-    for _ = 1, 8 do
-        if (a % 2) ~= (b % 2) then value = value + place end
-        a, b, place = math.floor(a / 2), math.floor(b / 2), place * 2
-    end
-    return value
-end
-
 function dungeon_neighbor_local(cell, size, dir, stage)
     local row, offset = math.floor(cell / 6), cell % 6
     local col = (row % 2 == 1) and (5 - offset) or offset
@@ -58,12 +48,8 @@ function dungeon_neighbor_local(cell, size, dir, stage)
     if dir == 0 or dir == 2 then
         local upper = (dir == 0) and row or old_row
         local turn = (upper % 2 == 1) and 0 or 5
-        local loop_row = xor8(xor8(emu:read8(RS + 4), emu:read8(RS + 5)),
-            ((stage or 0) * 17) % 256) % 2
-        local seed = xor8(xor8(emu:read8(RS + 2), emu:read8(RS + 3)),
-            xor8(((stage or 0) * 29) % 256, (upper * 47) % 256))
-        local seam = 1 + (seed % 4)
-        if col ~= turn and (upper ~= loop_row or col ~= seam) then return nil end
+        if upper == 0 and col == 1 then return next_cell end
+        if col ~= turn then return nil end
     end
     return next_cell
 end
@@ -848,6 +834,28 @@ function pixel_full_body_obstacle(x, y)
     return tile == 21 or tile == 25 or tile == 28 or tile == 29 or tile == 30
 end
 
+function pixel_feet_blocked(px, py)
+    local n = 0
+    if not pixel_walkable(px + 2, py + 8) then n = n + 1 end
+    if not pixel_walkable(px + 8, py + 8) then n = n + 1 end
+    if not pixel_walkable(px + 13, py + 8) then n = n + 1 end
+    if not pixel_walkable(px + 2, py + 15) then n = n + 1 end
+    if not pixel_walkable(px + 8, py + 15) then n = n + 1 end
+    if not pixel_walkable(px + 13, py + 15) then n = n + 1 end
+    return n
+end
+
+function pixel_body_obstacles(px, py)
+    local n = 0
+    if pixel_full_body_obstacle(px + 2, py) then n = n + 1 end
+    if pixel_full_body_obstacle(px + 8, py) then n = n + 1 end
+    if pixel_full_body_obstacle(px + 13, py) then n = n + 1 end
+    if pixel_full_body_obstacle(px + 2, py + 7) then n = n + 1 end
+    if pixel_full_body_obstacle(px + 8, py + 7) then n = n + 1 end
+    if pixel_full_body_obstacle(px + 13, py + 7) then n = n + 1 end
+    return n
+end
+
 function can_step(px, py, key)
     local nx, ny = px, py
     if key == KEY_RIGHT then nx = nx + 1
@@ -855,20 +863,18 @@ function can_step(px, py, key)
     elseif key == KEY_DOWN then ny = ny + 1
     elseif key == KEY_UP then ny = ny - 1
     else return true end
-    return pixel_walkable(nx + 2, ny + 8)
-        and pixel_walkable(nx + 13, ny + 8)
-        and pixel_walkable(nx + 2, ny + 15)
-        and pixel_walkable(nx + 13, ny + 15)
-        -- Mirror room.c's vertical full-sprite rule for crates and small
-        -- pillars. The earlier controller modeled only the feet box here,
-        -- so its otherwise exact pixel BFS could repeatedly ask the hero to
-        -- walk upward through the underside of a pillar—a move the cartridge
-        -- correctly rejects.
-        and (key == KEY_LEFT or key == KEY_RIGHT
-            or (not pixel_full_body_obstacle(nx + 2, ny)
-                and not pixel_full_body_obstacle(nx + 13, ny)
-                and not pixel_full_body_obstacle(nx + 2, ny + 7)
-                and not pixel_full_body_obstacle(nx + 13, ny + 7)))
+    local next_blocked = pixel_feet_blocked(nx, ny)
+    -- Mirror room.c's vertical full-sprite rule for crates and small pillars,
+    -- including its knockback depenetration contract.
+    if key == KEY_UP or key == KEY_DOWN then
+        next_blocked = next_blocked + pixel_body_obstacles(nx, ny)
+    end
+    if next_blocked == 0 then return true end
+    local current_blocked = pixel_feet_blocked(px, py)
+    if key == KEY_UP or key == KEY_DOWN then
+        current_blocked = current_blocked + pixel_body_obstacles(px, py)
+    end
+    return current_blocked > 0
 end
 
 -- A tile node can be feet-valid while the hero's upper body is tucked under
@@ -2071,6 +2077,21 @@ function door_step(px, py)
         return fallback
     end
     if not target then
+        -- The tile graph deliberately excludes canonical body cells that
+        -- overlap scenery. Enemy knockback can nevertheless leave the live
+        -- pixel body in exactly that exceptional state; room.c permits
+        -- ordinary depenetration until it reaches open floor. Mirror that
+        -- recovery before applying the generic DOWN fallback, otherwise a
+        -- bottom-edge overlap can oscillate forever outside the BFS graph.
+        local overlap = pixel_feet_blocked(px, py)
+            + pixel_body_obstacles(px, py)
+        if overlap > 0 then
+            local escape = py > 60 and {KEY_UP, KEY_LEFT, KEY_RIGHT, KEY_DOWN}
+                or {KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP}
+            for _, candidate in ipairs(escape) do
+                if can_step(px, py, candidate) then return candidate end
+            end
+        end
         -- Corvin's ranged orbit can land in the narrow top-edge cover seam
         -- several pixels at a time; it needs the continuous lookahead below
         -- to avoid reversing across that same seam. Other kits recover more
@@ -3145,13 +3166,15 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
             end
         elseif target.kind == 1 and target.giant == 0
-            and (CLASS == 0 or CLASS == 1) then
+            and (CLASS == 0 or CLASS == 1 or CLASS == 2) then
             -- The required Warden is stationary, large, and often placed
             -- across a generated U-shaped court. A tile-coarse route can
             -- alternate at the lower corner forever: one cell says LEFT is
             -- the approach, while the pixel body cannot finish that first
             -- step without committing around the wall. Use the exact
             -- feet-box lane search already proven for other fixed hazards.
+            -- Corvin needs this too now that centre-column cartridge
+            -- collision correctly rejects the former pillar tunnel.
             local warden_range = held_style == "spear" and 88
                 or held_style == "claw" and 64
                 or held_style == "ranged" and 140 or 52

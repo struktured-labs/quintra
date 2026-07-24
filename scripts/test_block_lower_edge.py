@@ -83,6 +83,35 @@ def small_obstacle_fixture(pb):
     pb.memory[TM + ty * ROOM_W + tx] = BGT_PILLAR
 
 
+def center_obstacle_fixture(pb):
+    """A one-tile pillar centred between both corner probes stays solid."""
+    fixture(pb)
+    tx, ty = 10, 6
+    for y in (ty, ty + 1):
+        for x in range(tx - 1, tx + 2):
+            pb.memory[TM + y * ROOM_W + x] = BGT_FLOOR
+    pb.memory[TM + ty * ROOM_W + tx] = BGT_PILLAR
+    # Collision edges land in columns 9 and 11; only the new centre sample
+    # sees the pillar in column 10.
+    put16(pb, PL + 9, 77)
+    put16(pb, PL + 11, 64)
+    pb.memory[PL + 23] = 0
+
+
+def center_overlap_fixture(pb):
+    """Knockback-style overlap can move outward without permitting entry."""
+    fixture(pb)
+    tx, ty = 10, 8
+    for y in (ty, ty + 1):
+        for x in range(tx - 1, tx + 3):
+            pb.memory[TM + y * ROOM_W + x] = BGT_FLOOR
+    pb.memory[TM + ty * ROOM_W + tx] = BGT_PILLAR
+    # Centre sample begins inside the pillar, as can happen after knockback.
+    put16(pb, PL + 9, 77)
+    put16(pb, PL + 11, 56)
+    pb.memory[PL + 23] = 0
+
+
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
@@ -125,8 +154,35 @@ def main():
     # all the way through to y=48.
     assert pillar_y >= 56, f"walk entered small solid tile through lower edge: y={pillar_y}"
 
+    center_obstacle_fixture(pb)
+    pb.button_press("up")
+    for _ in range(40):
+        pb.tick()
+    pb.button_release("up")
+    for _ in range(4):
+        pb.tick()
+    center_y = read16(pb, PL + 11)
+    assert center_y >= 56, (
+        f"walk tunnelled through centre of one-tile pillar: y={center_y}"
+    )
+
+    center_overlap_fixture(pb)
+    pb.button_press("left")
+    for _ in range(30):
+        pb.tick()
+    pb.button_release("left")
+    for _ in range(4):
+        pb.tick()
+    escaped_x = read16(pb, PL + 9)
+    assert escaped_x <= 70, (
+        f"knockback overlap could not depenetrate from pillar: x={escaped_x}"
+    )
+
     pb.stop(save=False)
-    print(f"[block-lower-edge] PASS crate walk y={walked_y}, dash y={dashed_y}; pillar y={pillar_y}")
+    print(
+        f"[block-lower-edge] PASS crate walk y={walked_y}, dash y={dashed_y}; "
+        f"pillar y={pillar_y}, centre pillar y={center_y}, escape x={escaped_x}"
+    )
 
 
 if __name__ == "__main__":

@@ -118,29 +118,12 @@ u8 run_state_dungeon_cell(void) {
     return run_state_dungeon_local();
 }
 
-// Pick one extra vertical seam for the entire dungeon. The former seam in
-// every adjacent row pair let a nominal 20-30-room maze collapse into a
-// seven-room Manhattan sprint. One seed-stable loop preserves roguelike route
-// choice while the long snake rows now read as separated dungeon wings.
-static u8 dungeon_loop_row(void) {
-    u8 stage = campaign_stage(run_state.bosses_beaten);
-    u8 mix = (u8)(run_state.run_seed >> 16)
-        ^ (u8)(run_state.run_seed >> 24)
-        ^ (u8)(stage * 17);
-    // Rows zero and one are fully populated in every 20+ room stage, so the
-    // extra seam always exists rather than disappearing in a partial tail.
-    return (u8)(mix & 1);
-}
-
-static u8 dungeon_loop_col(u8 upper_row) {
-    u8 stage = campaign_stage(run_state.bosses_beaten);
-    u8 mix = (u8)run_state.run_seed
-        ^ (u8)(run_state.run_seed >> 8)
-        ^ (u8)(stage * 29)
-        ^ (u8)(upper_row * 47);
-    return (u8)(1 + (mix % (DUNGEON_GRID_W - 2)));
-}
-
+// Every dungeon owns one large objective loop between its first two rows:
+// cell 1 branches south to cell 10 while the ordinary 1..10 snake remains
+// intact. The Sigil/Warden/Waystone fixtures live around that loop, so a
+// knowledgeable run can sweep them in order while a curious run can take the
+// junction toward the deeper route and later understand where it diverged.
+//
 u8 run_state_dungeon_cell_neighbor(u8 local, u8 dir) {
     u8 row, offset, col, old_row, next;
     if (local >= run_state_dungeon_size()) return 0xFF;
@@ -168,8 +151,7 @@ u8 run_state_dungeon_cell_neighbor(u8 local, u8 dir) {
         u8 upper_row = (dir == DIR_N) ? row : old_row;
         u8 turn_col = (upper_row & 1) ? 0 : (DUNGEON_GRID_W - 1);
         if (col != turn_col
-            && (upper_row != dungeon_loop_row()
-                || col != dungeon_loop_col(upper_row)))
+            && !(upper_row == 0 && col == 1))
             return 0xFF;
     }
     return next;
