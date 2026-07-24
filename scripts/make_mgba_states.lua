@@ -268,9 +268,9 @@ local function verify_loaded(checkpoint, stage, room, world_mode)
     if checkpoint == "boss" and not live_colossus() then
         error("boss checkpoint restored without a live Colossus")
     elseif checkpoint == "court"
-        and (emu:read8(LR) == 0 or emu:read8(WW) ~= 224
-            or emu:read8(WH) ~= 200) then
-        error("court checkpoint restored without its 224x200 dungeon field")
+        and (emu:read8(LR) == 0 or emu:read8(WW) ~= 248
+            or emu:read8(WH) ~= 248) then
+        error("court checkpoint restored without its 248x248 dungeon field")
     elseif checkpoint == "sanctuary" and hostile_count() ~= 0 then
         error("sanctuary checkpoint restored with hostiles")
     elseif checkpoint == "riftwild" and emu:read8(RS + 18) ~= 0 then

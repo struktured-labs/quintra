@@ -82,7 +82,7 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     cairn in the room-role layer. Puzzle mechanics have their own live-ROM
     contract; parity still compares every unaffected base-generator cell.
 
-    Scrolling 224×200 dungeon districts deliberately replace the complete
+    Scrolling 248×248 dungeon districts deliberately replace the complete
     compact base plane after consuming its established RNG sequence. Their
     dedicated live-ROM contract validates the whole 28×25 field; parity
     separates all 340 legacy cells here and retains room 8 as an exact compact

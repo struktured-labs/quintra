@@ -222,13 +222,17 @@ static void stamp_world_landmark(u8 family) {
     for (i = 0; i < 8; ++i) room_tilemap[ly[i]][lx[i]] = tile;
 }
 
-// Columns 20..27 turn every Riftwild node into a 224px field. The compact
+// Columns 20..30 turn every Riftwild node into a 248px field. The compact
 // room_tilemap remains stable for old cartridge tooling; this authored strip
 // is nevertheless real collision terrain, not a visual panorama. Its paired
 // landmark makes crossing the former screen boundary lead somewhere distinct.
 static void generate_world_extension(u8 edges, u8 family, u32 seed) {
-    static const u8 lx[8] = { 1, 2, 1, 2, 4, 5, 4, 5 };
-    static const u8 ly[8] = { 4, 4, 5, 5, 11, 11, 12, 12 };
+    static const u8 lx[12] = {
+        1, 2, 1, 2, 4, 5, 4, 5, 8, 9, 8, 9
+    };
+    static const u8 ly[12] = {
+        4, 4, 5, 5, 11, 11, 12, 12, 6, 6, 7, 7
+    };
     u8 x, y;
     u8 tile = (family == 0) ? BGT_WILD_FLOWER
         : (family == 1) ? BGT_WILD_WATER
@@ -241,7 +245,7 @@ static void generate_world_extension(u8 edges, u8 family, u32 seed) {
                 ? BGT_TREE : BGT_GRASS;
         }
     }
-    // A real east graph edge follows the worn trail to the true x=216 door.
+    // A real east graph edge follows the worn trail to the true x=240 door.
     if (edges & 0x02) {
         for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x)
             room_world_extension[8][x] =
@@ -249,17 +253,17 @@ static void generate_world_extension(u8 edges, u8 family, u32 seed) {
         room_world_extension[8][ROOM_WIDE_EXT_TILES - 1] =
             room_world_extension[9][ROOM_WIDE_EXT_TILES - 1] = BGT_DOOR;
     }
-    for (x = 0; x < 8; ++x)
+    for (x = 0; x < 12; ++x)
         room_world_extension[ly[x]][lx[x]] = tile;
     // Two seed-stable trees break the rectangular silhouette without touching
     // the landmark blocks or the broad center traversal lanes.
-    room_world_extension[3 + ((seed >> 3) & 3)][6] = BGT_TREE;
+    room_world_extension[3 + ((seed >> 3) & 3)][7] = BGT_TREE;
     room_world_extension[10 + ((seed >> 5) & 3)][0] = BGT_TREE;
 }
 
-// Rows 17..24 extend the same logical cell southward behind a real vertical
+// Rows 17..30 extend the same logical cell southward behind a real vertical
 // camera. The central trail crosses the obsolete row-16 boundary; only the
-// true global row 24 can advance to a southern graph neighbour.
+// true global row 30 can advance to a southern graph neighbour.
 static void generate_world_bottom(u8 edges, u8 family, u32 seed) {
     u8 x, y;
     u8 tile = (family == 0) ? BGT_WILD_FLOWER
@@ -286,7 +290,9 @@ static void generate_world_bottom(u8 edges, u8 family, u32 seed) {
     // A third landmark makes the southern reveal a destination, not padding.
     room_world_bottom[2][14] = room_world_bottom[2][15] =
         room_world_bottom[3][14] = room_world_bottom[3][15] = tile;
-    room_world_bottom[4 + ((seed >> 7) & 1)][22] = BGT_TREE;
+    room_world_bottom[9][24] = room_world_bottom[9][25] =
+        room_world_bottom[10][24] = room_world_bottom[10][25] = tile;
+    room_world_bottom[7 + ((seed >> 7) & 1)][22] = BGT_TREE;
     room_world_bottom[1 + ((seed >> 9) & 1)][4] = BGT_TREE;
 }
 
@@ -532,7 +538,7 @@ void procgen_generate_current_room(void) BANKED {
         // first two cells of the next row. Objective fixtures at local 7 and
         // the opening branch remain compact/readable, while ordinary cells
         // 4/5/6, 10/11/12/13, 16/17/18/19, and 22/23/24/25 can sustain
-        // several consecutive 224x200 fields. This makes the existing
+        // several consecutive 248x248 fields. This makes the existing
         // 20..30-cell graph feel geographically large without padding it
         // with more loading thresholds or filler counters.
         procgen_current_room_is_large = (!run_state.world_mode
@@ -917,7 +923,7 @@ void procgen_generate_current_room(void) BANKED {
 
     // Each long dungeon row resolves into a true scrolling turn court. The
     // base generator above still consumes its exact established RNG sequence;
-    // this deterministic role layer then authors the complete 28x25 field
+    // this deterministic role layer then authors the complete 31x31 field
     // without creating a second random stream.
     if (procgen_current_room_is_large) {
         room_generate_dungeon_court(seed);
@@ -1411,14 +1417,14 @@ void procgen_generate_current_room(void) BANKED {
                             // guaranteed-open southeast trail, beyond BOTH old
                             // viewport seams; no extra RNG is consumed.
                             if (run_state.world_mode && (spawned & 1)) {
-                                entities[idx].x = FIX8(192);
-                                entities[idx].y = FIX8(160);
+                                entities[idx].x = FIX8(216);
+                                entities[idx].y = FIX8(200);
                             } else if (procgen_current_room_is_large) {
                                 // The small pacing encounter occupies both
                                 // the middle and far field, proving this is
                                 // gameplay space rather than empty overscan.
-                                entities[idx].x = FIX8(spawned ? 168 : 184);
-                                entities[idx].y = FIX8(spawned ? 48 : 152);
+                                entities[idx].x = FIX8(spawned ? 208 : 184);
+                                entities[idx].y = FIX8(spawned ? 200 : 48);
                             }
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,

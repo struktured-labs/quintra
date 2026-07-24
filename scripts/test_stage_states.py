@@ -91,8 +91,8 @@ def main() -> None:
                 assert not obs["world_mode"]
                 assert env.pb is not None
                 assert env.pb.memory[large_room]
-                assert env.pb.memory[world_width] == 224
-                assert env.pb.memory[world_height] == 200
+                assert env.pb.memory[world_width] == 248
+                assert env.pb.memory[world_height] == 248
             elif record["checkpoint"] == "sanctuary":
                 assert record["room_counter"] == STAGE_BOSS_ROOM[stage - 1] - 1
                 assert not obs["hostiles"] and not giants

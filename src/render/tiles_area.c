@@ -86,7 +86,7 @@ void tiles_prepare_wide_field(void) BANKED {
             tiles[x] = tile;
             attrs[x] = wide_attr(tile, outdoor);
         }
-        // Column 28 is deterministic camera/shake overscan.
+        // Column 31 is deterministic camera/shake overscan.
         tiles[ROOM_WIDE_EXT_TILES] = outdoor ? BGT_TREE : BGT_WALL;
         attrs[ROOM_WIDE_EXT_TILES] = BGPAL_WALL;
         VBK_REG = 0;
@@ -94,7 +94,7 @@ void tiles_prepare_wide_field(void) BANKED {
         VBK_REG = 1;
         set_bkg_tiles(ROOM_W, y, ROOM_WIDE_EXT_TILES + 1, 1, attrs);
     }
-    // Rows 17..24 are complete 28-column terrain, not merely right-side
+    // Rows 17..30 are complete 31-column terrain, not merely right-side
     // projection. They use the same outdoor palette language as the top.
     for (y = 0; y < ROOM_WIDE_BOTTOM_ROWS; ++y) {
         for (x = 0; x < ROOM_WIDE_W_TILES; ++x) {
@@ -109,7 +109,7 @@ void tiles_prepare_wide_field(void) BANKED {
         VBK_REG = 1;
         set_bkg_tiles(0, (u8)(ROOM_H + y), ROOM_WIDE_W_TILES + 1, 1, attrs);
     }
-    // Row 25 and column 28 are deterministic camera/shake overscan.
+    // Row 31 and column 31 are deterministic camera/shake overscan.
     for (x = 0; x <= ROOM_WIDE_W_TILES; ++x) {
         tiles[x] = outdoor ? BGT_TREE : BGT_WALL;
         attrs[x] = BGPAL_WALL;

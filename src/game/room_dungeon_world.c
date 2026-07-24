@@ -5,7 +5,7 @@
 #include "game/run_state.h"
 #include "render/tiles.h"
 
-// The compact 20x17 ABI and its extension strips are one logical 28x25 map.
+// The compact 20x17 ABI and its extension strips are one logical 31x31 map.
 // Keeping the coordinate split here prevents every generator pass from
 // learning three storage layouts.
 static void court_set(u8 x, u8 y, u8 tile) {
@@ -65,7 +65,7 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     u8 shift = (u8)((seed >> 5) & 1);
     u8 variant = (u8)((seed >> 11) & 3);
 
-    // Only the true 28x25 perimeter is solid. The former 20x17 edge is
+    // Only the true 31x31 perimeter is solid. The former 20x17 edge is
     // ordinary interior terrain on both axes.
     for (y = 0; y < ROOM_WIDE_H_TILES; ++y) {
         for (x = 0; x < ROOM_WIDE_W_TILES; ++x) {
@@ -80,8 +80,9 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     // a stable silhouette without freezing every expedition to one arrangement.
     court_stamp_cluster((u8)(3 + shift), 3, accent);
     court_stamp_cluster((u8)(15 - shift), 4, accent);
-    court_stamp_cluster((u8)(4 + shift), 19, accent);
-    court_stamp_cluster((u8)(21 - shift), 17, accent);
+    court_stamp_cluster((u8)(4 + shift), 21, accent);
+    court_stamp_cluster((u8)(24 - shift), 19, accent);
+    court_stamp_cluster((u8)(25 - shift), 26, accent);
     {
         // Four approach crests occupy distinct corners of the legacy
         // viewport. Combined with the independent one-tile ruin shift, this
@@ -102,8 +103,9 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     // Two recognizable side halls make camera travel expose architecture,
     // not a mostly empty floor. Seed-selected paired gaps keep both chambers
     // permeable while their walls create Penta-style firing lanes and cover.
-    court_stamp_ruin(18, 2, 8, 7, shift ? 22 : 20, 4);
-    court_stamp_ruin(13, 12, 13, 11, shift ? 20 : 17, shift ? 17 : 15);
+    court_stamp_ruin(20, 2, 9, 8, shift ? 25 : 22, 5);
+    court_stamp_ruin(14, 16, 15, 13,
+                     shift ? 24 : 20, shift ? 23 : 19);
 
     // The familiar cardinal lanes are authoritative and are carved last, so
     // no landmark or ruin can turn a visible graph threshold into decoration.
@@ -117,8 +119,8 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     }
 
     // Guaranteed body-valid encounter aprons in both distant sectors.
-    court_floor_rect(20, 5, 4, 4);
-    court_floor_rect(22, 18, 4, 4);
+    court_floor_rect(22, 5, 4, 4);
+    court_floor_rect(25, 24, 4, 4);
 
     // Only reciprocal dungeon graph edges become doors. North/south retain
     // x=9..10 and east/west y=8..9 so one threshold grammar spans all rooms.

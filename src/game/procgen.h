@@ -9,7 +9,7 @@
 // Identity of the currently generated room. Entry presentation reads this
 // explicit state instead of an undocumented HRAM scratch byte.
 extern u8 procgen_current_room_is_boss;
-// Generated approach expanses and row-turn courts are true 224x200 dungeon
+// Generated approach expanses and row-turn courts are true 248x248 dungeon
 // regions. This runtime role is derived from the current stage/local cell and
 // regenerated on load; it does not consume persistent run-state bytes.
 extern u8 procgen_current_room_is_large;

@@ -297,7 +297,7 @@ def advance_to_court(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:
 
     The checkpoint stays procgen-first: external setup only positions the
     already-qualified run at local room four, then ordinary controller input
-    asks the cartridge to generate local room five, its 224x200 architecture,
+    asks the cartridge to generate local room five, its 248x248 architecture,
     far encounter, camera, reciprocal doors, and stage presentation.
     """
     rs, player = addrs["_run_state"], addrs["_player"]
@@ -637,8 +637,8 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         checks["court_room"] = room == STAGE_START[stage] + 5
         checks["large_role"] = bool(
             pyboy.memory[addrs["_procgen_current_room_is_large"]])
-        checks["wide"] = world_width == 224
-        checks["deep"] = world_height == 200
+        checks["wide"] = world_width == 248
+        checks["deep"] = world_height == 248
         checks["dungeon_context"] = not pyboy.memory[rs + 17]
     elif checkpoint == "sanctuary":
         entities = addrs["_entities"]

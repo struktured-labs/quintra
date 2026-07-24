@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for generated 224x200 dungeon turn courts."""
+"""Live-ROM contract for generated 248x248 dungeon districts."""
 import re
 from pathlib import Path
 
@@ -10,6 +10,12 @@ ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 ROOM_W, ROOM_H = 20, 17
+WIDE_W, WIDE_H = 31, 31
+EXT_W, BOTTOM_H = WIDE_W - ROOM_W, WIDE_H - ROOM_H
+WORLD_PX = WIDE_W * 8
+FAR_EDGE = WORLD_PX - 16
+CAMERA_X_MAX = WORLD_PX - ROOM_W * 8
+CAMERA_Y_MAX = WORLD_PX - ROOM_H * 8
 
 
 def addr(name):
@@ -19,13 +25,17 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, EXT, BOTTOM, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, LARGE = map(
+(
+    RS, PL, EN, TM, EXT, BOTTOM, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y,
+    LARGE, SEALED, PUZZLE_LOCKED,
+) = map(
     addr,
     (
         "_run_state", "_player", "_entities", "_room_tilemap",
         "_room_world_extension", "_room_world_bottom", "_room_world_width",
         "_room_world_height", "_room_camera_x", "_room_camera_y",
-        "_procgen_current_room_is_large",
+        "_procgen_current_room_is_large", "_room_combat_sealed",
+        "_room_puzzle_locked",
     ),
 )
 
@@ -72,44 +82,47 @@ def main():
 
         assert pb.memory[RS + 1] == 4
         assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (224, 200)
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
         # The next graph edge is the true far east edge. Crossing it keeps
         # wide-world state and enters the paired lighter turn court.
         clear_hostiles(pb)
-        put16(pb, PL + 9, 216)
+        put16(pb, PL + 9, FAR_EDGE)
         put16(pb, PL + 11, 60)
         settle(pb)
 
         assert pb.memory[RS + 1] == 5
         assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (224, 200)
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
         # Local 5 owns reciprocal west and south links. The old east/south
-        # viewport edges are interior; only the true 28x25 perimeter closes.
+        # viewport edges are interior; only the true 31x31 perimeter closes.
         assert pb.memory[TM + 8 * ROOM_W] == 3
         assert pb.memory[TM + 9 * ROOM_W] == 3
         walkable = (1, 19, 20, 23, 31)
         assert pb.memory[TM + 8 * ROOM_W + 19] in walkable
         assert pb.memory[TM + 16 * ROOM_W + 10] in walkable
-        assert pb.memory[EXT + 8 * 8 + 7] == 2
-        assert pb.memory[EXT + 9 * 8 + 7] == 2
-        assert pb.memory[BOTTOM + 7 * 28 + 9] == 3
-        assert pb.memory[BOTTOM + 7 * 28 + 10] == 3
+        assert pb.memory[EXT + 8 * EXT_W + EXT_W - 1] == 2
+        assert pb.memory[EXT + 9 * EXT_W + EXT_W - 1] == 2
+        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9] == 3
+        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 10] == 3
         assert not any(
-            pb.memory[EXT + i] & 0x80 for i in range(ROOM_H * 8)
+            pb.memory[EXT + i] & 0x80 for i in range(ROOM_H * EXT_W)
         )
         assert not any(
-            pb.memory[BOTTOM + i] & 0x80 for i in range(8 * 28)
+            pb.memory[BOTTOM + i] & 0x80
+            for i in range(BOTTOM_H * WIDE_W)
         )
         field = []
-        for y in range(25):
+        for y in range(WIDE_H):
             row = []
-            for x in range(28):
+            for x in range(WIDE_W):
                 if y < 17 and x < 20:
                     row.append(pb.memory[TM + y * 20 + x] & 0x7F)
                 elif y < 17:
-                    row.append(pb.memory[EXT + y * 8 + x - 20] & 0x7F)
+                    row.append(
+                        pb.memory[EXT + y * EXT_W + x - ROOM_W] & 0x7F)
                 else:
-                    row.append(pb.memory[BOTTOM + (y - 17) * 28 + x] & 0x7F)
+                    row.append(
+                        pb.memory[BOTTOM + (y - ROOM_H) * WIDE_W + x] & 0x7F)
             field.append(row)
         passable = {1, 3, 19, 20, 23, 31}
         queue = [(1, 8)]
@@ -118,18 +131,19 @@ def main():
             x, y = queue.pop()
             for nx, ny in ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)):
                 if (
-                    0 <= nx < 28
-                    and 0 <= ny < 25
+                    0 <= nx < WIDE_W
+                    and 0 <= ny < WIDE_H
                     and (nx, ny) not in seen
                     and field[ny][nx] in passable
                 ):
                     seen.add((nx, ny))
                     queue.append((nx, ny))
-        assert {(0, 8), (0, 9), (9, 24), (10, 24)} <= seen
+        assert {(0, 8), (0, 9),
+                (9, WIDE_H - 1), (10, WIDE_H - 1)} <= seen
         assert sum(
             field[y][x] == 21
-            for y in range(25)
-            for x in range(28)
+            for y in range(WIDE_H)
+            for x in range(WIDE_W)
             if x >= 20 or y >= 17
         ) >= 24
 
@@ -147,11 +161,13 @@ def main():
 
         # Exercise both camera axes in the actual added combat terrain.
         clear_hostiles(pb)
-        put16(pb, PL + 9, 192)
-        put16(pb, PL + 11, 160)
-        settle(pb, 40)
-        assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (64, 64)
-        assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (64, 64)
+        put16(pb, PL + 9, 216)
+        put16(pb, PL + 11, 216)
+        settle(pb, 64)
+        assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (
+            CAMERA_X_MAX, CAMERA_Y_MAX)
+        assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
+            CAMERA_X_MAX, CAMERA_Y_MAX)
         shot = ROOT / "tmp" / "dungeon-turn-court.png"
         shot.parent.mkdir(exist_ok=True)
         pb.screen.image.save(shot)
@@ -160,14 +176,21 @@ def main():
         # back to a one-screen field. A turn now reads as a scrolling district,
         # not one isolated large room.
         put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, 184)
+        put16(pb, PL + 11, FAR_EDGE)
         settle(pb)
-        assert pb.memory[RS + 1] == 6
+        assert pb.memory[RS + 1] == 6, (
+            f"south seam stayed room={pb.memory[RS + 1]} "
+            f"player={pb.memory[PL + 9] | pb.memory[PL + 10] << 8},"
+            f"{pb.memory[PL + 11] | pb.memory[PL + 12] << 8} "
+            f"door={pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9]} "
+            f"world={pb.memory[WORLD_W]}x{pb.memory[WORLD_H]} "
+            f"sealed={pb.memory[SEALED]} puzzle={pb.memory[PUZZLE_LOCKED]} "
+            f"entered={pb.memory[RS + 6]}")
         assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (224, 200)
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
 
         # Re-enter local 5 from the scrolling south neighbour. The champion
-        # belongs at the true lower edge and SCY=64 immediately, never hidden
+        # belongs at the true lower edge and SCY=112 immediately, never hidden
         # below the LCD.
         clear_hostiles(pb)
         put16(pb, PL + 9, 72)
@@ -175,16 +198,17 @@ def main():
         settle(pb)
         assert pb.memory[RS + 1] == 5
         assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (224, 200)
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
         player_y = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
-        assert player_y == 176, player_y
-        assert pb.memory[CAMERA_Y] == 64 and pb.memory[0xFF42] == 64
+        assert player_y == 224, player_y
+        assert pb.memory[CAMERA_Y] == CAMERA_Y_MAX
+        assert pb.memory[0xFF42] == CAMERA_Y_MAX
 
         # Local 7 is the authored Waystone fixture and deliberately returns
         # to the compact presentation so its puzzle language remains legible.
         clear_hostiles(pb)
         put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, 184)
+        put16(pb, PL + 11, FAR_EDGE)
         settle(pb)
         assert pb.memory[RS + 1] == 6
         clear_hostiles(pb)
@@ -199,7 +223,7 @@ def main():
         pb.stop(save=False)
 
     print(
-        "[dungeon-courts] PASS scrolling 224x200 districts + wide-to-wide "
+        "[dungeon-courts] PASS scrolling 248x248 districts + wide-to-wide "
         "turn + southeast camera + objective reset + reciprocal arrival"
     )
 

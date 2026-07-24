@@ -140,7 +140,7 @@ def assert_graph_exits(label, exits, stage, local_room, seed=0xCAFE1234,
     expected = expected_graph_exits(stage, local_room, seed)
     wide = wide or local_room in (4, 5, 10, 11, 16, 17, 22, 23)
     if wide:
-        # A 224x200 approach/court extends east and south from the legacy
+        # A 248x248 approach/court extends east and south from the legacy
         # 20x17 storage plane. Those two old edge samples are therefore
         # mandatory interior seams, regardless of whether the real graph owns
         # a far east/south door at x=27/y=24.

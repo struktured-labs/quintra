@@ -14,7 +14,8 @@ local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
 -- Controller-side mirror of the cartridge's runtime world extents. Stage
--- one's Crystal arena is 224x136; Riftwild cells are 224x200.
+-- one's Crystal arena is 224x136; Riftwild cells and dungeon districts are
+-- 248x248.
 QUINTRA_ARENA_W = 160
 QUINTRA_ARENA_H = 136
 DASH_SELFTEST = os.getenv("QUINTRA_BOT_DASH_SELFTEST") == "1"
@@ -568,7 +569,7 @@ end
 -- Weapon swaps remain outside the comparable class policy; shops are handled
 -- separately below so purchases can be measured without treating wares as
 -- free loot.
-function pickup_target(px, py, hp, hp_max, hearts_only)
+function pickup_target(px, py, hp, hp_max, coins, hearts_only)
     local best, bestd = nil, 65535
     local sigil, sigild = nil, 65535
     if EN == 0 then return nil end
@@ -586,7 +587,11 @@ function pickup_target(px, py, hp, hp_max, hearts_only)
             -- cartridge preserves their value rather than consuming them
             -- with a misleading chime. Do not route an agent forever toward
             -- a reward that the real collision rule will correctly refuse.
-            and (kind ~= 0 or hp < hp_max) then
+            and (kind ~= 0 or hp < hp_max)
+            -- Capped coins deliberately remain visible and chime on contact
+            -- without being consumed. Do not let an endurance pilot orbit
+            -- that valid player-facing contract forever after reaching 999.
+            and (kind ~= 1 and kind ~= 2 or coins < 999) then
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
             -- Byte values above the visible bounds represent negative/off-map
             -- drops (for example, an enemy dying against the north wall).
@@ -1047,7 +1052,7 @@ function tile_at_px(x, y)
     if y >= 136 then
         if QUINTRA_ARENA_H > 136 and WB ~= 0 then
             local tx, ty = math.floor(x / 8), math.floor(y / 8)
-            return emu:read8(WB + (ty - 17) * 28 + tx)
+            return emu:read8(WB + (ty - 17) * 31 + tx)
         end
         return 0
     end
@@ -1058,7 +1063,7 @@ function tile_at_px(x, y)
         -- and post-clear far-door contract.
         if QUINTRA_ARENA_H > 136 and WX ~= 0 then
             local tx, ty = math.floor(x / 8), math.floor(y / 8)
-            return emu:read8(WX + ty * 8 + (tx - 20))
+            return emu:read8(WX + ty * 11 + (tx - 20))
         end
         if x >= 216 then
             if y >= 64 and y < 80 and RS ~= 0 and emu:read8(RS + 11) > 0 then
@@ -1317,11 +1322,28 @@ end
 -- fire over a useful standoff distance, but short weapons must first route to
 -- a body-valid cell near the target instead of clawing into the intervening
 -- pillar forever.
+local target_step_cache = nil
 function target_step(px, py, ex, ey, fallback, near_tiles)
     if TM == 0 then return fallback end
     local reach = near_tiles or 1
     local sx, sy = math.floor((px + 13) / 8), math.floor((py + 15) / 8)
     local gx, gy = math.floor((ex + 4) / 8), math.floor((ey + 4) / 8)
+    local same_pixel_lane = math.abs(ex - px) <= 5 or math.abs(ey - py) <= 5
+    local route_room = RS ~= 0 and emu:read8(RS + 1) or 255
+    local route_world = RS ~= 0 and emu:read8(RS + 17) or 0
+    local route_screen = RS ~= 0 and (route_world == 1
+        and emu:read8(RS + 18) or emu:read8(RS + 19)) or 255
+    if target_step_cache
+        and target_step_cache.sx == sx and target_step_cache.sy == sy
+        and target_step_cache.gx == gx and target_step_cache.gy == gy
+        and target_step_cache.reach == reach
+        and target_step_cache.fallback == fallback
+        and target_step_cache.same_pixel_lane == same_pixel_lane
+        and target_step_cache.room == route_room
+        and target_step_cache.world == route_world
+        and target_step_cache.screen == route_screen then
+        return aligned_step(target_step_cache.dir, sx, sy, px, py, fallback)
+    end
     local qx, qy, head, tail = {sx}, {sy}, 1, 1
     local seen, prev, prevkey = {}, {}, {}
     local cols = math.floor(QUINTRA_ARENA_W / 8)
@@ -1352,8 +1374,7 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
             -- body can be on the opposite side of a pillar seam, with the
             -- target still diagonally offset by a full hurtbox. Continue BFS
             -- to a neighboring body-valid lane until pixel aim can finish.
-            and (x ~= sx or y ~= sy
-                or math.abs(ex - px) <= 5 or math.abs(ey - py) <= 5) then
+            and (x ~= sx or y ~= sy or same_pixel_lane) then
             target = y * cols + x
             break
         end
@@ -1368,9 +1389,22 @@ function target_step(px, py, ex, ey, fallback, near_tiles)
         end
     end
     if not target then target = best end
-    if not target or target == start then return fallback end
+    if not target or target == start then
+        target_step_cache = {
+            sx=sx, sy=sy, gx=gx, gy=gy, reach=reach, fallback=fallback,
+            same_pixel_lane=same_pixel_lane, room=route_room,
+            world=route_world, screen=route_screen, dir=nil
+        }
+        return fallback
+    end
     while prev[target] and prev[target] ~= start do target = prev[target] end
-    return aligned_step(prevkey[target], sx, sy, px, py, fallback)
+    local route_dir = prevkey[target]
+    target_step_cache = {
+        sx=sx, sy=sy, gx=gx, gy=gy, reach=reach, fallback=fallback,
+        same_pixel_lane=same_pixel_lane, room=route_room,
+        world=route_world, screen=route_screen, dir=route_dir
+    }
+    return aligned_step(route_dir, sx, sy, px, py, fallback)
 end
 
 -- Route the champion's real 12px feet box to one exact top-left coordinate.
@@ -1488,6 +1522,23 @@ function body_goal_step(px, py, goal_x, goal_y)
     end
     while prev[target] and prev[target] ~= start do target = prev[target] end
     return aligned_step(prevkey[target], sx, sy, px, py, 0)
+end
+
+-- Route the real feet box to the requested wide-field threshold. Stage
+-- theming is applied after the base landmark cross and may place a spike on
+-- that nominal highway, so blindly holding the cardinal can make the final
+-- spike guard cancel movement forever. The exact route is cached per
+-- room/screen by exact_body_goal_step(); all movement remains ordinary D-pad
+-- input over the cartridge's real collision map.
+function wide_cardinal_route_step(px, py, wanted)
+    local goal_x, goal_y = 72, 60
+    if wanted == 0 then goal_y = 0
+    elseif wanted == 1 then goal_x = QUINTRA_ARENA_W - 14
+    elseif wanted == 2 then goal_y = QUINTRA_ARENA_H - 16
+    else goal_x = 0 end
+    local route = exact_body_goal_step(px, py, goal_x, goal_y)
+    if route ~= nil and route ~= 0 then return route end
+    return CARD_KEYS[wanted + 1]
 end
 
 puzzle_policy_room = -1
@@ -2072,16 +2123,16 @@ function door_step(px, py)
     end
     if wanted ~= nil and (in_world
         or (not in_town and QUINTRA_ARENA_H > 136)) then
-        -- Riftwild cells and dungeon turn courts are 224x200 fields. Route
+        -- Riftwild cells and dungeon districts are 248x248 fields. Route
         -- the real feet box through generated side/lower terrain to the true
         -- cardinal threshold instead of planning against the old viewport.
-        local goal_x = wanted == 1 and 208 or (wanted == 3 and 0 or 72)
-        local goal_y = wanted == 0 and 0 or (wanted == 2 and 184 or 60)
         if wanted == 0 and py <= 1 and px >= 70 and px <= 74 then return KEY_UP end
-        if wanted == 1 and px >= 207 and py >= 56 and py <= 64 then return KEY_RIGHT end
-        if wanted == 2 and py >= 183 and px >= 70 and px <= 74 then return KEY_DOWN end
+        if wanted == 1 and px >= QUINTRA_ARENA_W - 17
+            and py >= 56 and py <= 64 then return KEY_RIGHT end
+        if wanted == 2 and py >= QUINTRA_ARENA_H - 17
+            and px >= 70 and px <= 74 then return KEY_DOWN end
         if wanted == 3 and px <= 1 and py >= 56 and py <= 64 then return KEY_LEFT end
-        local step = exact_body_goal_step(px, py, goal_x, goal_y)
+        local step = wide_cardinal_route_step(px, py, wanted)
         if step ~= nil and step ~= 0 then return step end
         if wanted == 0 or wanted == 2 then
             if px < 70 then return KEY_RIGHT end
@@ -2732,10 +2783,10 @@ while frames < LIMIT do
     last_active_charge = active_charge
     local room = RS ~= 0 and emu:read8(RS + 1) or 0
     QUINTRA_ARENA_W = WW ~= 0 and emu:read8(WW)
-        or ((room == STAGE_BOSS[1]
-            or (RS ~= 0 and emu:read8(RS + 17) == 1)) and 224 or 160)
+        or (room == STAGE_BOSS[1] and 224
+            or ((RS ~= 0 and emu:read8(RS + 17) == 1) and 248 or 160))
     QUINTRA_ARENA_H = WH ~= 0 and emu:read8(WH)
-        or ((RS ~= 0 and emu:read8(RS + 17) == 1) and 200 or 136)
+        or ((RS ~= 0 and emu:read8(RS + 17) == 1) and 248 or 136)
     if is_town_room(room) then
         -- `world_return_screen` is a plaza index only in a town. Mark each
         -- side street when its real room has loaded so the next arrival visit
@@ -3098,15 +3149,15 @@ while frames < LIMIT do
     local loot = quintra_boss_relic_target()
         or (world_mode == 0
         and dungeon_local(room, emu:read8(RS + 11)) == 2 and stage_sigil_missing()
-        and pickup_target(px, py, hp, hp_max))
+        and pickup_target(px, py, hp, hp_max, coins))
         -- A live fight normally takes priority over floor drops. At a genuine
         -- low-health threshold, however, an existing heart is the encounter's
         -- authored recovery resource; a human takes that step instead of
         -- continuing a perfect-but-fatal damage race. Restrict this exception
         -- to hearts so the observer never abandons combat for a coin.
         or (world_mode == 0 and target and hp + 3 <= hp_max
-            and pickup_target(px, py, hp, hp_max, true))
-        or (not target and ((world_mode == 0 and pickup_target(px, py, hp, hp_max))
+            and pickup_target(px, py, hp, hp_max, coins, true))
+        or (not target and ((world_mode == 0 and pickup_target(px, py, hp, hp_max, coins))
             or (world_mode == 1 and riftwell_target(px, py, hp, hp_max, mp, mp_max))) or nil)
     if loot and loot.kind == 11 then target = nil end
     local shop = (not target and not loot and world_mode == 0)

@@ -102,10 +102,11 @@ def main() -> None:
             "QUINTRA_BALANCE_FRAMES": str(total_frames + 600),
             # Expanded scrolling districts make the input-only controller
             # spend more host time in body-aware wide-field routing. The
-            # 30-minute cartridge run now reaches its fifth checkpoint near
-            # the old six-minute host ceiling; allow ten minutes so the sixth
-            # state can commit instead of retrying an otherwise healthy run.
-            "QUINTRA_BALANCE_HOST_TIMEOUT": "600",
+            # 30-minute cartridge run reaches its fifth checkpoint near the
+            # old ten-minute host ceiling on 31x31 fields. Allow twenty
+            # minutes so the sixth state and final CSV can commit instead of
+            # retrying an otherwise healthy controller run.
+            "QUINTRA_BALANCE_HOST_TIMEOUT": "1200",
             "QUINTRA_BALANCE_TARGET_FRAME": str(args.target_frame),
             "QUINTRA_BALANCE_OUT": str(temp_path / "balance.csv"),
             "QUINTRA_BALANCE_TRIAL_DIR": str(temp_path / "trials"),

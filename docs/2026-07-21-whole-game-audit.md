@@ -1,5 +1,42 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.76 physical-scale response
+
+The repeated report that stages still feel compact is accepted as physical
+evidence, not contradicted by the nominal 20–30-room count. The old scrolling
+district was 28×25 tiles (224×200 pixels, 44,800 generated pixels) behind a
+160×136 viewport. Every ordinary wide dungeon role and every Riftwild cell is
+now 31×31 tiles (248×248 pixels, 61,504 generated pixels): 37.3% more actual
+collision terrain. Camera range grows from 0..64 on both axes to 0..88
+horizontally and 0..112 vertically. The 32nd hardware BG row and column remain
+deterministic wall/tree overscan, so shake never exposes stale VRAM.
+
+This is not empty perimeter inflation. Dungeon districts extend the upper and
+lower ruin halls, add a distant encounter apron and southeast landmark, keep
+stage-colored cover, and carve their two-tile cardinal hall last. Riftwild
+adds a third eastern landmark block and a second southern block per cell; all
+four landmark families still rotate exactly four times over the 4×4 graph.
+Far-field enemies now occupy the new southeast space. Stage one retains eight
+wide districts and the finale fifteen, so the campaign becomes physically
+larger without adding filler counters or changing the compact Compass graph.
+
+The first live south-door check exposed an SDCC 4.4 optimizer failure in the
+banked collision query: after the 31×31 index arithmetic, the combined
+`height > view && row >= 17` expression reused a corrupted temporary and read
+every lower row as a wall. The equivalent nested comparison now compiles into
+independent checks. Live-ROM coverage crosses a southern dungeon seam,
+re-enters at y=224 with SCY=112, sweeps all sixteen Riftwild cells, reaches
+camera (88,112), and follows the ending route through the expanded world.
+
+The external mGBA pilot now recognizes the generated field's visible
+body-wide cardinal hall rather than flood-filling as many as 61,504 pixel
+positions merely to rediscover it. It still uses ordinary D-pad input and the
+ROM's real collision map. Sauran clears the covered Frost Sentinel route,
+Corvin crosses Riftwild, Vespine escapes the deterministic Rope pin, and the
+short five-champion sample records no deaths. Crystal remains its audited
+224×136 scrolling Colossus arena; boss scale, enemy stats, hero stats, and
+Normal/Easy rules are unchanged.
+
 ## v0.18.75 Compass context and corrected room evidence
 
 The dungeon Compass remains the requested compressed abstract grid rather

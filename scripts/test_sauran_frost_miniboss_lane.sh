@@ -17,10 +17,14 @@ trap 'rm -f "$OUT" "$OUT.lock"' EXIT
 # Pin the synchronized room handoff for this fixed-world controller fixture.
 # At 52 recovery frames the route reaches room 24 after clearing the covered
 # room-21 Sentinel; changing it deliberately requires re-measuring this lane.
+# The 248x248 district route emulates the same 36,000 cartridge frames but
+# performs materially more body-aware path searches than the old 224x200
+# fields. Give the host wrapper time to finish; this does not add one frame
+# or any assistance inside the ROM.
 QUINTRA_BOT_EASY=1 QUINTRA_BOT_READY_IFRAMES=52 \
   QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=1 \
   QUINTRA_BALANCE_REPS=1 QUINTRA_BALANCE_TARGET_FRAME=540 \
-  QUINTRA_BALANCE_FRAMES=36000 QUINTRA_BALANCE_HOST_TIMEOUT=90 \
+  QUINTRA_BALANCE_FRAMES=36000 QUINTRA_BALANCE_HOST_TIMEOUT=300 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

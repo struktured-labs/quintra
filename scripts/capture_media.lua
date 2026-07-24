@@ -155,7 +155,7 @@ if MODE == "gif" then
   hold(KEY_START, 2); tick(20); frame(KEY_DOWN, 12, 2)
   frame(KEY_UP, 8, 2); hold(KEY_A, 2); tick(50)
 
-  -- The first action scene is now a generated 224x200 dungeon court. Enter
+  -- The first action scene is now a generated 248x248 dungeon district. Enter
   -- through its real local-4 -> local-5 edge, then place the capture camera in
   -- the southeast combat sector so the reel visibly demonstrates dungeon
   -- scale rather than showing another fixed 20x17 room.
@@ -250,7 +250,7 @@ hold(KEY_DOWN, 2); tick(20)
 hold(KEY_DOWN, 2); tick(20); shot("shot_class2")
 hold(KEY_UP, 2); tick(10); hold(KEY_UP, 2); tick(10)   -- back to Wolfkin
 
--- Enter the dungeon, then photograph the first true 224x200 turn court from
+-- Enter the dungeon, then photograph the first true 248x248 district from
 -- its southeast camera bound. This still is generated and rendered by the
 -- live cartridge; the media setup only deep-links to its ordinary graph edge.
 hold(KEY_A, 2); tick(60)
@@ -288,13 +288,13 @@ emu:write8(RS + 17, prior_world_mode)
 emu:write8(RS + 18, prior_world_screen)
 emu:write8(RS + 21, prior_seen_lo); emu:write8(RS + 22, prior_seen_hi)
 
--- The dungeon still deliberately leaves the live room/camera in a 224x200
+-- The dungeon still deliberately leaves the live room/camera in a 248x248
 -- court. Return through its true far south door, then cross the next wide
 -- district cell into compact local room 7 before the remaining gallery
 -- deep-links use ordinary 160x136 thresholds.
 clear_hostiles()
 local court_room = room()
-put16(PL + 9, 72); put16(PL + 11, 184)
+put16(PL + 9, 72); put16(PL + 11, 232)
 for _=1,120 do
   emu:setKeys(KEY_DOWN); emu:runFrame()
   if room() ~= court_room then break end

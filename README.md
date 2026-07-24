@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.75: True Bearings](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.76: Outer Reaches](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,29 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.75**, published after the complete build,
+The current cartridge is **v0.18.76**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The stages now spend the hardware background on real travel.** Every
+scrolling dungeon district and Riftwild cell grows from 28×25 to **31×31
+tiles**—248×248 pixels behind the 160×136 viewport, with the final hardware
+row and column reserved as deterministic overscan. That is 61,504 pixels of
+generated collision terrain per field, 37% more than the former 224×200
+contract. Horizontal camera travel grows from 64 to 88 pixels and vertical
+travel from 64 to 112. Stage one still has eight scrolling districts and the
+finale fifteen; the added scale comes from exploration space rather than
+filler room counters.
+
+The new acreage is authored gameplay terrain. Dungeon fields extend their
+ruin rings, distant encounter apron, stage-colored cover, and guaranteed
+body-wide cardinal hall into the southeast. Riftwild adds a far-eastern
+landmark and a second southern landmark while retaining seed-rotated families
+and optional combat. A live sixteen-cell sweep reaches every real door and
+camera bound. The pass also fixes a GBDK optimizer-sensitive collision branch
+that could misread rows below the original viewport as solid: its simpler
+nested form is verified through the actual southern dungeon and world exits.
+Crystal's special Colossus arena deliberately remains its audited 224×136
+fight, and no enemy, boss, hero, or difficulty value changed.
 
 **The Spirit Compass now carries stage context without giving up its compact
 grid.** Dungeon SELECT screens say `S1 MAP` through `S9 MAP` above the

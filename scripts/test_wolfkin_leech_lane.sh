@@ -12,7 +12,7 @@ OUT="$(mktemp /tmp/quintra-wolfkin-leech-lane.XXXXXX)"
 # attach/dash/re-attach timing contract. Use the coarse tester assist so a
 # route assertion does not become a second Normal combat-balance gate.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=0 \
-  QUINTRA_BALANCE_FRAMES=5000 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=5000 QUINTRA_BALANCE_HOST_TIMEOUT=90 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

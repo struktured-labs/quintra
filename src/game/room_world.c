@@ -56,12 +56,17 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
     {
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
-        if (room_world_height > ROOM_VIEW_H_PX && ty >= ROOM_H) {
-            if (tx >= ROOM_WIDE_W_TILES || ty >= ROOM_WIDE_H_TILES)
+        // Keep the row test outermost. SDCC 4.4 can corrupt the temporary
+        // for `height > view && ty >= ROOM_H` in this banked function after
+        // the 31x31 index arithmetic is introduced, turning every southern
+        // field row into a wall. The nested form is equivalent C but compiles
+        // into independent comparisons on real hardware.
+        if (ty >= ROOM_H) {
+            if (room_world_height <= ROOM_VIEW_H_PX
+                || tx >= ROOM_WIDE_W_TILES || ty >= ROOM_WIDE_H_TILES)
                 return BGT_WALL;
             return (u8)(room_world_bottom[ty - ROOM_H][tx] & 0x7F);
         }
-        if (ty >= ROOM_H) return BGT_WALL;
         if (tx >= ROOM_W) {
             if (room_world_width <= ROOM_VIEW_W_PX
                 || tx >= ROOM_WIDE_W_TILES) return BGT_WALL;
