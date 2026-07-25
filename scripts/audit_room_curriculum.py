@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Measure progression-matched ordinary rooms with controller input.
 
-This is a diagnostic, not a balance gate.  It starts from every manifest-bound
-stage-entry state in the requested mode, stops at the first room transition or
-death, and records survival pressure separately from the giant-boss curriculum.
-Normal remains the default and canonical balance target; Easy comparison runs
-only measure whether the broad human-test assist is doing its job.
+This is a diagnostic, not a balance gate. It starts from every manifest-bound
+entry or mid-stage court state in the requested mode, stops at the first room
+transition or death, and records survival pressure separately from the
+giant-boss curriculum. Normal remains the default and canonical balance target;
+Easy comparison runs only measure whether the broad human-test assist is doing
+its job.
 """
 from __future__ import annotations
 
@@ -35,6 +36,9 @@ def main() -> None:
     parser.add_argument("--difficulty", choices=("normal", "easy"),
                         default="normal",
                         help="checkpoint mode to measure (default: normal)")
+    parser.add_argument("--checkpoint", choices=("entry", "court"),
+                        default="entry",
+                        help="ordinary-room fixture family (default: entry)")
     parser.add_argument("--stage", type=int, action="append", dest="stages",
                         help="stage number to sample; repeatable (default: all)")
     args = parser.parse_args()
@@ -53,7 +57,8 @@ def main() -> None:
             for champion in CHAMPIONS:
                 suffix = "-easy" if args.difficulty == "easy" else ""
                 state = args.state_dir / (
-                    f"quintra-stage-{stage:02d}-entry-{champion}{suffix}.pyboy")
+                    f"quintra-stage-{stage:02d}-{args.checkpoint}-"
+                    f"{champion}{suffix}.pyboy")
                 obs = env.load_state(state)
                 if obs["difficulty"] != args.difficulty:
                     raise RuntimeError(
@@ -101,6 +106,7 @@ def main() -> None:
                 resolved = exited or hostiles_defeated_at >= 0
                 row = {
                     "difficulty": args.difficulty,
+                    "checkpoint": args.checkpoint,
                     "stage": stage,
                     "champion": champion,
                     "resolved": int(resolved),
@@ -145,6 +151,7 @@ def main() -> None:
     exits = sum(int(row["exited"]) for row in rows)
     deaths = sum(int(row["died"]) for row in rows)
     print(f"[room-audit] wrote {args.out}: mode={args.difficulty} "
+          f"checkpoint={args.checkpoint} "
           f"resolved={resolved}/{len(rows)}, "
           f"exits={exits}, deaths={deaths}, "
           f"pressure-survivals={len(rows) - resolved - deaths}")

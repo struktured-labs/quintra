@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import dungeon_direction, dungeon_maze_neighbor, dungeon_size
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -59,6 +60,29 @@ def settle(pb, frames=100):
         pb.tick()
 
 
+def opening_expedition(seed):
+    """Depth-first walk covering every large pre-service cell."""
+    size = dungeon_size(0)
+    large_cells = size - 3
+    seen = {0}
+    walk = []
+
+    def visit(source):
+        for direction in range(4):
+            target = dungeon_maze_neighbor(source, size, direction, seed, 0)
+            if target is None or target >= large_cells or target in seen:
+                continue
+            seen.add(target)
+            walk.append((source, target))
+            visit(target)
+            walk.append((target, source))
+
+    visit(0)
+    assert seen == set(range(large_cells)), (
+        f"large district graph disconnected: {sorted(set(range(large_cells)) - seen)}")
+    return walk, large_cells
+
+
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     try:
@@ -75,30 +99,28 @@ def main():
         assert pb.memory[LARGE] == 1
         assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
 
-        # Follow the actual opening snake through every pre-service node.
+        # Follow the actual generated fold through every pre-service node.
         # This is the cartridge-facing proof that the scale response is one
         # sustained 17-field expedition, including Sigil/Waystone/Warden
         # roles, rather than another sparse selection of nominally large
         # rooms. The final shop, sanctuary, and Colossus remain deliberately
         # compact after this run.
-        for target in range(1, 17):
-            source = target - 1
-            row, offset = divmod(source, 6)
+        seed = sum(pb.memory[RS + 2 + i] << (i * 8) for i in range(4))
+        route, large_cells = opening_expedition(seed)
+        for source, target in route:
+            direction = dungeon_direction(source, target)
             clear_hostiles(pb)
             pb.memory[SEALED] = 0
             pb.memory[PUZZLE_LOCKED] = 0
-            if offset == 5:
-                put16(pb, PL + 9, 72)
-                put16(pb, PL + 11, FAR_EDGE)
-            elif row & 1:
-                put16(pb, PL + 9, 0)
-                put16(pb, PL + 11, 60)
-            else:
-                put16(pb, PL + 9, FAR_EDGE)
-                put16(pb, PL + 11, 60)
+            px, py = {
+                0: (72, 0), 1: (FAR_EDGE, 60),
+                2: (72, FAR_EDGE), 3: (0, 60),
+            }[direction]
+            put16(pb, PL + 9, px)
+            put16(pb, PL + 11, py)
             settle(pb)
             assert pb.memory[RS + 1] == target, (
-                f"sustained route stopped at {source}->{target}: "
+                f"generated route stopped at {source}->{target}: "
                 f"room={pb.memory[RS + 1]}")
             assert pb.memory[LARGE] == 1, (
                 f"local {target} collapsed the sustained expedition")
@@ -133,8 +155,9 @@ def main():
         assert pb.memory[RS + 1] == 5
         assert pb.memory[LARGE] == 1
         assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
-        # Local 5 owns reciprocal west and south links. The old east/south
-        # viewport edges are interior; only the true 31x31 perimeter closes.
+        # Local 5 is now a genuine dead-end court in this fold. Its reciprocal
+        # west link remains usable, while the old east/south viewport edges
+        # are interior and only the true 31x31 perimeter closes.
         assert pb.memory[TM + 8 * ROOM_W] == 3
         assert pb.memory[TM + 9 * ROOM_W] == 3
         walkable = (1, 19, 20, 23, 31)
@@ -142,8 +165,8 @@ def main():
         assert pb.memory[TM + 16 * ROOM_W + 10] in walkable
         assert pb.memory[EXT + 8 * EXT_W + EXT_W - 1] == 2
         assert pb.memory[EXT + 9 * EXT_W + EXT_W - 1] == 2
-        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9] == 3
-        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 10] == 3
+        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9] == 2
+        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 10] == 2
         assert not any(
             pb.memory[EXT + i] & 0x80 for i in range(ROOM_H * EXT_W)
         )
@@ -178,8 +201,7 @@ def main():
                 ):
                     seen.add((nx, ny))
                     queue.append((nx, ny))
-        assert {(0, 8), (0, 9),
-                (9, WIDE_H - 1), (10, WIDE_H - 1)} <= seen
+        assert {(0, 8), (0, 9)} <= seen
         assert sum(
             field[y][x] == 21
             for y in range(WIDE_H)
@@ -215,56 +237,6 @@ def main():
         shot.parent.mkdir(exist_ok=True)
         pb.screen.image.save(shot)
 
-        # The true south door continues into local room 6 without collapsing
-        # back to a one-screen field. A turn now reads as a scrolling district,
-        # not one isolated large room.
-        put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, FAR_EDGE)
-        settle(pb)
-        assert pb.memory[RS + 1] == 6, (
-            f"south seam stayed room={pb.memory[RS + 1]} "
-            f"player={pb.memory[PL + 9] | pb.memory[PL + 10] << 8},"
-            f"{pb.memory[PL + 11] | pb.memory[PL + 12] << 8} "
-            f"door={pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9]} "
-            f"world={pb.memory[WORLD_W]}x{pb.memory[WORLD_H]} "
-            f"sealed={pb.memory[SEALED]} puzzle={pb.memory[PUZZLE_LOCKED]} "
-            f"entered={pb.memory[RS + 6]}")
-        assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
-
-        # Re-enter local 5 from the scrolling south neighbour. The champion
-        # belongs at the true lower edge and SCY=112 immediately, never hidden
-        # below the LCD.
-        clear_hostiles(pb)
-        put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, 0)
-        settle(pb)
-        assert pb.memory[RS + 1] == 5
-        assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
-        player_y = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
-        assert player_y == 224, player_y
-        assert pb.memory[CAMERA_Y] == CAMERA_Y_MAX
-        assert pb.memory[0xFF42] == (
-            ((pb.memory[ORIGIN_Y] << 3) + CAMERA_Y_MAX) & 0xFF)
-
-        # Local 7 is the authored Waystone fixture. Its objective remains in
-        # the readable entry sector, but the surrounding acreage no longer
-        # collapses the continuous expedition into a compact threshold.
-        clear_hostiles(pb)
-        put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, FAR_EDGE)
-        settle(pb)
-        assert pb.memory[RS + 1] == 6
-        clear_hostiles(pb)
-        put16(pb, PL + 9, 0)
-        put16(pb, PL + 11, 60)
-        settle(pb)
-        assert pb.memory[RS + 1] == 7
-        assert pb.memory[LARGE] == 1
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
-        assert pb.memory[CAMERA_X] == CAMERA_X_MAX
-
     finally:
         pb.stop(save=False)
 
@@ -294,7 +266,7 @@ def main():
         pb.stop(save=False)
 
     print(
-        "[dungeon-courts] PASS sustained 17→27-field expedition + "
+        f"[dungeon-courts] PASS branched {large_cells}→27-field expedition + "
         "distributed encounters + seamless archetypes + reciprocal arrival"
     )
 

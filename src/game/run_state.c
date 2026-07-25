@@ -118,12 +118,52 @@ u8 run_state_dungeon_cell(void) {
     return run_state_dungeon_local();
 }
 
-// Every dungeon owns one large objective loop between its first two rows:
-// cell 1 branches south to cell 10 while the ordinary 1..10 snake remains
-// intact. The Sigil/Warden/Waystone fixtures live around that loop, so a
-// knowledgeable run can sweep them in order while a curious run can take the
-// junction toward the deeper route and later understand where it diverged.
-//
+// Eight seed-selected "folds" replace the old identical snake in every
+// dungeon. Each row remains a readable horizontal district, while one
+// connector per row band makes genuine arms and dead ends instead of a
+// corridor folded into a rectangle. The fixed 1<->10 objective seam adds one
+// large early loop; the safe fold table was selected so the staged
+// Sigil/Warden/Waystone route still consumes essentially the whole room
+// budget. Lore fixtures stay learnable, but the macro route is procgen too.
+static const u8 dungeon_fold_cols[32] = {
+    2, 0, 5, 0,
+    0, 4, 5, 0,
+    0, 5, 5, 0,
+    0, 0, 5, 0,
+    0, 1, 5, 0,
+    5, 0, 5, 0,
+    2, 5, 5, 0,
+    5, 5, 5, 0
+};
+
+static u8 dungeon_fold_variant(void) {
+    u8 fold = (u8)run_state.run_seed;
+    fold ^= (u8)(run_state.run_seed >> 8);
+    fold ^= (u8)(run_state.run_seed >> 16);
+    fold ^= (u8)(run_state.run_seed >> 24);
+    fold ^= (u8)(run_state.bosses_beaten * 3);
+    return (u8)(fold & 7);
+}
+
+static u8 dungeon_fold_col(u8 upper_row) {
+    u8 lower_first = (u8)((upper_row + 1) * DUNGEON_GRID_W);
+    u8 lower_count;
+    u8 col;
+    if (lower_first >= run_state_dungeon_size()) return 0xFF;
+    lower_count = (u8)(run_state_dungeon_size() - lower_first);
+    if (lower_count > DUNGEON_GRID_W) lower_count = DUNGEON_GRID_W;
+    col = dungeon_fold_cols[(u8)((dungeon_fold_variant() << 2) + upper_row)];
+    // Truncated final rows retain a connector. Odd lower rows occupy the
+    // right side of the display; even lower rows occupy the left.
+    if ((upper_row + 1) & 1) {
+        u8 min_col = (u8)(DUNGEON_GRID_W - lower_count);
+        if (col < min_col) col = min_col;
+    } else if (col >= lower_count) {
+        col = (u8)(lower_count - 1);
+    }
+    return col;
+}
+
 u8 run_state_dungeon_cell_neighbor(u8 local, u8 dir) {
     u8 row, offset, col, old_row, next;
     if (local >= run_state_dungeon_size()) return 0xFF;
@@ -149,8 +189,7 @@ u8 run_state_dungeon_cell_neighbor(u8 local, u8 dir) {
     if (next >= run_state_dungeon_size()) return 0xFF;
     if (dir == DIR_N || dir == DIR_S) {
         u8 upper_row = (dir == DIR_N) ? row : old_row;
-        u8 turn_col = (upper_row & 1) ? 0 : (DUNGEON_GRID_W - 1);
-        if (col != turn_col
+        if (col != dungeon_fold_col(upper_row)
             && !(upper_row == 0 && col == 1))
             return 0xFF;
     }

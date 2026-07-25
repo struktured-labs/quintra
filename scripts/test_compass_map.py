@@ -4,7 +4,9 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_BOSS_ROOM, STAGE_START
+from quintra_topology import (
+    STAGE_BOSS_ROOM, STAGE_START, dungeon_maze_neighbor, dungeon_size,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -189,8 +191,18 @@ def main() -> None:
         "Compass did not place the Rift Sigil in its owning room"
     assert node_tile(pb, 0) == BGT_MAP_BIG_ROOM, \
         "visited room lost its square glyph"
-    assert map_tile(pb, 16, 4) == BGT_MAP_PATH_V, \
-        "Compass vertical turn is not obvious"
+    seed = sum(pb.memory[rs + 2 + i] << (i * 8) for i in range(4))
+    vertical_links = []
+    for source in range(dungeon_size(0)):
+        target = dungeon_maze_neighbor(
+            source, dungeon_size(0), 2, seed, 0)
+        if target is not None:
+            vertical_links.append((
+                GX[source], min(GY[source], GY[target]) + 2))
+    assert len(vertical_links) >= 3, vertical_links
+    assert all(map_tile(pb, x, y) == BGT_MAP_PATH_V
+               for x, y in vertical_links), \
+        f"Compass did not render generated vertical folds: {vertical_links}"
     assert map_tile(pb, 0, 2) == BGT_VOID and map_tile(pb, 18, 11) == BGT_VOID, \
         "dungeon graph escaped its active lattice"
 

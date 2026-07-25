@@ -78,9 +78,19 @@ pub fn room_kind(room_counter: u8, bosses_beaten: u8) -> RoomKind {
     RoomKind { boss, miniboss, shop, rest }
 }
 
-fn dungeon_neighbor(local: u8, size: u8, dir: u8, _run_seed: u32, _stage: u8) -> Option<u8> {
+fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> Option<u8> {
     const GRID_W: u8 = 6;
     const GRID_H: u8 = 5;
+    const FOLD_COLS: [[u8; 4]; 8] = [
+        [2, 0, 5, 0],
+        [0, 4, 5, 0],
+        [0, 5, 5, 0],
+        [0, 0, 5, 0],
+        [0, 1, 5, 0],
+        [5, 0, 5, 0],
+        [2, 5, 5, 0],
+        [5, 5, 5, 0],
+    ];
     let mut row = local / GRID_W;
     let offset = local % GRID_W;
     let mut col = if row & 1 != 0 { GRID_W - 1 - offset } else { offset };
@@ -99,8 +109,20 @@ fn dungeon_neighbor(local: u8, size: u8, dir: u8, _run_seed: u32, _stage: u8) ->
     }
     if dir == 0 || dir == 2 {
         let upper_row = if dir == 0 { row } else { old_row };
-        let turn_col = if upper_row & 1 != 0 { 0 } else { GRID_W - 1 };
-        if col != turn_col && !(upper_row == 0 && col == 1) {
+        let seed_fold = ((run_seed
+            ^ (run_seed >> 8)
+            ^ (run_seed >> 16)
+            ^ (run_seed >> 24)
+            ^ u32::from(stage.wrapping_mul(3))) & 7) as usize;
+        let lower_first = (upper_row + 1) * GRID_W;
+        let lower_count = (size - lower_first).min(GRID_W);
+        let mut fold_col = FOLD_COLS[seed_fold][usize::from(upper_row)];
+        if (upper_row + 1) & 1 != 0 {
+            fold_col = fold_col.max(GRID_W - lower_count);
+        } else {
+            fold_col = fold_col.min(lower_count - 1);
+        }
+        if col != fold_col && !(upper_row == 0 && col == 1) {
             return None;
         }
     }

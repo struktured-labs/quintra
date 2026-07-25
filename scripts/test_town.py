@@ -6,6 +6,7 @@ from pathlib import Path
 from pyboy import PyBoy
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_direction,
+    dungeon_predecessor, dungeon_size,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -67,10 +68,12 @@ def main():
         else:
             stage = next(i for i, boss in enumerate(STAGE_BOSS_ROOM)
                          if target == boss - 1)
-            source_local = target - 1 - STAGE_START[stage]
             target_local = target - STAGE_START[stage]
+            seed = sum(pb.memory[rs + 2 + i] << (i * 8) for i in range(4))
+            source_local, _ = dungeon_predecessor(
+                target_local, dungeon_size(stage), seed, stage)
             direction = dungeon_direction(source_local, target_local)
-            pb.memory[rs + 1] = target - 1
+            pb.memory[rs + 1] = STAGE_START[stage] + source_local
             pb.memory[rs + 11] = stage
             # The test authors a compact synthetic predecessor below. Do not
             # inherit the real opening field's 248x248 bounds when only the

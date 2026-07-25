@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.82: Pocket Atlas](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.83: Farfold Labyrinths](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,42 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.82**, published after the complete build,
+The current cartridge is **v0.18.83**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The stages are no longer one corridor folded into the same rectangle.**
+Their raw scale remains substantial—20, 21, 22, 23, 24, 25, 26, 28, and 30
+rooms, 219 dungeon cells across a successful run, with every ordinary
+pre-service cell occupying a 31×31-tile scrolling field—but v0.18.82 still
+used the same near-linear snake in all nine dungeons. That made the acreage
+feel compact and made a procgen-first game repeat its most important spatial
+decision.
+
+v0.18.83 replaces that snake with **seed-selected safe folds**. Horizontal
+districts remain readable, but their row crossings move between runs and
+stages, producing real junctions, arms, and dead ends. A single early
+objective loop remains as a learnable fixture; the Rift Sigil, Warden Boon,
+Waystone, Deep Warden, shops, sanctuaries, nonlinear room-2/room-8 Rift, and
+Colossi retain their lore and progression roles. The approved fold set keeps
+the mandatory expedition at 20–31 room-to-room moves, so broader geography
+does not become a short Manhattan route.
+
+The SELECT Compass renders those exact generated edges as a screen-filling
+graph. Every fold is reciprocal and connected, owns exactly one loop, has at
+least two dead ends and a true three-way junction, and reserves the boss's
+only entrance for its marked sanctuary. Live-ROM coverage crosses all four
+door directions, both axes of the seamless 31×31 transition, every large
+opening-dungeon field, the boss skull/roar warning, villages, objectives, and
+all 460 five-champion Normal/Easy checkpoint combinations.
+
+An ordinary-input Easy Picsean pilot navigated the new graph and defeated all
+nine Colossi at room 220 in 140,885 frames, below the unchanged 210,000-frame
+cartridge budget. Replaying the exact recorded buttons from a clean emulator
+reproduced victory with 16 HP. No room count, encounter roster, enemy HP,
+projectile, boss, champion, Normal/Easy, economy, or reward value changed in
+this milestone.
+
+### Earlier milestones
 
 **The SELECT Compass is now a screen-filling abstract pocket map.** The
 previous implementation technically had a 6×5 grid, but each room was only

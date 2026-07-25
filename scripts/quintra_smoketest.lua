@@ -228,6 +228,100 @@ local function walk_edge(target, key)
     tick(20)
 end
 
+-- Mirror the cartridge's seed-selected district folds.  The old smoke route
+-- hard-coded the retired 0..5 / 6..11 snake and therefore stopped at a wall
+-- as soon as the macro topology became procedural.  Route each named fixture
+-- through the same reciprocal graph the ROM exposes; every actual crossing
+-- still happens through walk_edge and the normal transition transaction.
+local DUNGEON_FOLD_COLS = {
+    2,0,5,0, 0,4,5,0, 0,5,5,0, 0,0,5,0,
+    0,1,5,0, 5,0,5,0, 2,5,5,0, 5,5,5,0
+}
+
+local function xor_low3(a, b)
+    local result, bit = 0, 1
+    for _ = 1, 3 do
+        if a % 2 ~= b % 2 then result = result + bit end
+        a, b, bit = math.floor(a / 2), math.floor(b / 2), bit * 2
+    end
+    return result
+end
+
+local function dungeon_fold_col(size, stage, upper)
+    local fold = xor_low3(emu:read8(RS_ADDR + 2), emu:read8(RS_ADDR + 3))
+    fold = xor_low3(fold, emu:read8(RS_ADDR + 4))
+    fold = xor_low3(fold, emu:read8(RS_ADDR + 5))
+    fold = xor_low3(fold, stage * 3)
+    local col = DUNGEON_FOLD_COLS[fold * 4 + upper + 1]
+    local lower_count = math.min(6, size - (upper + 1) * 6)
+    if (upper + 1) % 2 == 1 then
+        col = math.max(col, 6 - lower_count)
+    else
+        col = math.min(col, lower_count - 1)
+    end
+    return col
+end
+
+local function dungeon_neighbor(cell, size, dir, stage)
+    local row, offset = math.floor(cell / 6), cell % 6
+    local col = (row % 2 == 1) and (5 - offset) or offset
+    local old_row = row
+    if dir == 0 then row = row - 1
+    elseif dir == 1 then col = col + 1
+    elseif dir == 2 then row = row + 1
+    else col = col - 1 end
+    if row < 0 or row > 4 or col < 0 or col > 5 then return nil end
+    local next_cell = row * 6 + ((row % 2 == 1) and (5 - col) or col)
+    if next_cell >= size then return nil end
+    if dir == 0 or dir == 2 then
+        local upper = (dir == 0) and row or old_row
+        if not (upper == 0 and col == 1)
+            and col ~= dungeon_fold_col(size, stage, upper) then
+            return nil
+        end
+    end
+    return next_cell
+end
+
+local function dungeon_route_dir(start, goal, size, stage)
+    if start == goal then return nil end
+    local queue, head, seen, first = {start}, 1, {[start] = true}, {}
+    while head <= #queue do
+        local cell = queue[head]
+        head = head + 1
+        for dir = 0, 3 do
+            local next_cell = dungeon_neighbor(cell, size, dir, stage)
+            if next_cell ~= nil and not seen[next_cell] then
+                seen[next_cell] = true
+                first[next_cell] = (cell == start) and dir or first[cell]
+                if next_cell == goal then return first[next_cell] end
+                queue[#queue + 1] = next_cell
+            end
+        end
+    end
+    return nil
+end
+
+local DIR_KEYS = {
+    [0] = KEY_UP, [1] = KEY_RIGHT, [2] = KEY_DOWN, [3] = KEY_LEFT
+}
+
+local function navigate_to(target)
+    local stage = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 11) or 0
+    -- The smoke owns stage one. Keep the size explicit so a failed boss flag
+    -- cannot silently make this reachability proof route against another map.
+    local size = 20
+    for _ = 1, 40 do
+        local current = room_counter()
+        if current == target then return true end
+        local dir = dungeon_route_dir(current, target, size, stage)
+        if dir == nil then return false end
+        local next_cell = dungeon_neighbor(current, size, dir, stage)
+        walk_edge(next_cell, DIR_KEYS[dir])
+    end
+    return room_counter() == target
+end
+
 local function collect_rift_sigil()
     if EN_ADDR == 0 or PL_ADDR == 0 then return false end
     for i = 0, 31 do
@@ -363,27 +457,27 @@ tap(KEY_A); tick(40); shot("03_room0_enter")
 -- it rejoins the deeper 6x5 spine at room ten. This complete controller route
 -- proves the twenty-room baseline cannot collapse into the old compact
 -- rectangle or skip the new geographic junction.
-walk_edge(1, KEY_RIGHT); shot("04_room1"); solve_opening_push_seal()
-walk_edge(2, KEY_RIGHT); collect_rift_sigil(); shot("05_room2_sigil")
-walk_edge(3, KEY_RIGHT); record_opening_warden_boon()
-walk_edge(4, KEY_RIGHT)
-walk_edge(5, KEY_RIGHT); shot("06_room5_branch")
-walk_edge(6, KEY_DOWN)
-walk_edge(7, KEY_LEFT); solve_waystone()
-walk_edge(8, KEY_LEFT)
-walk_edge(9, KEY_LEFT); record_deep_warden_boon(); shot("07_room9_threshold")
-walk_edge(10, KEY_LEFT)
-walk_edge(11, KEY_LEFT)
-walk_edge(12, KEY_DOWN)
-walk_edge(13, KEY_RIGHT)
-walk_edge(14, KEY_RIGHT)
-walk_edge(15, KEY_RIGHT)
-walk_edge(16, KEY_RIGHT)
-walk_edge(17, KEY_RIGHT)
-walk_edge(18, KEY_DOWN)
+navigate_to(1); shot("04_room1"); solve_opening_push_seal()
+navigate_to(2); collect_rift_sigil(); shot("05_room2_sigil")
+navigate_to(3); record_opening_warden_boon()
+navigate_to(4)
+navigate_to(5); shot("06_room5_branch")
+navigate_to(6)
+navigate_to(7); solve_waystone()
+navigate_to(8)
+navigate_to(9); record_deep_warden_boon(); shot("07_room9_threshold")
+navigate_to(10)
+navigate_to(11)
+navigate_to(12)
+navigate_to(13)
+navigate_to(14)
+navigate_to(15)
+navigate_to(16)
+navigate_to(17)
+navigate_to(18)
 -- A new stage deliberately fades its palette in. Wait it out so this is a
 -- useful boss-arena capture rather than an intended near-black transition.
-walk_edge(19, KEY_LEFT); tick(36); shot("08_BOSS_room")
+navigate_to(19); tick(36); shot("08_BOSS_room")
 
 -- Damage the first giant through real controller shots, sampling the fight.
 assault_boss(80)

@@ -117,11 +117,10 @@ u8   run_state_dungeon_size(void);
 u8   run_state_dungeon_local(void);
 u8   run_state_dungeon_cell(void);
 // Return the local cell of the reciprocal 6x5 maze neighbour in `dir`, or
-// 0xFF when that edge is absent. The graph owns a winding snake spine, one
-// fixed objective-wing junction between cells 1 and 10. Room geometry,
-// encounters, puzzles, and nonlinear Rift Wells remain seed-driven; keeping
-// the macro loop stable makes it learnable without restoring the compact
-// fully connected rectangle.
+// 0xFF when that edge is absent. Seed-selected safe folds give each dungeon
+// horizontal districts, meaningful branches/dead ends, and one fixed
+// objective loop between cells 1 and 10. The fold table preserves the staged
+// Sigil/Warden/Waystone route while making macro topology procgen-first.
 u8   run_state_dungeon_cell_neighbor(u8 cell, u8 dir);
 u8   run_state_dungeon_cells_connected(u8 a, u8 b);
 // Return the global room counter of the reciprocal 6x5 neighbour in `dir`,

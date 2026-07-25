@@ -44,6 +44,35 @@ function dungeon_size(stage)
     return STAGE_BOSS[index] - STAGE_START[index] + 1
 end
 
+local DUNGEON_FOLD_COLS = {
+    2,0,5,0, 0,4,5,0, 0,5,5,0, 0,0,5,0,
+    0,1,5,0, 5,0,5,0, 2,5,5,0, 5,5,5,0
+}
+
+local function xor_low3(a, b)
+    local result, bit = 0, 1
+    for _ = 1, 3 do
+        if a % 2 ~= b % 2 then result = result + bit end
+        a, b, bit = math.floor(a / 2), math.floor(b / 2), bit * 2
+    end
+    return result
+end
+
+function dungeon_fold_col(size, stage, upper)
+    local fold = xor_low3(emu:read8(RS + 2), emu:read8(RS + 3))
+    fold = xor_low3(fold, emu:read8(RS + 4))
+    fold = xor_low3(fold, emu:read8(RS + 5))
+    fold = xor_low3(fold, stage * 3)
+    local col = DUNGEON_FOLD_COLS[fold * 4 + upper + 1]
+    local lower_count = math.min(6, size - (upper + 1) * 6)
+    if (upper + 1) % 2 == 1 then
+        col = math.max(col, 6 - lower_count)
+    else
+        col = math.min(col, lower_count - 1)
+    end
+    return col
+end
+
 function dungeon_neighbor_local(cell, size, dir, stage)
     local row, offset = math.floor(cell / 6), cell % 6
     local col = (row % 2 == 1) and (5 - offset) or offset
@@ -57,9 +86,8 @@ function dungeon_neighbor_local(cell, size, dir, stage)
     if next_cell >= size then return nil end
     if dir == 0 or dir == 2 then
         local upper = (dir == 0) and row or old_row
-        local turn = (upper % 2 == 1) and 0 or 5
         if upper == 0 and col == 1 then return next_cell end
-        if col ~= turn then return nil end
+        if col ~= dungeon_fold_col(size, stage, upper) then return nil end
     end
     return next_cell
 end

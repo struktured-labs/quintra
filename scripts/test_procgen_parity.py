@@ -17,6 +17,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from quintra_topology import dungeon_predecessor
+
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROOT / "rom/working/quintra.noi"
@@ -84,9 +86,9 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
 
     Scrolling 248×248 dungeon districts deliberately replace the complete
     compact base plane after consuming its established RNG sequence. Their
-    dedicated live-ROM contract validates the whole 28×25 field; parity
-    separates all 340 legacy cells here and retains room 8 as an exact compact
-    control.
+    dedicated live-ROM contract validates the whole 31×31 field; parity
+    separates all 340 legacy cells here and retains the merchant and sanctuary
+    as exact compact controls.
 
     The opening boss similarly composes its giant Crystal projection after
     base generation. Its new column-19 seam is also authored world geometry:
@@ -94,7 +96,7 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     The colossal-arena test owns those cells and the 224px camera contract.
     """
     overlay = set()
-    if bosses_beaten == 0 and counter in (4, 5, 6, 10, 11, 12, 13, 16):
+    if bosses_beaten == 0 and counter < 17:
         return set(range(ROOM_W * ROOM_H))
     if counter == 19 and bosses_beaten == 0:
         overlay.update(row * ROOM_W + (ROOM_W - 1)
@@ -146,10 +148,15 @@ def main():
         pb.button("start"); tick(30)
         pb.button("a"); tick(60)          # Wolfkin -> room 0
 
-        # Poke the run state: known seed, one room before the target
+        # Poke the run state: known seed and one real generated-graph
+        # predecessor of the target. Numeric counter-1 was only valid for the
+        # retired fixed snake and could make this fixture cross into a
+        # different room while comparing against the requested reference.
+        source_counter, expected_dir = dungeon_predecessor(
+            counter, 20, seed, 0)
         for i, b in enumerate(seed.to_bytes(4, "little")):
             pb.memory[rs + 2 + i] = b     # run_seed at offset 2..5
-        pb.memory[rs + 1] = counter - 1   # room_counter
+        pb.memory[rs + 1] = source_counter
         pb.memory[rs + 11] = 0            # bosses_beaten
         pb.memory[rs + 13] = 0            # secret_pending
         # This fixture rewrites only the logical source counter. The opening
@@ -168,13 +175,18 @@ def main():
         pb.memory[rs + 27] = ((1 << 3) | (1 << 7)) if counter == 19 else 0
         pb.memory[rs + 28] = (1 << 7) if counter == 19 else 0
 
-        # Cross the real reciprocal edge from the prior snake cell so the C
-        # procgen runs for the requested target counter.
+        # Cross the real reciprocal edge from the selected graph predecessor
+        # so the C procgen runs for the requested target counter.
         # Check the counter EVERY frame and release input the moment we
         # cross: walking on into the fresh room can kick its rubble, and
         # sampling mid-regeneration reads a half-built map (both showed up
         # as phantom parity failures).
-        direction, px, py, doors = graph_step(counter - 1, counter)
+        direction, px, py, doors = graph_step(source_counter, counter)
+        direction_names = ("up", "right", "down", "left")
+        if direction != direction_names[expected_dir]:
+            pb.stop(save=False)
+            raise AssertionError(
+                f"topology direction mismatch {source_counter}->{counter}")
         for tx, ty in doors:
             pb.memory[tm + ty * ROOM_W + tx] = 3
         pb.memory[pl + 9] = px & 0xFF

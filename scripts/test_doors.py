@@ -3,7 +3,9 @@
 import re
 from pathlib import Path
 from pyboy import PyBoy
-from quintra_topology import STAGE_START, dungeon_neighbor
+from quintra_topology import (
+    STAGE_START, dungeon_maze_neighbor, dungeon_size,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -77,10 +79,18 @@ def crosses(direction, off_center=False):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
-    # Exercise one guaranteed snake-spine edge in each direction. Seeded maze
-    # seams deliberately mean no single 6x5 cell owns four exits every run.
-    stage, size = 2, 22
-    cell = {0: 6, 1: 0, 2: 5, 3: 1}[direction]
+    # Exercise one real generated edge in each direction. The safe-fold graph
+    # deliberately moves north/south crossings between seeds and stages.
+    stage, size = 2, dungeon_size(2)
+    seed = sum(pb.memory[RS + 2 + i] << (i * 8) for i in range(4))
+    candidates = [
+        (cell, dungeon_maze_neighbor(cell, size, direction, seed, stage))
+        for cell in range(size - 3)
+    ]
+    cell, target = next(
+        (cell, target) for cell, target in candidates
+        if target is not None and target < size - 3
+    )
     pb.memory[RS + 11] = stage
     pb.memory[RS + 1] = STAGE_START[stage] + cell
     pb.memory[RS + 6] = 0xFF
@@ -97,7 +107,6 @@ def crosses(direction, off_center=False):
         x = 36
         pb.memory[TM + 5] = pb.memory[TM + 6] = 3
     put16(pb, PL + 9, x); put16(pb, PL + 11, y)
-    target = dungeon_neighbor(cell, size, direction)
     target_room = STAGE_START[stage] + target
     # A full cardinal slide streams its tilemap across many VBlanks. At least
     # one sampled beat must show the reconstructed hero while arrival safety

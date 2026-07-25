@@ -78,6 +78,41 @@ local function cell_xy(cell)
   local row, offset = math.floor(cell / width), cell % width
   return (row % 2 == 1) and (width - 1 - offset) or offset, row
 end
+local FOLD_COLS = {
+  2,0,5,0, 0,4,5,0, 0,5,5,0, 0,0,5,0,
+  0,1,5,0, 5,0,5,0, 2,5,5,0, 5,5,5,0
+}
+local function fold_col(stage, upper_row)
+  local size = STAGE_BOSS[stage + 1] - STAGE_START[stage + 1] + 1
+  local fold = emu:read8(RS + 2) ~ emu:read8(RS + 3)
+    ~ emu:read8(RS + 4) ~ emu:read8(RS + 5) ~ ((stage * 3) & 255)
+  local col = FOLD_COLS[(fold & 7) * 4 + upper_row + 1]
+  local lower_count = math.min(6, size - (upper_row + 1) * 6)
+  if (upper_row + 1) % 2 == 1 then
+    col = math.max(col, 6 - lower_count)
+  else
+    col = math.min(col, lower_count - 1)
+  end
+  return col
+end
+local function graph_connected(a, b, stage)
+  if TOPOLOGY < 30 then return b == a + 1 end
+  local ax, ay = cell_xy(a)
+  local bx, by = cell_xy(b)
+  if math.abs(ax - bx) + math.abs(ay - by) ~= 1 then return false end
+  if ay == by then return true end
+  local upper = math.min(ay, by)
+  return (upper == 0 and ax == 1) or ax == fold_col(stage, upper)
+end
+local function source_for_target(target_local, stage)
+  if target_local > 0 and graph_connected(target_local - 1, target_local, stage)
+      then return target_local - 1 end
+  local size = STAGE_BOSS[stage + 1] - STAGE_START[stage + 1] + 1
+  for source=0,size - 1 do
+    if graph_connected(source, target_local, stage) then return source end
+  end
+  error("media target has no generated graph approach")
+end
 local function enter_room(target)
   -- Deterministic developer-media setup: arrange the current room's real
   -- reciprocal graph doorway, then let the cartridge generate the target. This
@@ -105,8 +140,8 @@ local function enter_room(target)
     return room() == target
   end
   local stage = stage_for_room(target)
-  local source_local = target - 1 - STAGE_START[stage + 1]
   local target_local = target - STAGE_START[stage + 1]
+  local source_local = source_for_target(target_local, stage)
   local sx, sy = cell_xy(source_local)
   local tx, ty = cell_xy(target_local)
   local key, px, py, door1, door2
@@ -123,7 +158,7 @@ local function enter_room(target)
     door1, door2 = 8 * 20, 9 * 20
   end
   emu:write8(RS + 11, stage)
-  emu:write8(RS + 1, target - 1)
+  emu:write8(RS + 1, STAGE_START[stage + 1] + source_local)
   emu:write8(RS + 6, 0xFF)
   emu:write8(TM + door1, 3); emu:write8(TM + door2, 3)
   put16(PL + 9, px); put16(PL + 11, py)
@@ -289,18 +324,9 @@ emu:write8(RS + 18, prior_world_screen)
 emu:write8(RS + 21, prior_seen_lo); emu:write8(RS + 22, prior_seen_hi)
 
 -- The dungeon still deliberately leaves the live room/camera in a 248x248
--- court. Return through its true far south door, then cross the next wide
--- district cell into compact local room 7 before the remaining gallery
--- deep-links use ordinary 160x136 thresholds.
-clear_hostiles()
-local court_room = room()
-put16(PL + 9, 72); put16(PL + 11, 232)
-for _=1,120 do
-  emu:setKeys(KEY_DOWN); emu:runFrame()
-  if room() ~= court_room then break end
-end
-emu:setKeys(0); tick(45)
-if room() == court_room then error("media could not leave turn court") end
+-- court. In this seed's safe fold, local 5 is a real dead end rather than the
+-- obsolete snake's south turn. Ask the graph-aware deep-link to approach
+-- local 7 from its actual neighbour before the remaining gallery captures.
 if not enter_room(STAGE_START[1] + 7) then
   error("media could not leave scrolling district")
 end

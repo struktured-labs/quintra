@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
+    STAGE_BOSS_ROOM, STAGE_START, dungeon_cell_xy, dungeon_direction,
+    dungeon_size,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,8 +32,8 @@ RS_BOSSES = 11
 RS_PUZZLES = 27
 BGT_VOID = 0
 BGT_SWITCH = 33
-BGT_MAP_SIGIL = 52
-BGT_MAP_UNKNOWN = 95
+BGT_MAP_BIG_UNKNOWN = 106
+BGT_MAP_BIG_GOAL = 114
 
 
 def put16(pb, address, value):
@@ -176,18 +177,21 @@ def main():
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    # The Pocket Grid gives each room one square tile. Opening-stage room 2
-    # owns the violet Sigil at (5,2), while its recovery reveals room 3's
-    # amber Warden trial at (7,2). The tutorial has no nonlinear rift at the
-    # later dungeons' (6,3) midpoint, and the full footprint keeps the unseen
-    # boss cell visible only as an anonymous dim square.
-    assert pb.memory[bg + 2 * 32 + 5] == BGT_MAP_SIGIL, \
-        "found Sigil lacks its one-tile violet node"
-    assert pb.memory[bg + 2 * 32 + 7] == BGT_SWITCH, \
-        "claimed Sigil did not reveal the amber Warden trial"
-    assert pb.memory[bg + 3 * 32 + 6] == BGT_VOID, \
+    def node_tile(cell):
+        col, row = dungeon_cell_xy(cell)
+        return pb.memory[bg + (2 + row * 3) * 32 + 1 + col * 3]
+
+    # The screen-filling Pocket Grid gives every room a readable 2x2 node.
+    # Opening room 2 owns the violet GOAL node, while its recovery reveals
+    # room 3 as the next amber Warden trial. The tutorial has no nonlinear
+    # rift at later dungeons' midpoint, and the unseen boss stays anonymous.
+    assert node_tile(2) == BGT_MAP_BIG_GOAL, \
+        "found Sigil lacks its violet 2x2 GOAL node"
+    assert node_tile(3) == BGT_MAP_BIG_GOAL, \
+        "claimed Sigil did not reveal the Warden GOAL node"
+    assert pb.memory[bg + 4 * 32 + 9] == BGT_VOID, \
         "tutorial Compass incorrectly revealed a nonlinear Rift link"
-    assert pb.memory[bg + 8 * 32 + 9] == BGT_MAP_UNKNOWN, \
+    assert node_tile(19) == BGT_MAP_BIG_UNKNOWN, \
         "unseen boss cell leaked its identity through the dim footprint"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")

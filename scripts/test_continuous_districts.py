@@ -9,6 +9,9 @@ from pyboy import PyBoy
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 STATE = ROOT / "tmp/stage-states/quintra-stage-01-court-wolfkin-easy.pyboy"
+VERTICAL_STATE = (
+    ROOT / "tmp/stage-states/quintra-stage-01-entry-wolfkin-easy.pyboy"
+)
 NOI = ROM.with_suffix(".noi").read_text()
 
 
@@ -169,11 +172,23 @@ def main():
     assert_rotated_bg_matches(pb, "Compass resume at rotated origin")
     cross(pb, target=5, x=232, expected_origin=0, expected_camera=0,
           label="east 4->5")
+    pb.stop(save=False)
+
+    # The objective seam is the stable vertical member of every generated
+    # fold: local 1 branches south to local 10. Exercise both directions from
+    # the real stage-entry checkpoint instead of assuming the obsolete 5->6
+    # snake turn still exists.
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    with VERTICAL_STATE.open("rb") as handle:
+        pb.load_state(handle)
+    for _ in range(12):
+        pb.tick()
+    assert pb.memory[RS + 1] == 1
     assert pb.memory[ORIGIN_X] == pb.memory[ORIGIN_Y] == 0
-    cross_vertical(pb, target=6, y=232, expected_origin=31,
-                   expected_camera=0, label="south 5->6")
-    cross_vertical(pb, target=5, y=0, expected_origin=0,
-                   expected_camera=112, label="north 6->5")
+    cross_vertical(pb, target=10, y=232, expected_origin=31,
+                   expected_camera=0, label="south 1->10")
+    cross_vertical(pb, target=1, y=0, expected_origin=0,
+                   expected_camera=112, label="north 10->1")
     assert pb.memory[ORIGIN_X] == pb.memory[ORIGIN_Y] == 0
     pb.stop(save=False)
     print("[continuous-districts] PASS reversible wide seam, LCD/hero/music "

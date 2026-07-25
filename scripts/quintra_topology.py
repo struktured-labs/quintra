@@ -40,16 +40,36 @@ def dungeon_neighbor(cell: int, size: int, direction: int) -> int | None:
 
 def dungeon_maze_neighbor(cell: int, size: int, direction: int,
                           run_seed: int, stage: int) -> int | None:
-    """Mirror the cartridge's winding spine and fixed objective wing."""
+    """Mirror the cartridge's seed-selected safe fold and objective loop."""
     col, row = dungeon_cell_xy(cell)
     upper_row = row - 1 if direction == 0 else row
     neighbor = dungeon_neighbor(cell, size, direction)
     if neighbor is None or direction not in (0, 2):
         return neighbor
-    turn_col = 0 if upper_row & 1 else GRID_W - 1
     if upper_row == 0 and col == 1:
         return neighbor
-    return neighbor if col == turn_col else None
+    folds = (
+        (2, 0, 5, 0),
+        (0, 4, 5, 0),
+        (0, 5, 5, 0),
+        (0, 0, 5, 0),
+        (0, 1, 5, 0),
+        (5, 0, 5, 0),
+        (2, 5, 5, 0),
+        (5, 5, 5, 0),
+    )
+    seed_fold = (run_seed ^ (run_seed >> 8) ^ (run_seed >> 16)
+                 ^ (run_seed >> 24) ^ (stage * 3)) & 7
+    lower_first = (upper_row + 1) * GRID_W
+    lower_count = min(GRID_W, size - lower_first)
+    if lower_count <= 0:
+        return None
+    fold_col = folds[seed_fold][upper_row]
+    if (upper_row + 1) & 1:
+        fold_col = max(fold_col, GRID_W - lower_count)
+    else:
+        fold_col = min(fold_col, lower_count - 1)
+    return neighbor if col == fold_col else None
 
 
 def dungeon_direction(source: int, target: int) -> int:
@@ -58,3 +78,19 @@ def dungeon_direction(source: int, target: int) -> int:
     return {
         (0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3,
     }[(tx - sx, ty - sy)]
+
+
+def dungeon_predecessor(target: int, size: int, run_seed: int,
+                        stage: int) -> tuple[int, int]:
+    """Return one real source cell and direction leading into ``target``."""
+    sources = list(range(size))
+    # Preserve the familiar numeric predecessor when that edge exists, then
+    # fall back to the closest real arm in the generated fold.
+    sources.sort(key=lambda source: (
+        source != target - 1, abs(source - target), source))
+    for source in sources:
+        for direction in range(4):
+            if dungeon_maze_neighbor(
+                    source, size, direction, run_seed, stage) == target:
+                return source, direction
+    raise ValueError(f"no graph approach to stage {stage + 1} cell {target}")

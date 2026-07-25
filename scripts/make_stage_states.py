@@ -20,7 +20,8 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_size,
+    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_predecessor,
+    dungeon_size,
 )
 
 
@@ -110,6 +111,10 @@ def new_emulator(rom: Path) -> tuple[PyBoy, io.BytesIO]:
 def put16(pyboy: PyBoy, address: int, value: int) -> None:
     pyboy.memory[address] = value & 0xFF
     pyboy.memory[address + 1] = (value >> 8) & 0xFF
+
+
+def get32(pyboy: PyBoy, address: int) -> int:
+    return sum(pyboy.memory[address + i] << (i * 8) for i in range(4))
 
 
 def stage_entry_room(stage: int) -> int:
@@ -361,7 +366,10 @@ def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int
     entities, tilemap = addrs["_entities"], addrs["_room_tilemap"]
     solve_entry_puzzle(pyboy, addrs)
     target = STAGE_BOSS_ROOM[stage] - 1
-    pyboy.memory[rs + 1] = target - 1
+    target_local = target - STAGE_START[stage]
+    source_local, direction_id = dungeon_predecessor(
+        target_local, dungeon_size(stage), get32(pyboy, rs + 2), stage)
+    pyboy.memory[rs + 1] = STAGE_START[stage] + source_local
     pyboy.memory[rs + 6] = 0xFF  # DIR_NONE before the synthetic approach
     normalize_compact_source(pyboy, addrs)
     put16(pyboy, rs + 23,
@@ -375,9 +383,7 @@ def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int
         entity = entities + i * 28
         if pyboy.memory[entity] == 2:
             pyboy.memory[entity] = pyboy.memory[entity + 1] = 0
-    source_local = target - 1 - STAGE_START[stage]
-    target_local = target - STAGE_START[stage]
-    direction = graph_direction(source_local, target_local)
+    direction = ("up", "right", "down", "left")[direction_id]
     cross_graph_edge(pyboy, player, tilemap, direction)
     try:
         for _ in range(120):

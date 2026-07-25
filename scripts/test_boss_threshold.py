@@ -89,8 +89,15 @@ def main() -> None:
     for i in range(32 * 28):
         pb.memory[entities + i] = 0
     pb.memory[sealed] = 0
-    # Local 17 leads south into the opening sanctuary at local 18.
-    source, sanctuary = 17, 18
+    # Enter the opening sanctuary from one real arm in this seed's fold.
+    sanctuary = dungeon_size(0) - 2
+    seed = sum(pb.memory[rs + 2 + i] << (i * 8) for i in range(4))
+    source = next(
+        cell for cell in range(dungeon_size(0))
+        if any(dungeon_maze_neighbor(
+            cell, dungeon_size(0), direction, seed, 0
+        ) == sanctuary for direction in range(4))
+    )
     approach = dungeon_direction(source, sanctuary)
     boss_direction = dungeon_direction(sanctuary, sanctuary + 1)
     return_direction = (approach + 2) & 3
@@ -149,7 +156,8 @@ def main() -> None:
         f"return door lost normal palette: attr={return_attr}")
 
     # Every actual boss-adjacent graph edge across all nine stage footprints
-    # assembles the same complete skull. A boss can have two approaches.
+    # assembles the same complete skull. The fold must never create a side
+    # entrance that bypasses the sanctuary, blessing, and proximity warning.
     expected_seal = (BGT_BOSS_GATE_L, BGT_BOSS_GATE_R,
                      BGT_BOSS_GATE_TOP, BGT_BOSS_GATE_BOTTOM)
     observed_directions = set()
@@ -161,6 +169,9 @@ def main() -> None:
                     source, size, direction, 0xCAFE1234, stage
                 ) != boss:
                     continue
+                assert source == boss - 1, (
+                    f"stage {stage + 1} fold bypasses sanctuary: "
+                    f"{source}->{boss}")
                 observed_directions.add(direction)
                 pb.memory[rs + 11] = stage
                 pb.memory[rs + 1] = STAGE_START[stage] + source
