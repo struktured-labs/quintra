@@ -1,4 +1,70 @@
-# Quintra whole-game audit — updated 2026-07-24
+# Quintra whole-game audit — updated 2026-07-25
+
+## v0.18.79 checkpoint and difficulty-response audit
+
+The post-v0.18.78 audit found a concrete stale-artifact gap: all 460 PyBoy
+curriculum fixtures matched the continuous-district ROM, but the native mGBA
+curriculum and five-minute training set still named the preceding cartridge
+hash. The complete five-hero, two-difficulty native curriculum is regenerated
+against v0.18.79 and representative entry, court, sanctuary, boss, Riftwild,
+and village files cold-load through mGBA's independent `-t` startup path. The
+continuous Easy Picsean route publishes six more native states at 5, 10, 15,
+20, 25, and 30 minutes. Its final checkpoint is stage 6, room counter 118,
+with five Colossi down and 16 HP.
+
+The periodic native generator also had an interruption hazard. It removed the
+last manifest and root states before the replacement controller route had
+finished; a host SIGTERM correctly prevented a false manifest but unnecessarily
+left the tester with no usable complete set. It now writes into an unreferenced
+generation, cold-loads every due checkpoint, publishes that directory, and
+atomically replaces the manifest last. Only after readers can resolve the new
+hashes does it retire old files. A failed or killed run therefore preserves the
+last complete generation rather than exposing partial progress.
+An intentional invalid-emulator run against the populated output fails before
+publication while preserving the prior manifest byte-for-byte, leaves its
+single referenced generation intact, and cleans the abandoned staging
+directory.
+
+The exact release candidate also completes the controller-only campaign with
+all nine Colossi and all eight intermediate boss relics at frame 192,530. A
+fresh emulator replays its recorded button stream to victory at frame 193,716
+with 15 HP. That gate exposed and fixed one host-side portability issue: its
+multi-line `awk` condition now ends continued lines with `||`, which both mawk
+and gawk accept. The cartridge result was already valid; only the audit parser
+had rejected it.
+
+The attended statement that the last played build felt difficult remains valid
+human evidence, but does not by itself justify weakening every Normal room.
+Normal remains the authored target. The live Game Over screen now closes the
+discoverability gap by rendering `SELECT EASY AT HERO` after a real Normal
+combat death; Easy deaths instead suggest another hero. A fatal-combat,
+permadeath, SRAM, rendered-text, and clean-restart contract owns that prompt,
+while the paired difficulty contract confirms all 230 Normal/Easy curriculum
+pairs still share generated tiles, routes, ordinary enemy placement/HP, and
+boss-pattern identity.
+
+The current controller diagnostics make the intended distinction visible.
+The Normal stage-entry pilot resolves 39/45 generated fixtures with zero
+deaths, so ordinary arrival pressure is not globally lethal. Its generic
+one-minute Colossus policy clears 9/45 and survives 12/45; the matching Easy
+policy clears and survives 40/45. These scripts are policy diagnostics rather
+than balance authority, but they support keeping demanding Normal encounters
+while making the existing inspection mode discoverable.
+
+Attended feedback also confirms that nominal topology is not the same thing as
+perceived scale. Even with 20–30 Compass cells and continuous seams between
+selected 31×31 fields, the stages still feel compact. The next geography pass
+must expand sustained scrolling acreage and meaningful branches rather than
+padding the campaign with tiny room counters.
+
+Native visual review confirms the other two goal-facing systems already meet
+their current cartridge contracts. SELECT renders a complete faint 6×5
+one-tile dungeon graph beside a permanent `YOU / ROOM / SIGIL / TRIAL / BOSS /
+RIFT` legend, with explored nodes and corridors brightened. Every actual
+boss-adjacent edge uses a 16×16 amber skull seal and triggers a one-shot roar
+and tremor in its approach band. The nine-boss gallery remains a set of
+64×48–128×80 background bodies around mobile weak points; Crystal retains the
+true 224×136 scrolling arena and Void occupies four fifths of screen width.
 
 ## v0.18.78 continuous-district response
 

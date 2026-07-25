@@ -12,6 +12,11 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 
 
+def font_tiles(text):
+    return bytes(0 if char == " " else ord(char) - ord("A") + 11
+                 for char in text)
+
+
 def addr(name):
     match = re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", NOI)
     if not match:
@@ -138,6 +143,17 @@ def main():
         first.memory[0xFF4F] = 0
         assert attrs == bytes(20 * 18), \
             "game-over retained stale CGB text palette attributes"
+        # A hard Normal death should teach the already-implemented inspection
+        # mode where the player actually needs it. This is an ordinary
+        # cartridge-rendered prompt, not documentation or a test-only overlay.
+        easy_hint = font_tiles("SELECT EASY AT HERO")
+        rendered_hint = bytes(first.memory[
+            bg_map + 13 * 32 + 1:bg_map + 13 * 32 + 1 + len(easy_hint)
+        ])
+        assert rendered_hint == easy_hint, (
+            f"Normal game-over omitted Easy-mode recovery hint: "
+            f"{list(rendered_hint)}"
+        )
 
         first.memory[0x0000] = 0x0A
         first.memory[0x4000] = 0

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.78: Unbroken Paths](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.79: Second Wind](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,25 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.78**, published after the complete build,
+The current cartridge is **v0.18.79**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**A difficult run now teaches its own testing escape hatch.** Normal remains
+the authored balance and no enemy, boss, projectile, hero, or procgen value
+changed. After an actual Normal combat death, the cartridge's Game Over screen
+now says `SELECT EASY AT HERO`, pointing directly to the existing hero-screen
+toggle when the advice is useful. An Easy death instead suggests trying
+another hero.
+
+**The preferred mGBA checkpoints are current and interruption-safe.** All 460
+native entry, court, sanctuary, boss, Riftwild, and village states are
+regenerated for the current ROM. The separate Easy Picsean training route
+writes verified native states every five emulated minutes through minute 30;
+that continuous route reaches stage 6 with five Colossi down at the final
+checkpoint.
+Timed-state generation now builds and cold-loads an isolated complete
+generation before atomically publishing its manifest; a killed or failed run
+cannot erase or partially replace the last usable set.
 
 **Consecutive wide fields now behave like one continuous district.** Crossing
 between 31×31-tile dungeon courts or Riftwild cells rotates the CGB's 32×32
@@ -2119,6 +2136,9 @@ room, stage, HP, and difficulty; every state must independently reload through
 mGBA's `-t` path. Open a beat with
 `make play-timed-mgba-state TIMED_CHECKPOINT=20`. These files are emulator
 fixtures only and do not alter cartridge SRAM or add an in-game save system.
+Generation occurs in an unreferenced staging directory. Only after every state
+cold-loads does one atomic manifest replacement expose the new generation;
+an interruption leaves the prior manifest and all of its files valid.
 
 For short controller-learning rollouts, use
 `UV_CACHE_DIR=tmp/uv-cache uv run --with 'pyboy==2.7.0' python scripts/quintra_pyboy_env.py --class-id 0 --difficulty normal --steps 40`.

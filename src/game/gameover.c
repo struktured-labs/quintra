@@ -50,7 +50,14 @@ void gameover_enter(void) {
     gotoxy(2, 11); text_write("time    "); text_u16((u16)(run_state.run_timer / 60));
     text_write(":"); text_digit((u8)((run_state.run_timer % 60) / 10));
     text_digit((u8)(run_state.run_timer % 10));
-    gotoxy(2, 14); text_write("PRESS  START");
+    // Normal is intentionally demanding, but the broad inspection assist was
+    // previously taught only on the class screen a player had already left.
+    // Put the exact recovery action at the point where difficulty feedback is
+    // useful. Easy deaths instead suggest a new vessel rather than telling an
+    // already-assisted player to toggle back to Normal.
+    gotoxy(1, 13);
+    text_write(RUN_IS_EASY() ? "TRY ANOTHER HERO" : "SELECT EASY AT HERO");
+    gotoxy(2, 15); text_write("PRESS  START");
 
     // Console glyph writes touch tile ids only; stale CGB attribute bytes from
     // gameplay otherwise color arbitrary digits differently.
