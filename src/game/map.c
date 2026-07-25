@@ -36,9 +36,15 @@ static u8 map_attr(u8 tile) {
     if (tile == BGT_CRYSTAL || tile == BGT_PORTAL
         || tile == BGT_WILD_FLOWER || tile == BGT_WILD_WATER)
         return BGPAL_CRYSTAL;
-    if (tile == BGT_MAP_SIGIL || tile == BGT_MAP_RIFT) return BGPAL_CRYSTAL;
-    if (tile == BGT_MAP_HERE) return BGPAL_DOOR;
-    if (tile == BGT_MAP_BOSS) return BGPAL_CRACK;
+    if (tile == BGT_MAP_SIGIL || tile == BGT_MAP_RIFT
+        || (tile >= BGT_MAP_BIG_GOAL
+            && tile < BGT_MAP_BIG_GOAL + 4)) return BGPAL_CRYSTAL;
+    if (tile == BGT_MAP_HERE
+        || (tile >= BGT_MAP_BIG_HERE
+            && tile < BGT_MAP_BIG_HERE + 4)) return BGPAL_DOOR;
+    if (tile == BGT_MAP_BOSS
+        || (tile >= BGT_MAP_BIG_BOSS
+            && tile < BGT_MAP_BIG_BOSS + 4)) return BGPAL_CRACK;
     if (tile == BGT_DOOR || tile == BGT_SWITCH || tile == BGT_WILD_STUMP)
         return BGPAL_DOOR;
     if (tile == BGT_WALL_CRACK || tile == BGT_SPIKES) return BGPAL_CRACK;
@@ -99,41 +105,33 @@ static void map_room_box(u8 x, u8 y, u8 center) {
     map_put((u8)(x + 1), (u8)(y + 1), center);
 }
 
+static void map_big_node(u8 x, u8 y, u8 base) {
+    map_put(x, y, base);
+    map_put((u8)(x + 1), y, (u8)(base + 1));
+    map_put(x, (u8)(y + 1), (u8)(base + 2));
+    map_put((u8)(x + 1), (u8)(y + 1), (u8)(base + 3));
+}
+
 static void draw_dungeon_legend(void) {
     static const u8 you[3] = {
         BGT_MAP_LABEL_Y, BGT_MAP_LABEL_O, BGT_MAP_LABEL_U
     };
-    static const u8 room[4] = {
-        BGT_MAP_LABEL_R, BGT_MAP_LABEL_O, BGT_MAP_LABEL_O, BGT_AREA_M
-    };
-    static const u8 sigil[5] = {
-        BGT_MAP_LABEL_S, BGT_MAP_LABEL_I, BGT_MAP_LABEL_G,
-        BGT_MAP_LABEL_I, BGT_MAP_LABEL_L
-    };
-    static const u8 trial[5] = {
-        BGT_MAP_LABEL_T, BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
-        BGT_AREA_A, BGT_MAP_LABEL_L
+    static const u8 goal[4] = {
+        BGT_MAP_LABEL_G, BGT_MAP_LABEL_O, BGT_AREA_A, BGT_MAP_LABEL_L
     };
     static const u8 boss[4] = {
         BGT_MAP_LABEL_B, BGT_MAP_LABEL_O, BGT_MAP_LABEL_S, BGT_MAP_LABEL_S
     };
-    static const u8 rift[4] = {
-        BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
-        BGT_MAP_LABEL_F, BGT_MAP_LABEL_T
-    };
     u8 i;
-    map_put(13, 2, BGT_MAP_HERE);
-    for (i = 0; i < 3; ++i) map_put((u8)(14 + i), 2, you[i]);
-    map_put(13, 4, BGT_MAP_ROOM);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 4, room[i]);
-    map_put(13, 6, BGT_MAP_SIGIL);
-    for (i = 0; i < 5; ++i) map_put((u8)(14 + i), 6, sigil[i]);
-    map_put(13, 8, BGT_SWITCH);
-    for (i = 0; i < 5; ++i) map_put((u8)(14 + i), 8, trial[i]);
-    map_put(13, 10, BGT_MAP_BOSS);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 10, boss[i]);
-    map_put(13, 12, BGT_MAP_RIFT);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 12, rift[i]);
+    // A single bottom key is enough once room identities are 16x16 shapes.
+    // It preserves the semantic colors without surrendering forty percent of
+    // the LCD to a vertical legend.
+    map_put(0, 17, BGT_MAP_HERE);
+    for (i = 0; i < 3; ++i) map_put((u8)(1 + i), 17, you[i]);
+    map_put(5, 17, BGT_MAP_SIGIL);
+    for (i = 0; i < 4; ++i) map_put((u8)(6 + i), 17, goal[i]);
+    map_put(11, 17, BGT_MAP_BOSS);
+    for (i = 0; i < 4; ++i) map_put((u8)(12 + i), 17, boss[i]);
 }
 
 static void draw_world_grid(void) {
@@ -223,23 +221,23 @@ static void draw_dungeon_grid(void) {
     // 23 -22 -21 -20 -19 -18
     // |
     // 24 -25 -26 -27 -28 -29
-    // One tile per room plus one tile per link makes the whole 6×5 footprint
-    // fit in the left twelve columns. Unlike the former room-sized boxes,
-    // this reads as a literal pocket grid and leaves a permanent right-hand
-    // key explaining every semantic icon.
+    // Two tiles per room plus one tile per link fills a 17x14 region: nearly
+    // the complete LCD instead of a miniature left-hand diagram. The same
+    // 6x5 topology stays compressed and abstract, but a room is now a
+    // glance-readable 16x16 node with a large YOU, GOAL, or BOSS mark.
     static const u8 gx[MAX_DUNGEON_CELLS] = {
-        1, 3, 5, 7, 9, 11,
-        11, 9, 7, 5, 3, 1,
-        1, 3, 5, 7, 9, 11,
-        11, 9, 7, 5, 3, 1,
-        1, 3, 5, 7, 9, 11
+        1, 4, 7, 10, 13, 16,
+        16, 13, 10, 7, 4, 1,
+        1, 4, 7, 10, 13, 16,
+        16, 13, 10, 7, 4, 1,
+        1, 4, 7, 10, 13, 16
     };
     static const u8 gy[MAX_DUNGEON_CELLS] = {
         2, 2, 2, 2, 2, 2,
-        4, 4, 4, 4, 4, 4,
-        6, 6, 6, 6, 6, 6,
+        5, 5, 5, 5, 5, 5,
         8, 8, 8, 8, 8, 8,
-        10, 10, 10, 10, 10, 10
+        11, 11, 11, 11, 11, 11,
+        14, 14, 14, 14, 14, 14
     };
     u8 i, j;
     u8 size = run_state_dungeon_size();
@@ -262,26 +260,26 @@ static void draw_dungeon_grid(void) {
         u8 seen = run_state_dungeon_cell_seen(i);
         u8 boss_hint = (i == (u8)(size - 1)
             && run_state_dungeon_cell_seen((u8)(size - 2)));
-        u8 icon = seen ? BGT_MAP_ROOM : BGT_MAP_UNKNOWN;
-        if (i == here) icon = BGT_MAP_HERE;
+        u8 icon = seen ? BGT_MAP_BIG_ROOM : BGT_MAP_BIG_UNKNOWN;
+        if (i == here) icon = BGT_MAP_BIG_HERE;
         // Reaching the sanctuary reveals the adjacent boss threshold even
         // before it is crossed. The amber danger node is the map equivalent
         // of Zelda's compass hint and matches the marked in-room boss doors.
-        if (boss_hint && i != here) icon = BGT_MAP_BOSS;
+        if (boss_hint && i != here) icon = BGT_MAP_BIG_BOSS;
         // Put the objective in the room that actually owns it. The older
         // free-floating center marker looked like decoration, so players
         // could reach the sanctuary without realizing which room held the
         // required Rift Sigil.
         if (i == 2 && seen && i != here)
-            icon = BGT_MAP_SIGIL;
-        // Each completed fixture reveals exactly one next trial. The switch
-        // glyph distinguishes the Waystone puzzle from amber Warden fights;
-        // late maps therefore teach the route without exposing unrelated
-        // procedural rooms or returning to a truncated text page.
+            icon = BGT_MAP_BIG_GOAL;
+        // Each completed fixture reveals exactly one next GOAL. The Pack
+        // supplies its specific Sigil/Waystone/Warden name; the Compass stays
+        // spatial and teaches the route without exposing unrelated procedural
+        // rooms or returning to a truncated text page.
         if (i == next_trial && i != here) {
-            icon = BGT_SWITCH;
+            icon = BGT_MAP_BIG_GOAL;
         }
-        map_put(gx[i], gy[i], icon);
+        map_big_node(gx[i], gy[i], icon);
     }
     // Every real corridor is faintly visible, establishing the dungeon's
     // shape immediately. A corridor brightens only after both endpoint rooms
@@ -292,9 +290,9 @@ static void draw_dungeon_grid(void) {
         for (j = (u8)(i + 1); j < size; ++j) {
             u8 b_seen = run_state_dungeon_cell_seen(j);
             u8 adjacent = (gy[i] == gy[j]
-                    && (gx[i] + 2 == gx[j] || gx[j] + 2 == gx[i]))
+                    && (gx[i] + 3 == gx[j] || gx[j] + 3 == gx[i]))
                 || (gx[i] == gx[j]
-                    && (gy[i] + 2 == gy[j] || gy[j] + 2 == gy[i]));
+                    && (gy[i] + 3 == gy[j] || gy[j] + 3 == gy[i]));
             if (i == (u8)(size - 1)
                 && run_state_dungeon_cell_seen((u8)(size - 2))) {
                 a_seen = 1;
@@ -313,12 +311,14 @@ static void draw_dungeon_grid(void) {
                 u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
                 u8 tile = (a_seen && b_seen)
                     ? BGT_MAP_PATH_H : BGT_MAP_PATH_H_DIM;
-                map_put((u8)(left + 1), gy[i], tile);
+                map_put((u8)(left + 2), gy[i], tile);
+                map_put((u8)(left + 2), (u8)(gy[i] + 1), tile);
             } else {
                 u8 top = gy[i] < gy[j] ? gy[i] : gy[j];
                 u8 tile = (a_seen && b_seen)
                     ? BGT_MAP_PATH_V : BGT_MAP_PATH_V_DIM;
-                map_put(gx[i], (u8)(top + 1), tile);
+                map_put(gx[i], (u8)(top + 2), tile);
+                map_put((u8)(gx[i] + 1), (u8)(top + 2), tile);
             }
         }
     }
@@ -330,7 +330,7 @@ static void draw_dungeon_grid(void) {
     if (run_state.bosses_beaten > 0) {
         if (run_state_dungeon_cell_seen(2)
             || run_state_dungeon_cell_seen(8))
-            map_put(6, 3, BGT_MAP_RIFT);
+            map_put(9, 4, BGT_MAP_RIFT);
     }
     draw_dungeon_legend();
 }

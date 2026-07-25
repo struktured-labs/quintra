@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.81: Colossus Fields](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.82: Pocket Atlas](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,37 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.81**, published after the complete build,
+The current cartridge is **v0.18.82**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The SELECT Compass is now a screen-filling abstract pocket map.** The
+previous implementation technically had a 6×5 grid, but each room was only
+one 8×8 tile and a six-line legend consumed roughly forty percent of the LCD.
+Every dungeon node is now a 16×16 metasquare connected by full-width route
+lines, so the 20-room opening stage and 30-room finale visibly occupy the
+screen instead of resembling a tiny status diagram.
+
+The language is deliberately small and consistent: a cyan arrow is **YOU**, a
+violet diamond is the next **GOAL**, and an amber skull is the **BOSS**. Those
+three labels fit on one bottom row. Explored rooms and corridors brighten over
+the dim complete footprint; objective branches, the nonlinear Rift shortcut,
+the stage number, high-byte late rooms, and sanctuary boss reveal all retain
+their actual cartridge state. The map contains no prose page and no host-side
+overlay.
+
+The boss approach remains a three-part warning rather than a surprise
+transition. Reaching the sanctuary reveals the adjacent amber skull on the
+Compass; the physical threshold is a unique 16×16 amber skull seal; approaching
+it produces a low roar and tremor before entry. Live-ROM coverage proves those
+cues from every graph approach together with the map’s 20→30-room footprint,
+semantic CGB colors, nonlinear edge, and objective progression.
+
+All 460 PyBoy fixtures and all 460 native mGBA states were regenerated against
+this exact ROM. The independent Easy Picsean training route also produced six
+cold-loadable native mGBA states at five-minute intervals through minute 30.
+Finally, the previously recorded 175,154-frame campaign trace reproduced the
+ending from cold boot with all nine Colossi down and 16 HP, so opening and
+closing the enlarged Compass does not perturb gameplay state or bank restore.
 
 **All nine Colossus fights now occupy scrolling 224×136 arenas.** Crystal's
 opening giant was previously the only boss with a real second chamber; the

@@ -138,6 +138,15 @@
 #define BGT_MAP_PATH_H_DIM 100
 #define BGT_MAP_PATH_V_DIM 101
 
+// Full-size dungeon Compass nodes. Each identity occupies a 2x2 tile
+// metasquare in TL/TR/BL/BR order, turning the 6x5 pocket graph into the
+// dominant screen element instead of a tiny diagram beside a tall legend.
+#define BGT_MAP_BIG_ROOM     102 // 102..105
+#define BGT_MAP_BIG_UNKNOWN  106 // 106..109
+#define BGT_MAP_BIG_HERE     110 // 110..113
+#define BGT_MAP_BIG_GOAL     114 // 114..117
+#define BGT_MAP_BIG_BOSS     118 // 118..121
+
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
 #define BGPAL_WALL    1
