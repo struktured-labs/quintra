@@ -270,6 +270,11 @@ void tiles_paint_void_projection(void) BANKED;
 void tiles_prepare_colossal_edges(void) BANKED; // safe 0..3px camera overscan
 void tiles_prepare_crystal_wide_arena(void) BANKED; // BG cols 20..28 for 224px arena
 void tiles_prepare_wide_field(void) BANKED; // generated BG cols/rows through 31x31
+// Stream one logical destination line into a rotated physical BG map. These
+// are used by wide-to-wide continuous seams; logical index 31 is the
+// deterministic wall/tree overscan line.
+void tiles_stream_wide_column(u8 logical_x, u8 physical_x) BANKED;
+void tiles_stream_wide_row(u8 logical_y, u8 physical_y) BANKED;
 u8 tiles_world_camera_step(u8 current, i16 player_pos,
                            u8 world_extent, u8 view_extent) BANKED;
 void tiles_open_crystal_far_exit(void) BANKED;

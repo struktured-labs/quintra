@@ -39,6 +39,13 @@ extern u8 room_world_width;
 extern u8 room_world_height;
 extern u8 room_camera_x;
 extern u8 room_camera_y;
+// Physical 32x32 BG-map origin of logical world tile (0,0). Consecutive
+// scrolling fields rotate this origin at their shared seam, allowing a full
+// destination to stream behind the moving camera without an LCD-off rebuild.
+extern u8 room_bg_origin_x;
+extern u8 room_bg_origin_y;
+#define ROOM_BG_MAP_X(x) ((u8)((room_bg_origin_x + (u8)(x)) & 31))
+#define ROOM_BG_MAP_Y(y) ((u8)((room_bg_origin_y + (u8)(y)) & 31))
 extern u8 room_transform_ticks;
 // Temporary combat boon: decremented in active gameplay only, so menus do
 // not consume it and it never needs to inflate the suspend-save payload.
@@ -60,6 +67,10 @@ u8 room_apply_world_arena(void) BANKED;
 // Build deterministic off-viewport terrain for a large dungeon turn court.
 void room_generate_dungeon_court(u32 seed) BANKED;
 void room_reopen_dungeon_court_seams(void) BANKED;
+// Continuous wide-field boundary: rotate and stream the destination through
+// the hardware BG ring while keeping the champion and music alive.
+void room_stream_wide_seam(u8 dir) BANKED;
+void room_draw_tilemap(void) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;

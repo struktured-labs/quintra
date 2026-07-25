@@ -27,7 +27,7 @@ def addr(name):
 
 (
     RS, PL, EN, TM, EXT, BOTTOM, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y,
-    LARGE, SEALED, PUZZLE_LOCKED,
+    LARGE, SEALED, PUZZLE_LOCKED, ORIGIN_X, ORIGIN_Y,
 ) = map(
     addr,
     (
@@ -35,7 +35,7 @@ def addr(name):
         "_room_world_extension", "_room_world_bottom", "_room_world_width",
         "_room_world_height", "_room_camera_x", "_room_camera_y",
         "_procgen_current_room_is_large", "_room_combat_sealed",
-        "_room_puzzle_locked",
+        "_room_puzzle_locked", "_room_bg_origin_x", "_room_bg_origin_y",
     ),
 )
 
@@ -180,7 +180,8 @@ def main():
         assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (
             CAMERA_X_MAX, CAMERA_Y_MAX)
         assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
-            CAMERA_X_MAX, CAMERA_Y_MAX)
+            ((pb.memory[ORIGIN_X] << 3) + CAMERA_X_MAX) & 0xFF,
+            ((pb.memory[ORIGIN_Y] << 3) + CAMERA_Y_MAX) & 0xFF)
         shot = ROOT / "tmp" / "dungeon-turn-court.png"
         shot.parent.mkdir(exist_ok=True)
         pb.screen.image.save(shot)
@@ -215,7 +216,8 @@ def main():
         player_y = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
         assert player_y == 224, player_y
         assert pb.memory[CAMERA_Y] == CAMERA_Y_MAX
-        assert pb.memory[0xFF42] == CAMERA_Y_MAX
+        assert pb.memory[0xFF42] == (
+            ((pb.memory[ORIGIN_Y] << 3) + CAMERA_Y_MAX) & 0xFF)
 
         # Local 7 is the authored Waystone fixture and deliberately returns
         # to the compact presentation so its puzzle language remains legible.

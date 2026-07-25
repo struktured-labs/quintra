@@ -14,11 +14,12 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM, SCREEN, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, WORLD_EXT, WORLD_BOTTOM, LARGE = map(addr, (
+RS, PL, EN, TM, SCREEN, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, WORLD_EXT, WORLD_BOTTOM, LARGE, ORIGIN_X, ORIGIN_Y = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap", "_loop_current_screen",
     "_room_world_width", "_room_world_height", "_room_camera_x", "_room_camera_y",
     "_room_world_extension", "_room_world_bottom",
     "_procgen_current_room_is_large",
+    "_room_bg_origin_x", "_room_bg_origin_y",
 ))
 
 def put16(pb, p, v):
@@ -39,14 +40,29 @@ def exit_at(pb, x, y, clear=True):
     # A full generated-room swap can straddle several video frames; the
     # outdoor rebuild also streams a complete tilemap before it is safe to
     # inspect authored paths.
-    for _ in range(90): pb.tick()
+    for _ in range(90):
+        # This is a topology/render transaction check, not an endurance
+        # encounter. Keep incidental destination fire from making the single
+        # sampled scroll register land on a one-pixel damage-shake frame.
+        pb.memory[PL + 2] = pb.memory[PL + 1]
+        pb.memory[PL + 15] = 120
+        pb.tick()
     # Riftwild seams now use the same streamed slide as dungeon seams. The
     # transition must settle its hardware scroll and restore OBJ afterwards;
     # otherwise a successful graph hop can look like the hero vanished.
     assert pb.memory[0xFF40] & 0x02, "Riftwild seam left sprites disabled"
-    entered_from = pb.memory[RS + 6]
-    expected_x = 88 if entered_from == 3 else 0
-    expected_y = 112 if entered_from == 0 else 0
+    expected_x = ((pb.memory[ORIGIN_X] << 3) + pb.memory[CAMERA_X]) & 0xFF
+    expected_y = ((pb.memory[ORIGIN_Y] << 3) + pb.memory[CAMERA_Y]) & 0xFF
+    for _ in range(20):
+        if (pb.memory[0xFF43], pb.memory[0xFF42]) == (expected_x, expected_y):
+            break
+        pb.memory[PL + 2] = pb.memory[PL + 1]
+        pb.memory[PL + 15] = 120
+        pb.tick()
+        expected_x = (
+            (pb.memory[ORIGIN_X] << 3) + pb.memory[CAMERA_X]) & 0xFF
+        expected_y = (
+            (pb.memory[ORIGIN_Y] << 3) + pb.memory[CAMERA_Y]) & 0xFF
     assert pb.memory[0xFF43] == expected_x and pb.memory[0xFF42] == expected_y, (
         f"Riftwild seam camera wrong: "
         f"{pb.memory[0xFF43]},{pb.memory[0xFF42]} != {expected_x},{expected_y}")
@@ -100,7 +116,8 @@ def main():
     put16(pb, PL + 11, 60)
     pb.memory[PL + 15] = 120
     for _ in range(64): pb.tick()
-    assert pb.memory[CAMERA_Y] == 0 and pb.memory[0xFF42] == 0
+    assert pb.memory[CAMERA_Y] == 0
+    assert pb.memory[0xFF42] == ((pb.memory[ORIGIN_Y] << 3) & 0xFF)
     # The live playfield identifies the region without replacing the walkable
     # grass/path data that collision and procgen parity consume.
     pb.memory[0xFF4F] = 0
@@ -128,13 +145,17 @@ def main():
     pb.memory[PL + 15] = 120
     for _ in range(64): pb.tick()
     assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (88, 112)
-    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (88, 112), \
+    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
+        ((pb.memory[ORIGIN_X] << 3) + 88) & 0xFF,
+        ((pb.memory[ORIGIN_Y] << 3) + 112) & 0xFF), \
         "Riftwild camera did not reach its southeast bound"
     pb.screen.image.save(ROOT / "tmp" / "riftwild-southeast-field.png")
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 40)
     for _ in range(64): pb.tick()
     assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0)
-    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (0, 0)
+    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
+        (pb.memory[ORIGIN_X] << 3) & 0xFF,
+        (pb.memory[ORIGIN_Y] << 3) & 0xFF)
 
     # Riftwild encounters never seal exits: leave screen 0 with its generated
     # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.

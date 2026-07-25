@@ -100,9 +100,9 @@ static void set_tile_live(u8 x, u8 y, u8 tile, u8 attr) {
     room_tilemap[y][x] = tile;
     wait_vbl_done();
     VBK_REG = 0;
-    set_bkg_tiles(x, y, 1, 1, &tile);
+    set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y), 1, 1, &tile);
     VBK_REG = 1;
-    set_bkg_tiles(x, y, 1, 1, &attr);
+    set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y), 1, 1, &attr);
     VBK_REG = 0;
 }
 

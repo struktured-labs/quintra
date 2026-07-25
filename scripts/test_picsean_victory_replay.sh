@@ -63,6 +63,12 @@ awk -F, -v expected_seed="$EXPECTED_SEED" '
       print "[picsean-victory] frame budget exceeded" > "/dev/stderr"
       exit 1
     }
+    if ($(col["boss_relics_seen"]) < 8
+        || $(col["boss_relics_collected"]) != $(col["boss_relics_seen"])
+        || $(col["boss_relics_missed"]) != 0) {
+      print "[picsean-victory] repeated boss relic collection regressed" > "/dev/stderr"
+      exit 1
+    }
     found = 1
   }
   END { if (!found) exit 1 }

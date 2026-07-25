@@ -38,6 +38,8 @@ u8 room_world_width = ROOM_VIEW_W_PX;
 u8 room_world_height = ROOM_VIEW_H_PX;
 u8 room_camera_x;
 u8 room_camera_y;
+u8 room_bg_origin_x;
+u8 room_bg_origin_y;
 
 static u8 room_paused;
 static u8 room_resume_flag;   // set by room_request_resume: skip procgen next enter
@@ -566,7 +568,8 @@ static void room_unseal_doors(void) {
                 && run_state_dungeon_neighbor(dir) == 0xFF) continue;
             if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
             for (half = 0; half < 2; ++half)
-                set_bkg_tiles(dxs[dir][half], dys[dir][half], 1, 1, &door);
+                set_bkg_tiles(ROOM_BG_MAP_X(dxs[dir][half]),
+                    ROOM_BG_MAP_Y(dys[dir][half]), 1, 1, &door);
         }
         VBK_REG = 1;
         for (dir = 0; dir < 4; ++dir) {
@@ -574,7 +577,8 @@ static void room_unseal_doors(void) {
                 && run_state_dungeon_neighbor(dir) == 0xFF) continue;
             if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
             for (half = 0; half < 2; ++half)
-                set_bkg_tiles(dxs[dir][half], dys[dir][half], 1, 1, &attr);
+                set_bkg_tiles(ROOM_BG_MAP_X(dxs[dir][half]),
+                    ROOM_BG_MAP_Y(dys[dir][half]), 1, 1, &attr);
         }
         VBK_REG = 0;
     }
@@ -588,9 +592,9 @@ static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
     room_tilemap[ty][tx] = t;
     wait_vbl_done();
     VBK_REG = 0;
-    set_bkg_tiles(tx, ty, 1, 1, &t);
+    set_bkg_tiles(ROOM_BG_MAP_X(tx), ROOM_BG_MAP_Y(ty), 1, 1, &t);
     VBK_REG = 1;
-    set_bkg_tiles(tx, ty, 1, 1, &attr);
+    set_bkg_tiles(ROOM_BG_MAP_X(tx), ROOM_BG_MAP_Y(ty), 1, 1, &attr);
     VBK_REG = 0;
 }
 
@@ -745,45 +749,6 @@ static void activate_switch(u8 tx, u8 ty) {
     sfx_play(SFX_PUZZLE);
 }
 
-static void draw_room_tilemap(void) {
-    u8 x, y;
-    u8 attr_row[ROOM_W];
-    u8 tile_row[ROOM_W];
-    for (y = 0; y < ROOM_H; ++y) {
-        // Tile indices (VRAM bank 0)
-        for (x = 0; x < ROOM_W; ++x)
-            tile_row[x] = room_tilemap[y][x];
-        VBK_REG = 0;
-        set_bkg_tiles(0, y, ROOM_W, 1, tile_row);
-        // Palette attributes (VRAM bank 1)
-        for (x = 0; x < ROOM_W; ++x)
-            attr_row[x] = attr_for_room_tile(x, y, room_tilemap[y][x]);
-        VBK_REG = 1;
-        set_bkg_tiles(0, y, ROOM_W, 1, attr_row);
-    }
-    // The banked renderer scans only the four edges once, then projects the
-    // 16x16 seal over every forward threshold. Keeping presentation code out
-    // of this crowded bank preserves the cartridge headroom floor.
-    tiles_draw_boss_cue(run_state.entered_from);
-    // Colossal arenas may breathe through a bounded 0..3px camera drift.
-    // Populate the first offscreen column and row with wall art so Crystal,
-    // Serpent, and Void never expose stale streamed-room VRAM at the right or
-    // bottom edge. Keeping this common to every boss also makes future
-    // stage-specific camera choreography safe by construction.
-    tiles_prepare_wide_field();
-    if (procgen_current_room_is_boss && room_world_width > ROOM_VIEW_W_PX) {
-        tiles_prepare_crystal_wide_arena();
-    } else if (procgen_current_room_is_boss) {
-        tiles_prepare_colossal_edges();
-    }
-    VBK_REG = 0;
-    // Compose the outdoor identity after ordinary terrain. It remains a
-    // display-only overlay: room_tilemap still owns grass/path collision.
-    if (run_state.world_mode) tiles_draw_area_label(1);
-    else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
-        tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
-}
-
 // A 20-tile room is wider than half the 32-tile BG map, so two complete
 // screens cannot simply sit side by side. For an eastward slide, stage the
 // first 12 destination columns at map x=20..31; once the first 8 source
@@ -848,7 +813,7 @@ static void room_slide_east(void) {
     // their straightforward x=0..19 coordinate system after the slide.
     DISPLAY_OFF;
     SCX_REG = room_camera_x;
-    draw_room_tilemap();
+    room_draw_tilemap();
 }
 
 // Mirrored westward streamer. Destination columns 8..19 live at x=20..31
@@ -873,7 +838,7 @@ static void room_slide_west(void) {
     }
     DISPLAY_OFF;
     SCX_REG = room_camera_x;
-    draw_room_tilemap();
+    room_draw_tilemap();
 }
 
 // Vertical rooms are 17 tiles high, leaving 15 free map rows. Stage those
@@ -895,7 +860,7 @@ static void room_slide_south(void) {
         room_transition_vbl();
         SCY_REG = (u8)(step << 3);
     }
-    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = room_camera_y; draw_room_tilemap();
+    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = room_camera_y; room_draw_tilemap();
 }
 
 static void room_slide_north(void) {
@@ -914,7 +879,7 @@ static void room_slide_north(void) {
         room_transition_vbl();
         SCY_REG = (u8)(0 - (i16)(step << 3));
     }
-    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = room_camera_y; draw_room_tilemap();
+    DISPLAY_OFF; SCX_REG = room_camera_x; SCY_REG = room_camera_y; room_draw_tilemap();
 }
 
 static void place_player_sprite(void) {
@@ -947,6 +912,14 @@ static void place_player_sprite(void) {
         move_sprite(2, sx,         (u8)(sy+8));
         move_sprite(3, (u8)(sx+8), (u8)(sy+8));
     }
+}
+
+static u8 room_scroll_x(void) {
+    return (u8)((room_bg_origin_x << 3) + room_camera_x);
+}
+
+static u8 room_scroll_y(void) {
+    return (u8)((room_bg_origin_y << 3) + room_camera_y);
 }
 
 // Get the 8-dir index from current/pressed input. Returns 0..7 or 0xFF if none.
@@ -983,6 +956,9 @@ void room_enter(void) {
     g_vbl_ticks = 0;   // run clock: don't count time spent off-room
     DISPLAY_OFF;
     room_paused = 0;
+    if (!room_resume_flag) {
+        room_bg_origin_x = room_bg_origin_y = 0;
+    }
 
     room_load_environment_palettes();
     palette_obj_load(0, skeleton_palette);
@@ -1032,11 +1008,11 @@ void room_enter(void) {
         room_resume_flag = 0;
         room_refresh_shop_wares();
         room_load_dynamic_fx_identity();
-        draw_room_tilemap();
+        room_draw_tilemap();
         entity_draw_all();
         place_player_sprite();
-        SCX_REG = room_camera_x;
-        SCY_REG = room_camera_y;
+        SCX_REG = room_scroll_x();
+        SCY_REG = room_scroll_y();
         // Music kept running through the pack screen (room_exit no longer stops
         // it), so there's nothing to restart here — resume is seamless.
         SHOW_SPRITES;
@@ -1070,7 +1046,7 @@ void room_enter(void) {
     puzzle_prepare_room_role();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
-    draw_room_tilemap();
+    room_draw_tilemap();
     place_player_sprite();
 
     secret_door_x = secret_door_y = 0xFF;
@@ -1388,14 +1364,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             VBK_REG = 0;
                             for (yy = 0; yy < 3; ++yy)
                                 for (xx = 0; xx < 3; ++xx)
-                                    set_bkg_tiles((u8)(x0 + xx), (u8)(y0 + yy),
+                                    set_bkg_tiles(
+                                        ROOM_BG_MAP_X((u8)(x0 + xx)),
+                                        ROOM_BG_MAP_Y((u8)(y0 + yy)),
                                         1, 1, &room_tilemap[y0 + yy][x0 + xx]);
                             VBK_REG = 1;
                             for (yy = 0; yy < 3; ++yy)
                                 for (xx = 0; xx < 3; ++xx) {
                                     u8 at = attr_for_room_tile((u8)(x0 + xx),
                                         (u8)(y0 + yy), room_tilemap[y0 + yy][x0 + xx]);
-                                    set_bkg_tiles((u8)(x0 + xx), (u8)(y0 + yy),
+                                    set_bkg_tiles(
+                                        ROOM_BG_MAP_X((u8)(x0 + xx)),
+                                        ROOM_BG_MAP_Y((u8)(y0 + yy)),
                                         1, 1, &at);
                                 }
                             VBK_REG = 0;
@@ -1856,7 +1836,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             puzzle_prepare_room_role();
             boss_threshold_warned = 0;
             room_load_environment_palettes();
-            draw_room_tilemap();
+            room_draw_tilemap();
             place_player_sprite();
             hud_redraw_all();
             DISPLAY_ON;
@@ -1894,6 +1874,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         u8 dir = DIR_NONE;
         u8 source_was_wide = (room_world_width > ROOM_VIEW_W_PX
             || room_world_height > ROOM_VIEW_H_PX);
+        u8 source_world_mode = run_state.world_mode;
+        u8 seamless_wide = 0;
         if (player.y <= 0) {
             dir = DIR_N; tx = (u8)((player.x + 8) >> 3); ty = 0;
         } else if (player.y >= (ppos_t)(room_world_height - 16)) {
@@ -2021,6 +2003,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // Zelda-like slide. Palette-changing boss/world/town
                 // boundaries retain the safe blanked rebuild path.
                 procgen_generate_current_room();
+                seamless_wide = (source_was_wide
+                    && (room_world_width > ROOM_VIEW_W_PX
+                        || room_world_height > ROOM_VIEW_H_PX)
+                    && source_world_mode == run_state.world_mode
+                    && !RUN_ROOM_IS_TOWN(run_state.room_counter)
+                    && !procgen_current_room_is_boss) ? 1 : 0;
+                if (!seamless_wide) {
+                    room_bg_origin_x = room_bg_origin_y = 0;
+                }
                 boss_threshold_warned = 0;
                 arrival_sprite_grace = 60;
                 room_refresh_shop_wares();
@@ -2036,14 +2027,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_town_resident_identity();
                 room_spawn_progression_fixture();
                 puzzle_prepare_room_role();
-                // A 224px source already occupies BG columns 0..27; the
-                // 20-column streamer would overwrite eight still-visible
-                // source columns while staging its destination at 20..31.
-                // Wide fields therefore use the shorter blanked rebuild.
-                // Their internal 64px camera travel removes far more loading
-                // than the obsolete one-screen-per-cell cadence, and entering
-                // from the east now starts at SCX 64 with the hero visible.
-                if (!source_was_wide
+                // A wide-to-wide edge is a continuous district seam. Rotate
+                // the 32x32 hardware map and stream destination lines behind
+                // the camera while the champion stays on-screen. Compact
+                // rooms retain the classic Zelda slide; palette/role changes
+                // retain the safe blanked rebuild.
+                if (seamless_wide) {
+                    room_stream_wide_seam(dir);
+                    if (run_state.world_mode) tiles_draw_area_label(1);
+                } else if (!source_was_wide
                     && room_world_width <= ROOM_VIEW_W_PX
                     && room_world_height <= ROOM_VIEW_H_PX
                     && !RUN_ROOM_IS_TOWN(run_state.room_counter) && dir == DIR_E
@@ -2083,7 +2075,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     tiles_load_area_labels();
                     if (procgen_current_room_is_boss)
                         tiles_load_colossus_bg(room_stage());
-                    draw_room_tilemap();
+                    room_draw_tilemap();
                 }
                 room_load_environment_palettes();
                 place_player_sprite();
@@ -2228,25 +2220,30 @@ void room_draw(void) {
     if (shake_timer) {
         shake_timer--;
         if (shake_timer == 0) {
-            SCX_REG = room_camera_x;
-            SCY_REG = room_camera_y;
+            SCX_REG = room_scroll_x();
+            SCY_REG = room_scroll_y();
         } else {
             if (shake_timer & 2) {
                 u8 max_camera = (u8)(room_world_width - ROOM_VIEW_W_PX);
-                SCX_REG = (room_camera_x + shake_mag > max_camera)
+                u8 shake_x = (room_camera_x + shake_mag > max_camera)
                     ? max_camera : (u8)(room_camera_x + shake_mag);
+                SCX_REG = (u8)((room_bg_origin_x << 3) + shake_x);
             } else {
-                SCX_REG = (room_camera_x > shake_mag)
+                u8 shake_x = (room_camera_x > shake_mag)
                     ? (u8)(room_camera_x - shake_mag) : 0;
+                SCX_REG = (u8)((room_bg_origin_x << 3) + shake_x);
             }
             if (room_world_height > ROOM_VIEW_H_PX) {
                 u8 max_camera_y = (u8)(room_world_height - ROOM_VIEW_H_PX);
-                if (shake_timer & 4)
-                    SCY_REG = (room_camera_y + shake_mag > max_camera_y)
+                u8 shake_y;
+                if (shake_timer & 4) {
+                    shake_y = (room_camera_y + shake_mag > max_camera_y)
                         ? max_camera_y : (u8)(room_camera_y + shake_mag);
-                else
-                    SCY_REG = (room_camera_y > shake_mag)
+                } else {
+                    shake_y = (room_camera_y > shake_mag)
                         ? (u8)(room_camera_y - shake_mag) : 0;
+                }
+                SCY_REG = (u8)((room_bg_origin_y << 3) + shake_y);
             } else {
                 SCY_REG = (room_world_width > ROOM_VIEW_W_PX)
                     ? 0 : ((shake_timer & 4) ? 1 : 0xFF);
@@ -2255,8 +2252,11 @@ void room_draw(void) {
     } else if (room_world_width > ROOM_VIEW_W_PX
         || room_world_height > ROOM_VIEW_H_PX) {
         // Crystal and every Riftwild cell share the real world camera.
-        SCX_REG = room_camera_x;
-        SCY_REG = room_camera_y;
+        // This is the ordinary every-frame wide-field path. Keep the
+        // additions inline: removing helper calls here recovers a measurable
+        // stress frame while retaining the bank headroom floor.
+        SCX_REG = (u8)((room_bg_origin_x << 3) + room_camera_x);
+        SCY_REG = (u8)((room_bg_origin_y << 3) + room_camera_y);
     } else if (procgen_current_room_is_boss && room_stage() == 1) {
         // Preserve Verdant's original inline timing: a banked call here costs
         // enough cycles to perturb fixed controller replays in dense fights.

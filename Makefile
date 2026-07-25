@@ -155,6 +155,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_quest_guidance.py
 	python3 scripts/test_dungeon_topology.py
 	$(PYBOY_RUN) scripts/test_dungeon_courts.py
+	$(PYBOY_RUN) scripts/test_continuous_districts.py
 	$(PYBOY_RUN) scripts/test_difficulty_mode.py
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
 	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py

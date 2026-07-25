@@ -1,5 +1,41 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.78 continuous-district response
+
+The 31×31 scale pass increased real terrain but consecutive procedural nodes
+still announced themselves as separate rooms by rebuilding the screen at every
+edge. Wide-to-wide dungeon and Riftwild crossings now use the hardware 32×32
+background map as a rotating ring. The next 31×31 field streams a row or
+column per VBlank behind the moving viewport; the LCD stays enabled, the
+champion's four OAM pieces stay visible, and the music sequencer advances
+throughout. Compact authored puzzle rooms retain their shorter Zelda-style
+slide, and palette/role changes still take the deliberately blanked path.
+
+The logical graph has not been flattened. Each generated field retains its
+own seed-stable collision map, encounter, objective role, visited Compass
+node, and reciprocal entrance. The rotated origin is published only once all
+961 destination tiles are resident, making the seam atomic to gameplay,
+Compass/Pack resume, and external checkpoints. Live writes for pushed blocks,
+revealed puzzles, door seals, and area labels map through the current origin.
+
+The cartridge contract crosses a wide dungeon pair west/east and another
+south/north, samples every transition frame for an enabled LCD and visible
+hero, confirms music-row movement, and compares the entire destination
+tilemap with physical VRAM. It also opens and closes the Spirit Compass at a
+nonzero origin. A separate authored-world sweep traverses all sixteen
+Riftwild cells through real reciprocal seams.
+
+The controller-only Picsean proof now wins at frame 193,716 with 15 HP,
+remaining inside its 210,000-frame cartridge budget. It observes and collects
+all eight post-boss relics before the ending. A short relic policy owns the
+first pickup; repeated collection is asserted by this campaign-wide proof.
+
+The hot camera path initially cost one stress frame. Its final form keeps both
+rotated scroll additions inline, removes an unnecessary champion-renderer
+wrapper and a topology-redundant stage comparison, and holds 180/180 ordinary
+frames plus 144/180 under twelve persistent projectiles. Bank 1 retains 1,038
+bytes of development headroom.
+
 ## v0.18.77 attended scale response
 
 The latest attended report still finds the stages compact after the 31×31
@@ -911,6 +947,12 @@ The town-continuation controller is deliberately an Easy route fixture: it
 checks the market, civic quarter, north gate, and next-dungeon transition, not
 combat balance. Normal remains canonical through the dedicated boss policies,
 curriculum audits, and attended playtests.
+
+With continuous-district timing, this fixed controller spends about 27,000
+frames resolving its stage-two room-20 Skeleton lane before continuing and
+still completes all nine bosses in the separate 210,000-frame victory proof.
+The town fixture therefore receives 90,000 frames to reach its actual subject;
+its north-gate stall limit remains the same strict 3,600 frames.
 
 That assisted replay now pins class-select frame 1040 / run seed 2064129883. In
 its final Sigil room a 2-HP crawler legitimately hugs the one-tile top edge,

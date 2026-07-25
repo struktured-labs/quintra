@@ -60,15 +60,25 @@ def main():
 
     # Column 19 is a real seam, not an invisible old room boundary. Walk the
     # cartridge's normal feet box across x=160 and watch its camera follow.
-    put16(pb, PL + 9, 144)
-    put16(pb, PL + 11, 96)
     pb.memory[PL + 15] = 255
+    # Debugger writes can land after room_tick has already cached the previous
+    # coordinate for the current video frame. Publish the synthetic warp over
+    # consecutive frame boundaries before applying controller input.
+    for _ in range(3):
+        put16(pb, PL + 9, 144)
+        put16(pb, PL + 11, 96)
+        pb.tick()
+    assert (pb.memory[PL + 9] | pb.memory[PL + 10] << 8) == 144
     pb.button_press("right")
     for _ in range(40):
         pb.tick()
     pb.button_release("right")
     crossed_x = pb.memory[PL + 9] | pb.memory[PL + 10] << 8
-    assert crossed_x > 160, f"old viewport seam still blocked the hero: x={crossed_x}"
+    assert crossed_x > 160, (
+        f"old viewport seam still blocked the hero: x={crossed_x} "
+        f"screen={pb.memory[addr('_loop_current_screen')]} "
+        f"room={pb.memory[RS + 1]} world={pb.memory[RS + 17]} "
+        f"boss_active={pb.memory[boss + 1] & 1} hp={pb.memory[PL + 2]}")
     assert 0 < pb.memory[CAMERA_X] <= 64, (
         f"camera did not follow across seam: {pb.memory[CAMERA_X]}")
     assert pb.memory[0xFF43] == pb.memory[CAMERA_X], (

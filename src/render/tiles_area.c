@@ -1,8 +1,9 @@
-#pragma bank 5
+#pragma bank 6
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
 #include "game/room.h"
+#include "game/puzzle.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
 
@@ -67,57 +68,94 @@ static u8 wide_attr(u8 tile, u8 outdoor) {
                 : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
                     ? BGPAL_DOOR : BGPAL_FLOOR;
     }
-    if (tile == BGT_WALL || tile == BGT_PILLAR) return BGPAL_WALL;
-    if (tile == BGT_SPIKES || tile == BGT_WALL_CRACK) return BGPAL_CRACK;
-    if (tile == BGT_DOOR || tile == BGT_SWITCH) return BGPAL_DOOR;
+    if (tile == BGT_WALL || tile == BGT_PILLAR
+        || tile == BGT_BLOCK || tile == BGT_BLOCK_TR
+        || tile == BGT_BLOCK_BL || tile == BGT_BLOCK_BR
+        || tile == BGT_ROOF || tile == BGT_FENCE
+        || tile == BGT_TREE || tile == BGT_WILD_STONE)
+        return BGPAL_WALL;
+    if (tile == BGT_SPIKES || tile == BGT_WALL_CRACK
+        || tile == BGT_BOSS_GATE_L || tile == BGT_BOSS_GATE_R
+        || tile == BGT_BOSS_GATE_TOP || tile == BGT_BOSS_GATE_BOTTOM)
+        return BGPAL_CRACK;
+    if (tile == BGT_DOOR)
+        return (room_combat_sealed || room_puzzle_locked)
+            ? BGPAL_CRACK : BGPAL_DOOR;
+    if (tile == BGT_POT || tile == BGT_SWITCH) return BGPAL_DOOR;
     if (tile == BGT_CRYSTAL || tile == BGT_PORTAL) return BGPAL_CRYSTAL;
+    if (tile == HUD_COIN || (tile >= HUD_DIGIT_0
+        && tile <= HUD_DIGIT_0 + 9)) return BGPAL_CRACK;
     return BGPAL_FLOOR;
 }
 
+static u8 wide_tile(u8 x, u8 y, u8 outdoor) {
+    if (x >= ROOM_WIDE_W_TILES || y >= ROOM_WIDE_H_TILES)
+        return outdoor ? BGT_TREE : BGT_WALL;
+    if (y < ROOM_H) {
+        if (x < ROOM_W) return room_tilemap[y][x];
+        return room_world_extension[y][x - ROOM_W];
+    }
+    return room_world_bottom[y - ROOM_H][x];
+}
+
+// Render a complete logical 31x31 field plus its deterministic overscan into
+// the rotated hardware map. Building each physical row in a 32-byte buffer
+// avoids any assumption that GBDK's rectangular writer wraps at map edges.
 void tiles_prepare_wide_field(void) BANKED {
-    u8 x, y;
+    u8 logical_x, logical_y;
     u8 outdoor = run_state.world_mode;
-    u8 tiles[ROOM_WIDE_W_TILES + 1];
-    u8 attrs[ROOM_WIDE_W_TILES + 1];
+    u8 tiles[32];
+    u8 attrs[32];
     if (!(room_world_height & 0x40)) return;
-    for (y = 0; y < ROOM_H; ++y) {
-        for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x) {
-            u8 tile = room_world_extension[y][x];
-            tiles[x] = tile;
-            attrs[x] = wide_attr(tile, outdoor);
+    for (logical_y = 0; logical_y < 32; ++logical_y) {
+        u8 physical_y = ROOM_BG_MAP_Y(logical_y);
+        for (logical_x = 0; logical_x < 32; ++logical_x) {
+            u8 physical_x = ROOM_BG_MAP_X(logical_x);
+            u8 tile = wide_tile(logical_x, logical_y, outdoor);
+            tiles[physical_x] = tile;
+            attrs[physical_x] = wide_attr(tile, outdoor);
         }
-        // Column 31 is deterministic camera/shake overscan.
-        tiles[ROOM_WIDE_EXT_TILES] = outdoor ? BGT_TREE : BGT_WALL;
-        attrs[ROOM_WIDE_EXT_TILES] = BGPAL_WALL;
         VBK_REG = 0;
-        set_bkg_tiles(ROOM_W, y, ROOM_WIDE_EXT_TILES + 1, 1, tiles);
+        set_bkg_tiles(0, physical_y, 32, 1, tiles);
         VBK_REG = 1;
-        set_bkg_tiles(ROOM_W, y, ROOM_WIDE_EXT_TILES + 1, 1, attrs);
-    }
-    // Rows 17..30 are complete 31-column terrain, not merely right-side
-    // projection. They use the same outdoor palette language as the top.
-    for (y = 0; y < ROOM_WIDE_BOTTOM_ROWS; ++y) {
-        for (x = 0; x < ROOM_WIDE_W_TILES; ++x) {
-            u8 tile = room_world_bottom[y][x];
-            tiles[x] = tile;
-            attrs[x] = wide_attr(tile, outdoor);
-        }
-        tiles[ROOM_WIDE_W_TILES] = outdoor ? BGT_TREE : BGT_WALL;
-        attrs[ROOM_WIDE_W_TILES] = BGPAL_WALL;
-        VBK_REG = 0;
-        set_bkg_tiles(0, (u8)(ROOM_H + y), ROOM_WIDE_W_TILES + 1, 1, tiles);
-        VBK_REG = 1;
-        set_bkg_tiles(0, (u8)(ROOM_H + y), ROOM_WIDE_W_TILES + 1, 1, attrs);
-    }
-    // Row 31 and column 31 are deterministic camera/shake overscan.
-    for (x = 0; x <= ROOM_WIDE_W_TILES; ++x) {
-        tiles[x] = outdoor ? BGT_TREE : BGT_WALL;
-        attrs[x] = BGPAL_WALL;
+        set_bkg_tiles(0, physical_y, 32, 1, attrs);
     }
     VBK_REG = 0;
-    set_bkg_tiles(0, ROOM_WIDE_H_TILES, ROOM_WIDE_W_TILES + 1, 1, tiles);
+}
+
+void tiles_stream_wide_column(u8 logical_x, u8 physical_x) BANKED {
+    u8 logical_y;
+    u8 outdoor = run_state.world_mode;
+    u8 tiles[32];
+    u8 attrs[32];
+    for (logical_y = 0; logical_y < 32; ++logical_y) {
+        u8 physical_y = ROOM_BG_MAP_Y(logical_y);
+        u8 tile = wide_tile(logical_x, logical_y, outdoor);
+        tiles[physical_y] = tile;
+        attrs[physical_y] = wide_attr(tile, outdoor);
+    }
+    VBK_REG = 0;
+    set_bkg_tiles(physical_x, 0, 1, 32, tiles);
     VBK_REG = 1;
-    set_bkg_tiles(0, ROOM_WIDE_H_TILES, ROOM_WIDE_W_TILES + 1, 1, attrs);
+    set_bkg_tiles(physical_x, 0, 1, 32, attrs);
+    VBK_REG = 0;
+}
+
+void tiles_stream_wide_row(u8 logical_y, u8 physical_y) BANKED {
+    u8 logical_x;
+    u8 outdoor = run_state.world_mode;
+    u8 tiles[32];
+    u8 attrs[32];
+    for (logical_x = 0; logical_x < 32; ++logical_x) {
+        u8 physical_x = ROOM_BG_MAP_X(logical_x);
+        u8 tile = wide_tile(logical_x, logical_y, outdoor);
+        tiles[physical_x] = tile;
+        attrs[physical_x] = wide_attr(tile, outdoor);
+    }
+    VBK_REG = 0;
+    set_bkg_tiles(0, physical_y, 32, 1, tiles);
+    VBK_REG = 1;
+    set_bkg_tiles(0, physical_y, 32, 1, attrs);
     VBK_REG = 0;
 }
 
@@ -147,7 +185,21 @@ void tiles_draw_area_label(u8 kind) BANKED {
     else if (kind == 2) { letters = village; x = 7; width = 7; }
     else if (kind == 3) { letters = market; x = 7; width = 6; }
     else { letters = forge; x = 8; width = 5; }
-    VBK_REG = 0; set_bkg_tiles(x, 1, width, 1, letters);
-    VBK_REG = 1; set_bkg_tiles(x, 1, width, 1, attrs);
+    // A Riftwild field may have crossed several continuous seams. Project the
+    // display-only sign through the same logical-to-physical origin instead
+    // of writing it into the previous field's canonical top-left.
+    if (room_world_width > ROOM_VIEW_W_PX
+        || room_world_height > ROOM_VIEW_H_PX) {
+        u8 i;
+        u8 py = ROOM_BG_MAP_Y(1);
+        for (i = 0; i < width; ++i) {
+            u8 px = ROOM_BG_MAP_X((u8)(x + i));
+            VBK_REG = 0; set_bkg_tiles(px, py, 1, 1, &letters[i]);
+            VBK_REG = 1; set_bkg_tiles(px, py, 1, 1, &attrs[i]);
+        }
+    } else {
+        VBK_REG = 0; set_bkg_tiles(x, 1, width, 1, letters);
+        VBK_REG = 1; set_bkg_tiles(x, 1, width, 1, attrs);
+    }
     VBK_REG = 0;
 }

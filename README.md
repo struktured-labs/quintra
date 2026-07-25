@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.77: Long Horizons](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.78: Unbroken Paths](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,33 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.77**, published after the complete build,
+The current cartridge is **v0.18.78**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Consecutive wide fields now behave like one continuous district.** Crossing
+between 31×31-tile dungeon courts or Riftwild cells rotates the CGB's 32×32
+background map as a ring and streams the next procedural field behind the
+camera. The LCD never blanks, the champion remains visible, and the stage
+music keeps advancing. Each field still owns an independent generated
+encounter, objective role, visited-map node, and deterministic backtracking
+identity.
+
+The transition is complete in both axes and reversible. Live-ROM coverage
+crosses west/east and south/north dungeon pairs, walks all sixteen Riftwild
+cells, compares every one of the destination's 961 logical tiles against
+rotated VRAM, and opens and closes the tile-native Spirit Compass from a
+nonzero background origin. Runtime puzzle, door, seal, and area-label writes
+now target that rotated map correctly.
+
+An input-only Picsean campaign still reaches the ending after all nine
+Colossi—frame 193,716 with 15 HP remaining—and collects all eight observed
+post-boss relics within the 210,000-frame cartridge budget.
+
+This directly addresses the attended report that the stages still felt
+compact after their physical expansion: large rooms no longer read as a stack
+of separately loaded boxes. Compact authored puzzle rooms retain the classic
+Zelda-style slide, while boss, village, and palette-changing boundaries keep
+their safe intentional rebuild.
 
 **Dungeon scale is visible from the first playable step.** Every stage now
 opens inside a 31×31-tile scrolling field instead of making the player pass
@@ -49,15 +74,15 @@ The wider opening remains inside the cartridge's measured frame budget. Camera
 follow and world-entity projection now share one banked pass while the hero is
 moving, then fall back to the resident renderer after the camera settles. The
 live dense-room gate holds **144/180** frames and ordinary traversal
-**179/180**, with 1,034 bytes still free in the tight fixed code bank.
+**180/180**, with 1,038 bytes still free in the tight fixed code bank.
 
-The release proof is campaign-wide, not just a room smoke test: an input-only
-Picsean run reaches the ending after all nine Colossi at frame 158,466 with
-16 HP remaining. All 460 native mGBA deep fixtures cold-load against this
-exact ROM, and separate five-minute native snapshots provide direct entry
-points into one continuous Easy training route. Longer host watchdogs used by
-wide-field route analysis do not change cartridge frame budgets, seeds,
-assertions, combat values, or difficulty rules.
+The preceding v0.18.77 proof was campaign-wide, not just a room smoke test: an
+input-only Picsean run reached the ending after all nine Colossi at frame
+158,466 with 16 HP remaining. All 460 native mGBA deep fixtures cold-loaded
+against that ROM, and separate five-minute native snapshots provided direct
+entry points into one continuous Easy training route. Longer host watchdogs
+used by wide-field route analysis do not change cartridge frame budgets,
+seeds, assertions, combat values, or difficulty rules.
 
 **The stages now spend the hardware background on real travel.** Every
 scrolling dungeon district and Riftwild cell grows from 28×25 to **31×31

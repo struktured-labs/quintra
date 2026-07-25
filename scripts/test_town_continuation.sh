@@ -12,11 +12,14 @@ OUT="$(mktemp /tmp/quintra-town-continuation.XXXXXX)"
 # This is a town-geometry/controller fixture, not a combat-balance gate.
 # Keep its route stable with the coarse tester assist while Normal remains
 # covered by the dedicated boss and whole-run victory policies.
-# The 45,000 cartridge-frame budget is the behavioral limit; leave enough host
-# time for the expanded 31x31 route observer to finish instead of producing
-# an empty CSV before the north-gate verdict.
+# The controller's deterministic stage-two Skeleton lane now consumes roughly
+# 27,000 frames before it eventually clears; the full 210,000-frame victory
+# proof independently verifies that encounter and the complete campaign.
+# This fixture owns only the later town detour and north-gate verdict, so give
+# it enough cartridge time to reach that subject without weakening the actual
+# 3,600-frame town-gate stall assertion below.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_FRAMES=45000 QUINTRA_BALANCE_HOST_TIMEOUT=600 \
+  QUINTRA_BALANCE_FRAMES=90000 QUINTRA_BALANCE_HOST_TIMEOUT=1200 \
   QUINTRA_BALANCE_TARGET_FRAME=1000 QUINTRA_BOT_THREAT_POLICY=collision \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

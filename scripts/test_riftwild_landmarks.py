@@ -6,8 +6,8 @@ from PIL import Image, ImageDraw
 from pyboy import PyBoy
 
 from test_overworld import (
-    CAMERA_X, CAMERA_Y, EN, LARGE, PL, ROM, ROOT, RS, TM, WORLD_BOTTOM, WORLD_EXT,
-    WORLD_H, WORLD_W, exit_at, put16,
+    CAMERA_X, CAMERA_Y, EN, LARGE, ORIGIN_X, ORIGIN_Y, PL, ROM, ROOT, RS, TM,
+    WORLD_BOTTOM, WORLD_EXT, WORLD_H, WORLD_W, exit_at, put16,
 )
 from quintra_topology import STAGE_BOSS_ROOM
 
@@ -96,7 +96,9 @@ def inspect_cell(pb, screen, seed_low, seen_families, shots):
     for _ in range(64):
         pb.tick()
     assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (88, 112)
-    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (88, 112)
+    assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
+        ((pb.memory[ORIGIN_X] << 3) + 88) & 0xFF,
+        ((pb.memory[ORIGIN_Y] << 3) + 112) & 0xFF)
     seen_families[expected] += 1
     shots[screen] = pb.screen.image.copy()
 
@@ -115,8 +117,11 @@ def cross_to(pb, target, x, y):
         ready = (pb.memory[RS + 17] == 1
                  and pb.memory[RS + 18] == target
                  and pb.memory[0xFF40] & 0x02
-                 and pb.memory[0xFF43] == (88 if x == 0 else 0)
-                 and pb.memory[0xFF42] == 0
+                 and pb.memory[0xFF43]
+                    == (((pb.memory[ORIGIN_X] << 3)
+                         + (88 if x == 0 else 0)) & 0xFF)
+                 and pb.memory[0xFF42]
+                    == ((pb.memory[ORIGIN_Y] << 3) & 0xFF)
                  and sum(tile == expected for tile in tiles) == 8
                  and not any(tile & 0x80 for tile in tiles))
         stable = stable + 1 if ready else 0
@@ -126,7 +131,9 @@ def cross_to(pb, target, x, y):
         f"Riftwild seam did not settle at {target}: "
         f"cell={pb.memory[RS + 18]} screen={pb.memory[RS + 17]} "
         f"lcdc={pb.memory[0xFF40]:02x} scx={pb.memory[0xFF43]} "
-        f"scy={pb.memory[0xFF42]} expected_camera={88 if x == 0 else 0}"
+        f"scy={pb.memory[0xFF42]} origin="
+        f"{pb.memory[ORIGIN_X]},{pb.memory[ORIGIN_Y]} "
+        f"expected_camera={88 if x == 0 else 0}"
     )
 
 
