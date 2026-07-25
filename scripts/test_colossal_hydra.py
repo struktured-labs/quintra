@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BODY_MIN, BODY_MAX = 55, 63
 EYE_TILE, MAW_TILE = 59, 62
 FRAME = addr("_loop_frame_counter")
+CAMERA_X = addr("_room_camera_x")
 
 
 def body_tiles(pb):
@@ -77,14 +78,16 @@ def main():
             break
     assert after != before, f"Hydra core stopped weaving: {before}->{after}"
 
-    # The late boss should feel like a moving Penta-scale arena without
-    # scrolling far enough to change any room-space collision decision.
+    # The late boss now occupies a Penta-scale field with a real eastern
+    # chamber, while vertical camera space remains locked to the HUD.
+    put16(pb, PL + 9, 200)
     scroll = []
-    for _ in range(160):
+    for _ in range(80):
         pb.tick()
         scroll.append((pb.memory[0xFF43], pb.memory[0xFF42]))
-    assert min(x for x, _ in scroll) == 0 and max(x for x, _ in scroll) == 3, (
-        f"Hydra camera weave drifted: {set(scroll)}")
+    assert pb.memory[CAMERA_X] == 64 and 61 <= scroll[-1][0] <= 67, (
+        f"Hydra field did not reach its eastern camera: "
+        f"camera={pb.memory[CAMERA_X]} SCX={scroll[-1][0]}")
     assert {y for _, y in scroll} == {0}, f"Hydra camera tilted: {set(scroll)}"
 
     screenshot = ROOT / "tmp" / "hydra-colossal-arena.png"
@@ -98,7 +101,7 @@ def main():
         "Hydra side/centre heads did not exchange breath posture")
 
     print(f"[colossal-hydra] PASS {len(body)} BG tiles, 112x64 three-head "
-          f"coil, moving core {before}->{after}, 0..3px arena weave, "
+          f"coil, moving core {before}->{after}, camera 0..64, "
           f"alternating heads, walkable")
 
 

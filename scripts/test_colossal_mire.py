@@ -2,12 +2,13 @@
 """Live-ROM contract for Toxic Mire's expanding BG body and OBJ heart."""
 from pathlib import Path
 
-from test_boss_identity import EN, PL, TM, enter_boss, put16
+from test_boss_identity import EN, PL, TM, addr, enter_boss, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
 ENTITY_SIZE = 28
 BODY_MIN, BODY_MAX = 55, 63
+CAMERA_X = addr("_room_camera_x")
 
 
 def body_tiles(pb):
@@ -66,15 +67,16 @@ def main():
     pb.button_release("right")
     assert pb.memory[PL + 9] > before_x, "Mire projection became invisible collision"
 
-    # The huge body now breathes as an arena as well as changing footprint.
-    # Keep the motion bounded below one tile so it cannot alter collision or
-    # obscure the fixed WINDOW HUD.
+    # The huge body now changes footprint inside a true scrolling field.
+    # Traverse to the eastern chamber while keeping the WINDOW HUD fixed.
+    put16(pb, PL + 9, 200)
     scroll = []
-    for _ in range(160):
+    for _ in range(80):
         pb.tick()
         scroll.append((pb.memory[0xFF43], pb.memory[0xFF42]))
-    assert min(x for x, _ in scroll) == 0 and max(x for x, _ in scroll) == 3, (
-        f"Mire camera breath drifted: {set(scroll)}")
+    assert pb.memory[CAMERA_X] == 64 and 61 <= scroll[-1][0] <= 67, (
+        f"Mire field did not reach its eastern camera: "
+        f"camera={pb.memory[CAMERA_X]} SCX={scroll[-1][0]}")
     assert {y for _, y in scroll} == {0}, f"Mire camera tilted: {set(scroll)}"
 
     screenshot = ROOT / "tmp" / "mire-colossal-expanded.png"
@@ -87,7 +89,7 @@ def main():
     pb.stop(save=False)
 
     print("[colossal-mire] PASS 64x48 clenched -> 96x64 expanded -> "
-          "64x48 clenched; 0..3px camera breath; BG projection walkable")
+          "64x48 clenched; camera 0..64; BG projection walkable")
 
 
 if __name__ == "__main__":

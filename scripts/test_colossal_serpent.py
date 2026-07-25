@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Verdant's storm coil, moving head, and camera sway."""
+"""Live-ROM contract for Verdant's storm coil, moving head, and wide field."""
 from pathlib import Path
 
 from test_boss_identity import PL, TM, addr, enter_boss, put16
@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BODY_MIN, BODY_MAX = 55, 63
 RUNE_TILE = 61
 FRAME = addr("_loop_frame_counter")
+CAMERA_X = addr("_room_camera_x")
 
 
 def body_tiles(pb):
@@ -75,22 +76,25 @@ def main():
     assert after[0] > before[0] and after[1] > before[1], (
         f"Serpent head stopped rebounding: {before}->{after}")
 
-    # Camera motion is intentionally sub-tile: enough to sell arena scale,
-    # never enough to visually detach a wall from its collision cell.
+    # Verdant now shares the true 224px Colossus field. Walk its eastern half
+    # rather than testing the obsolete decorative 0..3px compact-room sway.
+    put16(pb, PL + 9, 200)
     scx = []
-    for _ in range(72):
+    for _ in range(80):
         pb.tick()
         scx.append(pb.memory[0xFF43])
-    assert min(scx) == 0 and max(scx) == 3, f"Serpent camera sway drifted: {set(scx)}"
+    assert pb.memory[CAMERA_X] == 64 and 61 <= scx[-1] <= 67, (
+        f"Serpent field did not reach its eastern camera: "
+        f"camera={pb.memory[CAMERA_X]} SCX={scx[-1]}")
 
     screenshot = ROOT / "tmp" / "serpent-colossal-arena.png"
     pb.screen.image.save(screenshot)
     pb.stop(save=False)
 
-    assert rune_art(0x0E) != rune_art(0x2E), (
+    assert rune_art(0x0F) != rune_art(0x2F), (
         "Serpent lightning stopped travelling through the coil")
     print(f"[colossal-serpent] PASS {len(body)} BG tiles, 112x64 hollow "
-          f"coil, head bounce {before}->{after}, 0..3px sway, animated charge")
+          f"coil, head bounce {before}->{after}, camera 0..64, animated charge")
 
 
 if __name__ == "__main__":

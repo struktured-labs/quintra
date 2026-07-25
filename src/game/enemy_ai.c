@@ -502,17 +502,21 @@ static void boss_tick(entity_t *e) {
     // instrumentation keep their established entity layout.
     if ((e->ai_data[3] & 1) && !(e->ai_data[3] & 0x80)
         && e->hp <= (u8)(e->ai_data[6] >> 1)) {
-        i16 bx = FIX8_TO_INT(e->x) + 12;
-        i16 by = FIX8_TO_INT(e->y) + 12;
-        u8 d;
-        e->ai_data[3] |= 0x80;
+        e->ai_data[3] |= 0xC0; // phase entered + warning cross pending
         e->ai_data[1] = 30;   // readable beat before the normal next volley
         e->ai_data[7] = 20;   // visible white riftbreak flash
         room_shake(1, 12);
         sfx_play(SFX_ROAR);
-        for (d = 0; d < 8; d = (u8)(d + 2))
-            boss_shot(bx, by, d, 1, e->damage);
         return;
+    }
+
+    // Emit the cross on the next gameplay update. Keeping the phase commit
+    // and entity allocation on separate beats makes the warning deterministic
+    // even when a scrolling arena enters the phase during a banked draw beat.
+    if (e->ai_data[3] & 0x40) {
+        e->ai_data[3] &= (u8)~0x40;
+        projectile_spawn_enemy_cross(
+            FIX8_TO_INT(e->x) + 12, FIX8_TO_INT(e->y) + 12, e->damage);
     }
 
     boss_motion_tick(e);
@@ -524,7 +528,7 @@ static void boss_tick(entity_t *e) {
         // flag and ai_data[5] remains the announced/resolved corner slot.
         if ((e->ai_data[3] & 1) && e->ai_data[2] == 8 && e->ai_data[4]
             && (e->ai_data[1] & 7) == 0) {
-            static const u8 safe_x[4] = { 20, 124, 20, 124 };
+            static const u8 safe_x[4] = { 20, 188, 20, 188 };
             static const u8 safe_y[4] = { 20, 20, 100, 100 };
             fx_spawn(SPR_FX_IMPACT, 1, safe_x[e->ai_data[5] & 3],
                 safe_y[e->ai_data[5] & 3], 10);
@@ -662,15 +666,21 @@ static void boss_tick(entity_t *e) {
             case 8:   // Void Lord — WORLD COLLAPSE, room-wide except one pocket
                 if (!e->ai_data[4]) {
                     e->ai_data[4] = 1;
-                    e->ai_data[5] = (u8)rng_range(4);
-                    // A diagonal-to-diagonal safe pocket can demand a full
-                    // room crossing. 132 frames keeps World Collapse nearly
-                    // unavoidable once it resolves, but makes its visible
-                    // corner marker a reachable positional test instead of
-                    // depending on which RNG corner happened to be nearby.
+                    // Keep the announced pocket in the hero's current half of
+                    // the scrolling arena, then randomize its vertical side.
+                    // The cue therefore remains on-screen/reachable even at
+                    // the far chamber, while Collapse still punishes every
+                    // other pixel of the 224px field.
+                    e->ai_data[5] = (player.x
+                        >= (ROOM_COLOSSUS_W_PX >> 1)) ? 1 : 0;
+                    e->ai_data[5] |= (u8)(rng_next_u8() & 2);
+                    // 132 frames keeps World Collapse nearly unavoidable once
+                    // it resolves, but makes its visible corner marker a
+                    // reachable positional test rather than an off-screen RNG
+                    // demand.
                     cadence = 132;
                 } else {
-                    static const u8 safe_x[4] = { 20, 124, 20, 124 };
+                    static const u8 safe_x[4] = { 20, 188, 20, 188 };
                     static const u8 safe_y[4] = { 20, 20, 100, 100 };
                     i16 dx = (i16)player.x - safe_x[e->ai_data[5] & 3];
                     i16 dy = (i16)player.y - safe_y[e->ai_data[5] & 3];

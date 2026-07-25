@@ -12,6 +12,7 @@ ENT_FX = 4
 BODY_MIN, BODY_MAX = 55, 63
 EYE_TILE = 59
 FRAME = addr("_loop_frame_counter")
+CAMERA_X = addr("_room_camera_x")
 
 
 def clear_disposable(pb):
@@ -85,7 +86,7 @@ def main():
         if position(pb, boss) != before:
             break
     after = position(pb, boss)
-    anchors = {(40, 32), (88, 32), (64, 64), (64, 40)}
+    anchors = {(40, 32), (104, 32), (160, 64), (104, 40)}
     assert after in anchors and after != before, f"weak point did not jump anchors: {before}->{after}"
 
     # World Collapse now marks the same safe corner used by its resolution.
@@ -109,16 +110,19 @@ def main():
                     f"timer={pb.memory[boss + 18]} charge={pb.memory[boss + 21]} "
                     f"slot={pb.memory[boss + 22]} trace={trace}")
 
-    # The shared eye tile blinks and the BG camera breathes 0..3px without
-    # moving player/OAM coordinates or exposing an uninitialized edge column.
+    # The shared eye tile blinks and the final arena reaches the eastern
+    # chamber without moving the fixed WINDOW HUD.
     (eye_open, open_frame) = eye_art_at(0x7F)
     (eye_closed, closed_frame) = eye_art_at(0x6F)
     assert eye_open != eye_closed, ("colossal BG eyes did not animate; "
                                     f"frames={open_frame}/{closed_frame} "
                                     f"tile={eye_open.hex()}/{eye_closed.hex()}")
-    put16(pb, FRAME, 0x30)
-    pb.tick()
-    assert 0 < pb.memory[0xFF43] <= 3, f"colossal camera did not drift: SCX={pb.memory[0xFF43]}"
+    put16(pb, PL + 9, 200)
+    for _ in range(80):
+        pb.tick()
+    assert pb.memory[CAMERA_X] == 64 and 61 <= pb.memory[0xFF43] <= 67, (
+        f"Void field did not reach its eastern camera: "
+        f"camera={pb.memory[CAMERA_X]} SCX={pb.memory[0xFF43]}")
 
     screenshot = ROOT / "tmp" / "void-colossal-arena.png"
     pb.screen.image.save(screenshot)

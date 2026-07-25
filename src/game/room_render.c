@@ -66,12 +66,21 @@ void room_draw_tilemap(void) BANKED {
     u8 x, y;
     u8 attr_row[ROOM_W];
     u8 tile_row[ROOM_W];
-    if (room_world_width > ROOM_VIEW_W_PX
-        || room_world_height > ROOM_VIEW_H_PX) {
+    u8 horizontal_boss = (procgen_current_room_is_boss
+        && room_world_width > ROOM_VIEW_W_PX
+        && room_world_height == ROOM_VIEW_H_PX) ? 1 : 0;
+    if ((room_world_width > ROOM_VIEW_W_PX
+            || room_world_height > ROOM_VIEW_H_PX)
+        && !horizontal_boss) {
         // The full renderer owns all 32 physical rows because a continuous
         // seam may rotate logical tile (0,0) away from hardware map (0,0).
         tiles_prepare_wide_field();
     } else {
+        // A horizontal Colossus arena deliberately retains the compact
+        // 17-row ABI. Render its western 20 columns normally, then the
+        // specialist pass below authors columns 20..28. Previously only the
+        // first boss used the far chamber and its western projection could
+        // inherit the sanctuary's stale BG tiles.
         for (y = 0; y < ROOM_H; ++y) {
             for (x = 0; x < ROOM_W; ++x)
                 tile_row[x] = room_tilemap[y][x];

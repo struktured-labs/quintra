@@ -131,6 +131,13 @@ u8 projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) BANKED {
     return projectile_spawn_enemy_v(px, py, (i8)((i16)dx * 2), (i8)((i16)dy * 2), damage);
 }
 
+void projectile_spawn_enemy_cross(i16 px, i16 py, u8 damage) BANKED {
+    projectile_spawn_enemy_v(px, py, 0, -1, damage);
+    projectile_spawn_enemy_v(px, py, 1, 0, damage);
+    projectile_spawn_enemy_v(px, py, 0, 1, damage);
+    projectile_spawn_enemy_v(px, py, -1, 0, damage);
+}
+
 void projectile_update(entity_t *e, u8 idx) BANKED {
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;

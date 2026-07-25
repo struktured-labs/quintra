@@ -142,8 +142,8 @@ def main():
     pb.stop(save=False)
 
     mire, _ = enter_boss(4, keep_open=True)
-    assert mire.memory[WORLD_W] == 160 and mire.memory[CAMERA_X] == 0, (
-        "wide arena state leaked into an ordinary Colossus room")
+    assert mire.memory[WORLD_W] == 224 and mire.memory[CAMERA_X] <= 64, (
+        "Mire did not receive the shared scrolling Colossus field")
     mire_art = bg_tile_art(mire, BODY_MIN)
     mire.stop(save=False)
     void, _ = enter_boss(8, keep_open=True)

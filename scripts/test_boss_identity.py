@@ -180,13 +180,18 @@ def main():
         if (pb.memory[ep] == 1 and pb.memory[ep + 1] & 1
                 and not (pb.memory[ep + 1] & 0x10)):
             pb.memory[ep] = pb.memory[ep + 1] = 0
+    # Exercise the phase break in the new eastern chamber, where the warning
+    # must remain a real world-space projectile pattern rather than depending
+    # on the compact projection's decorative tile footprint.
+    put16(pb, boss + 3, 160)
+    put16(pb, boss + 7, 64)
     before_rift_shots = hostile_count()
     pb.memory[boss + 14] = max_hp // 2
     # Wide Crystal rendering can place one host tick between game updates in
     # PyBoy. The phase break is an event contract, not a two-host-frame ABI.
-    for _ in range(6):
+    for _ in range(8):
         pb.tick()
-        if pb.memory[boss + 20] & 0x80:
+        if pb.memory[boss + 20] & 0x80 and hostile_count() >= 4:
             break
     assert pb.memory[boss + 20] & 0x80, "boss did not enter its half-health riftbreak"
     assert pb.memory[boss + 18] >= 20, "riftbreak did not grant a readable recovery beat"

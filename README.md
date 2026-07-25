@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.80: Long Roads](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.81: Colossus Fields](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,34 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.80**, published after the complete build,
+The current cartridge is **v0.18.81**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**All nine Colossus fights now occupy scrolling 224×136 arenas.** Crystal's
+opening giant was previously the only boss with a real second chamber; the
+other eight could look enormous but still fought inside a compact 160-pixel
+box. Every stage now removes that obsolete viewport seam, adds a themed
+eastern body/chamber, and follows the champion across a genuine 64-pixel
+camera traverse. The fixed HUD remains stationary and each boss keeps its
+authored movement, bullets, weak point, palette, projection animation, HP,
+rewards, and far-side exit.
+
+The late-game arena rules expand with the geometry. Blink and warp placement
+use the live 224×136 bounds, the Void Lord's weak point reaches four
+field-spanning anchors, and World Collapse marks a reachable safe pocket in
+the champion's current half before its otherwise arena-wide blast. Every
+half-health riftbreak commits its flash first and emits the four slow warning
+lanes on the next gameplay beat, so scrolling presentation cannot suppress
+the bullet pattern.
+
+Live-ROM coverage enters all nine bosses, walks both halves, proves camera
+0..64 and SCX agreement, checks that the old x=152 seam is walkable, retains
+the physical far wall and post-clear exit, and re-runs every distinct boss
+identity, motion, collapse, reward, threshold, and projection contract.
+The input-only Picsean controller then defeated all nine Colossi and reached
+the ending at frame 173,968 with 11 HP. Its exact 258 KiB button trace won
+again from a cold emulator at frame 175,154 with 16 HP, proving the expanded
+far-side exits across the whole campaign rather than only in direct fixtures.
 
 **The dungeons now feel as large as their Compass footprint.** Attended play
 correctly found that 20–30 nominal cells still felt compact because wide
@@ -68,7 +94,7 @@ another hero.
 native entry, court, sanctuary, boss, Riftwild, and village states are
 regenerated for the current ROM. The separate Easy Picsean training route
 writes verified native states every five emulated minutes through minute 30;
-that continuous route reaches stage 7 with six Colossi down at the final
+that continuous route reaches stage 6 with five Colossi down at the final
 checkpoint.
 Timed-state generation now builds and cold-loads an isolated complete
 generation before atomically publishing its manifest; a killed or failed run
@@ -1866,6 +1892,8 @@ including its outdoor label, residents, paths, and house frontage:
 ![All nine live animated Quintra stage colossi](docs/media/boss-gallery.gif)
 
 [Open the maximum-footprint still atlas](docs/media/boss-gallery.png).
+
+![Both traversable halves of every scrolling Colossus field](docs/media/boss-fields.png)
 
 Both galleries are captured from progression-matched Normal encounters in the
 current ROM. The animated atlas runs every fight through the same two-second

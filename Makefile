@@ -173,6 +173,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_title_version.py
 	uv run --quiet --with pyboy python scripts/test_boss_identity.py
 	uv run --quiet --with pyboy python scripts/test_boss_movement.py
+	$(PYBOY_RUN) scripts/test_scrolling_colossi.py
 	$(PYBOY_RUN) scripts/test_colossal_crystal.py
 	$(PYBOY_RUN) scripts/test_colossal_serpent.py
 	$(PYBOY_RUN) scripts/test_colossal_cinder.py

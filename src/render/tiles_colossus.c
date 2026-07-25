@@ -826,8 +826,10 @@ void tiles_prepare_crystal_wide_arena(void) BANKED {
     u8 x, y;
     u8 tiles[9], attrs[9];
     // Columns 20..27 are real world; column 28 is one shake-overscan guard.
-    // The right-hand crystal mass is a second readable landmark/well, not
-    // repeated floor padding, so crossing the old seam visibly changes place.
+    // All nine Colossi reuse this far-chamber silhouette with their own loaded
+    // scale/eye/rune/maw tiles. Combined with each distinct western projection
+    // it creates a two-part, screen-dominating body that the camera can travel
+    // across instead of a single static mural.
     for (y = 0; y < ROOM_H; ++y) {
         for (x = 0; x < 9; ++x) {
             u8 wx = (u8)(20 + x);

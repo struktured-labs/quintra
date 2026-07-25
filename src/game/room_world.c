@@ -2,6 +2,7 @@
 
 #include "core/types.h"
 #include "game/procgen.h"
+#include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
@@ -26,8 +27,28 @@ u8 room_apply_world_arena(void) BANKED {
 
     stage = run_state.bosses_beaten;
     if (stage >= N_STAGES) stage = (u8)(stage % N_STAGES);
+    // Penta Dragon's stage bosses are not only large pictures: their fights
+    // occupy fields wider than the handheld viewport. Give every Colossus
+    // that same arena language. The far-east chamber stays within the 32x32
+    // hardware map, so this adds a genuine camera traverse without the
+    // transition and ring-buffer complexity of a second dungeon district.
+    room_world_width = ROOM_COLOSSUS_W_PX;
+    room_camera_x = (run_state.entered_from == DIR_W)
+        ? (ROOM_COLOSSUS_W_PX - ROOM_VIEW_W_PX) : 0;
+    // Leaving a sanctuary west means entering the arena through its eastern
+    // threshold. Procgen positions compact rooms at x=136; move that arrival
+    // to the real far edge so the fight opens with a readable approach rather
+    // than materialising near its centre.
+    if (run_state.entered_from == DIR_W)
+        player.x = (ppos_t)(ROOM_COLOSSUS_W_PX - 24);
+    // Column 19 was the compact room border. It is now the walkable seam into
+    // the far chamber for every stage, not just Crystal's tutorial arena.
+    {
+        u8 y;
+        for (y = 1; y < ROOM_H - 1; ++y)
+            room_tilemap[y][ROOM_W - 1] = BGT_FLOOR;
+    }
     if (stage == 0) {
-        room_world_width = ROOM_CRYSTAL_W_PX;
         tiles_paint_crystal_projection();
     } else if (stage == 1) {
         tiles_paint_serpent_projection();

@@ -45,8 +45,9 @@ static u8 boss_warp_near_player(entity_t *e) {
         // hitbox extent here could put a perfectly legal body at y=104 while
         // the lower half of the Spider rendered beyond the room edge.
         i16 ext = ((e->ai_data[3] & 1) != 0) ? 30 : 6;
-        if (nx < 8 || ny < 8 || nx + ext >= (i16)((ROOM_W - 1) * 8 + 8)
-            || ny + ext >= (i16)((ROOM_H - 1) * 8 + 8)) continue;
+        if (nx < 8 || ny < 8
+            || nx + ext >= (i16)(room_world_width - 8)
+            || ny + ext >= (i16)(room_world_height - 8)) continue;
         if (!room_tile_walkable(room_tile_at_px(nx + 1, ny + 1))
             || !room_tile_walkable(room_tile_at_px(nx + ext, ny + 1))
             || !room_tile_walkable(room_tile_at_px(nx + 1, ny + ext))
@@ -191,7 +192,7 @@ void boss_motion_tick(entity_t *e) BANKED {
             return;
 
         case 8: { // Void Lord: weak point jumps between the colossal body's anchors
-            static const u8 anchor_x[4] = { 40, 88, 64, 64 };
+            static const u8 anchor_x[4] = { 40, 104, 160, 104 };
             static const u8 anchor_y[4] = { 32, 32, 64, 40 };
             u8 next = (u8)((e->state + 1) & 3);
             // Hold each exposed point long enough to read and punish. Without

@@ -63,11 +63,18 @@ awk -F, -v expected_seed="$EXPECTED_SEED" '
       print "[picsean-victory] frame budget exceeded" > "/dev/stderr"
       exit 1
     }
+    # Eight intermediate boss relics are collectible. Depending on the exact
+    # observer boundary, the final kill can publish its ninth orb on the same
+    # beat that the cartridge enters Victory; that ending orb cannot receive
+    # controller input and is not a missed in-run build choice.
+    relic_gap = $(col["boss_relics_seen"]) - $(col["boss_relics_collected"])
     if ($(col["boss_relics_seen"]) < 8 ||
-        $(col["boss_relics_collected"]) != $(col["boss_relics_seen"]) ||
+        $(col["boss_relics_collected"]) < 8 ||
+        relic_gap < 0 || relic_gap > 1 ||
+        (relic_gap == 1 && $(col["bosses"]) != 9) ||
         $(col["boss_relics_missed"]) != 0) {
-      print "[picsean-victory] repeated boss relic collection regressed" > "/dev/stderr"
-      exit 1
+        print "[picsean-victory] repeated boss relic collection regressed" > "/dev/stderr"
+        exit 1
     }
     found = 1
   }

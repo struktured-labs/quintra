@@ -32,6 +32,9 @@ u8   projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) BANKED;
 // to vary bullet speed within a single attack pattern.
 u8   projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) BANKED;
 
+// Four slow cardinal lanes committed together for a Colossus phase break.
+void projectile_spawn_enemy_cross(i16 px, i16 py, u8 damage) BANKED;
+
 // Per-frame update (called by entity_update_all dispatch)
 void projectile_update(entity_t *e, u8 idx) BANKED;
 

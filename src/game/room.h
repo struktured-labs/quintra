@@ -21,8 +21,14 @@
 #define ROOM_WIDE_H_TILES 31
 #define ROOM_WIDE_H_PX (ROOM_WIDE_H_TILES * 8)
 #define ROOM_WIDE_BOTTOM_ROWS (ROOM_WIDE_H_TILES - ROOM_H)
-#define ROOM_CRYSTAL_W_TILES 28
-#define ROOM_CRYSTAL_W_PX (ROOM_CRYSTAL_W_TILES * 8)
+// Every authored Colossus arena is a 28x17 horizontal field. This is large
+// enough for a real 64px camera traverse while keeping the whole fight within
+// one hardware BG map and preserving the compact 17-row HUD contract.
+#define ROOM_COLOSSUS_W_TILES 28
+#define ROOM_COLOSSUS_W_PX (ROOM_COLOSSUS_W_TILES * 8)
+// Compatibility names retained for emulator tooling and older source notes.
+#define ROOM_CRYSTAL_W_TILES ROOM_COLOSSUS_W_TILES
+#define ROOM_CRYSTAL_W_PX ROOM_COLOSSUS_W_PX
 
 extern u8 room_tilemap[ROOM_H][ROOM_W];
 // The compact 20x17 map remains ABI-stable for existing tooling. Scrolling
@@ -34,7 +40,7 @@ extern u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
 extern u8 room_world_bottom[ROOM_WIDE_BOTTOM_ROWS][ROOM_WIDE_W_TILES];
 // World-space contract shared by collision, projectiles, OBJ projection, and
 // emulator instrumentation. Ordinary rooms are 160x136 px; Riftwild fields
-// and dungeon districts are 248x248 px; Crystal remains 224x136 px.
+// and dungeon districts are 248x248 px; Colossus arenas are 224x136 px.
 extern u8 room_world_width;
 extern u8 room_world_height;
 extern u8 room_camera_x;

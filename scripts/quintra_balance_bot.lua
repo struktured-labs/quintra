@@ -7,14 +7,14 @@ local KEY_START = 0x08
 local KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN = 0x10, 0x20, 0x40, 0x80
 local CARD_DX, CARD_DY = {0, 1, 0, -1}, {-1, 0, 1, 0}
 local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
-local VOID_SAFE_X, VOID_SAFE_Y = {20, 124, 20, 124}, {20, 20, 100, 100}
+local VOID_SAFE_X, VOID_SAFE_Y = {20, 188, 20, 188}, {20, 20, 100, 100}
 -- Per-screen shortest authored exit toward dungeon gate screen 6; 4 means
 -- use the central staircase rather than a boundary door.
 local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
 -- Controller-side mirror of the cartridge's runtime world extents. Stage
--- one's Crystal arena is 224x136; Riftwild cells and dungeon districts are
+-- all Colossus arenas are 224x136; Riftwild cells and dungeon districts are
 -- 248x248.
 QUINTRA_ARENA_W = 160
 QUINTRA_ARENA_H = 136
@@ -2032,9 +2032,11 @@ function door_step(px, py)
             town_wanted = 3
         end
     end
-    if not in_world and not in_town and room == STAGE_BOSS[1]
-        and emu:read8(RS + 11) > 0 then
-        -- Crystal's clear no longer reuses the old x=160 room edge. Route
+    local defeated_bosses = emu:read8(RS + 11)
+    local defeated_boss_index = math.min(defeated_bosses, 9)
+    if not in_world and not in_town and defeated_bosses > 0
+        and room == STAGE_BOSS[defeated_boss_index] then
+        -- Colossus clears no longer reuse the old x=160 room edge. Route
         -- the full champion body through the authored extension to the real
         -- far door at x=216; scanning the compact 20x17 WRAM map can only
         -- see the obsolete cardinal thresholds and will choose one forever.
