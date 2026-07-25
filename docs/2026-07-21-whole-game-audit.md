@@ -1,5 +1,67 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## v0.18.80 sustained-acreage response
+
+Attended play found the stages compact despite their 20–30-cell Compass
+footprints. The report matches the cartridge structure: v0.18.79 had only 119
+wide dungeon cells across the campaign, grouped into runs no longer than five.
+Nominal route distance therefore kept collapsing back into one-screen
+objective and Warden thresholds.
+
+Every non-service dungeon node is now a 31×31 scrolling field. The final
+merchant, sanctuary, and authored Colossus arena remain the deliberate compact
+destination cadence. This raises wide dungeon coverage from 119/219 to
+192/219 cells. Stage one is a continuous seventeen-field expedition before
+its destination; the Void route is twenty-seven. Room counts, topology,
+encounter draws, enemy HP, projectiles, bosses, heroes, and difficulty values
+are unchanged.
+
+The objective roles remain legible rather than drifting into distant random
+corners. Rift Sigils, Waystones, and Wardens occupy the familiar western entry
+sector inside the wider field. The nonlinear room-2/room-8 Rift needs an
+explicit post-layer restamp because a generated court replaces the compact
+base map. Its seed-derived position and body-wide central route are restored
+after stage silhouettes, without consuming RNG. Moving that restoration into
+the world-generation bank leaves procgen with 1,097 bytes free and preserves
+the 1 KiB development floor.
+
+The live-ROM geography contract traverses all seventeen opening fields through
+their real snake edges, including objective/miniboss roles, and asserts every
+destination remains 248×248. Separate coverage proves the Rift fixture and its
+hero-width path, Waystone/deep-Warden gates, puzzle persistence, reciprocal
+arrivals, collision, distributed encounters, rotated Compass resume, and exact
+31×31 VRAM publication. A complete wide transition settles in 55 frames,
+keeps the LCD and champion visible, and advances four music rows.
+
+The full route audit exposed a mandatory-fixture failure hidden by direct room
+probes. Entering local room 9 from the west places the hero at x=224 in the
+extension strip; the compact spawn-component marker had treated that
+coordinate as though it belonged to the 20×17 base array. The Sentinel spawn
+was therefore suppressed while the sanctuary still required its deep-Warden
+bit. Wide arrivals are now projected onto the guaranteed central seam before
+the compact component flood. Both required Warden rooms spawn one reachable
+Sentinel across 32 seeded layouts, and the exact formerly stuck controller
+seed advances beyond room 9 with zero route stalls.
+
+The same campaign exposed stale controller bounds at the first post-village
+Mirror Moth field and at a far-sector Crystal reward. The verifier's small-
+enemy edge guard used y=116 as a literal bottom edge, forcing the pilot north
+at what is now only an internal seam. It now reads the cartridge's live arena
+dimensions, commits cross-sector pursuits to the guaranteed court axes, and
+uses exact feet-box firing lanes through lower-ruin gaps. Boss-relic goals use
+the same live bounds rather than clamping at x=146. The final controller-only
+campaign defeats all nine Colossi and reaches the ending at frame 154,986 on
+seed 2064128163 with 11 HP, collects every observed intermediate relic, and
+replays to the same victory in a cold emulator inside the unchanged
+210,000-frame budget.
+
+The release-hash external curriculum is current as well. All 460 native mGBA
+entry, court, sanctuary, boss, Riftwild, and village checkpoints regenerate
+after the sustained-acreage change and representative files from all six
+families cold-load through `-t`. The continuous Easy Picsean training route
+publishes verified native states at 5/10/15/20/25/30 minutes; its final state
+has reached stage 7, room 158, with six Colossi defeated and 15 HP.
+
 ## v0.18.79 checkpoint and difficulty-response audit
 
 The post-v0.18.78 audit found a concrete stale-artifact gap: all 460 PyBoy

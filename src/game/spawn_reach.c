@@ -53,6 +53,22 @@ void mark_spawn_reachable(void) BANKED {
     u8 sx = (u8)((player.x + 2) >> 3);
     u8 sy = (u8)((player.y + 8) >> 3);
     u16 head = 0;
+    // The marker intentionally covers the compact 20x17 storage plane; the
+    // extension strips live in separate arrays. A hero entering a scrolling
+    // court from its true west/north neighbour can therefore begin at
+    // x=224/y=224, outside this local array. Project that arrival back onto
+    // the guaranteed-open central seam before flooding. The wide generator
+    // carves these two body-wide axes across the entire 31x31 court, so this
+    // selects the same connected component without reading beyond
+    // room_tilemap. Previously local room 9's west arrival made
+    // spawn_cell_open() index off the compact map, suppressed its mandatory
+    // Sentinel, and left the sanctuary gate permanently locked.
+    if (sy >= ROOM_H - 1) {
+        sx = 9;
+        sy = ROOM_H - 2;
+    } else if (sx >= ROOM_W - 1) {
+        sx = ROOM_W - 2;
+    }
     if (!spawn_cell_open(sx, sy)) return;
     reach_tail = 0;
     reach_enqueue(sx, sy);

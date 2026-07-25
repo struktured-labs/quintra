@@ -66,7 +66,7 @@ void room_spawn_progression_fixture(void) BANKED;
 u8 room_apply_world_arena(void) BANKED;
 // Build deterministic off-viewport terrain for a large dungeon turn court.
 void room_generate_dungeon_court(u32 seed) BANKED;
-void room_reopen_dungeon_court_seams(void) BANKED;
+void room_reopen_dungeon_court_seams(u32 seed) BANKED;
 // Continuous wide-field boundary: rotate and stream the destination through
 // the hardware BG ring while keeping the champion and music alive.
 void room_stream_wide_seam(u8 dir) BANKED;

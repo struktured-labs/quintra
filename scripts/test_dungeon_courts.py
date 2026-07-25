@@ -75,6 +75,35 @@ def main():
         assert pb.memory[LARGE] == 1
         assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
 
+        # Follow the actual opening snake through every pre-service node.
+        # This is the cartridge-facing proof that the scale response is one
+        # sustained 17-field expedition, including Sigil/Waystone/Warden
+        # roles, rather than another sparse selection of nominally large
+        # rooms. The final shop, sanctuary, and Colossus remain deliberately
+        # compact after this run.
+        for target in range(1, 17):
+            source = target - 1
+            row, offset = divmod(source, 6)
+            clear_hostiles(pb)
+            pb.memory[SEALED] = 0
+            pb.memory[PUZZLE_LOCKED] = 0
+            if offset == 5:
+                put16(pb, PL + 9, 72)
+                put16(pb, PL + 11, FAR_EDGE)
+            elif row & 1:
+                put16(pb, PL + 9, 0)
+                put16(pb, PL + 11, 60)
+            else:
+                put16(pb, PL + 9, FAR_EDGE)
+                put16(pb, PL + 11, 60)
+            settle(pb)
+            assert pb.memory[RS + 1] == target, (
+                f"sustained route stopped at {source}->{target}: "
+                f"room={pb.memory[RS + 1]}")
+            assert pb.memory[LARGE] == 1, (
+                f"local {target} collapsed the sustained expedition")
+            assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
+
         # Publish opening-dungeon local room 3, then cross its east threshold
         # into local room 4—the first dense scrolling approach expanse.
         pb.memory[RS + 1] = 3
@@ -219,8 +248,9 @@ def main():
         assert pb.memory[0xFF42] == (
             ((pb.memory[ORIGIN_Y] << 3) + CAMERA_Y_MAX) & 0xFF)
 
-        # Local 7 is the authored Waystone fixture and deliberately returns
-        # to the compact presentation so its puzzle language remains legible.
+        # Local 7 is the authored Waystone fixture. Its objective remains in
+        # the readable entry sector, but the surrounding acreage no longer
+        # collapses the continuous expedition into a compact threshold.
         clear_hostiles(pb)
         put16(pb, PL + 9, 72)
         put16(pb, PL + 11, FAR_EDGE)
@@ -231,23 +261,10 @@ def main():
         put16(pb, PL + 11, 60)
         settle(pb)
         assert pb.memory[RS + 1] == 7
-        assert pb.memory[LARGE] == 0
-        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (160, 136)
-        assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0)
-
-        # The central back-half approach is also a field. Without this beat,
-        # the middle row collapses into a run of compact rooms even though the
-        # nominal graph remains large.
-        pb.memory[RS + 1] = 13
-        pb.memory[TM + 8 * ROOM_W + ROOM_W - 1] = 3
-        pb.memory[TM + 9 * ROOM_W + ROOM_W - 1] = 3
-        clear_hostiles(pb)
-        put16(pb, PL + 9, 144)
-        put16(pb, PL + 11, 60)
-        settle(pb)
-        assert pb.memory[RS + 1] == 14
         assert pb.memory[LARGE] == 1
         assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
+        assert pb.memory[CAMERA_X] == CAMERA_X_MAX
+
     finally:
         pb.stop(save=False)
 
@@ -277,7 +294,7 @@ def main():
         pb.stop(save=False)
 
     print(
-        "[dungeon-courts] PASS wide foyer + scrolling 248x248 districts + "
+        "[dungeon-courts] PASS sustained 17→27-field expedition + "
         "distributed encounters + seamless archetypes + reciprocal arrival"
     )
 

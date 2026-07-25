@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.79: Second Wind](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.80: Long Roads](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,40 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.79**, published after the complete build,
+The current cartridge is **v0.18.80**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**The dungeons now feel as large as their Compass footprint.** Attended play
+correctly found that 20–30 nominal cells still felt compact because wide
+fields occurred in short groups of at most five. Every dungeon node before the
+final merchant, sanctuary, and authored Colossus arena is now a full
+**31×31-tile scrolling field**. Stage one becomes one sustained 17-field
+expedition; the finale reaches 27. Across the campaign, 192 of 219 dungeon
+cells now carry 248×248 terrain instead of only 119.
+
+This is physical acreage, not counter padding. Adjacent fields retain their
+own seed-stable geometry, combat, objectives, puzzles, and Compass cells while
+streaming through the CGB background ring without blanking the LCD or
+restarting music. Sigils, Waystones, and Wardens remain in the readable entry
+sector of their larger landscape. The final three-role cadence contracts
+deliberately so a merchant, sanctuary, and Colossus threshold feel like a
+destination. No room count, enemy HP, projectile, boss, hero, or difficulty
+value changed.
+
+**Nonlinear Rifts survive the acreage layer.** The expanded court replaces the
+compact base map, so v0.18.80 explicitly restamps the seed-stable room-2 /
+room-8 portal and its body-wide route after stage architecture is applied.
+That work lives in the roomier world-generation bank: the tight procgen bank
+still has 1,097 bytes free, above the project's 1 KiB development floor.
+Live-ROM traversal covers all 17 opening fields, the Rift pair, objective
+gates, reciprocal arrivals, and a 55-frame wide transition whose music
+advances across four rows.
+
+The full-route gate also covers wide-arrival failure modes: a hero entering
+room 9 from the extension strip still gets the mandatory reachable Warden,
+Mirror Moth pursuit crosses the old viewport seams instead of treating them
+as room edges, and a far-sector Crystal relic remains reachable through the
+live arena bounds.
 
 **A difficult run now teaches its own testing escape hatch.** Normal remains
 the authored balance and no enemy, boss, projectile, hero, or procgen value
@@ -36,7 +68,7 @@ another hero.
 native entry, court, sanctuary, boss, Riftwild, and village states are
 regenerated for the current ROM. The separate Easy Picsean training route
 writes verified native states every five emulated minutes through minute 30;
-that continuous route reaches stage 6 with five Colossi down at the final
+that continuous route reaches stage 7 with six Colossi down at the final
 checkpoint.
 Timed-state generation now builds and cold-loads an isolated complete
 generation before atomically publishing its manifest; a killed or failed run
@@ -57,9 +89,10 @@ rotated VRAM, and opens and closes the tile-native Spirit Compass from a
 nonzero background origin. Runtime puzzle, door, seal, and area-label writes
 now target that rotated map correctly.
 
-An input-only Picsean campaign still reaches the ending after all nine
-Colossi—frame 193,716 with 15 HP remaining—and collects all eight observed
-post-boss relics within the 210,000-frame cartridge budget.
+An input-only Picsean campaign reaches the ending after all nine Colossi at
+frame 154,986 with 11 HP remaining, collects every observed intermediate
+post-boss relic, and reproduces the victory from the exact recorded buttons
+in a cold emulator. The cartridge budget remains 210,000 frames.
 
 This directly addresses the attended report that the stages still felt
 compact after their physical expansion: large rooms no longer read as a stack

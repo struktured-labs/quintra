@@ -20,9 +20,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, COMBAT, PUZZLE, MUSIC_ROW = map(addr, (
+RS, PL, COMBAT, PUZZLE, MUSIC_ROW, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, \
+    ORIGIN_X, ORIGIN_Y = map(addr, (
     "_run_state", "_player", "_room_combat_sealed", "_room_puzzle_locked",
-    "_music_row",
+    "_music_row", "_room_world_width", "_room_world_height",
+    "_room_camera_x", "_room_camera_y", "_room_bg_origin_x",
+    "_room_bg_origin_y",
 ))
 
 
@@ -43,7 +46,12 @@ def main():
     pb.memory[PUZZLE] = 0
     entered = pb.memory[RS + 6]
     back = ((entered + 2) & 3) if entered != 0xFF else 0xFF
-    positions = ((72, 0), (144, 60), (72, 120), (0, 60))
+    positions = (
+        (72, 0),
+        (pb.memory[WORLD_W] - 16, 60),
+        (72, pb.memory[WORLD_H] - 16),
+        (0, 60),
+    )
     stage = pb.memory[RS + 11]
     local = pb.memory[RS + 1] - STAGE_START[stage]
     direction = next(
@@ -54,6 +62,22 @@ def main():
     target = STAGE_START[stage] + dungeon_neighbor(
         local, dungeon_size(stage), direction)
     x, y = positions[direction]
+    old_origin_x = pb.memory[ORIGIN_X]
+    old_origin_y = pb.memory[ORIGIN_Y]
+    expected_origin_x = old_origin_x
+    expected_origin_y = old_origin_y
+    expected_camera_x = 0
+    expected_camera_y = 0
+    if direction == 0:
+        expected_origin_y = (old_origin_y + 1) & 31
+        expected_camera_y = 112
+    elif direction == 1:
+        expected_origin_x = (old_origin_x + 31) & 31
+    elif direction == 2:
+        expected_origin_y = (old_origin_y + 31) & 31
+    else:
+        expected_origin_x = (old_origin_x + 1) & 31
+        expected_camera_x = 88
     put16(pb, PL + 9, x)
     put16(pb, PL + 11, y)
 
@@ -63,12 +87,27 @@ def main():
     slide_frames = 0
     for frame in range(180):
         pb.tick()
-        if pb.memory[0xFF42] or pb.memory[0xFF43]:
+        if (pb.memory[RS + 1] != local + STAGE_START[stage]
+                or pb.memory[0xFF42] !=
+                    ((old_origin_y << 3) + pb.memory[CAMERA_Y]) & 0xFF
+                or pb.memory[0xFF43] !=
+                    ((old_origin_x << 3) + pb.memory[CAMERA_X]) & 0xFF):
             started = True
+        if started:
             slide_frames += 1
             rows_while_scrolling.add(pb.memory[MUSIC_ROW])
-        if (started and pb.memory[RS + 1] == target and pb.memory[0xFF42] == 0
-                and pb.memory[0xFF43] == 0 and (pb.memory[0xFF40] & 0x80)):
+        if (started and pb.memory[RS + 1] == target
+                and pb.memory[ORIGIN_X] == expected_origin_x
+                and pb.memory[ORIGIN_Y] == expected_origin_y
+                and pb.memory[CAMERA_X] == expected_camera_x
+                and pb.memory[CAMERA_Y] == expected_camera_y
+                and pb.memory[0xFF43]
+                    == ((expected_origin_x << 3)
+                        + expected_camera_x) & 0xFF
+                and pb.memory[0xFF42]
+                    == ((expected_origin_y << 3)
+                        + expected_camera_y) & 0xFF
+                and (pb.memory[0xFF40] & 0x80)):
             elapsed = frame + 1
             break
     pb.stop(save=False)
@@ -76,12 +115,11 @@ def main():
     # This includes destination procgen, safe enemy placement, role fixtures,
     # streamed camera motion, palettes, HUD, and restored sprites. The former
     # quadratic cross-bank reachability scan measured 103 frames here.
-    assert elapsed <= 45, f"complete same-stage doorway regressed to {elapsed} frames"
-    # The cartridge performs exactly twenty 8px horizontal scroll steps.
-    # PyBoy may expose the final non-zero SCX value for one outer tick before
-    # observing the same transaction's LCD-off normalization, so the
-    # externally visible bound is twenty-one observations.
-    assert slide_frames <= 21, f"camera slide regressed to {slide_frames} frames"
+    assert elapsed <= 60, f"complete same-stage doorway regressed to {elapsed} frames"
+    # A wide seam visibly streams the destination half, then fills its
+    # offscreen half before publishing the rotated background origin. Keep the
+    # complete generation-and-stream transaction below one second.
+    assert slide_frames <= 60, f"camera slide regressed to {slide_frames} frames"
     assert len(rows_while_scrolling) >= 2, (
         f"music row droned during slide: {sorted(rows_while_scrolling)}")
     print(f"[transition-audio] PASS total={elapsed}f slide={slide_frames}f "

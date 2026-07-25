@@ -532,25 +532,19 @@ void procgen_generate_current_room(void) BANKED {
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
     {
-        u8 local = run_state_dungeon_local();
-        // Each snake turn now owns a scrolling district rather than one
-        // isolated large room: the last two cells of a row flow into the
-        // first two cells of the next row. The stage foyer and central
-        // back-half approach (local 14) are also full fields. Starting a
-        // dungeon inside a 248x248 landscape establishes scale immediately,
-        // while local 14 prevents the middle row from collapsing into three
-        // compact thresholds in succession. Objective fixtures at local 7
-        // remain compact/readable. This makes the existing 20..30-cell graph
-        // feel geographically large without padding it with more loading
-        // thresholds or filler counters.
+        // A dungeon is one sustained expedition, not a handful of large
+        // courts separated by compact objective/miniboss thresholds. Every
+        // node through the combat/objective route owns a 31x31 field, so
+        // adjacent graph cells stream continuously across the hardware ring.
+        // Sigils, Waystones, and Wardens remain close to their readable entry
+        // sector inside that acreage. Only the final merchant, sanctuary, and
+        // Colossus cadence contracts to one screen, giving the destination a
+        // deliberate landmark rhythm. Stage one therefore carries seventeen
+        // consecutive scrolling fields and the Void route twenty-seven,
+        // without inventing filler counters or changing encounter balance.
         procgen_current_room_is_large = (!run_state.world_mode
             && !is_boss_room && !is_town && !run_state.secret_pending
-            && !run_state_is_miniboss() && !run_state_is_shop()
-            && !run_state_is_sanctuary()
-            && (local == 0 || local == 14
-                || (local >= 4 && local != 7
-                    && ((local % DUNGEON_GRID_W) <= 1
-                        || (local % DUNGEON_GRID_W) >= 4)))) ? 1 : 0;
+            && !run_state_is_shop() && !run_state_is_sanctuary()) ? 1 : 0;
     }
     run_state_mark_visited();
     rng_seed(seed);
@@ -942,7 +936,7 @@ void procgen_generate_current_room(void) BANKED {
         }
         // Compact stage silhouettes may decorate the old viewport edge.
         // Reopen it after layering so the scrolling field has no legacy wall.
-        room_reopen_dungeon_court_seams();
+        room_reopen_dungeon_court_seams(seed);
     }
 
     // Three-screen village: arrival square branches west to the elder/forge

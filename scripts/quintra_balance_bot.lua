@@ -1847,12 +1847,17 @@ function wide_court_seam_step(px, py, ex, ey)
         if px > 72 then return KEY_LEFT end
         return KEY_UP
     end
-    if px <= 136 and ex >= 152 then
+    -- The guaranteed east/west seam is the northern y=56..60 cross. Once
+    -- both bodies are in the southern extension, forcing the hero back to
+    -- that northern lane merely because the target is farther east creates
+    -- a north/south loop. Let the full-field body BFS use the southern ruin
+    -- openings there; reserve this canonical seam for two northern bodies.
+    if py <= 120 and ey <= 120 and px <= 136 and ex >= 152 then
         if py < 56 then return KEY_DOWN end
         if py > 60 then return KEY_UP end
         return KEY_RIGHT
     end
-    if px >= 152 and ex <= 144 then
+    if py <= 120 and ey <= 120 and px >= 152 and ex <= 144 then
         if py < 56 then return KEY_DOWN end
         if py > 60 then return KEY_UP end
         return KEY_LEFT
@@ -3618,9 +3623,31 @@ while frames < LIMIT do
                 or held_style == "lunge" and 52
                 or held_style == "flail" and 56
                 or held_style == "ranged" and 140 or 60
-            if reach <= mirror_range and offaxis <= 5
+            local seam_step = wide_court_seam_step(
+                px, py, target.x, target.y)
+            if seam_step ~= nil then
+                -- A target that reverses every input can make a freshly
+                -- replanned shortest path alternate forever at the former
+                -- viewport seam. Commit to the court's guaranteed cross
+                -- until both bodies occupy the same sector, then resume the
+                -- live firing-lane pursuit below.
+                keys = KEY_A + seam_step
+                sigil_pixel_active = true
+            elseif reach <= mirror_range and offaxis <= 5
                 and projectile_lane_clear(px, py, target.x, target.y, aim) then
                 keys = KEY_A + aim
+            elseif QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136 then
+                -- Once inside the same wide sector, its lower ruin wall can
+                -- still put the moving Moth one narrow gap away. A coarse
+                -- tile route may alternate on the corner as the Moth mirrors
+                -- each attempted correction. Seek an actual projectile lane
+                -- with the cartridge's one-pixel feet collision, then fire
+                -- through the gap; this is the same controller-only route
+                -- used for Sentries and contracted Folding Stars.
+                local mirror_step, mirror_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, mirror_range)
+                keys = mirror_ready
+                    and (KEY_A + mirror_step) or mirror_step
             else
                 -- Keep A armed during pursuit. Because the Moth reverses each
                 -- movement sample, a body-valid route crosses a usable lane
@@ -3969,8 +3996,12 @@ while frames < LIMIT do
             -- endpoint if the generous pickup box is reached sooner.
             local goal_x = loot.x - 6
             local goal_y = loot.y - 10
-            if goal_x < 0 then goal_x = 0 elseif goal_x > 146 then goal_x = 146 end
-            if goal_y < 0 then goal_y = 0 elseif goal_y > 120 then goal_y = 120 end
+            local relic_max_x = QUINTRA_ARENA_W - 14
+            local relic_max_y = QUINTRA_ARENA_H - 16
+            if goal_x < 0 then goal_x = 0
+            elseif goal_x > relic_max_x then goal_x = relic_max_x end
+            if goal_y < 0 then goal_y = 0
+            elseif goal_y > relic_max_y then goal_y = relic_max_y end
             keys = body_goal_step(px, py, goal_x, goal_y)
             if DEBUG and frames % 60 == 0 then
                 debug_log(string.format(
@@ -4390,11 +4421,13 @@ while frames < LIMIT do
         and not (target.kind == 1 and target.giant == 0) then
         if py <= 12 and target.y <= 12 then
             keys = KEY_DOWN
-        elseif py >= 116 and target.y >= 116 then
+        elseif py >= QUINTRA_ARENA_H - 20
+            and target.y >= QUINTRA_ARENA_H - 20 then
             keys = KEY_UP
         elseif px <= 12 and target.x <= 12 then
             keys = KEY_RIGHT
-        elseif px >= 132 and target.x >= 132
+        elseif px >= QUINTRA_ARENA_W - 28
+            and target.x >= QUINTRA_ARENA_W - 28
             -- A stationary Mire Spore can own a valid vertical shot/trigger
             -- lane in this strip. Forcing LEFT every frame erases that
             -- authored arm-retreat-punish route and pins the pilot forever.

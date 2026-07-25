@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: every required early Sentinel spawns in the player's component."""
+"""ROM contract: every required Sentinel spawns in the player's component."""
 
 from test_stage_archetypes import EN, PL, ROOM_H, ROOM_W, generated_room, tile
 
@@ -52,14 +52,17 @@ def main():
             f"Sentinel at {(sx, sy)} is outside player component from {start}")
         checked.append((sx, sy))
 
-    # Exercise distinct fixed interior layouts at the same required local
-    # room. The generator may still decorate them differently, but all must
-    # preserve a reachable 2x2 combat body for the mandatory Sentinel.
-    for seed in range(0x51A70000, 0x51A70010):
-        generated_room(0, seed, probe=inspect, local_room=3)
+    # Exercise distinct fixed interior layouts at both required Sentinel
+    # rooms. Local 9 is especially important after dungeon courts became
+    # sustained 31x31 fields: a real west-door arrival starts the champion in
+    # the extension strip, and the compact spawn-component flood must project
+    # that position back onto the shared central seam.
+    for local_room in (3, 9):
+        for seed in range(0x51A70000, 0x51A70010):
+            generated_room(0, seed, probe=inspect, local_room=local_room)
 
-    assert len(checked) == 16
-    print(f"[miniboss-spawn-reach] PASS 16 required Sentinel positions={checked}")
+    assert len(checked) == 32
+    print(f"[miniboss-spawn-reach] PASS 32 required Sentinel positions={checked}")
 
 
 if __name__ == "__main__":

@@ -118,7 +118,11 @@ local function settle(normalize_scroll)
                 end
             end
         end
-        if committed and normalize_scroll
+        -- A stable nonzero camera is part of a valid 248x248 checkpoint,
+        -- especially after every pre-service dungeon node became a
+        -- scrolling field. Require origin scroll only for genuinely compact
+        -- destinations; LR is the cartridge's committed room-role flag.
+        if committed and normalize_scroll and emu:read8(LR) == 0
             and (emu:read8(0xFF42) ~= 0 or emu:read8(0xFF43) ~= 0) then
             committed = false
         end
