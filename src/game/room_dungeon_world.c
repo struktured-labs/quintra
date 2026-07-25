@@ -23,6 +23,28 @@ static u8 court_texture(u32 seed, u8 x, u8 y) {
     return (n < 38) ? BGT_FLOOR2 : (n < 64) ? BGT_FLOOR3 : BGT_FLOOR;
 }
 
+u8 run_state_dungeon_cache_cell(void) BANKED {
+    u8 size = run_state_dungeon_size();
+    u8 cell = (u8)(size - 4);
+    // Search from the deepest non-service cell backward. The approved fold
+    // table guarantees at least one eligible degree-one arm for all nine
+    // stage footprints, but retain local five as a safe old-save fallback.
+    while (cell > 0) {
+        // These rooms own authored progression or nonlinear fixtures.
+        if (cell != 1 && cell != 2 && cell != 3
+            && cell != 7 && cell != 8 && cell != 9 && cell != 15) {
+            u8 dir;
+            u8 degree = 0;
+            for (dir = DIR_N; dir <= DIR_W; ++dir)
+                if (run_state_dungeon_cell_neighbor(cell, dir) != 0xFF)
+                    degree++;
+            if (degree == 1) return cell;
+        }
+        cell--;
+    }
+    return 5;
+}
+
 static void court_floor_rect(u8 x0, u8 y0, u8 w, u8 h) {
     u8 x, y;
     for (y = y0; y < (u8)(y0 + h); ++y)
@@ -121,6 +143,20 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     // Guaranteed body-valid encounter aprons in both distant sectors.
     court_floor_rect(22, 5, 4, 4);
     court_floor_rect(25, 24, 4, 4);
+    if (local == run_state_dungeon_cache_cell()) {
+        // One generated dead-end owns a recognizable southeast reliquary.
+        // It sits well away from the cardinal cross, making the scrolling
+        // acreage mechanically optional rather than decorative padding.
+        // Four pylons frame a walkable altar on the already guaranteed apron.
+        court_set(24, 23, BGT_CRYSTAL);
+        court_set(29, 23, BGT_CRYSTAL);
+        court_set(24, 28, BGT_CRYSTAL);
+        court_set(29, 28, BGT_CRYSTAL);
+        court_set(26, 25, BGT_RUBBLE);
+        court_set(27, 25, BGT_RUBBLE);
+        court_set(26, 26, BGT_RUBBLE);
+        court_set(27, 26, BGT_SWITCH);
+    }
 
     // Only reciprocal dungeon graph edges become doors. North/south retain
     // x=9..10 and east/west y=8..9 so one threshold grammar spans all rooms.

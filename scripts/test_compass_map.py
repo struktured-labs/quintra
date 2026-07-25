@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_BOSS_ROOM, STAGE_START, dungeon_maze_neighbor, dungeon_size,
+    STAGE_BOSS_ROOM, STAGE_START, dungeon_cache_cell,
+    dungeon_maze_neighbor, dungeon_size,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -43,6 +44,8 @@ BGT_MAP_BIG_UNKNOWN = 106
 BGT_MAP_BIG_HERE = 110
 BGT_MAP_BIG_GOAL = 114
 BGT_MAP_BIG_BOSS = 118
+BGT_MAP_CACHE = 122
+BGT_MAP_BIG_CACHE = 123
 SPR_CLASS_ASCENDED_BASE = 102
 ASCENDED_TILE_COUNT = 20
 GX = (1, 4, 7, 10, 13, 16,
@@ -121,11 +124,20 @@ def main() -> None:
         "Compass lost its tile-native S1 MAP heading"
     assert map_tile(pb, 0, 17) == BGT_MAP_HERE, "Compass lost YOU key icon"
     assert map_tile(pb, 1, 17) == BGT_MAP_LABEL_Y, "Compass lost YOU key"
-    assert map_tile(pb, 5, 17) == BGT_MAP_SIGIL, "Compass lost GOAL key icon"
-    assert map_tile(pb, 11, 17) == BGT_MAP_BOSS, "Compass lost BOSS key icon"
-    assert map_tile(pb, 12, 17) == BGT_MAP_LABEL_B, "Compass lost BOSS key"
-    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 19, \
+    assert map_tile(pb, 4, 17) == BGT_MAP_SIGIL, "Compass lost GOAL key icon"
+    assert map_tile(pb, 9, 17) == BGT_MAP_BOSS, "Compass lost BOSS key icon"
+    assert map_tile(pb, 10, 17) == BGT_MAP_LABEL_B, "Compass lost BOSS key"
+    assert map_tile(pb, 14, 17) == BGT_MAP_CACHE, "Compass lost LOOT key icon"
+    seed = sum(pb.memory[rs + 2 + i] << (i * 8) for i in range(4))
+    cache = dungeon_cache_cell(dungeon_size(0), seed, 0)
+    assert node_tile(pb, cache) == BGT_MAP_BIG_CACHE, \
+        f"Compass did not reveal optional cache cell {cache}"
+    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 18, \
         "Compass opening footprint is not a full dim 20-room grid"
+    assert tuple(map_tile(pb, 19, y) for y in (2, 5, 8, 11)) == (
+        HUD_DIGIT_0 + 1, HUD_DIGIT_0 + 2,
+        HUD_DIGIT_0 + 3, HUD_DIGIT_0 + 4), \
+        "Compass lost its numbered dungeon depth bands"
     assert node_tile(pb, 20) == BGT_VOID, \
         "opening Compass leaked an inactive late-stage node"
     pb.screen.image.save(ROOT / "tmp" / "compass-first-room.png")
@@ -191,7 +203,6 @@ def main() -> None:
         "Compass did not place the Rift Sigil in its owning room"
     assert node_tile(pb, 0) == BGT_MAP_BIG_ROOM, \
         "visited room lost its square glyph"
-    seed = sum(pb.memory[rs + 2 + i] << (i * 8) for i in range(4))
     vertical_links = []
     for source in range(dungeon_size(0)):
         target = dungeon_maze_neighbor(

@@ -4,7 +4,7 @@ from collections import deque
 
 from quintra_topology import (
     GRID_H, GRID_W, STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM,
-    dungeon_maze_neighbor, dungeon_size,
+    dungeon_cache_cell, dungeon_maze_neighbor, dungeon_size,
 )
 
 
@@ -49,6 +49,7 @@ def main() -> None:
 
     route_lengths = []
     required_lengths = []
+    cache_cells = set()
     graph_signatures = set()
     for stage, size in enumerate(sizes):
         for seed in (0xCAFE1234, 0xCAFE1235, 0x51A6D00D, 0xDEADBEEF):
@@ -99,6 +100,14 @@ def main() -> None:
             }
             assert sum(degree == 1 for degree in degrees.values()) >= 2
             assert any(degree >= 3 for degree in degrees.values())
+            cache = dungeon_cache_cell(size, seed, stage)
+            cache_cells.add(cache)
+            assert degrees[cache] == 1, (
+                f"stage {stage + 1} seed {seed:08x} cache cell {cache} "
+                f"is degree {degrees[cache]}, not an optional dead end")
+            assert cache not in {0, 1, 2, 3, 7, 8, 9, 15}
+            assert cache < size - 3, (
+                f"stage {stage + 1} cache collided with service cadence")
             graph_signatures.add(tuple(sorted(edges)))
 
             # The actual progression route visits the staged Sigil, Wardens,
@@ -119,8 +128,11 @@ def main() -> None:
         f"safe folds produced only {len(graph_signatures)} graph variants")
     assert min(route_lengths) >= 7, (
         f"objective loop collapsed a boss route to {min(route_lengths)} rooms")
+    assert len(cache_cells) >= 3, (
+        f"Farfold Cache collapsed to {sorted(cache_cells)}")
     print("[dungeon-topology] PASS 20→30 rooms, 219-screen campaign, "
           f"{len(graph_signatures)} seed/stage folds, one objective loop, "
+          f"optional cache cells={sorted(cache_cells)}, "
           f"boss distance={min(route_lengths)}..{max(route_lengths)}, "
           f"required route={min(required_lengths)}..{max(required_lengths)}")
 

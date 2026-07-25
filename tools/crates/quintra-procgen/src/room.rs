@@ -83,13 +83,13 @@ fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> O
     const GRID_H: u8 = 5;
     const FOLD_COLS: [[u8; 4]; 8] = [
         [2, 0, 5, 0],
-        [0, 4, 5, 0],
         [0, 5, 5, 0],
         [0, 0, 5, 0],
-        [0, 1, 5, 0],
-        [5, 0, 5, 0],
-        [2, 5, 5, 0],
         [5, 5, 5, 0],
+        [2, 5, 5, 0],
+        [0, 5, 4, 0],
+        [0, 4, 5, 0],
+        [0, 1, 5, 0],
     ];
     let mut row = local / GRID_W;
     let offset = local % GRID_W;

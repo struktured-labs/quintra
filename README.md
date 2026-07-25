@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.84: Whole-World Training](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.85: Farfold Reliquaries](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,9 +22,41 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.84**, published after the complete build,
+The current cartridge is **v0.18.85**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
+**Generated acreage now contains an optional destination worth finding.**
+Every dungeon selects one non-fixture dead-end as its **Farfold Cache**. The
+approved procgen folds rotate that destination among local depth bands 6, 12,
+and 18 while keeping it away from the Rift Sigil, both Wardens, Waystone,
+nonlinear Rift, merchant, sanctuary, and Colossus threshold. Its southeast
+reliquary lies beyond both former viewport seams in a real 248×248 collision
+field, framed by four crystal pylons rather than placed on the direct door
+cross.
+
+The cache's cyan relic waits indefinitely instead of expiring while the player
+explores toward it. Claiming it grants one permanent run-long relic from the
+active champion's useful three-branch affinity pool—offense, defense, sustain,
+speed, or mana depending on the champion and seed. A persisted one-shot flag
+prevents farming it by leaving and returning. This is optional power: Normal
+and Easy keep identical geography, mandatory objectives, enemy rosters, and
+boss balance.
+
+The SELECT Compass now marks the generated destination with a distinct gold
+chest and the tile-native word **LOOT**, while numbering each horizontal
+district 1–5 down the right edge. The screen therefore communicates both an
+optional side expedition and increasing physical depth without returning to
+truncated prose. Live-ROM coverage proves the distant altar, persistent relic,
+permanent inventory effect, claimed-map state, and no-respawn backtrack.
+
+The refreshed fold set guarantees an eligible optional dead end in every
+sampled 20–30-room dungeon. It retains eighteen seed/stage graph signatures,
+one readable objective loop, 9–19 direct boss distance, and the unchanged
+19–31-transition required Sigil/Warden/Waystone expedition. Room counts,
+required progression, combat values, difficulty, and service cadence do not
+increase in this milestone.
+
+**v0.18.84 introduced Whole-World Training.**
 **Automated play now sees the same complete scrolling world as a person.**
 The Python/RL observation path had retained a 160×136 viewport assumption
 after dungeon fields grew to 248×248 and every Colossus arena grew to

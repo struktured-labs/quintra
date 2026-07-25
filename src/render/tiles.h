@@ -146,6 +146,8 @@
 #define BGT_MAP_BIG_HERE     110 // 110..113
 #define BGT_MAP_BIG_GOAL     114 // 114..117
 #define BGT_MAP_BIG_BOSS     118 // 118..121
+#define BGT_MAP_CACHE        122 // single chest glyph for the LOOT legend
+#define BGT_MAP_BIG_CACHE    123 // 123..126 optional Farfold Cache node
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0

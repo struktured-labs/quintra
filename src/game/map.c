@@ -39,6 +39,9 @@ static u8 map_attr(u8 tile) {
     if (tile == BGT_MAP_SIGIL || tile == BGT_MAP_RIFT
         || (tile >= BGT_MAP_BIG_GOAL
             && tile < BGT_MAP_BIG_GOAL + 4)) return BGPAL_CRYSTAL;
+    if (tile == BGT_MAP_CACHE
+        || (tile >= BGT_MAP_BIG_CACHE
+            && tile < BGT_MAP_BIG_CACHE + 4)) return BGPAL_DOOR;
     if (tile == BGT_MAP_HERE
         || (tile >= BGT_MAP_BIG_HERE
             && tile < BGT_MAP_BIG_HERE + 4)) return BGPAL_DOOR;
@@ -122,16 +125,21 @@ static void draw_dungeon_legend(void) {
     static const u8 boss[4] = {
         BGT_MAP_LABEL_B, BGT_MAP_LABEL_O, BGT_MAP_LABEL_S, BGT_MAP_LABEL_S
     };
+    static const u8 loot[4] = {
+        BGT_MAP_LABEL_L, BGT_MAP_LABEL_O, BGT_MAP_LABEL_O, BGT_MAP_LABEL_T
+    };
     u8 i;
     // A single bottom key is enough once room identities are 16x16 shapes.
     // It preserves the semantic colors without surrendering forty percent of
     // the LCD to a vertical legend.
     map_put(0, 17, BGT_MAP_HERE);
     for (i = 0; i < 3; ++i) map_put((u8)(1 + i), 17, you[i]);
-    map_put(5, 17, BGT_MAP_SIGIL);
-    for (i = 0; i < 4; ++i) map_put((u8)(6 + i), 17, goal[i]);
-    map_put(11, 17, BGT_MAP_BOSS);
-    for (i = 0; i < 4; ++i) map_put((u8)(12 + i), 17, boss[i]);
+    map_put(4, 17, BGT_MAP_SIGIL);
+    for (i = 0; i < 4; ++i) map_put((u8)(5 + i), 17, goal[i]);
+    map_put(9, 17, BGT_MAP_BOSS);
+    for (i = 0; i < 4; ++i) map_put((u8)(10 + i), 17, boss[i]);
+    map_put(14, 17, BGT_MAP_CACHE);
+    for (i = 0; i < 4; ++i) map_put((u8)(15 + i), 17, loot[i]);
 }
 
 static void draw_world_grid(void) {
@@ -251,6 +259,9 @@ static void draw_dungeon_grid(void) {
     u8 sigil_done = (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
     u8 next_trial = 0xFF;
+    u8 cache_cell = run_state_dungeon_cache_cell();
+    u8 cache_done = (run_state.dungeon_phase
+        & RUN_FARFOLD_CACHE_BIT) ? 1 : 0;
     if (sigil_done && !warden_done) next_trial = 3;
     else if (warden_done && size >= 12 && !waystone_done) {
         next_trial = 7;
@@ -279,7 +290,20 @@ static void draw_dungeon_grid(void) {
         if (i == next_trial && i != here) {
             icon = BGT_MAP_BIG_GOAL;
         }
+        // Optional build depth is explicit rather than indistinguishable from
+        // an empty arm. The chest is safe map knowledge from the first SELECT
+        // press; claiming it returns the node to ordinary explored terrain.
+        if (i == cache_cell && !cache_done && i != here)
+            icon = BGT_MAP_BIG_CACHE;
         map_big_node(gx[i], gy[i], icon);
+    }
+    // Number the horizontal districts at the free right edge. These markers
+    // turn the 6x5 lattice into visible depth bands without stealing room
+    // space or reverting to a prose-heavy status screen.
+    for (i = 0; i < DUNGEON_GRID_H; ++i) {
+        if ((u8)(i * DUNGEON_GRID_W) >= size) break;
+        map_put(19, gy[(u8)(i * DUNGEON_GRID_W)],
+            (u8)(HUD_DIGIT_0 + i + 1));
     }
     // Every real corridor is faintly visible, establishing the dungeon's
     // shape immediately. A corridor brightens only after both endpoint rooms

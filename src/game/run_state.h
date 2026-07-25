@@ -2,6 +2,7 @@
 #ifndef QUINTRA_GAME_RUN_STATE_H
 #define QUINTRA_GAME_RUN_STATE_H
 
+#include <gb/gb.h>
 #include "core/types.h"
 
 // Directions (door entry/exit)
@@ -103,6 +104,7 @@ typedef struct {
 // the packed run-state ABI.
 #define RUN_WAYSTONE_BIT     ((u8)(1u << 7))
 #define RUN_PHASE_OPEN_BIT   ((u8)(1u << 0))
+#define RUN_FARFOLD_CACHE_BIT ((u8)(1u << 1))
 #define RUN_DEEP_WARDEN_BIT  ((u8)(1u << 7))
 
 extern run_state_t run_state;
@@ -123,6 +125,9 @@ u8   run_state_dungeon_cell(void);
 // Sigil/Warden/Waystone route while making macro topology procgen-first.
 u8   run_state_dungeon_cell_neighbor(u8 cell, u8 dir);
 u8   run_state_dungeon_cells_connected(u8 a, u8 b);
+// Return one generated optional dead-end room which owns this dungeon's
+// Farfold Cache. The cache is never placed on a lore fixture or service room.
+u8   run_state_dungeon_cache_cell(void) BANKED;
 // Return the global room counter of the reciprocal 6x5 neighbour in `dir`,
 // or 0xFF when that edge leaves the active stage footprint.
 u8   run_state_dungeon_neighbor(u8 dir);

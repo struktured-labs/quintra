@@ -79,8 +79,8 @@ local function cell_xy(cell)
   return (row % 2 == 1) and (width - 1 - offset) or offset, row
 end
 local FOLD_COLS = {
-  2,0,5,0, 0,4,5,0, 0,5,5,0, 0,0,5,0,
-  0,1,5,0, 5,0,5,0, 2,5,5,0, 5,5,5,0
+  2,0,5,0, 0,5,5,0, 0,0,5,0, 5,5,5,0,
+  2,5,5,0, 0,5,4,0, 0,4,5,0, 0,1,5,0
 }
 local function fold_col(stage, upper_row)
   local size = STAGE_BOSS[stage + 1] - STAGE_START[stage + 1] + 1

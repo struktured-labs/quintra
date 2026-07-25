@@ -139,6 +139,10 @@ void projectile_spawn_enemy_cross(i16 px, i16 py, u8 damage) BANKED {
 }
 
 void projectile_update(entity_t *e, u8 idx) BANKED {
+    // Cache flags for the dense bullet path. SDCC otherwise reloads this
+    // struct byte for each material check below; twelve simultaneous hostile
+    // shots are enough for those redundant reads to cost a video frame.
+    u8 flags = e->flags;
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 
@@ -147,7 +151,7 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
 
     // Player bullets shimmer between 2 frames; physical melee arcs and enemy
     // bullets remain static so range and weapon category read immediately.
-    if ((e->flags & EF_PLAYER_PROJ) && e->ai_data[2] == 0) {
+    if ((flags & EF_PLAYER_PROJ) && e->ai_data[2] == 0) {
         e->ai_data[0] = (u8)(e->ai_data[0] + 1);
         e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
     }
@@ -174,25 +178,27 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
             ? room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)]
             : room_tile_at_px(sx, sy);
 
-        if (t == BGT_WALL_CRACK && (e->flags & EF_PLAYER_PROJ)) {
-            room_open_secret((u8)(sx >> 3), (u8)(sy >> 3));
-            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
-            entity_kill(idx);
-            return;
-        }
-        // Crystals shatter under PLAYER fire (mana nodes); they still
-        // block enemy shots, so they double as destructible cover.
-        if (t == BGT_CRYSTAL && (e->flags & EF_PLAYER_PROJ)) {
-            room_break_crystal((u8)(sx >> 3), (u8)(sy >> 3));
-            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
-            entity_kill(idx);
-            return;
-        }
-        if (t == BGT_POT && (e->flags & EF_PLAYER_PROJ)) {
-            room_break_pot((u8)(sx >> 3), (u8)(sy >> 3));
-            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
-            entity_kill(idx);
-            return;
+        if (flags & EF_PLAYER_PROJ) {
+            if (t == BGT_WALL_CRACK) {
+                room_open_secret((u8)(sx >> 3), (u8)(sy >> 3));
+                fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+                entity_kill(idx);
+                return;
+            }
+            // Crystals shatter under PLAYER fire (mana nodes); they still
+            // block enemy shots, so they double as destructible cover.
+            if (t == BGT_CRYSTAL) {
+                room_break_crystal((u8)(sx >> 3), (u8)(sy >> 3));
+                fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+                entity_kill(idx);
+                return;
+            }
+            if (t == BGT_POT) {
+                room_break_pot((u8)(sx >> 3), (u8)(sy >> 3));
+                fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+                entity_kill(idx);
+                return;
+            }
         }
         if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_CRYSTAL
             || t == BGT_WALL_CRACK || t == BGT_POT) {

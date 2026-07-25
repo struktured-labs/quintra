@@ -234,8 +234,8 @@ end
 -- through the same reciprocal graph the ROM exposes; every actual crossing
 -- still happens through walk_edge and the normal transition transaction.
 local DUNGEON_FOLD_COLS = {
-    2,0,5,0, 0,4,5,0, 0,5,5,0, 0,0,5,0,
-    0,1,5,0, 5,0,5,0, 2,5,5,0, 5,5,5,0
+    2,0,5,0, 0,5,5,0, 0,0,5,0, 5,5,5,0,
+    2,5,5,0, 0,5,4,0, 0,4,5,0, 0,1,5,0
 }
 
 local function xor_low3(a, b)

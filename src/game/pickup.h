@@ -26,6 +26,7 @@
 #define PICKUP_RIFTWELL     16 // one-use overworld restoration landmark
 #define PICKUP_LOREKEEPER   17 // permanent town storyteller / lore fixture
 #define PICKUP_BELLKEEPER    18 // permanent town arrival-square bellkeeper
+#define PICKUP_FARFOLD_RELIC 19 // persistent optional dungeon-cache relic
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -47,10 +48,14 @@ u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED;
 // Guaranteed colossus reward: roll from the active champion's small, useful
 // relic pool instead of allowing a first boss to pay only a luck-sidegrade.
 u8   pickup_boss_relic_for_class(void) BANKED;
+// Seed-pure counterpart used by the optional Farfold Cache. `roll` selects
+// one of the active champion's same three useful build branches.
+u8   pickup_farfold_relic_for_class(u8 roll) BANKED;
 
 // Spawn a weapon orb (generated weapon item index). Permanent, never magnetizes;
 // overlap it and press A to swap the A-weapon, dropping the old one in place.
 u8   pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_farfold_relic(u8 item_index, fix8_t x, fix8_t y) BANKED;
 
 // Content-driven weapon-orb selection. These avoid assuming weapon entries
 // occupy a contiguous prefix of items[] as the roster grows.

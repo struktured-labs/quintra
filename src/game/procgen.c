@@ -1458,6 +1458,21 @@ void procgen_generate_current_room(void) BANKED {
                     }
                 }
             }
+            if (!run_state.world_mode
+                && run_state_dungeon_local()
+                    == run_state_dungeon_cache_cell()
+                && !(run_state.dungeon_phase & RUN_FARFOLD_CACHE_BIT)) {
+                // The reliquary lies in the southeast camera sector, outside
+                // every direct cardinal crossing. Its seed-pure class relic
+                // makes exploring a generated dead end a real build decision
+                // without consuming or perturbing the encounter RNG stream.
+                u8 roll = (u8)run_state.run_seed;
+                roll = (u8)(roll + run_state.bosses_beaten
+                    + player.class_id);
+                pickup_spawn_farfold_relic(
+                    pickup_farfold_relic_for_class(roll),
+                    FIX8(216), FIX8(208));
+            }
             clear_reach_marks_local();
         }
     }

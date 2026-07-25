@@ -50,13 +50,13 @@ def dungeon_maze_neighbor(cell: int, size: int, direction: int,
         return neighbor
     folds = (
         (2, 0, 5, 0),
-        (0, 4, 5, 0),
         (0, 5, 5, 0),
         (0, 0, 5, 0),
-        (0, 1, 5, 0),
-        (5, 0, 5, 0),
-        (2, 5, 5, 0),
         (5, 5, 5, 0),
+        (2, 5, 5, 0),
+        (0, 5, 4, 0),
+        (0, 4, 5, 0),
+        (0, 1, 5, 0),
     )
     seed_fold = (run_seed ^ (run_seed >> 8) ^ (run_seed >> 16)
                  ^ (run_seed >> 24) ^ (stage * 3)) & 7
@@ -70,6 +70,22 @@ def dungeon_maze_neighbor(cell: int, size: int, direction: int,
     else:
         fold_col = min(fold_col, lower_count - 1)
     return neighbor if col == fold_col else None
+
+
+def dungeon_cache_cell(size: int, run_seed: int, stage: int) -> int:
+    """Mirror the cartridge's deepest optional dead-end cache selection."""
+    fixtures = {0, 1, 2, 3, 7, 8, 9, 15}
+    for cell in range(size - 4, 0, -1):
+        if cell in fixtures:
+            continue
+        degree = sum(
+            dungeon_maze_neighbor(cell, size, direction, run_seed, stage)
+            is not None
+            for direction in range(4)
+        )
+        if degree == 1:
+            return cell
+    return 5
 
 
 def dungeon_direction(source: int, target: int) -> int:
