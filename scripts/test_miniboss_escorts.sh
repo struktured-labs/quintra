@@ -11,10 +11,11 @@ OUT="$(mktemp /tmp/quintra-miniboss-escort.XXXXXX)"
 
 # Room slides, the Sigil detour, and a real shop purchase all consume
 # controller time before the boss threshold. This is still a short escort-path
-# regression window, but 3000 frames cuts off a healthy run immediately before
-# room 6 on the current cartridge pacing.
+# regression window. The scrolling opening court adds real traversal before
+# the same room-3 escort, so preserve the route assertion with a modestly
+# larger controller window.
 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=0 \
-  QUINTRA_BALANCE_FRAMES=3600 QUINTRA_BALANCE_HOST_TIMEOUT=40 \
+  QUINTRA_BALANCE_FRAMES=4400 QUINTRA_BALANCE_HOST_TIMEOUT=60 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

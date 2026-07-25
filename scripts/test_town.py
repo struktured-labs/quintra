@@ -21,9 +21,11 @@ def addr(name):
 
 
 def main():
-    rs, pl, en, screen, tilemap = map(addr, (
+    rs, pl, en, screen, tilemap, large, world_w, world_h, camera_x, camera_y = map(addr, (
         "_run_state", "_player", "_entities", "_loop_current_screen",
-        "_room_tilemap"))
+        "_room_tilemap", "_procgen_current_room_is_large",
+        "_room_world_width", "_room_world_height",
+        "_room_camera_x", "_room_camera_y"))
     pb = PyBoy(str(ROM), window="null", cgb=True)
 
     def tick(n):
@@ -70,6 +72,13 @@ def main():
             direction = dungeon_direction(source_local, target_local)
             pb.memory[rs + 1] = target - 1
             pb.memory[rs + 11] = stage
+            # The test authors a compact synthetic predecessor below. Do not
+            # inherit the real opening field's 248x248 bounds when only the
+            # logical room counter is being rewritten.
+            pb.memory[large] = 0
+            pb.memory[world_w], pb.memory[world_h] = 160, 136
+            pb.memory[camera_x] = pb.memory[camera_y] = 0
+            pb.memory[0xFF43] = pb.memory[0xFF42] = 0
             x, y = {
                 0: (72, 0), 1: (144, 60),
                 2: (72, 120), 3: (0, 60),

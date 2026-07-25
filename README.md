@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.76: Outer Reaches](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.77: Long Horizons](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,42 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.76**, published after the complete build,
+The current cartridge is **v0.18.77**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Dungeon scale is visible from the first playable step.** Every stage now
+opens inside a 31×31-tile scrolling field instead of making the player pass
+several compact chambers before seeing the larger geography. Local approach
+fourteen is also a full field, breaking up the compact middle-row sequence.
+The opening dungeon therefore has ten 248×248 districts rather than eight,
+and the finale has seventeen rather than fifteen, without adding a single
+filler room or changing the 20–30-node procedural graph.
+
+The large-field encounter placement also no longer piles nearly every rolled
+enemy onto one southeast coordinate. Up to four bodies occupy four guaranteed
+open sectors—the near hall, southeast apron, eastern ruin, and southern
+approach—so camera travel reveals a distributed fight rather than empty
+acreage followed by one overlapping clump. Stage-entry roster variety, enemy
+counts, HP, elite rules, and Normal/Easy balance are unchanged.
+
+Wide courts are also continuous across the former 160×136 viewport edge.
+Stage-specific decoration is layered first, then the obsolete internal row and
+column are reopened; no invisible one-screen wall survives inside a scrolling
+field.
+
+The wider opening remains inside the cartridge's measured frame budget. Camera
+follow and world-entity projection now share one banked pass while the hero is
+moving, then fall back to the resident renderer after the camera settles. The
+live dense-room gate holds **144/180** frames and ordinary traversal
+**179/180**, with 1,034 bytes still free in the tight fixed code bank.
+
+The release proof is campaign-wide, not just a room smoke test: an input-only
+Picsean run reaches the ending after all nine Colossi at frame 158,466 with
+16 HP remaining. All 460 native mGBA deep fixtures cold-load against this
+exact ROM, and separate five-minute native snapshots provide direct entry
+points into one continuous Easy training route. Longer host watchdogs used by
+wide-field route analysis do not change cartridge frame budgets, seeds,
+assertions, combat values, or difficulty rules.
 
 **The stages now spend the hardware background on real travel.** Every
 scrolling dungeon district and Riftwild cell grows from 28×25 to **31×31
@@ -31,8 +65,8 @@ tiles**—248×248 pixels behind the 160×136 viewport, with the final hardware
 row and column reserved as deterministic overscan. That is 61,504 pixels of
 generated collision terrain per field, 37% more than the former 224×200
 contract. Horizontal camera travel grows from 64 to 88 pixels and vertical
-travel from 64 to 112. Stage one still has eight scrolling districts and the
-finale fifteen; the added scale comes from exploration space rather than
+travel from 64 to 112. Stage one has ten scrolling districts and the finale
+seventeen; the added scale comes from exploration space rather than
 filler room counters.
 
 The new acreage is authored gameplay terrain. Dungeon fields extend their
@@ -74,9 +108,9 @@ not a second balance target or a hidden Normal nerf.
 longer contains only an isolated pair of wide rooms. Its final two cells flow
 into the first two ordinary cells of the next row as consecutive 224×200
 fields, while authored Waystones, Wardens, shops, sanctuaries, and Colossi
-return to a compact presentation for clarity. Stage one now contains eight
-scrolling fields instead of five, and the finale contains fifteen instead of
-eight. The stage count remains 20–30 rooms; this adds physical travel and
+return to a compact presentation for clarity. Stage one now contains ten
+scrolling fields instead of five, and the finale contains seventeen instead
+of eight. The stage count remains 20–30 rooms; this adds physical travel and
 camera time without padding the run with filler counters.
 
 **A new stage gets one readable arrival beat before full Normal pressure.**
@@ -107,8 +141,8 @@ adding a forced tutorial modal to every roguelike run.
 counters.** Every snake turn can span a 224×200 district behind the 160×136
 viewport: cells 4/5/6, 10/11/12/13, 16/17/18/19, and 22/23/24/25 use the
 wide-field contract whenever an authored fixture does not own that room.
-Stage one therefore has eight scrolling dungeon fields and the finale has
-fifteen. Each field retains
+Stage one therefore has ten scrolling dungeon fields and the finale has
+seventeen. Each field retains
 one-node Compass semantics but contains 28×25 tiles of actual collision,
 combat, cover, and camera travel. The former x=160 and y=136 edges are
 interior floor; only the far x=216 and y=184 perimeter owns graph doors.

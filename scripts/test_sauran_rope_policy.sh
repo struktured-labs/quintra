@@ -11,9 +11,11 @@ OUT="$(mktemp /tmp/quintra-sauran-rope.XXXXXX)"
 
 # Focused controller geometry check: Easy preserves the Rope and Tail Spike
 # behavior while preventing the harder opening Colossus from masking it.
+# The same 12,000 cartridge frames now include 248x248 route analysis, so the
+# external watchdog allows that work to finish on a loaded host.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=1 \
   QUINTRA_BALANCE_TARGET_FRAME=520 \
-  QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=180 \
+  QUINTRA_BALANCE_FRAMES=12000 QUINTRA_BALANCE_HOST_TIMEOUT=600 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

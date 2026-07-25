@@ -20,9 +20,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN, HITSTOP, FRAME_COUNTER = map(addr, (
+RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN, HITSTOP, FRAME_COUNTER, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
-    "_room_combat_sealed", "_room_sigil_status", "_loop_current_screen", "_g_hitstop", "_loop_frame_counter"))
+    "_room_combat_sealed", "_room_sigil_status", "_loop_current_screen",
+    "_g_hitstop", "_loop_frame_counter", "_procgen_current_room_is_large",
+    "_room_world_width", "_room_world_height",
+    "_room_camera_x", "_room_camera_y"))
 RS_SIGILS = 23
 RS_BOSSES = 11
 RS_PUZZLES = 27
@@ -57,13 +60,21 @@ def main():
         for i in range(32 * 28):
             pb.memory[EN + i] = 0
 
+    def compact_source():
+        pb.memory[LARGE] = 0
+        pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+        pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+        pb.memory[0xFF43] = pb.memory[0xFF42] = 0
+
     def right_door():
         # The authored Sigil route always crosses local room 1 -> 2 east.
+        compact_source()
         pb.memory[TM + 8 * 20 + 19] = pb.memory[TM + 9 * 20 + 19] = 3
         put16(pb, PL + 9, 144)
         put16(pb, PL + 11, 60)
 
     def boss_door(stage):
+        compact_source()
         size = dungeon_size(stage)
         direction = dungeon_direction(size - 2, size - 1)
         for tx, ty in {

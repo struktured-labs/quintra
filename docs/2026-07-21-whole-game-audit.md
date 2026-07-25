@@ -1,5 +1,47 @@
 # Quintra whole-game audit — updated 2026-07-24
 
+## v0.18.77 attended scale response
+
+The latest attended report still finds the stages compact after the 31×31
+field expansion. That is accepted as the governing evidence: increasing the
+area of fields hidden several rooms into a route did not establish scale soon
+enough. Every dungeon foyer is now a 248×248 scrolling field, and local
+approach fourteen supplies another broad beat in the graph's compact middle
+row. Stage one rises from eight to ten wide districts and the finale from
+fifteen to seventeen, while the room budgets, objectives, and Compass topology
+remain unchanged.
+
+The audit also found that generated wide-room enemies were not using the
+space honestly. The first body occupied one eastern point and nearly every
+subsequent body was overwritten onto the same southeast point. Four
+deterministic, guaranteed-open sectors now distribute the encounter across the
+near hall, southeast apron, eastern ruin, and southern approach without
+consuming RNG or changing which enemies rolled. Live-ROM coverage enters the
+wide opening foyer, crosses consecutive 31×31 courts, confirms distinct near
+and far bodies, returns to a compact Waystone, and enters the new central
+approach. Deep-state generation now treats a live scrolling foyer camera as
+valid and explicitly normalizes only its synthetic defeated-boss source.
+
+Moving-camera work is consolidated into one banked camera/entity projection
+pass; a settled camera returns to resident rendering. Measured performance is
+179/180 ordinary frames and 144/180 dense frames, with 1,034 bytes free in
+bank 1.
+
+The attended route trace also exposed a legacy boundary inside later
+stage-archetype courts: the camera could show the southern field while the old
+160×136 edge still behaved like a wall. Wide generation now reopens the entire
+obsolete row and column after stage decoration. A Stage 3 checkpoint verifies
+both seams as passable, and the controller reaches room 54 by frame 35,000
+instead of stalling against the room-41 Fold Star.
+
+The end-to-end Picsean proof reaches the ending at frame 158,466 after all
+nine bosses with 16 HP remaining. All 460 native mGBA champion/difficulty/
+checkpoint fixtures cold-load, and a separate periodic set supplies native
+snapshots at five-minute intervals for attended deep testing. Longer host
+watchdogs in a few input-controller fixtures accommodate route analysis over
+31×31 collision fields; no cartridge frame budget, deterministic seed,
+assertion, combat value, or difficulty rule changed with them.
+
 ## v0.18.76 physical-scale response
 
 The repeated report that stages still feel compact is accepted as physical

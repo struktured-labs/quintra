@@ -535,19 +535,22 @@ void procgen_generate_current_room(void) BANKED {
         u8 local = run_state_dungeon_local();
         // Each snake turn now owns a scrolling district rather than one
         // isolated large room: the last two cells of a row flow into the
-        // first two cells of the next row. Objective fixtures at local 7 and
-        // the opening branch remain compact/readable, while ordinary cells
-        // 4/5/6, 10/11/12/13, 16/17/18/19, and 22/23/24/25 can sustain
-        // several consecutive 248x248 fields. This makes the existing
-        // 20..30-cell graph feel geographically large without padding it
-        // with more loading thresholds or filler counters.
+        // first two cells of the next row. The stage foyer and central
+        // back-half approach (local 14) are also full fields. Starting a
+        // dungeon inside a 248x248 landscape establishes scale immediately,
+        // while local 14 prevents the middle row from collapsing into three
+        // compact thresholds in succession. Objective fixtures at local 7
+        // remain compact/readable. This makes the existing 20..30-cell graph
+        // feel geographically large without padding it with more loading
+        // thresholds or filler counters.
         procgen_current_room_is_large = (!run_state.world_mode
             && !is_boss_room && !is_town && !run_state.secret_pending
             && !run_state_is_miniboss() && !run_state_is_shop()
             && !run_state_is_sanctuary()
-            && local >= 4 && local != 7
-            && ((local % DUNGEON_GRID_W) <= 1
-                || (local % DUNGEON_GRID_W) >= 4)) ? 1 : 0;
+            && (local == 0 || local == 14
+                || (local >= 4 && local != 7
+                    && ((local % DUNGEON_GRID_W) <= 1
+                        || (local % DUNGEON_GRID_W) >= 4)))) ? 1 : 0;
     }
     run_state_mark_visited();
     rng_seed(seed);
@@ -937,6 +940,9 @@ void procgen_generate_current_room(void) BANKED {
             apply_stage_archetype(run_state.bosses_beaten, seed);
             carve_stage_escape_rails();
         }
+        // Compact stage silhouettes may decorate the old viewport edge.
+        // Reopen it after layering so the scrolling field has no legacy wall.
+        room_reopen_dungeon_court_seams();
     }
 
     // Three-screen village: arrival square branches west to the elder/forge
@@ -1420,11 +1426,21 @@ void procgen_generate_current_room(void) BANKED {
                                 entities[idx].x = FIX8(216);
                                 entities[idx].y = FIX8(200);
                             } else if (procgen_current_room_is_large) {
-                                // The small pacing encounter occupies both
-                                // the middle and far field, proving this is
-                                // gameplay space rather than empty overscan.
-                                entities[idx].x = FIX8(spawned ? 208 : 184);
-                                entities[idx].y = FIX8(spawned ? 200 : 48);
+                                // Populate four readable sectors rather than
+                                // stacking every body on one southeast pixel.
+                                // The coordinates sit on the guaranteed-open
+                                // central hall and encounter aprons, so the
+                                // full field becomes combat space without
+                                // consuming another RNG draw.
+                                static const u8 wide_spawn_x[4] = {
+                                    120, 208, 184, 72
+                                };
+                                static const u8 wide_spawn_y[4] = {
+                                    64, 200, 48, 184
+                                };
+                                u8 sector = (u8)(spawned & 3);
+                                entities[idx].x = FIX8(wide_spawn_x[sector]);
+                                entities[idx].y = FIX8(wide_spawn_y[sector]);
                             }
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,

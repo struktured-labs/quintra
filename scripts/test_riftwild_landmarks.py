@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw
 from pyboy import PyBoy
 
 from test_overworld import (
-    CAMERA_X, CAMERA_Y, EN, PL, ROM, ROOT, RS, TM, WORLD_BOTTOM, WORLD_EXT,
+    CAMERA_X, CAMERA_Y, EN, LARGE, PL, ROM, ROOT, RS, TM, WORLD_BOTTOM, WORLD_EXT,
     WORLD_H, WORLD_W, exit_at, put16,
 )
 from quintra_topology import STAGE_BOSS_ROOM
@@ -37,6 +37,12 @@ def boot_world():
         pb.tick()
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
+    # This debugger fixture changes the logical room to the defeated compact
+    # boss arena. Do not retain the real opening field's scrolling geometry.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     # The visible opening cell has no south maze edge; mirror the defeated
     # arena's all-cardinal unseal before taking its real Riftwild exit.
     pb.memory[TM + 16 * ROOM_W + 9] = 3

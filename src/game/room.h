@@ -59,6 +59,7 @@ void room_spawn_progression_fixture(void) BANKED;
 u8 room_apply_world_arena(void) BANKED;
 // Build deterministic off-viewport terrain for a large dungeon turn court.
 void room_generate_dungeon_court(u32 seed) BANKED;
+void room_reopen_dungeon_court_seams(void) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;

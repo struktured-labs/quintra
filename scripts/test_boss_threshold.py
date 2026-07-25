@@ -79,9 +79,11 @@ def set_cardinal_fixture(pb: PyBoy, rs: int, tilemap: int, direction: int) -> No
 
 
 def main() -> None:
-    rs, player, entities, tilemap, sealed = map(addr, (
+    rs, player, entities, tilemap, sealed, large, world_w, world_h, camera_x, camera_y = map(addr, (
         "_run_state", "_player", "_entities", "_room_tilemap",
-        "_room_combat_sealed"))
+        "_room_combat_sealed", "_procgen_current_room_is_large",
+        "_room_world_width", "_room_world_height",
+        "_room_camera_x", "_room_camera_y"))
     pb = PyBoy(str(ROM), window="null", cgb=True)
     pb.tick(240); pb.button("start"); pb.tick(30); pb.button("a"); pb.tick(90)
     for i in range(32 * 28):
@@ -94,6 +96,12 @@ def main() -> None:
     return_direction = (approach + 2) & 3
     pb.memory[rs + 1] = STAGE_START[0] + source
     pb.memory[rs + 6] = 0xFF
+    # This is a compact synthetic pre-sanctuary threshold, not the live wide
+    # foyer that happened to be rendered before the counter rewrite.
+    pb.memory[large] = 0
+    pb.memory[world_w], pb.memory[world_h] = 160, 136
+    pb.memory[camera_x] = pb.memory[camera_y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     pb.memory[rs + 23] = 1
     pb.memory[rs + 27] = 1 << 3
     for x, y in DOORS[approach]:

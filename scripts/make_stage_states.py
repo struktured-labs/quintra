@@ -92,7 +92,8 @@ def symbol_addresses(rom: Path) -> dict[str, int]:
     for name in ("_run_state", "_player", "_entities", "_room_tilemap",
                  "_loop_current_screen", "_room_puzzle_kind",
                  "_room_puzzle_locked", "_room_world_width",
-                 "_room_world_height", "_procgen_current_room_is_large"):
+                 "_room_world_height", "_room_camera_x", "_room_camera_y",
+                 "_procgen_current_room_is_large"):
         match = re.search(rf"DEF {re.escape(name)} 0x([0-9A-Fa-f]+)", text)
         if not match:
             raise RuntimeError(f"missing ROM symbol {name} in {noi}")
@@ -151,6 +152,22 @@ def cross_graph_edge(pyboy: PyBoy, player: int, tilemap: int, direction: str) ->
         pyboy.memory[tilemap + 8 * 20] = BGT_DOOR
         pyboy.memory[tilemap + 9 * 20] = BGT_DOOR
     pyboy.button_press(direction)
+
+
+def normalize_compact_source(pyboy: PyBoy, addrs: dict[str, int]) -> None:
+    """Give a synthetic threshold fixture the compact geometry it authors.
+
+    Stage entry checkpoints can now retain a legitimate scrolling camera.
+    Helpers that rewrite only the logical room counter must not accidentally
+    carry those bounds into an unrelated pre-court, pre-sanctuary, or defeated
+    boss source. The destination remains cartridge-generated through input.
+    """
+    pyboy.memory[addrs["_procgen_current_room_is_large"]] = 0
+    pyboy.memory[addrs["_room_world_width"]] = ROOM_W * 8
+    pyboy.memory[addrs["_room_world_height"]] = ROOM_H * 8
+    pyboy.memory[addrs["_room_camera_x"]] = 0
+    pyboy.memory[addrs["_room_camera_y"]] = 0
+    pyboy.memory[0xFF43] = pyboy.memory[0xFF42] = 0
 
 
 def apply_prior_progression(pyboy: PyBoy, rs: int, player: int, stage: int) -> None:
@@ -306,6 +323,7 @@ def advance_to_court(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:
     target = STAGE_START[stage] + 5
     pyboy.memory[rs + 1] = target - 1
     pyboy.memory[rs + 6] = DIR_NONE
+    normalize_compact_source(pyboy, addrs)
     # A hands-on court checkpoint should show the route that led there on the
     # Compass rather than an isolated current square.
     pyboy.memory[rs + 20] = 0x3F
@@ -345,6 +363,7 @@ def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int
     target = STAGE_BOSS_ROOM[stage] - 1
     pyboy.memory[rs + 1] = target - 1
     pyboy.memory[rs + 6] = 0xFF  # DIR_NONE before the synthetic approach
+    normalize_compact_source(pyboy, addrs)
     put16(pyboy, rs + 23,
           (pyboy.memory[rs + 23] | pyboy.memory[rs + 24] << 8) | (1 << stage))
     pyboy.memory[rs + 27] |= 1 << 3
@@ -512,6 +531,11 @@ def advance_to_riftwild(pyboy: PyBoy, addrs: dict[str, int],
     pyboy.memory[rs + 18] = pyboy.memory[rs + 19] = 0
     pyboy.memory[rs + 20] = 0
     pyboy.memory[rs + 21] = pyboy.memory[rs + 22] = 0
+    # The fixture rewinds a live next-stage foyer to the preceding defeated
+    # boss counter. Foyers are scrolling fields now, while the old boss exit
+    # remains a compact arena; normalize that synthetic source geometry before
+    # taking its real south-door transaction.
+    normalize_compact_source(pyboy, addrs)
     for i in range(32):
         entity = entities + i * 28
         if pyboy.memory[entity] == 2:
@@ -585,7 +609,15 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     if pyboy.memory[rs + 1] != target or pyboy.memory[rs + 17]:
         pyboy.stop(save=False)
         raise RuntimeError(f"could not enter stage {stage + 1} ({difficulty})")
-    settle_room(pyboy, tilemap)
+    # Dungeon foyers may be full scrolling fields. Their camera legitimately
+    # follows the centered live spawn instead of returning SCX/SCY to zero;
+    # only compact entries use the old normalized-scroll publication rule.
+    settle_room(
+        pyboy,
+        tilemap,
+        normalize_scroll=not bool(
+            pyboy.memory[addrs["_procgen_current_room_is_large"]]),
+    )
     return pyboy, ram, target
 
 

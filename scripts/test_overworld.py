@@ -14,10 +14,11 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM, SCREEN, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, WORLD_EXT, WORLD_BOTTOM = map(addr, (
+RS, PL, EN, TM, SCREEN, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, WORLD_EXT, WORLD_BOTTOM, LARGE = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap", "_loop_current_screen",
     "_room_world_width", "_room_world_height", "_room_camera_x", "_room_camera_y",
     "_room_world_extension", "_room_world_bottom",
+    "_procgen_current_room_is_large",
 ))
 
 def put16(pb, p, v):
@@ -60,6 +61,12 @@ def main():
 
     # Simulate a cleared first boss and leave through its south door.
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]; pb.memory[RS + 11] = 1
+    # The fixture rewrites the logical room to the defeated compact arena.
+    # Do not retain the actual opening field's world dimensions.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     # The currently rendered room is still opening cell 0, whose new 6x5
     # maze has no south edge. Publish the defeated arena's unsealed threshold
     # explicitly before exercising the real cleared-boss exit transaction.

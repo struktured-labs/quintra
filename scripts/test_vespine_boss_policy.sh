@@ -16,9 +16,11 @@ for replay in '1 440 2064128755' '2 540 2064128343' '3 400 2064128731'; do
   read -r run frame seed <<EOF
 $replay
 EOF
+  # Preserve the three 18,000-frame worlds and their two-clear floor. The
+  # expanded 248x248 routes only require a longer external watchdog.
   QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=4 \
     QUINTRA_BALANCE_TARGET_FRAME="$frame" \
-    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=240 \
+    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=600 \
     QUINTRA_MGBA_SAVE_DIR="${OUT}.save" QUINTRA_BALANCE_OUT="$OUT" \
     QUINTRA_BALANCE_APPEND=1 QUINTRA_BALANCE_SKIP_REPORT=1 \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

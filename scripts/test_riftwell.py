@@ -28,8 +28,10 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM = map(
-    addr, ("_run_state", "_player", "_entities", "_room_tilemap")
+RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
+    addr, ("_run_state", "_player", "_entities", "_room_tilemap",
+           "_procgen_current_room_is_large", "_room_world_width",
+           "_room_world_height", "_room_camera_x", "_room_camera_y")
 )
 
 
@@ -61,6 +63,10 @@ def main():
     # Simulate the real post-boss handoff, then cross authored 0 -> 1.
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     pb.memory[TM + 16 * 20 + 9] = 3
     pb.memory[TM + 16 * 20 + 10] = 3
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 120)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regression: Featherbarb's real range supports orbit-and-fire against giants.
-# Pin one real title-frame-derived Normal world so this policy contract cannot
+# Pin one real title-frame-derived world so this policy contract cannot
 # turn into an entropy lottery that dies in an unrelated early encounter
 # before reaching the bosses it is meant to exercise.
 set -euo pipefail
@@ -10,11 +10,12 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-corvin-boss.XXXXXX)"
 
 # Frame 680 with replay id 27 enters run seed 2064128483 on the current ROM.
-# It survives the expanded Sigil/Warden route and reaches a real Normal
-# colossus with enough health for the test to isolate orbit pressure instead
-# of measuring unrelated route attrition.
-QUINTRA_BALANCE_RUNS=27 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=14000 QUINTRA_BALANCE_HOST_TIMEOUT=180 \
+# The scrolling foyer adds meaningful pre-boss travel. Use the tester assist
+# for this orbit-specific contract so a generated Normal route death does not
+# prevent the real giant policy from being exercised; boss movement, arena,
+# projectiles, and controller input remain intact.
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=27 QUINTRA_BALANCE_CLASSES=2 \
+  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=240 \
   QUINTRA_BALANCE_TARGET_FRAME=680 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
@@ -43,4 +44,4 @@ awk -F, -v expected_seed=2064128483 '
     if (stalled) { print "[corvin-boss] live-combat stall" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[corvin-boss] PASS fixed Normal orbit policy produced a near-clear giant fight without a stall"
+echo "[corvin-boss] PASS fixed orbit policy produced a near-clear giant fight without a stall"

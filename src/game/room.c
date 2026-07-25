@@ -41,6 +41,12 @@ u8 room_camera_y;
 
 static u8 room_paused;
 static u8 room_resume_flag;   // set by room_request_resume: skip procgen next enter
+// A moving champion keeps the two-axis camera on the combined banked
+// follow/project path. Once both positions are stable, wide fields use the
+// resident entity projector and avoid a needless far call every idle frame.
+static u8 camera_player_x;
+static u8 camera_player_y;
+static u8 camera_follow_ticks;
 // Active VBlanks below one whole second. Keep this across pack/map visits so
 // menu tapping cannot erase time; g_vbl_ticks itself is cleared on re-entry so
 // time spent reading those screens remains paused.
@@ -1027,7 +1033,7 @@ void room_enter(void) {
         room_refresh_shop_wares();
         room_load_dynamic_fx_identity();
         draw_room_tilemap();
-        entity_draw_all_world();
+        entity_draw_all();
         place_player_sprite();
         SCX_REG = room_camera_x;
         SCY_REG = room_camera_y;
@@ -1162,7 +1168,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (player.iframes) player.iframes--;   // drives the flicker
         entity_update_all(0, 0);
         place_player_sprite();
-        entity_draw_all_world();
+        entity_draw_all();
         return SCREEN_SELF;
     }
 
@@ -1191,7 +1197,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (g_hitstop) {
         g_hitstop--;
         place_player_sprite();
-        entity_draw_all_world();
+        entity_draw_all();
         return SCREEN_SELF;
     }
 
@@ -2150,15 +2156,33 @@ void room_draw(void) {
             }
         }
     }
-    room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
-        ? tiles_world_camera_step(room_camera_x, player.x,
-            room_world_width, ROOM_VIEW_W_PX) : 0;
-    room_camera_y = (room_world_height > ROOM_VIEW_H_PX)
-        ? tiles_world_camera_step(room_camera_y, player.y,
-            room_world_height, ROOM_VIEW_H_PX) : 0;
-    place_player_sprite();
-    if (room_world_height > ROOM_VIEW_H_PX) entity_draw_all_world();
-    else entity_draw_all();
+    if (room_world_width > ROOM_VIEW_W_PX
+        || room_world_height > ROOM_VIEW_H_PX) {
+        if ((u8)player.x != camera_player_x
+            || (u8)player.y != camera_player_y) {
+            camera_player_x = (u8)player.x;
+            camera_player_y = (u8)player.y;
+            // The maximum 112px vertical correction needs 56 two-pixel
+            // steps after a checkpoint warp or fast dash.
+            camera_follow_ticks = 64;
+        }
+        if (camera_follow_ticks) {
+            // One banked call follows both camera axes and projects every
+            // entity. The former split paid three cross-bank calls.
+            entity_draw_all_world();
+            camera_follow_ticks--;
+        } else {
+            entity_draw_all();
+        }
+        place_player_sprite();
+    } else {
+        room_camera_x = room_camera_y = 0;
+        camera_player_x = (u8)player.x;
+        camera_player_y = (u8)player.y;
+        camera_follow_ticks = 0;
+        place_player_sprite();
+        entity_draw_all();
+    }
 
     if (procgen_current_room_is_boss && room_stage() == 1
         && (loop_frame_counter & 0x0F) == 0) {

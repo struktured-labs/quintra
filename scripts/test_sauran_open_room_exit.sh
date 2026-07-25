@@ -10,10 +10,13 @@ OUT="$ROOT/tmp/sauran-open-room-exit.csv"
 
 # This is an optional-combat routing fixture, not a Normal boss-balance gate.
 # Use the coarse tester assist so the baseline giant experiment cannot end the
-# run at boss one before room 13 exists.
+# run at boss one before room 13 exists. Its 30,000-frame route now crosses
+# sustained 248x248 fields, so give the external analyzer enough wall time
+# without changing the cartridge frame budget.
 QUINTRA_BOT_EASY=1 QUINTRA_BOT_GIANT_POLICY=baseline \
   QUINTRA_FIXED_MATRIX_CLASSES=1 \
   QUINTRA_FIXED_MATRIX_FRAMES=30000 \
+  QUINTRA_FIXED_MATRIX_HOST_TIMEOUT=900 \
   QUINTRA_FIXED_MATRIX_OUT="$OUT" \
   QUINTRA_FIXED_MATRIX_SAVE_DIR="$ROOT/tmp/sauran-open-room-exit-saves" \
   bash "$ROOT/scripts/fixed_controller_matrix.sh" "$ROM" >/dev/null

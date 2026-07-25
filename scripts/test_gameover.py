@@ -129,7 +129,12 @@ def main():
         # leak through and make arbitrary score digits appear red/oddly tinted.
         bg_map = 0x9C00 if (first.memory[0xFF40] & 0x08) else 0x9800
         first.memory[0xFF4F] = 1
-        attrs = bytes(first.memory[bg_map:bg_map + 20 * 18])
+        # A BG map is 32 tiles wide even though the display is 20. Inspect
+        # the visible rows, not the unused 12-tile padding between them.
+        attrs = b"".join(
+            bytes(first.memory[bg_map + y * 32:bg_map + y * 32 + 20])
+            for y in range(18)
+        )
         first.memory[0xFF4F] = 0
         assert attrs == bytes(20 * 18), \
             "game-over retained stale CGB text palette attributes"

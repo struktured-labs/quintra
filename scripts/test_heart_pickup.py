@@ -56,7 +56,10 @@ def main():
     # through combat_resolve -> pickup_check_player_collision in the ROM.
     for i in range(32 * 28):
         pb.memory[EN + i] = 0
-    heart = EN
+    # Use the last slot: PyBoy yields on VBlank, which can occur after the
+    # resident entity loop has cached slot 0 but before combat. Injecting a
+    # different type into that in-flight slot creates a debugger-only race.
+    heart = EN + 31 * 28
     px = pb.memory[PL + 9] | (pb.memory[PL + 10] << 8)
     py = pb.memory[PL + 11] | (pb.memory[PL + 12] << 8)
     pb.memory[heart] = 3
@@ -70,6 +73,9 @@ def main():
 
     pb.memory[PL + 1] = 8
     pb.memory[PL + 2] = 8
+    # Keep live wide-field terrain from turning this pickup-only contract into
+    # a simultaneous spike-hit-and-heal transaction.
+    pb.memory[PL + 15] = 120
     for _ in range(3):
         pb.tick()
     assert pb.memory[heart] == 3 and pb.memory[PL + 2] == 8, \
@@ -90,7 +96,7 @@ def main():
     # MP wisps follow the same no-fake-pickup rule. Previously the orb
     # vanished and played a reward sound at full MP even though no HUD value
     # changed, which was indistinguishable from a failed collection.
-    mp = EN
+    mp = EN + 31 * 28
     pb.memory[mp] = 3
     pb.memory[mp + 1] = 3
     put16(pb, mp + 3, px + 4)
@@ -116,7 +122,7 @@ def main():
     # both ordinary and five-coin drops must remain visible rather than play a
     # pickup sound while producing no HUD change. A lower purse then collects
     # and clamps normally through the real collision path.
-    coin = EN
+    coin = EN + 31 * 28
     pb.memory[coin] = 3
     pb.memory[coin + 1] = 3
     put16(pb, coin + 3, px + 4)
@@ -136,7 +142,7 @@ def main():
     assert pb.memory[coin] == 0 and (pb.memory[PL + 16] | (pb.memory[PL + 17] << 8)) == 999, \
         "ordinary coin did not collect to the purse cap"
 
-    coin5 = EN
+    coin5 = EN + 31 * 28
     pb.memory[coin5] = 3
     pb.memory[coin5 + 1] = 3
     put16(pb, coin5 + 3, px + 4)

@@ -18,9 +18,11 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, SURGE = map(addr, (
+RS, PL, EN, TM, SURGE, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
-    "_room_weapon_surge_ticks"))
+    "_room_weapon_surge_ticks", "_procgen_current_room_is_large",
+    "_room_world_width", "_room_world_height",
+    "_room_camera_x", "_room_camera_y"))
 
 
 def put16(pb, where, value):
@@ -46,6 +48,12 @@ def boot_shop(seed_low):
     pb.memory[RS + 1] = source
     pb.memory[RS + 2] = seed_low
     pb.memory[RS + 3] = pb.memory[RS + 4] = pb.memory[RS + 5] = 0
+    # The synthetic predecessor is compact even though the actual opening
+    # foyer is now a scrolling field.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     direction = dungeon_direction(source, target)
     for tx, ty in {
         0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),

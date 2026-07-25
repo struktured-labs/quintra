@@ -19,8 +19,9 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, SCREEN = map(
-    addr, ("_run_state", "_player", "_entities", "_loop_current_screen")
+RS, PL, EN, SCREEN, WORLD_WIDTH = map(
+    addr, ("_run_state", "_player", "_entities", "_loop_current_screen",
+           "_room_world_width")
 )
 
 
@@ -64,9 +65,10 @@ def main():
             if first.memory[ep] == 2:
                 first.memory[ep] = first.memory[ep + 1] = 0
         # Dungeon zero's guaranteed maze spine begins eastward (cell 0→1).
-        # The old compact topology opened south here, so pinning that obsolete
-        # threshold could no longer exercise the room-entry SRAM transaction.
-        put16(first, PL + 9, 144)
+        # Its foyer is now a real scrolling field, so use the cartridge's live
+        # width rather than the former compact x=144 threshold. This still
+        # crosses the authored far-east door and exercises room-entry SRAM.
+        put16(first, PL + 9, first.memory[WORLD_WIDTH] - 16)
         put16(first, PL + 11, 60)
         for _ in range(60):
             first.tick()

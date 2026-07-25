@@ -1831,6 +1831,35 @@ function fold_star_shot_lane(px, py, ex, ey, max_range)
     return nil
 end
 
+-- A scrolling court can put a moving target on the opposite side of the
+-- former viewport band. Commit to the authored cardinal cross while crossing
+-- that band so a continuously replanned chase does not oscillate between
+-- distant sectors before resuming live target pursuit.
+function wide_court_seam_step(px, py, ex, ey)
+    if QUINTRA_ARENA_W <= 160 and QUINTRA_ARENA_H <= 136 then return nil end
+    if py <= 120 and ey >= 128 then
+        if px < 72 then return KEY_RIGHT end
+        if px > 72 then return KEY_LEFT end
+        return KEY_DOWN
+    end
+    if py >= 128 and ey <= 120 then
+        if px < 72 then return KEY_RIGHT end
+        if px > 72 then return KEY_LEFT end
+        return KEY_UP
+    end
+    if px <= 136 and ex >= 152 then
+        if py < 56 then return KEY_DOWN end
+        if py > 60 then return KEY_UP end
+        return KEY_RIGHT
+    end
+    if px >= 152 and ex <= 144 then
+        if py < 56 then return KEY_DOWN end
+        if py > 60 then return KEY_UP end
+        return KEY_LEFT
+    end
+    return nil
+end
+
 function fold_star_pixel_step(room, px, py, ex, ey, fallback, max_range)
     if TM == 0 then return fallback, false end
     local stride = QUINTRA_ARENA_W
@@ -3272,19 +3301,62 @@ while frames < LIMIT do
             -- ordinary near-lane frames are misclassified as a body pin.
             keys = quintra_body_overlap_escape(px, py, target.x, target.y)
         elseif target.kind == 11 then
+            -- BubbleBolt can travel 160px, but a distant shot reaches the
+            -- core after its shorter vulnerable contraction has already
+            -- ended. Route projectile kits to a 64px punish lane so impact,
+            -- not launch, occurs during the readable bright window.
             local star_range = held_style == "spear" and 88
                 or held_style == "flail" and 56
                 or held_style == "lunge" and 52
-                or held_style == "claw" and 64 or 150
-            local star_step, star_ready = fold_star_pixel_step(
-                room, px, py, target.x, target.y, aim, star_range)
+                or held_style == "claw" and 64 or 64
+            local star_step, star_ready
+            local seam_step = wide_court_seam_step(
+                px, py, target.x, target.y)
+            if seam_step ~= nil then
+                star_step, star_ready = seam_step, false
+                -- This is the same class of exact, collision-proven route as
+                -- the Sigil path. Do not let the generic 20-frame combat
+                -- unstick replace its sustained seam crossing with a
+                -- rotating escape input before the body clears the wall.
+                sigil_pixel_active = true
+            elseif QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136 then
+                -- A Fold Star moves during both phases. Rebuilding a
+                -- 248x248 one-pixel route for every single-pixel diagonal
+                -- twitch makes the chosen first step oscillate at the old
+                -- viewport seam. Hold the coarse body-valid approach until
+                -- the live projectile test sees the exact punish lane.
+                local lane = fold_star_shot_lane(
+                    px, py, target.x, target.y, star_range)
+                star_ready = lane ~= nil
+                star_step = lane or target_step(
+                    px, py, target.x, target.y, aim, 1)
+            else
+                star_step, star_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, star_range)
+            end
+            if DEBUG and frames % 120 == 0 then
+                debug_log(string.format(
+                    "BOTSTAR f=%d arena=%dx%d pos=%d,%d target=%d,%d state=%d range=%d step=%02X ready=%d",
+                    frames, QUINTRA_ARENA_W, QUINTRA_ARENA_H,
+                    px, py, target.x, target.y, target.state, star_range,
+                    star_step or 0, star_ready and 1 or 0))
+            end
             if waiting_star then
                 -- Reposition through real pixel collision while the diffuse
-                -- form is invulnerable. Once a valid lane is ready, orbit
-                -- without wasting attacks until the bright core contracts.
-                keys = star_ready
-                    and giant_orbit_step(px, py, aim, move) or star_step
+                -- form is invulnerable. Once a valid lane is ready, hold it
+                -- instead of orbiting back out of alignment before the brief
+                -- bright-core window. Projectile/body danger can still
+                -- override this neutral wait in the safety pass below.
+                keys = star_ready and 0 or star_step
                 no_damage_frames = 0
+            elseif star_ready and CLASS == 3
+                and active_charge == 0 and mp >= 2 then
+                -- Picsean's three-lane Tidal Wave is the natural answer to
+                -- the brief contracted core, especially across a scrolling
+                -- court where a single BubbleBolt can lose the moving lane
+                -- before impact. Cast only from the same collision-proven
+                -- cardinal lane used by ordinary attacks.
+                keys = KEY_B + star_step
             else
                 keys = star_ready and (KEY_A + star_step) or star_step
             end
@@ -3671,6 +3743,12 @@ while frames < LIMIT do
             -- ranged-caster family to that lane; chasers retain their more
             -- responsive close-orbit behavior.
             local lane_caster = target.kind == 5 or target.kind == 8
+                -- A Rope's long charge can cross an entire scrolling court.
+                -- In a far-field ruin, the old ranged orbit kept firing into
+                -- cover while the charger repeatedly reset on the other
+                -- side. Route to one real cardinal lane first; the Rope
+                -- still moves, attacks, and must be defeated normally.
+                or target.kind == 9
                 or target.kind == 19 or target.kind == 20 or target.kind == 21
                 -- Dusk Midges are fast harriers, not cover-bound casters.
                 -- Replanning a full BFS against their every drift spends no
@@ -4423,6 +4501,11 @@ while frames < LIMIT do
     -- Preserve an already-committed dodge; otherwise take the legal outward
     -- step and resume ordinary targeting once the core contracts.
     fold_guard_keys = world_mode == 0 and dodge_phase == 0
+        -- The primary Fold Star branch already routes to and holds a proven
+        -- punish lane. This guard exists for a *secondary* expanded Star;
+        -- applying it to the selected target overwrote that lane every frame
+        -- and made large-court fights orbit indefinitely.
+        and (not target or target.kind ~= 11)
         and fold_star_guard(px, py) or nil
     if fold_guard_keys ~= nil then keys = fold_guard_keys end
     -- This final override comes after generic bullet dodges and unsticks so a

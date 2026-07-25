@@ -14,10 +14,11 @@ def addr(name):
     if not m: raise RuntimeError(name)
     return int(m.group(1), 16)
 
-RS, PL, EN, TM, SEALED, SHADOW_OAM, CAMERA_X, CAMERA_Y = map(addr, (
+RS, PL, EN, TM, SEALED, SHADOW_OAM, CAMERA_X, CAMERA_Y, LARGE, WORLD_W, WORLD_H = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
     "_room_combat_sealed", "_shadow_OAM", "_room_camera_x",
-    "_room_camera_y"))
+    "_room_camera_y", "_procgen_current_room_is_large",
+    "_room_world_width", "_room_world_height"))
 
 def put16(pb, address, value):
     pb.memory[address] = value & 0xFF
@@ -83,6 +84,11 @@ def crosses(direction, off_center=False):
     pb.memory[RS + 11] = stage
     pb.memory[RS + 1] = STAGE_START[stage] + cell
     pb.memory[RS + 6] = 0xFF
+    # These cardinal fixtures author a compact synthetic predecessor.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     for tx, ty in EDGE_TILES[direction]:
         pb.memory[TM + ty * 20 + tx] = 3
     x, y = EDGE_POSITION[direction]
@@ -167,7 +173,7 @@ def open_room_with_hostile_allows_exit():
     pb.memory[TM + 8 * 20 + 19] = pb.memory[TM + 9 * 20 + 19] = 3
     pb.memory[RS + 6] = 0xFF
     pb.memory[SEALED] = 0
-    put16(pb, PL + 9, 144)
+    put16(pb, PL + 9, pb.memory[WORLD_W] - 16)
     put16(pb, PL + 11, 60)
     for _ in range(8): pb.tick()
     room = pb.memory[RS + 1]

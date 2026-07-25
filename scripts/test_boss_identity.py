@@ -22,7 +22,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM = map(addr, ("_run_state", "_player", "_entities", "_room_tilemap"))
+RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
+    addr,
+    ("_run_state", "_player", "_entities", "_room_tilemap",
+     "_procgen_current_room_is_large", "_room_world_width",
+     "_room_world_height", "_room_camera_x", "_room_camera_y"),
+)
 
 
 def put16(pb, address, value):
@@ -45,6 +50,13 @@ def enter_boss(stage, keep_open=False):
     pb.memory[RS + 1] = target - 1
     pb.memory[RS + 11] = stage
     pb.memory[RS + 6] = 0xFF
+    # Boss identity begins at an authored compact sanctuary threshold after
+    # rewriting only the logical counter. Normalize the real wide foyer state
+    # before taking that synthetic predecessor edge.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     # The sanctuary before each boss correctly requires that stage's Rift
     # Sigil. This identity harness is sampling an already-qualified stage,
     # so grant that objective instead of mistaking its progression gate for

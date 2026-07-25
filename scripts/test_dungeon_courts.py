@@ -68,11 +68,22 @@ def main():
         pb.button("a")
         settle(pb, 60)
 
+        # The very first playable screen establishes the dungeon's physical
+        # scale instead of hiding every scrolling field behind several compact
+        # thresholds.
+        assert pb.memory[RS + 1] == 0
+        assert pb.memory[LARGE] == 1
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
+
         # Publish opening-dungeon local room 3, then cross its east threshold
         # into local room 4—the first dense scrolling approach expanse.
         pb.memory[RS + 1] = 3
         pb.memory[RS + 11] = 0
         pb.memory[RS + 13] = 0
+        pb.memory[LARGE] = 0
+        pb.memory[WORLD_W] = 160
+        pb.memory[WORLD_H] = 136
+        pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
         pb.memory[TM + 8 * ROOM_W + 19] = 3
         pb.memory[TM + 9 * ROOM_W + 19] = 3
         clear_hostiles(pb)
@@ -158,6 +169,8 @@ def main():
             if pb.memory[EN + slot * 28] == 2
         ]
         assert any(x >= 160 and y >= 136 for x, y in hostiles), hostiles
+        assert len(set(hostiles)) == len(hostiles), (
+            f"wide encounter bodies stacked on one coordinate: {hostiles}")
 
         # Exercise both camera axes in the actual added combat terrain.
         clear_hostiles(pb)
@@ -219,12 +232,51 @@ def main():
         assert pb.memory[LARGE] == 0
         assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (160, 136)
         assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (0, 0)
+
+        # The central back-half approach is also a field. Without this beat,
+        # the middle row collapses into a run of compact rooms even though the
+        # nominal graph remains large.
+        pb.memory[RS + 1] = 13
+        pb.memory[TM + 8 * ROOM_W + ROOM_W - 1] = 3
+        pb.memory[TM + 9 * ROOM_W + ROOM_W - 1] = 3
+        clear_hostiles(pb)
+        put16(pb, PL + 9, 144)
+        put16(pb, PL + 11, 60)
+        settle(pb)
+        assert pb.memory[RS + 1] == 14
+        assert pb.memory[LARGE] == 1
+        assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
+    finally:
+        pb.stop(save=False)
+
+    # Stage 3's Grove archetype is layered over the court's compact western
+    # sector. Its checkpoint proves that stage decoration cannot resurrect
+    # the old 160x136 border as an invisible wall inside one scrolling field.
+    state = (
+        ROOT / "tmp/stage-states/"
+        "quintra-stage-03-entry-picsean-easy.pyboy"
+    )
+    assert state.exists(), f"missing generated court checkpoint: {state}"
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    try:
+        with state.open("rb") as checkpoint:
+            pb.load_state(checkpoint)
+        assert pb.memory[LARGE] == 1
+        passable = {1, 3, 19, 20, 23, 31}
+        assert all(
+            (pb.memory[TM + 16 * ROOM_W + x] & 0x7F) in passable
+            for x in range(1, ROOM_W - 1)
+        ), "stage archetype restored the old south viewport wall"
+        assert all(
+            (pb.memory[TM + y * ROOM_W + 19] & 0x7F) in passable
+            for y in range(1, ROOM_H - 1)
+        ), "stage archetype restored the old east viewport wall"
     finally:
         pb.stop(save=False)
 
     print(
-        "[dungeon-courts] PASS scrolling 248x248 districts + wide-to-wide "
-        "turn + southeast camera + objective reset + reciprocal arrival"
+        "[dungeon-courts] PASS wide foyer + scrolling 248x248 districts + "
+        "distributed encounters + seamless archetypes + reciprocal arrival"
     )
 
 

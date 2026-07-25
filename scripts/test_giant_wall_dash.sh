@@ -10,9 +10,12 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 DIR="$(mktemp -d /tmp/quintra-giant-wall-dash.XXXXXX)"
 OUT="$DIR/balance.csv"
 
+# Debug telemetry plus 248x248 route analysis can exceed two wall-clock
+# minutes on a loaded host. The cartridge-side 9,000-frame contract stays
+# fixed; only the external process watchdog gets enough time to emit its row.
 QUINTRA_BALANCE_RUNS=95 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=9000 \
-  QUINTRA_BALANCE_HOST_TIMEOUT=120 QUINTRA_BALANCE_OUT="$OUT" \
+  QUINTRA_BALANCE_HOST_TIMEOUT=360 QUINTRA_BALANCE_OUT="$OUT" \
   QUINTRA_BALANCE_DEBUG=1 QUINTRA_BALANCE_DEBUG_DIR="$DIR" \
   QUINTRA_BOT_DASH_SELFTEST=1 \
   QUINTRA_BALANCE_SKIP_REPORT=1 \

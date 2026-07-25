@@ -153,7 +153,7 @@ void entity_draw_all(void) {
 #define ENTITY_DRAW_SX(e) \
     ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
 #define ENTITY_DRAW_SY(e) \
-    ((u8)(FIX8_TO_INT((e)->y) + 16))
+    ((u8)(FIX8_TO_INT((e)->y) - room_camera_y + 16))
 #include "game/entity_draw_core.h"
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY

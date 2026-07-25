@@ -4,7 +4,9 @@ from pathlib import Path
 
 from pyboy import PyBoy
 
-from test_boss_identity import EN, PL, RS, TM, put16
+from test_boss_identity import (
+    CAMERA_X, CAMERA_Y, EN, LARGE, PL, RS, TM, WORLD_H, WORLD_W, put16,
+)
 from quintra_topology import STAGE_START, dungeon_direction
 
 
@@ -47,6 +49,12 @@ def main():
     pb.memory[RS + 23] = 0xFF
     pb.memory[RS + 24] = 0x00
     pb.memory[RS + 6] = 0xFF
+    # Local room one is compact; normalize the synthetic predecessor after
+    # rewriting only the final-stage counter.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     for i in range(32):
         entity = EN + i * ENTITY_SIZE
         pb.memory[entity] = pb.memory[entity + 1] = 0

@@ -139,3 +139,14 @@ void room_generate_dungeon_court(u32 seed) BANKED {
         court_set(0, 8, BGT_DOOR); court_set(0, 9, BGT_DOOR);
     }
 }
+
+void room_reopen_dungeon_court_seams(void) BANKED {
+    u8 seam;
+    // A wide court owns one continuous 31x31 collision field. The compact
+    // map's final row and column are interior after expansion, even when the
+    // stage archetype layered immediately afterward was authored for 20x17.
+    for (seam = 1; seam < ROOM_W - 1; ++seam)
+        room_tilemap[ROOM_H - 1][seam] = BGT_FLOOR;
+    for (seam = 1; seam < ROOM_H - 1; ++seam)
+        room_tilemap[seam][ROOM_W - 1] = BGT_FLOOR;
+}

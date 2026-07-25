@@ -21,9 +21,10 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, KIND, LOCKED, COMBAT = map(addr, (
+RS, PL, EN, TM, KIND, LOCKED, COMBAT, WORLD_W, WORLD_H = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
     "_room_puzzle_kind", "_room_puzzle_locked", "_room_combat_sealed",
+    "_room_world_width", "_room_world_height",
 ))
 
 
@@ -35,7 +36,10 @@ def put16(pb, address, value):
 def cross_edge(pb, source_local, target_local):
     direction = dungeon_direction(source_local, target_local)
     x, y = {
-        0: (72, 0), 1: (144, 60), 2: (72, 120), 3: (0, 60),
+        0: (72, 0),
+        1: (pb.memory[WORLD_W] - 16, 60),
+        2: (72, pb.memory[WORLD_H] - 16),
+        3: (0, 60),
     }[direction]
     for tx, ty in {
         0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),

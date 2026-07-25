@@ -85,7 +85,7 @@ def main():
     for _ in range(6):
         pb.tick()
     solo_x, solo_y = xy(pb, lead)
-    assert solo_x > before_x and solo_y == before_y, (
+    assert abs(solo_x - 80) < abs(before_x - 80) and solo_y == before_y, (
         f"Solo Hornet did not retain direct chase: {before_x},{before_y} -> {solo_x},{solo_y}")
 
     # A Hornet is a persistent chaser, not an intangible projectile. It must

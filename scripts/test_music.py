@@ -21,9 +21,11 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, MUSIC, REQUEST = map(
+RS, PL, EN, TM, MUSIC, REQUEST, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
     addr, ("_run_state", "_player", "_entities", "_room_tilemap",
-           "_music_track_id", "_music_stage_number")
+           "_music_track_id", "_music_stage_number",
+           "_procgen_current_room_is_large", "_room_world_width",
+           "_room_world_height", "_room_camera_x", "_room_camera_y")
 )
 MUSIC_ROW = addr("_music_row")
 
@@ -76,6 +78,13 @@ def runtime_track(stage, boss):
     if boss:
         pb.memory[RS + 6] = 0xFF      # no backtracking direction
         pb.memory[RS + 17] = 0
+        # The boss fixture authors a compact sanctuary threshold after
+        # rewriting only the logical counter. Do not carry the live wide
+        # foyer's bounds into this synthetic predecessor.
+        pb.memory[LARGE] = 0
+        pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
+        pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+        pb.memory[0xFF43] = pb.memory[0xFF42] = 0
         source_local = desired_room - 1 - STAGE_START[stage]
         target_local = desired_room - STAGE_START[stage]
         direction = dungeon_direction(source_local, target_local)
@@ -125,8 +134,9 @@ def stage_door_keeps_phrase():
     # for the row to advance a little, but a mistaken `music_play_stage()`
     # would reset it near zero instead of preserving this phrase position.
     pb.memory[MUSIC_ROW] = 17
-    pb.memory[TM + 9 * ROOM_W + 19] = 3  # east BGT_DOOR
-    put16(pb, PL + 9, 144)
+    # The opening room is a real scrolling field. Its east threshold is at
+    # the 31x31 perimeter, not the former x=152 viewport seam.
+    put16(pb, PL + 9, pb.memory[WORLD_W] - 16)
     put16(pb, PL + 11, 60)
     for _ in range(80):
         pb.tick()

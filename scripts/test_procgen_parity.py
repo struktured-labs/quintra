@@ -132,6 +132,11 @@ def main():
     pl = noi_addr("_player")
     en = noi_addr("_entities")
     tm = noi_addr("_room_tilemap")
+    large = noi_addr("_procgen_current_room_is_large")
+    world_w = noi_addr("_room_world_width")
+    world_h = noi_addr("_room_world_height")
+    camera_x = noi_addr("_room_camera_x")
+    camera_y = noi_addr("_room_camera_y")
 
     failures = 0
     for seed, counter in CASES:
@@ -147,6 +152,15 @@ def main():
         pb.memory[rs + 1] = counter - 1   # room_counter
         pb.memory[rs + 11] = 0            # bosses_beaten
         pb.memory[rs + 13] = 0            # secret_pending
+        # This fixture rewrites only the logical source counter. The opening
+        # room is a scrolling field now, so explicitly give the synthetic
+        # predecessor the compact threshold geometry authored below instead
+        # of accidentally walking through room zero's unrelated far edge.
+        pb.memory[large] = 0
+        pb.memory[world_w] = ROOM_W * 8
+        pb.memory[world_h] = ROOM_H * 8
+        pb.memory[camera_x] = pb.memory[camera_y] = 0
+        pb.memory[0xFF43] = pb.memory[0xFF42] = 0
         # Boss-room parity is about generated geometry, so satisfy the
         # player-facing progression prerequisite before crossing its threshold.
         pb.memory[rs + 23] = 1 if counter == 19 else 0  # Rift Sigil stage bit
@@ -182,6 +196,12 @@ def main():
             if pb.memory[rs + 1] == counter:
                 break
         pb.button_release(direction)
+        if pb.memory[rs + 1] != counter:
+            pb.stop(save=False)
+            print(f"  FAIL seed={seed} counter={counter}: "
+                  "synthetic predecessor did not cross its authored edge")
+            failures += 1
+            continue
         # A room counter increments at the beginning of its Zelda-style slide,
         # before the destination's procgen call and its temporary spawn flood
         # have completed.  Let that transition settle first; a merely stable
