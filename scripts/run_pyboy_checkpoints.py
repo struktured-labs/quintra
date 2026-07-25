@@ -26,6 +26,17 @@ ENTRY_STATE_RE = re.compile(
     r"quintra-stage-(\d{2})-entry-([a-z]+)(-easy)?\.pyboy$")
 
 
+def observation_grid(obs: dict) -> tuple[list[int], int, int]:
+    """Return the complete public collision field carried by an observation."""
+    world = obs.get("world_tiles", [])
+    width = max(ROOM_W, obs.get("world_width", ROOM_W * 8) // 8)
+    height = max(ROOM_H, obs.get("world_height", ROOM_H * 8) // 8)
+    if len(world) == width * height:
+        return [tile & 0x7F for tile in world], width, height
+    # Compatibility with older recorded observations and compact unit fixtures.
+    return [tile & 0x7F for tile in obs["tiles"]], ROOM_W, ROOM_H
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -45,30 +56,15 @@ def axis_action(dx: int, dy: int, *, away: bool = False) -> int:
 def grid_step_action(obs: dict, start: tuple[int, int],
                      dx: int, dy: int) -> int:
     """Align the 12px feet box before following a tile-grid BFS edge."""
-    tiles = [tile & 0x7F for tile in obs["tiles"]]
-
-    def pose_open(px: int, py: int) -> bool:
-        probes = ((px + 2, py + 8), (px + 13, py + 8),
-                  (px + 2, py + 15), (px + 13, py + 15))
-        if any(not (0 <= x < ROOM_W * 8 and 0 <= y < ROOM_H * 8)
-               or tiles[(y // 8) * ROOM_W + x // 8] not in WALKABLE
-               for x, y in probes):
-            return False
-        body = ((px + 2, py), (px + 13, py),
-                (px + 2, py + 7), (px + 13, py + 7))
-        return all(not (0 <= x < ROOM_W * 8 and 0 <= y < ROOM_H * 8)
-                   or tiles[(y // 8) * ROOM_W + x // 8]
-                   not in FULL_BODY_BLOCKERS for x, y in body)
-
     if dy:
         targets = (start[0] * 8 - 2, (start[0] + 1) * 8 - 2)
-        target_x = min((x for x in targets if pose_open(x, obs["y"])),
+        target_x = min((x for x in targets if pose_open(obs, x, obs["y"])),
                        key=lambda x: abs(x - obs["x"]), default=targets[0])
         if obs["x"] != target_x:
             return ACTION_RIGHT if obs["x"] < target_x else ACTION_LEFT
     if dx:
         targets = (start[1] * 8 - 8, (start[1] + 1) * 8 - 8)
-        target_y = min((y for y in targets if pose_open(obs["x"], y)),
+        target_y = min((y for y in targets if pose_open(obs, obs["x"], y)),
                        key=lambda y: abs(y - obs["y"]), default=targets[0])
         if obs["y"] != target_y:
             return ACTION_DOWN if obs["y"] < target_y else ACTION_UP
@@ -86,7 +82,7 @@ def hostile_firing_action(obs: dict, enemy: dict, max_range: int,
     target. ``player_x``/``player_y`` describe a candidate top-left pose for
     BFS; omitted values use the champion's current pose.
     """
-    tiles = [tile & 0x7F for tile in obs["tiles"]]
+    tiles, room_w, room_h = observation_grid(obs)
     px = obs["x"] if player_x is None else player_x
     py = obs["y"] if player_y is None else player_y
     # Player projectiles begin at +2 with a 7px box. Aim from their centre;
@@ -114,8 +110,8 @@ def hostile_firing_action(obs: dict, enemy: dict, max_range: int,
             ray_x = sx + (tx - sx) * step // steps
             ray_y = sy + (ty - sy) * step // steps
             tile_x, tile_y = ray_x // 8, ray_y // 8
-            if not (0 <= tile_x < ROOM_W and 0 <= tile_y < ROOM_H
-                    and tiles[tile_y * ROOM_W + tile_x] in WALKABLE):
+            if not (0 <= tile_x < room_w and 0 <= tile_y < room_h
+                    and tiles[tile_y * room_w + tile_x] in WALKABLE):
                 clear = False
                 break
         if clear:
@@ -125,17 +121,17 @@ def hostile_firing_action(obs: dict, enemy: dict, max_range: int,
 
 def pose_open(obs: dict, px: int, py: int) -> bool:
     """Match the trainer's champion-sized wall probes for a candidate pose."""
-    tiles = [tile & 0x7F for tile in obs["tiles"]]
+    tiles, room_w, room_h = observation_grid(obs)
     feet = ((px + 2, py + 8), (px + 13, py + 8),
             (px + 2, py + 15), (px + 13, py + 15))
-    if any(not (0 <= x < ROOM_W * 8 and 0 <= y < ROOM_H * 8)
-           or tiles[(y // 8) * ROOM_W + x // 8] not in WALKABLE
+    if any(not (0 <= x < room_w * 8 and 0 <= y < room_h * 8)
+           or tiles[(y // 8) * room_w + x // 8] not in WALKABLE
            for x, y in feet):
         return False
     body = ((px + 2, py), (px + 13, py),
             (px + 2, py + 7), (px + 13, py + 7))
-    return all(not (0 <= x < ROOM_W * 8 and 0 <= y < ROOM_H * 8)
-               or tiles[(y // 8) * ROOM_W + x // 8]
+    return all(not (0 <= x < room_w * 8 and 0 <= y < room_h * 8)
+               or tiles[(y // 8) * room_w + x // 8]
                not in FULL_BODY_BLOCKERS for x, y in body)
 
 
@@ -192,19 +188,21 @@ def ordinary_retreat_action(obs: dict, enemy: dict) -> int:
 
 def route_to_exit(obs: dict, elapsed: int) -> int:
     """Path a champion-sized footprint to a non-return boundary door."""
-    tiles = [tile & 0x7F for tile in obs["tiles"]]
+    tiles, room_w, room_h = observation_grid(obs)
 
     def body_open(x: int, y: int) -> bool:
-        return (0 <= x < ROOM_W - 1 and 0 <= y < ROOM_H - 1
-                and all(tiles[yy * ROOM_W + xx] in WALKABLE
+        return (0 <= x < room_w - 1 and 0 <= y < room_h - 1
+                and all(tiles[yy * room_w + xx] in WALKABLE
                         for xx, yy in ((x, y), (x + 1, y),
                                        (x, y + 1), (x + 1, y + 1))))
 
     edge_goals = {
         0: [(x, 1) for x in (9, 10) if tiles[x] == 3],
-        1: [(18, y) for y in (8, 9) if tiles[y * ROOM_W + 19] == 3],
-        2: [(x, 15) for x in (9, 10) if tiles[16 * ROOM_W + x] == 3],
-        3: [(0, y) for y in (8, 9) if tiles[y * ROOM_W] == 3],
+        1: [(room_w - 2, y) for y in (8, 9)
+            if tiles[y * room_w + room_w - 1] == 3],
+        2: [(x, room_h - 2) for x in (9, 10)
+            if tiles[(room_h - 1) * room_w + x] == 3],
+        3: [(0, y) for y in (8, 9) if tiles[y * room_w] == 3],
     }
     entered = obs.get("entered_from", 0xFF)
     back = ((entered + 2) & 3) if entered != 0xFF else 0xFF
@@ -218,8 +216,8 @@ def route_to_exit(obs: dict, elapsed: int) -> int:
             (elapsed // 240) & 3]
     direction = candidates[(elapsed // 900) % len(candidates)]
     goals = set(edge_goals[direction])
-    start = (max(0, min(18, (obs["x"] + 2) // 8)),
-             max(0, min(15, (obs["y"] + 8) // 8)))
+    start = (max(0, min(room_w - 2, (obs["x"] + 2) // 8)),
+             max(0, min(room_h - 2, (obs["y"] + 8) // 8)))
     if start in goals:
         dx, dy = ((0, -1), (1, 0), (0, 1), (-1, 0))[direction]
         return grid_step_action(obs, start, dx, dy)
@@ -236,7 +234,8 @@ def route_to_exit(obs: dict, elapsed: int) -> int:
                        (x, y + 1), (x - 1, y)):
             nxt = (nx, ny)
             vertical_blocked = (ny != y and ny > 0
-                                and any(tiles[(ny - 1) * ROOM_W + xx]
+                                and 0 <= nx < room_w - 1
+                                and any(tiles[(ny - 1) * room_w + xx]
                                         in FULL_BODY_BLOCKERS
                                         for xx in (nx, nx + 1)))
             if nxt not in parent and body_open(nx, ny) and not vertical_blocked:
@@ -254,17 +253,17 @@ def route_to_exit(obs: dict, elapsed: int) -> int:
 
 def route_to_hostile(obs: dict, enemy: dict, max_range: int = 30) -> int:
     """Walk around hard cover until the primary attack has a clear lane."""
-    tiles = [tile & 0x7F for tile in obs["tiles"]]
+    tiles, room_w, room_h = observation_grid(obs)
 
     def body_open(x: int, y: int) -> bool:
-        return (0 <= x < ROOM_W - 1 and 0 <= y < ROOM_H - 1
-                and all(tiles[yy * ROOM_W + xx] in WALKABLE
+        return (0 <= x < room_w - 1 and 0 <= y < room_h - 1
+                and all(tiles[yy * room_w + xx] in WALKABLE
                         for xx, yy in ((x, y), (x + 1, y),
                                        (x, y + 1), (x + 1, y + 1))))
 
-    start = (max(0, min(18, (obs["x"] + 2) // 8)),
-             max(0, min(15, (obs["y"] + 8) // 8)))
-    goals = {(x, y) for y in range(ROOM_H - 1) for x in range(ROOM_W - 1)
+    start = (max(0, min(room_w - 2, (obs["x"] + 2) // 8)),
+             max(0, min(room_h - 2, (obs["y"] + 8) // 8)))
+    goals = {(x, y) for y in range(room_h - 1) for x in range(room_w - 1)
              if body_open(x, y)
              and hostile_firing_action(obs, enemy, max_range,
                                        player_x=x * 8 - 2,
@@ -288,7 +287,8 @@ def route_to_hostile(obs: dict, enemy: dict, max_range: int = 30) -> int:
                        (x, y + 1), (x - 1, y)):
             nxt = (nx, ny)
             vertical_blocked = (ny != y and ny > 0
-                                and any(tiles[(ny - 1) * ROOM_W + xx]
+                                and 0 <= nx < room_w - 1
+                                and any(tiles[(ny - 1) * room_w + xx]
                                         in FULL_BODY_BLOCKERS
                                         for xx in (nx, nx + 1)))
             if nxt not in parent and body_open(nx, ny) and not vertical_blocked:
@@ -303,17 +303,17 @@ def route_to_hostile(obs: dict, enemy: dict, max_range: int = 30) -> int:
 
 def route_to_pickup(obs: dict, pickup: dict) -> int:
     """Reach the walk-over pose for a visible Sigil without crossing cover."""
-    tiles = [tile & 0x7F for tile in obs["tiles"]]
+    tiles, room_w, room_h = observation_grid(obs)
 
     def body_open(x: int, y: int) -> bool:
-        return (0 <= x < ROOM_W - 1 and 0 <= y < ROOM_H - 1
-                and all(tiles[yy * ROOM_W + xx] in WALKABLE
+        return (0 <= x < room_w - 1 and 0 <= y < room_h - 1
+                and all(tiles[yy * room_w + xx] in WALKABLE
                         for xx, yy in ((x, y), (x + 1, y),
                                        (x, y + 1), (x + 1, y + 1))))
 
     goals = set()
-    for y in range(ROOM_H - 1):
-        for x in range(ROOM_W - 1):
+    for y in range(room_h - 1):
+        for x in range(room_w - 1):
             px, py = x * 8 - 2, y * 8 - 8
             # The cartridge's pickup box is the 12x8 feet rectangle against
             # the fixture's 6x6 body. Choose any aligned, physically open pose
@@ -323,8 +323,8 @@ def route_to_pickup(obs: dict, pickup: dict) -> int:
                     and py + 16 > pickup["y"]
                     and py + 8 < pickup["y"] + 6):
                 goals.add((x, y))
-    start = (max(0, min(18, (obs["x"] + 2) // 8)),
-             max(0, min(15, (obs["y"] + 8) // 8)))
+    start = (max(0, min(room_w - 2, (obs["x"] + 2) // 8)),
+             max(0, min(room_h - 2, (obs["y"] + 8) // 8)))
     if start in goals:
         target_x, target_y = start[0] * 8 - 2, start[1] * 8 - 8
         return axis_action(target_x - obs["x"], target_y - obs["y"])
@@ -340,7 +340,8 @@ def route_to_pickup(obs: dict, pickup: dict) -> int:
                        (x, y + 1), (x - 1, y)):
             nxt = (nx, ny)
             vertical_blocked = (ny != y and ny > 0
-                                and any(tiles[(ny - 1) * ROOM_W + xx]
+                                and 0 <= nx < room_w - 1
+                                and any(tiles[(ny - 1) * room_w + xx]
                                         in FULL_BODY_BLOCKERS
                                         for xx in (nx, nx + 1)))
             if nxt not in parent and body_open(nx, ny) and not vertical_blocked:

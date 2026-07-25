@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.83: Farfold Labyrinths](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.84: Whole-World Training](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,9 +22,39 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.83**, published after the complete build,
+The current cartridge is **v0.18.84**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
+**Automated play now sees the same complete scrolling world as a person.**
+The Python/RL observation path had retained a 160×136 viewport assumption
+after dungeon fields grew to 248×248 and every Colossus arena grew to
+224×136. Enemies, bullets, pickups, and collision terrain beyond that old
+seam were valid cartridge state but disappeared from training input. A giant
+crossing x=160 could therefore look dead to the pilot even while continuing
+to attack the champion.
+
+v0.18.84 publishes the live world dimensions, camera, and full collision
+field. Routing, firing lanes, pickups, and exits all use those bounds, while
+older compact observations remain compatible. A linked-ROM regression moves
+a real stage-four Colossus to x=184 and proves that it remains visible,
+reachable, and attackable across the former seam.
+
+The corrected 45-fight Normal diagnostic observes every Colossus for every
+live frame and clears 8/45, up from the false 4/45 result. Its 13/45 survival
+rate still flags late Normal bosses for attended testing rather than silently
+nerfing them around one heuristic pilot. Corrected ordinary-room samples
+resolve 18/45 stage entries and 30/45 mid-stage courts in thirty seconds with
+zero deaths; those broader fields were previously mistaken for exited rooms
+at their internal 160-pixel seam.
+
+Attended feedback still outranks nominal size: stages can feel compact even
+with 20–30 graph cells and 19–31 mandatory objective transitions. The next
+geography work is therefore about memorable subregions, route cadence, and
+meaningful optional depth—not inflating counters or repeating empty acreage.
+No cartridge combat, encounter, topology, difficulty, or reward value changes
+in this instrumentation milestone.
+
+**v0.18.83 introduced Farfold Labyrinths.**
 **The stages are no longer one corridor folded into the same rectangle.**
 Their raw scale remains substantial—20, 21, 22, 23, 24, 25, 26, 28, and 30
 rooms, 219 dungeon cells across a successful run, with every ordinary
@@ -326,10 +356,12 @@ expeditions rather than making every dungeon screen uniformly oversized.
 **Deep testing can open the new scale directly.** `CHECKPOINT=court` is now
 available for every stage, champion, and difficulty in both PyBoy and native
 mGBA formats. The ROM-bound curriculum grows from 370 to 460 states. All 230
-Normal/Easy pairs preserve identical generated geometry and encounters, while
-the native smoke set cold-loads entry, court, sanctuary, boss, Riftwild, and
-village families independently through mGBA. The release reel and dungeon
-still now show a live southeast court sector instead of another fixed room.
+Normal/Easy pairs preserve identical generated geometry and routes. Normal
+turn courts keep their generated pair; Easy deliberately retains one member
+as a testing breather, matching its documented Warden reduction. The native
+smoke set cold-loads entry, court, sanctuary, boss, Riftwild, and village
+families independently through mGBA. The release reel and dungeon still now
+show a live southeast court sector instead of another fixed room.
 
 **Riftwild is now a two-axis scrolling field rather than sixteen fixed
 boxes.** Every one of its 4×4 logical cells is a 224×200 world behind the
@@ -560,12 +592,13 @@ every champion starts with eight fully visible hearts, +4 ATK, +2 DEF, loses
 at most half a heart per impact, receives four times Normal's post-hit repositioning
 time, and suffers much slower attached-Leech drain.
 It deliberately uses the same procedural worlds and room geometry; required
-Wardens alone use half HP and one escort instead of Normal's two so the testing
-route remains viable. Fine Easy-mode balancing is deferred while Normal remains the
+Wardens use half HP and one escort instead of Normal's two, and recurring turn
+courts retain one member of Normal's generated pair so the testing route
+remains viable. Fine Easy-mode balancing is deferred while Normal remains the
 design target. A live-ROM regression compares all 230 paired Normal/Easy
-entry, court, sanctuary, boss, Riftwild, and village checkpoints and pins identical generated
-tiles, route state, ordinary enemy placement/HP, and boss-pattern identity
-underneath the assist modifiers.
+entry, court, sanctuary, boss, Riftwild, and village checkpoints and pins
+identical generated tiles, route state, shared-hostile identity, and boss
+patterns underneath those documented assist reductions.
 Controller balance runs also default to Normal. Focused deep-fixture checks may
 set `QUINTRA_BOT_EASY=1`; this presses SELECT through ordinary input and never
 writes HP, progression, enemies, or RNG. It is for reaching the system under

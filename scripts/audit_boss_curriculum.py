@@ -64,12 +64,20 @@ def main() -> None:
                 elapsed = 0
                 attack_frames = signature_frames = movement_frames = 0
                 projectile_frames = 0
+                giant_visible_frames = 0
+                last_giant_hp = initial_hp
+                min_giant_x = 999
+                max_giant_x = 0
                 min_reach = 999
                 max_reach = 0
                 while elapsed < args.frames:
                     frames = min(args.step_frames, args.frames - elapsed)
                     giants = [enemy for enemy in obs["hostiles"] if enemy["giant"]]
                     if giants:
+                        giant_visible_frames += frames
+                        last_giant_hp = giants[0]["hp"]
+                        min_giant_x = min(min_giant_x, giants[0]["x"])
+                        max_giant_x = max(max_giant_x, giants[0]["x"])
                         reach = max(abs(giants[0]["x"] - obs["x"]),
                                     abs(giants[0]["y"] - obs["y"]))
                         min_reach = min(min_reach, reach)
@@ -88,7 +96,11 @@ def main() -> None:
                     if obs["bosses"] > before_bosses or terminal:
                         break
                 cleared = obs["bosses"] > before_bosses
-                remaining = 0 if cleared else giant_hp(obs)
+                # GAMEOVER replaces the room entity table, and a scrolling
+                # giant may briefly leave the old viewport. Preserve the last
+                # live HP observation instead of reporting both as a false
+                # zero-HP mutual kill.
+                remaining = 0 if cleared else last_giant_hp
                 row = {
                     "difficulty": args.difficulty,
                     "stage": stage,
@@ -105,6 +117,9 @@ def main() -> None:
                     "signature_frames": signature_frames,
                     "movement_frames": movement_frames,
                     "projectile_frames": projectile_frames,
+                    "giant_visible_frames": giant_visible_frames,
+                    "min_giant_x": 0 if min_giant_x == 999 else min_giant_x,
+                    "max_giant_x": max_giant_x,
                     "min_reach": 0 if min_reach == 999 else min_reach,
                     "max_reach": max_reach,
                 }
@@ -114,7 +129,9 @@ def main() -> None:
                       f"t={elapsed} hero={obs['hp']}/{obs['hp_max']} "
                       f"boss={remaining}/{initial_hp} "
                       f"A={attack_frames} B={signature_frames} "
-                      f"move={movement_frames} reach={row['min_reach']}..{max_reach}")
+                      f"move={movement_frames} seen={giant_visible_frames}/{elapsed} "
+                      f"x={row['min_giant_x']}..{max_giant_x} "
+                      f"reach={row['min_reach']}..{max_reach}")
     finally:
         env.close()
 

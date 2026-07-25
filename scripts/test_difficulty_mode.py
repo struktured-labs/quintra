@@ -50,8 +50,19 @@ def assert_paired_worlds_match(env: QuintraPyBoyEnv) -> int:
     for key, pair in pairs.items():
         normal = world_signature(env, pair["normal"])
         easy = world_signature(env, pair["easy"])
-        assert normal == easy, \
-            f"Easy changed generated world or encounter at {key}"
+        assert normal[:5] == easy[:5], \
+            f"Easy changed generated geometry or route at {key}"
+        if key[3] == "court":
+            # Turn courts deliberately retain one of Normal's two generated
+            # foes in Easy so the inspection route has a breather. The old
+            # 160x136 observer clipped Normal's second, southeast foe and made
+            # this documented assist look like full encounter parity.
+            assert (len(normal[5]) == 2 and len(easy[5]) == 1
+                    and set(easy[5]).issubset(normal[5])), \
+                f"Easy court reduction drifted at {key}: {normal[5]} / {easy[5]}"
+        else:
+            assert normal[5] == easy[5], \
+                f"Easy changed generated encounter at {key}"
     return len(pairs)
 
 
@@ -73,7 +84,8 @@ def main() -> None:
     assert (easy_after_heavy_hit, easy_iframes) == (7, 120), \
         "Easy no longer caps damage and quadruples the post-hit testing window"
     print(f"[difficulty] PASS Normal default + generous Easy tester mode; "
-          f"{pair_count} paired checkpoints preserve world/encounter design")
+          f"{pair_count} paired checkpoints preserve geometry/routes and "
+          "the documented one-foe Easy turn courts")
 
 
 if __name__ == "__main__":

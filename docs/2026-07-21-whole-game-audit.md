@@ -1,5 +1,46 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## v0.18.84 whole-world trainer correction
+
+The latest attended report remains authoritative: the stages feel compact.
+Their nominal 20–30-cell footprints and 31×31 ordinary fields do not override
+that experience. The graph explains part of the mismatch. Depending on the
+seed-selected fold, the direct entrance-to-boss distance is only 9–21 edges;
+the required Sigil, Warden, Waystone, Deep Warden, and boss expedition spans
+19–31. Future scale work must make those required miles read as distinct,
+memorable subregions and add meaningful optional depth instead of merely
+adding counters or repeating generated floor.
+
+The audit used to understate that physical acreage. The framework-neutral
+PyBoy environment clipped enemies, hostile projectiles, and pickups to the old
+160×136 viewport and exposed only its 20×17 collision tilemap. Ordinary
+dungeon fields are now 248×248 and every Colossus arena is 224×136, so the
+trainer could mistake an internal camera seam for a room exit or lose a live
+boss when it crossed x=160. The latter produced false zero-HP endpoints after
+Game Over replaced the entity table.
+
+Observation now publishes the cartridge's live world width, height, camera,
+and complete collision field. Exit, hostile, pickup, firing-lane, and body
+routing use the full grid while compact recorded fixtures remain compatible.
+A live stage-four regression moves its real Colossus to x=184, verifies the
+eastern chamber geometry, and proves that the controller still aims and fires
+across the former seam.
+
+The corrected Normal boss matrix sees each giant for 100% of every sampled
+fight, including legal positions through x=201. It clears 8/45 rather than the
+clipped observer's 4/45 and survives 13/45. Remaining HP is now the last live
+boss observation, never a synthetic zero caused by death-screen replacement.
+This remains a policy diagnostic, not a balance vote: stages five through nine
+are the highest-value attended Normal checks.
+
+The corrected thirty-second ordinary-room matrices resolve 18/45 stage-entry
+fixtures and 30/45 mid-stage courts, both with zero deaths. The previous
+39/45 and 44/45 results were inflated by compact-grid navigation. The new
+result shows sustained encounters that a small pilot often cannot finish in
+thirty seconds, but does not show globally lethal ordinary rooms. Human
+reports of both difficulty and compactness therefore remain compatible and
+remain the design authority.
+
 ## v0.18.80 sustained-acreage response
 
 Attended play found the stages compact despite their 20–30-cell Compass
@@ -102,8 +143,9 @@ discoverability gap by rendering `SELECT EASY AT HERO` after a real Normal
 combat death; Easy deaths instead suggest another hero. A fatal-combat,
 permadeath, SRAM, rendered-text, and clean-restart contract owns that prompt,
 while the paired difficulty contract confirms all 230 Normal/Easy curriculum
-pairs still share generated tiles, routes, ordinary enemy placement/HP, and
-boss-pattern identity.
+pairs still share generated tiles, routes, shared-hostile identity, and
+boss-pattern identity around the documented one-foe Easy court and
+Warden-health/escort reductions.
 
 The current controller diagnostics make the intended distinction visible.
 The Normal stage-entry pilot resolves 39/45 generated fixtures with zero
@@ -393,8 +435,9 @@ ordinary 160×136 room, and re-enters at the correct far camera bound.
 
 One direct `court` checkpoint per stage, hero, and difficulty grows both
 external curricula to 460 states. Every court restores as 224×200, all 230
-Normal/Easy pairs retain identical generated geometry and encounters, and
-native mGBA cold-loads all six checkpoint families. This is the first
+Normal/Easy pairs retain identical generated geometry and routes; Easy turn
+courts deliberately retain one member of Normal's generated pair. Native mGBA
+cold-loads all six checkpoint families. This is the first
 spatially meaningful dungeon-wing milestone; continuous multi-node regions
 remain the next larger engine boundary.
 
@@ -692,9 +735,11 @@ traverses the same generated game. Easy-mode tuning
 should wait until Normal's target curve is stable; otherwise two moving targets
 will hide whether encounter design or the assist layer caused a result.
 The paired-state live-ROM contract checks all 230 Normal/Easy checkpoint pairs
-and requires identical generated tiles, route/progression state, hostile
-placement and HP, and boss-pattern identity. Easy may soften the hero-facing
-numbers and timing allowances, but it may not author different content.
+and requires identical generated tiles, route/progression state, shared
+hostile identity, and boss-pattern identity. It explicitly owns the two
+documented content assists: required Wardens have half HP and one escort, and
+turn courts retain one member of Normal's generated pair. No other checkpoint
+family may author different content.
 Both curriculum diagnostics accept `AUDIT_DIFFICULTY=easy`, providing a direct
 same-checkpoint comparison against canonical Normal. These comparisons measure
 whether the broad testing assist works; they are explicitly not Easy balance

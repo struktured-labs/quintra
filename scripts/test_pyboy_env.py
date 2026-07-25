@@ -25,6 +25,11 @@ def main():
         initial = env.reset(0)
         assert initial["screen"] == 5 and initial["class_id"] == 0
         assert len(initial["tiles"]) == 340 and initial["hp"] == initial["hp_max"] == 14
+        assert (initial["world_width"], initial["world_height"]) == (248, 248)
+        assert len(initial["world_tiles"]) == 31 * 31, \
+            "scrolling entry observation lost its complete collision field"
+        assert {"camera_x", "camera_y"}.issubset(initial), \
+            "RL observation lost public world-camera context"
         assert initial["stage"] == 1 and not initial["world_mode"], \
             "fresh curriculum observation lost public dungeon context"
         observation, reward, terminal, info = env.step(ACTION_RIGHT | ACTION_A, 4)
@@ -41,8 +46,9 @@ def main():
         assert "entered_from" in observation
         assert "shield_timer" in observation
         compact = env.observe(include_tiles=False)
-        assert compact["tiles"] == [] and compact["hp"] == observation["hp"], \
-            "passive human telemetry cannot omit only the expensive tile grid"
+        assert (compact["tiles"] == [] and compact["world_tiles"] == []
+                and compact["hp"] == observation["hp"]), \
+            "passive human telemetry cannot omit the expensive collision grids"
         for projectile in observation["projectiles"]:
             assert {"x", "y", "vx", "vy", "damage", "ttl"}.issubset(projectile), \
                 "RL observation lost hostile projectile state"
@@ -55,13 +61,14 @@ def main():
         # visible nor actionable and must not leak into an RL observation.
         entities = env.addrs["_entities"]
         off_room = entities + 31 * 28
+        outside = initial["world_width"] + 40
         env.pb.memory[off_room] = 2
         env.pb.memory[off_room + 1] = 1
-        env.pb.memory[off_room + 3] = 200
-        env.pb.memory[off_room + 4] = 0
-        env.pb.memory[off_room + 7] = 200
-        env.pb.memory[off_room + 8] = 0
-        assert all(not (enemy["x"] == 200 and enemy["y"] == 200)
+        env.pb.memory[off_room + 3] = outside & 0xFF
+        env.pb.memory[off_room + 4] = outside >> 8
+        env.pb.memory[off_room + 7] = outside & 0xFF
+        env.pb.memory[off_room + 8] = outside >> 8
+        assert all(not (enemy["x"] == outside and enemy["y"] == outside)
                    for enemy in env.observe()["hostiles"]), \
             "off-room transition entity leaked into observation"
         env.pb.memory[off_room] = env.pb.memory[off_room + 1] = 0
@@ -154,6 +161,48 @@ def main():
                 "paused checkpoint advanced cartridge frames before readiness"
             assert ready["input_keys"] == 0 and ready["input_pressed"] == 0, \
                 "readiness press leaked into the live cartridge session"
+
+        # Every Penta-scale Colossus arena is 224px wide. The older Python
+        # observer clipped bodies at the 160px viewport, so a boss moving into
+        # the scrolling half vanished from RL/audit state and the pilot stopped
+        # fighting it. Move a real stage-four giant into that legal chamber and
+        # prove both observation and controller aim follow it across the seam.
+        boss_state = (Path(__file__).resolve().parent.parent / "tmp"
+                      / "stage-states"
+                      / "quintra-stage-04-boss-wolfkin.pyboy")
+        if boss_state.exists():
+            boss = env.load_state(boss_state)
+            assert (boss["world_width"], boss["world_height"]) == (224, 136)
+            assert len(boss["world_tiles"]) == 28 * 17
+            entities = env.addrs["_entities"]
+            giant_base = next(
+                (entities + slot * 28 for slot in range(32)
+                 if env.pb.memory[entities + slot * 28] == 2
+                 and env.pb.memory[entities + slot * 28 + 17] == 1
+                 and env.pb.memory[entities + slot * 28 + 20] & 1),
+                None)
+            assert giant_base is not None, "stage-four checkpoint lost its giant"
+            env.pb.memory[giant_base + 3] = 184
+            env.pb.memory[giant_base + 4] = 0
+            for slot in range(32):
+                base = entities + slot * 28
+                if (env.pb.memory[base] == 1
+                        and not env.pb.memory[base + 1] & 0x10):
+                    env.pb.memory[base] = env.pb.memory[base + 1] = 0
+            far = env.observe()
+            far_giant = next(
+                enemy for enemy in far["hostiles"] if enemy["giant"])
+            assert far_giant["x"] == 184, \
+                "legal east-chamber giant vanished at the old viewport seam"
+            assert far["world_tiles"][8 * 28 + 20] in WALKABLE
+            assert far["world_tiles"][8 * 28 + 27] not in WALKABLE
+            far.update({
+                "x": 140, "y": far_giant["y"] + 2,
+                "active_charge": 1, "projectiles": [],
+            })
+            action = controller_action(far, 0)
+            assert action & ACTION_RIGHT and action & ACTION_A, \
+                f"pilot did not track/fight east-chamber giant: {action}"
     finally:
         env.close()
     print("[pyboy-env] PASS controller-only reset/observation/reward/step")

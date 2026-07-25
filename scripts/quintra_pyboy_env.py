@@ -46,6 +46,14 @@ SCREEN_GAMEOVER = 11
 SCREEN_VICTORY = 12
 ROOM_PIXEL_W = 20 * 8
 ROOM_PIXEL_H = 17 * 8
+ROOM_W = 20
+ROOM_H = 17
+ROOM_WIDE_W = 31
+ROOM_WIDE_H = 31
+ROOM_WIDE_EXT_W = ROOM_WIDE_W - ROOM_W
+BGT_FLOOR = 1
+BGT_WALL = 2
+BGT_DOOR = 3
 BLANK_SRAM_BYTES = 32 * 1024
 ENEMY_STONE_SENTINEL = 1
 
@@ -53,6 +61,9 @@ ENEMY_STONE_SENTINEL = 1
 def _symbol_addresses(rom: Path) -> dict[str, int]:
     noi = rom.with_suffix(".noi").read_text()
     names = ("_run_state", "_player", "_entities", "_room_tilemap",
+             "_room_world_extension", "_room_world_bottom",
+             "_room_world_width", "_room_world_height",
+             "_room_camera_x", "_room_camera_y",
              "_loop_current_screen", "_input_keys", "_input_pressed")
     result: dict[str, int] = {}
     for name in names:
@@ -243,17 +254,26 @@ class QuintraPyBoyEnv:
         self._last_bosses = obs["bosses"]
 
     def observe(self, *, include_tiles: bool = True) -> dict[str, Any]:
-        """Return a compact player-visible room/state observation.
+        """Return the complete current-world player-visible observation.
 
-        The tile grid is the current 20x17 playfield. Enemy bodies are public
-        on-screen entities; no private RNG, future rooms, or collision hooks
-        are exposed.
+        ``tiles`` retains the compact 20x17 compatibility view while
+        ``world_tiles`` spans the live generated field or Colossus arena.
+        Enemy bodies are public world entities; no private RNG, future rooms,
+        or collision hooks are exposed.
         """
         mem = self.pb.memory
         rs = self.addrs["_run_state"]
         player = self.addrs["_player"]
         entities = self.addrs["_entities"]
         tilemap = self.addrs["_room_tilemap"]
+        extension = self.addrs["_room_world_extension"]
+        bottom = self.addrs["_room_world_bottom"]
+        world_width = mem[self.addrs["_room_world_width"]] or ROOM_PIXEL_W
+        world_height = mem[self.addrs["_room_world_height"]] or ROOM_PIXEL_H
+        world_width = max(ROOM_PIXEL_W, min(ROOM_WIDE_W * 8, world_width))
+        world_height = max(ROOM_PIXEL_H, min(ROOM_WIDE_H * 8, world_height))
+        world_tile_w = world_width // 8
+        world_tile_h = world_height // 8
 
         hostiles = []
         projectiles = []
@@ -268,7 +288,7 @@ class QuintraPyBoyEnv:
             if mem[base] == 1 and (flags & 0x01) and not (flags & 0x10):
                 x = self._i16(mem, base + 3)
                 y = self._i16(mem, base + 7)
-                if -8 < x < ROOM_PIXEL_W and -8 < y < ROOM_PIXEL_H:
+                if -8 < x < world_width and -8 < y < world_height:
                     projectiles.append({
                         "x": x, "y": y,
                         "vx": self._i8(mem[base + 10]), "vy": self._i8(mem[base + 11]),
@@ -280,7 +300,7 @@ class QuintraPyBoyEnv:
             if mem[base] == 3 and (flags & 0x01):
                 x = self._i16(mem, base + 3)
                 y = self._i16(mem, base + 7)
-                if -8 < x < ROOM_PIXEL_W and -8 < y < ROOM_PIXEL_H:
+                if -8 < x < world_width and -8 < y < world_height:
                     pickups.append({"kind": mem[base + 17], "x": x, "y": y})
             # ENT_ENEMY (2) with bit 0 of flags marks a live hostile.
             if mem[base] != 2 or not (flags & 0x01):
@@ -290,12 +310,13 @@ class QuintraPyBoyEnv:
             # During a Zelda-style room slide, the previous room's entity
             # table can remain live for a few frames while the next room is
             # streaming. It is neither visible nor actionable. Clip bodies
-            # wholly outside the 160x136 playfield (with a 32px giant margin)
-            # so an RL policy never learns from stale transition artifacts.
+            # wholly outside the live world (with a 32px giant margin), not
+            # the old 160x136 viewport: every Colossus arena is 224px wide
+            # and generated districts are 248x248.
             is_giant = (mem[base + 17] == ENEMY_STONE_SENTINEL
                         and bool(mem[base + 20] & 0x01))
             size = 32 if is_giant else 16
-            if x <= -size or x >= ROOM_PIXEL_W or y <= -size or y >= ROOM_PIXEL_H:
+            if x <= -size or x >= world_width or y <= -size or y >= world_height:
                 continue
             hostiles.append({
                 "kind": mem[base + 17],
@@ -313,6 +334,33 @@ class QuintraPyBoyEnv:
                 "giant": is_giant,
             })
 
+        world_tiles: list[int] = []
+        if include_tiles:
+            giant_alive = any(enemy["giant"] for enemy in hostiles)
+            for y in range(world_tile_h):
+                for x in range(world_tile_w):
+                    if y < ROOM_H and x < ROOM_W:
+                        tile = mem[tilemap + y * ROOM_W + x]
+                    elif y < ROOM_H and world_height > ROOM_PIXEL_H:
+                        tile = mem[extension + y * ROOM_WIDE_EXT_W
+                                   + (x - ROOM_W)]
+                    elif y >= ROOM_H:
+                        tile = mem[bottom + (y - ROOM_H) * ROOM_WIDE_W + x]
+                    else:
+                        # Colossus arenas synthesize their 8-column eastern
+                        # chamber at query/render time rather than spending
+                        # WRAM on a third compact strip. Mirror room_tile_at_px:
+                        # visual projection space is walkable; the true far
+                        # border is solid until the giant has fallen.
+                        if x == world_tile_w - 1:
+                            tile = (BGT_DOOR if not giant_alive and y in (8, 9)
+                                    else BGT_WALL)
+                        elif y in (0, ROOM_H - 1):
+                            tile = BGT_WALL
+                        else:
+                            tile = BGT_FLOOR
+                    world_tiles.append(tile)
+
         return {
             "screen": mem[self.addrs["_loop_current_screen"]],
             "room": mem[rs + 1],
@@ -326,6 +374,10 @@ class QuintraPyBoyEnv:
             "world_mode": bool(mem[rs + 17]),
             "world_screen": mem[rs + 18],
             "entered_from": mem[rs + 6],
+            "world_width": world_width,
+            "world_height": world_height,
+            "camera_x": mem[self.addrs["_room_camera_x"]],
+            "camera_y": mem[self.addrs["_room_camera_y"]],
             "difficulty": "easy" if mem[rs + 26] else "normal",
             "victory": bool(mem[rs + 10]),
             "class_id": mem[player],
@@ -350,6 +402,7 @@ class QuintraPyBoyEnv:
             # adding needless overhead to the SDL play experience.
             "tiles": (list(mem[tilemap:tilemap + 20 * 17])
                       if include_tiles else []),
+            "world_tiles": world_tiles,
             "hostiles": hostiles,
             "projectiles": projectiles,
             "pickups": pickups,
