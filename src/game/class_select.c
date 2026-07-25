@@ -118,8 +118,13 @@ static void render(void) {
     // unlike the former clipped tutorial.
     gotoxy(1, 15); text_write("EFFECT ");
     text_write(signature_tips[class_select_cursor]);
-    gotoxy(1, 16); text_write("SELECT MODE ");
-    text_write(class_select_easy_mode ? "EASY" : "NORMAL");
+    // State the current mode and the result of pressing SELECT in one physical
+    // line. "SELECT MODE NORMAL" looked like a heading, so testers could begin
+    // the hard canonical mode without realizing an assist existed.
+    gotoxy(1, 16);
+    text_write(class_select_easy_mode
+        ? "EASY SELECT>NORMAL"
+        : "NORMAL SELECT>EASY");
     gotoxy(1, 17); text_write("A START  B BACK");
 }
 

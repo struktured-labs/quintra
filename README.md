@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.85: Farfold Reliquaries](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.86: Footprint Compass](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,9 +22,36 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.85**, published after the complete build,
+The current cartridge is **v0.18.86**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
+**The SELECT map now communicates exploration by shape, not faint color
+alone.** Walked rooms retain their bright square frame and gain a visible
+stippled interior. Unvisited rooms remain recognizable squares but use empty,
+dashed outlines. Bright explored corridors connect the filled footprints while
+the untouched route stays dim. The 6×5 grid, current-room arrow, sequential
+GOAL, amber BOSS warning, optional LOOT chest, nonlinear Rift, and numbered
+depth bands all remain in one tile-native screen.
+
+This is a stronger fill-in contract for original CGB panels, IPS displays,
+Analogue Pocket scaling, screenshots, and grayscale capture: a player can tell
+where they have walked without first learning which shade of green means
+"seen." Live-ROM coverage samples both interiors and dashed edges from the
+rendered CGB image, in addition to checking all 20–30 generated nodes.
+
+**Easy is now discoverable before the run begins.** The class selector says
+`NORMAL SELECT>EASY`, then `EASY SELECT>NORMAL` after the toggle, so the testing
+assist no longer looks like a static `SELECT MODE NORMAL` heading. Normal
+remains the default and its combat values are unchanged.
+
+The v0.18.85 audit found zero deaths in 90 progression-matched ordinary-room
+samples, versus 8/45 clears and 12/45 survivals in the isolated Normal Colossus
+curriculum. That evidence identifies bosses—not general room attrition—as the
+current automated difficulty spike, but attended play still outranks the small
+heuristic pilot. This release therefore improves navigation and access to Easy
+without flattening Normal around an imperfect bot.
+
+**v0.18.85 introduced Farfold Reliquaries.**
 **Generated acreage now contains an optional destination worth finding.**
 Every dungeon selects one non-fixture dead-end as its **Farfold Cache**. The
 approved procgen folds rotate that destination among local depth bands 6, 12,
@@ -617,7 +644,8 @@ meaningful cover, hazards, routes, rosters, and elite rolls—not merely palette
 or pebble differences.
 
 **Normal is the authored balance; Easy is a playtest assist.** On the champion
-screen, press **SELECT** to switch `SELECT MODE NORMAL` to `SELECT MODE EASY` before choosing
+screen, press **SELECT** to switch `NORMAL SELECT>EASY` to
+`EASY SELECT>NORMAL` before choosing
 with A. Normal keeps the intended enemy durability, projectile pressure, boss
 patterns, and progression. Easy is intentionally generous for deep testing:
 every champion starts with eight fully visible hearts, +4 ATK, +2 DEF, loses

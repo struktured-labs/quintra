@@ -141,7 +141,7 @@ def main():
         13: "A WPN FANG FORMS",
         14: "B SKILL HOWL",
         15: "EFFECT 8 WAY WARD",  # compact font renders '-' as a blank
-        16: "SELECT MODE NORMAL",
+        16: "NORMAL SELECT>EASY",
     }
     for row, label in class_rows.items():
         expected_row = font_tiles(label)
@@ -157,7 +157,7 @@ def main():
         )
     pb.button("select")
     pb.tick(8)
-    easy_mode = font_tiles("SELECT MODE EASY")
+    easy_mode = font_tiles("EASY SELECT>NORMAL")
     assert list(pb.memory[0x9800 + 16 * 32 + 1:
                           0x9800 + 16 * 32 + 1 + len(easy_mode)]) == easy_mode, (
         "class-select SELECT did not expose Easy as an explicit mode"

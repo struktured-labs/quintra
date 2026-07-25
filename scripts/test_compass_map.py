@@ -174,6 +174,26 @@ def main() -> None:
         "Compass lost eastward junction link"
     assert map_tile(pb, 4, 4) == BGT_MAP_PATH_V_DIM, \
         "Compass lost southward junction link"
+    # Fill-in must read by shape as well as palette. Cell zero is explored:
+    # its interior carries a visible dotted fill. Cell two is unvisited:
+    # its centre stays dark and its top edge alternates lit/gap pixels as a
+    # dashed square. This remains legible on low-contrast LCDs and grayscale
+    # captures where two shades of green alone are not an adequate contract.
+    junction_image = pb.screen.image
+    visited_fill_rgb = junction_image.getpixel((
+        GX[0] * 8 + 2, GY[0] * 8 + 1))[:3]
+    unknown_fill_rgb = junction_image.getpixel((
+        GX[2] * 8 + 2, GY[2] * 8 + 1))[:3]
+    unknown_edge_rgb = junction_image.getpixel((
+        GX[2] * 8, GY[2] * 8))[:3]
+    unknown_gap_rgb = junction_image.getpixel((
+        GX[2] * 8 + 1, GY[2] * 8))[:3]
+    assert visited_fill_rgb != unknown_fill_rgb, (
+        f"explored room lost its filled interior: "
+        f"{visited_fill_rgb} == {unknown_fill_rgb}")
+    assert unknown_edge_rgb != unknown_gap_rgb, (
+        f"unvisited room lost its dashed square: "
+        f"{unknown_edge_rgb} == {unknown_gap_rgb}")
     pb.screen.image.save(ROOT / "tmp" / "compass-objective-junction.png")
     pb.button("b")
     for _ in range(30):
@@ -324,7 +344,8 @@ def main() -> None:
     pb.screen.image.save(ROOT / "tmp" / "compass-thirty-room.png")
     pb.stop(save=False)
     print(f"[compass-map] PASS 20→30 room 6x5 screen-filling pocket grid "
-          f"+ full dim footprint + bright explored route + staged cues "
+          f"+ dotted explored rooms + dashed unknown squares "
+          f"+ bright explored route + staged cues "
           f"+ semantic colors "
           f"here={here_rgb} sigil/rift={sigil_rgb} boss={boss_rgb} "
           "+ nonlinear link + high-byte exploration + sprite restore")
