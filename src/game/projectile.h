@@ -13,6 +13,12 @@ extern u8 g_shot_element;
 // Convergence tags its eight-way chord so combat can preserve the burst
 // against crowds without counting eight overlapping arcs as eight boss hits.
 #define PROJ_FLAG_CONVERGENCE 0x01
+#define PROJ_FLAG_RICOCHET    0x02
+
+// Cached from the run inventory so ordinary fire never scans all eight slots.
+// The cache is refreshed on purchase, new-run reset, and SRAM resume.
+extern u8 g_player_ricochet;
+void projectile_sync_player_relics(void) BANKED;
 
 // ai_data[4] is visual-only for player projectiles. Physical sword/spear
 // tiles are authored pointing north-east; the renderer mirrors them around

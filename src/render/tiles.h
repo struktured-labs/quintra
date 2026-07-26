@@ -33,6 +33,10 @@
 #define HUD_OFFER_VAMP   46
 #define HUD_OFFER_CHART  47
 #define HUD_OFFER_WEAPON 48
+#define HUD_OFFER_BOUNCE 127
+#define HUD_OFFER_THORN  128
+#define HUD_OFFER_DRUM   129
+#define HUD_OFFER_FLASK  130
 
 // Dungeon tile slots (after HUD block)
 #define BGT_FLOOR2  19   // cracked floor variant

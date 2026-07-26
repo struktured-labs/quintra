@@ -1,4 +1,4 @@
-#pragma bank 6
+#pragma bank 7
 #include <gb/gb.h>
 
 #include "render/tiles.h"
@@ -65,6 +65,26 @@ void tiles_load_hud(void) BANKED {
         0x18,0x18, 0x18,0x18, 0x7E,0x7E, 0x3C,0x3C,
         0x18,0x18, 0x18,0x18, 0x24,0x24, 0x42,0x42,
     };
+    // Bent arrow returning from a wall: the primary strike rebounds once.
+    static const u8 offer_bounce[16] = {
+        0x7C,0x7C, 0x44,0x44, 0x04,0x04, 0x1C,0x1C,
+        0x34,0x34, 0x64,0x64, 0x40,0x40, 0x00,0x00,
+    };
+    // Four outward barbs: damage is answered by a cardinal counter-volley.
+    static const u8 offer_thorn[16] = {
+        0x18,0x18, 0x5A,0x5A, 0x3C,0x3C, 0xFF,0xFF,
+        0x3C,0x3C, 0x5A,0x5A, 0x18,0x18, 0x00,0x00,
+    };
+    // A small war drum with two crossed beaters.
+    static const u8 offer_drum[16] = {
+        0x42,0x42, 0x24,0x24, 0x7E,0x7E, 0xDB,0xDB,
+        0xDB,0xDB, 0x7E,0x7E, 0x24,0x24, 0x42,0x42,
+    };
+    // Moon Flask: a narrow neck above a round, half-filled vessel.
+    static const u8 offer_flask[16] = {
+        0x18,0x18, 0x18,0x18, 0x3C,0x3C, 0x24,0x24,
+        0x42,0x42, 0x5A,0x5A, 0x3C,0x3C, 0x00,0x00,
+    };
     u8 i;
     for (i = 0; i < HUD_TILE_COUNT; ++i)
         set_bkg_data((u8)(HUD_HEART_FULL + i), 1, hud_tiles[i]);
@@ -79,4 +99,8 @@ void tiles_load_hud(void) BANKED {
     set_bkg_data(HUD_OFFER_VAMP,  1, offer_vamp);
     set_bkg_data(HUD_OFFER_CHART, 1, offer_chart);
     set_bkg_data(HUD_OFFER_WEAPON, 1, offer_weapon);
+    set_bkg_data(HUD_OFFER_BOUNCE, 1, offer_bounce);
+    set_bkg_data(HUD_OFFER_THORN,  1, offer_thorn);
+    set_bkg_data(HUD_OFFER_DRUM,   1, offer_drum);
+    set_bkg_data(HUD_OFFER_FLASK,  1, offer_flask);
 }

@@ -10,6 +10,7 @@
 
 #include "core/types.h"
 #include "game/player.h"
+#include "game/projectile.h"
 #include "game/run_state.h"
 #include "game/sram.h"
 
@@ -100,6 +101,7 @@ u8 sram_load_run(void) {
     // A mid-fight suspend must not resume inside a half-resolved boss kill
     run_state.pending_unseal = 0;
     run_state.victory = 0;
+    projectile_sync_player_relics();
     return 1;
 }
 

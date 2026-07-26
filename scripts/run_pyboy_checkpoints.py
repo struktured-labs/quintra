@@ -358,6 +358,33 @@ def controller_action(obs: dict, elapsed: int) -> int:
     """Small deterministic survival/combat pilot; no WRAM writes or warps."""
     px, py = obs["x"], obs["y"]
     class_id = obs["class_id"]
+    # World Collapse visibly announces one safe corner for 132 frames. Honor
+    # that player-facing cue before generic projectile reactions; otherwise
+    # the isolated boss curriculum measured a pilot ignoring the encounter's
+    # defining mechanic, not the cartridge's actual Normal balance.
+    void = next((enemy for enemy in obs["hostiles"]
+                 if enemy.get("giant") and enemy.get("pattern") == 8
+                 and enemy.get("collapse")), None)
+    if void is not None:
+        safe_x = (20, 188, 20, 188)[void.get("safe_slot", 0) & 3]
+        safe_y = (20, 20, 100, 100)[void.get("safe_slot", 0) & 3]
+        dx, dy = safe_x - px, safe_y - py
+        if abs(dx) + abs(dy) <= 16:
+            return 0
+        primary = axis_action(dx, dy)
+        if abs(dx) >= abs(dy):
+            secondary = ACTION_DOWN if dy >= 0 else ACTION_UP
+        else:
+            secondary = ACTION_RIGHT if dx >= 0 else ACTION_LEFT
+        deltas = {
+            ACTION_UP: (0, -1), ACTION_RIGHT: (1, 0),
+            ACTION_DOWN: (0, 1), ACTION_LEFT: (-1, 0),
+        }
+        for action in (primary, secondary):
+            step_x, step_y = deltas[action]
+            if pose_open(obs, px + step_x, py + step_y):
+                return action
+        return primary
     # Public projectile velocity is enough to distinguish an approaching lane
     # from harmless nearby traffic. Dodge perpendicular to the first predicted
     # hurtbox crossing; moving directly away along a shot's own axis merely

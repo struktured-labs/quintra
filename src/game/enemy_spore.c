@@ -1,4 +1,4 @@
-#pragma bank 3
+#pragma bank 7
 
 #include "audio/sfx.h"
 #include "game/enemy_spore.h"

@@ -36,7 +36,7 @@ def put_fix8(pb, where, pixels):
         pb.memory[where + i] = (raw >> (i * 8)) & 0xFF
 
 
-def boot_shop(seed_low):
+def boot_shop(seed_low, owned=()):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -46,6 +46,8 @@ def boot_shop(seed_low):
     pb.button("a")
     for _ in range(90):
         pb.tick()
+    for i, item_id in enumerate(owned):
+        pb.memory[PL + 24 + i] = item_id
 
     # Make the next real graph transaction land in the opening shop two rooms
     # before its boss. The low seed byte selects both featured shelves.
@@ -131,16 +133,48 @@ def player_projectiles(pb):
         and pb.memory[EN + i * 28 + 1] & 0x10
     ]
 
+def signed8(value):
+    return value - 256 if value & 0x80 else value
+
+
+def inject_lethal_crawler(pb):
+    clear_entities(pb)
+    px = pb.memory[PL + 9] | pb.memory[PL + 10] << 8
+    py = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
+    enemy, shot = EN, EN + 28
+    pb.memory[enemy] = 2
+    pb.memory[enemy + 1] = 3
+    put16(pb, enemy + 3, px)
+    put16(pb, enemy + 7, py)
+    pb.memory[enemy + 14] = 1
+    pb.memory[enemy + 17] = 0
+    pb.memory[enemy + 25] = 0x88
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put16(pb, shot + 3, px)
+    put16(pb, shot + 7, py)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 26] = 20
+    for _ in range(8):
+        pb.tick()
+        if pb.memory[enemy] == 0:
+            return
+    raise AssertionError("synthetic fifth kill did not resolve")
+
 
 def main():
-    # Sixteen adjacent seeds cover the complete 4x4 catalog. Every shop keeps
+    # Thirty-six adjacent seeds cover the complete 6x6 catalog. Every shop keeps
     # healing and a class-attuned sealed relic, then guarantees one build
     # shelf and one tactical shelf without consuming combat RNG.
-    build_pool = (6, 8, 9, 12)
-    tactical_pool = (5, 7, 10, 11)
-    for seed in range(16):
+    build_pool = (6, 8, 9, 12, 13, 14)
+    tactical_pool = (5, 7, 10, 11, 15, 16)
+    for seed in range(36):
         pb = boot_shop(seed)
-        expected = {0, 1, build_pool[seed & 3], tactical_pool[(seed >> 2) & 3]}
+        expected = {
+            0, 1, build_pool[seed % 6], tactical_pool[(seed // 6) % 6],
+        }
         assert set(shop_wares(pb)) == expected, (
             f"seed {seed} featured stock drifted: "
             f"{sorted(shop_wares(pb))} != {sorted(expected)}"
@@ -149,6 +183,14 @@ def main():
         # not a purchase-time random low-stat roll.
         assert pb.memory[shop_wares(pb)[1] + 20] in (12, 17, 19)
         pb.stop(save=False)
+
+    # A later merchant must advance past a unique relic already carried.
+    # Seed three normally selects Echo; carrying Echo rotates that build
+    # shelf to Ricochet rather than presenting an unusable duplicate.
+    owned_pb = boot_shop(3, owned=(34,))
+    assert 12 not in shop_wares(owned_pb) and 13 in shop_wares(owned_pb), \
+        "owned unique relic left a dead merchant counter"
+    owned_pb.stop(save=False)
 
     # Seed zero offers the cyan 15-second Surge. Verify the semantic shelf
     # treatment and real transaction, not a debugger write to its timer.
@@ -214,7 +256,7 @@ def main():
 
     # Phoenix Cord intercepts a real lethal hostile projectile, restores half
     # health, remains in the room, and consumes itself.
-    phoenix_pb = boot_shop(8)
+    phoenix_pb = boot_shop(12)
     buy(phoenix_pb, 10)
     assert 33 in inventory(phoenix_pb), "Phoenix Cord is not recorded in the run"
     clear_entities(phoenix_pb)
@@ -243,15 +285,105 @@ def main():
 
     # Spirit Draught immediately makes the hidden full-MP A+B transformation
     # available and starts a useful weapon-shaped Surge window.
-    ascend_pb = boot_shop(12)
+    ascend_pb = boot_shop(18)
     ascend_pb.memory[PL + 4] = 0
     buy(ascend_pb, 11)
     assert ascend_pb.memory[PL + 4] == ascend_pb.memory[PL + 3]
     assert ascend_pb.memory[SURGE] > 100
     ascend_pb.stop(save=False)
 
-    print("[shop-surge] PASS four-counter 4x4 procedural catalog "
-          "+ class relic + Glass/Echo/Phoenix/Spirit mechanics")
+    # Ricochet Rune gives the next physical or ranged attack exactly one
+    # visible stone rebound. Use the shop's own west wall as the fixture.
+    ricochet_pb = boot_shop(4)
+    buy(ricochet_pb, 13)
+    assert 35 in inventory(ricochet_pb), "Ricochet Rune is not recorded"
+    clear_entities(ricochet_pb)
+    put16(ricochet_pb, PL + 9, 40)
+    put16(ricochet_pb, PL + 11, 60)
+    ricochet_pb.memory[PL + 13] = 1  # face east
+    ricochet_pb.memory[PL + 22] = 0
+    ricochet_pb.memory[TM + 8 * 20 + 7] = 2
+    ricochet_pb.button_press("a")
+    for _ in range(2):
+        ricochet_pb.tick()
+    ricochet_pb.button_release("a")
+    bounced = False
+    for _ in range(20):
+        ricochet_pb.tick()
+        shots = player_projectiles(ricochet_pb)
+        if shots and signed8(ricochet_pb.memory[shots[0] + 10]) < 0:
+            assert ricochet_pb.memory[shots[0] + 20] == 0
+            bounced = True
+            break
+    assert bounced, "Ricochet Rune attack never returned from stone"
+    ricochet_pb.stop(save=False)
+
+    # Thorn Crown answers a real hostile impact with four player-owned lanes.
+    thorn_pb = boot_shop(5)
+    buy(thorn_pb, 14)
+    assert 36 in inventory(thorn_pb), "Thorn Crown is not recorded"
+    clear_entities(thorn_pb)
+    thorn_pb.memory[PL + 2] = thorn_pb.memory[PL + 1]
+    thorn_pb.memory[PL + 15] = 0
+    px = thorn_pb.memory[PL + 9] | thorn_pb.memory[PL + 10] << 8
+    py = thorn_pb.memory[PL + 11] | thorn_pb.memory[PL + 12] << 8
+    hostile = EN
+    thorn_pb.memory[hostile] = 1
+    thorn_pb.memory[hostile + 1] = 3
+    put_fix8(thorn_pb, hostile + 2, px + 5)
+    put_fix8(thorn_pb, hostile + 6, py + 9)
+    thorn_pb.memory[hostile + 14] = 1
+    thorn_pb.memory[hostile + 16] = 30
+    thorn_pb.memory[hostile + 25] = 0x77
+    thorn_pb.memory[hostile + 26] = 2
+    for _ in range(4):
+        thorn_pb.tick()
+    assert thorn_pb.memory[PL + 2] < thorn_pb.memory[PL + 1]
+    assert len(player_projectiles(thorn_pb)) == 4, \
+        "Thorn Crown did not answer damage with four lanes"
+    thorn_pb.stop(save=False)
+
+    # War Drum makes each fifth real kill a signature-resource beat.
+    drum_pb = boot_shop(24)
+    buy(drum_pb, 15)
+    assert 37 in inventory(drum_pb), "War Drum is not recorded"
+    drum_pb.memory[RS + 16] = 4
+    drum_pb.memory[PL + 4] = 0
+    drum_pb.memory[PL + 19] = 100
+    drum_pb.memory[PL + 15] = 60
+    inject_lethal_crawler(drum_pb)
+    assert drum_pb.memory[RS + 16] == 5
+    assert drum_pb.memory[PL + 19] == 0, "War Drum did not ready B"
+    assert drum_pb.memory[PL + 4] == 1, "War Drum did not restore MP"
+    drum_pb.stop(save=False)
+
+    # Moon Flask consumes a surplus heart only when it can distill that
+    # otherwise-dead recovery into MP.
+    flask_pb = boot_shop(30)
+    buy(flask_pb, 16)
+    assert 38 in inventory(flask_pb), "Moon Flask is not recorded"
+    clear_entities(flask_pb)
+    flask_pb.memory[PL + 2] = flask_pb.memory[PL + 1]
+    flask_pb.memory[PL + 4] = 0
+    px = flask_pb.memory[PL + 9] | flask_pb.memory[PL + 10] << 8
+    py = flask_pb.memory[PL + 11] | flask_pb.memory[PL + 12] << 8
+    heart = EN
+    flask_pb.memory[heart] = 3
+    flask_pb.memory[heart + 1] = 3
+    put_fix8(flask_pb, heart + 2, px + 5)
+    put_fix8(flask_pb, heart + 6, py + 9)
+    flask_pb.memory[heart + 14] = 1
+    flask_pb.memory[heart + 16] = 30
+    flask_pb.memory[heart + 17] = 0
+    flask_pb.memory[heart + 25] = 0x66
+    for _ in range(4):
+        flask_pb.tick()
+    assert flask_pb.memory[heart] == 0, "Moon Flask left surplus heart behind"
+    assert flask_pb.memory[PL + 4] == 1, "Moon Flask did not distill MP"
+    flask_pb.stop(save=False)
+
+    print("[shop-surge] PASS four-counter 6x6 procedural catalog "
+          "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask mechanics")
 
 
 if __name__ == "__main__":

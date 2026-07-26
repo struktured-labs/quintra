@@ -87,8 +87,8 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     Scrolling 248×248 dungeon districts deliberately replace the complete
     compact base plane after consuming its established RNG sequence. Their
     dedicated live-ROM contract validates the whole 31×31 field; parity
-    separates all 340 legacy cells here and retains the merchant and sanctuary
-    as exact compact controls.
+    separates all 340 legacy cells here. The merchant and sanctuary remain
+    compact controls, apart from the merchant's twelve authored price glyphs.
 
     The opening boss similarly composes its giant Crystal projection after
     base generation. Its new column-19 seam is also authored world geometry:
@@ -98,6 +98,16 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     overlay = set()
     if bosses_beaten == 0 and counter < 17:
         return set(range(ROOM_W * ROOM_H))
+    if counter == 17 and bosses_beaten == 0:
+        # Four [coin][tens][ones] floor labels are shop-role presentation,
+        # applied after the shared base generator. The live merchant contract
+        # validates their exact values and all stock mechanics; parity still
+        # owns every other one of this compact room's 340 cells.
+        return {
+            10 * ROOM_W + col
+            for start in (4, 7, 10, 13)
+            for col in range(start, start + 3)
+        }
     if counter == 19 and bosses_beaten == 0:
         overlay.update(row * ROOM_W + (ROOM_W - 1)
                        for row in range(1, ROOM_H - 1))

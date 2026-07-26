@@ -553,6 +553,15 @@ static void boss_tick(entity_t *e) {
         i16 cy = FIX8_TO_INT(e->y) + (giant ? 12 : 8);
         u8 cadence;
 
+        // Stage bonuses used to carry giant shots from three damage in the
+        // opening to seven in the finale. With a 16-HP hard cap that made a
+        // late Normal champion die in three ordinary projectile contacts,
+        // even before the denser movement lesson or World Collapse mattered.
+        // Keep the escalating patterns, mixed speeds, arena travel, HP, and
+        // full authored contact value; only the repeatable giant projectile
+        // payload stops at the opening bosses' three-half-heart lesson.
+        if (giant && dmg > 3) dmg = 3;
+
         if (!giant) {
             // Three distinct mini-boss archetypes (ai_data[2] = variant:
             // 0 Sentinel / 1 Orc / 2 Skeleton) so they play differently,
@@ -688,7 +697,12 @@ static void boss_tick(entity_t *e) {
                     room_shake(3, 40);
                     for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 3, dmg);
                     if ((u16)(dx + dy) > 20 && player.shield_timer == 0) {
-                        u8 blast = (u8)(dmg + 4);
+                        // The radius is still effectively the whole 224px
+                        // arena and the announced corner is still the sole
+                        // clean answer. Five half-hearts makes a missed read
+                        // severe without letting two scripted pulses erase a
+                        // full 16-HP run before the fight develops.
+                        u8 blast = (u8)(dmg + 1);
                         // Tester Easy is a route/content inspection aid. The
                         // canonical blast still demands the announced pocket
                         // on Normal, while Easy matches its one-damage impact

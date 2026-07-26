@@ -42,10 +42,18 @@
 #define WARE_PHOENIX 10  // Phoenix Thread: consumed to revive once
 #define WARE_ASCEND  11  // Spirit Draught: refill MP + temporary weapon Surge
 #define WARE_ECHO    12  // Echo Prism: every fourth A attack forks
+#define WARE_RICOCHET 13 // Ricochet Rune: primary attacks rebound once
+#define WARE_THORN   14  // Thorn Crown: taking damage fires a counter-volley
+#define WARE_DRUM    15  // War Drum: every fifth kill readies B and restores MP
+#define WARE_FLASK   16  // Moon Flask: surplus heart drops become MP
 
 // Stable content ids used by runtime hooks outside generated content tables.
 #define ITEM_ID_PHOENIX_THREAD 33u
 #define ITEM_ID_ECHO_PRISM     34u
+#define ITEM_ID_RICOCHET_RUNE  35u
+#define ITEM_ID_THORN_CROWN     36u
+#define ITEM_ID_WAR_DRUM        37u
+#define ITEM_ID_MOON_FLASK      38u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;

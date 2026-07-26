@@ -41,7 +41,9 @@ def resolve_collapse(x, y, safe_slot, easy=False):
     pb.memory[boss + BOSS_COLLAPSE_CHARGING] = 1
     pb.memory[boss + BOSS_SAFE_SLOT] = safe_slot
     before = pb.memory[PLAYER_HP]
-    blast = pb.memory[boss + BOSS_DAMAGE] + 4
+    # Runtime keeps the stage-authored entity damage for contact/identity but
+    # caps repeatable giant shots at the opening three-half-heart lesson.
+    blast = min(pb.memory[boss + BOSS_DAMAGE], 3) + 1
     # Boss-entry presentation can own the first frame after the helper gives
     # us the encounter. Wait for the charged branch itself to consume its
     # flag, rather than treating that handoff as a gameplay frame.

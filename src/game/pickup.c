@@ -7,6 +7,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "input/input.h"
@@ -468,6 +469,7 @@ static void grant_special_item(u8 item_id) {
     for (i = 0; i < INVENTORY_SLOTS; ++i) {
         if (player.inventory[i] == 0xFF) {
             player.inventory[i] = item_id;
+            if (item_id == ITEM_ID_RICOCHET_RUNE) g_player_ricochet = 1;
             return;
         }
     }
@@ -491,9 +493,18 @@ u8 pickup_check_player_collision(void) BANKED {
                 case PICKUP_HEART_HALF:
                     // A full-health walk-over used to consume the heart and
                     // play its happy chime without changing the HUD. It read
-                    // as a broken pickup. Leave the finite drop in place so
-                    // a player can come back after taking a hit.
-                    if (player.hp >= player.hp_max) continue;
+                    // as a broken pickup. Moon Flask deliberately changes
+                    // that resource rule: surplus recovery distills into one
+                    // MP, making old heart drops tactically useful to every
+                    // champion. If both gauges are full, leave it in place.
+                    if (player.hp >= player.hp_max) {
+                        if (!player_has_item(ITEM_ID_MOON_FLASK)
+                            || player.mp >= player.mp_max) continue;
+                        player.mp++;
+                        hud_redraw_mp();
+                        sfx_play(SFX_HEART);
+                        break;
+                    }
                     player.hp = (u8)(player.hp + 1);
                     if (player.hp > player.hp_max) player.hp = player.hp_max;
                     hud_redraw_hp();
@@ -567,6 +578,14 @@ u8 pickup_check_player_collision(void) BANKED {
                             && player_has_item(ITEM_ID_PHOENIX_THREAD))
                         || (ware == WARE_ECHO
                             && player_has_item(ITEM_ID_ECHO_PRISM))
+                        || (ware == WARE_RICOCHET
+                            && player_has_item(ITEM_ID_RICOCHET_RUNE))
+                        || (ware == WARE_THORN
+                            && player_has_item(ITEM_ID_THORN_CROWN))
+                        || (ware == WARE_DRUM
+                            && player_has_item(ITEM_ID_WAR_DRUM))
+                        || (ware == WARE_FLASK
+                            && player_has_item(ITEM_ID_MOON_FLASK))
                         || (ware == WARE_GLASS && player.hp_max <= 2)) {
                         if (entities[i].ai_data[4] == 0) {
                             sfx_play(SFX_HURT);
@@ -641,6 +660,18 @@ u8 pickup_check_player_collision(void) BANKED {
                                 break;
                             case WARE_ECHO:
                                 grant_special_item(ITEM_ID_ECHO_PRISM);
+                                break;
+                            case WARE_RICOCHET:
+                                grant_special_item(ITEM_ID_RICOCHET_RUNE);
+                                break;
+                            case WARE_THORN:
+                                grant_special_item(ITEM_ID_THORN_CROWN);
+                                break;
+                            case WARE_DRUM:
+                                grant_special_item(ITEM_ID_WAR_DRUM);
+                                break;
+                            case WARE_FLASK:
+                                grant_special_item(ITEM_ID_MOON_FLASK);
                                 break;
                         }
                         sfx_play(SFX_COIN);

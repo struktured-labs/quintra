@@ -328,6 +328,12 @@ class QuintraPyBoyEnv:
                 # controller trace. They let an offline policy learn a
                 # telegraphed lunge/blink rather than treating it as noise.
                 "pattern": mem[base + 19], "phase_timer": mem[base + 18],
+                # Void Lord's visible World Collapse telegraph. The charge
+                # flag and announced safe-corner slot are intentionally
+                # public to controller-only curricula just as they are to
+                # the live mGBA pilot; no future position or immunity leaks.
+                "collapse": mem[base + 21],
+                "safe_slot": mem[base + 22],
                 # ai_data[3] is enemy-private storage. Only Stone Sentinel
                 # interprets bit 0 as the authored giant marker; Folding Star
                 # and other specialists may legitimately reuse that same bit.

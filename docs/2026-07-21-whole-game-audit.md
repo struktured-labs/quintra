@@ -1,5 +1,48 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## v0.18.89 Living Bazaar and Colossus damage correction
+
+The four-counter merchant retains its dependable recovery and class-attuned
+relic anchors, but its build and tactical shelves now form a deterministic
+6×6 catalog. Ricochet Rune, Thorn Crown, War Drum, and Moon Flask add wall
+rebound, damage counterfire, fifth-kill signature recharge, and surplus-heart
+MP conversion. Distinct HUD glyphs identify all four. Selection advances past
+unique relics already carried, preventing later merchants from offering a
+mechanically dead duplicate.
+
+The complete live-ROM contract enumerates all 36 stock pairs, buys each new
+relic through physical counter overlap, and observes its actual runtime effect.
+The fixed controller also understands the four new ware IDs and uses exact
+feet-over-counter routing instead of oscillating beside a valid purchase.
+Ricochet ownership is cached at run reset, purchase, and suspend resume rather
+than scanning eight inventory slots on every attack. Its projectile bit is
+also distinct from the existing Spirit Convergence marker. Dense-room timing
+therefore remains 147/180 loop frames, the fixed Normal Convergence policy
+reaches the first Colossus again, and the controller-only Picsean Easy campaign
+defeats all nine Colossi in 198,443 frames before its recorded-input replay
+reproduces victory.
+
+The v0.18.88 progression curriculum found zero deaths in ordinary entry and
+court samples but only 9/45 Normal Colossus clears. Stage bonuses had raised
+repeatable late giant shots to 5–7 half-hearts against a 16-HP cap; the Void
+Lord killed all five baseline champions in roughly nine seconds. v0.18.89 caps
+repeatable giant shots at three and makes a missed World Collapse cost four,
+without changing HP, motion, cadence, projectile count, or mixed speeds.
+The PyBoy curriculum now honors the same visible Collapse corner cue as the
+full mGBA pilot. On the final v0.18.89 ROM, four of five baseline Normal
+champions survive the full 3,600-frame Void Lord sample; fragile Vespine lasts
+2,888 frames. The v0.18.88 matrix killed all five in roughly 513–557 frames.
+The complete 45-match Normal matrix improves from 9 clears / 14 survivals to
+13 clears / 21 survivals without making a starter-like checkpoint kit defeat
+the final boss inside one minute.
+
+The latest attended Pocket note sharpens the champion/tile concern: several
+sub-body-width gaps between scenery pieces look *almost* traversable even
+though the 12-pixel feet box correctly rejects them. The next terrain
+readability pass should preserve the legible 16×16 champions, widen intended
+routes to genuinely body-clear lanes, and overlap rubble or trim across every
+intentionally blocked 8–11-pixel seam so collision is obvious before contact.
+
 ## v0.18.88 merchant choice and Compass legibility
 
 The attended request that merchants sell more interesting things is now a

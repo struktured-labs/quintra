@@ -742,8 +742,8 @@ function riftwell_target(px, py, hp, hp_max, mp, mp_max)
 end
 
 -- Choose an affordable ware through the public walk-into purchase mechanic.
--- Missing health wins; otherwise prefer deterministic attack/max-HP upgrades
--- over the seeded general relic. This reads state to decide, but—as with aim
+-- Missing health wins; otherwise prefer a deterministic build-changing offer
+-- over the sealed general relic. This reads state to decide, but—as with aim
 -- and routing—changes the cartridge only through controller input.
 function shop_target(px, py, hp, hp_max, mp_max, coins)
     local best, best_score, bestd = nil, -1, 65535
@@ -763,6 +763,21 @@ function shop_target(px, py, hp, hp_max, mp_max, coins)
                     or (ware == 4 and mp_max < 20 and 85)
                     or (ware == 2 and hp_max < 16 and 80)
                     or (ware == 8 and 88)
+                    -- v0.18.88 specialty shelves: accept Glass only when the
+                    -- run can pay its permanent heart stake, value a Phoenix
+                    -- more highly while wounded, and exercise Echo/Draught
+                    -- as real build choices rather than invisible stock.
+                    or (ware == 9 and hp_max >= 8 and 86)
+                    or (ware == 10 and hp * 2 <= hp_max and 94)
+                    or (ware == 10 and 84)
+                    or (ware == 11 and mp_max < 20 and 78)
+                    or (ware == 11 and 74)
+                    or (ware == 12 and 89)
+                    or (ware == 13 and 88)
+                    or (ware == 14 and 86)
+                    or (ware == 15 and 91)
+                    or (ware == 16 and mp_max > 4 and 82)
+                    or (ware == 16 and 76)
                     or (ware == 5 and 75)
                     or (ware == 7 and 60)
                     or (ware == 1 and 70) or -1
@@ -3252,12 +3267,13 @@ while frames < LIMIT do
     local shop = (not target and not loot and world_mode == 0)
         and shop_target(px, py, hp, hp_max, mp_max, coins) or nil
     local room_age = frames - room_enter_frame
-    -- Once Wolfkin's optional shop approach window expires, clear the
-    -- controller's local target entirely. Leaving it truthy while taking
-    -- `door_step` still made later stuck recovery classify the room as shop
-    -- navigation and overwrite the chosen exit with combat-style escapes.
-    -- Other champions retain their separately validated shop policies.
-    if shop and CLASS == 0 and room_age >= 600 then shop = nil end
+    -- Once the optional shop approach window expires, clear the controller's
+    -- local target entirely. Leaving it truthy while taking `door_step` makes
+    -- later stuck recovery classify the room as shop navigation and overwrite
+    -- the chosen exit with interaction-style escapes. Restricting this guard
+    -- to Wolfkin left a resumed Picsean expedition oscillating forever before
+    -- stage two's sanctuary despite having no hostiles in the room.
+    if shop and room_age >= 900 then shop = nil end
     if world_mode == 0 and target and room_age > max_combat_frames then
         max_combat_frames = room_age
         max_combat_room, max_combat_enemy = room, target.kind
@@ -3642,10 +3658,19 @@ while frames < LIMIT do
             -- Sunwheels orbit perpendicular to a narrow Astral Spear lane.
             -- On Picsean, use the authored three-lane Tidal Wave whenever its
             -- real MP/cooldown permits; between casts keep A armed while
-            -- pursuing. This is the natural wide-shot answer to a target
-            -- that can sidestep a single committed thrust in flight.
+            -- pursuing. If the wheel survives two seconds without losing HP,
+            -- find an exact cardinal spear lane: an eight-pixel vertical miss
+            -- is "near" to the coarse tile route but outside the physical
+            -- thrust, which can otherwise make the pilot alternate forever.
+            -- This is the natural wide-shot answer to a target that can
+            -- sidestep a single committed thrust in flight.
             if active_charge == 0 and mp >= 2 then
                 keys = KEY_B + aim
+            elseif no_damage_frames > 120 then
+                local wheel_step, wheel_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, 88)
+                keys = wheel_ready
+                    and (KEY_A + wheel_step) or wheel_step
             else
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim,
                     routed_reach)
@@ -4026,9 +4051,9 @@ while frames < LIMIT do
                     target_stall_frames > 360 and "stalled" or "damage"))
             end
         end
-    -- Shops are optional recovery/build choices. Wolfkin gets a generous
-    -- ten-second body-valid approach, then yields to the route if it cannot
-    -- buy; other champions retain their separately validated shop policies.
+    -- Shops are optional recovery/build choices. Every champion gets a
+    -- generous body-valid approach, then the deadline above yields to the
+    -- route if terrain or an interaction edge defeats that attempt.
     elseif shop then
         local dx, dy = shop.x - px, shop.y - py
         local direct
@@ -4054,13 +4079,22 @@ while frames < LIMIT do
             elseif px < approach_x then keys = KEY_RIGHT
             else keys = KEY_LEFT end
         else
-            -- A shop ware occupies its own tile and sells through the
-            -- cartridge's wide walk-into overlap. Route to the adjacent
-            -- one-tile interaction lane, not onto the occupied sprite cell;
-            -- the latter can leave the pilot scraping a counter forever even
-            -- though the offer is valid.
-            keys = target_step(px, py, shop.x, shop.y, direct,
-                CLASS == 0 and 1 or 0)
+            -- A shop ware sells through the cartridge's exact feet-anchored
+            -- overlap (player x+2..13/y+8..15 against a 6px ware). Use the
+            -- full-body one-pixel route to a centered overlap coordinate.
+            -- The coarse combat pathfinder can call a nearby horizontal tile
+            -- "close enough" and alternate left/right forever when vertical
+            -- scenery blocks that row.
+            local goal_x, goal_y = shop.x - 8, shop.y - 12
+            if goal_x < 0 then goal_x = 0
+            elseif goal_x > QUINTRA_ARENA_W - 16 then
+                goal_x = QUINTRA_ARENA_W - 16
+            end
+            if goal_y < 0 then goal_y = 0
+            elseif goal_y > QUINTRA_ARENA_H - 16 then
+                goal_y = QUINTRA_ARENA_H - 16
+            end
+            keys = body_goal_step(px, py, goal_x, goal_y)
         end
     elseif loot then
         local dx, dy = loot.x - px, loot.y - py

@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BOT_SCRIPT="${QUINTRA_BALANCE_BOT_SCRIPT:-$ROOT/scripts/quintra_balance_bot.lua}"
 source "$ROOT/scripts/balance_csv_header.sh"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="${QUINTRA_BALANCE_OUT:-$ROOT/tmp/balance-runs.csv}"
@@ -132,7 +133,7 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_BOT_RESUME_STATE="$RESUME_STATE" \
         QUINTRA_BOT_TARGET_FRAME="$TARGET_FRAME" \
         QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \
-        timeout "$HOST_TIMEOUT" "$MGBA_BIN" "${mgba_save_args[@]}" "$ROM" --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \
+        timeout "$HOST_TIMEOUT" "$MGBA_BIN" "${mgba_save_args[@]}" "$ROM" --script "$BOT_SCRIPT" -l 0 \
         >"$log" 2>&1 &
       pid=$!
       # This mGBA build does not honor frontend:quit from Lua reliably. The

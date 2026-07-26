@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.88: Rift Bazaar](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.89: Living Bazaar](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,17 +22,36 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.88**, published after the complete build,
+The current cartridge is **v0.18.89**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
-**Dungeon merchants now present an actual roguelike decision instead of one
-rotating stat shelf.** Every generated shop keeps recovery and a seed-stable,
-class-attuned sealed relic, then adds one build shelf and one tactical shelf.
-The complete procedural catalog includes vampirism, alternate Flail/Spear
-geometry, the **Glass Fang** max-heart-for-offense pact, the **Echo Prism**
-fourth-strike fork, Surge, full route charting, a one-use **Phoenix Cord**
-revival, and a **Spirit Draught** that fills MP and starts Surge. All 16
-seeded catalog combinations are deterministic without consuming combat RNG.
+**Dungeon merchants now sell mechanics, not merely larger numbers.** Every
+generated shop still keeps recovery and a seed-stable, class-attuned sealed
+relic, then adds one of six build offers and one of six tactical offers. The
+new **Ricochet Rune** rebounds every primary or signature attack once from
+stone; the **Thorn Crown** answers damage with a four-lane counter-volley; the
+**War Drum** makes every fifth kill restore MP and immediately ready B; and
+the **Moon Flask** distills otherwise-wasted full-health heart drops into MP.
+Each has distinct counter art and a distinct HUD offer glyph. Ricochet
+ownership is cached at run start, purchase, and suspend resume rather than
+scanning the inventory for every shot; its runtime marker is distinct from
+Spirit Convergence, preserving the 147/180 dense-room performance sample.
+
+Those join vampirism, alternate Flail/Spear geometry, the **Glass Fang**
+max-heart-for-offense pact, the **Echo Prism** fourth-strike fork, Surge, full
+route charting, a one-use **Phoenix Cord** revival, and a **Spirit Draught**
+that fills MP and starts Surge. All **36** build/tactical combinations are
+deterministic without consuming combat RNG, and a later merchant advances
+past a unique relic already carried instead of wasting a shelf on a dead
+duplicate.
+
+The progression-matched audit also isolated a real late-Normal balance error:
+ordinary room samples recorded no deaths, but the old stage bonuses raised
+repeatable Colossus projectiles to 5–7 half-hearts against a 16-HP hard cap.
+Giant shots now stop at three while retaining every boss's HP, movement,
+cadence, projectile count, and mixed speeds. The Void Lord's 224-pixel
+World Collapse still leaves only its announced corner clean, but a missed read
+costs four half-hearts instead of erasing a full run in two scripted pulses.
 
 The Spirit Compass objective is now a large `!` rather than an ambiguous
 diagonal rune, so the current arrow, next fixture, optional loot, and amber
@@ -63,12 +82,10 @@ entered through its lower centre, and the controller can no longer treat an
 exceptional scenery overlap as a route through a wall. The complete 16×16
 champion also stops at the legal 248×248 field edge.
 
-Dungeon merchants now have a seed-stable featured shelf drawn from seven
-run-shaping families: Iron Heart, class-shaped Surge, vampirism, attack, mana,
-a full dungeon Chart, or an alternate A-weapon. Healing and the procedural
-relic remain dependable anchors, while the featured offer changes the build
-decision between expeditions without consuming combat RNG. Approaching a
-shelf shows its exact semantic glyph and price in the HUD before purchase.
+Dungeon merchants retain healing and a class-attuned procedural relic as
+dependable anchors. Their separate build and tactical counters are drawn from
+the 6×6 catalog above without consuming combat RNG. Approaching a shelf shows
+its exact semantic glyph and price in the HUD before purchase.
 
 Stage 1 remains a 20-node dungeon—17 consecutive 248×248 fields plus its
 compact merchant, sanctuary, and Colossus cadence—and later dungeons reach 30

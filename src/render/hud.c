@@ -164,6 +164,10 @@ void hud_show_offer(u8 ware, u8 price) BANKED {
         case 10: icon = HUD_OFFER_VITAL; break; // WARE_PHOENIX: second life
         case 11: icon = HUD_OFFER_SURGE; break; // WARE_ASCEND: charged burst
         case 12: icon = HUD_OFFER_RUNE;  break; // WARE_ECHO: split prism
+        case 13: icon = HUD_OFFER_BOUNCE; break; // WARE_RICOCHET
+        case 14: icon = HUD_OFFER_THORN;  break; // WARE_THORN
+        case 15: icon = HUD_OFFER_DRUM;   break; // WARE_DRUM
+        case 16: icon = HUD_OFFER_FLASK;  break; // WARE_FLASK
         default: icon = HUD_OFFER_RELIC; break; // WARE_ITEM / future relics
     }
     row[0] = icon;

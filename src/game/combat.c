@@ -35,6 +35,13 @@ static void score_add(u16 points) {
     if (run_state.score < before) run_state.score = 0xFFFF;
 }
 
+static u8 combat_has_relic(u8 item_id) {
+    u8 k;
+    for (k = 0; k < INVENTORY_SLOTS; ++k)
+        if (player.inventory[k] == item_id) return 1;
+    return 0;
+}
+
 // A bullet-hell kill must leave room for its guaranteed rewards.  Retiring
 // hostile shots at the death beat is both a readable clear signal and avoids
 // a full 32-slot entity table letting explosion FX crowd out hearts/relics.
@@ -215,6 +222,18 @@ u8 combat_resolve(void) BANKED {
                                     break;
                                 }
                             }
+                        }
+                        // War Drum turns the same five-kill cadence into a
+                        // class-shaped resource swing: every champion gets
+                        // their own B move back, plus the MP needed to use it.
+                        if ((run_state.enemies_killed % 5) == 0
+                            && combat_has_relic(ITEM_ID_WAR_DRUM)) {
+                            player.active_charge = 0;
+                            if (player.mp < player.mp_max) {
+                                player.mp++;
+                                hud_redraw_mp();
+                            }
+                            sfx_play(SFX_CLEAR);
                         }
                         // Enemy id 1 is used by BOTH the large stage boss
                         // (giant flag ai_data[3]=1) and the room-3 mini-boss.
@@ -453,6 +472,19 @@ u8 combat_resolve(void) BANKED {
                             recovery = (u8)(recovery * EASY_IFRAME_MULTIPLIER);
                         }
                         player.iframes = recovery;
+                    }
+                    // Thorn Crown makes a risky contact build tangible: the
+                    // hit still costs full health, then four modest player
+                    // shots answer on the next combat sweep. Keeping it
+                    // cardinal avoids filling the 32-entity pool with an
+                    // eight-way burst during already-dense boss patterns.
+                    if (combat_has_relic(ITEM_ID_THORN_CROWN)) {
+                        u8 counter = (u8)(1 + (player.atk >> 1));
+                        g_shot_element = 0;
+                        projectile_spawn_player(0, -1, counter, PROJ_BULLET);
+                        projectile_spawn_player(1, 0, counter, PROJ_BULLET);
+                        projectile_spawn_player(0, 1, counter, PROJ_BULLET);
+                        projectile_spawn_player(-1, 0, counter, PROJ_BULLET);
                     }
                     g_hitstop = 3;
                     room_shake(1, 6);   // small jolt: that one hurt

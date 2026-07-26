@@ -4,6 +4,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/pickup.h"
 #include "game/projectile.h"
 #include "game/player.h"
 #include "game/room.h"
@@ -14,6 +15,34 @@
 // 8=Shadow 16=Poison). Set by the fire code per class/weapon; combat
 // doubles damage when it matches the target's weakness.
 u8 g_shot_element;
+u8 g_player_ricochet;
+
+void projectile_sync_player_relics(void) BANKED {
+    u8 i;
+    g_player_ricochet = 0;
+    for (i = 0; i < INVENTORY_SLOTS; ++i) {
+        if (player.inventory[i] == ITEM_ID_RICOCHET_RUNE) {
+            g_player_ricochet = 1;
+            return;
+        }
+    }
+}
+
+// Keep the reversal out of projectile_update(). SDCC otherwise expands that
+// dense per-shot function's stack frame from 16 to 25 bytes and spills
+// registers throughout the hostile-bullet hot path, even though hostile shots
+// can never ricochet.
+static void projectile_ricochet(entity_t *e, i16 px, i16 py) {
+    e->x = (ppos_t)(e->x - e->vx);
+    e->y = (ppos_t)(e->y - e->vy);
+    e->vx = (i8)-e->vx;
+    e->vy = (i8)-e->vy;
+    // Preserve an independent Convergence chord tag if this rebound came
+    // from the A+B volley; only the one-use wall charge is consumed.
+    e->ai_data[3] &= (u8)~PROJ_FLAG_RICOCHET;
+    fx_spawn(SPR_FX_IMPACT, 0x06, px, py, 8);
+    sfx_play(SFX_HIT);
+}
 
 u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     u8 idx;
@@ -91,6 +120,10 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     e->ai_data[1]  = g_shot_element; // element for weakness bonus
     e->ai_data[2]  = (kind == PROJ_SPIKE || kind == PROJ_FLAIL
         || kind == PROJ_SPEAR) ? 1 : 0;
+    // Ricochet Rune marks each newly created primary/signature attack with
+    // one stone rebound. The marker lives on the projectile, so buying the
+    // relic changes all five champions and alternate weapons naturally.
+    e->ai_data[3] = g_player_ricochet ? PROJ_FLAG_RICOCHET : 0;
     if ((kind == PROJ_SPIKE && player.class_id == 0
             && player.starter_weapon == classes[0].starter_weapon)
         || kind == PROJ_SPEAR) {
@@ -197,6 +230,16 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
                 room_break_pot((u8)(sx >> 3), (u8)(sy >> 3));
                 fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
                 entity_kill(idx);
+                return;
+            }
+            // Keep the relic branch inside the existing player-projectile
+            // split. Hostile bullet-hell shots are the dense hot path and
+            // must not pay another ownership test every frame.
+            if ((e->ai_data[3] & PROJ_FLAG_RICOCHET)
+                && (t == BGT_WALL || t == BGT_PILLAR)) {
+                // Back out before reversing both axes: a clean one-use
+                // pinball return without trapping a diagonal scrape.
+                projectile_ricochet(e, px, py);
                 return;
             }
         }
