@@ -1,5 +1,42 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## v0.18.88 merchant choice and Compass legibility
+
+The attended request that merchants sell more interesting things is now a
+mechanical change, not a larger list of stat names. Dungeon shops keep healing
+and a class-attuned sealed relic, then independently roll one build shelf and
+one tactical shelf. Build stock can be vampirism, a Flail/Spear trade, Glass
+Fang (one max heart for +2 ATK/+1 SPD), or Echo Prism (every fourth A attack
+forks into two half-damage lanes). Tactical stock can be Surge, a full-dungeon
+Chart, Phoenix Cord (one lethal-hit revival at half health), or Spirit Draught
+(full MP plus Surge, making the A+B form immediately available). All sixteen
+pairings are seed-stable and consume no combat RNG.
+
+This makes coin decisions situational: low-health runs may save for Phoenix,
+strong defensive builds can accept Glass, a crowd-control build can take
+Echo, and a player preparing for the skull gate can buy an immediate Spirit
+Convergence opportunity. The sealed relic no longer hides a purchase-time
+random stat; its champion-attuned payload is fixed when the counter spawns.
+Live-ROM tests buy and exercise every new mechanic, including a real lethal
+hostile projectile for Phoenix and exact one/one/one/three projectile counts
+for Echo.
+
+The Compass audit also found two presentation failures. Its purple objective
+rune resembled a stray `P`, so the 16×16 node now contains a centered `!`.
+More seriously, the Riftwild legend's `R` and `F` tile slots were overwritten
+by in-play district letters, visibly spelling `PNIHT`. Reversing atlas load
+priority restores `RIFT`, and rendered-pixel coverage distinguishes the fixed
+R/F strokes from the old P/H corruption. A carried two-second dungeon label
+timer could likewise erase a persistent village `MARKET` sign after entry;
+town and Riftwild generation now cancel that dungeon-only timer.
+
+The v0.18.88 native training ladder contains six ROM-bound mGBA states at
+five-minute intervals, and every state cold-loads through mGBA's `-t` path.
+This particular Picsean Easy controller run reaches stage two by minute five,
+then remains alive with 15 HP in room 38 through minute thirty. That is useful
+deep-test access, but not progression evidence: the stage-two route stall is
+retained as an open controller-policy/procgen audit item.
+
 ## v0.18.87 attended geography, scale, and merchant findings
 
 Attended Pocket play likes the new larger rooms. The five Compass rows now
@@ -44,16 +81,16 @@ visual audit explains why: all but hearts and Surge collapse into essentially
 the same generic orb/diamond silhouette, while the meaningful description
 appears only near the shelf. This is both a communication and variety problem.
 
-The first response is now in v0.18.87. A dungeon merchant's featured shelf is
+The first response shipped in v0.18.87. A dungeon merchant's featured shelf is
 seed-stable but can be an Iron Heart, Surge, Vampiric Sigil, Power Stone, Mana
 Gem, full dungeon Chart, or alternate A-weapon instead of alternating between
 only vitality and Surge. Approaching it already replaces the physical orb
 with the exact heart/forge/rune/lightning/fangs/chart/weapon glyph and price in
 the HUD; the shelf palette now also groups steel/weapon, crimson sustain, and
-cyan magic/information. ROM coverage enumerates all eight seed outcomes and
-executes a real Surge purchase. The next step remains more ambitious:
-dedicated physical silhouettes, short effect names before collision, and new
-risk/reward or weapon-geometry bargains—not merely more stat names.
+cyan magic/information. v0.18.88 completes the next mechanical step with two
+specialty shelves, risk/reward, revival, attack-fork, and transformation-ready
+offers. Dedicated physical silhouettes and longer pre-purchase names remain a
+future presentation opportunity.
 
 The goal-facing Compass and Colossus contracts remain materially present.
 SELECT is a tile-native 6×5 abstract graph with dim unknown nodes, bright

@@ -44,20 +44,6 @@ u8 boss_palette_for_stage(u8 stage) {
     return 0x06;
 }
 
-// Every town market makes one build-shaped weapon trade available.  Pick from
-// the two special physical weapons without consuming the run RNG, so a player
-// can plan around the shelf while generated combat and future room rolls stay
-// exactly deterministic.  If the champion already carries the rolled weapon,
-// offer its counterpart rather than charging coins for a no-op.
-static u8 town_market_weapon(void) {
-    u8 count = pickup_weapon_count();
-    u8 pick;
-    if (count < 2) return player.starter_weapon;
-    pick = pickup_weapon_from_roll((u8)(count - 2
-        + (((u8)run_state.run_seed ^ run_state.bosses_beaten) & 1)));
-    return (pick == player.starter_weapon) ? pickup_next_weapon(pick) : pick;
-}
-
 // Place player at the door opposite the one they entered from.
 static void place_player_after_entry(void) {
     // Spawn just inside the door opposite the exit. The player's WALL box
@@ -108,13 +94,7 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     entities[idx].ai_data[0] = PICKUP_SHOP;
     entities[idx].ai_data[1] = ware;
     entities[idx].ai_data[2] = price;
-    if (ware == WARE_WEAPON) entities[idx].ai_data[3] = town_market_weapon();
-    entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART
-        : (ware == WARE_SURGE) ? SPR_SURGE_ORB : SPR_ITEM_ORB;
-    entities[idx].palette = (ware == WARE_ITEM || ware == WARE_FORGE
-            || ware == WARE_WEAPON) ? 0x05
-        : (ware == WARE_SURGE || ware == WARE_RUNE
-            || ware == WARE_CHART) ? 0x06 : 0x04;
+    pickup_configure_shop_ware(idx, ware);
     // Keep the stock's heart/relic sprite intact and put the dedicated gold
     // sale tag above it. This answers "can I pick this up?" before the player
     // has to walk into a ware or discover the bottom-HUD price convention.
@@ -123,24 +103,6 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
         if (tag != 0xFF) entities[tag].ai_data[1] = idx;
     }
     return idx;
-}
-
-// The featured shelf is seed-stable without consuming combat RNG. It can
-// reshape offense, sustain, magic, route knowledge, weapon geometry, or the
-// next fight instead of alternating between only vitality and Surge.
-static u8 dungeon_featured_ware(void) {
-    static const u8 wares[8] = {
-        WARE_BIG, WARE_SURGE, WARE_VAMP, WARE_FORGE,
-        WARE_RUNE, WARE_CHART, WARE_WEAPON, WARE_BIG,
-    };
-    return wares[((u8)run_state.run_seed ^ run_state.bosses_beaten) & 7];
-}
-
-static u8 dungeon_ware_price(u8 ware) {
-    if (ware == WARE_CHART) return 15;
-    if (ware == WARE_SURGE) return 20;
-    if (ware == WARE_VAMP || ware == WARE_BIG) return 35;
-    return 30;
 }
 
 static void paint_shop_price(u8 tx, u8 price) {
@@ -538,6 +500,10 @@ void procgen_generate_current_room(void) BANKED {
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
+    // Dungeon district callouts fade by streaming terrain row 1 back in.
+    // Never let a timer carried through a threshold erase a persistent
+    // RIFTWILD/VILLAGE/MARKET/FORGE landmark after the new area draws it.
+    if (run_state.world_mode || is_town) room_district_label_ticks = 0;
     {
         // A dungeon is one sustained expedition, not a handful of large
         // courts separated by compact objective/miniboss thresholds. Every
@@ -1332,21 +1298,26 @@ void procgen_generate_current_room(void) BANKED {
                 clear_reach_marks_local();
             }
         } else if (is_shop) {
-            // MERCHANT room: three readable wares, no enemies. Recovery and
-            // a mystery relic remain familiar anchors; the featured shelf
-            // rotates through seven genuinely different run decisions.
+            // MERCHANT room: four readable wares, no enemies. Recovery and a
+            // class-attuned sealed relic remain familiar anchors; separate
+            // build and tactical shelves guarantee an actual run decision.
             {
-                u8 featured = dungeon_featured_ware();
+                u8 build = pickup_dungeon_featured_ware(0);
+                u8 tactical = pickup_dungeon_featured_ware(1);
+                u8 build_price = pickup_dungeon_ware_price(build);
+                u8 tactical_price = pickup_dungeon_ware_price(tactical);
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
-                spawn_shop_ware(56, 64, WARE_HEART, 10);
-                spawn_shop_ware(80, 64, WARE_ITEM, 25);
-                spawn_shop_ware(104, 64, featured, dungeon_ware_price(featured));
+                spawn_shop_ware(44, 64, WARE_HEART, 10);
+                spawn_shop_ware(68, 64, WARE_ITEM, 25);
+                spawn_shop_ware(92, 64, build, build_price);
+                spawn_shop_ware(116, 64, tactical, tactical_price);
                 // Price tags painted on the floor under each ware:
                 // [coin][d][d], amber, walkable. The nearby HUD replaces the
                 // generic orb with its semantic effect icon before purchase.
-                paint_shop_price(6, 10);
-                paint_shop_price(9, 25);
-                paint_shop_price(12, dungeon_ware_price(featured));
+                paint_shop_price(4, 10);
+                paint_shop_price(7, 25);
+                paint_shop_price(10, build_price);
+                paint_shop_price(13, tactical_price);
             }
         } else {
             // Enemy count scales with depth. One lone crawler made too many

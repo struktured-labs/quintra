@@ -38,6 +38,14 @@
 #define WARE_VAMP    6   // Vampiric Sigil (+ATK/+max HP; heal every fifth kill)
 #define WARE_CHART   7   // Cartographer's Chart (reveal the next dungeon)
 #define WARE_WEAPON  8   // seed-stable alternate A-weapon; town market trade
+#define WARE_GLASS   9   // Glass Fang pact: -2 max HP, +2 ATK, +1 SPD
+#define WARE_PHOENIX 10  // Phoenix Thread: consumed to revive once
+#define WARE_ASCEND  11  // Spirit Draught: refill MP + temporary weapon Surge
+#define WARE_ECHO    12  // Echo Prism: every fourth A attack forks
+
+// Stable content ids used by runtime hooks outside generated content tables.
+#define ITEM_ID_PHOENIX_THREAD 33u
+#define ITEM_ID_ECHO_PRISM     34u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
@@ -62,6 +70,9 @@ u8   pickup_spawn_farfold_relic(u8 item_index, fix8_t x, fix8_t y) BANKED;
 u8   pickup_weapon_count(void) BANKED;
 u8   pickup_weapon_from_roll(u8 roll) BANKED;
 u8   pickup_next_weapon(u8 current) BANKED;
+void pickup_configure_shop_ware(u8 entity_index, u8 ware) BANKED;
+u8   pickup_dungeon_featured_ware(u8 shelf) BANKED;
+u8   pickup_dungeon_ware_price(u8 ware) BANKED;
 
 // Spawn a +1 MP wisp (shattered-crystal drop)
 u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;
@@ -87,5 +98,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED;
 // Player touch check + apply effect; returns 1 if anything was picked up
 u8   pickup_check_player_collision(void) BANKED;
 u8   pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED;
+void pickup_echo_primary(u8 dir, u8 damage, u8 kind) BANKED;
+u8   pickup_try_phoenix_revive(void) BANKED;
 
 #endif

@@ -418,7 +418,9 @@ void map_enter(void) {
     palette_bg_load(BGPAL_CRACK, map_pal_boss);
     palette_bg_load(7, map_pal_base);
     if (run_state.world_mode) {
-        tiles_load_map_bg(); tiles_load_area_labels(); map_clear_tiles();
+        // The area alphabet supplies G/A/E for GATE, then the Compass atlas
+        // must win shared slots 90..92 so RIFT cannot render as "PNIHT".
+        tiles_load_area_labels(); tiles_load_map_bg(); map_clear_tiles();
         draw_map_heading();
         draw_world_grid();
         draw_world_legend();
@@ -426,13 +428,13 @@ void map_enter(void) {
         return;
     }
     if (is_town) {
-        tiles_load_map_bg(); tiles_load_area_labels(); map_clear_tiles();
+        tiles_load_area_labels(); tiles_load_map_bg(); map_clear_tiles();
         draw_map_heading();
         draw_town_grid();
         SHOW_BKG; DISPLAY_ON;
         return;
     }
-    tiles_load_map_bg(); tiles_load_area_labels(); tiles_load_hud();
+    tiles_load_area_labels(); tiles_load_map_bg(); tiles_load_hud();
     map_clear_tiles();
     draw_dungeon_heading();
     draw_dungeon_grid();

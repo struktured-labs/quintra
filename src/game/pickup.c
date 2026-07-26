@@ -21,6 +21,7 @@
 #define ITEM_ID_POWER_STONE  22u
 #define ITEM_ID_MANA_GEM     25u
 #define ITEM_ID_BLOOD_SIGIL  29u
+#define ITEM_ID_GLASS_FANG   32u
 
 u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
     u8 idx = entity_spawn(ENT_PICKUP);
@@ -454,6 +455,24 @@ static void apply_item_effects_by_id(u16 item_id) {
     }
 }
 
+static u8 player_has_item(u8 item_id) {
+    u8 i;
+    for (i = 0; i < INVENTORY_SLOTS; ++i)
+        if (player.inventory[i] == item_id) return 1;
+    return 0;
+}
+
+static void grant_special_item(u8 item_id) {
+    u8 i;
+    if (player_has_item(item_id)) return;
+    for (i = 0; i < INVENTORY_SLOTS; ++i) {
+        if (player.inventory[i] == 0xFF) {
+            player.inventory[i] = item_id;
+            return;
+        }
+    }
+}
+
 u8 pickup_check_player_collision(void) BANKED {
     u8 i;
     u8 any = 0;
@@ -540,7 +559,22 @@ u8 pickup_check_player_collision(void) BANKED {
                     // Walk into a ware to buy it. Not enough coins → error
                     // beep with a retry delay so it doesn't spam.
                     u8 price = entities[i].ai_data[2];
+                    u8 ware = entities[i].ai_data[1];
                     hud_show_offer(entities[i].ai_data[1], price);
+                    // Unique contracts cannot be bought twice, and Glass
+                    // Fang must always collect its promised one-heart stake.
+                    if ((ware == WARE_PHOENIX
+                            && player_has_item(ITEM_ID_PHOENIX_THREAD))
+                        || (ware == WARE_ECHO
+                            && player_has_item(ITEM_ID_ECHO_PRISM))
+                        || (ware == WARE_GLASS && player.hp_max <= 2)) {
+                        if (entities[i].ai_data[4] == 0) {
+                            sfx_play(SFX_HURT);
+                            entities[i].ai_data[4] = 1;
+                        }
+                        any = 1;
+                        continue;
+                    }
                     if (player.coins >= price) {
                         player.coins = (u16)(player.coins - price);
                         hud_redraw_coins();
@@ -551,7 +585,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 hud_redraw_hp();
                                 break;
                             case WARE_ITEM:
-                                apply_item_effects((u8)(10 + rng_range(10)));
+                                apply_item_effects(entities[i].ai_data[3]);
                                 break;
                             case WARE_BIG:
                                 apply_item_effects_by_id(ITEM_ID_IRON_HEART);
@@ -587,6 +621,26 @@ u8 pickup_check_player_collision(void) BANKED {
                             }
                             case WARE_SURGE:
                                 room_start_weapon_surge();
+                                break;
+                            case WARE_GLASS:
+                                player.atk = add_capped(player.atk, 2, 15);
+                                player.spd = add_capped(player.spd, 1, 9);
+                                grant_special_item(ITEM_ID_GLASS_FANG);
+                                player.hp_max = (u8)(player.hp_max - 2);
+                                if (player.hp > player.hp_max)
+                                    player.hp = player.hp_max;
+                                hud_redraw_hp();
+                                break;
+                            case WARE_PHOENIX:
+                                grant_special_item(ITEM_ID_PHOENIX_THREAD);
+                                break;
+                            case WARE_ASCEND:
+                                player.mp = player.mp_max;
+                                hud_redraw_mp();
+                                room_start_weapon_surge();
+                                break;
+                            case WARE_ECHO:
+                                grant_special_item(ITEM_ID_ECHO_PRISM);
                                 break;
                         }
                         sfx_play(SFX_COIN);

@@ -244,7 +244,9 @@ def main() -> None:
     # Sample authored interior strokes rather than the common outline.
     here_rgb = image.getpixel((GX[18] * 8 + 6, GY[18] * 8 + 6))[:3]
     boss_rgb = image.getpixel((GX[19] * 8 + 3, GY[19] * 8 + 5))[:3]
-    sigil_rgb = image.getpixel((GX[2] * 8 + 4, GY[2] * 8 + 5))[:3]
+    # The objective is a large centered exclamation mark. Sample its stem,
+    # not the empty left interior retained inside the common node outline.
+    sigil_rgb = image.getpixel((GX[2] * 8 + 6, GY[2] * 8 + 5))[:3]
     assert len({here_rgb, boss_rgb, sigil_rgb}) == 3, (
         f"Compass semantic colors collapsed: here={here_rgb} "
         f"boss={boss_rgb} sigil={sigil_rgb}")
@@ -342,13 +344,42 @@ def main() -> None:
     assert all(node_tile(pb, i) != BGT_MAP_BIG_UNKNOWN for i in range(30)), \
         "thirty-room Compass failed to render explored extra-byte cells"
     pb.screen.image.save(ROOT / "tmp" / "compass-thirty-room.png")
+
+    # Riftwild's legend shares VRAM slots 90..92 with in-play district
+    # lettering. The Compass atlas must load last: the previous order left
+    # the visible key reading PNIHT instead of RIFT.
+    pb.button("b")
+    for _ in range(30):
+        pb.tick()
+    pb.memory[rs + 17] = 1       # world_mode
+    pb.memory[rs + 18] = 0       # world_screen
+    pb.memory[rs + 21] = 0xFF    # world_seen low
+    pb.memory[rs + 22] = 0xFF    # world_seen high
+    pb.button("select")
+    for _ in range(30):
+        pb.tick()
+    assert tuple(map_tile(pb, x, 10) for x in range(14, 18)) == (
+        BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
+        BGT_MAP_LABEL_F, BGT_MAP_LABEL_T), \
+        "Riftwild Compass lost its RIFT legend tile ids"
+    world_image = pb.screen.image
+    letter_rgb = world_image.getpixel((15 * 8 + 3, 10 * 8))[:3]
+    r_diagonal_rgb = world_image.getpixel((14 * 8 + 4, 10 * 8 + 4))[:3]
+    f_bar_rgb = world_image.getpixel((16 * 8 + 3, 10 * 8))[:3]
+    # The old shared-slot corruption rendered PNIHT. R's lower diagonal is
+    # absent from P, while F's broad top bar is absent from H.
+    assert r_diagonal_rgb == letter_rgb, \
+        f"RIFT R still renders as P: {r_diagonal_rgb} != {letter_rgb}"
+    assert f_bar_rgb == letter_rgb, \
+        f"RIFT F still renders as H: {f_bar_rgb} != {letter_rgb}"
+    world_image.save(ROOT / "tmp" / "compass-riftwild-legend.png")
     pb.stop(save=False)
     print(f"[compass-map] PASS 20→30 room 6x5 screen-filling pocket grid "
           f"+ dotted explored rooms + dashed unknown squares "
           f"+ bright explored route + staged cues "
           f"+ semantic colors "
           f"here={here_rgb} sigil/rift={sigil_rgb} boss={boss_rgb} "
-          "+ nonlinear link + high-byte exploration + sprite restore")
+          "+ nonlinear link + high-byte exploration + RIFT legend + sprite restore")
 
 
 if __name__ == "__main__":

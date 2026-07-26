@@ -296,9 +296,10 @@ def main():
     assert pb.memory[weapon + 20] in {20, 21}, \
         "market weapon trade did not stock a special flail/spear index"
     pb.memory[0xFF4F] = 0
-    assert bytes(pb.memory[0x9800 + 1 * 32 + 7:0x9800 + 1 * 32 + 13]) == \
-        bytes((87, 84, 76, 88, 86, 79)), \
-        "east quarter lacks its MARKET playfield landmark"
+    market_tiles = bytes(pb.memory[
+        0x9800 + 1 * 32 + 7:0x9800 + 1 * 32 + 13])
+    assert market_tiles == bytes((87, 84, 76, 88, 86, 79)), \
+        f"east quarter lacks its MARKET playfield landmark: {market_tiles}"
     # A nearby merchant speaks visually before the player risks walking into
     # stock: a coin speech bubble makes the NPC's purpose legible even on a
     # busy market screen.

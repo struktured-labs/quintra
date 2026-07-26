@@ -1478,6 +1478,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     // several overlapping pseudo-projectiles in one frame.
                     entities[shot].hitbox = 0xBB;
                 }
+                pickup_echo_primary(dir, dmg, PROJ_SPIKE);
                 player.fire_cooldown = 24;
             }
         } else if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
@@ -1521,6 +1522,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             break;
                     }
                 }
+                pickup_echo_primary(dir, dmg, w->p2);
             }
             player.fire_cooldown = cooldown;
         }
@@ -1632,6 +1634,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Combat
     if (combat_resolve() || player.hp == 0) {
+        if (pickup_try_phoenix_revive()) {
+            death_timer = 0;
+            return SCREEN_SELF;
+        }
         // Player died: don't hard-cut — a beat of shake, bursts, and a
         // flickering hero falling before the GAMEOVER screen takes over.
         death_timer = 50;
@@ -1828,7 +1834,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 hud_redraw_hp();
             } else {
                 player.hp = 0;
-                return SCREEN_GAMEOVER;
+                if (pickup_try_phoenix_revive()) {
+                    death_timer = 0;
+                    room_stumble_off_hazard();
+                } else {
+                    return SCREEN_GAMEOVER;
+                }
             }
         }
     }

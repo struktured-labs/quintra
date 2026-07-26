@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.87: Fivefold Depths](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.88: Rift Bazaar](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,25 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.87**, published after the complete build,
+The current cartridge is **v0.18.88**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Dungeon merchants now present an actual roguelike decision instead of one
+rotating stat shelf.** Every generated shop keeps recovery and a seed-stable,
+class-attuned sealed relic, then adds one build shelf and one tactical shelf.
+The complete procedural catalog includes vampirism, alternate Flail/Spear
+geometry, the **Glass Fang** max-heart-for-offense pact, the **Echo Prism**
+fourth-strike fork, Surge, full route charting, a one-use **Phoenix Cord**
+revival, and a **Spirit Draught** that fills MP and starts Surge. All 16
+seeded catalog combinations are deterministic without consuming combat RNG.
+
+The Spirit Compass objective is now a large `!` rather than an ambiguous
+diagonal rune, so the current arrow, next fixture, optional loot, and amber
+boss skull separate by shape as well as color. The Riftwild key now visibly
+spells `RIFT`; two shared alphabet slots previously left it reading `PNIHT`.
+Village district names are also protected from a carried dungeon fade timer,
+which could briefly erase `MARKET` or another permanent civic landmark after
+arrival.
 
 **Dungeons now read as expeditions through five physical districts.** Each
 six-cell row of the Compass corresponds to a named region—**GATE, LOWER, DEEP,
@@ -1860,12 +1877,16 @@ live-ROM coverage proves its sprite handoff and five real projectile lanes.
 A complete nine-boss controller replay still wins after the new threat.
 
 v0.17.88 first gave every dungeon merchant a seed-stable Iron Heart/Surge
-premium fork. v0.18.87 expands that same shelf to seven families—vitality,
-Surge, vampirism, attack, mana, charting, and alternate weapons—while keeping
-the exact-price HUD and distinct semantic glyph contract. The cyan **Surge
-Tonic** still costs 20 coins and starts the visible 15-second primary-weapon
-burst without permanently inflating a run. Live-ROM coverage now enumerates
-every featured outcome and performs the real priced purchase.
+premium fork, and v0.18.87 expanded it to seven families. v0.18.88 replaces
+that single premium slot with independent build and tactical shelves. The
+four-counter shop can now combine vampirism, alternate weapon geometry, Glass
+Fang, or Echo Prism with Surge, charting, Phoenix Cord, or Spirit Draught.
+The familiar heal and sealed-relic counters remain; the latter is now
+class-attuned and seed-stable instead of rolling arbitrary stats only after
+payment. The cyan **Surge Tonic** still costs 20 coins and starts the visible
+15-second class-shaped burst. Live-ROM coverage enumerates the complete 4×4
+catalog and executes real purchases for Surge, Glass, Echo, Phoenix, and
+Spirit effects.
 
 v0.17.87 reserves every stage's **Rift Sigil** before dense procgen combat and
 loot can fill the fixed entity table. A live reproduction of the formerly
