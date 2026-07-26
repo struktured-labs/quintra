@@ -16,6 +16,7 @@
 #define PEND_PUZZLE_NOTE2 7
 #define PEND_PUZZLE_NOTE3 8
 #define PEND_PUZZLE_NOTE4 9
+#define PEND_DISTRICT_NOTE2 10
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -111,6 +112,15 @@ void sfx_play(u8 id) {
             pend_kind = PEND_PUZZLE_NOTE2;
             pend_timer = 12;
             break;
+        case SFX_DISTRICT:
+            // A restrained threshold bell: low A4 establishes distance,
+            // then D5 answers after the room seam. It is shorter and calmer
+            // than the puzzle fanfare, so crossing a district never sounds
+            // like the player solved or collected something.
+            ch1(0x00, 0x80, 0x94, 1750);
+            pend_kind = PEND_DISTRICT_NOTE2;
+            pend_timer = 8;
+            break;
         default:
             break;
     }
@@ -171,7 +181,10 @@ void sfx_tick(void) {
             pend_timer = 12;
             return;
         case PEND_PUZZLE_NOTE4:
-            NR12_REG = 0xD6;                           // long final glow
+        case PEND_DISTRICT_NOTE2:
+            // Both figures resolve to D5; only the puzzle's final envelope
+            // is longer and brighter than the threshold bell.
+            NR12_REG = (pend_kind == PEND_PUZZLE_NOTE4) ? 0xD6 : 0xB4;
             NR13_REG = (u8)(1825 & 0xFF);              // D5
             NR14_REG = (u8)(0x80 | (1825 >> 8));
             break;

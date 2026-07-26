@@ -111,6 +111,12 @@ u8 room_tile_at_px(i16 px, i16 py) BANKED {
     }
 }
 
+u8 room_player_position_in_bounds(i16 x, i16 y) BANKED {
+    return (x >= 0 && y >= 0
+        && x <= (i16)(room_world_width - 16)
+        && y <= (i16)(room_world_height - 16)) ? 1 : 0;
+}
+
 u8 room_tile_walkable(u8 t) BANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
          || t == BGT_GRASS || t == BGT_PATH || t == BGT_WILD_FLOWER

@@ -113,6 +113,12 @@
 #define BGT_AREA_M 87
 #define BGT_AREA_K 88
 #define BGT_AREA_O 89
+// Dungeon-only district signage reuses three Compass slots while the room
+// atlas is resident. Opening SELECT reloads the map glyphs into the same
+// addresses; returning to play reloads these letters with the area atlas.
+#define BGT_AREA_P 90
+#define BGT_AREA_N 91
+#define BGT_AREA_H 92
 
 // Compass-only nonlinear edge. Rooms 2 and 8 in later dungeons are joined by
 // a rift well in addition to the ordinary walking route; the map draws this

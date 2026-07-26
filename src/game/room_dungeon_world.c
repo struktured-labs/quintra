@@ -1,5 +1,6 @@
 #pragma bank 6
 
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -17,10 +18,22 @@ static void court_set(u8 x, u8 y, u8 tile) {
     }
 }
 
-static u8 court_texture(u32 seed, u8 x, u8 y) {
+static u8 court_texture(u32 seed, u8 x, u8 y, u8 district) {
     u8 n = (u8)seed;
     n = (u8)(n + (u8)(x * 13) + (u8)(y * 17) + (u8)(x * y));
-    return (n < 38) ? BGT_FLOOR2 : (n < 64) ? BGT_FLOOR3 : BGT_FLOOR;
+    // A stage's five Compass rows are physical districts, not five copies of
+    // one generic ruin. Their floor dialect remains seed-stable while making
+    // depth readable even before the player opens SELECT.
+    if (district == 0)
+        return (n < 76) ? BGT_FLOOR3 : BGT_FLOOR;
+    if (district == 1)
+        return ((u8)(x + (y << 1) + n) & 3) ? BGT_FLOOR : BGT_FLOOR2;
+    if (district == 2)
+        return (n < 92) ? BGT_FLOOR2 : BGT_FLOOR;
+    if (district == 3)
+        return ((u8)(x ^ y ^ n) & 3) ? BGT_FLOOR : BGT_FLOOR3;
+    return (n < 48) ? BGT_FLOOR2
+        : (n > 214) ? BGT_FLOOR3 : BGT_FLOOR;
 }
 
 u8 run_state_dungeon_cache_cell(void) BANKED {
@@ -78,9 +91,67 @@ static void court_stamp_ruin(u8 x0, u8 y0, u8 w, u8 h,
     }
 }
 
+static void court_wall_h(u8 y, u8 x0, u8 x1, u8 gap) {
+    u8 x;
+    for (x = x0; x <= x1; ++x)
+        if (x != gap && x != (u8)(gap + 1))
+            court_set(x, y, BGT_PILLAR);
+}
+
+static void court_wall_v(u8 x, u8 y0, u8 y1, u8 gap) {
+    u8 y;
+    for (y = y0; y <= y1; ++y)
+        if (y != gap && y != (u8)(gap + 1))
+            court_set(x, y, BGT_PILLAR);
+}
+
+// The six-cell Compass rows now correspond to five full-field geographic
+// districts. These silhouettes deliberately occupy the former off-screen
+// acreage: the western stage archetype still says "Ember" or "Frost", while
+// this layer says how far inside that place the champion has travelled.
+// Every wall has a body-wide gate, and the authoritative cardinal cross plus
+// encounter aprons are carved again after this pass.
+static void court_stamp_district(u8 district, u8 variant, u8 accent) {
+    u8 shift = variant & 1;
+    if (district == 0) {
+        // GATE: four long pylons make an unmistakable outer march.
+        court_wall_v((u8)(18 + shift), 2, 15, 8);
+        court_wall_v((u8)(27 - shift), 2, 15, 8);
+        court_stamp_cluster((u8)(18 + shift), 18, accent);
+        court_stamp_cluster((u8)(26 - shift), 18, accent);
+    } else if (district == 1) {
+        // LOWER: offset retaining walls force a broad left/right weave.
+        court_wall_h(12, 12, 29, shift ? 22 : 18);
+        court_wall_h(21, 12, 29, shift ? 18 : 24);
+        court_stamp_cluster(13, 14, accent);
+        court_stamp_cluster(27, 23, accent);
+    } else if (district == 2) {
+        // DEEP: a four-gated sunken ring owns the southeast expedition.
+        court_wall_h(15, 16, 29, shift ? 24 : 21);
+        court_wall_h(29, 16, 29, shift ? 21 : 24);
+        court_wall_v(16, 16, 28, shift ? 23 : 20);
+        court_wall_v(29, 16, 28, shift ? 20 : 23);
+    } else if (district == 3) {
+        // INNER: crossing processional walls divide the field into wards.
+        court_wall_v((u8)(20 + shift), 2, 28, 8);
+        court_wall_h((u8)(20 - shift), 2, 29, 9);
+        court_stamp_cluster(24, 4, accent);
+        court_stamp_cluster(4, 24, accent);
+    } else {
+        // HEART: a broken nested keep makes the last row feel like an inner
+        // destination before the compact merchant/sanctuary/Colossus cadence.
+        court_wall_h(12, 14, 29, shift ? 24 : 20);
+        court_wall_v(14, 12, 28, shift ? 22 : 18);
+        court_wall_v(29, 12, 28, shift ? 18 : 22);
+        court_wall_h(28, 14, 29, shift ? 20 : 24);
+        court_wall_h(18, 19, 27, shift ? 23 : 20);
+    }
+}
+
 void room_generate_dungeon_court(u32 seed) BANKED {
     u8 x, y;
     u8 local = run_state_dungeon_local();
+    u8 district = (u8)(local / DUNGEON_GRID_W);
     u8 stage = (u8)(run_state.bosses_beaten % 9);
     u8 accent = (stage == 2 || stage == 4 || stage == 7)
         ? BGT_SPIKES : BGT_RUBBLE;
@@ -94,7 +165,7 @@ void room_generate_dungeon_court(u32 seed) BANKED {
             court_set(x, y,
                 (x == 0 || x == ROOM_WIDE_W_TILES - 1
                     || y == 0 || y == ROOM_WIDE_H_TILES - 1)
-                ? BGT_WALL : court_texture(seed, x, y));
+                ? BGT_WALL : court_texture(seed, x, y, district));
         }
     }
 
@@ -116,18 +187,13 @@ void room_generate_dungeon_court(u32 seed) BANKED {
         for (x = bx; x < (u8)(bx + 4); ++x)
             court_set(x, by, (x & 1) ? BGT_PILLAR : accent);
     }
-    if (local >= 11) {
-        u8 gap = (seed & 0x100) ? 17 : 22;
-        for (x = 15; x <= 24; ++x)
-            if (x != gap && x != (u8)(gap + 1))
-                court_set(x, 13, (x & 1) ? BGT_PILLAR : accent);
-    }
     // Two recognizable side halls make camera travel expose architecture,
     // not a mostly empty floor. Seed-selected paired gaps keep both chambers
     // permeable while their walls create Penta-style firing lanes and cover.
     court_stamp_ruin(20, 2, 9, 8, shift ? 25 : 22, 5);
     court_stamp_ruin(14, 16, 15, 13,
                      shift ? 24 : 20, shift ? 23 : 19);
+    court_stamp_district(district, variant, accent);
 
     // The familiar cardinal lanes are authoritative and are carved last, so
     // no landmark or ruin can turn a visible graph threshold into decoration.
@@ -141,8 +207,15 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     }
 
     // Guaranteed body-valid encounter aprons in both distant sectors.
-    court_floor_rect(22, 5, 4, 4);
-    court_floor_rect(25, 24, 4, 4);
+    // Carry the northeast apron through the side-hall perimeter. District
+    // pylons may cross the old ruin, and a body entering from its far side
+    // must never be marooned between that landmark and the outer wall.
+    court_floor_rect(19, 5, 11, 4);
+    // The lower ruin can be crossed by both its own perimeter and the Inner
+    // district's processional walls. Reopen a body-wide cloister through
+    // every overlapping layer so neither half becomes an isolated pocket.
+    court_floor_rect(13, 19, 17, 2);
+    court_floor_rect(23, 24, 7, 6);
     if (local == run_state_dungeon_cache_cell()) {
         // One generated dead-end owns a recognizable southeast reliquary.
         // It sits well away from the cardinal cross, making the scrolling
@@ -174,6 +247,13 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     if (run_state_dungeon_neighbor(DIR_W) != 0xFF) {
         court_set(0, 8, BGT_DOOR); court_set(0, 9, BGT_DOOR);
     }
+
+    // Maze rows only connect north/south across a district boundary. The
+    // generator runs after the ordinary door whoosh, so this calm two-note
+    // bell replaces it precisely when the hero crosses into another named
+    // depth band. DIR_NONE on initial entry and nonlinear Rifts stays quiet.
+    if (run_state.entered_from == DIR_N || run_state.entered_from == DIR_S)
+        sfx_play(SFX_DISTRICT);
 }
 
 void room_reopen_dungeon_court_seams(u32 seed) BANKED {

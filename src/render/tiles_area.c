@@ -9,8 +9,8 @@
 
 // Compact all-caps outdoor signage. Every lit pixel uses colour 3 so the
 // labels remain crisp in the amber door palette against grass and paths.
-// Letters are intentionally loaded into combat-unused BG slots 76..89.
-static const u8 area_letters[14][16] = {
+// Letters are intentionally loaded into combat-unused BG slots 76..92.
+static const u8 area_letters[17][16] = {
     // R
     { 0x7C,0x7C, 0x42,0x42, 0x42,0x42, 0x7C,0x7C,
       0x48,0x48, 0x44,0x44, 0x42,0x42, 0x00,0x00 },
@@ -53,10 +53,19 @@ static const u8 area_letters[14][16] = {
     // O
     { 0x3C,0x3C, 0x42,0x42, 0x42,0x42, 0x42,0x42,
       0x42,0x42, 0x42,0x42, 0x3C,0x3C, 0x00,0x00 },
+    // P
+    { 0x7C,0x7C, 0x42,0x42, 0x42,0x42, 0x7C,0x7C,
+      0x40,0x40, 0x40,0x40, 0x40,0x40, 0x00,0x00 },
+    // N
+    { 0x42,0x42, 0x62,0x62, 0x52,0x52, 0x4A,0x4A,
+      0x46,0x46, 0x42,0x42, 0x42,0x42, 0x00,0x00 },
+    // H
+    { 0x42,0x42, 0x42,0x42, 0x42,0x42, 0x7E,0x7E,
+      0x42,0x42, 0x42,0x42, 0x42,0x42, 0x00,0x00 },
 };
 
 void tiles_load_area_labels(void) BANKED {
-    set_bkg_data(BGT_AREA_R, 14, area_letters[0]);
+    set_bkg_data(BGT_AREA_R, 17, area_letters[0]);
 }
 
 static u8 wide_attr(u8 tile, u8 outdoor) {
@@ -175,6 +184,21 @@ void tiles_draw_area_label(u8 kind) BANKED {
     static const u8 forge[5] = {
         BGT_AREA_F, BGT_AREA_O, BGT_AREA_R, BGT_AREA_G, BGT_AREA_E
     };
+    static const u8 gate[4] = {
+        BGT_AREA_G, BGT_AREA_A, BGT_AREA_T, BGT_AREA_E
+    };
+    static const u8 lower[5] = {
+        BGT_AREA_L, BGT_AREA_O, BGT_AREA_W, BGT_AREA_E, BGT_AREA_R
+    };
+    static const u8 deep[4] = {
+        BGT_AREA_D, BGT_AREA_E, BGT_AREA_E, BGT_AREA_P
+    };
+    static const u8 inner[5] = {
+        BGT_AREA_I, BGT_AREA_N, BGT_AREA_N, BGT_AREA_E, BGT_AREA_R
+    };
+    static const u8 heart[5] = {
+        BGT_AREA_H, BGT_AREA_E, BGT_AREA_A, BGT_AREA_R, BGT_AREA_T
+    };
     static const u8 attrs[8] = {
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR,
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR
@@ -184,7 +208,12 @@ void tiles_draw_area_label(u8 kind) BANKED {
     if (kind == 1) { letters = riftwild; x = 6; width = 8; }
     else if (kind == 2) { letters = village; x = 7; width = 7; }
     else if (kind == 3) { letters = market; x = 7; width = 6; }
-    else { letters = forge; x = 8; width = 5; }
+    else if (kind == 4) { letters = forge; x = 8; width = 5; }
+    else if (kind == 5) { letters = gate; x = 8; width = 4; }
+    else if (kind == 6) { letters = lower; x = 8; width = 5; }
+    else if (kind == 7) { letters = deep; x = 8; width = 4; }
+    else if (kind == 8) { letters = inner; x = 8; width = 5; }
+    else { letters = heart; x = 8; width = 5; }
     // A Riftwild field may have crossed several continuous seams. Project the
     // display-only sign through the same logical-to-physical origin instead
     // of writing it into the previous field's canonical top-left.

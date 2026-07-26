@@ -9,6 +9,25 @@
 #include "game/run_state.h"
 #include "render/tiles.h"
 
+u8 room_district_label_ticks;
+static u8 room_district_label_kind;
+static u8 room_district_label_stage;
+
+void room_show_district_label(u8 kind) BANKED {
+    if (kind != room_district_label_kind
+        || run_state.bosses_beaten != room_district_label_stage) {
+        room_district_label_kind = kind;
+        room_district_label_stage = run_state.bosses_beaten;
+        room_district_label_ticks = 120; // two-second Zelda-style arrival beat
+        tiles_draw_area_label(kind);
+    } else {
+        // A redraw or a seam within the same district restores ordinary
+        // terrain. Do not turn the callout into permanent map signage.
+        room_district_label_ticks = 0;
+        tiles_stream_wide_row(1, ROOM_BG_MAP_Y(1));
+    }
+}
+
 static u8 render_attr(u8 x, u8 y, u8 tile) {
     if (room_puzzle_kind == PUZZLE_PHASE_GATE
         && y == room_puzzle_visual_y && x >= 2 && x < ROOM_W - 2)
@@ -101,4 +120,7 @@ void room_draw_tilemap(void) BANKED {
     if (run_state.world_mode) tiles_draw_area_label(1);
     else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
+    else if (procgen_current_room_is_large)
+        room_show_district_label((u8)(5
+            + run_state_dungeon_local() / DUNGEON_GRID_W));
 }

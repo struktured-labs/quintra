@@ -1,5 +1,74 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## v0.18.87 attended geography, scale, and merchant findings
+
+Attended Pocket play likes the new larger rooms. The five Compass rows now
+correspond to five physical 248×248 depth dialects—Gate, Lower, Deep, Inner,
+and Heart—rather than one repeated court grammar. Each owns a distant
+multi-tile silhouette, connected encounter aprons, and a restrained boundary
+bell. The first presentation pass left names such as `LOWER` permanently over
+black/floor tiles, which made them look like unexplained terrain. They are now
+two-second Zelda-style arrival callouts. Exact rotated-VRAM coverage proves
+that the generated row returns afterward and that a same-district seamless
+crossing cannot carry stale letters into its neighbour.
+
+The same session repeated the long-standing bottom-centre block-clipping
+report. The root was broader than walking: damage knockback checked four
+corners while walking checked six feet/body probes, so a hit could embed the
+hero on the centre of a one-tile pillar. A permissive recovery route could
+then model the scenery as a tunnel. Walking, dashes, and knockback now share
+the complete collision contract and ordinary input has no embedded-scenery
+exception. Live-ROM coverage pins crate/pillar contact from below, dash
+contact, an impossible embedded fixture, and x/y=232 world bounds. A fresh
+button-only campaign crosses the formerly permanent room-72 stall, defeats all
+nine Colossi, and reaches room 220 victory. Its cold recorded-input replay
+passes in 158,896 frames with 16 HP remaining.
+
+The champion/tile proportion is not conclusively wrong, but the mixed feeling
+has a concrete source. The logical champion and collision footprint are
+16×16—two 8×8 tiles, the conventional top-down Game Boy ratio—while much of
+the opaque character art reads closer to one tile and several environmental
+objects remain literal one-tile marks. Shrinking the champion would reduce
+directional animation and handheld readability without fixing that mismatch.
+The next art pass should keep the 16×16 metasprite/collision contract and make
+important architecture and props read as deliberate multi-tile forms; attended
+Pocket play should decide whether the opaque hero silhouette itself then needs
+one or two more pixels of mass.
+
+Merchants sell nine semantic ware families: healing, procedural
+relics, max HP, attack, mana, vampirism, a one-dungeon chart, alternate
+weapons, and a fifteen-second class-shaped Surge. Village shelves include
+Flail/Spear trades, Vampiric Sigils, mapping, and permanent build stats.
+Nevertheless, attended play still reads the offers as uninteresting. The
+visual audit explains why: all but hearts and Surge collapse into essentially
+the same generic orb/diamond silhouette, while the meaningful description
+appears only near the shelf. This is both a communication and variety problem.
+
+The first response is now in v0.18.87. A dungeon merchant's featured shelf is
+seed-stable but can be an Iron Heart, Surge, Vampiric Sigil, Power Stone, Mana
+Gem, full dungeon Chart, or alternate A-weapon instead of alternating between
+only vitality and Surge. Approaching it already replaces the physical orb
+with the exact heart/forge/rune/lightning/fangs/chart/weapon glyph and price in
+the HUD; the shelf palette now also groups steel/weapon, crimson sustain, and
+cyan magic/information. ROM coverage enumerates all eight seed outcomes and
+executes a real Surge purchase. The next step remains more ambitious:
+dedicated physical silhouettes, short effect names before collision, and new
+risk/reward or weapon-geometry bargains—not merely more stat names.
+
+The goal-facing Compass and Colossus contracts remain materially present.
+SELECT is a tile-native 6×5 abstract graph with dim unknown nodes, bright
+visited links, current-room arrow, Sigil/trial/rift/loot/boss semantics, and
+stage context. The boss threshold has a 16×16 amber skull seal plus a
+one-shot roar and tremor before entry. All nine Colossi are BG-plane bodies
+roughly 64×48 through 128×80 around mobile weak points; the 224×136 arenas
+scroll and their gallery shows bodies occupying most of the viewport across
+multiple camera positions. This aligns with the reference direction: the
+[Penta Dragon asset index](https://www.spriters-resource.com/game_boy_gbc/pentadrag/)
+catalogues eleven separate enemy/boss sheets, and its documented play loop
+also ties kill-earned transformation power to boss pacing. Human validation
+still outranks screenshots: later Normal Colossi, merchant readability, and
+the current Compass should be tested directly from the refreshed deep states.
+
 ## v0.18.84 whole-world trainer correction
 
 The latest attended report remains authoritative: the stages feel compact.

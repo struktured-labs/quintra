@@ -131,4 +131,12 @@ void room_stream_wide_seam(u8 dir) BANKED {
     seam_place_player(
         (u8)((i16)player.x - room_camera_x + 8),
         (u8)((i16)player.y - room_camera_y + 16));
+    // The destination atlas has just rotated into place. Restore its
+    // display-only geographic sign here in the roomy streaming bank instead
+    // of burdening the resident combat loop.
+    if (run_state.world_mode)
+        tiles_draw_area_label(1);
+    else
+        room_show_district_label((u8)(5
+            + run_state_dungeon_local() / DUNGEON_GRID_W));
 }

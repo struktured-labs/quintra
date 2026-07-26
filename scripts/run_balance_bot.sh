@@ -18,6 +18,8 @@ MAX_WORLD_HOPS="${QUINTRA_BALANCE_MAX_WORLD_HOPS:-}"
 REQUIRED_ENEMIES="${QUINTRA_BALANCE_REQUIRED_ENEMIES:-}"
 HOST_TIMEOUT="${QUINTRA_BALANCE_HOST_TIMEOUT:-180}"
 MGBA_BIN="${QUINTRA_MGBA_BIN:-mgba-headless}"
+MGBA_STATE="${QUINTRA_MGBA_STATE:-}"
+RESUME_STATE="${QUINTRA_BALANCE_RESUME_STATE:-0}"
 # GBC cartridges are battery-backed. Every controller trial gets an isolated
 # save directory by default: otherwise mGBA can reuse the ROM-adjacent .sav
 # (or a prior trial's suspended run), making nominally paired seeds depend on
@@ -105,6 +107,7 @@ for run in "${RUN_IDS[@]}"; do
       save_dir="$MGBA_SAVE_ROOT/run-$run-class-$class-attempt-$attempt"
       mkdir -p "$save_dir"
       mgba_save_args=(-C "savegamePath=$save_dir")
+      if [ -n "$MGBA_STATE" ]; then mgba_save_args+=(-t "$MGBA_STATE"); fi
       trace_env=()
       debug_env=()
       if [ -n "$TRACE_DIR" ]; then
@@ -126,6 +129,7 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_PUZZLE_KIND_ADDR="$PUZZLE_KIND" \
         QUINTRA_PUZZLE_LOCKED_ADDR="$PUZZLE_LOCKED" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
+        QUINTRA_BOT_RESUME_STATE="$RESUME_STATE" \
         QUINTRA_BOT_TARGET_FRAME="$TARGET_FRAME" \
         QUINTRA_BOT_FRAMES="$FRAMES" QUINTRA_BOT_OUT="$trial_csv" \
         timeout "$HOST_TIMEOUT" "$MGBA_BIN" "${mgba_save_args[@]}" "$ROM" --script "$ROOT/scripts/quintra_balance_bot.lua" -l 0 \

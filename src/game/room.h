@@ -53,6 +53,9 @@ extern u8 room_bg_origin_y;
 #define ROOM_BG_MAP_X(x) ((u8)((room_bg_origin_x + (u8)(x)) & 31))
 #define ROOM_BG_MAP_Y(y) ((u8)((room_bg_origin_y + (u8)(y)) & 31))
 extern u8 room_transform_ticks;
+// Dungeon district names are short arrival callouts, not persistent terrain.
+// The Compass remains the permanent source of current-depth information.
+extern u8 room_district_label_ticks;
 // Temporary combat boon: decremented in active gameplay only, so menus do
 // not consume it and it never needs to inflate the suspend-save payload.
 extern u8 room_weapon_surge_ticks;
@@ -77,9 +80,17 @@ void room_reopen_dungeon_court_seams(u32 seed) BANKED;
 // the hardware BG ring while keeping the champion and music alive.
 void room_stream_wide_seam(u8 dir) BANKED;
 void room_draw_tilemap(void) BANKED;
+void room_show_district_label(u8 kind) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) BANKED;
+// Player top-left may occupy the legal door threshold but never pass it.
+u8 room_player_position_in_bounds(i16 x, i16 y) BANKED;
+// Full collision contract shared by knockback/recovery paths: six feet
+// samples plus the visible body faces of pillars and pushable blocks.
+u8 room_player_position_clear(i16 x, i16 y) BANKED;
+// Move a spike-hit champion to an immediately adjacent safe body position.
+void room_stumble_off_hazard(void) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.
 u8 room_tile_walkable(u8 t) BANKED;
 // A player shot hit a cracked wall: convert it to a secret door.

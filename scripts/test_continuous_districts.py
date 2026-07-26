@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Wide dungeon neighbours stream as one visible, reversible district."""
+"""Wide dungeon neighbours stream as one visible, reversible district.
+
+Depth names are brief arrival callouts; after their timer expires the rotated
+BG ring must contain the exact generated terrain again.
+"""
 import re
 from pathlib import Path
 
@@ -23,13 +27,23 @@ def addr(name):
 
 
 (RS, PL, TM, EXT, BOTTOM, SEALED, PUZZLE, LARGE, WORLD_W, WORLD_H, SCREEN,
- CAMERA_X, CAMERA_Y, ORIGIN_X, ORIGIN_Y, SHADOW_OAM, MUSIC_ROW) = map(addr, (
+ CAMERA_X, CAMERA_Y, ORIGIN_X, ORIGIN_Y, SHADOW_OAM, MUSIC_ROW,
+ LABEL_TICKS) = map(addr, (
     "_run_state", "_player", "_room_tilemap", "_room_world_extension",
     "_room_world_bottom", "_room_combat_sealed", "_room_puzzle_locked",
     "_procgen_current_room_is_large", "_room_world_width",
     "_room_world_height", "_loop_current_screen", "_room_camera_x", "_room_camera_y",
     "_room_bg_origin_x", "_room_bg_origin_y", "_shadow_OAM", "_music_row",
+    "_room_district_label_ticks",
 ))
+
+DISTRICT_LABELS = (
+    (85, 84, 79, 86),          # GATE
+    (81, 89, 80, 86, 76),      # LOWER
+    (82, 86, 86, 90),          # DEEP
+    (77, 91, 91, 86, 76),      # INNER
+    (92, 86, 84, 76, 79),      # HEART
+)
 
 
 def put16(pb, address, value):
@@ -62,6 +76,14 @@ def assert_rotated_bg_matches(pb, label):
         for x in range(31):
             physical = 0x9800 + ((oy + y) & 31) * 32 + ((ox + x) & 31)
             actual, expected = pb.memory[physical], logical_tile(pb, x, y)
+            # The named depth sign is display-only and brief. Pin its letters
+            # only during the two-second arrival beat; afterward every byte
+            # must match the generated collision terrain beneath it.
+            district = min((pb.memory[RS + 1] % 64) // 6, 4)
+            letters = DISTRICT_LABELS[district]
+            if (pb.memory[LABEL_TICKS] > 0
+                    and y == 1 and 8 <= x < 8 + len(letters)):
+                expected = letters[x - 8]
             if actual != expected:
                 mismatches.append((x, y, actual, expected))
     pb.memory[0xFF4F] = old_vbk

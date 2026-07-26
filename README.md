@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.86: Footprint Compass](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.87: Fivefold Depths](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,9 +22,54 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.86**, published after the complete build,
+The current cartridge is **v0.18.87**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
+**Dungeons now read as expeditions through five physical districts.** Each
+six-cell row of the Compass corresponds to a named region—**GATE, LOWER, DEEP,
+INNER,** and **HEART**—whose name briefly greets a new depth, then restores
+the generated terrain instead of lingering like an unexplained map tile. More importantly,
+each region owns a different full-field floor dialect and large architectural
+silhouette: outer pylons, offset retaining walls, a four-gated sunken ring,
+crossing processional wards, then a broken nested keep.
+
+These landmarks occupy the eastern and southern acreage beyond the old
+160×136 viewport rather than decorating only the entry corner. Their paired
+gaps preserve the generated maze and firing lanes, and the familiar cardinal
+route plus encounter aprons are carved after every silhouette. Crossing a
+north/south row boundary sounds a restrained two-note threshold bell without
+restarting the stage music.
+
+Walking, dashes, and damage knockback now share the same six-probe,
+full-body collision contract. A one-tile pillar or pushable block cannot be
+entered through its lower centre, and the controller can no longer treat an
+exceptional scenery overlap as a route through a wall. The complete 16×16
+champion also stops at the legal 248×248 field edge.
+
+Dungeon merchants now have a seed-stable featured shelf drawn from seven
+run-shaping families: Iron Heart, class-shaped Surge, vampirism, attack, mana,
+a full dungeon Chart, or an alternate A-weapon. Healing and the procedural
+relic remain dependable anchors, while the featured offer changes the build
+decision between expeditions without consuming combat RNG. Approaching a
+shelf shows its exact semantic glyph and price in the HUD before purchase.
+
+Stage 1 remains a 20-node dungeon—17 consecutive 248×248 fields plus its
+compact merchant, sanctuary, and Colossus cadence—and later dungeons reach 30
+nodes. This milestone addresses the attended report that they *felt* compact
+by giving distance a memorable regional cadence. It does not add filler rooms,
+extend mandatory objectives, or alter enemy, projectile, boss, reward, Normal,
+or Easy values. Live-ROM coverage proves all five fields differ materially,
+both deep encounter aprons remain connected, every sign renders through the
+rotated 31×31 map, and the Gate→Lower streaming seam remains reversible. A
+complete stage/archetype matrix also proves that every 2×2 body-valid position
+belongs to the central connected field. The overlap-recovery rule now stops at
+the legal field bounds; live-ROM coverage pins the east and south edges at
+x/y=232 while preserving safe spike depenetration. The fixed controller
+campaign then crosses the complete required route and defeats all nine
+Colossi at room 220; its cold recorded-input replay passes in 158,896 frames
+with 16 HP remaining.
+
+**v0.18.86 introduced the Footprint Compass.**
 **The SELECT map now communicates exploration by shape, not faint color
 alone.** Walked rooms retain their bright square frame and gain a visible
 stippled interior. Unvisited rooms remain recognizable squares but use empty,
@@ -1814,13 +1859,13 @@ prove it is in all three late pools without raising their total spawn weight;
 live-ROM coverage proves its sprite handoff and five real projectile lanes.
 A complete nine-boss controller replay still wins after the new threat.
 
-v0.17.88 gives every dungeon merchant a seed-stable premium choice: some runs
-offer the permanent **Iron Heart** as before, while others offer a cyan
-**Surge Tonic** for 20 coins. It starts the visible 15-second primary-weapon
-burst—faster shots and +1 damage—without permanently inflating a run. The
-stock's unique orb, lightning HUD icon, exact price, floor label, purchase,
-and timer are all live-ROM tested; Rust/C procgen parity covers both seeded
-price variants. Village market stock remains fixed and unchanged.
+v0.17.88 first gave every dungeon merchant a seed-stable Iron Heart/Surge
+premium fork. v0.18.87 expands that same shelf to seven families—vitality,
+Surge, vampirism, attack, mana, charting, and alternate weapons—while keeping
+the exact-price HUD and distinct semantic glyph contract. The cyan **Surge
+Tonic** still costs 20 coins and starts the visible 15-second primary-weapon
+burst without permanently inflating a run. Live-ROM coverage now enumerates
+every featured outcome and performs the real priced purchase.
 
 v0.17.87 reserves every stage's **Rift Sigil** before dense procgen combat and
 loot can fill the fixed entity table. A live reproduction of the formerly

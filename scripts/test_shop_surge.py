@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: seeded dungeon shops offer a readable Surge premium variant."""
+"""ROM contract: dungeon merchants offer readable procedural build choices."""
 import re
 from pathlib import Path
 
@@ -42,7 +42,7 @@ def boot_shop(seed_low):
         pb.tick()
 
     # Make the next real graph transaction land in the opening shop two rooms
-    # before its boss. The low seed byte selects vitality versus Surge.
+    # before its boss. The low seed byte selects both featured shelves.
     target = STAGE_BOSS_ROOM[0] - 2
     source = target - 1
     pb.memory[RS + 1] = source
@@ -76,16 +76,14 @@ def boot_shop(seed_low):
     return pb
 
 
-def premium_ware(pb):
+def shop_wares(pb):
     wares = []
     for i in range(32):
         e = EN + i * 28
         if pb.memory[e] == 3 and pb.memory[e + 17] == 4:
             wares.append(e)
     assert len(wares) == 3, f"merchant stock missing: {len(wares)}"
-    premium = [e for e in wares if pb.memory[e + 18] in (2, 5)]
-    assert len(premium) == 1, "premium shelf did not have exactly one variant"
-    return premium[0]
+    return {pb.memory[e + 18]: e for e in wares}
 
 
 def near(pb, ware):
@@ -98,28 +96,28 @@ def near(pb, ware):
 
 
 def main():
-    # Even seed keeps the permanent vitality premium, including its old HUD
-    # contract, so seed variation adds a choice rather than removes a build.
-    pb = boot_shop(0)
-    vital = premium_ware(pb)
-    assert pb.memory[vital + 18] == 2
-    assert pb.memory[vital + 12] == 35 and pb.memory[vital + 13] == 4
-    near(pb, vital)
-    assert pb.memory[0x9C00 + 12] == 42, "Iron Heart premium lost vital HUD icon"
-    assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 13, 9))
-    pb.stop(save=False)
+    # Eight adjacent seeds cover the complete featured pool. Every shop keeps
+    # healing and a mystery relic, then adds a seed-stable run-shaping offer
+    # without consuming combat RNG.
+    expected = (2, 5, 6, 3, 4, 7, 8, 2)
+    for seed, featured in enumerate(expected):
+        pb = boot_shop(seed)
+        assert set(shop_wares(pb)) == {0, 1, featured}, (
+            f"seed {seed} featured stock drifted: "
+            f"{sorted(shop_wares(pb))} != {sorted({0, 1, featured})}"
+        )
+        pb.stop(save=False)
 
-    # Odd seed selects the cyan, temporary 15-second premium. Verify the real
-    # walk-into transaction (currency, entity removal, HUD, and timer), not a
-    # debugger write to the effect state.
+    # Seed one offers the cyan 15-second Surge. Verify the semantic shelf
+    # treatment and real transaction, not a debugger write to its timer.
     pb = boot_shop(1)
-    surge = premium_ware(pb)
-    assert pb.memory[surge + 18] == 5
+    wares = shop_wares(pb)
+    surge = wares[5]
     assert pb.memory[surge + 12] == 126 and pb.memory[surge + 13] == 6, \
-        "Surge premium does not use its distinct cyan orb"
-    assert pb.memory[surge + 19] == 20, "Surge premium price drifted"
+        "Surge shelf does not use its distinct cyan orb"
+    assert pb.memory[surge + 19] == 20, "Surge shelf price drifted"
     near(pb, surge)
-    assert pb.memory[0x9C00 + 12] == 45, "Surge premium lacks lightning HUD icon"
+    assert pb.memory[0x9C00 + 12] == 45, "Surge shelf lacks lightning HUD icon"
     assert bytes(pb.memory[0x9C00 + 13:0x9C00 + 16]) == bytes((7, 11, 9))
     pb.memory[PL + 16] = 99
     pb.memory[PL + 17] = 0
@@ -130,13 +128,13 @@ def main():
     for _ in range(8):
         pb.tick()
     assert pb.memory[surge] == 0, (
-        "purchased Surge premium remained in stock "
+        "purchased Surge remained in stock "
         f"player={list(pb.memory[PL + 9:PL + 18])} "
         f"ware={list(pb.memory[surge:surge + 26])}")
-    assert pb.memory[SURGE] > 100, "Surge premium did not start temporary weapon burst"
-    assert pb.memory[PL + 16] == 79, "Surge premium charged the wrong price"
+    assert pb.memory[SURGE] > 100, "Surge did not start temporary weapon burst"
+    assert pb.memory[PL + 16] == 79, "Surge charged the wrong price"
     pb.stop(save=False)
-    print("[shop-surge] PASS seeded vitality/Surge shelves + visible purchase contract")
+    print("[shop-surge] PASS seven-family procedural shelf + semantic HUD + Surge purchase")
 
 
 if __name__ == "__main__":

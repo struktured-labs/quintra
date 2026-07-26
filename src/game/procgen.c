@@ -111,8 +111,10 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     if (ware == WARE_WEAPON) entities[idx].ai_data[3] = town_market_weapon();
     entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART
         : (ware == WARE_SURGE) ? SPR_SURGE_ORB : SPR_ITEM_ORB;
-    entities[idx].palette = (ware == WARE_ITEM) ? 0x05
-        : (ware == WARE_SURGE || ware == WARE_CHART) ? 0x06 : 0x04;
+    entities[idx].palette = (ware == WARE_ITEM || ware == WARE_FORGE
+            || ware == WARE_WEAPON) ? 0x05
+        : (ware == WARE_SURGE || ware == WARE_RUNE
+            || ware == WARE_CHART) ? 0x06 : 0x04;
     // Keep the stock's heart/relic sprite intact and put the dedicated gold
     // sale tag above it. This answers "can I pick this up?" before the player
     // has to walk into a ware or discover the bottom-HUD price convention.
@@ -123,17 +125,22 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     return idx;
 }
 
-// The dungeon's premium shelf is seed-stable without consuming RNG: some
-// expeditions offer permanent vitality, others let a cash-rich player buy a
-// short pre-boss damage/speed window. The player can read both the cyan orb
-// and the dedicated lightning HUD glyph before touching either stock.
-static u8 dungeon_premium_ware(void) {
-    return (((u8)run_state.run_seed ^ run_state.bosses_beaten) & 1)
-        ? WARE_SURGE : WARE_BIG;
+// The featured shelf is seed-stable without consuming combat RNG. It can
+// reshape offense, sustain, magic, route knowledge, weapon geometry, or the
+// next fight instead of alternating between only vitality and Surge.
+static u8 dungeon_featured_ware(void) {
+    static const u8 wares[8] = {
+        WARE_BIG, WARE_SURGE, WARE_VAMP, WARE_FORGE,
+        WARE_RUNE, WARE_CHART, WARE_WEAPON, WARE_BIG,
+    };
+    return wares[((u8)run_state.run_seed ^ run_state.bosses_beaten) & 7];
 }
 
-static u8 dungeon_premium_price(u8 ware) {
-    return (ware == WARE_SURGE) ? 20 : 40;
+static u8 dungeon_ware_price(u8 ware) {
+    if (ware == WARE_CHART) return 15;
+    if (ware == WARE_SURGE) return 20;
+    if (ware == WARE_VAMP || ware == WARE_BIG) return 35;
+    return 30;
 }
 
 static void paint_shop_price(u8 tx, u8 price) {
@@ -1325,20 +1332,21 @@ void procgen_generate_current_room(void) BANKED {
                 clear_reach_marks_local();
             }
         } else if (is_shop) {
-            // MERCHANT room: three wares, no enemies. The premium shelf is
-            // seed-stable: a permanent Iron Heart or a cheap, temporary Surge.
+            // MERCHANT room: three readable wares, no enemies. Recovery and
+            // a mystery relic remain familiar anchors; the featured shelf
+            // rotates through seven genuinely different run decisions.
             {
-                u8 premium = dungeon_premium_ware();
+                u8 featured = dungeon_featured_ware();
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(56, 64, WARE_HEART, 10);
                 spawn_shop_ware(80, 64, WARE_ITEM, 25);
-                spawn_shop_ware(104, 64, premium, dungeon_premium_price(premium));
+                spawn_shop_ware(104, 64, featured, dungeon_ware_price(featured));
                 // Price tags painted on the floor under each ware:
-                // [coin][d][d], amber, walkable. Wares sit at tile y=8;
-                // tags at y=10 leave a step of space.
+                // [coin][d][d], amber, walkable. The nearby HUD replaces the
+                // generic orb with its semantic effect icon before purchase.
                 paint_shop_price(6, 10);
                 paint_shop_price(9, 25);
-                paint_shop_price(12, dungeon_premium_price(premium));
+                paint_shop_price(12, dungeon_ware_price(featured));
             }
         } else {
             // Enemy count scales with depth. One lone crawler made too many

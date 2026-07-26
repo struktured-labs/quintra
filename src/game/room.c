@@ -416,55 +416,18 @@ static u8 player_body_obstacles_at(i16 x, i16 y) {
     return n;
 }
 
-static u8 player_feet_walkable_at(i16 x, i16 y) {
-    return player_feet_blocked_at(x, y) == 0;
-}
-
-// Knockback can put a body a few pixels inside scenery even though ordinary
-// input cannot enter it. Permit movement until that exceptional overlap is
-// clear; an unobstructed player can still never take the first step into a
-// solid tile. Requiring the sampled overlap count to decrease every pixel
-// creates another trap when the left/centre/right probes change tile columns.
+// Walking and damage knockback now share the same complete collision
+// contract. There is deliberately no "already overlapping" exception here:
+// it turned a one-pixel controller route into a tunnel through scenery.
 static u8 player_horizontal_step_allowed(i16 nx, i16 y) {
-    u8 next = player_feet_blocked_at(nx, y);
-    if (next == 0) return 1;
-    {
-        u8 current = player_feet_blocked_at(player.x, y);
-        return current != 0;
-    }
+    return room_player_position_in_bounds(nx, y)
+        && player_feet_blocked_at(nx, y) == 0;
 }
 
 static u8 player_vertical_step_allowed(i16 x, i16 ny) {
-    u8 next = (u8)(player_feet_blocked_at(x, ny)
-        + player_body_obstacles_at(x, ny));
-    if (next == 0) return 1;
-    {
-        u8 current = (u8)(player_feet_blocked_at(x, player.y)
-            + player_body_obstacles_at(x, player.y));
-        return current != 0;
-    }
-}
-
-// A spike is a readable positional tax, never a soft-lock. Contact can occur
-// after an enemy knockback or at a sub-tile seam where the player's attempted
-// escape is still resolving. When an immediately adjacent body position is
-// clear of spikes, stumble there with the same one-time hit that started the
-// recovery window. Dense spike fields retain their danger—this only prevents
-// repeated unavoidable damage while a safe lane is already beside the hero.
-static void room_stumble_off_hazard(void) {
-    static const i8 dx[4] = { 0, 8, 0, -8 };
-    static const i8 dy[4] = { -8, 0, 8, 0 };
-    u8 i;
-    for (i = 0; i < 4; ++i) {
-        ppos_t nx = (ppos_t)(player.x + dx[i]);
-        ppos_t ny = (ppos_t)(player.y + dy[i]);
-        if (room_tile_at_px(nx + 8, ny + 12) == BGT_SPIKES) continue;
-        if (player_feet_walkable_at(nx, ny)) {
-            player.x = nx;
-            player.y = ny;
-            return;
-        }
-    }
+    return room_player_position_in_bounds(x, ny)
+        && player_feet_blocked_at(x, ny) == 0
+        && player_body_obstacles_at(x, ny) == 0;
 }
 
 static const u16 outdoor_floor_pal[4] = {
@@ -1104,6 +1067,10 @@ void room_exit(void) {
 screen_id_t room_tick(u8 keys, u8 pressed) {
     if (door_bump_cd) door_bump_cd--;
     if (arrival_sprite_grace) arrival_sprite_grace--;
+    if (room_district_label_ticks
+        && --room_district_label_ticks == 0) {
+        tiles_stream_wide_row(1, ROOM_BG_MAP_Y(1));
+    }
     // Consume active-room wall time before any route can leave this screen.
     // This preserves the fraction earned before START/SELECT was pressed.
     room_clock_consume();
@@ -2034,7 +2001,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // retain the safe blanked rebuild.
                 if (seamless_wide) {
                     room_stream_wide_seam(dir);
-                    if (run_state.world_mode) tiles_draw_area_label(1);
                 } else if (!source_was_wide
                     && room_world_width <= ROOM_VIEW_W_PX
                     && room_world_height <= ROOM_VIEW_H_PX

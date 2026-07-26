@@ -20,6 +20,7 @@ enum {
     SFX_TICK,         // boss telegraph: quiet mechanical click
     SFX_WEAK,         // elemental super-effective: bright rising crystal ping
     SFX_PUZZLE,       // landscape secret: long spooky four-note discovery cue
+    SFX_DISTRICT,     // crossing a dungeon depth band: low/high wayfinding bell
 };
 
 void sfx_play(u8 id);

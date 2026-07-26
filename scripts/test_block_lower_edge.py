@@ -28,7 +28,10 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PL, EN, TM = map(addr, ("_player", "_entities", "_room_tilemap"))
+PL, EN, TM, EXT, BOTTOM, WORLD_W, WORLD_H = map(addr, (
+    "_player", "_entities", "_room_tilemap", "_room_world_extension",
+    "_room_world_bottom", "_room_world_width", "_room_world_height",
+))
 
 
 def put16(pb, address, value):
@@ -99,14 +102,15 @@ def center_obstacle_fixture(pb):
 
 
 def center_overlap_fixture(pb):
-    """Knockback-style overlap can move outward without permitting entry."""
+    """An impossible embedded fixture cannot be used to tunnel either way."""
     fixture(pb)
     tx, ty = 10, 8
     for y in (ty, ty + 1):
         for x in range(tx - 1, tx + 3):
             pb.memory[TM + y * ROOM_W + x] = BGT_FLOOR
     pb.memory[TM + ty * ROOM_W + tx] = BGT_PILLAR
-    # Centre sample begins inside the pillar, as can happen after knockback.
+    # Centre sample begins inside the pillar. Real knockback now rejects this
+    # position; this synthetic state proves input cannot exploit it.
     put16(pb, PL + 9, 77)
     put16(pb, PL + 11, 56)
     pb.memory[PL + 23] = 0
@@ -167,6 +171,18 @@ def main():
     )
 
     center_overlap_fixture(pb)
+    pb.button_press("right")
+    for _ in range(60):
+        pb.tick()
+    pb.button_release("right")
+    for _ in range(4):
+        pb.tick()
+    tunnel_x = read16(pb, PL + 9)
+    assert tunnel_x == 77, (
+        f"overlap recovery tunnelled deeper through pillar: x={tunnel_x}"
+    )
+
+    center_overlap_fixture(pb)
     pb.button_press("left")
     for _ in range(30):
         pb.tick()
@@ -174,14 +190,45 @@ def main():
     for _ in range(4):
         pb.tick()
     escaped_x = read16(pb, PL + 9)
-    assert escaped_x <= 70, (
-        f"knockback overlap could not depenetrate from pillar: x={escaped_x}"
+    assert escaped_x == 77, (
+        f"embedded fixture escaped through opposite pillar face: x={escaped_x}"
     )
+
+    # The same overlap exception must never turn a real field boundary into
+    # an infinite escape lane. Stand exactly on each legal far threshold with
+    # a non-door wall under the collision probes, then hold outward.
+    assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
+    for ty in (5, 6, 7):
+        for tx in (29, 30):
+            pb.memory[EXT + ty * 11 + tx - 20] = BGT_WALL
+    put16(pb, PL + 9, 232)
+    put16(pb, PL + 11, 40)
+    pb.button_press("right")
+    for _ in range(80):
+        pb.tick()
+    pb.button_release("right")
+    pb.tick(4)
+    east_x = read16(pb, PL + 9)
+    assert east_x == 232, f"walk escaped east world bound: x={east_x}"
+
+    for tx in (5, 6, 7):
+        pb.memory[BOTTOM + 13 * 31 + tx] = BGT_WALL
+    put16(pb, PL + 9, 40)
+    put16(pb, PL + 11, 232)
+    pb.button_press("down")
+    for _ in range(80):
+        pb.tick()
+    pb.button_release("down")
+    pb.tick(4)
+    south_y = read16(pb, PL + 11)
+    assert south_y == 232, f"walk escaped south world bound: y={south_y}"
 
     pb.stop(save=False)
     print(
         f"[block-lower-edge] PASS crate walk y={walked_y}, dash y={dashed_y}; "
-        f"pillar y={pillar_y}, centre pillar y={center_y}, escape x={escaped_x}"
+        f"pillar y={pillar_y}, centre pillar y={center_y}, "
+        f"overlap hold={tunnel_x}, escape x={escaped_x}; "
+        f"world bounds east={east_x} south={south_y}"
     )
 
 

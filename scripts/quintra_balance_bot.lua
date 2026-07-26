@@ -150,6 +150,10 @@ local DEBUG = os.getenv("QUINTRA_BOT_DEBUG") == "1"
 local DEBUG_OUT = os.getenv("QUINTRA_BOT_DEBUG_OUT")
 local DEBUG_SCREEN = os.getenv("QUINTRA_BOT_DEBUG_SCREEN")
 local TRACE_OUT = os.getenv("QUINTRA_BOT_TRACE_OUT")
+-- Targeted policy diagnostics may start from one of the native five-minute
+-- states emitted below. In that mode the cartridge is already in a stable
+-- live room, so title/class/seed input would destroy the reproduction.
+local RESUME_STATE = os.getenv("QUINTRA_BOT_RESUME_STATE") == "1"
 -- The input trace is exact but intentionally opaque (RLE button masks). The
 -- optional observation trace is a compact, read-only state/action dataset for
 -- controller review and future offline RL experiments. It samples each eight
@@ -758,6 +762,9 @@ function shop_target(px, py, hp, hp_max, mp_max, coins)
                     or (ware == 6 and 82)
                     or (ware == 4 and mp_max < 20 and 85)
                     or (ware == 2 and hp_max < 16 and 80)
+                    or (ware == 8 and 88)
+                    or (ware == 5 and 75)
+                    or (ware == 7 and 60)
                     or (ware == 1 and 70) or -1
                 local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
                 local d = math.abs(ex - px) + math.abs(ey - py)
@@ -901,18 +908,25 @@ function can_step(px, py, key)
     elseif key == KEY_DOWN then ny = ny + 1
     elseif key == KEY_UP then ny = ny - 1
     else return true end
+    -- room.c bounds the complete 16x16 champion before applying its
+    -- exceptional scenery-overlap recovery. Keep the controller's physical
+    -- model identical: treating the narrower 12px feet box as the field
+    -- extent lets a cached route target x=233/234 even though the cartridge
+    -- correctly stops at x=232.
+    if nx < 0 or ny < 0
+        or nx > QUINTRA_ARENA_W - 16
+        or ny > QUINTRA_ARENA_H - 16 then
+        return false
+    end
     local next_blocked = pixel_feet_blocked(nx, ny)
-    -- Mirror room.c's vertical full-sprite rule for crates and small pillars,
-    -- including its knockback depenetration contract.
+    -- Mirror room.c's vertical full-sprite rule for crates and small pillars.
     if key == KEY_UP or key == KEY_DOWN then
         next_blocked = next_blocked + pixel_body_obstacles(nx, ny)
     end
-    if next_blocked == 0 then return true end
-    local current_blocked = pixel_feet_blocked(px, py)
-    if key == KEY_UP or key == KEY_DOWN then
-        current_blocked = current_blocked + pixel_body_obstacles(px, py)
-    end
-    return current_blocked > 0
+    -- Damage knockback now uses the exact same complete-body contract, so a
+    -- legal run cannot begin a controller frame embedded in scenery. Never
+    -- model an overlap escape: that was the source of one-pixel wall tunnels.
+    return next_blocked == 0
 end
 
 -- A tile node can be feet-valid while the hero's upper body is tucked under
@@ -1442,7 +1456,7 @@ end
 local body_goal_pixel_route = nil
 function exact_body_goal_step(px, py, goal_x, goal_y)
     local stride = QUINTRA_ARENA_W
-    local max_player_x = QUINTRA_ARENA_W - 14
+    local max_player_x = QUINTRA_ARENA_W - 16
     local max_player_y = QUINTRA_ARENA_H - 16
     local start = py * stride + px
     local start_feet_tx = math.floor((px + 8) / 8)
@@ -1561,7 +1575,7 @@ end
 function wide_cardinal_route_step(px, py, wanted)
     local goal_x, goal_y = 72, 60
     if wanted == 0 then goal_y = 0
-    elseif wanted == 1 then goal_x = QUINTRA_ARENA_W - 14
+    elseif wanted == 1 then goal_x = QUINTRA_ARENA_W - 16
     elseif wanted == 2 then goal_y = QUINTRA_ARENA_H - 16
     else goal_x = 0 end
     local route = exact_body_goal_step(px, py, goal_x, goal_y)
@@ -1841,6 +1855,7 @@ end
 -- cover.  Unlike the Mire Spore route, no safety exclusion is needed: the
 -- expanded Star is handled by its separate orbit policy below.
 fold_star_pixel_route = nil
+fold_star_seam_escape_dir, fold_star_seam_escape_ticks = 0, 0
 function fold_star_shot_lane(px, py, ex, ey, max_range)
     local sx, sy = px + 6, py + 6
     local gx, gy = ex + 4, ey + 4
@@ -2664,57 +2679,66 @@ end
 -- padding only looked fair while silently producing five different seeds.
 -- BOOT_EXTRA narrows an entropy-dependent failure without touching cartridge
 -- RNG or game state: it is literally extra title-idle time a player could wait.
-for _ = 1, (120 + RUN * 37 + BOOT_EXTRA) do tick(0) end
-tap(KEY_START)
-for _ = 1, 40 do tick(0) end
-local select_base = FC ~= 0 and read16(FC) or 0
-for _ = 1, CLASS do
-    tap(KEY_DOWN)
-    for _ = 1, 12 do tick(0) end
-end
-if EASY then tap(KEY_SELECT) end
-if DEBUG then
-    debug_log(string.format("BOTBOOT class=%d easy=%d select_frame=%d screen=%d target=%s",
-        CLASS, EASY and 1 or 0, FC ~= 0 and read16(FC) or 0,
-        LS ~= 0 and emu:read8(LS) or 255,
-        TARGET_FRAME and tostring(TARGET_FRAME) or "-"))
-end
-if FC ~= 0 and TARGET_FRAME then
-    -- run_init_enter seeds the run from this exact pre-confirm loop frame.
-    -- Absolute alignment—not a delay relative to class-select entry—is what
-    -- makes a saved controller trace genuinely reproducible across launches.
-    while read16(FC) ~= TARGET_FRAME do tick(0) end
-elseif FC ~= 0 then
-    local confirm_at = (select_base + 160) % 65536
-    while read16(FC) ~= confirm_at do tick(0) end
-else
-    -- Compatibility fallback for an old linker map.
-    for _ = 1, ((4 - CLASS) * 16) do tick(0) end
-end
-if DEBUG then
-    debug_log(string.format("BOTALIGN class=%d frame=%d screen=%d",
-        CLASS, FC ~= 0 and read16(FC) or 0, LS ~= 0 and emu:read8(LS) or 255))
-end
-tap(KEY_A)
-if TARGET_FRAME and LS ~= 0 and PL ~= 0 then
-    -- Synchronize to the first actually playable room. run_init/procgen gives
-    -- the hero 60 visible entry iframes; reading them makes the exact replay
-    -- independent of title/class/room rendering cost while remaining pure
-    -- controller input. A bounded wait turns a boot regression into a normal
-    -- failed trial instead of hanging the host.
-    ready_wait = 0
-    while ready_wait < 120
-        and (emu:read8(LS) ~= 5 or emu:read8(PL + 2) == 0
-            or emu:read8(PL + 15) == 0) do
-        tick(0)
-        ready_wait = ready_wait + 1
+if not RESUME_STATE then
+    for _ = 1, (120 + RUN * 37 + BOOT_EXTRA) do tick(0) end
+    tap(KEY_START)
+    for _ = 1, 40 do tick(0) end
+    local select_base = FC ~= 0 and read16(FC) or 0
+    for _ = 1, CLASS do
+        tap(KEY_DOWN)
+        for _ = 1, 12 do tick(0) end
     end
-    while ready_wait < 180 and emu:read8(PL + 15) > READY_IFRAMES do
-        tick(0)
-        ready_wait = ready_wait + 1
+    if EASY then tap(KEY_SELECT) end
+    if DEBUG then
+        debug_log(string.format("BOTBOOT class=%d easy=%d select_frame=%d screen=%d target=%s",
+            CLASS, EASY and 1 or 0, FC ~= 0 and read16(FC) or 0,
+            LS ~= 0 and emu:read8(LS) or 255,
+            TARGET_FRAME and tostring(TARGET_FRAME) or "-"))
+    end
+    if FC ~= 0 and TARGET_FRAME then
+        -- run_init_enter seeds the run from this exact pre-confirm loop frame.
+        -- Absolute alignment—not a delay relative to class-select entry—is what
+        -- makes a saved controller trace genuinely reproducible across launches.
+        while read16(FC) ~= TARGET_FRAME do tick(0) end
+    elseif FC ~= 0 then
+        local confirm_at = (select_base + 160) % 65536
+        while read16(FC) ~= confirm_at do tick(0) end
+    else
+        -- Compatibility fallback for an old linker map.
+        for _ = 1, ((4 - CLASS) * 16) do tick(0) end
+    end
+    if DEBUG then
+        debug_log(string.format("BOTALIGN class=%d frame=%d screen=%d",
+            CLASS, FC ~= 0 and read16(FC) or 0, LS ~= 0 and emu:read8(LS) or 255))
+    end
+    tap(KEY_A)
+    if TARGET_FRAME and LS ~= 0 and PL ~= 0 then
+        -- Synchronize to the first actually playable room. run_init/procgen gives
+        -- the hero 60 visible entry iframes; reading them makes the exact replay
+        -- independent of title/class/room rendering cost while remaining pure
+        -- controller input. A bounded wait turns a boot regression into a normal
+        -- failed trial instead of hanging the host.
+        ready_wait = 0
+        while ready_wait < 120
+            and (emu:read8(LS) ~= 5 or emu:read8(PL + 2) == 0
+                or emu:read8(PL + 15) == 0) do
+            tick(0)
+            ready_wait = ready_wait + 1
+        end
+        while ready_wait < 180 and emu:read8(PL + 15) > READY_IFRAMES do
+            tick(0)
+            ready_wait = ready_wait + 1
+        end
+    else
+        for _ = 1, 45 do tick(0) end
     end
 else
-    for _ = 1, 45 do tick(0) end
+    if DEBUG then
+        debug_log(string.format("BOTRESUME class=%d frame=%d screen=%d room=%d",
+            CLASS, FC ~= 0 and read16(FC) or 0,
+            LS ~= 0 and emu:read8(LS) or 255,
+            RS ~= 0 and emu:read8(RS + 1) or 255))
+    end
 end
 -- GAME OVER clears/reuses run_state before the final CSV write. Snapshot the
 -- real initialized seed now so a fatal row remains replayable rather than
@@ -2970,6 +2994,7 @@ while frames < LIMIT do
         last_target_slot, last_target_hp = -1, 255
         no_damage_frames, target_stall_frames, flank_timer = 0, 0, 0
         fold_star_pixel_route, spore_pixel_route = nil, nil
+        fold_star_seam_escape_dir, fold_star_seam_escape_ticks = 0, 0
         if is_town_room(room) and not town_rooms[room] then
             town_rooms[room], towns_seen = true, towns_seen + 1
         end
@@ -3347,13 +3372,28 @@ while frames < LIMIT do
             local star_step, star_ready
             local seam_step = wide_court_seam_step(
                 px, py, target.x, target.y)
-            if seam_step ~= nil then
-                star_step, star_ready = seam_step, false
-                -- This is the same class of exact, collision-proven route as
-                -- the Sigil path. Do not let the generic 20-frame combat
-                -- unstick replace its sustained seam crossing with a
-                -- rotating escape input before the body clears the wall.
+            if fold_star_seam_escape_ticks > 0
+                and can_step(px, py, fold_star_seam_escape_dir) then
+                star_step, star_ready = fold_star_seam_escape_dir, false
+                fold_star_seam_escape_ticks = fold_star_seam_escape_ticks - 1
                 sigil_pixel_active = true
+            elseif seam_step ~= nil then
+                star_ready = false
+                if can_step(px, py, seam_step) then
+                    star_step = seam_step
+                    -- Do not let the generic 20-frame combat unstick replace
+                    -- a legal sustained seam crossing before the body clears
+                    -- the old viewport wall.
+                    sigil_pixel_active = true
+                else
+                    -- The canonical cross can meet the hero beside one of
+                    -- the ruin's seeded pillars. First peel around its legal
+                    -- face; the next live frame can resume the same seam.
+                    star_step = cover_recovery_step(
+                        px, py, aim, math.floor(frames / 30))
+                    fold_star_seam_escape_dir = star_step
+                    fold_star_seam_escape_ticks = 32
+                end
             elseif QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136 then
                 -- A Fold Star moves during both phases. Rebuilding a
                 -- 248x248 one-pixel route for every single-pixel diagonal
@@ -3365,6 +3405,30 @@ while frames < LIMIT do
                 star_ready = lane ~= nil
                 star_step = lane or target_step(
                     px, py, target.x, target.y, aim, 1)
+                -- The coarse target route is cheap enough to rebuild around
+                -- every diagonal twitch, but its first direction is only a
+                -- tile-level suggestion.  In a pillar pocket it can point
+                -- straight into the body blocker forever even though a
+                -- one-pixel route exists around the opposite face. Pay for
+                -- the exact search only on that blocked frame; after its
+                -- first legal step the inexpensive live chase takes over
+                -- again.
+                if not star_ready and not can_step(px, py, star_step) then
+                    local exact_step, exact_ready = fold_star_pixel_step(
+                        room, px, py, target.x, target.y, aim, star_range)
+                    if exact_ready or can_step(px, py, exact_step) then
+                        star_step, star_ready = exact_step, exact_ready
+                        sigil_pixel_active = true
+                    else
+                        -- A target on the unreachable side of generated
+                        -- cover has no exact firing lane yet. Move around a
+                        -- legal perpendicular face and let the live target
+                        -- search try again, rather than preserving the
+                        -- blocked fallback returned by an exhausted BFS.
+                        star_step = cover_recovery_step(
+                            px, py, aim, math.floor(frames / 30))
+                    end
+                end
             else
                 star_step, star_ready = fold_star_pixel_step(
                     room, px, py, target.x, target.y, aim, star_range)
@@ -4625,8 +4689,13 @@ while frames < LIMIT do
         elseif move == KEY_LEFT then nx = nx - 1
         elseif move == KEY_DOWN then ny = ny + 1
         elseif move == KEY_UP then ny = ny - 1 end
-        local weapon_x = quintra_weapon_shop_overlap(nx, ny, 3)
-        if weapon_x ~= nil then
+        local weapon_x, weapon_y = quintra_weapon_shop_overlap(nx, ny, 3)
+        -- Comparable-build safety applies to incidental crossings, not to a
+        -- weapon shelf the economy policy deliberately selected. Otherwise
+        -- the new featured weapon ware makes the pilot approach its counter,
+        -- sidestep it, and repeat forever instead of completing the purchase.
+        if weapon_x ~= nil
+            and not (shop and shop.x == weapon_x and shop.y == weapon_y) then
             local side = (px + 8 < weapon_x + 3) and KEY_LEFT or KEY_RIGHT
             if not can_step(px, py, side) then
                 side = (side == KEY_LEFT) and KEY_RIGHT or KEY_LEFT
@@ -4640,7 +4709,7 @@ while frames < LIMIT do
         -- become mandatory, but debug output still needs the nearest hostile
         -- to explain an overworld hit or an avoidance choice.
         local debug_target = target or overworld_threat
-        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X door=%02X route=%02X routeok=%d",
+        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X door=%02X route=%02X routeok=%d step=%d%d%d%d",
             frames, room, world_mode, world_screen,
             SEALED ~= 0 and emu:read8(SEALED) or 0,
             hp, mp, iframes, active_charge,
@@ -4658,7 +4727,11 @@ while frames < LIMIT do
             target and target_step(px, py, target.x, target.y, 0,
                 weapon_route_tiles(held_style)) or 0,
             target and can_step(px, py, target_step(px, py, target.x, target.y, 0,
-                weapon_route_tiles(held_style))) and 1 or 0))
+                weapon_route_tiles(held_style))) and 1 or 0,
+            can_step(px, py, KEY_LEFT) and 1 or 0,
+            can_step(px, py, KEY_RIGHT) and 1 or 0,
+            can_step(px, py, KEY_UP) and 1 or 0,
+            can_step(px, py, KEY_DOWN) and 1 or 0))
     end
     -- Preserve one collision-map artifact for every long live-enemy room,
     -- not only Mire Spore repros. This makes the CSV's combat-stall column
