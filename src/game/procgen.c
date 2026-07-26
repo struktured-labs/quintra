@@ -645,9 +645,15 @@ void procgen_generate_current_room(void) BANKED {
                     room_tilemap[13][16] = BGT_CRYSTAL; room_tilemap[12][15] = BGT_CRYSTAL;
                     room_tilemap[11][14] = BGT_CRYSTAL;
                 } else if (shape == 7) {
-                    // Colonnade: two pillar rows flanking the E/W lane —
-                    // a great hall with cover to duck behind.
-                    static const u8 col_x[6] = { 3, 5, 7, 13, 15, 17 };
+                    // Colonnade: joined two-tile piers with genuinely
+                    // body-wide openings. The former 3/5/7 and 13/15/17
+                    // spacing drew one floor tile between each 8px pillar.
+                    // That slit looked traversable beside the 16px champion
+                    // even though the 12px feet box correctly rejected it.
+                    // Pairing the masonry preserves the same six-column
+                    // silhouette and cover budget while making every visible
+                    // opening at least two tiles wide.
+                    static const u8 col_x[6] = { 3, 4, 7, 12, 15, 16 };
                     u8 i;
                     for (i = 0; i < 6; ++i) {
                         room_tilemap[5][col_x[i]]  = BGT_PILLAR;
@@ -1455,6 +1461,12 @@ void procgen_generate_current_room(void) BANKED {
             clear_reach_marks_local();
         }
     }
+
+    // Role fixtures are allowed to reshape a large court after its base
+    // silhouette is generated. Normalize only impossible one-tile visual
+    // slits now, once every terrain-writing pass has finished.
+    if (procgen_current_room_is_large)
+        room_close_dungeon_false_gaps();
 
     player.iframes = 60;    // brief invuln on room entry
 }

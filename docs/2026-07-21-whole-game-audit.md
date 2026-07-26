@@ -1,5 +1,42 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## v0.18.90 True Footing
+
+The attended Pocket report identified spaces that looked *almost* wide enough
+for the champion even though the 12-pixel feet box correctly rejected them.
+The fix preserves the readable 16×16 champion instead of shrinking collision:
+generated colonnades now form paired piers with body-wide openings, 31×31
+court clusters join into coherent architectural masses, and approach crests
+use a two-solid/two-accent rhythm rather than alternating false slots.
+
+A seed-pure finalization pass now closes only isolated 8-pixel walkable cells
+between permanent walls, pillars, or crystals. It runs once after stage
+silhouettes and again after every room-role overlay. The pass masks the
+temporary reachability bit borrowed from the tilemap during encounter
+placement; without that detail, deep Frost wings and eastern court acreage
+could evade the check even though their rendered tiles looked ordinary.
+Targeted live-ROM coverage samples every stage archetype, all authored graph
+exits, and the complete 31×31 collision field.
+
+The crystal tile also gained a full-width stone pedestal. It no longer reads
+like a floating collectible with empty space beneath it, so the art and its
+solid collision contract agree before the player touches it.
+
+Release preflight exposed a separate wide-seam suspend hazard: the first
+home-bank SRAM call after the long banked streaming path could save the new
+room counter with stale pre-seam coins and score. An immediate idempotent
+settled-state commit now makes the complete payload authoritative. The
+battery test proves the distinctive room, run, and player values after a
+separate emulator process cold-boots from the written 32 KiB save image.
+
+The Spirit Compass remains a tile-native 6×5 grid rather than text art. It
+already distinguishes unknown, visited, current, objective, cache, Rift, and
+Colossus cells, while the amber 16×16 skull seal and threshold roar warn before
+the boss gate. The nine Colossi continue to use BG-plane bodies ranging from
+roughly 64×48 to 128×80 in scrolling arenas; their silhouettes and weak-point
+contracts were re-audited against the giant-boss direction established by
+Penta Dragon.
+
 ## v0.18.89 Living Bazaar and Colossus damage correction
 
 The four-counter merchant retains its dependable recovery and class-attuned

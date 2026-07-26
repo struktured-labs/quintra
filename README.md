@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.89: Living Bazaar](https://github.com/struktured-labs/quintra/releases/latest)
+[Download the latest ROM — v0.18.90: True Footing](https://github.com/struktured-labs/quintra/releases/latest)
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,8 +22,21 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.89**, published after the complete build,
+The current cartridge is **v0.18.90**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
+
+**Generated terrain now tells the truth about where a champion fits.** The
+16×16 champion scale and its responsive 12-pixel feet box remain intact;
+instead, colonnades use paired piers and every intended lane is at least two
+tiles wide. Court clusters join into readable masses, ceremonial crests stop
+advertising false slots, and a final deterministic pass closes only isolated
+8-pixel floor slits caught between permanent scenery. The same rule runs
+before and after role-specific overlays and ignores the temporary reachability
+bit used during generation, so deep Frost wings and far-field court geometry
+cannot regress. Grounded crystal pedestals also make their solid collision
+clear at a glance. Wide streamed room changes now finish with an idempotent
+battery commit as well, preventing a first-call SDCC edge case from pairing
+the destination room number with stale pre-seam coins or score.
 
 **Dungeon merchants now sell mechanics, not merely larger numbers.** Every
 generated shop still keeps recovery and a seed-stable, class-attuned sealed

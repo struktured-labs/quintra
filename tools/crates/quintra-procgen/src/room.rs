@@ -252,7 +252,9 @@ pub fn generate_tilemap(
                 }
             }
             7 => {
-                for x in [3usize, 5, 7, 13, 15, 17] {
+                // Joined two-tile piers leave real 16px+ openings instead of
+                // visually inviting, champion-inaccessible 8px slits.
+                for x in [3usize, 4, 7, 12, 15, 16] {
                     m[5][x] = BGT_PILLAR;
                     m[11][x] = BGT_PILLAR;
                 }

@@ -18,6 +18,47 @@ static void court_set(u8 x, u8 y, u8 tile) {
     }
 }
 
+static u8 court_get(u8 x, u8 y) {
+    if (y < ROOM_H) {
+        return (x < ROOM_W) ? room_tilemap[y][x]
+            : room_world_extension[y][x - ROOM_W];
+    }
+    return room_world_bottom[y - ROOM_H][x];
+}
+
+static u8 court_hard_scenery(u8 tile) {
+    tile &= 0x7F;
+    return tile == BGT_WALL || tile == BGT_PILLAR || tile == BGT_CRYSTAL;
+}
+
+static u8 court_false_gap_floor(u8 tile) {
+    tile &= 0x7F;
+    return tile == BGT_FLOOR || tile == BGT_FLOOR2
+        || tile == BGT_FLOOR3 || tile == BGT_RUBBLE
+        || tile == BGT_SPIKES;
+}
+
+// Layering a stage silhouette over the 31x31 court can place two permanent
+// masses exactly one floor tile apart. The 8px slit is not traversable by the
+// champion's 12px feet box, so retaining it only teaches a false collision
+// rule. Merge those zero-utility cells into the surrounding architecture.
+// True routes are always two or more tiles wide and remain untouched.
+void room_close_dungeon_false_gaps(void) BANKED {
+    u8 x, y;
+    for (y = 1; y < ROOM_WIDE_H_TILES - 1; ++y) {
+        for (x = 1; x < ROOM_WIDE_W_TILES - 1; ++x) {
+            u8 tile = court_get(x, y);
+            if (!court_false_gap_floor(tile)) continue;
+            if ((court_hard_scenery(court_get((u8)(x - 1), y))
+                    && court_hard_scenery(court_get((u8)(x + 1), y)))
+                || (court_hard_scenery(court_get(x, (u8)(y - 1)))
+                    && court_hard_scenery(court_get(x, (u8)(y + 1))))) {
+                court_set(x, y, BGT_PILLAR);
+            }
+        }
+    }
+}
+
 static u8 court_texture(u32 seed, u8 x, u8 y, u8 district) {
     u8 n = (u8)seed;
     n = (u8)(n + (u8)(x * 13) + (u8)(y * 17) + (u8)(x * y));
@@ -67,9 +108,9 @@ static void court_floor_rect(u8 x0, u8 y0, u8 w, u8 h) {
 
 static void court_stamp_cluster(u8 x, u8 y, u8 accent) {
     court_set(x, y, BGT_PILLAR);
-    court_set((u8)(x + 1), y, accent);
+    court_set((u8)(x + 1), y, BGT_PILLAR);
     court_set(x, (u8)(y + 1), accent);
-    court_set((u8)(x + 1), (u8)(y + 1), BGT_PILLAR);
+    court_set((u8)(x + 1), (u8)(y + 1), accent);
 }
 
 static void court_stamp_ruin(u8 x0, u8 y0, u8 w, u8 h,
@@ -178,14 +219,19 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     court_stamp_cluster((u8)(25 - shift), 26, accent);
     {
         // Four approach crests occupy distinct corners of the legacy
-        // viewport. Combined with the independent one-tile ruin shift, this
-        // gives every stage at least eight meaningful collision silhouettes
-        // across the standard twelve-seed sample—not merely different floor
-        // speckles. They sit outside the body-wide central cross.
+        // viewport. Two joined pillars face a two-tile accent bed: there is
+        // no longer a decorative one-tile slit between hard columns that
+        // looks open but cannot admit the champion. Combined with the
+        // independent one-tile ruin shift, this gives every stage at least
+        // eight meaningful collision silhouettes across the standard
+        // twelve-seed sample—not merely different floor speckles. They sit
+        // outside the body-wide central cross.
         u8 bx = (variant & 1) ? 12 : 4;
         u8 by = (variant & 2) ? 14 : 2;
-        for (x = bx; x < (u8)(bx + 4); ++x)
-            court_set(x, by, (x & 1) ? BGT_PILLAR : accent);
+        court_set(bx, by, BGT_PILLAR);
+        court_set((u8)(bx + 1), by, BGT_PILLAR);
+        court_set((u8)(bx + 2), by, accent);
+        court_set((u8)(bx + 3), by, accent);
     }
     // Two recognizable side halls make camera travel expose architecture,
     // not a mostly empty floor. Seed-selected paired gaps keep both chambers
@@ -298,4 +344,7 @@ void room_reopen_dungeon_court_seams(u32 seed) BANKED {
                 court_set(x, y, BGT_FLOOR);
         court_set(px, py, BGT_PORTAL);
     }
+    // Catch base-field and stage-silhouette seams before encounter
+    // reachability borrows bit 7 of the collision map as scratch storage.
+    room_close_dungeon_false_gaps();
 }

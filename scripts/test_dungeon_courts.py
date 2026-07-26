@@ -17,6 +17,8 @@ WORLD_PX = WIDE_W * 8
 FAR_EDGE = WORLD_PX - 16
 CAMERA_X_MAX = WORLD_PX - ROOM_W * 8
 CAMERA_Y_MAX = WORLD_PX - ROOM_H * 8
+HARD_SCENERY = {2, 21, 22}
+FLOOR_SCENERY = {1, 3, 19, 20, 23, 31, 33, 34}
 
 
 def addr(name):
@@ -187,6 +189,21 @@ def main():
                     row.append(
                         pb.memory[BOTTOM + (y - ROOM_H) * WIDE_W + x] & 0x7F)
             field.append(row)
+        false_gaps = []
+        for y in range(1, WIDE_H - 1):
+            for x in range(1, WIDE_W - 1):
+                if field[y][x] not in FLOOR_SCENERY:
+                    continue
+                if (field[y][x - 1] in HARD_SCENERY
+                        and field[y][x + 1] in HARD_SCENERY):
+                    false_gaps.append((x, y, "vertical slit"))
+                if (field[y - 1][x] in HARD_SCENERY
+                        and field[y + 1][x] in HARD_SCENERY):
+                    false_gaps.append((x, y, "horizontal slit"))
+        assert not false_gaps, (
+            "31x31 court contains champion-inaccessible visible gaps: "
+            f"{false_gaps[:8]}"
+        )
         passable = {1, 3, 19, 20, 23, 31}
         queue = [(1, 8)]
         seen = set(queue)

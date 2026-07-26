@@ -12,6 +12,8 @@ NOI = ROM.with_suffix(".noi").read_text()
 ROOM_W, ROOM_H = 20, 17
 BGT_PILLAR, BGT_CRYSTAL, BGT_SPIKES = 21, 22, 31
 STAGE_RAIL_X = (2, 3, 16, 17)
+HARD_SCENERY = {2, BGT_PILLAR, BGT_CRYSTAL}
+FLOOR_SCENERY = {1, 3, 19, 20, 23, BGT_SPIKES, 33, 34}
 
 
 def addr(name):
@@ -104,6 +106,39 @@ def tile(tiles, x, y):
     return tiles[y * ROOM_W + x]
 
 
+def assert_no_false_one_tile_gaps(label, tiles):
+    """Every visible opening between permanent masses admits the champion.
+
+    A lone 8px floor cell between two pillars/crystals is not a secret or a
+    puzzle: the 12px feet box cannot occupy it, yet the former small scenery
+    silhouettes made it look like a plausible route. Keep decorative
+    compression out of the generated traversal language.
+    """
+    false_gaps = []
+    for y in range(1, ROOM_H - 1):
+        for x in range(1, ROOM_W - 1):
+            if tile(tiles, x, y) not in FLOOR_SCENERY:
+                continue
+            if (tile(tiles, x - 1, y) in HARD_SCENERY
+                    and tile(tiles, x + 1, y) in HARD_SCENERY):
+                false_gaps.append((
+                    x, y, "vertical slit",
+                    tile(tiles, x - 1, y), tile(tiles, x, y),
+                    tile(tiles, x + 1, y),
+                ))
+            if (tile(tiles, x, y - 1) in HARD_SCENERY
+                    and tile(tiles, x, y + 1) in HARD_SCENERY):
+                false_gaps.append((
+                    x, y, "horizontal slit",
+                    tile(tiles, x, y - 1), tile(tiles, x, y),
+                    tile(tiles, x, y + 1),
+                ))
+    assert not false_gaps, (
+        f"{label} contains champion-inaccessible visible gaps: "
+        f"{false_gaps[:8]}"
+    )
+
+
 def reachable_exits(tiles, start):
     walkable = {1, 3, 7, 19, 20, 23, 31, 33, 34, *range(9, 19)}
 
@@ -174,6 +209,7 @@ def main():
         )
 
     grove = generated_room(1, 2064128938)  # controller-agent seed 1
+    assert_no_false_one_tile_gaps("Verdant grove", grove)
     grove_sites = [(4, 4), (5, 4), (14, 4), (15, 4),
                    (4, 12), (5, 12), (14, 12), (15, 12)]
     grove_crystals = sum(tile(grove, x, y) == BGT_CRYSTAL for x, y in grove_sites)
@@ -186,6 +222,7 @@ def main():
     grove_wing = generated_room(
         1, 2064128938, local_room=11, probe=assert_waypoint_pair
     )
+    assert_no_false_one_tile_gaps("Verdant second wing", grove_wing)
     grove_wing_crystals = sum(
         tile(grove_wing, x, y) == BGT_CRYSTAL for x, y in grove_sites
     )
@@ -201,6 +238,7 @@ def main():
     # leaves both authored hazard seams intact, whereas room 2 deliberately
     # adds the cross-room phase wall.
     ember = generated_room(2, local_room=1)
+    assert_no_false_one_tile_gaps("Ember gauntlet", ember)
     seam_spikes = sum(
         tile(ember, x, y) == BGT_SPIKES
         for x in (5, 14) for y in range(3, 15)
@@ -219,6 +257,7 @@ def main():
     frost = generated_room(
         3, screenshot=ROOT / "tmp" / "frost-vault.png", local_room=4
     )
+    assert_no_false_one_tile_gaps("Frost vault", frost)
     vault_sites = [
         (7, 5), (8, 5), (11, 5), (12, 5),
         (7, 12), (8, 12), (11, 12), (12, 12),
@@ -241,6 +280,7 @@ def main():
     frost_wing = generated_room(
         3, local_room=17, probe=assert_waypoint_pair
     )
+    assert_no_false_one_tile_gaps("Frost late wing", frost_wing)
     frost_wing_crystals = sum(
         tile(frost_wing, x, y) == BGT_CRYSTAL for x, y in vault_sites
     )
@@ -284,6 +324,8 @@ def main():
             screenshot=ROOT / "tmp" / "toxic-mire.png" if index == 0 else None,
             probe=assert_mire_swim_passive if index == 0 else None,
         )
+        assert_no_false_one_tile_gaps(
+            f"Toxic Mire seed={seed:#x}", mire)
         mire_spikes = sum(
             tile(mire, x, y) == BGT_SPIKES
             for x in (*range(4, 7), *range(13, 16))
@@ -310,6 +352,8 @@ def main():
             5, seed,
             screenshot=ROOT / "tmp" / "shadow-keep.png" if index == 0 else None,
         )
+        assert_no_false_one_tile_gaps(
+            f"Shadow Keep seed={seed:#x}", keep)
         keep_pillars = sum(
             tile(keep, x, y) == BGT_PILLAR
             for x in range(4, 16) for y in (6, 11)
@@ -340,6 +384,8 @@ def main():
             6, seed,
             screenshot=ROOT / "tmp" / "golden-temple.png" if index == 0 else None,
         )
+        assert_no_false_one_tile_gaps(
+            f"Golden Temple seed={seed:#x}", temple)
         colonnade_sites = [
             (x, y) for x in (5, 14) for y in (4, 5, 6, 11, 12, 13)
         ]
@@ -378,6 +424,7 @@ def main():
 
     blood = generated_room(7, 0xB100D007,
                            screenshot=ROOT / "tmp" / "bloodmoon-sigil.png")
+    assert_no_false_one_tile_gaps("Bloodmoon", blood)
     blood_sites = []
     for i in (4, 6):
         blood_sites.extend(((i, i), (19 - i, i),
@@ -408,6 +455,8 @@ def main():
             screenshot=ROOT / "tmp" / "void-sanctum.png" if index == 0 else None,
             local_room=1,
         )
+        assert_no_false_one_tile_gaps(
+            f"Void Sanctum seed={seed:#x}", void)
         signature = tuple(tile(void, x, y) for x, y in void_sites)
         assert all(t in (BGT_PILLAR, BGT_CRYSTAL) for t in signature), (
             f"Void event horizon missing seed={seed:#x}"

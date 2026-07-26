@@ -58,6 +58,9 @@ def main():
 
         first = PyBoy(str(cart), window="null", cgb=True)
         boot_fresh(first)
+        assert first.memory[RS + 1] == 0, (
+            f"fresh run settled in room {first.memory[RS + 1]}, expected foyer"
+        )
         put16(first, PL + 16, 321)       # distinctive persisted player value
         put16(first, RS + 14, 0x1234)   # distinctive persisted run value
         for i in range(32):
@@ -97,7 +100,29 @@ def main():
             first.memory[0x0000] = 0
             if saved:
                 break
-        assert saved, "room-entry SRAM transaction did not commit"
+        if not saved:
+            first.memory[0x0000] = 0x0A
+            first.memory[0x4000] = 0
+            rs_len = first.memory[0xA003]
+            run_off = 0xA005
+            player_off = run_off + rs_len
+            observed = (
+                bytes(first.memory[0xA000:0xA002]),
+                rs_len,
+                first.memory[run_off + 1],
+                first.memory[run_off + 14],
+                first.memory[run_off + 15],
+                first.memory[player_off + 16],
+                first.memory[player_off + 17],
+                first.memory[RS + 14],
+                first.memory[RS + 15],
+                first.memory[PL + 16],
+                first.memory[PL + 17],
+            )
+            first.memory[0x0000] = 0
+            raise AssertionError(
+                f"room-entry SRAM transaction did not commit: {observed!r}"
+            )
         assert first.memory[RS + 1] == 1, "room advanced again during suspend setup"
 
         # Inspect the cartridge bytes, not merely the C globals.
