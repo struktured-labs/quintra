@@ -25,6 +25,14 @@ the cartridge runtime.
 The current cartridge is **v0.18.90**, published after the complete build,
 media, cartridge, checkpoint, gameplay, and controller verification gate.
 
+The final whole-run audit is release-hash specific: a controller-only Easy
+Picsean expedition reaches all-nine-boss Victory in 154,260 frames after 194
+visited rooms, both villages, 40 Riftwild hops, and eight collected boss
+relics. A clean mGBA process then replays the recorded input to
+`bosses=9 hp=15 won=1`. Normal remains the demanding authored target; Easy
+clears 37/45 progression-matched one-minute boss samples and survives 44/45,
+so it is a real deep-testing assist rather than cosmetic labeling.
+
 **Generated terrain now tells the truth about where a champion fits.** The
 16×16 champion scale and its responsive 12-pixel feet box remain intact;
 instead, colonnades use paired piers and every intended lane is at least two

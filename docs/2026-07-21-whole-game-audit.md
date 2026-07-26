@@ -1,5 +1,55 @@
 # Quintra whole-game audit — updated 2026-07-25
 
+## 2026-07-26 completion evidence
+
+The complete v0.18.90 cartridge now has current-ROM evidence for every hard
+part of the whole-game goal:
+
+- **External checkpoints:** 460 PyBoy states and 460 native mGBA states cover
+  five champions, Normal/Easy, all nine stage entries, courts, sanctuaries,
+  and Colossi, plus every Riftwild and both villages. Six additional native
+  states land at 5/10/15/20/25/30 emulated minutes; the final training pilot
+  reaches stage eight with seven bosses down. Every native checkpoint family
+  cold-loads through mGBA's `-t` path and every manifest is bound to ROM hash
+  `1bbe581c050346631cf4f74e18d22f22987e0dfc3f5d383ba28d4ada081fbc7d`.
+- **Whole-run playability:** a controller-only Picsean Easy run on the exact
+  release reaches Victory with nine bosses down in 154,260 frames. It visits
+  194 rooms, both villages, and 40 Riftwild cells, and collects all eight
+  boss relics available before the ending transition. A clean mGBA process
+  replaying the 206,187-byte recorded input trace independently reports
+  `PASS frames=155463 seed=2064128163 room=220 bosses=9 hp=15 won=1`.
+- **Difficulty:** the progression-matched one-minute boss matrix clears 9/45
+  and survives 19/45 on canonical Normal, versus 37/45 clears and 44/45
+  survivals on Easy. Easy therefore works as a substantial testing assist
+  without changing boss geometry or patterns. Separately, all 45 Normal
+  stage-entry room samples survive; ordinary-room pressure does not justify a
+  global enemy-damage reduction. Attended play remains the authority for
+  eventual Normal tuning.
+- **Roguelike variation:** 108 linked-ROM samples retain 8–12 meaningful
+  collision geometries per stage, 5–7 enemy species per stage, 10–12 distinct
+  roster signatures, 2–7 bodies per encounter, and 62 elite appearances.
+  C/Rust procgen parity remains 12/12.
+- **Map and boss warning:** SELECT renders a 6×5, screen-filling tile grid with
+  dotted explored nodes, dashed unknown nodes, bright traversed links, and a
+  four-icon YOU/GOAL/BOSS/LOOT legend. Sanctuary approaches reveal the amber
+  Colossus node; the physical threshold carries a 16×16 amber skull seal and
+  emits a one-shot proximity roar.
+- **Penta Dragon-scale bosses:** all nine Colossi are BG-plane creatures in
+  scrolling 224×136 arenas rather than ordinary four-sprite enemies. Their
+  silhouettes occupy 84–144 body tiles, roughly 64×48 through 128×80, with
+  separately targeted weak points, stage-specific motion, mixed projectile
+  speeds, and the Void Lord's arena-scale Collapse. The reference catalog's
+  eleven enemy/boss sheets—Angela, Cameo, Crystal Dragon, Enemies, Faze, Mini
+  Bosses, Penta Dragon, Riff, Shalamar, Ted, and Troop—confirm that giant,
+  multipart bosses are a defining part of the source game's visual language.
+
+This proves that the requested systems exist and compose into a deterministic
+full victory, not merely that their isolated unit tests pass. “Fun” remains a
+human judgment, but the current attended feedback, two distinct difficulty
+budgets, hardware play on Analogue Pocket and IPS GBC, and reproducible
+whole-run evidence are sufficient to call the implementation goal complete
+while leaving Normal balance open to ordinary post-release iteration.
+
 ## v0.18.90 True Footing
 
 The attended Pocket report identified spaces that looked *almost* wide enough
