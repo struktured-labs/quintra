@@ -2418,6 +2418,20 @@ SRAM. The generated
 and restored stage/room. `QuintraPyBoyEnv.load_state()` rejects any mismatch,
 so regenerate after rebuilding the ROM.
 
+For hardware deep testing, `make pocket-test-saves` converts the same
+hash-bound Easy entry curriculum into 45 independent Analogue Pocket
+ROM/battery-save pairs: every stage with every champion. It does **not**
+mislabel an emulator snapshot as a Pocket Memory. Instead, each save contains
+Quintra's real 32 KiB suspend record, which the unchanged cartridge regenerates
+through its normal CONTINUE path. The generated
+`tmp/pocket-test-saves/Assets` and `tmp/pocket-test-saves/Saves` trees mirror
+one another as required by openFPGA and can be merged at the SD-card root.
+On the Pocket, open the GBC core, enter `Quintra Test Checkpoints`, choose a
+`QTEST S01` through `QTEST S09` ROM, then press **A** at Quintra's title
+screen. START begins a new run and replaces only that test ROM's independent
+checkpoint. The ordinary release ROM and its player save use different names
+and remain untouched.
+
 For hands-on testing in the preferred emulator, `make mgba-states` generates
 the same 460-point curriculum as native mGBA `.ss0` files under
 `tmp/mgba-states/`. Every file is serialized and restored by mGBA itself; the

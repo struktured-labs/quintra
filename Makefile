@@ -16,6 +16,7 @@ GENDIR  = $(SRCDIR)/generated
 STATE_OUT ?= $(CURDIR)/tmp/stage-states
 MGBA_STATE_OUT ?= $(CURDIR)/tmp/mgba-states
 MGBA_STATE_SMOKE_OUT ?= $(CURDIR)/tmp/mgba-states-smoke
+POCKET_STATE_OUT ?= $(CURDIR)/tmp/pocket-test-saves
 MGBA_BIN ?= mgba-headless
 TIMED_STATE_OUT ?= $(CURDIR)/tmp/timed-states
 TIMED_MGBA_STATE_OUT ?= $(CURDIR)/tmp/timed-mgba-states
@@ -51,7 +52,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states mgba-states mgba-state-smoke timed-states timed-mgba-states
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states pocket-test-saves mgba-states mgba-state-smoke timed-states timed-mgba-states
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -373,6 +374,15 @@ play: all
 # requested output after the ROM link; this target remains a discoverable
 # explicit command and accepts STATE_OUT for an alternate curriculum set.
 stage-states: all
+
+# Analogue Pocket cannot consume PyBoy/mGBA snapshots directly. Export the
+# hash-bound Easy entry curriculum as 45 separately named ROM/battery-save
+# pairs in a mirrored Assets/Saves tree: nine stages times five champions.
+# Every SRAM image must cold-resume through the cartridge's real CONTINUE path.
+pocket-test-saves: all
+	@$(PYBOY_RUN) scripts/make_pocket_test_saves.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --states "$(STATE_OUT)" \
+		--out "$(POCKET_STATE_OUT)" --difficulty easy --checkpoint entry
 
 # Native mGBA equivalents for hands-on testing in mGBA-Qt. Generation covers
 # the same 460 champion/difficulty/checkpoint combinations as the PyBoy set and
