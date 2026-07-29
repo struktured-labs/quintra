@@ -192,6 +192,7 @@
 #define SPR_VILLAGER       69  // town elder / sanctuary keeper
 #define SPR_ENEMY_PRISM_SKITTER SPR_VILLAGER // dungeon-only orbiting caster
 #define SPR_MERCHANT       70  // town/dungeon shopkeeper
+#define SPR_ENEMY_RIFT_CANTOR SPR_MERCHANT // combat-only reinforcement caller
 #define SPR_SMITH          71  // village forge keeper
 #define SPR_ENEMY_FOLD_STAR 72 // contracted/expanded diagonal replicator
 #define SPR_ENEMY_FLUTTERBAT 73 // Keese-like flyer
@@ -262,6 +263,7 @@ void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
 void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-tag slot
 void tiles_load_prism_skitter_sprite(void) BANKED; // combat-only reuse of elder slot
+void tiles_load_rift_cantor_sprite(void) BANKED; // combat-only reuse of merchant slot
 void tiles_load_dusk_midge_sprite(void) BANKED;    // combat-only reuse of apothecary slot
 void tiles_load_cinder_kite_sprite(void) BANKED;   // Ember-only reuse of apothecary slot
 void tiles_load_bog_toad_sprite(void) BANKED;      // Toxic Mire reuse of apothecary slot
@@ -273,10 +275,15 @@ void tiles_load_void_halo_sprite(void) BANKED;     // Void Sanctum reuse of that
 void tiles_load_sunwheel_sprite(void) BANKED;      // Golden Temple reuse of that slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_spear_sprite(void) BANKED;
+// Reload the shared physical-attack slot for the equipped generated item
+// index, and the defensive slot for the active champion's shield identity.
+void tiles_load_weapon_sprite(u8 weapon_index) BANKED;
+void tiles_load_shield_sprite(u8 class_id) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
 void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
+void tiles_load_stage_scenery(u8 stage) BANKED;   // stage-local pillar/crystal/debris silhouettes
 void tiles_load_map_bg(void) BANKED;              // dungeon set + Compass glyphs
 void tiles_load_colossus_bg(u8 stage) BANKED;     // nine screen-scale boss bodies
 void tiles_paint_crystal_projection(void) BANKED;

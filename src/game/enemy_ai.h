@@ -38,4 +38,8 @@ void fold_star_update(entity_t *e, const enemy_def_t *def) BANKED;
 // Bank-5 positional caster used by typed AI_SPINNER content entries.
 void spinner_update(entity_t *e, const enemy_def_t *def) BANKED;
 
+// Bank-6 one-wave reinforcement caller. Its long tell remains interruptible:
+// killing the caller before resolution prevents every escort spawn.
+void rift_cantor_update(entity_t *e, const enemy_def_t *def) BANKED;
+
 #endif

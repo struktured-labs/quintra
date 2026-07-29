@@ -148,6 +148,29 @@ def main():
         other = EN + i * 28
         if other != ep:
             pb.memory[other] = pb.memory[other + 1] = 0
+
+    # Inspect the objective before collecting it. Move the displayed cursor
+    # away from room 2 so YOU does not intentionally cover its GOAL icon.
+    pb.memory[RS + 1] = 4
+    pb.button("select")
+    for _ in range(120):
+        pb.tick()
+    assert pb.memory[SCREEN] == 8
+    pb.memory[0xFF4F] = 0
+    bg = 0x9800
+
+    def node_tile(cell):
+        col, row = dungeon_cell_xy(cell)
+        return pb.memory[bg + (2 + row * 3) * 32 + 1 + col * 3]
+
+    assert node_tile(2) == BGT_MAP_BIG_GOAL, \
+        "unclaimed Sigil lacks its violet 2x2 GOAL node"
+    pb.button("b")
+    for _ in range(30):
+        pb.tick()
+    assert pb.memory[SCREEN] == 5
+    pb.memory[RS + 1] = 2
+
     pb.memory[PL + 2] = pb.memory[PL + 1]
     pb.memory[PL + 15] = 0
     # Put the full pickup box *inside* the 6x6 Sigil, rather than merely
@@ -176,17 +199,13 @@ def main():
         pb.tick()
     assert pb.memory[SCREEN] == 8
     pb.memory[0xFF4F] = 0
-    bg = 0x9800
-    def node_tile(cell):
-        col, row = dungeon_cell_xy(cell)
-        return pb.memory[bg + (2 + row * 3) * 32 + 1 + col * 3]
 
     # The screen-filling Pocket Grid gives every room a readable 2x2 node.
-    # Opening room 2 owns the violet GOAL node, while its recovery reveals
-    # room 3 as the next amber Warden trial. The tutorial has no nonlinear
-    # rift at later dungeons' midpoint, and the unseen boss stays anonymous.
-    assert node_tile(2) == BGT_MAP_BIG_GOAL, \
-        "found Sigil lacks its violet 2x2 GOAL node"
+    # Recovery clears room 2's completed GOAL and reveals room 3 as the next
+    # amber Warden trial. The tutorial has no nonlinear rift at later
+    # dungeons' midpoint, and the unseen boss stays anonymous.
+    assert node_tile(2) != BGT_MAP_BIG_GOAL, \
+        "found Sigil left a stale violet GOAL node"
     assert node_tile(3) == BGT_MAP_BIG_GOAL, \
         "claimed Sigil did not reveal the Warden GOAL node"
     assert pb.memory[bg + 4 * 32 + 9] == BGT_VOID, \

@@ -65,6 +65,9 @@ extern u8 room_combat_sealed;
 // Progression-fixture transaction marker for emulator contract tests.
 // 5 means the current dungeon's Rift Sigil was successfully placed.
 extern u8 room_sigil_status;
+// Visible run equipment tier: 0 base, 1 blue, 2 red, 3 pearl-gold.
+// Kept resident so combat can size shields without a cross-bank scan.
+extern u8 room_appearance_tier;
 
 // Called immediately after procgen clears the entity table, before optional
 // combat/loot population can consume every slot. Idempotent on later room
@@ -86,7 +89,7 @@ void room_draw_tilemap(void) BANKED;
 void room_show_district_label(u8 kind) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
-u8 room_tile_at_px(i16 px, i16 py) BANKED;
+u8 room_tile_at_px(i16 px, i16 py) NONBANKED;
 // Player top-left may occupy the legal door threshold but never pass it.
 u8 room_player_position_in_bounds(i16 x, i16 y) BANKED;
 // Full collision contract shared by knockback/recovery paths: six feet
@@ -107,6 +110,10 @@ void room_break_pot(u8 tx, u8 ty) BANKED;
 // mag = pixels (1-2 sensible); longer of current/new duration wins.
 void room_shake(u8 mag, u8 frames) BANKED;
 void room_start_weapon_surge(void) BANKED;
+// Reconcile champion palette + equipped attack/shield art after a relic,
+// boss clear, weapon trade, room load, or suspended-run resume.
+void room_refresh_player_appearance(u8 celebrate) BANKED;
+void room_spawn_shield_aura(void) BANKED;
 // Passive HP/MP clocks continue through ordinary rooms but must never carry
 // from a dead/completed run into a newly initialized champion.
 void room_reset_passive_timers(void) BANKED;

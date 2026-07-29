@@ -90,6 +90,7 @@ void run_state_clear(void) {
     run_state.secret_pending = 0;
     run_state.score          = 0;
     run_state.enemies_killed = 0;
+    run_state.enemies_killed_hi = 0;
     run_state.world_mode = 0;
     run_state.world_screen = 0;
     run_state.world_return_screen = 0;
@@ -106,6 +107,21 @@ void run_state_clear(void) {
     run_state.next_dungeon_reveal_xhi = 0;
     run_state.dungeon_seen_xxhi = 0;
     run_state.next_dungeon_reveal_xxhi = 0;
+}
+
+u16 run_state_enemies_killed_total(void) {
+    return (u16)run_state.enemies_killed
+        | ((u16)run_state.enemies_killed_hi << 8);
+}
+
+void run_state_record_enemy_kill(void) {
+    if (run_state.enemies_killed == 0xFF) {
+        if (run_state.enemies_killed_hi == 0xFF) return;
+        run_state.enemies_killed = 0;
+        run_state.enemies_killed_hi++;
+    } else {
+        run_state.enemies_killed++;
+    }
 }
 
 void run_state_init(u32 seed) {

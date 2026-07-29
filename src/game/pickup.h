@@ -36,7 +36,7 @@
 #define WARE_RUNE    4   // Mana Gem (+2 max MP), village apothecary only
 #define WARE_SURGE   5   // 15-second weapon burst, dungeon premium stock
 #define WARE_VAMP    6   // Vampiric Sigil (+ATK/+max HP; heal every fifth kill)
-#define WARE_CHART   7   // Cartographer's Chart (reveal the next dungeon)
+#define WARE_CHART   7   // Cartographer's Chart (reveal active/next dungeon)
 #define WARE_WEAPON  8   // seed-stable alternate A-weapon; town market trade
 #define WARE_GLASS   9   // Glass Fang pact: -2 max HP, +2 ATK, +1 SPD
 #define WARE_PHOENIX 10  // Phoenix Thread: consumed to revive once

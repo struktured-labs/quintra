@@ -450,6 +450,18 @@ pub const VOID_HALO: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const RIFT_CANTOR: Enemy = Enemy {
+    id: ENEMY_RIFT_CANTOR, symbol: "RIFT_CANTOR", name: "Rift Cantor",
+    sprite_set: SPRITE_RIFT_CANTOR, palette: OBJ_PAL_MAGIC,
+    // The caller itself is a priority target rather than another projectile
+    // turret. It announces a single reinforcement wave for almost a second;
+    // killing it during that chant prevents the wave completely.
+    stats: EnemyStats { hp: 13, damage: 1, speed: 32, score: 58, weakness: 0x08, poise: 1 },
+    ai_script: AiScriptId::Summoner { sight_radius: 88, tell_ticks: 48 },
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -483,4 +495,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(VINE_COIL.clone());
     r.add_enemy(SHARD_CRAB.clone());
     r.add_enemy(VOID_HALO.clone());
+    r.add_enemy(RIFT_CANTOR.clone());
 }

@@ -140,14 +140,17 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_town_compass.py
 	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
+	$(PYBOY_RUN) scripts/test_stage_scenery.py
 	$(PYBOY_RUN) scripts/test_procgen_variety.py
 	$(PYBOY_RUN) scripts/test_stage_entry_pacing.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
 	uv run --quiet --with pyboy python scripts/test_melee_special_guard.py
+	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
 	uv run --quiet --with pyboy python scripts/test_champion_animation.py
+	$(PYBOY_RUN) scripts/test_visual_progression.py
 	uv run --quiet --with pyboy python scripts/test_rift_flail.py
 	uv run --quiet --with pyboy python scripts/test_astral_spear.py
 	uv run --quiet --with pyboy python scripts/test_performance.py
@@ -166,6 +169,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_pyboy_env.py
 	python3 scripts/test_playtest_report.py
 	$(PYBOY_RUN) scripts/test_stage_states.py
+	$(PYBOY_RUN) scripts/test_sram_compat.py
 	python3 scripts/make_mgba_states.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
 		--mgba "$(MGBA_BIN)" --champion wolfkin --difficulty easy
@@ -191,6 +195,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_convergence_boss_cap.py
 	uv run --quiet --with pyboy python scripts/test_convergence_transform.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
+	$(PYBOY_RUN) scripts/test_reinforcement_caller.py
 	bash scripts/test_enemy_coverage_config.sh
 	uv run --quiet --with pyboy python scripts/test_hornet_swarm.py
 	uv run --quiet --with pyboy python scripts/test_ooze_cycle.py
@@ -215,6 +220,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
+	$(PYBOY_RUN) scripts/test_meta_saturation.py
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py
 	uv run --quiet --with pyboy python scripts/test_heart_pickup.py

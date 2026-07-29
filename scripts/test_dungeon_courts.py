@@ -202,7 +202,7 @@ def main():
                     false_gaps.append((x, y, "horizontal slit"))
         assert not false_gaps, (
             "31x31 court contains champion-inaccessible visible gaps: "
-            f"{false_gaps[:8]}"
+            f"{false_gaps}"
         )
         passable = {1, 3, 19, 20, 23, 31}
         queue = [(1, 8)]

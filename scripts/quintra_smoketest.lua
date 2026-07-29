@@ -64,6 +64,8 @@ local function shot(name)
     local vic     = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 10) or 0xFF
     local bosses  = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 11) or 0xFF
     local screen  = LS_ADDR ~= 0 and emu:read8(LS_ADDR) or 0xFF
+    local puzzle  = PK_ADDR ~= 0 and emu:read8(PK_ADDR) or 0xFF
+    local locked  = PLK_ADDR ~= 0 and emu:read8(PLK_ADDR) or 0xFF
     local px      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 9) or 0xFF
     local py      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 11) or 0xFF
     local hp      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 2) or 0xFF
@@ -89,8 +91,9 @@ local function shot(name)
         end
     end
     local line = string.format(
-        "SHOT %-25s  screen=%d room=%d vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
-        name, screen, rc_room, vic, bosses, hostiles, giants, giant_x, giant_y, giant_hp, px, py, tile, hp, ifr)
+        "SHOT %-25s  screen=%d room=%d puz=%d lock=%d vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, screen, rc_room, puzzle, locked, vic, bosses, hostiles,
+        giants, giant_x, giant_y, giant_hp, px, py, tile, hp, ifr)
     if log_fh then log_fh:write(line); log_fh:flush() end
     console:log(line)
 end
@@ -196,8 +199,12 @@ end
 -- frame alignment). The runner is topped up each burst: this harness
 -- verifies screens are REACHABLE, not that a bot survives bullet hell.
 local function walk_edge(target, key)
+    local crossed = false
     for _ = 1, 80 do
-        if room_counter() == target then break end
+        if room_counter() == target then
+            crossed = true
+            break
+        end
         if PL_ADDR ~= 0 then
             emu:write8(PL_ADDR + 2, 12)    -- hp: stay alive
             emu:write8(PL_ADDR + 15, 60)   -- iframes: no knockback ping-pong
@@ -225,7 +232,27 @@ local function walk_edge(target, key)
         clear_hostiles()
         hold(key, 8)
     end
-    tick(20)
+    -- room_counter changes near the beginning of the cartridge's banked
+    -- transition transaction. A 31x31 court may still be generating after
+    -- that public position changes, so a screenshot—or the next puzzle
+    -- action—must not mistake the half-built destination for a settled room.
+    -- Keep the reachability pilot safe while the real generator, streamed
+    -- seam, puzzle preparation, draw, and suspend-save all finish.
+    if crossed or room_counter() == target then
+        for _ = 1, 120 do
+            if PL_ADDR ~= 0 then
+                emu:write8(PL_ADDR + 2, 12)
+                emu:write8(PL_ADDR + 15, 60)
+            end
+            -- Stage one's final graph cell is the actual Colossus arena.
+            -- Preserve that body so the later controller assault still proves
+            -- the combat/reward path; every earlier cell remains cleared for
+            -- deterministic route coverage.
+            if target ~= 19 then clear_hostiles() end
+            emu:runFrame()
+        end
+    end
+    return room_counter() == target
 end
 
 -- Mirror the cartridge's seed-selected district folds.  The old smoke route
@@ -317,7 +344,7 @@ local function navigate_to(target)
         local dir = dungeon_route_dir(current, target, size, stage)
         if dir == nil then return false end
         local next_cell = dungeon_neighbor(current, size, dir, stage)
-        walk_edge(next_cell, DIR_KEYS[dir])
+        if not walk_edge(next_cell, DIR_KEYS[dir]) then return false end
     end
     return room_counter() == target
 end
@@ -354,18 +381,35 @@ local function record_opening_warden_boon()
 end
 
 local function solve_opening_push_seal()
-    if TM_ADDR == 0 or PL_ADDR == 0 then return false end
+    if TM_ADDR == 0 or PL_ADDR == 0 or PLK_ADDR == 0 then return false end
+    if emu:read8(PLK_ADDR) == 0 then return true end
     for y = 1, 15 do
         for x = 1, 18 do
             if emu:read8(TM_ADDR + y * 20 + x) == 25 then
                 -- Approach the ordinary-looking 2x2 cairn from its left and
                 -- hold into it through the real ten-frame push threshold.
-                emu:write8(PL_ADDR + 9, math.max(0, x * 8 - 16))
+                -- x*8-14 is the actual flush contact position for the
+                -- champion's x+14 push probe. The old one-screen helper
+                -- started two pixels farther away and assumed a fixed hold
+                -- would always spend enough frames walking into contact;
+                -- that became timing-dependent once rooms streamed 31x31
+                -- courts. Drive until the cartridge itself clears the lock.
+                emu:write8(PL_ADDR + 9, math.max(0, x * 8 - 14))
                 emu:write8(PL_ADDR + 10, 0)
                 emu:write8(PL_ADDR + 11, math.max(0, y * 8 - 8))
                 emu:write8(PL_ADDR + 12, 0)
-                hold(KEY_RIGHT, 120)
-                return true
+                for _ = 1, 180 do
+                    if emu:read8(PLK_ADDR) == 0 then
+                        emu:setKeys(0)
+                        tick(4)
+                        return true
+                    end
+                    emu:setKeys(KEY_RIGHT)
+                    emu:runFrame()
+                end
+                emu:setKeys(0)
+                tick(4)
+                return emu:read8(PLK_ADDR) == 0
             end
         end
     end

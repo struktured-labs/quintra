@@ -82,7 +82,10 @@ def main():
         for stage in range(1, 9):
             for seed in SEEDS:
                 roster, elites, total_hp = sample_foyer(pb, stage, seed)
-                assert 2 <= len(roster) <= 4, (
+                # Foyers remain the gentler no-elite introduction, but their
+                # scrolling footprint now earns the milestone's game-wide
+                # population floor instead of preserving the old sparse cap.
+                assert 4 <= len(roster) <= 6, (
                     f"stage {stage + 1} foyer count={len(roster)} roster={roster}")
                 assert elites == 0, (
                     f"stage {stage + 1} foyer promoted {elites} elite(s)")

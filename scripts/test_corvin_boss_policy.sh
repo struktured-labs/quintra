@@ -15,7 +15,7 @@ OUT="$(mktemp /tmp/quintra-corvin-boss.XXXXXX)"
 # prevent the real giant policy from being exercised; boss movement, arena,
 # projectiles, and controller input remain intact.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=27 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=240 \
+  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
   QUINTRA_BALANCE_TARGET_FRAME=680 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

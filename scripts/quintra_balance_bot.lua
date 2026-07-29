@@ -934,10 +934,11 @@ function can_step(px, py, key)
         return false
     end
     local next_blocked = pixel_feet_blocked(nx, ny)
-    -- Mirror room.c's vertical full-sprite rule for crates and small pillars.
-    if key == KEY_UP or key == KEY_DOWN then
-        next_blocked = next_blocked + pixel_body_obstacles(nx, ny)
-    end
+    -- room.c applies the full visible-body obstacle rule to both horizontal
+    -- and vertical walking. The controller formerly checked it only for
+    -- vertical input, so a lower-court pillar could look Right-walkable here
+    -- while the cartridge correctly held the champion still forever.
+    next_blocked = next_blocked + pixel_body_obstacles(nx, ny)
     -- Damage knockback now uses the exact same complete-body contract, so a
     -- legal run cannot begin a controller frame embedded in scenery. Never
     -- model an overlap escape: that was the source of one-pixel wall tunnels.
@@ -1871,6 +1872,8 @@ end
 -- expanded Star is handled by its separate orbit policy below.
 fold_star_pixel_route = nil
 fold_star_seam_escape_dir, fold_star_seam_escape_ticks = 0, 0
+counter_cover_dir, counter_cover_ticks, counter_cover_active = 0, 0, false
+mirror_route_active, mirror_route_x, mirror_route_y = false, 0, 0
 function fold_star_shot_lane(px, py, ex, ey, max_range)
     local sx, sy = px + 6, py + 6
     local gx, gy = ex + 4, ey + 4
@@ -2294,6 +2297,21 @@ function door_step(px, py)
             for _, candidate in ipairs(candidates) do
                 if can_step(px, py, candidate) then return candidate end
             end
+        end
+        -- A legal feet-anchored wall overhang can have no representative in
+        -- the conservative tile-center graph without actually overlapping
+        -- scenery. Never return a physically blocked fallback from that
+        -- state: take one real step toward the arena center so the next frame
+        -- can re-enter the authored route. The old unconditional DOWN left a
+        -- Wolfkin at (13,8) pressing into the same wall for 8,000 frames.
+        if can_step(px, py, fallback) then return fallback end
+        local inward_x = px < QUINTRA_ARENA_W / 2 and KEY_RIGHT or KEY_LEFT
+        local inward_y = py < QUINTRA_ARENA_H / 2 and KEY_DOWN or KEY_UP
+        local recovery = {inward_y, inward_x,
+            inward_x == KEY_RIGHT and KEY_LEFT or KEY_RIGHT,
+            inward_y == KEY_DOWN and KEY_UP or KEY_DOWN}
+        for _, candidate in ipairs(recovery) do
+            if can_step(px, py, candidate) then return candidate end
         end
         return fallback
     end
@@ -3010,6 +3028,8 @@ while frames < LIMIT do
         no_damage_frames, target_stall_frames, flank_timer = 0, 0, 0
         fold_star_pixel_route, spore_pixel_route = nil, nil
         fold_star_seam_escape_dir, fold_star_seam_escape_ticks = 0, 0
+        counter_cover_dir, counter_cover_ticks, counter_cover_active = 0, 0, false
+        mirror_route_active, mirror_route_x, mirror_route_y = false, 0, 0
         if is_town_room(room) and not town_rooms[room] then
             town_rooms[room], towns_seen = true, towns_seen + 1
         end
@@ -3675,6 +3695,89 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim,
                     routed_reach)
             end
+        elseif target.kind == 18 or target.kind == 30 then
+            -- Echo Guards and Shard Crabs are bait-and-punish enemies. Route
+            -- to a close physical shot lane so the first A can raise the
+            -- shell, then keep attacking through the short rush and pale
+            -- exposed window. The generic ranged orbit could fire its bait
+            -- from too far away, spend the whole opening reacquiring cover,
+            -- and then repeat that harmless parry forever.
+            local counter_range = math.max(math.abs(dx), math.abs(dy))
+            local counter_offaxis = (aim == KEY_UP or aim == KEY_DOWN)
+                and math.abs(dx) or math.abs(dy)
+            -- If a rushing shell has reached body overlap, the zero-length
+            -- projectile lane is intentionally undefined. That is already a
+            -- valid point-blank bait/punish position: press A instead of
+            -- asking the route search to find a line between identical
+            -- coordinates and walking into the same pixel forever.
+            local counter_contact = counter_range <= 12
+            local counter_ready = counter_contact
+                or (counter_range <= 52 and counter_offaxis <= 5
+                    and projectile_lane_clear(
+                        px, py, target.x, target.y, aim))
+            local counter_step = aim
+            local counter_exact = false
+            -- A CounterGuard may walk onto the champion while both occupy a
+            -- legal feet-anchored wall overhang. The coarse tile route then
+            -- reports "already there", although every Fang origin points
+            -- into cover and cannot deliver the bait hit. After a short
+            -- unchanged-HP observation—or immediately on body overlap—use
+            -- the existing exact pixel shot-lane search to step out, align,
+            -- and preserve the authored bait/rush/punish interaction.
+            if not counter_ready
+                and (counter_range <= 16 or no_damage_frames > 120) then
+                local exact_step, exact_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, 52)
+                if exact_ready or exact_step ~= aim then
+                    counter_step = exact_step
+                    counter_ready = exact_ready
+                    counter_exact = true
+                end
+            end
+            if counter_ready then
+                counter_cover_ticks = 0
+                counter_cover_active = false
+            elseif counter_exact then
+                counter_cover_ticks = 0
+                counter_cover_active = false
+            elseif counter_cover_active then
+                if counter_cover_ticks == 0
+                    or not can_step(px, py, counter_cover_dir) then
+                    counter_cover_dir = target_step(
+                        px, py, target.x, target.y, aim, 6)
+                    counter_cover_ticks = 32
+                end
+                counter_step = counter_cover_dir
+                if counter_cover_ticks > 0 then
+                    counter_cover_ticks = counter_cover_ticks - 1
+                end
+            else
+                counter_cover_ticks = 0
+                if counter_offaxis > 5 then
+                    counter_step = (aim == KEY_UP or aim == KEY_DOWN)
+                        and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+                        or (dy > 0 and KEY_DOWN or KEY_UP)
+                end
+                if not can_step(px, py, counter_step) then
+                    -- Pay for the cached tile route only when a real wall
+                    -- blocks the cheap direct alignment.
+                    counter_cover_dir = target_step(
+                        px, py, target.x, target.y, aim, 6)
+                    counter_cover_ticks = 32
+                    counter_cover_active = true
+                    counter_step = counter_cover_dir
+                end
+            end
+            if counter_ready then
+                if target.state ~= 0 and CLASS == 3
+                    and active_charge == 0 and mp >= 2 then
+                    keys = KEY_B + counter_step
+                else
+                    keys = KEY_A + counter_step
+                end
+            else
+                keys = counter_step
+            end
         elseif target.kind == 10 then
             -- Sentries do not chase. The generic ranged orbit therefore
             -- keeps a champion circling the same blocked corner forever
@@ -3754,19 +3857,51 @@ while frames < LIMIT do
                 sigil_pixel_active = true
             elseif reach <= mirror_range and offaxis <= 5
                 and projectile_lane_clear(px, py, target.x, target.y, aim) then
+                mirror_route_active = false
                 keys = KEY_A + aim
             elseif QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136 then
-                -- Once inside the same wide sector, its lower ruin wall can
-                -- still put the moving Moth one narrow gap away. A coarse
-                -- tile route may alternate on the corner as the Moth mirrors
-                -- each attempted correction. Seek an actual projectile lane
-                -- with the cartridge's one-pixel feet collision, then fire
-                -- through the gap; this is the same controller-only route
-                -- used for Sentries and contracted Folding Stars.
-                local mirror_step, mirror_ready = fold_star_pixel_step(
-                    room, px, py, target.x, target.y, aim, mirror_range)
-                keys = mirror_ready
-                    and (KEY_A + mirror_step) or mirror_step
+                -- Once both bodies share a wide-court sector, exploit the
+                -- Moth's authored rule directly: it moves opposite the
+                -- champion, so a sustained approach closes the gap from both
+                -- ends. The old per-frame pixel BFS chased yesterday's
+                -- position and could answer blocked UP forever along a ruin
+                -- wall. Align one axis, then approach on the other. If cover
+                -- blocks that live step (or the approach has made no damage
+                -- for two seconds), snapshot the Moth and commit to one
+                -- exact physical route. Its mirrored movement makes both
+                -- bodies converge on that snapshot route, while the fixed
+                -- endpoint keeps the cached graph stable and cheap.
+                local mirror_step = aim
+                if offaxis > 5 then
+                    mirror_step = (aim == KEY_UP or aim == KEY_DOWN)
+                        and (dx > 0 and KEY_RIGHT or KEY_LEFT)
+                        or (dy > 0 and KEY_DOWN or KEY_UP)
+                end
+                if mirror_route_active or no_damage_frames > 120
+                    or not can_step(px, py, mirror_step) then
+                    if not mirror_route_active then
+                        mirror_route_x, mirror_route_y = target.x, target.y
+                        mirror_route_active = true
+                        fold_star_pixel_route = nil
+                    end
+                    local mirror_ready
+                    mirror_step, mirror_ready = fold_star_pixel_step(
+                        room, px, py, mirror_route_x, mirror_route_y,
+                        aim, mirror_range)
+                    if mirror_ready then
+                        mirror_route_active = false
+                        no_damage_frames = 0
+                        keys = KEY_A + aim
+                    else
+                        keys = KEY_A + mirror_step
+                        -- The exact route owns recovery until it reaches the
+                        -- cached shot lane; generic combat unstick would
+                        -- otherwise kick it off the proven pixel path.
+                        sigil_pixel_active = true
+                    end
+                else
+                    keys = KEY_A + mirror_step
+                end
             else
                 -- Keep A armed during pursuit. Because the Moth reverses each
                 -- movement sample, a body-valid route crosses a usable lane
@@ -4011,6 +4146,11 @@ while frames < LIMIT do
         optional_open_room = target.giant == 0
             and world_mode == 0 and not optional_room_is_town
             and not (SEALED ~= 0 and emu:read8(SEALED) ~= 0)
+            -- Counter guards deliberately begin with a no-damage bait. Do
+            -- not misclassify that authored shell beat as an optional-combat
+            -- stall before the controller can use its exposed window.
+            and target.kind ~= 16
+            and target.kind ~= 18 and target.kind ~= 30
             -- Open doors mean exactly what they show. Preserve the authored
         -- room-3 Warden, late Waystone/deep Warden, shop, sanctuary, and
         -- giant objectives; every
@@ -4547,15 +4687,20 @@ while frames < LIMIT do
         -- with DOWN, letting the Sentinel's own contact push return them to
         -- y=0 forever. Preserve their real attack/BFS policy for this body.
         and not (target.kind == 1 and target.giant == 0) then
-        if py <= 12 and target.y <= 12 then
+        local counter_contact = (target.kind == 18 or target.kind == 30)
+            and math.max(math.abs(target.x - px),
+                math.abs(target.y - py)) <= 12
+        if py <= 12 and target.y <= 12 and not counter_contact then
             keys = KEY_DOWN
         elseif py >= QUINTRA_ARENA_H - 20
-            and target.y >= QUINTRA_ARENA_H - 20 then
+            and target.y >= QUINTRA_ARENA_H - 20
+            and not counter_contact then
             keys = KEY_UP
-        elseif px <= 12 and target.x <= 12 then
+        elseif px <= 12 and target.x <= 12 and not counter_contact then
             keys = KEY_RIGHT
         elseif px >= QUINTRA_ARENA_W - 28
             and target.x >= QUINTRA_ARENA_W - 28
+            and not counter_contact
             -- A stationary Mire Spore can own a valid vertical shot/trigger
             -- lane in this strip. Forcing LEFT every frame erases that
             -- authored arm-retreat-punish route and pins the pilot forever.

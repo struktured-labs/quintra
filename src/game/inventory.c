@@ -159,7 +159,7 @@ void inventory_enter(void) {
     }
     gotoxy(1, 15); text_write("bosses "); text_u16((u16)run_state.bosses_beaten);
     text_write("/"); text_u16((u16)BOSSES_TO_WIN);
-    gotoxy(1, 16); text_write("kills "); text_u16((u16)run_state.enemies_killed);
+    gotoxy(1, 16); text_write("kills "); text_u16(run_state_enemies_killed_total());
     gotoxy(13, 16); text_write(RUN_IS_EASY() ? "EASY" : "NORM");
 
     // Spirit Convergence is Quintra's defining Penta-style temporary power

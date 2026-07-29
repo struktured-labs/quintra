@@ -45,8 +45,19 @@ static u8 court_false_gap_floor(u8 tile) {
 // True routes are always two or more tiles wide and remain untouched.
 void room_close_dungeon_false_gaps(void) BANKED {
     u8 x, y;
-    for (y = 1; y < ROOM_WIDE_H_TILES - 1; ++y) {
-        for (x = 1; x < ROOM_WIDE_W_TILES - 1; ++x) {
+    // Geometry authoring guarantees every intentional passage is body-wide.
+    // Stage silhouettes can overlap the shared court only in the western
+    // 20x17 ABI. Normalize that composition east-to-west: the shared 2x2
+    // cluster grammar puts its accent on the western side, so filling it can
+    // expose the immediately preceding cell as another 8px slit. The distant
+    // court is authored directly with body-wide gates and does not need a
+    // 31x31 runtime rescan on every doorway.
+    // Archetype landmarks occupy rows 2..14 and columns 1..17; the old row
+    // 16/column 19 borders are open seams in a wide court. Keeping those
+    // guaranteed-floor margins out of this hot loop saves the last doorway
+    // frame without omitting any possible silhouette overlap.
+    for (y = 2; y < ROOM_H - 2; ++y) {
+        for (x = ROOM_W - 3; x > 0; --x) {
             u8 tile = court_get(x, y);
             if (!court_false_gap_floor(tile)) continue;
             if ((court_hard_scenery(court_get((u8)(x - 1), y))
@@ -158,6 +169,10 @@ static void court_stamp_district(u8 district, u8 variant, u8 accent) {
         // GATE: four long pylons make an unmistakable outer march.
         court_wall_v((u8)(18 + shift), 2, 15, 8);
         court_wall_v((u8)(27 - shift), 2, 15, 8);
+        // Their northern tips sit one row below the true boundary. Join that
+        // cap to the architecture so row one never advertises an 8px pocket.
+        court_set((u8)(18 + shift), 1, BGT_PILLAR);
+        court_set((u8)(27 - shift), 1, BGT_PILLAR);
         court_stamp_cluster((u8)(18 + shift), 18, accent);
         court_stamp_cluster((u8)(26 - shift), 18, accent);
     } else if (district == 1) {
@@ -228,6 +243,13 @@ void room_generate_dungeon_court(u32 seed) BANKED {
         // outside the body-wide central cross.
         u8 bx = (variant & 1) ? 12 : 4;
         u8 by = (variant & 2) ? 14 : 2;
+        // A north-facing crest must meet the outer wall. Leaving row 1 as
+        // floor above these pillars reads as a passable one-tile channel,
+        // even though the champion cannot fit through it.
+        if (by == 2) {
+            court_set(bx, 1, BGT_PILLAR);
+            court_set((u8)(bx + 1), 1, BGT_PILLAR);
+        }
         court_set(bx, by, BGT_PILLAR);
         court_set((u8)(bx + 1), by, BGT_PILLAR);
         court_set((u8)(bx + 2), by, accent);
@@ -236,8 +258,29 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     // Two recognizable side halls make camera travel expose architecture,
     // not a mostly empty floor. Seed-selected paired gaps keep both chambers
     // permeable while their walls create Penta-style firing lanes and cover.
-    court_stamp_ruin(20, 2, 9, 8, shift ? 25 : 22, 5);
-    court_stamp_ruin(14, 16, 15, 13,
+    {
+        u8 east_gap = shift ? 25 : 22;
+        court_stamp_ruin(20, 2, 9, 8, east_gap, 5);
+        // The ruin's top edge sits only one tile below the true world wall.
+        // A gate here creates a 16x16-looking alcove whose body positions
+        // cannot rejoin the field. Keep this edge solid; the paired side and
+        // south gates still make the hall permeable, while false-gap
+        // normalization can honestly merge the one-tile northern overhang.
+        court_set(east_gap, 2, BGT_PILLAR);
+        court_set((u8)(east_gap + 1), 2, BGT_PILLAR);
+        // Row one would otherwise be an 8px strip trapped between the true
+        // world boundary and this solid ruin roof. Author it as the same
+        // architectural mass up front; the fast western normalization pass
+        // never needs to scan this distant sector.
+        for (x = 20; x <= 28; ++x)
+            court_set(x, 1, BGT_PILLAR);
+    }
+    // Start the lower ruin at x=13 rather than x=14. The Deep district's
+    // independent ring owns a permanent wall at x=16; leaving the ruin at
+    // x=14 made their "cloister" only column 15—an 8px visual slit the
+    // champion could never enter. Columns 14..15 now form a genuine
+    // body-wide passage while the ruin keeps the same eastern boundary.
+    court_stamp_ruin(13, 16, 16, 13,
                      shift ? 24 : 20, shift ? 23 : 19);
     court_stamp_district(district, variant, accent);
 
@@ -262,6 +305,30 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     // every overlapping layer so neither half becomes an isolated pocket.
     court_floor_rect(13, 19, 17, 2);
     court_floor_rect(23, 24, 7, 6);
+
+    // Close the one-tile service strips left between the two side halls and
+    // the true east/south perimeter. They look like passages but are only
+    // eight pixels wide; the broad aprons above remain the playable route.
+    for (y = 1; y <= 4; ++y)
+        court_set(29, y, BGT_PILLAR);
+    for (y = 16; y <= 18; ++y)
+        court_set(29, y, BGT_PILLAR);
+    for (y = 21; y <= 22; ++y)
+        court_set(29, y, BGT_PILLAR);
+    for (x = 13; x <= 22; ++x)
+        court_set(x, 29, BGT_PILLAR);
+
+    // Joined landmarks can also sandwich a single floor cell where their
+    // authored silhouettes overlap. Merge those few fixed joints rather
+    // than paying for another full-field normalization pass on every door.
+    court_set(27, 3, BGT_PILLAR);
+    court_set(27, 4, BGT_PILLAR);
+    court_set(19, 17, BGT_PILLAR);
+    court_set(20, 17, BGT_PILLAR);
+    court_set(26, 17, BGT_PILLAR);
+    court_set(27, 17, BGT_PILLAR);
+    court_set(27, 18, BGT_PILLAR);
+
     if (local == run_state_dungeon_cache_cell()) {
         // One generated dead-end owns a recognizable southeast reliquary.
         // It sits well away from the cardinal cross, making the scrolling
@@ -344,7 +411,8 @@ void room_reopen_dungeon_court_seams(u32 seed) BANKED {
                 court_set(x, y, BGT_FLOOR);
         court_set(px, py, BGT_PORTAL);
     }
-    // Catch base-field and stage-silhouette seams before encounter
-    // reachability borrows bit 7 of the collision map as scratch storage.
-    room_close_dungeon_false_gaps();
+    // False-gap normalization runs once after every terrain-writing role in
+    // procgen has finished. Running it here as well made the second pass see
+    // the first pass's intentional fill as fresh scenery and could shrink a
+    // legitimate two-tile gate one layer at a time.
 }

@@ -281,7 +281,7 @@ static void draw_dungeon_grid(void) {
         // free-floating center marker looked like decoration, so players
         // could reach the sanctuary without realizing which room held the
         // required Rift Sigil.
-        if (i == 2 && seen && i != here)
+        if (i == 2 && seen && !sigil_done && i != here)
             icon = BGT_MAP_BIG_GOAL;
         // Each completed fixture reveals exactly one next GOAL. The Pack
         // supplies its specific Sigil/Waystone/Warden name; the Compass stays

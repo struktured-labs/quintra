@@ -9,6 +9,7 @@ local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local DUMP_ENTITIES = os.getenv("QUINTRA_REPLAY_DUMP_ENTITIES") == "1"
 local FRAME_LIMIT = tonumber(os.getenv("QUINTRA_REPLAY_FRAME_LIMIT") or "")
+local STATE_OUT = os.getenv("QUINTRA_REPLAY_STATE_OUT")
 
 local expected, rows = {}, {}
 for line in io.lines(TRACE) do
@@ -33,6 +34,13 @@ for _, row in ipairs(rows) do
     end
 end
 emu:setKeys(0)
+if STATE_OUT then
+    local state = assert(emu:saveStateBuffer(0),
+        "mGBA could not serialize partial replay state")
+    local state_file = assert(io.open(STATE_OUT, "wb"))
+    state_file:write(state)
+    state_file:close()
+end
 
 local function read32(address)
     return emu:read8(address) + emu:read8(address + 1) * 256

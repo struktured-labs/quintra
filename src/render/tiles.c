@@ -5,6 +5,7 @@
 #include "render/tiles.h"
 #include "render/sprites_gen.h"
 #include "stages.h"
+#include "content.h"
 
 // All tiles are 2bpp 8x8 (16 bytes). For each row: byte_low, byte_high.
 // color = (high_bit, low_bit) per pixel.
@@ -169,6 +170,12 @@ void tiles_load_prism_skitter_sprite(void) BANKED {
     set_sprite_data(SPR_ENEMY_PRISM_SKITTER, 1, sprite_enemy_prism_skitter);
 }
 
+void tiles_load_rift_cantor_sprite(void) BANKED {
+    // Dungeon combat cannot contain a merchant. Reclaim that NPC tile for a
+    // distinct reinforcement-caller silhouette; shops retain merchant art.
+    set_sprite_data(SPR_ENEMY_RIFT_CANTOR, 1, sprite_enemy_rift_cantor);
+}
+
 void tiles_load_dusk_midge_sprite(void) BANKED {
     // Apothecary art is resident only in a town. Dungeon rooms cannot contain
     // that NPC, so reclaim its slot for the Midge without increasing OBJ VRAM.
@@ -270,6 +277,28 @@ void tiles_load_fx_sprites(void) BANKED {
     // Wolfkin's physical attack is a readable steel sword, with a distinct
     // point, blade, crossguard, and hilt—not a bullet or a tiny bare fist.
     set_sprite_data(SPR_FX_SWING, 1, sprite_fx_sword);
+}
+
+void tiles_load_weapon_sprite(u8 weapon_index) BANKED {
+    u16 id = (weapon_index < N_ITEMS) ? items[weapon_index].id : 0;
+    // SPR_FX_SWING is deliberately multiplexed: only one primary weapon is
+    // equipped at a time, so the current run can carry materially different
+    // silhouettes without expanding the 128-tile OBJ atlas.
+    if (id == 30u) {
+        set_sprite_data(SPR_FX_SWING, 1, sprite_fx_flail);
+    } else if (id == 1u || id == 4u) {
+        set_sprite_data(SPR_FX_SWING, 1, sprite_fx_spike);
+    } else {
+        // Fang Forms and Spirit Convergence retain authored steel.
+        set_sprite_data(SPR_FX_SWING, 1, sprite_fx_sword);
+    }
+}
+
+void tiles_load_shield_sprite(u8 class_id) BANKED {
+    // Picsean's Tidal Guard is broader, softer water art. Sauran and the
+    // short activation wards keep the compact faceted Stoneskin shard.
+    set_sprite_data(SPR_SHIELD_AURA, 1,
+        class_id == 3 ? sprite_fx_water_aura : sprite_fx_shield_aura);
 }
 
 // Compact hand-authored outdoor vocabulary. These are deliberately runtime

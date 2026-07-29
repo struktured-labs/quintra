@@ -8,6 +8,7 @@
 #include "game/enemy_ai.h"
 #include "game/pickup.h"
 #include "game/room.h"
+#include "game/run_state.h"
 #include "content.h"
 
 entity_t entities[MAX_ENTITIES];
@@ -16,6 +17,12 @@ entity_t entities[MAX_ENTITIES];
 // sprite is X-flipped (OAM attr bit 5), reading as a 2-frame idle/walk motion
 // with no extra tile art.
 u8 entity_anim_counter;
+// Highest OAM cursor used by the previous entity draw. Only slots that became
+// unused need parking; rewriting every remaining hardware sprite each frame
+// wastes a large share of the Riftwild video budget.
+u8 entity_oam_high = 4;
+
+void entity_update_from(u8 start) BANKED;
 
 // 8-direction deltas: 0=N, 1=NE, 2=E, 3=SE, 4=S, 5=SW, 6=W, 7=NW
 const i8 dir8_dx[8] = {  0, +1, +1, +1,  0, -1, -1, -1 };
@@ -23,15 +30,6 @@ const i8 dir8_dy[8] = { -1, -1,  0, +1, +1, +1,  0, -1 };
 
 static u8 hitbox_w(const entity_t *e) { return (e->hitbox >> 4) & 0x0F; }
 static u8 hitbox_h(const entity_t *e) { return  e->hitbox       & 0x0F; }
-
-void entity_init_all(void) {
-    u8 i;
-    memset(entities, 0, sizeof(entities));
-    // Park entity sprites (slots 4..35) + boss metasprite overlay (36..39)
-    for (i = 4; i < 40; ++i) {
-        move_sprite(i, 0, 0);
-    }
-}
 
 u8 entity_spawn(u8 type) {
     u8 i;
@@ -96,18 +94,43 @@ u8 aabb_overlap_player_wide(const entity_t *e) {
     return 1;
 }
 
-void entity_update_all(u8 keys, u8 pressed) {
+// Home-bank half of the adaptive dispatcher. Projectile/FX-free rooms stay
+// here for the complete scan; the first projectile or effect transfers only
+// the unprocessed suffix to bank 3, where both updates are direct calls.
+void entity_update_nonprojectile(u8 idx) {
+    switch (entities[idx].type) {
+        case ENT_ENEMY:
+            if (!run_state.world_mode
+                || (entities[idx].flags & EF_ON_SCREEN))
+                enemy_update(&entities[idx], idx);
+            break;
+        case ENT_PICKUP:
+            pickup_update(&entities[idx], idx);
+            break;
+        default:
+            break;
+    }
+}
+
+void entity_update_all(void) {
     u8 i;
+    // A Riftwild field is four screens wide/tall, but enemies move by at
+    // most a pixel on only some AI ticks. Re-scanning all 32 slots through a
+    // banked call every frame consumed enough of the video budget to miss
+    // VBlank in otherwise quiet rooms. Refresh on the shared four-frame
+    // animation cadence instead: camera/edge activation remains responsive
+    // within 67 ms, while sleeping off-screen bodies still cannot simulate
+    // their way toward the champion.
+    if (run_state.world_mode && !(entity_anim_counter & 0x03))
+        entity_refresh_world_visibility();
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) continue;
-        switch (entities[i].type) {
-            case ENT_PROJECTILE: projectile_update(&entities[i], i); break;
-            case ENT_ENEMY:      enemy_update(&entities[i], i);      break;
-            case ENT_PICKUP:     pickup_update(&entities[i], i);     break;
-            case ENT_FX:         fx_update(&entities[i], i);         break;
-            default: break;
+        if (entities[i].type == ENT_PROJECTILE
+            || entities[i].type == ENT_FX) {
+            entity_update_from(i);
+            return;
         }
-        keys; pressed;
+        entity_update_nonprojectile(i);
     }
 }
 
@@ -125,11 +148,6 @@ u8 fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl) {
         e->damage      = 0;
     }
     return idx;
-}
-
-void fx_update(entity_t *e, u8 idx) {
-    if (e->state_timer == 0) { entity_kill(idx); return; }
-    e->state_timer--;
 }
 
 // 16x16 enemies (2x2 tiles): the mini-boss Sentinel and the bruiser tier

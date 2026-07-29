@@ -166,13 +166,13 @@ def main():
     clear_hostiles(pb); put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
     assert pb.memory[RS + 18] == 15 and pb.memory[RS + 19] == 2
-    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 92), \
-        "cave arrival did not use the safe world-center spawn"
+    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 60), \
+        "cave arrival did not use the body-safe world-center intersection"
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
     assert pb.memory[RS + 18] == 2, "vault staircase did not return"
-    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 92), \
-        "vault return did not use the safe world-center spawn"
+    assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 60), \
+        "vault return did not use the body-safe world-center intersection"
     exit_at(pb, 72, 232); assert pb.memory[RS + 18] == 6, pb.memory[RS + 18]
     assert pb.memory[TM + 8 * 20 + 10] == 34, "dungeon gate has no portal"
     for _ in range(60): pb.tick()

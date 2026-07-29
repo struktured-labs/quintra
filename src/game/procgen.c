@@ -44,35 +44,6 @@ u8 boss_palette_for_stage(u8 stage) {
     return 0x06;
 }
 
-// Place player at the door opposite the one they entered from.
-static void place_player_after_entry(void) {
-    // Spawn just inside the door opposite the exit. The player's WALL box
-    // is the feet half (x+2..x+13, y+8..y+15), so x=72 centers the body
-    // on the 2-wide N/S doors (cols 9-10) and y=60 on the E/W pair
-    // (rows 8-9).
-    u8 dir = run_state.entered_from;
-    u8 large = (run_state.world_mode || procgen_current_room_is_large) ? 1 : 0;
-    if (dir == DIR_N) {
-        player.x = 72;
-        player.y = large ? (ROOM_WIDE_H_PX - 24) : 112;
-    }
-    else if (dir == DIR_S) { player.x = 72;  player.y = 8;   }
-    else if (dir == DIR_E) { player.x = 8;   player.y = 60;  }
-    else if (dir == DIR_W) {
-        player.x = large ? (ROOM_WIDE_W_PX - 24) : 136;
-        player.y = 60;
-    }
-    else {
-        // Direct developer/checkpoint portals can target a court even though
-        // normal play reaches it through a cardinal door. Keep that fallback
-        // on the guaranteed x=9..10 central trail; x=104 overlapped the
-        // seed-variant southeast ruin's top-left wall and could suppress the
-        // entire reachable encounter component.
-        player.x = 72;
-        player.y = large ? 92 : 60;
-    }
-}
-
 // Weighted pick from this stage's roster (generated stage_pool tables;
 // stage wraps with the endless theme cycle). One rng draw per pick.
 static u8 pick_enemy_for_stage(u8 stage_raw) {
@@ -980,11 +951,8 @@ void procgen_generate_current_room(void) BANKED {
         }
     }
 
-    // Clear entity table — fresh enemies per room
-    entity_init_all();
-
-    // Player position FIRST so spawn-avoidance checks the real tile
-    place_player_after_entry();
+    // Clear entities and place the player before spawn-avoidance checks.
+    entity_init_room();
 
     // The stage objective is progression-critical. Reserve its real pickup
     // before this room's optional enemy, shop, and decoration spawns can fill
@@ -1057,6 +1025,17 @@ void procgen_generate_current_room(void) BANKED {
         // a guaranteed full blessing, so each escalating colossus tests the
         // build rather than leftover attrition from the preceding rooms.
         u8 is_rest = run_state_is_sanctuary();
+        u8 puzzle_local = run_state_dungeon_local();
+        // These roles deterministically replace combat after generation.
+        // Avoid rolling and placing a dense pack only for puzzle_prepare to
+        // delete it during the same doorway transaction. Besides saving
+        // entity churn, this keeps streamed same-stage travel below one
+        // second even after the game-wide encounter-density increase.
+        u8 is_puzzle_room = (!run_state.world_mode && !is_boss_room
+            && (puzzle_local == 1
+                || (puzzle_local == 2
+                    && (run_state.bosses_beaten % 3) == 2)
+                || puzzle_local == 7)) ? 1 : 0;
         // Recurring turn courts close each large two-room wing. They retain
         // combat, but cap it at a
         // deliberate pair so the enlarged maze has pacing contrast rather
@@ -1325,39 +1304,54 @@ void procgen_generate_current_room(void) BANKED {
                 paint_shop_price(10, build_price);
                 paint_shop_price(13, tactical_price);
             }
+        } else if (is_puzzle_room) {
+            // puzzle_prepare_room_role authors the interactive fixture and
+            // owns the room's non-combat seal after procgen returns.
         } else {
-            // Enemy count scales with depth. One lone crawler made too many
-            // early rooms read as a target practice hall; start at two bodies
-            // so positioning and the champion's B kit matter immediately.
-            // Keep the existing shallow ramp rather than raising every HP
-            // value into a sponge fight.
+            // Enemy count scales with depth, but every stage must feel
+            // inhabited. Three opening bodies is the new floor; stages two
+            // and three add one pressure body, stage four onward adds two,
+            // and the scrolling 31x31 fields add one more because the same
+            // population is otherwise diluted across more than three
+            // viewports. This raises decisions/projectile crossfire rather
+            // than hiding difficulty in another blanket HP increase.
             u8 depth_bonus = run_state.bosses_beaten;
             // A new stage should establish its visual language before asking
             // the player to solve the densest possible seven-body roll. This
             // is especially important after a village/Riftwild handoff, where
             // the first Golden Temple room could combine an elite Echo Guard
-            // with six escorts for 154 HP of immediate attrition. The foyer
-            // remains procedural combat, but caps at four non-elite bodies;
-            // every later ordinary room keeps the complete 2..7 budget and
-            // elite chance. Stage zero retains its existing tutorial seed.
+            // with a full late pack. The foyer remains procedural combat, but
+            // caps at five compact / six scrolling bodies and defers elites;
+            // every later ordinary room keeps the complete denser budget.
             u8 is_stage_foyer = (!run_state.world_mode
                 && run_state.bosses_beaten > 0
                 && run_state_dungeon_local() == 0) ? 1 : 0;
             u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 1 : 2)
-                : (u8)(2 + rng_range(4)
-                    + (depth_bonus > 2 ? 2 : depth_bonus));
-            if (is_stage_foyer && enemy_count > 4) enemy_count = 4;
+                : (u8)(3 + rng_range(4)
+                    + (depth_bonus >= 3 ? 2 : depth_bonus ? 1 : 0)
+                    + (procgen_current_room_is_large ? 1 : 0));
+            if (is_stage_foyer
+                && enemy_count > (procgen_current_room_is_large ? 6 : 5))
+                enemy_count = procgen_current_room_is_large ? 6 : 5;
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
             u8 spawned = 0;
             u8 attempts = 0;
+            // A fixed anchor list made every scrolling court open with the
+            // same enemy silhouette. Rotate four complete permutations by
+            // run, stage, and room instead. This consumes no RNG (preserving
+            // C/Rust procgen parity), keeps every body on a guaranteed-open
+            // apron, and creates ring, flank, reverse, and crossfire starts.
+            u8 encounter_formation = (u8)(((u8)run_state.run_seed
+                + run_state.room_counter
+                + (u8)(run_state.bosses_beaten << 1)) & 3);
             mark_spawn_reachable();
             // `enemy_count` used to mean attempts, not bodies: a pillar or
             // entrance-safety rejection could quietly turn the intended
             // two-enemy floor back into one crawler. Retry a bounded four
             // sites per desired body; this remains deterministic and never
             // risks an unbounded procgen loop in a dense room archetype.
-            while (spawned < enemy_count && attempts < (u8)(enemy_count << 2)) {
+            while (spawned < enemy_count && attempts < (u8)(enemy_count << 3)) {
                 u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
                 u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
                 attempts++;
@@ -1398,26 +1392,43 @@ void procgen_generate_current_room(void) BANKED {
                                 (u8)(entities[idx].hp + 1 + (u8)(st >> 1));
                             // Optional outdoor pressure should inhabit the new
                             // territory instead of clustering in the original
-                            // viewport. Every second successful body uses the
-                            // guaranteed-open southeast trail, beyond BOTH old
-                            // viewport seams; no extra RNG is consumed.
+                            // viewport. Every second successful body uses one
+                            // of four guaranteed-open trail sites beyond an
+                            // old viewport seam; no extra RNG is consumed.
                             if (run_state.world_mode && (spawned & 1)) {
-                                entities[idx].x = FIX8(216);
-                                entities[idx].y = FIX8(200);
+                                static const u8 world_spawn_x[4] = {
+                                    168, 72, 208, 80
+                                };
+                                static const u8 world_spawn_y[4] = {
+                                    64, 168, 72, 208
+                                };
+                                u8 sector = (u8)((spawned >> 1) & 3);
+                                entities[idx].x = FIX8(world_spawn_x[sector]);
+                                entities[idx].y = FIX8(world_spawn_y[sector]);
                             } else if (procgen_current_room_is_large) {
-                                // Populate four readable sectors rather than
-                                // stacking every body on one southeast pixel.
+                                // Populate nine readable anchors rather than
+                                // folding a denser pack back onto four points.
                                 // The coordinates sit on the guaranteed-open
                                 // central hall and encounter aprons, so the
                                 // full field becomes combat space without
                                 // consuming another RNG draw.
-                                static const u8 wide_spawn_x[4] = {
-                                    120, 208, 184, 72
+                                static const u8 wide_spawn_x[9] = {
+                                    120, 208, 184, 72, 32,
+                                    216, 120, 184, 72
                                 };
-                                static const u8 wide_spawn_y[4] = {
-                                    64, 200, 48, 184
+                                static const u8 wide_spawn_y[9] = {
+                                    64, 200, 48, 184, 64,
+                                    48, 152, 152, 216
                                 };
-                                u8 sector = (u8)(spawned & 3);
+                                static const u8 wide_formation[4][9] = {
+                                    { 0, 1, 2, 3, 4, 5, 6, 7, 8 },
+                                    { 4, 1, 5, 3, 0, 7, 6, 2, 8 },
+                                    { 8, 7, 6, 5, 4, 3, 2, 1, 0 },
+                                    { 2, 7, 0, 8, 3, 5, 1, 6, 4 },
+                                };
+                                u8 sector =
+                                    wide_formation[encounter_formation]
+                                                  [spawned % 9];
                                 entities[idx].x = FIX8(wide_spawn_x[sector]);
                                 entities[idx].y = FIX8(wide_spawn_y[sector]);
                             }

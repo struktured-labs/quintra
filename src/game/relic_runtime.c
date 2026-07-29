@@ -17,6 +17,19 @@
 // attack a stable run-wide cadence without expanding suspend-save state.
 static u8 echo_attack_count;
 
+// Cold inventory reconciliation belongs with the other relic bookkeeping,
+// not in projectile bank 3's dense-update budget.
+void projectile_sync_player_relics(void) BANKED {
+    u8 i;
+    g_player_ricochet = 0;
+    for (i = 0; i < INVENTORY_SLOTS; ++i) {
+        if (player.inventory[i] == ITEM_ID_RICOCHET_RUNE) {
+            g_player_ricochet = 1;
+            return;
+        }
+    }
+}
+
 static u8 has_item(u8 item_id) {
     u8 i;
     for (i = 0; i < INVENTORY_SLOTS; ++i)

@@ -6,25 +6,38 @@ from test_stage_archetypes import EN, generated_room
 
 def main():
     counts = []
+    first_positions = []
 
     def count_hostiles(pb, _tiles):
-        count = sum(
-            pb.memory[EN + i * 28] == 2 and pb.memory[EN + i * 28 + 1] & 1
-            for i in range(32)
-        )
+        enemies = [
+            EN + i * 28 for i in range(32)
+            if pb.memory[EN + i * 28] == 2
+            and pb.memory[EN + i * 28 + 1] & 1
+        ]
+        count = len(enemies)
         counts.append(count)
+        first = enemies[0]
+        first_positions.append((
+            pb.memory[first + 3] | (pb.memory[first + 4] << 8),
+            pb.memory[first + 7] | (pb.memory[first + 8] << 8),
+        ))
 
     # Stage-zero room one is an ordinary combat room (not a shop, rest,
     # miniboss, town, or boss). These seeds exercise different pillar/layout
     # decisions and used to reveal the old one-attempt placement bug.
-    for seed in (0xCAFE1234, 0xCAFE1235, 0x1337, 0xDEADBEEF):
+    for seed in (0xCAFE1234, 0xCAFE1235, 0xCAFE1236, 0xCAFE1237):
         generated_room(0, seed, probe=count_hostiles)
 
     assert len(counts) == 4
-    assert min(counts) >= 2, (
-        f"ordinary early room fell below two active enemies: {counts}"
+    assert min(counts) >= 3, (
+        f"ordinary early room fell below three active enemies: {counts}"
     )
-    print(f"[enemy-density] PASS early-room hostiles={counts}")
+    assert len(set(first_positions)) == 4, (
+        "seed-derived wide-room formations collapsed onto one opening: "
+        f"{first_positions}"
+    )
+    print(f"[enemy-density] PASS early-room hostiles={counts}; "
+          f"four opening formations={first_positions}")
 
 
 if __name__ == "__main__":

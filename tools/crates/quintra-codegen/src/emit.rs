@@ -100,6 +100,7 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_MIRROR    10\n\
          #define AI_SPORE_MINE 11\n\
          #define AI_COUNTER_GUARD 12\n\
+         #define AI_SUMMONER 13\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -359,8 +360,6 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
          \x20\x20\x20\x20u8            ai_p1;\n\
          \x20\x20\x20\x20u8            ai_p2;\n\
          \x20\x20\x20\x20u8            drop_table;\n\
-         \x20\x20\x20\x20u8            n_biomes;\n\
-         \x20\x20\x20\x20const u8*     biomes;\n\
          } enemy_def_t;\n\
          \n",
     );
@@ -379,12 +378,6 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
 
     let mut b = String::from(HEADER_NOTE);
     b.push_str("#include \"enemies.h\"\n\n");
-    for e in &reg.enemies {
-        b.push_str(&format!("static const u8 _bio_enemy_{}[] = {{", e.id.raw()));
-        for bi in e.biomes { b.push_str(&format!(" {},", bi.raw())); }
-        b.push_str(" };\n");
-    }
-    b.push('\n');
     b.push_str("const enemy_def_t enemies[] = {\n");
     for e in &reg.enemies { b.push_str(&emit_enemy(e)); }
     b.push_str("};\n");
@@ -420,16 +413,18 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_SPORE_MINE", trigger_radius, fuse_ticks, 0),
         AiScriptId::CounterGuard { guard_cooldown, rush_ticks } =>
             ("AI_COUNTER_GUARD", guard_cooldown, rush_ticks, 0),
+        AiScriptId::Summoner { sight_radius, tell_ticks } =>
+            ("AI_SUMMONER", sight_radius, tell_ticks, 0),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\
         \x20     .stats={{ {} }},\n\
         \x20     .ai_kind={}, .ai_p0={}, .ai_p1={}, .ai_p2={},\n\
-        \x20     .drop_table={}, .n_biomes={}, .biomes=_bio_enemy_{} }},\n",
+        \x20     .drop_table={} }},\n",
         e.id.raw(), esc(e.name), e.sprite_set.raw(), e.palette.raw(),
         emit_enemy_stats(e.stats),
         ak, p0, p1, p2,
-        e.drop_table.raw(), e.biomes.len(), e.id.raw(),
+        e.drop_table.raw(),
     )
 }
 

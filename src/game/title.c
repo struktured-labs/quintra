@@ -83,7 +83,7 @@ static void title_init_spirits(void) {
     tiles_load_all_class_sprites();
     for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit) {
         u8 id = (u8)(spirit * TITLE_SPIRIT_SPRITES);
-        palette_obj_load((u8)(spirit + 1), class_obj_palettes[spirit]);
+        class_palette_load_obj((u8)(spirit + 1), spirit);
         for (part = 0; part < TITLE_SPIRIT_SPRITES; ++part)
             set_sprite_prop((u8)(id + part), (u8)(spirit + 1));
     }

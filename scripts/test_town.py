@@ -365,6 +365,10 @@ def main():
     # interaction, with no UI-only shortcut.
     pb.memory[pl + 16] = 99
     pb.memory[pl + 17] = 0
+    # The village sanctuary left Sauran at full health. Healing stock now
+    # refuses an atomic no-benefit sale, so author two missing HP before
+    # proving the ordinary paid transaction.
+    pb.memory[pl + 2] = max(1, pb.memory[pl + 1] - 2)
     tick(6)
     assert pb.memory[ware] == 0, "purchased market ware remained active"
     tick(2)

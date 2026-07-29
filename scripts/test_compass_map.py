@@ -78,9 +78,50 @@ def node_tile(pb: PyBoy, cell: int) -> int:
     return map_tile(pb, GX[cell], GY[cell])
 
 
+def open_compass(pb: PyBoy, screen: int) -> None:
+    """Hold SELECT until the cartridge completes the real screen handoff."""
+    pb.button_press("select")
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[screen] == SCREEN_MAP:
+                # loop_current_screen flips before the banked map_enter has
+                # finished loading its tile atlas, attributes, and full 6x5
+                # grid. Let that transaction finish before sampling VRAM.
+                for _ in range(90):
+                    pb.tick()
+                return
+    finally:
+        pb.button_release("select")
+    raise AssertionError("SELECT did not enter Spirit Compass")
+
+
+def close_compass(pb: PyBoy, screen: int, player: int) -> None:
+    """Return through room_enter and let its banked resume work finish."""
+    pb.button_press("b")
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[screen] == SCREEN_ROOM:
+                break
+        else:
+            raise AssertionError("B did not return from Spirit Compass")
+    finally:
+        pb.button_release("b")
+    # loop_current_screen changes before room_enter's sprite/palette restore
+    # has necessarily returned. Keep this map-rendering fixture safe while
+    # that real transaction settles instead of guessing it still takes the
+    # historical fixed 30 frontend frames.
+    for _ in range(90):
+        pb.memory[player + 2] = 14
+        pb.memory[player + 15] = 60
+        pb.tick()
+
+
 def main() -> None:
     screen = addr("_loop_current_screen")
     rs = addr("_run_state")
+    player = addr("_player")
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -95,9 +136,7 @@ def main() -> None:
         0x8000 + SPR_CLASS_ASCENDED_BASE * 16:
         0x8000 + (SPR_CLASS_ASCENDED_BASE + ASCENDED_TILE_COUNT) * 16])
 
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert pb.memory[screen] == SCREEN_MAP, "SELECT did not enter Spirit Compass"
 
     # The complete active 6x5 footprint is a screen-filling grid of 2x2
@@ -142,9 +181,7 @@ def main() -> None:
         "opening Compass leaked an inactive late-stage node"
     pb.screen.image.save(ROOT / "tmp" / "compass-first-room.png")
 
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     assert pb.memory[screen] == SCREEN_ROOM, "B did not return from Spirit Compass"
     ascended_after = bytes(pb.memory[
         0x8000 + SPR_CLASS_ASCENDED_BASE * 16:
@@ -161,9 +198,7 @@ def main() -> None:
     pb.memory[rs + 29] = 0
     pb.memory[rs + 31] = 0
     pb.memory[rs + 33] = 0
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert node_tile(pb, 1) == BGT_MAP_BIG_HERE, \
         "Compass lost current marker at objective-wing junction"
     assert node_tile(pb, 2) == BGT_MAP_BIG_UNKNOWN, \
@@ -195,9 +230,7 @@ def main() -> None:
         f"unvisited room lost its dashed square: "
         f"{unknown_edge_rgb} == {unknown_gap_rgb}")
     pb.screen.image.save(ROOT / "tmp" / "compass-objective-junction.png")
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     assert pb.memory[screen] == SCREEN_ROOM, \
         "B did not return from objective-wing Compass"
 
@@ -208,9 +241,7 @@ def main() -> None:
     pb.memory[rs + 29] = 0xFF
     pb.memory[rs + 31] = 0x07
     pb.memory[rs + 33] = 0
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert node_tile(pb, 18) == BGT_MAP_BIG_HERE, \
         (f"sanctuary current marker is misplaced: room={pb.memory[rs + 1]} "
          f"bosses={pb.memory[rs + 11]} tile={map_tile(pb, GX[18], GY[18])} "
@@ -253,32 +284,36 @@ def main() -> None:
     shot = ROOT / "tmp" / "compass-semantic-colors.png"
     image.save(shot)
 
+    # Once collected, the Rift Sigil room returns to an ordinary explored
+    # node. A stale GOAL marker used to keep sending players back to a
+    # completed fixture.
+    close_compass(pb, screen, player)
+    pb.memory[rs + 23] |= 1
+    open_compass(pb, screen)
+    assert node_tile(pb, 2) == BGT_MAP_BIG_ROOM, \
+        "completed Rift Sigil remained marked as an active GOAL"
+
     # Later dungeons own a reversible nonlinear link between local rooms 2
     # and 8. Seeing the first endpoint reveals only its violet end-cap; after
     # both rooms are known, a diagonal chain describes the real teleport edge
     # without mislabeling it as a cardinal corridor.
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     pb.memory[rs + 11] = 1
     pb.memory[rs + 1] = STAGE_START[1] + 2
     pb.memory[rs + 20] = 0x07    # cells 0, 1, and 2 seen
     pb.memory[rs + 29] = 0
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert map_tile(pb, 9, 4) == BGT_MAP_RIFT, \
-        "Compass did not reveal the discovered rift endpoint"
+        (f"Compass did not reveal the discovered rift endpoint: "
+         f"tile={map_tile(pb, 9, 4)} screen={pb.memory[screen]} "
+         f"room={pb.memory[rs + 1]} bosses={pb.memory[rs + 11]} "
+         f"world={pb.memory[rs + 17]} seen={pb.memory[rs + 20]:02x}")
 
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     pb.memory[rs + 1] = STAGE_START[1] + 8
     pb.memory[rs + 20] = 0x07    # cells 0, 1, and 2 seen
     pb.memory[rs + 29] = 0x01    # cell 8 seen
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert map_tile(pb, 9, 4) == BGT_MAP_RIFT, \
         "Compass did not preserve the discovered rift shortcut"
     # The diamond is intentionally hollow at its exact centre; sample one of
@@ -290,51 +325,39 @@ def main() -> None:
 
     # Back-half fixtures are revealed one at a time instead of allowing the
     # player to cut diagonally from the first Warden to the sanctuary.
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     pb.memory[rs + 11] = 2
     pb.memory[rs + 1] = STAGE_START[2] + 4
     pb.memory[rs + 20] = 0x1F
     pb.memory[rs + 23] |= 1 << 2
     pb.memory[rs + 27] = 1 << 3
     pb.memory[rs + 28] = 0
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert node_tile(pb, 7) == BGT_MAP_BIG_GOAL, \
         "completed first Warden did not reveal the Waystone puzzle"
 
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     pb.memory[rs + 11] = 5
     pb.memory[rs + 1] = STAGE_START[5] + 7
     pb.memory[rs + 20] = 0xFF
     pb.memory[rs + 23] |= 1 << 5
     pb.memory[rs + 27] = (1 << 3) | (1 << 7)
     pb.memory[rs + 28] = 0
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert node_tile(pb, 9) == BGT_MAP_BIG_GOAL, \
         "completed Waystone did not reveal the deep Warden"
 
     # The final dungeon must exercise all four explored-room bytes. A fully
     # explored sanctuary shows all thirty cells, the extra-byte current
     # marker, and the adjacent Void boss hint.
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     pb.memory[rs + 11] = 8
     pb.memory[rs + 1] = STAGE_BOSS_ROOM[8] - 1
     pb.memory[rs + 20] = 0xFF
     pb.memory[rs + 29] = 0xFF
     pb.memory[rs + 31] = 0xFF
     pb.memory[rs + 33] = 0x1F
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert node_tile(pb, 28) == BGT_MAP_BIG_HERE, \
         "extra-byte sanctuary marker is misplaced"
     assert node_tile(pb, 29) == BGT_MAP_BIG_BOSS, \
@@ -348,16 +371,12 @@ def main() -> None:
     # Riftwild's legend shares VRAM slots 90..92 with in-play district
     # lettering. The Compass atlas must load last: the previous order left
     # the visible key reading PNIHT instead of RIFT.
-    pb.button("b")
-    for _ in range(30):
-        pb.tick()
+    close_compass(pb, screen, player)
     pb.memory[rs + 17] = 1       # world_mode
     pb.memory[rs + 18] = 0       # world_screen
     pb.memory[rs + 21] = 0xFF    # world_seen low
     pb.memory[rs + 22] = 0xFF    # world_seen high
-    pb.button("select")
-    for _ in range(30):
-        pb.tick()
+    open_compass(pb, screen)
     assert tuple(map_tile(pb, x, 10) for x in range(14, 18)) == (
         BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
         BGT_MAP_LABEL_F, BGT_MAP_LABEL_T), \

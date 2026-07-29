@@ -40,7 +40,14 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         e->hp          = def->stats.hp;
         e->damage      = def->stats.damage;
         e->ai_data[0]  = enemy_content_id;
+        // Preserve the shared spawn draw, but CounterGuard's state byte is a
+        // three-state shell machine rather than an eight-direction heading.
+        // Random values 3..7 formerly skipped both its parry and exposed
+        // states, making otherwise identical Shard Crabs spawn with different
+        // rules.
         e->state       = (u8)(rng_next_u8() & 0x07);
+        if (def->ai_kind == AI_COUNTER_GUARD || def->ai_kind == AI_SUMMONER)
+            e->state = 0;
         e->state_timer = 30;
         // Flutterbats need champion-sized navigation clearance. Their old
         // 8px footprint could enter one-tile pockets that a 12px hero could
@@ -764,6 +771,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
         case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
         case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;
+        case AI_SUMMONER: rift_cantor_update(e, def);                     break;
         default:         walker_tick(e);                   break;
     }
 }

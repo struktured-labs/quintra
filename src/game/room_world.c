@@ -70,9 +70,11 @@ u8 room_apply_world_arena(void) BANKED {
     return stage;
 }
 
-// Cold/banked world-coordinate queries live outside the crowded gameplay
-// bank. Every caller already uses the BANKED contract declared by room.h.
-u8 room_tile_at_px(i16 px, i16 py) BANKED {
+// Tile lookup is shared by several switchable gameplay banks and sits on
+// collision/hazard hot paths. Keeping it always mapped avoids a ROM-bank
+// round trip for every sampled tile while the colder world builders remain
+// in bank 5.
+u8 room_tile_at_px(i16 px, i16 py) NONBANKED {
     if (px < 0 || py < 0) return BGT_WALL;
     {
         u8 tx = (u8)(px >> 3);

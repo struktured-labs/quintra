@@ -42,6 +42,16 @@ static u8 combat_has_relic(u8 item_id) {
     return 0;
 }
 
+static u8 shield_catches_projectile(const entity_t *e) {
+    i16 dx = (i16)(FIX8_TO_INT(e->x) + 3) - (i16)(player.x + 8);
+    i16 dy = (i16)(FIX8_TO_INT(e->y) + 3) - (i16)(player.y + 8);
+    u8 radius = (u8)((player.class_id == 3 ? 14 : 10)
+        + (room_appearance_tier << 1));
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+    return dx <= radius && dy <= radius;
+}
+
 // A bullet-hell kill must leave room for its guaranteed rewards.  Retiring
 // hostile shots at the death beat is both a readable clear signal and avoids
 // a full 32-slot entity table letting explosion FX crowd out hearts/relics.
@@ -207,11 +217,11 @@ u8 combat_resolve(void) BANKED {
                             if (run_state.bosses_beaten >= BOSSES_TO_WIN) pts = (u16)(pts << 1);
                             score_add(pts);
                         }
-                        run_state.enemies_killed++;
+                        run_state_record_enemy_kill();
                         // Vampiric Sigil (item id 29): slow dungeon sustain.
                         // Multiple copies keep their stat boosts but do not
                         // multiply the heal, avoiding runaway immortality.
-                        if ((run_state.enemies_killed % 5) == 0
+                        if ((run_state_enemies_killed_total() % 5) == 0
                             && player.hp < player.hp_max) {
                             u8 vi;
                             for (vi = 0; vi < INVENTORY_SLOTS; ++vi) {
@@ -226,7 +236,7 @@ u8 combat_resolve(void) BANKED {
                         // War Drum turns the same five-kill cadence into a
                         // class-shaped resource swing: every champion gets
                         // their own B move back, plus the MP needed to use it.
-                        if ((run_state.enemies_killed % 5) == 0
+                        if ((run_state_enemies_killed_total() % 5) == 0
                             && combat_has_relic(ITEM_ID_WAR_DRUM)) {
                             player.active_charge = 0;
                             if (player.mp < player.mp_max) {
@@ -294,6 +304,9 @@ u8 combat_resolve(void) BANKED {
                             fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by + 10, 22);
                             fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by + 10, 26);
                             fx_spawn(SPR_FX_IMPACT, 2, bx,      by,      30);
+                            // Stage clears themselves advance visible gear;
+                            // the guaranteed relic can advance it early too.
+                            room_refresh_player_appearance(1);
                         } else if (eid == ENEMY_BOMBER) {
                             // Bomber: death detonation — a 4-way revenge
                             // burst. Kill it from a diagonal, or eat sparks.
@@ -413,7 +426,7 @@ u8 combat_resolve(void) BANKED {
             if ((entities[i].flags & EF_ACTIVE)
                 && entities[i].type == ENT_PROJECTILE
                 && !(entities[i].flags & EF_PLAYER_PROJ)
-                && aabb_overlap_player_wide(&entities[i])) {
+                && shield_catches_projectile(&entities[i])) {
                 fx_spawn(SPR_FX_IMPACT, 1,
                     FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 7);
                 entity_kill(i);
@@ -431,6 +444,11 @@ u8 combat_resolve(void) BANKED {
                 || (entities[i].type == ENT_PROJECTILE
                     && !(entities[i].flags & EF_PLAYER_PROJ));
             if (!hostile) continue;
+            // Sleeping Riftwild bodies are in distant camera sectors. Their
+            // world coordinates cannot overlap the champion, so avoid the
+            // signed 16-bit AABB work until visibility wakes them.
+            if (run_state.world_mode && entities[i].type == ENT_ENEMY
+                && !(entities[i].flags & EF_ON_SCREEN)) continue;
             // An attached Gloam Leech uses its own timed drain; ordinary body
             // collision would double-charge damage every iframe cycle.
             if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == ENEMY_GLOAM_LEECH

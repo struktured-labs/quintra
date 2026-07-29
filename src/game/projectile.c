@@ -17,17 +17,6 @@
 u8 g_shot_element;
 u8 g_player_ricochet;
 
-void projectile_sync_player_relics(void) BANKED {
-    u8 i;
-    g_player_ricochet = 0;
-    for (i = 0; i < INVENTORY_SLOTS; ++i) {
-        if (player.inventory[i] == ITEM_ID_RICOCHET_RUNE) {
-            g_player_ricochet = 1;
-            return;
-        }
-    }
-}
-
 // Keep the reversal out of projectile_update(). SDCC otherwise expands that
 // dense per-shot function's stack frame from 16 to 25 bytes and spills
 // registers throughout the hostile-bullet hot path, even though hostile shots
@@ -132,46 +121,13 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     }
     // physical arc: no shimmer
     fx_spawn(SPR_FX_MUZZLE, 2, (i16)player.x + 2, (i16)player.y + 2, 6);
-    sfx_play(SFX_FIRE);
+    if (kind == PROJ_FLAIL || kind == PROJ_SPEAR || kind == PROJ_SPIKE)
+        sfx_play_weapon(kind);
+    else sfx_play(SFX_FIRE);
     return idx;
 }
 
-// Core spawn with an explicit px/tick velocity — lets bosses mix bullet speeds
-// (thin-fast streams vs. slow dense walls) within one pattern.
-u8 projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) BANKED {
-    u8 idx;
-    entity_t *e;
-    if (vx == 0 && vy == 0) return 0xFF;
-    idx = entity_spawn(ENT_PROJECTILE);
-    if (idx == 0xFF) return 0xFF;
-    e = &entities[idx];
-    // No EF_PLAYER_PROJ: combat treats it as hostile
-    e->x           = FIX8(px);
-    e->y           = FIX8(py);
-    e->vx          = vx;
-    e->vy          = vy;
-    e->sprite_tile = SPR_BULLET_B;
-    e->palette     = 3;                   // crawler blue — reads hostile
-    e->hp          = 1;
-    e->state_timer = 110;
-    e->hitbox      = (6 << 4) | 6;
-    e->damage      = damage;
-    return idx;
-}
-
-u8 projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) BANKED {
-    // Legacy 8-dir helper: unit deltas at the default 2 px/tick.
-    return projectile_spawn_enemy_v(px, py, (i8)((i16)dx * 2), (i8)((i16)dy * 2), damage);
-}
-
-void projectile_spawn_enemy_cross(i16 px, i16 py, u8 damage) BANKED {
-    projectile_spawn_enemy_v(px, py, 0, -1, damage);
-    projectile_spawn_enemy_v(px, py, 1, 0, damage);
-    projectile_spawn_enemy_v(px, py, 0, 1, damage);
-    projectile_spawn_enemy_v(px, py, -1, 0, damage);
-}
-
-void projectile_update(entity_t *e, u8 idx) BANKED {
+void projectile_update_one(entity_t *e, u8 idx) {
     // Cache flags for the dense bullet path. SDCC otherwise reloads this
     // struct byte for each material check below; twelve simultaneous hostile
     // shots are enough for those redundant reads to cost a video frame.
@@ -198,16 +154,34 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
         // ~half of all cracked walls unshootable.
         i16 sx = px + 4, sy = py + 4;
         u8 t;
-        if (sx < 0) sx = 0;
-        else if (sx > (i16)(room_world_width - 1)) sx = room_world_width - 1;
-        if (sy < 0) sy = 0;
-        else if (sy > (i16)(room_world_height - 1))
-            sy = room_world_height - 1;
+        if (!(flags & EF_PLAYER_PROJ)) {
+            // Hostile shots cannot open secrets. Reject their out-of-bounds
+            // path first, then sample known-valid coordinates without four
+            // clamps per bullet. This is the ordinary bullet-hell hot path.
+            if (px < 8 || px > (i16)(room_world_width - 8)
+                || py < 8 || py > (i16)(room_world_height - 8)) {
+                entity_kill(idx);
+                return;
+            }
+        } else {
+            // Player fire samples the border before despawning so a shot that
+            // reaches a north/west cracked wall can still open it.
+            if (sx < 0) sx = 0;
+            else if (sx > (i16)(room_world_width - 1))
+                sx = room_world_width - 1;
+            if (sy < 0) sy = 0;
+            else if (sy > (i16)(room_world_height - 1))
+                sy = room_world_height - 1;
+        }
         // sx/sy are clamped to the room above, so this is exactly the
         // in-bounds branch of room_tile_at_px().  Keep the hot projectile
         // path in this bank instead of paying a banked helper call for every
         // hostile bullet every frame.
-        t = (sx < ROOM_VIEW_W_PX && sy < ROOM_VIEW_H_PX)
+        // A one-screen room guarantees every clamped sample belongs to the
+        // compact tilemap. Avoid two signed 16-bit comparisons per hostile
+        // bullet; wide courts retain the exact streamed-coordinate test.
+        t = (room_world_width == ROOM_VIEW_W_PX
+                || (sx < ROOM_VIEW_W_PX && sy < ROOM_VIEW_H_PX))
             ? room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)]
             : room_tile_at_px(sx, sy);
 
@@ -250,8 +224,9 @@ void projectile_update(entity_t *e, u8 idx) BANKED {
             return;
         }
         // Off-screen / past the room edge: despawn
-        if (px < 8 || px > (i16)(room_world_width - 8)
-            || py < 8 || py > (i16)(room_world_height - 8)) {
+        if ((flags & EF_PLAYER_PROJ)
+            && (px < 8 || px > (i16)(room_world_width - 8)
+                || py < 8 || py > (i16)(room_world_height - 8))) {
             entity_kill(idx);
             return;
         }

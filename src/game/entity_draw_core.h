@@ -80,7 +80,12 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     move_sprite(oam, sx, sy);
     oam++;
 }
-while (oam < 40) {
-    move_sprite(oam, 0, 0);
-    oam++;
+// Park only sprites that were occupied on the preceding frame. Room entry
+// already clears slots 4..39, and active slots are overwritten above; hiding
+// the entire unused tail every frame was 20-35 redundant OAM writes.
+i = oam;
+while (i < entity_oam_high) {
+    move_sprite(i, 0, 0);
+    i++;
 }
+entity_oam_high = oam;

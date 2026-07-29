@@ -50,7 +50,7 @@ static void render_ending(void) {
         gotoxy(6, 2);  text_write("VICTORY!");
         gotoxy(2, 5);  text_write("9 depths freed");
         gotoxy(2, 8);  text_write("rooms   "); text_u16((u16)run_state.room_counter);
-        gotoxy(2, 9);  text_write("kills   "); text_u16((u16)run_state.enemies_killed);
+        gotoxy(2, 9);  text_write("kills   "); text_u16(run_state_enemies_killed_total());
         gotoxy(2, 10); text_write("score   "); text_u16((u16)run_state.score);
         if (new_best & 1) text_write(" NEW!");
         gotoxy(2, 11); text_write("best    "); text_u16(sram_meta_best());

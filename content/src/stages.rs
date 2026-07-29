@@ -88,7 +88,7 @@ pub const STAGES: [StageTheme; 9] = [
         // readable lane hazard, while Frost Lancers take the upper 8% of the
         // old Wisp band. The total stays 100: a new lane decision, not more
         // bodies or a changed procgen draw count.
-        enemy_pool: &[(5, 15), (28, 8), (3, 23), (6, 22), (10, 10), (16, 22)],
+        enemy_pool: &[(5, 15), (28, 8), (3, 20), (6, 22), (10, 10), (16, 19), (32, 6)],
     },
     // 4 — Toxic Mire (sickly yellow-green)
     StageTheme {
@@ -106,7 +106,7 @@ pub const STAGES: [StageTheme; 9] = [
         // the upper eight points of the former Spore band become Bog Toad.
         // That gives procgen a new encounter without perturbing established
         // deterministic controller routes or increasing room population.
-        enemy_pool: &[(12, 15), (5, 15), (6, 20), (15, 25), (17, 17), (26, 8)],
+        enemy_pool: &[(12, 15), (5, 15), (6, 14), (15, 25), (17, 17), (26, 8), (32, 6)],
     },
     // 5 — Shadow Keep (cold grey/violet)
     StageTheme {
@@ -121,7 +121,7 @@ pub const STAGES: [StageTheme; 9] = [
         // Gloam Bramble replaces a small Prism Skitter slice with a slower
         // opposite-lane orbit. Shadow Keep stays a deliberate positioning
         // test without increasing generated body count.
-        enemy_pool: &[(7, 20), (3, 20), (5, 15), (11, 15), (19, 15), (22, 10), (27, 5)],
+        enemy_pool: &[(7, 28), (5, 18), (11, 18), (19, 15), (22, 10), (27, 5), (32, 6)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {
@@ -136,7 +136,7 @@ pub const STAGES: [StageTheme; 9] = [
         // The Sunwheel makes the Temple a positioning test: it maintains a
         // compact orbit and marks a changing opposite lane, while the rest
         // of the pool preserves room for melee and counter-play lessons.
-        enemy_pool: &[(4, 15), (6, 15), (7, 15), (18, 15), (20, 15), (21, 15), (24, 10)],
+        enemy_pool: &[(4, 18), (7, 18), (18, 18), (20, 15), (21, 15), (24, 10), (32, 6)],
     },
     // 7 — Bloodmoon (crimson/black)
     StageTheme {
@@ -152,7 +152,7 @@ pub const STAGES: [StageTheme; 9] = [
         // real weaving and the three-head animation extend it naturally.
         boss_hp_bonus: 248, boss_hp_cap: 150, endless_boss_hp_cap: 150,
         boss_dmg_bonus: 4, mb_variant: 0, room_archetype: 7,
-        enemy_pool: &[(3, 18), (7, 18), (11, 20), (8, 15), (20, 11), (21, 11), (23, 7)],
+        enemy_pool: &[(7, 26), (11, 24), (8, 15), (20, 11), (21, 11), (23, 7), (32, 6)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
     StageTheme {
@@ -168,7 +168,7 @@ pub const STAGES: [StageTheme; 9] = [
         // wider, slower opposite-pair lane puzzle. Midge still owns its
         // Bloodmoon encounter; the final pool remains seven entries and 100
         // weight, so this changes neither body density nor procgen draw count.
-        enemy_pool: &[(7, 17), (11, 17), (15, 20), (19, 15), (20, 13), (21, 10), (31, 8)],
+        enemy_pool: &[(11, 21), (15, 20), (19, 15), (20, 17), (21, 13), (31, 8), (32, 6)],
     },
 ];
 

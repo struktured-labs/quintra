@@ -68,7 +68,7 @@ typedef struct {
     u8  pending_unseal;      // set by combat on boss kill; room unseals doors
     u8  secret_pending;      // 0 normal, 1 entering cache, 2 inside cache
     u16 score;               // points scored from kills
-    u8  enemies_killed;      // run total
+    u8  enemies_killed;      // run total, low byte (legacy ABI position)
     u8  world_mode;          // 1 while traversing the generated 4x4 overworld
     u8  world_screen;        // current overworld screen, row-major 0..15
     u8  world_return_screen; // cave/vault staircase return anchor
@@ -87,6 +87,7 @@ typedef struct {
     u8  next_dungeon_reveal_xhi; // queued chart knowledge for cells 16..23
     u8  dungeon_seen_xxhi;   // bit 0..5: visited dungeon cells 24..29
     u8  next_dungeon_reveal_xxhi; // queued chart knowledge for cells 24..29
+    u8  enemies_killed_hi;   // high byte; long/dense runs exceed 255 hostiles
 } run_state_t;
 
 #define RUN_IS_EASY() (run_state.difficulty == DIFFICULTY_EASY)
@@ -142,5 +143,7 @@ void run_state_reveal_dungeon_cell(u8 cell);
 void run_state_mark_visited(void);
 void run_state_begin_world(void);
 void run_state_begin_dungeon(void);
+u16  run_state_enemies_killed_total(void);
+void run_state_record_enemy_kill(void);
 
 #endif

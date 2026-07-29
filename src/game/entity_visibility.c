@@ -1,0 +1,69 @@
+#pragma bank 7
+
+#include <gb/gb.h>
+#include <string.h>
+
+#include "core/types.h"
+#include "game/entity.h"
+#include "game/player.h"
+#include "game/procgen.h"
+#include "game/room.h"
+#include "game/run_state.h"
+
+void entity_init_room(void) BANKED {
+    u8 i;
+    u8 dir;
+    u8 large;
+    memset(entities, 0, sizeof(entities));
+    // Park entity sprites (slots 4..35) + boss metasprite overlay (36..39).
+    for (i = 4; i < 40; ++i)
+        move_sprite(i, 0, 0);
+
+    // Spawn just inside the door opposite the exit. The player's wall box is
+    // the feet half, so x=72 centers it on north/south doors and y=60 on the
+    // east/west pair.
+    dir = run_state.entered_from;
+    large = (run_state.world_mode || procgen_current_room_is_large) ? 1 : 0;
+    if (dir == DIR_N) {
+        player.x = 72;
+        player.y = large ? (ROOM_WIDE_H_PX - 24) : 112;
+    } else if (dir == DIR_S) {
+        player.x = 72;
+        player.y = 8;
+    } else if (dir == DIR_E) {
+        player.x = 8;
+        player.y = 60;
+    } else if (dir == DIR_W) {
+        player.x = large ? (ROOM_WIDE_W_PX - 24) : 136;
+        player.y = 60;
+    } else {
+        // Direct checkpoints and nonlinear portals use the intersection of
+        // the guaranteed horizontal and vertical trails. A large room's old
+        // y=92 fallback occupied only the vertical feet lane: stage scenery
+        // could overlap the hero's upper half there and the full-body
+        // collision contract would then (correctly) reject every escape step.
+        player.x = 72;
+        player.y = 60;
+    }
+}
+
+// Riftwild bodies are persistent across a 248x248 field, but they should not
+// march toward the arrival screen from an unseen camera sector. Refresh this
+// once before AI dispatch; ordinary rooms and Colossi never consult the flag.
+void entity_refresh_world_visibility(void) BANKED {
+    u8 i;
+    u8 right = (u8)(room_camera_x + ROOM_VIEW_W_PX);
+    u8 bottom = (u8)(room_camera_y + ROOM_VIEW_H_PX);
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *e = &entities[i];
+        u8 x, y;
+        if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) continue;
+        x = (u8)FIX8_TO_INT(e->x);
+        y = (u8)FIX8_TO_INT(e->y);
+        if (x >= room_camera_x && x < right
+            && y >= room_camera_y && y < bottom)
+            e->flags |= EF_ON_SCREEN;
+        else
+            e->flags &= (u8)~EF_ON_SCREEN;
+    }
+}

@@ -33,6 +33,7 @@ RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
            "_procgen_current_room_is_large", "_room_world_width",
            "_room_world_height", "_room_camera_x", "_room_camera_y")
 )
+SCREEN = addr("_loop_current_screen")
 
 
 def put16(pb, where, value):
@@ -70,11 +71,21 @@ def main():
     pb.memory[TM + 16 * 20 + 9] = 3
     pb.memory[TM + 16 * 20 + 10] = 3
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 120)
-    tick(pb)
+    # The compact-boss -> 31x31 Riftwild handoff performs a complete tilemap
+    # transaction before room_tick returns. Wait through that transaction
+    # before writing the next synthetic edge position.
+    tick(pb, 180)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
     put16(pb, PL + 9, 232); put16(pb, PL + 11, 60)
     tick(pb)
-    assert pb.memory[RS + 18] == 1, "did not reach the Riftwell screen"
+    assert pb.memory[RS + 18] == 1, (
+        "did not reach the Riftwell screen: "
+        f"world={pb.memory[RS + 18]} ui={pb.memory[SCREEN]} "
+        f"player=({pb.memory[PL + 9] | pb.memory[PL + 10] << 8},"
+        f"{pb.memory[PL + 11] | pb.memory[PL + 12] << 8}) "
+        f"hp={pb.memory[PL + 2]}/{pb.memory[PL + 1]} "
+        f"from={pb.memory[RS + 6]}"
+    )
 
     well = riftwell(pb)
     assert well is not None, "Riftwell was not spawned on the first Riftwild fork"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: high scores saturate instead of wrapping to zero."""
+"""ROM contract: score and long-run kill totals do not wrap at their old caps."""
 
 import re
 from pathlib import Path
@@ -108,6 +108,8 @@ def main():
 
     pb.memory[rs + 14] = 0xFA     # score = 65,530
     pb.memory[rs + 15] = 0xFF
+    pb.memory[rs + 16] = 0xFF     # old 8-bit kill ceiling
+    pb.memory[rs + 35] = 0
     pb.memory[pl + 2] = pb.memory[pl + 1] - 2  # elite should repay half a heart
     pb.memory[pl + 15] = 60       # avoid unrelated contact damage
     for _ in range(4):
@@ -121,14 +123,17 @@ def main():
         f"box={pb.memory[enemy + 25]:02x} shot type={pb.memory[shot]} "
         f"flags={pb.memory[shot + 1]} pos={pb.memory[shot + 3]},{pb.memory[shot + 7]} "
         f"box={pb.memory[shot + 25]:02x}")
-    assert pb.memory[rs + 16] == 1, "injected enemy did not die through combat"
+    assert (pb.memory[rs + 16], pb.memory[rs + 35]) == (0, 1), (
+        "256th enemy wrapped the run kill total to zero "
+        f"(lo={pb.memory[rs + 16]} hi={pb.memory[rs + 35]})"
+    )
     pickup_kinds = [pb.memory[entities + i * 28 + 17] for i in range(32)
                     if pb.memory[entities + i * 28] == 3
                     and pb.memory[entities + i * 28 + 1] & 1]
     assert 0 in pickup_kinds or pb.memory[pl + 2] > pb.memory[pl + 1] - 2, (
         f"wounded elite did not yield its half-heart recovery: {pickup_kinds}")
     pb.stop(save=False)
-    print("[score] PASS elite recovery + generated enemy award saturates at 65535")
+    print("[score] PASS elite recovery + score saturation + 16-bit kill rollover")
 
 
 if __name__ == "__main__":

@@ -65,13 +65,16 @@ extern entity_t entities[MAX_ENTITIES];
 extern const i8 dir8_dx[8];
 extern const i8 dir8_dy[8];
 
-void entity_init_all(void);
+// Clear the room entity table and place the player at the reciprocal door.
+void entity_init_room(void) BANKED;
 u8   entity_spawn(u8 type);        // returns idx, or 0xFF if no free slot
 void entity_kill(u8 idx);
-void entity_update_all(u8 keys, u8 pressed);
+void entity_update_all(void);
 void entity_draw_all(void);
 // Cold two-axis OAM projection used only by scrolling Riftwild fields.
 void entity_draw_all_world(void) BANKED;
+// Mark only the Riftwild enemies inside the current camera sector as awake.
+void entity_refresh_world_visibility(void) BANKED;
 
 // AABB test: returns 1 if hitboxes overlap. Hitbox interpreted as
 // 4-bit w in high nibble, 4-bit h in low nibble; box anchored at (x,y).
@@ -82,6 +85,5 @@ u8   aabb_overlap_player_wide(const entity_t *e);   // full feet-anchored body (
 // FX: visual-only entity (no collision, decays on state_timer=0).
 // sprite_tile is the OBJ tile slot; ttl is frames until despawn.
 u8   fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl);
-void fx_update(entity_t *e, u8 idx);
 
 #endif

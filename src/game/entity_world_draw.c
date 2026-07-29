@@ -10,6 +10,7 @@
 #include "content.h"
 
 extern u8 entity_anim_counter;
+extern u8 entity_oam_high;
 
 static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];

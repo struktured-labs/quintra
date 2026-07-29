@@ -117,6 +117,15 @@ def buy(pb, ware_kind, purse=99):
     return ware
 
 
+def touch_ware(pb, ware, purse=99):
+    pb.memory[PL + 16] = purse & 0xFF
+    pb.memory[PL + 17] = purse >> 8
+    put16(pb, PL + 9, pb.memory[ware + 3])
+    put16(pb, PL + 11, (pb.memory[ware + 7] - 8) & 0xFF)
+    for _ in range(12):
+        pb.tick()
+
+
 def inventory(pb):
     return tuple(pb.memory[PL + 24 + i] for i in range(16))
 
@@ -191,6 +200,86 @@ def main():
     assert 12 not in shop_wares(owned_pb) and 13 in shop_wares(owned_pb), \
         "owned unique relic left a dead merchant counter"
     owned_pb.stop(save=False)
+
+    # Paid healing is a transaction, not an ambient pickup: at full health
+    # the merchant must leave both the ware and the purse untouched.
+    full_hp_pb = boot_shop(0)
+    heart_ware = shop_wares(full_hp_pb)[0]
+    full_hp_pb.memory[PL + 2] = full_hp_pb.memory[PL + 1]
+    touch_ware(full_hp_pb, heart_ware)
+    assert full_hp_pb.memory[heart_ware] == 3, \
+        "full-health merchant heal vanished without helping"
+    assert (full_hp_pb.memory[PL + 16]
+            | full_hp_pb.memory[PL + 17] << 8) == 99, \
+        "full-health merchant heal still charged coins"
+    full_hp_pb.stop(save=False)
+
+    # A full Pack cannot accept another persistent contract. Refuse the sale
+    # before taking coins instead of destroying the Echo Prism on delivery.
+    full_pack_pb = boot_shop(3)
+    echo_ware = shop_wares(full_pack_pb)[12]
+    for slot in range(16):
+        full_pack_pb.memory[PL + 24 + slot] = 40 + slot
+    touch_ware(full_pack_pb, echo_ware)
+    assert full_pack_pb.memory[echo_ware] == 3, \
+        "full-Pack unique relic vanished without entering inventory"
+    assert (full_pack_pb.memory[PL + 16]
+            | full_pack_pb.memory[PL + 17] << 8) == 99, \
+        "full-Pack unique relic still charged coins"
+    assert 34 not in inventory(full_pack_pb)
+    full_pack_pb.stop(save=False)
+
+    # Blood Sigil is behavioral, not merely +ATK/+HP. A full Pack must refuse
+    # it before payment if id 29 cannot be stored for the fifth-kill hook.
+    full_vamp_pb = boot_shop(0)
+    vamp_ware = shop_wares(full_vamp_pb)[6]
+    for slot in range(16):
+        full_vamp_pb.memory[PL + 24 + slot] = 40 + slot
+    touch_ware(full_vamp_pb, vamp_ware)
+    assert full_vamp_pb.memory[vamp_ware] == 3
+    assert (full_vamp_pb.memory[PL + 16]
+            | full_vamp_pb.memory[PL + 17] << 8) == 99
+    assert 29 not in inventory(full_vamp_pb)
+    full_vamp_pb.stop(save=False)
+
+    # Fully capped stats make the class-attuned relic a no-op. It must remain
+    # on the counter rather than charging for no mechanical change.
+    capped_pb = boot_shop(0)
+    capped_item = shop_wares(capped_pb)[1]
+    for offset, value in ((1, 16), (3, 20), (5, 15),
+                          (6, 10), (7, 9), (8, 10)):
+        capped_pb.memory[PL + offset] = value
+    touch_ware(capped_pb, capped_item)
+    assert capped_pb.memory[capped_item] == 3, \
+        "fully capped merchant relic vanished without changing a stat"
+    assert (capped_pb.memory[PL + 16]
+            | capped_pb.memory[PL + 17] << 8) == 99
+    capped_pb.stop(save=False)
+
+    # A dungeon merchant's chart is useful immediately: it reveals the
+    # active route and does not accidentally queue an unrelated future map.
+    chart_pb = boot_shop(6)
+    buy(chart_pb, 7)
+    assert tuple(chart_pb.memory[RS + offset]
+                 for offset in (20, 29, 31, 33)) == (0xFF, 0xFF, 0xFF, 0x3F), \
+        "dungeon chart did not reveal the active 30-cell route"
+    assert tuple(chart_pb.memory[RS + offset]
+                 for offset in (25, 30, 32, 34)) == (0, 0, 0, 0), \
+        "dungeon chart leaked into the next-dungeon reveal queue"
+    chart_pb.stop(save=False)
+
+    # The same chart cannot be repurchased once the active route is already
+    # completely known.
+    known_pb = boot_shop(6)
+    known_chart = shop_wares(known_pb)[7]
+    for offset, value in zip((20, 29, 31, 33),
+                             (0xFF, 0xFF, 0xFF, 0x3F)):
+        known_pb.memory[RS + offset] = value
+    touch_ware(known_pb, known_chart)
+    assert known_pb.memory[known_chart] == 3
+    assert (known_pb.memory[PL + 16]
+            | known_pb.memory[PL + 17] << 8) == 99
+    known_pb.stop(save=False)
 
     # Seed zero offers the cyan 15-second Surge. Verify the semantic shelf
     # treatment and real transaction, not a debugger write to its timer.
@@ -383,6 +472,7 @@ def main():
     flask_pb.stop(save=False)
 
     print("[shop-surge] PASS four-counter 6x6 procedural catalog "
+          "+ atomic heal/chart/full-Pack transactions "
           "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask mechanics")
 
 

@@ -389,11 +389,30 @@ static u8 add_capped(u8 value, u8 delta, u8 cap) {
     return (u8)(value + delta);
 }
 
-// Apply a generated item's StatBoost effects to the live player.
-static void apply_item_effects(u8 item_idx) {
+static u8 item_would_change_stats(u8 item_idx) {
     const item_def_t *it;
     u8 k;
-    if (item_idx >= N_ITEMS) return;
+    if (item_idx >= N_ITEMS) return 0;
+    it = &items[item_idx];
+    for (k = 0; k < it->n_effects; ++k) {
+        const effect_t *ef = &it->effects[k];
+        if (ef->kind != EFFECT_STAT_BOOST) continue;
+        if ((ef->d0 == STAT_HP && player.hp_max < HP_CAP)
+            || (ef->d0 == STAT_MP && player.mp_max < 20)
+            || (ef->d0 == STAT_ATK && player.atk < 15)
+            || (ef->d0 == STAT_DEF && player.def < 10)
+            || (ef->d0 == STAT_SPD && player.spd < 9)
+            || (ef->d0 == STAT_LCK && player.lck < 10)) return 1;
+    }
+    return 0;
+}
+
+// Apply a generated item's StatBoost effects to the live player. Return zero
+// only when a behavioral relic cannot be represented in the full Pack.
+static u8 apply_item_effects(u8 item_idx) {
+    const item_def_t *it;
+    u8 k;
+    if (item_idx >= N_ITEMS) return 0;
     it = &items[item_idx];
     // Passive relics persist for this run and remain inspectable by behavioral
     // hooks (vampirism, future on-kill/on-dash effects). Stat boosts still
@@ -412,6 +431,9 @@ static void apply_item_effects(u8 item_idx) {
             }
         }
     }
+    // Vampirism is presence-based. Applying its visible +ATK/+HP while
+    // silently failing to store id 29 breaks the promised fifth-kill heal.
+    if (k == INVENTORY_SLOTS && it->id == ITEM_ID_BLOOD_SIGIL) return 0;
     for (k = 0; k < it->n_effects; ++k) {
         const effect_t *ef = &it->effects[k];
         if (ef->kind != EFFECT_STAT_BOOST) continue;
@@ -439,6 +461,8 @@ static void apply_item_effects(u8 item_idx) {
         }
     }
     hud_redraw_all();
+    room_refresh_player_appearance(1);
+    return 1;
 }
 
 // Loose procedural pickups intentionally store an items[] index in their
@@ -446,20 +470,27 @@ static void apply_item_effects(u8 item_idx) {
 // stable item ID at the boundary instead of coupling shop behavior to table
 // order. Missing content becomes a harmless no-op rather than applying an
 // unrelated relic after a data reorder.
-static void apply_item_effects_by_id(u16 item_id) {
+static u8 apply_item_effects_by_id(u16 item_id) {
     u8 item_idx;
     for (item_idx = 0; item_idx < N_ITEMS; ++item_idx) {
         if (items[item_idx].id == item_id) {
-            apply_item_effects(item_idx);
-            return;
+            return apply_item_effects(item_idx);
         }
     }
+    return 0;
 }
 
 static u8 player_has_item(u8 item_id) {
     u8 i;
     for (i = 0; i < INVENTORY_SLOTS; ++i)
         if (player.inventory[i] == item_id) return 1;
+    return 0;
+}
+
+static u8 player_has_inventory_space(void) {
+    u8 i;
+    for (i = 0; i < INVENTORY_SLOTS; ++i)
+        if (player.inventory[i] == 0xFF) return 1;
     return 0;
 }
 
@@ -470,6 +501,7 @@ static void grant_special_item(u8 item_id) {
         if (player.inventory[i] == 0xFF) {
             player.inventory[i] = item_id;
             if (item_id == ITEM_ID_RICOCHET_RUNE) g_player_ricochet = 1;
+            room_refresh_player_appearance(1);
             return;
         }
     }
@@ -527,13 +559,19 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_COIN);
                     break;
                 case PICKUP_ITEM:
-                    apply_item_effects(entities[i].ai_data[1]);
+                    if (!apply_item_effects(entities[i].ai_data[1])) {
+                        any = 1;
+                        continue;
+                    }
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_FARFOLD_RELIC:
-                    apply_item_effects(entities[i].ai_data[1]);
-                    run_state.dungeon_phase |= RUN_FARFOLD_CACHE_BIT;
+                    if (!apply_item_effects(entities[i].ai_data[1])) {
+                        any = 1;
+                        continue;
+                    }
                     sfx_play(SFX_CLEAR);
+                    run_state.dungeon_phase |= RUN_FARFOLD_CACHE_BIT;
                     break;
                 case PICKUP_MP:
                     // Match the heart rule above: consuming a full-MP wisp
@@ -560,7 +598,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (entities[i].state > 0) { any = 1; continue; }
                     if (!(input_pressed & J_A)) { any = 1; continue; }
                     player.starter_weapon = entities[i].ai_data[1];
-                    sfx_play(SFX_DOOR);
+                    room_refresh_player_appearance(1);
                     if (old_w < N_ITEMS && items[old_w].kind == ITEM_KIND_WEAPON) {
                         pickup_spawn_weapon(old_w, entities[i].x, entities[i].y);
                     }
@@ -574,6 +612,9 @@ u8 pickup_check_player_collision(void) BANKED {
                     hud_show_offer(entities[i].ai_data[1], price);
                     // Unique contracts cannot be bought twice, and Glass
                     // Fang must always collect its promised one-heart stake.
+                    // Every paid transaction must also have somewhere to put
+                    // a persistent relic; otherwise the old code took the
+                    // coins, erased the ware, and silently delivered nothing.
                     if ((ware == WARE_PHOENIX
                             && player_has_item(ITEM_ID_PHOENIX_THREAD))
                         || (ware == WARE_ECHO
@@ -586,7 +627,33 @@ u8 pickup_check_player_collision(void) BANKED {
                             && player_has_item(ITEM_ID_WAR_DRUM))
                         || (ware == WARE_FLASK
                             && player_has_item(ITEM_ID_MOON_FLASK))
-                        || (ware == WARE_GLASS && player.hp_max <= 2)) {
+                        || (ware == WARE_GLASS && player.hp_max <= 2)
+                        || (ware == WARE_HEART && player.hp >= player.hp_max)
+                        || (ware == WARE_ITEM
+                            && !item_would_change_stats(entities[i].ai_data[3]))
+                        || (ware == WARE_BIG && player.hp_max >= HP_CAP)
+                        || (ware == WARE_FORGE && player.atk >= 15)
+                        || (ware == WARE_RUNE && player.mp_max >= 20)
+                        || (ware == WARE_VAMP && player.atk >= 15
+                            && player.hp_max >= HP_CAP)
+                        || (ware == WARE_VAMP
+                            && !player_has_item(ITEM_ID_BLOOD_SIGIL)
+                            && !player_has_inventory_space())
+                        || (ware == WARE_CHART
+                            && (RUN_ROOM_IS_TOWN(run_state.room_counter)
+                                ? (run_state.next_dungeon_reveal == 0xFF
+                                    && run_state.next_dungeon_reveal_hi == 0xFF
+                                    && run_state.next_dungeon_reveal_xhi == 0xFF
+                                    && run_state.next_dungeon_reveal_xxhi == 0x3F)
+                                : (run_state.dungeon_seen == 0xFF
+                                    && run_state.dungeon_seen_hi == 0xFF
+                                    && run_state.dungeon_seen_xhi == 0xFF
+                                    && run_state.dungeon_seen_xxhi == 0x3F)))
+                        || ((ware == WARE_GLASS || ware == WARE_PHOENIX
+                                || ware == WARE_ECHO || ware == WARE_RICOCHET
+                                || ware == WARE_THORN || ware == WARE_DRUM
+                                || ware == WARE_FLASK)
+                            && !player_has_inventory_space())) {
                         if (entities[i].ai_data[4] == 0) {
                             sfx_play(SFX_HURT);
                             entities[i].ai_data[4] = 1;
@@ -597,6 +664,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (player.coins >= price) {
                         player.coins = (u16)(player.coins - price);
                         hud_redraw_coins();
+                        sfx_play(SFX_COIN);
                         switch (entities[i].ai_data[1]) {
                             case WARE_HEART:
                                 player.hp = (u8)(player.hp + 2);
@@ -622,10 +690,20 @@ u8 pickup_check_player_collision(void) BANKED {
                                 // Full route knowledge is deliberately a
                                 // one-dungeon service: coins buy planning
                                 // power without permanently removing fog.
-                                run_state.next_dungeon_reveal = 0xFF;
-                                run_state.next_dungeon_reveal_hi = 0xFF;
-                                run_state.next_dungeon_reveal_xhi = 0xFF;
-                                run_state.next_dungeon_reveal_xxhi = 0x3F;
+                                // Town charts queue the route ahead; a chart
+                                // bought from a dungeon merchant must reveal
+                                // the active route while it is still useful.
+                                if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+                                    run_state.next_dungeon_reveal = 0xFF;
+                                    run_state.next_dungeon_reveal_hi = 0xFF;
+                                    run_state.next_dungeon_reveal_xhi = 0xFF;
+                                    run_state.next_dungeon_reveal_xxhi = 0x3F;
+                                } else {
+                                    run_state.dungeon_seen = 0xFF;
+                                    run_state.dungeon_seen_hi = 0xFF;
+                                    run_state.dungeon_seen_xhi = 0xFF;
+                                    run_state.dungeon_seen_xxhi = 0x3F;
+                                }
                                 break;
                             case WARE_WEAPON: {
                                 u8 weapon = entities[i].ai_data[3];
@@ -634,8 +712,10 @@ u8 pickup_check_player_collision(void) BANKED {
                                 // do not scatter the old one back on the same
                                 // counter for an accidental free re-swap.
                                 if (weapon < N_ITEMS
-                                    && items[weapon].kind == ITEM_KIND_WEAPON)
+                                    && items[weapon].kind == ITEM_KIND_WEAPON) {
                                     player.starter_weapon = weapon;
+                                    room_refresh_player_appearance(1);
+                                }
                                 break;
                             }
                             case WARE_SURGE:
@@ -674,7 +754,6 @@ u8 pickup_check_player_collision(void) BANKED {
                                 grant_special_item(ITEM_ID_MOON_FLASK);
                                 break;
                         }
-                        sfx_play(SFX_COIN);
                         entity_kill(i);
                     } else if (entities[i].ai_data[4] == 0) {
                         sfx_play(SFX_HURT);

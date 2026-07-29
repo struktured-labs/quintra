@@ -35,16 +35,21 @@ def wait_for_generated_room(pb):
     """Return only after the cartridge has committed and displayed the room."""
     previous = None
     stable = 0
-    for _ in range(240):
+    for _ in range(480):
         pb.tick()
         tiles = bytes(pb.memory[TM + i] for i in range(ROOM_W * ROOM_H))
         lcd_on = bool(pb.memory[0xFF40] & 0x80)
         committed = not any(value & 0x80 for value in tiles)
         stable = stable + 1 if lcd_on and committed and tiles == previous else 0
         previous = tiles
-        if stable >= 10:
+        # A streamed 31x31 transaction can leave the compact western ABI
+        # unchanged while its banked off-screen court, role overlays, and
+        # suspend commit are still finishing. Ten matching frontend frames
+        # was short enough to sample a half-authored Deep district after the
+        # denser procgen pass. Require a sustained settled window.
+        if stable >= 30:
             return list(tiles)
-    raise AssertionError("room generation did not settle within 240 frames")
+    raise AssertionError("room generation did not settle within 480 frames")
 
 
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,

@@ -30,7 +30,7 @@ DEFAULT_ROM = ROOT / "rom/working/quintra.gbc"
 DEFAULT_STATES = ROOT / "tmp/stage-states"
 DEFAULT_OUT = ROOT / "tmp/pocket-test-saves"
 
-RUN_STATE_SIZE = 35
+RUN_STATE_SIZE = 36
 PLAYER_STATE_SIZE = 42
 SRAM_SIZE = 32 * 1024
 # budude2.GBC stores a 16-byte RTC trailer after cartridge RAM even for this

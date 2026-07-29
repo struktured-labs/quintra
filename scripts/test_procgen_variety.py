@@ -90,6 +90,7 @@ def main():
     roster_kinds = defaultdict(set)
     roster_signatures = defaultdict(set)
     body_counts = []
+    body_counts_by_stage = defaultdict(list)
     elite_total = 0
     pb = boot()
     try:
@@ -100,6 +101,7 @@ def main():
                 roster_kinds[stage].update(roster)
                 roster_signatures[stage].add(roster)
                 body_counts.append(len(roster))
+                body_counts_by_stage[stage].append(len(roster))
                 elite_total += elites
     finally:
         pb.stop(save=False)
@@ -116,7 +118,13 @@ def main():
             f"stage {stage + 1} collapsed to {len(roster_signatures[stage])}/12 "
             "encounter rosters"
         )
-    assert min(body_counts) >= 2, f"ordinary room lost minimum pressure: {body_counts}"
+    assert min(body_counts) >= 3, f"ordinary room lost minimum pressure: {body_counts}"
+    for stage in range(9):
+        expected_floor = 3 if stage == 0 else 4 if stage < 3 else 5
+        assert min(body_counts_by_stage[stage]) >= expected_floor, (
+            f"stage {stage + 1} fell below {expected_floor} bodies: "
+            f"{body_counts_by_stage[stage]}"
+        )
     assert max(body_counts) > min(body_counts), "enemy population stopped varying"
     assert elite_total >= 4, f"elite roll nearly disappeared ({elite_total}/108 samples)"
 

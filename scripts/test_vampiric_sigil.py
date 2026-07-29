@@ -63,11 +63,24 @@ def lethal_crawler(pb):
     pb.memory[shot + 16] = 30
     pb.memory[shot + 25] = 0x77
     pb.memory[shot + 26] = 20
+    frames = []
     for _ in range(8):
         pb.tick()
-        if pb.memory[enemy] == 0:
+        frames.append((
+            pb.memory[enemy], pb.memory[enemy + 1],
+            pb.memory[enemy + 3], pb.memory[enemy + 7],
+            pb.memory[enemy + 14],
+            pb.memory[shot], pb.memory[shot + 1],
+            pb.memory[shot + 3], pb.memory[shot + 7],
+            pb.memory[shot + 16],
+        ))
+        # The kill path may immediately reuse the freed slot for its death FX.
+        # Success means the original active enemy is gone, not necessarily
+        # that the slot remains ENT_NONE for an observable frame.
+        if pb.memory[enemy] != 2 or not (pb.memory[enemy + 1] & 1):
             return
-    raise AssertionError("injected player projectile did not kill its crawler")
+    raise AssertionError(
+        f"injected player projectile did not kill its crawler: {frames}")
 
 
 def main():

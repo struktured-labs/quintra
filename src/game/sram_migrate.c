@@ -38,7 +38,7 @@ void sram_migrate_run(u8 saved_rs) BANKED {
             run_state.room_counter =
                 (u8)(run_state_stage_start(stage) + old_local);
         }
-    } else if (saved_rs == PRE_WIDE_MAP_RS_SIZE) {
+    } else if (saved_rs <= PRE_WIDE_MAP_RS_SIZE) {
         if (run_state.world_mode && stage)
             run_state.room_counter = run_state_boss_room((u8)(stage - 1));
         else if (stage == 3 && run_state.room_counter == 19)

@@ -360,6 +360,24 @@ mod tests {
     }
 
     #[test]
+    fn alternate_weapons_and_shields_have_distinct_runtime_tiles() {
+        let sword = tile_2bpp_bytes(&parse_grid(&grids::SWORD));
+        let flail = tile_2bpp_bytes(&parse_grid(&grids::FLAIL));
+        let spike = tile_2bpp_bytes(&parse_grid(&grids::SPIKE));
+        let spear = tile_2bpp_bytes(&parse_grid(&grids::SPEAR));
+        assert_ne!(sword, flail);
+        assert_ne!(sword, spike);
+        assert_ne!(sword, spear);
+        assert_ne!(flail, spike);
+        assert_ne!(flail, spear);
+        assert_ne!(spike, spear);
+        assert_ne!(
+            tile_2bpp_bytes(&parse_grid(&grids::SHIELD_AURA)),
+            tile_2bpp_bytes(&parse_grid(&grids::WATER_AURA)),
+        );
+    }
+
+    #[test]
     fn village_roles_have_distinct_runtime_tiles() {
         let elder = tile_2bpp_bytes(&parse_grid(&grids::VILLAGER));
         let merchant = tile_2bpp_bytes(&parse_grid(&grids::MERCHANT));

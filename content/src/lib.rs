@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         22);   // 7 weapons + 5 actives + 10 passives
-        assert_eq!(r.n_enemies(),       32);   // Void Halo completes the current roster
+        assert_eq!(r.n_enemies(),       33);   // Rift Cantor completes the current roster
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -207,6 +207,20 @@ mod tests {
         let frost = &stages::STAGES[3];
         assert!(frost.enemy_pool.iter().any(|&(id, _)| id == 16));
         assert_eq!(frost.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+    }
+
+    #[test]
+    fn late_stages_author_one_bounded_rift_cantor_slice() {
+        for stage in &stages::STAGES[3..] {
+            assert!(stage.enemy_pool.iter()
+                .any(|&(id, w)| id == 32 && w == 6));
+            assert_eq!(stage.enemy_pool.iter()
+                .map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        }
+        assert_eq!(enemies::RIFT_CANTOR.ai_script,
+            quintra_content::AiScriptId::Summoner {
+                sight_radius: 88, tell_ticks: 48
+            });
     }
 
     #[test]

@@ -53,7 +53,7 @@ static const char *const signature_tips[N_CLASSES] = {
 static void update_preview(void) {
     u8 base = (u8)(SPR_CLASS_BASE + (u8)(class_select_cursor * SPR_CLASS_STRIDE));
     u8 sx = 128, sy = 72;
-    palette_obj_load(1, class_obj_palettes[class_select_cursor]);
+    class_palette_load_obj(1, class_select_cursor);
     set_sprite_tile(0, base);
     set_sprite_tile(1, (u8)(base + 1));
     set_sprite_tile(2, (u8)(base + 2));

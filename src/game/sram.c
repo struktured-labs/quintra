@@ -24,6 +24,7 @@
 #define PRE_WIDE_MAP_RS_SIZE 29 // v0.18.54 and earlier: six-cell topology
 #define PRE_DEEP_MAP_RS_SIZE 31 // v0.18.58: 10..16-cell topology
 #define PRE_MAZE_MAP_RS_SIZE 33 // v0.18.60-v0.18.61: 14..20-cell 5x4 topology
+#define PRE_WIDE_KILLS_RS_SIZE 35 // v0.18.62-v0.18.91: 8-bit kill total
 
 void sram_migrate_run(u8 saved_rs) BANKED;
 
@@ -36,6 +37,7 @@ u8 sram_run_valid(void) {
     if (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'S'
         && SRAM_BASE[2] == SAVE_VERSION
         && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
+            || SRAM_BASE[3] == PRE_WIDE_KILLS_RS_SIZE
             || SRAM_BASE[3] == PRE_MAZE_MAP_RS_SIZE
             || SRAM_BASE[3] == PRE_DEEP_MAP_RS_SIZE
             || SRAM_BASE[3] == PRE_WIDE_MAP_RS_SIZE
@@ -93,7 +95,11 @@ u8 sram_load_run(void) {
         run_state.world_seen = 0;
         run_state_mark_visited();
     }
-    if ((saved_rs == PRE_WIDE_MAP_RS_SIZE
+    if ((saved_rs == LEGACY_RS_SIZE
+            || saved_rs == PRE_SIGIL_RS_SIZE
+            || saved_rs == PRE_DIFFICULTY_RS_SIZE
+            || saved_rs == PRE_PUZZLE_RS_SIZE
+            || saved_rs == PRE_WIDE_MAP_RS_SIZE
             || saved_rs == PRE_MAZE_MAP_RS_SIZE
             || saved_rs == PRE_DEEP_MAP_RS_SIZE)
         && run_state.bosses_beaten < BOSSES_TO_WIN)
@@ -109,90 +115,4 @@ void sram_clear_run(void) {
     sram_open();
     SRAM_BASE[0] = 0x00;   // kill the magic — everything else is inert
     sram_close();
-}
-
-// ---- Meta-progress: SRAM bank 1 (per the engine design's bank plan).
-// Layout v2: 'Q' 'M' ver | best u16 | runs u16 | wins u16 |
-//            best_win_time u16 (seconds; 0xFFFF = no win yet) | checksum.
-// A version bump invalidates old meta (acceptable pre-1.0).
-
-#define META_VERSION 2
-#define META_NO_TIME 0xFFFF
-
-static void meta_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(1); }
-
-static u8 meta_sum(void) {
-    u8 s = 0, i;
-    for (i = 3; i < 11; ++i) s = (u8)(s + SRAM_BASE[i]);
-    return s;
-}
-
-static u8 meta_valid(void) {
-    return (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'M'
-        && SRAM_BASE[2] == META_VERSION
-        && SRAM_BASE[11] == meta_sum()) ? 1 : 0;
-}
-
-static void meta_reset(void) {
-    u8 i;
-    SRAM_BASE[0] = 'Q'; SRAM_BASE[1] = 'M'; SRAM_BASE[2] = META_VERSION;
-    for (i = 3; i < 9; ++i) SRAM_BASE[i] = 0;
-    SRAM_BASE[9] = 0xFF; SRAM_BASE[10] = 0xFF;   // no win time yet
-    SRAM_BASE[11] = meta_sum();
-}
-
-static u16 meta_get16(u8 off) {
-    return (u16)(SRAM_BASE[off] | ((u16)SRAM_BASE[off + 1] << 8));
-}
-
-static void meta_put16(u8 off, u16 v) {
-    SRAM_BASE[off]     = (u8)(v & 0xFF);
-    SRAM_BASE[off + 1] = (u8)(v >> 8);
-}
-
-u16 sram_meta_best(void) {
-    u16 v;
-    meta_open();
-    v = meta_valid() ? meta_get16(3) : 0;
-    sram_close();
-    return v;
-}
-
-u16 sram_meta_runs(void) {
-    u16 v;
-    meta_open();
-    v = meta_valid() ? meta_get16(5) : 0;
-    sram_close();
-    return v;
-}
-
-u16 sram_meta_wins(void) {
-    u16 v;
-    meta_open();
-    v = meta_valid() ? meta_get16(7) : 0;
-    sram_close();
-    return v;
-}
-
-u16 sram_meta_best_time(void) {
-    u16 v;
-    meta_open();
-    v = meta_valid() ? meta_get16(9) : META_NO_TIME;
-    sram_close();
-    return v;
-}
-
-u8 sram_meta_record(u16 score, u8 won, u16 time_s) {
-    u8 flags = 0;
-    meta_open();
-    if (!meta_valid()) meta_reset();
-    if (score > meta_get16(3)) { meta_put16(3, score); flags |= 1; }
-    meta_put16(5, (u16)(meta_get16(5) + 1));
-    if (won) {
-        meta_put16(7, (u16)(meta_get16(7) + 1));
-        if (time_s < meta_get16(9)) { meta_put16(9, time_s); flags |= 2; }
-    }
-    SRAM_BASE[11] = meta_sum();
-    sram_close();
-    return flags;
 }

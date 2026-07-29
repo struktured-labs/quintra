@@ -49,6 +49,9 @@ pub enum AiScriptId {
     /// Blocks the first incoming attack, rushes its source, then stays exposed
     /// until the guard cooldown completes.
     CounterGuard { guard_cooldown: u8, rush_ticks: u8 },
+    /// Holds position until the champion enters its awareness radius, then
+    /// performs a readable chant before calling a single bounded escort wave.
+    Summoner     { sight_radius: u8, tell_ticks: u8 },
 }
 
 // Container with &'static str and &'static [BiomeId] — no serde.

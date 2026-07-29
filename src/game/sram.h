@@ -4,6 +4,7 @@
 #ifndef QUINTRA_GAME_SRAM_H
 #define QUINTRA_GAME_SRAM_H
 
+#include <gb/gb.h>
 #include "core/types.h"
 
 u8   sram_run_valid(void);   // 1 = a resumable run is stored
@@ -13,12 +14,12 @@ void sram_clear_run(void);   // invalidate (death / victory / new run)
 
 // Meta-progress (SRAM bank 1) — survives across runs. "Only knowledge
 // persists" stays true for the RUN; these are the pilot's trophies.
-u16  sram_meta_best(void);           // best score ever (0 on fresh cart)
-u16  sram_meta_wins(void);           // total victorious runs
-u16  sram_meta_runs(void);           // total runs ended (win or death)
-u16  sram_meta_best_time(void);      // fastest WIN in seconds (0xFFFF = none)
+u16  sram_meta_best(void) BANKED;      // best score ever (0 on fresh cart)
+u16  sram_meta_wins(void) BANKED;      // total victorious runs
+u16  sram_meta_runs(void) BANKED;      // total runs ended (win or death)
+u16  sram_meta_best_time(void) BANKED; // fastest WIN in seconds (0xFFFF = none)
 // Record a run's end. Returns flag bits: 1 = new best score,
 // 2 = new fastest win (only possible when won).
-u8   sram_meta_record(u16 score, u8 won, u16 time_s);
+u8   sram_meta_record(u16 score, u8 won, u16 time_s) BANKED;
 
 #endif

@@ -40,7 +40,7 @@ void gameover_enter(void) {
 
     gotoxy(6, 3);  text_write("GAME  OVER");
     gotoxy(2, 7);  text_write("rooms   "); text_u16((u16)run_state.room_counter);
-    gotoxy(2, 8);  text_write("kills   "); text_u16((u16)run_state.enemies_killed);
+    gotoxy(2, 8);  text_write("kills   "); text_u16(run_state_enemies_killed_total());
     // These are deliberately distinct values. A plain "score" / "best"
     // pair made the two adjacent numbers read like a duplicated score during
     // a fast post-death glance, especially when a new-record tag followed.

@@ -41,6 +41,10 @@ def boot(class_moves):
     # incidental contact damage or projectiles.
     for i in range(32 * 28):
         pb.memory[ENTITIES + i] = 0
+    # Let the room observe the synthetic clear before queuing an ability.
+    # Otherwise its legitimate +1 MP clear reward can land after the test's
+    # B spend on class-dependent input timing and masquerade as a bad cost.
+    pb.tick(2)
     return pb
 
 

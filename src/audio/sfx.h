@@ -4,6 +4,7 @@
 #ifndef QUINTRA_AUDIO_SFX_H
 #define QUINTRA_AUDIO_SFX_H
 
+#include <gb/gb.h>
 #include "core/types.h"
 
 enum {
@@ -24,6 +25,10 @@ enum {
 };
 
 void sfx_play(u8 id);
+// Banked, low-frequency variants keep weapon/equipment identity out of the
+// precious always-mapped audio dispatcher.
+void sfx_play_weapon(u8 projectile_kind) BANKED;
+void sfx_play_equip(void) BANKED;
 // Ordered floor runes answer with a rising pitch before the full solve cue.
 void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps

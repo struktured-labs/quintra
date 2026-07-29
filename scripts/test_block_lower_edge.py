@@ -17,6 +17,8 @@ NOI = ROM.with_suffix(".noi").read_text()
 
 ROOM_W, ROOM_H = 20, 17
 BGT_FLOOR, BGT_WALL = 1, 2
+BGT_SPIKES = 31
+BGT_CRYSTAL, BGT_RUBBLE = 22, 23
 BGT_PILLAR = 21
 BGT_BLOCK, BGT_BLOCK_TR, BGT_BLOCK_BL, BGT_BLOCK_BR = 25, 28, 29, 30
 
@@ -28,9 +30,10 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PL, EN, TM, EXT, BOTTOM, WORLD_W, WORLD_H = map(addr, (
+PL, EN, TM, EXT, BOTTOM, WORLD_W, WORLD_H, SCREEN = map(addr, (
     "_player", "_entities", "_room_tilemap", "_room_world_extension",
     "_room_world_bottom", "_room_world_width", "_room_world_height",
+    "_loop_current_screen",
 ))
 
 
@@ -116,6 +119,21 @@ def center_overlap_fixture(pb):
     pb.memory[PL + 23] = 0
 
 
+def side_body_fixture(pb):
+    """Horizontal movement must respect a pillar above the feet box."""
+    fixture(pb)
+    for y in range(ROOM_H):
+        for x in range(ROOM_W):
+            pb.memory[TM + y * ROOM_W + x] = BGT_FLOOR
+    pb.memory[TM + 6 * ROOM_W + 10] = BGT_PILLAR
+    # The pillar occupies x=80..87/y=48..55. The champion's feet start below
+    # it at y=56, but the visible upper body still shares y=48..55. The old
+    # horizontal-only feet check walked straight through its side.
+    put16(pb, PL + 9, 64)
+    put16(pb, PL + 11, 48)
+    pb.memory[PL + 23] = 0
+
+
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
@@ -194,6 +212,18 @@ def main():
         f"embedded fixture escaped through opposite pillar face: x={escaped_x}"
     )
 
+    side_body_fixture(pb)
+    pb.button_press("right")
+    for _ in range(40):
+        pb.tick()
+    pb.button_release("right")
+    for _ in range(4):
+        pb.tick()
+    side_x = read16(pb, PL + 9)
+    assert side_x <= 66, (
+        f"horizontal walk buried upper body in pillar: x={side_x}"
+    )
+
     # The same overlap exception must never turn a real field boundary into
     # an infinite escape lane. Stand exactly on each legal far threshold with
     # a non-door wall under the collision probes, then hold outward.
@@ -223,12 +253,75 @@ def main():
     south_y = read16(pb, PL + 11)
     assert south_y == 232, f"walk escaped south world bound: y={south_y}"
 
+    # Scrolling courts store their east side outside the legacy 20x17
+    # projection. A far-field spike is still a real hazard.
+    pb.memory[EXT + 8 * 11 + 2] = BGT_SPIKES  # world tile (22, 8)
+    put16(pb, PL + 9, 22 * 8 - 8)
+    put16(pb, PL + 11, 8 * 8 - 12)
+    pb.memory[PL + 2] = 8
+    pb.memory[PL + 15] = 0
+    for _ in range(4):
+        pb.tick()
+    far_spike_hp = pb.memory[PL + 2]
+    assert far_spike_hp == 7, \
+        f"far-field dungeon spike was harmless: hp={far_spike_hp}"
+
+    # Far-field rubble and crystals share their compact counterparts'
+    # interaction contract instead of becoming decorative/invulnerable past
+    # column 19.
+    pb.memory[EXT + 8 * 11 + 3] = BGT_RUBBLE  # world tile (23, 8)
+    put16(pb, PL + 9, 23 * 8 - 8)
+    put16(pb, PL + 11, 8 * 8 - 12)
+    pb.memory[PL + 15] = 120
+    for _ in range(4):
+        pb.tick()
+    assert pb.memory[EXT + 8 * 11 + 3] == BGT_FLOOR, \
+        "far-field rubble did not break under the champion"
+
+    for i in range(32 * 28):
+        pb.memory[EN + i] = 0
+    pb.memory[EXT + 8 * 11 + 4] = BGT_CRYSTAL  # world tile (24, 8)
+    shot = EN
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put16(pb, shot + 3, 24 * 8 - 4)
+    put16(pb, shot + 7, 8 * 8 - 4)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 26] = 1
+    for _ in range(4):
+        pb.tick()
+    assert pb.memory[EXT + 8 * 11 + 4] == BGT_FLOOR, \
+        "far-field crystal ignored player fire"
+
+    # A lethal floor hit uses the same 50-frame fall beat as combat instead
+    # of hard-cutting directly to GAME OVER.
+    for i in range(32 * 28):
+        pb.memory[EN + i] = 0
+    pb.memory[EXT + 8 * 11 + 2] = BGT_SPIKES
+    put16(pb, PL + 9, 22 * 8 - 8)
+    put16(pb, PL + 11, 8 * 8 - 12)
+    pb.memory[PL + 2] = 1
+    pb.memory[PL + 15] = 0
+    for _ in range(4):
+        pb.tick()
+    assert pb.memory[PL + 2] == 0 and pb.memory[SCREEN] == 5, \
+        "lethal hazard skipped its in-room death animation"
+    for _ in range(70):
+        pb.tick()
+        if pb.memory[SCREEN] == 11:
+            break
+    assert pb.memory[SCREEN] == 11, \
+        "lethal hazard death beat never reached GAME OVER"
+
     pb.stop(save=False)
     print(
         f"[block-lower-edge] PASS crate walk y={walked_y}, dash y={dashed_y}; "
         f"pillar y={pillar_y}, centre pillar y={center_y}, "
-        f"overlap hold={tunnel_x}, escape x={escaped_x}; "
-        f"world bounds east={east_x} south={south_y}"
+        f"overlap hold={tunnel_x}, escape x={escaped_x}, side x={side_x}; "
+        f"world bounds east={east_x} south={south_y}; "
+        f"far spike hp={far_spike_hp}; rubble/crystal active"
     )
 
 

@@ -148,7 +148,8 @@ def main():
             assert (29, 6) in seen, (
                 f"district {district} pocketed the far side of the east ruin")
             assert (15, 25) in seen, (
-                f"district {district} pocketed the lower ruin cloister")
+                f"district {district} pocketed the lower ruin cloister: "
+                f"{[field[y][12:19] for y in range(15, 30)]}")
             assert (26, 25) in seen, (
                 f"district {district} sealed the deep encounter apron")
             label = tuple(

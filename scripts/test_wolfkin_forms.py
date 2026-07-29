@@ -160,6 +160,31 @@ def main():
         "held Wolfkin combo became a traveling shot stream"
     combo_pb.stop(save=False)
 
+    # Interrupting a 19-frame Max Strike tell with B cancels it. The old hold
+    # counter froze during the chord, then resumed into a surprise spear dash
+    # on the first post-B frame even though A had not been held continuously.
+    interrupt_pb = boot()
+    clear_entities(interrupt_pb, entities)
+    clear_room_floor(interrupt_pb, tilemap)
+    interrupt_pb.memory[player + 22] = 0
+    interrupt_pb.button_press("right")
+    interrupt_pb.button_press("a")
+    for _ in range(19):
+        interrupt_pb.tick()
+    interrupt_pb.button_press("b")
+    for _ in range(8):
+        interrupt_pb.tick()
+    clear_entities(interrupt_pb, entities)
+    interrupt_pb.button_release("b")
+    for _ in range(3):
+        interrupt_pb.tick()
+    interrupted = player_projectiles(interrupt_pb, entities)
+    assert not any(interrupt_pb.memory[e + 12] == 123 for e in interrupted), \
+        "B-interrupted Max Strike resumed from a stale hold counter"
+    interrupt_pb.button_release("a")
+    interrupt_pb.button_release("right")
+    interrupt_pb.stop(save=False)
+
     # A weapon orb replaces A's actual mechanics, not just its name. Wolfkin
     # holding Sauran's Tail Spike must regain that item's normal lunge instead
     # of silently retaining Fang Stab's short arc and missing nearby bodies.
@@ -180,7 +205,7 @@ def main():
         "Wolfkin weapon swap retained Fang Stab's oversized blade hitbox"
     swap_pb.stop(save=False)
     pb.stop(save=False)
-    print("[wolfkin-forms] PASS Fang forms and swapped Tail Spike behavior")
+    print("[wolfkin-forms] PASS Fang forms, interruption, and swapped Tail Spike")
 
 
 if __name__ == "__main__":

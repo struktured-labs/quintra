@@ -72,6 +72,7 @@ pub const ENEMY_FROST_LANCER:    EnemyId = EnemyId::new(28);   // Frost Vault te
 pub const ENEMY_VINE_COIL:       EnemyId = EnemyId::new(29);   // Verdant Hollow orbiting seed-pair caster
 pub const ENEMY_SHARD_CRAB:      EnemyId = EnemyId::new(30);   // Crystal Caverns shell-counter skirmisher
 pub const ENEMY_VOID_HALO:       EnemyId = EnemyId::new(31);   // Void Sanctum wide-orbit lane shaper
+pub const ENEMY_RIFT_CANTOR:     EnemyId = EnemyId::new(32);   // chants once, then calls bounded escorts
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -174,6 +175,9 @@ pub const SPRITE_SHARD_CRAB:     SpriteRef = SpriteRef::new(79);
 // specialists, so its final-region orbit silhouette costs no permanent OBJ
 // atlas slot.
 pub const SPRITE_VOID_HALO:      SpriteRef = SpriteRef::new(79);
+// Merchants never coexist with hostiles. Ordinary dungeon combat may reclaim
+// their tile for the Cantor's antlered-mask silhouette.
+pub const SPRITE_RIFT_CANTOR:    SpriteRef = SpriteRef::new(70);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

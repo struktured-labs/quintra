@@ -344,6 +344,17 @@ pub const VOID_HALO: [&str; 8] = [ // fractured ring with a dark central void
     "..1331..",
 ];
 
+pub const RIFT_CANTOR: [&str; 8] = [ // antlered mask around an open chanting mouth
+    "3..33..3",
+    ".3.22.3.",
+    "..3223..",
+    ".321123.",
+    "32133123",
+    ".123321.",
+    "..3113..",
+    ".3.11.3.",
+];
+
 pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
     "...33...",
     "..3223..",
@@ -563,6 +574,19 @@ pub const SHIELD_AURA: [&str; 8] = [
     "...11...",
 ];
 
+// Picsean's guard is a broad curling wave rather than Sauran's compact stone
+// shard. Runtime orbit radius reinforces the same mechanical distinction.
+pub const WATER_AURA: [&str; 8] = [
+    "....33..",
+    "..3333..",
+    ".33..33.",
+    "33...33.",
+    ".3..33..",
+    "..333...",
+    ".33333..",
+    "..111...",
+];
+
 // Wolfkin's steel: an asymmetric pointed blade with a crossguard and hilt.
 // The runtime X/Y flips it around the aim vector, so the starting melee kit
 // reads as a sword thrust/slash rather than a tiny fist or slow bullet.
@@ -575,6 +599,32 @@ pub const SWORD: [&str; 8] = [
     "..322...",
     ".3111...",
     "33.3....",
+];
+
+// Rift Flail: a heavy faceted head linked to a short diagonal chain. The
+// uneven mass reads differently from the straight sword even during a fast
+// room fight.
+pub const FLAIL: [&str; 8] = [
+    ".....333",
+    "....3223",
+    "....3233",
+    "...1.33.",
+    "..1.....",
+    ".1......",
+    "1.......",
+    "22......",
+];
+
+// Tail Spike / Stinger: a hooked organic barb, not borrowed sword steel.
+pub const SPIKE: [&str; 8] = [
+    ".......3",
+    ".....333",
+    "...3332.",
+    "..332...",
+    ".332....",
+    "332.....",
+    ".21.....",
+    "..11....",
 ];
 
 // Astral Spear: an asymmetric pointed shaft, intentionally unlike the broad
@@ -849,7 +899,7 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE_ASCENDED),
 ];
 
-pub const ENEMIES_8: [(&str, &[&str]); 30] = [
+pub const ENEMIES_8: [(&str, &[&str]); 31] = [
     ("crawler", &CRAWLER),
     ("hornet", &HORNET),
     ("skeleton", &SKELETON),
@@ -880,9 +930,10 @@ pub const ENEMIES_8: [(&str, &[&str]); 30] = [
     ("vine_coil", &VINE_COIL),
     ("shard_crab", &SHARD_CRAB),
     ("void_halo", &VOID_HALO),
+    ("rift_cantor", &RIFT_CANTOR),
 ];
 
-pub const FX_8: [(&str, &[&str]); 16] = [
+pub const FX_8: [(&str, &[&str]); 19] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
     ("muzzle", &MUZZLE),
@@ -894,7 +945,10 @@ pub const FX_8: [(&str, &[&str]); 16] = [
     ("surge_orb", &SURGE_ORB),
     ("shield_aura", &SHIELD_AURA),
     ("sword", &SWORD),
+    ("flail", &FLAIL),
+    ("spike", &SPIKE),
     ("spear", &SPEAR),
+    ("water_aura", &WATER_AURA),
     ("villager", &VILLAGER),
     ("merchant", &MERCHANT),
     ("smith", &SMITH),

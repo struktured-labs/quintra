@@ -11,7 +11,10 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download the latest ROM — v0.18.90: True Footing](https://github.com/struktured-labs/quintra/releases/latest)
+[Download Quintra v0.18.92: Living Courts](https://github.com/struktured-labs/quintra/releases/download/v0.18.92/quintra.gbc)
+
+The repository copy of the published cartridge is
+[`rom/working/quintra.gbc`](rom/working/quintra.gbc).
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 
@@ -22,16 +25,83 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.90**, published after the complete build,
-media, cartridge, checkpoint, gameplay, and controller verification gate.
+The current cartridge is **v0.18.92**, published after passing the complete
+build, media, cartridge, checkpoint, gameplay, and controller verification
+gate.
 
-The final whole-run audit is release-hash specific: a controller-only Easy
-Picsean expedition reaches all-nine-boss Victory in 154,260 frames after 194
-visited rooms, both villages, 40 Riftwild hops, and eight collected boss
-relics. A clean mGBA process then replays the recorded input to
-`bosses=9 hp=15 won=1`. Normal remains the demanding authored target; Easy
-clears 37/45 progression-matched one-minute boss samples and survives 44/45,
-so it is a real deep-testing assist rather than cosmetic labeling.
+**Every stage now has its own environmental silhouettes, not only a palette.**
+The procedural collision grammar remains identical, but the shared pillar,
+crystal, and walkable-debris slots are repainted at each dungeon boundary:
+faceted shards in Crystal, roots and blossoms in Verdant, braziers and ash in
+Ember, ice columns and snowflakes in Frost, fungi and bubbles in Mire,
+gargoyles and webs in Shadow, columns and sun mosaics in Golden, bone altars
+in Bloodmoon, and broken obelisks with watching halos in Void. A live-cartridge
+VRAM test proves all nine three-tile atlases are distinct while their tile IDs
+and collision semantics stay fixed.
+
+**The Rift Cantor is the thirty-third generated enemy.** From Frost Vault
+onward it can spot the champion inside an 88-pixel awareness field, hold still
+for a flashing 48-frame chant, and call one bounded escort wave. Killing it
+during the tell cancels the wave. Normal receives two stage-attuned escorts;
+Easy receives one. The Cantor never summons another Cantor, never rearms, and
+fails safely if projectiles or pickups already consume the fixed 32-entity
+budget. Its antlered-mask sprite reuses the merchant tile only in combat rooms,
+so it costs no permanent OBJ slot and cannot corrupt shop art.
+
+**Scrolling encounters no longer open from one repeated template.** Four
+run/stage/room-derived permutations distribute the nine guaranteed-safe court
+anchors into ring, flank, reverse, and crossfire openings without consuming
+combat RNG. Even a lighter two-enemy turn court still owns one distant sector.
+The live-ROM matrix proves all four opening signatures, preserved far-field
+pressure, body-valid navigation, and unchanged C/Rust procedural draw parity.
+
+**The July stability sweep closes 20 independently reproduced defects.**
+Merchant transactions are atomic when healing, inventory space, stat caps, or
+chart knowledge make an offer useless; legacy battery suspends migrate across
+every accepted layout; lifetime totals and the now-16-bit run kill count
+saturate safely; and wide scrolling courts share correct collision, hazard,
+and destructible behavior with compact rooms. Wolfkin can no longer retain a
+hidden Max Strike charge, Corvin cannot spend Murder into a full entity table,
+and fatal hazards use the same readable death animation as combat. The
+[numbered live-ROM audit](docs/bug-sweep-2026-07-28.md) records each symptom,
+fix, and cartridge regression.
+
+The subsequent whole-run certification also corrected nonlinear large-room
+arrivals: portals and direct checkpoints now place the champion at the
+body-safe crossing of the two guaranteed trails. The former vertical-lane-only
+fallback could let a generated pillar overlap the sprite's upper half and
+legitimately block every escape step once full-body collision was enforced.
+The automated pilot now uses that same collision contract on both axes.
+
+**Every dungeon is busier from the beginning of the run.** Ordinary compact
+rooms now roll 3–6 hostiles in stage one, 4–7 in stages two and three, and 5–8
+from stage four onward; scrolling courts add one more body because their
+31×31 acreage otherwise dilutes the fight. Large fields distribute those
+bodies across nine guaranteed-open encounter anchors instead of folding them
+onto four repeated coordinates, while Riftwild alternates four far-field
+trail sites. This is positioning, crossfire, and roster pressure—not another
+blanket enemy-HP increase. Live-ROM samples cover all nine stages at 4–9
+visible bodies in the sampled large roles and preserve encounter/geometry
+variation.
+
+**A run now changes the champion on-screen.** The first, third, and sixth
+collected run relic—or the equivalent first, third, and sixth Colossus
+clear—earns blue, red, then pearl-gold equipment colors while retaining the
+chosen vessel's silhouette and accent. Gear reconciles on pickups, purchases,
+boss clears, doors, rift portals, START resume, and battery checkpoint entry.
+Fang steel, organic Tail/Stinger barbs, the heavy violet Rift Flail, and the
+cyan Astral Spear use distinct attack tiles, palettes, and slash/heavy/thrust
+sounds. Sauran's compact Stoneskin and Picsean's broader Tidal Guard now have
+different art and run-growing visual/mechanical catch radii. The temporary
+18-second Spirit Convergence remains the full-sprite ascended form above this
+permanent-for-the-run equipment progression.
+
+The final whole-run audit is ROM-hash specific: a controller-only Easy
+Picsean expedition and its clean mGBA replay reproduce all-nine-boss Victory
+in 190,271 recorded frames at `room=220 bosses=9 hp=13 won=1`. Normal remains
+the demanding authored target; Easy clears 37/45 progression-matched
+one-minute boss samples and survives 44/45, so it is a real deep-testing
+assist rather than cosmetic labeling.
 
 **Generated terrain now tells the truth about where a champion fits.** The
 16×16 champion scale and its responsive 12-pixel feet box remain intact;
@@ -56,7 +126,7 @@ the **Moon Flask** distills otherwise-wasted full-health heart drops into MP.
 Each has distinct counter art and a distinct HUD offer glyph. Ricochet
 ownership is cached at run start, purchase, and suspend resume rather than
 scanning the inventory for every shot; its runtime marker is distinct from
-Spirit Convergence, preserving the 147/180 dense-room performance sample.
+Spirit Convergence, preserving the 148/180 dense-room stress sample.
 
 Those join vampirism, alternate Flail/Spear geometry, the **Glass Fang**
 max-heart-for-offense pact, the **Echo Prism** fourth-strike fork, Surge, full
@@ -2307,7 +2377,9 @@ than concept art.
   vaults and shops. The Vampiric Sigil restores a half-heart every fifth kill;
   an eight-heart cap leaves upgrade room even for seven-heart Sauran. All relic
   boosts saturate at their displayed stat caps, including multi-point luck
-  relics near the cap.
+  relics near the cap. Relic accumulation and Colossus clears also move every
+  champion through blue, red, and pearl-gold equipment states, so a build is
+  visible on the playfield rather than only in PACK numbers.
 - **Roguelike persistence done right**: battery **suspend save** resumes your
   run (and dies with you — permadeath holds), while best score / runs / wins
   persist forever. High and endless-run scores saturate at 65,535 instead of
@@ -2315,8 +2387,9 @@ than concept art.
   fatal hostile shot, waits through the animated game-over entry, power-cycles
   SRAM, proves the dead run cannot resume, and starts a clean replacement run.
 - **Full chiptune audio**: nine numbered exploration variants and nine
-  dedicated boss variants, plus title / victory / gameover tracks and 10
-  register-level SFX. Reprised melodic families change tempo and pacing, so
+  dedicated boss variants, plus title / victory / gameover tracks and 18
+  register-level SFX, including weapon-specific steel, heavy-chain,
+  and lance attacks. Reprised melodic families change tempo and pacing, so
   every stage/boss pairing remains audibly distinct within the ROM budget.
 - **Hardware-paced CGB performance**: the CGB-only cartridge uses double-speed
   CPU mode and does not discard a second VBlank after a busy frame. Ordinary
@@ -2911,6 +2984,13 @@ second puzzle and deep Warden in every stage, adds a third miniboss to later rou
 and retains the transition-latency budget so extra exploration does not restore
 the old doorway wait. Riftwild and the villages remain separate between-stage
 spaces.
+
+The **Rift Cantor reinforcement caller** now ships in stages four through nine:
+it spots the champion, gives a 48-frame visible/audible summon tell, then
+creates one bounded escort wave. Normal calls two bodies, Easy calls one, full
+entity tables fail safely, summoned IDs exclude the Cantor, and the caller
+never rearms. A dedicated live-ROM fixture proves the warning window,
+difficulty split, fixed budget, non-recursion, and one-wave room-clear path.
 
 Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,

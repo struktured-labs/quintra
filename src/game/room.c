@@ -31,6 +31,8 @@
 
 BANKREF(room_enter)
 
+static u8 room_is_outdoor(void);
+
 u8 room_tilemap[ROOM_H][ROOM_W];
 u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
 u8 room_world_bottom[ROOM_WIDE_BOTTOM_ROWS][ROOM_WIDE_W_TILES];
@@ -132,6 +134,21 @@ static void room_special_guard(u8 frames) {
     if (player.iframes < frames) player.iframes = frames;
 }
 
+static void room_start_death(void) {
+    // Every lethal source shares one readable fall beat. Hazard deaths used
+    // to hard-cut directly to GAME OVER while bullets/contact played this
+    // animation, making floor damage feel like a screen-transition bug.
+    death_timer = 50;
+    player.iframes = 50;
+    sfx_play(SFX_DEATH);
+    music_stop();
+    room_shake(2, 30);
+    fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x,     (i16)player.y,     16);
+    fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x - 8, (i16)player.y - 8, 24);
+    fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x + 8, (i16)player.y + 8, 32);
+    hud_redraw_hp();
+}
+
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
@@ -201,6 +218,10 @@ static void room_refresh_shop_wares(void) {
 // Both full screen entry and in-place door/portal regeneration must come
 // through this helper; otherwise a prior room's tile data can leak forward.
 static void room_load_dynamic_fx_identity(void) {
+    // In-place dungeon seams do not re-run room_enter's base BG upload.
+    // Repaint the three semantic scenery slots here so crossing a stage
+    // boundary changes roots/ice/idols immediately, before the tilemap draw.
+    if (!room_is_outdoor()) tiles_load_stage_scenery(room_stage());
     tiles_load_fx_sprites();
     // Slot 79 is phase-safe across stages, but its owner must not be tied to
     // the shop test below: that test is about the sale-callout slots, while
@@ -227,7 +248,11 @@ static void room_load_dynamic_fx_identity(void) {
         tiles_load_dread_bell_sprite();
         tiles_load_rift_warden_sprite();
         tiles_load_prism_skitter_sprite();
+        tiles_load_rift_cantor_sprite();
     }
+    // One reconciliation point covers full entry, START resume, cardinal
+    // doors, rift portals, and synthetic deep-stage checkpoints.
+    room_refresh_player_appearance(0);
 }
 
 static void room_load_town_resident_identity(void) {
@@ -264,7 +289,7 @@ void room_spawn_progression_fixture(void) BANKED {
     if (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) return;
     room_sigil_status = 4;
-    // This is normally called by procgen immediately after entity_init_all,
+    // This is normally called by procgen immediately after entity_init_room,
     // before optional enemies/loot can occupy the fixed 32-slot table. The
     // later orchestration calls are intentionally idempotent: never duplicate
     // an unclaimed fixture while a room is redrawn or resumed.
@@ -421,7 +446,8 @@ static u8 player_body_obstacles_at(i16 x, i16 y) {
 // it turned a one-pixel controller route into a tunnel through scenery.
 static u8 player_horizontal_step_allowed(i16 nx, i16 y) {
     return room_player_position_in_bounds(nx, y)
-        && player_feet_blocked_at(nx, y) == 0;
+        && player_feet_blocked_at(nx, y) == 0
+        && player_body_obstacles_at(nx, y) == 0;
 }
 
 static u8 player_vertical_step_allowed(i16 x, i16 ny) {
@@ -552,7 +578,12 @@ static void room_unseal_doors(void) {
 
 // Single-tile rewrite (tile + attr) at the top of vblank.
 static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
-    room_tilemap[ty][tx] = t;
+    if (ty < ROOM_H) {
+        if (tx < ROOM_W) room_tilemap[ty][tx] = t;
+        else room_world_extension[ty][tx - ROOM_W] = t;
+    } else {
+        room_world_bottom[ty - ROOM_H][tx] = t;
+    }
     wait_vbl_done();
     VBK_REG = 0;
     set_bkg_tiles(ROOM_BG_MAP_X(tx), ROOM_BG_MAP_Y(ty), 1, 1, &t);
@@ -564,8 +595,10 @@ static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
 void room_break_crystal(u8 tx, u8 ty) BANKED {
     // Shatter a crystal tile: floor it, ~25% of shards hold a +1 MP wisp
     // (crystals are the world's mana nodes).
-    if (tx >= ROOM_W || ty >= ROOM_H) return;
-    if (room_tilemap[ty][tx] != BGT_CRYSTAL) return;
+    if (tx >= (u8)(room_world_width >> 3)
+        || ty >= (u8)(room_world_height >> 3)) return;
+    if (room_tile_at_px((i16)tx << 3, (i16)ty << 3)
+        != BGT_CRYSTAL) return;
     room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
     sfx_play(SFX_HIT);
     if (rng_next_u8() < 64) {
@@ -575,8 +608,9 @@ void room_break_crystal(u8 tx, u8 ty) BANKED {
 
 void room_break_pot(u8 tx, u8 ty) BANKED {
     // Smash a pot: floor it and roll a drop (heart / coin / nothing).
-    if (tx >= ROOM_W || ty >= ROOM_H) return;
-    if (room_tilemap[ty][tx] != BGT_POT) return;
+    if (tx >= (u8)(room_world_width >> 3)
+        || ty >= (u8)(room_world_height >> 3)) return;
+    if (room_tile_at_px((i16)tx << 3, (i16)ty << 3) != BGT_POT) return;
     room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
     sfx_play(SFX_HIT);
     {
@@ -658,8 +692,8 @@ static u8 attr_for_tile(u8 t) {
 
 static u8 room_door_direction(u8 x, u8 y) {
     if (y == 0) return DIR_N;
-    if (x == ROOM_W - 1) return DIR_E;
-    if (y == ROOM_H - 1) return DIR_S;
+    if (x == (u8)((room_world_width >> 3) - 1)) return DIR_E;
+    if (y == (u8)((room_world_height >> 3) - 1)) return DIR_S;
     if (x == 0) return DIR_W;
     return DIR_NONE;
 }
@@ -925,7 +959,6 @@ void room_enter(void) {
 
     room_load_environment_palettes();
     palette_obj_load(0, skeleton_palette);
-    palette_obj_load(1, class_obj_palettes[player.class_id < 5 ? player.class_id : 0]);
     palette_obj_load(2, bullet_palette);
     palette_obj_load(3, crawler_palette);
     palette_obj_load(4, heart_palette);
@@ -1087,17 +1120,36 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (!boss_threshold_warned && !procgen_current_room_is_boss
         && !run_state.world_mode
         && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-        u8 near_n = (player.y <= 16) && is_forward_boss_door(
-            (u8)((player.x + 8) >> 3), 0, room_tilemap[0][(player.x + 8) >> 3]);
-        u8 near_s = (player.y >= 104) && is_forward_boss_door(
-            (u8)((player.x + 8) >> 3), ROOM_H - 1,
-            room_tilemap[ROOM_H - 1][(player.x + 8) >> 3]);
-        u8 near_w = (player.x <= 16) && is_forward_boss_door(
-            0, (u8)((player.y + 12) >> 3), room_tilemap[(player.y + 12) >> 3][0]);
-        u8 near_e = (player.x >= 128) && is_forward_boss_door(
-            ROOM_W - 1, (u8)((player.y + 12) >> 3),
-            room_tilemap[(player.y + 12) >> 3][ROOM_W - 1]);
-        if (near_n || near_s || near_w || near_e) {
+        u8 near = 0;
+        // Use world-aware tile access. Direct indexing into the compact
+        // 20x17 projection read beyond room_tilemap whenever the champion
+        // approached a far edge in a 31x31 scrolling court. Keep coordinate
+        // conversion lazy as well: a champion in the room interior should
+        // pay only four cheap edge comparisons, not four tile queries.
+        if (player.y <= 16) {
+            u8 tx = (u8)((player.x + 8) >> 3);
+            near = is_forward_boss_door(
+                tx, 0, room_tile_at_px((i16)player.x + 8, 0));
+        } else if (player.y >= (i16)room_world_height - 32) {
+            u8 tx = (u8)((player.x + 8) >> 3);
+            u8 south = (u8)((room_world_height >> 3) - 1);
+            near = is_forward_boss_door(tx, south,
+                room_tile_at_px((i16)player.x + 8,
+                    (i16)room_world_height - 1));
+        }
+        if (!near && player.x <= 16) {
+            u8 ty = (u8)((player.y + 12) >> 3);
+            near = is_forward_boss_door(
+                0, ty, room_tile_at_px(0, (i16)player.y + 12));
+        } else if (!near
+            && player.x >= (i16)room_world_width - 32) {
+            u8 ty = (u8)((player.y + 12) >> 3);
+            u8 east = (u8)((room_world_width >> 3) - 1);
+            near = is_forward_boss_door(east, ty,
+                room_tile_at_px((i16)room_world_width - 1,
+                    (i16)player.y + 12));
+        }
+        if (near) {
             boss_threshold_warned = 1;
             sfx_play(SFX_ROAR);
             room_shake(1, 12);
@@ -1109,7 +1161,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (death_timer) {
         if (--death_timer == 0) return SCREEN_GAMEOVER;
         if (player.iframes) player.iframes--;   // drives the flicker
-        entity_update_all(0, 0);
+        entity_update_all();
         place_player_sprite();
         entity_draw_all();
         return SCREEN_SELF;
@@ -1397,7 +1449,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         static const u8 class_element[5] = { 1, 4, 8, 2, 16 };
         const item_def_t *w =
             &items[player.starter_weapon < N_ITEMS ? player.starter_weapon : 0];
+        u8 wolfkin_melee = (player.class_id == 0
+            && player.starter_weapon == classes[0].starter_weapon
+            && w->p2 == PROJ_SPIKE) ? 1 : 0;
         g_shot_element = class_element[player.class_id < 5 ? player.class_id : 0];
+        if (wolfkin_max_cd) wolfkin_max_cd--;
 
         // A+B at full MP: SPIRIT CONVERGENCE. This is deliberately shared
         // across all five vessels—the common oath underneath their different
@@ -1413,6 +1469,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 }
             }
             player.mp = 0;
+            mp_regen = 0;
             player.iframes = 45;
             player.active_charge = 180;
             room_transform_ticks = 135; // 135 * 8 frames = 18 seconds at 60 Hz
@@ -1427,13 +1484,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // commits to a Max Strike dash, then settles into a deliberately
         // slower combo cadence so turbo/held play never requires button
         // mashing. Weapon swaps keep their authored projectile behaviour.
-        if (player.class_id == 0
-            && player.starter_weapon == classes[0].starter_weapon
-            && w->p2 == PROJ_SPIKE && !(keys & J_B)) {
-            u8 dir = input_to_dir8(keys);
-            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
-            if (wolfkin_max_cd) wolfkin_max_cd--;
+        if (wolfkin_melee && !(keys & J_B)) {
             if (keys & J_A) {
+                u8 dir = input_to_dir8(keys);
+                if (dir == 0xFF) dir = facing_to_dir8(player.facing);
                 if (wolfkin_a_hold < 255) wolfkin_a_hold++;
                 if (wolfkin_a_hold == 20 && wolfkin_max_cd == 0) {
                     // The dash is the hero's committed FF-style lane break:
@@ -1450,82 +1504,83 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     room_shake(1, 8);
                     sfx_play(SFX_ROAR);
                 }
+
+                // A held A is a deliberate physical combo, not a
+                // button-mashing tax: one contact arc every 24 frames.
+                if (player.fire_cooldown == 0) {
+                    u8 dmg = (u8)(w->p1 + player.atk);
+                    u8 shot;
+                    if (room_weapon_surge_ticks) dmg++;
+                    shot = projectile_spawn_player(
+                        dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
+                    if (room_weapon_surge_ticks && shot != 0xFF)
+                        entities[shot].hp++;
+                    if (shot != 0xFF
+                        && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
+                        // Neutral A sweeps a wider close arc while retaining
+                        // one hitbox, so bosses cannot be blendered.
+                        entities[shot].hitbox = 0xBB;
+                    }
+                    pickup_echo_primary(dir, dmg, PROJ_SPIKE);
+                    player.fire_cooldown = 24;
+                }
             } else {
                 wolfkin_a_hold = 0;
             }
-
-            // A held A is a deliberate physical combo, not a button-mashing
-            // tax: one contact arc every 24 frames (2.5/sec). That is slower
-            // than the old 16-frame tap rate; the 20-frame hold still layers
-            // the distinct Max Strike dash into the same sustained action.
-            if ((keys & J_A) && player.fire_cooldown == 0) {
+        } else if ((keys & J_A) && !(keys & J_B)
+            && player.fire_cooldown == 0) {
+                u8 dir = input_to_dir8(keys);
                 u8 dmg = (u8)(w->p1 + player.atk);
-                u8 shot;
-                if (room_weapon_surge_ticks) dmg++;
-                shot = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
-                    dmg, PROJ_SPIKE);
-                // Wolfkin takes the true-melee branch above, so its
-                // class-shaped Surge expression must live here rather than
-                // only in the ranged/shared branch below. The base claw
-                // already cleaves two bodies; Razor Surge deliberately adds
-                // exactly one more without widening the physical arc or
-                // changing permanent weapon stats.
-                if (room_weapon_surge_ticks && shot != 0xFF)
-                    entities[shot].hp++;
-                if (shot != 0xFF && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
-                    // Neutral A sweeps a noticeably wider close arc. It is
-                    // still one hitbox, so a boss cannot be blendered by
-                    // several overlapping pseudo-projectiles in one frame.
-                    entities[shot].hitbox = 0xBB;
+                u8 cooldown = player_fire_delay(w->p0);
+                if (room_weapon_surge_ticks) {
+                    // Surge Spark is an earned short burst, not a permanent stat:
+                    // it makes every class's actual A weapon hit harder and cycle
+                    // four frames faster without changing their geometry or B kit.
+                    dmg++;
+                    cooldown = (cooldown > 10) ? (u8)(cooldown - 4) : 6;
                 }
-                pickup_echo_primary(dir, dmg, PROJ_SPIKE);
-                player.fire_cooldown = 24;
-            }
-        } else if ((keys & J_A) && !(keys & J_B) && player.fire_cooldown == 0) {
-            u8 dir = input_to_dir8(keys);
-            u8 dmg = (u8)(w->p1 + player.atk);
-            u8 cooldown = player_fire_delay(w->p0);
-            if (room_weapon_surge_ticks) {
-                // Surge Spark is an earned short burst, not a permanent stat:
-                // it makes every class's actual A weapon hit harder and cycle
-                // four frames faster without changing their geometry or B kit.
-                dmg++;
-                cooldown = (cooldown > 10) ? (u8)(cooldown - 4) : 6;
-            }
-            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
-            {
-                u8 shot = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, w->p2);
-                if (room_weapon_surge_ticks && shot != 0xFF) {
-                    // Surge is one purchasable/drop-based power window, but
-                    // it should amplify the shape of the vessel's actual A
-                    // weapon rather than make five champions feel identical.
-                    // The shared +damage/+cadence above stays deliberately
-                    // modest; these are short 15-second expressions of the
-                    // kits, not permanent build inflation.
-                    switch (player.class_id) {
-                        case 0: // Wolfkin: Razor Surge cleaves one more body.
-                            entities[shot].hp++;
-                            break;
-                        case 1: // Sauran: Longtail Surge adds 16px of reach.
-                            entities[shot].state_timer = (u8)(entities[shot].state_timer + 4);
-                            break;
-                        case 2: // Corvin: Gale Surge opens a second feather lane.
-                            projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
-                                dir8_dy[(u8)((dir + 1) & 7)], dmg, PROJ_SHURIKEN);
-                            break;
-                        case 3: // Picsean: Tide Surge makes the bubble broader and deeper.
-                            entities[shot].hp++;
-                            entities[shot].hitbox = 0x99;
-                            break;
-                        default: // Vespine: Thorn Surge pierces a second target.
-                            entities[shot].hp++;
-                            break;
+                if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+                {
+                    u8 shot = projectile_spawn_player(dir8_dx[dir],
+                        dir8_dy[dir], dmg, w->p2);
+                    if (room_weapon_surge_ticks && shot != 0xFF) {
+                        // Surge is one purchasable/drop-based power window, but
+                        // it should amplify the shape of the vessel's actual A
+                        // weapon rather than make five champions feel identical.
+                        // The shared +damage/+cadence above stays deliberately
+                        // modest; these are short 15-second expressions of the
+                        // kits, not permanent build inflation.
+                        switch (player.class_id) {
+                            case 0: // Wolfkin: Razor Surge cleaves one more body.
+                                entities[shot].hp++;
+                                break;
+                            case 1: // Sauran: Longtail Surge adds 16px of reach.
+                                entities[shot].state_timer =
+                                    (u8)(entities[shot].state_timer + 4);
+                                break;
+                            case 2: // Corvin: Gale Surge opens a second feather lane.
+                                projectile_spawn_player(
+                                    dir8_dx[(u8)((dir + 1) & 7)],
+                                    dir8_dy[(u8)((dir + 1) & 7)],
+                                    dmg, PROJ_SHURIKEN);
+                                break;
+                            case 3: // Picsean: Tide Surge is broader and deeper.
+                                entities[shot].hp++;
+                                entities[shot].hitbox = 0x99;
+                                break;
+                            default: // Vespine: Thorn Surge pierces a second target.
+                                entities[shot].hp++;
+                                break;
+                        }
                     }
+                    pickup_echo_primary(dir, dmg, w->p2);
                 }
-                pickup_echo_primary(dir, dmg, w->p2);
-            }
-            player.fire_cooldown = cooldown;
+                player.fire_cooldown = cooldown;
         }
+        // A Max Strike is a continuous held-A commitment. Chording B or
+        // changing weapons interrupts that tell; the old frozen counter could
+        // resume at frame 19 and fire a surprise dash one frame later.
+        if (!wolfkin_melee || (keys & J_B)) wolfkin_a_hold = 0;
         if (player.fire_cooldown) player.fire_cooldown--;
 
         // ---- Weapon 2 (B, edge): class signature move. Costs MP_COST_B
@@ -1540,6 +1595,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + 1 + player.atk);
             u8 d;
+            u8 ability_ok = 1;
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
             switch (player.class_id) {
                 case 0:   // Wolfkin HOWL: 8-way spike ring
@@ -1556,11 +1612,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     player.iframes = 8; // cover the raising animation
                     break;
                 case 2:   // Corvin MURDER: 3-way shuriken spread
-                    projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SHURIKEN);
-                    projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
-                        dir8_dy[(u8)((dir + 1) & 7)], dmg, PROJ_SHURIKEN);
-                    projectile_spawn_player(dir8_dx[(u8)((dir + 7) & 7)],
-                        dir8_dy[(u8)((dir + 7) & 7)], dmg, PROJ_SHURIKEN);
+                    ability_ok = 0;
+                    if (projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
+                            dmg, PROJ_SHURIKEN) != 0xFF) ability_ok = 1;
+                    if (projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
+                            dir8_dy[(u8)((dir + 1) & 7)],
+                            dmg, PROJ_SHURIKEN) != 0xFF) ability_ok = 1;
+                    if (projectile_spawn_player(dir8_dx[(u8)((dir + 7) & 7)],
+                            dir8_dy[(u8)((dir + 7) & 7)],
+                            dmg, PROJ_SHURIKEN) != 0xFF) ability_ok = 1;
                     break;
                 case 3:   // Picsean TIDAL WAVE: 3-lane bubble wall
                     projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_BUBBLE);
@@ -1584,10 +1644,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     room_special_guard(18);
                     break;
             }
-            sfx_play(SFX_ROAR);
-            player.active_charge = 140;
-            player.mp = (u8)(player.mp - MP_COST_B);
-            hud_redraw_mp();
+            if (ability_ok) {
+                sfx_play(SFX_ROAR);
+                player.active_charge = 140;
+                player.mp = (u8)(player.mp - MP_COST_B);
+                mp_regen = 0;
+                hud_redraw_mp();
+            } else {
+                // Corvin's B has no shield/guard fallback. A saturated entity
+                // table must refuse it instead of charging MP for zero blades.
+                sfx_play(SFX_HURT);
+            }
         }
         if (player.active_charge > 0) player.active_charge--;
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0)
@@ -1601,9 +1668,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (player.shield_timer > 0) {
             player.shield_timer--;
             if ((player.shield_timer & 7) == 0)
-                fx_spawn(SPR_SHIELD_AURA, 1,
-                    (i16)player.x + ((player.shield_timer & 8) ? 12 : -4),
-                    (i16)player.y + ((player.shield_timer & 16) ? 12 : -4), 8);
+                room_spawn_shield_aura();
         }
 
         // MP trickle: +1 every ~3.2s while below max — Picsean's
@@ -1630,7 +1695,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     }
 
     // ---- Entity updates
-    entity_update_all(keys, pressed);
+    entity_update_all();
 
     // ---- Combat
     if (combat_resolve() || player.hp == 0) {
@@ -1638,17 +1703,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             death_timer = 0;
             return SCREEN_SELF;
         }
-        // Player died: don't hard-cut — a beat of shake, bursts, and a
-        // flickering hero falling before the GAMEOVER screen takes over.
-        death_timer = 50;
-        player.iframes = 50;             // reuse the iframe flicker
-        sfx_play(SFX_DEATH);
-        music_stop();
-        room_shake(2, 30);
-        fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x,     (i16)player.y,     16);
-        fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x - 8, (i16)player.y - 8, 24);
-        fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x + 8, (i16)player.y + 8, 32);
-        hud_redraw_hp();                 // show the empty hearts
+        room_start_death();
         return SCREEN_SELF;
     }
 
@@ -1754,8 +1809,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     {
         u8 rtx = (u8)((player.x + 8) >> 3);
         u8 rty = (u8)((player.y + 12) >> 3);
-        if (rtx < ROOM_W && rty < ROOM_H
-            && room_tilemap[rty][rtx] == BGT_RUBBLE) {
+        // Compact rooms own the overwhelmingly common hot path. Only call
+        // across to streamed world storage when the feet are actually beyond
+        // that core; doing two banked lookups every idle frame cost video
+        // rate even though almost every room uses room_tilemap directly.
+        u8 feet_tile = (rtx < ROOM_W && rty < ROOM_H)
+            ? room_tilemap[rty][rtx]
+            : room_tile_at_px((i16)player.x + 8, (i16)player.y + 12);
+        if (feet_tile == BGT_RUBBLE) {
             room_set_tile_vbl(rtx, rty, BGT_FLOOR, BGPAL_FLOOR);
             sfx_play(SFX_HIT);
             if (rng_next_u8() < 100) {   // ~40%: hidden coin
@@ -1763,8 +1824,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     FIX8((i16)rtx * 8), FIX8((i16)rty * 8));
             }
         }
-        else if (rtx < ROOM_W && rty < ROOM_H
-            && room_tilemap[rty][rtx] == BGT_PORTAL) {
+        else if (feet_tile == BGT_PORTAL) {
             if (run_state.world_mode) {
                 const zelda_screen_t *cell =
                     &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
@@ -1820,8 +1880,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // ---- Hazard floor: walkable but bites when the feet-box center
         // rests on it. Picsean's swim passive crosses Toxic Mire pools safely;
         // other stages remain dangerous to every vessel.
-        else if (rtx < ROOM_W && rty < ROOM_H
-            && room_tilemap[rty][rtx] == BGT_SPIKES
+        else if (feet_tile == BGT_SPIKES
             && !(player.class_id == 3 && room_stage() == 4)
             && player.iframes == 0) {
             if (player.hp > 1) {
@@ -1838,7 +1897,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     death_timer = 0;
                     room_stumble_off_hazard();
                 } else {
-                    return SCREEN_GAMEOVER;
+                    room_start_death();
+                    return SCREEN_SELF;
                 }
             }
         }
