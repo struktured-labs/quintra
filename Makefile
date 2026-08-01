@@ -210,6 +210,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_sunwheel.py
 	uv run --quiet --with pyboy python scripts/test_bellwarden.py
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py
+	$(PYBOY_RUN) scripts/test_dungeon_director.py
 	uv run --quiet --with pyboy python scripts/test_score.py
 	uv run --quiet --with pyboy python scripts/test_block_lower_edge.py
 	uv run --quiet --with pyboy python scripts/test_doors.py

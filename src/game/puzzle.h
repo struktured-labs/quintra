@@ -16,6 +16,7 @@ enum {
 extern u8 room_puzzle_kind;
 extern u8 room_puzzle_locked;
 extern u8 room_puzzle_visual_y;
+extern u8 room_puzzle_phase_bit;
 
 // Deterministically layer this dungeon's puzzle fixture over procgen.
 void puzzle_prepare_room(void) BANKED;

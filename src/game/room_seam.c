@@ -4,6 +4,7 @@
 
 #include "audio/audio.h"
 #include "core/types.h"
+#include "game/dungeon_director.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -136,6 +137,8 @@ void room_stream_wide_seam(u8 dir) BANKED {
     // of burdening the resident combat loop.
     if (run_state.world_mode)
         tiles_draw_area_label(1);
+    else if (room_encounter_kind != ENCOUNTER_SKIRMISH)
+        room_show_directive_label((u8)(9 + room_encounter_kind));
     else
         room_show_district_label((u8)(5
             + run_state_dungeon_local() / DUNGEON_GRID_W));

@@ -96,6 +96,9 @@ static void write_current_goal(void) {
     } else if (run_state_dungeon_size() >= 14
             && !(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT)) {
         text_write("GOAL CLEAR DEEP WARD");
+    } else if (run_state_dungeon_size() >= 20
+            && !(run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT)) {
+        text_write("GOAL OPEN DEEP SEAL");
     } else {
         text_write("GOAL SEEK SKULL GATE");
     }

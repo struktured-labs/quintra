@@ -1,7 +1,8 @@
-#pragma bank 6
+#pragma bank 7
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
+#include "game/dungeon_director.h"
 #include "game/room.h"
 #include "game/puzzle.h"
 #include "game/run_state.h"
@@ -68,7 +69,7 @@ void tiles_load_area_labels(void) BANKED {
     set_bkg_data(BGT_AREA_R, 17, area_letters[0]);
 }
 
-static u8 wide_attr(u8 tile, u8 outdoor) {
+static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
     if (outdoor) {
         return (tile == BGT_TREE || tile == BGT_WILD_STONE)
             ? BGPAL_WALL
@@ -87,9 +88,17 @@ static u8 wide_attr(u8 tile, u8 outdoor) {
         || tile == BGT_BOSS_GATE_L || tile == BGT_BOSS_GATE_R
         || tile == BGT_BOSS_GATE_TOP || tile == BGT_BOSS_GATE_BOTTOM)
         return BGPAL_CRACK;
-    if (tile == BGT_DOOR)
-        return (room_combat_sealed || room_puzzle_locked)
-            ? BGPAL_CRACK : BGPAL_DOOR;
+    if (tile == BGT_DOOR) {
+        if (room_combat_sealed || room_puzzle_locked) return BGPAL_CRACK;
+        if ((y == 0 && room_objective_dir == DIR_N)
+            || (x == ROOM_WIDE_W_TILES - 1
+                && room_objective_dir == DIR_E)
+            || (y == ROOM_WIDE_H_TILES - 1
+                && room_objective_dir == DIR_S)
+            || (x == 0 && room_objective_dir == DIR_W))
+            return BGPAL_CRYSTAL;
+        return BGPAL_DOOR;
+    }
     if (tile == BGT_POT || tile == BGT_SWITCH) return BGPAL_DOOR;
     if (tile == BGT_CRYSTAL || tile == BGT_PORTAL) return BGPAL_CRYSTAL;
     if (tile == HUD_COIN || (tile >= HUD_DIGIT_0
@@ -122,7 +131,8 @@ void tiles_prepare_wide_field(void) BANKED {
             u8 physical_x = ROOM_BG_MAP_X(logical_x);
             u8 tile = wide_tile(logical_x, logical_y, outdoor);
             tiles[physical_x] = tile;
-            attrs[physical_x] = wide_attr(tile, outdoor);
+            attrs[physical_x] = wide_attr(tile, outdoor,
+                logical_x, logical_y);
         }
         VBK_REG = 0;
         set_bkg_tiles(0, physical_y, 32, 1, tiles);
@@ -141,7 +151,8 @@ void tiles_stream_wide_column(u8 logical_x, u8 physical_x) BANKED {
         u8 physical_y = ROOM_BG_MAP_Y(logical_y);
         u8 tile = wide_tile(logical_x, logical_y, outdoor);
         tiles[physical_y] = tile;
-        attrs[physical_y] = wide_attr(tile, outdoor);
+        attrs[physical_y] = wide_attr(tile, outdoor,
+            logical_x, logical_y);
     }
     VBK_REG = 0;
     set_bkg_tiles(physical_x, 0, 1, 32, tiles);
@@ -159,7 +170,8 @@ void tiles_stream_wide_row(u8 logical_y, u8 physical_y) BANKED {
         u8 physical_x = ROOM_BG_MAP_X(logical_x);
         u8 tile = wide_tile(logical_x, logical_y, outdoor);
         tiles[physical_x] = tile;
-        attrs[physical_x] = wide_attr(tile, outdoor);
+        attrs[physical_x] = wide_attr(tile, outdoor,
+            logical_x, logical_y);
     }
     VBK_REG = 0;
     set_bkg_tiles(0, physical_y, 32, 1, tiles);
@@ -199,6 +211,18 @@ void tiles_draw_area_label(u8 kind) BANKED {
     static const u8 heart[5] = {
         BGT_AREA_H, BGT_AREA_E, BGT_AREA_A, BGT_AREA_R, BGT_AREA_T
     };
+    static const u8 trap[4] = {
+        BGT_AREA_T, BGT_AREA_R, BGT_AREA_A, BGT_AREA_P
+    };
+    static const u8 wave[4] = {
+        BGT_AREA_W, BGT_AREA_A, BGT_AREA_V, BGT_AREA_E
+    };
+    static const u8 elite[5] = {
+        BGT_AREA_E, BGT_AREA_L, BGT_AREA_I, BGT_AREA_T, BGT_AREA_E
+    };
+    static const u8 hold[4] = {
+        BGT_AREA_H, BGT_AREA_O, BGT_AREA_L, BGT_AREA_D
+    };
     static const u8 attrs[8] = {
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR,
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR
@@ -213,7 +237,11 @@ void tiles_draw_area_label(u8 kind) BANKED {
     else if (kind == 6) { letters = lower; x = 8; width = 5; }
     else if (kind == 7) { letters = deep; x = 8; width = 4; }
     else if (kind == 8) { letters = inner; x = 8; width = 5; }
-    else { letters = heart; x = 8; width = 5; }
+    else if (kind == 9) { letters = heart; x = 8; width = 5; }
+    else if (kind == 10) { letters = trap; x = 8; width = 4; }
+    else if (kind == 11) { letters = wave; x = 8; width = 4; }
+    else if (kind == 12) { letters = elite; x = 8; width = 5; }
+    else { letters = hold; x = 8; width = 4; }
     // A Riftwild field may have crossed several continuous seams. Project the
     // display-only sign through the same logical-to-physical origin instead
     // of writing it into the previous field's canonical top-left.

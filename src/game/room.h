@@ -86,7 +86,9 @@ void room_close_dungeon_false_gaps(void) BANKED;
 // the hardware BG ring while keeping the champion and music alive.
 void room_stream_wide_seam(u8 dir) BANKED;
 void room_draw_tilemap(void) BANKED;
+void room_unseal_doors(void) BANKED;
 void room_show_district_label(u8 kind) BANKED;
+void room_show_directive_label(u8 kind) BANKED;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) NONBANKED;

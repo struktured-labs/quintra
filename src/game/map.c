@@ -1,7 +1,8 @@
-#pragma bank 3
+#pragma bank 7
 #include <gb/gb.h>
 #include <gb/cgb.h>
 #include "audio/sfx.h"
+#include "game/dungeon_director.h"
 #include "game/map.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -54,11 +55,14 @@ static u8 map_attr(u8 tile) {
     return BGPAL_FLOOR;
 }
 
-static void map_put(u8 x, u8 y, u8 tile) {
-    u8 attr = map_attr(tile);
+static void map_put_attr(u8 x, u8 y, u8 tile, u8 attr) {
     VBK_REG = 0; set_bkg_tiles(x, y, 1, 1, &tile);
     VBK_REG = 1; set_bkg_tiles(x, y, 1, 1, &attr);
     VBK_REG = 0;
+}
+
+static void map_put(u8 x, u8 y, u8 tile) {
+    map_put_attr(x, y, tile, map_attr(tile));
 }
 
 static void map_clear_tiles(void) {
@@ -250,23 +254,15 @@ static void draw_dungeon_grid(void) {
     u8 i, j;
     u8 size = run_state_dungeon_size();
     u8 here = run_state_dungeon_cell();
-    u8 warden_done = (run_state.dungeon_puzzles
-        & RUN_WARDEN_BOON_BIT) ? 1 : 0;
-    u8 waystone_done = (run_state.dungeon_puzzles
-        & RUN_WAYSTONE_BIT) ? 1 : 0;
-    u8 deep_warden_done = (run_state.dungeon_phase
-        & RUN_DEEP_WARDEN_BIT) ? 1 : 0;
     u8 sigil_done = (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
-    u8 next_trial = 0xFF;
+    u8 next_trial = dungeon_director_goal_cell();
+    u8 route_dir = dungeon_director_direction_from(here);
+    u8 route_next = (route_dir == DIR_NONE) ? 0xFF
+        : run_state_dungeon_cell_neighbor(here, route_dir);
     u8 cache_cell = run_state_dungeon_cache_cell();
     u8 cache_done = (run_state.dungeon_phase
         & RUN_FARFOLD_CACHE_BIT) ? 1 : 0;
-    if (sigil_done && !warden_done) next_trial = 3;
-    else if (warden_done && size >= 12 && !waystone_done) {
-        next_trial = 7;
-    } else if (warden_done && waystone_done
-        && size >= 14 && !deep_warden_done) next_trial = 9;
     for (i = 0; i < size; ++i) {
         u8 seen = run_state_dungeon_cell_seen(i);
         u8 boss_hint = (i == (u8)(size - 1)
@@ -281,7 +277,7 @@ static void draw_dungeon_grid(void) {
         // free-floating center marker looked like decoration, so players
         // could reach the sanctuary without realizing which room held the
         // required Rift Sigil.
-        if (i == 2 && seen && !sigil_done && i != here)
+        if (i == 2 && !sigil_done && i != here)
             icon = BGT_MAP_BIG_GOAL;
         // Each completed fixture reveals exactly one next GOAL. The Pack
         // supplies its specific Sigil/Waystone/Warden name; the Compass stays
@@ -335,14 +331,32 @@ static void draw_dungeon_grid(void) {
                 u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
                 u8 tile = (a_seen && b_seen)
                     ? BGT_MAP_PATH_H : BGT_MAP_PATH_H_DIM;
-                map_put((u8)(left + 2), gy[i], tile);
-                map_put((u8)(left + 2), (u8)(gy[i] + 1), tile);
+                u8 route_edge = ((i == here && j == route_next)
+                    || (j == here && i == route_next));
+                if (route_edge) {
+                    map_put_attr((u8)(left + 2), gy[i], BGT_MAP_PATH_H,
+                        BGPAL_CRYSTAL);
+                    map_put_attr((u8)(left + 2), (u8)(gy[i] + 1),
+                        BGT_MAP_PATH_H, BGPAL_CRYSTAL);
+                } else {
+                    map_put((u8)(left + 2), gy[i], tile);
+                    map_put((u8)(left + 2), (u8)(gy[i] + 1), tile);
+                }
             } else {
                 u8 top = gy[i] < gy[j] ? gy[i] : gy[j];
                 u8 tile = (a_seen && b_seen)
                     ? BGT_MAP_PATH_V : BGT_MAP_PATH_V_DIM;
-                map_put(gx[i], (u8)(top + 2), tile);
-                map_put((u8)(gx[i] + 1), (u8)(top + 2), tile);
+                u8 route_edge = ((i == here && j == route_next)
+                    || (j == here && i == route_next));
+                if (route_edge) {
+                    map_put_attr(gx[i], (u8)(top + 2), BGT_MAP_PATH_V,
+                        BGPAL_CRYSTAL);
+                    map_put_attr((u8)(gx[i] + 1), (u8)(top + 2),
+                        BGT_MAP_PATH_V, BGPAL_CRYSTAL);
+                } else {
+                    map_put(gx[i], (u8)(top + 2), tile);
+                    map_put((u8)(gx[i] + 1), (u8)(top + 2), tile);
+                }
             }
         }
     }
@@ -435,6 +449,7 @@ void map_enter(void) {
         return;
     }
     tiles_load_area_labels(); tiles_load_map_bg(); tiles_load_hud();
+    dungeon_director_refresh_route();
     map_clear_tiles();
     draw_dungeon_heading();
     draw_dungeon_grid();

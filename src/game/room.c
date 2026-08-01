@@ -12,6 +12,7 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/combat.h"
+#include "game/dungeon_director.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/loop.h"
@@ -527,55 +528,6 @@ static void room_apply_pause_palettes(u8 dim) {
     }
 }
 
-// Rewrite authored cardinal thresholds after a seal is lifted. Ordinary graph
-// cells must not gain fake doors into nonexistent neighbours; a cleared boss
-// deliberately opens every edge because any threshold descends to Riftwild.
-// Called at the top of vblank so the handful of VRAM writes land safely.
-static void room_unseal_doors(void) {
-    static const u8 dxs[4][2] = {
-        { 9, 10 }, { ROOM_W - 1, ROOM_W - 1 },
-        { 9, 10 }, { 0, 0 },
-    };
-    static const u8 dys[4][2] = {
-        { 0, 0 }, { 8, 9 },
-        { ROOM_H - 1, ROOM_H - 1 }, { 8, 9 },
-    };
-    u8 dir, half;
-    for (dir = 0; dir < 4; ++dir) {
-        if (!run_state_was_cleared_boss()
-            && run_state_dungeon_neighbor(dir) == 0xFF) continue;
-        if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
-        for (half = 0; half < 2; ++half)
-            room_tilemap[dys[dir][half]][dxs[dir][half]] = BGT_DOOR;
-    }
-    wait_vbl_done();
-    {
-        u8 door = BGT_DOOR, attr = BGPAL_DOOR;
-        VBK_REG = 0;
-        for (dir = 0; dir < 4; ++dir) {
-            if (!run_state_was_cleared_boss()
-                && run_state_dungeon_neighbor(dir) == 0xFF) continue;
-            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
-            for (half = 0; half < 2; ++half)
-                set_bkg_tiles(ROOM_BG_MAP_X(dxs[dir][half]),
-                    ROOM_BG_MAP_Y(dys[dir][half]), 1, 1, &door);
-        }
-        VBK_REG = 1;
-        for (dir = 0; dir < 4; ++dir) {
-            if (!run_state_was_cleared_boss()
-                && run_state_dungeon_neighbor(dir) == 0xFF) continue;
-            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
-            for (half = 0; half < 2; ++half)
-                set_bkg_tiles(ROOM_BG_MAP_X(dxs[dir][half]),
-                    ROOM_BG_MAP_Y(dys[dir][half]), 1, 1, &attr);
-        }
-        VBK_REG = 0;
-    }
-    if (procgen_current_room_is_boss
-        && room_world_width > ROOM_VIEW_W_PX)
-        tiles_open_crystal_far_exit();
-}
-
 // Single-tile rewrite (tile + attr) at the top of vblank.
 static void room_set_tile_vbl(u8 tx, u8 ty, u8 t, u8 attr) {
     if (ty < ROOM_H) {
@@ -725,8 +677,8 @@ static u8 attr_for_room_tile(u8 x, u8 y, u8 tile) {
     // persistent dungeon color. This keeps collision simple while making a
     // switch in one room visibly raise/lower the wall in the next.
     if (room_puzzle_kind == PUZZLE_PHASE_GATE
-        && y == room_puzzle_visual_y && x >= 2 && x < ROOM_W - 2)
-        return (run_state.dungeon_phase & RUN_PHASE_OPEN_BIT)
+        && y == room_puzzle_visual_y && x >= 4 && x < ROOM_W - 4)
+        return (run_state.dungeon_phase & room_puzzle_phase_bit)
             ? BGPAL_CRYSTAL : BGPAL_CRACK;
     return attr_for_tile(tile);
 }
@@ -1040,6 +992,7 @@ void room_enter(void) {
     room_load_dynamic_fx_identity();
     room_spawn_progression_fixture();
     puzzle_prepare_room_role();
+    dungeon_director_activate();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
     room_draw_tilemap();
@@ -1725,6 +1678,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 found = 1;
             }
         }
+        // The director resolves at the hostile-count boundary: WAVE can add
+        // its second formation before the ordinary zero-enemy clear path,
+        // while HOLD and ELITE can release the exits with optional enemies
+        // still alive. This makes the room verb mechanical, not a label over
+        // another extermination encounter.
+        alive = dungeon_director_update(alive);
+        if (room_encounter_complete && room_combat_sealed) {
+            room_combat_sealed = 0;
+            room_unseal_doors();
+        }
         // Corvin's raven sight (perk 3): with no boss around, the bar
         // reads a regular enemy's real spawn HP. The old content-table value
         // ignored procgen's regular-room stage bonus, making a fully healthy
@@ -1867,6 +1830,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             room_load_town_resident_identity();
             room_spawn_progression_fixture();
             puzzle_prepare_room_role();
+            dungeon_director_activate();
             boss_threshold_warned = 0;
             room_load_environment_palettes();
             room_draw_tilemap();
@@ -1945,7 +1909,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                                 & RUN_WAYSTONE_BIT))
                         || (run_state_dungeon_size() >= 14
                             && !(run_state.dungeon_phase
-                                & RUN_DEEP_WARDEN_BIT)))) {
+                                & RUN_DEEP_WARDEN_BIT))
+                        || (run_state_dungeon_size() >= 20
+                            && !(run_state.dungeon_phase
+                                & RUN_DEEP_PHASE_OPEN_BIT)))) {
                     room_hold_at_door(dir, SFX_HURT, 6);
                     return SCREEN_SELF;
                 }
@@ -1957,10 +1924,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     room_hold_at_door(dir, SFX_TICK, 4);
                     return SCREEN_SELF;
                 }
-                // Procedural puzzle rooms preserve the return route but hold
-                // every unexplored exit until their landscape interaction is
-                // solved. This is independent of enemy count: these rooms are
-                // alternatives to the ordinary kill-everything seal.
+                // Push and rune rooms preserve the return route but hold every
+                // unexplored exit until their landscape interaction is solved.
+                // Paired phase rooms instead author a physical remote wall;
+                // they must never globally seal doors because procedural fold
+                // edges can approach either side before the switch is found.
                 if (room_puzzle_locked
                     && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
                     room_hold_at_door(dir, SFX_TICK, 4);
@@ -2065,6 +2033,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_town_resident_identity();
                 room_spawn_progression_fixture();
                 puzzle_prepare_room_role();
+                dungeon_director_activate();
                 // A wide-to-wide edge is a continuous district seam. Rotate
                 // the 32x32 hardware map and stream destination lines behind
                 // the camera while the champion stays on-screen. Compact

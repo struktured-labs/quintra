@@ -12,7 +12,8 @@ from pyboy import PyBoy
 from quintra_topology import STAGE_START
 
 from test_stage_archetypes import (
-    EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, put16, wait_for_generated_room,
+    EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, addr, put16,
+    wait_for_generated_room,
 )
 
 
@@ -24,6 +25,7 @@ MAX_ENTITIES = 32
 ENT_ENEMY = 2
 EF_ACTIVE = 0x01
 EF_ELITE = 0x20
+DIRECTIVE = addr("_room_encounter_kind")
 
 
 def boot():
@@ -82,7 +84,7 @@ def sample_stage_entry(pb, stage, seed):
     # Collapse only non-interactive floor texture/rubble. Walls, cover,
     # hazards, pots, blocks, secrets, doors, and portals retain identity.
     geometry = tuple(1 if tile in FLOORISH else tile for tile in tiles)
-    return geometry, tuple(sorted(hostiles)), elite_count
+    return geometry, tuple(sorted(hostiles)), elite_count, pb.memory[DIRECTIVE]
 
 
 def main():
@@ -91,17 +93,23 @@ def main():
     roster_signatures = defaultdict(set)
     body_counts = []
     body_counts_by_stage = defaultdict(list)
+    body_counts_by_kind = defaultdict(list)
+    kinds_by_stage = defaultdict(list)
+    kinds_seen = set()
     elite_total = 0
     pb = boot()
     try:
         for stage in range(9):
             for seed in SEEDS:
-                geometry, roster, elites = sample_stage_entry(pb, stage, seed)
+                geometry, roster, elites, kind = sample_stage_entry(pb, stage, seed)
                 geometries[stage].add(geometry)
                 roster_kinds[stage].update(roster)
                 roster_signatures[stage].add(roster)
                 body_counts.append(len(roster))
                 body_counts_by_stage[stage].append(len(roster))
+                body_counts_by_kind[kind].append(len(roster))
+                kinds_by_stage[stage].append(kind)
+                kinds_seen.add(kind)
                 elite_total += elites
     finally:
         pb.stop(save=False)
@@ -118,13 +126,29 @@ def main():
             f"stage {stage + 1} collapsed to {len(roster_signatures[stage])}/12 "
             "encounter rosters"
         )
-    assert min(body_counts) >= 3, f"ordinary room lost minimum pressure: {body_counts}"
+    assert kinds_seen == {0, 1, 2, 3, 4}, \
+        f"director variety disappeared from seed sample: {sorted(kinds_seen)}"
+    # Initial population now encodes encounter grammar: a trap opens in an
+    # intentional hush, wave rooms reserve bodies for phase two, and holds
+    # cap the starting pack before timed reinforcements. The dedicated live
+    # director test owns those transitions; baseline/elite openings retain
+    # the original depth floor here.
     for stage in range(9):
         expected_floor = 3 if stage == 0 else 4 if stage < 3 else 5
-        assert min(body_counts_by_stage[stage]) >= expected_floor, (
-            f"stage {stage + 1} fell below {expected_floor} bodies: "
-            f"{body_counts_by_stage[stage]}"
+        baseline = [
+            count for count, kind in zip(
+                body_counts_by_stage[stage], kinds_by_stage[stage])
+            if kind in (0, 3)
+        ]
+        assert baseline and min(baseline) >= expected_floor, (
+            f"stage {stage + 1} baseline fell below {expected_floor}: {baseline}"
         )
+    assert body_counts_by_kind[1] and min(body_counts_by_kind[1]) == 0, \
+        "trap rooms lost their quiet opening"
+    assert body_counts_by_kind[2] and min(body_counts_by_kind[2]) >= 2, \
+        "wave openings became empty"
+    assert body_counts_by_kind[4] and max(body_counts_by_kind[4]) <= 4, \
+        "hold openings exceeded their reinforcement cap"
     assert max(body_counts) > min(body_counts), "enemy population stopped varying"
     assert elite_total >= 4, f"elite roll nearly disappeared ({elite_total}/108 samples)"
 
@@ -133,7 +157,8 @@ def main():
         f"geometry={[len(geometries[s]) for s in range(9)]}/12, "
         f"enemy-kinds={[len(roster_kinds[s]) for s in range(9)]}, "
         f"rosters={[len(roster_signatures[s]) for s in range(9)]}/12, "
-        f"bodies={min(body_counts)}-{max(body_counts)}, elites={elite_total}/108"
+        f"bodies={min(body_counts)}-{max(body_counts)}, "
+        f"directives={sorted(kinds_seen)}, elites={elite_total}/108"
     )
 
 

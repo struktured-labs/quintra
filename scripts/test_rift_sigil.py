@@ -220,7 +220,7 @@ def main():
 
     # The Sigil reveals the Warden but does not replace its trial. The exact
     # same sanctuary threshold remains closed until local room 3's boon bit,
-    # the room-7 Waystone, and the deep Warden are earned in sequence.
+    # the room-7 Waystone, deep Warden, and Deep Seal are earned in sequence.
     clear_entities()
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[RS + 6] = 0xFF
@@ -239,6 +239,10 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
         "roomier opening route ignored the missing deep Warden"
     pb.memory[RS + 28] |= 1 << 7
+    pb.tick(8)
+    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
+        "full-size opening route ignored the missing Deep Seal"
+    pb.memory[RS + 28] |= 1 << 2
     pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \
         "complete opening route did not unlock boss threshold"
@@ -293,7 +297,7 @@ def main():
         "stage-two sanctuary ignored missing Sigil"
     pb.memory[RS + RS_SIGILS] |= 2
     pb.memory[RS + RS_PUZZLES] = (1 << 3) | (1 << 7)
-    pb.memory[RS + 28] |= 1 << 7
+    pb.memory[RS + 28] |= (1 << 7) | (1 << 2)
     for _ in range(45):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1], \
@@ -307,7 +311,7 @@ def main():
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] |= 1 << 2
     pb.memory[RS + RS_PUZZLES] = 1 << 3
-    pb.memory[RS + 28] = 1 << 7
+    pb.memory[RS + 28] = (1 << 7) | (1 << 2)
     pb.memory[SEALED] = 0
     boss_door(2)
     pb.tick(8)
@@ -325,7 +329,7 @@ def main():
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] |= 1 << 5
     pb.memory[RS + RS_PUZZLES] = (1 << 3) | (1 << 7)
-    pb.memory[RS + 28] = 0
+    pb.memory[RS + 28] = 1 << 2
     pb.memory[SEALED] = 0
     boss_door(5)
     pb.tick(8)
@@ -427,7 +431,7 @@ def main():
     ) == 1, "dense stage-three room lost its reserved Rift Sigil"
 
     pb.stop(save=False)
-    print("[rift-sigil] PASS Sigil + Warden + late Waystone/deep-Warden route gates")
+    print("[rift-sigil] PASS Sigil + Warden + late Waystone/deep-Warden/Deep-Seal route gates")
 
 
 if __name__ == "__main__":

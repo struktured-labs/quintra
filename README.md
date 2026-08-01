@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.18.92: Living Courts](https://github.com/struktured-labs/quintra/releases/download/v0.18.92/quintra.gbc)
+[Download Quintra v0.19.0: Living Dungeons](https://github.com/struktured-labs/quintra/releases/download/v0.19.0/quintra.gbc)
 
 The repository copy of the published cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,9 +25,41 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.18.92**, published after passing the complete
+The current cartridge is **v0.19.0**, published after passing the complete
 build, media, cartridge, checkpoint, gameplay, and controller verification
 gate.
+
+**Dungeons now change their rules while a run is in motion.** Deterministic
+first visits to ordinary scrolling courts can become a delayed **TRAP**, a
+two-formation **WAVE**, a marked **ELITE** hunt whose escorts become optional,
+or a timed **HOLD** with bounded reinforcements. Each verb announces itself
+briefly in the room, seals and releases doors according to its own objective,
+and falls back to an ordinary skirmish on backtracking so rewards cannot be
+farmed. Normal gives director encounters one additional durability step;
+Easy keeps its testing-oriented values.
+
+**Elite and Hold victories create an actual build decision.** Two separated,
+class-attuned relic orbs appear in the safe central hall—an offensive red
+branch and a cyan sustain/utility branch. Taking either applies the normal
+run-long item mechanics and removes the sibling. It is a choice between two
+existing systems, not an automatic pair of stat drops or a second inventory
+format.
+
+**The dungeon now says where meaningful progress is.** The Spirit Compass
+reveals the unseen Sigil objective and paints the immediate shortest-path
+corridor violet; the matching cardinal doorway receives the same crystal cue
+in the room. The ordered route is Sigil, Warden, Waystone, Deep Warden, a new
+room-12 **Deep Seal** switch, then the Colossus gate. Its paired room-13 wall
+changes remotely but retains body-width side detours, avoiding a seed-specific
+softlock when a procedural fold approaches the wall before the switch.
+
+The v0.19.0 cartridge contracts exercise all four encounter state machines,
+the mutually exclusive boon pair, objective routing, deep-wall persistence,
+all 460 Normal/Easy stage checkpoints, and a complete boss smoke path. A
+controller-only Easy Corvin run cleared two Colossi in 30,000 frames with a
+merchant purchase and no combat or route stalls; a five-class Normal sample
+confirmed the intended increase in early-run attrition without any watchdog
+stall.
 
 **Every stage now has its own environmental silhouettes, not only a palette.**
 The procedural collision grammar remains identical, but the shared pillar,
@@ -549,8 +581,8 @@ authored target.
 mean.** Champion selection says `SELECT OPENS MAP` and `START OPENS PACK`
 before the run begins. The Pack now carries one live quest line derived from
 the cartridge's real progression state: find the **Sigil key**, clear the
-Warden, wake the Waystone, complete the Deep Ward, then seek the marked skull
-gate. It changes to `FIND DUNGEON`, `REST THEN NORTH`, or `BREAK COLOSSUS` in
+Warden, wake the Waystone, complete the Deep Ward, open the Deep Seal, then
+seek the marked skull gate. It changes to `FIND DUNGEON`, `REST THEN NORTH`, or `BREAK COLOSSUS` in
 Riftwild, villages, and boss arenas.
 
 This guidance is not a second quest system and never guesses from room order.
@@ -2415,7 +2447,7 @@ than concept art.
 
 Shoot glowing amber wall tiles to find secret rooms. In puzzle chambers, try
 moving an ordinary cairn, listen for ascending rune tones, and remember that a
-colored switch may change a wall in the next room rather than the current one.
+colored switch may change a wall in another room rather than the current one.
 
 ## Build & run
 
@@ -2633,11 +2665,11 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.18.73 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.19.0 release ROM occupies 128 KiB. Its media,
 460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
-stage-archetype, music, boss-identity, and transition-audio contracts passed
-on 2026-07-24; the release SHA-256 is recorded by the attached artifact and
+stage-archetype, music, boss-identity, director, and transition-audio contracts passed
+on 2026-07-31; the release SHA-256 is recorded by the attached artifact and
 ROM-bound media manifest.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
@@ -2649,8 +2681,9 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.18.73 build has 1,032 bytes in bank 1, 1,538 in bank 2,
-1,783 in bank 3, 1,103 in bank 4, 1,253 in bank 5, and 6,361 in bank 6.
+ROM. The current v0.19.0 build has 1,442 bytes in bank 1, 1,052 in bank 2,
+4,180 in bank 3, 1,111 in bank 4, 1,132 in bank 5, 2,452 in bank 6,
+and 2,295 in bank 7.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles

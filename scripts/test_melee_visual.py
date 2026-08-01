@@ -30,7 +30,15 @@ def boot(class_moves=0):
     return pb
 
 
-def first_player_shot(pb, entities):
+def first_player_shot(pb, player, entities, tilemap):
+    # This is an attack-art contract, not a seed-dependent collision test.
+    # Clear the opening room's entities and floor so a nearby body or scenery
+    # tile cannot consume a short-lived physical arc on its spawn frame.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    pb.memory[player + 22] = 0
     pb.button("a")
     for _ in range(3): pb.tick()
     for i in range(32):
@@ -41,7 +49,9 @@ def first_player_shot(pb, entities):
 
 
 def main():
+    player = addr("_player")
     entities = addr("_entities")
+    tilemap = addr("_room_tilemap")
     for moves, name, max_ttl in (
         # Wolfkin's physical Fang forms deliberately live for 18 frames:
         # their compact forward lane is the melee kit's needed reach, not a
@@ -52,13 +62,13 @@ def main():
         (4, "Vespine", 12),
     ):
         hero = boot(moves)
-        shot = first_player_shot(hero, entities)
+        shot = first_player_shot(hero, player, entities, tilemap)
         assert hero.memory[shot + 12] == 122, f"{name} melee is not arc art"
         assert hero.memory[shot + 16] <= max_ttl, f"{name} melee is not short lived"
         hero.stop(save=False)
 
     corvin = boot(2)
-    shot = first_player_shot(corvin, entities)
+    shot = first_player_shot(corvin, player, entities, tilemap)
     assert corvin.memory[shot + 12] in (28, 29), "ranged champion lost bullet art"
     corvin.stop(save=False)
     print("[melee-visual] PASS melee arcs + ranged bullet identity")

@@ -19,7 +19,9 @@ PL=$(awk '/DEF _player / {print $3}' "$NOI")
 EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 PZ=$(awk '/DEF _room_puzzle_locked / {print $3}' "$NOI")
-if LC_ALL=C grep -aqE 'v0\.18\.(6[2-9]|[7-9][0-9])' "$ROM"; then
+DR=$(awk '/DEF _room_encounter_kind / {print $3}' "$NOI")
+if LC_ALL=C grep -aqE 'v0\.(1[9]|[2-9][0-9])\.' "$ROM" \
+    || LC_ALL=C grep -aqE 'v0\.18\.(6[2-9]|[7-9][0-9])' "$ROM"; then
   MEDIA_TOPOLOGY=30
 elif LC_ALL=C grep -aq 'v0.18.55' "$ROM"; then
   MEDIA_TOPOLOGY=12
@@ -42,6 +44,7 @@ QUINTRA_MEDIA_DIR="$TMP" QUINTRA_MEDIA_MODE=gif \
 QUINTRA_MEDIA_TOPOLOGY="$MEDIA_TOPOLOGY" \
 QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
 QUINTRA_TM_ADDR="$TM" QUINTRA_PZ_ADDR="${PZ:-0}" \
+QUINTRA_DIRECTOR_ADDR="${DR:-0}" \
 setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
   --script "$ROOT/scripts/capture_media.lua" -l 0 >"$TMP/emulator.log" 2>&1 &
 EMU_PID=$!
@@ -70,6 +73,7 @@ QUINTRA_MEDIA_DIR="$TMP" QUINTRA_MEDIA_MODE=shots \
 QUINTRA_MEDIA_TOPOLOGY="$MEDIA_TOPOLOGY" \
 QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
 QUINTRA_TM_ADDR="$TM" QUINTRA_PZ_ADDR="${PZ:-0}" \
+QUINTRA_DIRECTOR_ADDR="${DR:-0}" \
 setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
   --script "$ROOT/scripts/capture_media.lua" -l 0 >"$TMP/shots-emulator.log" 2>&1 &
 SHOT_PID=$!

@@ -35,13 +35,14 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-EXT, BOTTOM, COMBAT, PUZZLE, ORIGIN_X, ORIGIN_Y, LABEL_TICKS = map(
+EXT, BOTTOM, COMBAT, PUZZLE, ORIGIN_X, ORIGIN_Y, LABEL_TICKS, DIRECTIVE = map(
     addr,
     (
         "_room_world_extension", "_room_world_bottom",
         "_room_combat_sealed", "_room_puzzle_locked",
         "_room_bg_origin_x", "_room_bg_origin_y",
         "_room_district_label_ticks",
+        "_room_encounter_kind",
     ),
 )
 
@@ -132,6 +133,12 @@ def main():
         (77, 91, 91, 86, 76),      # INNER
         (92, 86, 84, 76, 79),      # HEART
     )
+    directive_labels = {
+        1: (79, 76, 84, 90),      # TRAP
+        2: (80, 84, 83, 86),      # WAVE
+        3: (86, 81, 77, 79, 86),  # ELITE
+        4: (92, 89, 81, 82),      # HOLD
+    }
     fields = []
 
     def inspect(district):
@@ -152,11 +159,13 @@ def main():
                 f"{[field[y][12:19] for y in range(15, 30)]}")
             assert (26, 25) in seen, (
                 f"district {district} sealed the deep encounter apron")
+            expected_label = directive_labels.get(
+                pb.memory[DIRECTIVE], labels[district])
             label = tuple(
                 logical_bg_tile(pb, 8 + i, 1)
-                for i in range(len(labels[district]))
+                for i in range(len(expected_label))
             )
-            assert label == labels[district], (
+            assert label == expected_label, (
                 f"district {district} label mismatch: {label}")
             assert pb.memory[LABEL_TICKS] > 0, (
                 f"district {district} callout timer was not armed")
@@ -170,11 +179,11 @@ def main():
             pb.tick(130)
             faded = tuple(
                 logical_bg_tile(pb, 8 + i, 1)
-                for i in range(len(labels[district]))
+                for i in range(len(expected_label))
             )
             assert pb.memory[LABEL_TICKS] == 0, (
                 f"district {district} callout did not expire")
-            assert faded != labels[district], (
+            assert faded != expected_label, (
                 f"district {district} label remained permanent terrain")
 
             # Pin one unmistakable full-field structure per depth band. These

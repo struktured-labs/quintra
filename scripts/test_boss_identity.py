@@ -67,6 +67,8 @@ def enter_boss(stage, keep_open=False):
         pb.memory[RS + 27] |= 1 << 7
     if dungeon_size(stage) >= 14:
         pb.memory[RS + 28] |= 1 << 7
+    if dungeon_size(stage) >= 20:
+        pb.memory[RS + 28] |= 1 << 2
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:

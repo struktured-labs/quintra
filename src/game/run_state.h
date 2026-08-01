@@ -80,7 +80,7 @@ typedef struct {
     u8  next_dungeon_reveal; // bit 0..7: cells to reveal on next entry
     u8  difficulty;          // DIFFICULTY_*; persisted with suspended run
     u8  dungeon_puzzles;     // bit 0..7: solved procedural puzzle rooms
-    u8  dungeon_phase;       // bit 0: phase wall; bit 7: deep-Warden clear
+    u8  dungeon_phase;       // bits 0/2: phase walls; bit 7: deep-Warden clear
     u8  dungeon_seen_hi;     // bit 0..7: visited dungeon cells 8..15
     u8  next_dungeon_reveal_hi; // queued chart knowledge for cells 8..15
     u8  dungeon_seen_xhi;    // bit 0..7: visited dungeon cells 16..23
@@ -106,6 +106,7 @@ typedef struct {
 #define RUN_WAYSTONE_BIT     ((u8)(1u << 7))
 #define RUN_PHASE_OPEN_BIT   ((u8)(1u << 0))
 #define RUN_FARFOLD_CACHE_BIT ((u8)(1u << 1))
+#define RUN_DEEP_PHASE_OPEN_BIT ((u8)(1u << 2))
 #define RUN_DEEP_WARDEN_BIT  ((u8)(1u << 7))
 
 extern run_state_t run_state;

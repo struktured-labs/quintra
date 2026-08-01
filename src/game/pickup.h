@@ -27,6 +27,7 @@
 #define PICKUP_LOREKEEPER   17 // permanent town storyteller / lore fixture
 #define PICKUP_BELLKEEPER    18 // permanent town arrival-square bellkeeper
 #define PICKUP_FARFOLD_RELIC 19 // persistent optional dungeon-cache relic
+#define PICKUP_BOON_CHOICE    20 // one of a mutually exclusive director pair
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -72,6 +73,7 @@ u8   pickup_farfold_relic_for_class(u8 roll) BANKED;
 // overlap it and press A to swap the A-weapon, dropping the old one in place.
 u8   pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_farfold_relic(u8 item_index, fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED;
 
 // Content-driven weapon-orb selection. These avoid assuming weapon entries
 // occupy a contiguous prefix of items[] as the roster grows.

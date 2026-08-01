@@ -88,6 +88,12 @@ def main():
 
         pb.memory[rs + 28] |= 1 << 7  # deep Warden
         open_pack(pb)
+        row(pb, 9, 0, "GOAL OPEN DEEP SEAL")
+        pb.button("b")
+        settle(pb, 20)
+
+        pb.memory[rs + 28] |= 1 << 2  # remote deep phase circuit
+        open_pack(pb)
         row(pb, 9, 0, "GOAL SEEK SKULL GATE")
         pb.button("b")
         settle(pb, 20)
@@ -115,7 +121,7 @@ def main():
 
     print(
         "[quest-guidance] PASS menu controls + Sigil key + ordered "
-        "trials + skull gate + world/village/Colossus goals"
+        "trials + deep seal + skull gate + world/village/Colossus goals"
     )
 
 

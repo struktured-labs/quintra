@@ -3,7 +3,7 @@
 # productive pressure lane. In the authored hard Normal mode, three fixed
 # fresh-SRAM worlds must each clear the opening boss before any possible later
 # death. The deeper objective chain deliberately adds enough traversal and
-# attrition that "four bosses inside 18,000 frames" no longer isolates Sauran's
+# attrition that "four bosses inside 24,000 frames" no longer isolates Sauran's
 # giant policy. A run number by itself samples title-idle entropy and is not a
 # repeatable controller regression.
 # `max_combat_frames` is
@@ -21,7 +21,7 @@ $replay
 EOF
   QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=1 \
     QUINTRA_BALANCE_TARGET_FRAME="$frame" \
-    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
+    QUINTRA_BALANCE_FRAMES=24000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
     QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_APPEND=1 \
     QUINTRA_BALANCE_SKIP_REPORT=1 \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

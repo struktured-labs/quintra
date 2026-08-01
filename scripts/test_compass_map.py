@@ -146,12 +146,12 @@ def main() -> None:
         "Compass lost its full-size current-room node"
     assert node_tile(pb, 1) == BGT_MAP_BIG_UNKNOWN, \
         "Compass lost its dim next room"
-    assert map_tile(pb, 3, 2) == BGT_MAP_PATH_H_DIM, \
-        "Compass lost the dim opening corridor"
-    assert map_tile(pb, 3, 3) == BGT_MAP_PATH_H_DIM, \
-        "Compass corridor does not span the full node height"
-    assert node_tile(pb, 2) == BGT_MAP_BIG_UNKNOWN, \
-        "Compass lost the dim active footprint"
+    assert map_tile(pb, 3, 2) == BGT_MAP_PATH_H, \
+        "Compass did not brighten the first step toward the active objective"
+    assert map_tile(pb, 3, 3) == BGT_MAP_PATH_H, \
+        "Compass route cue does not span the full node height"
+    assert node_tile(pb, 2) == BGT_MAP_BIG_GOAL, \
+        "Compass did not expose the unseen Sigil objective"
     assert node_tile(pb, 19) == BGT_MAP_BIG_UNKNOWN, \
         "Compass did not expose the opening dungeon's full abstract footprint"
     assert map_tile(pb, 0, 0) == BGT_VOID, "Compass retained text-page background"
@@ -171,7 +171,7 @@ def main() -> None:
     cache = dungeon_cache_cell(dungeon_size(0), seed, 0)
     assert node_tile(pb, cache) == BGT_MAP_BIG_CACHE, \
         f"Compass did not reveal optional cache cell {cache}"
-    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 18, \
+    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 17, \
         "Compass opening footprint is not a full dim 20-room grid"
     assert tuple(map_tile(pb, 19, y) for y in (2, 5, 8, 11)) == (
         HUD_DIGIT_0 + 1, HUD_DIGIT_0 + 2,
@@ -201,12 +201,12 @@ def main() -> None:
     open_compass(pb, screen)
     assert node_tile(pb, 1) == BGT_MAP_BIG_HERE, \
         "Compass lost current marker at objective-wing junction"
-    assert node_tile(pb, 2) == BGT_MAP_BIG_UNKNOWN, \
-        "Compass lost eastward Sigil-wing frontier"
+    assert node_tile(pb, 2) == BGT_MAP_BIG_GOAL, \
+        "Compass lost eastward Sigil objective"
     assert node_tile(pb, 10) == BGT_MAP_BIG_UNKNOWN, \
         "Compass lost southward deep-route frontier"
-    assert map_tile(pb, 6, 2) == BGT_MAP_PATH_H_DIM, \
-        "Compass lost eastward junction link"
+    assert map_tile(pb, 6, 2) == BGT_MAP_PATH_H, \
+        "Compass did not highlight the Sigil-bound junction link"
     assert map_tile(pb, 4, 4) == BGT_MAP_PATH_V_DIM, \
         "Compass lost southward junction link"
     # Fill-in must read by shape as well as palette. Cell zero is explored:
@@ -218,11 +218,11 @@ def main() -> None:
     visited_fill_rgb = junction_image.getpixel((
         GX[0] * 8 + 2, GY[0] * 8 + 1))[:3]
     unknown_fill_rgb = junction_image.getpixel((
-        GX[2] * 8 + 2, GY[2] * 8 + 1))[:3]
+        GX[10] * 8 + 2, GY[10] * 8 + 1))[:3]
     unknown_edge_rgb = junction_image.getpixel((
-        GX[2] * 8, GY[2] * 8))[:3]
+        GX[10] * 8, GY[10] * 8))[:3]
     unknown_gap_rgb = junction_image.getpixel((
-        GX[2] * 8 + 1, GY[2] * 8))[:3]
+        GX[10] * 8 + 1, GY[10] * 8))[:3]
     assert visited_fill_rgb != unknown_fill_rgb, (
         f"explored room lost its filled interior: "
         f"{visited_fill_rgb} == {unknown_fill_rgb}")

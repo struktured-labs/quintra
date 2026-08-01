@@ -443,6 +443,12 @@ function stage_deep_warden_missing()
     return size >= 14 and math.floor(emu:read8(RS + 28) / 128) % 2 == 0
 end
 
+function stage_deep_phase_missing()
+    if RS == 0 then return false end
+    local size = dungeon_size(emu:read8(RS + 11))
+    return size >= 20 and math.floor(emu:read8(RS + 28) / 4) % 2 == 0
+end
+
 function read_i16(address)
     local value = read16(address)
     return value >= 0x8000 and value - 0x10000 or value
@@ -1630,9 +1636,9 @@ end
 -- switch before advancing. Reading KIND/LOCKED merely distinguishes an
 -- intentional puzzle from an empty cleared room.
 function puzzle_controller_step(room, px, py, frame)
-    if PUZZLE_KIND == 0 or PUZZLE_LOCKED == 0 then return nil end
+    if PUZZLE_KIND == 0 then return nil end
     local kind = emu:read8(PUZZLE_KIND)
-    local locked = emu:read8(PUZZLE_LOCKED)
+    local locked = PUZZLE_LOCKED ~= 0 and emu:read8(PUZZLE_LOCKED) or 0
     if kind == 0 then return nil end
     if room ~= puzzle_policy_room then
         puzzle_policy_room = room
@@ -1716,7 +1722,9 @@ function puzzle_controller_step(room, px, py, frame)
             goal_x, goal_y = tx * 8 - 8, ty * 8 - 12
         end
         return body_goal_step(px, py, goal_x, goal_y)
-    elseif kind == 3 and emu:read8(RS + 28) == 0 then
+    elseif kind == 3 then
+        local bit = dungeon_local(room, emu:read8(RS + 11)) == 12 and 4 or 1
+        if math.floor(emu:read8(RS + 28) / bit) % 2 ~= 0 then return nil end
         return body_goal_step(px, py, 10 * 8 - 8, 8 * 8 - 12)
     end
     return nil
@@ -2144,20 +2152,23 @@ function door_step(px, py)
         local warden_missing = stage_warden_missing()
         local waystone_missing = stage_waystone_missing()
         local deep_warden_missing = stage_deep_warden_missing()
+        local deep_phase_missing = stage_deep_phase_missing()
         local stage = emu:read8(RS + 11)
         wanted = dungeon_route_dir(local_room,
             sigil_missing and 2
                 or (warden_missing and 3
                 or (waystone_missing and 7
-                or (deep_warden_missing and 9 or (size - 1)))), size, stage)
+                or (deep_warden_missing and 9
+                or (deep_phase_missing and 12 or (size - 1))))), size, stage)
         if DEBUG and debug_route_room ~= room then
             debug_route_room = room
             debug_log(string.format(
-                "BOTROUTE room=%d local=%d size=%d sigil_missing=%d warden_missing=%d waystone_missing=%d deep_warden_missing=%d wanted=%s doors=%d/%d/%d/%d",
+                "BOTROUTE room=%d local=%d size=%d sigil_missing=%d warden_missing=%d waystone_missing=%d deep_warden_missing=%d deep_phase_missing=%d wanted=%s doors=%d/%d/%d/%d",
                 room, local_room, size, sigil_missing and 1 or 0,
                 warden_missing and 1 or 0,
                 waystone_missing and 1 or 0,
                 deep_warden_missing and 1 or 0,
+                deep_phase_missing and 1 or 0,
                 wanted == nil and "nil" or tostring(wanted),
                 emu:read8(TM + 10), emu:read8(TM + 8 * 20 + 19),
                 emu:read8(TM + 16 * 20 + 10),

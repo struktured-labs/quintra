@@ -379,6 +379,8 @@ def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int
         pyboy.memory[rs + 27] |= 1 << 7
     if dungeon_size(stage) >= 14:
         pyboy.memory[rs + 28] |= 1 << 7
+    if dungeon_size(stage) >= 20:
+        pyboy.memory[rs + 28] |= 1 << 2
     for i in range(32):
         entity = entities + i * 28
         if pyboy.memory[entity] == 2:
@@ -418,6 +420,8 @@ def advance_to_boss(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:
         pyboy.memory[rs + 27] |= 1 << 7
     if dungeon_size(stage) >= 14:
         pyboy.memory[rs + 28] |= 1 << 7
+    if dungeon_size(stage) >= 20:
+        pyboy.memory[rs + 28] |= 1 << 2
     source_local = target - 1 - STAGE_START[stage]
     target_local = target - STAGE_START[stage]
     direction = graph_direction(source_local, target_local)

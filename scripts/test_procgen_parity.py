@@ -183,7 +183,7 @@ def main():
         pb.memory[rs + 23] = 1 if counter == 19 else 0  # Rift Sigil stage bit
         pb.memory[rs + 24] = 0
         pb.memory[rs + 27] = ((1 << 3) | (1 << 7)) if counter == 19 else 0
-        pb.memory[rs + 28] = (1 << 7) if counter == 19 else 0
+        pb.memory[rs + 28] = ((1 << 7) | (1 << 2)) if counter == 19 else 0
 
         # Cross the real reciprocal edge from the selected graph predecessor
         # so the C procgen runs for the requested target counter.

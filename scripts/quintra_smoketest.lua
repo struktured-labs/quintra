@@ -66,6 +66,8 @@ local function shot(name)
     local screen  = LS_ADDR ~= 0 and emu:read8(LS_ADDR) or 0xFF
     local puzzle  = PK_ADDR ~= 0 and emu:read8(PK_ADDR) or 0xFF
     local locked  = PLK_ADDR ~= 0 and emu:read8(PLK_ADDR) or 0xFF
+    local solved  = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 27) or 0xFF
+    local phase   = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 28) or 0xFF
     local px      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 9) or 0xFF
     local py      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 11) or 0xFF
     local hp      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 2) or 0xFF
@@ -91,8 +93,8 @@ local function shot(name)
         end
     end
     local line = string.format(
-        "SHOT %-25s  screen=%d room=%d puz=%d lock=%d vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
-        name, screen, rc_room, puzzle, locked, vic, bosses, hostiles,
+        "SHOT %-25s  screen=%d room=%d puz=%d lock=%d solved=0x%02X phase=0x%02X vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, screen, rc_room, puzzle, locked, solved, phase, vic, bosses, hostiles,
         giants, giant_x, giant_y, giant_hp, px, py, tile, hp, ifr)
     if log_fh then log_fh:write(line); log_fh:flush() end
     console:log(line)
@@ -485,6 +487,22 @@ local function record_deep_warden_boon()
     return true
 end
 
+-- The long-form dungeon route now owns a second persistent phase circuit at
+-- local room twelve.  Step on its real floor switch through the normal player
+-- update path so the smoke proves the next-room seal is usable; do not write
+-- the phase bit directly, because that would hide a broken puzzle trigger.
+local function open_deep_phase_seal()
+    if RS_ADDR == 0 or PL_ADDR == 0 or PK_ADDR == 0 then return false end
+    if room_counter() ~= 12 or emu:read8(PK_ADDR) ~= 3 then return false end
+    local before = emu:read8(RS_ADDR + 28)
+    if math.floor(before / 4) % 2 == 1 then return true end
+    -- puzzle_update_player samples the champion's center/feet as tile 10,8.
+    emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
+    emu:write8(PL_ADDR + 11, 52); emu:write8(PL_ADDR + 12, 0)
+    tick(8)
+    return math.floor(emu:read8(RS_ADDR + 28) / 4) % 2 == 1
+end
+
 -- Boot
 tick(120); shot("01_title")
 tap(KEY_START); tick(40); shot("02_class_select")
@@ -512,7 +530,7 @@ navigate_to(8)
 navigate_to(9); record_deep_warden_boon(); shot("07_room9_threshold")
 navigate_to(10)
 navigate_to(11)
-navigate_to(12)
+navigate_to(12); open_deep_phase_seal(); shot("07b_room12_switch")
 navigate_to(13)
 navigate_to(14)
 navigate_to(15)

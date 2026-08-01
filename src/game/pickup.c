@@ -293,6 +293,23 @@ u8 pickup_spawn_farfold_relic(u8 item_index, fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+u8 pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_BOON_CHOICE, x, y);
+    if (idx != 0xFF) {
+        entities[idx].ai_data[1] = item_index;
+        entities[idx].sprite_tile = SPR_ITEM_ORB;
+        // Alternate class-attuned branches remain distinguishable even when
+        // both use the shared orb tile: offense glows red, sustain/utility
+        // cyan. The exact mechanical name remains visible in the Pack after
+        // collection, avoiding another tiny modal text screen mid-fight.
+        entities[idx].palette = (item_index == 12 || item_index == 17
+            || item_index == 19) ? 0x04 : 0x06;
+        entities[idx].hitbox = (u8)0x88;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     u8 r = rng_next_u8();
     if      (r < 0x40) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 25%
@@ -354,7 +371,8 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFTWELL
-        || e->ai_data[0] == PICKUP_FARFOLD_RELIC) return;
+        || e->ai_data[0] == PICKUP_FARFOLD_RELIC
+        || e->ai_data[0] == PICKUP_BOON_CHOICE) return;
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     if (e->ai_data[0] == PICKUP_SHOP_TAG) {
         // ai_data[1] names the ware slot this tag advertises. A sale marker
@@ -573,6 +591,26 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_CLEAR);
                     run_state.dungeon_phase |= RUN_FARFOLD_CACHE_BIT;
                     break;
+                case PICKUP_BOON_CHOICE: {
+                    u8 other;
+                    if (!apply_item_effects(entities[i].ai_data[1])) {
+                        any = 1;
+                        continue;
+                    }
+                    // The room offers a build decision, not two automatic
+                    // stat drops. Retire the sibling before the common tail
+                    // removes the selected orb.
+                    for (other = 0; other < MAX_ENTITIES; ++other) {
+                        if (other != i
+                            && (entities[other].flags & EF_ACTIVE)
+                            && entities[other].type == ENT_PICKUP
+                            && entities[other].ai_data[0]
+                                == PICKUP_BOON_CHOICE)
+                            entity_kill(other);
+                    }
+                    sfx_play(SFX_CLEAR);
+                    break;
+                }
                 case PICKUP_MP:
                     // Match the heart rule above: consuming a full-MP wisp
                     // with a cheerful chime but no visible HUD change reads

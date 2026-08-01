@@ -65,6 +65,10 @@ def main():
     for _ in range(12):
         pb.tick()
     pb.button_release("right")
+    # Consume the queued release before the next direct checkpoint warp.
+    # PyBoy 2.7 restores the pre-event CPU sample on this boundary, which can
+    # otherwise overwrite a WRAM position written in the same host interval.
+    pb.tick()
     assert pb.memory[PL + 9] > before_x, "Mire projection became invisible collision"
 
     # The huge body now changes footprint inside a true scrolling field.

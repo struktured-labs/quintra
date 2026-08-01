@@ -9,6 +9,7 @@ local PL   = tonumber(os.getenv("QUINTRA_PL_ADDR") or "0") or 0
 local EN   = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM   = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local PZ   = tonumber(os.getenv("QUINTRA_PZ_ADDR") or "0") or 0
+local DIRECTOR = tonumber(os.getenv("QUINTRA_DIRECTOR_ADDR") or "0") or 0
 local TOPOLOGY = tonumber(os.getenv("QUINTRA_MEDIA_TOPOLOGY") or "6") or 6
 local BOSS1, SHOP1, SANCTUARY1, TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS
 if TOPOLOGY >= 30 then
@@ -122,6 +123,11 @@ local function enter_room(target)
   if RS == 0 or PL == 0 or TM == 0 then return false end
   clear_hostiles()
   if PZ ~= 0 then emu:write8(PZ, 0) end
+  -- A developer-media deep link rewrites the logical source room before the
+  -- next real doorway transaction. Retire the previous room's runtime-only
+  -- directive so a WAVE cannot materialize a second pack inside that
+  -- synthetic sanctuary source and block its threshold.
+  if DIRECTOR ~= 0 then emu:write8(DIRECTOR, 0) end
   if target == TOWN1 then
     -- A village is entered through the post-boss Riftwild gate, never by
     -- incrementing a dungeon corridor.
@@ -190,24 +196,14 @@ if MODE == "gif" then
   hold(KEY_START, 2); tick(20); frame(KEY_DOWN, 12, 2)
   frame(KEY_UP, 8, 2); hold(KEY_A, 2); tick(50)
 
-  -- The first action scene is now a generated 248x248 dungeon district. Enter
-  -- through its real local-4 -> local-5 edge, then place the capture camera in
-  -- the southeast combat sector so the reel visibly demonstrates dungeon
-  -- scale rather than showing another fixed 20x17 room.
-  if not enter_room(STAGE_START[1] + 5) then
-    error("media could not enter stage-one turn court")
+  -- The first action scene is a generated 248x248 WAVE court. Pin only the
+  -- low seed byte needed for that deterministic director signature, enter
+  -- through its real graph edge, and let the cartridge author every enemy,
+  -- label, formation, camera, and attack shown in the release reel.
+  emu:write8(RS + 2, 7)
+  if not enter_room(STAGE_START[1] + 4) then
+    error("media could not enter stage-one WAVE court")
   end
-
-  -- Show the current abstract Compass rather than the obsolete prose page.
-  -- Fully explored fixtures keep the three semantic landmarks legible in a
-  -- short release reel without pretending this is organic run progression.
-  if PL ~= 0 then emu:write8(PL + 2, 12) end
-  tick(20)
-  local prior_room = room()
-  emu:write8(RS + 1, BOSS1 - 1); emu:write8(RS + 20, 0xFF)
-  if TOPOLOGY >= 12 then emu:write8(RS + 29, 0x01) end
-  hold(KEY_SELECT, 2); tick(30); frame(0, 24, 2); hold(KEY_B, 2); tick(20)
-  emu:write8(RS + 1, prior_room)
 
   put16(PL + 9, 192); put16(PL + 11, 160); tick(24)
   local seq = {
@@ -224,11 +220,22 @@ if MODE == "gif" then
   end
   emu:setKeys(0)
 
+  -- Show the current abstract Compass after the live WAVE beat. Fully
+  -- explored fixtures keep the semantic landmarks legible in a short reel
+  -- without pretending this developer-media setup is organic progression.
+  if PL ~= 0 then emu:write8(PL + 2, 12) end
+  tick(20)
+  local prior_room = room()
+  emu:write8(RS + 1, BOSS1 - 1); emu:write8(RS + 20, 0xFF)
+  if TOPOLOGY >= 12 then emu:write8(RS + 29, 0x01) end
+  hold(KEY_SELECT, 2); tick(30); frame(0, 24, 2); hold(KEY_B, 2); tick(20)
+  emu:write8(RS + 1, prior_room)
+
   -- Enter the real opening colossus through a live door and spend the reel's
   -- main action beat on its screen-scale BG body + vulnerable OBJ heart.
   put16(RS + 23, (emu:read8(RS + 23) | (emu:read8(RS + 24) << 8)) | 1)
   emu:write8(RS + 27, emu:read8(RS + 27) | 0x88)
-  emu:write8(RS + 28, emu:read8(RS + 28) | 0x80)
+  emu:write8(RS + 28, emu:read8(RS + 28) | 0x84)
   if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
   -- Hold the firing lane for the reel. The boss still animates and attacks,
   -- while avoiding needless whole-sprite churn in every GIF delta frame.
@@ -285,12 +292,13 @@ hold(KEY_DOWN, 2); tick(20)
 hold(KEY_DOWN, 2); tick(20); shot("shot_class2")
 hold(KEY_UP, 2); tick(10); hold(KEY_UP, 2); tick(10)   -- back to Wolfkin
 
--- Enter the dungeon, then photograph the first true 248x248 district from
--- its southeast camera bound. This still is generated and rendered by the
--- live cartridge; the media setup only deep-links to its ordinary graph edge.
+-- Enter a deterministic WAVE court, then photograph the true 248x248
+-- district from its southeast camera bound. The media setup chooses a seed
+-- signature and graph edge; the live cartridge authors the pictured event.
 hold(KEY_A, 2); tick(60)
-if not enter_room(STAGE_START[1] + 5) then
-  error("media could not enter stage-one turn court")
+emu:write8(RS + 2, 7)
+if not enter_room(STAGE_START[1] + 4) then
+  error("media could not enter stage-one WAVE court")
 end
 put16(PL + 9, 192); put16(PL + 11, 160); tick(30)
 shot("shot_dungeon")
@@ -367,7 +375,7 @@ tick(45); shot("shot_village")
 emu:write8(RS + 11, 0)
 put16(RS + 23, (emu:read8(RS + 23) | (emu:read8(RS + 24) << 8)) | 1)
 emu:write8(RS + 27, emu:read8(RS + 27) | 0x88)
-emu:write8(RS + 28, emu:read8(RS + 28) | 0x80)
+emu:write8(RS + 28, emu:read8(RS + 28) | 0x84)
 if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
 tick(50)                       -- entry drama resolves, boss opens fire
 hold(KEY_A|KEY_UP, 40)         -- trade some shots for the action shot

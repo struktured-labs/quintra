@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import STAGE_START, dungeon_direction
+from test_stage_archetypes import generated_room
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -160,8 +161,14 @@ def phase_gate_contract():
     assert closed.memory[KIND] == 3 and closed.memory[RS + 28] == 0
     exit_to(closed, STAGE_START[2] + 2, 2)
     assert closed.memory[RS + 1] == STAGE_START[2] + 2 and closed.memory[KIND] == 4
-    assert closed.memory[LOCKED] == 1
-    assert all(closed.memory[TM + 11 * 20 + x] == 21 for x in range(2, 18))
+    # A phase wall is physical geometry, not a blanket door seal. The two
+    # body-width edge detours prevent procedural fold entrances from making
+    # the paired switch unreachable, while the center still previews the
+    # remote state change.
+    assert closed.memory[LOCKED] == 0
+    assert all(closed.memory[TM + 11 * 20 + x] == 21 for x in range(4, 16))
+    assert all(closed.memory[TM + 11 * 20 + x] != 21
+               for x in (2, 3, 16, 17))
     closed.stop(save=False)
 
     # Touching the prior-room switch persists the alternate state and lowers
@@ -173,7 +180,7 @@ def phase_gate_contract():
     exit_to(opened, STAGE_START[2] + 2, 2)
     assert opened.memory[RS + 1] == STAGE_START[2] + 2 and opened.memory[KIND] == 4
     assert opened.memory[LOCKED] == 0
-    assert all(opened.memory[TM + 11 * 20 + x] == 19 for x in range(2, 18))
+    assert all(opened.memory[TM + 11 * 20 + x] == 19 for x in range(4, 16))
     opened.stop(save=False)
 
 
@@ -265,14 +272,45 @@ def opening_shop_is_not_a_puzzle():
     pb.stop(save=False)
 
 
+def deep_phase_contract():
+    bit = 1 << 2
+
+    def switch_probe(pb, _tiles):
+        assert pb.memory[KIND] == 3 and pb.memory[LOCKED] == 0
+        assert not (pb.memory[RS + 28] & bit)
+        feet_on(pb, 10, 8)
+        step_off(pb)
+        assert pb.memory[RS + 28] & bit, \
+            "local-room-12 deep switch did not persist its phase bit"
+
+    def closed_gate_probe(pb, _tiles):
+        assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
+        assert all(pb.memory[TM + 11 * 20 + x] == 21 for x in range(4, 16))
+        assert all(pb.memory[TM + 11 * 20 + x] != 21
+                   for x in (2, 3, 16, 17)), \
+            "closed deep wall lost its body-width anti-softlock detours"
+
+    def open_gate_probe(pb, _tiles):
+        assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
+        assert all(pb.memory[TM + 11 * 20 + x] == 19 for x in range(4, 16))
+
+    seed = 0xDEED1200
+    generated_room(0, seed, local_room=12, probe=switch_probe)
+    generated_room(0, seed, local_room=13, dungeon_phase=0,
+                   probe=closed_gate_probe)
+    generated_room(0, seed, local_room=13, dungeon_phase=bit,
+                   probe=open_gate_probe)
+
+
 def main():
     push_seal_contract()
     rune_sequence_contract()
     phase_gate_contract()
     late_depth_puzzle_contract()
     opening_shop_is_not_a_puzzle()
+    deep_phase_contract()
     print("[puzzles] PASS push seal + ordered rune feedback + persistent phase wall "
-          "+ required late Waystone + unsealed opening shop")
+          "+ required late Waystone + unsealed opening shop + deep seal circuit")
 
 
 if __name__ == "__main__":

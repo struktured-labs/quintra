@@ -4,6 +4,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "core/rng.h"
+#include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/pickup.h"
@@ -42,19 +43,6 @@ u8 boss_sprite_for_stage(u8 stage) {
 u8 boss_palette_for_stage(u8 stage) {
     stage;
     return 0x06;
-}
-
-// Weighted pick from this stage's roster (generated stage_pool tables;
-// stage wraps with the endless theme cycle). One rng draw per pick.
-static u8 pick_enemy_for_stage(u8 stage_raw) {
-    u8 st = (u8)(stage_raw % N_STAGES);
-    u8 r = rng_range(stage_pool_total[st]);
-    u8 k, acc = 0;
-    for (k = 0; k < stage_pool_n[st]; ++k) {
-        acc = (u8)(acc + stage_pool_w[st][k]);
-        if (r < acc) return stage_pool_ids[st][k];
-    }
-    return stage_pool_ids[st][0];
 }
 
 // One source for town and dungeon merchant entities. Prices differ by venue;
@@ -471,6 +459,11 @@ void procgen_generate_current_room(void) BANKED {
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
+    u8 room_was_seen = (!run_state.world_mode && !is_town)
+        ? run_state_dungeon_cell_seen(run_state_dungeon_cell()) : 1;
+    // No directive state may survive a doorway transaction into a service,
+    // puzzle, town, overworld, boss, or backtracked room.
+    dungeon_director_reset();
     // Dungeon district callouts fade by streaming terrain row 1 back in.
     // Never let a timer carried through a threshold erase a persistent
     // RIFTWILD/VILLAGE/MARKET/FORGE landmark after the new area draws it.
@@ -1035,7 +1028,9 @@ void procgen_generate_current_room(void) BANKED {
             && (puzzle_local == 1
                 || (puzzle_local == 2
                     && (run_state.bosses_beaten % 3) == 2)
-                || puzzle_local == 7)) ? 1 : 0;
+                || puzzle_local == 7
+                || (run_state_dungeon_size() >= 20
+                    && (puzzle_local == 12 || puzzle_local == 13)))) ? 1 : 0;
         // Recurring turn courts close each large two-room wing. They retain
         // combat, but cap it at a
         // deliberate pair so the enlarged maze has pacing contrast rather
@@ -1047,6 +1042,16 @@ void procgen_generate_current_room(void) BANKED {
                 || run_state_dungeon_local() == 11
                 || run_state_dungeon_local() == 17
                 || run_state_dungeon_local() == 23)) ? 1 : 0;
+
+        // First visits to ordinary large districts rotate four different
+        // verbs through the run. Fixed lore/service roles and lighter turn
+        // courts retain their authored pacing instead of being overwritten
+        // by the director.
+        dungeon_director_choose((u8)(!is_town && !run_state.world_mode
+            && !is_boss_room && !is_miniboss && !is_shop && !is_rest
+            && !is_puzzle_room && !is_waypoint
+            && procgen_current_room_is_large
+            && run_state_dungeon_local() >= 4), room_was_seen);
 
         if (is_town) {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
@@ -1276,7 +1281,7 @@ void procgen_generate_current_room(void) BANKED {
                 {
                     u8 e;
                     for (e = 0; e < (RUN_IS_EASY() ? 1 : 2); ++e) {
-                        u8 eid = pick_enemy_for_stage(stage);
+                        u8 eid = dungeon_director_pick_stage_enemy(stage);
                         spawn_reachable_enemy(eid, (u8)(4 + e * 11), (u8)(ROOM_H - 4));
                     }
                 }
@@ -1330,6 +1335,7 @@ void procgen_generate_current_room(void) BANKED {
                 : (u8)(3 + rng_range(4)
                     + (depth_bonus >= 3 ? 2 : depth_bonus ? 1 : 0)
                     + (procgen_current_room_is_large ? 1 : 0));
+            enemy_count = dungeon_director_adjust_initial_count(enemy_count);
             if (is_stage_foyer
                 && enemy_count > (procgen_current_room_is_large ? 6 : 5))
                 enemy_count = procgen_current_room_is_large ? 6 : 5;
@@ -1364,7 +1370,8 @@ void procgen_generate_current_room(void) BANKED {
                 {
                     // Roster comes from the generated per-stage pool —
                     // designed in content/src/stages.rs, not hard-coded here.
-                    u8 eid = pick_enemy_for_stage(run_state.bosses_beaten);
+                    u8 eid = dungeon_director_pick_stage_enemy(
+                        run_state.bosses_beaten);
                     // Mire Spores arm inside a 40px Manhattan radius. An
                     // ordinary three-tile entry rejection can still place a
                     // mine roughly 24px from the arriving feet box, forcing
@@ -1386,10 +1393,7 @@ void procgen_generate_current_room(void) BANKED {
                         // into a sponge fight. It consumes NO RNG, so procgen
                         // C<->Rust parity (draw order) is untouched.
                         if (idx != 0xFF) {
-                            u8 st = run_state.bosses_beaten;
-                            if (st > 24) st = 24;
-                            entities[idx].hp =
-                                (u8)(entities[idx].hp + 1 + (u8)(st >> 1));
+                            dungeon_director_configure_initial(idx, spawned);
                             // Optional outdoor pressure should inhabit the new
                             // territory instead of clustering in the original
                             // viewport. Every second successful body uses one
@@ -1440,7 +1444,10 @@ void procgen_generate_current_room(void) BANKED {
                         // the elite promotion is deferred to later rooms.
                         {
                             u8 elite_roll = rng_next_u8();
-                            if (idx != 0xFF && !is_stage_foyer
+                            if (idx != 0xFF
+                                && !(room_encounter_kind == ENCOUNTER_ELITE
+                                    && spawned == 0)
+                                && !is_stage_foyer
                                 && elite_roll < 31) {
                                 entities[idx].flags  |= EF_ELITE;
                                 entities[idx].palette = 0x06;

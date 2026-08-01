@@ -16,6 +16,7 @@
 u8 room_puzzle_kind;
 u8 room_puzzle_locked;
 u8 room_puzzle_visual_y;
+u8 room_puzzle_phase_bit;
 
 static u8 puzzle_block_x;
 static u8 puzzle_block_y;
@@ -140,7 +141,7 @@ static void prepare_sequence(u32 seed) {
     room_puzzle_locked = 1;
 }
 
-static void prepare_phase_switch(void) {
+static void prepare_phase_switch(u8 bit) {
     // This room can own W/E/S graph exits. A stage archetype may leave its
     // central switch visible while a 12px hero still cannot reach the east
     // Sigil threshold through the surrounding pillars. Carve explicit
@@ -150,18 +151,24 @@ static void prepare_phase_switch(void) {
     floor_rect(9, 1, 3, ROOM_H - 2);
     room_tilemap[8][10] = BGT_SWITCH;
     room_puzzle_visual_y = 8;
+    room_puzzle_phase_bit = bit;
 }
 
-static void prepare_phase_gate(void) {
+static void prepare_phase_gate(u8 bit) {
     u8 x;
-    // The reciprocal graph enters local room 2 through its west/east lane.
-    // Keep that body-width arrival and the mandatory Sigil north of the
-    // barrier; the paired switch controls the south branch instead.
+    // This is a remote wall, not a magical lock on every doorway. Procedural
+    // fold edges can enter the gate chamber from either side before the hero
+    // reaches its paired switch; globally sealing unexplored doors therefore
+    // made some valid maze seeds strand the player. Keep a solid, conspicuous
+    // center barrier but leave two-tile body-width detours at both ends. The
+    // remote switch lowers the wall into the fast route, and the sanctuary's
+    // objective check remains the hard progression gate.
     room_puzzle_visual_y = 11;
-    for (x = 2; x < ROOM_W - 2; ++x)
-        room_tilemap[11][x] = (run_state.dungeon_phase & RUN_PHASE_OPEN_BIT)
+    room_puzzle_phase_bit = bit;
+    for (x = 4; x < ROOM_W - 4; ++x)
+        room_tilemap[11][x] = (run_state.dungeon_phase & bit)
             ? BGT_FLOOR2 : BGT_PILLAR;
-    room_puzzle_locked = (run_state.dungeon_phase & RUN_PHASE_OPEN_BIT) ? 0 : 1;
+    room_puzzle_locked = 0;
 }
 
 void puzzle_prepare_room(void) BANKED {
@@ -171,6 +178,7 @@ void puzzle_prepare_room(void) BANKED {
     room_puzzle_kind = PUZZLE_NONE;
     room_puzzle_locked = 0;
     room_puzzle_visual_y = 0xFF;
+    room_puzzle_phase_bit = RUN_PHASE_OPEN_BIT;
     puzzle_contact = 0;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
         || procgen_current_room_is_boss) return;
@@ -180,7 +188,16 @@ void puzzle_prepare_room(void) BANKED {
     seed = procgen_room_seed(run_state.run_seed, run_state.biome_id,
                             run_state.room_counter);
 
-    if (local == 7 && run_state_dungeon_size() >= 12) {
+    if (local == 12 && run_state_dungeon_size() >= 20) {
+        // The deep switch controls a gate in the following graph cell. It is
+        // deliberately present in every full-size dungeon, giving the long
+        // route one dependable multi-room state change amid fuzzy procgen.
+        room_puzzle_kind = PUZZLE_PHASE_SWITCH;
+        room_puzzle_phase_bit = RUN_DEEP_PHASE_OPEN_BIT;
+    } else if (local == 13 && run_state_dungeon_size() >= 20) {
+        room_puzzle_kind = PUZZLE_PHASE_GATE;
+        room_puzzle_phase_bit = RUN_DEEP_PHASE_OPEN_BIT;
+    } else if (local == 7 && run_state_dungeon_size() >= 12) {
         // Roomier mid/late dungeons get a second mechanical beat before the
         // back half. Keep it within the persisted eight-bit puzzle mask and
         // alternate its vocabulary so it does not merely repeat room one.
@@ -202,9 +219,9 @@ void puzzle_prepare_room(void) BANKED {
     } else if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) {
         if (!puzzle_solved()) prepare_sequence(seed);
     } else if (room_puzzle_kind == PUZZLE_PHASE_SWITCH) {
-        prepare_phase_switch();
+        prepare_phase_switch(room_puzzle_phase_bit);
     } else {
-        prepare_phase_gate();
+        prepare_phase_gate(room_puzzle_phase_bit);
     }
 }
 
@@ -255,8 +272,8 @@ static void update_phase_switch(u8 tx, u8 ty) {
     }
     if (puzzle_contact) return;
     puzzle_contact = 1;
-    run_state.dungeon_phase ^= RUN_PHASE_OPEN_BIT;
-    attr = (run_state.dungeon_phase & RUN_PHASE_OPEN_BIT)
+    run_state.dungeon_phase ^= room_puzzle_phase_bit;
+    attr = (run_state.dungeon_phase & room_puzzle_phase_bit)
         ? BGPAL_CRYSTAL : BGPAL_CRACK;
     set_tile_live(10, 8, BGT_SWITCH, attr);
     sfx_play(SFX_PUZZLE);
