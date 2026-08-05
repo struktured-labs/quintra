@@ -3,6 +3,7 @@
 #ifndef QUINTRA_AUDIO_MUSIC_H
 #define QUINTRA_AUDIO_MUSIC_H
 
+#include <gb/gb.h>
 #include "core/types.h"
 
 #define MUSIC_STAGE_COUNT 9
@@ -14,7 +15,7 @@
 
 extern u8 music_track_id;       // observable stable music number
 extern u8 music_stage_number;   // requested stage, normalized by player
-extern u8 music_row;            // current 0..31 sequencer row (read-only telemetry)
+extern u8 music_row;            // current sequencer row (read-only telemetry)
 
 void music_play_caverns(void);
 void music_play_stage(void);    // unique ids 0..8
@@ -23,6 +24,6 @@ void music_play_title(void);
 void music_play_victory(void);
 void music_play_gameover(void);
 void music_stop(void);
-void music_tick(void);        // call once per frame
+void music_tick(void);          // call once per frame
 
 #endif

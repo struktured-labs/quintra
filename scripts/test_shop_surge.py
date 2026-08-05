@@ -179,6 +179,11 @@ def main():
     # shelf and one tactical shelf without consuming combat RNG.
     build_pool = (6, 8, 9, 12, 13, 14)
     tactical_pool = (5, 7, 10, 11, 15, 16)
+    ware_art = {
+        0: 30, 5: 143, 6: 140, 7: 142, 8: 141, 9: 138,
+        10: 144, 11: 150, 12: 145, 13: 146, 14: 147,
+        15: 148, 16: 149,
+    }
     for seed in range(36):
         pb = boot_shop(seed)
         expected = {
@@ -188,6 +193,14 @@ def main():
             f"seed {seed} featured stock drifted: "
             f"{sorted(shop_wares(pb))} != {sorted(expected)}"
         )
+        wares = shop_wares(pb)
+        for ware, tile in ware_art.items():
+            if ware in wares:
+                assert pb.memory[wares[ware] + 12] == tile, (
+                    f"ware {ware} lost its semantic world silhouette"
+                )
+        assert 131 <= pb.memory[wares[1] + 12] <= 140, \
+            "class-attuned relic fell back to a generic orb"
         # WARE_ITEM payload is one of Wolfkin's class-attuned combat relics,
         # not a purchase-time random low-stat roll.
         assert pb.memory[shop_wares(pb)[1] + 20] in (12, 17, 19)
@@ -281,13 +294,14 @@ def main():
             | known_pb.memory[PL + 17] << 8) == 99
     known_pb.stop(save=False)
 
-    # Seed zero offers the cyan 15-second Surge. Verify the semantic shelf
-    # treatment and real transaction, not a debugger write to its timer.
+    # Seed zero offers the cyan 15-second Surge. Verify its lightning-bolt
+    # silhouette (color is now a secondary cue) and the real transaction,
+    # not a debugger write to its timer.
     pb = boot_shop(0)
     wares = shop_wares(pb)
     surge = wares[5]
-    assert pb.memory[surge + 12] == 126 and pb.memory[surge + 13] == 6, \
-        "Surge shelf does not use its distinct cyan orb"
+    assert pb.memory[surge + 12] == 143 and pb.memory[surge + 13] == 6, \
+        "Surge shelf does not use its distinct cyan lightning silhouette"
     assert pb.memory[surge + 19] == 20, "Surge shelf price drifted"
     near(pb, surge)
     assert pb.memory[0x9C00 + 12] == 45, "Surge shelf lacks lightning HUD icon"

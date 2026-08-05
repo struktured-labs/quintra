@@ -87,6 +87,7 @@ void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_SMITH, 1, sprite_fx_smith);
     set_sprite_data(SPR_APOTHECARY, 1, sprite_fx_apothecary);
     set_sprite_data(SPR_CARTOGRAPHER, 1, sprite_fx_cartographer);
+    tiles_load_item_sprites();
 }
 
 void tiles_load_town_waykeeper_sprite(void) BANKED {

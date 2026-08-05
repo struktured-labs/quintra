@@ -40,9 +40,28 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
         entities[idx].ai_data[3] = pickup_farfold_relic_for_class(
             (u8)((run_state.run_seed >> 8) ^ run_state.bosses_beaten));
     }
-    entities[idx].sprite_tile = (ware == WARE_HEART) ? SPR_HEART
-        : (ware == WARE_SURGE || ware == WARE_ASCEND)
-            ? SPR_SURGE_ORB : SPR_ITEM_ORB;
+    switch (ware) {
+        case WARE_HEART:   entities[idx].sprite_tile = SPR_HEART; break;
+        case WARE_ITEM:
+            entities[idx].sprite_tile = pickup_item_sprite(entities[idx].ai_data[3]);
+            break;
+        case WARE_BIG:     entities[idx].sprite_tile = SPR_ITEM_IRON_HEART; break;
+        case WARE_FORGE:   entities[idx].sprite_tile = SPR_ITEM_POWER_STONE; break;
+        case WARE_RUNE:    entities[idx].sprite_tile = SPR_ITEM_MANA_GEM; break;
+        case WARE_SURGE:   entities[idx].sprite_tile = SPR_ITEM_SURGE; break;
+        case WARE_VAMP:    entities[idx].sprite_tile = SPR_ITEM_BLOOD_SIGIL; break;
+        case WARE_CHART:   entities[idx].sprite_tile = SPR_ITEM_CHART; break;
+        case WARE_WEAPON:  entities[idx].sprite_tile = SPR_ITEM_WEAPON; break;
+        case WARE_GLASS:   entities[idx].sprite_tile = SPR_ITEM_SWIFT_FANG; break;
+        case WARE_PHOENIX: entities[idx].sprite_tile = SPR_ITEM_PHOENIX; break;
+        case WARE_ASCEND:  entities[idx].sprite_tile = SPR_ITEM_ASCEND; break;
+        case WARE_ECHO:    entities[idx].sprite_tile = SPR_ITEM_ECHO; break;
+        case WARE_RICOCHET: entities[idx].sprite_tile = SPR_ITEM_RICOCHET; break;
+        case WARE_THORN:   entities[idx].sprite_tile = SPR_ITEM_THORN; break;
+        case WARE_DRUM:    entities[idx].sprite_tile = SPR_ITEM_DRUM; break;
+        case WARE_FLASK:   entities[idx].sprite_tile = SPR_ITEM_FLASK; break;
+        default:           entities[idx].sprite_tile = SPR_ITEM_POWER_STONE; break;
+    }
     entities[idx].palette = (ware == WARE_ITEM || ware == WARE_FORGE
             || ware == WARE_PHOENIX || ware == WARE_DRUM) ? 0x05
         : (ware == WARE_SURGE || ware == WARE_RUNE

@@ -232,6 +232,32 @@
 #define SPR_SURGE_ORB        126 // temporary weapon-speed/damage pickup
 #define SPR_TOWN_LOREKEEPER  SPR_SURGE_ORB // town-arrival storyteller; no active Surge there
 #define SPR_SHIELD_AURA      127 // Sauran Stoneskin orbiting ward shard
+// Readable world-item silhouettes. Gameplay never loads the text font while
+// sprites are visible, so the otherwise-free upper tile range can carry real
+// equipment art instead of tinting one generic oval seventeen different ways.
+// Inventory/title screens may overwrite these slots only after hiding OAM;
+// room_enter restores the full pickup atlas before play resumes.
+#define SPR_ITEM_IRON_HEART  131
+#define SPR_ITEM_SPEED_RING  132
+#define SPR_ITEM_POWER_STONE 133
+#define SPR_ITEM_TOUGH_SKIN  134
+#define SPR_ITEM_LUCKY_COIN  135
+#define SPR_ITEM_MANA_GEM    136
+#define SPR_ITEM_WARD_CHARM  137
+#define SPR_ITEM_SWIFT_FANG  138
+#define SPR_ITEM_HUNTER_EYE  139
+#define SPR_ITEM_BLOOD_SIGIL 140
+#define SPR_ITEM_WEAPON      141
+#define SPR_ITEM_CHART       142
+#define SPR_ITEM_SURGE       143
+#define SPR_ITEM_PHOENIX     144
+#define SPR_ITEM_ECHO        145
+#define SPR_ITEM_RICOCHET    146
+#define SPR_ITEM_THORN       147
+#define SPR_ITEM_DRUM        148
+#define SPR_ITEM_FLASK       149
+#define SPR_ITEM_ASCEND      150
+#define SPR_ITEM_RIFT_SIGIL  151
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59
@@ -250,6 +276,7 @@ extern const u8 hud_tiles[][16];
 #define HUD_TILE_COUNT 15
 
 void tiles_load_pickup_sprites(void) BANKED;
+void tiles_load_item_sprites(void) BANKED;
 void tiles_load_town_waykeeper_sprite(void) BANKED;
 void tiles_load_town_bellkeeper_sprite(void) BANKED;
 void tiles_load_town_lorekeeper_sprite(void) BANKED;

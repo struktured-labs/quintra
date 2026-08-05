@@ -306,7 +306,7 @@ void room_spawn_progression_fixture(void) BANKED {
         u8 sigil = pickup_spawn(PICKUP_RIFT_SIGIL, FIX8(80), FIX8(64));
         if (sigil != 0xFF) {
             room_sigil_status = 5;
-            entities[sigil].sprite_tile = SPR_ITEM_ORB;
+            entities[sigil].sprite_tile = SPR_ITEM_RIFT_SIGIL;
             entities[sigil].palette = 0x06;
             entities[sigil].state_timer = 0;
         }

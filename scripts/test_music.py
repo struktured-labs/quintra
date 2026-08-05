@@ -169,7 +169,7 @@ def table_pairs(name):
         re.S,
     )
     assert match, f"missing {name} table"
-    pairs = re.findall(r"\{\s*(\w+),\s*(\w+),\s*\d+\s*\}", match.group(1))
+    pairs = re.findall(r"\{\s*(\w+),\s*(\w+),[^}]*\}", match.group(1))
     assert len(pairs) == 9, f"{name} table changed shape: {pairs}"
     return pairs
 
@@ -184,8 +184,15 @@ def main():
     assert set(stages).isdisjoint(bosses), "boss music reused an exploration id"
     assert len(set(stage_phrases)) == 9, f"stage phrases overlap: {stage_phrases}"
     assert len(set(boss_phrases)) == 9, f"boss phrases overlap: {boss_phrases}"
+    source = "\n".join((ROOT / name).read_text() for name in (
+        "src/audio/music_stage_score.c", "src/audio/music_boss_score.c"
+    ))
+    long_melodies = re.findall(r"const u8 \w*melody\[64\]", source)
+    long_basses = re.findall(r"const u8 (?:\w*bass|bassline)\[16\]", source)
+    assert len(long_melodies) == 18, f"expected 18 long arrangements, found {len(long_melodies)}"
+    assert len(long_basses) == 18, f"expected 18 long bass parts, found {len(long_basses)}"
     stage_door_keeps_phrase()
-    print(f"[music] PASS stages={stages}, bosses={bosses}, distinct phrases=18, title=18")
+    print(f"[music] PASS stages={stages}, bosses={bosses}, 18 distinct 64-row arrangements, title=18")
 
 
 if __name__ == "__main__":

@@ -169,7 +169,7 @@ def main():
     assert len(arrival_wares) == 1 and pb.memory[arrival_wares[0] + 18] == 7, \
         "arrival square lacks its dedicated Cartographer's Chart"
     chart_ware = arrival_wares[0]
-    assert pb.memory[chart_ware + 12] == 35 and pb.memory[chart_ware + 13] == 6
+    assert pb.memory[chart_ware + 12] == 142 and pb.memory[chart_ware + 13] == 6
     assert pb.memory[chart_ware + 19] == 15, "Cartographer's Chart price drifted"
     arrival = bytes(pb.memory[addr("_room_tilemap"):addr("_room_tilemap") + 340])
     arrival_gate_cells = (9, 10, 8 * 20, 8 * 20 + 19, 9 * 20, 9 * 20 + 19)
@@ -283,19 +283,25 @@ def main():
     assert {pb.memory[w + 18] for w in wares} == {0, 2, 5, 8}
     tick(70)
     assert pb.memory[wares[0] + 12] == 30, "heart stock lost its heart art"
-    assert all(pb.memory[w + 12] == 35 for w in wares
-               if pb.memory[w + 18] in {2, 8}), \
-        "relic stock lost its orb art"
+    big = next(w for w in wares if pb.memory[w + 18] == 2)
+    assert pb.memory[big + 12] == 131 and pb.memory[big + 13] == 4, \
+        "Iron Heart stock lost its heart-relic silhouette"
     surge = next(w for w in wares if pb.memory[w + 18] == 5)
     weapon = next(w for w in wares if pb.memory[w + 18] == 8)
-    assert pb.memory[surge + 12] == 126 and pb.memory[surge + 13] == 6, \
+    assert pb.memory[surge + 12] == 143 and pb.memory[surge + 13] == 6, \
         "market lacks its cyan Surge Tonic shelf"
-    assert pb.memory[weapon + 12] == 35 and pb.memory[weapon + 13] == 4, \
-        "market weapon trade lacks its distinct red weapon-orb art"
+    assert pb.memory[weapon + 12] == 141 and pb.memory[weapon + 13] == 4, \
+        "market weapon trade lacks its distinct red weapon silhouette"
     assert pb.memory[weapon + 19] == 30, "market weapon trade price drifted"
     assert pb.memory[weapon + 20] in {20, 21}, \
         "market weapon trade did not stock a special flail/spear index"
     pb.memory[0xFF4F] = 0
+    item_atlas = {
+        bytes(pb.memory[0x8000 + tile * 16:0x8000 + (tile + 1) * 16])
+        for tile in range(131, 152)
+    }
+    assert len(item_atlas) == 21, \
+        "world item atlas contains duplicate silhouettes"
     market_tiles = bytes(pb.memory[
         0x9800 + 1 * 32 + 7:0x9800 + 1 * 32 + 13])
     assert market_tiles == bytes((87, 84, 76, 88, 86, 79)), \
@@ -425,7 +431,7 @@ def main():
     # intentional run-long sustain purchase instead of a barely-seen random
     # drop. Check the semantic fangs HUD before buying through normal contact.
     vamp = next(w for w in wares if pb.memory[w + 18] == 6)
-    assert pb.memory[vamp + 12] == 35 and pb.memory[vamp + 13] == 4
+    assert pb.memory[vamp + 12] == 140 and pb.memory[vamp + 13] == 4
     assert pb.memory[vamp + 19] == 35, "Vampiric Sigil price drifted"
     vx, vy = pb.memory[vamp + 3], (pb.memory[vamp + 7] - 8) & 0xFF
     for off, value in ((9, vx), (10, 0), (11, vy - 24), (12, 0)):

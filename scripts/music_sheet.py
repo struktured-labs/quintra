@@ -3,6 +3,8 @@
 
 This deliberately does not write game source.  It gives the composer a small,
 repeatable check before a reviewed import into src/audio/music.c.
+Gameplay tracks use 64 melody rows and 16 bass changes; compact 32/8 sheets
+remain accepted for title, ending, and sketch material.
 """
 from __future__ import annotations
 
@@ -48,15 +50,13 @@ def normalize_note(token: str) -> str:
     return f"{letter}{'#' if '#' in token or 'S' in token else ''}{octave}"
 
 
-def split_rows(text: str, wanted: int, label: str) -> list[str]:
+def split_rows(text: str, label: str) -> list[str]:
     tokens: list[str] = []
     for token in text.replace("|", " ").split():
         # Numbered worksheet rows are labels rather than notes.
         if re.fullmatch(r"\d{1,2}", token):
             continue
         tokens.append(normalize_note(token))
-    if len(tokens) != wanted:
-        raise ValueError(f"{label} needs exactly {wanted} notes/rests; found {len(tokens)}")
     return tokens
 
 
@@ -95,22 +95,30 @@ def parse_sheet(text: str) -> Sheet:
     track, destination = str(parts["TRACK"]), str(parts["DESTINATION"])
     if not track or not destination:
         raise ValueError("TRACK and DESTINATION must not be empty")
-    melody = split_rows(" ".join(parts["MELODY"]), 32, "MELODY")
-    bass = split_rows(" ".join(parts["BASS"]), 8, "BASS")
+    melody = split_rows(" ".join(parts["MELODY"]), "MELODY")
+    if len(melody) not in (32, 64):
+        raise ValueError(f"MELODY needs exactly 32 or 64 notes/rests; found {len(melody)}")
+    bass = split_rows(" ".join(parts["BASS"]), "BASS")
+    wanted_bass = len(melody) // 4
+    if len(bass) != wanted_bass:
+        raise ValueError(
+            f"BASS needs exactly {wanted_bass} notes/rests for a {len(melody)}-row melody; "
+            f"found {len(bass)}"
+        )
     for note in melody:
         if note != "-" and not (midi("C5") <= midi(note) <= midi("E6")):
             raise ValueError(f"melody note {note} is outside C5–E6")
     for note in bass:
-        if note != "-" and not (midi("C3") <= midi(note) <= midi("A3")):
-            raise ValueError(f"bass note {note} is outside C3–A3")
+        if note != "-" and not (midi("C3") <= midi(note) <= midi("B3")):
+            raise ValueError(f"bass note {note} is outside C3–B3")
     return Sheet(track, destination, tempo, melody, bass)
 
 
-def gb_frequency(note: str) -> int:
+def gb_frequency(note: str, wave: bool = False) -> int:
     if note == "-":
         return 0
     hertz = 440.0 * 2 ** ((midi(note) - 69) / 12)
-    return round(2048 - 131072 / hertz)
+    return round(2048 - (65536 if wave else 131072) / hertz)
 
 
 def c_symbol(track: str) -> str:
@@ -122,10 +130,10 @@ def c_symbol(track: str) -> str:
     return symbol[:40]
 
 
-def format_table(name: str, notes: list[str], width: int) -> str:
+def format_table(name: str, notes: list[str], width: int, wave: bool = False) -> str:
     rows = []
     for start in range(0, len(notes), width):
-        entries = [f"{gb_frequency(note):4d} /* {note:3} */" for note in notes[start:start + width]]
+        entries = [f"{gb_frequency(note, wave):4d} /* {note:3} */" for note in notes[start:start + width]]
         rows.append("    " + ", ".join(entries) + ",")
     return f"static const u16 {name}[{len(notes)}] = {{\n" + "\n".join(rows) + "\n};"
 
@@ -139,7 +147,7 @@ def render(sheet: Sheet) -> str:
         "",
         format_table(f"{symbol}_melody", sheet.melody, 4),
         "",
-        format_table(f"{symbol}_bass", sheet.bass, 4),
+        format_table(f"{symbol}_bass", sheet.bass, 4, wave=True),
         "",
         "Install by adding these arrays and one music_variant_t entry in the reviewed track table.",
     ))
@@ -159,6 +167,7 @@ BASS:
 """)
     assert gb_frequency("C5") == 1798
     assert gb_frequency("D5") == 1825
+    assert gb_frequency("C3", wave=True) == 1547
     assert sheet.melody[3] == "F#5"
     assert "1798 /* C5" in render(sheet)
     try:
@@ -167,7 +176,13 @@ BASS:
         pass
     else:
         raise AssertionError("short rows were accepted")
-    print("[music-sheet] PASS parser, ranges, and Game Boy frequency conversion")
+    long_sheet = parse_sheet("""TRACK: Long Test
+DESTINATION: stage
+TEMPO: 8
+MELODY:
+""" + " ".join(["C5"] * 64) + "\nBASS:\n" + " ".join(["C3"] * 16))
+    assert len(long_sheet.melody) == 64 and len(long_sheet.bass) == 16
+    print("[music-sheet] PASS 32/64-row parser, ranges, and Game Boy frequency conversion")
 
 
 def main() -> int:

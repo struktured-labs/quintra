@@ -61,6 +61,9 @@ u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
 
 // Spawn a stat-boost item pickup (items[] table index)
 u8   pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED;
+// Resolve generated content to the same readable world silhouette used by
+// shops, boss rewards, optional caches, and ordinary enemy drops.
+u8   pickup_item_sprite(u8 item_index) BANKED;
 
 // Guaranteed colossus reward: roll from the active champion's small, useful
 // relic pool instead of allowing a first boss to pay only a luck-sidegrade.

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.19.0: Living Dungeons](https://github.com/struktured-labs/quintra/releases/download/v0.19.0/quintra.gbc)
+[Download Quintra v0.19.1: Relics & Refrains](https://github.com/struktured-labs/quintra/releases/download/v0.19.1/quintra.gbc)
 
 The repository copy of the published cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,9 +25,25 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.19.0**, published after passing the complete
+The current cartridge is **v0.19.1**, published after passing the complete
 build, media, cartridge, checkpoint, gameplay, and controller verification
 gate.
+
+**World upgrades now identify themselves by shape before color.** Hearts,
+rings, stones, shields, gems, fangs, eyes, blood sigils, weapons, charts,
+lightning, feathers, prisms, rebound runes, crowns, drums, flasks, ascension
+draughts, and progression Sigils each have their own native 8x8 silhouette.
+Loose drops, boon choices, caches, and all procedural merchant counters use
+the same visual vocabulary; proximity HUD names and prices remain the exact
+second layer of identification.
+
+**Every dungeon and every Colossus now owns a longer arrangement.** The nine
+exploration themes and nine matching boss pieces expand from 32 to 64 melody
+rows with 16-step bass forms. Their second halves are composed responses rather
+than duplicated loops, and biome-specific tempo, pulse duty, articulation,
+rests, and bass level keep Crystal, Verdant, Ember, Frost, Mire, Shadow,
+Golden, Bloodmoon, and Void from sounding like one phrase at different speeds.
+Ordinary room transitions continue the current row instead of restarting it.
 
 **Dungeons now change their rules while a run is in motion.** Deterministic
 first visits to ordinary scrolling courts can become a delayed **TRAP**, a
@@ -2665,11 +2681,11 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.19.0 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.19.1 release ROM occupies 128 KiB. Its media,
 460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, director, and transition-audio contracts passed
-on 2026-07-31; the release SHA-256 is recorded by the attached artifact and
+on 2026-08-04; the release SHA-256 is recorded by the attached artifact and
 ROM-bound media manifest.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
@@ -2681,9 +2697,9 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.19.0 build has 1,442 bytes in bank 1, 1,052 in bank 2,
-4,180 in bank 3, 1,111 in bank 4, 1,132 in bank 5, 2,452 in bank 6,
-and 2,295 in bank 7.
+ROM. The current v0.19.1 build has 1,442 bytes in bank 1, 1,045 in bank 2,
+4,070 in bank 3, 1,111 in bank 4, 1,068 in bank 5, 1,382 in bank 6,
+and 1,121 in bank 7.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -2979,10 +2995,11 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   and the Void Lord.
 - The current cart has been smoke-tested on an **Analogue Pocket** and an
   **IPS-modded Game Boy Color**, in addition to emulator coverage.
-- **Music composition remains a creator-owned release task**: the current
-  compact phrases prove the two-voice cartridge pipeline, while the final
-  stage, boss, title, and ending themes still need their composed pass. The
-  exact 32-row melody / 8-row bass handoff is in
+- **Music composition remains a creator-owned release task**: v0.19.1 gives
+  every stage and boss a distinct 64-row working arrangement, but your final
+  melodies can replace these score-by-score without changing the sequencer.
+  Title and ending cues also still need your composed pass. The exact 64-row
+  melody / 16-row bass handoff is in
   [the music worksheet](docs/music-composition.md).
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples
