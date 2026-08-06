@@ -666,6 +666,7 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         checks["no_giant"] = not any(
             pyboy.memory[entities + i * 28] == 2
             and pyboy.memory[entities + i * 28 + 1] & 1
+            and pyboy.memory[entities + i * 28 + 17] == 1
             and pyboy.memory[entities + i * 28 + 20] & 1
             for i in range(32))
     elif checkpoint == "boss":
@@ -673,6 +674,7 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         checks["live_boss"] = any(
             pyboy.memory[entities + i * 28] == 2
             and pyboy.memory[entities + i * 28 + 1] & 1
+            and pyboy.memory[entities + i * 28 + 17] == 1
             and pyboy.memory[entities + i * 28 + 20] & 1
             for i in range(32))
     elif checkpoint == "court":

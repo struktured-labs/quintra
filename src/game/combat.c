@@ -444,10 +444,12 @@ u8 combat_resolve(void) BANKED {
                 || (entities[i].type == ENT_PROJECTILE
                     && !(entities[i].flags & EF_PLAYER_PROJ));
             if (!hostile) continue;
-            // Sleeping Riftwild bodies are in distant camera sectors. Their
+            // Sleeping scrolling-field bodies are in distant camera sectors. Their
             // world coordinates cannot overlap the champion, so avoid the
             // signed 16-bit AABB work until visibility wakes them.
-            if (run_state.world_mode && entities[i].type == ENT_ENEMY
+            if ((room_world_width > ROOM_VIEW_W_PX
+                    || room_world_height > ROOM_VIEW_H_PX)
+                && entities[i].type == ENT_ENEMY
                 && !(entities[i].flags & EF_ON_SCREEN)) continue;
             // An attached Gloam Leech uses its own timed drain; ordinary body
             // collision would double-charge damage every iframe cycle.

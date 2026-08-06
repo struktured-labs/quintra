@@ -312,14 +312,25 @@ u8 pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED {
 
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     u8 r = rng_next_u8();
-    if      (r < 0x40) pickup_spawn(PICKUP_HEART_HALF, x, y);   // 25%
-    else if (r < 0xB3) pickup_spawn(PICKUP_COIN_1,     x, y);   // 45%
-    else if (r < 0xCC) {                                        // 10%: item
-        // Passive stat-boosters live at items[] indices 10..19
-        pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
+    // More bodies should create combat pressure, not turn every district
+    // into a permanent-equipment fountain. Easy raises recovery and temporary
+    // expression while keeping roughly the same relics-per-room as Normal's
+    // larger population.
+    if (RUN_IS_EASY()) {
+        if      (r < 72)  pickup_spawn(PICKUP_HEART_HALF, x, y); // 28%
+        else if (r < 179) pickup_spawn(PICKUP_COIN_1, x, y);     // 42%
+        else if (r < 187)                                        // 3% relic
+            pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
+        else if (r < 207) pickup_spawn_surge(x, y);              // 8%
+        // else nothing (19%)
+    } else {
+        if      (r < 46)  pickup_spawn(PICKUP_HEART_HALF, x, y); // 18%
+        else if (r < 161) pickup_spawn(PICKUP_COIN_1, x, y);     // 45%
+        else if (r < 166)                                        // 2% relic
+            pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
+        else if (r < 181) pickup_spawn_surge(x, y);              // 6%
+        // else nothing (29%)
     }
-    else if (r < 0xD9) pickup_spawn_surge(x, y);                // 5%: temporary burst
-    // else: no drop (15%)
 }
 
 // Merchant and Lorekeeper both advertise their purpose only while nearby.

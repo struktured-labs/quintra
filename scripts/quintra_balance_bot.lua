@@ -1174,6 +1174,44 @@ function body_on_spike(px, py)
     return tile_at_px(px + 8, py + 12) == 31
 end
 
+-- Edge-strip recovery must respect the same hazard floor as the later input
+-- sanitizer.  If the obvious inward pixel is a spike, choose a collision-safe
+-- tangent and walk around it; blindly returning the inward key only lets the
+-- sanitizer cancel that key back to zero forever.
+edge_hazard_crossing = false
+function safe_edge_step(px, py, inward, side_a, side_b)
+    local ix = inward == KEY_RIGHT and 1 or inward == KEY_LEFT and -1 or 0
+    local iy = inward == KEY_DOWN and 1 or inward == KEY_UP and -1 or 0
+    if can_step(px, py, inward)
+        and not body_on_spike(px + ix, py + iy) then
+        return inward
+    end
+    -- Do not choose a merely safe adjacent tangent: a one-pixel nook can
+    -- make the next frame prefer the opposite direction and ping-pong. Scan
+    -- each complete edge lane for a point where the inward step really opens.
+    for _, side in ipairs({side_a, side_b}) do
+        local sx = side == KEY_RIGHT and 1 or side == KEY_LEFT and -1 or 0
+        local sy = side == KEY_DOWN and 1 or side == KEY_UP and -1 or 0
+        local x, y = px, py
+        for _ = 1, 64 do
+            if not can_step(x, y, side)
+                or body_on_spike(x + sx, y + sy) then break end
+            x, y = x + sx, y + sy
+            if can_step(x, y, inward)
+                and not body_on_spike(x + ix, y + iy) then
+                return side
+            end
+        end
+    end
+    -- Some generated sealed rooms deliberately leave spikes as the only
+    -- walkable release from a border pocket. Authorize this one intentional
+    -- inward step so the general hazard sanitizer below does not turn it
+    -- back into neutral input; once standing on the pool, its normal full-
+    -- lane escape logic takes over.
+    if can_step(px, py, inward) then edge_hazard_crossing = true end
+    return inward
+end
+
 -- Mandatory fixtures deserve the same exact body route the cartridge uses,
 -- rather than a coarse tile plan plus an unrelated recovery nudge.  Cache a
 -- one-pixel route for the current Sigil and rebuild only if the real pickup
@@ -3419,7 +3457,17 @@ while frames < LIMIT do
             local star_step, star_ready
             local seam_step = wide_court_seam_step(
                 px, py, target.x, target.y)
-            if fold_star_seam_escape_ticks > 0
+            if (not waiting_star or target.clock <= 12)
+                and (QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136) then
+                -- A contracted Star is the encounter's short damage window.
+                -- It must outrank the broad court-seam heuristic: in the
+                -- southern ruin that heuristic can spend every punish beat
+                -- walking toward its canonical cross while the exact route
+                -- is already only one pillar turn from a valid shot lane.
+                star_step, star_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, star_range)
+                sigil_pixel_active = true
+            elseif fold_star_seam_escape_ticks > 0
                 and can_step(px, py, fold_star_seam_escape_dir) then
                 star_step, star_ready = fold_star_seam_escape_dir, false
                 fold_star_seam_escape_ticks = fold_star_seam_escape_ticks - 1
@@ -3452,6 +3500,23 @@ while frames < LIMIT do
                 star_ready = lane ~= nil
                 star_step = lane or target_step(
                     px, py, target.x, target.y, aim, 1)
+                -- The cheap chase is appropriate through most of the long
+                -- expanded phase, but it is not a proof that a projectile
+                -- lane exists.  In a wide ruin it can orbit a moving Star
+                -- forever while every 60-frame contraction expires behind
+                -- cover.  Pay for the exact feet-box route during the real
+                -- punish window (and its final 12-frame visual lead-in), so
+                -- the deterministic pilot responds to the same timing read
+                -- a human uses without changing the enemy or cartridge.
+                if not star_ready
+                    and (not waiting_star or target.clock <= 12) then
+                    local exact_step, exact_ready = fold_star_pixel_step(
+                        room, px, py, target.x, target.y, aim, star_range)
+                    if exact_ready or can_step(px, py, exact_step) then
+                        star_step, star_ready = exact_step, exact_ready
+                        sigil_pixel_active = true
+                    end
+                end
                 -- The coarse target route is cheap enough to rebuild around
                 -- every diagonal twitch, but its first direction is only a
                 -- tile-level suggestion.  In a pillar pocket it can point
@@ -3504,7 +3569,11 @@ while frames < LIMIT do
                 -- cardinal lane used by ordinary attacks.
                 keys = KEY_B + star_step
             else
-                keys = star_ready and (KEY_A + star_step) or star_step
+                -- Keep A armed while following the exact route during the
+                -- contracted phase. A moving Star can enter the cardinal
+                -- lane between controller samples; waiting until the prior
+                -- sample was already aligned throws away that hit frame.
+                keys = KEY_A + star_step
             end
         elseif target.kind == 12 then
             -- A Flutterbat may share the agent's nominal 8px tile while
@@ -3668,22 +3737,30 @@ while frames < LIMIT do
             else
                 keys = KEY_A + aim
             end
-        elseif CLASS == 3 and room == 50 and target.kind == 0
+        elseif CLASS == 3 and target.kind == 0
             and (target.x <= 8 or target.y <= 8
                 or target.x >= 136 or target.y >= 112) then
-            -- In the final Sigil room a small crawler can legally hug the
-            -- one-tile edge band, where Picsean's cardinal BubbleBolt cannot
-            -- always share its exact pixel lane. Tidal Wave is the authored
-            -- three-lane answer; first route toward a reachable proxy on the
-            -- hero's own row so the impossible edge cell cannot poison BFS,
-            -- then cast inside the real long lane. Keep this narrowly on the
-            -- replayed fixture so unrelated fights retain their policy.
-            if math.abs(target.x - px) > 80 then
-                keys = target_step(px, py, target.x, py, 0, 6)
-            elseif active_charge == 0 and mp >= 2 then
-                keys = KEY_B + aim
+            -- A small crawler can legally hug the one-tile edge band, where
+            -- Picsean's cardinal BubbleBolt cannot always share its exact
+            -- pixel lane. This first appeared in the final Sigil fixture,
+            -- but procgen can teach the same geometry in any dungeon room.
+            -- The captured room-57 state proves the cartridge fight is legal:
+            -- an exactly aligned BubbleBolt kills it. Route that last off-axis
+            -- pixel through the real body graph, then fire inward. This avoids
+            -- asking the generic shot-lane search to use a target origin that
+            -- intentionally overlaps the visual boundary wall.
+            if target.y <= 8 or target.y >= 112 then
+                if math.abs(target.x - px) > 1 then
+                    keys = body_goal_step(px, py, target.x, py)
+                else
+                    keys = KEY_A + (target.y <= 8 and KEY_UP or KEY_DOWN)
+                end
             else
-                keys = aim
+                if math.abs(target.y - py) > 1 then
+                    keys = body_goal_step(px, py, px, target.y)
+                else
+                    keys = KEY_A + (target.x <= 8 and KEY_LEFT or KEY_RIGHT)
+                end
             end
         elseif target.kind == 24 and CLASS == 3 then
             -- Sunwheels orbit perpendicular to a narrow Astral Spear lane.
@@ -3944,6 +4021,13 @@ while frames < LIMIT do
                 room, px, py, target.x, target.y, aim, recovery_range)
             keys = recovery_ready
                 and (KEY_A + recovery_step) or recovery_step
+            if DEBUG and frames % 120 == 0 then
+                debug_log(string.format(
+                    "BOTRECOVER f=%d room=%d enemy=%d pos=%d,%d target=%d,%d step=%02X ready=%d left=%d",
+                    frames, room, target.kind, px, py, target.x, target.y,
+                    recovery_step or 0, recovery_ready and 1 or 0,
+                    flank_timer))
+            end
             flank_timer = flank_timer - 1
         elseif no_damage_frames > 240 then
             flank_timer, no_damage_frames = 240, 0
@@ -4160,7 +4244,6 @@ while frames < LIMIT do
             -- Counter guards deliberately begin with a no-damage bait. Do
             -- not misclassify that authored shell beat as an optional-combat
             -- stall before the controller can use its exposed window.
-            and target.kind ~= 16
             and target.kind ~= 18 and target.kind ~= 30
             -- Open doors mean exactly what they show. Preserve the authored
         -- room-3 Warden, late Waystone/deep Warden, shop, sanctuary, and
@@ -4691,6 +4774,7 @@ while frames < LIMIT do
     -- either press of that sequence: it used to leave close-range champions
     -- permanently latched at the north wall, making their balance sample a
     -- controller artifact rather than a real encounter result.
+    edge_hazard_crossing = false
     if target and world_mode == 0 and shake_phase == 0 and not leech_attached()
         -- The required room-three Sentinel is 32x32, not a small hostile.
         -- At the north edge its valid vulnerable body extends down into the
@@ -4702,13 +4786,19 @@ while frames < LIMIT do
             and math.max(math.abs(target.x - px),
                 math.abs(target.y - py)) <= 12
         if py <= 12 and target.y <= 12 and not counter_contact then
-            keys = KEY_DOWN
+            local toward = target.x < px and KEY_LEFT or KEY_RIGHT
+            keys = safe_edge_step(px, py, KEY_DOWN, toward,
+                toward == KEY_LEFT and KEY_RIGHT or KEY_LEFT)
         elseif py >= QUINTRA_ARENA_H - 20
             and target.y >= QUINTRA_ARENA_H - 20
             and not counter_contact then
-            keys = KEY_UP
+            local toward = target.x < px and KEY_LEFT or KEY_RIGHT
+            keys = safe_edge_step(px, py, KEY_UP, toward,
+                toward == KEY_LEFT and KEY_RIGHT or KEY_LEFT)
         elseif px <= 12 and target.x <= 12 and not counter_contact then
-            keys = KEY_RIGHT
+            local toward = target.y < py and KEY_UP or KEY_DOWN
+            keys = safe_edge_step(px, py, KEY_RIGHT, toward,
+                toward == KEY_UP and KEY_DOWN or KEY_UP)
         elseif px >= QUINTRA_ARENA_W - 28
             and target.x >= QUINTRA_ARENA_W - 28
             and not counter_contact
@@ -4721,7 +4811,9 @@ while frames < LIMIT do
             -- LEFT forever just because both sprites share the right strip.
             and not (CLASS == 1 and held_style == "lunge"
                 and math.abs(target.y - py) > 8) then
-            keys = KEY_LEFT
+            local toward = target.y < py and KEY_UP or KEY_DOWN
+            keys = safe_edge_step(px, py, KEY_LEFT, toward,
+                toward == KEY_UP and KEY_DOWN or KEY_UP)
         end
     end
     -- Direct combat, dodge, and dash inputs do not all travel through the
@@ -4783,7 +4875,7 @@ while frames < LIMIT do
                 end
             end
         end
-    elseif not sigil_pixel_active then
+    elseif not sigil_pixel_active and not edge_hazard_crossing then
         spike_escape_dir = 0
         if math.floor(keys / KEY_RIGHT) % 2 == 1
             and body_on_spike(px + 1, py) then keys = keys - KEY_RIGHT end
@@ -4899,7 +4991,7 @@ while frames < LIMIT do
         -- become mandatory, but debug output still needs the nearest hostile
         -- to explain an overworld hit or an avoidance choice.
         local debug_target = target or overworld_threat
-        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X door=%02X route=%02X routeok=%d step=%d%d%d%d",
+        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X door=%02X route=%02X routeok=%d step=%d%d%d%d leech=%d shake=%d orb=%d spike=%d",
             frames, room, world_mode, world_screen,
             SEALED ~= 0 and emu:read8(SEALED) or 0,
             hp, mp, iframes, active_charge,
@@ -4921,7 +5013,10 @@ while frames < LIMIT do
             can_step(px, py, KEY_LEFT) and 1 or 0,
             can_step(px, py, KEY_RIGHT) and 1 or 0,
             can_step(px, py, KEY_UP) and 1 or 0,
-            can_step(px, py, KEY_DOWN) and 1 or 0))
+            can_step(px, py, KEY_DOWN) and 1 or 0,
+            leech_attached() and 1 or 0, shake_phase,
+            quintra_on_weapon_orb(px, py, 3) and 1 or 0,
+            body_on_spike(px, py) and 1 or 0))
     end
     -- Preserve one collision-map artifact for every long live-enemy room,
     -- not only Mire Spore repros. This makes the CSV's combat-stall column

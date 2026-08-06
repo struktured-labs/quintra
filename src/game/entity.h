@@ -1,4 +1,4 @@
-// ECS-lite — fixed entity table, 32 slots × 24 bytes.
+// ECS-lite — fixed entity table, 32 slots × 28 bytes.
 // Lives in WRAM at the address chosen by the linker (eventually $C100
 // per the spec). Per-type dispatch via switch in entity_update_all().
 #ifndef QUINTRA_GAME_ENTITY_H
@@ -60,6 +60,7 @@ typedef struct {
 typedef char entity_layout_must_remain_28_bytes[(sizeof(entity_t) == 28) ? 1 : -1];
 
 extern entity_t entities[MAX_ENTITIES];
+extern u8 entity_enemy_count;
 
 // 8-direction movement deltas (px scaled per dir index)
 extern const i8 dir8_dx[8];
@@ -71,9 +72,9 @@ u8   entity_spawn(u8 type);        // returns idx, or 0xFF if no free slot
 void entity_kill(u8 idx);
 void entity_update_all(void);
 void entity_draw_all(void);
-// Cold two-axis OAM projection used only by scrolling Riftwild fields.
+// Cold two-axis OAM projection used by every scrolling field.
 void entity_draw_all_world(void) BANKED;
-// Mark only the Riftwild enemies inside the current camera sector as awake.
+// Mark only enemies inside the current scrolling camera sector as awake.
 void entity_refresh_world_visibility(void) BANKED;
 
 // AABB test: returns 1 if hitboxes overlap. Hitbox interpreted as

@@ -1,6 +1,6 @@
 // SFX driver — one-shot register-write effects per cowir-sfx's designs.
-// Channel budget: CH1 (pulse+sweep) + CH4 (noise) belong to SFX;
-// CH2 + CH3 belong to the music sequencer.
+// Music may borrow CH1/CH4 for harmony and percussion between effects; these
+// ownership helpers keep a pickup fanfare or weapon hit from being overwritten.
 #ifndef QUINTRA_AUDIO_SFX_H
 #define QUINTRA_AUDIO_SFX_H
 
@@ -32,5 +32,8 @@ void sfx_play_equip(void) BANKED;
 // Ordered floor runes answer with a rising pitch before the full solve cue.
 void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps
+void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames);
+u8 sfx_music_ch1_clear(void);
+u8 sfx_music_ch4_clear(void);
 
 #endif

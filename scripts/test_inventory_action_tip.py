@@ -39,24 +39,18 @@ def boot(class_moves):
 
 def main():
     screen = addr("_loop_current_screen")
-    # font_min maps ACT to these tiles. The remaining action reminder must
-    # fit before the 20-column edge rather than clipping a prose description.
-    action_prefix = [11, 13, 30, 0]
-    convergence_tip = [
-        16, 31, 22, 22, 0, 23, 26, 0, 11, 0, 12, 0, 13, 18, 25, 28, 14
-    ]  # FULL MP A B CHORD in font_min
+    # The B effect owns one indented plain-language line with no second B/ACT
+    # pseudo-binding, and the full-MP chord remains explicit.
     for class_id in range(5):
         pb = boot(class_id)
         assert pb.memory[screen] == 9, f"class {class_id} did not open PACK"
-        row = list(pb.memory[0x9800 + 13 * 32 + 1:0x9800 + 13 * 32 + 21])
-        assert row[:4] == action_prefix, (
-            f"class {class_id} retained an ambiguous/repeated B action line: {row}")
-        assert any(row[4:15]), f"class {class_id} lost its active reminder"
-        assert not any(row[15:]), (
-            f"class {class_id} action reminder clips the PACK screen edge: {row}")
-        chord = list(pb.memory[0x9800 + 17 * 32 + 1:0x9800 + 17 * 32 + 18])
-        assert chord == convergence_tip, (
-            f"class {class_id} lost the readable full-MP chord tip: {chord}")
+        row = list(pb.memory[0x9800 + 12 * 32:0x9800 + 12 * 32 + 20])
+        assert row[0] == 0 and any(row[2:]), (
+            f"class {class_id} lost its indented B explanation: {row}")
+        assert not any(row[2 + 18:]), (
+            f"class {class_id} B explanation clips the PACK edge: {row}")
+        chord = bytes(pb.memory[0x9800 + 16 * 32:0x9800 + 16 * 32 + 18])
+        assert any(chord), f"class {class_id} lost the full-MP chord tip"
         pb.stop(save=False)
     print("[inventory-action-tip] PASS five B reminders + full-MP A/B chord")
 

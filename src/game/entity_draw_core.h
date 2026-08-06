@@ -6,9 +6,18 @@
 // banked two-axis world renderer cannot drift apart.
 entity_anim_counter++;
 for (i = 0; i < MAX_ENTITIES; ++i) {
-    entity_t *e = &entities[i];
+    // Rotate the 32 logical slots through the 36 non-player OAM entries.
+    // When a crowded scanline or several 16x16 bodies exceed hardware OAM,
+    // every entity receives display priority on following frames instead of
+    // later-spawned bullets/enemies becoming permanently invisible.
+    u8 slot = (u8)((i + (entity_anim_counter >> 1))
+        & (MAX_ENTITIES - 1));
+    entity_t *e = &entities[slot];
     u8 sx, sy, pal, flash;
     if (!(e->flags & EF_ACTIVE)) continue;
+    if ((room_world_width > ROOM_VIEW_W_PX
+            || room_world_height > ROOM_VIEW_H_PX)
+        && e->type == ENT_ENEMY && !(e->flags & EF_ON_SCREEN)) continue;
     sx = ENTITY_DRAW_SX(e);
     sy = ENTITY_DRAW_SY(e);
     pal = e->palette;

@@ -315,10 +315,11 @@ def main() -> None:
         "and choose a QTEST ROM. At the Quintra title screen press A for\n"
         "CONTINUE (do not press START, which begins a new run and replaces\n"
         "that test ROM's independent suspend save).\n\n"
-        "Each ROM is the exact release cartridge; only its paired battery\n"
-        "save differs. The player's ordinary Quintra-v0.18.90.gbc save is\n"
-        "not read or changed. These checkpoints use Easy mode for practical\n"
-        "deep-stage testing and include all five champions at every stage.\n"
+        "Each ROM is the exact same test cartridge; only its paired battery\n"
+        "save differs. The player's ordinary Quintra ROM and save use a\n"
+        "different name and are not read or changed. These checkpoints use\n"
+        "Easy mode for practical deep-stage testing and include all five\n"
+        "champions at every stage.\n"
     )
     output_manifest = {
         "format": "Analogue Pocket mirrored ROM/battery-save curriculum",

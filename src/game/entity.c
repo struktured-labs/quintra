@@ -12,6 +12,9 @@
 #include "content.h"
 
 entity_t entities[MAX_ENTITIES];
+// Maintained alongside the fixed table so an empty post-combat field does not
+// keep paying the banked camera-sector scan while its last bullets expire.
+u8 entity_enemy_count;
 
 // Free-running counter driving the enemy waddle: for half its cycle the enemy
 // sprite is X-flipped (OAM attr bit 5), reading as a 2-frame idle/walk motion
@@ -38,6 +41,7 @@ u8 entity_spawn(u8 type) {
             memset(&entities[i], 0, sizeof(entity_t));
             entities[i].type    = type;
             entities[i].flags   = EF_ACTIVE | EF_ALIVE;
+            if (type == ENT_ENEMY) entity_enemy_count++;
             // OAM slots 0-3 reserved for player metasprite; entities use 4+
             entities[i].oam_slot = (u8)(4 + i);
             return i;
@@ -48,6 +52,8 @@ u8 entity_spawn(u8 type) {
 
 void entity_kill(u8 idx) {
     if (idx >= MAX_ENTITIES) return;
+    if (entities[idx].type == ENT_ENEMY && entity_enemy_count)
+        entity_enemy_count--;
     entities[idx].flags &= (u8)~(EF_ACTIVE | EF_ALIVE);
     entities[idx].type   = ENT_NONE;
     move_sprite(entities[idx].oam_slot, 0, 0);   // hide
@@ -100,7 +106,8 @@ u8 aabb_overlap_player_wide(const entity_t *e) {
 void entity_update_nonprojectile(u8 idx) {
     switch (entities[idx].type) {
         case ENT_ENEMY:
-            if (!run_state.world_mode
+            if ((room_world_width <= ROOM_VIEW_W_PX
+                    && room_world_height <= ROOM_VIEW_H_PX)
                 || (entities[idx].flags & EF_ON_SCREEN))
                 enemy_update(&entities[idx], idx);
             break;
@@ -114,14 +121,15 @@ void entity_update_nonprojectile(u8 idx) {
 
 void entity_update_all(void) {
     u8 i;
-    // A Riftwild field is four screens wide/tall, but enemies move by at
-    // most a pixel on only some AI ticks. Re-scanning all 32 slots through a
-    // banked call every frame consumed enough of the video budget to miss
-    // VBlank in otherwise quiet rooms. Refresh on the shared four-frame
-    // animation cadence instead: camera/edge activation remains responsive
-    // within 67 ms, while sleeping off-screen bodies still cannot simulate
-    // their way toward the champion.
-    if (run_state.world_mode && !(entity_anim_counter & 0x03))
+    // Scrolling fields can hold a full district population, but only the
+    // current camera cluster spends AI/projectile time. Refresh on the shared
+    // four-frame animation cadence: activation remains responsive within
+    // 67 ms while 12..16 distant bodies cannot drag the cartridge below
+    // video rate or simulate their way toward an unseen champion.
+    if ((room_world_width > ROOM_VIEW_W_PX
+            || room_world_height > ROOM_VIEW_H_PX)
+        && entity_enemy_count
+        && !(entity_anim_counter & 0x03))
         entity_refresh_world_visibility();
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) continue;
@@ -163,8 +171,9 @@ static u8 enemy_is_big16(const entity_t *e) {
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a
 // cursor starting at 4 each frame (giant=16 tiles, 16x16=4, else 1), so no
 // entity is pinned to a fixed slot — which also fixes the old latent overlap
-// between the entity range and the boss overlay block. Past OAM 40 we simply
-// stop drawing (GB-authentic drop); unused slots are parked off-screen.
+// between the entity range and the boss overlay block. Logical iteration
+// rotates so OAM/scanline overflow becomes fair, GB-authentic flicker rather
+// than permanent invisibility; unused slots are parked off-screen.
 void entity_draw_all(void) {
     u8 i;
     u8 oam = 4;

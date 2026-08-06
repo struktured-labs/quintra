@@ -11,6 +11,10 @@ extern u16         loop_frame_counter;
 // rate, so loop counts are not wall time; this remains the run-clock source.
 // Consumers drain it (e.g. run clock: subtract 60 per counted second).
 extern volatile u8 g_vbl_ticks;
+// Free-running VBlank epoch for subsystems that need wall-clock deltas without
+// consuming the run-clock accumulator above. Unsigned 8-bit subtraction is
+// wrap-safe because the main loop observes it far more often than every 256 VBlanks.
+extern volatile u8 g_vbl_epoch;
 
 void loop_init(screen_id_t start);
 void loop_run(void);

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.19.1: Relics & Refrains](https://github.com/struktured-labs/quintra/releases/download/v0.19.1/quintra.gbc)
+[Download Quintra v0.19.2: Crowds & Cadences](https://github.com/struktured-labs/quintra/releases/download/v0.19.2/quintra.gbc)
 
 The repository copy of the published cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,9 +25,55 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.19.1**, published after passing the complete
-build, media, cartridge, checkpoint, gameplay, and controller verification
-gate.
+The current cartridge is **v0.19.2**, a public playtest milestone built around
+denser encounters, longer stage-specific music, clearer build screens, and
+slower equipment progression. Cartridge, media, checkpoint, gameplay,
+performance, and music contracts pass; the stricter all-class endurance target
+listed under release status remains open before show-build sign-off.
+
+### v0.19.2 — Crowds & Cadences
+
+The soundtrack replaces the preceding release's short working loops with
+eighteen full forms. Every dungeon and Colossus now has eight separately
+authored 16-row ideas arranged across 32 sections: a restrained introduction,
+A/B statement, new E–H bridge and development material, recapitulation, and
+final cadence. Exploration forms run roughly 60–85 seconds and bosses 43–60
+seconds. CH2 melody and CH3 bass are joined by adaptive CH1 harmony and
+biome-specific CH4 percussion; combat SFX temporarily claim those shared
+channels so attacks and discovery jingles retain priority. Ordinary room
+transitions preserve the exact section and row.
+
+This work is built into the attached `rom/working/quintra.gbc` release
+cartridge. The arrangements remain deliberately replaceable so creator-written
+melodies can be composed and auditioned score by score without rewriting the
+sequencer.
+
+**The current candidate is built for crowds without simulating the whole
+world at once.** An opening 31×31 district now carries 12–16 hostiles on
+Normal and 9–12 on Easy; later Normal rooms can reach 18. Twenty unique,
+seed-permuted anchors distribute them through the central route and distant
+aprons. Only enemies in the live camera sector spend AI, collision, draw, or
+projectile time, while the persistent bodies elsewhere keep their world
+positions. Logical sprite priority rotates through the CGB's 40 OAM entries,
+so scanline overflow produces fair Game Boy-style flicker instead of making
+later monsters or bullets permanently invisible. The linked cartridge holds
+177/180 gameplay loops in an ordinary populated field and the 12-projectile
+stress fixture retains its 144/180 (80%) floor.
+
+**More combat no longer means instant equipment saturation.** An ordinary
+Normal kill now rolls roughly 2% permanent relic, 6% temporary class-shaped
+Surge, 18% half-heart, and 45% coin; Easy uses 3%, 8%, 28%, and 42%
+respectively. This keeps temporary attack expression moderately common while
+making blue/red/pearl-gold equipment progression a run arc rather than
+something a player can finish in the first two minutes.
+
+**The two densest information screens now use plain input language.** Hero
+select separates ROLE, A, B, TRAIT, and fully named stats. START's Pack gives
+HEALTH/MAGIC their own rows, labels ATTACK/ARMOR/SPEED/LUCK, connects RELICS
+directly to BASE/BLUE/RED/GOLD equipment color, describes A and B on separate
+lines, states the next objective, and retains the `FULL MP A+B ASCEND` cue.
+This text-first pass is the readability baseline for a later semantic-icon
+pass rather than another abbreviation layer.
 
 **World upgrades now identify themselves by shape before color.** Hearts,
 rings, stones, shields, gems, fangs, eyes, blood sigils, weapons, charts,
@@ -37,13 +83,41 @@ Loose drops, boon choices, caches, and all procedural merchant counters use
 the same visual vocabulary; proximity HUD names and prices remain the exact
 second layer of identification.
 
-**Every dungeon and every Colossus now owns a longer arrangement.** The nine
-exploration themes and nine matching boss pieces expand from 32 to 64 melody
-rows with 16-step bass forms. Their second halves are composed responses rather
-than duplicated loops, and biome-specific tempo, pulse duty, articulation,
-rests, and bass level keep Crystal, Verdant, Ember, Frost, Mire, Shadow,
-Golden, Bloodmoon, and Void from sounding like one phrase at different speeds.
-Ordinary room transitions continue the current row instead of restarting it.
+**Every dungeon and Colossus now owns a musical language, not just a longer
+loop.** Crystal uses D Dorian, Verdant E Aeolian, Ember A Phrygian, Frost G
+Lydian, Mire F Dorian, Shadow D harmonic minor, Golden C Lydian, Bloodmoon A
+harmonic minor, and Void an eight-note octatonic field. The note engine now
+supports a complete chromatic bass and lead range; mode-aware triads replace
+the former global C-major accompaniment. Six wave-channel instruments and 18
+separate noise grooves give the biomes different materials and rhythmic
+footprints. Authored lead ties create real sustained notes, while selected
+biomes redistribute row pairs into long/short swing or a two-step mire/void
+lurch without changing the full form's duration. Each Colossus recalls
+recognizable cells from its dungeon while
+remaining a transformed combat composition rather than a copied faster loop.
+Ordinary room transitions still continue the exact current row.
+
+The 144 authored stage/boss sections now contain 56 attack/hold/rest profiles;
+the former row-by-row retrigger pattern has been removed from all 18 tracks.
+An automated score gate requires at least four articulation profiles per track,
+real rests and ties, and prevents any one rhythm from dominating the soundtrack.
+
+`scripts/render_music_preview.py` records the cartridge's real 48 kHz stereo
+mix into 18 opening-plus-development WAVs plus a continuous five-minute
+WAV/Opus audition album. The current audit verifies all 18
+tracks remain inside their intended modes, preserve their characteristic
+tones, use distinct stage and boss grooves, balance leitmotif recognition
+against phrase copying, reach both score banks in mixed PCM, and remain free
+of cartridge clipping before a human listening pass.
+
+Its `--full-form` release mode additionally records the complete 32-section
+loop of every piece into an approximately nineteen-minute album. It verifies
+all 32 rendered sections, whole-form dynamic contrast, and live tempo accuracy.
+Music and SFX envelopes now advance from the hardware VBlank epoch: dense
+Ember combat previously stretched a nominal 59.7-second form to 70.9 seconds;
+all eighteen live forms now remain within 0.21% of their authored duration.
+All eighteen loop cadences are additionally voice-led across the actual form
+restart; non-resting endings are limited to seamless unison or octave returns.
 
 **Dungeons now change their rules while a run is in motion.** Deterministic
 first visits to ordinary scrolling courts can become a delayed **TRAP**, a
@@ -69,7 +143,7 @@ room-12 **Deep Seal** switch, then the Colossus gate. Its paired room-13 wall
 changes remotely but retains body-width side detours, avoiding a seed-specific
 softlock when a procedural fold approaches the wall before the switch.
 
-The v0.19.0 cartridge contracts exercise all four encounter state machines,
+The v0.19.2 cartridge contracts exercise all four encounter state machines,
 the mutually exclusive boon pair, objective routing, deep-wall persistence,
 all 460 Normal/Easy stage checkpoints, and a complete boss smoke path. A
 controller-only Easy Corvin run cleared two Colossi in 30,000 frames with a
@@ -121,16 +195,22 @@ fallback could let a generated pillar overlap the sprite's upper half and
 legitimately block every escape step once full-body collision was enforced.
 The automated pilot now uses that same collision contract on both axes.
 
-**Every dungeon is busier from the beginning of the run.** Ordinary compact
-rooms now roll 3–6 hostiles in stage one, 4–7 in stages two and three, and 5–8
-from stage four onward; scrolling courts add one more body because their
-31×31 acreage otherwise dilutes the fight. Large fields distribute those
-bodies across nine guaranteed-open encounter anchors instead of folding them
-onto four repeated coordinates, while Riftwild alternates four far-field
-trail sites. This is positioning, crossfire, and roster pressure—not another
-blanket enemy-HP increase. Live-ROM samples cover all nine stages at 4–9
-visible bodies in the sampled large roles and preserve encounter/geometry
-variation.
+That certification also closes a sealed-room edge case exposed by a split
+Rift Ooze: a crawler fragment could previously tuck beneath a pillar overhang
+that the champion's full body could not enter, leaving an otherwise-cleared
+room locked. Ground enemies now validate movement against the same full-body
+room collision contract as the champion.
+
+**Every dungeon is busier from the beginning of the run.** The earlier
+3–8-body density pass has been superseded by the current 12–16 Normal / 9–12
+Easy opening population described above, with modest later-stage bonuses.
+Wide fields use twenty guaranteed-open anchors instead of wrapping late
+spawns over earlier coordinates, while Riftwild continues to alternate its
+far-field trail sites. This is positioning, crossfire, and roster pressure—not
+another blanket enemy-HP increase. Live-ROM samples preserve all nine stages'
+encounter and geometry variation, prove late 17–18-body rooms have no stacked
+coordinates, and keep off-camera sectors asleep until the champion reaches
+them.
 
 **A run now changes the champion on-screen.** The first, third, and sixth
 collected run relic—or the equivalent first, third, and sixth Colossus
@@ -174,7 +254,7 @@ the **Moon Flask** distills otherwise-wasted full-health heart drops into MP.
 Each has distinct counter art and a distinct HUD offer glyph. Ricochet
 ownership is cached at run start, purchase, and suspend resume rather than
 scanning the inventory for every shot; its runtime marker is distinct from
-Spirit Convergence, preserving the 148/180 dense-room stress sample.
+Spirit Convergence, preserving the 144/180 dense-room stress sample.
 
 Those join vampirism, alternate Flail/Spear geometry, the **Glass Fang**
 max-heart-for-offense pact, the **Echo Prism** fourth-strike fork, Surge, full
@@ -520,7 +600,8 @@ The wider opening remains inside the cartridge's measured frame budget. Camera
 follow and world-entity projection now share one banked pass while the hero is
 moving, then fall back to the resident renderer after the camera settles. The
 live dense-room gate holds **144/180** frames and ordinary traversal
-**180/180**, with 1,038 bytes still free in the tight fixed code bank.
+**177/180**, while every fixed switchable code bank retains at least 1 KiB of
+headroom.
 
 The preceding v0.18.77 proof was campaign-wide, not just a room smoke test: an
 input-only Picsean run reached the ending after all nine Colossi at frame
@@ -2436,14 +2517,15 @@ than concept art.
   SRAM, proves the dead run cannot resume, and starts a clean replacement run.
 - **Full chiptune audio**: nine numbered exploration variants and nine
   dedicated boss variants, plus title / victory / gameover tracks and 18
-  register-level SFX, including weapon-specific steel, heavy-chain,
-  and lance attacks. Reprised melodic families change tempo and pacing, so
-  every stage/boss pairing remains audibly distinct within the ROM budget.
+  register-level SFX, including weapon-specific steel, heavy-chain, and lance
+  attacks. The development soundtrack gives every gameplay piece eight
+  authored sections, a unique minute-scale form, dynamic harmony, and
+  biome-specific percussion while allowing SFX to claim shared channels.
 - **Hardware-paced CGB performance**: the CGB-only cartridge uses double-speed
-  CPU mode and does not discard a second VBlank after a busy frame. Ordinary
-  rooms hold 60/60 simulation Hz; the verification gate keeps a synthetic
-  12-projectile bullet-hell room above 80% video rate instead of collapsing
-  from a tiny overrun directly to 30 Hz.
+  CPU mode and does not discard a second VBlank after a busy frame. The current
+  ordinary populated-field fixture completes 177/180 gameplay loops; the
+  synthetic 12-projectile bullet-hell room keeps its 144/180 (80%) floor
+  instead of collapsing from a tiny overrun directly to 30 Hz.
 - **Honest active-play timing**: the run clock follows hardware VBlanks even
   in dense combat, pauses in PACK and the Spirit Compass, and retains the
   subsecond earned before opening either screen. Menu tapping therefore cannot
@@ -2681,11 +2763,11 @@ The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
 It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.19.1 release ROM occupies 128 KiB. Its media,
+headroom floor. The current v0.19.2 release ROM occupies 128 KiB. Its media,
 460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
 stage-archetype, music, boss-identity, director, and transition-audio contracts passed
-on 2026-08-04; the release SHA-256 is recorded by the attached artifact and
+on 2026-08-06; the release SHA-256 is recorded by the attached artifact and
 ROM-bound media manifest.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
@@ -2697,9 +2779,9 @@ an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
 The layout gate rejects any fixed switchable bank with less than 1 KiB free,
 well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.19.1 build has 1,442 bytes in bank 1, 1,045 in bank 2,
-4,070 in bank 3, 1,111 in bank 4, 1,068 in bank 5, 1,382 in bank 6,
-and 1,121 in bank 7.
+ROM. The current v0.19.2 build keeps at least 1 KiB free in each fixed
+switchable code bank; `scripts/report_budget.py` prints the exact linked
+values.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -2995,11 +3077,12 @@ Every gameplay candidate must clear three gates before it earns a ROM release:
   and the Void Lord.
 - The current cart has been smoke-tested on an **Analogue Pocket** and an
   **IPS-modded Game Boy Color**, in addition to emulator coverage.
-- **Music composition remains a creator-owned release task**: v0.19.1 gives
-  every stage and boss a distinct 64-row working arrangement, but your final
-  melodies can replace these score-by-score without changing the sequencer.
-  Title and ending cues also still need your composed pass. The exact 64-row
-  melody / 16-row bass handoff is in
+- **Music composition remains a creator-owned release task**: v0.19.2 ships
+  each gameplay piece as eight authored sections in a unique 32-section form.
+  Your final melodies
+  can replace these score-by-score without changing the sequencer. Title and
+  ending cues also still need your composed pass. The exact 128-row melody,
+  32-row bass, and A–H form handoff is in
   [the music worksheet](docs/music-composition.md).
 - This is **not yet a show-build sign-off**: the all-class endurance delivery
   gate remains two nine-boss endings per champion over three entropy samples

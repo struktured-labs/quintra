@@ -50,16 +50,18 @@ def main():
         pb.button("start")
         settle(pb, 20)
 
-        # Navigation help is visible before committing to a champion.
-        row(pb, 9, 2, "SELECT OPENS MAP")
-        row(pb, 10, 2, "START OPENS PACK")
+        # Hero choice uses one plain-language line per concept rather than an
+        # abbreviation wall or repeated A/B labels.
+        row(pb, 9, 0, "ROLE BLADE FIGHTER")
+        row(pb, 10, 0, "A STAB SLASH DASH")
+        row(pb, 12, 0, "TRAIT FAST MOVEMENT")
         (ROOT / "tmp").mkdir(exist_ok=True)
         pb.screen.image.save(ROOT / "tmp" / "quest-controls.png")
 
         pb.button("a")
         settle(pb, 60)
         open_pack(pb)
-        row(pb, 9, 0, "GOAL FIND SIGIL KEY")
+        row(pb, 14, 0, "NEXT FIND SIGIL KEY")
         pb.screen.image.save(ROOT / "tmp" / "quest-sigil-key.png")
 
         # Return to the live room, then advance the exact persisted fixture
@@ -70,31 +72,31 @@ def main():
 
         pb.memory[rs + 23] |= 1  # stage-zero rift_sigils low byte
         open_pack(pb)
-        row(pb, 9, 0, "GOAL CLEAR WARDEN")
+        row(pb, 14, 0, "NEXT CLEAR WARDEN")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 27] |= 1 << 3  # dungeon_puzzles Warden Boon
         open_pack(pb)
-        row(pb, 9, 0, "GOAL WAKE WAYSTONE")
+        row(pb, 14, 0, "NEXT WAKE WAYSTONE")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 27] |= 1 << 7  # Waystone
         open_pack(pb)
-        row(pb, 9, 0, "GOAL CLEAR DEEP WARD")
+        row(pb, 14, 0, "NEXT CLEAR DEEP WARD")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 28] |= 1 << 7  # deep Warden
         open_pack(pb)
-        row(pb, 9, 0, "GOAL OPEN DEEP SEAL")
+        row(pb, 14, 0, "NEXT OPEN DEEP SEAL")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 28] |= 1 << 2  # remote deep phase circuit
         open_pack(pb)
-        row(pb, 9, 0, "GOAL SEEK SKULL GATE")
+        row(pb, 14, 0, "NEXT SEEK SKULL GATE")
         pb.button("b")
         settle(pb, 20)
 
@@ -102,20 +104,20 @@ def main():
         # actual commitment fight rather than leaking dungeon-only advice.
         pb.memory[rs + 17] = 1  # world_mode
         open_pack(pb)
-        row(pb, 9, 0, "GOAL FIND DUNGEON")
+        row(pb, 14, 0, "NEXT FIND DUNGEON")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 17] = 0
         pb.memory[rs + 1] = 63  # first village
         open_pack(pb)
-        row(pb, 9, 0, "GOAL REST THEN NORTH")
+        row(pb, 14, 0, "NEXT REST THEN NORTH")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 1] = 19  # opening Colossus arena
         open_pack(pb)
-        row(pb, 9, 0, "GOAL BREAK COLOSSUS")
+        row(pb, 14, 0, "NEXT BREAK COLOSSUS")
     finally:
         pb.stop(save=False)
 

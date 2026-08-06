@@ -7,6 +7,7 @@
 #include "content.h"
 
 static void weapon_ch1(u8 nr10, u8 nr11, u8 nr12, u16 freq) {
+    sfx_claim_channels(8, 0);
     NR10_REG = nr10;
     NR11_REG = nr11;
     NR12_REG = nr12;
@@ -15,6 +16,7 @@ static void weapon_ch1(u8 nr10, u8 nr11, u8 nr12, u16 freq) {
 }
 
 static void weapon_ch4(u8 nr43, u8 nr42) {
+    sfx_claim_channels(0, 8);
     NR42_REG = nr42;
     NR43_REG = nr43;
     NR44_REG = 0x80;

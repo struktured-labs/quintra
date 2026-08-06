@@ -9,48 +9,68 @@
 #include "game/run_state.h"
 #include "render/tiles.h"
 
+static u8 unseal_x(u8 dir, u8 half, u8 east) {
+    if (dir == DIR_E) return east;
+    if (dir == DIR_W) return 0;
+    return (u8)(9 + half);
+}
+
+static u8 unseal_y(u8 dir, u8 half, u8 south) {
+    if (dir == DIR_N) return 0;
+    if (dir == DIR_S) return south;
+    return (u8)(8 + half);
+}
+
 // Cold seal-release rendering lives outside the resident combat bank. It
 // runs only after a puzzle, directive, or boss resolves, while the hot room
 // loop keeps more than the required development headroom.
 void room_unseal_doors(void) BANKED {
-    static const u8 dxs[4][2] = {
-        { 9, 10 }, { ROOM_W - 1, ROOM_W - 1 },
-        { 9, 10 }, { 0, 0 },
-    };
-    static const u8 dys[4][2] = {
-        { 0, 0 }, { 8, 9 },
-        { ROOM_H - 1, ROOM_H - 1 }, { 8, 9 },
-    };
     u8 dir, half;
-    for (dir = 0; dir < 4; ++dir) {
-        if (!run_state_was_cleared_boss()
-            && run_state_dungeon_neighbor(dir) == 0xFF) continue;
-        if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
-        for (half = 0; half < 2; ++half)
-            room_tilemap[dys[dir][half]][dxs[dir][half]] = BGT_DOOR;
-    }
+    u8 east = (u8)((room_world_width >> 3) - 1);
+    u8 south = (u8)((room_world_height >> 3) - 1);
+    u8 cleared_boss = run_state_was_cleared_boss();
+    // Ordinary exits already retain BGT_DOOR beneath their amber seal, so
+    // releasing a puzzle/combat room is only a palette change. A defeated
+    // Colossus is the exception: it authors fresh compact exits here.
+    if (cleared_boss)
+        for (dir = 0; dir < 4; ++dir) {
+            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
+            for (half = 0; half < 2; ++half)
+                room_tilemap[unseal_y(dir, half, ROOM_H - 1)]
+                    [unseal_x(dir, half, ROOM_W - 1)] = BGT_DOOR;
+        }
     wait_vbl_done();
     {
         u8 door = BGT_DOOR, attr = BGPAL_DOOR;
-        VBK_REG = 0;
-        for (dir = 0; dir < 4; ++dir) {
-            if (!run_state_was_cleared_boss()
-                && run_state_dungeon_neighbor(dir) == 0xFF) continue;
-            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
-            for (half = 0; half < 2; ++half)
-                set_bkg_tiles(ROOM_BG_MAP_X(dxs[dir][half]),
-                    ROOM_BG_MAP_Y(dys[dir][half]), 1, 1, &door);
+        if (cleared_boss) {
+            VBK_REG = 0;
+            for (dir = 0; dir < 4; ++dir) {
+                if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX)
+                    continue;
+                for (half = 0; half < 2; ++half) {
+                    u8 x = unseal_x(dir, half, ROOM_W - 1);
+                    u8 y = unseal_y(dir, half, ROOM_H - 1);
+                    set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y),
+                        1, 1, &door);
+                }
+            }
         }
         VBK_REG = 1;
         for (dir = 0; dir < 4; ++dir) {
-            if (!run_state_was_cleared_boss()
-                && run_state_dungeon_neighbor(dir) == 0xFF) continue;
-            if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX) continue;
+            if (!cleared_boss && run_state_dungeon_neighbor(dir) == 0xFF)
+                continue;
+            if (cleared_boss && dir == DIR_E
+                && room_world_width > ROOM_VIEW_W_PX) continue;
             attr = (dir == room_objective_dir)
                 ? BGPAL_CRYSTAL : BGPAL_DOOR;
-            for (half = 0; half < 2; ++half)
-                set_bkg_tiles(ROOM_BG_MAP_X(dxs[dir][half]),
-                    ROOM_BG_MAP_Y(dys[dir][half]), 1, 1, &attr);
+            for (half = 0; half < 2; ++half) {
+                u8 x = unseal_x(dir, half,
+                    cleared_boss ? (ROOM_W - 1) : east);
+                u8 y = unseal_y(dir, half,
+                    cleared_boss ? (ROOM_H - 1) : south);
+                set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y),
+                    1, 1, &attr);
+            }
         }
         VBK_REG = 0;
     }

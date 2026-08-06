@@ -15,6 +15,7 @@ void entity_init_room(void) BANKED {
     u8 dir;
     u8 large;
     memset(entities, 0, sizeof(entities));
+    entity_enemy_count = 0;
     // Park entity sprites (slots 4..35) + boss metasprite overlay (36..39).
     for (i = 4; i < 40; ++i)
         move_sprite(i, 0, 0);
@@ -47,9 +48,9 @@ void entity_init_room(void) BANKED {
     }
 }
 
-// Riftwild bodies are persistent across a 248x248 field, but they should not
-// march toward the arrival screen from an unseen camera sector. Refresh this
-// once before AI dispatch; ordinary rooms and Colossi never consult the flag.
+// Scrolling-field bodies persist across a 248x248 district, but should not
+// march or shoot from an unseen camera sector. The shared flag gates AI,
+// collision, and OAM allocation until exploration reaches that cluster.
 void entity_refresh_world_visibility(void) BANKED {
     u8 i;
     u8 right = (u8)(room_camera_x + ROOM_VIEW_W_PX);

@@ -10,6 +10,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
+#include "game/procgen_spawn.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/spawn_reach.h"
@@ -1313,13 +1314,12 @@ void procgen_generate_current_room(void) BANKED {
             // puzzle_prepare_room_role authors the interactive fixture and
             // owns the room's non-combat seal after procgen returns.
         } else {
-            // Enemy count scales with depth, but every stage must feel
-            // inhabited. Three opening bodies is the new floor; stages two
-            // and three add one pressure body, stage four onward adds two,
-            // and the scrolling 31x31 fields add one more because the same
-            // population is otherwise diluted across more than three
-            // viewports. This raises decisions/projectile crossfire rather
-            // than hiding difficulty in another blanket HP increase.
+            // A 31x31 district spans almost three LCD areas. Penta-like
+            // pressure therefore needs a real field population, not four
+            // bodies diluted into one-at-a-time encounters. Easy targets
+            // 9..12 opening bodies; canonical Normal targets 12..16. Later
+            // stages add modest pressure without replacing enemy identity
+            // with another blanket HP increase.
             u8 depth_bonus = run_state.bosses_beaten;
             // A new stage should establish its visual language before asking
             // the player to solve the densest possible seven-body roll. This
@@ -1331,18 +1331,22 @@ void procgen_generate_current_room(void) BANKED {
             u8 is_stage_foyer = (!run_state.world_mode
                 && run_state.bosses_beaten > 0
                 && run_state_dungeon_local() == 0) ? 1 : 0;
-            u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 1 : 2)
-                : (u8)(3 + rng_range(4)
+            u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 2 : 3)
+                : (u8)((RUN_IS_EASY()
+                        ? (u8)(8 + rng_range(4))
+                        : (u8)(11 + rng_range(5)))
                     + (depth_bonus >= 3 ? 2 : depth_bonus ? 1 : 0)
                     + (procgen_current_room_is_large ? 1 : 0));
             enemy_count = dungeon_director_adjust_initial_count(enemy_count);
             if (is_stage_foyer
-                && enemy_count > (procgen_current_room_is_large ? 6 : 5))
-                enemy_count = procgen_current_room_is_large ? 6 : 5;
+                && enemy_count > (RUN_IS_EASY() ? 11 : 14))
+                enemy_count = RUN_IS_EASY() ? 11 : 14;
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
             u8 spawned = 0;
             u8 attempts = 0;
+            u8 direct_wide = (!run_state.world_mode
+                && procgen_current_room_is_large) ? 1 : 0;
             // A fixed anchor list made every scrolling court open with the
             // same enemy silhouette. Rotate four complete permutations by
             // run, stage, and room instead. This consumes no RNG (preserving
@@ -1351,21 +1355,32 @@ void procgen_generate_current_room(void) BANKED {
             u8 encounter_formation = (u8)(((u8)run_state.run_seed
                 + run_state.room_counter
                 + (u8)(run_state.bosses_beaten << 1)) & 3);
-            mark_spawn_reachable();
+            if (!direct_wide) mark_spawn_reachable();
             // `enemy_count` used to mean attempts, not bodies: a pillar or
             // entrance-safety rejection could quietly turn the intended
             // two-enemy floor back into one crawler. Retry a bounded four
             // sites per desired body; this remains deterministic and never
             // risks an unbounded procgen loop in a dense room archetype.
             while (spawned < enemy_count && attempts < (u8)(enemy_count << 3)) {
-                u8 tx = (u8)(2 + rng_range(ROOM_W - 4));
-                u8 ty = (u8)(2 + rng_range(ROOM_H - 4));
+                u8 tx;
+                u8 ty;
                 attempts++;
-                if (!(room_tilemap[ty][tx] & 0x80)) continue;
-                {
-                    u8 dx = (tx > ptx) ? (u8)(tx - ptx) : (u8)(ptx - tx);
-                    u8 dy = (ty > pty) ? (u8)(ty - pty) : (u8)(pty - ty);
-                    if (dx < 3 && dy < 3) continue;
+                if (direct_wide) {
+                    // The batch helper moves this temporary spawn onto one
+                    // of twenty carved, body-valid anchors before the LCD is
+                    // exposed. Avoid a full compact-map flood plus rejected
+                    // random sites for every guaranteed-open 31x31 court.
+                    tx = 15;
+                    ty = 8;
+                } else {
+                    tx = (u8)(2 + rng_range(ROOM_W - 4));
+                    ty = (u8)(2 + rng_range(ROOM_H - 4));
+                    if (!(room_tilemap[ty][tx] & 0x80)) continue;
+                    {
+                        u8 dx = (tx > ptx) ? (u8)(tx - ptx) : (u8)(ptx - tx);
+                        u8 dy = (ty > pty) ? (u8)(ty - pty) : (u8)(pty - ty);
+                        if (dx < 3 && dy < 3) continue;
+                    }
                 }
                 {
                     // Roster comes from the generated per-stage pool —
@@ -1382,6 +1397,7 @@ void procgen_generate_current_room(void) BANKED {
                     // bounded placement attempt rather than reshuffling room
                     // geometry or the stage roster.
                     if (eid == ENEMY_MIRE_SPORE
+                        && !direct_wide
                         && (tx > ptx ? (u8)(tx - ptx) : (u8)(ptx - tx)) < 6
                         && (ty > pty ? (u8)(ty - pty) : (u8)(pty - ty)) < 6)
                         continue;
@@ -1409,32 +1425,6 @@ void procgen_generate_current_room(void) BANKED {
                                 u8 sector = (u8)((spawned >> 1) & 3);
                                 entities[idx].x = FIX8(world_spawn_x[sector]);
                                 entities[idx].y = FIX8(world_spawn_y[sector]);
-                            } else if (procgen_current_room_is_large) {
-                                // Populate nine readable anchors rather than
-                                // folding a denser pack back onto four points.
-                                // The coordinates sit on the guaranteed-open
-                                // central hall and encounter aprons, so the
-                                // full field becomes combat space without
-                                // consuming another RNG draw.
-                                static const u8 wide_spawn_x[9] = {
-                                    120, 208, 184, 72, 32,
-                                    216, 120, 184, 72
-                                };
-                                static const u8 wide_spawn_y[9] = {
-                                    64, 200, 48, 184, 64,
-                                    48, 152, 152, 216
-                                };
-                                static const u8 wide_formation[4][9] = {
-                                    { 0, 1, 2, 3, 4, 5, 6, 7, 8 },
-                                    { 4, 1, 5, 3, 0, 7, 6, 2, 8 },
-                                    { 8, 7, 6, 5, 4, 3, 2, 1, 0 },
-                                    { 2, 7, 0, 8, 3, 5, 1, 6, 4 },
-                                };
-                                u8 sector =
-                                    wide_formation[encounter_formation]
-                                                  [spawned % 9];
-                                entities[idx].x = FIX8(wide_spawn_x[sector]);
-                                entities[idx].y = FIX8(wide_spawn_y[sector]);
                             }
                         }
                         // ~12% spawn ELITE: boss-palette glow, double HP,
@@ -1461,6 +1451,11 @@ void procgen_generate_current_room(void) BANKED {
                     }
                 }
             }
+            // Batch every dungeon body's wide-field placement in one cold
+            // bank call. Calling the helper once per enemy added two visible
+            // frames to a 16-body same-stage doorway.
+            if (direct_wide)
+                procgen_place_wide_enemies(encounter_formation);
             if (!run_state.world_mode
                 && run_state_dungeon_local()
                     == run_state_dungeon_cache_cell()
@@ -1476,7 +1471,7 @@ void procgen_generate_current_room(void) BANKED {
                     pickup_farfold_relic_for_class(roll),
                     FIX8(216), FIX8(208));
             }
-            clear_reach_marks_local();
+            if (!direct_wide) clear_reach_marks_local();
         }
     }
 

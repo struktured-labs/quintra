@@ -85,7 +85,7 @@ def main():
                 # Foyers remain the gentler no-elite introduction, but their
                 # scrolling footprint now earns the milestone's game-wide
                 # population floor instead of preserving the old sparse cap.
-                assert 4 <= len(roster) <= 6, (
+                assert 13 <= len(roster) <= 14, (
                     f"stage {stage + 1} foyer count={len(roster)} roster={roster}")
                 assert elites == 0, (
                     f"stage {stage + 1} foyer promoted {elites} elite(s)")

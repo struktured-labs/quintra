@@ -20,8 +20,19 @@
 
 static u8 pend_kind;
 static u8 pend_timer;
+static u8 ch1_busy_frames;
+static u8 ch4_busy_frames;
+
+void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames) {
+    if (ch1_frames > ch1_busy_frames) ch1_busy_frames = ch1_frames;
+    if (ch4_frames > ch4_busy_frames) ch4_busy_frames = ch4_frames;
+}
+
+u8 sfx_music_ch1_clear(void) { return ch1_busy_frames == 0; }
+u8 sfx_music_ch4_clear(void) { return ch4_busy_frames == 0; }
 
 static void ch1(u8 nr10, u8 nr11, u8 nr12, u16 freq) {
+    sfx_claim_channels(8, 0);
     NR10_REG = nr10;
     NR11_REG = nr11;
     NR12_REG = nr12;
@@ -30,6 +41,7 @@ static void ch1(u8 nr10, u8 nr11, u8 nr12, u16 freq) {
 }
 
 static void ch4(u8 nr43, u8 nr42) {
+    sfx_claim_channels(0, 8);
     NR42_REG = nr42;
     NR43_REG = nr43;
     NR44_REG = 0x80;
@@ -50,18 +62,21 @@ void sfx_play(u8 id) {
             ch4(0x39, 0xD3);
             pend_kind = PEND_DEATH_BUMP;
             pend_timer = 12;
+            sfx_claim_channels(0, 18);
             break;
         case SFX_COIN:
             // CH1 no sweep, duty 50%, B5 then E6, env (13,down,2)
             ch1(0x00, 0x80, 0xD2, 1915);
             pend_kind = PEND_COIN_NOTE2;
             pend_timer = 3;
+            sfx_claim_channels(12, 0);
             break;
         case SFX_HEART:
             // 660Hz then 880Hz, duty 50%, env (11,down,3)
             ch1(0x00, 0x80, 0xB3, 1849);
             pend_kind = PEND_HEART_NOTE2;
             pend_timer = 4;
+            sfx_claim_channels(13, 0);
             break;
         case SFX_DOOR:
             // 280Hz sweep UP (2,2), duty 50%, env (10,down,4)
@@ -83,6 +98,7 @@ void sfx_play(u8 id) {
             ch1(0x00, 0x80, 0xC3, 1881);
             pend_kind = PEND_CLEAR_NOTE2;
             pend_timer = 5;
+            sfx_claim_channels(18, 0);
             break;
         case SFX_LOWHP:
             // Soft, short C7 blip — quiet env (6,down,2) so it reads as
@@ -100,6 +116,7 @@ void sfx_play(u8 id) {
             ch1(0x00, 0x80, 0xB1, 1985);
             pend_kind = PEND_WEAK_NOTE2;
             pend_timer = 2;
+            sfx_claim_channels(11, 0);
             break;
         case SFX_PUZZLE:
             // A landscape secret should linger, not read as another pickup.
@@ -111,6 +128,7 @@ void sfx_play(u8 id) {
             ch1(0x00, 0xC0, 0xA4, 1602);              // D4
             pend_kind = PEND_PUZZLE_NOTE2;
             pend_timer = 12;
+            sfx_claim_channels(45, 10);
             break;
         case SFX_DISTRICT:
             // A restrained threshold bell: low A4 establishes distance,
@@ -120,6 +138,7 @@ void sfx_play(u8 id) {
             ch1(0x00, 0x80, 0x94, 1750);
             pend_kind = PEND_DISTRICT_NOTE2;
             pend_timer = 8;
+            sfx_claim_channels(18, 0);
             break;
         default:
             break;
@@ -136,6 +155,8 @@ void sfx_play_rune(u8 step) {
 }
 
 void sfx_tick(void) {
+    if (ch1_busy_frames) ch1_busy_frames--;
+    if (ch4_busy_frames) ch4_busy_frames--;
     if (pend_kind == PEND_NONE) return;
     if (--pend_timer) return;
     switch (pend_kind) {

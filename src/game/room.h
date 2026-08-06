@@ -100,7 +100,7 @@ u8 room_player_position_clear(i16 x, i16 y) BANKED;
 // Move a spike-hit champion to an immediately adjacent safe body position.
 void room_stumble_off_hazard(void) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.
-u8 room_tile_walkable(u8 t) BANKED;
+u8 room_tile_walkable(u8 t) NONBANKED;
 // A player shot hit a cracked wall: convert it to a secret door.
 void room_open_secret(u8 tx, u8 ty) BANKED;
 // A player shot shattered a crystal: floor it, maybe drop a +1 MP wisp.

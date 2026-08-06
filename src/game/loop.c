@@ -19,7 +19,10 @@ u16         loop_frame_counter  = 0;
 // True-60Hz tick source (see loop.h). ISRs must live in home and stay
 // tiny: one increment.
 volatile u8 g_vbl_ticks = 0;
-static volatile u8 g_vbl_epoch = 0;
+// Monotonic hardware-audio clock. Unlike g_vbl_ticks, room_tick never drains
+// this byte; audio_tick takes an unsigned delta from its own last observation.
+// That keeps tempo at 59.7 Hz even when a dense simulation spans two VBlanks.
+volatile u8 g_vbl_epoch = 0;
 static void loop_vbl_isr(void) NONBANKED {
     g_vbl_ticks++;
     g_vbl_epoch++;

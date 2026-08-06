@@ -37,16 +37,26 @@ static const u16 cursor_palette[4] = {
     BGR555(31, 31,  4),
 };
 
-// The loadout names identify the controls, but they do not say what a first
-// B press actually does. These strings are intentionally 12 characters or
-// fewer: the class screen has a 20-column Game Boy grid, and they share a
-// line with the explicit EFFECT label below.
+// Selection copy is deliberately player language, not content-table jargon.
+// Each complete prefixed line fits the physical 20-column LCD.
+static const char *const role_tips[N_CLASSES] = {
+    "BLADE FIGHTER", "ARMORED TANK", "RANGED HUNTER",
+    "MAGIC CASTER", "FAST STRIKER",
+};
+
+static const char *const primary_tips[N_CLASSES] = {
+    "STAB SLASH DASH", "HEAVY TAIL STRIKE", "RETURNING FEATHER",
+    "PIERCING BUBBLE", "FAST STINGER",
+};
+
 static const char *const signature_tips[N_CLASSES] = {
-    "8-WAY WARD",            // Wolfkin
-    "BLOCKS SHOTS",          // Sauran
-    "3-WAY FAN",             // Corvin
-    "3 BUBBLES",             // Picsean
-    "FAN + WARD",            // Vespine
+    "8 SHOTS BRIEF WARD", "BLOCKS ALL HITS", "3 SHARD FAN",
+    "3 BUBBLES AND WARD", "4 STINGERS WARD",
+};
+
+static const char *const trait_tips[N_CLASSES] = {
+    "FAST MOVEMENT", "HEALTH REGEN", "SHOW ENEMY HP",
+    "FAST MAGIC REGEN", "STRONG ELEMENTS",
 };
 
 // Live 16x16 preview of the highlighted class, in its own colors.
@@ -72,7 +82,7 @@ static void update_preview(void) {
 
 static void render(void) {
     cls();
-    gotoxy(5, 1);  text_write("CHOOSE  CLASS");
+    gotoxy(3, 1);  text_write("CHOOSE YOUR HERO");
 
     {
         u8 i;
@@ -87,45 +97,26 @@ static void render(void) {
 
     {
         const class_def_t *c = &classes[class_select_cursor];
-        gotoxy(1, 11); text_write("HP "); text_u16((u16)c->base_stats.hp_max);
-        text_write("  MP "); text_u16((u16)c->base_stats.mp_max);
-        gotoxy(1, 12); text_write("AT "); text_u16((u16)c->base_stats.atk);
-        text_write("  DF "); text_u16((u16)c->base_stats.def);
-        text_write("  SP "); text_u16((u16)c->base_stats.spd);
-        // Loadout preview: this class's A weapon + B signature (by id —
-        // item.id != items[] index beyond the starters)
-        {
-            u8 i;
-            const char *wn = "?", *sn = "?";
-            for (i = 0; i < N_ITEMS; ++i) {
-                if (items[i].id == c->starter_weapon)   wn = items[i].name;
-                if (items[i].id == c->signature_active) sn = items[i].name;
-            }
-            gotoxy(1, 13); text_write("A WPN "); text_write(wn);
-            gotoxy(1, 14); text_write("B SKILL "); text_write(sn);
-        }
+        gotoxy(0, 9);  text_write("ROLE ");
+        text_write(role_tips[class_select_cursor]);
+        gotoxy(0, 10); text_write("A ");
+        text_write(primary_tips[class_select_cursor]);
+        gotoxy(0, 11); text_write("B ");
+        text_write(signature_tips[class_select_cursor]);
+        gotoxy(0, 12); text_write("TRAIT ");
+        text_write(trait_tips[class_select_cursor]);
+
+        gotoxy(0, 14); text_write("HEALTH ");
+        text_u16((u16)c->base_stats.hp_max);
+        text_write(" MAGIC "); text_u16((u16)c->base_stats.mp_max);
+        gotoxy(0, 15); text_write("ATTACK ");
+        text_u16((u16)c->base_stats.atk);
+        text_write(" ARMOR "); text_u16((u16)c->base_stats.def);
+        gotoxy(0, 16); text_write("SPEED ");
+        text_u16((u16)c->base_stats.spd);
+        text_write(class_select_easy_mode ? " SEL>NORMAL" : " SEL>EASY");
     }
-
-    // Teach the two navigation controls before the first room. They are
-    // intentionally separate, plain-language lines: the former bottom-row
-    // control cluster explained selection but left new players to discover
-    // the dungeon map and Pack by accident.
-    gotoxy(2, 9);  text_write("SELECT OPENS MAP");
-    gotoxy(2, 10); text_write("START OPENS PACK");
-
-    // Explain the skill in concrete play terms without presenting B as three
-    // different bindings. Every string fits the physical 20-column grid—
-    // unlike the former clipped tutorial.
-    gotoxy(1, 15); text_write("EFFECT ");
-    text_write(signature_tips[class_select_cursor]);
-    // State the current mode and the result of pressing SELECT in one physical
-    // line. "SELECT MODE NORMAL" looked like a heading, so testers could begin
-    // the hard canonical mode without realizing an assist existed.
-    gotoxy(1, 16);
-    text_write(class_select_easy_mode
-        ? "EASY SELECT>NORMAL"
-        : "NORMAL SELECT>EASY");
-    gotoxy(1, 17); text_write("A START  B BACK");
+    gotoxy(1, 17); text_write("A CHOOSE   B BACK");
 }
 
 void class_select_enter(void) {

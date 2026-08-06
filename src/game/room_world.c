@@ -119,7 +119,10 @@ u8 room_player_position_in_bounds(i16 x, i16 y) BANKED {
         && y <= (i16)(room_world_height - 16)) ? 1 : 0;
 }
 
-u8 room_tile_walkable(u8 t) BANKED {
+// Like room_tile_at_px(), this predicate is used many times per movement
+// probe from several gameplay banks. Keep it always mapped so stricter
+// six-point collision does not pay a ROM-bank round trip for every sample.
+u8 room_tile_walkable(u8 t) NONBANKED {
     return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
          || t == BGT_GRASS || t == BGT_PATH || t == BGT_WILD_FLOWER
          || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES

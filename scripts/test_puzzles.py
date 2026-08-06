@@ -111,6 +111,19 @@ def push_seal_contract():
     pb.button_release("right")
     assert pb.memory[LOCKED] == 0, "moving the ordinary cairn did not release seal"
     assert pb.memory[RS + 27] != 0, "push solve did not persist in dungeon bitset"
+    # Large dungeon courts continue beyond the legacy 20x17 viewport. Door
+    # release must target the real 31x31 perimeter; stamping the old south
+    # edge at y=16 leaves two conspicuous gold door tiles in mid-room.
+    if pb.memory[WORLD_H] > 17 * 8:
+        interior_south = (pb.memory[TM + 16 * 20 + 9],
+                          pb.memory[TM + 16 * 20 + 10])
+        assert 3 not in interior_south, (
+            f"push solve stamped a false interior south door: {interior_south}")
+    if pb.memory[WORLD_W] > 20 * 8:
+        interior_east = (pb.memory[TM + 8 * 20 + 19],
+                         pb.memory[TM + 9 * 20 + 19])
+        assert 3 not in interior_east, (
+            f"push solve stamped a false interior east door: {interior_east}")
     pb.stop(save=False)
 
 

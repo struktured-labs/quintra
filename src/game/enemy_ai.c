@@ -98,10 +98,12 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     if (nx + (ground ? 15 : ext) >= (i16)room_world_width
         || ny + (ground ? 15 : ext) >= (i16)room_world_height) return 0;
     if (ground) {
-        if (!room_tile_walkable(room_tile_at_px(nx + 2,  ny + 8))
-            || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 8))
-            || !room_tile_walkable(room_tile_at_px(nx + 2,  ny + 15))
-            || !room_tile_walkable(room_tile_at_px(nx + 13, ny + 15))) return 0;
+        // This shared cold-path predicate includes both the six feet samples
+        // and the full visible faces of pillars/push-blocks. Feet-only enemy
+        // collision let small Rift Ooze fragments tuck beneath an overhang
+        // into a pocket no champion or cardinal projectile could reach,
+        // leaving an otherwise-cleared sealed room permanently locked.
+        if (!room_player_position_clear(nx, ny)) return 0;
     } else if (!room_tile_walkable(room_tile_at_px(nx + 1,   ny + 1))
         || !room_tile_walkable(room_tile_at_px(nx + ext, ny + 1))
         || !room_tile_walkable(room_tile_at_px(nx + 1,   ny + ext))

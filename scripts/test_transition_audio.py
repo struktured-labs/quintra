@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Room slides stay bounded and keep the cartridge music sequencer alive."""
 
+import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -11,6 +13,19 @@ ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 STATE = ROOT / "tmp/stage-states/quintra-stage-01-entry-wolfkin.pyboy"
+
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_state_binding():
+    manifest = json.loads((STATE.parent / "manifest.json").read_text())
+    assert manifest["rom_sha256"] == sha256(ROM), (
+        "transition fixture belongs to an older ROM; run make stage-states"
+    )
+    record = next(item for item in manifest["states"] if item["file"] == STATE.name)
+    assert record["sha256"] == sha256(STATE), "transition fixture hash drifted"
 
 
 def addr(name):
@@ -35,6 +50,7 @@ def put16(pb, address, value):
 
 
 def main():
+    verify_state_binding()
     pb = PyBoy(str(ROM), window="null", cgb=True)
     with STATE.open("rb") as handle:
         pb.load_state(handle)

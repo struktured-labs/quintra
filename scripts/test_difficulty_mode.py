@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 
 from quintra_pyboy_env import QuintraPyBoyEnv
@@ -21,11 +22,11 @@ def stats(env: QuintraPyBoyEnv) -> tuple[int, int, int, int, str]:
 
 
 def world_signature(env: QuintraPyBoyEnv, state: Path) -> tuple[object, ...]:
-    """Difficulty may help the hero, but may not author a different world."""
+    """Difficulty may scale pressure, but may not author a different world."""
     obs = env.load_state(state)
     rs = env.addrs["_run_state"]
     # Transient timers and player stats intentionally differ. Generated tiles,
-    # route/progression state, and the authored hostile roster must not.
+    # route/progression state, and the authored hostile identities must not.
     route = tuple(env.pb.memory[rs + offset] for offset in (
         0, 1, 2, 3, 4, 5, 11, 17, 18, 19, 20, 21, 22, 23, 24, 25))
     hostiles = tuple(sorted(
@@ -52,35 +53,25 @@ def assert_paired_worlds_match(env: QuintraPyBoyEnv) -> int:
         easy = world_signature(env, pair["easy"])
         assert normal[:5] == easy[:5], \
             f"Easy changed generated geometry or route at {key}"
+        # Easy now deliberately reduces crowd pressure: 9..12 bodies in a
+        # wide ordinary district versus Normal's 12..16, and two versus three
+        # in waypoint courts. It must still be the same generated encounter,
+        # so every Easy body matches one of Normal's prefix identities and
+        # roster. HP is allowed to differ because special encounter assists
+        # are part of the difficulty contract; positions and the exported
+        # pattern scratch byte are live AI state. Normal's larger population
+        # can cross additional emulated VBlanks while a checkpoint settles,
+        # so moving bodies need not retain byte-identical coordinates.
+        assert len(normal[5]) >= len(easy[5]), \
+            f"Easy added encounter pressure at {key}: {normal[5]} / {easy[5]}"
         if key[3] == "court":
-            # Turn courts deliberately retain one of Normal's two generated
-            # foes in Easy so the inspection route has a breather. The old
-            # 160x136 observer clipped Normal's second, southeast foe and made
-            # this documented assist look like full encounter parity.
-            assert (len(normal[5]) == 2 and len(easy[5]) == 1
-                    and set(easy[5]).issubset(normal[5])), \
+            assert (len(normal[5]), len(easy[5])) == (3, 2), \
                 f"Easy court reduction drifted at {key}: {normal[5]} / {easy[5]}"
-        else:
-            # Checkpoint publication waits for the streamed room to settle
-            # while live AI is already ticking. Depending on the title-menu
-            # path, one walker frame can land on either side of that stable
-            # LCD boundary; that is capture timing, not procgen divergence.
-            # Preserve the strict roster/stat/pattern contract and permit
-            # only that single-pixel post-spawn motion.
-            normal_identity = tuple(
-                (kind, hp, pattern, giant)
-                for kind, _x, _y, hp, pattern, giant in normal[5])
-            easy_identity = tuple(
-                (kind, hp, pattern, giant)
-                for kind, _x, _y, hp, pattern, giant in easy[5])
-            assert normal_identity == easy_identity, \
-                f"Easy changed generated encounter at {key}"
-            assert all(
-                n[0] == e[0]
-                and abs(n[1] - e[1]) <= 1
-                and abs(n[2] - e[2]) <= 1
-                for n, e in zip(normal[5], easy[5])
-            ), f"Easy changed generated placement at {key}: {normal[5]} / {easy[5]}"
+        normal_roster = Counter((enemy[0], enemy[5]) for enemy in normal[5])
+        easy_roster = Counter((enemy[0], enemy[5]) for enemy in easy[5])
+        assert all(easy_roster[identity] <= normal_roster[identity]
+                   for identity in easy_roster), \
+            f"Easy changed encounter identity at {key}: {normal[5]} / {easy[5]}"
     return len(pairs)
 
 
@@ -103,7 +94,7 @@ def main() -> None:
         "Easy no longer caps damage and quadruples the post-hit testing window"
     print(f"[difficulty] PASS Normal default + generous Easy tester mode; "
           f"{pair_count} paired checkpoints preserve geometry/routes and "
-          "the documented one-foe Easy turn courts")
+          "the documented Easy crowd reduction")
 
 
 if __name__ == "__main__":

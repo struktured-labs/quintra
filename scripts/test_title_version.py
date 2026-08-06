@@ -134,32 +134,35 @@ def main():
             f"title spirit OAM {sprite} leaked into class select"
         )
 
-    # The original selector described one B binding on three separate lines
-    # ("B", "B USE", then another B-oriented hint). Pin explicit input,
-    # role, and effect labels on the rendered 20-column cartridge screen.
+    # The selector uses one plain-language row for each concept: role, A, B,
+    # trait, then fully named stats. Pin Wolfkin's complete initial page on the
+    # rendered 20-column cartridge screen rather than accepting abbreviations.
     class_rows = {
-        13: "A WPN FANG FORMS",
-        14: "B SKILL HOWL",
-        15: "EFFECT 8 WAY WARD",  # compact font renders '-' as a blank
-        16: "NORMAL SELECT>EASY",
+        9: "ROLE BLADE FIGHTER",
+        10: "A STAB SLASH DASH",
+        11: "B 8 SHOTS BRIEF WARD",
+        12: "TRAIT FAST MOVEMENT",
+        14: "HEALTH 14 MAGIC 4",
+        15: "ATTACK 4 ARMOR 1",
+        16: "SPEED 6 SEL>EASY",
     }
     for row, label in class_rows.items():
         expected_row = font_tiles(label)
         rendered_row = list(pb.memory[
-            0x9800 + row * 32 + 1:0x9800 + row * 32 + 1 + len(expected_row)
+            0x9800 + row * 32:0x9800 + row * 32 + len(expected_row)
         ])
         assert rendered_row == expected_row, (
             f"class-select row {row} is ambiguous or clipped: {rendered_row}"
         )
         assert all(pb.memory[0x9800 + row * 32 + col] == 0
-                   for col in range(1 + len(expected_row), 20)), (
+                   for col in range(len(expected_row), 20)), (
             f"class-select row {row} left stale edge glyphs"
         )
     pb.button("select")
     pb.tick(8)
-    easy_mode = font_tiles("EASY SELECT>NORMAL")
-    assert list(pb.memory[0x9800 + 16 * 32 + 1:
-                          0x9800 + 16 * 32 + 1 + len(easy_mode)]) == easy_mode, (
+    easy_mode = font_tiles("SPEED 6 SEL>NORMAL")
+    assert list(pb.memory[0x9800 + 16 * 32:
+                          0x9800 + 16 * 32 + len(easy_mode)]) == easy_mode, (
         "class-select SELECT did not expose Easy as an explicit mode"
     )
     pb.stop(save=False)

@@ -1,5 +1,6 @@
-// Compact 2-voice music sequencer: CH2 pulse melody + CH3 wave bass.
-// Per-biome and per-boss phrases are kept deliberately small for a 128 KiB ROM.
+// Four-channel adaptive sequencer: CH2 authored melody, CH3 authored bass,
+// plus generated CH1 harmony and CH4 percussion whenever SFX are not using
+// those channels. Gameplay tracks are 32-section dramatic forms.
 #ifndef QUINTRA_AUDIO_MUSIC_H
 #define QUINTRA_AUDIO_MUSIC_H
 
@@ -16,6 +17,9 @@
 extern u8 music_track_id;       // observable stable music number
 extern u8 music_stage_number;   // requested stage, normalized by player
 extern u8 music_row;            // current sequencer row (read-only telemetry)
+extern u8 music_form_step;      // current 16-row section, 0..31
+extern u8 music_pattern_row;    // row within the current section, 0..15
+extern u8 music_motif;          // authored idea A..H as 0..7
 
 void music_play_caverns(void);
 void music_play_stage(void);    // unique ids 0..8

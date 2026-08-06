@@ -3,8 +3,9 @@
 
 This deliberately does not write game source.  It gives the composer a small,
 repeatable check before a reviewed import into src/audio/music.c.
-Gameplay tracks use 64 melody rows and 16 bass changes; compact 32/8 sheets
-remain accepted for title, ending, and sketch material.
+Gameplay tracks use eight 16-row ideas (128 melody rows and 32 bass changes)
+plus a 32-section A–H form. Compact 32/8 and 64/16 sheets remain accepted for
+title, ending, and sketch material.
 """
 from __future__ import annotations
 
@@ -14,8 +15,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-SECTION_NAMES = {"TRACK", "DESTINATION", "TEMPO", "MELODY", "BASS"}
+SECTION_NAMES = {"TRACK", "DESTINATION", "TEMPO", "MELODY", "BASS", "FORM"}
 NOTE_RE = re.compile(r"^([A-G])(?:#|S)?([0-8])$")
+DEFAULT_FORM = list("AABACBDABCDBEFEGFGHECFDGACBDGHBA")
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,7 @@ class Sheet:
     tempo: int
     melody: list[str]
     bass: list[str]
+    form: list[int] | None
 
 
 def midi(note: str) -> int:
@@ -41,7 +44,7 @@ def midi(note: str) -> int:
 
 def normalize_note(token: str) -> str:
     token = token.strip().upper().replace("♯", "#")
-    if token == "-":
+    if token in ("-", "~"):
         return token
     match = NOTE_RE.fullmatch(token)
     if not match:
@@ -56,8 +59,23 @@ def split_rows(text: str, label: str) -> list[str]:
         # Numbered worksheet rows are labels rather than notes.
         if re.fullmatch(r"\d{1,2}", token):
             continue
-        tokens.append(normalize_note(token))
+        note = normalize_note(token)
+        if label == "BASS" and note == "~":
+            raise ValueError("bass rows already sustain four melody rows; use a note or -")
+        tokens.append(note)
     return tokens
+
+
+def split_form(text: str) -> list[int]:
+    tokens = text.replace("|", " ").upper().split()
+    result: list[int] = []
+    for token in tokens:
+        if token not in set("ABCDEFGH"):
+            raise ValueError(f"invalid FORM section {token!r}; use A through H")
+        result.append(ord(token) - ord("A"))
+    if len(result) != 32:
+        raise ValueError(f"FORM needs exactly 32 A/B/C/D sections; found {len(result)}")
+    return result
 
 
 def parse_sheet(text: str) -> Sheet:
@@ -75,15 +93,20 @@ def parse_sheet(text: str) -> Sheet:
             if key in SECTION_NAMES:
                 if key in parts:
                     raise ValueError(f"line {number}: {key} appears more than once")
-                parts[key] = [] if key in {"MELODY", "BASS"} else value.strip()
-                active = key if key in {"MELODY", "BASS"} else None
+                if key in {"MELODY", "BASS", "FORM"}:
+                    parts[key] = [value.strip()] if value.strip() else []
+                    active = key
+                else:
+                    parts[key] = value.strip()
+                    active = None
                 continue
         if active is None:
-            raise ValueError(f"line {number}: expected a TRACK, DESTINATION, TEMPO, MELODY, or BASS field")
+            raise ValueError(f"line {number}: expected a TRACK, DESTINATION, TEMPO, MELODY, BASS, or FORM field")
         assert isinstance(parts[active], list)
         parts[active].append(line)
 
-    missing = [field for field in SECTION_NAMES if field not in parts]
+    required = SECTION_NAMES - {"FORM"}
+    missing = [field for field in required if field not in parts]
     if missing:
         raise ValueError("missing field(s): " + ", ".join(sorted(missing)))
     try:
@@ -96,8 +119,8 @@ def parse_sheet(text: str) -> Sheet:
     if not track or not destination:
         raise ValueError("TRACK and DESTINATION must not be empty")
     melody = split_rows(" ".join(parts["MELODY"]), "MELODY")
-    if len(melody) not in (32, 64):
-        raise ValueError(f"MELODY needs exactly 32 or 64 notes/rests; found {len(melody)}")
+    if len(melody) not in (32, 64, 128):
+        raise ValueError(f"MELODY needs exactly 32, 64, or 128 notes/rests; found {len(melody)}")
     bass = split_rows(" ".join(parts["BASS"]), "BASS")
     wanted_bass = len(melody) // 4
     if len(bass) != wanted_bass:
@@ -106,12 +129,17 @@ def parse_sheet(text: str) -> Sheet:
             f"found {len(bass)}"
         )
     for note in melody:
-        if note != "-" and not (midi("C5") <= midi(note) <= midi("E6")):
+        if note not in ("-", "~") and not (midi("C5") <= midi(note) <= midi("E6")):
             raise ValueError(f"melody note {note} is outside C5–E6")
     for note in bass:
         if note != "-" and not (midi("C3") <= midi(note) <= midi("B3")):
             raise ValueError(f"bass note {note} is outside C3–B3")
-    return Sheet(track, destination, tempo, melody, bass)
+    form = split_form(" ".join(parts["FORM"])) if "FORM" in parts else None
+    if form is not None and len(melody) != 128:
+        raise ValueError("FORM is only valid with a 128-row gameplay score")
+    if form is None and len(melody) == 128:
+        form = [ord(section) - ord("A") for section in DEFAULT_FORM]
+    return Sheet(track, destination, tempo, melody, bass, form)
 
 
 def gb_frequency(note: str, wave: bool = False) -> int:
@@ -130,27 +158,46 @@ def c_symbol(track: str) -> str:
     return symbol[:40]
 
 
-def format_table(name: str, notes: list[str], width: int, wave: bool = False) -> str:
+def c_note(note: str) -> str:
+    if note == "-":
+        return "T_REST"
+    if note == "~":
+        return "T_HOLD"
+    return "T_" + note.replace("#", "S")
+
+
+def format_table(name: str, notes: list[str], width: int) -> str:
     rows = []
     for start in range(0, len(notes), width):
-        entries = [f"{gb_frequency(note, wave):4d} /* {note:3} */" for note in notes[start:start + width]]
+        entries = [c_note(note) for note in notes[start:start + width]]
         rows.append("    " + ", ".join(entries) + ",")
-    return f"static const u16 {name}[{len(notes)}] = {{\n" + "\n".join(rows) + "\n};"
+    return f"const u8 {name}[{len(notes)}] = {{\n" + "\n".join(rows) + "\n};"
+
+
+def format_form(name: str, form: list[int]) -> str:
+    letters = "".join(chr(section + ord("A")) for section in form)
+    values = ",".join(str(value) for value in form)
+    return f"// FORM {letters}\nconst u8 {name}[MUSIC_FORM_SECTIONS] = {{ {values} }};"
 
 
 def render(sheet: Sheet) -> str:
     symbol = c_symbol(sheet.track)
-    seconds = sheet.tempo * len(sheet.melody) / 60
-    return "\n".join((
+    rows = 16 * len(sheet.form) if sheet.form is not None else len(sheet.melody)
+    seconds = sheet.tempo * rows / 60
+    result = [
         f"{sheet.track} → {sheet.destination}",
         f"tempo {sheet.tempo} frames/row; nominal loop {seconds:.1f}s",
         "",
-        format_table(f"{symbol}_melody", sheet.melody, 4),
+        format_table(f"{symbol}_melody", sheet.melody[:64], 4),
         "",
-        format_table(f"{symbol}_bass", sheet.bass, 4, wave=True),
-        "",
-        "Install by adding these arrays and one music_variant_t entry in the reviewed track table.",
-    ))
+        format_table(f"{symbol}_bass", sheet.bass[:16], 4),
+    ]
+    if sheet.form is not None:
+        result.extend(("", format_table(f"{symbol}_development_melody", sheet.melody[64:], 4),
+                       "", format_table(f"{symbol}_development_bass", sheet.bass[16:], 4),
+                       "", format_form(f"{symbol}_form", sheet.form)))
+    result.extend(("", "Install these note-code arrays and form in the reviewed score table."))
+    return "\n".join(result)
 
 
 def self_test() -> None:
@@ -158,7 +205,7 @@ def self_test() -> None:
 DESTINATION: title
 TEMPO: 8
 MELODY:
-01 C5 02 D5 03 - 04 F#5 05 G5 06 A5 07 B5 08 C6
+01 C5 02 ~ 03 - 04 F#5 05 G5 06 A5 07 B5 08 C6
 09 C5 10 D5 11 - 12 F#5 13 G5 14 A5 15 B5 16 C6
 17 C5 18 D5 19 - 20 F#5 21 G5 22 A5 23 B5 24 C6
 25 C5 26 D5 27 - 28 F#5 29 G5 30 A5 31 B5 32 C6
@@ -169,20 +216,39 @@ BASS:
     assert gb_frequency("D5") == 1825
     assert gb_frequency("C3", wave=True) == 1547
     assert sheet.melody[3] == "F#5"
-    assert "1798 /* C5" in render(sheet)
+    assert sheet.melody[1] == "~"
+    assert "T_C5" in render(sheet)
+    assert "T_HOLD" in render(sheet)
+    assert sheet.form is None
     try:
         parse_sheet("TRACK: Bad\nDESTINATION: title\nTEMPO: 8\nMELODY: C5\nBASS: C3")
     except ValueError:
         pass
     else:
         raise AssertionError("short rows were accepted")
-    long_sheet = parse_sheet("""TRACK: Long Test
+    sketch = parse_sheet("""TRACK: Sketch Test
 DESTINATION: stage
 TEMPO: 8
 MELODY:
 """ + " ".join(["C5"] * 64) + "\nBASS:\n" + " ".join(["C3"] * 16))
-    assert len(long_sheet.melody) == 64 and len(long_sheet.bass) == 16
-    print("[music-sheet] PASS 32/64-row parser, ranges, and Game Boy frequency conversion")
+    assert len(sketch.melody) == 64 and sketch.form is None
+    long_sheet = parse_sheet("""TRACK: Long Test
+DESTINATION: stage
+TEMPO: 8
+MELODY:
+""" + " ".join(["C5"] * 128) + "\nBASS:\n" + " ".join(["C3"] * 32))
+    assert len(long_sheet.melody) == 128 and len(long_sheet.bass) == 32
+    assert long_sheet.form is not None and set(long_sheet.form) == set(range(8))
+    custom = parse_sheet("""TRACK: Form Test
+DESTINATION: stage
+TEMPO: 8
+MELODY:
+""" + " ".join(["C5"] * 128) + "\nBASS:\n" + " ".join(["C3"] * 32) +
+        "\nFORM:\n" + " ".join(list("ABCDEFGH" * 4)))
+    assert custom.form == list(range(8)) * 4
+    assert "0,1,2,3,4,5,6,7" in render(custom)
+    assert "68.3s" in render(custom)
+    print("[music-sheet] PASS compact/eight-section parser, forms, ranges, and frequencies")
 
 
 def main() -> int:
