@@ -2324,6 +2324,11 @@ an unreachable live enemy and seal progression.
 
 ## Screens
 
+[Open the local interactive Field Archive](docs/showcase/index.html) for
+filterable live-ROM captures of all nine stages, all nine final Colossi, and
+all 33 registered monsters, plus full-size stage, boss, and bestiary contact
+sheets. Rebuild it for the current cartridge with `make showcase`.
+
 | Title | Class select | Spirit Compass |
 |:---:|:---:|:---:|
 | ![title](docs/media/title.png) | ![class](docs/media/class.png) | ![compass](docs/media/compass.png) |

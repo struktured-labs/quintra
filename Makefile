@@ -52,7 +52,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states pocket-test-saves mgba-states mgba-state-smoke timed-states timed-mgba-states
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check showcase showcase-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states pocket-test-saves mgba-states mgba-state-smoke timed-states timed-mgba-states
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -277,6 +277,16 @@ media: all
 
 media-check: all
 	uv run --quiet --with pillow python scripts/check_media.py
+
+# Local, dependency-free browser of every stage, final Colossus, and monster.
+# Generated caps come from the linked cartridge in each enemy's actual stage
+# palette/VRAM context; the browser itself can be opened directly from disk.
+showcase: all
+	$(PYBOY_RUN) scripts/build_showcase.py
+	$(PYBOY_RUN) scripts/check_showcase.py
+
+showcase-check:
+	$(PYBOY_RUN) scripts/check_showcase.py
 
 # Controller-only heuristic agents. Unlike smoke tests, these receive no HP
 # or entity writes and produce comparable per-class run telemetry.

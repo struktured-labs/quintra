@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Quintra Field Archive</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="sky" aria-hidden="true"><i></i><i></i><i></i></div>
+  <header class="hero shell">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="status-dot"></span> Cartridge field archive</p>
+      <h1>QUINTRA <span>Field Archive</span></h1>
+      <p class="lede">A ROM-captured tour of every dungeon, every Colossus, and all 33 creatures currently stalking the Rift.</p>
+      <div class="hero-actions">
+        <button class="primary" data-view-jump="bosses">Meet the Colossi</button>
+        <button class="quiet" id="random-monster">Random encounter</button>
+      </div>
+    </div>
+    <div class="cartridge" aria-label="Game Boy Color cartridge silhouette">
+      <div class="cartridge-ridge"></div>
+      <div class="cartridge-label">
+        <span>STRUKTURED LABS</span>
+        <strong>QUINTRA</strong>
+        <em id="cart-version">LOADING</em>
+        <div class="sigil-mark">V</div>
+      </div>
+      <div class="cartridge-notch"></div>
+    </div>
+    <dl class="hero-stats" aria-label="Archive totals">
+      <div><dt id="stage-count">—</dt><dd>Stages</dd></div>
+      <div><dt id="boss-count">—</dt><dd>Colossi</dd></div>
+      <div><dt id="monster-count">—</dt><dd>Monsters</dd></div>
+      <div><dt>128<span>KiB</span></dt><dd>Cartridge</dd></div>
+    </dl>
+  </header>
+
+  <main class="shell">
+    <section class="atlases" aria-labelledby="atlas-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">The whole run at a glance</p><h2 id="atlas-title">Contact sheets</h2></div>
+        <p>Open any atlas full-size. Every frame comes from the current cartridge.</p>
+      </div>
+      <div class="atlas-grid">
+        <button class="atlas-card atlas-stages" data-collage="stages">
+          <span class="atlas-kicker">9 regions</span><strong>Stage mosaic</strong><small>Representative live dungeon fields</small>
+        </button>
+        <button class="atlas-card atlas-bosses" data-collage="bossesAnimated">
+          <span class="atlas-kicker">Animated</span><strong>Colossus wall</strong><small>All final bosses moving side by side</small>
+        </button>
+        <button class="atlas-card atlas-monsters" data-collage="monsters">
+          <span class="atlas-kicker">33 contacts</span><strong>Bestiary sheet</strong><small>The complete registered enemy roster</small>
+        </button>
+      </div>
+    </section>
+
+    <section class="archive" aria-labelledby="archive-title">
+      <div class="section-heading archive-heading">
+        <div><p class="eyebrow">Browse the cartridge</p><h2 id="archive-title">The archive</h2></div>
+        <p id="results-summary" aria-live="polite"></p>
+      </div>
+
+      <div class="browser-bar">
+        <div class="tabs" role="tablist" aria-label="Archive category">
+          <button role="tab" aria-selected="true" data-view="stages">Stages <span>09</span></button>
+          <button role="tab" aria-selected="false" data-view="bosses">Colossi <span>09</span></button>
+          <button role="tab" aria-selected="false" data-view="monsters">Bestiary <span>33</span></button>
+        </div>
+        <div class="filters" id="filters" hidden>
+          <label class="search"><span>Search</span><input id="search" type="search" placeholder="Name, attack, behavior…" autocomplete="off"></label>
+          <label><span>Stage</span><select id="stage-filter"><option value="all">All stages</option></select></label>
+          <label><span>Behavior</span><select id="behavior-filter"><option value="all">All behaviors</option></select></label>
+        </div>
+      </div>
+
+      <div id="gallery" class="gallery" aria-live="polite"></div>
+      <div id="empty" class="empty" hidden><span>∅</span><h3>No creatures found</h3><p>Try clearing one of the filters.</p></div>
+    </section>
+  </main>
+
+  <footer class="shell">
+    <p><strong>QUINTRA</strong> · native Game Boy Color · procedural action roguelike</p>
+    <p id="rom-hash">ROM —</p>
+  </footer>
+
+  <dialog id="lightbox">
+    <button class="close" aria-label="Close image">×</button>
+    <button class="step previous" aria-label="Previous entry">‹</button>
+    <figure>
+      <div class="lightbox-frame"><img id="lightbox-image" alt=""></div>
+      <figcaption>
+        <p id="lightbox-kicker" class="eyebrow"></p>
+        <h2 id="lightbox-title"></h2>
+        <p id="lightbox-copy"></p>
+        <div id="lightbox-meta" class="lightbox-meta"></div>
+      </figcaption>
+    </figure>
+    <button class="step next" aria-label="Next entry">›</button>
+  </dialog>
+
+  <script src="gallery-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
