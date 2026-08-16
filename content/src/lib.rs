@@ -147,12 +147,12 @@ mod tests {
 
         assert_eq!(
             stages::STAGES.map(|stage| stage.boss_hp_cap),
-            [200, 205, 150, 150, 255, 255, 230, 150, 220],
+            [200, 205, 240, 150, 255, 255, 230, 150, 220],
             "first-run boss windows drifted from the authored pacing contract",
         );
         assert_eq!(
             stages::STAGES.map(|stage| stage.endless_boss_hp_cap),
-            [255, 255, 150, 255, 255, 255, 230, 150, 220],
+            [255, 255, 240, 255, 255, 255, 230, 150, 220],
             "endless boss windows drifted from the authored pacing contract",
         );
 

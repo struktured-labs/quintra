@@ -208,12 +208,10 @@ def main():
         "Verdant's mobile Serpent did not receive its fair contact body")
     pb.stop(save=False)
     pb, cinder = enter_boss(2, keep_open=True)
-    # Ember combines a fast aimed triple breath and a committed lunge, so its
-    # window is deliberately below the raw 240-HP stage scaling.  It remains
-    # an endurance fight, but no longer outlasts the opening boss while also
-    # asking the short-range kit to learn its first moving bullet pattern.
-    assert pb.memory[cinder + 14] == 150, (
-        f"Cinder Maw HP pacing cap drifted: {pb.memory[cinder + 14]}")
+    # Ember is now two fights in one: five 24-HP Kilnback bands followed by a
+    # 120-HP Cinder Rex, with damage restricted to visible vent windows.
+    assert pb.memory[cinder + 14] == 240, (
+        f"Kilnback/Cinder Rex pacing cap drifted: {pb.memory[cinder + 14]}")
     pb.stop(save=False)
     pb, frost = enter_boss(3, keep_open=True)
     assert pb.memory[frost + 14] == 150, (

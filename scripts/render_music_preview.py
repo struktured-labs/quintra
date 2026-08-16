@@ -31,7 +31,7 @@ STAGES = (
     "Void Sanctum",
 )
 BOSSES = (
-    "Crystal Colossus", "Briar Crown", "Cinder Maw", "Frost Wyrm",
+    "Crystal Colossus", "Briar Crown", "Kilnback / Cinder Rex", "Frost Wyrm",
     "Mire Sovereign", "Shadow Reaper", "Sun Golem", "Blood Hydra",
     "Void Lord",
 )

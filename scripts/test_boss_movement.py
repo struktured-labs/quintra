@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ROM regression: early stage bosses must differ in body movement, not bullets."""
-from test_boss_identity import EN, PL, enter_boss, put16
+from test_boss_identity import EN, PL, addr, enter_boss, put16
 
 
 def pos(pb, boss):
@@ -54,48 +54,34 @@ def main():
     hydra_steps = bounce_steps(7)
     assert hydra_steps >= 2, f"Hydra stopped weaving ({hydra_steps} moves)"
 
-    # Stage 3's Maw performs a two-pixel lunge after its warning. Sampling
-    # live frames catches a regression to the old one-pixel shared creep.
-    pb, maw = enter_boss(2, keep_open=True)
-    put16(pb, PL + 9, 132)
-    put16(pb, PL + 11, 64)
-    samples = []
+    # Stage 3 is now five independent Kilnbacks. A fake wheel must resolve
+    # into multi-axis positions before the next patterns replace it with a
+    # descending press and an irregular Brandwalk; testing the logical pack
+    # prevents the old generic one-body lunge from quietly returning.
+    pb, kilnback = enter_boss(2, keep_open=True)
+    cinder_x = addr("_cinder_pack_x")
+    cinder_y = addr("_cinder_pack_y")
+    cinder_pattern = addr("_cinder_pattern")
+    cinder_timer = addr("_cinder_timer")
+    before = [(pb.memory[cinder_x + i], pb.memory[cinder_y + i])
+              for i in range(5)]
     for _ in range(80):
-        samples.append(pos(pb, maw))
+        pb.memory[PL + 15] = 255
         pb.tick()
-    fastest = max(abs(b[0] - a[0]) + abs(b[1] - a[1])
-                  for a, b in zip(samples, samples[1:]))
-    assert fastest >= 2, f"Maw never entered its lunge (fastest step={fastest})"
+    wheel = [(pb.memory[cinder_x + i], pb.memory[cinder_y + i])
+             for i in range(5)]
+    assert wheel != before and len(set(wheel)) == 5, (
+        f"Kilnback Wheel lost its five moving bodies: {before}->{wheel}")
 
-    # Its fast three-lane breath is a wind-up, not a constant bullet tax.
-    # Force an immediate volley while its motion state is visibly winding up,
-    # then repeat while it is in the lunge. The second probe must leave the
-    # recovery lane free for the intended melee punish beat.
-    def hostile_shots():
-        return sum(pb.memory[EN + i * 28] == 1
-                   and pb.memory[EN + i * 28 + 1] & 1
-                   and not pb.memory[EN + i * 28 + 1] & 0x10
-                   for i in range(32))
-
-    for i in range(32):
-        ep = EN + i * 28
-        if pb.memory[ep] == 1:
-            pb.memory[ep] = pb.memory[ep + 1] = 0
-    pb.memory[maw + 15] = 0  # boss motion: wind-up
-    pb.memory[maw + 10] = 20 # remain in wind-up after this tick
-    pb.memory[maw + 18] = 0  # boss volley timer
-    pb.tick()
-    assert hostile_shots() == 3, "Maw wind-up lost its fast triple breath"
-
-    for i in range(32):
-        ep = EN + i * 28
-        if pb.memory[ep] == 1:
-            pb.memory[ep] = pb.memory[ep + 1] = 0
-    pb.memory[maw + 15] = 1  # boss motion: lunge
-    pb.memory[maw + 10] = 8  # remain in lunge after this tick
-    pb.memory[maw + 18] = 0
-    pb.tick()
-    assert hostile_shots() == 0, "Maw fired through its lunge/recovery opening"
+    pb.memory[cinder_pattern] = 1
+    pb.memory[cinder_timer] = 0
+    press_start = sum(pb.memory[cinder_y + i] for i in range(5))
+    for _ in range(100):
+        pb.memory[PL + 15] = 255
+        pb.tick()
+    press_end = sum(pb.memory[cinder_y + i] for i in range(5))
+    assert press_end > press_start, (
+        f"Kiln Press stopped advancing top to bottom: {press_start}->{press_end}")
     pb.stop(save=False)
 
     # Stage 4's Spider gets a forced imminent blink; it must relocate a
@@ -171,7 +157,7 @@ def main():
 
     print(f"[boss-motion] PASS Serpent cardinal spiral "
           f"{serpent_before}->{serpent_after}; "
-          f"Hydra weave {hydra_steps} beats; Maw lunge {fastest}px + punish window; "
+          f"Hydra weave {hydra_steps} beats; five-body Wheel + descending Kiln Press; "
           f"Spider blink {leap}px/{flank}px flank + four-lane web; "
           f"Mire recovery 34; Hydra recovery 30")
 

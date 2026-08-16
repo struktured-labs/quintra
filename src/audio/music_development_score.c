@@ -134,7 +134,7 @@ const u8 boss_development_melody[MUSIC_STAGE_COUNT][64] = {
         T_B5,T_E5,T_G5,T_HOLD, T_A5,T_FS5,T_REST,T_B5,
         T_E5,T_HOLD,T_G5,T_A5, T_B5,T_G5,T_E5,T_REST,
     },
-    { // Cinder Maw — stoked furnace and collapsing flame
+    { // Kilnback Pack / Cinder Rex — stoked furnace and collapsing flame
         T_E5,T_A5,T_REST,T_E5, T_G5,T_AS5,T_A5,T_REST,
         T_E5,T_C5,T_HOLD,T_D5, T_F5,T_REST,T_G5,T_REST,
         T_A5,T_C5,T_E5,T_G5, T_A5,T_AS5,T_A5,T_G5,

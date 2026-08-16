@@ -81,9 +81,6 @@ static u8 hostiles_now;
 static u8 door_bump_cd;
 static u8 boss_threshold_warned;
 static u8 shop_offer_visible;
-// Cinder's projected furnace face only uploads its two animated tiles when
-// the existing wind-up/lunge/recovery state actually changes.
-static u8 cinder_projection_state = 0xFF;
 // Toxic Mire's BG organism redraws only when the boss changes pulse phase.
 // 0xFF forces the first live frame to reconcile VRAM with the entity state.
 static u8 mire_projection_state = 0xFF;
@@ -360,7 +357,6 @@ static void room_load_town_resident_identity(void) {
 void room_spawn_progression_fixture(void) BANKED {
     u8 i;
     u8 arena_stage = room_apply_world_arena();
-    if (arena_stage == 2) cinder_projection_state = 0xFF;
     if (arena_stage == 4) mire_projection_state = 0xFF;
     room_sigil_status = 1;
     if (run_state.world_mode) return;
@@ -2296,23 +2292,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 }
 
 void room_draw(void) {
-    if (procgen_current_room_is_boss && room_stage() == 2) {
-        u8 i;
-        for (i = 0; i < MAX_ENTITIES; ++i) {
-            entity_t *e = &entities[i];
-            if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
-                && e->ai_data[0] == ENEMY_STONE_SENTINEL
-                && (e->ai_data[3] & 1) && e->ai_data[2] == 2) {
-                // State 0 breathes, state 1 lunges, state 2 recovers.
-                u8 active = e->state != 2;
-                if (active != cinder_projection_state) {
-                    tiles_animate_cinder_bg(active);
-                    cinder_projection_state = active;
-                }
-                break;
-            }
-        }
-    }
     if (procgen_current_room_is_boss && room_stage() == 4) {
         u8 i;
         for (i = 0; i < MAX_ENTITIES; ++i) {
@@ -2357,6 +2336,7 @@ void room_draw(void) {
         entity_draw_all();
     }
     if (serpent_tail_active) serpent_draw();
+    if (cinder_pack_active) cinder_draw();
 
     if (procgen_current_room_is_boss && room_stage() == 3
         && (loop_frame_counter & 0x0F) == 0) {

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.4: Stormcoil](https://github.com/struktured-labs/quintra/releases/download/v0.20.4/quintra.gbc)
+[Download Quintra v0.20.5: Kilnheart](https://github.com/struktured-labs/quintra/releases/download/v0.20.5/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,20 +25,47 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.4**, the final focused Storm Serpent curation
-milestone. Verdant Hollow's articulated Colossus now traces a tightening
-four-ring spiral, drags a 128-pixel damaging second coil through the arena,
-pulses a wider storm-charged danger field at full growth, and visibly retracts
-scale by scale. Its hood now remains continuously visible through feeding and
-damage feedback instead of disappearing on alternating flash frames.
-Every Colossus also owns a long-warned, screen-shaping signature
-attack instead of sharing one generic half-health burst. It
-retains every v0.20.0 system—Will/MAX attacks, nine Oath Arts, physical tools,
-world interactions, dungeon Law, seeded mission graph, regional Riftwild,
-readable Pack/shop interfaces, visible locks, safe retreats, diagonal dashes,
-and distinct reward sounds. Cartridge, boss, asset, smoke, gallery, and
-checkpoint contracts pass; the stricter all-class endurance target listed
-under release status remains open before show-build sign-off.
+The current cartridge is **v0.20.5**, the focused Ember Colossus curation
+milestone. Five armored Kilnbacks now fight as a changing formation, shed one
+body at each health threshold, converge as burning husks, and forge the
+40-by-16-pixel Cinder Rex. Four pack sequences and four Rex sequences replace
+the former Stage 3 variant of the shared Colossus loop; armor and recovery
+windows make reading the choreography more important than holding fire.
+The release retains Stormcoil's full connected serpent and every v0.20.0
+system—Will/MAX attacks, nine Oath Arts, physical tools, world interactions,
+dungeon Law, seeded mission graph, regional Riftwild, readable Pack/shop
+interfaces, visible locks, safe retreats, diagonal dashes, and distinct reward
+sounds. Cartridge, boss, asset, gallery, and checkpoint contracts cover the new
+encounter; the stricter all-class endurance target listed under release status
+remains open before show-build sign-off.
+
+### v0.20.5 — Kilnheart
+
+Ember Depths' Colossus begins as five low, angular **Kilnbacks**, not another
+round weak point wearing a new palette. Their first half is a formation fight:
+the **Crucible Wheel** leapfrogs its rear body through the apparent center;
+**Kiln Press** advances in a top-to-bottom furnace line while one body vaults
+across the safe lane; **Brandwalk** traces one of four irregular 3-by-3 glyphs
+and leaves delayed burning nodes; **Broken Cadence** opens like a familiar wheel,
+then splits, zigzags, and closes an asymmetric cage. Easy mode fixes Brandwalk's
+route for practice, while Normal derives its glyph from the run seed.
+
+The pack's shells are armored. The final Kilnback opens its bright furnace vent
+only during each sequence's recovery, and every 24 damage removes one creature
+from the next formation. At half health the five discarded bodies return as
+burning silhouettes, converge for a complete 64-beat metamorphosis, and emerge
+as **Cinder Rex**: a long, spiked, hand-authored quadruped assembled from ten
+hardware sprites rather than the obsolete rectangular background projection.
+
+Rex has four committed attacks and a vulnerability window after each. **Furnace
+Breath** sends a seven-lane wall down the room and reverses it through one gap;
+**Slag Spit** mixes projectile speeds with delayed floor pools; **Kiln Stomp**
+marks five footprints before charging and detonating a cardinal backdraft;
+**Rex Charge** commits the full body and its trailing tail slab across the room.
+At critical health it splits back into five fast Brandwalk fire silhouettes,
+draws one last hostile glyph, and recombines. Live-ROM contracts exercise every
+formation, body loss, metamorphosis, Rex attack, armor window, and critical
+reprise; the animated boss gallery records the actual cartridge transition.
 
 ### v0.20.4 — Stormcoil
 

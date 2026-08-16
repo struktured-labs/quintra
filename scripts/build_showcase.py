@@ -43,13 +43,13 @@ STAGE_DESCRIPTIONS = (
 )
 
 BOSS_NAMES = (
-    "Crystal Colossus", "Storm Serpent", "Cinder Maw", "Frost Spider",
+    "Crystal Colossus", "Storm Serpent", "Kilnback Pack / Cinder Rex", "Frost Spider",
     "Mire Heart", "Shadow Reaper", "Sun Golem", "Blood Hydra", "Void Lord",
 )
 BOSS_DESCRIPTIONS = (
     "A screen-scale crystal guardian whose exposed heart jumps between three distant wells.",
     "A connected storm serpent that eats four motes, drags a damaging 128-pixel sixteen-scale second coil through the arena, pulses a wider charged aura, fires from both ends, charges an AOE, then contracts from the rear.",
-    "A furnace beast that breathes in aimed fans, telegraphs a hard lunge, then clenches to recover.",
+    "Five armored Kilnbacks rewrite their wheel into a press, a burning unlock glyph, and a broken cage before their husks forge the long Cinder Rex; the Rex answers with lane breath, slag pools, marked stomps, a tail charge, and a critical five-flame reprise.",
     "A charged web with a warned flank blink and alternating cardinal and diagonal volleys.",
     "An expanding organism that pulses outward, contracts, advances, and scatters mixed-speed shots.",
     "A hunting specter that telegraphs each disappearance before re-entering from a new flank.",
@@ -58,15 +58,15 @@ BOSS_DESCRIPTIONS = (
     "A slowly regenerating, warping weak point above an arena-scale World Collapse with one announced safe pocket.",
 )
 BOSS_MOVEMENT = (
-    "Anchor warp", "Snake trail / feed / AOE", "Lunge", "Blink", "Expand / contract",
+    "Anchor warp", "Snake trail / feed / AOE", "Formation / press / charge", "Blink", "Expand / contract",
     "Hunt / teleport", "Pursuit", "Broad weave", "Anchor warp",
 )
 BOSS_SIGNATURES = (
-    "Prism Lance", "Coil Tempest", "Furnace Breath", "Web Crucifix",
+    "Prism Lance", "Coil Tempest", "Brandwalk / Furnace Breath", "Web Crucifix",
     "Miasma Bloom", "Death Sweep", "Sunfall", "Threefold Deluge",
     "Event Horizon",
 )
-BOSS_HP = (200, 205, 150, 150, 255, 255, 230, 150, 220)
+BOSS_HP = (200, 205, 240, 150, 255, 255, 230, 150, 220)
 BOSS_DAMAGE = (1, 1, 2, 2, 3, 3, 4, 4, 5)
 
 ENEMY_NAMES = (

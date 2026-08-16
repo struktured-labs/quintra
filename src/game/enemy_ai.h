@@ -21,6 +21,7 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED;
 // shared roster AI, keeping the frequently edited encounter layer within the
 // 16 KiB cartridge-bank budget.
 void boss_motion_tick(entity_t *e) BANKED;
+void boss_volley_tick(entity_t *e) BANKED;
 // Bank-9 tightening-spiral movement for Verdant's Snake-like Colossus cycle.
 void serpent_feed_tick(entity_t *e) BANKED;
 void serpent_motion_tick(entity_t *e) BANKED;
@@ -43,6 +44,25 @@ void serpent_tail_reset(u8 head_x, u8 head_y) BANKED;
 void serpent_tail_update(entity_t *e) BANKED;
 void serpent_tail_contact(void) BANKED;
 void serpent_draw(void) BANKED;
+
+// Ember Depths' two-act stage boss is rendered and simulated as a real pack,
+// not as the shared 32x32 Colossus body. Five low Kilnbacks execute formation
+// attacks, collapse into Cinder Rex, and briefly split again when enraged.
+#define CINDER_KILNBACKS 5
+#define CINDER_HAZARDS 8
+extern u8 cinder_pack_active;
+extern u8 cinder_boss_index;
+extern u8 cinder_damage_open;
+extern u8 cinder_phase;       // 0 pack, 1 metamorphosis, 2 Rex, 3 fire pack
+extern u8 cinder_pattern;     // live formation/attack identity
+extern u8 cinder_pack_alive;
+extern u8 cinder_timer;
+extern u8 cinder_pack_x[CINDER_KILNBACKS];
+extern u8 cinder_pack_y[CINDER_KILNBACKS];
+void cinder_pack_reset(void) BANKED;
+void cinder_boss_tick(entity_t *e) BANKED;
+void cinder_draw(void) BANKED;
+void cinder_pack_retire(void) BANKED;
 
 // Bank-6 split/reform behavior for marked Rift Ooze crawler fragments.
 void ooze_fragment_update(entity_t *e, u8 idx) BANKED;

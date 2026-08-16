@@ -523,6 +523,15 @@ static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
 static void boss_tick(entity_t *e) {
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
 
+    // Ember is a bespoke two-act encounter. Its five physical Kilnbacks,
+    // formation windows, metamorphosis, and Cinder Rex attacks own the full
+    // update rather than layering another sprite over the shared Colossus
+    // chase/volley/signature driver.
+    if ((e->ai_data[3] & 1) && e->ai_data[2] == 2) {
+        cinder_boss_tick(e);
+        return;
+    }
+
     // The Void Lord slowly knits itself back together. One HP every six
     // seconds is visible in a stalled fight without erasing decisive damage;
     // its locomotion leaves `vy` free, so save states retain the partial beat.
@@ -570,25 +579,22 @@ static void boss_tick(entity_t *e) {
         return;
     }
 
+    // Giant projectile identities live with the bespoke encounter code in
+    // roomy bank 9. Bank 2 retains only miniboss volleys and roster AI; this
+    // also leaves enough emergency headroom for cartridge-safe hot fixes.
+    if (e->ai_data[3] & 1) {
+        boss_volley_tick(e);
+        return;
+    }
+
     {
-        u8 giant = e->ai_data[3] & 1;
         u8 dmg   = e->damage;
         u8 d, k;
-        // Both mini-boss and giant are 16x16+; center the volley origin.
-        i16 cx = FIX8_TO_INT(e->x) + (giant ? 12 : 8);
-        i16 cy = FIX8_TO_INT(e->y) + (giant ? 12 : 8);
+        i16 cx = FIX8_TO_INT(e->x) + 8;
+        i16 cy = FIX8_TO_INT(e->y) + 8;
         u8 cadence;
 
-        // Stage bonuses used to carry giant shots from three damage in the
-        // opening to seven in the finale. With a 16-HP hard cap that made a
-        // late Normal champion die in three ordinary projectile contacts,
-        // even before the denser movement lesson or World Collapse mattered.
-        // Keep the escalating patterns, mixed speeds, arena travel, HP, and
-        // full authored contact value; only the repeatable giant projectile
-        // payload stops at the opening bosses' three-half-heart lesson.
-        if (giant && dmg > 3) dmg = 3;
-
-        if (!giant) {
+        {
             // Three distinct mini-boss archetypes (ai_data[2] = variant:
             // 0 Sentinel / 1 Orc / 2 Skeleton) so they play differently,
             // not just recolored. Enrage tightens the slow ones below.
@@ -625,139 +631,6 @@ static void boss_tick(entity_t *e) {
                     cadence = 70;
                     break;
             }
-        } else switch (e->ai_data[2]) {
-            case 1:   // Serpent — fanged head fan + counter-rotating tail wake
-                d = aim_dir8(cx, cy);
-                boss_shot(cx, cy, d, 3, dmg);
-                boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
-                boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
-                // The visible tail is part of the attack, not decoration:
-                // its tip sheds an asymmetric slow/fast pair across the
-                // aimed head fan, forcing the player to read both ends.
-                d = (u8)(e->ai_data[5] & 7);
-                cx = serpent_tail_x[serpent_tail_visible];
-                cy = serpent_tail_y[serpent_tail_visible];
-                boss_shot(cx, cy, d, 1, dmg);
-                boss_shot(cx, cy, (u8)((d + 4) & 7), 2, dmg);
-                cadence = 30;
-                break;
-            case 2:   // Maw — fast aimed 3-shot breath during its wind-up
-                // Cinder's motion owns three clear phases: telegraph, hard
-                // lunge, recover. Firing the same fast fan through all three
-                // made the apparent recovery a fake opening and reduced a
-                // close-range fight to projectile attrition. Keep the sharp
-                // three-lane breath, but restrict it to the visibly ticking
-                // wind-up; the lunge still threatens contact and recovery is
-                // the deliberate melee punish window.
-                if (e->state != 0) {
-                    cadence = 10; // poll the next motion phase without fire
-                    break;
-                }
-                d = aim_dir8(cx, cy);
-                boss_shot(cx, cy, d, 3, (u8)(dmg > 2 ? dmg - 2 : 1));
-                boss_shot(cx, cy, (u8)((d + 1) & 7), 3, (u8)(dmg > 2 ? dmg - 2 : 1));
-                boss_shot(cx, cy, (u8)((d + 7) & 7), 3, (u8)(dmg > 2 ? dmg - 2 : 1));
-                cadence = 34;
-                break;
-            case 3:   // Spider — alternating cardinal/diagonal web
-                // The Spider already changes the arena with a telegraphed
-                // blink. Layering a fast aimed bolt over every four-lane web
-                // erased the readable gap and made this movement lesson a
-                // projectile-tax fight. Keep the alternating web itself;
-                // its normal-speed lanes and slightly longer beat let the
-                // blink, dodge, and short-weapon re-engagement all matter.
-                for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
-                    boss_shot(cx, cy, d, 2, dmg);
-                cadence = 44;
-                break;
-            case 4:   // Mire — chaotic scatter spray (random dir + speed)
-                for (k = 0; k < 6; ++k)
-                    boss_shot(cx, cy, (u8)rng_range(8), (i8)(1 + rng_range(3)), dmg);
-                // Keep the full six-bolt, mixed-speed scatter identity, but
-                // leave a real lane-reading beat after each spray.  At 26
-                // frames this 255-HP boss repeatedly refilled the arena
-                // before a player could reposition; 34 remains bullet hell
-                // while making the gap actionable rather than attrition.
-                cadence = 34;
-                break;
-            case 5:   // Reaper — 3-shot aimed burst, then a long pause
-                boss_shot(cx, cy, aim_dir8(cx, cy), 3, dmg);
-                e->ai_data[4]++;
-                if (e->ai_data[4] < 3) { e->ai_data[1] = 8; e->ai_data[5]++; return; }
-                e->ai_data[4] = 0;
-                cadence = 72;
-                break;
-            case 6:   // Golem — slow heavy full ring (dense wall)
-                for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 1, dmg);
-                cadence = 58;
-                break;
-            case 7:   // Hydra — three aimed streams at staggered speeds
-                d = aim_dir8(cx, cy);
-                boss_shot(cx, cy, d, 1, dmg);
-                boss_shot(cx, cy, d, 2, dmg);
-                boss_shot(cx, cy, d, 3, dmg);
-                boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
-                boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
-                // The five mixed-speed streams remain Hydra's late-run
-                // bullet-hell identity. A 30-frame beat leaves enough room
-                // to read the 1/2/3-speed stack and cross one lane before
-                // the next wave, instead of refilling the arena at 24.
-                cadence = 30;
-                break;
-            case 8:   // Void Lord — WORLD COLLAPSE, room-wide except one pocket
-                if (!e->ai_data[4]) {
-                    e->ai_data[4] = 1;
-                    // Keep the announced pocket in the hero's current half of
-                    // the scrolling arena, then randomize its vertical side.
-                    // The cue therefore remains on-screen/reachable even at
-                    // the far chamber, while Collapse still punishes every
-                    // other pixel of the 224px field.
-                    e->ai_data[5] = (player.x
-                        >= (ROOM_COLOSSUS_W_PX >> 1)) ? 1 : 0;
-                    e->ai_data[5] |= (u8)(rng_next_u8() & 2);
-                    // 132 frames keeps World Collapse nearly unavoidable once
-                    // it resolves, but makes its visible corner marker a
-                    // reachable positional test rather than an off-screen RNG
-                    // demand.
-                    cadence = 132;
-                } else {
-                    static const u8 safe_x[4] = { 20, 188, 20, 188 };
-                    static const u8 safe_y[4] = { 20, 20, 100, 100 };
-                    i16 dx = (i16)player.x - safe_x[e->ai_data[5] & 3];
-                    i16 dy = (i16)player.y - safe_y[e->ai_data[5] & 3];
-                    if (dx < 0) dx = -dx; if (dy < 0) dy = -dy;
-                    room_shake(3, 40);
-                    for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 3, dmg);
-                    if ((u16)(dx + dy) > 20 && player.shield_timer == 0) {
-                        // The radius is still effectively the whole 224px
-                        // arena and the announced corner is still the sole
-                        // clean answer. Five half-hearts makes a missed read
-                        // severe without letting two scripted pulses erase a
-                        // full 16-HP run before the fight develops.
-                        u8 blast = (u8)(dmg + 1);
-                        // Tester Easy is a route/content inspection aid. The
-                        // canonical blast still demands the announced pocket
-                        // on Normal, while Easy matches its one-damage impact
-                        // contract instead of deleting a full test run in
-                        // three scripted pulses.
-                        if (RUN_IS_EASY()) blast = 1;
-                        player.hp = (player.hp > blast) ? (u8)(player.hp - blast) : 0;
-                        player.iframes = 60;
-                        hud_redraw_hp();
-                        sfx_play(SFX_DEATH);
-                    } else {
-                        sfx_play(SFX_CLEAR);
-                    }
-                    e->ai_data[4] = 0;
-                    cadence = 150;
-                }
-                break;
-            case 0:   // Colossus — full ring + aimed (the classic)
-            default:
-                for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 2, dmg);
-                boss_shot(cx, cy, aim_dir8(cx, cy), 2, dmg);
-                cadence = 55;
-                break;
         }
 
         // Void Lord reserves ai_data[5] for the announced safe-corner slot;

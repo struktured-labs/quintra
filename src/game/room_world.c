@@ -57,6 +57,7 @@ u8 room_apply_world_arena(void) BANKED {
         u8 oam;
         for (oam = 4; oam < 32; ++oam) move_sprite(oam, 0, 0);
     }
+    if (cinder_pack_active) cinder_pack_retire();
     serpent_tail_active = 0;
     serpent_head_index = 0xFF;
     // Generation always returns to the one-screen contract first. The pack
@@ -102,7 +103,10 @@ u8 room_apply_world_arena(void) BANKED {
         // that moving head; no detached background body is painted here.
         serpent_tail_reset(76, 60);
     } else if (stage == 2) {
-        tiles_paint_cinder_projection();
+        // The old 112x64 background furnace plus generic moving core made
+        // Ember read as Crystal with a sprite swap. Five real Kilnback bodies
+        // now own this otherwise-open wide arena and later become Cinder Rex.
+        cinder_pack_reset();
     } else if (stage == 3) {
         tiles_paint_spider_projection();
     } else if (stage == 4) {

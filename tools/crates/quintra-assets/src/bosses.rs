@@ -154,27 +154,87 @@ fn boss_serpent() -> Grid {
     g
 }
 
-/// Stage 2 — Infernal Maw: broad demon head, huge glowing mouth.
+/// Stage 2 — Kilnback pack / Cinder Rex atlas.
+///
+/// The first two tile rows contain four 16x8 pack poses (walk A/B, exposed
+/// furnace vent, and burning husk). The lower half is one long 32x16 Cinder
+/// Rex. Runtime composes five independent animals from the upper tiles, then
+/// unfolds the surviving pack into the lower silhouette. Keeping every
+/// Kilnback only two OBJ tiles wide is intentional: five in a phalanx consume
+/// exactly the real GBC's ten-sprites-per-scanline limit.
 fn boss_maw() -> Grid {
     let mut g = blank();
-    ellipse(&mut g, 16.0, 15.0, 14.0, 13.0, 2, 1);
-    for y in 0..8usize {
-        for hx in [16 - (8 - y as i32), 16 + (8 - y as i32)] {
-            if (0..32).contains(&hx) {
-                g[y][hx as usize] = 1;
+    const WALK_A: [&str; 8] = [
+        "....3..3..33....", // dorsal vents, not a round body
+        "...1221221111...",
+        "..122222233211..", // one pale eye behind the wedge jaw
+        "112223322222211.",
+        ".122222222333221",
+        "..112211221111..",
+        "...11....11.....", // separated piston legs
+        "..11......11....",
+    ];
+    const WALK_B: [&str; 8] = [
+        "....3..3..33....",
+        "...1221221111...",
+        "..122222233211..",
+        "112223322222211.",
+        ".122222222333221",
+        "..112211221111..",
+        "..11......11....",
+        "....11..11......",
+    ];
+    const VENT: [&str; 8] = [
+        "....3..33333....",
+        "...1221333311...",
+        "..122223313211..", // open white-hot rear furnace
+        "112223333122211.",
+        ".122222222333221",
+        "..112211221111..",
+        "...11....11.....",
+        "..11......11....",
+    ];
+    const HUSK: [&str; 8] = [
+        "..3.3..333.3....",
+        ".3.1221331313...",
+        "..13232331321...",
+        "131223331322.13.",
+        ".123313233313.31",
+        "..11.31.21.11...",
+        "...3.....3......",
+        "..3.......3.....",
+    ];
+    const REX: [&str; 16] = [
+        "................................",
+        "..............3.....3...........",
+        "............131...131...........",
+        "..........11221112211......33...",
+        "........112222222222111..1131...",
+        "..1111112222332222222221123211..", // low wedge snout enters before the torso
+        "..11132222222222222223322222221.", // single white-hot eye, never a round face
+        "11222222222222222222222223322111",
+        ".11333122222222222222222222.111.", // tooth-lit lower jaw separates from the ground
+        "..1311122112211221122111111.....",
+        "......11....11....11....11......",
+        ".....131...131...131...131......",
+        "....11.1..11.1..11.1..11.1......",
+        "...11..1.11..1.11..1.11..1......",
+        "..11.....11.....11.....11.......",
+        "................................",
+    ];
+
+    let mut stamp = |ox: usize, oy: usize, art: &[&str]| {
+        for (y, row) in art.iter().enumerate() {
+            for (x, pixel) in row.bytes().enumerate() {
+                g[oy + y][ox + x] = if pixel == b'.' { 0 } else { pixel - b'0' };
             }
         }
-    }
-    eyes(&mut g, &[(11, 10), (11, 22)]);
-    for x in 7..25usize {
-        let yy = 20 + (x % 3);
-        if g[yy][x] != 0 {
-            g[yy][x] = 3;
-        }
-        if g[yy + 1][x] != 0 {
-            g[yy + 1][x] = 3;
-        }
-    }
+    };
+    stamp(0, 0, &WALK_A);
+    stamp(16, 0, &WALK_B);
+    stamp(0, 8, &VENT);
+    stamp(16, 8, &HUSK);
+    stamp(0, 16, &REX);
     g
 }
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Live-ROM contract for the nine telegraphed Colossus signatures."""
-from test_boss_identity import EN, PL, enter_boss
+from test_boss_identity import EN, PL, addr, enter_boss
 
 
 ENTITY_SIZE = 28
-EXPECTED = (3, 8, 5, 8, 8, 5, 8, 5, 8)
+EXPECTED = (3, 8, 7, 8, 8, 5, 8, 5, 8)
 NAMES = (
     "Prism Lance", "Coil Tempest", "Furnace Breath",
     "Web Crucifix", "Miasma Bloom", "Death Sweep",
@@ -41,6 +41,29 @@ def main():
             clear_disposable(pb)
             maximum = pb.memory[boss + 23]
             assert maximum > 1, f"stage {stage + 1} never captured max HP"
+            if stage == 2:
+                # Ember no longer enters the shared one-shot signature
+                # dispatcher: its entire fight is a pack/Rex curriculum. Force
+                # the first Rex attack and prove Furnace Breath creates seven
+                # parallel lanes around one gap after a long warning beat.
+                phase = addr("_cinder_phase")
+                pattern = addr("_cinder_pattern")
+                timer = addr("_cinder_timer")
+                pb.memory[phase] = 2
+                pb.memory[pattern] = 0
+                pb.memory[timer] = 0
+                pb.memory[boss + 14] = maximum // 2
+                pb.memory[PL + 15] = 255
+                for _ in range(40):
+                    pb.memory[PL + 15] = 255
+                    pb.tick()
+                shots = hostile_projectiles(pb)
+                assert len(shots) == expected, (
+                    f"Furnace Breath emitted {len(shots)}, expected {expected}")
+                assert len(set(shots)) == 1 and shots[0][0] == 0, (
+                    f"Furnace Breath lost its unified vertical wall: {shots}")
+                report.append(f"3:Kilnback/Cinder Rex Furnace Breath={len(shots)}")
+                continue
             pb.memory[boss + 14] = maximum // 2
 
             saw_warning = False

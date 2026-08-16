@@ -267,6 +267,14 @@
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 #define SPR_SERPENT_BODY_A (SPR_BOSS_BIG + 12) // stage-2 atlas tail frames
 #define SPR_SERPENT_BODY_B (SPR_BOSS_BIG + 13)
+// Ember's stage-3 atlas deliberately multiplexes the same sixteen slots:
+// four 16x8 Kilnback poses in the top half and one 32x16 Cinder Rex below.
+// Stage-local loading means these never coexist with the Serpent meanings.
+#define SPR_KILNBACK_WALK_A (SPR_BOSS_BIG + 0)
+#define SPR_KILNBACK_WALK_B (SPR_BOSS_BIG + 2)
+#define SPR_KILNBACK_VENT   (SPR_BOSS_BIG + 4)
+#define SPR_KILNBACK_HUSK   (SPR_BOSS_BIG + 6)
+#define SPR_CINDER_REX      (SPR_BOSS_BIG + 8)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59
 #define SPR_BRUISER_BOMBER  60   // 60..63

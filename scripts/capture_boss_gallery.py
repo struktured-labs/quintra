@@ -20,7 +20,7 @@ DEFAULT_ROM = ROOT / "rom/working/quintra.gbc"
 DEFAULT_OUT = ROOT / "docs/media/boss-gallery.png"
 DEFAULT_ANIMATED_OUT = ROOT / "docs/media/boss-gallery.gif"
 NAMES = (
-    "CRYSTAL COLOSSUS", "STORM SERPENT", "CINDER MAW",
+    "CRYSTAL COLOSSUS", "STORM SERPENT", "KILNBACK > CINDER REX",
     "FROST SPIDER", "MIRE HEART", "SHADOW REAPER",
     "SUN GOLEM", "BLOOD HYDRA", "VOID LORD",
 )
@@ -75,6 +75,8 @@ def main() -> None:
     screen = addrs["_loop_current_screen"]
     frame_counter = symbol_address(args.rom, "_loop_frame_counter")
     serpent_tail_visible = symbol_address(args.rom, "_serpent_tail_visible")
+    cinder_phase = symbol_address(args.rom, "_cinder_phase")
+    cinder_timer = symbol_address(args.rom, "_cinder_timer")
 
     panels: list[Image.Image] = []
     animated_panels: list[list[Image.Image]] = []
@@ -105,13 +107,29 @@ def main() -> None:
             for frame in range(121):
                 assert pyboy.memory[screen] == 5, \
                     f"stage {stage + 1} left its live boss room during capture"
+                if stage == 2:
+                    # A full fair fight takes far longer than a gallery loop.
+                    # Cross the real half-health threshold after five sampled
+                    # pack frames, then let the cartridge execute its complete
+                    # five-husk convergence and Cinder Rex metamorphosis.
+                    pyboy.memory[player + 15] = 255
+                    if frame == 40:
+                        pyboy.memory[giants[0] + 14] = 120
                 if frame % ANIMATION_STRIDE == 0:
                     stage_animation.append(
                         pyboy.screen.image.convert("RGB").copy())
-                current_tiles = sum(
-                    55 <= pyboy.memory[tilemap + index] <= 63
-                    for index in range(ROOM_TILES)
-                )
+                if stage == 2:
+                    # This encounter owns ten visible OBJ pieces instead of
+                    # painting the old rectangular projection into the BG.
+                    # Select the fully formed Rex for the static panel.
+                    current_tiles = (10 if pyboy.memory[cinder_phase] == 2
+                                     and pyboy.memory[giants[0] + 24] == 0
+                                     else 0)
+                else:
+                    current_tiles = sum(
+                        55 <= pyboy.memory[tilemap + index] <= 63
+                        for index in range(ROOM_TILES)
+                    )
                 if current_tiles > body_tiles:
                     body_tiles = current_tiles
                     selected_frame = frame
@@ -123,7 +141,10 @@ def main() -> None:
                     )
                     image = pyboy.screen.image.convert("RGB").copy()
                 if frame != 120:
-                    pyboy.tick()
+                    # Metamorphosis is deliberately a long 64-gameplay-beat
+                    # silhouette sequence. Sample twice as much cartridge time
+                    # for Ember and compress it into the same 16-panel loop.
+                    pyboy.tick(2 if stage == 2 else 1)
             if stage == 1 and pyboy.memory[giants[0] + 21] < 4:
                 # The eight-row live upload deliberately spans safe VBlanks,
                 # so a later compressed meal can land while the previous one
@@ -243,6 +264,12 @@ def main() -> None:
             if stage == 1:
                 assert body_tiles == 16, \
                     f"stage 2 lost its sixteen-segment articulated body: {body_tiles}"
+            elif stage == 2:
+                assert body_tiles == 10, \
+                    ("stage 3 never completed its live Kilnback-to-Rex "
+                     f"metamorphosis: phase={pyboy.memory[cinder_phase]} "
+                     f"timer={pyboy.memory[cinder_timer]} "
+                     f"hp={pyboy.memory[giants[0] + 14]}")
             else:
                 assert body_tiles >= 36, \
                     f"stage {stage + 1} lost its screen-scale BG body: {body_tiles}"

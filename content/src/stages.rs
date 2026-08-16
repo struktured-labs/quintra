@@ -57,9 +57,12 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 5, 1, 0), c(28,10, 2), c(31,22, 4), c(31,31,20)],
         door:    [c( 2, 1, 0), c(12, 8, 2), c(22,15, 3), c(31,26, 8)],
         boss:    [c(0,0,0), c(22, 9, 4), c( 6, 2, 1), c(31,27,10)],
-        // The Maw's fast aimed breath and lunge carry its difficulty; 150 HP
-        // prevents an early melee pattern lesson becoming an attrition wall.
-        boss_hp_bonus: 190, boss_hp_cap: 150, endless_boss_hp_cap: 150,
+        // Five 24-HP Kilnback furnace segments occupy the first half of this
+        // two-act fight; the remaining 120 HP belong to Cinder Rex. Damage is
+        // accepted only through clearly opened vents after formations and
+        // committed Rex attacks, so 240 buys authored cycles rather than a
+        // featureless sponge. Endless Ember keeps the same readable contract.
+        boss_hp_bonus: 190, boss_hp_cap: 240, endless_boss_hp_cap: 240,
         boss_dmg_bonus: 2, mb_variant: 2, room_archetype: 2,
         // Cinder Kites add a mobile, low-damage fan to the heavy Maw's
         // stationary three-way pressure.  Fold Stars and Rift Oozes give the

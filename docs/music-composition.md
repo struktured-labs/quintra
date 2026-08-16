@@ -104,7 +104,7 @@ destination as well as valid pitches.
 | --- | --- | --- |
 | Crystal / Crystal Colossus | D Dorian | Faceted triangle, glass taps, reflected falling cells. |
 | Verdant / Briar Crown | E Aeolian | Rounded reed, uneven leaf pulse, climbing and curling lines. |
-| Ember / Cinder Maw | A Phrygian | Saw bass, furnace cross-rhythm, the B-flat/A heat rub. |
+| Ember / Kilnback Pack & Cinder Rex | A Phrygian | Saw bass, furnace cross-rhythm, the B-flat/A heat rub. |
 | Frost / Frost Wyrm | G Lydian | Bell wave, suspended gaps, C-sharp/F-sharp ice glare. |
 | Mire / Mire Sovereign | F Dorian | Hollow wave, lopsided sinking pulse, chromatic-looking black-key color. |
 | Shadow / Shadow Reaper | D harmonic minor | Stalking rests, C-sharp leading tone, blade-like answers. |

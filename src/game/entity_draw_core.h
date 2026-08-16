@@ -19,6 +19,10 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     // renderer. Leaving its head in this generic pass would recreate the old
     // sprite-swapped Colossus and overwrite the articulated body.
     if (serpent_tail_active && slot == serpent_head_index) continue;
+    // The Ember boss likewise owns five 16x8 pack bodies or one 32x16 Rex.
+    // Its logical entity remains the current armor/vent collision anchor but
+    // must never leak the legacy generic 32x32 picture into the formation.
+    if (cinder_pack_active && slot == cinder_boss_index) continue;
     // EF_ON_SCREEN is authoritative in compact rooms, streaming fields, and
     // Shade limbo alike. Every enemy spawns with it; only camera streaming or
     // an authored vanish phase clears it.

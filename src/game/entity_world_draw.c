@@ -39,7 +39,7 @@ static u8 world_camera_step(u8 current, i16 player_pos,
 
 void entity_draw_all_world(void) BANKED {
     u8 i;
-    u8 oam = serpent_tail_active ? 32 : 4;
+    u8 oam = serpent_tail_active ? 32 : cinder_pack_active ? 22 : 4;
     room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
         ? world_camera_step(room_camera_x, player.x,
             room_world_width, ROOM_VIEW_W_PX) : 0;
