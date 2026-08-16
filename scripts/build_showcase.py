@@ -61,6 +61,11 @@ BOSS_MOVEMENT = (
     "Anchor warp", "Snake trail / feed / AOE", "Lunge", "Blink", "Expand / contract",
     "Hunt / teleport", "Pursuit", "Broad weave", "Anchor warp",
 )
+BOSS_SIGNATURES = (
+    "Prism Lance", "Coil Tempest", "Furnace Breath", "Web Crucifix",
+    "Miasma Bloom", "Death Sweep", "Sunfall", "Threefold Deluge",
+    "Event Horizon",
+)
 BOSS_HP = (200, 205, 150, 150, 255, 255, 230, 150, 220)
 BOSS_DAMAGE = (1, 1, 2, 2, 3, 3, 4, 4, 5)
 
@@ -376,6 +381,7 @@ def capture_bosses() -> list[dict]:
             "stage": STAGE_NAMES[stage],
             "description": BOSS_DESCRIPTIONS[stage],
             "movement": BOSS_MOVEMENT[stage],
+            "signature": BOSS_SIGNATURES[stage],
             "hp": BOSS_HP[stage],
             "damage": BOSS_DAMAGE[stage],
             "accent": STAGE_ACCENTS[stage],

@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.1: Serpent Uncoiled](https://github.com/struktured-labs/quintra/releases/download/v0.20.1/quintra.gbc)
+[Download Quintra v0.20.2: Coils & Cataclysms](https://github.com/struktured-labs/quintra/releases/download/v0.20.2/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,15 +25,45 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.1**, a focused Colossus-curation milestone.
-Verdant Hollow's Storm Serpent is now a connected multi-sprite creature rather
-than a generic giant sprite laid over a detached background projection. It
+The current cartridge is **v0.20.2**, a focused Colossus-curation milestone.
+Verdant Hollow's articulated Storm Serpent now traces a tightening four-ring
+spiral, visibly grows and retracts scale by scale, and closes into a compact
+inner coil. Every Colossus also owns a long-warned, screen-shaping signature
+attack instead of sharing one generic half-health burst. It
 retains every v0.20.0 system—Will/MAX attacks, nine Oath Arts, physical tools,
 world interactions, dungeon Law, seeded mission graph, regional Riftwild,
 readable Pack/shop interfaces, visible locks, safe retreats, diagonal dashes,
 and distinct reward sounds. Cartridge, boss, asset, smoke, gallery, and
 checkpoint contracts pass; the stricter all-class endurance target listed
 under release status remains open before show-build sign-off.
+
+### v0.20.2 — Coils & Cataclysms
+
+The Storm Serpent's feeding route is now a sixteen-waypoint rectangular spiral.
+It moves only on cardinal legs, and every fourth corner carries the mote that
+advances growth. The four rings tighten from the full scrolling field into an
+inner loop small enough for all fourteen overlapping scales to preserve nearly
+the complete coil at once. New scales emerge one at a time after each meal;
+after the charged AOE, the body visibly retracts 14→13→…→2 from the rear while
+the hood pulls toward the arena center. Six-pixel route samples keep the 8×8
+scales connected without turning the body into a straight decorative ribbon.
+
+All nine Colossi now reshape the room at half health through an authored
+signature: Crystal's three-wide **Prism Lance**, Verdant's room-filling
+**Coil Tempest**, Ember's five-wide **Furnace Breath**, Frost's crossed
+**Web Crucifix**, Mire's slow **Miasma Bloom**, Shadow's row-clearing
+**Death Sweep**, Golden Temple's target-marked **Sunfall**, Bloodmoon's
+five-wide **Threefold Deluge**, and Void's fast **Event Horizon** layered
+under its recurring World Collapse. Each attack captures and visibly marks
+its lane or impact point for 48 gameplay beats, freezes ordinary boss fire
+during the warning, then leaves a 36-beat recovery. Shields and invulnerability
+still work; Easy caps the impact at one damage while Normal preserves the
+boss-specific two-to-four-damage threat.
+
+Live-ROM contracts now require all nine exact signature geometries and their
+warning/recovery windows. Separate Serpent checks prove cardinal-only turns,
+2→5→8→11→14 gradual growth, a connected hazardous body, head-and-tail bullet
+hell, its large AOE, and one-scale-at-a-time contraction.
 
 ### v0.20.1 — Serpent Uncoiled
 

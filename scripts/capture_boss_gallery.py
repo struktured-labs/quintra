@@ -141,7 +141,7 @@ def main() -> None:
                         if now_loop != before_loop:
                             break
                     meal = pyboy.memory[giants[0] + 21]
-                    food = ((184, 24), (28, 92), (176, 96), (44, 28))[meal]
+                    food = ((60, 88), (76, 76), (92, 68), (100, 60))[meal]
                     pyboy.memory[giants[0] + 3] = food[0] - 12
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = food[1] - 12
@@ -152,6 +152,7 @@ def main() -> None:
                     pyboy.memory[giants[0] + 15] = 0
                     pyboy.memory[giants[0] + 16] = 1
                     pyboy.memory[giants[0] + 21] = meal
+                    pyboy.memory[giants[0] + 11] = 3
                     target = meal + 1
                     for _ in range(240):
                         pyboy.tick()
@@ -163,33 +164,46 @@ def main() -> None:
                          f"timer={pyboy.memory[giants[0] + 16]} "
                          f"growth={pyboy.memory[giants[0] + 21]} "
                          f"flags={pyboy.memory[giants[0] + 1]:02x}")
-                before_loop = (pyboy.memory[frame_counter]
-                               | pyboy.memory[frame_counter + 1] << 8)
                 for _ in range(240):
-                    pyboy.tick()
-                    now_loop = (pyboy.memory[frame_counter]
-                                | pyboy.memory[frame_counter + 1] << 8)
-                    if now_loop != before_loop:
-                        break
-                # Fill the real route history with a connected L turn. The
-                # old gallery counted detached background tiles; Verdant now
-                # owns fourteen repeated OBJ scales that follow the live head.
-                pyboy.memory[giants[0] + 15] = 1
-                pyboy.memory[giants[0] + 10] = 220
-                for x in range(60, 126, 5):
-                    pyboy.memory[giants[0] + 3] = x
-                    pyboy.memory[giants[0] + 4] = 0
-                    pyboy.memory[giants[0] + 7] = 36
-                    pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
                     pyboy.tick()
-                for y in range(41, 87, 5):
-                    pyboy.memory[giants[0] + 3] = 125
+                    if pyboy.memory[serpent_tail_visible] == 14:
+                        break
+                assert pyboy.memory[serpent_tail_visible] == 14, \
+                    "gallery Serpent never finished its one-scale growth"
+                # Fill the route history with the final four legs of the
+                # authored tightening spiral. Verdant owns fourteen repeated
+                # OBJ scales that preserve both concentric cardinal turns.
+                pyboy.memory[giants[0] + 15] = 1
+                pyboy.memory[giants[0] + 10] = 220
+                for y in range(56, 31, -6):
+                    pyboy.memory[giants[0] + 3] = 80
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = y
                     pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
-                    pyboy.tick()
+                    pyboy.tick(2)
+                for x in range(86, 105, 6):
+                    pyboy.memory[giants[0] + 3] = x
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = 32
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick(2)
+                for y in range(38, 49, 6):
+                    pyboy.memory[giants[0] + 3] = 104
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = y
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick(2)
+                for x in range(98, 87, -6):
+                    pyboy.memory[giants[0] + 3] = x
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = 48
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick(2)
                 # Capture the authored hood between warning flashes rather
                 # than letting a short-lived ring hide the face in the static
                 # contact sheet. The animated gallery retains the live pulse.

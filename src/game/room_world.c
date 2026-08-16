@@ -19,8 +19,8 @@ void serpent_tail_reset(u8 head_x, u8 head_y) BANKED {
     // Seed a short connected neck behind the head. The trail replaces these
     // points naturally as soon as the Serpent begins hunting its first mote.
     for (i = 1; i < SERPENT_TAIL_POINTS; ++i) {
-        serpent_tail_x[i] = (head_x > (u8)(i * 5))
-            ? (u8)(head_x - i * 5) : 4;
+        serpent_tail_x[i] = (head_x > (u8)(i * 6))
+            ? (u8)(head_x - i * 6) : 4;
         serpent_tail_y[i] = head_y;
     }
     serpent_tail_count = SERPENT_TAIL_POINTS;

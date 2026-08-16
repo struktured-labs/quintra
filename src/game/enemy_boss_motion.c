@@ -11,11 +11,6 @@
 #include "render/hud.h"
 #include "render/tiles.h"
 
-// The storm-ring sequencer lives in roomy bank 1; keeping the full visual
-// routine out of this crowded movement bank preserves the cartridge's
-// emergency free-space floor.
-void serpent_storm_pulse(entity_t *e) BANKED;
-
 // Giant bosses own a movement identity as well as a projectile identity.
 // `vx` is a phase timer and `vy` a saved direction; these fields are unused
 // by enemy bodies, so the state survives an emulator save without new WRAM.
@@ -93,74 +88,6 @@ static void boss_bounce_tick(entity_t *e, u8 divider) {
     e->state = d;
 }
 
-// Verdant's Colossus plays an adversarial game of Snake. Four visible storm
-// motes appear around the wide arena in a deterministic route; eating each
-// one grows the articulated coil and removes more visual breathing room. At
-// full length the head gives a long warning, hunts the champion, discharges a
-// close AOE, then visibly contracts before the next feeding route begins.
-// The normal rotating-cross driver keeps firing throughout every phase.
-static void serpent_tick(entity_t *e) {
-    i16 ex, ey, dx, dy;
-    u8 growth = e->ai_data[4];
-
-    if (growth > 4 || e->state > 2) {
-        e->ai_data[4] = growth = 0;
-        e->state = e->state_timer = e->vx = e->vy = 0;
-    }
-    serpent_tail_update(e);
-    if (e->state == 1) {
-        // Full-coil AOE: concentric storm warnings travel from hood to
-        // mid-body to tail tip. Getting outside its 60px square (or spending
-        // a shield) is the clean answer.
-        if ((e->vx & 7) == 0) {
-            serpent_storm_pulse(e);
-            sfx_play(SFX_TICK);
-        }
-        boss_chase_tick(e, 4);
-        // The broad 32x24 hood uses a deliberately smaller fair hitbox, but
-        // its art must still remain wholly inside the streamed arena.
-        ex = FIX8_TO_INT(e->x); ey = FIX8_TO_INT(e->y);
-        if (ex > (i16)room_world_width - 32)
-            e->x = FIX8((i16)room_world_width - 32);
-        if (ey > (i16)room_world_height - 24)
-            e->y = FIX8((i16)room_world_height - 24);
-        if (--e->vx) return;
-        dx = (i16)player.x - (FIX8_TO_INT(e->x) + 12);
-        dy = (i16)player.y - (FIX8_TO_INT(e->y) + 12);
-        if (dx < 0) dx = -dx; if (dy < 0) dy = -dy;
-        room_shake(2, 24);
-        if (dx < 60 && dy < 60 && player.shield_timer == 0) {
-            player.hp = (player.hp > 2) ? (u8)(player.hp - 2) : 0;
-            player.iframes = 45;
-            hud_redraw_hp();
-            sfx_play(SFX_HURT);
-        } else sfx_play(SFX_CLEAR);
-        e->state = 2; e->vx = 16; e->state_timer = 0;
-        return;
-    }
-    if (e->state == 2) {
-        // Pull the vulnerable head back toward the projected body's heart as
-        // one coil disappears every sixteen beats.
-        if (++e->state_timer >= 2) {
-            ex = FIX8_TO_INT(e->x); ey = FIX8_TO_INT(e->y);
-            e->state_timer = 0;
-            if (ex != 92) enemy_try_step(e, ex < 92 ? 1 : -1, 0);
-            if (ey != 48) enemy_try_step(e, 0, ey < 48 ? 1 : -1);
-        }
-        if (--e->vx) return;
-        if (growth) {
-            e->ai_data[4] = --growth;
-            serpent_tail_visible = (u8)(2 + growth + (growth << 1));
-        }
-        e->ai_data[7] = 5;
-        if (growth) e->vx = 16;
-        else { e->state = 0; e->vx = e->vy = 0; sfx_play(SFX_ROAR); }
-        return;
-    }
-
-    serpent_feed_tick(e);
-}
-
 void boss_motion_tick(entity_t *e) BANKED {
     // Mini-bosses retain the simpler pursuit behavior; giant stages receive
     // the more theatrical movement language below.
@@ -193,7 +120,7 @@ void boss_motion_tick(entity_t *e) BANKED {
         }
 
         case 1: // Storm Serpent: eat, grow, constrict, discharge, contract
-            serpent_tick(e);
+            serpent_motion_tick(e);
             return;
 
         case 2: // Cinder Maw: wind-up, hard lunge, recover

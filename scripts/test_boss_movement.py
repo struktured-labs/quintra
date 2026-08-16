@@ -8,8 +8,8 @@ def pos(pb, boss):
 
 
 def main():
-    # Stage 2's Serpent now plays Snake: it advances toward a fixed storm mote
-    # with a lateral wiggle instead of sharing Hydra's wall-bounce movement.
+    # Stage 2's Serpent now plays Snake: it reaches a cardinal corner, turns
+    # east, and never cuts diagonally across its tightening spiral.
     pb, serpent = enter_boss(1, keep_open=True)
     put16(pb, serpent + 3, 64)
     put16(pb, serpent + 7, 48)
@@ -17,18 +17,23 @@ def main():
     pb.memory[serpent + 16] = 0
     pb.memory[serpent + 21] = 0
     serpent_before = pos(pb, serpent)
-    old_distance = (abs(184 - (serpent_before[0] + 12))
-                    + abs(24 - (serpent_before[1] + 12)))
     samples = []
-    for _ in range(28):
+    for _ in range(240):
+        pb.memory[PL + 15] = 255
         samples.append(pos(pb, serpent))
         pb.tick()
     sx, sy = pos(pb, serpent)
-    new_distance = abs(184 - (sx + 12)) + abs(24 - (sy + 12))
-    assert new_distance < old_distance and len(set(samples)) >= 5, (
-        f"Serpent stopped feeding toward its mote: {serpent_before}->{(sx, sy)}")
     serpent_after = (sx, sy)
-    assert len({y for _, y in samples}) >= 2, "Serpent lost its feeding wiggle"
+    deltas = [(abs(b[0] - a[0]), abs(b[1] - a[1]))
+              for a, b in zip(samples, samples[1:])]
+    assert all(not (dx and dy) for dx, dy in deltas), (
+        "Serpent cut diagonally instead of following cardinal spiral legs")
+    assert min(y for _, y in samples) <= 17, (
+        f"Serpent never reached its first north corner: {serpent_before}->{serpent_after}")
+    assert max(x for x, _ in samples) >= 90, (
+        f"Serpent never turned east after its first corner: {serpent_after}")
+    assert len({x for x, _ in samples}) >= 8 and len({y for _, y in samples}) >= 8, (
+        "Serpent spiral lost one of its axes")
     pb.stop(save=False)
 
     # Stage 8's Hydra retains the late-game wall weave as its independent
@@ -164,7 +169,7 @@ def main():
         f"Hydra stream recovery lost its lane beat: {pb.memory[hydra + 18]}")
     pb.stop(save=False)
 
-    print(f"[boss-motion] PASS Serpent feeds/wiggles "
+    print(f"[boss-motion] PASS Serpent cardinal spiral "
           f"{serpent_before}->{serpent_after}; "
           f"Hydra weave {hydra_steps} beats; Maw lunge {fastest}px + punish window; "
           f"Spider blink {leap}px/{flank}px flank + four-lane web; "

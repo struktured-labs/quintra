@@ -21,8 +21,13 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED;
 // shared roster AI, keeping the frequently edited encounter layer within the
 // 16 KiB cartridge-bank budget.
 void boss_motion_tick(entity_t *e) BANKED;
-// Bank-2 feeding half of Verdant's Snake-like Colossus cycle.
+// Bank-9 tightening-spiral movement for Verdant's Snake-like Colossus cycle.
 void serpent_feed_tick(entity_t *e) BANKED;
+void serpent_motion_tick(entity_t *e) BANKED;
+
+// Every giant owns one warned, screen-shaping half-health signature. Returns
+// nonzero while the signature freezes the ordinary movement/volley driver.
+u8 colossus_signature_tick(entity_t *e) BANKED;
 
 // Verdant's body is a real route history rendered behind its mobile head.
 // Fourteen overlapping 8x8 segments leave ten OAM entries for bullets after

@@ -74,7 +74,8 @@ def main():
 
     # Resolve the four real storm-mote meals. Growth must change only the
     # route-following OBJ length; the background remains ordinary arena art.
-    food = ((184, 24), (28, 92), (176, 96), (44, 28))
+    food = ((60, 88), (76, 76), (92, 68), (100, 60))
+    visible_targets = (5, 8, 11, 14)
     lengths = [pb.memory[TAIL_VISIBLE]]
     background_counts = [len(projected_body_tiles(pb))]
     for growth, (food_x, food_y) in enumerate(food):
@@ -84,6 +85,7 @@ def main():
         pb.memory[boss + 15] = 0
         pb.memory[boss + 16] = 1
         pb.memory[boss + 21] = growth
+        pb.memory[boss + 11] = 3  # fourth waypoint: the real growth mote
         for _ in range(30):
             pb.tick()
             if pb.memory[boss + 21] == growth + 1:
@@ -92,6 +94,14 @@ def main():
             f"Serpent ignored storm mote {growth + 1}: "
             f"state={pb.memory[boss + 15]} timer={pb.memory[boss + 16]} "
             f"growth={pb.memory[boss + 21]} pos={position(pb, boss)}")
+        for _ in range(160):
+            pb.memory[PL + 15] = 255
+            pb.tick()
+            if pb.memory[TAIL_VISIBLE] == visible_targets[growth]:
+                break
+        assert pb.memory[TAIL_VISIBLE] == visible_targets[growth], (
+            f"meal {growth + 1} did not grow smoothly to "
+            f"{visible_targets[growth]} scales")
         lengths.append(pb.memory[TAIL_VISIBLE])
         background_counts.append(len(projected_body_tiles(pb)))
     assert lengths == [2, 5, 8, 11, 14], (
@@ -99,18 +109,18 @@ def main():
     assert background_counts == [0, 0, 0, 0, 0], (
         f"growth leaked back into detached BG tiles: {background_counts}")
 
-    # Lay a synthetic L-shaped motion trace one legal five-pixel sample at a
+    # Lay a synthetic L-shaped motion trace one legal six-pixel sample at a
     # time. The runtime must preserve that route as a continuous overlapping
     # tail instead of stretching a line between teleports or repainting a map.
     pb.memory[boss + 15] = 1
     pb.memory[boss + 10] = 220
-    for x in range(60, 126, 5):
+    for x in range(60, 133, 6):
         put16(pb, boss + 3, x)
         put16(pb, boss + 7, 36)
         pb.memory[PL + 15] = 255
         pb.tick(2)
-    for y in range(41, 102, 5):
-        put16(pb, boss + 3, 125)
+    for y in range(42, 109, 6):
+        put16(pb, boss + 3, 132)
         put16(pb, boss + 7, y)
         pb.memory[PL + 15] = 255
         pb.tick(2)
@@ -119,7 +129,7 @@ def main():
     for previous, current in zip(trail, trail[1:]):
         gap_x = abs(previous[0] - current[0])
         gap_y = abs(previous[1] - current[1])
-        assert 1 <= gap_x + gap_y and gap_x <= 5 and gap_y <= 5, (
+        assert 1 <= gap_x + gap_y and gap_x <= 6 and gap_y <= 6, (
             f"tail disconnected at {previous}->{current}")
     assert max(y for _, y in trail) - min(y for _, y in trail) >= 35, (
         f"tail did not retain the head's route: {trail}")
@@ -193,11 +203,11 @@ def main():
     pb.memory[boss + 10] = 1
     for _ in range(4):
         pb.tick()
-        if pb.memory[boss + 21] != before_growth:
+        if pb.memory[TAIL_VISIBLE] != before_length:
             break
-    assert pb.memory[boss + 21] == before_growth - 1
-    assert pb.memory[TAIL_VISIBLE] == before_length - 3, (
-        "contraction did not remove three rear scales")
+    assert pb.memory[boss + 21] == before_growth
+    assert pb.memory[TAIL_VISIBLE] == before_length - 1, (
+        "contraction did not retract exactly one rear scale")
 
     put16(pb, PL + 9, 200)
     scx = []
@@ -219,7 +229,7 @@ def main():
     assert segment_a != segment_b, "tail scale animation frames are identical"
     print(f"[colossal-serpent] PASS connected tail lengths {lengths}, no BG body, "
           f"one-damage contact, {hostile}-shot head+tail hell, rings, bounded hood, "
-          "AOE + contraction")
+          "AOE + one-scale contraction")
 
 
 if __name__ == "__main__":

@@ -99,7 +99,7 @@
     const isBoss = type === "bosses";
     const kicker = isBoss ? `Stage ${entry.id} · ${entry.stage}` : `Stage ${String(entry.id).padStart(2, "0")} · ${entry.boss}`;
     const meta = isBoss
-      ? pill("HP", entry.hp) + pill("DMG", entry.damage) + pill("MOVE", entry.movement)
+      ? pill("HP", entry.hp) + pill("DMG", entry.damage) + pill("SIGNATURE", entry.signature)
       : pill("REGION", entry.id) + pill("BOSS", entry.boss);
     return `<article class="card" style="--accent:${entry.accent}">
       <button class="card-media" data-entry-index="${index}" aria-label="Open ${escapeHtml(entry.name)} capture">
@@ -137,7 +137,8 @@
     if (view === "bosses") {
       return { image: entry.image, kicker: `Stage ${entry.id} final Colossus · ${entry.stage}`,
         title: entry.name, copy: entry.description,
-        meta: pill("HP cap", entry.hp) + pill("Damage", entry.damage) + pill("Movement", entry.movement) };
+        meta: pill("HP cap", entry.hp) + pill("Damage", entry.damage)
+          + pill("Movement", entry.movement) + pill("Signature", entry.signature) };
     }
     return { image: entry.image, kicker: `Region ${String(entry.id).padStart(2, "0")} · ${entry.boss}`,
       title: entry.name, copy: entry.description, meta: pill("Final boss", entry.boss) };

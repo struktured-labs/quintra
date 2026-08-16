@@ -15,6 +15,7 @@ u8 serpent_tail_count;
 u8 serpent_tail_visible;
 u8 serpent_tail_active;
 u8 serpent_head_index;
+extern u8 entity_anim_counter;
 
 void serpent_tail_update(entity_t *e) BANKED {
     u8 i;
@@ -25,10 +26,14 @@ void serpent_tail_update(entity_t *e) BANKED {
     u8 dy = (cy > serpent_tail_y[0])
         ? (u8)(cy - serpent_tail_y[0]) : (u8)(serpent_tail_y[0] - cy);
 
-    serpent_tail_visible = (u8)(2 + e->ai_data[4] + (e->ai_data[4] << 1));
-    // Five-pixel sampling makes adjacent 8x8 scales overlap. Curves remain
+    if (e->state == 0) {
+        u8 target = (u8)(2 + e->ai_data[4] + (e->ai_data[4] << 1));
+        if (serpent_tail_visible < target && !(entity_anim_counter & 3))
+            serpent_tail_visible++;
+    }
+    // Six-pixel sampling makes adjacent 8x8 scales overlap. Curves remain
     // visually continuous rather than degenerating into a dotted breadcrumb.
-    if ((u16)(dx + dy) >= 5) {
+    if ((u16)(dx + dy) >= 6) {
         for (i = SERPENT_TAIL_POINTS - 1; i != 0; --i) {
             serpent_tail_x[i] = serpent_tail_x[i - 1];
             serpent_tail_y[i] = serpent_tail_y[i - 1];

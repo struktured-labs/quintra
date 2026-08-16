@@ -168,10 +168,8 @@ def main():
         for i in range(32)
     )
     # This test enters an already-live Colossus, so its opening 8-ring may
-    # still occupy the shared entity table.  Clear only those disposable
-    # hostile projectiles before forcing the phase change: the contract is
-    # specifically the four riftbreak warning shots, not whether a previous
-    # volley happened to be off-screen by this frame.
+    # still occupy the shared entity table. Clear those disposable shots
+    # before forcing the authored half-health Prism Lance.
     for i in range(32):
         ep = EN + i * 28
         if (pb.memory[ep] == 1 and pb.memory[ep + 1] & 1
@@ -182,18 +180,26 @@ def main():
     # on the compact projection's decorative tile footprint.
     put16(pb, boss + 3, 160)
     put16(pb, boss + 7, 64)
-    before_rift_shots = hostile_count()
     pb.memory[boss + 14] = max_hp // 2
-    # Wide Crystal rendering can place one host tick between game updates in
-    # PyBoy. The phase break is an event contract, not a two-host-frame ABI.
-    for _ in range(8):
+    saw_warning = False
+    prism_shots = 0
+    # The signature announces its captured lane for 48 gameplay beats before
+    # firing. Keep the observer invulnerable and wait for that complete event.
+    for _ in range(160):
+        pb.memory[PL + 15] = 255
         pb.tick()
-        if pb.memory[boss + 20] & 0x80 and hostile_count() >= 4:
+        if pb.memory[boss + 20] & 0x40:
+            saw_warning = True
+        if (saw_warning and not (pb.memory[boss + 20] & 0x40)
+                and pb.memory[boss + 18] >= 30
+                and hostile_count() >= 3):
+            prism_shots = hostile_count()
             break
-    assert pb.memory[boss + 20] & 0x80, "boss did not enter its half-health riftbreak"
-    assert pb.memory[boss + 18] >= 20, "riftbreak did not grant a readable recovery beat"
-    rift_shot_delta = hostile_count() - before_rift_shots
-    assert rift_shot_delta >= 4, "riftbreak did not emit its slow four-way warning"
+    assert saw_warning, "boss did not telegraph its half-health signature"
+    assert pb.memory[boss + 20] & 0x80, "boss signature did not latch as spent"
+    assert pb.memory[boss + 18] >= 30, "signature lost its readable recovery beat"
+    assert prism_shots == 3, (
+        f"Crystal Colossus did not emit its three-wide Prism Lance: {prism_shots}")
     pb.stop(save=False)
     pb, serpent = enter_boss(1, keep_open=True)
     assert pb.memory[serpent + 14] == 205, (
@@ -217,7 +223,7 @@ def main():
     pb.stop(save=False)
     print(f"[boss-id] PASS 9/9 distinct runtime silhouettes; "
           f"Colossus vs crowned Void Lord differs {differing}/256 bytes; "
-          f"variants 0..8; riftbreak adds {rift_shot_delta} warning shots")
+          f"variants 0..8; charged Prism Lance adds {prism_shots} shots")
 
 
 if __name__ == "__main__":

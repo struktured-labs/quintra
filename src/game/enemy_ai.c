@@ -502,7 +502,7 @@ static void teleport_tick(entity_t *e, const enemy_def_t *def) {
 //
 // Boss ai_data layout:
 //   [0]=content id  [1]=volley timer  [2]=pattern id (0..8)
-//   [3]=bit0 giant flag; bit7 one-time giant phase break
+//   [3]=bit0 giant flag; bit7 signature spent; bit6 signature charging
 //   [4]=burst counter (Reaper)  [5]=rotation counter  [6]=max hp (enrage)
 
 // Index into dir8_* that points from (cx,cy) toward the player.
@@ -534,30 +534,10 @@ static void boss_tick(entity_t *e) {
         } else e->vy = 0;
     }
 
-    // A boss used to turn its below-half enrage into a nearly invisible
-    // cadence subtraction.  Give every large encounter one readable second
-    // phase instead: the slow four-way riftbreak is announced by a shake and
-    // bright flash, then the existing pattern resumes in its faster state.
-    // The marker shares the giant byte's high bit—mini-boss counters and all
-    // instrumentation keep their established entity layout.
-    if ((e->ai_data[3] & 1) && !(e->ai_data[3] & 0x80)
-        && e->hp <= (u8)(e->ai_data[6] >> 1)) {
-        e->ai_data[3] |= 0xC0; // phase entered + warning cross pending
-        e->ai_data[1] = 30;   // readable beat before the normal next volley
-        e->ai_data[7] = 20;   // visible white riftbreak flash
-        room_shake(1, 12);
-        sfx_play(SFX_ROAR);
-        return;
-    }
-
-    // Emit the cross on the next gameplay update. Keeping the phase commit
-    // and entity allocation on separate beats makes the warning deterministic
-    // even when a scrolling arena enters the phase during a banked draw beat.
-    if (e->ai_data[3] & 0x40) {
-        e->ai_data[3] &= (u8)~0x40;
-        projectile_spawn_enemy_cross(
-            FIX8_TO_INT(e->x) + 12, FIX8_TO_INT(e->y) + 12, e->damage);
-    }
+    // The old shared four-shot riftbreak has become nine authored, warned
+    // screen-shaping attacks. The banked dispatcher owns its countdown and
+    // freezes ordinary movement/volleys until the announced geometry fires.
+    if (colossus_signature_tick(e)) return;
 
     boss_motion_tick(e);
 
