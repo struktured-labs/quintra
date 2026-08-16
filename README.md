@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.0: Oaths & Outlands](https://github.com/struktured-labs/quintra/releases/download/v0.20.0/quintra.gbc)
+[Download Quintra v0.20.1: Serpent Uncoiled](https://github.com/struktured-labs/quintra/releases/download/v0.20.1/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,14 +25,44 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.0**, a public playtest milestone built around
-Will/MAX attacks, nine Oath Arts, physical tools, systemic world interactions,
-a mutable dungeon Law, a seeded seven-role mission graph, and a persistent
-regional Riftwild. It also includes readable Pack/shop interfaces, visible
-door locks, graph-safe retreats, diagonal dashes, and mechanically distinct
-reward sounds. Cartridge, checkpoint, gameplay, performance, and music
-contracts pass; the stricter all-class endurance target listed under release
-status remains open before show-build sign-off.
+The current cartridge is **v0.20.1**, a focused Colossus-curation milestone.
+Verdant Hollow's Storm Serpent is now a connected multi-sprite creature rather
+than a generic giant sprite laid over a detached background projection. It
+retains every v0.20.0 system—Will/MAX attacks, nine Oath Arts, physical tools,
+world interactions, dungeon Law, seeded mission graph, regional Riftwild,
+readable Pack/shop interfaces, visible locks, safe retreats, diagonal dashes,
+and distinct reward sounds. Cartridge, boss, asset, smoke, gallery, and
+checkpoint contracts pass; the stricter all-class endurance target listed
+under release status remains open before show-build sign-off.
+
+### v0.20.1 — Serpent Uncoiled
+
+The Storm Serpent is no longer a sprite swap on the generic 32×32 Colossus
+renderer. Its atlas now carries a broad 32×24 cobra head and two animated
+scale frames. The cartridge samples the head's traveled route at five-pixel
+intervals and renders up to fourteen overlapping tail segments, leaving ten
+hardware OAM entries available for the encounter's bullets. Every eaten storm
+mote exposes three more real segments—2→5→8→11→14—and contraction removes them
+from the rear. No boss-body background tiles are painted at any length.
+
+The redrawn cobra hood has slitted eyes, fangs, a forked tongue, and nested
+lightning marks; alternating body scales use sharper concentric storm diamonds.
+At full growth, warning rings travel from hood to mid-body to tail tip while the
+longer charge bears down on the champion. The articulated tail participates
+mechanically. Touching it deals the normal one-damage contact hit without
+becoming an impassable softlock wall. Its tip
+fires a mixed-speed counter-pair across the head's aimed three-lane fang fan,
+so Verdant has a five-shot head-and-tail bullet language rather than Crystal's
+generic full ring. The existing warned 60-pixel AOE remains the full-length
+payoff. Boss-room initialization now clears ordinary enemy spawn randomness;
+every run deterministically begins with the feeding route instead of sometimes
+skipping directly to AOE or contraction.
+
+The live-ROM regression proves connected turns, five visible growth lengths,
+zero detached projection tiles, tail contact, head-plus-tail projectiles, AOE,
+rear contraction, scrolling-camera coverage, and two distinct animated scale
+frames. The browser's focused animation and nine-boss gallery are captured
+from the same linked cartridge.
 
 ### Latest working-cart pass — readable Pack, shops, locks, and movement
 
@@ -142,14 +172,15 @@ accurate advice for their biome or Colossus. A nearby sparkle distinguishes a
 speaker from its hostile kin; **A** becomes TALK only inside its small approach
 radius and remains the normal primary attack everywhere else.
 
-Verdant Hollow's Storm Serpent now plays an adversarial game of Snake across
-its 224-pixel court. Four visible storm motes draw the vulnerable head through
-a deterministic but wiggling route; every meal grows its projected coil from
-32 to 40, 52, 68, and finally 84 tiles. At full length it gives a long flash
-and audio warning, hunts the champion, discharges a 60-pixel-radius square AOE,
-then sheds one coil at a time and begins feeding again. Its rotating four-lane
-cross continues throughout all three phases, so the movement gimmick never
-replaces the bullet-hell fight.
+Verdant Hollow's Storm Serpent plays an adversarial game of Snake across its
+224-pixel court. Four visible storm motes draw the vulnerable head through a
+deterministic but wiggling route; every meal adds three connected, route-following
+scale sprites until its tail reaches fourteen segments. At full length, storm
+rings travel along its concentric markings from hood to mid-body to tip while
+it hunts the champion, discharges a 60-pixel-radius square AOE, then contracts
+from the rear and begins feeding again. An aimed three-lane head fan and
+mixed-speed pair fired from the tail tip keep the
+bullet-hell layer tied to the same visible creature throughout the cycle.
 
 The Void Lord now restores one HP roughly every six seconds, capped at its
 authored maximum. The deliberately slow recovery gives the finale pressure

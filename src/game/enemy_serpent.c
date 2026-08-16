@@ -32,11 +32,11 @@ void serpent_feed_tick(entity_t *e) BANKED {
     if (ax < 7 && ay < 7) {
         fx_spawn(SPR_FX_IMPACT, 2, food_x[growth], food_y[growth], 14);
         e->ai_data[4] = ++growth;
-        tiles_paint_serpent_projection(growth, 1);
+        serpent_tail_visible = (u8)(2 + growth + (growth << 1));
         e->ai_data[7] = 8;
         sfx_play(SFX_HEART);
         if (growth == 4) {
-            e->state = 1; e->vx = 72; e->state_timer = 0;
+            e->state = 1; e->vx = 96; e->vy = 0; e->state_timer = 0;
             room_shake(1, 12); sfx_play(SFX_ROAR);
         }
         return;

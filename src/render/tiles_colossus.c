@@ -497,60 +497,6 @@ void tiles_load_colossus_bg(u8 stage) BANKED {
     set_bkg_data(BGT_COLOSSUS_HORN,   1, mire ? bgt_mire_horn : bgt_colossus_horn);
 }
 
-void tiles_paint_serpent_projection(u8 growth, u8 draw_vram) BANKED {
-    // Each eaten mote adds two columns to most rows until the familiar 14x8
-    // Colossus fills the arena. Clearing the complete envelope first makes
-    // the later contraction just as legible as the growth.
-    static const u8 widths[8] = { 6,10,14,14,14,14,10,6 };
-    u8 y, x;
-    if (growth > 4) growth = 4;
-    for (y = 4; y < 12; ++y)
-        for (x = 3; x < 17; ++x)
-            room_tilemap[y][x] = BGT_FLOOR;
-    for (y = 0; y < 8; ++y) {
-        u8 shrink = (u8)((4 - growth) << 1);
-        u8 width = widths[y] > shrink ? (u8)(widths[y] - shrink) : 2;
-        u8 left = (u8)(10 - (width >> 1));
-        for (x = 0; x < width; ++x) {
-            u8 hollow = (y == 3 || y == 5) && width >= 8
-                && (x == (u8)(width >> 1)
-                    || x == (u8)((width >> 1) - 1));
-            u8 tile = BGT_COLOSSUS_SCALE;
-            if (hollow) continue;
-            if (x == 0) tile = BGT_COLOSSUS_EDGE_L;
-            else if (x == width - 1) tile = BGT_COLOSSUS_EDGE_R;
-            else if ((y == 0 || y == 7) && (x == 1 || x == width - 2))
-                tile = BGT_COLOSSUS_HORN;
-            else if (((u8)(x + y) & 3) == 0)
-                tile = BGT_COLOSSUS_RUNE;
-            else if (y == 2 && (x == 3 || x == width - 4))
-                tile = BGT_COLOSSUS_EYE;
-            else if (y >= 4 && ((u8)(x + y) & 1))
-                tile = BGT_COLOSSUS_VOID;
-            room_tilemap[y + 4][left + x] = tile;
-        }
-    }
-    if (draw_vram) {
-        u8 attrs[14];
-        for (y = 4; y < 12; ++y) {
-            for (x = 0; x < 14; ++x) {
-                u8 tile = room_tilemap[y][x + 3];
-                attrs[x] = (tile == BGT_COLOSSUS_EDGE_L
-                    || tile == BGT_COLOSSUS_EDGE_R
-                    || tile == BGT_COLOSSUS_SCALE
-                    || tile == BGT_COLOSSUS_HORN) ? BGPAL_WALL
-                    : (tile == BGT_COLOSSUS_EYE || tile == BGT_COLOSSUS_FANG)
-                        ? BGPAL_CRACK
-                        : (tile >= BGT_COLOSSUS_VOID && tile <= BGT_COLOSSUS_HORN)
-                            ? BGPAL_CRYSTAL : BGPAL_FLOOR;
-            }
-            VBK_REG = 0; set_bkg_tiles(3, y, 14, 1, &room_tilemap[y][3]);
-            VBK_REG = 1; set_bkg_tiles(3, y, 14, 1, attrs);
-        }
-        VBK_REG = 0;
-    }
-}
-
 void tiles_paint_spider_projection(void) BANKED {
     static const u8 widths[8] = { 10,14,14,14,14,14,12,8 };
     u8 y, x;
@@ -945,11 +891,6 @@ void tiles_animate_cinder_bg(u8 active) BANKED {
         active ? bgt_cinder_eye_open : bgt_cinder_eye_closed);
     set_bkg_data(BGT_COLOSSUS_MAW, 1,
         active ? bgt_cinder_maw_open : bgt_cinder_maw_closed);
-}
-
-void tiles_animate_serpent_bg(u8 alternate) BANKED {
-    set_bkg_data(BGT_COLOSSUS_RUNE, 1,
-        alternate ? bgt_serpent_rune_b : bgt_serpent_rune_a);
 }
 
 void tiles_animate_spider_bg(u8 closed) BANKED {

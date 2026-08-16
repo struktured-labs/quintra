@@ -2356,13 +2356,7 @@ void room_draw(void) {
         place_player_sprite();
         entity_draw_all();
     }
-
-    if (procgen_current_room_is_boss && room_stage() == 1
-        && (loop_frame_counter & 0x0F) == 0) {
-        // One shared BG tile makes charge visibly travel through the huge
-        // coil while the existing OBJ head owns all combat behavior.
-        tiles_animate_serpent_bg((loop_frame_counter & 0x20) != 0);
-    }
+    if (serpent_tail_active) serpent_draw();
 
     if (procgen_current_room_is_boss && room_stage() == 3
         && (loop_frame_counter & 0x0F) == 0) {

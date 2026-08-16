@@ -48,7 +48,7 @@ BOSS_NAMES = (
 )
 BOSS_DESCRIPTIONS = (
     "A screen-scale crystal guardian whose exposed heart jumps between three distant wells.",
-    "A hungry storm coil that eats four motes, grows across the arena, charges an AOE, then contracts while its rotating cross keeps firing.",
+    "A connected storm serpent that eats four motes, grows a route-following fourteen-scale tail, sends storm rings down its body, fires from both ends, charges an AOE, then contracts from the rear.",
     "A furnace beast that breathes in aimed fans, telegraphs a hard lunge, then clenches to recover.",
     "A charged web with a warned flank blink and alternating cardinal and diagonal volleys.",
     "An expanding organism that pulses outward, contracts, advances, and scatters mixed-speed shots.",
@@ -58,7 +58,7 @@ BOSS_DESCRIPTIONS = (
     "A slowly regenerating, warping weak point above an arena-scale World Collapse with one announced safe pocket.",
 )
 BOSS_MOVEMENT = (
-    "Anchor warp", "Feed / grow / AOE", "Lunge", "Blink", "Expand / contract",
+    "Anchor warp", "Snake trail / feed / AOE", "Lunge", "Blink", "Expand / contract",
     "Hunt / teleport", "Pursuit", "Broad weave", "Anchor warp",
 )
 BOSS_HP = (200, 205, 150, 150, 255, 255, 230, 150, 220)

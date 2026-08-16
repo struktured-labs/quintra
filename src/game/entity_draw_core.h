@@ -15,6 +15,10 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     entity_t *e = &entities[slot];
     u8 sx, sy, pal, flash;
     if (!(e->flags & EF_ACTIVE)) continue;
+    // The route-following Serpent owns fixed OAM 4..22 through its dedicated
+    // renderer. Leaving its head in this generic pass would recreate the old
+    // sprite-swapped Colossus and overwrite the articulated body.
+    if (serpent_tail_active && slot == serpent_head_index) continue;
     // EF_ON_SCREEN is authoritative in compact rooms, streaming fields, and
     // Shade limbo alike. Every enemy spawns with it; only camera streaming or
     // an authored vanish phase clears it.
@@ -24,7 +28,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     pal = e->palette;
     flash = (e->type == ENT_ENEMY && e->ai_data[7]) ? 1 : 0;
 
-    // 32x32 Colossus — 16 tiles, row-major 4x4
+    // 32x32 Colossi — 16 tiles, row-major 4x4
     if (e->type == ENT_ENEMY && e->ai_data[0] == ENEMY_STONE_SENTINEL
         && e->ai_data[3]) {
         u8 r, c, tile = e->sprite_tile;

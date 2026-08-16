@@ -71,8 +71,10 @@ def main() -> None:
     addrs = symbol_addresses(args.rom)
     tilemap = addrs["_room_tilemap"]
     entities = addrs["_entities"]
+    player = addrs["_player"]
     screen = addrs["_loop_current_screen"]
     frame_counter = symbol_address(args.rom, "_loop_frame_counter")
+    serpent_tail_visible = symbol_address(args.rom, "_serpent_tail_visible")
 
     panels: list[Image.Image] = []
     animated_panels: list[list[Image.Image]] = []
@@ -169,10 +171,37 @@ def main() -> None:
                                 | pyboy.memory[frame_counter + 1] << 8)
                     if now_loop != before_loop:
                         break
-                body_tiles = sum(
-                    55 <= pyboy.memory[tilemap + index] <= 63
-                    for index in range(ROOM_TILES)
-                )
+                # Fill the real route history with a connected L turn. The
+                # old gallery counted detached background tiles; Verdant now
+                # owns fourteen repeated OBJ scales that follow the live head.
+                pyboy.memory[giants[0] + 15] = 1
+                pyboy.memory[giants[0] + 10] = 220
+                for x in range(60, 126, 5):
+                    pyboy.memory[giants[0] + 3] = x
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = 36
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick()
+                for y in range(41, 87, 5):
+                    pyboy.memory[giants[0] + 3] = 125
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = y
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick()
+                # Capture the authored hood between warning flashes rather
+                # than letting a short-lived ring hide the face in the static
+                # contact sheet. The animated gallery retains the live pulse.
+                for slot in range(32):
+                    ep = entities + slot * 28
+                    if pyboy.memory[ep] == 4:
+                        pyboy.memory[ep] = pyboy.memory[ep + 1] = 0
+                pyboy.memory[giants[0] + 24] = 0
+                pyboy.memory[giants[0] + 10] = 223
+                pyboy.memory[player + 15] = 255
+                pyboy.tick()
+                body_tiles = pyboy.memory[serpent_tail_visible]
                 selected_frame = 121
                 selected_core = (
                     pyboy.memory[giants[0] + 3]
@@ -181,8 +210,12 @@ def main() -> None:
                     | pyboy.memory[giants[0] + 8] << 8,
                 )
                 image = pyboy.screen.image.convert("RGB").copy()
-            assert body_tiles >= 36, \
-                f"stage {stage + 1} lost its screen-scale BG body: {body_tiles}"
+            if stage == 1:
+                assert body_tiles == 14, \
+                    f"stage 2 lost its fourteen-segment articulated body: {body_tiles}"
+            else:
+                assert body_tiles >= 36, \
+                    f"stage {stage + 1} lost its screen-scale BG body: {body_tiles}"
             assert len(stage_animation) == ANIMATION_FRAMES
             assert image.size == (160, 144)
             panels.append(image)

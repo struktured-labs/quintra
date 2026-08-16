@@ -640,14 +640,20 @@ static void boss_tick(entity_t *e) {
                     break;
             }
         } else switch (e->ai_data[2]) {
-            case 1:   // Serpent — rotating 4-cross (sweeps a spiral)
-                for (k = 0; k < 4; ++k)
-                    boss_shot(cx, cy, (u8)((e->ai_data[5] + k * 2) & 7), 2, dmg);
-                // Boss two remains a dense four-lane sweep, but the matched
-                // Normal matrix showed its old 20-frame refill combining with
-                // wall bounces into a class gate. Four extra frames expose the
-                // announced gap without reducing HP, damage, or lane count.
-                cadence = 24;
+            case 1:   // Serpent — fanged head fan + counter-rotating tail wake
+                d = aim_dir8(cx, cy);
+                boss_shot(cx, cy, d, 3, dmg);
+                boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
+                boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
+                // The visible tail is part of the attack, not decoration:
+                // its tip sheds an asymmetric slow/fast pair across the
+                // aimed head fan, forcing the player to read both ends.
+                d = (u8)(e->ai_data[5] & 7);
+                cx = serpent_tail_x[serpent_tail_visible];
+                cy = serpent_tail_y[serpent_tail_visible];
+                boss_shot(cx, cy, d, 1, dmg);
+                boss_shot(cx, cy, (u8)((d + 4) & 7), 2, dmg);
+                cadence = 30;
                 break;
             case 2:   // Maw — fast aimed 3-shot breath during its wind-up
                 // Cinder's motion owns three clear phases: telegraph, hard

@@ -24,6 +24,20 @@ void boss_motion_tick(entity_t *e) BANKED;
 // Bank-2 feeding half of Verdant's Snake-like Colossus cycle.
 void serpent_feed_tick(entity_t *e) BANKED;
 
+// Verdant's body is a real route history rendered behind its mobile head.
+// Fourteen overlapping 8x8 segments leave ten OAM entries for bullets after
+// the broad 4x3 head and player, preserving the encounter's bullet-hell half.
+#define SERPENT_TAIL_POINTS 15
+extern u8 serpent_tail_x[SERPENT_TAIL_POINTS];
+extern u8 serpent_tail_y[SERPENT_TAIL_POINTS];
+extern u8 serpent_tail_count;
+extern u8 serpent_tail_visible;
+extern u8 serpent_tail_active;
+extern u8 serpent_head_index;
+void serpent_tail_reset(u8 head_x, u8 head_y) BANKED;
+void serpent_tail_update(entity_t *e) BANKED;
+void serpent_draw(void) BANKED;
+
 // Bank-6 split/reform behavior for marked Rift Ooze crawler fragments.
 void ooze_fragment_update(entity_t *e, u8 idx) BANKED;
 

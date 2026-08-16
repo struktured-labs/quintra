@@ -1,7 +1,10 @@
 #pragma bank 5
 
+#include <gb/gb.h>
+
 #include "core/types.h"
 #include "game/procgen.h"
+#include "game/enemy_ai.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -9,10 +12,53 @@
 #include "render/tiles.h"
 #include "content.h"
 
+void serpent_tail_reset(u8 head_x, u8 head_y) BANKED {
+    u8 i;
+    serpent_tail_x[0] = head_x;
+    serpent_tail_y[0] = head_y;
+    // Seed a short connected neck behind the head. The trail replaces these
+    // points naturally as soon as the Serpent begins hunting its first mote.
+    for (i = 1; i < SERPENT_TAIL_POINTS; ++i) {
+        serpent_tail_x[i] = (head_x > (u8)(i * 5))
+            ? (u8)(head_x - i * 5) : 4;
+        serpent_tail_y[i] = head_y;
+    }
+    serpent_tail_count = SERPENT_TAIL_POINTS;
+    serpent_tail_visible = 2;
+    serpent_tail_active = 1;
+    serpent_head_index = 0xFF;
+    // Procgen creates the giant before applying its wide-arena fixture. Bind
+    // the dedicated renderer here, after the fixture reset, so the generic
+    // 4x4 Colossus path can never reclaim the Serpent head.
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        if ((entities[i].flags & EF_ACTIVE)
+            && entities[i].type == ENT_ENEMY
+            && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
+            && (entities[i].ai_data[3] & 1)
+            && entities[i].ai_data[2] == 1) {
+            serpent_head_index = i;
+            // enemy_spawn gives ordinary enemies a random heading in state.
+            // For the Serpent that byte is a strict feed/AOE/contract phase;
+            // random 1 or 2 would skip Snake play entirely on room entry.
+            entities[i].state = 0;
+            entities[i].state_timer = 0;
+            entities[i].ai_data[4] = 0;
+            entities[i].vx = entities[i].vy = 0;
+            break;
+        }
+    }
+}
+
 u8 room_apply_world_arena(void) BANKED {
     u8 stage;
     u8 generated_wide = (run_state.world_mode
         || procgen_current_room_is_large) ? 1 : 0;
+    if (serpent_tail_active) {
+        u8 oam;
+        for (oam = 4; oam < 30; ++oam) move_sprite(oam, 0, 0);
+    }
+    serpent_tail_active = 0;
+    serpent_head_index = 0xFF;
     // Generation always returns to the one-screen contract first. The pack
     // resume path skips this function, preserving a live scrolling camera.
     room_world_width = generated_wide ? ROOM_WIDE_W_PX : ROOM_VIEW_W_PX;
@@ -51,7 +97,10 @@ u8 room_apply_world_arena(void) BANKED {
     if (stage == 0) {
         tiles_paint_crystal_projection();
     } else if (stage == 1) {
-        tiles_paint_serpent_projection(0, 0);
+        // Spawn coordinates are (64,48), with the broad 32x24 head's route
+        // anchor at (76,60). Its tail is entirely OBJ-based and connected to
+        // that moving head; no detached background body is painted here.
+        serpent_tail_reset(76, 60);
     } else if (stage == 2) {
         tiles_paint_cinder_projection();
     } else if (stage == 3) {

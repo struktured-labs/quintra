@@ -265,6 +265,8 @@
 #define SPR_ITEM_ECHO_CHIME  153
 #define SPR_ITEM_MIRROR_SHARD 154
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
+#define SPR_SERPENT_BODY_A (SPR_BOSS_BIG + 12) // stage-2 atlas tail frames
+#define SPR_SERPENT_BODY_B (SPR_BOSS_BIG + 13)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59
 #define SPR_BRUISER_BOMBER  60   // 60..63
@@ -322,7 +324,6 @@ void tiles_load_cinder_maw_medium_sprite(void) BANKED;
 void tiles_load_map_bg(void) BANKED;              // dungeon set + Compass glyphs
 void tiles_load_colossus_bg(u8 stage) BANKED;     // nine screen-scale boss bodies
 void tiles_paint_crystal_projection(void) BANKED;
-void tiles_paint_serpent_projection(u8 growth, u8 draw_vram) BANKED;
 void tiles_paint_cinder_projection(void) BANKED;
 void tiles_paint_spider_projection(void) BANKED;
 void tiles_paint_reaper_projection(void) BANKED;
@@ -346,7 +347,6 @@ void tiles_draw_boss_cue(u8 entered_from) BANKED; // project its 16x16 edge seal
 void tiles_load_area_labels(void) BANKED;          // RIFTWILD + village quarter landmarks
 void tiles_draw_area_label(u8 kind) BANKED;        // 1 Riftwild, 2 Village, 3 Market, 4 Forge
 void tiles_animate_colossus_bg(u8 closed) BANKED; // blink the BG-plane eyes
-void tiles_animate_serpent_bg(u8 alternate) BANKED; // electric coil travel
 void tiles_animate_cinder_bg(u8 active) BANKED;   // breath/lunge vs recovery jaw
 void tiles_animate_spider_bg(u8 closed) BANKED;   // web charge + eye pulse
 void tiles_animate_reaper_bg(u8 phased) BANKED;   // spectral cloak fade

@@ -85,27 +85,72 @@ pub fn make_boss_big() -> Grid {
     g
 }
 
-/// Stage 1 — Serpent: coiled spiral body with a fanged head.
+/// Stage 1 — Serpent atlas: a mobile 32x24 fanged head plus two animated
+/// 8x8 body segments hidden in the unused bottom row. Runtime renders the
+/// head as a 4x3 metasprite and repeats those segment tiles along the actual
+/// route history, so this is one connected creature rather than a coiled
+/// picture swapped onto the generic 32x32 Colossus.
 fn boss_serpent() -> Grid {
     let mut g = blank();
-    for t in (0..260).step_by(2) {
-        let a = t as f64 / 40.0;
-        let r = 4.0 + t as f64 / 22.0;
-        let x = (16.0 + r * a.cos()) as i32;
-        let y = (16.0 + r * a.sin() * 0.7) as i32;
-        for dy in -2i32..=2 {
-            for dx in -2i32..=2 {
-                if dx * dx + dy * dy <= 5
-                    && (0..32).contains(&(y + dy))
-                    && (0..32).contains(&(x + dx))
-                {
-                    g[(y + dy) as usize][(x + dx) as usize] =
-                        if dx * dx + dy * dy >= 4 { 1 } else { 2 };
-                }
-            }
+    // A deliberate front-facing cobra silhouette: the hood swells abruptly,
+    // then narrows through the jaw into a forked tongue. This reads much more
+    // clearly at native scale than the old mathematical oval.
+    let hood_width = [
+        12usize, 18, 24, 28, 32, 32, 30, 30, 28, 28, 26, 24,
+        22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 4, 2,
+    ];
+    for (y, width) in hood_width.iter().copied().enumerate() {
+        let left = (32 - width) / 2;
+        for x in left..left + width {
+            g[y][x] = if x == left || x + 1 == left + width { 1 } else { 2 };
         }
     }
-    eyes(&mut g, &[(6, 22), (8, 26)]);
+
+    // Nested lightning chevrons turn the hood itself into a storm warning.
+    for &(y, x) in &[
+        (2, 4), (2, 27), (3, 5), (3, 26), (4, 6), (4, 25),
+        (5, 7), (5, 24), (9, 6), (9, 25), (10, 7), (10, 24),
+        (11, 8), (11, 23),
+    ] { g[y][x] = 3; }
+    // Slanted eye sockets, bright pupils, nostrils, jaw, and paired fangs.
+    for x in 9..13usize { g[6][x] = 1; }
+    for x in 19..23usize { g[6][x] = 1; }
+    for &(y, x) in &[
+        (7, 9), (7, 10), (7, 21), (7, 22),
+        (8, 10), (8, 11), (8, 20), (8, 21),
+    ] { g[y][x] = 1; }
+    g[8][11] = 3; g[8][20] = 3;
+    g[12][13] = 1; g[12][18] = 1;
+    for x in 11..21usize { g[14][x] = 1; }
+    g[15][12] = 3; g[16][13] = 3;
+    g[15][19] = 3; g[16][18] = 3;
+    for x in 13..19usize { g[17][x] = 1; }
+    // Forked tongue pierces the narrowing neck silhouette.
+    g[19][15] = 3; g[19][16] = 3;
+    g[20][15] = 3; g[20][16] = 3;
+    g[21][14] = 3; g[21][17] = 3;
+    g[22][13] = 3; g[22][18] = 3;
+
+    // Tiles 12 and 13 are not part of the 4x3 head renderer. They are two
+    // electric-scale animation frames for the route-following tail.
+    let segment_a = [
+        "...11...", "..1331..", ".132231.", "13233231",
+        "13233231", ".132231.", "..1331..", "...11...",
+    ];
+    let segment_b = [
+        "1..11..1", ".123321.", "..1331..", "12322321",
+        "12322321", "..1331..", ".123321.", "1..11..1",
+    ];
+    for (y, row) in segment_a.iter().enumerate() {
+        for (x, pixel) in row.bytes().enumerate() {
+            g[24 + y][x] = if pixel == b'.' { 0 } else { pixel - b'0' };
+        }
+    }
+    for (y, row) in segment_b.iter().enumerate() {
+        for (x, pixel) in row.bytes().enumerate() {
+            g[24 + y][8 + x] = if pixel == b'.' { 0 } else { pixel - b'0' };
+        }
+    }
     g
 }
 

@@ -205,7 +205,7 @@ static u8 enemy_is_big16(const entity_t *e) {
 // than permanent invisibility; unused slots are parked off-screen.
 void entity_draw_all(void) {
     u8 i;
-    u8 oam = 4;
+    u8 oam = serpent_tail_active ? 30 : 4;
 #define ENTITY_DRAW_SX(e) \
     ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
 #define ENTITY_DRAW_SY(e) \
