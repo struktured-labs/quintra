@@ -49,10 +49,10 @@ pub const SAMPLE_ZELDA_OVERWORLD: ZeldaOverworldBiome = ZeldaOverworldBiome {
             cell(DoorMask::N | DoorMask::E | DoorMask::S, OW, None, None),
             cell(DoorMask::N | DoorMask::E | DoorMask::S | DoorMask::W, OW, None, None),
             cell(DoorMask::N | DoorMask::E | DoorMask::S | DoorMask::W, OW, None, None),
-            cell(DoorMask::N | DoorMask::S | DoorMask::W, CAVE, None, None),
+            cell(DoorMask::N | DoorMask::S | DoorMask::W, DUNGEON, None, None),
         ],
         [
-            cell(DoorMask::N | DoorMask::E, OW, None, None),
+            cell(DoorMask::N | DoorMask::E, DUNGEON, None, None),
             cell(DoorMask::N | DoorMask::E | DoorMask::W, OW, None, None),
             cell(DoorMask::N | DoorMask::E | DoorMask::W, BOSS, None, None),
             cell(DoorMask::N | DoorMask::W, VAULT, None, None),

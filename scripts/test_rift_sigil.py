@@ -6,7 +6,7 @@ from pathlib import Path
 from pyboy import PyBoy
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, dungeon_cell_xy, dungeon_direction,
-    dungeon_size,
+    dungeon_predecessor, dungeon_size, mission_graph,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,6 +34,9 @@ BGT_VOID = 0
 BGT_SWITCH = 33
 BGT_MAP_BIG_UNKNOWN = 106
 BGT_MAP_BIG_GOAL = 114
+DEFAULT_SEED = 0xCAFE1234
+RUN_REQUIRED_PUZZLES = (1 << 0) | (1 << 3) | (1 << 6) | (1 << 7)
+RUN_REQUIRED_PHASE = (1 << 2) | (1 << 7)
 
 
 def put16(pb, address, value):
@@ -67,12 +70,28 @@ def main():
         pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
         pb.memory[0xFF43] = pb.memory[0xFF42] = 0
 
-    def right_door():
-        # The authored Sigil route always crosses local room 1 -> 2 east.
+    def role_door(stage, seed=DEFAULT_SEED, role="sigil"):
+        graph = mission_graph(dungeon_size(stage), seed, stage)
+        target = graph[role]
+        source, direction = dungeon_predecessor(
+            target, dungeon_size(stage), seed, stage)
+        pb.memory[RS + 1] = STAGE_START[stage] + source
+        pb.memory[RS + RS_BOSSES] = stage
+        put32(pb, RS + 2, seed)
+        pb.memory[RS + 37] = 0
         compact_source()
-        pb.memory[TM + 8 * 20 + 19] = pb.memory[TM + 9 * 20 + 19] = 3
-        put16(pb, PL + 9, 144)
-        put16(pb, PL + 11, 60)
+        for tx, ty in {
+            0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
+            2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
+        }[direction]:
+            pb.memory[TM + ty * 20 + tx] = 3
+        x, y = {
+            0: (72, 0), 1: (144, 60),
+            2: (72, 120), 3: (0, 60),
+        }[direction]
+        put16(pb, PL + 9, x)
+        put16(pb, PL + 11, y)
+        return target
 
     def boss_door(stage):
         compact_source()
@@ -95,7 +114,8 @@ def main():
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] = pb.memory[RS + RS_SIGILS + 1] = 0
-    pb.memory[RS + RS_PUZZLES] = 1 << 3  # isolate the missing-Sigil contract
+    pb.memory[RS + RS_PUZZLES] = RUN_REQUIRED_PUZZLES
+    pb.memory[RS + 28] = RUN_REQUIRED_PHASE
     pb.memory[SEALED] = 0
     boss_door(0)
     for _ in range(8):
@@ -117,16 +137,16 @@ def main():
     for _ in range(60):
         pb.tick()
 
-    # Room 2 always regenerates the current stage's objective until collected.
-    pb.memory[RS + 1] = 1
+    # The generated role always regenerates this stage's objective until collected.
     pb.memory[RS + 6] = 0xFF
+    pb.memory[RS + RS_PUZZLES] |= 1 << 0
     pb.memory[SEALED] = 0
-    right_door()
+    sigil_cell = role_door(0)
     for _ in range(240):
         pb.tick()
         if pb.memory[SIGIL_STATUS] != 2:
             break
-    assert pb.memory[RS + 1] == 2 and pb.memory[SIGIL_STATUS] == 5, (
+    assert pb.memory[RS + 1] == sigil_cell and pb.memory[SIGIL_STATUS] == 5, (
         f"room transaction incomplete: room={pb.memory[RS + 1]} "
         f"status={pb.memory[SIGIL_STATUS]}")
     sigils = []
@@ -135,7 +155,7 @@ def main():
         if pb.memory[ep] == 3 and pb.memory[ep + 17] == 11:
             sigils.append(ep)
     assert len(sigils) == 1, (
-        "room 2 did not contain exactly one Rift Sigil: "
+        "generated objective room did not contain exactly one Rift Sigil: "
         f"status={pb.memory[SIGIL_STATUS]} rs={list(pb.memory[RS:RS + 26])} "
         f"entities={[list(pb.memory[EN + i * 28:EN + i * 28 + 20]) for i in range(10)]}")
     # The generator has already published the Sigil by this point, but an
@@ -150,8 +170,8 @@ def main():
             pb.memory[other] = pb.memory[other + 1] = 0
 
     # Inspect the objective before collecting it. Move the displayed cursor
-    # away from room 2 so YOU does not intentionally cover its GOAL icon.
-    pb.memory[RS + 1] = 4
+    # away from its cell so YOU does not intentionally cover its GOAL icon.
+    pb.memory[RS + 1] = 0
     pb.button("select")
     for _ in range(120):
         pb.tick()
@@ -163,13 +183,13 @@ def main():
         col, row = dungeon_cell_xy(cell)
         return pb.memory[bg + (2 + row * 3) * 32 + 1 + col * 3]
 
-    assert node_tile(2) == BGT_MAP_BIG_GOAL, \
+    assert node_tile(sigil_cell) == BGT_MAP_BIG_GOAL, \
         "unclaimed Sigil lacks its violet 2x2 GOAL node"
     pb.button("b")
     for _ in range(30):
         pb.tick()
     assert pb.memory[SCREEN] == 5
-    pb.memory[RS + 1] = 2
+    pb.memory[RS + 1] = sigil_cell
 
     pb.memory[PL + 2] = pb.memory[PL + 1]
     pb.memory[PL + 15] = 0
@@ -193,7 +213,7 @@ def main():
     # SELECT is a graphical tile map. Move the displayed cursor one room past
     # the recovered fixture so its icon can be asserted in the room that owns
     # it, rather than at the old confusing floating center marker.
-    pb.memory[RS + 1] = 4
+    pb.memory[RS + 1] = 0
     pb.button("select")
     for _ in range(120):
         pb.tick()
@@ -201,12 +221,13 @@ def main():
     pb.memory[0xFF4F] = 0
 
     # The screen-filling Pocket Grid gives every room a readable 2x2 node.
-    # Recovery clears room 2's completed GOAL and reveals room 3 as the next
+    # Recovery clears the generated completed GOAL and reveals the Warden as the next
     # amber Warden trial. The tutorial has no nonlinear rift at later
     # dungeons' midpoint, and the unseen boss stays anonymous.
-    assert node_tile(2) != BGT_MAP_BIG_GOAL, \
+    graph0 = mission_graph(dungeon_size(0), DEFAULT_SEED, 0)
+    assert node_tile(sigil_cell) != BGT_MAP_BIG_GOAL, \
         "found Sigil left a stale violet GOAL node"
-    assert node_tile(3) == BGT_MAP_BIG_GOAL, \
+    assert node_tile(graph0["warden"]) == BGT_MAP_BIG_GOAL, \
         "claimed Sigil did not reveal the Warden GOAL node"
     assert pb.memory[bg + 4 * 32 + 9] == BGT_VOID, \
         "tutorial Compass incorrectly revealed a nonlinear Rift link"
@@ -219,8 +240,8 @@ def main():
     assert pb.memory[SCREEN] == 5
 
     # The Sigil reveals the Warden but does not replace its trial. The exact
-    # same sanctuary threshold remains closed until local room 3's boon bit,
-    # the room-7 Waystone, deep Warden, and Deep Seal are earned in sequence.
+    # same sanctuary threshold remains closed until every generated role is
+    # earned in sequence.
     clear_entities()
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[RS + 6] = 0xFF
@@ -243,6 +264,10 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
         "full-size opening route ignored the missing Deep Seal"
     pb.memory[RS + 28] |= 1 << 2
+    pb.tick(8)
+    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
+        "full mission ignored the uncrossed Deep Gate"
+    pb.memory[RS + RS_PUZZLES] |= 1 << 6
     pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \
         "complete opening route did not unlock boss threshold"
@@ -264,22 +289,20 @@ def main():
     for _ in range(60):
         pb.tick()
 
-    # Simulate a boss-1 clear, take local room 1 south into local room 2, and make
-    # sure that stage two receives a distinct objective and gate bit.
+    # Simulate a boss-1 clear and enter stage two's generated Sigil role.
     clear_entities()
-    pb.memory[RS + 1] = STAGE_START[1] + 1
     pb.memory[RS + RS_BOSSES] = 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] &= 0xFD
     pb.memory[SEALED] = 0
-    right_door()
+    stage_two_sigil = role_door(1)
     for _ in range(240):
         pb.tick()
         if pb.memory[SIGIL_STATUS] == 5:
             break
-    assert pb.memory[RS + 1] == STAGE_START[1] + 2 \
+    assert pb.memory[RS + 1] == STAGE_START[1] + stage_two_sigil \
         and pb.memory[SIGIL_STATUS] == 5, (
-        "stage-two room 2 did not receive its Rift Sigil")
+        "stage-two generated role did not receive its Rift Sigil")
     assert sum(
         pb.memory[EN + i * 28] == 3 and pb.memory[EN + i * 28 + 17] == 11
         for i in range(32)
@@ -296,22 +319,21 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1] - 1, \
         "stage-two sanctuary ignored missing Sigil"
     pb.memory[RS + RS_SIGILS] |= 2
-    pb.memory[RS + RS_PUZZLES] = (1 << 3) | (1 << 7)
-    pb.memory[RS + 28] |= (1 << 7) | (1 << 2)
+    pb.memory[RS + RS_PUZZLES] = RUN_REQUIRED_PUZZLES
+    pb.memory[RS + 28] |= RUN_REQUIRED_PHASE
     for _ in range(45):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1], \
         "stage-two Sigil did not unlock its boss"
 
-    # Roomier stages make their existing local-room-7 puzzle a required
-    # Waystone. This lengthens the meaningful route instead of adding filler.
+    # Every generated stage has a required Waystone role.
     clear_entities()
     pb.memory[RS + RS_BOSSES] = 2
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[2] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] |= 1 << 2
-    pb.memory[RS + RS_PUZZLES] = 1 << 3
-    pb.memory[RS + 28] = (1 << 7) | (1 << 2)
+    pb.memory[RS + RS_PUZZLES] = RUN_REQUIRED_PUZZLES & ~(1 << 7)
+    pb.memory[RS + 28] = RUN_REQUIRED_PHASE
     pb.memory[SEALED] = 0
     boss_door(2)
     pb.tick(8)
@@ -322,13 +344,13 @@ def main():
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[2], \
         "completed Waystone did not unlock the isolated route gate"
 
-    # The existing room-9 Warden is independently required.
+    # The generated deep Warden is independently required.
     clear_entities()
     pb.memory[RS + RS_BOSSES] = 5
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[5] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] |= 1 << 5
-    pb.memory[RS + RS_PUZZLES] = (1 << 3) | (1 << 7)
+    pb.memory[RS + RS_PUZZLES] = RUN_REQUIRED_PUZZLES
     pb.memory[RS + 28] = 1 << 2
     pb.memory[SEALED] = 0
     boss_door(5)
@@ -341,53 +363,25 @@ def main():
         "deep Warden clear did not unlock fourteen-room boss"
 
     # Stage three caught a historical controller stall in its Sigil room.
-    # Exercise the real local-room-1 -> local-room-2 transaction so every early objective,
-    # not only the first two, is guaranteed to survive procgen population.
+    # Exercise the real generated graph edge so every objective survives
+    # procgen population.
     clear_entities()
-    pb.memory[RS + 1] = STAGE_START[2] + 1
     pb.memory[RS + RS_BOSSES] = 2
     pb.memory[RS + RS_SIGILS] &= 0xFB
     pb.memory[RS + 6] = 0xFF
     pb.memory[SEALED] = 0
-    right_door()
+    stage_three_sigil = role_door(2)
     for _ in range(240):
         pb.tick()
         if pb.memory[SIGIL_STATUS] == 5:
             break
-    assert pb.memory[RS + 1] == STAGE_START[2] + 2 \
+    assert pb.memory[RS + 1] == STAGE_START[2] + stage_three_sigil \
         and pb.memory[SIGIL_STATUS] == 5, (
-        "stage-three room 2 did not receive its Rift Sigil")
+        "stage-three generated role did not receive its Rift Sigil")
     assert sum(
         pb.memory[EN + i * 28] == 3 and pb.memory[EN + i * 28 + 17] == 11
         for i in range(32)
     ) == 1, "stage-three Rift Sigil was not spawned exactly once"
-
-    # The same room carries the nonlinear rift to local room 8. Its bright
-    # tile alone is not enough: the feet-box needs a full 2x2 walkable path
-    # from the actual entry point, or a player can see a mandatory route that
-    # cannot be entered. Flood the real WRAM tilemap at hero-footprint scale.
-    walkable = {1, 3, 7, *range(9, 19), 19, 20, 23, 31, 33, 34}
-    portals = [(x, y) for y in range(17) for x in range(20)
-               if pb.memory[TM + y * 20 + x] == 34]
-    assert len(portals) == 1, f"stage-three rift missing or duplicated: {portals}"
-    tx, ty = portals[0]
-
-    def body_open(x, y):
-        return (0 <= x < 19 and 0 <= y < 16 and
-                all((pb.memory[TM + yy * 20 + xx] & 0x7F) in walkable
-                    for xx, yy in ((x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1))))
-
-    start = ((pb.memory[PL + 9] + 2) // 8, (pb.memory[PL + 11] + 8) // 8)
-    goal = (tx - 1, ty - 1)
-    seen, queue = {start}, [start]
-    while queue:
-        x, y = queue.pop(0)
-        for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
-            if (nx, ny) not in seen and body_open(nx, ny):
-                seen.add((nx, ny))
-                queue.append((nx, ny))
-    assert goal in seen, (
-        f"rift at {(tx, ty)} has no hero-footprint route from {start}")
 
     # A real high-population seed once filled the 32-slot table before room.c
     # tried to add this fixture, silently omitting the required stage-three
@@ -409,18 +403,17 @@ def main():
 
     clear_entities()
     put32(pb, RS + 2, 2064128116)
-    pb.memory[RS + 1] = STAGE_START[2] + 1
     pb.memory[RS + RS_BOSSES] = 2
     pb.memory[RS + RS_SIGILS] = 3
     pb.memory[RS + RS_SIGILS + 1] = 0
     pb.memory[RS + 6] = 0xFF
     pb.memory[SEALED] = 0
-    right_door()
+    dense_sigil = role_door(2, seed=2064128116)
     for _ in range(240):
         pb.tick()
         if pb.memory[SIGIL_STATUS] == 5:
             break
-    assert pb.memory[RS + 1] == STAGE_START[2] + 2 \
+    assert pb.memory[RS + 1] == STAGE_START[2] + dense_sigil \
         and pb.memory[SIGIL_STATUS] == 5, (
         "dense stage-three room did not reserve its Rift Sigil "
         f"(room={pb.memory[RS + 1]} status={pb.memory[SIGIL_STATUS]} "
@@ -431,7 +424,7 @@ def main():
     ) == 1, "dense stage-three room lost its reserved Rift Sigil"
 
     pb.stop(save=False)
-    print("[rift-sigil] PASS Sigil + Warden + late Waystone/deep-Warden/Deep-Seal route gates")
+    print("[rift-sigil] PASS generated Sigil + Trial/Wardens/Waystone/Deep-Gate route gates")
 
 
 if __name__ == "__main__":

@@ -28,6 +28,7 @@
 #define PICKUP_BELLKEEPER    18 // permanent town arrival-square bellkeeper
 #define PICKUP_FARFOLD_RELIC 19 // persistent optional dungeon-cache relic
 #define PICKUP_BOON_CHOICE    20 // one of a mutually exclusive director pair
+#define PICKUP_WAYFARER       21 // peaceful stage creature; A opens lore/advice
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -55,6 +56,9 @@
 #define ITEM_ID_THORN_CROWN     36u
 #define ITEM_ID_WAR_DRUM        37u
 #define ITEM_ID_MOON_FLASK      38u
+#define ITEM_ID_RIFT_BOMB       40u
+#define ITEM_ID_ECHO_CHIME      41u
+#define ITEM_ID_MIRROR_SHARD    42u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
@@ -99,6 +103,7 @@ u8   pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_lorekeeper(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED;
 
@@ -111,6 +116,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED;
 // Player touch check + apply effect; returns 1 if anything was picked up
 u8   pickup_check_player_collision(void) BANKED;
 u8   pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED;
+u8   pickup_nearby_speaker(u8 *kind_out, u8 *topic_out) BANKED;
 void pickup_echo_primary(u8 dir, u8 damage, u8 kind) BANKED;
 u8   pickup_try_phoenix_revive(void) BANKED;
 

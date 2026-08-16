@@ -59,6 +59,8 @@ WX=$(awk '/DEF _room_world_extension / {print $3}' "$NOI")
 WB=$(awk '/DEF _room_world_bottom / {print $3}' "$NOI")
 WW=$(awk '/DEF _room_world_width / {print $3}' "$NOI")
 WH=$(awk '/DEF _room_world_height / {print $3}' "$NOI")
+CAMX=$(awk '/DEF _room_camera_x / {print $3}' "$NOI")
+CAMY=$(awk '/DEF _room_camera_y / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 GH=$(awk '/DEF _g_hitstop / {print $3}' "$NOI")
@@ -123,6 +125,7 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" QUINTRA_TM_ADDR="$TM" \
         QUINTRA_WORLD_EXT_ADDR="$WX" QUINTRA_WORLD_BOTTOM_ADDR="$WB" \
         QUINTRA_WORLD_WIDTH_ADDR="$WW" QUINTRA_WORLD_HEIGHT_ADDR="$WH" \
+        QUINTRA_CAMERA_X_ADDR="$CAMX" QUINTRA_CAMERA_Y_ADDR="$CAMY" \
         QUINTRA_SCREEN_ADDR="$LS" \
         QUINTRA_FRAME_ADDR="$FC" \
         QUINTRA_HITSTOP_ADDR="$GH" \

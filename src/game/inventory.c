@@ -1,20 +1,26 @@
 #pragma bank 4
-// INVENTORY / STATS pause screen. Opened with START from a room; shows the
-// hero's class, live stats, held weapon + signature, coins, and run depth.
-// Returns to the room via a resume flag so the room is NOT regenerated.
+// Zelda/Ultima-shaped PACK panel. START pauses into one framed visual page:
+// hero portrait, vitals, equipped A/B verbs, quest, tools, and Oath. It
+// returns through room_resume so opening the panel never regenerates a room.
 
 #include <gb/gb.h>
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
+#include <stdio.h>
 
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/inventory.h"
 #include "game/inventory_copy.h"
+#include "game/inventory_visual.h"
+#include "game/dungeon_tools.h"
+#include "game/dungeon_law.h"
+#include "game/oath_arts.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/will.h"
 #include "render/palette.h"
 #include "render/text.h"
 #include "content.h"
@@ -22,10 +28,20 @@
 BANKREF(inventory_enter)
 
 static const u16 inv_palette[4] = {
-    BGR555( 1,  2,  6),    // 0: deep blue
-    BGR555( 8, 10, 20),    // 1: slate
-    BGR555(20, 20, 28),    // 2: light
-    BGR555(31, 31, 31),    // 3: white
+    BGR555( 1,  2,  6), BGR555( 6,  9, 18),
+    BGR555(18, 21, 28), BGR555(31, 31, 31),
+};
+static const u16 inv_gold_bg[4] = {
+    BGR555( 1,  2,  6), BGR555(13,  8,  1),
+    BGR555(25, 18,  4), BGR555(31, 29, 16),
+};
+static const u16 inv_magic_bg[4] = {
+    BGR555( 1,  2,  6), BGR555( 8,  3, 15),
+    BGR555(18,  8, 27), BGR555(29, 22, 31),
+};
+static const u16 inv_quest_bg[4] = {
+    BGR555( 1,  2,  6), BGR555( 3, 10,  6),
+    BGR555( 8, 22, 12), BGR555(24, 31, 20),
 };
 
 static const char *class_name(u8 id) {
@@ -37,14 +53,6 @@ static const char *class_name(u8 id) {
 
 // Class passive perk names, indexed by class id (see player.c/room.c
 // for the mechanics each one drives).
-static const char *const perk_names[5] = {
-    "FAST MOVEMENT",    // Wolfkin: +1 SPD
-    "HEALTH REGEN",     // Sauran: slow HP regen
-    "SHOW ENEMY HP",    // Corvin: HUD bar reads enemy HP
-    "FAST MAGIC REGEN", // Picsean: MP regen x2
-    "STRONG ELEMENTS",  // Vespine: elemental hits +1
-};
-
 // items[] is keyed by array position but item.id != index beyond the 5
 // starters — resolve the real entry by id (small table, linear scan is fine).
 static const char *item_name_by_id(u16 id) {
@@ -52,6 +60,7 @@ static const char *item_name_by_id(u16 id) {
     for (i = 0; i < N_ITEMS; ++i) {
         if (items[i].id == id) return items[i].name;
     }
+
     return "-";
 }
 
@@ -59,11 +68,11 @@ static const char *item_name_by_id(u16 id) {
 // content and shop context; these are one-line action reminders that never
 // clip or repeat the B label already shown above.
 static const char *const active_tips[5] = {
-    "8 SHOTS BRIEF WARD", // Howl, item id 10
-    "BLOCKS ALL HITS",    // Stoneskin, 11
-    "3 SHARD FAN",        // Murder, 12
-    "3 BUBBLES AND WARD", // Tidal Wave, 13
-    "4 STINGERS WARD",    // Swarm, 14
+    "8 SHOTS + WARD",  // Howl, item id 10
+    "FULL HIT SHIELD", // Stoneskin, 11
+    "MARK + RAVEN DIVE", // Raven Mark, 12
+    "3 BUBBLES + WARD", // Tidal Wave, 13
+    "ORBITING STINGERS", // Swarm, 14
 };
 
 static const char *active_tip_by_id(u16 id) {
@@ -74,123 +83,127 @@ static const char *item_name_by_index(u8 index) {
     return index < N_ITEMS ? items[index].name : "-";
 }
 
-static u8 relic_count(void) {
-    u8 i, count = 0;
-    for (i = 0; i < INVENTORY_SLOTS; ++i)
-        if (player.inventory[i] != 0xFF) count++;
-    return count;
+static void write_field(const char *s, u8 width) {
+    while (width && *s) { putchar(*s++); width--; }
+    while (width--) putchar(' ');
 }
 
-static const char *gear_color(void) {
-    if (room_appearance_tier == 1) return "BLUE";
-    if (room_appearance_tier == 2) return "RED";
-    if (room_appearance_tier >= 3) return "GOLD";
-    return "BASE";
+static void framed_blank(u8 y) {
+    gotoxy(0, y); text_write("|                  |");
+}
+
+static void attr_row(u8 y, u8 slot) {
+    u8 attrs[20];
+    u8 x;
+    u8 *map = (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
+    for (x = 0; x < 20; ++x) attrs[x] = slot;
+    VBK_REG = 1;
+    set_tiles(0, y, 20, 1, map, attrs);
+    VBK_REG = 0;
 }
 
 // One progression-aware line turns the Pack into a useful "what do I do
 // next?" screen. In particular, calling the stage key only a Sigil made its
 // purpose opaque to a first-time player even after the Compass correctly
 // marked its room. Every phrase fits the physical 20-column LCD exactly.
-static void write_current_goal(void) {
-    gotoxy(0, 14);
-    if (run_state.world_mode) {
-        text_write("NEXT FIND DUNGEON");
-    } else if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-        text_write("NEXT REST THEN NORTH");
-    } else if (run_state_is_boss_room()) {
-        text_write("NEXT BREAK COLOSSUS");
-    } else if (!(run_state.rift_sigils
-            & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))) {
-        text_write("NEXT FIND SIGIL KEY");
-    } else if (!(run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT)) {
-        text_write("NEXT CLEAR WARDEN");
-    } else if (run_state_dungeon_size() >= 12
-            && !(run_state.dungeon_puzzles & RUN_WAYSTONE_BIT)) {
-        text_write("NEXT WAKE WAYSTONE");
-    } else if (run_state_dungeon_size() >= 14
-            && !(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT)) {
-        text_write("NEXT CLEAR DEEP WARD");
-    } else if (run_state_dungeon_size() >= 20
-            && !(run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT)) {
-        text_write("NEXT OPEN DEEP SEAL");
-    } else {
-        text_write("NEXT SEEK SKULL GATE");
-    }
-}
-
 void inventory_enter(void) {
+    u8 i;
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;
     palette_bg_load(0, inv_palette);
+    palette_bg_load(1, inv_gold_bg);
+    palette_bg_load(2, inv_magic_bg);
+    palette_bg_load(3, inv_quest_bg);
     palette_bg_load(7, inv_palette);
 
     font_init();
     { font_t f = font_load(font_min); font_set(f); }
     cls();
 
-    gotoxy(0, 0);  text_write("PACK  ");
-    text_write(class_name(player.class_id));
+    gotoxy(0, 0); text_write("+---- QUINTRA -----+");
+    framed_blank(1); framed_blank(2); framed_blank(3);
+    gotoxy(0, 4); text_write("+--- VITALS -------+");
+    framed_blank(5); framed_blank(6); framed_blank(7);
+    gotoxy(0, 8); text_write("+--- ARMS ---------+");
+    framed_blank(9); framed_blank(10); framed_blank(11); framed_blank(12);
+    gotoxy(0, 13); text_write("+--- QUEST --------+");
+    framed_blank(14); framed_blank(15); framed_blank(16);
+    gotoxy(0, 17); text_write(" A+B SPIRIT B CLOSE");
+    inventory_prepare_sprites();
+
+    gotoxy(4, 1); write_field(class_name(player.class_id), 7);
+    gotoxy(12, 1); text_write(RUN_IS_EASY() ? "EASY" : "NORMAL");
     {
-        // Endless descent wraps the theme cycle — name what you see
         u8 s = (u8)(run_state.bosses_beaten % 9);
-        // Riftwild is an outdoors connector, not a dungeon stage.  Naming
-        // both its current mode and destination keeps the green path from
-        // reading as an unexplained "Stage N".
+        gotoxy(4, 2);
         if (run_state.world_mode) {
-            gotoxy(0, 1); text_write(RUN_IS_EASY() ? "EASY  RIFTWILD" : "NORMAL  RIFTWILD");
-            gotoxy(0, 2); text_write("NEXT "); text_write(stage_names[s]);
+            text_write("RIFTWILD");
         } else if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-            gotoxy(0, 1); text_write(RUN_IS_EASY() ? "EASY  VILLAGE" : "NORMAL  VILLAGE");
-            gotoxy(0, 2); text_write("SAFE HAVEN");
+            text_write("VILLAGE");
         } else {
-            gotoxy(0, 1); text_write(RUN_IS_EASY() ? "EASY  STAGE " : "NORMAL  STAGE ");
+            text_write("STAGE ");
             text_u16((u16)(run_state.bosses_beaten + 1));
-            gotoxy(0, 2); text_write(stage_names[s]);
         }
+        gotoxy(1, 3); write_field(stage_names[s], 17);
     }
+    dungeon_law_draw_pack();
 
-    gotoxy(0, 4); text_write("HEALTH "); text_u16((u16)player.hp);
+    gotoxy(1, 5); text_write("HP "); text_u16((u16)player.hp);
     text_write("/"); text_u16((u16)player.hp_max);
-    gotoxy(0, 5); text_write("MAGIC  "); text_u16((u16)player.mp);
+    gotoxy(11, 5); text_write("MP "); text_u16((u16)player.mp);
     text_write("/"); text_u16((u16)player.mp_max);
-    gotoxy(0, 6); text_write("ATTACK "); text_u16((u16)player.atk);
-    text_write("  ARMOR "); text_u16((u16)player.def);
-    gotoxy(0, 7); text_write("SPEED  "); text_u16((u16)player.spd);
-    text_write("  LUCK "); text_u16((u16)player.lck);
-    gotoxy(0, 8); text_write("RELICS "); text_u16((u16)relic_count());
-    text_write(" COLOR "); text_write(gear_color());
+    gotoxy(1, 6); text_write("ATK "); text_u16((u16)player.atk);
+    gotoxy(7, 6); text_write("DEF "); text_u16((u16)player.def);
+    gotoxy(13, 6); text_write("SPD "); text_u16((u16)player.spd);
+    gotoxy(1, 7); text_write("LCK "); text_u16((u16)player.lck);
+    gotoxy(9, 7); text_u16((u16)player.coins);
+    gotoxy(13, 7); text_write("W[");
+    for (i = 0; i < 3; ++i)
+        putchar((u16)player.will_charge * 3u
+            >= (u16)(i + 1) * WILL_MAX ? '#' : '-');
+    putchar(']');
 
-    gotoxy(0, 9); text_write("A ");
-    text_write(item_name_by_index(player.starter_weapon));
-    gotoxy(0, 10); text_write("  ");
+    gotoxy(1, 9); text_write("A");
+    gotoxy(5, 9); write_field(item_name_by_index(player.starter_weapon), 13);
+    gotoxy(2, 10);
     inventory_write_weapon_tip(player.starter_weapon);
-    gotoxy(0, 11); text_write("B ");
-    text_write(item_name_by_id(player.active_item));
-    gotoxy(0, 12); text_write("  ");
+    gotoxy(1, 11); text_write("B");
+    gotoxy(5, 11); write_field(item_name_by_id(player.active_item), 13);
+    gotoxy(2, 12);
     text_write(active_tip_by_id(player.active_item));
-    gotoxy(0, 13); text_write("TRAIT ");
-    text_write(perk_names[player.class_id < 5 ? player.class_id : 0]);
-    write_current_goal();
-
-    gotoxy(0, 15); text_write("COINS "); text_u16((u16)player.coins);
-    text_write(" BOSSES "); text_u16((u16)run_state.bosses_beaten);
-    text_write("/"); text_u16((u16)BOSSES_TO_WIN);
-    gotoxy(0, 16); text_write("FULL MP A+B ASCEND");
-    gotoxy(0, 17); text_write("START OR B BACK");
+    inventory_write_current_goal();
+    dungeon_tools_draw_pack();
+    oath_arts_draw_pack();
 
     palette_bg_fill_attrs(0);
+    attr_row(0, 1); attr_row(4, 1); attr_row(8, 2);
+    for (i = 9; i <= 12; ++i) attr_row(i, 2);
+    attr_row(13, 3);
+    for (i = 14; i <= 16; ++i) attr_row(i, 3);
+    attr_row(17, 1);
+    SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
 }
 
-void inventory_exit(void) {}
+void inventory_exit(void) {
+    u8 i;
+    for (i = 0; i < 40; ++i) move_sprite(i, 0, 0);
+    HIDE_SPRITES;
+}
 
 screen_id_t inventory_tick(u8 keys, u8 pressed) {
+    u8 tool_action;
     keys;
     if (pressed & (J_START | J_B)) {
         sfx_play(SFX_COIN);
+        room_request_resume();
+        return SCREEN_ROOM;
+    }
+    if (oath_arts_pack_input(pressed)) return SCREEN_SELF;
+    tool_action = dungeon_tools_pack_input(pressed);
+    if (tool_action == 2) {
         room_request_resume();
         return SCREEN_ROOM;
     }

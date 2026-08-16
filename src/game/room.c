@@ -12,10 +12,14 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/combat.h"
+#include "game/dialog.h"
 #include "game/dungeon_director.h"
+#include "game/dungeon_law.h"
+#include "game/dungeon_tools.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/loop.h"
+#include "game/oath_arts.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
@@ -24,6 +28,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/sram.h"
+#include "game/will.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
 #include "render/palette.h"
@@ -85,6 +90,10 @@ static u8 mire_projection_state = 0xFF;
 // Set once when a room is generated.  Price proximity must never put a
 // 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
 static u8 room_has_shop_wares;
+// The same room-role cache keeps contextual A from scanning 32 entities on
+// every turbo shot in ordinary combat. Only towns, shops, and authored turn
+// courts can contain a speaker.
+static u8 room_has_speakers;
 // These are run-scoped, not room-scoped: passive trickles should retain their
 // partial progress through doors/menus, but player_clear resets them before a
 // brand-new champion is initialized.
@@ -109,11 +118,6 @@ static u8 tap_age;       // frames since that press
 static u8 dash_timer;    // frames left in the current dash
 static u8 dash_cd;       // cooldown before the next dash
 static i8 dash_dx, dash_dy;
-// Wolfkin's A kit is deliberately input-shaped rather than a held-button
-// projectile stream: a directed tap stabs, an undirected tap sweeps, and a
-// committed hold becomes a cooldown-gated Max Strike dash.
-static u8 wolfkin_a_hold;
-static u8 wolfkin_max_cd;
 // Room transitions grant real invulnerability so a generated arrival cannot
 // immediately trade into a hostile. It is safety rather than damage, so it
 // must not inherit the alternating invisible damage-flicker.
@@ -126,13 +130,69 @@ u8 room_transform_ticks;
 // runtime state, like Spirit Convergence, rather than permanent save data.
 u8 room_weapon_surge_ticks;
 
-// Wolfkin's Howl and Vespine's Swarm are committed close-range burst
-// abilities. Their activation ward is deliberately not a shield: it neither
-// deletes shots nor lasts through a whole pattern. It merely gives the two
-// melee kits a readable beat to spend their MP burst inside a boss body or
-// lane without trading the same frame for damage.
-static void room_special_guard(u8 frames) {
-    if (player.iframes < frames) player.iframes = frames;
+// These timers are hot only while a B effect is visibly active. Keep their
+// cheap per-frame bookkeeping beside room_tick in bank 1; a far call into the
+// cold Will-art bank every marked frame measurably reduced Corvin's cartridge
+// action rate. Projectile creation remains banked and occurs only every 16th
+// swarm beat.
+static void room_update_signatures(void) {
+    if (will_corvin_mark_ticks) {
+        u8 slot = will_corvin_mark_slot;
+        if (player.class_id != 2 || slot >= MAX_ENTITIES
+            || !(entities[slot].flags & EF_ACTIVE)
+            || entities[slot].type != ENT_ENEMY) {
+            will_corvin_mark_ticks = 0;
+            will_corvin_mark_slot = 0xFF;
+        } else {
+            will_corvin_mark_ticks--;
+            if ((will_corvin_mark_ticks & 0x0F) == 0)
+                fx_spawn(SPR_FX_IMPACT, 6,
+                    (i16)FIX8_TO_INT(entities[slot].x),
+                    (i16)FIX8_TO_INT(entities[slot].y), 7);
+            // Two follow-up ravens dive toward the target's current position.
+            // This stays a focused mark instead of B's old miniature MAX fan.
+            if (will_corvin_mark_ticks == 128
+                || will_corvin_mark_ticks == 64) {
+                i16 dx = (i16)(FIX8_TO_INT(entities[slot].x) + 4)
+                    - (i16)(player.x + 8);
+                i16 dy = (i16)(FIX8_TO_INT(entities[slot].y) + 4)
+                    - (i16)(player.y + 8);
+                u16 ax = dx < 0 ? (u16)-dx : (u16)dx;
+                u16 ay = dy < 0 ? (u16)-dy : (u16)dy;
+                u8 dir;
+                u8 shot;
+                if (ax > (ay << 1)) dir = dx < 0 ? 6 : 2;
+                else if (ay > (ax << 1)) dir = dy < 0 ? 0 : 4;
+                else if (dx >= 0) dir = dy < 0 ? 1 : 3;
+                else dir = dy < 0 ? 7 : 5;
+                shot = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
+                    will_corvin_mark_damage, PROJ_SHURIKEN);
+                if (shot != 0xFF) {
+                    entities[shot].hp = 1;
+                    entities[shot].hitbox = 0x99;
+                }
+            }
+        }
+    }
+
+    if (will_vespine_swarm_ticks) {
+        if (player.class_id != 4) {
+            will_vespine_swarm_ticks = 0;
+        } else {
+            u8 shot;
+            will_vespine_swarm_ticks--;
+            if (will_vespine_swarm_ticks
+                && (will_vespine_swarm_ticks & 0x0F) == 0) {
+                shot = projectile_spawn_player(
+                    dir8_dx[will_vespine_swarm_dir],
+                    dir8_dy[will_vespine_swarm_dir],
+                    will_vespine_swarm_damage, PROJ_SPIKE);
+                if (shot != 0xFF) entities[shot].hp = 1;
+                will_vespine_swarm_dir =
+                    (u8)((will_vespine_swarm_dir + 3) & 7);
+            }
+        }
+    }
 }
 
 static void room_start_death(void) {
@@ -159,14 +219,12 @@ void room_start_weapon_surge(void) BANKED {
     room_weapon_surge_ticks = 120;
     room_shake(1, 10);
     fx_spawn(SPR_SURGE_ORB, 0x06, (i16)player.x + 4, (i16)player.y - 6, 18);
-    sfx_play(SFX_ROAR);
+    sfx_play_reward(SFX_REWARD_SURGE);
 }
 
 void room_reset_passive_timers(void) BANKED {
     mp_regen = 0;
     hp_regen = 0;
-    wolfkin_a_hold = 0;
-    wolfkin_max_cd = 0;
 }
 
 void room_request_resume(void) BANKED { room_resume_flag = 1; }
@@ -191,6 +249,11 @@ static u8 room_stage(void) {
     // Crystal Caverns at double power, and on down. Stats stay maxed
     // (procgen clamps power separately); this drives look + music.
     u8 s = run_state.bosses_beaten;
+    // A Riftwild is a regional place shared by three dungeons. Keep its
+    // palette and score stable across return trips even as enemy pressure and
+    // the active gate advance with the cleared-boss count.
+    if (run_state.world_mode)
+        return (s >= 7) ? 6 : (s >= 4) ? 3 : 0;
     return (s < N_STAGES) ? s : (u8)(s % N_STAGES);
 }
 
@@ -212,6 +275,23 @@ static u8 room_state_has_shop_wares(void) {
 
 static void room_refresh_shop_wares(void) {
     room_has_shop_wares = room_state_has_shop_wares();
+    room_has_speakers = room_has_shop_wares
+        || (!run_state.world_mode && !run_state_is_boss_room()
+            && (run_state_dungeon_local() == 5
+                || run_state_dungeon_local() == 11
+                || run_state_dungeon_local() == 17
+                || run_state_dungeon_local() == 23));
+}
+
+// Kept out of room_tick deliberately. SDCC otherwise hoists the pressed-A
+// test and its temporary storage above both weapon branches, charging every
+// idle/bullet-hell frame for a feature that only matters while A is down.
+static u8 room_try_begin_dialog(u8 pressed) {
+    u8 speaker_kind, speaker_topic;
+    if (!(pressed & J_A) || !room_has_speakers) return 0;
+    if (!pickup_nearby_speaker(&speaker_kind, &speaker_topic)) return 0;
+    dialog_prepare(speaker_kind, speaker_topic);
+    return 1;
 }
 
 // Slot 125 is intentionally multiplexed: merchant rooms need the proximity
@@ -232,7 +312,10 @@ static void room_load_dynamic_fx_identity(void) {
     if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) {
         if (room_stage() == 0) tiles_load_shard_crab_sprite();
         else if (room_stage() == 1) tiles_load_vine_coil_sprite();
-        else if (room_stage() == 2) tiles_load_cinder_kite_sprite();
+        else if (room_stage() == 2) {
+            tiles_load_cinder_kite_sprite();
+            tiles_load_cinder_maw_medium_sprite();
+        }
         else if (room_stage() == 3) tiles_load_frost_lancer_sprite();
         else if (room_stage() == 4) tiles_load_bog_toad_sprite();
         else if (room_stage() == 5) tiles_load_bramble_sprite();
@@ -282,10 +365,9 @@ void room_spawn_progression_fixture(void) BANKED {
     room_sigil_status = 1;
     if (run_state.world_mode) return;
     room_sigil_status = 2;
-    // Each six-room dungeon puts its persistent objective in local room 2.
-    // This must be modulo-based: stage two and beyond have their own Sigil,
-    // rather than inheriting the opening dungeon's one-time fixture.
-    if (run_state_dungeon_local() != 2) return;
+    // The mission graph owns this stage's persistent objective room. Its cell
+    // is seed-stable for backtracking/suspend but no longer pinned to room 2.
+    if (run_state_dungeon_local() != run_state.mission_sigil_cell) return;
     room_sigil_status = 3;
     if (run_state.rift_sigils
         & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) return;
@@ -324,7 +406,7 @@ static void room_load_stage_obj_identity(void) {
 }
 
 static void play_stage_music(void) {
-    u8 stage = (u8)(run_state.bosses_beaten % MUSIC_STAGE_COUNT);
+    u8 stage = room_stage();
     // Doorways within a stage must not reset the exploration loop.  Besides
     // sounding repetitive, the reset made a long room-to-room trek feel like
     // a string of disconnected screens.  A real track change (boss exit,
@@ -401,8 +483,21 @@ static const u16 coin_palette[4] = {
     BGR555(31, 31, 14),
 };
 
+static u8 hidden_walk_at(u8 tx, u8 ty) {
+    return room_hidden_secret_kind == HIDDEN_SECRET_WALK
+        && ((tx == room_hidden_secret_x && ty == room_hidden_secret_y)
+            || (tx == room_hidden_secret_x2 && ty == room_hidden_secret_y2));
+}
+
 static u8 is_walkable_at(i16 px, i16 py) {
-    return room_tile_walkable(room_tile_at_px(px, py));
+    u8 t = room_tile_at_px(px, py);
+    // Keep this rare branch on the champion path, not room_tile_at_px(): that
+    // generic accessor is the hottest enemy/projectile collision primitive
+    // and paying four hidden-coordinate comparisons for every bullet cost two
+    // gameplay loops per three-second performance sample.
+    if (t == BGT_WALL && hidden_walk_at((u8)(px >> 3), (u8)(py >> 3)))
+        return 1;
+    return room_tile_walkable(t);
 }
 
 // Most scenery deliberately uses a Zelda-style feet collision box, allowing
@@ -573,6 +668,34 @@ void room_break_pot(u8 tx, u8 ty) BANKED {
                                FIX8((i16)tx * 8), FIX8((i16)ty * 8));   // 44%
         // else nothing (25%)
     }
+}
+
+u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
+    u8 tile;
+    if (tx >= (u8)(room_world_width >> 3)
+        || ty >= (u8)(room_world_height >> 3)) return 0;
+    tile = room_tile_at_px((i16)tx << 3, (i16)ty << 3);
+    // Fire clears solid wild growth into searchable rubble. Ice bridges a
+    // spike bed. Lightning can throw an authored phase switch from range.
+    if ((element & 1) && tile == BGT_TREE) {
+        room_set_tile_vbl(tx, ty, BGT_RUBBLE, BGPAL_CRACK);
+    } else if ((element & 2) && tile == BGT_SPIKES) {
+        room_set_tile_vbl(tx, ty, BGT_FLOOR2, BGPAL_CRYSTAL);
+    } else if ((element & 4) && tile == BGT_SWITCH) {
+        if (room_puzzle_kind == PUZZLE_PHASE_SWITCH) {
+            run_state.dungeon_phase ^= room_puzzle_phase_bit;
+            room_set_tile_vbl(tx, ty, BGT_SWITCH,
+                (run_state.dungeon_phase & room_puzzle_phase_bit)
+                    ? BGPAL_CRYSTAL : BGPAL_CRACK);
+        } else if (dungeon_law_try_toggle_at(tx, ty)) {
+            // The law helper owns its full-room animation, persistence, and
+            // feedback. Do not add a second shake/chime below.
+            return 1;
+        } else return 0;
+    } else return 0;
+    room_shake(1, 8);
+    sfx_play(SFX_PUZZLE);
+    return 1;
 }
 
 void room_open_secret(u8 tx, u8 ty) BANKED {
@@ -933,6 +1056,7 @@ void room_enter(void) {
     hud_show();
     shop_offer_visible = 0;
     room_has_shop_wares = 0;
+    room_has_speakers = 0;
     hud_clear_offer();
 
     // Player metasprite — 4 tiles starting at class-specific base
@@ -966,6 +1090,10 @@ void room_enter(void) {
         SHOW_SPRITES;
         SHOW_BKG;
         DISPLAY_ON;
+        // Pack tools are queued across the screen swap. Resolve the one-shot
+        // action only after the restored room is visible; doing this from the
+        // per-frame tick made every ordinary room frame pay a far-call tax.
+        dungeon_tools_apply_pending();
         return;
     }
 
@@ -992,6 +1120,7 @@ void room_enter(void) {
     room_load_dynamic_fx_identity();
     room_spawn_progression_fixture();
     puzzle_prepare_room_role();
+    dungeon_law_apply_room(0);
     dungeon_director_activate();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
@@ -1067,6 +1196,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (pressed & J_SELECT) {
         return SCREEN_MAP;
     }
+    // A law altar is a contextual world action. Resolve it before ordinary
+    // A fire so a deliberate switch press does not also spend Will or launch
+    // a stray attack into the reshaping architecture.
+    if ((pressed & J_A) && dungeon_law_try_player_toggle())
+        return SCREEN_SELF;
     // Entering the amber threshold's approach gives one low roar and tremor.
     // The room itself is a full-heal sanctuary, so this is a fair commitment
     // warning rather than an ambush or an extra confirmation dialog.
@@ -1166,8 +1300,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             player.move_acc = (u8)(player.move_acc + player.spd);
         }
 
-        // ---- Dodge dash: double-tap a cardinal within ~12 frames to lunge
-        // fast in that direction with brief i-frames, then a short cooldown.
+        // ---- Dodge dash: double-tap one axis within ~12 frames to lunge.
+        // Holding the perpendicular axis preserves it, so UP+RIGHT can be
+        // double-tapped as a genuine diagonal instead of collapsing east.
         {
             u8 td = (pressed & J_LEFT)  ? (u8)'L'
                   : (pressed & J_RIGHT) ? (u8)'R'
@@ -1181,6 +1316,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     if (player.iframes < 14) player.iframes = 14;
                     dash_dx = (td == 'L') ? -1 : (td == 'R') ? 1 : 0;
                     dash_dy = (td == 'U') ? -1 : (td == 'D') ? 1 : 0;
+                    if (dash_dx) {
+                        if (keys & J_UP) dash_dy = -1;
+                        else if (keys & J_DOWN) dash_dy = 1;
+                    } else {
+                        if (keys & J_LEFT) dash_dx = -1;
+                        else if (keys & J_RIGHT) dash_dx = 1;
+                    }
                     sfx_play(SFX_DOOR);   // whoosh
                     tap_dir = 0;
                 } else {
@@ -1199,8 +1341,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // neutralized below via moved/move_acc = 0.
         if (dash_timer) {
             u8 s;
+            // Two steps on each diagonal axis is approximately the same
+            // vector length as three cardinal steps (2*sqrt(2) ~= 3). This
+            // keeps diagonal evasion expressive without making it faster.
+            u8 dash_steps = (dash_dx && dash_dy) ? 2 : 3;
             dash_timer--;
-            for (s = 0; s < 3; ++s) {
+            for (s = 0; s < dash_steps; ++s) {
                 if (dash_dx) {
                     ppos_t nx = (ppos_t)(player.x + dash_dx);
                     if (player_horizontal_step_allowed(nx, player.y))
@@ -1405,14 +1551,25 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         u8 wolfkin_melee = (player.class_id == 0
             && player.starter_weapon == classes[0].starter_weapon
             && w->p2 == PROJ_SPIKE) ? 1 : 0;
+        u8 max_fired = 0;
+        u8 chord = ((keys & (J_A | J_B)) == (J_A | J_B)
+            && (pressed & (J_A | J_B))) ? 1 : 0;
         g_shot_element = class_element[player.class_id < 5 ? player.class_id : 0];
-        if (wolfkin_max_cd) wolfkin_max_cd--;
-
+        // Primary restraint remains legible as "release A". A successful B
+        // separately pays its quarter-meter toll, so its input frame need not
+        // add a second hidden penalty.
+        // A real shield is safety, not restraint. Pausing Will during its
+        // protected frames prevents Stoneskin/Undertow from purchasing a
+        // nearly risk-free MAX while ordinary offensive signatures can still
+        // be woven into an exposed setup.
+        if (!(keys & J_A) && player.shield_timer == 0
+            && player.will_charge < WILL_MAX)
+            player.will_charge++;
         // A+B at full MP: SPIRIT CONVERGENCE. This is deliberately shared
         // across all five vessels—the common oath underneath their different
         // kits. Full-meter requirement prevents accidental chord activation.
-        if ((pressed & (J_A | J_B)) == (J_A | J_B)
-            && player.mp == player.mp_max && player.active_charge == 0) {
+        if (chord && player.mp == player.mp_max
+            && player.active_charge == 0) {
             u8 sd;
             for (sd = 0; sd < 8; ++sd) {
                 u8 shot = projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
@@ -1429,35 +1586,62 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             room_shake(1, 18);
             sfx_play(SFX_ROAR);
             hud_redraw_mp();
+        } else if (chord && player.mp < player.mp_max) {
+            // Below full MP the same chord invokes the selected stage-earned
+            // Oath Art. Full MP remains reserved for Spirit Convergence, so
+            // the two systems form one readable resource ladder rather than
+            // competing mappings.
+            u8 dir = input_to_dir8(keys);
+            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+            if (player.active_charge == 0 && player.mp >= OATH_MP_COST
+                && oath_arts_fire(dir)) {
+                player.mp = (u8)(player.mp - OATH_MP_COST);
+                mp_regen = 0;
+                player.active_charge = OATH_COOLDOWN;
+                if (player.iframes < 10) player.iframes = 10;
+                room_shake(1, 14);
+                sfx_play(SFX_PUZZLE);
+                hud_redraw_hp();
+                hud_redraw_mp();
+            } else {
+                sfx_play(SFX_HURT);
+            }
+        }
+
+        // At full Will, the next unchorded A edge becomes this weapon's MAX
+        // art. Dialogue wins the same contextual edge, so talking can never
+        // spend a three-second charge. Ordinary shots below reset the meter.
+        if ((pressed & J_A) && !(keys & J_B)) {
+            u8 dir = input_to_dir8(keys);
+            if (room_try_begin_dialog(pressed)) return SCREEN_DIALOG;
+            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+            if (player.will_charge == WILL_MAX) {
+                max_fired = will_fire_max(player.starter_weapon, dir,
+                    (u8)(w->p1 + player.atk));
+                if (max_fired) {
+                    player.will_charge = 0;
+                    player.fire_cooldown = player_fire_delay(w->p0);
+                    if (wolfkin_melee) {
+                        dash_timer = 9;
+                        dash_cd = 45;
+                        dash_dx = dir8_dx[dir];
+                        dash_dy = dir8_dy[dir];
+                        if (player.iframes < 16) player.iframes = 16;
+                    }
+                }
+            }
         }
 
         // Wolfkin is a true contact kit, not the same held-A fire stream as
         // the ranged champions. A directed tap is the precise Fang Stab;
         // neutral A is a wider two-target Sweep. Holding through the tell
-        // commits to a Max Strike dash, then settles into a deliberately
-        // slower combo cadence so turbo/held play never requires button
-        // mashing. Weapon swaps keep their authored projectile behaviour.
+        // settles into a deliberately slower combo cadence so turbo/held play
+        // never requires button mashing. Weapon swaps keep their authored
+        // projectile behaviour.
         if (wolfkin_melee && !(keys & J_B)) {
-            if (keys & J_A) {
+            if ((keys & J_A) && !max_fired) {
                 u8 dir = input_to_dir8(keys);
                 if (dir == 0xFF) dir = facing_to_dir8(player.facing);
-                if (wolfkin_a_hold < 255) wolfkin_a_hold++;
-                if (wolfkin_a_hold == 20 && wolfkin_max_cd == 0) {
-                    // The dash is the hero's committed FF-style lane break:
-                    // a visible spear-like thrust travels with the body, not
-                    // a permanent replacement for their contact weapon.
-                    projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
-                        (u8)(w->p1 + player.atk + 3), PROJ_SPEAR);
-                    dash_timer = 11;
-                    dash_cd = 45;
-                    dash_dx = dir8_dx[dir];
-                    dash_dy = dir8_dy[dir];
-                    if (player.iframes < 18) player.iframes = 18;
-                    wolfkin_max_cd = 150;
-                    room_shake(1, 8);
-                    sfx_play(SFX_ROAR);
-                }
-
                 // A held A is a deliberate physical combo, not a
                 // button-mashing tax: one contact arc every 24 frames.
                 if (player.fire_cooldown == 0) {
@@ -1474,14 +1658,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         // one hitbox, so bosses cannot be blendered.
                         entities[shot].hitbox = 0xBB;
                     }
+                    if (shot != 0xFF) player.will_charge = 0;
                     pickup_echo_primary(dir, dmg, PROJ_SPIKE);
                     player.fire_cooldown = 24;
                 }
-            } else {
-                wolfkin_a_hold = 0;
             }
-        } else if ((keys & J_A) && !(keys & J_B)
-            && player.fire_cooldown == 0) {
+        } else if ((keys & J_A) && !(keys & J_B) && !max_fired) {
+            // The ranged path shares the same contextual TALK edge. Checking
+            // it before the cooldown gate means a resident always answers,
+            // even if the prior turbo shot has not cooled down yet.
+            if (player.fire_cooldown == 0) {
                 u8 dir = input_to_dir8(keys);
                 u8 dmg = (u8)(w->p1 + player.atk);
                 u8 cooldown = player_fire_delay(w->p0);
@@ -1526,86 +1712,37 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                                 break;
                         }
                     }
+                    if (shot != 0xFF) player.will_charge = 0;
                     pickup_echo_primary(dir, dmg, w->p2);
                 }
                 player.fire_cooldown = cooldown;
+            }
         }
-        // A Max Strike is a continuous held-A commitment. Chording B or
-        // changing weapons interrupts that tell; the old frozen counter could
-        // resume at frame 19 and fire a surprise dash one frame later.
-        if (!wolfkin_melee || (keys & J_B)) wolfkin_a_hold = 0;
         if (player.fire_cooldown) player.fire_cooldown--;
 
-        // ---- Weapon 2 (B, edge): class signature move. Costs MP_COST_B
+        // ---- Weapon 2 (B, edge): class signature move. Costs MP
         // magic on top of the ~2.3s cooldown; no MP -> error beep.
-        #define MP_COST_B 2
         if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
-            && player.mp < MP_COST_B) {
+            && player.mp < SIGNATURE_MP_COST) {
             sfx_play(SFX_HURT);   // out of magic
         }
         if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
-            && player.mp >= MP_COST_B) {
+            && player.mp >= SIGNATURE_MP_COST) {
             u8 dir = input_to_dir8(keys);
             u8 dmg = (u8)(w->p1 + 1 + player.atk);
-            u8 d;
-            u8 ability_ok = 1;
             if (dir == 0xFF) dir = facing_to_dir8(player.facing);
-            switch (player.class_id) {
-                case 0:   // Wolfkin HOWL: 8-way spike ring
-                    for (d = 0; d < 8; ++d) {
-                        projectile_spawn_player(dir8_dx[d], dir8_dy[d], dmg, PROJ_SPIKE);
-                    }
-                    // This remains an activation ward rather than a shield:
-                    // half a second carries the committed burst through a
-                    // dense boss lane, but cannot erase a whole volley.
-                    room_special_guard(30);
-                    break;
-                case 1:   // Sauran STONESKIN: brief, timed shot/body shield
-                    player.shield_timer = 60;
-                    player.iframes = 8; // cover the raising animation
-                    break;
-                case 2:   // Corvin MURDER: 3-way shuriken spread
-                    ability_ok = 0;
-                    if (projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
-                            dmg, PROJ_SHURIKEN) != 0xFF) ability_ok = 1;
-                    if (projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
-                            dir8_dy[(u8)((dir + 1) & 7)],
-                            dmg, PROJ_SHURIKEN) != 0xFF) ability_ok = 1;
-                    if (projectile_spawn_player(dir8_dx[(u8)((dir + 7) & 7)],
-                            dir8_dy[(u8)((dir + 7) & 7)],
-                            dmg, PROJ_SHURIKEN) != 0xFF) ability_ok = 1;
-                    break;
-                case 3:   // Picsean TIDAL WAVE: 3-lane bubble wall
-                    projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_BUBBLE);
-                    projectile_spawn_player(dir8_dx[(u8)((dir + 2) & 7)],
-                        dir8_dy[(u8)((dir + 2) & 7)], dmg, PROJ_BUBBLE);
-                    projectile_spawn_player(dir8_dx[(u8)((dir + 6) & 7)],
-                        dir8_dy[(u8)((dir + 6) & 7)], dmg, PROJ_BUBBLE);
-                    // Undertow guard: the wave wraps its caster in a brief
-                    // water barrier, paid for by the normal MP/cooldown. It
-                    // blocks bodies and destroys shots like other barriers.
-                    if (player.shield_timer < 100) player.shield_timer = 100;
-                    if (player.iframes < 8) player.iframes = 8;
-                    break;
-                default:  // Vespine SWARM: 4-stinger fan burst
-                    projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
-                    projectile_spawn_player(dir8_dx[dir], dir8_dy[dir], dmg, PROJ_BULLET);
-                    projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
-                        dir8_dy[(u8)((dir + 1) & 7)], dmg, PROJ_BULLET);
-                    projectile_spawn_player(dir8_dx[(u8)((dir + 7) & 7)],
-                        dir8_dy[(u8)((dir + 7) & 7)], dmg, PROJ_BULLET);
-                    room_special_guard(18);
-                    break;
-            }
-            if (ability_ok) {
-                sfx_play(SFX_ROAR);
-                player.active_charge = 140;
-                player.mp = (u8)(player.mp - MP_COST_B);
+            if (will_fire_signature(dir, dmg)) {
+                // B is still a useful action during a restraint cycle, but it
+                // gives up part of the setup rather than safely charging a
+                // second burst for free. One quarter meter is a meaningful
+                // choice without making the two buttons mutually exclusive.
+                will_begin_signature();
+                player.mp = (u8)(player.mp - SIGNATURE_MP_COST);
                 mp_regen = 0;
                 hud_redraw_mp();
             } else {
-                // Corvin's B has no shield/guard fallback. A saturated entity
-                // table must refuse it instead of charging MP for zero blades.
+                // Targeted signatures with no valid subject must refuse the
+                // resource spend rather than starting an empty cooldown.
                 sfx_play(SFX_HURT);
             }
         }
@@ -1623,6 +1760,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             if ((player.shield_timer & 7) == 0)
                 room_spawn_shield_aura();
         }
+        if (will_corvin_mark_ticks || will_vespine_swarm_ticks)
+            room_update_signatures();
 
         // MP trickle: +1 every ~3.2s while below max — Picsean's
         // MP-attuned passive (perk 4) regenerates twice as fast.
@@ -1687,6 +1826,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (room_encounter_complete && room_combat_sealed) {
             room_combat_sealed = 0;
             room_unseal_doors();
+            sfx_play_reward(SFX_REWARD_UNLOCK);
         }
         // Corvin's raven sight (perk 3): with no boss around, the bar
         // reads a regular enemy's real spawn HP. The old content-table value
@@ -1719,23 +1859,24 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 hud_clear_offer();
                 shop_offer_visible = 0;
             }
-            // The contextual four-slot lane is otherwise empty. Wolfkin's
-            // Max Strike uses it as a filling cooldown bar: full means the
-            // held-A dash is ready, empty means it has just been spent.
-            if (!room_has_shop_wares && player.class_id == 0
-                && player.starter_weapon == classes[0].starter_weapon) {
-                hud_redraw_action_charge((u8)(150 - wolfkin_max_cd), 150);
-            }
+            // The contextual four-slot lane is otherwise the shared Will
+            // meter. Full means the next A edge becomes that weapon's MAX.
+            if (!room_has_shop_wares)
+                hud_redraw_action_charge(player.will_charge, WILL_MAX);
         }
 
-        // Last hostile down → rising chime + 1 MP back. Boss kills keep
-        // their own fanfare (roar/explosion), so skip when one just landed.
+        // Last hostile down restores MP. A room that truly required the clear
+        // gets the dedicated latch-release voice while its barred door visibly
+        // opens; optional combat keeps the lighter completion arpeggio.
+        // Boss kills retain their own fanfare.
         if (alive == 0 && hostiles_prev != 0
             && !run_state.pending_unseal && !run_state.victory) {
-            sfx_play(SFX_CLEAR);
             if (room_combat_sealed) {
                 room_combat_sealed = 0;
                 room_unseal_doors();
+                sfx_play_reward(SFX_REWARD_UNLOCK);
+            } else if (!room_encounter_complete) {
+                sfx_play(SFX_CLEAR);
             }
             if (run_state.rooms_cleared < 255) run_state.rooms_cleared++;
             if (player.mp < player.mp_max) {
@@ -1830,6 +1971,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             room_load_town_resident_identity();
             room_spawn_progression_fixture();
             puzzle_prepare_room_role();
+            dungeon_law_apply_room(0);
             dungeon_director_activate();
             boss_threshold_warned = 0;
             room_load_environment_palettes();
@@ -1891,8 +2033,30 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
 
         if (dir != DIR_NONE && ty < (u8)(room_world_height >> 3)
-            && room_tile_at_px((i16)tx << 3, (i16)ty << 3) == BGT_DOOR) {
+            && (room_tile_at_px((i16)tx << 3, (i16)ty << 3) == BGT_DOOR
+                || hidden_walk_at(tx, ty))) {
             u8 back_dir = (u8)((run_state.entered_from + 2) & 3);
+            u8 return_door = (run_state.entered_from != DIR_NONE
+                && dir == back_dir) ? 1 : 0;
+            // A nonlinear Rift, suspend/resume, or streamed transition can
+            // arrive without a trustworthy cardinal entered_from direction.
+            // The first hardening only recognized numerically lower cells;
+            // Stage 3's folded graph can enter its sealed deep Warden at local
+            // 16 from the already-visited local 17 (and other seeds reverse
+            // different arms). Treat any *seen* graph neighbour as proven
+            // backtracking.
+            // It cannot skip an objective because the player has physically
+            // visited that cell already.
+            if (!return_door && !run_state.world_mode
+                && !RUN_ROOM_IS_TOWN(run_state.room_counter)
+                && !run_state.secret_pending) {
+                u8 retreat = run_state_dungeon_neighbor(dir);
+                if (retreat != 0xFF) {
+                    u8 local = (u8)(retreat
+                        - run_state_stage_start(run_state.bosses_beaten));
+                    if (run_state_dungeon_cell_seen(local)) return_door = 1;
+                }
+            }
                 // The sanctuary's forward threshold rejects the hero until
                 // this dungeon's route fixtures are recovered. Twelve-cell
                 // stages add the local-room-7 Waystone; fourteen-cell stages
@@ -1900,19 +2064,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // return door remains open, guaranteeing a route back to
                 // every visible objective.
                 if (is_forward_boss_door(tx, ty, BGT_DOOR)
-                    && (!(run_state.rift_sigils
+                    && (!(run_state.dungeon_puzzles & RUN_TRIAL_BIT)
+                        || !(run_state.rift_sigils
                             & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
                         || !(run_state.dungeon_puzzles
                             & RUN_WARDEN_BOON_BIT)
-                        || (run_state_dungeon_size() >= 12
-                            && !(run_state.dungeon_puzzles
-                                & RUN_WAYSTONE_BIT))
-                        || (run_state_dungeon_size() >= 14
-                            && !(run_state.dungeon_phase
-                                & RUN_DEEP_WARDEN_BIT))
-                        || (run_state_dungeon_size() >= 20
-                            && !(run_state.dungeon_phase
-                                & RUN_DEEP_PHASE_OPEN_BIT)))) {
+                        || !(run_state.dungeon_puzzles & RUN_WAYSTONE_BIT)
+                        || !(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT)
+                        || !(run_state.dungeon_phase
+                            & RUN_DEEP_PHASE_OPEN_BIT)
+                        || !(run_state.dungeon_puzzles
+                            & RUN_DEEP_GATE_BIT))) {
                     room_hold_at_door(dir, SFX_HURT, 6);
                     return SCREEN_SELF;
                 }
@@ -1930,7 +2092,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // they must never globally seal doors because procedural fold
                 // edges can approach either side before the switch is found.
                 if (room_puzzle_locked
-                    && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
+                    && !return_door) {
                     room_hold_at_door(dir, SFX_TICK, 4);
                     return SCREEN_SELF;
                 }
@@ -1938,7 +2100,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // overworld, not a chain of arenas: its fights are optional
                 // and every authored graph exit remains fleeable.
                 if (room_combat_sealed && hostiles_now != 0
-                    && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
+                    && !return_door) {
                     // A locked doorway is still walkable terrain so the hero
                     // can cross it after a clear. Hold the signed position at
                     // the legal room edge while combat keeps it locked;
@@ -1949,8 +2111,15 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 }
                 // Leaving through a shot-open secret door → treasure room
                 if ((tx == secret_door_x && ty == secret_door_y)
-                    || (tx == secret_door_x2 && ty == secret_door_y2)) {
+                    || (tx == secret_door_x2 && ty == secret_door_y2)
+                    || (room_hidden_secret_kind == HIDDEN_SECRET_WALK
+                        && ((tx == room_hidden_secret_x
+                                && ty == room_hidden_secret_y)
+                            || (tx == room_hidden_secret_x2
+                                && ty == room_hidden_secret_y2)))) {
                     run_state.secret_pending = 1;
+                    if (room_hidden_secret_kind == HIDDEN_SECRET_WALK)
+                        run_state.dungeon_phase |= room_hidden_secret_bit;
                 }
                 secret_door_x = secret_door_y = 0xFF;
                 secret_door_x2 = secret_door_y2 = 0xFF;
@@ -2033,6 +2202,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_town_resident_identity();
                 room_spawn_progression_fixture();
                 puzzle_prepare_room_role();
+                dungeon_law_apply_room(0);
                 dungeon_director_activate();
                 // A wide-to-wide edge is a continuous district seam. Rotate
                 // the 32x32 hardware map and stream destination lines behind

@@ -8,9 +8,9 @@
 
 void inventory_write_weapon_tip(u8 index) BANKED {
     static const char *const tips[7] = {
-        "STAB SLASH DASH", "HEAVY CLOSE STRIKE", "RETURNING SHOT",
-        "PIERCING BUBBLE", "FAST CRITICAL SHOT", "SLOW 3 HIT SWEEP",
-        "LONG PRECISE STAB",
+        "STAB SLASH MAX", "HEAVY HIT MAX", "RETURNING MAX",
+        "PIERCE BUBBLE MAX", "FAST CRIT MAX", "SLOW SWEEP MAX",
+        "LONG STAB MAX",
     };
     if (index < 5) {
         text_write(tips[index]);

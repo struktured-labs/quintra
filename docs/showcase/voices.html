@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Quintra — Voices of the Rift</title>
+  <link rel="stylesheet" href="voices.css">
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i>
+  </div>
+
+  <nav class="nav shell">
+    <a class="brand" href="index.html" aria-label="Return to Quintra Field Archive">
+      <span class="brand-mark">V</span>
+      <span><strong>QUINTRA</strong><small>FIELD ARCHIVE</small></span>
+    </a>
+    <div class="nav-actions">
+      <span class="build"><i></i> LIVE ROM CAPTURES</span>
+      <a href="index.html">Full archive <span>↗</span></a>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero shell">
+      <div class="hero-copy">
+        <p class="eyebrow">Working milestone · Lore &amp; conversation</p>
+        <h1>The Rift<br><em>finally speaks.</em></h1>
+        <p class="lede">Merchants, villagers, and peaceful creatures now have voices—small, strange fragments of a world that remembers five champions differently every run.</p>
+        <div class="hero-actions">
+          <button class="primary" data-scroll="voices">Meet the wayfarers <span>↓</span></button>
+          <button class="secondary" data-open="assets/dialog-merchant-advice.png">View full-size capture</button>
+        </div>
+      </div>
+
+      <div class="hero-capture">
+        <div class="capture-aura"></div>
+        <div class="handheld">
+          <div class="handheld-top"><span>DOT MATRIX WITH STEREO SOUND</span><i></i></div>
+          <button class="screen" data-open="assets/dialog-merchant-advice.png" aria-label="Open merchant conversation capture">
+            <img src="assets/dialog-merchant-advice.png" alt="Rift Merchant explaining how to buy wares">
+            <span class="screen-glass"></span>
+          </button>
+          <div class="handheld-label"><strong>QUINTRA</strong><span>COLOR</span></div>
+          <div class="controls" aria-hidden="true">
+            <div class="dpad"><i></i><i></i></div>
+            <div class="speaker"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="buttons"><i>A</i><i>B</i></div>
+          </div>
+        </div>
+        <div class="capture-note note-one"><span>01</span> Real advice,<br>not an empty bubble</div>
+        <div class="capture-note note-two"><span>A</span> Talk only when<br>you are close</div>
+      </div>
+    </header>
+
+    <section class="metrics">
+      <div class="shell metric-grid">
+        <div><strong>02</strong><span>pages per conversation</span></div>
+        <div><strong>09</strong><span>biome-native wayfarers</span></div>
+        <div><strong>00</strong><span>room rerolls after talking</span></div>
+        <div><strong>256<small>KiB</small></strong><span>current MBC5 cartridge</span></div>
+      </div>
+    </section>
+
+    <section class="change shell">
+      <div class="section-heading">
+        <p class="eyebrow">The useful kind of worldbuilding</p>
+        <h2>Lore that teaches the game.</h2>
+        <p>Every conversation carries atmosphere on page one and actionable knowledge on page two. The words can stay mysterious without making the mechanics mysterious.</p>
+      </div>
+      <div class="change-grid">
+        <article class="change-card muted">
+          <span class="card-index">BEFORE</span>
+          <div class="pixel-frame"><img src="../media/shop.png" alt="Merchant room before opening conversation"></div>
+          <div><h3>A bubble without a voice</h3><p>The merchant signaled that something was there, but never explained stock, prices, or what survived a run.</p></div>
+        </article>
+        <div class="rift-arrow" aria-hidden="true"><span>✦</span></div>
+        <article class="change-card live">
+          <span class="card-index">NOW</span>
+          <button class="pixel-frame" data-open="assets/dialog-merchant-advice.png"><img src="assets/dialog-merchant-advice.png" alt="Merchant dialogue explaining purchases"></button>
+          <div><h3>The Rift Merchant inventories the room</h3><p>The second page is generated from the four live counters: every line gives the item's exact effect and price, then says how to buy it.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="voices" id="voices">
+      <div class="shell">
+        <div class="section-heading split">
+          <div><p class="eyebrow">Voices found between battles</p><h2>Not everything here wants you dead.</h2></div>
+          <p>The end court of each dungeon wing may shelter a stage-native creature. A small sparkle marks the rare moment when a familiar silhouette is a witness, not prey.</p>
+        </div>
+
+        <div class="voice-grid">
+          <article class="voice-card featured">
+            <button class="voice-image" data-open="assets/dialog-wayfarer-room.png">
+              <img src="assets/dialog-wayfarer-room.png" alt="Peaceful Moss Coil waiting in a Verdant Hollow room">
+              <span>Open capture</span>
+            </button>
+            <div class="voice-copy">
+              <span class="voice-number">I</span>
+              <p class="voice-kind">Encounter language</p>
+              <h3>A hostile shape, at peace.</h3>
+              <p>The creature inherits its biome’s native art. The sparkle and its stillness invite curiosity without introducing a modern quest marker.</p>
+              <ul><li>Contextual A-button talk</li><li>Normal weapon behavior everywhere else</li><li>Returns to the exact procedural room</li></ul>
+            </div>
+          </article>
+
+          <article class="voice-card">
+            <button class="voice-image" data-open="assets/dialog-moss-advice.png">
+              <img src="assets/dialog-moss-advice.png" alt="Moss Coil warning how to fight the Storm Serpent">
+              <span>Open capture</span>
+            </button>
+            <div class="voice-copy">
+              <span class="voice-number">II</span>
+              <p class="voice-kind">Mechanically accurate advice</p>
+              <h3>The Moss Coil knows hunger.</h3>
+              <blockquote>“The Serpent feeds. Deny four storms. Flee the full coil.”</blockquote>
+              <p>Its warning maps directly onto the Colossus: four motes, visible growth, then the full-coil AOE.</p>
+            </div>
+          </article>
+
+          <article class="voice-card">
+            <button class="voice-image" data-open="assets/dialog-merchant-advice.png">
+              <img src="assets/dialog-merchant-advice.png" alt="Rift Merchant service dialogue">
+              <span>Open capture</span>
+            </button>
+            <div class="voice-copy">
+              <span class="voice-number">III</span>
+              <p class="voice-kind">Readable procedural stock</p>
+              <h3>No more mystery ovals.</h3>
+              <p>Smiths, cartographers, and lorekeepers still teach their services. Merchants now name what each generated ware actually does, show its exact cost, and explain the contact-purchase rule.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="witnesses shell">
+      <div class="witness-panel">
+        <div class="witness-copy">
+          <p class="eyebrow">Nine witnesses · nine climates</p>
+          <h2>The same myth,<br>remembered nine ways.</h2>
+          <p>Crystal Crab. Moss Coil. Cinder Kite. Frost Lancer. Bog Toad. Bramble Sprite. Sunwheel. Dusk Midge. Void Halo.</p>
+          <p>Each remembers a different piece of the five-spirit oath, then points toward a secret, hazard, or Colossus opening from its own region.</p>
+          <a href="index.html">Browse all stages and creatures <span>↗</span></a>
+        </div>
+        <button class="witness-art" data-open="assets/stage-collage.png">
+          <img src="assets/stage-collage.png" alt="Representative mosaic of all nine Quintra stages">
+          <span><b>09</b> REGIONS / ONE FRACTURED HISTORY</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="flow shell">
+      <div class="section-heading"><p class="eyebrow">Cartridge interaction</p><h2>Walk up. Listen. Continue.</h2></div>
+      <ol>
+        <li><span>01</span><div><strong>Notice the sparkle</strong><p>A peaceful witness uses its stage silhouette but does not pursue or attack.</p></div></li>
+        <li><span>02</span><div><strong>Approach and press A</strong><p>TALK replaces the primary weapon only inside the small conversation radius.</p></div></li>
+        <li><span>03</span><div><strong>Read lore, then advice</strong><p>A advances to page two. B or START returns immediately to play.</p></div></li>
+        <li><span>04</span><div><strong>Resume the same world</strong><p>Stock, enemies, terrain, secrets, and the procedural graph remain untouched.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="closing">
+      <div class="shell closing-grid">
+        <div>
+          <p class="eyebrow">Still a roguelike. Now with memory.</p>
+          <h2>The fixtures endure.<br>The road changes.</h2>
+          <p>The five champions, the oath, and the witnesses are lore anchors. Which rooms you find them beside—and what their warning means for your current build—belongs to the run.</p>
+        </div>
+        <button class="boss-window" data-open="../media/boss-gallery.png">
+          <img src="../media/boss-gallery.gif" alt="Animated gallery of all nine Quintra Colossi">
+          <span>View all nine Colossi <b>↗</b></span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer shell">
+    <p><strong>QUINTRA</strong> · native Game Boy Color · procedural action roguelike</p>
+    <p>Working cartridge · v0.19.2 · 256 KiB MBC5</p>
+  </footer>
+
+  <dialog id="lightbox">
+    <button class="lightbox-close" aria-label="Close">×</button>
+    <button class="lightbox-step previous" aria-label="Previous capture">‹</button>
+    <figure><img id="lightbox-image" alt=""><figcaption id="lightbox-caption"></figcaption></figure>
+    <button class="lightbox-step next" aria-label="Next capture">›</button>
+  </dialog>
+
+  <script>
+    const captures = [...document.querySelectorAll('[data-open]')];
+    const unique = [...new Set(captures.map(item => item.dataset.open))];
+    const box = document.querySelector('#lightbox');
+    const image = document.querySelector('#lightbox-image');
+    const caption = document.querySelector('#lightbox-caption');
+    let active = 0;
+
+    function show(source) {
+      active = unique.indexOf(source);
+      image.src = source;
+      const trigger = captures.find(item => item.dataset.open === source);
+      const preview = trigger && trigger.querySelector('img');
+      image.alt = preview ? preview.alt : 'Quintra cartridge capture';
+      caption.textContent = image.alt;
+      if (!box.open) box.showModal();
+    }
+    captures.forEach(item => item.addEventListener('click', () => show(item.dataset.open)));
+    document.querySelectorAll('[data-scroll]').forEach(item => item.addEventListener('click', () => {
+      document.querySelector('#' + item.dataset.scroll).scrollIntoView({behavior: 'smooth'});
+    }));
+    document.querySelector('.lightbox-close').addEventListener('click', () => box.close());
+    document.querySelector('.previous').addEventListener('click', () => show(unique[(active + unique.length - 1) % unique.length]));
+    document.querySelector('.next').addEventListener('click', () => show(unique[(active + 1) % unique.length]));
+    box.addEventListener('click', event => { if (event.target === box) box.close(); });
+    window.addEventListener('keydown', event => {
+      if (!box.open) return;
+      if (event.key === 'ArrowLeft') show(unique[(active + unique.length - 1) % unique.length]);
+      if (event.key === 'ArrowRight') show(unique[(active + 1) % unique.length]);
+    });
+  </script>
+</body>
+</html>

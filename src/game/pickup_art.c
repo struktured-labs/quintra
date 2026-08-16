@@ -13,6 +13,8 @@ u8 pickup_item_sprite(u8 item_index) BANKED {
     // ten-arm SDCC switch in the crowded pickup-runtime bank.
     if (id >= 20u && id <= 29u)
         return (u8)(SPR_ITEM_IRON_HEART + (u8)(id - 20u));
+    if (id >= 40u && id <= 42u)
+        return (u8)(SPR_ITEM_RIFT_BOMB + (u8)(id - 40u));
     return (item_index < N_ITEMS && items[item_index].kind == ITEM_KIND_WEAPON)
         ? SPR_ITEM_WEAPON : SPR_ITEM_POWER_STONE;
 }

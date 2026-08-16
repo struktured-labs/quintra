@@ -7,6 +7,7 @@
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
+#include "game/mission_graph.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
@@ -447,8 +448,12 @@ void procgen_generate_current_room(void) BANKED {
     u8 world_kind = run_state.world_mode
         ? zelda_overworlds[0].screen_grid[run_state.world_screen & 15].kind
         : ZELDA_CELL_OVERWORLD;
+    u8 world_gate_active = (run_state.world_mode
+        && world_kind == ZELDA_CELL_DUNGEON_ENTRANCE)
+        ? run_state_riftwild_gate_active(run_state.world_screen) : 0;
     u8 seed_room = run_state.world_mode
-        ? (u8)(0x80 | (run_state.world_screen & 15))
+        ? (u8)(0x80 | (run_state.world_screen & 15)
+            | (u8)(run_state.riftwild_region << 4))
         : run_state.room_counter;
     u32 seed = procgen_room_seed(run_state.run_seed, run_state.biome_id, seed_room);
     // A boss guards every Nth room until BOSSES_TO_WIN are down. Computed
@@ -462,6 +467,9 @@ void procgen_generate_current_room(void) BANKED {
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
     u8 room_was_seen = (!run_state.world_mode && !is_town)
         ? run_state_dungeon_cell_seen(run_state_dungeon_cell()) : 1;
+    // Resolve every progression role against the seed-folded maze before a
+    // room shape, enemy, puzzle, or lore fixture asks what this cell means.
+    mission_graph_ensure();
     // No directive state may survive a doorway transaction into a service,
     // puzzle, town, overworld, boss, or backtracked room.
     dungeon_director_reset();
@@ -722,7 +730,8 @@ void procgen_generate_current_room(void) BANKED {
 
             // Entrances and vault staircases are explicit graph fixtures.
             if (run_state.world_mode
-                && (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
+                && ((world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
+                        && world_gate_active)
                     || world_kind == ZELDA_CELL_VAULT
                     || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)) {
                 room_tilemap[8][10] = BGT_PORTAL;
@@ -812,7 +821,8 @@ void procgen_generate_current_room(void) BANKED {
         u8 x, y;
         u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen & 15].edges;
         u8 family = (u8)(((u8)run_state.run_seed
-            + (run_state.world_screen & 15)) & 3);
+            + (run_state.world_screen & 15)
+            + run_state.riftwild_region) & 3);
         for (y = 0; y < ROOM_H; ++y)
             for (x = 0; x < ROOM_W; ++x)
                 room_tilemap[y][x] = (y == 0 || y == ROOM_H - 1
@@ -856,10 +866,20 @@ void procgen_generate_current_room(void) BANKED {
         for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x)
             room_world_extension[ROOM_H - 1][x] = BGT_GRASS;
         generate_world_bottom(edges, family, seed);
-        if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
+        if ((world_kind == ZELDA_CELL_DUNGEON_ENTRANCE && world_gate_active)
             || world_kind == ZELDA_CELL_VAULT
             || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)
             room_tilemap[8][10] = BGT_PORTAL;
+        if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
+            // Three permanent gate ruins make the shared region legible.
+            // Only the current mission arch wakes; explored future/cleared
+            // arches remain visible geography without becoming shortcuts.
+            room_tilemap[5][3] = room_tilemap[6][3] = BGT_PILLAR;
+            room_tilemap[5][16] = room_tilemap[6][16] = BGT_PILLAR;
+            room_tilemap[6][4] = room_tilemap[6][15] = BGT_CRYSTAL;
+            room_tilemap[5][4] = world_gate_active
+                ? BGT_SWITCH : BGT_PILLAR;
+        }
     }
 
     // Each long dungeon row resolves into a true scrolling turn court. The
@@ -999,6 +1019,7 @@ void procgen_generate_current_room(void) BANKED {
             pickup_spawn(PICKUP_COIN_1,     FIX8(96), FIX8(64));
             pickup_spawn(PICKUP_COIN_1,     FIX8(80), FIX8(48));
             pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
+            pickup_spawn_item((u8)(22 + rng_range(3)), FIX8(56), FIX8(80));
             if (rng_next_u8() & 1) {
                 u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
                 if (w == player.starter_weapon) w = pickup_next_weapon(w);
@@ -1026,12 +1047,10 @@ void procgen_generate_current_room(void) BANKED {
         // entity churn, this keeps streamed same-stage travel below one
         // second even after the game-wide encounter-density increase.
         u8 is_puzzle_room = (!run_state.world_mode && !is_boss_room
-            && (puzzle_local == 1
-                || (puzzle_local == 2
-                    && (run_state.bosses_beaten % 3) == 2)
-                || puzzle_local == 7
-                || (run_state_dungeon_size() >= 20
-                    && (puzzle_local == 12 || puzzle_local == 13)))) ? 1 : 0;
+            && (puzzle_local == run_state.mission_trial_cell
+                || puzzle_local == run_state.mission_waystone_cell
+                || puzzle_local == run_state.mission_deep_switch_cell
+                || puzzle_local == run_state.mission_deep_gate_cell)) ? 1 : 0;
         // Recurring turn courts close each large two-room wing. They retain
         // combat, but cap it at a
         // deliberate pair so the enlarged maze has pacing contrast rather
@@ -1111,9 +1130,13 @@ void procgen_generate_current_room(void) BANKED {
         }
 
         if (run_state.world_mode && world_kind == ZELDA_CELL_VAULT) {
-            pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
-            pickup_spawn(PICKUP_COIN_5, FIX8(64), FIX8(72));
-            pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));
+            if (!(run_state.riftwild_flags & RIFT_REGION_VAULT_USED_BIT)) {
+                pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
+                pickup_spawn_item((u8)(22 + rng_range(3)), FIX8(80), FIX8(80));
+                pickup_spawn(PICKUP_COIN_5, FIX8(64), FIX8(72));
+                pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));
+                run_state.riftwild_flags |= RIFT_REGION_VAULT_USED_BIT;
+            }
             player.iframes = 60;
             return;
         }
@@ -1456,6 +1479,20 @@ void procgen_generate_current_room(void) BANKED {
             // frames to a 16-body same-stage doorway.
             if (direct_wide)
                 procgen_place_wide_enemies(encounter_formation);
+            if (is_waypoint) {
+                u8 lx, ly;
+                // Every long dungeon wing ends at a lighter turn court. Give
+                // that breathing beat a peaceful, stage-native witness: its
+                // slot-79 art is already the biome's specialist creature,
+                // while a small open apron guarantees the player can reach
+                // and circle it without changing graph progression.
+                for (ly = 12; ly <= 14; ++ly)
+                    for (lx = 13; lx <= 15; ++lx)
+                        room_tilemap[ly][lx] = BGT_FLOOR;
+                pickup_spawn_wayfarer(
+                    (u8)(run_state.bosses_beaten % 9),
+                    FIX8(112), FIX8(104));
+            }
             if (!run_state.world_mode
                 && run_state_dungeon_local()
                     == run_state_dungeon_cache_cell()

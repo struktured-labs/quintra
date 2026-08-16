@@ -48,17 +48,17 @@ BOSS_NAMES = (
 )
 BOSS_DESCRIPTIONS = (
     "A screen-scale crystal guardian whose exposed heart jumps between three distant wells.",
-    "A hollow storm coil with a vulnerable head that rebounds diagonally around the arena.",
+    "A hungry storm coil that eats four motes, grows across the arena, charges an AOE, then contracts while its rotating cross keeps firing.",
     "A furnace beast that breathes in aimed fans, telegraphs a hard lunge, then clenches to recover.",
     "A charged web with a warned flank blink and alternating cardinal and diagonal volleys.",
     "An expanding organism that pulses outward, contracts, advances, and scatters mixed-speed shots.",
     "A hunting specter that telegraphs each disappearance before re-entering from a new flank.",
     "An awakened idol whose moving heart sends slow, heavy eight-way rings through the court.",
     "A broad three-headed weave firing staggered slow, medium, and fast streams down the same lanes.",
-    "A warping weak point above an arena-scale World Collapse with one announced safe pocket.",
+    "A slowly regenerating, warping weak point above an arena-scale World Collapse with one announced safe pocket.",
 )
 BOSS_MOVEMENT = (
-    "Anchor warp", "Wall bounce", "Lunge", "Blink", "Expand / contract",
+    "Anchor warp", "Feed / grow / AOE", "Lunge", "Blink", "Expand / contract",
     "Hunt / teleport", "Pursuit", "Broad weave", "Anchor warp",
 )
 BOSS_HP = (200, 205, 150, 150, 255, 255, 230, 150, 220)
@@ -88,7 +88,7 @@ ENEMY_SIGNATURES = (
     "Blooms into untouchable diagonal echoes on an odd cadence, then contracts to take damage.",
     "A Keese-like diagonal flyer that flutters in bursts and rebounds around obstacles.",
     "Pursues, attaches, and drains life until a dodge-dash shakes it loose.",
-    "A slow Ember caster whose deliberate three-way volleys turn open space into a routing test.",
+    "A narrow 10x15 middle-scale furnace caster whose deliberate three-way volleys turn open space into a routing test.",
     "A modest walker that splits into two fragile fragments, then tries to recombine.",
     "Reverses the champion's last movement and fires a reflected lane shot.",
     "A rooted proximity mine that unfolds into an eight-lane burst after a visible fuse.",
@@ -117,7 +117,7 @@ AI_LABELS = {
     "AI_SUMMONER": "Summoner", "AI_TELEPORT": "Teleporter",
 }
 ELEMENTS = ((1, "Fire"), (2, "Ice"), (4, "Lightning"), (8, "Shadow"), (16, "Poison"))
-BIG_ENEMIES = {1, 4, 6, 8}
+BIG_ENEMIES = {1, 4, 6, 8, 14}
 
 
 def slug(text: str) -> str:

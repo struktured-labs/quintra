@@ -8,7 +8,7 @@ from quintra_pyboy_env import QuintraPyBoyEnv
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "tmp/stage-states/quintra-village-after-stage-03-wolfkin.pyboy"
 SCREEN_MAP = 8
-BGT_SWITCH = 33
+BGT_MAP_HERE = 50
 BGT_AREA_R = 76
 BGT_AREA_I = 77
 BGT_AREA_F = 78
@@ -37,8 +37,12 @@ def main():
         env.pb.tick(40)
         assert env.observe(include_tiles=False)["screen"] == SCREEN_MAP
         env.pb.memory[0xFF4F] = 0
-        assert env.pb.memory[0x9800 + 9 * 32 + 9] == BGT_SWITCH, \
-            "village arrival node is not the cyan current marker"
+        assert env.pb.memory[0x9800 + 9 * 32 + 9] == BGT_MAP_HERE, \
+            "village arrival node is not the shared player map pin"
+        env.pb.memory[0xFF4F] = 1
+        assert env.pb.memory[0x9800 + 9 * 32 + 9] == 7, \
+            "village map pin lost its dedicated player palette"
+        env.pb.memory[0xFF4F] = 0
         assert row(env.pb, 1, 13, 5) == bytes((
             BGT_AREA_F, BGT_AREA_O, BGT_AREA_R, BGT_AREA_G, BGT_AREA_E)), \
             "left civic node lost its FORGE label"

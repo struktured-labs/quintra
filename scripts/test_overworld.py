@@ -137,14 +137,28 @@ def main():
          pb.memory[EN + i * 28 + 7] | pb.memory[EN + i * 28 + 8] << 8)
         for i in range(32) if pb.memory[EN + i * 28] == 2
     ]
+    hostile_records = [
+        bytes(pb.memory[EN + i * 28:EN + (i + 1) * 28])
+        for i in range(32) if pb.memory[EN + i * 28] == 2
+    ]
+    assert hostile_count(pb) > 0, "test seed produced no overworld encounter"
     assert any(x >= 160 for x, _ in hostile_positions), \
         f"Riftwild spawned no far-field hostile: {hostile_positions}"
     assert any(y >= 136 for _, y in hostile_positions), \
         f"Riftwild spawned no southern-field hostile: {hostile_positions}"
-    put16(pb, PL + 9, 216); put16(pb, PL + 11, 216)
+    # Incidental knockback made this camera contract depend on the random
+    # encounter.  Keep the already-inspected spawn distribution, then sample
+    # the actual 248-136 southern camera bound deterministically.
+    clear_hostiles(pb)
+    put16(pb, PL + 9, 224); put16(pb, PL + 11, 224)
     pb.memory[PL + 15] = 120
     for _ in range(64): pb.tick()
-    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (88, 112)
+    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (88, 112), (
+        f"camera={pb.memory[CAMERA_X]},{pb.memory[CAMERA_Y]} "
+        f"player={pb.memory[PL + 9] | pb.memory[PL + 10] << 8},"
+        f"{pb.memory[PL + 11] | pb.memory[PL + 12] << 8} "
+        f"world={pb.memory[RS + 17]}/{pb.memory[RS + 18]} "
+        f"size={pb.memory[WORLD_W]},{pb.memory[WORLD_H]}")
     assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
         ((pb.memory[ORIGIN_X] << 3) + 88) & 0xFF,
         ((pb.memory[ORIGIN_Y] << 3) + 112) & 0xFF), \
@@ -159,7 +173,8 @@ def main():
 
     # Riftwild encounters never seal exits: leave screen 0 with its generated
     # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.
-    assert hostile_count(pb) > 0, "test seed produced no overworld encounter"
+    for off, value in enumerate(hostile_records[0]):
+        pb.memory[EN + off] = value
     exit_at(pb, 232, 60, clear=False); assert pb.memory[RS + 18] == 1, pb.memory[RS + 18]
     exit_at(pb, 232, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
     # Screen 2's cave staircase is a nonlinear hop to vault 15 and back.
@@ -194,7 +209,7 @@ def main():
     # consumed the LCD without explaining the two colored squares.
     assert bytes(pb.memory[bg + 0 * 32 + 8:bg + 0 * 32 + 11]) == bytes((87, 84, 94)), \
         "Riftwild map heading was overwritten by its top row"
-    assert pb.memory[bg + 7 * 32 + 7] == 50, "current cell lacks cyan HERE glyph"
+    assert pb.memory[bg + 7 * 32 + 7] == 50, "current cell lacks player map pin"
     assert pb.memory[bg + 13 * 32 + 10] == 52, "visited vault lacks violet glyph"
     assert pb.memory[bg + 4 * 32 + 10] == 95, \
         "unseen cell lost its dim 4x4-grid placeholder"
@@ -229,11 +244,19 @@ def main():
     assert pb.memory[SCREEN] == 5, "map did not resume Riftwild"
 
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
-    for _ in range(8): pb.tick()
+    # Entering a dungeon streams a complete 31x31 room and can legitimately
+    # span several VBlanks.  Observe the committed room, not the middle of
+    # that display transaction.
+    for _ in range(90): pb.tick()
     assert pb.memory[RS + 17] == 0, "gate did not return to dungeon mode"
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] + 1, \
         "next dungeon did not advance depth"
-    assert pb.memory[RS + 20] == 1, "new dungeon map did not reset to entry cell"
+    assert pb.memory[RS + 20] == 1, (
+        "new dungeon map did not reset to entry cell: "
+        f"room={pb.memory[RS + 1]} bosses={pb.memory[RS + 11]} "
+        f"world={pb.memory[RS + 17]}/{pb.memory[RS + 18]} "
+        f"seen={tuple(pb.memory[RS + off] for off in (20, 28, 30, 32))}"
+    )
     pb.stop(save=False)
     print("[overworld] PASS 248x248 field + 2D camera + visited 4x4 map -> dungeon gate")
 

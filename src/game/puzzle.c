@@ -7,6 +7,7 @@
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/player.h"
+#include "game/pickup.h"
 #include "game/procgen.h"
 #include "game/puzzle.h"
 #include "game/room.h"
@@ -17,6 +18,12 @@ u8 room_puzzle_kind;
 u8 room_puzzle_locked;
 u8 room_puzzle_visual_y;
 u8 room_puzzle_phase_bit;
+u8 room_hidden_secret_kind;
+u8 room_hidden_secret_x;
+u8 room_hidden_secret_y;
+u8 room_hidden_secret_x2;
+u8 room_hidden_secret_y2;
+u8 room_hidden_secret_bit;
 
 static u8 puzzle_block_x;
 static u8 puzzle_block_y;
@@ -51,7 +58,8 @@ u8 puzzle_combat_seal_policy(void) BANKED {
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)) return 0;
     local = run_state_dungeon_local();
     if (local == 0) return run_state.room_counter ? 1 : 0;
-    if (local == 3) return 1;
+    if (local == run_state.mission_warden_cell
+        || local == run_state.mission_deep_warden_cell) return 1;
     if (local >= 4) return 0;
     chosen = (u8)(1 + ((run_state.run_seed
         ^ (u32)(run_state.bosses_beaten * 0x5D)) & 1));
@@ -59,15 +67,26 @@ u8 puzzle_combat_seal_policy(void) BANKED {
 }
 
 static u8 puzzle_solved(void) {
-    return (run_state.dungeon_puzzles
-        & (u8)(1u << run_state_dungeon_cell())) ? 1 : 0;
+    u8 cell = run_state_dungeon_cell();
+    u8 bit = (cell == run_state.mission_trial_cell) ? RUN_TRIAL_BIT
+        : (cell == run_state.mission_waystone_cell) ? RUN_WAYSTONE_BIT : 0;
+    return (bit && (run_state.dungeon_puzzles & bit)) ? 1 : 0;
 }
 
 static void mark_puzzle_solved(void) {
-    run_state.dungeon_puzzles |= (u8)(1u << run_state_dungeon_cell());
+    u8 cell = run_state_dungeon_cell();
+    if (cell == run_state.mission_trial_cell)
+        run_state.dungeon_puzzles |= RUN_TRIAL_BIT;
+    else if (cell == run_state.mission_waystone_cell)
+        run_state.dungeon_puzzles |= RUN_WAYSTONE_BIT;
     room_puzzle_locked = 0;
     sfx_play(SFX_PUZZLE);
     room_shake(1, 18);
+    // Every mandatory puzzle pays one physical tool charge. The seed and
+    // local cell choose the implement, so routing changes the tactical Pack
+    // without turning tools into generic random enemy trash.
+    pickup_spawn_item((u8)(22 + ((u8)run_state.run_seed
+        + run_state_dungeon_cell()) % 3), player.x, player.y);
 }
 
 static void kill_puzzle_room_hostiles(void) {
@@ -168,6 +187,10 @@ static void prepare_phase_gate(u8 bit) {
     for (x = 4; x < ROOM_W - 4; ++x)
         room_tilemap[11][x] = (run_state.dungeon_phase & bit)
             ? BGT_FLOOR2 : BGT_PILLAR;
+    // A remote gate is the final graph node, not merely decoration. It counts
+    // only when revisited after its distant switch has changed the dungeon.
+    if (run_state.dungeon_phase & bit)
+        run_state.dungeon_puzzles |= RUN_DEEP_GATE_BIT;
     room_puzzle_locked = 0;
 }
 
@@ -179,35 +202,98 @@ void puzzle_prepare_room(void) BANKED {
     room_puzzle_locked = 0;
     room_puzzle_visual_y = 0xFF;
     room_puzzle_phase_bit = RUN_PHASE_OPEN_BIT;
+    room_hidden_secret_kind = HIDDEN_SECRET_NONE;
+    room_hidden_secret_bit = 0;
     puzzle_contact = 0;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
-        || procgen_current_room_is_boss) return;
+        || procgen_current_room_is_boss || run_state.secret_pending
+        || run_state_is_shop() || run_state_is_sanctuary()) return;
 
     local = run_state_dungeon_local();
     family = (u8)(run_state.bosses_beaten % 3);
     seed = procgen_room_seed(run_state.run_seed, run_state.biome_id,
                             run_state.room_counter);
 
-    if (local == 12 && run_state_dungeon_size() >= 20) {
+    if (local == run_state.mission_deep_switch_cell) {
         // The deep switch controls a gate in the following graph cell. It is
         // deliberately present in every full-size dungeon, giving the long
         // route one dependable multi-room state change amid fuzzy procgen.
         room_puzzle_kind = PUZZLE_PHASE_SWITCH;
         room_puzzle_phase_bit = RUN_DEEP_PHASE_OPEN_BIT;
-    } else if (local == 13 && run_state_dungeon_size() >= 20) {
+    } else if (local == run_state.mission_deep_gate_cell) {
         room_puzzle_kind = PUZZLE_PHASE_GATE;
         room_puzzle_phase_bit = RUN_DEEP_PHASE_OPEN_BIT;
-    } else if (local == 7 && run_state_dungeon_size() >= 12) {
+    } else if (local == run_state.mission_waystone_cell) {
         // Roomier mid/late dungeons get a second mechanical beat before the
         // back half. Keep it within the persisted eight-bit puzzle mask and
         // alternate its vocabulary so it does not merely repeat room one.
         room_puzzle_kind = ((family + (u8)seed) & 1)
             ? PUZZLE_PUSH_SEAL : PUZZLE_RUNE_SEQUENCE;
-    } else if (local == 1 && family == 0) room_puzzle_kind = PUZZLE_PUSH_SEAL;
-    else if (local == 1 && family == 1) room_puzzle_kind = PUZZLE_RUNE_SEQUENCE;
-    else if (local == 1 && family == 2) room_puzzle_kind = PUZZLE_PHASE_SWITCH;
-    else if (local == 2 && family == 2) room_puzzle_kind = PUZZLE_PHASE_GATE;
-    else return;
+    } else if (local == run_state.mission_trial_cell)
+        room_puzzle_kind = (family & 1)
+            ? PUZZLE_RUNE_SEQUENCE : PUZZLE_PUSH_SEAL;
+    else {
+        // These are the same stable spatial punctuation cells reserved by
+        // the mission graph: nonlinear Rifts, named stage wings, witnesses,
+        // and the optional third Warden. A disguised secret's clearing apron
+        // must not erase a Mire pool, Frost vault, Temple colonnade, or other
+        // lore fixture. Ordinary courts still provide ample fuzzy secrets.
+        if (local == 2 || local == 5 || local == 8 || local == 11
+            || local == 15 || local == 17 || local == 23) return;
+        // Roughly three rooms in 32 contain a true optional secret. Unlike
+        // amber cracks, these use the exact ordinary wall/cairn art: only
+        // experimentation reveals whether this seed wants a shot, a walk
+        // through stone, or a shove. No objective or boss route uses them.
+        u8 roll = (u8)(seed >> 16) & 31;
+        if (roll > 2) return;
+        // Four otherwise-unused dungeon-phase bits remember discoveries for
+        // the current stage. Seed collisions simply make a later optional
+        // cache decline to appear; they can never recreate an already-looted
+        // vault for farming after backtracking.
+        room_hidden_secret_bit = RUN_HIDDEN_SECRET_BIT((u8)(seed >> 24));
+        if (run_state.dungeon_phase & room_hidden_secret_bit) return;
+        room_hidden_secret_kind = (u8)(roll + 1);
+        if (room_hidden_secret_kind == HIDDEN_SECRET_PUSH) {
+            u8 i;
+            floor_rect(4, 4, 6, 6);
+            // Entities were selected before the puzzle pass. Do not silently
+            // entomb a living enemy in the disguised 2x2 cairn; when this
+            // particular procedural room already owns its center, keep the
+            // newly cleared floor but decline the optional secret.
+            for (i = 0; i < MAX_ENTITIES; ++i) {
+                if ((entities[i].flags & EF_ACTIVE)
+                    && entities[i].type == ENT_ENEMY) {
+                    u8 ex = (u8)((FIX8_TO_INT(entities[i].x) + 8) >> 3);
+                    u8 ey = (u8)((FIX8_TO_INT(entities[i].y) + 8) >> 3);
+                    if (ex >= 5 && ex <= 8 && ey >= 5 && ey <= 8) {
+                        room_hidden_secret_kind = HIDDEN_SECRET_NONE;
+                        return;
+                    }
+                }
+            }
+            room_hidden_secret_x = 6; room_hidden_secret_y = 6;
+            room_hidden_secret_x2 = 7; room_hidden_secret_y2 = 7;
+            room_tilemap[6][6] = BGT_BLOCK;
+            room_tilemap[6][7] = BGT_BLOCK_TR;
+            room_tilemap[7][6] = BGT_BLOCK_BL;
+            room_tilemap[7][7] = BGT_BLOCK_BR;
+        } else if (seed & 0x200000UL) {
+            u8 pos = (u8)(2 + ((u8)(seed >> 24) % 5));
+            if (seed & 0x100000UL) pos = (u8)(pos + 9);
+            room_hidden_secret_x = room_hidden_secret_x2 = 0;
+            room_hidden_secret_y = pos;
+            room_hidden_secret_y2 = (u8)(pos + 1);
+            room_tilemap[pos][0] = room_tilemap[pos + 1][0] = BGT_WALL;
+        } else {
+            u8 pos = (u8)(2 + ((u8)(seed >> 24) % 6));
+            if (seed & 0x100000UL) pos = (u8)(pos + 10);
+            room_hidden_secret_x = pos;
+            room_hidden_secret_x2 = (u8)(pos + 1);
+            room_hidden_secret_y = room_hidden_secret_y2 = 0;
+            room_tilemap[0][pos] = room_tilemap[0][pos + 1] = BGT_WALL;
+        }
+        return;
+    }
 
     // Puzzle rooms are alternatives to extermination rooms. Enemies may be
     // rolled by the shared generator, but this authored room role removes
@@ -226,9 +312,44 @@ void puzzle_prepare_room(void) BANKED {
 }
 
 u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED {
+    if (room_hidden_secret_kind == HIDDEN_SECRET_PUSH
+        && old_x == room_hidden_secret_x && old_y == room_hidden_secret_y) {
+        room_hidden_secret_kind = HIDDEN_SECRET_NONE;
+        run_state.dungeon_phase |= room_hidden_secret_bit;
+        room_open_secret(6, 0);
+        sfx_play(SFX_PUZZLE);
+        return 0; // optional discovery never clears a live combat seal
+    }
     if (room_puzzle_kind != PUZZLE_PUSH_SEAL || !room_puzzle_locked) return 0;
     if (old_x != puzzle_block_x || old_y != puzzle_block_y) return 0;
     mark_puzzle_solved();
+    return 1;
+}
+
+u8 puzzle_try_hidden_shot(u8 tx, u8 ty) BANKED {
+    if (room_hidden_secret_kind != HIDDEN_SECRET_SHOT) return 0;
+    if (!((tx == room_hidden_secret_x && ty == room_hidden_secret_y)
+        || (tx == room_hidden_secret_x2 && ty == room_hidden_secret_y2)))
+        return 0;
+    room_hidden_secret_kind = HIDDEN_SECRET_NONE;
+    run_state.dungeon_phase |= room_hidden_secret_bit;
+    room_open_secret(room_hidden_secret_x, room_hidden_secret_y);
+    sfx_play(SFX_PUZZLE);
+    return 1;
+}
+
+u8 puzzle_chime_reveal(void) BANKED {
+    u8 kind;
+    if (room_hidden_secret_kind == HIDDEN_SECRET_NONE) return 0;
+    kind = room_hidden_secret_kind;
+    room_hidden_secret_kind = HIDDEN_SECRET_NONE;
+    run_state.dungeon_phase |= room_hidden_secret_bit;
+    // The disguised cairn's reward threshold is the north wall; replacing
+    // its middle 2x2 body with two door tiles recreates the old confusing
+    // "holes in the floor" visual. Wall secrets open where they were found.
+    if (kind == HIDDEN_SECRET_PUSH) room_open_secret(6, 0);
+    else room_open_secret(room_hidden_secret_x, room_hidden_secret_y);
+    sfx_play(SFX_PUZZLE);
     return 1;
 }
 

@@ -6,13 +6,15 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START, dungeon_direction
+from quintra_topology import (
+    STAGE_START, dungeon_direction, dungeon_predecessor, dungeon_size,
+    mission_graph,
+)
 from test_stage_archetypes import generated_room
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
-STATES = ROOT / "tmp/stage-states"
 
 
 def addr(name):
@@ -55,29 +57,40 @@ def cross_edge(pb, source_local, target_local):
 
 def load(stage):
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    state = STATES / f"quintra-stage-{stage:02d}-entry-wolfkin.pyboy"
-    with state.open("rb") as handle:
-        pb.load_state(handle)
-    for _ in range(4):
+    pb.tick(240)
+    pb.button("start")
+    pb.tick(30)
+    pb.button("a")
+    pb.tick(60)
+    stage_index = stage - 1
+    seed = 0xCAFE1234
+    trial = mission_graph(
+        dungeon_size(stage_index), seed, stage_index)["trial"]
+    target = STAGE_START[stage_index] + trial
+    # Use the real between-stage gate instead of a ROM-specific emulator
+    # snapshot. ABI/layout changes can never make this puzzle test execute a
+    # stale instruction stream.
+    pb.memory[RS + 1] = target - 1
+    for i, byte in enumerate(seed.to_bytes(4, "little")):
+        pb.memory[RS + 2 + i] = byte
+    pb.memory[RS + 11] = stage_index
+    pb.memory[RS + 12] = pb.memory[RS + 13] = 0
+    pb.memory[RS + 17] = 1
+    pb.memory[RS + 18] = 6
+    pb.memory[RS + 37] = 0
+    for i in range(32):
+        ep = EN + i * 28
+        pb.memory[ep] = pb.memory[ep + 1] = 0
+    put16(pb, PL + 9, 72)
+    put16(pb, PL + 11, 60)
+    pb.memory[TM + 9 * 20 + 10] = 34
+    for _ in range(30):
         pb.tick()
-    target = STAGE_START[stage - 1] + 1
-    if pb.memory[RS + 1] != target:
-        # Deep-test entry states now begin at true local room 0. Puzzle
-        # families live in local room 1, so cross one ordinary unlocked
-        # threshold through cartridge code before exercising the fixture.
-        for i in range(32):
-            ep = EN + i * 28
-            if pb.memory[ep] == 2:
-                pb.memory[ep] = pb.memory[ep + 1] = 0
-        pb.memory[COMBAT] = 0
-        source = pb.memory[RS + 1] - STAGE_START[stage - 1]
-        cross_edge(pb, source, 1)
-        # KIND is assigned one instruction window before the family-specific
-        # lock/geometry is prepared. Settle the complete destination role
-        # instead of accepting that observable half-transaction.
-        for _ in range(60):
-            pb.tick()
-        assert pb.memory[RS + 1] == target
+        if pb.memory[RS + 1] == target:
+            break
+    assert pb.memory[RS + 1] == target
+    for _ in range(90):
+        pb.tick()
     return pb
 
 
@@ -110,7 +123,7 @@ def push_seal_contract():
             break
     pb.button_release("right")
     assert pb.memory[LOCKED] == 0, "moving the ordinary cairn did not release seal"
-    assert pb.memory[RS + 27] != 0, "push solve did not persist in dungeon bitset"
+    assert pb.memory[RS + 27] & 1, "Trial solve did not persist its stable bit"
     # Large dungeon courts continue beyond the legacy 20x17 viewport. Door
     # release must target the real 31x31 perimeter; stamping the old south
     # edge at y=16 leaves two conspicuous gold door tiles in mid-room.
@@ -168,49 +181,23 @@ def exit_to(pb, target, stage):
             break
 
 
-def phase_gate_contract():
-    # Ignoring the switch produces a raised, locked wall in the next room.
-    closed = load(3)
-    assert closed.memory[KIND] == 3 and closed.memory[RS + 28] == 0
-    exit_to(closed, STAGE_START[2] + 2, 2)
-    assert closed.memory[RS + 1] == STAGE_START[2] + 2 and closed.memory[KIND] == 4
-    # A phase wall is physical geometry, not a blanket door seal. The two
-    # body-width edge detours prevent procedural fold entrances from making
-    # the paired switch unreachable, while the center still previews the
-    # remote state change.
-    assert closed.memory[LOCKED] == 0
-    assert all(closed.memory[TM + 11 * 20 + x] == 21 for x in range(4, 16))
-    assert all(closed.memory[TM + 11 * 20 + x] != 21
-               for x in (2, 3, 16, 17))
-    closed.stop(save=False)
-
-    # Touching the prior-room switch persists the alternate state and lowers
-    # that same wall when the destination is generated.
-    opened = load(3)
-    feet_on(opened, 10, 8)
-    step_off(opened)
-    assert opened.memory[RS + 28] == 1, "phase switch did not persist"
-    exit_to(opened, STAGE_START[2] + 2, 2)
-    assert opened.memory[RS + 1] == STAGE_START[2] + 2 and opened.memory[KIND] == 4
-    assert opened.memory[LOCKED] == 0
-    assert all(opened.memory[TM + 11 * 20 + x] == 19 for x in range(4, 16))
-    opened.stop(save=False)
-
-
 def late_depth_puzzle_contract():
     # Expanded dungeons spend their new depth on a second authored puzzle
     # beat at local room seven, rather than padding the route with only
     # ordinary extermination rooms.
     pb = load(3)
-    target = STAGE_START[2] + 7
-    pb.memory[RS + 1] = target - 1
+    seed = sum(pb.memory[RS + 2 + i] << (8 * i) for i in range(4))
+    waystone = mission_graph(dungeon_size(2), seed, 2)["waystone"]
+    source, _ = dungeon_predecessor(waystone, dungeon_size(2), seed, 2)
+    target = STAGE_START[2] + waystone
+    pb.memory[RS + 1] = STAGE_START[2] + source
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
     pb.memory[COMBAT] = 0
     pb.memory[LOCKED] = 0
-    cross_edge(pb, 6, 7)
+    cross_edge(pb, source, waystone)
     for _ in range(60):
         pb.tick()
         if (pb.memory[RS + 1] == target and pb.memory[KIND] in (1, 2)
@@ -218,7 +205,7 @@ def late_depth_puzzle_contract():
             break
     assert pb.memory[RS + 1] == target, "could not enter late-depth puzzle room"
     assert pb.memory[KIND] in (1, 2) and pb.memory[LOCKED] == 1, \
-        "local room seven became filler instead of a mechanical puzzle"
+        "generated Waystone became filler instead of a mechanical puzzle"
     assert not any(pb.memory[EN + i * 28] == 2 for i in range(32)), \
         "late-depth puzzle retained mandatory hostiles"
     fixture_count = sum(
@@ -255,26 +242,27 @@ def late_depth_puzzle_contract():
                     break
             if not pb.memory[LOCKED]:
                 break
-    assert pb.memory[LOCKED] == 0, "local-room-7 Waystone could not be solved"
+    assert pb.memory[LOCKED] == 0, "generated Waystone could not be solved"
     assert pb.memory[RS + 27] & (1 << 7), \
-        "Waystone solve did not persist the local-room-7 route bit"
+        "Waystone solve did not persist its stable route bit"
     pb.stop(save=False)
 
 
 def opening_shop_is_not_a_puzzle():
     pb = load(1)
-    # The wider opening stage moves its size-3 merchant rest from local seven
-    # to local eleven. Room seven is now intentionally the Waystone puzzle;
-    # keep the exclusion pinned to the actual procedural shop role.
-    target = STAGE_START[0] + 11
-    pb.memory[RS + 1] = target - 1
+    # The merchant remains the generated footprint's size-3 service cell.
+    target_local = dungeon_size(0) - 3
+    target = STAGE_START[0] + target_local
+    seed = sum(pb.memory[RS + 2 + i] << (8 * i) for i in range(4))
+    source, _ = dungeon_predecessor(target_local, dungeon_size(0), seed, 0)
+    pb.memory[RS + 1] = STAGE_START[0] + source
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
     pb.memory[COMBAT] = 0
     pb.memory[LOCKED] = 0
-    cross_edge(pb, 10, 11)
+    cross_edge(pb, source, target_local)
     for _ in range(60):
         pb.tick()
         if pb.memory[RS + 1] == target and pb.memory[KIND] == 0:
@@ -306,24 +294,26 @@ def deep_phase_contract():
     def open_gate_probe(pb, _tiles):
         assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
         assert all(pb.memory[TM + 11 * 20 + x] == 19 for x in range(4, 16))
+        assert pb.memory[RS + 27] & (1 << 6), \
+            "revisiting the opened mission gate did not persist its crossing"
 
     seed = 0xDEED1200
-    generated_room(0, seed, local_room=12, probe=switch_probe)
-    generated_room(0, seed, local_room=13, dungeon_phase=0,
+    graph = mission_graph(dungeon_size(0), seed, 0)
+    generated_room(0, seed, local_room=graph["deep_switch"], probe=switch_probe)
+    generated_room(0, seed, local_room=graph["deep_gate"], dungeon_phase=0,
                    probe=closed_gate_probe)
-    generated_room(0, seed, local_room=13, dungeon_phase=bit,
+    generated_room(0, seed, local_room=graph["deep_gate"], dungeon_phase=bit,
                    probe=open_gate_probe)
 
 
 def main():
     push_seal_contract()
     rune_sequence_contract()
-    phase_gate_contract()
     late_depth_puzzle_contract()
     opening_shop_is_not_a_puzzle()
     deep_phase_contract()
-    print("[puzzles] PASS push seal + ordered rune feedback + persistent phase wall "
-          "+ required late Waystone + unsealed opening shop + deep seal circuit")
+    print("[puzzles] PASS generated Trial/Waystone + ordered runes + service exclusion "
+          "+ remote deep switch/gate circuit + persistent gate crossing")
 
 
 if __name__ == "__main__":

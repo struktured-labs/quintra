@@ -72,11 +72,11 @@ def assert_menu_palette_contract(pb, button):
     pb.memory[0xFF4F] = 0
     pb.memory[0xFF40] = lcdc
     # Inventory text is deliberately uniform. The SELECT field map is a
-    # tile-built diagram with four intentional semantic attribute classes:
-    # floor/path and the self-bordered room glyphs for violet Sigil, cyan HERE,
-    # and amber Boss. Require the exact set so stale room attributes cannot
-    # leak through; the old 3x3 cells alone needed a fifth wall class.
-    expected = {0} if button == "start" else {0, 2, 3, 4}
+    # tile-built diagram with five intentional semantic attribute classes:
+    # floor/path plus violet Sigil, cool landmarks, amber Boss, and the
+    # dedicated lime/white player pin. Require the exact set so stale room
+    # attributes cannot leak through.
+    expected = {0} if button == "start" else {0, 2, 3, 4, 7}
     assert attrs == expected, (
         f"{button} menu palette contract changed: expected {expected}, got {attrs}"
     )

@@ -12,7 +12,7 @@ enum {
     SFX_HIT,          // enemy takes damage: dry crunch
     SFX_DEATH,        // enemy dies: metallic 7-bit buzz falling apart
     SFX_COIN,         // B5 -> E6 two-note classic
-    SFX_HEART,        // 660 -> 880 softer rise
+    SFX_HEART,        // soft E6 -> glassy upper twinkle
     SFX_DOOR,         // rising whoosh
     SFX_ROAR,         // boss: low 75%-duty growl + slow noise
     SFX_HURT,         // player hurt: harsh 12.5%-duty snap
@@ -24,11 +24,23 @@ enum {
     SFX_DISTRICT,     // crossing a dungeon depth band: low/high wayfinding bell
 };
 
+// Banked reward voices keep pickups mechanically legible without bloating the
+// resident combat dispatcher or turning every collectible into the coin cue.
+enum {
+    SFX_REWARD_RELIC = 0,
+    SFX_REWARD_MAGIC,
+    SFX_REWARD_SIGIL,
+    SFX_REWARD_SURGE,
+    SFX_REWARD_PURCHASE,
+    SFX_REWARD_UNLOCK,
+};
+
 void sfx_play(u8 id);
 // Banked, low-frequency variants keep weapon/equipment identity out of the
 // precious always-mapped audio dispatcher.
 void sfx_play_weapon(u8 projectile_kind) BANKED;
 void sfx_play_equip(void) BANKED;
+void sfx_play_reward(u8 kind) BANKED;
 // Ordered floor runes answer with a rising pitch before the full solve cue.
 void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps

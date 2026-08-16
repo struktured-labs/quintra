@@ -82,12 +82,12 @@ pub const STONESKIN: Item = Item {
 };
 
 pub const MURDER: Item = Item {
-    id: ITEM_MURDER, name: "Murder",
-    description: "3-way shard burst.",
+    id: ITEM_MURDER, name: "Raven Mark",
+    description: "Mark aimed foe; ravens dive; attacks bite harder.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
-    // Runtime fires a three-way shuriken spread on B; it does not spawn
-    // homing shards after a clear.
+    // Runtime marks one concrete live target. It complements Murderstorm's
+    // five-lane crowd fan instead of being a smaller copy of the same move.
     effects: &[],
 };
 
@@ -101,7 +101,7 @@ pub const TIDAL_WAVE: Item = Item {
 
 pub const SWARM: Item = Item {
     id: ITEM_SWARM, name: "Swarm",
-    description: "4-stinger fan + brief ward.",
+    description: "Six rotating stings over time + brief ward.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -228,6 +228,33 @@ pub const ASTRAL_SPEAR: Item = Item {
     effects:     &[],
 };
 
+// Dungeon tools are physical charges, not permanent stat lines. Each copy
+// occupies one Pack slot and is consumed on use, recreating FFA's pleasure of
+// finding a strange implement whose best moment may be several rooms later.
+pub const RIFT_BOMB: Item = Item {
+    id: ITEM_RIFT_BOMB, name: "Rift Bomb",
+    description: "Break cover and burst every nearby lane.",
+    kind: ItemKind::Consumable { uses: 1 },
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_RED, rarity: Rarity::Uncommon,
+    effects: &[],
+};
+
+pub const ECHO_CHIME: Item = Item {
+    id: ITEM_ECHO_CHIME, name: "Echo Chime",
+    description: "Still bullets; expose a secret and nearby paths.",
+    kind: ItemKind::Consumable { uses: 1 },
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_MAGIC, rarity: Rarity::Uncommon,
+    effects: &[],
+};
+
+pub const MIRROR_SHARD: Item = Item {
+    id: ITEM_MIRROR_SHARD, name: "Mirror Shard",
+    description: "Turn every hostile shot back on its maker.",
+    kind: ItemKind::Consumable { uses: 1 },
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_MAGIC, rarity: Rarity::Rare,
+    effects: &[],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_item(CLAW_COMBO.clone());
     r.add_item(TAIL_SPIKE.clone());
@@ -251,4 +278,7 @@ pub fn register(r: &mut Registry) {
     r.add_item(BLOOD_SIGIL.clone());
     r.add_item(RIFT_FLAIL.clone());
     r.add_item(ASTRAL_SPEAR.clone());
+    r.add_item(RIFT_BOMB.clone());
+    r.add_item(ECHO_CHIME.clone());
+    r.add_item(MIRROR_SHARD.clone());
 }

@@ -8,9 +8,14 @@ local KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN = 0x10, 0x20, 0x40, 0x80
 local CARD_DX, CARD_DY = {0, 1, 0, -1}, {-1, 0, 1, 0}
 local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
 local VOID_SAFE_X, VOID_SAFE_Y = {20, 188, 20, 188}, {20, 20, 100, 100}
--- Per-screen shortest authored exit toward dungeon gate screen 6; 4 means
--- use the central staircase rather than a boundary door.
-local WORLD_ROUTE = {1, 1, 2, 2, 1, 1, 4, 3, 1, 1, 0, 3, 1, 1, 0, 3}
+-- Per-screen shortest authored exits toward each regional dungeon gate;
+-- 4 means use the central threshold rather than a boundary door. A single
+-- Riftwild persists for three dungeons, waking gates 6, 11, then 12.
+local WORLD_ROUTES = {
+    [6]  = {1,1,2,2, 1,1,4,3, 1,1,0,3, 1,1,0,3},
+    [11] = {1,1,1,2, 1,1,1,2, 1,1,1,4, 1,1,1,0},
+    [12] = {2,3,3,3, 2,3,3,3, 2,3,3,3, 4,3,3,3},
+}
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
 -- Controller-side mirror of the cartridge's runtime world extents. Stage
@@ -30,8 +35,21 @@ local WX = tonumber(os.getenv("QUINTRA_WORLD_EXT_ADDR") or "0") or 0
 local WB = tonumber(os.getenv("QUINTRA_WORLD_BOTTOM_ADDR") or "0") or 0
 WW = tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR") or "0") or 0
 WH = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
+CAMX = tonumber(os.getenv("QUINTRA_CAMERA_X_ADDR") or "0") or 0
+CAMY = tonumber(os.getenv("QUINTRA_CAMERA_Y_ADDR") or "0") or 0
 local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
+
+function world_gate_screen()
+    if RS == 0 then return 6 end
+    local cleared = emu:read8(RS + 11)
+    local step = (math.max(cleared, 1) - 1) % 3
+    return ({6, 11, 12})[step + 1]
+end
+
+function world_route_dir(screen)
+    return WORLD_ROUTES[world_gate_screen()][screen + 1]
+end
 
 function dungeon_local(room, stage)
     local index = math.min(stage, 8) + 1
@@ -291,6 +309,12 @@ local enemy_mask, enemy_seen = 0, {}
 -- controller experiment can distinguish "too close often" from "too close
 -- and actually pinned" without consuming cartridge RAM.
 enemy_seen.giant_close_frames = 0
+-- Merchant and wayfarer conversations are real full-screen states. The
+-- controller may legitimately open one while attacking or approaching shop
+-- wares, so finish that conversation with ordinary release/A/release/B edges
+-- instead of continuing to route against a paused room behind the text.
+-- SCREEN_DIALOG is 10 in the cartridge's public screen enum.
+local dialog_input_phase = 0
 
 function debug_log(line)
     console:log(line)
@@ -300,8 +324,48 @@ function debug_log(line)
     end
 end
 
+function debug_entity_summary(frame, room)
+    if not DEBUG or EN == 0 then return end
+    local enemies, player_shots, hostile_shots, pickups, effects = 0, 0, 0, 0, 0
+    local shot = "-"
+    for i = 0, 31 do
+        local p = EN + i * 28
+        local kind, flags = emu:read8(p), emu:read8(p + 1)
+        if flags % 2 == 1 then
+            if kind == 2 then enemies = enemies + 1
+            elseif kind == 1 and math.floor(flags / 16) % 2 == 1 then
+                player_shots = player_shots + 1
+                if shot == "-" then
+                    shot = string.format("%d,%d:%d,%d/t%d", emu:read8(p + 3),
+                        emu:read8(p + 7), emu:read8(p + 10), emu:read8(p + 11),
+                        emu:read8(p + 15))
+                end
+            elseif kind == 1 then hostile_shots = hostile_shots + 1
+            elseif kind == 3 then pickups = pickups + 1
+            elseif kind == 4 then effects = effects + 1 end
+        end
+    end
+    debug_log(string.format(
+        "BOTENTS f=%d room=%d enemy=%d pshot=%d hshot=%d pickup=%d fx=%d first=%s",
+        frame, room, enemies, player_shots, hostile_shots, pickups, effects, shot))
+end
+
 function tick(keys)
     keys = keys or 0
+    if LS ~= 0 and emu:read8(LS) == 10 then
+        dialog_input_phase = dialog_input_phase + 1
+        if dialog_input_phase <= 2 then
+            keys = 0
+        elseif dialog_input_phase <= 4 then
+            keys = KEY_A
+        elseif dialog_input_phase <= 6 then
+            keys = 0
+        else
+            keys = KEY_B
+        end
+    else
+        dialog_input_phase = 0
+    end
     if TRACE_OUT then
         if trace_last == nil then
             trace_last, trace_count = keys, 1
@@ -409,10 +473,14 @@ function read16(address)
     return emu:read8(address) + emu:read8(address + 1) * 256
 end
 
--- The stage objective is a real progression gate.  Reading it lets this
--- controller retrace to the Sigil room instead of grinding against the
--- sanctuary's intentionally locked forward door.  The offsets mirror
--- run_state_t: bosses_beaten at 11 and rift_sigils at 23.
+-- The stage objectives are real progression gates. Reading their public run
+-- state lets this controller follow the same generated quest chain shown by
+-- the Compass instead of assuming obsolete fixed room numbers.
+function stage_trial_missing()
+    if RS == 0 then return false end
+    return emu:read8(RS + 27) % 2 == 0
+end
+
 function stage_sigil_missing()
     if RS == 0 then return false end
     local stage = emu:read8(RS + 11) % 9
@@ -420,17 +488,11 @@ function stage_sigil_missing()
     return math.floor(read16(RS + 23) / bit) % 2 == 0
 end
 
--- The stage-one Warden is local room 3. Its clear is persisted in
--- run_state.dungeon_puzzles bit 3, the same public state used by the Compass
--- and sanctuary gate. This remains a read-only routing observation.
 function stage_warden_missing()
     if RS == 0 then return false end
     return math.floor(emu:read8(RS + 27) / 8) % 2 == 0
 end
 
--- Roomier layouts turn their already-authored back-half fixtures into route
--- objectives. Local 7 persists as the high puzzle bit; local 9's deep Warden
--- shares the otherwise-unused high bit of dungeon_phase.
 function stage_waystone_missing()
     if RS == 0 then return false end
     local size = dungeon_size(emu:read8(RS + 11))
@@ -449,6 +511,36 @@ function stage_deep_phase_missing()
     return size >= 20 and math.floor(emu:read8(RS + 28) / 4) % 2 == 0
 end
 
+function stage_deep_gate_missing()
+    if RS == 0 then return false end
+    return math.floor(emu:read8(RS + 27) / 64) % 2 == 0
+end
+
+function mission_goal_cell()
+    if stage_trial_missing() then return emu:read8(RS + 39) end
+    local order = emu:read8(RS + 38) % 2
+    if order == 1 then
+        if stage_warden_missing() then return emu:read8(RS + 41) end
+        if stage_sigil_missing() then return emu:read8(RS + 40) end
+    else
+        if stage_sigil_missing() then return emu:read8(RS + 40) end
+        if stage_warden_missing() then return emu:read8(RS + 41) end
+    end
+    if stage_waystone_missing() then return emu:read8(RS + 42) end
+    if stage_deep_warden_missing() then return emu:read8(RS + 43) end
+    if stage_deep_phase_missing() then return emu:read8(RS + 44) end
+    if stage_deep_gate_missing() then return emu:read8(RS + 45) end
+    return dungeon_size(emu:read8(RS + 11)) - 1
+end
+
+function current_room_is_warden()
+    if RS == 0 then return false end
+    local local_room = dungeon_local(emu:read8(RS + 1), emu:read8(RS + 11))
+    return local_room == emu:read8(RS + 41)
+        or local_room == emu:read8(RS + 43)
+        or (dungeon_size(emu:read8(RS + 11)) >= 19 and local_room == 15)
+end
+
 function read_i16(address)
     local value = read16(address)
     return value >= 0x8000 and value - 0x10000 or value
@@ -456,6 +548,8 @@ end
 
 function enemy_target(px, py, preferred_kind)
     local best, bestd = nil, 65535
+    local sleeper, sleeperd = nil, 65535
+    local streamed_court = QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136
     if EN == 0 then return nil end
     for i = 0, 31 do
         local p = EN + i * 28
@@ -469,21 +563,33 @@ function enemy_target(px, py, preferred_kind)
             if preferred_kind == nil or kind == preferred_kind then
                 local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
                 local d = math.abs(ex - px) + math.abs(ey - py)
-                if d < bestd then
-                    best, bestd = {
-                        x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
-                        kind=kind, state=emu:read8(p + 15),
-                        clock=emu:read8(p + 18), state6=emu:read8(p + 23),
-                        giant=(kind == 1) and emu:read8(p + 20) or 0,
-                        pattern=emu:read8(p + 19),
-                        collapse=emu:read8(p + 21),
-                        safe_slot=emu:read8(p + 22)
-                    }, d
+                local visible = math.floor(emu:read8(p + 1) / 4) % 2 == 1
+                local candidate = {
+                    x=ex, y=ey, slot=i, hp=emu:read8(p + 14),
+                    kind=kind, state=emu:read8(p + 15),
+                    clock=emu:read8(p + 18), state6=emu:read8(p + 23),
+                    giant=(kind == 1) and emu:read8(p + 20) or 0,
+                    pattern=emu:read8(p + 19),
+                    collapse=emu:read8(p + 21),
+                    safe_slot=emu:read8(p + 22),
+                    asleep=streamed_court and not visible
+                }
+                -- Wide Riftwild courts stream entities with the camera. Fight
+                -- an awake body before choosing a nearer off-camera sleeper;
+                -- otherwise ranged standoff can halt just outside the wake
+                -- sector forever. If only sleepers remain, return the nearest
+                -- one explicitly so the controller can approach and wake it.
+                if candidate.asleep then
+                    if d < sleeperd then
+                        sleeper, sleeperd = candidate, d
+                    end
+                elseif d < bestd then
+                    best, bestd = candidate, d
                 end
             end
         end
     end
-    return best
+    return best or sleeper
 end
 
 -- A class signature is not always a single-target attack.  The Wolfkin's
@@ -1531,9 +1637,14 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
         and body_goal_pixel_route.goal_y == goal_y
         and body_goal_pixel_route.room == route_room
         and body_goal_pixel_route.world == route_world
-        and body_goal_pixel_route.screen == route_screen
-        and body_goal_pixel_route.dirs[start] then
-        return body_goal_pixel_route.dirs[start]
+        and body_goal_pixel_route.screen == route_screen then
+        if body_goal_pixel_route.dirs[start] then
+            return body_goal_pixel_route.dirs[start]
+        end
+        -- A blocked exact endpoint used to repeat a 50k-node pixel BFS every
+        -- emulator frame. Cache that negative result for this room/goal and
+        -- let the cheap tile route below make progress instead.
+        if body_goal_pixel_route.unreachable then return nil end
     end
     local qx, qy, head, tail = {px}, {py}, 1, 1
     local seen, previous, step = {[start] = true}, {}, {}
@@ -1563,7 +1674,13 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
             end
         end
     end
-    if not found then return nil end
+    if not found then
+        body_goal_pixel_route = {
+            goal_x=goal_x, goal_y=goal_y, room=route_room,
+            world=route_world, screen=route_screen, dirs={}, unreachable=true
+        }
+        return nil
+    end
     local dirs, node = {}, found
     while previous[node] do
         dirs[previous[node]] = step[node]
@@ -1578,6 +1695,18 @@ end
 
 function body_goal_step(px, py, goal_x, goal_y)
     if px == goal_x and py == goal_y then return 0 end
+    -- A generated 248px district can begin more than two hundred pixels from
+    -- its compact puzzle fixture. Cross that distance on the 31x31 body-tile
+    -- graph, then pay for pixel precision only inside the interaction apron.
+    -- This preserves exact cairn/rune contact while avoiding a full-field
+    -- 60k-position BFS merely to walk in from a distant doorway.
+    if (QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136)
+        and math.abs(px - goal_x) + math.abs(py - goal_y) > 40 then
+        local fallback = math.abs(px - goal_x) >= math.abs(py - goal_y)
+            and (px < goal_x and KEY_RIGHT or KEY_LEFT)
+            or (py < goal_y and KEY_DOWN or KEY_UP)
+        return target_step(px, py, goal_x + 4, goal_y + 8, fallback, 0)
+    end
     -- Full-height scenery uses stricter upward/downward collision than the
     -- ordinary feet box. A tile-cell route can therefore oscillate forever
     -- beneath a pillar while trying to reach a rune. Prefer the same
@@ -1626,21 +1755,23 @@ function body_goal_step(px, py, goal_x, goal_y)
     return aligned_step(prevkey[target], sx, sy, px, py, 0)
 end
 
--- Route the real feet box to the requested wide-field threshold. Stage
--- theming is applied after the base landmark cross and may place a spike on
--- that nominal highway, so blindly holding the cardinal can make the final
--- spike guard cancel movement forever. The exact route is cached per
--- room/screen by exact_body_goal_step(); all movement remains ordinary D-pad
--- input over the cartridge's real collision map.
+-- Route the real feet box to the requested wide-field threshold. The 31x31
+-- body-tile graph already rejects spikes and full-body scenery, and is the
+-- right granularity for a screen edge. Reserve the much costlier pixel graph
+-- for cairns, runes, and pickups that truly require an exact interaction
+-- point; a blocked edge endpoint once made the observer search ~50k pixels
+-- per frame.
 function wide_cardinal_route_step(px, py, wanted)
-    local goal_x, goal_y = 72, 60
-    if wanted == 0 then goal_y = 0
-    elseif wanted == 1 then goal_x = QUINTRA_ARENA_W - 16
-    elseif wanted == 2 then goal_y = QUINTRA_ARENA_H - 16
-    else goal_x = 0 end
-    local route = exact_body_goal_step(px, py, goal_x, goal_y)
-    if route ~= nil and route ~= 0 then return route end
-    return CARD_KEYS[wanted + 1]
+    -- target_step() accepts an entity origin (+4) while its source is the
+    -- champion feet center (+13/+15). Supply equivalent pseudo-targets so
+    -- the tile route ends at the legal player threshold instead of turning
+    -- around four pixels before a wide-room door.
+    local goal_x, goal_y = 76, 68
+    if wanted == 0 then goal_y = 4
+    elseif wanted == 1 then goal_x = QUINTRA_ARENA_W - 12
+    elseif wanted == 2 then goal_y = QUINTRA_ARENA_H - 12
+    else goal_x = 4 end
+    return target_step(px, py, goal_x, goal_y, CARD_KEYS[wanted + 1], 0)
 end
 
 puzzle_policy_room = -1
@@ -1761,7 +1892,8 @@ function puzzle_controller_step(room, px, py, frame)
         end
         return body_goal_step(px, py, goal_x, goal_y)
     elseif kind == 3 then
-        local bit = dungeon_local(room, emu:read8(RS + 11)) == 12 and 4 or 1
+        local bit = dungeon_local(room, emu:read8(RS + 11))
+            == emu:read8(RS + 44) and 4 or 1
         if math.floor(emu:read8(RS + 28) / bit) % 2 ~= 0 then return nil end
         return body_goal_step(px, py, 10 * 8 - 8, 8 * 8 - 12)
     end
@@ -1945,14 +2077,10 @@ end
 function wide_court_seam_step(px, py, ex, ey)
     if QUINTRA_ARENA_W <= 160 and QUINTRA_ARENA_H <= 136 then return nil end
     if py <= 120 and ey >= 128 then
-        if px < 72 then return KEY_RIGHT end
-        if px > 72 then return KEY_LEFT end
-        return KEY_DOWN
+        return body_goal_step(px, py, 72, 136)
     end
     if py >= 128 and ey <= 120 then
-        if px < 72 then return KEY_RIGHT end
-        if px > 72 then return KEY_LEFT end
-        return KEY_UP
+        return body_goal_step(px, py, 72, 112)
     end
     -- The guaranteed east/west seam is the northern y=56..60 cross. Once
     -- both bodies are in the southern extension, forcing the hero back to
@@ -1960,14 +2088,10 @@ function wide_court_seam_step(px, py, ex, ey)
     -- a north/south loop. Let the full-field body BFS use the southern ruin
     -- openings there; reserve this canonical seam for two northern bodies.
     if py <= 120 and ey <= 120 and px <= 136 and ex >= 152 then
-        if py < 56 then return KEY_DOWN end
-        if py > 60 then return KEY_UP end
-        return KEY_RIGHT
+        return body_goal_step(px, py, 160, 56)
     end
     if py <= 120 and ey <= 120 and px >= 152 and ex <= 144 then
-        if py < 56 then return KEY_DOWN end
-        if py > 60 then return KEY_UP end
-        return KEY_LEFT
+        return body_goal_step(px, py, 136, 56)
     end
     return nil
 end
@@ -2154,29 +2278,17 @@ function door_step(px, py)
         if py > 64 then return KEY_UP end
         return KEY_RIGHT
     end
-    -- The Sigil sits in local room 2. The spatial-graph policy below routes
-    -- there before selecting any Colossus threshold.
     local local_room = dungeon_local(room, emu:read8(RS + 11))
-    -- Local rooms 2 and 8 form a paired nonlinear rift. Room 2 can skip
-    -- forward after its Sigil is collected; if the pilot skipped it, room 8
-    -- must take the paired rift back instead of wandering through the shop
-    -- and sanctuary looking for a cardinal "back" door (portal arrivals
-    -- deliberately have DIR_NONE).  This is controller-only routing over
-    -- the cartridge's existing reversible fixture.
-    if not in_world and ((local_room == 2
-            -- A nonlinear arrival uses DIR_NONE. If room 8's physical route
-            -- brushes its well after the objectives are complete, the paired
-            -- jump lands back in room 2; immediately selecting the room-2
-            -- well again creates an endless 2<->8 routing loop. Only use the
-            -- forward shortcut after an ordinary cardinal arrival.
-            and entered ~= 255
-            and not stage_sigil_missing() and not stage_warden_missing())
-        or (local_room == 8 and stage_sigil_missing())) then
+    -- Local rooms 2 and 8 retain their confusing paired nonlinear rift. It is
+    -- now an optional shortcut rather than the location of a fixed Sigil;
+    -- use the forward well only after the early generated branch is complete
+    -- and never bounce a portal arrival straight back into a 2<->8 loop.
+    if not in_world and local_room == 2 and entered ~= 255
+        and not stage_sigil_missing() and not stage_warden_missing() then
         local portal = rift_portal_step(px, py)
         if portal ~= nil then return portal end
     end
-    -- Shortest authored route to dungeon gate screen 6.
-    local wanted = in_world and WORLD_ROUTE[world_screen + 1] or nil
+    local wanted = in_world and world_route_dir(world_screen) or nil
     if not in_world and not in_town and inside_cache then
         -- A discovered cache overlays its parent graph cell, so the room
         -- counter deliberately does not change. The cartridge exposes state
@@ -2186,27 +2298,21 @@ function door_step(px, py)
         wanted = back ~= 255 and back or nil
     elseif not in_world and not in_town then
         local size = dungeon_size(emu:read8(RS + 11))
-        local sigil_missing = stage_sigil_missing()
-        local warden_missing = stage_warden_missing()
-        local waystone_missing = stage_waystone_missing()
-        local deep_warden_missing = stage_deep_warden_missing()
-        local deep_phase_missing = stage_deep_phase_missing()
         local stage = emu:read8(RS + 11)
-        wanted = dungeon_route_dir(local_room,
-            sigil_missing and 2
-                or (warden_missing and 3
-                or (waystone_missing and 7
-                or (deep_warden_missing and 9
-                or (deep_phase_missing and 12 or (size - 1))))), size, stage)
+        local goal = mission_goal_cell()
+        wanted = dungeon_route_dir(local_room, goal, size, stage)
         if DEBUG and debug_route_room ~= room then
             debug_route_room = room
             debug_log(string.format(
-                "BOTROUTE room=%d local=%d size=%d sigil_missing=%d warden_missing=%d waystone_missing=%d deep_warden_missing=%d deep_phase_missing=%d wanted=%s doors=%d/%d/%d/%d",
-                room, local_room, size, sigil_missing and 1 or 0,
-                warden_missing and 1 or 0,
-                waystone_missing and 1 or 0,
-                deep_warden_missing and 1 or 0,
-                deep_phase_missing and 1 or 0,
+                "BOTROUTE room=%d local=%d size=%d goal=%d trial=%d sigil=%d warden=%d waystone=%d deep_warden=%d deep_phase=%d deep_gate=%d wanted=%s doors=%d/%d/%d/%d",
+                room, local_room, size, goal,
+                stage_trial_missing() and 1 or 0,
+                stage_sigil_missing() and 1 or 0,
+                stage_warden_missing() and 1 or 0,
+                stage_waystone_missing() and 1 or 0,
+                stage_deep_warden_missing() and 1 or 0,
+                stage_deep_phase_missing() and 1 or 0,
+                stage_deep_gate_missing() and 1 or 0,
                 wanted == nil and "nil" or tostring(wanted),
                 emu:read8(TM + 10), emu:read8(TM + 8 * 20 + 19),
                 emu:read8(TM + 16 * 20 + 10),
@@ -2249,12 +2355,12 @@ function door_step(px, py)
         if py > 64 then return KEY_UP end
         return KEY_RIGHT
     end
-    -- The dungeon gate (6) and the nonlinear cave vault (15) are both
+    -- The currently active regional gate and nonlinear cave vault (15) are
     -- central interactable nodes, not boundary exits.  Treating the vault as
     -- a normal world screen made a long-form controller run walk into its
     -- wall forever after the screen-2 cave hop instead of stepping back onto
     -- the return staircase at 72,52.
-    if in_world and (world_screen == 6 or world_screen == 15) then
+    if in_world and (world_screen == world_gate_screen() or world_screen == 15) then
         local dx, dy = 72 - px, 52 - py
         if math.abs(dx) <= 2 and math.abs(dy) <= 2 then return 0 end
         local primary = math.abs(dx) >= math.abs(dy)
@@ -2302,7 +2408,7 @@ function door_step(px, py)
     local tx, ty, target, target_dir = sx, sy, nil, nil
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
-        if in_world and world_screen == 6 and x == 10 and y == 8 then
+        if in_world and world_screen == world_gate_screen() and x == 10 and y == 8 then
             target, target_dir, tx, ty = y * 20 + x, 4, x, y
             break
         end
@@ -2513,6 +2619,17 @@ function quintra_signature_keys(keys, target, aim, dx, dy, mp, mp_max,
             or (SAURAN_GIANT_SHIELD_PERIOD > 0
                 and frame % SAURAN_GIANT_SHIELD_PERIOD == 0)) then
         return KEY_B + aim
+    elseif ABILITY_POLICY == "smart" and CLASS == 1
+        and target.giant == 0 and not waiting_star
+        and SEALED ~= 0 and emu:read8(SEALED) ~= 0
+        and hp <= 8 and reach <= 24
+        and active_charge == 0 and mp >= 2 then
+        -- A required mission room can leave the tank at four hearts while
+        -- several bodies still own the only route. Spending the real
+        -- cooldown shield here is the class-shaped survival choice; the old
+        -- pilot conserved every charge for a distant Colossus, escaped the
+        -- seal at one half-heart, then died to an optional Rope outside.
+        return KEY_B + aim
     -- A full meter is Picsean's authored Spirit Convergence moment.  Spend it
     -- as the first safe answer to a newly engaged giant instead of waiting
     -- for an unrelated global clock boundary; a player can make this same
@@ -2562,7 +2679,7 @@ function quintra_signature_keys(keys, target, aim, dx, dy, mp, mp_max,
         and active_charge == 0 and mp >= 2
         and ((hp <= 4 and reach <= 20)
             or (target.kind == 1 and RS ~= 0
-                and dungeon_local(emu:read8(RS + 1), emu:read8(RS + 11)) == 3
+                and current_room_is_warden()
                 and reach <= 32)) then
         return KEY_B + aim
     elseif ABILITY_POLICY == "smart" and CLASS == 4
@@ -2590,11 +2707,17 @@ function quintra_signature_keys(keys, target, aim, dx, dy, mp, mp_max,
     elseif ABILITY_POLICY == "smart" and CLASS ~= 0
         and (CLASS ~= 4 or (RS ~= 0 and emu:read8(RS + 1) >= 3))
         and not waiting_star and active_charge == 0
+        -- At critical health Sauran's last full meter belongs to Stoneskin,
+        -- not the generic A+B transformation. A fixed Normal route caught
+        -- him transforming at one half-heart in an open room, then dying to
+        -- the optional body before he could take the door.
+        and not (CLASS == 1 and hp <= 8)
         and mp == mp_max and frame % 600 == 599 then
         return 0
     elseif ABILITY_POLICY == "smart" and CLASS ~= 0
         and (CLASS ~= 4 or (RS ~= 0 and emu:read8(RS + 1) >= 3))
         and not waiting_star and active_charge == 0
+        and not (CLASS == 1 and hp <= 8)
         and mp == mp_max and frame % 600 == 0 then
         return KEY_A + KEY_B + aim
     end
@@ -2625,6 +2748,15 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
     local giant_orbit_floor = GIANT_RETREAT_RANGE_ENV and giant_retreat or 36
     if held_style == "spear" then
         giant_retreat, giant_fire_range, giant_orbit_floor = 52, 80, 52
+        if CLASS == 3 and target.pattern == 4 then
+            -- Mire's mixed-speed scatter punishes the generic spear buffer:
+            -- the pilot was still walking toward the core on every
+            -- orbit-fire beat and needed a Phoenix revive merely to leave it
+            -- at 20 HP. Picsean can use the full 88px Astral lane, so keep a
+            -- real outer reset before committing another thrust.
+            giant_retreat, giant_fire_range, giant_orbit_floor = 64, 88, 60
+            giant_fire_cadence = 2
+        end
     elseif held_style == "claw" and CLASS == 0 then
         if GIANT_RETREAT_RANGE_ENV == nil then
             giant_retreat, giant_orbit_floor = 24, 24
@@ -2716,11 +2848,12 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
         or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
     if held_style == "lunge" and CLASS == 1 and reach < SAURAN_GIANT_ESCAPE_RANGE then
         return retreat
-    elseif held_style == "ranged" and CLASS == 3 and target.pattern == 4
+    elseif CLASS == 3 and target.pattern == 4
         and reach < giant_orbit_floor then
-        -- A scatter wave can force the lane search to orbit forever if the
-        -- pilot keeps attacking from inside it.  Gain distance first; orbit
-        -- only when the direct escape edge is physically blocked.
+        -- A scatter wave can force either BubbleBolt or an acquired Astral
+        -- Spear to orbit forever if the pilot keeps attacking from inside it.
+        -- Gain distance first; orbit only when the direct escape edge is
+        -- physically blocked.
         return can_step(px, py, retreat)
             and retreat or giant_orbit_step(px, py, aim, retreat)
     elseif target.giant ~= 0 and giant_mode ~= "baseline" and reach < giant_orbit_floor then
@@ -3126,11 +3259,11 @@ while frames < LIMIT do
         visited_shop_rooms[room], shop_visits = true, shop_visits + 1
     end
     local target = enemy_target(px, py)
-    -- Room 3 is the authored miniboss check. If a stationary Spore escort is
+    -- Generated Warden rooms are the authored miniboss checks. If a stationary Spore escort is
     -- closer than its Sentinel, clear the actual miniboss first; only then is
     -- it sensible to spend time locating a mine-safe firing lane.
     if target and target.kind == 17
-        and dungeon_local(room, emu:read8(RS + 11)) == 3 then
+        and current_room_is_warden() then
         local miniboss = enemy_target(px, py, 1)
         if miniboss then target = miniboss end
     end
@@ -3314,14 +3447,15 @@ while frames < LIMIT do
     -- Dungeon rooms use normal loot/objective routing.  Riftwild intentionally
     -- ignores optional drops, but the one fixed Riftwell is a public recovery
     -- mechanic and must be part of an honest long-run policy.  The dedicated
-    -- local-room-2 Sigil is different from ordinary loot: it is the stage
-    -- gate.  Seek it before optional combat, or a melee pilot can donate its
+    -- generated Sigil is different from ordinary loot: it is the stage gate.
+    -- Seek it before optional combat, or a melee pilot can donate its
     -- entire health pool chasing a Flutterbat and only then remember the
     -- fixture it came here for.  This is still a body-valid walk to the
     -- cartridge pickup, never a state shortcut.
     local loot = quintra_boss_relic_target()
         or (world_mode == 0
-        and dungeon_local(room, emu:read8(RS + 11)) == 2 and stage_sigil_missing()
+        and dungeon_local(room, emu:read8(RS + 11)) == emu:read8(RS + 40)
+        and stage_sigil_missing()
         and pickup_target(px, py, hp, hp_max, coins))
         -- A live fight normally takes priority over floor drops. At a genuine
         -- low-health threshold, however, an existing heart is the encounter's
@@ -3369,8 +3503,8 @@ while frames < LIMIT do
     local optional_exit = false
     local puzzle_keys = world_mode == 0
         and puzzle_controller_step(room, px, py, frames) or nil
-    -- A collected Rift Sigil immediately unlocks the portal in local room 2.
-    -- Treat the static Spore's optional post-pickup encounter as lower
+    -- Once the generated Rift Sigil is collected, an optional local-room-2
+    -- shortcut may outrank the static Spore's post-objective encounter.
     -- priority than that authored route. Other enemies retain the ordinary
     -- combat-before-portal policy, except a wounded Sauran: after collecting
     -- the required Sigil at three hearts or lower, its real tank decision is
@@ -3432,7 +3566,15 @@ while frames < LIMIT do
         -- Folding Stars are intentionally invulnerable while expanded. Route
         -- around their echoes without filling the entity pool with doomed shots;
         -- resume attacks as soon as the bright contracted core returns.
-        if target.giant == 0 and target.kind ~= 13
+        if target.asleep then
+            -- Streaming is based on camera proximity, not weapon reach. Walk
+            -- close enough to activate the chosen body before applying any
+            -- ranged standoff, cover, or contraction-window policy. Eight
+            -- tiles is safely inside both viewport axes and avoids demanding
+            -- an enemy-adjacent endpoint that may lie inside ruin scenery.
+            keys = target_step(px, py, target.x, target.y, aim, 8)
+            sigil_pixel_active = true
+        elseif target.giant == 0 and target.kind ~= 13
             and ((math.abs(dx) <= 8 and math.abs(dy) <= 8)
                 or (CLASS == 1 and math.abs(dx) <= 16 and math.abs(dy) <= 16)) then
             -- A fast chaser can overlap the hero's 16px body after a
@@ -3558,7 +3700,21 @@ while frames < LIMIT do
                 -- instead of orbiting back out of alignment before the brief
                 -- bright-core window. Projectile/body danger can still
                 -- override this neutral wait in the safety pass below.
-                keys = star_ready and 0 or star_step
+                -- In a scrolling court, however, a valid long line can end
+                -- just beyond the active camera sector. Holding 64px away
+                -- then puts the Star to sleep and waits forever for a
+                -- contraction it cannot tick. Close to a 48px readable lane
+                -- first; the camera wakes it and the ordinary timed punish
+                -- remains unchanged.
+                local star_wait_range = math.max(
+                    math.abs(target.x - px), math.abs(target.y - py))
+                if star_ready and (QUINTRA_ARENA_W > 160
+                        or QUINTRA_ARENA_H > 136) and star_wait_range > 48 then
+                    keys = can_step(px, py, aim) and aim
+                        or target_step(px, py, target.x, target.y, aim, 1)
+                else
+                    keys = star_ready and 0 or star_step
+                end
                 no_damage_frames = 0
             elseif star_ready and CLASS == 3
                 and active_charge == 0 and mp >= 2 then
@@ -3584,7 +3740,17 @@ while frames < LIMIT do
             local bat_range = math.max(math.abs(dx), math.abs(dy))
             local bat_offaxis = (aim == KEY_UP or aim == KEY_DOWN)
                 and math.abs(dx) or math.abs(dy)
-            if CLASS == 4 and held_style == "lunge" then
+            if no_damage_frames > 120 then
+                -- Flutterbat has its own combat branch, so the generic
+                -- unchanged-HP recovery below never sees it. In a wide ruin
+                -- its cling phase can expose a tempting tile-coarse route on
+                -- alternating sides of a wall. Commit to one collision-proven
+                -- projectile lane until the bat moves or takes damage.
+                local bat_step, bat_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, 140)
+                keys = bat_ready and (KEY_A + bat_step) or bat_step
+                sigil_pixel_active = true
+            elseif CLASS == 4 and held_style == "lunge" then
                 if bat_range <= 52 and bat_offaxis <= 5
                     and projectile_lane_clear(px, py, target.x, target.y, aim) then
                     keys = KEY_A + aim
@@ -3604,13 +3770,10 @@ while frames < LIMIT do
                 end
             elseif bat_range <= 28 and bat_offaxis > 4 then
                 -- Finish the final perpendicular pixels before committing a
-                -- cardinal contact arc. This avoids a diagonal miss without
-                -- forcing the target into a static/unsafe orbit.
-                if aim == KEY_UP or aim == KEY_DOWN then
-                    keys = dx > 0 and KEY_RIGHT or KEY_LEFT
-                else
-                    keys = dy > 0 and KEY_DOWN or KEY_UP
-                end
+                -- cardinal contact arc. Route around the body itself rather
+                -- than holding the naïve perpendicular input into a wall or
+                -- the bat's occupied cell.
+                keys = target_step(px, py, target.x, target.y, aim, 0)
             elseif bat_range <= 24 then
                 keys = KEY_A + aim
             else
@@ -3621,15 +3784,17 @@ while frames < LIMIT do
                 keys = KEY_A + target_step(px, py, target.x, target.y, aim, routed_reach)
             end
         elseif target.kind == 1 and target.giant == 0
-            and (CLASS == 0 or CLASS == 1 or CLASS == 2) then
+            and (CLASS == 0 or CLASS == 1 or CLASS == 2 or CLASS == 3) then
             -- The required Warden is stationary, large, and often placed
             -- across a generated U-shaped court. A tile-coarse route can
             -- alternate at the lower corner forever: one cell says LEFT is
             -- the approach, while the pixel body cannot finish that first
             -- step without committing around the wall. Use the exact
             -- feet-box lane search already proven for other fixed hazards.
-            -- Corvin needs this too now that centre-column cartridge
-            -- collision correctly rejects the former pillar tunnel.
+            -- Both ranged kits need this too now that centre-column cartridge
+            -- collision correctly rejects the former pillar tunnel: Corvin's
+            -- Featherbarb and Picsean's BubbleBolt should hold their actual
+            -- range rather than orbit into the Warden body.
             local warden_range = held_style == "spear" and 88
                 or held_style == "claw" and 64
                 or held_style == "ranged" and 140 or 52
@@ -3661,15 +3826,14 @@ while frames < LIMIT do
             end
             local warden_body_range = math.max(
                 math.abs(target.x - px), math.abs(target.y - py))
-            if held_style == "lunge" and CLASS == 1
-                and py < 8 and target.y <= 16
-                and math.abs(dx) > 20 and can_step(px, py, KEY_DOWN) then
-                -- Tail Spike originates above Sauran's feet. At the north
-                -- strip an otherwise valid horizontal line can therefore be
-                -- embedded in the wall: the lane solver reports "ready" but
-                -- every strike dies in the ceiling. Expose the weapon origin
-                -- with ordinary downward input before resuming that same
-                -- exact-pixel Warden policy.
+            if py < 8 and target.y <= 16
+                and can_step(px, py, KEY_DOWN) then
+                -- Every A weapon originates at y+2. At the north strip an
+                -- otherwise valid horizontal body lane is therefore embedded
+                -- in border wall: the solver reports "ready" but BubbleBolt,
+                -- Spear, Fang, and Tail Spike all die before reaching the
+                -- Warden. Expose the real weapon origin with ordinary downward
+                -- input before resuming the same exact-pixel policy.
                 keys = KEY_DOWN
             elseif warden_ready and held_style == "lunge"
                 and warden_body_range < 28 then
@@ -3737,10 +3901,12 @@ while frames < LIMIT do
             else
                 keys = KEY_A + aim
             end
-        elseif CLASS == 3 and target.kind == 0
+        elseif CLASS == 3 and (target.kind == 0 or target.kind == 32)
             and (target.x <= 8 or target.y <= 8
-                or target.x >= 136 or target.y >= 112) then
-            -- A small crawler can legally hug the one-tile edge band, where
+                or target.x >= QUINTRA_ARENA_W - 24
+                or target.y >= QUINTRA_ARENA_H - 24) then
+            -- A small crawler or the one-wave Rift Cantor can legally hug
+            -- the one-tile edge band, where
             -- Picsean's cardinal BubbleBolt cannot always share its exact
             -- pixel lane. This first appeared in the final Sigil fixture,
             -- but procgen can teach the same geometry in any dungeon room.
@@ -3749,7 +3915,33 @@ while frames < LIMIT do
             -- pixel through the real body graph, then fire inward. This avoids
             -- asking the generic shot-lane search to use a target origin that
             -- intentionally overlaps the visual boundary wall.
-            if target.y <= 8 or target.y >= 112 then
+            if QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136 then
+                -- A scrolling ruin can put the apparent one-axis alignment
+                -- on the far side of its southern wall. Own one exact route
+                -- to a physical projectile lane; generic combat unstick must
+                -- not kick it back and forth before it reaches the opening.
+                local edge_range = held_style == "spear" and 88
+                    or held_style == "flail" and 56
+                    or held_style == "lunge" and 52
+                    or held_style == "claw" and 64 or 140
+                if target.kind == 32 then
+                    -- A spent Cantor moves one pixel every eight frames.
+                    -- Rebuilding the full 248x248 pixel graph for every new
+                    -- coordinate made the offline pilot vastly slower than
+                    -- the cartridge. Follow its reachable tile component,
+                    -- then pay for exact cardinal geometry only when firing.
+                    local edge_aim = fold_star_shot_lane(
+                        px, py, target.x, target.y, edge_range)
+                    keys = edge_aim and (KEY_A + edge_aim)
+                        or target_step(px, py, target.x, target.y, aim,
+                            weapon_route_tiles(held_style))
+                else
+                    local edge_step, edge_ready = fold_star_pixel_step(
+                        room, px, py, target.x, target.y, aim, edge_range)
+                    keys = edge_ready and (KEY_A + edge_step) or edge_step
+                end
+                sigil_pixel_active = true
+            elseif target.y <= 8 or target.y >= QUINTRA_ARENA_H - 24 then
                 if math.abs(target.x - px) > 1 then
                     keys = body_goal_step(px, py, target.x, py)
                 else
@@ -3812,7 +4004,7 @@ while frames < LIMIT do
             -- unchanged-HP observation—or immediately on body overlap—use
             -- the existing exact pixel shot-lane search to step out, align,
             -- and preserve the authored bait/rush/punish interaction.
-            if not counter_ready
+            if not counter_ready and counter_range <= 40
                 and (counter_range <= 16 or no_damage_frames > 120) then
                 local exact_step, exact_ready = fold_star_pixel_step(
                     room, px, py, target.x, target.y, aim, 52)
@@ -3822,7 +4014,17 @@ while frames < LIMIT do
                     counter_exact = true
                 end
             end
-            if counter_ready then
+            if counter_range > 40 then
+                -- Outside the exact shot-lane search radius, follow the
+                -- ordinary body-valid route all the way around cover. The
+                -- old six-tile standoff could select a legal point on the
+                -- wrong side of a wall, cache that direction, and leave a
+                -- sealed Shard Crab staring at Wolfkin forever.
+                counter_cover_ticks = 0
+                counter_cover_active = false
+                counter_step = target_step(
+                    px, py, target.x, target.y, aim, 1)
+            elseif counter_ready then
                 counter_cover_ticks = 0
                 counter_cover_active = false
             elseif counter_exact then
@@ -4007,6 +4209,16 @@ while frames < LIMIT do
         elseif target.kind == 1 and target.giant ~= 0 then
             keys = quintra_giant_combat_keys(target, dx, dy, aim, held_style,
                 frames, px, py)
+        elseif QUINTRA_ARENA_H > 136
+            and wide_court_seam_step(px, py, target.x, target.y) ~= nil then
+            -- Large dungeon courts have a guaranteed cardinal cross between
+            -- their streamed halves. A walker can roam through that seam and
+            -- settle behind the district wall; local firing-lane searches
+            -- then find attractive endpoints on the wrong side. Cross the
+            -- authored seam first, for every ordinary enemy family, and only
+            -- resume weapon-specific spacing inside the same district.
+            keys = wide_court_seam_step(px, py, target.x, target.y)
+            sigil_pixel_active = true
         elseif flank_timer > 0 then
             -- A blind perpendicular strafe or tile-coarse endpoint can circle
             -- a U-shaped court forever. After a measured no-damage stall,
@@ -4017,10 +4229,27 @@ while frames < LIMIT do
                 or held_style == "spear" and 88
                 or held_style == "claw" and 64
                 or held_style == "flail" and 56 or 52
-            local recovery_step, recovery_ready = fold_star_pixel_step(
-                room, px, py, target.x, target.y, aim, recovery_range)
-            keys = recovery_ready
-                and (KEY_A + recovery_step) or recovery_step
+            local recovery_step, recovery_ready
+            if (target.kind == 0 and target.pattern == 0x4F)
+                or target.kind == 5 then
+                -- A lone Rift Ooze fragment and a drifting Wisp both change
+                -- coordinates while the champion crosses a wide court.
+                -- Rebuilding the full 248x248 one-pixel graph for each new
+                -- endpoint is counterproductive: at a long southern wall the
+                -- first step repeatedly points at yesterday's opening. Follow
+                -- the live body/tile route with A armed; exact lanes remain
+                -- reserved for stationary or phase-window targets.
+                recovery_step = target_step(px, py, target.x, target.y,
+                    aim, routed_reach)
+                recovery_ready = projectile_lane_clear(
+                    px, py, target.x, target.y, aim)
+                keys = KEY_A + recovery_step
+            else
+                recovery_step, recovery_ready = fold_star_pixel_step(
+                    room, px, py, target.x, target.y, aim, recovery_range)
+                keys = recovery_ready
+                    and (KEY_A + recovery_step) or recovery_step
+            end
             if DEBUG and frames % 120 == 0 then
                 debug_log(string.format(
                     "BOTRECOVER f=%d room=%d enemy=%d pos=%d,%d target=%d,%d step=%02X ready=%d left=%d",
@@ -4118,7 +4347,12 @@ while frames < LIMIT do
             -- body route to a cardinal bubble lane exists.  Route only the
             -- ranged-caster family to that lane; chasers retain their more
             -- responsive close-orbit behavior.
-            local lane_caster = target.kind == 5 or target.kind == 8
+            local lane_caster = target.kind == 0
+                -- A recombined Rift Ooze can settle behind a seeded pillar.
+                -- Its stationary core is then the same cover-routing problem
+                -- as a caster: perpendicular orbit merely walks the ranged
+                -- champion along the wall while every bolt hits stone.
+                or target.kind == 5 or target.kind == 8
                 -- A Rope's long charge can cross an entire scrolling court.
                 -- In a far-field ruin, the old ranged orbit kept firing into
                 -- cover while the charger repeatedly reset on the other
@@ -4130,16 +4364,18 @@ while frames < LIMIT do
                 -- Replanning a full BFS against their every drift spends no
                 -- attack frames and lets a ten-HP foe own a room forever.
                 -- Keep their fight on the responsive orbit/fire branch.
-                or target.kind == 25
+                or target.kind == 25 or target.kind == 32
             if held_style == "ranged" and lane_caster
                 and not projectile_lane_clear(px, py, target.x, target.y, aim) then
                 keys = target_step(px, py, target.x, target.y, aim, 6)
             elseif math.abs(dx) <= 32 and math.abs(dy) <= 32
-                and ((aim == KEY_UP or aim == KEY_DOWN) and math.abs(dx) > 5) then
-                keys = dx > 0 and KEY_RIGHT or KEY_LEFT
-            elseif math.abs(dx) <= 32 and math.abs(dy) <= 32
-                and ((aim == KEY_LEFT or aim == KEY_RIGHT) and math.abs(dy) > 5) then
-                keys = dy > 0 and KEY_DOWN or KEY_UP
+                and (((aim == KEY_UP or aim == KEY_DOWN) and math.abs(dx) > 5)
+                    or ((aim == KEY_LEFT or aim == KEY_RIGHT) and math.abs(dy) > 5)) then
+                -- Close diagonal bodies can physically occupy the tempting
+                -- one-pixel alignment step, especially in a southern ruin
+                -- pocket. Use the collision-aware cardinal-lane route rather
+                -- than holding directly into that body/wall seam forever.
+                keys = target_step(px, py, target.x, target.y, aim, routed_reach)
             else
                 -- Separate firing and movement frames. Holding perpendicular
                 -- directions together aimed diagonal shots past cardinal targets.
@@ -4152,7 +4388,13 @@ while frames < LIMIT do
         -- Physical builds need a body buffer; Corvin retains its measured
         -- ranged panic behavior. This is read-only controller policy, not a
         -- cartridge-side damage or immunity adjustment.
-        if target.giant == 0 and not waiting_star then
+        if target.giant == 0 and target.kind ~= 1 and not waiting_star then
+            -- The compact Sentinel already owns the exact Warden branch
+            -- above, including a collision-proven path to a shot lane and a
+            -- close-lunge retreat. Running the generic small-body panic pass
+            -- afterward reversed that path at 32px: UP toward the opening,
+            -- then A+DOWN away from the Warden, forever. Preserve the more
+            -- precise encounter policy for this one 16x16 required body.
             local body_range = math.max(math.abs(dx), math.abs(dy))
             local panic_range = held_style == "claw" and 12
                 -- Preserve the measured Sauran/Vespine body buffer; this
@@ -4219,9 +4461,11 @@ while frames < LIMIT do
         end
         -- Sample the local projectile danger once; the later dodge pass
         -- reuses this observation instead of sampling a different frame.
+        -- Sentry/Mirror/Prism patterns require committed fire-path movement;
+        -- treating each rotating lane as a fresh dodge can suppress A forever.
         local threat = nil
         if not target or target.kind ~= 10
-            and target.kind ~= 16 then
+            and target.kind ~= 16 and target.kind ~= 22 then
             threat = projectile_threat(px, py)
         end
         observed_threat = threat
@@ -4241,23 +4485,20 @@ while frames < LIMIT do
         optional_open_room = target.giant == 0
             and world_mode == 0 and not optional_room_is_town
             and not (SEALED ~= 0 and emu:read8(SEALED) ~= 0)
-            -- Counter guards deliberately begin with a no-damage bait. Do
-            -- not misclassify that authored shell beat as an optional-combat
-            -- stall before the controller can use its exposed window.
-            and target.kind ~= 18 and target.kind ~= 30
             -- Open doors mean exactly what they show. Preserve the authored
-        -- room-3 Warden, late Waystone/deep Warden, shop, sanctuary, and
-        -- giant objectives; every
+        -- the current generated mission role, shop, sanctuary, and giant
+        -- objectives; every
             -- other unsealed combat room may be yielded after a measured
             -- no-damage stall. This keeps the new two-fixture critical route
             -- meaningful without turning the expanded dungeon into a hidden
             -- kill-everything corridor.
-            and (optional_local_room ~= 3 or not stage_warden_missing())
-            and (optional_local_room ~= 7 or not stage_waystone_missing())
-            and (optional_local_room ~= 9 or not stage_deep_warden_missing())
+            -- Preserve the current dependency. A completed Sigil/Warden room
+            -- may still contain unrelated survivors, but its visible open
+            -- doors must regain their ordinary optional-combat meaning once
+            -- the graph advances to the next role.
+            and optional_local_room ~= mission_goal_cell()
             and optional_local_room ~= (optional_stage_size - 3)
             and optional_local_room ~= (optional_stage_size - 2)
-            and (optional_local_room ~= 2 or not stage_sigil_missing())
         -- The opening room is optional. The two fragile short-range kits
         -- preserve the run after one lost heart instead of trading required-
         -- room health for loose drops. In room 1, however, yielding beside a
@@ -4267,6 +4508,8 @@ while frames < LIMIT do
         local opening_damage_bailout = (CLASS == 0 or CLASS == 4)
             and optional_local_room == 0
             and room_age > 180 and hp <= hp_max - 2
+        local sauran_critical_bailout = CLASS == 1
+            and room_age > 120 and hp <= 4
         if optional_open_room and (target_stall_frames > 360
                 -- Several mobile enemies can alternate as nearest target
                 -- without any one slot owning the six-second watchdog. An
@@ -4275,10 +4518,19 @@ while frames < LIMIT do
                 -- target-selection tie. Required fixtures and sealed arenas
                 -- are excluded above and still demand completion.
                 or room_age > 900
-                or opening_damage_bailout) then
-            keys = door_step(px, py) + KEY_A
+                or opening_damage_bailout or sauran_critical_bailout) then
+            local exit_step = door_step(px, py)
+            if sauran_critical_bailout and active_charge == 0 and mp >= 2 then
+                -- Activate the actual body/projectile shield while taking
+                -- the visible exit. Once its cooldown is live, ordinary A
+                -- remains armed on following route frames.
+                keys = exit_step + KEY_B
+            else
+                keys = exit_step + KEY_A
+            end
             optional_exit = true
-            if DEBUG and (target_stall_frames == 361 or opening_damage_bailout) then
+            if DEBUG and (target_stall_frames == 361 or opening_damage_bailout
+                    or sauran_critical_bailout) then
                 debug_log(string.format(
                     "BOTEXIT f=%d room=%d enemy=%d hp=%d reason=%s",
                     frames, room, target.kind, target.hp,
@@ -4603,7 +4855,7 @@ while frames < LIMIT do
         -- edge rule—ordinary rooms and other projectile lanes retain their
         -- closest-away direction.
         if CLASS == 1 and world_mode == 0
-            and dungeon_local(room, emu:read8(RS + 11)) == 3
+            and current_room_is_warden()
             and SEALED ~= 0 and emu:read8(SEALED) ~= 0
             and py <= 24 and target and target.y > py and dodge_dir == KEY_UP then
             local left_ok, right_ok = can_step(px, py, KEY_LEFT), can_step(px, py, KEY_RIGHT)
@@ -4663,21 +4915,29 @@ while frames < LIMIT do
     -- A covered Sentinel can remain close enough to keep producing harmless
     -- shots while the normal shield/dodge priority repeatedly interrupts the
     -- body-valid route that the no-damage watchdog already chose. Once that
-    -- watchdog has proved the lane is stale, commit a short-weapon Sauran to
-    -- the ordinary A+BFS inputs until it either reconnects or changes HP.
-    -- This is deliberately limited to the required Sentinel, never a giant,
-    -- and never rewrites game state.
-    if target and CLASS == 1 and target.kind == 1 and target.giant == 0
+    -- watchdog has proved the lane is stale, commit every held weapon to the
+    -- exact ordinary-input route until it reconnects or changes HP. This was
+    -- originally Sauran-only; a late Picsean run that had traded BubbleBolt
+    -- for Astral Spear then dodged harmless Warden shots for 90,000 frames
+    -- while standing in a valid long thrust lane. The cartridge is untouched:
+    -- the pilot merely honors the route it already computed.
+    -- This remains limited to the required Sentinel, never a giant.
+    if target and target.kind == 1 and target.giant == 0
         and flank_timer > 0 then
-        if py < 8 and target.y <= 16 and math.abs(target.x - px) > 20
+        if CLASS == 1 and py < 8 and target.y <= 16
+            and math.abs(target.x - px) > 20
             and can_step(px, py, KEY_DOWN) then
             -- Preserve the ceiling-lane correction above after the watchdog
             -- has armed.  This recovery block otherwise recomputed the same
             -- coarse UP route and overwrote the deliberate inward step.
             keys = KEY_DOWN
         else
+            local recovery_range = held_style == "ranged" and 140
+                or held_style == "spear" and 88
+                or held_style == "claw" and 64
+                or held_style == "flail" and 56 or 52
             local warden_step, warden_ready = fold_star_pixel_step(
-                room, px, py, target.x, target.y, 0, 52)
+                room, px, py, target.x, target.y, 0, recovery_range)
             keys = warden_ready and (KEY_A + warden_step) or warden_step
         end
         dodge_phase = 0
@@ -4716,7 +4976,7 @@ while frames < LIMIT do
     -- carrying the agent through a non-route Riftwild boundary and undoing
     -- an entire authored graph hop; preserve A/B while steering inward.
     if world_mode == 1 then
-        local wanted = WORLD_ROUTE[world_screen + 1]
+        local wanted = world_route_dir(world_screen)
         local actions = keys % 16
         -- An enemy can pin the hero toward a non-route boundary. Let the
         -- evasive sidestep use the last safe body-width near that edge, then
@@ -4776,6 +5036,10 @@ while frames < LIMIT do
     -- controller artifact rather than a real encounter result.
     edge_hazard_crossing = false
     if target and world_mode == 0 and shake_phase == 0 and not leech_attached()
+        -- A pixel-valid cardinal lane owns its whole route. Replacing that
+        -- step with a generic inward nudge at the last screen strip was the
+        -- exact cause of Picsean orbiting a corner Cantor forever in stage 9.
+        and not sigil_pixel_active
         -- The required room-three Sentinel is 32x32, not a small hostile.
         -- At the north edge its valid vulnerable body extends down into the
         -- arena. The old generic nudge replaced every Sauran/Corvin attack
@@ -4910,6 +5174,7 @@ while frames < LIMIT do
     -- Preserve an already-committed dodge; otherwise take the legal outward
     -- step and resume ordinary targeting once the core contracts.
     fold_guard_keys = world_mode == 0 and dodge_phase == 0
+        and not optional_exit
         -- The primary Fold Star branch already routes to and holds a proven
         -- punish lane. This guard exists for a *secondary* expanded Star;
         -- applying it to the selected target overwrote that lane every frame
@@ -4925,10 +5190,10 @@ while frames < LIMIT do
     -- Sealed encounters deliberately leave the return door usable for a
     -- human who chooses to retreat, but an automated combat pilot must not
     -- let a recovery frame abandon a live miniboss and reset its progress.
-    -- Restrict this to the dedicated local-room-three miniboss: normal rooms,
+    -- Restrict this to generated Warden rooms: normal rooms,
     -- bosses, and all player-facing door routing retain their authored rules.
     if world_mode == 0
-        and dungeon_local(room, emu:read8(RS + 11)) == 3
+        and current_room_is_warden()
         and SEALED ~= 0 and emu:read8(SEALED) ~= 0 then
         local entered = emu:read8(RS + 6)
         local back = entered ~= 255 and ((entered + 2) % 4) or 255
@@ -4987,21 +5252,25 @@ while frames < LIMIT do
     end
     if DEBUG and (frames % 600 == 0
         or (target and target.giant ~= 0 and frames % 60 == 0)) then
+        if frames % 600 == 0 then debug_entity_summary(frames, room) end
         -- World traversal deliberately clears `target` so combat does not
         -- become mandatory, but debug output still needs the nearest hostile
         -- to explain an overworld hit or an avoidance choice.
         local debug_target = target or overworld_threat
-        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X target=%s keys=%02X door=%02X route=%02X routeok=%d step=%d%d%d%d leech=%d shake=%d orb=%d spike=%d",
+        debug_log(string.format("BOTDBG f=%d room=%d world=%d:%d sealed=%d hp=%d mp=%d ifr=%d charge=%d hitstop=%d face=%d acc=%d pos=%d:%02X,%d:%02X cam=%d,%d target=%s keys=%02X door=%02X route=%02X routeok=%d step=%d%d%d%d leech=%d shake=%d orb=%d spike=%d",
             frames, room, world_mode, world_screen,
             SEALED ~= 0 and emu:read8(SEALED) or 0,
             hp, mp, iframes, active_charge,
             HITSTOP ~= 0 and emu:read8(HITSTOP) or 0,
             emu:read8(PL + 13), emu:read8(PL + 23),
             px, emu:read8(PL + 10), py, emu:read8(PL + 12),
-            debug_target and string.format("enemy:%d@%d,%d hp=%d giant=%d pattern=%d state=%d clk=%d s6=%d stall=%d",
+            CAMX ~= 0 and emu:read8(CAMX) or 0,
+            CAMY ~= 0 and emu:read8(CAMY) or 0,
+            debug_target and string.format("enemy:%d@%d,%d hp=%d giant=%d pattern=%d state=%d clk=%d s6=%d sleep=%d stall=%d",
                 debug_target.kind, debug_target.x, debug_target.y,
                 debug_target.hp, debug_target.giant, debug_target.pattern or 255,
                 debug_target.state, debug_target.clock, debug_target.state6,
+                debug_target.asleep and 1 or 0,
                 no_damage_frames)
                 or (loot and string.format("loot:%d,%d", loot.x, loot.y)
                     or (shop and string.format("shop:%d,%d", shop.x, shop.y) or "door")), keys,

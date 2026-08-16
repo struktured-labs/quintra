@@ -10,6 +10,11 @@ local EN   = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local TM   = tonumber(os.getenv("QUINTRA_TM_ADDR") or "0") or 0
 local PZ   = tonumber(os.getenv("QUINTRA_PZ_ADDR") or "0") or 0
 local DIRECTOR = tonumber(os.getenv("QUINTRA_DIRECTOR_ADDR") or "0") or 0
+local WORLD_W = tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR") or "0") or 0
+local WORLD_H = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
+local CAMERA_X = tonumber(os.getenv("QUINTRA_CAMERA_X_ADDR") or "0") or 0
+local CAMERA_Y = tonumber(os.getenv("QUINTRA_CAMERA_Y_ADDR") or "0") or 0
+local LARGE = tonumber(os.getenv("QUINTRA_LARGE_ADDR") or "0") or 0
 local TOPOLOGY = tonumber(os.getenv("QUINTRA_MEDIA_TOPOLOGY") or "6") or 6
 local BOSS1, SHOP1, SANCTUARY1, TOWN1, STAGE3_SIGIL, COMPASS_ROOM, FINAL_BOSS
 if TOPOLOGY >= 30 then
@@ -134,7 +139,8 @@ local function enter_room(target)
     emu:write8(RS + 1, STAGE_BOSS[3])
     emu:write8(RS + 11, 3)
     emu:write8(RS + 17, 1)
-    emu:write8(RS + 18, 6)
+    -- The third return in a regional Riftwild wakes the southern gate ruin.
+    emu:write8(RS + 18, (TOPOLOGY >= 30) and 12 or 6)
     emu:write8(RS + 19, 0)
     emu:write8(TM + 8 * 20 + 10, 34)
     put16(PL + 9, 72); put16(PL + 11, 52)
@@ -151,6 +157,15 @@ local function enter_room(target)
   local sx, sy = cell_xy(source_local)
   local tx, ty = cell_xy(target_local)
   local key, px, py, door1, door2
+  -- Media deep-links replace only the logical source. Normalize the retained
+  -- live field too; otherwise a 248px source still waits for its far boundary
+  -- while this fixture stamps and approaches the compact reciprocal door.
+  if LARGE ~= 0 then emu:write8(LARGE, 0) end
+  if WORLD_W ~= 0 then emu:write8(WORLD_W, 160) end
+  if WORLD_H ~= 0 then emu:write8(WORLD_H, 136) end
+  if CAMERA_X ~= 0 then emu:write8(CAMERA_X, 0) end
+  if CAMERA_Y ~= 0 then emu:write8(CAMERA_Y, 0) end
+  emu:write8(0xFF43, 0); emu:write8(0xFF42, 0)
   if ty < sy then
     key, px, py, door1, door2 = KEY_UP, 72, 0, 9, 10
   elseif tx > sx then
@@ -174,6 +189,30 @@ local function enter_room(target)
   end
   emu:setKeys(0); tick(50)
   return room() == target
+end
+
+local function enter_dungeon_portal(target, stage)
+  -- A cross-stage media cut cannot safely reinterpret the retained 248x248
+  -- field as a different dungeon's compact predecessor. Use the same gate
+  -- transaction as an organic Riftwild entry: begin_dungeon(), increment the
+  -- counter, then let procgen author the complete requested destination.
+  clear_hostiles()
+  if PZ ~= 0 then emu:write8(PZ, 0) end
+  if DIRECTOR ~= 0 then emu:write8(DIRECTOR, 0) end
+  emu:write8(RS + 1, target - 1)
+  emu:write8(RS + 11, stage)
+  emu:write8(RS + 6, 0xFF)
+  emu:write8(RS + 17, 1)
+  emu:write8(RS + 18, 6)
+  emu:write8(RS + 19, 0)
+  emu:write8(TM + 8 * 20 + 10, 34)
+  put16(PL + 9, 72); put16(PL + 11, 52)
+  for _=1,150 do
+    emu:runFrame()
+    if room() == target and emu:read8(RS + 17) == 0 then break end
+  end
+  tick(50)
+  return room() == target and emu:read8(RS + 17) == 0
 end
 
 if MODE == "gif" then
@@ -234,7 +273,7 @@ if MODE == "gif" then
   -- Enter the real opening colossus through a live door and spend the reel's
   -- main action beat on its screen-scale BG body + vulnerable OBJ heart.
   put16(RS + 23, (emu:read8(RS + 23) | (emu:read8(RS + 24) << 8)) | 1)
-  emu:write8(RS + 27, emu:read8(RS + 27) | 0x88)
+  emu:write8(RS + 27, emu:read8(RS + 27) | 0xC9)
   emu:write8(RS + 28, emu:read8(RS + 28) | 0x84)
   if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
   -- Hold the firing lane for the reel. The boss still animates and attacks,
@@ -343,21 +382,17 @@ end
 -- with Ember Depths palettes, shoot it, then restore (must happen before
 -- the boss threshold or the role math changes).
 if RS ~= 0 then
-  -- Stage three's room-two fixture is the far side of a paired phase switch.
-  -- This synthetic still route jumps over its prior room, so establish the
-  -- same persistent state that an ordinary player creates by stepping on the
-  -- switch before asking the cartridge to generate the destination wall.
-  local prior_phase = emu:read8(RS + 28)
-  emu:write8(RS + 28, 1)
-  emu:write8(RS + 11, 2)
-  if not enter_room(STAGE3_SIGIL) then error("media could not enter Ember room") end
+  -- Cross-stage stills use the live regional gate transaction so the newly
+  -- seeded mission graph and Law are initialized before Ember generation.
+  if not enter_dungeon_portal(STAGE3_SIGIL, 2) then
+    error("media could not enter Ember room")
+  end
   tick(60); shot("shot_ember")   -- fade-in resolves first
   emu:write8(RS + 11, 0)
-  emu:write8(RS + 28, prior_phase)
 end
 
 -- Shop (room 7): wares + amber price tags
-if not enter_room(SHOP1) then error("media could not enter shop") end
+if not enter_dungeon_portal(SHOP1, 0) then error("media could not enter shop") end
 tick(30); shot("shot_shop")
 
 -- Sanctuary (room 8): shrine pylons
@@ -374,7 +409,7 @@ tick(45); shot("shot_village")
 -- Stage boss (room 9): giant + HUD bar mid-fight
 emu:write8(RS + 11, 0)
 put16(RS + 23, (emu:read8(RS + 23) | (emu:read8(RS + 24) << 8)) | 1)
-emu:write8(RS + 27, emu:read8(RS + 27) | 0x88)
+emu:write8(RS + 27, emu:read8(RS + 27) | 0xC9)
 emu:write8(RS + 28, emu:read8(RS + 28) | 0x84)
 if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
 tick(50)                       -- entry drama resolves, boss opens fire

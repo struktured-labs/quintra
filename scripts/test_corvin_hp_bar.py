@@ -47,7 +47,7 @@ def main() -> None:
     pb.memory[run_state + 11] = 4     # stage-scaling source of truth
     enemy = entities
     pb.memory[enemy] = 2              # ENT_ENEMY
-    pb.memory[enemy + 1] = 1          # EF_ACTIVE
+    pb.memory[enemy + 1] = 7          # ACTIVE | ALIVE | ON_SCREEN
     pb.memory[enemy + 3] = 120        # x integer byte in fix8_t
     pb.memory[enemy + 7] = 96         # y integer byte in fix8_t
     pb.memory[enemy + 14] = 9

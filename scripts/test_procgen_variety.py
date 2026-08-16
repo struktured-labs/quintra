@@ -9,7 +9,7 @@ only in floor speckles.
 from collections import defaultdict
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START
+from quintra_topology import STAGE_START, dungeon_size, mission_graph
 
 from test_stage_archetypes import (
     EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, addr, put16,
@@ -42,10 +42,21 @@ def boot():
 
 
 def sample_stage_entry(pb, stage, seed):
-    # Sample a real ordinary combat room, not one of the authored puzzle,
-    # miniboss, shop, or sanctuary roles. Phase-family stages reserve both
-    # local 1 and 2, so use their still-ordinary local 4 Rift room.
-    local = 4 if stage % 3 == 2 else 2
+    # Sample a real ordinary combat court, not one of the generated Trial,
+    # Sigil, Warden, Waystone, switch/gate, shop, or sanctuary roles. Mission
+    # placement is seed-first now, so a fixed local room can legitimately be
+    # a three-body Warden beat rather than a baseline density sample.
+    roles = set(mission_graph(dungeon_size(stage), seed, stage)["sequence"])
+    candidates = [
+        cell for cell in (4, 6, 10, 12, 13, 14, 16)
+        if cell < dungeon_size(stage) - 3
+        and cell not in roles and cell != 15
+    ]
+    # Spread the twelve seed probes over several ordinary districts instead
+    # of always taking the numerically first legal cell. That measures the
+    # generated dungeon's collision vocabulary, not twelve recolorings of
+    # one recurring landmark position.
+    local = candidates[((seed >> 24) ^ seed) % len(candidates)]
     target = STAGE_START[stage] + local
     pb.memory[RS + 1] = target - 1
     for offset, byte in enumerate(seed.to_bytes(4, "little")):

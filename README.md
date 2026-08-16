@@ -11,9 +11,9 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.19.2: Crowds & Cadences](https://github.com/struktured-labs/quintra/releases/download/v0.19.2/quintra.gbc)
+[Download Quintra v0.20.0: Oaths & Outlands](https://github.com/struktured-labs/quintra/releases/download/v0.20.0/quintra.gbc)
 
-The repository copy of the published cartridge is
+The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
 
 ![Quintra gameplay](docs/media/gameplay.gif)
@@ -25,11 +25,153 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.19.2**, a public playtest milestone built around
-denser encounters, longer stage-specific music, clearer build screens, and
-slower equipment progression. Cartridge, media, checkpoint, gameplay,
-performance, and music contracts pass; the stricter all-class endurance target
-listed under release status remains open before show-build sign-off.
+The current cartridge is **v0.20.0**, a public playtest milestone built around
+Will/MAX attacks, nine Oath Arts, physical tools, systemic world interactions,
+a mutable dungeon Law, a seeded seven-role mission graph, and a persistent
+regional Riftwild. It also includes readable Pack/shop interfaces, visible
+door locks, graph-safe retreats, diagonal dashes, and mechanically distinct
+reward sounds. Cartridge, checkpoint, gameplay, performance, and music
+contracts pass; the stricter all-class endurance target listed under release
+status remains open before show-build sign-off.
+
+### Latest working-cart pass — readable Pack, shops, locks, and movement
+
+START now opens a native tile-and-sprite Pack rather than a wall of prose.
+Gold, magic, and quest frames separate the champion portrait, VITALS, ARMS,
+QUEST, selected tool, and Oath Art; six semantic icons identify the primary
+weapon, signature, Sigil, currency, tool, and Oath at a glance. Compact labels
+retain the exact numbers and controls without wrapping on the 20x18 display.
+
+Every procedural merchant's second dialogue page now inventories the stock
+that actually spawned in that room. Each line states the mechanical effect and
+exact price—such as `MAX HP +2 30G`, `KILLS HEAL HP 35G`, or
+`BOUNCE A SHOT 40G`—and the footer explains that touching its matching counter
+buys it. The proximity HUD still provides the immediate icon/name/cost cue.
+
+Incomplete Colossus thresholds now retain a graph-safe retreat even if stale
+puzzle-lock state and missing arrival metadata coincide. Any existing edge to
+an already visited cell is proven backtracking—even when a folded Stage 3 arm
+returns to a numerically higher cell—so it cannot skip a Sigil, open an unseen
+objective, or enter the boss. A live-ROM contract replays this hostile state
+across all nine dungeon sanctuaries and the exact Stage 3 fold that previously
+trapped a run.
+
+Locked and open thresholds are now visually different. An unexplored exit in
+a mandatory combat or puzzle room displays a barred amber portcullis, while a
+visited retreat remains an ordinary open door. When the last required monster
+falls, the bars visibly release and a heavy latch/upward-sweep cue replaces the
+generic clear or coin sound. Hearts, coins, magic, permanent relics, Sigils,
+temporary Surges, and purchases likewise use mechanically distinct reward
+voices; a live cartridge test verifies the five most common pickup families
+and a real projectile-triggered final-kill release.
+
+The shared double-tap dodge now supports all four diagonals. Double-tap both
+directions together—or double-tap one while holding the perpendicular
+direction—to dash northwest, northeast, southwest, or southeast. Diagonal
+travel is vector-normalized to 14×14 pixels versus 21 pixels cardinal, keeping
+its useful reach and invulnerability without making it a faster exploit.
+
+### v0.20.0 — Oaths & Outlands
+
+The cartridge now has a complete seven-part systemic layer:
+
+1. **Will / MAX attacks.** Not attacking charges a 180-frame Will meter.
+   Its HUD lane is spirit-purple rather than health red and blooms pale
+   lavender when MAX is ready.
+   Pressing A at full Will invokes a distinct MAX form for every champion's
+   primary weapon and for both procedural melee weapons; an ordinary attack
+   spends partial charge. A successful signature B spends 45 Will, so an
+   alternate action can support a setup without preserving an immediately
+   ready MAX. Will pauses while Stoneskin or Undertow is physically raised,
+   so neither shield can charge a protected MAX. Picsean's B remains the
+   directional, defensive Undertow; her Moon Tide MAX is instead a widening
+   five-lane ice breaker with no ward or invulnerability. Corvin's Raven Mark
+   sends three timed lock-on dives and focuses primary damage onto the aimed foe instead
+   of duplicating Murderstorm's five-lane fan; Vespine's Swarm now releases six rotating stings over time
+   instead of copying Queen's Needle's forward burst. Wolfkin's Howl retains
+   all eight crowd lanes but caps their combined Colossus contact at three.
+2. **Limited physical tools.** Rift Bombs break nearby cover and burst in
+   multiple lanes, Echo Chimes silence live hostile bullets, and Mirror Shards
+   reverse a projectile's ownership and travel. Each is a real consumed Pack
+   charge, not a permanent menu toggle.
+3. **Shared world interactions.** Fire burns trees into searchable rubble,
+   ice bridges spike lanes, lightning operates remote phase switches, heavy
+   enemy fire destroys cover, and physical melee cuts hostile bullets. These
+   rules apply to generated terrain and enemy attacks rather than bespoke
+   puzzle-only replicas.
+4. **Nine Oath Arts.** Every defeated Colossus unlocks one new A+B verb:
+   Shard Wake, Root Call, Cinderstep, Still Wave, Miasma, Gloam Shift, Sun
+   Turn, Red Harvest, and Rift Exchange. Each costs MP, has a cooldown, and
+   changes geometry, projectiles, enemies, or health rather than merely
+   multiplying attack power.
+5. **A mutable dungeon Law.** Every dungeon seeds one material rule and begins
+   in WAX. Contextual A at a Law altar flips it to WANE, reshaping openings in
+   the current room and every later room while persisting through suspend.
+6. **A seeded mission graph.** Trial, Sigil, Warden, Waystone, Deep Warden,
+   remote switch, and Deep Gate are generated as seven distinct reachable
+   nodes before room generation. Sigil/Warden branch order can reverse by
+   seed; the Pack and Compass read the same graph and reveal only the next
+   required objective.
+7. **A regional Riftwild.** One persistent 4×4 outdoor region now spans three
+   Colossus returns. Explored paths and claimed Riftwell/vault rewards survive
+   dungeon trips, while three permanent gate ruins wake in the 6→11→12
+   sequence. Crossing a three-dungeon boundary clears regional fog and claims,
+   rotates its landmark families, and enters a distinct terrain/encounter seed
+   namespace.
+
+The ROM, SRAM migration, Python topology mirror, and live-cartridge regression
+suite cover all seven systems. Boss-by-boss curation is intentionally the next
+separate design pass: each Colossus will be reviewed individually for movement,
+bullet language, arena gimmick, phase curve, and difficulty rather than tuned
+as one blanket batch.
+
+### Prior working milestone — secrets, scale, and a hungry Colossus
+
+Merchants no longer advertise an empty speech bubble. Approach a merchant or
+village resident and press **A** to open a real two-page conversation: the
+first page gives that character a voice and a place in the five-spirit myth;
+the second explains their service, the dungeon route, Sigils, or optional
+secrets in plain input language. The conversation returns to the exact live
+room without rerolling stock, enemies, terrain, or the procedural graph.
+
+The lighter turn court at the end of each dungeon wing can now shelter a
+peaceful, stage-native creature. Crystal Crabs, Moss Coils, Cinder Kites,
+Frost Lancers, Bog Toads, Bramble Sprites, Sunwheels, Dusk Midges, and Void
+Halos each tell a short piece of fuzzy world history, then offer mechanically
+accurate advice for their biome or Colossus. A nearby sparkle distinguishes a
+speaker from its hostile kin; **A** becomes TALK only inside its small approach
+radius and remains the normal primary attack everywhere else.
+
+Verdant Hollow's Storm Serpent now plays an adversarial game of Snake across
+its 224-pixel court. Four visible storm motes draw the vulnerable head through
+a deterministic but wiggling route; every meal grows its projected coil from
+32 to 40, 52, 68, and finally 84 tiles. At full length it gives a long flash
+and audio warning, hunts the champion, discharges a 60-pixel-radius square AOE,
+then sheds one coil at a time and begins feeding again. Its rotating four-lane
+cross continues throughout all three phases, so the movement gimmick never
+replaces the bullet-hell fight.
+
+The Void Lord now restores one HP roughly every six seconds, capped at its
+authored maximum. The deliberately slow recovery gives the finale pressure
+during a stalled fight without undoing decisive attacks. All nine Colossi
+retain an independent projectile pattern and a second movement/arena gimmick;
+World Collapse remains the finale's almost-room-wide positional attack.
+
+Ordinary rooms can now hide three rare, wholly optional discoveries. Roughly
+three rooms in 32 secretly choose an otherwise-normal wall that opens when
+shot, an ordinary wall pair that can simply be walked through, or a normal
+2x2 landscape cairn whose first shove reveals a cache. None is used by the
+Sigil, Warden, Waystone, or boss route. All resolve with the longer uncanny
+puzzle figure, making experimentation legible after the fact without marking
+the answer in advance.
+
+Ember's regular Cinder Maw establishes a genuine middle enemy scale: its
+narrow 10x15-pixel furnace body is clearly larger than an 8x8 swarm creature
+without reading as another full square 16x16 bruiser. It retains its durable,
+slow three-lane area-denial behavior and uses an 8x13 combat box that follows
+the visible silhouette. Hearts now play a soft high twinkle, stat/MP pickups
+use a crystal shimmer, weapon swaps and major boons use the longer reward
+figure, and only currency keeps the short coin chirp.
 
 ### v0.19.2 — Crowds & Cadences
 
@@ -273,7 +415,7 @@ World Collapse still leaves only its announced corner clean, but a missed read
 costs four half-hearts instead of erasing a full run in two scripted pulses.
 
 The Spirit Compass objective is now a large `!` rather than an ambiguous
-diagonal rune, so the current arrow, next fixture, optional loot, and amber
+diagonal rune, so the lime-white player pin, next fixture, optional loot, and amber
 boss skull separate by shape as well as color. The Riftwild key now visibly
 spells `RIFT`; two shared alphabet slots previously left it reading `PNIHT`.
 Village district names are also protected from a carried dungeon fade timer,
@@ -327,7 +469,7 @@ with 16 HP remaining.
 alone.** Walked rooms retain their bright square frame and gain a visible
 stippled interior. Unvisited rooms remain recognizable squares but use empty,
 dashed outlines. Bright explored corridors connect the filled footprints while
-the untouched route stays dim. The 6×5 grid, current-room arrow, sequential
+the untouched route stays dim. The 6×5 grid, lime-white current-room pin, sequential
 GOAL, amber BOSS warning, optional LOOT chest, nonlinear Rift, and numbered
 depth bands all remain in one tile-native screen.
 
@@ -453,7 +595,7 @@ Every dungeon node is now a 16×16 metasquare connected by full-width route
 lines, so the 20-room opening stage and 30-room finale visibly occupy the
 screen instead of resembling a tiny status diagram.
 
-The language is deliberately small and consistent: a cyan arrow is **YOU**, a
+The language is deliberately small and consistent: a lime-white map pin is **YOU**, a
 violet diamond is the next **GOAL**, and an amber skull is the **BOSS**. Those
 three labels fit on one bottom row. Explored rooms and corridors brighten over
 the dim complete footprint; objective branches, the nonlinear Rift shortcut,
@@ -635,7 +777,7 @@ fight, and no enemy, boss, hero, or difficulty value changed.
 **The Spirit Compass now carries stage context without giving up its compact
 grid.** Dungeon SELECT screens say `S1 MAP` through `S9 MAP` above the
 graphical 6×5 pocket map, so screenshots and deep save states no longer look
-detached from their campaign position. The cyan current room, bright explored
+detached from their campaign position. The lime-white current-room pin, bright explored
 route, dim unknown footprint, violet Sigil/rift, trial switch, amber boss hint,
 and permanent right-hand legend remain tile-native and visible together.
 
@@ -999,9 +1141,10 @@ feet box. The live-ROM contract covers both a normal double-tap shake-off and
 the legal edge placement.
 
 **Verdant Hollow's Storm Serpent keeps its Normal-mode threat without acting
-as a global difficulty switch.** Its 205 HP, damage, four simultaneous rotating
-lanes, and wall-bounce identity are unchanged; the body advances every four
-movement beats and each cross leaves 24 frames before the next refill. After
+as a global difficulty switch.** Its 205 HP, damage, and four simultaneous
+rotating lanes remain unchanged; the new feed/grow/AOE/contract cycle gives
+those 24-frame crosses a moving spatial problem rather than the old wall
+bounce. After
 repairing the expanded-route controller's mGBA compile, cairn-contact, and
 mandatory-Sigil routing defects, a fresh three-world/five-champion Normal
 matrix records all 15 rows with zero route stalls. Crystal is cleared in 14/15
@@ -1092,14 +1235,14 @@ pins the far combat wall, performs the off-screen warp, reaches the camera
 bound, opens the x=27 post-clear door, descends to Riftwild, and verifies the
 next Colossus returns to 160px/SCX 0.
 
-**Verdant Hollow's Storm Serpent now makes the arena move.** An 84-tile,
-112×64 hollow storm coil fills the BG plane while the original 32×32 OBJ
-remains its vulnerable bouncing head. Charge visibly travels through the coil,
-and a sub-tile 0–3px camera sway borrows Penta Dragon's moving-arena language
-without detaching walls from their collision cells. Its canonical Normal
-205 HP, damage, four rotating lanes, rebound cadence, and recovery remain
-unchanged. The live-ROM contract pins the hollow footprint, walkability,
-diagonal head bounce, electrical animation, and bounded camera motion.
+**Verdant Hollow's Storm Serpent now grows into the arena.** Its BG projection
+expands through five exact footprints as the original 32×32 vulnerable head
+eats visible storm motes. Charge continues to travel through the coil; at the
+84-tile, 112×64 maximum the head announces and resolves its close AOE before
+the body contracts. Its canonical Normal 205 HP, damage, and rotating
+four-cross remain intact. The live-ROM contract pins all five footprints,
+walkability, feeding motion, simultaneous bullets, AOE damage, contraction,
+electrical animation, and the full 64-pixel camera range.
 
 **Ember Depths' Cinder Maw is now a screen-scale furnace beast.** Its 96-tile,
 112×64 BG body opens its eyes and four-tile jaw through the existing breath
@@ -2490,7 +2633,7 @@ than concept art.
   the amber room-three **Warden Boon** objective on the Compass. Its sanctuary
   threshold rejects forward progress until both fixtures are claimed.
   SELECT draws compact tile-based linked 4×4 Riftwild and dungeon maps:
-  visited cells persist in battery SRAM, the current cell is a cyan `YOU`
+  visited cells persist in battery SRAM, the current cell is a lime-white `YOU`
   marker, Riftwild's nonlinear links/gate/boss have an on-screen legend, and
   unseen cells remain dim hollow slots while their identities and links stay
   fogged. In town, the Spirit Compass switches
@@ -2542,15 +2685,18 @@ than concept art.
 | Input | Action |
 |---|---|
 | **D-pad** | Move (8-way aim while firing); double-tap to dodge-dash and shake off attached Gloom Leeches |
-| **A** | Primary weapon (Wolfkin: melee) · continue a suspended run (title) |
+| **A** | Primary weapon (Wolfkin: melee) · TALK near a speaker · continue a suspended run (title) |
 | **B** | Class signature move (2 MP; Sauran: shield) |
 | **A+B** | Spirit Convergence when MP is full |
 | **START** | Pack screen (stats, loadout, run clock) |
 | **SELECT** | Spirit Compass (dungeon/town progress; Riftwild coordinates, exits, and landmark hint) |
 
-Shoot glowing amber wall tiles to find secret rooms. In puzzle chambers, try
-moving an ordinary cairn, listen for ascending rune tones, and remember that a
-colored switch may change a wall in another room rather than the current one.
+Shoot glowing amber wall tiles to find secret rooms. Rarer optional caches are
+not marked at all: try shooting or walking through ordinary walls and moving a
+normal landscape cairn. In puzzle chambers, listen for ascending rune tones,
+and remember that a colored switch may change a wall in another room rather
+than the current one. Unmarked discoveries are never required to finish a
+dungeon.
 
 ## Build & run
 
@@ -2767,13 +2913,15 @@ frame-for-frame cartridge reproduction without RAM or RNG instrumentation.
 The default headless backend keeps these controller-only checks fast and
 display-independent; set `QUINTRA_MGBA_BIN` to another compatible mGBA binary
 when diagnosing a frontend-specific issue.
-It enforces a 128 KiB ROM ceiling and the repository's validated fixed-bank
-headroom floor. The current v0.19.2 release ROM occupies 128 KiB. Its media,
+It enforces a 256 KiB working-ROM ceiling and the repository's validated
+fixed-bank headroom floor. The published v0.19.2 release occupies 128 KiB;
+the current dialogue candidate is 256 KiB, using a new MBC5 content bank for
+full conversations instead of clipped abbreviations. Its media,
 460 external stage checkpoints,
 cartridge checks, expanded Compass, live puzzle, topology, Rift Well,
-stage-archetype, music, boss-identity, director, and transition-audio contracts passed
-on 2026-08-06; the release SHA-256 is recorded by the attached artifact and
-ROM-bound media manifest.
+stage-archetype, dialogue, music, boss-identity, director, and
+transition-audio contracts passed on 2026-08-09; the working SHA-256 is bound
+into the checkpoint, media, and showcase manifests.
 Gameplay files
 use an explicit validated bank map and the source manifest is sorted; the
 preflight clean-copy rebuild must match the working ROM byte-for-byte, avoiding
@@ -2782,11 +2930,15 @@ GBDK autobank assignments that otherwise vary with an absolute checkout path.
 the source manifest and link order fixed; set `QUINTRA_REPRO_KEEP=1` to retain
 an interrupted copy for diagnosis, or `QUINTRA_REPRO_JOBS` to tune its local
 parallelism. The current clean-copy comparison is byte-identical.
-The layout gate rejects any fixed switchable bank with less than 1 KiB free,
-well before GBDK's warning-only cross-bank overwrite could produce a corrupt
-ROM. The current v0.19.2 build keeps at least 1 KiB free in each fixed
-switchable code bank; `scripts/report_budget.py` prints the exact linked
-values.
+The candidate layout gate reserves a 384-byte fixed/home margin and rejects
+any switchable bank with less than a 256-byte emergency floor, before GBDK's
+warning-only cross-bank overwrite can produce a corrupt ROM. The current
+working cartridge has 512 bytes free at the end of home ROM and 285 bytes in
+its tightest original switchable bank; the other original banks retain
+473–1,066 bytes, while the new dialogue/content bank retains more than 12 KiB.
+`scripts/report_budget.py` prints the exact linked values. The larger image
+keeps the same MBC5 mapper and 32 KiB battery-SRAM ABI while restoring room for
+narrative and future procgen fixtures.
 Enemy OBJ tile and palette identity now comes directly from validated generated
 content rather than duplicate runtime switches. Hardware-range validation pins
 tiles to 0–127 and palettes to 0–7. Combat now shares bank 3 with projectiles
@@ -3130,7 +3282,8 @@ entity tables fail safely, summoned IDs exclude the Cantor, and the caller
 never rearms. A dedicated live-ROM fixture proves the warning window,
 difficulty split, fixed budget, non-recursion, and one-wave room-clear path.
 
-Cart spec: **128 KiB ROM, MBC5 + 32 KiB RAM + battery, CGB-only**, with the
+Current working cart spec: **256 KiB ROM, MBC5 + 32 KiB RAM + battery,
+CGB-only**, with the
 validated cartridge title `QUINTRA`. `make preflight` checks the Nintendo logo,
 mapper/size flags, header and global checksums, then writes a live suspend to
 SRAM and resumes it in a fresh emulator instance—the software equivalent of a

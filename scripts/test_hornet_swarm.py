@@ -30,7 +30,7 @@ def put16(pb, address, value):
 
 def hornet(pb, address, x, y):
     pb.memory[address] = 2
-    pb.memory[address + 1] = 3
+    pb.memory[address + 1] = 7  # active + alive + current camera sector
     put_fix8(pb, address + 2, x)
     put_fix8(pb, address + 6, y)
     pb.memory[address + 14] = 7

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Regression: Sauran's Tail Spike classwise giant policy must preserve a safe,
-# productive pressure lane. In the authored hard Normal mode, three fixed
-# fresh-SRAM worlds must each clear the opening boss before any possible later
-# death. The deeper objective chain deliberately adds enough traversal and
-# attrition that "four bosses inside 24,000 frames" no longer isolates Sauran's
-# giant policy. A run number by itself samples title-idle entropy and is not a
-# repeatable controller regression.
+# productive pressure lane. Seven generated mission roles now make a fresh
+# Normal traversal an attrition test before the subject is reached, so this
+# controller fixture uses the coarse Easy tester assist. Three fixed worlds
+# must still each clear the real opening boss before any possible later death;
+# Normal boss mechanics remain covered by the dedicated ROM contracts.
+# A run number by itself samples title-idle entropy and is not a repeatable
+# controller regression.
 # `max_combat_frames` is
 # intentionally not used here: it measures whole procedural-room age, not a
 # no-progress interval, and can include several legitimate sequential fights.
@@ -19,9 +20,9 @@ for replay in '11 500 2064128703' '12 520 2064128323' '13 420 2064128751'; do
   read -r run frame seed <<EOF
 $replay
 EOF
-  QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=1 \
+  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=1 \
     QUINTRA_BALANCE_TARGET_FRAME="$frame" \
-    QUINTRA_BALANCE_FRAMES=24000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
+    QUINTRA_BALANCE_FRAMES=30000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
     QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_APPEND=1 \
     QUINTRA_BALANCE_SKIP_REPORT=1 \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
@@ -49,4 +50,4 @@ awk -F, '
     if (early_deaths > 0) { print "[sauran-boss] classwise policy died before an opening clear" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[sauran-boss] PASS Normal policy cleared three fixed opening giants before any later death"
+echo "[sauran-boss] PASS Easy test policy cleared three fixed opening giants before any later death"

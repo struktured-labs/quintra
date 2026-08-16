@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live-ROM contract: Corvin's projectile-only B never charges for no blades."""
+"""Live-ROM contract: Corvin's target-mark B refuses an empty room."""
 import re
 from pathlib import Path
 
@@ -31,9 +31,8 @@ def main():
     pb.tick(100)
     assert pb.memory[player] == 2, "did not enter as Corvin"
 
-    # Fill the fixed entity table with inert resident pickups. Corvin's Murder
-    # has no shield or activation ward, so a three-projectile allocation
-    # failure has no gameplay effect worth charging for.
+    # Fill the fixed entity table with inert resident pickups. Raven Mark has
+    # no shield or activation ward, so no valid enemy means no resource spend.
     for slot in range(32):
         entity = entities + slot * 28
         for i in range(28):
@@ -59,14 +58,14 @@ def main():
         if pb.memory[entities + slot * 28] == 1
     )
     assert pb.memory[player + 4] == mp_before, (
-        "full entity table charged Corvin MP without creating a blade "
+        "enemy-free table charged Corvin MP without marking a foe "
         f"(mp={pb.memory[player + 4]} active={remaining} "
         f"projectiles={projectiles} cooldown={pb.memory[player + 19]})"
     )
     assert pb.memory[player + 19] == 0, \
         "full entity table started Corvin's cooldown without an ability"
     pb.stop(save=False)
-    print("[corvin-capacity] PASS saturated entity table refuses empty Murder")
+    print("[corvin-capacity] PASS enemy-free table refuses empty Raven Mark")
 
 
 if __name__ == "__main__":

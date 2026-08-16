@@ -256,6 +256,28 @@ pub const CINDER_MAW: [&str; 8] = [ // furnace shell with bright open jaws
     ".3.11.3.",
 ];
 
+// A deliberate middle scale: ten visible pixels wide by fifteen tall inside
+// a 16x16 metasprite. It reads twice-ish as large as a swarm enemy without
+// becoming another square four-times-area bruiser.
+pub const CINDER_MAW_MEDIUM: [&str; 16] = [
+    "......3333......",
+    ".....322223.....",
+    "....32111123....",
+    "....32133123....",
+    "...3213333123...",
+    "...3213..3123...",
+    "...3213..3123...",
+    "...3213333123...",
+    "....32111123....",
+    "....33211233....",
+    ".....321123.....",
+    ".....321123.....",
+    ".....32..23.....",
+    "....33....33....",
+    "....3......3....",
+    "................",
+];
+
 pub const RIFT_OOZE: [&str; 8] = [ // unstable blob with two budding fragments
     "..1..1..",
     ".122221.",
@@ -747,6 +769,20 @@ pub const BGT_DOOR_FRAME: [&str; 8] = [
     "30000003",
 ];
 
+// Closed portcullis. Runtime rendering substitutes this for the ordinary
+// threshold only while that particular graph exit is sealed; collision keeps
+// the underlying BGT_DOOR so the same edge opens without rebuilding terrain.
+pub const BGT_DOOR_LOCKED: [&str; 8] = [
+    "31111113",
+    "30222203",
+    "30222203",
+    "30222203",
+    "30222203",
+    "30222203",
+    "30222203",
+    "31111113",
+];
+
 pub const BGT_PILLAR: [&str; 8] = [
     "33333332",
     "32222212",
@@ -955,12 +991,13 @@ pub const FX_8: [(&str, &[&str]); 19] = [
     ("apothecary", &APOTHECARY),
 ];
 
-pub const DUNGEON_TILES: [(&str, &[&str]); 14] = [
+pub const DUNGEON_TILES: [(&str, &[&str]); 15] = [
     ("floor_plain", &BGT_FLOOR_PLAIN),
     ("floor_crack", &BGT_FLOOR_CRACK),
     ("floor_pebble", &BGT_FLOOR_PEBBLE),
     ("wall_brick", &BGT_WALL_BRICK),
     ("door_frame", &BGT_DOOR_FRAME),
+    ("door_locked", &BGT_DOOR_LOCKED),
     ("pillar", &BGT_PILLAR),
     ("crystal", &BGT_CRYSTAL),
     ("rubble", &BGT_RUBBLE),

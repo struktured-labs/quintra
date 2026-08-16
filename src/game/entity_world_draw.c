@@ -16,7 +16,8 @@ static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];
     if (e->type != ENT_ENEMY) return 0;
     if (eid == ENEMY_STONE_SENTINEL) return 1;
-    return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK);
+    return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
+        || eid == ENEMY_CINDER_MAW);
 }
 
 static u8 world_camera_step(u8 current, i16 player_pos,

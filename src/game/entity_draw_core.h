@@ -15,9 +15,10 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     entity_t *e = &entities[slot];
     u8 sx, sy, pal, flash;
     if (!(e->flags & EF_ACTIVE)) continue;
-    if ((room_world_width > ROOM_VIEW_W_PX
-            || room_world_height > ROOM_VIEW_H_PX)
-        && e->type == ENT_ENEMY && !(e->flags & EF_ON_SCREEN)) continue;
+    // EF_ON_SCREEN is authoritative in compact rooms, streaming fields, and
+    // Shade limbo alike. Every enemy spawns with it; only camera streaming or
+    // an authored vanish phase clears it.
+    if (e->type == ENT_ENEMY && !(e->flags & EF_ON_SCREEN)) continue;
     sx = ENTITY_DRAW_SX(e);
     sy = ENTITY_DRAW_SY(e);
     pal = e->palette;

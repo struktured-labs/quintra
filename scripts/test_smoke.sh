@@ -104,6 +104,7 @@ check 04_room1                7
 check 05_room2_sigil          7
 check 06_room5_branch         7
 check 07_room9_threshold      7
+check 07b_room12_switch       7
 # The first boss uses an intentional six-color night arena; its active-giant
 # log assertion below verifies this is the actual encounter, not an empty UI.
 check 08_BOSS_room            6
@@ -121,11 +122,12 @@ check 13_room_return          3
 # Wolfkin's seven-heart conference floor is 14 half-hearts at the first
 # controllable room; keep the smoke contract tied to the real starter reserve.
 assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=14'
-assert_log 04_room1           'room=1 '
-assert_log 05_room2_sigil     'room=2 '
-assert_log 06_room5_branch    'room=5 '
-assert_log 07_room9_threshold 'room=9 '
-assert_log 08_BOSS_room       'room=19 .*giants=1 '
+assert_log 04_room1           'puz=1 lock=0 .*solved=0x01 '
+assert_log 05_room2_sigil     'sigils=0x0001 '
+assert_log 06_room5_branch    'solved=0x89 '
+assert_log 07_room9_threshold 'phase=0x80 '
+assert_log 07b_room12_switch  'phase=0x84 '
+assert_log 08_BOSS_room       'room=19 .*solved=0xC9 phase=0x84 .*giants=1 '
 # The assault must visibly cost health without killing the seven-heart
 # Wolfkin: accept every damaged-alive value (1..13), including two digits.
 assert_log 11_after_long_assault 'screen=5 .*room=19 .*bosses=1 .*giants=0 .*hp=\([1-9]\|1[0-3]\)'

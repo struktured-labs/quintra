@@ -145,7 +145,7 @@ def locked_north_holds():
     for i in range(32 * 28): pb.memory[EN + i] = 0
     enemy = EN
     pb.memory[enemy] = 2
-    pb.memory[enemy + 1] = 3
+    pb.memory[enemy + 1] = 7
     pb.memory[enemy + 3] = 104
     pb.memory[enemy + 7] = 72
     pb.memory[enemy + 14] = 8
@@ -174,7 +174,7 @@ def open_room_with_hostile_allows_exit():
     for _ in range(60): pb.tick()
     for i in range(32 * 28): pb.memory[EN + i] = 0
     pb.memory[EN] = 2
-    pb.memory[EN + 1] = 3
+    pb.memory[EN + 1] = 7
     pb.memory[EN + 3] = 104
     pb.memory[EN + 7] = 72
     pb.memory[EN + 14] = 8

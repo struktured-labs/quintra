@@ -76,8 +76,36 @@ def main():
         f"Easy World Collapse should preserve deep testing with one damage; "
         f"got {easy_before}->{easy_after}; post-state={easy_state}"
     )
+    # The final boss also recovers one HP on a deliberately slow independent
+    # clock. Drive the last beat and prove both the heal and hard max cap.
+    pb, boss = enter_boss(8, keep_open=True)
+    maximum = pb.memory[boss + 23]
+    pb.memory[boss + 14] = maximum - 2
+    pb.memory[boss + 11] = 179
+    for _ in range(4):
+        pb.tick()
+        if pb.memory[boss + 14] == maximum - 1:
+            break
+    assert pb.memory[boss + 14] == maximum - 1 and pb.memory[boss + 11] == 0, (
+        "Void Lord did not recover one HP on its 180-beat clock")
+    pb.stop(save=False)
+
+    # Use a fresh encounter for the cap check so a forced near-max heal cannot
+    # share an emulator handoff frame with the following synthetic write.
+    pb, boss = enter_boss(8, keep_open=True)
+    maximum = pb.memory[boss + 23]
+    pb.memory[boss + 14] = maximum
+    pb.memory[boss + 11] = 179
+    for _ in range(30):
+        pb.tick()
+        if pb.memory[boss + 11] == 0:
+            break
+    assert pb.memory[boss + 14] == maximum and pb.memory[boss + 11] == 0, (
+        f"Void Lord regeneration exceeded its authored maximum: "
+        f"hp={pb.memory[boss + 14]}/{maximum} timer={pb.memory[boss + 11]}")
+    pb.stop(save=False)
     print(f"[void-collapse] PASS slot4 wraps to top-left; safe={safe_after}; "
-          f"unsafe blast={blast}; easy blast=1")
+          f"unsafe blast={blast}; easy blast=1; slow regen capped at {maximum}")
 
 
 if __name__ == "__main__":

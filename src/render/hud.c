@@ -1,4 +1,4 @@
-#pragma bank 6
+#pragma bank 8
 
 #include <gb/gb.h>
 #include <gb/cgb.h>
@@ -37,10 +37,39 @@ static const u16 hud_palette_mp_full[4] = {
     BGR555(24, 31, 31),    // 3: icy-white, ready to ascend
 };
 
+// Will is a spirit resource, not health or danger. Give its shared four-tile
+// lane an independent violet palette so the charge bar cannot be mistaken for
+// the red boss/heart language. Full restraint blooms toward pale lavender.
+static const u16 hud_palette_will[4] = {
+    BGR555( 0,  0,  0),
+    BGR555( 9,  5, 14),    // 1: dark violet empty-bar outline
+    BGR555(18,  8, 24),
+    BGR555(24,  8, 31),    // 3: charged Will purple
+};
+static const u16 hud_palette_will_full[4] = {
+    BGR555( 0,  0,  0),
+    BGR555( 9,  5, 14),
+    BGR555(24, 12, 29),
+    BGR555(31, 23, 31),    // 3: pale lavender MAX-ready cue
+};
+
 // Shops call hud_show_offer every frame while the hero is nearby. Cache the
 // rendered price so this context hint costs no repeated VRAM traffic.
 static u8 offer_price = 0xFF;
 static u8 offer_ware = 0xFF;
+static u8 lane_palette = 0xFF;
+static u8 will_full_palette = 0xFF;
+
+static void hud_set_lane_palette(u8 palette) {
+    u8 attrs[4];
+    u8 i;
+    if (lane_palette == palette) return;
+    for (i = 0; i < 4; ++i) attrs[i] = palette;
+    VBK_REG = 1;
+    set_win_tiles(12, 0, 4, 1, attrs);
+    VBK_REG = 0;
+    lane_palette = palette;
+}
 
 // 1-row HUD layout (20 tiles wide):
 //
@@ -53,6 +82,9 @@ void hud_init(void) BANKED {
     // slot 6 is the blue MP variant for the MP digit columns.
     palette_bg_load(7, hud_palette);
     palette_bg_load(6, hud_palette_mp);
+    palette_bg_load(5, hud_palette_will);
+    lane_palette = 5;
+    will_full_palette = 0;
 
     // Fill all 20 WIN tiles with blank, then set palette attribute = 7
     // (except the MP columns 8-9, which take the blue palette 6)
@@ -62,6 +94,7 @@ void hud_init(void) BANKED {
         u8 i;
         for (i = 0; i < 20; ++i) { row[i] = HUD_BLANK; attr[i] = 0x07; }
         attr[8] = attr[9] = 0x06;
+        attr[12] = attr[13] = attr[14] = attr[15] = 0x05;
         VBK_REG = 0; set_win_tiles(0, 0, 20, 1, row);
         VBK_REG = 1; set_win_tiles(0, 0, 20, 1, attr);
         VBK_REG = 0;
@@ -145,6 +178,7 @@ void hud_redraw_depth(void) BANKED {
 void hud_show_offer(u8 ware, u8 price) BANKED {
     u8 row[4];
     u8 icon;
+    if (lane_palette != 7) hud_set_lane_palette(7);
     if (price == offer_price && ware == offer_ware) return;
     offer_price = price;
     offer_ware = ware;
@@ -199,6 +233,7 @@ void hud_redraw_boss(u8 cur, u8 max) BANKED {
         if (segs == last_segs) return;
         for (i = 0; i < 4; ++i) row[i] = HUD_BLANK;
     } else {
+        if (lane_palette != 7) hud_set_lane_palette(7);
         // ceil(cur * 4 / max), clamped 1..4 while alive
         u16 t = (u16)((u16)cur * 4);
         segs = (u8)((t + max - 1) / max);
@@ -218,6 +253,19 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     u8 row[4];
     u8 segs, i;
     if (max == 0) return;
+    {
+        u8 full = cur >= max ? 1 : 0;
+        // The normal room path redraws Will repeatedly. Avoid even the local
+        // helper call once the lane already owns palette 5; this preserves
+        // the dense-room frame budget while still switching immediately
+        // after a shop offer or boss bar used the shared cells.
+        if (lane_palette != 5) hud_set_lane_palette(5);
+        if (full != will_full_palette) {
+            palette_bg_load(5,
+                full ? hud_palette_will_full : hud_palette_will);
+            will_full_palette = full;
+        }
+    }
     segs = (u8)(((u16)cur * 4u) / max);
     if (segs > 4) segs = 4;
     for (i = 0; i < 4; ++i)

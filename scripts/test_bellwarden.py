@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START
+from quintra_topology import STAGE_START, dungeon_size, mission_graph
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -40,7 +40,7 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
-def boot_to_miniboss(stage, local=3):
+def boot_to_miniboss(stage, role="warden"):
     """Generate one real authored miniboss through the Riftwild gate."""
     pb = PyBoy(str(ROM), window="null", cgb=True)
     pb.tick(240)
@@ -50,8 +50,10 @@ def boot_to_miniboss(stage, local=3):
     pb.tick(60)
 
     # The gate invokes the actual room generator and palette/sprite orchestration.
-    # Target local room 3 directly so this encounter contract is independent of
-    # the deliberately nonlinear player route to it.
+    # Target the generated mission role directly so this encounter contract is
+    # independent of the deliberately nonlinear player route to it.
+    local = mission_graph(
+        dungeon_size(stage), 0xCAFE1234, stage)[role]
     target = STAGE_START[stage] + local
     pb.memory[RS + 1] = target - 1
     for i, byte in enumerate((0xCAFE1234).to_bytes(4, "little")):
@@ -161,14 +163,14 @@ def main():
                 "first Bellwarden kill did not persist its Warden Boon"
         pb.stop(save=False)
 
-    deep = boot_to_miniboss(6, local=9)
+    deep = boot_to_miniboss(6, role="deep_warden")
     deep_bell = next(
         e for e in enemies(deep)
         if deep.memory[e + 17] == ENEMY_DREAD_BELL
     )
     kill_bellwarden_for_reward(deep, deep_bell)
     assert deep.memory[RS + 28] & (1 << 7), \
-        "local-room-9 Bellwarden kill did not persist the deep-Warden seal"
+        "generated deep Bellwarden kill did not persist the deep-Warden seal"
     deep.stop(save=False)
 
     print("[bellwarden] PASS Sentinel early; tagged Bell + Warden stages 6-8; "

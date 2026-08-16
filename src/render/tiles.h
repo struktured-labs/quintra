@@ -158,6 +158,9 @@
 #define BGT_MAP_BIG_BOSS     118 // 118..121
 #define BGT_MAP_CACHE        122 // single chest glyph for the LOOT legend
 #define BGT_MAP_BIG_CACHE    123 // 123..126 optional Farfold Cache node
+// Dungeon-only barred threshold. SELECT overwrites slot 126 with the final
+// Farfold-cache quadrant; returning to play reloads this portcullis tile.
+#define BGT_DOOR_LOCKED      126
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
@@ -258,11 +261,15 @@
 #define SPR_ITEM_FLASK       149
 #define SPR_ITEM_ASCEND      150
 #define SPR_ITEM_RIFT_SIGIL  151
+#define SPR_ITEM_RIFT_BOMB   152
+#define SPR_ITEM_ECHO_CHIME  153
+#define SPR_ITEM_MIRROR_SHARD 154
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59
 #define SPR_BRUISER_BOMBER  60   // 60..63
 #define SPR_BRUISER_WARLOCK 64   // 64..67
+#define SPR_MEDIUM_CINDER_MAW SPR_BRUISER_WARLOCK // Ember-only 10x15 silhouette
 // Legacy aliases (kept for back-compat with existing code):
 #define SPR_PLAYER         SPR_CLASS_BASE
 #define SPR_ENEMY          SPR_ENEMY_CRAWLER
@@ -311,10 +318,11 @@ void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
 void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
 void tiles_load_stage_scenery(u8 stage) BANKED;   // stage-local pillar/crystal/debris silhouettes
+void tiles_load_cinder_maw_medium_sprite(void) BANKED;
 void tiles_load_map_bg(void) BANKED;              // dungeon set + Compass glyphs
 void tiles_load_colossus_bg(u8 stage) BANKED;     // nine screen-scale boss bodies
 void tiles_paint_crystal_projection(void) BANKED;
-void tiles_paint_serpent_projection(void) BANKED;
+void tiles_paint_serpent_projection(u8 growth, u8 draw_vram) BANKED;
 void tiles_paint_cinder_projection(void) BANKED;
 void tiles_paint_spider_projection(void) BANKED;
 void tiles_paint_reaper_projection(void) BANKED;

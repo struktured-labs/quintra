@@ -14,12 +14,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-vespine-rope.XXXXXX)"
 
-# Preserve the fixed 18,000-frame post-boss route. Scanning its sustained
-# 248x248 fields can exceed four wall-clock minutes on a loaded host, so only
-# the external watchdog is widened.
+# The seven-role dependency chain makes this a 32,000-frame post-boss route.
+# The measured replay clears two Colossi and encounters the same Rope family;
+# the tester assist preserves its movement and body-pin geometry.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=4 \
   QUINTRA_BALANCE_TARGET_FRAME=540 \
-  QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
+  QUINTRA_BALANCE_FRAMES=32000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

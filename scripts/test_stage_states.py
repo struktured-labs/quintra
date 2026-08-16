@@ -74,12 +74,14 @@ def main() -> None:
             if record["checkpoint"] == "riftwild":
                 assert record["after_stage"] in range(1, 9)
                 assert record["room_counter"] == STAGE_BOSS_ROOM[record["after_stage"] - 1]
-                assert obs["world_mode"] and obs["world_screen"] == 0
+                arrival = (0, 7, 13)[(record["after_stage"] - 1) % 3]
+                assert obs["world_mode"] and obs["world_screen"] == arrival
                 assert not giants, f"{state.name}: Riftwild contains a giant"
                 assert env.pb is not None
                 rs = env.addrs["_run_state"]
                 seen = env.pb.memory[rs + 21] | env.pb.memory[rs + 22] << 8
-                assert seen == 1, f"{state.name}: Riftwild fog is not fresh"
+                assert seen == (1 << arrival), \
+                    f"{state.name}: Riftwild fog is not fresh"
             elif record["checkpoint"] == "boss":
                 assert record["room_counter"] == STAGE_BOSS_ROOM[stage - 1]
                 assert len(giants) == 1, (

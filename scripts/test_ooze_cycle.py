@@ -78,7 +78,7 @@ def main():
         pb.memory[filler + 1] = 3
         pb.memory[filler + 16] = 100
     pb.memory[ooze] = 2
-    pb.memory[ooze + 1] = 3
+    pb.memory[ooze + 1] = 7
     put_fix8(pb, ooze + 2, 80)
     put_fix8(pb, ooze + 6, 72)
     pb.memory[ooze + 14] = 1
@@ -108,6 +108,11 @@ def main():
         f"shot={list(pb.memory[shot:shot + 28])}; "
         f"active={[(i, pb.memory[entities + i * 28], pb.memory[entities + i * 28 + 1], pb.memory[entities + i * 28 + 14], pb.memory[entities + i * 28 + 17], pb.memory[entities + i * 28 + 19]) for i in range(32) if pb.memory[entities + i * 28 + 1] & 1]}"
     )
+    # Direct WRAM construction bypasses entity_spawn's population counter and
+    # its first-sector refresh. The two fragments are visibly in the current
+    # camera, so publish that normal runtime fact before testing recombination.
+    for fragment in fragments:
+        pb.memory[fragment + 1] |= 4
 
     for i in range(2, 32):
         filler = entities + i * 28
@@ -121,7 +126,30 @@ def main():
                 and pb.memory[entities + i * 28 + 17] == 15]
     assert len(reformed) == 1 and pb.memory[reformed[0] + 14] == 8, (
         f"Rift Ooze shards did not reform into one weakened body: {reformed}")
-    print("[ooze-cycle] PASS split -> scatter -> recombine")
+
+    # A lone shard inherits its last scatter heading. At the north boundary,
+    # heading zero used to retry the solid wall forever because the lone
+    # branch ignored enemy_try_step's failure. Reproduce that exact state and
+    # require it to rotate back into the room without any player input.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for x in range(20):
+        pb.memory[tilemap + x] = 2
+    shard = entities
+    pb.memory[shard] = 2
+    pb.memory[shard + 1] = 7
+    put_fix8(pb, shard + 2, 80)
+    put_fix8(pb, shard + 6, 8)
+    pb.memory[shard + 14] = 2
+    pb.memory[shard + 16] = 0
+    pb.memory[shard + 17] = 0
+    pb.memory[shard + 19] = 0x4F
+    pb.memory[shard + 25] = 0
+    for _ in range(20):
+        pb.tick()
+    assert pb.memory[shard + 25] != 0 or pb.memory[shard + 7] > 8, (
+        "lone north-wall Ooze shard kept its blocked heading")
+    print("[ooze-cycle] PASS split -> scatter -> recombine; blocked lone shard rotates")
 
 
 if __name__ == "__main__":

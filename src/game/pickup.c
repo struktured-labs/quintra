@@ -170,6 +170,13 @@ u8 pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED {
     return pickup_spawn_resident(PICKUP_BELLKEEPER, SPR_TOWN_BELLKEEPER, 0x04, x, y);
 }
 
+u8 pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn_resident(
+        PICKUP_WAYFARER, SPR_APOTHECARY, 0x06, x, y);
+    if (idx != 0xFF) entities[idx].ai_data[1] = stage < 9 ? stage : 8;
+    return idx;
+}
+
 u8 pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_RIFTWELL, x, y);
     if (idx != 0xFF) {
@@ -208,7 +215,8 @@ static u8 pickup_is_town_resident(u8 kind) {
 static u8 pickup_is_visual_town_resident(u8 kind) {
     return kind == PICKUP_MERCHANT || kind == PICKUP_SMITH
         || kind == PICKUP_APOTHECARY || kind == PICKUP_WAYKEEPER
-        || kind == PICKUP_LOREKEEPER || kind == PICKUP_BELLKEEPER;
+        || kind == PICKUP_LOREKEEPER || kind == PICKUP_BELLKEEPER
+        || kind == PICKUP_WAYFARER;
 }
 
 // Context, not a purchase: reveal the nearest ware's price before the player
@@ -232,6 +240,36 @@ u8 pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED {
             *ware_out = entities[i].ai_data[1];
             *price_out = entities[i].ai_data[2];
             found = 1;
+        }
+    }
+    return found;
+}
+
+// A is intentionally contextual only inside this small proximity box. The
+// player can still attack normally elsewhere in the room, while standing by
+// a resident or peaceful wayfarer makes the conversation win over a stray
+// turbo shot. The nearest speaker wins when a village crowd overlaps ranges.
+u8 pickup_nearby_speaker(u8 *kind_out, u8 *topic_out) BANKED {
+    u8 i, found = 0, best_distance = 0xFF;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        i16 dx, dy;
+        u8 kind, distance;
+        if (!(entities[i].flags & EF_ACTIVE)
+            || entities[i].type != ENT_PICKUP) continue;
+        kind = entities[i].ai_data[0];
+        if (!pickup_is_town_resident(kind) && kind != PICKUP_WAYFARER)
+            continue;
+        dx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
+        dy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx > 28 || dy > 28) continue;
+        distance = (u8)(dx + dy);
+        if (!found || distance < best_distance) {
+            found = 1;
+            best_distance = distance;
+            *kind_out = kind;
+            *topic_out = entities[i].ai_data[1];
         }
     }
     return found;
@@ -337,7 +375,7 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
 // The active room chooses what tile slot 125 means (coin thought or scroll),
 // so this shared timing/geometry path keeps their interaction behavior in
 // sync without duplicating the same cooldown arithmetic for each resident.
-static void pickup_near_callout(entity_t *e, u8 palette) {
+static void pickup_near_callout(entity_t *e, u8 palette, u8 tile) {
     if (e->state_timer != 0) {
         e->state_timer--;
     } else {
@@ -346,7 +384,7 @@ static void pickup_near_callout(entity_t *e, u8 palette) {
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
         if (dx <= 32 && dy <= 32
-            && fx_spawn(SPR_MERCHANT_CALLOUT, palette,
+            && fx_spawn(tile, palette,
                 FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 10, 45) != 0xFF)
             e->state_timer = 105; // visible 0.75s, then a short rest
     }
@@ -369,7 +407,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         // The floor labels and HUD identify each price; this one small thought
         // bubble tells a nearby player that the character is actually a
         // trader. state_timer is otherwise unused by permanent residents.
-        pickup_near_callout(e, 0x05);
+        pickup_near_callout(e, 0x05, SPR_MERCHANT_CALLOUT);
         return;
     }
     if (e->ai_data[0] == PICKUP_LOREKEEPER) {
@@ -377,7 +415,14 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         // than the merchant's coin). It makes the authored lore fixture read
         // as someone worth approaching without adding a modal text screen or
         // a new interaction economy.
-        pickup_near_callout(e, 0x06);
+        pickup_near_callout(e, 0x06, SPR_MERCHANT_CALLOUT);
+        return;
+    }
+    if (e->ai_data[0] == PICKUP_WAYFARER) {
+        // Dungeon sprite slot 79 already carries a different stage-native
+        // creature silhouette in each biome. A small sparkle is the neutral
+        // "this one will talk" cue; slot 125 remains combat's Dread Bell.
+        pickup_near_callout(e, 0x06, SPR_FX_MUZZLE);
         return;
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
@@ -443,6 +488,17 @@ static u8 apply_item_effects(u8 item_idx) {
     u8 k;
     if (item_idx >= N_ITEMS) return 0;
     it = &items[item_idx];
+    // Consumables are physical charges: duplicates deliberately occupy
+    // separate Pack slots and each activation removes exactly one copy.
+    if (it->kind == ITEM_KIND_CONSUMABLE) {
+        for (k = 0; k < INVENTORY_SLOTS; ++k) {
+            if (player.inventory[k] == 0xFF) {
+                player.inventory[k] = (u8)it->id;
+                return 1;
+            }
+        }
+        return 0;
+    }
     // Passive relics persist for this run and remain inspectable by behavioral
     // hooks (vampirism, future on-kill/on-dash effects). Stat boosts still
     // stack, but presence-based hooks do not need duplicate IDs. Coalescing
@@ -592,14 +648,16 @@ u8 pickup_check_player_collision(void) BANKED {
                         any = 1;
                         continue;
                     }
-                    sfx_play(SFX_HEART);
+                    // Permanent build growth has a forged relic voice; hearts,
+                    // currency, MP, Sigils, and temporary Surges each differ.
+                    sfx_play_reward(SFX_REWARD_RELIC);
                     break;
                 case PICKUP_FARFOLD_RELIC:
                     if (!apply_item_effects(entities[i].ai_data[1])) {
                         any = 1;
                         continue;
                     }
-                    sfx_play(SFX_CLEAR);
+                    sfx_play_reward(SFX_REWARD_RELIC);
                     run_state.dungeon_phase |= RUN_FARFOLD_CACHE_BIT;
                     break;
                 case PICKUP_BOON_CHOICE: {
@@ -619,7 +677,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 == PICKUP_BOON_CHOICE)
                             entity_kill(other);
                     }
-                    sfx_play(SFX_CLEAR);
+                    sfx_play_reward(SFX_REWARD_RELIC);
                     break;
                 }
                 case PICKUP_MP:
@@ -630,14 +688,14 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (player.mp >= player.mp_max) continue;
                     player.mp++;
                     hud_redraw_mp();
-                    sfx_play(SFX_HEART);
+                    sfx_play_reward(SFX_REWARD_MAGIC);
                     break;
                 case PICKUP_SURGE:
                     room_start_weapon_surge();
                     break;
                 case PICKUP_RIFT_SIGIL:
                     run_state.rift_sigils |= RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten);
-                    sfx_play(SFX_CLEAR);
+                    sfx_play_reward(SFX_REWARD_SIGIL);
                     break;
                 case PICKUP_WEAPON: {
                     // A deliberate A press trades weapons. The dropped old
@@ -651,6 +709,8 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (old_w < N_ITEMS && items[old_w].kind == ITEM_KIND_WEAPON) {
                         pickup_spawn_weapon(old_w, entities[i].x, entities[i].y);
                     }
+                    // room_refresh_player_appearance already plays the forged
+                    // equipment cue for a real weapon change.
                     break;
                 }
                 case PICKUP_SHOP: {
@@ -713,7 +773,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (player.coins >= price) {
                         player.coins = (u16)(player.coins - price);
                         hud_redraw_coins();
-                        sfx_play(SFX_COIN);
+                        sfx_play_reward(SFX_REWARD_PURCHASE);
                         switch (entities[i].ai_data[1]) {
                             case WARE_HEART:
                                 player.hp = (u8)(player.hp + 2);
@@ -835,7 +895,7 @@ u8 pickup_check_player_collision(void) BANKED {
                         run_state.next_dungeon_reveal |= 0x03;
                         entities[i].state = 1;
                         entities[i].palette = 0x02;
-                        sfx_play(SFX_CLEAR);
+                        sfx_play_reward(SFX_REWARD_MAGIC);
                     }
                     any = 1;
                     continue;
@@ -850,9 +910,9 @@ u8 pickup_check_player_collision(void) BANKED {
                         continue;
                     player.hp = add_capped(player.hp, 4, player.hp_max);
                     player.mp = add_capped(player.mp, 2, player.mp_max);
-                    run_state.world_return_screen |= RIFTWELL_USED_FLAG;
+                    run_state.riftwild_flags |= RIFT_REGION_WELL_USED_BIT;
                     hud_redraw_all();
-                    sfx_play(SFX_CLEAR);
+                    sfx_play_reward(SFX_REWARD_MAGIC);
                     break;
             }
             entity_kill(i);

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM contract: a full MP meter visibly advertises Convergence readiness."""
 
-from test_convergence_transform import PLAYER, boot
+from test_convergence_transform import ENTITIES, PLAYER, boot
 
 
 READY = (192, 248, 248, 255)
@@ -21,6 +21,17 @@ def main():
         assert pb.memory[PLAYER + 4] == pb.memory[PLAYER + 3]
         assert READY in mp_colors(pb), (
             f"class {class_id} full MP never reached the icy ready color")
+
+        # Raven Mark deliberately refuses an empty target table. Give Corvin
+        # one visible dummy so this remains a HUD/spend contract instead of
+        # contradicting the signature's no-wasted-resource behavior.
+        if class_id == 2:
+            pb.memory[ENTITIES] = 2       # ENT_ENEMY
+            pb.memory[ENTITIES + 1] = 7   # active, alive, on screen
+            pb.memory[ENTITIES + 3] = 96
+            pb.memory[ENTITIES + 7] = 64
+            pb.memory[ENTITIES + 14] = 30
+            pb.memory[ENTITIES + 25] = 0x88
 
         # Keep the edge queued until the cartridge's real input poll sees it.
         # A single host-side convenience tap can begin and end while a longer

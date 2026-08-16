@@ -4,6 +4,7 @@
 #include "audio/sfx.h"
 #include "game/dungeon_director.h"
 #include "game/map.h"
+#include "game/mission_graph.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/palette.h"
@@ -23,8 +24,14 @@ static const u16 map_pal_base[4] = {
 static const u16 map_pal_sigil[4] = {
     BGR555(1,3,2), BGR555(8,4,14), BGR555(20,8,27), BGR555(31,14,31)
 };
-static const u16 map_pal_here[4] = {
+// Doors and caches keep the cool landmark color. The player marker owns a
+// separate lime/white palette below: sharing cyan made the old arrow look
+// like another route instruction instead of an unmistakable "you are here."
+static const u16 map_pal_landmark[4] = {
     BGR555(1,3,2), BGR555(2,10,14), BGR555(5,23,25), BGR555(12,31,31)
+};
+static const u16 map_pal_player[4] = {
+    BGR555(1,3,2), BGR555(2,10,4), BGR555(8,27,8), BGR555(29,31,24)
 };
 static const u16 map_pal_boss[4] = {
     BGR555(1,3,2), BGR555(14,3,1), BGR555(27,7,1), BGR555(31,20,4)
@@ -45,7 +52,7 @@ static u8 map_attr(u8 tile) {
             && tile < BGT_MAP_BIG_CACHE + 4)) return BGPAL_DOOR;
     if (tile == BGT_MAP_HERE
         || (tile >= BGT_MAP_BIG_HERE
-            && tile < BGT_MAP_BIG_HERE + 4)) return BGPAL_DOOR;
+            && tile < BGT_MAP_BIG_HERE + 4)) return 7;
     if (tile == BGT_MAP_BOSS
         || (tile >= BGT_MAP_BIG_BOSS
             && tile < BGT_MAP_BIG_BOSS + 4)) return BGPAL_CRACK;
@@ -150,6 +157,7 @@ static void draw_world_grid(void) {
     static const u8 wx[4] = { 1, 4, 7, 10 };
     static const u8 wy[4] = { 4, 7, 10, 13 };
     u8 r, c;
+    u8 active_gate = run_state_riftwild_gate_screen();
     for (r = 0; r < 4; ++r) {
         for (c = 0; c < 4; ++c) {
             u8 cell = (u8)(r * 4 + c);
@@ -167,7 +175,7 @@ static void draw_world_grid(void) {
             else if (cell == RIFTWELL_WORLD_SCREEN)
                 icon = BGT_MAP_RIFT;
             else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE)
-                icon = BGT_PORTAL;
+                icon = (cell == active_gate) ? BGT_PORTAL : BGT_MAP_ROOM;
             else if (z->kind == ZELDA_CELL_VAULT)
                 icon = BGT_MAP_SIGIL;
             else if (z->kind == ZELDA_CELL_BOSS)
@@ -254,8 +262,6 @@ static void draw_dungeon_grid(void) {
     u8 i, j;
     u8 size = run_state_dungeon_size();
     u8 here = run_state_dungeon_cell();
-    u8 sigil_done = (run_state.rift_sigils
-        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
     u8 next_trial = dungeon_director_goal_cell();
     u8 route_dir = dungeon_director_direction_from(here);
     u8 route_next = (route_dir == DIR_NONE) ? 0xFF
@@ -273,12 +279,6 @@ static void draw_dungeon_grid(void) {
         // before it is crossed. The amber danger node is the map equivalent
         // of Zelda's compass hint and matches the marked in-room boss doors.
         if (boss_hint && i != here) icon = BGT_MAP_BIG_BOSS;
-        // Put the objective in the room that actually owns it. The older
-        // free-floating center marker looked like decoration, so players
-        // could reach the sanctuary without realizing which room held the
-        // required Rift Sigil.
-        if (i == 2 && !sigil_done && i != here)
-            icon = BGT_MAP_BIG_GOAL;
         // Each completed fixture reveals exactly one next GOAL. The Pack
         // supplies its specific Sigil/Waystone/Warden name; the Compass stays
         // spatial and teaches the route without exposing unrelated procedural
@@ -402,7 +402,7 @@ static void draw_town_grid(void) {
     if (plaza > TOWN_QUARTER) plaza = TOWN_ARRIVAL;
     here = plaza_node[plaza];
     for (i = 0; i < 3; ++i) {
-        map_room_box(tx[i], ty[i], i == here ? BGT_SWITCH : icon[i]);
+        map_room_box(tx[i], ty[i], i == here ? BGT_MAP_HERE : icon[i]);
     }
     // East/west civic lanes and the north route back into the next dungeon.
     for (i = 0; i < 3; ++i) {
@@ -425,12 +425,17 @@ static void draw_town_grid(void) {
 void map_enter(void) {
     u8 is_town = RUN_ROOM_IS_TOWN(run_state.room_counter) ? 1 : 0;
     DISPLAY_OFF; HIDE_SPRITES; HIDE_WIN;
+    // Room rendering commonly leaves VBK on the attribute plane. Tile-data
+    // uploads obey VBK too: without this reset the Compass atlas lands in
+    // VRAM bank 1 while its nodes select bank 0, exposing stale champion art
+    // as the notorious blue "arrow" and other garbage-shaped map glyphs.
+    VBK_REG = 0;
     palette_bg_load(BGPAL_FLOOR, map_pal_base);
     palette_bg_load(BGPAL_WALL, map_pal_base);
     palette_bg_load(BGPAL_CRYSTAL, map_pal_sigil);
-    palette_bg_load(BGPAL_DOOR, map_pal_here);
+    palette_bg_load(BGPAL_DOOR, map_pal_landmark);
     palette_bg_load(BGPAL_CRACK, map_pal_boss);
-    palette_bg_load(7, map_pal_base);
+    palette_bg_load(7, map_pal_player);
     if (run_state.world_mode) {
         // The area alphabet supplies G/A/E for GATE, then the Compass atlas
         // must win shared slots 90..92 so RIFT cannot render as "PNIHT".
@@ -448,6 +453,7 @@ void map_enter(void) {
         SHOW_BKG; DISPLAY_ON;
         return;
     }
+    mission_graph_ensure();
     tiles_load_area_labels(); tiles_load_map_bg(); tiles_load_hud();
     dungeon_director_refresh_route();
     map_clear_tiles();

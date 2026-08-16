@@ -14,6 +14,9 @@ extern u8 g_shot_element;
 // against crowds without counting eight overlapping arcs as eight boss hits.
 #define PROJ_FLAG_CONVERGENCE 0x01
 #define PROJ_FLAG_RICOCHET    0x02
+// Wolfkin's Howl uses a cast-wide Colossus hit budget while retaining all
+// eight physical lanes against ordinary crowds.
+#define PROJ_FLAG_HOWL        0x04
 
 // Cached from the run inventory so ordinary fire never scans all eight slots.
 // The cache is refreshed on purchase, new-run reset, and SRAM resume.

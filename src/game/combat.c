@@ -10,6 +10,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/will.h"
 #include "render/tiles.h"
 #include "render/hud.h"
 #include "content.h"
@@ -91,6 +92,27 @@ u8 combat_resolve(void) BANKED {
             u8 boss_retired_for_rewards = 0;
             if (j == i) continue;
             if (!(entities[j].flags & EF_ACTIVE)) continue;
+            if (entities[j].type == ENT_ENEMY
+                && !(entities[j].flags & EF_ON_SCREEN)) continue;
+            // Physical A weapons can cut hostile shots. Reuse the outer
+            // player-projectile sweep instead of adding another 32x32 pass:
+            // melee gains defensive space without taxing ordinary bullets.
+            if (entities[j].type == ENT_PROJECTILE
+                && !(entities[j].flags & EF_PLAYER_PROJ)
+                && entities[i].ai_data[2]
+                && aabb_overlap_ee(&entities[i], &entities[j])) {
+                fx_spawn(SPR_FX_IMPACT, 6,
+                    FIX8_TO_INT(entities[j].x),
+                    FIX8_TO_INT(entities[j].y), 7);
+                entity_kill(j);
+                sfx_play(SFX_HIT);
+                if (entities[i].hp <= 1) {
+                    entity_kill(i);
+                    break;
+                }
+                entities[i].hp--;
+                continue;
+            }
             if (entities[j].type != ENT_ENEMY) continue;
             if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
@@ -133,6 +155,17 @@ u8 combat_resolve(void) BANKED {
                 }
                 convergence_giant_hits++;
             }
+            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
+                && (entities[i].ai_data[3] & PROJ_FLAG_HOWL)) {
+                if (will_howl_giant_hits >= WILL_HOWL_GIANT_HIT_CAP) {
+                    entity_kill(i);
+                    break;
+                }
+                will_howl_giant_hits++;
+                // Each Howl lane may touch this giant only once. It retains
+                // its normal pierce value against separate crowd bodies.
+                entities[i].hp = 1;
+            }
             weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
             // Large bosses reuse the Stone Sentinel entity definition for
             // storage/AI, but must not inherit its lightning-only weakness.
@@ -154,6 +187,10 @@ u8 combat_resolve(void) BANKED {
                 if (player.class_id == 4) dmg++;
             }
             if (rng_range(100) < (u8)(player.lck * 5)) dmg = (u8)(dmg << 1);
+            if (player.class_id == 2 && will_corvin_mark_ticks
+                && j == will_corvin_mark_slot) {
+                dmg = (u8)(dmg + WILL_CORVIN_MARK_BONUS);
+            }
             // Last Stand: down to your final heart (the low-HP pulse zone),
             // desperation lends +1 damage — a comeback edge one hit from death.
             if (player.hp <= 2 && player.hp > 0) dmg++;
@@ -257,6 +294,9 @@ u8 combat_resolve(void) BANKED {
                             g_hitstop = 8;   // boss kill: big freeze
                             room_shake(2, 26);   // the colossus hits the floor
                             run_state.bosses_beaten++;
+                            // Campaign order is also the Oath unlock table:
+                            // this victory grants a permanent new active verb
+                            // for the current run, selectable in the Pack.
                             // Every defeated arena opens before its reward or
                             // ending screen. The final boss used to jump
                             // straight to Victory with every threshold still
@@ -332,10 +372,10 @@ u8 combat_resolve(void) BANKED {
                             // the sanctuary that the trial was completed.
                             if (!run_state.world_mode) {
                                 u8 local = run_state_dungeon_local();
-                                if (local == 3)
+                                if (local == run_state.mission_warden_cell)
                                     run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
-                                else if (local == 9
-                                    && run_state_dungeon_size() >= 14)
+                                else if (local
+                                    == run_state.mission_deep_warden_cell)
                                     run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
                             }
                             g_hitstop = 5;
@@ -444,12 +484,9 @@ u8 combat_resolve(void) BANKED {
                 || (entities[i].type == ENT_PROJECTILE
                     && !(entities[i].flags & EF_PLAYER_PROJ));
             if (!hostile) continue;
-            // Sleeping scrolling-field bodies are in distant camera sectors. Their
-            // world coordinates cannot overlap the champion, so avoid the
-            // signed 16-bit AABB work until visibility wakes them.
-            if ((room_world_width > ROOM_VIEW_W_PX
-                    || room_world_height > ROOM_VIEW_H_PX)
-                && entities[i].type == ENT_ENEMY
+            // Sleeping field bodies and authored vanish phases share one
+            // authoritative collision flag. Compact enemies spawn visible.
+            if (entities[i].type == ENT_ENEMY
                 && !(entities[i].flags & EF_ON_SCREEN)) continue;
             // An attached Gloam Leech uses its own timed drain; ordinary body
             // collision would double-charge damage every iframe cycle.

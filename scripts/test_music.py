@@ -82,7 +82,9 @@ def runtime_track(stage, boss, keep_emulator=False):
         sigils |= (1 << stage)
         pb.memory[RS + 23] = sigils & 0xFF
         pb.memory[RS + 24] = sigils >> 8
-        pb.memory[RS + 27] = 1 << 3
+        # Synthetic sanctuary entry must mirror the complete prerequisite
+        # chain, including the newly explicit opening trial and Warden boon.
+        pb.memory[RS + 27] = (1 << 0) | (1 << 3) | (1 << 6)
         if dungeon_size(stage) >= 12:
             pb.memory[RS + 27] |= 1 << 7
         if dungeon_size(stage) >= 14:

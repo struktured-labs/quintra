@@ -57,6 +57,7 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, wheel + 2, 64)
         put_fix8(pb, wheel + 6, 64)
+        pb.memory[wheel + 1] |= 4
         pb.memory[wheel + 16] = 2  # body divider: take one measured orbit step
         pb.memory[wheel + 18] = 0  # Spinner ai_data[1]: fire now
         pb.memory[wheel + 19] = 0  # Spinner ai_data[2]: north/south pair

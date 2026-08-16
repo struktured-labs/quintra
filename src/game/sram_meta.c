@@ -1,4 +1,4 @@
-#pragma bank 7
+#pragma bank 2
 // Lifetime trophies live in SRAM bank 1. They are only read on title/results
 // screens, so keeping this cold path in switchable ROM preserves scarce
 // always-mapped bank-0 space for frame-critical runtime code.

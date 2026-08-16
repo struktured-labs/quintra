@@ -51,7 +51,7 @@ u8 room_apply_world_arena(void) BANKED {
     if (stage == 0) {
         tiles_paint_crystal_projection();
     } else if (stage == 1) {
-        tiles_paint_serpent_projection();
+        tiles_paint_serpent_projection(0, 0);
     } else if (stage == 2) {
         tiles_paint_cinder_projection();
     } else if (stage == 3) {

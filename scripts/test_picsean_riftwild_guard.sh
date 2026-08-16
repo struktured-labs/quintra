@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # Regression: Picsean's real Tidal Wave guard must cover the mandatory
 # Riftwild lane when a nearby body threat cannot be sidestepped. This
-# controller-only seed used to die after its first boss in room 7; it should
-# now cross the world, clear a second boss, and reach the next dungeon. The
-# long-wing maze needs a larger traversal budget than the former shortcut
-# graph, but retains the same safety outcome.
+# controller-only world crosses the regional trail, clears a second boss, and
+# reaches the next dungeon. Easy is setup only: guard/Will/controller mechanics
+# are identical, while the expanded seven-role routes no longer turn this
+# traversal contract into an unrelated pre-boss endurance gate.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-picsean-riftwild.XXXXXX)"
 
-QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_FRAMES=36000 QUINTRA_BALANCE_HOST_TIMEOUT=100 \
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
+  QUINTRA_BALANCE_TARGET_FRAME=1000 \
+  QUINTRA_BALANCE_FRAMES=80000 QUINTRA_BALANCE_HOST_TIMEOUT=300 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
@@ -22,11 +23,15 @@ awk -F, '
     next
   }
   NR == 2 {
+    if ($(col["seed"]) != 2064128163) {
+      print "[picsean-riftwild] fixed world drifted" > "/dev/stderr"
+      exit 1
+    }
     if ($(col["bosses"]) < 2) {
       print "[picsean-riftwild] did not clear the second boss" > "/dev/stderr"
       exit 1
     }
-    if ($(col["max_room"]) < 16 || $(col["world_hops"]) < 10) {
+    if ($(col["max_room"]) < 63 || $(col["world_hops"]) < 10) {
       print "[picsean-riftwild] did not cross Riftwild into the next dungeon" > "/dev/stderr"
       exit 1
     }

@@ -29,7 +29,7 @@ enum {
 #define RUN_ROOM_IS_TOWN(n) run_state_room_is_town(n)
 
 // During a town, world_return_screen is safely reused as a local plaza index;
-// it is reset before entering either a dungeon or Riftwild cave traversal.
+// regional persistence lives in appended dedicated bytes instead.
 #define TOWN_ARRIVAL 0
 #define TOWN_MARKET  1
 #define TOWN_QUARTER 2
@@ -50,11 +50,16 @@ enum {
 // readable, lore-like fixture between otherwise generated expeditions rather
 // than a hidden roll the player can never reasonably plan around.
 #define RIFTWELL_WORLD_SCREEN 1
-// While in Riftwild, world_return_screen is a 0..15 cave/vault return
-// anchor. Its high bit is otherwise unused and keeps the one-use landmark
-// state out of the packed run-state ABI (which is shared with SRAM/tools).
+// While in Riftwild, world_return_screen is a 0..15 cave/vault return anchor.
+// The legacy high bit remains readable for old suspends; new runs keep
+// one-use state in riftwild_flags so a town cannot erase a whole region.
 #define RIFTWELL_USED_FLAG 0x80
-#define RUN_RIFTWELL_USED() (run_state.world_return_screen & RIFTWELL_USED_FLAG)
+#define RIFT_REGION_WELL_USED_BIT  0x01
+#define RIFT_REGION_VAULT_USED_BIT 0x02
+#define RIFT_REGION_READY_BIT      0x80
+#define RUN_RIFTWELL_USED() ((run_state.riftwild_flags \
+    & RIFT_REGION_WELL_USED_BIT) \
+    || (run_state.world_return_screen & RIFTWELL_USED_FLAG))
 
 typedef struct {
     u8  biome_id;            // current biome
@@ -80,7 +85,7 @@ typedef struct {
     u8  next_dungeon_reveal; // bit 0..7: cells to reveal on next entry
     u8  difficulty;          // DIFFICULTY_*; persisted with suspended run
     u8  dungeon_puzzles;     // bit 0..7: solved procedural puzzle rooms
-    u8  dungeon_phase;       // bits 0/2: phase walls; bit 7: deep-Warden clear
+    u8  dungeon_phase;       // route/cache/hidden-secret state; see masks below
     u8  dungeon_seen_hi;     // bit 0..7: visited dungeon cells 8..15
     u8  next_dungeon_reveal_hi; // queued chart knowledge for cells 8..15
     u8  dungeon_seen_xhi;    // bit 0..7: visited dungeon cells 16..23
@@ -88,25 +93,47 @@ typedef struct {
     u8  dungeon_seen_xxhi;   // bit 0..5: visited dungeon cells 24..29
     u8  next_dungeon_reveal_xxhi; // queued chart knowledge for cells 24..29
     u8  enemies_killed_hi;   // high byte; long/dense runs exceed 255 hostiles
+    // Seeded dungeon-wide two-state rule. Low bits choose its material
+    // grammar; bit 7 is the current WAX/WANE state; bit 6 marks initialized.
+    // Appended so every historical run-state offset remains stable.
+    u8  dungeon_law;
+    // Generated before any room in the stage. These cells turn the maze into
+    // a seed-stable mission graph instead of pinning lore roles to 1/2/3/7.
+    // mission_order bit 0 chooses whether the Warden or Sigil branch is
+    // required first; every other dependency remains readable campaign lore.
+    u8  mission_ready;
+    u8  mission_order;
+    u8  mission_trial_cell;
+    u8  mission_sigil_cell;
+    u8  mission_warden_cell;
+    u8  mission_waystone_cell;
+    u8  mission_deep_warden_cell;
+    u8  mission_deep_switch_cell;
+    u8  mission_deep_gate_cell;
+    // One persistent Riftwild serves a complete three-dungeon region.
+    // Geography/seen cells and these landmark flags survive dungeon trips;
+    // the region id changes only after the third and sixth Colossi.
+    u8  riftwild_region;
+    u8  riftwild_flags;
 } run_state_t;
+
+#define DUNGEON_LAW_KIND_MASK 0x03
+#define DUNGEON_LAW_READY_BIT 0x40
+#define DUNGEON_LAW_STATE_BIT 0x80
+#define MISSION_GRAPH_READY    0xA5
 
 #define RUN_IS_EASY() (run_state.difficulty == DIFFICULTY_EASY)
 
 #define RUN_STAGE_SIGIL_BIT(stage) ((u16)(1u << ((stage) % BOSSES_TO_WIN)))
-// Local room 3 is every dungeon's first Warden encounter. Its existing
-// class-changing weapon reward is also the stage's required Warden Boon.
-// Reuse that room's persisted puzzle bit so suspend saves remember the clear
-// without expanding the packed run-state ABI.
+#define RUN_TRIAL_BIT       ((u8)(1u << 0))
 #define RUN_WARDEN_BOON_BIT ((u8)(1u << 3))
-// Roomier dungeons deliberately route through their authored back-half
-// fixtures. Local room 7's puzzle becomes the Waystone needed from twelve
-// cells onward; local room 9's second Warden is required from fourteen onward.
-// Both reuse persistent bytes that already survive suspend without changing
-// the packed run-state ABI.
+#define RUN_DEEP_GATE_BIT    ((u8)(1u << 6))
 #define RUN_WAYSTONE_BIT     ((u8)(1u << 7))
 #define RUN_PHASE_OPEN_BIT   ((u8)(1u << 0))
 #define RUN_FARFOLD_CACHE_BIT ((u8)(1u << 1))
 #define RUN_DEEP_PHASE_OPEN_BIT ((u8)(1u << 2))
+#define RUN_HIDDEN_SECRET_BIT(slot) ((u8)(1u << (3 + ((slot) & 3))))
+#define RUN_HIDDEN_SECRET_MASK ((u8)0x78)
 #define RUN_DEEP_WARDEN_BIT  ((u8)(1u << 7))
 
 extern run_state_t run_state;
@@ -136,14 +163,17 @@ u8   run_state_dungeon_neighbor(u8 dir);
 u8   run_state_is_boss_room(void);
 u8   run_state_was_cleared_boss(void);
 u8   run_state_is_sanctuary(void);
-u8   run_state_is_miniboss(void);
+u8   run_state_is_miniboss(void) BANKED;
 u8   run_state_is_shop(void);
 u8   run_state_room_is_town(u8 room_counter);
 u8   run_state_dungeon_cell_seen(u8 cell);
 void run_state_reveal_dungeon_cell(u8 cell);
 void run_state_mark_visited(void);
-void run_state_begin_world(void);
-void run_state_begin_dungeon(void);
+void run_state_begin_world(void) BANKED;
+void run_state_begin_dungeon(void) BANKED;
+u8   run_state_riftwild_gate_screen(void) BANKED;
+u8   run_state_riftwild_gate_active(u8 screen) BANKED;
+void run_state_ensure_dungeon_law(void);
 u16  run_state_enemies_killed_total(void);
 void run_state_record_enemy_kill(void);
 

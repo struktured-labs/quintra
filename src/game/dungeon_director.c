@@ -183,15 +183,29 @@ u8 dungeon_director_goal_cell(void) BANKED {
     u8 size = run_state_dungeon_size();
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter))
         return 0xFF;
-    if (!(run_state.rift_sigils
-            & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))) return 2;
-    if (!(run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT)) return 3;
-    if (size >= 12
-        && !(run_state.dungeon_puzzles & RUN_WAYSTONE_BIT)) return 7;
-    if (size >= 14
-        && !(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT)) return 9;
-    if (size >= 20
-        && !(run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT)) return 12;
+    if (!(run_state.dungeon_puzzles & RUN_TRIAL_BIT))
+        return run_state.mission_trial_cell;
+    if (run_state.mission_order & 1) {
+        if (!(run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT))
+            return run_state.mission_warden_cell;
+        if (!(run_state.rift_sigils
+                & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)))
+            return run_state.mission_sigil_cell;
+    } else {
+        if (!(run_state.rift_sigils
+                & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)))
+            return run_state.mission_sigil_cell;
+        if (!(run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT))
+            return run_state.mission_warden_cell;
+    }
+    if (!(run_state.dungeon_puzzles & RUN_WAYSTONE_BIT))
+        return run_state.mission_waystone_cell;
+    if (!(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT))
+        return run_state.mission_deep_warden_cell;
+    if (!(run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT))
+        return run_state.mission_deep_switch_cell;
+    if (!(run_state.dungeon_puzzles & RUN_DEEP_GATE_BIT))
+        return run_state.mission_deep_gate_cell;
     return (u8)(size - 1);
 }
 

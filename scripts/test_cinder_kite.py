@@ -63,6 +63,7 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, kite + 2, 64)
         put_fix8(pb, kite + 6, 64)
+        pb.memory[kite + 1] |= 4
         pb.memory[kite + 15] = 2  # state: east
         pb.memory[kite + 16] = 0  # body divider: move this update
         pb.memory[kite + 18] = 0  # Shooter ai_data[1]: fire this update

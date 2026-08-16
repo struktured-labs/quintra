@@ -38,6 +38,7 @@ DIR_NONE = 0xFF
 BLANK_SRAM_BYTES = 32 * 1024
 CHAMPIONS = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
 DUNGEON_GRID_W = 6
+REGIONAL_RIFTWILD = False
 
 
 def select_rom_topology(rom: Path) -> None:
@@ -48,7 +49,9 @@ def select_rom_topology(rom: Path) -> None:
     symbols is stronger evidence than source version text.
     """
     global STAGE_START, STAGE_BOSS_ROOM, VILLAGE_ROOM, DUNGEON_GRID_W
+    global REGIONAL_RIFTWILD
     symbols = rom.with_suffix(".noi").read_text()
+    REGIONAL_RIFTWILD = "DEF _run_state_riftwild_gate_screen " in symbols
     image = rom.read_bytes()
     if "DEF _run_state_boss_room " not in symbols:
         DUNGEON_GRID_W = 1
@@ -122,6 +125,19 @@ def stage_entry_room(stage: int) -> int:
     # A fresh title flow already owns room 0; synthetic deep-stage entry uses
     # a portal transaction and therefore targets room 1 for the tutorial.
     return 1 if stage == 0 else STAGE_START[stage]
+
+
+def riftwild_return_screen(bosses_beaten: int) -> int:
+    if not REGIONAL_RIFTWILD or bosses_beaten <= 0:
+        return 0
+    return (0, 7, 13)[(bosses_beaten - 1) % 3]
+
+
+def riftwild_gate_screen(bosses_beaten: int) -> int:
+    if not REGIONAL_RIFTWILD:
+        return 6
+    step = 0 if bosses_beaten <= 0 else (bosses_beaten - 1) % 3
+    return (6, 11, 12)[step]
 
 
 def dungeon_cell_xy(cell: int) -> tuple[int, int]:
@@ -207,7 +223,8 @@ def apply_prior_progression(pyboy: PyBoy, rs: int, player: int, stage: int) -> N
     pyboy.memory[rs + 16] = min(255, stage * 12)  # enemies killed
 
 
-def settle_room(pyboy: PyBoy, tilemap: int, *, normalize_scroll: bool = True) -> None:
+def settle_room(pyboy: PyBoy, tilemap: int, *, normalize_scroll: bool = True,
+                reject_tiles: bytes | None = None) -> None:
     """Wait until CGB uploads and the stage-entry fade have committed."""
     previous = None
     stable = 0
@@ -222,7 +239,8 @@ def settle_room(pyboy: PyBoy, tilemap: int, *, normalize_scroll: bool = True) ->
         scroll_ready = (not normalize_scroll
                         or (pyboy.memory[0xFF43] == 0
                             and pyboy.memory[0xFF42] == 0))
-        committed = not any(tile & 0x80 for tile in tiles) and scroll_ready
+        committed = (not any(tile & 0x80 for tile in tiles)
+                     and scroll_ready and tiles != reject_tiles)
         stable = stable + 1 if lcd_on and committed and tiles == previous else 0
         previous = tiles
         if stable >= 10:
@@ -374,13 +392,11 @@ def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int
     normalize_compact_source(pyboy, addrs)
     put16(pyboy, rs + 23,
           (pyboy.memory[rs + 23] | pyboy.memory[rs + 24] << 8) | (1 << stage))
-    pyboy.memory[rs + 27] |= 1 << 3
-    if dungeon_size(stage) >= 12:
-        pyboy.memory[rs + 27] |= 1 << 7
-    if dungeon_size(stage) >= 14:
-        pyboy.memory[rs + 28] |= 1 << 7
-    if dungeon_size(stage) >= 20:
-        pyboy.memory[rs + 28] |= 1 << 2
+    # This synthetic approach represents a completed generated mission, not
+    # the historical fixed-room subset: Trial + Warden + Waystone + Deep Gate
+    # live in dungeon_puzzles; Deep Warden + remote switch live in phase.
+    pyboy.memory[rs + 27] |= 0xC9
+    pyboy.memory[rs + 28] |= 0x84
     for i in range(32):
         entity = entities + i * 28
         if pyboy.memory[entity] == 2:
@@ -415,13 +431,8 @@ def advance_to_boss(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:
         raise RuntimeError(f"boss {stage + 1} fixture did not begin in sanctuary")
     put16(pyboy, rs + 23,
           (pyboy.memory[rs + 23] | pyboy.memory[rs + 24] << 8) | (1 << stage))
-    pyboy.memory[rs + 27] |= 1 << 3
-    if dungeon_size(stage) >= 12:
-        pyboy.memory[rs + 27] |= 1 << 7
-    if dungeon_size(stage) >= 14:
-        pyboy.memory[rs + 28] |= 1 << 7
-    if dungeon_size(stage) >= 20:
-        pyboy.memory[rs + 28] |= 1 << 2
+    pyboy.memory[rs + 27] |= 0xC9
+    pyboy.memory[rs + 28] |= 0x84
     source_local = target - 1 - STAGE_START[stage]
     target_local = target - STAGE_START[stage]
     direction = graph_direction(source_local, target_local)
@@ -464,7 +475,7 @@ def advance_to_village(pyboy: PyBoy, addrs: dict[str, int],
     pyboy.memory[rs + 1] = STAGE_BOSS_ROOM[after_stage - 1]
     pyboy.memory[rs + 11] = after_stage
     pyboy.memory[rs + 17] = 1
-    pyboy.memory[rs + 18] = 6
+    pyboy.memory[rs + 18] = riftwild_gate_screen(after_stage)
     pyboy.memory[rs + 19] = 0
     pyboy.memory[rs + 6] = 0xFF
     for i in range(32):
@@ -517,7 +528,7 @@ def advance_to_village(pyboy: PyBoy, addrs: dict[str, int],
 
 def advance_to_riftwild(pyboy: PyBoy, addrs: dict[str, int],
                         after_stage: int) -> int:
-    """Cross a defeated boss room's real south door into Riftwild screen 0.
+    """Cross a defeated boss room's real south door into its regional return.
 
     ``boot_to_stage(after_stage)`` has already installed the build and boss
     count earned through that dungeon. Rewind only the visible room counter to
@@ -552,6 +563,9 @@ def advance_to_riftwild(pyboy: PyBoy, addrs: dict[str, int],
             pyboy.memory[entity] = pyboy.memory[entity + 1] = 0
     pyboy.memory[tilemap + (ROOM_H - 1) * ROOM_W + 9] = BGT_DOOR
     pyboy.memory[tilemap + (ROOM_H - 1) * ROOM_W + 10] = BGT_DOOR
+    source_tiles = bytes(
+        pyboy.memory[tilemap + i] for i in range(ROOM_W * ROOM_H)
+    )
     put16(pyboy, player + 9, 72)
     put16(pyboy, player + 11, 120)
     pyboy.button_press("down")
@@ -562,10 +576,23 @@ def advance_to_riftwild(pyboy: PyBoy, addrs: dict[str, int],
                 break
     finally:
         pyboy.button_release("down")
-    if (not pyboy.memory[rs + 17] or pyboy.memory[rs + 18] != 0
+    expected_screen = riftwild_return_screen(after_stage)
+    if (not pyboy.memory[rs + 17]
+            or pyboy.memory[rs + 18] != expected_screen
             or pyboy.memory[rs + 1] != target):
         raise RuntimeError(f"could not enter Riftwild after stage {after_stage}")
-    settle_room(pyboy, tilemap)
+    # world_mode flips as soon as the threshold transaction begins. The old
+    # compact boss tilemap can remain stable and LCD-visible for several
+    # frames after that flag, especially under Normal's larger population;
+    # never publish it as a completed Riftwild checkpoint.
+    for _ in range(240):
+        if (pyboy.memory[addrs["_room_world_width"]] == 248
+                and pyboy.memory[addrs["_room_world_height"]] == 248):
+            break
+        pyboy.tick()
+    else:
+        raise RuntimeError("Riftwild transaction never installed wide bounds")
+    settle_room(pyboy, tilemap, reject_tiles=source_tiles)
     pyboy.memory[player + 2] = pyboy.memory[player + 1]
     return target
 
@@ -597,7 +624,7 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     pyboy.memory[rs + 13] = 0
     put16(pyboy, rs + 23, (1 << stage) - 1)
     pyboy.memory[rs + 17] = 1
-    pyboy.memory[rs + 18] = ZELDA_CELL_DUNGEON_ENTRANCE
+    pyboy.memory[rs + 18] = riftwild_gate_screen(stage)
     pyboy.memory[rs + 19] = 0
     pyboy.memory[rs + 20] = 0
     pyboy.memory[rs + 21] = pyboy.memory[rs + 22] = 0
@@ -661,8 +688,9 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         entities = addrs["_entities"]
         seen = pyboy.memory[rs + 21] | pyboy.memory[rs + 22] << 8
         checks["post_boss_room"] = room == STAGE_BOSS_ROOM[stage - 1]
-        checks["arrival_screen"] = pyboy.memory[rs + 18] == 0
-        checks["fresh_fog"] = seen == 1
+        arrival = riftwild_return_screen(stage)
+        checks["arrival_screen"] = pyboy.memory[rs + 18] == arrival
+        checks["fresh_fog"] = seen == (1 << arrival)
         checks["no_giant"] = not any(
             pyboy.memory[entities + i * 28] == 2
             and pyboy.memory[entities + i * 28 + 1] & 1

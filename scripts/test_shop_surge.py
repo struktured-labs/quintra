@@ -152,7 +152,7 @@ def inject_lethal_crawler(pb):
     py = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
     enemy, shot = EN, EN + 28
     pb.memory[enemy] = 2
-    pb.memory[enemy + 1] = 3
+    pb.memory[enemy + 1] = 7  # active + alive + on-screen
     put16(pb, enemy + 3, px)
     put16(pb, enemy + 7, py)
     pb.memory[enemy + 14] = 1

@@ -66,6 +66,8 @@ local function shot(name)
     local screen  = LS_ADDR ~= 0 and emu:read8(LS_ADDR) or 0xFF
     local puzzle  = PK_ADDR ~= 0 and emu:read8(PK_ADDR) or 0xFF
     local locked  = PLK_ADDR ~= 0 and emu:read8(PLK_ADDR) or 0xFF
+    local sigils  = RS_ADDR ~= 0 and (emu:read8(RS_ADDR + 23)
+        + emu:read8(RS_ADDR + 24) * 256) or 0xFFFF
     local solved  = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 27) or 0xFF
     local phase   = RS_ADDR ~= 0 and emu:read8(RS_ADDR + 28) or 0xFF
     local px      = PL_ADDR ~= 0 and emu:read8(PL_ADDR + 9) or 0xFF
@@ -93,8 +95,8 @@ local function shot(name)
         end
     end
     local line = string.format(
-        "SHOT %-25s  screen=%d room=%d puz=%d lock=%d solved=0x%02X phase=0x%02X vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
-        name, screen, rc_room, puzzle, locked, solved, phase, vic, bosses, hostiles,
+        "SHOT %-25s  screen=%d room=%d puz=%d lock=%d sigils=0x%04X solved=0x%02X phase=0x%02X vic=%d bosses=%d hostiles=%d giants=%d giant=%d,%d giant_hp=%d  pos=(%d,%d) tile=0x%02X  hp=%d ifr=%d\n",
+        name, screen, rc_room, puzzle, locked, sigils, solved, phase, vic, bosses, hostiles,
         giants, giant_x, giant_y, giant_hp, px, py, tile, hp, ifr)
     if log_fh then log_fh:write(line); log_fh:flush() end
     console:log(line)
@@ -373,8 +375,8 @@ end
 -- room-three Warden Boon. Preserve the equivalent post-clear fixture state
 -- after visibly reaching that authored chamber; this is a reachability smoke,
 -- while controller-only tests separately prove the real Warden kill path.
-local function record_opening_warden_boon()
-    if RS_ADDR == 0 or room_counter() ~= 3 then return false end
+local function record_warden_boon(cell)
+    if RS_ADDR == 0 or room_counter() ~= cell then return false end
     local puzzles = emu:read8(RS_ADDR + 27)
     if math.floor(puzzles / 8) % 2 == 0 then
         emu:write8(RS_ADDR + 27, puzzles + 8)
@@ -388,26 +390,31 @@ local function solve_opening_push_seal()
     for y = 1, 15 do
         for x = 1, 18 do
             if emu:read8(TM_ADDR + y * 20 + x) == 25 then
-                -- Approach the ordinary-looking 2x2 cairn from its left and
-                -- hold into it through the real ten-frame push threshold.
-                -- x*8-14 is the actual flush contact position for the
-                -- champion's x+14 push probe. The old one-screen helper
-                -- started two pixels farther away and assumed a fixed hold
-                -- would always spend enough frames walking into contact;
-                -- that became timing-dependent once rooms streamed 31x31
-                -- courts. Drive until the cartridge itself clears the lock.
-                emu:write8(PL_ADDR + 9, math.max(0, x * 8 - 14))
-                emu:write8(PL_ADDR + 10, 0)
-                emu:write8(PL_ADDR + 11, math.max(0, y * 8 - 8))
-                emu:write8(PL_ADDR + 12, 0)
-                for _ = 1, 180 do
-                    if emu:read8(PLK_ADDR) == 0 then
-                        emu:setKeys(0)
-                        tick(4)
-                        return true
+                -- Try every legal face. Seeded stage silhouettes can make a
+                -- particular direction a poor shove even though the cairn
+                -- itself remains solvable. Each attempt still uses the real
+                -- ten-frame player/block transaction; WRAM placement only
+                -- removes pathfinding from this cartridge smoke proof.
+                local attempts = {
+                    {KEY_RIGHT, x * 8 - 14, y * 8 - 8},
+                    {KEY_LEFT, (x + 2) * 8 - 2, y * 8 - 8},
+                    {KEY_DOWN, x * 8, y * 8 - 16},
+                    {KEY_UP, x * 8, (y + 2) * 8},
+                }
+                for _, attempt in ipairs(attempts) do
+                    emu:setKeys(0); tick(16)
+                    emu:write8(PL_ADDR + 9, math.max(0, attempt[2]))
+                    emu:write8(PL_ADDR + 10, 0)
+                    emu:write8(PL_ADDR + 11, math.max(0, attempt[3]))
+                    emu:write8(PL_ADDR + 12, 0)
+                    for _ = 1, 60 do
+                        if emu:read8(PLK_ADDR) == 0 then
+                            emu:setKeys(0); tick(4)
+                            return true
+                        end
+                        emu:setKeys(attempt[1])
+                        emu:runFrame()
                     end
-                    emu:setKeys(KEY_RIGHT)
-                    emu:runFrame()
                 end
                 emu:setKeys(0)
                 tick(4)
@@ -478,8 +485,8 @@ end
 -- This deterministic reachability runner clears combat entities. Mirror the
 -- deep Warden's normal death reward only after visibly reaching its authored
 -- chamber; controller-only combat tests own the real kill/reward contract.
-local function record_deep_warden_boon()
-    if RS_ADDR == 0 or room_counter() ~= 9 then return false end
+local function record_deep_warden_boon(cell)
+    if RS_ADDR == 0 or room_counter() ~= cell then return false end
     local phase = emu:read8(RS_ADDR + 28)
     if math.floor(phase / 128) % 2 == 0 then
         emu:write8(RS_ADDR + 28, phase + 128)
@@ -491,9 +498,9 @@ end
 -- local room twelve.  Step on its real floor switch through the normal player
 -- update path so the smoke proves the next-room seal is usable; do not write
 -- the phase bit directly, because that would hide a broken puzzle trigger.
-local function open_deep_phase_seal()
+local function open_deep_phase_seal(cell)
     if RS_ADDR == 0 or PL_ADDR == 0 or PK_ADDR == 0 then return false end
-    if room_counter() ~= 12 or emu:read8(PK_ADDR) ~= 3 then return false end
+    if room_counter() ~= cell or emu:read8(PK_ADDR) ~= 3 then return false end
     local before = emu:read8(RS_ADDR + 28)
     if math.floor(before / 4) % 2 == 1 then return true end
     -- puzzle_update_player samples the champion's center/feet as tile 10,8.
@@ -515,27 +522,36 @@ tap(KEY_DOWN); tick(15); shot("02e_vespine")
 tap(KEY_DOWN); tick(15)  -- wraps back to Wolfkin
 tap(KEY_A); tick(40); shot("03_room0_enter")
 
--- Opening graph route sweeps the Sigil/Warden/Waystone objective wing before
--- it rejoins the deeper 6x5 spine at room ten. This complete controller route
--- proves the twenty-room baseline cannot collapse into the old compact
--- rectangle or skip the new geographic junction.
-navigate_to(1); shot("04_room1"); solve_opening_push_seal()
-navigate_to(2); collect_rift_sigil(); shot("05_room2_sigil")
-navigate_to(3); record_opening_warden_boon()
-navigate_to(4)
-navigate_to(5); shot("06_room5_branch")
-navigate_to(6)
-navigate_to(7); solve_waystone()
-navigate_to(8)
-navigate_to(9); record_deep_warden_boon(); shot("07_room9_threshold")
-navigate_to(10)
-navigate_to(11)
-navigate_to(12); open_deep_phase_seal(); shot("07b_room12_switch")
-navigate_to(13)
-navigate_to(14)
-navigate_to(15)
-navigate_to(16)
-navigate_to(17)
+-- Follow the seven roles generated by this run rather than historical room
+-- numbers. The filenames stay stable for CI consumers, while each capture
+-- now proves a semantic beat: Trial, Sigil, Waystone, deep Warden, switch,
+-- gate, sanctuary. The mission order intentionally swaps Sigil/Warden arms.
+local trial = emu:read8(RS_ADDR + 39)
+local sigil = emu:read8(RS_ADDR + 40)
+local warden = emu:read8(RS_ADDR + 41)
+local waystone = emu:read8(RS_ADDR + 42)
+local deep_warden = emu:read8(RS_ADDR + 43)
+local deep_switch = emu:read8(RS_ADDR + 44)
+local deep_gate = emu:read8(RS_ADDR + 45)
+local branch = emu:read8(RS_ADDR + 38) % 2 == 1
+    and {{warden, "warden"}, {sigil, "sigil"}}
+    or {{sigil, "sigil"}, {warden, "warden"}}
+
+navigate_to(trial); solve_opening_push_seal(); shot("04_room1")
+for _, role in ipairs(branch) do
+    navigate_to(role[1])
+    if role[2] == "sigil" then
+        collect_rift_sigil(); shot("05_room2_sigil")
+    else
+        record_warden_boon(role[1])
+    end
+end
+navigate_to(waystone); solve_waystone(); shot("06_room5_branch")
+navigate_to(deep_warden); record_deep_warden_boon(deep_warden)
+shot("07_room9_threshold")
+navigate_to(deep_switch); open_deep_phase_seal(deep_switch)
+shot("07b_room12_switch")
+navigate_to(deep_gate)
 navigate_to(18)
 -- A new stage deliberately fades its palette in. Wait it out so this is a
 -- useful boss-arena capture rather than an intended near-black transition.

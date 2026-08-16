@@ -13,12 +13,9 @@ NOI = ROM.with_suffix(".noi").read_text()
 ENTITY_SIZE = 28
 ENT_PICKUP = 3
 PICKUP_RIFTWELL = 16
-# run_state_t is packed by SDCC: the persisted landmark flag follows
-# next_dungeon_reveal at byte 25 (room_tilemap begins at byte 26).
-# In Riftwild the one-use bit occupies the existing cave-return anchor's high
-# bit, keeping the run-state ABI/SRAM footprint unchanged.
-WORLD_RETURN_OFFSET = 19
-RIFTWELL_USED_FLAG = 0x80
+# Appended regional flags preserve the well across all three dungeon outings.
+RIFTWILD_FLAGS_OFFSET = 47
+RIFTWELL_USED_FLAG = 0x01
 
 
 def addr(name):
@@ -99,7 +96,7 @@ def main():
     assert pb.memory[PL + 2] == 8 and pb.memory[PL + 4] == 6, (
         f"Riftwell recovery wrong hp/mp={pb.memory[PL + 2]}/{pb.memory[PL + 4]}"
     )
-    assert pb.memory[RS + WORLD_RETURN_OFFSET] & RIFTWELL_USED_FLAG, \
+    assert pb.memory[RS + RIFTWILD_FLAGS_OFFSET] & RIFTWELL_USED_FLAG, \
         "Riftwell use was not persisted"
     assert riftwell(pb) is None, "spent Riftwell entity did not disappear"
 

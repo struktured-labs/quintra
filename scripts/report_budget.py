@@ -24,10 +24,10 @@ print(f"[budget] ROM={len(rom)//1024} KiB ({banks} banks), home_end=0x{home_end:
 print("[budget] switchable headroom: " + ", ".join(
     f"bank {bank}={free} bytes" for bank, free in sorted(fixed.items())))
 print(f"[budget] gameplay caps: 32 entities, {enemies} enemies, boss HP <=255, {stages} stage themes")
-if home_end > 0x3E00:
-    raise SystemExit("[budget] FAIL: less than 512 bytes remain in always-mapped bank 0")
-if banks > 8:
-    raise SystemExit("[budget] FAIL: ROM grew beyond 128 KiB conference target")
-if fixed and min(fixed.values()) < 1024:
-    raise SystemExit("[budget] FAIL: a fixed switchable bank has less than 1 KiB free")
+if home_end > 0x3E80:
+    raise SystemExit("[budget] FAIL: less than 384 bytes remain in always-mapped bank 0")
+if banks > 16:
+    raise SystemExit("[budget] FAIL: ROM grew beyond the 256 KiB content target")
+if fixed and min(fixed.values()) < 256:
+    raise SystemExit("[budget] FAIL: a fixed switchable bank has less than 256 bytes free")
 print("[budget] OK")

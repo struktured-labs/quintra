@@ -53,6 +53,7 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, midge + 2, 64)
         put_fix8(pb, midge + 6, 64)
+        pb.memory[midge + 1] |= 4
         pb.memory[midge + 15] = 2  # state: east; dir8[2] is +X.
         # Start just before a harrier beat. This avoids conflating the first
         # post-room-update frame with the cadence itself: an 80-speed Midge

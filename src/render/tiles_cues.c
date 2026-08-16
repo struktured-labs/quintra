@@ -1,4 +1,4 @@
-#pragma bank 5
+#pragma bank 8
 #include <gb/gb.h>
 
 #include "core/types.h"

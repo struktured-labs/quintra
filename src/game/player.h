@@ -35,6 +35,13 @@ typedef struct {
     u8     move_acc;                     // sub-pixel movement accumulator (5 = 1px)
     u8     inventory[INVENTORY_SLOTS];   // item id LSBs; 0xFF = empty
     u8     score_lo, score_hi;           // 16-bit score
+    // FFA-style restraint meter. It fills only while A is released; the
+    // next primary strike at full charge becomes that weapon's MAX art.
+    // Kept last so every established emulator/debug offset remains stable.
+    u8     will_charge;
+    // Stage-earned active verb selected in the Pack. Appended after Will so
+    // every historical field and the 43-byte Will-era suspend ABI stay put.
+    u8     active_oath;
 } player_state_t;
 
 extern player_state_t player;

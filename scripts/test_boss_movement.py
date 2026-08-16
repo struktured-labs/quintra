@@ -8,29 +8,31 @@ def pos(pb, boss):
 
 
 def main():
-    # Stage 2's Serpent must reflect from a wall and continue on the other
-    # diagonal, rather than falling back to generic direct pursuit.
+    # Stage 2's Serpent now plays Snake: it advances toward a fixed storm mote
+    # with a lateral wiggle instead of sharing Hydra's wall-bounce movement.
     pb, serpent = enter_boss(1, keep_open=True)
-    put16(pb, serpent + 3, 10)
-    put16(pb, serpent + 7, 10)
-    pb.memory[serpent + 15] = 1  # NE
+    put16(pb, serpent + 3, 64)
+    put16(pb, serpent + 7, 48)
+    pb.memory[serpent + 15] = 0
     pb.memory[serpent + 16] = 0
-    # Verdant's bounce holds one readable re-engagement beat between moves;
-    # sample long enough to observe both the wall reflection and its next
-    # diagonal step rather than assuming the old two-frame cadence.
-    for _ in range(20):
+    pb.memory[serpent + 21] = 0
+    serpent_before = pos(pb, serpent)
+    old_distance = (abs(184 - (serpent_before[0] + 12))
+                    + abs(24 - (serpent_before[1] + 12)))
+    samples = []
+    for _ in range(28):
+        samples.append(pos(pb, serpent))
         pb.tick()
     sx, sy = pos(pb, serpent)
-    assert (sx, sy) != (10, 10) and pb.memory[serpent + 15] == 3, (
-        f"Serpent did not bounce into a new diagonal: x={sx}, y={sy}, "
-        f"dir={pb.memory[serpent + 15]}")
+    new_distance = abs(184 - (sx + 12)) + abs(24 - (sy + 12))
+    assert new_distance < old_distance and len(set(samples)) >= 5, (
+        f"Serpent stopped feeding toward its mote: {serpent_before}->{(sx, sy)}")
+    serpent_after = (sx, sy)
+    assert len({y for _, y in samples}) >= 2, "Serpent lost its feeding wiggle"
     pb.stop(save=False)
 
-    # Stage 8's Hydra also bounces, but its three staggered projectile lanes
-    # need a broad, slower weave—not the Serpent's identical pinball cadence.
-    # Force both at a clear central starting point and compare live movement
-    # beats over the same window; this catches a future copy/paste of the
-    # Serpent divider while allowing normal entity-update frame pacing.
+    # Stage 8's Hydra retains the late-game wall weave as its independent
+    # movement gimmick.
     def bounce_steps(stage):
         pb, boss = enter_boss(stage, keep_open=True)
         put16(pb, boss + 3, 64)
@@ -44,12 +46,8 @@ def main():
         pb.stop(save=False)
         return sum(a != b for a, b in zip(samples, samples[1:]))
 
-    serpent_steps = bounce_steps(1)
     hydra_steps = bounce_steps(7)
     assert hydra_steps >= 2, f"Hydra stopped weaving ({hydra_steps} moves)"
-    assert serpent_steps > hydra_steps, (
-        f"Hydra copied Serpent bounce cadence: serpent={serpent_steps}, "
-        f"hydra={hydra_steps}")
 
     # Stage 3's Maw performs a two-pixel lunge after its warning. Sampling
     # live frames catches a regression to the old one-pixel shared creep.
@@ -125,15 +123,19 @@ def main():
             pb.memory[ep] = pb.memory[ep + 1] = 0
     pb.memory[spider + 18] = 0
     pb.memory[spider + 21] = 0
-    pb.tick()
     web = []
-    for i in range(32):
-        ep = EN + i * 28
-        if (pb.memory[ep] == 1 and pb.memory[ep + 1] & 1
-                and not pb.memory[ep + 1] & 0x10):
-            vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
-            web.append((vx - 256 if vx >= 128 else vx,
-                        vy - 256 if vy >= 128 else vy))
+    for _ in range(20):
+        pb.tick()
+        web = []
+        for i in range(32):
+            ep = EN + i * 28
+            if (pb.memory[ep] == 1 and pb.memory[ep + 1] & 1
+                    and not pb.memory[ep + 1] & 0x10):
+                vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
+                web.append((vx - 256 if vx >= 128 else vx,
+                            vy - 256 if vy >= 128 else vy))
+        if web:
+            break
     assert len(web) == 4 and all(max(abs(vx), abs(vy)) == 2 for vx, vy in web), (
         f"Spider web lost its four normal-speed lanes: {web}")
     pb.stop(save=False)
@@ -162,7 +164,8 @@ def main():
         f"Hydra stream recovery lost its lane beat: {pb.memory[hydra + 18]}")
     pb.stop(save=False)
 
-    print(f"[boss-motion] PASS Serpent bounce {serpent_steps} beats; "
+    print(f"[boss-motion] PASS Serpent feeds/wiggles "
+          f"{serpent_before}->{serpent_after}; "
           f"Hydra weave {hydra_steps} beats; Maw lunge {fastest}px + punish window; "
           f"Spider blink {leap}px/{flank}px flank + four-lane web; "
           f"Mire recovery 34; Hydra recovery 30")

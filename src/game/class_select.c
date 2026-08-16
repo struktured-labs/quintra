@@ -50,8 +50,8 @@ static const char *const primary_tips[N_CLASSES] = {
 };
 
 static const char *const signature_tips[N_CLASSES] = {
-    "8 SHOTS BRIEF WARD", "BLOCKS ALL HITS", "3 SHARD FAN",
-    "3 BUBBLES AND WARD", "4 STINGERS WARD",
+    "8 SHOTS BRIEF WARD", "BLOCKS ALL HITS", "MARK + RAVEN DIVES",
+    "3 BUBBLES AND WARD", "ROTATING STINGERS",
 };
 
 static const char *const trait_tips[N_CLASSES] = {

@@ -4,6 +4,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
+#include "game/will.h"
 #include "content.h"
 
 player_state_t player;
@@ -33,6 +34,12 @@ void player_clear(void) {
     g_player_ricochet = 0;
     for (i = 0; i < INVENTORY_SLOTS; ++i) player.inventory[i] = 0xFF;
     player.score_lo = player.score_hi = 0;
+    player.will_charge = 0;
+    will_corvin_mark_slot = 0xFF;
+    will_corvin_mark_ticks = 0;
+    will_howl_giant_hits = 0;
+    will_vespine_swarm_ticks = 0;
+    player.active_oath = 0;
 }
 
 void player_init_from_class(u8 class_id) {

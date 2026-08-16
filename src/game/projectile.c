@@ -7,6 +7,7 @@
 #include "game/pickup.h"
 #include "game/projectile.h"
 #include "game/player.h"
+#include "game/puzzle.h"
 #include "game/room.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -186,6 +187,19 @@ void projectile_update_one(entity_t *e, u8 idx) {
             : room_tile_at_px(sx, sy);
 
         if (flags & EF_PLAYER_PROJ) {
+            if ((t == BGT_TREE || t == BGT_SPIKES || t == BGT_SWITCH)
+                && room_elemental_tile((u8)(sx >> 3), (u8)(sy >> 3),
+                    e->ai_data[1])) {
+                fx_spawn(SPR_FX_IMPACT, 6, px, py, 10);
+                entity_kill(idx);
+                return;
+            }
+            if (t == BGT_WALL
+                && puzzle_try_hidden_shot((u8)(sx >> 3), (u8)(sy >> 3))) {
+                fx_spawn(SPR_FX_IMPACT, 2, px, py, 10);
+                entity_kill(idx);
+                return;
+            }
             if (t == BGT_WALL_CRACK) {
                 room_open_secret((u8)(sx >> 3), (u8)(sy >> 3));
                 fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
@@ -216,8 +230,20 @@ void projectile_update_one(entity_t *e, u8 idx) {
                 projectile_ricochet(e, px, py);
                 return;
             }
+        } else if (e->damage >= 2 && t == BGT_CRYSTAL) {
+            // Powerful enemy and Colossus patterns reshape their own arena:
+            // cover is temporary, but the shattered mana remains claimable.
+            room_break_crystal((u8)(sx >> 3), (u8)(sy >> 3));
+            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+            entity_kill(idx);
+            return;
+        } else if (e->damage >= 2 && t == BGT_POT) {
+            room_break_pot((u8)(sx >> 3), (u8)(sy >> 3));
+            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
+            entity_kill(idx);
+            return;
         }
-        if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_CRYSTAL
+        if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE || t == BGT_CRYSTAL
             || t == BGT_WALL_CRACK || t == BGT_POT) {
             fx_spawn(SPR_FX_IMPACT, 2, px, py, 4);
             entity_kill(idx);

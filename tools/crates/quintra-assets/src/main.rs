@@ -64,6 +64,7 @@ pub fn generate_header() -> String {
     declaration(&mut o, "sprite_boss_sentinel", 64);
     for (name, _) in grids::MINIBOSS_SRC { declaration(&mut o, &format!("sprite_miniboss_{name}"), 64); }
     for (name, _) in grids::BRUISER_SRC { declaration(&mut o, &format!("sprite_bruiser_{name}"), 64); }
+    declaration(&mut o, "sprite_medium_cinder_maw", 64);
     let _ = writeln!(o, "\n// Nine 32x32 stage bosses (9 * 16 tiles * 16 bytes)");
     declaration(&mut o, "sprite_boss_stages", 2304);
     let _ = writeln!(o, "\n#endif");
@@ -148,6 +149,15 @@ pub fn generate() -> String {
         let tiles = sprite_to_tiles(&big, 16, 16);
         let _ = writeln!(o, "{}", emit_metasprite_c_array(
             &format!("sprite_bruiser_{name}"), &tiles));
+    }
+
+    // One deliberately narrow 16x16 enemy establishes an intermediate visual
+    // tier between 8x8 swarms and square 16x16 bruisers.
+    {
+        let grid = parse_grid(&grids::CINDER_MAW_MEDIUM);
+        let tiles = sprite_to_tiles(&grid, 16, 16);
+        let _ = writeln!(o, "{}", emit_metasprite_c_array(
+            "sprite_medium_cinder_maw", &tiles));
     }
 
     // One contiguous atlas avoids SDCC bank-local pointer relocation tables,

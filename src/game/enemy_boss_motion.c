@@ -8,6 +8,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/room.h"
+#include "render/hud.h"
 #include "render/tiles.h"
 
 // Giant bosses own a movement identity as well as a projectile identity.
@@ -87,6 +88,67 @@ static void boss_bounce_tick(entity_t *e, u8 divider) {
     e->state = d;
 }
 
+// Verdant's Colossus plays an adversarial game of Snake. Four visible storm
+// motes appear around the wide arena in a deterministic route; eating each
+// one grows the projected coil and removes more visual breathing room. At
+// full length the head gives a long warning, hunts the champion, discharges a
+// close AOE, then visibly contracts before the next feeding route begins.
+// The normal rotating-cross driver keeps firing throughout every phase.
+static void serpent_tick(entity_t *e) {
+    i16 ex, ey, dx, dy;
+    u8 growth = e->ai_data[4];
+
+    if (growth > 4 || e->state > 2) {
+        e->ai_data[4] = growth = 0;
+        e->state = e->state_timer = e->vx = e->vy = 0;
+    }
+    if (e->state == 1) {
+        // Full-coil AOE: the flashing head is the center and getting outside
+        // its 60px square (or spending a shield) is the clean answer.
+        if ((e->vx & 7) == 0) {
+            e->ai_data[7] = 6;
+            fx_spawn(SPR_FX_IMPACT, 2, FIX8_TO_INT(e->x) + 12,
+                FIX8_TO_INT(e->y) + 12, 8);
+            sfx_play(SFX_TICK);
+        }
+        boss_chase_tick(e, 4);
+        if (--e->vx) return;
+        dx = (i16)player.x - (FIX8_TO_INT(e->x) + 12);
+        dy = (i16)player.y - (FIX8_TO_INT(e->y) + 12);
+        if (dx < 0) dx = -dx; if (dy < 0) dy = -dy;
+        room_shake(2, 24);
+        if (dx < 60 && dy < 60 && player.shield_timer == 0) {
+            player.hp = (player.hp > 2) ? (u8)(player.hp - 2) : 0;
+            player.iframes = 45;
+            hud_redraw_hp();
+            sfx_play(SFX_HURT);
+        } else sfx_play(SFX_CLEAR);
+        e->state = 2; e->vx = 16; e->state_timer = 0;
+        return;
+    }
+    if (e->state == 2) {
+        // Pull the vulnerable head back toward the projected body's heart as
+        // one coil disappears every sixteen beats.
+        if (++e->state_timer >= 2) {
+            ex = FIX8_TO_INT(e->x); ey = FIX8_TO_INT(e->y);
+            e->state_timer = 0;
+            if (ex != 92) enemy_try_step(e, ex < 92 ? 1 : -1, 0);
+            if (ey != 48) enemy_try_step(e, 0, ey < 48 ? 1 : -1);
+        }
+        if (--e->vx) return;
+        if (growth) {
+            e->ai_data[4] = --growth;
+            tiles_paint_serpent_projection(growth, 1);
+        }
+        e->ai_data[7] = 5;
+        if (growth) e->vx = 16;
+        else { e->state = 0; e->vx = e->vy = 0; sfx_play(SFX_ROAR); }
+        return;
+    }
+
+    serpent_feed_tick(e);
+}
+
 void boss_motion_tick(entity_t *e) BANKED {
     // Mini-bosses retain the simpler pursuit behavior; giant stages receive
     // the more theatrical movement language below.
@@ -118,15 +180,8 @@ void boss_motion_tick(entity_t *e) BANKED {
             return;
         }
 
-        case 1: // Storm Serpent: diagonal wall bounces with attack windows
-            // Two-frame movement made Verdant's 220-HP giant cross an entire
-            // melee lane before Wolfkin could complete a single claw cycle.
-            // Four frames remains visibly faster than the Hydra's broad
-            // weave, but the matched Normal matrix showed the three-frame
-            // body defeated or timed out three of five kits at boss two.
-            // Preserve its HP and dense rotating cross; this changes tracking
-            // pressure, not the Serpent's projectile or endurance identity.
-            boss_bounce_tick(e, 4);
+        case 1: // Storm Serpent: eat, grow, constrict, discharge, contract
+            serpent_tick(e);
             return;
 
         case 2: // Cinder Maw: wind-up, hard lunge, recover

@@ -61,7 +61,7 @@ def main():
         pb.button("a")
         settle(pb, 60)
         open_pack(pb)
-        row(pb, 14, 0, "NEXT FIND SIGIL KEY")
+        row(pb, 14, 4, "BREAK TRIAL")
         pb.screen.image.save(ROOT / "tmp" / "quest-sigil-key.png")
 
         # Return to the live room, then advance the exact persisted fixture
@@ -70,33 +70,54 @@ def main():
         settle(pb, 20)
         rs = addr("_run_state")
 
-        pb.memory[rs + 23] |= 1  # stage-zero rift_sigils low byte
+        pb.memory[rs + 27] |= 1  # generated opening Trial
         open_pack(pb)
-        row(pb, 14, 0, "NEXT CLEAR WARDEN")
+        if pb.memory[rs + 38] & 1:
+            row(pb, 14, 4, "CLEAR WARDEN")
+            pb.memory[rs + 27] |= 1 << 3
+        else:
+            row(pb, 14, 4, "FIND SIGIL KEY")
+            pb.memory[rs + 23] |= 1
         pb.button("b")
         settle(pb, 20)
 
-        pb.memory[rs + 27] |= 1 << 3  # dungeon_puzzles Warden Boon
+        # Complete whichever seed-swapped branch came first.
         open_pack(pb)
-        row(pb, 14, 0, "NEXT WAKE WAYSTONE")
+        if pb.memory[rs + 38] & 1:
+            row(pb, 14, 4, "FIND SIGIL KEY")
+            pb.memory[rs + 23] |= 1
+        else:
+            row(pb, 14, 4, "CLEAR WARDEN")
+            pb.memory[rs + 27] |= 1 << 3
+        pb.button("b")
+        settle(pb, 20)
+
+        open_pack(pb)
+        row(pb, 14, 4, "WAKE WAYSTONE")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 27] |= 1 << 7  # Waystone
         open_pack(pb)
-        row(pb, 14, 0, "NEXT CLEAR DEEP WARD")
+        row(pb, 14, 4, "CLEAR DEEP WARD")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 28] |= 1 << 7  # deep Warden
         open_pack(pb)
-        row(pb, 14, 0, "NEXT OPEN DEEP SEAL")
+        row(pb, 14, 4, "OPEN DEEP SEAL")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 28] |= 1 << 2  # remote deep phase circuit
         open_pack(pb)
-        row(pb, 14, 0, "NEXT SEEK SKULL GATE")
+        row(pb, 14, 4, "CROSS DEEP GATE")
+        pb.button("b")
+        settle(pb, 20)
+
+        pb.memory[rs + 27] |= 1 << 6  # crossed generated remote gate
+        open_pack(pb)
+        row(pb, 14, 4, "SEEK SKULL GATE")
         pb.button("b")
         settle(pb, 20)
 
@@ -104,26 +125,26 @@ def main():
         # actual commitment fight rather than leaking dungeon-only advice.
         pb.memory[rs + 17] = 1  # world_mode
         open_pack(pb)
-        row(pb, 14, 0, "NEXT FIND DUNGEON")
+        row(pb, 14, 4, "FIND DUNGEON")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 17] = 0
         pb.memory[rs + 1] = 63  # first village
         open_pack(pb)
-        row(pb, 14, 0, "NEXT REST THEN NORTH")
+        row(pb, 14, 4, "REST THEN NORTH")
         pb.button("b")
         settle(pb, 20)
 
         pb.memory[rs + 1] = 19  # opening Colossus arena
         open_pack(pb)
-        row(pb, 14, 0, "NEXT BREAK COLOSSUS")
+        row(pb, 14, 4, "BREAK COLOSSUS")
     finally:
         pb.stop(save=False)
 
     print(
         "[quest-guidance] PASS menu controls + Sigil key + ordered "
-        "trials + deep seal + skull gate + world/village/Colossus goals"
+        "seed-swapped trials + deep seal/gate + world/village/Colossus goals"
     )
 
 

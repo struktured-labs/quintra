@@ -83,7 +83,7 @@ def take_hostile_hit(pb, world_mode=0, boss_body=False, void_lord_body=False,
     hostile = EN
     if boss_body or void_lord_body:
         pb.memory[hostile] = 2           # ENT_ENEMY
-        pb.memory[hostile + 1] = 3       # active + alive
+        pb.memory[hostile + 1] = 7       # active + alive + current camera
         pb.memory[hostile + 14] = damage
         pb.memory[hostile + 25] = 0xEE   # 16x16/32x32-style collision body
         pb.memory[hostile + 17] = 1      # ENEMY_STONE_SENTINEL

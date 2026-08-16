@@ -59,6 +59,7 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, bramble + 2, 64)
         put_fix8(pb, bramble + 6, 64)
+        pb.memory[bramble + 1] |= 4
         pb.memory[bramble + 16] = 2
         pb.memory[bramble + 18] = 0
         pb.memory[bramble + 19] = 0

@@ -20,6 +20,11 @@ EN=$(awk '/DEF _entities / {print $3}' "$NOI")
 TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 PZ=$(awk '/DEF _room_puzzle_locked / {print $3}' "$NOI")
 DR=$(awk '/DEF _room_encounter_kind / {print $3}' "$NOI")
+WW=$(awk '/DEF _room_world_width / {print $3}' "$NOI")
+WH=$(awk '/DEF _room_world_height / {print $3}' "$NOI")
+CX=$(awk '/DEF _room_camera_x / {print $3}' "$NOI")
+CY=$(awk '/DEF _room_camera_y / {print $3}' "$NOI")
+LG=$(awk '/DEF _procgen_current_room_is_large / {print $3}' "$NOI")
 if LC_ALL=C grep -aqE 'v0\.(1[9]|[2-9][0-9])\.' "$ROM" \
     || LC_ALL=C grep -aqE 'v0\.18\.(6[2-9]|[7-9][0-9])' "$ROM"; then
   MEDIA_TOPOLOGY=30
@@ -45,6 +50,9 @@ QUINTRA_MEDIA_TOPOLOGY="$MEDIA_TOPOLOGY" \
 QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
 QUINTRA_TM_ADDR="$TM" QUINTRA_PZ_ADDR="${PZ:-0}" \
 QUINTRA_DIRECTOR_ADDR="${DR:-0}" \
+QUINTRA_WORLD_WIDTH_ADDR="${WW:-0}" QUINTRA_WORLD_HEIGHT_ADDR="${WH:-0}" \
+QUINTRA_CAMERA_X_ADDR="${CX:-0}" QUINTRA_CAMERA_Y_ADDR="${CY:-0}" \
+QUINTRA_LARGE_ADDR="${LG:-0}" \
 setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
   --script "$ROOT/scripts/capture_media.lua" -l 0 >"$TMP/emulator.log" 2>&1 &
 EMU_PID=$!
@@ -74,6 +82,9 @@ QUINTRA_MEDIA_TOPOLOGY="$MEDIA_TOPOLOGY" \
 QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
 QUINTRA_TM_ADDR="$TM" QUINTRA_PZ_ADDR="${PZ:-0}" \
 QUINTRA_DIRECTOR_ADDR="${DR:-0}" \
+QUINTRA_WORLD_WIDTH_ADDR="${WW:-0}" QUINTRA_WORLD_HEIGHT_ADDR="${WH:-0}" \
+QUINTRA_CAMERA_X_ADDR="${CX:-0}" QUINTRA_CAMERA_Y_ADDR="${CY:-0}" \
+QUINTRA_LARGE_ADDR="${LG:-0}" \
 setsid xvfb-run -a mgba-qt "$ROM" --fastforward \
   --script "$ROOT/scripts/capture_media.lua" -l 0 >"$TMP/shots-emulator.log" 2>&1 &
 SHOT_PID=$!

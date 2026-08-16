@@ -91,11 +91,20 @@ def inspect_cell(pb, screen, seed_low, seen_families, shots):
         f"cell {screen} retained a wall at the old viewport seam"
     )
     # Move the real camera into the added terrain before taking review media.
-    put16(pb, PL + 9, 216); put16(pb, PL + 11, 216)
+    # Geography is the subject of this sweep.  Remove the optional encounter
+    # before sampling the camera so enemy knockback cannot make the expected
+    # 248-136 bound vary from cell to cell.
+    for slot in range(32):
+        base = EN + slot * 28
+        pb.memory[base] = pb.memory[base + 1] = 0
+    put16(pb, PL + 9, 224); put16(pb, PL + 11, 224)
     pb.memory[PL + 15] = 120
     for _ in range(64):
         pb.tick()
-    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (88, 112)
+    assert (pb.memory[CAMERA_X], pb.memory[CAMERA_Y]) == (88, 112), (
+        f"cell {screen} camera={pb.memory[CAMERA_X]},{pb.memory[CAMERA_Y]} "
+        f"player={pb.memory[PL + 9] | pb.memory[PL + 10] << 8},"
+        f"{pb.memory[PL + 11] | pb.memory[PL + 12] << 8}")
     assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
         ((pb.memory[ORIGIN_X] << 3) + 88) & 0xFF,
         ((pb.memory[ORIGIN_Y] << 3) + 112) & 0xFF)

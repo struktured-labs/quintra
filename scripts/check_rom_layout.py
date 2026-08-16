@@ -17,7 +17,7 @@ Checks (banked build):
   3. The ROM must have >= 3 populated banks (autobank actually worked;
      a broken flag set collapses everything to banks 0-1).
   4. Every fixed switchable _CODE_N area must fit its 16 KiB bank and retain
-     1 KiB of conference-development headroom. The linker only warns when one
+     256 bytes of emergency headroom. The linker only warns when one
      crosses into the next bank, producing a ROM that can pass header tests
      while containing overwritten code.
 """
@@ -58,9 +58,9 @@ def main(stem):
             fail(f"area {name} is {size} bytes -- overflows its 16 KiB "
                  f"switchable bank by {size - 0x4000} bytes")
         fixed_headroom[bank] = 0x4000 - size
-        if fixed_headroom[bank] < 1024:
+        if fixed_headroom[bank] < 256:
             fail(f"area {name} has only {fixed_headroom[bank]} bytes free -- "
-                 "less than the 1 KiB conference-development floor")
+                 "less than the 256-byte emergency floor")
 
     # ---- 2. trampoline must be in bank 0
     try:

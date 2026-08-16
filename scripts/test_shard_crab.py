@@ -37,6 +37,8 @@ def player_shot(pb, ep, x, y):
     pb.memory[ep + 1] = EF_ACTIVE | EF_ALIVE | EF_PLAYER_PROJ
     put_fix8(pb, ep + 2, x)
     put_fix8(pb, ep + 6, y)
+    pb.memory[ep + 10] = 0
+    pb.memory[ep + 11] = 0
     pb.memory[ep + 14] = 1       # one collision then spent
     pb.memory[ep + 16] = 60
     pb.memory[ep + 25] = 0x88
@@ -70,7 +72,11 @@ def main():
         # Finish any nested generation VBlank before publishing a disposable
         # live Crab. Reusing the generated entity lets its in-flight ordinary
         # update overwrite this exact shell-state fixture.
-        for _ in range(8):
+        # Wide-room entry may still owe its final role/secret pass after the
+        # compact ABI has looked stable. Let that transaction retire before
+        # installing the isolated combat fixture; otherwise its legitimate
+        # hostile cleanup can consume the synthetic Crab on the next frame.
+        for _ in range(60):
             pb.tick()
         for i in range(32):
             ep = EN + i * ENTITY_SIZE
@@ -79,7 +85,7 @@ def main():
             pb.memory[TM + i] = 1
         crab = EN
         pb.memory[crab] = ENT_ENEMY
-        pb.memory[crab + 1] = EF_ACTIVE | EF_ALIVE
+        pb.memory[crab + 1] = EF_ACTIVE | EF_ALIVE | 4
         put16(pb, PL + 9, 112)
         put16(pb, PL + 11, 64)
         put_fix8(pb, crab + 2, 64)
@@ -93,12 +99,24 @@ def main():
         pb.memory[crab + 25] = 0x66
         pb.memory[crab + 27] = 2
         player_shot(pb, EN + ENTITY_SIZE, 64, 64)
+        trace = []
         for _ in range(4):
             pb.tick()
+            trace.append((pb.memory[crab], pb.memory[crab + 1],
+                          pb.memory[crab + 15],
+                          pb.memory[EN + ENTITY_SIZE],
+                          pb.memory[EN + ENTITY_SIZE + 1]))
             if not (pb.memory[EN + ENTITY_SIZE + 1] & EF_ACTIVE):
                 break
         assert pb.memory[crab + 14] == 9, "Shard Crab's ready shell took first-hit damage"
-        assert pb.memory[crab + 15] == 1, "Shard Crab did not enter its counter-rush"
+        assert pb.memory[crab + 15] == 1, (
+            "Shard Crab did not enter its counter-rush "
+            f"(flags={pb.memory[crab + 1]:#x}, hp={pb.memory[crab + 14]}, "
+            f"shot_flags={pb.memory[EN + ENTITY_SIZE + 1]:#x}, "
+            f"crab_xy=({pb.memory[crab + 3]},{pb.memory[crab + 7]}), "
+            f"shot_xy=({pb.memory[EN + ENTITY_SIZE + 3]},"
+            f"{pb.memory[EN + ENTITY_SIZE + 7]}), trace={trace})"
+        )
         assert not (pb.memory[EN + ENTITY_SIZE + 1] & EF_ACTIVE), \
             "Shard Crab did not consume the deflected hit"
 

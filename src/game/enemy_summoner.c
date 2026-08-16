@@ -115,13 +115,5 @@ void rift_cantor_update(entity_t *e, const enemy_def_t *def) BANKED {
     // After its one wave, the Cantor becomes a slow evasive target instead
     // of beginning another chant. This is bounded by construction: summoned
     // IDs never include the Cantor, and this mode never returns to zero.
-    if ((++e->ai_data[4] & 7) == 0) {
-        i8 dx = FIX8_TO_INT(e->x) < (i16)player.x ? -1 : 1;
-        i8 dy = FIX8_TO_INT(e->y) < (i16)player.y ? -1 : 1;
-        if (e->ai_data[4] & 8) {
-            if (!enemy_try_step(e, dx, 0)) (void)enemy_try_step(e, 0, dy);
-        } else {
-            if (!enemy_try_step(e, 0, dy)) (void)enemy_try_step(e, dx, 0);
-        }
-    }
+    if ((++e->ai_data[4] & 7) == 0) enemy_cantor_evade(e);
 }

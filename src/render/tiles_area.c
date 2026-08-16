@@ -88,8 +88,8 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
         || tile == BGT_BOSS_GATE_L || tile == BGT_BOSS_GATE_R
         || tile == BGT_BOSS_GATE_TOP || tile == BGT_BOSS_GATE_BOTTOM)
         return BGPAL_CRACK;
+    if (tile == BGT_DOOR_LOCKED) return BGPAL_CRACK;
     if (tile == BGT_DOOR) {
-        if (room_combat_sealed || room_puzzle_locked) return BGPAL_CRACK;
         if ((y == 0 && room_objective_dir == DIR_N)
             || (x == ROOM_WIDE_W_TILES - 1
                 && room_objective_dir == DIR_E)
@@ -106,14 +106,39 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
     return BGPAL_FLOOR;
 }
 
+static u8 wide_door_locked(u8 x, u8 y) {
+    u8 dir = DIR_NONE;
+    u8 neighbor;
+    if (!(room_combat_sealed || room_puzzle_locked)) return 0;
+    if (y == 0) dir = DIR_N;
+    else if (x == (u8)((room_world_width >> 3) - 1)) dir = DIR_E;
+    else if (y == (u8)((room_world_height >> 3) - 1)) dir = DIR_S;
+    else if (x == 0) dir = DIR_W;
+    if (dir == DIR_NONE) return 0;
+    if (run_state.entered_from != DIR_NONE
+        && dir == (u8)((run_state.entered_from + 2) & 3)) return 0;
+    if (!run_state.world_mode) {
+        neighbor = run_state_dungeon_neighbor(dir);
+        if (neighbor != 0xFF) {
+            u8 local = (u8)(neighbor
+                - run_state_stage_start(run_state.bosses_beaten));
+            if (run_state_dungeon_cell_seen(local)) return 0;
+        }
+    }
+    return 1;
+}
+
 static u8 wide_tile(u8 x, u8 y, u8 outdoor) {
+    u8 tile;
     if (x >= ROOM_WIDE_W_TILES || y >= ROOM_WIDE_H_TILES)
         return outdoor ? BGT_TREE : BGT_WALL;
     if (y < ROOM_H) {
-        if (x < ROOM_W) return room_tilemap[y][x];
-        return room_world_extension[y][x - ROOM_W];
-    }
-    return room_world_bottom[y - ROOM_H][x];
+        tile = (x < ROOM_W) ? room_tilemap[y][x]
+            : room_world_extension[y][x - ROOM_W];
+    } else tile = room_world_bottom[y - ROOM_H][x];
+    if (!outdoor && tile == BGT_DOOR && wide_door_locked(x, y))
+        return BGT_DOOR_LOCKED;
+    return tile;
 }
 
 // Render a complete logical 31x31 field plus its deterministic overscan into

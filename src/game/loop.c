@@ -12,6 +12,7 @@
 #include "game/victory.h"
 #include "game/inventory.h"
 #include "game/map.h"
+#include "game/dialog.h"
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
 u16         loop_frame_counter  = 0;
@@ -35,6 +36,7 @@ BANKREF_EXTERN(class_select_enter)
 BANKREF_EXTERN(room_enter)
 BANKREF_EXTERN(inventory_enter)
 BANKREF_EXTERN(map_enter)
+BANKREF_EXTERN(dialog_enter)
 BANKREF_EXTERN(gameover_enter)
 BANKREF_EXTERN(victory_enter)
 
@@ -51,7 +53,7 @@ const screen_t screens[SCREEN_COUNT] = {
     [SCREEN_BOSS]         = { 0, 0, 0, 0, 0 },
     [SCREEN_MAP]          = { BANK(map_enter), map_enter, map_exit, map_tick, map_draw },
     [SCREEN_INVENTORY]    = { BANK(inventory_enter), inventory_enter, inventory_exit, inventory_tick, inventory_draw },
-    [SCREEN_DIALOG]       = { 0, 0, 0, 0, 0 },
+    [SCREEN_DIALOG]       = { BANK(dialog_enter), dialog_enter, dialog_exit, dialog_tick, dialog_draw },
     [SCREEN_GAMEOVER]     = { BANK(gameover_enter), gameover_enter, gameover_exit, gameover_tick, gameover_draw },
     [SCREEN_VICTORY]      = { BANK(victory_enter), victory_enter,  victory_exit,  victory_tick,  victory_draw  },
 };

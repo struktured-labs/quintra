@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM contract for the one-wave Rift Cantor reinforcement caller."""
 
-from test_stage_archetypes import EN, PL, RS, generated_room, put16
+from test_stage_archetypes import EN, PL, RS, TM, generated_room, put16
 
 
 ENTITY_SIZE = 28
@@ -30,7 +30,10 @@ def install_cantor(pb):
     put16(pb, PL + 11, 64)
     e = EN
     pb.memory[e] = ENT_ENEMY
-    pb.memory[e + 1] = 3  # active + alive
+    # Generated courts simulate only the active camera sector. This injected
+    # body is deliberately on-screen, so publish the same visibility flag the
+    # real spawner/sector pass would own.
+    pb.memory[e + 1] = 7  # active + alive + on-screen
     put16(pb, e + 3, 72)
     put16(pb, e + 7, 104)
     pb.memory[e + 12] = 70
@@ -98,6 +101,30 @@ def assert_easy_wave(pb, _tiles):
     assert ids.count(ENEMY_RIFT_CANTOR) == 1
 
 
+def assert_spent_caller_leaves_outer_band(pb, _tiles):
+    install_cantor(pb)
+    # Reproduce the final-stage softlock in the visible northwest equivalent
+    # of its captured southeast pocket. A spent caller at (8,8) sees the
+    # champion southeast, so its ordinary away vector points into the two
+    # world bounds. Keep the local apron honest floor and prove that the live
+    # cartridge chooses the inward vector instead of retrying the corner.
+    for ty in range(6):
+        for tx in range(6):
+            pb.memory[TM + ty * 20 + tx] = 1
+    put16(pb, PL + 9, 72)
+    put16(pb, PL + 11, 64)
+    put16(pb, EN + 3, 8)
+    put16(pb, EN + 7, 8)
+    pb.memory[EN + 19] = 2  # wave spent
+    pb.memory[EN + 21] = 0  # movement divider
+    for _ in range(96):
+        pb.tick()
+    x = pb.memory[EN + 3] | (pb.memory[EN + 4] << 8)
+    y = pb.memory[EN + 7] | (pb.memory[EN + 8] << 8)
+    assert x > 8 or y > 8, \
+        f"spent Cantor retried its blocked outer corner forever: ({x},{y})"
+
+
 def main():
     # Stage index three is the first pool that can roll a Cantor. Injecting
     # the typed ID into a real generated court isolates AI behavior from the
@@ -105,8 +132,11 @@ def main():
     # collision map, entity budget, SFX, and difficulty state.
     generated_room(3, seed=0xCA110012, probe=assert_normal_wave)
     generated_room(3, seed=0xCA110013, probe=assert_easy_wave)
+    generated_room(8, seed=0xCA110014,
+                   probe=assert_spent_caller_leaves_outer_band)
     print("[reinforcement-caller] PASS 48f interruptible tell, two escorts on "
-          "Normal / one on Easy, no recursion, no second wave")
+          "Normal / one on Easy, no recursion, no second wave, outer-band "
+          "escape")
 
 
 if __name__ == "__main__":

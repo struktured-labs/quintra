@@ -64,7 +64,7 @@ def main():
     py = pb.memory[player + 11] | (pb.memory[player + 12] << 8)
     enemy = entities
     pb.memory[enemy] = 2
-    pb.memory[enemy + 1] = 3
+    pb.memory[enemy + 1] = 7  # active + alive + current camera sector
     put_fix8(pb, enemy + 2, px + 5)
     put_fix8(pb, enemy + 6, py + 9)
     pb.memory[enemy + 14] = 9

@@ -161,6 +161,8 @@ end
 
 local base_player = {}
 for i = 0, 41 do base_player[i] = emu:read8(PL + i) end
+local base_state = assert(emu:saveStateBuffer(0),
+    "mGBA could not snapshot the clean post-title room")
 
 local function restore_player(stage)
     for i = 0, 41 do emu:write8(PL + i, base_player[i]) end
@@ -187,7 +189,9 @@ local function restore_player(stage)
 end
 
 local function reset_run(stage)
-    for i = 0, 34 do emu:write8(RS + i, 0) end
+    -- Clear the complete current run_state, including the mission graph and
+    -- regional Riftwild tail added after the original checkpoint generator.
+    for i = 0, 47 do emu:write8(RS + i, 0) end
     emu:write8(RS + 2, 0x0D)
     emu:write8(RS + 3, 0xD0)
     emu:write8(RS + 4, 0xA6)
@@ -229,17 +233,36 @@ end
 
 local function qualify_stage(stage)
     put16(RS + 23, (2 ^ (stage + 1)) - 1)
-    emu:write8(RS + 27, 0x88) -- Warden Boon + Waystone
-    emu:write8(RS + 28, 0x80) -- deep Warden
+    -- Completed generated mission: Trial + Warden + Waystone + Deep Gate,
+    -- followed by the deep Warden and remote cross-room switch.
+    emu:write8(RS + 27, 0xC9)
+    emu:write8(RS + 28, 0x84)
+end
+
+local function riftwild_gate_screen(bosses_beaten)
+    local step = bosses_beaten <= 0 and 0 or ((bosses_beaten - 1) % 3)
+    return ({6, 11, 12})[step + 1]
+end
+
+local function riftwild_return_screen(bosses_beaten)
+    local step = bosses_beaten <= 0 and 0 or ((bosses_beaten - 1) % 3)
+    return ({0, 7, 13})[step + 1]
 end
 
 local function enter_dungeon(target, stage, qualified, normalize_scroll)
+    -- Synthetic deep checkpoints must be independent. Reusing the previous
+    -- live room carried bank-local transition/camera state from a Riftwild
+    -- save into the next portal transaction even after run_state was reset.
+    if not emu:loadStateBuffer(base_state, 0) then
+        error("mGBA could not restore the clean checkpoint base")
+    end
+    tick(2)
     clear_entities()
     reset_run(stage)
     if qualified then qualify_stage(stage) end
     emu:write8(RS + 1, target - 1)
     emu:write8(RS + 17, 1)
-    emu:write8(RS + 18, 6)
+    emu:write8(RS + 18, riftwild_gate_screen(stage))
     emu:write8(RS + 19, 0)
     put16(PL + 9, 72)
     put16(PL + 11, 60)
@@ -308,7 +331,8 @@ local function verify_loaded(checkpoint, stage, room, world_mode)
         error("court checkpoint restored without its 248x248 dungeon field")
     elseif checkpoint == "sanctuary" and hostile_count() ~= 0 then
         error("sanctuary checkpoint restored with hostiles")
-    elseif checkpoint == "riftwild" and emu:read8(RS + 18) ~= 0 then
+    elseif checkpoint == "riftwild"
+        and emu:read8(RS + 18) ~= riftwild_return_screen(stage) then
         error("Riftwild checkpoint restored away from its arrival")
     elseif checkpoint == "village"
         and emu:read8(RS + 19) ~= 0 then
@@ -369,7 +393,7 @@ end
 
 for after_stage = 1, 8 do
     -- Build the next stage's progression, then cross the prior defeated
-    -- Colossus room's real south threshold into Riftwild screen zero.
+    -- Colossus room's real south threshold into its regional return screen.
     enter_dungeon(STAGE_START[after_stage + 1], after_stage, false)
     emu:write8(RS + 1, STAGE_BOSS[after_stage])
     emu:write8(RS + 6, 0xFF)
@@ -391,8 +415,16 @@ for after_stage = 1, 8 do
         if emu:read8(RS + 17) == 1 then break end
     end
     emu:setKeys(0)
-    if emu:read8(RS + 17) ~= 1 or emu:read8(RS + 18) ~= 0 then
+    local arrival = riftwild_return_screen(after_stage)
+    if emu:read8(RS + 17) ~= 1 or emu:read8(RS + 18) ~= arrival then
         error("could not enter Riftwild after stage " .. after_stage)
+    end
+    for _ = 1, 300 do
+        if emu:read8(WW) == 248 and emu:read8(WH) == 248 then break end
+        emu:runFrame()
+    end
+    if emu:read8(WW) ~= 248 or emu:read8(WH) ~= 248 then
+        error("Riftwild transaction never installed wide bounds")
     end
     settle(true)
     save_checkpoint("riftwild", after_stage + 1, after_stage, after_stage)
@@ -403,7 +435,7 @@ for _, after_stage in ipairs({3, 6}) do
     emu:write8(RS + 1, STAGE_BOSS[after_stage])
     emu:write8(RS + 11, after_stage)
     emu:write8(RS + 17, 1)
-    emu:write8(RS + 18, 6)
+    emu:write8(RS + 18, riftwild_gate_screen(after_stage))
     emu:write8(RS + 19, 0)
     normalize_compact_source()
     clear_entities()

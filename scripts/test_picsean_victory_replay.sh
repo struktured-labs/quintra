@@ -27,6 +27,11 @@ EXPECTED_SEED="${QUINTRA_VICTORY_EXPECTED_SEED:-2064128163}"
 # only; the cartridge's Easy assist, enemies, procgen, and bosses remain real.
 THREAT_POLICY="${QUINTRA_VICTORY_THREAT_POLICY:-collision}"
 EASY="${QUINTRA_VICTORY_EASY:-1}"
+# The seven-role mission graph and persistent Riftwild now put the measured
+# stage-nine entry at frame 263,908 on this fixed world. Its controller-only
+# final leg needs roughly 43,000 more frames. Keep a real margin for route
+# variance without changing cartridge pacing or the Normal balance target.
+FRAME_BUDGET="${QUINTRA_VICTORY_FRAME_BUDGET:-350000}"
 
 RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
 PL=$(awk '/DEF _player / {print $3}' "$NOI")
@@ -35,12 +40,14 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 
-# Keep the cartridge-side 210,000-frame budget authoritative. The 31x31
-# exploration fields make the external route auditor substantially more
-# expensive than the former 28x25 world. Only its wall-clock allowance grows;
-# the controller must still win within the same emulated-frame budget.
+# Seven generated mission roles now precede every Colossus. The fixed replay
+# reaches stage nine at frame 263,908; a captured room-193 continuation then
+# needed roughly 43,000 honest controller frames to clear the remaining
+# mission chain and ninth Colossus. Retain a measured final-stage margin.
+# This is only controller-proof travel time: all nine real boss kills, relic
+# pickups, Victory, and exact trace replay remain mandatory.
 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_FRAMES=210000 QUINTRA_BALANCE_HOST_TIMEOUT=3600 \
+  QUINTRA_BALANCE_FRAMES="$FRAME_BUDGET" QUINTRA_BALANCE_HOST_TIMEOUT=3600 \
   QUINTRA_BALANCE_TARGET_FRAME="$TARGET_FRAME" \
   QUINTRA_BOT_EASY="$EASY" \
   QUINTRA_BOT_THREAT_POLICY="$THREAT_POLICY" \
@@ -48,7 +55,7 @@ QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
   QUINTRA_BALANCE_TRACE_DIR="$TRACE_DIR" QUINTRA_BALANCE_OUT="$CSV" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
-awk -F, -v expected_seed="$EXPECTED_SEED" '
+awk -F, -v expected_seed="$EXPECTED_SEED" -v frame_budget="$FRAME_BUDGET" '
   NR == 1 { for (i = 1; i <= NF; ++i) col[$i] = i; next }
   NR == 2 {
     if ($(col["seed"]) != expected_seed) {
@@ -59,7 +66,7 @@ awk -F, -v expected_seed="$EXPECTED_SEED" '
       print "[picsean-victory] controller did not finish all nine bosses" > "/dev/stderr"
       exit 1
     }
-    if ($(col["frames"]) > 210000) {
+    if ($(col["frames"]) > frame_budget) {
       print "[picsean-victory] frame budget exceeded" > "/dev/stderr"
       exit 1
     }
@@ -88,7 +95,10 @@ env QUINTRA_RS_ADDR="$RS" QUINTRA_PL_ADDR="$PL" QUINTRA_EN_ADDR="$EN" \
   "$MGBA_BIN" -C "savegamePath=$TMP/replay-save" "$ROM" --script "$ROOT/scripts/quintra_replay.lua" -l 0 \
   >/dev/null 2>&1 &
 REPLAY_PID=$!
-for _ in $(seq 1 1440); do
+# Loaded hosts can replay the full 250k+ controller trace more slowly than the
+# decision-making run. Poll for up to fifteen minutes; the result file still
+# ends the wait immediately and no emulator is allowed to survive the proof.
+for _ in $(seq 1 3600); do
   test -s "$RESULT" && break
   kill -0 "$REPLAY_PID" 2>/dev/null || break
   sleep 0.25

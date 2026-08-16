@@ -15,6 +15,11 @@ entity_t entities[MAX_ENTITIES];
 // Maintained alongside the fixed table so an empty post-combat field does not
 // keep paying the banked camera-sector scan while its last bullets expire.
 u8 entity_enemy_count;
+// Visibility is a camera-sector concern, not an animation concern. A sentinel
+// forces the first wide-field population scan; subsequent scans happen only
+// after the camera crosses a 16px sector boundary.
+static u8 visibility_sector_x = 0xFF;
+static u8 visibility_sector_y = 0xFF;
 
 // Free-running counter driving the enemy waddle: for half its cycle the enemy
 // sprite is X-flipped (OAM attr bit 5), reading as a 2-frame idle/walk motion
@@ -41,7 +46,18 @@ u8 entity_spawn(u8 type) {
             memset(&entities[i], 0, sizeof(entity_t));
             entities[i].type    = type;
             entities[i].flags   = EF_ACTIVE | EF_ALIVE;
-            if (type == ENT_ENEMY) entity_enemy_count++;
+            if (type == ENT_ENEMY) {
+                // Compact-room bodies are visible immediately. Wide fields
+                // run the forced first camera-sector refresh below and clear
+                // only the distant bodies; teleport limbo also clears this
+                // same authoritative render/collision flag.
+                entities[i].flags |= EF_ON_SCREEN;
+                if (entity_enemy_count == 0) {
+                    visibility_sector_x = 0xFF;
+                    visibility_sector_y = 0xFF;
+                }
+                entity_enemy_count++;
+            }
             // OAM slots 0-3 reserved for player metasprite; entities use 4+
             entities[i].oam_slot = (u8)(4 + i);
             return i;
@@ -108,6 +124,14 @@ void entity_update_nonprojectile(u8 idx) {
         case ENT_ENEMY:
             if ((room_world_width <= ROOM_VIEW_W_PX
                     && room_world_height <= ROOM_VIEW_H_PX)
+                // A Colossus owns the complete scrolling arena. Its pattern
+                // cannot freeze merely because a blink, weave, or player
+                // camera move puts its body beyond the current viewport.
+                || (entities[idx].ai_data[3] & 1)
+                // A Shade deliberately clears EF_ON_SCREEN while vanished;
+                // its hidden return timer must still reach materialization.
+                || (entities[idx].ai_data[0] == ENEMY_SHADE
+                    && entities[idx].ai_data[2] != 0)
                 || (entities[idx].flags & EF_ON_SCREEN))
                 enemy_update(&entities[idx], idx);
             break;
@@ -122,15 +146,18 @@ void entity_update_nonprojectile(u8 idx) {
 void entity_update_all(void) {
     u8 i;
     // Scrolling fields can hold a full district population, but only the
-    // current camera cluster spends AI/projectile time. Refresh on the shared
-    // four-frame animation cadence: activation remains responsive within
-    // 67 ms while 12..16 distant bodies cannot drag the cartridge below
-    // video rate or simulate their way toward an unseen champion.
+    // current camera cluster spends AI/projectile time. Refresh when either
+    // camera axis enters a new 16px sector. This keeps activation responsive
+    // while a stationary scene pays no periodic far-call tax.
     if ((room_world_width > ROOM_VIEW_W_PX
             || room_world_height > ROOM_VIEW_H_PX)
         && entity_enemy_count
-        && !(entity_anim_counter & 0x03))
+        && ((room_camera_x >> 4) != visibility_sector_x
+            || (room_camera_y >> 4) != visibility_sector_y)) {
+        visibility_sector_x = (u8)(room_camera_x >> 4);
+        visibility_sector_y = (u8)(room_camera_y >> 4);
         entity_refresh_world_visibility();
+    }
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) continue;
         if (entities[i].type == ENT_PROJECTILE
@@ -159,13 +186,15 @@ u8 fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl) {
 }
 
 // 16x16 enemies (2x2 tiles): the mini-boss Sentinel and the bruiser tier
-// (orc 4, bomber 6, warlock 8). Their sprite_tile points at a 4-tile block
-// TL,TR,BL,BR. The 32x32 Colossus (giant flag) is handled separately.
+// (orc 4, bomber 6, warlock 8), plus Ember's narrow middle-scale Cinder Maw.
+// Their sprite_tile points at a 4-tile block TL,TR,BL,BR. The 32x32 Colossus
+// (giant flag) is handled separately.
 static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];
     if (e->type != ENT_ENEMY) return 0;
     if (eid == ENEMY_STONE_SENTINEL) return 1;
-    return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK);
+    return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
+        || eid == ENEMY_CINDER_MAW);
 }
 
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a

@@ -88,28 +88,6 @@ static u8 court_texture(u32 seed, u8 x, u8 y, u8 district) {
         : (n > 214) ? BGT_FLOOR3 : BGT_FLOOR;
 }
 
-u8 run_state_dungeon_cache_cell(void) BANKED {
-    u8 size = run_state_dungeon_size();
-    u8 cell = (u8)(size - 4);
-    // Search from the deepest non-service cell backward. The approved fold
-    // table guarantees at least one eligible degree-one arm for all nine
-    // stage footprints, but retain local five as a safe old-save fallback.
-    while (cell > 0) {
-        // These rooms own authored progression or nonlinear fixtures.
-        if (cell != 1 && cell != 2 && cell != 3
-            && cell != 7 && cell != 8 && cell != 9 && cell != 15) {
-            u8 dir;
-            u8 degree = 0;
-            for (dir = DIR_N; dir <= DIR_W; ++dir)
-                if (run_state_dungeon_cell_neighbor(cell, dir) != 0xFF)
-                    degree++;
-            if (degree == 1) return cell;
-        }
-        cell--;
-    }
-    return 5;
-}
-
 static void court_floor_rect(u8 x0, u8 y0, u8 w, u8 h) {
     u8 x, y;
     for (y = y0; y < (u8)(y0 + h); ++y)

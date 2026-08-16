@@ -13,13 +13,14 @@ for replay in '1 520 2064128323' '2 540 2064128343' '3 560 2064128379'; do
   read -r run frame seed <<EOF
 $replay
 EOF
-  # Paired 248x248 fields make the input-only pilot's pixel-route search
-  # materially heavier. Keep the exact 18,000 cartridge frames, fixed seeds,
-  # and combat requirements; this only gives a loaded host enough wall time
-  # to emit the authoritative row.
-  QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=0 \
+  # The seven-role mission graph now asks the pilot to complete both fixture
+  # chains before the Colossus gate. Thirty-two thousand frames is the
+  # measured first-boss floor for all three fixed worlds. Easy is the intended
+  # deep-route tester assist: it preserves enemy movement, attacks, and Fang
+  # cadence while preventing unrelated attrition from hiding this policy.
+  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=0 \
     QUINTRA_BALANCE_TARGET_FRAME="$frame" \
-    QUINTRA_BALANCE_FRAMES=18000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
+    QUINTRA_BALANCE_FRAMES=32000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
     QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_APPEND=1 \
     QUINTRA_BALANCE_SKIP_REPORT=1 \
     bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
@@ -48,4 +49,4 @@ awk -F, '
     if (deaths > 3) { print "[wolfkin-cadence] unexpected extra deaths" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[wolfkin-cadence] PASS fixed claw lane reached all minibosses and cleared two first giants"
+echo "[wolfkin-cadence] PASS seven-role claw routes reached all Wardens and cleared first giants"

@@ -56,6 +56,7 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, toad + 2, 64)
         put_fix8(pb, toad + 6, 64)
+        pb.memory[toad + 1] |= 4
         pb.memory[toad + 19] = 2  # CHG_CHARGE
         pb.memory[toad + 20] = 8  # charge duration
         pb.memory[toad + 21] = 2  # east dir8

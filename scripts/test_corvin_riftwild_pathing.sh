@@ -12,8 +12,10 @@ OUT="$(mktemp /tmp/quintra-corvin-riftwild.XXXXXX)"
 
 # Outdoor collision/pathing is identical in Easy; use the tester budget so
 # the harder opening boss cannot prevent this traversal fixture from running.
+# The seven-role mission graph now reaches the first Riftwild after the old
+# 24,000-frame cutoff, so leave enough time to clear the boss and cross it.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=24000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
+  QUINTRA_BALANCE_FRAMES=45000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

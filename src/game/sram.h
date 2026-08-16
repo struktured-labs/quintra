@@ -7,10 +7,10 @@
 #include <gb/gb.h>
 #include "core/types.h"
 
-u8   sram_run_valid(void);   // 1 = a resumable run is stored
-void sram_save_run(void);    // snapshot run_state + player
-u8   sram_load_run(void);    // restore; 1 = ok, 0 = invalid/corrupt
-void sram_clear_run(void);   // invalidate (death / victory / new run)
+u8   sram_run_valid(void) BANKED;   // 1 = a resumable run is stored
+void sram_save_run(void) BANKED;    // snapshot run_state + player
+u8   sram_load_run(void) BANKED;    // restore; 1 = ok, 0 = invalid/corrupt
+void sram_clear_run(void) BANKED;   // invalidate (death / victory / new run)
 
 // Meta-progress (SRAM bank 1) — survives across runs. "Only knowledge
 // persists" stays true for the RUN; these are the pilot's trophies.

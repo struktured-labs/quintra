@@ -84,6 +84,7 @@ def collect_surge(pb, player, entities, surge_ticks):
 def main():
     player, entities, screen = map(addr, ("_player", "_entities", "_loop_current_screen"))
     surge_ticks = addr("_room_weapon_surge_ticks")
+    will_offset = 42
     # Item-authored base A damages for Wolfkin, Sauran, Corvin, Picsean,
     # Vespine.  Every one receives the shared +1 damage, then its own
     # geometry expression below.  Permanent ATK must never change.
@@ -127,6 +128,10 @@ def main():
             assert pb.memory[surge_ticks] == 0, "Surge Spark timer did not expire"
             clear_entities(pb, entities)
             pb.memory[player + 22] = 0
+            # The expiry wait legitimately fills the restraint-based Will
+            # meter. This assertion isolates Surge, so prevent the next A
+            # edge from becoming Wolfkin's separate full-Will MAX strike.
+            pb.memory[player + will_offset] = 0
             pb.button("a")
             for _ in range(3): pb.tick()
             shot = first_player_shot(pb, entities)

@@ -62,7 +62,7 @@ def main():
 
     leech = EN
     pb.memory[leech] = 2       # ENT_ENEMY
-    pb.memory[leech + 1] = 3   # active + alive
+    pb.memory[leech + 1] = 7   # active + alive + on-screen
     put_fix8(pb, leech + 2, 76)
     put_fix8(pb, leech + 6, 73)
     pb.memory[leech + 14] = 10
@@ -98,7 +98,7 @@ def main():
     put16(pb, PL + 11, 1)
     put_fix8(pb, leech + 2, 76)
     put_fix8(pb, leech + 6, 2)
-    pb.memory[leech + 1] = 3
+    pb.memory[leech + 1] = 7
     pb.memory[leech + 17] = 13
     pb.memory[leech + 23] = 1
     # The first half of this regression already proves that a real double-tap

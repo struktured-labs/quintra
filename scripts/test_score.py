@@ -86,7 +86,10 @@ def main():
 
     enemy = entities
     pb.memory[enemy] = 2          # ENT_ENEMY
-    pb.memory[enemy + 1] = 0x23   # EF_ACTIVE | EF_ALIVE | EF_ELITE
+    # Synthetic live-room bodies must publish the same authoritative
+    # visibility bit as the real spawner/sector pass. Combat deliberately
+    # ignores sleeping scrolling-field enemies.
+    pb.memory[enemy + 1] = 0x27   # ACTIVE | ALIVE | ON_SCREEN | ELITE
     put16(pb, enemy + 3, px)
     put16(pb, enemy + 7, py)
     pb.memory[enemy + 14] = 1     # one-hit crawler

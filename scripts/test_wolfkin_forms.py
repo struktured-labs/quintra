@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ROM contract: Wolfkin A is melee combo/Max Strike, never a shot stream."""
+"""ROM contract: Wolfkin A is a true melee form, never a shot stream."""
 import re
 from pathlib import Path
 
@@ -49,8 +49,8 @@ def player_projectiles(pb, entities):
 
 
 def main():
-    player, entities, input_keys, tilemap = map(
-        addr, ("_player", "_entities", "_input_keys", "_room_tilemap"))
+    player, entities, tilemap = map(
+        addr, ("_player", "_entities", "_room_tilemap"))
     pb = boot()
     assert pb.memory[player] == 0, "did not enter as Wolfkin"
     # The reach contract is about a blade lane, not a seed-dependent wall
@@ -104,86 +104,29 @@ def main():
     assert len(sweep) == 1, f"neutral A spawned {len(sweep)} overlapping arcs"
     assert pb.memory[sweep[0] + 25] == 0xBB, "neutral A did not widen into a sweep"
 
-    # Holding a directed A long enough creates the cooldown-gated Max Strike:
-    # the player travels down the lane and emits the authored spear visual.
-    clear_entities(pb, entities)
-    pb.memory[player + 22] = 0
-    before_x = pb.memory[player + 9] | (pb.memory[player + 10] << 8)
-    pb.button_press("right")
-    pb.button_press("a")
-    for _ in range(22):
-        pb.tick()
-    pb.button_release("a")
-    pb.button_release("right")
-    after_x = pb.memory[player + 9] | (pb.memory[player + 10] << 8)
-    assert after_x >= before_x + 24, "Max Strike did not dash through its lane"
-    assert any(pb.memory[e + 12] == 123 for e in player_projectiles(pb, entities)), \
-        "Max Strike did not create its spear-lane hit"
-
-    # Keeping A held after the Max Strike commits to a slow physical combo,
-    # not the ranged champions' shot stream. Use a fresh room so the first
-    # assertion's release is observed by a different input loop. The first
-    # post-charge beat follows the cartridge's 24-frame cooldown (2.5 swings
-    # per second, deliberately below the old tap cadence).
+    # Holding A commits to a slow physical combo, not the ranged champions'
+    # shot stream and not the old hold-to-auto-dash. MAX now belongs to the
+    # shared full-Will system covered by test_will_max.py.
     combo_pb = boot()
     assert combo_pb.memory[player] == 0, "fresh combo test did not enter as Wolfkin"
     clear_entities(combo_pb, entities)
     clear_room_floor(combo_pb, tilemap)
     combo_pb.memory[player + 22] = 0
-    # The title-start room can place Wolfkin close to the right boundary. Test
-    # the sustained physical combo down the open left lane so the screen edge
-    # cannot despawn an otherwise valid arc before this cadence sample.
+    combo_pb.memory[player + 42] = 0
     combo_pb.button_press("left")
     combo_pb.button_press("a")
     held_combo = []
-    for frame in range(90):
-        # Let the held-A Max Strike commit left, then turn back into open
-        # floor before the next Fang beat. This is the real player input
-        # sequence that proves a long dash does not suppress the combo.
-        if frame == 22:
-            combo_pb.button_release("left")
-            combo_pb.button_press("right")
+    for _ in range(72):
         combo_pb.tick()
-        # The opening stab is gone before this window. Max Strike starts on
-        # frame 20 and the next 24-frame combo cooldown resolves on frame 25;
-        # sample from that actual second beat, before a dash toward a room
-        # edge naturally culls its physical arc.
-        if frame >= 24:
-            held_combo.extend((combo_pb.memory[e + 12], combo_pb.memory[e + 16],
-                               combo_pb.memory[input_keys], combo_pb.memory[player + 22])
-                              for e in player_projectiles(combo_pb, entities))
+        held_combo.extend((combo_pb.memory[e + 12], combo_pb.memory[e + 16])
+                          for e in player_projectiles(combo_pb, entities))
     combo_pb.button_release("a")
-    combo_pb.button_release("right")
-    assert any(tile == 122 for tile, _, _, _ in held_combo), \
+    combo_pb.button_release("left")
+    assert any(tile == 122 for tile, _ in held_combo), \
         f"held Wolfkin A did not continue with a slow physical combo: {held_combo}"
-    assert all(ttl <= 22 for _, ttl, _, _ in held_combo), \
+    assert all(tile == 122 and ttl <= 18 for tile, ttl in held_combo), \
         "held Wolfkin combo became a traveling shot stream"
     combo_pb.stop(save=False)
-
-    # Interrupting a 19-frame Max Strike tell with B cancels it. The old hold
-    # counter froze during the chord, then resumed into a surprise spear dash
-    # on the first post-B frame even though A had not been held continuously.
-    interrupt_pb = boot()
-    clear_entities(interrupt_pb, entities)
-    clear_room_floor(interrupt_pb, tilemap)
-    interrupt_pb.memory[player + 22] = 0
-    interrupt_pb.button_press("right")
-    interrupt_pb.button_press("a")
-    for _ in range(19):
-        interrupt_pb.tick()
-    interrupt_pb.button_press("b")
-    for _ in range(8):
-        interrupt_pb.tick()
-    clear_entities(interrupt_pb, entities)
-    interrupt_pb.button_release("b")
-    for _ in range(3):
-        interrupt_pb.tick()
-    interrupted = player_projectiles(interrupt_pb, entities)
-    assert not any(interrupt_pb.memory[e + 12] == 123 for e in interrupted), \
-        "B-interrupted Max Strike resumed from a stale hold counter"
-    interrupt_pb.button_release("a")
-    interrupt_pb.button_release("right")
-    interrupt_pb.stop(save=False)
 
     # A weapon orb replaces A's actual mechanics, not just its name. Wolfkin
     # holding Sauran's Tail Spike must regain that item's normal lunge instead
@@ -205,7 +148,7 @@ def main():
         "Wolfkin weapon swap retained Fang Stab's oversized blade hitbox"
     swap_pb.stop(save=False)
     pb.stop(save=False)
-    print("[wolfkin-forms] PASS Fang forms, interruption, and swapped Tail Spike")
+    print("[wolfkin-forms] PASS Fang stab/sweep/held combo and swapped Tail Spike")
 
 
 if __name__ == "__main__":

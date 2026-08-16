@@ -62,13 +62,8 @@ def enter_boss(stage, keep_open=False):
     # so grant that objective instead of mistaking its progression gate for
     # a failed room transition.
     put16(pb, RS + 23, 1 << stage)
-    pb.memory[RS + 27] = 1 << 3
-    if dungeon_size(stage) >= 12:
-        pb.memory[RS + 27] |= 1 << 7
-    if dungeon_size(stage) >= 14:
-        pb.memory[RS + 28] |= 1 << 7
-    if dungeon_size(stage) >= 20:
-        pb.memory[RS + 28] |= 1 << 2
+    pb.memory[RS + 27] = (1 << 0) | (1 << 3) | (1 << 6) | (1 << 7)
+    pb.memory[RS + 28] |= (1 << 2) | (1 << 7)
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:

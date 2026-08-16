@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -31,6 +32,16 @@ ANIMATION_FRAME_MS = 120
 
 def digest(image: Image.Image) -> str:
     return hashlib.sha256(image.tobytes()).hexdigest()
+
+
+def symbol_address(rom: Path, name: str) -> int:
+    """Read one auxiliary symbol not needed by the checkpoint builder."""
+    noi = rom.with_suffix(".noi")
+    match = re.search(
+        rf"DEF {re.escape(name)} 0x([0-9A-Fa-f]+)", noi.read_text())
+    if not match:
+        raise RuntimeError(f"missing ROM symbol {name} in {noi}")
+    return int(match.group(1), 16)
 
 
 def gallery_canvas(panels: list[Image.Image]) -> Image.Image:
@@ -61,6 +72,7 @@ def main() -> None:
     tilemap = addrs["_room_tilemap"]
     entities = addrs["_entities"]
     screen = addrs["_loop_current_screen"]
+    frame_counter = symbol_address(args.rom, "_loop_frame_counter")
 
     panels: list[Image.Image] = []
     animated_panels: list[list[Image.Image]] = []
@@ -110,6 +122,65 @@ def main() -> None:
                     image = pyboy.screen.image.convert("RGB").copy()
                 if frame != 120:
                     pyboy.tick()
+            if stage == 1 and pyboy.memory[giants[0] + 21] < 4:
+                # The eight-row live upload deliberately spans safe VBlanks,
+                # so a later compressed meal can land while the previous one
+                # is still returning. Finish any missing meals one at a time,
+                # synchronized to a complete gameplay loop, for the static
+                # "final boss" panel. The 16-frame animation above remains a
+                # truthful excerpt of the same growth process.
+                while pyboy.memory[giants[0] + 21] < 4:
+                    before_loop = (pyboy.memory[frame_counter]
+                                   | pyboy.memory[frame_counter + 1] << 8)
+                    for _ in range(240):
+                        pyboy.tick()
+                        now_loop = (pyboy.memory[frame_counter]
+                                    | pyboy.memory[frame_counter + 1] << 8)
+                        if now_loop != before_loop:
+                            break
+                    meal = pyboy.memory[giants[0] + 21]
+                    food = ((184, 24), (28, 92), (176, 96), (44, 28))[meal]
+                    pyboy.memory[giants[0] + 3] = food[0] - 12
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = food[1] - 12
+                    pyboy.memory[giants[0] + 8] = 0
+                    # A compressed animation beat may have landed while the
+                    # previous banked BG upload was still returning. Restore
+                    # the exact pre-meal state used by the live-ROM contract.
+                    pyboy.memory[giants[0] + 15] = 0
+                    pyboy.memory[giants[0] + 16] = 1
+                    pyboy.memory[giants[0] + 21] = meal
+                    target = meal + 1
+                    for _ in range(240):
+                        pyboy.tick()
+                        if pyboy.memory[giants[0] + 21] == target:
+                            break
+                    assert pyboy.memory[giants[0] + 21] == target, \
+                        (f"gallery could not resolve Serpent meal {target}: "
+                         f"state={pyboy.memory[giants[0] + 15]} "
+                         f"timer={pyboy.memory[giants[0] + 16]} "
+                         f"growth={pyboy.memory[giants[0] + 21]} "
+                         f"flags={pyboy.memory[giants[0] + 1]:02x}")
+                before_loop = (pyboy.memory[frame_counter]
+                               | pyboy.memory[frame_counter + 1] << 8)
+                for _ in range(240):
+                    pyboy.tick()
+                    now_loop = (pyboy.memory[frame_counter]
+                                | pyboy.memory[frame_counter + 1] << 8)
+                    if now_loop != before_loop:
+                        break
+                body_tiles = sum(
+                    55 <= pyboy.memory[tilemap + index] <= 63
+                    for index in range(ROOM_TILES)
+                )
+                selected_frame = 121
+                selected_core = (
+                    pyboy.memory[giants[0] + 3]
+                    | pyboy.memory[giants[0] + 4] << 8,
+                    pyboy.memory[giants[0] + 7]
+                    | pyboy.memory[giants[0] + 8] << 8,
+                )
+                image = pyboy.screen.image.convert("RGB").copy()
             assert body_tiles >= 36, \
                 f"stage {stage + 1} lost its screen-scale BG body: {body_tiles}"
             assert len(stage_animation) == ANIMATION_FRAMES

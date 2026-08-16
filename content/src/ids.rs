@@ -38,6 +38,9 @@ pub const ITEM_HUNTERS_EYE:  ItemId = ItemId::new(28);   // +3 LCK
 pub const ITEM_BLOOD_SIGIL:  ItemId = ItemId::new(29);   // +1 ATK +1 HP
 pub const ITEM_RIFT_FLAIL:   ItemId = ItemId::new(30);   // rare physical weapon swap
 pub const ITEM_ASTRAL_SPEAR: ItemId = ItemId::new(31);   // rare long-reach weapon swap
+pub const ITEM_RIFT_BOMB:    ItemId = ItemId::new(40);   // limited radial terrain breaker
+pub const ITEM_ECHO_CHIME:   ItemId = ItemId::new(41);   // limited secret/map revealer
+pub const ITEM_MIRROR_SHARD: ItemId = ItemId::new(42);   // limited hostile-shot reflector
 
 // ----- Enemies
 pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);
@@ -132,7 +135,9 @@ pub const SPRITE_SENTRY:      SpriteRef = SpriteRef::new(68);
 pub const SPRITE_FOLD_STAR:   SpriteRef = SpriteRef::new(72);
 pub const SPRITE_FLUTTERBAT:  SpriteRef = SpriteRef::new(73);
 pub const SPRITE_GLOAM_LEECH: SpriteRef = SpriteRef::new(74);
-pub const SPRITE_CINDER_MAW:  SpriteRef = SpriteRef::new(75);
+// Ember does not spawn Warlocks, so Cinder Maw reuses their four-tile block
+// for a narrow 10x15 middle-scale silhouette.
+pub const SPRITE_CINDER_MAW:  SpriteRef = SpriteRef::new(64);
 pub const SPRITE_RIFT_OOZE:   SpriteRef = SpriteRef::new(76);
 pub const SPRITE_MIRROR_MOTH: SpriteRef = SpriteRef::new(77);
 pub const SPRITE_MIRE_SPORE:  SpriteRef = SpriteRef::new(78);

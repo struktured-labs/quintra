@@ -72,9 +72,60 @@ def dungeon_maze_neighbor(cell: int, size: int, direction: int,
     return neighbor if col == fold_col else None
 
 
+def mission_graph(size: int, run_seed: int, stage: int) -> dict[str, int]:
+    """Mirror the cartridge's pre-room seeded objective graph."""
+    limit = size - 3
+    mix = (run_seed ^ (run_seed >> 8) ^ (run_seed >> 16)
+           ^ (run_seed >> 24)) & 0xFF
+    mix = (mix + stage * 41) & 0xFF
+    reserved = {0, 2, 5, 8, 11, 15, 17, 23}
+    cache_reserve = next((cell for cell in range(size - 4, 0, -1)
+        if cell not in reserved and sum(
+            dungeon_maze_neighbor(cell, size, direction, run_seed, stage)
+            is not None for direction in range(4)) == 1), None)
+    if cache_reserve is not None:
+        reserved.add(cache_reserve)
+    queue = [0]
+    seen = {0}
+    eligible = []
+    for cell in queue:
+        if cell < limit and cell not in reserved:
+            eligible.append(cell)
+        turn = (mix + cell * 3) & 3
+        for step in range(4):
+            neighbor = dungeon_maze_neighbor(
+                cell, size, (turn + step) & 3, run_seed, stage)
+            if (neighbor is None or neighbor >= limit or neighbor in seen):
+                continue
+            seen.add(neighbor)
+            queue.append(neighbor)
+    if len(eligible) < 7:
+        selected = [1, 3, 4, 6, 7, 9, 10]
+    else:
+        selected = [eligible[(i * (len(eligible) - 1) + 3) // 6]
+                    for i in range(7)]
+    graph = {
+        "order": mix & 1,
+        "trial": selected[0],
+        "waystone": selected[3],
+        "deep_warden": selected[4],
+        "deep_switch": selected[5],
+        "deep_gate": selected[6],
+    }
+    if graph["order"]:
+        graph["warden"], graph["sigil"] = selected[1:3]
+    else:
+        graph["sigil"], graph["warden"] = selected[1:3]
+    graph["sequence"] = tuple(selected)
+    graph["discovery"] = tuple(eligible)
+    return graph
+
+
 def dungeon_cache_cell(size: int, run_seed: int, stage: int) -> int:
     """Mirror the cartridge's deepest optional dead-end cache selection."""
-    fixtures = {0, 1, 2, 3, 7, 8, 9, 15}
+    graph = mission_graph(size, run_seed, stage)
+    fixtures = {0, 2, 5, 8, 11, 15, 17, 23}
+    fixtures.update(graph["sequence"])
     for cell in range(size - 4, 0, -1):
         if cell in fixtures:
             continue
@@ -85,7 +136,7 @@ def dungeon_cache_cell(size: int, run_seed: int, stage: int) -> int:
         )
         if degree == 1:
             return cell
-    return 5
+    return next(cell for cell in range(1, size - 3) if cell not in fixtures)
 
 
 def dungeon_direction(source: int, target: int) -> int:

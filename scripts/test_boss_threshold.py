@@ -110,7 +110,10 @@ def main() -> None:
     pb.memory[camera_x] = pb.memory[camera_y] = 0
     pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     pb.memory[rs + 23] = 1
-    pb.memory[rs + 27] = (1 << 3) | (1 << 7)
+    # Qualify the sanctuary through the complete mission graph. Leaving the
+    # Trial or deep gate incomplete correctly makes its route—not the boss—
+    # the crystal Compass objective and would tint the return threshold.
+    pb.memory[rs + 27] = (1 << 0) | (1 << 3) | (1 << 6) | (1 << 7)
     pb.memory[rs + 28] = (1 << 7) | (1 << 2)
     for x, y in DOORS[approach]:
         pb.memory[tilemap + y * ROOM_W + x] = BGT_DOOR
@@ -178,7 +181,8 @@ def main() -> None:
                 pb.memory[rs + 1] = STAGE_START[stage] + source
                 pb.memory[rs + 23] = 0xFF
                 pb.memory[rs + 24] = 0x01
-                pb.memory[rs + 27] = (1 << 3) | (1 << 7)
+                pb.memory[rs + 27] = \
+                    (1 << 0) | (1 << 3) | (1 << 6) | (1 << 7)
                 pb.memory[rs + 28] = (1 << 7) | (1 << 2)
                 set_cardinal_fixture(pb, rs, tilemap, direction)
                 pb.memory[0xFF4F] = 0

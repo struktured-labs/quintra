@@ -18,7 +18,7 @@ IDENTITIES = {
     0: (20, 3), 1: (24, 6), 2: (21, 5), 3: (22, 0), 4: (56, 7),
     5: (34, 0), 6: (60, 4), 7: (37, 0), 8: (64, 7), 9: (39, 7),
     10: (68, 3), 11: (72, 5), 12: (73, 0), 13: (74, 4),
-    14: (75, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
+    14: (64, 3), 15: (76, 7), 16: (77, 0), 17: (78, 7),
     18: (80, 5), 19: (124, 6), 20: (125, 4), 21: (81, 6),
     22: (69, 6), 23: (79, 6),
     27: (79, 7),
@@ -30,7 +30,7 @@ SPECIALISTS = {
     11: (72, 37, "FOLD_STAR", "SPR_ENEMY_FOLD_STAR", "fold-star"),
     12: (73, 21, "FLUTTERBAT", "SPR_ENEMY_FLUTTERBAT", "flutterbat"),
     13: (74, 34, "GLOAM_LEECH", "SPR_ENEMY_GLOAM_LEECH", "gloam-leech"),
-    14: (75, 20, "CINDER_MAW", "SPR_ENEMY_CINDER_MAW", "cinder-maw"),
+    14: (64, 75, "CINDER_MAW", "SPR_MEDIUM_CINDER_MAW", "cinder-maw"),
     15: (76, 20, "RIFT_OOZE", "SPR_ENEMY_RIFT_OOZE", "rift-ooze"),
     16: (77, 21, "MIRROR_MOTH", "SPR_ENEMY_MIRROR_MOTH", "mirror-moth"),
     17: (78, 20, "MIRE_SPORE", "SPR_ENEMY_MIRE_SPORE", "mire-spore"),
@@ -109,12 +109,17 @@ def main():
         pb.tick()
     tiles = {}
     for enemy_id, (slot, legacy_slot, _, _, name) in SPECIALISTS.items():
+        # Ember phase-loads the four-tile Cinder Maw over Warlock's mutually
+        # exclusive block. test_medium_cinder.py exercises that real room;
+        # the opening stage correctly still owns Warlock art here.
+        if enemy_id == 14:
+            continue
         tile = bytes(pb.memory[0x8000 + slot * 16 + i] for i in range(16))
         legacy = bytes(pb.memory[0x8000 + legacy_slot * 16 + i] for i in range(16))
         assert any(tile), f"{name} OBJ tile is blank in runtime VRAM"
         assert tile != legacy, f"{name} still aliases its legacy silhouette"
         tiles[enemy_id] = tile
-    assert len(set(tiles.values())) == len(SPECIALISTS), "specialist OBJ silhouettes are not unique"
+    assert len(set(tiles.values())) == len(tiles), "specialist OBJ silhouettes are not unique"
 
     # Slot 125 is deliberately multiplexed.  In combat it holds Dread Bell
     # art, but the real room transition into a merchant room must restore the
@@ -191,7 +196,7 @@ def main():
     put16(pb, player + 11, 12 * 8)
     leech = entities
     pb.memory[leech] = 2
-    pb.memory[leech + 1] = 3
+    pb.memory[leech + 1] = 7
     put_fix8(pb, leech + 2, 15 * 8)
     put_fix8(pb, leech + 6, 12 * 8)
     pb.memory[leech + 14] = 4
@@ -223,7 +228,7 @@ def main():
     pb.memory[tilemap + 9 * 20 + 10] = 2
     bat = entities
     pb.memory[bat] = 2
-    pb.memory[bat + 1] = 3
+    pb.memory[bat + 1] = 7
     put_fix8(pb, bat + 2, 80)
     put_fix8(pb, bat + 6, 79)
     pb.memory[bat + 14] = 2
@@ -259,7 +264,7 @@ def main():
     put16(pb, player + 11, 64)
     skeleton = entities
     pb.memory[skeleton] = 2
-    pb.memory[skeleton + 1] = 3
+    pb.memory[skeleton + 1] = 7
     put_fix8(pb, skeleton + 2, 64)
     put_fix8(pb, skeleton + 6, 64)
     pb.memory[skeleton + 14] = 10
@@ -289,7 +294,7 @@ def main():
         pb.memory[tilemap + 9 * 20 + tx] = 2
     crawler = entities
     pb.memory[crawler] = 2
-    pb.memory[crawler + 1] = 3
+    pb.memory[crawler + 1] = 7
     put_fix8(pb, crawler + 2, 64)
     put_fix8(pb, crawler + 6, 64)
     pb.memory[crawler + 14] = 2
@@ -319,7 +324,7 @@ def main():
     put16(pb, player + 11, 64)
     leech = entities
     pb.memory[leech] = 2
-    pb.memory[leech + 1] = 3
+    pb.memory[leech + 1] = 7
     put_fix8(pb, leech + 2, 64)
     put_fix8(pb, leech + 6, 64)
     pb.memory[leech + 14] = 10
@@ -346,7 +351,7 @@ def main():
     pb.memory[player + 2] = 20
     moth = entities
     pb.memory[moth] = 2
-    pb.memory[moth + 1] = 3
+    pb.memory[moth + 1] = 7
     put_fix8(pb, moth + 2, 112)
     put_fix8(pb, moth + 6, 72)
     pb.memory[moth + 14] = 4
@@ -383,7 +388,7 @@ def main():
     pb.memory[player + 2] = 20
     spore = entities
     pb.memory[spore] = 2
-    pb.memory[spore + 1] = 3
+    pb.memory[spore + 1] = 7
     put_fix8(pb, spore + 2, 112)
     put_fix8(pb, spore + 6, 80)
     pb.memory[spore + 14] = 5
@@ -425,7 +430,7 @@ def main():
     guard = entities
     shot = entities + 28
     pb.memory[guard] = 2
-    pb.memory[guard + 1] = 3
+    pb.memory[guard + 1] = 7
     put_fix8(pb, guard + 2, 80)
     put_fix8(pb, guard + 6, 72)
     pb.memory[guard + 12] = 80
@@ -481,10 +486,10 @@ def main():
     for i in range(2, 32):
         filler = entities + i * 28
         pb.memory[filler] = 4
-        pb.memory[filler + 1] = 3
+        pb.memory[filler + 1] = 7
         pb.memory[filler + 16] = 100
     pb.memory[ooze] = 2
-    pb.memory[ooze + 1] = 3
+    pb.memory[ooze + 1] = 7
     put_fix8(pb, ooze + 2, 80)
     put_fix8(pb, ooze + 6, 72)
     pb.memory[ooze + 14] = 1
@@ -526,7 +531,7 @@ def main():
     pb.memory[player + 2] = 20
     lantern = entities
     pb.memory[lantern] = 2
-    pb.memory[lantern + 1] = 3
+    pb.memory[lantern + 1] = 7
     put_fix8(pb, lantern + 2, 88)
     put_fix8(pb, lantern + 6, 72)
     pb.memory[lantern + 14] = 8
@@ -534,7 +539,10 @@ def main():
     pb.memory[lantern + 18] = 0       # fire immediately
     pb.memory[lantern + 25] = 0x66
     pb.memory[addr("_g_hitstop")] = 0
-    pb.tick()
+    for _ in range(4):
+        pb.tick()
+        if pb.memory[lantern + 18]:
+            break
     ring = []
     for i in range(1, 32):
         ep = entities + i * 28
@@ -559,7 +567,7 @@ def main():
     pb.memory[player + 2] = 20
     bell = entities
     pb.memory[bell] = 2
-    pb.memory[bell + 1] = 3
+    pb.memory[bell + 1] = 7
     put_fix8(pb, bell + 2, 88)
     put_fix8(pb, bell + 6, 72)
     pb.memory[bell + 12] = 125
@@ -593,7 +601,7 @@ def main():
     pb.memory[player + 2] = 20
     warden = entities
     pb.memory[warden] = 2
-    pb.memory[warden + 1] = 3
+    pb.memory[warden + 1] = 7
     put_fix8(pb, warden + 2, 88)
     put_fix8(pb, warden + 6, 72)
     pb.memory[warden + 12] = 81
@@ -628,7 +636,7 @@ def main():
     pb.memory[player + 2] = 20
     skitter = entities
     pb.memory[skitter] = 2
-    pb.memory[skitter + 1] = 3
+    pb.memory[skitter + 1] = 7
     put_fix8(pb, skitter + 2, 40)
     put_fix8(pb, skitter + 6, 72)
     pb.memory[skitter + 12] = 69

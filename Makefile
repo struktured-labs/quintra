@@ -137,6 +137,7 @@ verify: all check-balance-bot
 	bash scripts/test_smoke.sh
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 	uv run --quiet --with pyboy python scripts/test_town.py
+	$(PYBOY_RUN) scripts/test_dialogue.py
 	$(PYBOY_RUN) scripts/test_town_compass.py
 	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
@@ -149,6 +150,13 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_melee_special_guard.py
 	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
+	$(PYBOY_RUN) scripts/test_will_max.py
+	$(PYBOY_RUN) scripts/test_signature_balance.py
+	$(PYBOY_RUN) scripts/test_dungeon_tools.py
+	$(PYBOY_RUN) scripts/test_world_interactions.py
+	$(PYBOY_RUN) scripts/test_oath_arts.py
+	$(PYBOY_RUN) scripts/test_dungeon_law.py
+	$(PYBOY_RUN) scripts/test_mission_graph.py
 	uv run --quiet --with pyboy python scripts/test_champion_animation.py
 	$(PYBOY_RUN) scripts/test_visual_progression.py
 	uv run --quiet --with pyboy python scripts/test_rift_flail.py
@@ -164,6 +172,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_continuous_districts.py
 	$(PYBOY_RUN) scripts/test_difficulty_mode.py
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
+	$(PYBOY_RUN) scripts/test_sanctuary_escape.py
 	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py
 	uv run --quiet --with pyboy python scripts/test_full_mp_hud.py
 	$(PYBOY_RUN) scripts/test_pyboy_env.py
@@ -174,6 +183,7 @@ verify: all check-balance-bot
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
 		--mgba "$(MGBA_BIN)" --champion wolfkin --difficulty easy
 	$(PYBOY_RUN) scripts/test_puzzles.py
+	$(PYBOY_RUN) scripts/test_hidden_secrets.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
 	$(PYBOY_RUN) scripts/test_timed_states.py
 	$(PYBOY_RUN) scripts/test_controller_policy.py
@@ -195,6 +205,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_convergence_boss_cap.py
 	uv run --quiet --with pyboy python scripts/test_convergence_transform.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
+	$(PYBOY_RUN) scripts/test_medium_cinder.py
 	$(PYBOY_RUN) scripts/test_reinforcement_caller.py
 	bash scripts/test_enemy_coverage_config.sh
 	uv run --quiet --with pyboy python scripts/test_hornet_swarm.py
@@ -212,11 +223,13 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py
 	$(PYBOY_RUN) scripts/test_dungeon_director.py
 	uv run --quiet --with pyboy python scripts/test_score.py
+	uv run --quiet --with pyboy python scripts/test_diagonal_dash.py
 	uv run --quiet --with pyboy python scripts/test_block_lower_edge.py
 	uv run --quiet --with pyboy python scripts/test_doors.py
 	uv run --quiet --with pyboy python scripts/test_rift_sigil.py
 	uv run --quiet --with pyboy python scripts/test_stage8_sigil_path.py
 	uv run --quiet --with pyboy python scripts/test_overworld.py
+	$(PYBOY_RUN) scripts/test_regional_riftwild.py
 	$(PYBOY_RUN) scripts/test_riftwild_landmarks.py
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
@@ -225,6 +238,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py
 	uv run --quiet --with pyboy python scripts/test_heart_pickup.py
+	uv run --quiet --with pyboy python scripts/test_unlock_feedback.py
 	uv run --quiet --with pyboy python scripts/test_vampiric_sigil.py
 	uv run --quiet --with pyboy python scripts/test_shop_surge.py
 	uv run --quiet --with pyboy python scripts/test_sauran_shield.py

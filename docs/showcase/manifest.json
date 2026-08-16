@@ -1,7 +1,7 @@
 {
   "meta": {
-    "version": "v0.19.2",
-    "romSha256": "fa7a2a1384ff23897afc5c09477c1bc4d56c222e2777a5296fd480ac33ef9c60",
+    "version": "v0.20.0",
+    "romSha256": "6ed0287ceb85a0c15830f23f0933272e1164c6b9c1c2bbec0fb1a7c5a9f86180",
     "stageCount": 9,
     "bossCount": 9,
     "monsterCount": 33
@@ -111,8 +111,8 @@
       "id": 2,
       "name": "Storm Serpent",
       "stage": "Verdant Hollow",
-      "description": "A hollow storm coil with a vulnerable head that rebounds diagonally around the arena.",
-      "movement": "Wall bounce",
+      "description": "A hungry storm coil that eats four motes, grows across the arena, charges an AOE, then contracts while its rotating cross keeps firing.",
+      "movement": "Feed / grow / AOE",
       "hp": 205,
       "damage": 1,
       "accent": "#70e28d",
@@ -188,7 +188,7 @@
       "id": 9,
       "name": "Void Lord",
       "stage": "Void Sanctum",
-      "description": "A warping weak point above an arena-scale World Collapse with one announced safe pocket.",
+      "description": "A slowly regenerating, warping weak point above an arena-scale World Collapse with one announced safe pocket.",
       "movement": "Anchor warp",
       "hp": 220,
       "damage": 5,
@@ -518,7 +518,7 @@
     {
       "id": 14,
       "name": "Cinder Maw",
-      "description": "A slow Ember caster whose deliberate three-way volleys turn open space into a routing test.",
+      "description": "A narrow 10x15 middle-scale furnace caster whose deliberate three-way volleys turn open space into a routing test.",
       "behavior": "Shooter",
       "hp": 16,
       "damage": 2,

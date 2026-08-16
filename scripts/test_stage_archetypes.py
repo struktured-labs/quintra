@@ -4,7 +4,9 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START, dungeon_maze_neighbor, dungeon_size
+from quintra_topology import (
+    STAGE_START, dungeon_maze_neighbor, dungeon_size, mission_graph,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -52,8 +54,21 @@ def wait_for_generated_room(pb):
     raise AssertionError("room generation did not settle within 480 frames")
 
 
+def archetype_sample_cell(stage, seed, preferred=4):
+    """Choose an ordinary wide court with no role/secret terrain overlay."""
+    roles = set(mission_graph(dungeon_size(stage), seed, stage)["sequence"])
+    for cell in (preferred, 4, 6, 10, 12, 13, 14, 16, 18, 20, 22, 24, 25, 26):
+        if cell >= dungeon_size(stage) - 3 or cell in roles or cell == 15:
+            continue
+        room_seed = (seed ^ (((STAGE_START[stage] + cell) * 0x9E3779B9)
+                             & 0xFFFFFFFF)) & 0xFFFFFFFF
+        if ((room_seed >> 16) & 31) > 2:
+            return cell
+    raise AssertionError(f"no ordinary archetype sample stage={stage} seed={seed:#x}")
+
+
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
-                   local_room=4, dungeon_phase=0):
+                   local_room=None, dungeon_phase=0):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
@@ -64,10 +79,11 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
     for _ in range(60):
         pb.tick()
 
-    # Local room four is the dedicated full-silhouette landmark in every
-    # wider stage. Rooms 1/2 remain available to puzzle and Rift fixtures;
-    # auditing room four keeps those safety overlays from weakening the
-    # stage-identity contract.
+    # Mission and hidden-secret roles are seed-first. Choose a normal wide
+    # court when callers want stage identity, while explicit role/fixture
+    # tests can still request an exact local cell.
+    if local_room is None:
+        local_room = archetype_sample_cell(stage, seed)
     target = STAGE_START[stage] + local_room
     # Enter through the authored Riftwild dungeon gate. This follows the
     # cartridge's real between-dungeon transition without fighting prior
@@ -203,17 +219,20 @@ def assert_escape_rails(label, tiles):
 
 
 def main():
-    def assert_waypoint_pair(pb, _tiles):
+    def assert_waypoint_patrol(pb, _tiles):
         enemies = sum(
             pb.memory[EN + i * 28] == 2
             and pb.memory[EN + i * 28 + 1] & 1
             for i in range(32)
         )
-        assert 1 <= enemies <= 2, (
-            f"wing landmark lost its two-enemy pacing beat ({enemies})"
+        # The crowd pass raised this authored landmark from an exact pair to
+        # a light one-to-three patrol. It must still read as a breather beside
+        # the 12-18-body scrolling courts, not as an empty or dense fallback.
+        assert 1 <= enemies <= 3, (
+            f"wing landmark lost its light patrol pacing beat ({enemies})"
         )
 
-    grove = generated_room(1, 2064128938)  # controller-agent seed 1
+    grove = generated_room(1, 2064128938, local_room=4)  # controller-agent seed 1
     assert_no_false_one_tile_gaps("Verdant grove", grove)
     grove_sites = [(4, 4), (5, 4), (14, 4), (15, 4),
                    (4, 12), (5, 12), (14, 12), (15, 12)]
@@ -222,10 +241,10 @@ def main():
     grove_exits = reachable_exits(grove, (18, 9))
     assert_graph_exits("Verdant grove", grove_exits, 1, 4, 2064128938)
     # Room eleven begins the second long wing. It must repeat the stage's
-    # authored identity and use a lighter combat pair, not fall back to an
+    # authored identity and use a lighter combat patrol, not fall back to an
     # anonymous dense procgen room.
     grove_wing = generated_room(
-        1, 2064128938, local_room=11, probe=assert_waypoint_pair
+        1, 2064128938, local_room=11, probe=assert_waypoint_patrol
     )
     assert_no_false_one_tile_gaps("Verdant second wing", grove_wing)
     grove_wing_crystals = sum(
@@ -283,7 +302,7 @@ def main():
     # Room seventeen is the later wing threshold. Sampling a different
     # archetype here proves both landmark slots survive into deep traversal.
     frost_wing = generated_room(
-        3, local_room=17, probe=assert_waypoint_pair
+        3, local_room=17, probe=assert_waypoint_patrol
     )
     assert_no_false_one_tile_gaps("Frost late wing", frost_wing)
     frost_wing_crystals = sum(
@@ -324,6 +343,7 @@ def main():
 
     mire_counts = []
     for index, seed in enumerate((0xCAFE1234, 0xCAFE1235, 0xCAFE1236, 0xCAFE1237)):
+        sample_cell = archetype_sample_cell(4, seed)
         mire = generated_room(
             4, seed,
             screenshot=ROOT / "tmp" / "toxic-mire.png" if index == 0 else None,
@@ -348,11 +368,13 @@ def main():
                    for x in (9, 10) for y in range(3, 15))
         mire_exits = reachable_exits(mire, (18, 9))
         assert_graph_exits(
-            f"Toxic Mire seed={seed:#x}", mire_exits, 4, 4, seed
+            f"Toxic Mire seed={seed:#x}", mire_exits, 4, sample_cell, seed,
+            wide=True,
         )
 
     keep_counts = []
     for index, seed in enumerate((0x5A0D0000, 0x5A0D0001)):
+        sample_cell = archetype_sample_cell(5, seed)
         keep = generated_room(
             5, seed,
             screenshot=ROOT / "tmp" / "shadow-keep.png" if index == 0 else None,
@@ -380,11 +402,13 @@ def main():
                    for x in range(lower_gate, lower_gate + 4))
         keep_exits = reachable_exits(keep, (18, 9))
         assert_graph_exits(
-            f"Shadow Keep seed={seed:#x}", keep_exits, 5, 4, seed
+            f"Shadow Keep seed={seed:#x}", keep_exits, 5, sample_cell, seed,
+            wide=True,
         )
 
     temple_signatures = []
     for index, seed in enumerate((0x601D0000, 0x601D0001)):
+        sample_cell = archetype_sample_cell(6, seed)
         temple = generated_room(
             6, seed,
             screenshot=ROOT / "tmp" / "golden-temple.png" if index == 0 else None,
@@ -421,13 +445,14 @@ def main():
                    for x in range(3, 17) for y in (8, 9))
         temple_exits = reachable_exits(temple, (18, 9))
         assert_graph_exits(f"Golden Temple seed={seed:#x}",
-                           temple_exits, 6, 4, seed)
+                           temple_exits, 6, sample_cell, seed, wide=True)
         temple_signatures.append((pillars, crystals, inner_l))
     assert temple_signatures[0] != temple_signatures[1], (
         "Golden Temple seed variants collapsed to one inner-court layout"
     )
 
-    blood = generated_room(7, 0xB100D007,
+    blood_seed = 0xB100D007
+    blood = generated_room(7, blood_seed,
                            screenshot=ROOT / "tmp" / "bloodmoon-sigil.png")
     assert_no_false_one_tile_gaps("Bloodmoon", blood)
     blood_sites = []
@@ -446,7 +471,9 @@ def main():
     assert all(tile(blood, x, y) != BGT_SPIKES
                for x in range(3, 17) for y in (8, 9))
     blood_exits = reachable_exits(blood, (18, 9))
-    assert_graph_exits("Bloodmoon", blood_exits, 7, 4, 0xB100D007)
+    assert_graph_exits("Bloodmoon", blood_exits, 7,
+                       archetype_sample_cell(7, blood_seed), blood_seed,
+                       wide=True)
 
     void_signatures = []
     void_sites = []
@@ -455,10 +482,10 @@ def main():
                            (i, 17 - i), (19 - i, 17 - i)))
     for index, seed in enumerate((0xA01D0000, 0xA01D0001,
                                   0xA01D0002, 0xA01D0003)):
+        sample_cell = archetype_sample_cell(8, seed)
         void = generated_room(
             8, seed,
             screenshot=ROOT / "tmp" / "void-sanctum.png" if index == 0 else None,
-            local_room=1,
         )
         assert_no_false_one_tile_gaps(
             f"Void Sanctum seed={seed:#x}", void)
@@ -474,7 +501,7 @@ def main():
                    for x in range(3, 17) for y in (8, 9))
         void_exits = reachable_exits(void, (18, 9))
         assert_graph_exits(f"Void Sanctum seed={seed:#x}",
-                           void_exits, 8, 1, seed)
+                           void_exits, 8, sample_cell, seed, wide=True)
         assert_escape_rails(f"Void Sanctum seed={seed:#x}", void)
         void_signatures.append(signature)
     # This is the exact final-stage landmark/seed that exposed a peripheral

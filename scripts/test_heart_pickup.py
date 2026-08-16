@@ -34,6 +34,11 @@ def put16(pb, address, pixels):
     pb.memory[address + 1] = (pixels >> 8) & 0xFF
 
 
+def tone(pb):
+    return tuple(pb.memory[address] for address in (
+        0xFF10, 0xFF11, 0xFF12, 0xFF13, 0xFF21, 0xFF22))
+
+
 def main():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
@@ -92,6 +97,7 @@ def main():
          f"hp={pb.memory[PL + 2]}/{pb.memory[PL + 1]} "
          f"player={list(pb.memory[PL + 9:PL + 13])} "
          f"heart={list(pb.memory[heart + 2:heart + 18])})")
+    heart_tone = tone(pb)
 
     # MP wisps follow the same no-fake-pickup rule. Previously the orb
     # vanished and played a reward sound at full MP even though no HUD value
@@ -117,6 +123,7 @@ def main():
         pb.tick()
     assert pb.memory[mp] == 0 and pb.memory[PL + 4] == 4, \
         "MP wisp did not restore and consume once MP was missing"
+    mp_tone = tone(pb)
 
     # Coins follow the same no-fake-pickup contract. At the 999 purse cap,
     # both ordinary and five-coin drops must remain visible rather than play a
@@ -141,6 +148,9 @@ def main():
         pb.tick()
     assert pb.memory[coin] == 0 and (pb.memory[PL + 16] | (pb.memory[PL + 17] << 8)) == 999, \
         "ordinary coin did not collect to the purse cap"
+    coin_tone = tone(pb)
+    assert heart_tone != coin_tone, (
+        f"heart twinkle still aliases the coin chirp: {heart_tone}")
 
     coin5 = EN + 31 * 28
     pb.memory[coin5] = 3
@@ -160,8 +170,48 @@ def main():
         pb.tick()
     assert pb.memory[coin5] == 0 and (pb.memory[PL + 16] | (pb.memory[PL + 17] << 8)) == 999, \
         "five-coin drop did not clamp and collect correctly"
+
+    # Permanent relics and temporary Surges have their own audio identities,
+    # too. Run both through normal pickup collision and compare the complete
+    # square/noise register signature with heart, coin, and magic recovery.
+    relic = EN + 31 * 28
+    pb.memory[relic] = 3
+    pb.memory[relic + 1] = 3
+    put16(pb, relic + 3, px + 4)
+    put16(pb, relic + 7, py + 8)
+    pb.memory[relic + 14] = 1
+    pb.memory[relic + 16] = 240
+    pb.memory[relic + 17] = 3   # PICKUP_ITEM
+    pb.memory[relic + 18] = 10  # generated Iron Heart item index
+    pb.memory[relic + 25] = 0x66
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[relic] == 0, "permanent relic fixture did not collect"
+    relic_tone = tone(pb)
+
+    surge = EN + 31 * 28
+    pb.memory[surge] = 3
+    pb.memory[surge + 1] = 3
+    put16(pb, surge + 3, px + 4)
+    put16(pb, surge + 7, py + 8)
+    pb.memory[surge + 14] = 1
+    pb.memory[surge + 16] = 240
+    pb.memory[surge + 17] = 14  # PICKUP_SURGE
+    pb.memory[surge + 25] = 0x66
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[surge] == 0, "temporary Surge fixture did not collect"
+    surge_tone = tone(pb)
+
+    pickup_tones = {
+        "heart": heart_tone, "coin": coin_tone, "magic": mp_tone,
+        "relic": relic_tone, "surge": surge_tone,
+    }
+    assert len(set(pickup_tones.values())) == len(pickup_tones), (
+        f"pickup sound families alias one another: {pickup_tones}")
     pb.stop(save=False)
-    print("[heart-pickup] PASS capped heart/MP/coins wait, missing stats restore")
+    print("[heart-pickup] PASS capped pickups wait; five distinct reward "
+          f"voices {pickup_tones}")
 
 
 if __name__ == "__main__":

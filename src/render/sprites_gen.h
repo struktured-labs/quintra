@@ -81,6 +81,7 @@ extern const u8 bgt_floor_crack[16];
 extern const u8 bgt_floor_pebble[16];
 extern const u8 bgt_wall_brick[16];
 extern const u8 bgt_door_frame[16];
+extern const u8 bgt_door_locked[16];
 extern const u8 bgt_pillar[16];
 extern const u8 bgt_crystal[16];
 extern const u8 bgt_rubble[16];
@@ -102,6 +103,7 @@ extern const u8 sprite_miniboss_skeleton[64];
 extern const u8 sprite_bruiser_orc[64];
 extern const u8 sprite_bruiser_bomber[64];
 extern const u8 sprite_bruiser_warlock[64];
+extern const u8 sprite_medium_cinder_maw[64];
 
 // Nine 32x32 stage bosses (9 * 16 tiles * 16 bytes)
 extern const u8 sprite_boss_stages[2304];

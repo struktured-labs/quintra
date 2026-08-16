@@ -72,8 +72,9 @@ void sfx_play(u8 id) {
             sfx_claim_channels(12, 0);
             break;
         case SFX_HEART:
-            // 660Hz then 880Hz, duty 50%, env (11,down,3)
-            ch1(0x00, 0x80, 0xB3, 1849);
+            // A soft high twinkle, deliberately an octave above the short
+            // B5->E6 currency chirp: E6 blooms into a glassy upper sparkle.
+            ch1(0x00, 0x40, 0x93, 1949);
             pend_kind = PEND_HEART_NOTE2;
             pend_timer = 4;
             sfx_claim_channels(13, 0);
@@ -165,8 +166,9 @@ void sfx_tick(void) {
             NR14_REG = (u8)(0x80 | (1949 >> 8));
             break;
         case PEND_HEART_NOTE2:
-            NR13_REG = (u8)(1899 & 0xFF);
-            NR14_REG = (u8)(0x80 | (1899 >> 8));
+            NR12_REG = 0xB4;
+            NR13_REG = (u8)(2010 & 0xFF);
+            NR14_REG = (u8)(0x80 | (2010 >> 8));
             break;
         case PEND_DEATH_BUMP:
             NR43_REG = 0x69;   // s=6, 7-bit — buzz falls apart as it fades

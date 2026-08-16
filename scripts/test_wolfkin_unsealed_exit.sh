@@ -9,17 +9,17 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-wolfkin-open-exit.XXXXXX)"
 trap 'rm -f "$OUT" "$OUT.lock"' EXIT
 
-# The Penta-scale first two colossi now consume more of the deterministic
-# replay than the former small bosses. Keep the route assertion unchanged,
-# but give the controller enough frames to traverse the new 20/21-room first
-# pair and reach the later optional boundary encounter this contract
-# actually exercises.
+# The seven-role mission graph now expands the deterministic first pair well
+# beyond the former 20/21-room setup. At 36,000 frames Wolfkin had already
+# escaped the optional boundary encounter and reached room 30, but was still
+# honestly completing stage two with one Colossus down. Keep the two-boss
+# route assertion unchanged and extend only the setup envelope.
 # This is an exit-routing fixture. Use the coarse tester assist so surviving
 # two colossal bosses is only its setup, not an accidental Normal-balance
 # requirement.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=460 \
-  QUINTRA_BALANCE_FRAMES=36000 QUINTRA_BALANCE_HOST_TIMEOUT=1200 \
+  QUINTRA_BALANCE_FRAMES=70000 QUINTRA_BALANCE_HOST_TIMEOUT=1200 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

@@ -65,7 +65,7 @@ def main():
             pb.memory[TM + i] = 1
         lancer = EN
         pb.memory[lancer] = ENT_ENEMY
-        pb.memory[lancer + 1] = 3
+        pb.memory[lancer + 1] = 7
         put_fix8(pb, lancer + 2, 64)
         put_fix8(pb, lancer + 6, 64)
         pb.memory[lancer + 12] = SPR_FROST_LANCER

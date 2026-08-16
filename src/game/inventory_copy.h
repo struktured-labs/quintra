@@ -7,5 +7,6 @@
 // banked text would leave the string inaccessible after the trampoline
 // restores the Pack screen's bank.
 void inventory_write_weapon_tip(u8 index) BANKED;
+void inventory_write_current_goal(void) BANKED;
 
 #endif

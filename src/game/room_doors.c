@@ -42,17 +42,22 @@ void room_unseal_doors(void) BANKED {
     wait_vbl_done();
     {
         u8 door = BGT_DOOR, attr = BGPAL_DOOR;
-        if (cleared_boss) {
-            VBK_REG = 0;
-            for (dir = 0; dir < 4; ++dir) {
-                if (dir == DIR_E && room_world_width > ROOM_VIEW_W_PX)
-                    continue;
-                for (half = 0; half < 2; ++half) {
-                    u8 x = unseal_x(dir, half, ROOM_W - 1);
-                    u8 y = unseal_y(dir, half, ROOM_H - 1);
-                    set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y),
-                        1, 1, &door);
-                }
+        // Locked ordinary exits are rendered with the barred tile while the
+        // logical terrain remains BGT_DOOR. Restore their visible tile as the
+        // latch opens; a palette-only change left an amber portcullis behind.
+        VBK_REG = 0;
+        for (dir = 0; dir < 4; ++dir) {
+            if (!cleared_boss && run_state_dungeon_neighbor(dir) == 0xFF)
+                continue;
+            if (cleared_boss && dir == DIR_E
+                && room_world_width > ROOM_VIEW_W_PX) continue;
+            for (half = 0; half < 2; ++half) {
+                u8 x = unseal_x(dir, half,
+                    cleared_boss ? (ROOM_W - 1) : east);
+                u8 y = unseal_y(dir, half,
+                    cleared_boss ? (ROOM_H - 1) : south);
+                set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y),
+                    1, 1, &door);
             }
         }
         VBK_REG = 1;

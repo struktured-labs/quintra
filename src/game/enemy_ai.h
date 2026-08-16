@@ -21,6 +21,8 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED;
 // shared roster AI, keeping the frequently edited encounter layer within the
 // 16 KiB cartridge-bank budget.
 void boss_motion_tick(entity_t *e) BANKED;
+// Bank-2 feeding half of Verdant's Snake-like Colossus cycle.
+void serpent_feed_tick(entity_t *e) BANKED;
 
 // Bank-6 split/reform behavior for marked Rift Ooze crawler fragments.
 void ooze_fragment_update(entity_t *e, u8 idx) BANKED;
@@ -41,5 +43,8 @@ void spinner_update(entity_t *e, const enemy_def_t *def) BANKED;
 // Bank-6 one-wave reinforcement caller. Its long tell remains interruptible:
 // killing the caller before resolution prevents every escort spawn.
 void rift_cantor_update(entity_t *e, const enemy_def_t *def) BANKED;
+// Bank-2 reachable-space movement for the spent caller. Keeping this beside
+// enemy_try_step avoids spending scarce summoner-bank bytes on four trampolines.
+void enemy_cantor_evade(entity_t *e) BANKED;
 
 #endif

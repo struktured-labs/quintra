@@ -51,9 +51,14 @@ def tick_safe(pb, frames):
         pb.tick()
 
 
+DIRECTOR_ROOM = 8
+
+
 def seed_for(signature):
-    # Stage zero, local room four: (seed_low + room + stage*3) & 7.
-    return 0xD1CE0000 | ((signature - 4) & 7)
+    # Stage zero, ordinary local room eight:
+    # (seed_low + room + stage*3) & 7. Mission roles are seed-dependent now,
+    # so avoid local four, which can correctly become the Deep Warden room.
+    return 0xD1CE0000 | ((signature - DIRECTOR_ROOM) & 7)
 
 
 def trap_contract():
@@ -70,7 +75,7 @@ def trap_contract():
         erase(pb, enemies(pb))
         tick_safe(pb, 4)
         assert pb.memory[SEALED] == 0, "cleared trap did not release doors"
-    generated_room(0, seed_for(2), local_room=4, probe=probe)
+    generated_room(0, seed_for(2), local_room=DIRECTOR_ROOM, probe=probe)
 
 
 def wave_contract():
@@ -86,7 +91,7 @@ def wave_contract():
         erase(pb, enemies(pb))
         tick_safe(pb, 4)
         assert pb.memory[SEALED] == 0, "second wave did not release doors"
-    generated_room(0, seed_for(3), local_room=4, probe=probe)
+    generated_room(0, seed_for(3), local_room=DIRECTOR_ROOM, probe=probe)
 
 
 def elite_contract():
@@ -107,7 +112,7 @@ def elite_contract():
         put16(pb, PL + 11, (pb.memory[chosen + 7] - 9) & 0xFF)
         tick_safe(pb, 8)
         assert not boon_choices(pb), "taking one boon did not retire its sibling"
-    generated_room(0, seed_for(5), local_room=4, probe=probe)
+    generated_room(0, seed_for(5), local_room=DIRECTOR_ROOM, probe=probe)
 
 
 def hold_contract():
@@ -127,7 +132,7 @@ def hold_contract():
         tick_safe(pb, 5)
         assert pb.memory[SEALED] == 0 and len(boon_choices(pb)) == 2, \
             "survival completion did not release a boon choice"
-    generated_room(0, seed_for(6), local_room=4, probe=probe)
+    generated_room(0, seed_for(6), local_room=DIRECTOR_ROOM, probe=probe)
 
 
 def main():

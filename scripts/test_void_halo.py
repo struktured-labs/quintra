@@ -63,6 +63,7 @@ def main():
             pb.memory[TM + i] = 1
         put_fix8(pb, halo + 2, 64)
         put_fix8(pb, halo + 6, 64)
+        pb.memory[halo + 1] |= 4
         pb.memory[halo + 16] = 2   # one measured spinner movement beat
         pb.memory[halo + 18] = 0   # ai_data[1]: fire this update
         pb.memory[halo + 19] = 0   # ai_data[2]: north/south pair

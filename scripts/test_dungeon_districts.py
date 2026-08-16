@@ -266,7 +266,11 @@ def main():
 
     generated_room(
         4, 2064128163, local_room=2,
-        probe=campaign_reach("stage-five Gate east ruin", (26, 5)),
+        # Row five now belongs to the mutable WAX/WANE architecture, so its
+        # old sample can correctly be solid in one Law state. Pin the stable
+        # floor below it; the full-body connectivity assertion still proves
+        # that both halves of the ruin rejoin through the generated gap.
+        probe=campaign_reach("stage-five Gate east ruin", (26, 7)),
     )
     generated_room(
         5, 2064128163, local_room=19,

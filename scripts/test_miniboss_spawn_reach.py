@@ -2,6 +2,7 @@
 """ROM contract: every required Sentinel spawns in the player's component."""
 
 from test_stage_archetypes import EN, PL, ROOM_H, ROOM_W, generated_room, tile
+from quintra_topology import dungeon_size, mission_graph
 
 
 ENTITY_SIZE = 28
@@ -52,17 +53,16 @@ def main():
             f"Sentinel at {(sx, sy)} is outside player component from {start}")
         checked.append((sx, sy))
 
-    # Exercise distinct fixed interior layouts at both required Sentinel
-    # rooms. Local 9 is especially important after dungeon courts became
-    # sustained 31x31 fields: a real west-door arrival starts the champion in
-    # the extension strip, and the compact spawn-component flood must project
-    # that position back onto the shared central seam.
-    for local_room in (3, 9):
-        for seed in range(0x51A70000, 0x51A70010):
+    # The two Warden cells are seed-authored mission roles now; local 15
+    # remains the recurring midpoint Sentinel. Exercise all three required
+    # fights for each graph instead of pinning the former fixed 3/9 layout.
+    for seed in range(0x51A70000, 0x51A70010):
+        graph = mission_graph(dungeon_size(0), seed, 0)
+        for local_room in (graph["warden"], graph["deep_warden"], 15):
             generated_room(0, seed, probe=inspect, local_room=local_room)
 
-    assert len(checked) == 32
-    print(f"[miniboss-spawn-reach] PASS 32 required Sentinel positions={checked}")
+    assert len(checked) == 48
+    print(f"[miniboss-spawn-reach] PASS 48 required Sentinel positions={checked}")
 
 
 if __name__ == "__main__":

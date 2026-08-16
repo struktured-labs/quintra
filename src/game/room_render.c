@@ -79,8 +79,9 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_COLOSSUS_RUNE:
         case BGT_COLOSSUS_MAW:
             return BGPAL_CRYSTAL;
+        case BGT_DOOR_LOCKED:
+            return BGPAL_CRACK;
         case BGT_DOOR:
-            if (room_combat_sealed || room_puzzle_locked) return BGPAL_CRACK;
             if ((y == 0 && room_objective_dir == DIR_N)
                 || (x == ROOM_W - 1 && room_objective_dir == DIR_E)
                 || (y == ROOM_H - 1 && room_objective_dir == DIR_S)
@@ -93,6 +94,28 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
                 return BGPAL_CRACK;
             return BGPAL_FLOOR;
     }
+}
+
+static u8 compact_door_locked(u8 x, u8 y) {
+    u8 dir = DIR_NONE;
+    u8 neighbor;
+    if (!(room_combat_sealed || room_puzzle_locked)) return 0;
+    if (y == 0) dir = DIR_N;
+    else if (x == ROOM_W - 1) dir = DIR_E;
+    else if (y == ROOM_H - 1) dir = DIR_S;
+    else if (x == 0) dir = DIR_W;
+    if (dir == DIR_NONE) return 0;
+    if (run_state.entered_from != DIR_NONE
+        && dir == (u8)((run_state.entered_from + 2) & 3)) return 0;
+    if (!run_state.world_mode) {
+        neighbor = run_state_dungeon_neighbor(dir);
+        if (neighbor != 0xFF) {
+            u8 local = (u8)(neighbor
+                - run_state_stage_start(run_state.bosses_beaten));
+            if (run_state_dungeon_cell_seen(local)) return 0;
+        }
+    }
+    return 1;
 }
 
 void room_draw_tilemap(void) BANKED {
@@ -115,12 +138,16 @@ void room_draw_tilemap(void) BANKED {
         // first boss used the far chamber and its western projection could
         // inherit the sanctuary's stale BG tiles.
         for (y = 0; y < ROOM_H; ++y) {
-            for (x = 0; x < ROOM_W; ++x)
-                tile_row[x] = room_tilemap[y][x];
+            for (x = 0; x < ROOM_W; ++x) {
+                u8 tile = room_tilemap[y][x];
+                tile_row[x] = (tile == BGT_DOOR
+                    && compact_door_locked(x, y))
+                    ? BGT_DOOR_LOCKED : tile;
+            }
             VBK_REG = 0;
             set_bkg_tiles(0, y, ROOM_W, 1, tile_row);
             for (x = 0; x < ROOM_W; ++x)
-                attr_row[x] = render_attr(x, y, room_tilemap[y][x]);
+                attr_row[x] = render_attr(x, y, tile_row[x]);
             VBK_REG = 1;
             set_bkg_tiles(0, y, ROOM_W, 1, attr_row);
         }

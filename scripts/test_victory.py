@@ -125,20 +125,16 @@ def main():
     assert pb.memory[rs + 10] == 0, "endless descent left victory flag latched"
     wait_for_room()
 
-    # Dawn's Verge is not dead postgame lore: results reopen Riftwild screen
-    # zero directly, avoiding a regenerated/clamped final-boss arena. Cross
-    # the authored 0->1->2->6 route and use its gate.
-    assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 0, (
+    # Dawn's Verge is not dead postgame lore: results reopen the third return
+    # of the final regional Riftwild, avoiding a regenerated/clamped boss
+    # arena. That return begins at 13 beside the currently live gate at 12.
+    assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 13, (
         "post-victory descent did not reopen Riftwild "
         f"(room={pb.memory[rs + 1]} world={pb.memory[rs + 17]} "
         f"cell={pb.memory[rs + 18]} screen={pb.memory[screen]})"
     )
-    exit_at(232, 60, clear=False)
-    assert pb.memory[rs + 18] == 1
-    exit_at(232, 60)
-    assert pb.memory[rs + 18] == 2
-    exit_at(72, 232)
-    assert pb.memory[rs + 18] == 6
+    exit_at(0, 60, clear=False)
+    assert pb.memory[rs + 18] == 12
     pb.memory[pl + 9] = 72
     pb.memory[pl + 10] = 0
     pb.memory[pl + 11] = 52
@@ -147,7 +143,7 @@ def main():
         pb.tick()
     assert pb.memory[rs + 17] == 0 \
         and pb.memory[rs + 1] == STAGE_BOSS_ROOM[-1] + 1, (
-        "post-victory Riftwild gate did not reach final town"
+        "post-victory regional Riftwild gate did not reach final town"
     )
     pb.stop(save=False)
 

@@ -150,6 +150,12 @@ void tiles_load_all_enemy_sprites(void) BANKED {
     set_sprite_data(SPR_BRUISER_WARLOCK, 4, sprite_bruiser_warlock);
 }
 
+void tiles_load_cinder_maw_medium_sprite(void) BANKED {
+    // Ember's pool never contains Warlocks, so their four-tile block can
+    // become this narrow middle-scale body without expanding OBJ VRAM.
+    set_sprite_data(SPR_MEDIUM_CINDER_MAW, 4, sprite_medium_cinder_maw);
+}
+
 void tiles_load_dread_bell_sprite(void) BANKED {
     // OBJ VRAM is full. Normal dungeon combat never contains a merchant,
     // so it may safely repurpose the merchant-callout tile. Shop and town
@@ -349,6 +355,7 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_FLOOR,   1, bgt_floor_plain);
     set_bkg_data(BGT_WALL,    1, bgt_wall_brick);
     set_bkg_data(BGT_DOOR,    1, bgt_door_frame);
+    set_bkg_data(BGT_DOOR_LOCKED, 1, bgt_door_locked);
     set_bkg_data(BGT_FLOOR2,  1, bgt_floor_crack);
     set_bkg_data(BGT_FLOOR3,  1, bgt_floor_pebble);
     set_bkg_data(BGT_PILLAR,  1, bgt_pillar);

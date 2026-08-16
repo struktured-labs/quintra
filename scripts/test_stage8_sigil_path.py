@@ -7,7 +7,9 @@ from pyboy import PyBoy
 from test_boss_identity import (
     CAMERA_X, CAMERA_Y, EN, LARGE, PL, RS, TM, WORLD_H, WORLD_W, put16,
 )
-from quintra_topology import STAGE_START, dungeon_direction
+from quintra_topology import (
+    STAGE_START, dungeon_predecessor, dungeon_size, mission_graph,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,15 +42,21 @@ def main():
     for _ in range(60):
         pb.tick()
 
-    # Replay the final stage's local-room-1 -> local-room-2 transaction of the seed that found
-    # the controller stall. Previous eight Sigils exist; only stage eight's
+    # Replay a real edge into the final stage's generated Sigil cell for the
+    # seed that found the controller stall. Previous eight Sigils exist; only stage eight's
     # bit is absent, so the room must publish its final mandatory fixture.
-    put32(pb, RS + 2, 2064128116)
-    pb.memory[RS + 1] = STAGE_START[8] + 1
+    seed = 2064128116
+    graph = mission_graph(dungeon_size(8), seed, 8)
+    target = graph["sigil"]
+    source, direction = dungeon_predecessor(
+        target, dungeon_size(8), seed, 8)
+    put32(pb, RS + 2, seed)
+    pb.memory[RS + 1] = STAGE_START[8] + source
     pb.memory[RS + 11] = 8
     pb.memory[RS + 23] = 0xFF
     pb.memory[RS + 24] = 0x00
     pb.memory[RS + 6] = 0xFF
+    pb.memory[RS + 37] = 0  # regenerate mission record for rewritten seed/stage
     # Local room one is compact; normalize the synthetic predecessor after
     # rewriting only the final-stage counter.
     pb.memory[LARGE] = 0
@@ -58,7 +66,6 @@ def main():
     for i in range(32):
         entity = EN + i * ENTITY_SIZE
         pb.memory[entity] = pb.memory[entity + 1] = 0
-    direction = dungeon_direction(1, 2)
     for tx, ty in {
         0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
         2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
@@ -72,9 +79,9 @@ def main():
     put16(pb, PL + 11, y)
     for _ in range(240):
         pb.tick()
-        if pb.memory[RS + 1] == STAGE_START[8] + 2:
+        if pb.memory[RS + 1] == STAGE_START[8] + target:
             break
-    assert pb.memory[RS + 1] == STAGE_START[8] + 2, \
+    assert pb.memory[RS + 1] == STAGE_START[8] + target, \
         "could not enter final-stage Sigil room"
     for _ in range(60):
         pb.tick()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live-ROM contract: PACK explains every B skill and the full-MP A/B chord."""
+"""Live-ROM contract: the framed visual PACK explains all five hero verbs."""
 import re
 from pathlib import Path
 
@@ -39,20 +39,24 @@ def boot(class_moves):
 
 def main():
     screen = addr("_loop_current_screen")
-    # The B effect owns one indented plain-language line with no second B/ACT
-    # pseudo-binding, and the full-MP chord remains explicit.
+    # The B effect owns one short line, the footer keeps the A+B Spirit chord,
+    # and OBJ icons distinguish A, B, quest, currency, tool, and Oath.
     for class_id in range(5):
         pb = boot(class_id)
         assert pb.memory[screen] == 9, f"class {class_id} did not open PACK"
         row = list(pb.memory[0x9800 + 12 * 32:0x9800 + 12 * 32 + 20])
-        assert row[0] == 0 and any(row[2:]), (
+        assert any(row[2:19]), (
             f"class {class_id} lost its indented B explanation: {row}")
-        assert not any(row[2 + 18:]), (
-            f"class {class_id} B explanation clips the PACK edge: {row}")
-        chord = bytes(pb.memory[0x9800 + 16 * 32:0x9800 + 16 * 32 + 18])
+        chord = bytes(pb.memory[0x9800 + 17 * 32:0x9800 + 17 * 32 + 19])
         assert any(chord), f"class {class_id} lost the full-MP chord tip"
+        icon_tiles = tuple(pb.memory[0xFE00 + sprite * 4 + 2]
+                           for sprite in range(4, 10))
+        assert all(icon_tiles), (
+            f"class {class_id} visual Pack lost semantic icons: {icon_tiles}")
+        if class_id == 0:
+            pb.screen.image.save(ROOT / "tmp" / "pack-visual.png")
         pb.stop(save=False)
-    print("[inventory-action-tip] PASS five B reminders + full-MP A/B chord")
+    print("[inventory-action-tip] PASS framed Pack + six semantic icons + five B reminders")
 
 
 if __name__ == "__main__":

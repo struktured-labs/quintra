@@ -13,10 +13,11 @@ ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 TMP="$(mktemp -d /tmp/quintra-picsean-convergence.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 
-# Living Dungeon directives put meaningful fights on the qualified route;
-# this fixed world now reaches its first giant around frame 15,700.
-QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=18000 \
+# This is a signature-policy setup check, not a pre-boss endurance test.
+# Easy preserves the same B/Will/MP/controller mechanics while keeping the
+# paid-Undertow route alive long enough to observe its first giant response.
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
+  QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=28000 \
   QUINTRA_BALANCE_HOST_TIMEOUT=600 QUINTRA_BALANCE_TRACE_DIR="$TMP/traces" \
   QUINTRA_BALANCE_OUT="$TMP/run.csv" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null

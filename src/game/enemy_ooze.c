@@ -66,6 +66,13 @@ void ooze_fragment_update(entity_t *e, u8 idx) BANKED {
     }
 
     // A lone surviving fragment stays an ordinary small crawler until killed.
-    if ((e->state_timer++ & 3) == 0)
-        enemy_try_step(e, dir8_dx[e->state & 7], dir8_dy[e->state & 7]);
+    // Rotate a blocked heading exactly as the scatter phase does. Ignoring a
+    // failed step left a north-facing fragment at y=8 pressing into the wall
+    // forever; in a seeded Sigil court that stationary two-HP body could own
+    // the final seal while generated cover denied the hero its vertical lane.
+    if ((e->state_timer++ & 3) == 0) {
+        i8 dx = dir8_dx[e->state & 7], dy = dir8_dy[e->state & 7];
+        if (!enemy_try_step(e, dx, dy))
+            e->state = (u8)((e->state + 3) & 7);
+    }
 }

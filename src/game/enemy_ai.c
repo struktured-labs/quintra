@@ -57,6 +57,10 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         // Bruiser tier (orc 4, bomber 6, warlock 8) and the Sentinel
         // mini-boss (1) render 16x16 — give them a bigger hitbox so the
         // larger body is hittable and its contact reach matches its size.
+        } else if (enemy_content_id == ENEMY_CINDER_MAW) {
+            // Narrow 8x13 gameplay body under a 10x15 visible silhouette: a
+            // true intermediate tier, not the bruisers' square 13x13 mass.
+            e->hitbox = (u8)0x8D;
         } else if (enemy_content_id == ENEMY_STONE_SENTINEL || enemy_content_id == ENEMY_ORC
             || enemy_content_id == ENEMY_BOMBER || enemy_content_id == ENEMY_WARLOCK) {
             e->hitbox = (u8)0xDD;
@@ -76,6 +80,13 @@ static u8 ground_navigation_enemy(const entity_t *e) {
     return e->ai_data[0] == ENEMY_HORNET
         || e->ai_data[0] == ENEMY_SKELETON
         || e->ai_data[0] == ENEMY_GLOAM_LEECH
+        // A spent Cantor deliberately retreats from the hero and can become
+        // the last seal target. Its old 6px navigation envelope admitted the
+        // outer eight-pixel floor strip of a scrolling court, but the hero's
+        // 12px feet and cardinal shots cannot enter or align with that strip.
+        // Give its evasive phase the same reachable-space contract as other
+        // persistent ground enemies.
+        || e->ai_data[0] == ENEMY_RIFT_CANTOR
         || e->ai_data[0] == ENEMY_BLUE_CRAWLER;
 }
 
@@ -93,10 +104,11 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 nx = (i16)(FIX8_TO_INT(e->x) + dx);
     i16 ny = (i16)(FIX8_TO_INT(e->y) + dy);
     u8 ground = ground_navigation_enemy(e);
-    i16 ext = ((e->hitbox >> 4) >= 10) ? 14 : 6;
+    i16 ext_x = ((e->hitbox >> 4) >= 10) ? 14 : 6;
+    i16 ext_y = ((e->hitbox & 0x0F) >= 10) ? 14 : 6;
     if (nx < 8 || ny < 8) return 0;
-    if (nx + (ground ? 15 : ext) >= (i16)room_world_width
-        || ny + (ground ? 15 : ext) >= (i16)room_world_height) return 0;
+    if (nx + (ground ? 15 : ext_x) >= (i16)room_world_width
+        || ny + (ground ? 15 : ext_y) >= (i16)room_world_height) return 0;
     if (ground) {
         // This shared cold-path predicate includes both the six feet samples
         // and the full visible faces of pillars/push-blocks. Feet-only enemy
@@ -104,10 +116,10 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
         // into a pocket no champion or cardinal projectile could reach,
         // leaving an otherwise-cleared sealed room permanently locked.
         if (!room_player_position_clear(nx, ny)) return 0;
-    } else if (!room_tile_walkable(room_tile_at_px(nx + 1,   ny + 1))
-        || !room_tile_walkable(room_tile_at_px(nx + ext, ny + 1))
-        || !room_tile_walkable(room_tile_at_px(nx + 1,   ny + ext))
-        || !room_tile_walkable(room_tile_at_px(nx + ext, ny + ext))) return 0;
+    } else if (!room_tile_walkable(room_tile_at_px(nx + 1,     ny + 1))
+        || !room_tile_walkable(room_tile_at_px(nx + ext_x, ny + 1))
+        || !room_tile_walkable(room_tile_at_px(nx + 1,     ny + ext_y))
+        || !room_tile_walkable(room_tile_at_px(nx + ext_x, ny + ext_y))) return 0;
     e->x = FIX8(nx);
     e->y = FIX8(ny);
     return 1;
@@ -445,6 +457,10 @@ static void teleport_tick(entity_t *e, const enemy_def_t *def) {
             e->ai_data[2] = 1;
             fx_spawn(SPR_FX_IMPACT, 2,
                 (i16)FIX8_TO_INT(e->x), (i16)FIX8_TO_INT(e->y), 8);
+            // A vanished Shade must keep ticking its return timer while it is
+            // absent from a scrolling camera sector. Rendering and both
+            // collision sweeps recognize this phase explicitly.
+            e->flags &= (u8)~EF_ON_SCREEN;
             e->x = FIX8(80);
             e->y = FIX8(200);                     // limbo
         }
@@ -466,6 +482,10 @@ static void teleport_tick(entity_t *e, const enemy_def_t *def) {
             e->x = FIX8(nx);
             e->y = FIX8(ny);
             e->ai_data[2] = 0;
+            // The destination is generated around the hero, so materialize
+            // immediately instead of waiting for a camera-sector transition
+            // that may never occur while the player holds a firing lane.
+            e->flags |= EF_ON_SCREEN;
             e->ai_data[7] = 6;                    // materialize shimmer
             fx_spawn(SPR_FX_IMPACT, 2, nx, ny, 8);
             break;
@@ -502,6 +522,17 @@ static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
 
 static void boss_tick(entity_t *e) {
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
+
+    // The Void Lord slowly knits itself back together. One HP every six
+    // seconds is visible in a stalled fight without erasing decisive damage;
+    // its locomotion leaves `vy` free, so save states retain the partial beat.
+    if ((e->ai_data[3] & 1) && e->ai_data[2] == 8) {
+        if (e->hp < e->ai_data[6]) {
+            u8 regen = (u8)e->vy + 1;
+            e->vy = (i8)regen;
+            if (regen >= 180) { e->vy = 0; e->hp++; }
+        } else e->vy = 0;
+    }
 
     // A boss used to turn its below-half enrage into a nearly invisible
     // cadence subtraction.  Give every large encounter one readable second
