@@ -14,6 +14,7 @@ TAIL_COUNT = addr("_serpent_tail_count")
 TAIL_VISIBLE = addr("_serpent_tail_visible")
 TAIL_ACTIVE = addr("_serpent_tail_active")
 HEAD_INDEX = addr("_serpent_head_index")
+ANIM_COUNTER = addr("_entity_anim_counter")
 ENTITY_SIZE = 28
 SPR_BOSS_BIG = 40
 SPR_SHIELD_AURA = 127
@@ -75,7 +76,7 @@ def main():
     # Resolve the four real storm-mote meals. Growth must change only the
     # route-following OBJ length; the background remains ordinary arena art.
     food = ((60, 88), (76, 76), (92, 68), (100, 60))
-    visible_targets = (5, 8, 11, 14)
+    visible_targets = (6, 10, 14, 16)
     lengths = [pb.memory[TAIL_VISIBLE]]
     background_counts = [len(projected_body_tiles(pb))]
     for growth, (food_x, food_y) in enumerate(food):
@@ -94,18 +95,20 @@ def main():
             f"Serpent ignored storm mote {growth + 1}: "
             f"state={pb.memory[boss + 15]} timer={pb.memory[boss + 16]} "
             f"growth={pb.memory[boss + 21]} pos={position(pb, boss)}")
-        for _ in range(160):
+        for _ in range(320):
             pb.memory[PL + 15] = 255
             pb.tick()
             if pb.memory[TAIL_VISIBLE] == visible_targets[growth]:
                 break
         assert pb.memory[TAIL_VISIBLE] == visible_targets[growth], (
             f"meal {growth + 1} did not grow smoothly to "
-            f"{visible_targets[growth]} scales")
+            f"{visible_targets[growth]} scales: visible="
+            f"{pb.memory[TAIL_VISIBLE]} state={pb.memory[boss + 15]} "
+            f"growth={pb.memory[boss + 21]}")
         lengths.append(pb.memory[TAIL_VISIBLE])
         background_counts.append(len(projected_body_tiles(pb)))
-    assert lengths == [2, 5, 8, 11, 14], (
-        f"meals did not expose three real tail scales each: {lengths}")
+    assert lengths == [2, 6, 10, 14, 16], (
+        f"meals did not expose the sixteen-scale body: {lengths}")
     assert background_counts == [0, 0, 0, 0, 0], (
         f"growth leaked back into detached BG tiles: {background_counts}")
 
@@ -129,8 +132,8 @@ def main():
         record_trace_point(x, 36)
     for y in range(44, 109, 8):
         record_trace_point(132, y)
-    trail = tail_points(pb)[:15]
-    assert len(trail) == 15 and pb.memory[TAIL_VISIBLE] == 14
+    trail = tail_points(pb)[:17]
+    assert len(trail) == 17 and pb.memory[TAIL_VISIBLE] == 16
     for previous, current in zip(trail, trail[1:]):
         gap_x = abs(previous[0] - current[0])
         gap_y = abs(previous[1] - current[1])
@@ -139,7 +142,7 @@ def main():
     route_pixels = sum(abs(previous[0] - current[0])
                        + abs(previous[1] - current[1])
                        for previous, current in zip(trail, trail[1:]))
-    assert route_pixels >= 104, (
+    assert route_pixels >= 120, (
         f"full tail no longer occupies an exaggerated route length: {route_pixels}px")
     assert max(y for _, y in trail) - min(y for _, y in trail) >= 35, (
         f"tail did not retain the head's route: {trail}")
@@ -162,6 +165,21 @@ def main():
             break
     assert pb.memory[PL + 2] == 9, (
         f"visible tail did not deal its fair contact damage: hp={pb.memory[PL + 2]}")
+
+    # The maximum-length body alternates between its ordinary ribbon and a
+    # visibly pale storm charge. On the charged beat its aura reaches 13px
+    # from a scale center, turning the whole second coil into moving territory.
+    pb.memory[PL + 15] = pb.memory[PL + 20] = 0
+    pb.memory[PL + 2] = 10
+    put16(pb, PL + 9, touch_x + 5)  # champion center = scale center +13
+    put16(pb, PL + 11, touch_y - 12)
+    for _ in range(6):
+        pb.memory[ANIM_COUNTER] = 0x10
+        pb.tick()
+        if pb.memory[PL + 2] < 10:
+            break
+    assert pb.memory[PL + 2] == 9, (
+        "full-growth pale pulse did not widen the tail's charged danger field")
 
     # Signature warning used to return before tail collision. Pin the champion
     # on a visible scale while half health arms Coil Tempest: the body must hurt
@@ -218,6 +236,9 @@ def main():
 
     # Resolve the advertised square blast, then pin visible rear contraction.
     clear_hostile_projectiles(pb)
+    # Isolate the hood's fixed AOE from the separately proven charged coil.
+    for i in range(pb.memory[TAIL_COUNT]):
+        pb.memory[TAIL_X + i] = pb.memory[TAIL_Y + i] = 0
     put16(pb, boss + 3, 80)
     put16(pb, boss + 7, 48)
     put16(pb, PL + 9, 120)
@@ -261,8 +282,15 @@ def main():
     segment_b = obj_tile_art(SPR_BOSS_BIG + 13)
     assert segment_a != bytes(16) and segment_b != bytes(16)
     assert segment_a != segment_b, "tail scale animation frames are identical"
+    # Renderer contract: hit flashes may change the hood palette but may never
+    # hide it again. This source guard accompanies the live cartridge checks.
+    draw_source = (ROOT / "src/game/enemy_serpent_draw.c").read_text()
+    head_loop = draw_source.split("// A broad cobra head", 1)[1].split(
+        "// Overlapping, spiked scales", 1)[0]
+    assert "move_sprite(oam, 0, 0)" not in head_loop
+    assert "set_sprite_prop(oam, head_pal)" in head_loop
     print(f"[colossal-serpent] PASS connected tail lengths {lengths}, no BG body, "
-          f"{route_pixels}px continuous one-damage body, "
+          f"{route_pixels}px continuous charged body, stable palette-flash hood, "
           f"{hostile}-shot head+tail hell, rings, bounded hood, "
           "AOE + one-scale contraction")
 

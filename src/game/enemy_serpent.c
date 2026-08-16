@@ -52,7 +52,7 @@ void serpent_feed_tick(entity_t *e) BANKED {
     // The last meal finishes expanding one scale at a time before the charge
     // begins; this makes maximum length an event rather than a three-sprite pop.
     if (growth >= 4) {
-        if (serpent_tail_visible < 14) return;
+        if (serpent_tail_visible < 16) return;
         e->state = 1; e->vx = 96; e->vy = 0; e->state_timer = 0;
         room_shake(1, 12); sfx_play(SFX_ROAR);
         return;
@@ -126,7 +126,7 @@ void serpent_motion_tick(entity_t *e) BANKED {
     }
     if (e->state == 2) {
         // The head coils inward while one real rear segment retracts every
-        // five beats. All intermediate lengths are visible: 14,13,...,2.
+        // five beats. All intermediate lengths are visible: 16,15,...,2.
         if (++e->state_timer >= 2) {
             ex = FIX8_TO_INT(e->x); ey = FIX8_TO_INT(e->y);
             e->state_timer = 0;

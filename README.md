@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.3: Barbed Coil](https://github.com/struktured-labs/quintra/releases/download/v0.20.3/quintra.gbc)
+[Download Quintra v0.20.4: Stormcoil](https://github.com/struktured-labs/quintra/releases/download/v0.20.4/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,11 +25,13 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.3**, a focused Colossus-curation milestone.
-Verdant Hollow's articulated Storm Serpent now traces a tightening four-ring
-spiral, stretches a 112-pixel damaging tail through the arena, visibly grows
-and retracts scale by scale, and closes into a compact inner coil. Every
-Colossus also owns a long-warned, screen-shaping signature
+The current cartridge is **v0.20.4**, the final focused Storm Serpent curation
+milestone. Verdant Hollow's articulated Colossus now traces a tightening
+four-ring spiral, drags a 128-pixel damaging second coil through the arena,
+pulses a wider storm-charged danger field at full growth, and visibly retracts
+scale by scale. Its hood now remains continuously visible through feeding and
+damage feedback instead of disappearing on alternating flash frames.
+Every Colossus also owns a long-warned, screen-shaping signature
 attack instead of sharing one generic half-health burst. It
 retains every v0.20.0 system—Will/MAX attacks, nine Oath Arts, physical tools,
 world interactions, dungeon Law, seeded mission graph, regional Riftwild,
@@ -37,6 +39,29 @@ readable Pack/shop interfaces, visible locks, safe retreats, diagonal dashes,
 and distinct reward sounds. Cartridge, boss, asset, smoke, gallery, and
 checkpoint contracts pass; the stricter all-class endurance target listed
 under release status remains open before show-build sign-off.
+
+### v0.20.4 — Stormcoil
+
+The Storm Serpent now grows 2→6→10→14→16 connected scales. Eight-pixel route
+sampling makes that sixteen-scale body occupy 128 route pixels: the complete
+inner loop plus a substantial second coil crossing the previous ring. The
+allocation deliberately stops at sixteen so the 12-sprite cobra hood and body
+still leave exactly eight hardware object slots for Coil Tempest's complete
+eight-shot storm.
+
+At maximum growth, the whole tail alternates between its ordinary contact
+ribbon and a pale, visibly charged danger field. The charged beat widens each
+scale's combined contact reach from ten to fourteen pixels while preserving
+one-damage hits, 24 frames of grace, shield interaction, and passability. That
+makes the second coil active territory without turning it into a softlock wall.
+
+The apparent hood flicker was partly exaggerated by GIF sampling but was also
+real cartridge behavior: feeding and damage feedback parked all twelve hood
+sprites off-screen on alternating flash frames. Stormcoil replaces that
+disappearance with a lightning-pale palette flash while keeping every hood
+sprite positioned. Live-ROM coverage now proves the five growth lengths, 128
+connected route pixels, the charged outer contact edge, five-shot ordinary
+bullet hell, fixed AOE, rear contraction, and the stable palette-flash hood.
 
 ### v0.20.3 — Barbed Coil
 

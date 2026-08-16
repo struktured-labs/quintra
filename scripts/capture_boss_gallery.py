@@ -167,16 +167,30 @@ def main() -> None:
                 for _ in range(240):
                     pyboy.memory[player + 15] = 255
                     pyboy.tick()
-                    if pyboy.memory[serpent_tail_visible] == 14:
+                    if pyboy.memory[serpent_tail_visible] == 16:
                         break
-                assert pyboy.memory[serpent_tail_visible] == 14, \
+                assert pyboy.memory[serpent_tail_visible] == 16, \
                     "gallery Serpent never finished its one-scale growth"
-                # Fill the route history with the final four legs of the
-                # authored tightening spiral. Verdant owns fourteen repeated
-                # OBJ scales that preserve both concentric cardinal turns.
+                # Fill the full history with an inner loop plus a substantial
+                # second coil. Verdant owns sixteen repeated OBJ scales and
+                # every synthetic step preserves their eight-pixel connection.
                 pyboy.memory[giants[0] + 15] = 1
                 pyboy.memory[giants[0] + 10] = 220
-                for y in range(56, 31, -8):
+                for y in range(40, 57, 8):
+                    pyboy.memory[giants[0] + 3] = 120
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = y
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick(4)
+                for x in range(112, 79, -8):
+                    pyboy.memory[giants[0] + 3] = x
+                    pyboy.memory[giants[0] + 4] = 0
+                    pyboy.memory[giants[0] + 7] = 56
+                    pyboy.memory[giants[0] + 8] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick(4)
+                for y in range(48, 31, -8):
                     pyboy.memory[giants[0] + 3] = 80
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = y
@@ -204,17 +218,15 @@ def main() -> None:
                     pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
                     pyboy.tick(4)
-                # Capture the authored hood between warning flashes rather
-                # than letting a short-lived ring hide the face in the static
-                # contact sheet. The animated gallery retains the live pulse.
+                # Capture the authored hood without an FX ring covering the
+                # face. Damage now palette-flashes the hood without hiding it;
+                # the animated gallery retains that live pulse.
                 for slot in range(32):
                     ep = entities + slot * 28
                     if pyboy.memory[ep] == 4:
                         pyboy.memory[ep] = pyboy.memory[ep + 1] = 0
                 pyboy.memory[giants[0] + 10] = 223
-                # A banked tail-contact pass can cross a host LCD boundary.
-                # Hold flash at zero until a complete draw beat lands so the
-                # still never captures the valid body with its hood omitted.
+                # Let a complete banked draw beat land before taking the still.
                 for _ in range(8):
                     pyboy.memory[giants[0] + 24] = 0
                     pyboy.memory[player + 15] = 255
@@ -229,8 +241,8 @@ def main() -> None:
                 )
                 image = pyboy.screen.image.convert("RGB").copy()
             if stage == 1:
-                assert body_tiles == 14, \
-                    f"stage 2 lost its fourteen-segment articulated body: {body_tiles}"
+                assert body_tiles == 16, \
+                    f"stage 2 lost its sixteen-segment articulated body: {body_tiles}"
             else:
                 assert body_tiles >= 36, \
                     f"stage {stage + 1} lost its screen-scale BG body: {body_tiles}"

@@ -55,7 +55,7 @@ u8 room_apply_world_arena(void) BANKED {
         || procgen_current_room_is_large) ? 1 : 0;
     if (serpent_tail_active) {
         u8 oam;
-        for (oam = 4; oam < 30; ++oam) move_sprite(oam, 0, 0);
+        for (oam = 4; oam < 32; ++oam) move_sprite(oam, 0, 0);
     }
     serpent_tail_active = 0;
     serpent_head_index = 0xFF;

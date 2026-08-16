@@ -15,7 +15,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     entity_t *e = &entities[slot];
     u8 sx, sy, pal, flash;
     if (!(e->flags & EF_ACTIVE)) continue;
-    // The route-following Serpent owns fixed OAM 4..22 through its dedicated
+    // The route-following Serpent owns fixed OAM 4..31 through its dedicated
     // renderer. Leaving its head in this generic pass would recreate the old
     // sprite-swapped Colossus and overwrite the articulated body.
     if (serpent_tail_active && slot == serpent_head_index) continue;

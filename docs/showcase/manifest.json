@@ -1,7 +1,7 @@
 {
   "meta": {
-    "version": "v0.20.3",
-    "romSha256": "b5b5c44a39c4ed5e0d02d5286965a26c38abc333c7448a81449c4acc9ccbdb20",
+    "version": "v0.20.4",
+    "romSha256": "2f8158d4ae7df3093f1b562676f8eaf91299d4e71327a037e5f4442ad3cc8584",
     "stageCount": 9,
     "bossCount": 9,
     "monsterCount": 33
@@ -112,7 +112,7 @@
       "id": 2,
       "name": "Storm Serpent",
       "stage": "Verdant Hollow",
-      "description": "A connected storm serpent that eats four motes, grows a damaging 112-pixel fourteen-scale tail, sends storm rings down its body, fires from both ends, charges an AOE, then contracts from the rear.",
+      "description": "A connected storm serpent that eats four motes, drags a damaging 128-pixel sixteen-scale second coil through the arena, pulses a wider charged aura, fires from both ends, charges an AOE, then contracts from the rear.",
       "movement": "Snake trail / feed / AOE",
       "signature": "Coil Tempest",
       "hp": 205,
