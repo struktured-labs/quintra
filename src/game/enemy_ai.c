@@ -534,6 +534,12 @@ static void boss_tick(entity_t *e) {
         } else e->vy = 0;
     }
 
+    // Verdant's articulated body remains a live contact hazard even while
+    // the signature dispatcher freezes ordinary movement and volleys. Keeping
+    // this before the early return closes the former harmless warning phase.
+    if ((e->ai_data[3] & 1) && e->ai_data[2] == 1)
+        serpent_tail_contact();
+
     // The old shared four-shot riftbreak has become nine authored, warned
     // screen-shaping attacks. The banked dispatcher owns its countdown and
     // freezes ordinary movement/volleys until the announced geometry fires.

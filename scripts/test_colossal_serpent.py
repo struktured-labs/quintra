@@ -109,36 +109,50 @@ def main():
     assert background_counts == [0, 0, 0, 0, 0], (
         f"growth leaked back into detached BG tiles: {background_counts}")
 
-    # Lay a synthetic L-shaped motion trace one legal six-pixel sample at a
-    # time. The runtime must preserve that route as a continuous overlapping
+    # Lay a synthetic L-shaped motion trace one legal eight-pixel sample at a
+    # time. The runtime must preserve that route as a continuous edge-connected
     # tail instead of stretching a line between teleports or repainting a map.
     pb.memory[boss + 15] = 1
     pb.memory[boss + 10] = 220
-    for x in range(60, 133, 6):
+    def record_trace_point(x, y):
         put16(pb, boss + 3, x)
-        put16(pb, boss + 7, 36)
-        pb.memory[PL + 15] = 255
-        pb.tick(2)
-    for y in range(42, 109, 6):
-        put16(pb, boss + 3, 132)
         put16(pb, boss + 7, y)
-        pb.memory[PL + 15] = 255
-        pb.tick(2)
+        for _ in range(8):
+            pb.memory[PL + 15] = 255
+            pb.tick()
+            if (pb.memory[TAIL_X] == (x + 12) & 0xFF
+                    and pb.memory[TAIL_Y] == (y + 12) & 0xFF):
+                return
+        raise AssertionError(f"tail sampler missed authored point {(x, y)}")
+
+    for x in range(60, 133, 8):
+        record_trace_point(x, 36)
+    for y in range(44, 109, 8):
+        record_trace_point(132, y)
     trail = tail_points(pb)[:15]
     assert len(trail) == 15 and pb.memory[TAIL_VISIBLE] == 14
     for previous, current in zip(trail, trail[1:]):
         gap_x = abs(previous[0] - current[0])
         gap_y = abs(previous[1] - current[1])
-        assert 1 <= gap_x + gap_y and gap_x <= 6 and gap_y <= 6, (
+        assert 1 <= gap_x + gap_y and gap_x <= 8 and gap_y <= 8, (
             f"tail disconnected at {previous}->{current}")
+    route_pixels = sum(abs(previous[0] - current[0])
+                       + abs(previous[1] - current[1])
+                       for previous, current in zip(trail, trail[1:]))
+    assert route_pixels >= 104, (
+        f"full tail no longer occupies an exaggerated route length: {route_pixels}px")
     assert max(y for _, y in trail) - min(y for _, y in trail) >= 35, (
         f"tail did not retain the head's route: {trail}")
 
-    # The tail is a fair one-damage contact hazard, not just art. It remains
+    # The tail is a one-damage contact hazard, not just art. Its combined
+    # scale/player ribbon is deliberately wider than point contact, but remains
     # passable so curling around the player cannot create a boss-room softlock.
     clear_hostile_projectiles(pb)
     touch_x, touch_y = trail[5]
-    put16(pb, PL + 9, touch_x - 8)
+    # Put the champion at the outer combined-hurtbox edge: center +9px from
+    # the scale, outside the old narrow threshold but inside the visible-body
+    # plus champion-width ribbon.
+    put16(pb, PL + 9, touch_x + 1)
     put16(pb, PL + 11, touch_y - 12)
     pb.memory[PL + 2] = 10
     pb.memory[PL + 15] = pb.memory[PL + 20] = 0
@@ -148,6 +162,26 @@ def main():
             break
     assert pb.memory[PL + 2] == 9, (
         f"visible tail did not deal its fair contact damage: hp={pb.memory[PL + 2]}")
+
+    # Signature warning used to return before tail collision. Pin the champion
+    # on a visible scale while half health arms Coil Tempest: the body must hurt
+    # on that same beat and the warned signature must still begin normally.
+    pb.memory[PL + 15] = pb.memory[PL + 20] = 0
+    pb.memory[PL + 2] = 10
+    put16(pb, PL + 9, touch_x - 8)
+    put16(pb, PL + 11, touch_y - 12)
+    pb.memory[boss + 14] = pb.memory[boss + 23] // 2
+    pb.memory[boss + 20] &= 0x3F
+    for _ in range(6):
+        pb.tick()
+        if pb.memory[boss + 20] & 0x40:
+            break
+    assert pb.memory[boss + 20] & 0x40, "Coil Tempest warning did not arm"
+    assert pb.memory[PL + 2] == 9, (
+        "tail became harmless while the signature dispatcher owned the boss")
+    pb.memory[boss + 14] = pb.memory[boss + 23]
+    pb.memory[boss + 20] = (pb.memory[boss + 20] & 0x3F) | 0x81
+    pb.memory[boss + 18] = 0
 
     # Full length still layers bullet hell over Snake movement. The head fires
     # an aimed three-lane fan while the visible tail tip sheds a mixed-speed
@@ -163,7 +197,7 @@ def main():
     for _ in range(30):
         pb.tick()
         hostile = hostile_count(pb)
-        if hostile:
+        if hostile >= 5:
             break
     assert hostile == 5, f"Serpent lost its head+tail bullet hell: {hostile} shots"
     assert any(pb.memory[EN + i * ENTITY_SIZE] == 4
@@ -228,7 +262,8 @@ def main():
     assert segment_a != bytes(16) and segment_b != bytes(16)
     assert segment_a != segment_b, "tail scale animation frames are identical"
     print(f"[colossal-serpent] PASS connected tail lengths {lengths}, no BG body, "
-          f"one-damage contact, {hostile}-shot head+tail hell, rings, bounded hood, "
+          f"{route_pixels}px continuous one-damage body, "
+          f"{hostile}-shot head+tail hell, rings, bounded hood, "
           "AOE + one-scale contraction")
 
 

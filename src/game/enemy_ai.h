@@ -41,6 +41,7 @@ extern u8 serpent_tail_active;
 extern u8 serpent_head_index;
 void serpent_tail_reset(u8 head_x, u8 head_y) BANKED;
 void serpent_tail_update(entity_t *e) BANKED;
+void serpent_tail_contact(void) BANKED;
 void serpent_draw(void) BANKED;
 
 // Bank-6 split/reform behavior for marked Rift Ooze crawler fragments.

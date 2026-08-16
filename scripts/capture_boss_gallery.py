@@ -176,34 +176,34 @@ def main() -> None:
                 # OBJ scales that preserve both concentric cardinal turns.
                 pyboy.memory[giants[0] + 15] = 1
                 pyboy.memory[giants[0] + 10] = 220
-                for y in range(56, 31, -6):
+                for y in range(56, 31, -8):
                     pyboy.memory[giants[0] + 3] = 80
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = y
                     pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
-                    pyboy.tick(2)
-                for x in range(86, 105, 6):
+                    pyboy.tick(4)
+                for x in range(88, 105, 8):
                     pyboy.memory[giants[0] + 3] = x
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = 32
                     pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
-                    pyboy.tick(2)
-                for y in range(38, 49, 6):
+                    pyboy.tick(4)
+                for y in range(40, 49, 8):
                     pyboy.memory[giants[0] + 3] = 104
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = y
                     pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
-                    pyboy.tick(2)
-                for x in range(98, 87, -6):
+                    pyboy.tick(4)
+                for x in range(96, 87, -8):
                     pyboy.memory[giants[0] + 3] = x
                     pyboy.memory[giants[0] + 4] = 0
                     pyboy.memory[giants[0] + 7] = 48
                     pyboy.memory[giants[0] + 8] = 0
                     pyboy.memory[player + 15] = 255
-                    pyboy.tick(2)
+                    pyboy.tick(4)
                 # Capture the authored hood between warning flashes rather
                 # than letting a short-lived ring hide the face in the static
                 # contact sheet. The animated gallery retains the live pulse.
@@ -211,10 +211,14 @@ def main() -> None:
                     ep = entities + slot * 28
                     if pyboy.memory[ep] == 4:
                         pyboy.memory[ep] = pyboy.memory[ep + 1] = 0
-                pyboy.memory[giants[0] + 24] = 0
                 pyboy.memory[giants[0] + 10] = 223
-                pyboy.memory[player + 15] = 255
-                pyboy.tick()
+                # A banked tail-contact pass can cross a host LCD boundary.
+                # Hold flash at zero until a complete draw beat lands so the
+                # still never captures the valid body with its hood omitted.
+                for _ in range(8):
+                    pyboy.memory[giants[0] + 24] = 0
+                    pyboy.memory[player + 15] = 255
+                    pyboy.tick()
                 body_tiles = pyboy.memory[serpent_tail_visible]
                 selected_frame = 121
                 selected_core = (

@@ -31,9 +31,10 @@ void serpent_tail_update(entity_t *e) BANKED {
         if (serpent_tail_visible < target && !(entity_anim_counter & 3))
             serpent_tail_visible++;
     }
-    // Six-pixel sampling makes adjacent 8x8 scales overlap. Curves remain
-    // visually continuous rather than degenerating into a dotted breadcrumb.
-    if ((u16)(dx + dy) >= 6) {
+    // Eight-pixel sampling stretches fourteen scales across 112 route pixels
+    // while keeping adjacent 8x8 art edge-connected. The inner loop therefore
+    // reaches back into the previous ring instead of collapsing beside the head.
+    if ((u16)(dx + dy) >= 8) {
         for (i = SERPENT_TAIL_POINTS - 1; i != 0; --i) {
             serpent_tail_x[i] = serpent_tail_x[i - 1];
             serpent_tail_y[i] = serpent_tail_y[i - 1];
@@ -42,9 +43,14 @@ void serpent_tail_update(entity_t *e) BANKED {
         serpent_tail_y[0] = cy;
     }
 
-    // The articulated body is a real hazard, but it uses the champion's
-    // ordinary one-damage/iframe contract instead of becoming an impassable
-    // wall that can soft-lock a wide arena.
+}
+
+void serpent_tail_contact(void) BANKED {
+    u8 i, cx, cy, dx, dy;
+    if (!serpent_tail_active) return;
+    // The articulated body is a passable but damaging ribbon. Combining the
+    // scale's four-pixel radius with the champion's centered hurtbox requires
+    // a wider test than point contact; adjacent eight-pixel samples overlap.
     if (player.iframes || player.shield_timer) return;
     cx = (u8)(player.x + 8);
     cy = (u8)(player.y + 12);
@@ -53,11 +59,11 @@ void serpent_tail_update(entity_t *e) BANKED {
             ? (u8)(cx - serpent_tail_x[i]) : (u8)(serpent_tail_x[i] - cx);
         dy = (cy > serpent_tail_y[i])
             ? (u8)(cy - serpent_tail_y[i]) : (u8)(serpent_tail_y[i] - cy);
-        if (dx < 7 && dy < 7) {
+        if (dx < 10 && dy < 10) {
             player.hp = player.hp ? (u8)(player.hp - 1) : 0;
-            player.iframes = 30;
+            player.iframes = 24;
             hud_redraw_hp();
-            room_shake(1, 8);
+            room_shake(1, 10);
             sfx_play(SFX_HURT);
             return;
         }

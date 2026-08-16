@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.2: Coils & Cataclysms](https://github.com/struktured-labs/quintra/releases/download/v0.20.2/quintra.gbc)
+[Download Quintra v0.20.3: Barbed Coil](https://github.com/struktured-labs/quintra/releases/download/v0.20.3/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,10 +25,11 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.2**, a focused Colossus-curation milestone.
+The current cartridge is **v0.20.3**, a focused Colossus-curation milestone.
 Verdant Hollow's articulated Storm Serpent now traces a tightening four-ring
-spiral, visibly grows and retracts scale by scale, and closes into a compact
-inner coil. Every Colossus also owns a long-warned, screen-shaping signature
+spiral, stretches a 112-pixel damaging tail through the arena, visibly grows
+and retracts scale by scale, and closes into a compact inner coil. Every
+Colossus also owns a long-warned, screen-shaping signature
 attack instead of sharing one generic half-health burst. It
 retains every v0.20.0 system—Will/MAX attacks, nine Oath Arts, physical tools,
 world interactions, dungeon Law, seeded mission graph, regional Riftwild,
@@ -36,6 +37,23 @@ readable Pack/shop interfaces, visible locks, safe retreats, diagonal dashes,
 and distinct reward sounds. Cartridge, boss, asset, smoke, gallery, and
 checkpoint contracts pass; the stricter all-class endurance target listed
 under release status remains open before show-build sign-off.
+
+### v0.20.3 — Barbed Coil
+
+The Storm Serpent's fourteen-scale body now samples its traveled route every
+eight pixels instead of six. The same hardware-sprite budget therefore spans
+112 connected route pixels—one-third farther—so the completed inner loop reaches
+back into the previous ring and cuts off substantially more arena space without
+sacrificing its five-shot head-and-tail bullet pattern.
+
+Every visible scale is now a continuous damaging body. The collision ribbon
+combines the scale and champion hurtbox widths, closes the former harmless gaps,
+and deals one damage with 24 frames of grace. It remains active during feeding,
+chase, Coil Tempest's otherwise-frozen 48-beat warning, AOE resolution, and
+contraction. The body stays passable so the enlarged coil cannot imprison the
+champion or create a boss-room softlock. Live-ROM coverage measures at least
+104 occupied route pixels, proves damage at the outer overlap edge, and pins a
+second damage case during the signature warning.
 
 ### v0.20.2 — Coils & Cataclysms
 

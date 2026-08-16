@@ -48,7 +48,7 @@ BOSS_NAMES = (
 )
 BOSS_DESCRIPTIONS = (
     "A screen-scale crystal guardian whose exposed heart jumps between three distant wells.",
-    "A connected storm serpent that eats four motes, grows a route-following fourteen-scale tail, sends storm rings down its body, fires from both ends, charges an AOE, then contracts from the rear.",
+    "A connected storm serpent that eats four motes, grows a damaging 112-pixel fourteen-scale tail, sends storm rings down its body, fires from both ends, charges an AOE, then contracts from the rear.",
     "A furnace beast that breathes in aimed fans, telegraphs a hard lunge, then clenches to recover.",
     "A charged web with a warned flank blink and alternating cardinal and diagonal volleys.",
     "An expanding organism that pulses outward, contracts, advances, and scatters mixed-speed shots.",
