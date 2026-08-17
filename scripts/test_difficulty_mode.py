@@ -88,8 +88,8 @@ def main() -> None:
         pair_count = assert_paired_worlds_match(env)
     finally:
         env.close()
-    assert normal == (14, 4, 1, 14, "normal"), f"Normal balance drifted: {normal}"
-    assert easy == (16, 8, 3, 16, "easy"), f"Easy tester budget drifted: {easy}"
+    assert normal == (14, 2, 1, 14, "normal"), f"Normal balance drifted: {normal}"
+    assert easy == (16, 6, 3, 16, "easy"), f"Easy tester budget drifted: {easy}"
     assert (easy_after_heavy_hit, easy_iframes) == (7, 120), \
         "Easy no longer caps damage and quadruples the post-hit testing window"
     print(f"[difficulty] PASS Normal default + generous Easy tester mode; "

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Live-ROM contracts for the three procedural dungeon puzzle families."""
 
-import itertools
 import re
 from pathlib import Path
 
@@ -140,32 +139,48 @@ def push_seal_contract():
     pb.stop(save=False)
 
 
-def try_rune_order(order):
+def solve_runes(pb, runes):
+    """Discover a deterministic phrase through only its visible lit feedback."""
+    prefix = []
+
+    def lit(rune):
+        x, y = rune
+        return pb.memory[TM + y * 20 + x] == 19
+
+    while pb.memory[LOCKED] and len(prefix) < len(runes):
+        found = None
+        for candidate in runes:
+            if candidate in prefix:
+                continue
+            # A wrong candidate clears every rune. Replay only the known
+            # prefix, exactly as a player following the tones would.
+            if prefix and not all(lit(rune) for rune in prefix):
+                for rune in prefix:
+                    feet_on(pb, *rune)
+                    step_off(pb)
+            feet_on(pb, *candidate)
+            if not pb.memory[LOCKED] or all(lit(rune) for rune in (*prefix, candidate)):
+                found = candidate
+                prefix.append(candidate)
+                step_off(pb)
+                break
+            step_off(pb)
+        assert found is not None, f"visible feedback exposed no next tone after {prefix}"
+    assert not pb.memory[LOCKED], f"discovered phrase did not release seal: {prefix}"
+    return prefix
+
+
+def rune_sequence_contract():
     pb = load(2)
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
     runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
              if pb.memory[TM + y * 20 + x] == 33]
-    assert len(runes) == 3, f"sequence needs three runes, got {runes}"
-    feedback_seen = False
-    for index in order:
-        tx, ty = runes[index]
-        feet_on(pb, tx, ty)
-        feedback_seen |= pb.memory[TM + ty * 20 + tx] == 19
-        step_off(pb)
-    solved = pb.memory[LOCKED] == 0
+    assert len(runes) == 4, f"stage two needs four runes, got {runes}"
+    assert max(x for x, _ in runes) - min(x for x, _ in runes) >= 12
+    assert max(y for _, y in runes) - min(y for _, y in runes) >= 8
+    order = solve_runes(pb, runes)
+    assert len(order) == 4 and len(set(order)) == 4
     pb.stop(save=False)
-    return solved, feedback_seen
-
-
-def rune_sequence_contract():
-    solved_orders = 0
-    feedback = False
-    for order in itertools.permutations(range(3)):
-        solved, seen = try_rune_order(order)
-        solved_orders += int(solved)
-        feedback |= seen
-    assert solved_orders == 1, f"expected one deterministic rune order, got {solved_orders}"
-    assert feedback, "correct rune steps gave no lit-tile feedback"
 
 
 def exit_to(pb, target, stage):
@@ -211,7 +226,7 @@ def late_depth_puzzle_contract():
     fixture_count = sum(
         pb.memory[TM + y * 20 + x] in (25, 33)
         for y in range(1, 16) for x in range(1, 19))
-    assert fixture_count >= (1 if pb.memory[KIND] == 1 else 3), \
+    assert fixture_count >= (1 if pb.memory[KIND] == 1 else 5), \
         "late-depth puzzle has no readable fixture"
     if pb.memory[KIND] == 1:
         bx, by = next(
@@ -231,17 +246,8 @@ def late_depth_puzzle_contract():
             (x, y) for y in range(1, 16) for x in range(1, 19)
             if pb.memory[TM + y * 20 + x] == 33
         ]
-        # Every wrong contact resets visibly. Trying all six short orders with
-        # a step-off between plates therefore solves through ordinary input
-        # without peeking at private rune_order state.
-        for order in itertools.permutations(runes):
-            for tx, ty in order:
-                feet_on(pb, tx, ty)
-                step_off(pb)
-                if not pb.memory[LOCKED]:
-                    break
-            if not pb.memory[LOCKED]:
-                break
+        assert len(runes) == 5, f"stage three Waystone needs five runes: {runes}"
+        solve_runes(pb, runes)
     assert pb.memory[LOCKED] == 0, "generated Waystone could not be solved"
     assert pb.memory[RS + 27] & (1 << 7), \
         "Waystone solve did not persist its stable route bit"

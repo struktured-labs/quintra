@@ -10,7 +10,7 @@ pub const CLAW_COMBO: Item = Item {
     description: "D-pad stab; neutral slash; hold Max Strike.",
     kind: ItemKind::Weapon {
         fire_rate:  24,    // deliberate no-upgrade cadence; run-earned SPD accelerates it
-        damage:     2,
+        damage:     1,
         projectile: ProjectileKind::Spike,
         mp_cost:    0,
     },

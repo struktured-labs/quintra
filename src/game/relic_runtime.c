@@ -22,11 +22,16 @@ static u8 echo_attack_count;
 void projectile_sync_player_relics(void) BANKED {
     u8 i;
     g_player_ricochet = 0;
+    g_player_attack_traits = 0;
     for (i = 0; i < INVENTORY_SLOTS; ++i) {
-        if (player.inventory[i] == ITEM_ID_RICOCHET_RUNE) {
-            g_player_ricochet = 1;
-            return;
-        }
+        u8 id = player.inventory[i];
+        if (id == ITEM_ID_RICOCHET_RUNE) g_player_ricochet = 1;
+        else if (id == ITEM_ID_POWER_STONE)
+            g_player_attack_traits |= ATTACK_TRAIT_POWER;
+        else if (id == ITEM_ID_SWIFT_FANG)
+            g_player_attack_traits |= ATTACK_TRAIT_SWIFT;
+        else if (id == ITEM_ID_BLOOD_SIGIL)
+            g_player_attack_traits |= ATTACK_TRAIT_BLOOD;
     }
 }
 

@@ -9,6 +9,12 @@ local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local EN = tonumber(os.getenv("QUINTRA_EN_ADDR") or "0") or 0
 local DUMP_ENTITIES = os.getenv("QUINTRA_REPLAY_DUMP_ENTITIES") == "1"
 local FRAME_LIMIT = tonumber(os.getenv("QUINTRA_REPLAY_FRAME_LIMIT") or "")
+-- Resume a long trace from a native emulator checkpoint captured at this
+-- absolute trace frame. Rows before the checkpoint are consumed logically,
+-- not emulated a second time; a partially overlapping RLE row starts at its
+-- remaining input beat. This keeps late-stage controller regressions cheap to
+-- reproduce without changing cartridge state or trace semantics.
+local START_FRAME = tonumber(os.getenv("QUINTRA_REPLAY_START_FRAME") or "0") or 0
 local STATE_OUT = os.getenv("QUINTRA_REPLAY_STATE_OUT")
 
 local expected, rows = {}, {}
@@ -23,14 +29,20 @@ for line in io.lines(TRACE) do
 end
 assert(expected.frames and #rows > 0, "trace has no outcome or inputs")
 
-local frames = 0
+local frames = START_FRAME
+local trace_cursor = 0
 for _, row in ipairs(rows) do
-    if FRAME_LIMIT and frames >= FRAME_LIMIT then break end
-    emu:setKeys(row[2])
-    for _ = 1, row[1] do
+    local row_start, row_end = trace_cursor, trace_cursor + row[1]
+    trace_cursor = row_end
+    if row_end > START_FRAME then
         if FRAME_LIMIT and frames >= FRAME_LIMIT then break end
-        emu:runFrame()
-        frames = frames + 1
+        emu:setKeys(row[2])
+        local first = START_FRAME > row_start and (START_FRAME - row_start + 1) or 1
+        for _ = first, row[1] do
+            if FRAME_LIMIT and frames >= FRAME_LIMIT then break end
+            emu:runFrame()
+            frames = frames + 1
+        end
     end
 end
 emu:setKeys(0)
@@ -73,9 +85,11 @@ if DUMP_ENTITIES and EN ~= 0 then
         local p = EN + slot * 28
         if emu:read8(p + 1) % 2 == 1 then
             out:write(string.format(
-                "ENTITY slot=%d type=%d kind=%d flags=%d x=%d y=%d aux=%d\n",
+                "ENTITY slot=%d type=%d kind=%d flags=%d x=%d y=%d hp=%d state=%d timer=%d aux=%d ai6=%d\n",
                 slot, emu:read8(p), emu:read8(p + 17), emu:read8(p + 1),
-                emu:read8(p + 3), emu:read8(p + 7), emu:read8(p + 18)))
+                emu:read8(p + 3), emu:read8(p + 7), emu:read8(p + 14),
+                emu:read8(p + 15), emu:read8(p + 16), emu:read8(p + 18),
+                emu:read8(p + 23)))
         end
     end
 end

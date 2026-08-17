@@ -12,15 +12,15 @@ pub const WOLFKIN: Class = Class {
     starter_weapon: ITEM_CLAW_COMBO,
     signature_active: ITEM_HOWL,
     passive_perk:  PERK_MOVE_SPEED_PLUS_20,
-    // Claw Combo requires sustained body-range contact. Seven hearts and a
-    // four-ATK Fang Stab give the dedicated melee champion one real recovery
-    // beat to finish a close boss exchange; Sauran remains the tank through
-    // higher DEF and its projectile-breaking Stoneskin, while Vespine retains
-    // the faster, harder-hitting fragile pressure role.
+    // Fang Forms owns reach and two-body lane control, not a hidden ranged-
+    // damage premium. The old four-ATK opener combined with its fire affinity
+    // for nine damage and literally one-tapped several 8-HP early creatures.
+    // Two ATK keeps the dedicated melee vessel durable and spatially strong
+    // while asking for two or three committed contacts on an opening body.
     base_stats: BaseStats {
         hp_max: 14,  // 7 hearts
         mp_max: 4,
-        atk:    4,
+        atk:    2,
         def:    1,
         spd:    6,
     },

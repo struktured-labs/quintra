@@ -10,6 +10,9 @@ enum {
     ENCOUNTER_WAVE,
     ENCOUNTER_ELITE,
     ENCOUNTER_HOLD,
+    // Ember's authored furnace owns the room's existing director update
+    // slot, avoiding any new branch in every ordinary 60 Hz room tick.
+    ENCOUNTER_FURNACE,
 };
 
 // Runtime-only room identity. Directives are deterministic first-visit

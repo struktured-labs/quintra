@@ -65,7 +65,11 @@ static void cinder_move_member(u8 i, u8 x, u8 y, u8 speed) {
 static void cinder_hurt_player(void) {
     if (player.iframes || player.shield_timer) return;
     player.hp = player.hp ? (u8)(player.hp - 1) : 0;
-    player.iframes = RUN_IS_EASY() ? 60 : 36;
+    // Easy is the deep-content inspection mode. Cinder's overlapping pack,
+    // persistent brands, and ordinary bullet field all share this one damage
+    // epoch, so give testers a full 2.5-second read without changing Normal's
+    // authored 36-frame pressure or removing any pattern.
+    player.iframes = RUN_IS_EASY() ? 150 : 36;
     hud_redraw_hp();
     room_shake(1, 8);
     sfx_play(SFX_HURT);
@@ -329,7 +333,10 @@ static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
         return;
     }
 
-    cinder_damage_open = cinder_timer >= 140;
+    // Normal keeps its brief 44-frame vent. Easy is the hands-on inspection
+    // mode: the same formation and attacks play, but the peel becomes
+    // targetable earlier so a tester can actually progress to later stages.
+    cinder_damage_open = cinder_timer >= (RUN_IS_EASY() ? 80 : 140);
     switch (cinder_pattern) {
         case 0: cinder_wheel_tick(2, damage); break;
         case 1: cinder_press_tick(damage); break;
@@ -341,8 +348,19 @@ static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
     // wide-arena scroll can never place the only punish window off-screen.
     if (cinder_timer >= 120) {
         u8 vulnerable = (u8)(cinder_pack_alive - 1);
-        i16 target_x = player.x < 112 ? (i16)player.x + 40 : (i16)player.x - 40;
-        i16 target_y = player.y < 64 ? (i16)player.y + 28 : (i16)player.y - 28;
+        // Primary weapons own cardinal lanes. The old 40x28 diagonal follow
+        // point made the bright vent continuously evade those lanes unless a
+        // player happened to pin it against an arena boundary. Alternate a
+        // horizontal peel and a vertical peel by formation: positioning is
+        // still required, but the announced recovery is genuinely hittable.
+        i16 target_x = player.x;
+        i16 target_y = player.y;
+        if (cinder_pattern & 1)
+            target_y = player.y < 64
+                ? (i16)player.y + 40 : (i16)player.y - 40;
+        else
+            target_x = player.x < 112
+                ? (i16)player.x + 48 : (i16)player.x - 48;
         if (target_x < 8) target_x = 8;
         if (target_x > 200) target_x = 200;
         if (target_y < 16) target_y = 16;
@@ -433,7 +451,7 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
 static void cinder_rex_tick(entity_t *e, u8 damage) {
     u8 i;
     if (cinder_timer == 0) cinder_rex_begin(e);
-    cinder_damage_open = cinder_timer >= 112;
+    cinder_damage_open = cinder_timer >= (RUN_IS_EASY() ? 64 : 112);
     e->state = (u8)(4 + cinder_pattern);
     switch (cinder_pattern) {
         case 0: // Furnace Breath: two broad walls with different approach.

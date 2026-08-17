@@ -143,7 +143,7 @@ def main():
         11: "B 8 SHOTS BRIEF WARD",
         12: "TRAIT FAST MOVEMENT",
         14: "HEALTH 14 MAGIC 4",
-        15: "ATTACK 4 ARMOR 1",
+        15: "ATTACK 2 ARMOR 1",
         16: "SPEED 6 SEL>EASY",
     }
     for row, label in class_rows.items():

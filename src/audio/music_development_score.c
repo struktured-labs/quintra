@@ -29,15 +29,15 @@ const u8 stage_development_melody[MUSIC_STAGE_COUNT][64] = {
         T_D5,T_E5,T_FS5,T_HOLD, T_A5,T_G5,T_REST,T_E5,
         T_C5,T_HOLD,T_G5,T_C6, T_B5,T_A5,T_HOLD,T_REST,
     },
-    { // Ember Depths — flare, running fire, ash hush, rekindling
-        T_C6,T_HOLD,T_E5,T_A5, T_D6,T_C6,T_A5,T_G5,
-        T_F5,T_A5,T_C6,T_E6, T_D6,T_C6,T_A5,T_REST,
-        T_E5,T_E5,T_G5,T_A5, T_C6,T_AS5,T_A5,T_G5,
-        T_F5,T_E5,T_D5,T_E5, T_G5,T_A5,T_REST,T_REST,
+    { // Ember Depths — bellows, running fire, ash hush, rekindling
+        T_C6,T_HOLD,T_REST,T_A5, T_F5,T_HOLD,T_E5,T_REST,
+        T_D5,T_F5,T_A5,T_HOLD, T_G5,T_E5,T_D5,T_REST,
+        T_E5,T_A5,T_AS5,T_C6, T_A5,T_G5,T_F5,T_E5,
+        T_D5,T_REST,T_C5,T_D5, T_E5,T_HOLD,T_REST,T_REST,
         T_A5,T_HOLD,T_E5,T_REST, T_F5,T_HOLD,T_C5,T_REST,
-        T_D5,T_F5,T_A5,T_REST, T_G5,T_E5,T_D5,T_REST,
-        T_C5,T_REST,T_E5,T_G5, T_A5,T_REST,T_AS5,T_A5,
-        T_F5,T_E5,T_REST,T_C5, T_E5,T_HOLD,T_E5,T_REST,
+        T_D5,T_HOLD,T_REST,T_F5, T_E5,T_C5,T_HOLD,T_REST,
+        T_C5,T_REST,T_E5,T_G5, T_A5,T_HOLD,T_AS5,T_REST,
+        T_G5,T_F5,T_E5,T_C5, T_D5,T_HOLD,T_A5,T_REST,
     },
     { // Frost Vault — thawing bell, prismatic run, whiteout, stillness
         T_D6,T_HOLD,T_B5,T_G5, T_E6,T_HOLD,T_CS6,T_A5,
@@ -223,7 +223,7 @@ const u8 boss_development_bass[MUSIC_STAGE_COUNT][16] = {
 const u8 stage_forms[MUSIC_STAGE_COUNT][MUSIC_FORM_SECTIONS] = {
     { 0,0,1,0, 2,1,3,0, 1,2,3,1, 4,5,4,6, 5,6,7,4, 2,5,3,6, 0,2,1,3, 6,7,1,0 },
     { 0,1,0,1, 2,0,3,1, 0,2,1,3, 4,4,5,6, 5,7,6,4, 1,5,2,7, 0,2,1,3, 7,6,1,0 },
-    { 0,0,2,1, 0,2,3,1, 2,0,3,2, 4,5,6,4, 7,5,6,7, 2,4,3,6, 0,1,2,3, 7,5,1,0 },
+    { 0,1,2,0, 3,1,0,2, 4,0,5,3, 6,4,2,7, 5,6,1,4, 7,3,5,2, 0,4,1,6, 7,5,3,0 },
     { 0,1,0,2, 1,0,3,1, 0,2,1,3, 4,6,5,4, 6,7,5,6, 1,4,2,7, 0,2,3,1, 7,5,1,0 },
     { 0,0,1,2, 0,1,3,2, 1,0,2,3, 4,5,4,7, 6,5,7,4, 2,6,1,5, 0,2,3,1, 6,7,1,0 },
     { 0,1,1,0, 2,0,3,1, 1,2,0,3, 4,6,5,7, 4,5,7,6, 2,4,3,5, 0,1,2,3, 7,6,1,0 },

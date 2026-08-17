@@ -141,6 +141,7 @@ SEALED = tonumber(os.getenv("QUINTRA_SEALED_ADDR") or "0") or 0
 -- fixtures through ordinary D-pad input. These addresses are never written.
 PUZZLE_KIND = tonumber(os.getenv("QUINTRA_PUZZLE_KIND_ADDR") or "0") or 0
 PUZZLE_LOCKED = tonumber(os.getenv("QUINTRA_PUZZLE_LOCKED_ADDR") or "0") or 0
+CINDER_OPEN = tonumber(os.getenv("QUINTRA_CINDER_OPEN_ADDR") or "0") or 0
 local CLASS = tonumber(os.getenv("QUINTRA_BOT_CLASS") or "0") or 0
 local RUN = tonumber(os.getenv("QUINTRA_BOT_RUN") or "0") or 0
 local BOOT_EXTRA = tonumber(os.getenv("QUINTRA_BOT_BOOT_EXTRA") or "0") or 0
@@ -572,7 +573,13 @@ function enemy_target(px, py, preferred_kind)
                     pattern=emu:read8(p + 19),
                     collapse=emu:read8(p + 21),
                     safe_slot=emu:read8(p + 22),
+                    -- Cinder Rex deliberately clears EF_ON_SCREEN while its
+                    -- furnace armor is closed; that bit is targetability for
+                    -- this boss, not camera sleep. Treating it like a distant
+                    -- streamed enemy made the pilot charge into all five
+                    -- bodies throughout every armored formation.
                     asleep=streamed_court and not visible
+                        and not (kind == 1 and emu:read8(p + 19) == 2)
                 }
                 -- Wide Riftwild courts stream entities with the camera. Fight
                 -- an awake body before choosing a nearer off-camera sleeper;
@@ -1620,6 +1627,27 @@ end
 -- a floor rune, so the combat helper's "any cardinal firing lane" endpoint is
 -- intentionally too loose here.
 local body_goal_pixel_route = nil
+
+-- Accepted runes change from BGT_SWITCH to ordinary-looking crystal floor.
+-- Tile-only path avoidance therefore forgets where the earlier notes were
+-- and a long five-note route can walk back across an accepted rune, which is
+-- correctly treated by the cartridge as a wrong note.  Mirror only the
+-- visible fixture coordinates here so the controller walks around every
+-- non-target rune regardless of its current colour/state.
+function puzzle_rune_fixture_at(tx, ty)
+    if PUZZLE_KIND == 0 or emu:read8(PUZZLE_KIND) ~= 2 then return false end
+    if emu:read8(RS + 11) == 0 then
+        return (tx == 5 and ty == 8)
+            or (tx == 10 and ty == 5)
+            or (tx == 14 and ty == 10)
+    end
+    return (tx == 3 and ty == 4)
+        or (tx == 16 and ty == 4)
+        or (tx == 4 and ty == 12)
+        or (tx == 15 and ty == 12)
+        or (tx == 10 and ty == 8)
+end
+
 function exact_body_goal_step(px, py, goal_x, goal_y)
     local stride = QUINTRA_ARENA_W
     local max_player_x = QUINTRA_ARENA_W - 16
@@ -1662,7 +1690,7 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
             local next_key = ny * stride + nx
             local feet_tx = math.floor((nx + 8) / 8)
             local feet_ty = math.floor((ny + 12) / 8)
-            local crosses_other_rune = tile_at_px(nx + 8, ny + 12) == 33
+            local crosses_other_rune = puzzle_rune_fixture_at(feet_tx, feet_ty)
                 and (feet_tx ~= start_feet_tx or feet_ty ~= start_feet_ty)
                 and (math.abs(nx - goal_x) > 1 or math.abs(ny - goal_y) > 1)
             if nx >= 0 and nx <= max_player_x and ny >= 0 and ny <= max_player_y
@@ -1701,6 +1729,11 @@ function body_goal_step(px, py, goal_x, goal_y)
     -- This preserves exact cairn/rune contact while avoiding a full-field
     -- 60k-position BFS merely to walk in from a distant doorway.
     if (QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136)
+        -- Five-note district phrases can place an unsolved center rune on the
+        -- coarse shortest path between two distant notes. Crossing it is a
+        -- real wrong input and resets the phrase, so keep the rune-aware
+        -- pixel route across the whole field for this one authored role.
+        and not (PUZZLE_KIND ~= 0 and emu:read8(PUZZLE_KIND) == 2)
         and math.abs(px - goal_x) + math.abs(py - goal_y) > 40 then
         local fallback = math.abs(px - goal_x) >= math.abs(py - goal_y)
             and (px < goal_x and KEY_RIGHT or KEY_LEFT)
@@ -1801,7 +1834,7 @@ end
 
 -- Solve every authored non-combat room from its visible fixture. The policy
 -- has no puzzle-state shortcut: it walks to the cairn and pushes it, follows
--- the seed-stable three-rune order one tile at a time, and touches the phase
+-- the seed-stable stage-length rune order one tile at a time, and touches the phase
 -- switch before advancing. Reading KIND/LOCKED merely distinguishes an
 -- intentional puzzle from an empty cleared room.
 function puzzle_controller_step(room, px, py, frame)
@@ -1843,26 +1876,44 @@ function puzzle_controller_step(room, px, py, frame)
         end
         return body_goal_step(px, py, goal_x, goal_y)
     elseif kind == 2 and locked ~= 0 then
-        local orders = {
-            {0, 1, 2}, {0, 2, 1}, {1, 0, 2},
-            {1, 2, 0}, {2, 0, 1}, {2, 1, 0}
-        }
-        local rune_x, rune_y = {5, 10, 14}, {8, 5, 10}
-        local order = orders[(math.floor(puzzle_run_seed(room) / 256) % 6) + 1]
+        local seed = puzzle_run_seed(room)
+        local stage = emu:read8(RS + 11)
+        local rune_count = stage == 0 and 3 or (stage == 1 and 4 or 5)
+        local rune_x, rune_y
+        local order
+        if rune_count == 3 then
+            local orders = {
+                {0, 1, 2}, {0, 2, 1}, {1, 0, 2},
+                {1, 2, 0}, {2, 0, 1}, {2, 1, 0}
+            }
+            rune_x, rune_y = {5, 10, 14}, {8, 5, 10}
+            order = orders[(math.floor(seed / 256) % 6) + 1]
+        else
+            rune_x, rune_y = {3, 16, 4, 15, 10}, {4, 4, 12, 12, 8}
+            order = {}
+            local at = (seed % 256) % rune_count
+            local step = rune_count == 4
+                and (math.floor(seed / 256) % 2 == 1 and 3 or 1)
+                or (1 + (math.floor(seed / 256) % 4))
+            for i = 1, rune_count do
+                order[i] = at
+                at = (at + step) % rune_count
+            end
+        end
         -- A wrong or high-speed contact visibly resets every rune to tile 33.
         -- Keep the controller's objective synchronized with that public
         -- feedback instead of retaining a stale third-rune index forever.
         -- Conversely, a crystal-colored floor tile proves that the expected
         -- prefix was accepted even if the pilot crossed it between samples.
         local visible_progress = 0
-        for step_index = 1, 3 do
+        for step_index = 1, rune_count do
             local visible_rune = order[step_index] + 1
             local visible_tile = emu:read8(
                 TM + rune_y[visible_rune] * 20 + rune_x[visible_rune])
             if visible_tile == 33 then break end
             visible_progress = step_index
         end
-        local visible_next = math.min(3, visible_progress + 1)
+        local visible_next = math.min(rune_count, visible_progress + 1)
         if puzzle_rune_index ~= visible_next then
             puzzle_rune_index = visible_next
             puzzle_rune_stepoff = false
@@ -1884,7 +1935,7 @@ function puzzle_controller_step(room, px, py, frame)
         elseif puzzle_rune_stepoff
             and (math.floor((px + 8) / 8) ~= tx
                 or math.floor((py + 12) / 8) ~= ty) then
-            puzzle_rune_index = math.min(3, puzzle_rune_index + 1)
+            puzzle_rune_index = math.min(rune_count, puzzle_rune_index + 1)
             puzzle_rune_stepoff = false
             rune = order[puzzle_rune_index] + 1
             tx, ty = rune_x[rune], rune_y[rune]
@@ -2846,7 +2897,27 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
     local retreat = (aim == KEY_UP and KEY_DOWN)
         or (aim == KEY_DOWN and KEY_UP)
         or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
-    if held_style == "lunge" and CLASS == 1 and reach < SAURAN_GIANT_ESCAPE_RANGE then
+    if DEBUG and target.pattern == 2 and frame % 60 == 0 then
+        debug_log(string.format(
+            "BOTCINDER f=%d open=%d pos=%d,%d target=%d,%d hp=%d reach=%d off=%d",
+            frame, CINDER_OPEN ~= 0 and emu:read8(CINDER_OPEN) or 255,
+            px, py, target.x, target.y, target.hp, reach, offaxis))
+    end
+    if target.pattern == 2 and CINDER_OPEN ~= 0
+        and emu:read8(CINDER_OPEN) == 0 then
+        -- The five Kilnbacks and Cinder Rex are furnace armor until their
+        -- bright recovery vent opens. Preserve projectiles/MP and circle the
+        -- formation at a real ranged buffer instead of attacking the hidden
+        -- logical anchor or walking into a rendered body that cannot be hurt.
+        if reach < 72 and can_step(px, py, retreat) then return retreat end
+        return giant_orbit_step(px, py, aim, retreat)
+    elseif target.pattern == 2 and CINDER_OPEN ~= 0 then
+        -- The vent peels toward the champion for a short punish beat. Commit
+        -- the actual held weapon to that moving anchor while it is targetable;
+        -- generic orbit correction used to spend the whole window sidestepping.
+        if offaxis <= 6 and reach <= 112 then return KEY_A + aim end
+        return KEY_A + target_step(px, py, target.x, target.y, aim, 10)
+    elseif held_style == "lunge" and CLASS == 1 and reach < SAURAN_GIANT_ESCAPE_RANGE then
         return retreat
     elseif CLASS == 3 and target.pattern == 4
         and reach < giant_orbit_floor then
@@ -4058,6 +4129,16 @@ while frames < LIMIT do
                     counter_step = counter_cover_dir
                 end
             end
+            if DEBUG and frames % 120 == 0 then
+                debug_log(string.format(
+                    "BOTCOUNTER f=%d room=%d pos=%d,%d target=%d,%d state=%d range=%d off=%d aim=%02X ready=%d exact=%d step=%02X lane=%d",
+                    frames, room, px, py, target.x, target.y, target.state,
+                    counter_range, counter_offaxis, aim,
+                    counter_ready and 1 or 0, counter_exact and 1 or 0,
+                    counter_step,
+                    projectile_lane_clear(px, py, target.x, target.y, aim)
+                        and 1 or 0))
+            end
             if counter_ready then
                 if target.state ~= 0 and CLASS == 3
                     and active_charge == 0 and mp >= 2 then
@@ -4247,6 +4328,31 @@ while frames < LIMIT do
             else
                 recovery_step, recovery_ready = fold_star_pixel_step(
                     room, px, py, target.x, target.y, aim, recovery_range)
+                -- The exact tile/body search deliberately ignores live enemy
+                -- bodies.  At close range its shortest route can therefore
+                -- point straight through the target toward a nominal firing
+                -- cell that the cartridge will never let the champion
+                -- occupy.  Corvin's long Featherbarb recovery aligns on the
+                -- free perpendicular axis first; once the sprites overlap a
+                -- cardinal lane, the ordinary shot test below takes over.
+                -- Keep this to that ranged kit: physical weapon routes and
+                -- the other champions have distinct close-range contracts.
+                local close_dx = target.x - px
+                local close_dy = target.y - py
+                if CLASS == 2 and held_style == "ranged"
+                    and math.max(math.abs(close_dx), math.abs(close_dy)) <= 32 then
+                    local perpendicular = nil
+                    if math.abs(close_dx) >= math.abs(close_dy)
+                        and math.abs(close_dy) > 5 then
+                        perpendicular = close_dy > 0 and KEY_DOWN or KEY_UP
+                    elseif math.abs(close_dx) < math.abs(close_dy)
+                        and math.abs(close_dx) > 5 then
+                        perpendicular = close_dx > 0 and KEY_RIGHT or KEY_LEFT
+                    end
+                    if perpendicular and can_step(px, py, perpendicular) then
+                        recovery_step, recovery_ready = perpendicular, false
+                    end
+                end
                 keys = recovery_ready
                     and (KEY_A + recovery_step) or recovery_step
             end
@@ -4439,7 +4545,21 @@ while frames < LIMIT do
                     -- At <=8px the normal retreat still wins.
                     or (target.kind == 12 and held_style == "claw"
                         and body_range > 8 and body_range <= 16))
+            -- Counter guards already own a close bait/rush/punish policy
+            -- above. A Spear user caught at its 32px generic panic boundary
+            -- can otherwise have that body-valid route replaced by A+retreat,
+            -- firing every thrust away from the shield forever while neither
+            -- body can cross the intervening cover seam.
+            -- Lunge, Flail, and Spear already implement their own correctly
+            -- aimed near-range retreat/fire cadence in the physical-weapon
+            -- branch above. Re-running this generic pass points the weapon in
+            -- the retreat direction and can likewise strand a Cantor behind
+            -- cover. Reserve this fallback for the claw/ranged policies that
+            -- do not own that earlier spacing loop.
             if panic_range > 0 and body_range <= panic_range
+                and held_style ~= "lunge" and held_style ~= "flail"
+                and held_style ~= "spear"
+                and target.kind ~= 18 and target.kind ~= 30
                 and not contact_strike_lane
                 and not leech_needs_lane then
                 local retreat = (aim == KEY_UP and KEY_DOWN)

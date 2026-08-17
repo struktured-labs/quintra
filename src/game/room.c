@@ -28,6 +28,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/sram.h"
+#include "game/stage_event.h"
 #include "game/will.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
@@ -647,6 +648,7 @@ void room_break_crystal(u8 tx, u8 ty) BANKED {
     if (rng_next_u8() < 64) {
         pickup_spawn_mp(FIX8((i16)tx * 8), FIX8((i16)ty * 8));
     }
+    stage_event_on_crystal_break(tx, ty);
 }
 
 void room_break_pot(u8 tx, u8 ty) BANKED {
@@ -1117,6 +1119,7 @@ void room_enter(void) {
     room_spawn_progression_fixture();
     puzzle_prepare_room_role();
     dungeon_law_apply_room(0);
+    stage_event_prepare_room();
     dungeon_director_activate();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
@@ -1656,7 +1659,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     }
                     if (shot != 0xFF) player.will_charge = 0;
                     pickup_echo_primary(dir, dmg, PROJ_SPIKE);
-                    player.fire_cooldown = 24;
+                    player.fire_cooldown = player_fire_delay(w->p0);
                 }
             }
         } else if ((keys & J_A) && !(keys & J_B) && !max_fired) {
@@ -1968,6 +1971,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             room_spawn_progression_fixture();
             puzzle_prepare_room_role();
             dungeon_law_apply_room(0);
+            stage_event_prepare_room();
             dungeon_director_activate();
             boss_threshold_warned = 0;
             room_load_environment_palettes();
@@ -2199,6 +2203,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_spawn_progression_fixture();
                 puzzle_prepare_room_role();
                 dungeon_law_apply_room(0);
+                stage_event_prepare_room();
                 dungeon_director_activate();
                 // A wide-to-wide edge is a continuous district seam. Rotate
                 // the 32x32 hardware map and stream destination lines behind

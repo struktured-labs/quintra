@@ -11,6 +11,11 @@ PROJ_FLAG_CONVERGENCE = 0x01
 
 
 def setup_shot(pb, address, x, y, *, convergence=False):
+    # This harness writes a projectile directly into a slot which may have
+    # belonged to an enemy moments earlier. Mirror entity_spawn()'s zero-fill
+    # so future projectile metadata cannot inherit that body's scratch bytes.
+    for offset in range(28):
+        pb.memory[address + offset] = 0
     pb.memory[address] = ENT_PROJECTILE
     pb.memory[address + 1] = EF_ACTIVE_ALIVE | EF_PLAYER_PROJ
     pb.memory[address + 3] = x
@@ -70,8 +75,12 @@ def main():
     assert ordinary_damage == 56, (
         f"ordinary projectiles changed unexpectedly ({ordinary_damage}, expected 56)"
     )
-    assert ember_damage == 24, (
-        f"Ember Depths Rift Armor should cap eight ordinary hits at 24, got {ember_damage}"
+    # Cinder Rex now replaces generic always-open Rift Armor with its authored
+    # five-body furnace armor. The entry formation is closed, so both modes
+    # must wait for the bright vent recovery instead of damaging its hidden
+    # logical anchor with overlapping burst shots.
+    assert ember_damage == 0, (
+        f"closed Ember furnace armor leaked {ember_damage} damage"
     )
     assert frost_damage == 24, (
         f"Frost Vault Rift Armor should cap eight ordinary hits at 24, got {frost_damage}"
@@ -79,14 +88,15 @@ def main():
     assert void_damage == 24, (
         f"Void Lord Rift Armor should cap eight ordinary hits at 24, got {void_damage}"
     )
-    assert easy_ember_damage == 40, (
-        "Easy tester damage should pierce Ember Rift Armor for five per hit, "
-        f"got {easy_ember_damage}")
+    assert easy_ember_damage == 0, (
+        "Easy mode bypassed Cinder Rex's closed furnace armor, "
+        f"dealing {easy_ember_damage}")
     assert easy_void_damage == 40, (
         "Easy tester damage should pierce Void Rift Armor for five per hit, "
         f"got {easy_void_damage}")
     print("[convergence-cap] PASS chord=28; ordinary-eight=56; "
-          "Normal Rift Armor eight=24; Easy tester eight=40")
+          "closed Cinder armor=0; Normal Rift Armor eight=24; "
+          "Easy tester eight=40")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from quintra_topology import (
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
+BGT_MAP_HERE = 50
 
 
 def addr(name):
@@ -209,7 +210,7 @@ def main():
     assert pb.memory[screen] == 8, "SELECT did not open town compass"
     pb.memory[0xFF4F] = 0
     bg = 0x9800
-    assert pb.memory[bg + 9 * 32 + 9] == 33, \
+    assert pb.memory[bg + 9 * 32 + 9] == BGT_MAP_HERE, \
         f"arrival square lacks current marker (got {pb.memory[bg + 9 * 32 + 9]})"
     assert pb.memory[bg + 9 * 32 + 3] == 37, "craft quarter lacks roof marker"
     assert pb.memory[bg + 9 * 32 + 15] == 22, "market lacks crystal marker"

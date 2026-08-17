@@ -144,6 +144,11 @@ u8 combat_resolve(void) BANKED {
                 entity_kill(i);
                 break;
             }
+            // Fang Forms is a two-body cleave, not two consecutive damage
+            // ticks against one overlapping body. Preserve the projectile so
+            // it can strike a different enemy farther down the same lane.
+            if (entities[i].ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+                && entities[i].ai_data[5] == j) continue;
             if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
                 && (entities[i].ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
                 if (convergence_giant_hits >= 4) {
@@ -195,6 +200,8 @@ u8 combat_resolve(void) BANKED {
             // desperation lends +1 damage — a comeback edge one hit from death.
             if (player.hp <= 2 && player.hp > 0) dmg++;
             if (dmg == 0) dmg = 1;
+            if (entities[i].ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
+                entities[i].ai_data[5] = j;
 
             // A fully built run can otherwise erase the one-byte (255 HP)
             // late bosses in a few rapid-fire beats. Ember Depths onward,

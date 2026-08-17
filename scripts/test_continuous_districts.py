@@ -44,6 +44,8 @@ DISTRICT_LABELS = (
     (77, 91, 91, 86, 76),      # INNER
     (92, 86, 84, 76, 79),      # HEART
 )
+BGT_DOOR = 3
+BGT_DOOR_LOCKED = 126
 
 
 def put16(pb, address, value):
@@ -84,6 +86,15 @@ def assert_rotated_bg_matches(pb, label):
             if (pb.memory[LABEL_TICKS] > 0
                     and y == 1 and 8 <= x < 8 + len(letters)):
                 expected = letters[x - 8]
+            # Combat/puzzle seals are display overlays: collision memory
+            # deliberately remains BGT_DOOR while boundary tiles draw the
+            # barred BGT_DOOR_LOCKED cue. The dedicated door suite owns the
+            # finer entered/seen-neighbour policy; this streamer contract
+            # accepts the overlay only on a real sealed boundary door.
+            if (expected == BGT_DOOR and actual == BGT_DOOR_LOCKED
+                    and (pb.memory[SEALED] or pb.memory[PUZZLE])
+                    and (x in (0, 30) or y in (0, 30))):
+                expected = BGT_DOOR_LOCKED
             if actual != expected:
                 mismatches.append((x, y, actual, expected))
     pb.memory[0xFF4F] = old_vbk

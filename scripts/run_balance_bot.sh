@@ -67,6 +67,7 @@ GH=$(awk '/DEF _g_hitstop / {print $3}' "$NOI")
 SEALED=$(awk '/DEF _room_combat_sealed / {print $3}' "$NOI")
 PUZZLE_KIND=$(awk '/DEF _room_puzzle_kind / {print $3}' "$NOI")
 PUZZLE_LOCKED=$(awk '/DEF _room_puzzle_locked / {print $3}' "$NOI")
+CINDER_OPEN=$(awk '/DEF _cinder_damage_open / {print $3}' "$NOI")
 mkdir -p "$(dirname "$OUT")"
 mkdir -p "$TRIAL_DIR"
 if [ -n "$TRACE_DIR" ]; then mkdir -p "$TRACE_DIR"; fi
@@ -132,6 +133,7 @@ for run in "${RUN_IDS[@]}"; do
         QUINTRA_SEALED_ADDR="$SEALED" \
         QUINTRA_PUZZLE_KIND_ADDR="$PUZZLE_KIND" \
         QUINTRA_PUZZLE_LOCKED_ADDR="$PUZZLE_LOCKED" \
+        QUINTRA_CINDER_OPEN_ADDR="$CINDER_OPEN" \
         QUINTRA_BOT_RUN="$run" QUINTRA_BOT_CLASS="$class" \
         QUINTRA_BOT_RESUME_STATE="$RESUME_STATE" \
         QUINTRA_BOT_TARGET_FRAME="$TARGET_FRAME" \

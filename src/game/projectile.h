@@ -18,9 +18,18 @@ extern u8 g_shot_element;
 // eight physical lanes against ordinary crowds.
 #define PROJ_FLAG_HOWL        0x04
 
+// Cached visible/mechanical mutations granted by ordinary run relics. These
+// make a pickup alter the champion's actual attack rather than only changing
+// an opaque number on the Pack screen.
+#define ATTACK_TRAIT_POWER 0x01
+#define ATTACK_TRAIT_SWIFT 0x02
+#define ATTACK_TRAIT_BLOOD 0x04
+#define PROJ_AUX_WOLFKIN_FANG 0xF1
+
 // Cached from the run inventory so ordinary fire never scans all eight slots.
 // The cache is refreshed on purchase, new-run reset, and SRAM resume.
 extern u8 g_player_ricochet;
+extern u8 g_player_attack_traits;
 void projectile_sync_player_relics(void) BANKED;
 
 // ai_data[4] is visual-only for player projectiles. Physical sword/spear

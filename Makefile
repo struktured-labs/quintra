@@ -142,6 +142,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py
 	$(PYBOY_RUN) scripts/test_stage_scenery.py
+	$(PYBOY_RUN) scripts/test_stage_events.py
 	$(PYBOY_RUN) scripts/test_procgen_variety.py
 	$(PYBOY_RUN) scripts/test_stage_entry_pacing.py
 	uv run --quiet --with pyboy python scripts/test_music.py
@@ -150,6 +151,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_melee_special_guard.py
 	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
+	$(PYBOY_RUN) scripts/test_attack_relics.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py

@@ -13,6 +13,7 @@
 #include "game/procgen.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/stage_event.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -246,7 +247,8 @@ void dungeon_director_refresh_route(void) BANKED {
 
 void dungeon_director_activate(void) BANKED {
     dungeon_director_refresh_route();
-    if (room_encounter_kind != ENCOUNTER_SKIRMISH)
+    if (room_encounter_kind != ENCOUNTER_SKIRMISH
+        && room_encounter_kind != ENCOUNTER_FURNACE)
         room_combat_sealed = 1;
 }
 
@@ -255,7 +257,11 @@ u8 dungeon_director_update(u8 alive) BANKED {
     if (room_encounter_kind == ENCOUNTER_SKIRMISH
         || room_encounter_phase == 2) return alive;
 
-    if (room_encounter_kind == ENCOUNTER_TRAP) {
+    // Furnace chambers are their own room verb. Reuse the director call the
+    // combat loop already pays for, keeping ordinary rooms at video rate.
+    if (room_encounter_kind == ENCOUNTER_FURNACE) {
+        stage_event_tick();
+    } else if (room_encounter_kind == ENCOUNTER_TRAP) {
         if (room_encounter_timer) {
             room_encounter_timer--;
             if (room_encounter_timer == 24) sfx_play(SFX_TICK);

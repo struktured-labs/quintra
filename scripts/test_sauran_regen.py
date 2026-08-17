@@ -79,7 +79,10 @@ def main():
     # otherwise the assertion accidentally includes an unknown partial timer
     # from that normal handoff.
     pb.memory[PLAYER + 2] = 15
-    for _ in range(1800):
+    # SCREEN_ROOM becomes public one dispatcher beat before the banked room
+    # tick owns the frame. Allow that single handoff beat in addition to the
+    # full 1,800 active-room-frame recovery interval.
+    for _ in range(1801):
         tick_safe(pb, 1)
         if pb.memory[PLAYER + 2] == 16:
             break

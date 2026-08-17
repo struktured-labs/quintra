@@ -37,16 +37,19 @@ const u8 s1_bass[16] = {
     T_E3,T_D3,T_C3,T_B3, T_C3,T_D3,T_B3,T_E3,
 };
 
-// Stage 2 — Ember Depths: breathless heat figure and scorched descent.
+// Stage 2 — Ember Depths: low furnace breath, flare, ash, and rekindling.
+// The former seven-frame saw/retrigger line lived almost entirely at the top
+// of the lead register. This version leaves real air between phrases and
+// saves the high flare for contrast instead of making a whole dungeon shrill.
 const u8 s2_melody[64] = {
-    T_A5,T_REST,T_AS5,T_A5, T_E5,T_F5,T_E5,T_D5,
-    T_C5,T_D5,T_F5,T_E5, T_AS5,T_A5,T_HOLD,T_REST,
-    T_A5,T_REST,T_E6,T_D6, T_C6,T_REST,T_A5,T_G5,
-    T_F5,T_AS5,T_REST,T_C6, T_E5,T_HOLD,T_A5,T_REST,
-    T_E5,T_REST,T_A5,T_AS5, T_A5,T_REST,T_F5,T_D5,
-    T_C5,T_D5,T_REST,T_F5, T_G5,T_HOLD,T_E5,T_REST,
-    T_A5,T_REST,T_C6,T_E6, T_D6,T_REST,T_AS5,T_A5,
-    T_G5,T_F5,T_REST,T_D5, T_C5,T_HOLD,T_A5,T_REST,
+    T_A5,T_HOLD,T_E5,T_REST, T_F5,T_HOLD,T_E5,T_REST,
+    T_C5,T_D5,T_E5,T_REST, T_AS5,T_A5,T_HOLD,T_REST,
+    T_C6,T_HOLD,T_A5,T_G5, T_F5,T_REST,T_E5,T_REST,
+    T_D5,T_HOLD,T_C5,T_D5, T_E5,T_HOLD,T_A5,T_REST,
+    T_E5,T_A5,T_AS5,T_C6, T_HOLD,T_A5,T_G5,T_REST,
+    T_F5,T_E5,T_D5,T_C5, T_D5,T_HOLD,T_REST,T_REST,
+    T_A5,T_HOLD,T_REST,T_E5, T_F5,T_HOLD,T_REST,T_C5,
+    T_D5,T_HOLD,T_F5,T_E5, T_C5,T_HOLD,T_A5,T_REST,
 };
 const u8 s2_bass[16] = {
     T_A3,T_AS3,T_F3,T_A3, T_A3,T_G3,T_AS3,T_A3,

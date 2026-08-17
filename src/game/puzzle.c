@@ -29,10 +29,11 @@ static u8 puzzle_block_x;
 static u8 puzzle_block_y;
 static u8 puzzle_contact;
 static u8 rune_progress;
-static u8 rune_order[3];
+static u8 rune_count;
+static u8 rune_order[5];
+static u8 rune_x[5];
+static u8 rune_y[5];
 
-static const u8 rune_x[3] = { 5, 10, 14 };
-static const u8 rune_y[3] = { 8, 5, 10 };
 static const u8 rune_orders[18] = {
     0,1,2, 0,2,1, 1,0,2, 1,2,0, 2,0,1, 2,1,0
 };
@@ -150,11 +151,43 @@ static void prepare_sequence(u32 seed) {
     folded = (u8)(seed >> 8);
     folded += (u16)((u16)(u8)(seed >> 16) << 2);
     folded += (u16)((u16)(u8)(seed >> 24) << 2);
+    // Stage one teaches a short three-tone phrase. Verdant expands it to
+    // four far-apart corners; Ember and every later dungeon demand five,
+    // including a center pivot that creates phone-unlock-like crossings.
+    // The fixtures stay deterministic for a run seed while their growing
+    // spatial span prevents three adjacent taps from solving every stage.
+    rune_count = run_state.bosses_beaten == 0 ? 3
+        : run_state.bosses_beaten == 1 ? 4 : 5;
+    if (rune_count == 3) {
+        rune_x[0] = 5;  rune_y[0] = 8;
+        rune_x[1] = 10; rune_y[1] = 5;
+        rune_x[2] = 14; rune_y[2] = 10;
+    } else {
+        rune_x[0] = 3;  rune_y[0] = 4;
+        rune_x[1] = 16; rune_y[1] = 4;
+        rune_x[2] = 4;  rune_y[2] = 12;
+        rune_x[3] = 15; rune_y[3] = 12;
+        rune_x[4] = 10; rune_y[4] = 8;
+    }
     order = (u8)(folded % 6);
-    for (i = 0; i < 3; ++i) {
+    for (i = 0; i < rune_count; ++i) {
         floor_rect((u8)(rune_x[i] - 1), (u8)(rune_y[i] - 1), 3, 3);
         room_tilemap[rune_y[i]][rune_x[i]] = BGT_SWITCH;
-        rune_order[i] = rune_orders[(u8)(order * 3 + i)];
+    }
+    if (rune_count == 3) {
+        for (i = 0; i < 3; ++i)
+            rune_order[i] = rune_orders[(u8)(order * 3 + i)];
+    } else {
+        u8 at = (u8)seed;
+        u8 step = rune_count == 4
+            ? ((seed & 0x100UL) ? 3 : 1)
+            : (u8)(1 + ((u8)(seed >> 8) & 3));
+        while (at >= rune_count) at = (u8)(at - rune_count);
+        for (i = 0; i < rune_count; ++i) {
+            rune_order[i] = at;
+            at = (u8)(at + step);
+            if (at >= rune_count) at = (u8)(at - rune_count);
+        }
     }
     rune_progress = 0;
     room_puzzle_locked = 1;
@@ -355,7 +388,7 @@ u8 puzzle_chime_reveal(void) BANKED {
 
 static void reset_runes(void) {
     u8 i;
-    for (i = 0; i < 3; ++i)
+    for (i = 0; i < rune_count; ++i)
         set_tile_live(rune_x[i], rune_y[i], BGT_SWITCH, BGPAL_DOOR);
     rune_progress = 0;
 }
@@ -363,7 +396,7 @@ static void reset_runes(void) {
 static u8 update_sequence(u8 tx, u8 ty) {
     u8 i;
     u8 touched = 0xFF;
-    for (i = 0; i < 3; ++i)
+    for (i = 0; i < rune_count; ++i)
         if (tx == rune_x[i] && ty == rune_y[i]) touched = i;
     if (touched == 0xFF) {
         puzzle_contact = 0;
@@ -380,7 +413,7 @@ static u8 update_sequence(u8 tx, u8 ty) {
     set_tile_live(tx, ty, BGT_FLOOR2, BGPAL_CRYSTAL);
     sfx_play_rune(rune_progress);
     rune_progress++;
-    if (rune_progress < 3) return 0;
+    if (rune_progress < rune_count) return 0;
     mark_puzzle_solved();
     return 1;
 }

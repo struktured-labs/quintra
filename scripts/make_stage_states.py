@@ -289,44 +289,40 @@ def solve_entry_puzzle(pyboy: PyBoy, addrs: dict[str, int]) -> None:
         runes = [(x, y) for y in range(1, ROOM_H - 1)
                  for x in range(1, ROOM_W - 1)
                  if pyboy.memory[tilemap + y * ROOM_W + x] == 33]
-        if len(runes) != 3:
-            raise RuntimeError(f"rune puzzle expected three runes, got {runes}")
+        expected = 3 if pyboy.memory[addrs["_run_state"] + 11] == 0 \
+            else 4 if pyboy.memory[addrs["_run_state"] + 11] == 1 else 5
+        if len(runes) != expected:
+            raise RuntimeError(
+                f"rune puzzle expected {expected} runes, got {runes}")
 
         def off() -> None:
             _puzzle_feet_on(pyboy, player, 10, 13)
 
-        first = None
-        for rune in runes:
-            _puzzle_feet_on(pyboy, player, *rune)
-            if pyboy.memory[tilemap + rune[1] * ROOM_W + rune[0]] == 19:
-                first = rune
-                off()
-                break
-            off()
-        if first is None:
-            raise RuntimeError("rune puzzle exposed no valid first tone")
+        prefix = []
 
-        second = None
-        for rune in runes:
-            if rune == first:
-                continue
-            # A failed candidate resets the sequence, so replay the known
-            # first contact before testing the next one.
-            if pyboy.memory[tilemap + first[1] * ROOM_W + first[0]] != 19:
-                _puzzle_feet_on(pyboy, player, *first)
+        def lit(rune: tuple[int, int]) -> bool:
+            return pyboy.memory[tilemap + rune[1] * ROOM_W + rune[0]] == 19
+
+        while pyboy.memory[locked] and len(prefix) < len(runes):
+            found = None
+            for rune in runes:
+                if rune in prefix:
+                    continue
+                if prefix and not all(lit(known) for known in prefix):
+                    for known in prefix:
+                        _puzzle_feet_on(pyboy, player, *known)
+                        off()
+                _puzzle_feet_on(pyboy, player, *rune)
+                if (not pyboy.memory[locked]
+                        or all(lit(known) for known in (*prefix, rune))):
+                    prefix.append(rune)
+                    found = rune
+                    off()
+                    break
                 off()
-            _puzzle_feet_on(pyboy, player, *rune)
-            if (pyboy.memory[tilemap + first[1] * ROOM_W + first[0]] == 19
-                    and pyboy.memory[tilemap + rune[1] * ROOM_W + rune[0]] == 19):
-                second = rune
-                off()
-                break
-            off()
-        if second is None:
-            raise RuntimeError("rune puzzle exposed no valid second tone")
-        third = next(rune for rune in runes if rune not in (first, second))
-        _puzzle_feet_on(pyboy, player, *third)
-        off()
+            if found is None:
+                raise RuntimeError(
+                    f"rune puzzle exposed no valid tone after {prefix}")
         if not pyboy.memory[locked]:
             return
     raise RuntimeError(f"could not solve entry puzzle kind {kind}")

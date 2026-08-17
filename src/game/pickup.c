@@ -15,15 +15,6 @@
 #include "render/tiles.h"
 #include "content.h"
 
-// These are authored content IDs, deliberately separate from the generated
-// `items[]` positions. Shops should keep selling the same relic if a future
-// content entry changes that table's ordering.
-#define ITEM_ID_IRON_HEART   20u
-#define ITEM_ID_POWER_STONE  22u
-#define ITEM_ID_MANA_GEM     25u
-#define ITEM_ID_BLOOD_SIGIL  29u
-#define ITEM_ID_GLASS_FANG   32u
-
 u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
     u8 idx = entity_spawn(ENT_PICKUP);
     if (idx == 0xFF) return 0xFF;
@@ -109,7 +100,7 @@ u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
-static void pickup_spawn_surge(fix8_t x, fix8_t y) {
+void pickup_spawn_surge(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_SURGE, x, y);
     if (idx != 0xFF) {
         entities[idx].sprite_tile = SPR_ITEM_SURGE;
@@ -546,6 +537,7 @@ static u8 apply_item_effects(u8 item_idx) {
         }
     }
     hud_redraw_all();
+    projectile_sync_player_relics();
     room_refresh_player_appearance(1);
     return 1;
 }
@@ -585,7 +577,7 @@ static void grant_special_item(u8 item_id) {
     for (i = 0; i < INVENTORY_SLOTS; ++i) {
         if (player.inventory[i] == 0xFF) {
             player.inventory[i] = item_id;
-            if (item_id == ITEM_ID_RICOCHET_RUNE) g_player_ricochet = 1;
+            projectile_sync_player_relics();
             room_refresh_player_appearance(1);
             return;
         }

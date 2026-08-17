@@ -50,6 +50,13 @@
 #define WARE_FLASK   16  // Moon Flask: surplus heart drops become MP
 
 // Stable content ids used by runtime hooks outside generated content tables.
+#define ITEM_ID_IRON_HEART    20u
+#define ITEM_ID_SPEED_RING    21u
+#define ITEM_ID_POWER_STONE   22u
+#define ITEM_ID_MANA_GEM      25u
+#define ITEM_ID_SWIFT_FANG    27u
+#define ITEM_ID_BLOOD_SIGIL   29u
+#define ITEM_ID_GLASS_FANG    32u
 #define ITEM_ID_PHOENIX_THREAD 33u
 #define ITEM_ID_ECHO_PRISM     34u
 #define ITEM_ID_RICOCHET_RUNE  35u
@@ -93,6 +100,7 @@ u8   pickup_dungeon_ware_price(u8 ware) BANKED;
 
 // Spawn a +1 MP wisp (shattered-crystal drop)
 u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;
+void pickup_spawn_surge(fix8_t x, fix8_t y) BANKED;
 
 // Spawn a permanent town elder who restores HP/MP once per room visit.
 u8   pickup_spawn_villager(fix8_t x, fix8_t y) BANKED;

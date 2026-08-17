@@ -24,8 +24,9 @@ rooms_cleared=$(awk -F, 'NR == 2 { print $7 }' "$OUT")
 max_room=$(awk -F, 'NR == 2 { print $5 }' "$OUT")
 # The expanded opening route includes more non-combat fixtures than its
 # compact predecessor. Reaching room 6 is the authoritative proof that the
-# sealed room-3 escort was defeated; retain a modest clear-count sanity check
-# without encoding the obsolete compact-room total.
-test "${rooms_cleared:-0}" -ge 2
+# sealed room-3 escort was defeated. Wolfkin's corrected three-damage Fang no
+# longer erases a second dense room inside this fixture's fixed time budget;
+# one recorded clear plus room-6 traversal proves the escort was resolved.
+test "${rooms_cleared:-0}" -ge 1
 test "${max_room:-0}" -ge 6
 echo "[miniboss-escorts] PASS escort route reached room=$max_room clears=$rooms_cleared"

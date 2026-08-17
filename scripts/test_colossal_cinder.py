@@ -137,6 +137,11 @@ def main():
     keep_alive(pb, 27)
     assert pb.memory[CINDER_DAMAGE_OPEN] == 1
     assert pb.memory[boss + 1] & 0x04, "open furnace vent is not targetable"
+    vent_x, vent_y = pb.memory[CINDER_X + 4], pb.memory[CINDER_Y + 4]
+    player_x, player_y = pb.memory[PL + 9], pb.memory[PL + 11]
+    assert abs(vent_y - player_y) <= 4 and abs(vent_x - player_x) >= 32, (
+        "Crucible Wheel recovery vent did not peel into a cardinal weapon lane: "
+        f"vent={(vent_x, vent_y)} player={(player_x, player_y)}")
     vent_tiles = oam_tiles(pb)
     assert any(t in (44, 45) for t in vent_tiles), (
         f"open vent pose did not reach OAM: {vent_tiles}; "

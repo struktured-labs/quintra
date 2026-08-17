@@ -72,6 +72,8 @@ def main():
     assert pb.memory[stab[0] + 12] == 122, "stab lost physical arc art"
     assert pb.memory[stab[0] + 16] <= 18, "stab travels like a projectile"
     assert pb.memory[stab[0] + 25] == 0x88, "directed sword no longer covers its blade art"
+    assert pb.memory[stab[0] + 26] == 3, \
+        "normal Wolfkin opener regressed above its three-damage floor"
     # The sword begins at Wolfkin's visible weapon edge instead of inside the
     # old fist silhouette or beyond an unhittable close-range gap. Entity x's
     # integer half is offset +3 from the struct base.
@@ -128,6 +130,42 @@ def main():
         "held Wolfkin combo became a traveling shot stream"
     combo_pb.stop(save=False)
 
+    # One long-lived arc may cleave a second body, but it must never apply its
+    # full damage to the same overlapping target again on the next sweep.
+    hit_pb = boot()
+    clear_entities(hit_pb, entities)
+    clear_room_floor(hit_pb, tilemap)
+    hit_pb.memory[player + 22] = 0
+    hit_pb.memory[player + 42] = 0
+    hit_pb.memory[player + 13] = 1  # FACE_E
+    hit_pb.button_press("a")
+    for _ in range(3):
+        hit_pb.tick()
+    hit_pb.button_release("a")
+    hit_shot = player_projectiles(hit_pb, entities)[0]
+    hit_pb.memory[hit_shot + 10] = hit_pb.memory[hit_shot + 11] = 0
+    shot_x = hit_pb.memory[hit_shot + 3] | (hit_pb.memory[hit_shot + 4] << 8)
+    shot_y = hit_pb.memory[hit_shot + 7] | (hit_pb.memory[hit_shot + 8] << 8)
+    foe = next(entities + i * 28 for i in range(32)
+               if entities + i * 28 != hit_shot)
+    hit_pb.memory[foe] = 2
+    hit_pb.memory[foe + 1] = 0x07
+    hit_pb.memory[foe + 3] = shot_x & 0xFF
+    hit_pb.memory[foe + 4] = shot_x >> 8
+    hit_pb.memory[foe + 7] = shot_y & 0xFF
+    hit_pb.memory[foe + 8] = shot_y >> 8
+    hit_pb.memory[foe + 14] = 8
+    hit_pb.memory[foe + 17] = 2  # Hornet: not weak to Wolfkin fire
+    hit_pb.memory[foe + 25] = 0x88
+    hit_pb.memory[foe + 26] = 1
+    hit_pb.tick()
+    assert hit_pb.memory[foe + 14] == 5, \
+        f"Fang's first ordinary contact was not three damage: {hit_pb.memory[foe + 14]}"
+    hit_pb.tick()
+    assert hit_pb.memory[foe + 14] == 5, \
+        "one Fang arc damaged the same overlapping body twice"
+    hit_pb.stop(save=False)
+
     # A weapon orb replaces A's actual mechanics, not just its name. Wolfkin
     # holding Sauran's Tail Spike must regain that item's normal lunge instead
     # of silently retaining Fang Stab's short arc and missing nearby bodies.
@@ -148,7 +186,7 @@ def main():
         "Wolfkin weapon swap retained Fang Stab's oversized blade hitbox"
     swap_pb.stop(save=False)
     pb.stop(save=False)
-    print("[wolfkin-forms] PASS Fang stab/sweep/held combo and swapped Tail Spike")
+    print("[wolfkin-forms] PASS 3-damage Fang, one-hit/body cleave, forms and weapon swap")
 
 
 if __name__ == "__main__":

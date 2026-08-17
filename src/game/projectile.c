@@ -17,6 +17,7 @@
 // doubles damage when it matches the target's weakness.
 u8 g_shot_element;
 u8 g_player_ricochet;
+u8 g_player_attack_traits;
 
 // Keep the reversal out of projectile_update(). SDCC otherwise expands that
 // dense per-shot function's stack frame from 16 to 25 bytes and spills
@@ -114,6 +115,30 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     // one stone rebound. The marker lives on the projectile, so buying the
     // relic changes all five champions and alternate weapons naturally.
     e->ai_data[3] = g_player_ricochet ? PROJ_FLAG_RICOCHET : 0;
+    // Run relics mutate the actual attack silhouette and travel, not only a
+    // number in the Pack. PowerStone broadens every weapon one pixel per
+    // side; Swift Fang visibly accelerates its trajectory; VampSigil stains
+    // it red to connect the strike with its fifth-kill healing contract.
+    if ((g_player_attack_traits & ATTACK_TRAIT_POWER)
+        && e->hitbox <= 0xAA) e->hitbox = (u8)(e->hitbox + 0x11);
+    if (g_player_attack_traits & ATTACK_TRAIT_SWIFT) {
+        if (e->vx > 0) e->vx++;
+        else if (e->vx < 0) e->vx--;
+        if (e->vy > 0) e->vy++;
+        else if (e->vy < 0) e->vy--;
+        e->palette = 5;
+    }
+    if (g_player_attack_traits & (ATTACK_TRAIT_POWER | ATTACK_TRAIT_BLOOD))
+        e->palette = 4;
+    // A long-lived physical arc used to re-hit one overlapping body on the
+    // next collision sweep, so Fang's nominal two-target cleave silently
+    // became two full hits on the same enemy. Remember its last body slot;
+    // combat still lets the stroke continue into a distinct second target.
+    if (player.class_id == 0 && kind == PROJ_SPIKE
+        && player.starter_weapon == classes[0].starter_weapon) {
+        e->ai_data[5] = 0xFF;
+        e->ai_data[6] = PROJ_AUX_WOLFKIN_FANG;
+    }
     if ((kind == PROJ_SPIKE && player.class_id == 0
             && player.starter_weapon == classes[0].starter_weapon)
         || kind == PROJ_SPEAR) {

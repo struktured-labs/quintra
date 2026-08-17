@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.5: Kilnheart](https://github.com/struktured-labs/quintra/releases/download/v0.20.5/quintra.gbc)
+[Download Quintra v0.20.6: Roots & Bellows](https://github.com/struktured-labs/quintra/releases/download/v0.20.6/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,19 +25,61 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.5**, the focused Ember Colossus curation
-milestone. Five armored Kilnbacks now fight as a changing formation, shed one
-body at each health threshold, converge as burning husks, and forge the
-40-by-16-pixel Cinder Rex. Four pack sequences and four Rex sequences replace
-the former Stage 3 variant of the shared Colossus loop; armor and recovery
-windows make reading the choreography more important than holding fire.
-The release retains Stormcoil's full connected serpent and every v0.20.0
-system—Will/MAX attacks, nine Oath Arts, physical tools, world interactions,
-dungeon Law, seeded mission graph, regional Riftwild, readable Pack/shop
-interfaces, visible locks, safe retreats, diagonal dashes, and distinct reward
-sounds. Cartridge, boss, asset, gallery, and checkpoint contracts cover the new
-encounter; the stricter all-class endurance target listed under release status
-remains open before show-build sign-off.
+The current cartridge is **v0.20.6**, an early-dungeon variety and combat-read
+milestone. Wolfkin's normal Fang now deals three damage instead of six before
+affinity, and one stroke can cleave two bodies but cannot hit the same body on
+successive collision sweeps. Verdant Hollow gains seeded cuttable root networks;
+Ember Depths gains furnace rooms whose marked lanes warn, ignite in a wave,
+cool, and pay a one-time Surge. Rune trials grow from three nearby tones in
+Stage 1 to four widely spread tones in Stage 2 and five from Stage 3 onward.
+PowerStone, Swift Fang, and VampSigil now visibly widen, accelerate, or recolor
+the champion's real attack. Ember's exploration score is a rewritten, less
+shrill 68-second form with a rounded reed voice, lower register, and more air.
+Kilnback recovery vents now peel into real cardinal weapon lanes instead of
+continuously following the hero at an unhittable diagonal; Normal keeps its
+short punish window, while Easy exposes it earlier for deep-stage testing.
+
+The release retains Kilnheart's five-body pack/Cinder Rex encounter,
+Stormcoil's complete connected serpent, and every v0.20.0 system—Will/MAX
+attacks, nine Oath Arts, physical tools, world interactions, dungeon Law,
+seeded mission graph, regional Riftwild, readable Pack/shop interfaces,
+visible locks, safe retreats, diagonal dashes, and distinct reward sounds.
+
+### v0.20.6 — Roots & Bellows
+
+Wolfkin's opening Fang damage is now **1 weapon + 2 ATK = 3**. Fire affinity
+raises that to five against a vulnerable body instead of the former nine, so
+7–10 HP opening creatures require two or three deliberate contacts. His
+64-pixel lane, broad neutral sweep, and two-target cleave remain intact. Each
+arc records the body it struck and cannot apply a second hidden damage tick to
+that same overlap; Swift Fang finally shortens Wolfkin's formerly hard-coded
+combo cadence as its description promises.
+
+Ordinary combat relics now change attacks in the field. **PowerStone** expands
+the projectile/contact box and turns the strike red; **Swift Fang** accelerates
+the attack's travel and turns it gold in addition to improving cadence;
+**VampSigil** visibly stains its strengthened attack red before its existing
+every-fifth-kill heal. These effects apply to the five champions' actual weapon
+geometries rather than replacing them with one generic upgrade shot.
+
+The first three dungeon themes now teach a growing puzzle and biome language.
+Stage 1 keeps a compact three-rune tutorial. Stage 2 spreads four runes across
+the room corners, while Stage 3 onward uses five-tone criss-cross patterns with
+a center pivot. After the opening phrase, one seeded room in each four-cell
+phrase can carry a regional event: Verdant's three cuttable root knots reshape
+lanes and yield a Surge when the network falls; Ember's ten marked furnace
+tiles give a gold warning wave,
+ignite, remain dangerous, then cool into a reward window. Neither event is a
+mandatory lock, and both regenerate deterministically from the run seed.
+
+Ember exploration no longer uses the breathless seven-frame saw line. Its
+eight-section score now runs about 68 seconds on cartridge, favors A-Phrygian's
+lower register and real rests, uses a rounded furnace-reed timbre, and reserves
+upper flares for contrast. Ordinary room transitions retain the current phrase.
+Live-ROM contracts prove the three-damage Fang, one-hit-per-body cleave, three
+attack mutations, 3→4→5 rune curriculum, both seeded room events, the complete
+furnace warn/hot/cool/reward cycle, cardinal Kilnback recovery, music
+identity/timing, and cartridge budget.
 
 ### v0.20.5 — Kilnheart
 

@@ -95,10 +95,20 @@ mod tests {
     }
 
     #[test]
-    fn wolfkin_has_the_melee_damage_floor() {
-        // A physical sword must finish the opening Sentinel's full pattern
-        // without lowering its HP or turning the other champions into copies.
-        assert_eq!(classes::WOLFKIN.base_stats.atk, 4);
+    fn wolfkin_melee_power_is_spatial_not_a_one_shot_floor() {
+        use quintra_content::ItemKind;
+
+        // Fang Forms already reaches through a lane and cleaves two bodies.
+        // Its ordinary opener must not also one-tap the 7-10 HP early roster.
+        assert_eq!(classes::WOLFKIN.base_stats.atk, 2);
+        let r = registry();
+        let fang = r.items.iter()
+            .find(|item| item.id == classes::WOLFKIN.starter_weapon)
+            .expect("registered Fang Forms");
+        let ItemKind::Weapon { damage, .. } = fang.kind else {
+            panic!("Fang Forms is not a weapon");
+        };
+        assert_eq!(damage + classes::WOLFKIN.base_stats.atk, 3);
     }
 
     #[test]

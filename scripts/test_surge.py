@@ -88,7 +88,7 @@ def main():
     # Item-authored base A damages for Wolfkin, Sauran, Corvin, Picsean,
     # Vespine.  Every one receives the shared +1 damage, then its own
     # geometry expression below.  Permanent ATK must never change.
-    base_weapon_damage = (2, 4, 1, 2, 2)
+    base_weapon_damage = (1, 4, 1, 2, 2)
     for class_id in range(5):
         pb = boot_class(class_id, screen, player)
         collect_surge(pb, player, entities, surge_ticks)
@@ -135,7 +135,7 @@ def main():
             pb.button("a")
             for _ in range(3): pb.tick()
             shot = first_player_shot(pb, entities)
-            assert pb.memory[shot + 26] == base_atk + 2, \
+            assert pb.memory[shot + 26] == base_atk + 1, \
                 "expired Surge Spark still boosted damage"
         pb.stop(save=False)
     print("[surge] PASS shared temporary damage + five class-shaped A boons + expiry")

@@ -71,12 +71,12 @@ def assert_menu_palette_contract(pb, button):
     }
     pb.memory[0xFF4F] = 0
     pb.memory[0xFF40] = lcdc
-    # Inventory text is deliberately uniform. The SELECT field map is a
-    # tile-built diagram with five intentional semantic attribute classes:
-    # floor/path plus violet Sigil, cool landmarks, amber Boss, and the
-    # dedicated lime/white player pin. Require the exact set so stale room
-    # attributes cannot leak through.
-    expected = {0} if button == "start" else {0, 2, 3, 4, 7}
+    # The framed Pack deliberately uses four semantic bands: neutral body,
+    # gold headings, blue equipment, and violet quest/tools. The SELECT field
+    # map uses floor/path plus violet Sigil, cool landmarks, amber Boss, and
+    # the dedicated lime/white player pin. Require the exact sets so stale
+    # room attributes cannot leak through either screen.
+    expected = {0, 1, 2, 3} if button == "start" else {0, 2, 3, 4, 7}
     assert attrs == expected, (
         f"{button} menu palette contract changed: expected {expected}, got {attrs}"
     )

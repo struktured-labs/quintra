@@ -18,8 +18,13 @@ def addr(name):
     return int(m.group(1), 16)
 
 
-PLAYER, ENTITIES, SCREEN, TILEMAP = map(
-    addr, ("_player", "_entities", "_loop_current_screen", "_room_tilemap"))
+PLAYER, ENTITIES, SCREEN, TILEMAP, FRAME = map(
+    addr, ("_player", "_entities", "_loop_current_screen", "_room_tilemap",
+           "_loop_frame_counter"))
+
+
+def frame_counter(pb):
+    return pb.memory[FRAME] | (pb.memory[FRAME + 1] << 8)
 
 
 def press(pb, button, held=5, released=6):
@@ -64,14 +69,24 @@ def use_tool(pb, tool_index, item_id):
     pb.memory[PLAYER + 24] = item_id
     press(pb, "start")
     assert pb.memory[SCREEN] == 9, "START did not open Pack"
+    # SCREEN changes before the banked Pack renderer finishes. Wait for the
+    # dispatcher to complete that loop turn so the following A edge is polled
+    # by inventory_tick rather than arriving during its VRAM setup.
+    previous_frame = frame_counter(pb)
+    for _ in range(240):
+        if frame_counter(pb) != previous_frame:
+            break
+        pb.tick()
+    assert frame_counter(pb) != previous_frame, "Pack renderer did not settle"
     for _ in range(tool_index):
         press(pb, "right")
     # Observe the complete Pack->room transaction. Bomb lanes are deliberately
     # brief and can expire before a fixed post-resume sample on a fast host;
     # their peak simultaneous geometry is the actual contract.
     peak_player_shots = 0
+    resume_frame = None
     pb.button_press("a")
-    for frame in range(30):
+    for frame in range(240):
         pb.tick()
         if frame == 4:
             pb.button_release("a")
@@ -79,8 +94,13 @@ def use_tool(pb, tool_index, item_id):
             pb.memory[ENTITIES + i * 28] == 1
             and (pb.memory[ENTITIES + i * 28 + 1] & 0x10)
             for i in range(32)))
+        if pb.memory[SCREEN] == 5 and resume_frame is None:
+            resume_frame = frame_counter(pb)
+        elif resume_frame is not None and frame_counter(pb) != resume_frame:
+            break
     pb.button_release("a")
-    assert pb.memory[SCREEN] == 5, "tool did not return to room"
+    assert pb.memory[SCREEN] == 5, \
+        f"tool did not return to room (screen={pb.memory[SCREEN]})"
     assert pb.memory[PLAYER + 24] == 0xFF, "tool charge was not consumed"
     return peak_player_shots
 

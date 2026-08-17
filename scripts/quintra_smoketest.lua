@@ -564,11 +564,12 @@ shot("09_boss_under_fire")
 assault_boss(80)
 shot("10_boss_mid_fight")
 
--- The Colossus now has a 200-HP introductory pattern window. Keep the smoke
--- runner on its real held-A path long enough to prove the complete reward /
--- Pack / return sequence instead of mistaking the old 760-frame budget for
--- a balance assertion. The loop exits immediately on a real boss death.
-assault_boss(2400)
+-- The Colossus now has a 200-HP introductory pattern window and Wolfkin's
+-- Fang may hit each body only once per swing. Keep the smoke runner on its
+-- real held-A path long enough to prove the complete reward / Pack / return
+-- sequence instead of turning the old overpowered damage cadence into a test
+-- contract. The loop exits immediately on a real boss death.
+assault_boss(4200)
 shot("11_after_long_assault")
 
 -- START opens the Pack screen; START again returns to the live room.
