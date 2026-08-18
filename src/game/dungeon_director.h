@@ -15,6 +15,16 @@ enum {
     ENCOUNTER_FURNACE,
 };
 
+// Procedural room-level roster grammar. Mixed preserves the original
+// independent weighted rolls; the other shapes give an ordinary room a
+// readable species identity without changing its body count or stage pool.
+enum {
+    ROOM_ROSTER_MIXED = 0,
+    ROOM_ROSTER_BROOD,
+    ROOM_ROSTER_PAIR,
+    ROOM_ROSTER_COMMAND,
+};
+
 // Runtime-only room identity. Directives are deterministic first-visit
 // events; suspend/backtrack regeneration falls back to ordinary combat so a
 // completed risk room can never be farmed for another boon pair.
@@ -22,6 +32,12 @@ extern u8 room_encounter_kind;
 extern u8 room_encounter_phase;
 extern u16 room_encounter_timer;
 extern u8 room_encounter_complete;
+
+// Runtime-only roster identity, exposed for live-ROM coverage and future
+// Compass/lore presentation. Primary/secondary are content enemy IDs.
+extern u8 room_roster_kind;
+extern u8 room_roster_primary;
+extern u8 room_roster_secondary;
 
 // Immediate cardinal route from the current dungeon cell toward the next
 // progression fixture. DIR_NONE means the player is already at that fixture
@@ -31,6 +47,7 @@ extern u8 room_objective_dir;
 // Reset before every procgen transaction, then choose one directive after
 // deterministic room roles are known.
 void dungeon_director_reset(void) BANKED;
+void dungeon_director_prepare_roster(u8 eligible) BANKED;
 void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED;
 u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED;
 u8 dungeon_director_pick_stage_enemy(u8 stage) BANKED;

@@ -65,14 +65,22 @@ void ooze_fragment_update(entity_t *e, u8 idx) BANKED {
         return;
     }
 
-    // A lone surviving fragment stays an ordinary small crawler until killed.
-    // Rotate a blocked heading exactly as the scatter phase does. Ignoring a
-    // failed step left a north-facing fragment at y=8 pressing into the wall
-    // forever; in a seeded Sigil court that stationary two-HP body could own
-    // the final seal while generated cover denied the hero its vertical lane.
-    if ((e->state_timer++ & 3) == 0) {
-        i8 dx = dir8_dx[e->state & 7], dy = dir8_dy[e->state & 7];
-        if (!enemy_try_step(e, dx, dy))
-            e->state = (u8)((e->state + 3) & 7);
+    // Once its twin dies, the last fragile shard becomes a tiny hunter. A
+    // direction-only wanderer could circle behind generated cover forever and
+    // own the last seal despite having just two HP. Pursuing the player's live
+    // row/column keeps the split threatening and guarantees it eventually
+    // presents an honest firing lane instead of silently soft-locking a court.
+    if ((e->state_timer++ & 1) == 0) {
+        i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
+        i16 dx = (i16)player.x - ex, dy = (i16)player.y - ey;
+        i16 ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+        i8 sx = dx > 0 ? 1 : dx < 0 ? -1 : 0;
+        i8 sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+        if (ax >= ay) {
+            if ((!sx || !enemy_try_step(e, sx, 0)) && sy)
+                enemy_try_step(e, 0, sy);
+        } else if ((!sy || !enemy_try_step(e, 0, sy)) && sx) {
+            enemy_try_step(e, sx, 0);
+        }
     }
 }

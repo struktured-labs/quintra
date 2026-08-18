@@ -70,10 +70,16 @@ def projectile(pb, slot, player_owned, x, y, damage=2, element=0, physical=0):
 
 
 def terrain_probe(pb, tile, element, expected):
+    # Direct WRAM construction can land while the cartridge still has the old
+    # slot cached inside a nested update. Retire that frame, then republish the
+    # clean table at an ordinary game-loop boundary before installing the
+    # synthetic projectile fixture.
+    clear_entities(pb)
+    pb.tick(4)
     clear_entities(pb)
     tx, ty = 10, 8
     pb.memory[TILEMAP + ty * 20 + tx] = tile
-    projectile(pb, 0, True, tx * 8, ty * 8, element=element)
+    shot = projectile(pb, 0, True, tx * 8, ty * 8, element=element)
     pb.tick(10)
     assert pb.memory[TILEMAP + ty * 20 + tx] == expected, (
         f"element {element} left tile {tile} unchanged")

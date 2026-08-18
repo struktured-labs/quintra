@@ -104,6 +104,27 @@ def step_off(pb):
     feet_on(pb, 10, 13)
 
 
+def body_component(tiles, start):
+    """Return compact-court cells reachable by the champion's 2x2 body."""
+    walkable = {1, 3, 7, 19, 20, 23, 31, 33, 34, *range(9, 19)}
+
+    def body_ok(x, y):
+        return (1 <= x <= 19 and 1 <= y <= 16
+                and all(tiles[ty * 20 + tx] in walkable
+                        for tx, ty in ((x - 1, y - 1), (x, y - 1),
+                                       (x - 1, y), (x, y))))
+
+    seen, pending = {start}, [start]
+    while pending:
+        x, y = pending.pop()
+        for cell in ((x, y - 1), (x + 1, y),
+                     (x, y + 1), (x - 1, y)):
+            if cell not in seen and body_ok(*cell):
+                seen.add(cell)
+                pending.append(cell)
+    return seen
+
+
 def push_seal_contract():
     pb = load(1)
     assert pb.memory[KIND] == 1 and pb.memory[LOCKED] == 1
@@ -254,6 +275,28 @@ def late_depth_puzzle_contract():
     pb.stop(save=False)
 
 
+def wide_waystone_circuit_contract():
+    # The fixed full-campaign world once produced a horizontal Stage 7 court
+    # whose first rune was reachable but whose lower note was an isolated
+    # floor island. Mandatory phrases must retain their unknown order without
+    # asking the player to cross solid procedural scenery.
+    stage = 6
+    seed = 2064128163
+    waystone = mission_graph(dungeon_size(stage), seed, stage)["waystone"]
+
+    def probe(pb, tiles):
+        assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
+        runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
+                 if pb.memory[TM + y * 20 + x] == 33]
+        assert len(runes) == 5, f"Stage 7 Waystone lost notes: {runes}"
+        reachable = body_component(tiles, runes[0])
+        assert set(runes) <= reachable, (
+            f"wide-court Waystone marooned required notes: "
+            f"{set(runes) - reachable}")
+
+    generated_room(stage, seed, local_room=waystone, probe=probe)
+
+
 def opening_shop_is_not_a_puzzle():
     pb = load(1)
     # The merchant remains the generated footprint's size-3 service cell.
@@ -316,10 +359,12 @@ def main():
     push_seal_contract()
     rune_sequence_contract()
     late_depth_puzzle_contract()
+    wide_waystone_circuit_contract()
     opening_shop_is_not_a_puzzle()
     deep_phase_contract()
-    print("[puzzles] PASS generated Trial/Waystone + ordered runes + service exclusion "
-          "+ remote deep switch/gate circuit + persistent gate crossing")
+    print("[puzzles] PASS generated Trial/Waystone + connected ordered runes "
+          "+ service exclusion + remote deep switch/gate circuit "
+          "+ persistent gate crossing")
 
 
 if __name__ == "__main__":

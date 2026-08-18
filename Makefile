@@ -410,13 +410,14 @@ play: all
 stage-states: all
 
 # Analogue Pocket cannot consume PyBoy/mGBA snapshots directly. Export the
-# hash-bound Easy entry curriculum as 45 separately named ROM/battery-save
-# pairs in a mirrored Assets/Saves tree: nine stages times five champions.
+# full hash-bound curriculum as 460 separately named ROM/battery-save pairs:
+# two difficulties, five champions, stage entry/court/sanctuary/boss states,
+# eight Riftwild arrivals, and both villages. Nested folders keep it browsable.
 # Every SRAM image must cold-resume through the cartridge's real CONTINUE path.
 pocket-test-saves: all
 	@$(PYBOY_RUN) scripts/make_pocket_test_saves.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --states "$(STATE_OUT)" \
-		--out "$(POCKET_STATE_OUT)" --difficulty easy --checkpoint entry
+		--out "$(POCKET_STATE_OUT)" --difficulty all --checkpoint all
 
 # Native mGBA equivalents for hands-on testing in mGBA-Qt. Generation covers
 # the same 460 champion/difficulty/checkpoint combinations as the PyBoy set and

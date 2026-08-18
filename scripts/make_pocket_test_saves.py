@@ -51,6 +51,14 @@ STAGE_NAMES = (
     "Bloodmoon",
     "Void Sanctum",
 )
+CHECKPOINT_DIRS = {
+    "entry": "01 Entry",
+    "court": "02 Court",
+    "sanctuary": "03 Sanctuary",
+    "boss": "04 Boss",
+    "riftwild": "05 Riftwild",
+    "village": "06 Village",
+}
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -176,15 +184,15 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument(
         "--difficulty",
-        choices=("normal", "easy"),
-        default="easy",
-        help="Pocket test curriculum (default: easy)",
+        choices=("normal", "easy", "all"),
+        default="all",
+        help="Pocket test curriculum (default: all)",
     )
     parser.add_argument(
         "--checkpoint",
-        choices=("entry", "court", "sanctuary", "boss"),
-        default="entry",
-        help="checkpoint family to export (default: entry)",
+        choices=(*CHECKPOINT_DIRS, "all"),
+        default="all",
+        help="checkpoint family to export (default: all)",
     )
     parser.add_argument(
         "--champion",
@@ -226,15 +234,39 @@ def main() -> None:
     if any(stage < 1 or stage > 9 for stage in stages):
         parser.error("--stage must be between 1 and 9")
 
+    difficulties = {"normal", "easy"} if args.difficulty == "all" \
+        else {args.difficulty}
+    checkpoints = set(CHECKPOINT_DIRS) if args.checkpoint == "all" \
+        else {args.checkpoint}
+    def filter_stage(record: dict) -> int:
+        # Between-dungeon fixtures store the upcoming gameplay stage for
+        # cartridge resume, but humans identify them by the dungeon just
+        # cleared ("Riftwild after S01", "Village after S03").
+        return record.get("after_stage", record["stage"])
+
     selected = [
         record for record in manifest["states"]
-        if record["checkpoint"] == args.checkpoint
-        and record["difficulty"] == args.difficulty
+        if record["checkpoint"] in checkpoints
+        and record["difficulty"] in difficulties
         and record["champion"] in champions
-        and record["stage"] in stages
+        and filter_stage(record) in stages
     ]
-    selected.sort(key=lambda item: (item["stage"], item["class_id"]))
-    expected_count = len(champions) * len(stages)
+    selected.sort(key=lambda item: (
+        item["difficulty"] != "easy",
+        tuple(CHECKPOINT_DIRS).index(item["checkpoint"]),
+        filter_stage(item), item["class_id"],
+    ))
+    stage_counts = {
+        "entry": len(stages),
+        "court": len(stages),
+        "sanctuary": len(stages),
+        "boss": len(stages),
+        "riftwild": len(stages & set(range(1, 9))),
+        "village": len(stages & {3, 6}),
+    }
+    expected_count = len(champions) * len(difficulties) * sum(
+        stage_counts[checkpoint] for checkpoint in checkpoints
+    )
     if len(selected) != expected_count:
         raise RuntimeError(
             f"expected {expected_count} matching states, found {len(selected)}"
@@ -252,12 +284,12 @@ def main() -> None:
         trailer = template[SRAM_SIZE:]
 
     relative_dir = Path("Quintra Test Checkpoints")
-    rom_dir = out / "Assets/gbc/common" / relative_dir
-    save_dir = out / "Saves/gbc/common" / relative_dir
+    rom_root = out / "Assets/gbc/common" / relative_dir
+    save_root = out / "Saves/gbc/common" / relative_dir
     if out.exists():
         shutil.rmtree(out)
-    rom_dir.mkdir(parents=True)
-    save_dir.mkdir(parents=True)
+    rom_root.mkdir(parents=True)
+    save_root.mkdir(parents=True)
 
     generated = []
     for record in selected:
@@ -280,16 +312,25 @@ def main() -> None:
             )
 
         champion = record["champion"].title()
-        base = (
-            f"QTEST S{record['stage']:02d} {champion} "
-            f"{record['difficulty'].title()}"
-        )
+        checkpoint = record["checkpoint"]
+        display_stage = filter_stage(record)
+        folder = Path(record["difficulty"].title()) / CHECKPOINT_DIRS[checkpoint]
+        rom_dir = rom_root / folder
+        save_dir = save_root / folder
+        rom_dir.mkdir(parents=True, exist_ok=True)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        stage_label = (f"After S{display_stage:02d}"
+                       if checkpoint in ("riftwild", "village")
+                       else f"S{display_stage:02d}")
+        base = f"QTEST {stage_label} {champion} {checkpoint.title()}"
         rom_path = rom_dir / f"{base}.gbc"
         save_path = save_dir / f"{base}.sav"
         shutil.copyfile(rom, rom_path)
         save_path.write_bytes(sram + trailer)
         generated.append({
             "stage": record["stage"],
+            "display_stage": display_stage,
+            "after_stage": record.get("after_stage"),
             "stage_name": STAGE_NAMES[record["stage"] - 1],
             "champion": record["champion"],
             "difficulty": record["difficulty"],
@@ -303,7 +344,7 @@ def main() -> None:
             "pocket_trailer_bytes": len(trailer),
         })
         print(
-            f"[pocket] S{record['stage']:02d} {champion:<8} "
+            f"[pocket] {stage_label:<9} {champion:<8} "
             f"{record['difficulty']} -> room {record['room_counter']}"
         )
 
@@ -312,14 +353,16 @@ def main() -> None:
         f"Quintra {version} Analogue Pocket test checkpoints\n"
         "==================================================\n\n"
         "Open the budude2 GBC core, enter the Quintra Test Checkpoints folder,\n"
-        "and choose a QTEST ROM. At the Quintra title screen press A for\n"
+        "and choose Easy or Normal, then Entry/Court/Sanctuary/Boss/\n"
+        "Riftwild/Village and a QTEST ROM. At the title screen press A for\n"
         "CONTINUE (do not press START, which begins a new run and replaces\n"
         "that test ROM's independent suspend save).\n\n"
         "Each ROM is the exact same test cartridge; only its paired battery\n"
         "save differs. The player's ordinary Quintra ROM and save use a\n"
-        "different name and are not read or changed. These checkpoints use\n"
-        "Easy mode for practical deep-stage testing and include all five\n"
-        "champions at every stage.\n"
+        "different name and are not read or changed. The complete curriculum\n"
+        "contains both difficulties, all five champions, every stage entry,\n"
+        "first court, sanctuary, live boss, eight Riftwild arrivals, and both\n"
+        "village arrivals.\n"
     )
     output_manifest = {
         "format": "Analogue Pocket mirrored ROM/battery-save curriculum",
@@ -327,8 +370,8 @@ def main() -> None:
         "rom": rom.name,
         "version": version,
         "rom_sha256": sha256(rom),
-        "checkpoint": args.checkpoint,
-        "difficulty": args.difficulty,
+        "checkpoint": sorted(checkpoints),
+        "difficulty": sorted(difficulties),
         "count": len(generated),
         "records": generated,
     }

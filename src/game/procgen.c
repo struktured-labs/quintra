@@ -1063,6 +1063,15 @@ void procgen_generate_current_room(void) BANKED {
                 || run_state_dungeon_local() == 17
                 || run_state_dungeon_local() == 23)) ? 1 : 0;
 
+        // Every ordinary combat field first chooses a room-level roster:
+        // one-species brood, two-species pair, leader/minion command pack, or
+        // the classic fully mixed stage pool. This is independent of the
+        // special encounter directive below, so foyers and backtracks retain
+        // a deterministic enemy identity while service/fixture rooms do not.
+        dungeon_director_prepare_roster((u8)(!is_town
+            && !run_state.world_mode && !is_boss_room && !is_miniboss
+            && !is_shop && !is_rest && !is_puzzle_room));
+
         // First visits to ordinary large districts rotate four different
         // verbs through the run. Fixed lore/service roles and lighter turn
         // courts retain their authored pacing instead of being overwritten

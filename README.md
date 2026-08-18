@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.6: Roots & Bellows](https://github.com/struktured-labs/quintra/releases/download/v0.20.6/quintra.gbc)
+[Download Quintra v0.20.7: Broods & Warbands](https://github.com/struktured-labs/quintra/releases/download/v0.20.7/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,25 +25,56 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.6**, an early-dungeon variety and combat-read
-milestone. Wolfkin's normal Fang now deals three damage instead of six before
-affinity, and one stroke can cleave two bodies but cannot hit the same body on
-successive collision sweeps. Verdant Hollow gains seeded cuttable root networks;
-Ember Depths gains furnace rooms whose marked lanes warn, ignite in a wave,
-cool, and pay a one-time Surge. Rune trials grow from three nearby tones in
-Stage 1 to four widely spread tones in Stage 2 and five from Stage 3 onward.
-PowerStone, Swift Fang, and VampSigil now visibly widen, accelerate, or recolor
-the champion's real attack. Ember's exploration score is a rewritten, less
-shrill 68-second form with a rounded reed voice, lower register, and more air.
-Kilnback recovery vents now peel into real cardinal weapon lanes instead of
-continuously following the hero at an unhittable diagonal; Normal keeps its
-short punish window, while Easy exposes it earlier for deep-stage testing.
+The current cartridge is **v0.20.7**, a room-identity milestone. Ordinary
+combat rooms no longer roll every body independently from the full stage pool.
+Each seed/stage/room now chooses one of four encounter grammars: a one-species
+**Brood**, an alternating two-species **Pair**, a **Command** warband with one
+unusual leader and one minion species, or the original fully **Mixed** weighted
+hodgepodge. Mixed rooms remain one quarter of the procedural vocabulary.
+Traps, second waves, and survival reinforcements retain their room's family;
+backtracking regenerates the same identity. Heavy ring casters, Bramble
+Sprites, Shard Crabs, and the Rift Cantor may lead a Command room but cannot
+become an unreadable or route-blocking 12–18-body brood. Enemy density, HP,
+stage pools, elite odds, and procgen RNG draw count are unchanged.
 
 The release retains Kilnheart's five-body pack/Cinder Rex encounter,
-Stormcoil's complete connected serpent, and every v0.20.0 system—Will/MAX
+Roots & Bellows' Wolfkin/relic balance and regional events, Stormcoil's
+complete connected serpent, and every v0.20.0 system—Will/MAX
 attacks, nine Oath Arts, physical tools, world interactions, dungeon Law,
 seeded mission graph, regional Riftwild, readable Pack/shop interfaces,
 visible locks, safe retreats, diagonal dashes, and distinct reward sounds.
+
+### v0.20.7 — Broods & Warbands
+
+Every ordinary combat field now has a seed-stable **roster grammar** in
+addition to its terrain and Dungeon Law directive. Brood rooms contain one
+stage-native species. Pair rooms alternate two compatible species. Command
+rooms place one distinct captain or support monster, then fill the formation
+with one minion species. Mixed rooms retain the previous independent weighted
+roll for every body, preserving deliberate chaos as roughly one quarter of
+the room vocabulary rather than the universal default.
+
+The family persists through the entire encounter. A trap's delayed ambush, a
+second wave, or a Hold room's timed reinforcements cannot suddenly introduce
+unrelated species. The selector consumes the same random draw per requested
+body as v0.20.6, so room geometry, density, elite frequency, and C/Rust
+procgen parity do not drift. Rune Lanterns, Dread Bells, Rift Wardens, Bramble
+Sprites, Shard Crabs, and Rift Cantors remain eligible as a Command leader or
+in Mixed rooms, but are excluded from room-filling Brood/Pair slots to preserve
+readable bullet gaps, keep orbit/counter specialists from walling procedural
+lanes, and retain the Cantor's bounded one-summoner contract. A lone surviving
+Rift Ooze fragment now hunts the champion instead of wandering forever behind
+cover after its twin dies. Mandatory rune Waystones now carve a body-width
+connected circuit through every note, preventing wide-court terrain from
+marooning a required rune without exposing the seed-dependent phrase.
+
+Hardware testing now gets the complete external curriculum. The Pocket
+exporter converts all **460** hash-bound checkpoints into independently named
+ROM/battery-save pairs: Easy and Normal, five champions, nine Entries, Courts,
+Sanctuaries, and live Bosses, eight post-boss Riftwild arrivals, and both
+Village arrivals. Mirrored difficulty/checkpoint folders keep the Assets and
+Saves trees browsable, and every generated save cold-resumes through the real
+title-screen Continue path before deployment.
 
 ### v0.20.6 — Roots & Bellows
 
@@ -2945,19 +2976,21 @@ SRAM. The generated
 and restored stage/room. `QuintraPyBoyEnv.load_state()` rejects any mismatch,
 so regenerate after rebuilding the ROM.
 
-For hardware deep testing, `make pocket-test-saves` converts the same
-hash-bound Easy entry curriculum into 45 independent Analogue Pocket
-ROM/battery-save pairs: every stage with every champion. It does **not**
+For hardware deep testing, `make pocket-test-saves` converts the complete
+hash-bound curriculum into 460 independent Analogue Pocket ROM/battery-save
+pairs: both difficulties, every stage and champion, Entry/Court/Sanctuary/Boss
+checkpoints, eight Riftwild arrivals, and both villages. It does **not**
 mislabel an emulator snapshot as a Pocket Memory. Instead, each save contains
 Quintra's real 32 KiB suspend record, which the unchanged cartridge regenerates
 through its normal CONTINUE path. The generated
 `tmp/pocket-test-saves/Assets` and `tmp/pocket-test-saves/Saves` trees mirror
 one another as required by openFPGA and can be merged at the SD-card root.
-On the Pocket, open the GBC core, enter `Quintra Test Checkpoints`, choose a
-`QTEST S01` through `QTEST S09` ROM, then press **A** at Quintra's title
-screen. START begins a new run and replaces only that test ROM's independent
-checkpoint. The ordinary release ROM and its player save use different names
-and remain untouched.
+On the Pocket, open the GBC core, enter `Quintra Test Checkpoints`, choose
+Easy or Normal, then a checkpoint family and `QTEST` ROM. Post-boss folders
+label fixtures as `After S01` rather than the upcoming dungeon number. Press
+**A** at Quintra's title screen to Continue. START begins a new run and
+replaces only that test ROM's independent checkpoint. The ordinary release ROM
+and its player save use different names and remain untouched.
 
 For hands-on testing in the preferred emulator, `make mgba-states` generates
 the same 460-point curriculum as native mGBA `.ss0` files under

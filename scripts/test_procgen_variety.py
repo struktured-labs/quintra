@@ -26,6 +26,15 @@ ENT_ENEMY = 2
 EF_ACTIVE = 0x01
 EF_ELITE = 0x20
 DIRECTIVE = addr("_room_encounter_kind")
+ROSTER_KIND = addr("_room_roster_kind")
+ROSTER_PRIMARY = addr("_room_roster_primary")
+ROSTER_SECONDARY = addr("_room_roster_secondary")
+
+ROOM_ROSTER_MIXED = 0
+ROOM_ROSTER_BROOD = 1
+ROOM_ROSTER_PAIR = 2
+ROOM_ROSTER_COMMAND = 3
+ROOM_FILL_SPECIALISTS = {19, 20, 21, 27, 30, 32}
 
 
 def boot():
@@ -95,7 +104,15 @@ def sample_stage_entry(pb, stage, seed):
     # Collapse only non-interactive floor texture/rubble. Walls, cover,
     # hazards, pots, blocks, secrets, doors, and portals retain identity.
     geometry = tuple(1 if tile in FLOORISH else tile for tile in tiles)
-    return geometry, tuple(sorted(hostiles)), elite_count, pb.memory[DIRECTIVE]
+    return (
+        geometry,
+        tuple(sorted(hostiles)),
+        elite_count,
+        pb.memory[DIRECTIVE],
+        pb.memory[ROSTER_KIND],
+        pb.memory[ROSTER_PRIMARY],
+        pb.memory[ROSTER_SECONDARY],
+    )
 
 
 def main():
@@ -107,12 +124,15 @@ def main():
     body_counts_by_kind = defaultdict(list)
     kinds_by_stage = defaultdict(list)
     kinds_seen = set()
+    roster_grammars = defaultdict(list)
+    grammars_by_stage = defaultdict(set)
     elite_total = 0
     pb = boot()
     try:
         for stage in range(9):
             for seed in SEEDS:
-                geometry, roster, elites, kind = sample_stage_entry(pb, stage, seed)
+                (geometry, roster, elites, kind, grammar,
+                 primary, secondary) = sample_stage_entry(pb, stage, seed)
                 geometries[stage].add(geometry)
                 roster_kinds[stage].update(roster)
                 roster_signatures[stage].add(roster)
@@ -121,6 +141,9 @@ def main():
                 body_counts_by_kind[kind].append(len(roster))
                 kinds_by_stage[stage].append(kind)
                 kinds_seen.add(kind)
+                grammars_by_stage[stage].add(grammar)
+                roster_grammars[grammar].append(
+                    (stage, roster, primary, secondary))
                 elite_total += elites
     finally:
         pb.stop(save=False)
@@ -137,6 +160,45 @@ def main():
             f"stage {stage + 1} collapsed to {len(roster_signatures[stage])}/12 "
             "encounter rosters"
         )
+        assert len(grammars_by_stage[stage]) >= 3, (
+            f"stage {stage + 1} exposed only room roster grammars "
+            f"{sorted(grammars_by_stage[stage])}"
+        )
+    assert set(roster_grammars) == {
+        ROOM_ROSTER_MIXED,
+        ROOM_ROSTER_BROOD,
+        ROOM_ROSTER_PAIR,
+        ROOM_ROSTER_COMMAND,
+    }, f"room roster grammar collapsed: {sorted(roster_grammars)}"
+
+    # Themed rooms are a structural contract, not a lucky weighted sample.
+    # Broods own one species; pairs alternate two compatible species; command
+    # rooms contain exactly one stage-native leader plus one minion species.
+    # Mixed rooms intentionally retain the old unrestricted weighted pool.
+    for stage, roster, primary, secondary in roster_grammars[ROOM_ROSTER_BROOD]:
+        assert primary not in ROOM_FILL_SPECIALISTS, (
+            f"stage {stage + 1} repeated specialist {primary} as a brood")
+        if not roster:  # trap hush; its later spawn inherits this grammar
+            continue
+        assert set(roster) == {primary}, (
+            f"stage {stage + 1} brood dissolved into {roster}; primary={primary}"
+        )
+    for grammar in (ROOM_ROSTER_PAIR, ROOM_ROSTER_COMMAND):
+        for stage, roster, primary, secondary in roster_grammars[grammar]:
+            assert primary not in ROOM_FILL_SPECIALISTS, (
+                f"stage {stage + 1} repeated specialist {primary} in grammar {grammar}")
+            assert primary != secondary
+            if not roster:  # trap hush; covered live by director wave tests
+                continue
+            assert set(roster) <= {primary, secondary}, (
+                f"stage {stage + 1} grammar {grammar} became hodgepodge "
+                f"{roster}; family=({primary},{secondary})"
+            )
+            if len(roster) >= 2:
+                assert primary in roster and secondary in roster, (
+                    f"stage {stage + 1} grammar {grammar} lost one family "
+                    f"member: {roster}; family=({primary},{secondary})"
+                )
     assert kinds_seen == {0, 1, 2, 3, 4}, \
         f"director variety disappeared from seed sample: {sorted(kinds_seen)}"
     # Initial population now encodes encounter grammar: a trap opens in an
@@ -168,6 +230,7 @@ def main():
         f"geometry={[len(geometries[s]) for s in range(9)]}/12, "
         f"enemy-kinds={[len(roster_kinds[s]) for s in range(9)]}, "
         f"rosters={[len(roster_signatures[s]) for s in range(9)]}/12, "
+        f"grammars={sorted(roster_grammars)}, "
         f"bodies={min(body_counts)}-{max(body_counts)}, "
         f"directives={sorted(kinds_seen)}, elites={elite_total}/108"
     )

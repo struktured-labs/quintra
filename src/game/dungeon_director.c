@@ -23,18 +23,72 @@ u16 room_encounter_timer;
 u8 room_encounter_complete;
 u8 room_objective_dir;
 u8 room_encounter_target;
+u8 room_roster_kind;
+u8 room_roster_primary;
+u8 room_roster_secondary;
 
 static u8 encounter_spawn_clock;
+static u8 room_roster_ordinal;
 
-u8 dungeon_director_pick_stage_enemy(u8 stage_raw) BANKED {
-    u8 stage = (u8)(stage_raw % N_STAGES);
-    u8 roll = rng_range(stage_pool_total[stage]);
+static u8 weighted_stage_enemy(u8 stage, u8 roll) {
     u8 i, sum = 0;
     for (i = 0; i < stage_pool_n[stage]; ++i) {
         sum = (u8)(sum + stage_pool_w[stage][i]);
         if (roll < sum) return stage_pool_ids[stage][i];
     }
     return stage_pool_ids[stage][0];
+}
+
+// A whole brood of heavy ring casters would erase the readable gaps that
+// make those specialists interesting. Bramble Sprites are lane-shaping orbit
+// fighters that can shelter one another behind generated cover, while the
+// Shard Crab's bait-and-counter contract becomes a tedious melee wall when
+// every minion owns it. They may still lead one Command pack or appear at
+// their authored weight in Mixed rooms; only the repeated primary/paired
+// species slots exclude them.
+static u8 enemy_can_fill_room(u8 id) {
+    return id != ENEMY_BRAMBLE_SPRITE
+        && id != ENEMY_SHARD_CRAB
+        && id != ENEMY_RUNE_LANTERN
+        && id != ENEMY_DREAD_BELL
+        && id != ENEMY_RIFT_WARDEN
+        && id != ENEMY_RIFT_CANTOR;
+}
+
+static u8 themed_stage_enemy(u8 stage, u8 start, u8 avoid) {
+    u8 i;
+    for (i = 0; i < stage_pool_n[stage]; ++i) {
+        u8 slot = (u8)(start + i);
+        while (slot >= stage_pool_n[stage])
+            slot = (u8)(slot - stage_pool_n[stage]);
+        {
+            u8 id = stage_pool_ids[stage][slot];
+            if (id != avoid && enemy_can_fill_room(id)) return id;
+        }
+    }
+    return stage_pool_ids[stage][0];
+}
+
+u8 dungeon_director_pick_stage_enemy(u8 stage_raw) BANKED {
+    u8 stage = (u8)(stage_raw % N_STAGES);
+    u8 roll = rng_range(stage_pool_total[stage]);
+    u8 id;
+    if (room_roster_kind == ROOM_ROSTER_BROOD) {
+        id = room_roster_primary;
+    } else if (room_roster_kind == ROOM_ROSTER_PAIR) {
+        id = (room_roster_ordinal & 1)
+            ? room_roster_secondary : room_roster_primary;
+    } else if (room_roster_kind == ROOM_ROSTER_COMMAND) {
+        // The first body is the visible captain/support; every later body is
+        // the same minion species. Spawn placement may reject a hazard site,
+        // but the room still never dissolves into unrelated weighted rolls.
+        id = room_roster_ordinal ? room_roster_primary
+            : room_roster_secondary;
+    } else {
+        id = weighted_stage_enemy(stage, roll);
+    }
+    room_roster_ordinal++;
+    return id;
 }
 
 // The same nine aprons used by initial wide-court placement. Procgen carves
@@ -126,6 +180,44 @@ void dungeon_director_reset(void) BANKED {
     room_objective_dir = DIR_NONE;
     room_encounter_target = 0xFF;
     encounter_spawn_clock = 0;
+    room_roster_kind = ROOM_ROSTER_MIXED;
+    room_roster_primary = 0xFF;
+    room_roster_secondary = 0xFF;
+    room_roster_ordinal = 0;
+}
+
+void dungeon_director_prepare_roster(u8 eligible) BANKED {
+    u8 stage;
+    u8 mix;
+    u8 first;
+    u8 second;
+    if (!eligible) return;
+    stage = (u8)(run_state.bosses_beaten % N_STAGES);
+    mix = (u8)run_state.run_seed;
+    mix ^= (u8)(run_state.run_seed >> 8);
+    mix ^= (u8)(run_state.run_seed >> 16);
+    mix ^= (u8)(run_state.run_seed >> 24);
+    mix = (u8)(mix + run_state.room_counter * 13
+        + run_state.bosses_beaten * 29);
+    room_roster_kind = (u8)(mix & 3);
+    first = (u8)((mix >> 2) % stage_pool_n[stage]);
+    room_roster_primary = themed_stage_enemy(stage, first, 0xFF);
+    second = (u8)(first + 1 + ((mix >> 5) & 3));
+    if (room_roster_kind == ROOM_ROSTER_COMMAND) {
+        // Command rooms deliberately admit one specialist leader, including
+        // a Bell, Warden, Lantern, or Cantor, but never duplicate it.
+        u8 i;
+        for (i = 0; i < stage_pool_n[stage]; ++i) {
+            u8 slot = (u8)(second + i);
+            while (slot >= stage_pool_n[stage])
+                slot = (u8)(slot - stage_pool_n[stage]);
+            room_roster_secondary = stage_pool_ids[stage][slot];
+            if (room_roster_secondary != room_roster_primary) break;
+        }
+    } else {
+        room_roster_secondary = themed_stage_enemy(
+            stage, second, room_roster_primary);
+    }
 }
 
 void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED {

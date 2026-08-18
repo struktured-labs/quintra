@@ -10,6 +10,9 @@ TIMER = addr("_room_encounter_timer")
 COMPLETE = addr("_room_encounter_complete")
 SEALED = addr("_room_combat_sealed")
 TARGET = addr("_room_encounter_target")
+ROSTER_KIND = addr("_room_roster_kind")
+ROSTER_PRIMARY = addr("_room_roster_primary")
+ROSTER_SECONDARY = addr("_room_roster_secondary")
 
 ENT_ENEMY, ENT_PICKUP = 2, 3
 EF_ACTIVE, EF_ELITE = 0x01, 0x20
@@ -27,6 +30,25 @@ def enemies(pb):
         if (pb.memory[EN + i * 28] == ENT_ENEMY
             and pb.memory[EN + i * 28 + 1] & EF_ACTIVE)
     ]
+
+
+def enemy_ids(pb):
+    return [pb.memory[ep + 17] for ep in enemies(pb)]
+
+
+def assert_room_family(pb):
+    grammar = pb.memory[ROSTER_KIND]
+    if grammar == 0:  # intentional mixed/anything-goes room
+        return
+    family = {pb.memory[ROSTER_PRIMARY], pb.memory[ROSTER_SECONDARY]}
+    observed = set(enemy_ids(pb))
+    assert observed <= family, (
+        f"director reinforcement broke room family {family}: {observed}"
+    )
+    if grammar == 1 and observed:
+        assert observed == {pb.memory[ROSTER_PRIMARY]}, (
+            f"brood reinforcement added a second species: {observed}"
+        )
 
 
 def boon_choices(pb):
@@ -72,6 +94,7 @@ def trap_contract():
                 break
         assert pb.memory[PHASE] == 1 and len(enemies(pb)) >= 4, \
             "trap did not spring a Normal-mode ambush"
+        assert_room_family(pb)
         erase(pb, enemies(pb))
         tick_safe(pb, 4)
         assert pb.memory[SEALED] == 0, "cleared trap did not release doors"
@@ -83,11 +106,13 @@ def wave_contract():
         assert pb.memory[KIND] == 2 and pb.memory[SEALED] == 1
         first = len(enemies(pb))
         assert first >= 2
+        assert_room_family(pb)
         erase(pb, enemies(pb))
         tick_safe(pb, 4)
         second = len(enemies(pb))
         assert pb.memory[PHASE] == 1 and second >= 3, \
             "first clear did not create a second formation"
+        assert_room_family(pb)
         erase(pb, enemies(pb))
         tick_safe(pb, 4)
         assert pb.memory[SEALED] == 0, "second wave did not release doors"
@@ -123,6 +148,7 @@ def hold_contract():
         start_timer = pb.memory[TIMER] | (pb.memory[TIMER + 1] << 8)
         tick_safe(pb, 130)
         assert len(enemies(pb)) > initial, "hold room did not reinforce pressure"
+        assert_room_family(pb)
         now = pb.memory[TIMER] | (pb.memory[TIMER + 1] << 8)
         assert now < start_timer
         # Fast-forward only the clock; release/reward still travels through
@@ -140,7 +166,7 @@ def main():
     wave_contract()
     elite_contract()
     hold_contract()
-    print("[dungeon-director] PASS trap + wave + elite target/choice + hold reinforcements")
+    print("[dungeon-director] PASS themed trap/wave/hold reinforcements + elite target/choice")
 
 
 if __name__ == "__main__":

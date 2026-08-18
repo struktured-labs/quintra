@@ -162,12 +162,26 @@ static void prepare_sequence(u32 seed) {
         rune_x[0] = 5;  rune_y[0] = 8;
         rune_x[1] = 10; rune_y[1] = 5;
         rune_x[2] = 14; rune_y[2] = 10;
+        // The phrase is mandatory progression, so its three visible aprons
+        // must be one physical circuit even when the generated court beneath
+        // them is a narrow horizontal or vertical lane.  A three-tile road
+        // admits the champion's full 12px body without revealing the order.
+        floor_rect(4, 7, 8, 3);
+        floor_rect(9, 4, 3, 8);
+        floor_rect(10, 9, 6, 3);
     } else {
         rune_x[0] = 3;  rune_y[0] = 4;
         rune_x[1] = 16; rune_y[1] = 4;
         rune_x[2] = 4;  rune_y[2] = 12;
         rune_x[3] = 15; rune_y[3] = 12;
         rune_x[4] = 10; rune_y[4] = 8;
+        // Four/five-note Waystones span the whole compact court. Connect the
+        // upper and lower rune roads through the center pivot before laying
+        // the switches; merely clearing five isolated 3x3 aprons can leave a
+        // lower note marooned behind otherwise valid procedural cover.
+        floor_rect(2, 3, 16, 3);
+        floor_rect(3, 11, 14, 3);
+        floor_rect(9, 3, 3, 11);
     }
     order = (u8)(folded % 6);
     for (i = 0; i < rune_count; ++i) {
