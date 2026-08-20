@@ -82,7 +82,12 @@ function dungeon_fold_col(size, stage, upper)
     fold = xor_low3(fold, emu:read8(RS + 5))
     fold = xor_low3(fold, stage * 3)
     local col = DUNGEON_FOLD_COLS[fold * 4 + upper + 1]
-    local lower_count = math.min(6, size - (upper + 1) * 6)
+    local lower_first = (upper + 1) * 6
+    local lower_count = math.min(6, size - lower_first)
+    local service_first = size - 3
+    if lower_first < service_first then
+        lower_count = math.min(lower_count, service_first - lower_first)
+    end
     if (upper + 1) % 2 == 1 then
         col = math.max(col, 6 - lower_count)
     else
@@ -2522,6 +2527,8 @@ function door_step(px, py)
         return fallback
     end
     if not target then
+        local route_fallback = wanted ~= nil and CARD_KEYS[wanted + 1]
+            or KEY_DOWN
         -- The tile graph deliberately excludes canonical body cells that
         -- overlap scenery. Enemy knockback can nevertheless leave the live
         -- pixel body in exactly that exceptional state; room.c permits
@@ -2531,6 +2538,12 @@ function door_step(px, py)
         local overlap = pixel_feet_blocked(px, py)
             + pixel_body_obstacles(px, py)
         if overlap > 0 then
+            -- A legal step along the generated mission route is the cleanest
+            -- way out of a conservative current-cell overlap. In the stage-3
+            -- shop, choosing UP first undid the weapon-shelf guard's one-pixel
+            -- DOWN bypass and produced an exact y=64<->65 loop while WEST was
+            -- physically open on both frames.
+            if can_step(px, py, route_fallback) then return route_fallback end
             local escape = py > 60 and {KEY_UP, KEY_LEFT, KEY_RIGHT, KEY_DOWN}
                 or {KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP}
             for _, candidate in ipairs(escape) do
@@ -2542,7 +2555,7 @@ function door_step(px, py)
         -- to avoid reversing across that same seam. Other kits recover more
         -- reliably one legal body step at a time, especially Wolfkin after a
         -- melee knockback at the west edge.
-        if CLASS ~= 2 then return immediate_border_escape(KEY_DOWN) end
+        if CLASS ~= 2 then return immediate_border_escape(route_fallback) end
         -- A knockback/dodge can leave the real 12px body in a legal border
         -- pocket whose coarse feet cell is not part of the BFS graph. Scan
         -- along the border for the nearest continuous path to an inward
@@ -2580,7 +2593,7 @@ function door_step(px, py)
         if py >= 116 then return border_escape(KEY_RIGHT, KEY_LEFT, KEY_UP) end
         if px <= 4 then return border_escape(KEY_DOWN, KEY_UP, KEY_RIGHT) end
         if px >= 140 then return border_escape(KEY_DOWN, KEY_UP, KEY_LEFT) end
-        return KEY_DOWN
+        return route_fallback
     end
     -- Tile-center BFS is not precise enough at a two-tile door: the player's
     -- 12px body can occupy the correct 8px cell while its shoulder still
@@ -3811,16 +3824,22 @@ while frames < LIMIT do
             local bat_range = math.max(math.abs(dx), math.abs(dy))
             local bat_offaxis = (aim == KEY_UP or aim == KEY_DOWN)
                 and math.abs(dx) or math.abs(dy)
-            if no_damage_frames > 120 then
+            if no_damage_frames > 120 and target.state == 0 then
                 -- Flutterbat has its own combat branch, so the generic
                 -- unchanged-HP recovery below never sees it. In a wide ruin
                 -- its cling phase can expose a tempting tile-coarse route on
                 -- alternating sides of a wall. Commit to one collision-proven
-                -- projectile lane until the bat moves or takes damage.
+                -- projectile lane until the bat moves or takes damage. Only
+                -- pay for this pixel graph while it is actually clinging: a
+                -- moving bat changes coordinates faster than the cached graph
+                -- can be reused and is better handled by live tile pursuit.
                 local bat_step, bat_ready = fold_star_pixel_step(
                     room, px, py, target.x, target.y, aim, 140)
                 keys = bat_ready and (KEY_A + bat_step) or bat_step
                 sigil_pixel_active = true
+            elseif no_damage_frames > 120 then
+                keys = KEY_A + target_step(
+                    px, py, target.x, target.y, aim, routed_reach)
             elseif CLASS == 4 and held_style == "lunge" then
                 if bat_range <= 52 and bat_offaxis <= 5
                     and projectile_lane_clear(px, py, target.x, target.y, aim) then
@@ -4560,6 +4579,11 @@ while frames < LIMIT do
                 and held_style ~= "lunge" and held_style ~= "flail"
                 and held_style ~= "spear"
                 and target.kind ~= 18 and target.kind ~= 30
+                -- An exact pixel route has already proved how to leave this
+                -- corner and establish a real attack lane. Replacing it with
+                -- the generic contact retreat every other frame is the
+                -- controller equivalent of cancelling its own path.
+                and not sigil_pixel_active
                 and not contact_strike_lane
                 and not leech_needs_lane then
                 local retreat = (aim == KEY_UP and KEY_DOWN)
@@ -5356,16 +5380,41 @@ while frames < LIMIT do
         elseif move == KEY_LEFT then nx = nx - 1
         elseif move == KEY_DOWN then ny = ny + 1
         elseif move == KEY_UP then ny = ny - 1 end
-        local weapon_x, weapon_y = quintra_weapon_shop_overlap(nx, ny, 3)
+        -- After the optional dungeon-shop window, the route is deliberately
+        -- leaving rather than browsing. Its one-pixel prospective position is
+        -- sufficient to reject a real contact sale. Keeping the ordinary
+        -- three-pixel approach margin here made a physically clear westbound
+        -- lane look occupied, so the shelf guard undid the door BFS forever.
+        -- Town browsing and every active shop choice retain the wider margin.
+        local service_shop_egress = world_mode == 0 and room_age >= 900
+            and dungeon_local(room, emu:read8(RS + 11))
+                == dungeon_size(emu:read8(RS + 11)) - 3
+        local weapon_x, weapon_y = quintra_weapon_shop_overlap(
+            nx, ny, service_shop_egress and 0 or 3)
         -- Comparable-build safety applies to incidental crossings, not to a
         -- weapon shelf the economy policy deliberately selected. Otherwise
         -- the new featured weapon ware makes the pilot approach its counter,
         -- sidestep it, and repeat forever instead of completing the purchase.
         if weapon_x ~= nil
             and not (shop and shop.x == weapon_x and shop.y == weapon_y) then
-            local side = (px + 8 < weapon_x + 3) and KEY_LEFT or KEY_RIGHT
-            if not can_step(px, py, side) then
-                side = (side == KEY_LEFT) and KEY_RIGHT or KEY_LEFT
+            -- Step *across* the current route axis. The old unconditional
+            -- horizontal sidestep trapped westbound pilots beside a dungeon
+            -- weapon shelf: door_step asked for LEFT, this guard answered
+            -- RIGHT, and the pair oscillated forever in the final shop.
+            -- A two-pixel vertical clearance lets that same honest route pass
+            -- around the shelf without buying it; vertical crossings retain
+            -- the original left/right bypass.
+            local side
+            if move == KEY_LEFT or move == KEY_RIGHT then
+                side = (py + 12 < weapon_y + 3) and KEY_UP or KEY_DOWN
+                if not can_step(px, py, side) then
+                    side = (side == KEY_UP) and KEY_DOWN or KEY_UP
+                end
+            else
+                side = (px + 8 < weapon_x + 3) and KEY_LEFT or KEY_RIGHT
+                if not can_step(px, py, side) then
+                    side = (side == KEY_LEFT) and KEY_RIGHT or KEY_LEFT
+                end
             end
             keys = keys % 16 + side
         end

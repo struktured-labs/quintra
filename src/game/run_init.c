@@ -1,5 +1,8 @@
+#pragma bank 10
 // RUN_INIT — initializes run-level state from current entropy + player class
 // then immediately transitions to ROOM.
+
+#include <gb/gb.h>
 
 #include "core/types.h"
 #include "core/rng.h"
@@ -9,6 +12,8 @@
 #include "game/run_init.h"
 #include "game/run_state.h"
 #include "game/sram.h"
+
+BANKREF(run_init_enter)
 
 void run_init_enter(void) {
     u32 seed = (u32)loop_frame_counter ^ 0xA5A5A5A5UL;

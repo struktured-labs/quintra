@@ -110,10 +110,11 @@ def main() -> None:
                 f"stage {stage + 1} cache collided with service cadence")
             graph_signatures.add(tuple(sorted(edges)))
 
-            # The actual progression route visits the staged Sigil, Wardens,
-            # and Waystone before the boss. Every approved fold occupies at
-            # least all but one cell's worth of traversal, so making the
-            # dungeon broader does not quietly make it shorter.
+            # A representative landmark circuit still traverses essentially
+            # the whole large-room prefix before the boss. The service-prefix
+            # clamp may move one row fold by up to two cells to keep every
+            # scrolling district reachable before shop/sanctuary, but must
+            # not turn the broader dungeon into a short direct corridor.
             goals = (2, 3, 7, 9, 15, size - 1)
             cursor = 0
             required = 0
@@ -121,7 +122,7 @@ def main() -> None:
                 required += distance(size, seed, stage, cursor, goal)
                 cursor = goal
             required_lengths.append(required)
-            assert required >= size - 1, (
+            assert required >= size - 3, (
                 f"stage {stage + 1} seed {seed:08x} required route "
                 f"collapsed to {required}/{size}")
     assert len(graph_signatures) >= 6, (

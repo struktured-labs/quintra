@@ -1,11 +1,34 @@
-#pragma bank 6
+#pragma bank 10
 #include <gb/gb.h>
 
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
+#include "game/player.h"
+#include "game/room.h"
 #include "content.h"
+
+// A Flutterbat is visually small, but a sealed combat room must never let it
+// fly through an 8px crack into a pocket the champion cannot enter. Require a
+// complete 16x16 walkable footprint along every move. Starting positions are
+// already chosen from the generated reachable component, so preserving this
+// footprint also preserves a real route back to the player.
+static u8 flutterbat_space_clear(i16 x, i16 y) {
+    if (x < 0 || y < 0 || x > (i16)(room_world_width - 16)
+        || y > (i16)(room_world_height - 16)) return 0;
+    return room_tile_walkable(room_tile_at_px(x + 1, y + 1))
+        && room_tile_walkable(room_tile_at_px(x + 14, y + 1))
+        && room_tile_walkable(room_tile_at_px(x + 1, y + 14))
+        && room_tile_walkable(room_tile_at_px(x + 14, y + 14));
+}
+
+static u8 flutterbat_try_step(entity_t *e, i8 dx, i8 dy) {
+    i16 nx = FIX8_TO_INT(e->x) + dx;
+    i16 ny = FIX8_TO_INT(e->y) + dy;
+    if (!flutterbat_space_clear(nx, ny)) return 0;
+    return enemy_try_step(e, dx, dy);
+}
 
 // Keese-like cadence: cling motionless, flutter diagonally, dart, settle.
 void flutterbat_update(entity_t *e) BANKED {
@@ -26,11 +49,24 @@ void flutterbat_update(entity_t *e) BANKED {
         // axis motion keeps the Keese-like slant in open space and slides the
         // bat along either wall when only one component is legal.
         if (dx && dy) {
-            moved = enemy_try_step(e, dx, 0);
-            if (enemy_try_step(e, 0, dy)) moved = 1;
+            moved = flutterbat_try_step(e, dx, 0);
+            if (flutterbat_try_step(e, 0, dy)) moved = 1;
         } else {
-            moved = enemy_try_step(e, dx, dy);
+            moved = flutterbat_try_step(e, dx, dy);
         }
-        if (!moved) e->state_timer = 0;
+        if (!moved) {
+            // A blocked odd diagonal must not leave a required Keese clinging
+            // forever inside the last legal corner of a sealed room. Take one
+            // collision-checked axis beat toward the champion, which is both
+            // a readable hunting twitch and a guaranteed attempt to retrace
+            // the same full-footprint space from which it entered.
+            i16 ex = FIX8_TO_INT(e->x);
+            i16 ey = FIX8_TO_INT(e->y);
+            i8 hunt_x = player.x > ex ? 1 : player.x < ex ? -1 : 0;
+            i8 hunt_y = player.y > ey ? 1 : player.y < ey ? -1 : 0;
+            if (hunt_x) moved = flutterbat_try_step(e, hunt_x, 0);
+            if (!moved && hunt_y) moved = flutterbat_try_step(e, 0, hunt_y);
+            if (!moved) e->state_timer = 0;
+        }
     }
 }

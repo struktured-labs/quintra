@@ -53,6 +53,16 @@ static u8 shield_catches_projectile(const entity_t *e) {
     return dx <= radius && dy <= radius;
 }
 
+static u8 splash_reaches_enemy(const entity_t *burst, const entity_t *enemy) {
+    i16 dx = (FIX8_TO_INT(enemy->x) + 4)
+        - (FIX8_TO_INT(burst->x) + 7);
+    i16 dy = (FIX8_TO_INT(enemy->y) + 4)
+        - (FIX8_TO_INT(burst->y) + 7);
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+    return dx <= 18 && dy <= 18;
+}
+
 // A bullet-hell kill must leave room for its guaranteed rewards.  Retiring
 // hostile shots at the death beat is both a readable clear signal and avoids
 // a full 32-slot entity table letting explosion FX crowd out hearts/relics.
@@ -86,6 +96,16 @@ u8 combat_resolve(void) BANKED {
         if (!(entities[i].flags & EF_ACTIVE)) continue;
         if (entities[i].type   != ENT_PROJECTILE) continue;
         if (!(entities[i].flags & EF_PLAYER_PROJ)) continue;
+        // Splash arming happens in the next frame's projectile update. It then
+        // receives exactly one complete sweep independent of entity slot order.
+        if (entities[i].ai_data[6] == PROJ_AUX_SPLASH) {
+            if (entities[i].ai_data[7] == 3) {
+                entity_kill(i);
+                continue;
+            }
+            if (entities[i].ai_data[7] != 2) continue;
+            entities[i].ai_data[7] = 3;
+        }
         for (j = 0; j < MAX_ENTITIES; ++j) {
             u8 eid, weakness, poise, dmg;
             u8 shot_spent_for_split = 0;
@@ -114,7 +134,11 @@ u8 combat_resolve(void) BANKED {
                 continue;
             }
             if (entities[j].type != ENT_ENEMY) continue;
-            if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
+            if (entities[i].ai_data[6] == PROJ_AUX_SPLASH) {
+                if (entities[i].ai_data[5] == j
+                    || !splash_reaches_enemy(&entities[i], &entities[j]))
+                    continue;
+            } else if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
             // Counter guards (Echo Guard and Crystal's Shard Crab) parry the
@@ -228,6 +252,18 @@ u8 combat_resolve(void) BANKED {
                 // three-damage endurance cap.
                 u8 cap = RUN_IS_EASY() ? 5 : 3;
                 if (dmg > cap) dmg = cap;
+            }
+
+            // Blast Seed is a true area interaction: the first direct body
+            // impact consumes the marker and leaves a one-frame 15x15 burst.
+            // Its payload remembers the struck slot so the target never takes
+            // both direct and splash damage from the same hit.
+            if (entities[i].ai_data[3] & PROJ_FLAG_SPLASH) {
+                entities[i].ai_data[3] &= (u8)~PROJ_FLAG_SPLASH;
+                projectile_spawn_splash(
+                    FIX8_TO_INT(entities[i].x) + 3,
+                    FIX8_TO_INT(entities[i].y) + 3,
+                    dmg > 1 ? (u8)((dmg + 1) >> 1) : 1, j);
             }
 
             {

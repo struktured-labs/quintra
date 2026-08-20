@@ -172,7 +172,8 @@
 // OBJ tile slots — 5 classes × 4 tiles each (metasprite) + 4 enemies + 4 boss tiles + pickups + bullet
 #define SPR_CLASS_BASE     0     // 5 classes × 4 tiles = 0..19
 #define SPR_CLASS_STRIDE   4
-#define SPR_CLASS_WALK_BASE 82  // 5 authored step poses: 82..101
+#define SPR_CLASS_WALK_A_BASE 82 // first authored stride beat: 82..101
+#define SPR_CLASS_WALK_BASE SPR_CLASS_WALK_A_BASE // legacy/test alias
 #define SPR_CLASS_ASCENDED_BASE 102 // 5 Spirit Convergence forms: 102..121
 #define SPR_ENEMY_CRAWLER  20
 #define SPR_ENEMY_HORNET   21
@@ -264,6 +265,12 @@
 #define SPR_ITEM_RIFT_BOMB   152
 #define SPR_ITEM_ECHO_CHIME  153
 #define SPR_ITEM_MIRROR_SHARD 154
+#define SPR_ITEM_BLAST_SEED   155 // radial impact-splash relic
+#define SPR_ITEM_RIFT_LENS    156 // every-third-shot heavy beam relic
+#define SPR_FX_BEAM_HEAD      158 // two-sprite fat beam head
+#define SPR_FX_BEAM_TAIL      159 // trailing beam body
+#define SPR_CLASS_WALK_B_BASE 160 // opposite stride beat: 160..179
+#define SPR_CLASS_HURT_BASE   180 // five actual-damage recoil poses: 180..199
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)
 #define SPR_SERPENT_BODY_A (SPR_BOSS_BIG + 12) // stage-2 atlas tail frames
 #define SPR_SERPENT_BODY_B (SPR_BOSS_BIG + 13)
@@ -302,7 +309,8 @@ void tiles_load_hud(void) BANKED;
 
 // Phase 12 metasprite loaders
 void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles = 20 OBJ tiles
-void tiles_load_ascended_sprites(void) BANKED;    // bank-3 transform atlas -> fixed OBJ slots
+void tiles_load_ascended_sprites(void) BANKED;    // transform atlas -> fixed OBJ slots
+void tiles_load_motion_sprites(void) BANKED;      // bank-4 walk-B + damage-recoil atlas
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
 void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-tag slot

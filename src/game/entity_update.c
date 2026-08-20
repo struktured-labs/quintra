@@ -7,6 +7,7 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/projectile.h"
 
 // Internal bank-3 entry point from projectile.c. It deliberately is not part
 // of the cross-bank public API.
@@ -19,6 +20,10 @@ static void fx_update_one(entity_t *e, u8 idx) {
         return;
     }
     e->state_timer--;
+    if (e->ai_data[6] == PROJ_AUX_BEAM_TRAIL) {
+        e->x = (ppos_t)(e->x + e->vx);
+        e->y = (ppos_t)(e->y + e->vy);
+    }
 }
 
 void entity_update_from(u8 start) BANKED {

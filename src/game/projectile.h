@@ -17,6 +17,9 @@ extern u8 g_shot_element;
 // Wolfkin's Howl uses a cast-wide Colossus hit budget while retaining all
 // eight physical lanes against ordinary crowds.
 #define PROJ_FLAG_HOWL        0x04
+#define PROJ_FLAG_SPLASH      0x08 // Blast Seed: first body impact blooms once
+#define PROJ_FLAG_FRACTAL     0x10 // Echo child: forks once after a short flight
+#define PROJ_FLAG_BEAM        0x20 // Rift Lens: wide two-sprite heavy projectile
 
 // Cached visible/mechanical mutations granted by ordinary run relics. These
 // make a pickup alter the champion's actual attack rather than only changing
@@ -24,7 +27,11 @@ extern u8 g_shot_element;
 #define ATTACK_TRAIT_POWER 0x01
 #define ATTACK_TRAIT_SWIFT 0x02
 #define ATTACK_TRAIT_BLOOD 0x04
+#define ATTACK_TRAIT_SPLASH 0x08
+#define ATTACK_TRAIT_BEAM   0x10
 #define PROJ_AUX_WOLFKIN_FANG 0xF1
+#define PROJ_AUX_SPLASH        0xF2
+#define PROJ_AUX_BEAM_TRAIL    0xF3
 
 // Cached from the run inventory so ordinary fire never scans all eight slots.
 // The cache is refreshed on purchase, new-run reset, and SRAM resume.
@@ -52,5 +59,15 @@ u8   projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) BANKED;
 
 // Four slow cardinal lanes committed together for a Colossus phase break.
 void projectile_spawn_enemy_cross(i16 px, i16 py, u8 damage) BANKED;
+
+// Cold relic physics live outside the crowded projectile bank. Echo children
+// fork for two bounded generations, Blast Seed creates one stationary area
+// hit, and Rift Lens widens the cadence shot into a two-sprite beam.
+void projectile_spawn_fractal_pair(i16 px, i16 py, u8 dir,
+    u8 damage, u8 can_fork) BANKED;
+void projectile_spawn_splash(i16 px, i16 py, u8 damage,
+    u8 avoid_slot) BANKED;
+void projectile_make_beam(u8 idx) BANKED;
+void projectile_update_relic(entity_t *e) BANKED;
 
 #endif

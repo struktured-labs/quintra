@@ -15,9 +15,61 @@
 #include "render/tiles.h"
 #include "content.h"
 
+static u8 pickup_kind_collectible(u8 kind) {
+    return kind <= PICKUP_MP || kind == PICKUP_RIFT_SIGIL
+        || kind == PICKUP_SURGE || kind == PICKUP_RIFTWELL
+        || kind == PICKUP_FARFOLD_RELIC || kind == PICKUP_BOON_CHOICE;
+}
+
+static u8 pickup_tile_safe(u8 tile) {
+    return room_tile_walkable(tile) && tile != BGT_SPIKES
+        && tile != BGT_PORTAL && tile != BGT_SWITCH;
+}
+
+static u8 pickup_position_safe(i16 px, i16 py) {
+    if (px < 0 || py < 0 || px > (i16)(room_world_width - 16)
+        || py > (i16)(room_world_height - 16)) return 0;
+    return pickup_tile_safe(room_tile_at_px(px + 1, py + 1))
+        && pickup_tile_safe(room_tile_at_px(px + 14, py + 1))
+        && pickup_tile_safe(room_tile_at_px(px + 1, py + 14))
+        && pickup_tile_safe(room_tile_at_px(px + 14, py + 14));
+}
+
+// Enemy deaths, authored rewards, and seeded fixtures all enter through the
+// same constructor. Terrain can change after their preferred coordinate was
+// chosen (push-block puzzles are the common case), so snap to the nearest
+// complete champion-sized walkable footprint. If an authored pocket has become
+// solid, the final fallback is the champion's connected component: a reward
+// may arrive at their feet, but can never remain trapped inside scenery.
+static void pickup_make_position_safe(fix8_t *x, fix8_t *y) {
+    i8 radius, dx, dy;
+    i16 px = FIX8_TO_INT(*x);
+    i16 py = FIX8_TO_INT(*y);
+    if (pickup_position_safe(px, py)) return;
+    for (radius = 1; radius <= 4; ++radius) {
+        for (dy = (i8)-radius; dy <= radius; ++dy) {
+            for (dx = (i8)-radius; dx <= radius; ++dx) {
+                i8 ax = dx < 0 ? (i8)-dx : dx;
+                i8 ay = dy < 0 ? (i8)-dy : dy;
+                i16 nx, ny;
+                if ((i8)(ax + ay) != radius) continue;
+                nx = px + (i16)dx * 8;
+                ny = py + (i16)dy * 8;
+                if (pickup_position_safe(nx, ny)) {
+                    *x = FIX8(nx); *y = FIX8(ny);
+                    return;
+                }
+            }
+        }
+    }
+    *x = FIX8(player.x);
+    *y = FIX8(player.y);
+}
+
 u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
     u8 idx = entity_spawn(ENT_PICKUP);
     if (idx == 0xFF) return 0xFF;
+    if (pickup_kind_collectible(kind)) pickup_make_position_safe(&x, &y);
     {
         entity_t *e = &entities[idx];
         e->x = x;
@@ -728,6 +780,10 @@ u8 pickup_check_player_collision(void) BANKED {
                             && player_has_item(ITEM_ID_WAR_DRUM))
                         || (ware == WARE_FLASK
                             && player_has_item(ITEM_ID_MOON_FLASK))
+                        || (ware == WARE_BLAST
+                            && player_has_item(ITEM_ID_BLAST_SEED))
+                        || (ware == WARE_BEAM
+                            && player_has_item(ITEM_ID_RIFT_LENS))
                         || (ware == WARE_GLASS && player.hp_max <= 2)
                         || (ware == WARE_HEART && player.hp >= player.hp_max)
                         || (ware == WARE_ITEM
@@ -753,7 +809,8 @@ u8 pickup_check_player_collision(void) BANKED {
                         || ((ware == WARE_GLASS || ware == WARE_PHOENIX
                                 || ware == WARE_ECHO || ware == WARE_RICOCHET
                                 || ware == WARE_THORN || ware == WARE_DRUM
-                                || ware == WARE_FLASK)
+                                || ware == WARE_FLASK || ware == WARE_BLAST
+                                || ware == WARE_BEAM)
                             && !player_has_inventory_space())) {
                         if (entities[i].ai_data[4] == 0) {
                             sfx_play(SFX_HURT);
@@ -853,6 +910,12 @@ u8 pickup_check_player_collision(void) BANKED {
                                 break;
                             case WARE_FLASK:
                                 grant_special_item(ITEM_ID_MOON_FLASK);
+                                break;
+                            case WARE_BLAST:
+                                grant_special_item(ITEM_ID_BLAST_SEED);
+                                break;
+                            case WARE_BEAM:
+                                grant_special_item(ITEM_ID_RIFT_LENS);
                                 break;
                         }
                         entity_kill(i);

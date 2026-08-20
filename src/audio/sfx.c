@@ -141,6 +141,14 @@ void sfx_play(u8 id) {
             pend_timer = 8;
             sfx_claim_channels(18, 0);
             break;
+        case SFX_DASH:
+            // A quick rising wind-cut: bright sweep plus a soft narrow-noise
+            // scrape. Unlike SFX_DOOR it stops immediately, so repeated combat
+            // dodges feel athletic instead of sounding like room transitions.
+            ch1(0x24, 0x40, 0xA1, 1874);
+            ch4(0x27, 0x72);
+            sfx_claim_channels(9, 7);
+            break;
         default:
             break;
     }

@@ -114,11 +114,14 @@ void tiles_load_all_class_sprites(void) BANKED {
     set_sprite_data((u8)(SPR_CLASS_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin);
     set_sprite_data((u8)(SPR_CLASS_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean);
     set_sprite_data((u8)(SPR_CLASS_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine);
-    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin_walk);
-    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 1 * SPR_CLASS_STRIDE), 4, sprite_class_sauran_walk);
-    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin_walk);
-    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean_walk);
-    set_sprite_data((u8)(SPR_CLASS_WALK_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine_walk);
+    set_sprite_data((u8)(SPR_CLASS_WALK_A_BASE + 0 * SPR_CLASS_STRIDE), 4, sprite_class_wolfkin_walk_a);
+    set_sprite_data((u8)(SPR_CLASS_WALK_A_BASE + 1 * SPR_CLASS_STRIDE), 4, sprite_class_sauran_walk_a);
+    set_sprite_data((u8)(SPR_CLASS_WALK_A_BASE + 2 * SPR_CLASS_STRIDE), 4, sprite_class_corvin_walk_a);
+    set_sprite_data((u8)(SPR_CLASS_WALK_A_BASE + 3 * SPR_CLASS_STRIDE), 4, sprite_class_picsean_walk_a);
+    set_sprite_data((u8)(SPR_CLASS_WALK_A_BASE + 4 * SPR_CLASS_STRIDE), 4, sprite_class_vespine_walk_a);
+    // The second stride and hurt atlas live in bank 4: keeping another ten
+    // 16x16 poses out of this art-heavy bank preserves cartridge headroom.
+    tiles_load_motion_sprites();
     // The ascended atlas resides in bank 3, so its own banked loader performs
     // the VRAM copies. Direct pointers here would read whatever bank 2 has at
     // the same address rather than the transformed forms.
@@ -281,6 +284,8 @@ void tiles_load_fx_sprites(void) BANKED {
     tiles_load_merchant_callout_sprite();
     set_sprite_data(SPR_SURGE_ORB,  1, sprite_fx_surge_orb);
     set_sprite_data(SPR_SHIELD_AURA, 1, sprite_fx_shield_aura);
+    set_sprite_data(SPR_FX_BEAM_HEAD, 1, sprite_fx_beam_head);
+    set_sprite_data(SPR_FX_BEAM_TAIL, 1, sprite_fx_beam_tail);
     // Wolfkin's physical attack is a readable steel sword, with a distinct
     // point, blade, crossguard, and hilt—not a bullet or a tiny bare fist.
     set_sprite_data(SPR_FX_SWING, 1, sprite_fx_sword);

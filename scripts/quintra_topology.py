@@ -64,6 +64,9 @@ def dungeon_maze_neighbor(cell: int, size: int, direction: int,
     lower_count = min(GRID_W, size - lower_first)
     if lower_count <= 0:
         return None
+    service_first = size - 3
+    if lower_first < service_first:
+        lower_count = min(lower_count, service_first - lower_first)
     fold_col = folds[seed_fold][upper_row]
     if (upper_row + 1) & 1:
         fold_col = max(fold_col, GRID_W - lower_count)

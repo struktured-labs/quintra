@@ -88,6 +88,32 @@ def map_node(pb, cell):
     return pb.memory[0x9800 + GY[cell] * 32 + GX[cell]]
 
 
+def open_compass(pb):
+    pb.button_press("select")
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[SCREEN] == SCREEN_MAP:
+                settle(pb, 30)
+                return
+    finally:
+        pb.button_release("select")
+    raise AssertionError("SELECT did not enter Farfold Compass")
+
+
+def close_compass(pb):
+    pb.button_press("b")
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[SCREEN] == SCREEN_ROOM:
+                settle(pb, 30)
+                return
+    finally:
+        pb.button_release("b")
+    raise AssertionError("B did not return from Farfold Compass")
+
+
 def cross(pb, direction):
     clear_hostiles(pb)
     pb.memory[SEALED] = 0
@@ -119,14 +145,10 @@ def main():
 
         # SELECT advertises the optional destination before the player walks
         # there, while keeping it semantically separate from required GOAL.
-        pb.button("select")
-        settle(pb, 30)
-        assert pb.memory[SCREEN] == SCREEN_MAP
+        open_compass(pb)
         assert map_node(pb, cache) == BGT_MAP_BIG_CACHE, (
             f"cache cell {cache} lacks its optional LOOT node")
-        pb.button("b")
-        settle(pb, 30)
-        assert pb.memory[SCREEN] == SCREEN_ROOM
+        close_compass(pb)
 
         # Enter the generated cache cell through the cartridge's real
         # Riftwild-to-dungeon transaction so all room banks and runtime
@@ -154,7 +176,10 @@ def main():
         relics = farfold_entities(pb)
         assert len(relics) == 1, f"cache spawned {len(relics)} relics"
         relic = relics[0]
-        assert (get16(pb, relic + 3), get16(pb, relic + 7)) == (216, 208)
+        # The altar's visible switch occupies the authored center. The shared
+        # pickup safety pass snaps the orb one floor cell east, still inside
+        # the shrine but never on top of an interactive terrain tile.
+        assert (get16(pb, relic + 3), get16(pb, relic + 7)) == (224, 208)
         item_index = pb.memory[relic + 18]
         assert item_index in (10, 11, 12, 15, 16, 17, 19), item_index
         # The southeast altar is real collision-world architecture, beyond
@@ -188,13 +213,10 @@ def main():
         direction, neighbor = neighbors[0]
         cross(pb, direction)
         assert pb.memory[RS + 1] == STAGE_START[0] + neighbor
-        pb.button("select")
-        settle(pb, 30)
-        assert pb.memory[SCREEN] == SCREEN_MAP
+        open_compass(pb)
         assert map_node(pb, cache) != BGT_MAP_BIG_CACHE, (
             "claimed cache remained marked as unclaimed LOOT")
-        pb.button("b")
-        settle(pb, 30)
+        close_compass(pb)
         cross(pb, direction ^ 2)
         assert pb.memory[RS + 1] == target
         assert not farfold_entities(pb), "cache relic respawned after backtrack"

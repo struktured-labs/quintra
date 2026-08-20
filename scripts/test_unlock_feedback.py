@@ -80,14 +80,23 @@ def main():
     assert pb.memory[SEALED] == 0, "final mandatory kill did not unseal room"
 
     # room_unseal_doors waits for the VBlank on which its tile swap becomes
-    # visible. PyBoy can return at that boundary just before the following
-    # banked sound call executes, so finish the release frame before sampling.
-    pb.tick()
-    signature = tuple(pb.memory[address] for address in (
-        0xFF10, 0xFF11, 0xFF12, 0xFF21, 0xFF22))
-    assert (signature[0] & 0x7F) == 0x26 and signature[2:] == (
-        0xC4, 0xB3, 0x5A), (
-        f"mandatory clear did not finish on latch voice: {signature}")
+    # visible. PyBoy can return at that boundary before the following banked
+    # sound call executes, and the wider world redraw makes that handoff vary
+    # by a few frames. Observe the unique latch voice during its claimed
+    # 12-frame window instead of sampling one arbitrary emulator boundary.
+    signature = None
+    last_signature = None
+    for _ in range(12):
+        pb.tick()
+        observed = tuple(pb.memory[address] for address in (
+            0xFF10, 0xFF11, 0xFF12, 0xFF21, 0xFF22))
+        last_signature = observed
+        if ((observed[0] & 0x7F) == 0x26
+                and observed[2:] == (0xC4, 0xB3, 0x5A)):
+            signature = observed
+            break
+    assert signature is not None, (
+        f"mandatory clear did not play latch voice: {last_signature}")
     pb.stop(save=False)
     print(f"[unlock-feedback] PASS final real kill released seal with latch "
           f"signature {signature}")

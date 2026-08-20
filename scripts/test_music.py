@@ -552,9 +552,14 @@ def main():
     assert stage_swings == [0, 1, 0, 1, 2, 1, 0, 1, 2], stage_swings
     assert boss_swings == [0, 1, 0, 1, 2, 1, 0, 1, 1], boss_swings
     engine = (ROOT / "src/audio/music.c").read_text()
+    director = (ROOT / "src/audio/music_director.c").read_text()
     data_engine = (ROOT / "src/audio/music_data.c").read_text()
-    assert "play_harmony(boss)" in engine and "play_percussion(boss)" in engine
+    assert "play_harmony()" in engine and "play_percussion(boss)" in engine
     assert "sfx_music_ch1_clear()" in engine and "sfx_music_ch4_clear()" in engine
+    assert "music_adaptive_prepare_section" in engine
+    for layer in ("health", "threat", "context", "power", "relic"):
+        assert f"music_{layer}_target" in director, (
+            f"adaptive score lost its {layer} input")
     stage_rows = variant_rows("stage_music")
     boss_rows = variant_rows("boss_music")
     assert tuple(int(row[9], 0) for row in stage_rows) == STAGE_SCALES

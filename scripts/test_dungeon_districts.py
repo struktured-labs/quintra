@@ -335,12 +335,25 @@ def main():
             if pb.memory[RS + 1] == target:
                 break
         assert pb.memory[RS + 1] == target, "vertical district seam stalled"
-        pb.tick(48)
-        # NR13 is write-only and NR14 has read masks on real hardware/PyBoy;
-        # the fresh 0xB4 envelope is the observable contract for the second
-        # bell attack (and cannot come from the CH2 stage melody).
-        assert pb.memory[0xFF12] == 0xB4, (
-            "district boundary bell did not reach its second attack: "
+        # Cell state advances before the destination finishes drawing, and
+        # wider district silhouettes legitimately vary that redraw latency.
+        # Observe the complete low-A4 -> D5 figure instead of sampling one
+        # brittle frame after the transition. NR13 is write-only and NR14 has
+        # read masks on real hardware/PyBoy, so the two fresh envelopes are
+        # the stable CH1 contract (and cannot come from the CH2 stage melody).
+        heard_low = pb.memory[0xFF12] == 0x94
+        heard_answer = False
+        for _ in range(120):
+            pb.tick()
+            envelope = pb.memory[0xFF12]
+            if envelope == 0x94:
+                heard_low = True
+            elif heard_low and envelope == 0xB4:
+                heard_answer = True
+                break
+        assert heard_low and heard_answer, (
+            "district boundary bell did not complete its two attacks: "
+            f"low={heard_low} answer={heard_answer} "
             f"NR12={pb.memory[0xFF12]:#04x}")
     finally:
         pb.stop(save=False)

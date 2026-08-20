@@ -5,9 +5,11 @@
 
 #include "core/types.h"
 #include "game/player.h"
+#include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
 #include "render/palette.h"
+#include "render/tiles.h"
 #include "render/tiles.h"
 
 // HUD palette — bright accent (red hearts, gold coin) on dark BG
@@ -59,6 +61,7 @@ static u8 offer_price = 0xFF;
 static u8 offer_ware = 0xFF;
 static u8 lane_palette = 0xFF;
 static u8 will_full_palette = 0xFF;
+static u8 hud_hp_seen;
 
 static void hud_set_lane_palette(u8 palette) {
     u8 attrs[4];
@@ -85,6 +88,7 @@ void hud_init(void) BANKED {
     palette_bg_load(5, hud_palette_will);
     lane_palette = 5;
     will_full_palette = 0;
+    hud_hp_seen = player.hp;
 
     // Fill all 20 WIN tiles with blank, then set palette attribute = 7
     // (except the MP columns 8-9, which take the blue palette 6)
@@ -119,6 +123,13 @@ void hud_redraw_hp(void) BANKED {
     u8 hearts_total = player.hp_max;     // half-hearts
     u8 hearts_filled = player.hp;
     u8 i;
+
+    if (player.hp < hud_hp_seen) {
+        room_hurt_pose_ticks = 12;
+        room_player_pose_locked = 1;
+        room_player_pose_base = SPR_CLASS_HURT_BASE;
+    }
+    hud_hp_seen = player.hp;
 
     for (i = 0; i < HUD_MAX_HEARTS; ++i) {
         u8 cap_full  = (u8)(2 + (i * 2));    // half-hearts up to and including full
@@ -202,6 +213,8 @@ void hud_show_offer(u8 ware, u8 price) BANKED {
         case 14: icon = HUD_OFFER_THORN;  break; // WARE_THORN
         case 15: icon = HUD_OFFER_DRUM;   break; // WARE_DRUM
         case 16: icon = HUD_OFFER_FLASK;  break; // WARE_FLASK
+        case 17: icon = HUD_OFFER_THORN;  break; // WARE_BLAST: area burst
+        case 18: icon = HUD_OFFER_WEAPON; break; // WARE_BEAM: attack shape
         default: icon = HUD_OFFER_RELIC; break; // WARE_ITEM / future relics
     }
     row[0] = icon;

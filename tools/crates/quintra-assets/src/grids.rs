@@ -46,15 +46,22 @@ pub const VESPINE: [&str; 16] = [   // wasp-man: antennae, wings, striped, sting
     "....21122112....", "....21122112....", "....212..212....", "....22....22....",
 ];
 
-// Deliberate second walk poses. Each foot stays on its own side; the old OAM
-// quadrant mirror made faces, fins, wings and tails jump sideways.
-pub const WOLFKIN_WALK: [&str; 16] = walk_pose(WOLFKIN);
-pub const SAURAN_WALK: [&str; 16] = walk_pose(SAURAN);
-pub const CORVIN_WALK: [&str; 16] = walk_pose(CORVIN);
-pub const PICSEAN_WALK: [&str; 16] = picsean_walk_pose();
-pub const VESPINE_WALK: [&str; 16] = vespine_walk_pose();
+// A real two-beat walk cycle. The feet trade the lead instead of alternating
+// one generic leg edit with the neutral pose, while each species moves the
+// appendage that defines its silhouette: Sauran's tail, Corvin's wings,
+// Picsean's fins, and Vespine's full wing span.
+pub const WOLFKIN_WALK_A: [&str; 16] = wolfkin_walk_a();
+pub const SAURAN_WALK_A: [&str; 16] = sauran_walk_a();
+pub const CORVIN_WALK_A: [&str; 16] = corvin_walk_a();
+pub const PICSEAN_WALK_A: [&str; 16] = picsean_walk_a();
+pub const VESPINE_WALK_A: [&str; 16] = vespine_walk_a();
+pub const WOLFKIN_WALK_B: [&str; 16] = wolfkin_walk_b();
+pub const SAURAN_WALK_B: [&str; 16] = sauran_walk_b();
+pub const CORVIN_WALK_B: [&str; 16] = corvin_walk_b();
+pub const PICSEAN_WALK_B: [&str; 16] = picsean_walk_b();
+pub const VESPINE_WALK_B: [&str; 16] = vespine_walk_b();
 
-const fn walk_pose(mut pose: [&'static str; 16]) -> [&'static str; 16] {
+const fn walk_pose_a(mut pose: [&'static str; 16]) -> [&'static str; 16] {
     pose[12] = "....211..2112...";
     pose[13] = "....212..2112...";
     pose[14] = "....22....212...";
@@ -62,19 +69,131 @@ const fn walk_pose(mut pose: [&'static str; 16]) -> [&'static str; 16] {
     pose
 }
 
-const fn picsean_walk_pose() -> [&'static str; 16] {
-    let mut pose = walk_pose(PICSEAN);
+const fn walk_pose_b(mut pose: [&'static str; 16]) -> [&'static str; 16] {
+    pose[12] = "...2112..211....";
+    pose[13] = "...2112..212....";
+    pose[14] = "...212....22....";
+    pose[15] = "....22..........";
+    pose
+}
+
+const fn wolfkin_walk_a() -> [&'static str; 16] {
+    let mut pose = walk_pose_a(WOLFKIN);
+    pose[8] = ".2211111111112..";
+    pose
+}
+
+const fn wolfkin_walk_b() -> [&'static str; 16] {
+    let mut pose = walk_pose_b(WOLFKIN);
+    pose[8] = "..211111111122..";
+    pose
+}
+
+const fn sauran_walk_a() -> [&'static str; 16] {
+    let mut pose = walk_pose_a(SAURAN);
+    pose[10] = "...21111111222..";
+    pose
+}
+
+const fn sauran_walk_b() -> [&'static str; 16] {
+    let mut pose = walk_pose_b(SAURAN);
+    pose[10] = "..22211111112...";
+    pose
+}
+
+const fn corvin_walk_a() -> [&'static str; 16] {
+    let mut pose = walk_pose_a(CORVIN);
+    pose[7] = ".2211111111122..";
+    pose
+}
+
+const fn corvin_walk_b() -> [&'static str; 16] {
+    let mut pose = walk_pose_b(CORVIN);
+    pose[7] = "..221111111122..";
+    pose
+}
+
+const fn picsean_walk_a() -> [&'static str; 16] {
+    let mut pose = walk_pose_a(PICSEAN);
+    pose[7] = ".3211111111123..";
     pose[14] = "...232....2132..";
     pose[15] = "....2......2....";
     pose
 }
 
-const fn vespine_walk_pose() -> [&'static str; 16] {
-    let mut pose = walk_pose(VESPINE);
+const fn picsean_walk_b() -> [&'static str; 16] {
+    let mut pose = walk_pose_b(PICSEAN);
+    pose[7] = "..321111111123..";
+    pose[14] = "..2312....232...";
+    pose[15] = "...2......2.....";
+    pose
+}
+
+const fn vespine_walk_a() -> [&'static str; 16] {
+    let mut pose = walk_pose_a(VESPINE);
+    pose[6] = ".33321111112333.";
     pose[12] = ".....211.2112...";
     pose[13] = ".....212.2112...";
     pose[14] = ".....22...212...";
-    pose[15] = "..........22....";
+    pose
+}
+
+const fn vespine_walk_b() -> [&'static str; 16] {
+    let mut pose = walk_pose_b(VESPINE);
+    pose[6] = "333.21111112.333";
+    pose[12] = "...2112.211.....";
+    pose[13] = "...2112.212.....";
+    pose[14] = "...212...22.....";
+    pose
+}
+
+// Damage has its own readable recoil instead of borrowing the walk frame.
+// The upper half remains class-authored, while the torso folds and the feet
+// brace into a wide stagger. Species-specific appendages stay visible.
+pub const WOLFKIN_HURT: [&str; 16] = wolfkin_hurt();
+pub const SAURAN_HURT: [&str; 16] = sauran_hurt();
+pub const CORVIN_HURT: [&str; 16] = corvin_hurt();
+pub const PICSEAN_HURT: [&str; 16] = picsean_hurt();
+pub const VESPINE_HURT: [&str; 16] = vespine_hurt();
+
+const fn hurt_pose(mut pose: [&'static str; 16]) -> [&'static str; 16] {
+    pose[9] = "...211111112....";
+    pose[10] = "....21111112....";
+    pose[11] = ".....211112.....";
+    pose[12] = "....2112.2112...";
+    pose[13] = ".....212.212....";
+    pose[14] = ".....22..22.....";
+    pose[15] = "....22....22....";
+    pose
+}
+
+const fn wolfkin_hurt() -> [&'static str; 16] {
+    let mut pose = hurt_pose(WOLFKIN);
+    pose[8] = ".2211111111122..";
+    pose
+}
+
+const fn sauran_hurt() -> [&'static str; 16] {
+    let mut pose = hurt_pose(SAURAN);
+    pose[10] = "..22211111112...";
+    pose
+}
+
+const fn corvin_hurt() -> [&'static str; 16] {
+    let mut pose = hurt_pose(CORVIN);
+    pose[7] = ".2211111111122..";
+    pose
+}
+
+const fn picsean_hurt() -> [&'static str; 16] {
+    let mut pose = hurt_pose(PICSEAN);
+    pose[7] = ".3211111111123..";
+    pose
+}
+
+const fn vespine_hurt() -> [&'static str; 16] {
+    let mut pose = hurt_pose(VESPINE);
+    pose[6] = "333.21111112.333";
     pose
 }
 
@@ -495,6 +614,31 @@ pub const BULLET_B: [&str; 8] = [
     "..1331..",
     ".113311.",
     "..1..1..",
+    "........",
+];
+
+// Rift Lens projectile: the renderer chains these two tiles along velocity.
+// A bright solid core and dark rim make the result read as a thick beam rather
+// than two ordinary bullets touching one another.
+pub const BEAM_HEAD: [&str; 8] = [
+    "..3333..",
+    ".321123.",
+    "32111123",
+    "31133113",
+    "31133113",
+    "32111123",
+    ".321123.",
+    "..3333..",
+];
+
+pub const BEAM_TAIL: [&str; 8] = [
+    "........",
+    ".333333.",
+    "32111123",
+    "31133113",
+    "31133113",
+    "32111123",
+    ".333333.",
     "........",
 ];
 
@@ -919,12 +1063,28 @@ pub const PLAYERS: [(&str, &[&str]); 5] = [
     ("vespine", &VESPINE),
 ];
 
-pub const PLAYERS_WALK: [(&str, &[&str]); 5] = [
-    ("wolfkin", &WOLFKIN_WALK),
-    ("sauran", &SAURAN_WALK),
-    ("corvin", &CORVIN_WALK),
-    ("picsean", &PICSEAN_WALK),
-    ("vespine", &VESPINE_WALK),
+pub const PLAYERS_WALK_A: [(&str, &[&str]); 5] = [
+    ("wolfkin", &WOLFKIN_WALK_A),
+    ("sauran", &SAURAN_WALK_A),
+    ("corvin", &CORVIN_WALK_A),
+    ("picsean", &PICSEAN_WALK_A),
+    ("vespine", &VESPINE_WALK_A),
+];
+
+pub const PLAYERS_WALK_B: [(&str, &[&str]); 5] = [
+    ("wolfkin", &WOLFKIN_WALK_B),
+    ("sauran", &SAURAN_WALK_B),
+    ("corvin", &CORVIN_WALK_B),
+    ("picsean", &PICSEAN_WALK_B),
+    ("vespine", &VESPINE_WALK_B),
+];
+
+pub const PLAYERS_HURT: [(&str, &[&str]); 5] = [
+    ("wolfkin", &WOLFKIN_HURT),
+    ("sauran", &SAURAN_HURT),
+    ("corvin", &CORVIN_HURT),
+    ("picsean", &PICSEAN_HURT),
+    ("vespine", &VESPINE_HURT),
 ];
 
 pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
@@ -969,9 +1129,11 @@ pub const ENEMIES_8: [(&str, &[&str]); 31] = [
     ("rift_cantor", &RIFT_CANTOR),
 ];
 
-pub const FX_8: [(&str, &[&str]); 19] = [
+pub const FX_8: [(&str, &[&str]); 21] = [
     ("bullet_a", &BULLET_A),
     ("bullet_b", &BULLET_B),
+    ("beam_head", &BEAM_HEAD),
+    ("beam_tail", &BEAM_TAIL),
     ("muzzle", &MUZZLE),
     ("impact", &IMPACT),
     ("wisp", &WISP),

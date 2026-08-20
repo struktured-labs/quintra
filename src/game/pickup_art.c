@@ -15,6 +15,8 @@ u8 pickup_item_sprite(u8 item_index) BANKED {
         return (u8)(SPR_ITEM_IRON_HEART + (u8)(id - 20u));
     if (id >= 40u && id <= 42u)
         return (u8)(SPR_ITEM_RIFT_BOMB + (u8)(id - 40u));
+    if (id == ITEM_ID_BLAST_SEED) return SPR_ITEM_BLAST_SEED;
+    if (id == ITEM_ID_RIFT_LENS) return SPR_ITEM_RIFT_LENS;
     return (item_index < N_ITEMS && items[item_index].kind == ITEM_KIND_WEAPON)
         ? SPR_ITEM_WEAPON : SPR_ITEM_POWER_STONE;
 }

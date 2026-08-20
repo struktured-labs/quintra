@@ -3,6 +3,7 @@
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
+#include "audio/music_director.h"
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/dungeon_director.h"
@@ -339,6 +340,7 @@ void dungeon_director_refresh_route(void) BANKED {
 
 void dungeon_director_activate(void) BANKED {
     dungeon_director_refresh_route();
+    music_director_refresh();
     if (room_encounter_kind != ENCOUNTER_SKIRMISH
         && room_encounter_kind != ENCOUNTER_FURNACE)
         room_combat_sealed = 1;

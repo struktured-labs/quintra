@@ -2,6 +2,7 @@
 
 #include "audio/music.h"
 #include "audio/music_data.h"
+#include "audio/music_director.h"
 #include "audio/music_score.h"
 #include "audio/sfx.h"
 
@@ -34,14 +35,24 @@ static u8 accent_mask = 0x11;
 static u8 swing_amount;
 static u8 current_row_frames = 8;
 static u8 active_harmony[36];
-static u8 active_drum_timbre = 0x35;
-static u8 active_drum_strong = 0x11;
-static u8 active_drum_soft = 0x44;
+u8 music_drum_timbre = 0x35;
+u8 music_drum_strong = 0x11;
+u8 music_drum_soft = 0x44;
 static u8 score_bank;
 static u8 development_bank;
 static u8 long_form;
 static u8 active_bass_code;
 u8 music_motif;
+u8 music_health_tier;
+u8 music_threat_tier;
+u8 music_context;
+u8 music_power_tier;
+u8 music_relic_tier;
+u8 music_health_target;
+u8 music_threat_target;
+u8 music_context_target;
+u8 music_power_target;
+u8 music_relic_target;
 static const u8 *cur_melody = title_melody;
 static const u8 *cur_bass = title_bass;
 static const u8 *cur_development_melody;
@@ -63,9 +74,9 @@ static void select_variant(const music_variant_t *v, const u8 *form,
     swing_amount = v->swing;
     current_row_frames = frames_per_row + swing_amount;
     music_prepare_harmony(v->scale, active_harmony);
-    active_drum_timbre = v->drum_timbre;
-    active_drum_strong = v->drum_strong;
-    active_drum_soft = v->drum_soft;
+    music_drum_timbre = v->drum_timbre;
+    music_drum_strong = v->drum_strong;
+    music_drum_soft = v->drum_soft;
     score_bank = bank;
     development_bank = BANK(music_development_score);
     cur_form = form;
@@ -80,6 +91,11 @@ static void select_variant(const music_variant_t *v, const u8 *form,
     music_pattern_row = 0;
     active_bass_code = T_REST;
     music_motif = 0;
+    music_health_tier = music_health_target = 0;
+    music_threat_tier = music_threat_target = 1;
+    music_context = music_context_target = MUSIC_CONTEXT_EXPLORE;
+    music_power_tier = music_power_target = 0;
+    music_relic_tier = music_relic_target = 0;
 }
 
 void music_play_caverns(void) {
@@ -172,30 +188,7 @@ void music_stop(void) {
     NR30_REG = 0x00;
 }
 
-static u8 arranged_envelope(void) {
-    u8 volume = pulse_envelope & 0xF0;
-    if (music_form_step < 2) {
-        if (volume >= 0x30) volume -= 0x20;
-    } else if (music_form_step == 12) {
-        if (volume >= 0x40) volume -= 0x30;
-    } else if (music_form_step < 16) {
-        if (volume >= 0x20) volume -= 0x10;
-    } else if (music_form_step >= 28 && volume < 0xF0) {
-        volume += 0x10;
-    }
-    if ((accent_mask & (u8)(1u << (music_pattern_row & 0x07))) &&
-        volume < 0xF0) volume += 0x10;
-    return volume | (pulse_envelope & 0x0F);
-}
-
-static u8 arranged_wave_level(void) {
-    if (music_form_step == 12) return 0x00; // bridge opens into vacuum
-    if (music_form_step < 2 || music_form_step == 13) return 0x60;
-    if (music_form_step >= 28) return 0x20;
-    return wave_level;
-}
-
-static void play_harmony(u8 boss) {
+static void play_harmony(void) {
     u8 root;
     u8 phase;
     u8 code;
@@ -204,23 +197,16 @@ static void play_harmony(u8 boss) {
     if (!sfx_music_ch1_clear() || active_bass_code < T_C3 ||
         active_bass_code > T_B3 || music_form_step == 12) return;
 
-    // The intro answers only twice per section, exploration arpeggiates on
-    // the offbeat, and bosses push twice as often. This density arc is part
-    // of the form rather than a permanently busy extra voice.
-    if (music_form_step < 2) {
-        if ((music_pattern_row & 0x07) != 2) return;
-    } else if (boss) {
-        if ((music_pattern_row & 0x01) == 0) return;
-    } else if ((music_pattern_row & 0x03) != 2) return;
+    if (!(music_mix_harmony_mask
+        & (u8)(1u << (music_pattern_row & 0x07)))) return;
+    envelope = music_mix_harmony_envelope;
 
     root = active_bass_code - T_C3;
-    phase = (u8)((music_pattern_row >> 1) + music_form_step);
+    phase = (u8)((music_pattern_row >> 1) + music_form_step
+        + music_health_tier + music_relic_tier);
     while (phase >= 3) phase -= 3;
     code = active_harmony[(u8)(root * 3 + phase)];
     note = tone_freq[code];
-    envelope = boss ? 0x72 : 0x42;
-    if (music_form_step < 2) envelope = 0x32;
-    else if (music_form_step >= 28) envelope += 0x20;
     NR10_REG = 0x00;
     NR11_REG = pulse_duty ^ 0x40;
     NR12_REG = envelope;
@@ -228,18 +214,33 @@ static void play_harmony(u8 boss) {
     NR14_REG = (u8)(0x80 | (note >> 8));
 }
 
+static u8 adaptive_lead_envelope(void) {
+    u8 envelope = music_mix_lead_envelope;
+    if ((accent_mask & (u8)(1u << (music_pattern_row & 0x07)))
+        && (envelope & 0xF0) < 0xF0) envelope += 0x10;
+    return envelope;
+}
+
 static void play_percussion(u8 boss) {
     u8 beat = music_pattern_row & 0x07;
     u8 bit = (u8)(1u << beat);
-    if (!sfx_music_ch4_clear() || music_form_step < 2 ||
-        music_form_step == 12) return;
-
-    if (active_drum_strong & bit) {
-        NR42_REG = boss ? 0x82 : 0x52;
-        NR43_REG = active_drum_timbre;
-    } else if (active_drum_soft & bit) {
-        NR42_REG = boss ? 0x72 : 0x42;
-        NR43_REG = active_drum_timbre ^ 0x08;
+    if (!sfx_music_ch4_clear() || music_form_step < 2
+        || music_form_step == 12
+        || music_context == MUSIC_CONTEXT_SANCTUARY
+        || music_context == MUSIC_CONTEXT_MERCHANT) return;
+    if (music_drum_strong & bit) {
+        NR42_REG = (boss || music_context == MUSIC_CONTEXT_MINIBOSS)
+            ? 0x82 : 0x52;
+        NR43_REG = music_drum_timbre;
+    } else if (music_drum_soft & bit) {
+        NR42_REG = (boss || music_context == MUSIC_CONTEXT_MINIBOSS)
+            ? 0x72 : 0x42;
+        NR43_REG = music_drum_timbre ^ 0x08;
+    } else if (music_health_tier == 3 && (beat == 0 || beat == 4)) {
+        NR42_REG = 0x62; NR43_REG = 0x55;
+    } else if ((music_context == MUSIC_CONTEXT_MINIBOSS
+            || music_threat_tier >= 3) && !(beat & 1)) {
+        NR42_REG = 0x42; NR43_REG = music_drum_timbre ^ 0x10;
     } else return;
     NR44_REG = 0x80;
 }
@@ -256,6 +257,14 @@ void music_tick(void) {
     if (!playing) return;
     if (++frame_div < current_row_frames) return;
     frame_div = 0;
+
+    // Sample live room state and cache the whole 16-row arrangement in one
+    // cold-bank crossing. Every row below then consumes only WRAM values.
+    if (long_form && music_pattern_row == 0) {
+        u8 boss_track = music_track_id >= MUSIC_BOSS_BASE;
+        music_adaptive_prepare_section(pulse_envelope, wave_level,
+            music_form_step, boss_track);
+    }
 
     if (long_form && music_pattern_row == 0) {
         u8 previous_bank = CURRENT_BANK;
@@ -307,7 +316,7 @@ void music_tick(void) {
         // and final return retain the track's identifying timbre.
         NR21_REG = (music_form_step >= 8 && music_form_step < 24) ?
             (pulse_duty ^ 0x40) : pulse_duty;
-        NR22_REG = long_form ? arranged_envelope() : pulse_envelope;
+        NR22_REG = long_form ? adaptive_lead_envelope() : pulse_envelope;
         NR23_REG = (u8)(note & 0xFF);
         NR24_REG = (u8)(0x80 | (note >> 8));
     } else {
@@ -320,7 +329,7 @@ void music_tick(void) {
         u16 bass = tone_freq[bass_code < T_COUNT ? bass_code : T_REST];
         if (bass != 0) {
             NR31_REG = 0x00;
-            NR32_REG = long_form ? arranged_wave_level() : wave_level;
+            NR32_REG = long_form ? music_mix_wave_level : wave_level;
             NR33_REG = (u8)(bass & 0xFF);
             NR34_REG = (u8)(0x80 | (bass >> 8));
         } else {
@@ -329,7 +338,7 @@ void music_tick(void) {
     }
 
     if (long_form) {
-        play_harmony(boss);
+        play_harmony();
         play_percussion(boss);
         music_pattern_row++;
         if (music_pattern_row >= 16) {

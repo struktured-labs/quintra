@@ -22,6 +22,7 @@ enum {
     SFX_WEAK,         // elemental super-effective: bright rising crystal ping
     SFX_PUZZLE,       // landscape secret: long spooky four-note discovery cue
     SFX_DISTRICT,     // crossing a dungeon depth band: low/high wayfinding bell
+    SFX_DASH,         // double-tap dodge: short rising wind-cut, never a door
 };
 
 // Banked reward voices keep pickups mechanically legible without bloating the

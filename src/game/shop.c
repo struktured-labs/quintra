@@ -26,7 +26,9 @@ static u8 ware_owned(u8 ware) {
         : ware == WARE_RICOCHET ? ITEM_ID_RICOCHET_RUNE
         : ware == WARE_THORN ? ITEM_ID_THORN_CROWN
         : ware == WARE_DRUM ? ITEM_ID_WAR_DRUM
-        : ware == WARE_FLASK ? ITEM_ID_MOON_FLASK : 0xFF;
+        : ware == WARE_FLASK ? ITEM_ID_MOON_FLASK
+        : ware == WARE_BLAST ? ITEM_ID_BLAST_SEED
+        : ware == WARE_BEAM ? ITEM_ID_RIFT_LENS : 0xFF;
     u8 i;
     if (item == 0xFF) return 0;
     for (i = 0; i < INVENTORY_SLOTS; ++i)
@@ -60,6 +62,8 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
         case WARE_THORN:   entities[idx].sprite_tile = SPR_ITEM_THORN; break;
         case WARE_DRUM:    entities[idx].sprite_tile = SPR_ITEM_DRUM; break;
         case WARE_FLASK:   entities[idx].sprite_tile = SPR_ITEM_FLASK; break;
+        case WARE_BLAST:   entities[idx].sprite_tile = SPR_ITEM_BLAST_SEED; break;
+        case WARE_BEAM:    entities[idx].sprite_tile = SPR_ITEM_RIFT_LENS; break;
         default:           entities[idx].sprite_tile = SPR_ITEM_POWER_STONE; break;
     }
     entities[idx].palette = (ware == WARE_ITEM || ware == WARE_FORGE
@@ -67,13 +71,14 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
         : (ware == WARE_SURGE || ware == WARE_RUNE
             || ware == WARE_CHART || ware == WARE_ASCEND
             || ware == WARE_ECHO || ware == WARE_RICOCHET
-            || ware == WARE_FLASK) ? 0x06 : 0x04;
+            || ware == WARE_FLASK || ware == WARE_BEAM) ? 0x06
+        : 0x04;
 }
 
 u8 pickup_dungeon_featured_ware(u8 shelf) BANKED {
-    static const u8 build_wares[6] = {
+    static const u8 build_wares[8] = {
         WARE_VAMP, WARE_WEAPON, WARE_GLASS, WARE_ECHO,
-        WARE_RICOCHET, WARE_THORN,
+        WARE_RICOCHET, WARE_THORN, WARE_BLAST, WARE_BEAM,
     };
     static const u8 tactical_wares[6] = {
         WARE_SURGE, WARE_CHART, WARE_PHOENIX, WARE_ASCEND,
@@ -81,19 +86,19 @@ u8 pickup_dungeon_featured_ware(u8 shelf) BANKED {
     };
     u8 roll = (u8)((u8)run_state.run_seed ^ run_state.bosses_beaten);
     u8 pick, tries = 0;
-    // Six-by-six catalog: contiguous low-byte seeds enumerate every pair.
+    // Eight-by-six catalog: contiguous low-byte seeds enumerate every pair.
     // If a unique relic is already carried, walk forward within that shelf
     // so a later merchant never wastes its interesting counter on a dead
     // duplicate.
     if (shelf) {
-        pick = (u8)((roll / 6) % 6);
+        pick = (u8)((roll / 8) % 6);
         while (tries++ < 6 && ware_owned(tactical_wares[pick]))
             pick = (u8)((pick + 1) % 6);
         return tactical_wares[pick];
     }
-    pick = (u8)(roll % 6);
-    while (tries++ < 6 && ware_owned(build_wares[pick]))
-        pick = (u8)((pick + 1) % 6);
+    pick = (u8)(roll % 8);
+    while (tries++ < 8 && ware_owned(build_wares[pick]))
+        pick = (u8)((pick + 1) % 8);
     return build_wares[pick];
 }
 
@@ -103,6 +108,8 @@ u8 pickup_dungeon_ware_price(u8 ware) BANKED {
     if (ware == WARE_SURGE || ware == WARE_GLASS
         || ware == WARE_FLASK) return 20;
     if (ware == WARE_DRUM || ware == WARE_RICOCHET) return 28;
+    if (ware == WARE_BLAST) return 32;
+    if (ware == WARE_BEAM) return 40;
     if (ware == WARE_PHOENIX || ware == WARE_VAMP
         || ware == WARE_BIG || ware == WARE_THORN) return 35;
     return 30;

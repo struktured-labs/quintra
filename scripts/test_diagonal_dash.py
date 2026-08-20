@@ -69,15 +69,18 @@ def dash(buttons):
         pb.tick()
     before = (read16(pb, PL + 9), read16(pb, PL + 11))
     set_buttons(pb, buttons, True)
+    dash_noise = None
     for _ in range(7):
         pb.tick()
+        if pb.memory[PL + 15] >= 14 and dash_noise is None:
+            dash_noise = (pb.memory[0xFF22], pb.memory[0xFF21])
     set_buttons(pb, buttons, False)
     for _ in range(2):
         pb.tick()
     after = (read16(pb, PL + 9), read16(pb, PL + 11))
     iframes = pb.memory[PL + 15]
     pb.stop(save=False)
-    return after[0] - before[0], after[1] - before[1], iframes
+    return after[0] - before[0], after[1] - before[1], iframes, dash_noise
 
 
 def main():
@@ -89,7 +92,7 @@ def main():
     }
     vectors = {}
     for buttons, signs in expected_signs.items():
-        dx, dy, iframes = dash(buttons)
+        dx, dy, iframes, dash_noise = dash(buttons)
         vectors["+".join(buttons)] = (dx, dy)
         assert (dx > 0) - (dx < 0) == signs[0], (
             f"{'/'.join(buttons)} dash lost horizontal direction: {dx},{dy}")
@@ -99,12 +102,15 @@ def main():
             f"{'/'.join(buttons)} dash is not normalized: {dx},{dy}")
         assert iframes >= 6, (
             f"{'/'.join(buttons)} dash lost its dodge window: {iframes}")
+        assert dash_noise == (0x27, 0x72), (
+            f"{'/'.join(buttons)} dash lost wind-cut SFX: {dash_noise}")
 
-    cardinal_dx, cardinal_dy, _ = dash(("right",))
+    cardinal_dx, cardinal_dy, _, cardinal_noise = dash(("right",))
     assert cardinal_dy == 0 and 19 <= cardinal_dx <= 23, (
         f"cardinal dash baseline drifted: {cardinal_dx},{cardinal_dy}")
     assert max(abs(dx) for dx, _ in vectors.values()) < cardinal_dx, (
         "diagonal dash axes were not vector-normalized")
+    assert cardinal_noise == (0x27, 0x72)
     print(f"[diagonal-dash] PASS four vectors {vectors}; "
           f"cardinal=({cardinal_dx},{cardinal_dy})")
 

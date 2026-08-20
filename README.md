@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.7: Broods & Warbands](https://github.com/struktured-labs/quintra/releases/download/v0.20.7/quintra.gbc)
+[Download Quintra v0.20.8: Resonant Arsenal](https://github.com/struktured-labs/quintra/releases/download/v0.20.8/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,24 +25,66 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.7**, a room-identity milestone. Ordinary
-combat rooms no longer roll every body independently from the full stage pool.
-Each seed/stage/room now chooses one of four encounter grammars: a one-species
-**Brood**, an alternating two-species **Pair**, a **Command** warband with one
-unusual leader and one minion species, or the original fully **Mixed** weighted
-hodgepodge. Mixed rooms remain one quarter of the procedural vocabulary.
-Traps, second waves, and survival reinforcements retain their room's family;
-backtracking regenerates the same identity. Heavy ring casters, Bramble
-Sprites, Shard Crabs, and the Rift Cantor may lead a Command room but cannot
-become an unreadable or route-blocking 12–18-body brood. Enemy density, HP,
-stage pools, elite odds, and procgen RNG draw count are unchanged.
+The current cartridge is **v0.20.8**, an attack, animation, adaptive-score, and
+loot-safety milestone. Every champion now has a two-stride walk cycle and an
+authored damage recoil, while diagonal dashes carry their own wind-cut voice.
+Three run-shaping attack relics add mechanical splash bursts, bounded fractal
+subprojectiles, and a broad two-part beam; the procedural merchant catalog now
+combines eight build offers with six tactical offers.
+
+The score reacts at musical phrase boundaries instead of restarting: four HP
+bands, visible and nearby enemy pressure, minibosses, merchant/sanctuary rooms,
+hero power, and proximity to important stage treasures reshape harmony,
+percussion, dynamics, and bass weight. All collectibles now pass through one
+shared placement guard that requires a complete 16×16 safe footprint and
+searches nearby reachable floor rather than allowing hearts, currency, wares,
+weapons, boons, Sigils, Riftwells, or relic caches to appear inside walls,
+blocks, hazards, portals, or disconnected terrain.
 
 The release retains Kilnheart's five-body pack/Cinder Rex encounter,
 Roots & Bellows' Wolfkin/relic balance and regional events, Stormcoil's
 complete connected serpent, and every v0.20.0 system—Will/MAX
 attacks, nine Oath Arts, physical tools, world interactions, dungeon Law,
 seeded mission graph, regional Riftwild, readable Pack/shop interfaces,
-visible locks, safe retreats, diagonal dashes, and distinct reward sounds.
+visible locks, safe retreats, Brood/Pair/Command encounter identities, and
+distinct reward sounds.
+
+### v0.20.8 — Resonant Arsenal
+
+The five champions have complete idle, two-step walk, hurt, and ascended OBJ
+families generated from the Rust asset source. Motion alternates at gameplay
+speed, real HP loss owns a twelve-frame recoil pose, and safety-only iframes do
+not fake damage. Pose selection is cached outside the OAM hot path, and the
+double-tap dodge now has a dedicated dash sound in all eight directions.
+
+**Blast Seed** gives direct attacks a real nearby area sweep. **Echo Prism**
+makes every fourth primary fork into two children that each split once into a
+bounded four-lane fractal. **Rift Lens** turns every third primary into a wide,
+heavy beam with a connected moving tail. These join Ricochet, Thorn, Vampiric,
+Power, Swift, Glass, Phoenix, Spirit, Drum, Flask, Chart, and Surge behavior in
+an eight-build-by-six-tactical procedural merchant catalog with distinct icons
+and readable offer text.
+
+The long-form score now orchestrates the current room without resetting its
+melody. Once per 16-row phrase it samples four health tiers, on-screen and
+nearby monster pressure, miniboss presence, merchant or sanctuary context,
+relative hero strength, and two ranges around Sigils, weapons, boons, and
+Farfold relics. Those signals change lead dynamics, harmony rhythm and color,
+bass weight, and percussion density together on the next phrase boundary.
+
+Every pickup type uses the same guarded constructor. A candidate must fit a
+champion-sized footprint on safe terrain; otherwise a deterministic radial
+search finds a nearby legal position, with the player's reachable position as
+the final fallback. The lower dungeon court and Farfold cloister now share a
+body-width route as well. Live-ROM verification generates the shop, Sigil, and
+cache roles for all nine stages—27 procedural rooms—and flood-fills from the
+champion to prove every collectible is both unobstructed and reachable.
+
+The dense-room cartridge fence remains healthy with these systems: the mixed
+opening holds 166/180 loop frames, a normalized enemy room holds 179/180, and
+the twelve-projectile stress room holds 148/180 against its 135-frame release
+floor. Flutterbats also validate their full body footprint while moving and
+steer out of blocked corners, preventing a flying target from sealing a room.
 
 ### v0.20.7 — Broods & Warbands
 

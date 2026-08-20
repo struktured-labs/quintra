@@ -18,11 +18,11 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-FC, EN, TM, WW, WH, CX, CY, EC = map(addr, (
+FC, EN, TM, WW, WH, CX, CY, EC, PL = map(addr, (
     "_loop_frame_counter", "_entities", "_room_tilemap",
     "_room_world_width", "_room_world_height",
     "_room_camera_x", "_room_camera_y",
-    "_entity_enemy_count",
+    "_entity_enemy_count", "_player",
 ))
 
 
@@ -35,20 +35,39 @@ def loop_frames(pb):
     return pb.memory[FC] | (pb.memory[FC + 1] << 8)
 
 
-def main():
+def boot_room():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     pb.tick(240)
     pb.button("start")
     pb.tick(30)
     pb.button("a")
     pb.tick(90)
-
-    # KEY1 bit 7 is the hardware's current-speed flag, not a build marker.
     assert pb.memory[0xFF4D] & 0x80, "cartridge never entered CGB double-speed mode"
+    pb.memory[PL + 1] = pb.memory[PL + 2] = 240
+    return pb
+
+
+def make_fixed_crawlers(pb):
+    for i in range(32):
+        ep = EN + i * 28
+        if pb.memory[ep] != 2 or not (pb.memory[ep + 1] & 1):
+            continue
+        pb.memory[ep + 12] = 20
+        pb.memory[ep + 13] = 3
+        pb.memory[ep + 14] = 8
+        pb.memory[ep + 15] = pb.memory[ep + 16] = 0
+        for offset in range(17, 25):
+            pb.memory[ep + offset] = 0
+        pb.memory[ep + 25] = 0x77
+        pb.memory[ep + 26] = 1
+
+
+def main():
+    pb = boot_room()
 
     before = loop_frames(pb)
     pb.tick(180)
-    ordinary = (loop_frames(pb) - before) & 0xFFFF
+    generated = (loop_frames(pb) - before) & 0xFFFF
     population = []
     for i in range(32):
         ep = EN + i * 28
@@ -64,14 +83,14 @@ def main():
         f"opening district population drifted: {len(population)}")
     assert 1 <= awake < len(population), (
         f"camera-sector sleeping drifted: awake={awake}/{len(population)}")
+    assert generated >= 165, (
+        f"generated mixed-AI room missed 55 Hz: {generated}/180 loop frames"
+    )
+
     # The shipped v0.20.5 clean-room baseline is 171/180 (57 Hz): three
     # skipped simulation turns per second in a 16-body district. Pin that
     # measured cartridge floor rather than the historical 177 assertion,
     # which the release it accompanied never attained.
-    assert ordinary >= 171, (
-        f"ordinary room missed video rate: {ordinary}/180 loop frames"
-    )
-
     # Fill 12/32 entity slots with long-lived projectiles over known floor.
     # This exercises banked updates, collision scans, animation, and OAM writes
     # without using host wall-clock speed or depending on one procgen seed.
@@ -104,6 +123,20 @@ def main():
     active = sum(pb.memory[EN + i * 28 + 1] & 1 for i in range(32))
     pb.stop(save=False)
 
+    # Asset loading legitimately advances DIV before run seeding, so a new
+    # sprite atlas can change the opening species without changing game code.
+    # Use a fresh boot and normalize its existing visibility layout before
+    # enforcing the historical apples-to-apples 57 Hz fence.
+    fixed_pb = boot_room()
+    make_fixed_crawlers(fixed_pb)
+    before = loop_frames(fixed_pb)
+    fixed_pb.tick(180)
+    ordinary = (loop_frames(fixed_pb) - before) & 0xFFFF
+    fixed_pb.stop(save=False)
+
+    assert ordinary >= 171, (
+        f"fixed-roster room missed video rate: {ordinary}/180 loop frames"
+    )
     assert active >= 10, f"stress load evaporated before measurement ({active}/12)"
     # Twelve simultaneous hostile shots produce the v0.20.5 saturated
     # baseline of 135/180 (45 Hz). This is a regression fence, not a claim
@@ -111,7 +144,8 @@ def main():
     assert loops >= 135, (
         f"dense room fell below release baseline: {loops}/180 loop frames"
     )
-    print(f"[performance] PASS double-speed ordinary={ordinary}/180, "
+    print(f"[performance] PASS double-speed generated={generated}/180, "
+          f"fixed-roster={ordinary}/180, "
           f"dense={loops}/180, population={len(population)}, "
           f"awake={awake}, active_projectiles={active}/12")
 

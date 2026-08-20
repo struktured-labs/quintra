@@ -172,10 +172,19 @@ static u8 dungeon_fold_variant(void) {
 static u8 dungeon_fold_col(u8 upper_row) {
     u8 lower_first = (u8)((upper_row + 1) * DUNGEON_GRID_W);
     u8 lower_count;
+    u8 service_first = (u8)(run_state_dungeon_size() - 3);
     u8 col;
     if (lower_first >= run_state_dungeon_size()) return 0xFF;
     lower_count = (u8)(run_state_dungeon_size() - lower_first);
     if (lower_count > DUNGEON_GRID_W) lower_count = DUNGEON_GRID_W;
+    // The last three cells are the compact shop/sanctuary/Colossus cadence.
+    // If a row straddles that boundary, its single vertical fold must land
+    // on the large-room prefix first. Otherwise the service room becomes the
+    // only bridge and a whole scrolling district is unreachable until after
+    // the intended expedition finale.
+    if (lower_first < service_first
+        && lower_count > (u8)(service_first - lower_first))
+        lower_count = (u8)(service_first - lower_first);
     col = dungeon_fold_cols[(u8)((dungeon_fold_variant() << 2) + upper_row)];
     // Truncated final rows retain a connector. Odd lower rows occupy the
     // right side of the display; even lower rows occupy the left.

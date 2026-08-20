@@ -33,6 +33,7 @@ static void loop_vbl_isr(void) NONBANKED {
 // BANKREF(); bankpack patches these to the real assigned bank numbers).
 BANKREF_EXTERN(title_enter)
 BANKREF_EXTERN(class_select_enter)
+BANKREF_EXTERN(run_init_enter)
 BANKREF_EXTERN(room_enter)
 BANKREF_EXTERN(inventory_enter)
 BANKREF_EXTERN(map_enter)
@@ -46,7 +47,7 @@ const screen_t screens[SCREEN_COUNT] = {
     [SCREEN_BOOT]         = { 0, 0, 0, 0, 0 },
     [SCREEN_TITLE]        = { BANK(title_enter), title_enter,   title_exit,   title_tick,   title_draw   },
     [SCREEN_CLASS_SELECT] = { BANK(class_select_enter), class_select_enter, class_select_exit, class_select_tick, class_select_draw },
-    [SCREEN_RUN_INIT]     = { 0, run_init_enter,     run_init_exit,     run_init_tick,     run_init_draw     },
+    [SCREEN_RUN_INIT]     = { BANK(run_init_enter), run_init_enter, run_init_exit, run_init_tick, run_init_draw },
     [SCREEN_PROCGEN]      = { 0, 0, 0, 0, 0 },
     [SCREEN_ROOM]         = { BANK(room_enter), room_enter,         room_exit,         room_tick,         room_draw         },
     [SCREEN_REST_ROOM]    = { 0, 0, 0, 0, 0 },

@@ -115,7 +115,11 @@ fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> O
             ^ (run_seed >> 24)
             ^ u32::from(stage.wrapping_mul(3))) & 7) as usize;
         let lower_first = (upper_row + 1) * GRID_W;
-        let lower_count = (size - lower_first).min(GRID_W);
+        let service_first = size - 3;
+        let mut lower_count = (size - lower_first).min(GRID_W);
+        if lower_first < service_first {
+            lower_count = lower_count.min(service_first - lower_first);
+        }
         let mut fold_col = FOLD_COLS[seed_fold][usize::from(upper_row)];
         if (upper_row + 1) & 1 != 0 {
             fold_col = fold_col.max(GRID_W - lower_count);

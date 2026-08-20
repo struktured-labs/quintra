@@ -37,10 +37,12 @@ static const char *effect(u8 ware, u8 item_index) {
         case WARE_GLASS: return "HP FOR ATK+SPD";
         case WARE_PHOENIX: return "ONE REVIVE";
         case WARE_ASCEND: return "MP + WEAPON UP";
-        case WARE_ECHO: return "FORK A SHOTS";
+        case WARE_ECHO: return "4TH A FRACTAL";
         case WARE_RICOCHET: return "BOUNCE A SHOT";
         case WARE_THORN: return "HIT COUNTER";
         case WARE_DRUM: return "5 KILLS: B+MP";
+        case WARE_BLAST: return "HITS SPLASH";
+        case WARE_BEAM: return "3RD A FAT BEAM";
         default: return "HEARTS TO MP";
     }
 }

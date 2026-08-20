@@ -284,7 +284,12 @@ local function dungeon_fold_col(size, stage, upper)
     fold = xor_low3(fold, emu:read8(RS_ADDR + 5))
     fold = xor_low3(fold, stage * 3)
     local col = DUNGEON_FOLD_COLS[fold * 4 + upper + 1]
-    local lower_count = math.min(6, size - (upper + 1) * 6)
+    local lower_first = (upper + 1) * 6
+    local lower_count = math.min(6, size - lower_first)
+    local service_first = size - 3
+    if lower_first < service_first then
+        lower_count = math.min(lower_count, service_first - lower_first)
+    end
     if (upper + 1) % 2 == 1 then
         col = math.max(col, 6 - lower_count)
     else
@@ -552,9 +557,12 @@ shot("07_room9_threshold")
 navigate_to(deep_switch); open_deep_phase_seal(deep_switch)
 shot("07b_room12_switch")
 navigate_to(deep_gate)
-navigate_to(18)
 -- A new stage deliberately fades its palette in. Wait it out so this is a
 -- useful boss-arena capture rather than an intended near-black transition.
+-- Do not route through a hard-coded "pre-boss" cell: the seed-folded graph
+-- can put that cell behind the Colossus, causing a reachability pilot to enter
+-- the arena early and erase its body while attempting to leave. Route to the
+-- semantic boss destination exactly once and preserve it on the final edge.
 navigate_to(19); tick(36); shot("08_BOSS_room")
 
 -- Damage the first giant through real controller shots, sampling the fight.

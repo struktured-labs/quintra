@@ -9,6 +9,7 @@
 #include "game/pickup.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "render/tiles.h"
 #include "content.h"
 
 entity_t entities[MAX_ENTITIES];

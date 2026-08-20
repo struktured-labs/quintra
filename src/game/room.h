@@ -53,6 +53,13 @@ extern u8 room_bg_origin_y;
 #define ROOM_BG_MAP_X(x) ((u8)((room_bg_origin_x + (u8)(x)) & 31))
 #define ROOM_BG_MAP_Y(y) ((u8)((room_bg_origin_y + (u8)(y)) & 31))
 extern u8 room_transform_ticks;
+// Visible telemetry for the authored HP-loss recoil; safety-only iframes do
+// not activate it.
+extern u8 room_hurt_pose_ticks;
+// Cached OBJ tile family. Hurt/ascended poses lock it; movement otherwise
+// alternates the authored two-step walk without branching in OAM rendering.
+extern u8 room_player_pose_base;
+extern u8 room_player_pose_locked;
 // Dungeon district names are short arrival callouts, not persistent terrain.
 // The Compass remains the permanent source of current-depth information.
 extern u8 room_district_label_ticks;

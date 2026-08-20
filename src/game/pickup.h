@@ -48,6 +48,8 @@
 #define WARE_THORN   14  // Thorn Crown: taking damage fires a counter-volley
 #define WARE_DRUM    15  // War Drum: every fifth kill readies B and restores MP
 #define WARE_FLASK   16  // Moon Flask: surplus heart drops become MP
+#define WARE_BLAST   17  // Blast Seed: first impact blooms into an area hit
+#define WARE_BEAM    18  // Rift Lens: every third A becomes a heavy fat beam
 
 // Stable content ids used by runtime hooks outside generated content tables.
 #define ITEM_ID_IRON_HEART    20u
@@ -66,6 +68,8 @@
 #define ITEM_ID_RIFT_BOMB       40u
 #define ITEM_ID_ECHO_CHIME      41u
 #define ITEM_ID_MIRROR_SHARD    42u
+#define ITEM_ID_BLAST_SEED       43u
+#define ITEM_ID_RIFT_LENS        44u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;
@@ -125,7 +129,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED;
 u8   pickup_check_player_collision(void) BANKED;
 u8   pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED;
 u8   pickup_nearby_speaker(u8 *kind_out, u8 *topic_out) BANKED;
-void pickup_echo_primary(u8 dir, u8 damage, u8 kind) BANKED;
+void pickup_echo_primary(u8 primary, u8 dir, u8 damage) BANKED;
 u8   pickup_try_phoenix_revive(void) BANKED;
 
 #endif

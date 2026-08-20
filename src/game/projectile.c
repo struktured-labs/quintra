@@ -115,6 +115,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     // one stone rebound. The marker lives on the projectile, so buying the
     // relic changes all five champions and alternate weapons naturally.
     e->ai_data[3] = g_player_ricochet ? PROJ_FLAG_RICOCHET : 0;
+    if (g_player_attack_traits & ATTACK_TRAIT_SPLASH)
+        e->ai_data[3] |= PROJ_FLAG_SPLASH;
     // Run relics mutate the actual attack silhouette and travel, not only a
     // number in the Pack. PowerStone broadens every weapon one pixel per
     // side; Swift Fang visibly accelerates its trajectory; VampSigil stains
@@ -153,6 +155,23 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     return idx;
 }
 
+// Keep relic-only pointer work out of the dense hostile-bullet stack frame.
+// SDCC eagerly materializes struct offsets used later in a function, even
+// across a player-only branch; isolating this cold path preserves the shipped
+// twelve-shot update cost while ordinary player shots still animate locally.
+static void projectile_update_player(entity_t *e) {
+    if (e->ai_data[6] == PROJ_AUX_SPLASH
+        || (e->ai_data[3] & PROJ_FLAG_FRACTAL))
+        projectile_update_relic(e);
+
+    // Ordinary player bullets shimmer; melee arcs and beams stay solid.
+    if (e->ai_data[2] == 0 && !(e->ai_data[3] & PROJ_FLAG_BEAM)) {
+        e->ai_data[0] = (u8)(e->ai_data[0] + 1);
+        e->sprite_tile = (u8)((e->ai_data[0] & 0x02)
+            ? SPR_BULLET_B : SPR_BULLET);
+    }
+}
+
 void projectile_update_one(entity_t *e, u8 idx) {
     // Cache flags for the dense bullet path. SDCC otherwise reloads this
     // struct byte for each material check below; twelve simultaneous hostile
@@ -164,12 +183,10 @@ void projectile_update_one(entity_t *e, u8 idx) {
     e->x = (ppos_t)(e->x + e->vx);
     e->y = (ppos_t)(e->y + e->vy);
 
-    // Player bullets shimmer between 2 frames; physical melee arcs and enemy
-    // bullets remain static so range and weapon category read immediately.
-    if ((flags & EF_PLAYER_PROJ) && e->ai_data[2] == 0) {
-        e->ai_data[0] = (u8)(e->ai_data[0] + 1);
-        e->sprite_tile = (u8)((e->ai_data[0] & 0x02) ? SPR_BULLET_B : SPR_BULLET);
-    }
+    // Area bursts are born during combat resolution, after this updater has
+    // already passed. Arm them here on the following frame so their collision
+    // sweep never depends on the parent's current table index.
+    if (flags & EF_PLAYER_PROJ) projectile_update_player(e);
 
     {
         i16 px = FIX8_TO_INT(e->x);

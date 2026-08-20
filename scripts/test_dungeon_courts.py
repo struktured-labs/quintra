@@ -157,9 +157,10 @@ def main():
         assert pb.memory[RS + 1] == 5
         assert pb.memory[LARGE] == 1
         assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
-        # Local 5 is now a genuine dead-end court in this fold. Its reciprocal
-        # west link remains usable, while the old east/south viewport edges
-        # are interior and only the true 31x31 perimeter closes.
+        # Local 5 always keeps its reciprocal west link. Depending on the
+        # seed-selected fold it is either a genuine dead end or the row-turn
+        # court into the next district; only that real graph edge may open on
+        # the true 31x31 perimeter.
         assert pb.memory[TM + 8 * ROOM_W] == 3
         assert pb.memory[TM + 9 * ROOM_W] == 3
         walkable = (1, 19, 20, 23, 31)
@@ -167,8 +168,15 @@ def main():
         assert pb.memory[TM + 16 * ROOM_W + 10] in walkable
         assert pb.memory[EXT + 8 * EXT_W + EXT_W - 1] == 2
         assert pb.memory[EXT + 9 * EXT_W + EXT_W - 1] == 2
-        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9] == 2
-        assert pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 10] == 2
+        south_tile = 3 if dungeon_maze_neighbor(
+            5, large_cells + 3, 2, seed, 0) is not None else 2
+        got_south = (
+            pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 9],
+            pb.memory[BOTTOM + (BOTTOM_H - 1) * WIDE_W + 10],
+        )
+        assert got_south == (south_tile, south_tile), (
+            f"local-5 south edge seed={seed:08x}: "
+            f"expected {south_tile}, got {got_south}")
         assert not any(
             pb.memory[EXT + i] & 0x80 for i in range(ROOM_H * EXT_W)
         )

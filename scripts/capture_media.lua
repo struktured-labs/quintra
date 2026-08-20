@@ -93,7 +93,12 @@ local function fold_col(stage, upper_row)
   local fold = emu:read8(RS + 2) ~ emu:read8(RS + 3)
     ~ emu:read8(RS + 4) ~ emu:read8(RS + 5) ~ ((stage * 3) & 255)
   local col = FOLD_COLS[(fold & 7) * 4 + upper_row + 1]
-  local lower_count = math.min(6, size - (upper_row + 1) * 6)
+  local lower_first = (upper_row + 1) * 6
+  local lower_count = math.min(6, size - lower_first)
+  local service_first = size - 3
+  if lower_first < service_first then
+    lower_count = math.min(lower_count, service_first - lower_first)
+  end
   if (upper_row + 1) % 2 == 1 then
     col = math.max(col, 6 - lower_count)
   else
@@ -205,8 +210,11 @@ local function enter_dungeon_portal(target, stage)
   emu:write8(RS + 17, 1)
   emu:write8(RS + 18, 6)
   emu:write8(RS + 19, 0)
-  emu:write8(TM + 8 * 20 + 10, 34)
-  put16(PL + 9, 72); put16(PL + 11, 52)
+  -- Use the lower center apron rather than (10,8). A generated mission can
+  -- make the prior room a paired phase-switch chamber, whose live update
+  -- correctly owns the exact center tile and would replace a synthetic gate.
+  emu:write8(TM + 9 * 20 + 10, 34)
+  put16(PL + 9, 72); put16(PL + 11, 60)
   for _=1,150 do
     emu:runFrame()
     if room() == target and emu:read8(RS + 17) == 0 then break end

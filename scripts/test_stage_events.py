@@ -85,6 +85,12 @@ def furnace_probe(pb, tiles):
                 pb.memory[TM + y * ROOM_W + x] == BGT_SPIKES for x, y in sites)
         if saw_hot and phase == 0:
             break
+    # The cooling transition publishes phase 0 immediately before its banked
+    # reward constructor validates the complete 16x16 footprint. A host VBlank
+    # can observe that boundary mid-call, so let the cartridge finish the
+    # transaction before inspecting the entity table.
+    for _ in range(8):
+        pb.tick()
     assert saw_warning, "furnace jumped to damage without a gold warning wave"
     assert saw_hot, "furnace cycle never completed its hot hazard lanes"
     assert pb.memory[PHASE] == 0, "furnace lanes never cooled back into a route"

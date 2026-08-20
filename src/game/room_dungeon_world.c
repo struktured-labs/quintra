@@ -281,7 +281,10 @@ void room_generate_dungeon_court(u32 seed) BANKED {
     // The lower ruin can be crossed by both its own perimeter and the Inner
     // district's processional walls. Reopen a body-wide cloister through
     // every overlapping layer so neither half becomes an isolated pocket.
-    court_floor_rect(13, 19, 17, 2);
+    // Begin at the central x=9..10 route, not at the ruin wall. Columns
+    // 11..12 could inherit a district barrier and silently turn the entire
+    // southern court—including its optional reliquary—into an open island.
+    court_floor_rect(9, 19, 21, 2);
     court_floor_rect(23, 24, 7, 6);
 
     // Close the one-tile service strips left between the two side halls and
@@ -311,7 +314,11 @@ void room_generate_dungeon_court(u32 seed) BANKED {
         // One generated dead-end owns a recognizable southeast reliquary.
         // It sits well away from the cardinal cross, making the scrolling
         // acreage mechanically optional rather than decorative padding.
-        // Four pylons frame a walkable altar on the already guaranteed apron.
+        // Join the altar to the lower processional hall with a body-wide
+        // cloister. The old visual apron was open locally but could become a
+        // disconnected island when the Inner district walls overlapped it.
+        court_floor_rect(25, 19, 4, 10);
+        // Four pylons frame a walkable altar on the guaranteed cloister.
         court_set(24, 23, BGT_CRYSTAL);
         court_set(29, 23, BGT_CRYSTAL);
         court_set(24, 28, BGT_CRYSTAL);

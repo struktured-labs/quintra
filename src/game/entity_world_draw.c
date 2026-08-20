@@ -8,6 +8,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
+#include "render/tiles.h"
 #include "content.h"
 
 extern u8 entity_anim_counter;

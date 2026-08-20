@@ -11,7 +11,9 @@ NOI = ROM.with_suffix(".noi").read_text()
 
 CLASS_STRIDE = 4
 IDLE_BASE = 0
-WALK_BASE = 82
+WALK_A_BASE = 82
+WALK_B_BASE = 160
+HURT_BASE = 180
 OAM_TILE_0 = 0xFE02
 
 
@@ -24,6 +26,7 @@ def addr(name):
 
 PLAYER = addr("_player")
 SCREEN = addr("_loop_current_screen")
+HURT_TICKS = addr("_room_hurt_pose_ticks")
 ANIM_FRAME_OFFSET = 14
 X_OFFSET = 9
 Y_OFFSET = 11
@@ -70,8 +73,11 @@ def main():
         # The authored 16x16 idle and walk metasprites occupy their own four
         # tiles.  A visual identity regression must not collapse two heroes.
         idle = tile_bytes(pb, IDLE_BASE + class_id * CLASS_STRIDE)
-        walk = tile_bytes(pb, WALK_BASE + class_id * CLASS_STRIDE)
-        assert idle != walk, f"class {class_id} walk pose equals idle art"
+        walk_a = tile_bytes(pb, WALK_A_BASE + class_id * CLASS_STRIDE)
+        walk_b = tile_bytes(pb, WALK_B_BASE + class_id * CLASS_STRIDE)
+        hurt = tile_bytes(pb, HURT_BASE + class_id * CLASS_STRIDE)
+        assert len({idle, walk_a, walk_b, hurt}) == 4, \
+            f"class {class_id} collapsed an authored motion pose"
         hero_art.append(idle)
 
         # The room entry frame is always the idle pose.
@@ -82,16 +88,18 @@ def main():
         # Use real controller movement—not a memory poke—to prove the live
         # renderer changes to the matching walk atlas.  One of four directions
         # must be open from the procgen spawn; sample every moving frame.
-        walk_tile = WALK_BASE + class_id * CLASS_STRIDE
+        walk_a_tile = WALK_A_BASE + class_id * CLASS_STRIDE
+        walk_b_tile = WALK_B_BASE + class_id * CLASS_STRIDE
         moved = False
-        walk_seen = False
+        walk_seen = set()
         for direction in ("right", "left", "down", "up"):
             x0 = pb.memory[PLAYER + X_OFFSET] | (pb.memory[PLAYER + X_OFFSET + 1] << 8)
             y0 = pb.memory[PLAYER + Y_OFFSET] | (pb.memory[PLAYER + Y_OFFSET + 1] << 8)
             pb.button_press(direction)
-            for _ in range(20):
+            for _ in range(28):
                 pb.tick()
-                walk_seen |= pb.memory[OAM_TILE_0] == walk_tile
+                if pb.memory[OAM_TILE_0] in (walk_a_tile, walk_b_tile):
+                    walk_seen.add(pb.memory[OAM_TILE_0])
             pb.button_release(direction)
             for _ in range(2):
                 pb.tick()
@@ -101,11 +109,41 @@ def main():
                 moved = True
                 break
         assert moved, f"class {class_id} had no open spawn direction"
-        assert walk_seen, f"class {class_id} movement never selected walk tile {walk_tile}"
+        assert walk_seen == {walk_a_tile, walk_b_tile}, (
+            f"class {class_id} did not cycle both strides: {walk_seen}"
+        )
+        assert pb.memory[OAM_TILE_0] == IDLE_BASE + class_id * CLASS_STRIDE, \
+            f"class {class_id} did not settle back to idle"
+
+        # A real hostile projectile must select the class-specific recoil art,
+        # not merely flash the idle sprite or change the HP number.
+        for i in range(32 * 28):
+            pb.memory[addr("_entities") + i] = 0
+        e = addr("_entities")
+        x = pb.memory[PLAYER + X_OFFSET] | pb.memory[PLAYER + X_OFFSET + 1] << 8
+        y = pb.memory[PLAYER + Y_OFFSET] | pb.memory[PLAYER + Y_OFFSET + 1] << 8
+        pb.memory[e] = 1
+        pb.memory[e + 1] = 0x03
+        pb.memory[e + 3], pb.memory[e + 4] = (x + 5) & 0xFF, (x + 5) >> 8
+        pb.memory[e + 7], pb.memory[e + 8] = (y + 9) & 0xFF, (y + 9) >> 8
+        pb.memory[e + 14] = 1
+        pb.memory[e + 16] = 20
+        pb.memory[e + 25] = 0x66
+        pb.memory[e + 26] = 1
+        pb.memory[PLAYER + 15] = 0
+        hp_before = pb.memory[PLAYER + 2]
+        hurt_seen = False
+        for _ in range(24):
+            pb.tick()
+            hurt_seen |= pb.memory[OAM_TILE_0] == HURT_BASE + class_id * CLASS_STRIDE
+        assert pb.memory[PLAYER + 2] < hp_before, f"class {class_id} took no damage"
+        assert pb.memory[HURT_TICKS] > 0 or hurt_seen, \
+            f"class {class_id} never entered recoil timing"
+        assert hurt_seen, f"class {class_id} recoil art never reached OAM"
         pb.stop(save=False)
 
     assert len(set(hero_art)) == 5, "champion idle art is not distinct"
-    print("[champion-animation] PASS five distinct idle/walk champions")
+    print("[champion-animation] PASS five idle + two-stride + recoil champions")
 
 
 if __name__ == "__main__":

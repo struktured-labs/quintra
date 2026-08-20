@@ -116,6 +116,14 @@ static u8 tap_age;       // frames since that press
 static u8 dash_timer;    // frames left in the current dash
 static u8 dash_cd;       // cooldown before the next dash
 static i8 dash_dx, dash_dy;
+// HP loss owns a short authored recoil pose. Keep it separate from iframes:
+// room entry, shields, and a dodge dash may all grant safety without falsely
+// making the champion look injured.
+u8 room_hurt_pose_ticks;
+// Keep pose choice out of the four-sprite OAM hot path. Motion owns the
+// cached base until a hurt/ascended pose temporarily locks it.
+u8 room_player_pose_base;
+u8 room_player_pose_locked;
 // Room transitions grant real invulnerability so a generated arrival cannot
 // immediately trade into a hostile. It is safety rather than damage, so it
 // must not inherit the alternating invisible damage-flicker.
@@ -964,10 +972,7 @@ static void place_player_sprite(void) {
         u8 sx = (u8)((i16)player.x - room_camera_x + 8);
         u8 sy = (u8)((i16)player.y - room_camera_y + 16);
         u8 class_id = (player.class_id < 5) ? player.class_id : 0;
-        u8 step = (player.anim_frame & 0x04) ? 1 : 0;
-        u8 pose_base = room_transform_ticks ? SPR_CLASS_ASCENDED_BASE
-            : (step ? SPR_CLASS_WALK_BASE : SPR_CLASS_BASE);
-        u8 base = (u8)(pose_base
+        u8 base = (u8)(room_player_pose_base
                        + (u8)(class_id * SPR_CLASS_STRIDE));
         set_sprite_tile(0, (u8)(base + 0));
         set_sprite_tile(1, (u8)(base + 1));
@@ -1071,6 +1076,11 @@ void room_enter(void) {
     }
     player.facing        = FACE_S;
     player.fire_cooldown = 0;
+    player.anim_frame    = 0;
+    room_hurt_pose_ticks = 0;
+    room_player_pose_locked = room_transform_ticks ? 1 : 0;
+    room_player_pose_base = room_transform_ticks
+        ? SPR_CLASS_ASCENDED_BASE : SPR_CLASS_BASE;
 
     if (room_resume_flag) {
         // Returning from the pack screen: keep the existing tilemap, entities
@@ -1181,6 +1191,17 @@ void room_exit(void) {
 screen_id_t room_tick(u8 keys, u8 pressed) {
     if (door_bump_cd) door_bump_cd--;
     if (arrival_sprite_grace) arrival_sprite_grace--;
+    if (room_hurt_pose_ticks && --room_hurt_pose_ticks == 0) {
+        if (room_transform_ticks) {
+            room_player_pose_base = SPR_CLASS_ASCENDED_BASE;
+        } else {
+            room_player_pose_locked = 0;
+            room_player_pose_base = (player.anim_frame & 0x80)
+                ? ((player.anim_frame & 0x08)
+                    ? SPR_CLASS_WALK_B_BASE : SPR_CLASS_WALK_A_BASE)
+                : SPR_CLASS_BASE;
+        }
+    }
     if (room_district_label_ticks
         && --room_district_label_ticks == 0) {
         tiles_stream_wide_row(1, ROOM_BG_MAP_Y(1));
@@ -1287,6 +1308,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Sauran 4 = 0.8, Wolfkin 6 = 1.2, Vespine 7 = 1.4.
     {
         u8 moved = 0;
+        u8 animate_walk = 0;
         i8 dx = 0, dy = 0;
         u8 steps;
 
@@ -1297,6 +1319,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
         if (moved) {
             player.move_acc = (u8)(player.move_acc + player.spd);
+            animate_walk = 1;
         }
 
         // ---- Dodge dash: double-tap one axis within ~12 frames to lunge.
@@ -1322,7 +1345,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         if (keys & J_LEFT) dash_dx = -1;
                         else if (keys & J_RIGHT) dash_dx = 1;
                     }
-                    sfx_play(SFX_DOOR);   // whoosh
+                    sfx_play(SFX_DASH);
                     tap_dir = 0;
                 } else {
                     tap_dir = td;
@@ -1345,6 +1368,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // keeps diagonal evasion expressive without making it faster.
             u8 dash_steps = (dash_dx && dash_dy) ? 2 : 3;
             dash_timer--;
+            animate_walk = 1;
             for (s = 0; s < dash_steps; ++s) {
                 if (dash_dx) {
                     ppos_t nx = (ppos_t)(player.x + dash_dx);
@@ -1533,8 +1557,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
         }
 
-        if (moved) {
-            player.anim_frame = (u8)((player.anim_frame + 1) & 0x07);
+        if (animate_walk) {
+            player.anim_frame = (u8)(0x80
+                | (((player.anim_frame & 0x0F) + 1) & 0x0F));
+            if (!room_player_pose_locked)
+                room_player_pose_base = (player.anim_frame & 0x08)
+                    ? SPR_CLASS_WALK_B_BASE : SPR_CLASS_WALK_A_BASE;
+        } else {
+            player.anim_frame = 0;
+            if (!room_player_pose_locked)
+                room_player_pose_base = SPR_CLASS_BASE;
         }
     }
 
@@ -1582,6 +1614,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             player.iframes = 45;
             player.active_charge = 180;
             room_transform_ticks = 135; // 135 * 8 frames = 18 seconds at 60 Hz
+            room_player_pose_locked = 1;
+            if (!room_hurt_pose_ticks)
+                room_player_pose_base = SPR_CLASS_ASCENDED_BASE;
             room_shake(1, 18);
             sfx_play(SFX_ROAR);
             hud_redraw_mp();
@@ -1658,7 +1693,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         entities[shot].hitbox = 0xBB;
                     }
                     if (shot != 0xFF) player.will_charge = 0;
-                    pickup_echo_primary(dir, dmg, PROJ_SPIKE);
+                    pickup_echo_primary(shot, dir, dmg);
                     player.fire_cooldown = player_fire_delay(w->p0);
                 }
             }
@@ -1712,7 +1747,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         }
                     }
                     if (shot != 0xFF) player.will_charge = 0;
-                    pickup_echo_primary(dir, dmg, w->p2);
+                    pickup_echo_primary(shot, dir, dmg);
                 }
                 player.fire_cooldown = cooldown;
             }
@@ -1746,8 +1781,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
         }
         if (player.active_charge > 0) player.active_charge--;
-        if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0)
+        if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_transform_ticks--;
+            if (room_transform_ticks == 0 && !room_hurt_pose_ticks) {
+                room_player_pose_locked = 0;
+                room_player_pose_base = (player.anim_frame & 0x80)
+                    ? ((player.anim_frame & 0x08)
+                        ? SPR_CLASS_WALK_B_BASE : SPR_CLASS_WALK_A_BASE)
+                    : SPR_CLASS_BASE;
+            }
+        }
         if (room_weapon_surge_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_weapon_surge_ticks--;
             if ((room_weapon_surge_ticks & 0x0F) == 0)

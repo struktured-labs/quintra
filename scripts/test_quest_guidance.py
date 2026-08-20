@@ -38,9 +38,16 @@ def settle(pb, frames):
 
 
 def open_pack(pb):
-    pb.button("start")
-    settle(pb, 20)
-    assert pb.memory[addr("_loop_current_screen")] == SCREEN_INVENTORY
+    # Returning from Pack publishes SCREEN_ROOM before the banked room-resume
+    # redraw has completely returned to the input loop. Retry START across
+    # that brief, legitimate boundary instead of assuming a fixed code-layout
+    # dependent frame count.
+    for _ in range(6):
+        pb.button("start")
+        settle(pb, 20)
+        if pb.memory[addr("_loop_current_screen")] == SCREEN_INVENTORY:
+            return
+    assert False, "Pack did not reopen after the room-resume transaction"
 
 
 def main():

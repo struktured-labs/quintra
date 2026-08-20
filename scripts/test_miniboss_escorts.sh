@@ -15,18 +15,23 @@ OUT="$(mktemp /tmp/quintra-miniboss-escort.XXXXXX)"
 # rooms: 4,400 frames expires inside room 3 and 60 host seconds expires before
 # mGBA can publish its CSV row. Preserve the controller-only proof with the
 # measured current route/host budgets.
-QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=0 \
+# Vespine's ranged fan reliably completes this dense seed and reaches its
+# generated Warden in the fixed budget. Wolfkin now spends that same window
+# learning the optional room-10 melee crowd rather than reaching the fixture,
+# which made the old class choice a combat-balance test instead of an escort
+# placement test.
+QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=4 \
   QUINTRA_BALANCE_FRAMES=8000 QUINTRA_BALANCE_HOST_TIMEOUT=180 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
 rooms_cleared=$(awk -F, 'NR == 2 { print $7 }' "$OUT")
 max_room=$(awk -F, 'NR == 2 { print $5 }' "$OUT")
-# The expanded opening route includes more non-combat fixtures than its
-# compact predecessor. Reaching room 6 is the authoritative proof that the
-# sealed room-3 escort was defeated. Wolfkin's corrected three-damage Fang no
-# longer erases a second dense room inside this fixture's fixed time budget;
-# one recorded clear plus room-6 traversal proves the escort was resolved.
+# The seeded nonlinear route reaches the Sigil at cell 12, then doubles back
+# through its generated Warden. Seeing the numeric high-water mark at 12 plus
+# a real clear proves the controller survived that mandatory encounter; the
+# live reachability test immediately after this one checks every authored
+# Sentinel/escort position directly.
 test "${rooms_cleared:-0}" -ge 1
-test "${max_room:-0}" -ge 6
+test "${max_room:-0}" -ge 12
 echo "[miniboss-escorts] PASS escort route reached room=$max_room clears=$rooms_cleared"

@@ -146,12 +146,14 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_procgen_variety.py
 	$(PYBOY_RUN) scripts/test_stage_entry_pacing.py
 	uv run --quiet --with pyboy python scripts/test_music.py
+	uv run --quiet --with pyboy python scripts/test_adaptive_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
 	uv run --quiet --with pyboy python scripts/test_melee_special_guard.py
 	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
 	$(PYBOY_RUN) scripts/test_attack_relics.py
+	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py
@@ -241,6 +243,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py
 	uv run --quiet --with pyboy python scripts/test_heart_pickup.py
+	$(PYBOY_RUN) scripts/test_pickup_reachability.py
 	uv run --quiet --with pyboy python scripts/test_unlock_feedback.py
 	uv run --quiet --with pyboy python scripts/test_vampiric_sigil.py
 	uv run --quiet --with pyboy python scripts/test_shop_surge.py

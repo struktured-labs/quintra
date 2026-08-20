@@ -86,8 +86,16 @@ def main():
         pb.tick()
         if pb.memory[boss + 14] == maximum - 1:
             break
-    assert pb.memory[boss + 14] == maximum - 1 and pb.memory[boss + 11] == 0, (
-        "Void Lord did not recover one HP on its 180-beat clock")
+    # The CGB runs the game loop in double-speed mode. Depending on where the
+    # emulator frame lands, the update immediately after the healing beat can
+    # already have advanced the freshly reset counter from 0 to 1. Both are
+    # the same six-second gameplay cadence; a larger value means it failed to
+    # reset or healed too early.
+    assert (pb.memory[boss + 14] == maximum - 1
+            and pb.memory[boss + 11] <= 1), (
+        "Void Lord did not recover one HP on its 180-beat clock: "
+        f"hp={pb.memory[boss + 14]}/{maximum} "
+        f"timer={pb.memory[boss + 11]}")
     pb.stop(save=False)
 
     # Use a fresh encounter for the cap check so a forced near-max heal cannot

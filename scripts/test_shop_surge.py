@@ -174,20 +174,20 @@ def inject_lethal_crawler(pb):
 
 
 def main():
-    # Thirty-six adjacent seeds cover the complete 6x6 catalog. Every shop keeps
+    # Forty-eight adjacent seeds cover the complete 8x6 catalog. Every shop keeps
     # healing and a class-attuned sealed relic, then guarantees one build
     # shelf and one tactical shelf without consuming combat RNG.
-    build_pool = (6, 8, 9, 12, 13, 14)
+    build_pool = (6, 8, 9, 12, 13, 14, 17, 18)
     tactical_pool = (5, 7, 10, 11, 15, 16)
     ware_art = {
         0: 30, 5: 143, 6: 140, 7: 142, 8: 141, 9: 138,
         10: 144, 11: 150, 12: 145, 13: 146, 14: 147,
-        15: 148, 16: 149,
+        15: 148, 16: 149, 17: 155, 18: 156,
     }
-    for seed in range(36):
+    for seed in range(48):
         pb = boot_shop(seed)
         expected = {
-            0, 1, build_pool[seed % 6], tactical_pool[(seed // 6) % 6],
+            0, 1, build_pool[seed % 8], tactical_pool[(seed // 8) % 6],
         }
         assert set(shop_wares(pb)) == expected, (
             f"seed {seed} featured stock drifted: "
@@ -271,7 +271,7 @@ def main():
 
     # A dungeon merchant's chart is useful immediately: it reveals the
     # active route and does not accidentally queue an unrelated future map.
-    chart_pb = boot_shop(6)
+    chart_pb = boot_shop(8)
     buy(chart_pb, 7)
     assert tuple(chart_pb.memory[RS + offset]
                  for offset in (20, 29, 31, 33)) == (0xFF, 0xFF, 0xFF, 0x3F), \
@@ -283,7 +283,7 @@ def main():
 
     # The same chart cannot be repurchased once the active route is already
     # completely known.
-    known_pb = boot_shop(6)
+    known_pb = boot_shop(8)
     known_chart = shop_wares(known_pb)[7]
     for offset, value in zip((20, 29, 31, 33),
                              (0xFF, 0xFF, 0xFF, 0x3F)):
@@ -359,7 +359,7 @@ def main():
 
     # Phoenix Cord intercepts a real lethal hostile projectile, restores half
     # health, remains in the room, and consumes itself.
-    phoenix_pb = boot_shop(12)
+    phoenix_pb = boot_shop(16)
     buy(phoenix_pb, 10)
     assert 33 in inventory(phoenix_pb), "Phoenix Cord is not recorded in the run"
     clear_entities(phoenix_pb)
@@ -388,7 +388,7 @@ def main():
 
     # Spirit Draught immediately makes the hidden full-MP A+B transformation
     # available and starts a useful weapon-shaped Surge window.
-    ascend_pb = boot_shop(18)
+    ascend_pb = boot_shop(24)
     ascend_pb.memory[PL + 4] = 0
     buy(ascend_pb, 11)
     assert ascend_pb.memory[PL + 4] == ascend_pb.memory[PL + 3]
@@ -447,7 +447,7 @@ def main():
     thorn_pb.stop(save=False)
 
     # War Drum makes each fifth real kill a signature-resource beat.
-    drum_pb = boot_shop(24)
+    drum_pb = boot_shop(32)
     buy(drum_pb, 15)
     assert 37 in inventory(drum_pb), "War Drum is not recorded"
     drum_pb.memory[RS + 16] = 4
@@ -462,7 +462,7 @@ def main():
 
     # Moon Flask consumes a surplus heart only when it can distill that
     # otherwise-dead recovery into MP.
-    flask_pb = boot_shop(30)
+    flask_pb = boot_shop(40)
     buy(flask_pb, 16)
     assert 38 in inventory(flask_pb), "Moon Flask is not recorded"
     clear_entities(flask_pb)
@@ -485,7 +485,7 @@ def main():
     assert flask_pb.memory[PL + 4] == 1, "Moon Flask did not distill MP"
     flask_pb.stop(save=False)
 
-    print("[shop-surge] PASS four-counter 6x6 procedural catalog "
+    print("[shop-surge] PASS four-counter 8x6 procedural catalog "
           "+ atomic heal/chart/full-Pack transactions "
           "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask mechanics")
 
