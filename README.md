@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.10: Wayfarer's Gate](https://github.com/struktured-labs/quintra/releases/download/v0.20.10/quintra.gbc)
+[Download Quintra v0.20.11: Living Labyrinths](https://github.com/struktured-labs/quintra/releases/download/v0.20.11/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -23,26 +23,39 @@ live dungeon combat, the Riftwild overworld, a nonlinear cave-to-vault
 teleport, and the animated epilogue. The transitions shown are executed by
 the cartridge runtime.
 
+[Browse every stage, Colossus, monster, and meaningful pickup in the cartridge field archive.](docs/showcase/index.html)
+
+![Quintra cartridge field atlas](docs/showcase/assets/quintra-world-atlas.png)
+
 ### Current release
 
-The current cartridge is **v0.20.10**, an exploration and world-legibility
-milestone. Each three-dungeon region now shares one persistent 6×6 Riftwild
-whose explored geography, one-use landmarks, and three sequential dungeon
-gates survive every expedition. Hero nature and one equipped permanent
-Waygear implement open optional boulder, water, chasm, thorn, and vent routes,
-turning champion choice into geography rather than combat stats alone.
+The current cartridge is **v0.20.11 — Living Labyrinths**, a puzzle, hazard,
+and civic-audio milestone with five playtest-facing changes.
+Villages own an 85-second **Hearthlight Common** score and hand off cleanly to
+the next dungeon theme. A wrong ordered-rune press costs one half-heart,
+flashes the real hurt pose/HUD, and resets the phrase instead of providing
+free brute-force input.
 
-Peaceful residents, merchants, and wayfarers now use full 16×16 silhouettes.
-Merchant dialogue pairs the exact live item icon and tint with every effect and
-price; major Rift Sigils receive their own illustrated claim tableau. Stage 1
-Normal fields carry 14–18 tougher ordinary enemies while its service rooms,
-puzzles, sanctuary, and 200-HP opening Colossus remain unchanged.
+Frost Vault can generate wall-mounted launchers that flash amber before firing
+fast arrow-shaped bolts inward from alternating sides. Shadow Keep can
+generate two dotted rows of cracked panels that turn gold, disappear into the
+void, and reform; a panel dropping underfoot deals one hit and pushes the hero
+onto the permanent central route. Both events use the full 31×31 backing field,
+remain optional combat pressure rather than progression locks, and are
+seed/local-room stable. All 460 PyBoy and 460 native mGBA checkpoints have
+been regenerated against this release cartridge.
 
-The Stage 4 sanctuary-side cache can no longer confuse its return threshold
-with the locked Colossus gate. All 460 PyBoy and 460 native mGBA checkpoints
-were regenerated against the release cartridge, and the fixed-bank refactor
-restores the project's 384-byte bank-zero release margin without slowing the
-compact collision path.
+The former one-step deep switch is now a four-panel **Aether Lattice**. Each
+plate transforms itself and adjacent plates between gold and crystal states;
+the run seed chooses an exactly solvable three- or four-press starting pattern.
+Lighting the full lattice persists a phase change and opens a remote wall in a
+later room, adding an Ultima-like inference/backtracking puzzle without making
+an unlucky procedural route impossible.
+
+The release field archive is regenerated from the cartridge: nine live stage
+captures, nine Colossi, all 33 registered monster habitats, all 29 authored
+relic/tool/Waygear silhouettes, and one unified shareable atlas. All 460 PyBoy
+and 460 native mGBA checkpoints are also regenerated against the release ROM.
 
 ### v0.20.10 — Wayfarer's Gate
 

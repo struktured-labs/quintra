@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the local Quintra stage, Colossus, and complete-enemy browser."""
+"""Build the local Quintra stage, item, Colossus, and enemy browser."""
 from __future__ import annotations
 
 import hashlib
@@ -7,7 +7,7 @@ import json
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from make_stage_states import boot_to_stage, select_rom_topology, symbol_addresses
 
@@ -18,6 +18,7 @@ OUT = ROOT / "docs/showcase"
 ASSETS = OUT / "assets"
 ENEMIES_C = ROOT / "src/generated/enemies.c"
 STAGES_C = ROOT / "src/generated/stages.c"
+ITEMS_C = ROOT / "src/render/tiles_items.c"
 VERSION_H = ROOT / "src/game/version.h"
 BOSS_ATLAS = ROOT / "docs/media/boss-gallery.png"
 
@@ -112,6 +113,60 @@ ENEMY_SIGNATURES = (
     "Deflects one hasty hit, scuttles forward, then opens for a generous counterattack.",
     "A wide, slow Void orbit that shapes space with one opposite pair at a time.",
     "A priority target that chants once to summon a bounded escort wave; interrupting it cancels the call.",
+)
+
+ITEM_NAMES = (
+    "Iron Heart", "Speed Ring", "Power Stone", "Tough Skin", "Lucky Coin",
+    "Mana Gem", "Ward Charm", "Swift Fang", "Hunter's Eye", "Blood Sigil",
+    "Weapon Cache", "Spirit Chart", "Weapon Surge", "Phoenix Feather",
+    "Echo Prism", "Ricochet Rune", "Thorn Mail", "War Drum", "Spirit Flask",
+    "Ascension Crown", "Rift Sigil", "Rift Bomb", "Echo Chime", "Mirror Shard",
+    "Blast Seed", "Rift Lens", "Titan Glove", "Tide Raft", "Rift Hook",
+)
+ITEM_EFFECTS = (
+    "Permanently raises maximum health by one full heart.",
+    "Permanently quickens movement through combat fields.",
+    "Permanently raises direct attack strength.",
+    "Permanently reduces incoming damage.",
+    "Raises luck, improving the run's reward economy.",
+    "Permanently expands the champion's Will reserve.",
+    "Combines defense and luck in one compact boon.",
+    "Trades restraint for greater attack and movement speed.",
+    "A high-luck hunter's boon for treasure-driven builds.",
+    "Vampiric kills slowly return health.",
+    "Adds a class-shaped alternate weapon to the current build.",
+    "Reveals more of the procedural dungeon Compass.",
+    "Temporarily accelerates and empowers the equipped weapon.",
+    "Returns the champion from one otherwise-fatal hit.",
+    "Every fourth primary shot fractures into bounded child shots.",
+    "Direct projectiles rebound from dungeon walls.",
+    "Taking a hit answers with a retaliatory counterburst.",
+    "Every fifth kill strengthens the next B art and restores Will.",
+    "Converts spare hearts into Will for ability-heavy builds.",
+    "Refills Will and awakens a short weapon transformation.",
+    "The stage's lore fixture and required Colossus seal.",
+    "A permanent tool that destroys selected cracked barriers.",
+    "Silences hostile projectiles and resolves chime secrets.",
+    "A permanent tool that bends one room pattern back on itself.",
+    "Direct impacts splash damage into nearby enemies.",
+    "Every third primary becomes a wide, heavy beam.",
+    "Permanent Waygear for moving boulders without Sauran.",
+    "Permanent Waygear for crossing water without Picsean.",
+    "Permanent Waygear for crossing chasms without Corvin.",
+)
+ITEM_CATEGORIES = (
+    "Stat relic", "Stat relic", "Stat relic", "Stat relic", "Stat relic",
+    "Stat relic", "Hybrid relic", "Hybrid relic", "Hybrid relic", "Build relic",
+    "Weapon", "Navigation", "Temporary boon", "Build relic", "Weapon physics",
+    "Weapon physics", "Defense relic", "Kill-chain relic", "Will relic", "Transformation",
+    "Stage fixture", "Dungeon tool", "Dungeon tool", "Dungeon tool", "Weapon physics",
+    "Weapon physics", "Permanent Waygear", "Permanent Waygear", "Permanent Waygear",
+)
+ITEM_PALETTES = (
+    ((8, 15, 23), (61, 36, 44), (224, 75, 84), (255, 232, 195)),
+    ((8, 15, 23), (25, 55, 60), (63, 205, 179), (230, 255, 221)),
+    ((8, 15, 23), (55, 42, 76), (180, 125, 255), (255, 236, 190)),
+    ((8, 15, 23), (70, 54, 20), (246, 188, 56), (255, 246, 195)),
 )
 
 AI_LABELS = {
@@ -216,6 +271,101 @@ def labeled_collage(images: list[Image.Image], labels: list[str], columns: int,
                        fill=(6, 13, 22))
         draw.text((x + 6, y + height + 6), label, fill=(226, 244, 232))
     return canvas
+
+
+def display_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+    try:
+        return ImageFont.truetype(f"/usr/share/fonts/truetype/dejavu/{name}", size)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def parse_item_tiles() -> list[list[int]]:
+    source = ITEMS_C.read_text()
+    block = re.search(
+        r"static const u8 sprite_item_icons\[29\]\[16\] = \{(.*?)\n\};",
+        source, re.DOTALL,
+    )
+    assert block, "missing authored item icon table"
+    rows = [
+        [int(value, 16) for value in re.findall(r"0x[0-9A-Fa-f]{2}", row)]
+        for row in re.findall(r"\{([^{}]+)\}", block.group(1))
+    ]
+    assert len(rows) == len(ITEM_NAMES) == 29
+    assert all(len(row) == 16 for row in rows)
+    return rows
+
+
+def render_item_icon(tile: list[int], index: int) -> Image.Image:
+    palette = ITEM_PALETTES[index % len(ITEM_PALETTES)]
+    sprite = Image.new("RGB", (8, 8), palette[0])
+    pixels = sprite.load()
+    for y in range(8):
+        low, high = tile[y * 2:y * 2 + 2]
+        for x in range(8):
+            bit = 7 - x
+            color = ((low >> bit) & 1) | (((high >> bit) & 1) << 1)
+            pixels[x, y] = palette[color]
+
+    panel = Image.new("RGB", (128, 128), (4, 8, 15))
+    draw = ImageDraw.Draw(panel)
+    draw.rectangle((8, 8, 119, 119), fill=(8, 16, 25), outline=palette[2], width=2)
+    draw.rectangle((13, 13, 114, 114), outline=(24, 43, 50))
+    for point in ((16, 16), (111, 16), (16, 111), (111, 111)):
+        draw.rectangle((point[0] - 1, point[1] - 1, point[0] + 1, point[1] + 1), fill=palette[3])
+    panel.paste(sprite.resize((80, 80), Image.Resampling.NEAREST), (24, 24))
+    return panel
+
+
+def capture_items() -> tuple[list[dict], Image.Image]:
+    images: list[Image.Image] = []
+    items: list[dict] = []
+    for index, tile in enumerate(parse_item_tiles()):
+        image = render_item_icon(tile, index)
+        path = ASSETS / f"item-{index:02d}-{slug(ITEM_NAMES[index])}.png"
+        save_png(image, path)
+        images.append(image)
+        items.append({
+            "id": index,
+            "name": ITEM_NAMES[index],
+            "description": ITEM_EFFECTS[index],
+            "category": ITEM_CATEGORIES[index],
+            "accent": ("#e04b54", "#3fcdb3", "#b47dff", "#f6bc38")[index % 4],
+            "image": f"assets/{path.name}",
+        })
+    collage = labeled_collage(
+        images, [f"{index:02d}  {name.upper()}" for index, name in enumerate(ITEM_NAMES)],
+        columns=6, panel_size=(128, 128), label_height=24,
+    )
+    save_png(collage, ASSETS / "item-collage.png")
+    return items, collage
+
+
+def build_world_atlas(stage_collage: Image.Image, item_collage: Image.Image) -> None:
+    boss_collage = Image.open(BOSS_ATLAS).convert("RGB")
+    monster_collage = Image.open(ASSETS / "monster-collage.png").convert("RGB")
+    canvas = Image.new("RGB", (1600, 1884), (3, 7, 12))
+    draw = ImageDraw.Draw(canvas)
+    draw.text((32, 20), "QUINTRA // CARTRIDGE FIELD ATLAS",
+              fill=(233, 246, 237), font=display_font(30, bold=True))
+    draw.text((34, 57), "9 STAGES  ·  9 COLOSSI  ·  29 RELICS & TOOLS  ·  33 MONSTERS",
+              fill=(126, 240, 188), font=display_font(15, bold=True))
+
+    stage_large = stage_collage.resize((720, 756), Image.Resampling.NEAREST)
+    boss_large = boss_collage.resize((720, 720), Image.Resampling.NEAREST)
+    draw.text((56, 91), "STAGES", fill=(255, 210, 111), font=display_font(20, bold=True))
+    draw.text((824, 91), "COLOSSI", fill=(255, 210, 111), font=display_font(20, bold=True))
+    canvas.paste(stage_large, (56, 120))
+    canvas.paste(boss_large, (824, 120))
+
+    draw.text((24, 910), "RELICS, TOOLS & WAYGEAR", fill=(185, 147, 255),
+              font=display_font(20, bold=True))
+    draw.text((808, 910), "BESTIARY", fill=(185, 147, 255),
+              font=display_font(20, bold=True))
+    canvas.paste(item_collage, (24, 946))
+    canvas.paste(monster_collage, (808, 946))
+    save_png(canvas, ASSETS / "quintra-world-atlas.png")
 
 
 def speed_tier(raw: int) -> str:
@@ -390,7 +540,8 @@ def capture_bosses() -> list[dict]:
     return bosses
 
 
-def write_data(stages: list[dict], bosses: list[dict], monsters: list[dict]) -> None:
+def write_data(stages: list[dict], bosses: list[dict], monsters: list[dict],
+               items: list[dict]) -> None:
     version_match = re.search(r'QUINTRA_VERSION "([^"]+)"', VERSION_H.read_text())
     assert version_match
     data = {
@@ -400,16 +551,20 @@ def write_data(stages: list[dict], bosses: list[dict], monsters: list[dict]) -> 
             "stageCount": len(stages),
             "bossCount": len(bosses),
             "monsterCount": len(monsters),
+            "itemCount": len(items),
         },
         "collages": {
             "stages": "assets/stage-collage.png",
             "bosses": "../media/boss-gallery.png",
             "bossesAnimated": "../media/boss-gallery.gif",
             "monsters": "assets/monster-collage.png",
+            "items": "assets/item-collage.png",
+            "worldAtlas": "assets/quintra-world-atlas.png",
         },
         "stages": stages,
         "bosses": bosses,
         "monsters": monsters,
+        "items": items,
     }
     payload = json.dumps(data, indent=2)
     (OUT / "gallery-data.js").write_text(
@@ -429,10 +584,13 @@ def main() -> None:
     pools = parse_stage_pools()
     stages, monsters = capture_assets(records, pools)
     bosses = capture_bosses()
-    write_data(stages, bosses, monsters)
+    items, item_collage = capture_items()
+    stage_collage = Image.open(ASSETS / "stage-collage.png").convert("RGB")
+    build_world_atlas(stage_collage, item_collage)
+    write_data(stages, bosses, monsters, items)
     print(
         f"[showcase] PASS {len(stages)} stages, {len(bosses)} Colossi, "
-        f"{len(monsters)} monsters -> {OUT / 'index.html'}"
+        f"{len(monsters)} monsters, {len(items)} items -> {OUT / 'index.html'}"
     )
 
 

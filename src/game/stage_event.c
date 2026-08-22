@@ -103,10 +103,9 @@ static void prepare_furnace(void) {
     }
     room_stage_event_kind = STAGE_EVENT_FURNACE;
     room_stage_event_remaining = FURNACE_TILE_COUNT;
-    // The room director already owns one per-frame update call. Furnace is a
-    // mutually exclusive encounter verb, so route its state machine through
-    // that slot instead of taxing every ordinary room with another branch.
-    room_encounter_kind = ENCOUNTER_FURNACE;
+    // The room director already owns one per-frame update call. Animated
+    // hazards use that slot instead of taxing every ordinary room.
+    room_encounter_kind = ENCOUNTER_STAGE_EVENT;
 }
 
 void stage_event_prepare_room(void) BANKED {
@@ -128,6 +127,8 @@ void stage_event_prepare_room(void) BANKED {
     if (local < 5 || (local & 3) != 1) return;
     if (run_state.bosses_beaten == 1) prepare_roots();
     else if (run_state.bosses_beaten == 2) prepare_furnace();
+    else if (run_state.bosses_beaten == 3) stage_event_prepare_arrows();
+    else if (run_state.bosses_beaten == 5) stage_event_prepare_fading();
 }
 
 void stage_event_on_crystal_break(u8 tx, u8 ty) BANKED {
@@ -150,6 +151,10 @@ void stage_event_on_crystal_break(u8 tx, u8 ty) BANKED {
 
 void stage_event_tick(void) BANKED {
     u8 tile, attr;
+    if (room_stage_event_kind >= STAGE_EVENT_ARROW_TRAPS) {
+        stage_event_tick_hazard();
+        return;
+    }
     if (room_stage_event_kind != STAGE_EVENT_FURNACE) return;
     event_timer++;
     switch (room_stage_event_phase) {

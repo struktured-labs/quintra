@@ -35,6 +35,7 @@ def main() -> None:
     assert len(data["stages"]) == data["meta"]["stageCount"] == 9
     assert len(data["bosses"]) == data["meta"]["bossCount"] == 9
     assert len(data["monsters"]) == data["meta"]["monsterCount"] == 33
+    assert len(data["items"]) == data["meta"]["itemCount"] == 29
     assert [monster["id"] for monster in data["monsters"]] == list(range(33))
     assert len({monster["name"] for monster in data["monsters"]}) == 33
 
@@ -46,8 +47,12 @@ def main() -> None:
         assert monster["stages"], f"{monster['name']} has no habitat"
         assert_image(monster["focus"], (128, 128))
         assert_image(monster["field"], (160, 144))
+    for item in data["items"]:
+        assert_image(item["image"], (128, 128))
     assert_image(data["collages"]["stages"], (480, 504))
     assert_image(data["collages"]["monsters"], (768, 912))
+    assert_image(data["collages"]["items"], (768, 760))
+    assert_image(data["collages"]["worldAtlas"], (1600, 1884))
 
     html = (SHOWCASE / "index.html").read_text()
     css = (SHOWCASE / "styles.css").read_text()
@@ -58,8 +63,9 @@ def main() -> None:
     assert "data-view=\"stages\"" in html
     assert "data-view=\"bosses\"" in html
     assert "data-view=\"monsters\"" in html
+    assert "data-view=\"items\"" in html
     print(
-        f"[showcase] PASS {version}, 9 stages, 9 Colossi, 33 monsters, "
+        f"[showcase] PASS {version}, 9 stages, 9 Colossi, 33 monsters, 29 items, "
         "local assets and ROM hash current"
     )
 

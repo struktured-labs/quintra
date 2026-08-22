@@ -28,6 +28,7 @@
     $("#stage-count").textContent = String(data.meta.stageCount).padStart(2, "0");
     $("#boss-count").textContent = String(data.meta.bossCount).padStart(2, "0");
     $("#monster-count").textContent = data.meta.monsterCount;
+    $("#item-count").textContent = data.meta.itemCount;
     $("#rom-hash").textContent = `ROM ${data.meta.romSha256.slice(0, 12)}…`;
 
     data.stages.forEach(stage => stageFilter.insertAdjacentHTML(
@@ -87,9 +88,10 @@
       });
     }
     visibleEntries = entries;
-    gallery.classList.toggle("monster-grid", view === "monsters");
+    gallery.classList.toggle("monster-grid", view === "monsters" || view === "items");
     gallery.innerHTML = entries.map((entry, index) => view === "monsters"
       ? monsterCard(entry, index)
+      : view === "items" ? itemCard(entry, index)
       : standardCard(entry, index, view)).join("");
     empty.hidden = entries.length !== 0;
     $("#results-summary").textContent = `${entries.length} ${view === "bosses" ? "Colossi" : view}`;
@@ -125,7 +127,24 @@
     </article>`;
   }
 
+  function itemCard(item, index) {
+    return `<article class="card monster-card item-card" style="--accent:${item.accent}">
+      <button class="card-media" data-entry-index="${index}" aria-label="Open ${escapeHtml(item.name)} art">
+        <img src="${item.image}" alt="${escapeHtml(item.name)} authored cartridge sprite" loading="lazy">
+        <span class="card-index">ITEM ${String(item.id).padStart(2, "0")}</span>
+      </button>
+      <div class="card-body"><p class="card-kicker">${escapeHtml(item.category)}</p>
+      <h3>${escapeHtml(item.name)}</h3><p class="card-copy">${escapeHtml(item.description)}</p>
+      <div class="pills">${pill("ART", "2BPP")}${pill("SCOPE", item.category.includes("Waygear") ? "PERMANENT" : "RUN")}</div></div>
+    </article>`;
+  }
+
   function entryLightbox(entry) {
+    if (view === "items") {
+      return { image: entry.image, kicker: `Item ${String(entry.id).padStart(2, "0")} · ${entry.category}`,
+        title: entry.name, copy: entry.description,
+        meta: pill("Artwork", "Native 8×8 2bpp") + pill("Scope", entry.category.includes("Waygear") ? "Permanent" : "Run") };
+    }
     if (view === "monsters") {
       return {
         image: entry.field, kicker: `Monster ${String(entry.id).padStart(2, "0")} · ${entry.behavior}`,
@@ -158,6 +177,8 @@
       bosses: ["Maximum-footprint atlas", "All nine Colossi", "The largest captured body pose from every final boss."],
       bossesAnimated: ["Two-second synchronized atlas", "All nine Colossi — animated", "Pursuit, bounce, lunge, blink, pulse, weave, and weak-point travel side by side."],
       monsters: ["Complete contact sheet", "All 33 monsters", "Every registered enemy silhouette in its correct dungeon palette and floor context."],
+      items: ["Authored 2bpp contact sheet", "29 relics, tools, and Waygear", "The actual in-cartridge silhouettes behind stat relics, wild weapon physics, puzzle tools, and permanent traversal gear."],
+      worldAtlas: ["Complete cartridge field atlas", "The whole current run", "Every region and Colossus beside all meaningful pickup silhouettes and all 33 registered monsters."],
     };
     visibleEntries = [];
     const [kicker, title, copy] = labels[key];

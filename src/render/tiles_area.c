@@ -82,7 +82,10 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
                 : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
                     ? BGPAL_DOOR : BGPAL_FLOOR;
     }
-    if (tile == BGT_WALL || tile == BGT_PILLAR
+    if (room_puzzle_kind == PUZZLE_PHASE_SWITCH && y == 8
+        && (x == 4 || x == 8 || x == 12 || x == 16)
+        && tile == BGT_FLOOR2) return BGPAL_CRYSTAL;
+    if (tile == BGT_WALL || tile == BGT_ARROW_TRAP || tile == BGT_PILLAR
         || tile == BGT_BLOCK || tile == BGT_BLOCK_TR
         || tile == BGT_BLOCK_BL || tile == BGT_BLOCK_BR
         || tile == BGT_ROOF || tile == BGT_FENCE

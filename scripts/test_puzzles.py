@@ -4,10 +4,13 @@
 import re
 from pathlib import Path
 
-from pyboy import PyBoy
 from quintra_topology import (
     STAGE_START, dungeon_direction, dungeon_predecessor, dungeon_size,
     mission_graph,
+)
+from make_stage_states import (
+    boot_to_stage, cross_graph_edge, normalize_compact_source,
+    select_rom_topology, symbol_addresses,
 )
 from test_stage_archetypes import generated_room
 
@@ -55,38 +58,36 @@ def cross_edge(pb, source_local, target_local):
 
 
 def load(stage):
-    pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240)
-    pb.button("start")
-    pb.tick(30)
-    pb.button("a")
-    pb.tick(60)
     stage_index = stage - 1
-    seed = 0xCAFE1234
+    seed = 0x51A6D00D
+    select_rom_topology(ROM)
+    addrs = symbol_addresses(ROM)
+    pb, _ram, _entry = boot_to_stage(ROM, addrs, stage_index, "normal", 0)
     trial = mission_graph(
         dungeon_size(stage_index), seed, stage_index)["trial"]
     target = STAGE_START[stage_index] + trial
-    # Use the real between-stage gate instead of a ROM-specific emulator
-    # snapshot. ABI/layout changes can never make this puzzle test execute a
-    # stale instruction stream.
-    pb.memory[RS + 1] = target - 1
-    for i, byte in enumerate(seed.to_bytes(4, "little")):
-        pb.memory[RS + 2 + i] = byte
-    pb.memory[RS + 11] = stage_index
-    pb.memory[RS + 12] = pb.memory[RS + 13] = 0
-    pb.memory[RS + 17] = 1
-    pb.memory[RS + 18] = 6
-    pb.memory[RS + 37] = 0
-    for i in range(32):
-        ep = EN + i * 28
-        pb.memory[ep] = pb.memory[ep + 1] = 0
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 60)
-    pb.memory[TM + 9 * 20 + 10] = 34
-    for _ in range(30):
-        pb.tick()
-        if pb.memory[RS + 1] == target:
-            break
+    if pb.memory[RS + 1] != target:
+        # Cross a reciprocal live maze edge. The old shortcut painted a
+        # portal into room_tilemap while the opening room used its 31x31
+        # streamed backing store, so the engine correctly never saw it.
+        source, direction_id = dungeon_predecessor(
+            trial, dungeon_size(stage_index), seed, stage_index)
+        pb.memory[RS + 1] = STAGE_START[stage_index] + source
+        pb.memory[RS + 6] = 0xFF
+        pb.memory[LOCKED] = 0
+        pb.memory[COMBAT] = 0
+        normalize_compact_source(pb, addrs)
+        for i in range(32):
+            ep = EN + i * 28
+            if pb.memory[ep] == 2:
+                pb.memory[ep] = pb.memory[ep + 1] = 0
+        direction = ("up", "right", "down", "left")[direction_id]
+        cross_graph_edge(pb, PL, TM, direction)
+        for _ in range(120):
+            pb.tick()
+            if pb.memory[RS + 1] == target:
+                break
+        pb.button_release(direction)
     assert pb.memory[RS + 1] == target
     for _ in range(90):
         pb.tick()
@@ -179,12 +180,23 @@ def solve_runes(pb, runes):
                 for rune in prefix:
                     feet_on(pb, *rune)
                     step_off(pb)
+            hp_before = pb.memory[PL + 2]
             feet_on(pb, *candidate)
             if not pb.memory[LOCKED] or all(lit(rune) for rune in (*prefix, candidate)):
+                assert pb.memory[PL + 2] == hp_before, (
+                    "correct rune damaged the champion"
+                )
                 found = candidate
                 prefix.append(candidate)
                 step_off(pb)
                 break
+            assert pb.memory[PL + 2] == hp_before - 1, (
+                "wrong rune did not charge exactly one half-heart"
+            )
+            # This routine intentionally discovers the hidden order through
+            # mistakes. Refill only its test vessel so later candidates can
+            # verify the same live damage contract without dying mid-proof.
+            pb.memory[PL + 2] = hp_before
             step_off(pb)
         assert found is not None, f"visible feedback exposed no next tone after {prefix}"
     assert not pb.memory[LOCKED], f"discovered phrase did not release seal: {prefix}"
@@ -328,10 +340,42 @@ def deep_phase_contract():
     def switch_probe(pb, _tiles):
         assert pb.memory[KIND] == 3 and pb.memory[LOCKED] == 0
         assert not (pb.memory[RS + 28] & bit)
-        feet_on(pb, 10, 8)
-        step_off(pb)
+        xs = (4, 8, 12, 16)
+        masks = (0x03, 0x07, 0x0E, 0x0C)
+
+        def state():
+            return sum((pb.memory[TM + 8 * 20 + x] == 19) << i
+                       for i, x in enumerate(xs))
+
+        initial = state()
+        assert initial != 0x0F, "deep Aether Lattice spawned already solved"
+        # Solve from the cartridge's visible state, not from its seed. This
+        # mirrors a player reasoning about the transformation rule and proves
+        # the generated fixture is genuinely solvable in three/four presses.
+        pending = [(initial, ())]
+        seen = {initial}
+        solution = None
+        while pending:
+            current, path = pending.pop(0)
+            if current == 0x0F:
+                solution = path
+                break
+            for i, mask in enumerate(masks):
+                nxt = current ^ mask
+                if nxt not in seen:
+                    seen.add(nxt)
+                    pending.append((nxt, path + (i,)))
+        assert solution is not None and len(solution) >= 3, \
+            f"deep Aether Lattice was trivial or unsolvable: {initial:04b}"
+        for press in solution:
+            before = state()
+            feet_on(pb, xs[press], 8)
+            step_off(pb)
+            assert state() == (before ^ masks[press]), \
+                f"plate {press} did not transform its neighbor lattice"
         assert pb.memory[RS + 28] & bit, \
-            "local-room-12 deep switch did not persist its phase bit"
+            "solved deep Aether Lattice did not persist its remote phase bit"
+        assert state() == 0x0F, "solved Aether Lattice did not finish fully lit"
 
     def closed_gate_probe(pb, _tiles):
         assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
@@ -363,7 +407,7 @@ def main():
     opening_shop_is_not_a_puzzle()
     deep_phase_contract()
     print("[puzzles] PASS generated Trial/Waystone + connected ordered runes "
-          "+ service exclusion + remote deep switch/gate circuit "
+          "+ service exclusion + four-panel remote Aether Lattice/gate circuit "
           "+ persistent gate crossing")
 
 

@@ -79,6 +79,13 @@ static const u8 sprite_fx_lore_callout[16] = {
     0xBD, 0x42, 0xC3, 0x24, 0x7E, 0x18, 0x3C, 0x00,
 };
 
+// A long horizontal shaft with a broad head. Wall traps mirror this one
+// authored direction in OAM, keeping it distinct from round enemy bullets.
+static const u8 sprite_fx_arrow[16] = {
+    0x00,0x00, 0x02,0x02, 0x01,0x01, 0xFF,0xFF,
+    0xFF,0xFF, 0x01,0x01, 0x02,0x02, 0x00,0x00,
+};
+
 void tiles_load_pickup_sprites(void) BANKED {
     set_sprite_data(SPR_HEART, 1, sprite_tile_heart);
     set_sprite_data(SPR_COIN,  1, sprite_tile_coin);
@@ -287,6 +294,7 @@ void tiles_load_fx_sprites(void) BANKED {
     set_sprite_data(SPR_SHIELD_AURA, 1, sprite_fx_shield_aura);
     set_sprite_data(SPR_FX_BEAM_HEAD, 1, sprite_fx_beam_head);
     set_sprite_data(SPR_FX_BEAM_TAIL, 1, sprite_fx_beam_tail);
+    set_sprite_data(SPR_FX_ARROW, 1, sprite_fx_arrow);
     // Wolfkin's physical attack is a readable steel sword, with a distinct
     // point, blade, crossguard, and hilt—not a bullet or a tiny bare fist.
     set_sprite_data(SPR_FX_SWING, 1, sprite_fx_sword);
@@ -353,6 +361,12 @@ static const u8 bgt_wild_stump[16] = {
     0x00,0x00, 0x3C,0x3C, 0x7E,0x42, 0xFF,0xA5,
     0x7E,0x5A, 0x3C,0x24, 0x3C,0x24, 0x7E,0x42
 };
+// A square gargoyle/vent face with a bright horizontal firing slit. It reads
+// as wall machinery before its palette flashes amber for the launch warning.
+static const u8 bgt_arrow_trap[16] = {
+    0xFF,0xFF, 0x81,0xFF, 0xA5,0xDB, 0xBD,0xC3,
+    0x81,0xFF, 0xBD,0xC3, 0x81,0xFF, 0xFF,0xFF,
+};
 static const u8 bgt_gate_tiles[5][16] = {
     // Titan boulder: dense stone bearing a square strength rune.
     {0x3C,0x3C, 0x7E,0x42, 0xFF,0x81, 0xE7,0x99,
@@ -379,6 +393,7 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_WALL,    1, bgt_wall_brick);
     set_bkg_data(BGT_DOOR,    1, bgt_door_frame);
     set_bkg_data(BGT_DOOR_LOCKED, 1, bgt_door_locked);
+    set_bkg_data(BGT_ARROW_TRAP, 1, bgt_arrow_trap);
     set_bkg_data(BGT_FLOOR2,  1, bgt_floor_crack);
     set_bkg_data(BGT_FLOOR3,  1, bgt_floor_pebble);
     set_bkg_data(BGT_PILLAR,  1, bgt_pillar);

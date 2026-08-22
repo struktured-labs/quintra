@@ -1,16 +1,19 @@
 {
   "meta": {
-    "version": "v0.20.5",
-    "romSha256": "be9065b572309ca867fd733048a15d05ed607f0078885dfcecee1197035f943e",
+    "version": "v0.20.11",
+    "romSha256": "167cd51fd66132e2638bbf727d340a26fd17be55f9dbb53be1a55cbe541aad19",
     "stageCount": 9,
     "bossCount": 9,
-    "monsterCount": 33
+    "monsterCount": 33,
+    "itemCount": 29
   },
   "collages": {
     "stages": "assets/stage-collage.png",
     "bosses": "../media/boss-gallery.png",
     "bossesAnimated": "../media/boss-gallery.gif",
-    "monsters": "assets/monster-collage.png"
+    "monsters": "assets/monster-collage.png",
+    "items": "assets/item-collage.png",
+    "worldAtlas": "assets/quintra-world-atlas.png"
   },
   "stages": [
     {
@@ -934,6 +937,240 @@
       "firstSeen": "Frost Vault",
       "focus": "assets/monster-32-rift-cantor-focus.png",
       "field": "assets/monster-32-rift-cantor-field.png"
+    }
+  ],
+  "items": [
+    {
+      "id": 0,
+      "name": "Iron Heart",
+      "description": "Permanently raises maximum health by one full heart.",
+      "category": "Stat relic",
+      "accent": "#e04b54",
+      "image": "assets/item-00-iron-heart.png"
+    },
+    {
+      "id": 1,
+      "name": "Speed Ring",
+      "description": "Permanently quickens movement through combat fields.",
+      "category": "Stat relic",
+      "accent": "#3fcdb3",
+      "image": "assets/item-01-speed-ring.png"
+    },
+    {
+      "id": 2,
+      "name": "Power Stone",
+      "description": "Permanently raises direct attack strength.",
+      "category": "Stat relic",
+      "accent": "#b47dff",
+      "image": "assets/item-02-power-stone.png"
+    },
+    {
+      "id": 3,
+      "name": "Tough Skin",
+      "description": "Permanently reduces incoming damage.",
+      "category": "Stat relic",
+      "accent": "#f6bc38",
+      "image": "assets/item-03-tough-skin.png"
+    },
+    {
+      "id": 4,
+      "name": "Lucky Coin",
+      "description": "Raises luck, improving the run's reward economy.",
+      "category": "Stat relic",
+      "accent": "#e04b54",
+      "image": "assets/item-04-lucky-coin.png"
+    },
+    {
+      "id": 5,
+      "name": "Mana Gem",
+      "description": "Permanently expands the champion's Will reserve.",
+      "category": "Stat relic",
+      "accent": "#3fcdb3",
+      "image": "assets/item-05-mana-gem.png"
+    },
+    {
+      "id": 6,
+      "name": "Ward Charm",
+      "description": "Combines defense and luck in one compact boon.",
+      "category": "Hybrid relic",
+      "accent": "#b47dff",
+      "image": "assets/item-06-ward-charm.png"
+    },
+    {
+      "id": 7,
+      "name": "Swift Fang",
+      "description": "Trades restraint for greater attack and movement speed.",
+      "category": "Hybrid relic",
+      "accent": "#f6bc38",
+      "image": "assets/item-07-swift-fang.png"
+    },
+    {
+      "id": 8,
+      "name": "Hunter's Eye",
+      "description": "A high-luck hunter's boon for treasure-driven builds.",
+      "category": "Hybrid relic",
+      "accent": "#e04b54",
+      "image": "assets/item-08-hunter-s-eye.png"
+    },
+    {
+      "id": 9,
+      "name": "Blood Sigil",
+      "description": "Vampiric kills slowly return health.",
+      "category": "Build relic",
+      "accent": "#3fcdb3",
+      "image": "assets/item-09-blood-sigil.png"
+    },
+    {
+      "id": 10,
+      "name": "Weapon Cache",
+      "description": "Adds a class-shaped alternate weapon to the current build.",
+      "category": "Weapon",
+      "accent": "#b47dff",
+      "image": "assets/item-10-weapon-cache.png"
+    },
+    {
+      "id": 11,
+      "name": "Spirit Chart",
+      "description": "Reveals more of the procedural dungeon Compass.",
+      "category": "Navigation",
+      "accent": "#f6bc38",
+      "image": "assets/item-11-spirit-chart.png"
+    },
+    {
+      "id": 12,
+      "name": "Weapon Surge",
+      "description": "Temporarily accelerates and empowers the equipped weapon.",
+      "category": "Temporary boon",
+      "accent": "#e04b54",
+      "image": "assets/item-12-weapon-surge.png"
+    },
+    {
+      "id": 13,
+      "name": "Phoenix Feather",
+      "description": "Returns the champion from one otherwise-fatal hit.",
+      "category": "Build relic",
+      "accent": "#3fcdb3",
+      "image": "assets/item-13-phoenix-feather.png"
+    },
+    {
+      "id": 14,
+      "name": "Echo Prism",
+      "description": "Every fourth primary shot fractures into bounded child shots.",
+      "category": "Weapon physics",
+      "accent": "#b47dff",
+      "image": "assets/item-14-echo-prism.png"
+    },
+    {
+      "id": 15,
+      "name": "Ricochet Rune",
+      "description": "Direct projectiles rebound from dungeon walls.",
+      "category": "Weapon physics",
+      "accent": "#f6bc38",
+      "image": "assets/item-15-ricochet-rune.png"
+    },
+    {
+      "id": 16,
+      "name": "Thorn Mail",
+      "description": "Taking a hit answers with a retaliatory counterburst.",
+      "category": "Defense relic",
+      "accent": "#e04b54",
+      "image": "assets/item-16-thorn-mail.png"
+    },
+    {
+      "id": 17,
+      "name": "War Drum",
+      "description": "Every fifth kill strengthens the next B art and restores Will.",
+      "category": "Kill-chain relic",
+      "accent": "#3fcdb3",
+      "image": "assets/item-17-war-drum.png"
+    },
+    {
+      "id": 18,
+      "name": "Spirit Flask",
+      "description": "Converts spare hearts into Will for ability-heavy builds.",
+      "category": "Will relic",
+      "accent": "#b47dff",
+      "image": "assets/item-18-spirit-flask.png"
+    },
+    {
+      "id": 19,
+      "name": "Ascension Crown",
+      "description": "Refills Will and awakens a short weapon transformation.",
+      "category": "Transformation",
+      "accent": "#f6bc38",
+      "image": "assets/item-19-ascension-crown.png"
+    },
+    {
+      "id": 20,
+      "name": "Rift Sigil",
+      "description": "The stage's lore fixture and required Colossus seal.",
+      "category": "Stage fixture",
+      "accent": "#e04b54",
+      "image": "assets/item-20-rift-sigil.png"
+    },
+    {
+      "id": 21,
+      "name": "Rift Bomb",
+      "description": "A permanent tool that destroys selected cracked barriers.",
+      "category": "Dungeon tool",
+      "accent": "#3fcdb3",
+      "image": "assets/item-21-rift-bomb.png"
+    },
+    {
+      "id": 22,
+      "name": "Echo Chime",
+      "description": "Silences hostile projectiles and resolves chime secrets.",
+      "category": "Dungeon tool",
+      "accent": "#b47dff",
+      "image": "assets/item-22-echo-chime.png"
+    },
+    {
+      "id": 23,
+      "name": "Mirror Shard",
+      "description": "A permanent tool that bends one room pattern back on itself.",
+      "category": "Dungeon tool",
+      "accent": "#f6bc38",
+      "image": "assets/item-23-mirror-shard.png"
+    },
+    {
+      "id": 24,
+      "name": "Blast Seed",
+      "description": "Direct impacts splash damage into nearby enemies.",
+      "category": "Weapon physics",
+      "accent": "#e04b54",
+      "image": "assets/item-24-blast-seed.png"
+    },
+    {
+      "id": 25,
+      "name": "Rift Lens",
+      "description": "Every third primary becomes a wide, heavy beam.",
+      "category": "Weapon physics",
+      "accent": "#3fcdb3",
+      "image": "assets/item-25-rift-lens.png"
+    },
+    {
+      "id": 26,
+      "name": "Titan Glove",
+      "description": "Permanent Waygear for moving boulders without Sauran.",
+      "category": "Permanent Waygear",
+      "accent": "#b47dff",
+      "image": "assets/item-26-titan-glove.png"
+    },
+    {
+      "id": 27,
+      "name": "Tide Raft",
+      "description": "Permanent Waygear for crossing water without Picsean.",
+      "category": "Permanent Waygear",
+      "accent": "#f6bc38",
+      "image": "assets/item-27-tide-raft.png"
+    },
+    {
+      "id": 28,
+      "name": "Rift Hook",
+      "description": "Permanent Waygear for crossing chasms without Corvin.",
+      "category": "Permanent Waygear",
+      "accent": "#e04b54",
+      "image": "assets/item-28-rift-hook.png"
     }
   ]
 }

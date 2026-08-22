@@ -12,6 +12,7 @@
 #include "game/puzzle.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "render/hud.h"
 #include "render/tiles.h"
 
 u8 room_puzzle_kind;
@@ -33,6 +34,13 @@ static u8 rune_count;
 static u8 rune_order[5];
 static u8 rune_x[5];
 static u8 rune_y[5];
+static u8 phase_switch_state;
+
+static const u8 phase_switch_x[4] = { 4, 8, 12, 16 };
+// Each plate transforms itself and its neighbor(s), producing a compact
+// four-bit Lights-Out grammar instead of a one-step remote door button.
+static const u8 phase_switch_mask[4] = { 0x03, 0x07, 0x0E, 0x0C };
+static const u8 phase_switch_solutions[5] = { 0x07, 0x0B, 0x0D, 0x0E, 0x0F };
 
 static const u8 rune_orders[18] = {
     0,1,2, 0,2,1, 1,0,2, 1,2,0, 2,0,1, 2,1,0
@@ -207,7 +215,8 @@ static void prepare_sequence(u32 seed) {
     room_puzzle_locked = 1;
 }
 
-static void prepare_phase_switch(u8 bit) {
+static void prepare_phase_switch(u8 bit, u32 seed) {
+    u8 i, presses;
     // This room can own W/E/S graph exits. A stage archetype may leave its
     // central switch visible while a 12px hero still cannot reach the east
     // Sigil threshold through the surrounding pillars. Carve explicit
@@ -215,7 +224,19 @@ static void prepare_phase_switch(u8 bit) {
     // graph edge remains physically usable, not merely present in the border.
     floor_rect(1, 7, ROOM_W - 2, 3);
     floor_rect(9, 1, 3, ROOM_H - 2);
-    room_tilemap[8][10] = BGT_SWITCH;
+    phase_switch_state = 0x0F;
+    if (!(run_state.dungeon_phase & bit)) {
+        // Generate backwards from the solved state using a three/four-press
+        // seed-stable solution. The line transform is invertible, so every
+        // published lattice has exactly one solution and never soft-locks.
+        presses = phase_switch_solutions[(u8)seed % 5];
+        for (i = 0; i < 4; ++i)
+            if (presses & (1u << i))
+                phase_switch_state ^= phase_switch_mask[i];
+    }
+    for (i = 0; i < 4; ++i)
+        room_tilemap[8][phase_switch_x[i]] =
+            (phase_switch_state & (1u << i)) ? BGT_FLOOR2 : BGT_SWITCH;
     room_puzzle_visual_y = 8;
     room_puzzle_phase_bit = bit;
 }
@@ -352,7 +373,7 @@ void puzzle_prepare_room(void) BANKED {
     } else if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) {
         if (!puzzle_solved()) prepare_sequence(seed);
     } else if (room_puzzle_kind == PUZZLE_PHASE_SWITCH) {
-        prepare_phase_switch(room_puzzle_phase_bit);
+        prepare_phase_switch(room_puzzle_phase_bit, seed);
     } else {
         prepare_phase_gate(room_puzzle_phase_bit);
     }
@@ -420,6 +441,13 @@ static u8 update_sequence(u8 tx, u8 ty) {
     puzzle_contact = 1;
     if (touched != rune_order[rune_progress]) {
         reset_runes();
+        // A false note is a magical trap, not merely a UI reset. Charge one
+        // half-heart on every distinct wrong press—even during the recovery
+        // flash—so rapid brute force cannot become free. The contact latch
+        // still guarantees that standing on one rune costs exactly once.
+        if (player.hp) player.hp--;
+        if (player.iframes < 30) player.iframes = 30;
+        hud_redraw_hp();
         sfx_play(SFX_HURT);
         room_shake(1, 6);
         return 0;
@@ -433,19 +461,28 @@ static u8 update_sequence(u8 tx, u8 ty) {
 }
 
 static void update_phase_switch(u8 tx, u8 ty) {
-    u8 attr;
-    if (tx != 10 || ty != 8) {
+    u8 i, touched = 0xFF;
+    for (i = 0; i < 4; ++i)
+        if (tx == phase_switch_x[i] && ty == 8) touched = i;
+    if (touched == 0xFF) {
         puzzle_contact = 0;
         return;
     }
     if (puzzle_contact) return;
     puzzle_contact = 1;
-    run_state.dungeon_phase ^= room_puzzle_phase_bit;
-    attr = (run_state.dungeon_phase & room_puzzle_phase_bit)
-        ? BGPAL_CRYSTAL : BGPAL_CRACK;
-    set_tile_live(10, 8, BGT_SWITCH, attr);
-    sfx_play(SFX_PUZZLE);
-    room_shake(1, 12);
+    if (run_state.dungeon_phase & room_puzzle_phase_bit) return;
+    phase_switch_state ^= phase_switch_mask[touched];
+    for (i = 0; i < 4; ++i) {
+        u8 lit = phase_switch_state & (1u << i);
+        set_tile_live(phase_switch_x[i], 8,
+            lit ? BGT_FLOOR2 : BGT_SWITCH,
+            lit ? BGPAL_CRYSTAL : BGPAL_DOOR);
+    }
+    if (phase_switch_state == 0x0F) {
+        run_state.dungeon_phase |= room_puzzle_phase_bit;
+        sfx_play(SFX_PUZZLE);
+        room_shake(1, 12);
+    } else sfx_play_rune(touched);
 }
 
 u8 puzzle_update_player(void) BANKED {

@@ -5,9 +5,12 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
+    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_direction,
+    dungeon_size,
 )
-from make_stage_states import boot_to_stage, select_rom_topology, symbol_addresses
+from make_stage_states import (
+    advance_to_village, boot_to_stage, select_rom_topology, symbol_addresses,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -202,6 +205,52 @@ def stage_door_keeps_phrase():
         f"stage form restarted across door: section={pb.memory[MUSIC_FORM_STEP]}"
     )
     pb.stop(save=False)
+
+
+def village_track_handoff():
+    """Both real villages own track 21 and yield to the next stage score."""
+    for after_stage in (3, 6):
+        pb = boot_run()
+        try:
+            advance_to_village(pb, symbol_addresses(ROM), after_stage)
+            assert pb.memory[RS + 1] == VILLAGE_ROOM[after_stage]
+            assert pb.memory[MUSIC] == 21, (
+                f"village after stage {after_stage} reused track "
+                f"{pb.memory[MUSIC]}"
+            )
+            # Hearthlight Common is a full arranged score, not a 7-second
+            # civic cue. Prove its form advances while the arrival remains
+            # peaceful and the champion is kept alive.
+            pb.memory[PL + 2] = pb.memory[PL + 1]
+            for _ in range(180):
+                pb.tick()
+            assert pb.memory[MUSIC_FORM_STEP] >= 1, (
+                "village score never advanced beyond its opening section"
+            )
+
+            # Arrival north is the authored continuation gate. Crossing it
+            # must select the upcoming stage's own music from row zero rather
+            # than allowing the village phrase to bleed into the dungeon.
+            put16(pb, PL + 9, 72)
+            put16(pb, PL + 11, 0)
+            pb.button_press("up")
+            try:
+                for _ in range(120):
+                    pb.tick()
+                    if pb.memory[RS + 1] == VILLAGE_ROOM[after_stage] + 1:
+                        break
+            finally:
+                pb.button_release("up")
+            assert pb.memory[RS + 1] == VILLAGE_ROOM[after_stage] + 1, (
+                f"village {after_stage // 3} north gate did not enter dungeon"
+            )
+            assert pb.memory[MUSIC] == after_stage, (
+                f"stage {after_stage + 1} retained village track "
+                f"{pb.memory[MUSIC]}"
+            )
+            assert pb.memory[REQUEST] == after_stage
+        finally:
+            pb.stop(save=False)
 
 
 def live_form_frame_count(stage, boss, tempo):
@@ -574,6 +623,7 @@ def main():
     assert "active_harmony" in engine
     assert "note_code == T_HOLD" in engine and "row_frames" in engine
     stage_door_keeps_phrase()
+    village_track_handoff()
     ember_form_frames = live_form_frame_count(2, False, stage_tempos[2])
     void_form_frames = live_form_frame_count(8, True, boss_tempos[8])
     print(f"[music] PASS stages={stages}, bosses={bosses}, "
@@ -584,7 +634,7 @@ def main():
           f"unrelated_motif_max={max_unrelated_motif:.1%}, "
           "18 voice-led cadences, valid_ties+swing, leitmotif-linked bosses, "
           f"vblank_locked=ember:{ember_form_frames}f/void:{void_form_frames}f, "
-          "mixed_PCM=opening+development, title=18")
+          "mixed_PCM=opening+development, village=21/85.3s, title=18")
 
 
 if __name__ == "__main__":

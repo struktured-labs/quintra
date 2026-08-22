@@ -170,6 +170,9 @@
 // Dungeon-only barred threshold. SELECT overwrites slot 126 with the final
 // Farfold-cache quadrant; returning to play reloads this portcullis tile.
 #define BGT_DOOR_LOCKED      126
+// Dungeon-only wall launcher. SELECT temporarily reclaims this address for a
+// Farfold-cache quadrant; room resume restores the trap face with the atlas.
+#define BGT_ARROW_TRAP       125
 
 // CGB BG palette slot per tile kind (written to VRAM bank 1 attributes)
 #define BGPAL_FLOOR   0
@@ -288,6 +291,7 @@
 #define SPR_TOWN_BIG_END      224
 #define SPR_FX_BEAM_HEAD      158 // two-sprite fat beam head
 #define SPR_FX_BEAM_TAIL      159 // trailing beam body
+#define SPR_FX_ARROW          157 // Frost wall-launcher bolt
 #define SPR_CLASS_WALK_B_BASE 160 // opposite stride beat: 160..179
 #define SPR_CLASS_HURT_BASE   180 // five actual-damage recoil poses: 180..199
 #define SPR_BOSS_BIG       40    // 16 tiles: 40..55 (32x32 final boss)

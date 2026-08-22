@@ -220,13 +220,17 @@ local function walk_edge(target, key)
                 emu:write8(PL_ADDR + 11, 8); emu:write8(PL_ADDR + 12, 0)
             elseif key == KEY_RIGHT then
                 local world_width = WW_ADDR ~= 0 and emu:read8(WW_ADDR) or 160
-                emu:write8(PL_ADDR + 9, world_width - 20)
+                -- Door detection owns the exact body boundary. Collision is
+                -- intentionally unable to walk a 12px body through the last
+                -- solid seam pixel, so place this reachability fixture on the
+                -- same width-16 threshold used by live transition tests.
+                emu:write8(PL_ADDR + 9, world_width - 16)
                 emu:write8(PL_ADDR + 10, 0)
                 emu:write8(PL_ADDR + 11, 60); emu:write8(PL_ADDR + 12, 0)
             elseif key == KEY_DOWN then
                 local world_height = WH_ADDR ~= 0 and emu:read8(WH_ADDR) or 136
                 emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
-                emu:write8(PL_ADDR + 11, world_height - 24)
+                emu:write8(PL_ADDR + 11, world_height - 16)
                 emu:write8(PL_ADDR + 12, 0)
             else
                 emu:write8(PL_ADDR + 9, 8); emu:write8(PL_ADDR + 10, 0)
@@ -369,6 +373,14 @@ local function collect_rift_sigil()
             emu:write8(PL_ADDR + 11, math.max(0, emu:read8(p + 7) - 9))
             emu:write8(PL_ADDR + 12, 0)
             tick(30)
+            -- Major Sigils now receive a protected illustrated claim page.
+            -- A route pilot must acknowledge it before trying to steer the
+            -- room; otherwise every subsequent direction is correctly eaten
+            -- by SCREEN_DIALOG and the old smoke appears stuck at the Warden.
+            if LS_ADDR ~= 0 and emu:read8(LS_ADDR) == 10 then
+                tap(KEY_B)
+                tick(24)
+            end
             return true
         end
     end
@@ -499,19 +511,44 @@ local function record_deep_warden_boon(cell)
     return true
 end
 
--- The long-form dungeon route now owns a second persistent phase circuit at
--- local room twelve.  Step on its real floor switch through the normal player
--- update path so the smoke proves the next-room seal is usable; do not write
--- the phase bit directly, because that would hide a broken puzzle trigger.
+-- The long-form dungeon route now owns a seeded four-panel Aether Lattice.
+-- Read its four visible tile states, solve the tiny linear transform, then
+-- step the real plates through the normal player update path. Do not write the
+-- phase bit directly, because that would hide a broken lattice trigger.
 local function open_deep_phase_seal(cell)
     if RS_ADDR == 0 or PL_ADDR == 0 or PK_ADDR == 0 then return false end
     if room_counter() ~= cell or emu:read8(PK_ADDR) ~= 3 then return false end
     local before = emu:read8(RS_ADDR + 28)
     if math.floor(before / 4) % 2 == 1 then return true end
-    -- puzzle_update_player samples the champion's center/feet as tile 10,8.
-    emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
-    emu:write8(PL_ADDR + 11, 52); emu:write8(PL_ADDR + 12, 0)
-    tick(8)
+    local xs = {4, 8, 12, 16}
+    local masks = {0x03, 0x07, 0x0E, 0x0C}
+    local state = 0
+    -- BGT_FLOOR2 is the lit/crystal plate state; BGT_SWITCH is dark.
+    for i, x in ipairs(xs) do
+        if emu:read8(TM_ADDR + 8 * 20 + x) == 19 then
+            state = state | (1 << (i - 1))
+        end
+    end
+    local solution = nil
+    for presses = 0, 15 do
+        local result = state
+        for i = 1, 4 do
+            if (presses & (1 << (i - 1))) ~= 0 then result = result ~ masks[i] end
+        end
+        if result == 0x0F then solution = presses; break end
+    end
+    if solution == nil then return false end
+    for i, x in ipairs(xs) do
+        if (solution & (1 << (i - 1))) ~= 0 then
+            -- puzzle_update_player samples center/feet at (x,8).
+            emu:write8(PL_ADDR + 9, x * 8 - 8); emu:write8(PL_ADDR + 10, 0)
+            emu:write8(PL_ADDR + 11, 52); emu:write8(PL_ADDR + 12, 0)
+            tick(8)
+            emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
+            emu:write8(PL_ADDR + 11, 92); emu:write8(PL_ADDR + 12, 0)
+            tick(8)
+        end
+    end
     return math.floor(emu:read8(RS_ADDR + 28) / 4) % 2 == 1
 end
 

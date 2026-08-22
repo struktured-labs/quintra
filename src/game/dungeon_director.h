@@ -10,9 +10,9 @@ enum {
     ENCOUNTER_WAVE,
     ENCOUNTER_ELITE,
     ENCOUNTER_HOLD,
-    // Ember's authored furnace owns the room's existing director update
-    // slot, avoiding any new branch in every ordinary 60 Hz room tick.
-    ENCOUNTER_FURNACE,
+    // Animated biome hazards own the room's existing director update slot,
+    // avoiding any new branch in every ordinary 60 Hz room tick.
+    ENCOUNTER_STAGE_EVENT,
 };
 
 // Procedural room-level roster grammar. Mixed preserves the original

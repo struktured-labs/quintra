@@ -26,5 +26,11 @@ typedef struct {
 void music_read_variant(u8 stage, u8 boss, music_variant_t *out) BANKED;
 void music_load_wave(u8 shape) BANKED;
 void music_prepare_harmony(u16 scale, u8 *out) BANKED;
+// Cold banked selectors use the same home-resident sequencer setup as stage
+// tracks. Keeping this one initializer in bank zero avoids duplicating its
+// mutable audio-state contract for each non-combat long-form score.
+void music_select_variant(const music_variant_t *v, const u8 *form,
+    const u8 *development_melody, const u8 *development_bass,
+    u8 bank, u8 id);
 
 #endif

@@ -346,7 +346,7 @@ void dungeon_director_activate(void) BANKED {
     dungeon_director_refresh_route();
     music_director_refresh();
     if (room_encounter_kind != ENCOUNTER_SKIRMISH
-        && room_encounter_kind != ENCOUNTER_FURNACE)
+        && room_encounter_kind != ENCOUNTER_STAGE_EVENT)
         room_combat_sealed = 1;
 }
 
@@ -355,9 +355,9 @@ u8 dungeon_director_update(u8 alive) BANKED {
     if (room_encounter_kind == ENCOUNTER_SKIRMISH
         || room_encounter_phase == 2) return alive;
 
-    // Furnace chambers are their own room verb. Reuse the director call the
-    // combat loop already pays for, keeping ordinary rooms at video rate.
-    if (room_encounter_kind == ENCOUNTER_FURNACE) {
+    // Animated biome hazards are their own room verb. Reuse the director call
+    // the combat loop already pays for, keeping ordinary rooms at video rate.
+    if (room_encounter_kind == ENCOUNTER_STAGE_EVENT) {
         stage_event_tick();
     } else if (room_encounter_kind == ENCOUNTER_TRAP) {
         if (room_encounter_timer) {

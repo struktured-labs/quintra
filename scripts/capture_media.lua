@@ -144,8 +144,10 @@ local function enter_room(target)
     emu:write8(RS + 1, STAGE_BOSS[3])
     emu:write8(RS + 11, 3)
     emu:write8(RS + 17, 1)
-    -- The third return in a regional Riftwild wakes the southern gate ruin.
-    emu:write8(RS + 18, (TOPOLOGY >= 30) and 12 or 6)
+    -- The third return in the 6x6 regional Riftwild wakes gate 34. The old
+    -- media fixture still used pre-expansion screen 12, which is ordinary
+    -- grass now and therefore waited forever before the village reel beat.
+    emu:write8(RS + 18, (TOPOLOGY >= 30) and 34 or 6)
     emu:write8(RS + 19, 0)
     emu:write8(TM + 8 * 20 + 10, 34)
     put16(PL + 9, 72); put16(PL + 11, 52)
@@ -208,7 +210,16 @@ local function enter_dungeon_portal(target, stage)
   emu:write8(RS + 11, stage)
   emu:write8(RS + 6, 0xFF)
   emu:write8(RS + 17, 1)
-  emu:write8(RS + 18, 6)
+  if TOPOLOGY >= 30 then
+    -- Regional gates are 8/21/34. bosses_beaten (stage here) selects the
+    -- same current-region step as regional_riftwild.c; old media used screen
+    -- 6, which became an ordinary field when the overworld grew to 6x6.
+    local step = (stage == 0) and 0 or ((stage - 1) % 3)
+    local gates = {8, 21, 34}
+    emu:write8(RS + 18, gates[step + 1])
+  else
+    emu:write8(RS + 18, 6)
+  end
   emu:write8(RS + 19, 0)
   -- Use the lower center apron rather than (10,8). A generated mission can
   -- make the prior room a paired phase-switch chamber, whose live update
@@ -376,13 +387,9 @@ emu:write8(RS + 17, prior_world_mode)
 emu:write8(RS + 18, prior_world_screen)
 emu:write8(RS + 21, prior_seen_lo); emu:write8(RS + 22, prior_seen_hi)
 
--- The dungeon still deliberately leaves the live room/camera in a 248x248
--- court. In this seed's safe fold, local 5 is a real dead end rather than the
--- obsolete snake's south turn. Ask the graph-aware deep-link to approach
--- local 7 from its actual neighbour before the remaining gallery captures.
-if not enter_room(STAGE_START[1] + 7) then
-  error("media could not leave scrolling district")
-end
+-- The remaining gallery deep-links now enter through real 6x6 Riftwild gate
+-- tiles. They replace the logical source and position atomically, so the
+-- retained 248x248 court does not need an obsolete compact-room detour.
 
 -- A deeper stage's look: bump bosses_beaten so the NEXT room generates
 -- with Ember Depths palettes, shoot it, then restore (must happen before

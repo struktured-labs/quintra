@@ -37,7 +37,7 @@ u8 room_player_position_clear(i16 x, i16 y) BANKED {
 #undef PLAYER_WALKABLE
 }
 
-// A spike is a readable positional tax, never a soft-lock.
+// A floor hazard is a readable positional tax, never a soft-lock.
 void room_stumble_off_hazard(void) BANKED {
     static const i8 dx[4] = { 0, 8, 0, -8 };
     static const i8 dy[4] = { -8, 0, 8, 0 };
@@ -45,7 +45,10 @@ void room_stumble_off_hazard(void) BANKED {
     for (i = 0; i < 4; ++i) {
         ppos_t nx = (ppos_t)(player.x + dx[i]);
         ppos_t ny = (ppos_t)(player.y + dy[i]);
-        if (room_tile_at_px(nx + 8, ny + 12) == BGT_SPIKES) continue;
+        {
+            u8 tile = room_tile_at_px(nx + 8, ny + 12);
+            if (tile == BGT_SPIKES || tile == BGT_VOID) continue;
+        }
         if (room_player_position_clear(nx, ny)) {
             player.x = nx;
             player.y = ny;

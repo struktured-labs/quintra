@@ -38,12 +38,16 @@ void room_show_directive_label(u8 kind) BANKED {
 }
 
 static u8 render_attr(u8 x, u8 y, u8 tile) {
+    if (room_puzzle_kind == PUZZLE_PHASE_SWITCH && y == 8
+        && (x == 4 || x == 8 || x == 12 || x == 16)
+        && tile == BGT_FLOOR2) return BGPAL_CRYSTAL;
     if (room_puzzle_kind == PUZZLE_PHASE_GATE
         && y == room_puzzle_visual_y && x >= 4 && x < ROOM_W - 4)
         return (run_state.dungeon_phase & room_puzzle_phase_bit)
             ? BGPAL_CRYSTAL : BGPAL_CRACK;
     switch (tile) {
         case BGT_WALL:
+        case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:
         case BGT_FENCE:

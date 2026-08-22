@@ -61,7 +61,7 @@ static const u8 *cur_form;
 u8 music_track_id;
 u8 music_stage_number;
 
-static void select_variant(const music_variant_t *v, const u8 *form,
+void music_select_variant(const music_variant_t *v, const u8 *form,
     const u8 *development_melody, const u8 *development_bass,
     u8 bank, u8 id) {
     cur_melody = v->melody;
@@ -98,18 +98,13 @@ static void select_variant(const music_variant_t *v, const u8 *form,
     music_relic_tier = music_relic_target = 0;
 }
 
-void music_play_caverns(void) {
-    music_stage_number = 0;
-    music_play_stage();
-}
-
 void music_play_stage(void) {
     u8 stage = music_stage_number;
     music_variant_t variant;
     while (stage >= MUSIC_STAGE_COUNT) stage -= MUSIC_STAGE_COUNT;
     music_read_variant(stage, 0, &variant);
     music_load_wave(variant.wave_shape);
-    select_variant(&variant, stage_forms[stage],
+    music_select_variant(&variant, stage_forms[stage],
         stage_development_melody[stage], stage_development_bass[stage],
         BANK(music_stage_score), stage);
 }
@@ -120,7 +115,7 @@ void music_play_boss(void) {
     while (stage >= MUSIC_STAGE_COUNT) stage -= MUSIC_STAGE_COUNT;
     music_read_variant(stage, 1, &variant);
     music_load_wave(variant.wave_shape);
-    select_variant(&variant, boss_forms[stage],
+    music_select_variant(&variant, boss_forms[stage],
         boss_development_melody[stage], boss_development_bass[stage],
         BANK(music_boss_score),
         (u8)(MUSIC_BOSS_BASE + stage));
@@ -264,7 +259,8 @@ void music_tick(void) {
     // Sample live room state and cache the whole 16-row arrangement in one
     // cold-bank crossing. Every row below then consumes only WRAM values.
     if (long_form && music_pattern_row == 0) {
-        u8 boss_track = music_track_id >= MUSIC_BOSS_BASE;
+        u8 boss_track = (u8)(music_track_id - MUSIC_BOSS_BASE)
+            < MUSIC_STAGE_COUNT;
         music_adaptive_prepare_section(pulse_envelope, wave_level,
             music_form_step, boss_track);
     }
@@ -307,7 +303,8 @@ void music_tick(void) {
     }
 
     if ((source_row & 0x03) == 0) active_bass_code = bass_code;
-    boss = long_form && music_track_id >= MUSIC_BOSS_BASE;
+    boss = long_form && (u8)(music_track_id - MUSIC_BOSS_BASE)
+        < MUSIC_STAGE_COUNT;
 
     note = tone_freq[note_code < T_COUNT ? note_code : T_REST];
     if (note_code == T_HOLD) {

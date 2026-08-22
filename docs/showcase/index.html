@@ -13,7 +13,7 @@
     <div class="hero-copy">
       <p class="eyebrow"><span class="status-dot"></span> Cartridge field archive</p>
       <h1>QUINTRA <span>Field Archive</span></h1>
-      <p class="lede">A ROM-captured tour of every dungeon, every Colossus, and all 33 creatures currently stalking the Rift.</p>
+      <p class="lede">A cartridge-authentic tour of every dungeon, every Colossus, all 33 creatures, and the 29 relics, tools, and Waygear shaping each run.</p>
       <div class="hero-actions">
         <button class="primary" data-view-jump="bosses">Meet the Colossi</button>
         <button class="quiet" id="random-monster">Random encounter</button>
@@ -34,7 +34,7 @@
       <div><dt id="stage-count">—</dt><dd>Stages</dd></div>
       <div><dt id="boss-count">—</dt><dd>Colossi</dd></div>
       <div><dt id="monster-count">—</dt><dd>Monsters</dd></div>
-      <div><dt>256<span>KiB</span></dt><dd>Cartridge</dd></div>
+      <div><dt id="item-count">—</dt><dd>Items</dd></div>
     </dl>
   </header>
 
@@ -45,6 +45,9 @@
         <p>Open any atlas full-size. Every frame comes from the current cartridge.</p>
       </div>
       <div class="atlas-grid">
+        <button class="atlas-card atlas-world" data-collage="worldAtlas">
+          <span class="atlas-kicker">Complete atlas</span><strong>The whole cartridge</strong><small>Stages, Colossi, meaningful pickups, and every monster</small>
+        </button>
         <button class="atlas-card atlas-stages" data-collage="stages">
           <span class="atlas-kicker">9 regions</span><strong>Stage mosaic</strong><small>Representative live dungeon fields</small>
         </button>
@@ -53,6 +56,9 @@
         </button>
         <button class="atlas-card atlas-monsters" data-collage="monsters">
           <span class="atlas-kicker">33 contacts</span><strong>Bestiary sheet</strong><small>The complete registered enemy roster</small>
+        </button>
+        <button class="atlas-card atlas-items" data-collage="items">
+          <span class="atlas-kicker">29 silhouettes</span><strong>Relic &amp; Waygear sheet</strong><small>Actual authored pickup art with no generic placeholder orbs</small>
         </button>
       </div>
     </section>
@@ -68,6 +74,7 @@
           <button role="tab" aria-selected="true" data-view="stages">Stages <span>09</span></button>
           <button role="tab" aria-selected="false" data-view="bosses">Colossi <span>09</span></button>
           <button role="tab" aria-selected="false" data-view="monsters">Bestiary <span>33</span></button>
+          <button role="tab" aria-selected="false" data-view="items">Items <span>29</span></button>
         </div>
         <div class="filters" id="filters" hidden>
           <label class="search"><span>Search</span><input id="search" type="search" placeholder="Name, attack, behavior…" autocomplete="off"></label>

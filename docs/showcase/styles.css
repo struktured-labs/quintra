@@ -70,15 +70,17 @@ section { margin-top: 74px; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 24px; }
 .section-heading h2 { margin: 0; font-size: clamp(32px, 5vw, 54px); line-height: 1; letter-spacing: -.045em; }
 .section-heading > p { max-width: 420px; margin: 0; color: var(--muted); line-height: 1.55; }
-.atlas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.atlas-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .atlas-card { position: relative; min-height: 225px; padding: 24px; text-align: left; overflow: hidden; border-radius: var(--radius); background-color: #101c25; border: 1px solid var(--line); isolation: isolate; transition: transform .2s, border-color .2s; }
 .atlas-card::before { content: ""; position: absolute; inset: 0; z-index: -2; background-image: var(--atlas-image); background-size: cover; background-position: center; image-rendering: pixelated; opacity: .38; filter: saturate(.8); transition: transform .35s, opacity .35s; }
 .atlas-card::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(4,8,13,.08), rgba(4,8,13,.96)); }
 .atlas-card:hover { transform: translateY(-4px); border-color: rgba(126,240,188,.5); }
 .atlas-card:hover::before { transform: scale(1.04); opacity: .55; }
+.atlas-world { --atlas-image: url("assets/quintra-world-atlas.png"); grid-column: 1 / -1; }
 .atlas-stages { --atlas-image: url("assets/stage-collage.png"); }
 .atlas-bosses { --atlas-image: url("../media/boss-gallery.gif"); }
 .atlas-monsters { --atlas-image: url("assets/monster-collage.png"); }
+.atlas-items { --atlas-image: url("assets/item-collage.png"); }
 .atlas-card strong, .atlas-card small, .atlas-kicker { display: block; }
 .atlas-card strong { margin-top: 112px; font-size: 23px; }
 .atlas-card small { margin-top: 7px; color: #a7bbb1; font-size: 13px; }

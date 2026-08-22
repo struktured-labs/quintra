@@ -424,6 +424,13 @@ static void room_load_stage_obj_identity(void) {
 
 static void play_stage_music(void) {
     u8 stage = room_stage();
+    // Villages are a pacing release between regions, not the foyer of the
+    // next dungeon. Give them their own complete score; leaving through the
+    // north gate then necessarily selects and restarts the upcoming stage.
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        if (music_track_id != MUSIC_VILLAGE) music_play_village();
+        return;
+    }
     // Doorways within a stage must not reset the exploration loop.  Besides
     // sounding repetitive, the reset made a long room-to-room trek feel like
     // a string of disconnected screens.  A real track change (boss exit,
@@ -735,6 +742,7 @@ void room_open_secret(u8 tx, u8 ty) BANKED {
 static u8 attr_for_tile(u8 t) {
     switch (t) {
         case BGT_WALL:
+        case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:
         case BGT_FENCE:
@@ -2045,11 +2053,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             sram_save_run();
             return SCREEN_SELF;
         }
-        // ---- Hazard floor: walkable but bites when the feet-box center
-        // rests on it. Picsean's swim passive crosses Toxic Mire pools safely;
-        // other stages remain dangerous to every vessel.
-        else if (feet_tile == BGT_SPIKES
-            && !(player.class_id == 3 && room_stage() == 4)
+        // ---- Hazard floor: spikes bite on contact; Shadow panels hurt once
+        // when they vanish underfoot, then stumble the hero onto the intact
+        // processional. Picsean's swim passive applies only to Toxic Mire.
+        else if ((feet_tile == BGT_SPIKES
+                || (feet_tile == BGT_VOID
+                    && room_stage_event_kind == STAGE_EVENT_FADING_FLOOR))
+            && !(feet_tile == BGT_SPIKES
+                && player.class_id == 3 && room_stage() == 4)
             && player.iframes == 0) {
             if (player.hp > 1) {
                 player.hp--;
