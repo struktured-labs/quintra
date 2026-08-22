@@ -258,6 +258,10 @@ void dungeon_director_configure_initial(u8 idx, u8 ordinal) BANKED {
     // This is the ordinary room depth curve, moved cold-side so procgen's
     // already-dense bank does not duplicate director-specific branches.
     entities[idx].hp = (u8)(entities[idx].hp + 1 + (stage >> 1));
+    // Normal Stage 1 enemies need one additional clean hit so its increased
+    // population does not remain a crowd of paper targets. Boss setup never
+    // passes through this ordinary-encounter hook.
+    if (stage == 0 && !RUN_IS_EASY()) entities[idx].hp++;
     if (room_encounter_kind != ENCOUNTER_SKIRMISH && !RUN_IS_EASY())
         entities[idx].hp++;
     if (room_encounter_kind == ENCOUNTER_ELITE && ordinal == 0) {

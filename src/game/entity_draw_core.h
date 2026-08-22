@@ -50,9 +50,16 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         continue;
     }
 
-    // 16x16 — mini-boss or bruiser, 2x2 tiles
+    // 16x16 — civic resident, mini-boss, or bruiser; 2x2 tiles. Residents
+    // grow around their old 8x8 feet-anchor, so authored town positions and
+    // proximity dialogue remain stable while the silhouette doubles in size.
     if (enemy_is_big16(e)) {
         u8 t = e->sprite_tile;
+        u8 bx = sx, by = sy;
+        if (e->type == ENT_PICKUP) {
+            bx = (u8)(bx - 4);
+            by = (u8)(by - 8);
+        }
         if (flash) e->ai_data[7]--;
         if (oam + 4 > 40) continue;
         if (flash && (e->ai_data[7] & 1)) {
@@ -69,10 +76,10 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
             set_sprite_prop((u8)(oam + 1), pal);
             set_sprite_prop((u8)(oam + 2), pal);
             set_sprite_prop((u8)(oam + 3), pal);
-            move_sprite(oam, sx, sy);
-            move_sprite((u8)(oam + 1), (u8)(sx + 8), sy);
-            move_sprite((u8)(oam + 2), sx, (u8)(sy + 8));
-            move_sprite((u8)(oam + 3), (u8)(sx + 8), (u8)(sy + 8));
+            move_sprite(oam, bx, by);
+            move_sprite((u8)(oam + 1), (u8)(bx + 8), by);
+            move_sprite((u8)(oam + 2), bx, (u8)(by + 8));
+            move_sprite((u8)(oam + 3), (u8)(bx + 8), (u8)(by + 8));
         }
         oam += 4;
         continue;

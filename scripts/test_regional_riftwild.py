@@ -14,6 +14,7 @@ SCREEN_ROOM = 5
 SCREEN_MAP = 8
 BGT_PORTAL = 34
 BGT_MAP_ROOM = 49
+BGT_MAP_HERE = 50
 BGT_DOOR = 3
 READY = 0x80
 WELL = 0x01
@@ -23,7 +24,10 @@ FLAGS = 47
 WORLD_MODE = 17
 WORLD_SCREEN = 18
 WORLD_SEEN = 21
-GATE_NODES = {6: (7, 7), 11: (10, 10), 12: (1, 13)}
+WORLD_SEEN_HI = 48
+WORLD_SEEN_XHI = 49
+WORLD_SEEN_XXHI = 50
+GATE_NODES = {8: (5, 4), 21: (7, 8), 34: (9, 12)}
 
 
 def set16(pb, off, value):
@@ -33,6 +37,22 @@ def set16(pb, off, value):
 
 def get16(pb, off):
     return pb.memory[RS + off] | (pb.memory[RS + off + 1] << 8)
+
+
+def world_seen(pb):
+    return (
+        get16(pb, WORLD_SEEN),
+        pb.memory[RS + WORLD_SEEN_HI],
+        pb.memory[RS + WORLD_SEEN_XHI],
+        pb.memory[RS + WORLD_SEEN_XXHI],
+    )
+
+
+def reveal_all_world(pb):
+    set16(pb, WORLD_SEEN, 0xFFFF)
+    pb.memory[RS + WORLD_SEEN_HI] = 0xFF
+    pb.memory[RS + WORLD_SEEN_XHI] = 0xFF
+    pb.memory[RS + WORLD_SEEN_XXHI] = 0x0F
 
 
 def return_after_boss(pb, number):
@@ -88,7 +108,9 @@ def assert_gate_map(pb, active):
     open_map(pb)
     for gate, (x, y) in GATE_NODES.items():
         tile = pb.memory[0x9800 + y * 32 + x]
-        expected = BGT_PORTAL if gate == active else BGT_MAP_ROOM
+        expected = (BGT_MAP_HERE
+                    if gate == pb.memory[RS + WORLD_SCREEN]
+                    else BGT_PORTAL if gate == active else BGT_MAP_ROOM)
         assert tile == expected, (
             f"region gate {gate} tile={tile}, expected={expected}; active={active}"
         )
@@ -103,32 +125,39 @@ def main():
         assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 0)
         assert pb.memory[RS + FLAGS] == READY
         first_region_tiles = bytes(pb.memory[TM:TM + ROOM_W * 17])
-        set16(pb, WORLD_SEEN, 0xFFFF)
+        reveal_all_world(pb)
         pb.memory[RS + FLAGS] = READY | WELL | VAULT
 
         return_after_boss(pb, 2)
-        assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 7)
-        assert get16(pb, WORLD_SEEN) == 0xFFFF
+        assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 8)
+        assert world_seen(pb) == (0xFFFF, 0xFF, 0xFF, 0x0F)
         assert pb.memory[RS + FLAGS] == READY | WELL | VAULT
-        assert_gate_map(pb, 11)
+        assert_gate_map(pb, 21)
 
-        # Gate six remains visible geography but is inert; gate eleven is the
+        # Gate eight remains visible geography but is inert; gate twenty-one is the
         # only live threshold for the second trip through the shared region.
-        exit_at(pb, 0, 60)
-        assert pb.memory[RS + WORLD_SCREEN] == 6
+        assert pb.memory[RS + WORLD_SCREEN] == 8
         assert pb.memory[TM + 8 * ROOM_W + 10] != BGT_PORTAL
-        exit_at(pb, 232, 60)
         exit_at(pb, 72, 232)
-        assert pb.memory[RS + WORLD_SCREEN] == 11
+        assert pb.memory[RS + WORLD_SCREEN] == 14
+        exit_at(pb, 72, 232)
+        assert pb.memory[RS + WORLD_SCREEN] == 20
+        exit_at(pb, 232, 60)
+        assert pb.memory[RS + WORLD_SCREEN] == 21
         assert pb.memory[TM + 8 * ROOM_W + 10] == BGT_PORTAL
 
         return_after_boss(pb, 3)
-        assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 13)
-        assert get16(pb, WORLD_SEEN) == 0xFFFF
+        assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 21)
+        assert world_seen(pb) == (0xFFFF, 0xFF, 0xFF, 0x0F)
         assert pb.memory[RS + FLAGS] == READY | WELL | VAULT
-        assert_gate_map(pb, 12)
-        exit_at(pb, 0, 60)
-        assert pb.memory[RS + WORLD_SCREEN] == 12
+        assert_gate_map(pb, 34)
+        assert pb.memory[TM + 8 * ROOM_W + 10] != BGT_PORTAL
+        exit_at(pb, 72, 232)
+        assert pb.memory[RS + WORLD_SCREEN] == 27
+        exit_at(pb, 72, 232)
+        assert pb.memory[RS + WORLD_SCREEN] == 33
+        exit_at(pb, 232, 60)
+        assert pb.memory[RS + WORLD_SCREEN] == 34
         assert pb.memory[TM + 8 * ROOM_W + 10] == BGT_PORTAL
 
         # The fourth defeated Colossus starts region one: fog and claimed
@@ -136,7 +165,7 @@ def main():
         # produces genuinely different geography from region zero.
         return_after_boss(pb, 4)
         assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (1, 0)
-        assert get16(pb, WORLD_SEEN) == 0x0001
+        assert world_seen(pb) == (0x0001, 0, 0, 0)
         assert pb.memory[RS + FLAGS] == READY
         assert bytes(pb.memory[TM:TM + ROOM_W * 17]) != first_region_tiles
     finally:
@@ -144,7 +173,7 @@ def main():
 
     print(
         "[regional-riftwild] PASS persistent exploration + one-use landmarks "
-        "+ sequential gates 6/11/12 across three returns + fresh next region"
+        "+ sequential gates 8/21/34 across three returns + fresh next region"
     )
 
 

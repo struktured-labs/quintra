@@ -609,6 +609,9 @@ fn write_zelda_overworld(out: &Path, reg: &Registry) -> Result<()> {
          #define ZELDA_CELL_DUNGEON_ENTRANCE 2\n\
          #define ZELDA_CELL_VAULT           3\n\
          #define ZELDA_CELL_BOSS            4\n\
+         #define ZELDA_WORLD_W              6\n\
+         #define ZELDA_WORLD_H              6\n\
+         #define ZELDA_WORLD_CELLS          36\n\
          \n\
          typedef struct {\n\
          \x20\x20\x20\x20u8 kind;\n\
@@ -632,8 +635,8 @@ fn write_zelda_overworld(out: &Path, reg: &Registry) -> Result<()> {
     let mut c = String::from(HEADER_NOTE);
     c.push_str("#include \"zelda_overworld.h\"\n\n");
     for z in &reg.zelda_overworlds {
-        c.push_str(&format!("static const zelda_screen_t _zelda_grid_{}[16] = {{\n", z.id.raw()));
-        for idx in 0..16 {
+        c.push_str(&format!("static const zelda_screen_t _zelda_grid_{}[36] = {{\n", z.id.raw()));
+        for idx in 0..36 {
             c.push_str(&format!("    {},\n", emit_zelda_screen(z, idx)));
         }
         c.push_str("};\n\n");

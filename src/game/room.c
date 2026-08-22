@@ -30,6 +30,7 @@
 #include "game/sram.h"
 #include "game/stage_event.h"
 #include "game/will.h"
+#include "game/waygear.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
 #include "render/palette.h"
@@ -43,8 +44,9 @@ static u8 room_is_outdoor(void);
 u8 room_tilemap[ROOM_H][ROOM_W];
 u8 room_world_extension[ROOM_H][ROOM_WIDE_EXT_TILES];
 u8 room_world_bottom[ROOM_WIDE_BOTTOM_ROWS][ROOM_WIDE_W_TILES];
-u8 room_world_width = ROOM_VIEW_W_PX;
-u8 room_world_height = ROOM_VIEW_H_PX;
+// procgen's room_apply_world_arena() sets these before gameplay begins.
+u8 room_world_width;
+u8 room_world_height;
 u8 room_camera_x;
 u8 room_camera_y;
 u8 room_bg_origin_x;
@@ -63,16 +65,16 @@ static u8 camera_follow_ticks;
 // time spent reading those screens remains paused.
 static u8 run_clock_fraction;
 // Secret door opened by shooting a cracked wall this room (0xFF = none)
-static u8 secret_door_x = 0xFF;
-static u8 secret_door_y = 0xFF;
-static u8 secret_door_x2 = 0xFF;   // secret doors open as a 2-tile pair
-static u8 secret_door_y2 = 0xFF;   // (the wide feet box needs 16px)
+static u8 secret_door_x;
+static u8 secret_door_y;
+static u8 secret_door_x2;   // secret doors open as a 2-tile pair
+static u8 secret_door_y2;   // (the wide feet box needs 16px)
 // Block-push state: current lean direction + how long it's been held.
-static u8 push_dir = DIR_NONE;
+static u8 push_dir;
 static u8 push_timer;
 // Stage-entry reveal: first room of each new stage fades in from dimmed
 // palettes over ~half a second. stage_seen tracks the last stage revealed.
-static u8 stage_seen = 0xFF;
+static u8 stage_seen;
 static u8 stage_fade;
 
 // Room-clear chime: hostiles seen alive this room (reset on every room
@@ -84,7 +86,7 @@ static u8 boss_threshold_warned;
 static u8 shop_offer_visible;
 // Toxic Mire's BG organism redraws only when the boss changes pulse phase.
 // 0xFF forces the first live frame to reconcile VRAM with the entity state.
-static u8 mire_projection_state = 0xFF;
+static u8 mire_projection_state;
 // Set once when a room is generated.  Price proximity must never put a
 // 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
 static u8 room_has_shop_wares;
@@ -92,6 +94,7 @@ static u8 room_has_shop_wares;
 // every turbo shot in ordinary combat. Only towns, shops, and authored turn
 // courts can contain a speaker.
 static u8 room_has_speakers;
+static u8 room_major_reward_pending;
 // These are run-scoped, not room-scoped: passive trickles should retain their
 // partial progress through doors/menus, but player_clear resets them before a
 // brand-new champion is initialized.
@@ -226,6 +229,15 @@ void room_start_weapon_surge(void) BANKED {
     room_shake(1, 10);
     fx_spawn(SPR_SURGE_ORB, 0x06, (i16)player.x + 4, (i16)player.y - 6, 18);
     sfx_play_reward(SFX_REWARD_SURGE);
+}
+
+void room_start_major_reward(u8 kind, u8 topic) BANKED {
+    dialog_prepare_reward(kind, topic);
+    room_major_reward_pending = 1;
+    // Pickup collision resolves before hostile contact in combat_resolve().
+    // Protect the claim frame so the major-item tableau cannot be replaced by
+    // a same-frame death when a projectile overlaps the pedestal.
+    if (player.iframes < 90) player.iframes = 90;
 }
 
 void room_reset_passive_timers(void) BANKED {
@@ -496,6 +508,7 @@ static u8 hidden_walk_at(u8 tx, u8 ty) {
 
 static u8 is_walkable_at(i16 px, i16 py) {
     u8 t = room_tile_at_px(px, py);
+    if (WAYGEAR_TILE_PASSABLE(t)) return 1;
     // Keep this rare branch on the champion path, not room_tile_at_px(): that
     // generic accessor is the hottest enemy/projectile collision primitive
     // and paying four hidden-coordinate comparisons for every bullet cost two
@@ -1033,6 +1046,7 @@ void room_enter(void) {
     room_paused = 0;
     if (!room_resume_flag) {
         room_bg_origin_x = room_bg_origin_y = 0;
+        room_major_reward_pending = 0;
     }
 
     room_load_environment_palettes();
@@ -1840,6 +1854,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         room_start_death();
         return SCREEN_SELF;
     }
+    if (room_major_reward_pending) {
+        room_major_reward_pending = 0;
+        return SCREEN_DIALOG;
+    }
 
     // ---- Boss HP bar + room-clear detection in one entity sweep.
     // HUD helper caches segments so polling only writes VRAM on change.
@@ -1973,12 +1991,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         else if (feet_tile == BGT_PORTAL) {
             if (run_state.world_mode) {
                 const zelda_screen_t *cell =
-                    &zelda_overworlds[0].screen_grid[run_state.world_screen & 15];
+                    &zelda_overworlds[0].screen_grid[run_state.world_screen];
                 if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
                     run_state_begin_dungeon();
                     run_state.room_counter++;
                 } else if (cell->kind == ZELDA_CELL_VAULT) {
-                    run_state.world_screen = (u8)(run_state.world_return_screen & 15);
+                    run_state.world_screen =
+                        (u8)(run_state.world_return_screen & 0x3Fu);
                 } else if (cell->stairs != ID_NONE_U8) {
                     run_state.world_return_screen = (u8)(run_state.world_screen
                         | (run_state.world_return_screen & RIFTWELL_USED_FLAG));
@@ -1991,7 +2010,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
             // A rift/stair is not a cardinal doorway. Pretending it came
             // through a random edge can spawn the hero on a destination's
-            // non-existent east/south exit (notably vault 15), where the
+            // non-existent east/south exit (notably vault 30), where the
             // sprite appears to vanish into the tree line. DIR_NONE makes
             // procgen use its safe center arrival, clear of the portal tile
             // and valid regardless of the destination's authored edges.
@@ -2106,7 +2125,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // also require the existing local-room-9 deep Warden. The
                 // return door remains open, guaranteeing a route back to
                 // every visible objective.
-                if (is_forward_boss_door(tx, ty, BGT_DOOR)
+                // A cache overlays its parent graph cell. If that parent is
+                // the sanctuary, the cache's sole return threshold can face
+                // the same cardinal direction as the Colossus. It is still a
+                // return from optional treasure—not an attempt to enter the
+                // boss—so never apply mission prerequisites while state 2
+                // proves that the hero is inside the overlay.
+                if (run_state.secret_pending != 2
+                    && is_forward_boss_door(tx, ty, BGT_DOOR)
                     && (!(run_state.dungeon_puzzles & RUN_TRIAL_BIT)
                         || !(run_state.rift_sigils
                             & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
@@ -2174,9 +2200,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // both (the player spawns at the opposite door either way).
                 {
                     if (run_state.world_mode) {
-                        if (dir == DIR_N) run_state.world_screen -= 4;
+                        if (dir == DIR_N) run_state.world_screen -= ZELDA_WORLD_W;
                         else if (dir == DIR_E) run_state.world_screen++;
-                        else if (dir == DIR_S) run_state.world_screen += 4;
+                        else if (dir == DIR_S) run_state.world_screen += ZELDA_WORLD_W;
                         else run_state.world_screen--;
                     } else if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
                         if (run_state.world_return_screen == TOWN_ARRIVAL) {

@@ -14,6 +14,7 @@
 #include "game/inventory.h"
 #include "game/inventory_copy.h"
 #include "game/inventory_visual.h"
+#include "game/inventory_waygear.h"
 #include "game/dungeon_tools.h"
 #include "game/dungeon_law.h"
 #include "game/oath_arts.h"
@@ -26,6 +27,8 @@
 #include "content.h"
 
 BANKREF(inventory_enter)
+
+static u8 inventory_page;
 
 static const u16 inv_palette[4] = {
     BGR555( 1,  2,  6), BGR555( 6,  9, 18),
@@ -173,6 +176,7 @@ static void attr_row(u8 y, u8 slot) {
 // marked its room. Every phrase fits the physical 20-column LCD exactly.
 void inventory_enter(void) {
     u8 i;
+    inventory_page = 0;
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;
@@ -191,7 +195,7 @@ void inventory_enter(void) {
     gotoxy(5, 4); text_write(" VITALS ");
     gotoxy(7, 8); text_write(" ARMS ");
     gotoxy(6, 13); text_write(" QUEST ");
-    gotoxy(2, 17); text_write("A+B MAX B BACK");
+    gotoxy(2, 17); text_write("SEL GEAR B BACK");
     inventory_prepare_sprites();
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);
@@ -258,10 +262,28 @@ void inventory_exit(void) {
 screen_id_t inventory_tick(u8 keys, u8 pressed) {
     u8 tool_action;
     keys;
+    if (inventory_page) {
+        u8 gear_action = inventory_waygear_tick(pressed);
+        if (gear_action == INVENTORY_WAYGEAR_EXIT) {
+            sfx_play(SFX_COIN);
+            room_request_resume();
+            return SCREEN_ROOM;
+        }
+        if (gear_action == INVENTORY_WAYGEAR_PACK) {
+            inventory_enter();
+            return SCREEN_SELF;
+        }
+        return SCREEN_SELF;
+    }
     if (pressed & (J_START | J_B)) {
         sfx_play(SFX_COIN);
         room_request_resume();
         return SCREEN_ROOM;
+    }
+    if (pressed & J_SELECT) {
+        inventory_page = 1;
+        inventory_waygear_enter();
+        return SCREEN_SELF;
     }
     if (oath_arts_pack_input(pressed)) return SCREEN_SELF;
     tool_action = dungeon_tools_pack_input(pressed);

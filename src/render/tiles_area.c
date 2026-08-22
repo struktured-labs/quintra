@@ -71,6 +71,10 @@ void tiles_load_area_labels(void) BANKED {
 
 static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
     if (outdoor) {
+        if (tile == BGT_GATE_WATER || tile == BGT_GATE_CHASM)
+            return BGPAL_CRYSTAL;
+        if (tile == BGT_GATE_BOULDER || tile == BGT_GATE_THORNS
+            || tile == BGT_GATE_VENT) return BGPAL_WALL;
         return (tile == BGT_TREE || tile == BGT_WILD_STONE)
             ? BGPAL_WALL
             : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER)

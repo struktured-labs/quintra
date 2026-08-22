@@ -16,12 +16,35 @@
 #include "game/shop_copy.h"
 #include "render/palette.h"
 #include "render/text.h"
+#include "render/tiles.h"
 
 BANKREF(dialog_enter)
 
 u8 dialog_kind;
 u8 dialog_topic;
 u8 dialog_page;
+static u8 dialog_is_reward;
+
+#define SPR_DIALOG_SIGIL 200
+
+// A 16x16 authored artifact replaces the ordinary 8x8 floor pickup on the
+// claim page. Four independent quadrants keep the inner rift and pale facets
+// readable at native LCD scale instead of crudely repeating one tiny icon.
+static const u8 dialog_sigil_tiles[64] = {
+    0x01,0x00, 0x02,0x01, 0x04,0x03, 0x09,0x07,
+    0x13,0x0F, 0x26,0x1F, 0x4D,0x3E, 0x9B,0x7C,
+    0x80,0x00, 0x40,0x80, 0x20,0xC0, 0x90,0xE0,
+    0xC8,0xF0, 0x64,0xF8, 0xB2,0x7C, 0xD9,0x3E,
+    0x9B,0x7C, 0x4D,0x3E, 0x26,0x1F, 0x13,0x0F,
+    0x09,0x07, 0x04,0x03, 0x02,0x01, 0x01,0x00,
+    0xD9,0x3E, 0xB2,0x7C, 0x64,0xF8, 0xC8,0xF0,
+    0x90,0xE0, 0x20,0xC0, 0x40,0x80, 0x80,0x00,
+};
+
+static const u16 dialog_sigil_palette[4] = {
+    BGR555(0,0,0), BGR555(6,2,13),
+    BGR555(22,8,31), BGR555(31,27,31),
+};
 
 static const u16 dialog_palette[4] = {
     BGR555(1, 2, 6), BGR555(7, 10, 17),
@@ -50,6 +73,7 @@ static void wayfarer_title(void) {
 
 static void dialog_title(void) {
     switch (dialog_kind) {
+        case PICKUP_RIFT_SIGIL: text_write("RIFT SIGIL"); break;
         case PICKUP_VILLAGER: text_write("HEARTH ELDER"); break;
         case PICKUP_MERCHANT: text_write("RIFT MERCHANT"); break;
         case PICKUP_SMITH: text_write("FORGE KEEPER"); break;
@@ -91,6 +115,11 @@ static void wayfarer_advice(void) {
 }
 
 static void resident_copy(void) {
+    if (dialog_is_reward && dialog_kind == PICKUP_RIFT_SIGIL) {
+        dialog_lines("DUNGEON KEY CLAIMED", "NEXT TRIAL AWAKENS",
+            "SELECT SHOWS PATH");
+        return;
+    }
     if (!dialog_page) {
         switch (dialog_kind) {
             case PICKUP_VILLAGER: dialog_lines("FIVE SPARKS PASS ON", "WE KEEP THEIR FIRE", "REST BEFORE NORTH"); break;
@@ -126,37 +155,74 @@ static void dialog_paint(void) {
         else wayfarer_lore();
     } else resident_copy();
     gotoxy(1, 13);
-    if (dialog_kind == PICKUP_MERCHANT && dialog_page)
+    if (dialog_is_reward)
+        text_write("THE RIFT REMEMBERS.");
+    else if (dialog_kind == PICKUP_MERCHANT && dialog_page)
         text_write("TOUCH ICON TO BUY");
     else text_write(dialog_page ? "THE ROAD REMEMBERS." : "... ... ...");
     gotoxy(1, 16);
-    text_write(dialog_page ? "A/B RETURN" : "A NEXT   B RETURN");
+    text_write(dialog_is_reward ? "A/B CONTINUE"
+        : dialog_page ? "A/B RETURN" : "A NEXT   B RETURN");
     palette_bg_fill_attrs(0);
     SHOW_BKG;
     DISPLAY_ON;
+    if (dialog_kind == PICKUP_MERCHANT && dialog_page) SHOW_SPRITES;
 }
 
 void dialog_prepare(u8 kind, u8 topic) BANKED {
     dialog_kind = kind;
     dialog_topic = topic < 9 ? topic : 8;
     dialog_page = 0;
+    dialog_is_reward = 0;
+}
+
+void dialog_prepare_reward(u8 kind, u8 topic) BANKED {
+    dialog_kind = kind;
+    dialog_topic = topic < 9 ? topic : 8;
+    dialog_page = 0;
+    dialog_is_reward = 1;
 }
 
 void dialog_enter(void) {
+    u8 i;
     DISPLAY_OFF;
     HIDE_SPRITES;
     HIDE_WIN;
+    // The room renderer may have occupied every hardware sprite. Dialogue
+    // pages own a clean four-icon strip; parking the rest prevents enemies,
+    // sale tags, or residents from leaking through when that strip is shown.
+    for (i = 0; i < 40; ++i) move_sprite(i, 0, 0);
     palette_bg_load(0, dialog_palette);
     palette_bg_load(7, dialog_palette);
     font_init();
     { font_t f = font_load(font_min); font_set(f); }
     dialog_paint();
+    if (dialog_is_reward && dialog_kind == PICKUP_RIFT_SIGIL) {
+        u8 part;
+        palette_obj_load(1, dialog_sigil_palette);
+        set_sprite_data(SPR_DIALOG_SIGIL, 4, dialog_sigil_tiles);
+        for (part = 0; part < 4; ++part) {
+            set_sprite_tile(part, (u8)(SPR_DIALOG_SIGIL + part));
+            set_sprite_prop(part, 1);
+            move_sprite(part, (u8)(80 + ((part & 1) ? 8 : 0)),
+                (u8)(44 + ((part >= 2) ? 8 : 0)));
+        }
+        SHOW_SPRITES;
+    }
 }
 
-void dialog_exit(void) {}
+void dialog_exit(void) {
+    u8 i;
+    for (i = 0; i < 4; ++i) move_sprite(i, 0, 0);
+    HIDE_SPRITES;
+}
 
 screen_id_t dialog_tick(u8 keys, u8 pressed) {
     keys;
+    if (dialog_is_reward && (pressed & (J_A | J_B | J_START))) {
+        room_request_resume();
+        return SCREEN_ROOM;
+    }
     if ((pressed & J_A) && !dialog_page) {
         dialog_page = 1;
         sfx_play(SFX_TICK);

@@ -28,7 +28,13 @@ def structural_contract():
     )
     assert "u8 sfx_melody_locked(void)" in core
     assert "u8 sfx_melody_locked(void);" in header
-    assert "if (sfx_melody_locked()) return;" in rewards
+    assert "kind != SFX_REWARD_SIGIL && sfx_melody_locked()" in rewards
+    assert "melody_lock(MELODY_PRIORITY_MAJOR, 70)" in core
+    assert "case SFX_SIGIL:" in core
+    for frequency in (1547, 1750, 1798, 1849, 1881, 1922):
+        assert str(frequency) in core, (
+            f"major Sigil fanfare lost authored note {frequency}"
+        )
     assert weapons.count("if (sfx_melody_locked()) return;") == 2
 
 
@@ -73,7 +79,7 @@ def main():
     structural_contract()
     live_coin_collision()
     print("[sfx-priority] PASS live coin collected under intact secret figure; "
-          "clear/core/reward/weapon/equip/rune lock coverage")
+          "major Sigil fanfare + clear/core/reward/weapon/equip/rune locks")
 
 
 if __name__ == "__main__":

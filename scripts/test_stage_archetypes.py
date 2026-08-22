@@ -5,7 +5,12 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_START, dungeon_maze_neighbor, dungeon_size, mission_graph,
+    STAGE_START, dungeon_maze_neighbor, dungeon_predecessor, dungeon_size,
+    mission_graph,
+)
+from make_stage_states import (
+    boot_to_stage, cross_graph_edge, normalize_compact_source,
+    select_rom_topology, symbol_addresses,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,15 +74,12 @@ def archetype_sample_cell(stage, seed, preferred=4):
 
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
                    local_room=None, dungeon_phase=0):
-    pb = PyBoy(str(ROM), window="null", cgb=True)
-    for _ in range(240):
-        pb.tick()
-    pb.button("start")
-    for _ in range(30):
-        pb.tick()
-    pb.button("a")
-    for _ in range(60):
-        pb.tick()
+    # Enter through the real Riftwild gate, then cross one reciprocal maze
+    # edge. BGT_PORTAL is a mission-branch traversal mechanic now (local
+    # 2<->8), not a generic test-only "next room" shortcut.
+    select_rom_topology(ROM)
+    addrs = symbol_addresses(ROM)
+    pb, _ram, _entry = boot_to_stage(ROM, addrs, stage, "normal", 0)
 
     # Mission and hidden-secret roles are seed-first. Choose a normal wide
     # court when callers want stage identity, while explicit role/fixture
@@ -85,29 +87,35 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
     if local_room is None:
         local_room = archetype_sample_cell(stage, seed)
     target = STAGE_START[stage] + local_room
-    # Enter through the authored Riftwild dungeon gate. This follows the
-    # cartridge's real between-dungeon transition without fighting prior
-    # bosses merely to inspect deterministic stage geometry.
-    pb.memory[RS + 1] = target - 1
     for i, byte in enumerate(seed.to_bytes(4, "little")):
         pb.memory[RS + 2 + i] = byte
-    pb.memory[RS + 11] = stage
+    # Rebuild seed-first stage roles and its two-state dungeon law for the
+    # requested sample rather than retaining the boot fixture's seed.
+    pb.memory[RS + 36] = 0
+    pb.memory[RS + 37] = 0
     pb.memory[RS + 12] = 0
     pb.memory[RS + 13] = 0
     pb.memory[RS + 28] = dungeon_phase
-    pb.memory[RS + 17] = 1
-    pb.memory[RS + 18] = 6  # authored ZELDA_CELL_DUNGEON_ENTRANCE
+    # The synthetic source replaces the live entry room. Do not carry that
+    # room's combat/rune seal into a different graph cell.
+    pb.memory[addrs["_room_puzzle_locked"]] = 0
+    pb.memory[addr("_room_combat_sealed")] = 0
+    source_local, direction_id = dungeon_predecessor(
+        local_room, dungeon_size(stage), seed, stage)
+    pb.memory[RS + 1] = STAGE_START[stage] + source_local
+    pb.memory[RS + 6] = 0xFF
+    normalize_compact_source(pb, addrs)
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:
             pb.memory[ep] = pb.memory[ep + 1] = 0
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 60)
-    pb.memory[TM + 9 * ROOM_W + 10] = 34  # BGT_PORTAL under feet center
-    for _ in range(20):
+    direction = ("up", "right", "down", "left")[direction_id]
+    cross_graph_edge(pb, PL, TM, direction)
+    for _ in range(120):
         pb.tick()
         if pb.memory[RS + 1] == target:
             break
+    pb.button_release(direction)
     assert pb.memory[RS + 1] == target, f"could not enter stage {stage} room"
     # The real dungeon-entry transaction resets puzzle state just before the
     # counter changes. Select the requested paired-switch state at that

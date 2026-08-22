@@ -19,8 +19,8 @@ u8 entity_enemy_count;
 // Visibility is a camera-sector concern, not an animation concern. A sentinel
 // forces the first wide-field population scan; subsequent scans happen only
 // after the camera crosses a 16px sector boundary.
-static u8 visibility_sector_x = 0xFF;
-static u8 visibility_sector_y = 0xFF;
+static u8 visibility_sector_x;
+static u8 visibility_sector_y;
 
 // Free-running counter driving the enemy waddle: for half its cycle the enemy
 // sprite is X-flipped (OAM attr bit 5), reading as a 2-frame idle/walk motion
@@ -29,7 +29,7 @@ u8 entity_anim_counter;
 // Highest OAM cursor used by the previous entity draw. Only slots that became
 // unused need parking; rewriting every remaining hardware sprite each frame
 // wastes a large share of the Riftwild video budget.
-u8 entity_oam_high = 4;
+u8 entity_oam_high;
 
 void entity_update_from(u8 start) BANKED;
 
@@ -186,12 +186,16 @@ u8 fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl) {
     return idx;
 }
 
-// 16x16 enemies (2x2 tiles): the mini-boss Sentinel and the bruiser tier
+// 16x16 entities (2x2 tiles): champion-scale civic residents, the mini-boss
+// Sentinel, and the bruiser tier
 // (orc 4, bomber 6, warlock 8), plus Ember's narrow middle-scale Cinder Maw.
 // Their sprite_tile points at a 4-tile block TL,TR,BL,BR. The 32x32 Colossus
 // (giant flag) is handled separately.
 static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];
+    if (e->type == ENT_PICKUP)
+        return e->sprite_tile >= SPR_TOWN_RESIDENT_BIG
+            && e->sprite_tile < SPR_TOWN_BIG_END;
     if (e->type != ENT_ENEMY) return 0;
     if (eid == ENEMY_STONE_SENTINEL) return 1;
     return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK

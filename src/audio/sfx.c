@@ -17,6 +17,11 @@
 #define PEND_PUZZLE_NOTE3 8
 #define PEND_PUZZLE_NOTE4 9
 #define PEND_DISTRICT_NOTE2 10
+#define PEND_SIGIL_NOTE2 11
+#define PEND_SIGIL_NOTE3 12
+#define PEND_SIGIL_NOTE4 13
+#define PEND_SIGIL_NOTE5 14
+#define PEND_SIGIL_NOTE6 15
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -28,9 +33,11 @@ static u8 melody_lock_priority;
 #define MELODY_PRIORITY_NONE   0
 #define MELODY_PRIORITY_CLEAR  1
 #define MELODY_PRIORITY_SECRET 2
+#define MELODY_PRIORITY_MAJOR  3
 
 static u8 melody_priority_for(u8 id) {
     if (id == SFX_PUZZLE) return MELODY_PRIORITY_SECRET;
+    if (id == SFX_SIGIL) return MELODY_PRIORITY_MAJOR;
     if (id == SFX_CLEAR) return MELODY_PRIORITY_CLEAR;
     return MELODY_PRIORITY_NONE;
 }
@@ -175,6 +182,18 @@ void sfx_play(u8 id) {
             ch4(0x27, 0x72);
             sfx_claim_channels(9, 7);
             break;
+        case SFX_SIGIL:
+            // A required dungeon key deserves its own uninterrupted event,
+            // not the half-second forged ping shared by random stat relics.
+            // C4 -> G4 -> C5 -> E5 -> G5 -> C6 rises for a full second while
+            // a low crystalline breath gives the first beat physical weight.
+            ch4(0x55, 0x73);
+            ch1(0x00, 0xC0, 0xC5, 1547);             // C4
+            pend_kind = PEND_SIGIL_NOTE2;
+            pend_timer = 10;
+            sfx_claim_channels(70, 16);
+            melody_lock(MELODY_PRIORITY_MAJOR, 70);
+            break;
         default:
             break;
     }
@@ -249,6 +268,39 @@ void sfx_tick(void) {
             NR12_REG = (pend_kind == PEND_PUZZLE_NOTE4) ? 0xD6 : 0xB4;
             NR13_REG = (u8)(1825 & 0xFF);              // D5
             NR14_REG = (u8)(0x80 | (1825 >> 8));
+            break;
+        case PEND_SIGIL_NOTE2:
+            NR12_REG = 0xB4;
+            NR13_REG = (u8)(1750 & 0xFF);             // G4
+            NR14_REG = (u8)(0x80 | (1750 >> 8));
+            pend_kind = PEND_SIGIL_NOTE3;
+            pend_timer = 10;
+            return;
+        case PEND_SIGIL_NOTE3:
+            NR12_REG = 0xC4;
+            NR13_REG = (u8)(1798 & 0xFF);             // C5
+            NR14_REG = (u8)(0x80 | (1798 >> 8));
+            pend_kind = PEND_SIGIL_NOTE4;
+            pend_timer = 10;
+            return;
+        case PEND_SIGIL_NOTE4:
+            NR12_REG = 0xD4;
+            NR13_REG = (u8)(1849 & 0xFF);             // E5
+            NR14_REG = (u8)(0x80 | (1849 >> 8));
+            pend_kind = PEND_SIGIL_NOTE5;
+            pend_timer = 10;
+            return;
+        case PEND_SIGIL_NOTE5:
+            NR12_REG = 0xE5;
+            NR13_REG = (u8)(1881 & 0xFF);             // G5
+            NR14_REG = (u8)(0x80 | (1881 >> 8));
+            pend_kind = PEND_SIGIL_NOTE6;
+            pend_timer = 10;
+            return;
+        case PEND_SIGIL_NOTE6:
+            NR12_REG = 0xF7;
+            NR13_REG = (u8)(1922 & 0xFF);             // C6 resolve
+            NR14_REG = (u8)(0x80 | (1922 >> 8));
             break;
     }
     pend_kind = PEND_NONE;

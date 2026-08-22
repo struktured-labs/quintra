@@ -123,42 +123,40 @@ u8 room_apply_world_arena(void) BANKED {
     return stage;
 }
 
-// Tile lookup is shared by several switchable gameplay banks and sits on
-// collision/hazard hot paths. Keeping it always mapped avoids a ROM-bank
-// round trip for every sampled tile while the colder world builders remain
-// in bank 5.
+// The compact 20x17 plane is the collision hot path. Keep that direct lookup
+// always mapped, but move the less common streamed-extension address grammar
+// into this file's roomy fixed bank. This recovers scarce bank-zero release
+// headroom without charging ordinary dungeon movement a far call.
+static u8 room_tile_at_wide(u8 tx, u8 ty) BANKED {
+    if (ty >= ROOM_H) {
+        if (room_world_height <= ROOM_VIEW_H_PX
+            || tx >= ROOM_WIDE_W_TILES || ty >= ROOM_WIDE_H_TILES)
+            return BGT_WALL;
+        return (u8)(room_world_bottom[ty - ROOM_H][tx] & 0x7F);
+    }
+    if (room_world_width <= ROOM_VIEW_W_PX
+        || tx >= ROOM_WIDE_W_TILES) return BGT_WALL;
+    if (room_world_height > ROOM_VIEW_H_PX)
+        return (u8)(room_world_extension[ty][tx - ROOM_W] & 0x7F);
+    // The far east threshold replaces the obsolete viewport seam after
+    // Crystal falls. Before then it remains a real arena wall.
+    if (tx == ROOM_CRYSTAL_W_TILES - 1) {
+        if ((ty == 8 || ty == 9) && run_state_was_cleared_boss())
+            return BGT_DOOR;
+        return BGT_WALL;
+    }
+    if (ty == 0 || ty == ROOM_H - 1) return BGT_WALL;
+    // Extension projection tiles are visual, walkable spirit-space.
+    return BGT_FLOOR;
+}
+
 u8 room_tile_at_px(i16 px, i16 py) NONBANKED {
     if (px < 0 || py < 0) return BGT_WALL;
     {
         u8 tx = (u8)(px >> 3);
         u8 ty = (u8)(py >> 3);
-        // Keep the row test outermost. SDCC 4.4 can corrupt the temporary
-        // for `height > view && ty >= ROOM_H` in this banked function after
-        // the 31x31 index arithmetic is introduced, turning every southern
-        // field row into a wall. The nested form is equivalent C but compiles
-        // into independent comparisons on real hardware.
-        if (ty >= ROOM_H) {
-            if (room_world_height <= ROOM_VIEW_H_PX
-                || tx >= ROOM_WIDE_W_TILES || ty >= ROOM_WIDE_H_TILES)
-                return BGT_WALL;
-            return (u8)(room_world_bottom[ty - ROOM_H][tx] & 0x7F);
-        }
-        if (tx >= ROOM_W) {
-            if (room_world_width <= ROOM_VIEW_W_PX
-                || tx >= ROOM_WIDE_W_TILES) return BGT_WALL;
-            if (room_world_height > ROOM_VIEW_H_PX)
-                return (u8)(room_world_extension[ty][tx - ROOM_W] & 0x7F);
-            // The far east threshold replaces the obsolete viewport seam
-            // after Crystal falls. Before then it remains a real arena wall.
-            if (tx == ROOM_CRYSTAL_W_TILES - 1) {
-                if ((ty == 8 || ty == 9) && run_state_was_cleared_boss())
-                    return BGT_DOOR;
-                return BGT_WALL;
-            }
-            if (ty == 0 || ty == ROOM_H - 1) return BGT_WALL;
-            // Extension projection tiles are visual, walkable spirit-space.
-            return BGT_FLOOR;
-        }
+        if (ty >= ROOM_H || tx >= ROOM_W)
+            return room_tile_at_wide(tx, ty);
         // Bit 7 is generator-only reachability scratch. Room preparation
         // clears it before rendering, but collision must remain correct even
         // if a later diagnostic/placement pass marks the same WRAM tile.
@@ -176,11 +174,13 @@ u8 room_player_position_in_bounds(i16 x, i16 y) BANKED {
 // probe from several gameplay banks. Keep it always mapped so stricter
 // six-point collision does not pay a ROM-bank round trip for every sample.
 u8 room_tile_walkable(u8 t) NONBANKED {
-    return (t == BGT_FLOOR || t == BGT_FLOOR2 || t == BGT_FLOOR3
-         || t == BGT_GRASS || t == BGT_PATH || t == BGT_WILD_FLOWER
-         || t == BGT_RUBBLE || t == BGT_DOOR || t == BGT_SPIKES
-         || t == BGT_SWITCH || t == BGT_PORTAL
+    // HUD digits 9..18 flow directly into the two floor variants at 19/20;
+    // grouping that complete interval saves hot-bank comparisons while
+    // retaining merchant price tags as intentional walkable terrain.
+    return (t == BGT_FLOOR || t == BGT_DOOR || t == HUD_COIN
+         || (t >= HUD_DIGIT_0 && t <= BGT_FLOOR3)
+         || t == BGT_RUBBLE || t == BGT_SPIKES
+         || (t >= BGT_SWITCH && t <= BGT_PATH)
          || (t >= BGT_COLOSSUS_VOID && t <= BGT_COLOSSUS_HORN)
-         // Shop price tags are painted floor (coin glyph + digits)
-         || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
+         || t == BGT_WILD_FLOWER);
 }

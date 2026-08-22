@@ -13,7 +13,7 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 SRAM_SIZE = 32 * 1024
 PLAYER_SIZE = 42       # accepted pre-Will player layout
-CURRENT_PLAYER_SIZE = 44
+CURRENT_PLAYER_SIZE = 46
 SCREEN_ROOM = 5
 
 
@@ -78,7 +78,7 @@ def main():
                 pb.tick()
             pb.memory[0x0000] = 0x0A
             pb.memory[0x4000] = 0
-            assert pb.memory[0xA003] == 48, \
+            assert pb.memory[0xA003] == 51, \
                 f"{run_size}-byte suspend was not rewritten as current ABI"
             assert pb.memory[0xA004] == CURRENT_PLAYER_SIZE, \
                 f"{run_size}-byte player suspend was not upgraded"

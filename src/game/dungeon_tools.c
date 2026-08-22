@@ -50,7 +50,10 @@ void dungeon_tools_draw_pack(void) BANKED {
     text_write(" A");
     set_sprite_tile(8, icons[selected_tool]);
     set_sprite_prop(8, 3);
-    move_sprite(8, 16, 136);
+    // The tool and Oath glyphs occupy consecutive PACK rows. Keep the tool
+    // one scanline high so silhouettes such as Echo Chime (which use their
+    // bottom tile row) do not touch the Oath flare's top row below.
+    move_sprite(8, 16, 135);
 }
 
 u8 dungeon_tools_pack_input(u8 pressed) BANKED {

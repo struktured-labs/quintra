@@ -25,16 +25,17 @@ void sfx_play_reward(u8 kind) BANKED {
     // Discovery and room-clear melodies schedule later CH1 notes. A reward
     // collected during that window stays mechanically collected but silent,
     // rather than cutting the fanfare into unrelated fragments.
-    if (sfx_melody_locked()) return;
+    if (kind != SFX_REWARD_SIGIL && sfx_melody_locked()) return;
     switch (kind) {
         case SFX_REWARD_MAGIC:
             // Clean high upward shimmer: MP/wells, never currency.
             reward_ch1(0x23, 0x40, 0xA3, 1902);
             break;
         case SFX_REWARD_SIGIL:
-            // Resonant key claim: low square bell plus crystalline breath.
-            reward_ch1(0x36, 0xC0, 0xD5, 1688);
-            reward_ch4(0x55, 0x63);
+            // The mandatory stage objective owns a true major-item fanfare.
+            // It may supersede a coincident incidental secret melody rather
+            // than becoming a silent inventory bit the player never notices.
+            sfx_play(SFX_SIGIL);
             break;
         case SFX_REWARD_SURGE:
             // Fast power bloom replaces the boss-roar/boom formerly reused

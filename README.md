@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.9: Carved Resonance](https://github.com/struktured-labs/quintra/releases/download/v0.20.9/quintra.gbc)
+[Download Quintra v0.20.10: Wayfarer's Gate](https://github.com/struktured-labs/quintra/releases/download/v0.20.10/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,23 +25,62 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.9**, an interface and audio-legibility
-milestone. START's Pack replaces its typed `+---|` scaffolding with nine
-dedicated beveled tiles: proper outer corners, section junctions, side rails,
-and a closing border frame the identity, Vitals, Arms, and Quest regions in
-their own color families. Labels and controls remain embedded in the rails,
-leaving the same usable 20×18 text area and all six semantic OBJ icons.
+The current cartridge is **v0.20.10**, an exploration and world-legibility
+milestone. Each three-dungeon region now shares one persistent 6×6 Riftwild
+whose explored geography, one-use landmarks, and three sequential dungeon
+gates survive every expedition. Hero nature and one equipped permanent
+Waygear implement open optional boulder, water, chasm, thorn, and vent routes,
+turning champion choice into geography rather than combat stats alone.
 
-Secret discoveries now own the effect bus for their complete four-note figure,
-and the shorter three-note room-clear arpeggio receives the same protection.
-A heart, coin, equip, weapon swing, rune, or reward collected during that short
-window still applies mechanically but cannot replace the fanfare's scheduled
-notes. Stage music continues underneath on its unaffected channels.
+Peaceful residents, merchants, and wayfarers now use full 16×16 silhouettes.
+Merchant dialogue pairs the exact live item icon and tint with every effect and
+price; major Rift Sigils receive their own illustrated claim tableau. Stage 1
+Normal fields carry 14–18 tougher ordinary enemies while its service rooms,
+puzzles, sanctuary, and 200-HP opening Colossus remain unchanged.
 
-The release retains v0.20.8's champion animation, adaptive long-form score,
-Blast Seed/Echo Prism/Rift Lens attack physics, 48-offer procedural merchant
-catalog, and global safe/reachable collectible placement, along with all prior
-world, puzzle, boss, encounter-grammar, and roguelike systems.
+The Stage 4 sanctuary-side cache can no longer confuse its return threshold
+with the locked Colossus gate. All 460 PyBoy and 460 native mGBA checkpoints
+were regenerated against the release cartridge, and the fixed-bank refactor
+restores the project's 384-byte bank-zero release margin without slowing the
+compact collision path.
+
+### v0.20.10 — Wayfarer's Gate
+
+The Riftwild grows from a short sequence of fields into a persistent 6×6
+regional overworld. The first, second, and third dungeon gates occupy stable
+landmarks at screens 8, 21, and 34; returning from a dungeon preserves the
+region's explored map and spent well/vault state, while crossing the third
+Colossus begins a fresh generated region. Town and cave returns retain their
+own anchors instead of erasing that regional memory.
+
+Five hero natures now solve different landscape gates: Sauran moves boulders,
+Picsean crosses water, Corvin traverses chasms, Wolfkin parts thorns, and
+Vespine rides vents. A permanent Glove, Raft, or Hook can substitute for the
+first three powers, but only one resonates at a time through START's Waygear
+page. Optional groves place their rewards after entity initialization and use
+the same reachable-footprint rules as every other major treasure.
+
+Residents and dungeon wayfarers are champion-scale 16×16 metasprites with
+dedicated elder, merchant, artisan, and sage identities. Merchant stock pages
+park stale combat OAM, then render the actual four generated shelf icons beside
+readable effects and right-aligned prices. Rift Sigils similarly pause combat
+for a protected illustrated claim page instead of disappearing as another
+generic floor oval.
+
+Normal Stage 1 ordinary rooms rise to a verified 14–18 enemies and add one HP
+per ordinary body; Easy retains a 10–13 testing band. The increase does not
+touch waypoints, shops, puzzles, the sanctuary, or the opening Colossus, whose
+runtime contract remains 200 HP. The exact post-village Stage 4 cache failure
+now has a cartridge regression: Picsean shoots the real sanctuary crack,
+enters the cache with every boss prerequisite removed, and still returns to
+the parent room while the genuine boss threshold remains sealed.
+
+Bank-zero release headroom is restored by keeping compact tile lookup always
+mapped while moving streamed-extension address grammar into its fixed content
+bank, grouping contiguous walkable tile ranges, and dropping redundant boot
+initializers that are authoritatively set by engine startup. Dense-room,
+Riftwild, regional persistence, title/audio, dialogue, boss identity, cache,
+and cartridge checks all run against the linked release ROM.
 
 ### v0.20.9 — Carved Resonance
 
@@ -301,8 +340,9 @@ retain the exact numbers and controls without wrapping on the 20x18 display.
 Every procedural merchant's second dialogue page now inventories the stock
 that actually spawned in that room. Each line states the mechanical effect and
 exact price—such as `MAX HP +2 30G`, `KILLS HEAL HP 35G`, or
-`BOUNCE A SHOT 40G`—and the footer explains that touching its matching counter
-buys it. The proximity HUD still provides the immediate icon/name/cost cue.
+`BOUNCE A SHOT 40G`—and displays the exact live shelf icon and tint beside it.
+The footer explains that touching its matching counter buys it; the proximity
+HUD retains the immediate icon/name/cost cue.
 
 Incomplete Colossus thresholds now retain a graph-safe retreat even if stale
 puzzle-lock state and missing arrival metadata coincide. Any existing edge to
@@ -311,6 +351,20 @@ returns to a numerically higher cell—so it cannot skip a Sigil, open an unseen
 objective, or enter the boss. A live-ROM contract replays this hostile state
 across all nine dungeon sanctuaries and the exact Stage 3 fold that previously
 trapped a run.
+
+A sanctuary-side Farfold Cache can no longer mistake its sole return threshold
+for the adjacent locked Colossus entrance. Cache-overlay state bypasses only
+that boss-prerequisite check, while the ordinary sanctuary gate remains locked
+until the Trial, Sigil, Wardens, Waystone, remote phase, and Deep Gate are done.
+The regression shoots Stage 4's real cracked wall with Picsean, enters the
+cache, removes every boss qualification, and proves the west return still
+restores the sanctuary.
+
+Stage 1's ordinary rooms now establish the intended action pressure immediately:
+Normal fields carry 14–18 bodies and one extra HP per ordinary enemy; Easy
+fields carry 10–13 bodies for traversal testing. Service rooms, puzzles,
+waypoints, the sanctuary, and the opening Colossus are unchanged—the linked-ROM
+boss contract still holds the first Colossus at 200 HP.
 
 Locked and open thresholds are now visually different. An unexplored exit in
 a mandatory combat or puzzle room displays a barred amber portcullis, while a
@@ -1311,24 +1365,34 @@ cross-bank predicate calls. A measured same-stage doorway—including procgen,
 fixtures, the 18-frame slide, palettes, HUD, and restored sprites—fell from
 103 to 38 frames, and a live-ROM contract rejects regression above 45.
 
-**Riftwild now has the same pocket-map grammar as the dungeons.** SELECT draws
-its visited 4×4 topology as a compact one-glyph graph rather than sixteen
-large terrain thumbnails. Cyan `YOU`, violet `RIFT`, a marked `GATE`, and
-amber `BOSS` labels live beside the graph on the Game Boy screen. Sixteen dim
-hollow slots establish the 4×4 grid immediately; exploration replaces them
-with bright semantic nodes and reveals only the links actually travelled.
+**Riftwild is now an expansive optional overworld, not a hallway.** Each
+region contains 36 scrolling 31×31-tile fields in a looped 6×6 expedition
+graph—roughly Zelda-I-scale in raw traversable area—while a readable
+three-field route still lets a speed run reach the next dungeon. SELECT draws
+the visited topology as a compact one-glyph graph. Lime `YOU`, violet `RIFT`,
+a marked `GATE`, and amber `BOSS` labels live beside it; 36 dim hollow slots
+establish the world shape immediately, while exploration reveals identities
+and only the links actually travelled.
 Vaults retain the familiar violet objective diamond.
 This makes the next-dungeon route and nonlinear cave hops readable without a
 README legend or sacrificing fog of war.
 
-**Riftwild cells now have seed-stable geographic landmarks.** Every 4×4
-crossing contains four meadow, pond, standing-stone, and old-stump clearings;
-the run seed rotates which coordinates own each family. Backtracking therefore
-returns to a recognizable place, while a new expedition remixes the geography.
+**Riftwild cells have seed-stable geographic landmarks.** Meadow, pond,
+standing-stone, and old-stump clearings recur across the 6×6 world; the run
+seed rotates which coordinates own each family. Backtracking therefore returns
+to a recognizable place, while a new expedition remixes the geography.
 All solid landmarks stay outside the two-tile trail cross, preserve every
 authored exit, and leave Normal/Easy encounters, HP, and routes identical. A
-live-ROM sweep crosses all sixteen cells, checks four instances of each family,
+live-ROM sweep crosses all 36 fields, checks nine instances of each family,
 and emits a native-resolution visual atlas.
+
+**Champion nature and permanent Waygear now shape exploration.** Wolfkin cuts
+thorns, Sauran lifts boulders, Corvin crosses chasms, Picsean swims deep water,
+and Vespine enters hive vents. The Titan Glove, Tide Raft, and Rift Hook are
+run-permanent substitutes found in optional Riftwild pockets. All three can be
+carried, but only one resonates at a time from START → SELECT, so route choice
+and inventory economy matter without ever making the selected hero unable to
+finish the main path.
 
 **Procgen variety is now a measured cartridge contract.** A 512-seed Rust
 corpus produces 393 distinct gameplay silhouettes after decorative floor

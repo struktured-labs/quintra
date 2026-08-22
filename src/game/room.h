@@ -120,6 +120,9 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED;
 // mag = pixels (1-2 sensible); longer of current/new duration wins.
 void room_shake(u8 mag, u8 frames) BANKED;
 void room_start_weapon_surge(void) BANKED;
+// Pause into the one-page major-objective claim tableau after collision has
+// committed the item. `kind` is the pickup identity; `topic` is its stage.
+void room_start_major_reward(u8 kind, u8 topic) BANKED;
 // Reconcile champion palette + equipped attack/shield art after a relic,
 // boss clear, weapon trade, room load, or suspended-run resume.
 void room_refresh_player_appearance(u8 celebrate) BANKED;

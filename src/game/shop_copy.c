@@ -48,15 +48,22 @@ static const char *effect(u8 ware, u8 item_index) {
 }
 
 void shop_write_live_stock(void) BANKED {
-    u8 i, row = 5;
+    u8 i, row = 5, icon = 0;
     gotoxy(1, 3); text_write("TODAYS WARES / COST");
     for (i = 0; i < MAX_ENTITIES && row <= 11; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)
             || entities[i].type != ENT_PICKUP
             || entities[i].ai_data[0] != PICKUP_SHOP) continue;
+        // The dialogue retains the room's OBJ atlas. Reuse the exact shelf
+        // silhouette and tint at the left of every row, turning this from a
+        // wall of abbreviations into a four-item visual catalog.
+        set_sprite_tile(icon, entities[i].sprite_tile);
+        set_sprite_prop(icon, entities[i].palette);
+        move_sprite(icon, 8, (u8)(row * 8 + 16));
         gotoxy(1, row);
         text_write(effect(entities[i].ai_data[1], entities[i].ai_data[3]));
         gotoxy(15, row); text_u16(entities[i].ai_data[2]); text_write("G");
+        icon++;
         row = (u8)(row + 2);
     }
 }

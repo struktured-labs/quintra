@@ -172,30 +172,40 @@ def main():
         (pb.memory[ORIGIN_Y] << 3) & 0xFF)
 
     # Riftwild encounters never seal exits: leave screen 0 with its generated
-    # hostiles alive, then follow graph 0 --E--> 1 --E--> 2 --S--> gate 6.
+    # hostiles alive, then explore the northern cave before taking the short
+    # 0 --E--> 1 --E--> 2 --S--> gate-8 speed route.
     for off, value in enumerate(hostile_records[0]):
         pb.memory[EN + off] = value
     exit_at(pb, 232, 60, clear=False); assert pb.memory[RS + 18] == 1, pb.memory[RS + 18]
     exit_at(pb, 232, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
-    # Screen 2's cave staircase is a nonlinear hop to vault 15 and back.
+    exit_at(pb, 232, 60); assert pb.memory[RS + 18] == 3, pb.memory[RS + 18]
+    exit_at(pb, 232, 60); assert pb.memory[RS + 18] == 4, pb.memory[RS + 18]
+    exit_at(pb, 232, 60); assert pb.memory[RS + 18] == 5, pb.memory[RS + 18]
+    # Screen 5's cave staircase is a nonlinear hop to vault 30 and back.
     clear_hostiles(pb); put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
-    assert pb.memory[RS + 18] == 15 and pb.memory[RS + 19] == 2
+    assert pb.memory[RS + 18] == 30 and pb.memory[RS + 19] == 5
     assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 60), \
         "cave arrival did not use the body-safe world-center intersection"
     put16(pb, PL + 9, 72); put16(pb, PL + 11, 52)
     for _ in range(45): pb.tick()
-    assert pb.memory[RS + 18] == 2, "vault staircase did not return"
+    assert pb.memory[RS + 18] == 5, "vault staircase did not return"
     assert (pb.memory[PL + 9], pb.memory[PL + 11]) == (72, 60), \
         "vault return did not use the body-safe world-center intersection"
-    exit_at(pb, 72, 232); assert pb.memory[RS + 18] == 6, pb.memory[RS + 18]
+    exit_at(pb, 0, 60); assert pb.memory[RS + 18] == 4, pb.memory[RS + 18]
+    exit_at(pb, 0, 60); assert pb.memory[RS + 18] == 3, pb.memory[RS + 18]
+    exit_at(pb, 0, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
+    exit_at(pb, 72, 232); assert pb.memory[RS + 18] == 8, pb.memory[RS + 18]
     assert pb.memory[TM + 8 * 20 + 10] == 34, "dungeon gate has no portal"
     for _ in range(60): pb.tick()
     pb.screen.image.save(ROOT / "tmp" / "riftwild-gate.png")
-    seen = pb.memory[RS + 21] | (pb.memory[RS + 22] << 8)
-    expected_seen = sum(1 << cell for cell in (0, 1, 2, 6, 15))
+    seen = (
+        pb.memory[RS + 21] | (pb.memory[RS + 22] << 8),
+        pb.memory[RS + 48], pb.memory[RS + 49], pb.memory[RS + 50],
+    )
+    expected_seen = (0x013F, 0, 0x40, 0)
     assert seen == expected_seen, (
-        f"Riftwild map did not reveal exact visited cells: {seen:#06x}"
+        f"Riftwild map did not reveal exact visited cells: {seen}"
     )
     pb.button("select"); pb.tick(24)
     assert pb.memory[SCREEN] == 8, "SELECT did not open visited Riftwild map"
@@ -209,32 +219,34 @@ def main():
     # consumed the LCD without explaining the two colored squares.
     assert bytes(pb.memory[bg + 0 * 32 + 8:bg + 0 * 32 + 11]) == bytes((87, 84, 94)), \
         "Riftwild map heading was overwritten by its top row"
-    assert pb.memory[bg + 7 * 32 + 7] == 50, "current cell lacks player map pin"
-    assert pb.memory[bg + 13 * 32 + 10] == 52, "visited vault lacks violet glyph"
-    assert pb.memory[bg + 4 * 32 + 10] == 95, \
-        "unseen cell lost its dim 4x4-grid placeholder"
+    assert pb.memory[bg + 4 * 32 + 5] == 50, "current cell lacks player map pin"
+    assert pb.memory[bg + 12 * 32 + 1] == 52, "visited vault lacks violet glyph"
+    assert pb.memory[bg + 12 * 32 + 11] == 95, \
+        "unseen cell lost its dim 6x6-grid placeholder"
     assert sum(pb.memory[bg + y * 32 + x] == 95
-               for y in (4, 7, 10, 13) for x in (1, 4, 7, 10)) == 11, \
-        "Riftwild map did not expose all eleven unseen grid slots"
-    assert all(pb.memory[bg + 4 * 32 + x] == 53 for x in (2, 3, 5, 6)), \
+               for y in (2, 4, 6, 8, 10, 12)
+               for x in (1, 3, 5, 7, 9, 11)) == 28, \
+        "Riftwild map did not expose all twenty-eight unseen field slots"
+    assert all(pb.memory[bg + 2 * 32 + x] == 53
+               for x in (2, 4, 6, 8, 10)), \
         "Riftwild graph lost its visited east-west links"
-    assert all(pb.memory[bg + y * 32 + 7] == 54 for y in (5, 6)), \
+    assert pb.memory[bg + 3 * 32 + 5] == 54, \
         "Riftwild graph lost its visited south link"
     # The route symbols explain themselves in the live 20x18 tilemap.
-    assert tuple(pb.memory[bg + 4 * 32 + x] for x in range(13, 17)) == \
+    assert tuple(pb.memory[bg + 2 * 32 + x] for x in range(13, 17)) == \
         (50, 64, 65, 66), "Riftwild map lost YOU legend"
-    assert tuple(pb.memory[bg + 7 * 32 + x] for x in range(13, 18)) == \
+    assert tuple(pb.memory[bg + 5 * 32 + x] for x in range(13, 18)) == \
         (34, 85, 84, 93, 86), "Riftwild map lost GATE legend"
-    assert tuple(pb.memory[bg + 10 * 32 + x] for x in range(13, 18)) == \
+    assert tuple(pb.memory[bg + 8 * 32 + x] for x in range(13, 18)) == \
         (90, 91, 68, 92, 93), "Riftwild map lost RIFT legend"
-    assert tuple(pb.memory[bg + 13 * 32 + x] for x in range(13, 18)) == \
+    assert tuple(pb.memory[bg + 11 * 32 + x] for x in range(13, 18)) == \
         (51, 71, 65, 67, 67), "Riftwild map lost BOSS legend"
     # Semantic colors must survive actual CGB rendering, not just nominal
     # palette attributes.
     image = pb.screen.image
-    here_rgb = image.getpixel((7 * 8 + 4, 7 * 8 + 4))[:3]
-    rift_rgb = image.getpixel((13 * 8 + 2, 10 * 8 + 3))[:3]
-    boss_rgb = image.getpixel((13 * 8 + 4, 13 * 8 + 4))[:3]
+    here_rgb = image.getpixel((5 * 8 + 4, 4 * 8 + 4))[:3]
+    rift_rgb = image.getpixel((13 * 8 + 2, 8 * 8 + 3))[:3]
+    boss_rgb = image.getpixel((13 * 8 + 4, 11 * 8 + 4))[:3]
     assert len({here_rgb, rift_rgb, boss_rgb}) == 3, \
         f"Riftwild semantic colors collapsed: {here_rgb}, {rift_rgb}, {boss_rgb}"
     map_shot = ROOT / "tmp" / "riftwild-map.png"
@@ -258,6 +270,6 @@ def main():
         f"seen={tuple(pb.memory[RS + off] for off in (20, 28, 30, 32))}"
     )
     pb.stop(save=False)
-    print("[overworld] PASS 248x248 field + 2D camera + visited 4x4 map -> dungeon gate")
+    print("[overworld] PASS 248x248 field + 2D camera + visited 6x6 map -> dungeon gate")
 
 if __name__ == "__main__": main()

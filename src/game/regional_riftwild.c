@@ -5,8 +5,11 @@
 #include "core/types.h"
 #include "game/run_state.h"
 
-static const u8 regional_return_screen[3] = { 0, 7, 13 };
-static const u8 regional_gate_screen[3] = { 6, 11, 12 };
+// Each return resumes at the prior active arch. The direct routes to the next
+// gates are short enough for a speed run; the surrounding 27 fields, cave,
+// vault, and boss landmark are entirely optional exploration territory.
+static const u8 regional_return_screen[3] = { 0, 8, 21 };
+static const u8 regional_gate_screen[3] = { 8, 21, 34 };
 
 static u8 current_region(void) {
     u8 cleared = run_state.bosses_beaten;
@@ -26,12 +29,34 @@ static u8 current_region_step(void) {
     return cleared;
 }
 
+u8 run_state_world_cell_seen(u8 cell) BANKED {
+    if (cell < 16)
+        return (run_state.world_seen & (u16)(1u << cell)) ? 1 : 0;
+    if (cell < 24)
+        return (run_state.world_seen_hi & (u8)(1u << (cell - 16))) ? 1 : 0;
+    if (cell < 32)
+        return (run_state.world_seen_xhi & (u8)(1u << (cell - 24))) ? 1 : 0;
+    if (cell < 36)
+        return (run_state.world_seen_xxhi & (u8)(1u << (cell - 32))) ? 1 : 0;
+    return 0;
+}
+
+void run_state_reveal_world_cell(u8 cell) BANKED {
+    if (cell < 16) run_state.world_seen |= (u16)(1u << cell);
+    else if (cell < 24)
+        run_state.world_seen_hi |= (u8)(1u << (cell - 16));
+    else if (cell < 32)
+        run_state.world_seen_xhi |= (u8)(1u << (cell - 24));
+    else if (cell < 36)
+        run_state.world_seen_xxhi |= (u8)(1u << (cell - 32));
+}
+
 u8 run_state_riftwild_gate_screen(void) BANKED {
     return regional_gate_screen[current_region_step()];
 }
 
 u8 run_state_riftwild_gate_active(u8 screen) BANKED {
-    return ((screen & 15) == run_state_riftwild_gate_screen()) ? 1 : 0;
+    return (screen == run_state_riftwild_gate_screen()) ? 1 : 0;
 }
 
 void run_state_begin_world(void) BANKED {
@@ -45,11 +70,14 @@ void run_state_begin_world(void) BANKED {
         run_state.riftwild_region = region;
         run_state.riftwild_flags = RIFT_REGION_READY_BIT;
         run_state.world_seen = 0;
+        run_state.world_seen_hi = 0;
+        run_state.world_seen_xhi = 0;
+        run_state.world_seen_xxhi = 0;
     }
     run_state.world_mode = 1;
     run_state.world_screen = regional_return_screen[step];
     run_state.world_return_screen = 0;
-    run_state.world_seen |= (u16)(1u << run_state.world_screen);
+    run_state_reveal_world_cell(run_state.world_screen);
     run_state.mission_ready = 0;
 }
 

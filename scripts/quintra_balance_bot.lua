@@ -10,11 +10,21 @@ local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
 local VOID_SAFE_X, VOID_SAFE_Y = {20, 188, 20, 188}, {20, 20, 100, 100}
 -- Per-screen shortest authored exits toward each regional dungeon gate;
 -- 4 means use the central threshold rather than a boundary door. A single
--- Riftwild persists for three dungeons, waking gates 6, 11, then 12.
+-- Riftwild persists for three dungeons, waking gates 8, 21, then 34 in the
+-- expanded 6x6 expedition graph.
 local WORLD_ROUTES = {
-    [6]  = {1,1,2,2, 1,1,4,3, 1,1,0,3, 1,1,0,3},
-    [11] = {1,1,1,2, 1,1,1,2, 1,1,1,4, 1,1,1,0},
-    [12] = {2,3,3,3, 2,3,3,3, 2,3,3,3, 4,3,3,3},
+    [8] = {
+        1,1,2,3,3,3, 1,1,4,0,2,0, 0,1,0,3,3,3,
+        0,0,0,3,0,0, 1,0,0,0,0,0, 0,0,0,0,3,0,
+    },
+    [21] = {
+        1,1,2,2,3,2, 1,1,2,2,2,2, 2,1,2,3,2,2,
+        1,1,1,4,2,2, 1,0,0,0,3,3, 0,0,0,0,3,0,
+    },
+    [34] = {
+        1,1,2,1,1,2, 1,1,2,1,1,2, 2,1,2,1,1,2,
+        1,1,1,2,1,2, 1,2,1,2,1,2, 1,1,1,1,4,3,
+    },
 }
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
@@ -41,10 +51,10 @@ local LS = tonumber(os.getenv("QUINTRA_SCREEN_ADDR") or "0") or 0
 local FC = tonumber(os.getenv("QUINTRA_FRAME_ADDR") or "0") or 0
 
 function world_gate_screen()
-    if RS == 0 then return 6 end
+    if RS == 0 then return 8 end
     local cleared = emu:read8(RS + 11)
     local step = (math.max(cleared, 1) - 1) % 3
-    return ({6, 11, 12})[step + 1]
+    return ({8, 21, 34})[step + 1]
 end
 
 function world_route_dir(screen)
@@ -2416,7 +2426,7 @@ function door_step(px, py)
     -- a normal world screen made a long-form controller run walk into its
     -- wall forever after the screen-2 cave hop instead of stepping back onto
     -- the return staircase at 72,52.
-    if in_world and (world_screen == world_gate_screen() or world_screen == 15) then
+    if in_world and (world_screen == world_gate_screen() or world_screen == 30) then
         local dx, dy = 72 - px, 52 - py
         if math.abs(dx) <= 2 and math.abs(dy) <= 2 then return 0 end
         local primary = math.abs(dx) >= math.abs(dy)

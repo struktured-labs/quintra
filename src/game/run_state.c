@@ -103,6 +103,9 @@ void run_state_clear(void) {
     run_state.mission_ready = 0;
     run_state.riftwild_region = 0;
     run_state.riftwild_flags = 0;
+    run_state.world_seen_hi = 0;
+    run_state.world_seen_xhi = 0;
+    run_state.world_seen_xxhi = 0;
 }
 
 u16 run_state_enemies_killed_total(void) {
@@ -267,7 +270,7 @@ void run_state_reveal_dungeon_cell(u8 cell) {
 
 void run_state_mark_visited(void) {
     if (run_state.world_mode) {
-        run_state.world_seen |= (u16)(1u << (run_state.world_screen & 15));
+        run_state_reveal_world_cell(run_state.world_screen);
     } else {
         run_state_reveal_dungeon_cell(run_state_dungeon_cell());
     }

@@ -1,6 +1,8 @@
 #include "core/rng.h"
 
-u32 rng_state = 0xDEADBEEFUL;
+// main() seeds before any screen can consume randomness. Keeping this in BSS
+// avoids shipping a duplicate four-byte initializer in scarce bank zero.
+u32 rng_state;
 
 void rng_seed(u32 seed) {
     rng_state = (seed == 0UL) ? 0xDEADBEEFUL : seed;

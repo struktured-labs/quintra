@@ -154,24 +154,22 @@ static void draw_dungeon_legend(void) {
 }
 
 static void draw_world_grid(void) {
-    static const u8 wx[4] = { 1, 4, 7, 10 };
-    static const u8 wy[4] = { 4, 7, 10, 13 };
+    static const u8 wx[6] = { 1, 3, 5, 7, 9, 11 };
+    static const u8 wy[6] = { 2, 4, 6, 8, 10, 12 };
     u8 r, c;
     u8 active_gate = run_state_riftwild_gate_screen();
-    for (r = 0; r < 4; ++r) {
-        for (c = 0; c < 4; ++c) {
-            u8 cell = (u8)(r * 4 + c);
+    for (r = 0; r < ZELDA_WORLD_H; ++r) {
+        for (c = 0; c < ZELDA_WORLD_W; ++c) {
+            u8 cell = (u8)(r * ZELDA_WORLD_W + c);
             u8 x = wx[c];
             u8 y = wy[r];
-            u8 seen = (run_state.world_seen & (u16)(1u << cell)) ? 1 : 0;
+            u8 seen = run_state_world_cell_seen(cell);
             u8 icon = BGT_MAP_ROOM;
             const zelda_screen_t *z = &zelda_overworlds[0].screen_grid[cell];
-            // Use the dungeon Compass's single-glyph language here too. The
-            // former 3x3 terrain thumbnails filled nearly the whole LCD yet
-            // still left a new player guessing which colored square was the
-            // onward gate. This compact field reads as an actual 4x4 graph
-            // and leaves room for an in-cartridge legend.
-            if (cell == (run_state.world_screen & 15)) icon = BGT_MAP_HERE;
+            // Thirty-six nodes fit because each one is already a complete
+            // scrolling field. The graph therefore communicates geographic
+            // scale without returning to tiny terrain screenshots or text.
+            if (cell == run_state.world_screen) icon = BGT_MAP_HERE;
             else if (cell == RIFTWELL_WORLD_SCREEN)
                 icon = BGT_MAP_RIFT;
             else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE)
@@ -182,21 +180,19 @@ static void draw_world_grid(void) {
                 icon = BGT_MAP_BOSS;
             else if (z->kind == ZELDA_CELL_CAVE_ENTRANCE)
                 icon = BGT_MAP_RIFT;
-            // The fixed 4x4 lattice is safe knowledge; show unseen positions
+            // The fixed 6x6 lattice is safe knowledge; show unseen positions
             // as dim hollow cells so a partial route reads as a square grid.
             // Identity and connectivity remain fogged until actually visited.
             map_put(x, y, seen ? icon : BGT_MAP_UNKNOWN);
-            if (c < 3 && (run_state.world_seen & (u16)(1u << cell))
-                && (run_state.world_seen & (u16)(1u << (cell + 1)))
+            if (c + 1 < ZELDA_WORLD_W && seen
+                && run_state_world_cell_seen((u8)(cell + 1))
                 && (zelda_overworlds[0].screen_grid[cell].edges & 2)) {
                 map_put((u8)(x + 1), y, BGT_MAP_PATH_H);
-                map_put((u8)(x + 2), y, BGT_MAP_PATH_H);
             }
-            if (r < 3 && (run_state.world_seen & (u16)(1u << cell))
-                && (run_state.world_seen & (u16)(1u << (cell + 4)))
+            if (r + 1 < ZELDA_WORLD_H && seen
+                && run_state_world_cell_seen((u8)(cell + ZELDA_WORLD_W))
                 && (zelda_overworlds[0].screen_grid[cell].edges & 4)) {
                 map_put(x, (u8)(y + 1), BGT_MAP_PATH_V);
-                map_put(x, (u8)(y + 2), BGT_MAP_PATH_V);
             }
         }
     }
@@ -221,14 +217,14 @@ static void draw_world_legend(void) {
         BGT_MAP_LABEL_S, BGT_MAP_LABEL_S
     };
     u8 i;
-    map_put(13, 4, BGT_MAP_HERE);
-    for (i = 0; i < 3; ++i) map_put((u8)(14 + i), 4, you[i]);
-    map_put(13, 7, BGT_PORTAL);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 7, gate[i]);
-    map_put(13, 10, BGT_MAP_RIFT);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 10, rift[i]);
-    map_put(13, 13, BGT_MAP_BOSS);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 13, boss[i]);
+    map_put(13, 2, BGT_MAP_HERE);
+    for (i = 0; i < 3; ++i) map_put((u8)(14 + i), 2, you[i]);
+    map_put(13, 5, BGT_PORTAL);
+    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 5, gate[i]);
+    map_put(13, 8, BGT_MAP_RIFT);
+    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 8, rift[i]);
+    map_put(13, 11, BGT_MAP_BOSS);
+    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 11, boss[i]);
 }
 
 static void draw_dungeon_grid(void) {

@@ -3,8 +3,10 @@
 import re
 from pathlib import Path
 
-from pyboy import PyBoy
 from quintra_topology import STAGE_START
+from make_stage_states import (
+    advance_to_court, boot_to_stage, select_rom_topology, symbol_addresses,
+)
 from test_shop_surge import boot_shop
 
 
@@ -69,36 +71,16 @@ def clear_hostiles(pb):
 
 
 def boot_waypoint(stage):
-    pb = PyBoy(str(ROM), window="null", cgb=True)
-    tick(pb, 240)
-    pb.button("start"); tick(pb, 30)
-    pb.button("a"); tick(pb, 60)
-
-    target = STAGE_START[stage] + 5
-    pb.memory[RS + 1] = target - 1
-    pb.memory[RS + 11] = stage
-    pb.memory[RS + 12] = 0
-    pb.memory[RS + 13] = 0
-    pb.memory[RS + 17] = 1
-    pb.memory[RS + 18] = 6
-    pb.memory[LARGE] = 0
-    pb.memory[WORLD_W], pb.memory[WORLD_H] = 160, 136
-    clear_hostiles(pb)
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 60)
-    pb.memory[TM + 9 * 20 + 10] = 34
-    for _ in range(30):
-        pb.tick()
-        if pb.memory[RS + 1] == target:
-            break
-    assert pb.memory[RS + 1] == target, f"stage {stage + 1} waypoint did not load"
-    tick(pb, 90)
+    select_rom_topology(ROM)
+    addrs = symbol_addresses(ROM)
+    pb, _ram, _entry = boot_to_stage(ROM, addrs, stage, "normal", 0)
+    target = advance_to_court(pb, addrs, stage)
     clear_hostiles(pb)
     speakers = pickups(pb, PICKUP_WAYFARER)
     assert len(speakers) == 1, (
         f"stage {stage + 1} waypoint has {len(speakers)} peaceful creatures")
     speaker = speakers[0]
-    assert pb.memory[speaker + 12] == 79, (
+    assert pb.memory[speaker + 12] == 208, (
         f"stage {stage + 1} wayfarer lost its stage-native sprite slot")
     assert pb.memory[speaker + 18] == stage, (
         f"stage {stage + 1} wayfarer topic is {pb.memory[speaker + 18]}")
@@ -131,6 +113,17 @@ def approach_and_talk(pb, speaker, expected_kind, expected_topic):
                                     0x9800 + y * 32 + 18])
             assert any(effect) and any(price), (
                 f"merchant stock row {y} did not name effect and cost")
+        # Four exact shelf silhouettes sit beside the four description rows.
+        # This is real OBJ art from the live generated stock, not a repeated
+        # text bullet that leaves visually distinct relics ambiguous.
+        wares = pickups(pb, 4)
+        assert len(wares) == 4
+        for slot, (y, ware) in enumerate(zip((5, 7, 9, 11), wares)):
+            oam = 0xFE00 + slot * 4
+            assert pb.memory[oam] == y * 8 + 16 and pb.memory[oam + 1] == 8
+            assert pb.memory[oam + 2] == pb.memory[ware + 12]
+            assert (pb.memory[oam + 3] & 7) == pb.memory[ware + 13]
+        assert pb.memory[0xFF40] & 0x02, "merchant catalog icons are hidden"
         pb.screen.image.save(ROOT / "tmp" / "merchant-stock.png")
     tap(pb, "b"); tick(pb, 22)
     assert pb.memory[SCREEN] == SCREEN_ROOM, "B did not return to the live room"

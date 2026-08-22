@@ -292,13 +292,11 @@ if MODE == "gif" then
   -- performs the real runtime handoff into overworld screen zero.
   emu:write8(RS + 1, BOSS1); emu:write8(RS + 11, 1)
   warp(72, 120); frame(KEY_A|KEY_RIGHT, 20, 2)
-  warp(144, 60); frame(KEY_RIGHT, 12, 2)      -- Riftwild 0 -> 1
-  warp(144, 60); frame(KEY_A|KEY_DOWN, 16, 2) -- Riftwild 1 -> cave 2
-  warp(72, 52); frame(0, 8, 2)               -- cave 2 -> distant vault 15
-  -- Let the reel itself prove that the nonlinear hop appears on the new
-  -- compact Riftwild graph. Keep the same twelve-frame segment budget: four
-  -- live-vault frames plus eight map frames replaces the old twelve-frame
-  -- idle vault hold, so the published reel remains exactly 174 frames.
+  warp(232, 60); frame(KEY_RIGHT, 12, 2)      -- Riftwild 0 -> 1
+  warp(232, 60); frame(KEY_A|KEY_DOWN, 16, 2) -- Riftwild 1 -> 2
+  warp(72, 232); frame(0, 8, 2)              -- short route -> gate 8
+  -- Let the reel itself prove the expanded 6x6 route appears on the compact
+  -- Riftwild graph while preserving the established segment budget.
   hold(KEY_SELECT, 2); tick(30); frame(0, 16, 2)
   hold(KEY_B, 2); tick(20)
 

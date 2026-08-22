@@ -62,7 +62,9 @@ def main():
             pb.memory[rs + 1] = STAGE_BOSS_ROOM[after_stage - 1]
             pb.memory[rs + 11] = after_stage
             pb.memory[rs + 17] = 1
-            pb.memory[rs + 18] = 6
+            # The third arch of each three-dungeon region is the village
+            # handoff. Its current expanded-Riftwild coordinate is field 34.
+            pb.memory[rs + 18] = 34
             pb.memory[rs + 19] = 0
             pb.memory[tilemap + 8 * 20 + 10] = 34
             x, y = 72, 52
@@ -134,13 +136,13 @@ def main():
     waykeeper = entities(15)
     lorekeeper = entities(17)
     bellkeeper = entities(18)
-    assert len(elder) == 1 and pb.memory[elder[0] + 12] == 69
-    assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 123
-    assert len(waykeeper) == 1 and pb.memory[waykeeper[0] + 12] == 124, \
+    assert len(elder) == 1 and pb.memory[elder[0] + 12] == 208
+    assert len(chartwright) == 1 and pb.memory[chartwright[0] + 12] == 220
+    assert len(waykeeper) == 1 and pb.memory[waykeeper[0] + 12] == 216, \
         "arrival square lacks its dedicated north-gate Waykeeper"
-    assert len(lorekeeper) == 1 and pb.memory[lorekeeper[0] + 12] == 126, \
+    assert len(lorekeeper) == 1 and pb.memory[lorekeeper[0] + 12] == 220, \
         "arrival square lacks its dedicated scroll-bearing Lorekeeper"
-    assert len(bellkeeper) == 1 and pb.memory[bellkeeper[0] + 12] == 79, \
+    assert len(bellkeeper) == 1 and pb.memory[bellkeeper[0] + 12] == 216, \
         "arrival square lacks its dedicated Bellkeeper landmark"
     # The Waykeeper safely borrows the Rune Lantern's 8x8 VRAM slot only in a
     # town. Keep the exact town bytes so the transition below proves a normal
@@ -274,7 +276,7 @@ def main():
     leave("east")
     assert pb.memory[rs + 1] == town_room and pb.memory[rs + 19] == 1
     merchant, wares, tags = entities(8), entities(4), entities(13)
-    assert len(merchant) == 1 and pb.memory[merchant[0] + 12] == 70
+    assert len(merchant) == 1 and pb.memory[merchant[0] + 12] == 212
     assert len(wares) == 4
     assert len(tags) == 4 and all(pb.memory[t + 12] == 81 for t in tags), \
         "market stock lacks persistent gold sale markers"
@@ -412,8 +414,8 @@ def main():
     assert pb.memory[rs + 1] == town_room and pb.memory[rs + 19] == 2
     smith, apothecary, wares = entities(9), entities(10), entities(4)
     assert len(smith) == len(apothecary) == 1
-    assert pb.memory[smith[0] + 12] == 71
-    assert pb.memory[apothecary[0] + 12] == 79
+    assert pb.memory[smith[0] + 12] == 216
+    assert pb.memory[apothecary[0] + 12] == 220
     # Arrival borrows slot 79 for the Bellkeeper. The craft quarter must
     # reload the real apothecary art after two lateral town transitions;
     # checking only the shared tile number would miss a visual identity leak.
@@ -427,7 +429,7 @@ def main():
     assert bytes(pb.memory[0x9800 + 1 * 32 + 8:0x9800 + 1 * 32 + 13]) == \
         bytes((78, 89, 76, 85, 86)), \
         "west quarter lacks its FORGE playfield landmark"
-    assert len({69, 70, pb.memory[smith[0] + 12], pb.memory[apothecary[0] + 12]}) == 4
+    assert len({208, 212, pb.memory[smith[0] + 12], pb.memory[apothecary[0] + 12]}) == 4
     # The apothecary's crimson shelf makes the fifth-kill Vampiric Sigil an
     # intentional run-long sustain purchase instead of a barely-seen random
     # drop. Check the semantic fangs HUD before buying through normal contact.

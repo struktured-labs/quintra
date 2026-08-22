@@ -29,65 +29,15 @@
 #define PRE_DUNGEON_LAW_RS_SIZE 36 // before seeded dungeon-wide state
 #define PRE_MISSION_RS_SIZE 37 // before generated dungeon mission roles
 #define PRE_REGIONAL_RIFT_RS_SIZE 46 // before shared three-dungeon Riftwild
+#define PRE_EXPANDED_RIFT_RS_SIZE 48 // 4x4 Riftwild before 36-field bitmap
 #define PRE_WILL_PL_SIZE 42 // player layout before the appended Will meter
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection
+#define PRE_WAYGEAR_PL_SIZE 44 // Pack layout before permanent traversal gear
 
 void sram_migrate_run(u8 saved_rs) BANKED;
 
 static void sram_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(0); }
 static void sram_close(void) { DISABLE_RAM_MBC5; }
-
-u8 sram_run_valid(void) BANKED {
-    u8 ok = 0;
-    sram_open();
-    if (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'S'
-        && SRAM_BASE[2] == SAVE_VERSION
-        && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
-            || SRAM_BASE[3] == PRE_REGIONAL_RIFT_RS_SIZE
-            || SRAM_BASE[3] == PRE_MISSION_RS_SIZE
-            || SRAM_BASE[3] == PRE_DUNGEON_LAW_RS_SIZE
-            || SRAM_BASE[3] == PRE_WIDE_KILLS_RS_SIZE
-            || SRAM_BASE[3] == PRE_MAZE_MAP_RS_SIZE
-            || SRAM_BASE[3] == PRE_DEEP_MAP_RS_SIZE
-            || SRAM_BASE[3] == PRE_WIDE_MAP_RS_SIZE
-            || SRAM_BASE[3] == PRE_PUZZLE_RS_SIZE
-            || SRAM_BASE[3] == PRE_DIFFICULTY_RS_SIZE
-            || SRAM_BASE[3] == PRE_SIGIL_RS_SIZE
-            || SRAM_BASE[3] == LEGACY_RS_SIZE)
-        && (SRAM_BASE[4] == (u8)sizeof(player_state_t)
-            || SRAM_BASE[4] == PRE_OATH_PL_SIZE
-            || SRAM_BASE[4] == PRE_WILL_PL_SIZE)) {
-        u8 n = (u8)(SRAM_BASE[3] + SRAM_BASE[4]);
-        u8 sum = 0, i;
-        for (i = 0; i < n; ++i) sum = (u8)(sum + SRAM_BASE[HDR_SIZE + i]);
-        ok = (sum == SRAM_BASE[HDR_SIZE + n]) ? 1 : 0;
-    }
-    sram_close();
-    return ok;
-}
-
-void sram_save_run(void) BANKED {
-    const u8 *rs = (const u8 *)&run_state;
-    const u8 *pl = (const u8 *)&player;
-    u8 sum = 0, i;
-    u16 off = HDR_SIZE;
-    sram_open();
-    SRAM_BASE[0] = 'Q';
-    SRAM_BASE[1] = 'S';
-    SRAM_BASE[2] = SAVE_VERSION;
-    SRAM_BASE[3] = (u8)sizeof(run_state_t);
-    SRAM_BASE[4] = (u8)sizeof(player_state_t);
-    for (i = 0; i < (u8)sizeof(run_state_t); ++i, ++off) {
-        SRAM_BASE[off] = rs[i];
-        sum = (u8)(sum + rs[i]);
-    }
-    for (i = 0; i < (u8)sizeof(player_state_t); ++i, ++off) {
-        SRAM_BASE[off] = pl[i];
-        sum = (u8)(sum + pl[i]);
-    }
-    SRAM_BASE[off] = sum;
-    sram_close();
-}
 
 u8 sram_load_run(void) BANKED {
     u8 *rs = (u8 *)&run_state;
@@ -133,12 +83,10 @@ u8 sram_load_run(void) BANKED {
     if (player.active_oath >= BOSSES_TO_WIN
         || player.active_oath >= run_state.bosses_beaten)
         player.active_oath = 0;
+    if (saved_pl <= PRE_WAYGEAR_PL_SIZE) {
+        player.waygear_owned = 0;
+        player.waygear_equipped = 0xFF;
+    }
     projectile_sync_player_relics();
     return 1;
-}
-
-void sram_clear_run(void) BANKED {
-    sram_open();
-    SRAM_BASE[0] = 0x00;   // kill the magic — everything else is inert
-    sram_close();
 }

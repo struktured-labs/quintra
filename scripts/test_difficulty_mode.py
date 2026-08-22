@@ -53,8 +53,8 @@ def assert_paired_worlds_match(env: QuintraPyBoyEnv) -> int:
         easy = world_signature(env, pair["easy"])
         assert normal[:5] == easy[:5], \
             f"Easy changed generated geometry or route at {key}"
-        # Easy now deliberately reduces crowd pressure: 9..12 bodies in a
-        # wide ordinary district versus Normal's 12..16, and two versus three
+        # Easy deliberately reduces crowd pressure: Stage 1's opening boost
+        # produces 10..13 bodies versus Normal's 14..18, and two versus three
         # in waypoint courts. It must still be the same generated encounter,
         # so every Easy body matches one of Normal's prefix identities and
         # roster. HP is allowed to differ because special encounter assists

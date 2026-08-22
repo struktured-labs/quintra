@@ -7,6 +7,7 @@ from pyboy import PyBoy
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
 )
+from make_stage_states import boot_to_stage, select_rom_topology, symbol_addresses
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -67,13 +68,20 @@ def boot_run():
 
 
 def runtime_track(stage, boss, keep_emulator=False):
-    pb = boot_run()
-    desired_room = STAGE_BOSS_ROOM[stage] if boss else (
-        1 if stage == 0 else STAGE_START[stage])
-    pb.memory[RS + 1] = desired_room - 1
-    pb.memory[RS + 11] = stage       # bosses_beaten drives stage identity
-    pb.memory[RS + 12] = 0
-    pb.memory[RS + 13] = 0
+    if not boss:
+        # Enter through the cartridge's real Riftwild gate. Portals inside a
+        # dungeon now connect mission branches (local 2<->8); treating one as
+        # a generic next-room test shortcut no longer models gameplay.
+        select_rom_topology(ROM)
+        pb, _ram, desired_room = boot_to_stage(
+            ROM, symbol_addresses(ROM), stage, "normal", 0)
+    else:
+        pb = boot_run()
+        desired_room = STAGE_BOSS_ROOM[stage]
+        pb.memory[RS + 1] = desired_room - 1
+        pb.memory[RS + 11] = stage       # bosses_beaten drives stage identity
+        pb.memory[RS + 12] = 0
+        pb.memory[RS + 13] = 0
     # Boss-route injection starts at the sanctuary.  Mirror a legitimate
     # completed room-2 objective so the persistent Rift Sigil gate admits
     # the synthetic traversal instead of making music coverage bypass it.
@@ -120,18 +128,10 @@ def runtime_track(stage, boss, keep_emulator=False):
         }[direction]
         put16(pb, PL + 9, x)
         put16(pb, PL + 11, y)
-    else:
-        pb.memory[RS + 17] = 1        # Riftwild dungeon gate
-        pb.memory[RS + 18] = 6
-        put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, 60)
-        pb.memory[TM + 9 * ROOM_W + 10] = 1
-        pb.tick()                      # settle synthetic state
-        pb.memory[TM + 9 * ROOM_W + 10] = 34  # BGT_PORTAL under feet
-    for _ in range(30):
-        pb.tick()
-        if pb.memory[RS + 1] == desired_room:
-            break
+        for _ in range(30):
+            pb.tick()
+            if pb.memory[RS + 1] == desired_room:
+                break
     assert pb.memory[RS + 1] == desired_room, (
         f"could not enter stage {stage} {'boss' if boss else 'room'}"
     )

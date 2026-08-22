@@ -241,12 +241,12 @@ end
 
 local function riftwild_gate_screen(bosses_beaten)
     local step = bosses_beaten <= 0 and 0 or ((bosses_beaten - 1) % 3)
-    return ({6, 11, 12})[step + 1]
+    return ({8, 21, 34})[step + 1]
 end
 
 local function riftwild_return_screen(bosses_beaten)
     local step = bosses_beaten <= 0 and 0 or ((bosses_beaten - 1) % 3)
-    return ({0, 7, 13})[step + 1]
+    return ({0, 8, 21})[step + 1]
 end
 
 local function enter_dungeon(target, stage, qualified, normalize_scroll)

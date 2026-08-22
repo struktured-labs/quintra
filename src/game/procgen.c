@@ -15,6 +15,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/spawn_reach.h"
+#include "game/waygear.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -446,14 +447,14 @@ static void carve_stage_escape_rails(void) {
 void procgen_generate_current_room(void) BANKED {
     const biome_def_t *bio = &biomes[run_state.biome_id];
     u8 world_kind = run_state.world_mode
-        ? zelda_overworlds[0].screen_grid[run_state.world_screen & 15].kind
+        ? zelda_overworlds[0].screen_grid[run_state.world_screen].kind
         : ZELDA_CELL_OVERWORLD;
     u8 world_gate_active = (run_state.world_mode
         && world_kind == ZELDA_CELL_DUNGEON_ENTRANCE)
         ? run_state_riftwild_gate_active(run_state.world_screen) : 0;
     u8 seed_room = run_state.world_mode
-        ? (u8)(0x80 | (run_state.world_screen & 15)
-            | (u8)(run_state.riftwild_region << 4))
+        ? (u8)(0x80u ^ run_state.world_screen
+            ^ (u8)(run_state.riftwild_region * 0x35u))
         : run_state.room_counter;
     u32 seed = procgen_room_seed(run_state.run_seed, run_state.biome_id, seed_room);
     // A boss guards every Nth room until BOSSES_TO_WIN are down. Computed
@@ -528,7 +529,7 @@ void procgen_generate_current_room(void) BANKED {
 
             // Overworld screens expose only authored reciprocal graph edges.
             if (run_state.world_mode) {
-                u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen & 15].edges;
+                u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen].edges;
                 if (!(edges & 0x01)) { room_tilemap[0][9] = BGT_WALL; room_tilemap[0][10] = BGT_WALL; }
                 if (!(edges & 0x02)) { room_tilemap[8][ROOM_W - 1] = BGT_WALL; room_tilemap[9][ROOM_W - 1] = BGT_WALL; }
                 if (!(edges & 0x04)) { room_tilemap[ROOM_H - 1][9] = BGT_WALL; room_tilemap[ROOM_H - 1][10] = BGT_WALL; }
@@ -733,7 +734,7 @@ void procgen_generate_current_room(void) BANKED {
                 && ((world_kind == ZELDA_CELL_DUNGEON_ENTRANCE
                         && world_gate_active)
                     || world_kind == ZELDA_CELL_VAULT
-                    || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)) {
+                    || zelda_overworlds[0].screen_grid[run_state.world_screen].stairs != ID_NONE_U8)) {
                 room_tilemap[8][10] = BGT_PORTAL;
             }
 
@@ -819,9 +820,9 @@ void procgen_generate_current_room(void) BANKED {
     // inherited brick/prop tile while preserving authored reciprocal edges.
     if (run_state.world_mode) {
         u8 x, y;
-        u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen & 15].edges;
+        u8 edges = zelda_overworlds[0].screen_grid[run_state.world_screen].edges;
         u8 family = (u8)(((u8)run_state.run_seed
-            + (run_state.world_screen & 15)
+            + run_state.world_screen
             + run_state.riftwild_region) & 3);
         for (y = 0; y < ROOM_H; ++y)
             for (x = 0; x < ROOM_W; ++x)
@@ -857,8 +858,8 @@ void procgen_generate_current_room(void) BANKED {
         room_tilemap[4][16] = BGT_TREE;
         room_tilemap[12][4] = BGT_TREE;
         room_tilemap[13][13] = BGT_TREE;
-        // All four landmark families occur exactly four times in a 4x4
-        // Riftwild. A different run seed rotates which coordinate owns which
+        // All four landmark families occur nine times in a 6x6 Riftwild. A
+        // different run seed rotates which coordinate owns which
         // family, preserving both geographic memory and roguelike variation.
         stamp_world_landmark(family);
         generate_world_extension(edges, family, seed);
@@ -868,7 +869,7 @@ void procgen_generate_current_room(void) BANKED {
         generate_world_bottom(edges, family, seed);
         if ((world_kind == ZELDA_CELL_DUNGEON_ENTRANCE && world_gate_active)
             || world_kind == ZELDA_CELL_VAULT
-            || zelda_overworlds[0].screen_grid[run_state.world_screen & 15].stairs != ID_NONE_U8)
+            || zelda_overworlds[0].screen_grid[run_state.world_screen].stairs != ID_NONE_U8)
             room_tilemap[8][10] = BGT_PORTAL;
         if (world_kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
             // Three permanent gate ruins make the shared region legible.
@@ -967,6 +968,14 @@ void procgen_generate_current_room(void) BANKED {
 
     // Clear entities and place the player before spawn-avoidance checks.
     entity_init_room();
+
+    // Optional northern groves turn hero identity and one equipped permanent
+    // implement into geographic access. Run this after entity_init_room():
+    // the pass stamps both terrain and its permanent reward, so doing it in
+    // the terrain block above silently erased the Waygear pickup afterward.
+    // Generic world texture is already final at this point.
+    if (run_state.world_mode)
+        waygear_prepare_world_field();
 
     // The stage objective is progression-critical. Reserve its real pickup
     // before this room's optional enemy, shop, and decoration spawns can fill
@@ -1151,7 +1160,7 @@ void procgen_generate_current_room(void) BANKED {
         }
 
         if (run_state.world_mode
-            && (run_state.world_screen & 15) == RIFTWELL_WORLD_SCREEN) {
+            && run_state.world_screen == RIFTWELL_WORLD_SCREEN) {
             // The first fork in every Riftwild has a fixed lore landmark so
             // the player learns that overworld travel can be restorative as
             // well as dangerous. Its one-use state lives in run_state, so a
@@ -1348,10 +1357,10 @@ void procgen_generate_current_room(void) BANKED {
         } else {
             // A 31x31 district spans almost three LCD areas. Penta-like
             // pressure therefore needs a real field population, not four
-            // bodies diluted into one-at-a-time encounters. Easy targets
-            // 9..12 opening bodies; canonical Normal targets 12..16. Later
-            // stages add modest pressure without replacing enemy identity
-            // with another blanket HP increase.
+            // bodies diluted into one-at-a-time encounters. The common bands
+            // are 9..12 on Easy and 12..16 on canonical Normal; Stage 1 adds
+            // its explicit opening-pressure curriculum below. Later stages
+            // add modest pressure without replacing enemy identity.
             u8 depth_bonus = run_state.bosses_beaten;
             // A new stage should establish its visual language before asking
             // the player to solve the densest possible seven-body roll. This
@@ -1363,12 +1372,19 @@ void procgen_generate_current_room(void) BANKED {
             u8 is_stage_foyer = (!run_state.world_mode
                 && run_state.bosses_beaten > 0
                 && run_state_dungeon_local() == 0) ? 1 : 0;
+            // The first dungeon is the player's first proof of the combat
+            // loop, not a prolonged tutorial. Give its ordinary rooms extra
+            // bodies (especially on canonical Normal) while leaving service,
+            // puzzle, waypoint, sanctuary, and Colossus roles untouched.
+            u8 opening_pressure = run_state.bosses_beaten == 0
+                ? (RUN_IS_EASY() ? 1 : 2) : 0;
             u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 2 : 3)
                 : (u8)((RUN_IS_EASY()
                         ? (u8)(8 + rng_range(4))
                         : (u8)(11 + rng_range(5)))
                     + (depth_bonus >= 3 ? 2 : depth_bonus ? 1 : 0)
-                    + (procgen_current_room_is_large ? 1 : 0));
+                    + (procgen_current_room_is_large ? 1 : 0)
+                    + opening_pressure);
             enemy_count = dungeon_director_adjust_initial_count(enemy_count);
             if (is_stage_foyer
                 && enemy_count > (RUN_IS_EASY() ? 11 : 14))

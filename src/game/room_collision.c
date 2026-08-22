@@ -7,6 +7,7 @@
 #include "core/types.h"
 #include "game/player.h"
 #include "game/room.h"
+#include "game/waygear.h"
 #include "render/tiles.h"
 
 static u8 full_body_obstacle(i16 x, i16 y) {
@@ -17,19 +18,23 @@ static u8 full_body_obstacle(i16 x, i16 y) {
 }
 
 u8 room_player_position_clear(i16 x, i16 y) BANKED {
+#define PLAYER_WALKABLE(px, py) \
+    (room_tile_walkable(room_tile_at_px((px), (py))) \
+        || WAYGEAR_TILE_PASSABLE(room_tile_at_px((px), (py))))
     return room_player_position_in_bounds(x, y)
-        && room_tile_walkable(room_tile_at_px(x + 2,  y + 8))
-        && room_tile_walkable(room_tile_at_px(x + 8,  y + 8))
-        && room_tile_walkable(room_tile_at_px(x + 13, y + 8))
-        && room_tile_walkable(room_tile_at_px(x + 2,  y + 15))
-        && room_tile_walkable(room_tile_at_px(x + 8,  y + 15))
-        && room_tile_walkable(room_tile_at_px(x + 13, y + 15))
+        && PLAYER_WALKABLE(x + 2,  y + 8)
+        && PLAYER_WALKABLE(x + 8,  y + 8)
+        && PLAYER_WALKABLE(x + 13, y + 8)
+        && PLAYER_WALKABLE(x + 2,  y + 15)
+        && PLAYER_WALKABLE(x + 8,  y + 15)
+        && PLAYER_WALKABLE(x + 13, y + 15)
         && !full_body_obstacle(x + 2,  y)
         && !full_body_obstacle(x + 8,  y)
         && !full_body_obstacle(x + 13, y)
         && !full_body_obstacle(x + 2,  y + 7)
         && !full_body_obstacle(x + 8,  y + 7)
         && !full_body_obstacle(x + 13, y + 7);
+#undef PLAYER_WALKABLE
 }
 
 // A spike is a readable positional tax, never a soft-lock.

@@ -115,6 +115,10 @@ def main():
     constructor = source[source.index("u8 pickup_spawn("):
                          source.index("u8 pickup_spawn_item(")]
     assert "pickup_make_position_safe(&x, &y)" in constructor
+    assert "snap_major_pickup_to_reachable(kind, &x, &y)" in constructor
+    reach = (ROOT / "src/game/spawn_reach.c").read_text()
+    assert "snap_reward_to_reachable" in reach
+    assert "PICKUP_RIFT_SIGIL" in reach and "PICKUP_FARFOLD_RELIC" in reach
     assert "room_tile_at_px" in source and "room_world_width" in source
 
     found_kinds = set()
@@ -133,8 +137,8 @@ def main():
     assert {4, 11, 19} <= found_kinds, (
         f"coverage missed shop/Sigil/Farfold fixtures: {sorted(found_kinds)}")
     print("[pickup-reachability] PASS 27 generated role rooms: shop stock, "
-          "Rift Sigils, and Farfold relics are safe + player-reachable; "
-          "all runtime loot uses the guarded constructor")
+          "Rift Sigils, and Farfold relics are safe + connected; ordinary "
+          "major loot uses the guarded constructor")
 
 
 if __name__ == "__main__":

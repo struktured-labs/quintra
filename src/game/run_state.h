@@ -50,7 +50,7 @@ enum {
 // readable, lore-like fixture between otherwise generated expeditions rather
 // than a hidden roll the player can never reasonably plan around.
 #define RIFTWELL_WORLD_SCREEN 1
-// While in Riftwild, world_return_screen is a 0..15 cave/vault return anchor.
+// While in Riftwild, world_return_screen is a 0..35 cave/vault return anchor.
 // The legacy high bit remains readable for old suspends; new runs keep
 // one-use state in riftwild_flags so a town cannot erase a whole region.
 #define RIFTWELL_USED_FLAG 0x80
@@ -74,11 +74,11 @@ typedef struct {
     u8  secret_pending;      // 0 normal, 1 entering cache, 2 inside cache
     u16 score;               // points scored from kills
     u8  enemies_killed;      // run total, low byte (legacy ABI position)
-    u8  world_mode;          // 1 while traversing the generated 4x4 overworld
-    u8  world_screen;        // current overworld screen, row-major 0..15
+    u8  world_mode;          // 1 while traversing the generated Riftwild
+    u8  world_screen;        // current field, row-major 0..35
     u8  world_return_screen; // cave/vault staircase return anchor
     u8  dungeon_seen;        // bit 0..7: rooms revealed in current dungeon
-    u16 world_seen;          // bit 0..15: Riftwild cells revealed this stage
+    u16 world_seen;          // bit 0..15: legacy low Riftwild exploration
     u16 rift_sigils;         // bit 0..8: stage sigil claimed this run
     // Route knowledge purchased or earned in a town applies when the hero
     // next enters a dungeon, not to the town's own compass.
@@ -115,6 +115,11 @@ typedef struct {
     // the region id changes only after the third and sixth Colossi.
     u8  riftwild_region;
     u8  riftwild_flags;
+    // Appended exploration bits grow the regional graph to 36 scrolling
+    // fields without shifting any historical suspend/debug offsets.
+    u8  world_seen_hi;       // cells 16..23
+    u8  world_seen_xhi;      // cells 24..31
+    u8  world_seen_xxhi;     // cells 32..35 (upper nibble reserved)
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03
@@ -169,6 +174,8 @@ u8   run_state_room_is_town(u8 room_counter);
 u8   run_state_dungeon_cell_seen(u8 cell);
 void run_state_reveal_dungeon_cell(u8 cell);
 void run_state_mark_visited(void);
+u8   run_state_world_cell_seen(u8 cell) BANKED;
+void run_state_reveal_world_cell(u8 cell) BANKED;
 void run_state_begin_world(void) BANKED;
 void run_state_begin_dungeon(void) BANKED;
 u8   run_state_riftwild_gate_screen(void) BANKED;

@@ -135,12 +135,21 @@
 #define BGT_MAP_UNKNOWN 95 // dim slot; reveals grid shape, never room identity/link
 
 // Riftwild-only geographic vocabulary. A run rotates four landmark families
-// across the authored 4x4 graph, making a cell recognizable without replacing
+// across the authored 6x6 graph, making a cell recognizable without replacing
 // procgen or exposing its Compass identity through fog of war.
 #define BGT_WILD_FLOWER  96 // walkable meadow color
 #define BGT_WILD_WATER   97 // solid pond edge / streamlet
 #define BGT_WILD_STONE   98 // solid weathered standing stone
 #define BGT_WILD_STUMP   99 // solid old-growth stump
+
+// Riftwild capability thresholds deliberately reuse Compass-only slots. The
+// room atlas is restored after closing SELECT, so five visually explicit
+// Zelda-like barriers cost no additional BG tile address space.
+#define BGT_GATE_BOULDER 100 // Sauran or Titan Glove
+#define BGT_GATE_WATER   101 // Picsean or Tide Raft
+#define BGT_GATE_CHASM   102 // Corvin or Rift Hook
+#define BGT_GATE_THORNS  103 // Wolfkin only
+#define BGT_GATE_VENT    104 // Vespine only
 
 // Compass-only dim connections. These expose the active dungeon lattice from
 // the first visit while discovered routes overwrite them with the bright
@@ -267,6 +276,16 @@
 #define SPR_ITEM_MIRROR_SHARD 154
 #define SPR_ITEM_BLAST_SEED   155 // radial impact-splash relic
 #define SPR_ITEM_RIFT_LENS    156 // every-third-shot heavy beam relic
+#define SPR_WAYGEAR_GLOVE     204 // permanent traversal loadout
+#define SPR_WAYGEAR_RAFT      205
+#define SPR_WAYGEAR_HOOK      206
+// Peaceful residents are full champion-scale 16x16 metasprites. These high
+// OBJ slots are town/dungeon-shop fixtures and never overlap combat atlases.
+#define SPR_TOWN_RESIDENT_BIG 208 // 208..211: elder / ordinary wayfarer
+#define SPR_TOWN_MERCHANT_BIG 212 // 212..215: broad hat, pack, coin satchel
+#define SPR_TOWN_ARTISAN_BIG  216 // 216..219: smith / gate and bell keepers
+#define SPR_TOWN_SAGE_BIG     220 // 220..223: apothecary / chart / lore
+#define SPR_TOWN_BIG_END      224
 #define SPR_FX_BEAM_HEAD      158 // two-sprite fat beam head
 #define SPR_FX_BEAM_TAIL      159 // trailing beam body
 #define SPR_CLASS_WALK_B_BASE 160 // opposite stride beat: 160..179
@@ -301,6 +320,7 @@ extern const u8 hud_tiles[][16];
 
 void tiles_load_pickup_sprites(void) BANKED;
 void tiles_load_item_sprites(void) BANKED;
+void tiles_load_town_big_sprites(void) BANKED;
 void tiles_load_town_waykeeper_sprite(void) BANKED;
 void tiles_load_town_bellkeeper_sprite(void) BANKED;
 void tiles_load_town_lorekeeper_sprite(void) BANKED;

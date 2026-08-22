@@ -31,8 +31,8 @@ def main():
         generated_room(0, seed, probe=count_hostiles)
 
     assert len(counts) == 4
-    assert min(counts) >= 12 and max(counts) <= 16, (
-        f"Normal opening district left the 12-16 pressure band: {counts}"
+    assert min(counts) >= 14 and max(counts) <= 18, (
+        f"Normal opening district left the 14-18 pressure band: {counts}"
     )
     assert len(set(first_positions)) >= 2, (
         "baseline skirmish formations collapsed onto one opening: "

@@ -79,7 +79,7 @@ def main():
                 "y": pb.memory[ep + 7],
             })
     awake = sum(enemy["awake"] for enemy in population)
-    assert 12 <= len(population) <= 16, (
+    assert 14 <= len(population) <= 18, (
         f"opening district population drifted: {len(population)}")
     assert 1 <= awake < len(population), (
         f"camera-sector sleeping drifted: awake={awake}/{len(population)}")

@@ -64,6 +64,11 @@ def main():
                            for sprite in range(4, 10))
         assert all(icon_tiles), (
             f"class {class_id} visual Pack lost semantic icons: {icon_tiles}")
+        tool_y = pb.memory[0xFE00 + 8 * 4]
+        oath_y = pb.memory[0xFE00 + 9 * 4]
+        assert oath_y - tool_y >= 9, (
+            f"class {class_id} tool/Oath icons lost their blank scanline: "
+            f"tool_y={tool_y}, oath_y={oath_y}")
         if class_id == 0:
             pb.screen.image.save(ROOT / "tmp" / "pack-visual.png")
         pb.stop(save=False)

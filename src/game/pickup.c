@@ -10,6 +10,8 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/spawn_reach.h"
+#include "game/waygear.h"
 #include "input/input.h"
 #include "render/hud.h"
 #include "render/tiles.h"
@@ -18,7 +20,8 @@
 static u8 pickup_kind_collectible(u8 kind) {
     return kind <= PICKUP_MP || kind == PICKUP_RIFT_SIGIL
         || kind == PICKUP_SURGE || kind == PICKUP_RIFTWELL
-        || kind == PICKUP_FARFOLD_RELIC || kind == PICKUP_BOON_CHOICE;
+        || kind == PICKUP_FARFOLD_RELIC || kind == PICKUP_BOON_CHOICE
+        || kind == PICKUP_WAYGEAR;
 }
 
 static u8 pickup_tile_safe(u8 tile) {
@@ -70,6 +73,7 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
     u8 idx = entity_spawn(ENT_PICKUP);
     if (idx == 0xFF) return 0xFF;
     if (pickup_kind_collectible(kind)) pickup_make_position_safe(&x, &y);
+    snap_major_pickup_to_reachable(kind, &x, &y);
     {
         entity_t *e = &entities[idx];
         e->x = x;
@@ -152,15 +156,6 @@ u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
-void pickup_spawn_surge(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_SURGE, x, y);
-    if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_ITEM_SURGE;
-        entities[idx].palette     = 0x06;  // cyan magic, distinct from coin gold
-        entities[idx].state_timer = 255;
-    }
-}
-
 // Town residents are all persistent, wide collision anchors. Keeping their
 // common construction here avoids six nearly identical code paths consuming
 // bank-5 space while public spawn functions retain their semantic names.
@@ -170,67 +165,55 @@ static u8 pickup_spawn_resident(u8 kind, u8 sprite_tile, u8 palette,
     if (idx != 0xFF) {
         entities[idx].sprite_tile = sprite_tile;
         entities[idx].palette = palette;
-        entities[idx].hitbox = (u8)0x88;
+        // Larger than ordinary loot so walking up to a full-size resident is
+        // an easy, forgiving interaction rather than pixel hunting.
+        entities[idx].hitbox = (u8)0xCC;
         entities[idx].state_timer = 0;
     }
     return idx;
 }
 
 u8 pickup_spawn_villager(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_VILLAGER, SPR_VILLAGER, 0x05, x, y);
+    return pickup_spawn_resident(PICKUP_VILLAGER, SPR_TOWN_RESIDENT_BIG, 0x05, x, y);
 }
 
 u8 pickup_spawn_merchant(fix8_t x, fix8_t y) BANKED {
     u8 idx;
     // A merchant owns the shared callout tile. This also repairs the OBJ slot
     // after an in-place transition from a Dread Bell combat room.
-    idx = pickup_spawn_resident(PICKUP_MERCHANT, SPR_MERCHANT, 0x04, x, y);
+    idx = pickup_spawn_resident(PICKUP_MERCHANT, SPR_TOWN_MERCHANT_BIG, 0x04, x, y);
     if (idx != 0xFF) tiles_load_merchant_callout_sprite();
     return idx;
 }
 
 u8 pickup_spawn_smith(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_SMITH, SPR_SMITH, 0x06, x, y);
+    return pickup_spawn_resident(PICKUP_SMITH, SPR_TOWN_ARTISAN_BIG, 0x06, x, y);
 }
 
 u8 pickup_spawn_apothecary(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_APOTHECARY, SPR_APOTHECARY, 0x07, x, y);
+    return pickup_spawn_resident(PICKUP_APOTHECARY, SPR_TOWN_SAGE_BIG, 0x07, x, y);
 }
 
 u8 pickup_spawn_cartographer(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_CARTOGRAPHER, SPR_CARTOGRAPHER, 0x06, x, y);
+    return pickup_spawn_resident(PICKUP_CARTOGRAPHER, SPR_TOWN_SAGE_BIG, 0x06, x, y);
 }
 
 u8 pickup_spawn_waykeeper(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_WAYKEEPER, SPR_TOWN_WAYKEEPER, 0x06, x, y);
+    return pickup_spawn_resident(PICKUP_WAYKEEPER, SPR_TOWN_ARTISAN_BIG, 0x06, x, y);
 }
 
 u8 pickup_spawn_lorekeeper(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_LOREKEEPER, SPR_TOWN_LOREKEEPER, 0x05, x, y);
+    return pickup_spawn_resident(PICKUP_LOREKEEPER, SPR_TOWN_SAGE_BIG, 0x05, x, y);
 }
 
 u8 pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED {
-    return pickup_spawn_resident(PICKUP_BELLKEEPER, SPR_TOWN_BELLKEEPER, 0x04, x, y);
+    return pickup_spawn_resident(PICKUP_BELLKEEPER, SPR_TOWN_ARTISAN_BIG, 0x04, x, y);
 }
 
 u8 pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn_resident(
-        PICKUP_WAYFARER, SPR_APOTHECARY, 0x06, x, y);
+        PICKUP_WAYFARER, SPR_TOWN_RESIDENT_BIG, 0x06, x, y);
     if (idx != 0xFF) entities[idx].ai_data[1] = stage < 9 ? stage : 8;
-    return idx;
-}
-
-u8 pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_RIFTWELL, x, y);
-    if (idx != 0xFF) {
-        // The cyan Surge orb is already loaded in every room's FX atlas. A
-        // persistent, distinct tint makes the well read as a landmark rather
-        // than a loose coin without consuming another OBJ tile slot.
-        entities[idx].sprite_tile = SPR_SURGE_ORB;
-        entities[idx].palette = 0x06;
-        entities[idx].hitbox = (u8)0x88;
-        entities[idx].state_timer = 0;
-    }
     return idx;
 }
 
@@ -471,7 +454,8 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFTWELL
         || e->ai_data[0] == PICKUP_FARFOLD_RELIC
-        || e->ai_data[0] == PICKUP_BOON_CHOICE) return;
+        || e->ai_data[0] == PICKUP_BOON_CHOICE
+        || e->ai_data[0] == PICKUP_WAYGEAR) return;
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     if (e->ai_data[0] == PICKUP_SHOP_TAG) {
         // ai_data[1] names the ware slot this tag advertises. A sale marker
@@ -740,6 +724,14 @@ u8 pickup_check_player_collision(void) BANKED {
                 case PICKUP_RIFT_SIGIL:
                     run_state.rift_sigils |= RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten);
                     sfx_play_reward(SFX_REWARD_SIGIL);
+                    room_start_major_reward(PICKUP_RIFT_SIGIL,
+                        run_state.bosses_beaten);
+                    break;
+                case PICKUP_WAYGEAR:
+                    if (!waygear_grant(entities[i].ai_data[1])) {
+                        any = 1;
+                        continue;
+                    }
                     break;
                 case PICKUP_WEAPON: {
                     // A deliberate A press trades weapons. The dropped old

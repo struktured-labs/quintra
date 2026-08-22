@@ -49,6 +49,9 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_FENCE:
         case BGT_TREE:
         case BGT_WILD_STONE:
+        case BGT_GATE_BOULDER:
+        case BGT_GATE_THORNS:
+        case BGT_GATE_VENT:
         case BGT_BLOCK:
         case BGT_BLOCK_TR:
         case BGT_BLOCK_BL:
@@ -75,6 +78,8 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_PORTAL:
         case BGT_WILD_FLOWER:
         case BGT_WILD_WATER:
+        case BGT_GATE_WATER:
+        case BGT_GATE_CHASM:
         case BGT_COLOSSUS_VOID:
         case BGT_COLOSSUS_RUNE:
         case BGT_COLOSSUS_MAW:

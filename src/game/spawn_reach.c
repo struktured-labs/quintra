@@ -1,8 +1,9 @@
-#pragma bank 6
+#pragma bank 10
 #include <gb/gb.h>
 
 #include "core/types.h"
 #include "game/player.h"
+#include "game/pickup.h"
 #include "game/room.h"
 #include "game/spawn_reach.h"
 #include "render/tiles.h"
@@ -91,4 +92,71 @@ void clear_spawn_reachable(void) BANKED {
     for (y = 0; y < ROOM_H; ++y)
         for (x = 0; x < ROOM_W; ++x)
             room_tilemap[y][x] &= 0x7F;
+}
+
+static u8 reward_tile_safe(u8 tile) {
+    tile &= 0x7F;
+    return spawn_tile_walkable(tile) && tile != BGT_SPIKES
+        && tile != BGT_PORTAL && tile != BGT_SWITCH;
+}
+
+static u8 reward_cell_reachable(u8 x, u8 y) {
+    if (x + 1 >= ROOM_W || y + 1 >= ROOM_H) return 0;
+    // Only the top-left body cell carries the flood mark. The four terrain
+    // samples independently reject hazards that are legal movement space but
+    // terrible permanent-item pedestals.
+    return (room_tilemap[y][x] & 0x80)
+        && reward_tile_safe(room_tilemap[y][x])
+        && reward_tile_safe(room_tilemap[y][x + 1])
+        && reward_tile_safe(room_tilemap[y + 1][x])
+        && reward_tile_safe(room_tilemap[y + 1][x + 1]);
+}
+
+u8 snap_reward_to_reachable(i16 *px, i16 *py) BANKED {
+    u8 preferred_x = (u8)(*px >> 3);
+    u8 preferred_y = (u8)(*py >> 3);
+    u8 best_x = 0, best_y = 0, best_distance = 0xFF;
+    u8 x, y, found = 0;
+
+    mark_spawn_reachable();
+    for (y = 0; y < ROOM_H - 1; ++y) {
+        for (x = 0; x < ROOM_W - 1; ++x) {
+            u8 dx, dy, distance;
+            if (!reward_cell_reachable(x, y)) continue;
+            dx = x > preferred_x ? (u8)(x - preferred_x)
+                : (u8)(preferred_x - x);
+            dy = y > preferred_y ? (u8)(y - preferred_y)
+                : (u8)(preferred_y - y);
+            distance = (u8)(dx + dy);
+            if (!found || distance < best_distance) {
+                best_x = x;
+                best_y = y;
+                best_distance = distance;
+                found = 1;
+            }
+        }
+    }
+    clear_spawn_reachable();
+    if (found) {
+        *px = (i16)best_x << 3;
+        *py = (i16)best_y << 3;
+    }
+    return found;
+}
+
+void snap_major_pickup_to_reachable(u8 kind, fix8_t *x, fix8_t *y) BANKED {
+    i16 px, py;
+    if (kind != PICKUP_ITEM && kind != PICKUP_WEAPON
+        && kind != PICKUP_RIFT_SIGIL && kind != PICKUP_FARFOLD_RELIC
+        && kind != PICKUP_BOON_CHOICE) return;
+    px = FIX8_TO_INT(*x);
+    py = FIX8_TO_INT(*y);
+    // Authored objectives and caches live in the compact storage plane. Loot
+    // dropped by a reachable enemy in a wide extension is already connected;
+    // projecting it back would merely move it several screens away.
+    if (px >= ROOM_VIEW_W_PX || py >= ROOM_VIEW_H_PX) return;
+    if (snap_reward_to_reachable(&px, &py)) {
+        *x = FIX8(px);
+        *y = FIX8(py);
+    }
 }

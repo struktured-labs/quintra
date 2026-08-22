@@ -34,6 +34,10 @@ BGT_VOID = 0
 BGT_SWITCH = 33
 BGT_MAP_BIG_UNKNOWN = 106
 BGT_MAP_BIG_GOAL = 114
+SCREEN_ROOM = 5
+SCREEN_MAP = 8
+SCREEN_DIALOG = 10
+SPR_DIALOG_SIGIL = 200
 DEFAULT_SEED = 0xCAFE1234
 RUN_REQUIRED_PUZZLES = (1 << 0) | (1 << 3) | (1 << 6) | (1 << 7)
 RUN_REQUIRED_PHASE = (1 << 2) | (1 << 7)
@@ -144,7 +148,8 @@ def main():
     sigil_cell = role_door(0)
     for _ in range(240):
         pb.tick()
-        if pb.memory[SIGIL_STATUS] != 2:
+        if (pb.memory[RS + 1] == sigil_cell
+                and pb.memory[SIGIL_STATUS] == 5):
             break
     assert pb.memory[RS + 1] == sigil_cell and pb.memory[SIGIL_STATUS] == 5, (
         f"room transaction incomplete: room={pb.memory[RS + 1]} "
@@ -209,6 +214,19 @@ def main():
         f"entity={list(pb.memory[ep:ep + 22])} hitbox=0x{pb.memory[ep + 25]:02X} "
         f"screen={pb.memory[SCREEN]} hitstop={pb.memory[HITSTOP]} "
         f"frame={pb.memory[FRAME_COUNTER] | pb.memory[FRAME_COUNTER + 1] << 8}")
+    assert pb.memory[SCREEN] == SCREEN_DIALOG, (
+        "major stage objective did not pause into its claim tableau"
+    )
+    assert tuple(pb.memory[0xFE00 + i * 4 + 2] for i in range(4)) == \
+        tuple(range(SPR_DIALOG_SIGIL, SPR_DIALOG_SIGIL + 4)), (
+            "Rift Sigil claim lacks its authored four-tile artifact"
+        )
+    pb.screen.image.save(ROOT / "tmp" / "rift-sigil-claim.png")
+    pb.button("a")
+    for _ in range(30):
+        pb.tick()
+    assert pb.memory[SCREEN] == SCREEN_ROOM, \
+        "Rift Sigil claim did not resume the same room"
 
     # SELECT is a graphical tile map. Move the displayed cursor one room past
     # the recovered fixture so its icon can be asserted in the room that owns
@@ -217,7 +235,7 @@ def main():
     pb.button("select")
     for _ in range(120):
         pb.tick()
-    assert pb.memory[SCREEN] == 8
+    assert pb.memory[SCREEN] == SCREEN_MAP
     pb.memory[0xFF4F] = 0
 
     # The screen-filling Pocket Grid gives every room a readable 2x2 node.

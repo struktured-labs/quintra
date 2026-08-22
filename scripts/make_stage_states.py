@@ -130,14 +130,14 @@ def stage_entry_room(stage: int) -> int:
 def riftwild_return_screen(bosses_beaten: int) -> int:
     if not REGIONAL_RIFTWILD or bosses_beaten <= 0:
         return 0
-    return (0, 7, 13)[(bosses_beaten - 1) % 3]
+    return (0, 8, 21)[(bosses_beaten - 1) % 3]
 
 
 def riftwild_gate_screen(bosses_beaten: int) -> int:
     if not REGIONAL_RIFTWILD:
-        return 6
+        return 8
     step = 0 if bosses_beaten <= 0 else (bosses_beaten - 1) % 3
-    return (6, 11, 12)[step]
+    return (8, 21, 34)[step]
 
 
 def dungeon_cell_xy(cell: int) -> tuple[int, int]:
@@ -682,11 +682,24 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
     }
     if checkpoint == "riftwild":
         entities = addrs["_entities"]
-        seen = pyboy.memory[rs + 21] | pyboy.memory[rs + 22] << 8
+        seen = (
+            pyboy.memory[rs + 21] | pyboy.memory[rs + 22] << 8,
+            pyboy.memory[rs + 48], pyboy.memory[rs + 49],
+            pyboy.memory[rs + 50],
+        )
         checks["post_boss_room"] = room == STAGE_BOSS_ROOM[stage - 1]
         arrival = riftwild_return_screen(stage)
         checks["arrival_screen"] = pyboy.memory[rs + 18] == arrival
-        checks["fresh_fog"] = seen == (1 << arrival)
+        expected_seen = [0, 0, 0, 0]
+        if arrival < 16:
+            expected_seen[0] = 1 << arrival
+        elif arrival < 24:
+            expected_seen[1] = 1 << (arrival - 16)
+        elif arrival < 32:
+            expected_seen[2] = 1 << (arrival - 24)
+        else:
+            expected_seen[3] = 1 << (arrival - 32)
+        checks["fresh_fog"] = seen == tuple(expected_seen)
         checks["no_giant"] = not any(
             pyboy.memory[entities + i * 28] == 2
             and pyboy.memory[entities + i * 28 + 1] & 1

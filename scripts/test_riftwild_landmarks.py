@@ -16,12 +16,27 @@ ROOM_W, ROOM_H = 20, 17
 WIDE_W, WIDE_H = 31, 31
 EXT_W, BOTTOM_H = WIDE_W - ROOM_W, WIDE_H - ROOM_H
 LANDMARKS = (96, 97, 98, 99)
-# Visit all sixteen cells through real reciprocal seams in a compact snake.
+# Depth-first walk of the authored reciprocal graph. Repeated cells are the
+# backtracking steps; every one of the 36 fields is still inspected once.
 ROUTE = (
-    (1, 232, 60), (2, 232, 60), (3, 232, 60),
-    (7, 72, 232), (6, 0, 60), (5, 0, 60), (4, 0, 60),
-    (8, 72, 232), (9, 232, 60), (10, 232, 60), (11, 232, 60),
-    (15, 72, 232), (14, 0, 60), (13, 0, 60), (12, 0, 60),
+    (1, 232, 60), (2, 232, 60), (3, 232, 60), (4, 232, 60),
+    (5, 232, 60), (11, 72, 232), (17, 72, 232), (23, 72, 232),
+    (29, 72, 232), (35, 72, 232), (34, 0, 60), (33, 0, 60),
+    (27, 72, 0), (21, 72, 0), (20, 0, 60), (14, 72, 0),
+    (8, 72, 0), (7, 0, 60), (6, 0, 60), (12, 72, 232),
+    (18, 72, 232), (19, 232, 60), (13, 72, 0), (19, 72, 232),
+    (25, 72, 232), (31, 72, 232), (32, 232, 60), (26, 72, 0),
+    (32, 72, 232), (31, 0, 60), (30, 0, 60), (24, 72, 0),
+    (30, 72, 232), (31, 232, 60), (25, 72, 0), (19, 72, 0),
+    (18, 0, 60), (12, 72, 0), (6, 72, 0), (7, 232, 60),
+    (8, 232, 60), (14, 72, 232), (15, 232, 60), (9, 72, 0),
+    (10, 232, 60), (16, 72, 232), (22, 72, 232), (28, 72, 232),
+    (22, 72, 0), (16, 72, 0), (10, 72, 0), (9, 0, 60),
+    (15, 72, 232), (14, 0, 60), (20, 72, 232), (21, 232, 60),
+    (27, 72, 232), (33, 72, 232), (34, 232, 60), (35, 232, 60),
+    (29, 72, 0), (23, 72, 0), (17, 72, 0), (11, 72, 0),
+    (5, 72, 0), (4, 0, 60), (3, 0, 60), (2, 0, 60),
+    (1, 0, 60), (0, 0, 60),
 )
 
 
@@ -63,8 +78,13 @@ def inspect_cell(pb, screen, seed_low, seen_families, shots):
         WORLD_BOTTOM:WORLD_BOTTOM + BOTTOM_H * WIDE_W])
     bottom_counts = Counter(tile for tile in bottom if tile in LANDMARKS)
     expected = LANDMARKS[(seed_low + screen) & 3]
-    assert counts == Counter({expected: 8}), (
+    assert counts[expected] == 8, (
         f"Riftwild cell {screen} expected landmark {expected}, got {counts}"
+    )
+    extra = counts.copy()
+    del extra[expected]
+    assert extra == (Counter({96: 1}) if screen == 3 else Counter()), (
+        f"Riftwild cell {screen} gained unintended landmark tiles: {extra}"
     )
     assert extension_counts == Counter({expected: 12}), (
         f"Riftwild far field {screen} expected landmark {expected}, "
@@ -120,6 +140,8 @@ def cross_to(pb, target, x, y):
     put16(pb, PL + 11, y)
     stable = 0
     expected = LANDMARKS[(pb.memory[RS + 2] + target) & 3]
+    expected_camera_x = 88 if x == 0 else 0
+    expected_camera_y = 112 if y == 0 else 0
     for _ in range(180):
         pb.tick()
         tiles = pb.memory[TM:TM + ROOM_W * ROOM_H]
@@ -128,9 +150,10 @@ def cross_to(pb, target, x, y):
                  and pb.memory[0xFF40] & 0x02
                  and pb.memory[0xFF43]
                     == (((pb.memory[ORIGIN_X] << 3)
-                         + (88 if x == 0 else 0)) & 0xFF)
+                         + expected_camera_x) & 0xFF)
                  and pb.memory[0xFF42]
-                    == ((pb.memory[ORIGIN_Y] << 3) & 0xFF)
+                    == (((pb.memory[ORIGIN_Y] << 3)
+                         + expected_camera_y) & 0xFF)
                  and sum(tile == expected for tile in tiles) == 8
                  and not any(tile & 0x80 for tile in tiles))
         stable = stable + 1 if ready else 0
@@ -142,7 +165,7 @@ def cross_to(pb, target, x, y):
         f"lcdc={pb.memory[0xFF40]:02x} scx={pb.memory[0xFF43]} "
         f"scy={pb.memory[0xFF42]} origin="
         f"{pb.memory[ORIGIN_X]},{pb.memory[ORIGIN_Y]} "
-        f"expected_camera={88 if x == 0 else 0}"
+        f"expected_camera={expected_camera_x},{expected_camera_y}"
     )
 
 
@@ -160,22 +183,23 @@ def main():
             pb.memory[PL + 2] = pb.memory[PL + 1]
             pb.memory[PL + 15] = 120
             cross_to(pb, screen, x, y)
-            inspect_cell(pb, screen, seed_low, family_counts, shots)
+            if screen not in shots:
+                inspect_cell(pb, screen, seed_low, family_counts, shots)
     finally:
         pb.stop(save=False)
 
-    assert family_counts == Counter({tile: 4 for tile in LANDMARKS}), family_counts
-    sheet = Image.new("RGB", (4 * 160, 4 * 144), (0, 0, 0))
+    assert family_counts == Counter({tile: 9 for tile in LANDMARKS}), family_counts
+    sheet = Image.new("RGB", (6 * 160, 6 * 144), (0, 0, 0))
     draw = ImageDraw.Draw(sheet)
-    for screen in range(16):
-        x, y = (screen & 3) * 160, (screen >> 2) * 144
+    for screen in range(36):
+        x, y = (screen % 6) * 160, (screen // 6) * 144
         sheet.paste(shots[screen].convert("RGB"), (x, y))
         draw.text((x + 2, y + 130), f"CELL {screen:02d}", fill=(255, 255, 255))
     out = ROOT / "tmp" / "riftwild-landmarks.png"
     out.parent.mkdir(exist_ok=True)
     sheet.save(out)
     print(
-        "[riftwild-landmarks] PASS 16 scrolling 248x248 fields, four-part "
+        "[riftwild-landmarks] PASS 36 scrolling 248x248 fields, four-part "
         "seed-rotated landmarks, real seams, central trails clear"
     )
 

@@ -74,13 +74,26 @@ def main() -> None:
             if record["checkpoint"] == "riftwild":
                 assert record["after_stage"] in range(1, 9)
                 assert record["room_counter"] == STAGE_BOSS_ROOM[record["after_stage"] - 1]
-                arrival = (0, 7, 13)[(record["after_stage"] - 1) % 3]
+                arrival = (0, 8, 21)[(record["after_stage"] - 1) % 3]
                 assert obs["world_mode"] and obs["world_screen"] == arrival
                 assert not giants, f"{state.name}: Riftwild contains a giant"
                 assert env.pb is not None
                 rs = env.addrs["_run_state"]
-                seen = env.pb.memory[rs + 21] | env.pb.memory[rs + 22] << 8
-                assert seen == (1 << arrival), \
+                seen = (
+                    env.pb.memory[rs + 21] | env.pb.memory[rs + 22] << 8,
+                    env.pb.memory[rs + 48], env.pb.memory[rs + 49],
+                    env.pb.memory[rs + 50],
+                )
+                expected_seen = [0, 0, 0, 0]
+                if arrival < 16:
+                    expected_seen[0] = 1 << arrival
+                elif arrival < 24:
+                    expected_seen[1] = 1 << (arrival - 16)
+                elif arrival < 32:
+                    expected_seen[2] = 1 << (arrival - 24)
+                else:
+                    expected_seen[3] = 1 << (arrival - 32)
+                assert seen == tuple(expected_seen), \
                     f"{state.name}: Riftwild fog is not fresh"
             elif record["checkpoint"] == "boss":
                 assert record["room_counter"] == STAGE_BOSS_ROOM[stage - 1]

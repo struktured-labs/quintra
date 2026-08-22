@@ -41,6 +41,8 @@ void player_clear(void) {
     will_howl_giant_hits = 0;
     will_vespine_swarm_ticks = 0;
     player.active_oath = 0;
+    player.waygear_owned = 0;
+    player.waygear_equipped = 0xFF;
 }
 
 void player_init_from_class(u8 class_id) {

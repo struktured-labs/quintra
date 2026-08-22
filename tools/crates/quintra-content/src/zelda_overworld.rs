@@ -1,4 +1,4 @@
-//! Zelda-style overworld biome definitions — fixed 4x4 screen grids.
+//! Zelda-style overworld biome definitions — fixed 6x6 field grids.
 
 use std::collections::VecDeque;
 
@@ -7,8 +7,11 @@ use serde::{Deserialize, Serialize};
 use crate::refs::*;
 use crate::room::DoorMask;
 
-pub const SCREEN_QUAD_W: usize = 4;
-pub const SCREEN_QUAD_H: usize = 4;
+// Each cell is itself a scrolling 31x31-tile field. A 6x6 graph therefore
+// carries roughly the traversable tile area of the original Zelda overworld
+// without asking the cartridge to retain a giant authored tilemap.
+pub const SCREEN_QUAD_W: usize = 6;
+pub const SCREEN_QUAD_H: usize = 6;
 pub const SCREEN_QUAD_LEN: usize = SCREEN_QUAD_W * SCREEN_QUAD_H;
 pub const ROOM_TPL_VOID: RoomTemplateId = RoomTemplateId::new(0xFFFF);
 
