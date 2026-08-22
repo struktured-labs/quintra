@@ -22,6 +22,23 @@ static u8 pend_kind;
 static u8 pend_timer;
 static u8 ch1_busy_frames;
 static u8 ch4_busy_frames;
+static u8 melody_lock_frames;
+static u8 melody_lock_priority;
+
+#define MELODY_PRIORITY_NONE   0
+#define MELODY_PRIORITY_CLEAR  1
+#define MELODY_PRIORITY_SECRET 2
+
+static u8 melody_priority_for(u8 id) {
+    if (id == SFX_PUZZLE) return MELODY_PRIORITY_SECRET;
+    if (id == SFX_CLEAR) return MELODY_PRIORITY_CLEAR;
+    return MELODY_PRIORITY_NONE;
+}
+
+static void melody_lock(u8 priority, u8 frames) {
+    melody_lock_priority = priority;
+    melody_lock_frames = frames;
+}
 
 void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames) {
     if (ch1_frames > ch1_busy_frames) ch1_busy_frames = ch1_frames;
@@ -30,6 +47,7 @@ void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames) {
 
 u8 sfx_music_ch1_clear(void) { return ch1_busy_frames == 0; }
 u8 sfx_music_ch4_clear(void) { return ch4_busy_frames == 0; }
+u8 sfx_melody_locked(void) { return melody_lock_frames != 0; }
 
 static void ch1(u8 nr10, u8 nr11, u8 nr12, u16 freq) {
     sfx_claim_channels(8, 0);
@@ -48,6 +66,12 @@ static void ch4(u8 nr43, u8 nr42) {
 }
 
 void sfx_play(u8 id) {
+    u8 priority = melody_priority_for(id);
+    // A pushed-block reward can be collected on the same frame its passage
+    // opens. Do not let that coin/heart/equip voice replace the remaining
+    // scheduled discovery notes. A true secret may still supersede the
+    // shorter room-clear figure.
+    if (melody_lock_frames && priority < melody_lock_priority) return;
     switch (id) {
         case SFX_FIRE:
             // CH1 duty 25%, 1150Hz, sweep down (1,3), env (12,down,1)
@@ -100,6 +124,7 @@ void sfx_play(u8 id) {
             pend_kind = PEND_CLEAR_NOTE2;
             pend_timer = 5;
             sfx_claim_channels(18, 0);
+            melody_lock(MELODY_PRIORITY_CLEAR, 18);
             break;
         case SFX_LOWHP:
             // Soft, short C7 blip — quiet env (6,down,2) so it reads as
@@ -130,6 +155,7 @@ void sfx_play(u8 id) {
             pend_kind = PEND_PUZZLE_NOTE2;
             pend_timer = 12;
             sfx_claim_channels(45, 10);
+            melody_lock(MELODY_PRIORITY_SECRET, 45);
             break;
         case SFX_DISTRICT:
             // A restrained threshold bell: low A4 establishes distance,
@@ -158,6 +184,7 @@ void sfx_play_rune(u8 step) {
     // C5, E5, G5: unmistakable positive positional feedback without spending
     // the longer SFX_PUZZLE fanfare until the complete order is correct.
     static const u16 notes[3] = { 1798, 1849, 1881 };
+    if (melody_lock_frames) return;
     if (step > 2) step = 2;
     pend_kind = PEND_NONE;
     ch1(0x00, 0x80, 0xA2, notes[step]);
@@ -166,6 +193,10 @@ void sfx_play_rune(u8 step) {
 void sfx_tick(void) {
     if (ch1_busy_frames) ch1_busy_frames--;
     if (ch4_busy_frames) ch4_busy_frames--;
+    if (melody_lock_frames) {
+        melody_lock_frames--;
+        if (!melody_lock_frames) melody_lock_priority = MELODY_PRIORITY_NONE;
+    }
     if (pend_kind == PEND_NONE) return;
     if (--pend_timer) return;
     switch (pend_kind) {

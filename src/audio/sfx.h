@@ -46,6 +46,10 @@ void sfx_play_reward(u8 kind) BANKED;
 void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps
 void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames);
+// Long discovery/clear figures own the effect bus until their scheduled
+// notes resolve. Banked pickup and weapon voices use this to avoid replacing
+// a fanfare halfway through its melody.
+u8 sfx_melody_locked(void);
 u8 sfx_music_ch1_clear(void);
 u8 sfx_music_ch4_clear(void);
 

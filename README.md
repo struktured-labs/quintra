@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.8: Resonant Arsenal](https://github.com/struktured-labs/quintra/releases/download/v0.20.8/quintra.gbc)
+[Download Quintra v0.20.9: Carved Resonance](https://github.com/struktured-labs/quintra/releases/download/v0.20.9/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -25,29 +25,40 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.8**, an attack, animation, adaptive-score, and
-loot-safety milestone. Every champion now has a two-stride walk cycle and an
-authored damage recoil, while diagonal dashes carry their own wind-cut voice.
-Three run-shaping attack relics add mechanical splash bursts, bounded fractal
-subprojectiles, and a broad two-part beam; the procedural merchant catalog now
-combines eight build offers with six tactical offers.
+The current cartridge is **v0.20.9**, an interface and audio-legibility
+milestone. START's Pack replaces its typed `+---|` scaffolding with nine
+dedicated beveled tiles: proper outer corners, section junctions, side rails,
+and a closing border frame the identity, Vitals, Arms, and Quest regions in
+their own color families. Labels and controls remain embedded in the rails,
+leaving the same usable 20×18 text area and all six semantic OBJ icons.
 
-The score reacts at musical phrase boundaries instead of restarting: four HP
-bands, visible and nearby enemy pressure, minibosses, merchant/sanctuary rooms,
-hero power, and proximity to important stage treasures reshape harmony,
-percussion, dynamics, and bass weight. All collectibles now pass through one
-shared placement guard that requires a complete 16×16 safe footprint and
-searches nearby reachable floor rather than allowing hearts, currency, wares,
-weapons, boons, Sigils, Riftwells, or relic caches to appear inside walls,
-blocks, hazards, portals, or disconnected terrain.
+Secret discoveries now own the effect bus for their complete four-note figure,
+and the shorter three-note room-clear arpeggio receives the same protection.
+A heart, coin, equip, weapon swing, rune, or reward collected during that short
+window still applies mechanically but cannot replace the fanfare's scheduled
+notes. Stage music continues underneath on its unaffected channels.
 
-The release retains Kilnheart's five-body pack/Cinder Rex encounter,
-Roots & Bellows' Wolfkin/relic balance and regional events, Stormcoil's
-complete connected serpent, and every v0.20.0 system—Will/MAX
-attacks, nine Oath Arts, physical tools, world interactions, dungeon Law,
-seeded mission graph, regional Riftwild, readable Pack/shop interfaces,
-visible locks, safe retreats, Brood/Pair/Command encounter identities, and
-distinct reward sounds.
+The release retains v0.20.8's champion animation, adaptive long-form score,
+Blast Seed/Echo Prism/Rift Lens attack physics, 48-offer procedural merchant
+catalog, and global safe/reachable collectible placement, along with all prior
+world, puzzle, boss, encounter-grammar, and roguelike systems.
+
+### v0.20.9 — Carved Resonance
+
+The Pack page now uses authored 2bpp frame art rather than punctuation glyphs.
+Gold, blue, purple, and green panels share beveled corners and rails while
+keeping class, difficulty, region, Dungeon Law, vitals, Will, A/B verbs, goal,
+tools, Oath, and controls visible at once. Live-ROM checks open the page for all
+five champions and assert the physical corners, junctions, side rails, bottom
+corners, six icons, and five class-specific B reminders.
+
+Sound effects now have two explicit melody priorities. A landscape discovery
+holds CH1 for its complete 45-frame diminished rise and resolve; a room-clear
+figure holds it for 18 frames. Core sounds and the banked reward, weapon, equip,
+and rune voices respect that lock. A live regression test places a coin on the
+champion during Echo Chime, proves the currency is granted, rejects the coin
+envelope during the opening, and observes the intended later Ab4 and D5
+envelopes.
 
 ### v0.20.8 — Resonant Arsenal
 

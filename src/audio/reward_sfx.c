@@ -22,6 +22,10 @@ static void reward_ch4(u8 nr43, u8 nr42) {
 }
 
 void sfx_play_reward(u8 kind) BANKED {
+    // Discovery and room-clear melodies schedule later CH1 notes. A reward
+    // collected during that window stays mechanically collected but silent,
+    // rather than cutting the fanfare into unrelated fragments.
+    if (sfx_melody_locked()) return;
     switch (kind) {
         case SFX_REWARD_MAGIC:
             // Clean high upward shimmer: MP/wells, never currency.

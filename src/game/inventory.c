@@ -44,6 +44,40 @@ static const u16 inv_quest_bg[4] = {
     BGR555( 8, 22, 12), BGR555(24, 31, 20),
 };
 
+// Dedicated 2bpp rails replace the old literal '+', '-' and '|' glyphs.
+// Bright inner strokes and a darker one-pixel bevel make the four PACK
+// regions read as one carved interface on color, grayscale, and IPS panels.
+#define INV_FRAME_BASE ((u8)0xF6u)
+#define INV_FRAME_H    ((u8)0xF6u)
+#define INV_FRAME_VL   ((u8)0xF7u)
+#define INV_FRAME_VR   ((u8)0xF8u)
+#define INV_FRAME_TL   ((u8)0xF9u)
+#define INV_FRAME_TR   ((u8)0xFAu)
+#define INV_FRAME_BL   ((u8)0xFBu)
+#define INV_FRAME_BR   ((u8)0xFCu)
+#define INV_FRAME_TLJ  ((u8)0xFDu)
+#define INV_FRAME_TRJ  ((u8)0xFEu)
+
+static const u8 inv_frame_tiles[9][16] = {
+    { 0,0, 0,0, 0,0, 0xFF,0xFF, 0,0xFF, 0,0, 0,0, 0,0 },
+    { 0x10,0x18, 0x10,0x18, 0x10,0x18, 0x10,0x18,
+      0x10,0x18, 0x10,0x18, 0x10,0x18, 0x10,0x18 },
+    { 0x08,0x18, 0x08,0x18, 0x08,0x18, 0x08,0x18,
+      0x08,0x18, 0x08,0x18, 0x08,0x18, 0x08,0x18 },
+    { 0,0, 0,0, 0,0, 0x1F,0x1F, 0x10,0x1F,
+      0x10,0x18, 0x10,0x18, 0x10,0x18 },
+    { 0,0, 0,0, 0,0, 0xF8,0xF8, 0x08,0xF8,
+      0x08,0x18, 0x08,0x18, 0x08,0x18 },
+    { 0x10,0x18, 0x10,0x18, 0x10,0x18, 0x1F,0x1F,
+      0,0x1F, 0,0, 0,0, 0,0 },
+    { 0x08,0x18, 0x08,0x18, 0x08,0x18, 0xF8,0xF8,
+      0,0xF8, 0,0, 0,0, 0,0 },
+    { 0x10,0x18, 0x10,0x18, 0x10,0x18, 0x1F,0x1F,
+      0x10,0x1F, 0x10,0x18, 0x10,0x18, 0x10,0x18 },
+    { 0x08,0x18, 0x08,0x18, 0x08,0x18, 0xF8,0xF8,
+      0x08,0xF8, 0x08,0x18, 0x08,0x18, 0x08,0x18 },
+};
+
 static const char *class_name(u8 id) {
     if (id < N_CLASSES) return classes[id].name;
     return "?";
@@ -88,8 +122,39 @@ static void write_field(const char *s, u8 width) {
     while (width--) putchar(' ');
 }
 
-static void framed_blank(u8 y) {
-    gotoxy(0, y); text_write("|                  |");
+static u8 *inventory_bg_map(void) {
+    return (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
+}
+
+static void frame_row(u8 y, u8 left, u8 right) {
+    u8 row[20];
+    u8 x;
+    row[0] = left;
+    for (x = 1; x < 19; ++x) row[x] = INV_FRAME_H;
+    row[19] = right;
+    set_tiles(0, y, 20, 1, inventory_bg_map(), row);
+}
+
+static void frame_sides(u8 y) {
+    u8 tile = INV_FRAME_VL;
+    set_tiles(0, y, 1, 1, inventory_bg_map(), &tile);
+    tile = INV_FRAME_VR;
+    set_tiles(19, y, 1, 1, inventory_bg_map(), &tile);
+}
+
+static void draw_pack_frames(void) {
+    u8 y;
+    VBK_REG = 0;
+    set_bkg_data(INV_FRAME_BASE, 9, inv_frame_tiles[0]);
+    frame_row(0, INV_FRAME_TL, INV_FRAME_TR);
+    for (y = 1; y <= 3; ++y) frame_sides(y);
+    frame_row(4, INV_FRAME_TLJ, INV_FRAME_TRJ);
+    for (y = 5; y <= 7; ++y) frame_sides(y);
+    frame_row(8, INV_FRAME_TLJ, INV_FRAME_TRJ);
+    for (y = 9; y <= 12; ++y) frame_sides(y);
+    frame_row(13, INV_FRAME_TLJ, INV_FRAME_TRJ);
+    for (y = 14; y <= 16; ++y) frame_sides(y);
+    frame_row(17, INV_FRAME_BL, INV_FRAME_BR);
 }
 
 static void attr_row(u8 y, u8 slot) {
@@ -121,15 +186,12 @@ void inventory_enter(void) {
     { font_t f = font_load(font_min); font_set(f); }
     cls();
 
-    gotoxy(0, 0); text_write("+---- QUINTRA -----+");
-    framed_blank(1); framed_blank(2); framed_blank(3);
-    gotoxy(0, 4); text_write("+--- VITALS -------+");
-    framed_blank(5); framed_blank(6); framed_blank(7);
-    gotoxy(0, 8); text_write("+--- ARMS ---------+");
-    framed_blank(9); framed_blank(10); framed_blank(11); framed_blank(12);
-    gotoxy(0, 13); text_write("+--- QUEST --------+");
-    framed_blank(14); framed_blank(15); framed_blank(16);
-    gotoxy(0, 17); text_write(" A+B SPIRIT B CLOSE");
+    draw_pack_frames();
+    gotoxy(5, 0); text_write(" QUINTRA ");
+    gotoxy(5, 4); text_write(" VITALS ");
+    gotoxy(7, 8); text_write(" ARMS ");
+    gotoxy(6, 13); text_write(" QUEST ");
+    gotoxy(2, 17); text_write("A+B MAX B BACK");
     inventory_prepare_sprites();
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);

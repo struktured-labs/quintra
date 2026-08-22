@@ -49,6 +49,17 @@ def main():
             f"class {class_id} lost its indented B explanation: {row}")
         chord = bytes(pb.memory[0x9800 + 17 * 32:0x9800 + 17 * 32 + 19])
         assert any(chord), f"class {class_id} lost the full-MP chord tip"
+        # These are raw, dedicated 2bpp frame tiles, not printable '+-|'
+        # glyphs. Verify the outer corners, section junctions, side rails,
+        # and closing corners survive later text writes.
+        assert pb.memory[0x9800] == 0xF9
+        assert pb.memory[0x9800 + 19] == 0xFA
+        assert pb.memory[0x9800 + 4 * 32] == 0xFD
+        assert pb.memory[0x9800 + 4 * 32 + 19] == 0xFE
+        assert pb.memory[0x9800 + 5 * 32] == 0xF7
+        assert pb.memory[0x9800 + 5 * 32 + 19] == 0xF8
+        assert pb.memory[0x9800 + 17 * 32] == 0xFB
+        assert pb.memory[0x9800 + 17 * 32 + 19] == 0xFC
         icon_tiles = tuple(pb.memory[0xFE00 + sprite * 4 + 2]
                            for sprite in range(4, 10))
         assert all(icon_tiles), (
@@ -56,7 +67,7 @@ def main():
         if class_id == 0:
             pb.screen.image.save(ROOT / "tmp" / "pack-visual.png")
         pb.stop(save=False)
-    print("[inventory-action-tip] PASS framed Pack + six semantic icons + five B reminders")
+    print("[inventory-action-tip] PASS tile-framed Pack + six semantic icons + five B reminders")
 
 
 if __name__ == "__main__":

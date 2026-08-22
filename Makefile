@@ -146,6 +146,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_procgen_variety.py
 	$(PYBOY_RUN) scripts/test_stage_entry_pacing.py
 	uv run --quiet --with pyboy python scripts/test_music.py
+	$(PYBOY_RUN) scripts/test_sfx_priority.py
 	uv run --quiet --with pyboy python scripts/test_adaptive_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
