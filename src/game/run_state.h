@@ -120,8 +120,9 @@ typedef struct {
     u8  world_seen_hi;       // cells 16..23
     u8  world_seen_xhi;      // cells 24..31
     u8  world_seen_xxhi;     // cells 32..35 (upper nibble reserved)
-    // Seconds until the current Road Echo can answer ASK again. Its role is
-    // derived from run seed + stage, so only the balance-critical timer saves.
+    // Low six bits: active seconds until ASK recovers. High bits persist the
+    // optional cache discovery/reveal without shifting the suspend ABI. The
+    // companion role is derived once from the run seed and stays stable.
     u8  companion_cooldown;
 } run_state_t;
 

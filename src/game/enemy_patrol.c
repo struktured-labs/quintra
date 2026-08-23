@@ -119,11 +119,22 @@ static u8 facet_ram_hit_from_rear(const entity_t *shot, const entity_t *ram) {
     i16 sy = FIX8_TO_INT(shot->y) + (i16)((shot->hitbox & 0x0F) >> 1);
     i16 rx = FIX8_TO_INT(ram->x) + 6;
     i16 ry = FIX8_TO_INT(ram->y) + 7;
+
+    // A location-only half-plane lets a fast or wide shot enter through an
+    // armored face, cross the body's centre between collision samples, and
+    // then look like a rear hit. Require both pieces of the Darknut read:
+    // contact on the back half *and* travel from back toward front. A
+    // stationary splash has no travel vector, so its own centre must simply
+    // be behind the Ram; centered/front AOE cannot bypass the armor.
     switch (ram->state & 6) {
-        case 0: return sy >= ry;
-        case 2: return sx <= rx;
-        case 4: return sy <= ry;
-        default:return sx >= rx;
+        case 0:
+            return sy > ry && (shot->vy < 0 || (!shot->vx && !shot->vy));
+        case 2:
+            return sx < rx && (shot->vx > 0 || (!shot->vx && !shot->vy));
+        case 4:
+            return sy < ry && (shot->vy > 0 || (!shot->vx && !shot->vy));
+        default:
+            return sx > rx && (shot->vx < 0 || (!shot->vx && !shot->vy));
     }
 }
 

@@ -12,6 +12,7 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/combat.h"
+#include "game/companion.h"
 #include "game/dialog.h"
 #include "game/dungeon_director.h"
 #include "game/dungeon_law.h"
@@ -2197,6 +2198,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             || (tx == room_hidden_secret_x2
                                 && ty == room_hidden_secret_y2)))) {
                     run_state.secret_pending = 1;
+                    // The first true disguised cache is where this run's
+                    // Road Echo is found. The following procgen transaction
+                    // stages it inside that vault; later rooms merely respawn
+                    // the same seed-stable travelling spirit.
+                    companion_discover();
                     if (room_hidden_secret_kind == HIDDEN_SECRET_WALK)
                         run_state.dungeon_phase |= room_hidden_secret_bit;
                 }

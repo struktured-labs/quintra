@@ -56,7 +56,8 @@ static void companion_reveal_route(void) {
 u8 companion_ask(void) BANKED {
     entity_t *e = ask_companion_entity();
     u8 kind = companion_active_kind();
-    if (run_state.companion_cooldown) {
+    if (!e || !companion_discovered()) return 0;
+    if (run_state.companion_cooldown & COMPANION_COOLDOWN_MASK) {
         sfx_play(SFX_HURT);
         return 0;
     }
@@ -81,12 +82,11 @@ u8 companion_ask(void) BANKED {
         if (player.iframes < 45) player.iframes = 45;
         sfx_play(SFX_PUZZLE);
     }
-    run_state.companion_cooldown = COMPANION_ASK_COOLDOWN;
-    if (e) {
-        e->state = 32;
-        fx_spawn(SPR_FX_IMPACT, e->palette,
-            FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 8, 20);
-    }
+    run_state.companion_cooldown =
+        COMPANION_DISCOVERED_BIT | COMPANION_ASK_COOLDOWN;
+    e->state = 32;
+    fx_spawn(SPR_FX_IMPACT, e->palette,
+        FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 8, 20);
     sram_save_run();
     return 1;
 }

@@ -10,7 +10,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-wolfkin-cadence.XXXXXX)"
 
-for replay in '1 520 2064128323' '2 540 2064128343' '3 560 2064128379'; do
+# Re-baselined after Road Echoes became optional secret discoveries: the old
+# 520/560 worlds died in room 2 without their free bolt support. These three
+# solo worlds retain distinct Warden routes, while 540 still attempts and
+# clears two real Colossi inside the same unchanged 32k-frame allowance.
+for replay in '1 530 2064128345' '2 540 2064128343' '3 550 2064128365'; do
   read -r run frame seed <<EOF
 $replay
 EOF
@@ -34,7 +38,7 @@ awk -F, '
   }
   {
     rows++
-    expected = (NR == 2 ? 2064128323 : NR == 3 ? 2064128343 : 2064128379)
+    expected = (NR == 2 ? 2064128345 : NR == 3 ? 2064128343 : 2064128365)
     if ($(col["seed"]) != expected) wrong_seed = 1
     bosses += $(col["bosses"])
     boss_attempts += $(col["boss_attempts"])

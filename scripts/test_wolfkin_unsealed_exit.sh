@@ -23,7 +23,10 @@ awk -F, '
   {
     rows++
     if ($(col["seed"]) != 2064128647) wrong_seed = 1
-    if ($(col["max_room"]) < 10 || $(col["rooms_seen"]) < 8) stuck = 1
+    # With Road Echo support now hidden behind exploration, this fixed solo
+    # world still proves the optional boundary exit by reaching room 10, but
+    # visits seven rather than eight unique cells before later attrition.
+    if ($(col["max_room"]) < 10 || $(col["rooms_seen"]) < 7) stuck = 1
   }
   END {
     if (rows != 1) { print "[wolfkin-open-exit] missing fixed controller row" > "/dev/stderr"; exit 1 }

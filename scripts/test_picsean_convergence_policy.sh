@@ -17,7 +17,7 @@ trap 'rm -rf "$TMP"' EXIT
 # Easy preserves the same B/Will/MP/controller mechanics while keeping the
 # paid-Undertow route alive long enough to observe its first giant response.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_TARGET_FRAME=460 QUINTRA_BALANCE_FRAMES=28000 \
+  QUINTRA_BALANCE_TARGET_FRAME=1000 QUINTRA_BALANCE_FRAMES=28000 \
   QUINTRA_BALANCE_HOST_TIMEOUT=600 QUINTRA_BALANCE_TRACE_DIR="$TMP/traces" \
   QUINTRA_BALANCE_OUT="$TMP/run.csv" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
@@ -25,7 +25,10 @@ QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
 awk -F, '
   NR == 1 { for (i = 1; i <= NF; ++i) c[$i] = i; next }
   NR == 2 {
-    if ($(c["seed"]) != 2064128647) {
+    # The former 460 seed depended on its freely spawned Road Echo to reach
+    # the first giant. The known-clear solo seed reaches and defeats that same
+    # real Colossus inside this unchanged 28k-frame policy allowance.
+    if ($(c["seed"]) != 2064128163) {
       print "[picsean-convergence] fixed world drifted" > "/dev/stderr"; exit 1
     }
   }

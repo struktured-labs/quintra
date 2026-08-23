@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.13: Inverted Hunt](https://github.com/struktured-labs/quintra/releases/download/v0.20.13/quintra.gbc)
+[Download Quintra v0.20.14: Hidden Company](https://github.com/struktured-labs/quintra/releases/download/v0.20.14/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,8 +29,31 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.13 — Inverted Hunt**, a combat-condition and
-enemy-pressure milestone. Poison, burn, slow, stagger, blind, adaptive
+The current cartridge is **v0.20.14 — Hidden Company**, an exploration and
+directional-combat correction. Road Echoes no longer appear for free at stage
+entry and the Compass exposes no phantom ASK action before one exists. The
+first optional disguised cache found by shooting an ordinary wall, walking
+through false stone, or shifting an ordinary-looking cairn reveals the run's
+seed-selected Echo inside its crystal ring. That Hearth, Aether, or Way spirit
+keeps one identity through the rest of the run, follows between dungeons, and
+retains its restrained bolt and twenty-second ASK cadence.
+
+The medium Facet Ram now enforces a true Darknut-style rear-entry contract.
+Damage requires contact on the back half *and* projectile travel from rear to
+front; frontal shots, perpendicular side hits, and fast attacks that cross the
+body before a collision sample all spark harmlessly on armor. Stationary
+splash effects count only when their own centre is visibly behind the Ram.
+Its dangerous backward shot remains the deliberate twist.
+
+The release ROM is checked for nine companion-free stage entries, hidden-cache
+discovery and persistence, suppressed pre-discovery ASK, follow/fire/cooldown
+behavior, horizontal and vertical Ram facings, perpendicular armor rejection,
+cartridge integrity, and the complete downstream procgen/content suite.
+
+### v0.20.13 — Inverted Hunt
+
+v0.20.13 was a combat-condition and enemy-pressure milestone. Poison, burn,
+slow, stagger, blind, adaptive
 confusion, mute, brittle, bleed, curse, regeneration, and haste now affect
 both champions and monsters through one cartridge-native system. Mute preserves
 a champion's physical A attack while suppressing B arts, Oaths, Convergence,

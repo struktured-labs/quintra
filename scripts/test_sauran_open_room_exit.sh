@@ -15,6 +15,8 @@ OUT="$ROOT/tmp/sauran-open-room-exit.csv"
 # without changing the cartridge frame budget.
 QUINTRA_BOT_EASY=1 QUINTRA_BOT_GIANT_POLICY=baseline \
   QUINTRA_FIXED_MATRIX_CLASSES=1 \
+  QUINTRA_FIXED_MATRIX_FRAME=1000 \
+  QUINTRA_FIXED_MATRIX_SEED=2064128163 \
   QUINTRA_FIXED_MATRIX_FRAMES=30000 \
   QUINTRA_FIXED_MATRIX_HOST_TIMEOUT=900 \
   QUINTRA_FIXED_MATRIX_OUT="$OUT" \
@@ -25,7 +27,7 @@ awk -F, '
   NR == 1 { for (i = 1; i <= NF; ++i) col[$i] = i; next }
   {
     rows++
-    if ($(col["seed"]) != 2064128647) wrong_seed = 1
+    if ($(col["seed"]) != 2064128163) wrong_seed = 1
     if ($(col["max_room"]) < 14) no_exit = 1
     if ($(col["max_target_stall_room"]) == 13 && $(col["max_target_stall_frames"]) > 720) ooze_stall = 1
   }

@@ -110,7 +110,9 @@ void boss_motion_tick(entity_t *e) BANKED {
                 e->x = FIX8(anchor_x[next]);
                 e->y = FIX8(anchor_y[next]);
                 e->ai_data[7] = 12;
-                e->ai_data[1] = 32;
+                // Leave a reliable half-second punish window even when a
+                // banked update straddles an emulator/video frame boundary.
+                e->ai_data[1] = 34;
                 fx_spawn(SPR_FX_IMPACT, 2, anchor_x[next] + 12,
                     anchor_y[next] + 12, 14);
                 e->vx = 96;

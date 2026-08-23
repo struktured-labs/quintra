@@ -19,7 +19,6 @@ static u8 companion_seed_kind(void) {
     mix ^= (u8)(run_state.run_seed >> 8);
     mix ^= (u8)(run_state.run_seed >> 16);
     mix ^= (u8)(run_state.run_seed >> 24);
-    mix = (u8)(mix + run_state.bosses_beaten * 17);
     return (u8)(mix % COMPANION_COUNT);
 }
 
@@ -37,10 +36,6 @@ static entity_t *companion_entity(void) {
 u8 companion_active_kind(void) BANKED {
     entity_t *e = companion_entity();
     return e ? e->ai_data[1] : companion_seed_kind();
-}
-
-u8 companion_ask_ready(void) BANKED {
-    return run_state.companion_cooldown == 0;
 }
 
 static u8 companion_palette(u8 kind) {
@@ -81,7 +76,10 @@ static void companion_place_near_player(entity_t *e) {
 void companion_spawn_current(void) BANKED {
     u8 idx, kind;
     entity_t *e;
-    if (run_state.victory || companion_entity()) return;
+    u8 newly_found = run_state.companion_cooldown & COMPANION_PENDING_BIT;
+    if (run_state.victory
+        || !(run_state.companion_cooldown & COMPANION_DISCOVERED_BIT)
+        || companion_entity()) return;
     idx = entity_spawn(ENT_PICKUP);
     if (idx == 0xFF) return;
     kind = companion_seed_kind();
@@ -93,7 +91,18 @@ void companion_spawn_current(void) BANKED {
     e->palette = companion_palette(kind);
     e->hitbox = 0;       // ally: neither loot nor a blocking resident
     e->state_timer = (u8)(36 + kind * 18);
-    companion_place_near_player(e);
+    if (newly_found) {
+        // The first cache reveal stages the spirit inside the crystal ring;
+        // subsequent rooms use the ordinary trailing placement. The entity
+        // remains nonblocking, so an unusually narrow cache can never trap
+        // the champion around the reveal.
+        e->x = FIX8(80);
+        e->y = FIX8(72);
+        e->state = 48;
+        run_state.companion_cooldown &= (u8)~COMPANION_PENDING_BIT;
+    } else {
+        companion_place_near_player(e);
+    }
 }
 
 static u8 companion_try_step(entity_t *e, i8 dx, i8 dy) {
@@ -108,13 +117,16 @@ static u8 companion_try_step(entity_t *e, i8 dx, i8 dy) {
 static void companion_tick_cooldown(entity_t *e) {
     u8 now = (u8)run_state.run_timer;
     u8 elapsed = (u8)(now - e->ai_data[2]);
+    u8 flags;
+    u8 cooldown;
     if (!elapsed) return;
     e->ai_data[2] = now;
-    if (elapsed >= run_state.companion_cooldown)
-        run_state.companion_cooldown = 0;
-    else
-        run_state.companion_cooldown =
-            (u8)(run_state.companion_cooldown - elapsed);
+    flags = run_state.companion_cooldown &
+        (COMPANION_DISCOVERED_BIT | COMPANION_PENDING_BIT);
+    cooldown = run_state.companion_cooldown & COMPANION_COOLDOWN_MASK;
+    if (elapsed >= cooldown) cooldown = 0;
+    else cooldown = (u8)(cooldown - elapsed);
+    run_state.companion_cooldown = flags | cooldown;
 }
 
 static void companion_fire(entity_t *from, i8 dx, i8 dy) {

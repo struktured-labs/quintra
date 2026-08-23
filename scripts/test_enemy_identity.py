@@ -454,7 +454,10 @@ def main():
     pb.memory[shot + 25] = 0x77
     pb.memory[shot + 27] = 1
     pb.memory[addr("_g_hitstop")] = 0
-    pb.tick()
+    for _ in range(6):
+        pb.tick()
+        if not (pb.memory[shot + 1] & 1):
+            break
     assert pb.memory[guard + 14] == 7, "Echo Guard's ready shield leaked damage"
     assert pb.memory[guard + 15] == 1 and pb.memory[guard + 23] > 90, (
         "Echo Guard did not enter its counter cooldown: "
@@ -475,12 +478,16 @@ def main():
     pb.memory[shot + 17] = 0
     pb.memory[shot + 25] = 0x77
     pb.memory[shot + 27] = 1
-    pb.tick()
+    for _ in range(6):
+        pb.tick()
+        if pb.memory[guard + 14] < 7:
+            break
     assert pb.memory[guard + 14] < 7, "Echo Guard stayed invulnerable after its parry"
 
-    # Facet Ram deliberately reverses the familiar armored-patrol read: its
-    # bright rear facet is vulnerable, while a shot into the facing side is
-    # spent with no damage. Exercise both contacts through the real resolver.
+    # Facet Ram uses a strict Darknut-style read: its bright rear facet is the
+    # only vulnerable side. Exercise impact side *and* travel direction through
+    # the real resolver so a fast shot cannot cross the centre and fake a rear
+    # contact after entering through armor.
     clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
@@ -503,13 +510,18 @@ def main():
     pb.memory[shot + 1] = 0x13
     put_fix8(pb, shot + 2, 90)       # overlapping east/front face
     put_fix8(pb, shot + 6, 76)
+    pb.memory[shot + 10] = 0xFE      # travels west, from front toward rear
+    pb.memory[shot + 11] = 0
     pb.memory[shot + 14] = 1
     pb.memory[shot + 16] = 30
     pb.memory[shot + 25] = 0x66
     pb.memory[shot + 26] = 3
     pb.memory[shot + 27] = 1
     pb.memory[addr("_g_hitstop")] = 0
-    pb.tick()
+    for _ in range(6):
+        pb.tick()
+        if not (pb.memory[shot + 1] & 1):
+            break
     assert pb.memory[ram + 14] == 18, "Facet Ram's armored face leaked damage"
     assert not (pb.memory[shot + 1] & 1), "Facet Ram did not reject the frontal shot"
 
@@ -519,13 +531,79 @@ def main():
     pb.memory[shot + 1] = 0x13
     put_fix8(pb, shot + 2, 76)
     put_fix8(pb, shot + 6, pb.memory[ram + 7] + 4)
+    pb.memory[shot + 10] = 2         # travels east, from rear toward front
+    pb.memory[shot + 11] = 0
     pb.memory[shot + 14] = 1
     pb.memory[shot + 16] = 30
     pb.memory[shot + 25] = 0x66
     pb.memory[shot + 26] = 3
     pb.memory[shot + 27] = 1
-    pb.tick()
+    for _ in range(6):
+        pb.tick()
+        if not (pb.memory[shot + 1] & 1):
+            break
     assert pb.memory[ram + 14] < 18, "Facet Ram's rear facet rejected damage"
+
+    # A perpendicular north-to-south strike may overlap the western half of
+    # the long body, but it still came from the side and must spark on armor.
+    side_hp = pb.memory[ram + 14]
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 78)
+    put_fix8(pb, shot + 6, 68)
+    pb.memory[shot + 10] = 0
+    pb.memory[shot + 11] = 2
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x66
+    pb.memory[shot + 26] = 3
+    pb.memory[shot + 27] = 1
+    for _ in range(6):
+        pb.tick()
+        if not (pb.memory[shot + 1] & 1):
+            break
+    assert pb.memory[ram + 14] == side_hp, (
+        "Facet Ram accepted a perpendicular side hit")
+
+    # Turn north and repeat the two meaningful faces. This catches accidental
+    # hard-coding of the horizontal sprite instead of live cardinal facing.
+    pb.memory[ram + 14] = 18
+    pb.memory[ram + 15] = 0          # faces north; rear is south
+    pb.memory[ram + 16] = 48
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 82)
+    put_fix8(pb, shot + 6, 68)
+    pb.memory[shot + 10] = 0
+    pb.memory[shot + 11] = 2         # north/front toward south
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x66
+    pb.memory[shot + 26] = 3
+    pb.memory[shot + 27] = 1
+    for _ in range(6):
+        pb.tick()
+        if not (pb.memory[shot + 1] & 1):
+            break
+    assert pb.memory[ram + 14] == 18, (
+        "Facet Ram's north-facing armor leaked damage")
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 82)
+    put_fix8(pb, shot + 6, 82)
+    pb.memory[shot + 10] = 0
+    pb.memory[shot + 11] = 0xFE      # south/rear toward north
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x66
+    pb.memory[shot + 26] = 3
+    pb.memory[shot + 27] = 1
+    for _ in range(6):
+        pb.tick()
+        if pb.memory[ram + 14] < 18:
+            break
+    assert pb.memory[ram + 14] < 18, (
+        "Facet Ram's north-facing rear rejected damage")
 
     # The Dread Reaper's signature is intentionally terrifying but fair: a
     # mortal scythe leaves exactly one visible heart and consumes itself.

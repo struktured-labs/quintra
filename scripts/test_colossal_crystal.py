@@ -97,8 +97,9 @@ def main():
     after = position(pb, boss)
     assert before == (96, 32) and after == (176, 72), (
         f"Crystal did not warp into the wide well: {before}->{after}")
-    assert pb.memory[boss + 18] >= 30, (
-        "Crystal warp lost its post-jump attack grace")
+    warp_grace = pb.memory[boss + 18]
+    assert warp_grace >= 30, (
+        f"Crystal warp lost its post-jump attack grace: {warp_grace}")
 
     # Driving to the far side must reach the full 64px camera bound without
     # vertical shake detaching the BG from its world collision.

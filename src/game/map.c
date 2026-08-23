@@ -96,8 +96,11 @@ static void draw_map_heading(void) {
 }
 
 static void draw_ask_prompt(void) {
-    u8 kind = companion_active_kind();
-    u8 pal = companion_ask_ready() ? (kind == COMPANION_HEARTH ? BGPAL_CRACK
+    u8 kind;
+    u8 pal;
+    if (!companion_discovered()) return;
+    kind = companion_active_kind();
+    pal = companion_ask_ready() ? (kind == COMPANION_HEARTH ? BGPAL_CRACK
         : kind == COMPANION_AETHER ? BGPAL_CRYSTAL : BGPAL_DOOR) : BGPAL_WALL;
     // Red ASK restores health, violet restores magic, and cyan scouts the
     // adjacent route. The word dims while its twenty-second cooldown runs.

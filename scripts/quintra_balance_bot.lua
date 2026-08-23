@@ -5579,7 +5579,7 @@ while frames < LIMIT do
     -- play cooldown. The two follow-up phases only navigate the real map UI.
     local live_screen = LS ~= 0 and emu:read8(LS) or 255
     if companion_ask_phase == 0 and live_screen == 5
-        and RS ~= 0 and emu:read8(RS + 51) == 0
+        and RS ~= 0 and emu:read8(RS + 51) % 64 == 0
         and quintra_companion_kind() == 0
         and hp <= 10 and hp + 1 < hp_max then
         keys = KEY_SELECT

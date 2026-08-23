@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Regression: a stationary Mire Spore must never arm at the room entrance
-# before the melee champion gets a readable first movement choice. Start from
-# the release gate's native Stage 5 checkpoint so this remains a Mire contract
-# after the campaign expanded from compact global room 25 to rooms 87+.
+# Regression: the melee champion must survive and traverse the Toxic Mire
+# entrance without an optional stationary Spore creating a route stall. Start
+# from the release gate's native Stage 5 checkpoint so this remains a Mire
+# contract after the campaign expanded from compact global room 25 to 87+.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,7 +28,10 @@ awk -F, '
   {
     rows++
     if ($(col["max_room"]) < 90 || $(col["rooms_seen"]) < 8) stranded = 1
-    if (int($(col["enemy_mask"]) / 131072) % 2 == 0) missed_spore = 1
+    # Road Echoes are now hidden optional discoveries, so this fixed solo path
+    # reaches eight Mire rooms without necessarily visiting the optional cell
+    # that rolls a Spore. Live Spore identity/arming remains mandatory in the
+    # dedicated enemy contract; if one appears here, retain the stall check.
     # The CSV retains the single longest target stall across the whole run.
     # Only classify it as this fixture when it belongs to the room-25 Mire
     # Spore itself; a longer, unrelated encounter elsewhere must not turn a
@@ -41,7 +44,6 @@ awk -F, '
   END {
     if (rows != 1) { print "[wolfkin-mire-entry] missing fixed controller row" > "/dev/stderr"; exit 1 }
     if (stranded) { print "[wolfkin-mire-entry] Toxic Mire entry was not survivable" > "/dev/stderr"; exit 1 }
-    if (missed_spore) { print "[wolfkin-mire-entry] Mire Spore was not exercised" > "/dev/stderr"; exit 1 }
     if (stalled) { print "[wolfkin-mire-entry] live Mire Spore combat stall" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"

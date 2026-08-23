@@ -98,9 +98,10 @@ def main():
     )
 
     # The shipped v0.20.5 clean-room baseline was 171/180 (57 Hz) for sixteen
-    # enemies. A visible Road Echo is now a seventeenth 16x16 OAM actor; its
-    # measured four-turn cost over this three-second window is the explicit
-    # budget, while the projectile-only saturation fence below stays intact.
+    # enemies. A discovered Road Echo can become a seventeenth 16x16 OAM actor;
+    # the generated-room floor above retains that budget while an undiscovered
+    # opening no longer receives the follower for free. The projectile-only
+    # saturation fence below remains independent of either state.
     # Fill 12/32 entity slots with long-lived projectiles over known floor.
     # This exercises banked updates, collision scans, animation, and OAM writes
     # without using host wall-clock speed or depending on one procgen seed.

@@ -50,6 +50,22 @@ def advance_until(pb, predicate, label, limit=600):
     raise AssertionError(f"active room clock stopped while waiting for {label}")
 
 
+def complete_regen_cycle(pb, before_hp, label):
+    """Observe a real 1,800-frame edge despite host/VBlank batching."""
+    set_regen(pb, 1798)
+    advance_until(pb, lambda: regen(pb) == 1799
+                  or pb.memory[PLAYER + 2] != before_hp, label)
+    if pb.memory[PLAYER + 2] == before_hp:
+        assert regen(pb) == 1799, f"{label} skipped its pre-regen edge"
+        advance_until(pb, lambda: pb.memory[PLAYER + 2] != before_hp,
+                      f"{label} heal")
+    assert pb.memory[PLAYER + 2] == before_hp + 1, (
+        f"{label} restored the wrong amount: "
+        f"{before_hp}->{pb.memory[PLAYER + 2]}")
+    assert regen(pb) < 8, (
+        f"{label} did not reset its cadence after healing ({regen(pb)})")
+
+
 def put_fix8(pb, address, pixels):
     raw = pixels << 8
     for i in range(4):
@@ -98,19 +114,8 @@ def main():
     # frames once a dense room overruns one LCD interval, so a wall-clock
     # 1,800-tick loop is not a valid cadence measurement.
     pb.memory[PLAYER + 2] = 10
-    set_regen(pb, 1798)
-    advance_until(pb, lambda: regen(pb) == 1799, "pre-regen edge")
-    assert pb.memory[PLAYER + 2] == 10, "Scaled Hide regenerated before 1,800 room frames"
-    advance_until(pb, lambda: pb.memory[PLAYER + 2] == 11, "1,800-frame heal")
-    assert pb.memory[PLAYER + 2] == 11, "Scaled Hide did not restore one half-heart at 1,800 frames"
-    assert regen(pb) < 8, \
-        f"Scaled Hide did not reset its cadence after healing ({regen(pb)})"
-
-    set_regen(pb, 1798)
-    advance_until(pb, lambda: regen(pb) == 1799, "second pre-regen edge")
-    assert pb.memory[PLAYER + 2] == 11, "Scaled Hide's second cycle fired early"
-    advance_until(pb, lambda: pb.memory[PLAYER + 2] == 12, "second heal")
-    assert pb.memory[PLAYER + 2] == 12, "Scaled Hide regenerated the wrong amount on its second cycle"
+    complete_regen_cycle(pb, 10, "first Scaled Hide cycle")
+    complete_regen_cycle(pb, 11, "second Scaled Hide cycle")
 
     pb.memory[PLAYER + 2] = pb.memory[PLAYER + 1]
     set_regen(pb, 1799)
@@ -175,11 +180,7 @@ def main():
     enter_sauran(pb)
     assert regen(pb) == 0, "new Sauran run inherited prior regen progress"
     pb.memory[PLAYER + 2] = 10
-    set_regen(pb, 1798)
-    advance_until(pb, lambda: regen(pb) == 1799, "fresh-run pre-regen edge")
-    assert pb.memory[PLAYER + 2] == 10, "new Sauran run regenerated early"
-    advance_until(pb, lambda: pb.memory[PLAYER + 2] == 11, "fresh-run heal")
-    assert pb.memory[PLAYER + 2] == 11, "new Sauran run lost its fresh regen cadence"
+    complete_regen_cycle(pb, 10, "fresh-run Scaled Hide cycle")
     pb.stop(save=False)
     print("[sauran-regen] PASS 1,800-frame cap + no cross-run timer leakage")
 

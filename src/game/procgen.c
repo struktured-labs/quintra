@@ -986,9 +986,10 @@ void procgen_generate_current_room(void) BANKED {
     // before this room's optional enemy, shop, and decoration spawns can fill
     // the 32-slot table; later room orchestration calls are idempotent.
     room_spawn_progression_fixture();
-    // One seed-selected Road Echo travels with the champion for this stage.
-    // Reserve it before optional combat fills the fixed entity table, but
-    // after the arena establishes the real world extent and arrival point.
+    // A discovered Road Echo persists through the expedition. Before the
+    // first disguised cache this is intentionally a no-op; during that cache
+    // it stages the reveal, and later it reserves the follower before optional
+    // combat fills the fixed entity table.
     companion_spawn_current();
 
     // Secret treasure room: no enemies, loot piled in the middle. State 1
