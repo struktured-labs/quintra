@@ -10,10 +10,12 @@ OUT="$(mktemp /tmp/quintra-wolfkin-leech-lane.XXXXXX)"
 
 # This pins Wolfkin's lane selection, while the direct live-ROM test owns the
 # attach/dash/re-attach timing contract. Use the coarse tester assist so a
-# route assertion does not become a second Normal combat-balance gate.
+# route assertion does not become a second Normal combat-balance gate. The
+# denser opening can spend just over 5,000 frames in room 2 before the Leech
+# appears, so the controller window must include the actual target lane.
 QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=2 QUINTRA_BALANCE_CLASSES=0 \
   QUINTRA_BALANCE_TARGET_FRAME=382 \
-  QUINTRA_BALANCE_FRAMES=5000 QUINTRA_BALANCE_HOST_TIMEOUT=300 \
+  QUINTRA_BALANCE_FRAMES=10000 QUINTRA_BALANCE_HOST_TIMEOUT=300 \
   QUINTRA_BALANCE_OUT="$OUT" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

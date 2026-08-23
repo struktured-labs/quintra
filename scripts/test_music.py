@@ -252,6 +252,10 @@ def village_track_handoff():
             assert pb.memory[RS + 1] == VILLAGE_ROOM[after_stage] + 1, (
                 f"village {after_stage // 3} north gate did not enter dungeon"
             )
+            # The room counter becomes authoritative before the remainder of
+            # the same emulated frame finishes its banked score load. Let the
+            # transition transaction retire before observing public audio ID.
+            pb.tick(2)
             assert pb.memory[MUSIC] == after_stage, (
                 f"stage {after_stage + 1} retained village track "
                 f"{pb.memory[MUSIC]}"

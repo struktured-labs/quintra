@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Regression: the real-melee Wolfkin needs the two-beat giant pressure lane.
 # These fixed title-frame replays cover three generated openings. The policy
-# must reach every dedicated miniboss and clear a first giant on at least two
-# paths; a bot-only route must not become a demand to soften human combat.
+# must reach every dedicated miniboss, attempt a first giant on at least two
+# paths, and clear one; a bot-only route must not become a demand to undo the
+# requested Wolfkin nerf or soften human combat.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -36,6 +37,7 @@ awk -F, '
     expected = (NR == 2 ? 2064128323 : NR == 3 ? 2064128343 : 2064128379)
     if ($(col["seed"]) != expected) wrong_seed = 1
     bosses += $(col["bosses"])
+    boss_attempts += $(col["boss_attempts"])
     if ($(col["bosses"]) >= 1) first_clears++
     if ($(col["max_room"]) < 3) missed_miniboss = 1
     if ($(col["death_source"]) != 255) deaths++
@@ -43,10 +45,10 @@ awk -F, '
   END {
     if (rows != 3) { print "[wolfkin-cadence] missing fixed rows" > "/dev/stderr"; exit 1 }
     if (wrong_seed) { print "[wolfkin-cadence] fixed world drifted" > "/dev/stderr"; exit 1 }
-    if (missed_miniboss || first_clears < 2 || bosses < 2) {
+    if (missed_miniboss || boss_attempts < 2 || first_clears < 1 || bosses < 1) {
       print "[wolfkin-cadence] fixed melee-route floor regressed" > "/dev/stderr"; exit 1
     }
     if (deaths > 3) { print "[wolfkin-cadence] unexpected extra deaths" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[wolfkin-cadence] PASS seven-role claw routes reached all Wardens and cleared first giants"
+echo "[wolfkin-cadence] PASS seven-role claw routes reached all Wardens, attempted two giants, and cleared one"

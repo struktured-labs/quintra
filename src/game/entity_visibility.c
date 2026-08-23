@@ -9,6 +9,7 @@
 #include "game/procgen.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "game/will.h"
 
 void entity_init_room(void) BANKED {
@@ -16,6 +17,7 @@ void entity_init_room(void) BANKED {
     u8 dir;
     u8 large;
     memset(entities, 0, sizeof(entities));
+    status_clear_enemies();
     entity_enemy_count = 0;
     // A target mark belongs to its concrete entity, never to a slot reused
     // after a room transition. Timed self-effects such as Vespine's swarm

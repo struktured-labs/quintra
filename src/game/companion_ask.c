@@ -9,6 +9,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "game/sram.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -60,7 +61,7 @@ u8 companion_ask(void) BANKED {
         return 0;
     }
     if (kind == COMPANION_HEARTH) {
-        if (player.hp >= player.hp_max) {
+        if (player.hp >= player.hp_max || STATUS_PLAYER_HEALING_BLOCKED()) {
             sfx_play(SFX_HURT);
             return 0;
         }

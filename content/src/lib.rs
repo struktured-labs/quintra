@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         25);   // + three physical dungeon tools
-        assert_eq!(r.n_enemies(),       33);   // Rift Cantor completes the current roster
+        assert_eq!(r.n_enemies(),       35);   // Facet Ram + one-per-stage Reaper
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -68,10 +68,9 @@ mod tests {
     #[test]
     fn enemy_runtime_identity_respects_obj_hardware_ranges() {
         use quintra_content::{PaletteRef, SpriteRef};
-        let mut bad_tile = registry();
-        bad_tile.enemies[0].sprite_set = SpriteRef::new(128);
-        let errors = bad_tile.validate().expect_err("out-of-range OBJ tile was accepted");
-        assert!(errors.iter().any(|e| e.contains("OBJ tile is outside")));
+        let mut high_tile = registry();
+        high_tile.enemies[0].sprite_set = SpriteRef::new(255);
+        high_tile.validate().expect("full 8x8 OBJ tile byte was rejected");
 
         let mut bad_palette = registry();
         bad_palette.enemies[0].palette = PaletteRef::new(8);
@@ -380,10 +379,14 @@ mod tests {
             .any(|stage| stage.enemy_pool.iter().any(|&(enemy, _)| enemy == id));
         for enemy in &r.enemies {
             let id = enemy.id.raw();
-            if id != ids::ENEMY_STONE_SENTINEL.raw() {
+            if id != ids::ENEMY_STONE_SENTINEL.raw()
+                && id != ids::ENEMY_STAGE_REAPER.raw()
+            {
                 assert!(pooled(id), "enemy {} ({}) is unreachable from every stage pool",
                     id, enemy.name);
             }
         }
+        assert!(!pooled(ids::ENEMY_STAGE_REAPER.raw()),
+            "the fixed once-per-stage Reaper leaked into a random pool");
     }
 }

@@ -2,6 +2,8 @@
 #ifndef QUINTRA_GAME_PLAYER_H
 #define QUINTRA_GAME_PLAYER_H
 
+#include <gb/gb.h>
+
 #include "core/types.h"
 
 #define INVENTORY_SLOTS 16   // Phase 4-5; bumped to 64 in Phase 6+

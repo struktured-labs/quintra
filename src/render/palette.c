@@ -31,7 +31,7 @@ void palette_obj_load(u8 slot, const u16 *colors) {
 void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors) {
     u8 i;
     for (i = 0; i < n; ++i) {
-        palette_bg_load((u8)(first_slot + i), colors + (u16)(i * 4));
+        load_to_pal(0, (u8)(first_slot + i), colors + (u16)(i * 4));
     }
 }
 

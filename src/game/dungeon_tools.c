@@ -13,6 +13,7 @@
 #include "game/puzzle.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "render/text.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -106,7 +107,9 @@ static void tool_bomb(void) {
     }
     for (d = 0; d < 8; ++d) {
         u8 shot = projectile_spawn_player(dir8_dx[d], dir8_dy[d],
-            (u8)(player.atk + 4), PROJ_BOMB);
+            (u8)((STATUS_PLAYER_INVERTED()
+                ? status_player_effective_stat(QSTATUS_STAT_ATK)
+                : player.atk) + 4), PROJ_BOMB);
         if (shot != 0xFF) {
             entities[shot].state_timer = 20;
             entities[shot].hitbox = 0xAA;
@@ -148,7 +151,9 @@ static void tool_mirror(void) {
         e->flags |= EF_PLAYER_PROJ;
         e->vx = (i8)-e->vx;
         e->vy = (i8)-e->vy;
-        e->damage = (u8)(player.atk + 3);
+        e->damage = (u8)((STATUS_PLAYER_INVERTED()
+            ? status_player_effective_stat(QSTATUS_STAT_ATK)
+            : player.atk) + 3);
         e->hp = 2;
         e->palette = 6;
         e->ai_data[1] = 8; // shadow element

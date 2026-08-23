@@ -24,10 +24,11 @@ def main():
         ))
 
     # Stage-zero local room four is an ordinary first-visit court. Select only
-    # director signatures 0/1 here so this remains the baseline-skirmish
-    # density contract; trap/wave openings intentionally alter the initial
-    # body count and have their own live state-machine regression.
-    for seed in (0xCAFE1234, 0xCAFE1235, 0xCAFE123C, 0xCAFE123D):
+    # director signature 0 here so this remains the baseline-skirmish density
+    # contract. Signature 1 is now an additional Stage-1 wave encounter (its
+    # deliberately halved opening and second formation are covered by the
+    # director suite), while trap/hold openings likewise own different bands.
+    for seed in (0xCAFE1234, 0xCAFE123C, 0xCAFE1244, 0xCAFE124C):
         generated_room(0, seed, probe=count_hostiles)
 
     assert len(counts) == 4

@@ -32,6 +32,9 @@ extern u8 g_shot_element;
 #define PROJ_AUX_WOLFKIN_FANG 0xF1
 #define PROJ_AUX_SPLASH        0xF2
 #define PROJ_AUX_BEAM_TRAIL    0xF3
+// The one-per-stage Reaper owns this marker exclusively. On collision its
+// clearly telegraphed scythe sets the champion to one heart, never zero.
+#define PROJ_AUX_MORTAL_SCYTHE 0xE1
 
 // Cached from the run inventory so ordinary fire never scans all eight slots.
 // The cache is refreshed on purchase, new-run reset, and SRAM resume.
@@ -44,6 +47,9 @@ void projectile_sync_player_relics(void) BANKED;
 // the actual aim so a thrust reads in the direction the player chose.
 #define PROJ_VIS_FLIP_X 0x01
 #define PROJ_VIS_FLIP_Y 0x02
+// Hostile projectile fired under Confusion. It can bruise other monsters;
+// hostile shots retain source enemy ID + 1 in ai_data[5] for status payloads.
+#define PROJ_HOSTILE_CONFUSED 0x80
 
 // Spawn a player projectile at player.x/y in (dx,dy) direction (8-dir deltas)
 // with explicit damage + ProjectileKind (PROJ_* from generated enums.h) —
@@ -56,9 +62,6 @@ u8   projectile_spawn_enemy(i16 px, i16 py, i8 dx, i8 dy, u8 damage) BANKED;
 // Enemy projectile with an explicit px/tick velocity (vx,vy). Used by bosses
 // to vary bullet speed within a single attack pattern.
 u8   projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) BANKED;
-
-// Four slow cardinal lanes committed together for a Colossus phase break.
-void projectile_spawn_enemy_cross(i16 px, i16 py, u8 damage) BANKED;
 
 // Cold relic physics live outside the crowded projectile bank. Echo children
 // fork for two bounded generations, Blast Seed creates one stationary area

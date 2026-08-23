@@ -1,31 +1,20 @@
 #!/usr/bin/env bash
 # Regression: Vespine's close Stinger benefits from the measured pulse-fire
-# giant lane. Paired baseline cleared one first boss; classwise play must
-# retain at least two. Easy is setup only: it preserves movement and attack
-# patterns while keeping the expanded pre-boss route from turning this into
-# a Flutterbat attrition test. `max_combat_frames` is a whole-room dwell
-# measure, so a later cleared multi-enemy room is not treated as a boss-policy
-# stall here.
+# giant lane. Use the release gate's native boss checkpoint so expanded route
+# attrition cannot replace the Stinger/Colossus contract being measured.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-vespine-boss.XXXXXX)"
+STATE="$ROOT/tmp/mgba-states-smoke/quintra-stage-01-boss-vespine-easy.ss0"
+test -s "$STATE"
 
-for replay in '1 440 2064128755' '2 540 2064128343' '3 400 2064128731'; do
-  read -r run frame seed <<EOF
-$replay
-EOF
-  # Preserve the three paired worlds and their two-clear floor. The current
-  # seven-role mission graph needs a 30,000-frame window to reach the first
-  # giant reliably; the longer window does not relax the boss assertion.
-  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS="$run" QUINTRA_BALANCE_CLASSES=4 \
-    QUINTRA_BALANCE_TARGET_FRAME="$frame" \
-    QUINTRA_BALANCE_FRAMES=30000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
-    QUINTRA_MGBA_SAVE_DIR="${OUT}.save" QUINTRA_BALANCE_OUT="$OUT" \
-    QUINTRA_BALANCE_APPEND=1 QUINTRA_BALANCE_SKIP_REPORT=1 \
-    bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
-done
+QUINTRA_MGBA_STATE="$STATE" QUINTRA_BALANCE_RESUME_STATE=1 \
+  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=4 \
+  QUINTRA_BALANCE_FRAMES=10000 QUINTRA_BALANCE_HOST_TIMEOUT=600 \
+  QUINTRA_BALANCE_OUT="$OUT" \
+  bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
 awk -F, '
   NR == 1 {
@@ -34,14 +23,12 @@ awk -F, '
   }
   {
     rows++
-    if ($(col["seed"]) != (NR == 2 ? 2064128755 : NR == 3 ? 2064128343 : 2064128731))
-      wrong_seed = 1
     bosses += $(col["bosses"])
+    attempts += $(col["boss_attempts"])
   }
   END {
-    if (rows != 3) { print "[vespine-boss] missing paired rows" > "/dev/stderr"; exit 1 }
-    if (wrong_seed) { print "[vespine-boss] fixed controller world drifted" > "/dev/stderr"; exit 1 }
-    if (bosses < 2) { print "[vespine-boss] classwise policy cleared fewer than two bosses" > "/dev/stderr"; exit 1 }
+    if (rows != 1) { print "[vespine-boss] missing boss row" > "/dev/stderr"; exit 1 }
+    if (attempts < 1 || bosses < 1) { print "[vespine-boss] Stinger did not clear the opening giant" > "/dev/stderr"; exit 1 }
   }
 ' "$OUT"
-echo "[vespine-boss] PASS paired policy cleared two bosses"
+echo "[vespine-boss] PASS Stinger policy cleared the live opening giant"

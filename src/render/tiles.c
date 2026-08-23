@@ -134,12 +134,18 @@ void tiles_load_all_class_sprites(void) BANKED {
     // the VRAM copies. Direct pointers here would read whatever bank 2 has at
     // the same address rather than the transformed forms.
     tiles_load_ascended_sprites();
+    // Only the animated lower halves live in bank 4; the neutral ascended
+    // forms above remain the source for each hero's head and torso.
+    tiles_load_ascended_motion_sprites();
 }
 
 void tiles_load_all_enemy_sprites(void) BANKED {
     // The Road Echo exists in combat, Riftwild, and towns, so its two stride
     // beats belong to the shared room upload rather than a civic-only path.
     tiles_load_companion_sprite();
+    // High OBJ slots are reserved for the Facet Ram, the once-per-stage
+    // Reaper, and its mortal scythe tell/attack.
+    tiles_load_high_enemy_sprites();
     set_sprite_data(SPR_ENEMY_CRAWLER,  1, sprite_enemy_crawler);
     set_sprite_data(SPR_ENEMY_HORNET,   1, sprite_enemy_hornet);
     set_sprite_data(SPR_ENEMY_SKELETON, 1, sprite_enemy_skeleton);

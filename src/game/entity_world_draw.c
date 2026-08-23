@@ -8,8 +8,11 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
+#include "game/status.h"
 #include "render/tiles.h"
 #include "content.h"
+
+void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;
 
 extern u8 entity_anim_counter;
 extern u8 entity_oam_high;
@@ -22,7 +25,8 @@ static u8 enemy_is_big16(const entity_t *e) {
     if (e->type != ENT_ENEMY) return 0;
     if (eid == ENEMY_STONE_SENTINEL) return 1;
     return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
-        || eid == ENEMY_CINDER_MAW);
+        || eid == ENEMY_CINDER_MAW || eid == ENEMY_FACET_RAM
+        || eid == ENEMY_STAGE_REAPER);
 }
 
 static u8 world_camera_step(u8 current, i16 player_pos,

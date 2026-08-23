@@ -24,6 +24,8 @@ IDENTITIES = {
     27: (79, 7),
     29: (79, 7),
     31: (79, 6),
+    33: (242, 6),
+    34: (250, 0),
 }
 
 SPECIALISTS = {
@@ -59,6 +61,18 @@ def addr(name):
     if not match:
         raise RuntimeError(f"missing symbol {name}")
     return int(match.group(1), 16)
+
+
+def clear_entities(pb, entities):
+    """Reset direct-injection fixtures through the status-era actor ABI."""
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for symbol in ("_enemy_status_kind", "_enemy_status_ticks",
+                   "_enemy_status_aux"):
+        base = addr(symbol)
+        for i in range(32):
+            pb.memory[base + i] = 0
+    pb.memory[addr("_status_confused_projectiles")] = 0
 
 
 def generated_sprite(name):
@@ -185,8 +199,7 @@ def main():
     entities = addr("_entities")
     player = addr("_player")
     tilemap = addr("_room_tilemap")
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     wall_x = 12
@@ -221,8 +234,7 @@ def main():
     # feet-box cannot enter. Recreate that exact corner: NE is blocked by the
     # tile above, while east is open. Its cardinal fallback must escape rather
     # than repeatedly settling there and softlocking a sealed melee room.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     pb.memory[tilemap + 9 * 20 + 10] = 2
@@ -253,8 +265,7 @@ def main():
     # clearance, it could pursue through this lane and strand a melee run in
     # a sealed room.  The same direct chase also exercises both perpendicular
     # fallback attempts rather than only a static collision predicate.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     for tx in range(1, 19):
@@ -285,8 +296,7 @@ def main():
     # of a sealed encounter while a 12px champion has no melee route to it.
     # Start a real eastward walker update at the lane mouth: its feet-box must
     # reject that move before the walker can get stranded.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     for tx in range(1, 19):
@@ -313,8 +323,7 @@ def main():
     # envelope could cross this exact one-tile lane and latch from a pocket
     # a champion cannot physically enter. Their Metroid-like drain remains
     # dangerous in open rooms; this only preserves a fair player-sized route.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     for tx in range(1, 19):
@@ -342,8 +351,7 @@ def main():
     # Mirror Moth runs through its typed AI_MIRROR dispatch in bank 3. Real
     # controller movement to the right must make it step left, and its authored
     # fire clock must produce a hostile reflected bolt without direct writes.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 64)
@@ -379,8 +387,7 @@ def main():
     # A Mire Spore must remain inert at range, arm only inside its authored
     # 40px Manhattan radius, honor the 36-frame tell, then produce all eight
     # hostile lanes through the actual banked dispatch.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 32)
@@ -419,8 +426,7 @@ def main():
 
     # Echo Guard must consume the first real player attack without losing HP,
     # rush toward the attacker, then accept damage while its shield is down.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 120)
@@ -472,11 +478,96 @@ def main():
     pb.tick()
     assert pb.memory[guard + 14] < 7, "Echo Guard stayed invulnerable after its parry"
 
+    # Facet Ram deliberately reverses the familiar armored-patrol read: its
+    # bright rear facet is vulnerable, while a shot into the facing side is
+    # spent with no damage. Exercise both contacts through the real resolver.
+    clear_entities(pb, entities)
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    pb.memory[player + 8] = 0       # deterministic: no critical hit
+    ram = entities
+    shot = entities + 28
+    pb.memory[ram] = 2
+    pb.memory[ram + 1] = 7
+    put_fix8(pb, ram + 2, 80)
+    put_fix8(pb, ram + 6, 72)
+    pb.memory[ram + 12] = 242
+    pb.memory[ram + 13] = 6
+    pb.memory[ram + 14] = 18
+    pb.memory[ram + 15] = 2         # faces east; rear is west
+    pb.memory[ram + 16] = 48
+    pb.memory[ram + 17] = 33
+    pb.memory[ram + 25] = 0xBD
+    pb.memory[ram + 26] = 2
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 90)       # overlapping east/front face
+    put_fix8(pb, shot + 6, 76)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x66
+    pb.memory[shot + 26] = 3
+    pb.memory[shot + 27] = 1
+    pb.memory[addr("_g_hitstop")] = 0
+    pb.tick()
+    assert pb.memory[ram + 14] == 18, "Facet Ram's armored face leaked damage"
+    assert not (pb.memory[shot + 1] & 1), "Facet Ram did not reject the frontal shot"
+
+    # Re-arm the same slot from the western/rear side. This one must pass the
+    # specialist gate and reduce HP through ordinary damage/poise handling.
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put_fix8(pb, shot + 2, 76)
+    put_fix8(pb, shot + 6, pb.memory[ram + 7] + 4)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x66
+    pb.memory[shot + 26] = 3
+    pb.memory[shot + 27] = 1
+    pb.tick()
+    assert pb.memory[ram + 14] < 18, "Facet Ram's rear facet rejected damage"
+
+    # The Dread Reaper's signature is intentionally terrifying but fair: a
+    # mortal scythe leaves exactly one visible heart and consumes itself.
+    clear_entities(pb, entities)
+    for i in range(20 * 17):
+        pb.memory[tilemap + i] = 1
+    put16(pb, player + 9, 80)
+    put16(pb, player + 11, 72)
+    pb.memory[player + 1] = 12
+    pb.memory[player + 2] = 12
+    pb.memory[player + 15] = 0
+    scythe = entities
+    pb.memory[scythe] = 1
+    pb.memory[scythe + 1] = 3
+    put_fix8(pb, scythe + 2, 84)
+    put_fix8(pb, scythe + 6, 80)
+    pb.memory[scythe + 12] = 250
+    pb.memory[scythe + 14] = 1
+    pb.memory[scythe + 16] = 30
+    pb.memory[scythe + 23] = 0xE1
+    pb.memory[scythe + 25] = 0x88
+    pb.memory[scythe + 26] = 6
+    pb.memory[scythe + 27] = 1
+    pb.memory[addr("_g_hitstop")] = 0
+    for _ in range(4):
+        pb.tick()
+        if pb.memory[player + 2] == 2:
+            break
+    assert pb.memory[player + 2] == 2, (
+        f"Dread Reaper mortal scythe left {pb.memory[player + 2]} half-hearts; "
+        f"shot type/flags={pb.memory[scythe]}/{pb.memory[scythe + 1]} "
+        f"xy={pb.memory[scythe + 3]},{pb.memory[scythe + 7]} "
+        f"player={pb.memory[player + 9]},{pb.memory[player + 11]} "
+        f"iframes={pb.memory[player + 15]} shield={pb.memory[player + 20]} "
+        f"screen={pb.memory[addr('_loop_current_screen')]}"
+    )
+    assert not (pb.memory[scythe + 1] & 1), "mortal scythe survived player contact"
+
     # Kill a Rift Ooze through the real projectile/combat loop. The corpse
     # must become two fragile crawler fragments, not merely claim to split in
     # authored data or a unit-test-only helper.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     ooze = entities
@@ -522,8 +613,7 @@ def main():
     # cardinal lanes must emerge from the real AI_SHOOTER dispatch, leaving
     # the diagonals as visible escape paths instead of becoming a data-only
     # roster entry or a generic single-shot wisp.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 32)
@@ -558,8 +648,7 @@ def main():
     # cadence, but a full fast eight-way peal. It must exercise the generated
     # Ring(8) data and its special 3px/tick velocity through live AI, rather
     # than only occupying a weighted roster slot.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 32)
@@ -592,8 +681,7 @@ def main():
     # Rift Warden is the new late-stage center-lane breaker. Its five-way fan
     # must differ from both the Lantern's cardinal ring and the Bell's full
     # peal, while slot 81 proves combat safely reclaims merchant-only tag art.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 32)
@@ -627,8 +715,7 @@ def main():
     # 40px ring it takes a tangential step, then rotates a sparse opposite
     # pair. This proves both movement and projectile identity through the
     # real banked enemy dispatch, not merely generated content metadata.
-    for i in range(32 * 28):
-        pb.memory[entities + i] = 0
+    clear_entities(pb, entities)
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     put16(pb, player + 9, 80)
@@ -662,8 +749,9 @@ def main():
     assert set(skitter_pair) == {(0, -2), (0, 2)}, (
         f"Prism Skitter opposite pair drifted: {skitter_pair}")
     pb.stop(save=False)
-    print("[enemy-id] PASS specialist art (including Dusk Midge) + "
-          "guard/spore/mirror/leech/lantern/bell/warden/skitter behavior + ooze split")
+    print("[enemy-id] PASS specialist art + "
+          "guard/ram/reaper/spore/mirror/leech/lantern/bell/warden/skitter "
+          "behavior + ooze split")
 
 
 if __name__ == "__main__":

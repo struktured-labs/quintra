@@ -137,11 +137,22 @@ def elite_contract():
         rewards = boon_choices(pb)
         assert pb.memory[SEALED] == 0 and len(rewards) == 2, \
             "elite kill did not release the room with a two-way build choice"
-        tick_safe(pb, 32)
+        # The pair owns a 30-game-update anti-auto-pickup grace period. Dense
+        # rooms can advance fewer cartridge updates than host VBlanks, so
+        # observe the actual entity state instead of assuming 32 host ticks.
+        for _ in range(120):
+            tick_safe(pb, 1)
+            if all(pb.memory[ep + 15] == 0 for ep in rewards):
+                break
+        assert all(pb.memory[ep + 15] == 0 for ep in rewards), \
+            "boon choice grace did not expire"
         chosen = rewards[0]
         put16(pb, PL + 9, (pb.memory[chosen + 3] - 2) & 0xFF)
         put16(pb, PL + 11, (pb.memory[chosen + 7] - 9) & 0xFF)
-        tick_safe(pb, 8)
+        for _ in range(60):
+            tick_safe(pb, 1)
+            if not boon_choices(pb):
+                break
         assert not boon_choices(pb), "taking one boon did not retire its sibling"
     generated_room(0, seed_for(5), local_room=DIRECTOR_ROOM, probe=probe)
 

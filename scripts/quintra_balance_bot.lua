@@ -1755,10 +1755,14 @@ function body_goal_step(px, py, goal_x, goal_y)
     -- 60k-position BFS merely to walk in from a distant doorway.
     if (QUINTRA_ARENA_W > 160 or QUINTRA_ARENA_H > 136)
         -- Five-note district phrases can place an unsolved center rune on the
-        -- coarse shortest path between two distant notes. Crossing it is a
-        -- real wrong input and resets the phrase, so keep the rune-aware
-        -- pixel route across the whole field for this one authored role.
-        and not (PUZZLE_KIND ~= 0 and emu:read8(PUZZLE_KIND) == 2)
+        -- coarse shortest path between two distant notes. The four-panel
+        -- Aether Lattice likewise needs an exact approach that treats its
+        -- other panels as contact hazards; a coarse route can oscillate at a
+        -- colonnade forever. Keep the fixture-aware pixel route across the
+        -- whole field for both authored roles.
+        and not (PUZZLE_KIND ~= 0
+            and (emu:read8(PUZZLE_KIND) == 2
+                or emu:read8(PUZZLE_KIND) == 3))
         and math.abs(px - goal_x) + math.abs(py - goal_y) > 40 then
         local fallback = math.abs(px - goal_x) >= math.abs(py - goal_y)
             and (px < goal_x and KEY_RIGHT or KEY_LEFT)
@@ -4423,9 +4427,12 @@ while frames < LIMIT do
                 or held_style == "flail" and 56 or 52
             local recovery_step, recovery_ready
             if (target.kind == 0 and target.pattern == 0x4F)
-                or target.kind == 5 then
-                -- A lone Rift Ooze fragment and a drifting Wisp both change
-                -- coordinates while the champion crosses a wide court.
+                or target.kind == 5
+                or target.kind == 24 or target.kind == 27
+                or target.kind == 29 or target.kind == 31 then
+                -- A lone Rift Ooze fragment, a drifting Wisp, and the four
+                -- orbiting stage specialists all change coordinates while
+                -- the champion crosses a wide court.
                 -- Rebuilding the full 248x248 one-pixel graph for each new
                 -- endpoint is counterproductive: at a long southern wall the
                 -- first step repeatedly points at yesterday's opening. Follow

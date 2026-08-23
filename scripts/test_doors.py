@@ -141,7 +141,10 @@ def locked_north_holds():
     pb.button("start")
     for _ in range(30): pb.tick()
     pb.button("a")
-    for _ in range(60): pb.tick()
+    # The opening field is a scrolling room whose entry transaction takes
+    # longer than the old compact-room fixture. Wait for the same stable live
+    # boundary as the cardinal transition checks before mutating WRAM.
+    for _ in range(240): pb.tick()
     for i in range(32 * 28): pb.memory[EN + i] = 0
     enemy = EN
     pb.memory[enemy] = 2
@@ -171,7 +174,7 @@ def open_room_with_hostile_allows_exit():
     pb.button("start")
     for _ in range(30): pb.tick()
     pb.button("a")
-    for _ in range(60): pb.tick()
+    for _ in range(240): pb.tick()
     for i in range(32 * 28): pb.memory[EN + i] = 0
     pb.memory[EN] = 2
     pb.memory[EN + 1] = 7
@@ -196,7 +199,7 @@ def blocked_crate_north_face_holds():
     pb.button("start")
     for _ in range(30): pb.tick()
     pb.button("a")
-    for _ in range(60): pb.tick()
+    for _ in range(240): pb.tick()
     for i in range(32 * 28): pb.memory[EN + i] = 0
     # A 2x2 crate at pixels 72,64 with walls immediately north so it cannot
     # slide. The visible 16px hero must stop at y=80, not overlap to y=72.
@@ -223,7 +226,7 @@ def block_cannot_jam_east_threshold():
     pb.button("start")
     for _ in range(30): pb.tick()
     pb.button("a")
-    for _ in range(60): pb.tick()
+    for _ in range(240): pb.tick()
     for i in range(32 * 28): pb.memory[EN + i] = 0
     # Exact geometry from the full-run regression: moving this origin from
     # x=15 to x=16 would leave only the single x=18 tile between the 2x2
@@ -260,7 +263,7 @@ def pressure_plate_reveals_secret():
     pb.button("start")
     for _ in range(30): pb.tick()
     pb.button("a")
-    for _ in range(60): pb.tick()
+    for _ in range(240): pb.tick()
     for i in range(32 * 28): pb.memory[EN + i] = 0
     # This is the authored puzzle coordinate family in procgen: x=7 or 12.
     # x=7 creates north-wall doors at 7/8, safely beside the main 9/10 door.

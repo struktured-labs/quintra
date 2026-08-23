@@ -21,6 +21,7 @@
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "game/will.h"
 #include "render/palette.h"
 #include "render/text.h"
@@ -199,7 +200,8 @@ void inventory_enter(void) {
     inventory_prepare_sprites();
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);
-    gotoxy(12, 1); text_write(RUN_IS_EASY() ? "EASY" : "NORMAL");
+    if (player_status_kind != QSTATUS_NONE) status_draw_pack_label();
+    else { gotoxy(12, 1); text_write(RUN_IS_EASY() ? "EASY" : "NORMAL"); }
     {
         u8 s = (u8)(run_state.bosses_beaten % 9);
         gotoxy(4, 2);
@@ -219,10 +221,14 @@ void inventory_enter(void) {
     text_write("/"); text_u16((u16)player.hp_max);
     gotoxy(11, 5); text_write("MP "); text_u16((u16)player.mp);
     text_write("/"); text_u16((u16)player.mp_max);
-    gotoxy(1, 6); text_write("ATK "); text_u16((u16)player.atk);
-    gotoxy(7, 6); text_write("DEF "); text_u16((u16)player.def);
-    gotoxy(13, 6); text_write("SPD "); text_u16((u16)player.spd);
-    gotoxy(1, 7); text_write("LCK "); text_u16((u16)player.lck);
+    gotoxy(1, 6); text_write("ATK "); text_u16((u16)(STATUS_PLAYER_INVERTED()
+        ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk));
+    gotoxy(7, 6); text_write("DEF "); text_u16((u16)(STATUS_PLAYER_INVERTED()
+        ? status_player_effective_stat(QSTATUS_STAT_DEF) : player.def));
+    gotoxy(13, 6); text_write("SPD "); text_u16((u16)(STATUS_PLAYER_INVERTED()
+        ? status_player_effective_stat(QSTATUS_STAT_SPD) : player.spd));
+    gotoxy(1, 7); text_write("LCK "); text_u16((u16)(STATUS_PLAYER_INVERTED()
+        ? status_player_effective_stat(QSTATUS_STAT_LCK) : player.lck));
     gotoxy(9, 7); text_u16((u16)player.coins);
     gotoxy(13, 7); text_write("W[");
     for (i = 0; i < 3; ++i)

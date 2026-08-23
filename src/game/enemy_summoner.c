@@ -9,6 +9,7 @@
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -74,8 +75,18 @@ static void cantor_call_escort(entity_t *e, u8 ordinal) {
         i16 ty = by + oy[site];
         if (tx <= 0 || ty <= 0 || tx > 30 || ty > 30) continue;
         if (!cantor_spawn_cell_clear((u8)tx, (u8)ty)) continue;
-        if (enemy_spawn(cantor_escort_id(ordinal), (u8)tx, (u8)ty) != 0xFF)
-            return;
+        {
+            u8 escort = enemy_spawn(cantor_escort_id(ordinal),
+                (u8)tx, (u8)ty);
+            if (escort != 0xFF) {
+                // The first called body rushes under Haste; the second knits
+                // back together under Regen. Killing or Muting the Cantor
+                // before resolution prevents both, preserving counterplay.
+                status_enemy_apply(escort,
+                    ordinal ? QSTATUS_REGEN : QSTATUS_HASTE, 60);
+                return;
+            }
+        }
         // No entity headroom. A failed call is final rather than retrying
         // forever once projectiles and pickups release their slots.
         return;

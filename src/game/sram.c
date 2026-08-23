@@ -14,6 +14,7 @@
 #include "game/projectile.h"
 #include "game/run_state.h"
 #include "game/sram.h"
+#include "game/status.h"
 
 #define SRAM_BASE     ((volatile u8 *)0xA000)
 #define SAVE_VERSION  1
@@ -88,6 +89,9 @@ u8 sram_load_run(void) BANKED {
         player.waygear_owned = 0;
         player.waygear_equipped = 0xFF;
     }
+    // Temporary room conditions are deliberately not suspend ABI. A loaded
+    // run resumes cleanly rather than inheriting stale WRAM from the title.
+    status_reset_all();
     projectile_sync_player_relics();
     return 1;
 }

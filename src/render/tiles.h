@@ -294,6 +294,15 @@
 #define SPR_COMPANION_WALK_A  224 // 224..227
 #define SPR_COMPANION_WALK_B  228 // 228..231
 #define SPR_BIG_ACTOR_END     232
+// High OBJ range used only while the room renderer is active. Text screens
+// hide OAM before replacing this VRAM, and room_enter restores it afterward.
+// Convergence needs only a two-tile lower-half strip per class: the opposite
+// stride mirrors/swaps that strip while the powered upper body stays stable.
+#define SPR_CLASS_ASCENDED_STEP_BASE 232 // 5 classes x 2 tiles: 232..241
+#define SPR_MEDIUM_FACET_RAM_H       242 // horizontal E-facing pose: 242..245
+#define SPR_MEDIUM_FACET_RAM_V       246 // vertical S-facing pose: 246..249
+#define SPR_MEDIUM_STAGE_REAPER      250 // narrow 16x16 Reaper: 250..253
+#define SPR_FX_MORTAL_SCYTHE         254 // Reaper's warned nonlethal strike
 #define SPR_FX_BEAM_HEAD      158 // two-sprite fat beam head
 #define SPR_FX_BEAM_TAIL      159 // trailing beam body
 #define SPR_FX_ARROW          157 // Frost wall-launcher bolt
@@ -340,8 +349,10 @@ void tiles_load_hud(void) BANKED;
 // Phase 12 metasprite loaders
 void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles = 20 OBJ tiles
 void tiles_load_ascended_sprites(void) BANKED;    // transform atlas -> fixed OBJ slots
+void tiles_load_ascended_motion_sprites(void) BANKED; // transformed lower-half stride
 void tiles_load_motion_sprites(void) BANKED;      // bank-4 walk-B + damage-recoil atlas
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
+void tiles_load_high_enemy_sprites(void) BANKED;  // Facet Ram + Reaper + scythe
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot
 void tiles_load_rift_warden_sprite(void) BANKED;  // combat-only reuse of sale-tag slot
 void tiles_load_prism_skitter_sprite(void) BANKED; // combat-only reuse of elder slot

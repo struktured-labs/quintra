@@ -23,10 +23,11 @@ pub const STAGES: [StageTheme; 9] = [
         // unwinnable expedition.
         boss_hp_bonus: 150, boss_hp_cap: 200, endless_boss_hp_cap: 255,
         boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
-        // Shard Crabs replace a small crawler slice: their one-hit shell
-        // introduces a readable bait-and-punish beat without increasing the
-        // opening room body count or changing pool weight.
-        enemy_pool: &[(0, 29), (30, 6), (12, 30), (9, 20), (13, 15)],
+        // Stage 1 now asks for movement immediately: Hornets close distance,
+        // while a rare Facet Ram creates a directional armor problem and a
+        // dangerous rear lane. Passive crawler/flutter weight pays for both,
+        // leaving the table and procgen density at exactly 100.
+        enemy_pool: &[(0, 18), (30, 6), (12, 22), (9, 18), (13, 14), (33, 12), (2, 10)],
     },
     // 1 — Verdant Hollow (mossy green)
     StageTheme {

@@ -12,6 +12,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "render/text.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -76,12 +77,17 @@ static u8 oath_shot(i8 dx, i8 dy, u8 damage, u8 kind, u8 pierce) {
     return 0;
 }
 
+static u8 oath_attack(void) {
+    return STATUS_PLAYER_INVERTED()
+        ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk;
+}
+
 static u8 shard_wake(void) {
     u8 d, made = 0;
     g_shot_element = 2; // crystal-cold: also bridges authored spike beds
     for (d = 0; d < 8; ++d)
         made |= oath_shot(dir8_dx[d], dir8_dy[d],
-            (u8)(player.atk + 2), PROJ_SHURIKEN, 3);
+            (u8)(oath_attack() + 2), PROJ_SHURIKEN, 3);
     return made;
 }
 
@@ -105,10 +111,10 @@ static u8 root_call(void) {
     }
     // Roots still have a close-range presence in an empty lane.
     g_shot_element = 16;
-    touched |= oath_shot(0, -1, (u8)(player.atk + 1), PROJ_SPIKE, 2);
-    touched |= oath_shot(1, 0, (u8)(player.atk + 1), PROJ_SPIKE, 2);
-    touched |= oath_shot(0, 1, (u8)(player.atk + 1), PROJ_SPIKE, 2);
-    touched |= oath_shot(-1, 0, (u8)(player.atk + 1), PROJ_SPIKE, 2);
+    touched |= oath_shot(0, -1, (u8)(oath_attack() + 1), PROJ_SPIKE, 2);
+    touched |= oath_shot(1, 0, (u8)(oath_attack() + 1), PROJ_SPIKE, 2);
+    touched |= oath_shot(0, 1, (u8)(oath_attack() + 1), PROJ_SPIKE, 2);
+    touched |= oath_shot(-1, 0, (u8)(oath_attack() + 1), PROJ_SPIKE, 2);
     return touched;
 }
 
@@ -126,11 +132,11 @@ static u8 cinderstep(u8 dir) {
         made = 1;
     }
     g_shot_element = 1;
-    made |= oath_shot(dx, dy, (u8)(player.atk + 3), PROJ_BOMB, 3);
+    made |= oath_shot(dx, dy, (u8)(oath_attack() + 3), PROJ_BOMB, 3);
     made |= oath_shot(dir8_dx[(u8)((dir + 1) & 7)],
-        dir8_dy[(u8)((dir + 1) & 7)], (u8)(player.atk + 2), PROJ_BOMB, 2);
+        dir8_dy[(u8)((dir + 1) & 7)], (u8)(oath_attack() + 2), PROJ_BOMB, 2);
     made |= oath_shot(dir8_dx[(u8)((dir + 7) & 7)],
-        dir8_dy[(u8)((dir + 7) & 7)], (u8)(player.atk + 2), PROJ_BOMB, 2);
+        dir8_dy[(u8)((dir + 7) & 7)], (u8)(oath_attack() + 2), PROJ_BOMB, 2);
     if (player.iframes < 20) player.iframes = 20;
     return made;
 }
@@ -161,7 +167,7 @@ static u8 still_wave(void) {
     g_shot_element = 2;
     for (d = 0; d < 8; d += 2)
         made |= oath_shot(dir8_dx[d], dir8_dy[d],
-            (u8)(player.atk + 1), PROJ_BUBBLE, 3);
+            (u8)(oath_attack() + 1), PROJ_BUBBLE, 3);
     return made;
 }
 
@@ -246,7 +252,8 @@ static u8 red_harvest(void) {
         drained++;
     }
     if (!drained) return 0;
-    if (player.hp < player.hp_max) player.hp++;
+    if (player.hp < player.hp_max && !STATUS_PLAYER_HEALING_BLOCKED())
+        player.hp++;
     return 1;
 }
 

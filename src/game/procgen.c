@@ -20,6 +20,10 @@
 #include "render/tiles.h"
 #include "content.h"
 
+// Fixed Reaper encounter construction lives with its feature AI/art bank;
+// procgen only selects the authored deep cell.
+void stage_reaper_spawn_encounter(u8 stage) BANKED;
+
 u8 procgen_current_room_is_boss;
 u8 procgen_current_room_is_large;
 
@@ -1248,14 +1252,19 @@ void procgen_generate_current_room(void) BANKED {
                 }
             }
         } else if (is_miniboss) {
+            // Every dungeon's fixed deep court belongs to the Reaper. It is
+            // not part of any random pool, and its clear bit prevents the
+            // mortal encounter from respawning during stage backtracking.
+            u8 stage = run_state.bosses_beaten;
+            if (!run_state.world_mode && run_state_dungeon_local() == 15) {
+                stage_reaper_spawn_encounter(stage);
             // MINI-BOSS: early dungeons use a beefed 16x16 Sentinel and two
             // escorts. Golden Temple onward instead gets the Bellwarden: a
             // stage-tinted Dread Bell plus one Rift Warden. That is a
             // guaranteed, readable pre-boss bullet-hell check—not a late
             // roster roll the player might never see—while the sanctuary in
             // the next room still turns its reward into boss preparation.
-            u8 stage = run_state.bosses_beaten;
-            if (stage >= 6) {
+            } else if (stage >= 6) {
                 u8 idx = enemy_spawn(ENEMY_DREAD_BELL, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
                     // Palette 6 is the generated boss tint already loaded

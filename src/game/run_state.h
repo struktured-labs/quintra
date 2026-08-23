@@ -134,6 +134,7 @@ typedef struct {
 
 #define RUN_STAGE_SIGIL_BIT(stage) ((u16)(1u << ((stage) % BOSSES_TO_WIN)))
 #define RUN_TRIAL_BIT       ((u8)(1u << 0))
+#define RUN_REAPER_CLEARED_BIT ((u8)(1u << 2))
 #define RUN_WARDEN_BOON_BIT ((u8)(1u << 3))
 #define RUN_DEEP_GATE_BIT    ((u8)(1u << 6))
 #define RUN_WAYSTONE_BIT     ((u8)(1u << 7))
@@ -175,7 +176,7 @@ u8   run_state_is_miniboss(void) BANKED;
 u8   run_state_is_shop(void);
 u8   run_state_room_is_town(u8 room_counter);
 u8   run_state_dungeon_cell_seen(u8 cell);
-void run_state_reveal_dungeon_cell(u8 cell);
+void run_state_reveal_dungeon_cell(u8 cell) BANKED;
 void run_state_mark_visited(void);
 u8   run_state_world_cell_seen(u8 cell) BANKED;
 void run_state_reveal_world_cell(u8 cell) BANKED;
@@ -185,6 +186,6 @@ u8   run_state_riftwild_gate_screen(void) BANKED;
 u8   run_state_riftwild_gate_active(u8 screen) BANKED;
 void run_state_ensure_dungeon_law(void);
 u16  run_state_enemies_killed_total(void);
-void run_state_record_enemy_kill(void);
+void run_state_record_enemy_kill(void) BANKED;
 
 #endif

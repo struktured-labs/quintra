@@ -1,4 +1,4 @@
-#pragma bank 6
+#pragma bank 11
 
 #include "audio/sfx.h"
 #include "game/enemy_ai.h"

@@ -76,6 +76,8 @@ pub const ENEMY_VINE_COIL:       EnemyId = EnemyId::new(29);   // Verdant Hollow
 pub const ENEMY_SHARD_CRAB:      EnemyId = EnemyId::new(30);   // Crystal Caverns shell-counter skirmisher
 pub const ENEMY_VOID_HALO:       EnemyId = EnemyId::new(31);   // Void Sanctum wide-orbit lane shaper
 pub const ENEMY_RIFT_CANTOR:     EnemyId = EnemyId::new(32);   // chants once, then calls bounded escorts
+pub const ENEMY_FACET_RAM:       EnemyId = EnemyId::new(33);   // rear-vulnerable patrol, fires backward
+pub const ENEMY_STAGE_REAPER:    EnemyId = EnemyId::new(34);   // one mortal encounter per dungeon
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -119,8 +121,8 @@ pub const BG_PAL_CAVERN_HI:   PaletteRef = PaletteRef::new(3);
 
 pub const SPRITE_WOLFKIN:     SpriteRef = SpriteRef::new(0);
 // Enemy SpriteRef values are the actual OBJ tile slots consumed by runtime.
-// Keep these aligned with render/tiles.h; content validation constrains them
-// to the 0..127 hardware OBJ tile range.
+// Keep these aligned with render/tiles.h. In 8x8 OBJ mode the hardware tile
+// index is the full unsigned byte, so dedicated late atlas slots are valid.
 pub const SPRITE_CRAWLER:     SpriteRef = SpriteRef::new(20);
 pub const SPRITE_HORNET:      SpriteRef = SpriteRef::new(21);
 pub const SPRITE_SKELETON:    SpriteRef = SpriteRef::new(22);
@@ -183,6 +185,8 @@ pub const SPRITE_VOID_HALO:      SpriteRef = SpriteRef::new(79);
 // Merchants never coexist with hostiles. Ordinary dungeon combat may reclaim
 // their tile for the Cantor's antlered-mask silhouette.
 pub const SPRITE_RIFT_CANTOR:    SpriteRef = SpriteRef::new(70);
+pub const SPRITE_FACET_RAM:      SpriteRef = SpriteRef::new(242);
+pub const SPRITE_STAGE_REAPER:   SpriteRef = SpriteRef::new(250);
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

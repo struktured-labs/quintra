@@ -158,6 +158,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
+	$(PYBOY_RUN) scripts/test_status_effects.py
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py
 	$(PYBOY_RUN) scripts/test_world_interactions.py
 	$(PYBOY_RUN) scripts/test_oath_arts.py
@@ -187,7 +188,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_sram_compat.py
 	python3 scripts/make_mgba_states.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
-		--mgba "$(MGBA_BIN)" --champion wolfkin --difficulty easy
+		--mgba "$(MGBA_BIN)" --difficulty easy
 	$(PYBOY_RUN) scripts/test_puzzles.py
 	$(PYBOY_RUN) scripts/test_hidden_secrets.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
@@ -436,7 +437,7 @@ mgba-states: all
 mgba-state-smoke:
 	@python3 scripts/make_mgba_states.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
-		--mgba "$(MGBA_BIN)" --champion wolfkin --difficulty easy
+		--mgba "$(MGBA_BIN)" --difficulty easy
 
 # Controller-driven periodic capture. The default begins from the plausible
 # stage-four Wolfkin Easy curriculum and emits a fresh PyBoy checkpoint every

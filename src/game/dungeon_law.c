@@ -19,6 +19,11 @@
 #define LAW_SWITCH_X 3
 #define LAW_SWITCH_Y 8
 
+// Feedback/persistence is completed by the resident room loop after this
+// banked call returns. That avoids stacking an SRAM far call underneath the
+// live multi-VBlank architecture rewrite.
+u8 dungeon_law_toggle_pending;
+
 static const char *const law_names[3] = {
     "PRISM", "THORN", "STONE",
 };
@@ -69,7 +74,7 @@ static void law_set(u8 x, u8 y, u8 tile, u8 live) {
     VBK_REG = 0;
 }
 
-void dungeon_law_apply_room(u8 live) BANKED {
+static void law_apply_room(u8 live) {
     u8 x, y;
     u8 state;
     u8 kind;
@@ -103,19 +108,25 @@ void dungeon_law_apply_room(u8 live) BANKED {
         law_set(LAW_SWITCH_X, LAW_SWITCH_Y, BGT_SWITCH, live);
 }
 
-u8 dungeon_law_try_toggle_at(u8 tx, u8 ty) BANKED {
+void dungeon_law_apply_room(u8 live) BANKED {
+    law_apply_room(live);
+}
+
+static u8 law_try_toggle_at(u8 tx, u8 ty) {
     if (!law_room_has_switch() || tx != LAW_SWITCH_X || ty != LAW_SWITCH_Y)
         return 0;
     run_state.dungeon_law ^= DUNGEON_LAW_STATE_BIT;
-    dungeon_law_apply_room(1);
-    room_shake(2, 22);
-    sfx_play(SFX_PUZZLE);
-    sram_save_run();
+    law_apply_room(1);
+    dungeon_law_toggle_pending = 1;
     return 1;
 }
 
+u8 dungeon_law_try_toggle_at(u8 tx, u8 ty) BANKED {
+    return law_try_toggle_at(tx, ty);
+}
+
 u8 dungeon_law_try_player_toggle(void) BANKED {
-    return dungeon_law_try_toggle_at((u8)((player.x + 8) >> 3),
+    return law_try_toggle_at((u8)((player.x + 8) >> 3),
         (u8)((player.y + 12) >> 3));
 }
 

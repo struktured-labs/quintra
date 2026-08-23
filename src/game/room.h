@@ -60,6 +60,7 @@ extern u8 room_hurt_pose_ticks;
 // alternates the authored two-step walk without branching in OAM rendering.
 extern u8 room_player_pose_base;
 extern u8 room_player_pose_locked;
+void room_draw_ascended_walk_lower(u8 class_id, u8 frame, u8 prop) BANKED;
 // Dungeon district names are short arrival callouts, not persistent terrain.
 // The Compass remains the permanent source of current-depth information.
 extern u8 room_district_label_ticks;
@@ -119,6 +120,8 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED;
 // Impact shake: wiggle the BG scroll (HUD unaffected) for a few frames.
 // mag = pixels (1-2 sensible); longer of current/new duration wins.
 void room_shake(u8 mag, u8 frames) BANKED;
+// Blind dims only the playfield palettes; HUD and silhouettes stay readable.
+void room_status_blind_visual(u8 blind) BANKED;
 void room_start_weapon_surge(void) BANKED;
 // Pause into the one-page major-objective claim tableau after collision has
 // committed the item. `kind` is the pickup identity; `topic` is its stage.

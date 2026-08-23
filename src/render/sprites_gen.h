@@ -30,6 +30,11 @@ extern const u8 sprite_class_sauran_ascended[64];
 extern const u8 sprite_class_corvin_ascended[64];
 extern const u8 sprite_class_picsean_ascended[64];
 extern const u8 sprite_class_vespine_ascended[64];
+extern const u8 sprite_class_wolfkin_ascended_step[32];
+extern const u8 sprite_class_sauran_ascended_step[32];
+extern const u8 sprite_class_corvin_ascended_step[32];
+extern const u8 sprite_class_picsean_ascended_step[32];
+extern const u8 sprite_class_vespine_ascended_step[32];
 
 // 8x8 enemy sprites
 extern const u8 sprite_enemy_crawler[16];
@@ -116,6 +121,10 @@ extern const u8 sprite_bruiser_orc[64];
 extern const u8 sprite_bruiser_bomber[64];
 extern const u8 sprite_bruiser_warlock[64];
 extern const u8 sprite_medium_cinder_maw[64];
+extern const u8 sprite_medium_facet_ram_h[64];
+extern const u8 sprite_medium_facet_ram_v[64];
+extern const u8 sprite_medium_stage_reaper[64];
+extern const u8 sprite_fx_mortal_scythe[16];
 
 // Nine 32x32 stage bosses (9 * 16 tiles * 16 bytes)
 extern const u8 sprite_boss_stages[2304];

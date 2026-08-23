@@ -10,10 +10,15 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "game/will.h"
 #include "render/tiles.h"
 #include "render/hud.h"
 #include "content.h"
+
+u8 status_enemy_effective_poise(u8 idx, u8 poise) BANKED;
+u8 status_enemy_hit_damage(u8 idx, u8 damage) BANKED;
+u8 status_hostile_damage_taken(u8 idx) BANKED;
 
 // Global hit-stop: freezes the room loop for a few frames on impact for weight.
 u8 g_hitstop;
@@ -90,6 +95,8 @@ u8 combat_resolve(void) BANKED {
 
     // Tick down per-frame timers
     if (player.iframes > 0) player.iframes--;
+    if (status_confused_projectiles)
+        status_resolve_confused_projectiles();
 
     // 1) Player-projectile -> enemy collisions
     for (i = 0; i < MAX_ENTITIES; ++i) {
@@ -141,32 +148,17 @@ u8 combat_resolve(void) BANKED {
             } else if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
-            // Counter guards (Echo Guard and Crystal's Shard Crab) parry the
-            // first hit, rush briefly, then expose a real punish window. The
-            // behavior is keyed to authored AI rather than a one-off enemy
-            // ID so future shell creatures do not duplicate combat rules.
-            if (eid < N_ENEMIES && enemies[eid].ai_kind == AI_COUNTER_GUARD
-                && entities[j].state == 0) {
-                entities[j].state = 1;
-                entities[j].state_timer = enemies[eid].ai_p1;
-                entities[j].ai_data[6] = enemies[eid].ai_p0;
-                entities[j].palette = 4;
-                entities[j].ai_data[7] = 10;
-                fx_spawn(SPR_FX_IMPACT, 3,
-                    FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 8);
-                sfx_play(SFX_WEAK);
-                entity_kill(i);
-                break;
-            }
-            // Folding Star: expanded geometry is an invulnerable projection.
-            // Shots still burst on contact, teaching the player to wait for
-            // the bright contracted core rather than passing through it.
-            if (eid == ENEMY_FOLD_STAR && entities[j].state != 0) {
-                sfx_play(SFX_HIT);
-                fx_spawn(SPR_FX_IMPACT, 0,
-                    FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 5);
-                entity_kill(i);
-                break;
+            // Keep specialist rejection out of this already-large resolver's
+            // stack frame. The helper is entered only for authored armor,
+            // shell, or projection bodies—not every ordinary contact.
+            if (eid == ENEMY_FACET_RAM || eid == ENEMY_FOLD_STAR
+                    || (eid < N_ENEMIES
+                        && enemies[eid].ai_kind == AI_COUNTER_GUARD)) {
+                enemy_special_reject_hit(i, j);
+                // Projectile retirement is the authoritative rejection
+                // result. Avoid carrying an SDCC banked return byte through
+                // the helper's nested visual/audio calls.
+                if (!(entities[i].flags & EF_ACTIVE)) break;
             }
             // Fang Forms is a two-body cleave, not two consecutive damage
             // ticks against one overlapping body. Preserve the projectile so
@@ -205,6 +197,7 @@ u8 combat_resolve(void) BANKED {
             // mini-bosses retain their authored matchups.
             if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) weakness = 0;
             poise    = (eid < N_ENEMIES) ? enemies[eid].stats.poise    : 0;
+            poise = status_enemy_effective_poise(j, poise);
 
             // Per-hit damage: base + elemental x2 (weapon element in
             // projectile ai_data[1]) + crit x2 (LCK * 5% chance).
@@ -215,7 +208,9 @@ u8 combat_resolve(void) BANKED {
                 dmg = (u8)(dmg + ((dmg + 1) >> 1));
                 if (player.class_id == 4) dmg++;
             }
-            if (rng_range(100) < (u8)(player.lck * 5)) dmg = (u8)(dmg << 1);
+            if (rng_range(100)
+                < (u8)(status_player_effective_stat(QSTATUS_STAT_LCK) * 5))
+                dmg = (u8)(dmg << 1);
             if (player.class_id == 2 && will_corvin_mark_ticks
                 && j == will_corvin_mark_slot) {
                 dmg = (u8)(dmg + WILL_CORVIN_MARK_BONUS);
@@ -224,6 +219,7 @@ u8 combat_resolve(void) BANKED {
             // desperation lends +1 damage — a comeback edge one hit from death.
             if (player.hp <= 2 && player.hp > 0) dmg++;
             if (dmg == 0) dmg = 1;
+            dmg = status_enemy_hit_damage(j, dmg);
             if (entities[i].ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
                 entities[i].ai_data[5] = j;
 
@@ -270,6 +266,7 @@ u8 combat_resolve(void) BANKED {
                 // Apply damage
                 if (entities[j].hp > dmg) {
                     entities[j].hp = (u8)(entities[j].hp - dmg);
+                    status_try_player_shot(j, i);
                     entities[j].ai_data[7] = weak ? 7 : 4;  // hit-flash frames
                     knockback_enemy(&entities[j], entities[i].vx, entities[i].vy, poise);
                     if (g_hitstop < (weak ? 2 : 1)) g_hitstop = weak ? 2 : 1;
@@ -298,10 +295,13 @@ u8 combat_resolve(void) BANKED {
                             score_add(pts);
                         }
                         run_state_record_enemy_kill();
+                        if (eid == ENEMY_STAGE_REAPER)
+                            run_state.dungeon_puzzles |= RUN_REAPER_CLEARED_BIT;
                         // Vampiric Sigil (item id 29): slow dungeon sustain.
                         // Multiple copies keep their stat boosts but do not
                         // multiply the heal, avoiding runaway immortality.
-                        if ((run_state_enemies_killed_total() % 5) == 0
+                        if (!STATUS_PLAYER_HEALING_BLOCKED()
+                            && (run_state_enemies_killed_total() % 5) == 0
                             && player.hp < player.hp_max) {
                             u8 vi;
                             for (vi = 0; vi < INVENTORY_SLOTS; ++vi) {
@@ -363,7 +363,8 @@ u8 combat_resolve(void) BANKED {
                             // be saved at full health. This is sustain, not
                             // a boss-fight heal: it happens only after the
                             // colossus and its bullet storm are gone.
-                            if (player.hp < player.hp_max) {
+                            if (!STATUS_PLAYER_HEALING_BLOCKED()
+                                && player.hp < player.hp_max) {
                                 if (player.hp <= (u8)(player.hp_max - 2))
                                     player.hp = (u8)(player.hp + 2);
                                 else
@@ -537,14 +538,18 @@ u8 combat_resolve(void) BANKED {
                 && entities[i].ai_data[6]) continue;
             if (aabb_overlap_player(&entities[i])) {
                 u8 was_projectile = (entities[i].type == ENT_PROJECTILE);
+                if (was_projectile
+                    && entities[i].ai_data[6] == PROJ_AUX_MORTAL_SCYTHE) {
+                    stage_reaper_mortal_hit(i);
+                    break;
+                }
                 // DEF soaks incoming damage (min 1 half-heart gets through).
                 // A giant colossus is already a moving wall inside a dense
                 // bullet pattern. Its body is a positioning tax, not a
                 // second full-strength projectile: keep contact at one
                 // half-heart so close-range champions can trade a lunge for
                 // space while the actual bullet-hell damage still escalates.
-                u8 taken = (entities[i].damage > player.def)
-                    ? (u8)(entities[i].damage - player.def) : 1;
+                u8 taken = status_hostile_damage_taken(i);
                 if (entities[i].type == ENT_ENEMY
                     && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
                     && entities[i].ai_data[3]) taken = 1;
@@ -579,7 +584,9 @@ u8 combat_resolve(void) BANKED {
                     // cardinal avoids filling the 32-entity pool with an
                     // eight-way burst during already-dense boss patterns.
                     if (combat_has_relic(ITEM_ID_THORN_CROWN)) {
-                        u8 counter = (u8)(1 + (player.atk >> 1));
+                        u8 counter_atk = status_player_effective_stat(
+                            QSTATUS_STAT_ATK);
+                        u8 counter = (u8)(1 + (counter_atk >> 1));
                         g_shot_element = 0;
                         projectile_spawn_player(0, -1, counter, PROJ_BULLET);
                         projectile_spawn_player(1, 0, counter, PROJ_BULLET);
@@ -616,6 +623,7 @@ u8 combat_resolve(void) BANKED {
                 // Without this, ordinary contact/projectile damage stayed on
                 // the old heart row until a later pickup or room redraw.
                 hud_redraw_hp();
+                status_try_hostile_hit(i);
                 if (was_projectile) entity_kill(i);   // bullet spent
                 break;   // one hit per frame
             }

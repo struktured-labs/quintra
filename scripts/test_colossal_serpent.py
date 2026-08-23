@@ -2,7 +2,7 @@
 """Live-ROM contract for Verdant's articulated Snake boss."""
 from pathlib import Path
 
-from test_boss_identity import EN, PL, TM, addr, enter_boss, put16
+from test_boss_identity import EN, ENEMY_STATUS, PL, TM, addr, enter_boss, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -120,13 +120,23 @@ def main():
     def record_trace_point(x, y):
         put16(pb, boss + 3, x)
         put16(pb, boss + 7, y)
+        # This section proves the eight-pixel route sampler itself. Keep the
+        # live chase from advancing far enough within one PyBoy observation
+        # tick to overwrite the exact synthetic point before Python sees it;
+        # pursuit is exercised independently by the movement suite below.
+        put16(pb, PL + 9, x)
+        put16(pb, PL + 11, y)
         for _ in range(8):
             pb.memory[PL + 15] = 255
+            pb.memory[boss + 16] = 0
+            pb.memory[ENEMY_STATUS + (boss - EN) // ENTITY_SIZE] = 0
             pb.tick()
             if (pb.memory[TAIL_X] == (x + 12) & 0xFF
                     and pb.memory[TAIL_Y] == (y + 12) & 0xFF):
                 return
-        raise AssertionError(f"tail sampler missed authored point {(x, y)}")
+        raise AssertionError(
+            f"tail sampler missed authored point {(x, y)}: "
+            f"tail0={tail_points(pb)[:2]} head={position(pb, boss)}")
 
     for x in range(60, 133, 8):
         record_trace_point(x, 36)

@@ -230,6 +230,33 @@ pub const VESPINE_ASCENDED: [&str; 16] = [
     "...3211221123...", "...3211221123...", "...3212..2123...", "...322....223...",
 ];
 
+// Spirit Convergence used to lock each champion to the single neutral pose,
+// so a maxed-out A+B form visibly slid across the floor. One authored lower
+// half per champion is enough for a true two-beat stride: runtime mirrors and
+// swaps only these two bottom tiles for the opposite foot, leaving asymmetric
+// heads, wings, fins, and crowns stable instead of flipping the whole hero.
+pub const WOLFKIN_ASCENDED_STEP: [&str; 16] = ascended_step(WOLFKIN_ASCENDED);
+pub const SAURAN_ASCENDED_STEP: [&str; 16] = ascended_step(SAURAN_ASCENDED);
+pub const CORVIN_ASCENDED_STEP: [&str; 16] = ascended_step(CORVIN_ASCENDED);
+pub const PICSEAN_ASCENDED_STEP: [&str; 16] = picsean_ascended_step();
+pub const VESPINE_ASCENDED_STEP: [&str; 16] = ascended_step(VESPINE_ASCENDED);
+
+const fn ascended_step(mut pose: [&'static str; 16]) -> [&'static str; 16] {
+    pose[12] = "...3211..21123..";
+    pose[13] = "....212..2112...";
+    pose[14] = "...322....2123..";
+    pose[15] = "..........223...";
+    pose
+}
+
+const fn picsean_ascended_step() -> [&'static str; 16] {
+    let mut pose = ascended_step(PICSEAN_ASCENDED);
+    // Keep Picsean's webbed lead foot broad enough to read at 1x on a GBC.
+    pose[14] = "..3232....2123..";
+    pose[15] = "...32.....223...";
+    pose
+}
+
 // Swarm tier (8x8): distinct silhouettes over samey blobs. Shading
 // convention 1 body / 2 dark outline / 3 highlight+eyes, same as players.
 pub const CRAWLER: [&str; 8] = [   // spider/tick: splayed legs, wide body
@@ -395,6 +422,81 @@ pub const CINDER_MAW_MEDIUM: [&str; 16] = [
     "....33....33....",
     "....3......3....",
     "................",
+];
+
+// Facet Ram: a rectangular crystal beast, deliberately between an 8x8 swarm
+// body and the square 16x16 bruisers. Horizontal art faces east; the bright
+// rune/cannon on the left is its vulnerable rear. Vertical art faces south,
+// with the same readable weak rune at the top.
+pub const FACET_RAM_H: [&str; 16] = [
+    "................",
+    "...........22...",
+    "..33.....22222..",
+    ".33122222211122.",
+    "3311111111111222",
+    "3131131113311222",
+    "3311111111111222",
+    ".33122222211122.",
+    "..33....222222..",
+    "..3.....2.22.2..",
+    "........2....2..",
+    ".......22....22.",
+    ".......2......2.",
+    "......22......22",
+    "................",
+    "................",
+];
+
+pub const FACET_RAM_V: [&str; 16] = [
+    "......33........",
+    ".....3313.......",
+    "....331133......",
+    "...221111122....",
+    "..22113311222...",
+    "..21111111112...",
+    ".2211133111122..",
+    ".2111111111112..",
+    ".2211111111122..",
+    "..21111111112...",
+    "..22111111222...",
+    "...22111122.....",
+    "....221122......",
+    "....22..22......",
+    "...22....22.....",
+    "................",
+];
+
+// The stage Reaper is narrow rather than another round/square bruiser. Its
+// raised crescent is visible during the long mortal-strike tell, while the
+// hollow robe keeps the body distinct from villagers and Warlocks.
+pub const STAGE_REAPER: [&str; 16] = [
+    "..........3.....",
+    ".........333....",
+    "....222.33.33...",
+    "...21112...33...",
+    "..2111112...33..",
+    "..2113312....3..",
+    ".221111112..33..",
+    ".211111111233...",
+    ".21113311123....",
+    "..2111111123....",
+    "..2211111223....",
+    "...21111123.....",
+    "...21111123.....",
+    "..22.2112.22....",
+    ".22..2112..22...",
+    "22...2222...22..",
+];
+
+pub const MORTAL_SCYTHE: [&str; 8] = [
+    ".....333",
+    "...3332.",
+    "..3322..",
+    ".332....",
+    ".32.....",
+    "..3.....",
+    "..3.....",
+    ".33.....",
 ];
 
 pub const RIFT_OOZE: [&str; 8] = [ // unstable blob with two budding fragments
@@ -1093,6 +1195,14 @@ pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [
     ("corvin", &CORVIN_ASCENDED),
     ("picsean", &PICSEAN_ASCENDED),
     ("vespine", &VESPINE_ASCENDED),
+];
+
+pub const PLAYERS_ASCENDED_STEP: [(&str, &[&str]); 5] = [
+    ("wolfkin", &WOLFKIN_ASCENDED_STEP),
+    ("sauran", &SAURAN_ASCENDED_STEP),
+    ("corvin", &CORVIN_ASCENDED_STEP),
+    ("picsean", &PICSEAN_ASCENDED_STEP),
+    ("vespine", &VESPINE_ASCENDED_STEP),
 ];
 
 pub const ENEMIES_8: [(&str, &[&str]); 31] = [

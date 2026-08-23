@@ -29,6 +29,7 @@
 #include "game/run_state.h"
 #include "game/sram.h"
 #include "game/stage_event.h"
+#include "game/status.h"
 #include "game/will.h"
 #include "game/waygear.h"
 #include "render/class_palettes.h"
@@ -86,7 +87,7 @@ static u8 boss_threshold_warned;
 static u8 shop_offer_visible;
 // Toxic Mire's BG organism redraws only when the boss changes pulse phase.
 // 0xFF forces the first live frame to reconcile VRAM with the entity state.
-static u8 mire_projection_state;
+u8 room_mire_projection_state;
 // Set once when a room is generated.  Price proximity must never put a
 // 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
 static u8 room_has_shop_wares;
@@ -107,6 +108,20 @@ u8 room_sigil_status;
 // combat via room_shake() on boss kills / player hits.
 static u8 shake_timer;
 static u8 shake_mag;
+// A contextual altar press owns A until it is physically released. The live
+// room rewrite spans several VBlanks; without this latch, turbo fire resumes
+// after the animation and can immediately strike the same altar a second time.
+static u8 law_action_latch;
+
+extern u8 dungeon_law_toggle_pending;
+
+static void room_finish_law_toggle(void) {
+    dungeon_law_toggle_pending = 0;
+    shake_mag = 2;
+    if (shake_timer < 22) shake_timer = 22;
+    sfx_play(SFX_PUZZLE);
+    sram_save_run();
+}
 
 // Death sequence: frames left in the fall-down beat before GAMEOVER.
 static u8 death_timer;
@@ -222,13 +237,6 @@ static void room_start_death(void) {
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
-}
-
-void room_start_weapon_surge(void) BANKED {
-    room_weapon_surge_ticks = 120;
-    room_shake(1, 10);
-    fx_spawn(SPR_SURGE_ORB, 0x06, (i16)player.x + 4, (i16)player.y - 6, 18);
-    sfx_play_reward(SFX_REWARD_SURGE);
 }
 
 void room_start_major_reward(u8 kind, u8 topic) BANKED {
@@ -369,46 +377,6 @@ static void room_load_town_resident_identity(void) {
         tiles_load_town_bellkeeper_sprite();
         tiles_load_town_lorekeeper_sprite();
         tiles_load_town_lore_callout_sprite();
-    }
-}
-
-// Progression fixtures belong to room orchestration, after procgen has fully
-// populated combat slots. Keeping them here prevents geometry/encounter code
-// from accidentally erasing a required key and makes the invariant testable.
-void room_spawn_progression_fixture(void) BANKED {
-    u8 i;
-    u8 arena_stage = room_apply_world_arena();
-    if (arena_stage == 4) mire_projection_state = 0xFF;
-    room_sigil_status = 1;
-    if (run_state.world_mode) return;
-    room_sigil_status = 2;
-    // The mission graph owns this stage's persistent objective room. Its cell
-    // is seed-stable for backtracking/suspend but no longer pinned to room 2.
-    if (run_state_dungeon_local() != run_state.mission_sigil_cell) return;
-    room_sigil_status = 3;
-    if (run_state.rift_sigils
-        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) return;
-    room_sigil_status = 4;
-    // This is normally called by procgen immediately after entity_init_room,
-    // before optional enemies/loot can occupy the fixed 32-slot table. The
-    // later orchestration calls are intentionally idempotent: never duplicate
-    // an unclaimed fixture while a room is redrawn or resumed.
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if ((entities[i].flags & EF_ACTIVE)
-            && entities[i].type == ENT_PICKUP
-            && entities[i].ai_data[0] == PICKUP_RIFT_SIGIL) {
-            room_sigil_status = 5;
-            return;
-        }
-    }
-    {
-        u8 sigil = pickup_spawn(PICKUP_RIFT_SIGIL, FIX8(80), FIX8(64));
-        if (sigil != 0xFF) {
-            room_sigil_status = 5;
-            entities[sigil].sprite_tile = SPR_ITEM_RIFT_SIGIL;
-            entities[sigil].palette = 0x06;
-            entities[sigil].state_timer = 0;
-        }
     }
 }
 
@@ -646,6 +614,10 @@ static void room_apply_pause_palettes(u8 dim) {
         palette_bg_load(BGPAL_CRYSTAL, sp[2]);
         palette_bg_load(BGPAL_DOOR,    sp[3]);
     }
+}
+
+void room_status_blind_visual(u8 blind) BANKED {
+    room_apply_pause_palettes(blind ? 1 : 0);
 }
 
 // Single-tile rewrite (tile + attr) at the top of vblank.
@@ -995,16 +967,29 @@ static void place_player_sprite(void) {
         u8 class_id = (player.class_id < 5) ? player.class_id : 0;
         u8 base = (u8)(room_player_pose_base
                        + (u8)(class_id * SPR_CLASS_STRIDE));
+        u8 prop = 0x01;
+        // Conditions pulse rather than permanently erasing hero identity.
+        if (player_status_kind != QSTATUS_NONE && (entity_anim_counter & 0x08))
+            prop = status_player_palette_prop();
         set_sprite_tile(0, (u8)(base + 0));
         set_sprite_tile(1, (u8)(base + 1));
-        set_sprite_prop(0, 0x01);
-        set_sprite_prop(1, 0x01);
+        set_sprite_prop(0, prop);
+        set_sprite_prop(1, prop);
         move_sprite(0, sx,         sy);
         move_sprite(1, (u8)(sx+8), sy);
-        set_sprite_tile(2, (u8)(base + 2));
-        set_sprite_tile(3, (u8)(base + 3));
-        set_sprite_prop(2, 0x01);
-        set_sprite_prop(3, 0x01);
+        if (room_transform_ticks && (player.anim_frame & 0x80)) {
+            // Spirit Convergence used to lock all five heroes to one static
+            // 16x16 pose, making their powered forms glide. Keep each
+            // asymmetric crown/face intact and animate only the two feet;
+            // mirroring plus swapping this lower strip supplies the opposite
+            // leading step without mirroring the whole champion.
+            room_draw_ascended_walk_lower(class_id, player.anim_frame, prop);
+        } else {
+            set_sprite_tile(2, (u8)(base + 2));
+            set_sprite_tile(3, (u8)(base + 3));
+            set_sprite_prop(2, prop);
+            set_sprite_prop(3, prop);
+        }
         move_sprite(2, sx,         (u8)(sy+8));
         move_sprite(3, (u8)(sx+8), (u8)(sy+8));
     }
@@ -1018,35 +1003,9 @@ static u8 room_scroll_y(void) {
     return (u8)((room_bg_origin_y << 3) + room_camera_y);
 }
 
-// Get the 8-dir index from current/pressed input. Returns 0..7 or 0xFF if none.
-static u8 input_to_dir8(u8 keys) {
-    u8 d = 0xFF;
-    if (keys & J_UP) {
-        if      (keys & J_RIGHT) d = 1;   // NE
-        else if (keys & J_LEFT)  d = 7;   // NW
-        else                     d = 0;   // N
-    } else if (keys & J_DOWN) {
-        if      (keys & J_RIGHT) d = 3;   // SE
-        else if (keys & J_LEFT)  d = 5;   // SW
-        else                     d = 4;   // S
-    } else if (keys & J_RIGHT) {
-        d = 2;
-    } else if (keys & J_LEFT) {
-        d = 6;
-    }
-    return d;
-}
-
-// Map 4-dir facing to 8-dir for fallback when no D-pad pressed at fire time
-static u8 facing_to_dir8(u8 facing) {
-    switch (facing) {
-        case FACE_N: return 0;
-        case FACE_E: return 2;
-        case FACE_S: return 4;
-        case FACE_W: return 6;
-        default:     return 4;
-    }
-}
+// Cold direction decoder is shared by weapon edges only. Keeping it in the
+// new feature bank recovers emergency headroom in the always-hot room bank.
+u8 room_input_dir8(u8 keys, u8 facing) BANKED;
 
 void room_enter(void) {
     g_vbl_ticks = 0;   // run clock: don't count time spent off-room
@@ -1115,6 +1074,7 @@ void room_enter(void) {
         place_player_sprite();
         SCX_REG = room_scroll_x();
         SCY_REG = room_scroll_y();
+        status_player_refresh_visual();
         // Music kept running through the pack screen (room_exit no longer stops
         // it), so there's nothing to restart here — resume is seamless.
         SHOW_SPRITES;
@@ -1191,6 +1151,7 @@ void room_enter(void) {
     // Suspend save: every room entry snapshots the run (battery SRAM).
     sram_save_run();
 
+    status_player_refresh_visual();
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
@@ -1211,6 +1172,15 @@ void room_exit(void) {
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
+    // Projectile-triggered Law altars finish on the next resident room tick;
+    // contextual A finishes below immediately after the far call returns.
+    if (dungeon_law_toggle_pending) room_finish_law_toggle();
+    if (law_action_latch) {
+        if (keys & J_A) {
+            keys &= (u8)~J_A;
+            pressed &= (u8)~J_A;
+        } else law_action_latch = 0;
+    }
     if (door_bump_cd) door_bump_cd--;
     if (arrival_sprite_grace) arrival_sprite_grace--;
     if (room_hurt_pose_ticks && --room_hurt_pose_ticks == 0) {
@@ -1238,11 +1208,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     if (pressed & J_SELECT) {
         return SCREEN_MAP;
     }
+    // Screen controls stay trustworthy; only in-world movement/actions are
+    // slowed, stopped, or adaptively remapped by an active condition.
+    if (player_status_kind == QSTATUS_STOP
+        || player_status_kind == QSTATUS_SLOW
+        || player_status_kind == QSTATUS_CONFUSION)
+        status_player_filter_input(&keys, &pressed);
     // A law altar is a contextual world action. Resolve it before ordinary
     // A fire so a deliberate switch press does not also spend Will or launch
     // a stray attack into the reshaping architecture.
-    if ((pressed & J_A) && dungeon_law_try_player_toggle())
+    if ((pressed & J_A) && dungeon_law_try_player_toggle()) {
+        law_action_latch = 1;
+        room_finish_law_toggle();
         return SCREEN_SELF;
+    }
     // Entering the amber threshold's approach gives one low roar and tremor.
     // The room itself is a full-heal sanctuary, so this is a fair commitment
     // warning rather than an ambush or an extra confirmation dialog.
@@ -1340,7 +1319,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (keys & J_DOWN)  { dy = +1; player.facing = FACE_S; moved = 1; }
 
         if (moved) {
-            player.move_acc = (u8)(player.move_acc + player.spd);
+            u8 move_stat = STATUS_PLAYER_INVERTED()
+                ? status_player_effective_stat(QSTATUS_STAT_SPD) : player.spd;
+            if (STATUS_PLAYER_HASTED() && move_stat < 13)
+                move_stat = (u8)(move_stat + 2);
+            player.move_acc = (u8)(player.move_acc + move_stat);
             animate_walk = 1;
         }
 
@@ -1605,6 +1588,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             && player.starter_weapon == classes[0].starter_weapon
             && w->p2 == PROJ_SPIKE) ? 1 : 0;
         u8 max_fired = 0;
+        u8 muted = STATUS_PLAYER_MUTED() ? 1 : 0;
+        u8 effective_atk = STATUS_PLAYER_INVERTED()
+            ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk;
         u8 chord = ((keys & (J_A | J_B)) == (J_A | J_B)
             && (pressed & (J_A | J_B))) ? 1 : 0;
         g_shot_element = class_element[player.class_id < 5 ? player.class_id : 0];
@@ -1621,12 +1607,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // A+B at full MP: SPIRIT CONVERGENCE. This is deliberately shared
         // across all five vessels—the common oath underneath their different
         // kits. Full-meter requirement prevents accidental chord activation.
-        if (chord && player.mp == player.mp_max
+        if (chord && muted) {
+            // Mute preserves the physical A strike but seals every spell,
+            // selected Oath, Spirit Convergence, and Will MAX expression.
+            sfx_play(SFX_HURT);
+        } else if (chord && player.mp == player.mp_max
             && player.active_charge == 0) {
             u8 sd;
             for (sd = 0; sd < 8; ++sd) {
                 u8 shot = projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
-                    (u8)(w->p1 + player.atk + 2), PROJ_SPIKE);
+                    (u8)(w->p1 + effective_atk + 2), PROJ_SPIKE);
                 if (shot != 0xFF) {
                     entities[shot].ai_data[3] |= PROJ_FLAG_CONVERGENCE;
                 }
@@ -1647,8 +1637,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // Oath Art. Full MP remains reserved for Spirit Convergence, so
             // the two systems form one readable resource ladder rather than
             // competing mappings.
-            u8 dir = input_to_dir8(keys);
-            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+            u8 dir = room_input_dir8(keys, player.facing);
             if (player.active_charge == 0 && player.mp >= OATH_MP_COST
                 && oath_arts_fire(dir)) {
                 player.mp = (u8)(player.mp - OATH_MP_COST);
@@ -1668,12 +1657,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // art. Dialogue wins the same contextual edge, so talking can never
         // spend a three-second charge. Ordinary shots below reset the meter.
         if ((pressed & J_A) && !(keys & J_B)) {
-            u8 dir = input_to_dir8(keys);
+            u8 dir = room_input_dir8(keys, player.facing);
             if (room_try_begin_dialog(pressed)) return SCREEN_DIALOG;
-            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
-            if (player.will_charge == WILL_MAX) {
+            if (!muted && player.will_charge == WILL_MAX) {
                 max_fired = will_fire_max(player.starter_weapon, dir,
-                    (u8)(w->p1 + player.atk));
+                    (u8)(w->p1 + effective_atk));
                 if (max_fired) {
                     player.will_charge = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
@@ -1696,12 +1684,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // projectile behaviour.
         if (wolfkin_melee && !(keys & J_B)) {
             if ((keys & J_A) && !max_fired) {
-                u8 dir = input_to_dir8(keys);
-                if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+                u8 dir = room_input_dir8(keys, player.facing);
                 // A held A is a deliberate physical combo, not a
                 // button-mashing tax: one contact arc every 24 frames.
                 if (player.fire_cooldown == 0) {
-                    u8 dmg = (u8)(w->p1 + player.atk);
+                    u8 dmg = (u8)(w->p1 + effective_atk);
                     u8 shot;
                     if (room_weapon_surge_ticks) dmg++;
                     shot = projectile_spawn_player(
@@ -1714,7 +1701,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         // one hitbox, so bosses cannot be blendered.
                         entities[shot].hitbox = 0xBB;
                     }
-                    if (shot != 0xFF) player.will_charge = 0;
+                    if (shot != 0xFF && !muted) player.will_charge = 0;
                     pickup_echo_primary(shot, dir, dmg);
                     player.fire_cooldown = player_fire_delay(w->p0);
                 }
@@ -1724,8 +1711,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // it before the cooldown gate means a resident always answers,
             // even if the prior turbo shot has not cooled down yet.
             if (player.fire_cooldown == 0) {
-                u8 dir = input_to_dir8(keys);
-                u8 dmg = (u8)(w->p1 + player.atk);
+                u8 dir = room_input_dir8(keys, player.facing);
+                u8 dmg = (u8)(w->p1 + effective_atk);
                 u8 cooldown = player_fire_delay(w->p0);
                 if (room_weapon_surge_ticks) {
                     // Surge Spark is an earned short burst, not a permanent stat:
@@ -1734,7 +1721,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     dmg++;
                     cooldown = (cooldown > 10) ? (u8)(cooldown - 4) : 6;
                 }
-                if (dir == 0xFF) dir = facing_to_dir8(player.facing);
                 {
                     u8 shot = projectile_spawn_player(dir8_dx[dir],
                         dir8_dy[dir], dmg, w->p2);
@@ -1768,25 +1754,30 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                                 break;
                         }
                     }
-                    if (shot != 0xFF) player.will_charge = 0;
+                    if (shot != 0xFF && !muted) player.will_charge = 0;
                     pickup_echo_primary(shot, dir, dmg);
                 }
                 player.fire_cooldown = cooldown;
             }
         }
-        if (player.fire_cooldown) player.fire_cooldown--;
+        if (player.fire_cooldown) {
+            player.fire_cooldown--;
+            if (STATUS_PLAYER_HASTED() && player.fire_cooldown)
+                player.fire_cooldown--;
+        }
 
         // ---- Weapon 2 (B, edge): class signature move. Costs MP
         // magic on top of the ~2.3s cooldown; no MP -> error beep.
-        if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
+        if ((pressed & J_B) && !(keys & J_A) && muted) {
+            sfx_play(SFX_HURT);
+        } else if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
             && player.mp < SIGNATURE_MP_COST) {
             sfx_play(SFX_HURT);   // out of magic
         }
-        if ((pressed & J_B) && !(keys & J_A) && player.active_charge == 0
+        if (!muted && (pressed & J_B) && !(keys & J_A) && player.active_charge == 0
             && player.mp >= SIGNATURE_MP_COST) {
-            u8 dir = input_to_dir8(keys);
-            u8 dmg = (u8)(w->p1 + 1 + player.atk);
-            if (dir == 0xFF) dir = facing_to_dir8(player.facing);
+            u8 dir = room_input_dir8(keys, player.facing);
+            u8 dmg = (u8)(w->p1 + 1 + effective_atk);
             if (will_fire_signature(dir, dmg)) {
                 // B is still a useful action during a restraint cycle, but it
                 // gives up part of the setup rather than safely charging a
@@ -1840,7 +1831,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
         // Sauran's scaled hide (perk 2): slow HP regen, one half-heart
         // per ~30s of active play.
-        if (player.class_id == 1 && player.hp < player.hp_max) {
+        if (player.class_id == 1 && player.hp < player.hp_max
+            && !STATUS_PLAYER_HEALING_BLOCKED()) {
             if (++hp_regen >= 1800) {
                 hp_regen = 0;
                 player.hp++;
@@ -1852,6 +1844,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Entity updates
     entity_update_all();
+
+    // Conditions advance only during live room play. Their damage lands
+    // before combat's death check, so poison/burn/bleed share the same fall
+    // beat as bullets and hazards instead of hard-cutting to GAME OVER.
+    status_tick();
 
     // ---- Combat
     if (combat_resolve() || player.hp == 0) {
@@ -2049,6 +2046,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             room_draw_tilemap();
             place_player_sprite();
             hud_redraw_all();
+            status_player_refresh_visual();
             DISPLAY_ON;
             hostiles_prev = 0;
             sram_save_run();
@@ -2338,6 +2336,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_load_environment_palettes();
                 place_player_sprite();
                 hud_redraw_all();
+                status_player_refresh_visual();
                 // The Zelda-style slide hides OBJ for the scroll so neither
                 // room's actors float across the seam. Restore it before the
                 // rebuilt room is shown; otherwise the player state is live
@@ -2386,9 +2385,9 @@ void room_draw(void) {
                 && e->ai_data[0] == ENEMY_STONE_SENTINEL
                 && (e->ai_data[3] & 1) && e->ai_data[2] == 4) {
                 u8 phase = (u8)(e->state & 1);
-                if (phase != mire_projection_state) {
+                if (phase != room_mire_projection_state) {
                     tiles_paint_mire_projection(phase, 1);
-                    mire_projection_state = phase;
+                    room_mire_projection_state = phase;
                 }
                 break;
             }

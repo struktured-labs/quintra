@@ -15,13 +15,12 @@ OUT="$(mktemp /tmp/quintra-miniboss-escort.XXXXXX)"
 # rooms: 4,400 frames expires inside room 3 and 60 host seconds expires before
 # mGBA can publish its CSV row. Preserve the controller-only proof with the
 # measured current route/host budgets.
-# Vespine's ranged fan reliably completes this dense seed and reaches its
-# generated Warden in the fixed budget. Wolfkin now spends that same window
-# learning the optional room-10 melee crowd rather than reaching the fixture,
-# which made the old class choice a combat-balance test instead of an escort
-# placement test.
-QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=4 \
-  QUINTRA_BALANCE_FRAMES=8000 QUINTRA_BALANCE_HOST_TIMEOUT=180 \
+# Vespine's ranged fan in Easy tester mode reliably completes this exact route
+# without turning a geometry/escort proof into a Normal-balance survival gate.
+# The denser Stage 1 curriculum now spends roughly 8,000 frames in the first
+# ten cells; 14,000 preserves enough honest controller time to reach cell 12.
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=4 \
+  QUINTRA_BALANCE_FRAMES=14000 QUINTRA_BALANCE_HOST_TIMEOUT=300 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

@@ -10,8 +10,11 @@
 #include "game/pickup.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "render/tiles.h"
 #include "content.h"
+
+void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;
 
 entity_t entities[MAX_ENTITIES];
 // Maintained alongside the fixed table so an empty post-combat field does not
@@ -46,6 +49,7 @@ u8 entity_spawn(u8 type) {
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) {
             memset(&entities[i], 0, sizeof(entity_t));
+            enemy_status_kind[i] = QSTATUS_NONE;
             entities[i].type    = type;
             entities[i].flags   = EF_ACTIVE | EF_ALIVE;
             if (type == ENT_ENEMY) {
@@ -72,6 +76,7 @@ void entity_kill(u8 idx) {
     if (idx >= MAX_ENTITIES) return;
     if (entities[idx].type == ENT_ENEMY && entity_enemy_count)
         entity_enemy_count--;
+    enemy_status_kind[idx] = QSTATUS_NONE;
     entities[idx].flags &= (u8)~(EF_ACTIVE | EF_ALIVE);
     entities[idx].type   = ENT_NONE;
     move_sprite(entities[idx].oam_slot, 0, 0);   // hide
@@ -134,8 +139,13 @@ void entity_update_nonprojectile(u8 idx) {
                 // its hidden return timer must still reach materialization.
                 || (entities[idx].ai_data[0] == ENEMY_SHADE
                     && entities[idx].ai_data[2] != 0)
-                || (entities[idx].flags & EF_ON_SCREEN))
-                enemy_update(&entities[idx], idx);
+                || (entities[idx].flags & EF_ON_SCREEN)) {
+                if (enemy_status_kind[idx] == QSTATUS_NONE) {
+                    status_enemy_actor = idx;
+                    enemy_update(&entities[idx], idx);
+                    status_enemy_actor = 0xFF;
+                } else status_update_enemy_condition(idx);
+            }
             break;
         case ENT_PICKUP:
             if (entities[idx].ai_data[0] == PICKUP_COMPANION) {
@@ -197,7 +207,8 @@ u8 fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl) {
 
 // 16x16 entities (2x2 tiles): champion-scale civic residents, the mini-boss
 // Sentinel, and the bruiser tier
-// (orc 4, bomber 6, warlock 8), plus Ember's narrow middle-scale Cinder Maw.
+// (orc 4, bomber 6, warlock 8), plus the middle-scale Cinder Maw, Facet Ram,
+// and one-per-stage Reaper.
 // Their sprite_tile points at a 4-tile block TL,TR,BL,BR. The 32x32 Colossus
 // (giant flag) is handled separately.
 static u8 enemy_is_big16(const entity_t *e) {
@@ -208,7 +219,8 @@ static u8 enemy_is_big16(const entity_t *e) {
     if (e->type != ENT_ENEMY) return 0;
     if (eid == ENEMY_STONE_SENTINEL) return 1;
     return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
-        || eid == ENEMY_CINDER_MAW);
+        || eid == ENEMY_CINDER_MAW || eid == ENEMY_FACET_RAM
+        || eid == ENEMY_STAGE_REAPER);
 }
 
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a

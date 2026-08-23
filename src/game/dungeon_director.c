@@ -51,6 +51,7 @@ static u8 weighted_stage_enemy(u8 stage, u8 roll) {
 static u8 enemy_can_fill_room(u8 id) {
     return id != ENEMY_BRAMBLE_SPRITE
         && id != ENEMY_SHARD_CRAB
+        && id != ENEMY_FACET_RAM
         && id != ENEMY_RUNE_LANTERN
         && id != ENEMY_DREAD_BELL
         && id != ENEMY_RIFT_WARDEN
@@ -218,7 +219,13 @@ void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED {
         + run_state.room_counter
         + (u8)(run_state.bosses_beaten * 3));
     signature &= 7;
-    if (signature == 2) room_encounter_kind = ENCOUNTER_TRAP;
+    // Canonical Stage 1 needs one more room whose pressure changes over time,
+    // not merely another static pile of HP. This raises its large-court
+    // directive cadence from four to five eighths; Tester Easy and every
+    // Colossus room retain their existing curve.
+    if (signature == 1 && run_state.bosses_beaten == 0 && !RUN_IS_EASY())
+        room_encounter_kind = ENCOUNTER_WAVE;
+    else if (signature == 2) room_encounter_kind = ENCOUNTER_TRAP;
     else if (signature == 3) room_encounter_kind = ENCOUNTER_WAVE;
     else if (signature == 5) room_encounter_kind = ENCOUNTER_ELITE;
     else if (signature == 6) room_encounter_kind = ENCOUNTER_HOLD;

@@ -462,6 +462,30 @@ pub const RIFT_CANTOR: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const FACET_RAM: Enemy = Enemy {
+    id: ENEMY_FACET_RAM, symbol: "FACET_RAM", name: "Facet Ram",
+    sprite_set: SPRITE_FACET_RAM, palette: OBJ_PAL_MAGIC,
+    // A middle-sized patrol creature, armored everywhere except the bright
+    // rear facet. Its surprising backward shot is intentionally much more
+    // dangerous than contact; runtime owns facing, armor, and the shot tell.
+    stats: EnemyStats { hp: 18, damage: 2, speed: 56, score: 72, weakness: 0, poise: 3 },
+    ai_script: AiScriptId::Walker,
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const STAGE_REAPER: Enemy = Enemy {
+    id: ENEMY_STAGE_REAPER, symbol: "STAGE_REAPER", name: "Dread Reaper",
+    sprite_set: SPRITE_STAGE_REAPER, palette: OBJ_PAL_BONE,
+    // Exactly one is authored into each dungeon outside the random pool. Its
+    // telegraphed mortal scythe cannot kill outright, but cuts any healthier
+    // champion down to one heart; ordinary contact remains modest.
+    stats: EnemyStats { hp: 30, damage: 2, speed: 48, score: 110, weakness: 0x04, poise: 4 },
+    ai_script: AiScriptId::Walker,
+    drop_table: DROP_SMALL_COIN,
+    biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -496,4 +520,6 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(SHARD_CRAB.clone());
     r.add_enemy(VOID_HALO.clone());
     r.add_enemy(RIFT_CANTOR.clone());
+    r.add_enemy(FACET_RAM.clone());
+    r.add_enemy(STAGE_REAPER.clone());
 }

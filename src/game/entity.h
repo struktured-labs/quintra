@@ -61,6 +61,7 @@ typedef char entity_layout_must_remain_28_bytes[(sizeof(entity_t) == 28) ? 1 : -
 
 extern entity_t entities[MAX_ENTITIES];
 extern u8 entity_enemy_count;
+extern u8 entity_anim_counter;
 
 // 8-direction movement deltas (px scaled per dir index)
 extern const i8 dir8_dx[8];

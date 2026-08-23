@@ -11,6 +11,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/spawn_reach.h"
+#include "game/status.h"
 #include "game/waygear.h"
 #include "game/dungeon_director.h"
 #include "input/input.h"
@@ -552,7 +553,8 @@ static u8 apply_item_effects(u8 item_idx) {
         switch (ef->d0) {
             case STAT_HP:
                 player.hp_max = add_capped(player.hp_max, ef->d1, HP_CAP);
-                player.hp = add_capped(player.hp, ef->d1, player.hp_max);
+                if (!STATUS_PLAYER_HEALING_BLOCKED())
+                    player.hp = add_capped(player.hp, ef->d1, player.hp_max);
                 break;
             case STAT_MP:
                 player.mp_max = add_capped(player.mp_max, ef->d1, 20);
@@ -647,6 +649,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // that resource rule: surplus recovery distills into one
                     // MP, making old heart drops tactically useful to every
                     // champion. If both gauges are full, leave it in place.
+                    if (STATUS_PLAYER_HEALING_BLOCKED()) continue;
                     if (player.hp >= player.hp_max) {
                         if (!player_has_item(ITEM_ID_MOON_FLASK)
                             || player.mp >= player.mp_max) continue;
@@ -782,7 +785,9 @@ u8 pickup_check_player_collision(void) BANKED {
                         || (ware == WARE_BEAM
                             && player_has_item(ITEM_ID_RIFT_LENS))
                         || (ware == WARE_GLASS && player.hp_max <= 2)
-                        || (ware == WARE_HEART && player.hp >= player.hp_max)
+                        || (ware == WARE_HEART
+                            && (player.hp >= player.hp_max
+                                || STATUS_PLAYER_HEALING_BLOCKED()))
                         || (ware == WARE_ITEM
                             && !item_would_change_stats(entities[i].ai_data[3]))
                         || (ware == WARE_BIG && player.hp_max >= HP_CAP)
@@ -928,6 +933,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // firing invisibly on room entry. State prevents chime
                     // spam while the player remains in contact.
                     if (entities[i].state == 0) {
+                        status_player_cure();
                         player.hp = player.hp_max;
                         player.mp = player.mp_max;
                         player.iframes = 90;
@@ -935,6 +941,7 @@ u8 pickup_check_player_collision(void) BANKED {
                         entities[i].palette = 0x06;
                         hud_redraw_all();
                         sfx_play(SFX_HEART);
+                        status_player_apply(QSTATUS_REGEN, 90);
                     }
                     any = 1;
                     continue;
@@ -958,13 +965,16 @@ u8 pickup_check_player_collision(void) BANKED {
                     // without replacing the later town healer or making the
                     // landmark farmable. Leave it lit at full resources so
                     // it never pretends to grant an invisible reward.
-                    if (player.hp >= player.hp_max && player.mp >= player.mp_max)
+                    if (player.hp >= player.hp_max && player.mp >= player.mp_max
+                        && player_status_kind == QSTATUS_NONE)
                         continue;
+                    status_player_cure();
                     player.hp = add_capped(player.hp, 4, player.hp_max);
                     player.mp = add_capped(player.mp, 2, player.mp_max);
                     run_state.riftwild_flags |= RIFT_REGION_WELL_USED_BIT;
                     hud_redraw_all();
                     sfx_play_reward(SFX_REWARD_MAGIC);
+                    status_player_apply(QSTATUS_REGEN, 60);
                     break;
             }
             entity_kill(i);

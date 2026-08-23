@@ -12,6 +12,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/status.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -23,10 +24,19 @@
 //   Charger: ai_data[2] = mode (0 wander 1 telegraph 2 charge 3 recover),
 //            ai_data[3] = mode timer, ai_data[4] = locked dir8
 
+// Spawn-only initializer owned by the feature bank. Keeping the declaration
+// private avoids making every translation unit depend on this cold hook.
+void enemy_patrol_init(entity_t *e, u8 enemy_content_id) BANKED;
+void enemy_patrol_update(entity_t *e, u8 enemy_content_id) BANKED;
+u8 status_enemy_summon_blocked(void) BANKED;
+
 u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
     u8 idx;
     entity_t *e;
     if (enemy_content_id >= N_ENEMIES) return 0xFF;
+    // Mute shuts down an enemy's reinforcement spell but never its movement
+    // or contact body. Procgen has no active actor and remains unaffected.
+    if (status_enemy_summon_blocked()) return 0xFF;
     idx = entity_spawn(ENT_ENEMY);
     if (idx == 0xFF) return 0xFF;
     e = &entities[idx];
@@ -49,6 +59,11 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         if (def->ai_kind == AI_COUNTER_GUARD || def->ai_kind == AI_SUMMONER)
             e->state = 0;
         e->state_timer = 30;
+        // Both feature enemies occupy the final contiguous content IDs.
+        if (enemy_content_id >= ENEMY_FACET_RAM) {
+            enemy_patrol_init(e, enemy_content_id);
+            return idx;
+        }
         // Flutterbats need champion-sized navigation clearance. Their old
         // 8px footprint could enter one-tile pockets that a 12px hero could
         // neither enter nor reliably reach with a cardinal melee attack.
@@ -87,6 +102,7 @@ static u8 ground_navigation_enemy(const entity_t *e) {
         // Give its evasive phase the same reachable-space contract as other
         // persistent ground enemies.
         || e->ai_data[0] == ENEMY_RIFT_CANTOR
+        || e->ai_data[0] >= ENEMY_FACET_RAM
         || e->ai_data[0] == ENEMY_BLUE_CRAWLER;
 }
 
@@ -658,6 +674,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
+    if (id >= ENEMY_FACET_RAM) { enemy_patrol_update(e, id); return; }
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;

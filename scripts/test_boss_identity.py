@@ -28,6 +28,7 @@ RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
      "_procgen_current_room_is_large", "_room_world_width",
      "_room_world_height", "_room_camera_x", "_room_camera_y"),
 )
+ENEMY_STATUS = addr("_enemy_status_kind")
 
 
 def put16(pb, address, value):
@@ -175,6 +176,11 @@ def main():
         if (pb.memory[ep] == 1 and pb.memory[ep + 1] & 1
                 and not (pb.memory[ep + 1] & 0x10)):
             pb.memory[ep] = pb.memory[ep + 1] = 0
+    # This is an identity contract for the authored Prism geometry, not a Mute
+    # contract. Class-select input can deterministically tag the live boss with
+    # a condition before this synthetic health rewrite, so normalize it here;
+    # status behavior has its own direct ROM suite.
+    pb.memory[ENEMY_STATUS + (boss - EN) // 28] = 0
     # Exercise the phase break in the new eastern chamber, where the warning
     # must remain a real world-space projectile pattern rather than depending
     # on the compact projection's decorative tile footprint.
@@ -187,6 +193,7 @@ def main():
     # firing. Keep the observer invulnerable and wait for that complete event.
     for _ in range(160):
         pb.memory[PL + 15] = 255
+        pb.memory[ENEMY_STATUS + (boss - EN) // 28] = 0
         pb.tick()
         if pb.memory[boss + 20] & 0x40:
             saw_warning = True

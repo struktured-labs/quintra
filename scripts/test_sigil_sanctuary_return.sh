@@ -10,9 +10,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-sigil-return.XXXXXX)"
 
-# The 31x31 fields make each emulated frame more expensive for the external
-# route auditor. Keep the gameplay budgets unchanged; only relax wall time.
-QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=3 \
+# This is a nonlinear-route proof, not a Normal survival score. Easy tester
+# mode keeps the fixed Picsean controller alive through the denser opening
+# roster while preserving the exact graph, Sigil, and portal geometry.
+QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=1 QUINTRA_BALANCE_CLASSES=3 \
   QUINTRA_BALANCE_TARGET_FRAME=346 QUINTRA_BALANCE_FRAMES=15000 \
   QUINTRA_BALANCE_HOST_TIMEOUT=360 \
   QUINTRA_BALANCE_OUT="$OUT" \

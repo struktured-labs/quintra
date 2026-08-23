@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.12: Road Echoes](https://github.com/struktured-labs/quintra/releases/download/v0.20.12/quintra.gbc)
+[Download Quintra v0.20.13: Inverted Hunt](https://github.com/struktured-labs/quintra/releases/download/v0.20.13/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,8 +29,37 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.12 — Road Echoes**, a Final Fantasy
-Adventure-inspired companion milestone. Every expedition receives one
+The current cartridge is **v0.20.13 — Inverted Hunt**, a combat-condition and
+enemy-pressure milestone. Poison, burn, slow, stagger, blind, adaptive
+confusion, mute, brittle, bleed, curse, regeneration, and haste now affect
+both champions and monsters through one cartridge-native system. Mute preserves
+a champion's physical A attack while suppressing B arts, Oaths, Convergence,
+and Will MAX; on enemies it silences shots and summons without freezing their
+movement.
+
+The Mirror Moth introduces **Rift Inversion**: the champion's strongest and
+weakest effective stats swap temporarily while permanent build values remain
+untouched. Enemy inversion attacks the equivalent combat advantage—armor,
+damage, speed, or poise—so it remains useful rather than becoming a player-only
+penalty. Shadow attacks rotate through blind, confusion, mute, and inversion,
+and Convergence can turn the rift trick back against hostile bodies.
+
+Every dungeon now has one persistent Dread Reaper court. Its telegraphed
+mortal scythe cannot kill outright, but cuts a healthy champion to one heart.
+The new medium-scale Facet Ram patrols cardinal lanes, rejects attacks from its
+armored faces, and fires a dangerous projectile from behind—the familiar
+front-facing armor read is deliberately inverted. Normal Stage 1 also carries
+a tougher authored roster, while Easy remains the testing lane. All five
+ascended champions receive dedicated walking-foot animation instead of sliding
+their powered-up sprites across the floor.
+
+The release ROM is checked for temporary stat inversion without save mutation,
+physical-only Mute behavior, specialist parries, Reaper reachability, ascended
+animation, dense-room performance, and the complete Rust content suite.
+
+### v0.20.12 — Road Echoes
+
+v0.20.12 was a Final Fantasy Adventure-inspired companion milestone. Every expedition receives one
 seed-selected travelling spirit: Hearth, Aether, or Way. The Echo follows the
 champion through generated rooms with a two-frame walk, safely finds paths
 around terrain, catches up after long separations, and contributes a slow,

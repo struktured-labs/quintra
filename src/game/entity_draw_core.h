@@ -30,6 +30,9 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     sx = ENTITY_DRAW_SX(e);
     sy = ENTITY_DRAW_SY(e);
     pal = e->palette;
+    if (e->type == ENT_ENEMY && enemy_status_kind[slot] != QSTATUS_NONE
+        && (entity_anim_counter & 0x08))
+        pal = status_enemy_palette_prop(slot);
     flash = (e->type == ENT_ENEMY && e->ai_data[7]) ? 1 : 0;
 
     // 32x32 Colossi — 16 tiles, row-major 4x4
@@ -60,8 +63,13 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
             bx = (u8)(bx - 4);
             by = (u8)(by - 8);
         }
-        if (flash) e->ai_data[7]--;
         if (oam + 4 > 40) continue;
+        if (e->type == ENT_ENEMY && e->ai_data[0] == ENEMY_FACET_RAM) {
+            facet_ram_draw(e, oam, bx, by, pal);
+            oam += 4;
+            continue;
+        }
+        if (flash) e->ai_data[7]--;
         if (flash && (e->ai_data[7] & 1)) {
             move_sprite(oam, 0, 0);
             move_sprite((u8)(oam + 1), 0, 0);

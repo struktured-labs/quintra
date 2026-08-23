@@ -87,4 +87,14 @@ void rift_cantor_update(entity_t *e, const enemy_def_t *def) BANKED;
 // enemy_try_step avoids spending scarce summoner-bank bytes on four trampolines.
 void enemy_cantor_evade(entity_t *e) BANKED;
 
+// Bank-5 middle-scale specialists. Facet Ram is a cardinal patrol with a
+// slight tracking bias, rear-only vulnerability, and a heavy backward shot.
+// The separate Reaper stalks the fixed deep encounter in every dungeon.
+void facet_ram_update(entity_t *e) BANKED;
+void stage_reaper_update(entity_t *e) BANKED;
+// Resolves the three authored no-damage contacts (rear-armored Ram,
+// ready Counter Guard, expanded Fold Star) outside combat's large stack.
+void enemy_special_reject_hit(u8 shot_idx, u8 enemy_idx) BANKED;
+void stage_reaper_mortal_hit(u8 projectile_idx) BANKED;
+
 #endif
