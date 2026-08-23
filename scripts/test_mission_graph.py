@@ -37,7 +37,8 @@ def generate(pb, stage, seed):
     pb.memory[RS + RS_STAGE] = stage
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_WORLD_MODE] = 1
-    pb.memory[RS + RS_WORLD_SCREEN] = 6
+    pb.memory[RS + RS_WORLD_SCREEN] = \
+        (8, 21, 34)[(stage - 1) % 3 if stage else 0]
     pb.memory[RS + RS_MISSION_READY] = 0
     for slot in range(MAX_ENTITIES):
         base = EN + slot * ENTITY_SIZE

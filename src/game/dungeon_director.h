@@ -32,6 +32,7 @@ extern u8 room_encounter_kind;
 extern u8 room_encounter_phase;
 extern u16 room_encounter_timer;
 extern u8 room_encounter_complete;
+extern u8 room_encounter_reward_pending;
 
 // Runtime-only roster identity, exposed for live-ROM coverage and future
 // Compass/lore presentation. Primary/secondary are content enemy IDs.

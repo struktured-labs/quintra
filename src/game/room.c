@@ -1892,6 +1892,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // another extermination encounter.
         alive = dungeon_director_update(alive);
         if (room_encounter_complete && room_combat_sealed) {
+            pickup_settle_pending_boon();
             room_combat_sealed = 0;
             room_unseal_doors();
             sfx_play_reward(SFX_REWARD_UNLOCK);

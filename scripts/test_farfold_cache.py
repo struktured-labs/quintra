@@ -159,7 +159,7 @@ def main():
         pb.memory[RS + 12] = 0
         pb.memory[RS + 13] = 0
         pb.memory[RS + 17] = 1
-        pb.memory[RS + 18] = 6
+        pb.memory[RS + 18] = 8
         clear_hostiles(pb)
         put16(pb, PL + 9, 72)
         put16(pb, PL + 11, 60)

@@ -137,6 +137,9 @@ void tiles_load_all_class_sprites(void) BANKED {
 }
 
 void tiles_load_all_enemy_sprites(void) BANKED {
+    // The Road Echo exists in combat, Riftwild, and towns, so its two stride
+    // beats belong to the shared room upload rather than a civic-only path.
+    tiles_load_companion_sprite();
     set_sprite_data(SPR_ENEMY_CRAWLER,  1, sprite_enemy_crawler);
     set_sprite_data(SPR_ENEMY_HORNET,   1, sprite_enemy_hornet);
     set_sprite_data(SPR_ENEMY_SKELETON, 1, sprite_enemy_skeleton);

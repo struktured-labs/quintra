@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.11: Living Labyrinths](https://github.com/struktured-labs/quintra/releases/download/v0.20.11/quintra.gbc)
+[Download Quintra v0.20.12: Road Echoes](https://github.com/struktured-labs/quintra/releases/download/v0.20.12/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,8 +29,33 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.11 — Living Labyrinths**, a puzzle, hazard,
-and civic-audio milestone with five playtest-facing changes.
+The current cartridge is **v0.20.12 — Road Echoes**, a Final Fantasy
+Adventure-inspired companion milestone. Every expedition receives one
+seed-selected travelling spirit: Hearth, Aether, or Way. The Echo follows the
+champion through generated rooms with a two-frame walk, safely finds paths
+around terrain, catches up after long separations, and contributes a slow,
+one-damage auto-bolt without becoming a second primary weapon.
+
+SELECT's tile-native Compass now carries a colour-coded **A ASK** action.
+Hearth restores one heart, Aether restores two MP, and Way reveals the routes
+touching the current dungeon or Riftwild field while granting a brief safe
+step. ASK has a 20-active-second cooldown that pauses in menus and survives a
+suspend save. Its role rotates with run seed and stage, making the travelling
+party a procedural run texture rather than a fixed story NPC.
+
+Directive reward creation now completes after the director bank returns, so
+an elite or survival objective cannot strand a sealed room during its boon
+transaction. New boon pairs also wait briefly before accepting collision,
+preventing an underfoot reward from silently choosing itself. The release ROM
+is checked for follower presence and art across all nine stages, terrain-aware
+following, restrained damage, all three ASK effects, cooldown persistence,
+dense-room performance, SRAM compatibility, and the complete downstream
+cartridge suite.
+
+### v0.20.11 — Living Labyrinths
+
+v0.20.11 was a puzzle, hazard, and civic-audio milestone with five
+playtest-facing changes.
 Villages own an 85-second **Hearthlight Common** score and hand off cleanly to
 the next dungeon theme. A wrong ordered-rune press costs one half-heart,
 flashes the real hurt pose/HUD, and resets the phrase instead of providing

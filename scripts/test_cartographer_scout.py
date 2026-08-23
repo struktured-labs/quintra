@@ -53,7 +53,8 @@ def main():
     pb.memory[run_state + 1] = STAGE_BOSS_ROOM[2]
     pb.memory[run_state + 11] = 3
     pb.memory[run_state + 17] = 1
-    pb.memory[run_state + 18] = 6
+    # Stage three hands off through the third regional arch.
+    pb.memory[run_state + 18] = 34
     pb.memory[run_state + 19] = 0
     clear_hostiles()
     pb.memory[tilemap + 8 * 20 + 10] = 34

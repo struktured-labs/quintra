@@ -22,6 +22,7 @@ u8 room_encounter_kind;
 u8 room_encounter_phase;
 u16 room_encounter_timer;
 u8 room_encounter_complete;
+u8 room_encounter_reward_pending;
 u8 room_objective_dir;
 u8 room_encounter_target;
 u8 room_roster_kind;
@@ -155,22 +156,10 @@ static u8 target_alive(void) {
         && entities[room_encounter_target].type == ENT_ENEMY;
 }
 
-static void spawn_boon_choice(void) {
-    u8 roll = (u8)(run_state.room_counter + (u8)run_state.run_seed
-        + player.class_id);
-    u8 first = pickup_farfold_relic_for_class(roll);
-    u8 second = pickup_farfold_relic_for_class((u8)(roll + 1));
-    // Every generated dungeon district owns a guaranteed-open central hall.
-    // Two separated orbs make the mutually exclusive choice readable and
-    // keep neither reward under the champion at the instant it appears.
-    pickup_spawn_choice(first, FIX8(104), FIX8(120));
-    pickup_spawn_choice(second, FIX8(136), FIX8(120));
-}
-
 static void finish_directive(u8 reward) {
     room_encounter_phase = 2;
     room_encounter_complete = 1;
-    if (reward) spawn_boon_choice();
+    room_encounter_reward_pending = reward;
 }
 
 void dungeon_director_reset(void) BANKED {
@@ -178,6 +167,7 @@ void dungeon_director_reset(void) BANKED {
     room_encounter_phase = 0;
     room_encounter_timer = 0;
     room_encounter_complete = 0;
+    room_encounter_reward_pending = 0;
     room_objective_dir = DIR_NONE;
     room_encounter_target = 0xFF;
     encounter_spawn_clock = 0;

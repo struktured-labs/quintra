@@ -77,6 +77,10 @@ def main():
     # every starter: 17-frame reach and three-target pierce.
     for i in range(32 * 28):
         pb.memory[entities + i] = 0
+    # Let any impact freeze from the room's departing actors finish before
+    # sampling a new controller edge.
+    for _ in range(12):
+        pb.tick()
     pb.memory[player + 22] = 0      # fire cooldown
     pb.button("a")
     for _ in range(3):

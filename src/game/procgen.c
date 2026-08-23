@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/dungeon_director.h"
+#include "game/companion.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/mission_graph.h"
@@ -981,6 +982,10 @@ void procgen_generate_current_room(void) BANKED {
     // before this room's optional enemy, shop, and decoration spawns can fill
     // the 32-slot table; later room orchestration calls are idempotent.
     room_spawn_progression_fixture();
+    // One seed-selected Road Echo travels with the champion for this stage.
+    // Reserve it before optional combat fills the fixed entity table, but
+    // after the arena establishes the real world extent and arrival point.
+    companion_spawn_current();
 
     // Secret treasure room: no enemies, loot piled in the middle. State 1
     // means "enter now"; state 2 keeps the vault overlay active until its

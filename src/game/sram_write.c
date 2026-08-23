@@ -25,6 +25,7 @@
 #define PRE_MISSION_RS_SIZE 37
 #define PRE_REGIONAL_RIFT_RS_SIZE 46
 #define PRE_EXPANDED_RIFT_RS_SIZE 48
+#define PRE_COMPANION_RS_SIZE 51
 #define PRE_WILL_PL_SIZE 42
 #define PRE_OATH_PL_SIZE 43
 #define PRE_WAYGEAR_PL_SIZE 44
@@ -44,6 +45,7 @@ u8 sram_run_valid(void) BANKED {
     if (SRAM_BASE[0] == 'Q' && SRAM_BASE[1] == 'S'
         && SRAM_BASE[2] == SAVE_VERSION
         && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
+            || SRAM_BASE[3] == PRE_COMPANION_RS_SIZE
             || SRAM_BASE[3] == PRE_EXPANDED_RIFT_RS_SIZE
             || SRAM_BASE[3] == PRE_REGIONAL_RIFT_RS_SIZE
             || SRAM_BASE[3] == PRE_MISSION_RS_SIZE

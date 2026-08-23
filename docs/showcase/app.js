@@ -99,14 +99,15 @@
 
   function standardCard(entry, index, type) {
     const isBoss = type === "bosses";
+    const media = isBoss ? entry.animated : entry.image;
     const kicker = isBoss ? `Stage ${entry.id} · ${entry.stage}` : `Stage ${String(entry.id).padStart(2, "0")} · ${entry.boss}`;
     const meta = isBoss
       ? pill("HP", entry.hp) + pill("DMG", entry.damage) + pill("SIGNATURE", entry.signature)
       : pill("REGION", entry.id) + pill("BOSS", entry.boss);
     return `<article class="card" style="--accent:${entry.accent}">
       <button class="card-media" data-entry-index="${index}" aria-label="Open ${escapeHtml(entry.name)} capture">
-        <img src="${entry.image}" alt="${escapeHtml(entry.name)} live cartridge capture" loading="lazy">
-        <span class="card-index">${isBoss ? "COLOSSUS" : "REGION"} ${String(entry.id).padStart(2, "0")}</span>
+        <img src="${media}" alt="${escapeHtml(entry.name)} ${isBoss ? "animated" : "live"} cartridge capture" loading="lazy">
+        <span class="card-index">${isBoss ? "16F COLOSSUS" : "REGION"} ${String(entry.id).padStart(2, "0")}</span>
       </button>
       <div class="card-body"><p class="card-kicker">${escapeHtml(kicker)}</p><h3>${escapeHtml(entry.name)}</h3>
       <p class="card-copy">${escapeHtml(entry.description)}</p><div class="pills">${meta}</div></div>
@@ -154,7 +155,7 @@
       };
     }
     if (view === "bosses") {
-      return { image: entry.image, kicker: `Stage ${entry.id} final Colossus · ${entry.stage}`,
+      return { image: entry.animated, kicker: `Stage ${entry.id} final Colossus · ${entry.stage} · 16 live frames`,
         title: entry.name, copy: entry.description,
         meta: pill("HP cap", entry.hp) + pill("Damage", entry.damage)
           + pill("Movement", entry.movement) + pill("Signature", entry.signature) };

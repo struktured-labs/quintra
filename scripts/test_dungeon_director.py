@@ -128,10 +128,16 @@ def elite_contract():
             "elite directive lacks one persistent target handle"
         assert pb.memory[target + 1] & EF_ELITE and pb.memory[target + 13] == 6
         erase(pb, [target])
-        tick_safe(pb, 4)
+        # A dense room can span several host emulator frames before its
+        # cartridge frame reaches the post-director door transaction.
+        for _ in range(60):
+            tick_safe(pb, 1)
+            if pb.memory[SEALED] == 0:
+                break
         rewards = boon_choices(pb)
         assert pb.memory[SEALED] == 0 and len(rewards) == 2, \
-            "elite kill did not offer a two-way build choice"
+            "elite kill did not release the room with a two-way build choice"
+        tick_safe(pb, 32)
         chosen = rewards[0]
         put16(pb, PL + 9, (pb.memory[chosen + 3] - 2) & 0xFF)
         put16(pb, PL + 11, (pb.memory[chosen + 7] - 9) & 0xFF)
@@ -153,11 +159,22 @@ def hold_contract():
         assert now < start_timer
         # Fast-forward only the clock; release/reward still travels through
         # the cartridge's real per-frame director and room-door path.
-        pb.memory[TIMER] = 2
-        pb.memory[TIMER + 1] = 0
-        tick_safe(pb, 5)
+        for _ in range(120):
+            # A cartridge frame can span several host VBlanks under maximum
+            # density. Hold the requested clock value until the director
+            # reaches and consumes that frame boundary.
+            if pb.memory[PHASE] != 2:
+                pb.memory[TIMER] = 1
+                pb.memory[TIMER + 1] = 0
+            tick_safe(pb, 1)
+            if pb.memory[SEALED] == 0:
+                break
         assert pb.memory[SEALED] == 0 and len(boon_choices(pb)) == 2, \
-            "survival completion did not release a boon choice"
+            f"survival completion did not release a boon choice: " \
+            f"sealed={pb.memory[SEALED]} phase={pb.memory[PHASE]} " \
+            f"complete={pb.memory[COMPLETE]} timer=" \
+            f"{pb.memory[TIMER] | pb.memory[TIMER + 1] << 8} " \
+            f"rewards={len(boon_choices(pb))}"
     generated_room(0, seed_for(6), local_room=DIRECTOR_ROOM, probe=probe)
 
 

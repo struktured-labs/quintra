@@ -428,14 +428,14 @@ def main() -> None:
     pb.memory[rs + 21] = 0xFF    # world_seen low
     pb.memory[rs + 22] = 0xFF    # world_seen high
     open_compass(pb, screen)
-    assert tuple(map_tile(pb, x, 10) for x in range(14, 18)) == (
+    assert tuple(map_tile(pb, x, 8) for x in range(14, 18)) == (
         BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
         BGT_MAP_LABEL_F, BGT_MAP_LABEL_T), \
         "Riftwild Compass lost its RIFT legend tile ids"
     world_image = pb.screen.image
-    letter_rgb = world_image.getpixel((15 * 8 + 3, 10 * 8))[:3]
-    r_diagonal_rgb = world_image.getpixel((14 * 8 + 4, 10 * 8 + 4))[:3]
-    f_bar_rgb = world_image.getpixel((16 * 8 + 3, 10 * 8))[:3]
+    letter_rgb = world_image.getpixel((15 * 8 + 3, 8 * 8))[:3]
+    r_diagonal_rgb = world_image.getpixel((14 * 8 + 4, 8 * 8 + 4))[:3]
+    f_bar_rgb = world_image.getpixel((16 * 8 + 3, 8 * 8))[:3]
     # The old shared-slot corruption rendered PNIHT. R's lower diagonal is
     # absent from P, while F's broad top bar is absent from H.
     assert r_diagonal_rgb == letter_rgb, \

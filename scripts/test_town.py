@@ -208,8 +208,10 @@ def main():
     # town report made a three-screen settlement read like one strange room;
     # this tile graph exposes its craft quarter, arrival square, market, and
     # onward north gate at a glance.
-    pb.button("select"); tick(120)
-    assert pb.memory[screen] == 8, "SELECT did not open town compass"
+    pb.button_press("select"); tick(6)
+    pb.button_release("select"); tick(114)
+    assert pb.memory[screen] == 8, (
+        f"SELECT did not open town compass (screen={pb.memory[screen]})")
     pb.memory[0xFF4F] = 0
     bg = 0x9800
     assert pb.memory[bg + 9 * 32 + 9] == BGT_MAP_HERE, \
@@ -218,7 +220,8 @@ def main():
     assert pb.memory[bg + 9 * 32 + 15] == 22, "market lacks crystal marker"
     assert pb.memory[bg + 4 * 32 + 9] == 3, "town compass lacks north gate"
     pb.screen.image.save(ROOT / "tmp" / "town-tile-map.png")
-    pb.button("b"); tick(30)
+    pb.button_press("b"); tick(6)
+    pb.button_release("b"); tick(24)
     assert pb.memory[screen] == 5, "town compass did not resume arrival square"
 
     # Elder is a visible, permanent full blessing.

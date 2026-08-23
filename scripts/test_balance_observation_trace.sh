@@ -36,7 +36,11 @@ awk -F, '
   }
   {
     if (NF != 33) exit 1
-    if ($1 < last_frame || $7 > $8 || $9 > $10 || $17 > 1 || $18 > 255 || $32 > 100 || $33 > 60) exit 1
+    # Major-reward claims and village recovery deliberately grant a 90-frame
+    # safety window; ordinary combat recovery remains shorter. The trace
+    # contract should reject corrupted bytes above that authored maximum,
+    # not reject a legitimate reward event reached by a new controller path.
+    if ($1 < last_frame || $7 > $8 || $9 > $10 || $17 > 1 || $18 > 255 || $32 > 100 || $33 > 90) exit 1
     if ($17 == 0 && $18 != 255) exit 1
     if ($17 == 1) {
       if ($18 != 255 && ($18 < 1 || $18 > 8)) exit 1

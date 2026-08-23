@@ -158,7 +158,13 @@ def main():
     assert pb.memory[CINDER_PHASE] == 1, "pack did not begin metamorphosis"
     transform_shot = ROOT / "tmp" / "cinder-transform-live.png"
     pb.screen.image.save(transform_shot)
-    keep_alive(pb, 66)
+    # Hit-stop from either champion or Road Echo impacts can pause the world
+    # without advancing the transformation clock. Observe the phase event,
+    # not an exact host-frame deadline.
+    for _ in range(120):
+        if pb.memory[CINDER_PHASE] == 2:
+            break
+        keep_alive(pb, 1)
     assert pb.memory[CINDER_PHASE] == 2, "Cinder Rex did not unfold"
     rex_tiles = oam_tiles(pb)
     assert len([t for t in rex_tiles if 48 <= t <= 55]) == 10, (
@@ -204,7 +210,10 @@ def main():
     keep_alive(pb, 2)
     assert pb.memory[CINDER_PHASE] == 3 and pb.memory[CINDER_ALIVE] == 5, (
         "critical Rex did not split into five fire silhouettes")
-    keep_alive(pb, 98)
+    for _ in range(180):
+        if pb.memory[CINDER_PHASE] == 2:
+            break
+        keep_alive(pb, 1)
     assert pb.memory[CINDER_PHASE] == 2, "fire pack did not recombine into Rex"
 
     final_shot = ROOT / "tmp" / "cinder-rex-live.png"

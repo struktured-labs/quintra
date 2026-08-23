@@ -18,6 +18,7 @@ ENT_ENEMY = 2
 EF_ACTIVE = 0x01
 EF_ELITE = 0x20
 BGT_PORTAL = 34
+REGIONAL_GATE_SCREEN = (8, 21, 34)
 
 
 def boot():
@@ -43,7 +44,7 @@ def sample_foyer(pb, stage, seed):
     pb.memory[RS + 12] = 0
     pb.memory[RS + 13] = 0
     pb.memory[RS + 17] = 1
-    pb.memory[RS + 18] = 6
+    pb.memory[RS + 18] = REGIONAL_GATE_SCREEN[(stage - 1) % 3]
     for slot in range(MAX_ENTITIES):
         base = EN + slot * ENTITY_SIZE
         pb.memory[base] = pb.memory[base + 1] = 0
@@ -55,7 +56,10 @@ def sample_foyer(pb, stage, seed):
         if pb.memory[RS + 1] == target:
             break
     assert pb.memory[RS + 1] == target, (
-        f"could not enter stage {stage + 1} foyer seed={seed:#x}")
+        f"could not enter stage {stage + 1} foyer seed={seed:#x}; "
+        f"room={pb.memory[RS + 1]} world={pb.memory[RS + 17]} "
+        f"screen={pb.memory[RS + 18]} player=({pb.memory[PL + 9]},"
+        f"{pb.memory[PL + 11]}) feet={pb.memory[TM + 9 * ROOM_W + 10]}")
     wait_for_generated_room(pb)
 
     roster = []

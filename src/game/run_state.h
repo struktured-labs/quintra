@@ -120,6 +120,9 @@ typedef struct {
     u8  world_seen_hi;       // cells 16..23
     u8  world_seen_xhi;      // cells 24..31
     u8  world_seen_xxhi;     // cells 32..35 (upper nibble reserved)
+    // Seconds until the current Road Echo can answer ASK again. Its role is
+    // derived from run seed + stage, so only the balance-critical timer saves.
+    u8  companion_cooldown;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03
@@ -143,8 +146,8 @@ typedef struct {
 
 extern run_state_t run_state;
 
-void run_state_init(u32 seed);
-void run_state_clear(void);
+// Cold, once-per-run initialization lives outside scarce always-mapped ROM.
+void run_state_init(u32 seed) BANKED;
 // Explicit stage topology. Later dungeons grow without allowing village
 // counters to steal rooms from the following stage.
 u8   run_state_stage_start(u8 stage);

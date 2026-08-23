@@ -1663,6 +1663,13 @@ function puzzle_rune_fixture_at(tx, ty)
         or (tx == 10 and ty == 8)
 end
 
+function puzzle_phase_fixture_at(tx, ty)
+    if PUZZLE_KIND == 0 or emu:read8(PUZZLE_KIND) ~= 3 or ty ~= 8 then
+        return false
+    end
+    return tx == 4 or tx == 8 or tx == 12 or tx == 16
+end
+
 function exact_body_goal_step(px, py, goal_x, goal_y)
     local stride = QUINTRA_ARENA_W
     local max_player_x = QUINTRA_ARENA_W - 16
@@ -1670,6 +1677,8 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
     local start = py * stride + px
     local start_feet_tx = math.floor((px + 8) / 8)
     local start_feet_ty = math.floor((py + 12) / 8)
+    local goal_feet_tx = math.floor((goal_x + 8) / 8)
+    local goal_feet_ty = math.floor((goal_y + 12) / 8)
     local route_room = emu:read8(RS + 1)
     local route_world = emu:read8(RS + 17)
     local route_screen = route_world == 1 and emu:read8(RS + 18)
@@ -1705,12 +1714,13 @@ function exact_body_goal_step(px, py, goal_x, goal_y)
             local next_key = ny * stride + nx
             local feet_tx = math.floor((nx + 8) / 8)
             local feet_ty = math.floor((ny + 12) / 8)
-            local crosses_other_rune = puzzle_rune_fixture_at(feet_tx, feet_ty)
+            local crosses_other_fixture = (puzzle_rune_fixture_at(feet_tx, feet_ty)
+                    or puzzle_phase_fixture_at(feet_tx, feet_ty))
                 and (feet_tx ~= start_feet_tx or feet_ty ~= start_feet_ty)
-                and (math.abs(nx - goal_x) > 1 or math.abs(ny - goal_y) > 1)
+                and (feet_tx ~= goal_feet_tx or feet_ty ~= goal_feet_ty)
             if nx >= 0 and nx <= max_player_x and ny >= 0 and ny <= max_player_y
                 and not seen[next_key] and can_step(x, y, dir)
-                and not body_on_spike(nx, ny) and not crosses_other_rune then
+                and not body_on_spike(nx, ny) and not crosses_other_fixture then
                 seen[next_key], previous[next_key], step[next_key] = true, key, dir
                 tail = tail + 1
                 qx[tail], qy[tail] = nx, ny
@@ -1961,7 +1971,43 @@ function puzzle_controller_step(room, px, py, frame)
         local bit = dungeon_local(room, emu:read8(RS + 11))
             == emu:read8(RS + 44) and 4 or 1
         if math.floor(emu:read8(RS + 28) / bit) % 2 ~= 0 then return nil end
-        return body_goal_step(px, py, 10 * 8 - 8, 8 * 8 - 12)
+        -- Solve the visible four-panel Aether Lattice instead of walking to
+        -- the empty centre between panels and hoping to brush the right
+        -- switches. Lit panels are logical 1s; each contact applies its
+        -- published line mask. The transform is invertible, so exactly one
+        -- subset changes the observed state to 0x0F. Route to the first
+        -- required panel while exact_body_goal_step treats every other panel
+        -- as a contact hazard; recompute from the new visible state after
+        -- each accepted press.
+        local xs, masks = {4, 8, 12, 16}, {3, 7, 14, 12}
+        local state = 0
+        for i = 1, 4 do
+            if emu:read8(TM + 8 * 20 + xs[i]) ~= 33 then
+                state = state + 2 ^ (i - 1)
+            end
+        end
+        for subset = 0, 15 do
+            local candidate = state
+            for i = 1, 4 do
+                if math.floor(subset / 2 ^ (i - 1)) % 2 == 1 then
+                    candidate = xor32(candidate, masks[i])
+                end
+            end
+            if candidate == 15 then
+                for i = 1, 4 do
+                    if math.floor(subset / 2 ^ (i - 1)) % 2 == 1 then
+                        if DEBUG and frame % 120 == 0 then
+                            debug_log(string.format(
+                                "BOTPHASE f=%d room=%d state=%X subset=%X panel=%d pos=%d,%d",
+                                frame, room, state, subset, i, px, py))
+                        end
+                        return body_goal_step(
+                            px, py, xs[i] * 8 - 8, 8 * 8 - 12)
+                    end
+                end
+            end
+        end
+        return 0
     end
     return nil
 end
@@ -3134,6 +3180,22 @@ local max_combat_room, max_combat_enemy, max_route_room = 0, 255, 0
 max_target_stall_frames, max_target_stall_room, max_target_stall_enemy = 0, 0, 255
 local last_weapon = 255
 weapon_swaps = 0
+-- Public-input state machine for the new Road Echo ASK action. The observer
+-- discovers the follower through its ordinary entity fields, opens the
+-- Compass with SELECT, and presses A on the map exactly as a player does.
+-- It never edits HP, cooldown, entities, or run state.
+companion_ask_phase = 0
+function quintra_companion_kind()
+    if EN == 0 then return 255 end
+    for slot = 0, 31 do
+        local p = EN + slot * 28
+        if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
+            and emu:read8(p + 17) == 23 then
+            return emu:read8(p + 18)
+        end
+    end
+    return 255
+end
 while frames < LIMIT do
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local hp_max = PL ~= 0 and emu:read8(PL + 1) or 0
@@ -3926,6 +3988,9 @@ while frames < LIMIT do
             end
             local warden_body_range = math.max(
                 math.abs(target.x - px), math.abs(target.y - py))
+            local warden_retreat = (aim == KEY_UP and KEY_DOWN)
+                or (aim == KEY_DOWN and KEY_UP)
+                or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
             if py < 8 and target.y <= 16
                 and can_step(px, py, KEY_DOWN) then
                 -- Every A weapon originates at y+2. At the north strip an
@@ -3935,12 +4000,22 @@ while frames < LIMIT do
                 -- Warden. Expose the real weapon origin with ordinary downward
                 -- input before resuming the same exact-pixel policy.
                 keys = KEY_DOWN
+            elseif warden_ready and held_style == "claw" then
+                -- Fang Stab owns a 64px physical lane, but D-pad+A also
+                -- walks Wolfkin toward the stationary Warden. The old pilot
+                -- held that input continuously and converted a valid lane
+                -- into nine consecutive body hits. Mirror the proven
+                -- Colossus cadence here: take one aimed swing, then restore
+                -- the lane with one outward step. If knockback already put
+                -- the two bodies together, retreat before attacking again.
+                keys = (warden_body_range < 24 or frames % 2 ~= 0)
+                    and (can_step(px, py, warden_retreat)
+                        and warden_retreat or warden_step)
+                    or (KEY_A + warden_step)
             elseif warden_ready and held_style == "lunge"
                 and warden_body_range < 28 then
-                local retreat = (aim == KEY_UP and KEY_DOWN)
-                    or (aim == KEY_DOWN and KEY_UP)
-                    or (aim == KEY_LEFT and KEY_RIGHT) or KEY_LEFT
-                keys = can_step(px, py, retreat) and retreat or warden_step
+                keys = can_step(px, py, warden_retreat)
+                    and warden_retreat or warden_step
             else
                 keys = warden_ready and (KEY_A + warden_step) or warden_step
             end
@@ -3970,7 +4045,14 @@ while frames < LIMIT do
             -- again: the old policy maintained a 16px panic gap forever and
             -- never issued an A press, despite the 48px lunge being able to
             -- finish the fight safely from here.
-            if CLASS == 1 and held_style == "lunge" and leech_lane
+            if CLASS == 0 and held_style == "claw" and leech_lane then
+                -- Fang's physical arc is wider than a one-pixel centreline.
+                -- If the cartridge terrain probe proves the live lane, take
+                -- it now: forcing an extra visual-origin alignment can step
+                -- into the wall above a clinging Leech and oscillate forever
+                -- between a clear y=43 strike and a blocked y=40 strike.
+                keys = KEY_A + aim
+            elseif CLASS == 1 and held_style == "lunge" and leech_lane
                 and leech_range > 8 then
                 keys = KEY_A + aim
             elseif not leech_lane then
@@ -5483,6 +5565,36 @@ while frames < LIMIT do
             emu:screenshot(string.format("%s-r%d.png", DEBUG_SCREEN, room))
         end
         debug_shot_room = room
+    end
+    -- Hearth's ASK heal is a core part of the companion tradeoff, not a
+    -- hidden test affordance. Use it before a wounded pilot donates the rest
+    -- of its life pool, then respect the cartridge's real 20-second active-
+    -- play cooldown. The two follow-up phases only navigate the real map UI.
+    local live_screen = LS ~= 0 and emu:read8(LS) or 255
+    if companion_ask_phase == 0 and live_screen == 5
+        and RS ~= 0 and emu:read8(RS + 51) == 0
+        and quintra_companion_kind() == 0
+        and hp <= 10 and hp + 1 < hp_max then
+        keys = KEY_SELECT
+        companion_ask_phase = 1
+        if DEBUG then debug_log(string.format(
+            "BOTASK f=%d room=%d kind=hearth hp=%d/%d phase=open",
+            frames, room, hp, hp_max)) end
+    elseif companion_ask_phase == 1 then
+        if live_screen == 8 then
+            -- Map VRAM upload can span several host video frames before the
+            -- next cartridge input_poll. Hold A until map_tick actually
+            -- samples it; a one-host-frame tap can vanish inside map_enter.
+            keys = KEY_A
+            if DEBUG and frames % 30 == 0 then debug_log(string.format(
+                "BOTASK f=%d room=%d kind=hearth hp=%d/%d phase=ask",
+                frames, room, hp, hp_max)) end
+        elseif live_screen == 5 then
+            keys = 0
+            companion_ask_phase = 0
+        else
+            keys = 0
+        end
     end
     observe_trace(frames, room, world_mode, world_screen, px, py, hp, hp_max,
         mp, mp_max, target, observed_threat, keys, room_age,

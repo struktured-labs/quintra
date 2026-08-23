@@ -62,7 +62,7 @@ def boot_to_miniboss(stage, role="warden"):
     pb.memory[RS + 12] = 0
     pb.memory[RS + 13] = 0
     pb.memory[RS + 17] = 1
-    pb.memory[RS + 18] = 6  # ZELDA_CELL_DUNGEON_ENTRANCE
+    pb.memory[RS + 18] = (8, 21, 34)[(stage - 1) % 3 if stage else 0]
     for i in range(32):
         entity = EN + i * ENTITY_SIZE
         if pb.memory[entity] in (ENT_ENEMY, ENT_PROJECTILE):

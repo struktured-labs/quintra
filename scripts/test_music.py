@@ -35,6 +35,7 @@ MUSIC_ROW = addr("_music_row")
 MUSIC_FORM_STEP = addr("_music_form_step")
 MUSIC_PATTERN_ROW = addr("_music_pattern_row")
 MUSIC_MOTIF = addr("_music_motif")
+PROC_BOSS = addr("_procgen_current_room_is_boss")
 
 
 def put16(pb, address, value):
@@ -135,6 +136,13 @@ def runtime_track(stage, boss, keep_emulator=False):
             pb.tick()
             if pb.memory[RS + 1] == desired_room:
                 break
+        # The logical counter commits at the start of a directional slide.
+        # Wait for the destination generator and its boss score transaction;
+        # vertical thresholds can legitimately outlive the first 30 frames.
+        for _ in range(120):
+            if pb.memory[PROC_BOSS] and pb.memory[MUSIC] == 9 + stage:
+                break
+            pb.tick()
     assert pb.memory[RS + 1] == desired_room, (
         f"could not enter stage {stage} {'boss' if boss else 'room'}"
     )

@@ -18,8 +18,9 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PL, EN, TM, SCREEN = map(addr, (
-    "_player", "_entities", "_room_tilemap", "_loop_current_screen"))
+PL, EN, TM, SCREEN, DIRECTOR_KIND = map(addr, (
+    "_player", "_entities", "_room_tilemap", "_loop_current_screen",
+    "_room_encounter_kind"))
 
 
 def put16(pb, address, value):
@@ -34,6 +35,13 @@ def read16(pb, address):
 def set_buttons(pb, buttons, down):
     for button in buttons:
         (pb.button_press if down else pb.button_release)(button)
+
+
+def quiet_tick(pb):
+    # Hold this across the cartridge boundary: dense frames may span more
+    # than one host VBlank after the fixture first clears the room.
+    pb.memory[DIRECTOR_KIND] = 0
+    pb.tick()
 
 
 def boot():
@@ -51,10 +59,17 @@ def boot():
         pb.memory[EN + i] = 0
     for i in range(20 * 17):
         pb.memory[TM + i] = 1  # guaranteed open dash floor
+    # Keep the fixture's audio lane isolated from a seed-selected trap clock.
+    pb.memory[DIRECTOR_KIND] = 0
     put16(pb, PL + 9, 72)
     put16(pb, PL + 11, 64)
     pb.memory[PL + 15] = 0
     pb.memory[PL + 23] = 0
+    for _ in range(90):
+        quiet_tick(pb)
+    put16(pb, PL + 9, 72)
+    put16(pb, PL + 11, 64)
+    pb.memory[PL + 15] = 0
     return pb
 
 
@@ -63,20 +78,21 @@ def dash(buttons):
     # Tap the whole vector twice just as a player would on a diagonal d-pad.
     set_buttons(pb, buttons, True)
     for _ in range(2):
-        pb.tick()
+        quiet_tick(pb)
     set_buttons(pb, buttons, False)
     for _ in range(3):
-        pb.tick()
+        quiet_tick(pb)
     before = (read16(pb, PL + 9), read16(pb, PL + 11))
     set_buttons(pb, buttons, True)
     dash_noise = None
     for _ in range(7):
-        pb.tick()
-        if pb.memory[PL + 15] >= 14 and dash_noise is None:
-            dash_noise = (pb.memory[0xFF22], pb.memory[0xFF21])
+        quiet_tick(pb)
+        noise = (pb.memory[0xFF22], pb.memory[0xFF21])
+        if noise == (0x27, 0x72):
+            dash_noise = noise
     set_buttons(pb, buttons, False)
     for _ in range(2):
-        pb.tick()
+        quiet_tick(pb)
     after = (read16(pb, PL + 9), read16(pb, PL + 11))
     iframes = pb.memory[PL + 15]
     pb.stop(save=False)

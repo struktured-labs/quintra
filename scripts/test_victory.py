@@ -127,14 +127,19 @@ def main():
 
     # Dawn's Verge is not dead postgame lore: results reopen the third return
     # of the final regional Riftwild, avoiding a regenerated/clamped boss
-    # arena. That return begins at 13 beside the currently live gate at 12.
-    assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 13, (
+    # arena. The final return resumes at 21; its short south-south-east road
+    # reaches the currently live regional gate at 34.
+    assert pb.memory[rs + 17] == 1 and pb.memory[rs + 18] == 21, (
         "post-victory descent did not reopen Riftwild "
         f"(room={pb.memory[rs + 1]} world={pb.memory[rs + 17]} "
         f"cell={pb.memory[rs + 18]} screen={pb.memory[screen]})"
     )
-    exit_at(0, 60, clear=False)
-    assert pb.memory[rs + 18] == 12
+    exit_at(72, 232, clear=False)
+    assert pb.memory[rs + 18] == 27
+    exit_at(72, 232, clear=False)
+    assert pb.memory[rs + 18] == 33
+    exit_at(232, 60, clear=False)
+    assert pb.memory[rs + 18] == 34
     pb.memory[pl + 9] = 72
     pb.memory[pl + 10] = 0
     pb.memory[pl + 11] = 52

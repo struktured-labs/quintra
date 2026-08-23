@@ -73,6 +73,8 @@ def main():
 
     for i in range(32 * 28):
         pb.memory[entities + i] = 0
+    for _ in range(12):
+        pb.tick()
     pb.memory[player + 22] = 0
     pb.button("a")
     for _ in range(3):

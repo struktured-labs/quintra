@@ -138,6 +138,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 	uv run --quiet --with pyboy python scripts/test_town.py
 	$(PYBOY_RUN) scripts/test_dialogue.py
+	$(PYBOY_RUN) scripts/test_companion.py
 	$(PYBOY_RUN) scripts/test_town_compass.py
 	uv run --quiet --with pyboy python scripts/test_cartographer_scout.py
 	uv run --quiet --with pyboy python scripts/test_stage_archetypes.py

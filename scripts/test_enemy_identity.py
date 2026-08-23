@@ -142,7 +142,7 @@ def main():
     shop_room = STAGE_BOSS_ROOM[0] - 2
     pb.memory[addr("_run_state") + 1] = shop_room - 1
     pb.memory[addr("_run_state") + 17] = 1
-    pb.memory[addr("_run_state") + 18] = 6
+    pb.memory[addr("_run_state") + 18] = 8
     put16(pb, addr("_player") + 9, 72)
     put16(pb, addr("_player") + 11, 60)
     pb.memory[addr("_room_tilemap") + 9 * 20 + 10] = 34

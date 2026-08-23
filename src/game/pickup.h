@@ -30,6 +30,7 @@
 #define PICKUP_BOON_CHOICE    20 // one of a mutually exclusive director pair
 #define PICKUP_WAYFARER       21 // peaceful stage creature; A opens lore/advice
 #define PICKUP_WAYGEAR         22 // permanent traversal implement; ai_data[1]=gear
+#define PICKUP_COMPANION       23 // nonblocking Road Echo follower; ai_data[1]=role
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -94,6 +95,8 @@ u8   pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_farfold_relic(u8 item_index, fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_waygear(u8 gear, fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED;
+void pickup_spawn_boon_pair(u8 roll) BANKED;
+void pickup_settle_pending_boon(void) BANKED;
 
 // Content-driven weapon-orb selection. These avoid assuming weapon entries
 // occupy a contiguous prefix of items[] as the roster grows.

@@ -2,6 +2,7 @@
 #include <gb/gb.h>
 #include <gb/cgb.h>
 #include "audio/sfx.h"
+#include "game/companion.h"
 #include "game/dungeon_director.h"
 #include "game/map.h"
 #include "game/mission_graph.h"
@@ -92,6 +93,18 @@ static void draw_map_heading(void) {
     map_put(8, 0, BGT_AREA_M);
     map_put(9, 0, BGT_AREA_A);
     map_put(10, 0, BGT_MAP_LABEL_P);
+}
+
+static void draw_ask_prompt(void) {
+    u8 kind = companion_active_kind();
+    u8 pal = companion_ask_ready() ? (kind == COMPANION_HEARTH ? BGPAL_CRACK
+        : kind == COMPANION_AETHER ? BGPAL_CRYSTAL : BGPAL_DOOR) : BGPAL_WALL;
+    // Red ASK restores health, violet restores magic, and cyan scouts the
+    // adjacent route. The word dims while its twenty-second cooldown runs.
+    map_put_attr(14, 0, BGT_AREA_A, pal);
+    map_put_attr(16, 0, BGT_AREA_A, pal);
+    map_put_attr(17, 0, BGT_MAP_LABEL_S, pal);
+    map_put_attr(18, 0, BGT_AREA_K, pal);
 }
 
 // Dungeon screenshots and deep-test states need immediate campaign context.
@@ -439,6 +452,7 @@ void map_enter(void) {
         draw_map_heading();
         draw_world_grid();
         draw_world_legend();
+        draw_ask_prompt();
         SHOW_BKG; DISPLAY_ON;
         return;
     }
@@ -446,6 +460,7 @@ void map_enter(void) {
         tiles_load_area_labels(); tiles_load_map_bg(); map_clear_tiles();
         draw_map_heading();
         draw_town_grid();
+        draw_ask_prompt();
         SHOW_BKG; DISPLAY_ON;
         return;
     }
@@ -455,11 +470,16 @@ void map_enter(void) {
     map_clear_tiles();
     draw_dungeon_heading();
     draw_dungeon_grid();
+    draw_ask_prompt();
     SHOW_BKG; DISPLAY_ON;
 }
 void map_exit(void) {}
 screen_id_t map_tick(u8 keys, u8 pressed) {
     keys;
+    if ((pressed & J_A) && companion_ask()) {
+        room_request_resume();
+        return SCREEN_ROOM;
+    }
     if (pressed & (J_SELECT | J_B | J_START)) {
         sfx_play(SFX_COIN); room_request_resume(); return SCREEN_ROOM;
     }

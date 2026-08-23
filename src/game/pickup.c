@@ -12,10 +12,12 @@
 #include "game/run_state.h"
 #include "game/spawn_reach.h"
 #include "game/waygear.h"
+#include "game/dungeon_director.h"
 #include "input/input.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
+
 
 static u8 pickup_kind_collectible(u8 kind) {
     return kind <= PICKUP_MP || kind == PICKUP_RIFT_SIGIL
@@ -242,33 +244,7 @@ static u8 pickup_is_visual_town_resident(u8 kind) {
     return kind == PICKUP_MERCHANT || kind == PICKUP_SMITH
         || kind == PICKUP_APOTHECARY || kind == PICKUP_WAYKEEPER
         || kind == PICKUP_LOREKEEPER || kind == PICKUP_BELLKEEPER
-        || kind == PICKUP_WAYFARER;
-}
-
-// Context, not a purchase: reveal the nearest ware's price before the player
-// touches it. This makes the merchant's offer legible without a costly modal
-// screen or an accidental walk-into purchase.
-u8 pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED {
-    u8 i, found = 0, best_distance = 0xFF;
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        i16 dx, dy;
-        u8 distance;
-        if (!(entities[i].flags & EF_ACTIVE) || entities[i].type != ENT_PICKUP
-            || entities[i].ai_data[0] != PICKUP_SHOP) continue;
-        dx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
-        dy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
-        if (dx > 32 || dy > 32) continue;
-        distance = (u8)(dx + dy);
-        if (!found || distance < best_distance) {
-            best_distance = distance;
-            *ware_out = entities[i].ai_data[1];
-            *price_out = entities[i].ai_data[2];
-            found = 1;
-        }
-    }
-    return found;
+        || kind == PICKUP_WAYFARER || kind == PICKUP_COMPANION;
 }
 
 // A is intentionally contextual only inside this small proximity box. The
@@ -370,8 +346,26 @@ u8 pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED {
             || item_index == 19) ? 0x04 : 0x06;
         entities[idx].hitbox = (u8)0x88;
         entities[idx].state_timer = 0;
+        entities[idx].state = 30;
     }
     return idx;
+}
+
+void pickup_spawn_boon_pair(u8 roll) BANKED {
+    u8 first = pickup_farfold_relic_for_class(roll);
+    u8 second = pickup_farfold_relic_for_class((u8)(roll + 1));
+    // The director queues this transaction, then the room calls it only
+    // after the director bank has returned. Keep all constructors local to
+    // the pickup bank so completion cannot strand a sealed room.
+    pickup_spawn_choice(first, FIX8(104), FIX8(120));
+    pickup_spawn_choice(second, FIX8(136), FIX8(120));
+}
+
+void pickup_settle_pending_boon(void) BANKED {
+    if (!room_encounter_reward_pending) return;
+    pickup_spawn_boon_pair((u8)(run_state.room_counter
+        + (u8)run_state.run_seed + player.class_id));
+    room_encounter_reward_pending = 0;
 }
 
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
@@ -454,8 +448,14 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFTWELL
         || e->ai_data[0] == PICKUP_FARFOLD_RELIC
-        || e->ai_data[0] == PICKUP_BOON_CHOICE
         || e->ai_data[0] == PICKUP_WAYGEAR) return;
+    if (e->ai_data[0] == PICKUP_BOON_CHOICE) {
+        // A directive can resolve while the champion stands on the nearest
+        // safe reward cell. Preserve the visible two-way decision long
+        // enough to step back and choose instead of auto-taking one branch.
+        if (e->state) e->state--;
+        return;
+    }
     if (e->ai_data[0] == PICKUP_RIFT_SIGIL) return;
     if (e->ai_data[0] == PICKUP_SHOP_TAG) {
         // ai_data[1] names the ware slot this tag advertises. A sale marker
@@ -631,6 +631,11 @@ u8 pickup_check_player_collision(void) BANKED {
             // purchase/blessing effect. Share this result instead of keeping
             // one identical collision branch per civic silhouette.
             if (pickup_is_visual_town_resident(entities[i].ai_data[0])) {
+                any = 1;
+                continue;
+            }
+            if (entities[i].ai_data[0] == PICKUP_BOON_CHOICE
+                && entities[i].state) {
                 any = 1;
                 continue;
             }

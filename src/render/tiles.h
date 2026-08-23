@@ -289,6 +289,11 @@
 #define SPR_TOWN_ARTISAN_BIG  216 // 216..219: smith / gate and bell keepers
 #define SPR_TOWN_SAGE_BIG     220 // 220..223: apothecary / chart / lore
 #define SPR_TOWN_BIG_END      224
+// A two-beat 16x16 Road Echo follows through combat and peaceful fields.
+// Upper OBJ slots are safe: text screens hide sprites before loading fonts.
+#define SPR_COMPANION_WALK_A  224 // 224..227
+#define SPR_COMPANION_WALK_B  228 // 228..231
+#define SPR_BIG_ACTOR_END     232
 #define SPR_FX_BEAM_HEAD      158 // two-sprite fat beam head
 #define SPR_FX_BEAM_TAIL      159 // trailing beam body
 #define SPR_FX_ARROW          157 // Frost wall-launcher bolt
@@ -325,6 +330,7 @@ extern const u8 hud_tiles[][16];
 void tiles_load_pickup_sprites(void) BANKED;
 void tiles_load_item_sprites(void) BANKED;
 void tiles_load_town_big_sprites(void) BANKED;
+void tiles_load_companion_sprite(void) BANKED;
 void tiles_load_town_waykeeper_sprite(void) BANKED;
 void tiles_load_town_bellkeeper_sprite(void) BANKED;
 void tiles_load_town_lorekeeper_sprite(void) BANKED;

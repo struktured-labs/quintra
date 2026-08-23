@@ -30,6 +30,7 @@
 #define PRE_MISSION_RS_SIZE 37 // before generated dungeon mission roles
 #define PRE_REGIONAL_RIFT_RS_SIZE 46 // before shared three-dungeon Riftwild
 #define PRE_EXPANDED_RIFT_RS_SIZE 48 // 4x4 Riftwild before 36-field bitmap
+#define PRE_COMPANION_RS_SIZE 51 // expanded Riftwild before Road Echo ASK timer
 #define PRE_WILL_PL_SIZE 42 // player layout before the appended Will meter
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection
 #define PRE_WAYGEAR_PL_SIZE 44 // Pack layout before permanent traversal gear

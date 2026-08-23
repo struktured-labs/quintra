@@ -17,7 +17,8 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PL, EN, SCREEN = map(addr, ("_player", "_entities", "_loop_current_screen"))
+PL, EN, SCREEN, DIRECTOR_KIND = map(addr, (
+    "_player", "_entities", "_loop_current_screen", "_room_encounter_kind"))
 
 
 def press(pb, button, held=4, released=4):
@@ -61,6 +62,12 @@ def main():
     # through combat_resolve -> pickup_check_player_collision in the ROM.
     for i in range(32 * 28):
         pb.memory[EN + i] = 0
+    # Finish any entry/secret melody before comparing isolated reward voices.
+    # Dense cartridge frames can still be retiring after the visible tilemap
+    # settles, and reward SFX correctly defer while that melody owns CH1.
+    for _ in range(120):
+        pb.memory[DIRECTOR_KIND] = 0
+        pb.tick()
     # Use the last slot: PyBoy yields on VBlank, which can occur after the
     # resident entity loop has cached slot 0 but before combat. Injecting a
     # different type into that in-flight slot creates a debugger-only race.

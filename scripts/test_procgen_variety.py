@@ -75,7 +75,7 @@ def sample_stage_entry(pb, stage, seed):
     pb.memory[RS + 12] = 0         # pending_unseal
     pb.memory[RS + 13] = 0         # secret_pending
     pb.memory[RS + 17] = 1         # stand in Riftwild's dungeon gate cell
-    pb.memory[RS + 18] = 6
+    pb.memory[RS + 18] = (8, 21, 34)[(stage - 1) % 3 if stage else 0]
     pb.memory[PL + 2] = pb.memory[PL + 1]
     pb.memory[PL + 15] = 60
     for slot in range(MAX_ENTITIES):

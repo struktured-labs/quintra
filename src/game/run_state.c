@@ -69,45 +69,6 @@ u8 run_state_room_is_town(u8 room_counter) {
     return (room_counter == 63 || room_counter == 136) ? 1 : 0;
 }
 
-void run_state_clear(void) {
-    run_state.biome_id       = 0;
-    run_state.room_counter   = 0;
-    run_state.run_seed       = 0xCAFE1234UL;
-    run_state.entered_from   = DIR_NONE;
-    run_state.run_timer      = 0;
-    run_state.rooms_cleared  = 0;
-    run_state.victory        = 0;
-    run_state.bosses_beaten  = 0;
-    run_state.pending_unseal = 0;
-    run_state.secret_pending = 0;
-    run_state.score          = 0;
-    run_state.enemies_killed = 0;
-    run_state.enemies_killed_hi = 0;
-    run_state.world_mode = 0;
-    run_state.world_screen = 0;
-    run_state.world_return_screen = 0;
-    run_state.dungeon_seen = 1;
-    run_state.world_seen = 0;
-    run_state.rift_sigils = 0;
-    run_state.next_dungeon_reveal = 0;
-    run_state.difficulty = DIFFICULTY_NORMAL;
-    run_state.dungeon_puzzles = 0;
-    run_state.dungeon_phase = 0;
-    run_state.dungeon_seen_hi = 0;
-    run_state.next_dungeon_reveal_hi = 0;
-    run_state.dungeon_seen_xhi = 0;
-    run_state.next_dungeon_reveal_xhi = 0;
-    run_state.dungeon_seen_xxhi = 0;
-    run_state.next_dungeon_reveal_xxhi = 0;
-    run_state.dungeon_law = 0;
-    run_state.mission_ready = 0;
-    run_state.riftwild_region = 0;
-    run_state.riftwild_flags = 0;
-    run_state.world_seen_hi = 0;
-    run_state.world_seen_xhi = 0;
-    run_state.world_seen_xxhi = 0;
-}
-
 u16 run_state_enemies_killed_total(void) {
     return (u16)run_state.enemies_killed
         | ((u16)run_state.enemies_killed_hi << 8);
@@ -121,13 +82,6 @@ void run_state_record_enemy_kill(void) {
     } else {
         run_state.enemies_killed++;
     }
-}
-
-void run_state_init(u32 seed) {
-    run_state_clear();
-    run_state.run_seed = (seed == 0UL) ? 0xCAFE1234UL : seed;
-    run_state.biome_id = 0;     // Phase 7: only one biome — Crystal Caverns
-    run_state_ensure_dungeon_law();
 }
 
 void run_state_ensure_dungeon_law(void) {

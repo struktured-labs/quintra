@@ -18,8 +18,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PLAYER, ENTITIES, SCREEN, TRACK = map(
-    addr, ("_player", "_entities", "_loop_current_screen", "_music_track_id"))
+PLAYER, ENTITIES, SCREEN, TRACK, SEALED = map(addr, (
+    "_player", "_entities", "_loop_current_screen", "_music_track_id",
+    "_room_combat_sealed"))
+# hp_regen is the two-byte private field immediately preceding the public
+# room seal in room.c's declared WRAM block.
+HP_REGEN = SEALED - 2
 
 
 def tick_safe(pb, frames):
@@ -27,6 +31,23 @@ def tick_safe(pb, frames):
     for _ in range(frames):
         pb.memory[PLAYER + 15] = 120  # public player iframe field
         pb.tick()
+
+
+def set_regen(pb, value):
+    pb.memory[HP_REGEN] = value & 0xFF
+    pb.memory[HP_REGEN + 1] = value >> 8
+
+
+def regen(pb):
+    return pb.memory[HP_REGEN] | (pb.memory[HP_REGEN + 1] << 8)
+
+
+def advance_until(pb, predicate, label, limit=600):
+    for _ in range(limit):
+        tick_safe(pb, 1)
+        if predicate():
+            return
+    raise AssertionError(f"active room clock stopped while waiting for {label}")
 
 
 def put_fix8(pb, address, pixels):
@@ -73,50 +94,35 @@ def main():
     enter_sauran(pb)
     assert pb.memory[PLAYER + 1] == 16, "Sauran's eight-heart Scaled Hide base drifted"
 
-    # The selection-to-room handoff can legitimately expose a newly selected
-    # Sauran to a live first-room body before this probe starts. Align to a
-    # real just-fired recovery edge first, then measure a complete interval;
-    # otherwise the assertion accidentally includes an unknown partial timer
-    # from that normal handoff.
-    pb.memory[PLAYER + 2] = 15
-    # SCREEN_ROOM becomes public one dispatcher beat before the banked room
-    # tick owns the frame. Allow that single handoff beat in addition to the
-    # full 1,800 active-room-frame recovery interval.
-    for _ in range(1801):
-        tick_safe(pb, 1)
-        if pb.memory[PLAYER + 2] == 16:
-            break
-    assert pb.memory[PLAYER + 2] == 16, "Scaled Hide did not establish a recovery epoch"
-
+    # Probe the real threshold edge directly. Host VBlanks are not gameplay
+    # frames once a dense room overruns one LCD interval, so a wall-clock
+    # 1,800-tick loop is not a valid cadence measurement.
     pb.memory[PLAYER + 2] = 10
-    tick_safe(pb, 1799)
+    set_regen(pb, 1798)
+    advance_until(pb, lambda: regen(pb) == 1799, "pre-regen edge")
     assert pb.memory[PLAYER + 2] == 10, "Scaled Hide regenerated before 1,800 room frames"
-    # HP becomes observable before the same room tick's HUD/SFX helpers have
-    # necessarily returned. Those helpers may consume a few VBlanks that are
-    # not active room ticks, so preserve the strict no-early check above and
-    # allow the next epoch to finish across that bounded feedback tail.
-    for _ in range(8):
-        tick_safe(pb, 1)
-        if pb.memory[PLAYER + 2] == 11:
-            break
+    advance_until(pb, lambda: pb.memory[PLAYER + 2] == 11, "1,800-frame heal")
     assert pb.memory[PLAYER + 2] == 11, "Scaled Hide did not restore one half-heart at 1,800 frames"
-    tick_safe(pb, 1799)
+    assert regen(pb) < 8, \
+        f"Scaled Hide did not reset its cadence after healing ({regen(pb)})"
+
+    set_regen(pb, 1798)
+    advance_until(pb, lambda: regen(pb) == 1799, "second pre-regen edge")
     assert pb.memory[PLAYER + 2] == 11, "Scaled Hide's second cycle fired early"
-    for _ in range(8):
-        tick_safe(pb, 1)
-        if pb.memory[PLAYER + 2] == 12:
-            break
+    advance_until(pb, lambda: pb.memory[PLAYER + 2] == 12, "second heal")
     assert pb.memory[PLAYER + 2] == 12, "Scaled Hide regenerated the wrong amount on its second cycle"
 
     pb.memory[PLAYER + 2] = pb.memory[PLAYER + 1]
-    tick_safe(pb, 1808)
+    set_regen(pb, 1799)
+    pb.memory[PLAYER + 22] = 2
+    advance_until(pb, lambda: pb.memory[PLAYER + 22] == 0, "full-health room ticks")
     assert pb.memory[PLAYER + 2] == pb.memory[PLAYER + 1], "Scaled Hide exceeded max health"
 
     # Advance a half-cycle, then die and start a genuine new Sauran run. The
     # new run must not inherit the old static counter and heal 900 frames
     # early. This uses the public hostile/projectile → GAMEOVER → title path.
     pb.memory[PLAYER + 2] = 10
-    tick_safe(pb, 900)
+    set_regen(pb, 900)
     for i in range(32 * 28):
         pb.memory[ENTITIES + i] = 0
     pb.memory[PLAYER + 2] = 1
@@ -167,15 +173,12 @@ def main():
     for _ in range(4):
         pb.tick()
     enter_sauran(pb)
+    assert regen(pb) == 0, "new Sauran run inherited prior regen progress"
     pb.memory[PLAYER + 2] = 10
-    tick_safe(pb, 900)
-    assert pb.memory[PLAYER + 2] == 10, "new Sauran run inherited prior regen progress"
-    tick_safe(pb, 899)
+    set_regen(pb, 1798)
+    advance_until(pb, lambda: regen(pb) == 1799, "fresh-run pre-regen edge")
     assert pb.memory[PLAYER + 2] == 10, "new Sauran run regenerated early"
-    for _ in range(8):
-        tick_safe(pb, 1)
-        if pb.memory[PLAYER + 2] == 11:
-            break
+    advance_until(pb, lambda: pb.memory[PLAYER + 2] == 11, "fresh-run heal")
     assert pb.memory[PLAYER + 2] == 11, "new Sauran run lost its fresh regen cadence"
     pb.stop(save=False)
     print("[sauran-regen] PASS 1,800-frame cap + no cross-run timer leakage")

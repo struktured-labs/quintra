@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "core/types.h"
+#include "game/companion.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -137,7 +138,15 @@ void entity_update_nonprojectile(u8 idx) {
                 enemy_update(&entities[idx], idx);
             break;
         case ENT_PICKUP:
-            pickup_update(&entities[idx], idx);
+            if (entities[idx].ai_data[0] == PICKUP_COMPANION) {
+                // The follower owns deliberate two-frame animation beats.
+                // Dispatch it directly instead of paying pickup-bank then
+                // companion-bank trampolines every video frame.
+                if (!(entity_anim_counter & 1))
+                    companion_update(&entities[idx], idx);
+            } else {
+                pickup_update(&entities[idx], idx);
+            }
             break;
         default:
             break;
@@ -195,7 +204,7 @@ static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];
     if (e->type == ENT_PICKUP)
         return e->sprite_tile >= SPR_TOWN_RESIDENT_BIG
-            && e->sprite_tile < SPR_TOWN_BIG_END;
+            && e->sprite_tile < SPR_BIG_ACTOR_END;
     if (e->type != ENT_ENEMY) return 0;
     if (eid == ENEMY_STONE_SENTINEL) return 1;
     return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK

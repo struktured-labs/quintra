@@ -17,21 +17,28 @@ def addr(name):
     return int(match.group(1), 16)
 
 
+def press(pb, button, held=5, released=5):
+    pb.button_press(button)
+    pb.tick(held)
+    pb.button_release(button)
+    pb.tick(released)
+
+
 def boot(class_moves):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):
         pb.tick()
-    pb.button("start")
+    press(pb, "start")
     for _ in range(20):
         pb.tick()
     for _ in range(class_moves):
-        pb.button("down")
+        press(pb, "down")
         for _ in range(8):
             pb.tick()
-    pb.button("a")
+    press(pb, "a")
     for _ in range(60):
         pb.tick()
-    pb.button("start")
+    press(pb, "start")
     for _ in range(20):
         pb.tick()
     return pb

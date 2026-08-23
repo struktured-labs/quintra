@@ -7,7 +7,7 @@ import json
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageSequence
 
 from make_stage_states import boot_to_stage, select_rom_topology, symbol_addresses
 
@@ -21,6 +21,7 @@ STAGES_C = ROOT / "src/generated/stages.c"
 ITEMS_C = ROOT / "src/render/tiles_items.c"
 VERSION_H = ROOT / "src/game/version.h"
 BOSS_ATLAS = ROOT / "docs/media/boss-gallery.png"
+BOSS_ANIMATED_ATLAS = ROOT / "docs/media/boss-gallery.gif"
 
 STAGE_NAMES = (
     "Crystal Caverns", "Verdant Hollow", "Ember Depths",
@@ -254,6 +255,16 @@ def save_png(image: Image.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(path.suffix + ".tmp")
     image.save(temp, format="PNG", optimize=True)
+    temp.replace(path)
+
+
+def save_gif(frames: list[Image.Image], path: Path, duration: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(path.suffix + ".tmp")
+    frames[0].save(
+        temp, format="GIF", save_all=True, append_images=frames[1:],
+        duration=duration, loop=0, disposal=2, optimize=True,
+    )
     temp.replace(path)
 
 
@@ -518,6 +529,14 @@ def capture_assets(records: list[dict[str, int | str]], pools: list[list[int]]) 
 def capture_bosses() -> list[dict]:
     atlas = Image.open(BOSS_ATLAS).convert("RGB")
     assert atlas.size == (480, 480), f"unexpected boss atlas size {atlas.size}"
+    animated_atlas = Image.open(BOSS_ANIMATED_ATLAS)
+    assert animated_atlas.size == (480, 480)
+    assert animated_atlas.n_frames == 16
+    duration = animated_atlas.info.get("duration", 120)
+    animated_frames = [
+        frame.convert("RGB").copy()
+        for frame in ImageSequence.Iterator(animated_atlas)
+    ]
     bosses = []
     for stage, name in enumerate(BOSS_NAMES):
         x = (stage % 3) * 160
@@ -525,6 +544,11 @@ def capture_bosses() -> list[dict]:
         image = atlas.crop((x, y, x + 160, y + 144))
         path = ASSETS / f"boss-{stage + 1:02d}-{slug(name)}.png"
         save_png(image, path)
+        animated_path = ASSETS / f"boss-{stage + 1:02d}-{slug(name)}.gif"
+        save_gif([
+            frame.crop((x, y, x + 160, y + 144))
+            for frame in animated_frames
+        ], animated_path, duration)
         bosses.append({
             "id": stage + 1,
             "name": name,
@@ -536,6 +560,7 @@ def capture_bosses() -> list[dict]:
             "damage": BOSS_DAMAGE[stage],
             "accent": STAGE_ACCENTS[stage],
             "image": f"assets/{path.name}",
+            "animated": f"assets/{animated_path.name}",
         })
     return bosses
 

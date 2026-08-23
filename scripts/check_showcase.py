@@ -27,6 +27,15 @@ def assert_image(relative: str, size: tuple[int, int]) -> None:
         assert image.size == size, f"{relative} is {image.size}, expected {size}"
 
 
+def assert_animation(relative: str, size: tuple[int, int], frames: int) -> None:
+    path = SHOWCASE / relative
+    assert path.is_file(), f"missing showcase animation: {relative}"
+    with Image.open(path) as image:
+        assert image.size == size, f"{relative} is {image.size}, expected {size}"
+        assert image.n_frames == frames, (
+            f"{relative} has {image.n_frames} frames, expected {frames}")
+
+
 def main() -> None:
     data = json.loads((SHOWCASE / "manifest.json").read_text())
     version = re.search(r'QUINTRA_VERSION "([^"]+)"', VERSION.read_text()).group(1)
@@ -43,6 +52,7 @@ def main() -> None:
         assert_image(stage["image"], (160, 144))
     for boss in data["bosses"]:
         assert_image(boss["image"], (160, 144))
+        assert_animation(boss["animated"], (160, 144), 16)
     for monster in data["monsters"]:
         assert monster["stages"], f"{monster['name']} has no habitat"
         assert_image(monster["focus"], (128, 128))

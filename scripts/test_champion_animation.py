@@ -101,8 +101,13 @@ def main():
                 if pb.memory[OAM_TILE_0] in (walk_a_tile, walk_b_tile):
                     walk_seen.add(pb.memory[OAM_TILE_0])
             pb.button_release(direction)
-            for _ in range(2):
+            # Passive ally shots can legitimately land during this exact
+            # release window and briefly hold the last pose in hit-stop.
+            # Require a prompt idle settle, not one particular two-frame beat.
+            for _ in range(20):
                 pb.tick()
+                if pb.memory[OAM_TILE_0] == IDLE_BASE + class_id * CLASS_STRIDE:
+                    break
             x1 = pb.memory[PLAYER + X_OFFSET] | (pb.memory[PLAYER + X_OFFSET + 1] << 8)
             y1 = pb.memory[PLAYER + Y_OFFSET] | (pb.memory[PLAYER + Y_OFFSET + 1] << 8)
             if (x0, y0) != (x1, y1):
@@ -113,7 +118,8 @@ def main():
             f"class {class_id} did not cycle both strides: {walk_seen}"
         )
         assert pb.memory[OAM_TILE_0] == IDLE_BASE + class_id * CLASS_STRIDE, \
-            f"class {class_id} did not settle back to idle"
+            f"class {class_id} did not settle back to idle: " \
+            f"tile={pb.memory[OAM_TILE_0]} expected={IDLE_BASE + class_id * CLASS_STRIDE}"
 
         # A real hostile projectile must select the class-specific recoil art,
         # not merely flash the idle sprite or change the HP number.
