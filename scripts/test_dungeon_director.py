@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM contract for Quintra's deterministic living-dungeon directives."""
 
-from test_stage_archetypes import EN, PL, addr, generated_room
+from test_stage_archetypes import EN, PL, TM, addr, generated_room
 
 
 KIND = addr("_room_encounter_kind")
@@ -17,6 +17,10 @@ ROSTER_SECONDARY = addr("_room_roster_secondary")
 ENT_ENEMY, ENT_PICKUP = 2, 3
 EF_ACTIVE, EF_ELITE = 0x01, 0x20
 PICKUP_BOON_CHOICE = 20
+ROOM_W, ROOM_H = 20, 17
+WALKABLE = {1, 3, 7, *range(9, 21), 23, 31, 33, 34, 35, 36,
+            96, *range(55, 64)}
+FULL_BODY_OBSTACLES = {21, 25, 28, 29, 30}
 
 
 def put16(pb, address, value):
@@ -58,6 +62,52 @@ def boon_choices(pb):
             and pb.memory[EN + i * 28 + 1] & EF_ACTIVE
             and pb.memory[EN + i * 28 + 17] == PICKUP_BOON_CHOICE)
     ]
+
+
+def assert_boon_reachable(pb, rewards):
+    """Model the cartridge's exact feet + full-height-pillar movement."""
+    tiles = [pb.memory[TM + i] & 0x7F for i in range(ROOM_W * ROOM_H)]
+
+    def tile_at(x, y):
+        if x < 0 or y < 0 or x >= ROOM_W * 8 or y >= ROOM_H * 8:
+            return 2
+        return tiles[(y >> 3) * ROOM_W + (x >> 3)]
+
+    def body_clear(x, y):
+        return (0 <= x <= ROOM_W * 8 - 16
+                and 0 <= y <= ROOM_H * 8 - 16
+                and all(tile_at(x + dx, y + dy) in WALKABLE
+                        for dx in (2, 8, 13) for dy in (8, 15))
+                and all(tile_at(x + dx, y + dy) not in FULL_BODY_OBSTACLES
+                        for dx in (2, 8, 13) for dy in (0, 7)))
+
+    start = (pb.memory[PL + 9] | pb.memory[PL + 10] << 8,
+             pb.memory[PL + 11] | pb.memory[PL + 12] << 8)
+    # Wide courts can finish while the hero is in the extension plane. The
+    # cartridge projects that position onto the guaranteed-open compact seam
+    # before running its compact reward flood; mirror the same anchor here.
+    if start[1] + 16 > ROOM_H * 8:
+        start = (70, ROOM_H * 8 - 24)
+    elif start[0] + 16 > ROOM_W * 8:
+        start = (ROOM_W * 8 - 18, ((start[1] + 8) >> 3) * 8 - 8)
+    assert body_clear(*start), f"reward-time player position is blocked: {start}"
+    seen, pending = {start}, [start]
+    while pending:
+        x, y = pending.pop()
+        for position in ((x - 1, y), (x + 1, y),
+                         (x, y - 1), (x, y + 1)):
+            if position not in seen and body_clear(*position):
+                seen.add(position)
+                pending.append(position)
+
+    for reward in rewards:
+        x = pb.memory[reward + 3] | pb.memory[reward + 4] << 8
+        y = pb.memory[reward + 7] | pb.memory[reward + 8] << 8
+        assert any(px + 14 > x and px + 2 < x + 8
+                   and py + 16 > y and py + 8 < y + 8
+                   for px, py in seen), (
+            f"boon at {(x, y)} cannot be reached around full-height scenery"
+        )
 
 
 def erase(pb, entities):
@@ -137,6 +187,7 @@ def elite_contract():
         rewards = boon_choices(pb)
         assert pb.memory[SEALED] == 0 and len(rewards) == 2, \
             "elite kill did not release the room with a two-way build choice"
+        assert_boon_reachable(pb, rewards)
         # The pair owns a 30-game-update anti-auto-pickup grace period. Dense
         # rooms can advance fewer cartridge updates than host VBlanks, so
         # observe the actual entity state instead of assuming 32 host ticks.
@@ -186,6 +237,7 @@ def hold_contract():
             f"complete={pb.memory[COMPLETE]} timer=" \
             f"{pb.memory[TIMER] | pb.memory[TIMER + 1] << 8} " \
             f"rewards={len(boon_choices(pb))}"
+        assert_boon_reachable(pb, boon_choices(pb))
     generated_room(0, seed_for(6), local_room=DIRECTOR_ROOM, probe=probe)
 
 

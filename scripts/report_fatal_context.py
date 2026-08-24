@@ -19,7 +19,8 @@ ENEMY_NAMES = (
     "Flutterbat", "Gloom Leech", "Cinder Maw", "Rift Ooze", "Mirror Moth",
     "Mire Spore", "Echo Guard", "Rune Lantern", "Dread Bell", "Rift Warden",
     "Prism Skitter", "Dusk Midge", "Sunwheel", "Cinder Kite", "Bog Toad",
-    "Gloam Bramble", "Frost Lancer", "Vine Coil",
+    "Gloam Bramble", "Frost Lancer", "Vine Coil", "Shard Crab", "Void Halo",
+    "Rift Cantor", "Facet Ram", "Dread Reaper",
 )
 
 

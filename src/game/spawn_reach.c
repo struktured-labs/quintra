@@ -1,4 +1,4 @@
-#pragma bank 10
+#pragma bank 11
 #include <gb/gb.h>
 
 #include "core/types.h"
@@ -9,7 +9,7 @@
 #include "render/tiles.h"
 
 // This runs hundreds of times while flooding one generated room. Calling the
-// bank-1 gameplay predicate from bank 2 for every one of four footprint tiles
+// bank-1 gameplay predicate from this cold bank for every footprint tile
 // used to cross the far-call trampoline thousands of times and accounted for
 // most of the visible pause before a room slide. Keep the exact predicate
 // local to the generator's reachability pass; the live collision path retains
@@ -23,11 +23,32 @@ static u8 spawn_tile_walkable(u8 t) {
          || t == HUD_COIN || (t >= HUD_DIGIT_0 && t <= HUD_DIGIT_0 + 9));
 }
 
+static u8 spawn_full_body_obstacle(u8 t) {
+    t &= 0x7F;
+    return t == BGT_PILLAR || t == BGT_BLOCK || t == BGT_BLOCK_TR
+        || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR;
+}
+
+// Enemy placement intentionally retains its established feet-space flood so
+// reward hardening does not reshuffle deterministic combat layouts. Major
+// treasure opts into the stricter live-body model for one cold flood.
+static u8 reach_full_body;
+
 // A marked cell is the top-left of a clear 2x2 tile footprint. Flooding this
 // graph models the champion's body instead of a point: one-tile cracks may be
 // connected floor mathematically while remaining impossible to traverse.
 static u8 spawn_cell_open(u8 x, u8 y) {
     if (x + 1 >= ROOM_W || y + 1 >= ROOM_H) return 0;
+    // The live hero has a feet-anchored walk box, but pillars and push blocks
+    // collide with the complete 16px body. A floor apron immediately below
+    // one of those props therefore is not a real standing cell even though
+    // its 2x2 floor footprint looks open. Reward placement uses this flood;
+    // omitting the upper-body row can strand one boon beneath a pillar while
+    // its sibling remains collectible.
+    if (reach_full_body && y
+            && (spawn_full_body_obstacle(room_tilemap[y - 1][x])
+            || spawn_full_body_obstacle(room_tilemap[y - 1][x + 1])))
+        return 0;
     return spawn_tile_walkable((u8)(room_tilemap[y][x] & 0x7F))
         && spawn_tile_walkable((u8)(room_tilemap[y][x + 1] & 0x7F))
         && spawn_tile_walkable((u8)(room_tilemap[y + 1][x] & 0x7F))
@@ -118,6 +139,7 @@ u8 snap_reward_to_reachable(i16 *px, i16 *py) BANKED {
     u8 best_x = 0, best_y = 0, best_distance = 0xFF;
     u8 x, y, found = 0;
 
+    reach_full_body = 1;
     mark_spawn_reachable();
     for (y = 0; y < ROOM_H - 1; ++y) {
         for (x = 0; x < ROOM_W - 1; ++x) {
@@ -137,6 +159,7 @@ u8 snap_reward_to_reachable(i16 *px, i16 *py) BANKED {
         }
     }
     clear_spawn_reachable();
+    reach_full_body = 0;
     if (found) {
         *px = (i16)best_x << 3;
         *py = (i16)best_y << 3;

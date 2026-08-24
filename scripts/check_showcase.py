@@ -27,13 +27,41 @@ def assert_image(relative: str, size: tuple[int, int]) -> None:
         assert image.size == size, f"{relative} is {image.size}, expected {size}"
 
 
-def assert_animation(relative: str, size: tuple[int, int], frames: int) -> None:
+def assert_animation(relative: str, size: tuple[int, int], frames: int,
+                     frame_ms: int = 120) -> None:
     path = SHOWCASE / relative
     assert path.is_file(), f"missing showcase animation: {relative}"
     with Image.open(path) as image:
         assert image.size == size, f"{relative} is {image.size}, expected {size}"
-        assert image.n_frames == frames, (
-            f"{relative} has {image.n_frames} frames, expected {frames}")
+        # GIF encoders may merge two identical adjacent poses into one frame
+        # with a doubled delay. The public contract is the synchronized
+        # two-second encounter window, not redundant storage frames.
+        durations = []
+        for frame in range(image.n_frames):
+            image.seek(frame)
+            durations.append(image.info.get("duration", 0))
+        assert image.n_frames >= 2 and sum(durations) == frames * frame_ms, (
+            f"{relative} lasts {sum(durations)}ms across {image.n_frames} "
+            f"frames, expected {frames * frame_ms}ms")
+
+
+def assert_feature_portrait(relative: str) -> None:
+    """Reject a crop containing only the patterned dungeon floor."""
+    path = SHOWCASE / relative
+    with Image.open(path) as image:
+        rgb = image.convert("RGB")
+        border = set()
+        for x in range(rgb.width):
+            border.add(rgb.getpixel((x, 0)))
+            border.add(rgb.getpixel((x, rgb.height - 1)))
+        for y in range(rgb.height):
+            border.add(rgb.getpixel((0, y)))
+            border.add(rgb.getpixel((rgb.width - 1, y)))
+        center = rgb.crop((32, 32, 96, 96))
+        foreground = sum(pixel not in border for pixel in center.getdata())
+        assert foreground >= 128, (
+            f"{relative} contains no visible feature monster "
+            f"({foreground} foreground pixels)")
 
 
 def main() -> None:
@@ -43,10 +71,10 @@ def main() -> None:
     assert data["meta"]["romSha256"] == sha256(ROM), "showcase ROM hash is stale"
     assert len(data["stages"]) == data["meta"]["stageCount"] == 9
     assert len(data["bosses"]) == data["meta"]["bossCount"] == 9
-    assert len(data["monsters"]) == data["meta"]["monsterCount"] == 33
+    assert len(data["monsters"]) == data["meta"]["monsterCount"] == 35
     assert len(data["items"]) == data["meta"]["itemCount"] == 29
-    assert [monster["id"] for monster in data["monsters"]] == list(range(33))
-    assert len({monster["name"] for monster in data["monsters"]}) == 33
+    assert [monster["id"] for monster in data["monsters"]] == list(range(35))
+    assert len({monster["name"] for monster in data["monsters"]}) == 35
 
     for stage in data["stages"]:
         assert_image(stage["image"], (160, 144))
@@ -57,6 +85,8 @@ def main() -> None:
         assert monster["stages"], f"{monster['name']} has no habitat"
         assert_image(monster["focus"], (128, 128))
         assert_image(monster["field"], (160, 144))
+        if monster["id"] in (33, 34):
+            assert_feature_portrait(monster["focus"])
     for item in data["items"]:
         assert_image(item["image"], (128, 128))
     assert_image(data["collages"]["stages"], (480, 504))
@@ -75,7 +105,7 @@ def main() -> None:
     assert "data-view=\"monsters\"" in html
     assert "data-view=\"items\"" in html
     print(
-        f"[showcase] PASS {version}, 9 stages, 9 Colossi, 33 monsters, 29 items, "
+        f"[showcase] PASS {version}, 9 stages, 9 Colossi, 35 monsters, 29 items, "
         "local assets and ROM hash current"
     )
 

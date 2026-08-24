@@ -177,9 +177,9 @@
       stages: ["Nine-region contact sheet", "Every stage", "One representative live field from each procedural dungeon."],
       bosses: ["Maximum-footprint atlas", "All nine Colossi", "The largest captured body pose from every final boss."],
       bossesAnimated: ["Two-second synchronized atlas", "All nine Colossi — animated", "Pursuit, bounce, lunge, blink, pulse, weave, and weak-point travel side by side."],
-      monsters: ["Complete contact sheet", "All 33 monsters", "Every registered enemy silhouette in its correct dungeon palette and floor context."],
+      monsters: ["Complete contact sheet", "All 35 monsters", "Every registered enemy silhouette in its correct dungeon palette and floor context."],
       items: ["Authored 2bpp contact sheet", "29 relics, tools, and Waygear", "The actual in-cartridge silhouettes behind stat relics, wild weapon physics, puzzle tools, and permanent traversal gear."],
-      worldAtlas: ["Complete cartridge field atlas", "The whole current run", "Every region and Colossus beside all meaningful pickup silhouettes and all 33 registered monsters."],
+      worldAtlas: ["Complete cartridge field atlas", "The whole current run", "Every region and Colossus beside all meaningful pickup silhouettes and all 35 registered monsters."],
     };
     visibleEntries = [];
     const [kicker, title, copy] = labels[key];

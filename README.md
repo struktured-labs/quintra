@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.14: Hidden Company](https://github.com/struktured-labs/quintra/releases/download/v0.20.14/quintra.gbc)
+[Download Quintra v0.20.15: Clear Choice](https://github.com/struktured-labs/quintra/releases/download/v0.20.15/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,9 +29,29 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.14 — Hidden Company**, an exploration and
-directional-combat correction. Road Echoes no longer appear for free at stage
-entry and the Compass exposes no phantom ASK action before one exists. The
+The current cartridge is **v0.20.15 — Clear Choice**, a reward-reachability
+correction. Elite and survival rooms still present two mutually exclusive
+build boons, but the placement flood now models the same full-height pillar
+and push-block collision as live champion movement. A visually open floor
+apron beneath a pillar can no longer be mistaken for a valid standing cell or
+strand one half of the choice outside the champion's movement space.
+
+The live-ROM director regression follows every pixel position admitted by the
+real six-point feet/body collision shape and proves both rewards can be
+reached after Elite and Hold completions. Major relics, Rift Sigils, optional
+caches, and fixed miniboss placements retain their shared safe-floor and
+connected-component coverage.
+
+The release cartridge, gameplay reel, title capture, README stills, and
+animated nine-Colossus gallery are rebuilt together and hash-bound in the
+media manifest. The Field Archive now covers all 35 registered monsters,
+including visible Facet Ram and Dread Reaper portraits.
+
+### v0.20.14 — Hidden Company
+
+v0.20.14 was an exploration and directional-combat correction. Road Echoes no
+longer appear for free at stage entry and the Compass exposes no phantom ASK
+action before one exists. The
 first optional disguised cache found by shooting an ordinary wall, walking
 through false stone, or shifting an ordinary-looking cairn reveals the run's
 seed-selected Echo inside its crystal ring. That Hearth, Aether, or Way spirit
@@ -130,7 +150,7 @@ later room, adding an Ultima-like inference/backtracking puzzle without making
 an unlucky procedural route impossible.
 
 The release field archive is regenerated from the cartridge: nine live stage
-captures, nine Colossi, all 33 registered monster habitats, all 29 authored
+captures, nine Colossi, all 35 registered monster habitats, all 29 authored
 relic/tool/Waygear silhouettes, and one unified shareable atlas. All 460 PyBoy
 and 460 native mGBA checkpoints are also regenerated against the release ROM.
 
@@ -2880,7 +2900,7 @@ an unreachable live enemy and seal progression.
 
 [Open the local interactive Field Archive](docs/showcase/index.html) for
 filterable live-ROM captures of all nine stages, all nine final Colossi, and
-all 33 registered monsters, plus full-size stage, boss, and bestiary contact
+all 35 registered monsters, plus full-size stage, boss, and bestiary contact
 sheets. Rebuild it for the current cartridge with `make showcase`.
 
 | Title | Class select | Spirit Compass |

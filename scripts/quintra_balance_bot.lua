@@ -3747,6 +3747,47 @@ while frames < LIMIT do
             -- attack safely from that distance and loses its boss route if
             -- ordinary near-lane frames are misclassified as a body pin.
             keys = quintra_body_overlap_escape(px, py, target.x, target.y)
+        elseif target.kind == 33 then
+            -- Facet Ram armor accepts a hit only from its visible rear rune:
+            -- north-facing bodies are struck from below, east-facing bodies
+            -- from the left, and so on. The generic orbit/fire policy can
+            -- settle on the armored face and spend the rest of a deterministic
+            -- replay firing harmless bubbles. Route the real champion body
+            -- to a short rear lane, then use the matching cardinal attack.
+            -- The Ram still moves and turns normally; this is controller
+            -- observation and D-pad/A input only.
+            local facing = target.state % 8
+            local rear_x, rear_y = target.x, target.y
+            local rear_aim
+            if facing == 0 then
+                rear_y, rear_aim = target.y + 24, KEY_UP
+            elseif facing == 2 then
+                rear_x, rear_aim = target.x - 24, KEY_RIGHT
+            elseif facing == 4 then
+                rear_y, rear_aim = target.y - 24, KEY_DOWN
+            else
+                rear_x, rear_aim = target.x + 24, KEY_LEFT
+            end
+            rear_x = math.max(0, math.min(rear_x, QUINTRA_ARENA_W - 16))
+            rear_y = math.max(0, math.min(rear_y, QUINTRA_ARENA_H - 16))
+            local rear_side = (facing == 0 and py > target.y)
+                or (facing == 2 and px < target.x)
+                or (facing == 4 and py < target.y)
+                or (facing == 6 and px > target.x)
+            local rear_offaxis = (rear_aim == KEY_UP or rear_aim == KEY_DOWN)
+                and math.abs(dx) or math.abs(dy)
+            local rear_ready = rear_side
+                and ((held_style ~= "ranged" and rear_offaxis <= 16)
+                    or (rear_offaxis <= 5 and projectile_lane_clear(
+                        px, py, target.x, target.y, rear_aim)))
+            if rear_ready then
+                keys = KEY_A + rear_aim
+            else
+                keys = body_goal_step(px, py, rear_x, rear_y)
+            end
+            -- Rear acquisition already owns the collision-safe route. Keep
+            -- generic panic/recovery from replacing that committed line.
+            sigil_pixel_active = true
         elseif target.kind == 11 then
             -- BubbleBolt can travel 160px, but a distant shot reaches the
             -- core after its shorter vulnerable contraction has already
@@ -3891,6 +3932,32 @@ while frames < LIMIT do
                 -- sample was already aligned throws away that hit frame.
                 keys = KEY_A + star_step
             end
+        elseif target.kind == 2 and CLASS == 0 and target.y <= 8
+            and math.abs(dx) <= 64 then
+            -- A Hornet can settle into the legal top strip while Fang's
+            -- visual origin sits just below its small body. The generic
+            -- horizontal lane then skims beneath it forever. Route beneath
+            -- the live x-coordinate and strike upward—the same readable
+            -- cardinal answer a player sees at the wall. Howl is the natural
+            -- first attack when its real MP/cooldown is available.
+            local hornet_goal_x = math.max(0,
+                math.min(target.x, QUINTRA_ARENA_W - 16))
+            local hornet_goal_y = math.min(target.y + 20,
+                QUINTRA_ARENA_H - 16)
+            if math.abs(dx) <= 16 and py > target.y then
+                if active_charge == 0 and mp >= 2 then
+                    keys = KEY_B + KEY_UP
+                else
+                    keys = KEY_A + KEY_UP
+                end
+            else
+                keys = body_goal_step(
+                    px, py, hornet_goal_x, hornet_goal_y)
+            end
+            -- This authored edge lane is already the body-safe answer; do
+            -- not let the later generic contact panic replace it with the
+            -- same blocked vertical oscillation.
+            sigil_pixel_active = true
         elseif target.kind == 12 then
             -- A Flutterbat may share the agent's nominal 8px tile while
             -- remaining several pixels diagonal from its cardinal shot lane.

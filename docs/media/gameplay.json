@@ -1,9 +1,9 @@
 {
-  "version": "v0.20.14",
-  "rom_sha256": "24a22695d6d8d5a0bdcffdf1e8ce09ee672add5b5a7769ceb73db6db90d9aed1",
+  "version": "v0.20.15",
+  "rom_sha256": "3ca713da71fb3bc5f87bb4d6245b56ec2f2402cae7f7da61f1b6d9d2f5d0ddd5",
   "capture_sha256": "09072b613c240cbf3fb8243998b3f10cc4bebc76b6753d01aa27ca9af3b3e4f8",
-  "gif_sha256": "f9507335681c2709bb4f7e725ddfd30908c9127863e7f7894cec610f99ee0fbd",
-  "title_sha256": "64c6039d0ff569226b4316f80a44ed3a595df6178e824a32ab4a6e9afe69e3e9",
+  "gif_sha256": "db5341c22c67c6788bd39ecf4d010741053ff6157467363d7f844a285da4ec5f",
+  "title_sha256": "f9f0f2cdddcad9a34dd3239161159e8ed2c4ea74abe2189379236bc4af9268f4",
   "title_capture_sha256": "590f229533e67d1820c5fc345d1bc66fa6c873a3ee368f9bec40bce125266e90",
   "boss_gallery_sha256": "944f25967a71b1d58e56dc4ad0fef155c7955d9ff558a386fe4c74a5403dae54",
   "boss_gallery_gif_sha256": "46e7b1725996aac3a8739fb4a7a0343700f5b34d00dcabb484a321b17d280d3b",

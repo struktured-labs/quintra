@@ -78,7 +78,7 @@ ENEMY_NAMES = (
     "Mire Spore", "Echo Guard", "Rune Lantern", "Dread Bell", "Rift Warden",
     "Prism Skitter", "Dusk Midge", "Sunwheel", "Cinder Kite", "Bog Toad",
     "Bramble Sprite", "Frost Lancer", "Vine Coil", "Shard Crab", "Void Halo",
-    "Rift Cantor",
+    "Rift Cantor", "Facet Ram", "Dread Reaper",
 )
 ENEMY_SIGNATURES = (
     "A compact wandering body that becomes dangerous when several close the same route.",
@@ -114,6 +114,8 @@ ENEMY_SIGNATURES = (
     "Deflects one hasty hit, scuttles forward, then opens for a generous counterattack.",
     "A wide, slow Void orbit that shapes space with one opposite pair at a time.",
     "A priority target that chants once to summon a bounded escort wave; interrupting it cancels the call.",
+    "An armored cardinal patrol whose bright rear facet accepts only rear-to-front attacks before it fires backward.",
+    "A deep-court hunter whose warned mortal scythe cuts a healthy champion to one heart without killing outright.",
 )
 
 ITEM_NAMES = (
@@ -178,7 +180,7 @@ AI_LABELS = {
     "AI_SUMMONER": "Summoner", "AI_TELEPORT": "Teleporter",
 }
 ELEMENTS = ((1, "Fire"), (2, "Ice"), (4, "Lightning"), (8, "Shadow"), (16, "Poison"))
-BIG_ENEMIES = {1, 4, 6, 8, 14}
+BIG_ENEMIES = {1, 4, 6, 8, 14, 33, 34}
 
 
 def slug(text: str) -> str:
@@ -216,7 +218,8 @@ def parse_enemy_records() -> list[dict[str, int | str]]:
             "ai": values[9], "p0": int(values[10]), "p1": int(values[11]),
             "p2": int(values[12]),
         })
-    assert len(records) == len(ENEMY_NAMES), f"expected 33 enemy records, got {len(records)}"
+    assert len(records) == len(ENEMY_NAMES), \
+        f"expected {len(ENEMY_NAMES)} enemy records, got {len(records)}"
     assert [record["id"] for record in records] == list(range(len(ENEMY_NAMES)))
     return records
 
@@ -360,7 +363,7 @@ def build_world_atlas(stage_collage: Image.Image, item_collage: Image.Image) -> 
     draw = ImageDraw.Draw(canvas)
     draw.text((32, 20), "QUINTRA // CARTRIDGE FIELD ATLAS",
               fill=(233, 246, 237), font=display_font(30, bold=True))
-    draw.text((34, 57), "9 STAGES  ·  9 COLOSSI  ·  29 RELICS & TOOLS  ·  33 MONSTERS",
+    draw.text((34, 57), "9 STAGES  ·  9 COLOSSI  ·  29 RELICS & TOOLS  ·  35 MONSTERS",
               fill=(126, 240, 188), font=display_font(15, bold=True))
 
     stage_large = stage_collage.resize((720, 756), Image.Resampling.NEAREST)
@@ -413,6 +416,7 @@ def capture_assets(records: list[dict[str, int | str]], pools: list[list[int]]) 
         for enemy_id in range(len(records))
     }
     enemy_stages[1] = list(range(len(STAGE_NAMES)))  # stage-colored Wardens
+    enemy_stages[34] = list(range(len(STAGE_NAMES)))  # fixed deep Reaper
 
     for stage, stage_name in enumerate(STAGE_NAMES):
         pyboy, _, room = boot_to_stage(ROM, addrs, stage, "normal", 0)
@@ -462,6 +466,16 @@ def capture_assets(records: list[dict[str, int | str]], pools: list[list[int]]) 
                 for offset in range(8):
                     pyboy.memory[entity + 17 + offset] = 0
                 pyboy.memory[entity + 17] = enemy_id
+                # These specialists own runtime state outside the generated
+                # content record. Mirror their real spawn initialization so
+                # the Ram presents its broad silhouette and the Reaper is not
+                # captured on the first hidden beat of its attack telegraph.
+                if enemy_id == 33:
+                    pyboy.memory[entity + 15] = 2
+                    pyboy.memory[entity + 16] = 72
+                    pyboy.memory[entity + 18] = 72
+                elif enemy_id == 34:
+                    pyboy.memory[entity + 20] = 78
                 pyboy.memory[entity + 25] = 0xAA if enemy_id == 12 else (
                     0xDD if enemy_id in BIG_ENEMIES else 0x66)
                 pyboy.memory[entity + 26] = int(record["damage"])
