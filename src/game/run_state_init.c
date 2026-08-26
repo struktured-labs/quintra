@@ -1,4 +1,4 @@
-#pragma bank 4
+#pragma bank 14
 
 #include "core/types.h"
 #include "game/run_state.h"
@@ -41,6 +41,11 @@ static void clear_run_state(void) {
     run_state.world_seen_xhi = 0;
     run_state.world_seen_xxhi = 0;
     run_state.companion_cooldown = 0;
+    run_state.return_echo_flags = 0;
+    run_state.dungeon_visited = 1;
+    run_state.dungeon_visited_hi = 0;
+    run_state.dungeon_visited_xhi = 0;
+    run_state.dungeon_visited_xxhi = 0;
 }
 
 void run_state_init(u32 seed) BANKED {

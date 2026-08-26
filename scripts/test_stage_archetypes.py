@@ -73,7 +73,7 @@ def archetype_sample_cell(stage, seed, preferred=4):
 
 
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
-                   local_room=None, dungeon_phase=0):
+                   local_room=None, dungeon_phase=0, pre_cross=None):
     # Enter through the real Riftwild gate, then cross one reciprocal maze
     # edge. BGT_PORTAL is a mission-branch traversal mechanic now (local
     # 2<->8), not a generic test-only "next room" shortcut.
@@ -105,6 +105,8 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
     pb.memory[RS + 1] = STAGE_START[stage] + source_local
     pb.memory[RS + 6] = 0xFF
     normalize_compact_source(pb, addrs)
+    if pre_cross is not None:
+        pre_cross(pb, addrs)
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 2:

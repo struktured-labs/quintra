@@ -315,13 +315,12 @@ def route_to_pickup(obs: dict, pickup: dict) -> int:
     for y in range(room_h - 1):
         for x in range(room_w - 1):
             px, py = x * 8 - 2, y * 8 - 8
-            # The cartridge's pickup box is the 12x8 feet rectangle against
-            # the fixture's 6x6 body. Choose any aligned, physically open pose
-            # that overlaps it instead of assuming its center is standable.
-            if (body_open(x, y) and px + 14 > pickup["x"]
-                    and px + 2 < pickup["x"] + 6
+            # Loot follows the complete visible 16x16 champion even though
+            # terrain still uses the physically open feet/body pose.
+            if (body_open(x, y) and px + 16 > pickup["x"]
+                    and px < pickup["x"] + 6
                     and py + 16 > pickup["y"]
-                    and py + 8 < pickup["y"] + 6):
+                    and py < pickup["y"] + 6):
                 goals.add((x, y))
     start = (max(0, min(room_w - 2, (obs["x"] + 2) // 8)),
              max(0, min(room_h - 2, (obs["y"] + 8) // 8)))

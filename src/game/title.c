@@ -41,8 +41,11 @@ static const u16 title_palette_steady[4] = {
 
 // 0 = main title, 1 = records page (SELECT toggles)
 static u8 showing_records;
+static u8 showing_stage_warp;
 static u8 lore_beat;
 static u8 lore_hold;
+
+u8 title_stage_warp = 0xFF;
 
 #define N_LORE_BEATS 7
 #define TITLE_SPIRIT_COUNT 5
@@ -178,6 +181,9 @@ void title_enter(void) {
 
     has_save = sram_run_valid();
     showing_records = 0;
+    showing_stage_warp = 0;
+    title_stage_warp = 0xFF;
+    title_cheat_reset();
     lore_beat = 0;
     lore_hold = 0;
     render_title();
@@ -199,6 +205,18 @@ void title_exit(void) {
 
 screen_id_t title_tick(u8 keys, u8 pressed) {
     keys;
+    if (showing_stage_warp) {
+        screen_id_t result;
+        if (!pressed) return SCREEN_SELF;
+        result = title_cheat_tick(pressed);
+        if (result == SCREEN_TITLE) {
+            showing_stage_warp = 0;
+            render_title();
+            title_draw_spirits();
+            return SCREEN_SELF;
+        }
+        return result;
+    }
     // Records page: SELECT toggles, B backs out. Blocks run-start inputs
     // so a stray START on the stats page doesn't launch a game.
     if (showing_records) {
@@ -209,6 +227,20 @@ screen_id_t title_tick(u8 keys, u8 pressed) {
             title_draw_spirits();
         }
         return SCREEN_SELF;
+    }
+
+    // Ask the cold recognizer only when a code-relevant edge arrives. Consume
+    // the terminal A here before it can trigger CONTINUE below.
+    {
+        u8 code_key = (u8)(pressed
+            & (J_UP | J_DOWN | J_LEFT | J_RIGHT | J_B | J_A));
+        if (code_key && title_cheat_code_input(code_key)) {
+            showing_stage_warp = 1;
+            sfx_play(SFX_CLEAR);
+            title_hide_spirits();
+            title_cheat_begin();
+            return SCREEN_SELF;
+        }
     }
     if (pressed & J_SELECT) {
         showing_records = 1;
@@ -226,7 +258,12 @@ screen_id_t title_tick(u8 keys, u8 pressed) {
         music_stop();
         return SCREEN_ROOM;
     }
-    if (pressed & J_START) { sfx_play(SFX_COIN); music_stop(); return SCREEN_CLASS_SELECT; }
+    if (pressed & J_START) {
+        title_stage_warp = 0xFF;
+        sfx_play(SFX_COIN);
+        music_stop();
+        return SCREEN_CLASS_SELECT;
+    }
     return SCREEN_SELF;
 }
 
@@ -238,11 +275,12 @@ void title_draw(void) {
 
     // OAM updates are deliberately coarse: the tableau reads as a living
     // procession at 7.5 Hz while leaving nearly all title frames untouched.
-    if (!showing_records && (pulse_phase & 7) == 0) title_draw_spirits();
+    if (!showing_records && !showing_stage_warp && (pulse_phase & 7) == 0)
+        title_draw_spirits();
 
     // Change the vow every three pulse cycles. The palette continues moving
     // between beats, giving the lore tableau a simple hardware-cheap animation.
-    if (pulse_phase == 0 && !showing_records) {
+    if (pulse_phase == 0 && !showing_records && !showing_stage_warp) {
         if (++lore_hold >= 3) {
             lore_hold = 0;
             lore_beat = (u8)((lore_beat + 1) % N_LORE_BEATS);

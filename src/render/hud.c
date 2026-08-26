@@ -59,6 +59,7 @@ static const u16 hud_palette_will_full[4] = {
 // rendered price so this context hint costs no repeated VRAM traffic.
 static u8 offer_price = 0xFF;
 static u8 offer_ware = 0xFF;
+static u8 loot_seconds = 0xFF;
 static u8 lane_palette = 0xFF;
 static u8 will_full_palette = 0xFF;
 static u8 hud_hp_seen;
@@ -88,6 +89,7 @@ void hud_init(void) BANKED {
     palette_bg_load(5, hud_palette_will);
     lane_palette = 5;
     will_full_palette = 0;
+    loot_seconds = 0xFF;
     hud_hp_seen = player.hp;
 
     // Fill all 20 WIN tiles with blank, then set palette attribute = 7
@@ -230,6 +232,31 @@ void hud_clear_offer(void) BANKED {
     if (offer_price == 0xFF) return;
     offer_price = 0xFF;
     offer_ware = 0xFF;
+    VBK_REG = 0;
+    set_win_tiles(12, 0, 4, 1, row);
+}
+
+void hud_show_loot_timer(u8 seconds) BANKED {
+    u8 row[4];
+    if (seconds > 99) seconds = 99;
+    if (lane_palette != 7) hud_set_lane_palette(7);
+    if (seconds == loot_seconds) return;
+    loot_seconds = seconds;
+    // A relic silhouette makes the digits unambiguously describe the vault
+    // hoard rather than the run clock, room depth, or a status duration.
+    row[0] = HUD_OFFER_RELIC;
+    row[1] = HUD_BLANK;
+    row[2] = seconds >= 10
+        ? (u8)(HUD_DIGIT_0 + seconds / 10) : HUD_BLANK;
+    row[3] = (u8)(HUD_DIGIT_0 + seconds % 10);
+    VBK_REG = 0;
+    set_win_tiles(12, 0, 4, 1, row);
+}
+
+void hud_clear_loot_timer(void) BANKED {
+    static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
+    if (loot_seconds == 0xFF) return;
+    loot_seconds = 0xFF;
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
 }

@@ -111,10 +111,14 @@ def authored_overlay_cells(seed, counter, bosses_beaten=0):
     if counter == 19 and bosses_beaten == 0:
         overlay.update(row * ROOM_W + (ROOM_W - 1)
                        for row in range(1, ROOM_H - 1))
-        for y, width in enumerate((8, 12, 14, 14, 14, 14, 14, 12, 8)):
-            left = 10 - width // 2
-            overlay.update((y + 3) * ROOM_W + x
-                           for x in range(left, left + width))
+        # The hand-authored Crystal wall titan now owns a 16x10 western
+        # projection at (2,2), with transparent 0xFF cells intentionally
+        # preserving whatever floor the base generator supplied. Excluding
+        # the complete bounding box keeps this parity contract independent of
+        # future silhouette cuts; the colossal-art test owns its exact body.
+        overlay.update(row * ROOM_W + col
+                       for row in range(2, 12)
+                       for col in range(2, 18))
         return overlay
 
     local = counter

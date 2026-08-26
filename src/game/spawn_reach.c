@@ -108,6 +108,12 @@ void mark_spawn_reachable(void) BANKED {
     }
 }
 
+void mark_enemy_spawn_reachable(void) BANKED {
+    reach_full_body = 1;
+    mark_spawn_reachable();
+    reach_full_body = 0;
+}
+
 void clear_spawn_reachable(void) BANKED {
     u8 x, y;
     for (y = 0; y < ROOM_H; ++y)

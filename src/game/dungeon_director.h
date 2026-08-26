@@ -40,6 +40,8 @@ extern u8 room_encounter_target;
 extern u8 room_roster_kind;
 extern u8 room_roster_primary;
 extern u8 room_roster_secondary;
+// 0 none; 1 changed hunt, 2 reinforced wave, 3 trap, 4 elite/miniboss echo.
+extern u8 room_return_echo_kind;
 
 // Immediate cardinal route from the current dungeon cell toward the next
 // progression fixture. DIR_NONE means the player is already at that fixture
@@ -51,6 +53,7 @@ extern u8 room_objective_dir;
 void dungeon_director_reset(void) BANKED;
 void dungeon_director_prepare_roster(u8 eligible) BANKED;
 void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED;
+void dungeon_director_choose_return(u8 eligible, u8 was_seen) BANKED;
 u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED;
 u8 dungeon_director_pick_stage_enemy(u8 stage) BANKED;
 void dungeon_director_configure_initial(u8 entity_index, u8 ordinal) BANKED;

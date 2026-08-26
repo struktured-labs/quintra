@@ -38,9 +38,9 @@ def main():
     body = body_tiles(pb)
     xs = [x for x, _, _ in body]
     ys = [y for _, y, _ in body]
-    assert len(body) == 110, f"opening Colossus body drifted: {len(body)} tiles"
-    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (14, 9), (
-        f"opening Colossus lost its 112x72 footprint: "
+    assert len(body) == 118, f"opening Colossus body drifted: {len(body)} tiles"
+    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (16, 10), (
+        f"opening Colossus lost its 128x80 footprint: "
         f"x={min(xs)}..{max(xs)} y={min(ys)}..{max(ys)}")
 
     # The enormous statue is projection art; only the original 32x32 heart is
@@ -153,7 +153,7 @@ def main():
     assert len({crystal_art, mire_art, void_art}) == 3, (
         "Crystal/Mire/Void projections lost their distinct runtime BG art")
 
-    print(f"[colossal-crystal] PASS {len(body)} BG tiles, 112x72 body, "
+    print(f"[colossal-crystal] PASS {len(body)} BG tiles, 128x80 body, "
           f"224px walkable arena, seam x={crossed_x}, camera 0..64, "
           f"well warp {before}->{after}, art distinct from Mire/Void")
 

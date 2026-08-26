@@ -49,7 +49,7 @@ BOSS_NAMES = (
     "Mire Heart", "Shadow Reaper", "Sun Golem", "Blood Hydra", "Void Lord",
 )
 BOSS_DESCRIPTIONS = (
-    "A screen-scale crystal guardian whose exposed heart jumps between three distant wells.",
+    "A hand-authored wall-titan with crown prongs, slab shoulders, split roots, and an angular diamond weak core that jumps between three distant wells.",
     "A connected storm serpent that eats four motes, drags a damaging 128-pixel sixteen-scale second coil through the arena, pulses a wider charged aura, fires from both ends, charges an AOE, then contracts from the rear.",
     "Five armored Kilnbacks rewrite their wheel into a press, a burning unlock glyph, and a broken cage before their husks forge the long Cinder Rex; the Rex answers with lane breath, slag pools, marked stomps, a tail charge, and a critical five-flame reprise.",
     "A charged web with a warned flank blink and alternating cardinal and diagonal volleys.",

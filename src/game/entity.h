@@ -82,7 +82,7 @@ void entity_refresh_world_visibility(void) BANKED;
 // 4-bit w in high nibble, 4-bit h in low nibble; box anchored at (x,y).
 u8   aabb_overlap_ee(const entity_t *a, const entity_t *b);
 u8   aabb_overlap_player(const entity_t *e);        // small center HURTBOX
-u8   aabb_overlap_player_wide(const entity_t *e);   // full feet-anchored body (pickups)
+u8   aabb_overlap_player_wide(const entity_t *e);   // full visible body (pickups)
 
 // FX: visual-only entity (no collision, decays on state_timer=0).
 // sprite_tile is the OBJ tile slot; ttl is frames until despawn.

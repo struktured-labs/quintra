@@ -124,6 +124,16 @@ typedef struct {
     // optional cache discovery/reveal without shifting the suspend ABI. The
     // companion role is derived once from the run seed and stays stable.
     u8  companion_cooldown;
+    // One return-route surprise per completed objective leg. Each bit records
+    // that the matching progress phase already spent its echo ambush.
+    u8  return_echo_flags;
+    // Compass knowledge is not proof of travel. Keep a second four-byte map
+    // for rooms the champion actually entered so Cartographer/ASK reveals
+    // cannot spring a "return" encounter on a first visit.
+    u8  dungeon_visited;
+    u8  dungeon_visited_hi;
+    u8  dungeon_visited_xhi;
+    u8  dungeon_visited_xxhi;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03
@@ -177,6 +187,7 @@ u8   run_state_is_miniboss(void) BANKED;
 u8   run_state_is_shop(void);
 u8   run_state_room_is_town(u8 room_counter);
 u8   run_state_dungeon_cell_seen(u8 cell);
+u8   run_state_dungeon_cell_visited(u8 cell);
 void run_state_reveal_dungeon_cell(u8 cell) BANKED;
 void run_state_mark_visited(void);
 u8   run_state_world_cell_seen(u8 cell) BANKED;

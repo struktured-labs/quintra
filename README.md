@@ -47,6 +47,72 @@ animated nine-Colossus gallery are rebuilt together and hash-bound in the
 media manifest. The Field Archive now covers all 35 registered monsters,
 including visible Facet Ram and Dread Reaper portraits.
 
+### Current development — Colossus art pass
+
+The working cartridge gives the opening **Crystal Colossus** a complete visual
+redesign. Its former width-generated oval is now a hand-authored 128×80
+wall-titan with three crown prongs, slab shoulders, transparent fractures,
+split rooted feet, and a compact reactor chamber. The moving 32×32 weak point
+is an angular crystal guardian wrapped around one white diamond core instead
+of a round face with eyes and a smiling maw. Its 224-pixel arena, three anchor
+warps, collision, HP, Prism Lance, and post-clear route are unchanged.
+
+The other eight Colossi receive deliberately smaller silhouette refinements:
+Storm Serpent has a deeper brow and inner lightning chevron; Cinder Rex gains
+a broken dorsal ridge and hooked tail; Frost Spider has continuous jointed
+legs around a smaller plated abdomen; Mire Heart has an asymmetric seed iris
+and rootlike vessels; Shadow Reaper has a pointed hood, blade shoulders, and
+torn hem; Sun Golem has separated arms and legs around a diamond sun-heart;
+Blood Hydra has thicker necks and three substantial heads; and Void Lord now
+carries a continuous event-horizon mask beneath its five-point crown.
+
+All art remains cartridge-native: sixteen shared 8×8 OBJ tiles per stage boss,
+nine reused BG projection tiles, four colours per palette, and no additional
+OAM. The live boss atlas, animated gallery, README gameplay reel, and Field
+Archive have been regenerated from the linked ROM.
+
+### Current development — Rift Index
+
+The title screen now contains a hidden controller-only stage warp for focused
+playtesting. Enter **UP, RIGHT, DOWN, LEFT, RIGHT, UP, LEFT, DOWN, B, A** to
+open the **Rift Index**. UP/DOWN moves one stage, LEFT/RIGHT moves three, A
+continues to hero selection, and B closes the index. The chosen hero and
+Normal/Easy setting still pass through the ordinary new-run flow.
+
+A deep-stage warp begins at that dungeon's real entrance with its prior Oath
+Arts and a deterministic approximation of the guaranteed Colossus-reward
+curve. It grants no rare optional relics and does not modify an existing
+suspend while merely browsing or cancelling the index. Confirming a warped
+run clears the old suspend exactly like STARTing any other new run. Ordinary
+START and A-to-continue behavior are unchanged.
+
+### Current development — live-play feedback pass
+
+Required dungeon keys now resolve as a two-part ceremony. Combat freezes on
+the live room, the selected champion raises both arms, and the key floats
+overhead for two seconds before the clean text page appears. The former dialog
+icon that could overlap **KEY** has been removed. Major-reward time does not
+advance the run clock, and the claim frame cannot become a simultaneous KO.
+
+Harmless pickups use the champion's complete visible 16×16 sprite for contact,
+so treasure beside an otherwise valid wall edge collects when the art visibly
+overlaps it. Generated ordinary enemies, reinforcements, Sentinels, and Dread
+Reapers now require a full-body-safe position in the player's reachable
+component rather than accepting a feet-only floor apron beneath a pillar.
+
+Secret-cache hoards replace their invisible individual expiries with one
+visible twelve-second HUD clock. A quiet metallic tick marks each second and
+all unclaimed pieces disappear together at zero; collecting the hoard early
+clears the clock. The timer is armed atomically while the cache is generated,
+which avoids stale bank-boundary state on the cartridge compiler.
+
+Backtracking after an objective can now spend one seed-stable **return echo**:
+an altered species roster, a reinforced second wave, a warned trap, or a
+glowing leader-and-escort miniboss encounter. Each objective leg can trigger
+at most one echo, preventing room farming. Actual visit history is tracked
+separately from Compass/Cartographer knowledge, so revealing a room never
+turns its first visit into a false return ambush.
+
 ### v0.20.14 — Hidden Company
 
 v0.20.14 was an exploration and directional-combat correction. Road Echoes no
@@ -540,10 +606,10 @@ The cartridge now has a complete seven-part systemic layer:
    namespace.
 
 The ROM, SRAM migration, Python topology mirror, and live-cartridge regression
-suite cover all seven systems. Boss-by-boss curation is intentionally the next
-separate design pass: each Colossus will be reviewed individually for movement,
-bullet language, arena gimmick, phase curve, and difficulty rather than tuned
-as one blanket batch.
+suite cover all seven systems. The visual boss pass is now complete; deeper
+mechanical curation remains a separate boss-by-boss process so movement,
+bullet language, arena gimmicks, phase curves, and difficulty can be reviewed
+individually rather than tuned as one blanket batch.
 
 ### Prior working milestone — secrets, scale, and a hungry Colossus
 
@@ -1655,7 +1721,7 @@ with no observed interaction is still labelled as unattended evidence instead
 of a human balance result.
 
 **The opening Crystal Colossus is now a camera-travelling encounter.** Its
-112×72 projected guardian still occupies 110 tiles and its 32×32 heart remains
+128×80 projected guardian occupies 118 tiles and its 32×32 heart remains
 the sole vulnerable/collidable body with 200 HP, ring-plus-aimed pressure,
 damage, and riftbreak. The former 0–3px decorative sway is gone. The arena is
 224 pixels wide, the hero can cross the former x=160 seam to x=202, and SCX
@@ -3121,6 +3187,9 @@ than concept art.
 | **A+B** | Spirit Convergence when MP is full |
 | **START** | Pack screen (stats, loadout, run clock) |
 | **SELECT** | Spirit Compass (dungeon/town progress; Riftwild coordinates, exits, and landmark hint) |
+
+For focused stage testing from the title screen, enter **UP, RIGHT, DOWN, LEFT,
+RIGHT, UP, LEFT, DOWN, B, A** to open the hidden Rift Index.
 
 Shoot glowing amber wall tiles to find secret rooms. Rarer optional caches are
 not marked at all: try shooting or walking through ordinary walls and moving a

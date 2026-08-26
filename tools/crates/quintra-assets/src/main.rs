@@ -61,6 +61,7 @@ pub fn generate_header() -> String {
     for (name, _) in grids::PLAYERS_WALK_A { declaration(&mut o, &format!("sprite_class_{name}_walk_a"), 64); }
     for (name, _) in grids::PLAYERS_WALK_B { declaration(&mut o, &format!("sprite_class_{name}_walk_b"), 64); }
     for (name, _) in grids::PLAYERS_HURT { declaration(&mut o, &format!("sprite_class_{name}_hurt"), 64); }
+    for (name, _) in grids::PLAYERS_CLAIM { declaration(&mut o, &format!("sprite_class_{name}_claim"), 64); }
     for (name, _) in grids::PLAYERS_ASCENDED { declaration(&mut o, &format!("sprite_class_{name}_ascended"), 64); }
     for (name, _) in grids::PLAYERS_ASCENDED_STEP { declaration(&mut o, &format!("sprite_class_{name}_ascended_step"), 32); }
     let _ = writeln!(o, "\n// 8x8 enemy sprites");
@@ -222,6 +223,11 @@ pub fn generate_motion() -> String {
         let _ = writeln!(o, "{}", emit_metasprite_c_array(
             &format!("sprite_class_{name}_hurt"), &tiles));
     }
+    for (name, lines) in grids::PLAYERS_CLAIM {
+        let tiles = sprite_to_tiles(&parse_grid(lines), grids::PLAYER_W, grids::PLAYER_H);
+        let _ = writeln!(o, "{}", emit_metasprite_c_array(
+            &format!("sprite_class_{name}_claim"), &tiles));
+    }
     let _ = writeln!(o, "void tiles_load_motion_sprites(void) BANKED {{");
     for (i, (name, _)) in grids::PLAYERS_WALK_B.iter().enumerate() {
         let _ = writeln!(o,
@@ -231,6 +237,15 @@ pub fn generate_motion() -> String {
         let _ = writeln!(o,
             "    set_sprite_data((u8)(SPR_CLASS_HURT_BASE + {i} * SPR_CLASS_STRIDE), 4, sprite_class_{name}_hurt);");
     }
+    let _ = writeln!(o, "}}");
+    let _ = writeln!(o, "void tiles_load_class_claim_sprite(u8 class_id) BANKED {{");
+    let _ = writeln!(o, "    switch (class_id) {{");
+    for (i, (name, _)) in grids::PLAYERS_CLAIM.iter().enumerate() {
+        let _ = writeln!(o,
+            "        case {i}: set_sprite_data((u8)(SPR_CLASS_BASE + {i} * SPR_CLASS_STRIDE), 4, sprite_class_{name}_claim); break;");
+    }
+    let _ = writeln!(o, "        default: set_sprite_data(SPR_CLASS_BASE, 4, sprite_class_wolfkin_claim); break;");
+    let _ = writeln!(o, "    }}");
     let _ = writeln!(o, "}}");
     o
 }
@@ -510,6 +525,50 @@ mod tests {
             assert_eq!(g.len(), 32, "boss {i} height");
             assert!(g.iter().all(|r| r.len() == 32), "boss {i} width");
         }
+    }
+
+    #[test]
+    fn boss_art_keeps_authored_silhouettes_and_highlights() {
+        let stages = bosses::boss_stages();
+        for (i, g) in stages.iter().enumerate() {
+            let solid = g.iter().flatten().filter(|&&pixel| pixel != 0).count();
+            let bright = g.iter().flatten().filter(|&&pixel| pixel == 3).count();
+            assert!(solid >= 100, "boss {i} silhouette too sparse: {solid}");
+            assert!(bright >= 8, "boss {i} lost its readable highlights: {bright}");
+            for other in &stages[..i] {
+                assert_ne!(g, other, "boss {i} duplicates an earlier atlas");
+            }
+        }
+
+        let crystal = &stages[0];
+        assert!(crystal[10][0] != 0 && crystal[10][31] != 0,
+            "Crystal Colossus lost its full slab shoulders");
+        assert_eq!((crystal[15][15], crystal[15][16]), (0, 0),
+            "Crystal Colossus reactor lost its central fault");
+        assert!(crystal[31][15] == 0 && crystal[31][16] == 0,
+            "Crystal Colossus feet no longer split");
+
+        let spider = &stages[3];
+        assert!(spider[6][0] != 0 && spider[6][31] != 0
+            && spider[27][0] != 0 && spider[27][31] != 0,
+            "Frost Spider lost one or more jointed leg tips");
+
+        let reaper = &stages[5];
+        assert!(reaper[1][15] != 0 && reaper[10][0] == 3
+            && reaper[10][31] == 3 && reaper[30][15] == 0,
+            "Shadow Reaper lost its point, blade shoulders, or tattered hem");
+
+        let golem = &stages[6];
+        assert!(golem[16][9] == 0 && golem[16][22] == 0,
+            "Sun Golem limbs fused back into its torso");
+
+        let hydra = &stages[7];
+        assert!(hydra[6][4] == 3 && hydra[6][15] == 3 && hydra[6][28] == 3,
+            "Blood Hydra lost one of its three head highlights");
+
+        let void_lord = &stages[8];
+        assert!(void_lord[15][8..24].iter().all(|&pixel| pixel == 3),
+            "Void Lord event-horizon mask is no longer continuous");
     }
 
     #[test]

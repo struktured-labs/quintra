@@ -159,6 +159,25 @@ def main():
     assert heart_tone != coin_tone, (
         f"heart twinkle still aliases the coin chirp: {heart_tone}")
 
+    # A harmless pickup touched by the visible shoulder must collect even if
+    # terrain prevents the feet box from moving closer. This exact pose ends
+    # at y+8, merely kissing (and therefore missing) the former feet-only box.
+    shoulder = EN + 31 * 28
+    pb.memory[shoulder] = 3
+    pb.memory[shoulder + 1] = 3
+    put16(pb, shoulder + 3, px + 5)
+    put16(pb, shoulder + 7, py + 2)
+    pb.memory[shoulder + 14] = 1
+    pb.memory[shoulder + 16] = 240
+    pb.memory[shoulder + 17] = 1  # PICKUP_COIN_1
+    pb.memory[shoulder + 25] = 0x66
+    pb.memory[PL + 16], pb.memory[PL + 17] = 0, 0
+    for _ in range(3):
+        pb.tick()
+    assert pb.memory[shoulder] == 0 and pb.memory[PL + 16] == 1, (
+        "visible shoulder overlap did not collect edge-adjacent loot"
+    )
+
     coin5 = EN + 31 * 28
     pb.memory[coin5] = 3
     pb.memory[coin5 + 1] = 3

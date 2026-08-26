@@ -818,12 +818,11 @@ function quintra_on_weapon_orb(px, py, margin)
         if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
             and emu:read8(p + 17) == 5 then
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
-            -- Mirror aabb_overlap_player_wide(): player x+2..x+13,
-            -- y+8..y+15 against the ordinary 6x6 weapon-orb box. Do not
-            -- replace this with a symmetric radius—the feet anchor is why a
-            -- player can validly confirm an orb that is mostly below-right.
-            if px + 14 + margin > ex and ex + 6 + margin > px + 2
-                and py + 16 + margin > ey and ey + 6 + margin > py + 8 then
+            -- Mirror aabb_overlap_player_wide(): harmless loot follows the
+            -- complete visible 16x16 champion, including shoulders beside
+            -- walls where the feet cannot move any closer.
+            if px + 16 + margin > ex and ex + 6 + margin > px
+                and py + 16 + margin > ey and ey + 6 + margin > py then
                 return true
             end
         end
@@ -843,8 +842,8 @@ function quintra_weapon_shop_overlap(px, py, margin)
         if emu:read8(p) == 3 and emu:read8(p + 1) % 2 == 1
             and emu:read8(p + 17) == 4 and emu:read8(p + 18) == 8 then
             local ex, ey = emu:read8(p + 3), emu:read8(p + 7)
-            if px + 14 + margin > ex and ex + 6 + margin > px + 2
-                and py + 16 + margin > ey and ey + 6 + margin > py + 8 then
+            if px + 16 + margin > ex and ex + 6 + margin > px
+                and py + 16 + margin > ey and ey + 6 + margin > py then
                 return ex, ey
             end
         end

@@ -5,6 +5,10 @@
 
 // Temporarily marks the player's strictly-walkable tile component in bit 7.
 void mark_spawn_reachable(void) BANKED;
+// Ordinary enemy placement needs the live full-body pillar/block contract;
+// otherwise a legal feet cell directly below a pillar can spawn a body whose
+// upper half begins embedded and cannot take its first movement step.
+void mark_enemy_spawn_reachable(void) BANKED;
 void clear_spawn_reachable(void) BANKED;
 
 // Move a pixel-space reward origin onto the nearest safe 16x16 footprint in

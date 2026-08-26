@@ -21,12 +21,13 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN, HITSTOP, FRAME_COUNTER, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(addr, (
+RS, PL, EN, TM, SEALED, SIGIL_STATUS, SCREEN, HITSTOP, FRAME_COUNTER, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, REWARD_TIMER, POSE_LOCKED = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
     "_room_combat_sealed", "_room_sigil_status", "_loop_current_screen",
     "_g_hitstop", "_loop_frame_counter", "_procgen_current_room_is_large",
     "_room_world_width", "_room_world_height",
-    "_room_camera_x", "_room_camera_y"))
+    "_room_camera_x", "_room_camera_y", "_room_major_reward_pending",
+    "_room_player_pose_locked"))
 RS_SIGILS = 23
 RS_BOSSES = 11
 RS_PUZZLES = 27
@@ -37,7 +38,8 @@ BGT_MAP_BIG_GOAL = 114
 SCREEN_ROOM = 5
 SCREEN_MAP = 8
 SCREEN_DIALOG = 10
-SPR_DIALOG_SIGIL = 200
+SPR_ITEM_RIFT_SIGIL = 151
+OAM_MAJOR_REWARD_ICON = 39
 DEFAULT_SEED = 0xCAFE1234
 RUN_REQUIRED_PUZZLES = (1 << 0) | (1 << 3) | (1 << 6) | (1 << 7)
 RUN_REQUIRED_PHASE = (1 << 2) | (1 << 7)
@@ -58,7 +60,7 @@ def main():
     for _ in range(240):
         pb.tick()
     pb.button("start")
-    for _ in range(30):
+    for _ in range(24):
         pb.tick()
     pb.button("a")
     for _ in range(60):
@@ -202,11 +204,12 @@ def main():
     # kissing its corner. This stays stable if the hero feet box is refined.
     put16(pb, PL + 9, (pb.memory[ep + 3] - 2) & 0xFF)
     put16(pb, PL + 11, (pb.memory[ep + 7] - 9) & 0xFF)
-    # A banked fixture reservation runs during the same in-place room
-    # transition as its slide/fade. Give that presentation transaction a
-    # complete short settle window before asserting the ordinary walk-over.
-    for _ in range(30):
+    # Observe the first live claim frame so the ceremony duration is measured
+    # from its actual transaction, not from an arbitrary post-slide delay.
+    claim_wait = 0
+    while pb.memory[REWARD_TIMER] == 0 and claim_wait < 30:
         pb.tick()
+        claim_wait += 1
     assert pb.memory[RS + RS_SIGILS] & 1, (
         "Sigil pickup did not persist stage bit "
         f"rs={list(pb.memory[RS:RS + 28])} "
@@ -214,19 +217,39 @@ def main():
         f"entity={list(pb.memory[ep:ep + 22])} hitbox=0x{pb.memory[ep + 25]:02X} "
         f"screen={pb.memory[SCREEN]} hitstop={pb.memory[HITSTOP]} "
         f"frame={pb.memory[FRAME_COUNTER] | pb.memory[FRAME_COUNTER + 1] << 8}")
-    assert pb.memory[SCREEN] == SCREEN_DIALOG, (
-        "major stage objective did not pause into its claim tableau"
+    assert pb.memory[SCREEN] == SCREEN_ROOM and 118 <= pb.memory[REWARD_TIMER] <= 120, (
+        "major stage objective skipped its two-second live-room ceremony: "
+        f"screen={pb.memory[SCREEN]} timer={pb.memory[REWARD_TIMER]}"
     )
-    assert tuple(pb.memory[0xFE00 + i * 4 + 2] for i in range(4)) == \
-        tuple(range(SPR_DIALOG_SIGIL, SPR_DIALOG_SIGIL + 4)), (
-            "Rift Sigil claim lacks its authored four-tile artifact"
-        )
+    assert pb.memory[POSE_LOCKED] == 1, \
+        "Sigil ceremony did not lock the champion's raised-arm pose"
+    icon = 0xFE00 + OAM_MAJOR_REWARD_ICON * 4
+    assert pb.memory[icon + 2] == SPR_ITEM_RIFT_SIGIL and pb.memory[icon] != 0, (
+        "raised-arm ceremony lacks the floating dungeon key"
+    )
     pb.screen.image.save(ROOT / "tmp" / "rift-sigil-claim.png")
-    pb.button("a")
-    for _ in range(30):
+
+    ceremony_frames = 0
+    while pb.memory[SCREEN] == SCREEN_ROOM and ceremony_frames < 130:
         pb.tick()
-    assert pb.memory[SCREEN] == SCREEN_ROOM, \
-        "Rift Sigil claim did not resume the same room"
+        ceremony_frames += 1
+    assert pb.memory[SCREEN] == SCREEN_DIALOG and 118 <= ceremony_frames <= 121, (
+        "Rift Sigil ceremony did not hold for about two seconds: "
+        f"frames={ceremony_frames} screen={pb.memory[SCREEN]}"
+    )
+    assert pb.memory[REWARD_TIMER] == 0, \
+        "claim timer remained armed after entering the text page"
+    # The screen id publishes one loop edge before dialog_enter finishes its
+    # LCD transaction; wait for that entry, then provide a fresh button edge.
+    pb.tick(30)
+    pb.button_press("a")
+    pb.tick(4)
+    pb.button_release("a")
+    pb.tick(24)
+    assert pb.memory[SCREEN] == SCREEN_ROOM, (
+        "Rift Sigil claim did not resume the same room: "
+        f"screen={pb.memory[SCREEN]}"
+    )
 
     # SELECT is a graphical tile map. Move the displayed cursor one room past
     # the recovered fixture so its icon can be asserted in the room that owns

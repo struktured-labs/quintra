@@ -471,8 +471,8 @@ void procgen_generate_current_room(void) BANKED {
     // It remains a pure function of room_counter, so suspend/resume and
     // backtracking regenerate the same world landmark.
     u8 is_town = (!run_state.world_mode && RUN_ROOM_IS_TOWN(run_state.room_counter)) ? 1 : 0;
-    u8 room_was_seen = (!run_state.world_mode && !is_town)
-        ? run_state_dungeon_cell_seen(run_state_dungeon_cell()) : 1;
+    u8 room_was_visited = (!run_state.world_mode && !is_town)
+        ? run_state_dungeon_cell_visited(run_state_dungeon_cell()) : 1;
     // Resolve every progression role against the seed-folded maze before a
     // room shape, enemy, puzzle, or lore fixture asks what this cell means.
     mission_graph_ensure();
@@ -1044,6 +1044,10 @@ void procgen_generate_current_room(void) BANKED {
                 if (w == player.starter_weapon) w = pickup_next_weapon(w);
                 pickup_spawn_weapon(w, FIX8(80), FIX8(80));
             }
+            // Arm the shared visible expiry while the generator still owns
+            // authoritative cache state. Checking secret_pending after this
+            // banked call lets SDCC reuse the caller's stale pre-call byte.
+            room_begin_secret_loot_timer();
             sfx_play(SFX_CLEAR);   // secret-found fanfare
             player.iframes = 60;
             return;
@@ -1099,7 +1103,11 @@ void procgen_generate_current_room(void) BANKED {
             && !is_boss_room && !is_miniboss && !is_shop && !is_rest
             && !is_puzzle_room && !is_waypoint
             && procgen_current_room_is_large
-            && run_state_dungeon_local() >= 4), room_was_seen);
+            && run_state_dungeon_local() >= 4), room_was_visited);
+        dungeon_director_choose_return((u8)(!is_town && !run_state.world_mode
+            && !is_boss_room && !is_miniboss && !is_shop && !is_rest
+            && !is_puzzle_room && !is_waypoint
+            && procgen_current_room_is_large), room_was_visited);
 
         if (is_town) {
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
@@ -1418,7 +1426,7 @@ void procgen_generate_current_room(void) BANKED {
             u8 encounter_formation = (u8)(((u8)run_state.run_seed
                 + run_state.room_counter
                 + (u8)(run_state.bosses_beaten << 1)) & 3);
-            if (!direct_wide) mark_spawn_reachable();
+            if (!direct_wide) mark_enemy_spawn_reachable();
             // `enemy_count` used to mean attempts, not bodies: a pillar or
             // entrance-safety rejection could quietly turn the intended
             // two-enemy floor back into one crawler. Retry a bounded four

@@ -32,6 +32,10 @@
 #define PICKUP_WAYGEAR         22 // permanent traversal implement; ai_data[1]=gear
 #define PICKUP_COMPANION       23 // nonblocking Road Echo follower; ai_data[1]=role
 
+// Room-owned secret-vault countdown. Marked loot bypasses its old individual
+// u8 lifespan and is retired together by the visible twelve-second clock.
+#define PICKUP_SECRET_TIMER_MARK 0x80
+
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
 #define WARE_ITEM    1   // random stat item, 25 coins

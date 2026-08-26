@@ -96,7 +96,11 @@ static u8 room_has_shop_wares;
 // every turbo shot in ordinary combat. Only towns, shops, and authored turn
 // courts can contain a speaker.
 static u8 room_has_speakers;
-static u8 room_major_reward_pending;
+#define OAM_MAJOR_REWARD_ICON    39
+// Frames remaining in the frozen Zelda-style key-lift tableau. The dialogue
+// follows only after this reaches zero, so its copy never competes with art.
+u8 room_major_reward_pending;
+u16 room_secret_loot_timer;
 // These are run-scoped, not room-scoped: passive trickles should retain their
 // partial progress through doors/menus, but player_clear resets them before a
 // brand-new champion is initialized.
@@ -125,7 +129,7 @@ static void room_finish_law_toggle(void) {
 }
 
 // Death sequence: frames left in the fall-down beat before GAMEOVER.
-static u8 death_timer;
+u8 death_timer;
 
 // Dodge dash (double-tap a direction): a fast i-frame lunge on a short
 // cooldown. tap_dir/tap_age detect the double-tap; dash_timer runs the
@@ -220,33 +224,9 @@ static void room_update_signatures(void) {
     }
 }
 
-static void room_start_death(void) {
-    // Every lethal source shares one readable fall beat. Hazard deaths used
-    // to hard-cut directly to GAME OVER while bullets/contact played this
-    // animation, making floor damage feel like a screen-transition bug.
-    death_timer = 50;
-    player.iframes = 50;
-    sfx_play(SFX_DEATH);
-    music_stop();
-    room_shake(2, 30);
-    fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x,     (i16)player.y,     16);
-    fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x - 8, (i16)player.y - 8, 24);
-    fx_spawn(SPR_FX_IMPACT, 2, (i16)player.x + 8, (i16)player.y + 8, 32);
-    hud_redraw_hp();
-}
-
 void room_shake(u8 mag, u8 frames) BANKED {
     shake_mag = mag;
     if (frames > shake_timer) shake_timer = frames;
-}
-
-void room_start_major_reward(u8 kind, u8 topic) BANKED {
-    dialog_prepare_reward(kind, topic);
-    room_major_reward_pending = 1;
-    // Pickup collision resolves before hostile contact in combat_resolve().
-    // Protect the claim frame so the major-item tableau cannot be replaced by
-    // a same-frame death when a projectile overlaps the pedestal.
-    if (player.iframes < 90) player.iframes = 90;
 }
 
 void room_reset_passive_timers(void) BANKED {
@@ -956,7 +936,8 @@ static void room_slide_north(void) {
 
 static void place_player_sprite(void) {
     // 16x16 player metasprite — 4 OAM slots, anchored at (x+8, y+16) per GBDK
-    if (arrival_sprite_grace == 0 && player.iframes > 0
+    if (!room_major_reward_pending && arrival_sprite_grace == 0
+        && player.iframes > 0
         && (player.iframes & 0x04)) {
         move_sprite(0, 0, 0);
         move_sprite(1, 0, 0);
@@ -996,6 +977,20 @@ static void place_player_sprite(void) {
     }
 }
 
+static void room_draw_major_reward_tableau(void) {
+    u8 icon_x = (u8)((i16)player.x - room_camera_x + 12);
+    u8 icon_y = (u8)((i16)player.y - room_camera_y + 7
+        + ((room_major_reward_pending & 0x10) ? 0 : 1));
+    // Freeze actors exactly where the Sigil was claimed, but retain the live
+    // room as the backdrop. The current class's raised-arm atlas occupies its
+    // normal four tiles until dialogue resume reloads the complete room art.
+    entity_draw_all();
+    place_player_sprite();
+    set_sprite_tile(OAM_MAJOR_REWARD_ICON, SPR_ITEM_RIFT_SIGIL);
+    set_sprite_prop(OAM_MAJOR_REWARD_ICON, 0x06);
+    move_sprite(OAM_MAJOR_REWARD_ICON, icon_x, icon_y);
+}
+
 static u8 room_scroll_x(void) {
     return (u8)((room_bg_origin_x << 3) + room_camera_x);
 }
@@ -1015,6 +1010,7 @@ void room_enter(void) {
     if (!room_resume_flag) {
         room_bg_origin_x = room_bg_origin_y = 0;
         room_major_reward_pending = 0;
+        room_secret_loot_timer = 0;
     }
 
     room_load_environment_palettes();
@@ -1176,6 +1172,21 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.
     if (dungeon_law_toggle_pending) room_finish_law_toggle();
+    if (room_major_reward_pending) {
+        // Major-item ceremony is presentation, not run time. Discard elapsed
+        // VBlanks while all movement, AI, hazards, and menus are frozen.
+        g_vbl_ticks = 0;
+        room_major_reward_pending--;
+        if (room_major_reward_pending == 0) {
+            room_player_pose_locked = room_transform_ticks ? 1 : 0;
+            room_player_pose_base = room_transform_ticks
+                ? SPR_CLASS_ASCENDED_BASE : SPR_CLASS_BASE;
+            return SCREEN_DIALOG;
+        }
+        room_draw_major_reward_tableau();
+        return SCREEN_SELF;
+    }
+    if (room_secret_loot_timer) room_update_secret_loot_timer();
     if (law_action_latch) {
         if (keys & J_A) {
             keys &= (u8)~J_A;
@@ -1861,8 +1872,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         return SCREEN_SELF;
     }
     if (room_major_reward_pending) {
-        room_major_reward_pending = 0;
-        return SCREEN_DIALOG;
+        room_draw_major_reward_tableau();
+        return SCREEN_SELF;
     }
 
     // ---- Boss HP bar + room-clear detection in one entity sweep.
@@ -1954,6 +1965,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         hostiles_now = alive;
         hostiles_prev = alive;
     }
+    if (room_secret_loot_timer)
+        hud_show_loot_timer((u8)((room_secret_loot_timer + 59u) / 60u));
 
     // ---- Boss beaten (non-final): lift the door seal, run continues,
     // and the fight music yields back to the exploration theme.

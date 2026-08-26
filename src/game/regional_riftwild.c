@@ -97,6 +97,11 @@ void run_state_begin_dungeon(void) BANKED {
     run_state.next_dungeon_reveal_xxhi = 0;
     run_state.dungeon_puzzles = 0;
     run_state.dungeon_phase = 0;
+    run_state.return_echo_flags = 0;
+    run_state.dungeon_visited = 0;
+    run_state.dungeon_visited_hi = 0;
+    run_state.dungeon_visited_xhi = 0;
+    run_state.dungeon_visited_xxhi = 0;
     run_state.dungeon_law = 0;
     run_state.mission_ready = 0;
     run_state_ensure_dungeon_law();

@@ -28,6 +28,7 @@ u8 room_encounter_target;
 u8 room_roster_kind;
 u8 room_roster_primary;
 u8 room_roster_secondary;
+u8 room_return_echo_kind;
 
 static u8 encounter_spawn_clock;
 static u8 room_roster_ordinal;
@@ -176,6 +177,7 @@ void dungeon_director_reset(void) BANKED {
     room_roster_primary = 0xFF;
     room_roster_secondary = 0xFF;
     room_roster_ordinal = 0;
+    room_return_echo_kind = 0;
 }
 
 void dungeon_director_prepare_roster(u8 eligible) BANKED {
@@ -238,6 +240,7 @@ void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED {
 
 u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED {
     if (room_encounter_kind == ENCOUNTER_TRAP) return 0;
+    if (room_return_echo_kind == 2) return proposed;
     if (room_encounter_kind == ENCOUNTER_WAVE)
         return (u8)((proposed + 1) >> 1);
     if (room_encounter_kind == ENCOUNTER_HOLD) {

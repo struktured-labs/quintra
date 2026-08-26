@@ -11,40 +11,40 @@
 // silhouettes.
 // This keeps the HUD and the GBC's 40-object budget untouched.
 static const u8 bgt_crystal_void[16] = {
-    0x18,0x00, 0x3C,0x18, 0x66,0x3C, 0xC3,0x66,
-    0x81,0x7E, 0xC3,0x66, 0x66,0x3C, 0x3C,0x18
+    0x81,0x00, 0x42,0x81, 0x24,0x42, 0x18,0x24,
+    0x0C,0x18, 0x12,0x0C, 0x21,0x12, 0x40,0x21
 };
 static const u8 bgt_crystal_scale[16] = {
-    0x18,0x00, 0x3C,0x18, 0x7E,0x3C, 0xDB,0x66,
-    0xFF,0x7E, 0x7E,0x3C, 0x3C,0x18, 0x18,0x00
+    0x80,0x00, 0xC1,0x80, 0xE3,0xC1, 0x77,0xE3,
+    0x3E,0x77, 0x1C,0x3E, 0x08,0x1C, 0x00,0x08
 };
 static const u8 bgt_crystal_edge_l[16] = {
-    0x01,0x00, 0x03,0x01, 0x07,0x03, 0x0F,0x07,
-    0x1F,0x0F, 0x3F,0x1F, 0x7F,0x3F, 0xFF,0x7F
+    0x01,0x00, 0x03,0x01, 0x07,0x02, 0x0F,0x05,
+    0x1F,0x0A, 0x3F,0x15, 0x7F,0x2A, 0xFF,0x55
 };
 static const u8 bgt_crystal_edge_r[16] = {
-    0x80,0x00, 0xC0,0x80, 0xE0,0xC0, 0xF0,0xE0,
-    0xF8,0xF0, 0xFC,0xF8, 0xFE,0xFC, 0xFF,0xFE
+    0x80,0x00, 0xC0,0x80, 0xE0,0x40, 0xF0,0xA0,
+    0xF8,0x50, 0xFC,0xA8, 0xFE,0x54, 0xFF,0xAA
 };
-static const u8 bgt_crystal_eye[16] = {
-    0x00,0x00, 0x7E,0x00, 0xFF,0x7E, 0xBD,0xC3,
-    0xDB,0xE7, 0xFF,0x7E, 0x7E,0x00, 0x00,0x00
+static const u8 bgt_crystal_core_bright[16] = {
+    0x18,0x00, 0x3C,0x18, 0x7E,0x3C, 0xFF,0x7E,
+    0xDB,0xFF, 0x7E,0xDB, 0x3C,0x7E, 0x18,0x3C
 };
 static const u8 bgt_crystal_fang[16] = {
-    0x18,0x00, 0x3C,0x18, 0x7E,0x3C, 0xFF,0x7E,
-    0x7E,0x3C, 0x3C,0x18, 0x18,0x00, 0x00,0x00
+    0x81,0x00, 0xC3,0x81, 0xE7,0xC3, 0x7E,0xE7,
+    0x3C,0x7E, 0x18,0x3C, 0x3C,0x18, 0x66,0x3C
 };
-static const u8 bgt_crystal_rune[16] = {
+static const u8 bgt_crystal_rune_bright[16] = {
     0x24,0x00, 0x5A,0x24, 0xA5,0x5A, 0x5A,0xA5,
     0xA5,0x5A, 0x5A,0x24, 0x24,0x18, 0x18,0x00
 };
 static const u8 bgt_crystal_maw[16] = {
-    0x7E,0x00, 0xC3,0x7E, 0xBD,0xC3, 0xA5,0xDB,
-    0xBD,0xC3, 0xC3,0x7E, 0x7E,0x00, 0x3C,0x00
+    0x18,0x00, 0x3C,0x18, 0x66,0x3C, 0xC3,0x66,
+    0x81,0x7E, 0xC3,0x66, 0x66,0x3C, 0x3C,0x18
 };
 static const u8 bgt_crystal_horn[16] = {
-    0x08,0x08, 0x1C,0x14, 0x3E,0x2A, 0x7F,0x55,
-    0xFE,0xAA, 0x7C,0xD4, 0x38,0x68, 0x10,0x30
+    0x08,0x08, 0x1C,0x14, 0x3E,0x22, 0x7F,0x45,
+    0xFE,0x8A, 0x7C,0x94, 0x38,0x28, 0x10,0x10
 };
 
 // Verdant Hollow's storm coil. The mobile 32x32 OBJ remains the serpent's
@@ -407,9 +407,9 @@ void tiles_load_colossus_bg(u8 stage) BANKED {
         set_bkg_data(BGT_COLOSSUS_SCALE,  1, bgt_crystal_scale);
         set_bkg_data(BGT_COLOSSUS_EDGE_L, 1, bgt_crystal_edge_l);
         set_bkg_data(BGT_COLOSSUS_EDGE_R, 1, bgt_crystal_edge_r);
-        set_bkg_data(BGT_COLOSSUS_EYE,    1, bgt_crystal_eye);
+        set_bkg_data(BGT_COLOSSUS_EYE,    1, bgt_crystal_core_bright);
         set_bkg_data(BGT_COLOSSUS_FANG,   1, bgt_crystal_fang);
-        set_bkg_data(BGT_COLOSSUS_RUNE,   1, bgt_crystal_rune);
+        set_bkg_data(BGT_COLOSSUS_RUNE,   1, bgt_crystal_rune_bright);
         set_bkg_data(BGT_COLOSSUS_MAW,    1, bgt_crystal_maw);
         set_bkg_data(BGT_COLOSSUS_HORN,   1, bgt_crystal_horn);
         return;
@@ -648,26 +648,66 @@ void tiles_paint_golem_projection(void) BANKED {
 }
 
 void tiles_paint_crystal_projection(void) BANKED {
-    static const u8 widths[9] = { 8,12,14,14,14,14,14,12,8 };
+    // A hand-authored 128x80 titan replaces the former width-generated oval.
+    // Empty cells carve three crown prongs, broad shoulder breaks, a diamond
+    // reactor chamber, and two rooted feet. The moving OBJ is still the only
+    // vulnerable core; this is presentation, not hidden collision.
+    static const u8 body[10][16] = {
+        { 0xFF,0xFF,BGT_COLOSSUS_HORN,0xFF,0xFF,BGT_COLOSSUS_HORN,
+          BGT_COLOSSUS_HORN,0xFF,0xFF,BGT_COLOSSUS_HORN,
+          BGT_COLOSSUS_HORN,0xFF,0xFF,BGT_COLOSSUS_HORN,0xFF,0xFF },
+        { 0xFF,0xFF,BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_EDGE_R,0xFF,0xFF },
+        { 0xFF,BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_RUNE,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_RUNE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_EDGE_R,0xFF },
+        { BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_RUNE,BGT_COLOSSUS_RUNE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_EDGE_R },
+        { BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_VOID,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_RUNE,BGT_COLOSSUS_FANG,
+          BGT_COLOSSUS_RUNE,BGT_COLOSSUS_EYE,BGT_COLOSSUS_EYE,
+          BGT_COLOSSUS_RUNE,BGT_COLOSSUS_FANG,BGT_COLOSSUS_RUNE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_EDGE_R },
+        { BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_RUNE,
+          BGT_COLOSSUS_EYE,BGT_COLOSSUS_MAW,BGT_COLOSSUS_MAW,
+          BGT_COLOSSUS_EYE,BGT_COLOSSUS_RUNE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_EDGE_R },
+        { 0xFF,BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_RUNE,
+          BGT_COLOSSUS_MAW,BGT_COLOSSUS_MAW,BGT_COLOSSUS_RUNE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_EDGE_R,0xFF },
+        { 0xFF,0xFF,BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_RUNE,BGT_COLOSSUS_RUNE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_VOID,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_EDGE_R,0xFF,0xFF },
+        { 0xFF,0xFF,BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_SCALE,BGT_COLOSSUS_EDGE_R,0xFF,0xFF,0xFF,0xFF,
+          BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_SCALE,BGT_COLOSSUS_SCALE,
+          BGT_COLOSSUS_EDGE_R,0xFF,0xFF },
+        { 0xFF,0xFF,0xFF,BGT_COLOSSUS_EDGE_L,BGT_COLOSSUS_EDGE_R,
+          0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,BGT_COLOSSUS_EDGE_L,
+          BGT_COLOSSUS_EDGE_R,0xFF,0xFF,0xFF },
+    };
     u8 y, x;
     for (y = 1; y < ROOM_H - 1; ++y)
         room_tilemap[y][ROOM_W - 1] = BGT_FLOOR;
-    for (y = 0; y < 9; ++y) {
-        u8 width = widths[y];
-        u8 left = (u8)(10 - (width >> 1));
-        for (x = 0; x < width; ++x) {
-            u8 tile = BGT_COLOSSUS_SCALE;
-            if (x == 0) tile = BGT_COLOSSUS_EDGE_L;
-            else if (x == width - 1) tile = BGT_COLOSSUS_EDGE_R;
-            else if (y == 0 && (x == 1 || x == width - 2)) tile = BGT_COLOSSUS_HORN;
-            else if (y == 2 && (x == 3 || x == width - 4)) tile = BGT_COLOSSUS_EYE;
-            else if (y == 4 && x >= (u8)((width >> 1) - 2)
-                && x <= (u8)((width >> 1) + 1)) tile = BGT_COLOSSUS_MAW;
-            else if (y >= 6 && ((u8)(x + y) & 2)) tile = BGT_COLOSSUS_VOID;
-            else if (((u8)(x + y) & 3) == 0) tile = BGT_COLOSSUS_RUNE;
-            room_tilemap[y + 3][left + x] = tile;
-        }
-    }
+    for (y = 0; y < 10; ++y)
+        for (x = 0; x < 16; ++x)
+            if (body[y][x] != 0xFF) room_tilemap[y + 2][x + 2] = body[y][x];
 }
 
 void tiles_paint_mire_projection(u8 expanded, u8 draw_vram) BANKED {

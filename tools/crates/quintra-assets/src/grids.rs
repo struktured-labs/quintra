@@ -60,6 +60,28 @@ pub const SAURAN_WALK_B: [&str; 16] = sauran_walk_b();
 pub const CORVIN_WALK_B: [&str; 16] = corvin_walk_b();
 pub const PICSEAN_WALK_B: [&str; 16] = picsean_walk_b();
 pub const VESPINE_WALK_B: [&str; 16] = vespine_walk_b();
+pub const WOLFKIN_CLAIM: [&str; 16] = claim_pose(WOLFKIN);
+pub const SAURAN_CLAIM: [&str; 16] = claim_pose(SAURAN);
+pub const CORVIN_CLAIM: [&str; 16] = claim_pose(CORVIN);
+pub const PICSEAN_CLAIM: [&str; 16] = claim_pose(PICSEAN);
+pub const VESPINE_CLAIM: [&str; 16] = claim_pose(VESPINE);
+
+// Zelda-style major-item silhouette: each species keeps its authored head,
+// while both arms form a high V toward the separately rendered Sigil above.
+// The stable planted feet distinguish this from walking and hurt frames.
+const fn claim_pose(mut pose: [&'static str; 16]) -> [&'static str; 16] {
+    pose[6] = ".12.21....12.21.";
+    pose[7] = ".112.21..12.211.";
+    pose[8] = "..112.2112.211..";
+    pose[9] = "...2111111112...";
+    pose[10] = "....21111112....";
+    pose[11] = "....21111112....";
+    pose[12] = "....211..2112...";
+    pose[13] = "....211..2112...";
+    pose[14] = "....212..212....";
+    pose[15] = "....22....22....";
+    pose
+}
 
 const fn walk_pose_a(mut pose: [&'static str; 16]) -> [&'static str; 16] {
     pose[12] = "....211..2112...";
@@ -1187,6 +1209,14 @@ pub const PLAYERS_HURT: [(&str, &[&str]); 5] = [
     ("corvin", &CORVIN_HURT),
     ("picsean", &PICSEAN_HURT),
     ("vespine", &VESPINE_HURT),
+];
+
+pub const PLAYERS_CLAIM: [(&str, &[&str]); 5] = [
+    ("wolfkin", &WOLFKIN_CLAIM),
+    ("sauran", &SAURAN_CLAIM),
+    ("corvin", &CORVIN_CLAIM),
+    ("picsean", &PICSEAN_CLAIM),
+    ("vespine", &VESPINE_CLAIM),
 ];
 
 pub const PLAYERS_ASCENDED: [(&str, &[&str]); 5] = [

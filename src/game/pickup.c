@@ -477,6 +477,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
+    if (e->ai_data[7] & PICKUP_SECRET_TIMER_MARK) return;
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 

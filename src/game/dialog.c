@@ -25,27 +25,6 @@ u8 dialog_topic;
 u8 dialog_page;
 static u8 dialog_is_reward;
 
-#define SPR_DIALOG_SIGIL 200
-
-// A 16x16 authored artifact replaces the ordinary 8x8 floor pickup on the
-// claim page. Four independent quadrants keep the inner rift and pale facets
-// readable at native LCD scale instead of crudely repeating one tiny icon.
-static const u8 dialog_sigil_tiles[64] = {
-    0x01,0x00, 0x02,0x01, 0x04,0x03, 0x09,0x07,
-    0x13,0x0F, 0x26,0x1F, 0x4D,0x3E, 0x9B,0x7C,
-    0x80,0x00, 0x40,0x80, 0x20,0xC0, 0x90,0xE0,
-    0xC8,0xF0, 0x64,0xF8, 0xB2,0x7C, 0xD9,0x3E,
-    0x9B,0x7C, 0x4D,0x3E, 0x26,0x1F, 0x13,0x0F,
-    0x09,0x07, 0x04,0x03, 0x02,0x01, 0x01,0x00,
-    0xD9,0x3E, 0xB2,0x7C, 0x64,0xF8, 0xC8,0xF0,
-    0x90,0xE0, 0x20,0xC0, 0x40,0x80, 0x80,0x00,
-};
-
-static const u16 dialog_sigil_palette[4] = {
-    BGR555(0,0,0), BGR555(6,2,13),
-    BGR555(22,8,31), BGR555(31,27,31),
-};
-
 static const u16 dialog_palette[4] = {
     BGR555(1, 2, 6), BGR555(7, 10, 17),
     BGR555(21, 22, 25), BGR555(31, 31, 31),
@@ -197,18 +176,6 @@ void dialog_enter(void) {
     font_init();
     { font_t f = font_load(font_min); font_set(f); }
     dialog_paint();
-    if (dialog_is_reward && dialog_kind == PICKUP_RIFT_SIGIL) {
-        u8 part;
-        palette_obj_load(1, dialog_sigil_palette);
-        set_sprite_data(SPR_DIALOG_SIGIL, 4, dialog_sigil_tiles);
-        for (part = 0; part < 4; ++part) {
-            set_sprite_tile(part, (u8)(SPR_DIALOG_SIGIL + part));
-            set_sprite_prop(part, 1);
-            move_sprite(part, (u8)(80 + ((part & 1) ? 8 : 0)),
-                (u8)(44 + ((part >= 2) ? 8 : 0)));
-        }
-        SHOW_SPRITES;
-    }
 }
 
 void dialog_exit(void) {

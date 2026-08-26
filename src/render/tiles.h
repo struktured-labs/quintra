@@ -351,6 +351,9 @@ void tiles_load_all_class_sprites(void) BANKED;   // loads 5 classes × 4 tiles 
 void tiles_load_ascended_sprites(void) BANKED;    // transform atlas -> fixed OBJ slots
 void tiles_load_ascended_motion_sprites(void) BANKED; // transformed lower-half stride
 void tiles_load_motion_sprites(void) BANKED;      // bank-4 walk-B + damage-recoil atlas
+// Upload only the active class into its ordinary four-tile range for the
+// frozen major-item tableau; room resume restores the complete class atlas.
+void tiles_load_class_claim_sprite(u8 class_id) BANKED;
 void tiles_load_all_enemy_sprites(void) BANKED;   // 4 enemy tiles
 void tiles_load_high_enemy_sprites(void) BANKED;  // Facet Ram + Reaper + scythe
 void tiles_load_dread_bell_sprite(void) BANKED;   // combat-only reuse of callout slot

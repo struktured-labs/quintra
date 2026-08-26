@@ -202,9 +202,34 @@ u8 run_state_dungeon_cell_seen(u8 cell) {
     return 0;
 }
 
+u8 run_state_dungeon_cell_visited(u8 cell) {
+    if (cell < 8)
+        return (run_state.dungeon_visited & (u8)(1u << cell)) ? 1 : 0;
+    if (cell < 16)
+        return (run_state.dungeon_visited_hi
+            & (u8)(1u << (cell - 8))) ? 1 : 0;
+    if (cell < 24)
+        return (run_state.dungeon_visited_xhi
+            & (u8)(1u << (cell - 16))) ? 1 : 0;
+    if (cell < MAX_DUNGEON_CELLS)
+        return (run_state.dungeon_visited_xxhi
+            & (u8)(1u << (cell - 24))) ? 1 : 0;
+    return 0;
+}
+
 void run_state_mark_visited(void) {
-    if (run_state.world_mode)
+    if (run_state.world_mode) {
         run_state_reveal_world_cell(run_state.world_screen);
-    else
-        run_state_reveal_dungeon_cell(run_state_dungeon_cell());
+    } else {
+        u8 cell = run_state_dungeon_cell();
+        if (cell < 8)
+            run_state.dungeon_visited |= (u8)(1u << cell);
+        else if (cell < 16)
+            run_state.dungeon_visited_hi |= (u8)(1u << (cell - 8));
+        else if (cell < 24)
+            run_state.dungeon_visited_xhi |= (u8)(1u << (cell - 16));
+        else if (cell < MAX_DUNGEON_CELLS)
+            run_state.dungeon_visited_xxhi |= (u8)(1u << (cell - 24));
+        run_state_reveal_dungeon_cell(cell);
+    }
 }

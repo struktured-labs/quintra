@@ -90,7 +90,7 @@ def main():
     pb.memory[PL + 1] = 8; pb.memory[PL + 2] = 5
     pb.memory[PL + 3] = 6; pb.memory[PL + 4] = 5
     put16(pb, PL + 9, pb.memory[well + 3])
-    # Player y is the sprite top while pickup collision uses feet at y+8.
+    # Player y is the sprite top; harmless pickup collision uses all 16px.
     put16(pb, PL + 11, pb.memory[well + 7] - 8)
     tick(pb, 4)
     assert pb.memory[PL + 2] == 8 and pb.memory[PL + 4] == 6, (

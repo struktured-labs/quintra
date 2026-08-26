@@ -14,7 +14,7 @@ NOI = ROM.with_suffix(".noi").read_text()
 SRAM_SIZE = 32 * 1024
 PLAYER_SIZE = 42       # accepted pre-Will player layout
 CURRENT_PLAYER_SIZE = 46
-CURRENT_RUN_SIZE = 52
+CURRENT_RUN_SIZE = 57
 SCREEN_ROOM = 5
 
 

@@ -109,16 +109,18 @@ u8 aabb_overlap_player(const entity_t *e) {
     return 1;
 }
 
-// PICKUP box: the full feet-anchored body (x+2..x+13, y+8..y+15) —
-// generous for loot, matches the wall-collision silhouette.
+// PICKUP box: the complete visible 16x16 champion sprite. Loot is harmless,
+// so collection should follow what the player sees rather than the smaller
+// feet box used for terrain. In particular, an orb beside a wall can overlap
+// the hero's head/shoulder while their feet cannot move any closer; requiring
+// feet contact there makes a visibly touched item feel unreachable.
 u8 aabb_overlap_player_wide(const entity_t *e) {
     i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
     i16 px = (i16)player.x, py = (i16)player.y;
     u8  ew = hitbox_w(e), eh = hitbox_h(e);
-    px += 2; py += 8;
-    if (px + 12 <= ex) return 0;
+    if (px + 16 <= ex) return 0;
     if (ex + (i16)ew <= px) return 0;
-    if (py + 8 <= ey) return 0;
+    if (py + 16 <= ey) return 0;
     if (ey + (i16)eh <= py) return 0;
     return 1;
 }

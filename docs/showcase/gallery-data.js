@@ -2,7 +2,7 @@
 window.QUINTRA_SHOWCASE = {
   "meta": {
     "version": "v0.20.15",
-    "romSha256": "3ca713da71fb3bc5f87bb4d6245b56ec2f2402cae7f7da61f1b6d9d2f5d0ddd5",
+    "romSha256": "2842c5eb47a2b95552e412f8d18cbd1452734cbb898e1970e1e9717af5e40fcc",
     "stageCount": 9,
     "bossCount": 9,
     "monsterCount": 35,
@@ -104,7 +104,7 @@ window.QUINTRA_SHOWCASE = {
       "id": 1,
       "name": "Crystal Colossus",
       "stage": "Crystal Caverns",
-      "description": "A screen-scale crystal guardian whose exposed heart jumps between three distant wells.",
+      "description": "A hand-authored wall-titan with crown prongs, slab shoulders, split roots, and an angular diamond weak core that jumps between three distant wells.",
       "movement": "Anchor warp",
       "signature": "Prism Lance",
       "hp": 200,
