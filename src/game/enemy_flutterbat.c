@@ -7,6 +7,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/room.h"
+#include "game/run_state.h"
 #include "content.h"
 
 // A Flutterbat is visually small, but a sealed combat room must never let it
@@ -32,6 +33,11 @@ static u8 flutterbat_try_step(entity_t *e, i8 dx, i8 dy) {
 
 // Keese-like cadence: cling motionless, flutter diagonally, dart, settle.
 void flutterbat_update(entity_t *e) BANKED {
+    // Cache a nonzero spawn-coordinate salt in otherwise-free scratch. Using
+    // the live x position would let wall slides accelerate or suppress casts.
+    if (e->ai_data[1] == 0)
+        e->ai_data[1] = (u8)(FIX8_TO_INT(e->x) + 1);
+    if (!RUN_IS_EASY()) weak_pattern_tick(e, e->ai_data[1]);
     if (e->state_timer == 0) {
         e->state = (u8)((e->state + 1) % 3);
         e->state_timer = (e->state == 0) ? (u8)(28 + (rng_next_u8() & 31))

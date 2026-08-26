@@ -512,10 +512,13 @@ void procgen_generate_current_room(void) BANKED {
                     room_tilemap[y][x] = BGT_WALL;
                 } else {
                     u8 r = rng_next_u8();
-                    room_tilemap[y][x] =
-                        (r < 38) ? BGT_FLOOR2 :        // ~15% cracked
-                        (r < 64) ? BGT_FLOOR3 :        // ~10% pebbled
-                                   BGT_FLOOR;
+                    // Consume the same deterministic draw, but give the
+                    // opening stage a quiet combat plane. Later biomes keep
+                    // their cracked/pebbled floor texture dialect.
+                    room_tilemap[y][x] = run_state.bosses_beaten == 0
+                        ? BGT_FLOOR
+                        : (r < 38) ? BGT_FLOOR2
+                        : (r < 64) ? BGT_FLOOR3 : BGT_FLOOR;
                 }
             }
         }

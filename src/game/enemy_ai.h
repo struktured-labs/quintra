@@ -12,6 +12,9 @@ u8   enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED;
 
 // Per-frame update (called by entity_update_all dispatch)
 void enemy_update(entity_t *e, u8 idx) BANKED;
+// Cold constructor for the slow three-way field cast used by fragile Normal
+// specialists. Their existing roomy behavior banks filter the call.
+void weak_pattern_tick(entity_t *e, u8 idx) BANKED;
 
 // Move an enemy 1px by (dx,dy) if the target tile is walkable + in bounds.
 // Returns 1 if it moved. Exposed for knockback in combat.

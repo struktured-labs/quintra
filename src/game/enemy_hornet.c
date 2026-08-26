@@ -5,6 +5,7 @@
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/player.h"
+#include "game/run_state.h"
 #include "content.h"
 
 // A Hornet group is a small formation only when the procgen roster has
@@ -14,6 +15,7 @@
 u8 hornet_swarm_tick(entity_t *e, u8 idx) BANKED {
     u8 i, rank = 0, packed = 0;
     i16 tx = (i16)player.x, ty = (i16)player.y;
+    if (!RUN_IS_EASY()) weak_pattern_tick(e, idx);
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (i == idx || !(entities[i].flags & EF_ACTIVE)
             || entities[i].type != ENT_ENEMY

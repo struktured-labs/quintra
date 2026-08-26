@@ -137,6 +137,8 @@ void room_stream_wide_seam(u8 dir) BANKED {
     // of burdening the resident combat loop.
     if (run_state.world_mode)
         tiles_draw_area_label(1);
+    else if (room_return_echo_kind)
+        room_show_directive_label(14);
     else if (room_encounter_kind != ENCOUNTER_SKIRMISH)
         room_show_directive_label((u8)(9 + room_encounter_kind));
     else

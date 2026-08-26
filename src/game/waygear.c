@@ -11,11 +11,43 @@
 #include "game/waygear.h"
 #include "render/tiles.h"
 
+static void open_current_grove(void) {
+    u8 grass = BGT_GRASS;
+    u8 floor_attr = BGPAL_FLOOR;
+    u8 left;
+    u8 right;
+    if (!run_state.world_mode) return;
+    left = room_tilemap[7][14];
+    right = room_tilemap[7][15];
+    // Only the two traversal-reward groves auto-swap the active implement.
+    // Check the authored pair as well as the screen so a malformed field can
+    // never turn an unrelated pair of terrain cells into grass.
+    if (!((run_state.world_screen == 17 && left == BGT_GATE_BOULDER
+                && right == BGT_GATE_BOULDER)
+            || (run_state.world_screen == 29 && left == BGT_GATE_WATER
+                && right == BGT_GATE_WATER))) return;
+    room_tilemap[7][14] = room_tilemap[7][15] = BGT_GRASS;
+    wait_vbl_done();
+    VBK_REG = 0;
+    set_bkg_tiles(ROOM_BG_MAP_X(14), ROOM_BG_MAP_Y(7), 1, 1, &grass);
+    set_bkg_tiles(ROOM_BG_MAP_X(15), ROOM_BG_MAP_Y(7), 1, 1, &grass);
+    VBK_REG = 1;
+    set_bkg_tiles(ROOM_BG_MAP_X(14), ROOM_BG_MAP_Y(7), 1, 1, &floor_attr);
+    set_bkg_tiles(ROOM_BG_MAP_X(15), ROOM_BG_MAP_Y(7), 1, 1, &floor_attr);
+    VBK_REG = 0;
+    sfx_play(SFX_DOOR);
+}
+
 u8 waygear_grant(u8 gear) BANKED {
     u8 bit;
     if (gear >= WAYGEAR_COUNT) return 0;
     bit = WAYGEAR_BIT(gear);
     if (player.waygear_owned & bit) return 0;
+    // The Raft and Hook sit behind a gate crossed with the previous tool.
+    // Open that mouth before auto-equipping the discovery; otherwise the new
+    // tool immediately revokes the old traversal permission and soft-locks
+    // the hero inside the two-cell grove.
+    open_current_grove();
     player.waygear_owned |= bit;
     // A newly discovered traversal implement resonates immediately. The
     // Pack can later swap the single active slot at any time outside action.

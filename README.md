@@ -113,6 +113,37 @@ at most one echo, preventing room farming. Actual visit history is tracked
 separately from Compass/Cartographer knowledge, so revealing a room never
 turns its first visit into a false return ambush.
 
+### Current development — first-run pressure and Riftwild escape
+
+The Tide Raft and Rift Hook groves now permanently collapse their paired gate
+when their reward is collected. Because a new Waygear implement resonates
+immediately, leaving the old gate intact could replace the traversal power
+used to enter and strand the champion inside. The live-ROM regression crosses
+the boulder gate with the Titan Glove, collects and auto-equips the Raft, then
+walks back through the newly opened mouth.
+
+Ordinary first-visit trap rooms begin with two or three visible sentries and
+add their ambush pack after the warning beat; an unexplored combat field no
+longer looks accidentally empty. Return echoes now override the ordinary
+district card with a visible **RIFT** callout, roar, and stronger screen shake.
+The changed-roster echo also adds one or two bodies, making its rerolled hunt
+mechanically apparent instead of merely different in seed data.
+
+Normal-mode Hornets and Flutterbats now build three-lane projectile fans. Each
+shot moves one pixel per tick, persists for 180 ticks, and uses a warm danger
+palette; stable per-enemy salts stagger their casts over a 256-frame cycle rather than
+firing one synchronized burst. Tester Easy retains the old projectile-clean
+families. This raises first-run movement pressure while preserving slow,
+readable Penta Dragon-style gaps and keeping the twelve-projectile stress room
+above its release performance floor.
+
+Crystal Caverns uses one calm plain floor beneath its authored pillars,
+crystals, rubble, hazards, and bullets instead of layering cracked and pebbled
+speckle across the opening combat read. Green enemy palettes retain their
+biological identity but gain a near-black outline, bright lime face, and warm
+gold feature colour so Orcs, Ropes, Oozes, Spores, and Vine Coils remain
+legible over Verdant Hollow and the Riftwild.
+
 ### v0.20.14 — Hidden Company
 
 v0.20.14 was an exploration and directional-combat correction. Road Echoes no

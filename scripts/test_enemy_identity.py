@@ -743,7 +743,10 @@ def main():
     pb.memory[bell + 18] = 0          # peal immediately
     pb.memory[bell + 25] = 0x66
     pb.memory[addr("_g_hitstop")] = 0
-    pb.tick()
+    for _ in range(4):
+        pb.tick()
+        if pb.memory[bell + 18]:
+            break
     peal = []
     for i in range(1, 32):
         ep = entities + i * 28

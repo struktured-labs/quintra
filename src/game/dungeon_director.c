@@ -32,6 +32,7 @@ u8 room_return_echo_kind;
 
 static u8 encounter_spawn_clock;
 static u8 room_roster_ordinal;
+static u8 return_echo_alert_pending;
 
 static u8 weighted_stage_enemy(u8 stage, u8 roll) {
     u8 i, sum = 0;
@@ -178,6 +179,7 @@ void dungeon_director_reset(void) BANKED {
     room_roster_secondary = 0xFF;
     room_roster_ordinal = 0;
     room_return_echo_kind = 0;
+    return_echo_alert_pending = 0;
 }
 
 void dungeon_director_prepare_roster(u8 eligible) BANKED {
@@ -236,18 +238,6 @@ void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED {
         room_encounter_timer = RUN_IS_EASY() ? 360 : 480;
         encounter_spawn_clock = 120;
     }
-}
-
-u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED {
-    if (room_encounter_kind == ENCOUNTER_TRAP) return 0;
-    if (room_return_echo_kind == 2) return proposed;
-    if (room_encounter_kind == ENCOUNTER_WAVE)
-        return (u8)((proposed + 1) >> 1);
-    if (room_encounter_kind == ENCOUNTER_HOLD) {
-        u8 cap = RUN_IS_EASY() ? 3 : 4;
-        return proposed > cap ? cap : proposed;
-    }
-    return proposed;
 }
 
 void dungeon_director_configure_initial(u8 idx, u8 ordinal) BANKED {
@@ -348,10 +338,19 @@ void dungeon_director_activate(void) BANKED {
     if (room_encounter_kind != ENCOUNTER_SKIRMISH
         && room_encounter_kind != ENCOUNTER_STAGE_EVENT)
         room_combat_sealed = 1;
+    if (room_return_echo_kind) return_echo_alert_pending = 1;
 }
 
 u8 dungeon_director_update(u8 alive) BANKED {
     room_encounter_complete = 0;
+    // Procgen and tile upload run under a blanked display. Defer the sensory
+    // beat until the first live combat frame so it cannot disappear inside a
+    // doorway transaction.
+    if (return_echo_alert_pending) {
+        return_echo_alert_pending = 0;
+        sfx_play(SFX_ROAR);
+        room_shake(2, 18);
+    }
     if (room_encounter_kind == ENCOUNTER_SKIRMISH
         || room_encounter_phase == 2) return alive;
 
@@ -364,8 +363,8 @@ u8 dungeon_director_update(u8 alive) BANKED {
             room_encounter_timer--;
             if (room_encounter_timer == 24) sfx_play(SFX_TICK);
             if (room_encounter_timer == 0) {
-                alive = spawn_wave((u8)(RUN_IS_EASY() ? 3
-                    : 4 + (run_state.bosses_beaten >= 3)), 0);
+                alive = (u8)(alive + spawn_wave((u8)(RUN_IS_EASY() ? 3
+                    : 4 + (run_state.bosses_beaten >= 3)), 0));
                 room_encounter_phase = 1;
             }
         } else if (room_encounter_phase == 1 && alive == 0) {

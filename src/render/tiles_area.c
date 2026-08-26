@@ -273,7 +273,8 @@ void tiles_draw_area_label(u8 kind) BANKED {
     else if (kind == 10) { letters = trap; x = 8; width = 4; }
     else if (kind == 11) { letters = wave; x = 8; width = 4; }
     else if (kind == 12) { letters = elite; x = 8; width = 5; }
-    else { letters = hold; x = 8; width = 4; }
+    else if (kind == 13) { letters = hold; x = 8; width = 4; }
+    else { letters = riftwild; x = 8; width = 4; }
     // A Riftwild field may have crossed several continuous seams. Project the
     // display-only sign through the same logical-to-physical origin instead
     // of writing it into the previous field's canonical top-left.

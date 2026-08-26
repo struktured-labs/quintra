@@ -136,8 +136,10 @@ def seed_for(signature):
 def trap_contract():
     def probe(pb, _tiles):
         assert pb.memory[KIND] == 1 and pb.memory[SEALED] == 1
-        # The empty hush is deliberate; the warning clock then materializes
-        # a real pack without another doorway transaction.
+        # First visits always show a living room. The warning clock then adds
+        # a second pack without another doorway transaction.
+        assert len(enemies(pb)) >= 2, \
+            "first-visit trap presented an apparently empty combat room"
         for _ in range(80):
             tick_safe(pb, 1)
             if pb.memory[PHASE] == 1:

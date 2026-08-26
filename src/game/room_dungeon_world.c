@@ -73,6 +73,10 @@ void room_close_dungeon_false_gaps(void) BANKED {
 static u8 court_texture(u32 seed, u8 x, u8 y, u8 district) {
     u8 n = (u8)seed;
     n = (u8)(n + (u8)(x * 13) + (u8)(y * 17) + (u8)(x * y));
+    // Crystal Caverns is the player's first combat read. Its pillars,
+    // crystals, rubble, hazards, and projectiles already carry the meaningful
+    // pattern; a second high-frequency floor pattern competes with them.
+    if (run_state.bosses_beaten == 0) return BGT_FLOOR;
     // A stage's five Compass rows are physical districts, not five copies of
     // one generic ruin. Their floor dialect remains seed-stable while making
     // depth readable even before the player opens SELECT.

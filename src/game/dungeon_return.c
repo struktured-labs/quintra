@@ -52,3 +52,27 @@ void dungeon_director_choose_return(u8 eligible, u8 was_seen) BANKED {
         room_roster_kind = ROOM_ROSTER_COMMAND;
     }
 }
+
+u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED {
+    // A first-visit trap starts with visible sentries; the later pack changes
+    // pressure instead of presenting an apparently empty field. A warned
+    // return ambush may retain its hush because it is explicitly a revisit.
+    if (room_encounter_kind == ENCOUNTER_TRAP) {
+        u8 cap;
+        if (room_return_echo_kind == 3) return 0;
+        cap = RUN_IS_EASY() ? 2 : 3;
+        return proposed > cap ? cap : proposed;
+    }
+    // A changed roster was formerly only a seed-level distinction. Add a
+    // compact reinforcement so this return variant is visible in play.
+    if (room_return_echo_kind == 1)
+        return (u8)(proposed + (RUN_IS_EASY() ? 1 : 2));
+    if (room_return_echo_kind == 2) return proposed;
+    if (room_encounter_kind == ENCOUNTER_WAVE)
+        return (u8)((proposed + 1) >> 1);
+    if (room_encounter_kind == ENCOUNTER_HOLD) {
+        u8 cap = RUN_IS_EASY() ? 3 : 4;
+        return proposed > cap ? cap : proposed;
+    }
+    return proposed;
+}

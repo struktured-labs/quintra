@@ -8,6 +8,9 @@ from test_stage_archetypes import (
 
 RETURN_KIND = addr("_room_return_echo_kind")
 ENCOUNTER_KIND = addr("_room_encounter_kind")
+LABEL_TICKS = addr("_room_district_label_ticks")
+BG_X = addr("_room_bg_origin_x")
+BG_Y = addr("_room_bg_origin_y")
 RS_PUZZLES = 27
 RS_RETURN_FLAGS = 52
 RS_VISITED = 53
@@ -47,6 +50,14 @@ def variant_contract(wanted):
             f"variant {wanted} published encounter {pb.memory[ENCOUNTER_KIND]}, "
             f"expected {expected_encounter}"
         )
+        assert pb.memory[LABEL_TICKS] > 0, \
+            "return surprise did not publish a visible arrival card"
+        px = (pb.memory[BG_X] + 8) & 31
+        py = (pb.memory[BG_Y] + 1) & 31
+        label = [pb.memory[0x9800 + py * 32 + ((px + i) & 31)]
+                 for i in range(4)]
+        assert label == [76, 77, 78, 79], \
+            f"return surprise card is not RIFT: {label}"
 
     generated_room(0, seed, local_room=local,
                    pre_cross=prepare, probe=inspect)

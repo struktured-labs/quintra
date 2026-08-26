@@ -170,6 +170,8 @@ void room_draw_tilemap(void) BANKED {
     if (run_state.world_mode) tiles_draw_area_label(1);
     else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
+    else if (room_return_echo_kind)
+        room_show_directive_label(14); // unmistakable RIFT return card
     else if (room_encounter_kind != ENCOUNTER_SKIRMISH)
         room_show_directive_label((u8)(9 + room_encounter_kind));
     else if (procgen_current_room_is_large)

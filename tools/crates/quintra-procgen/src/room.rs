@@ -154,7 +154,9 @@ pub fn generate_tilemap(
                 m[y][x] = BGT_WALL;
             } else {
                 let r = rng.next_u8();
-                m[y][x] = if r < 38 {
+                m[y][x] = if bosses_beaten == 0 {
+                    BGT_FLOOR
+                } else if r < 38 {
                     BGT_FLOOR2
                 } else if r < 64 {
                     BGT_FLOOR3

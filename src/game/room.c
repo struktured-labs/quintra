@@ -415,9 +415,12 @@ static const u16 skeleton_palette[4] = {
 // Orc — moss green (OBJ palette 7)
 static const u16 orc_palette[4] = {
     BGR555( 0,  0,  0),
-    BGR555(12, 22,  8),
-    BGR555( 5, 10,  4),
-    BGR555(27, 13,  6),
+    // Green enemies must still read over Verdant Hollow's moss floor. Keep
+    // the identity, but push its lit face beyond the BG's brightest green,
+    // deepen the outline, and retain a warm complementary feature colour.
+    BGR555(21, 31, 10),
+    BGR555( 2,  7,  3),
+    BGR555(31, 22,  6),
 };
 
 // Stone Sentinel (mini-boss) palette — granite grey with bright accent
@@ -1023,8 +1026,10 @@ void room_enter(void) {
 
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
     tiles_load_boss_cue_bg();             // unmistakable sanctuary threshold
-    if (room_is_outdoor())
-        tiles_load_area_labels();         // live Riftwild/village identifiers
+    // District, directive, and return-echo cards share this tiny alphabet.
+    // Load it on every room entry: previously a dungeon reached without an
+    // outdoor atlas could draw arbitrary old BG art instead of its callout.
+    tiles_load_area_labels();
     tiles_load_colossus_bg(room_stage()); // phase-specific BG projection atlas
     tiles_load_pickup_sprites();
     tiles_load_all_class_sprites();       // 5 × 16x16 player metasprites (slots 0..19)
