@@ -23,6 +23,7 @@ enum {
 #define EF_DIRTY       0x08
 #define EF_PLAYER_PROJ 0x10   // player-owned projectile (vs enemy projectile)
 #define EF_ELITE       0x20   // elite enemy: boss-glow, 2x HP, sure loot
+#define EF_ALPHA       0x40   // one tinted pack leader: tougher + sure loot, normal music
 
 // `ai_data[2]` is unused by Shooter enemies.  Procgen tags the guaranteed
 // late-game Dread Bell encounter with this value so combat can distinguish the

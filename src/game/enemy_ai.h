@@ -15,6 +15,10 @@ void enemy_update(entity_t *e, u8 idx) BANKED;
 // Cold constructor for the slow three-way field cast used by fragile Normal
 // specialists. Their existing roomy behavior banks filter the call.
 void weak_pattern_tick(entity_t *e, u8 idx) BANKED;
+// Blue Crawlers are no longer contact-only filler. Stable per-body variants
+// cast a dart, a slow fan, or a two-beat eight-direction viral pulse; pack
+// alphas always own the radial version so their threat matches their tint.
+void blue_crawler_pattern_tick(entity_t *e, u8 idx) BANKED;
 
 // Move an enemy 1px by (dx,dy) if the target tile is walkable + in bounds.
 // Returns 1 if it moved. Exposed for knockback in combat.

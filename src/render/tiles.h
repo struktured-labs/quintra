@@ -92,6 +92,11 @@
 #define BGT_MAP_LABEL_L 70
 #define BGT_MAP_LABEL_B 71
 
+// Combat-time HUD alphabet extensions temporarily reuse map-only slots. The
+// Compass reloads its own glyph atlas; returning to play reloads these.
+#define HUD_STATUS_B 64
+#define HUD_STATUS_U 65
+
 // Sanctuary-only boss threshold art. The room tilemap retains BGT_DOOR for
 // collision/progression; rendering substitutes these unmistakable gate tiles.
 #define BGT_BOSS_GATE_L      72
@@ -123,6 +128,11 @@
 #define BGT_AREA_P 90
 #define BGT_AREA_N 91
 #define BGT_AREA_H 92
+// Three room-safe alphabet extensions let the bottom HUD spell compact
+// pickup results (ATK+1, SPD+1, LCK+2) without loading the modal font.
+#define HUD_STATUS_S    93
+#define HUD_STATUS_C    94
+#define HUD_STATUS_PLUS 95
 
 // Compass-only nonlinear edge. Rooms 2 and 8 in later dungeons are joined by
 // a rift well in addition to the ordinary walking route; the map draws this

@@ -245,6 +245,7 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
     if (was_blind && kind != QSTATUS_BLIND) room_status_blind_visual(0);
     if (kind == QSTATUS_BLIND) room_status_blind_visual(1);
     status_signal_at(kind, (i16)player.x + 4, (i16)player.y + 2);
+    hud_show_status(kind);
 }
 
 static u8 inversion_enemy_aspect(const entity_t *e) {
@@ -267,7 +268,7 @@ void status_enemy_apply(u8 idx, u8 kind, u8 ticks) BANKED {
     if (!ticks) ticks = status_duration(kind);
     // Elites and Colossi resist duration rather than ignoring the system.
     // Stop becomes a short stagger and Mute cannot erase an entire boss phase.
-    if ((e->flags & EF_ELITE) || (e->ai_data[3] & 1)) {
+    if ((e->flags & (EF_ELITE | EF_ALPHA)) || (e->ai_data[3] & 1)) {
         ticks = (u8)((ticks + 2) / 3);
         if (kind == QSTATUS_STOP && ticks > 6) ticks = 6;
         if (kind == QSTATUS_MUTE && ticks > 12) ticks = 12;

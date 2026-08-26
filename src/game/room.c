@@ -1927,7 +1927,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     max = (u8)(max + 1 + (u8)(st >> 1));
                 }
                 // Elites carry doubled HP — double the reference too
-                if (entities[corvin_i].flags & EF_ELITE) max = (u8)(max << 1);
+                if (entities[corvin_i].flags & (EF_ELITE | EF_ALPHA))
+                    max = (u8)(max << 1);
                 hud_redraw_boss(entities[corvin_i].hp, max);
                 found = 1;
             }
@@ -1972,6 +1973,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     }
     if (room_secret_loot_timer)
         hud_show_loot_timer((u8)((room_secret_loot_timer + 59u) / 60u));
+    // Pickup feedback owns the contextual HUD cells for its brief lifetime;
+    // tick it after boss/shop/loot polling so those writers cannot cover it.
+    hud_tick_notice();
 
     // ---- Boss beaten (non-final): lift the door seal, run continues,
     // and the fight music yields back to the exploration theme.

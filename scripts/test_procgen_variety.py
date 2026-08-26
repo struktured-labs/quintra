@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live-ROM contract: seeds vary collision, rosters, elites, and encounter size.
+"""Live-ROM contract: seeds vary collision, rosters, alphas, and encounter size.
 
 The Rust property test covers the deterministic base generator exhaustively.
 This companion samples the linked cartridge after stage architecture and
@@ -25,6 +25,7 @@ MAX_ENTITIES = 32
 ENT_ENEMY = 2
 EF_ACTIVE = 0x01
 EF_ELITE = 0x20
+EF_ALPHA = 0x40
 DIRECTIVE = addr("_room_encounter_kind")
 ROSTER_KIND = addr("_room_roster_kind")
 ROSTER_PRIMARY = addr("_room_roster_primary")
@@ -100,7 +101,7 @@ def sample_stage_entry(pb, stage, seed):
         flags = pb.memory[base + 1]
         if pb.memory[base] == ENT_ENEMY and flags & EF_ACTIVE:
             hostiles.append(pb.memory[base + 17])
-            elite_count += bool(flags & EF_ELITE)
+            elite_count += bool(flags & (EF_ELITE | EF_ALPHA))
     # Collapse only non-interactive floor texture/rubble. Walls, cover,
     # hazards, pots, blocks, secrets, doors, and portals retain identity.
     geometry = tuple(1 if tile in FLOORISH else tile for tile in tiles)
@@ -145,6 +146,10 @@ def main():
                 roster_grammars[grammar].append(
                     (stage, roster, primary, secondary))
                 elite_total += elites
+                if len(roster) >= 3:
+                    assert elites == 1, (
+                        f"stage {stage + 1} pack has {len(roster)} bodies "
+                        f"but {elites} alphas")
     finally:
         pb.stop(save=False)
 
@@ -201,11 +206,10 @@ def main():
                 )
     assert kinds_seen == {0, 1, 2, 3, 4}, \
         f"director variety disappeared from seed sample: {sorted(kinds_seen)}"
-    # Initial population now encodes encounter grammar: a trap opens in an
-    # intentional hush, wave rooms reserve bodies for phase two, and holds
-    # cap the starting pack before timed reinforcements. The dedicated live
-    # director test owns those transitions; baseline/elite openings retain
-    # the original depth floor here.
+    # Initial population now encodes encounter grammar. Trap rooms retain a
+    # compact visible guard group (ordinary first-entry rooms are never empty),
+    # wave rooms reserve bodies for phase two, and holds cap the starting pack
+    # before timed reinforcements. The live director test owns transitions.
     for stage in range(9):
         expected_floor = 3 if stage == 0 else 4 if stage < 3 else 5
         baseline = [
@@ -216,14 +220,14 @@ def main():
         assert baseline and min(baseline) >= expected_floor, (
             f"stage {stage + 1} baseline fell below {expected_floor}: {baseline}"
         )
-    assert body_counts_by_kind[1] and min(body_counts_by_kind[1]) == 0, \
-        "trap rooms lost their quiet opening"
+    assert body_counts_by_kind[1] and min(body_counts_by_kind[1]) >= 3, \
+        f"trap rooms lost their visible opening guard: {body_counts_by_kind[1]}"
     assert body_counts_by_kind[2] and min(body_counts_by_kind[2]) >= 2, \
         "wave openings became empty"
     assert body_counts_by_kind[4] and max(body_counts_by_kind[4]) <= 4, \
         "hold openings exceeded their reinforcement cap"
     assert max(body_counts) > min(body_counts), "enemy population stopped varying"
-    assert elite_total >= 4, f"elite roll nearly disappeared ({elite_total}/108 samples)"
+    assert elite_total >= 4, f"pack alpha contract disappeared ({elite_total}/108 samples)"
 
     print(
         "[procgen-variety] PASS "
@@ -232,7 +236,7 @@ def main():
         f"rosters={[len(roster_signatures[s]) for s in range(9)]}/12, "
         f"grammars={sorted(roster_grammars)}, "
         f"bodies={min(body_counts)}-{max(body_counts)}, "
-        f"directives={sorted(kinds_seen)}, elites={elite_total}/108"
+        f"directives={sorted(kinds_seen)}, alphas={elite_total}/108"
     )
 
 

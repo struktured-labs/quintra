@@ -550,28 +550,41 @@ static u8 apply_item_effects(u8 item_idx) {
     if (k == INVENTORY_SLOTS && it->id == ITEM_ID_BLOOD_SIGIL) return 0;
     for (k = 0; k < it->n_effects; ++k) {
         const effect_t *ef = &it->effects[k];
+        u8 before;
         if (ef->kind != EFFECT_STAT_BOOST) continue;
         switch (ef->d0) {
             case STAT_HP:
+                before = player.hp_max;
                 player.hp_max = add_capped(player.hp_max, ef->d1, HP_CAP);
                 if (!STATUS_PLAYER_HEALING_BLOCKED())
                     player.hp = add_capped(player.hp, ef->d1, player.hp_max);
+                hud_show_stat_gain(STAT_HP, (u8)(player.hp_max - before));
                 break;
             case STAT_MP:
+                before = player.mp_max;
                 player.mp_max = add_capped(player.mp_max, ef->d1, 20);
                 player.mp = add_capped(player.mp, ef->d1, player.mp_max);
+                hud_show_stat_gain(STAT_MP, (u8)(player.mp_max - before));
                 break;
             case STAT_ATK:
+                before = player.atk;
                 player.atk = add_capped(player.atk, ef->d1, 15);
+                hud_show_stat_gain(STAT_ATK, (u8)(player.atk - before));
                 break;
             case STAT_DEF:
+                before = player.def;
                 player.def = add_capped(player.def, ef->d1, 10);
+                hud_show_stat_gain(STAT_DEF, (u8)(player.def - before));
                 break;
             case STAT_SPD:
+                before = player.spd;
                 player.spd = add_capped(player.spd, ef->d1, 9);
+                hud_show_stat_gain(STAT_SPD, (u8)(player.spd - before));
                 break;
             case STAT_LCK:
+                before = player.lck;
                 player.lck = add_capped(player.lck, ef->d1, 10);
+                hud_show_stat_gain(STAT_LCK, (u8)(player.lck - before));
                 break;
         }
     }
@@ -883,14 +896,22 @@ u8 pickup_check_player_collision(void) BANKED {
                                 room_start_weapon_surge();
                                 break;
                             case WARE_GLASS:
+                            {
+                                u8 old_atk = player.atk;
+                                u8 old_spd = player.spd;
                                 player.atk = add_capped(player.atk, 2, 15);
                                 player.spd = add_capped(player.spd, 1, 9);
+                                hud_show_stat_gain(STAT_ATK,
+                                    (u8)(player.atk - old_atk));
+                                hud_show_stat_gain(STAT_SPD,
+                                    (u8)(player.spd - old_spd));
                                 grant_special_item(ITEM_ID_GLASS_FANG);
                                 player.hp_max = (u8)(player.hp_max - 2);
                                 if (player.hp > player.hp_max)
                                     player.hp = player.hp_max;
                                 hud_redraw_hp();
                                 break;
+                            }
                             case WARE_PHOENIX:
                                 grant_special_item(ITEM_ID_PHOENIX_THREAD);
                                 break;

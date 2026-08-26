@@ -439,7 +439,7 @@ u8 combat_resolve(void) BANKED {
                     // keeps hard Normal encounters dangerous while making an
                     // unlucky early elite a roguelike risk/reward beat instead
                     // of pure run attrition.
-                    if (entities[j].flags & EF_ELITE) {
+                    if (entities[j].flags & (EF_ELITE | EF_ALPHA)) {
                         pickup_spawn((player.hp < player.hp_max)
                             ? PICKUP_HEART_HALF : PICKUP_COIN_5,
                             entities[j].x, entities[j].y);

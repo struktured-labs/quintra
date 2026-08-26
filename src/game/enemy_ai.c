@@ -24,67 +24,7 @@
 //   Charger: ai_data[2] = mode (0 wander 1 telegraph 2 charge 3 recover),
 //            ai_data[3] = mode timer, ai_data[4] = locked dir8
 
-// Spawn-only initializer owned by the feature bank. Keeping the declaration
-// private avoids making every translation unit depend on this cold hook.
-void enemy_patrol_init(entity_t *e, u8 enemy_content_id) BANKED;
 void enemy_patrol_update(entity_t *e, u8 enemy_content_id) BANKED;
-u8 status_enemy_summon_blocked(void) BANKED;
-
-u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
-    u8 idx;
-    entity_t *e;
-    if (enemy_content_id >= N_ENEMIES) return 0xFF;
-    // Mute shuts down an enemy's reinforcement spell but never its movement
-    // or contact body. Procgen has no active actor and remains unaffected.
-    if (status_enemy_summon_blocked()) return 0xFF;
-    idx = entity_spawn(ENT_ENEMY);
-    if (idx == 0xFF) return 0xFF;
-    e = &entities[idx];
-    {
-        const enemy_def_t *def = &enemies[enemy_content_id];
-        e->x           = FIX8((i16)tile_x * 8);
-        e->y           = FIX8((i16)tile_y * 8);
-        e->vx = e->vy  = 0;
-        e->sprite_tile = def->sprite_set;
-        e->palette     = def->palette;
-        e->hp          = def->stats.hp;
-        e->damage      = def->stats.damage;
-        e->ai_data[0]  = enemy_content_id;
-        // Preserve the shared spawn draw, but CounterGuard's state byte is a
-        // three-state shell machine rather than an eight-direction heading.
-        // Random values 3..7 formerly skipped both its parry and exposed
-        // states, making otherwise identical Shard Crabs spawn with different
-        // rules.
-        e->state       = (u8)(rng_next_u8() & 0x07);
-        if (def->ai_kind == AI_COUNTER_GUARD || def->ai_kind == AI_SUMMONER)
-            e->state = 0;
-        e->state_timer = 30;
-        // Both feature enemies occupy the final contiguous content IDs.
-        if (enemy_content_id >= ENEMY_FACET_RAM) {
-            enemy_patrol_init(e, enemy_content_id);
-            return idx;
-        }
-        // Flutterbats need champion-sized navigation clearance. Their old
-        // 8px footprint could enter one-tile pockets that a 12px hero could
-        // neither enter nor reliably reach with a cardinal melee attack.
-        if (enemy_content_id == ENEMY_FLUTTERBAT) {
-            e->hitbox = (u8)0xAA;
-        // Bruiser tier (orc 4, bomber 6, warlock 8) and the Sentinel
-        // mini-boss (1) render 16x16 — give them a bigger hitbox so the
-        // larger body is hittable and its contact reach matches its size.
-        } else if (enemy_content_id == ENEMY_CINDER_MAW) {
-            // Narrow 8x13 gameplay body under a 10x15 visible silhouette: a
-            // true intermediate tier, not the bruisers' square 13x13 mass.
-            e->hitbox = (u8)0x8D;
-        } else if (enemy_content_id == ENEMY_STONE_SENTINEL || enemy_content_id == ENEMY_ORC
-            || enemy_content_id == ENEMY_BOMBER || enemy_content_id == ENEMY_WARLOCK) {
-            e->hitbox = (u8)0xDD;
-        } else {
-            e->hitbox = (6 << 4) | 6;
-        }
-    }
-    return idx;
-}
 
 static u8 ground_navigation_enemy(const entity_t *e) {
     // Persistent ground enemies must remain in spaces a champion's 12px feet
@@ -672,6 +612,8 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         && e->ai_data[2] == ENEMY_AUX_OOZE_FRAGMENT) {
         ooze_fragment_update(e, idx); return;
     }
+    if (id == ENEMY_BLUE_CRAWLER)
+        blue_crawler_pattern_tick(e, idx);
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     if (id >= ENEMY_FACET_RAM) { enemy_patrol_update(e, id); return; }

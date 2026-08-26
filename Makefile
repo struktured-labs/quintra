@@ -156,6 +156,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
 	$(PYBOY_RUN) scripts/test_attack_relics.py
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
+	$(PYBOY_RUN) scripts/test_pickup_feedback.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_status_effects.py

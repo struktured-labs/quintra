@@ -106,6 +106,10 @@ def main():
 
         # A live Sentinel/elite owns the miniboss arrangement priority.
         pb.memory[EN + 17] = 1  # ENEMY_STONE_SENTINEL
+        # The preceding synthetic Crawlers legitimately use ai_data[3] as
+        # their projectile clock. Retyping one in place must also clear the
+        # Sentinel's giant-form byte, just as enemy_spawn's zeroed slot does.
+        pb.memory[EN + 20] = 0
         force_phrase_latch(pb)
         assert pb.memory[CONTEXT] == pb.memory[CONTEXT_T] == 3
 

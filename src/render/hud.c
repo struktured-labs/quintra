@@ -7,6 +7,7 @@
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/will.h"
 #include "render/hud.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -63,6 +64,9 @@ static u8 loot_seconds = 0xFF;
 static u8 lane_palette = 0xFF;
 static u8 will_full_palette = 0xFF;
 static u8 hud_hp_seen;
+extern u8 hud_notice_ticks;
+void hud_notice_reset(void) BANKED;
+void hud_notice_load_glyphs(void) BANKED;
 
 static void hud_set_lane_palette(u8 palette) {
     u8 attrs[4];
@@ -82,6 +86,7 @@ static void hud_set_lane_palette(u8 palette) {
 
 void hud_init(void) BANKED {
     tiles_load_hud();
+    hud_notice_load_glyphs();
     // Place HUD on BG palette slot 7 (won't collide with room pal 0);
     // slot 6 is the blue MP variant for the MP digit columns.
     palette_bg_load(7, hud_palette);
@@ -91,6 +96,7 @@ void hud_init(void) BANKED {
     will_full_palette = 0;
     loot_seconds = 0xFF;
     hud_hp_seen = player.hp;
+    hud_notice_reset();
 
     // Fill all 20 WIN tiles with blank, then set palette attribute = 7
     // (except the MP columns 8-9, which take the blue palette 6)
@@ -180,6 +186,7 @@ void hud_redraw_depth(void) BANKED {
     // from biome art and the pack screen; the old redundant digit made max-HP
     // relics impossible to display for Sauran.
     u8 row[2];
+    if (hud_notice_ticks) return;
     u8 d = run_state.room_counter;
     if (d > 99) d = 99;
     row[0] = (u8)(HUD_DIGIT_0 + (d / 10));
@@ -191,6 +198,7 @@ void hud_redraw_depth(void) BANKED {
 void hud_show_offer(u8 ware, u8 price) BANKED {
     u8 row[4];
     u8 icon;
+    if (hud_notice_ticks) return;
     if (lane_palette != 7) hud_set_lane_palette(7);
     if (price == offer_price && ware == offer_ware) return;
     offer_price = price;
@@ -229,7 +237,7 @@ void hud_show_offer(u8 ware, u8 price) BANKED {
 
 void hud_clear_offer(void) BANKED {
     static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
-    if (offer_price == 0xFF) return;
+    if (hud_notice_ticks || offer_price == 0xFF) return;
     offer_price = 0xFF;
     offer_ware = 0xFF;
     VBK_REG = 0;
@@ -238,6 +246,7 @@ void hud_clear_offer(void) BANKED {
 
 void hud_show_loot_timer(u8 seconds) BANKED {
     u8 row[4];
+    if (hud_notice_ticks) return;
     if (seconds > 99) seconds = 99;
     if (lane_palette != 7) hud_set_lane_palette(7);
     if (seconds == loot_seconds) return;
@@ -255,7 +264,7 @@ void hud_show_loot_timer(u8 seconds) BANKED {
 
 void hud_clear_loot_timer(void) BANKED {
     static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
-    if (loot_seconds == 0xFF) return;
+    if (hud_notice_ticks || loot_seconds == 0xFF) return;
     loot_seconds = 0xFF;
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
@@ -267,6 +276,7 @@ void hud_redraw_boss(u8 cur, u8 max) BANKED {
     static u8 last_segs = 0xFF;
     u8 segs, i;
     u8 row[4];
+    if (hud_notice_ticks) return;
 
     if (max == 0) {
         segs = 0xFE;                     // sentinel: bar hidden
@@ -292,7 +302,7 @@ void hud_redraw_boss(u8 cur, u8 max) BANKED {
 void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     u8 row[4];
     u8 segs, i;
-    if (max == 0) return;
+    if (hud_notice_ticks || max == 0) return;
     {
         u8 full = cur >= max ? 1 : 0;
         // The normal room path redraws Will repeatedly. Avoid even the local
@@ -327,6 +337,19 @@ void hud_low_hp_pulse(u8 phase) BANKED {
     for (i = 0; i < 4; ++i) pal[i] = hud_palette[i];
     if (phase) pal[3] = BGR555(31, 26, 24);   // white-hot flash
     palette_bg_load(7, pal);
+}
+
+void hud_notice_restore_context(void) BANKED {
+    // Context renderers cache their values. Invalidate those caches so the
+    // boss/offer/timer beneath the temporary card returns on the next frame.
+    offer_price = 0xFF;
+    offer_ware = 0xFF;
+    loot_seconds = 0xFF;
+    lane_palette = 0xFF;
+    will_full_palette = player.will_charge >= WILL_MAX ? 1 : 0;
+    palette_bg_load(5, will_full_palette
+        ? hud_palette_will_full : hud_palette_will);
+    hud_redraw_depth();
 }
 
 void hud_redraw_all(void) BANKED {

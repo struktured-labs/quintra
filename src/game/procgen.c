@@ -1427,6 +1427,15 @@ void procgen_generate_current_room(void) BANKED {
             u8 encounter_formation = (u8)(((u8)run_state.run_seed
                 + run_state.room_counter
                 + (u8)(run_state.bosses_beaten << 1)) & 3);
+            // A real pack always has one readable priority target. Stage
+            // foyers and peaceful waypoint courts keep their gentler pacing;
+            // every other group of three or more promotes exactly one stable
+            // ordinal, with no extra RNG draw and no chance of duplicate
+            // alphas. ELITE directives already designate ordinal zero.
+            u8 alpha_ordinal = (room_encounter_kind == ENCOUNTER_ELITE) ? 0
+                : enemy_count ? (u8)(((u8)run_state.run_seed
+                    + run_state.room_counter * 7) % enemy_count) : 0xFF;
+            u8 has_alpha = enemy_count >= 3 && !is_stage_foyer && !is_waypoint;
             if (!direct_wide) mark_enemy_spawn_reachable();
             // `enemy_count` used to mean attempts, not bodies: a pillar or
             // entrance-safety rejection could quietly turn the intended
@@ -1499,19 +1508,18 @@ void procgen_generate_current_room(void) BANKED {
                                 entities[idx].y = FIX8(world_spawn_y[sector]);
                             }
                         }
-                        // ~12% spawn ELITE: boss-palette glow, double HP,
-                        // +1 damage, EF_ELITE flag (combat pays the bonus).
-                        // Still consume the roll in a stage foyer so its
-                        // procedural draw contract stays deterministic; only
-                        // the elite promotion is deferred to later rooms.
+                        // Preserve the historical RNG draw so projectile and
+                        // reward improvements cannot reshuffle deterministic
+                        // procgen. Promotion is now the pack-alpha contract:
+                        // exactly one cyan-glow body, double HP, +1 contact,
+                        // and the established guaranteed elite reward.
                         {
                             u8 elite_roll = rng_next_u8();
-                            if (idx != 0xFF
-                                && !(room_encounter_kind == ENCOUNTER_ELITE
-                                    && spawned == 0)
-                                && !is_stage_foyer && !is_puzzle_room
-                                && elite_roll < 31) {
-                                entities[idx].flags  |= EF_ELITE;
+                            (void)elite_roll;
+                            if (idx != 0xFF && has_alpha
+                                && spawned == alpha_ordinal
+                                && !(entities[idx].flags & EF_ELITE)) {
+                                entities[idx].flags  |= EF_ALPHA;
                                 entities[idx].palette = 0x06;
                                 entities[idx].hp =
                                     (u8)(entities[idx].hp << 1);
