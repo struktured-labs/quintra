@@ -1067,11 +1067,9 @@ void procgen_generate_current_room(void) BANKED {
         // build rather than leftover attrition from the preceding rooms.
         u8 is_rest = run_state_is_sanctuary();
         u8 puzzle_local = run_state_dungeon_local();
-        // These roles deterministically replace combat after generation.
-        // Avoid rolling and placing a dense pack only for puzzle_prepare to
-        // delete it during the same doorway transaction. Besides saving
-        // entity churn, this keeps streamed same-stage travel below one
-        // second even after the game-wide encounter-density increase.
+        // Puzzle roles keep a smaller guard pack alongside their authored
+        // fixture. They remain traversal objectives rather than extermination
+        // locks, but no first-visit dungeon field should feel uninhabited.
         u8 is_puzzle_room = (!run_state.world_mode && !is_boss_room
             && (puzzle_local == run_state.mission_trial_cell
                 || puzzle_local == run_state.mission_waystone_cell
@@ -1092,11 +1090,11 @@ void procgen_generate_current_room(void) BANKED {
         // Every ordinary combat field first chooses a room-level roster:
         // one-species brood, two-species pair, leader/minion command pack, or
         // the classic fully mixed stage pool. This is independent of the
-        // special encounter directive below, so foyers and backtracks retain
-        // a deterministic enemy identity while service/fixture rooms do not.
+        // special encounter directive below, so foyers, puzzle guards, and
+        // backtracks retain a deterministic enemy identity while services do not.
         dungeon_director_prepare_roster((u8)(!is_town
             && !run_state.world_mode && !is_boss_room && !is_miniboss
-            && !is_shop && !is_rest && !is_puzzle_room));
+            && !is_shop && !is_rest));
 
         // First visits to ordinary large districts rotate four different
         // verbs through the run. Fixed lore/service roles and lighter turn
@@ -1377,16 +1375,13 @@ void procgen_generate_current_room(void) BANKED {
                 paint_shop_price(10, build_price);
                 paint_shop_price(13, tactical_price);
             }
-        } else if (is_puzzle_room) {
-            // puzzle_prepare_room_role authors the interactive fixture and
-            // owns the room's non-combat seal after procgen returns.
         } else {
             // A 31x31 district spans almost three LCD areas. Penta-like
             // pressure therefore needs a real field population, not four
             // bodies diluted into one-at-a-time encounters. The common bands
             // are 9..12 on Easy and 12..16 on canonical Normal; Stage 1 adds
-            // its explicit opening-pressure curriculum below. Later stages
-            // add modest pressure without replacing enemy identity.
+            // its explicit opening-pressure curriculum below. Puzzle rooms
+            // use a smaller guard band so their fixture stays readable.
             u8 depth_bonus = run_state.bosses_beaten;
             // A new stage should establish its visual language before asking
             // the player to solve the densest possible seven-body roll. This
@@ -1400,11 +1395,14 @@ void procgen_generate_current_room(void) BANKED {
                 && run_state_dungeon_local() == 0) ? 1 : 0;
             // The first dungeon is the player's first proof of the combat
             // loop, not a prolonged tutorial. Give its ordinary rooms extra
-            // bodies (especially on canonical Normal) while leaving service,
-            // puzzle, waypoint, sanctuary, and Colossus roles untouched.
+            // bodies (especially on canonical Normal); puzzle guards use the
+            // explicit smaller band below instead of this density bonus.
             u8 opening_pressure = run_state.bosses_beaten == 0
                 ? (RUN_IS_EASY() ? 1 : 2) : 0;
-            u8 enemy_count = is_waypoint ? (RUN_IS_EASY() ? 2 : 3)
+            u8 enemy_count = is_puzzle_room
+                ? (u8)((RUN_IS_EASY() ? 3 : 4)
+                    + (depth_bonus >= 3 ? 1 : 0))
+                : is_waypoint ? (RUN_IS_EASY() ? 2 : 3)
                 : (u8)((RUN_IS_EASY()
                         ? (u8)(8 + rng_range(4))
                         : (u8)(11 + rng_range(5)))
@@ -1511,7 +1509,7 @@ void procgen_generate_current_room(void) BANKED {
                             if (idx != 0xFF
                                 && !(room_encounter_kind == ENCOUNTER_ELITE
                                     && spawned == 0)
-                                && !is_stage_foyer
+                                && !is_stage_foyer && !is_puzzle_room
                                 && elite_roll < 31) {
                                 entities[idx].flags  |= EF_ELITE;
                                 entities[idx].palette = 0x06;
@@ -1528,8 +1526,11 @@ void procgen_generate_current_room(void) BANKED {
             // Batch every dungeon body's wide-field placement in one cold
             // bank call. Calling the helper once per enemy added two visible
             // frames to a 16-body same-stage doorway.
-            if (direct_wide)
+            if (direct_wide) {
                 procgen_place_wide_enemies(encounter_formation);
+                if (is_puzzle_room)
+                    procgen_place_visible_puzzle_guard();
+            }
             if (is_waypoint) {
                 u8 lx, ly;
                 // Every long dungeon wing ends at a lighter turn court. Give

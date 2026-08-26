@@ -43,7 +43,7 @@ void sfx_play(u8 id);
 void sfx_play_weapon(u8 projectile_kind) BANKED;
 void sfx_play_equip(void) BANKED;
 void sfx_play_reward(u8 kind) BANKED;
-// Ordered floor runes answer with a rising pitch before the full solve cue.
+// Ordered floor runes answer with one of five rising positional pitches.
 void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps
 void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames);

@@ -200,11 +200,11 @@ void sfx_play(u8 id) {
 }
 
 void sfx_play_rune(u8 step) {
-    // C5, E5, G5: unmistakable positive positional feedback without spending
-    // the longer SFX_PUZZLE fanfare until the complete order is correct.
-    static const u16 notes[3] = { 1798, 1849, 1881 };
+    // C5, D5, E5, G5, B5: one distinct ascending voice per possible phrase
+    // position, without spending the longer fanfare until the order is right.
+    static const u16 notes[5] = { 1798, 1825, 1849, 1881, 1915 };
     if (melody_lock_frames) return;
-    if (step > 2) step = 2;
+    if (step > 4) step = 4;
     pend_kind = PEND_NONE;
     ch1(0x00, 0x80, 0xA2, notes[step]);
 }

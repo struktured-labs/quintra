@@ -98,14 +98,6 @@ static void mark_puzzle_solved(void) {
         + run_state_dungeon_cell()) % 3), player.x, player.y);
 }
 
-static void kill_puzzle_room_hostiles(void) {
-    u8 i;
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY)
-            entity_kill(i);
-    }
-}
-
 static void clear_all_cairns(void) {
     u8 x, y;
     for (y = 1; y < ROOM_H - 1; ++y) {
@@ -363,10 +355,8 @@ void puzzle_prepare_room(void) BANKED {
         return;
     }
 
-    // Puzzle rooms are alternatives to extermination rooms. Enemies may be
-    // rolled by the shared generator, but this authored room role removes
-    // them while preserving Sigils, loot, and every other procgen fixture.
-    kill_puzzle_room_hostiles();
+    // Puzzle rooms are traversal objectives rather than extermination locks,
+    // but their smaller procgen guard pack remains alive around the fixture.
 
     if (room_puzzle_kind == PUZZLE_PUSH_SEAL) {
         if (!puzzle_solved()) prepare_push(seed);
@@ -439,7 +429,17 @@ static u8 update_sequence(u8 tx, u8 ty) {
     }
     if (puzzle_contact) return 0;
     puzzle_contact = 1;
+    // A confirmed note remains safe for the rest of this attempt. Routes
+    // between later runes can naturally cross an earlier lit plate; treating
+    // that revisit as a false note made the visible progress itself a trap.
+    for (i = 0; i < rune_progress; ++i)
+        if (touched == rune_order[i]) return 0;
     if (touched != rune_order[rune_progress]) {
+        // Preserve the pressed plate's place in the ascending phrase before
+        // reset_runes clears progress. Its pitch is a genuine routing hint:
+        // a low note belongs earlier, while a high note belongs later.
+        for (i = 0; i < rune_count; ++i)
+            if (touched == rune_order[i]) break;
         reset_runes();
         // A false note is a magical trap, not merely a UI reset. Charge one
         // half-heart on every distinct wrong press—even during the recovery
@@ -448,7 +448,10 @@ static u8 update_sequence(u8 tx, u8 ty) {
         if (player.hp) player.hp--;
         if (player.iframes < 30) player.iframes = 30;
         hud_redraw_hp();
-        sfx_play(SFX_HURT);
+        // Noise carries the hit while CH1 remains free to voice the wrong
+        // plate. Muting that note removed the puzzle's best learnable clue.
+        sfx_play(SFX_HIT);
+        sfx_play_rune(i);
         room_shake(1, 6);
         return 0;
     }

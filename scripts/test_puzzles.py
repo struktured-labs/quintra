@@ -105,6 +105,23 @@ def step_off(pb):
     feet_on(pb, 10, 13)
 
 
+def active_hostiles(pb):
+    return [i for i in range(32)
+            if pb.memory[EN + i * 28] == 2
+            and pb.memory[EN + i * 28 + 1] & 1]
+
+
+def visible_hostiles(pb):
+    return [i for i in active_hostiles(pb)
+            if pb.memory[EN + i * 28 + 1] & 4]
+
+
+def clear_hostiles(pb):
+    for i in active_hostiles(pb):
+        ep = EN + i * 28
+        pb.memory[ep] = pb.memory[ep + 1] = 0
+
+
 def body_component(tiles, start):
     """Return compact-court cells reachable by the champion's 2x2 body."""
     walkable = {1, 3, 7, 19, 20, 23, 31, 33, 34, *range(9, 19)}
@@ -129,8 +146,10 @@ def body_component(tiles, start):
 def push_seal_contract():
     pb = load(1)
     assert pb.memory[KIND] == 1 and pb.memory[LOCKED] == 1
-    assert not any(pb.memory[EN + i * 28] == 2 for i in range(32)), (
-        "push puzzle retained mandatory hostiles")
+    assert len(active_hostiles(pb)) >= 4, (
+        "push puzzle did not retain its live guard pack")
+    assert visible_hostiles(pb), "push puzzle looked empty on arrival"
+    clear_hostiles(pb)  # isolate cairn mechanics after proving population
     blocks = [(x, y) for y in range(1, 16) for x in range(1, 19)
               if pb.memory[TM + y * 20 + x] == 25]
     assert len(blocks) == 1, f"push seal needs one readable cairn, got {blocks}"
@@ -189,9 +208,30 @@ def solve_runes(pb, runes):
                 found = candidate
                 prefix.append(candidate)
                 step_off(pb)
+                if pb.memory[LOCKED]:
+                    # Every accepted, visibly lit note is safe to cross while
+                    # routing toward the rest of the phrase. It must neither
+                    # hurt the champion nor clear the confirmed prefix.
+                    for confirmed in prefix:
+                        hp_before_revisit = pb.memory[PL + 2]
+                        lit_before_revisit = tuple(lit(rune) for rune in prefix)
+                        feet_on(pb, *confirmed)
+                        assert pb.memory[PL + 2] == hp_before_revisit, (
+                            "revisiting a lit rune damaged the champion"
+                        )
+                        assert tuple(lit(rune) for rune in prefix) == lit_before_revisit, (
+                            "revisiting a lit rune reset the confirmed phrase"
+                        )
+                        step_off(pb)
                 break
             assert pb.memory[PL + 2] == hp_before - 1, (
                 "wrong rune did not charge exactly one half-heart"
+            )
+            assert pb.memory[0xFF12] == 0xA2, (
+                "wrong rune muted its pitched sequence hint"
+            )
+            assert pb.memory[0xFF21] == 0xC1, (
+                "wrong rune lost its separate impact voice"
             )
             # This routine intentionally discovers the hidden order through
             # mistakes. Refill only its test vessel so later candidates can
@@ -206,6 +246,10 @@ def solve_runes(pb, runes):
 def rune_sequence_contract():
     pb = load(2)
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
+    assert len(active_hostiles(pb)) >= 4, (
+        "rune puzzle did not retain its live guard pack")
+    assert visible_hostiles(pb), "rune puzzle looked empty on arrival"
+    clear_hostiles(pb)  # isolate note/damage mechanics after proving population
     runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
              if pb.memory[TM + y * 20 + x] == 33]
     assert len(runes) == 4, f"stage two needs four runes, got {runes}"
@@ -254,8 +298,10 @@ def late_depth_puzzle_contract():
     assert pb.memory[RS + 1] == target, "could not enter late-depth puzzle room"
     assert pb.memory[KIND] in (1, 2) and pb.memory[LOCKED] == 1, \
         "generated Waystone became filler instead of a mechanical puzzle"
-    assert not any(pb.memory[EN + i * 28] == 2 for i in range(32)), \
-        "late-depth puzzle retained mandatory hostiles"
+    assert len(active_hostiles(pb)) >= 4, \
+        "late-depth puzzle did not retain its live guard pack"
+    assert visible_hostiles(pb), "late-depth puzzle looked empty on arrival"
+    clear_hostiles(pb)  # isolate fixture completion after proving population
     fixture_count = sum(
         pb.memory[TM + y * 20 + x] in (25, 33)
         for y in range(1, 16) for x in range(1, 19))
@@ -298,6 +344,9 @@ def wide_waystone_circuit_contract():
 
     def probe(pb, tiles):
         assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
+        assert len(active_hostiles(pb)) >= 5, \
+            "late Waystone did not retain its scaled guard pack"
+        assert visible_hostiles(pb), "late Waystone looked empty on arrival"
         runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
                  if pb.memory[TM + y * 20 + x] == 33]
         assert len(runes) == 5, f"Stage 7 Waystone lost notes: {runes}"
@@ -339,6 +388,10 @@ def deep_phase_contract():
 
     def switch_probe(pb, _tiles):
         assert pb.memory[KIND] == 3 and pb.memory[LOCKED] == 0
+        assert len(active_hostiles(pb)) >= 4, \
+            "Aether Lattice did not retain its live guard pack"
+        assert visible_hostiles(pb), "Aether Lattice looked empty on arrival"
+        clear_hostiles(pb)
         assert not (pb.memory[RS + 28] & bit)
         xs = (4, 8, 12, 16)
         masks = (0x03, 0x07, 0x0E, 0x0C)
@@ -379,6 +432,9 @@ def deep_phase_contract():
 
     def closed_gate_probe(pb, _tiles):
         assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
+        assert len(active_hostiles(pb)) >= 4, \
+            "closed phase gate did not retain its live guard pack"
+        assert visible_hostiles(pb), "closed phase gate looked empty on arrival"
         assert all(pb.memory[TM + 11 * 20 + x] == 21 for x in range(4, 16))
         assert all(pb.memory[TM + 11 * 20 + x] != 21
                    for x in (2, 3, 16, 17)), \
@@ -386,6 +442,9 @@ def deep_phase_contract():
 
     def open_gate_probe(pb, _tiles):
         assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
+        assert len(active_hostiles(pb)) >= 4, \
+            "open phase gate did not retain its live guard pack"
+        assert visible_hostiles(pb), "open phase gate looked empty on arrival"
         assert all(pb.memory[TM + 11 * 20 + x] == 19 for x in range(4, 16))
         assert pb.memory[RS + 27] & (1 << 6), \
             "revisiting the opened mission gate did not persist its crossing"
@@ -406,9 +465,9 @@ def main():
     wide_waystone_circuit_contract()
     opening_shop_is_not_a_puzzle()
     deep_phase_contract()
-    print("[puzzles] PASS generated Trial/Waystone + connected ordered runes "
-          "+ service exclusion + four-panel remote Aether Lattice/gate circuit "
-          "+ persistent gate crossing")
+    print("[puzzles] PASS populated Trial/Waystone + safe/audio-complete ordered "
+          "runes + service exclusion + populated remote Aether Lattice/gate "
+          "circuit + persistent gate crossing")
 
 
 if __name__ == "__main__":

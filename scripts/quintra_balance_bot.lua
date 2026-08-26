@@ -1643,11 +1643,9 @@ end
 local body_goal_pixel_route = nil
 
 -- Accepted runes change from BGT_SWITCH to ordinary-looking crystal floor.
--- Tile-only path avoidance therefore forgets where the earlier notes were
--- and a long five-note route can walk back across an accepted rune, which is
--- correctly treated by the cartridge as a wrong note.  Mirror only the
--- visible fixture coordinates here so the controller walks around every
--- non-target rune regardless of its current colour/state.
+-- The cartridge now permits crossing those confirmed notes, but retaining
+-- the visible fixture coordinates keeps the controller from accidentally
+-- pressing an unconfirmed rune while routing to its intended target.
 function puzzle_rune_fixture_at(tx, ty)
     if PUZZLE_KIND == 0 or emu:read8(PUZZLE_KIND) ~= 2 then return false end
     if emu:read8(RS + 11) == 0 then

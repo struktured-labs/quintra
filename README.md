@@ -144,6 +144,13 @@ biological identity but gain a near-black outline, bright lime face, and warm
 gold feature colour so Orcs, Ropes, Oozes, Spores, and Vine Coils remain
 legible over Verdant Hollow and the Riftwild.
 
+Ordered runes now treat every already-lit note as safe to cross. A genuinely
+wrong plate still resets the phrase and costs one half-heart, but voices its
+own place in the five-note ascending scale over a separate impact sound, so a
+mistake remains an audio clue. Puzzle fields now retain a restrained group of
+three to five stage-native guards instead of deleting their generated roster;
+the puzzle controls forward progress while the monsters provide live pressure.
+
 ### v0.20.14 — Hidden Company
 
 v0.20.14 was an exploration and directional-combat correction. Road Echoes no
@@ -1555,13 +1562,14 @@ Suspend saves from every earlier explicit topology migrate to the equivalent
 stage, town, world anchor, sanctuary, or boss threshold.
 
 **Dungeon locks are no longer synonymous with extermination.** Procedural
-dungeons rotate three non-combat room families alongside the existing selective
+dungeons rotate three traversal-puzzle families alongside the existing selective
 arena seals. A normal-looking 16×16 cairn can be the keystone that releases a
 room when pushed; three floor runes demand one seed-stable walking order, with
 an ascending note and lit tile confirming every correct step and a visible
 reset on mistakes; paired phase switches persist into the following room,
-raising or lowering a colored wall there. Puzzle rooms remove mandatory
-hostiles, always preserve the return threshold, and persist their solved state
+raising or lowering a colored wall there. Puzzle rooms retain a smaller guard
+pack without making its extermination mandatory, always preserve the return
+threshold, and persist their solved state
 through dungeon backtracking. A new low rumble and D–F–Ab–D discovery figure
 lets the final solve linger instead of sounding like another coin pickup.
 Room slides now advance both music and SFX on every transition VBlank, so the
