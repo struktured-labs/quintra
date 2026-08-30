@@ -182,5 +182,6 @@ u8 room_tile_walkable(u8 t) NONBANKED {
          || t == BGT_RUBBLE || t == BGT_SPIKES
          || (t >= BGT_SWITCH && t <= BGT_PATH)
          || (t >= BGT_COLOSSUS_VOID && t <= BGT_COLOSSUS_HORN)
-         || t == BGT_WILD_FLOWER);
+         || t == BGT_WILD_FLOWER
+         || (t >= BGT_WILD_MUD && t <= BGT_WILD_SNOW));
 }

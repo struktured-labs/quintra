@@ -104,10 +104,10 @@ def main():
     assert pb.memory[TM + 9 * 20 + 19] == 36
     assert pb.memory[TM + 16 * 20 + 10] == 36, \
         "obsolete south viewport edge is not an open internal trail"
-    assert pb.memory[WORLD_EXT + 8 * 11 + 10] == 3
-    assert pb.memory[WORLD_EXT + 9 * 11 + 10] == 3
-    assert pb.memory[WORLD_BOTTOM + 13 * 31 + 9] == 3
-    assert pb.memory[WORLD_BOTTOM + 13 * 31 + 10] == 3
+    assert pb.memory[WORLD_EXT + 8 * 11 + 10] == 36
+    assert pb.memory[WORLD_EXT + 9 * 11 + 10] == 36
+    assert pb.memory[WORLD_BOTTOM + 13 * 31 + 9] == 36
+    assert pb.memory[WORLD_BOTTOM + 13 * 31 + 10] == 36
     assert pb.memory[WORLD_BOTTOM + 2 * 31 + 14] == pb.memory[TM + 4 * 20 + 5], \
         "southern field lost its seed-stable landmark family"
     assert pb.memory[TM + 8 * 20 + 10] == 36, "Riftwild center lacks path terrain"
@@ -196,7 +196,16 @@ def main():
     exit_at(pb, 0, 60); assert pb.memory[RS + 18] == 3, pb.memory[RS + 18]
     exit_at(pb, 0, 60); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
     exit_at(pb, 72, 232); assert pb.memory[RS + 18] == 8, pb.memory[RS + 18]
-    assert pb.memory[TM + 8 * 20 + 10] == 34, "dungeon gate has no portal"
+    assert pb.memory[TM + 8 * 20 + 10] != 34, \
+        "dungeon arch woke before its Riftwild Warden was defeated"
+    # This topology/media test already proved that screen 3 is reachable; its
+    # encounter was cleared synthetically above. Publish the persistent kill
+    # bit, then regenerate the arch and prove that the expedition gate wakes.
+    pb.memory[RS + 47] |= 0x04
+    exit_at(pb, 72, 0); assert pb.memory[RS + 18] == 2, pb.memory[RS + 18]
+    exit_at(pb, 72, 232); assert pb.memory[RS + 18] == 8, pb.memory[RS + 18]
+    assert pb.memory[TM + 8 * 20 + 10] == 34, \
+        "Warden victory did not wake the dungeon arch"
     for _ in range(60): pb.tick()
     pb.screen.image.save(ROOT / "tmp" / "riftwild-gate.png")
     seen = (

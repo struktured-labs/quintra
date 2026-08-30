@@ -23,6 +23,7 @@ SPR_COMPANION_A = 224
 SPR_COMPANION_B = 228
 SCREEN_ROOM = 5
 SCREEN_MAP = 8
+SCREEN_DIALOG = 10
 
 # Stable player ABI offsets.
 PL_HP_MAX = 1
@@ -173,6 +174,11 @@ def discover_through_secret(pb):
     # let its remaining VBlank-sliced terrain/loot transaction finish before
     # inspecting or normalizing the resident entity table.
     tick(pb, 120)
+    assert pb.memory[SCREEN] == SCREEN_DIALOG, (
+        "new Road Echo did not receive its discovery introduction")
+    tap(pb, "a")
+    assert pb.memory[SCREEN] == SCREEN_ROOM, (
+        "Road Echo introduction did not resume its secret room")
     state = pb.memory[RUN_STATE + RS_COMPANION_COOLDOWN]
     assert state & COMPANION_DISCOVERED_BIT, "secret did not persist discovery"
     assert not (state & COMPANION_PENDING_BIT), "reveal bit survived cache spawn"

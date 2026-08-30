@@ -8,6 +8,7 @@
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/curse.h"
 #include "game/enemy_ai.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -26,6 +27,7 @@ u8 enemy_status_ticks[MAX_ENTITIES];
 u8 enemy_status_aux[MAX_ENTITIES];
 u8 status_enemy_actor = 0xFF;
 u8 status_confused_projectiles;
+u8 status_enemy_active;
 
 u8 status_enemy_summon_blocked(void) BANKED {
     return status_enemy_actor < MAX_ENTITIES
@@ -60,10 +62,11 @@ u8 status_hostile_damage_taken(u8 idx) BANKED {
         incoming = (u8)((incoming + 1) >> 1);
     taken = (incoming > defense) ? (u8)(incoming - defense) : 1;
     if (player_status_kind == QSTATUS_BRITTLE) taken++;
+    taken = (u8)(taken + curse_incoming_bonus());
     return taken;
 }
 
-static u8 status_clock;
+u8 status_clock;
 static u8 player_status_aux;
 static u8 confusion_mode;
 static u8 confusion_streak;
@@ -190,6 +193,7 @@ void status_clear_enemies(void) BANKED {
     memset(enemy_status_aux, 0, sizeof(enemy_status_aux));
     status_enemy_actor = 0xFF;
     status_confused_projectiles = 0;
+    status_enemy_active = 0;
 }
 
 void status_reset_all(void) BANKED {
@@ -275,6 +279,7 @@ void status_enemy_apply(u8 idx, u8 kind, u8 ticks) BANKED {
     }
     enemy_status_kind[idx] = kind;
     enemy_status_ticks[idx] = ticks;
+    status_enemy_active = 1;
     if (kind == QSTATUS_REGEN) enemy_status_aux[idx] = e->hp;
     else if (kind == QSTATUS_INVERSION)
         enemy_status_aux[idx] = inversion_enemy_aspect(e);
@@ -320,7 +325,17 @@ void status_try_hostile_hit(u8 hostile_idx) BANKED {
     if (kind == QSTATUS_NONE || kind >= QSTATUS_COUNT) return;
     chance = RUN_IS_EASY() ? 16 : 42;
     if (rng_range(100) >= chance) return;
-    status_player_apply(kind, status_duration(kind));
+    if (kind == QSTATUS_CURSE) {
+        // Gloam Leeches seed a room-scale hex instead of occupying the short
+        // status slot. Most hits create a travel-bounded curse; late-run bad
+        // luck can leave a permanent mark until a cleansing Wildcard.
+        u8 permanent = (!RUN_IS_EASY() && run_state.bosses_beaten >= 3
+            && rng_range(4) == 0);
+        u8 curse = permanent
+            ? ((rng_next_u8() & 1) ? CURSE_FRAIL : CURSE_MISFORTUNE)
+            : ((rng_next_u8() & 1) ? CURSE_DULL : CURSE_HUNGER);
+        curse_apply(curse, permanent ? 0 : 6, 1);
+    } else status_player_apply(kind, status_duration(kind));
 }
 
 void status_try_player_shot(u8 enemy_idx, u8 shot_idx) BANKED {
@@ -421,17 +436,18 @@ u8 status_player_effective_stat(u8 stat) BANKED {
     values[1] = player.def;
     values[2] = player.spd;
     values[3] = player.lck;
-    if (player_status_kind != QSTATUS_INVERSION || stat >= 4)
-        return (stat < 4) ? values[stat] : 0;
+    if (stat >= 4) return 0;
+    if (player_status_kind != QSTATUS_INVERSION)
+        return curse_adjust_stat(stat, values[stat]);
     hi = lo = (u8)(inversion_tie & 3);
     for (i = 1; i < 4; ++i) {
         u8 n = (u8)((i + inversion_tie) & 3);
         if (values[n] > values[hi]) hi = n;
         if (values[n] < values[lo]) lo = n;
     }
-    if (stat == hi) return values[lo];
-    if (stat == lo) return values[hi];
-    return values[stat];
+    if (stat == hi) return curse_adjust_stat(stat, values[lo]);
+    if (stat == lo) return curse_adjust_stat(stat, values[hi]);
+    return curse_adjust_stat(stat, values[stat]);
 }
 
 static void player_status_damage(void) {

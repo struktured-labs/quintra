@@ -118,7 +118,11 @@ def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
         if pb.memory[RS + 1] == target:
             break
     pb.button_release(direction)
-    assert pb.memory[RS + 1] == target, f"could not enter stage {stage} room"
+    assert pb.memory[RS + 1] == target, (
+        f"could not enter stage {stage} room {local_room}; "
+        f"source={source_local} dir={direction} now={pb.memory[RS + 1]} "
+        f"screen={pb.memory[addr('_loop_current_screen')]} "
+        f"player=({pb.memory[PL + 9]}, {pb.memory[PL + 11]})")
     # The real dungeon-entry transaction resets puzzle state just before the
     # counter changes. Select the requested paired-switch state at that
     # observable boundary, before the destination role is prepared.
@@ -257,11 +261,12 @@ def main():
         1, 2064128938, local_room=11, probe=assert_waypoint_patrol
     )
     assert_no_false_one_tile_gaps("Verdant second wing", grove_wing)
-    grove_wing_crystals = sum(
-        tile(grove_wing, x, y) == BGT_CRYSTAL for x, y in grove_sites
-    )
-    assert grove_wing_crystals >= 4, (
-        f"Verdant second-wing landmark missing ({grove_wing_crystals}/8)"
+    # Verdant now owns six asymmetric clearing silhouettes instead of one
+    # repeated eight-cell stamp. Require a strong living-growth footprint
+    # without forcing its second wing to clone room four's exact corners.
+    grove_wing_crystals = sum(value == BGT_CRYSTAL for value in grove_wing)
+    assert grove_wing_crystals >= 8, (
+        f"Verdant second-wing identity too sparse ({grove_wing_crystals})"
     )
     assert_graph_exits(
         "Verdant second wing",

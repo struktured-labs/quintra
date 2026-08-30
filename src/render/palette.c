@@ -3,6 +3,10 @@
 
 #include "render/palette.h"
 
+const u16 boss_arena_floor_palette[4] = {
+    BGR555(1,1,3), BGR555(3,4,7), BGR555(6,7,10), BGR555(12,13,16)
+};
+
 static void load_to_pal(u8 ps_reg_select_lo, u8 slot, const u16 *colors) {
     // Auto-increment + start at (slot * 8) — each palette is 4 colors × 2 bytes
     if (ps_reg_select_lo == 0) {

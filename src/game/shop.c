@@ -76,9 +76,9 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
 }
 
 u8 pickup_dungeon_featured_ware(u8 shelf) BANKED {
-    static const u8 build_wares[8] = {
+    static const u8 build_wares[6] = {
         WARE_VAMP, WARE_WEAPON, WARE_GLASS, WARE_ECHO,
-        WARE_RICOCHET, WARE_THORN, WARE_BLAST, WARE_BEAM,
+        WARE_RICOCHET, WARE_THORN,
     };
     static const u8 tactical_wares[6] = {
         WARE_SURGE, WARE_CHART, WARE_PHOENIX, WARE_ASCEND,
@@ -91,14 +91,14 @@ u8 pickup_dungeon_featured_ware(u8 shelf) BANKED {
     // so a later merchant never wastes its interesting counter on a dead
     // duplicate.
     if (shelf) {
-        pick = (u8)((roll / 8) % 6);
+        pick = (u8)((roll / 6) % 6);
         while (tries++ < 6 && ware_owned(tactical_wares[pick]))
             pick = (u8)((pick + 1) % 6);
         return tactical_wares[pick];
     }
-    pick = (u8)(roll % 8);
-    while (tries++ < 8 && ware_owned(build_wares[pick]))
-        pick = (u8)((pick + 1) % 8);
+    pick = (u8)(roll % 6);
+    while (tries++ < 6 && ware_owned(build_wares[pick]))
+        pick = (u8)((pick + 1) % 6);
     return build_wares[pick];
 }
 

@@ -31,6 +31,8 @@
 #define PICKUP_WAYFARER       21 // peaceful stage creature; A opens lore/advice
 #define PICKUP_WAYGEAR         22 // permanent traversal implement; ai_data[1]=gear
 #define PICKUP_COMPANION       23 // nonblocking Road Echo follower; ai_data[1]=role
+#define PICKUP_WILDCARD        24 // optional pulsing fate orb: boon or run curse
+#define PICKUP_HOLLOW_RELIC    25 // Worldglass-only counterpart cache; ai1=item id, ai2=claim bit
 
 // Room-owned secret-vault countdown. Marked loot bypasses its old individual
 // u8 lifespan and is retired together by the visible twelve-second clock.
@@ -52,7 +54,7 @@
 #define WARE_ECHO    12  // Echo Prism: every fourth A attack forks
 #define WARE_RICOCHET 13 // Ricochet Rune: primary attacks rebound once
 #define WARE_THORN   14  // Thorn Crown: taking damage fires a counter-volley
-#define WARE_DRUM    15  // War Drum: every fifth kill readies B and restores MP
+#define WARE_DRUM    15  // War Drum: fifth kill readies B; MP feeds A+B/Oaths
 #define WARE_FLASK   16  // Moon Flask: surplus heart drops become MP
 #define WARE_BLAST   17  // Blast Seed: first impact blooms into an area hit
 #define WARE_BEAM    18  // Rift Lens: every third A becomes a heavy fat beam
@@ -62,6 +64,7 @@
 #define ITEM_ID_SPEED_RING    21u
 #define ITEM_ID_POWER_STONE   22u
 #define ITEM_ID_MANA_GEM      25u
+#define ITEM_ID_WARD_CHARM    26u
 #define ITEM_ID_SWIFT_FANG    27u
 #define ITEM_ID_BLOOD_SIGIL   29u
 #define ITEM_ID_GLASS_FANG    32u
@@ -114,6 +117,8 @@ u8   pickup_dungeon_ware_price(u8 ware) BANKED;
 // Spawn a +1 MP wisp (shattered-crystal drop)
 u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;
 void pickup_spawn_surge(fix8_t x, fix8_t y) BANKED;
+void pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED;
+void pickup_resolve_wildcard(void) BANKED;
 
 // Spawn a permanent town elder who restores HP/MP once per room visit.
 u8   pickup_spawn_villager(fix8_t x, fix8_t y) BANKED;
@@ -128,7 +133,7 @@ u8   pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_riftwell(fix8_t x, fix8_t y) BANKED;
 u8   pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED;
 
-// RNG-driven drop on enemy death: heart 30%, coin 50%, nothing 20%
+// RNG-driven drop on enemy death, including a rare optional Wildcard.
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;
 
 // Per-frame update (dispatch in entity_update_all)

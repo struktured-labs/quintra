@@ -90,6 +90,10 @@ static void map_clear_tiles(void) {
 // compact graphical Compass while making the diagram immediately read as a
 // map in dungeons, villages, and Riftwild alike.
 static void draw_map_heading(void) {
+    if (run_state.world_mode)
+        map_put_attr(5, 0, RUN_RIFTWILD_IS_HOLLOW()
+            ? BGT_AREA_H : BGT_AREA_W,
+            RUN_RIFTWILD_IS_HOLLOW() ? BGPAL_CRACK : BGPAL_DOOR);
     map_put(8, 0, BGT_AREA_M);
     map_put(9, 0, BGT_AREA_A);
     map_put(10, 0, BGT_MAP_LABEL_P);

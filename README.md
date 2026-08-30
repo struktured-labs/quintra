@@ -47,6 +47,73 @@ animated nine-Colossus gallery are rebuilt together and hash-bound in the
 media manifest. The Field Archive now covers all 35 registered monsters,
 including visible Facet Ram and Dread Reaper portraits.
 
+### Current development — final playtest pass
+
+The working cartridge now treats temporary state as first-class information.
+The live HP header names the most urgent condition or curse and shows
+**BOOSTED** while a temporary boon is active. In the Pack, SELECT cycles
+through Waygear to a dedicated **STATUS** page listing the current condition
+and duration, every run curse and its remaining rooms, Weapon Surge, Ascension,
+shield time, and Corvin/Vespine signature timers. Green/gold rows identify
+boons; red/violet rows identify harm. Pickup and affliction messages use a
+four-entry queue, so a multi-stat relic no longer silently loses part of its
+feedback.
+
+Riftwild exits now introduce each dungeon with a five-second, skippable stage
+card and a region-authored ditty. The title's SELECT pages explain A, each
+champion's free B power, MP-driven A+B Oath Arts, full-MP Convergence, dash,
+Pack, Compass, Sigils, Riftwild, companions, and the new Gear/Status path.
+Hidden companions introduce themselves on discovery and state their ability;
+secret vaults show only their real return door.
+
+The first two Colossi have stronger health curves, every Colossus gains a
+quarter-health crisis, and the Crystal Colossus arena uses a quiet neutral
+floor plus a high-contrast cyan/white boss palette. Reopening Pack after a
+victory preserves the cleared arena, palette, and victory music. The returning
+Dread Reaper is guaranteed on its first eligible route, larger in consequence,
+and attacks with a mortal center shot and flanking lanes. Stage foyers remain
+gentler no-elite introductions while ordinary dungeon rooms retain their
+denser procedural pressure.
+
+Final terrain repair now runs after dungeon laws, event overlays, and encounter
+activation, validating all initial monsters against their own real movement
+envelopes. Ground hunters, small specialists, and full-square Flutterbats can
+no longer begin embedded in a pillar or crystal added late in room preparation.
+The live-ROM sweep covers generated combat and puzzle fields across all nine
+dungeons.
+
+Riftwild's score has a new epic development and restates the exact title motif
+at its climax. Its Wayfarers now point toward sleeping arches, tool-gated
+groves, the Farfold cave, and one-time memory vaults; incidental wall changes
+use a short impact sound while the long discovery cadence is reserved for
+meaningful phase changes.
+
+### Current development — Waking and Hollow Riftwild
+
+The Riftwild now has two related realities rather than a generic light/dark
+recolour. **Waking Riftwild** is the living, remembered country. **Hollow
+Riftwild** is the possibility the Void nearly erased: flowers collapse into
+broken earth, waterways die into reed beds, familiar landmarks stand amid
+bone-pale islands and bruised ground. Both realities occupy the same
+6×6 geography, so remembered routes and blocked landmarks become deliberate
+counterpart puzzles instead of a second disconnected map.
+
+Claiming the permanent **Worldglass** Waygear unlocks a `SELECT+B` world verb.
+The champion and violet afterimages shear across the screen through cycling
+cyan, violet, red, and white palettes; the same world cell then reforms around
+the hero. If transformed terrain would occupy the old position, the cartridge
+finds the nearest full-body-safe tile before control returns. The active
+reality and three regional relic claims persist in suspended runs, while a new
+region begins in Waking Riftwild.
+
+Hollow fields add extra bodies, 50% enemy health, heavier contact damage, and
+a distinct lower, tenser title-theme development, **The Road Unremembered**.
+Three distant Hollow shrines gate the Blast Seed, Rift Lens, and Mirror Shard;
+these relics no longer appear in ordinary merchant rolls. Each uses the same
+protected raised-arm discovery ceremony as keys and Waygear, making the
+counterpart expedition an authored high-risk reward route rather than a visual
+toggle.
+
 ### Current development — Colossus art pass
 
 The working cartridge gives the opening **Crystal Colossus** a complete visual
@@ -115,12 +182,22 @@ turns its first visit into a false return ambush.
 
 ### Current development — first-run pressure and Riftwild escape
 
-The Tide Raft and Rift Hook groves now permanently collapse their paired gate
-when their reward is collected. Because a new Waygear implement resonates
-immediately, leaving the old gate intact could replace the traversal power
-used to enter and strand the champion inside. The live-ROM regression crosses
-the boulder gate with the Titan Glove, collects and auto-equips the Raft, then
-walks back through the newly opened mouth.
+Riftwild progression is now a real expedition instead of a short shopping
+route. Each of its three regional legs sends the champion to a distant marked
+**WARDEN** field before the next dungeon arch wakes. The first-region Wardens
+carry the Titan Glove, Tide Raft, and Rift Hook; if a drop is left behind, it
+returns on the cleared pedestal, so required progression can never be lost.
+Later regions repeat the fights with Wildcard rewards rather than duplicating
+owned gear. Claiming new Waygear now pauses the field for the same protected
+two-second raised-arm tableau as a dungeon key, with the implement visible
+above the champion before its named traversal ability appears.
+
+The 6×6 wild now has six coherent climate belts: snowy mountain country,
+lakewood, broken high ridges, a riverplain, muddy reed-filled mire, and a sand
+desert cut by canyon holes and an oasis. Rivers, lakes, trees, mountains,
+reeds, and chasms form large readable shapes around protected routes. Cardinal
+crossings use six-tile open landscape thresholds rather than indoor doors, so
+walking across a field edge reads like one continuous Zelda-style overworld.
 
 Ordinary first-visit trap rooms begin with two or three visible sentries and
 add their ambush pack after the warning beat; an unexplored combat field no
@@ -128,6 +205,13 @@ longer looks accidentally empty. Return echoes now override the ordinary
 district card with a visible **RIFT** callout, roar, and stronger screen shake.
 The changed-roster echo also adds one or two bodies, making its rerolled hunt
 mechanically apparent instead of merely different in seed data.
+
+The trapped return miniboss is now announced as **ELITE** and always promotes
+a stage-native 16x16 bruiser rather than enlarging a tiny fodder silhouette.
+It has roughly four times an ordinary body's health on Normal, heavier contact
+damage, three warned slow fan volleys per cycle, and eight orange-red spikes
+closing around its arena. It remains a backtracking surprise, but now asks for
+the same deliberate movement as a small boss fight.
 
 Normal-mode Hornets and Flutterbats now build three-lane projectile fans. Each
 shot moves one pixel per tick, persists for 180 ticks, and uses a warm danger
@@ -144,12 +228,65 @@ biological identity but gain a near-black outline, bright lime face, and warm
 gold feature colour so Orcs, Ropes, Oozes, Spores, and Vine Coils remain
 legible over Verdant Hollow and the Riftwild.
 
-Ordered runes now treat every already-lit note as safe to cross. A genuinely
-wrong plate still resets the phrase and costs one half-heart, but voices its
-own place in the five-note ascending scale over a separate impact sound, so a
-mistake remains an audio clue. Puzzle fields now retain a restrained group of
+Ordered runes now treat every already-lit note as safe to cross and sound that
+note again. A genuinely wrong plate still resets the phrase and costs one
+half-heart, but also voices its stable place in a five-note major-pentatonic
+scale over a separate impact sound. Each seeded phrase moves plainly upward or
+downward, so both mistakes and unavoidable recrossings remain useful audio
+clues without printing note names. Puzzle fields retain a restrained group of
 three to five stage-native guards instead of deleting their generated roster;
 the puzzle controls forward progress while the monsters provide live pressure.
+
+### Current development — hunted roads and wild fates
+
+The shared compact-room library grows from eleven to nineteen silhouettes,
+with six additional seed-stable visual arrangements apiece for Crystal Caverns
+and Verdant Hollow. Crystal formations, stone courts, and overgrown clusters
+now establish different stage identities even when two rooms share a graph
+role, without narrowing the champion-sized circulation lanes.
+
+Every dungeon now carries one **Dread Reaper hunt**. After the Sigil has been
+claimed, a seed-stable progressed backtrack usually springs it in a previously
+visited room; local room fifteen remains the guarantee if the hunt has not yet
+occurred. Spike jaws seal the arena, boss music takes over, and a **REAPER**
+name card and dedicated HP bar announce the stage-scaled elite before its
+opening truce ends. Killing it restores the stage score and permanently clears
+that dungeon's hunt.
+
+Colossus arenas now reserve their central combat plane for the boss, hazards,
+and projectile tells. Full-field crack and pebble noise gives way to a flat
+low-contrast floor, with only four corner frames and six cardinal seals
+retaining each stage's patterned-arena identity. The second camera chamber uses
+the same sparse border grammar, and ordinary dungeon textures are restored as
+soon as the player leaves the fight.
+
+Riftwild crossings are now literal overworld seams. Authored reciprocal edges
+end in worn trail tiles at the true 248×248 field boundary, and walking through
+one scrolls directly into the neighboring field without an indoor door or door
+sound. A dedicated Riftwild score develops the title theme's opening figure
+into its own outdoor melody and persists across those continuous crossings.
+
+Rare, visibly pulsing **Wildcard** drops advertise that their result may be
+good or bad. Four fates grant a stat, resources, coins, or cleansing; four
+apply Frail, Misfortune, Dull, or Hunger. Frail and Misfortune can last the
+run, while timed curses count down by room. Hunger prevents heart and vampiric
+healing, Dull suppresses attack, and every curse receives a coloured HUD/Pack
+callout. A Ward Charm blocks monster curses and softens permanent Wildcard
+curses into short-lived forms. Curse state is included in suspend data while
+older saves remain forward-compatible.
+
+Champion **B signatures are now free tactical verbs** instead of consuming the
+same MP needed by A+B and erasing progress toward A's Will MAX. Each vessel has
+a distinct, SPD-scaled cooldown and activation voice: Howl clears nearby shots,
+Stoneskin holds a body/projectile guard, Raven Mark focuses one aimed foe,
+Undertow builds a three-way bubble wall with a long guard, and Swarm rotates
+stings through the room. Surge strengthens each signature in its own way,
+Speed gear shortens its return, War Drum readies it on every fifth kill, and a
+quiet flash signals readiness. The dodge dash now front-loads its old travel
+budget into a sharper launch frame with an impact echo and micro-shake. Empty
+status rooms also skip the old cross-bank condition scan: the cartridge stress
+fixture improved from 135 to 138 gameplay loops per 180 VBlanks while retaining
+the same affliction timing once a status is active.
 
 ### v0.20.14 — Hidden Company
 
@@ -636,12 +773,13 @@ The cartridge now has a complete seven-part systemic layer:
    nodes before room generation. Sigil/Warden branch order can reverse by
    seed; the Pack and Compass read the same graph and reveal only the next
    required objective.
-7. **A regional Riftwild.** One persistent 4×4 outdoor region now spans three
+7. **A regional Riftwild.** One persistent 6×6 outdoor region spans three
    Colossus returns. Explored paths and claimed Riftwell/vault rewards survive
-   dungeon trips, while three permanent gate ruins wake in the 6→11→12
-   sequence. Crossing a three-dungeon boundary clears regional fog and claims,
-   rotates its landmark families, and enters a distinct terrain/encounter seed
-   namespace.
+   dungeon trips. Each leg places a distant Warden between the return point
+   and the next permanent arch; victory wakes that arch and yields permanent
+   traversal gear in the first region. Crossing a three-dungeon boundary
+   clears regional fog and claims, rotates landmarks and climate variation,
+   and enters a distinct terrain/encounter seed namespace.
 
 The ROM, SRAM migration, Python topology mirror, and live-cartridge regression
 suite cover all seven systems. The visual boss pass is now complete; deeper
@@ -1580,10 +1718,11 @@ cross-bank predicate calls. A measured same-stage doorway—including procgen,
 fixtures, the 18-frame slide, palettes, HUD, and restored sprites—fell from
 103 to 38 frames, and a live-ROM contract rejects regression above 45.
 
-**Riftwild is now an expansive optional overworld, not a hallway.** Each
+**Riftwild is now an expansive overworld, not a hallway.** Each
 region contains 36 scrolling 31×31-tile fields in a looped 6×6 expedition
-graph—roughly Zelda-I-scale in raw traversable area—while a readable
-three-field route still lets a speed run reach the next dungeon. SELECT draws
+graph—roughly Zelda-I-scale in raw traversable area. Three distant Warden
+expeditions now gate the regional dungeon arches, spreading required rewards
+across the world instead of clustering them along the shortest route. SELECT draws
 the visited topology as a compact one-glyph graph. Lime `YOU`, violet `RIFT`,
 a marked `GATE`, and amber `BOSS` labels live beside it; 36 dim hollow slots
 establish the world shape immediately, while exploration reveals identities
@@ -1592,19 +1731,18 @@ Vaults retain the familiar violet objective diamond.
 This makes the next-dungeon route and nonlinear cave hops readable without a
 README legend or sacrificing fog of war.
 
-**Riftwild cells have seed-stable geographic landmarks.** Meadow, pond,
-standing-stone, and old-stump clearings recur across the 6×6 world; the run
-seed rotates which coordinates own each family. Backtracking therefore returns
-to a recognizable place, while a new expedition remixes the geography.
-All solid landmarks stay outside the two-tile trail cross, preserve every
-authored exit, and leave Normal/Easy encounters, HP, and routes identical. A
-live-ROM sweep crosses all 36 fields, checks nine instances of each family,
-and emits a native-resolution visual atlas.
+**Riftwild cells have seed-stable landmarks and regional climates.** Meadow,
+pond, standing-stone, and old-stump clearings recur across snowy peaks,
+lakewood, high ridges, river country, mire, and desert. The run seed rotates
+local variation without consuming combat RNG. Broad protected trails bridge
+rivers and passes, while six-tile outdoor mouths preserve every authored exit.
+A live-ROM sweep crosses all 36 fields, checks the landmark families, climate
+vocabulary, reciprocal thresholds, and emits a native-resolution visual atlas.
 
 **Champion nature and permanent Waygear now shape exploration.** Wolfkin cuts
 thorns, Sauran lifts boulders, Corvin crosses chasms, Picsean swims deep water,
 and Vespine enters hive vents. The Titan Glove, Tide Raft, and Rift Hook are
-run-permanent substitutes found in optional Riftwild pockets. All three can be
+run-permanent substitutes claimed from the three Riftwild Wardens. All three can be
 carried, but only one resonates at a time from START → SELECT, so route choice
 and inventory economy matter without ever making the selected hero unable to
 finish the main path.
@@ -3222,10 +3360,11 @@ than concept art.
 |---|---|
 | **D-pad** | Move (8-way aim while firing); double-tap to dodge-dash and shake off attached Gloom Leeches |
 | **A** | Primary weapon (Wolfkin: melee) · TALK near a speaker · continue a suspended run (title) |
-| **B** | Class signature move (2 MP; Sauran: shield) |
+| **B** | Free class signature on a short class/SPD-tuned cooldown; Surge empowers it |
 | **A+B** | Spirit Convergence when MP is full |
 | **START** | Pack screen (stats, loadout, run clock) |
 | **SELECT** | Spirit Compass (dungeon/town progress; Riftwild coordinates, exits, and landmark hint) |
+| **SELECT+B** | Worldglass shift between Waking and Hollow Riftwild |
 
 For focused stage testing from the title screen, enter **UP, RIGHT, DOWN, LEFT,
 RIGHT, UP, LEFT, DOWN, B, A** to open the hidden Rift Index.

@@ -13,6 +13,9 @@ enum {
     // Animated biome hazards own the room's existing director update slot,
     // avoiding any new branch in every ordinary 60 Hz room tick.
     ENCOUNTER_STAGE_EVENT,
+    // One named, run-persistent hunt per dungeon. Unlike an ordinary elite,
+    // it seals even the arrival threshold until the target dies.
+    ENCOUNTER_HUNT,
 };
 
 // Procedural room-level roster grammar. Mixed preserves the original
@@ -40,7 +43,8 @@ extern u8 room_encounter_target;
 extern u8 room_roster_kind;
 extern u8 room_roster_primary;
 extern u8 room_roster_secondary;
-// 0 none; 1 changed hunt, 2 reinforced wave, 3 trap, 4 elite/miniboss echo.
+// 0 none; 1 changed pack, 2 reinforced wave, 3 trap, 4 elite echo,
+// 5 the dungeon's named Dread Reaper hunt.
 extern u8 room_return_echo_kind;
 
 // Immediate cardinal route from the current dungeon cell toward the next

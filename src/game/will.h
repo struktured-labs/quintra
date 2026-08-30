@@ -7,10 +7,16 @@
 // Three seconds of deliberate restraint at 60 Hz. Unlike a cooldown, every
 // ordinary primary attack spends the partial meter, so waiting is a choice.
 #define WILL_MAX 180
-// A signature move remains available while building restraint, but it cannot
-// be the free offensive/defensive action that erases MAX's waiting risk.
-#define WILL_SIGNATURE_TOLL 45
-#define SIGNATURE_MP_COST 2
+
+// B is each champion's dependable tactical verb, not another claimant on the
+// MP/Will hoarding economy.  These class-shaped bases are shortened further by
+// run-earned SPD; A+B and Oath Arts retain MP as their separate magic ladder.
+#define SIGNATURE_CD_WOLFKIN 72
+#define SIGNATURE_CD_SAURAN  90
+#define SIGNATURE_CD_CORVIN   54
+#define SIGNATURE_CD_PICSEAN 120
+#define SIGNATURE_CD_VESPINE  72
+#define SIGNATURE_CD_MIN      36
 
 // Corvin's B marks one live foe instead of duplicating Murderstorm's fan.
 // Combat reads these two bytes directly on its existing collision pass.
@@ -23,6 +29,7 @@ extern u8 will_corvin_mark_damage;
 // may multiply against one Colossus. Ordinary enemies keep the full ring.
 #define WILL_HOWL_GIANT_HIT_CAP 3
 extern u8 will_howl_giant_hits;
+void will_howl_clear_nearby_shots(void) BANKED;
 
 // Vespine's B is a short rotating swarm rather than another instantaneous
 // forward fan. The room only pays the banked update while this byte is live.
@@ -37,7 +44,7 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED;
 // Invoke the active champion's distinct B verb. Returns nonzero when the
 // signature committed a real defensive, marked-target, or swarm effect.
 u8 will_fire_signature(u8 dir, u8 damage) BANKED;
-// Begin the shared cooldown/resource side of a successful signature move.
+// Begin the class-tuned, SPD-scaled cooldown after a successful signature.
 void will_begin_signature(void) BANKED;
 
 #endif

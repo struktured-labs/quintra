@@ -5,11 +5,13 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/entity.h"
+#include "game/curse.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/riftwild_phase.h"
 #include "game/spawn_reach.h"
 #include "game/status.h"
 #include "game/waygear.h"
@@ -24,7 +26,8 @@ static u8 pickup_kind_collectible(u8 kind) {
     return kind <= PICKUP_MP || kind == PICKUP_RIFT_SIGIL
         || kind == PICKUP_SURGE || kind == PICKUP_RIFTWELL
         || kind == PICKUP_FARFOLD_RELIC || kind == PICKUP_BOON_CHOICE
-        || kind == PICKUP_WAYGEAR;
+        || kind == PICKUP_WAYGEAR || kind == PICKUP_WILDCARD
+        || kind == PICKUP_HOLLOW_RELIC;
 }
 
 static u8 pickup_tile_safe(u8 tile) {
@@ -159,6 +162,21 @@ u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
+#if 0
+void pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_WILDCARD, x, y);
+    if (idx != 0xFF) {
+        entity_t *e = &entities[idx];
+        e->sprite_tile = SPR_SURGE_ORB;
+        e->palette = 0x06;
+        e->hitbox = 0x88;
+        e->state_timer = 255;
+        // A different phase per drop keeps a pile from flashing in lockstep.
+        e->state = (u8)(rng_next_u8() & 31);
+    }
+}
+#endif
+
 // Town residents are all persistent, wide collision anchors. Keeping their
 // common construction here avoids six nearly identical code paths consuming
 // bank-5 space while public spawn functions retain their semantic names.
@@ -216,7 +234,7 @@ u8 pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED {
 u8 pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn_resident(
         PICKUP_WAYFARER, SPR_TOWN_RESIDENT_BIG, 0x06, x, y);
-    if (idx != 0xFF) entities[idx].ai_data[1] = stage < 9 ? stage : 8;
+    if (idx != 0xFF) entities[idx].ai_data[1] = stage < 13 ? stage : 12;
     return idx;
 }
 
@@ -369,6 +387,7 @@ void pickup_settle_pending_boon(void) BANKED {
     room_encounter_reward_pending = 0;
 }
 
+#if 0
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     u8 r = rng_next_u8();
     // More bodies should create combat pressure, not turn every district
@@ -381,16 +400,19 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
         else if (r < 187)                                        // 3% relic
             pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
         else if (r < 207) pickup_spawn_surge(x, y);              // 8%
-        // else nothing (19%)
+        else if (r < 212) pickup_spawn_wildcard(x, y);           // 2%
+        // else nothing (17%)
     } else {
         if      (r < 46)  pickup_spawn(PICKUP_HEART_HALF, x, y); // 18%
         else if (r < 161) pickup_spawn(PICKUP_COIN_1, x, y);     // 45%
         else if (r < 166)                                        // 2% relic
             pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
         else if (r < 181) pickup_spawn_surge(x, y);              // 6%
-        // else nothing (29%)
+        else if (r < 191) pickup_spawn_wildcard(x, y);           // 4%
+        // else nothing (25%)
     }
 }
+#endif
 
 // Merchant and Lorekeeper both advertise their purpose only while nearby.
 // The active room chooses what tile slot 125 means (coin thought or scroll),
@@ -412,6 +434,14 @@ static void pickup_near_callout(entity_t *e, u8 palette, u8 tile) {
 }
 
 void pickup_update(entity_t *e, u8 idx) BANKED {
+    if (e->ai_data[0] == PICKUP_WILDCARD) {
+        // Violet/red/gold cycling is an explicit risk tell: this is neither
+        // ordinary loot nor a guaranteed upgrade. It remains optional.
+        e->state++;
+        if ((e->state & 31) < 11) e->palette = 0x06;
+        else if ((e->state & 31) < 22) e->palette = 0x04;
+        else e->palette = 0x05;
+    }
     // Shop wares are permanent until bought; state counts a retry delay.
     // They never magnetize (flying wares would force accidental purchases).
     if (e->ai_data[0] == PICKUP_SHOP) {
@@ -424,6 +454,11 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
+    // Hunger deliberately leaves recovery on the floor. Re-arm its one-shot
+    // rejection cue only after the champion steps away, so standing on a
+    // heart cannot buzz or refill the notice queue every frame.
+    if (e->ai_data[0] == PICKUP_HEART_HALF
+        && !aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
     if (e->ai_data[0] == PICKUP_MERCHANT) {
         // The floor labels and HUD identify each price; this one small thought
         // bubble tells a nearby player that the character is actually a
@@ -449,7 +484,8 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_RIFTWELL
         || e->ai_data[0] == PICKUP_FARFOLD_RELIC
-        || e->ai_data[0] == PICKUP_WAYGEAR) return;
+        || e->ai_data[0] == PICKUP_WAYGEAR
+        || e->ai_data[0] == PICKUP_HOLLOW_RELIC) return;
     if (e->ai_data[0] == PICKUP_BOON_CHOICE) {
         // A directive can resolve while the champion stands on the nearest
         // safe reward cell. Preserve the visible two-way decision long
@@ -663,7 +699,15 @@ u8 pickup_check_player_collision(void) BANKED {
                     // that resource rule: surplus recovery distills into one
                     // MP, making old heart drops tactically useful to every
                     // champion. If both gauges are full, leave it in place.
-                    if (STATUS_PLAYER_HEALING_BLOCKED()) continue;
+                    if (STATUS_PLAYER_HEALING_BLOCKED()) {
+                        if (!entities[i].ai_data[4]) {
+                            entities[i].ai_data[4] = 1;
+                            hud_show_healing_blocked();
+                            sfx_play(SFX_WEAK);
+                        }
+                        any = 1;
+                        continue;
+                    }
                     if (player.hp >= player.hp_max) {
                         if (!player_has_item(ITEM_ID_MOON_FLASK)
                             || player.mp >= player.mp_max) continue;
@@ -743,18 +787,81 @@ u8 pickup_check_player_collision(void) BANKED {
                 case PICKUP_SURGE:
                     room_start_weapon_surge();
                     break;
+                case PICKUP_WILDCARD: {
+                    pickup_resolve_wildcard();
+#if 0
+                    u8 fate = (u8)rng_range(8);
+                    if (fate == 0) {
+                        u8 before = player.atk;
+                        player.atk = add_capped(player.atk, 1, 15);
+                        if (player.atk != before)
+                            hud_show_stat_gain(STAT_ATK, 1);
+                        else {
+                            player.coins = (u16)(player.coins + 15);
+                            if (player.coins > COIN_CAP) player.coins = COIN_CAP;
+                            hud_redraw_coins();
+                        }
+                        sfx_play_reward(SFX_REWARD_RELIC);
+                    } else if (fate == 1) {
+                        curse_cleanse();
+                        player.hp = player.hp_max;
+                        player.mp = player.mp_max;
+                        hud_redraw_all();
+                        sfx_play_reward(SFX_REWARD_MAGIC);
+                    } else if (fate == 2) {
+                        player.coins = (u16)(player.coins + 25);
+                        if (player.coins > COIN_CAP) player.coins = COIN_CAP;
+                        hud_redraw_coins();
+                        sfx_play_reward(SFX_REWARD_PURCHASE);
+                    } else if (fate == 3) {
+                        if (player.curse_flags) curse_cleanse();
+                        else {
+                            u8 before = player.lck;
+                            player.lck = add_capped(player.lck, 1, 10);
+                            hud_show_stat_gain(STAT_LCK,
+                                (u8)(player.lck - before));
+                            sfx_play_reward(SFX_REWARD_RELIC);
+                        }
+                    } else if (fate == 4)
+                        curse_apply(CURSE_FRAIL, 0, 0);
+                    else if (fate == 5)
+                        curse_apply(CURSE_MISFORTUNE, 0, 0);
+                    else if (fate == 6)
+                        curse_apply(CURSE_DULL, 6, 0);
+                    else curse_apply(CURSE_HUNGER, 6, 0);
+#endif
+                    break;
+                }
                 case PICKUP_RIFT_SIGIL:
                     run_state.rift_sigils |= RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten);
                     sfx_play_reward(SFX_REWARD_SIGIL);
                     room_start_major_reward(PICKUP_RIFT_SIGIL,
                         run_state.bosses_beaten);
                     break;
-                case PICKUP_WAYGEAR:
-                    if (!waygear_grant(entities[i].ai_data[1])) {
+                case PICKUP_WAYGEAR: {
+                    u8 gear = entities[i].ai_data[1];
+                    if (!waygear_grant(gear)) {
                         any = 1;
                         continue;
                     }
+                    // Traversal gear changes the shape of the whole
+                    // Riftwild route. Give it the same protected two-second
+                    // raised-arm ceremony as a dungeon Sigil instead of
+                    // letting this progression beat vanish under the hero.
+                    room_start_major_reward(PICKUP_WAYGEAR, gear);
                     break;
+                }
+                case PICKUP_HOLLOW_RELIC: {
+                    u8 item_id = entities[i].ai_data[1];
+                    if (!riftwild_claim_hollow_relic(item_id,
+                            entities[i].ai_data[2])) {
+                        any = 1;
+                        continue;
+                    }
+                    sfx_play_reward(SFX_REWARD_RELIC);
+                    room_start_major_reward(PICKUP_HOLLOW_RELIC, item_id);
+                    break;
+                }
                 case PICKUP_WEAPON: {
                     // A deliberate A press trades weapons. The dropped old
                     // weapon receives grace so a confirmation press cannot

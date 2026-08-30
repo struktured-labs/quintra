@@ -125,6 +125,7 @@ ITEM_NAMES = (
     "Echo Prism", "Ricochet Rune", "Thorn Mail", "War Drum", "Spirit Flask",
     "Ascension Crown", "Rift Sigil", "Rift Bomb", "Echo Chime", "Mirror Shard",
     "Blast Seed", "Rift Lens", "Titan Glove", "Tide Raft", "Rift Hook",
+    "Worldglass",
 )
 ITEM_EFFECTS = (
     "Permanently raises maximum health by one full heart.",
@@ -156,6 +157,7 @@ ITEM_EFFECTS = (
     "Permanent Waygear for moving boulders without Sauran.",
     "Permanent Waygear for crossing water without Picsean.",
     "Permanent Waygear for crossing chasms without Corvin.",
+    "Shifts Riftwild between its Waking and Hollow expressions.",
 )
 ITEM_CATEGORIES = (
     "Stat relic", "Stat relic", "Stat relic", "Stat relic", "Stat relic",
@@ -164,6 +166,7 @@ ITEM_CATEGORIES = (
     "Weapon physics", "Defense relic", "Kill-chain relic", "Will relic", "Transformation",
     "Stage fixture", "Dungeon tool", "Dungeon tool", "Dungeon tool", "Weapon physics",
     "Weapon physics", "Permanent Waygear", "Permanent Waygear", "Permanent Waygear",
+    "Riftwild key item",
 )
 ITEM_PALETTES = (
     ((8, 15, 23), (61, 36, 44), (224, 75, 84), (255, 232, 195)),
@@ -298,7 +301,7 @@ def display_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | Imag
 def parse_item_tiles() -> list[list[int]]:
     source = ITEMS_C.read_text()
     block = re.search(
-        r"static const u8 sprite_item_icons\[29\]\[16\] = \{(.*?)\n\};",
+        r"static const u8 sprite_item_icons\[30\]\[16\] = \{(.*?)\n\};",
         source, re.DOTALL,
     )
     assert block, "missing authored item icon table"
@@ -306,7 +309,7 @@ def parse_item_tiles() -> list[list[int]]:
         [int(value, 16) for value in re.findall(r"0x[0-9A-Fa-f]{2}", row)]
         for row in re.findall(r"\{([^{}]+)\}", block.group(1))
     ]
-    assert len(rows) == len(ITEM_NAMES) == 29
+    assert len(rows) == len(ITEM_NAMES) == 30
     assert all(len(row) == 16 for row in rows)
     return rows
 

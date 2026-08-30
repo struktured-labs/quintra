@@ -46,6 +46,7 @@ static void clear_run_state(void) {
     run_state.dungeon_visited_hi = 0;
     run_state.dungeon_visited_xhi = 0;
     run_state.dungeon_visited_xxhi = 0;
+    run_state.riftwild_shadow = 0;
 }
 
 void run_state_init(u32 seed) BANKED {

@@ -16,6 +16,7 @@
 #include "game/inventory_visual.h"
 #include "game/inventory_waygear.h"
 #include "game/dungeon_tools.h"
+#include "game/curse.h"
 #include "game/dungeon_law.h"
 #include "game/oath_arts.h"
 #include "game/player.h"
@@ -201,6 +202,12 @@ void inventory_enter(void) {
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);
     if (player_status_kind != QSTATUS_NONE) status_draw_pack_label();
+    else if (player.curse_flags) curse_draw_pack_label();
+    else if (room_weapon_surge_ticks || room_transform_ticks
+        || player.shield_timer || will_corvin_mark_ticks
+        || will_vespine_swarm_ticks) {
+        gotoxy(12, 1); text_write("BOOSTED");
+    }
     else { gotoxy(12, 1); text_write(RUN_IS_EASY() ? "EASY" : "NORMAL"); }
     {
         u8 s = (u8)(run_state.bosses_beaten % 9);
@@ -269,6 +276,18 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
     u8 tool_action;
     keys;
     if (inventory_page) {
+        if (inventory_page == 2) {
+            if (pressed & (J_START | J_B)) {
+                sfx_play(SFX_COIN);
+                room_request_resume();
+                return SCREEN_ROOM;
+            }
+            if (pressed & J_SELECT) {
+                inventory_enter();
+                return SCREEN_SELF;
+            }
+            return SCREEN_SELF;
+        }
         u8 gear_action = inventory_waygear_tick(pressed);
         if (gear_action == INVENTORY_WAYGEAR_EXIT) {
             sfx_play(SFX_COIN);
@@ -276,7 +295,8 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
             return SCREEN_ROOM;
         }
         if (gear_action == INVENTORY_WAYGEAR_PACK) {
-            inventory_enter();
+            inventory_page = 2;
+            inventory_status_enter();
             return SCREEN_SELF;
         }
         return SCREEN_SELF;

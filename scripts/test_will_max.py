@@ -12,7 +12,6 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 WILL_OFFSET = 42
 WILL_MAX = 180
-WILL_SIGNATURE_TOLL = 45
 ENTITY_SIZE = 28
 
 
@@ -146,9 +145,9 @@ def main():
             f"class {class_id} ordinary A preserved partial Will")
         pb.stop(save=False)
 
-    # Defensive signatures pay the same quarter-meter toll, but Will now
-    # pauses for the complete protected interval. Neither shield may purchase
-    # a safe MAX simply by waiting inside its own immunity.
+    # B is independent of the restraint economy, but Will pauses for the
+    # complete protected interval. Neither shield may purchase a safe MAX by
+    # waiting inside immunity, and neither destroys progress already earned.
     for class_id, label, shield_floor in ((1, "Stoneskin", 45),
                                            (3, "Undertow", 80)):
         pb = boot(class_id)
@@ -156,17 +155,24 @@ def main():
         pb.memory[PLAYER + 4] = pb.memory[PLAYER + 3]
         pb.memory[PLAYER + 19] = 0
         pb.memory[PLAYER + 20] = 0
-        pb.memory[PLAYER + WILL_OFFSET] = WILL_MAX
+        # Partial Will proves both halves of the new contract: B preserves the
+        # exact value, then restraint resumes once the guard has ended.
+        pb.memory[PLAYER + WILL_OFFSET] = 120
         pb.button_press("b")
         for _ in range(12):
             pb.tick()
             if pb.memory[PLAYER + 19] > 0:
                 break
         after_b = pb.memory[PLAYER + WILL_OFFSET]
-        assert after_b == WILL_MAX - WILL_SIGNATURE_TOLL, (
-            f"{label} left Will at {after_b}, expected quarter-meter toll")
+        # The input frame may earn its ordinary one idle point before the
+        # signature raises the guard; it must never erase the partial meter.
+        assert 120 <= after_b <= 121, (
+            f"{label} spent independent Will meter: {after_b}")
         assert pb.memory[PLAYER + 20] > shield_floor, (
             f"{label} did not raise its authored shield")
+        if class_id == 3:
+            assert pb.memory[PLAYER + 19] > pb.memory[PLAYER + 20], (
+                "Undertow cooldown allows a permanent guard loop")
         pb.button_release("b")
         pb.tick(20)
         assert pb.memory[PLAYER + WILL_OFFSET] == after_b, (

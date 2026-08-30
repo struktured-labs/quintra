@@ -30,14 +30,27 @@ static void weak_pattern_shot(i16 cx, i16 cy, u8 d, u8 damage) {
 }
 
 void weak_pattern_tick(entity_t *e, u8 salt) BANKED {
-    u8 phase = (u8)(entity_anim_counter + (u8)(salt * 29));
+    u8 miniboss = salt & 0x80;
+    u8 phase;
     u8 d;
     i16 cx;
     i16 cy;
-    // One wrap per 256 frames per body, with prime-ish spawn/slot staggering. A
-    // visible pack builds a steady field instead of one entity-cap burst.
-    if (phase == 12 && e->ai_data[7] == 0) e->ai_data[7] = 12;
-    if (phase != 0) return;
+    salt &= 0x1F;
+    phase = (u8)(entity_anim_counter + (u8)(salt * 29));
+    // Ordinary fragile bodies cast once per 256 frames. A named return
+    // miniboss warns and fires three times in that span, making the larger
+    // body a room-shaping threat without flooding all of its escorts too.
+    if (miniboss) {
+        if ((phase == 84 || phase == 180 || phase == 244)
+            && e->ai_data[7] == 0) {
+            e->ai_data[7] = 12;
+            sfx_play(SFX_TICK);
+        }
+        if (phase != 0 && phase != 96 && phase != 192) return;
+    } else {
+        if (phase == 244 && e->ai_data[7] == 0) e->ai_data[7] = 12;
+        if (phase != 0) return;
+    }
     cx = FIX8_TO_INT(e->x) + 4;
     cy = FIX8_TO_INT(e->y) + 4;
     d = weak_aim_dir(cx, cy);

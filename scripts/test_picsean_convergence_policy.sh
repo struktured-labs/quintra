@@ -2,8 +2,8 @@
 # Regression: Picsean's controller must answer a full-MP giant with an actual
 # cartridge ability, not drift into a body collision. A safe lane may use the
 # ordinary A+B Spirit Convergence (MP 0, 180-frame charge); an imminent body
-# collision may correctly choose the authored B Undertow guard (MP down two,
-# 140-frame cooldown). The separate convergence-transform ROM test owns the
+# collision may correctly choose the authored free B Undertow guard (its
+# class-tuned cooldown starts). The separate convergence-transform ROM owns the
 # mechanics of A+B itself. This policy check writes neither ROM nor cartridge
 # RAM.
 set -euo pipefail

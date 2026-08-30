@@ -69,6 +69,21 @@ def make_player_shot(pb, slot, x, y, damage, flag=0):
     return e
 
 
+def make_hostile_shot(pb, slot, x, y):
+    e = ENTITIES + slot * ENTITY_SIZE
+    for i in range(ENTITY_SIZE):
+        pb.memory[e + i] = 0
+    pb.memory[e] = 1
+    pb.memory[e + 1] = 0x03
+    put_fix8(pb, e + 2, x)
+    put_fix8(pb, e + 6, y)
+    pb.memory[e + 14] = 1
+    pb.memory[e + 16] = 90
+    pb.memory[e + 25] = 0x77
+    pb.memory[e + 26] = 1
+    return e
+
+
 def press_b(pb, aim=None):
     if aim:
         pb.button_press(aim)
@@ -161,11 +176,32 @@ def test_howl_colossus_cap():
     pb.stop(save=False)
 
 
+def test_howl_bullet_relief():
+    pb = boot(0)
+    clear_arena(pb)
+    put16(pb, PLAYER + 9, 80)
+    put16(pb, PLAYER + 11, 72)
+    near = make_hostile_shot(pb, 0, 88, 80)
+    far = make_hostile_shot(pb, 1, 144, 112)
+    pb.memory[PLAYER + 19] = 0
+    press_b(pb)
+    near_still_hostile = (pb.memory[near] == 1
+                          and pb.memory[near + 1] & 0x01
+                          and not pb.memory[near + 1] & EF_PLAYER_PROJ)
+    far_still_hostile = (pb.memory[far] == 1
+                         and pb.memory[far + 1] & 0x01
+                         and not pb.memory[far + 1] & EF_PLAYER_PROJ)
+    assert not near_still_hostile, "Howl left a close hostile shot alive"
+    assert far_still_hostile, "Howl erased the distant pattern instead of space"
+    pb.stop(save=False)
+
+
 def main():
     test_corvin_mark()
     test_vespine_swarm()
     test_howl_colossus_cap()
-    print("[signature-balance] PASS Raven Mark, rotating Swarm, and Howl giant cap")
+    test_howl_bullet_relief()
+    print("[signature-balance] PASS Mark, Swarm, Howl cap + local bullet relief")
 
 
 if __name__ == "__main__":

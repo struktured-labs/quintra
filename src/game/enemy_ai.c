@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/entity.h"
+#include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/enemy_mirror.h"
 #include "game/enemy_spore.h"
@@ -607,6 +608,11 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
     const enemy_def_t *def = &enemies[id];
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
+    // Return-echo minibosses supplement their native charge, bomb, or caster
+    // behavior with a warned three-lane scale volley. Bit 7 requests the
+    // tighter miniboss cadence without consuming another entity scratch byte.
+    if (room_return_echo_kind == 4 && (e->flags & EF_ELITE))
+        weak_pattern_tick(e, (u8)(0x80 | idx));
     if (id == ENEMY_HORNET && hornet_swarm_tick(e, idx)) return;
     if (id == ENEMY_BLUE_CRAWLER
         && e->ai_data[2] == ENEMY_AUX_OOZE_FRAGMENT) {

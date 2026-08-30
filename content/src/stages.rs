@@ -14,14 +14,14 @@ pub const STAGES: [StageTheme; 9] = [
         wall:    [c( 1, 1, 3), c( 5, 5,11), c( 9,10,17), c(16,18,26)],
         crystal: [c( 2, 0, 5), c(16, 5,22), c(10,22,29), c(31,30,31)],
         door:    [c( 1, 1, 2), c(10, 7, 2), c(18,13, 3), c(28,21, 6)],
-        boss:    [c(0,0,0), c(10,13,22), c( 2, 3, 8), c(22,29,31)],
+        // Cyan core and warm-white edge sit deliberately outside the muted
+        // violet arena ramp. The vulnerable OBJ must read instantly against
+        // both the floor and the screen-scale crystal projection.
+        boss:    [c(0,0,0), c( 3,10,18), c( 4,25,31), c(31,31,20)],
         // The first Colossus is a pattern lesson, not a five-second burst
-        // check. With the Sentinel's 50 base this lands at 200 HP: enough
-        // time for a shop/relic-assisted starter kit to see the opening,
-        // ring, body-spacing, and phase break before the kill, without
-        // changing boss damage or turning an early contact sequence into an
-        // unwinnable expedition.
-        boss_hp_bonus: 150, boss_hp_cap: 200, endless_boss_hp_cap: 255,
+        // check. With the Sentinel's 50 base this lands at 220 HP: enough
+        // time to see both signature crises, its ring, and body spacing.
+        boss_hp_bonus: 170, boss_hp_cap: 220, endless_boss_hp_cap: 255,
         boss_dmg_bonus: 1, mb_variant: 0, room_archetype: 0,
         // Stage 1 now asks for movement immediately: Hornets close distance,
         // while a rare Facet Ram creates a directional armor problem and a
@@ -36,13 +36,11 @@ pub const STAGES: [StageTheme; 9] = [
         wall:    [c( 1, 3, 1), c( 4, 9, 3), c( 7,14, 6), c(13,22,11)],
         crystal: [c( 1, 4, 0), c( 8,24, 4), c(18,31,10), c(30,31,22)],
         door:    [c( 2, 2, 1), c(11, 8, 2), c(20,14, 3), c(30,24, 8)],
-        boss:    [c(0,0,0), c( 9,19, 7), c( 2, 6, 2), c(26,31,14)],
-        // The Serpent remains tougher than Crystal in movement/pattern terms,
-        // but 220 HP plus continuous rebound movement turned the second boss
-        // into an attrition wall for a legitimate starter build. 205 leaves
-        // the first stage's 200-HP lesson below it while preserving a clear
-        // re-engagement-and-dodge fight instead of an extra damage lap.
-        boss_hp_bonus: 155, boss_hp_cap: 205, endless_boss_hp_cap: 255,
+        boss:    [c(0,0,0), c(10, 3,15), c(27, 8,24), c(31,31,14)],
+        // The Serpent reaches 225 HP and a second crisis phase. Its purple,
+        // magenta, and yellow body ramp keeps the extra pressure readable
+        // against Verdant Hollow's green arena architecture.
+        boss_hp_bonus: 175, boss_hp_cap: 225, endless_boss_hp_cap: 255,
         boss_dmg_bonus: 1, mb_variant: 1, room_archetype: 1,
         // Vine Coils replace part of the Flutterbat band with a slow,
         // readable opposite-pair lane prompt. The table remains exactly 100:

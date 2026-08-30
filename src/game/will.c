@@ -40,13 +40,6 @@ static u8 max_spawn(i8 dx, i8 dy, u8 damage, u8 kind) {
     return shot;
 }
 
-void will_begin_signature(void) BANKED {
-    player.will_charge = (player.will_charge > WILL_SIGNATURE_TOLL)
-        ? (u8)(player.will_charge - WILL_SIGNATURE_TOLL) : 0;
-    sfx_play(SFX_ROAR);
-    player.active_charge = 140;
-}
-
 static u8 corvin_mark_aimed(u8 dir, u8 damage) {
     u8 i;
     u8 best = 0xFF;
@@ -109,6 +102,7 @@ u8 will_fire_signature(u8 dir, u8 damage) BANKED {
 
     switch (player.class_id) {
         case 0:   // Wolfkin HOWL: eight crowd lanes, capped on Colossi
+            will_howl_clear_nearby_shots();
             will_howl_giant_hits = 0;
             for (d = 0; d < 8; ++d) {
                 shot = projectile_spawn_player(
@@ -119,37 +113,51 @@ u8 will_fire_signature(u8 dir, u8 damage) BANKED {
                 }
             }
             // Howl is a committed point-blank burst, not a durable shield.
-            if (player.iframes < 30) player.iframes = 30;
+            if (player.iframes < (room_weapon_surge_ticks ? 42 : 30))
+                player.iframes = room_weapon_surge_ticks ? 42 : 30;
+            sfx_play(SFX_ROAR);
             return 1; // the activation ward remains useful at entity capacity
 
         case 1:   // Sauran STONESKIN: timed shot/body shield
-            player.shield_timer = 60;
+            player.shield_timer = room_weapon_surge_ticks ? 90 : 60;
             if (player.iframes < 8) player.iframes = 8;
+            sfx_play(SFX_HIT);
             return 1;
 
         case 2:   // Corvin RAVEN MARK: aimed focus; no duplicate fan
-            return corvin_mark_aimed(dir, damage);
+            made = corvin_mark_aimed(dir,
+                room_weapon_surge_ticks ? (u8)(damage + 1) : damage);
+            if (made) sfx_play_weapon(PROJ_SHURIKEN);
+            return made;
 
         case 3:   // Picsean UNDERTOW: directional bubble wall + guard
-            projectile_spawn_player(
+            shot = projectile_spawn_player(
                 dir8_dx[dir], dir8_dy[dir], damage, PROJ_BUBBLE);
-            projectile_spawn_player(
+            if (shot != 0xFF && room_weapon_surge_ticks) entities[shot].hp++;
+            shot = projectile_spawn_player(
                 dir8_dx[(u8)((dir + 2) & 7)],
                 dir8_dy[(u8)((dir + 2) & 7)], damage, PROJ_BUBBLE);
-            projectile_spawn_player(
+            if (shot != 0xFF && room_weapon_surge_ticks) entities[shot].hp++;
+            shot = projectile_spawn_player(
                 dir8_dx[(u8)((dir + 6) & 7)],
                 dir8_dy[(u8)((dir + 6) & 7)], damage, PROJ_BUBBLE);
-            if (player.shield_timer < 100) player.shield_timer = 100;
+            if (shot != 0xFF && room_weapon_surge_ticks) entities[shot].hp++;
+            if (player.shield_timer < (room_weapon_surge_ticks ? 112 : 100))
+                player.shield_timer = room_weapon_surge_ticks ? 112 : 100;
             if (player.iframes < 8) player.iframes = 8;
+            sfx_play_weapon(PROJ_BUBBLE);
             return 1;
 
         default:  // Vespine SWARM: six rotating stings over 1.6 seconds
             will_vespine_swarm_dir = dir;
             will_vespine_swarm_damage = (damage > 2) ? (u8)(damage - 2) : 1;
+            if (room_weapon_surge_ticks) will_vespine_swarm_damage++;
             // 97 lets this frame's update launch the first aimed stinger,
             // followed by five turns at sixteen-frame intervals.
             will_vespine_swarm_ticks = 97;
-            if (player.iframes < 18) player.iframes = 18;
+            if (player.iframes < (room_weapon_surge_ticks ? 28 : 18))
+                player.iframes = room_weapon_surge_ticks ? 28 : 18;
+            sfx_play_weapon(PROJ_SPIKE);
             return 1;
     }
 }

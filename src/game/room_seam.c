@@ -135,8 +135,15 @@ void room_stream_wide_seam(u8 dir) BANKED {
     // The destination atlas has just rotated into place. Restore its
     // display-only geographic sign here in the roomy streaming bank instead
     // of burdening the resident combat loop.
-    if (run_state.world_mode)
-        tiles_draw_area_label(1);
+    if (run_state.world_mode
+        && run_state_riftwild_guard_active(run_state.world_screen))
+        room_show_directive_label(16);
+    else if (run_state.world_mode)
+        tiles_draw_area_label(RUN_RIFTWILD_IS_HOLLOW() ? 17 : 1);
+    else if (room_encounter_kind == ENCOUNTER_HUNT)
+        room_show_directive_label(15);
+    else if (room_return_echo_kind == 4)
+        room_show_directive_label(12);
     else if (room_return_echo_kind)
         room_show_directive_label(14);
     else if (room_encounter_kind != ENCOUNTER_SKIRMISH)

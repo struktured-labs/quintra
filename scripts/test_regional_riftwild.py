@@ -19,6 +19,9 @@ BGT_DOOR = 3
 READY = 0x80
 WELL = 0x01
 VAULT = 0x02
+GUARD_1 = 0x04
+GUARD_2 = 0x08
+GUARD_3 = 0x10
 REGION = 46
 FLAGS = 47
 WORLD_MODE = 17
@@ -126,12 +129,13 @@ def main():
         assert pb.memory[RS + FLAGS] == READY
         first_region_tiles = bytes(pb.memory[TM:TM + ROOM_W * 17])
         reveal_all_world(pb)
-        pb.memory[RS + FLAGS] = READY | WELL | VAULT
+        pb.memory[RS + FLAGS] = READY | WELL | VAULT | GUARD_1
 
         return_after_boss(pb, 2)
         assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 8)
         assert world_seen(pb) == (0xFFFF, 0xFF, 0xFF, 0x0F)
-        assert pb.memory[RS + FLAGS] == READY | WELL | VAULT
+        pb.memory[RS + FLAGS] |= GUARD_2
+        assert pb.memory[RS + FLAGS] == READY | WELL | VAULT | GUARD_1 | GUARD_2
         assert_gate_map(pb, 21)
 
         # Gate eight remains visible geography but is inert; gate twenty-one is the
@@ -149,7 +153,9 @@ def main():
         return_after_boss(pb, 3)
         assert (pb.memory[RS + REGION], pb.memory[RS + WORLD_SCREEN]) == (0, 21)
         assert world_seen(pb) == (0xFFFF, 0xFF, 0xFF, 0x0F)
-        assert pb.memory[RS + FLAGS] == READY | WELL | VAULT
+        pb.memory[RS + FLAGS] |= GUARD_3
+        assert pb.memory[RS + FLAGS] == (READY | WELL | VAULT
+                                         | GUARD_1 | GUARD_2 | GUARD_3)
         assert_gate_map(pb, 34)
         assert pb.memory[TM + 8 * ROOM_W + 10] != BGT_PORTAL
         exit_at(pb, 72, 232)

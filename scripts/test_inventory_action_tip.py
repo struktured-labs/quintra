@@ -46,6 +46,9 @@ def boot(class_moves):
 
 def main():
     screen = addr("_loop_current_screen")
+    player = addr("_player")
+    surge = addr("_room_weapon_surge_ticks")
+    ascension = addr("_room_transform_ticks")
     # The B effect owns one short line, the footer keeps the A+B Spirit chord,
     # and OBJ icons distinguish A, B, quest, currency, tool, and Oath.
     for class_id in range(5):
@@ -78,6 +81,31 @@ def main():
             f"tool_y={tool_y}, oath_y={oath_y}")
         if class_id == 0:
             pb.screen.image.save(ROOT / "tmp" / "pack-visual.png")
+            ordinary_header = bytes(
+                pb.memory[0x9800 + 32 + 12:0x9800 + 32 + 19])
+            press(pb, "b")
+            assert pb.memory[screen] == 5
+            pb.tick(30)
+            pb.memory[surge] = 120
+            pb.memory[ascension] = 135
+            press(pb, "start")
+            boosted_header = bytes(
+                pb.memory[0x9800 + 32 + 12:0x9800 + 32 + 19])
+            assert boosted_header != ordinary_header, (
+                "Pack health header did not expose temporary boosts")
+            # Add a three-room Hunger curse, then visit Gear -> Status. Menu
+            # frames must not consume any active-play duration.
+            pb.memory[player + 46] = 0x08
+            pb.memory[player + 47] = 3
+            press(pb, "select")
+            press(pb, "select")
+            assert pb.memory[screen] == 9, "Status page left the Pack screen"
+            pb.tick(120)
+            assert (pb.memory[surge], pb.memory[ascension]) == (120, 135), (
+                "Status page consumed paused temporary-effect time")
+            pb.screen.image.save(ROOT / "tmp" / "pack-status.png")
+            press(pb, "b")
+            assert pb.memory[screen] == 5, "Status B did not return to play"
         pb.stop(save=False)
     print("[inventory-action-tip] PASS tile-framed Pack + six semantic icons + five B reminders")
 

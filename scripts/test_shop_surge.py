@@ -446,7 +446,7 @@ def main():
         "Thorn Crown did not answer damage with four lanes"
     thorn_pb.stop(save=False)
 
-    # War Drum makes each fifth real kill a signature-resource beat.
+    # War Drum makes each fifth real kill a B-refresh + A+B-resource beat.
     drum_pb = boot_shop(32)
     buy(drum_pb, 15)
     assert 37 in inventory(drum_pb), "War Drum is not recorded"

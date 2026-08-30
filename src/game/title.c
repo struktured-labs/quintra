@@ -1,4 +1,4 @@
-#pragma bank 3
+#pragma bank 12
 // TITLE screen — "QUINTRA" + "PRESS START". Pulses palette so the screen
 // feels alive while waiting on player input.
 
@@ -39,7 +39,7 @@ static const u16 title_palette_steady[4] = {
     BGR555(30, 30, 31),    // 3: near-white
 };
 
-// 0 = main title, 1 = records page (SELECT toggles)
+// 0 = main title, 1 = records, 2/3 = first-run help pages.
 static u8 showing_records;
 static u8 showing_stage_warp;
 static u8 lore_beat;
@@ -137,7 +137,7 @@ static void render_title(void) {
     // was easily mistaken for the stray glyph reported at the right edge.
     // Neither line touches column 19: the GBDK console would wrap/scroll if
     // the bottom-right cell were written.
-    gotoxy(3, 16); text_write("SELECT RECORDS");
+    gotoxy(1, 16); text_write("SELECT RECORDS+HELP");
     gotoxy(6, 17); text_write(QUINTRA_VERSION);
     // Personal score belongs on SELECT → Records. Keeping it off the title
     // preserves the lore tableau instead of leaving a bare persistent number
@@ -163,7 +163,33 @@ static void render_records(void) {
     }
     gotoxy(2, 14); text_write("ONLY KNOWLEDGE");
     gotoxy(2, 15); text_write("PERSISTS.");
-    gotoxy(2, 17); text_write("SELECT/B = BACK");
+    gotoxy(2, 17); text_write("A HELP  B = BACK");
+}
+
+static void render_help(void) {
+    cls();
+    if (showing_records == 2) {
+        gotoxy(5, 1); text_write("- CONTROLS -");
+        gotoxy(1, 3); text_write("D PAD   MOVE / AIM");
+        gotoxy(1, 5); text_write("A       PRIMARY/MAX");
+        gotoxy(1, 7); text_write("B       HERO POWER");
+        gotoxy(1, 8); text_write("        FREE + COOL");
+        gotoxy(1, 10); text_write("A+B   OATH USES MP");
+        gotoxy(1, 11); text_write("FULL MP CONVERGENCE");
+        gotoxy(1, 13); text_write("2X D PAD = DASH");
+        gotoxy(1, 15); text_write("START PACK SEL MAP");
+        gotoxy(2, 17); text_write("A NEXT   B BACK");
+    } else {
+        gotoxy(5, 1); text_write("- JOURNEY -");
+        gotoxy(1, 3); text_write("FIND THE SIGIL KEY");
+        gotoxy(1, 5); text_write("CLEAR THE COLOSSUS");
+        gotoxy(1, 7); text_write("CROSS RIFTWILD");
+        gotoxy(1, 9); text_write("SECRETS HIDE ECHOES");
+        gotoxy(1, 11); text_write("MAP+A ASK YOUR ECHO");
+        gotoxy(1, 13); text_write("PACK>GEAR>STATUS");
+        gotoxy(1, 15); text_write("GBC-BORN FIVE OATHS");
+        gotoxy(2, 17); text_write("A RECORDS B BACK");
+    }
 }
 
 void title_enter(void) {
@@ -220,7 +246,24 @@ screen_id_t title_tick(u8 keys, u8 pressed) {
     // Records page: SELECT toggles, B backs out. Blocks run-start inputs
     // so a stray START on the stats page doesn't launch a game.
     if (showing_records) {
-        if (pressed & (J_SELECT | J_B | J_START)) {
+        if (pressed & (J_B | J_START)) {
+            showing_records = 0;
+            sfx_play(SFX_COIN);
+            render_title();
+            title_draw_spirits();
+        } else if (showing_records == 1 && (pressed & J_A)) {
+            showing_records = 2;
+            sfx_play(SFX_DOOR);
+            render_help();
+        } else if (showing_records == 2 && (pressed & J_A)) {
+            showing_records = 3;
+            sfx_play(SFX_DOOR);
+            render_help();
+        } else if (showing_records == 3 && (pressed & J_A)) {
+            showing_records = 1;
+            sfx_play(SFX_DOOR);
+            render_records();
+        } else if (pressed & J_SELECT) {
             showing_records = 0;
             sfx_play(SFX_COIN);
             render_title();

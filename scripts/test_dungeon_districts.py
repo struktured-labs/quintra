@@ -337,6 +337,12 @@ def main():
             pb.memory[base] = pb.memory[base + 1] = 0
         pb.memory[COMBAT] = 0
         pb.memory[PUZZLE] = 0
+        # Let the synthetic all-at-once clear finish its short arpeggio. A
+        # player necessarily spends this time walking to the far south edge;
+        # teleporting there on the same frame would correctly give the clear
+        # cue priority over the quieter district bell.
+        for _ in range(24):
+            pb.tick()
         put16(pb, PL + 9, 72)
         put16(pb, PL + 11, 232)
         for _ in range(180):

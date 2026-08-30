@@ -215,12 +215,18 @@ def solve_runes(pb, runes):
                     for confirmed in prefix:
                         hp_before_revisit = pb.memory[PL + 2]
                         lit_before_revisit = tuple(lit(rune) for rune in prefix)
+                        pb.memory[0xFF12] = 0
                         feet_on(pb, *confirmed)
                         assert pb.memory[PL + 2] == hp_before_revisit, (
                             "revisiting a lit rune damaged the champion"
                         )
                         assert tuple(lit(rune) for rune in prefix) == lit_before_revisit, (
                             "revisiting a lit rune reset the confirmed phrase"
+                        )
+                        assert pb.memory[0xFF12] == 0xA2, (
+                            "lit rune did not retrigger its pitched clue: "
+                            f"env=0x{pb.memory[0xFF12]:02X} "
+                            f"confirmed={confirmed} prefix={prefix}"
                         )
                         step_off(pb)
                 break
@@ -243,7 +249,28 @@ def solve_runes(pb, runes):
     return prefix
 
 
+def rune_scale_source_contract():
+    """Prove the write-only APU pitch table and ordering in source.
+
+    Game Boy frequency registers read back as open-bus values, so the live ROM
+    contract above checks that every plate actually triggers CH1 while this
+    check owns the exact rising/falling pitch relationship.
+    """
+    sfx = (ROOT / "src/audio/sfx.c").read_text()
+    puzzle = (ROOT / "src/game/puzzle.c").read_text()
+    match = re.search(r"static const u16 notes\[5\] = \{([^}]+)\}", sfx)
+    assert match, "rune scale table disappeared"
+    notes = [int(value) for value in re.findall(r"\d+", match.group(1))]
+    assert len(notes) == 5 and all(a < b for a, b in zip(notes, notes[1:])), \
+        f"rune degrees are not a rising scale: {notes}"
+    assert "rune_count - 1 - order_rank" in puzzle, \
+        "seeded descending traversal disappeared"
+    assert "sfx_play_rune(rune_pitch(i));" in puzzle, \
+        "physical rune pitches are no longer stable by order rank"
+
+
 def rune_sequence_contract():
+    rune_scale_source_contract()
     pb = load(2)
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
     assert len(active_hostiles(pb)) >= 4, (

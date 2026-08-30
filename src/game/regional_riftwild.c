@@ -5,11 +5,17 @@
 #include "core/types.h"
 #include "game/run_state.h"
 
-// Each return resumes at the prior active arch. The direct routes to the next
-// gates are short enough for a speed run; the surrounding 27 fields, cave,
-// vault, and boss landmark are entirely optional exploration territory.
+// Each return resumes at the prior arch, then points toward a distant Warden
+// whose victory wakes the next gate. The cave, vault, and older boss landmark
+// remain optional territory around that mandatory expedition spine.
 static const u8 regional_return_screen[3] = { 0, 8, 21 };
 static const u8 regional_gate_screen[3] = { 8, 21, 34 };
+static const u8 regional_guard_screen[3] = { 3, 17, 29 };
+static const u8 regional_guard_bit[3] = {
+    RIFT_REGION_GUARD_1_BIT,
+    RIFT_REGION_GUARD_2_BIT,
+    RIFT_REGION_GUARD_3_BIT,
+};
 
 static u8 current_region(void) {
     u8 cleared = run_state.bosses_beaten;
@@ -56,7 +62,35 @@ u8 run_state_riftwild_gate_screen(void) BANKED {
 }
 
 u8 run_state_riftwild_gate_active(u8 screen) BANKED {
-    return (screen == run_state_riftwild_gate_screen()) ? 1 : 0;
+    u8 step = current_region_step();
+    return (screen == regional_gate_screen[step]
+        && (run_state.riftwild_flags & regional_guard_bit[step])) ? 1 : 0;
+}
+
+u8 run_state_riftwild_guard_active(u8 screen) BANKED {
+    u8 step = current_region_step();
+    return (screen == regional_guard_screen[step]
+        && !(run_state.riftwild_flags & regional_guard_bit[step])) ? 1 : 0;
+}
+
+u8 run_state_riftwild_guard_cleared(u8 screen) BANKED {
+    u8 step;
+    for (step = 0; step < 3; ++step)
+        if (screen == regional_guard_screen[step])
+            return (run_state.riftwild_flags & regional_guard_bit[step]) ? 1 : 0;
+    return 0;
+}
+
+u8 run_state_riftwild_guard_gear(u8 screen) BANKED {
+    if (screen == regional_guard_screen[0]) return 0;
+    if (screen == regional_guard_screen[1]) return 1;
+    if (screen == regional_guard_screen[2]) return 2;
+    return 0xFF;
+}
+
+void run_state_riftwild_clear_guard(void) BANKED {
+    u8 step = current_region_step();
+    run_state.riftwild_flags |= regional_guard_bit[step];
 }
 
 void run_state_begin_world(void) BANKED {
@@ -73,7 +107,12 @@ void run_state_begin_world(void) BANKED {
         run_state.world_seen_hi = 0;
         run_state.world_seen_xhi = 0;
         run_state.world_seen_xxhi = 0;
+        run_state.riftwild_shadow = 0;
     }
+    // Every dungeon exit returns to the remembered world. Hollow relic
+    // claims remain regional, but a suspend or campaign transition never
+    // resumes inside the more dangerous counterpart unexpectedly.
+    run_state.riftwild_shadow &= RIFT_SHADOW_RELIC_MASK;
     run_state.world_mode = 1;
     run_state.world_screen = regional_return_screen[step];
     run_state.world_return_screen = 0;

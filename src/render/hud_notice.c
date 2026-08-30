@@ -12,12 +12,16 @@
 
 #define HUD_NOTICE_STATUS 0x80
 #define HUD_NOTICE_FRAMES 45
+#define HUD_NOTICE_HUNGER 0x7F
+#define HUD_NOTICE_QUEUE  4
 
 u8 hud_notice_ticks;
 static u8 notice_kind;
 static u8 notice_amount;
-static u8 queued_kind;
-static u8 queued_amount;
+static u8 queued_kind[HUD_NOTICE_QUEUE];
+static u8 queued_amount[HUD_NOTICE_QUEUE];
+static u8 queue_head;
+static u8 queue_count;
 
 void hud_notice_restore_context(void) BANKED;
 
@@ -87,6 +91,9 @@ static u8 status_word(u8 status, u8 *row) {
         case QSTATUS_HASTE:
             row[0]=BGT_AREA_H; row[1]=BGT_AREA_A; row[2]=HUD_STATUS_S;
             row[3]=BGT_AREA_T; row[4]=BGT_AREA_E; return 5;
+        case HUD_NOTICE_HUNGER:
+            row[0]=BGT_AREA_H; row[1]=HUD_STATUS_U; row[2]=BGT_AREA_N;
+            row[3]=BGT_AREA_G; row[4]=BGT_AREA_E; row[5]=BGT_AREA_R; return 6;
         default:
             row[0]=BGT_AREA_I; row[1]=BGT_AREA_N; row[2]=BGT_AREA_V;
             row[3]=BGT_AREA_E; row[4]=BGT_AREA_R; row[5]=BGT_AREA_T; return 6;
@@ -165,13 +172,32 @@ static void begin_notice(u8 kind, u8 amount) {
 void hud_notice_reset(void) BANKED {
     hud_notice_ticks = 0;
     notice_kind = 0xFF;
-    queued_kind = 0xFF;
+    queue_head = 0;
+    queue_count = 0;
+}
+
+static u8 notice_already_queued(u8 kind) {
+    u8 i;
+    if (hud_notice_ticks && notice_kind == kind) return 1;
+    for (i = 0; i < queue_count; ++i)
+        if (queued_kind[(u8)((queue_head + i) % HUD_NOTICE_QUEUE)] == kind)
+            return 1;
+    return 0;
+}
+
+static void queue_notice(u8 kind, u8 amount) {
+    u8 tail;
+    if (queue_count >= HUD_NOTICE_QUEUE) return;
+    tail = (u8)((queue_head + queue_count) % HUD_NOTICE_QUEUE);
+    queued_kind[tail] = kind;
+    queued_amount[tail] = amount;
+    queue_count++;
 }
 
 void hud_show_stat_gain(u8 stat, u8 amount) BANKED {
     if (!amount) return;
     if (hud_notice_ticks) {
-        if (queued_kind == 0xFF) { queued_kind = stat; queued_amount = amount; }
+        queue_notice(stat, amount);
         return;
     }
     begin_notice(stat, amount);
@@ -182,8 +208,17 @@ void hud_show_status(u8 status) BANKED {
     if (status == QSTATUS_NONE || status >= QSTATUS_COUNT) return;
     kind = (u8)(HUD_NOTICE_STATUS | status);
     if (hud_notice_ticks) {
-        if (notice_kind == kind || queued_kind == kind) return;
-        if (queued_kind == 0xFF) { queued_kind = kind; queued_amount = 0; }
+        if (notice_already_queued(kind)) return;
+        queue_notice(kind, 0);
+        return;
+    }
+    begin_notice(kind, 0);
+}
+
+void hud_show_healing_blocked(void) BANKED {
+    u8 kind = (u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HUNGER);
+    if (hud_notice_ticks) {
+        if (!notice_already_queued(kind)) queue_notice(kind, 0);
         return;
     }
     begin_notice(kind, 0);
@@ -191,10 +226,11 @@ void hud_show_status(u8 status) BANKED {
 
 void hud_tick_notice(void) BANKED {
     if (!hud_notice_ticks || --hud_notice_ticks) return;
-    if (queued_kind != 0xFF) {
-        u8 kind = queued_kind;
-        u8 amount = queued_amount;
-        queued_kind = 0xFF;
+    if (queue_count) {
+        u8 kind = queued_kind[queue_head];
+        u8 amount = queued_amount[queue_head];
+        queue_head = (u8)((queue_head + 1) % HUD_NOTICE_QUEUE);
+        queue_count--;
         begin_notice(kind, amount);
         return;
     }

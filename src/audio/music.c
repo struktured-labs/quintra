@@ -63,7 +63,13 @@ u8 music_stage_number;
 
 void music_select_variant(const music_variant_t *v, const u8 *form,
     const u8 *development_melody, const u8 *development_bass,
-    u8 bank, u8 id) {
+    u8 bank, u8 development_score_bank, u8 id) BANKED {
+    u8 previous_bank = CURRENT_BANK;
+    u16 scale;
+    // Cold scores may own both their A and B phrases in a bank other than
+    // the core stage tables. Read the descriptor under its declared bank;
+    // its pointed-to score bytes remain lazy and are switched per row.
+    if (bank && bank != previous_bank) SWITCH_ROM(bank);
     cur_melody = v->melody;
     cur_bass = v->bass;
     frames_per_row = v->tempo;
@@ -73,12 +79,14 @@ void music_select_variant(const music_variant_t *v, const u8 *form,
     accent_mask = v->accent;
     swing_amount = v->swing;
     current_row_frames = frames_per_row + swing_amount;
-    music_prepare_harmony(v->scale, active_harmony);
+    scale = v->scale;
     music_drum_timbre = v->drum_timbre;
     music_drum_strong = v->drum_strong;
     music_drum_soft = v->drum_soft;
+    if (bank && bank != previous_bank) SWITCH_ROM(previous_bank);
+    music_prepare_harmony(scale, active_harmony);
     score_bank = bank;
-    development_bank = BANK(music_development_score);
+    development_bank = development_score_bank;
     cur_form = form;
     cur_development_melody = development_melody;
     cur_development_bass = development_bass;
@@ -106,7 +114,7 @@ void music_play_stage(void) {
     music_load_wave(variant.wave_shape);
     music_select_variant(&variant, stage_forms[stage],
         stage_development_melody[stage], stage_development_bass[stage],
-        BANK(music_stage_score), stage);
+        BANK(music_stage_score), BANK(music_development_score), stage);
 }
 
 void music_play_boss(void) {
@@ -117,7 +125,7 @@ void music_play_boss(void) {
     music_load_wave(variant.wave_shape);
     music_select_variant(&variant, boss_forms[stage],
         boss_development_melody[stage], boss_development_bass[stage],
-        BANK(music_boss_score),
+        BANK(music_boss_score), BANK(music_development_score),
         (u8)(MUSIC_BOSS_BASE + stage));
 }
 

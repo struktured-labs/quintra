@@ -861,8 +861,16 @@ void tiles_prepare_crystal_wide_arena(void) BANKED {
                 else if (((u8)(wx + y) & 3) == 0)
                     tile = BGT_COLOSSUS_RUNE;
                 else tile = BGT_COLOSSUS_SCALE;
+            } else if ((y == 2 || y == 14)
+                && (wx == 21 || wx == 25)) {
+                tile = BGT_FLOOR2;
+            } else if ((y == 1 || y == 15) && wx == 23) {
+                tile = BGT_FLOOR3;
             } else {
-                tile = ((u8)(wx + y) & 1) ? BGT_FLOOR2 : BGT_FLOOR3;
+                // The old checkerboard extended the busiest part of every
+                // arena into the second camera screen. Keep just six border
+                // inlays and give the travelling fight a calm readable field.
+                tile = BGT_FLOOR;
             }
             tiles[x] = tile;
             attrs[x] = (tile == BGT_WALL || tile == BGT_COLOSSUS_EDGE_L

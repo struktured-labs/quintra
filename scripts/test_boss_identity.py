@@ -157,7 +157,7 @@ def main():
         f"Bloodmoon Hydra endurance window drifted: {pb.memory[hydra + 14]}")
     pb.stop(save=False)
     pb, boss = enter_boss(0, keep_open=True)
-    assert pb.memory[boss + 14] == 200, (
+    assert pb.memory[boss + 14] == 220, (
         f"starter Colossus pacing drifted: {pb.memory[boss + 14]}")
     assert pb.memory[boss + 25] == 0xFF, "early Colossus contact body drifted"
     max_hp = pb.memory[boss + 23]  # ai_data[6], captured by boss_tick
@@ -209,7 +209,7 @@ def main():
         f"Crystal Colossus did not emit its three-wide Prism Lance: {prism_shots}")
     pb.stop(save=False)
     pb, serpent = enter_boss(1, keep_open=True)
-    assert pb.memory[serpent + 14] == 205, (
+    assert pb.memory[serpent + 14] == 225, (
         f"Verdant Serpent HP pacing drifted: {pb.memory[serpent + 14]}")
     assert pb.memory[serpent + 25] == 0xDD, (
         "Verdant's mobile Serpent did not receive its fair contact body")

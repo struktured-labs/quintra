@@ -23,7 +23,7 @@ pub const CLAW_COMBO: Item = Item {
 pub const HOWL: Item = Item {
     id:          ITEM_HOWL,
     name:        "Howl",
-    description: "8-way burst + brief ward.",
+    description: "8-way burst; clears nearby shots.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL,
     palette:     OBJ_PAL_ITEM_GOLD,
@@ -75,7 +75,7 @@ pub const STINGER: Item = Item {
 
 pub const STONESKIN: Item = Item {
     id: ITEM_STONESKIN, name: "Stoneskin",
-    description: "Block shots & bodies.",
+    description: "Timed shot/body guard.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -83,7 +83,7 @@ pub const STONESKIN: Item = Item {
 
 pub const MURDER: Item = Item {
     id: ITEM_MURDER, name: "Raven Mark",
-    description: "Mark aimed foe; ravens dive; attacks bite harder.",
+    description: "Mark aimed foe; ravens focus it.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     // Runtime marks one concrete live target. It complements Murderstorm's
@@ -93,7 +93,7 @@ pub const MURDER: Item = Item {
 
 pub const TIDAL_WAVE: Item = Item {
     id: ITEM_TIDAL_WAVE, name: "TidalWave",
-    description: "3 bubbles + water guard.",
+    description: "3-way bubble wall + long guard.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -101,7 +101,7 @@ pub const TIDAL_WAVE: Item = Item {
 
 pub const SWARM: Item = Item {
     id: ITEM_SWARM, name: "Swarm",
-    description: "Six rotating stings over time + brief ward.",
+    description: "Rotating stings + attack ward.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
@@ -159,7 +159,7 @@ pub const MANA_GEM: Item = Item {
 
 pub const WARD_CHARM: Item = Item {
     id: ITEM_WARD_CHARM, name: "Ward Charm",
-    description: "+1 DEF, +1 LCK.",
+    description: "+1 DEF/LCK. WARD.",
     kind: ItemKind::Passive,
     icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[
@@ -255,6 +255,25 @@ pub const MIRROR_SHARD: Item = Item {
     effects: &[],
 };
 
+// These two run-long projectile verbs do not occur in shops or ordinary
+// drops. Their only source is a Worldglass cache in Hollow Riftwild, making
+// counterpart exploration produce builds unavailable on the Waking route.
+pub const BLAST_SEED: Item = Item {
+    id: ITEM_BLAST_SEED, name: "Blast Seed",
+    description: "First impact blooms into a wide damaging burst.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_RED,
+    rarity: Rarity::Rare, effects: &[],
+};
+
+pub const RIFT_LENS: Item = Item {
+    id: ITEM_RIFT_LENS, name: "Rift Lens",
+    description: "Every third primary attack becomes a heavy beam.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_CLAW, palette: OBJ_PAL_MAGIC,
+    rarity: Rarity::Rare, effects: &[],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_item(CLAW_COMBO.clone());
     r.add_item(TAIL_SPIKE.clone());
@@ -281,4 +300,6 @@ pub fn register(r: &mut Registry) {
     r.add_item(RIFT_BOMB.clone());
     r.add_item(ECHO_CHIME.clone());
     r.add_item(MIRROR_SHARD.clone());
+    r.add_item(BLAST_SEED.clone());
+    r.add_item(RIFT_LENS.clone());
 }

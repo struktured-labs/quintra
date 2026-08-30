@@ -12,8 +12,11 @@ extern u8 dialog_page;
 // current stage for dungeon wayfarers and zero for civic residents.
 void dialog_prepare(u8 kind, u8 topic) BANKED;
 // Major dungeon objectives reuse the readable conversation screen but have a
-// one-page claim layout, a large artifact tableau, and no speaker identity.
+// one-page claim layout, a raised-artifact tableau, and no speaker identity.
 void dialog_prepare_reward(u8 kind, u8 topic) BANKED;
+// Riftwild gate arrivals pause on an authored stage card for up to five
+// seconds; A/B/START skips immediately into the already-generated room.
+void dialog_prepare_stage(u8 stage) BANKED;
 void dialog_enter(void);
 void dialog_exit(void);
 screen_id_t dialog_tick(u8 keys, u8 pressed);

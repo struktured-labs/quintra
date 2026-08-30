@@ -362,6 +362,21 @@ local function navigate_to(target)
     return room_counter() == target
 end
 
+local function dismiss_reward_dialog()
+    if LS_ADDR ~= 0 and emu:read8(LS_ADDR) == 10 then
+        -- Let dialog_enter finish painting before presenting a new input
+        -- edge; pressing on the exact screen-transition frame can be eaten
+        -- by the outgoing room tick on native mGBA.
+        tick(8)
+        tap(KEY_A)
+        for _ = 1, 40 do
+            if emu:read8(LS_ADDR) ~= 10 then break end
+            emu:runFrame()
+        end
+        tick(16)
+    end
+end
+
 local function collect_rift_sigil()
     if EN_ADDR == 0 or PL_ADDR == 0 then return false end
     for i = 0, 31 do
@@ -377,9 +392,18 @@ local function collect_rift_sigil()
             -- A route pilot must acknowledge it before trying to steer the
             -- room; otherwise every subsequent direction is correctly eaten
             -- by SCREEN_DIALOG and the old smoke appears stuck at the Warden.
-            if LS_ADDR ~= 0 and emu:read8(LS_ADDR) == 10 then
-                tap(KEY_B)
-                tick(24)
+            for _ = 1, 150 do
+                if LS_ADDR ~= 0 and emu:read8(LS_ADDR) == 10 then break end
+                emu:runFrame()
+            end
+            dismiss_reward_dialog()
+            -- This reachability pilot erases enemies from WRAM instead of
+            -- delivering death callbacks. Mark the separately tested Reaper
+            -- hunt complete so its persistent return-room regeneration cannot
+            -- turn a topology smoke into a simulated combat test.
+            local solved = emu:read8(RS_ADDR + 27)
+            if math.floor(solved / 4) % 2 == 0 then
+                emu:write8(RS_ADDR + 27, solved + 4)
             end
             return true
         end
@@ -588,7 +612,8 @@ for _, role in ipairs(branch) do
         record_warden_boon(role[1])
     end
 end
-navigate_to(waystone); solve_waystone(); shot("06_room5_branch")
+navigate_to(waystone); solve_waystone(); dismiss_reward_dialog()
+shot("06_room5_branch")
 navigate_to(deep_warden); record_deep_warden_boon(deep_warden)
 shot("07_room9_threshold")
 navigate_to(deep_switch); open_deep_phase_seal(deep_switch)

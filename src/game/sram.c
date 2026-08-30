@@ -34,9 +34,11 @@
 #define PRE_COMPANION_RS_SIZE 51 // expanded Riftwild before Road Echo ASK timer
 #define PRE_RETURN_ECHO_RS_SIZE 52 // before objective-leg return ambushes
 #define PRE_VISITED_RS_SIZE 53 // return echoes before true-visit bitmaps
+#define PRE_SHADOW_RS_SIZE 57 // before Waking/Hollow Riftwild state
 #define PRE_WILL_PL_SIZE 42 // player layout before the appended Will meter
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection
 #define PRE_WAYGEAR_PL_SIZE 44 // Pack layout before permanent traversal gear
+#define PRE_CURSE_PL_SIZE 46 // Waygear layout before appended run curses
 
 void sram_migrate_run(u8 saved_rs) BANKED;
 
@@ -91,6 +93,12 @@ u8 sram_load_run(void) BANKED {
         player.waygear_owned = 0;
         player.waygear_equipped = 0xFF;
     }
+    if (saved_pl <= PRE_CURSE_PL_SIZE) {
+        player.curse_flags = 0;
+        player.curse_rooms = 0;
+    }
+    if (saved_rs <= PRE_SHADOW_RS_SIZE)
+        run_state.riftwild_shadow = 0;
     // Temporary room conditions are deliberately not suspend ABI. A loaded
     // run resumes cleanly rather than inheriting stale WRAM from the title.
     status_reset_all();

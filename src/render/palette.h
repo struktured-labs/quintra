@@ -7,6 +7,10 @@
 // Pack 5-bit r/g/b channels into BGR555 word (CGB native).
 #define BGR555(r,g,b)  ((u16)((((b) & 0x1F) << 10) | (((g) & 0x1F) << 5) | ((r) & 0x1F)))
 
+// Boss arenas share one quiet neutral floor ramp so biome-coloured bodies
+// stay readable. Fixed-bank palette data keeps it callable from room code.
+extern const u16 boss_arena_floor_palette[4];
+
 // Load 4-color palette into BG palette slot 0..7
 void palette_bg_load(u8 slot, const u16 *colors);
 

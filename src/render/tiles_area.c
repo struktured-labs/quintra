@@ -1,4 +1,4 @@
-#pragma bank 7
+#pragma bank 11
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
@@ -75,11 +75,15 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
             return BGPAL_CRYSTAL;
         if (tile == BGT_GATE_BOULDER || tile == BGT_GATE_THORNS
             || tile == BGT_GATE_VENT) return BGPAL_WALL;
-        return (tile == BGT_TREE || tile == BGT_WILD_STONE)
+        return (tile == BGT_TREE || tile == BGT_WILD_STONE
+                || tile == BGT_WILD_MOUNTAIN || tile == BGT_WILD_REEDS)
             ? BGPAL_WALL
-            : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER)
+            : (tile == BGT_WILD_WATER || tile == BGT_WILD_FLOWER
+                || tile == BGT_WILD_SNOW)
                 ? BGPAL_CRYSTAL
-                : (tile == BGT_WILD_STUMP || tile == BGT_DOOR)
+                : (tile == BGT_WILD_HOLE) ? BGPAL_CRACK
+                : (tile == BGT_WILD_STUMP || tile == BGT_WILD_SAND
+                    || tile == BGT_DOOR)
                     ? BGPAL_DOOR : BGPAL_FLOOR;
     }
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH && y == 8
@@ -122,7 +126,8 @@ static u8 wide_door_locked(u8 x, u8 y) {
     else if (y == (u8)((room_world_height >> 3) - 1)) dir = DIR_S;
     else if (x == 0) dir = DIR_W;
     if (dir == DIR_NONE) return 0;
-    if (run_state.entered_from != DIR_NONE
+    if (room_encounter_kind != ENCOUNTER_HUNT
+        && run_state.entered_from != DIR_NONE
         && dir == (u8)((run_state.entered_from + 2) & 3)) return 0;
     if (!run_state.world_mode) {
         neighbor = run_state_dungeon_neighbor(dir);
@@ -255,6 +260,18 @@ void tiles_draw_area_label(u8 kind) BANKED {
     static const u8 hold[4] = {
         BGT_AREA_H, BGT_AREA_O, BGT_AREA_L, BGT_AREA_D
     };
+    static const u8 reaper[6] = {
+        BGT_AREA_R, BGT_AREA_E, BGT_AREA_A,
+        BGT_AREA_P, BGT_AREA_E, BGT_AREA_R
+    };
+    static const u8 warden[6] = {
+        BGT_AREA_W, BGT_AREA_A, BGT_AREA_R,
+        BGT_AREA_D, BGT_AREA_E, BGT_AREA_N
+    };
+    static const u8 hollow[6] = {
+        BGT_AREA_H, BGT_AREA_O, BGT_AREA_L,
+        BGT_AREA_L, BGT_AREA_O, BGT_AREA_W
+    };
     static const u8 attrs[8] = {
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR,
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR
@@ -274,6 +291,9 @@ void tiles_draw_area_label(u8 kind) BANKED {
     else if (kind == 11) { letters = wave; x = 8; width = 4; }
     else if (kind == 12) { letters = elite; x = 8; width = 5; }
     else if (kind == 13) { letters = hold; x = 8; width = 4; }
+    else if (kind == 15) { letters = reaper; x = 7; width = 6; }
+    else if (kind == 16) { letters = warden; x = 7; width = 6; }
+    else if (kind == 17) { letters = hollow; x = 7; width = 6; }
     else { letters = riftwild; x = 8; width = 4; }
     // A Riftwild field may have crossed several continuous seams. Project the
     // display-only sign through the same logical-to-physical origin instead

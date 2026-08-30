@@ -21,5 +21,6 @@ u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED;
 // Build the room_tilemap + spawn enemies for the current run_state.
 // Uses run_state.entered_from to position the player near the opposite door.
 void procgen_generate_current_room(void) BANKED;
+void riftwild_terrain_apply(u8 seed_low) BANKED;
 
 #endif

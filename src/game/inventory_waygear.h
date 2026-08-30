@@ -12,5 +12,6 @@ enum {
 
 void inventory_waygear_enter(void) BANKED;
 u8 inventory_waygear_tick(u8 pressed) BANKED;
+void inventory_status_enter(void) BANKED;
 
 #endif

@@ -174,8 +174,7 @@ u8 run_state_is_miniboss(void) BANKED {
     mission_graph_ensure();
     local = run_state_dungeon_local();
     return (local == run_state.mission_warden_cell
-        || local == run_state.mission_deep_warden_cell
-        || (run_state_dungeon_size() >= 19 && local == 15)) ? 1 : 0;
+        || local == run_state.mission_deep_warden_cell) ? 1 : 0;
 }
 
 u8 run_state_dungeon_cache_cell(void) BANKED {

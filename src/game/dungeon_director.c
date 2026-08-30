@@ -264,6 +264,18 @@ void dungeon_director_configure_initial(u8 idx, u8 ordinal) BANKED {
         else
             entities[idx].hp = (u8)(entities[idx].hp << 1);
         entities[idx].damage++;
+        if (room_return_echo_kind == 4) {
+            // The backtracking surprise is a true miniboss, not the ordinary
+            // pack-alpha balance reused under another card: it fills its
+            // 16x16 art, survives roughly twice the normal Elite fight, and
+            // makes both contact and its added scale volleys consequential.
+            entities[idx].hitbox = 0xEE;
+            if (RUN_IS_EASY())
+                entities[idx].hp = (u8)(entities[idx].hp
+                    + ((entities[idx].hp + 1) >> 1));
+            else entities[idx].hp = (u8)(entities[idx].hp << 1);
+            entities[idx].damage++;
+        }
     }
 }
 
@@ -378,7 +390,8 @@ u8 dungeon_director_update(u8 alive) BANKED {
         } else if (alive == 0 && room_encounter_phase == 1) {
             finish_directive(0);
         }
-    } else if (room_encounter_kind == ENCOUNTER_ELITE) {
+    } else if (room_encounter_kind == ENCOUNTER_ELITE
+        || room_encounter_kind == ENCOUNTER_HUNT) {
         if (!target_alive()) finish_directive(1);
     } else if (room_encounter_kind == ENCOUNTER_HOLD) {
         if (room_encounter_timer) room_encounter_timer--;

@@ -34,6 +34,7 @@ static u8 rune_count;
 static u8 rune_order[5];
 static u8 rune_x[5];
 static u8 rune_y[5];
+static u8 rune_descending;
 static u8 phase_switch_state;
 
 static const u8 phase_switch_x[4] = { 4, 8, 12, 16 };
@@ -45,6 +46,12 @@ static const u8 phase_switch_solutions[5] = { 0x07, 0x0B, 0x0D, 0x0E, 0x0F };
 static const u8 rune_orders[18] = {
     0,1,2, 0,2,1, 1,0,2, 1,2,0, 2,0,1, 2,1,0
 };
+
+static u8 rune_pitch(u8 order_rank) {
+    u8 degree = rune_descending
+        ? (u8)(rune_count - 1 - order_rank) : order_rank;
+    return degree;
+}
 
 void puzzle_prepare_room_role(void) BANKED {
     u8 x, y;
@@ -184,6 +191,10 @@ static void prepare_sequence(u32 seed) {
         floor_rect(9, 3, 3, 11);
     }
     order = (u8)(folded % 6);
+    // Each Waystone owns one coherent musical grammar for the whole attempt.
+    // The physical plates keep their assigned pitch through resets; only the
+    // required traversal direction changes between rising and falling.
+    rune_descending = (u8)((seed >> 6) & 1);
     for (i = 0; i < rune_count; ++i) {
         floor_rect((u8)(rune_x[i] - 1), (u8)(rune_y[i] - 1), 3, 3);
         room_tilemap[rune_y[i]][rune_x[i]] = BGT_SWITCH;
@@ -429,11 +440,15 @@ static u8 update_sequence(u8 tx, u8 ty) {
     }
     if (puzzle_contact) return 0;
     puzzle_contact = 1;
-    // A confirmed note remains safe for the rest of this attempt. Routes
-    // between later runes can naturally cross an earlier lit plate; treating
-    // that revisit as a false note made the visible progress itself a trap.
-    for (i = 0; i < rune_progress; ++i)
-        if (touched == rune_order[i]) return 0;
+    // A confirmed note remains safe for the rest of this attempt. It still
+    // voices its own stable pitch: walking over any musical plate must teach
+    // the scale, even when a route naturally crosses an earlier lit note.
+    for (i = 0; i < rune_progress; ++i) {
+        if (touched == rune_order[i]) {
+            sfx_play_rune(rune_pitch(i));
+            return 0;
+        }
+    }
     if (touched != rune_order[rune_progress]) {
         // Preserve the pressed plate's place in the ascending phrase before
         // reset_runes clears progress. Its pitch is a genuine routing hint:
@@ -451,12 +466,12 @@ static u8 update_sequence(u8 tx, u8 ty) {
         // Noise carries the hit while CH1 remains free to voice the wrong
         // plate. Muting that note removed the puzzle's best learnable clue.
         sfx_play(SFX_HIT);
-        sfx_play_rune(i);
+        sfx_play_rune(rune_pitch(i));
         room_shake(1, 6);
         return 0;
     }
     set_tile_live(tx, ty, BGT_FLOOR2, BGPAL_CRYSTAL);
-    sfx_play_rune(rune_progress);
+    sfx_play_rune(rune_pitch(rune_progress));
     rune_progress++;
     if (rune_progress < rune_count) return 0;
     mark_puzzle_solved();

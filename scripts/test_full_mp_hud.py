@@ -33,22 +33,41 @@ def main():
             pb.memory[ENTITIES + 14] = 30
             pb.memory[ENTITIES + 25] = 0x88
 
-        # Keep the edge queued until the cartridge's real input poll sees it.
-        # A single host-side convenience tap can begin and end while a longer
-        # banked room transaction is still returning, which tests frontend
-        # timing rather than the B ability or its meter feedback.
+        # B is a free class verb now: using it must leave the icy full-MP cue
+        # intact for the separate A+B Convergence decision.
         pb.button_press("b")
         try:
             for _ in range(16):
                 pb.tick()
-                if pb.memory[PLAYER + 4] == pb.memory[PLAYER + 3] - 2:
+                if pb.memory[PLAYER + 19] > 0:
                     break
         finally:
             pb.button_release("b")
-        assert pb.memory[PLAYER + 4] == pb.memory[PLAYER + 3] - 2, (
-            f"class {class_id} signature did not spend the expected two MP")
-        # The state change and hud_redraw_mp happen in the same room tick;
-        # allow the CGB window scanout to present that freshly written row.
+        assert pb.memory[PLAYER + 4] == pb.memory[PLAYER + 3], (
+            f"class {class_id} B incorrectly spent A+B magic")
+        for _ in range(8):
+            pb.tick()
+        assert READY in mp_colors(pb), (
+            f"class {class_id} B erased Convergence's ready cue")
+
+        # The chord still owns the actual MP spend and returns the meter to
+        # ordinary blue. Free the B cooldown/entity table so this checks only
+        # the live simultaneous-input contract.
+        pb.memory[PLAYER + 19] = 0
+        for i in range(32 * 28):
+            pb.memory[ENTITIES + i] = 0
+        pb.button_press("a")
+        pb.button_press("b")
+        try:
+            for _ in range(24):
+                pb.tick()
+                if pb.memory[PLAYER + 4] == 0:
+                    break
+        finally:
+            pb.button_release("a")
+            pb.button_release("b")
+        assert pb.memory[PLAYER + 4] == 0, (
+            f"class {class_id} full-MP A+B did not spend Convergence magic")
         for _ in range(8):
             pb.tick()
         colors = mp_colors(pb)
@@ -56,7 +75,7 @@ def main():
             f"class {class_id} spent meter retained its full-ready cue: {colors}")
         pb.stop(save=False)
 
-    print("[full-mp-hud] PASS five icy-ready meters return to blue after B")
+    print("[full-mp-hud] PASS free B preserves ready; A+B returns MP to blue")
 
 
 if __name__ == "__main__":

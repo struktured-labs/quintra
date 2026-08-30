@@ -6,7 +6,8 @@ from pyboy import PyBoy
 from quintra_topology import STAGE_START
 
 from test_stage_archetypes import (
-    EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, put16, wait_for_generated_room,
+    EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, addr, put16,
+    wait_for_generated_room,
 )
 
 
@@ -19,6 +20,8 @@ EF_ACTIVE = 0x01
 EF_ELITE = 0x20
 BGT_PORTAL = 34
 REGIONAL_GATE_SCREEN = (8, 21, 34)
+SCREEN = addr("_loop_current_screen")
+SCREEN_DIALOG = 10
 
 
 def boot():
@@ -45,6 +48,8 @@ def sample_foyer(pb, stage, seed):
     pb.memory[RS + 13] = 0
     pb.memory[RS + 17] = 1
     pb.memory[RS + 18] = REGIONAL_GATE_SCREEN[(stage - 1) % 3]
+    # Synthetic stage-entry fixtures represent a completed Riftwild leg.
+    pb.memory[RS + 47] = 0x80 | (1 << (2 + ((stage - 1) % 3)))
     for slot in range(MAX_ENTITIES):
         base = EN + slot * ENTITY_SIZE
         pb.memory[base] = pb.memory[base + 1] = 0
@@ -60,7 +65,22 @@ def sample_foyer(pb, stage, seed):
         f"room={pb.memory[RS + 1]} world={pb.memory[RS + 17]} "
         f"screen={pb.memory[RS + 18]} player=({pb.memory[PL + 9]},"
         f"{pb.memory[PL + 11]}) feet={pb.memory[TM + 9 * ROOM_W + 10]}")
-    wait_for_generated_room(pb)
+    for _ in range(120):
+        if pb.memory[SCREEN] == SCREEN_DIALOG:
+            break
+        pb.tick()
+    assert pb.memory[SCREEN] == SCREEN_DIALOG, (
+        f"stage {stage + 1} arrived without its skippable intro card")
+    for _ in range(30):
+        pb.tick()
+    pb.button_press("a")
+    for _ in range(30):
+        pb.tick()
+        if pb.memory[SCREEN] != SCREEN_DIALOG:
+            break
+    pb.button_release("a")
+    assert pb.memory[SCREEN] != SCREEN_DIALOG, (
+        f"stage {stage + 1} intro card did not dismiss")
 
     roster = []
     elite_count = 0

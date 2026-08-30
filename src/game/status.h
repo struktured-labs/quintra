@@ -5,6 +5,7 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/curse.h"
 
 // One primary condition per actor keeps the GBC combat language readable:
 // a new affliction replaces the old one, while every application refreshes
@@ -55,6 +56,11 @@ extern u8 status_enemy_actor;
 // Zero in ordinary play. Combat enters the O(n²) friendly-fire resolver only
 // while at least one genuinely confused hostile projectile survives.
 extern u8 status_confused_projectiles;
+// Hot-room gate: zero until an enemy receives a condition. It deliberately
+// remains set for the rest of that room, avoiding kill/expiry bookkeeping in
+// ROM0 while ordinary untouched rooms skip a far call and 32-slot scan.
+extern u8 status_enemy_active;
+extern u8 status_clock;
 
 void status_reset_all(void) BANKED;
 void status_clear_enemies(void) BANKED;
@@ -91,7 +97,7 @@ u8 status_player_effective_stat(u8 stat) BANKED;
 #define STATUS_PLAYER_MUTED() \
     (player_status_kind == QSTATUS_MUTE)
 #define STATUS_PLAYER_HEALING_BLOCKED() \
-    (player_status_kind == QSTATUS_CURSE)
+    (player_status_kind == QSTATUS_CURSE || CURSE_PLAYER_HEALING_BLOCKED())
 #define STATUS_PLAYER_HASTED() \
     (player_status_kind == QSTATUS_HASTE)
 #define STATUS_PLAYER_INVERTED() \

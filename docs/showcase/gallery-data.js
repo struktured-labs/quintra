@@ -2,11 +2,11 @@
 window.QUINTRA_SHOWCASE = {
   "meta": {
     "version": "v0.20.15",
-    "romSha256": "2842c5eb47a2b95552e412f8d18cbd1452734cbb898e1970e1e9717af5e40fcc",
+    "romSha256": "3a2056c0642804d77d8b173636b0ee393659ad3b463c460d894c22a735c0d2e6",
     "stageCount": 9,
     "bossCount": 9,
     "monsterCount": 35,
-    "itemCount": 29
+    "itemCount": 30
   },
   "collages": {
     "stages": "assets/stage-collage.png",
@@ -1230,6 +1230,14 @@ window.QUINTRA_SHOWCASE = {
       "category": "Permanent Waygear",
       "accent": "#e04b54",
       "image": "assets/item-28-rift-hook.png"
+    },
+    {
+      "id": 29,
+      "name": "Worldglass",
+      "description": "Shifts Riftwild between its Waking and Hollow expressions.",
+      "category": "Riftwild key item",
+      "accent": "#3fcdb3",
+      "image": "assets/item-29-worldglass.png"
     }
   ]
 };

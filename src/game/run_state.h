@@ -56,7 +56,19 @@ enum {
 #define RIFTWELL_USED_FLAG 0x80
 #define RIFT_REGION_WELL_USED_BIT  0x01
 #define RIFT_REGION_VAULT_USED_BIT 0x02
+#define RIFT_REGION_GUARD_1_BIT    0x04
+#define RIFT_REGION_GUARD_2_BIT    0x08
+#define RIFT_REGION_GUARD_3_BIT    0x10
 #define RIFT_REGION_READY_BIT      0x80
+#define RIFTWILD_WAKING 0
+#define RIFTWILD_HOLLOW 1
+#define RIFT_SHADOW_HOLLOW_BIT 0x01
+#define RIFT_SHADOW_RELIC_1_BIT 0x02
+#define RIFT_SHADOW_RELIC_2_BIT 0x04
+#define RIFT_SHADOW_RELIC_3_BIT 0x08
+#define RIFT_SHADOW_RELIC_MASK  0x0E
+#define RUN_RIFTWILD_IS_HOLLOW() ((run_state.riftwild_shadow \
+    & RIFT_SHADOW_HOLLOW_BIT) ? 1 : 0)
 #define RUN_RIFTWELL_USED() ((run_state.riftwild_flags \
     & RIFT_REGION_WELL_USED_BIT) \
     || (run_state.world_return_screen & RIFTWELL_USED_FLAG))
@@ -134,6 +146,10 @@ typedef struct {
     u8  dungeon_visited_hi;
     u8  dungeon_visited_xhi;
     u8  dungeon_visited_xxhi;
+    // Waking/Hollow counterpart state. Bit zero is the currently manifested
+    // reality; bits 1..3 persist the three Hollow-only relic claims for this
+    // three-dungeon region. Appended to preserve the complete historical ABI.
+    u8  riftwild_shadow;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03
@@ -146,6 +162,7 @@ typedef struct {
 #define RUN_STAGE_SIGIL_BIT(stage) ((u16)(1u << ((stage) % BOSSES_TO_WIN)))
 #define RUN_TRIAL_BIT       ((u8)(1u << 0))
 #define RUN_REAPER_CLEARED_BIT ((u8)(1u << 2))
+#define RUN_REAPER_HUNT_BIT    ((u8)(1u << 7))
 #define RUN_WARDEN_BOON_BIT ((u8)(1u << 3))
 #define RUN_DEEP_GATE_BIT    ((u8)(1u << 6))
 #define RUN_WAYSTONE_BIT     ((u8)(1u << 7))
@@ -172,14 +189,14 @@ u8   run_state_dungeon_cell(void);
 // horizontal districts, meaningful branches/dead ends, and one fixed
 // objective loop between cells 1 and 10. The fold table preserves the staged
 // Sigil/Warden/Waystone route while making macro topology procgen-first.
-u8   run_state_dungeon_cell_neighbor(u8 cell, u8 dir);
-u8   run_state_dungeon_cells_connected(u8 a, u8 b);
+u8   run_state_dungeon_cell_neighbor(u8 cell, u8 dir) BANKED;
+u8   run_state_dungeon_cells_connected(u8 a, u8 b) BANKED;
 // Return one generated optional dead-end room which owns this dungeon's
 // Farfold Cache. The cache is never placed on a lore fixture or service room.
 u8   run_state_dungeon_cache_cell(void) BANKED;
 // Return the global room counter of the reciprocal 6x5 neighbour in `dir`,
 // or 0xFF when that edge leaves the active stage footprint.
-u8   run_state_dungeon_neighbor(u8 dir);
+u8   run_state_dungeon_neighbor(u8 dir) BANKED;
 u8   run_state_is_boss_room(void);
 u8   run_state_was_cleared_boss(void);
 u8   run_state_is_sanctuary(void);
@@ -196,7 +213,11 @@ void run_state_begin_world(void) BANKED;
 void run_state_begin_dungeon(void) BANKED;
 u8   run_state_riftwild_gate_screen(void) BANKED;
 u8   run_state_riftwild_gate_active(u8 screen) BANKED;
-void run_state_ensure_dungeon_law(void);
+u8   run_state_riftwild_guard_active(u8 screen) BANKED;
+u8   run_state_riftwild_guard_cleared(u8 screen) BANKED;
+u8   run_state_riftwild_guard_gear(u8 screen) BANKED;
+void run_state_riftwild_clear_guard(void) BANKED;
+void run_state_ensure_dungeon_law(void) BANKED;
 u16  run_state_enemies_killed_total(void);
 void run_state_record_enemy_kill(void) BANKED;
 

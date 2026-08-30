@@ -2,7 +2,7 @@
 """ROM contract: every required dungeon specialist is player-reachable."""
 
 from test_stage_archetypes import (
-    EN, PL, ROOM_H, ROOM_W, addr, generated_room,
+    EN, PL, RS, ROOM_H, ROOM_W, addr, generated_room,
 )
 from quintra_topology import dungeon_size, mission_graph
 
@@ -80,19 +80,42 @@ def main():
             f"{expected['name']} at {(sx, sy)} is outside player component from {start}")
         checked.append((sx, sy))
 
-    # The two Warden cells retain the stage-scaled Sentinel, while the fixed
-    # deep court at local 15 now belongs to the one-per-dungeon Dread Reaper.
+    # The two Warden cells retain the stage-scaled Sentinel. Local 15 is the
+    # guaranteed fallback for the one-per-dungeon Reaper hunt when no earlier
+    # progressed backtrack sprung it first.
     for seed in range(0x51A70000, 0x51A70010):
         graph = mission_graph(dungeon_size(0), seed, 0)
         for local_room, enemy_id, hp, name in (
                 (graph["warden"], ENEMY_STONE_SENTINEL, 50, "Sentinel"),
                 (graph["deep_warden"], ENEMY_STONE_SENTINEL, 50, "Sentinel"),
-                (15, ENEMY_STAGE_REAPER, 30, "Dread Reaper")):
+                (15, ENEMY_STAGE_REAPER, 80, "Dread Reaper")):
             expected.update(id=enemy_id, hp=hp, name=name)
             generated_room(0, seed, probe=inspect, local_room=local_room)
 
-    assert len(checked) == 48
-    print(f"[miniboss-spawn-reach] PASS 32 Sentinels + 16 Reapers positions={checked}")
+    # The natural trigger is a progressed revisit, not the numeric fallback.
+    # Mark wide room four as previously entered and claim the stage Sigil;
+    # this seed's three-in-four hunt roll is deterministic.
+    def progressed_backtrack(pb, _addrs):
+        pb.memory[RS + 23] |= 0x01       # stage-one Sigil: phase >= 2
+        pb.memory[RS + 53] |= 1 << 4     # actual visit bit for local room 4
+
+    def inspect_hunt(pb, tiles):
+        inspect(pb, tiles)
+        assert pb.memory[addr("_room_encounter_kind")] == 6
+        assert pb.memory[addr("_music_track_id")] == 9
+        assert pb.memory[RS + 52] & 0x80
+        # The dungeon-law overlay may replace two of the eight authored teeth,
+        # but the jaws must still read as an unmistakably trapped arena.
+        assert tiles.count(31) >= 6, (
+            f"Reaper hunt lost its trapped spike jaws ({tiles.count(31)})")
+
+    expected.update(id=ENEMY_STAGE_REAPER, hp=80, name="Dread Reaper")
+    generated_room(0, 0x51A70000, probe=inspect_hunt, local_room=4,
+                   pre_cross=progressed_backtrack)
+
+    assert len(checked) == 49
+    print(f"[miniboss-spawn-reach] PASS 32 Sentinels + 16 fallback Reapers "
+          f"+ trapped backtrack hunt positions={checked}")
 
 
 if __name__ == "__main__":

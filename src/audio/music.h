@@ -13,6 +13,8 @@
 #define MUSIC_VICTORY     19
 #define MUSIC_GAMEOVER    20
 #define MUSIC_VILLAGE     21
+#define MUSIC_RIFTWILD    22
+#define MUSIC_HOLLOW_RIFTWILD 23
 #define MUSIC_STOPPED     0xFF
 
 enum {
@@ -47,6 +49,8 @@ extern u8 music_drum_soft;
 void music_play_stage(void);    // unique ids 0..8
 void music_play_boss(void);     // matching boss ids 9..17
 void music_play_village(void) BANKED;
+void music_play_riftwild(void) BANKED;
+void music_play_hollow_riftwild(void) BANKED;
 void music_play_title(void);
 void music_play_victory(void);
 void music_play_gameover(void);

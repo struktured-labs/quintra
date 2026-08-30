@@ -7,5 +7,8 @@
 void procgen_place_wide_enemies(u8 formation) BANKED;
 // Puzzle fields additionally guarantee one guard in the arrival camera.
 void procgen_place_visible_puzzle_guard(void) BANKED;
+// Final terrain normalisation can close a false gap after population. Repair
+// any body whose complete footprint is no longer open before the LCD returns.
+void procgen_repair_enemy_spawns(void) BANKED;
 
 #endif

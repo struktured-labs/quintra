@@ -200,10 +200,13 @@ void sfx_play(u8 id) {
 }
 
 void sfx_play_rune(u8 step) {
-    // C5, D5, E5, G5, B5: one distinct ascending voice per possible phrase
-    // position, without spending the longer fanfare until the order is right.
+    // C5, D5, E5, G5, B5: stable degrees of a bright major-pentatonic
+    // scale. Puzzle order may traverse them upward or downward; a physical
+    // floor note keeps the same pitch when correct, wrong, or already lit.
     static const u16 notes[5] = { 1798, 1825, 1849, 1881, 1915 };
-    if (melody_lock_frames) return;
+    // A floor note is player input, not incidental pickup noise. It must
+    // answer even just after the room-clear figure or the audible scale clue
+    // disappears at exactly the moment the champion begins the puzzle.
     if (step > 4) step = 4;
     pend_kind = PEND_NONE;
     ch1(0x00, 0x80, 0xA2, notes[step]);

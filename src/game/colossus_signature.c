@@ -216,5 +216,18 @@ u8 colossus_signature_tick(entity_t *e) BANKED {
         sfx_play(SFX_ROAR);
         return 1;
     }
+    // A second, faster crisis at quarter health prevents an otherwise solved
+    // first half from becoming a stationary damage race. Bit 5 records this
+    // repeat independently of the original spent/charging flags.
+    if ((e->ai_data[3] & 0x80) && !(e->ai_data[3] & 0x20)
+        && e->hp <= (u8)(e->ai_data[6] >> 2)) {
+        e->ai_data[3] |= 0x60;
+        e->ai_data[1] = 36;
+        e->ai_data[7] = 20;
+        signature_arm(e);
+        room_shake(2, 18);
+        sfx_play(SFX_ROAR);
+        return 1;
+    }
     return 0;
 }

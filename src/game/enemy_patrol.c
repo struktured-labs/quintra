@@ -54,15 +54,20 @@ void enemy_patrol_update(entity_t *e, u8 enemy_content_id) BANKED {
     else stage_reaper_update(e);
 }
 
-void stage_reaper_spawn_encounter(u8 stage) BANKED {
-    u8 idx;
-    if (run_state.dungeon_puzzles & RUN_REAPER_CLEARED_BIT) return;
-    idx = enemy_spawn(ENEMY_STAGE_REAPER, 9, 6);
-    if (idx == 0xFF) return;
-    entities[idx].hp = (u8)(entities[idx].hp + (u8)(stage * 3));
+void stage_reaper_configure_encounter(u8 idx, u8 stage) BANKED {
+    if (idx >= MAX_ENTITIES) return;
+    // Eighty opening HP survives a complete build's burst and grows by five
+    // per dungeon. The mortal scythe remains the real threat, so this is one
+    // memorable pattern fight rather than an arbitrary contact-damage wall.
+    entities[idx].hp = (u8)(entities[idx].hp + 50u + (u8)(stage * 5u));
     if (RUN_IS_EASY())
         entities[idx].hp = (u8)((entities[idx].hp + 1) >> 1);
-    room_encounter_kind = ENCOUNTER_ELITE;
+    entities[idx].flags |= EF_ELITE;
+    entities[idx].palette = 0x06;
+    entities[idx].damage++;
+    entities[idx].ai_data[5] = 90; // title-card truce
+    entities[idx].ai_data[6] = entities[idx].hp;
+    room_encounter_kind = ENCOUNTER_HUNT;
     room_encounter_target = idx;
 }
 
@@ -260,8 +265,21 @@ void facet_ram_update(entity_t *e) BANKED {
 // Reaper phase: 0 stalk/cooldown, 1 announced mortal cast, 2 recovery.
 void stage_reaper_update(entity_t *e) BANKED {
     u8 phase = e->ai_data[2];
+    // The name card gets a clean ninety-frame beat. The champion may choose
+    // a lane, but the Reaper neither stalks nor begins its mortal cast until
+    // its announcement has fully cleared.
+    if (e->ai_data[5]) {
+        e->ai_data[5]--;
+        // Orbiting scythe glints expand the announced silhouette beyond its
+        // 16x16 body without permanently consuming four more OAM objects.
+        if ((e->ai_data[5] & 15) == 0)
+            fx_spawn(SPR_FX_MORTAL_SCYTHE, 4,
+                FIX8_TO_INT(e->x) + ((e->ai_data[5] & 16) ? 14 : -6),
+                FIX8_TO_INT(e->y) + 4, 12);
+        return;
+    }
     if (phase == 0) {
-        if (++e->ai_data[1] >= 4) {
+        if (++e->ai_data[1] >= 3) {
             i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
             i16 dx = (i16)player.x - ex, dy = (i16)player.y - ey;
             i16 ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
@@ -304,6 +322,7 @@ void stage_reaper_update(entity_t *e) BANKED {
         }
         if (e->ai_data[3] == 0) {
             u8 dir = (u8)(e->ai_data[4] & 7);
+            u8 side;
             u8 shot = projectile_spawn_enemy_v(
                 FIX8_TO_INT(e->x) + 4,
                 FIX8_TO_INT(e->y) + 5,
@@ -315,9 +334,24 @@ void stage_reaper_update(entity_t *e) BANKED {
                 entities[shot].state_timer = 100;
                 entities[shot].ai_data[6] = PROJ_AUX_MORTAL_SCYTHE;
             }
+            // Two slower side lanes make the mortal cast a room event rather
+            // than one tiny projectile that can pass unnoticed. They deal
+            // ordinary damage; only the clearly distinct central scythe owns
+            // the cut-to-one-heart rule.
+            for (side = 1; side <= 2; ++side) {
+                u8 wing = projectile_spawn_enemy_v(
+                    FIX8_TO_INT(e->x) + 4,
+                    FIX8_TO_INT(e->y) + 5,
+                    dir8_dx[(u8)((dir + (side == 1 ? 1 : 7)) & 7)],
+                    dir8_dy[(u8)((dir + (side == 1 ? 1 : 7)) & 7)], 2);
+                if (wing != 0xFF) {
+                    entities[wing].palette = 4;
+                    entities[wing].state_timer = 110;
+                }
+            }
             e->palette = enemies[ENEMY_STAGE_REAPER].palette;
             e->ai_data[2] = 2;
-            e->ai_data[3] = 88;
+            e->ai_data[3] = 60;
         }
         return;
     }
@@ -325,6 +359,6 @@ void stage_reaper_update(entity_t *e) BANKED {
     if (e->ai_data[3]) e->ai_data[3]--;
     if (e->ai_data[3] == 0) {
         e->ai_data[2] = 0;
-        e->ai_data[3] = 70;
+        e->ai_data[3] = 52;
     }
 }

@@ -99,6 +99,8 @@ void enemy_cantor_evade(entity_t *e) BANKED;
 // The separate Reaper stalks the fixed deep encounter in every dungeon.
 void facet_ram_update(entity_t *e) BANKED;
 void stage_reaper_update(entity_t *e) BANKED;
+// Turn a reachability-safe spawned Reaper into this dungeon's named hunt.
+void stage_reaper_configure_encounter(u8 entity_index, u8 stage) BANKED;
 // Resolves the three authored no-damage contacts (rear-armored Ram,
 // ready Counter Guard, expanded Fold Star) outside combat's large stack.
 void enemy_special_reject_hit(u8 shot_idx, u8 enemy_idx) BANKED;

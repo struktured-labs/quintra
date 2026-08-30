@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for hero nature and one equipped traversal implement."""
+"""Live-ROM contract for Warden-gated permanent Riftwild Waygear."""
 
 from test_overworld import (
-    EN, ORIGIN_X, ORIGIN_Y, PL, RS, SCREEN, TM, exit_at, put16,
+    EN, PL, RS, SCREEN, addr, exit_at, put16,
 )
 from test_riftwild_landmarks import boot_world
 
 
 ENTITY_SIZE = 28
 PICKUP_WAYGEAR = 22
-BGT_GATE_BOULDER = 100
-BGT_GATE_WATER = 101
 SCREEN_INVENTORY = 9
+SCREEN_ROOM = 5
+SCREEN_DIALOG = 10
+REWARD_TIMER = addr("_room_major_reward_pending")
+POSE_LOCKED = addr("_room_player_pose_locked")
+OAM_MAJOR_REWARD_ICON = 39
+SPR_WAYGEAR_GLOVE = 204
 WAYGEAR_OWNED = 44
 WAYGEAR_EQUIPPED = 45
+RIFT_FLAGS = 47
+RIFT_READY = 0x80
+GUARD_BITS = (0x04, 0x08, 0x10)
 
 
 def pickup_slots(pb, kind, gear=None):
@@ -27,144 +34,102 @@ def pickup_slots(pb, kind, gear=None):
     return slots
 
 
-def move_up(pb, frames=40):
-    pb.button_press("up")
-    try:
-        for _ in range(frames):
-            pb.memory[PL + 15] = 120
-            pb.tick()
-    finally:
-        pb.button_release("up")
-    return pb.memory[PL + 11] | pb.memory[PL + 12] << 8
-
-
-def move_down(pb, frames=48):
-    pb.button_press("down")
-    try:
-        for _ in range(frames):
-            pb.memory[PL + 15] = 120
-            pb.tick()
-    finally:
-        pb.button_release("down")
-    return pb.memory[PL + 11] | pb.memory[PL + 12] << 8
-
-
-def hook_grove_contract():
-    pb = boot_world()
-    try:
-        # Follow the real eastern ridge and southern chain from field zero.
-        for _ in range(5):
-            exit_at(pb, 232, 60)
-        for _ in range(3):
-            exit_at(pb, 72, 232)
-        assert pb.memory[RS + 18] == 23
-        pb.memory[PL] = 0
-        pb.memory[PL + WAYGEAR_OWNED] = 0x03
-        pb.memory[PL + WAYGEAR_EQUIPPED] = 1
-        exit_at(pb, 72, 232)
-        assert pb.memory[RS + 18] == 29
-        assert (pb.memory[TM + 7 * 20 + 14],
-                pb.memory[TM + 7 * 20 + 15]) == (
-                    BGT_GATE_WATER, BGT_GATE_WATER)
-        put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 72)
-        assert move_up(pb) < 56, "equipped Tide Raft did not cross deep water"
-        put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 32)
-        for _ in range(40):
-            pb.tick()
-            if pb.memory[PL + WAYGEAR_EQUIPPED] == 2:
-                break
-        assert pb.memory[PL + WAYGEAR_EQUIPPED] == 2, \
-            "Rift Hook collection did not auto-equip"
-        assert (pb.memory[TM + 7 * 20 + 14],
-                pb.memory[TM + 7 * 20 + 15]) == (35, 35), \
-            "Hook reward left its old paired water gate closed"
-        gate_py = (pb.memory[ORIGIN_Y] + 7) & 31
-        gate_px = (pb.memory[ORIGIN_X] + 14) & 31
-        assert [pb.memory[0x9800 + gate_py * 32 + ((gate_px + i) & 31)]
-                for i in range(2)] == [35, 35], \
-            "opened Hook grove retained its paired gate in visible BG VRAM"
-        assert move_down(pb) > 56, \
-            "newly equipped Hook still left the champion trapped in its grove"
-    finally:
-        pb.stop(save=False)
+def sentinel_slots(pb):
+    return [slot for slot in range(32)
+            if pb.memory[EN + slot * ENTITY_SIZE] == 2
+            and pb.memory[EN + slot * ENTITY_SIZE + 1] & 1
+            and pb.memory[EN + slot * ENTITY_SIZE + 17] == 1]
 
 
 def main():
     pb = boot_world()
     try:
-        # Reach field three through real reciprocal seams. Its first implement
-        # is freely discoverable rather than hidden behind its own gate.
+        # Leg one: the Glove is carried by a live Warden, not sitting beside
+        # the shortest path. The gate remains dormant until that fight's bit
+        # is persisted.
         exit_at(pb, 232, 60)
         exit_at(pb, 232, 60)
         exit_at(pb, 232, 60)
         assert pb.memory[RS + 18] == 3
+        assert sentinel_slots(pb), "field 3 did not spawn its Riftwild Warden"
+        assert not pickup_slots(pb, PICKUP_WAYGEAR), \
+            "Titan Glove appeared before the Warden fell"
+
+        # Model the persistent result of the combat, leave, and return. The
+        # pedestal recovery is essential: an immediate drop left behind can
+        # never make the run unwinnable.
+        pb.memory[RS + RIFT_FLAGS] |= GUARD_BITS[0]
+        exit_at(pb, 0, 60)
+        exit_at(pb, 232, 60)
+        assert not sentinel_slots(pb), "cleared Warden respawned"
         assert pickup_slots(pb, PICKUP_WAYGEAR, 0), \
-            "field 3 did not spawn the Titan Glove"
+            "cleared Warden did not restore its missed Titan Glove"
 
         put16(pb, PL + 9, 112)
         put16(pb, PL + 11, 32)
         for _ in range(30):
             pb.tick()
+            if pb.memory[REWARD_TIMER]:
+                break
         assert pb.memory[PL + WAYGEAR_OWNED] & 1
         assert pb.memory[PL + WAYGEAR_EQUIPPED] == 0
+        assert pb.memory[SCREEN] == SCREEN_ROOM
+        assert 118 <= pb.memory[REWARD_TIMER] <= 120, \
+            "Waygear skipped its protected two-second claim ceremony"
+        # The collision transaction can publish 120 before the following
+        # room-draw edge writes OAM. Observe that first presentation frame.
+        if pb.memory[REWARD_TIMER] == 120:
+            pb.tick()
+        assert pb.memory[POSE_LOCKED] == 1, \
+            "Waygear ceremony did not raise the champion's arms"
+        icon = 0xFE00 + OAM_MAJOR_REWARD_ICON * 4
+        assert pb.memory[icon + 2] == SPR_WAYGEAR_GLOVE \
+            and pb.memory[icon] != 0, \
+            ("Titan Glove was not held visibly above the champion: "
+             f"oam={list(pb.memory[icon:icon + 4])} "
+             f"timer={pb.memory[REWARD_TIMER]}")
+        frames = 0
+        while pb.memory[SCREEN] == SCREEN_ROOM and frames < 130:
+            pb.tick()
+            frames += 1
+        assert pb.memory[SCREEN] == SCREEN_DIALOG and 118 <= frames <= 121
+        pb.tick(30)
+        pb.button_press("a")
+        pb.tick(3)
+        pb.button_release("a")
+        pb.tick(24)
+        assert pb.memory[SCREEN] == SCREEN_ROOM, \
+            "Waygear claim page did not resume the Riftwild field"
 
-        # Enter field 17 from its real northern neighbour. The Tide Raft is
-        # visible inside a boulder-gated optional grove.
+        # Leg two: preserve the first victory, advance the campaign counter,
+        # and enter the second Warden field through a reciprocal world seam.
+        pb.memory[RS + 11] = 2
+        pb.memory[RS + RIFT_FLAGS] = RIFT_READY | GUARD_BITS[0]
         pb.memory[RS + 18] = 11
         exit_at(pb, 72, 232)
         assert pb.memory[RS + 18] == 17
-        assert (pb.memory[TM + 7 * 20 + 14],
-                pb.memory[TM + 7 * 20 + 15]) == (
-                    BGT_GATE_BOULDER, BGT_GATE_BOULDER)
+        assert sentinel_slots(pb), "field 17 did not spawn its Riftwild Warden"
+        assert not pickup_slots(pb, PICKUP_WAYGEAR, 1)
+        pb.memory[RS + RIFT_FLAGS] |= GUARD_BITS[1]
+        exit_at(pb, 72, 0)
+        exit_at(pb, 72, 232)
         assert pickup_slots(pb, PICKUP_WAYGEAR, 1), \
-            "field 17 gated grove lost the Tide Raft"
+            "second Warden did not restore its missed Tide Raft"
 
-        # Wolfkin cannot cross boulders by nature alone.
-        pb.memory[PL] = 0
-        pb.memory[PL + WAYGEAR_EQUIPPED] = 0xFF
-        put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 72)
-        assert move_up(pb) >= 56, "Wolfkin crossed a boulder without Waygear"
-
-        # The equipped Glove substitutes for Sauran's innate stone lift.
-        pb.memory[PL + WAYGEAR_EQUIPPED] = 0
-        put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 72)
-        assert move_up(pb) < 56, "equipped Titan Glove did not open boulders"
-
-        # Collecting the Raft auto-equips it. The grove mouth must collapse
-        # first, or that swap revokes the Glove permission used to enter and
-        # strands the champion behind the two boulder-rune tiles.
-        put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 32)
-        for _ in range(40):
-            pb.tick()
-            if pb.memory[PL + WAYGEAR_EQUIPPED] == 1:
-                break
-        assert pb.memory[PL + WAYGEAR_EQUIPPED] == 1, \
-            "Tide Raft collection did not auto-equip"
-        assert (pb.memory[TM + 7 * 20 + 14],
-                pb.memory[TM + 7 * 20 + 15]) == (35, 35), \
-            "Waygear reward left its old paired gate closed: " \
-            f"screen={pb.memory[RS + 18]} tiles=" \
-            f"{pb.memory[TM + 7 * 20 + 14]}," \
-            f"{pb.memory[TM + 7 * 20 + 15]}"
-        gate_py = (pb.memory[ORIGIN_Y] + 7) & 31
-        gate_px = (pb.memory[ORIGIN_X] + 14) & 31
-        assert [pb.memory[0x9800 + gate_py * 32 + ((gate_px + i) & 31)]
-                for i in range(2)] == [35, 35], \
-            "opened Raft grove retained its paired gate in visible BG VRAM"
-        assert move_down(pb) > 56, \
-            "newly equipped Raft still left the champion trapped in its grove"
-
-        # Sauran gets the same route for free, leaving the gear slot available.
-        pb.memory[PL] = 1
-        pb.memory[PL + WAYGEAR_EQUIPPED] = 0xFF
-        put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 72)
-        assert move_up(pb) < 56, "Sauran nature did not lift boulders"
+        # Leg three repeats the same mandatory cadence for the Rift Hook.
+        pb.memory[RS + 11] = 3
+        pb.memory[RS + RIFT_FLAGS] = (RIFT_READY | GUARD_BITS[0]
+                                      | GUARD_BITS[1])
+        pb.memory[RS + 18] = 23
+        exit_at(pb, 72, 232)
+        assert pb.memory[RS + 18] == 29
+        assert sentinel_slots(pb), "field 29 did not spawn its Riftwild Warden"
+        assert not pickup_slots(pb, PICKUP_WAYGEAR, 2)
+        pb.memory[RS + RIFT_FLAGS] |= GUARD_BITS[2]
+        exit_at(pb, 72, 0)
+        exit_at(pb, 72, 232)
+        assert pickup_slots(pb, PICKUP_WAYGEAR, 2), \
+            "third Warden did not restore its missed Rift Hook"
 
         # START -> SELECT is a graphical loadout, not another prose dump.
         pb.button_press("start")
@@ -174,20 +139,19 @@ def main():
                 break
         pb.button_release("start")
         assert pb.memory[SCREEN] == SCREEN_INVENTORY, \
-            f"START did not open Pack after grove escape: screen={pb.memory[SCREEN]}"
+            f"START did not open Pack after Warden reward: screen={pb.memory[SCREEN]}"
         pb.button_press("select")
         for _ in range(60):
             pb.tick()
             if pb.memory[0xFE12] == 204:
                 break
         pb.button_release("select")
-        assert pb.memory[0xFE12] == 204, \
+        assert pb.memory[0xFE12] == SPR_WAYGEAR_GLOVE, \
             "Waygear page did not render the Titan Glove icon"
     finally:
         pb.stop(save=False)
 
-    hook_grove_contract()
-    print("[waygear] PASS Raft/Hook self-opening groves + hero/tool access + Pack UI")
+    print("[waygear] PASS three Warden gates + raised-arm claim + recovery + Pack UI")
 
 
 if __name__ == "__main__":

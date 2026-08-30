@@ -391,22 +391,12 @@ emu:write8(RS + 21, prior_seen_lo); emu:write8(RS + 22, prior_seen_hi)
 -- tiles. They replace the logical source and position atomically, so the
 -- retained 248x248 court does not need an obsolete compact-room detour.
 
--- A deeper stage's look: bump bosses_beaten so the NEXT room generates
--- with Ember Depths palettes, shoot it, then restore (must happen before
--- the boss threshold or the role math changes).
-if RS ~= 0 then
-  -- Cross-stage stills use the live regional gate transaction so the newly
-  -- seeded mission graph and Law are initialized before Ember generation.
-  if not enter_dungeon_portal(STAGE3_SIGIL, 2) then
-    error("media could not enter Ember room")
-  end
-  tick(60); shot("shot_ember")   -- fade-in resolves first
-  emu:write8(RS + 11, 0)
-end
-
 -- Shop (room 7): wares + amber price tags
 if not enter_dungeon_portal(SHOP1, 0) then error("media could not enter shop") end
 tick(30); shot("shot_shop")
+-- The shop owns a modal input loop; leave it before asking the world driver to
+-- perform the sanctuary doorway transaction.
+hold(KEY_B, 2); tick(20)
 
 -- Sanctuary (room 8): shrine pylons
 if not enter_room(SANCTUARY1) then error("media could not enter sanctuary") end
@@ -428,6 +418,17 @@ if not enter_room(BOSS1) then error("media could not enter stage-one boss") end
 tick(50)                       -- entry drama resolves, boss opens fire
 hold(KEY_A|KEY_UP, 40)         -- trade some shots for the action shot
 shot("shot_boss")
+
+-- Finish on a deeper stage's look. A cross-stage regional-gate transaction
+-- rebuilds the mission graph and Law for Ember Depths, but returning from that
+-- synthetic media deep-link no longer represents a valid runtime transition.
+-- Keeping it last makes every prior still independent of that terminal setup.
+if RS ~= 0 then
+  if not enter_dungeon_portal(STAGE3_SIGIL, 2) then
+    error("media could not enter Ember room")
+  end
+  tick(60); shot("shot_ember")   -- fade-in resolves first
+end
 
 console:log("MEDIA CAPTURE DONE shots")
 emu.frontend:quit()

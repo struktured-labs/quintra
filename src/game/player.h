@@ -45,9 +45,14 @@ typedef struct {
     // every historical field and the 43-byte Will-era suspend ABI stay put.
     u8     active_oath;
     // Three permanent traversal implements can be carried, but only one
-    // resonates at a time. Hero nature never consumes this equipment slot.
+    // resonates at a time. Worldglass occupies a fourth ownership bit and is
+    // an always-available Riftwild verb, never this equipment slot.
     u8     waygear_owned;     // WAYGEAR_BIT(*)
     u8     waygear_equipped;  // WAYGEAR_* or 0xFF
+    // Long-form run afflictions. Appended to preserve every historical
+    // player/debug offset and keep old suspend records forward-migratable.
+    u8     curse_flags;
+    u8     curse_rooms;
 } player_state_t;
 
 extern player_state_t player;

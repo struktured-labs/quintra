@@ -2,7 +2,9 @@
 
 #include <gb/gb.h>
 
+#include "audio/sfx.h"
 #include "core/types.h"
+#include "game/dialog.h"
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/room.h"
@@ -10,6 +12,29 @@
 #include "render/tiles.h"
 
 extern u8 room_mire_projection_state;
+extern u8 room_resume_flag;
+extern u8 shake_timer;
+extern u8 shake_mag;
+
+void room_shake(u8 mag, u8 frames) BANKED {
+    shake_mag = mag;
+    if (frames > shake_timer) shake_timer = frames;
+}
+
+void room_request_resume(void) BANKED {
+    room_resume_flag = 1;
+}
+
+// Dungeon arrivals reuse one three-region fanfare policy regardless of
+// whether the transition came from a cardinal path or a Riftwild portal.
+// Keeping this cold block out of room's nearly-full hot bank also prevents
+// the two paths from drifting apart again.
+void room_prepare_stage_arrival(u8 stage) BANKED {
+    dialog_prepare_stage(stage);
+    if (stage < 3) sfx_play_reward(SFX_REWARD_UNLOCK);
+    else if (stage < 6) sfx_play_reward(SFX_REWARD_MAGIC);
+    else sfx_play_reward(SFX_REWARD_RELIC);
+}
 
 // Progression fixtures run after procgen has populated geometry. Keeping this
 // cold transaction out of the every-frame room bank preserves emergency ROM

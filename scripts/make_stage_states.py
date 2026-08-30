@@ -34,6 +34,7 @@ BGT_BOSS_GATE_L = 72
 BGT_BOSS_GATE_R = 73
 ZELDA_CELL_DUNGEON_ENTRANCE = 6
 SCREEN_ROOM = 5
+SCREEN_DIALOG = 10
 DIR_NONE = 0xFF
 BLANK_SRAM_BYTES = 32 * 1024
 CHAMPIONS = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
@@ -472,6 +473,7 @@ def advance_to_village(pyboy: PyBoy, addrs: dict[str, int],
     pyboy.memory[rs + 11] = after_stage
     pyboy.memory[rs + 17] = 1
     pyboy.memory[rs + 18] = riftwild_gate_screen(after_stage)
+    pyboy.memory[rs + 47] |= 1 << (2 + ((after_stage - 1) % 3))
     pyboy.memory[rs + 19] = 0
     pyboy.memory[rs + 6] = 0xFF
     for i in range(32):
@@ -608,8 +610,10 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     if difficulty == "easy":
         pyboy.button("select")
         pyboy.tick(8)
-    pyboy.button("a")
-    pyboy.tick(60)
+    pyboy.button_press("a")
+    pyboy.tick(6)
+    pyboy.button_release("a")
+    pyboy.tick(90)
 
     target = stage_entry_room(stage)
     pyboy.memory[rs + 1] = target - 1
@@ -621,6 +625,9 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     put16(pyboy, rs + 23, (1 << stage) - 1)
     pyboy.memory[rs + 17] = 1
     pyboy.memory[rs + 18] = riftwild_gate_screen(stage)
+    # This developer fixture begins after the leg's mandatory Warden fight.
+    step = 0 if stage == 0 else (stage - 1) % 3
+    pyboy.memory[rs + 47] = 0x80 | (1 << (2 + step))
     pyboy.memory[rs + 19] = 0
     pyboy.memory[rs + 20] = 0
     pyboy.memory[rs + 21] = pyboy.memory[rs + 22] = 0
@@ -642,6 +649,27 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     if pyboy.memory[rs + 1] != target or pyboy.memory[rs + 17]:
         pyboy.stop(save=False)
         raise RuntimeError(f"could not enter stage {stage + 1} ({difficulty})")
+    # A real Riftwild gate now pauses on the region-authored stage card.
+    # Developer checkpoints begin after that skippable presentation so they
+    # remain immediate gameplay fixtures rather than modal UI saves.
+    screen = addrs["_loop_current_screen"]
+    for _ in range(180):
+        if pyboy.memory[screen] == SCREEN_DIALOG:
+            break
+        pyboy.tick()
+    if pyboy.memory[screen] != SCREEN_DIALOG:
+        pyboy.stop(save=False)
+        raise RuntimeError(f"stage {stage + 1} entry card did not appear")
+    pyboy.tick(30)
+    pyboy.button_press("a")
+    for _ in range(30):
+        pyboy.tick()
+        if pyboy.memory[screen] == SCREEN_ROOM:
+            break
+    pyboy.button_release("a")
+    if pyboy.memory[screen] != SCREEN_ROOM:
+        pyboy.stop(save=False)
+        raise RuntimeError(f"stage {stage + 1} entry card did not dismiss")
     # Dungeon foyers may be full scrolling fields. Their camera legitimately
     # follows the centered live spawn instead of returning SCX/SCY to zero;
     # only compact entries use the old normalized-scroll publication rule.

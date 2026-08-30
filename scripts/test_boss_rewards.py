@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Live-ROM regression: a saturated boss kill still pays every guaranteed reward."""
-from test_boss_identity import EN, PL, enter_boss
+from test_boss_identity import EN, PL, addr, enter_boss
 
 
 ENTITY_SIZE = 28
@@ -11,6 +11,23 @@ EF_PLAYER_PROJ = 0x10
 PICKUP_HEART_HALF = 0
 PICKUP_COIN_5 = 2
 PICKUP_ITEM = 3
+MUSIC = addr("_music_track_id")
+SCREEN = addr("_loop_current_screen")
+
+
+def cgb_palette(pb, index_register, data_register, slot):
+    result = []
+    for offset in range(8):
+        pb.memory[index_register] = slot * 8 + offset
+        result.append(pb.memory[data_register])
+    return tuple(result)
+
+
+def press(pb, button):
+    pb.button_press(button)
+    for _ in range(5): pb.tick()
+    pb.button_release(button)
+    for _ in range(10): pb.tick()
 
 
 def setup_projectile(pb, address, x, y, player_owned=False):
@@ -111,6 +128,17 @@ def main():
     assert PICKUP_ITEM in kinds, f"missing guaranteed boss relic: {kinds}"
     assert any(relic in (12, 17, 19) for relic in relic_indices), (
         f"Wolfkin boss reward ignored its combat-relic pool: {relic_indices}")
+    assert pb.memory[MUSIC] == 19, "boss clear did not resolve to victory music"
+    arena_floor = cgb_palette(pb, 0xFF68, 0xFF69, 0)
+    assert arena_floor == (0x21, 0x0C, 0x83, 0x1C,
+                           0xE6, 0x28, 0xAC, 0x41), arena_floor
+    press(pb, "start")
+    assert pb.memory[SCREEN] == 9, "cleared arena did not open Pack"
+    press(pb, "b")
+    assert pb.memory[SCREEN] == 5, "Pack did not resume cleared arena"
+    assert pb.memory[MUSIC] == 19, "Pack resume replaced boss victory music"
+    assert cgb_palette(pb, 0xFF68, 0xFF69, 0) == arena_floor, (
+        "Pack resume leaked the next stage's floor palette into cleared arena")
     pb.stop(save=False)
 
     pools = {

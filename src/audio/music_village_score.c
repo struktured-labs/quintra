@@ -59,5 +59,5 @@ void music_play_village(void) BANKED {
     music_load_wave(village_music.wave_shape);
     music_select_variant(&village_music, village_form,
         village_development_melody, village_development_bass,
-        BANK(music_village_score), MUSIC_VILLAGE);
+        BANK(music_village_score), BANK(music_village_score), MUSIC_VILLAGE);
 }

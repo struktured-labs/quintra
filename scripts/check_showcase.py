@@ -72,7 +72,7 @@ def main() -> None:
     assert len(data["stages"]) == data["meta"]["stageCount"] == 9
     assert len(data["bosses"]) == data["meta"]["bossCount"] == 9
     assert len(data["monsters"]) == data["meta"]["monsterCount"] == 35
-    assert len(data["items"]) == data["meta"]["itemCount"] == 29
+    assert len(data["items"]) == data["meta"]["itemCount"] == 30
     assert [monster["id"] for monster in data["monsters"]] == list(range(35))
     assert len({monster["name"] for monster in data["monsters"]}) == 35
 
@@ -105,7 +105,7 @@ def main() -> None:
     assert "data-view=\"monsters\"" in html
     assert "data-view=\"items\"" in html
     print(
-        f"[showcase] PASS {version}, 9 stages, 9 Colossi, 35 monsters, 29 items, "
+        f"[showcase] PASS {version}, 9 stages, 9 Colossi, 35 monsters, 30 items, "
         "local assets and ROM hash current"
     )
 

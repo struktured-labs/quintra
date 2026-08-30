@@ -51,7 +51,7 @@ u8 waygear_grant(u8 gear) BANKED {
     player.waygear_owned |= bit;
     // A newly discovered traversal implement resonates immediately. The
     // Pack can later swap the single active slot at any time outside action.
-    player.waygear_equipped = gear;
+    if (gear < WAYGEAR_EQUIP_COUNT) player.waygear_equipped = gear;
     sfx_play_reward(SFX_REWARD_SIGIL);
     room_refresh_player_appearance(1);
     return 1;
@@ -91,19 +91,22 @@ void waygear_prepare_world_field(void) BANKED {
     if (!run_state.world_mode) return;
     screen = run_state.world_screen;
 
-    // First implement is freely discoverable; the next two form a capability
-    // chain. Sauran and Picsean can skip the corresponding prior tool, making
-    // champion identity a route advantage rather than a cosmetic stat line.
-    if (screen == 3 && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_GLOVE))) {
+    // Each permanent implement now appears only after its far-flung regional
+    // Warden is defeated. If the player leaves without touching the drop,
+    // regenerate it on the cleared pedestal rather than losing progression.
+    if (screen == 3 && run_state_riftwild_guard_cleared(screen)
+            && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_GLOVE))) {
         open_pedestal();
         pickup_spawn_waygear(WAYGEAR_GLOVE, FIX8(120), FIX8(40));
     } else if (screen == 17
+            && run_state_riftwild_guard_cleared(screen)
             && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_RAFT))) {
-        stamp_pocket(BGT_GATE_BOULDER);
+        open_pedestal();
         pickup_spawn_waygear(WAYGEAR_RAFT, FIX8(120), FIX8(40));
     } else if (screen == 29
+            && run_state_riftwild_guard_cleared(screen)
             && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_HOOK))) {
-        stamp_pocket(BGT_GATE_WATER);
+        open_pedestal();
         pickup_spawn_waygear(WAYGEAR_HOOK, FIX8(120), FIX8(40));
     } else if (screen == 16) {
         stamp_pocket(BGT_GATE_THORNS);
@@ -115,4 +118,12 @@ void waygear_prepare_world_field(void) BANKED {
         stamp_pocket(BGT_GATE_CHASM);
         pickup_spawn_wayfarer(2, FIX8(120), FIX8(40));
     }
+
+    // Worldglass waits beside the first awakened arch the champion reaches.
+    // If ignored, every later active arch restores it, so the world-shift
+    // verb cannot be permanently lost to a missed field pickup.
+    if (!RUN_RIFTWILD_IS_HOLLOW()
+        && run_state_riftwild_gate_active(screen)
+        && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_WORLDGLASS)))
+        pickup_spawn_waygear(WAYGEAR_WORLDGLASS, FIX8(120), FIX8(40));
 }

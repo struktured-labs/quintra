@@ -35,6 +35,7 @@ def spawn_pickup(pb, kind, payload=0):
     pb.memory[ep + 12] = 35
     pb.memory[ep + 13] = 5
     pb.memory[ep + 14] = 1
+    pb.memory[ep + 15] = 0
     pb.memory[ep + 16] = 200
     pb.memory[ep + 17] = kind
     pb.memory[ep + 18] = payload
@@ -96,10 +97,52 @@ def main():
         tiles, attrs = hud_row(pb)
         assert tiles == (R, E, G, E, N, HUD_BLANK), tiles
         assert attrs == (5, 5, 5, 5, 5, 5), attrs
+        wait_notice(pb)
+
+        # Hunger lasts across rooms and makes hearts visibly uncollectable;
+        # cleansing it restores ordinary pickup behavior immediately.
+        clear_entities(pb)
+        pb.memory[PL + 46] = 0x08
+        pb.memory[PL + 47] = 3
+        pb.memory[PL + 2] = pb.memory[PL + 1] - 2
+        hp_before = pb.memory[PL + 2]
+        spawn_pickup(pb, 0)
+        pb.tick()
+        assert pb.memory[PL + 2] == hp_before
+        assert pb.memory[EN] == 3 and pb.memory[EN + 1] & 1
+        pb.memory[PL + 46] = pb.memory[PL + 47] = 0
+        pb.tick()
+        assert pb.memory[PL + 2] == hp_before + 1
+        assert not (pb.memory[EN + 1] & 1)
+
+        # The marked fate orb pulses through its own palette at range, then
+        # every possible resolution changes at least one observable run value.
+        clear_entities(pb)
+        pb.memory[PL + 2] = max(1, pb.memory[PL + 1] - 2)
+        pb.memory[PL + 4] = max(0, pb.memory[PL + 3] - 2)
+        pb.memory[PL + 5] = min(pb.memory[PL + 5], 12)
+        pb.memory[PL + 8] = min(pb.memory[PL + 8], 8)
+        pb.memory[PL + 17] = pb.memory[PL + 18] = 0
+        spawn_pickup(pb, 24)
+        px = pb.memory[PL + 9] | (pb.memory[PL + 10] << 8)
+        put32(pb, EN + 2, (px + 32) << 8)
+        palettes = set()
+        for _ in range(40):
+            pb.tick()
+            palettes.add(pb.memory[EN + 13] & 7)
+        assert {4, 5, 6} <= palettes, palettes
+        before = tuple(pb.memory[off] for off in (
+            PL + 46, PL + 2, PL + 4, PL + 5, PL + 8, PL + 17, PL + 18))
+        put32(pb, EN + 2, px << 8)
+        pb.tick()
+        after = tuple(pb.memory[off] for off in (
+            PL + 46, PL + 2, PL + 4, PL + 5, PL + 8, PL + 17, PL + 18))
+        assert after != before, (before, after)
+        assert not (pb.memory[EN + 1] & 1)
     finally:
         pb.stop(save=False)
 
-    print("[pickup-feedback] PASS literal queued stat gains + colored temporary/status words")
+    print("[pickup-feedback] PASS colored gains/status + Hunger heart block + pulsing Wildcard fate")
 
 
 if __name__ == "__main__":

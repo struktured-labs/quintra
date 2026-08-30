@@ -61,6 +61,7 @@ extern u8 room_hurt_pose_ticks;
 extern u8 room_player_pose_base;
 extern u8 room_player_pose_locked;
 extern u8 room_major_reward_pending;
+extern u8 room_major_reward_icon;
 extern u16 room_secret_loot_timer;
 extern u8 death_timer;
 void room_draw_ascended_walk_lower(u8 class_id, u8 frame, u8 prop) BANKED;
@@ -127,7 +128,8 @@ void room_shake(u8 mag, u8 frames) BANKED;
 void room_status_blind_visual(u8 blind) BANKED;
 void room_start_weapon_surge(void) BANKED;
 // Pause into the one-page major-objective claim tableau after collision has
-// committed the item. `kind` is the pickup identity; `topic` is its stage.
+// committed the item. `kind` is the pickup identity; `topic` is its stage or
+// Waygear index.
 void room_start_major_reward(u8 kind, u8 topic) BANKED;
 void room_begin_secret_loot_timer(void) BANKED;
 void room_update_secret_loot_timer(void) BANKED;

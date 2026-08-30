@@ -161,6 +161,15 @@
 #define BGT_GATE_THORNS  103 // Wolfkin only
 #define BGT_GATE_VENT    104 // Vespine only
 
+// Riftwild climate terrain. These intentionally share the map-only 105..110
+// slots: closing the Compass reloads the room atlas before play resumes.
+#define BGT_WILD_MUD      105 // walkable marsh ground
+#define BGT_WILD_SAND     106 // walkable desert ground
+#define BGT_WILD_SNOW     107 // walkable frost ground
+#define BGT_WILD_HOLE     108 // solid sinkhole / broken earth
+#define BGT_WILD_MOUNTAIN 109 // solid high ridge
+#define BGT_WILD_REEDS    110 // solid wetland growth
+
 // Compass-only dim connections. These expose the active dungeon lattice from
 // the first visit while discovered routes overwrite them with the bright
 // path tiles above. Slots 100–101 are otherwise unused by every map atlas.
@@ -292,6 +301,7 @@
 #define SPR_WAYGEAR_GLOVE     204 // permanent traversal loadout
 #define SPR_WAYGEAR_RAFT      205
 #define SPR_WAYGEAR_HOOK      206
+#define SPR_WAYGEAR_WORLDGLASS 207 // Waking/Hollow Riftwild world verb
 // Peaceful residents are full champion-scale 16x16 metasprites. These high
 // OBJ slots are town/dungeon-shop fixtures and never overlap combat atlases.
 #define SPR_TOWN_RESIDENT_BIG 208 // 208..211: elder / ordinary wayfarer
@@ -389,6 +399,8 @@ void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
 void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
+void tiles_load_arena_floor(void) BANKED;         // calm Colossus plane + sparse inlays
+void tiles_load_standard_floor(void) BANKED;      // restore dungeon cracks after a boss
 void tiles_load_stage_scenery(u8 stage) BANKED;   // stage-local pillar/crystal/debris silhouettes
 void tiles_load_cinder_maw_medium_sprite(void) BANKED;
 void tiles_load_map_bg(void) BANKED;              // dungeon set + Compass glyphs

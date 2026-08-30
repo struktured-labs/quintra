@@ -133,6 +133,72 @@ fn dungeon_neighbor(local: u8, size: u8, dir: u8, run_seed: u32, stage: u8) -> O
     Some(next)
 }
 
+/// Mirror the six seed-stable silhouettes that give the first two dungeons
+/// distinct visual grammar before loose props are scattered over the room.
+fn apply_early_archetype(m: &mut Tilemap, stage: u8, seed: u32) {
+    if stage == 0 {
+        match (seed >> 5) % 6 {
+            0 => for (x, y) in [
+                (3,4),(4,4),(5,4),(14,4),(15,4),(16,4),
+                (3,12),(4,12),(5,12),(14,12),(15,12),(16,12),
+            ] { m[y][x] = BGT_CRYSTAL; },
+            1 => for i in 3..=6usize {
+                m[i][5] = BGT_CRYSTAL;
+                m[17 - i][14] = BGT_CRYSTAL;
+            },
+            2 => for (x, y) in [
+                (4,3),(5,4),(6,5),(13,3),(14,4),(15,5),
+                (4,14),(5,13),(6,12),(13,14),(14,13),(15,12),
+            ] { m[y][x] = BGT_CRYSTAL; },
+            3 => for i in 3..=7usize {
+                m[4][i] = BGT_PILLAR;
+                m[13][19 - i] = BGT_PILLAR;
+            },
+            4 => for (x, y) in [
+                (3,5),(4,5),(7,3),(8,3),(12,14),(13,14),
+                (16,11),(17,11),(4,12),(5,12),(14,5),(15,5),
+            ] { m[y][x] = BGT_CRYSTAL; },
+            _ => for i in 4..=6usize {
+                m[i][4] = BGT_PILLAR;
+                m[i][15] = BGT_CRYSTAL;
+                m[17 - i][4] = BGT_CRYSTAL;
+                m[17 - i][15] = BGT_PILLAR;
+            },
+        }
+    } else if stage == 1 {
+        match (seed >> 7) % 6 {
+            0 => for (x, y) in [
+                (3,4),(4,4),(5,5),(14,12),(15,12),
+                (16,11),(4,13),(5,13),(13,3),(14,3),
+            ] { m[y][x] = BGT_CRYSTAL; },
+            1 => for i in 3..=6usize {
+                m[i][i + 1] = BGT_CRYSTAL;
+                m[17 - i][i + 1] = BGT_CRYSTAL;
+            },
+            2 => for (x, y) in [
+                (3,5),(4,5),(5,5),(6,6),(13,11),(14,12),
+                (15,12),(16,12),(4,13),(5,13),(14,4),(15,4),
+            ] { m[y][x] = BGT_CRYSTAL; },
+            3 => for i in 3..=6usize {
+                m[4][i] = BGT_CRYSTAL;
+                m[12][i] = BGT_CRYSTAL;
+                m[5][19 - i] = BGT_CRYSTAL;
+                m[13][19 - i] = BGT_CRYSTAL;
+            },
+            4 => for (x, y) in [
+                (3,3),(4,3),(5,3),(3,4),(4,4),(14,13),(15,13),
+                (16,13),(15,12),(16,12),(5,11),(6,11),(13,5),(14,5),
+            ] { m[y][x] = BGT_CRYSTAL; },
+            _ => for i in 3..=6usize {
+                m[i][4] = BGT_CRYSTAL;
+                m[17 - i][5] = BGT_CRYSTAL;
+                m[i][15] = BGT_CRYSTAL;
+                m[17 - i][14] = BGT_CRYSTAL;
+            },
+        }
+    }
+}
+
 /// Generate the room tilemap for the given run state — the reference for
 /// what the cart's WRAM `room_tilemap` holds right after generation.
 pub fn generate_tilemap(
@@ -154,7 +220,9 @@ pub fn generate_tilemap(
                 m[y][x] = BGT_WALL;
             } else {
                 let r = rng.next_u8();
-                m[y][x] = if bosses_beaten == 0 {
+                m[y][x] = if kind.boss {
+                    BGT_FLOOR
+                } else if bosses_beaten == 0 {
                     BGT_FLOOR
                 } else if r < 38 {
                     BGT_FLOOR2
@@ -165,6 +233,19 @@ pub fn generate_tilemap(
                 };
             }
         }
+    }
+
+    if kind.boss {
+        m[2][2] = BGT_FLOOR2;
+        m[2][17] = BGT_FLOOR2;
+        m[14][2] = BGT_FLOOR2;
+        m[14][17] = BGT_FLOOR2;
+        m[2][9] = BGT_FLOOR3;
+        m[2][10] = BGT_FLOOR3;
+        m[14][9] = BGT_FLOOR3;
+        m[14][10] = BGT_FLOOR3;
+        m[8][2] = BGT_FLOOR3;
+        m[8][17] = BGT_FLOOR3;
     }
 
     if !kind.boss {
@@ -202,8 +283,8 @@ pub fn generate_tilemap(
             m[9][0] = BGT_WALL;
         }
 
-        // ---- Interior shape (8 layouts; lanes cols 9-11 / rows 7-9 clear)
-        let shape = rng.range_u8(11);   // 11 interior layouts
+        // ---- Interior shape (19 layouts; lanes cols 9-11 / rows 7-9 clear)
+        let shape = rng.range_u8(19);
         match shape {
             1 => {
                 for (y, x) in [(4, 4), (4, 15), (13, 4), (13, 15)] {
@@ -296,7 +377,60 @@ pub fn generate_tilemap(
                     }
                 }
             }
+            11 => {
+                for i in 3..=7usize {
+                    m[4][i] = BGT_PILLAR;
+                    m[13][19 - i] = BGT_PILLAR;
+                }
+            }
+            12 => {
+                for i in 2..=7usize { m[5][i] = BGT_PILLAR; }
+                for i in 12..=17usize { m[11][i] = BGT_PILLAR; }
+            }
+            13 => {
+                for (y, x) in [(4,7),(4,8),(4,12),(4,13),
+                               (6,5),(11,5),(6,14),(11,14),
+                               (13,7),(13,8),(13,12),(13,13)] {
+                    m[y][x] = BGT_CRYSTAL;
+                }
+            }
+            14 => {
+                for (y, x) in [(4,3),(4,4),(4,5),(5,3),
+                               (4,14),(4,15),(4,16),(5,16),
+                               (12,3),(13,3),(13,4),(13,5),
+                               (13,14),(13,15),(13,16),(12,16)] {
+                    m[y][x] = BGT_PILLAR;
+                }
+            }
+            15 => {
+                for i in 3..=6usize {
+                    m[i][6] = BGT_PILLAR;
+                    m[17 - i][13] = BGT_PILLAR;
+                }
+            }
+            16 => {
+                for (y, x) in [(5,3),(5,4),(5,5),(6,3),(11,3),(11,5),
+                               (12,14),(12,15),(12,16),(6,14),(6,16),(11,16)] {
+                    m[y][x] = BGT_PILLAR;
+                }
+            }
+            17 => {
+                for x in [3usize,7,13,16] { m[4][x] = BGT_PILLAR; }
+                for x in [5usize,8,12,15] { m[12][x] = BGT_PILLAR; }
+            }
+            18 => {
+                for i in 3..=6usize { m[4][i] = BGT_PILLAR; }
+                for i in 13..=16usize { m[12][i] = BGT_CRYSTAL; }
+                m[5][3] = BGT_PILLAR;
+                m[11][16] = BGT_CRYSTAL;
+            }
             _ => {} // 0: open room
+        }
+
+        if matches!(local, 1 | 2 | 4 | 11 | 17)
+            || (local == 7 && size >= 12)
+        {
+            apply_early_archetype(&mut m, stage as u8, seed);
         }
 
         // ---- Rubble x3

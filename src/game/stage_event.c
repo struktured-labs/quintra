@@ -117,6 +117,7 @@ void stage_event_prepare_room(void) BANKED {
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
         || procgen_current_room_is_boss || run_state.secret_pending
         || run_state_is_shop() || run_state_is_sanctuary()
+        || room_encounter_kind == ENCOUNTER_HUNT
         || room_puzzle_kind != PUZZLE_NONE
         || room_hidden_secret_kind != HIDDEN_SECRET_NONE) return;
     local = run_state_dungeon_local();

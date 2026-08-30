@@ -41,6 +41,8 @@ void player_clear_fields(void) BANKED {
     player.active_oath = 0;
     player.waygear_owned = 0;
     player.waygear_equipped = 0xFF;
+    player.curse_flags = 0;
+    player.curse_rooms = 0;
 }
 
 void player_apply_class(u8 class_id) BANKED {

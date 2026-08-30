@@ -12,6 +12,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/room.h"
+#include "game/waygear.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 
@@ -37,6 +38,13 @@ void room_start_death(void) BANKED {
 void room_start_major_reward(u8 kind, u8 topic) BANKED {
     u8 class_id = player.class_id < 5 ? player.class_id : 0;
     dialog_prepare_reward(kind, topic);
+    if (kind == PICKUP_WAYGEAR && topic < WAYGEAR_COUNT)
+        room_major_reward_icon = (u8)(SPR_WAYGEAR_GLOVE + topic);
+    else if (kind == PICKUP_HOLLOW_RELIC)
+        room_major_reward_icon = topic == ITEM_ID_BLAST_SEED
+            ? SPR_ITEM_BLAST_SEED : topic == ITEM_ID_RIFT_LENS
+            ? SPR_ITEM_RIFT_LENS : SPR_ITEM_MIRROR_SHARD;
+    else room_major_reward_icon = SPR_ITEM_RIFT_SIGIL;
     room_major_reward_pending = ROOM_MAJOR_REWARD_FRAMES;
     tiles_load_class_claim_sprite(class_id);
     room_player_pose_base = SPR_CLASS_BASE;

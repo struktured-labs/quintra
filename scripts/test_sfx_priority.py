@@ -23,8 +23,9 @@ def structural_contract():
     assert "melody_lock(MELODY_PRIORITY_SECRET, 45)" in core
     assert "melody_lock(MELODY_PRIORITY_CLEAR, 18)" in core
     assert "priority < melody_lock_priority" in core
-    assert "if (melody_lock_frames) return;" in core, (
-        "rune feedback can overwrite a scheduled discovery melody"
+    rune = core.split("void sfx_play_rune", 1)[1].split("void sfx_tick", 1)[0]
+    assert "if (melody_lock_frames) return;" not in rune, (
+        "floor-note input was muted by an incidental room melody"
     )
     assert "u8 sfx_melody_locked(void)" in core
     assert "u8 sfx_melody_locked(void);" in header

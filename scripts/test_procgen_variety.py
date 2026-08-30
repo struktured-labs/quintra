@@ -75,6 +75,10 @@ def sample_stage_entry(pb, stage, seed):
     pb.memory[RS + 11] = stage
     pb.memory[RS + 12] = 0         # pending_unseal
     pb.memory[RS + 13] = 0         # secret_pending
+    # Each injection models a fresh first visit. The same emulator samples
+    # all stages, so clear prior synthetic visit/hunt history explicitly.
+    for offset in range(52, 57):
+        pb.memory[RS + offset] = 0
     pb.memory[RS + 17] = 1         # stand in Riftwild's dungeon gate cell
     pb.memory[RS + 18] = (8, 21, 34)[(stage - 1) % 3 if stage else 0]
     pb.memory[PL + 2] = pb.memory[PL + 1]

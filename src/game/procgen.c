@@ -15,17 +15,16 @@
 #include "game/procgen_spawn.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/riftwild_phase.h"
 #include "game/spawn_reach.h"
 #include "game/waygear.h"
 #include "render/tiles.h"
 #include "content.h"
 
-// Fixed Reaper encounter construction lives with its feature AI/art bank;
-// procgen only selects the authored deep cell.
-void stage_reaper_spawn_encounter(u8 stage) BANKED;
-
 u8 procgen_current_room_is_boss;
 u8 procgen_current_room_is_large;
+void procgen_apply_shared_layout(u8 shape) BANKED;
+void procgen_apply_early_archetype(u8 stage, u32 seed) BANKED;
 
 u32 procgen_room_seed(u32 run_seed, u8 biome_id, u8 room_counter) BANKED {
     u32 room_mix = 0;
@@ -181,13 +180,14 @@ static void generate_world_extension(u8 edges, u8 family, u32 seed) {
                 ? BGT_TREE : BGT_GRASS;
         }
     }
-    // A real east graph edge follows the worn trail to the true x=240 door.
+    // A real east graph edge reaches an open field boundary. Riftwild travel
+    // crosses landscape, never a dungeon-door glyph.
     if (edges & 0x02) {
         for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x)
             room_world_extension[8][x] =
                 room_world_extension[9][x] = BGT_PATH;
         room_world_extension[8][ROOM_WIDE_EXT_TILES - 1] =
-            room_world_extension[9][ROOM_WIDE_EXT_TILES - 1] = BGT_DOOR;
+            room_world_extension[9][ROOM_WIDE_EXT_TILES - 1] = BGT_PATH;
     }
     for (x = 0; x < 12; ++x)
         room_world_extension[ly[x]][lx[x]] = tile;
@@ -218,7 +218,7 @@ static void generate_world_bottom(u8 edges, u8 family, u32 seed) {
         room_world_bottom[y][9] = room_world_bottom[y][10] = BGT_PATH;
     if (edges & 0x04) {
         room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][9] =
-            room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][10] = BGT_DOOR;
+            room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][10] = BGT_PATH;
     } else {
         room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][9] =
             room_world_bottom[ROOM_WIDE_BOTTOM_ROWS - 1][10] = BGT_TREE;
@@ -230,6 +230,22 @@ static void generate_world_bottom(u8 edges, u8 family, u32 seed) {
         room_world_bottom[10][24] = room_world_bottom[10][25] = tile;
     room_world_bottom[7 + ((seed >> 7) & 1)][22] = BGT_TREE;
     room_world_bottom[1 + ((seed >> 9) & 1)][4] = BGT_TREE;
+}
+
+// The graph-owning generator bank is the final authority for true field
+// thresholds. Climate painting happens through a banked call; restamp these
+// six-tile boundary mouths afterward so no switchable-data or ABI quirk can
+// collapse continuous wilderness travel back into a two-tile doorway.
+static void open_world_thresholds(u8 edges) {
+    u8 i;
+    if (edges & 0x01) for (i = 7; i <= 12; ++i)
+        room_tilemap[0][i] = BGT_PATH;
+    if (edges & 0x04) for (i = 7; i <= 12; ++i)
+        room_world_bottom[13][i] = BGT_PATH;
+    if (edges & 0x08) for (i = 6; i <= 11; ++i)
+        room_tilemap[i][0] = BGT_PATH;
+    if (edges & 0x02) for (i = 6; i <= 11; ++i)
+        room_world_extension[i][10] = BGT_PATH;
 }
 
 static u8 escort_cell_unoccupied(u8 tx, u8 ty) {
@@ -280,7 +296,8 @@ static void configure_sentinel_miniboss(u8 idx, u8 stage) {
     entities[idx].hitbox      = (u8)0xEE;
     // ai_data[2] = variant -> boss_tick picks the matching archetype.
     entities[idx].ai_data[2]  = mb_var;
-    entities[idx].hp = (u8)(entities[idx].hp + (u8)(mb_pow * 12));
+    entities[idx].hp = (u8)(entities[idx].hp + 25u + (u8)(mb_pow * 14));
+    entities[idx].damage++;
     // Easy exists primarily for deep-route testing. The Warden is now a
     // required stage fixture, so halve only its Easy health burden while
     // preserving every Normal pattern, damage value, and scaling step.
@@ -295,15 +312,87 @@ static void configure_sentinel_miniboss(u8 idx, u8 stage) {
 static void apply_stage_archetype(u8 stage, u32 seed) {
     u8 archetype = stage_room_archetype[stage % N_STAGES];
     u8 i;
-    if (archetype == STAGE_ARCH_GROVE) {
-        // Grove: paired crystal thickets form four cover islands. Stage
-        // palettes turn the common crystal art into luminous vegetation.
-        static const u8 gx[8] = { 4, 5, 14, 15, 4, 5, 14, 15 };
-        static const u8 gy[8] = { 4, 4, 4, 4, 12, 12, 12, 12 };
-        for (i = 0; i < 8; ++i) {
-            room_tilemap[gy[i]][gx[i]] = BGT_CRYSTAL;
+#if 0
+    if (archetype == STAGE_ARCH_CAVERN) {
+        // Crystal's six seed-selected excavations are deliberately geometric:
+        // shelves, ribs, pockets, and broken facets make the opening dungeon
+        // recognizable without teaching one repeated room stamp. Every
+        // variant leaves the broad cardinal cross untouched.
+        u8 variant = (u8)((seed >> 5) % 6);
+        if (variant == 0) {
+            static const u8 cx[12] = { 3,4,5, 14,15,16, 3,4,5, 14,15,16 };
+            static const u8 cy[12] = { 4,4,4, 4,4,4, 12,12,12, 12,12,12 };
+            for (i = 0; i < 12; ++i) room_tilemap[cy[i]][cx[i]] = BGT_CRYSTAL;
+        } else if (variant == 1) {
+            for (i = 3; i <= 6; ++i) {
+                room_tilemap[i][5] = BGT_CRYSTAL;
+                room_tilemap[(u8)(17 - i)][14] = BGT_CRYSTAL;
+            }
+        } else if (variant == 2) {
+            static const u8 cx[12] = { 4,5,6, 13,14,15, 4,5,6, 13,14,15 };
+            static const u8 cy[12] = { 3,4,5, 3,4,5, 14,13,12, 14,13,12 };
+            for (i = 0; i < 12; ++i) room_tilemap[cy[i]][cx[i]] = BGT_CRYSTAL;
+        } else if (variant == 3) {
+            for (i = 3; i <= 7; ++i) {
+                room_tilemap[4][i] = BGT_PILLAR;
+                room_tilemap[13][(u8)(19 - i)] = BGT_PILLAR;
+            }
+        } else if (variant == 4) {
+            static const u8 cx[12] = { 3,4, 7,8, 12,13, 16,17, 4,5, 14,15 };
+            static const u8 cy[12] = { 5,5, 3,3, 14,14, 11,11, 12,12, 5,5 };
+            for (i = 0; i < 12; ++i) room_tilemap[cy[i]][cx[i]] = BGT_CRYSTAL;
+        } else {
+            for (i = 4; i <= 6; ++i) {
+                room_tilemap[i][4] = BGT_PILLAR;
+                room_tilemap[i][15] = BGT_CRYSTAL;
+                room_tilemap[(u8)(17 - i)][4] = BGT_CRYSTAL;
+                room_tilemap[(u8)(17 - i)][15] = BGT_PILLAR;
+            }
         }
-    } else if (archetype == STAGE_ARCH_GAUNTLET) {
+    } else if (archetype == STAGE_ARCH_GROVE) {
+        // Verdant owns six asymmetric living clearings rather than Crystal's
+        // architecture recolored green. Thickets bend around open lanes,
+        // alternate sides, and form crescents or canopy pockets by seed.
+        u8 variant = (u8)((seed >> 7) % 6);
+        if (variant == 0) {
+            static const u8 gx[10] = { 3,4,5, 14,15,16, 4,5, 13,14 };
+            static const u8 gy[10] = { 4,4,5, 12,12,11, 13,13, 3,3 };
+            for (i = 0; i < 10; ++i) room_tilemap[gy[i]][gx[i]] = BGT_CRYSTAL;
+        } else if (variant == 1) {
+            for (i = 3; i <= 6; ++i) {
+                room_tilemap[i][(u8)(i + 1)] = BGT_CRYSTAL;
+                room_tilemap[(u8)(17 - i)][(u8)(i + 1)] = BGT_CRYSTAL;
+            }
+        } else if (variant == 2) {
+            static const u8 gx[12] = { 3,4,5,6, 13,14,15,16, 4,5,14,15 };
+            static const u8 gy[12] = { 5,5,5,6, 11,12,12,12, 13,13,4,4 };
+            for (i = 0; i < 12; ++i) room_tilemap[gy[i]][gx[i]] = BGT_CRYSTAL;
+        } else if (variant == 3) {
+            for (i = 3; i <= 6; ++i) {
+                room_tilemap[4][i] = BGT_CRYSTAL;
+                room_tilemap[12][i] = BGT_CRYSTAL;
+                room_tilemap[5][(u8)(19 - i)] = BGT_CRYSTAL;
+                room_tilemap[13][(u8)(19 - i)] = BGT_CRYSTAL;
+            }
+        } else if (variant == 4) {
+            static const u8 gx[14] = { 3,4,5, 3,4, 14,15,16, 15,16, 5,6,13,14 };
+            static const u8 gy[14] = { 3,3,3, 4,4, 13,13,13, 12,12, 11,11,5,5 };
+            for (i = 0; i < 14; ++i) room_tilemap[gy[i]][gx[i]] = BGT_CRYSTAL;
+        } else {
+            for (i = 3; i <= 6; ++i) {
+                room_tilemap[i][4] = BGT_CRYSTAL;
+                room_tilemap[(u8)(17 - i)][5] = BGT_CRYSTAL;
+                room_tilemap[i][15] = BGT_CRYSTAL;
+                room_tilemap[(u8)(17 - i)][14] = BGT_CRYSTAL;
+            }
+        }
+    }
+#else
+    if (archetype == STAGE_ARCH_CAVERN || archetype == STAGE_ARCH_GROVE) {
+        procgen_apply_early_archetype(stage, seed);
+    }
+#endif
+    else if (archetype == STAGE_ARCH_GAUNTLET) {
         // Gauntlet: two broken magma/spike seams make lateral positioning
         // matter without blocking any route. Three-tile gaps alternate per
         // seed, and spike iframes make crossing costly rather than fatal.
@@ -512,15 +601,30 @@ void procgen_generate_current_room(void) BANKED {
                     room_tilemap[y][x] = BGT_WALL;
                 } else {
                     u8 r = rng_next_u8();
-                    // Consume the same deterministic draw, but give the
-                    // opening stage a quiet combat plane. Later biomes keep
-                    // their cracked/pebbled floor texture dialect.
-                    room_tilemap[y][x] = run_state.bosses_beaten == 0
+                    // Preserve one deterministic draw per interior tile even
+                    // when a boss replaces the texture. Boss behavior and
+                    // replay seeds must not shift merely because its floor is
+                    // calmer. Ordinary later biomes retain their dialect.
+                    room_tilemap[y][x] = is_boss_room
+                        ? BGT_FLOOR
+                        : run_state.bosses_beaten == 0
                         ? BGT_FLOOR
                         : (r < 38) ? BGT_FLOOR2
                         : (r < 64) ? BGT_FLOOR3 : BGT_FLOOR;
                 }
             }
+        }
+
+        if (is_boss_room) {
+            // Four corner frames and six cardinal seals occupy under 7% of
+            // the walkable plane. The centre twelve-by-nine combat field is
+            // intentionally untouched, giving every boss and hazard a calm
+            // silhouette while stage palettes still identify the arena.
+            room_tilemap[2][2] = room_tilemap[2][17] = BGT_FLOOR2;
+            room_tilemap[14][2] = room_tilemap[14][17] = BGT_FLOOR2;
+            room_tilemap[2][9] = room_tilemap[2][10] = BGT_FLOOR3;
+            room_tilemap[14][9] = room_tilemap[14][10] = BGT_FLOOR3;
+            room_tilemap[8][2] = room_tilemap[8][17] = BGT_FLOOR3;
         }
 
         if (!is_boss_room) {
@@ -569,7 +673,9 @@ void procgen_generate_current_room(void) BANKED {
             // N/S door at col 10; rows 7-9 for the E/W door at row 8) so
             // every door remains reachable regardless of pattern.
             {
-                u8 shape = (u8)rng_range(11);   // 11 interior layouts
+                u8 shape = (u8)rng_range(19);   // 19 shared interior layouts
+#if 0
+                u8 i;
                 if (shape == 1) {
                     // Four pillars at quarter points
                     room_tilemap[4][4]   = BGT_PILLAR;
@@ -596,7 +702,6 @@ void procgen_generate_current_room(void) BANKED {
                 } else if (shape == 4) {
                     // Inner vault: pillar ring at x 4-15 / y 4-12, with
                     // lane-wide gaps where the door lanes cross it.
-                    u8 i;
                     for (i = 4; i <= 15; ++i) {
                         if (i >= 9 && i <= 11) continue;      // N/S lane gap
                         room_tilemap[4][i]  = BGT_PILLAR;
@@ -610,7 +715,6 @@ void procgen_generate_current_room(void) BANKED {
                 } else if (shape == 5) {
                     // Twin walls: vertical pillar runs at x=5 and x=14,
                     // broken at the E/W lane — three linked chambers.
-                    u8 i;
                     for (i = 2; i <= 14; ++i) {
                         if (i >= 7 && i <= 9) continue;
                         room_tilemap[i][5]  = BGT_PILLAR;
@@ -636,7 +740,6 @@ void procgen_generate_current_room(void) BANKED {
                     // silhouette and cover budget while making every visible
                     // opening at least two tiles wide.
                     static const u8 col_x[6] = { 3, 4, 7, 12, 15, 16 };
-                    u8 i;
                     for (i = 0; i < 6; ++i) {
                         room_tilemap[5][col_x[i]]  = BGT_PILLAR;
                         room_tilemap[11][col_x[i]] = BGT_PILLAR;
@@ -644,7 +747,6 @@ void procgen_generate_current_room(void) BANKED {
                 } else if (shape == 8) {
                     // Serpentine: two staggered half-walls, N/S lane (cols
                     // 9-11) kept clear — weave an S around them.
-                    u8 i;
                     for (i = 2; i <= 12; ++i)
                         if (i < 9 || i > 11) room_tilemap[5][i]  = BGT_PILLAR;
                     for (i = 7; i <= 17; ++i)
@@ -652,7 +754,6 @@ void procgen_generate_current_room(void) BANKED {
                 } else if (shape == 9) {
                     // Pillar grid: a regular hall of columns (lanes clear).
                     static const u8 gx[4] = { 4, 8, 12, 16 };
-                    u8 i;
                     for (i = 0; i < 4; ++i) {
                         room_tilemap[4][gx[i]]  = BGT_PILLAR;
                         room_tilemap[12][gx[i]] = BGT_PILLAR;
@@ -660,7 +761,6 @@ void procgen_generate_current_room(void) BANKED {
                 } else if (shape == 10) {
                     // Central chamber: a pillar ring around the middle with
                     // openings at every door lane (cols 9-11, rows 7-9).
-                    u8 i;
                     for (i = 6; i <= 13; ++i)
                         if (i < 9 || i > 11) {
                             room_tilemap[6][i]  = BGT_PILLAR;
@@ -671,8 +771,52 @@ void procgen_generate_current_room(void) BANKED {
                             room_tilemap[i][6]  = BGT_PILLAR;
                             room_tilemap[i][13] = BGT_PILLAR;
                         }
+                } else if (shape == 11) {
+                    // Opposed shelves: broad cover at northwest/southeast.
+                    for (i = 3; i <= 7; ++i) {
+                        room_tilemap[4][i] = BGT_PILLAR;
+                        room_tilemap[13][(u8)(19 - i)] = BGT_PILLAR;
+                    }
+                } else if (shape == 12) {
+                    // Offset galleries leave a diagonal route between bars.
+                    for (i = 2; i <= 7; ++i) room_tilemap[5][i] = BGT_PILLAR;
+                    for (i = 12; i <= 17; ++i) room_tilemap[11][i] = BGT_PILLAR;
+                } else if (shape == 13) {
+                    // Broken crystal diamond around the central fighting lane.
+                    static const u8 dx[12] = { 7,8,12,13, 5,5,14,14, 7,8,12,13 };
+                    static const u8 dy[12] = { 4,4,4,4, 6,11,6,11, 13,13,13,13 };
+                    for (i = 0; i < 12; ++i) room_tilemap[dy[i]][dx[i]] = BGT_CRYSTAL;
+                } else if (shape == 14) {
+                    // Four short inward-facing corner walls.
+                    static const u8 qx[16] = { 3,4,5,3, 14,15,16,16, 3,3,4,5, 14,15,16,16 };
+                    static const u8 qy[16] = { 4,4,4,5, 4,4,4,5, 12,13,13,13, 13,13,13,12 };
+                    for (i = 0; i < 16; ++i) room_tilemap[qy[i]][qx[i]] = BGT_PILLAR;
+                } else if (shape == 15) {
+                    // Alternating ribs create two roomy side pockets.
+                    for (i = 3; i <= 6; ++i) {
+                        room_tilemap[i][6] = BGT_PILLAR;
+                        room_tilemap[(u8)(17 - i)][13] = BGT_PILLAR;
+                    }
+                } else if (shape == 16) {
+                    // Twin half-rings, open toward the cardinal cross.
+                    static const u8 rx[12] = { 3,4,5, 3,3,5, 14,15,16, 14,16,16 };
+                    static const u8 ry[12] = { 5,5,5, 6,11,11, 12,12,12, 6,6,11 };
+                    for (i = 0; i < 12; ++i) room_tilemap[ry[i]][rx[i]] = BGT_PILLAR;
+                } else if (shape == 17) {
+                    // Staggered piers avoid the symmetry of the old grid.
+                    static const u8 sx[8] = { 3,7,13,16, 5,8,12,15 };
+                    for (i = 0; i < 4; ++i) room_tilemap[4][sx[i]] = BGT_PILLAR;
+                    for (i = 4; i < 8; ++i) room_tilemap[12][sx[i]] = BGT_PILLAR;
+                } else if (shape == 18) {
+                    // Asymmetric ruin: one hard court and one fragile court.
+                    for (i = 3; i <= 6; ++i) room_tilemap[4][i] = BGT_PILLAR;
+                    for (i = 13; i <= 16; ++i) room_tilemap[12][i] = BGT_CRYSTAL;
+                    room_tilemap[5][3] = BGT_PILLAR;
+                    room_tilemap[11][16] = BGT_CRYSTAL;
                 }
-                // shape 0: open room (1-in-11 — variety rules)
+                // shape 0: open room (1-in-19 — now a deliberate rarity)
+#endif
+                procgen_apply_shared_layout(shape);
             }
 
             // Stage architecture is laid down before loose props so crates,
@@ -845,13 +989,13 @@ void procgen_generate_current_room(void) BANKED {
             room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
         if (edges & 0x02) for (x = 9; x < ROOM_W; ++x)
             room_tilemap[8][x] = room_tilemap[9][x] = BGT_PATH;
-        if (edges & 0x01) room_tilemap[0][9] = room_tilemap[0][10] = BGT_DOOR;
+        if (edges & 0x01) room_tilemap[0][9] = room_tilemap[0][10] = BGT_PATH;
         // Row 16 is now an internal seam into the southern field. It remains
         // open regardless of graph direction; the true door lives at row 24.
         for (x = 1; x < ROOM_W - 1; ++x)
             room_tilemap[ROOM_H - 1][x] = BGT_GRASS;
         room_tilemap[ROOM_H - 1][9] = room_tilemap[ROOM_H - 1][10] = BGT_PATH;
-        if (edges & 0x08) room_tilemap[8][0] = room_tilemap[9][0] = BGT_DOOR;
+        if (edges & 0x08) room_tilemap[8][0] = room_tilemap[9][0] = BGT_PATH;
         // Column 19 is no longer a cardinal boundary. Open the whole old seam
         // into the side field; only column 27 can advance east.
         for (y = 1; y < ROOM_H - 1; ++y)
@@ -875,6 +1019,7 @@ void procgen_generate_current_room(void) BANKED {
         for (x = 0; x < ROOM_WIDE_EXT_TILES; ++x)
             room_world_extension[ROOM_H - 1][x] = BGT_GRASS;
         generate_world_bottom(edges, family, seed);
+        riftwild_terrain_apply((u8)seed);
         if ((world_kind == ZELDA_CELL_DUNGEON_ENTRANCE && world_gate_active)
             || world_kind == ZELDA_CELL_VAULT
             || zelda_overworlds[0].screen_grid[run_state.world_screen].stairs != ID_NONE_U8)
@@ -902,11 +1047,8 @@ void procgen_generate_current_room(void) BANKED {
         // Verdant/Frost/etc. wing landmarks disappear beneath generic ruins
         // precisely where the long route should reinforce place identity.
         // Archetypes consume no RNG and preserve the central cardinal cross.
-        if (stage_room_archetype[run_state.bosses_beaten % N_STAGES]
-                != STAGE_ARCH_CAVERN) {
-            apply_stage_archetype(run_state.bosses_beaten, seed);
-            carve_stage_escape_rails();
-        }
+        apply_stage_archetype(run_state.bosses_beaten, seed);
+        carve_stage_escape_rails();
         // Compact stage silhouettes may decorate the old viewport edge.
         // Reopen it after layering so the scrolling field has no legacy wall.
         room_reopen_dungeon_court_seams(seed);
@@ -984,6 +1126,15 @@ void procgen_generate_current_room(void) BANKED {
     // Generic world texture is already final at this point.
     if (run_state.world_mode)
         waygear_prepare_world_field();
+    if (run_state.world_mode)
+        riftwild_prepare_hollow_field();
+
+    // The Riftwild already contains distant arches, a Farfold staircase,
+    // permanent traversal gear, and a one-use regional vault. Witnesses make
+    // those systems legible on a first expedition and explicitly invite the
+    // player to remember blocked groves and return with a different tool.
+    if (run_state.world_mode && world_kind == ZELDA_CELL_CAVE_ENTRANCE)
+        pickup_spawn_wayfarer(11, FIX8(64), FIX8(88));
 
     // The stage objective is progression-critical. Reserve its real pickup
     // before this room's optional enemy, shop, and decoration spawns can fill
@@ -1010,6 +1161,15 @@ void procgen_generate_current_room(void) BANKED {
             // entrance may have been revealed through a wall where the parent
             // graph intentionally has no edge, so author the opposite return
             // threshold explicitly instead of inheriting a sealed border.
+            // The base room template advertises four generic thresholds;
+            // erase all of them first so the three nonexistent exits read as
+            // walls, not tantalising doors that only fail on contact.
+            room_tilemap[0][9] = room_tilemap[0][10] = BGT_WALL;
+            room_tilemap[ROOM_H - 1][9] =
+                room_tilemap[ROOM_H - 1][10] = BGT_WALL;
+            room_tilemap[8][0] = room_tilemap[9][0] = BGT_WALL;
+            room_tilemap[8][ROOM_W - 1] =
+                room_tilemap[9][ROOM_W - 1] = BGT_WALL;
             if (run_state.entered_from == DIR_N) {
                 room_tilemap[ROOM_H - 1][9] = BGT_DOOR;
                 room_tilemap[ROOM_H - 1][10] = BGT_DOOR;
@@ -1060,7 +1220,9 @@ void procgen_generate_current_room(void) BANKED {
 
     {
         u8 is_miniboss = run_state.world_mode
-            ? (world_kind == ZELDA_CELL_BOSS) : run_state_is_miniboss();
+            ? (world_kind == ZELDA_CELL_BOSS
+                || run_state_riftwild_guard_active(run_state.world_screen))
+            : run_state_is_miniboss();
         u8 is_shop = (!is_miniboss && run_state_is_shop()) ? 1 : 0;
         // Sanctuary: the room right before every stage boss. No enemies and
         // a guaranteed full blessing, so each escalating colossus tests the
@@ -1162,6 +1324,8 @@ void procgen_generate_current_room(void) BANKED {
 
         if (run_state.world_mode
             && world_kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
+            pickup_spawn_wayfarer(world_gate_active ? 9 : 13,
+                FIX8(64), FIX8(88));
             player.iframes = 60;
             return;
         }
@@ -1174,6 +1338,7 @@ void procgen_generate_current_room(void) BANKED {
                 pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));
                 run_state.riftwild_flags |= RIFT_REGION_VAULT_USED_BIT;
             }
+            pickup_spawn_wayfarer(12, FIX8(120), FIX8(88));
             player.iframes = 60;
             return;
         }
@@ -1262,19 +1427,14 @@ void procgen_generate_current_room(void) BANKED {
                 }
             }
         } else if (is_miniboss) {
-            // Every dungeon's fixed deep court belongs to the Reaper. It is
-            // not part of any random pool, and its clear bit prevents the
-            // mortal encounter from respawning during stage backtracking.
             u8 stage = run_state.bosses_beaten;
-            if (!run_state.world_mode && run_state_dungeon_local() == 15) {
-                stage_reaper_spawn_encounter(stage);
             // MINI-BOSS: early dungeons use a beefed 16x16 Sentinel and two
             // escorts. Golden Temple onward instead gets the Bellwarden: a
             // stage-tinted Dread Bell plus one Rift Warden. That is a
             // guaranteed, readable pre-boss bullet-hell check—not a late
             // roster roll the player might never see—while the sanctuary in
             // the next room still turns its reward into boss preparation.
-            } else if (stage >= 6) {
+            if (stage >= 6) {
                 u8 idx = enemy_spawn(ENEMY_DREAD_BELL, (ROOM_W / 2) - 1, 3);
                 if (idx != 0xFF) {
                     // Palette 6 is the generated boss tint already loaded
@@ -1409,6 +1569,11 @@ void procgen_generate_current_room(void) BANKED {
                     + (depth_bonus >= 3 ? 2 : depth_bonus ? 1 : 0)
                     + (procgen_current_room_is_large ? 1 : 0)
                     + opening_pressure);
+            // Hollow Riftwild is the abandoned dangerous possibility, not a
+            // cosmetic second palette. Four extra bodies make every mirrored
+            // field a deliberate risk against its exclusive relic route.
+            if (run_state.world_mode && RUN_RIFTWILD_IS_HOLLOW())
+                enemy_count = (u8)(enemy_count + (RUN_IS_EASY() ? 2 : 4));
             enemy_count = dungeon_director_adjust_initial_count(enemy_count);
             if (is_stage_foyer
                 && enemy_count > (RUN_IS_EASY() ? 11 : 14))
@@ -1491,6 +1656,7 @@ void procgen_generate_current_room(void) BANKED {
                         // C<->Rust parity (draw order) is untouched.
                         if (idx != 0xFF) {
                             dungeon_director_configure_initial(idx, spawned);
+                            riftwild_harden_enemy(idx, spawned);
                             // Optional outdoor pressure should inhabit the new
                             // territory instead of clustering in the original
                             // viewport. Every second successful body uses one
@@ -1539,6 +1705,25 @@ void procgen_generate_current_room(void) BANKED {
                 if (is_puzzle_room)
                     procgen_place_visible_puzzle_guard();
             }
+            if (room_encounter_kind == ENCOUNTER_HUNT
+                || room_return_echo_kind == 4) {
+                u8 hx;
+                // Four orange-red spike jaws make the revisited room visibly
+                // trapped before the first scythe. They sit outside the
+                // cardinal circulation cross and cannot obstruct the target.
+                static const u8 trap_x[8] = { 5,6, 13,14, 5,6, 13,14 };
+                static const u8 trap_y[8] = { 5,5, 5,5, 12,12, 12,12 };
+                for (hx = 0; hx < 8; ++hx)
+                    room_tilemap[trap_y[hx]][trap_x[hx]] = BGT_SPIKES;
+            }
+            if (room_encounter_kind == ENCOUNTER_HUNT) {
+                u8 reaper;
+                mark_spawn_reachable();
+                reaper = spawn_reachable_enemy(ENEMY_STAGE_REAPER, 9, 6);
+                clear_reach_marks_local();
+                stage_reaper_configure_encounter(reaper,
+                    run_state.bosses_beaten);
+            }
             if (is_waypoint) {
                 u8 lx, ly;
                 // Every long dungeon wing ends at a lighter turn court. Give
@@ -1577,6 +1762,17 @@ void procgen_generate_current_room(void) BANKED {
     // slits now, once every terrain-writing pass has finished.
     if (procgen_current_room_is_large)
         room_close_dungeon_false_gaps();
+
+    // This is deliberately the final Riftwild terrain write. Encounter and
+    // reward preparation may decorate the compact sector after climate
+    // painting; the continuous-world threshold contract wins last.
+    if (run_state.world_mode)
+        open_world_thresholds(zelda_overworlds[0]
+            .screen_grid[run_state.world_screen].edges);
+
+    // The false-gap normalizer above is intentionally the final terrain
+    // writer. It can close a visually misleading slit beneath a body that was
+    // valid when population ran, so validate every hostile one last time.
 
     player.iframes = 60;    // brief invuln on room entry
 }

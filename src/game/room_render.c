@@ -53,6 +53,8 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_FENCE:
         case BGT_TREE:
         case BGT_WILD_STONE:
+        case BGT_WILD_MOUNTAIN:
+        case BGT_WILD_REEDS:
         case BGT_GATE_BOULDER:
         case BGT_GATE_THORNS:
         case BGT_GATE_VENT:
@@ -77,17 +79,23 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_POT:
         case BGT_SWITCH:
         case BGT_WILD_STUMP:
+        case BGT_WILD_SAND:
             return BGPAL_DOOR;
         case BGT_CRYSTAL:
         case BGT_PORTAL:
         case BGT_WILD_FLOWER:
         case BGT_WILD_WATER:
+        case BGT_WILD_SNOW:
         case BGT_GATE_WATER:
         case BGT_GATE_CHASM:
         case BGT_COLOSSUS_VOID:
         case BGT_COLOSSUS_RUNE:
         case BGT_COLOSSUS_MAW:
             return BGPAL_CRYSTAL;
+        case BGT_WILD_HOLE:
+            return BGPAL_CRACK;
+        case BGT_WILD_MUD:
+            return BGPAL_FLOOR;
         case BGT_DOOR_LOCKED:
             return BGPAL_CRACK;
         case BGT_DOOR:
@@ -114,7 +122,8 @@ static u8 compact_door_locked(u8 x, u8 y) {
     else if (y == ROOM_H - 1) dir = DIR_S;
     else if (x == 0) dir = DIR_W;
     if (dir == DIR_NONE) return 0;
-    if (run_state.entered_from != DIR_NONE
+    if (room_encounter_kind != ENCOUNTER_HUNT
+        && run_state.entered_from != DIR_NONE
         && dir == (u8)((run_state.entered_from + 2) & 3)) return 0;
     if (!run_state.world_mode) {
         neighbor = run_state_dungeon_neighbor(dir);
@@ -167,9 +176,17 @@ void room_draw_tilemap(void) BANKED {
     else if (procgen_current_room_is_boss)
         tiles_prepare_colossal_edges();
     VBK_REG = 0;
-    if (run_state.world_mode) tiles_draw_area_label(1);
+    if (run_state.world_mode
+        && run_state_riftwild_guard_active(run_state.world_screen))
+        room_show_directive_label(16);
+    else if (run_state.world_mode)
+        tiles_draw_area_label(RUN_RIFTWILD_IS_HOLLOW() ? 17 : 1);
     else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
+    else if (room_encounter_kind == ENCOUNTER_HUNT)
+        room_show_directive_label(15); // full DREAD REAPER name card
+    else if (room_return_echo_kind == 4)
+        room_show_directive_label(12); // champion-scale ELITE miniboss
     else if (room_return_echo_kind)
         room_show_directive_label(14); // unmistakable RIFT return card
     else if (room_encounter_kind != ENCOUNTER_SKIRMISH)

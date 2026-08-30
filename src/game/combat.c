@@ -11,6 +11,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
+#include "game/waygear.h"
 #include "game/will.h"
 #include "render/tiles.h"
 #include "render/hud.h"
@@ -315,7 +316,8 @@ u8 combat_resolve(void) BANKED {
                         }
                         // War Drum turns the same five-kill cadence into a
                         // class-shaped resource swing: every champion gets
-                        // their own B move back, plus the MP needed to use it.
+                        // B back immediately, while restored MP feeds the
+                        // separate A+B/Oath magic ladder.
                         if ((run_state_enemies_killed_total() % 5) == 0
                             && combat_has_relic(ITEM_ID_WAR_DRUM)) {
                             player.active_charge = 0;
@@ -408,13 +410,31 @@ u8 combat_resolve(void) BANKED {
                             // is tagged by procgen so it receives this same
                             // weapon-orb preparation reward. Ordinary late
                             // roster Bells remain ordinary enemy drops.
-                            u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
-                            if (w == player.starter_weapon) w = pickup_next_weapon(w);
+                            u8 world_guard = (run_state.world_mode
+                                && run_state_riftwild_guard_active(
+                                    run_state.world_screen));
                             // The first Warden is a meaningful stage fixture,
                             // not an optional combat room. Its weapon orb is
                             // the mechanical boon; this persistent mark tells
                             // the sanctuary that the trial was completed.
-                            if (!run_state.world_mode) {
+                            if (world_guard) {
+                                u8 gear = run_state_riftwild_guard_gear(
+                                    run_state.world_screen);
+                                run_state_riftwild_clear_guard();
+                                // First-region Wardens carry the three
+                                // permanent traversal implements. In later
+                                // regions the same distant fights remain
+                                // rewarding through a volatile Wildcard.
+                                if (gear < WAYGEAR_COUNT
+                                    && !(player.waygear_owned
+                                        & WAYGEAR_BIT(gear)))
+                                    pickup_spawn_waygear(gear,
+                                        entities[j].x + FIX8(12),
+                                        entities[j].y);
+                                else pickup_spawn_wildcard(
+                                    entities[j].x + FIX8(12),
+                                    entities[j].y);
+                            } else if (!run_state.world_mode) {
                                 u8 local = run_state_dungeon_local();
                                 if (local == run_state.mission_warden_cell)
                                     run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
@@ -425,7 +445,14 @@ u8 combat_resolve(void) BANKED {
                             g_hitstop = 5;
                             pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
                             pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
-                            pickup_spawn_weapon(w, entities[j].x + FIX8(12), entities[j].y);
+                            if (!world_guard) {
+                                u8 w = pickup_weapon_from_roll(
+                                    rng_range(pickup_weapon_count()));
+                                if (w == player.starter_weapon)
+                                    w = pickup_next_weapon(w);
+                                pickup_spawn_weapon(w,
+                                    entities[j].x + FIX8(12), entities[j].y);
+                            }
                         }
                     }
                     // Impact FX at enemy position

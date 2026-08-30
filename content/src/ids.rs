@@ -41,6 +41,8 @@ pub const ITEM_ASTRAL_SPEAR: ItemId = ItemId::new(31);   // rare long-reach weap
 pub const ITEM_RIFT_BOMB:    ItemId = ItemId::new(40);   // limited radial terrain breaker
 pub const ITEM_ECHO_CHIME:   ItemId = ItemId::new(41);   // limited secret/map revealer
 pub const ITEM_MIRROR_SHARD: ItemId = ItemId::new(42);   // limited hostile-shot reflector
+pub const ITEM_BLAST_SEED:   ItemId = ItemId::new(43);   // Hollow-only impact bloom relic
+pub const ITEM_RIFT_LENS:    ItemId = ItemId::new(44);   // Hollow-only every-third-shot beam
 
 // ----- Enemies
 pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);

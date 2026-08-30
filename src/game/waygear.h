@@ -10,8 +10,14 @@ enum {
     WAYGEAR_GLOVE = 0,
     WAYGEAR_RAFT,
     WAYGEAR_HOOK,
+    WAYGEAR_WORLDGLASS,
     WAYGEAR_COUNT,
 };
+
+// Worldglass is permanent Waygear, but it is an always-available world verb
+// rather than a traversal substitute. Only these first three items compete
+// for the single resonating loadout slot.
+#define WAYGEAR_EQUIP_COUNT 3
 
 #define WAYGEAR_BIT(g) ((u8)(1u << (g)))
 

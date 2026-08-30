@@ -13,8 +13,8 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 SRAM_SIZE = 32 * 1024
 PLAYER_SIZE = 42       # accepted pre-Will player layout
-CURRENT_PLAYER_SIZE = 46
-CURRENT_RUN_SIZE = 57
+CURRENT_PLAYER_SIZE = 48
+CURRENT_RUN_SIZE = 58
 SCREEN_ROOM = 5
 
 

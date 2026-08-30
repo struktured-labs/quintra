@@ -49,7 +49,7 @@ mod tests {
     fn registry_counts() {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
-        assert_eq!(r.n_items(),         25);   // + three physical dungeon tools
+        assert_eq!(r.n_items(),         27);   // + Hollow-exclusive Blast Seed/Rift Lens
         assert_eq!(r.n_enemies(),       35);   // Facet Ram + one-per-stage Reaper
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
@@ -156,7 +156,7 @@ mod tests {
 
         assert_eq!(
             stages::STAGES.map(|stage| stage.boss_hp_cap),
-            [200, 205, 240, 150, 255, 255, 230, 150, 220],
+            [220, 225, 240, 150, 255, 255, 230, 150, 220],
             "first-run boss windows drifted from the authored pacing contract",
         );
         assert_eq!(
@@ -168,7 +168,7 @@ mod tests {
         // The first colossus is deliberately the run's pattern tutorial.
         // Keep it below the later attrition ramp: input-only starter runs
         // should have enough recovery budget to clear it before relics.
-        assert_eq!(boss_hp(0), 200, "starter Colossus pacing drifted");
+        assert_eq!(boss_hp(0), 220, "starter Colossus pacing drifted");
 
         let r = registry();
         for champion in &r.classes {

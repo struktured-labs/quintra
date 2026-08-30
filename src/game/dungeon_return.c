@@ -7,6 +7,7 @@
 #include "core/types.h"
 #include "game/dungeon_director.h"
 #include "game/run_state.h"
+#include "content.h"
 
 static u8 return_echo_phase(void) {
     if (run_state.dungeon_puzzles & RUN_DEEP_GATE_BIT) return 0x40;
@@ -20,11 +21,34 @@ static u8 return_echo_phase(void) {
     return 0;
 }
 
+static void choose_reaper_hunt(void) {
+    run_state.return_echo_flags |= RUN_REAPER_HUNT_BIT;
+    room_return_echo_kind = 5;
+    room_encounter_kind = ENCOUNTER_HUNT;
+    room_roster_kind = ROOM_ROSTER_MIXED;
+}
+
 void dungeon_director_choose_return(u8 eligible, u8 was_seen) BANKED {
     u8 phase;
     u8 variant;
-    if (!eligible || !was_seen) return;
+    if (!eligible || (run_state.dungeon_puzzles & RUN_REAPER_CLEARED_BIT))
+        return;
     phase = return_echo_phase();
+    // A suspended hunt regenerates in the same visited room. Before it has
+    // begun, the first eligible progressed return leg springs it; reaching
+    // the deep court remains a guarantee for a route that never doubled back.
+    // A named signature encounter should not be hidden behind a 25% miss that
+    // can make an entire playthrough appear not to contain it.
+    if (run_state.return_echo_flags & RUN_REAPER_HUNT_BIT) {
+        if (was_seen) choose_reaper_hunt();
+        return;
+    }
+    if ((was_seen && phase >= 0x02)
+        || run_state_dungeon_local() == 15) {
+        choose_reaper_hunt();
+        return;
+    }
+    if (!was_seen) return;
     if (!phase || (run_state.return_echo_flags & phase)) return;
     run_state.return_echo_flags |= phase;
     variant = (u8)(((u8)(run_state.run_seed >> 8)
@@ -46,14 +70,20 @@ void dungeon_director_choose_return(u8 eligible, u8 was_seen) BANKED {
         room_encounter_kind = ENCOUNTER_TRAP;
         room_encounter_timer = 50;
     } else {
-        // One glowing leader plus a compact escort reads as a miniboss echo
-        // without importing a Colossus into ordinary procedural geometry.
+        static const u8 echo_leader[3] = {
+            ENEMY_ORC, ENEMY_BOMBER, ENEMY_WARLOCK
+        };
+        // A return miniboss must be physically larger than its escort. Cycle
+        // the three champion-scale bruiser bodies rather than promoting an
+        // arbitrary 8x8 roster creature and hoping a cyan tint sells it.
         room_encounter_kind = ENCOUNTER_ELITE;
         room_roster_kind = ROOM_ROSTER_COMMAND;
+        room_roster_secondary = echo_leader[run_state.bosses_beaten % 3];
     }
 }
 
 u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED {
+    if (room_encounter_kind == ENCOUNTER_HUNT) return 0;
     // A first-visit trap starts with visible sentries; the later pack changes
     // pressure instead of presenting an apparently empty field. A warned
     // return ambush may retain its hush because it is explicitly a revisit.

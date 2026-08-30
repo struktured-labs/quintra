@@ -8,6 +8,7 @@ from test_stage_archetypes import (
 
 RETURN_KIND = addr("_room_return_echo_kind")
 ENCOUNTER_KIND = addr("_room_encounter_kind")
+ENTITIES = addr("_entities")
 LABEL_TICKS = addr("_room_district_label_ticks")
 BG_X = addr("_room_bg_origin_x")
 BG_Y = addr("_room_bg_origin_y")
@@ -54,10 +55,29 @@ def variant_contract(wanted):
             "return surprise did not publish a visible arrival card"
         px = (pb.memory[BG_X] + 8) & 31
         py = (pb.memory[BG_Y] + 1) & 31
+        width = 5 if wanted == 3 else 4
         label = [pb.memory[0x9800 + py * 32 + ((px + i) & 31)]
-                 for i in range(4)]
-        assert label == [76, 77, 78, 79], \
-            f"return surprise card is not RIFT: {label}"
+                 for i in range(width)]
+        expected = [86, 81, 77, 79, 86] if wanted == 3 \
+            else [76, 77, 78, 79]
+        assert label == expected, \
+            f"return surprise card is malformed: {label}"
+        if wanted == 3:
+            elites = [ENTITIES + slot * 28 for slot in range(32)
+                      if pb.memory[ENTITIES + slot * 28] == 2
+                      and pb.memory[ENTITIES + slot * 28 + 1] & 0x21 == 0x21]
+            assert len(elites) == 1, \
+                f"return miniboss needs exactly one live Elite: {elites}"
+            elite = elites[0]
+            assert pb.memory[elite + 17] == 4, \
+                "Stage 1 return miniboss is not a champion-scale Orc"
+            assert pb.memory[elite + 12] == 56 and pb.memory[elite + 25] == 0xEE, \
+                ("return miniboss lost its 16x16 bruiser silhouette/body: "
+                 f"entity={list(pb.memory[elite:elite + 28])}")
+            assert pb.memory[elite + 14] >= 70 and pb.memory[elite + 26] >= 4, \
+                "return miniboss retained ordinary Elite durability/damage"
+            assert _tiles.count(31) >= 8, \
+                "return miniboss arena lost its orange-red spike jaws"
 
     generated_room(0, seed, local_room=local,
                    pre_cross=prepare, probe=inspect)

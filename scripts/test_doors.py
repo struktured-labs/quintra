@@ -316,6 +316,12 @@ def pressure_plate_reveals_secret():
         if pb.memory[RS + 13] == 2:
             break
     entered_cache = pb.memory[RS + 13] == 2 and pb.memory[RS + 1] == parent_room
+    # A first disguised cache now introduces its newly discovered Road Echo
+    # before returning control to the vault. Dismiss that one-page reward so
+    # this geometry probe can exercise the cache's authored return threshold.
+    for _ in range(120): pb.tick()
+    pb.button("a")
+    for _ in range(20): pb.tick()
     put16(pb, PL + 9, 72)
     put16(pb, PL + 11, 120)
     for _ in range(180):

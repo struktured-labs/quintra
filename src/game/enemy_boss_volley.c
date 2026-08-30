@@ -1,4 +1,4 @@
-#pragma bank 9
+#pragma bank 11
 
 #include <gb/gb.h>
 
@@ -114,7 +114,7 @@ void boss_volley_tick(entity_t *e) BANKED {
         default:
             for (d = 0; d < 8; ++d) volley_shot(cx, cy, d, 2, damage);
             volley_shot(cx, cy, volley_aim(cx, cy), 2, damage);
-            cadence = 55;
+            cadence = 46;
             break;
     }
 
