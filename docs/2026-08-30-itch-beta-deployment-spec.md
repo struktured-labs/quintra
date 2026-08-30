@@ -8,31 +8,30 @@ Current cartridge: `v0.20.15`, SHA-256
 
 ## Decision
 
-Build the first beta around a **small, self-hosted binjgb WebAssembly shell**, not
-an improvised SameBoy port and not an externally hosted emulator iframe.
+Build the first beta around a **self-hosted WasmBoy fork and a Quintra-specific
+browser shell**. Do not use the externally hosted WasmBoy iframe: the ROM,
+emulator, player, saves, and license/source links must all ship in our package.
 
-The choice is deliberately provisional until Quintra passes the browser
-compatibility matrix. binjgb already ships a browser embed, supports CGB,
-MBC5, battery backup, keyboard/gamepad input, and touch controls under the MIT
-license. Its own documentation calls CGB support “hacky-but-passable,” so the
-exact Quintra ROM—not a generic emulator test suite—must decide whether it is
-good enough.
+WasmBoy is browser-native, explicitly designed for homebrew embedding on
+itch.io, and already supplies a responsive canvas, Web Audio, Web Workers,
+keyboard/gamepad input, and save support. Upstream also warns that it is
+pre-1.0 and not fully accurate. That is an invitation to test and improve it,
+not permission to ship known emulation faults. The exact Quintra ROM must pass
+the compatibility matrix; general emulator defects should be fixed in our
+GPL-3.0-or-later fork with focused regression coverage and offered upstream.
 
-SameBoy remains the accuracy reference for desktop and hardware comparison,
-but its upstream project does not publish an official browser frontend. A
-SameBoy-derived web package would therefore make us responsible for a custom
-WASM port, frontend, audio, storage, and maintenance before we have even tested
-the simpler path. WasmBoy is browser-native and explicitly supports itch.io
-embedding, but upstream also warns that it is pre-1.0, not very accurate, and
-GPL-3.0. It is the second compatibility probe, not the default ship target.
+SameBoy remains the desktop accuracy oracle and hardware comparison point.
+binjgb remains the small MIT-licensed fallback used to distinguish a WasmBoy
+defect from a ROM defect. A SameBoy web port is the last resort because
+upstream does not publish an official browser frontend.
 
 References:
 
 - [itch.io HTML5 upload requirements](https://itch.io/docs/creators/html5)
 - [itch.io butler push and channel rules](https://itch.io/docs/butler/pushing.html)
-- [binjgb browser embed and capabilities](https://github.com/binji/binjgb)
-- [SameBoy upstream](https://github.com/LIJI32/SameBoy)
 - [WasmBoy upstream](https://github.com/torch2424/wasmboy)
+- [SameBoy upstream](https://github.com/LIJI32/SameBoy)
+- [binjgb browser embed and capabilities](https://github.com/binji/binjgb)
 
 ## Product shape
 
@@ -75,12 +74,13 @@ builds/itch-web/
 ├── quintra.sha256             # ROM integrity record
 ├── build.json                 # version, git commit, ROM/core hashes
 ├── emulator/
-│   ├── binjgb.js
-│   ├── binjgb.wasm
+│   ├── wasmboy.js
+│   ├── wasmboy.wasm
 │   ├── quintra-player.js
 │   └── quintra-player.css
 ├── licenses/
-│   ├── binjgb-LICENSE.txt
+│   ├── GPL-3.0-or-later.txt
+│   ├── QUINTRA-LICENSE-MAP.md
 │   └── THIRD-PARTY-NOTICES.md
 └── media/
     └── cover.png
@@ -98,7 +98,7 @@ will fail.
   "version": "v0.21b1",
   "gitCommit": "<full commit>",
   "romSha256": "<sha256>",
-  "emulator": "binjgb",
+  "emulator": "wasmboy-quintra",
   "emulatorCommit": "<pinned upstream commit>",
   "channel": "web"
 }
@@ -106,6 +106,20 @@ will fail.
 
 The build must vendor a pinned, reviewed emulator revision. Never fetch
 `latest` during packaging.
+
+## License boundary
+
+Quintra's software source and build tooling are MPL-2.0. Original game art,
+music, writing, media, and branding remain separately protected. The WasmBoy
+fork and the browser shell that forms one program with it are
+GPL-3.0-or-later. The independently compiled ROM is cartridge data loaded by
+the emulator, not a linked part of the browser program.
+
+The itch package must include the complete license map and GPL text plus a
+prominent link to the exact corresponding WasmBoy/player source revision and
+reproducible build instructions. Every modified WasmBoy file must retain
+upstream attribution and identify our changes. See `LICENSES/README.md` for the
+repository-wide component map.
 
 ## Player shell
 
@@ -214,7 +228,7 @@ asynchronous persistence path that reports success but never reaches IndexedDB.
 
 ## Emulator go/no-go probe
 
-Before building the polished shell, package the current ROM in bare binjgb and
+Before building the polished shell, package the current ROM in bare WasmBoy and
 test these Quintra-specific risks:
 
 - CGB-only boot and cartridge header handling;
@@ -227,9 +241,12 @@ test these Quintra-specific risks:
 - 30-minute stability in Chromium and Firefox.
 
 Any progression, audio, rendering, or save defect is a **no-go**, not a known
-beta limitation. If binjgb fails, run the same matrix against a locally bundled
-WasmBoy prototype. If both fail, then scope a SameBoy/libretro web frontend as
-a separate engineering project; do not disguise that work as packaging.
+beta limitation. Reproduce failures against SameBoy/hardware and binjgb, reduce
+them to emulator-focused cases where possible, fix our pinned WasmBoy fork,
+and offer generally useful fixes upstream. If WasmBoy cannot be made reliable
+within the beta budget, ship binjgb only after it independently passes the same
+matrix. A SameBoy/libretro web frontend is a separate engineering project, not
+packaging work.
 
 ## Page assets and copy
 
@@ -248,16 +265,19 @@ ROM hash, and third-party emulator source/license.
 
 ## Implementation sequence
 
-1. Pin and vendor a binjgb revision; record its license and source URL.
+1. Pin and vendor a WasmBoy revision; preserve GPL notices and record its
+   source revision.
 2. Produce the bare local package and run the emulator go/no-go probe.
-3. Implement the Quintra player shell and stable control mapping.
-4. Implement IndexedDB SRAM plus import/export.
-5. Add Playwright boot, input, and save-round-trip tests.
-6. Add package integrity and size gates.
-7. Add publish-off-by-default butler deployment.
-8. Create the restricted itch page and permanently reserve the `web` channel.
-9. Upload the hidden first candidate and test inside itch's iframe.
-10. Bump the game to the beta version, rebuild ROM/media/package from one
+3. Fix Quintra-visible emulator defects with regression tests; offer generic
+   repairs upstream without blocking our pinned fork on review latency.
+4. Implement the GPL Quintra player shell and stable control mapping.
+5. Implement IndexedDB SRAM plus import/export.
+6. Add Playwright boot, input, and save-round-trip tests.
+7. Add corresponding-source, package-integrity, and size gates.
+8. Add publish-off-by-default butler deployment.
+9. Create the restricted itch page and permanently reserve the `web` channel.
+10. Upload the hidden first candidate and test inside itch's iframe.
+11. Bump the game to the beta version, rebuild ROM/media/package from one
     commit, and publish only that exact candidate.
 
 ## Open decisions before the first push
@@ -270,4 +290,3 @@ ROM hash, and third-party emulator source/license.
 - Pick the final beta version after the emulator probe; do not relabel the
   current `v0.20.15` cartridge as `v0.21b1` without rebuilding it.
 - Decide whether mobile is in beta scope after touch/save tests, not before.
-

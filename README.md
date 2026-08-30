@@ -4005,3 +4005,10 @@ compile-time invariant checking mean bad content can't reach the cart.
 
 Quintra is wholly original. It contains **no** assets from Penta Dragon or any
 other game — only its own art, audio, and code.
+
+Quintra's software source and build tooling are licensed under **MPL-2.0**.
+Original art, music, writing, media, and branding remain separately protected;
+the future self-hosted WasmBoy browser player is **GPL-3.0-or-later**. Read the
+[license map](LICENSES/README.md), root [MPL-2.0 license](LICENSE),
+[contribution terms](CONTRIBUTING.md), and [branding notice](TRADEMARKS.md)
+before redistributing or modifying the project.
