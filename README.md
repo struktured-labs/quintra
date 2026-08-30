@@ -47,6 +47,9 @@ animated nine-Colossus gallery are rebuilt together and hash-bound in the
 media manifest. The Field Archive now covers all 35 registered monsters,
 including visible Facet Ram and Dread Reaper portraits.
 
+The browser-beta packaging, save-persistence, licensing, and publish gates are
+tracked in the [itch.io beta deployment spec](docs/2026-08-30-itch-beta-deployment-spec.md).
+
 ### Current development — final playtest pass
 
 The working cartridge now treats temporary state as first-class information.
