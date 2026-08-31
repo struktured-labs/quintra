@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#090b12">
+    <title>Quintra — Game Boy Color browser beta</title>
+    <link rel="icon" href="media/cover.png" type="image/png">
+    <link rel="stylesheet" href="player.css">
+  </head>
+  <body>
+    <main class="player" id="player-shell">
+      <header>
+        <div>
+          <p class="eyebrow">A real Game Boy Color cartridge</p>
+          <h1>QUINTRA</h1>
+        </div>
+        <p class="status" id="status" role="status">Preparing cartridge…</p>
+      </header>
+
+      <section class="screen-wrap" aria-label="Quintra game screen">
+        <canvas id="game" width="160" height="144" tabindex="0"></canvas>
+        <button class="launch" id="launch" type="button" disabled>
+          <strong>Enter the Riftwild</strong>
+          <span>Click to start with sound</span>
+        </button>
+      </section>
+
+      <section class="toolbar" aria-label="Player controls">
+        <button id="mute" type="button" aria-pressed="false">Mute</button>
+        <button id="fullscreen" type="button">Fullscreen</button>
+        <button id="export-save" type="button" disabled>Export save</button>
+        <button id="import-save" type="button" disabled>Import save</button>
+        <input id="save-file" type="file" accept=".sav,application/octet-stream" hidden>
+      </section>
+
+      <details>
+        <summary>Controls</summary>
+        <div class="controls-grid">
+          <span><kbd>Arrows</kbd> / <kbd>WASD</kbd> Move</span>
+          <span><kbd>X</kbd> GBC A</span>
+          <span><kbd>Z</kbd> GBC B</span>
+          <span><kbd>Enter</kbd> Start</span>
+          <span><kbd>Shift</kbd> Select</span>
+          <span>Gamepads supported</span>
+        </div>
+      </details>
+
+      <footer>
+        Browser play uses the GPL-3.0-or-later
+        <a href="licenses/THIRD-PARTY-NOTICES.md" target="_blank" rel="noreferrer">WasmBoy player</a>.
+        Cartridge saves remain in this browser and can be exported as a 32 KiB <code>.sav</code> file.
+      </footer>
+    </main>
+
+    <script src="emulator/wasmboy.js"></script>
+    <script src="emulator/quintra-player.js"></script>
+  </body>
+</html>

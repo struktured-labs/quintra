@@ -9,6 +9,7 @@ rom/**/*.sav
 
 # Build artifacts (C)
 obj/
+builds/
 *.ihx
 *.map
 *.noi
