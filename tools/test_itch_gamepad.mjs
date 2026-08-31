@@ -9,20 +9,36 @@ if (!playerPath) throw new Error("usage: test_itch_gamepad.mjs PLAYER_JS");
 
 const listeners = new Map();
 const elements = new Map();
-const element = () => ({
-  disabled: false,
-  hidden: false,
-  textContent: "",
-  value: "",
-  files: [],
-  classList: { toggle() {} },
-  addEventListener() {},
-  setAttribute() {},
-  focus() {},
-  click() {},
-  querySelector() { return element(); },
-  requestFullscreen: async () => {}
-});
+const element = (dataset = {}) => {
+  const ownListeners = new Map();
+  const classes = new Set();
+  return {
+    disabled: false,
+    hidden: false,
+    textContent: "",
+    value: "",
+    files: [],
+    dataset,
+    classList: {
+      toggle(name, force) {
+        if (force) classes.add(name); else classes.delete(name);
+      },
+      contains(name) { return classes.has(name); }
+    },
+    addEventListener(type, callback) { ownListeners.set(type, callback); },
+    dispatch(type, event) { ownListeners.get(type)(event); },
+    setPointerCapture() {},
+    setAttribute() {},
+    focus() {},
+    click() {},
+    querySelector() { return element(); },
+    requestFullscreen: async () => {}
+  };
+};
+
+const touchDiagonal = element({ touchInput: "UP RIGHT" });
+const touchA = element({ touchInput: "A" });
+const touchButtons = [touchDiagonal, touchA];
 
 for (const id of [
   "game", "player-shell", "launch", "status", "mute", "fullscreen",
@@ -65,6 +81,7 @@ const context = {
   navigator: { getGamepads: () => pads },
   document: {
     querySelector: selector => elements.get(selector),
+    querySelectorAll: selector => selector === "[data-touch-input]" ? touchButtons : [],
     addEventListener() {},
     fullscreenElement: null,
     visibilityState: "visible"
@@ -128,4 +145,23 @@ responsiveGamepad.getState();
 assert.match(elements.get("#gamepad-status").textContent, /idle virtual pad/,
   "disconnect should fall back to another connected gamepad");
 
-console.log("itch gamepad checks passed: 8BitDo A/B/Start/Select, hat/diagonal, active nonzero, sticky selection, disconnect fallback");
+const pointerEvent = pointerId => ({ pointerId, preventDefault() {} });
+touchDiagonal.dispatch("pointerdown", pointerEvent(7));
+touchA.dispatch("pointerdown", pointerEvent(8));
+state = responsiveGamepad.getState();
+assert.equal(state.UP, true, "touch diagonal should hold up");
+assert.equal(state.RIGHT, true, "touch diagonal should hold right");
+assert.equal(state.A, true, "a second touch should hold A simultaneously");
+assert.equal(touchA.classList.contains("is-pressed"), true, "pressed touch control should show feedback");
+
+touchA.dispatch("pointerup", pointerEvent(8));
+state = responsiveGamepad.getState();
+assert.equal(state.A, false, "released touch A should clear");
+assert.equal(state.UP, true, "releasing A should not release another pointer's direction");
+
+touchDiagonal.dispatch("pointerup", pointerEvent(7));
+state = responsiveGamepad.getState();
+assert.equal(state.UP, false, "released touch direction should clear");
+assert.equal(state.RIGHT, false, "released touch diagonal should clear both directions");
+
+console.log("itch input checks passed: 8BitDo mapping, D-pad hats, numeric vendor id, and multi-touch controls");

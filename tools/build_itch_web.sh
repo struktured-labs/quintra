@@ -3,11 +3,11 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-archive="$project_root/builds/quintra-itch-web-v0.20.15-beta7.zip"
+archive="$project_root/builds/quintra-itch-web-v0.20.15-beta8.zip"
 rom="$project_root/rom/working/quintra.gbc"
 expected_rom_sha="3a2056c0642804d77d8b173636b0ee393659ad3b463c460d894c22a735c0d2e6"
 wasmboy_sha="e3aeddf33d6ecf3c03adc1112787537c318d05b48c9e12fe2241416acffa804b"
-version="v0.20.15-beta7"
+version="v0.20.15-beta8"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
 if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then

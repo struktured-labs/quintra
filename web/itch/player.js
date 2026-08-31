@@ -20,6 +20,7 @@
   const importSave = document.querySelector("#import-save");
   const saveFile = document.querySelector("#save-file");
   const gamepadStatus = document.querySelector("#gamepad-status");
+  const touchButtons = Array.from(document.querySelectorAll("[data-touch-input]"));
   const saveSize = 32 * 1024;
   const handledKeys = new Set([
     "ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft",
@@ -32,6 +33,42 @@
   let muted = false;
   let saveBusy = false;
   let activeGamepadIndex = null;
+  const touchPointers = new Map();
+  const touchState = {
+    UP: false, RIGHT: false, DOWN: false, LEFT: false,
+    A: false, B: false, SELECT: false, START: false
+  };
+
+  function refreshTouchState() {
+    Object.keys(touchState).forEach(input => {
+      touchState[input] = Array.from(touchPointers.values()).some(inputs => inputs.includes(input));
+    });
+  }
+
+  function pressTouchButton(button, event) {
+    event.preventDefault();
+    const inputs = button.dataset.touchInput.split(" ");
+    touchPointers.set(event.pointerId, inputs);
+    refreshTouchState();
+    button.classList.toggle("is-pressed", true);
+    if (typeof button.setPointerCapture === "function") {
+      button.setPointerCapture(event.pointerId);
+    }
+  }
+
+  function releaseTouchButton(button, event) {
+    touchPointers.delete(event.pointerId);
+    refreshTouchState();
+    button.classList.toggle("is-pressed", false);
+  }
+
+  touchButtons.forEach(button => {
+    button.addEventListener("pointerdown", event => pressTouchButton(button, event), { passive: false });
+    button.addEventListener("pointerup", event => releaseTouchButton(button, event));
+    button.addEventListener("pointercancel", event => releaseTouchButton(button, event));
+    button.addEventListener("lostpointercapture", event => releaseTouchButton(button, event));
+    button.addEventListener("contextmenu", event => event.preventDefault());
+  });
 
   function getConnectedGamepads() {
     if (typeof navigator.getGamepads !== "function") return [];
@@ -127,6 +164,9 @@
     const getState = responsive.getState.bind(responsive);
     responsive.getState = () => {
       const state = getState() || {};
+      Object.keys(touchState).forEach(input => {
+        state[input] = state[input] || touchState[input];
+      });
       const index = selectGamepadIndex();
       const gamepad = getConnectedGamepads().find(pad => pad.index === index);
       if (!gamepad) return state;
