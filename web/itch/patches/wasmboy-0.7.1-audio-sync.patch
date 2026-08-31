@@ -1,0 +1,104 @@
+diff --git a/lib/audio/gbchannel.js b/lib/audio/gbchannel.js
+index 2e327e9..feb12a3 100644
+--- a/lib/audio/gbchannel.js
++++ b/lib/audio/gbchannel.js
+@@ -13 +13 @@ import toWav from 'audiobuffer-to-wav';
+-const DEFAULT_AUDIO_LATENCY_IN_MILLI = 100;
++const DEFAULT_AUDIO_LATENCY_IN_MILLI = 25;
+@@ -15,0 +16 @@ const DEFAULT_AUDIO_LATENCY_IN_SECONDS = DEFAULT_AUDIO_LATENCY_IN_MILLI / 1000;
++const MAX_SCHEDULED_AUDIO_LATENCY_IN_SECONDS = 0.1;
+@@ -48 +49,2 @@ export default class GbChannelWebAudio {
+-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
++      const AudioContext = window.AudioContext || window.webkitAudioContext;
++      this.audioContext = new AudioContext({ latencyHint: 'interactive' });
+@@ -152,0 +155,8 @@ export default class GbChannelWebAudio {
++    if (this.audioPlaytime - audioContextCurrentTime > MAX_SCHEDULED_AUDIO_LATENCY_IN_SECONDS) {
++      // Video always renders the newest emulated frame, so retaining a large
++      // queue here makes every sound visibly stale. Keep a source that has
++      // already started, discard only future sources, and resume close to the
++      // hardware clock.
++      this.cancelAllAudio(false);
++      this.audioPlaytime = audioContextCurrentTimeWithLatency;
++    }
+@@ -160 +170,2 @@ export default class GbChannelWebAudio {
+-    source.start(this.audioPlaytime);
++    const sourceStartTime = this.audioPlaytime;
++    source.start(sourceStartTime);
+@@ -166,8 +177,2 @@ export default class GbChannelWebAudio {
+-    // Cancel all audio sources on the tail that play before us
+-    while (
+-      this.audioSources[this.audioSources.length - 1] &&
+-      this.audioSources[this.audioSources.length - 1].playtime <= this.audioPlaytime
+-    ) {
+-      this.audioSources[this.audioSources.length - 1].source.stop();
+-      this.audioSources.pop();
+-    }
++    // Drop bookkeeping for sources the audio clock has already consumed.
++    this.audioSources = this.audioSources.filter(audioSource => audioSource.endTime > audioContextCurrentTime);
+@@ -175,2 +180,2 @@ export default class GbChannelWebAudio {
+-    // Add the source so we can stop this if needed
+-    this.audioSources.push({
++    // Add the source so queued audio can be pruned if it becomes stale.
++    const audioSource = {
+@@ -178,8 +183,8 @@ export default class GbChannelWebAudio {
+-      playTime: this.audioPlaytime
+-    });
+-
+-    // Shift ourselves out when finished
+-    const timeUntilSourceEnds = this.audioPlaytime - this.audioContext.currentTime + 500;
+-    setTimeout(() => {
+-      this.audioSources.shift();
+-    }, timeUntilSourceEnds);
++      startTime: sourceStartTime,
++      endTime: this.audioPlaytime
++    };
++    this.audioSources.push(audioSource);
++    source.onended = () => {
++      const index = this.audioSources.indexOf(audioSource);
++      if (index >= 0) this.audioSources.splice(index, 1);
++    };
+@@ -194,3 +199,5 @@ export default class GbChannelWebAudio {
+-    for (let i = 0; i < this.audioSources.length; i++) {
+-      if (stopCurrentAudio || this.audioSources[i].playTime > this.audioPlaytime) {
+-        this.audioSources[i].source.stop();
++    const currentTime = this.audioContext.currentTime;
++    this.audioSources = this.audioSources.filter(audioSource => {
++      if (stopCurrentAudio || audioSource.startTime > currentTime) {
++        audioSource.source.stop();
++        return false;
+@@ -198,3 +205,2 @@ export default class GbChannelWebAudio {
+-    }
+-
+-    this.audioSources = [];
++      return audioSource.endTime > currentTime;
++    });
+@@ -203 +209 @@ export default class GbChannelWebAudio {
+-    this.audioPlaytime = this.audioContext.currentTime + DEFAULT_AUDIO_LATENCY_IN_SECONDS;
++    this.audioPlaytime = currentTime + DEFAULT_AUDIO_LATENCY_IN_SECONDS;
+diff --git a/lib/wasmboy/worker/update.js b/lib/wasmboy/worker/update.js
+index e7ac5bd..6a7d719 100644
+--- a/lib/wasmboy/worker/update.js
++++ b/lib/wasmboy/worker/update.js
+@@ -27 +27 @@ import { transferGraphics } from './graphics/transfer';
+-const MAX_AUDIO_LATENCY = 0.25;
++const MAX_AUDIO_LATENCY = 0.05;
+@@ -30 +30 @@ const MAX_AUDIO_LATENCY = 0.25;
+-const AUDIO_BUFFER_SIZE = 1024;
++const AUDIO_BUFFER_SIZE = 512;
+@@ -203,7 +203,4 @@ function executeAndCheckAudio(libWorker, resolve) {
+-    const isRunningFullSpeed = currentFps >= gameboyFrameRateWithSpeed;
+-
+-    if (isTooMuchLatency && isRunningFullSpeed) {
+-      sendAudio(libWorker, audioQueueIndex);
+-      // Wait, Set a timeout for when we would like to
+-      // Continue executing. * 1000 for seconds -> milli
+-      // Wait for half the difference, since it may take time to execute, and things
++    if (isTooMuchLatency) {
++      // Let the browser audio clock consume the full excess before queuing
++      // another block. The old one-tenth delay let video continually outrun
++      // audio, making the A/V offset grow throughout play.
+@@ -212,0 +210 @@ function executeAndCheckAudio(libWorker, resolve) {
++        sendAudio(libWorker, audioQueueIndex);
+@@ -215 +213 @@ function executeAndCheckAudio(libWorker, resolve) {
+-      }, Math.floor(latencyDifferenceInMilli / 10));
++      }, latencyDifferenceInMilli);

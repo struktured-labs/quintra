@@ -6,14 +6,15 @@ GPL-3.0-or-later. See `../../LICENSES/GPL-3.0-or-later.txt`.
 
 The vendored browser bundle is rebuilt from WasmBoy 0.7.1, pinned to upstream
 commit `8e96bcb70969d943b1ffc4028b169c835098ce04`, with Quintra's channel-1
-double-speed timing and low-latency audio corrections applied. The complete
+double-speed timing and audio synchronization corrections applied. The complete
 downstream changes are distributed in the `patches` directory.
 
-The low-latency profile reduces WasmBoy's initial audio lead from 100 ms to
-35 ms, caps its queued lead at 80 ms instead of 250 ms, and emits 512-sample
-chunks instead of 1024-sample chunks. This keeps enough scheduling headroom
-for ordinary browsers while making combat SFX track their visual event much
-more closely.
+The audio-sync profile reduces WasmBoy's initial audio lead from 100 ms to
+25 ms, throttles against the browser audio clock at 50 ms instead of loosely
+targeting 250 ms, and emits 512-sample chunks instead of 1024-sample chunks.
+It also repairs queued-source bookkeeping and discards unplayed audio if the
+scheduled lead ever exceeds 100 ms, preventing permanent A/V drift after a
+browser hitch.
 
 Build the upload directory and ZIP from the repository root:
 
