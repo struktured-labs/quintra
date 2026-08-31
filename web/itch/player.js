@@ -89,19 +89,31 @@
     };
   }
 
+  function isEightBitDoDirectInput(gamepad) {
+    return /8bitdo/i.test(gamepad.id || "") &&
+      typeof gamepad.axes[9] === "number";
+  }
+
   function readGamepadState(gamepad) {
     const horizontal = gamepad.axes[0] || 0;
     const vertical = gamepad.axes[1] || 0;
     const hat = readHatSwitch(gamepad);
+    // Linux exposes the Pro 2's Nintendo-labelled face/menu buttons at these
+    // DirectInput indices. Preserve the standard browser mapping in XInput.
+    const eightBitDoDirectInput = isEightBitDoDirectInput(gamepad);
+    const aButton = eightBitDoDirectInput ? 1 : 0;
+    const bButton = eightBitDoDirectInput ? 0 : 1;
+    const selectButton = eightBitDoDirectInput ? 10 : 8;
+    const startButton = eightBitDoDirectInput ? 11 : 9;
     return {
       UP: isPressed(gamepad, 12) || vertical < -0.35 || hat.UP,
       RIGHT: isPressed(gamepad, 15) || horizontal > 0.35 || hat.RIGHT,
       DOWN: isPressed(gamepad, 13) || vertical > 0.35 || hat.DOWN,
       LEFT: isPressed(gamepad, 14) || horizontal < -0.35 || hat.LEFT,
-      A: isPressed(gamepad, 0),
-      B: isPressed(gamepad, 1),
-      SELECT: isPressed(gamepad, 8),
-      START: isPressed(gamepad, 9)
+      A: isPressed(gamepad, aButton),
+      B: isPressed(gamepad, bButton),
+      SELECT: isPressed(gamepad, selectButton),
+      START: isPressed(gamepad, startButton)
     };
   }
 

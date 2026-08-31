@@ -50,7 +50,10 @@ const api = {
 let pads = [
   null,
   { index: 1, id: "idle virtual pad", buttons: [{ pressed: false, value: 0 }], axes: [0, 0] },
-  { index: 2, id: "8BitDo Pro 2", buttons: [{ pressed: true, value: 1 }],
+  { index: 2, id: "8BitDo Pro 2", buttons: Array.from({ length: 15 }, (_, index) => ({
+      pressed: index === 1,
+      value: index === 1 ? 1 : 0
+    })),
     axes: [0, 0, 0, 0, 0, 0, 0, 0, 0, -1] }
 ];
 
@@ -77,11 +80,28 @@ await new Promise(resolve => setImmediate(resolve));
 
 let state = responsiveGamepad.getState();
 assert.equal(state.A, true, "active nonzero gamepad input should reach WasmBoy");
+assert.equal(state.B, false, "8BitDo physical A should not trigger GBC B");
 assert.equal(originalStateCalls, 1, "keyboard/touch state should still be polled");
 assert.equal(state.UP, true, "8BitDo DirectInput hat up should reach WasmBoy");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/);
 
+pads[2].buttons[1] = { pressed: false, value: 0 };
+pads[2].buttons[0] = { pressed: true, value: 1 };
+state = responsiveGamepad.getState();
+assert.equal(state.A, false, "8BitDo physical B should not trigger GBC A");
+assert.equal(state.B, true, "8BitDo physical B should trigger GBC B");
+
 pads[2].buttons[0] = { pressed: false, value: 0 };
+pads[2].buttons[10] = { pressed: true, value: 1 };
+state = responsiveGamepad.getState();
+assert.equal(state.SELECT, true, "8BitDo Select should reach GBC Select");
+
+pads[2].buttons[10] = { pressed: false, value: 0 };
+pads[2].buttons[11] = { pressed: true, value: 1 };
+state = responsiveGamepad.getState();
+assert.equal(state.START, true, "8BitDo Start should reach GBC Start");
+
+pads[2].buttons[11] = { pressed: false, value: 0 };
 pads[2].axes[9] = -0.7142857;
 state = responsiveGamepad.getState();
 assert.equal(state.UP, true, "8BitDo hat diagonal should preserve vertical input");
@@ -101,4 +121,4 @@ responsiveGamepad.getState();
 assert.match(elements.get("#gamepad-status").textContent, /idle virtual pad/,
   "disconnect should fall back to another connected gamepad");
 
-console.log("itch gamepad checks passed: direct input, 8BitDo hat/diagonal, active nonzero, sticky selection, disconnect fallback");
+console.log("itch gamepad checks passed: 8BitDo A/B/Start/Select, hat/diagonal, active nonzero, sticky selection, disconnect fallback");
