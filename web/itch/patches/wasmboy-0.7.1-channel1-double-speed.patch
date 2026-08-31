@@ -1,0 +1,11 @@
+diff --git a/core/sound/channel1.ts b/core/sound/channel1.ts
+index e7f85a8..ffa0c86 100644
+--- a/core/sound/channel1.ts
++++ b/core/sound/channel1.ts
+@@ -322,5 +322 @@ export class Channel1 {
+-    // TODO: Ensure this is correct for GBC Double Speed Mode
+-    if (Cpu.GBCDoubleSpeed) {
+-      frequencyTimer = frequencyTimer << 2;
+-    }
+-    Channel1.frequencyTimer = frequencyTimer;
++    Channel1.frequencyTimer = frequencyTimer << (<i32>Cpu.GBCDoubleSpeed);

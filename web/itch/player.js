@@ -19,6 +19,7 @@
   const exportSave = document.querySelector("#export-save");
   const importSave = document.querySelector("#import-save");
   const saveFile = document.querySelector("#save-file");
+  const gamepadStatus = document.querySelector("#gamepad-status");
   const saveSize = 32 * 1024;
   const handledKeys = new Set([
     "ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft",
@@ -30,6 +31,50 @@
   let started = false;
   let muted = false;
   let saveBusy = false;
+  let activeGamepadIndex = null;
+
+  function getConnectedGamepads() {
+    if (typeof navigator.getGamepads !== "function") return [];
+    return Array.from(navigator.getGamepads()).filter(Boolean);
+  }
+
+  function hasGamepadInput(gamepad) {
+    return gamepad.buttons.some(button => button.pressed || button.value > 0.5) ||
+      gamepad.axes.some(axis => Math.abs(axis) > 0.35);
+  }
+
+  function updateGamepadStatus(gamepad) {
+    if (!gamepadStatus) return;
+    gamepadStatus.textContent = gamepad
+      ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}`
+      : "Gamepad: press any button";
+  }
+
+  function selectGamepadIndex() {
+    const gamepads = getConnectedGamepads();
+    const usedGamepad = gamepads.find(hasGamepadInput);
+
+    if (usedGamepad) activeGamepadIndex = usedGamepad.index;
+
+    let selected = gamepads.find(gamepad => gamepad.index === activeGamepadIndex);
+    if (!selected) {
+      selected = gamepads[0] || null;
+      activeGamepadIndex = selected ? selected.index : null;
+    }
+
+    updateGamepadStatus(selected);
+    return selected ? selected.index : 0;
+  }
+
+  function enableAnyConnectedGamepad() {
+    const gamepadInput = api && api.ResponsiveGamepad && api.ResponsiveGamepad.Gamepad;
+    if (!gamepadInput || typeof gamepadInput.getState !== "function") return;
+
+    const getState = gamepadInput.getState.bind(gamepadInput);
+    gamepadInput.getState = index => getState(
+      index === undefined ? selectGamepadIndex() : index
+    );
+  }
 
   function setStatus(message, isError = false) {
     status.textContent = message;
@@ -48,6 +93,8 @@
     if (!api) {
       throw new Error("WasmBoy did not load");
     }
+
+    enableAnyConnectedGamepad();
 
     await api.config({
       enableBootROMIfAvailable: false,
@@ -166,6 +213,16 @@
   exportSave.addEventListener("click", exportCartridgeSave);
   importSave.addEventListener("click", () => saveFile.click());
   saveFile.addEventListener("change", () => importCartridgeSave(saveFile.files[0]));
+
+  window.addEventListener("gamepadconnected", event => {
+    if (activeGamepadIndex === null) activeGamepadIndex = event.gamepad.index;
+    updateGamepadStatus(event.gamepad);
+  });
+
+  window.addEventListener("gamepaddisconnected", event => {
+    if (activeGamepadIndex === event.gamepad.index) activeGamepadIndex = null;
+    updateGamepadStatus(getConnectedGamepads()[0] || null);
+  });
 
   document.addEventListener("keydown", event => {
     if (started && handledKeys.has(event.code)) event.preventDefault();

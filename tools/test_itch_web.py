@@ -28,6 +28,7 @@ required = (
     "licenses/QUINTRA-LICENSE-MAP.md",
     "licenses/THIRD-PARTY-NOTICES.md",
     "media/cover.png",
+    "patches/wasmboy-0.7.1-channel1-double-speed.patch",
 )
 
 for relative in required:
@@ -53,6 +54,10 @@ build = json.loads((root / "build.json").read_text())
 rom_hash = hashlib.sha256((root / "quintra.gbc").read_bytes()).hexdigest()
 if build["romSha256"] != rom_hash:
     fail("build.json ROM hash does not match packaged ROM")
+
+emulator_hash = hashlib.sha256((root / "emulator/wasmboy.js").read_bytes()).hexdigest()
+if build["emulatorSha256"] != emulator_hash:
+    fail("build.json emulator hash does not match packaged emulator")
 
 sha_record = (root / "quintra.sha256").read_text().split()[0]
 if sha_record != rom_hash:
