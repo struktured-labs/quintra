@@ -69,6 +69,10 @@ if "__QUINTRA_WEB_VERSION__" in index:
     fail("web version placeholder was not replaced")
 if f'emulator/quintra-player.js?v={build["version"]}' not in index:
     fail("player script URL is not cache-busted with the build version")
+if f'emulator/wasmboy.js?v={build["version"]}' not in index:
+    fail("emulator script URL is not cache-busted with the build version")
+if f'emulator/quintra-player.css?v={build["version"]}' not in index:
+    fail("player stylesheet URL is not cache-busted with the build version")
 references = re.findall(r'(?:src|href)="([^"]+)"', index)
 for reference in references:
     if reference.startswith(("http://", "https://", "//")):
