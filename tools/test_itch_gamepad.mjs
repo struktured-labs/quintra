@@ -50,7 +50,8 @@ const api = {
 let pads = [
   null,
   { index: 1, id: "idle virtual pad", buttons: [{ pressed: false, value: 0 }], axes: [0, 0] },
-  { index: 2, id: "8BitDo Pro 2", buttons: [{ pressed: true, value: 1 }], axes: [0, 0] }
+  { index: 2, id: "8BitDo Pro 2", buttons: [{ pressed: true, value: 1 }],
+    axes: [0, 0, 0, 0, 0, 0, 0, 0, 0, -1] }
 ];
 
 const context = {
@@ -77,12 +78,20 @@ await new Promise(resolve => setImmediate(resolve));
 let state = responsiveGamepad.getState();
 assert.equal(state.A, true, "active nonzero gamepad input should reach WasmBoy");
 assert.equal(originalStateCalls, 1, "keyboard/touch state should still be polled");
+assert.equal(state.UP, true, "8BitDo DirectInput hat up should reach WasmBoy");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/);
 
 pads[2].buttons[0] = { pressed: false, value: 0 };
+pads[2].axes[9] = -0.7142857;
+state = responsiveGamepad.getState();
+assert.equal(state.UP, true, "8BitDo hat diagonal should preserve vertical input");
+assert.equal(state.RIGHT, true, "8BitDo hat diagonal should preserve horizontal input");
+
+pads[2].axes[9] = 3.285714;
 pads[2].axes[0] = 0.8;
 state = responsiveGamepad.getState();
 assert.equal(state.RIGHT, true, "analog movement should be mapped directly");
+assert.equal(state.UP, false, "8BitDo neutral hat value should not produce movement");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/,
   "selected gamepad should remain sticky while connected");
 
@@ -92,4 +101,4 @@ responsiveGamepad.getState();
 assert.match(elements.get("#gamepad-status").textContent, /idle virtual pad/,
   "disconnect should fall back to another connected gamepad");
 
-console.log("itch gamepad checks passed: direct input, active nonzero, sticky selection, disconnect fallback");
+console.log("itch gamepad checks passed: direct input, 8BitDo hat/diagonal, active nonzero, sticky selection, disconnect fallback");

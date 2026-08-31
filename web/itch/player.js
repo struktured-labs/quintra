@@ -71,14 +71,33 @@
     return !!button && (button.pressed || button.value > 0.5);
   }
 
+  function readHatSwitch(gamepad) {
+    // 8BitDo's DirectInput modes commonly expose the D-pad as axis 9:
+    // -1.0 is up, then seven 2/7 steps clockwise. Neutral is outside
+    // the normal [-1, 1] axis range (usually about 3.29).
+    const value = gamepad.axes[9];
+    if (typeof value !== "number" || value < -1 || value > 1) {
+      return { UP: false, RIGHT: false, DOWN: false, LEFT: false };
+    }
+
+    const direction = Math.max(0, Math.min(7, Math.round((value + 1) * 3.5)));
+    return {
+      UP: direction === 0 || direction === 1 || direction === 7,
+      RIGHT: direction >= 1 && direction <= 3,
+      DOWN: direction >= 3 && direction <= 5,
+      LEFT: direction >= 5 && direction <= 7
+    };
+  }
+
   function readGamepadState(gamepad) {
     const horizontal = gamepad.axes[0] || 0;
     const vertical = gamepad.axes[1] || 0;
+    const hat = readHatSwitch(gamepad);
     return {
-      UP: isPressed(gamepad, 12) || vertical < -0.35,
-      RIGHT: isPressed(gamepad, 15) || horizontal > 0.35,
-      DOWN: isPressed(gamepad, 13) || vertical > 0.35,
-      LEFT: isPressed(gamepad, 14) || horizontal < -0.35,
+      UP: isPressed(gamepad, 12) || vertical < -0.35 || hat.UP,
+      RIGHT: isPressed(gamepad, 15) || horizontal > 0.35 || hat.RIGHT,
+      DOWN: isPressed(gamepad, 13) || vertical > 0.35 || hat.DOWN,
+      LEFT: isPressed(gamepad, 14) || horizontal < -0.35 || hat.LEFT,
       A: isPressed(gamepad, 0),
       B: isPressed(gamepad, 1),
       SELECT: isPressed(gamepad, 8),
