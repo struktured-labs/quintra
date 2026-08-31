@@ -65,6 +65,10 @@ if sha_record != rom_hash:
     fail("quintra.sha256 does not match packaged ROM")
 
 index = (root / "index.html").read_text()
+if "__QUINTRA_WEB_VERSION__" in index:
+    fail("web version placeholder was not replaced")
+if f'emulator/quintra-player.js?v={build["version"]}' not in index:
+    fail("player script URL is not cache-busted with the build version")
 references = re.findall(r'(?:src|href)="([^"]+)"', index)
 for reference in references:
     if reference.startswith(("http://", "https://", "//")):

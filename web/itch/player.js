@@ -46,7 +46,9 @@
   function updateGamepadStatus(gamepad) {
     if (!gamepadStatus) return;
     gamepadStatus.textContent = gamepad
-      ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}`
+      ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}${
+          isEightBitDoDirectInput(gamepad) ? " · Nintendo layout" : ""
+        }`
       : "Gamepad: not detected — press a button";
   }
 
@@ -90,7 +92,8 @@
   }
 
   function isEightBitDoDirectInput(gamepad) {
-    return /8bitdo/i.test(gamepad.id || "") &&
+    // Some browsers expose only 8BitDo's USB vendor id (2dc8).
+    return /8bitdo|2dc8/i.test(gamepad.id || "") &&
       typeof gamepad.axes[9] === "number";
   }
 

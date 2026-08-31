@@ -84,6 +84,8 @@ assert.equal(state.B, false, "8BitDo physical A should not trigger GBC B");
 assert.equal(originalStateCalls, 1, "keyboard/touch state should still be polled");
 assert.equal(state.UP, true, "8BitDo DirectInput hat up should reach WasmBoy");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/);
+assert.match(elements.get("#gamepad-status").textContent, /Nintendo layout/,
+  "active 8BitDo profile should be visible to the player");
 
 pads[2].buttons[1] = { pressed: false, value: 0 };
 pads[2].buttons[0] = { pressed: true, value: 1 };
@@ -114,6 +116,11 @@ assert.equal(state.RIGHT, true, "analog movement should be mapped directly");
 assert.equal(state.UP, false, "8BitDo neutral hat value should not produce movement");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/,
   "selected gamepad should remain sticky while connected");
+
+pads[2].id = "2dc8-6006";
+responsiveGamepad.getState();
+assert.match(elements.get("#gamepad-status").textContent, /Nintendo layout/,
+  "8BitDo's numeric vendor id should activate the Nintendo layout");
 
 pads = [null, pads[1], null];
 listeners.get("gamepaddisconnected")({ gamepad: { index: 2 } });
