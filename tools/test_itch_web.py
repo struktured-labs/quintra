@@ -29,6 +29,7 @@ required = (
     "licenses/THIRD-PARTY-NOTICES.md",
     "media/cover.png",
     "patches/wasmboy-0.7.1-channel1-double-speed.patch",
+    "patches/wasmboy-0.7.1-low-latency-audio.patch",
 )
 
 for relative in required:

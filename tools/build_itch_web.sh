@@ -3,11 +3,11 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-archive="$project_root/builds/quintra-itch-web-v0.20.15-beta2.zip"
+archive="$project_root/builds/quintra-itch-web-v0.20.15-beta3.zip"
 rom="$project_root/rom/working/quintra.gbc"
 expected_rom_sha="3a2056c0642804d77d8b173636b0ee393659ad3b463c460d894c22a735c0d2e6"
-wasmboy_sha="7172414c1311e561fee1ecac7413b31d861eadde866ea091dff283f1eac3b7d9"
-version="v0.20.15-beta2"
+wasmboy_sha="83b2968eb7e336c30cd8f96050c704bb65f9937aa9c7990bbfa9801bd22f1c1f"
+version="v0.20.15-beta3"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
 if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then
@@ -36,6 +36,7 @@ cp "$project_root/web/itch/vendor/wasmboy-0.7.1.umd.js" "$output_dir/emulator/wa
 cp "$project_root/web/itch/vendor/WASMBOY-LICENSE.txt" "$output_dir/licenses/WASMBOY-LICENSE.txt"
 cp "$project_root/web/itch/THIRD-PARTY-NOTICES.md" "$output_dir/licenses/THIRD-PARTY-NOTICES.md"
 cp "$project_root/web/itch/patches/wasmboy-0.7.1-channel1-double-speed.patch" "$output_dir/patches/wasmboy-0.7.1-channel1-double-speed.patch"
+cp "$project_root/web/itch/patches/wasmboy-0.7.1-low-latency-audio.patch" "$output_dir/patches/wasmboy-0.7.1-low-latency-audio.patch"
 cp "$project_root/LICENSES/GPL-3.0-or-later.txt" "$output_dir/licenses/GPL-3.0-or-later.txt"
 cp "$project_root/LICENSES/README.md" "$output_dir/licenses/QUINTRA-LICENSE-MAP.md"
 cp "$project_root/docs/media/itch/quintra-cover-630x500.png" "$output_dir/media/cover.png"
@@ -51,7 +52,7 @@ cat > "$output_dir/build.json" <<JSON
   "version": "$version",
   "gitCommit": "$git_commit",
   "romSha256": "$actual_rom_sha",
-  "emulator": "wasmboy-0.7.1+quintra.1",
+  "emulator": "wasmboy-0.7.1+quintra.2",
   "emulatorCommit": "8e96bcb70969d943b1ffc4028b169c835098ce04",
   "emulatorSha256": "$actual_wasmboy_sha",
   "channel": "web"

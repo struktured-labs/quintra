@@ -47,7 +47,7 @@
     if (!gamepadStatus) return;
     gamepadStatus.textContent = gamepad
       ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}`
-      : "Gamepad: press any button";
+      : "Gamepad: not detected — press a button";
   }
 
   function selectGamepadIndex() {
@@ -66,14 +66,43 @@
     return selected ? selected.index : 0;
   }
 
-  function enableAnyConnectedGamepad() {
-    const gamepadInput = api && api.ResponsiveGamepad && api.ResponsiveGamepad.Gamepad;
-    if (!gamepadInput || typeof gamepadInput.getState !== "function") return;
+  function isPressed(gamepad, index) {
+    const button = gamepad.buttons[index];
+    return !!button && (button.pressed || button.value > 0.5);
+  }
 
-    const getState = gamepadInput.getState.bind(gamepadInput);
-    gamepadInput.getState = index => getState(
-      index === undefined ? selectGamepadIndex() : index
-    );
+  function readGamepadState(gamepad) {
+    const horizontal = gamepad.axes[0] || 0;
+    const vertical = gamepad.axes[1] || 0;
+    return {
+      UP: isPressed(gamepad, 12) || vertical < -0.35,
+      RIGHT: isPressed(gamepad, 15) || horizontal > 0.35,
+      DOWN: isPressed(gamepad, 13) || vertical > 0.35,
+      LEFT: isPressed(gamepad, 14) || horizontal < -0.35,
+      A: isPressed(gamepad, 0),
+      B: isPressed(gamepad, 1),
+      SELECT: isPressed(gamepad, 8),
+      START: isPressed(gamepad, 9)
+    };
+  }
+
+  function enableAnyConnectedGamepad() {
+    const responsive = api && api.ResponsiveGamepad;
+    if (!responsive || typeof responsive.getState !== "function") return;
+
+    const getState = responsive.getState.bind(responsive);
+    responsive.getState = () => {
+      const state = getState() || {};
+      const index = selectGamepadIndex();
+      const gamepad = getConnectedGamepads().find(pad => pad.index === index);
+      if (!gamepad) return state;
+
+      const directState = readGamepadState(gamepad);
+      Object.keys(directState).forEach(input => {
+        state[input] = state[input] || directState[input];
+      });
+      return state;
+    };
   }
 
   function setStatus(message, isError = false) {

@@ -29,15 +29,16 @@ for (const id of [
   "export-save", "import-save", "save-file", "gamepad-status"
 ]) elements.set(`#${id}`, element());
 
-const observedIndexes = [];
-const gamepadInput = {
-  getState(index) {
-    observedIndexes.push(index);
-    return {};
+let originalStateCalls = 0;
+const responsiveGamepad = {
+  getState() {
+    originalStateCalls += 1;
+    return { UP: false, RIGHT: false, DOWN: false, LEFT: false,
+      A: false, B: false, SELECT: false, START: false };
   }
 };
 const api = {
-  ResponsiveGamepad: { Gamepad: gamepadInput },
+  ResponsiveGamepad: responsiveGamepad,
   config: async () => {},
   loadROM: async () => {},
   resumeAudioContext: async () => {},
@@ -73,17 +74,22 @@ const context = {
 vm.runInNewContext(fs.readFileSync(playerPath, "utf8"), context, { filename: playerPath });
 await new Promise(resolve => setImmediate(resolve));
 
-gamepadInput.getState();
-assert.equal(observedIndexes.at(-1), 2, "active nonzero gamepad should be selected");
+let state = responsiveGamepad.getState();
+assert.equal(state.A, true, "active nonzero gamepad input should reach WasmBoy");
+assert.equal(originalStateCalls, 1, "keyboard/touch state should still be polled");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/);
 
 pads[2].buttons[0] = { pressed: false, value: 0 };
-gamepadInput.getState();
-assert.equal(observedIndexes.at(-1), 2, "selected gamepad should remain sticky while connected");
+pads[2].axes[0] = 0.8;
+state = responsiveGamepad.getState();
+assert.equal(state.RIGHT, true, "analog movement should be mapped directly");
+assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/,
+  "selected gamepad should remain sticky while connected");
 
 pads = [null, pads[1], null];
 listeners.get("gamepaddisconnected")({ gamepad: { index: 2 } });
-gamepadInput.getState();
-assert.equal(observedIndexes.at(-1), 1, "disconnect should fall back to another connected gamepad");
+responsiveGamepad.getState();
+assert.match(elements.get("#gamepad-status").textContent, /idle virtual pad/,
+  "disconnect should fall back to another connected gamepad");
 
-console.log("itch gamepad checks passed: active nonzero, sticky selection, disconnect fallback");
+console.log("itch gamepad checks passed: direct input, active nonzero, sticky selection, disconnect fallback");
