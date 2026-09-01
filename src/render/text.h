@@ -8,8 +8,8 @@
 // Tiny console helpers for the handful of non-gameplay screens.  Keeping
 // formatted I/O out of the cartridge avoids pulling the full stdio formatter
 // into always-mapped ROM bank 0.
-void text_write(const char *text);
-void text_u16(u16 value);
-void text_digit(u8 value);
+void text_write(const char *text) NONBANKED;
+void text_u16(u16 value) BANKED;
+void text_digit(u8 value) BANKED;
 
 #endif

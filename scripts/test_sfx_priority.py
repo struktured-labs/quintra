@@ -36,7 +36,11 @@ def structural_contract():
         assert str(frequency) in core, (
             f"major Sigil fanfare lost authored note {frequency}"
         )
-    assert weapons.count("if (sfx_melody_locked()) return;") == 2
+    for name in ("sfx_play_weapon", "sfx_play_boomerang", "sfx_play_equip"):
+        start = weapons.index(f"void {name}")
+        end = weapons.find("\nvoid ", start + 1)
+        body = weapons[start:end if end >= 0 else None]
+        assert "if (sfx_melody_locked()) return;" in body
 
 
 def live_coin_collision():

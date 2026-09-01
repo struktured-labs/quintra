@@ -38,6 +38,17 @@ void sfx_play_weapon(u8 projectile_kind) BANKED {
     }
 }
 
+void sfx_play_boomerang(u8 caught) BANKED {
+    if (sfx_melody_locked()) return;
+    if (caught) {
+        weapon_ch1(0x00, 0x80, 0x71, 1942);
+        weapon_ch4(0x17, 0x41);
+    } else {
+        weapon_ch1(0x2B, 0x40, 0x92, 1860);
+        weapon_ch4(0x33, 0x42);
+    }
+}
+
 void sfx_play_equip(void) BANKED {
     // Bright forged ping plus a soft locking click. This stays distinct from
     // both paid coin feedback and the longer puzzle/room-clear fanfares.

@@ -43,6 +43,7 @@ pub const ITEM_ECHO_CHIME:   ItemId = ItemId::new(41);   // limited secret/map r
 pub const ITEM_MIRROR_SHARD: ItemId = ItemId::new(42);   // limited hostile-shot reflector
 pub const ITEM_BLAST_SEED:   ItemId = ItemId::new(43);   // Hollow-only impact bloom relic
 pub const ITEM_RIFT_LENS:    ItemId = ItemId::new(44);   // Hollow-only every-third-shot beam
+pub const ITEM_BOOMERANG:    ItemId = ItemId::new(45);   // merchant stun-and-fetch B tool
 
 // ----- Enemies
 pub const ENEMY_BLUE_CRAWLER:    EnemyId = EnemyId::new(0);
@@ -122,6 +123,7 @@ pub const BG_PAL_CAVERN_ALT:  PaletteRef = PaletteRef::new(2);
 pub const BG_PAL_CAVERN_HI:   PaletteRef = PaletteRef::new(3);
 
 pub const SPRITE_WOLFKIN:     SpriteRef = SpriteRef::new(0);
+pub const SPRITE_ITEM_BOOMERANG: SpriteRef = SpriteRef::new(128);
 // Enemy SpriteRef values are the actual OBJ tile slots consumed by runtime.
 // Keep these aligned with render/tiles.h. In 8x8 OBJ mode the hardware tile
 // index is the full unsigned byte, so dedicated late atlas slots are valid.

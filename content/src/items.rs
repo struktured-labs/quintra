@@ -274,6 +274,14 @@ pub const RIFT_LENS: Item = Item {
     rarity: Rarity::Rare, effects: &[],
 };
 
+pub const BOOMERANG: Item = Item {
+    id: ITEM_BOOMERANG, name: "Boomerang",
+    description: "B on cooldown throws a returning stun-and-fetch tool.",
+    kind: ItemKind::Passive,
+    icon_sprite: SPRITE_ITEM_BOOMERANG, palette: OBJ_PAL_MAGIC,
+    rarity: Rarity::Rare, effects: &[],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_item(CLAW_COMBO.clone());
     r.add_item(TAIL_SPIKE.clone());
@@ -302,4 +310,5 @@ pub fn register(r: &mut Registry) {
     r.add_item(MIRROR_SHARD.clone());
     r.add_item(BLAST_SEED.clone());
     r.add_item(RIFT_LENS.clone());
+    r.add_item(BOOMERANG.clone());
 }

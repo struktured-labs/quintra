@@ -11,7 +11,7 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 ENEMY_HEADER = (ROOT / "src/generated/enemies.h").read_text()
 ENEMY_SOURCE = (ROOT / "src/generated/enemies.c").read_text()
-SPAWN_SOURCE = (ROOT / "src/game/enemy_ai.c").read_text()
+SPAWN_SOURCE = (ROOT / "src/game/enemy_spawn.c").read_text()
 SPRITE_SOURCE = (ROOT / "src/render/sprites_gen.c").read_text()
 
 IDENTITIES = {

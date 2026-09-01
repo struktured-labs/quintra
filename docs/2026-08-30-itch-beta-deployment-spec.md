@@ -3,8 +3,8 @@
 Status: first implementation draft, 2026-08-30  
 Target release: free or pay-what-you-want browser beta, with the raw `.gbc` ROM
 available as a separate download  
-Current cartridge: `v0.20.15`, SHA-256
-`3a2056c0642804d77d8b173636b0ee393659ad3b463c460d894c22a735c0d2e6`
+Current cartridge: `v0.20.16`, SHA-256
+`1b7359d63303f5ec686dff92eeba5715d4cd7a7ebc2b73d8982cad6f1da5cc96`
 
 ## Decision
 
@@ -287,6 +287,6 @@ ROM hash, and third-party emulator source/license.
   minimum for beta.
 - Decide whether the raw ROM download is public on day one or limited to beta
   testers.
-- Pick the final beta version after the emulator probe; do not relabel the
-  current `v0.20.15` cartridge as `v0.21b1` without rebuilding it.
+- Keep the public beta version bound to the linked cartridge hash; never
+  relabel a prior cartridge without rebuilding it.
 - Decide whether mobile is in beta scope after touch/save tests, not before.

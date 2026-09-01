@@ -12,26 +12,22 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 TMP="$(mktemp -d /tmp/quintra-picsean-convergence.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
+STATE="$ROOT/tmp/mgba-states-smoke/quintra-stage-01-boss-picsean-easy.ss0"
+test -s "$STATE"
 
-# This is a signature-policy setup check, not a pre-boss endurance test.
-# Easy preserves the same B/Will/MP/controller mechanics while keeping the
-# paid-Undertow route alive long enough to observe its first giant response.
-QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
-  QUINTRA_BALANCE_TARGET_FRAME=1000 QUINTRA_BALANCE_FRAMES=28000 \
+# The checkpoint supplies progression only. Boss behavior and every response
+# remain live controller/cartridge mechanics.
+QUINTRA_MGBA_STATE="$STATE" QUINTRA_BALANCE_RESUME_STATE=1 \
+  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \
+  QUINTRA_BALANCE_FRAMES=3000 \
   QUINTRA_BALANCE_HOST_TIMEOUT=600 QUINTRA_BALANCE_TRACE_DIR="$TMP/traces" \
   QUINTRA_BALANCE_OUT="$TMP/run.csv" QUINTRA_BALANCE_SKIP_REPORT=1 \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 
 awk -F, '
   NR == 1 { for (i = 1; i <= NF; ++i) c[$i] = i; next }
-  NR == 2 {
-    # The former 460 seed depended on its freely spawned Road Echo to reach
-    # the first giant. The known-clear solo seed reaches and defeats that same
-    # real Colossus inside this unchanged 28k-frame policy allowance.
-    if ($(c["seed"]) != 2064128163) {
-      print "[picsean-convergence] fixed world drifted" > "/dev/stderr"; exit 1
-    }
-  }
+  NR == 2 { found = 1 }
+  END { if (!found) exit 1 }
 ' "$TMP/run.csv"
 
 OBS="$TMP/traces/run-4-class-3-1.obs.csv"

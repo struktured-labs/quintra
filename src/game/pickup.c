@@ -903,8 +903,8 @@ u8 pickup_check_player_collision(void) BANKED {
                             && player_has_item(ITEM_ID_MOON_FLASK))
                         || (ware == WARE_BLAST
                             && player_has_item(ITEM_ID_BLAST_SEED))
-                        || (ware == WARE_BEAM
-                            && player_has_item(ITEM_ID_RIFT_LENS))
+                        || (ware == WARE_BOOMERANG
+                            && player_has_item(ITEM_ID_BOOMERANG))
                         || (ware == WARE_GLASS && player.hp_max <= 2)
                         || (ware == WARE_HEART
                             && (player.hp >= player.hp_max
@@ -933,7 +933,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 || ware == WARE_ECHO || ware == WARE_RICOCHET
                                 || ware == WARE_THORN || ware == WARE_DRUM
                                 || ware == WARE_FLASK || ware == WARE_BLAST
-                                || ware == WARE_BEAM)
+                                || ware == WARE_BOOMERANG)
                             && !player_has_inventory_space())) {
                         if (entities[i].ai_data[4] == 0) {
                             sfx_play(SFX_HURT);
@@ -1045,8 +1045,9 @@ u8 pickup_check_player_collision(void) BANKED {
                             case WARE_BLAST:
                                 grant_special_item(ITEM_ID_BLAST_SEED);
                                 break;
-                            case WARE_BEAM:
-                                grant_special_item(ITEM_ID_RIFT_LENS);
+                            case WARE_BOOMERANG:
+                                grant_special_item(ITEM_ID_BOOMERANG);
+                                hud_show_boomerang();
                                 break;
                         }
                         entity_kill(i);

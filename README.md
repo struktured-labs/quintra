@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.15: Clear Choice](https://github.com/struktured-labs/quintra/releases/download/v0.20.15/quintra.gbc)
+[Download Quintra v0.20.16: Returning Edge](https://github.com/struktured-labs/quintra/releases/download/v0.20.16/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,28 +29,36 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.15 — Clear Choice**, a reward-reachability
-correction. Elite and survival rooms still present two mutually exclusive
-build boons, but the placement flood now models the same full-height pillar
-and push-block collision as live champion movement. A visually open floor
-apron beneath a pillar can no longer be mistaken for a valid standing cell or
-strand one half of the choice outside the champion's movement space.
+The current cartridge is **v0.20.16 — Returning Edge**, the public-demo beta
+cut. Waking and Hollow Riftwild now form one tool-gated counterpart world;
+return routes can spring named trap minibosses; all five champions expose
+distinct B powers, Oath Arts, status feedback, and expanded build choices.
+The nine Colossi use quiet neutral arena floors, distinct screen-scale bodies,
+stronger phase breaks, and preserved victory presentation.
 
-The live-ROM director regression follows every pixel position admitted by the
-real six-point feet/body collision shape and proves both rewards can be
-reached after Elite and Hold completions. Major relics, Rift Sigils, optional
-caches, and fixed miniboss placements retain their shared safe-floor and
-connected-component coverage.
+Dungeon merchants can now sell a run-long **Boomerang**. It fills the downtime
+between hero powers with a reusable Zelda-like throw that briefly Stops
+ordinary monsters, cuts hostile shots, and retrieves loose loot. Purchase now
+flashes an amber acquisition card, while throw and catch have separate visual
+and audio feedback.
 
-The release cartridge, gameplay reel, title capture, README stills, and
-animated nine-Colossus gallery are rebuilt together and hash-bound in the
-media manifest. The Field Archive now covers all 35 registered monsters,
-including visible Facet Ram and Dread Reaper portraits.
+The browser package includes the downstream WasmBoy audio synchronization,
+gamepad, mobile touch, dark-page, and aspect-ratio corrections. A four-station
+Pocket demo kit provides cold-resumable First Room, Boomerang Shop, Crystal
+Boss, and Riftwild routes without modifying the ordinary player save.
 
 The browser-beta packaging, save-persistence, licensing, and publish gates are
 tracked in the [itch.io beta deployment spec](docs/2026-08-30-itch-beta-deployment-spec.md).
 
-### Current development — final playtest pass
+### v0.20.16 detail — final playtest pass
+
+Dungeon merchants can now carry a run-long **Boomerang** for 30 coins. A
+ready, valid champion signature still owns B; while that move cools down—or
+when a targeted signature has no subject—the same button throws one reusable
+boomerang about seven tiles before it follows the moving champion home. It
+briefly stops ordinary monsters, cuts hostile shots, and retrieves loose
+hearts, coins, MP, relics, and Surge. Elites, minibosses, Colossi, merchant
+stock, progression objects, and terrain are unaffected.
 
 The working cartridge now treats temporary state as first-class information.
 The live HP header names the most urgent condition or curse and shows
@@ -91,7 +99,7 @@ groves, the Farfold cave, and one-time memory vaults; incidental wall changes
 use a short impact sound while the long discovery cadence is reserved for
 meaningful phase changes.
 
-### Current development — Waking and Hollow Riftwild
+### v0.20.16 detail — Waking and Hollow Riftwild
 
 The Riftwild now has two related realities rather than a generic light/dark
 recolour. **Waking Riftwild** is the living, remembered country. **Hollow
@@ -117,7 +125,7 @@ protected raised-arm discovery ceremony as keys and Waygear, making the
 counterpart expedition an authored high-risk reward route rather than a visual
 toggle.
 
-### Current development — Colossus art pass
+### v0.20.16 detail — Colossus art pass
 
 The working cartridge gives the opening **Crystal Colossus** a complete visual
 redesign. Its former width-generated oval is now a hand-authored 128×80
@@ -141,7 +149,7 @@ nine reused BG projection tiles, four colours per palette, and no additional
 OAM. The live boss atlas, animated gallery, README gameplay reel, and Field
 Archive have been regenerated from the linked ROM.
 
-### Current development — Rift Index
+### v0.20.16 detail — Rift Index
 
 The title screen now contains a hidden controller-only stage warp for focused
 playtesting. Enter **UP, RIGHT, DOWN, LEFT, RIGHT, UP, LEFT, DOWN, B, A** to
@@ -156,7 +164,7 @@ suspend while merely browsing or cancelling the index. Confirming a warped
 run clears the old suspend exactly like STARTing any other new run. Ordinary
 START and A-to-continue behavior are unchanged.
 
-### Current development — live-play feedback pass
+### v0.20.16 detail — live-play feedback pass
 
 Required dungeon keys now resolve as a two-part ceremony. Combat freezes on
 the live room, the selected champion raises both arms, and the key floats
@@ -183,7 +191,7 @@ at most one echo, preventing room farming. Actual visit history is tracked
 separately from Compass/Cartographer knowledge, so revealing a room never
 turns its first visit into a false return ambush.
 
-### Current development — first-run pressure and Riftwild escape
+### v0.20.16 detail — first-run pressure and Riftwild escape
 
 Riftwild progression is now a real expedition instead of a short shopping
 route. Each of its three regional legs sends the champion to a distant marked
@@ -240,7 +248,7 @@ clues without printing note names. Puzzle fields retain a restrained group of
 three to five stage-native guards instead of deleting their generated roster;
 the puzzle controls forward progress while the monsters provide live pressure.
 
-### Current development — hunted roads and wild fates
+### v0.20.16 detail — hunted roads and wild fates
 
 The shared compact-room library grows from eleven to nineteen silhouettes,
 with six additional seed-stable visual arrangements apiece for Crystal Caverns

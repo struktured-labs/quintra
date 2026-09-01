@@ -67,8 +67,10 @@ def main():
             pb.tick()
             if pb.memory[toad + 3] != 64:
                 break
-        assert pb.memory[toad + 3] == 67, (
-            f"Bog Toad ignored its fast authored pounce: x={pb.memory[toad + 3]}")
+        updates = 8 - pb.memory[toad + 20]
+        assert updates > 0 and pb.memory[toad + 3] == 64 + updates * 3, (
+            "Bog Toad ignored its fast authored pounce: "
+            f"x={pb.memory[toad + 3]} updates={updates}")
 
     enemy_table = (Path(__file__).resolve().parent.parent / "src/generated/enemies.c").read_text()
     assert '.id=26, .name="Bog Toad", .sprite_set=79, .palette=7,' in enemy_table

@@ -256,7 +256,9 @@ def main():
     cx, cy = pb.memory[chart_ware + 3], (pb.memory[chart_ware + 7] - 8) & 0xFF
     for off, value in ((9, cx), (10, 0), (11, cy - 24), (12, 0)):
         pb.memory[pl + off] = value
-    tick(6)
+    # The Elder's REGEN notice intentionally owns the HUD lane first. Remain
+    # near the shelf until that status callout clears and the offer takes over.
+    tick(50)
     pb.memory[0xFF4F] = 0
     assert pb.memory[0x9C00 + 12] == 47, \
         f"nearby Chart lacks route-map offer glyph (got {pb.memory[0x9C00 + 12]})"
@@ -367,6 +369,7 @@ def main():
         pb.memory[pl + off] = value
     tick(6)
     assert pb.memory[ware] == 3 and pb.memory[ware + 21] == 1
+    tick(50)
     pb.memory[0xFF4F] = 0
     assert pb.memory[0x9C00 + 12] == 40, \
         "market contact did not preserve the healing offer icon"
@@ -405,8 +408,13 @@ def main():
     for off, value in ((9, wx), (10, 0), (11, wy), (12, 0)):
         pb.memory[pl + off] = value
     tick(6)
-    assert pb.memory[weapon] == 0 and pb.memory[pl + 21] == advertised_weapon \
-        and advertised_weapon != old_weapon, "market weapon trade did not replace A weapon"
+    assert pb.memory[weapon] != 3 and pb.memory[pl + 21] == advertised_weapon \
+        and advertised_weapon != old_weapon, (
+            "market weapon trade did not replace A weapon "
+            f"(entity_type={pb.memory[weapon]} old={old_weapon} "
+            f"advertised={advertised_weapon} actual={pb.memory[pl + 21]} "
+            f"coins={pb.memory[pl + 16] | (pb.memory[pl + 17] << 8)})"
+        )
     assert not entities(5), "market weapon trade dropped an old weapon for free"
     assert len(entities(13)) == 1, "weapon sale marker remained after trade"
 

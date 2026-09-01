@@ -32,7 +32,11 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM = map(addr, ("_run_state", "_player", "_entities", "_room_tilemap"))
+RS, PL, EN, TM, SCREEN = map(addr, (
+    "_run_state", "_player", "_entities", "_room_tilemap",
+    "_loop_current_screen",
+))
+SCREEN_ROOM, SCREEN_DIALOG = 5, 10
 
 
 def put16(pb, address, value):
@@ -77,13 +81,20 @@ def boot_to_miniboss(stage, role="warden"):
     assert pb.memory[RS + 1] == target, (
         f"could not generate stage {stage} miniboss; got room={pb.memory[RS + 1]} "
         f"world={pb.memory[RS + 17]} entered={pb.memory[RS + 6]}")
-    # The room counter advances at the start of the Zelda-style portal slide,
-    # before the banked destination generator has committed its entities.
-    # Settle that seam before inspecting the live encounter; eight frames was
-    # enough before the full slide but can now sample the transient empty map.
-    # The Bell and Warden still retain a positive cadence timer after this
-    # window, which keeps the later assertions about their real behavior.
-    pb.tick(90)
+    for _ in range(180):
+        if pb.memory[SCREEN] == SCREEN_DIALOG:
+            break
+        pb.tick()
+    assert pb.memory[SCREEN] == SCREEN_DIALOG, "stage card did not appear"
+    pb.tick(30)
+    pb.button_press("a")
+    for _ in range(90):
+        pb.tick()
+        if pb.memory[SCREEN] == SCREEN_ROOM:
+            break
+    pb.button_release("a")
+    assert pb.memory[SCREEN] == SCREEN_ROOM, "stage card did not dismiss"
+    pb.tick(60)
     return pb
 
 

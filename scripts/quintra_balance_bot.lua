@@ -8,7 +8,7 @@ local KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN = 0x10, 0x20, 0x40, 0x80
 local CARD_DX, CARD_DY = {0, 1, 0, -1}, {-1, 0, 1, 0}
 local CARD_KEYS = {KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT}
 local VOID_SAFE_X, VOID_SAFE_Y = {20, 188, 20, 188}, {20, 20, 100, 100}
--- Per-screen shortest authored exits toward each regional dungeon gate;
+-- Per-screen shortest authored exits toward each regional Warden or gate;
 -- 4 means use the central threshold rather than a boundary door. A single
 -- Riftwild persists for three dungeons, waking gates 8, 21, then 34 in the
 -- expanded 6x6 expedition graph.
@@ -25,7 +25,21 @@ local WORLD_ROUTES = {
         1,1,2,1,1,2, 1,1,2,1,1,2, 2,1,2,1,1,2,
         1,1,1,2,1,2, 1,2,1,2,1,2, 1,1,1,1,4,3,
     },
+    [3] = {
+        1,1,1,4,3,3, 0,0,0,0,3,0, 0,1,0,0,0,0,
+        0,0,0,3,0,0, 1,0,0,0,0,0, 0,0,0,0,1,0,
+    },
+    [17] = {
+        1,1,1,1,1,2, 1,1,2,1,1,2, 0,1,1,1,1,4,
+        1,0,0,2,0,0, 1,0,0,1,0,0, 0,0,0,0,1,0,
+    },
+    [29] = {
+        1,1,1,1,1,2, 1,1,2,1,1,2, 2,1,1,1,1,2,
+        1,1,1,2,1,2, 1,0,1,1,1,4, 1,1,0,0,1,0,
+    },
 }
+local WORLD_GUARDS = {3, 17, 29}
+local WORLD_GUARD_BITS = {4, 8, 16}
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
 -- Controller-side mirror of the cartridge's runtime world extents. Stage
@@ -57,8 +71,30 @@ function world_gate_screen()
     return ({8, 21, 34})[step + 1]
 end
 
+function world_region_step()
+    if RS == 0 then return 0 end
+    local cleared = emu:read8(RS + 11)
+    return (math.max(cleared, 1) - 1) % 3
+end
+
+function world_guard_screen()
+    return WORLD_GUARDS[world_region_step() + 1]
+end
+
+function world_guard_cleared()
+    if RS == 0 then return false end
+    local bit = WORLD_GUARD_BITS[world_region_step() + 1]
+    return math.floor(emu:read8(RS + 47) / bit) % 2 == 1
+end
+
+function world_guard_active(screen)
+    return screen == world_guard_screen() and not world_guard_cleared()
+end
+
 function world_route_dir(screen)
-    return WORLD_ROUTES[world_gate_screen()][screen + 1]
+    local goal = world_guard_cleared() and world_gate_screen()
+        or world_guard_screen()
+    return WORLD_ROUTES[goal][screen + 1]
 end
 
 function dungeon_local(room, stage)
@@ -2473,7 +2509,9 @@ function door_step(px, py)
     -- a normal world screen made a long-form controller run walk into its
     -- wall forever after the screen-2 cave hop instead of stepping back onto
     -- the return staircase at 72,52.
-    if in_world and (world_screen == world_gate_screen() or world_screen == 30) then
+    if in_world and world_guard_active(world_screen) then return 0 end
+    if in_world and ((world_guard_cleared()
+            and world_screen == world_gate_screen()) or world_screen == 30) then
         local dx, dy = 72 - px, 52 - py
         if math.abs(dx) <= 2 and math.abs(dy) <= 2 then return 0 end
         local primary = math.abs(dx) >= math.abs(dy)
@@ -2521,7 +2559,8 @@ function door_step(px, py)
     local tx, ty, target, target_dir = sx, sy, nil, nil
     while head <= tail do
         local x, y = qx[head], qy[head]; head = head + 1
-        if in_world and world_screen == world_gate_screen() and x == 10 and y == 8 then
+        if in_world and world_guard_cleared()
+            and world_screen == world_gate_screen() and x == 10 and y == 8 then
             target, target_dir, tx, ty = y * 20 + x, 4, x, y
             break
         end
@@ -3443,10 +3482,14 @@ while frames < LIMIT do
     -- prevents progress, so engage only that blocker until the route opens.
     -- The melee champions retain their independently tested flee policies.
     local overworld_threat = world_mode == 1 and target or nil
+    local world_required_guard = world_mode == 1
+        and world_guard_active(world_screen)
     local world_blocker = CLASS == 2 and overworld_threat
         and math.max(math.abs(overworld_threat.x - px),
             math.abs(overworld_threat.y - py)) <= 16
-    if world_mode == 1 then target = world_blocker and overworld_threat or nil end
+    if world_mode == 1 then
+        target = (world_required_guard or world_blocker) and overworld_threat or nil
+    end
     if DEBUG and frames % 600 == 0 and RS ~= 0 then
         local portal_x, portal_y = -1, -1
         if TM ~= 0 then
@@ -4958,7 +5001,7 @@ while frames < LIMIT do
     -- meaningful route play. Briefly step away from nearby bodies while
     -- keeping A held, then resume the authored gate route next beat.
     local world_flee = 0
-    if overworld_threat then
+    if overworld_threat and not world_required_guard then
         local dx, dy = overworld_threat.x - px, overworld_threat.y - py
         -- Optional Riftwild fights are never worth a trade. Keep a wide
         -- body-and-projectile buffer at every health level, then resume the
@@ -5511,9 +5554,11 @@ while frames < LIMIT do
         -- option to retreat from a sealed room.
         if back == 0 and py <= 32 and has(KEY_UP) then
             keys = keys - KEY_UP + KEY_DOWN
-        elseif back == 1 and px >= 120 and has(KEY_RIGHT) then
+        elseif back == 1 and px >= QUINTRA_ARENA_W - 40
+            and has(KEY_RIGHT) then
             keys = keys - KEY_RIGHT + KEY_LEFT
-        elseif back == 2 and py >= 88 and has(KEY_DOWN) then
+        elseif back == 2 and py >= QUINTRA_ARENA_H - 48
+            and has(KEY_DOWN) then
             keys = keys - KEY_DOWN + KEY_UP
         -- Generated courts can require the leftmost two tile columns to
         -- round a long wall. Claim only the true transition lip here: the

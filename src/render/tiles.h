@@ -267,6 +267,7 @@
 #define SPR_SURGE_ORB        126 // temporary weapon-speed/damage pickup
 #define SPR_TOWN_LOREKEEPER  SPR_SURGE_ORB // town-arrival storyteller; no active Surge there
 #define SPR_SHIELD_AURA      127 // Sauran Stoneskin orbiting ward shard
+#define SPR_ITEM_BOOMERANG   128 // merchant tool and its returning projectile
 // Readable world-item silhouettes. Gameplay never loads the text font while
 // sprites are visible, so the otherwise-free upper tile range can carry real
 // equipment art instead of tinting one generic oval seventeen different ways.

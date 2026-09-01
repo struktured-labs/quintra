@@ -34,6 +34,7 @@ def main():
     en = addr("_entities")
     tm = addr("_room_tilemap")
     screen = addr("_loop_current_screen")
+    frame = addr("_loop_frame_counter")
     pb = PyBoy(str(ROM), window="null", cgb=True)
 
     def wait_for_room():
@@ -59,12 +60,21 @@ def main():
     def exit_at(x, y, clear=True):
         if clear:
             clear_hostiles()
+        source = (pb.memory[rs + 17], pb.memory[rs + 18], pb.memory[rs + 1])
         pb.memory[pl + 9] = x & 0xFF
         pb.memory[pl + 10] = (x >> 8) & 0xFF
         pb.memory[pl + 11] = y & 0xFF
         pb.memory[pl + 12] = (y >> 8) & 0xFF
-        for _ in range(45):
+        transition_frame = None
+        for _ in range(240):
             pb.tick()
+            current = (pb.memory[rs + 17], pb.memory[rs + 18], pb.memory[rs + 1])
+            loop_frame = pb.memory[frame] | (pb.memory[frame + 1] << 8)
+            if transition_frame is None and current != source:
+                transition_frame = loop_frame
+            elif transition_frame is not None and loop_frame != transition_frame:
+                return
+        raise AssertionError("Riftwild edge transition did not settle")
     for _ in range(60):
         pb.tick()
     title_page_0 = bytes(pb.memory[0x9800:0x9C00])
@@ -86,6 +96,8 @@ def main():
     pb.memory[rs + 10] = 1      # victory flag set by combat
     pb.memory[rs + 11] = 9      # BOSSES_TO_WIN
     pb.memory[rs + 12] = 1      # same boss-kill transaction opens descent
+    pb.memory[rs + 46] = 2      # final regional Riftwild
+    pb.memory[rs + 47] = 0x90   # region ready + third Warden cleared
     for _ in range(20):
         pb.tick()
     assert pb.memory[screen] == 12, "victory flag did not enter SCREEN_VICTORY"
@@ -119,8 +131,11 @@ def main():
     pb.memory[0x0000] = 0
 
     press(pb, "a")
-    for _ in range(12):
+    for _ in range(120):
         pb.tick()
+        if (pb.memory[rs + 17] == 0
+                and pb.memory[rs + 1] == STAGE_BOSS_ROOM[-1] + 1):
+            break
     assert pb.memory[screen] == 5, "A did not enter endless descent from results"
     assert pb.memory[rs + 10] == 0, "endless descent left victory flag latched"
     wait_for_room()
@@ -148,7 +163,13 @@ def main():
         pb.tick()
     assert pb.memory[rs + 17] == 0 \
         and pb.memory[rs + 1] == STAGE_BOSS_ROOM[-1] + 1, (
-        "post-victory regional Riftwild gate did not reach final town"
+        "post-victory regional Riftwild gate did not reach final town: "
+        f"world={pb.memory[rs + 17]} cell={pb.memory[rs + 18]} "
+        f"room={pb.memory[rs + 1]} screen={pb.memory[screen]} "
+        f"region={pb.memory[rs + 46]} flags={pb.memory[rs + 47]:02x} "
+        f"gate_tile={pb.memory[tm + 8 * 20 + 10]} "
+        f"hp={pb.memory[pl + 2]} "
+        f"player=({pb.memory[pl + 9]}, {pb.memory[pl + 11]})"
     )
     pb.stop(save=False)
 

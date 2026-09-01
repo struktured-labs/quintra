@@ -224,7 +224,7 @@ void hud_show_offer(u8 ware, u8 price) BANKED {
         case 15: icon = HUD_OFFER_DRUM;   break; // WARE_DRUM
         case 16: icon = HUD_OFFER_FLASK;  break; // WARE_FLASK
         case 17: icon = HUD_OFFER_THORN;  break; // WARE_BLAST: area burst
-        case 18: icon = HUD_OFFER_WEAPON; break; // WARE_BEAM: attack shape
+        case 18: icon = HUD_OFFER_BOUNCE; break; // WARE_BOOMERANG
         default: icon = HUD_OFFER_RELIC; break; // WARE_ITEM / future relics
     }
     row[0] = icon;

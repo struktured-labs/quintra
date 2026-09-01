@@ -1,13 +1,15 @@
+#pragma bank 14
+
 #include <gbdk/console.h>
 #include <stdio.h>
 
 #include "render/text.h"
 
-void text_write(const char *text) {
+void text_write(const char *text) NONBANKED {
     while (*text) putchar(*text++);
 }
 
-void text_u16(u16 value) {
+void text_u16(u16 value) BANKED {
     u16 place = 10000;
     u8 emitted = 0;
     while (place > 1) {
@@ -22,6 +24,6 @@ void text_u16(u16 value) {
     putchar((u8)('0' + value));
 }
 
-void text_digit(u8 value) {
+void text_digit(u8 value) BANKED {
     putchar((u8)('0' + (value % 10)));
 }

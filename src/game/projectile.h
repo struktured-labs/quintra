@@ -32,6 +32,7 @@ extern u8 g_shot_element;
 #define PROJ_AUX_WOLFKIN_FANG 0xF1
 #define PROJ_AUX_SPLASH        0xF2
 #define PROJ_AUX_BEAM_TRAIL    0xF3
+#define PROJ_AUX_BOOMERANG     0xF4
 // The one-per-stage Reaper owns this marker exclusively. On collision its
 // clearly telegraphed scythe sets the champion to one heart, never zero.
 #define PROJ_AUX_MORTAL_SCYTHE 0xE1
@@ -72,5 +73,7 @@ void projectile_spawn_splash(i16 px, i16 py, u8 damage,
     u8 avoid_slot) BANKED;
 void projectile_make_beam(u8 idx) BANKED;
 void projectile_update_relic(entity_t *e) BANKED;
+void projectile_update_boomerang(entity_t *e, u8 idx) BANKED;
+u8 projectile_throw_boomerang(u8 dir) BANKED;
 
 #endif

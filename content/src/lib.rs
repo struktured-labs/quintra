@@ -49,7 +49,7 @@ mod tests {
     fn registry_counts() {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
-        assert_eq!(r.n_items(),         27);   // + Hollow-exclusive Blast Seed/Rift Lens
+        assert_eq!(r.n_items(),         28);   // + merchant Boomerang
         assert_eq!(r.n_enemies(),       35);   // Facet Ram + one-per-stage Reaper
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);

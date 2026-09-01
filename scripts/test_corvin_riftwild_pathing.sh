@@ -9,13 +9,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROM="${1:-$ROOT/rom/working/quintra.gbc}"
 OUT="$(mktemp /tmp/quintra-corvin-riftwild.XXXXXX)"
+STATE="$ROOT/tmp/mgba-states-smoke/quintra-riftwild-after-stage-01-corvin-easy.ss0"
+test -s "$STATE"
 
-# Outdoor collision/pathing is identical in Easy; use the tester budget so
-# the harder opening boss cannot prevent this traversal fixture from running.
-# The seven-role mission graph now reaches the first Riftwild after the old
-# 24,000-frame cutoff, so leave enough time to clear the boss and cross it.
-QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=2 \
-  QUINTRA_BALANCE_FRAMES=45000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
+# The checkpoint supplies only the completed opening boss. Riftwild terrain,
+# Warden combat, gate travel, and every controller input remain live.
+QUINTRA_MGBA_STATE="$STATE" QUINTRA_BALANCE_RESUME_STATE=1 \
+  QUINTRA_BOT_EASY=1 QUINTRA_BALANCE_RUNS=3 QUINTRA_BALANCE_CLASSES=2 \
+  QUINTRA_BALANCE_FRAMES=8000 QUINTRA_BALANCE_HOST_TIMEOUT=900 \
   QUINTRA_BALANCE_OUT="$OUT" \
   bash "$ROOT/scripts/run_balance_bot.sh" "$ROM" >/dev/null
 

@@ -44,13 +44,11 @@ def main():
                 for char in version]
     records_row = 0x9800 + 16 * 32
     title_row = 0x9800 + 17 * 32
-    # font_min uses a packed, non-alphabetic glyph table.
-    prompt = [29, 15, 22, 15, 13, 30, 0, 28, 15, 13, 25, 28, 14, 29]  # "SELECT RECORDS"
-    assert list(pb.memory[records_row + 3:records_row + 17]) == prompt, (
+    prompt = font_tiles("SELECT RECORDS HELP")
+    assert list(pb.memory[records_row + 1:records_row + 20]) == prompt, (
         "title SELECT prompt drifted"
     )
-    assert all(pb.memory[records_row + col] == 0 for col in (*range(3), *range(17, 20))), \
-        "title records prompt lost its side gutters"
+    assert pb.memory[records_row] == 0, "title records prompt lost its left gutter"
     rendered = list(pb.memory[title_row + 6:title_row + 6 + len(version)])
     assert rendered == expected, (
         f"rendered title version drifted: expected {expected}, got {rendered}"

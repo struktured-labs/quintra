@@ -20,7 +20,7 @@ local EASY = DIFFICULTY == "easy"
 local KEY_A, KEY_SELECT, KEY_START = 0x01, 0x04, 0x08
 local KEY_RIGHT, KEY_LEFT, KEY_DOWN = 0x10, 0x20, 0x80
 local BGT_FLOOR, BGT_DOOR, BGT_PORTAL = 1, 3, 34
-local SCREEN_ROOM = 5
+local SCREEN_ROOM, SCREEN_DIALOG = 5, 10
 local STAGE_START = {0, 20, 41, 64, 87, 111, 137, 163, 191}
 local STAGE_BOSS = {19, 40, 62, 86, 110, 135, 162, 190, 220}
 local VILLAGE = {[3] = 63, [6] = 136}
@@ -281,6 +281,21 @@ local function enter_dungeon(target, stage, qualified, normalize_scroll)
     end
     if qualified then qualify_stage(stage) end
     mark_seen(target - STAGE_START[stage + 1])
+    for _ = 1, 180 do
+        if emu:read8(LS) == SCREEN_DIALOG then break end
+        emu:runFrame()
+    end
+    if emu:read8(LS) ~= SCREEN_DIALOG then
+        error("stage entry card did not appear")
+    end
+    emu:setKeys(0)
+    for _ = 1, 330 do
+        if emu:read8(LS) == SCREEN_ROOM then break end
+        emu:runFrame()
+    end
+    if emu:read8(LS) ~= SCREEN_ROOM then
+        error("stage entry card did not dismiss; screen=" .. emu:read8(LS))
+    end
     if normalize_scroll == nil then
         -- Foyers after the opening room are genuine 248x248 fields. Their
         -- camera may own a legitimate nonzero scroll after the live portal
@@ -321,7 +336,12 @@ local function verify_loaded(checkpoint, stage, room, world_mode)
         or emu:read8(PL) ~= CLASS_ID
         or emu:read8(PL + 2) == 0
         or emu:read8(LS) ~= SCREEN_ROOM then
-        error("native state restored the wrong public game context")
+        error(string.format(
+            "native state restored wrong context room=%d/%d stage=%d/%d world=%d/%d easy=%d/%d class=%d/%d hp=%d screen=%d/%d",
+            emu:read8(RS + 1), room, emu:read8(RS + 11), stage,
+            emu:read8(RS + 17), world_mode, emu:read8(RS + 26),
+            EASY and 1 or 0, emu:read8(PL), CLASS_ID,
+            emu:read8(PL + 2), emu:read8(LS), SCREEN_ROOM))
     end
     if checkpoint == "boss" and not live_colossus() then
         error("boss checkpoint restored without a live Colossus")

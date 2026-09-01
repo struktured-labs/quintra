@@ -57,7 +57,7 @@
 #define WARE_DRUM    15  // War Drum: fifth kill readies B; MP feeds A+B/Oaths
 #define WARE_FLASK   16  // Moon Flask: surplus heart drops become MP
 #define WARE_BLAST   17  // Blast Seed: first impact blooms into an area hit
-#define WARE_BEAM    18  // Rift Lens: every third A becomes a heavy fat beam
+#define WARE_BOOMERANG 18 // reusable B fallback: returning stun-and-fetch tool
 
 // Stable content ids used by runtime hooks outside generated content tables.
 #define ITEM_ID_IRON_HEART    20u
@@ -79,6 +79,7 @@
 #define ITEM_ID_MIRROR_SHARD    42u
 #define ITEM_ID_BLAST_SEED       43u
 #define ITEM_ID_RIFT_LENS        44u
+#define ITEM_ID_BOOMERANG         45u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;

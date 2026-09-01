@@ -1,4 +1,4 @@
-#pragma bank 4
+#pragma bank 14
 // Zelda/Ultima-shaped PACK panel. START pauses into one framed visual page:
 // hero portrait, vitals, equipped A/B verbs, quest, tools, and Oath. It
 // returns through room_resume so opening the panel never regenerates a room.

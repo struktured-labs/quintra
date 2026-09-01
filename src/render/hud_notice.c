@@ -13,6 +13,7 @@
 #define HUD_NOTICE_STATUS 0x80
 #define HUD_NOTICE_FRAMES 45
 #define HUD_NOTICE_HUNGER 0x7F
+#define HUD_NOTICE_BOOMERANG 0x7E
 #define HUD_NOTICE_QUEUE  4
 
 u8 hud_notice_ticks;
@@ -103,6 +104,9 @@ static u8 status_word(u8 status, u8 *row) {
 static u8 notice_palette(u8 kind) {
     u8 value = kind & 0x7F;
     if (!(kind & HUD_NOTICE_STATUS)) {
+        if (kind == HUD_NOTICE_BOOMERANG) {
+            palette_bg_load(5, notice_gold); return 5;
+        }
         if (value == STAT_MP || value == STAT_SPD) return 6;
         if (value == STAT_DEF) { palette_bg_load(5, notice_violet); return 5; }
         if (value == STAT_LCK) { palette_bg_load(5, notice_gold); return 5; }
@@ -128,6 +132,11 @@ static void draw_notice(u8 kind, u8 amount) {
     u8 i;
     u8 pal = notice_palette(kind);
     if (kind & HUD_NOTICE_STATUS) width = status_word((u8)(kind & 0x7F), row);
+    else if (kind == HUD_NOTICE_BOOMERANG) {
+        row[0]=HUD_STATUS_B; row[1]=BGT_AREA_O; row[2]=BGT_AREA_O;
+        row[3]=BGT_AREA_M; row[4]=BGT_AREA_E; row[5]=BGT_AREA_R;
+        width=6;
+    }
     else {
         switch (kind) {
             case STAT_HP:
@@ -222,6 +231,15 @@ void hud_show_healing_blocked(void) BANKED {
         return;
     }
     begin_notice(kind, 0);
+}
+
+void hud_show_boomerang(void) BANKED {
+    if (hud_notice_ticks) {
+        if (!notice_already_queued(HUD_NOTICE_BOOMERANG))
+            queue_notice(HUD_NOTICE_BOOMERANG, 0);
+        return;
+    }
+    begin_notice(HUD_NOTICE_BOOMERANG, 0);
 }
 
 void hud_tick_notice(void) BANKED {

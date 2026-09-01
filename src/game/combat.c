@@ -149,6 +149,16 @@ u8 combat_resolve(void) BANKED {
             } else if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
+            if (entities[i].ai_data[6] == PROJ_AUX_BOOMERANG) {
+                if (!(entities[j].flags & (EF_ELITE | EF_ALPHA))
+                    && eid != ENEMY_STONE_SENTINEL
+                    && eid != ENEMY_STAGE_REAPER
+                    && entities[j].ai_data[2] != ENEMY_AUX_BELLWARDEN
+                    && enemy_status_kind[j] != QSTATUS_STOP) {
+                    status_enemy_apply(j, QSTATUS_STOP, 14);
+                }
+                continue;
+            }
             // Keep specialist rejection out of this already-large resolver's
             // stack frame. The helper is entered only for authored armor,
             // shell, or projection bodies—not every ordinary contact.

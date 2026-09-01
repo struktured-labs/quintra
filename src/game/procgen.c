@@ -1683,18 +1683,45 @@ void procgen_generate_current_room(void) BANKED {
                             u8 elite_roll = rng_next_u8();
                             (void)elite_roll;
                             if (idx != 0xFF && has_alpha
-                                && spawned == alpha_ordinal
-                                && !(entities[idx].flags & EF_ELITE)) {
-                                entities[idx].flags  |= EF_ALPHA;
-                                entities[idx].palette = 0x06;
-                                entities[idx].hp =
-                                    (u8)(entities[idx].hp << 1);
-                                entities[idx].damage =
-                                    (u8)(entities[idx].damage + 1);
+                                && spawned == alpha_ordinal) {
+                                if (!(entities[idx].flags & EF_ELITE)) {
+                                    entities[idx].flags |= EF_ALPHA;
+                                    entities[idx].palette = 0x06;
+                                    entities[idx].hp =
+                                        (u8)(entities[idx].hp << 1);
+                                    entities[idx].damage =
+                                        (u8)(entities[idx].damage + 1);
+                                }
                             }
                         }
                         if (idx != 0xFF) spawned++;
                     }
+                }
+            }
+            // Directors can retain fewer opening bodies than the original
+            // density roll (notably a three-sentry trap), leaving the stable
+            // alpha ordinal beyond the actual pack. Verify the committed
+            // entity table rather than trusting an attempted ordinal: every
+            // eligible three-body pack has exactly one visible leader.
+            if (has_alpha) {
+                u8 idx;
+                u8 actual = 0;
+                u8 first = 0xFF;
+                u8 has_leader = 0;
+                for (idx = 0; idx < MAX_ENTITIES; ++idx) {
+                    if (entities[idx].type != ENT_ENEMY
+                        || !(entities[idx].flags & EF_ACTIVE)) continue;
+                    if (first == 0xFF) first = idx;
+                    actual++;
+                    if (entities[idx].flags & (EF_ELITE | EF_ALPHA))
+                        has_leader = 1;
+                }
+                if (actual >= 3 && !has_leader && first != 0xFF) {
+                    entity_t *fallback = &entities[first];
+                    fallback->flags |= EF_ALPHA;
+                    fallback->palette = 0x06;
+                    fallback->hp = (u8)(fallback->hp << 1);
+                    fallback->damage = (u8)(fallback->damage + 1);
                 }
             }
             // Batch every dungeon body's wide-field placement in one cold

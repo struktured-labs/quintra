@@ -26,10 +26,15 @@ def position(pb, entity):
 def head_art(frame):
     pb, _ = enter_boss(7, keep_open=True)
     put16(pb, FRAME, frame)
-    # room_draw observes the counter before loop.c advances it; cross the
-    # next 16-frame upload boundary, then allow VRAM writes to settle.
-    for _ in range(4):
+    # The counter advances only after the banked VRAM upload returns.
+    target = frame + 3
+    for _ in range(30):
         pb.tick()
+        current = pb.memory[FRAME] | pb.memory[FRAME + 1] << 8
+        if current >= target:
+            break
+    else:
+        raise AssertionError("Hydra tile upload did not return")
     lcdc = pb.memory[0xFF40]
     pb.memory[0xFF40] &= 0x7F
     pb.memory[0xFF4F] = 0

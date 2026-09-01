@@ -9,7 +9,10 @@ only in floor speckles.
 from collections import defaultdict
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START, dungeon_size, mission_graph
+from quintra_topology import (
+    STAGE_START, dungeon_predecessor, dungeon_size, mission_graph,
+)
+from make_stage_states import cross_graph_edge, normalize_compact_source
 
 from test_stage_archetypes import (
     EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, addr, put16,
@@ -30,6 +33,15 @@ DIRECTIVE = addr("_room_encounter_kind")
 ROSTER_KIND = addr("_room_roster_kind")
 ROSTER_PRIMARY = addr("_room_roster_primary")
 ROSTER_SECONDARY = addr("_room_roster_secondary")
+SOURCE_ADDRS = {
+    name: addr(name) for name in (
+        "_procgen_current_room_is_large", "_room_world_width",
+        "_room_world_height", "_room_camera_x", "_room_camera_y",
+    )
+}
+PUZZLE_LOCKED = addr("_room_puzzle_locked")
+COMBAT_SEALED = addr("_room_combat_sealed")
+ROOM_COMMIT = addr("_room_puzzle_kind")
 
 ROOM_ROSTER_MIXED = 0
 ROOM_ROSTER_BROOD = 1
@@ -46,7 +58,10 @@ def boot():
     for _ in range(30):
         pb.tick()
     pb.button("a")
-    for _ in range(60):
+    # Dense wide-room population continues after the title has switched to
+    # the room screen. Do not rewrite run state while that first banked entry
+    # transaction still owns the entity table.
+    for _ in range(240):
         pb.tick()
     return pb
 
@@ -67,35 +82,53 @@ def sample_stage_entry(pb, stage, seed):
     # generated dungeon's collision vocabulary, not twelve recolorings of
     # one recurring landmark position.
     local = candidates[((seed >> 24) ^ seed) % len(candidates)]
+    source, direction = dungeon_predecessor(
+        local, dungeon_size(stage), seed, stage)
     target = STAGE_START[stage] + local
-    pb.memory[RS + 1] = target - 1
+    pb.memory[RS + 1] = STAGE_START[stage] + source
     for offset, byte in enumerate(seed.to_bytes(4, "little")):
         pb.memory[RS + 2 + offset] = byte
     pb.memory[RS + 6] = 0xFF       # center entry; no stale directional lane
     pb.memory[RS + 11] = stage
     pb.memory[RS + 12] = 0         # pending_unseal
     pb.memory[RS + 13] = 0         # secret_pending
+    pb.memory[RS + 36] = 0         # rebuild dungeon law for injected seed
+    pb.memory[RS + 37] = 0         # rebuild seed-first mission roles
     # Each injection models a fresh first visit. The same emulator samples
     # all stages, so clear prior synthetic visit/hunt history explicitly.
     for offset in range(52, 57):
         pb.memory[RS + offset] = 0
-    pb.memory[RS + 17] = 1         # stand in Riftwild's dungeon gate cell
-    pb.memory[RS + 18] = (8, 21, 34)[(stage - 1) % 3 if stage else 0]
+    pb.memory[RS + 17] = 0
     pb.memory[PL + 2] = pb.memory[PL + 1]
     pb.memory[PL + 15] = 60
     for slot in range(MAX_ENTITIES):
         base = EN + slot * ENTITY_SIZE
         pb.memory[base] = pb.memory[base + 1] = 0
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 60)
-    pb.memory[TM + 9 * ROOM_W + 10] = 34  # BGT_PORTAL under feet center
-    for _ in range(30):
+    pb.memory[PUZZLE_LOCKED] = 0
+    pb.memory[COMBAT_SEALED] = 0
+    # room_counter changes at the start of the banked doorway transaction,
+    # well before a dense 16-body court has finished spawning. The compact
+    # tilemap can remain stable throughout that in-place rebuild, so use the
+    # post-procgen puzzle-role pass as the authoritative commit edge.
+    pb.memory[ROOM_COMMIT] = 0xA5
+    normalize_compact_source(pb, SOURCE_ADDRS)
+    direction_name = ("up", "right", "down", "left")[direction]
+    cross_graph_edge(pb, PL, TM, direction_name)
+    for _ in range(120):
         pb.tick()
         if pb.memory[RS + 1] == target:
             break
+    pb.button_release(direction_name)
     assert pb.memory[RS + 1] == target, (
         f"could not enter stage={stage} seed={seed:#x}; "
         f"room={pb.memory[RS + 1]} world={pb.memory[RS + 17]}"
+    )
+    for _ in range(480):
+        pb.tick()
+        if pb.memory[ROOM_COMMIT] != 0xA5:
+            break
+    assert pb.memory[ROOM_COMMIT] != 0xA5, (
+        f"room generation did not commit for stage={stage} seed={seed:#x}"
     )
     tiles = wait_for_generated_room(pb)
     hostiles = []
@@ -152,8 +185,8 @@ def main():
                 elite_total += elites
                 if len(roster) >= 3:
                     assert elites == 1, (
-                        f"stage {stage + 1} pack has {len(roster)} bodies "
-                        f"but {elites} alphas")
+                        f"stage {stage + 1} seed={seed:#x} grammar={grammar} "
+                        f"directive={kind} roster={roster} has {elites} alphas")
     finally:
         pb.stop(save=False)
 

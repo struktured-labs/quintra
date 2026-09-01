@@ -135,8 +135,8 @@ static void render_title(void) {
     // Keep the records affordance and version on separate centred rows.  The
     // old packed "SEL RECORD v0..." footer read as broken leftover text and
     // was easily mistaken for the stray glyph reported at the right edge.
-    // Neither line touches column 19: the GBDK console would wrap/scroll if
-    // the bottom-right cell were written.
+    // The version line avoids the bottom-right cell, where the GBDK console
+    // would wrap and scroll.
     gotoxy(1, 16); text_write("SELECT RECORDS+HELP");
     gotoxy(6, 17); text_write(QUINTRA_VERSION);
     // Personal score belongs on SELECT → Records. Keeping it off the title

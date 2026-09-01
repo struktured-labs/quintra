@@ -159,10 +159,16 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
 // SDCC eagerly materializes struct offsets used later in a function, even
 // across a player-only branch; isolating this cold path preserves the shipped
 // twelve-shot update cost while ordinary player shots still animate locally.
-static void projectile_update_player(entity_t *e) {
+static u8 projectile_update_player(entity_t *e, u8 idx) {
     if (e->ai_data[6] == PROJ_AUX_SPLASH
-        || (e->ai_data[3] & PROJ_FLAG_FRACTAL))
+        || (e->ai_data[3] & PROJ_FLAG_FRACTAL)) {
         projectile_update_relic(e);
+        if (!(e->flags & EF_ACTIVE)) return 0;
+    }
+    if (e->ai_data[6] == PROJ_AUX_BOOMERANG) {
+        projectile_update_boomerang(e, idx);
+        if (!(e->flags & EF_ACTIVE)) return 0;
+    }
 
     // Ordinary player bullets shimmer; melee arcs and beams stay solid.
     if (e->ai_data[2] == 0 && !(e->ai_data[3] & PROJ_FLAG_BEAM)) {
@@ -170,6 +176,7 @@ static void projectile_update_player(entity_t *e) {
         e->sprite_tile = (u8)((e->ai_data[0] & 0x02)
             ? SPR_BULLET_B : SPR_BULLET);
     }
+    return 1;
 }
 
 void projectile_update_one(entity_t *e, u8 idx) {
@@ -186,7 +193,7 @@ void projectile_update_one(entity_t *e, u8 idx) {
     // Area bursts are born during combat resolution, after this updater has
     // already passed. Arm them here on the following frame so their collision
     // sweep never depends on the parent's current table index.
-    if (flags & EF_PLAYER_PROJ) projectile_update_player(e);
+    if ((flags & EF_PLAYER_PROJ) && !projectile_update_player(e, idx)) return;
 
     {
         i16 px = FIX8_TO_INT(e->x);
@@ -229,6 +236,19 @@ void projectile_update_one(entity_t *e, u8 idx) {
             : room_tile_at_px(sx, sy);
 
         if (flags & EF_PLAYER_PROJ) {
+            if (e->ai_data[6] == PROJ_AUX_BOOMERANG) {
+                if (!e->state
+                    && (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE
+                        || t == BGT_CRYSTAL || t == BGT_WALL_CRACK
+                        || t == BGT_POT || px < 8
+                        || px > (i16)(room_world_width - 8)
+                        || py < 8 || py > (i16)(room_world_height - 8))) {
+                    e->x = (ppos_t)(e->x - e->vx);
+                    e->y = (ppos_t)(e->y - e->vy);
+                    e->state = 1;
+                }
+                return;
+            }
             if ((t == BGT_TREE || t == BGT_SPIKES || t == BGT_SWITCH)
                 && room_elemental_tile((u8)(sx >> 3), (u8)(sy >> 3),
                     e->ai_data[1])) {

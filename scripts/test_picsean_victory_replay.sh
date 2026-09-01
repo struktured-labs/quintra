@@ -27,11 +27,10 @@ EXPECTED_SEED="${QUINTRA_VICTORY_EXPECTED_SEED:-2064128163}"
 # only; the cartridge's Easy assist, enemies, procgen, and bosses remain real.
 THREAT_POLICY="${QUINTRA_VICTORY_THREAT_POLICY:-collision}"
 EASY="${QUINTRA_VICTORY_EASY:-1}"
-# The seven-role mission graph and persistent Riftwild now put the measured
-# stage-nine entry at frame 263,908 on this fixed world. Its controller-only
-# final leg needs roughly 43,000 more frames. Keep a real margin for route
-# variance without changing cartridge pacing or the Normal balance target.
-FRAME_BUDGET="${QUINTRA_VICTORY_FRAME_BUDGET:-350000}"
+# The seven-role mission graph and three mandatory Riftwild Wardens put this
+# fixed world's measured ending near frame 365,000. Keep a real route margin
+# without changing cartridge pacing or the Normal balance target.
+FRAME_BUDGET="${QUINTRA_VICTORY_FRAME_BUDGET:-425000}"
 
 RS=$(awk '/DEF _run_state / {print $3}' "$NOI")
 PL=$(awk '/DEF _player / {print $3}' "$NOI")
@@ -40,10 +39,8 @@ TM=$(awk '/DEF _room_tilemap / {print $3}' "$NOI")
 LS=$(awk '/DEF _loop_current_screen / {print $3}' "$NOI")
 FC=$(awk '/DEF _loop_frame_counter / {print $3}' "$NOI")
 
-# Seven generated mission roles now precede every Colossus. The fixed replay
-# reaches stage nine at frame 263,908; a captured room-193 continuation then
-# needed roughly 43,000 honest controller frames to clear the remaining
-# mission chain and ninth Colossus. Retain a measured final-stage margin.
+# Seven generated mission roles precede every Colossus, and each dungeon exit
+# now routes through its required Riftwild Warden before the next gate wakes.
 # This is only controller-proof travel time: all nine real boss kills, relic
 # pickups, Victory, and exact trace replay remain mandatory.
 QUINTRA_BALANCE_RUNS=4 QUINTRA_BALANCE_CLASSES=3 \

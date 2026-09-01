@@ -17,6 +17,7 @@ STATE_OUT ?= $(CURDIR)/tmp/stage-states
 MGBA_STATE_OUT ?= $(CURDIR)/tmp/mgba-states
 MGBA_STATE_SMOKE_OUT ?= $(CURDIR)/tmp/mgba-states-smoke
 POCKET_STATE_OUT ?= $(CURDIR)/tmp/pocket-test-saves
+DEMO_KIT_OUT ?= $(CURDIR)/builds/quintra-demo-kit
 MGBA_BIN ?= mgba-headless
 TIMED_STATE_OUT ?= $(CURDIR)/tmp/timed-states
 TIMED_MGBA_STATE_OUT ?= $(CURDIR)/tmp/timed-mgba-states
@@ -52,7 +53,7 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
-.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check showcase showcase-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states pocket-test-saves mgba-states mgba-state-smoke timed-states timed-mgba-states
+.PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check demo-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check showcase showcase-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states pocket-test-saves demo-kit mgba-states mgba-state-smoke timed-states timed-mgba-states
 # Two-stage build: gen produces src/generated/*.c BEFORE SRCS is evaluated
 # for the rom-link step. Without the recursive $(MAKE), Make captures SRCS
 # at parse time and misses the generated files on a fresh build.
@@ -99,13 +100,13 @@ $(OBJDIR)/src/game/title.o: force-title $(SRCDIR)/game/version.h
 # Link to ROM, then verify the memory layout. The layout check exists
 # because the linker SILENTLY placed init code past 0x8000 when the flat
 # 32KB image overflowed (white screen at boot, shipped 6 broken commits).
-# Always perform the final link. GBDK's map/NOI side artifacts and coarse
-# generated-header dependencies can otherwise leave a newly compiled object
-# newer than an apparently-current ROM, which is unacceptable for a flash or
-# GitHub release build.
+# Always perform the final link. Bankpack resolves auto-bank assignments into
+# the objects on its first cold pass, so link twice to make clean and warm
+# builds byte-identical.
 force-link:
 
 $(BINDIR)/$(PROJECT).gbc: $(OBJS) Makefile force-link
+	@$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	@python3 scripts/check_rom_layout.py $(BINDIR)/$(PROJECT)
 
@@ -293,6 +294,19 @@ preflight: all repro-check
 	uv run --quiet --with pyboy python scripts/test_suspend.py
 	uv run --quiet --with pillow python scripts/check_media.py
 
+demo-check: demo-kit
+	$(PYBOY_RUN) scripts/test_quest_guidance.py
+	$(PYBOY_RUN) scripts/test_title_version.py
+	$(PYBOY_RUN) scripts/test_shop_surge.py
+	$(PYBOY_RUN) scripts/test_signature_balance.py
+	$(PYBOY_RUN) scripts/test_boss_identity.py
+	$(PYBOY_RUN) scripts/test_boss_rewards.py
+	$(PYBOY_RUN) scripts/test_performance.py
+	$(PYBOY_RUN) scripts/test_transition_audio.py
+	$(PYBOY_RUN) scripts/test_gameover.py
+	$(PYBOY_RUN) scripts/test_suspend.py
+	tools/build_itch_web.sh
+
 # Fresh-copy determinism: rebuild without obj/target/current ROM and demand
 # exact cartridge bytes. This catches filesystem-dependent source/link order.
 repro-check: all
@@ -427,6 +441,11 @@ pocket-test-saves: all
 	@$(PYBOY_RUN) scripts/make_pocket_test_saves.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --states "$(STATE_OUT)" \
 		--out "$(POCKET_STATE_OUT)" --difficulty all --checkpoint all
+
+demo-kit: all
+	@$(PYBOY_RUN) scripts/make_demo_kit.py \
+		--rom "$(BINDIR)/$(PROJECT).gbc" --states "$(STATE_OUT)" \
+		--out "$(DEMO_KIT_OUT)"
 
 # Native mGBA equivalents for hands-on testing in mGBA-Qt. Generation covers
 # the same 460 champion/difficulty/checkpoint combinations as the PyBoy set and

@@ -1808,17 +1808,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // ---- Weapon 2 (B, edge): a dependable class signature. It has a
         // short class/SPD-shaped cooldown but spends neither MP nor Will;
         // those resources belong to A+B/Oaths and A MAX respectively.
-        if ((pressed & J_B) && !(keys & J_A) && muted) {
-            sfx_play(SFX_HURT);
-        }
-        if (!muted && (pressed & J_B) && !(keys & J_A)
-            && player.active_charge == 0) {
+        if ((pressed & J_B) && !(keys & J_A)) {
             u8 dir = room_input_dir8(keys, player.facing);
-            u8 dmg = (u8)(w->p1 + 1 + effective_atk);
-            if (will_fire_signature(dir, dmg)) {
-                will_begin_signature();
-            } else {
-                // Targeted signatures with no subject refuse the cooldown.
+            u8 used = 0;
+            if (!muted && player.active_charge == 0) {
+                u8 dmg = (u8)(w->p1 + 1 + effective_atk);
+                if (will_fire_signature(dir, dmg)) {
+                    will_begin_signature();
+                    used = 1;
+                }
+            }
+            if (!used) used = projectile_throw_boomerang(dir);
+            if (!used && (muted || player.active_charge == 0)) {
                 sfx_play(SFX_HURT);
             }
         }
@@ -2516,6 +2517,8 @@ void room_draw(void) {
     }
     if (serpent_tail_active) serpent_draw();
     if (cinder_pack_active) cinder_draw();
+
+    if (procgen_current_room_is_boss) VBK_REG = 0;
 
     if (procgen_current_room_is_boss && room_stage() == 3
         && (loop_frame_counter & 0x0F) == 0) {

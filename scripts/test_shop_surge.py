@@ -18,11 +18,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, SURGE, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(addr, (
+RS, PL, EN, TM, SURGE, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, ESTATUS, HNOTICE = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
     "_room_weapon_surge_ticks", "_procgen_current_room_is_large",
     "_room_world_width", "_room_world_height",
-    "_room_camera_x", "_room_camera_y"))
+    "_room_camera_x", "_room_camera_y", "_enemy_status_kind",
+    "_hud_notice_ticks"))
 
 
 def put16(pb, where, value):
@@ -146,6 +147,10 @@ def signed8(value):
     return value - 256 if value & 0x80 else value
 
 
+def get16(pb, where):
+    return pb.memory[where] | pb.memory[where + 1] << 8
+
+
 def inject_lethal_crawler(pb):
     clear_entities(pb)
     px = pb.memory[PL + 9] | pb.memory[PL + 10] << 8
@@ -174,20 +179,20 @@ def inject_lethal_crawler(pb):
 
 
 def main():
-    # Forty-eight adjacent seeds cover the complete 8x6 catalog. Every shop keeps
+    # Forty-two adjacent seeds cover the complete 6x7 catalog. Every shop keeps
     # healing and a class-attuned sealed relic, then guarantees one build
     # shelf and one tactical shelf without consuming combat RNG.
-    build_pool = (6, 8, 9, 12, 13, 14, 17, 18)
-    tactical_pool = (5, 7, 10, 11, 15, 16)
+    build_pool = (6, 8, 9, 12, 13, 14)
+    tactical_pool = (5, 7, 10, 11, 15, 16, 18)
     ware_art = {
         0: 30, 5: 143, 6: 140, 7: 142, 8: 141, 9: 138,
         10: 144, 11: 150, 12: 145, 13: 146, 14: 147,
-        15: 148, 16: 149, 17: 155, 18: 156,
+        15: 148, 16: 149, 18: 128,
     }
-    for seed in range(48):
+    for seed in range(42):
         pb = boot_shop(seed)
         expected = {
-            0, 1, build_pool[seed % 8], tactical_pool[(seed // 8) % 6],
+            0, 1, build_pool[seed % 6], tactical_pool[(seed // 6) % 7],
         }
         assert set(shop_wares(pb)) == expected, (
             f"seed {seed} featured stock drifted: "
@@ -388,7 +393,7 @@ def main():
 
     # Spirit Draught immediately makes the hidden full-MP A+B transformation
     # available and starts a useful weapon-shaped Surge window.
-    ascend_pb = boot_shop(24)
+    ascend_pb = boot_shop(18)
     ascend_pb.memory[PL + 4] = 0
     buy(ascend_pb, 11)
     assert ascend_pb.memory[PL + 4] == ascend_pb.memory[PL + 3]
@@ -447,7 +452,7 @@ def main():
     thorn_pb.stop(save=False)
 
     # War Drum makes each fifth real kill a B-refresh + A+B-resource beat.
-    drum_pb = boot_shop(32)
+    drum_pb = boot_shop(24)
     buy(drum_pb, 15)
     assert 37 in inventory(drum_pb), "War Drum is not recorded"
     drum_pb.memory[RS + 16] = 4
@@ -462,7 +467,7 @@ def main():
 
     # Moon Flask consumes a surplus heart only when it can distill that
     # otherwise-dead recovery into MP.
-    flask_pb = boot_shop(40)
+    flask_pb = boot_shop(30)
     buy(flask_pb, 16)
     assert 38 in inventory(flask_pb), "Moon Flask is not recorded"
     clear_entities(flask_pb)
@@ -485,9 +490,133 @@ def main():
     assert flask_pb.memory[PL + 4] == 1, "Moon Flask did not distill MP"
     flask_pb.stop(save=False)
 
-    print("[shop-surge] PASS four-counter 8x6 procedural catalog "
+    # Boomerang fills B's cooldown with one reusable utility projectile. It
+    # stops ordinary bodies, ignores bosses, cuts shots, fetches loose loot,
+    # and must return before another one can exist.
+    boom_pb = boot_shop(36)
+    boom_ware = shop_wares(boom_pb)[18]
+    assert boom_pb.memory[boom_ware + 19] == 30
+    buy(boom_pb, 18)
+    assert 45 in inventory(boom_pb), "Boomerang is not recorded in the run"
+    assert boom_pb.memory[HNOTICE] > 0, "Boomerang purchase lacks a HUD notice"
+    assert bytes(boom_pb.memory[0x9C00 + 10:0x9C00 + 16]) == bytes(
+        (64, 89, 89, 87, 86, 76)), "Boomerang purchase notice is not BOOMER"
+    clear_entities(boom_pb)
+    for tile in range(20 * 17):
+        boom_pb.memory[TM + tile] = 1
+    put16(boom_pb, PL + 9, 64)
+    put16(boom_pb, PL + 11, 64)
+    boom_pb.memory[PL + 13] = 1
+    boom_pb.memory[PL + 19] = 80
+    boom_pb.button_press("b")
+    for _ in range(2):
+        boom_pb.tick()
+    boom_pb.button_release("b")
+    booms = [shot for shot in player_projectiles(boom_pb)
+             if boom_pb.memory[shot + 23] == 0xF4]
+    assert len(booms) == 1, "cooling B did not throw one Boomerang"
+    boom = booms[0]
+    assert boom_pb.memory[boom + 12] == 128
+    assert boom_pb.memory[boom + 26] == 0
+    boom_pb.button_press("b")
+    for _ in range(2):
+        boom_pb.tick()
+    boom_pb.button_release("b")
+    assert sum(boom_pb.memory[shot + 23] == 0xF4
+               for shot in player_projectiles(boom_pb)) == 1
+
+    enemy = next(EN + i * 28 for i in range(32)
+                 if not boom_pb.memory[EN + i * 28 + 1])
+    enemy_slot = (enemy - EN) // 28
+    bx = get16(boom_pb, boom + 3) + signed8(boom_pb.memory[boom + 10])
+    by = get16(boom_pb, boom + 7) + signed8(boom_pb.memory[boom + 11])
+    boom_pb.memory[enemy] = 2
+    boom_pb.memory[enemy + 1] = 7
+    put16(boom_pb, enemy + 3, bx)
+    put16(boom_pb, enemy + 7, by)
+    boom_pb.memory[enemy + 14] = 9
+    boom_pb.memory[enemy + 17] = 0
+    boom_pb.memory[enemy + 25] = 0x88
+    boom_pb.tick()
+    assert boom_pb.memory[ESTATUS + enemy_slot] == 4, (
+        f"Boomerang did not stop ordinary enemy: status="
+        f"{boom_pb.memory[ESTATUS + enemy_slot]} "
+        f"boom={list(boom_pb.memory[boom:boom + 28])} "
+        f"enemy={list(boom_pb.memory[enemy:enemy + 28])}")
+    assert boom_pb.memory[enemy + 14] == 9, "Boomerang dealt damage"
+
+    boom_pb.memory[ESTATUS + enemy_slot] = 0
+    boom_pb.memory[enemy + 17] = 1
+    boom_pb.memory[enemy + 20] = 1
+    bx = get16(boom_pb, boom + 3) + signed8(boom_pb.memory[boom + 10])
+    by = get16(boom_pb, boom + 7) + signed8(boom_pb.memory[boom + 11])
+    put16(boom_pb, enemy + 3, bx)
+    put16(boom_pb, enemy + 7, by)
+    boom_pb.tick()
+    assert boom_pb.memory[ESTATUS + enemy_slot] == 0, \
+        "Colossus body was stopped by Boomerang"
+    boom_pb.memory[enemy] = boom_pb.memory[enemy + 1] = 0
+
+    hostile = next(EN + i * 28 for i in range(32)
+                   if not boom_pb.memory[EN + i * 28 + 1])
+    for offset in range(28):
+        boom_pb.memory[hostile + offset] = 0
+    bx = get16(boom_pb, boom + 3) + signed8(boom_pb.memory[boom + 10])
+    by = get16(boom_pb, boom + 7) + signed8(boom_pb.memory[boom + 11])
+    boom_pb.memory[hostile] = 1
+    boom_pb.memory[hostile + 1] = 3
+    put16(boom_pb, hostile + 3, bx)
+    put16(boom_pb, hostile + 7, by)
+    boom_pb.memory[hostile + 14] = 1
+    boom_pb.memory[hostile + 16] = 30
+    boom_pb.memory[hostile + 25] = 0x77
+    boom_pb.memory[hostile + 26] = 1
+    for _ in range(3):
+        boom_pb.tick()
+        if boom_pb.memory[hostile] == 0:
+            break
+    assert boom_pb.memory[hostile] == 0, (
+        f"Boomerang did not cut hostile shot: "
+        f"boom={list(boom_pb.memory[boom:boom + 28])} "
+        f"hostile={list(boom_pb.memory[hostile:hostile + 28])}")
+
+    coin = next(EN + i * 28 for i in range(32)
+                if not boom_pb.memory[EN + i * 28 + 1])
+    for offset in range(28):
+        boom_pb.memory[coin + offset] = 0
+    bx = get16(boom_pb, boom + 3) + signed8(boom_pb.memory[boom + 10])
+    by = get16(boom_pb, boom + 7) + signed8(boom_pb.memory[boom + 11])
+    boom_pb.memory[coin] = 3
+    boom_pb.memory[coin + 1] = 3
+    put16(boom_pb, coin + 3, bx)
+    put16(boom_pb, coin + 7, by)
+    boom_pb.memory[coin + 14] = 1
+    boom_pb.memory[coin + 16] = 30
+    boom_pb.memory[coin + 17] = 1
+    boom_pb.memory[coin + 25] = 0x66
+    old_coins = get16(boom_pb, PL + 16)
+    for _ in range(3):
+        boom_pb.tick()
+        if boom_pb.memory[coin] == 0:
+            break
+    assert boom_pb.memory[coin] == 0 and get16(boom_pb, PL + 16) == old_coins + 1, \
+        (f"Boomerang did not fetch loose coin: "
+         f"boom={list(boom_pb.memory[boom:boom + 28])} "
+         f"coin={list(boom_pb.memory[coin:coin + 28])}")
+
+    turned = False
+    for _ in range(80):
+        boom_pb.tick()
+        if boom_pb.memory[boom] == 0:
+            break
+        turned |= boom_pb.memory[boom + 15] == 1
+    assert turned and boom_pb.memory[boom] == 0, \
+        "Boomerang did not turn and return to the champion"
+    boom_pb.stop(save=False)
+
+    print("[shop-surge] PASS four-counter 6x7 procedural catalog "
           "+ atomic heal/chart/full-Pack transactions "
-          "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask mechanics")
+          "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask/Boomerang mechanics")
 
 
 if __name__ == "__main__":

@@ -41,6 +41,7 @@ void sfx_play(u8 id);
 // Banked, low-frequency variants keep weapon/equipment identity out of the
 // precious always-mapped audio dispatcher.
 void sfx_play_weapon(u8 projectile_kind) BANKED;
+void sfx_play_boomerang(u8 caught) BANKED;
 void sfx_play_equip(void) BANKED;
 void sfx_play_reward(u8 kind) BANKED;
 // Ordered floor runes answer with one of five stable major-pentatonic pitches.
