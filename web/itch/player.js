@@ -204,6 +204,8 @@
       isGbcEnabled: true,
       isGbcColorizationEnabled: true,
       isAudioEnabled: true,
+      audioWorkletDirectOutput: true,
+      audioTargetLatencyInSeconds: 0.024,
       maxNumberOfAutoSaveStates: 2,
       onReady: () => setStatus("Cartridge ready")
     }, canvas);

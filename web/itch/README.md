@@ -4,17 +4,15 @@ This directory contains the source for Quintra's self-hosted itch.io player.
 It forms one browser program with WasmBoy and is licensed under
 GPL-3.0-or-later. See `../../LICENSES/GPL-3.0-or-later.txt`.
 
-The vendored browser bundle is rebuilt from WasmBoy 0.7.1, pinned to upstream
-commit `8e96bcb70969d943b1ffc4028b169c835098ce04`, with Quintra's channel-1
-double-speed timing and audio synchronization corrections applied. The complete
-downstream changes are distributed in the `patches` directory.
+The vendored browser bundle is built from Quintra's maintained WasmBoy fork,
+tagged `v0.8.9-audio-flow-control` at commit
+`8726d75662bd9908d638790353e98f216584ac64`. The player uses its direct
+AudioWorklet path with a 24 ms target, bounded 512-frame blocks, and
+acknowledgement-based producer flow control. The fork also includes the Game
+Boy wave-channel pitch correction and Quintra's controller/mobile work.
 
-The audio-sync profile reduces WasmBoy's initial audio lead from 100 ms to
-25 ms, throttles against the browser audio clock at 50 ms instead of loosely
-targeting 250 ms, and emits 512-sample chunks instead of 1024-sample chunks.
-It also repairs queued-source bookkeeping and discards unplayed audio if the
-scheduled lead ever exceeds 100 ms, preventing permanent A/V drift after a
-browser hitch.
+Fork source:
+https://github.com/struktured-labs/wasmboy/tree/v0.8.9-audio-flow-control
 
 Build the upload directory and ZIP from the repository root:
 

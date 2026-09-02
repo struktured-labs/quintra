@@ -28,8 +28,6 @@ required = (
     "licenses/QUINTRA-LICENSE-MAP.md",
     "licenses/THIRD-PARTY-NOTICES.md",
     "media/cover.png",
-    "patches/wasmboy-0.7.1-channel1-double-speed.patch",
-    "patches/wasmboy-0.7.1-audio-sync.patch",
 )
 
 for relative in required:
