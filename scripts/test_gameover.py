@@ -106,6 +106,10 @@ def main():
         first.memory[projectile + 26] = 4
 
         for _ in range(180):
+            # A legal warm transition may inherit either VRAM bank. Hold the
+            # selector on attributes so Game Over must choose tile bank 0
+            # before loading its font and drawing, as Pocket hardware requires.
+            first.memory[0xFF4F] = 1
             first.tick()
             if first.memory[SCREEN] == 11:
                 break
@@ -143,6 +147,13 @@ def main():
         first.memory[0xFF4F] = 0
         assert attrs == bytes(20 * 18), \
             "game-over retained stale CGB text palette attributes"
+        game_over = font_tiles("GAME  OVER")
+        rendered_game_over = bytes(first.memory[
+            bg_map + 3 * 32 + 6:bg_map + 3 * 32 + 6 + len(game_over)
+        ])
+        assert rendered_game_over == game_over, (
+            "game-over drew its text into CGB attribute memory"
+        )
         # A hard Normal death should teach the already-implemented inspection
         # mode where the player actually needs it. This is an ordinary
         # cartridge-rendered prompt, not documentation or a test-only overlay.
@@ -168,6 +179,20 @@ def main():
             f"death meta drifted: best/runs/wins={(best, runs, wins)}"
         first.memory[0x0000] = 0
 
+        # Exercise the real in-process restart before the separate cold-boot
+        # proof. The title, audio master, and title score must recover without
+        # relying on emulator power-on register defaults.
+        press(first, "start")
+        for _ in range(30):
+            first.tick()
+        assert first.memory[SCREEN] == 1, "warm death restart missed title"
+        warm_title = font_tiles("QUINTRA")
+        assert bytes(first.memory[
+            0x9800 + 4 * 32 + 6:0x9800 + 4 * 32 + 6 + len(warm_title)
+        ]) == warm_title, "warm death restart produced a black title"
+        assert first.memory[TRACK] == 18, "warm death restart missed title music"
+        assert first.memory[0xFF26] & 0x80, "warm death restart disabled audio"
+
         battery_io = battery.open("w+b")
         first.stop(save=True, ram_file=battery_io)
         battery_io.flush()
@@ -190,10 +215,22 @@ def main():
         press(second, "start")
         for _ in range(30):
             second.tick()
+        # Erase one hero and one enemy tile in bank 0, then deliberately leave
+        # VBK on bank 1 while choosing the hero. Room entry must restore bank 0
+        # before its atlas uploads or Pocket renders those actors black.
+        second.memory[0xFF4F] = 0
+        for address in (*range(0x8000, 0x8040), *range(0x8140, 0x8150)):
+            second.memory[address] = 0
+        second.memory[0xFF4F] = 1
         press(second, "a")
         for _ in range(80):
             second.tick()
         assert second.memory[SCREEN] == 5, "could not start clean run after death"
+        second.memory[0xFF4F] = 0
+        assert any(second.memory[0x8000:0x8040]), \
+            "room loaded the hero atlas into CGB VRAM bank 1"
+        assert any(second.memory[0x8140:0x8150]), \
+            "room loaded the enemy atlas into CGB VRAM bank 1"
         second.memory[0x0000] = 0x0A
         second.memory[0x4000] = 0
         assert bytes(second.memory[0xA000:0xA002]) == b"QS", \

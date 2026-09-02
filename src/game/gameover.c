@@ -29,6 +29,7 @@ void gameover_enter(void) {
     sram_clear_run();   // run over -> suspend save dies with it
     new_best = sram_meta_record(run_state.score, 0, run_state.run_timer);
     DISPLAY_OFF;
+    VBK_REG = 0;
     HIDE_SPRITES;
     HIDE_WIN;
     palette_bg_load(0, gameover_palette);

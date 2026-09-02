@@ -1011,6 +1011,7 @@ u8 room_input_dir8(u8 keys, u8 facing) BANKED;
 void room_enter(void) {
     g_vbl_ticks = 0;   // run clock: don't count time spent off-room
     DISPLAY_OFF;
+    VBK_REG = 0;
     room_paused = 0;
     if (!room_resume_flag) {
         room_bg_origin_x = room_bg_origin_y = 0;

@@ -84,6 +84,7 @@ void victory_enter(void) {
         new_best = sram_meta_record(run_state.score, 1, run_state.run_timer);
     }
     DISPLAY_OFF;
+    VBK_REG = 0;
     HIDE_SPRITES;
     HIDE_WIN;
     palette_bg_load(0, victory_palette);

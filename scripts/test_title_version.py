@@ -172,7 +172,9 @@ def main():
     for row in range(18):
         for col in range(20):
             pb.memory[0x9800 + row * 32 + col] = 0x6F
-    pb.memory[0xFF4F] = 0
+    # Leave VBK on the attribute plane across the real B transition. Pocket
+    # hardware can arrive here in that state after a warm Game Over restart;
+    # title_enter must select tile-data bank 0 before loading or drawing.
     pb.button("b")
     pb.tick(20)
     pb.memory[0xFF4F] = 1
@@ -182,8 +184,16 @@ def main():
     assert not any(stale_attrs), (
         "title retained stale CGB attributes from the previous screen"
     )
+    warm_title = font_tiles("QUINTRA")
+    assert list(pb.memory[0x9800 + 4 * 32 + 6:
+                          0x9800 + 4 * 32 + 6 + len(warm_title)]) == warm_title, (
+        "title drew into CGB attribute memory after a warm restart"
+    )
     pb.stop(save=False)
-    print(f"[title-version] PASS rendered {version}, README, and clean CGB attributes")
+    print(
+        f"[title-version] PASS rendered {version}, README, clean CGB attributes, "
+        "and warm-VBK recovery"
+    )
 
 
 if __name__ == "__main__":

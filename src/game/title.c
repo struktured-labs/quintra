@@ -194,6 +194,7 @@ static void render_help(void) {
 
 void title_enter(void) {
     DISPLAY_OFF;
+    VBK_REG = 0;
 
     palette_bg_load(0, title_palette_steady);
     // Mirror to palette 7 so font_init's choice of palette doesn't surprise us

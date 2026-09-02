@@ -3,8 +3,8 @@
 Status: first implementation draft, 2026-08-30  
 Target release: free or pay-what-you-want browser beta, with the raw `.gbc` ROM
 available as a separate download  
-Current cartridge: `v0.20.18`, SHA-256
-`e8690e387c32c0ab6f2ee2dabc7b7f5cd4e14b64284957d8646526e24b424c6b`
+Current cartridge: `v0.20.19`, SHA-256
+`d2cf5ed60d79a399f5c0566e88743c523f781e8675cfe7168f83571d1338539b`
 
 ## Decision
 

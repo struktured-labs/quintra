@@ -121,6 +121,7 @@ static void render(void) {
 
 void class_select_enter(void) {
     DISPLAY_OFF;
+    VBK_REG = 0;
     palette_bg_load(0, cs_palette);
     palette_bg_load(7, cs_palette);
     palette_obj_load(2, cursor_palette);

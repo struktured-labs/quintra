@@ -266,6 +266,7 @@ void dialog_prepare_stage(u8 stage) BANKED {
 void dialog_enter(void) {
     u8 i;
     DISPLAY_OFF;
+    VBK_REG = 0;
     HIDE_SPRITES;
     HIDE_WIN;
     // The room renderer may have occupied every hardware sprite. Dialogue

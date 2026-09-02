@@ -219,6 +219,7 @@ void inventory_enter(void) {
     u8 i;
     inventory_page = 0;
     DISPLAY_OFF;
+    VBK_REG = 0;
     HIDE_SPRITES;
     HIDE_WIN;
     palette_bg_load(0, inv_palette);

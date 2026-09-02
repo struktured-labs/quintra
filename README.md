@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.18: Clean Slate](https://github.com/struktured-labs/quintra/releases/download/v0.20.18/quintra.gbc)
+[Download Quintra v0.20.19: Clean Return](https://github.com/struktured-labs/quintra/releases/download/v0.20.19/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,7 +29,7 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.18 — Clean Slate**, the public-demo beta
+The current cartridge is **v0.20.19 — Clean Return**, the public-demo beta
 cut. Waking and Hollow Riftwild form one tool-gated counterpart world;
 return routes can spring named trap minibosses; all five champions expose
 distinct B powers, Oath Arts, status feedback, and expanded build choices.
@@ -49,6 +49,16 @@ Boss, and Riftwild routes without modifying the ordinary player save.
 
 The browser-beta packaging, save-persistence, licensing, and publish gates are
 tracked in the [itch.io beta deployment spec](docs/2026-08-30-itch-beta-deployment-spec.md).
+
+### v0.20.19 detail — clean warm restarts
+
+Every full-screen entry now selects CGB VRAM tile bank 0 before uploading
+fonts, backgrounds, or sprite atlases. A Game Over restart can no longer draw
+the title into attribute memory or load hero and monster graphics into the
+invisible bank, which appeared on Pocket as a mostly black title and black
+actors. The warm-restart regression forces the leaked hardware state, verifies
+title graphics and audio, then erases and requires representative hero and
+enemy tiles to be restored by the replacement run.
 
 ### v0.20.18 detail — deterministic title rendering
 
