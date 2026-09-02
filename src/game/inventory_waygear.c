@@ -170,7 +170,7 @@ void inventory_status_enter(void) BANKED {
     } else text_write("SIGNATURE FX  -");
     gotoxy(1, 14); text_write("GREEN/GOLD = BOON");
     gotoxy(1, 15); text_write("RED/VIOLET = HARM");
-    gotoxy(1, 16); text_write("SEL PACK  B RETURN");
+    gotoxy(1, 16); text_write("SEL HELP  B RETURN");
     gotoxy(2, 17); text_write("KNOW YOUR STATUS");
     palette_bg_fill_attrs(0);
     attr_row(0, 1); attr_row(4, 1); attr_row(8, 2);
@@ -195,8 +195,8 @@ static void draw_page(void) {
         ? classes[player.class_id].name : "?");
     gotoxy(1, 2); text_write("INNATE ");
     text_write(player.class_id < 5 ? nature_names[player.class_id] : "?");
-    gotoxy(1, 5); text_write("HERO POWER IS FREE");
-    gotoxy(1, 6); text_write("GEAR OPENS ALT WAY");
+    gotoxy(1, 5); text_write("INNATE ALWAYS ON");
+    gotoxy(1, 6); text_write("ONE * GEAR ACTIVE");
     gotoxy(1, 7); text_write("GLASS: SEL+B SHIFT");
 
     inventory_prepare_sprites();

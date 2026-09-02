@@ -1,7 +1,7 @@
 {
   "meta": {
-    "version": "v0.20.16",
-    "romSha256": "1b7359d63303f5ec686dff92eeba5715d4cd7a7ebc2b73d8982cad6f1da5cc96",
+    "version": "v0.20.17",
+    "romSha256": "7545412c37d411a940a6ebd1a7b22a06c0d3fda1f73c8fdbb597f97878ae501f",
     "stageCount": 9,
     "bossCount": 9,
     "monsterCount": 35,

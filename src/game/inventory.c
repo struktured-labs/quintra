@@ -172,6 +172,45 @@ static void attr_row(u8 y, u8 slot) {
     VBK_REG = 0;
 }
 
+static void inventory_help_enter(void) {
+    u8 i;
+    DISPLAY_OFF;
+    HIDE_SPRITES;
+    cls();
+    draw_pack_frames();
+    gotoxy(5, 0); text_write(" COMBAT ");
+    gotoxy(5, 4); text_write(" SIGNATURE ");
+    gotoxy(5, 8); text_write(" SPIRIT ");
+    gotoxy(4, 13); text_write(" EQUIPMENT ");
+
+    gotoxy(1, 1); text_write("A  PRIMARY WEAPON");
+    gotoxy(2, 2); write_field(item_name_by_index(player.starter_weapon), 16);
+    gotoxy(1, 3); text_write("RED ORB + A = SWAP");
+
+    gotoxy(1, 5); text_write("B  FREE SIGNATURE");
+    gotoxy(2, 6); write_field(item_name_by_id(player.active_item), 16);
+    gotoxy(1, 7); text_write("RECHARGES; NO MP");
+
+    gotoxy(1, 9); text_write("A+B OATH: 2 MP");
+    gotoxy(1, 10); text_write("FULL MP: CONVERGE");
+    gotoxy(1, 11); text_write("RELEASE A FOR 3S");
+    gotoxy(1, 12); text_write("NEXT A: WILL MAX");
+
+    gotoxy(1, 14); text_write("WEAPONS: ORB + A");
+    gotoxy(1, 15); text_write("PACK: SEL FOR GEAR");
+    gotoxy(1, 16); text_write("UP/DN + A EQUIPS");
+    gotoxy(1, 17); text_write("SEL PACK B RETURN");
+
+    palette_bg_fill_attrs(0);
+    attr_row(0, 1); attr_row(4, 1); attr_row(8, 2);
+    for (i = 9; i <= 12; ++i) attr_row(i, 2);
+    attr_row(13, 3);
+    for (i = 14; i <= 16; ++i) attr_row(i, 3);
+    attr_row(17, 1);
+    SHOW_BKG;
+    DISPLAY_ON;
+}
+
 // One progression-aware line turns the Pack into a useful "what do I do
 // next?" screen. In particular, calling the stage key only a Sigil made its
 // purpose opaque to a first-time player even after the Compass correctly
@@ -276,7 +315,7 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
     u8 tool_action;
     keys;
     if (inventory_page) {
-        if (inventory_page == 2) {
+        if (inventory_page == 3) {
             if (pressed & (J_START | J_B)) {
                 sfx_play(SFX_COIN);
                 room_request_resume();
@@ -284,6 +323,19 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
             }
             if (pressed & J_SELECT) {
                 inventory_enter();
+                return SCREEN_SELF;
+            }
+            return SCREEN_SELF;
+        }
+        if (inventory_page == 2) {
+            if (pressed & (J_START | J_B)) {
+                sfx_play(SFX_COIN);
+                room_request_resume();
+                return SCREEN_ROOM;
+            }
+            if (pressed & J_SELECT) {
+                inventory_page = 3;
+                inventory_help_enter();
                 return SCREEN_SELF;
             }
             return SCREEN_SELF;

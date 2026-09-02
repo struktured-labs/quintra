@@ -15,6 +15,9 @@ RIFTWILD_SHADOW = 57
 HOLLOW_BIT = 0x01
 RELIC_ONE_BIT = 0x02
 MUSIC = addr("_music_track_id")
+MUSIC_FORM = addr("_music_form_step")
+MUSIC_PATTERN = addr("_music_pattern_row")
+MUSIC_MOTIF = addr("_music_motif")
 ROOM_REWARD = addr("_room_major_reward_pending")
 
 
@@ -116,6 +119,17 @@ def main():
         assert wide_tiles(pb) == waking_tiles, \
             "returning to Waking did not restore deterministic geography"
 
+        # Six consecutive sections halfway through each long form are the
+        # sparse, straight-time road interlude rather than another climax.
+        for form, motif in ((16, 4), (21, 5)):
+            pb.memory[MUSIC_FORM] = form
+            pb.memory[MUSIC_PATTERN] = 0
+            for _ in range(12):
+                pb.memory[PL + 15] = 120
+                pb.tick()
+            assert pb.memory[MUSIC_MOTIF] == motif, \
+                f"Riftwild calm form {form} selected motif {pb.memory[MUSIC_MOTIF]}"
+
         # First regional relic lives far across field five only in Hollow.
         # Setting the logical cell is a debugger shortcut; the shift itself
         # performs the same complete room regeneration used in play.
@@ -147,7 +161,7 @@ def main():
     finally:
         pb.stop(save=False)
 
-    print("[riftwild-phase] PASS Worldglass chord + terrain + music + pressure + relic")
+    print("[riftwild-phase] PASS counterpart world + six-section calm bridge + relic")
 
 
 if __name__ == "__main__":

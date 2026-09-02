@@ -333,7 +333,15 @@ static void shooter_tick(entity_t *e, const enemy_def_t *def) {
     }
 
     if (e->ai_data[1] == 0) {
-        e->ai_data[1] = def->ai_p0;   // fire_rate
+        u8 fire_rate = def->ai_p0;
+        if (!RUN_IS_EASY()) {
+            if (fire_rate > 32) fire_rate -= 4;
+            if (run_state.bosses_beaten >= 3 && fire_rate > 32)
+                fire_rate -= 6;
+            if (run_state.bosses_beaten >= 6 && fire_rate > 32)
+                fire_rate -= 6;
+        }
+        e->ai_data[1] = fire_rate;
         {
             // Shot pattern from content: ai_p2 low nibble = kind
             // (0 single, 1 fan, 2 ring), high nibble = N.

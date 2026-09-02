@@ -89,6 +89,8 @@ def main():
             pb.memory[surge] = 120
             pb.memory[ascension] = 135
             press(pb, "start")
+            for _ in range(20):
+                pb.tick()
             boosted_header = bytes(
                 pb.memory[0x9800 + 32 + 12:0x9800 + 32 + 19])
             assert boosted_header != ordinary_header, (
@@ -98,16 +100,33 @@ def main():
             pb.memory[player + 46] = 0x08
             pb.memory[player + 47] = 3
             press(pb, "select")
+            for _ in range(12):
+                pb.tick()
             press(pb, "select")
+            for _ in range(12):
+                pb.tick()
             assert pb.memory[screen] == 9, "Status page left the Pack screen"
             pb.tick(120)
             assert (pb.memory[surge], pb.memory[ascension]) == (120, 135), (
                 "Status page consumed paused temporary-effect time")
             pb.screen.image.save(ROOT / "tmp" / "pack-status.png")
+            press(pb, "select")
+            for _ in range(12):
+                pb.tick()
+            assert pb.memory[screen] == 9, "Combat Help left the Pack screen"
+            help_map = 0x9C00 if pb.memory[0xFF40] & 0x08 else 0x9800
+            help_rows = [bytes(pb.memory[help_map + row * 32 + 1:
+                                         help_map + row * 32 + 19])
+                         for row in (1, 3, 5, 7, 9, 10, 11, 12, 14, 15, 16)]
+            assert all(any(row) for row in help_rows), \
+                "Combat Help lost an input or equipment instruction"
+            assert not (pb.memory[0xFF40] & 0x02), \
+                "Combat Help leaked Pack sprites over its copy"
+            pb.screen.image.save(ROOT / "tmp" / "pack-combat-help.png")
             press(pb, "b")
-            assert pb.memory[screen] == 5, "Status B did not return to play"
+            assert pb.memory[screen] == 5, "Combat Help B did not return to play"
         pb.stop(save=False)
-    print("[inventory-action-tip] PASS tile-framed Pack + six semantic icons + five B reminders")
+    print("[inventory-action-tip] PASS framed Pack + Status + truthful Combat Help")
 
 
 if __name__ == "__main__":

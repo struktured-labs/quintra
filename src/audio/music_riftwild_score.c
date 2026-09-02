@@ -31,10 +31,10 @@ static const u8 riftwild_bass[16] = {
 };
 
 static const u8 riftwild_development_melody[64] = {
-    T_E5,T_HOLD,T_A5,T_C6, T_E6,T_D6,T_C6,T_A5,
-    T_G5,T_HOLD,T_D6,T_C6, T_B5,T_G5,T_E5,T_REST,
-    T_A5,T_C6,T_E6,T_HOLD, T_D6,T_C6,T_B5,T_G5,
-    T_E5,T_G5,T_B5,T_D6, T_C6,T_A5,T_E5,T_REST,
+    T_A5,T_HOLD,T_HOLD,T_REST, T_E5,T_HOLD,T_REST,T_REST,
+    T_C6,T_HOLD,T_B5,T_REST, T_A5,T_HOLD,T_REST,T_REST,
+    T_E5,T_HOLD,T_G5,T_HOLD, T_A5,T_HOLD,T_REST,T_REST,
+    T_D5,T_HOLD,T_E5,T_HOLD, T_A5,T_HOLD,T_HOLD,T_REST,
     T_D5,T_A5,T_C6,T_D6, T_E6,T_C6,T_A5,T_G5,
     T_E5,T_D5,T_E5,T_G5, T_A5,T_C6,T_B5,T_REST,
     // Climactic, exact title-oath restatement. The denser marching mix below
@@ -44,13 +44,13 @@ static const u8 riftwild_development_melody[64] = {
 };
 
 static const u8 riftwild_development_bass[16] = {
-    T_A3,T_C3,T_G3,T_E3, T_D3,T_A3,T_C3,T_G3,
+    T_REST,T_REST,T_REST,T_REST, T_REST,T_REST,T_REST,T_REST,
     T_E3,T_G3,T_D3,T_A3, T_C3,T_D3,T_E3,T_A3,
 };
 
 static const u8 riftwild_form[MUSIC_FORM_SECTIONS] = {
-    0,0,1,0, 2,1,3,0, 4,1,5,2, 6,4,7,3,
-    0,4,1,5, 2,6,3,7, 4,5,2,6, 3,1,0,0,
+    0,0,1,0, 2,1,3,0, 6,1,7,2, 6,3,7,3,
+    4,5,4,5, 4,5,2,6, 3,7,2,6, 3,1,0,0,
 };
 
 static const music_variant_t riftwild_music = {
@@ -82,10 +82,10 @@ static const u8 hollow_bass[16] = {
 };
 
 static const u8 hollow_development_melody[64] = {
-    T_E5,T_F5,T_E5,T_C5, T_D5,T_C5,T_C5,T_REST,
-    T_F5,T_HOLD,T_A5,T_G5, T_E5,T_D5,T_C5,T_REST,
-    T_C5,T_C5,T_F5,T_E5, T_D5,T_D5,T_C5,T_C5,
-    T_E5,T_F5,T_A5,T_HOLD, T_G5,T_E5,T_D5,T_REST,
+    T_E5,T_HOLD,T_HOLD,T_REST, T_C5,T_HOLD,T_REST,T_REST,
+    T_F5,T_HOLD,T_E5,T_REST, T_C5,T_HOLD,T_REST,T_REST,
+    T_C5,T_HOLD,T_F5,T_HOLD, T_E5,T_HOLD,T_REST,T_REST,
+    T_D5,T_HOLD,T_C5,T_HOLD, T_E5,T_HOLD,T_HOLD,T_REST,
     T_C5,T_D5,T_F5,T_E5, T_C5,T_C5,T_D5,T_REST,
     T_F5,T_E5,T_D5,T_C5, T_D5,T_C5,T_E5,T_REST,
     T_A5,T_REST,T_C6,T_REST, T_E6,T_REST,T_C6,T_REST,
@@ -93,13 +93,13 @@ static const u8 hollow_development_melody[64] = {
 };
 
 static const u8 hollow_development_bass[16] = {
-    T_A3,T_F3,T_E3,T_D3, T_C3,T_F3,T_E3,T_A3,
+    T_REST,T_REST,T_REST,T_REST, T_REST,T_REST,T_REST,T_REST,
     T_F3,T_D3,T_C3,T_E3, T_A3,T_F3,T_E3,T_A3,
 };
 
 static const u8 hollow_form[MUSIC_FORM_SECTIONS] = {
-    0,0,2,1, 4,2,5,1, 6,3,7,5, 2,6,4,7,
-    1,5,3,6, 0,7,2,4, 5,6,3,7, 2,1,0,0,
+    0,0,2,1, 3,2,1,0, 6,3,7,2, 6,1,7,3,
+    4,5,4,5, 4,5,2,6, 3,7,2,6, 2,1,0,0,
 };
 
 static const music_variant_t hollow_music = {

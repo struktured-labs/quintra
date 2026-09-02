@@ -135,8 +135,43 @@ def main():
                     and pb.memory[entities + i * 28 + 1] & 1]
     assert 0 in pickup_kinds or pb.memory[pl + 2] > pb.memory[pl + 1] - 2, (
         f"wounded elite did not yield its half-heart recovery: {pickup_kinds}")
+
+    # Ordinary Normal packs no longer erase chip damage every room. Their
+    # alpha pays coins above half health; true elites keep the recovery above.
+    for i in range(32 * 28):
+        pb.memory[entities + i] = 0
+    for address in (input_keys, input_prev, input_pressed, input_released):
+        pb.memory[address] = 0
+    pb.memory[pl + 2] = pb.memory[pl + 1] - 2
+    assert pb.memory[pl + 2] * 2 > pb.memory[pl + 1]
+    pb.memory[pl + 22] = 60
+    enemy = entities
+    pb.memory[enemy] = 2
+    pb.memory[enemy + 1] = 0x47  # ACTIVE | ALIVE | ON_SCREEN | ALPHA
+    put16(pb, enemy + 3, px)
+    put16(pb, enemy + 7, py)
+    pb.memory[enemy + 14] = 1
+    pb.memory[enemy + 16] = 0xFF
+    pb.memory[enemy + 17] = 0
+    pb.memory[enemy + 25] = 0x88
+    shot = entities + 28
+    pb.memory[shot] = 1
+    pb.memory[shot + 1] = 0x13
+    put16(pb, shot + 3, px)
+    put16(pb, shot + 7, py)
+    pb.memory[shot + 14] = 1
+    pb.memory[shot + 16] = 30
+    pb.memory[shot + 25] = 0x77
+    pb.memory[shot + 26] = 20
+    for _ in range(4):
+        pb.tick()
+    pickup_kinds = [pb.memory[entities + i * 28 + 17] for i in range(32)
+                    if pb.memory[entities + i * 28] == 3
+                    and pb.memory[entities + i * 28 + 1] & 1]
+    assert 2 in pickup_kinds and 0 not in pickup_kinds, \
+        f"Normal alpha still erased above-half chip damage: {pickup_kinds}"
     pb.stop(save=False)
-    print("[score] PASS elite recovery + score saturation + 16-bit kill rollover")
+    print("[score] PASS elite recovery + Normal alpha attrition + score saturation")
 
 
 if __name__ == "__main__":

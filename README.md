@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.16: Returning Edge](https://github.com/struktured-labs/quintra/releases/download/v0.20.16/quintra.gbc)
+[Download Quintra v0.20.17: Quiet Pressure](https://github.com/struktured-labs/quintra/releases/download/v0.20.17/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,8 +29,8 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.16 — Returning Edge**, the public-demo beta
-cut. Waking and Hollow Riftwild now form one tool-gated counterpart world;
+The current cartridge is **v0.20.17 — Quiet Pressure**, the public-demo beta
+cut. Waking and Hollow Riftwild form one tool-gated counterpart world;
 return routes can spring named trap minibosses; all five champions expose
 distinct B powers, Oath Arts, status feedback, and expanded build choices.
 The nine Colossi use quiet neutral arena floors, distinct screen-scale bodies,
@@ -49,6 +49,29 @@ Boss, and Riftwild routes without modifying the ordinary player save.
 
 The browser-beta packaging, save-persistence, licensing, and publish gates are
 tracked in the [itch.io beta deployment spec](docs/2026-08-30-itch-beta-deployment-spec.md).
+
+### v0.20.17 detail — clear verbs, quieter roads, sharper attrition
+
+START now cycles **PACK → WAYGEAR → STATUS → COMBAT**. The Combat page states
+the cartridge's actual verbs: A fires the primary weapon; A beside a red
+weapon orb swaps it; B is the champion's free rechargeable signature; A+B
+spends 2 MP on the selected Oath Art; full MP turns that chord into Spirit
+Convergence; and releasing A for three seconds primes the next A attack's
+Will MAX. Waygear explicitly marks its single active slot and gives the exact
+input used to equip it.
+
+Normal difficulty now asks the player to preserve health across rooms. An
+ordinary pack alpha pays five coins while the champion remains above half
+health instead of erasing every scrape with a guaranteed half-heart. Random
+half-heart drops fall from about 18% to 12%, while true elites keep their
+recovery reward and Easy remains unchanged. Ranged monsters also shorten
+their volley cadence modestly at stages 1, 4, and 7, increasing lane pressure
+without adding bodies, damage, or enemy HP.
+
+Both Riftwild scores now defer a six-section calm passage until the midpoint
+of their long form. Sparse sustained melodies and a complete bass withdrawal
+leave only a patient road pulse, giving the journey a real valley before the
+title-linked themes rebuild toward their final statements.
 
 ### v0.20.16 detail — final playtest pass
 

@@ -469,15 +469,12 @@ u8 combat_resolve(void) BANKED {
                     fx_spawn(SPR_FX_IMPACT, 2,
                         (i16)FIX8_TO_INT(entities[j].x),
                         (i16)FIX8_TO_INT(entities[j].y), 8);
-                    // Elites always pay out. Preserve their doubled HP and
-                    // damage, but turn the sure reward into a small recovery
-                    // when the fight actually cost health. At full health the
-                    // same slot remains the established five-coin prize. This
-                    // keeps hard Normal encounters dangerous while making an
-                    // unlucky early elite a roguelike risk/reward beat instead
-                    // of pure run attrition.
                     if (entities[j].flags & (EF_ELITE | EF_ALPHA)) {
-                        pickup_spawn((player.hp < player.hp_max)
+                        u8 recovery = (entities[j].flags & EF_ELITE)
+                            ? player.hp < player.hp_max
+                            : RUN_IS_EASY() ? player.hp < player.hp_max
+                            : (u16)player.hp * 2u <= player.hp_max;
+                        pickup_spawn(recovery
                             ? PICKUP_HEART_HALF : PICKUP_COIN_5,
                             entities[j].x, entities[j].y);
                         score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
