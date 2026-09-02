@@ -213,6 +213,7 @@ void title_enter(void) {
     lore_beat = 0;
     lore_hold = 0;
     render_title();
+    palette_bg_fill_attrs(0);
 
     pulse_phase         = 0;
     last_palette_color2 = title_palette_steady[2];

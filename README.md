@@ -11,7 +11,7 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
-[Download Quintra v0.20.17: Quiet Pressure](https://github.com/struktured-labs/quintra/releases/download/v0.20.17/quintra.gbc)
+[Download Quintra v0.20.18: Clean Slate](https://github.com/struktured-labs/quintra/releases/download/v0.20.18/quintra.gbc)
 
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
@@ -29,7 +29,7 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.17 — Quiet Pressure**, the public-demo beta
+The current cartridge is **v0.20.18 — Clean Slate**, the public-demo beta
 cut. Waking and Hollow Riftwild form one tool-gated counterpart world;
 return routes can spring named trap minibosses; all five champions expose
 distinct B powers, Oath Arts, status feedback, and expanded build choices.
@@ -49,6 +49,15 @@ Boss, and Riftwild routes without modifying the ordinary player save.
 
 The browser-beta packaging, save-persistence, licensing, and publish gates are
 tracked in the [itch.io beta deployment spec](docs/2026-08-30-itch-beta-deployment-spec.md).
+
+### v0.20.18 detail — deterministic title rendering
+
+Title entry now clears the visible CGB background attributes before animation
+begins. This prevents stale browser-emulator VRAM from selecting the wrong tile
+bank, palette, or flip bits and turning the title into purple checker fragments
+after a reload. A cartridge-level regression deliberately poisons that complete
+attribute map before returning from champion selection and verifies that every
+visible cell is restored.
 
 ### v0.20.17 detail — clear verbs, quieter roads, sharper attrition
 

@@ -163,8 +163,27 @@ def main():
                           0x9800 + 16 * 32 + len(easy_mode)]) == easy_mode, (
         "class-select SELECT did not expose Easy as an explicit mode"
     )
+
+    # A browser emulator may retain VRAM across cartridge reloads, and real
+    # CGB power-on contents are not a title-screen contract. Poison the CGB
+    # attribute map, return through the real screen transition, and require
+    # title_enter to restore palette 0 / tile bank 0 / no flips explicitly.
+    pb.memory[0xFF4F] = 1
+    for row in range(18):
+        for col in range(20):
+            pb.memory[0x9800 + row * 32 + col] = 0x6F
+    pb.memory[0xFF4F] = 0
+    pb.button("b")
+    pb.tick(20)
+    pb.memory[0xFF4F] = 1
+    stale_attrs = [pb.memory[0x9800 + row * 32 + col]
+                   for row in range(18) for col in range(20)]
+    pb.memory[0xFF4F] = 0
+    assert not any(stale_attrs), (
+        "title retained stale CGB attributes from the previous screen"
+    )
     pb.stop(save=False)
-    print(f"[title-version] PASS rendered {version} and README agree")
+    print(f"[title-version] PASS rendered {version}, README, and clean CGB attributes")
 
 
 if __name__ == "__main__":
