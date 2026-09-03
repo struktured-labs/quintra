@@ -46,6 +46,9 @@ void boss_volley_tick(entity_t *e) BANKED {
             cy = serpent_tail_y[serpent_tail_visible];
             volley_shot(cx, cy, d, 1, damage);
             volley_shot(cx, cy, (u8)((d + 4) & 7), 2, damage);
+            cx = serpent_tail_x[serpent_tail_visible >> 1];
+            cy = serpent_tail_y[serpent_tail_visible >> 1];
+            volley_shot(cx, cy, (u8)((d + 2) & 7), 2, damage);
             cadence = 30;
             break;
         case 3: // Spider: alternating cardinal/diagonal web.

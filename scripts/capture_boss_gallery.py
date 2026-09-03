@@ -188,12 +188,12 @@ def main() -> None:
                 for _ in range(240):
                     pyboy.memory[player + 15] = 255
                     pyboy.tick()
-                    if pyboy.memory[serpent_tail_visible] == 16:
+                    if pyboy.memory[serpent_tail_visible] == 20:
                         break
-                assert pyboy.memory[serpent_tail_visible] == 16, \
+                assert pyboy.memory[serpent_tail_visible] == 20, \
                     "gallery Serpent never finished its one-scale growth"
                 # Fill the full history with an inner loop plus a substantial
-                # second coil. Verdant owns sixteen repeated OBJ scales and
+                # second coil. Verdant owns twenty repeated OBJ scales and
                 # every synthetic step preserves their eight-pixel connection.
                 pyboy.memory[giants[0] + 15] = 1
                 pyboy.memory[giants[0] + 10] = 220
@@ -262,8 +262,8 @@ def main() -> None:
                 )
                 image = pyboy.screen.image.convert("RGB").copy()
             if stage == 1:
-                assert body_tiles == 16, \
-                    f"stage 2 lost its sixteen-segment articulated body: {body_tiles}"
+                assert body_tiles == 20, \
+                    f"stage 2 lost its twenty-segment articulated body: {body_tiles}"
             elif stage == 2:
                 assert body_tiles == 10, \
                     ("stage 3 never completed its live Kilnback-to-Rex "

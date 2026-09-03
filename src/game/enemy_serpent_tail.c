@@ -27,15 +27,15 @@ void serpent_tail_update(entity_t *e) BANKED {
         ? (u8)(cy - serpent_tail_y[0]) : (u8)(serpent_tail_y[0] - cy);
 
     if (e->state == 0) {
-        // Four meals expose 2->6->10->14->16 scales. The final two scales
-        // complete a second arena coil without consuming Coil Tempest's eight
+        // Four meals expose 2->7->12->17->20 scales. The final scales
+        // complete a second arena coil without consuming Coil Tempest's
         // remaining projectile sprites.
-        u8 target = (u8)(2 + (e->ai_data[4] << 2));
-        if (target > 16) target = 16;
+        u8 target = (u8)(2 + e->ai_data[4] * 5);
+        if (target > 20) target = 20;
         if (serpent_tail_visible < target && !(entity_anim_counter & 3))
             serpent_tail_visible++;
     }
-    // Eight-pixel sampling stretches sixteen scales across 128 route pixels
+    // Eight-pixel sampling stretches twenty scales across 160 route pixels
     // while keeping adjacent 8x8 art edge-connected. The completed inner loop
     // therefore drags a substantial second coil through the previous ring.
     if ((u16)(dx + dy) >= 8) {

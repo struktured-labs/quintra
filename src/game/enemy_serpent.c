@@ -52,7 +52,7 @@ void serpent_feed_tick(entity_t *e) BANKED {
     // The last meal finishes expanding one scale at a time before the charge
     // begins; this makes maximum length an event rather than a three-sprite pop.
     if (growth >= 4) {
-        if (serpent_tail_visible < 16) return;
+        if (serpent_tail_visible < 20) return;
         e->state = 1; e->vx = 96; e->vy = 0; e->state_timer = 0;
         room_shake(1, 12); sfx_play(SFX_ROAR);
         return;
