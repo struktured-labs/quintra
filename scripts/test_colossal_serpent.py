@@ -212,8 +212,8 @@ def main():
     pb.memory[boss + 18] = 0
 
     # Full length still layers bullet hell over Snake movement. The head fires
-    # an aimed three-lane fan while the visible tail tip sheds a mixed-speed
-    # counter-pair: five hostile sprites, not stage one's generic full ring.
+    # an aimed three-lane fan while the tail sheds a mixed-speed tip pair plus
+    # a midpoint shot: six hostile sprites, not stage one's generic full ring.
     clear_hostile_projectiles(pb)
     pb.memory[PL + 15] = 255
     pb.memory[boss + 15] = 1
@@ -225,9 +225,9 @@ def main():
     for _ in range(30):
         pb.tick()
         hostile = hostile_count(pb)
-        if hostile >= 5:
+        if hostile >= 6:
             break
-    assert hostile == 5, f"Serpent lost its head+tail bullet hell: {hostile} shots"
+    assert hostile == 6, f"Serpent lost its head+tail bullet hell: {hostile} shots"
     assert any(pb.memory[EN + i * ENTITY_SIZE] == 4
                and pb.memory[EN + i * ENTITY_SIZE + 12] == SPR_SHIELD_AURA
                for i in range(32)), "full growth lost its traveling hollow ring"

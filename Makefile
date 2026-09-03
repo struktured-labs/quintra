@@ -199,6 +199,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_controller_policy.py
 	uv run --quiet --with pyboy python scripts/test_title_version.py
 	uv run --quiet --with pyboy python scripts/test_boss_identity.py
+	uv run --quiet --with pyboy python scripts/test_boss_contact.py
 	uv run --quiet --with pyboy python scripts/test_boss_movement.py
 	uv run --quiet --with pyboy python scripts/test_colossus_signatures.py
 	$(PYBOY_RUN) scripts/test_scrolling_colossi.py
