@@ -57,6 +57,29 @@ def main() -> None:
         wait.until(lambda browser: browser.find_element(By.ID, "status").text == "Playing")
         driver.execute_script(
             """
+            window.__quintraVisibilityEvents = [];
+            document.addEventListener('visibilitychange', () => {
+              window.__quintraVisibilityEvents.push(document.visibilityState);
+            });
+            """
+        )
+        game_window = driver.current_window_handle
+        driver.switch_to.new_window("tab")
+        driver.get("about:blank")
+        time.sleep(0.5)
+        driver.switch_to.window(game_window)
+        time.sleep(1)
+        lifecycle = driver.execute_script(
+            """
+            return {
+              events: window.__quintraVisibilityEvents,
+              playing: window.WasmBoy.WasmBoy.isPlaying(),
+              status: document.querySelector('#status').textContent
+            };
+            """
+        )
+        driver.execute_script(
+            """
             window.__quintraGateSamples = [];
             window.__quintraGateTimer = setInterval(() => {
               const d = window.WasmBoy.WasmBoy.getAudioDiagnostics();
@@ -156,6 +179,7 @@ def main() -> None:
         "colors": result["colors"],
         "nearBlack": result["nearBlack"],
         "launch": launch_state,
+        "lifecycle": lifecycle,
         "touchRelease": result["touchRelease"],
         "fullscreen": result["fullscreen"],
     }
@@ -181,6 +205,12 @@ def main() -> None:
         "detail": "Click to start with sound",
     }:
         failures.append("ready cartridge did not expose the sound-enabled launch action")
+    if report["lifecycle"] != {
+        "events": ["hidden", "visible"],
+        "playing": True,
+        "status": "Playing",
+    }:
+        failures.append("player did not resume after returning to the browser tab")
     if report["touchRelease"] != {
         "actionHeld": True,
         "actionStyled": True,

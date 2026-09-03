@@ -60,6 +60,10 @@ let originalStateCalls = 0;
 let gamepadPollCalls = 0;
 let pointerCaptureWarnings = 0;
 let saveCalls = 0;
+let pauseCalls = 0;
+let playCalls = 0;
+let playing = false;
+let configuredOptions;
 let visibilityState = "visible";
 const responsiveGamepad = {
   getState() {
@@ -70,11 +74,12 @@ const responsiveGamepad = {
 };
 const api = {
   ResponsiveGamepad: responsiveGamepad,
-  config: async () => {},
+  config: async options => { configuredOptions = options; },
   loadROM: async () => {},
   resumeAudioContext: async () => {},
-  play: async () => {},
-  isPlaying: () => false,
+  play: async () => { playing = true; playCalls += 1; },
+  pause: async () => { playing = false; pauseCalls += 1; },
+  isPlaying: () => playing,
   saveLoadedCartridge: async () => { saveCalls += 1; },
   _getAudioChannels: () => ({ master: { mute() {}, unmute() {} } })
 };
@@ -117,6 +122,8 @@ const context = {
 
 vm.runInNewContext(fs.readFileSync(playerPath, "utf8"), context, { filename: playerPath });
 await new Promise(resolve => setImmediate(resolve));
+assert.equal(configuredOptions.disablePauseOnHidden, true,
+  "the shell should own background pause/resume instead of WasmBoy's one-way pause");
 
 let state = responsiveGamepad.getState();
 assert.equal(state.A, true, "active nonzero gamepad input should reach WasmBoy");
@@ -239,6 +246,38 @@ assert.equal(responsiveGamepad.getState().UP, false, "page hiding should release
 assert.equal(responsiveGamepad.getState().RIGHT, false, "page hiding should release diagonal touch input");
 await new Promise(resolve => setImmediate(resolve));
 assert.equal(saveCalls, 1, "page hiding should still persist cartridge RAM");
+
+visibilityState = "visible";
+documentListeners.get("visibilitychange")();
+await new Promise(resolve => setImmediate(resolve));
+elements.get("#launch").dispatch("click", {});
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(playCalls, 1, "launch should start the emulator");
+
+visibilityState = "hidden";
+documentListeners.get("visibilitychange")();
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(pauseCalls, 1, "page hiding should pause a running emulator");
+assert.equal(playing, false, "the emulator should remain paused while hidden");
+
+visibilityState = "visible";
+documentListeners.get("visibilitychange")();
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(playCalls, 2, "returning to the page should resume prior playback");
+assert.equal(playing, true, "the emulator should be playing after visibility returns");
+
+visibilityState = "hidden";
+documentListeners.get("visibilitychange")();
+visibilityState = "visible";
+documentListeners.get("visibilitychange")();
+visibilityState = "hidden";
+documentListeners.get("visibilitychange")();
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(playing, false, "rapid visibility changes should preserve the suspended state");
+visibilityState = "visible";
+documentListeners.get("visibilitychange")();
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(playing, true, "the final return should resume after rapid visibility changes");
 
 touchA.dispatch("pointerdown", pointerEvent(12));
 listeners.get("pagehide")();

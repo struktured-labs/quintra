@@ -35,6 +35,8 @@
   let saveBusy = false;
   let activeGamepadIndex = null;
   let gamepadStatusText = "";
+  let resumeAfterVisibility = false;
+  let visibilityTask = Promise.resolve();
   const touchPointers = new Map();
   const touchState = {
     UP: false, RIGHT: false, DOWN: false, LEFT: false,
@@ -231,6 +233,7 @@
       isGbcEnabled: true,
       isGbcColorizationEnabled: true,
       randomizeStartupRam: false,
+      disablePauseOnHidden: true,
       isAudioEnabled: true,
       audioWorkletDirectOutput: true,
       audioTargetLatencyInSeconds: 0.042,
@@ -378,10 +381,21 @@
   }, { passive: false });
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      clearTouchPointers();
-      if (ready) api.saveLoadedCartridge({ title: "Quintra" }).catch(console.error);
-    }
+    const hidden = document.visibilityState === "hidden";
+    if (hidden) clearTouchPointers();
+    visibilityTask = visibilityTask.then(async () => {
+      if (!ready) return;
+      if (hidden) {
+        const playing = started && api.isPlaying();
+        resumeAfterVisibility = resumeAfterVisibility || playing;
+        if (playing) await api.pause();
+        await api.saveLoadedCartridge({ title: "Quintra" });
+      } else if (resumeAfterVisibility && document.visibilityState === "visible") {
+        resumeAfterVisibility = false;
+        await api.play();
+        setStatus("Playing");
+      }
+    }).catch(error => console.error("Could not update player visibility", error));
   });
 
   window.addEventListener("error", event => fail(event.error || new Error(event.message)));
