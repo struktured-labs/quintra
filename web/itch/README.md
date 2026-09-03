@@ -16,6 +16,8 @@ regression harness, and Quintra's controller/mobile work.
 
 The launch poster is captured from the current cartridge title and omits the
 build-number row so a browser-only deploy cannot advertise a stale ROM.
+The shell owns tab suspension so a running game resumes after the player
+returns, while WasmBoy's unload handler still preserves cartridge RAM.
 
 Gate a built package through real Firefox before publishing:
 
@@ -23,6 +25,7 @@ Gate a built package through real Firefox before publishing:
 python3 -m http.server 8765 -d builds/itch-web
 DISPLAY=:0 uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/ --headed
 uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/ --duration 3 --portrait --layout-only
+uv run --with selenium python tools/test_itch_persistence.py http://127.0.0.1:8765/
 ```
 
 Use `--firefox-binary PATH` when the system launcher is a wrapper rather than
