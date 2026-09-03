@@ -9,13 +9,14 @@ if (!playerPath) throw new Error("usage: test_itch_gamepad.mjs PLAYER_JS");
 
 const listeners = new Map();
 const elements = new Map();
+let gamepadStatusWrites = 0;
 const element = (dataset = {}) => {
   const ownListeners = new Map();
   const classes = new Set();
-  return {
+  let textContent = "";
+  const item = {
     disabled: false,
     hidden: false,
-    textContent: "",
     value: "",
     files: [],
     dataset,
@@ -34,6 +35,14 @@ const element = (dataset = {}) => {
     querySelector() { return element(); },
     requestFullscreen: async () => {}
   };
+  Object.defineProperty(item, "textContent", {
+    get() { return textContent; },
+    set(value) {
+      textContent = value;
+      if (dataset.gamepadStatus) gamepadStatusWrites += 1;
+    }
+  });
+  return item;
 };
 
 const touchDiagonal = element({ touchInput: "UP RIGHT" });
@@ -44,9 +53,10 @@ const touchButtons = [touchDiagonal, touchA];
 for (const id of [
   "game", "player-shell", "launch", "status", "mute", "fullscreen",
   "export-save", "import-save", "save-file", "gamepad-status"
-]) elements.set(`#${id}`, element());
+]) elements.set(`#${id}`, element(id === "gamepad-status" ? { gamepadStatus: "true" } : {}));
 
 let originalStateCalls = 0;
+let gamepadPollCalls = 0;
 let pointerCaptureWarnings = 0;
 const responsiveGamepad = {
   getState() {
@@ -84,7 +94,10 @@ const context = {
   Uint8Array,
   Blob,
   URL,
-  navigator: { getGamepads: () => pads },
+  navigator: { getGamepads: () => {
+    gamepadPollCalls += 1;
+    return pads;
+  } },
   document: {
     querySelector: selector => elements.get(selector),
     querySelectorAll: selector => selector === "[data-touch-input]" ? touchButtons : [],
@@ -109,6 +122,12 @@ assert.equal(state.UP, true, "8BitDo DirectInput hat up should reach WasmBoy");
 assert.match(elements.get("#gamepad-status").textContent, /8BitDo Pro 2/);
 assert.match(elements.get("#gamepad-status").textContent, /Nintendo layout/,
   "active 8BitDo profile should be visible to the player");
+assert.equal(gamepadPollCalls, 1, "custom mappings should poll browser gamepads once per frame");
+assert.equal(gamepadStatusWrites, 1, "initial controller selection should update its status once");
+
+responsiveGamepad.getState();
+assert.equal(gamepadPollCalls, 2, "each later frame should add only one browser gamepad poll");
+assert.equal(gamepadStatusWrites, 1, "unchanged controller status should not rewrite the DOM");
 
 pads[2].buttons[1] = { pressed: false, value: 0 };
 pads[2].buttons[0] = { pressed: true, value: 1 };

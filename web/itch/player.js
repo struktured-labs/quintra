@@ -33,6 +33,7 @@
   let muted = false;
   let saveBusy = false;
   let activeGamepadIndex = null;
+  let gamepadStatusText = "";
   const touchPointers = new Map();
   const touchState = {
     UP: false, RIGHT: false, DOWN: false, LEFT: false,
@@ -86,14 +87,17 @@
 
   function updateGamepadStatus(gamepad) {
     if (!gamepadStatus) return;
-    gamepadStatus.textContent = gamepad
+    const nextText = gamepad
       ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}${
           isEightBitDoDirectInput(gamepad) ? " · Nintendo layout" : ""
         }`
       : "Gamepad: not detected — press a button";
+    if (nextText === gamepadStatusText) return;
+    gamepadStatusText = nextText;
+    gamepadStatus.textContent = nextText;
   }
 
-  function selectGamepadIndex() {
+  function selectGamepad() {
     const gamepads = getConnectedGamepads();
     const usedGamepad = gamepads.find(hasGamepadInput);
 
@@ -106,7 +110,7 @@
     }
 
     updateGamepadStatus(selected);
-    return selected ? selected.index : 0;
+    return selected;
   }
 
   function isPressed(gamepad, index) {
@@ -171,8 +175,7 @@
       Object.keys(touchState).forEach(input => {
         state[input] = state[input] || touchState[input];
       });
-      const index = selectGamepadIndex();
-      const gamepad = getConnectedGamepads().find(pad => pad.index === index);
+      const gamepad = selectGamepad();
       if (!gamepad) return state;
 
       const directState = readGamepadState(gamepad);
