@@ -87,6 +87,8 @@ for relative in ("index.html", "emulator/quintra-player.js", "emulator/quintra-p
 player = (root / "emulator/quintra-player.js").read_text()
 if "randomizeStartupRam: false" not in player:
     fail("browser player does not pin deterministic startup RAM")
+if "audioTargetLatencyInSeconds: 0.042" not in player:
+    fail("browser player does not pin the zero-underrun 42 ms audio target")
 
 if "width=\"160\" height=\"144\"" not in index:
     fail("canvas does not declare native 160x144 dimensions")

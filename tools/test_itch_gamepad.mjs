@@ -38,6 +38,7 @@ const element = (dataset = {}) => {
 
 const touchDiagonal = element({ touchInput: "UP RIGHT" });
 const touchA = element({ touchInput: "A" });
+touchA.setPointerCapture = () => { throw new DOMException("pointer unavailable", "NotFoundError"); };
 const touchButtons = [touchDiagonal, touchA];
 
 for (const id of [
@@ -46,6 +47,7 @@ for (const id of [
 ]) elements.set(`#${id}`, element());
 
 let originalStateCalls = 0;
+let pointerCaptureWarnings = 0;
 const responsiveGamepad = {
   getState() {
     originalStateCalls += 1;
@@ -74,7 +76,11 @@ let pads = [
 ];
 
 const context = {
-  console,
+  console: {
+    log: console.log,
+    error: console.error,
+    warn() { pointerCaptureWarnings += 1; }
+  },
   Uint8Array,
   Blob,
   URL,
@@ -153,6 +159,7 @@ assert.equal(state.UP, true, "touch diagonal should hold up");
 assert.equal(state.RIGHT, true, "touch diagonal should hold right");
 assert.equal(state.A, true, "a second touch should hold A simultaneously");
 assert.equal(touchA.classList.contains("is-pressed"), true, "pressed touch control should show feedback");
+assert.equal(pointerCaptureWarnings, 1, "pointer capture failure should remain non-fatal");
 
 touchA.dispatch("pointerup", pointerEvent(8));
 state = responsiveGamepad.getState();

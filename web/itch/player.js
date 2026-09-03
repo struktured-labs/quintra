@@ -52,7 +52,11 @@
     refreshTouchState();
     button.classList.toggle("is-pressed", true);
     if (typeof button.setPointerCapture === "function") {
-      button.setPointerCapture(event.pointerId);
+      try {
+        button.setPointerCapture(event.pointerId);
+      } catch (error) {
+        console.warn("Could not capture touch pointer", error);
+      }
     }
   }
 
@@ -206,7 +210,7 @@
       randomizeStartupRam: false,
       isAudioEnabled: true,
       audioWorkletDirectOutput: true,
-      audioTargetLatencyInSeconds: 0.024,
+      audioTargetLatencyInSeconds: 0.042,
       maxNumberOfAutoSaveStates: 2,
       onReady: () => setStatus("Cartridge ready")
     }, canvas);
