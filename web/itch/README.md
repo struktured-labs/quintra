@@ -17,6 +17,13 @@ regression harness, and Quintra's controller/mobile work.
 The launch poster is captured from the current cartridge title and omits the
 build-number row so a browser-only deploy cannot advertise a stale ROM.
 
+Gate a built package through real Firefox before publishing:
+
+```sh
+python3 -m http.server 8765 -d builds/itch-web
+uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/
+```
+
 Fork source:
 https://github.com/struktured-labs/wasmboy/tree/v0.8.13-audio-fidelity
 
