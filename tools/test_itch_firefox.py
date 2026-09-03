@@ -74,6 +74,22 @@ def main() -> None:
             };
             """
         )
+        driver.find_element(By.ID, "fullscreen").click()
+        wait.until(lambda browser: browser.execute_script("return Boolean(document.fullscreenElement)"))
+        result["fullscreen"] = driver.execute_script(
+            """
+            const box = element => {
+              const rect = element.getBoundingClientRect();
+              return { top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height };
+            };
+            return {
+              active: document.fullscreenElement === document.querySelector('#player-shell'),
+              viewport: { width: innerWidth, height: innerHeight },
+              screen: box(document.querySelector('.screen-wrap')),
+              controls: box(document.querySelector('.touch-controls'))
+            };
+            """
+        )
     finally:
         driver.quit()
 
@@ -94,6 +110,7 @@ def main() -> None:
         "finalPlaybackRate": worklet["playbackRate"],
         "minimumPlaybackRate": min(sample["rate"] for sample in samples),
         "maximumPlaybackRate": max(sample["rate"] for sample in samples),
+        "fullscreen": result["fullscreen"],
     }
     failures = []
     if report["status"] != "Playing":
@@ -110,6 +127,16 @@ def main() -> None:
         failures.append("audio did not finish at exact pitch")
     if report["colors"] < 8 or report["nearBlack"] > 160 * 144 // 4:
         failures.append("rendered frame looks blank or corrupted")
+    fullscreen = report["fullscreen"]
+    if not fullscreen["active"]:
+        failures.append("player did not enter fullscreen")
+    if fullscreen["screen"]["bottom"] > fullscreen["viewport"]["height"] + 1:
+        failures.append("fullscreen canvas extends below the viewport")
+    if fullscreen["controls"]["bottom"] > fullscreen["viewport"]["height"] + 1:
+        failures.append("fullscreen touch controls extend below the viewport")
+    ratio = fullscreen["screen"]["width"] / fullscreen["screen"]["height"]
+    if abs(ratio - 10 / 9) > 0.002:
+        failures.append(f"fullscreen canvas ratio is {ratio:.4f}, expected 10:9")
 
     print(json.dumps(report, indent=2, sort_keys=True))
     if failures:
