@@ -89,6 +89,10 @@ if "randomizeStartupRam: false" not in player:
     fail("browser player does not pin deterministic startup RAM")
 if "disablePauseOnHidden: true" not in player:
     fail("browser player does not own a reversible background pause")
+if 'cartridgeRamStorageKey: "quintra:mbc5:sram:v1"' not in player:
+    fail("browser player does not use the stable Quintra SRAM key")
+if "cartridgeRamStorageSize: 32 * 1024" not in player:
+    fail("browser player does not pin the 32 KiB cartridge SRAM size")
 if "audioTargetLatencyInSeconds: 0.042" not in player:
     fail("browser player does not pin the zero-underrun 42 ms audio target")
 

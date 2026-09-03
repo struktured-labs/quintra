@@ -234,6 +234,8 @@
       isGbcColorizationEnabled: true,
       randomizeStartupRam: false,
       disablePauseOnHidden: true,
+      cartridgeRamStorageKey: "quintra:mbc5:sram:v1",
+      cartridgeRamStorageSize: 32 * 1024,
       isAudioEnabled: true,
       audioWorkletDirectOutput: true,
       audioTargetLatencyInSeconds: 0.042,

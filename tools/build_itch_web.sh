@@ -3,11 +3,11 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-archive="$project_root/builds/quintra-itch-web-v0.20.19-beta24.zip"
+archive="$project_root/builds/quintra-itch-web-v0.20.19-beta25.zip"
 rom="$project_root/rom/working/quintra.gbc"
-expected_rom_sha="d2cf5ed60d79a399f5c0566e88743c523f781e8675cfe7168f83571d1338539b"
-wasmboy_sha="0aa4f83b7a312a1f77c1a844cbd90da96b3f129f7067fbaee93b5549b9bd6dd4"
-version="v0.20.19-beta24"
+expected_rom_sha="eeaef2282c213c66df49fc40620f3919121e9f597ceea894693851a75b144bb2"
+wasmboy_sha="3cffca75e29b90559437cc4984b5c8166e66a04a1edb295a51eb487fe9fa5b47"
+version="v0.20.19-beta25"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
 if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then
@@ -15,7 +15,7 @@ if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then
   exit 1
 fi
 
-actual_wasmboy_sha=$(sha256sum "$project_root/web/itch/vendor/wasmboy-0.8.13.umd.js" | cut -d' ' -f1)
+actual_wasmboy_sha=$(sha256sum "$project_root/web/itch/vendor/wasmboy-0.8.14.umd.js" | cut -d' ' -f1)
 if [[ "$actual_wasmboy_sha" != "$wasmboy_sha" ]]; then
   echo "WasmBoy hash mismatch: expected $wasmboy_sha, got $actual_wasmboy_sha" >&2
   exit 1
@@ -32,7 +32,7 @@ mkdir -p "$output_dir/emulator" "$output_dir/licenses" "$output_dir/media"
 cp "$project_root/web/itch/index.html" "$output_dir/index.html"
 cp "$project_root/web/itch/player.css" "$output_dir/emulator/quintra-player.css"
 cp "$project_root/web/itch/player.js" "$output_dir/emulator/quintra-player.js"
-cp "$project_root/web/itch/vendor/wasmboy-0.8.13.umd.js" "$output_dir/emulator/wasmboy.js"
+cp "$project_root/web/itch/vendor/wasmboy-0.8.14.umd.js" "$output_dir/emulator/wasmboy.js"
 cp "$project_root/web/itch/vendor/WASMBOY-LICENSE.txt" "$output_dir/licenses/WASMBOY-LICENSE.txt"
 cp "$project_root/web/itch/THIRD-PARTY-NOTICES.md" "$output_dir/licenses/THIRD-PARTY-NOTICES.md"
 cp "$project_root/LICENSES/GPL-3.0-or-later.txt" "$output_dir/licenses/GPL-3.0-or-later.txt"
@@ -51,8 +51,8 @@ cat > "$output_dir/build.json" <<JSON
   "version": "$version",
   "gitCommit": "$git_commit",
   "romSha256": "$actual_rom_sha",
-  "emulator": "wasmboy-0.8.13-audio-fidelity",
-  "emulatorCommit": "f641ef1f318767fffc168f6158e13ea980942ec1",
+  "emulator": "wasmboy-0.8.14-stable-sram",
+  "emulatorCommit": "1d73f9c54c3401891ddd5fb9303a7ae9da520da9",
   "emulatorSha256": "$actual_wasmboy_sha",
   "channel": "web"
 }
