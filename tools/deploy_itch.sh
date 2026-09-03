@@ -20,6 +20,6 @@ fi
 
 butler push \
   --if-changed \
-  --userversion v0.20.19-beta18 \
+  --userversion v0.20.19-beta19 \
   "$project_root/builds/itch-web" \
   struktured/quintra:web

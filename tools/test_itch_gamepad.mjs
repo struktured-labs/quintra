@@ -8,6 +8,7 @@ const playerPath = process.argv[2];
 if (!playerPath) throw new Error("usage: test_itch_gamepad.mjs PLAYER_JS");
 
 const listeners = new Map();
+const documentListeners = new Map();
 const elements = new Map();
 let gamepadStatusWrites = 0;
 const element = (dataset = {}) => {
@@ -101,7 +102,7 @@ const context = {
   document: {
     querySelector: selector => elements.get(selector),
     querySelectorAll: selector => selector === "[data-touch-input]" ? touchButtons : [],
-    addEventListener() {},
+    addEventListener(type, callback) { documentListeners.set(type, callback); },
     fullscreenElement: null,
     visibilityState: "visible"
   },
@@ -195,16 +196,25 @@ activeGenericPad.buttons[0] = { pressed: false, value: 0 };
 const pointerEvent = pointerId => ({ pointerId, preventDefault() {} });
 touchDiagonal.dispatch("pointerdown", pointerEvent(7));
 touchA.dispatch("pointerdown", pointerEvent(8));
+touchA.dispatch("pointerdown", pointerEvent(9));
 state = responsiveGamepad.getState();
 assert.equal(state.UP, true, "touch diagonal should hold up");
 assert.equal(state.RIGHT, true, "touch diagonal should hold right");
 assert.equal(state.A, true, "a second touch should hold A simultaneously");
 assert.equal(touchA.classList.contains("is-pressed"), true, "pressed touch control should show feedback");
-assert.equal(pointerCaptureWarnings, 1, "pointer capture failure should remain non-fatal");
+assert.equal(pointerCaptureWarnings, 2, "pointer capture failure should remain non-fatal");
 
 touchA.dispatch("pointerup", pointerEvent(8));
 state = responsiveGamepad.getState();
+assert.equal(state.A, true, "releasing one of two pointers should keep their shared control held");
+assert.equal(touchA.classList.contains("is-pressed"), true,
+  "shared control feedback should remain while another pointer holds it");
+
+documentListeners.get("pointerup")(pointerEvent(9));
+state = responsiveGamepad.getState();
 assert.equal(state.A, false, "released touch A should clear");
+assert.equal(touchA.classList.contains("is-pressed"), false,
+  "a document-level release should clear feedback after pointer capture failure");
 assert.equal(state.UP, true, "releasing A should not release another pointer's direction");
 
 touchDiagonal.dispatch("pointerup", pointerEvent(7));

@@ -41,17 +41,20 @@
   };
 
   function refreshTouchState() {
+    const activeTouches = Array.from(touchPointers.values());
     Object.keys(touchState).forEach(input => {
-      touchState[input] = Array.from(touchPointers.values()).some(inputs => inputs.includes(input));
+      touchState[input] = activeTouches.some(touch => touch.inputs.includes(input));
+    });
+    touchButtons.forEach(button => {
+      button.classList.toggle("is-pressed", activeTouches.some(touch => touch.button === button));
     });
   }
 
   function pressTouchButton(button, event) {
     event.preventDefault();
     const inputs = button.dataset.touchInput.split(" ");
-    touchPointers.set(event.pointerId, inputs);
+    touchPointers.set(event.pointerId, { button, inputs });
     refreshTouchState();
-    button.classList.toggle("is-pressed", true);
     if (typeof button.setPointerCapture === "function") {
       try {
         button.setPointerCapture(event.pointerId);
@@ -61,19 +64,20 @@
     }
   }
 
-  function releaseTouchButton(button, event) {
+  function releaseTouchPointer(event) {
     touchPointers.delete(event.pointerId);
     refreshTouchState();
-    button.classList.toggle("is-pressed", false);
   }
 
   touchButtons.forEach(button => {
     button.addEventListener("pointerdown", event => pressTouchButton(button, event), { passive: false });
-    button.addEventListener("pointerup", event => releaseTouchButton(button, event));
-    button.addEventListener("pointercancel", event => releaseTouchButton(button, event));
-    button.addEventListener("lostpointercapture", event => releaseTouchButton(button, event));
+    button.addEventListener("pointerup", releaseTouchPointer);
+    button.addEventListener("pointercancel", releaseTouchPointer);
+    button.addEventListener("lostpointercapture", releaseTouchPointer);
     button.addEventListener("contextmenu", event => event.preventDefault());
   });
+  document.addEventListener("pointerup", releaseTouchPointer);
+  document.addEventListener("pointercancel", releaseTouchPointer);
 
   function getConnectedGamepads() {
     if (typeof navigator.getGamepads !== "function") return [];
