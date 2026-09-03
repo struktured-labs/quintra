@@ -20,6 +20,7 @@
   const importSave = document.querySelector("#import-save");
   const saveFile = document.querySelector("#save-file");
   const gamepadStatus = document.querySelector("#gamepad-status");
+  const touchControls = document.querySelector(".touch-controls");
   const touchButtons = Array.from(document.querySelectorAll("[data-touch-input]"));
   const saveSize = 32 * 1024;
   const handledKeys = new Set([
@@ -333,8 +334,21 @@
     canvas.focus();
   });
 
+  function updateFullscreenLayout() {
+    if (document.fullscreenElement !== shell) return;
+    const controlsHeight = touchControls ? touchControls.getBoundingClientRect().height : 0;
+    const availableHeight = Math.max(0, window.innerHeight - controlsHeight);
+    const gameWidth = Math.min(window.innerWidth, availableHeight * 10 / 9);
+    shell.style.setProperty("--fullscreen-game-width", `${gameWidth}px`);
+    shell.style.setProperty("--fullscreen-game-height", `${gameWidth * 9 / 10}px`);
+  }
+
   document.addEventListener("fullscreenchange", () => {
     fullscreen.textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
+    requestAnimationFrame(updateFullscreenLayout);
+  });
+  window.addEventListener("resize", () => {
+    if (document.fullscreenElement === shell) requestAnimationFrame(updateFullscreenLayout);
   });
 
   exportSave.addEventListener("click", exportCartridgeSave);

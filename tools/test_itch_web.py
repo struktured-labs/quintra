@@ -96,5 +96,7 @@ if 'aria-busy="true" disabled' not in index or "Preparing cartridge…" not in i
     fail("launch overlay does not distinguish cartridge loading from readiness")
 if 'textContent = "Enter the Riftwild"' not in player or 'aria-busy", "false"' not in player:
     fail("player does not reveal the launch action after preparation")
+if "--fullscreen-game-width" not in player or "--fullscreen-game-height" not in player:
+    fail("player does not measure fullscreen touch controls")
 
 print(f"itch package checks passed: {len(files)} files, {total_size} bytes")

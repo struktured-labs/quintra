@@ -274,9 +274,12 @@ footer { line-height: 1.45; }
 a { color: #b9a9ff; }
 
 .player:fullscreen {
+  --fullscreen-game-width: 100vw;
+  --fullscreen-game-height: 90vw;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100vw;
   height: 100vh;
   padding: 0;
@@ -290,12 +293,9 @@ a { color: #b9a9ff; }
 .player:fullscreen footer { display: none; }
 
 .player:fullscreen .screen-wrap {
-  flex: 1 1 auto;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  min-height: 0;
-  max-height: 100%;
+  flex: 0 0 auto;
+  width: var(--fullscreen-game-width);
+  height: var(--fullscreen-game-height);
   border: 0;
 }
 
