@@ -580,13 +580,17 @@ u8 combat_resolve(void) BANKED {
                 // DEF soaks incoming damage (min 1 half-heart gets through).
                 // A giant colossus is already a moving wall inside a dense
                 // bullet pattern. Its body is a positioning tax, not a
-                // second full-strength projectile: keep contact at one
-                // half-heart so close-range champions can trade a lunge for
-                // space while the actual bullet-hell damage still escalates.
+                // second full-strength projectile.
                 u8 taken = status_hostile_damage_taken(i);
                 if (entities[i].type == ENT_ENEMY
                     && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
-                    && entities[i].ai_data[3]) taken = 1;
+                    && entities[i].ai_data[3]) {
+                    // Boss body contact is half its computed hit (round up,
+                    // min 1): a real cost that scales with the stage without
+                    // turning the body into a second full-strength bullet.
+                    taken = (u8)((taken + 1) >> 1);
+                    if (!taken) taken = 1;
+                }
                 // Tester Easy deliberately makes every impact legible but
                 // inexpensive: one half-heart, regardless of late-game power.
                 // Normal reaches this point unchanged.
