@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 
 from selenium import webdriver
@@ -17,9 +18,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("--duration", type=float, default=30)
+    parser.add_argument("--layout-only", action="store_true")
+    parser.add_argument("--portrait", action="store_true")
     args = parser.parse_args()
     if args.duration < 3:
         parser.error("--duration must be at least 3 seconds")
+    if args.portrait:
+        os.environ["MOZ_HEADLESS_WIDTH"] = "500"
+        os.environ["MOZ_HEADLESS_HEIGHT"] = "814"
 
     options = Options()
     options.add_argument("-headless")
@@ -109,21 +115,25 @@ def main() -> None:
     producer = final["producer"]
     samples = result.pop("samples")
     report = {
+        "audioChecked": not args.layout_only,
         "status": result["status"],
         "colors": result["colors"],
         "nearBlack": result["nearBlack"],
-        "sampleRate": result["sampleRate"],
-        "underrunDelta": worklet["underrunFrames"] - baseline["worklet"]["underrunFrames"],
-        "dropDelta": worklet["droppedFrames"] - baseline["worklet"]["droppedFrames"],
-        "ackTimeoutDelta": producer["ackTimeouts"] - baseline["producer"]["ackTimeouts"],
-        "finalQueueMs": worklet["queuedSeconds"] * 1000,
-        "finalDriftTrim": worklet["driftTrim"],
-        "finalPlaybackRate": worklet["playbackRate"],
-        "minimumPlaybackRate": min(sample["rate"] for sample in samples),
-        "maximumPlaybackRate": max(sample["rate"] for sample in samples),
         "launch": launch_state,
         "fullscreen": result["fullscreen"],
     }
+    if not args.layout_only:
+        report.update({
+            "sampleRate": result["sampleRate"],
+            "underrunDelta": worklet["underrunFrames"] - baseline["worklet"]["underrunFrames"],
+            "dropDelta": worklet["droppedFrames"] - baseline["worklet"]["droppedFrames"],
+            "ackTimeoutDelta": producer["ackTimeouts"] - baseline["producer"]["ackTimeouts"],
+            "finalQueueMs": worklet["queuedSeconds"] * 1000,
+            "finalDriftTrim": worklet["driftTrim"],
+            "finalPlaybackRate": worklet["playbackRate"],
+            "minimumPlaybackRate": min(sample["rate"] for sample in samples),
+            "maximumPlaybackRate": max(sample["rate"] for sample in samples),
+        })
     failures = []
     if report["status"] != "Playing":
         failures.append("player did not remain in Playing state")
@@ -134,16 +144,17 @@ def main() -> None:
         "detail": "Click to start with sound",
     }:
         failures.append("ready cartridge did not expose the sound-enabled launch action")
-    if report["sampleRate"] != 44100:
-        failures.append(f'audio context ran at {report["sampleRate"]} Hz')
-    if report["underrunDelta"] != 0:
-        failures.append(f'{report["underrunDelta"]} audio frames underran after warmup')
-    if report["dropDelta"] != 0:
-        failures.append(f'{report["dropDelta"]} audio frames were dropped after warmup')
-    if report["ackTimeoutDelta"] != 0:
-        failures.append(f'{report["ackTimeoutDelta"]} audio acknowledgements timed out')
-    if report["finalPlaybackRate"] != 1 or report["finalDriftTrim"] != 0:
-        failures.append("audio did not finish at exact pitch")
+    if not args.layout_only:
+        if report["sampleRate"] != 44100:
+            failures.append(f'audio context ran at {report["sampleRate"]} Hz')
+        if report["underrunDelta"] != 0:
+            failures.append(f'{report["underrunDelta"]} audio frames underran after warmup')
+        if report["dropDelta"] != 0:
+            failures.append(f'{report["dropDelta"]} audio frames were dropped after warmup')
+        if report["ackTimeoutDelta"] != 0:
+            failures.append(f'{report["ackTimeoutDelta"]} audio acknowledgements timed out')
+        if report["finalPlaybackRate"] != 1 or report["finalDriftTrim"] != 0:
+            failures.append("audio did not finish at exact pitch")
     if report["colors"] < 8 or report["nearBlack"] > 160 * 144 // 4:
         failures.append("rendered frame looks blank or corrupted")
     fullscreen = report["fullscreen"]

@@ -22,6 +22,7 @@ Gate a built package through real Firefox before publishing:
 ```sh
 python3 -m http.server 8765 -d builds/itch-web
 uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/
+uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/ --duration 3 --portrait --layout-only
 ```
 
 Fork source:
