@@ -203,6 +203,7 @@
       enableBootROMIfAvailable: false,
       isGbcEnabled: true,
       isGbcColorizationEnabled: true,
+      randomizeStartupRam: false,
       isAudioEnabled: true,
       audioWorkletDirectOutput: true,
       audioTargetLatencyInSeconds: 0.024,
