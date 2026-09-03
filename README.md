@@ -46,6 +46,9 @@ The browser package includes the downstream WasmBoy audio synchronization,
 gamepad, mobile touch, dark-page, and aspect-ratio corrections. A four-station
 Pocket demo kit provides cold-resumable First Room, Boomerang Shop, Crystal
 Boss, and Riftwild routes without modifying the ordinary player save.
+The mobile shell releases every held virtual button when the page loses focus
+or becomes hidden, preventing a notification or app switch from leaving the
+champion moving or attacking after play resumes.
 
 The browser-beta packaging, save-persistence, licensing, and publish gates are
 tracked in the [itch.io beta deployment spec](docs/2026-08-30-itch-beta-deployment-spec.md).

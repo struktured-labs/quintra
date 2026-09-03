@@ -20,6 +20,8 @@ def main() -> None:
     parser.add_argument("--duration", type=float, default=30)
     parser.add_argument("--layout-only", action="store_true")
     parser.add_argument("--portrait", action="store_true")
+    parser.add_argument("--firefox-binary")
+    parser.add_argument("--headed", action="store_true")
     args = parser.parse_args()
     if args.duration < 3:
         parser.error("--duration must be at least 3 seconds")
@@ -28,7 +30,10 @@ def main() -> None:
         os.environ["MOZ_HEADLESS_HEIGHT"] = "814"
 
     options = Options()
-    options.add_argument("-headless")
+    if not args.headed:
+        options.add_argument("-headless")
+    if args.firefox_binary:
+        options.binary_location = args.firefox_binary
     options.set_preference("media.autoplay.default", 0)
     options.set_preference("media.autoplay.blocking_policy", 0)
     driver = webdriver.Firefox(options=options)

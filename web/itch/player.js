@@ -70,6 +70,12 @@
     refreshTouchState();
   }
 
+  function clearTouchPointers() {
+    if (!touchPointers.size) return;
+    touchPointers.clear();
+    refreshTouchState();
+  }
+
   touchButtons.forEach(button => {
     button.addEventListener("pointerdown", event => pressTouchButton(button, event), { passive: false });
     button.addEventListener("pointerup", releaseTouchPointer);
@@ -79,6 +85,8 @@
   });
   document.addEventListener("pointerup", releaseTouchPointer);
   document.addEventListener("pointercancel", releaseTouchPointer);
+  window.addEventListener("blur", clearTouchPointers);
+  window.addEventListener("pagehide", clearTouchPointers);
 
   function getConnectedGamepads() {
     if (typeof navigator.getGamepads !== "function") return [];
@@ -370,8 +378,9 @@
   }, { passive: false });
 
   document.addEventListener("visibilitychange", () => {
-    if (ready && document.visibilityState === "hidden") {
-      api.saveLoadedCartridge({ title: "Quintra" }).catch(console.error);
+    if (document.visibilityState === "hidden") {
+      clearTouchPointers();
+      if (ready) api.saveLoadedCartridge({ title: "Quintra" }).catch(console.error);
     }
   });
 

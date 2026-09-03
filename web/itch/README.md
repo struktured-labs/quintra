@@ -21,9 +21,12 @@ Gate a built package through real Firefox before publishing:
 
 ```sh
 python3 -m http.server 8765 -d builds/itch-web
-uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/
+DISPLAY=:0 uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/ --headed
 uv run --with selenium python tools/test_itch_firefox.py http://127.0.0.1:8765/ --duration 3 --portrait --layout-only
 ```
+
+Use `--firefox-binary PATH` when the system launcher is a wrapper rather than
+the browser executable.
 
 Fork source:
 https://github.com/struktured-labs/wasmboy/tree/v0.8.13-audio-fidelity

@@ -59,6 +59,8 @@ for (const id of [
 let originalStateCalls = 0;
 let gamepadPollCalls = 0;
 let pointerCaptureWarnings = 0;
+let saveCalls = 0;
+let visibilityState = "visible";
 const responsiveGamepad = {
   getState() {
     originalStateCalls += 1;
@@ -73,6 +75,7 @@ const api = {
   resumeAudioContext: async () => {},
   play: async () => {},
   isPlaying: () => false,
+  saveLoadedCartridge: async () => { saveCalls += 1; },
   _getAudioChannels: () => ({ master: { mute() {}, unmute() {} } })
 };
 
@@ -104,7 +107,7 @@ const context = {
     querySelectorAll: selector => selector === "[data-touch-input]" ? touchButtons : [],
     addEventListener(type, callback) { documentListeners.set(type, callback); },
     fullscreenElement: null,
-    visibilityState: "visible"
+    get visibilityState() { return visibilityState; }
   },
   window: {
     WasmBoy: { WasmBoy: api },
@@ -222,4 +225,23 @@ state = responsiveGamepad.getState();
 assert.equal(state.UP, false, "released touch direction should clear");
 assert.equal(state.RIGHT, false, "released touch diagonal should clear both directions");
 
-console.log("itch input checks passed: 8BitDo mapping, D-pad hats, numeric vendor id, and multi-touch controls");
+touchA.dispatch("pointerdown", pointerEvent(10));
+assert.equal(responsiveGamepad.getState().A, true, "touch A should be held before focus loss");
+listeners.get("blur")();
+assert.equal(responsiveGamepad.getState().A, false, "focus loss should release held touch input");
+assert.equal(touchA.classList.contains("is-pressed"), false,
+  "focus loss should clear held touch feedback");
+
+touchDiagonal.dispatch("pointerdown", pointerEvent(11));
+visibilityState = "hidden";
+documentListeners.get("visibilitychange")();
+assert.equal(responsiveGamepad.getState().UP, false, "page hiding should release held touch input");
+assert.equal(responsiveGamepad.getState().RIGHT, false, "page hiding should release diagonal touch input");
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(saveCalls, 1, "page hiding should still persist cartridge RAM");
+
+touchA.dispatch("pointerdown", pointerEvent(12));
+listeners.get("pagehide")();
+assert.equal(responsiveGamepad.getState().A, false, "page teardown should release held touch input");
+
+console.log("itch input checks passed: gamepads, multi-touch, and focus-loss release");
