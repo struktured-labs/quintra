@@ -156,7 +156,7 @@ mod tests {
 
         assert_eq!(
             stages::STAGES.map(|stage| stage.boss_hp_cap),
-            [220, 225, 240, 150, 255, 255, 230, 150, 220],
+            [220, 240, 240, 150, 255, 255, 230, 150, 220],
             "first-run boss windows drifted from the authored pacing contract",
         );
         assert_eq!(

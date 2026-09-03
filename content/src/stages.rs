@@ -37,11 +37,11 @@ pub const STAGES: [StageTheme; 9] = [
         crystal: [c( 1, 4, 0), c( 8,24, 4), c(18,31,10), c(30,31,22)],
         door:    [c( 2, 2, 1), c(11, 8, 2), c(20,14, 3), c(30,24, 8)],
         boss:    [c(0,0,0), c(10, 3,15), c(27, 8,24), c(31,31,14)],
-        // The Serpent reaches 225 HP and a second crisis phase. Its purple,
+        // The Serpent reaches 240 HP and a second crisis phase. Its purple,
         // magenta, and yellow body ramp keeps the extra pressure readable
         // against Verdant Hollow's green arena architecture.
-        boss_hp_bonus: 175, boss_hp_cap: 225, endless_boss_hp_cap: 255,
-        boss_dmg_bonus: 1, mb_variant: 1, room_archetype: 1,
+        boss_hp_bonus: 190, boss_hp_cap: 240, endless_boss_hp_cap: 255,
+        boss_dmg_bonus: 2, mb_variant: 1, room_archetype: 1,
         // Vine Coils replace part of the Flutterbat band with a slow,
         // readable opposite-pair lane prompt. The table remains exactly 100:
         // this makes Verdant Hollow more distinct without adding bodies,

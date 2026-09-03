@@ -209,7 +209,7 @@ def main():
         f"Crystal Colossus did not emit its three-wide Prism Lance: {prism_shots}")
     pb.stop(save=False)
     pb, serpent = enter_boss(1, keep_open=True)
-    assert pb.memory[serpent + 14] == 225, (
+    assert pb.memory[serpent + 14] == 240, (
         f"Verdant Serpent HP pacing drifted: {pb.memory[serpent + 14]}")
     assert pb.memory[serpent + 25] == 0xDD, (
         "Verdant's mobile Serpent did not receive its fair contact body")
