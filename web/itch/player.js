@@ -205,6 +205,7 @@
     console.error(error);
     setStatus("Browser player failed to start", true);
     launch.disabled = true;
+    launch.setAttribute("aria-busy", "false");
     launch.querySelector("strong").textContent = "Player error";
     launch.querySelector("span").textContent = "Download the cartridge ROM below to play in an emulator.";
   }
@@ -229,6 +230,9 @@
     }, canvas);
     await api.loadROM("quintra.gbc", { fileName: "quintra.gbc" });
     ready = true;
+    launch.querySelector("strong").textContent = "Enter the Riftwild";
+    launch.querySelector("span").textContent = "Click to start with sound";
+    launch.setAttribute("aria-busy", "false");
     launch.disabled = false;
     exportSave.disabled = false;
     importSave.disabled = false;

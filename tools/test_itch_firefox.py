@@ -31,6 +31,17 @@ def main() -> None:
         driver.get(args.url)
         wait = WebDriverWait(driver, 30)
         wait.until(lambda browser: browser.find_element(By.ID, "status").text.startswith("Ready"))
+        launch_state = driver.execute_script(
+            """
+            const launch = document.querySelector('#launch');
+            return {
+              disabled: launch.disabled,
+              busy: launch.getAttribute('aria-busy'),
+              title: launch.querySelector('strong').textContent,
+              detail: launch.querySelector('span').textContent
+            };
+            """
+        )
         driver.find_element(By.ID, "launch").click()
         wait.until(lambda browser: browser.find_element(By.ID, "status").text == "Playing")
         driver.execute_script(
@@ -110,11 +121,19 @@ def main() -> None:
         "finalPlaybackRate": worklet["playbackRate"],
         "minimumPlaybackRate": min(sample["rate"] for sample in samples),
         "maximumPlaybackRate": max(sample["rate"] for sample in samples),
+        "launch": launch_state,
         "fullscreen": result["fullscreen"],
     }
     failures = []
     if report["status"] != "Playing":
         failures.append("player did not remain in Playing state")
+    if report["launch"] != {
+        "disabled": False,
+        "busy": "false",
+        "title": "Enter the Riftwild",
+        "detail": "Click to start with sound",
+    }:
+        failures.append("ready cartridge did not expose the sound-enabled launch action")
     if report["sampleRate"] != 44100:
         failures.append(f'audio context ran at {report["sampleRate"]} Hz')
     if report["underrunDelta"] != 0:

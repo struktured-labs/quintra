@@ -92,5 +92,9 @@ if "audioTargetLatencyInSeconds: 0.042" not in player:
 
 if "width=\"160\" height=\"144\"" not in index:
     fail("canvas does not declare native 160x144 dimensions")
+if 'aria-busy="true" disabled' not in index or "Preparing cartridge…" not in index:
+    fail("launch overlay does not distinguish cartridge loading from readiness")
+if 'textContent = "Enter the Riftwild"' not in player or 'aria-busy", "false"' not in player:
+    fail("player does not reveal the launch action after preparation")
 
 print(f"itch package checks passed: {len(files)} files, {total_size} bytes")
