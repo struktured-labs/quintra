@@ -96,6 +96,37 @@ def main() -> None:
             };
             """
         )
+        result["touchRelease"] = driver.execute_script(
+            """
+            const api = window.WasmBoy.WasmBoy;
+            const press = (button, pointerId) => button.dispatchEvent(new PointerEvent('pointerdown', {
+              bubbles: true,
+              cancelable: true,
+              pointerId,
+              pointerType: 'touch'
+            }));
+            const action = document.querySelector('.touch-a');
+            const diagonal = document.querySelector('[data-touch-input="UP RIGHT"]');
+            press(action, 41);
+            const actionHeld = api.ResponsiveGamepad.getState().A;
+            const actionStyled = action.classList.contains('is-pressed');
+            window.dispatchEvent(new Event('blur'));
+            const actionAfterBlur = api.ResponsiveGamepad.getState().A;
+            const actionStyledAfterBlur = action.classList.contains('is-pressed');
+            press(diagonal, 42);
+            const diagonalHeld = api.ResponsiveGamepad.getState();
+            window.dispatchEvent(new Event('pagehide'));
+            const diagonalAfterPagehide = api.ResponsiveGamepad.getState();
+            return {
+              actionHeld,
+              actionStyled,
+              actionAfterBlur,
+              actionStyledAfterBlur,
+              diagonalHeld: diagonalHeld.UP && diagonalHeld.RIGHT,
+              diagonalAfterPagehide: diagonalAfterPagehide.UP || diagonalAfterPagehide.RIGHT
+            };
+            """
+        )
         driver.find_element(By.ID, "fullscreen").click()
         wait.until(lambda browser: browser.execute_script("return Boolean(document.fullscreenElement)"))
         result["fullscreen"] = driver.execute_script(
@@ -125,6 +156,7 @@ def main() -> None:
         "colors": result["colors"],
         "nearBlack": result["nearBlack"],
         "launch": launch_state,
+        "touchRelease": result["touchRelease"],
         "fullscreen": result["fullscreen"],
     }
     if not args.layout_only:
@@ -149,6 +181,15 @@ def main() -> None:
         "detail": "Click to start with sound",
     }:
         failures.append("ready cartridge did not expose the sound-enabled launch action")
+    if report["touchRelease"] != {
+        "actionHeld": True,
+        "actionStyled": True,
+        "actionAfterBlur": False,
+        "actionStyledAfterBlur": False,
+        "diagonalHeld": True,
+        "diagonalAfterPagehide": False,
+    }:
+        failures.append("touch input remained held after page interruption")
     if not args.layout_only:
         if report["sampleRate"] != 44100:
             failures.append(f'audio context ran at {report["sampleRate"]} Hz')
