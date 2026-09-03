@@ -3,11 +3,11 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-archive="$project_root/builds/quintra-itch-web-v0.20.19-beta15.zip"
+archive="$project_root/builds/quintra-itch-web-v0.20.19-beta16.zip"
 rom="$project_root/rom/working/quintra.gbc"
 expected_rom_sha="d2cf5ed60d79a399f5c0566e88743c523f781e8675cfe7168f83571d1338539b"
 wasmboy_sha="0aa4f83b7a312a1f77c1a844cbd90da96b3f129f7067fbaee93b5549b9bd6dd4"
-version="v0.20.19-beta15"
+version="v0.20.19-beta16"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
 if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then
@@ -37,7 +37,7 @@ cp "$project_root/web/itch/vendor/WASMBOY-LICENSE.txt" "$output_dir/licenses/WAS
 cp "$project_root/web/itch/THIRD-PARTY-NOTICES.md" "$output_dir/licenses/THIRD-PARTY-NOTICES.md"
 cp "$project_root/LICENSES/GPL-3.0-or-later.txt" "$output_dir/licenses/GPL-3.0-or-later.txt"
 cp "$project_root/LICENSES/README.md" "$output_dir/licenses/QUINTRA-LICENSE-MAP.md"
-cp "$project_root/docs/media/itch/quintra-cover-630x500.png" "$output_dir/media/cover.png"
+cp "$project_root/docs/media/itch/quintra-cover-current-630x500.png" "$output_dir/media/cover.png"
 cp "$rom" "$output_dir/quintra.gbc"
 
 sed -i 's|href="player.css|href="emulator/quintra-player.css|' "$output_dir/index.html"

@@ -14,6 +14,9 @@ low-level crossover distortion. The fork also includes the Game Boy
 wave-channel pitch correction, deterministic startup memory, rendering
 regression harness, and Quintra's controller/mobile work.
 
+The launch poster is captured from the current cartridge title and omits the
+build-number row so a browser-only deploy cannot advertise a stale ROM.
+
 Fork source:
 https://github.com/struktured-labs/wasmboy/tree/v0.8.13-audio-fidelity
 
