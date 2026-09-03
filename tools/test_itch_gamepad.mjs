@@ -170,6 +170,28 @@ responsiveGamepad.getState();
 assert.match(elements.get("#gamepad-status").textContent, /idle virtual pad/,
   "disconnect should fall back to another connected gamepad");
 
+const idleEightBitDo = {
+  index: 1,
+  id: "2dc8-6006",
+  buttons: Array.from({ length: 15 }, () => ({ pressed: false, value: 0 })),
+  axes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 3.285714]
+};
+const activeGenericPad = {
+  index: 2,
+  id: "generic active pad",
+  buttons: Array.from({ length: 16 }, (_, index) => ({
+    pressed: index === 0,
+    value: index === 0 ? 1 : 0
+  })),
+  axes: [0, 0, 0, 0]
+};
+pads = [null, idleEightBitDo, activeGenericPad];
+state = responsiveGamepad.getState();
+assert.equal(state.A, true, "an active generic pad should beat an idle DirectInput pad");
+assert.match(elements.get("#gamepad-status").textContent, /generic active pad/,
+  "a neutral DirectInput hat should not steal controller selection");
+activeGenericPad.buttons[0] = { pressed: false, value: 0 };
+
 const pointerEvent = pointerId => ({ pointerId, preventDefault() {} });
 touchDiagonal.dispatch("pointerdown", pointerEvent(7));
 touchA.dispatch("pointerdown", pointerEvent(8));

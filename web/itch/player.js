@@ -81,8 +81,14 @@
   }
 
   function hasGamepadInput(gamepad) {
-    return gamepad.buttons.some(button => button.pressed || button.value > 0.5) ||
-      gamepad.axes.some(axis => Math.abs(axis) > 0.35);
+    if (gamepad.buttons.some(button => button.pressed || button.value > 0.5)) return true;
+    const directInput = isEightBitDoDirectInput(gamepad);
+    return gamepad.axes.some((axis, index) => {
+      if (directInput && index === 9) {
+        return Object.values(readHatSwitch(gamepad)).some(Boolean);
+      }
+      return Math.abs(axis) > 0.35;
+    });
   }
 
   function updateGamepadStatus(gamepad) {
