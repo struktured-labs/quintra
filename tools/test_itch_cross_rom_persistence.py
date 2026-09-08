@@ -279,6 +279,17 @@ def main() -> None:
             player = player.replace(line, "", 1)
         player_path.write_text(player)
 
+        negative_previous = Path(temp) / "previous-default-storage"
+        shutil.copytree(previous, negative_previous)
+        previous_player_path = negative_previous / "emulator/quintra-player.js"
+        previous_player = previous_player_path.read_text()
+        for line in (
+            '      cartridgeRamStorageKey: "quintra:mbc5:sram:v1",\n',
+            "      cartridgeRamStorageSize: 32 * 1024,\n",
+        ):
+            previous_player = previous_player.replace(line, "", 1)
+        previous_player_path.write_text(previous_player)
+
         server = PackageServer(("127.0.0.1", 0), PackageHandler)
         server.package_dir = previous
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -289,7 +300,7 @@ def main() -> None:
                 server, url, previous, current, args.firefox_binary
             )
             _, negative_stripped, negative_result = run_transition(
-                server, url, previous, negative, args.firefox_binary
+                server, url, negative_previous, negative, args.firefox_binary
             )
         finally:
             server.shutdown()
