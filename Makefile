@@ -247,6 +247,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
+	$(PYBOY_RUN) scripts/test_corner_slide.py
 	$(PYBOY_RUN) scripts/test_meta_saturation.py
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py
@@ -305,6 +306,7 @@ demo-check: demo-kit
 	$(PYBOY_RUN) scripts/test_performance.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
 	$(PYBOY_RUN) scripts/test_gameover.py
+	$(PYBOY_RUN) scripts/test_corner_slide.py
 	$(PYBOY_RUN) scripts/test_suspend.py
 	tools/build_itch_web.sh
 

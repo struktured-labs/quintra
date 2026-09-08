@@ -530,16 +530,10 @@ static u8 player_body_obstacles_at(i16 x, i16 y) {
 // Walking and damage knockback now share the same complete collision
 // contract. There is deliberately no "already overlapping" exception here:
 // it turned a one-pixel controller route into a tunnel through scenery.
-static u8 player_horizontal_step_allowed(i16 nx, i16 y) {
+static u8 player_step_allowed(i16 nx, i16 y) {
     return room_player_position_in_bounds(nx, y)
         && player_feet_blocked_at(nx, y) == 0
         && player_body_obstacles_at(nx, y) == 0;
-}
-
-static u8 player_vertical_step_allowed(i16 x, i16 ny) {
-    return room_player_position_in_bounds(x, ny)
-        && player_feet_blocked_at(x, ny) == 0
-        && player_body_obstacles_at(x, ny) == 0;
 }
 
 static u8 room_is_arena(void) {
@@ -1417,12 +1411,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             for (s = 0; s < dash_steps; ++s) {
                 if (dash_dx) {
                     ppos_t nx = (ppos_t)(player.x + dash_dx);
-                    if (player_horizontal_step_allowed(nx, player.y))
+                    if (player_step_allowed(nx, player.y))
                         player.x = nx;
                 }
                 if (dash_dy) {
                     ppos_t ny = (ppos_t)(player.y + dash_dy);
-                    if (player_vertical_step_allowed(player.x, ny))
+                    if (player_step_allowed(player.x, ny))
                         player.y = ny;
                 }
             }
@@ -1590,14 +1584,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // overhangs walls above; the body never buries into terrain.
             if (dx) {
                 ppos_t nx = (ppos_t)(player.x + dx);
-                if (player_horizontal_step_allowed(nx, player.y)) {
+                if (player_step_allowed(nx, player.y)) {
                     player.x = nx;
+                } else if (!dy) {
+                    room_player_corner_slide(dx, 0);
                 }
             }
             if (dy) {
                 ppos_t ny = (ppos_t)(player.y + dy);
-                if (player_vertical_step_allowed(player.x, ny)) {
+                if (player_step_allowed(player.x, ny)) {
                     player.y = ny;
+                } else if (!dx) {
+                    room_player_corner_slide(0, dy);
                 }
             }
         }

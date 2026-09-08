@@ -109,6 +109,7 @@ u8 room_player_position_in_bounds(i16 x, i16 y) BANKED;
 // Full collision contract shared by knockback/recovery paths: six feet
 // samples plus the visible body faces of pillars and pushable blocks.
 u8 room_player_position_clear(i16 x, i16 y) BANKED;
+void room_player_corner_slide(i8 dx, i8 dy) BANKED;
 // Move a spike-hit champion to an immediately adjacent safe body position.
 void room_stumble_off_hazard(void) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.

@@ -13,6 +13,11 @@ tables at build time.
 
 [Download Quintra v0.20.19: Clean Return](https://github.com/struktured-labs/quintra/releases/download/v0.20.19/quintra.gbc)
 
+The September 8 movement update adds gentle alignment through narrow gaps:
+hold a direction within three pixels of an opening to ease into it. Collision
+boxes, diagonal control, and dashes are unchanged. The itch build is beta26;
+the cartridge title still displays v0.20.19.
+
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
 
