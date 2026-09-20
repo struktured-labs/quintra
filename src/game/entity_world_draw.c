@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/player.h"
 #include "game/projectile.h"

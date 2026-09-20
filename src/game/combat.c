@@ -4,6 +4,7 @@
 #include "core/types.h"
 #include "game/combat.h"
 #include "game/enemy_ai.h"
+#include "game/dungeon_director.h"
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/player.h"
@@ -231,6 +232,13 @@ u8 combat_resolve(void) BANKED {
             if (player.hp <= 2 && player.hp > 0) dmg++;
             if (dmg == 0) dmg = 1;
             dmg = status_enemy_hit_damage(j, dmg);
+            if (j == room_encounter_target && room_return_echo_kind >= 4) {
+                dmg = dungeon_return_hit_damage(dmg);
+                if (!dmg) {
+                    entity_kill(i);
+                    break;
+                }
+            }
             if (entities[i].ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
                 entities[i].ai_data[5] = j;
 

@@ -10,6 +10,8 @@
 #include "game/projectile.h"
 #include "content.h"
 
+void enemy_pattern_emit(entity_t *e, u8 direction, u8 palette) BANKED;
+
 // ai_p0 is the desired manhattan radius; ai_p1 is the volley cadence.
 // The compact behavior lives in bank 5, keeping the shared enemy dispatcher
 // and the fixed bank-2 budget available for the rest of combat.
@@ -20,6 +22,23 @@ void spinner_update(entity_t *e, const enemy_def_t *def) BANKED {
     i16 distance = ax + ay;
     i8 mx = 0, my = 0;
     u8 clockwise = e->ai_data[3] & 1;
+
+    if (e->ai_data[4]) {
+        e->ai_data[4]--;
+        if (!(e->ai_data[4] & 7)) {
+            enemy_pattern_emit(e, e->ai_data[2], 6);
+            e->ai_data[2] = (u8)((e->ai_data[2] + (clockwise ? 1 : 7)) & 7);
+        }
+        return;
+    }
+    if (e->ai_data[1] && e->ai_data[1] <= 16) {
+        if (e->ai_data[1] == 16) {
+            e->ai_data[7] = 12;
+            sfx_play(SFX_TICK);
+        }
+        e->ai_data[1]--;
+        return;
+    }
 
     if (++e->state_timer >= 3) {
         e->state_timer = 0;
@@ -43,13 +62,7 @@ void spinner_update(entity_t *e, const enemy_def_t *def) BANKED {
     }
 
     if (e->ai_data[1] == 0) {
-        u8 d = e->ai_data[2] & 7;
-        projectile_spawn_enemy_v(ex + 4, ey + 4,
-            (i8)(dir8_dx[d] * 2), (i8)(dir8_dy[d] * 2), e->damage);
-        d = (u8)((d + 4) & 7);
-        projectile_spawn_enemy_v(ex + 4, ey + 4,
-            (i8)(dir8_dx[d] * 2), (i8)(dir8_dy[d] * 2), e->damage);
-        e->ai_data[2] = (u8)((e->ai_data[2] + 1) & 7);
+        e->ai_data[4] = 64;
         e->ai_data[1] = def->ai_p1;
         sfx_play(SFX_TICK);
     } else {

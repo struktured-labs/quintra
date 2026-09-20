@@ -6,8 +6,63 @@
 
 #include "core/types.h"
 #include "game/dungeon_director.h"
+#include "game/entity.h"
+#include "game/enemy_ai.h"
+#include "game/player.h"
+#include "game/room.h"
 #include "game/run_state.h"
+#include "render/tiles.h"
 #include "content.h"
+
+u8 room_return_guard_ticks;
+
+void dungeon_return_configure_target(u8 idx, u8 stage) BANKED {
+    u16 hp = (RUN_IS_EASY() ? 96u : 144u) + (u16)stage * 8u;
+    entities[idx].hp = hp > 224u ? 224 : (u8)hp;
+    entities[idx].hitbox = 0xEE;
+    entities[idx].ai_data[6] = entities[idx].hp;
+    room_return_guard_ticks = 90;
+    room_encounter_timer = 120;
+}
+
+u8 dungeon_return_hit_damage(u8 damage) BANKED {
+    u8 cap = RUN_IS_EASY() ? 8 : 6;
+    if (room_return_guard_ticks) return 0;
+    room_return_guard_ticks = 12;
+    return damage > cap ? cap : damage;
+}
+
+u8 dungeon_return_spawn_swarm(void) BANKED {
+    static const i8 dx[12] = { -4, 4, 0, 0, -4, 4, -4, 4, -6, 6, 0, 0 };
+    static const i8 dy[12] = { 0, 0, -4, 4, -4, -4, 4, 4, 0, 0, -6, 6 };
+    u8 i, made = 0;
+    u8 limit = RUN_IS_EASY() ? 4 : 6;
+    i16 bx = entities[room_encounter_target].x >> 3;
+    i16 by = entities[room_encounter_target].y >> 3;
+    for (i = 0; i < 12 && made < limit; ++i) {
+        i16 tx = bx + dx[i], ty = by + dy[i];
+        i16 px = tx * 8, py = ty * 8;
+        i16 ax = px - player.x, ay = py - player.y;
+        u8 idx;
+        if (tx <= 0 || ty <= 0 || px + 15 >= room_world_width
+            || py + 15 >= room_world_height) continue;
+        if (ax < 0) ax = -ax;
+        if (ay < 0) ay = -ay;
+        if (ax < 32 && ay < 32) continue;
+        if (!room_tile_walkable(room_tile_at_px(px, py))
+            || !room_tile_walkable(room_tile_at_px(px + 15, py))
+            || !room_tile_walkable(room_tile_at_px(px, py + 15))
+            || !room_tile_walkable(room_tile_at_px(px + 15, py + 15))) continue;
+        idx = enemy_spawn(ENEMY_HORNET, (u8)tx, (u8)ty);
+        if (idx == 0xFF) break;
+        entities[idx].hp = (u8)((RUN_IS_EASY() ? 2 : 3)
+            + (run_state.bosses_beaten >> 1));
+        entities[idx].palette = 4;
+        made++;
+        fx_spawn(SPR_FX_IMPACT, 4, px, py, 18);
+    }
+    return made;
+}
 
 static u8 return_echo_phase(void) {
     if (run_state.dungeon_puzzles & RUN_DEEP_GATE_BIT) return 0x40;

@@ -4,9 +4,15 @@
 #include <gb/gb.h>
 #include "core/types.h"
 
-// Three seconds of deliberate restraint at 60 Hz. Unlike a cooldown, every
-// ordinary primary attack spends the partial meter, so waiting is a choice.
-#define WILL_MAX 180
+// At SPD 5, each tier takes another 3/4/5/6 exposed seconds.
+#define WILL_MAX 90
+#define WILL_NEXT_MAX (WILL_MAX + 30 * player.will_level)
+#define WILL_LEVEL_CAP (1 + (player.waygear_owned & 1) \
+    + ((player.waygear_owned >> 1) & 1) + ((player.waygear_owned >> 2) & 1))
+
+void will_bank_charge(void) BANKED;
+void will_charge_tick(void) BANKED;
+extern u8 will_charge_fraction;
 
 // B is each champion's dependable tactical verb, not another claimant on the
 // MP/Will hoarding economy.  These class-shaped bases are shortened further by

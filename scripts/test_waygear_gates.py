@@ -65,14 +65,18 @@ def main():
         assert pickup_slots(pb, PICKUP_WAYGEAR, 0), \
             "cleared Warden did not restore its missed Titan Glove"
 
+        pb.memory[PL + 48] = 1
+        pb.memory[PL + 42] = 90
         put16(pb, PL + 9, 112)
-        put16(pb, PL + 11, 32)
+        put16(pb, PL + 11, 64)
         for _ in range(30):
             pb.tick()
             if pb.memory[REWARD_TIMER]:
                 break
         assert pb.memory[PL + WAYGEAR_OWNED] & 1
         assert pb.memory[PL + WAYGEAR_EQUIPPED] == 0
+        assert pb.memory[PL + 48] == 1, "Waygear erased banked Will"
+        assert pb.memory[PL + 42] < 5, "new tier inherited a free full bar"
         assert pb.memory[SCREEN] == SCREEN_ROOM
         assert 118 <= pb.memory[REWARD_TIMER] <= 120, \
             "Waygear skipped its protected two-second claim ceremony"
@@ -94,6 +98,12 @@ def main():
             frames += 1
         assert pb.memory[SCREEN] == SCREEN_DIALOG and 118 <= frames <= 121
         pb.tick(30)
+        for row, col, palette in ((1, 1, 2), (3, 1, 1), (7, 6, 2),
+                                  (9, 1, 2), (16, 1, 3), (5, 1, 0)):
+            assert pb.memory[1, 0x9800 + row * 32 + col] == palette, (
+                f"reward emphasis missing at {col},{row}")
+        assert pb.memory[0xFF4F] & 1 == 0
+        pb.screen.image.save('/tmp/quintra-titan-glove-styled.png')
         pb.button_press("a")
         pb.tick(3)
         pb.button_release("a")

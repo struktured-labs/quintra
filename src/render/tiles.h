@@ -398,6 +398,7 @@ void tiles_load_weapon_sprite(u8 weapon_index) BANKED;
 void tiles_load_shield_sprite(u8 class_id) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
+void tiles_load_return_reaper(void) BANKED;
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
 void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
 void tiles_load_arena_floor(void) BANKED;         // calm Colossus plane + sparse inlays

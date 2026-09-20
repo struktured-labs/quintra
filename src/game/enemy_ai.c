@@ -616,18 +616,23 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
     const enemy_def_t *def = &enemies[id];
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
-    // Return-echo minibosses supplement their native charge, bomb, or caster
-    // behavior with a warned three-lane scale volley. Bit 7 requests the
-    // tighter miniboss cadence without consuming another entity scratch byte.
-    if (room_return_echo_kind == 4 && (e->flags & EF_ELITE))
+    // Return-echo elites are 24x24 Reaper/Weaver/Maw. Weaver and Maw take
+    // over movement here; Reaper (variant 0) falls through to native AI plus
+    // the warned three-lane volley. Bit 7 requests the tighter miniboss
+    // cadence without consuming another entity scratch byte.
+    if (room_return_echo_kind == 4 && (e->flags & EF_ELITE)) {
+        if (enemy_return_variant(e)) return;
         weak_pattern_tick(e, (u8)(0x80 | idx));
+    }
     if (id == ENEMY_HORNET && hornet_swarm_tick(e, idx)) return;
     if (id == ENEMY_BLUE_CRAWLER
         && e->ai_data[2] == ENEMY_AUX_OOZE_FRAGMENT) {
         ooze_fragment_update(e, idx); return;
     }
-    if (id == ENEMY_BLUE_CRAWLER)
+    if (id == ENEMY_BLUE_CRAWLER) {
         blue_crawler_pattern_tick(e, idx);
+        if (e->ai_data[4] == 2 && e->ai_data[3] >= 145) return;
+    }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     if (id >= ENEMY_FACET_RAM) { enemy_patrol_update(e, id); return; }

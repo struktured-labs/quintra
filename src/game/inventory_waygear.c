@@ -24,6 +24,21 @@ static const char *const waygear_names[WAYGEAR_COUNT] = {
     "TITAN GLOVE", "TIDE RAFT", "RIFT HOOK", "WORLDGLASS"
 };
 
+static const char *const waygear_short_names[WAYGEAR_COUNT] = {
+    "GLOVE", "RAFT", "HOOK", "GLASS"
+};
+
+static const char *const waygear_rules[WAYGEAR_COUNT] = {
+    "PASS RUNE BOULDERS", "CROSS RIVERS/LAKES", "CROSS HOLES/GAPS", "SEL+B SHIFT WORLD"
+};
+
+static const u8 selection_tiles[4][16] = {
+    {255,255,128,128,128,128,128,128,128,128,128,128,128,128,128,128},
+    {255,255,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+    {128,128,128,128,128,128,128,128,128,128,128,128,128,128,255,255},
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,255,255},
+};
+
 static const char *const nature_names[5] = {
     "THORN CUT", "LIFT STONE", "CROSS GAPS", "DEEP WATER", "HIVE VENTS"
 };
@@ -195,29 +210,34 @@ static void draw_page(void) {
         ? classes[player.class_id].name : "?");
     gotoxy(1, 2); text_write("INNATE ");
     text_write(player.class_id < 5 ? nature_names[player.class_id] : "?");
-    gotoxy(1, 5); text_write("INNATE ALWAYS ON");
-    gotoxy(1, 6); text_write("ONE * GEAR ACTIVE");
+    gotoxy(1, 5); text_write("OWNED = ALWAYS ON");
+    gotoxy(1, 6); text_write("VIEW ");
+    text_write((player.waygear_owned & WAYGEAR_BIT(waygear_cursor))
+        ? waygear_names[waygear_cursor] : "LOCKED GEAR");
     gotoxy(1, 7); text_write("GLASS: SEL+B SHIFT");
 
     inventory_prepare_sprites();
-    for (i = 4; i < 10; ++i) move_sprite(i, 0, 0);
+    for (i = 0; i < 10; ++i) move_sprite(i, 0, 0);
+    set_bkg_data(0xF2, 4, selection_tiles[0]);
     for (i = 0; i < WAYGEAR_COUNT; ++i) {
-        u8 row = (u8)(9 + i);
-        gotoxy(1, row);
-        putchar(i == waygear_cursor ? '>' : ' ');
-        putchar(i < WAYGEAR_EQUIP_COUNT
-            && player.waygear_equipped == i ? '*' : ' ');
+        u8 col = (i & 1) ? 10 : 1;
+        u8 row = (i & 2) ? 11 : 9;
+        gotoxy((u8)(col + 3), row);
         text_write((player.waygear_owned & WAYGEAR_BIT(i))
-            ? waygear_names[i] : "???????????");
+            ? waygear_short_names[i] : "LOCK");
+        if (i == waygear_cursor) {
+            const u8 frame[4] = {0xF2, 0xF3, 0xF4, 0xF5};
+            set_tiles(col, row, 2, 2, waygear_bg_map(), frame);
+        }
         set_sprite_tile((u8)(4 + i), (u8)(SPR_WAYGEAR_GLOVE + i));
         set_sprite_prop((u8)(4 + i),
             (player.waygear_owned & WAYGEAR_BIT(i)) ? 3 : 1);
-        move_sprite((u8)(4 + i), 144, (u8)(88 + i * 8));
+        move_sprite((u8)(4 + i), (u8)(12 + col * 8), (u8)(20 + row * 8));
     }
-    gotoxy(1, 14); text_write("* EQUIPPED SLOT");
-    gotoxy(1, 15); text_write("UP/DN PICK A EQUIP");
+    gotoxy(1, 14); text_write(waygear_rules[waygear_cursor]);
+    gotoxy(1, 15); text_write("D PAD VIEW GEAR");
     gotoxy(1, 16); text_write("SEL STATUS  B BACK");
-    gotoxy(2, 17); text_write("EXPLORE. REMEMBER.");
+    gotoxy(2, 17); text_write("EXPLORE. REMEMBER");
     palette_bg_fill_attrs(0);
     attr_row(0, 1); attr_row(4, 1); attr_row(8, 2);
     for (i = 9; i <= 12; ++i) attr_row(i, 2);
@@ -238,23 +258,12 @@ void inventory_waygear_enter(void) BANKED {
 u8 inventory_waygear_tick(u8 pressed) BANKED {
     if (pressed & (J_START | J_B)) return INVENTORY_WAYGEAR_EXIT;
     if (pressed & J_SELECT) return INVENTORY_WAYGEAR_PACK;
-    if (pressed & J_UP) {
-        waygear_cursor = waygear_cursor
-            ? (u8)(waygear_cursor - 1) : WAYGEAR_COUNT - 1;
-        sfx_play(SFX_DOOR);
-        draw_page();
-    } else if (pressed & J_DOWN) {
-        waygear_cursor++;
-        if (waygear_cursor >= WAYGEAR_COUNT) waygear_cursor = 0;
+    if (pressed & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) {
+        waygear_cursor ^= (pressed & (J_UP | J_DOWN)) ? 2 : 1;
         sfx_play(SFX_DOOR);
         draw_page();
     } else if (pressed & J_A) {
-        if (waygear_cursor < WAYGEAR_EQUIP_COUNT
-            && (player.waygear_owned & WAYGEAR_BIT(waygear_cursor))) {
-            player.waygear_equipped = waygear_cursor;
-            sfx_play(SFX_CLEAR);
-        } else if (waygear_cursor == WAYGEAR_WORLDGLASS
-            && (player.waygear_owned & WAYGEAR_BIT(waygear_cursor))) {
+        if (player.waygear_owned & WAYGEAR_BIT(waygear_cursor)) {
             sfx_play_rune(4);
         } else {
             sfx_play(SFX_HURT);

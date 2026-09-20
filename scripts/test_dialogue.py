@@ -125,6 +125,13 @@ def approach_and_talk(pb, speaker, expected_kind, expected_topic):
             assert (pb.memory[oam + 3] & 7) == pb.memory[ware + 13]
         assert pb.memory[0xFF40] & 0x02, "merchant catalog icons are hidden"
         pb.screen.image.save(ROOT / "tmp" / "merchant-stock.png")
+    else:
+        assert pb.memory[1, 0x9800 + 5 * 32 + 1] == 3, "SHOOT lacks action accent"
+        assert pb.memory[1, 0x9800 + 5 * 32 + 11] == 1, "CRYSTALS lacks item accent"
+        assert pb.memory[1, 0x9800 + 7 * 32 + 11] == 2, "MAGIC lacks benefit accent"
+        assert pb.memory[1, 0x9800 + 5 * 32 + 7] == 0, "accent leaked into ordinary prose"
+        assert pb.memory[0xFF4F] & 1 == 0, "attribute bank left selected"
+        pb.screen.image.save(ROOT / "tmp" / "wayfarer-advice-styled.png")
     tap(pb, "b"); tick(pb, 22)
     assert pb.memory[SCREEN] == SCREEN_ROOM, "B did not return to the live room"
     assert pb.memory[RS + 1] == room, "dialogue regenerated or changed the room"
@@ -135,8 +142,9 @@ def main():
     # line wraps its final glyph to column zero below, which looks like random
     # screen-edge garbage. Keep every authored dialogue literal within the
     # actual 19-character writing width.
-    for literal in re.findall(r'"([A-Z0-9 +./:-]+)"',
+    for literal in re.findall(r'"([A-Z0-9 +./:^!-]+)"',
                               DIALOG_SOURCE + SHOP_COPY_SOURCE):
+        literal = re.sub(r'\^[0-4]', '', literal)
         assert len(literal) <= 19, (
             f"dialogue line wraps the screen ({len(literal)} chars): {literal!r}")
 

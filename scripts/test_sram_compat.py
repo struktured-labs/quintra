@@ -13,7 +13,7 @@ ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 SRAM_SIZE = 32 * 1024
 PLAYER_SIZE = 42       # accepted pre-Will player layout
-CURRENT_PLAYER_SIZE = 48
+CURRENT_PLAYER_SIZE = 49
 CURRENT_RUN_SIZE = 58
 SCREEN_ROOM = 5
 
@@ -87,6 +87,38 @@ def main():
         finally:
             pb.stop(save=False)
     print("[sram-compat] PASS all accepted six-room suspend layouts migrate")
+    for size, charge, level, expected in ((48, 180, 0, 1), (48, 120, 0, 0),
+                                          (49, 70, 3, 3)):
+        run = bytearray(CURRENT_RUN_SIZE)
+        run[6] = 0xFF
+        player = bytearray(size)
+        player[:9] = bytes((0, 8, 8, 6, 6, 4, 2, 5, 2))
+        player[24:40] = bytes((0xFF,)) * 16
+        player[42] = charge
+        player[44] = 7
+        if size == 49:
+            player[48] = level
+        payload = run + player
+        record = b"QS" + bytes((1, len(run), size)) + payload
+        record += bytes((sum(payload) & 255,))
+        battery = io.BytesIO(record + bytes(SRAM_SIZE - len(record)))
+        pb = PyBoy(str(ROM), window="null", cgb=True, ram_file=battery)
+        try:
+            pb.tick(240)
+            press(pb, "a")
+            for _ in range(360):
+                pb.tick()
+                if pb.memory[SCREEN] == SCREEN_ROOM:
+                    break
+            assert pb.memory[SCREEN] == SCREEN_ROOM
+            assert pb.memory[PL + 48] == expected, (size, charge, level)
+            if size == 49:
+                assert 70 <= pb.memory[PL + 42] < 80
+            elif charge == 120:
+                assert 60 <= pb.memory[PL + 42] < 70
+        finally:
+            pb.stop(save=False)
+    print("[sram-compat] PASS legacy Will migration and tiered suspend")
 
 
 if __name__ == "__main__":

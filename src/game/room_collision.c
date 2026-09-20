@@ -17,24 +17,25 @@ static u8 full_body_obstacle(i16 x, i16 y) {
          || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
 }
 
+static u8 player_walkable(i16 x, i16 y) {
+    u8 tile = room_tile_at_px(x, y);
+    return room_tile_walkable(tile) || WAYGEAR_TILE_PASSABLE(tile);
+}
+
 u8 room_player_position_clear(i16 x, i16 y) BANKED {
-#define PLAYER_WALKABLE(px, py) \
-    (room_tile_walkable(room_tile_at_px((px), (py))) \
-        || WAYGEAR_TILE_PASSABLE(room_tile_at_px((px), (py))))
     return room_player_position_in_bounds(x, y)
-        && PLAYER_WALKABLE(x + 2,  y + 8)
-        && PLAYER_WALKABLE(x + 8,  y + 8)
-        && PLAYER_WALKABLE(x + 13, y + 8)
-        && PLAYER_WALKABLE(x + 2,  y + 15)
-        && PLAYER_WALKABLE(x + 8,  y + 15)
-        && PLAYER_WALKABLE(x + 13, y + 15)
+        && player_walkable(x + 2,  y + 8)
+        && player_walkable(x + 8,  y + 8)
+        && player_walkable(x + 13, y + 8)
+        && player_walkable(x + 2,  y + 15)
+        && player_walkable(x + 8,  y + 15)
+        && player_walkable(x + 13, y + 15)
         && !full_body_obstacle(x + 2,  y)
         && !full_body_obstacle(x + 8,  y)
         && !full_body_obstacle(x + 13, y)
         && !full_body_obstacle(x + 2,  y + 7)
         && !full_body_obstacle(x + 8,  y + 7)
         && !full_body_obstacle(x + 13, y + 7);
-#undef PLAYER_WALKABLE
 }
 
 // A floor hazard is a readable positional tax, never a soft-lock.

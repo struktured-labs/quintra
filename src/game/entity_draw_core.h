@@ -35,14 +35,17 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         pal = status_enemy_palette_prop(slot);
     flash = (e->type == ENT_ENEMY && e->ai_data[7]) ? 1 : 0;
 
-    // 32x32 Colossi — 16 tiles, row-major 4x4
-    if (e->type == ENT_ENEMY && e->ai_data[0] == ENEMY_STONE_SENTINEL
-        && e->ai_data[3]) {
-        u8 r, c, tile = e->sprite_tile;
+    // Return champions use a 24x24 cloak around their 14x14 collision body.
+    if (e->type == ENT_ENEMY
+        && ((e->ai_data[0] == ENEMY_STONE_SENTINEL && e->ai_data[3])
+            || (room_return_echo_kind >= 4 && slot == room_encounter_target))) {
+        u8 side = e->ai_data[0] == ENEMY_STONE_SENTINEL ? 4 : 3;
+        u8 r, c, tile = side == 3 ? SPR_BOSS_BIG : e->sprite_tile;
+        if (side == 3) { sx -= 4; sy -= 8; }
         if (flash) e->ai_data[7]--;
-        if (oam + 16 > 40) continue;
-        for (r = 0; r < 4; ++r) {
-            for (c = 0; c < 4; ++c) {
+        if (oam + (side == 3 ? 9 : 16) > 40) continue;
+        for (r = 0; r < side; ++r) {
+            for (c = 0; c < side; ++c) {
                 set_sprite_tile(oam, tile);
                 set_sprite_prop(oam, pal);
                 if (flash && (e->ai_data[7] & 1)) move_sprite(oam, 0, 0);

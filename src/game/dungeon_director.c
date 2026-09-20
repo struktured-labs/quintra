@@ -33,6 +33,7 @@ u8 room_return_echo_kind;
 static u8 encounter_spawn_clock;
 static u8 room_roster_ordinal;
 static u8 return_echo_alert_pending;
+u8 dungeon_return_spawn_swarm(void) BANKED;
 
 static u8 weighted_stage_enemy(u8 stage, u8 roll) {
     u8 i, sum = 0;
@@ -179,6 +180,7 @@ void dungeon_director_reset(void) BANKED {
     room_roster_secondary = 0xFF;
     room_roster_ordinal = 0;
     room_return_echo_kind = 0;
+    room_return_guard_ticks = 0;
     return_echo_alert_pending = 0;
 }
 
@@ -265,15 +267,7 @@ void dungeon_director_configure_initial(u8 idx, u8 ordinal) BANKED {
             entities[idx].hp = (u8)(entities[idx].hp << 1);
         entities[idx].damage++;
         if (room_return_echo_kind == 4) {
-            // The backtracking surprise is a true miniboss, not the ordinary
-            // pack-alpha balance reused under another card: it fills its
-            // 16x16 art, survives roughly twice the normal Elite fight, and
-            // makes both contact and its added scale volleys consequential.
-            entities[idx].hitbox = 0xEE;
-            if (RUN_IS_EASY())
-                entities[idx].hp = (u8)(entities[idx].hp
-                    + ((entities[idx].hp + 1) >> 1));
-            else entities[idx].hp = (u8)(entities[idx].hp << 1);
+            dungeon_return_configure_target(idx, stage);
             entities[idx].damage++;
         }
     }
@@ -355,6 +349,7 @@ void dungeon_director_activate(void) BANKED {
 
 u8 dungeon_director_update(u8 alive) BANKED {
     room_encounter_complete = 0;
+    if (room_return_guard_ticks) room_return_guard_ticks--;
     // Procgen and tile upload run under a blanked display. Defer the sensory
     // beat until the first live combat frame so it cannot disappear inside a
     // doorway transaction.
@@ -393,6 +388,18 @@ u8 dungeon_director_update(u8 alive) BANKED {
     } else if (room_encounter_kind == ENCOUNTER_ELITE
         || room_encounter_kind == ENCOUNTER_HUNT) {
         if (!target_alive()) finish_directive(1);
+        else if (room_return_echo_kind >= 4 && room_encounter_phase == 0) {
+            if (room_encounter_timer) {
+                room_encounter_timer--;
+                if (room_encounter_timer == 30) {
+                    sfx_play(SFX_ROAR);
+                    room_shake(1, 12);
+                }
+            } else if (alive < 5) {
+                alive = (u8)(alive + dungeon_return_spawn_swarm());
+                room_encounter_phase = 1;
+            }
+        }
     } else if (room_encounter_kind == ENCOUNTER_HOLD) {
         if (room_encounter_timer) room_encounter_timer--;
         if (encounter_spawn_clock) encounter_spawn_clock--;

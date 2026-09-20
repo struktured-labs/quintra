@@ -129,29 +129,7 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
-static const u8 class_relics[5][3] = {
-    { 12, 17, 19 }, // Wolfkin: PowerStone / Swift Fang / Vamp Sigil
-    { 10, 16, 19 }, // Sauran: Iron Heart / Ward Charm / Vamp Sigil
-    { 11, 12, 17 }, // Corvin: Speed Ring / PowerStone / Swift Fang
-    { 12, 15, 16 }, // Picsean: PowerStone / Mana Gem / Ward Charm
-    { 12, 17, 19 }  // Vespine: PowerStone / Swift Fang / Vamp Sigil
-};
-
-u8 pickup_farfold_relic_for_class(u8 roll) BANKED {
-    u8 class_id = player.class_id;
-    if (class_id >= 5) class_id = 0;
-    while (roll >= 3) roll = (u8)(roll - 3);
-    return class_relics[class_id][roll];
-}
-
-u8 pickup_boss_relic_for_class(void) BANKED {
-    // Boss rewards are the run's guaranteed power curve, not ordinary random
-    // trash drops. Each champion retains three meaningful build branches,
-    // while a pure-LCK result can no longer make a hard-earned first Colossus
-    // feel like it granted no immediate combat help. Values are authored
-    // `items[]` indices (the same representation pickup_spawn_item uses).
-    return pickup_farfold_relic_for_class(rng_range(3));
-}
+u8 treasure_cache_guarded(void) BANKED;
 
 u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_MP, x, y);
@@ -482,8 +460,11 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         return;
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
+    if (e->ai_data[0] == PICKUP_FARFOLD_RELIC) {
+        e->palette = treasure_cache_guarded() ? 4 : 6;
+        return;
+    }
     if (e->ai_data[0] == PICKUP_RIFTWELL
-        || e->ai_data[0] == PICKUP_FARFOLD_RELIC
         || e->ai_data[0] == PICKUP_WAYGEAR
         || e->ai_data[0] == PICKUP_HOLLOW_RELIC) return;
     if (e->ai_data[0] == PICKUP_BOON_CHOICE) {
@@ -747,12 +728,14 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play_reward(SFX_REWARD_RELIC);
                     break;
                 case PICKUP_FARFOLD_RELIC:
+                    if (treasure_cache_guarded()) continue;
                     if (!apply_item_effects(entities[i].ai_data[1])) {
                         any = 1;
                         continue;
                     }
                     sfx_play_reward(SFX_REWARD_RELIC);
                     run_state.dungeon_phase |= RUN_FARFOLD_CACHE_BIT;
+                    room_start_major_reward(PICKUP_FARFOLD_RELIC, entities[i].ai_data[1]);
                     break;
                 case PICKUP_BOON_CHOICE: {
                     u8 other;

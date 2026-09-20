@@ -14,25 +14,22 @@ enum {
     WAYGEAR_COUNT,
 };
 
-// Worldglass is permanent Waygear, but it is an always-available world verb
-// rather than a traversal substitute. Only these first three items compete
-// for the single resonating loadout slot.
+// The first three discoveries also unlock Will tiers.
 #define WAYGEAR_EQUIP_COUNT 3
 
 #define WAYGEAR_BIT(g) ((u8)(1u << (g)))
 
-// Hero nature is the primary key; one equipped permanent implement can
-// substitute for the three traditional traversal families.
+// Innate abilities and every owned implement remain active together.
 #define WAYGEAR_TILE_PASSABLE(t) ( \
     ((t) == BGT_GATE_BOULDER \
         && (player.class_id == 1 \
-            || player.waygear_equipped == WAYGEAR_GLOVE)) \
-    || ((t) == BGT_GATE_WATER \
+            || (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_GLOVE)))) \
+    || (((t) == BGT_GATE_WATER || (t) == BGT_WILD_WATER) \
         && (player.class_id == 3 \
-            || player.waygear_equipped == WAYGEAR_RAFT)) \
-    || ((t) == BGT_GATE_CHASM \
+            || (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_RAFT)))) \
+    || (((t) == BGT_GATE_CHASM || (t) == BGT_WILD_HOLE) \
         && (player.class_id == 2 \
-            || player.waygear_equipped == WAYGEAR_HOOK)) \
+            || (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_HOOK)))) \
     || ((t) == BGT_GATE_THORNS && player.class_id == 0) \
     || ((t) == BGT_GATE_VENT && player.class_id == 4))
 

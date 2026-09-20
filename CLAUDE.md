@@ -10,7 +10,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Lineage:** this project began as a Penta Dragon DX colorization effort (that history lives in the separate `penta-dragon-dx` repo) and pivoted into Quintra, a Penta-inspired but wholly original game.
 
-**Current Status:** v0.15 — 9-stage roguelike, playable end to end, **banked
+**Current Status:** v0.20.x (check `git tag` for latest; this summary dates
+from v0.15 and undercounts content — e.g. 32 enemies now, plus the Riftwild
+overworld, colossus bosses, and the itch.io browser player under `web/`) —
+9-stage roguelike, playable end to end, **banked
 ROM** (autobank; see the 2026-07-05 banking spec — new gameplay files need
 `#pragma bank 255` + `BANKED`, and `scripts/check_rom_layout.py` gates every
 link). TITLE (pulsing + music, CONTINUE when a suspend save exists, BEST
@@ -108,7 +111,9 @@ penta-dragon-remake/
 
 ### Cart spec
 - **MBC5 + RAM + battery** (cart type 0x1B)
-- **2 MB target** (currently building 512KB; bumps `-Wl-yo` as banks fill)
+- **Auto-sized ROM** via `-autobank` — NEVER add a fixed bank count
+  (`-Wm-yo<n>`/`-Wl-yo`): it suppresses auto sizing and collapses banked code
+  into banks 0–1, breaking boot silently (see Makefile warning)
 - **32 KB SRAM** (4 × 8KB banks)
 - **CGB only** (`-Wm-yC` enforces)
 

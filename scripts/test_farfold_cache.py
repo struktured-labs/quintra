@@ -186,6 +186,17 @@ def main():
         # both former viewport seams—not a host-only marker.
         assert pb.memory[BOTTOM + (26 - 17) * 31 + 27] == 33
 
+        guards = [EN + slot * ENTITY_SIZE for slot in range(MAX_ENTITIES)
+                  if pb.memory[EN + slot * ENTITY_SIZE] == ENT_ENEMY]
+        assert len(guards) >= 4, f"cache only has {len(guards)} guards"
+        put16(pb, PL + 9, 212)
+        put16(pb, PL + 11, 200)
+        settle(pb, 12)
+        assert farfold_entities(pb) == [relic], "relic could be stolen before combat"
+        assert not (pb.memory[RS + 28] & RUN_FARFOLD_CACHE_BIT)
+        put16(pb, PL + 9, 72)
+        put16(pb, PL + 11, 60)
+
         clear_hostiles(pb)
         settle(pb, 360)
         assert farfold_entities(pb) == [relic], (
@@ -200,6 +211,15 @@ def main():
         inventory_after = bytes(pb.memory[PL + 24 + i] for i in range(16))
         assert inventory_after != inventory_before, (
             "cache relic did not enter the run inventory")
+        assert pb.memory[addr('_room_major_reward_pending')] > 100
+        settle(pb, 125)
+        assert pb.memory[SCREEN] == 10, "relic lacks its claim card"
+        assert pb.memory[addr('_dialog_topic')] == item_index, 'claim card names a different relic'
+        settle(pb, 30)
+        pb.screen.image.save('/tmp/quintra-treasure-claim.png')
+        pb.button('a')
+        settle(pb, 30)
+        assert pb.memory[SCREEN] == SCREEN_ROOM
 
         # Leave along the cache arm's unique edge. Its Compass icon clears,
         # and returning to the reliquary cannot farm a second permanent item.

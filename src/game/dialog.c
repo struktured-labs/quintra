@@ -7,6 +7,7 @@
 #include <gb/cgb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
+#include <stdio.h>
 
 #include "audio/sfx.h"
 #include "core/types.h"
@@ -34,10 +35,35 @@ static const u16 dialog_palette[4] = {
     BGR555(21, 22, 25), BGR555(31, 31, 31),
 };
 
+static const u16 dialog_accents[4][4] = {
+    { BGR555(1, 2, 6), BGR555(7, 10, 17), BGR555(21, 22, 25), BGR555(31, 27, 12) },
+    { BGR555(1, 2, 6), BGR555(7, 10, 17), BGR555(21, 22, 25), BGR555(15, 31, 18) },
+    { BGR555(1, 2, 6), BGR555(7, 10, 17), BGR555(21, 22, 25), BGR555(15, 28, 31) },
+    { BGR555(1, 2, 6), BGR555(7, 10, 17), BGR555(21, 22, 25), BGR555(31, 17, 13) },
+};
+
+// Inline ^0 resets; ^1 treasure, ^2 benefit, ^3 action, ^4 danger.
+static void dialog_line(u8 row, const char *text) {
+    u8 col = 1;
+    u8 accent = 0;
+    gotoxy(col, row);
+    while (*text && col < 20) {
+        if (*text == '^' && text[1] >= '0' && text[1] <= '4') {
+            accent = (u8)(text[1] - '0');
+            text += 2;
+        } else {
+            putchar(*text++);
+            VBK_REG = 1;
+            set_tiles(col++, row, 1, 1, (u8 *)0x9800, &accent);
+            VBK_REG = 0;
+        }
+    }
+}
+
 static void dialog_lines(const char *a, const char *b, const char *c) {
-    gotoxy(1, 5); text_write(a);
-    gotoxy(1, 7); text_write(b);
-    gotoxy(1, 9); text_write(c);
+    dialog_line(5, a);
+    dialog_line(7, b);
+    dialog_line(9, c);
 }
 
 static void wayfarer_title(void) {
@@ -65,6 +91,9 @@ static void dialog_title(void) {
         return;
     }
     switch (dialog_kind) {
+        case PICKUP_FARFOLD_RELIC:
+            text_write(dialog_topic < N_ITEMS ? items[dialog_topic].name : "FARFOLD RELIC");
+            break;
         case PICKUP_RIFT_SIGIL: text_write("RIFT SIGIL"); break;
         case PICKUP_WAYGEAR:
             if (dialog_topic == 0) text_write("TITAN GLOVE");
@@ -114,66 +143,81 @@ static void wayfarer_lore(void) {
 
 static void wayfarer_advice(void) {
     switch (dialog_topic) {
-        case 0: dialog_lines("SHOOT THE CRYSTALS", "SOME HOLD MAGIC", "CRACKS HIDE PATHS"); break;
-        case 1: dialog_lines("THE SERPENT FEEDS", "DENY FOUR STORMS", "FLEE THE FULL COIL"); break;
-        case 2: dialog_lines("CINDER MAWS HOLD", "THREE BURNING LANES", "CROSS AFTER THE FAN"); break;
-        case 3: dialog_lines("WATCH FOR THE BLINK", "THEN CROSS THE WEB", "DO NOT WAIT CENTER"); break;
-        case 4: dialog_lines("LEAVE THE PULSE", "BEFORE MIRE SWELLS", "RETURN AFTER IMPACT"); break;
-        case 5: dialog_lines("REAPER WARPS NEAR", "KEEP AN EXIT LINE", "FIRE AFTER THE WARP"); break;
-        case 6: dialog_lines("GOLEM SLAMS TWICE", "MOVE AFTER THE RING", "CORNERS BUY TIME"); break;
-        case 7: dialog_lines("HYDRA HEADS WEAVE", "CUT THROUGH THE GAP", "DO NOT CHASE EDGES"); break;
-        case 8: dialog_lines("VOID HEALS SLOWLY", "PRESS EVERY OPENING", "FLEE THE COLLAPSE"); break;
+        case 0: dialog_lines("^3SHOOT^0 THE ^1CRYSTALS", "SOME HOLD ^2MAGIC", "^1CRACKS^0 HIDE PATHS"); break;
+        case 1: dialog_lines("THE SERPENT FEEDS", "DENY ^1FOUR STORMS", "^3FLEE^0 THE ^4FULL COIL"); break;
+        case 2: dialog_lines("CINDER MAWS HOLD", "^4THREE BURNING LANES", "CROSS ^3AFTER THE FAN"); break;
+        case 3: dialog_lines("WATCH FOR THE ^1BLINK", "THEN ^3CROSS^0 THE WEB", "^4DO NOT WAIT CENTER"); break;
+        case 4: dialog_lines("^3LEAVE^0 THE PULSE", "^4BEFORE^0 MIRE SWELLS", "RETURN ^3AFTER IMPACT"); break;
+        case 5: dialog_lines("REAPER ^4WARPS NEAR", "KEEP AN ^2EXIT LINE", "FIRE ^3AFTER THE WARP"); break;
+        case 6: dialog_lines("GOLEM ^4SLAMS TWICE", "MOVE ^3AFTER THE RING", "^2CORNERS^0 BUY TIME"); break;
+        case 7: dialog_lines("HYDRA HEADS WEAVE", "CUT THROUGH ^2THE GAP", "^4DO NOT CHASE EDGES"); break;
+        case 8: dialog_lines("VOID ^4HEALS SLOWLY", "PRESS ^3EVERY OPENING", "^3FLEE^0 THE ^4COLLAPSE"); break;
         case 9: dialog_lines("OTHER ARCHES SLEEP", "WIN WAKES THE ROAD", "THE MAP KEEPS MARKS"); break;
         case 10: dialog_lines("SEEK THE BLUE ARCH", "RETURN AFTER WIN", "OLD GATES THEN WAKE"); break;
-        case 11: dialog_lines("TOOLS OPEN GROVES", "REMEMBER OLD GATES", "RETURN WITH GEAR"); break;
-        case 12: dialog_lines("VAULTS NEVER REFILL", "ROADS HIDE GEAR", "WILD REWARDS MEMORY"); break;
+        case 11: dialog_lines("^1TOOLS^0 OPEN GROVES", "REMEMBER ^1OLD GATES", "^3RETURN WITH GEAR"); break;
+        case 12: dialog_lines("VAULTS ^4NEVER REFILL", "ROADS HIDE GEAR", "WILD REWARDS MEMORY"); break;
         default: dialog_lines("WILD WARDEN HOLDS", "FIND ITS RED MARK", "WIN WAKES THIS ARCH"); break;
     }
 }
 
 static void resident_copy(void) {
+    if (dialog_is_reward && dialog_kind == PICKUP_FARFOLD_RELIC) {
+        dialog_lines("^2TREASURE WON", "", "^3PACK^0 SHOWS STATS");
+        switch (dialog_topic) {
+            case 10: dialog_line(7, "^2MAX HP +2"); break;
+            case 11: dialog_line(7, "^2SPD +1"); break;
+            case 12: dialog_line(7, "^2ATK +1"); break;
+            case 15: dialog_line(7, "^2MAX MP +2"); break;
+            case 16: dialog_line(7, "^2DEF +1  LCK +1"); break;
+            case 17: dialog_line(7, "^2SPD +1  ATK +1"); break;
+            case 19:
+                dialog_line(7, "^2ATK +1  MAX HP +1");
+                dialog_line(9, "^2HEAL EVERY 5 KILLS"); break;
+        }
+        return;
+    }
     if (dialog_is_reward && dialog_kind == PICKUP_RIFT_SIGIL) {
-        dialog_lines("DUNGEON KEY CLAIMED", "NEXT TRIAL AWAKENS",
-            "SELECT SHOWS PATH");
+        dialog_lines("^1DUNGEON KEY^0 CLAIMED", "^2NEXT TRIAL^0 AWAKENS",
+            "^3SELECT^0 SHOWS PATH");
         return;
     }
     if (dialog_is_reward && dialog_kind == PICKUP_WAYGEAR) {
         if (dialog_topic == 0)
-            dialog_lines("WAYGEAR CLAIMED", "BREAKS BOULDERS",
-                "SELECT IN PACK");
+            dialog_lines("A NEW WAY THROUGH", "PASS ^2RUNE BOULDERS",
+                "^2ALWAYS ON^0 - WALK");
         else if (dialog_topic == 1)
-            dialog_lines("WAYGEAR CLAIMED", "CROSSES DEEP WATER",
-                "SELECT IN PACK");
+            dialog_lines("A NEW WAY THROUGH", "CROSS ^2RIVERS/LAKES",
+                "^2ALWAYS ON^0 - WALK");
         else if (dialog_topic == 2)
-            dialog_lines("WAYGEAR CLAIMED", "CROSSES CHASMS",
-                "SELECT IN PACK");
+            dialog_lines("A NEW WAY THROUGH", "CROSS ^2HOLES/GAPS",
+                "^2ALWAYS ON^0 - WALK");
         else
-            dialog_lines("WORLDGLASS CLAIMED", "WAKING / HOLLOW",
-                "RIFTWILD: SEL+B");
+            dialog_lines("A NEW WAY THROUGH", "^2WAKING / HOLLOW",
+                "RIFTWILD: ^3SEL+B");
         return;
     }
     if (dialog_is_reward && dialog_kind == PICKUP_COMPANION) {
         if (dialog_topic == COMPANION_HEARTH)
-            dialog_lines("YOUR HEART SUMMONED", "I MEND TWO HALF HP",
-                "SELECT MAP THEN A");
+            dialog_lines("YOUR HEART SUMMONED", "I MEND ^2TWO HALF HP",
+                "^3SELECT^0 MAP THEN ^3A");
         else if (dialog_topic == COMPANION_AETHER)
-            dialog_lines("YOUR SPARK SUMMONED", "I RESTORE TWO MAGIC",
-                "SELECT MAP THEN A");
+            dialog_lines("YOUR SPARK SUMMONED", "I RESTORE ^2TWO MAGIC",
+                "^3SELECT^0 MAP THEN ^3A");
         else
-            dialog_lines("THE ROAD CALLED ME", "I REVEAL NEAR PATHS",
-                "SELECT MAP THEN A");
+            dialog_lines("THE ROAD CALLED ME", "I REVEAL ^2NEAR PATHS",
+                "^3SELECT^0 MAP THEN ^3A");
         return;
     }
     if (dialog_is_reward && dialog_kind == PICKUP_HOLLOW_RELIC) {
         if (dialog_topic == ITEM_ID_BLAST_SEED)
-            dialog_lines("HOLLOW RELIC FOUND", "IMPACTS NOW EXPLODE",
-                "ONLY IN HOLLOW");
+            dialog_lines("HOLLOW RELIC FOUND", "IMPACTS NOW ^2EXPLODE",
+                "^4ONLY IN HOLLOW");
         else if (dialog_topic == ITEM_ID_RIFT_LENS)
-            dialog_lines("HOLLOW RELIC FOUND", "THIRD A: FAT BEAM",
-                "ONLY IN HOLLOW");
+            dialog_lines("HOLLOW RELIC FOUND", "^3THIRD A:^2 FAT BEAM",
+                "^4ONLY IN HOLLOW");
         else
-            dialog_lines("HOLLOW RELIC FOUND", "REFLECTS ALL SHOTS",
-                "ONE USE IN PACK");
+            dialog_lines("HOLLOW RELIC FOUND", "^2REFLECTS^0 ALL SHOTS",
+                "^4ONE USE^0 IN ^3PACK");
         return;
     }
     if (!dialog_page) {
@@ -189,14 +233,14 @@ static void resident_copy(void) {
         }
     } else {
         switch (dialog_kind) {
-            case PICKUP_VILLAGER: dialog_lines("TOUCH ME FOR REST", "HP AND MAGIC REFILL", "BLESSING IS FREE"); break;
+            case PICKUP_VILLAGER: dialog_lines("TOUCH ME FOR REST", "^2HP AND MAGIC^0 REFILL", "BLESSING IS FREE"); break;
             case PICKUP_MERCHANT: shop_write_live_stock(); break;
-            case PICKUP_SMITH: dialog_lines("POWER RAISES ATTACK", "WEAPONS CHANGE A", "GOLD MEANS STRONG"); break;
-            case PICKUP_APOTHECARY: dialog_lines("VAMP HEALS ON KILLS", "RUNES RAISE MAGIC", "SURGE IS TEMPORARY"); break;
-            case PICKUP_CARTOGRAPHER: dialog_lines("TOUCH TO SCOUT", "SELECT OPENS MAP", "FOG RESETS NEXT STG"); break;
+            case PICKUP_SMITH: dialog_lines("POWER RAISES ATTACK", "^1WEAPONS^0 CHANGE ^3A", "GOLD MEANS STRONG"); break;
+            case PICKUP_APOTHECARY: dialog_lines("VAMP HEALS ON KILLS", "RUNES RAISE MAGIC", "SURGE IS ^4TEMPORARY"); break;
+            case PICKUP_CARTOGRAPHER: dialog_lines("TOUCH TO SCOUT", "^3SELECT^0 OPENS MAP", "FOG RESETS NEXT STG"); break;
             case PICKUP_WAYKEEPER: dialog_lines("GO NORTH TO LEAVE", "TOWN EACH 3 BOSSES", "SIDE ROADS: SHOPS"); break;
-            case PICKUP_LOREKEEPER: dialog_lines("SIGIL OPENS GATE", "SECRET ROOMS HIDE", "TRY ORDINARY WALLS"); break;
-            default: dialog_lines("ODD WALLS MAY OPEN", "SHOOT PUSH OR WALK", "HEAR SECRET CHIME"); break;
+            case PICKUP_LOREKEEPER: dialog_lines("^1SIGIL^0 OPENS GATE", "SECRET ROOMS HIDE", "TRY ORDINARY WALLS"); break;
+            default: dialog_lines("ODD WALLS MAY OPEN", "^3SHOOT PUSH OR WALK", "HEAR SECRET CHIME"); break;
         }
     }
 }
@@ -204,8 +248,26 @@ static void resident_copy(void) {
 static void dialog_paint(void) {
     DISPLAY_OFF;
     cls();
-    gotoxy(1, 1); dialog_title();
-    gotoxy(1, 2); text_write("------------------");
+    palette_bg_fill_attrs(0);
+    if (dialog_is_reward) {
+        dialog_line(1, dialog_kind == PICKUP_WAYGEAR ? "^2WAYGEAR ACQUIRED"
+            : dialog_kind == PICKUP_COMPANION ? "^2COMPANION JOINED"
+            : dialog_kind == PICKUP_RIFT_SIGIL ? "^2KEY CLAIMED"
+            : "^2RELIC ACQUIRED");
+    }
+    gotoxy(1, dialog_is_reward ? 3 : 1); dialog_title();
+    VBK_REG = 1;
+    {
+        u8 col;
+        u8 accent = 1;
+        for (col = 1; col < 19; ++col)
+            set_tiles(col, dialog_is_reward ? 3 : 1, 1, 1,
+                (u8 *)0x9800, &accent);
+    }
+    VBK_REG = 0;
+    if (!dialog_is_reward) {
+        gotoxy(1, 2); text_write("------------------");
+    }
     if (dialog_is_stage) {
         if (dialog_topic < 3)
             dialog_lines("THE WOUND DEEPENS", "STONE ROOT EMBER",
@@ -220,6 +282,9 @@ static void dialog_paint(void) {
         if (dialog_page) wayfarer_advice();
         else wayfarer_lore();
     } else resident_copy();
+    if (dialog_is_reward && dialog_kind == PICKUP_WAYGEAR && dialog_topic < 3) {
+        dialog_line(11, "^2WILL LIMIT RAISED");
+    }
     gotoxy(1, 13);
     if (dialog_is_stage)
         text_write("A/B SKIP  AUTO 5S");
@@ -228,11 +293,9 @@ static void dialog_paint(void) {
     else if (dialog_kind == PICKUP_MERCHANT && dialog_page)
         text_write("TOUCH ICON TO BUY");
     else text_write(dialog_page ? "THE ROAD REMEMBERS." : "... ... ...");
-    gotoxy(1, 16);
-    text_write(dialog_is_stage ? "A/B/START ENTER"
-        : dialog_is_reward ? "A/B CONTINUE"
-        : dialog_page ? "A/B RETURN" : "A NEXT   B RETURN");
-    palette_bg_fill_attrs(0);
+    dialog_line(16, dialog_is_stage ? "^3A/B/START^0 ENTER"
+        : dialog_is_reward ? "^3A/B^0 CONTINUE"
+        : dialog_page ? "^3A/B^0 RETURN" : "^3A^0 NEXT   ^3B^0 RETURN");
     SHOW_BKG;
     DISPLAY_ON;
     if (dialog_kind == PICKUP_MERCHANT && dialog_page) SHOW_SPRITES;
@@ -248,7 +311,8 @@ void dialog_prepare(u8 kind, u8 topic) BANKED {
 
 void dialog_prepare_reward(u8 kind, u8 topic) BANKED {
     dialog_kind = kind;
-    dialog_topic = topic < 13 ? topic : 12;
+    dialog_topic = kind == PICKUP_FARFOLD_RELIC
+        ? (topic < N_ITEMS ? topic : 12) : (topic < 13 ? topic : 12);
     dialog_page = 0;
     dialog_is_reward = 1;
     dialog_is_stage = 0;
@@ -275,6 +339,7 @@ void dialog_enter(void) {
     for (i = 0; i < 40; ++i) move_sprite(i, 0, 0);
     palette_bg_load(0, dialog_palette);
     palette_bg_load(7, dialog_palette);
+    for (i = 0; i < 4; ++i) palette_bg_load((u8)(i + 1), dialog_accents[i]);
     font_init();
     { font_t f = font_load(font_min); font_set(f); }
     dialog_paint();

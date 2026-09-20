@@ -72,7 +72,7 @@ pub const ORC: Enemy = Enemy {
     name:       "Orc",
     sprite_set: SPRITE_ORC,
     palette:    OBJ_PAL_GREEN,
-    stats: EnemyStats { hp: 16, damage: 2, speed: 48, score: 40, weakness: 0x11, poise: 3 },  // fire + poison
+    stats: EnemyStats { hp: 32, damage: 2, speed: 48, score: 40, weakness: 0x11, poise: 3 },  // fire + poison
     ai_script:  AiScriptId::Charger { telegraph_ticks: 30, charge_speed: 96 },
     drop_table: DROP_SMALL_COIN,
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
@@ -102,7 +102,7 @@ pub const BOMBER: Enemy = Enemy {
     palette:    OBJ_PAL_RED,
     // Chunky slow walker. The real threat is the death detonation —
     // combat.c fires a 4-way revenge burst when it dies.
-    stats: EnemyStats { hp: 10, damage: 2, speed: 40, score: 35, weakness: 0x02, poise: 2 },
+    stats: EnemyStats { hp: 24, damage: 2, speed: 40, score: 35, weakness: 0x02, poise: 2 },
     ai_script:  AiScriptId::Walker,
     drop_table: DROP_SMALL_COIN,
     biomes:     &[BIOME_CRYSTAL_CAVERNS],
@@ -130,7 +130,7 @@ pub const WARLOCK: Enemy = Enemy {
     palette:    OBJ_PAL_GREEN,
     // Deep-stage caster: slow drift, three-way fanned volleys. The first
     // enemy to exercise the content ShotPattern beyond Single.
-    stats: EnemyStats { hp: 12, damage: 2, speed: 32, score: 55, weakness: 0x04, poise: 1 },
+    stats: EnemyStats { hp: 28, damage: 2, speed: 32, score: 55, weakness: 0x04, poise: 1 },
     ai_script:  AiScriptId::Shooter {
         fire_rate: 100,
         projectile: ProjectileKind::Bullet,
@@ -209,7 +209,7 @@ pub const CINDER_MAW: Enemy = Enemy {
     palette: OBJ_PAL_CRAWLER,
     // Stage-2 specialist: a durable, slow caster whose three-way volleys
     // turn Ember Depths into a routing problem without adding contact speed.
-    stats: EnemyStats { hp: 16, damage: 2, speed: 24, score: 50, weakness: 0x02, poise: 2 },
+    stats: EnemyStats { hp: 32, damage: 2, speed: 24, score: 50, weakness: 0x02, poise: 2 },
     ai_script: AiScriptId::Shooter {
         fire_rate: 105,
         projectile: ProjectileKind::Bullet,
@@ -468,7 +468,7 @@ pub const FACET_RAM: Enemy = Enemy {
     // A middle-sized patrol creature, armored everywhere except the bright
     // rear facet. Its surprising backward shot is intentionally much more
     // dangerous than contact; runtime owns facing, armor, and the shot tell.
-    stats: EnemyStats { hp: 18, damage: 2, speed: 56, score: 72, weakness: 0, poise: 3 },
+    stats: EnemyStats { hp: 30, damage: 2, speed: 56, score: 72, weakness: 0, poise: 3 },
     ai_script: AiScriptId::Walker,
     drop_table: DROP_SMALL_COIN,
     biomes: &[BIOME_CRYSTAL_CAVERNS],

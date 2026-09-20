@@ -184,11 +184,16 @@ void room_draw_tilemap(void) BANKED {
     else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
     else if (room_encounter_kind == ENCOUNTER_HUNT)
-        room_show_directive_label(15); // full DREAD REAPER name card
+        room_show_directive_label(run_state.bosses_beaten % 3 == 0 ? 15
+            : run_state.bosses_beaten % 3 == 1 ? 18 : 19);
     else if (room_return_echo_kind == 4)
         room_show_directive_label(12); // champion-scale ELITE miniboss
     else if (room_return_echo_kind)
         room_show_directive_label(14); // unmistakable RIFT return card
+    else if (!run_state.world_mode
+        && run_state_dungeon_local() == run_state_dungeon_cache_cell()
+        && !(run_state.dungeon_phase & RUN_FARFOLD_CACHE_BIT))
+        room_show_directive_label(20);
     else if (room_encounter_kind != ENCOUNTER_SKIRMISH)
         room_show_directive_label((u8)(9 + room_encounter_kind));
     else if (procgen_current_room_is_large)
