@@ -193,12 +193,12 @@ static void inventory_help_enter(void) {
 
     gotoxy(1, 9); text_write("A+B OATH: 2 MP");
     gotoxy(1, 10); text_write("FULL MP: CONVERGE");
-    gotoxy(1, 11); text_write("RELEASE A FOR 3S");
-    gotoxy(1, 12); text_write("NEXT A: WILL MAX");
+    gotoxy(1, 11); text_write("NO A: SPD FILLS W");
+    gotoxy(1, 12); text_write("NEXT A SPENDS WILL");
 
     gotoxy(1, 14); text_write("WEAPONS: ORB + A");
     gotoxy(1, 15); text_write("PACK: SEL FOR GEAR");
-    gotoxy(1, 16); text_write("UP/DN + A EQUIPS");
+    gotoxy(1, 16); text_write("OWNED GEAR AUTO ON");
     gotoxy(1, 17); text_write("SEL PACK B RETURN");
 
     palette_bg_fill_attrs(0);
@@ -277,11 +277,8 @@ void inventory_enter(void) {
     gotoxy(1, 7); text_write("LCK "); text_u16((u16)(STATUS_PLAYER_INVERTED()
         ? status_player_effective_stat(QSTATUS_STAT_LCK) : player.lck));
     gotoxy(9, 7); text_u16((u16)player.coins);
-    gotoxy(13, 7); text_write("W[");
-    for (i = 0; i < 3; ++i)
-        putchar((u16)player.will_charge * 3u
-            >= (u16)(i + 1) * WILL_MAX ? '#' : '-');
-    putchar(']');
+    gotoxy(13, 7); text_write("W ");
+    text_u16(player.will_level); putchar('/'); text_u16(WILL_LEVEL_CAP);
 
     gotoxy(1, 9); text_write("A");
     gotoxy(5, 9); write_field(item_name_by_index(player.starter_weapon), 13);

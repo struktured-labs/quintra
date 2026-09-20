@@ -37,22 +37,20 @@ typedef struct {
     u8     move_acc;                     // sub-pixel movement accumulator (5 = 1px)
     u8     inventory[INVENTORY_SLOTS];   // item id LSBs; 0xFF = empty
     u8     score_lo, score_hi;           // 16-bit score
-    // FFA-style restraint meter. It fills only while A is released; the
-    // next primary strike at full charge becomes that weapon's MAX art.
+    // Progress toward the next Will tier while A is released.
     // Kept last so every established emulator/debug offset remains stable.
     u8     will_charge;
     // Stage-earned active verb selected in the Pack. Appended after Will so
     // every historical field and the 43-byte Will-era suspend ABI stay put.
     u8     active_oath;
-    // Three permanent traversal implements can be carried, but only one
-    // resonates at a time. Worldglass occupies a fourth ownership bit and is
-    // an always-available Riftwild verb, never this equipment slot.
+    // Ownership enables every traversal ability simultaneously.
     u8     waygear_owned;     // WAYGEAR_BIT(*)
-    u8     waygear_equipped;  // WAYGEAR_* or 0xFF
+    u8     waygear_equipped;  // legacy slot retained for save ABI / menu focus
     // Long-form run afflictions. Appended to preserve every historical
     // player/debug offset and keep old suspend records forward-migratable.
     u8     curse_flags;
     u8     curse_rooms;
+    u8     will_level;    // banked charges; appended for suspend compatibility
 } player_state_t;
 
 extern player_state_t player;

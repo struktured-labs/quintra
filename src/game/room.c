@@ -45,6 +45,7 @@ BANKREF(room_enter)
 
 static u8 room_is_outdoor(void);
 void room_load_stage_obj_identity(void) BANKED;
+void room_load_return_identity(void) BANKED;
 void play_stage_music(void) BANKED;
 void play_boss_music(void) BANKED;
 void room_prepare_stage_arrival(u8 stage) BANKED;
@@ -309,46 +310,7 @@ static u8 room_try_begin_dialog(u8 pressed) {
 // callout, while all other dungeon rooms may use the Dread Bell silhouette.
 // Both full screen entry and in-place door/portal regeneration must come
 // through this helper; otherwise a prior room's tile data can leak forward.
-static void room_load_dynamic_fx_identity(void) {
-    // In-place dungeon seams do not re-run room_enter's base BG upload.
-    // Repaint the three semantic scenery slots here so crossing a stage
-    // boundary changes roots/ice/idols immediately, before the tilemap draw.
-    if (!room_is_outdoor()) tiles_load_stage_scenery(room_stage());
-    tiles_load_fx_sprites();
-    // Slot 79 is phase-safe across stages, but its owner must not be tied to
-    // the shop test below: that test is about the sale-callout slots, while
-    // a fresh room-entry can still have its shop cache in flight.  Choose the
-    // stage specialist first, then let a town resident reclaim its tile in
-    // the town-specific loader.
-    if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-        if (room_stage() == 0) tiles_load_shard_crab_sprite();
-        else if (room_stage() == 1) tiles_load_vine_coil_sprite();
-        else if (room_stage() == 2) {
-            tiles_load_cinder_kite_sprite();
-            tiles_load_cinder_maw_medium_sprite();
-        }
-        else if (room_stage() == 3) tiles_load_frost_lancer_sprite();
-        else if (room_stage() == 4) tiles_load_bog_toad_sprite();
-        else if (room_stage() == 5) tiles_load_bramble_sprite();
-        else if (room_stage() == 6) tiles_load_sunwheel_sprite();
-        else if (room_stage() == 7) tiles_load_dusk_midge_sprite();
-        else tiles_load_void_halo_sprite();
-    }
-    // Chartwright occupies this slot only in towns. Dungeon rooms reclaim it
-    // for Astral Spear; no gameplay population can require both at once.
-    if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) tiles_load_spear_sprite();
-    // room_state_has_shop_wares() already covers towns as well as dungeon
-    // shops, so it is the single exclusion for this combat-only sprite set.
-    if (!run_state.world_mode && !room_state_has_shop_wares()) {
-        tiles_load_dread_bell_sprite();
-        tiles_load_rift_warden_sprite();
-        tiles_load_prism_skitter_sprite();
-        tiles_load_rift_cantor_sprite();
-    }
-    // One reconciliation point covers full entry, START resume, cardinal
-    // doors, rift portals, and synthetic deep-stage checkpoints.
-    room_refresh_player_appearance(0);
-}
+void room_load_dynamic_fx_identity(void) BANKED;
 
 static void room_load_town_resident_identity(void) {
     if (!RUN_ROOM_IS_TOWN(run_state.room_counter)) return;
@@ -1632,16 +1594,13 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         u8 chord = ((keys & (J_A | J_B)) == (J_A | J_B)
             && (pressed & (J_A | J_B))) ? 1 : 0;
         g_shot_element = class_element[player.class_id < 5 ? player.class_id : 0];
-        // Primary restraint remains legible as "release A". A successful B
-        // separately pays its quarter-meter toll, so its input frame need not
-        // add a second hidden penalty.
         // A real shield is safety, not restraint. Pausing Will during its
         // protected frames prevents Stoneskin/Undertow from purchasing a
         // nearly risk-free MAX while ordinary offensive signatures can still
         // be woven into an exposed setup.
-        if (!(keys & J_A) && player.shield_timer == 0
-            && player.will_charge < WILL_MAX)
-            player.will_charge++;
+        if (!(keys & J_A) && player.shield_timer == 0 && !muted) {
+            will_charge_tick();
+        }
         // A+B at full MP: SPIRIT CONVERGENCE. This is deliberately shared
         // across all five vessels—the common oath underneath their different
         // kits. Full-meter requirement prevents accidental chord activation.
@@ -1691,17 +1650,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
         }
 
-        // At full Will, the next unchorded A edge becomes this weapon's MAX
-        // art. Dialogue wins the same contextual edge, so talking can never
-        // spend a three-second charge. Ordinary shots below reset the meter.
+        // Talking wins over spending a banked Will attack.
         if ((pressed & J_A) && !(keys & J_B)) {
             u8 dir = room_input_dir8(keys, player.facing);
             if (room_try_begin_dialog(pressed)) return SCREEN_DIALOG;
-            if (!muted && player.will_charge == WILL_MAX) {
+            if (!muted && player.will_level) {
                 max_fired = will_fire_max(player.starter_weapon, dir,
                     (u8)(w->p1 + effective_atk));
                 if (max_fired) {
                     player.will_charge = 0;
+                    player.will_level = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
                     if (wolfkin_melee) {
                         dash_timer = 9;
@@ -2073,7 +2031,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             // and valid regardless of the destination's authored edges.
             run_state.entered_from = DIR_NONE;
             curse_advance_room();
-            sfx_play(SFX_DOOR);
+            sfx_play(SFX_PORTAL);
             // Select before the banked generator. On hardware/SDCC the
             // post-bcall path could skip the later selector, leaving every
             // Riftwild dungeon entrance on stage 0 music.

@@ -272,6 +272,11 @@ void tiles_draw_area_label(u8 kind) BANKED {
         BGT_AREA_H, BGT_AREA_O, BGT_AREA_L,
         BGT_AREA_L, BGT_AREA_O, BGT_AREA_W
     };
+    static const u8 weaver[6] = { BGT_AREA_W, BGT_AREA_E, BGT_AREA_A,
+        BGT_AREA_V, BGT_AREA_E, BGT_AREA_R };
+    static const u8 maw[3] = { BGT_AREA_M, BGT_AREA_A, BGT_AREA_W };
+    static const u8 warded[6] = { BGT_AREA_W, BGT_AREA_A, BGT_AREA_R,
+        BGT_AREA_D, BGT_AREA_E, BGT_AREA_D };
     static const u8 attrs[8] = {
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR,
         BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR, BGPAL_DOOR
@@ -294,6 +299,9 @@ void tiles_draw_area_label(u8 kind) BANKED {
     else if (kind == 15) { letters = reaper; x = 7; width = 6; }
     else if (kind == 16) { letters = warden; x = 7; width = 6; }
     else if (kind == 17) { letters = hollow; x = 7; width = 6; }
+    else if (kind == 18) { letters = weaver; x = 7; width = 6; }
+    else if (kind == 19) { letters = maw; x = 9; width = 3; }
+    else if (kind == 20) { letters = warded; x = 7; width = 6; }
     else { letters = riftwild; x = 8; width = 4; }
     // A Riftwild field may have crossed several continuous seams. Project the
     // display-only sign through the same logical-to-physical origin instead

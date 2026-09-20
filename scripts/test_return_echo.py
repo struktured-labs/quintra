@@ -70,9 +70,9 @@ def variant_contract(wanted):
                 f"return miniboss needs exactly one live Elite: {elites}"
             elite = elites[0]
             assert pb.memory[elite + 17] == 4, \
-                "Stage 1 return miniboss is not a champion-scale Orc"
+                "Stage 1 return miniboss lost its Orc attack identity"
             assert pb.memory[elite + 12] == 56 and pb.memory[elite + 25] == 0xEE, \
-                ("return miniboss lost its 16x16 bruiser silhouette/body: "
+                ("return miniboss lost its native sprite reference/collision body: "
                  f"entity={list(pb.memory[elite:elite + 28])}")
             assert pb.memory[elite + 14] >= 70 and pb.memory[elite + 26] >= 4, \
                 "return miniboss retained ordinary Elite durability/damage"

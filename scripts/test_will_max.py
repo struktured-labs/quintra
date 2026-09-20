@@ -2,16 +2,18 @@
 """Live-ROM contract: restraint charges Will and every A weapon owns a MAX."""
 
 import re
+import os
 from pathlib import Path
 
 from pyboy import PyBoy
 
 
 ROOT = Path(__file__).resolve().parent.parent
-ROM = ROOT / "rom/working/quintra.gbc"
+ROM = Path(os.environ.get('QUINTRA_TEST_ROM', ROOT / "rom/working/quintra.gbc"))
 NOI = ROM.with_suffix(".noi").read_text()
 WILL_OFFSET = 42
-WILL_MAX = 180
+LEVEL_OFFSET = 48
+WILL_MAX = 90
 ENTITY_SIZE = 28
 
 
@@ -95,9 +97,11 @@ def main():
 
         # Real idle room frames—not a memory fill—must charge and clamp Will.
         pb.memory[PLAYER + WILL_OFFSET] = 0
-        pb.tick(WILL_MAX + 12)
+        pb.memory[PLAYER + 7] = 5
+        pb.tick(WILL_MAX * 2 + 24)
         assert pb.memory[PLAYER + WILL_OFFSET] == WILL_MAX, (
             f"class {class_id} Will did not charge/clamp")
+        assert pb.memory[PLAYER + LEVEL_OFFSET] == 1
 
         # A room director may have legitimately repopulated the arena during
         # the three-second idle sample. Free those unrelated slots before the
@@ -139,7 +143,7 @@ def main():
         # An ordinary primary attack spends partial Will. This is what makes
         # restraint a combat choice instead of another automatic cooldown.
         clear_arena(pb)
-        pb.memory[PLAYER + WILL_OFFSET] = 90
+        pb.memory[PLAYER + WILL_OFFSET] = 45
         fire_right(pb)
         assert pb.memory[PLAYER + WILL_OFFSET] < 8, (
             f"class {class_id} ordinary A preserved partial Will")
@@ -157,7 +161,7 @@ def main():
         pb.memory[PLAYER + 20] = 0
         # Partial Will proves both halves of the new contract: B preserves the
         # exact value, then restraint resumes once the guard has ended.
-        pb.memory[PLAYER + WILL_OFFSET] = 120
+        pb.memory[PLAYER + WILL_OFFSET] = 60
         pb.button_press("b")
         for _ in range(12):
             pb.tick()
@@ -166,7 +170,7 @@ def main():
         after_b = pb.memory[PLAYER + WILL_OFFSET]
         # The input frame may earn its ordinary one idle point before the
         # signature raises the guard; it must never erase the partial meter.
-        assert 120 <= after_b <= 121, (
+        assert 60 <= after_b <= 61, (
             f"{label} spent independent Will meter: {after_b}")
         assert pb.memory[PLAYER + 20] > shield_floor, (
             f"{label} did not raise its authored shield")
@@ -187,7 +191,8 @@ def main():
     # Will owns a purple spirit palette, distinct from red hearts/boss HP and
     # blue MP. The complete meter brightens toward lavender for MAX readiness.
     pb = boot(0)
-    pb.memory[PLAYER + WILL_OFFSET] = 90
+    pb.memory[PLAYER + WILL_OFFSET] = 45
+    pb.memory[PLAYER + LEVEL_OFFSET] = 0
     pb.tick(16)
     pb.memory[0xFF4F] = 1
     assert tuple(pb.memory[0x9C00 + x] for x in range(12, 16)) == (5,) * 4, \
@@ -197,6 +202,7 @@ def main():
     assert (192, 64, 248, 255) in colors, \
         f"partial Will bar is not purple: {colors}"
     pb.memory[PLAYER + WILL_OFFSET] = WILL_MAX
+    pb.memory[PLAYER + LEVEL_OFFSET] = 1
     pb.tick(16)
     colors = set(pb.screen.image.crop((96, 136, 128, 144)).getdata())
     assert (248, 184, 248, 255) in colors, \
@@ -209,6 +215,7 @@ def main():
         clear_arena(pb)
         pb.memory[PLAYER + 21] = weapon
         pb.memory[PLAYER + WILL_OFFSET] = WILL_MAX
+        pb.memory[PLAYER + LEVEL_OFFSET] = 1
         fire_right(pb)
         shots = player_shots(pb)
         assert len(shots) >= minimum, f"weapon {weapon} missing MAX geometry"

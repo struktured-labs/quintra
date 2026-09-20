@@ -287,6 +287,8 @@ static u8 spawn_reachable_enemy(u8 eid, u8 preferred_x, u8 preferred_y) {
 // Keeping this out of procgen_generate() is not merely tidier: that function
 // already carries the room-generation state, and SDCC's optimiser can lose
 // conditional-flow precision when the full miniboss setup lives in that scope.
+void treasure_cache_prepare(void) BANKED;
+
 static void configure_sentinel_miniboss(u8 idx, u8 stage) {
     static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
     u8 mb_pow = (stage < 9) ? stage : 8;
@@ -1779,6 +1781,7 @@ void procgen_generate_current_room(void) BANKED {
                 pickup_spawn_farfold_relic(
                     pickup_farfold_relic_for_class(roll),
                     FIX8(216), FIX8(208));
+                treasure_cache_prepare();
             }
             if (!direct_wide) clear_reach_marks_local();
         }

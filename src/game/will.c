@@ -167,6 +167,10 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     u8 shot;
     u8 d;
     u8 kind = (weapon_index < N_ITEMS) ? items[weapon_index].p2 : PROJ_BULLET;
+    u8 level = player.will_level;
+    if (!level) return 0;
+    if (level > WILL_LEVEL_CAP) level = WILL_LEVEL_CAP;
+    damage += (u8)(level - 1);
 
     // Fang Forms — Moonfang Rush. Three steel lanes travel with a brief
     // body-dash applied by room.c: broad enough to read as a slash, short
@@ -189,9 +193,9 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
         }
     // Featherbarb — Murderstorm. A five-lane returning fan.
     } else if (weapon_index == classes[2].starter_weapon) {
-        for (d = 6; d != 3; ++d) {
-            shot = max_spawn(dir8_dx[(u8)((dir + d) & 7)],
-                dir8_dy[(u8)((dir + d) & 7)],
+        for (d = 0; d < 5; ++d) {
+            shot = max_spawn(dir8_dx[(u8)((dir + d + 6) & 7)],
+                dir8_dy[(u8)((dir + d + 6) & 7)],
                 (u8)(damage + 2), PROJ_SHURIKEN);
             if (first == 0xFF) first = shot;
             if (shot != 0xFF) entities[shot].hp = 4;
@@ -264,6 +268,46 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     }
 
     if (first != 0xFF) {
+        if (level > 1) {
+            if (kind == PROJ_SPEAR || weapon_index == classes[1].starter_weapon) {
+                entities[first].hp = (u8)(entities[first].hp + level);
+                entities[first].state_timer += (u8)(level * 8);
+                for (d = 1; d < level; ++d) {
+                    i8 side;
+                    for (side = -1; side <= 1; side += 2) {
+                        shot = max_spawn(dir8_dx[dir], dir8_dy[dir],
+                            damage, PROJ_SPEAR);
+                        if (shot != 0xFF) {
+                            entities[shot].x += dir8_dy[dir] * side * d * 5;
+                            entities[shot].y -= dir8_dx[dir] * side * d * 5;
+                            entities[shot].hp = (u8)(2 + level);
+                            entities[shot].state_timer = (u8)(40 + level * 8);
+                        }
+                    }
+                }
+            } else if (kind == PROJ_SHURIKEN || kind == PROJ_BUBBLE) {
+                for (d = 3; d <= (level == 4 ? 5 : 3); d += 2) {
+                    shot = max_spawn(dir8_dx[(dir + d) & 7],
+                        dir8_dy[(dir + d) & 7], damage, kind);
+                    if (shot != 0xFF) entities[shot].hp = level;
+                }
+                if (level >= 3) {
+                    shot = max_spawn(dir8_dx[(dir + 4) & 7],
+                        dir8_dy[(dir + 4) & 7], damage, kind);
+                    if (shot != 0xFF) entities[shot].hp = level;
+                }
+            } else {
+                for (d = 2; d < level + 1 && d < 4; ++d) {
+                    max_spawn(dir8_dx[(dir + d) & 7], dir8_dy[(dir + d) & 7],
+                        damage, kind);
+                    max_spawn(dir8_dx[(dir + 8 - d) & 7], dir8_dy[(dir + 8 - d) & 7],
+                        damage, kind);
+                }
+                if (level == 4)
+                    max_spawn(dir8_dx[(dir + 4) & 7], dir8_dy[(dir + 4) & 7],
+                        damage, kind);
+            }
+        }
         room_shake(2, 12);
         sfx_play(SFX_ROAR);
         return 1;

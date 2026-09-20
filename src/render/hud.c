@@ -303,8 +303,9 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     u8 row[4];
     u8 segs, i;
     if (hud_notice_ticks || max == 0) return;
+    max = WILL_NEXT_MAX;
     {
-        u8 full = cur >= max ? 1 : 0;
+        u8 full = player.will_level >= WILL_LEVEL_CAP ? 1 : 0;
         // The normal room path redraws Will repeatedly. Avoid even the local
         // helper call once the lane already owns palette 5; this preserves
         // the dense-room frame budget while still switching immediately
@@ -316,10 +317,12 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
             will_full_palette = full;
         }
     }
-    segs = (u8)(((u16)cur * 4u) / max);
-    if (segs > 4) segs = 4;
-    for (i = 0; i < 4; ++i)
-        row[i] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
+    segs = (u8)(((u16)cur * 3u) / max);
+    if (player.will_level >= WILL_LEVEL_CAP) segs = 3;
+    if (segs > 3) segs = 3;
+    row[0] = HUD_DIGIT_0 + player.will_level;
+    for (i = 0; i < 3; ++i)
+        row[i + 1] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
     // This lane can be replaced by a shop offer immediately after the hero
     // moves. Four WINDOW tiles per normal Wolfkin frame is intentionally
     // cheap and avoids a stale cached charge bar after that context change.
@@ -346,7 +349,7 @@ void hud_notice_restore_context(void) BANKED {
     offer_ware = 0xFF;
     loot_seconds = 0xFF;
     lane_palette = 0xFF;
-    will_full_palette = player.will_charge >= WILL_MAX ? 1 : 0;
+    will_full_palette = player.will_level >= WILL_LEVEL_CAP ? 1 : 0;
     palette_bg_load(5, will_full_palette
         ? hud_palette_will_full : hud_palette_will);
     hud_redraw_depth();

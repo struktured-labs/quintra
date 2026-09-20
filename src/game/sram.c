@@ -15,6 +15,7 @@
 #include "game/run_state.h"
 #include "game/sram.h"
 #include "game/status.h"
+#include "game/will.h"
 
 #define SRAM_BASE     ((volatile u8 *)0xA000)
 #define SAVE_VERSION  1
@@ -102,6 +103,17 @@ u8 sram_load_run(void) BANKED {
     // Temporary room conditions are deliberately not suspend ABI. A loaded
     // run resumes cleanly rather than inheriting stale WRAM from the title.
     status_reset_all();
+    will_charge_fraction = 0;
+    if (saved_pl <= 48) {
+        if (player.will_charge >= 180) {
+            player.will_level = 1;
+            player.will_charge = 0;
+        } else player.will_charge >>= 1;
+    }
+    if (player.will_level > WILL_LEVEL_CAP)
+        player.will_level = WILL_LEVEL_CAP;
+    if (player.will_level >= WILL_LEVEL_CAP) player.will_charge = WILL_MAX;
+    else if (player.will_charge >= WILL_NEXT_MAX) player.will_charge = 0;
     projectile_sync_player_relics();
     return 1;
 }

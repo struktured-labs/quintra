@@ -44,6 +44,8 @@ void room_start_major_reward(u8 kind, u8 topic) BANKED {
         room_major_reward_icon = topic == ITEM_ID_BLAST_SEED
             ? SPR_ITEM_BLAST_SEED : topic == ITEM_ID_RIFT_LENS
             ? SPR_ITEM_RIFT_LENS : SPR_ITEM_MIRROR_SHARD;
+    else if (kind == PICKUP_FARFOLD_RELIC)
+        room_major_reward_icon = pickup_item_sprite(topic);
     else room_major_reward_icon = SPR_ITEM_RIFT_SIGIL;
     room_major_reward_pending = ROOM_MAJOR_REWARD_FRAMES;
     tiles_load_class_claim_sprite(class_id);

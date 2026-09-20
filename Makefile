@@ -149,6 +149,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_stage_entry_pacing.py
 	uv run --quiet --with pyboy python scripts/test_music.py
 	$(PYBOY_RUN) scripts/test_sfx_priority.py
+	$(PYBOY_RUN) scripts/test_portal_sfx.py
 	uv run --quiet --with pyboy python scripts/test_adaptive_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
@@ -159,6 +160,8 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_pickup_feedback.py
 	$(PYBOY_RUN) scripts/test_will_max.py
+	$(PYBOY_RUN) scripts/test_will_tiers.py
+	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_status_effects.py
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py
@@ -234,6 +237,8 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_bellwarden.py
 	uv run --quiet --with pyboy python scripts/test_enemy_density.py
 	$(PYBOY_RUN) scripts/test_dungeon_director.py
+	$(PYBOY_RUN) scripts/test_return_echo.py
+	$(PYBOY_RUN) scripts/test_return_miniboss.py
 	uv run --quiet --with pyboy python scripts/test_score.py
 	uv run --quiet --with pyboy python scripts/test_diagonal_dash.py
 	uv run --quiet --with pyboy python scripts/test_block_lower_edge.py
@@ -248,6 +253,8 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
 	$(PYBOY_RUN) scripts/test_corner_slide.py
+	$(PYBOY_RUN) scripts/test_waygear_layout.py
+	$(PYBOY_RUN) scripts/test_auto_waygear.py
 	$(PYBOY_RUN) scripts/test_meta_saturation.py
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py

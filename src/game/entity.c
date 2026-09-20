@@ -3,6 +3,7 @@
 
 #include "core/types.h"
 #include "game/companion.h"
+#include "game/dungeon_director.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"

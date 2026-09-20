@@ -46,6 +46,9 @@ extern u8 room_roster_secondary;
 // 0 none; 1 changed pack, 2 reinforced wave, 3 trap, 4 elite echo,
 // 5 the dungeon's named Dread Reaper hunt.
 extern u8 room_return_echo_kind;
+extern u8 room_return_guard_ticks;
+void dungeon_return_configure_target(u8 idx, u8 stage) BANKED;
+u8 dungeon_return_hit_damage(u8 damage) BANKED;
 
 // Immediate cardinal route from the current dungeon cell toward the next
 // progression fixture. DIR_NONE means the player is already at that fixture

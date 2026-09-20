@@ -7,6 +7,30 @@
 #include "game/player.h"
 #include "game/will.h"
 #include "render/tiles.h"
+#include "audio/sfx.h"
+#include "game/status.h"
+
+u8 will_charge_fraction;
+
+void will_charge_tick(void) BANKED {
+    u8 speed;
+    if (player.will_level >= WILL_LEVEL_CAP) return;
+    speed = STATUS_PLAYER_INVERTED()
+        ? status_player_effective_stat(QSTATUS_STAT_SPD) : player.spd;
+    if (speed > 10) speed = 10;
+    will_charge_fraction += (u8)(15 + speed);
+    if (will_charge_fraction < 40) return;
+    will_charge_fraction -= 40;
+    if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
+}
+
+void will_bank_charge(void) BANKED {
+    if (player.will_level >= WILL_LEVEL_CAP) return;
+    player.will_level++;
+    player.will_charge = player.will_level >= WILL_LEVEL_CAP ? WILL_MAX : 0;
+    sfx_play(player.will_level >= WILL_LEVEL_CAP ? SFX_PUZZLE : SFX_COIN);
+    fx_spawn(SPR_FX_IMPACT, 6, (i16)player.x + 4, (i16)player.y - 4, 10);
+}
 
 void will_begin_signature(void) BANKED {
     u8 cd;

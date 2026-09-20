@@ -22,6 +22,7 @@
 #define PEND_SIGIL_NOTE4 13
 #define PEND_SIGIL_NOTE5 14
 #define PEND_SIGIL_NOTE6 15
+#define PEND_PORTAL_ARRIVE 16
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -38,6 +39,7 @@ static u8 melody_lock_priority;
 static u8 melody_priority_for(u8 id) {
     if (id == SFX_PUZZLE) return MELODY_PRIORITY_SECRET;
     if (id == SFX_SIGIL) return MELODY_PRIORITY_MAJOR;
+    if (id == SFX_PORTAL) return MELODY_PRIORITY_MAJOR;
     if (id == SFX_CLEAR) return MELODY_PRIORITY_CLEAR;
     return MELODY_PRIORITY_NONE;
 }
@@ -113,6 +115,14 @@ void sfx_play(u8 id) {
         case SFX_DOOR:
             // 280Hz sweep UP (2,2), duty 50%, env (10,down,4)
             ch1(0x22, 0x80, 0xA4, 1580);
+            break;
+        case SFX_PORTAL:
+            ch1(0x2B, 0x80, 0xB2, 1900);
+            ch4(0x37, 0x63);
+            pend_kind = PEND_PORTAL_ARRIVE;
+            pend_timer = 8;
+            sfx_claim_channels(24, 12);
+            melody_lock(MELODY_PRIORITY_MAJOR, 24);
             break;
         case SFX_ROAR:
             // CH1 duty 75%, 100Hz, slow sweep down (7,1), env (15,down,6)
@@ -222,6 +232,9 @@ void sfx_tick(void) {
     if (pend_kind == PEND_NONE) return;
     if (--pend_timer) return;
     switch (pend_kind) {
+        case PEND_PORTAL_ARRIVE:
+            ch1(0x26, 0x40, 0xA2, 1720);
+            break;
         case PEND_COIN_NOTE2:
             NR13_REG = (u8)(1949 & 0xFF);
             NR14_REG = (u8)(0x80 | (1949 >> 8));

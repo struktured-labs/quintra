@@ -34,6 +34,8 @@ void player_clear_fields(void) BANKED {
     for (i = 0; i < INVENTORY_SLOTS; ++i) player.inventory[i] = 0xFF;
     player.score_lo = player.score_hi = 0;
     player.will_charge = 0;
+    player.will_level = 0;
+    will_charge_fraction = 0;
     will_corvin_mark_slot = 0xFF;
     will_corvin_mark_ticks = 0;
     will_howl_giant_hits = 0;

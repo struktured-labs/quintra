@@ -9,6 +9,8 @@
 #include "game/player.h"
 #include "game/projectile.h"
 
+void enemy_pattern_emit(entity_t *e, u8 direction, u8 palette) BANKED;
+
 static u8 weak_aim_dir(i16 cx, i16 cy) {
     i8 sx = ((i16)player.x > cx) ? 1 : ((i16)player.x < cx) ? -1 : 0;
     i8 sy = ((i16)player.y > cy) ? 1 : ((i16)player.y < cy) ? -1 : 0;
@@ -101,13 +103,13 @@ void blue_crawler_pattern_tick(entity_t *e, u8 idx) BANKED {
         return;
     }
     if (e->ai_data[4] == 2) {
-        // Fuzzy fan: three slow adjacent lanes that linger longer than dart.
-        if (clock < 175) return;
-        e->ai_data[3] = 0;
-        d = weak_aim_dir(cx, cy);
-        crawler_shot(cx, cy, (u8)((d + 7) & 7), 1, e->damage, 6);
-        crawler_shot(cx, cy, d, 1, e->damage, 6);
-        crawler_shot(cx, cy, (u8)((d + 1) & 7), 1, e->damage, 6);
+        if (clock == 145) {
+            e->ai_data[5] = weak_aim_dir(cx, cy);
+            e->ai_data[7] = 12;
+        }
+        if (clock >= 161 && clock <= 193 && ((clock - 161) & 7) == 0)
+            enemy_pattern_emit(e, (u8)(e->ai_data[5] + 6 + ((clock - 161) >> 3)), 6);
+        if (clock >= 194) e->ai_data[3] = 0;
         return;
     }
 

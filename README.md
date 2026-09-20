@@ -84,8 +84,8 @@ the cartridge's actual verbs: A fires the primary weapon; A beside a red
 weapon orb swaps it; B is the champion's free rechargeable signature; A+B
 spends 2 MP on the selected Oath Art; full MP turns that chord into Spirit
 Convergence; and releasing A for three seconds primes the next A attack's
-Will MAX. Waygear explicitly marks its single active slot and gives the exact
-input used to equip it.
+Will attack. Owned Waygear is always active; its Pack page explains each
+terrain ability and Worldglass's Select+B action.
 
 Normal difficulty now asks the player to preserve health across rooms. An
 ordinary pack alpha pays five coins while the champion remains above half
@@ -468,8 +468,8 @@ own anchors instead of erasing that regional memory.
 Five hero natures now solve different landscape gates: Sauran moves boulders,
 Picsean crosses water, Corvin traverses chasms, Wolfkin parts thorns, and
 Vespine rides vents. A permanent Glove, Raft, or Hook can substitute for the
-first three powers, but only one resonates at a time through START's Waygear
-page. Optional groves place their rewards after entity initialization and use
+first three powers, with all owned implements active together. The raft crosses
+ordinary rivers and lakes; the hook also crosses natural holes. Optional groves place their rewards after entity initialization and use
 the same reachable-footprint rules as every other major treasure.
 
 Residents and dungeon wayfarers are champion-scale 16×16 metasprites with
@@ -797,14 +797,17 @@ its useful reach and invulnerability without making it a faster exploit.
 
 The cartridge now has a complete seven-part systemic layer:
 
-1. **Will / MAX attacks.** Not attacking charges a 180-frame Will meter.
+1. **Will / MAX attacks.** Releasing A banks up to four unlocked Will tiers.
    Its HUD lane is spirit-purple rather than health red and blooms pale
    lavender when MAX is ready.
-   Pressing A at full Will invokes a distinct MAX form for every champion's
+   Pressing A with any banked tier invokes a distinct MAX form for every champion's
    primary weapon and for both procedural melee weapons; an ordinary attack
-   spends partial charge. A successful signature B spends 45 Will, so an
-   alternate action can support a setup without preserving an immediately
-   ready MAX. Will pauses while Stoneskin or Undertow is physically raised,
+   spends partial charge. Each traversal Waygear discovery raises the tier cap,
+   starting at one. At SPD 5, tiers take another 3/4/5/6 seconds; higher SPD
+   improves charge rate up to +25%. The HUD shows stored tier and next-tier
+   progress; the Pack shows stored/cap. B preserves Will, and A+B retains MP
+   spells. See [Will tiers](docs/will-tiers.md) for details.
+   Will pauses while Stoneskin or Undertow is physically raised,
    so neither shield can charge a protected MAX. Picsean's B remains the
    directional, defensive Undertow; her Moon Tide MAX is instead a widening
    five-lane ice breaker with no ward or invulnerability. Corvin's Raven Mark
@@ -1804,9 +1807,8 @@ vocabulary, reciprocal thresholds, and emits a native-resolution visual atlas.
 thorns, Sauran lifts boulders, Corvin crosses chasms, Picsean swims deep water,
 and Vespine enters hive vents. The Titan Glove, Tide Raft, and Rift Hook are
 run-permanent substitutes claimed from the three Riftwild Wardens. All three can be
-carried, but only one resonates at a time from START → SELECT, so route choice
-and inventory economy matter without ever making the selected hero unable to
-finish the main path.
+carried and work automatically together. START → SELECT shows their abilities;
+it does not require equipping or trading away previously earned traversal.
 
 **Procgen variety is now a measured cartridge contract.** A 512-seed Rust
 corpus produces 393 distinct gameplay silhouettes after decorative floor

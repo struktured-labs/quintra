@@ -32,7 +32,7 @@ static const u8 route_y[16] = {
 static void serpent_chase_tick(entity_t *e) {
     i16 ex, ey;
     i8 sx, sy;
-    if (++e->state_timer < 3) return;
+    if (++e->state_timer < 2) return;
     e->state_timer = 0;
     ex = FIX8_TO_INT(e->x); ey = FIX8_TO_INT(e->y);
     sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
@@ -66,8 +66,7 @@ void serpent_feed_tick(entity_t *e) BANKED {
         fx_spawn(tile, 2, route_x[route], route_y[route], 12);
     }
     e->vx = (i8)((u8)e->vx + 1);
-    if (++e->state_timer < 1) return;
-    e->state_timer = 0;
+    e->state_timer ^= 1;
     dx = (i16)route_x[route] - (FIX8_TO_INT(e->x) + 12);
     dy = (i16)route_y[route] - (FIX8_TO_INT(e->y) + 12);
     ax = dx < 0 ? -dx : dx; ay = dy < 0 ? -dy : dy;
@@ -85,8 +84,13 @@ void serpent_feed_tick(entity_t *e) BANKED {
     // Waypoints share one coordinate with their predecessor: move only that
     // cardinal leg, producing the hard turns of Snake rather than diagonal
     // chaser interpolation.
-    if (ax) enemy_try_step(e, sx, 0);
-    else if (ay) enemy_try_step(e, 0, sy);
+    if (ax) {
+        enemy_try_step(e, sx, 0);
+        if (ax > 1 && e->state_timer) enemy_try_step(e, sx, 0);
+    } else if (ay) {
+        enemy_try_step(e, 0, sy);
+        if (ay > 1 && e->state_timer) enemy_try_step(e, 0, sy);
+    }
 }
 
 void serpent_motion_tick(entity_t *e) BANKED {
@@ -121,12 +125,11 @@ void serpent_motion_tick(entity_t *e) BANKED {
             hud_redraw_hp();
             sfx_play(SFX_HURT);
         } else sfx_play(SFX_CLEAR);
-        e->state = 2; e->vx = 5; e->state_timer = 0;
+        e->state = 2; e->vx = 60; e->state_timer = 0;
         return;
     }
     if (e->state == 2) {
-        // The head coils inward while one real rear segment retracts every
-        // five beats. All intermediate lengths are visible: 16,15,...,2.
+        // Recovery changes the route, never the length already earned.
         if (++e->state_timer >= 2) {
             ex = FIX8_TO_INT(e->x); ey = FIX8_TO_INT(e->y);
             e->state_timer = 0;
@@ -134,15 +137,9 @@ void serpent_motion_tick(entity_t *e) BANKED {
             if (ey != 48) enemy_try_step(e, 0, ey < 48 ? 1 : -1);
         }
         if (--e->vx) return;
-        if (serpent_tail_visible > 2) {
-            serpent_tail_visible--;
-            e->ai_data[7] = 3;
-            e->vx = 5;
-        } else {
-            e->ai_data[4] = 0;
-            e->state = 0; e->vx = e->vy = 0;
-            sfx_play(SFX_ROAR);
-        }
+        e->ai_data[4] = 0;
+        e->state = 0; e->vx = e->vy = 0;
+        sfx_play(SFX_ROAR);
         return;
     }
     serpent_feed_tick(e);

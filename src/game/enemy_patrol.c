@@ -21,6 +21,7 @@
 // Preserve the one projectile slot these cold rejection transactions retire
 // in WRAM before spawning feedback, then consume that exact body afterward.
 static u8 special_projectile_idx;
+u8 enemy_return_variant(entity_t *e) BANKED;
 
 // These specialist transactions always consume a projectile, never an enemy.
 // Retire that slot locally: calling the HOME entity helper after nested FX and
@@ -56,12 +57,7 @@ void enemy_patrol_update(entity_t *e, u8 enemy_content_id) BANKED {
 
 void stage_reaper_configure_encounter(u8 idx, u8 stage) BANKED {
     if (idx >= MAX_ENTITIES) return;
-    // Eighty opening HP survives a complete build's burst and grows by five
-    // per dungeon. The mortal scythe remains the real threat, so this is one
-    // memorable pattern fight rather than an arbitrary contact-damage wall.
-    entities[idx].hp = (u8)(entities[idx].hp + 50u + (u8)(stage * 5u));
-    if (RUN_IS_EASY())
-        entities[idx].hp = (u8)((entities[idx].hp + 1) >> 1);
+    dungeon_return_configure_target(idx, stage);
     entities[idx].flags |= EF_ELITE;
     entities[idx].palette = 0x06;
     entities[idx].damage++;
@@ -278,6 +274,7 @@ void stage_reaper_update(entity_t *e) BANKED {
                 FIX8_TO_INT(e->y) + 4, 12);
         return;
     }
+    if (enemy_return_variant(e)) return;
     if (phase == 0) {
         if (++e->ai_data[1] >= 3) {
             i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
@@ -349,7 +346,7 @@ void stage_reaper_update(entity_t *e) BANKED {
                     entities[wing].state_timer = 110;
                 }
             }
-            e->palette = enemies[ENEMY_STAGE_REAPER].palette;
+            e->palette = (e->flags & EF_ELITE) ? 6 : enemies[ENEMY_STAGE_REAPER].palette;
             e->ai_data[2] = 2;
             e->ai_data[3] = 60;
         }

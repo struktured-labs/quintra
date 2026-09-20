@@ -286,6 +286,16 @@ pub fn generate_high() -> String {
     }
     let _ = writeln!(o, "{}", emit_tile_c_array(
         "sprite_fx_mortal_scythe", &tile_2bpp_bytes(&parse_grid(&grids::MORTAL_SCYTHE))));
+    let _ = writeln!(o, "#include \"game/run_state.h\"");
+    for (name, grid) in [("reaper", &grids::RETURN_REAPER),
+        ("weaver", &grids::RETURN_WEAVER), ("maw", &grids::RETURN_MAW)] {
+        let tiles = sprite_to_tiles(&parse_grid(grid), 24, 24);
+        let _ = writeln!(o, "{}", emit_metasprite_c_array(&format!("sprite_return_{name}"), &tiles));
+    }
+    let _ = writeln!(o, "void tiles_load_return_reaper(void) BANKED {{");
+    let _ = writeln!(o, "    const u8 *art = run_state.bosses_beaten % 3 == 0 ? sprite_return_reaper : run_state.bosses_beaten % 3 == 1 ? sprite_return_weaver : sprite_return_maw;");
+    let _ = writeln!(o, "    set_sprite_data(SPR_BOSS_BIG, 9, art);");
+    let _ = writeln!(o, "}}");
     let _ = writeln!(o, "void tiles_load_high_enemy_sprites(void) BANKED {{");
     let _ = writeln!(o, "    set_sprite_data(SPR_MEDIUM_FACET_RAM_H, 4, sprite_medium_facet_ram_h);");
     let _ = writeln!(o, "    set_sprite_data(SPR_MEDIUM_FACET_RAM_V, 4, sprite_medium_facet_ram_v);");

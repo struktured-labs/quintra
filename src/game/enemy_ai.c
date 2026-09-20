@@ -626,8 +626,10 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         && e->ai_data[2] == ENEMY_AUX_OOZE_FRAGMENT) {
         ooze_fragment_update(e, idx); return;
     }
-    if (id == ENEMY_BLUE_CRAWLER)
+    if (id == ENEMY_BLUE_CRAWLER) {
         blue_crawler_pattern_tick(e, idx);
+        if (e->ai_data[4] == 2 && e->ai_data[3] >= 145) return;
+    }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     if (id >= ENEMY_FACET_RAM) { enemy_patrol_update(e, id); return; }
