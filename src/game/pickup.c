@@ -216,16 +216,7 @@ u8 pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
-u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_SHOP_TAG, x, y);
-    if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_SHOP_TAG;
-        entities[idx].palette = 0x05;
-        entities[idx].hitbox = 0;       // visual context, never a pickup
-        entities[idx].state_timer = 0;  // persistent while its ware exists
-    }
-    return idx;
-}
+
 
 static u8 pickup_is_town_resident(u8 kind) {
     return (kind >= PICKUP_VILLAGER && kind <= PICKUP_APOTHECARY)
@@ -929,6 +920,8 @@ u8 pickup_check_player_collision(void) BANKED {
                         player.coins = (u16)(player.coins - price);
                         hud_redraw_coins();
                         sfx_play_reward(SFX_REWARD_PURCHASE);
+                        shop_mark_sold(entities[i].ai_data[6],
+                            entities[i].ai_data[5]);
                         switch (entities[i].ai_data[1]) {
                             case WARE_HEART:
                                 player.hp = (u8)(player.hp + 2);

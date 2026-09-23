@@ -143,5 +143,6 @@ void run_state_begin_dungeon(void) BANKED {
     run_state.dungeon_visited_xxhi = 0;
     run_state.dungeon_law = 0;
     run_state.mission_ready = 0;
+    run_state.dungeon_shop_sold = (u8)(run_state.dungeon_shop_sold & 0xF0);
     run_state_ensure_dungeon_law();
 }

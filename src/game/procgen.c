@@ -54,12 +54,20 @@ u8 boss_palette_for_stage(u8 stage) {
 
 // One source for town and dungeon merchant entities. Prices differ by venue;
 // visual and ware wiring do not.
+static u8 shop_shelf_cursor;
+static u8 shop_shelf_town;
+
 static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
-    u8 idx = pickup_spawn(PICKUP_SHOP, FIX8(px), FIX8(py));
+    u8 shelf = shop_shelf_cursor++;
+    u8 idx;
+    if (shop_shelf_sold(shop_shelf_town, shelf)) return 0xFF;
+    idx = pickup_spawn(PICKUP_SHOP, FIX8(px), FIX8(py));
     if (idx == 0xFF) return idx;
     entities[idx].ai_data[0] = PICKUP_SHOP;
     entities[idx].ai_data[1] = ware;
     entities[idx].ai_data[2] = price;
+    entities[idx].ai_data[5] = shelf;
+    entities[idx].ai_data[6] = shop_shelf_town;
     pickup_configure_shop_ware(idx, ware);
     // Keep the stock's heart/relic sprite intact and put the dedicated gold
     // sale tag above it. This answers "can I pick this up?" before the player
@@ -1275,7 +1283,17 @@ void procgen_generate_current_room(void) BANKED {
             && procgen_current_room_is_large), room_was_visited);
 
         if (is_town) {
+            {
+                u8 town_id = (run_state.room_counter == 63) ? 1 : 2;
+                if ((run_state.dungeon_shop_sold >> 4) != town_id) {
+                    run_state.town_shop_sold = 0;
+                    run_state.dungeon_shop_sold = (u8)((run_state.dungeon_shop_sold & 0x0F)
+                        | (u8)(town_id << 4));
+                }
+            }
+            shop_shelf_town = 1;
             if (run_state.world_return_screen == TOWN_ARRIVAL) {
+                shop_shelf_cursor = 0;
                 pickup_spawn_villager(FIX8(80), FIX8(64));
                 pickup_spawn_cartographer(FIX8(48), FIX8(64));
                 // A one-dungeon full chart is a tactical alternative to
@@ -1294,6 +1312,7 @@ void procgen_generate_current_room(void) BANKED {
                 // unchanged while the town reads less like a shop room.
                 pickup_spawn_bellkeeper(FIX8(24), FIX8(112));
             } else if (run_state.world_return_screen == TOWN_MARKET) {
+                shop_shelf_cursor = 1;
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
                 spawn_shop_ware(48, 72, WARE_HEART, 5);
                 // A visible, seed-stable weapon trade replaces the former
@@ -1309,6 +1328,7 @@ void procgen_generate_current_room(void) BANKED {
                 spawn_shop_ware(144, 72, WARE_SURGE, 20);
                 paint_shop_price(16, 20);
             } else {
+                shop_shelf_cursor = 5;
                 pickup_spawn_smith(FIX8(40), FIX8(48));
                 pickup_spawn_apothecary(FIX8(120), FIX8(96));
                 spawn_shop_ware(40, 80, WARE_FORGE, 30);
@@ -1524,18 +1544,17 @@ void procgen_generate_current_room(void) BANKED {
                 u8 tactical = pickup_dungeon_featured_ware(1);
                 u8 build_price = pickup_dungeon_ware_price(build);
                 u8 tactical_price = pickup_dungeon_ware_price(tactical);
+                shop_shelf_town = 0;
+                shop_shelf_cursor = 0;
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
-                spawn_shop_ware(44, 64, WARE_HEART, 10);
-                spawn_shop_ware(68, 64, WARE_ITEM, 25);
-                spawn_shop_ware(92, 64, build, build_price);
-                spawn_shop_ware(116, 64, tactical, tactical_price);
-                // Price tags painted on the floor under each ware:
-                // [coin][d][d], amber, walkable. The nearby HUD replaces the
-                // generic orb with its semantic effect icon before purchase.
-                paint_shop_price(4, 10);
-                paint_shop_price(7, 25);
-                paint_shop_price(10, build_price);
-                paint_shop_price(13, tactical_price);
+                if (spawn_shop_ware(44, 64, WARE_HEART, 10) != 0xFF)
+                    paint_shop_price(4, 10);
+                if (spawn_shop_ware(68, 64, WARE_ITEM, 25) != 0xFF)
+                    paint_shop_price(7, 25);
+                if (spawn_shop_ware(92, 64, build, build_price) != 0xFF)
+                    paint_shop_price(10, build_price);
+                if (spawn_shop_ware(116, 64, tactical, tactical_price) != 0xFF)
+                    paint_shop_price(13, tactical_price);
             }
         } else {
             // A 31x31 district spans almost three LCD areas. Penta-like

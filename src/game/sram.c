@@ -36,6 +36,7 @@
 #define PRE_RETURN_ECHO_RS_SIZE 52 // before objective-leg return ambushes
 #define PRE_VISITED_RS_SIZE 53 // return echoes before true-visit bitmaps
 #define PRE_SHADOW_RS_SIZE 57 // before Waking/Hollow Riftwild state
+#define PRE_SHOP_SOLD_RS_SIZE 58 // before persistent merchant sold shelves
 #define PRE_WILL_PL_SIZE 42 // player layout before the appended Will meter
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection
 #define PRE_WAYGEAR_PL_SIZE 44 // Pack layout before permanent traversal gear

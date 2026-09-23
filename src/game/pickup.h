@@ -112,6 +112,8 @@ u8   pickup_weapon_count(void) BANKED;
 u8   pickup_weapon_from_roll(u8 roll) BANKED;
 u8   pickup_next_weapon(u8 current) BANKED;
 void pickup_configure_shop_ware(u8 entity_index, u8 ware) BANKED;
+u8   shop_shelf_sold(u8 town, u8 shelf) BANKED;
+void shop_mark_sold(u8 town, u8 shelf) BANKED;
 u8   pickup_dungeon_featured_ware(u8 shelf) BANKED;
 u8   pickup_dungeon_ware_price(u8 ware) BANKED;
 

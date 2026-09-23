@@ -150,6 +150,11 @@ typedef struct {
     // reality; bits 1..3 persist the three Hollow-only relic claims for this
     // three-dungeon region. Appended to preserve the complete historical ABI.
     u8  riftwild_shadow;
+    // Sold merchant shelves persist until the next dungeon (low nibble) or
+    // the next town (town_shop_sold). High nibble of dungeon_shop_sold is
+    // the last town id so a later village can restock without a third byte.
+    u8  dungeon_shop_sold;
+    u8  town_shop_sold;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03

@@ -114,3 +114,24 @@ u8 pickup_dungeon_ware_price(u8 ware) BANKED {
         || ware == WARE_BIG || ware == WARE_THORN) return 35;
     return 30;
 }
+
+u8 pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED {
+    u8 idx = pickup_spawn(PICKUP_SHOP_TAG, x, y);
+    if (idx != 0xFF) {
+        entities[idx].sprite_tile = SPR_SHOP_TAG;
+        entities[idx].palette = 0x05;
+        entities[idx].hitbox = 0;
+        entities[idx].state_timer = 0;
+    }
+    return idx;
+}
+
+u8 shop_shelf_sold(u8 town, u8 shelf) BANKED {
+    u8 mask = town ? run_state.town_shop_sold : (run_state.dungeon_shop_sold & 0x0F);
+    return (mask & (u8)(1u << (shelf & 7))) ? 1 : 0;
+}
+
+void shop_mark_sold(u8 town, u8 shelf) BANKED {
+    if (town) run_state.town_shop_sold |= (u8)(1u << (shelf & 7));
+    else run_state.dungeon_shop_sold |= (u8)(1u << (shelf & 7));
+}

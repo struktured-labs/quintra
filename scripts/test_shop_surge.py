@@ -104,8 +104,17 @@ def near(pb, ware):
     pb.memory[0xFF4F] = 0
 
 
+def find_ware(pb, ware_kind):
+    for i in range(32):
+        e = EN + i * 28
+        if (pb.memory[e] == 3 and pb.memory[e + 17] == 4
+                and pb.memory[e + 18] == ware_kind):
+            return e
+    raise AssertionError(f"ware {ware_kind} missing")
+
+
 def buy(pb, ware_kind, purse=99):
-    ware = shop_wares(pb)[ware_kind]
+    ware = find_ware(pb, ware_kind)
     pb.memory[PL + 16] = purse & 0xFF
     pb.memory[PL + 17] = purse >> 8
     put16(pb, PL + 9, pb.memory[ware + 3])
@@ -116,6 +125,42 @@ def buy(pb, ware_kind, purse=99):
             break
     assert pb.memory[ware] == 0, f"ware {ware_kind} was not purchased"
     return ware
+
+
+def shop_kinds(pb):
+    kinds = set()
+    for i in range(32):
+        e = EN + i * 28
+        if pb.memory[e] == 3 and pb.memory[e + 17] == 4:
+            kinds.add(pb.memory[e + 18])
+    return kinds
+
+
+def walk_door(pb, source, target):
+    direction = dungeon_direction(source, target)
+    width = pb.memory[WORLD_W]
+    height = pb.memory[WORLD_H]
+    if width <= 160 and height <= 136:
+        for tx, ty in {
+            0: ((9, 0), (10, 0)), 1: ((19, 8), (19, 9)),
+            2: ((9, 16), (10, 16)), 3: ((0, 8), (0, 9)),
+        }[direction]:
+            pb.memory[TM + ty * 20 + tx] = 3
+    x, y = {
+        0: (72, 0),
+        1: (max(width - 16, 0), 60),
+        2: (72, max(height - 16, 0)),
+        3: (0, 60),
+    }[direction]
+    put16(pb, PL + 9, x)
+    put16(pb, PL + 11, y)
+    for _ in range(240):
+        pb.memory[PL + 15] = 120
+        pb.tick()
+        if pb.memory[RS + 1] == target and shop_kinds(pb):
+            break
+    assert pb.memory[RS + 1] == target, (
+        f"could not walk room {source} -> {target}")
 
 
 def touch_ware(pb, ware, purse=99):
@@ -176,6 +221,33 @@ def inject_lethal_crawler(pb):
         if pb.memory[enemy] == 0:
             return
     raise AssertionError("synthetic fifth kill did not resolve")
+
+
+def sold_stock_stays_gone():
+    # Buying a ware and leaving the merchant must not restock that shelf.
+    persist_pb = boot_shop(0)
+    shop = persist_pb.memory[RS + 1]
+    neighbor = shop - 1
+    before = shop_kinds(persist_pb)
+    assert 0 in before and 5 in before
+    persist_pb.memory[PL + 2] = persist_pb.memory[PL + 1] - 2
+    buy(persist_pb, 0)
+    buy(persist_pb, 5)
+    assert 0 not in shop_kinds(persist_pb)
+    assert 5 not in shop_kinds(persist_pb)
+    clear_entities(persist_pb)
+    persist_pb.memory[RS + 1] = neighbor
+    persist_pb.memory[LARGE] = 0
+    persist_pb.memory[WORLD_W], persist_pb.memory[WORLD_H] = 160, 136
+    persist_pb.memory[CAMERA_X] = persist_pb.memory[CAMERA_Y] = 0
+    persist_pb.memory[0xFF43] = persist_pb.memory[0xFF42] = 0
+    walk_door(persist_pb, neighbor, shop)
+    after = shop_kinds(persist_pb)
+    assert 0 not in after, "merchant restocked sold heart after leaving"
+    assert 5 not in after, "merchant restocked sold Surge after leaving"
+    assert after == (before - {0, 5}), (
+        f"merchant restocked or replaced sold shelves: {sorted(after)}")
+    persist_pb.stop(save=False)
 
 
 def main():
@@ -614,9 +686,12 @@ def main():
         "Boomerang did not turn and return to the champion"
     boom_pb.stop(save=False)
 
+    sold_stock_stays_gone()
+
     print("[shop-surge] PASS four-counter 6x7 procedural catalog "
           "+ atomic heal/chart/full-Pack transactions "
-          "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask/Boomerang mechanics")
+          "+ Glass/Echo/Phoenix/Spirit/Ricochet/Thorn/Drum/Flask/Boomerang mechanics "
+          "+ sold stock stays gone")
 
 
 if __name__ == "__main__":
