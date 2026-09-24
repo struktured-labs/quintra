@@ -1,0 +1,64 @@
+name: Endurance
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Long controller-agent target
+        type: choice
+        options:
+          - endurance
+          - balance
+          - picsean-endurance
+        default: endurance
+  schedule:
+    # Mondays 07:00 UTC. Not a pull-request check.
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  soak:
+    name: Controller soak
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.98.1
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: ./.github/actions/setup-native
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            Makefile
+            scripts/**/*.py
+
+      - name: Run controller soak
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          target="${{ github.event.inputs.target }}"
+          if [ -z "$target" ]; then
+            target=endurance
+          fi
+          case "$target" in
+            endurance|balance|picsean-endurance) ;;
+            *) echo "refusing target: $target" >&2; exit 2 ;;
+          esac
+          # These targets build the ROM, refresh the PyBoy curriculum,
+          # syntax-check the Lua agent, then run the long controller matrix.
+          # mgba-headless comes from the development mGBA package installed
+          # above; stable 0.10.5 does not ship that binary or --script.
+          xvfb-run -a make "$target"

@@ -1,0 +1,74 @@
+name: Setup GBDK and mGBA
+description: Install GBDK 4.5.0 and commit-pinned mGBA with Lua scripting.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v4
+      id: gbdk-cache
+      with:
+        path: ${{ runner.tool_cache }}/gbdk
+        key: gbdk-2020-4.5.0-linux64-v1
+
+    - name: Install GBDK
+      if: steps.gbdk-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl -fsSL -o "$RUNNER_TEMP/gbdk.tar.gz" https://github.com/gbdk-2020/gbdk-2020/releases/download/4.5.0/gbdk-linux64.tar.gz
+        mkdir -p "$RUNNER_TOOL_CACHE"
+        tar -xzf "$RUNNER_TEMP/gbdk.tar.gz" -C "$RUNNER_TOOL_CACHE"
+
+    - name: Install native dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          cmake ninja-build build-essential pkg-config libsdl2-dev \
+          qtbase5-dev qtmultimedia5-dev qttools5-dev libqt5opengl5-dev \
+          liblua5.4-dev libpng-dev libzip-dev zipcmp zipmerge ziptool libelf-dev libedit-dev \
+          xvfb xauth python3-pil lua5.4
+        sudo ln -sfn /usr/bin/luac5.4 /usr/local/bin/luac
+
+    - uses: actions/cache@v4
+      id: mgba-cache
+      with:
+        path: ${{ runner.tool_cache }}/mgba-pinned
+        key: mgba-source-ubuntu24-x64-1d201b22a86d31dfb3bc75145403711f6762015f-v1
+
+    - name: Build pinned mGBA
+      if: steps.mgba-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        commit=1d201b22a86d31dfb3bc75145403711f6762015f
+        src=$(mktemp -d "$RUNNER_TEMP/mgba-source.XXXXXX")
+        git -C "$src" init -q
+        git -C "$src" fetch --depth=1 https://github.com/mgba-emu/mgba.git "$commit"
+        git -C "$src" checkout --detach FETCH_HEAD
+        test "$(git -C "$src" rev-parse HEAD)" = "$commit"
+        cmake -S "$src" -B "$src/build" -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TOOL_CACHE/mgba-pinned" \
+          -DBUILD_HEADLESS=ON -DBUILD_QT=ON -DBUILD_SDL=ON \
+          -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DENABLE_SCRIPTING=ON -DUSE_LUA=5.4 \
+          -DSKIP_GIT=ON
+        cmake --build "$src/build" --parallel 2
+        cmake --install "$src/build"
+
+    - name: Export and check tools
+      shell: bash
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        set -euo pipefail
+        test -x "$RUNNER_TOOL_CACHE/gbdk/bin/lcc"
+        echo "GBDK=$RUNNER_TOOL_CACHE/gbdk" >> "$GITHUB_ENV"
+        export PATH="$RUNNER_TOOL_CACHE/mgba-pinned/bin:$PATH"
+        echo "$RUNNER_TOOL_CACHE/mgba-pinned/bin" >> "$GITHUB_PATH"
+        command -v mgba-qt
+        command -v mgba-headless
+        command -v luac
+        timeout 15 mgba-qt --help > "$RUNNER_TEMP/mgba-help.txt"
+        grep -q -- '--script' "$RUNNER_TEMP/mgba-help.txt"
+        python3 -c "from PIL import Image"
