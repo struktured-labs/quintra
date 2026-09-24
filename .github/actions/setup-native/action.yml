@@ -27,7 +27,7 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           cmake ninja-build build-essential pkg-config libsdl2-dev \
           qtbase5-dev qtmultimedia5-dev qttools5-dev libqt5opengl5-dev \
-          liblua5.4-dev libpng-dev libzip-dev libelf-dev libedit-dev \
+          liblua5.4-dev libpng-dev libzip-dev zipcmp zipmerge ziptool libelf-dev libedit-dev \
           xvfb xauth python3-pil lua5.4
         sudo ln -sfn /usr/bin/luac5.4 /usr/local/bin/luac
 
