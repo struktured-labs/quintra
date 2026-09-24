@@ -51,7 +51,8 @@ runs:
         cmake -S "$src" -B "$src/build" -G Ninja \
           -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TOOL_CACHE/mgba-pinned" \
           -DBUILD_HEADLESS=ON -DBUILD_QT=ON -DBUILD_SDL=ON \
-          -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DENABLE_SCRIPTING=ON -DUSE_LUA=5.4
+          -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DENABLE_SCRIPTING=ON -DUSE_LUA=5.4 \
+          -DSKIP_GIT=ON
         cmake --build "$src/build" --parallel 2
         cmake --install "$src/build"
 
