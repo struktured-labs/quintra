@@ -28,7 +28,7 @@ void will_bank_charge(void) BANKED {
     if (player.will_level >= WILL_LEVEL_CAP) return;
     player.will_level++;
     player.will_charge = player.will_level >= WILL_LEVEL_CAP ? WILL_MAX : 0;
-    sfx_play(player.will_level >= WILL_LEVEL_CAP ? SFX_PUZZLE : SFX_COIN);
+    sfx_play(player.will_level >= WILL_LEVEL_CAP ? SFX_WILL_FULL : SFX_COIN);
     fx_spawn(SPR_FX_IMPACT, 6, (i16)player.x + 4, (i16)player.y - 4, 10);
 }
 

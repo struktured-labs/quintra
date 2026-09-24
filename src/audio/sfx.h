@@ -25,6 +25,7 @@ enum {
     SFX_DASH,         // double-tap dodge: short rising wind-cut, never a door
     SFX_SIGIL,        // major dungeon key: six-note, one-second claim fanfare
     SFX_PORTAL,       // descending warp pull, then rising arrival shimmer
+    SFX_WILL_FULL,    // Will bar filled: short bright major sting, not a secret
 };
 
 // Banked reward voices keep pickups mechanically legible without bloating the

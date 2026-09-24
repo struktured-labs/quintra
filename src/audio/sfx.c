@@ -23,6 +23,8 @@
 #define PEND_SIGIL_NOTE5 14
 #define PEND_SIGIL_NOTE6 15
 #define PEND_PORTAL_ARRIVE 16
+#define PEND_WILL_NOTE2 17
+#define PEND_WILL_NOTE3 18
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -40,7 +42,7 @@ static u8 melody_priority_for(u8 id) {
     if (id == SFX_PUZZLE) return MELODY_PRIORITY_SECRET;
     if (id == SFX_SIGIL) return MELODY_PRIORITY_MAJOR;
     if (id == SFX_PORTAL) return MELODY_PRIORITY_MAJOR;
-    if (id == SFX_CLEAR) return MELODY_PRIORITY_CLEAR;
+    if (id == SFX_CLEAR || id == SFX_WILL_FULL) return MELODY_PRIORITY_CLEAR;
     return MELODY_PRIORITY_NONE;
 }
 
@@ -192,6 +194,16 @@ void sfx_play(u8 id) {
             ch4(0x27, 0x72);
             sfx_claim_channels(9, 7);
             break;
+        case SFX_WILL_FULL:
+            // Full Will is a charge completing, not a discovered secret.
+            // Duty 25% G5 -> C6 -> E6, packed tight, with no low noise breath
+            // and none of the puzzle cue's diminished four-note climb.
+            ch1(0x00, 0x40, 0xC2, 1881);              // G5
+            pend_kind = PEND_WILL_NOTE2;
+            pend_timer = 4;
+            sfx_claim_channels(14, 0);
+            melody_lock(MELODY_PRIORITY_CLEAR, 14);
+            break;
         case SFX_SIGIL:
             // A required dungeon key deserves its own uninterrupted event,
             // not the half-second forged ping shared by random stat relics.
@@ -313,6 +325,18 @@ void sfx_tick(void) {
             pend_kind = PEND_SIGIL_NOTE6;
             pend_timer = 10;
             return;
+        case PEND_WILL_NOTE2:
+            NR12_REG = 0xD2;
+            NR13_REG = (u8)(1922 & 0xFF);              // C6
+            NR14_REG = (u8)(0x80 | (1922 >> 8));
+            pend_kind = PEND_WILL_NOTE3;
+            pend_timer = 4;
+            return;
+        case PEND_WILL_NOTE3:
+            NR12_REG = 0xE3;
+            NR13_REG = (u8)(1949 & 0xFF);              // E6
+            NR14_REG = (u8)(0x80 | (1949 >> 8));
+            break;
         case PEND_SIGIL_NOTE6:
             NR12_REG = 0xF7;
             NR13_REG = (u8)(1922 & 0xFF);             // C6 resolve
