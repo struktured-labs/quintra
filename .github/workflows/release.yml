@@ -39,6 +39,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-glob: |
+            Makefile
+            scripts/test_suspend.py
 
       - uses: actions/setup-node@v4
         with:
