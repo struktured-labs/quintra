@@ -11,6 +11,8 @@ Written in C with GBDK-2020 — the only thing that ships on cart. All content
 authoring and dev tooling is a typed **Rust** workspace that generates the C
 tables at build time.
 
+[![CI](https://github.com/struktured-labs/quintra/actions/workflows/ci.yml/badge.svg)](https://github.com/struktured-labs/quintra/actions/workflows/ci.yml)
+
 [Download Quintra v0.20.19: Clean Return](https://github.com/struktured-labs/quintra/releases/download/v0.20.19/quintra.gbc)
 
 The September 8 movement update adds gentle alignment through narrow gaps:
@@ -3443,8 +3445,16 @@ dungeon.
 
 ## Build & run
 
-Requires [GBDK-2020](https://github.com/gbdk-2020/gbdk-2020) v4.5.0 at `~/gbdk`
-and a stable Rust toolchain (host-side only — Rust never ships in the ROM).
+Requires [GBDK-2020](https://github.com/gbdk-2020/gbdk-2020) v4.5.0 and a Rust
+toolchain new enough to build the lockfile (host-side only — Rust never ships
+in the ROM). The Makefile looks for GBDK at `/home/struktured/gbdk`. Point it
+somewhere else with `GBDK=/path/to/gbdk` in the environment or on the `make`
+command line.
+
+Pull requests and `main` are gated by the [CI workflow](.github/workflows/ci.yml)
+(Rust tests, a ROM link, and a short headless cart smoke). What runs on tags
+and on the weekly soak, and which secret publishes to itch.io, is written up
+in [docs/ci.md](docs/ci.md).
 
 ```bash
 make            # cargo codegen + sprite pipeline → SDCC → rom/working/quintra.gbc

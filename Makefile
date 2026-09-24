@@ -2,7 +2,10 @@
 # Runtime: C / GBDK-2020 / SDCC — only thing in the ROM
 # Tooling:  Rust workspace under tools/ — never linked into ROM
 
-GBDK    = /home/struktured/gbdk
+# Local default. CI and other machines override this with the GBDK
+# environment variable or `make GBDK=/path/to/gbdk` (`?=` keeps an explicit
+# setting, including the existing checkout at /home/struktured/gbdk).
+GBDK    ?= /home/struktured/gbdk
 LCC     = $(GBDK)/bin/lcc
 
 PROJECT = quintra

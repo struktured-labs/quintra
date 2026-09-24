@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    # GitHub tag filters are globs, not regular expressions. These cover
+    # v0.20.19-style tags (one or two digits per component) and ignore
+    # suffixed historical tags such as v4.10-organic-arena-reached.
+    tags:
+      - "v[0-9].[0-9].[0-9]"
+      - "v[0-9].[0-9].[0-9][0-9]"
+      - "v[0-9].[0-9][0-9].[0-9]"
+      - "v[0-9].[0-9][0-9].[0-9][0-9]"
+      - "v[0-9][0-9].[0-9].[0-9]"
+      - "v[0-9][0-9].[0-9].[0-9][0-9]"
+      - "v[0-9][0-9].[0-9][0-9].[0-9]"
+      - "v[0-9][0-9].[0-9][0-9].[0-9][0-9]"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: GitHub Release and itch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.98.1
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: ./.github/actions/setup-native
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Link ROM and run release cart checks
+        run: |
+          set -euo pipefail
+          make gen
+          make -j"$(nproc)" rom/working/quintra.gbc
+          python3 scripts/check_cartridge.py rom/working/quintra.gbc
+          uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
+          bash scripts/test_smoke.sh rom/working/quintra.gbc
+          sha256sum rom/working/quintra.gbc
+
+      - name: Build the itch.io web bundle
+        run: tools/build_itch_web.sh
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          notes_file="docs/releases/${tag}.md"
+          zip=$(echo builds/quintra-itch-web-*.zip)
+          args=(
+            release create "$tag"
+            rom/working/quintra.gbc
+            "$zip"
+            --repo "${GITHUB_REPOSITORY}"
+            --verify-tag
+            --target "${GITHUB_SHA}"
+            --title "Quintra ${tag}"
+          )
+          if [ -f "$notes_file" ]; then
+            args+=(--notes-file "$notes_file")
+          else
+            args+=(--notes "Cartridge and itch web bundle built from ${GITHUB_SHA}.")
+          fi
+          gh "${args[@]}"
+
+      - name: Detect itch.io credentials
+        id: butler
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BUTLER_API_KEY}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "BUTLER_API_KEY is not set; skipping itch.io publish."
+          fi
+
+      - name: Publish struktured/quintra:web
+        if: steps.butler.outputs.enabled == 'true'
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/butler.zip" \
+            https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          "$RUNNER_TEMP/butler/butler" push \
+            --if-changed \
+            --userversion "${GITHUB_REF_NAME}" \
+            builds/itch-web \
+            struktured/quintra:web

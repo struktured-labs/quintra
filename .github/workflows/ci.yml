@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust workspace
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy
+        # These seven lints already fire on main. Allowing them keeps the
+        # gate on new warnings without a formatting-only rewrite.
+        run: >
+          cargo clippy --workspace --locked --all-targets --
+          -D warnings
+          -A clippy::too_many_arguments
+          -A clippy::needless_range_loop
+          -A clippy::unnecessary_cast
+          -A clippy::if_same_then_else
+          -A clippy::manual_range_contains
+          -A clippy::useless_format
+          -A clippy::manual_div_ceil
+
+      - name: Build
+        run: cargo build --workspace --locked --all-targets
+
+      - name: Test
+        run: cargo test --workspace --locked --all-targets
+
+  rom:
+    name: ROM build and cart smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.98.1
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: ./.github/actions/setup-native
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Link ROM
+        run: |
+          set -euo pipefail
+          make gen
+          make -j"$(nproc)" rom/working/quintra.gbc
+          python3 scripts/check_cartridge.py rom/working/quintra.gbc
+          sha256sum rom/working/quintra.gbc
+
+      - name: PyBoy suspend power-cycle
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
+
+      - name: Headless mGBA smoke
+        run: bash scripts/test_smoke.sh rom/working/quintra.gbc
+
+      - name: Upload ROM
+        uses: actions/upload-artifact@v4
+        with:
+          name: quintra-gbc
+          if-no-files-found: error
+          path: |
+            rom/working/quintra.gbc
+            rom/working/quintra.map
+            rom/working/quintra.noi
