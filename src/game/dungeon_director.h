@@ -78,6 +78,9 @@ u8 dungeon_director_update(u8 alive) BANKED;
 // Spatial objective helpers shared with the SELECT Compass.
 u8 dungeon_director_goal_cell(void) BANKED;
 u8 dungeon_director_direction_from(u8 start) BANKED;
+// 1 when `cell` lies on the walked route from this dungeon's entry to the
+// current objective, including both ends.
+u8 dungeon_director_cell_on_goal_route(u8 cell) BANKED;
 
 #define ENCOUNTER_TARGET_TAG 0xD7
 

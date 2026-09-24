@@ -1369,6 +1369,39 @@ void procgen_generate_current_room(void) BANKED {
             // outside the door lanes (cols 9-11 / rows 7-9 stay clear)
             room_tilemap[6][7]   = BGT_CRYSTAL; room_tilemap[6][12]  = BGT_CRYSTAL;
             room_tilemap[10][7]  = BGT_CRYSTAL; room_tilemap[10][12] = BGT_CRYSTAL;
+            // The stage puzzle lowers a themed blockage in front of the
+            // skull door. Stage scenery already restyles BGT_PILLAR, so the
+            // same stamp reads as shards, roots, slag, ice, or spore.
+            {
+                u8 local = run_state_dungeon_local();
+                u8 boss = (u8)(run_state_dungeon_size() - 1);
+                u8 dir;
+                u8 open = run_state.bosses_beaten
+                    ? ((run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT)
+                        ? 1 : 0)
+                    : ((run_state.dungeon_puzzles & RUN_TRIAL_BIT) ? 1 : 0);
+                u8 tile = open ? BGT_FLOOR2 : BGT_PILLAR;
+                u8 x = 9, y = 2;
+                for (dir = DIR_N; dir <= DIR_W; ++dir)
+                    if (run_state_dungeon_cell_neighbor(local, dir) == boss)
+                        break;
+                if (dir == DIR_S)
+                    y = (u8)((room_world_height >> 3) - 3);
+                else if (dir == DIR_W) { x = 2; y = 8; }
+                else if (dir == DIR_E) {
+                    x = (u8)((room_world_width >> 3) - 3);
+                    y = 8;
+                }
+                if (dir <= DIR_W) {
+                    if (dir == DIR_N || dir == DIR_S) {
+                        room_tilemap[y][x] = tile;
+                        room_tilemap[y][(u8)(x + 1)] = tile;
+                    } else {
+                        room_tilemap[y][x] = tile;
+                        room_tilemap[(u8)(y + 1)][x] = tile;
+                    }
+                }
+            }
             player.hp = player.hp_max;
             player.mp = player.mp_max;
             player.iframes = 60;
@@ -1803,6 +1836,25 @@ void procgen_generate_current_room(void) BANKED {
     // The false-gap normalizer above is intentionally the final terrain
     // writer. It can close a visually misleading slit beneath a body that was
     // valid when population ran, so validate every hostile one last time.
+
+    // A room on the way to the current goal changes when you come back.
+    // Before the stage puzzle, themed scenery grows off the door lanes.
+    // After it, those same spots are a cracked trail. First visits stay
+    // exactly as procgen drew them. Shops, shrines, and the boss do not.
+    if (room_was_visited && !is_town && !run_state.world_mode
+        && !is_boss_room && !run_state_is_shop() && !run_state_is_sanctuary()
+        && dungeon_director_cell_on_goal_route(run_state_dungeon_local())) {
+        u8 open = run_state.bosses_beaten
+            ? ((run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT) ? 1 : 0)
+            : ((run_state.dungeon_puzzles & RUN_TRIAL_BIT) ? 1 : 0);
+        u8 tile = open ? BGT_FLOOR2 : BGT_CRYSTAL;
+        if (room_tilemap[5][4] == BGT_FLOOR || room_tilemap[5][4] == BGT_FLOOR2
+            || room_tilemap[5][4] == BGT_FLOOR3 || room_tilemap[5][4] == BGT_RUBBLE)
+            room_tilemap[5][4] = tile;
+        if (room_tilemap[5][15] == BGT_FLOOR || room_tilemap[5][15] == BGT_FLOOR2
+            || room_tilemap[5][15] == BGT_FLOOR3 || room_tilemap[5][15] == BGT_RUBBLE)
+            room_tilemap[5][15] = tile;
+    }
 
     player.iframes = 60;    // brief invuln on room entry
 }

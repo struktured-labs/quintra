@@ -287,40 +287,39 @@ static void draw_dungeon_grid(void) {
         & RUN_FARFOLD_CACHE_BIT) ? 1 : 0;
     for (i = 0; i < size; ++i) {
         u8 seen = run_state_dungeon_cell_seen(i);
+        // The boss node appears once you are in the room that holds its
+        // door. The corridor to it still waits until that room is entered.
         u8 boss_hint = (i == (u8)(size - 1)
             && run_state_dungeon_cell_seen((u8)(size - 2)));
-        u8 icon = seen ? BGT_MAP_BIG_ROOM : BGT_MAP_BIG_UNKNOWN;
+        u8 icon = BGT_MAP_BIG_ROOM;
+        u8 draw = (i == here || seen || (i == next_trial)
+            || boss_hint) ? 1 : 0;
+        if (!draw) continue;
         if (i == here) icon = BGT_MAP_BIG_HERE;
-        // Reaching the sanctuary reveals the adjacent boss threshold even
-        // before it is crossed. The amber danger node is the map equivalent
-        // of Zelda's compass hint and matches the marked in-room boss doors.
+        // Each completed fixture reveals exactly one next GOAL, without
+        // drawing the unwalked doors that lead there.
+        if (i == next_trial && i != here) icon = BGT_MAP_BIG_GOAL;
         if (boss_hint && i != here) icon = BGT_MAP_BIG_BOSS;
-        // Each completed fixture reveals exactly one next GOAL. The Pack
-        // supplies its specific Sigil/Waystone/Warden name; the Compass stays
-        // spatial and teaches the route without exposing unrelated procedural
-        // rooms or returning to a truncated text page.
-        if (i == next_trial && i != here) {
-            icon = BGT_MAP_BIG_GOAL;
-        }
-        // Optional build depth is explicit rather than indistinguishable from
-        // an empty arm. The chest is safe map knowledge from the first SELECT
-        // press; claiming it returns the node to ordinary explored terrain.
-        if (i == cache_cell && !cache_done && i != here)
+        // The cache appears only after that room is visited or charted.
+        if (seen && i == cache_cell && !cache_done && i != here)
             icon = BGT_MAP_BIG_CACHE;
         map_big_node(gx[i], gy[i], icon);
     }
-    // Number the horizontal districts at the free right edge. These markers
-    // turn the 6x5 lattice into visible depth bands without stealing room
-    // space or reverting to a prose-heavy status screen.
+    // Depth numbers appear only for rows that contain a room you have
+    // actually entered.
     for (i = 0; i < DUNGEON_GRID_H; ++i) {
-        if ((u8)(i * DUNGEON_GRID_W) >= size) break;
-        map_put(19, gy[(u8)(i * DUNGEON_GRID_W)],
-            (u8)(HUD_DIGIT_0 + i + 1));
+        u8 base = (u8)(i * DUNGEON_GRID_W);
+        u8 n, show = 0;
+        if (base >= size) break;
+        for (n = 0; n < DUNGEON_GRID_W && (u8)(base + n) < size; ++n) {
+            u8 cell = (u8)(base + n);
+            if (cell == here || run_state_dungeon_cell_seen(cell)) show = 1;
+        }
+        if (show)
+            map_put(19, gy[base], (u8)(HUD_DIGIT_0 + i + 1));
     }
-    // Every real corridor is faintly visible, establishing the dungeon's
-    // shape immediately. A corridor brightens only after both endpoint rooms
-    // are known. This is the requested fill-in behavior: topology is readable
-    // from the first SELECT press while the walked route remains unmistakable.
+    // A corridor exists on the compass only after both rooms it joins have
+    // been entered or charted. The goal marker does not leak the path.
     for (i = 0; i < size; ++i) {
         u8 a_seen = run_state_dungeon_cell_seen(i);
         for (j = (u8)(i + 1); j < size; ++j) {
@@ -329,24 +328,11 @@ static void draw_dungeon_grid(void) {
                     && (gx[i] + 3 == gx[j] || gx[j] + 3 == gx[i]))
                 || (gx[i] == gx[j]
                     && (gy[i] + 3 == gy[j] || gy[j] + 3 == gy[i]));
-            if (i == (u8)(size - 1)
-                && run_state_dungeon_cell_seen((u8)(size - 2))) {
-                a_seen = 1;
-            }
-            if (j == (u8)(size - 1)
-                && run_state_dungeon_cell_seen((u8)(size - 2))) {
-                b_seen = 1;
-            }
-            if (next_trial != 0xFF) {
-                if (i == next_trial) a_seen = 1;
-                if (j == next_trial) b_seen = 1;
-            }
+            if (!a_seen || !b_seen) continue;
             if (!adjacent || !run_state_dungeon_cells_connected(i, j))
                 continue;
             if (gy[i] == gy[j]) {
                 u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
-                u8 tile = (a_seen && b_seen)
-                    ? BGT_MAP_PATH_H : BGT_MAP_PATH_H_DIM;
                 u8 route_edge = ((i == here && j == route_next)
                     || (j == here && i == route_next));
                 if (route_edge) {
@@ -355,13 +341,11 @@ static void draw_dungeon_grid(void) {
                     map_put_attr((u8)(left + 2), (u8)(gy[i] + 1),
                         BGT_MAP_PATH_H, BGPAL_CRYSTAL);
                 } else {
-                    map_put((u8)(left + 2), gy[i], tile);
-                    map_put((u8)(left + 2), (u8)(gy[i] + 1), tile);
+                    map_put((u8)(left + 2), gy[i], BGT_MAP_PATH_H);
+                    map_put((u8)(left + 2), (u8)(gy[i] + 1), BGT_MAP_PATH_H);
                 }
             } else {
                 u8 top = gy[i] < gy[j] ? gy[i] : gy[j];
-                u8 tile = (a_seen && b_seen)
-                    ? BGT_MAP_PATH_V : BGT_MAP_PATH_V_DIM;
                 u8 route_edge = ((i == here && j == route_next)
                     || (j == here && i == route_next));
                 if (route_edge) {
@@ -370,8 +354,8 @@ static void draw_dungeon_grid(void) {
                     map_put_attr((u8)(gx[i] + 1), (u8)(top + 2),
                         BGT_MAP_PATH_V, BGPAL_CRYSTAL);
                 } else {
-                    map_put(gx[i], (u8)(top + 2), tile);
-                    map_put((u8)(gx[i] + 1), (u8)(top + 2), tile);
+                    map_put(gx[i], (u8)(top + 2), BGT_MAP_PATH_V);
+                    map_put((u8)(gx[i] + 1), (u8)(top + 2), BGT_MAP_PATH_V);
                 }
             }
         }

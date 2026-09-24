@@ -101,6 +101,17 @@ def main():
 
     def boss_door(stage):
         compact_source()
+        pb.memory[SEALED] = 0
+        pb.memory[RS + 17] = 0
+        pb.memory[addr("_room_puzzle_locked")] = 0
+        pb.memory[addr("_room_encounter_kind")] = 0
+        for slot in range(32):
+            pb.memory[EN + slot * 28 + 1] = 0
+        pb.memory[LARGE] = 0
+        put16(pb, WORLD_W, 160)
+        put16(pb, WORLD_H, 136)
+        pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+        pb.memory[CAMERA_X + 1] = pb.memory[CAMERA_Y + 1] = 0
         size = dungeon_size(stage)
         direction = dungeon_direction(size - 2, size - 1)
         for tx, ty in {
@@ -272,46 +283,32 @@ def main():
         "claimed Sigil did not reveal the Warden GOAL node"
     assert pb.memory[bg + 4 * 32 + 9] == BGT_VOID, \
         "tutorial Compass incorrectly revealed a nonlinear Rift link"
-    assert node_tile(19) == BGT_MAP_BIG_UNKNOWN, \
-        "unseen boss cell leaked its identity through the dim footprint"
+    assert node_tile(19) == BGT_VOID, \
+        "unseen boss cell leaked its identity onto the compass"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")
     for _ in range(30):
         pb.tick()
     assert pb.memory[SCREEN] == 5
 
-    # The Sigil reveals the Warden but does not replace its trial. The exact
-    # same sanctuary threshold remains closed until every generated role is
-    # earned in sequence.
+    # The Sigil reveals the Warden but does not replace the trial. On the
+    # opening stage the trial is what lowers the themed gap; the Sigil is
+    # the key. Later objectives stay on the compass and do not re-lock it.
     clear_entities()
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[SEALED] = 0
+    pb.memory[RS + RS_PUZZLES] &= ~(1 << 0)
     boss_door(0)
     for _ in range(8):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
-        "claimed Sigil bypassed the missing Warden Boon"
-    pb.memory[RS + RS_PUZZLES] |= 1 << 3
-    pb.tick(8)
-    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
-        "roomier opening route ignored the missing Waystone"
-    pb.memory[RS + RS_PUZZLES] |= 1 << 7
-    pb.tick(8)
-    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
-        "roomier opening route ignored the missing deep Warden"
-    pb.memory[RS + 28] |= 1 << 7
-    pb.tick(8)
-    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
-        "full-size opening route ignored the missing Deep Seal"
-    pb.memory[RS + 28] |= 1 << 2
-    pb.tick(8)
-    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0] - 1, \
-        "full mission ignored the uncrossed Deep Gate"
-    pb.memory[RS + RS_PUZZLES] |= 1 << 6
+        "claimed Sigil bypassed the closed trial gate"
+    pb.memory[RS + RS_PUZZLES] |= 1 << 0
+    boss_door(0)
     pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[0], \
-        "complete opening route did not unlock boss threshold"
+        "trial plus Sigil did not open the skull door"
 
     # The invariant repeats for every dungeon, not just the opening one.
     # Start that contract from a fresh room runtime. The opening boss is now a
@@ -362,30 +359,34 @@ def main():
     pb.memory[RS + RS_SIGILS] |= 2
     pb.memory[RS + RS_PUZZLES] = RUN_REQUIRED_PUZZLES
     pb.memory[RS + 28] |= RUN_REQUIRED_PHASE
+    boss_door(1)
     for _ in range(45):
         pb.tick()
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[1], \
         "stage-two Sigil did not unlock its boss"
 
-    # Every generated stage has a required Waystone role.
+    # Later sanctuaries open on the deep-switch puzzle plus the Sigil.
+    # A missing Waystone no longer latches the same door.
     clear_entities()
     pb.memory[RS + RS_BOSSES] = 2
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[2] - 1
     pb.memory[RS + 6] = 0xFF
     pb.memory[RS + RS_SIGILS] |= 1 << 2
     pb.memory[RS + RS_PUZZLES] = RUN_REQUIRED_PUZZLES & ~(1 << 7)
-    pb.memory[RS + 28] = RUN_REQUIRED_PHASE
+    pb.memory[RS + 28] = RUN_REQUIRED_PHASE & ~(1 << 2)
     pb.memory[SEALED] = 0
     boss_door(2)
     pb.tick(8)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[2] - 1, \
-        "roomier sanctuary ignored missing Waystone"
-    pb.memory[RS + RS_PUZZLES] |= 1 << 7
+        "sanctuary ignored a closed themed gate"
+    pb.memory[RS + 28] |= 1 << 2
+    boss_door(2)
     pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[2], \
-        "completed Waystone did not unlock the isolated route gate"
+        "opened themed gate plus Sigil did not unlock the boss"
 
-    # The generated deep Warden is independently required.
+    # The deep Warden is a compass objective, not a second latch on the
+    # skull door. The deep-switch bit alone, with the Sigil, is enough.
     clear_entities()
     pb.memory[RS + RS_BOSSES] = 5
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[5] - 1
@@ -395,13 +396,9 @@ def main():
     pb.memory[RS + 28] = 1 << 2
     pb.memory[SEALED] = 0
     boss_door(5)
-    pb.tick(8)
-    assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[5] - 1, \
-        "fourteen-room sanctuary ignored missing deep Warden"
-    pb.memory[RS + 28] |= 1 << 7
     pb.tick(45)
     assert pb.memory[RS + 1] == STAGE_BOSS_ROOM[5], \
-        "deep Warden clear did not unlock fourteen-room boss"
+        "deep-switch gate plus Sigil did not unlock the boss"
 
     # Stage three caught a historical controller stall in its Sigil room.
     # Exercise the real generated graph edge so every objective survives

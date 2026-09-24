@@ -31,6 +31,19 @@ u8 run_state_dungeon_size(void) {
     return (u8)(stage_boss_room[stage] - stage_start[stage] + 1);
 }
 
+u8 run_state_dungeon_entry_cell(void) {
+    u8 stage = run_state.bosses_beaten;
+    u8 size;
+    static const u8 corners[4] = { 0, 5, 6, 11 };
+    u8 pick;
+    if (!stage) return 0;
+    if (stage >= BOSSES_TO_WIN) stage = (u8)(BOSSES_TO_WIN - 1);
+    size = run_state_dungeon_size();
+    pick = corners[(u8)(((u8)run_state.run_seed + (u8)(stage * 3)) & 3)];
+    if ((u8)(pick + 3) >= size) return 0;
+    return pick;
+}
+
 u8 run_state_dungeon_local(void) {
     u8 start = run_state_stage_start(run_state.bosses_beaten);
     if (run_state.room_counter <= start) return 0;

@@ -333,6 +333,36 @@ u8 dungeon_director_direction_from(u8 start) BANKED {
     return DIR_NONE;
 }
 
+u8 dungeon_director_cell_on_goal_route(u8 cell) BANKED {
+    static u8 parent[MAX_DUNGEON_CELLS];
+    static u8 queue[MAX_DUNGEON_CELLS];
+    u8 target = dungeon_director_goal_cell();
+    u8 entry = run_state_dungeon_entry_cell();
+    u8 head = 0, tail = 0, i;
+    if (target == 0xFF) return 0;
+    if (cell == entry || cell == target) return 1;
+    for (i = 0; i < MAX_DUNGEON_CELLS; ++i) parent[i] = 0xFF;
+    parent[entry] = entry;
+    queue[tail++] = entry;
+    while (head < tail && parent[target] == 0xFF) {
+        u8 at = queue[head++];
+        u8 dir;
+        for (dir = DIR_N; dir <= DIR_W; ++dir) {
+            u8 next = run_state_dungeon_cell_neighbor(at, dir);
+            if (next == 0xFF || parent[next] != 0xFF) continue;
+            parent[next] = at;
+            queue[tail++] = next;
+        }
+    }
+    if (parent[target] == 0xFF) return 0;
+    i = target;
+    while (i != entry) {
+        if (i == cell) return 1;
+        i = parent[i];
+    }
+    return 0;
+}
+
 void dungeon_director_refresh_route(void) BANKED {
     room_objective_dir = dungeon_director_direction_from(
         run_state_dungeon_cell());

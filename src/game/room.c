@@ -2165,20 +2165,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // boss—so never apply mission prerequisites while state 2
                 // proves that the hero is inside the overlay.
                 if (run_state.secret_pending != 2
-                    && is_forward_boss_door(tx, ty, BGT_DOOR)
-                    && (!(run_state.dungeon_puzzles & RUN_TRIAL_BIT)
-                        || !(run_state.rift_sigils
-                            & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten))
-                        || !(run_state.dungeon_puzzles
-                            & RUN_WARDEN_BOON_BIT)
-                        || !(run_state.dungeon_puzzles & RUN_WAYSTONE_BIT)
-                        || !(run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT)
-                        || !(run_state.dungeon_phase
-                            & RUN_DEEP_PHASE_OPEN_BIT)
-                        || !(run_state.dungeon_puzzles
-                            & RUN_DEEP_GATE_BIT))) {
-                    room_hold_at_door(dir, SFX_HURT, 6);
-                    return SCREEN_SELF;
+                    && is_forward_boss_door(tx, ty, BGT_DOOR)) {
+                    // The stage puzzle opens a themed gap. The Sigil is the
+                    // key that uses it. Other objectives stay on the compass
+                    // but no longer silently latch this same door.
+                    u8 opened = run_state.bosses_beaten
+                        ? ((run_state.dungeon_phase & RUN_DEEP_PHASE_OPEN_BIT)
+                            ? 1 : 0)
+                        : ((run_state.dungeon_puzzles & RUN_TRIAL_BIT) ? 1 : 0);
+                    u8 keyed = (run_state.rift_sigils
+                        & RUN_STAGE_SIGIL_BIT(run_state.bosses_beaten)) ? 1 : 0;
+                    if (!opened || !keyed) {
+                        room_hold_at_door(dir, SFX_HURT, 6);
+                        return SCREEN_SELF;
+                    }
                 }
                 // A discovered cache is an overlay attached to its parent
                 // graph cell, not another campaign node. Its only exit is the
@@ -2254,7 +2254,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                                 // a genuine dungeon transition, so consume it
                                 // here just as Riftwild cave gates do.
                                 run_state_begin_dungeon();
-                                run_state.room_counter++;
+                                run_state.room_counter = (u8)(
+                                    run_state_stage_start(run_state.bosses_beaten)
+                                    + run_state_dungeon_entry_cell());
                             }
                         } else {
                             run_state.world_return_screen = TOWN_ARRIVAL;

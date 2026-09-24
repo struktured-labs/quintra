@@ -75,21 +75,60 @@ def dungeon_maze_neighbor(cell: int, size: int, direction: int,
     return neighbor if col == fold_col else None
 
 
+def dungeon_entry_cell(size: int, run_seed: int, stage: int) -> int:
+    """Mirror run_state_dungeon_entry_cell. Stage 1 stays upper-left."""
+    if stage == 0:
+        return 0
+    pick = (0, 5, 6, 11)[((run_seed & 0xFF) + stage * 3) & 3]
+    if pick + 3 >= size:
+        return 0
+    return pick
+
+
+def mission_rhythm_picks(count: int, stage: int) -> list[int]:
+    """Mirror the cartridge's per-stage objective spacing."""
+    span = count - 1
+    half = span >> 1
+    picks = []
+    prev = -1
+    for i in range(7):
+        if stage == 0:
+            pick = (i * span + 3) // 6
+        elif stage % 3 == 1:
+            pick = ((i * half) // 3 if half else i) if i < 4 \
+                else half + ((i - 3) * (span - half)) // 3
+        elif stage % 3 == 2:
+            pick = i if i < 2 else half + (
+                (i - 1) * ((span - half) if span > half else 1)) // 5
+        else:
+            pick = (i * span + (stage & 3)) // 6
+        if pick <= prev:
+            pick = prev + 1
+        if pick >= count:
+            return list(range(7))
+        picks.append(pick)
+        prev = pick
+    return picks
+
+
 def mission_graph(size: int, run_seed: int, stage: int) -> dict[str, int]:
     """Mirror the cartridge's pre-room seeded objective graph."""
     limit = size - 3
     mix = (run_seed ^ (run_seed >> 8) ^ (run_seed >> 16)
            ^ (run_seed >> 24)) & 0xFF
     mix = (mix + stage * 41) & 0xFF
-    reserved = {0, 2, 5, 8, 11, 15, 17, 23}
+    entry = dungeon_entry_cell(size, run_seed, stage)
+    landmarks = {0, 2, 5, 8, 11, 15, 17, 23}
     cache_reserve = next((cell for cell in range(size - 4, 0, -1)
-        if cell not in reserved and sum(
+        if cell not in landmarks and sum(
             dungeon_maze_neighbor(cell, size, direction, run_seed, stage)
             is not None for direction in range(4)) == 1), None)
+    reserved = set(landmarks)
+    reserved.add(entry)
     if cache_reserve is not None:
         reserved.add(cache_reserve)
-    queue = [0]
-    seen = {0}
+    queue = [entry]
+    seen = {entry}
     eligible = []
     for cell in queue:
         if cell < limit and cell not in reserved:
@@ -105,8 +144,8 @@ def mission_graph(size: int, run_seed: int, stage: int) -> dict[str, int]:
     if len(eligible) < 7:
         selected = [1, 3, 4, 6, 7, 9, 10]
     else:
-        selected = [eligible[(i * (len(eligible) - 1) + 3) // 6]
-                    for i in range(7)]
+        selected = [eligible[pick]
+                    for pick in mission_rhythm_picks(len(eligible), stage)]
     graph = {
         "order": mix & 1,
         "trial": selected[0],

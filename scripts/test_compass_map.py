@@ -141,21 +141,20 @@ def main() -> None:
     open_compass(pb, screen)
     assert pb.memory[screen] == SCREEN_MAP, "SELECT did not enter Spirit Compass"
 
-    # The complete active 6x5 footprint is a screen-filling grid of 2x2
-    # metasquares. Unknown rooms/corridors stay dim while walked rooms/links
-    # brighten, making both scale and fill-in behavior obvious immediately.
+    # Unvisited rooms and their doors stay blank. The current room and the
+    # one earned GOAL are the only marks until you walk or buy a chart.
     assert node_tile(pb, 0) == BGT_MAP_BIG_HERE, \
         "Compass lost its full-size current-room node"
     assert node_tile(pb, graph0["trial"]) == BGT_MAP_BIG_GOAL, \
         "Compass did not expose the generated opening Trial"
-    assert node_tile(pb, graph0["sigil"]) == BGT_MAP_BIG_UNKNOWN, \
+    assert node_tile(pb, graph0["sigil"]) == BGT_VOID, \
         "Compass exposed a later Sigil before the Trial"
-    assert map_tile(pb, 3, 2) == BGT_MAP_PATH_H, \
-        "Compass did not brighten the first step toward the active objective"
-    assert map_tile(pb, 3, 3) == BGT_MAP_PATH_H, \
-        "Compass route cue does not span the full node height"
-    assert node_tile(pb, 19) == BGT_MAP_BIG_UNKNOWN, \
-        "Compass did not expose the opening dungeon's full abstract footprint"
+    assert map_tile(pb, 3, 2) == BGT_VOID, \
+        "Compass drew the unwalked path toward the active objective"
+    assert map_tile(pb, 3, 3) == BGT_VOID, \
+        "Compass route cue leaked below the unwalked path"
+    assert node_tile(pb, 19) == BGT_VOID, \
+        "Compass revealed the boss before the sanctuary was found"
     assert map_tile(pb, 0, 0) == BGT_VOID, "Compass retained text-page background"
     assert (map_tile(pb, 6, 0), map_tile(pb, 7, 0),
             map_tile(pb, 9, 0), map_tile(pb, 10, 0),
@@ -170,14 +169,15 @@ def main() -> None:
     assert map_tile(pb, 10, 17) == BGT_MAP_LABEL_B, "Compass lost BOSS key"
     assert map_tile(pb, 14, 17) == BGT_MAP_CACHE, "Compass lost LOOT key icon"
     cache = dungeon_cache_cell(dungeon_size(0), seed, 0)
-    assert node_tile(pb, cache) == BGT_MAP_BIG_CACHE, \
-        f"Compass did not reveal optional cache cell {cache}"
-    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 17, \
-        "Compass opening footprint is not a full dim 20-room grid"
-    assert tuple(map_tile(pb, 19, y) for y in (2, 5, 8, 11)) == (
-        HUD_DIGIT_0 + 1, HUD_DIGIT_0 + 2,
-        HUD_DIGIT_0 + 3, HUD_DIGIT_0 + 4), \
-        "Compass lost its numbered dungeon depth bands"
+    assert node_tile(pb, cache) == BGT_VOID, \
+        f"Compass revealed unvisited cache cell {cache}"
+    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 0, \
+        "Compass still ghosts unvisited rooms"
+    assert map_tile(pb, 19, 2) == HUD_DIGIT_0 + 1, \
+        "Compass hid the depth band of the room you are standing in"
+    assert tuple(map_tile(pb, 19, y) for y in (5, 8, 11)) == (
+        BGT_VOID, BGT_VOID, BGT_VOID), \
+        "Compass numbered depth bands you have not entered"
     assert node_tile(pb, 20) == BGT_VOID, \
         "opening Compass leaked an inactive late-stage node"
     # HERE is a pin, not the former directional arrow, and owns palette 7
@@ -228,8 +228,8 @@ def main() -> None:
         "Compass lost current marker at objective-wing junction"
     assert node_tile(pb, graph0["sigil"]) == BGT_MAP_BIG_GOAL, \
         "Compass lost the generated Sigil objective"
-    assert node_tile(pb, 10) == BGT_MAP_BIG_UNKNOWN, \
-        "Compass lost southward deep-route frontier"
+    assert node_tile(pb, 10) == BGT_VOID, \
+        "Compass revealed an unvisited deep-route room"
     # Resolve the cartridge's first BFS step so this remains valid across all
     # eight seed-selected folds rather than assuming the old eastward room 2.
     parents, queue = {1: None}, [1]
@@ -249,29 +249,22 @@ def main() -> None:
         link_x, link_y, link_tile = GX[1], min(GY[1], GY[step]) + 2, BGT_MAP_PATH_V
     else:
         link_x, link_y, link_tile = min(GX[1], GX[step]) + 2, GY[1], BGT_MAP_PATH_H
-    assert map_tile(pb, link_x, link_y) == link_tile, (
-        f"Compass did not highlight generated Sigil route via {step}: "
+    assert map_tile(pb, link_x, link_y) == BGT_VOID, (
+        f"Compass highlighted an unwalked Sigil route via {step}: "
         f"{map_tile(pb, link_x, link_y)}")
-    # Fill-in must read by shape as well as palette. Cell zero is explored:
-    # its interior carries a visible dotted fill. Cell two is unvisited:
-    # its centre stays dark and its top edge alternates lit/gap pixels as a
-    # dashed square. This remains legible on low-contrast LCDs and grayscale
-    # captures where two shades of green alone are not an adequate contract.
+    # Explored rooms keep a filled interior. Unvisited rooms are blank, the
+    # same color as the empty margin, not a dashed ghost of the maze.
     junction_image = pb.screen.image
     visited_fill_rgb = junction_image.getpixel((
         GX[0] * 8 + 2, GY[0] * 8 + 1))[:3]
     unknown_fill_rgb = junction_image.getpixel((
         GX[10] * 8 + 2, GY[10] * 8 + 1))[:3]
-    unknown_edge_rgb = junction_image.getpixel((
-        GX[10] * 8, GY[10] * 8))[:3]
-    unknown_gap_rgb = junction_image.getpixel((
-        GX[10] * 8 + 1, GY[10] * 8))[:3]
+    margin_rgb = junction_image.getpixel((0, 2 * 8))[:3]
     assert visited_fill_rgb != unknown_fill_rgb, (
         f"explored room lost its filled interior: "
         f"{visited_fill_rgb} == {unknown_fill_rgb}")
-    assert unknown_edge_rgb != unknown_gap_rgb, (
-        f"unvisited room lost its dashed square: "
-        f"{unknown_edge_rgb} == {unknown_gap_rgb}")
+    assert unknown_fill_rgb == margin_rgb, (
+        f"unvisited room is still drawn: {unknown_fill_rgb} != {margin_rgb}")
     pb.screen.image.save(ROOT / "tmp" / "compass-objective-junction.png")
     close_compass(pb, screen, player)
     assert pb.memory[screen] == SCREEN_ROOM, \
@@ -290,9 +283,9 @@ def main() -> None:
          f"bosses={pb.memory[rs + 11]} tile={map_tile(pb, GX[18], GY[18])} "
          f"here={[(x, y) for y in range(17) for x in range(20) if map_tile(pb, x, y) == BGT_MAP_BIG_HERE]}")
     assert node_tile(pb, 19) == BGT_MAP_BIG_BOSS, \
-        "Compass did not hint the boss node"
-    assert map_tile(pb, 15, 11) == BGT_MAP_PATH_H, \
-        "Compass did not connect sanctuary to the hinted boss"
+        "Compass did not hint the boss node from the sanctuary"
+    assert map_tile(pb, 15, 11) == BGT_VOID, \
+        "Compass connected the sanctuary to a boss room you have not entered"
     assert node_tile(pb, graph0["sigil"]) == BGT_MAP_BIG_GOAL, \
         "Compass did not place the Rift Sigil in its owning room"
     assert node_tile(pb, 0) == BGT_MAP_BIG_ROOM, \
@@ -301,7 +294,7 @@ def main() -> None:
     for source in range(dungeon_size(0)):
         target = dungeon_maze_neighbor(
             source, dungeon_size(0), 2, seed, 0)
-        if target is not None:
+        if target is not None and source < 19 and target < 19:
             vertical_links.append((
                 GX[source], min(GY[source], GY[target]) + 2))
     assert len(vertical_links) >= 3, vertical_links

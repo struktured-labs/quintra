@@ -183,6 +183,9 @@ u8   run_state_stage_start(u8 stage);
 u8   run_state_boss_room(u8 stage);
 u8   run_state_dungeon_size(void);
 u8   run_state_dungeon_local(void);
+// Stage 1 always enters the upper-left cell. Later stages enter a different
+// corner of the same snake so the expedition does not begin in one foyer.
+u8   run_state_dungeon_entry_cell(void);
 u8   run_state_dungeon_cell(void);
 // Return the local cell of the reciprocal 6x5 maze neighbour in `dir`, or
 // 0xFF when that edge is absent. Seed-selected safe folds give each dungeon

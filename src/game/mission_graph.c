@@ -44,7 +44,7 @@ static u8 mission_seed_cache_cell(void) {
 }
 
 static u8 mission_reserved(u8 cell, u8 limit) {
-    if (cell == 0 || cell >= limit) return 1;
+    if (cell == run_state_dungeon_entry_cell() || cell >= limit) return 1;
     // Keep nonlinear wells, quiet witnesses, and the optional third Warden
     // available as stable spatial punctuation around the generated quest.
     return (mission_landmark_reserved(cell)
@@ -61,8 +61,8 @@ static u8 mission_discover(void) {
     u8 mix = mission_mix();
     mission_cache_reserve = mission_seed_cache_cell();
     for (i = 0; i < MAX_DUNGEON_CELLS; ++i) mission_seen[i] = 0;
-    mission_seen[0] = 1;
-    mission_queue[tail++] = 0;
+    mission_seen[run_state_dungeon_entry_cell()] = 1;
+    mission_queue[tail++] = run_state_dungeon_entry_cell();
     while (head < tail) {
         u8 cell = mission_queue[head++];
         u8 turn = (u8)((mix + cell * 3) & 3);
@@ -132,12 +132,34 @@ void mission_graph_ensure(void) BANKED {
     count = mission_discover();
     run_state.mission_order = mission_mix() & 1;
     if (count >= MISSION_ROLE_COUNT) {
-        // Span the available outward traversal rather than clustering seven
-        // objectives in the foyer. The small rounded division is entry-time
-        // only and gives every stage a full early/middle/deep quest rhythm.
+        // Stage 1 keeps the even early/middle/deep rhythm. Later stages
+        // front-load, back-load, or stagger the same seven jobs so the
+        // diamonds are not in the same relative slots every dungeon.
+        u8 stage = run_state.bosses_beaten;
+        u8 span = (u8)(count - 1);
+        u8 half = (u8)(span >> 1);
+        u8 prev = 0xFF;
+        u8 bad = 0;
         for (i = 0; i < MISSION_ROLE_COUNT; ++i) {
-            u8 pick = (u8)((i * (count - 1) + 3) / 6);
+            u8 pick;
+            if (!stage) pick = (u8)((i * span + 3) / 6);
+            else if ((stage % 3) == 1)
+                pick = (i < 4)
+                    ? (half ? (u8)((i * half) / 3) : i)
+                    : (u8)(half + ((i - 3) * (u8)(span - half)) / 3);
+            else if ((stage % 3) == 2)
+                pick = (i < 2) ? i
+                    : (u8)(half + ((i - 1)
+                        * (span > half ? (u8)(span - half) : 1)) / 5);
+            else pick = (u8)((i * span + (stage & 3)) / 6);
+            if (prev != 0xFF && pick <= prev) pick = (u8)(prev + 1);
+            if (pick >= count) { bad = 1; break; }
             role[i] = mission_eligible[pick];
+            prev = pick;
+        }
+        if (bad) {
+            for (i = 0; i < MISSION_ROLE_COUNT; ++i)
+                role[i] = mission_eligible[i];
         }
     } else {
         // Defensive old-save fallback; current 20..30-cell footprints always
