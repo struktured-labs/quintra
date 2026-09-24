@@ -57,7 +57,12 @@ jobs:
           bash scripts/test_smoke.sh rom/working/quintra.gbc
           sha256sum rom/working/quintra.gbc
 
+      - name: Check web package version handling
+        run: python3 tools/test_itch_version.py
+
       - name: Build the itch.io web bundle
+        env:
+          QUINTRA_WEB_VERSION: ${{ github.ref_name }}
         run: tools/build_itch_web.sh
 
       - name: Create GitHub Release
@@ -67,7 +72,8 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
           notes_file="docs/releases/${tag}.md"
-          zip=$(echo builds/quintra-itch-web-*.zip)
+          zip="builds/quintra-itch-web-${tag}.zip"
+          test -f "$zip"
           args=(
             release create "$tag"
             rom/working/quintra.gbc

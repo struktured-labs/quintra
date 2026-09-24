@@ -3,11 +3,15 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-archive="$project_root/builds/quintra-itch-web-v0.20.19-beta27.zip"
+version="${QUINTRA_WEB_VERSION:-v0.20.19-beta27}"
+if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+  echo "Invalid web version: $version" >&2
+  exit 1
+fi
+archive="$project_root/builds/quintra-itch-web-$version.zip"
 rom="$project_root/rom/working/quintra.gbc"
 expected_rom_sha="7623604d389ae49d8eaa885d7320191601660dcc898559411659b4f81cd1fe49"
 wasmboy_sha="3cffca75e29b90559437cc4984b5c8166e66a04a1edb295a51eb487fe9fa5b47"
-version="v0.20.19-beta27"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
 if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then

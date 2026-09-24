@@ -31,13 +31,11 @@ Rust is pinned to **1.98.1**. `Cargo.toml` still declares `rust-version =
 GBDK is the upstream 4.5.0 `gbdk-linux64.tar.gz`, cached between runs. mGBA
 is a development build, not the 0.10.5 release packages: those omit the
 `--script` flag that `scripts/test_smoke.sh` and the controller bot require.
-CI downloads the Ubuntu 24.04 development tarball and checks it against the
-sha256 of mGBA `0.11-9140-1d201b22a` (`1d201b22a86d31dfb3bc75145403711f6762015f`),
-which is the build the smoke test was run against. That tarball provides
-`mgba-qt` and `mgba-headless`. PyBoy is installed with `uv` at the same
-`pyboy==2.7.0` pin as the Makefile. If upstream replaces the "latest" object,
-the hash check fails closed until `docs/ci.md` and the setup action are
-updated together.
+CI builds upstream commit `1d201b22a86d31dfb3bc75145403711f6762015f`
+with Lua 5.4 and Qt/SDL/headless frontends enabled, and caches the installed
+tools. It verifies the fetched commit and scripting CLI, without depending on
+a moving "latest" tarball. Bump the cache key when changing build settings.
+PyBoy uses the same `pyboy==2.7.0` pin as the Makefile.
 
 The ROM link does **not** run `make all`. That target also refreshes about
 460 external PyBoy curriculum states after the cartridge exists. Those states
@@ -87,6 +85,11 @@ not run on pull requests or on ordinary pushes to `main`.
 3. The workflow links the ROM, runs the same cart checks as CI, and builds
    the itch web directory with `tools/build_itch_web.sh`. That script refuses
    to pack a ROM whose SHA-256 does not match its pin.
+   The workflow passes `QUINTRA_WEB_VERSION` from the tag so the archive,
+   browser version label, and `build.json` agree with the release. Manual
+   builds retain the beta default unless that variable is explicitly set.
+   `python3 tools/test_itch_version.py` checks tag/default packaging and invalid
+   versions before release packaging; it never publishes.
 4. It opens a GitHub Release titled `Quintra vX.Y.Z` with `quintra.gbc` and
    the zip `tools/build_itch_web.sh` writes. Release notes come from
    `docs/releases/<tag>.md` when that file exists.

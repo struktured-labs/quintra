@@ -1,83 +1,73 @@
 name: Setup GBDK and mGBA
-description: >
-  Install cached GBDK-2020 4.5.0 and the pinned mGBA development build,
-  and export GBDK for make.
+description: Install GBDK 4.5.0 and commit-pinned mGBA with Lua scripting.
 
 runs:
   using: composite
   steps:
-    - name: Cache GBDK 4.5.0
+    - uses: actions/cache@v4
       id: gbdk-cache
-      uses: actions/cache@v4
       with:
         path: ${{ runner.tool_cache }}/gbdk
         key: gbdk-2020-4.5.0-linux64-v1
 
-    - name: Install GBDK 4.5.0
+    - name: Install GBDK
       if: steps.gbdk-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
-        curl -fsSL -o "$RUNNER_TEMP/gbdk-linux64.tar.gz" \
-          https://github.com/gbdk-2020/gbdk-2020/releases/download/4.5.0/gbdk-linux64.tar.gz
+        curl -fsSL -o "$RUNNER_TEMP/gbdk.tar.gz" https://github.com/gbdk-2020/gbdk-2020/releases/download/4.5.0/gbdk-linux64.tar.gz
         mkdir -p "$RUNNER_TOOL_CACHE"
-        tar -xzf "$RUNNER_TEMP/gbdk-linux64.tar.gz" -C "$RUNNER_TOOL_CACHE"
-        test -x "$RUNNER_TOOL_CACHE/gbdk/bin/lcc"
+        tar -xzf "$RUNNER_TEMP/gbdk.tar.gz" -C "$RUNNER_TOOL_CACHE"
 
-    - name: Export GBDK
+    - name: Install native dependencies
       shell: bash
       run: |
         set -euo pipefail
-        test -x "$RUNNER_TOOL_CACHE/gbdk/bin/lcc"
-        echo "GBDK=$RUNNER_TOOL_CACHE/gbdk" >> "$GITHUB_ENV"
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          cmake ninja-build build-essential pkg-config libsdl2-dev \
+          qtbase5-dev qtmultimedia5-dev qttools5-dev libqt5opengl5-dev \
+          liblua5.4-dev libpng-dev libzip-dev libelf-dev libedit-dev \
+          xvfb xauth python3-pil lua5.4
+        sudo ln -sfn /usr/bin/luac5.4 /usr/local/bin/luac
 
-    # Stable 0.10.5 packages are built without the --script flag. The smoke
-    # harness and the controller bot both pass Lua that way, so CI uses the
-    # development build that provides mgba-qt and mgba-headless. The tarball
-    # hash is the build verified with scripts/test_smoke.sh (mGBA
-    # 0.11-9140-1d201b22a). "latest" moves; a mismatch fails closed.
-    - name: Cache mGBA development packages
+    - uses: actions/cache@v4
       id: mgba-cache
-      uses: actions/cache@v4
       with:
-        path: ${{ runner.tool_cache }}/mgba-dev-1d201b22a
-        key: mgba-dev-1d201b22a86d31dfb3bc75145403711f6762015f-v1
+        path: ${{ runner.tool_cache }}/mgba-pinned
+        key: mgba-source-ubuntu24-x64-1d201b22a86d31dfb3bc75145403711f6762015f-v1
 
-    - name: Download mGBA development build
+    - name: Build pinned mGBA
       if: steps.mgba-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
-        curl -fsSL -o "$RUNNER_TEMP/mgba.tar.xz" \
-          https://s3.amazonaws.com/mgba/mGBA-build-latest-ubuntu64-noble.tar.xz
-        echo "41effb02f1596d34e059bf1ee6c341f47cb123686fb81a208e3db7c1647b1d03  $RUNNER_TEMP/mgba.tar.xz" | sha256sum -c -
-        dest="$RUNNER_TOOL_CACHE/mgba-dev-1d201b22a"
-        rm -rf "$dest"
-        mkdir -p "$dest"
-        tar -xJf "$RUNNER_TEMP/mgba.tar.xz" -C "$dest" --strip-components=1
-        test -f "$dest/libmgba.deb"
-        test -f "$dest/mgba-qt.deb"
-        test -f "$dest/mgba-sdl.deb"
-        test -f "$dest/mgba-headless.deb"
+        commit=1d201b22a86d31dfb3bc75145403711f6762015f
+        src=$(mktemp -d "$RUNNER_TEMP/mgba-source.XXXXXX")
+        git -C "$src" init -q
+        git -C "$src" fetch --depth=1 https://github.com/mgba-emu/mgba.git "$commit"
+        git -C "$src" checkout --detach FETCH_HEAD
+        test "$(git -C "$src" rev-parse HEAD)" = "$commit"
+        cmake -S "$src" -B "$src/build" -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TOOL_CACHE/mgba-pinned" \
+          -DBUILD_HEADLESS=ON -DBUILD_QT=ON -DBUILD_SDL=ON \
+          -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DENABLE_SCRIPTING=ON -DUSE_LUA=5.4
+        cmake --build "$src/build" --parallel 2
+        cmake --install "$src/build"
 
-    - name: Install mGBA, Xvfb, and Pillow
+    - name: Export and check tools
       shell: bash
+      env:
+        QT_QPA_PLATFORM: offscreen
       run: |
         set -euo pipefail
-        dest="$RUNNER_TOOL_CACHE/mgba-dev-1d201b22a"
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          "$dest/libmgba.deb" \
-          "$dest/mgba-sdl.deb" \
-          "$dest/mgba-qt.deb" \
-          "$dest/mgba-headless.deb" \
-          xvfb \
-          python3-pil \
-          lua5.4
-        sudo ln -sfn /usr/bin/luac5.4 /usr/local/bin/luac
+        test -x "$RUNNER_TOOL_CACHE/gbdk/bin/lcc"
+        echo "GBDK=$RUNNER_TOOL_CACHE/gbdk" >> "$GITHUB_ENV"
+        export PATH="$RUNNER_TOOL_CACHE/mgba-pinned/bin:$PATH"
+        echo "$RUNNER_TOOL_CACHE/mgba-pinned/bin" >> "$GITHUB_PATH"
         command -v mgba-qt
         command -v mgba-headless
         command -v luac
-        timeout 15 mgba-qt --help >"$RUNNER_TEMP/mgba-qt-help.txt" || true
-        grep -q -- '--script' "$RUNNER_TEMP/mgba-qt-help.txt"
+        timeout 15 mgba-qt --help > "$RUNNER_TEMP/mgba-help.txt"
+        grep -q -- '--script' "$RUNNER_TEMP/mgba-help.txt"
         python3 -c "from PIL import Image"
