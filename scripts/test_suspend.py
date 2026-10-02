@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Battery-SRAM suspend survives a true emulator process restart."""
+"""Battery-SRAM suspend survives a true emulator process restart.
+
+A cold continue past room 0 of stage 0 must also reload that stage's OBJ
+palette and miniboss tiles. stage_seen used to start at 0, which is Crystal
+Caverns, so the upload was skipped and magic-palette monsters and pickups
+rendered black.
+"""
 import re
 import shutil
 import tempfile
@@ -48,6 +54,66 @@ def boot_fresh(pb):
 def put16(pb, address, value):
     pb.memory[address] = value & 0xFF
     pb.memory[address + 1] = value >> 8
+
+
+def bgr555(r, g, b):
+    return ((b & 0x1F) << 10) | ((g & 0x1F) << 5) | (r & 0x1F)
+
+
+def palette_bytes(colors):
+    out = bytearray()
+    for r, g, b in colors:
+        value = bgr555(r, g, b)
+        out.append(value & 0xFF)
+        out.append((value >> 8) & 0xFF)
+    return bytes(out)
+
+
+# Crystal Caverns boss ramp from content/src/stages.rs. room_load_stage_obj_identity
+# writes these four colors into OBJ palette 6.
+CRYSTAL_BOSS_OBJ = palette_bytes([
+    (0, 0, 0), (3, 10, 18), (4, 25, 31), (31, 31, 20),
+])
+SPR_BOSS = 24
+VRAM_TILE = 0x8000
+
+
+def obj_palette(pb, slot):
+    result = []
+    for index in range(8):
+        pb.memory[0xFF6A] = slot * 8 + index
+        result.append(pb.memory[0xFF6B])
+    return bytes(result)
+
+
+def obj_tiles(pb, slot, count):
+    pb.memory[0xFF4F] = 0
+    base = VRAM_TILE + slot * 16
+    return bytes(pb.memory[base:base + count * 16])
+
+
+def sentinel_tiles():
+    text = (ROOT / "src/render/sprites_gen.c").read_text()
+    match = re.search(
+        r"const u8 sprite_boss_sentinel\[64\] = \{([^}]+)\}", text)
+    if not match:
+        raise RuntimeError("sprite_boss_sentinel missing from sprites_gen.c")
+    return bytes(int(x, 16) for x in re.findall(r"0x([0-9A-Fa-f]+)", match.group(1)))
+
+
+def assert_stage0_obj_identity(pb):
+    palette = obj_palette(pb, 6)
+    assert palette == CRYSTAL_BOSS_OBJ, (
+        "stage 0 OBJ palette 6 was not loaded on cold resume "
+        f"(got {palette.hex()}, expected {CRYSTAL_BOSS_OBJ.hex()})"
+    )
+    tiles = obj_tiles(pb, SPR_BOSS, 4)
+    expected = sentinel_tiles()
+    assert len(expected) == 64, f"sentinel art length {len(expected)}"
+    assert tiles == expected, (
+        "Crystal Caverns miniboss tiles were not loaded on cold resume "
+        f"(first tile {tiles[:16].hex()})"
+    )
 
 
 def main():
@@ -156,9 +222,13 @@ def main():
         )
         assert coins == 321, f"player payload drifted across power cycle: {coins}"
         assert score == 0x1234, f"run payload drifted across power cycle: 0x{score:04X}"
+        assert_stage0_obj_identity(second)
         second.stop(save=False)
         battery_io.close()
-    print("[suspend] PASS battery SRAM room/player payload survives cold boot")
+    print(
+        "[suspend] PASS battery SRAM room/player payload survives cold boot; "
+        "stage 0 OBJ palette and miniboss tiles reloaded"
+    )
 
 
 if __name__ == "__main__":

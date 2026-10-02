@@ -18,7 +18,7 @@ that at a cached GBDK-2020 4.5.0 tree.
 | `cargo test --workspace --locked --all-targets` | Rust job |
 | `make gen` and `make rom/working/quintra.gbc` (link runs `scripts/check_rom_layout.py`) | ROM job |
 | `scripts/check_cartridge.py` | ROM job |
-| `scripts/test_suspend.py` under PyBoy 2.7.0 (the battery power-cycle from `make preflight`) | ROM job |
+| `scripts/test_suspend.py` under PyBoy 2.7.0 (the battery power-cycle from `make preflight`, plus the stage-0 cold-resume OBJ palette and miniboss tiles) | ROM job |
 | `scripts/test_smoke.sh` under headless mGBA (the cart walk from `make test`) | ROM job |
 
 The ROM job uploads `quintra.gbc` plus the linker `.map` and `.noi` as the
