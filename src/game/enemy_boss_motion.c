@@ -2,10 +2,12 @@
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
+#include "audio/boss_voice.h"
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
+#include "game/boss_phase.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "render/hud.h"
@@ -92,6 +94,7 @@ void boss_motion_tick(entity_t *e) BANKED {
     // Mini-bosses retain the simpler pursuit behavior; giant stages receive
     // the more theatrical movement language below.
     if (!(e->ai_data[3] & 1)) { boss_chase_tick(e, 3); return; }
+    if (boss_phase_motion(e)) return;
 
     switch (e->ai_data[2]) {
         case 0: { // Crystal Dragon: warned jumps among three distant wells
@@ -109,14 +112,14 @@ void boss_motion_tick(entity_t *e) BANKED {
                 e->state = next;
                 e->x = FIX8(anchor_x[next]);
                 e->y = FIX8(anchor_y[next]);
-                e->ai_data[7] = 12;
+                e->ai_data[7] = 6;
                 // Leave a reliable half-second punish window even when a
                 // banked update straddles an emulator/video frame boundary.
                 e->ai_data[1] = 34;
                 fx_spawn(SPR_FX_IMPACT, 2, anchor_x[next] + 12,
                     anchor_y[next] + 12, 14);
                 e->vx = 96;
-                sfx_play(SFX_ROAR);
+                boss_voice(0, BOSS_VOICE_ATTACK);
             }
             return;
         }
@@ -131,7 +134,7 @@ void boss_motion_tick(entity_t *e) BANKED {
                 if (e->vx == 10) { e->ai_data[7] = 10; sfx_play(SFX_TICK); }
                 if (--e->vx == 0) {
                     e->vy = (i8)boss_aim_dir8(e);
-                    e->state = 1; e->vx = 15; sfx_play(SFX_ROAR);
+                    e->state = 1; e->vx = 15; boss_voice(2, BOSS_VOICE_ATTACK);
                 }
             } else if (e->state == 1) {
                 i8 dx = dir8_dx[(u8)e->vy & 7], dy = dir8_dy[(u8)e->vy & 7];
@@ -152,7 +155,7 @@ void boss_motion_tick(entity_t *e) BANKED {
                 // its blink cadence and four-lane pattern, but grant a short
                 // re-engagement beat for close weapons after every flank.
                 e->ai_data[1] = 18;
-                e->state = 0; e->vx = 92; sfx_play(SFX_ROAR);
+                e->state = 0; e->vx = 92; boss_voice(3, BOSS_VOICE_ATTACK);
             }
             return;
 
@@ -175,7 +178,7 @@ void boss_motion_tick(entity_t *e) BANKED {
         case 5: // Reaper: hunt, telegraph, then re-enter at a new flank
             if (e->vx == 0) e->vx = 84;
             if (e->vx == 14) { e->ai_data[7] = 10; sfx_play(SFX_TICK); }
-            if (--e->vx == 0) { boss_warp_near_player(e); e->vx = 84; sfx_play(SFX_ROAR); }
+            if (--e->vx == 0) { boss_warp_near_player(e); e->vx = 84; boss_voice(5, BOSS_VOICE_ATTACK); }
             else boss_chase_tick(e, 5);
             return;
 
@@ -204,7 +207,7 @@ void boss_motion_tick(entity_t *e) BANKED {
             e->ai_data[7] = 12;
             fx_spawn(SPR_FX_IMPACT, 2, anchor_x[next] + 12,
                 anchor_y[next] + 12, 12);
-            sfx_play(SFX_ROAR);
+            boss_voice(8, BOSS_VOICE_ATTACK);
             return;
         }
         default: boss_chase_tick(e, 3); return;

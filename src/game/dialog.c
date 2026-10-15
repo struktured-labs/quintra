@@ -14,6 +14,9 @@
 #include "game/dialog.h"
 #include "game/companion.h"
 #include "game/pickup.h"
+#include "game/player.h"
+#include "game/run_state.h"
+#include "game/waygear.h"
 #include "game/room.h"
 #include "game/shop_copy.h"
 #include "render/palette.h"
@@ -80,6 +83,9 @@ static void wayfarer_title(void) {
         case 9: text_write("WAKING ARCH"); break;
         case 10: text_write("SLEEPING ARCH"); break;
         case 11: text_write("FARFOLD CAVE"); break;
+        case 13: text_write("SEALED ARCH"); break;
+        case 14: text_write("REED SINGER"); break;
+        case 15: text_write("BELLWATER ECHO"); break;
         default: text_write("MEMORY VAULT"); break;
     }
 }
@@ -125,7 +131,7 @@ static void dialog_title(void) {
 
 static void wayfarer_lore(void) {
     switch (dialog_topic) {
-        case 0: dialog_lines("STONE KEEPS ECHOES", "OF THE FIRST RIFT", "LISTEN FOR ECHOES"); break;
+        case 0: dialog_lines("HE GUARDED THE ROAD", "BEFORE STONE GREW", "OVER HIS EYES"); break;
         case 1: dialog_lines("ROOTS REMEMBER FIVE", "SPARKS BEFORE KINGS", "THE SERPENT HUNGERS"); break;
         case 2: dialog_lines("EMBER FED THE OATH", "WHEN THE SKY BROKE", "ASH STILL KNOWS IT"); break;
         case 3: dialog_lines("ICE HOLDS A NAME", "THE VOID CANNOT EAT", "SPEAK IT IN WINTER"); break;
@@ -137,25 +143,52 @@ static void wayfarer_lore(void) {
         case 9: dialog_lines("THIS ARCH IS AWAKE", "STEP INTO BLUE FIRE", "A DUNGEON WAITS"); break;
         case 10: dialog_lines("THIS ARCH SLEEPS", "ANOTHER BURNS BLUE", "FOLLOW YOUR MAP"); break;
         case 11: dialog_lines("FARFOLD STAIRS BEND", "LINK DISTANT WOODS", "DESCEND TO CROSS"); break;
+        case 13:
+            if (run_state.world_screen == run_state_riftwild_gate_screen())
+                dialog_lines("THIS ARCH IS ^4SEALED", "A ^4WARDEN^0 HOLDS IT", "ITS FALL WAKES FIRE");
+            else dialog_lines("THIS ARCH SLEEPS", "YOUR ROAD GOES ON", "ANOTHER ARCH WAITS");
+            break;
+        case 14:
+            if (run_state.riftwild_flags & 0x20)
+                dialog_lines("YOU MET THE ECHO?", "THEN HE SAVED IT", "NOT JUST THE ROAD");
+            else dialog_lines("THE WARDEN CLOSED", "THE BELL ROAD", "I STILL SING TO IT");
+            break;
+        case 15: dialog_lines("HE SEALED THE ROAD", "WHEN THE VOID CAME", "I WAS LEFT BEHIND"); break;
         default: dialog_lines("ONE VAULT PER WILD", "MEMORY GUARDS GIFT", "CLAIM IT ONLY ONCE"); break;
     }
 }
 
 static void wayfarer_advice(void) {
     switch (dialog_topic) {
-        case 0: dialog_lines("^3SHOOT^0 THE ^1CRYSTALS", "SOME HOLD ^2MAGIC", "^1CRACKS^0 HIDE PATHS"); break;
+        case 0: dialog_lines("^3SIDESTEP^0 HIS AIM", "^3SLIP^0 THROUGH RINGS", "STRIKE AS HE RESTS"); break;
         case 1: dialog_lines("THE SERPENT FEEDS", "DENY ^1FOUR STORMS", "^3FLEE^0 THE ^4FULL COIL"); break;
         case 2: dialog_lines("CINDER MAWS HOLD", "^4THREE BURNING LANES", "CROSS ^3AFTER THE FAN"); break;
         case 3: dialog_lines("WATCH FOR THE ^1BLINK", "THEN ^3CROSS^0 THE WEB", "^4DO NOT WAIT CENTER"); break;
         case 4: dialog_lines("^3LEAVE^0 THE PULSE", "^4BEFORE^0 MIRE SWELLS", "RETURN ^3AFTER IMPACT"); break;
-        case 5: dialog_lines("REAPER ^4WARPS NEAR", "KEEP AN ^2EXIT LINE", "FIRE ^3AFTER THE WARP"); break;
+        case 5: dialog_lines("GOLD FLOOR ^4FALLS", "FALLS ^4END THE RUN", "^1RIFT HOOK^0 SAVES"); break;
         case 6: dialog_lines("GOLEM ^4SLAMS TWICE", "MOVE ^3AFTER THE RING", "^2CORNERS^0 BUY TIME"); break;
         case 7: dialog_lines("HYDRA HEADS WEAVE", "CUT THROUGH ^2THE GAP", "^4DO NOT CHASE EDGES"); break;
         case 8: dialog_lines("VOID ^4HEALS SLOWLY", "PRESS ^3EVERY OPENING", "^3FLEE^0 THE ^4COLLAPSE"); break;
         case 9: dialog_lines("OTHER ARCHES SLEEP", "WIN WAKES THE ROAD", "THE MAP KEEPS MARKS"); break;
         case 10: dialog_lines("SEEK THE BLUE ARCH", "RETURN AFTER WIN", "OLD GATES THEN WAKE"); break;
         case 11: dialog_lines("^1TOOLS^0 OPEN GROVES", "REMEMBER ^1OLD GATES", "^3RETURN WITH GEAR"); break;
-        case 12: dialog_lines("VAULTS ^4NEVER REFILL", "ROADS HIDE GEAR", "WILD REWARDS MEMORY"); break;
+        case 12: dialog_lines("TAKE THE ^1GIFTS", "^3BEFORE YOU LEAVE", "VAULTS ^4NEVER REFILL"); break;
+        case 13:
+            if (run_state.world_screen == run_state_riftwild_gate_screen())
+                dialog_lines("SEEK ^3NORTHEAST", "DEFEAT THE ^4WARDEN", "RETURN TO THIS ARCH");
+            else dialog_lines("SEEK THE ^1NEXT ARCH", "ITS ^4WARDEN^0 HOLDS IT", "^3SELECT^0 OPENS MAP");
+            break;
+        case 14:
+            dialog_lines("REST BY ^2MY SPRING", "SEE THE ^1LAKE SHRINE",
+                player.class_id == 3 ? "YOU CAN ^3SWIM^0 THERE"
+                : (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_RAFT))
+                ? "YOUR ^3RAFT^0 CAN CROSS" : "RETURN WITH A ^3RAFT");
+            break;
+        case 15:
+            dialog_lines((run_state.riftwild_flags & 0x20)
+                ? "MY ^1SPARK^0 IS YOURS" : "TAKE THIS ^1SPARK",
+                "AND KEEP A SONG", "FOR THE WAY HOME");
+            break;
         default: dialog_lines("WILD WARDEN HOLDS", "FIND ITS RED MARK", "WIN WAKES THIS ARCH"); break;
     }
 }
@@ -303,7 +336,7 @@ static void dialog_paint(void) {
 
 void dialog_prepare(u8 kind, u8 topic) BANKED {
     dialog_kind = kind;
-    dialog_topic = topic < 13 ? topic : 12;
+    dialog_topic = topic < 16 ? topic : 12;
     dialog_page = 0;
     dialog_is_reward = 0;
     dialog_is_stage = 0;

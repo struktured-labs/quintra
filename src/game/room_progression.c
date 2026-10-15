@@ -11,7 +11,6 @@
 #include "game/run_state.h"
 #include "render/tiles.h"
 
-extern u8 room_mire_projection_state;
 extern u8 room_resume_flag;
 extern u8 shake_timer;
 extern u8 shake_mag;
@@ -41,8 +40,7 @@ void room_prepare_stage_arrival(u8 stage) BANKED {
 // headroom for collision and transition fixes.
 void room_spawn_progression_fixture(void) BANKED {
     u8 i;
-    u8 arena_stage = room_apply_world_arena();
-    if (arena_stage == 4) room_mire_projection_state = 0xFF;
+    room_apply_world_arena();
     room_sigil_status = 1;
     if (run_state.world_mode) return;
     room_sigil_status = 2;

@@ -19,6 +19,7 @@ extern u8 entity_anim_counter;
 
 void serpent_tail_update(entity_t *e) BANKED {
     u8 i;
+    u8 *trail;
     u8 cx = (u8)(FIX8_TO_INT(e->x) + 12);
     u8 cy = (u8)(FIX8_TO_INT(e->y) + 12);
     u8 dx = (cx > serpent_tail_x[0])
@@ -27,49 +28,44 @@ void serpent_tail_update(entity_t *e) BANKED {
         ? (u8)(cy - serpent_tail_y[0]) : (u8)(serpent_tail_y[0] - cy);
 
     if (e->state == 0) {
-        // Four meals expose 2->7->12->17->20 scales. The final scales
-        // complete a second arena coil without consuming Coil Tempest's
-        // remaining projectile sprites.
-        u8 target = (u8)(2 + e->ai_data[4] * 5);
-        if (target > 20) target = 20;
-        if (serpent_tail_visible < target && !(entity_anim_counter & 3))
+        u8 target = (u8)(2 + e->ai_data[4] * 12);
+        if (target > SERPENT_TAIL_MAX) target = SERPENT_TAIL_MAX;
+        if (serpent_tail_visible < target && !(entity_anim_counter & 3)) {
             serpent_tail_visible++;
-    }
-    // Eight-pixel sampling stretches twenty scales across 160 route pixels
-    // while keeping adjacent 8x8 art edge-connected. The completed inner loop
-    // therefore drags a substantial second coil through the previous ring.
-    if ((u16)(dx + dy) >= 8) {
-        for (i = SERPENT_TAIL_POINTS - 1; i != 0; --i) {
-            serpent_tail_x[i] = serpent_tail_x[i - 1];
-            serpent_tail_y[i] = serpent_tail_y[i - 1];
+            serpent_body_dirty = 1;
         }
+    }
+    if ((u16)(dx + dy) >= 8) {
+        trail = serpent_tail_x + SERPENT_TAIL_MAX;
+        for (i = SERPENT_TAIL_MAX; i; --i, --trail) *trail = *(trail-1);
+        trail = serpent_tail_y + SERPENT_TAIL_MAX;
+        for (i = SERPENT_TAIL_MAX; i; --i, --trail) *trail = *(trail-1);
         serpent_tail_x[0] = cx;
         serpent_tail_y[0] = cy;
+        serpent_body_dirty = 1;
     }
 
 }
 
 void serpent_tail_contact(void) BANKED {
-    u8 i, cx, cy, dx, dy, radius = 10;
+    u8 i, count, cx, cy, dx, dy, tx, ty;
+    u8 *xs = serpent_tail_x + 1, *ys = serpent_tail_y + 1;
     if (!serpent_tail_active) return;
-    // The articulated body is a passable but damaging ribbon. Combining the
-    // scale's four-pixel radius with the champion's centered hurtbox requires
-    // a wider test than point contact; adjacent eight-pixel samples overlap.
     if (player.iframes || player.shield_timer) return;
-    // At full growth the pale scale pulse is mechanically real: every other
-    // sixteen-frame beat charges a wider storm field around the whole body.
-    // The corresponding palette pulse in serpent_draw keeps that reach honest.
-    if (serpent_head_index < MAX_ENTITIES
-        && entities[serpent_head_index].ai_data[4] >= 4
-        && (entity_anim_counter & 0x10)) radius = 14;
+    if (serpent_head_index >= MAX_ENTITIES
+        || entities[serpent_head_index].type != ENT_ENEMY
+        || !(entities[serpent_head_index].flags & EF_ACTIVE)) return;
     cx = (u8)(player.x + 8);
     cy = (u8)(player.y + 12);
-    for (i = 1; i <= serpent_tail_visible && i < serpent_tail_count; ++i) {
-        dx = (cx > serpent_tail_x[i])
-            ? (u8)(cx - serpent_tail_x[i]) : (u8)(serpent_tail_x[i] - cx);
-        dy = (cy > serpent_tail_y[i])
-            ? (u8)(cy - serpent_tail_y[i]) : (u8)(serpent_tail_y[i] - cy);
-        if (dx < radius && dy < radius) {
+    count = serpent_tail_visible;
+    if (count >= serpent_tail_count) count = serpent_tail_count - 1;
+    for (i = count; i; --i, ++xs, ++ys) {
+        tx = (*xs & 0xF8) + 4;
+        dx = (u8)(cx - tx + 7);
+        if (dx >= 15) continue;
+        ty = (*ys & 0xF8) + 4;
+        dy = (u8)(cy - ty + 7);
+        if (dy < 15) {
             player.hp = player.hp ? (u8)(player.hp - 1) : 0;
             player.iframes = 24;
             hud_redraw_hp();

@@ -7,12 +7,14 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
 #include "game/enemy_ai.h"
 #include "game/pickup.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
 #include "render/tiles.h"
+#include "render/large_boss.h"
 #include "content.h"
 
 void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;
@@ -115,17 +117,6 @@ u8 aabb_overlap_player(const entity_t *e) {
 // feet box used for terrain. In particular, an orb beside a wall can overlap
 // the hero's head/shoulder while their feet cannot move any closer; requiring
 // feet contact there makes a visibly touched item feel unreachable.
-u8 aabb_overlap_player_wide(const entity_t *e) {
-    i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
-    i16 px = (i16)player.x, py = (i16)player.y;
-    u8  ew = hitbox_w(e), eh = hitbox_h(e);
-    if (px + 16 <= ex) return 0;
-    if (ex + (i16)ew <= px) return 0;
-    if (py + 16 <= ey) return 0;
-    if (ey + (i16)eh <= py) return 0;
-    return 1;
-}
-
 // Home-bank half of the adaptive dispatcher. Projectile/FX-free rooms stay
 // here for the complete scan; the first projectile or effect transfers only
 // the unprocessed suffix to bank 3, where both updates are direct calls.
@@ -234,7 +225,7 @@ static u8 enemy_is_big16(const entity_t *e) {
 // than permanent invisibility; unused slots are parked off-screen.
 void entity_draw_all(void) {
     u8 i;
-    u8 oam = serpent_tail_active ? 32 : cinder_pack_active ? 22 : 4;
+    u8 oam = serpent_tail_active ? 16 : cinder_pack_active ? 22 : 4;
 #define ENTITY_DRAW_SX(e) \
     ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
 #define ENTITY_DRAW_SY(e) \

@@ -29,7 +29,7 @@ static const char *const waygear_short_names[WAYGEAR_COUNT] = {
 };
 
 static const char *const waygear_rules[WAYGEAR_COUNT] = {
-    "PASS RUNE BOULDERS", "CROSS RIVERS/LAKES", "CROSS HOLES/GAPS", "SEL+B SHIFT WORLD"
+    "PASS RUNE BOULDERS", "CROSS RIVERS/LAKES", "GAPS + FALL RESCUE", "SEL+B SHIFT WORLD"
 };
 
 static const u8 selection_tiles[4][16] = {

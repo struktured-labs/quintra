@@ -29,6 +29,20 @@ void room_unseal_doors(void) BANKED {
     u8 east = (u8)((room_world_width >> 3) - 1);
     u8 south = (u8)((room_world_height >> 3) - 1);
     u8 cleared_boss = run_state_was_cleared_boss();
+    if (cleared_boss) {
+        u8 x, y, floor = BGT_FLOOR, attr = BGPAL_FLOOR;
+        for (y = 1; y < ROOM_H - 1; ++y)
+            for (x = 1; x < ROOM_W; ++x)
+                if (room_tilemap[y][x] >= BGT_COLOSSUS_VOID
+                    && room_tilemap[y][x] <= BGT_COLOSSUS_HORN) {
+                    room_tilemap[y][x] = floor;
+                    VBK_REG = 0; set_bkg_tiles(x, y, 1, 1, &floor);
+                    VBK_REG = 1; set_bkg_tiles(x, y, 1, 1, &attr);
+                }
+        VBK_REG = 0;
+        if (room_world_width > ROOM_VIEW_W_PX)
+            tiles_prepare_crystal_wide_arena();
+    }
     // Ordinary exits already retain BGT_DOOR beneath their amber seal, so
     // releasing a puzzle/combat room is only a palette change. A defeated
     // Colossus is the exception: it authors fresh compact exits here.

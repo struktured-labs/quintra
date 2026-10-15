@@ -1,11 +1,18 @@
 #pragma bank 3
 #include "audio/sfx.h"
+#include "audio/boss_voice.h"
+#include "render/large_boss.h"
+
+u8 large_boss_shot_overlap(const entity_t *shot, const entity_t *boss) BANKED;
+u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/combat.h"
 #include "game/enemy_ai.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
+#include "game/rare_enemy.h"
+#include "game/boss_phase.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -84,6 +91,243 @@ static void boss_clear_hostile_projectiles(void) {
     }
 }
 
+static u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) {
+    u8 eid=entities[j].ai_data[0];
+    u8 boss_retired_for_rewards=0, shot_spent_for_split=0;
+    sfx_play(SFX_DEATH);
+    if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
+        && (entities[j].ai_data[3] & 1))
+        boss_voice(entities[j].ai_data[2], BOSS_VOICE_DEATH);
+    if (weak) {
+        fx_spawn(SPR_FX_IMPACT, 3,
+                 FIX8_TO_INT(entities[j].x) + 4,
+                 FIX8_TO_INT(entities[j].y) + 4, 10);
+    }
+    if (g_hitstop < 2) g_hitstop = 2;
+    {
+        if (eid < N_ENEMIES) {
+            // Endless descent pays double
+            u16 pts = enemies[eid].stats.score;
+            if (run_state.bosses_beaten >= BOSSES_TO_WIN) pts = (u16)(pts << 1);
+            score_add(pts);
+        }
+        run_state_record_enemy_kill();
+        if (eid == ENEMY_STAGE_REAPER)
+            run_state.dungeon_puzzles |= RUN_REAPER_CLEARED_BIT;
+        // Vampiric Sigil (item id 29): slow dungeon sustain.
+        // Multiple copies keep their stat boosts but do not
+        // multiply the heal, avoiding runaway immortality.
+        if (!STATUS_PLAYER_HEALING_BLOCKED()
+            && (run_state_enemies_killed_total() % 5) == 0
+            && player.hp < player.hp_max) {
+            u8 vi;
+            for (vi = 0; vi < INVENTORY_SLOTS; ++vi) {
+                if (player.inventory[vi] == 29) {
+                    player.hp++;
+                    hud_redraw_hp();
+                    sfx_play(SFX_HEART);
+                    break;
+                }
+            }
+        }
+        // War Drum turns the same five-kill cadence into a
+        // class-shaped resource swing: every champion gets
+        // B back immediately, while restored MP feeds the
+        // separate A+B/Oath magic ladder.
+        if ((run_state_enemies_killed_total() % 5) == 0
+            && combat_has_relic(ITEM_ID_WAR_DRUM)) {
+            player.active_charge = 0;
+            if (player.mp < player.mp_max) {
+                player.mp++;
+                hud_redraw_mp();
+            }
+            sfx_play(SFX_CLEAR);
+        }
+        // Enemy id 1 is used by BOTH the large stage boss
+        // (giant flag ai_data[3]=1) and the room-3 mini-boss.
+        // Only the GIANT advances the stage — a mini-boss kill
+        // must not skip the stage boss (bug: it used to).
+        if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) {
+            fix8_t boss_x = entities[j].x;
+            fix8_t boss_y = entities[j].y;
+            i16 bx = FIX8_TO_INT(entities[j].x) + 12;
+            i16 by = FIX8_TO_INT(entities[j].y) + 12;
+            g_hitstop = 8;   // boss kill: big freeze
+            room_shake(2, 26);   // the colossus hits the floor
+            run_state.bosses_beaten++;
+            // Campaign order is also the Oath unlock table:
+            // this victory grants a permanent new active verb
+            // for the current run, selectable in the Pack.
+            // Every defeated arena opens before its reward or
+            // ending screen. The final boss used to jump
+            // straight to Victory with every threshold still
+            // sealed, trapping endless descent in the arena.
+            run_state.pending_unseal = 1;
+            if (run_state.bosses_beaten >= BOSSES_TO_WIN) {
+                run_state.victory = 1;
+            }
+            // The giant and its bullets release their slots
+            // before effects. Rewards therefore remain real
+            // pickups even in a completely saturated fight.
+            entity_kill(j);
+            boss_retired_for_rewards = 1;
+            boss_link_active = boss_link_pending = 0;
+            hud_show_boss_link(3);
+            boss_clear_hostile_projectiles();
+            // A stage clear is the run's deliberate recovery
+            // beat. Grant one visible heart immediately so a
+            // player who won the fight at low health enters
+            // the next procedurally dangerous room with a
+            // buffer, while the two physical heart drops
+            // below still reward careful positioning and can
+            // be saved at full health. This is sustain, not
+            // a boss-fight heal: it happens only after the
+            // colossus and its bullet storm are gone.
+            if (!STATUS_PLAYER_HEALING_BLOCKED()
+                && player.hp < player.hp_max) {
+                if (player.hp <= (u8)(player.hp_max - 2))
+                    player.hp = (u8)(player.hp + 2);
+                else
+                    player.hp = player.hp_max;
+                hud_redraw_hp();
+                sfx_play(SFX_HEART);
+            }
+            pickup_spawn(PICKUP_HEART_HALF, boss_x - FIX8(8), boss_y);
+            pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y);
+            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8));
+            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y + FIX8(16));
+            // Every colossus yields a class-attuned passive
+            // item — the run's guaranteed power curve.
+            pickup_spawn_item(pickup_boss_relic_for_class(),
+                boss_x + FIX8(4), boss_y + FIX8(4));
+            // Death explosion: staggered ring of impact FX.
+            // These are allowed to drop if a later effect
+            // burst fills the table; the rewards are not.
+            fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by - 10, 14);
+            fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by - 10, 18);
+            fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by + 10, 22);
+            fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by + 10, 26);
+            fx_spawn(SPR_FX_IMPACT, 2, bx,      by,      30);
+            // Stage clears themselves advance visible gear;
+            // the guaranteed relic can advance it early too.
+            room_refresh_player_appearance(1);
+        } else if (eid == ENEMY_BOMBER) {
+            // Bomber: death detonation — a 4-way revenge
+            // burst. Kill it from a diagonal, or eat sparks.
+            i16 dx2 = FIX8_TO_INT(entities[j].x);
+            i16 dy2 = FIX8_TO_INT(entities[j].y);
+            projectile_spawn_enemy(dx2, dy2, 0, -2, entities[j].damage);
+            projectile_spawn_enemy(dx2, dy2, 0,  2, entities[j].damage);
+            projectile_spawn_enemy(dx2, dy2, -2, 0, entities[j].damage);
+            projectile_spawn_enemy(dx2, dy2,  2, 0, entities[j].damage);
+        } else if ((eid == ENEMY_STONE_SENTINEL)
+                   || (eid == ENEMY_DREAD_BELL
+                       && entities[j].ai_data[2] == ENEMY_AUX_BELLWARDEN)) {
+            // Mini-boss down: solid reward, no stage advance.
+            // Bellwarden is a Dread Bell mechanically, but it
+            // is tagged by procgen so it receives this same
+            // weapon-orb preparation reward. Ordinary late
+            // roster Bells remain ordinary enemy drops.
+            u8 world_guard = (run_state.world_mode
+                && run_state_riftwild_guard_active(
+                    run_state.world_screen));
+            // The first Warden is a meaningful stage fixture,
+            // not an optional combat room. Its weapon orb is
+            // the mechanical boon; this persistent mark tells
+            // the sanctuary that the trial was completed.
+            if (world_guard) {
+                u8 gear = run_state_riftwild_guard_gear(
+                    run_state.world_screen);
+                run_state_riftwild_clear_guard();
+                // First-region Wardens carry the three
+                // permanent traversal implements. In later
+                // regions the same distant fights remain
+                // rewarding through a volatile Wildcard.
+                if (gear < WAYGEAR_COUNT
+                    && !(player.waygear_owned
+                        & WAYGEAR_BIT(gear)))
+                    pickup_spawn_waygear(gear,
+                        entities[j].x + FIX8(12),
+                        entities[j].y);
+                else pickup_spawn_wildcard(
+                    entities[j].x + FIX8(12),
+                    entities[j].y);
+            } else if (!run_state.world_mode) {
+                u8 local = run_state_dungeon_local();
+                if (local == run_state.mission_warden_cell)
+                    run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+                else if (local
+                    == run_state.mission_deep_warden_cell)
+                    run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
+            }
+            g_hitstop = 5;
+            pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
+            pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
+            if (!world_guard) {
+                u8 w = pickup_weapon_from_roll(
+                    rng_range(pickup_weapon_count()));
+                if (w == player.starter_weapon)
+                    w = pickup_next_weapon(w);
+                pickup_spawn_weapon(w,
+                    entities[j].x + FIX8(12), entities[j].y);
+            }
+        }
+    }
+    // Impact FX at enemy position
+    fx_spawn(SPR_FX_IMPACT, 2,
+        (i16)FIX8_TO_INT(entities[j].x),
+        (i16)FIX8_TO_INT(entities[j].y), 8);
+    if (entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE)) {
+        u8 recovery = (entities[j].flags & EF_ELITE)
+            ? player.hp < player.hp_max
+            : RUN_IS_EASY() ? player.hp < player.hp_max
+            : (u16)player.hp * 2u <= player.hp_max;
+        pickup_spawn(recovery
+            ? PICKUP_HEART_HALF : PICKUP_COIN_5,
+            entities[j].x, entities[j].y);
+        score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
+    } else {
+        pickup_roll_drop(entities[j].x, entities[j].y);
+    }
+    {
+        // Rift Ooze: the apparent kill is only phase one.
+        // Free its slot first so a full entity table still
+        // guarantees at least one fragment, then seed two
+        // fragile crawlers on opposite sides of the corpse.
+        u8 split = (eid == ENEMY_RIFT_OOZE);
+        u8 sx = (u8)(FIX8_TO_INT(entities[j].x) >> 3);
+        u8 sy = (u8)(FIX8_TO_INT(entities[j].y) >> 3);
+        // Boss rewards can occupy the just-freed boss slot.
+        // Do not erase that first heart/item in the generic
+        // cleanup after the giant has already been retired.
+        if (!boss_retired_for_rewards) entity_kill(j);
+        if (split) {
+            // Generic pierce cleanup happens later, but its
+            // lethal shot is the second free slot we need at
+            // entity capacity. Retire it before fragment spawn.
+            if (entities[i].hp <= 1) {
+                entity_kill(i);
+                shot_spent_for_split = 1;
+            }
+            u8 a = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
+            u8 b = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
+            if (a != 0xFF) {
+                entities[a].hp = 2;
+                entities[a].ai_data[1] = 90; // scatter beat
+                entities[a].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
+                enemy_try_step(&entities[a], -1, 0);
+            }
+            if (b != 0xFF) {
+                entities[b].hp = 2;
+                entities[b].ai_data[1] = 90;
+                entities[b].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
+                enemy_try_step(&entities[b], 1, 0);
+            }
+        }
+    }
+    return shot_spent_for_split;
+}
+
 u8 combat_resolve(void) BANKED {
     u8 i, j;
     u8 player_died = 0;
@@ -94,6 +338,11 @@ u8 combat_resolve(void) BANKED {
     // enemy it reaches, while a colossus receives at most four readable
     // hits per cast rather than all eight overlapping arcs.
     u8 convergence_giant_hits = 0;
+
+    if (!player.hp) {
+        boss_link_pending = 0;
+        return 1;
+    }
 
     // Tick down per-frame timers
     if (player.iframes > 0) player.iframes--;
@@ -118,7 +367,6 @@ u8 combat_resolve(void) BANKED {
         for (j = 0; j < MAX_ENTITIES; ++j) {
             u8 eid, weakness, poise, dmg;
             u8 shot_spent_for_split = 0;
-            u8 boss_retired_for_rewards = 0;
             if (j == i) continue;
             if (!(entities[j].flags & EF_ACTIVE)) continue;
             if (entities[j].type == ENT_ENEMY
@@ -147,11 +395,15 @@ u8 combat_resolve(void) BANKED {
                 if (entities[i].ai_data[5] == j
                     || !splash_reaches_enemy(&entities[i], &entities[j]))
                     continue;
+            } else if (j == large_boss_index) {
+                if (!large_boss_shot_overlap(&entities[i], &entities[j])) continue;
             } else if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
+            if (entities[i].ai_data[6] == PROJ_AUX_HOOKSHOT
+                || entities[i].ai_data[6] == PROJ_AUX_FUSE_BOMB) continue;
             if (entities[i].ai_data[6] == PROJ_AUX_BOOMERANG) {
-                if (!(entities[j].flags & (EF_ELITE | EF_ALPHA))
+                if (!(entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE))
                     && eid != ENEMY_STONE_SENTINEL
                     && eid != ENEMY_STAGE_REAPER
                     && entities[j].ai_data[2] != ENEMY_AUX_BELLWARDEN
@@ -269,6 +521,10 @@ u8 combat_resolve(void) BANKED {
                 if (dmg > cap) dmg = cap;
             }
 
+            if (boss_link_active && boss_link_reflect(&entities[j], &entities[i], dmg)) {
+                entity_kill(i);
+                break;
+            }
             // Blast Seed is a true area interaction: the first direct body
             // impact consumes the marker and leaves a one-frame 15x15 burst.
             // Its payload remembers the struck slot so the target never takes
@@ -297,234 +553,12 @@ u8 combat_resolve(void) BANKED {
                         sfx_play(SFX_WEAK);
                     } else {
                         sfx_play(SFX_HIT);
+                        if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
+                            && (entities[j].ai_data[3] & 1))
+                            boss_voice(entities[j].ai_data[2], BOSS_VOICE_PAIN);
                     }
                 } else {
-                    sfx_play(SFX_DEATH);
-                    if (weak) {
-                        fx_spawn(SPR_FX_IMPACT, 3,
-                                 FIX8_TO_INT(entities[j].x) + 4,
-                                 FIX8_TO_INT(entities[j].y) + 4, 10);
-                    }
-                    if (g_hitstop < 2) g_hitstop = 2;
-                    {
-                        if (eid < N_ENEMIES) {
-                            // Endless descent pays double
-                            u16 pts = enemies[eid].stats.score;
-                            if (run_state.bosses_beaten >= BOSSES_TO_WIN) pts = (u16)(pts << 1);
-                            score_add(pts);
-                        }
-                        run_state_record_enemy_kill();
-                        if (eid == ENEMY_STAGE_REAPER)
-                            run_state.dungeon_puzzles |= RUN_REAPER_CLEARED_BIT;
-                        // Vampiric Sigil (item id 29): slow dungeon sustain.
-                        // Multiple copies keep their stat boosts but do not
-                        // multiply the heal, avoiding runaway immortality.
-                        if (!STATUS_PLAYER_HEALING_BLOCKED()
-                            && (run_state_enemies_killed_total() % 5) == 0
-                            && player.hp < player.hp_max) {
-                            u8 vi;
-                            for (vi = 0; vi < INVENTORY_SLOTS; ++vi) {
-                                if (player.inventory[vi] == 29) {
-                                    player.hp++;
-                                    hud_redraw_hp();
-                                    sfx_play(SFX_HEART);
-                                    break;
-                                }
-                            }
-                        }
-                        // War Drum turns the same five-kill cadence into a
-                        // class-shaped resource swing: every champion gets
-                        // B back immediately, while restored MP feeds the
-                        // separate A+B/Oath magic ladder.
-                        if ((run_state_enemies_killed_total() % 5) == 0
-                            && combat_has_relic(ITEM_ID_WAR_DRUM)) {
-                            player.active_charge = 0;
-                            if (player.mp < player.mp_max) {
-                                player.mp++;
-                                hud_redraw_mp();
-                            }
-                            sfx_play(SFX_CLEAR);
-                        }
-                        // Enemy id 1 is used by BOTH the large stage boss
-                        // (giant flag ai_data[3]=1) and the room-3 mini-boss.
-                        // Only the GIANT advances the stage — a mini-boss kill
-                        // must not skip the stage boss (bug: it used to).
-                        if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) {
-                            fix8_t boss_x = entities[j].x;
-                            fix8_t boss_y = entities[j].y;
-                            i16 bx = FIX8_TO_INT(entities[j].x) + 12;
-                            i16 by = FIX8_TO_INT(entities[j].y) + 12;
-                            g_hitstop = 8;   // boss kill: big freeze
-                            room_shake(2, 26);   // the colossus hits the floor
-                            run_state.bosses_beaten++;
-                            // Campaign order is also the Oath unlock table:
-                            // this victory grants a permanent new active verb
-                            // for the current run, selectable in the Pack.
-                            // Every defeated arena opens before its reward or
-                            // ending screen. The final boss used to jump
-                            // straight to Victory with every threshold still
-                            // sealed, trapping endless descent in the arena.
-                            run_state.pending_unseal = 1;
-                            if (run_state.bosses_beaten >= BOSSES_TO_WIN) {
-                                run_state.victory = 1;
-                            }
-                            // The giant and its bullets release their slots
-                            // before effects. Rewards therefore remain real
-                            // pickups even in a completely saturated fight.
-                            entity_kill(j);
-                            boss_retired_for_rewards = 1;
-                            boss_clear_hostile_projectiles();
-                            // A stage clear is the run's deliberate recovery
-                            // beat. Grant one visible heart immediately so a
-                            // player who won the fight at low health enters
-                            // the next procedurally dangerous room with a
-                            // buffer, while the two physical heart drops
-                            // below still reward careful positioning and can
-                            // be saved at full health. This is sustain, not
-                            // a boss-fight heal: it happens only after the
-                            // colossus and its bullet storm are gone.
-                            if (!STATUS_PLAYER_HEALING_BLOCKED()
-                                && player.hp < player.hp_max) {
-                                if (player.hp <= (u8)(player.hp_max - 2))
-                                    player.hp = (u8)(player.hp + 2);
-                                else
-                                    player.hp = player.hp_max;
-                                hud_redraw_hp();
-                                sfx_play(SFX_HEART);
-                            }
-                            pickup_spawn(PICKUP_HEART_HALF, boss_x - FIX8(8), boss_y);
-                            pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y);
-                            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8));
-                            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y + FIX8(16));
-                            // Every colossus yields a class-attuned passive
-                            // item — the run's guaranteed power curve.
-                            pickup_spawn_item(pickup_boss_relic_for_class(),
-                                boss_x + FIX8(4), boss_y + FIX8(4));
-                            // Death explosion: staggered ring of impact FX.
-                            // These are allowed to drop if a later effect
-                            // burst fills the table; the rewards are not.
-                            fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by - 10, 14);
-                            fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by - 10, 18);
-                            fx_spawn(SPR_FX_IMPACT, 2, bx - 10, by + 10, 22);
-                            fx_spawn(SPR_FX_IMPACT, 2, bx + 10, by + 10, 26);
-                            fx_spawn(SPR_FX_IMPACT, 2, bx,      by,      30);
-                            // Stage clears themselves advance visible gear;
-                            // the guaranteed relic can advance it early too.
-                            room_refresh_player_appearance(1);
-                        } else if (eid == ENEMY_BOMBER) {
-                            // Bomber: death detonation — a 4-way revenge
-                            // burst. Kill it from a diagonal, or eat sparks.
-                            i16 dx2 = FIX8_TO_INT(entities[j].x);
-                            i16 dy2 = FIX8_TO_INT(entities[j].y);
-                            projectile_spawn_enemy(dx2, dy2, 0, -2, entities[j].damage);
-                            projectile_spawn_enemy(dx2, dy2, 0,  2, entities[j].damage);
-                            projectile_spawn_enemy(dx2, dy2, -2, 0, entities[j].damage);
-                            projectile_spawn_enemy(dx2, dy2,  2, 0, entities[j].damage);
-                        } else if ((eid == ENEMY_STONE_SENTINEL)
-                                   || (eid == ENEMY_DREAD_BELL
-                                       && entities[j].ai_data[2] == ENEMY_AUX_BELLWARDEN)) {
-                            // Mini-boss down: solid reward, no stage advance.
-                            // Bellwarden is a Dread Bell mechanically, but it
-                            // is tagged by procgen so it receives this same
-                            // weapon-orb preparation reward. Ordinary late
-                            // roster Bells remain ordinary enemy drops.
-                            u8 world_guard = (run_state.world_mode
-                                && run_state_riftwild_guard_active(
-                                    run_state.world_screen));
-                            // The first Warden is a meaningful stage fixture,
-                            // not an optional combat room. Its weapon orb is
-                            // the mechanical boon; this persistent mark tells
-                            // the sanctuary that the trial was completed.
-                            if (world_guard) {
-                                u8 gear = run_state_riftwild_guard_gear(
-                                    run_state.world_screen);
-                                run_state_riftwild_clear_guard();
-                                // First-region Wardens carry the three
-                                // permanent traversal implements. In later
-                                // regions the same distant fights remain
-                                // rewarding through a volatile Wildcard.
-                                if (gear < WAYGEAR_COUNT
-                                    && !(player.waygear_owned
-                                        & WAYGEAR_BIT(gear)))
-                                    pickup_spawn_waygear(gear,
-                                        entities[j].x + FIX8(12),
-                                        entities[j].y);
-                                else pickup_spawn_wildcard(
-                                    entities[j].x + FIX8(12),
-                                    entities[j].y);
-                            } else if (!run_state.world_mode) {
-                                u8 local = run_state_dungeon_local();
-                                if (local == run_state.mission_warden_cell)
-                                    run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
-                                else if (local
-                                    == run_state.mission_deep_warden_cell)
-                                    run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
-                            }
-                            g_hitstop = 5;
-                            pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
-                            pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
-                            if (!world_guard) {
-                                u8 w = pickup_weapon_from_roll(
-                                    rng_range(pickup_weapon_count()));
-                                if (w == player.starter_weapon)
-                                    w = pickup_next_weapon(w);
-                                pickup_spawn_weapon(w,
-                                    entities[j].x + FIX8(12), entities[j].y);
-                            }
-                        }
-                    }
-                    // Impact FX at enemy position
-                    fx_spawn(SPR_FX_IMPACT, 2,
-                        (i16)FIX8_TO_INT(entities[j].x),
-                        (i16)FIX8_TO_INT(entities[j].y), 8);
-                    if (entities[j].flags & (EF_ELITE | EF_ALPHA)) {
-                        u8 recovery = (entities[j].flags & EF_ELITE)
-                            ? player.hp < player.hp_max
-                            : RUN_IS_EASY() ? player.hp < player.hp_max
-                            : (u16)player.hp * 2u <= player.hp_max;
-                        pickup_spawn(recovery
-                            ? PICKUP_HEART_HALF : PICKUP_COIN_5,
-                            entities[j].x, entities[j].y);
-                        score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
-                    } else {
-                        pickup_roll_drop(entities[j].x, entities[j].y);
-                    }
-                    {
-                        // Rift Ooze: the apparent kill is only phase one.
-                        // Free its slot first so a full entity table still
-                        // guarantees at least one fragment, then seed two
-                        // fragile crawlers on opposite sides of the corpse.
-                        u8 split = (eid == ENEMY_RIFT_OOZE);
-                        u8 sx = (u8)(FIX8_TO_INT(entities[j].x) >> 3);
-                        u8 sy = (u8)(FIX8_TO_INT(entities[j].y) >> 3);
-                        // Boss rewards can occupy the just-freed boss slot.
-                        // Do not erase that first heart/item in the generic
-                        // cleanup after the giant has already been retired.
-                        if (!boss_retired_for_rewards) entity_kill(j);
-                        if (split) {
-                            // Generic pierce cleanup happens later, but its
-                            // lethal shot is the second free slot we need at
-                            // entity capacity. Retire it before fragment spawn.
-                            if (entities[i].hp <= 1) {
-                                entity_kill(i);
-                                shot_spent_for_split = 1;
-                            }
-                            u8 a = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
-                            u8 b = enemy_spawn(ENEMY_BLUE_CRAWLER, sx, sy);
-                            if (a != 0xFF) {
-                                entities[a].hp = 2;
-                                entities[a].ai_data[1] = 90; // scatter beat
-                                entities[a].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
-                                enemy_try_step(&entities[a], -1, 0);
-                            }
-                            if (b != 0xFF) {
-                                entities[b].hp = 2;
-                                entities[b].ai_data[1] = 90;
-                                entities[b].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
-                                enemy_try_step(&entities[b], 1, 0);
-                            }
-                        }
-                    }
+                    shot_spent_for_split = combat_defeat_enemy(j,i,weak);
                 }
                 if (shot_spent_for_split) break;
                 // Impact FX at bullet position (spawn on every hit, even non-kill)
@@ -564,7 +598,7 @@ u8 combat_resolve(void) BANKED {
     // 3) Enemy bodies AND enemy projectiles -> player
     if (player.iframes == 0 && player.shield_timer == 0) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
-            u8 hostile;
+            u8 hostile, touching;
             if (!(entities[i].flags & EF_ACTIVE)) continue;
             hostile = (entities[i].type == ENT_ENEMY)
                 || (entities[i].type == ENT_PROJECTILE
@@ -578,7 +612,9 @@ u8 combat_resolve(void) BANKED {
             // collision would double-charge damage every iframe cycle.
             if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == ENEMY_GLOAM_LEECH
                 && entities[i].ai_data[6]) continue;
-            if (aabb_overlap_player(&entities[i])) {
+            if (i == large_boss_index) touching=large_boss_contact(&entities[i]);
+            else touching=aabb_overlap_player(&entities[i]);
+            if (touching) {
                 u8 was_projectile = (entities[i].type == ENT_PROJECTILE);
                 if (was_projectile
                     && entities[i].ai_data[6] == PROJ_AUX_MORTAL_SCYTHE) {
@@ -603,6 +639,7 @@ u8 combat_resolve(void) BANKED {
                 // inexpensive: one half-heart, regardless of late-game power.
                 // Normal reaches this point unchanged.
                 if (RUN_IS_EASY()) taken = 1;
+                if (boss_link_active) boss_link_share(i,taken);
                 if (player.hp > taken) {
                     player.hp = (u8)(player.hp - taken);
                     // Riftwild is traversal pressure, not a sealed combat
@@ -676,5 +713,16 @@ u8 combat_resolve(void) BANKED {
         }
     }
 
+    if (boss_link_pending) {
+        // Finish the source hit before retiring its boss and projectile slots.
+        j = boss_link_pending - 1;
+        boss_link_pending = 0;
+        if (player.hp && entities[j].type == ENT_ENEMY
+            && (entities[j].flags & EF_ACTIVE) && !entities[j].hp
+            && entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
+            && (entities[j].ai_data[3] & 1) && entities[j].ai_data[2] == 5)
+            combat_defeat_enemy(j,0xFF,0);
+    }
+    if (!player.hp) player_died = 1;
     return player_died;
 }

@@ -18,8 +18,9 @@ if [[ "$publish" != true ]]; then
   exit 0
 fi
 
+version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$project_root/builds/itch-web/build.json")
 butler push \
   --if-changed \
-  --userversion v0.20.19-beta27 \
+  --userversion "$version" \
   "$project_root/builds/itch-web" \
   struktured/quintra:web

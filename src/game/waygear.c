@@ -12,6 +12,8 @@
 #include "game/will.h"
 #include "render/tiles.h"
 
+void riftwild_discovery_prepare(void) BANKED;
+
 u8 waygear_grant(u8 gear) BANKED {
     u8 bit;
     u8 was_full = player.will_level >= WILL_LEVEL_CAP;
@@ -53,6 +55,7 @@ void waygear_prepare_world_field(void) BANKED {
     u8 screen;
     u8 gear;
     if (!run_state.world_mode) return;
+    riftwild_discovery_prepare();
     screen = run_state.world_screen;
 
     // Each permanent implement now appears only after its far-flung regional

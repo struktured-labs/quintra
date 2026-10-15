@@ -3,12 +3,14 @@
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
+#include "audio/boss_voice.h"
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
@@ -176,8 +178,9 @@ static u8 cinder_aim_dir(u8 x, u8 y) {
 
 static void cinder_aimed_shot(u8 x, u8 y, i8 speed, u8 damage) {
     u8 d = cinder_aim_dir(x, y);
-    projectile_spawn_enemy_v(x, y,
-        (i8)(dir8_dx[d] * speed), (i8)(dir8_dy[d] * speed), damage);
+    boss_projectile_vector(x, y,
+        (i8)(dir8_dx[d] * speed), (i8)(dir8_dy[d] * speed), damage,
+        cinder_phase == 2 ? BOSS_SHOT_RETURN : BOSS_SHOT_WAVE, 0);
 }
 
 static void cinder_pack_anchor(entity_t *e) {
@@ -195,10 +198,10 @@ static void cinder_pack_fire(u8 mode, u8 damage) {
         // Crucible Wheel breathes both through and away from its own center.
         i8 dx = cinder_pack_x[i] < 104 ? 2 : -2;
         i8 dy = cinder_pack_y[i] < 64 ? 1 : -1;
-        projectile_spawn_enemy_v((i16)cinder_pack_x[i] + 8,
-            (i16)cinder_pack_y[i] + 4, dx, dy, damage);
-        projectile_spawn_enemy_v((i16)cinder_pack_x[i] + 8,
-            (i16)cinder_pack_y[i] + 4, (i8)-dx, (i8)-dy, damage);
+        boss_projectile_vector((i16)cinder_pack_x[i] + 8,
+            (i16)cinder_pack_y[i] + 4, dx, dy, damage, BOSS_SHOT_SPIRAL, 0);
+        boss_projectile_vector((i16)cinder_pack_x[i] + 8,
+            (i16)cinder_pack_y[i] + 4, (i8)-dx, (i8)-dy, damage, BOSS_SHOT_SPIRAL, 0);
     } else {
         cinder_aimed_shot((u8)(cinder_pack_x[i] + 8),
             (u8)(cinder_pack_y[i] + 4),
@@ -237,9 +240,9 @@ static void cinder_press_tick(u8 damage) {
     }
     if (cinder_timer == 96 || cinder_timer == 120) {
         for (i = 0; i < cinder_pack_alive; ++i)
-            projectile_spawn_enemy_v((i16)cinder_pack_x[i] + 8,
-                cinder_pack_y[i], 0, (i8)(cinder_timer == 96 ? -2 : -3), damage);
-        sfx_play(SFX_ROAR);
+            boss_projectile_vector((i16)cinder_pack_x[i] + 8,
+                cinder_pack_y[i], 0, (i8)(cinder_timer == 96 ? -2 : -3), damage, BOSS_SHOT_LANE, 0);
+        boss_voice(2, BOSS_VOICE_ATTACK);
     }
 }
 
@@ -329,7 +332,7 @@ static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
         cinder_damage_open = 0;
         e->hitbox = 0;
         room_shake(2, 28);
-        sfx_play(SFX_ROAR);
+        boss_voice(2, BOSS_VOICE_PHASE);
         return;
     }
 
@@ -378,7 +381,7 @@ static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
         cinder_timer = 0;
         cinder_pattern = (u8)((cinder_pattern + 1) & 3);
         cinder_damage_open = 0;
-        sfx_play(SFX_ROAR);
+        boss_voice(2, BOSS_VOICE_ATTACK);
     }
 }
 
@@ -439,12 +442,15 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
     u8 gap = (u8)(((u8)(player.x - room_camera_x) + 10) / 20);
     u8 base = (u8)(room_camera_x + 10);
     for (k = 0; k < 8; ++k) {
+        i16 x = (i16)base + k * 20;
         if (k == gap) continue;
-        projectile_spawn_enemy_v((i16)base + k * 20,
-            from_bottom ? 116 : 12, 0, from_bottom ? -2 : 2, damage);
+        if (x < 12) x = 12;
+        if (x > room_world_width - 12) x = room_world_width - 12;
+        boss_projectile_vector(x,
+            from_bottom ? 116 : 12, 0, from_bottom ? -2 : 2, damage, BOSS_SHOT_LANE, 0);
     }
     room_shake(2, 16);
-    sfx_play(SFX_ROAR);
+    boss_voice(2, BOSS_VOICE_ATTACK);
     e->ai_data[7] = 10;
 }
 
@@ -473,7 +479,7 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
                     (u8)(player.y + 12), 28, 104);
                 cinder_hazard_add((u8)(player.x + (cinder_timer == 28 ? 28 : 236)),
                     (u8)(player.y + 12), 36, 96);
-                sfx_play(SFX_ROAR);
+        boss_voice(2, BOSS_VOICE_ATTACK);
             }
             break;
         case 2: // Kiln Stomp / Backdraft: marked footprints ignite later.
@@ -494,9 +500,9 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
             }
             if (cinder_timer == 88) {
                 for (i = 0; i < 8; i += 2)
-                    projectile_spawn_enemy_v(FIX8_TO_INT(e->x) + 16,
+                    boss_projectile_vector(FIX8_TO_INT(e->x) + 16,
                         FIX8_TO_INT(e->y) + 8,
-                        (i8)(dir8_dx[i] * 2), (i8)(dir8_dy[i] * 2), damage);
+                        (i8)(dir8_dx[i] * 2), (i8)(dir8_dy[i] * 2), damage, BOSS_SHOT_WAVE, 1);
                 room_shake(3, 22);
             }
             break;
@@ -545,7 +551,7 @@ static void cinder_fire_pack_tick(entity_t *e, u8 damage) {
         e->hitbox = 0xFD;
         e->ai_data[7] = 14;
         room_shake(2, 20);
-        sfx_play(SFX_ROAR);
+        boss_voice(2, BOSS_VOICE_ATTACK);
     }
 }
 
@@ -619,7 +625,7 @@ void cinder_boss_tick(entity_t *e) BANKED {
             cinder_pack_y[i] = (u8)(FIX8_TO_INT(e->y) + 4);
         }
         room_shake(2, 18);
-        sfx_play(SFX_DEATH);
+        boss_voice(2, BOSS_VOICE_PHASE);
     }
     cinder_hazards_tick();
     if (cinder_phase == 0) cinder_pack_phase_tick(e, damage);

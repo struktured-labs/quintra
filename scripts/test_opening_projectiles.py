@@ -17,8 +17,8 @@ def main():
     try:
         for i in range(32):
             ep = EN + i * 28
-            pb.memory[ep] = 0
-            pb.memory[ep + 1] = 0
+            for offset in range(28): pb.memory[ep + offset] = 0
+        pb.memory[addr('_entity_enemy_count')] = 1
 
         # One real Flutterbat at slot zero. Counter zero is its authored stagger
         # beat, allowing the cartridge AI—not a test-side projectile fixture—
@@ -32,6 +32,7 @@ def main():
         pb.memory[flutterbat + 13] = 0
         pb.memory[flutterbat + 14] = 6
         pb.memory[flutterbat + 17] = 12
+        pb.memory[flutterbat + 18] = 49
         pb.memory[flutterbat + 25] = 0xAA
         pb.memory[flutterbat + 26] = 1
         put16(pb, PL + 9, 112)
@@ -40,7 +41,7 @@ def main():
         for _ in range(30):
             # A host VBlank need not contain a complete cartridge update in a
             # dense CGB frame. Hold the authored phase until AI consumes it.
-            pb.memory[ANIM] = (-49 * 29) & 0xFF
+            pb.memory[ANIM] = (-(49 & 31) * 29) & 0xFF
             pb.tick()
             shots = [EN + i * 28 for i in range(32)
                      if pb.memory[EN + i * 28] == 1
@@ -67,8 +68,7 @@ def main():
         # directions without one entity-cap spike.
         for i in range(32):
             ep = EN + i * 28
-            pb.memory[ep] = 0
-            pb.memory[ep + 1] = 0
+            for offset in range(28): pb.memory[ep + offset] = 0
         pb.memory[addr("_entity_enemy_count")] = 1
         crawler = EN
         pb.memory[crawler] = 2
@@ -84,35 +84,41 @@ def main():
         pb.memory[crawler + 21] = 3         # radial variant initialized
         pb.memory[crawler + 25] = 0x66
         pb.memory[crawler + 26] = 1
-        pb.tick()
-        shots = [EN + i * 28 for i in range(32)
-                 if pb.memory[EN + i * 28] == 1
-                 and pb.memory[EN + i * 28 + 1] & 1]
+        for _ in range(8):
+            pb.tick()
+            shots = [EN + i * 28 for i in range(32)
+                     if pb.memory[EN + i * 28] == 1
+                     and pb.memory[EN + i * 28 + 1] & 1]
+            if len(shots)>=4: break
+        seeds=[e for e in shots if pb.memory[e+1]&128]
+        assert len(seeds)==1 and pb.memory[seeds[0]+19]==1,'alpha lost its splitting wave'
         cardinal = set()
         for shot in shots:
+            if pb.memory[shot+1]&128: continue
             vx, vy = pb.memory[shot + 10], pb.memory[shot + 11]
             cardinal.add((vx - 256 if vx > 127 else vx,
                           vy - 256 if vy > 127 else vy))
-        assert cardinal == {(0, -1), (1, 0), (0, 1), (-1, 0)}, \
+        assert cardinal == {(1, 0), (0, 1), (-1, 0)}, \
             f"crawler alpha cardinal beat malformed: {cardinal}"
-        for _ in range(10):
+        for _ in range(16):
             pb.tick()
         shots = [EN + i * 28 for i in range(32)
                  if pb.memory[EN + i * 28] == 1
                  and pb.memory[EN + i * 28 + 1] & 1]
         radial = set()
         for shot in shots:
+            if pb.memory[shot+1]&128: continue
             vx, vy = pb.memory[shot + 10], pb.memory[shot + 11]
             radial.add((vx - 256 if vx > 127 else vx,
                         vy - 256 if vy > 127 else vy))
             assert pb.memory[shot + 13] == 4
-        assert radial == {(0, -1), (1, -1), (1, 0), (1, 1),
+        assert radial == {(1, -1), (1, 0), (1, 1),
                           (0, 1), (-1, 1), (-1, 0), (-1, -1)}, \
             f"crawler alpha did not complete eight radial lanes: {radial}"
     finally:
         pb.stop(save=False)
 
-    print("[opening-projectiles] PASS weak fan + two-beat 8-way crawler alpha pulse")
+    print("[opening-projectiles] PASS weak fan + two-beat alpha pulse with splitting wave")
 
 
 if __name__ == "__main__":

@@ -12,11 +12,15 @@ extern u8 entity_anim_counter;
 void serpent_draw(void) BANKED {
     entity_t *e;
     u8 oam = 4;
-    u8 r, c, segment, pal, flash, head_pal, tail_pal;
+    u8 r, c, pal, flash, head_pal;
     i16 sx, sy;
     if (!serpent_tail_active || serpent_head_index >= MAX_ENTITIES) return;
+    serpent_body_draw();
     e = &entities[serpent_head_index];
-    if (!(e->flags & EF_ACTIVE) || !(e->flags & EF_ON_SCREEN)) return;
+    if (!serpent_tail_active || !(e->flags & EF_ACTIVE) || !(e->flags & EF_ON_SCREEN)) {
+        while (oam < 16) move_sprite(oam++, 0, 0);
+        return;
+    }
     pal = e->palette;
     flash = e->ai_data[7] ? 1 : 0;
     if (flash) e->ai_data[7]--;
@@ -24,7 +28,6 @@ void serpent_draw(void) BANKED {
     // sprites at (0,0). The former disappearance was real cartridge flicker;
     // palette zero gives the hit a readable lightning-white pulse instead.
     head_pal = (flash && (e->ai_data[7] & 1)) ? 0 : pal;
-    tail_pal = (e->ai_data[4] >= 4 && (entity_anim_counter & 0x10)) ? 0 : pal;
     sx = FIX8_TO_INT(e->x) - room_camera_x + 8;
     sy = FIX8_TO_INT(e->y) - room_camera_y + 16;
 
@@ -38,21 +41,4 @@ void serpent_draw(void) BANKED {
         }
     }
 
-    // Overlapping, spiked scales follow sampled head positions. Each meal
-    // exposes four more (then two for the final meal); contraction hides them
-    // from the rear. At full growth a pale pulse telegraphs the wider aura.
-    for (segment = 1;
-         segment <= serpent_tail_visible && segment < serpent_tail_count;
-         ++segment) {
-        sx = (i16)serpent_tail_x[segment] - room_camera_x;
-        sy = (i16)serpent_tail_y[segment] - room_camera_y;
-        if (sx < -7 || sx >= ROOM_VIEW_W_PX
-            || sy < -7 || sy >= ROOM_VIEW_H_PX) continue;
-        set_sprite_tile(oam, ((segment + (entity_anim_counter >> 3)) & 1)
-            ? (u8)(e->sprite_tile + 12) : (u8)(e->sprite_tile + 13));
-        set_sprite_prop(oam, tail_pal);
-        move_sprite(oam, (u8)(sx + 4), (u8)(sy + 12));
-        oam++;
-    }
-    while (oam < 32) move_sprite(oam++, 0, 0);
 }

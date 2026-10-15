@@ -7,11 +7,14 @@
 #include "game/run_state.h"
 #include "game/dungeon_director.h"
 #include "game/room.h"
+#include "game/boss_projectile.h"
+#include "game/enemy_ai.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
 
 static u8 return_identity_loaded;
+void status_effects_load(void) BANKED;
 
 static u8 destination_stage(void) {
     u8 s = run_state.bosses_beaten;
@@ -51,6 +54,7 @@ void room_load_dynamic_fx_identity(void) BANKED {
     room_load_return_identity();
     if (!run_state.world_mode && !town) tiles_load_stage_scenery(stage);
     tiles_load_fx_sprites();
+    status_effects_load();
     if (!town) {
         switch (stage) {
             case 0: tiles_load_shard_crab_sprite(); break;
@@ -73,6 +77,9 @@ void room_load_dynamic_fx_identity(void) BANKED {
         tiles_load_prism_skitter_sprite();
         tiles_load_rift_cantor_sprite();
     }
+    if (run_state_is_boss_room() || run_state_was_cleared_boss())
+        boss_projectile_load_art();
+    if (serpent_tail_active) serpent_body_reset();
     room_refresh_player_appearance(0);
 }
 

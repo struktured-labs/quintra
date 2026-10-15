@@ -37,6 +37,9 @@ void hud_show_stat_gain(u8 stat, u8 amount) BANKED;
 void hud_show_status(u8 status) BANKED;
 void hud_show_healing_blocked(void) BANKED;
 void hud_show_boomerang(void) BANKED;
+void hud_show_hookshot(void) BANKED;
+void hud_show_secondary(u8 bomb) BANKED;
+void hud_show_boss_link(u8 mode) BANKED;
 void hud_tick_notice(void) BANKED;
 void hud_redraw_all(void) BANKED;
 

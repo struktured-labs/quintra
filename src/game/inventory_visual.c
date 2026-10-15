@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include "game/inventory_visual.h"
 #include "game/player.h"
+#include "game/pickup.h"
 #include "render/class_palettes.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -28,7 +29,11 @@ void inventory_prepare_sprites(void) BANKED {
         : player.active_item == 11 ? SPR_ITEM_WARD_CHARM
         : player.active_item == 12 ? SPR_ITEM_HUNTER_EYE
         : player.active_item == 13 ? SPR_ITEM_MANA_GEM
-        : player.active_item == 14 ? SPR_ITEM_THORN : SPR_ITEM_ASCEND;
+        : player.active_item == 14 ? SPR_ITEM_THORN
+        : player.active_item == ITEM_ID_BOOMERANG ? SPR_ITEM_BOOMERANG
+        : player.active_item == ITEM_ID_HOOKSHOT ? SPR_WAYGEAR_HOOK
+        : player.active_item == ITEM_ID_MORNINGSTAR ? 237
+        : player.active_item == ITEM_ID_BOMBS ? SPR_ITEM_RIFT_BOMB : SPR_ITEM_ASCEND;
     class_palette_load_obj(1, player.class_id);
     palette_obj_load(2, gold);
     palette_obj_load(3, magic);
@@ -43,6 +48,7 @@ void inventory_prepare_sprites(void) BANKED {
     }
     icon(4, SPR_ITEM_WEAPON, 3, 9, 2);
     icon(5, signature, 3, 11, 3);
+    if (player.active_item == ITEM_ID_MORNINGSTAR) set_sprite_prop(5,11);
     icon(6, SPR_ITEM_RIFT_SIGIL, 2, 14, 2);
     icon(7, SPR_COIN, 7, 7, 2);
 }
