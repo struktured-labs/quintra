@@ -25,6 +25,26 @@ displays v0.20.19.
 The repository copy of the current working cartridge is
 [`rom/working/quintra.gbc`](rom/working/quintra.gbc).
 
+### October development build
+
+The working cartridge adds expanded boss art and phases, nonlinear and splitting
+projectiles, Riftwild discovery encounters, rare empowered monsters, and thirteen
+distinct status-effect glyphs. Merchant weapons now include a longer-range
+boomerang, a grappling hookshot, an orbiting morningstar, and timed bombs.
+Open **START → SELECT**, then use **UP/DOWN** to choose your B weapon.
+Bombs cost 1 MP: stand still to drop one, or hold a direction to throw it.
+Traversal Waygear remains automatic; the active hookshot is a separate weapon.
+
+On Normal, warned collapsing Shadow Keep floors are lethal without the passive
+Rift Hook (Corvin also escapes); Easy retains recoverable fall damage. Hostile
+projectiles are capped to protect the Game Boy's limited sprite and CPU budget.
+This development cartridge is ahead of the tagged release and published browser
+build. Emulator checks are not a substitute for Pocket/MiSTer playtesting.
+
+Known performance work remains: the full-growth Serpent comparison and the
+fixed-roster room test currently miss their frame-cadence targets. Those checks
+remain strict and failing; this is a development build, not a performance sign-off.
+
 ![Quintra gameplay](docs/media/gameplay.gif)
 
 The current reel shows the animated five-spirit prologue, champion selection,

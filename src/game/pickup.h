@@ -58,6 +58,9 @@
 #define WARE_FLASK   16  // Moon Flask: surplus heart drops become MP
 #define WARE_BLAST   17  // Blast Seed: first impact blooms into an area hit
 #define WARE_BOOMERANG 18 // reusable B fallback: returning stun-and-fetch tool
+#define WARE_HOOKSHOT 19
+#define WARE_MORNINGSTAR 20
+#define WARE_BOMBS 21
 
 // Stable content ids used by runtime hooks outside generated content tables.
 #define ITEM_ID_IRON_HEART    20u
@@ -80,6 +83,9 @@
 #define ITEM_ID_BLAST_SEED       43u
 #define ITEM_ID_RIFT_LENS        44u
 #define ITEM_ID_BOOMERANG         45u
+#define ITEM_ID_HOOKSHOT          46u
+#define ITEM_ID_MORNINGSTAR       47u
+#define ITEM_ID_BOMBS             48u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;

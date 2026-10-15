@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """ROM regression: stage identity changes generated traversal geometry."""
 import re
+import os
 from pathlib import Path
 
 from pyboy import PyBoy
@@ -14,7 +15,7 @@ from make_stage_states import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
-ROM = ROOT / "rom/working/quintra.gbc"
+ROM = Path(os.environ.get('QUINTRA_TEST_ROM', ROOT / "rom/working/quintra.gbc")).resolve()
 NOI = ROM.with_suffix(".noi").read_text()
 ROOM_W, ROOM_H = 20, 17
 BGT_PILLAR, BGT_CRYSTAL, BGT_SPIKES = 21, 22, 31

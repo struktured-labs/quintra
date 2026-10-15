@@ -33,6 +33,7 @@ u8 room_return_echo_kind;
 static u8 encounter_spawn_clock;
 static u8 room_roster_ordinal;
 static u8 return_echo_alert_pending;
+static u8 nook_pending;
 u8 dungeon_return_spawn_swarm(void) BANKED;
 
 static u8 weighted_stage_enemy(u8 stage, u8 roll) {
@@ -182,6 +183,7 @@ void dungeon_director_reset(void) BANKED {
     room_return_echo_kind = 0;
     room_return_guard_ticks = 0;
     return_echo_alert_pending = 0;
+    nook_pending = 0;
 }
 
 void dungeon_director_prepare_roster(u8 eligible) BANKED {
@@ -225,6 +227,8 @@ void dungeon_director_choose(u8 eligible, u8 was_seen) BANKED {
         + run_state.room_counter
         + (u8)(run_state.bosses_beaten * 3));
     signature &= 7;
+    if (signature == 7 && run_state.bosses_beaten == 0)
+        nook_pending = 1;
     // Canonical Stage 1 needs one more room whose pressure changes over time,
     // not merely another static pile of HP. This raises its large-court
     // directive cadence from four to five eighths; Tester Easy and every
@@ -358,6 +362,22 @@ u8 dungeon_director_update(u8 alive) BANKED {
         sfx_play(SFX_ROAR);
         room_shake(2, 18);
     }
+    if (nook_pending && !alive && room_encounter_kind == ENCOUNTER_SKIRMISH) {
+        i16 dx = player.x < room_world_width / 2
+            ? player.x : room_world_width - 16 - player.x;
+        i16 dy = player.y < room_world_height / 2
+            ? player.y : room_world_height - 16 - player.y;
+        if (dx < 64 && dy < 64) {
+            if ((entity_anim_counter & 31) == 0)
+                fx_spawn(SPR_FX_MUZZLE, 6, player.x, player.y - 8, 24);
+            if (dx < 32 && dy < 32) {
+                pickup_spawn(PICKUP_COIN_5, FIX8(player.x), FIX8(player.y));
+                pickup_spawn_mp(FIX8(player.x + 8), FIX8(player.y));
+                sfx_play(SFX_CLEAR);
+                nook_pending = 0;
+            }
+        }
+    }
     if (room_encounter_kind == ENCOUNTER_SKIRMISH
         || room_encounter_phase == 2) return alive;
 
@@ -378,7 +398,17 @@ u8 dungeon_director_update(u8 alive) BANKED {
             finish_directive(0);
         }
     } else if (room_encounter_kind == ENCOUNTER_WAVE) {
-        if (alive == 0 && room_encounter_phase == 0) {
+        if (room_encounter_phase == 0 && alive <= 2
+            && run_state.bosses_beaten == 0 && !RUN_IS_EASY()) {
+            if (!room_encounter_timer) {
+                room_encounter_timer = 36;
+                sfx_play(SFX_ROAR);
+                room_shake(1, 12);
+            } else if (--room_encounter_timer == 0) {
+                room_encounter_phase = 1;
+                alive = (u8)(alive + spawn_wave(3, 0));
+            }
+        } else if (alive == 0 && room_encounter_phase == 0) {
             room_encounter_phase = 1;
             alive = spawn_wave((u8)(RUN_IS_EASY() ? 2
                 : 3 + (run_state.bosses_beaten >= 4)), 0);

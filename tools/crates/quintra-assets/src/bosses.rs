@@ -51,71 +51,9 @@ fn line(g: &mut Grid, from: (usize, usize), to: (usize, usize), value: u8) {
     }
 }
 
-/// Stage 0 — Crystal Colossus: an angular guardian wrapped around a diamond
-/// reactor. The former mathematical oval read as a friendly floating face;
-/// this authored silhouette has a crown, slab shoulders, split feet, faceted
-/// planes, and one unmistakable weak core instead of eyes and a smile.
+/// Stage 0 — crowned crystal bruiser with a readable face and heavy fists.
 pub fn make_boss_big() -> Grid {
-    let mut g = blank();
-
-    // Three uneven crown crystals. Their bright inner ridges establish a
-    // single upper-left light source and keep the top from reading as horns.
-    for &(y, l, r) in &[
-        (0, 15, 16), (1, 14, 17), (2, 14, 17), (3, 13, 18),
-        (3, 5, 7), (4, 4, 8), (5, 3, 9),
-        (2, 24, 25), (3, 23, 26), (4, 22, 27), (5, 21, 28),
-    ] {
-        span(&mut g, y, l, r, 2, 1);
-    }
-
-    // Stepped shoulders and a narrowing torso. Long horizontal plate breaks
-    // make the 32x32 object feel built from crystal slabs, not inflated.
-    let body = [
-        (6, 8, 23), (7, 6, 25), (8, 4, 27), (9, 2, 29),
-        (10, 0, 31), (11, 1, 30), (12, 2, 29), (13, 3, 28),
-        (14, 3, 28), (15, 4, 27), (16, 4, 27), (17, 5, 26),
-        (18, 5, 26), (19, 6, 25), (20, 6, 25), (21, 7, 24),
-        (22, 7, 24), (23, 8, 23), (24, 8, 23), (25, 9, 22),
-        (26, 8, 23), (27, 7, 24), (28, 6, 25), (29, 5, 26),
-        (30, 4, 27), (31, 4, 27),
-    ];
-    for &(y, left, right) in &body {
-        span(&mut g, y, left, right, 2, 1);
-    }
-
-    // Shoulder shards, plate seams, and transparent fractures break the mass.
-    paint(&mut g, 3, &[
-        (4, 5), (5, 4), (5, 8), (3, 24), (4, 23),
-        (6, 14), (6, 15), (7, 13), (8, 12), (9, 11),
-        (9, 4), (10, 3), (11, 2), (9, 27), (10, 28),
-        (12, 7), (13, 8), (14, 9), (12, 24), (13, 23), (14, 22),
-        (20, 8), (21, 9), (22, 10), (20, 23), (21, 22), (22, 21),
-        (27, 8), (28, 7), (29, 6), (27, 23), (28, 24), (29, 25),
-    ]);
-    paint(&mut g, 1, &[
-        (10, 8), (10, 9), (10, 22), (10, 23),
-        (18, 6), (18, 7), (18, 24), (18, 25),
-        (23, 11), (23, 12), (23, 19), (23, 20),
-    ]);
-    paint(&mut g, 0, &[
-        (11, 5), (12, 5), (12, 6), (15, 25), (16, 24), (16, 25),
-        (24, 9), (25, 9), (24, 22), (25, 22),
-        (29, 15), (29, 16), (30, 14), (30, 15), (30, 16), (30, 17),
-        (31, 13), (31, 14), (31, 15), (31, 16), (31, 17), (31, 18),
-    ]);
-
-    // Seven-row diamond reactor: dark armored rim, white-hot centre, and a
-    // vertical fault line. It reads as the target even during palette flash.
-    for &(y, left, right) in &[
-        (12, 15, 16), (13, 14, 17), (14, 13, 18), (15, 12, 19),
-        (16, 13, 18), (17, 14, 17), (18, 15, 16),
-    ] {
-        span(&mut g, y, left, right, 3, 1);
-    }
-    g[14][15] = 3; g[14][16] = 3;
-    g[15][14] = 3; g[15][15] = 0; g[15][16] = 0; g[15][17] = 3;
-    g[16][15] = 3; g[16][16] = 3;
-    g
+    crate::large_bosses::crystal()
 }
 
 /// Stage 1 — Serpent atlas: a mobile 32x24 fanged head plus two animated
@@ -305,15 +243,21 @@ fn boss_spider() -> Grid {
         [(23, 21), (25, 24), (28, 26), (30, 29), (31, 30)],
     ];
     for leg in LEGS {
-        for segment in leg.windows(2) {
-            line(&mut g, segment[0], segment[1], 1);
+        for (index, segment) in leg.windows(2).enumerate() {
+            line(&mut g, (segment[0].0.saturating_add(1).min(31),segment[0].1),
+                (segment[1].0.saturating_add(1).min(31),segment[1].1),1);
+            line(&mut g, segment[0], segment[1], if index == 1 || index == 2 { 3 } else { 2 });
         }
         for (index, &(y, x)) in leg.iter().enumerate() {
-            g[y][x] = if index == 2 { 3 } else { 1 };
-            if y + 1 < 32 && index > 0 && index < 4 { g[y + 1][x] = 1; }
+            g[y][x] = if index == 2 { 3 } else { 2 };
+            if y + 1 < 32 && index > 0 && index < 4 { g[y + 1][x] = 2; }
         }
     }
-    ellipse(&mut g, 16.0, 17.0, 7.0, 6.5, 2, 1);
+    ellipse(&mut g, 16.0, 17.0, 8.0, 8.0, 2, 1);
+    for y in 11..18 {
+        for x in 11..15 { g[y][x] = 3; }
+        for x in 19..22 { g[y][x] = 1; }
+    }
     // Frost-star carapace, four pin eyes, and dark mandible split.
     paint(&mut g, 3, &[
         (10, 16), (11, 14), (11, 16), (11, 18),
@@ -332,52 +276,77 @@ fn boss_spider() -> Grid {
 /// Stage 4 — Mire Heart: an asymmetric iris with rootlike vessels.
 fn boss_eye() -> Grid {
     let mut g = blank();
-    ellipse(&mut g, 16.0, 16.0, 15.0, 11.0, 1, 1);
-    ellipse(&mut g, 16.0, 16.0, 10.0, 8.0, 2, 2);
-    ellipse(&mut g, 16.0, 16.0, 4.5, 6.0, 3, 1);
-    // A dark vertical seed keeps the weak point organic instead of reading as
-    // a perfect target icon; the offset glint maintains gaze direction.
-    for y in 12..21 { g[y][16] = 1; }
-    paint(&mut g, 3, &[(12, 13), (13, 12), (13, 13), (14, 12)]);
-    // Uneven capillaries and lashes root the eye into the projected organism.
-    paint(&mut g, 3, &[
-        (8, 7), (9, 8), (10, 9), (6, 21), (8, 20), (9, 19),
-        (19, 7), (20, 8), (21, 9), (22, 22), (21, 21), (20, 20),
-    ]);
-    paint(&mut g, 1, &[
-        (3, 5), (5, 7), (7, 9), (2, 16), (4, 16),
-        (4, 27), (6, 25), (8, 23), (24, 8), (27, 6),
-        (24, 23), (27, 26), (16, 0), (16, 31),
-    ]);
+    const ROOTS: [[(usize,usize);4];4] = [
+        [(14,6),(10,3),(4,3),(2,6)],
+        [(13,24),(8,28),(3,27),(1,24)],
+        [(20,7),(24,3),(29,4),(30,9)],
+        [(21,24),(24,29),(29,28),(30,23)],
+    ];
+    for root in ROOTS {
+        for segment in root.windows(2) {
+            line(&mut g,segment[0],segment[1],1);
+            line(&mut g,(segment[0].0,segment[0].1+1),
+                (segment[1].0,segment[1].1+1),2);
+        }
+        let (y,x) = root[3];
+        g[y][x] = 3;
+        g[y][x+1] = 3;
+    }
+    ellipse(&mut g,15.5,15.5,11.5,9.5,2,1);
+    ellipse(&mut g,15.5,15.5,9.5,7.5,3,1);
+    ellipse(&mut g,16.5,15.5,3.5,5.5,1,2);
+    paint(&mut g,3,&[(12,15),(12,16),(13,15),(13,16)]);
+    paint(&mut g,2,&[(8,11),(9,12),(9,13),(10,14),(10,15),
+                    (8,21),(9,20),(9,19),(10,18)]);
+    for y in 25..29 {
+        g[y][12] = 2;
+        g[y][19] = 1;
+    }
     g
 }
 
 /// Stage 5 — Reaper: pointed hood, blade shoulders, and a tattered mantle.
 fn boss_reaper() -> Grid {
+    reaper_pose(0)
+}
+
+pub fn reaper_pose(pose: u8) -> Grid {
     let mut g = blank();
-    for &(y, left, right) in &[
-        (1, 15, 16), (2, 14, 17), (3, 13, 18), (4, 12, 19),
-        (5, 10, 21), (6, 8, 23), (7, 6, 25), (8, 4, 27),
-        (9, 2, 29), (10, 1, 30), (11, 2, 29), (12, 3, 28),
-        (13, 4, 27), (14, 5, 26), (15, 5, 26), (16, 4, 27),
-        (17, 3, 28), (18, 2, 29), (19, 2, 29), (20, 3, 28),
-        (21, 3, 28), (22, 4, 27), (23, 4, 27), (24, 5, 26),
-        (25, 5, 26), (26, 6, 25), (27, 6, 25), (28, 7, 24),
-        (29, 7, 24), (30, 8, 23), (31, 8, 23),
-    ] { span(&mut g, y, left, right, 1, 2); }
-    // Hollow face sits high beneath the overhanging hood.
-    ellipse(&mut g, 16.0, 13.5, 6.5, 5.5, 0, 2);
-    paint(&mut g, 3, &[(13, 12), (13, 13), (13, 19), (13, 20)]);
-    paint(&mut g, 2, &[
-        (6, 13), (7, 12), (8, 11), (6, 18), (7, 19), (8, 20),
-        (18, 7), (19, 6), (18, 24), (19, 25),
-    ]);
-    // Cut transparent teeth from the hem and sharpen both shoulder blades.
-    paint(&mut g, 0, &[
-        (28, 10), (29, 10), (30, 9), (29, 15), (30, 15), (31, 14),
-        (28, 21), (29, 21), (30, 22),
-    ]);
-    paint(&mut g, 3, &[(9, 1), (10, 0), (9, 30), (10, 31)]);
+    for y in 1..14 {
+        let width = (y + 1).min(8);
+        span(&mut g, y, 15-width, 16+width, 1, 2);
+    }
+    for y in 13..30 {
+        let width = 7 + (y-13)/4;
+        span(&mut g, y, 15-width, 16+width, 1, 2);
+        for x in 11..15 { g[y][x] = 2; }
+    }
+    for &(x, end) in &[(6, 29), (10, 31), (17, 30), (23, 31)] {
+        for y in 27..=end { span(&mut g, y, x, x+2, 2, 1); }
+    }
+    ellipse(&mut g, 15.5, 8.0, 5.5, 4.5, 3, 2);
+    for y in 7..9 {
+        span(&mut g, y, 12, 13, 1, 1);
+        span(&mut g, y, 18, 19, 1, 1);
+    }
+    paint(&mut g, 1, &[(10,15),(10,16),(12,14),(12,17)]);
+    for side in 0..2 {
+        for step in 0..if pose == 2 { 20 } else { 10 } {
+            let x = if side == 0 { 6+step } else { 25-step };
+            let y = match pose {
+                1 => 5+step,
+                2 => 13+step/2,
+                _ => 20-step/2,
+            };
+            for d in 0..3 { g[y+d][x] = if d == 1 { 3 } else { 2 }; }
+        }
+    }
+    if pose == 0 {
+        line(&mut g, (6,28), (28,25), 3);
+        for x in 22..31 { g[3][x] = 3; g[4][x] = 2; }
+        paint(&mut g, 3, &[(4,21),(5,20),(6,19),(7,19)]);
+        ellipse(&mut g, 16.0, 19.0, 2.0, 3.0, 3, 2);
+    }
     g
 }
 
@@ -385,16 +354,33 @@ fn boss_reaper() -> Grid {
 fn boss_golem() -> Grid {
     let mut g = blank();
     for y in 3..11 { span(&mut g, y, 9, 22, 2, 1); }
-    for y in 10..14 { span(&mut g, y, 4, 27, 2, 1); }
-    for y in 14..24 {
-        span(&mut g, y, 2, 8, 2, 1);
+    for y in 10..14 { span(&mut g, y, 0, 31, 2, 1); }
+    for y in 14..25 {
+        span(&mut g, y, 0, 8, 2, 1);
         span(&mut g, y, 10, 21, 2, 1);
-        span(&mut g, y, 23, 29, 2, 1);
+        span(&mut g, y, 23, 31, 2, 1);
     }
     for y in 24..32 {
-        span(&mut g, y, 7, 14, 2, 1);
-        span(&mut g, y, 17, 24, 2, 1);
+        span(&mut g, y, 6, 14, 2, 1);
+        span(&mut g, y, 17, 25, 2, 1);
     }
+    for y in 11..14 {
+        for x in 1..8 { g[y][x] = 3; }
+        for x in 24..30 { g[y][x] = 3; }
+    }
+    for y in 14..23 {
+        for x in 1..4 { g[y][x] = 3; }
+        for x in 28..31 { g[y][x] = 1; }
+    }
+    for y in 25..30 {
+        for x in 7..10 { g[y][x] = 3; }
+        for x in 23..25 { g[y][x] = 1; }
+    }
+    for x in 11..21 { g[4][x] = 3; }
+    for x in 12..20 { g[8][x] = 1; }
+    for y in 15..22 { g[y][11] = 1; g[y][20] = 1; }
+    for x in 1..8 { g[21][x] = 1; }
+    for x in 24..31 { g[21][x] = 1; }
     // Crown blocks, masonry seams, inset eyes, and a diamond sun-heart.
     paint(&mut g, 3, &[
         (1, 11), (1, 20), (2, 10), (2, 11), (2, 20), (2, 21),
@@ -416,17 +402,34 @@ fn boss_golem() -> Grid {
 fn boss_hydra() -> Grid {
     let mut g = blank();
     ellipse(&mut g, 16.0, 23.0, 12.0, 8.0, 2, 1);
+    for y in 19..28 {
+        for x in 8..17 {
+            if g[y][x] == 2 { g[y][x] = 3; }
+        }
+    }
     for &(root_x, head_x) in &[(10i32, 5i32), (16, 16), (22, 27)] {
         for step in 0..13i32 {
             let x = root_x + (head_x - root_x) * step / 12;
             let y = 22 - step;
-            for dx in -1..=1 {
+            for dx in -2..=2 {
                 if (0..32).contains(&(x + dx)) {
-                    g[y as usize][(x + dx) as usize] = if dx == 0 { 2 } else { 1 };
+                    g[y as usize][(x + dx) as usize] = match dx {
+                        -1 => 3, 0 | 1 => 2, _ => 1,
+                    };
                 }
             }
         }
         ellipse(&mut g, head_x as f64, 7.0, 4.0, 3.5, 2, 1);
+        for y in 5..8 {
+            for x in (head_x - 2)..=(head_x + 1) {
+                g[y][x as usize] = 3;
+            }
+        }
+        for x in (head_x - 2)..=(head_x + 2) {
+            g[8][x as usize] = 1;
+        }
+        g[9][(head_x - 1) as usize] = 3;
+        g[9][(head_x + 1) as usize] = 3;
         if head_x < 16 {
             paint(&mut g, 1, &[(3, 2), (2, 1), (4, 8), (3, 9)]);
             paint(&mut g, 3, &[(6, 4)]);
@@ -447,22 +450,38 @@ fn boss_hydra() -> Grid {
     g
 }
 
-/// Stage 8 — Void Lord: the Colossus body overtaken by a many-point crown and
-/// a horizontal event-horizon mask. It remains an evolved visual rhyme with
-/// stage one without becoming a palette swap of the new crystal reactor.
+/// Stage 8 — Void Lord: a crowned hollow mantle and event-horizon mask.
 fn boss_voidlord() -> Grid {
-    let mut g = make_boss_big();
+    let mut g = blank();
+    for y in 7..13 {
+        span(&mut g, y, 10, 21, 2, 1);
+    }
+    for y in 11..24 {
+        let inset = (y - 11) / 3;
+        span(&mut g, y, inset, 10, 2, 1);
+        span(&mut g, y, 21, 31-inset, 2, 1);
+    }
+    for y in 12..18 {
+        for x in 2..8 { g[y][x] = 3; }
+        for x in 24..30 { g[y][x] = 3; }
+    }
+    for y in 23..32 {
+        let taper = (y - 23) / 3;
+        span(&mut g, y, 5+taper, 11, 2, 1);
+        span(&mut g, y, 20, 26-taper, 2, 1);
+        g[y][9] = 3;
+        g[y][22] = 3;
+    }
     for (cx, height) in [(3usize, 4usize), (8, 7), (15, 9), (22, 7), (28, 4)] {
         for y in 0..height {
             let half = y / 2;
             let left = cx.saturating_sub(half);
             let right = (cx + half).min(31);
             for x in left..=right {
-                g[y][x] = if y == 0 || (x == cx && y < 3) { 3 } else { 1 };
+                g[y][x] = if x == cx { 3 } else if x < cx { 2 } else { 1 };
             }
         }
     }
-    // Erase the diamond target and replace it with a cold horizon slit.
     for y in 12..20 {
         for x in 10..22 { g[y][x] = if y == 15 || y == 16 { 0 } else { 1 }; }
     }

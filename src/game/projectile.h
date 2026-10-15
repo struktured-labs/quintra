@@ -33,6 +33,9 @@ extern u8 g_shot_element;
 #define PROJ_AUX_SPLASH        0xF2
 #define PROJ_AUX_BEAM_TRAIL    0xF3
 #define PROJ_AUX_BOOMERANG     0xF4
+#define PROJ_AUX_HOOKSHOT      0xF5
+#define PROJ_AUX_MORNINGSTAR   0xF6
+#define PROJ_AUX_FUSE_BOMB     0xF7
 // The one-per-stage Reaper owns this marker exclusively. On collision its
 // clearly telegraphed scythe sets the champion to one heart, never zero.
 #define PROJ_AUX_MORTAL_SCYTHE 0xE1
@@ -75,5 +78,11 @@ void projectile_make_beam(u8 idx) BANKED;
 void projectile_update_relic(entity_t *e) BANKED;
 void projectile_update_boomerang(entity_t *e, u8 idx) BANKED;
 u8 projectile_throw_boomerang(u8 dir) BANKED;
+u8 projectile_throw_hookshot(u8 dir) BANKED;
+void projectile_update_hookshot(entity_t *e, u8 idx) BANKED;
+u8 hookshot_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED;
+void secondary_cycle(void) BANKED;
+u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED;
+void secondary_heavy_update(entity_t *e,u8 idx) BANKED;
 
 #endif

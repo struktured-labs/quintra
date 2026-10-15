@@ -126,10 +126,12 @@ def approach_and_talk(pb, speaker, expected_kind, expected_topic):
         assert pb.memory[0xFF40] & 0x02, "merchant catalog icons are hidden"
         pb.screen.image.save(ROOT / "tmp" / "merchant-stock.png")
     else:
-        assert pb.memory[1, 0x9800 + 5 * 32 + 1] == 3, "SHOOT lacks action accent"
-        assert pb.memory[1, 0x9800 + 5 * 32 + 11] == 1, "CRYSTALS lacks item accent"
-        assert pb.memory[1, 0x9800 + 7 * 32 + 11] == 2, "MAGIC lacks benefit accent"
-        assert pb.memory[1, 0x9800 + 5 * 32 + 7] == 0, "accent leaked into ordinary prose"
+        for x in range(1, 9):
+            assert pb.memory[1, 0x9800 + 5 * 32 + x] == 3, "SIDESTEP lacks action accent"
+        for x in range(1, 5):
+            assert pb.memory[1, 0x9800 + 7 * 32 + x] == 3, "SLIP lacks action accent"
+        assert pb.memory[1, 0x9800 + 5 * 32 + 10] == 0, "accent leaked into ordinary prose"
+        assert pb.memory[1, 0x9800 + 7 * 32 + 6] == 0, "accent leaked into ring advice"
         assert pb.memory[0xFF4F] & 1 == 0, "attribute bank left selected"
         pb.screen.image.save(ROOT / "tmp" / "wayfarer-advice-styled.png")
     tap(pb, "b"); tick(pb, 22)

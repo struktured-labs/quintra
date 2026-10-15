@@ -7,6 +7,9 @@
 #include "core/types.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
+#include "game/player.h"
+#include "game/waygear.h"
+#include "game/run_state.h"
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/stage_event.h"
@@ -19,6 +22,12 @@ static u8 hazard_x[FADING_TILE_COUNT];
 static u8 hazard_y[FADING_TILE_COUNT];
 static u8 hazard_timer;
 static u8 hazard_cursor;
+
+void stage_event_resolve_fall(void) BANKED {
+    if (player.class_id==2 || (player.waygear_owned&WAYGEAR_BIT(WAYGEAR_HOOK)))
+        room_stumble_off_hazard();
+    else player.hp=0;
+}
 
 static void hazard_set_raw(u8 x, u8 y, u8 tile) {
     if (y < ROOM_H) {
@@ -124,7 +133,7 @@ static void tick_fading(void) {
             tile = BGT_SWITCH; attr = BGPAL_DOOR;
             break;
         case 2:
-            if (hazard_timer < 36) return;
+            if (hazard_timer < 60) return;
             hazard_timer = hazard_cursor = 0;
             room_stage_event_phase = 3;
             room_shake(1, 8);

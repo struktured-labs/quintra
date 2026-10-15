@@ -29,7 +29,7 @@ def run(enemy_id, stage, clock, variant, frames):
     pb.memory[e + 21] = variant
     pb.memory[e + 25] = 0x77
     pb.memory[e + 26] = 1
-    trace, births, previous = [], [], set()
+    trace, births, directions, previous = [], [], [], set()
     for frame in range(frames):
         pb.memory[PLAYER + 15] = 120
         pb.tick()
@@ -44,12 +44,14 @@ def run(enemy_id, stage, clock, variant, frames):
             current.add(slot)
             shot = [slot, pb.memory[s + 3], pb.memory[s + 7], vx, vy]
             shots.append(shot)
-            if slot not in previous: births.append([frame, *shot])
+            if slot not in previous:
+                births.append([frame, *shot])
+                directions.append(pb.memory[s+17] if pb.memory[s+1]&128 else (vx,vy))
         previous = current
         trace.append(dict(frame=frame, x=pb.memory[e + 3], y=pb.memory[e + 7],
                           phase=pb.memory[e + 19], shots=shots))
     pb.stop(save=False)
-    return dict(enemy=enemy_id, stage=stage, trace=trace, births=births)
+    return dict(enemy=enemy_id, stage=stage, trace=trace, births=births, directions=directions)
 
 def main():
     spiral = run(22, 0, 16, 0, 145)
@@ -61,11 +63,11 @@ def main():
         fixture='fresh boot; isolated enemy; native update loop', results=results), indent=2))
     assert all(abs(s[-2]) <= 1 and abs(s[-1]) <= 1 for r in results for s in r['births'])
     assert len(spiral['births']) == 8, spiral['births']
-    assert len({tuple(s[-2:]) for s in spiral['births']}) == 8
+    assert len(set(spiral['directions'])) == 8
     assert spiral['births'][0][0] >= 16
     assert len({(r['x'], r['y']) for r in spiral['trace'][-30:]}) > 1
     assert len(fan['births']) == 5, fan['births']
-    assert len({tuple(s[-2:]) for s in fan['births']}) == 5
+    assert len(set(fan['directions'])) == 5
     assert len({(r['x'], r['y']) for r in fan['trace'][:40]}) == 1
     for stage in (1, 2):
         result = results[stage + 1]

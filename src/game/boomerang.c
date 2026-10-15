@@ -46,7 +46,7 @@ u8 projectile_throw_boomerang(u8 dir) BANKED {
     e->hp = 255;
     e->state_timer = 120;
     e->hitbox = 0x77;
-    e->ai_data[0] = 18;
+    e->ai_data[0] = 28;
     e->ai_data[2] = 1;
     e->ai_data[6] = PROJ_AUX_BOOMERANG;
     sfx_play_boomerang(0);
@@ -68,8 +68,8 @@ void projectile_update_boomerang(entity_t *e, u8 idx) BANKED {
             sfx_play_boomerang(1);
             return;
         }
-        e->vx = dx > 0 ? 3 : dx < 0 ? -3 : 0;
-        e->vy = dy > 0 ? 3 : dy < 0 ? -3 : 0;
+        e->vx = dx > 4 ? 4 : dx < -4 ? -4 : (i8)dx;
+        e->vy = dy > 4 ? 4 : dy < -4 ? -4 : (i8)dy;
     }
     e->ai_data[7]++;
     switch ((e->ai_data[7] >> 1) & 3) {

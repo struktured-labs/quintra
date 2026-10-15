@@ -3,11 +3,14 @@
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
+#include "audio/boss_voice.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
+#include "game/boss_phase.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
@@ -30,6 +33,7 @@ static void signature_hurt(entity_t *e) {
     if (damage < 2) damage = 2;
     if (damage > 4) damage = 4;
     if (RUN_IS_EASY()) damage = 1;
+    if (boss_link_active) boss_link_share((u8)(e-entities), damage);
     player.hp = (player.hp > damage) ? (u8)(player.hp - damage) : 0;
     player.iframes = 50;
     hud_redraw_hp();
@@ -46,8 +50,9 @@ static void signature_ring(entity_t *e, i16 x, i16 y, i8 speed) {
     u8 d;
     u8 damage = signature_damage(e);
     for (d = 0; d < 8; ++d)
-        projectile_spawn_enemy_v(x, y,
-            (i8)(dir8_dx[d] * speed), (i8)(dir8_dy[d] * speed), damage);
+        boss_projectile_vector(x, y,
+            (i8)(dir8_dx[d] * speed), (i8)(dir8_dy[d] * speed), damage,
+            e->ai_data[2] == 4 || e->ai_data[2] == 8 ? BOSS_SHOT_SPIRAL : BOSS_SHOT_WAVE, 0);
 }
 
 static void signature_fat_lane(entity_t *e, u8 count, i8 speed, u8 width) {
@@ -63,11 +68,11 @@ static void signature_fat_lane(entity_t *e, u8 count, i8 speed, u8 width) {
 
     for (k = start; k < (u8)(start + count); ++k) {
         i8 offset = offsets[k];
-        projectile_spawn_enemy_v(
+        boss_projectile_vector(
             cx + ((signature_dir & 2) ? 0 : offset),
             cy + ((signature_dir & 2) ? offset : 0),
             (i8)(dir8_dx[signature_dir] * speed),
-            (i8)(dir8_dy[signature_dir] * speed), damage);
+            (i8)(dir8_dy[signature_dir] * speed), damage, BOSS_SHOT_BOLT, 0);
     }
     if (signature_dir & 2) {
         perpendicular = signature_abs(py - cy);
@@ -150,13 +155,13 @@ static void signature_fire(entity_t *e) {
             break;
         case 3: // Spider: two crossing Web Crucifix bands
             for (d = 0; d < 8; d += 2) {
-                projectile_spawn_enemy_v(cx, cy,
+                boss_projectile_vector(cx, cy,
                     (i8)(dir8_dx[d] * 2), (i8)(dir8_dy[d] * 2),
-                    signature_damage(e));
-                projectile_spawn_enemy_v(cx + dir8_dy[d] * 8,
+                    signature_damage(e), BOSS_SHOT_WAVE, 0);
+                boss_projectile_vector(cx + dir8_dy[d] * 8,
                     cy - dir8_dx[d] * 8,
                     (i8)(dir8_dx[d] * 2), (i8)(dir8_dy[d] * 2),
-                    signature_damage(e));
+                    signature_damage(e), BOSS_SHOT_WAVE, 0);
             }
             if (signature_abs(px - cx) < 12 || signature_abs(py - cy) < 12)
                 signature_hurt(e);
@@ -170,8 +175,8 @@ static void signature_fire(entity_t *e) {
             static const i8 offsets[5] = { -12, -6, 0, 6, 12 };
             i8 speed = signature_x >= cx ? 3 : -3;
             for (d = 0; d < 5; ++d)
-                projectile_spawn_enemy_v(cx, signature_y + offsets[d],
-                    speed, 0, signature_damage(e));
+                boss_projectile_vector(cx, signature_y + offsets[d],
+                    speed, 0, signature_damage(e), BOSS_SHOT_BOLT, 0);
             if (signature_abs(py - signature_y) < 16) signature_hurt(e);
             break;
         }
@@ -190,7 +195,7 @@ static void signature_fire(entity_t *e) {
                 signature_hurt(e);
             break;
     }
-    sfx_play(SFX_DEATH);
+    boss_voice(stage, BOSS_VOICE_ATTACK);
 }
 
 u8 colossus_signature_tick(entity_t *e) BANKED {
@@ -213,7 +218,7 @@ u8 colossus_signature_tick(entity_t *e) BANKED {
         e->ai_data[7] = 20;
         signature_arm(e);
         room_shake(1, 16);
-        sfx_play(SFX_ROAR);
+        boss_voice(e->ai_data[2], BOSS_VOICE_PHASE);
         return 1;
     }
     // A second, faster crisis at quarter health prevents an otherwise solved
@@ -226,7 +231,7 @@ u8 colossus_signature_tick(entity_t *e) BANKED {
         e->ai_data[7] = 20;
         signature_arm(e);
         room_shake(2, 18);
-        sfx_play(SFX_ROAR);
+        boss_voice(e->ai_data[2], BOSS_VOICE_PHASE);
         return 1;
     }
     return 0;

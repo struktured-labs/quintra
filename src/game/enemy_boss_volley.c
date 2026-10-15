@@ -3,12 +3,15 @@
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
+#include "audio/boss_voice.h"
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
+#include "game/boss_phase.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
@@ -22,9 +25,22 @@ static u8 volley_aim(i16 cx, i16 cy) {
     return 0;
 }
 
+static u8 volley_stage;
+static u8 volley_split_dir;
 static void volley_shot(i16 x, i16 y, u8 d, i8 speed, u8 damage) {
-    projectile_spawn_enemy_v(x, y,
-        (i8)(dir8_dx[d] * speed), (i8)(dir8_dy[d] * speed), damage);
+    static const u8 patterns[9][3] = {
+        {0,5,3}, {1,4,1}, {5,0,3}, {3,1,3}, {1,2,3},
+        {4,4,3}, {5,5,4}, {1,3,1}, {3,4,3}
+    };
+    u8 seed_dir = volley_stage == 6 ? (x < room_world_width / 2 ? 2 : 6) : volley_stage & 7;
+    u8 seed = (d == seed_dir && speed == 1)
+        || (!RUN_IS_EASY() && boss_phase && d == volley_split_dir);
+    u8 pattern = patterns[volley_stage][boss_phase];
+    u8 slot;
+    if (seed) pattern = volley_stage == 6 ? BOSS_SHOT_BOLT
+        : boss_phase == 2 ? BOSS_SHOT_SPIRAL : BOSS_SHOT_SEED;
+    slot = boss_projectile_spawn(x, y, d << 2, pattern, seed ? 2 : 0, damage);
+    if (slot != 0xFF) entities[slot].state = speed;
 }
 
 void boss_volley_tick(entity_t *e) BANKED {
@@ -34,6 +50,9 @@ void boss_volley_tick(entity_t *e) BANKED {
     i16 cx = FIX8_TO_INT(e->x) + 12;
     i16 cy = FIX8_TO_INT(e->y) + 12;
     if (!damage) damage = 1;
+    volley_stage = e->ai_data[2];
+    volley_split_dir = (u8)((e->ai_data[5] + volley_stage) & 7);
+    boss_voice(volley_stage, BOSS_VOICE_ATTACK);
 
     switch (e->ai_data[2]) {
         case 1: // Serpent: aimed fangs plus a counter-rotating tail wake.
@@ -73,8 +92,11 @@ void boss_volley_tick(entity_t *e) BANKED {
             e->ai_data[4] = 0;
             cadence = 72;
             break;
-        case 6: // Golem: slow, heavy complete ring.
-            for (d = 0; d < 8; ++d) volley_shot(cx, cy, d, 1, damage);
+        case 6: // Golem: inward fork, then a budgeted heavy ring.
+            k = cx < room_world_width / 2 ? 2 : 6;
+            volley_shot(cx, cy, k, 1, damage);
+            for (d = 0; d < 8; ++d)
+                if (d != k) volley_shot(cx, cy, d, 1, damage);
             cadence = 58;
             break;
         case 7: // Hydra: five streams stacked at three distinct speeds.
@@ -113,7 +135,21 @@ void boss_volley_tick(entity_t *e) BANKED {
                 cadence = 150;
             }
             break;
-        case 0: // Crystal: classic full ring plus one aimed lane.
+        case 0:
+            if (!RUN_IS_EASY()) {
+                if (!(e->ai_data[5] & 1)) {
+                    d = volley_aim(cx, cy);
+                    volley_shot(cx, cy, d, 3, damage);
+                    volley_shot(cx, cy, (u8)((d + 7) & 7), 2, damage);
+                    volley_shot(cx, cy, (u8)((d + 1) & 7), 2, damage);
+                    cadence = 30;
+                } else {
+                    for (d = 0; d < 8; ++d) volley_shot(cx, cy, d, 2, damage);
+                    cadence = 58;
+                }
+                break;
+            }
+            // Easy keeps the original predictable ring.
         default:
             for (d = 0; d < 8; ++d) volley_shot(cx, cy, d, 2, damage);
             volley_shot(cx, cy, volley_aim(cx, cy), 2, damage);

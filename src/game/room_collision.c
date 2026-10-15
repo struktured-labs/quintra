@@ -6,6 +6,7 @@
 
 #include "core/types.h"
 #include "game/player.h"
+#include "game/entity.h"
 #include "game/room.h"
 #include "game/waygear.h"
 #include "render/tiles.h"
@@ -15,6 +16,11 @@ static u8 full_body_obstacle(i16 x, i16 y) {
     return (t == BGT_PILLAR
          || t == BGT_BLOCK || t == BGT_BLOCK_TR
          || t == BGT_BLOCK_BL || t == BGT_BLOCK_BR);
+}
+
+u8 aabb_overlap_player_wide(const entity_t *e) BANKED {
+    return player.x+16>e->x && e->x+(e->hitbox>>4)>player.x
+        && player.y+16>e->y && e->y+(e->hitbox&15)>player.y;
 }
 
 static u8 player_walkable(i16 x, i16 y) {

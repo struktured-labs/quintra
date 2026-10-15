@@ -26,6 +26,7 @@ void serpent_tail_reset(u8 head_x, u8 head_y) BANKED {
     serpent_tail_count = SERPENT_TAIL_POINTS;
     serpent_tail_visible = 2;
     serpent_tail_active = 1;
+    serpent_body_reset();
     serpent_head_index = 0xFF;
     // Procgen creates the giant before applying its wide-arena fixture. Bind
     // the dedicated renderer here, after the fixture reset, so the generic
@@ -95,30 +96,15 @@ u8 room_apply_world_arena(void) BANKED {
         for (y = 1; y < ROOM_H - 1; ++y)
             room_tilemap[y][ROOM_W - 1] = BGT_FLOOR;
     }
-    if (stage == 0) {
-        tiles_paint_crystal_projection();
-    } else if (stage == 1) {
-        // Spawn coordinates are (64,48), with the broad 32x24 head's route
-        // anchor at (76,60). Its tail is entirely OBJ-based and connected to
-        // that moving head; no detached background body is painted here.
+    if (stage == 0 || stage >= 3) return stage;
+    if (stage == 1) {
+        // The moving body follows this head; there is no static projection.
         serpent_tail_reset(76, 60);
     } else if (stage == 2) {
         // The old 112x64 background furnace plus generic moving core made
         // Ember read as Crystal with a sprite swap. Five real Kilnback bodies
         // now own this otherwise-open wide arena and later become Cinder Rex.
         cinder_pack_reset();
-    } else if (stage == 3) {
-        tiles_paint_spider_projection();
-    } else if (stage == 4) {
-        tiles_paint_mire_projection(0, 0);
-    } else if (stage == 5) {
-        tiles_paint_reaper_projection();
-    } else if (stage == 6) {
-        tiles_paint_golem_projection();
-    } else if (stage == 7) {
-        tiles_paint_hydra_projection();
-    } else {
-        tiles_paint_void_projection();
     }
     return stage;
 }

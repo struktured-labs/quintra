@@ -8,6 +8,8 @@
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
+#include "game/procgen.h"
 #include "game/status.h"
 #include "render/tiles.h"
 
@@ -19,6 +21,7 @@ u8 projectile_spawn_enemy_v(i16 px, i16 py, i8 vx, i8 vy, u8 damage) BANKED {
     u8 source_id = 0;
     entity_t *e;
     if (vx == 0 && vy == 0) return 0xFF;
+    if (!boss_projectile_has_room(1)) return 0xFF;
     if (status_enemy_actor < MAX_ENTITIES) {
         actor_kind = enemy_status_kind[status_enemy_actor];
         if (actor_kind == QSTATUS_MUTE) return 0xFF;

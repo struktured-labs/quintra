@@ -4,6 +4,7 @@
 #include "core/types.h"
 #include "render/tiles.h"
 #include "render/sprites_gen.h"
+#include "render/large_boss.h"
 #include "stages.h"
 #include "content.h"
 
@@ -280,10 +281,15 @@ void tiles_load_miniboss(u8 stage) BANKED {
     set_sprite_data(SPR_BOSS, 4, mb[stage_mb_variant[stage < 9 ? stage : 8]]);
 }
 
+void reaper_pose_load(u8 pose) BANKED;
+
 void tiles_load_boss_big(u8 stage) BANKED {
     // Load the current stage's distinct 32x32 boss into the fixed 16-tile
     // slot range (SPR_BOSS_BIG). Only the active stage's art is resident.
     stage = (stage < 9) ? stage : 8;
+    large_boss_reset();
+    if (stage==3 || stage==4 || stage==7) large_boss_load(stage);
+    if (stage == 5) { reaper_pose_load(255); return; }
     // Cast before shifting: SDCC otherwise keeps the u8 arithmetic and a
     // 256-byte row stride wraps to zero, selecting stage 0 every time.
     set_sprite_data(SPR_BOSS_BIG, 16,

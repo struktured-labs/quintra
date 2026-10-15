@@ -5,12 +5,14 @@
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/entity.h"
+#include "game/rare_enemy.h"
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/enemy_mirror.h"
 #include "game/enemy_spore.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_phase.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
@@ -487,6 +489,7 @@ static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
 
 static void boss_tick(entity_t *e) {
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
+    if ((e->ai_data[3] & 1) && boss_phase_tick(e)) return;
 
     // Ember is a bespoke two-act encounter. Its five physical Kilnbacks,
     // formation windows, metamorphosis, and Cinder Rex attacks own the full
@@ -615,6 +618,7 @@ static void boss_tick(entity_t *e) {
 void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
     const enemy_def_t *def = &enemies[id];
+    if ((e->flags & EF_RARE) && rare_enemy_tick(e)) return;
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
     // Return-echo elites are 24x24 Reaper/Weaver/Maw. Weaver and Maw take
     // over movement here; Reaper (variant 0) falls through to native AI plus

@@ -20,6 +20,8 @@
 #include "game/dungeon_law.h"
 #include "game/oath_arts.h"
 #include "game/player.h"
+#include "game/pickup.h"
+#include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
@@ -31,6 +33,7 @@
 BANKREF(inventory_enter)
 
 static u8 inventory_page;
+u8 player_penta_aim = 1;
 
 static const u16 inv_palette[4] = {
     BGR555( 1,  2,  6), BGR555( 6,  9, 18),
@@ -96,6 +99,10 @@ static const char *class_name(u8 id) {
 // starters — resolve the real entry by id (small table, linear scan is fine).
 static const char *item_name_by_id(u16 id) {
     u8 i;
+    if (id == ITEM_ID_BOOMERANG) return "BOOMERANG";
+    if (id == ITEM_ID_HOOKSHOT) return "HOOKSHOT";
+    if (id == ITEM_ID_MORNINGSTAR) return "MORNINGSTAR";
+    if (id == ITEM_ID_BOMBS) return "BOMB BAG";
     for (i = 0; i < N_ITEMS; ++i) {
         if (items[i].id == id) return items[i].name;
     }
@@ -115,6 +122,10 @@ static const char *const active_tips[5] = {
 };
 
 static const char *active_tip_by_id(u16 id) {
+    if (id == ITEM_ID_BOOMERANG) return "STUN + LONG FETCH";
+    if (id == ITEM_ID_HOOKSHOT) return "LATCH + PULL SELF";
+    if (id == ITEM_ID_MORNINGSTAR) return "SWING AROUND YOU";
+    if (id == ITEM_ID_BOMBS) return "1 MP: THROW / DROP";
     return (id >= 10 && id < 15) ? active_tips[id - 10] : "SEE SIG";
 }
 
@@ -172,6 +183,26 @@ static void attr_row(u8 y, u8 slot) {
     VBK_REG = 0;
 }
 
+static void inventory_aim_enter(void) {
+    DISPLAY_OFF;
+    HIDE_SPRITES;
+    cls();
+    gotoxy(3, 1); text_write("AIM / B WEAPON");
+    gotoxy(2, 3); text_write(player_penta_aim ? "MODE: PENTA HOLD" : "MODE: CLASSIC");
+    gotoxy(2, 5); text_write("A: SWITCH MODE");
+    gotoxy(2, 7); text_write(player_penta_aim ? "DIAGONAL KEEPS" : "DIAGONAL PICKS");
+    gotoxy(2, 8); text_write(player_penta_aim ? "PREVIOUS HEADING" : "VERTICAL HEADING");
+    gotoxy(1, 10); text_write("UP/DOWN: B WEAPON");
+    gotoxy(1, 11); text_write("> "); text_write(item_name_by_id(player.active_item));
+    gotoxy(1, 13); text_write(active_tip_by_id(player.active_item));
+    gotoxy(1, 15); text_write("A+B OATH UNCHANGED");
+    gotoxy(1, 17); text_write("SEL GEAR B RETURN");
+    palette_bg_fill_attrs(0);
+    attr_row(1, 1); attr_row(3, 2); attr_row(5, 1); attr_row(13, 3);
+    SHOW_BKG;
+    DISPLAY_ON;
+}
+
 static void inventory_help_enter(void) {
     u8 i;
     DISPLAY_OFF;
@@ -187,9 +218,9 @@ static void inventory_help_enter(void) {
     gotoxy(2, 2); write_field(item_name_by_index(player.starter_weapon), 16);
     gotoxy(1, 3); text_write("RED ORB + A = SWAP");
 
-    gotoxy(1, 5); text_write("B  FREE SIGNATURE");
+    gotoxy(1, 5); text_write("B SELECTED WEAPON");
     gotoxy(2, 6); write_field(item_name_by_id(player.active_item), 16);
-    gotoxy(1, 7); text_write("RECHARGES; NO MP");
+    gotoxy(1, 7); text_write("CHANGE: PACK SELECT");
 
     gotoxy(1, 9); text_write("A+B OATH: 2 MP");
     gotoxy(1, 10); text_write("FULL MP: CONVERGE");
@@ -197,7 +228,7 @@ static void inventory_help_enter(void) {
     gotoxy(1, 12); text_write("NEXT A SPENDS WILL");
 
     gotoxy(1, 14); text_write("WEAPONS: ORB + A");
-    gotoxy(1, 15); text_write("PACK: SEL FOR GEAR");
+    gotoxy(1, 15); text_write("PACK: SEL FOR AIM");
     gotoxy(1, 16); text_write("OWNED GEAR AUTO ON");
     gotoxy(1, 17); text_write("SEL PACK B RETURN");
 
@@ -237,7 +268,7 @@ void inventory_enter(void) {
     gotoxy(5, 4); text_write(" VITALS ");
     gotoxy(7, 8); text_write(" ARMS ");
     gotoxy(6, 13); text_write(" QUEST ");
-    gotoxy(2, 17); text_write("SEL GEAR B BACK");
+    gotoxy(1, 17); text_write("SEL B KIT  B BACK");
     inventory_prepare_sprites();
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);
@@ -313,6 +344,25 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
     u8 tool_action;
     keys;
     if (inventory_page) {
+        if (inventory_page == 4) {
+            if (pressed & (J_START | J_B)) {
+                room_request_resume();
+                return SCREEN_ROOM;
+            }
+            if (pressed & J_SELECT) {
+                inventory_page = 1;
+                inventory_waygear_enter();
+            } else if (pressed & J_A) {
+                player_penta_aim ^= 1;
+                sfx_play(SFX_TICK);
+                inventory_aim_enter();
+            } else if (pressed & (J_UP | J_DOWN)) {
+                secondary_cycle();
+                sfx_play(SFX_TICK);
+                inventory_aim_enter();
+            }
+            return SCREEN_SELF;
+        }
         if (inventory_page == 3) {
             if (pressed & (J_START | J_B)) {
                 sfx_play(SFX_COIN);
@@ -357,8 +407,8 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
         return SCREEN_ROOM;
     }
     if (pressed & J_SELECT) {
-        inventory_page = 1;
-        inventory_waygear_enter();
+        inventory_page = 4;
+        inventory_aim_enter();
         return SCREEN_SELF;
     }
     if (oath_arts_pack_input(pressed)) return SCREEN_SELF;

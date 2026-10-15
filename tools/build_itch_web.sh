@@ -3,14 +3,14 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-version="${QUINTRA_WEB_VERSION:-v0.20.19-beta27}"
+version="${QUINTRA_WEB_VERSION:-v0.20.19-beta29}"
 if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
   echo "Invalid web version: $version" >&2
   exit 1
 fi
 archive="$project_root/builds/quintra-itch-web-$version.zip"
 rom="$project_root/rom/working/quintra.gbc"
-expected_rom_sha="7623604d389ae49d8eaa885d7320191601660dcc898559411659b4f81cd1fe49"
+expected_rom_sha="57321748552396f336fae31f0705397d4a9daa51b32db8430f5972e8566b1978"
 wasmboy_sha="3cffca75e29b90559437cc4984b5c8166e66a04a1edb295a51eb487fe9fa5b47"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
@@ -50,10 +50,15 @@ sed -i "s|__QUINTRA_WEB_VERSION__|$version|g" "$output_dir/index.html"
 printf '%s  quintra.gbc\n' "$actual_rom_sha" > "$output_dir/quintra.sha256"
 
 git_commit=$(git -C "$project_root" rev-parse HEAD)
+source_dirty=false
+if [[ -n "$(git -C "$project_root" status --porcelain)" ]]; then
+  source_dirty=true
+fi
 cat > "$output_dir/build.json" <<JSON
 {
   "version": "$version",
   "gitCommit": "$git_commit",
+  "sourceDirty": $source_dirty,
   "romSha256": "$actual_rom_sha",
   "emulator": "wasmboy-0.8.14-stable-sram",
   "emulatorCommit": "1d73f9c54c3401891ddd5fb9303a7ae9da520da9",

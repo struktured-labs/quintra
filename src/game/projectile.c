@@ -6,6 +6,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
 #include "game/player.h"
 #include "game/puzzle.h"
 #include "game/room.h"
@@ -184,6 +185,15 @@ void projectile_update_one(entity_t *e, u8 idx) {
     // struct byte for each material check below; twelve simultaneous hostile
     // shots are enough for those redundant reads to cost a video frame.
     u8 flags = e->flags;
+    if (flags & EF_BOSS_PROJECTILE) {
+        boss_projectile_update(e, idx);
+        return;
+    }
+    if ((flags & EF_PLAYER_PROJ) && e->ai_data[6] >= PROJ_AUX_HOOKSHOT) {
+        if (e->ai_data[6] == PROJ_AUX_HOOKSHOT) projectile_update_hookshot(e,idx);
+        else secondary_heavy_update(e,idx);
+        return;
+    }
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 

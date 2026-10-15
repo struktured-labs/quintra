@@ -31,6 +31,7 @@ def main():
         press(pb, 'start')
         pb.tick(90)
         press(pb, 'select')
+        press(pb, 'select')
         pb.tick(90)
         check_page(pb, 0)
         for key, selected in [('right', 1), ('down', 3), ('left', 2), ('up', 0)]:

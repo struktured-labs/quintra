@@ -8,6 +8,9 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
+#include "game/procgen.h"
+#include "game/run_state.h"
 
 void enemy_pattern_emit(entity_t *e, u8 direction, u8 palette) BANKED;
 
@@ -89,6 +92,8 @@ void blue_crawler_pattern_tick(entity_t *e, u8 idx) BANKED {
         return;
     }
 
+    if (!e->ai_data[3] && !RUN_IS_EASY() && !procgen_current_room_is_boss)
+        e->ai_data[3] = 32;
     clock = (u8)(e->ai_data[3] + 1);
     e->ai_data[3] = clock;
     cx = FIX8_TO_INT(e->x) + 4;
@@ -120,8 +125,11 @@ void blue_crawler_pattern_tick(entity_t *e, u8 idx) BANKED {
         e->ai_data[7] = 8;
         sfx_play(SFX_TICK);
     } else if (clock == 160) {
-        for (d = 0; d < 8; d = (u8)(d + 2))
-            crawler_shot(cx, cy, d, 1, e->damage, 4);
+        for (d = 0; d < 8; d = (u8)(d + 2)) {
+            if (!d && !RUN_IS_EASY() && (e->flags & EF_ALPHA))
+                boss_projectile_spawn(cx,cy,0,BOSS_SHOT_WAVE,1,e->damage);
+            else crawler_shot(cx, cy, d, 1, e->damage, 4);
+        }
     } else if (clock >= 170) {
         for (d = 1; d < 8; d = (u8)(d + 2))
             crawler_shot(cx, cy, d, 1, e->damage, 4);

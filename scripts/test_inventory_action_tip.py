@@ -99,6 +99,7 @@ def main():
             # frames must not consume any active-play duration.
             pb.memory[player + 46] = 0x08
             pb.memory[player + 47] = 3
+            press(pb, "select")  # Aim comparison page.
             press(pb, "select")
             for _ in range(12):
                 pb.tick()

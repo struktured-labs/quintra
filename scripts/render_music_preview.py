@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -39,7 +40,7 @@ SAMPLE_RATE = 48_000
 
 
 def slug(text: str) -> str:
-    return "-".join(text.lower().split())
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
 def sha256(path: Path) -> str:

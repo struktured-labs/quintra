@@ -42,7 +42,11 @@ u8 colossus_signature_tick(entity_t *e) BANKED;
 // Verdant's body is a real route history rendered behind its mobile head.
 // Twenty overlapping 8x8 segments leave four OAM entries for bullets after
 // the broad 4x3 head and player; Coil Tempest's storm shares the remainder.
-#define SERPENT_TAIL_POINTS 21
+#define SERPENT_TAIL_POINTS 49
+#define SERPENT_TAIL_MAX (SERPENT_TAIL_POINTS - 1)
+extern u8 serpent_body_dirty;
+void serpent_body_reset(void) BANKED;
+void serpent_body_draw(void) BANKED;
 extern u8 serpent_tail_x[SERPENT_TAIL_POINTS];
 extern u8 serpent_tail_y[SERPENT_TAIL_POINTS];
 extern u8 serpent_tail_count;
