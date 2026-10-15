@@ -160,7 +160,10 @@ def wave_contract():
         assert first >= 2
         assert_room_family(pb)
         erase(pb, enemies(pb))
-        tick_safe(pb, 4)
+        for _ in range(120):
+            tick_safe(pb, 1)
+            if pb.memory[PHASE] == 1:
+                break
         second = len(enemies(pb))
         assert pb.memory[PHASE] == 1 and second >= 3, \
             "first clear did not create a second formation"

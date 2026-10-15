@@ -212,7 +212,7 @@ u8 pickup_spawn_bellkeeper(fix8_t x, fix8_t y) BANKED {
 u8 pickup_spawn_wayfarer(u8 stage, fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn_resident(
         PICKUP_WAYFARER, SPR_TOWN_RESIDENT_BIG, 0x06, x, y);
-    if (idx != 0xFF) entities[idx].ai_data[1] = stage < 13 ? stage : 12;
+    if (idx != 0xFF) entities[idx].ai_data[1] = stage < 16 ? stage : 12;
     return idx;
 }
 
@@ -494,6 +494,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         if (e->state > 0) e->state--;
         return;
     }
+    if (e->ai_data[5] == 0xB1 || e->ai_data[5] == 0xB2) return;
     if (e->ai_data[7] & PICKUP_SECRET_TIMER_MARK) return;
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
@@ -726,6 +727,10 @@ u8 pickup_check_player_collision(void) BANKED {
                     // Permanent build growth has a forged relic voice; hearts,
                     // currency, MP, Sigils, and temporary Surges each differ.
                     sfx_play_reward(SFX_REWARD_RELIC);
+                    if (entities[i].ai_data[5] == 0xB1) {
+                        run_state.riftwild_flags |= 0x20;
+                        room_start_major_reward(PICKUP_FARFOLD_RELIC, entities[i].ai_data[1]);
+                    }
                     break;
                 case PICKUP_FARFOLD_RELIC:
                     if (treasure_cache_guarded()) continue;
@@ -888,6 +893,12 @@ u8 pickup_check_player_collision(void) BANKED {
                             && player_has_item(ITEM_ID_BLAST_SEED))
                         || (ware == WARE_BOOMERANG
                             && player_has_item(ITEM_ID_BOOMERANG))
+                        || (ware == WARE_HOOKSHOT
+                            && player_has_item(ITEM_ID_HOOKSHOT))
+                        || (ware == WARE_MORNINGSTAR
+                            && player_has_item(ITEM_ID_MORNINGSTAR))
+                        || (ware == WARE_BOMBS
+                            && player_has_item(ITEM_ID_BOMBS))
                         || (ware == WARE_GLASS && player.hp_max <= 2)
                         || (ware == WARE_HEART
                             && (player.hp >= player.hp_max
@@ -916,7 +927,8 @@ u8 pickup_check_player_collision(void) BANKED {
                                 || ware == WARE_ECHO || ware == WARE_RICOCHET
                                 || ware == WARE_THORN || ware == WARE_DRUM
                                 || ware == WARE_FLASK || ware == WARE_BLAST
-                                || ware == WARE_BOOMERANG)
+                                || ware == WARE_BOOMERANG || ware == WARE_HOOKSHOT
+                                || ware == WARE_MORNINGSTAR || ware == WARE_BOMBS)
                             && !player_has_inventory_space())) {
                         if (entities[i].ai_data[4] == 0) {
                             sfx_play(SFX_HURT);
@@ -1031,6 +1043,18 @@ u8 pickup_check_player_collision(void) BANKED {
                             case WARE_BOOMERANG:
                                 grant_special_item(ITEM_ID_BOOMERANG);
                                 hud_show_boomerang();
+                                break;
+                            case WARE_HOOKSHOT:
+                                grant_special_item(ITEM_ID_HOOKSHOT);
+                                hud_show_hookshot();
+                                break;
+                            case WARE_MORNINGSTAR:
+                                grant_special_item(ITEM_ID_MORNINGSTAR);
+                                hud_show_secondary(0);
+                                break;
+                            case WARE_BOMBS:
+                                grant_special_item(ITEM_ID_BOMBS);
+                                hud_show_secondary(1);
                                 break;
                         }
                         entity_kill(i);

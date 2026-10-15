@@ -150,6 +150,11 @@ def main():
         pb.button_release("start")
         assert pb.memory[SCREEN] == SCREEN_INVENTORY, \
             f"START did not open Pack after Warden reward: screen={pb.memory[SCREEN]}"
+        pb.tick(30)
+        pb.button_press("select")
+        pb.tick(20)
+        pb.button_release("select")
+        pb.tick(30)
         pb.button_press("select")
         for _ in range(60):
             pb.tick()

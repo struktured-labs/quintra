@@ -14,6 +14,9 @@
 #define HUD_NOTICE_FRAMES 45
 #define HUD_NOTICE_HUNGER 0x7F
 #define HUD_NOTICE_BOOMERANG 0x7E
+#define HUD_NOTICE_HOOKSHOT 0x7D
+#define HUD_NOTICE_SECONDARY 0x7C
+#define HUD_NOTICE_BOSS_LINK 0x7B
 #define HUD_NOTICE_QUEUE  4
 
 u8 hud_notice_ticks;
@@ -23,6 +26,7 @@ static u8 queued_kind[HUD_NOTICE_QUEUE];
 static u8 queued_amount[HUD_NOTICE_QUEUE];
 static u8 queue_head;
 static u8 queue_count;
+static u8 link_mode;
 
 void hud_notice_restore_context(void) BANKED;
 
@@ -104,7 +108,8 @@ static u8 status_word(u8 status, u8 *row) {
 static u8 notice_palette(u8 kind) {
     u8 value = kind & 0x7F;
     if (!(kind & HUD_NOTICE_STATUS)) {
-        if (kind == HUD_NOTICE_BOOMERANG) {
+        if (kind == HUD_NOTICE_BOOMERANG || kind == HUD_NOTICE_HOOKSHOT
+            || kind == HUD_NOTICE_SECONDARY) {
             palette_bg_load(5, notice_gold); return 5;
         }
         if (value == STAT_MP || value == STAT_SPD) return 6;
@@ -130,12 +135,39 @@ static void draw_notice(u8 kind, u8 amount) {
     u8 width;
     u8 start;
     u8 i;
-    u8 pal = notice_palette(kind);
+    u8 pal;
+    if (kind == HUD_NOTICE_BOSS_LINK) {
+        palette_bg_load(5, amount == 0 ? notice_gold
+            : amount == 1 ? notice_violet : notice_green);
+        pal = 5;
+    } else pal = notice_palette(kind);
     if (kind & HUD_NOTICE_STATUS) width = status_word((u8)(kind & 0x7F), row);
+    else if (kind == HUD_NOTICE_SECONDARY) {
+        row[0]=amount ? HUD_STATUS_B : HUD_STATUS_S;
+        row[1]=amount ? BGT_AREA_O : BGT_AREA_T;
+        row[2]=amount ? BGT_AREA_M : BGT_AREA_A;
+        row[3]=amount ? HUD_STATUS_B : BGT_AREA_R; width=4;
+    }
+    else if (kind == HUD_NOTICE_HOOKSHOT) {
+        row[0]=BGT_AREA_H; row[1]=BGT_AREA_O;
+        row[2]=BGT_AREA_O; row[3]=BGT_AREA_K; width=4;
+    }
     else if (kind == HUD_NOTICE_BOOMERANG) {
         row[0]=HUD_STATUS_B; row[1]=BGT_AREA_O; row[2]=BGT_AREA_O;
         row[3]=BGT_AREA_M; row[4]=BGT_AREA_E; row[5]=BGT_AREA_R;
         width=6;
+    }
+    else if (kind == HUD_NOTICE_BOSS_LINK) {
+        if (amount == 0) {
+            row[0]=BGT_AREA_L; row[1]=BGT_AREA_I;
+            row[2]=BGT_AREA_N; row[3]=BGT_AREA_K; width=4;
+        } else if (amount == 1) {
+            row[0]=BGT_AREA_N; row[1]=BGT_AREA_O;
+            row[3]=BGT_AREA_A; row[4]=BGT_AREA_T; row[5]=BGT_AREA_K; width=6;
+        } else {
+            row[0]=BGT_AREA_A; row[1]=BGT_AREA_T; row[2]=BGT_AREA_T;
+            row[3]=BGT_AREA_A; row[4]=HUD_STATUS_C; row[5]=BGT_AREA_K; width=6;
+        }
     }
     else {
         switch (kind) {
@@ -183,6 +215,7 @@ void hud_notice_reset(void) BANKED {
     notice_kind = 0xFF;
     queue_head = 0;
     queue_count = 0;
+    link_mode = 0xFF;
 }
 
 static u8 notice_already_queued(u8 kind) {
@@ -240,6 +273,34 @@ void hud_show_boomerang(void) BANKED {
         return;
     }
     begin_notice(HUD_NOTICE_BOOMERANG, 0);
+}
+
+void hud_show_hookshot(void) BANKED {
+    if (hud_notice_ticks) queue_notice(HUD_NOTICE_HOOKSHOT, 0);
+    else begin_notice(HUD_NOTICE_HOOKSHOT, 0);
+}
+
+void hud_show_secondary(u8 bomb) BANKED {
+    if (hud_notice_ticks) queue_notice(HUD_NOTICE_SECONDARY,bomb);
+    else begin_notice(HUD_NOTICE_SECONDARY,bomb);
+}
+
+void hud_show_boss_link(u8 mode) BANKED {
+    if (mode == 3) {
+        link_mode = 0xFF;
+        if (notice_kind == HUD_NOTICE_BOSS_LINK && hud_notice_ticks) {
+            hud_notice_ticks = 1;
+            hud_tick_notice();
+        }
+        return;
+    }
+    if (link_mode == mode) return;
+    link_mode = mode;
+    if (hud_notice_ticks && notice_kind != HUD_NOTICE_BOSS_LINK)
+        queue_notice(notice_kind, notice_amount);
+    begin_notice(HUD_NOTICE_BOSS_LINK, mode);
+    if (mode == 0) hud_notice_ticks = 32;
+    else if (mode == 1) hud_notice_ticks = 96;
 }
 
 void hud_tick_notice(void) BANKED {

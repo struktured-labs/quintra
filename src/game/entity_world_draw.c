@@ -8,9 +8,11 @@
 #include "game/enemy_ai.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
 #include "game/room.h"
 #include "game/status.h"
 #include "render/tiles.h"
+#include "render/large_boss.h"
 #include "content.h"
 
 void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;
@@ -48,7 +50,7 @@ static u8 world_camera_step(u8 current, i16 player_pos,
 
 void entity_draw_all_world(void) BANKED {
     u8 i;
-    u8 oam = serpent_tail_active ? 32 : cinder_pack_active ? 22 : 4;
+    u8 oam = serpent_tail_active ? 16 : cinder_pack_active ? 22 : 4;
     room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
         ? world_camera_step(room_camera_x, player.x,
             room_world_width, ROOM_VIEW_W_PX) : 0;

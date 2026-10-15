@@ -8,6 +8,7 @@
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/rare_enemy.h"
 #include "game/curse.h"
 #include "game/enemy_ai.h"
 #include "game/player.h"
@@ -21,6 +22,7 @@
 #include "content.h"
 
 u8 player_status_kind;
+void status_effect(u8 kind,u8 palette,i16 x,i16 y) BANKED;
 u8 player_status_ticks;
 u8 enemy_status_kind[MAX_ENTITIES];
 u8 enemy_status_ticks[MAX_ENTITIES];
@@ -182,7 +184,7 @@ u8 status_enemy_palette_prop(u8 idx) BANKED {
 }
 
 static void status_signal_at(u8 kind, i16 x, i16 y) {
-    fx_spawn(SPR_FX_IMPACT, status_palette(kind), x, y, 12);
+    status_effect(kind,status_palette(kind),x,y);
     sfx_play((kind == QSTATUS_STOP || kind == QSTATUS_MUTE)
         ? SFX_TICK : SFX_WEAK);
 }
@@ -272,7 +274,7 @@ void status_enemy_apply(u8 idx, u8 kind, u8 ticks) BANKED {
     if (!ticks) ticks = status_duration(kind);
     // Elites and Colossi resist duration rather than ignoring the system.
     // Stop becomes a short stagger and Mute cannot erase an entire boss phase.
-    if ((e->flags & (EF_ELITE | EF_ALPHA)) || (e->ai_data[3] & 1)) {
+    if ((e->flags & (EF_ELITE | EF_ALPHA | EF_RARE)) || (e->ai_data[3] & 1)) {
         ticks = (u8)((ticks + 2) / 3);
         if (kind == QSTATUS_STOP && ticks > 6) ticks = 6;
         if (kind == QSTATUS_MUTE && ticks > 12) ticks = 12;
@@ -317,13 +319,19 @@ void status_try_hostile_hit(u8 hostile_idx) BANKED {
     if (hostile_idx >= MAX_ENTITIES) return;
     e = &entities[hostile_idx];
     if (!(e->flags & EF_ACTIVE)) return;
-    kind = (e->type == ENT_PROJECTILE)
+    if (e->type == ENT_ENEMY && (e->flags & EF_RARE))
+        kind = (e->ai_data[0] & 1) ? QSTATUS_SLOW : QSTATUS_POISON;
+    else if (e->type == ENT_PROJECTILE && (e->ai_data[5] & 0x80))
+        kind = e->ai_data[5] & 0x7F;
+    else kind = (e->type == ENT_PROJECTILE)
         ? (e->ai_data[5]
             ? status_hostile_kind_for_enemy((u8)(e->ai_data[5] - 1))
             : QSTATUS_NONE)
         : status_hostile_kind_for_enemy(e->ai_data[0]);
     if (kind == QSTATUS_NONE || kind >= QSTATUS_COUNT) return;
     chance = RUN_IS_EASY() ? 16 : 42;
+    if ((e->type == ENT_ENEMY && (e->flags & EF_RARE))
+        || (e->type == ENT_PROJECTILE && (e->ai_data[5] & 0x80))) chance = 100;
     if (rng_range(100) >= chance) return;
     if (kind == QSTATUS_CURSE) {
         // Gloam Leeches seed a room-scale hex instead of occupying the short
@@ -528,9 +536,8 @@ void status_tick(void) BANKED {
             hud_redraw_hp();
             sfx_play(SFX_HEART);
         }
-        if ((player_status_ticks & 15) == 0)
-            fx_spawn(SPR_FX_IMPACT, status_palette(kind),
-                (i16)player.x + 4, (i16)player.y + 2, 8);
+        if ((player_status_ticks & 3) == 0)
+            status_effect(kind,status_palette(kind),player.x+4,player.y+2);
         if (player_status_ticks == 0) {
             u8 was_blind = (kind == QSTATUS_BLIND);
             player_status_kind = QSTATUS_NONE;
@@ -548,6 +555,9 @@ void status_tick(void) BANKED {
         if (kind == QSTATUS_NONE || !enemy_status_ticks[i]
             || !(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) continue;
         enemy_status_ticks[i]--;
+        if ((enemy_status_ticks[i] & 7) == (i & 7)
+            && (e->flags & EF_ON_SCREEN))
+            status_effect(kind,status_palette(kind),e->x+4,e->y);
         // Enemy DOT bottoms out at one HP so status kills still resolve
         // through the ordinary reward/score/death path on the next strike.
         if (((kind == QSTATUS_POISON && (enemy_status_ticks[i] & 7) == 0)

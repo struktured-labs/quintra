@@ -17,6 +17,7 @@ CINDER_ALIVE = addr("_cinder_pack_alive")
 CINDER_TIMER = addr("_cinder_timer")
 CINDER_X = addr("_cinder_pack_x")
 CINDER_Y = addr("_cinder_pack_y")
+ANIM_COUNTER = addr("_entity_anim_counter")
 # The encounter's private WRAM block follows its exported globals: x[5],
 # y[5], then hazard x/y/ttl/delay arrays. This live test intentionally checks
 # the runtime hazard lifetime rather than an OAM snapshot that can land during
@@ -46,12 +47,15 @@ def place_player_shot(pb, x, y):
     for i in range(31, -1, -1):
         ep = EN + i * ENTITY_SIZE
         if not (pb.memory[ep + 1] & 1):
+            for byte in range(28):
+                pb.memory[ep+byte] = 0
             pb.memory[ep] = 1
             pb.memory[ep + 1] = 0x11
             put16(pb, ep + 3, x)
             put16(pb, ep + 7, y)
             pb.memory[ep + 10] = pb.memory[ep + 11] = 0
             pb.memory[ep + 14] = 1
+            pb.memory[ep + 16] = 40
             pb.memory[ep + 25] = 0x66
             pb.memory[ep + 26] = 1
             return ep
@@ -64,9 +68,17 @@ def oam_tiles(pb, start=4, end=22):
 
 
 def keep_alive(pb, frames):
-    for _ in range(frames):
+    previous=pb.memory[ANIM_COUNTER]
+    advanced=0
+    for _ in range(frames*4+60):
         pb.memory[PL + 15] = 255
         pb.tick()
+        current=pb.memory[ANIM_COUNTER]
+        advanced+=(current-previous)&255
+        previous=current
+        if advanced>=frames:
+            return
+    raise AssertionError('gameplay update clock stalled')
 
 
 def main():
@@ -154,7 +166,10 @@ def main():
     keep_alive(pb, 2)
     assert pb.memory[CINDER_ALIVE] == 4, "first Kilnback segment did not break"
     pb.memory[boss + 14] = 120
-    keep_alive(pb, 2)
+    for _ in range(80):
+        keep_alive(pb, 1)
+        if pb.memory[CINDER_PHASE] == 1:
+            break
     assert pb.memory[CINDER_PHASE] == 1, "pack did not begin metamorphosis"
     transform_shot = ROOT / "tmp" / "cinder-transform-live.png"
     pb.screen.image.save(transform_shot)
@@ -207,7 +222,10 @@ def main():
     # recombines instead of simply gaining projectile speed.
     clear_hostiles(pb)
     pb.memory[boss + 14] = 40
-    keep_alive(pb, 2)
+    for _ in range(80):
+        keep_alive(pb, 1)
+        if pb.memory[CINDER_PHASE] == 3:
+            break
     assert pb.memory[CINDER_PHASE] == 3 and pb.memory[CINDER_ALIVE] == 5, (
         "critical Rex did not split into five fire silhouettes")
     for _ in range(180):

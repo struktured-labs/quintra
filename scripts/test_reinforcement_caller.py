@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM contract for the one-wave Rift Cantor reinforcement caller."""
 
-from test_stage_archetypes import EN, PL, RS, TM, generated_room, put16
+from test_stage_archetypes import EN, PL, RS, TM, generated_room, put16, addr
 
 
 ENTITY_SIZE = 28
@@ -18,6 +18,7 @@ def active_enemies(pb):
 
 
 def clear_entities(pb):
+    pb.memory[addr('_entity_enemy_count')] = 0
     for i in range(32):
         e = EN + i * ENTITY_SIZE
         pb.memory[e] = 0
@@ -26,6 +27,7 @@ def clear_entities(pb):
 
 def install_cantor(pb):
     clear_entities(pb)
+    pb.memory[addr('_entity_enemy_count')] = 1
     put16(pb, PL + 9, 72)
     put16(pb, PL + 11, 64)
     e = EN
@@ -88,6 +90,21 @@ def assert_normal_wave(pb, _tiles):
     assert len(active_enemies(pb)) == 3, "Cantor produced a second wave"
     assert pb.memory[EN + 19] == 2, "Cantor re-armed after its one wave"
 
+    for e in active_enemies(pb):
+        if e != EN: pb.memory[e] = pb.memory[e+1] = 0
+    pb.memory[addr('_entity_enemy_count')] = 1
+    pb.memory[EN+14] = 1
+    put16(pb,EN+3,72); put16(pb,EN+7,104)
+    for _ in range(160):
+        pb.memory[PL+15] = 120
+        pb.tick()
+    assert pb.memory[EN+22] == 1, 'wounded caller never spent its last chant'
+    assert len(active_enemies(pb)) == 3, 'wounded caller failed its bounded second wave'
+    for _ in range(220):
+        pb.memory[PL+15] = 120
+        pb.tick()
+    assert len(active_enemies(pb)) == 3, 'caller summoned a third wave'
+
 
 def assert_easy_wave(pb, _tiles):
     assert_cantor_art_loaded(pb)
@@ -134,9 +151,33 @@ def main():
     generated_room(3, seed=0xCA110013, probe=assert_easy_wave)
     generated_room(8, seed=0xCA110014,
                    probe=assert_spent_caller_leaves_outer_band)
+    generated_room(3, seed=0xCA110015, probe=assert_occupied_summon_sites)
     print("[reinforcement-caller] PASS 48f interruptible tell, two escorts on "
-          "Normal / one on Easy, no recursion, no second wave, outer-band "
+          "Normal / one on Easy, bounded wounded second wave, outer-band "
           "escape")
+
+
+def assert_occupied_summon_sites(pb, _tiles):
+    install_cantor(pb)
+    put16(pb, PL+9, 24); put16(pb, PL+11, 24)
+    put16(pb, EN+3, 72); put16(pb, EN+7, 72)
+    for y in range(1,16):
+        for x in range(1,19): pb.memory[TM+y*20+x]=1
+    for slot,(dx,dy) in enumerate(((24,0),(-24,0),(0,24),(0,-24),
+                                  (24,24),(-24,24),(24,-24),(-24,-24)),1):
+        e=EN+slot*ENTITY_SIZE
+        for off in range(ENTITY_SIZE): pb.memory[e+off]=0
+        pb.memory[e]=2; pb.memory[e+1]=7; pb.memory[e+14]=80
+        pb.memory[e+25]=0x66
+        put16(pb,e+3,72+dx); put16(pb,e+7,72+dy)
+        pb.memory[addr('_enemy_status_kind')+slot]=4
+        pb.memory[addr('_enemy_status_ticks')+slot]=100
+    pb.memory[addr('_entity_enemy_count')]=9
+    pb.memory[addr('_status_enemy_active')]=1
+    pb.memory[EN+19]=1; pb.memory[EN+20]=1
+    pb.tick(8)
+    assert pb.memory[EN+19]==2, 'chant did not resolve'
+    assert len(active_enemies(pb))==9, 'summon overlapped an occupied body'
 
 
 if __name__ == "__main__":

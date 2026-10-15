@@ -5,6 +5,7 @@
 // lives as one source fragment so the zero-cost one-screen renderer and the
 // banked two-axis world renderer cannot drift apart.
 entity_anim_counter++;
+if (large_boss_index != 255) oam = large_boss_draw(oam);
 for (i = 0; i < MAX_ENTITIES; ++i) {
     // Rotate the 32 logical slots through the 36 non-player OAM entries.
     // When a crowded scanline or several 16x16 bodies exceed hardware OAM,
@@ -30,6 +31,11 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     sx = ENTITY_DRAW_SX(e);
     sy = ENTITY_DRAW_SY(e);
     pal = e->palette;
+    if (e->type == ENT_PROJECTILE && ((e->flags & EF_BOSS_PROJECTILE)
+        || e->ai_data[6] >= PROJ_AUX_HOOKSHOT)) {
+        oam = boss_projectile_draw(e, oam, sx, sy);
+        continue;
+    }
     if (e->type == ENT_ENEMY && enemy_status_kind[slot] != QSTATUS_NONE
         && (entity_anim_counter & 0x08))
         pal = status_enemy_palette_prop(slot);
@@ -39,6 +45,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     if (e->type == ENT_ENEMY
         && ((e->ai_data[0] == ENEMY_STONE_SENTINEL && e->ai_data[3])
             || (room_return_echo_kind >= 4 && slot == room_encounter_target))) {
+        if (slot == large_boss_index) continue;
         u8 side = e->ai_data[0] == ENEMY_STONE_SENTINEL ? 4 : 3;
         u8 r, c, tile = side == 3 ? SPR_BOSS_BIG : e->sprite_tile;
         if (side == 3) { sx -= 4; sy -= 8; }

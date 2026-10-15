@@ -33,6 +33,7 @@ static u8 cantor_spots_player(const entity_t *e, u8 radius) {
 }
 
 static u8 cantor_spawn_cell_clear(u8 tx, u8 ty) {
+    u8 i;
     i16 px = (i16)tx << 3;
     i16 py = (i16)ty << 3;
     i16 dx = px - (i16)player.x;
@@ -44,6 +45,12 @@ static u8 cantor_spawn_cell_clear(u8 tx, u8 ty) {
     // walks directly into the chant. The long tell is meaningful warning,
     // not permission to materialize damage inside the hurtbox.
     if (cantor_abs(dx) < 20 && cantor_abs(dy) < 20) return 0;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *other = &entities[i];
+        if (other->type != ENT_ENEMY || !(other->flags & EF_ACTIVE)) continue;
+        if (px < other->x + 16 && px + 16 > other->x
+            && py < other->y + 16 && py + 16 > other->y) return 0;
+    }
     return room_tile_walkable(room_tile_at_px(px + 1, py + 1))
         && room_tile_walkable(room_tile_at_px(px + 14, py + 1))
         && room_tile_walkable(room_tile_at_px(px + 1, py + 14))
@@ -69,6 +76,7 @@ static void cantor_call_escort(entity_t *e, u8 ordinal) {
     i16 by = FIX8_TO_INT(e->y) >> 3;
     u8 start = (u8)((e->state + ordinal * 3) & 7);
     u8 i;
+    if (entity_enemy_count >= 10) return;
     for (i = 0; i < 8; ++i) {
         u8 site = (u8)((start + i) & 7);
         i16 tx = bx + ox[site];
@@ -123,8 +131,9 @@ void rift_cantor_update(entity_t *e, const enemy_def_t *def) BANKED {
         return;
     }
 
-    // After its one wave, the Cantor becomes a slow evasive target instead
-    // of beginning another chant. This is bounded by construction: summoned
-    // IDs never include the Cantor, and this mode never returns to zero.
+    if (!RUN_IS_EASY() && !e->ai_data[5] && e->hp <= (def->stats.hp >> 1)) {
+        e->ai_data[5]=1;
+        e->ai_data[2]=0;
+    }
     if ((++e->ai_data[4] & 7) == 0) enemy_cantor_evade(e);
 }

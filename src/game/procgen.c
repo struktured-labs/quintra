@@ -8,6 +8,7 @@
 #include "game/companion.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
+#include "game/rare_enemy.h"
 #include "game/mission_graph.h"
 #include "game/pickup.h"
 #include "game/player.h"
@@ -19,6 +20,7 @@
 #include "game/spawn_reach.h"
 #include "game/waygear.h"
 #include "render/tiles.h"
+#include "render/large_boss.h"
 #include "content.h"
 
 u8 procgen_current_room_is_boss;
@@ -1333,11 +1335,16 @@ void procgen_generate_current_room(void) BANKED {
         }
 
         if (run_state.world_mode && world_kind == ZELDA_CELL_VAULT) {
+            u8 vault_slot;
             if (!(run_state.riftwild_flags & RIFT_REGION_VAULT_USED_BIT)) {
                 pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
                 pickup_spawn_item((u8)(22 + rng_range(3)), FIX8(80), FIX8(80));
                 pickup_spawn(PICKUP_COIN_5, FIX8(64), FIX8(72));
                 pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));
+                for (vault_slot = 0; vault_slot < MAX_ENTITIES; ++vault_slot)
+                    if (entities[vault_slot].type == ENT_PICKUP
+                        && (entities[vault_slot].flags & EF_ACTIVE))
+                        entities[vault_slot].ai_data[5] = 0xB2;
                 run_state.riftwild_flags |= RIFT_REGION_VAULT_USED_BIT;
             }
             pickup_spawn_wayfarer(12, FIX8(120), FIX8(88));
@@ -1391,6 +1398,7 @@ void procgen_generate_current_room(void) BANKED {
             {
                 u8 idx = enemy_spawn(ENEMY_STONE_SENTINEL, (ROOM_W / 2) - 2, (ROOM_H / 2) - 2);
                 if (idx != 0xFF) {
+                    large_boss_index = (skin == 3 || skin == 4 || skin == 7) ? idx : 255;
                     entities[idx].sprite_tile = boss_sprite_for_stage(skin);
                     entities[idx].palette     = boss_palette_for_stage(skin);
                     // Crystal's stationary tutorial Colossus keeps the
@@ -1726,6 +1734,9 @@ void procgen_generate_current_room(void) BANKED {
                     fallback->damage = (u8)(fallback->damage + 1);
                 }
             }
+            if (!is_waypoint && !is_puzzle_room
+                && room_encounter_kind != ENCOUNTER_HUNT)
+                rare_enemy_prepare();
             // Batch every dungeon body's wide-field placement in one cold
             // bank call. Calling the helper once per enemy added two visible
             // frames to a 16-body same-stage doorway.

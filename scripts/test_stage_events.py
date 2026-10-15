@@ -148,6 +148,7 @@ def arrow_probe(pb, _tiles):
 
 
 def fading_probe(pb, _tiles):
+    pb.memory[addr('_run_state') + 26] = 1
     wide = pb.memory[WORLD_W] > 160
     xs = (4, 12, 20, 27) if wide else (4, 7, 12, 15)
     sites = tuple((x, y) for y in (7, 10) for x in xs)

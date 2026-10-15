@@ -6,10 +6,17 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
+#include "game/procgen.h"
 #include "game/run_state.h"
 
 void enemy_pattern_emit(entity_t *e, u8 direction, u8 palette) BANKED {
     u8 i, hostile = 0, free = 0;
+    if (!RUN_IS_EASY() && !procgen_current_room_is_boss) {
+        i=boss_projectile_spawn(e->x+6,e->y+6,(direction&7)<<2,BOSS_SHOT_WAVE,0,e->damage);
+        if (i!=0xFF) entities[i].palette=palette;
+        return;
+    }
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)) free++;
         else if (entities[i].type == ENT_PROJECTILE
@@ -53,15 +60,24 @@ u8 enemy_return_variant(entity_t *e) BANKED {
         }
     } else if (e->ai_data[2] == 2) {
         if (variant == 1) {
-            if (!(e->ai_data[3] & 7))
-                enemy_pattern_emit(e, (u8)(e->ai_data[4]++), 6);
+            if (!(e->ai_data[3] & 7)) {
+                if (RUN_IS_EASY()) enemy_pattern_emit(e, (u8)(e->ai_data[4]++), 6);
+                else boss_projectile_spawn(e->x+6,e->y+6,
+                    (e->ai_data[4]++ << 2)&31,BOSS_SHOT_WAVE,
+                    e->ai_data[3]==56 ? 2 : 0,e->damage);
+            }
         } else {
             u8 d = e->ai_data[4];
             enemy_try_step(e, dir8_dx[d], dir8_dy[d]);
             enemy_try_step(e, dir8_dx[d], dir8_dy[d]);
             if (!(e->ai_data[3] & 7)) {
-                enemy_pattern_emit(e, (u8)(d + 2), 4);
-                enemy_pattern_emit(e, (u8)(d + 6), 4);
+                if (RUN_IS_EASY()) {
+                    enemy_pattern_emit(e, (u8)(d + 2), 4);
+                    enemy_pattern_emit(e, (u8)(d + 6), 4);
+                } else {
+                    boss_projectile_spawn(e->x+6,e->y+6,((d+2)<<2)&31,BOSS_SHOT_ARC,1,e->damage);
+                    boss_projectile_spawn(e->x+6,e->y+6,((d+6)<<2)&31,BOSS_SHOT_ARC,1,e->damage);
+                }
             }
         }
         if (!e->ai_data[3]) { e->ai_data[2] = 3; e->ai_data[3] = 64; }

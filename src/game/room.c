@@ -9,6 +9,7 @@
 #include "audio/audio.h"
 #include "audio/music.h"
 #include "audio/sfx.h"
+#include "audio/boss_voice.h"
 #include "core/types.h"
 #include "core/rng.h"
 #include "game/combat.h"
@@ -26,6 +27,9 @@
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/projectile.h"
+void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
+void secondary_cooldown_tick(void) BANKED;
+void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -97,9 +101,6 @@ static u8 hostiles_now;
 static u8 door_bump_cd;
 static u8 boss_threshold_warned;
 static u8 shop_offer_visible;
-// Toxic Mire's BG organism redraws only when the boss changes pulse phase.
-// 0xFF forces the first live frame to reconcile VRAM with the entity state.
-u8 room_mire_projection_state;
 // Set once when a room is generated.  Price proximity must never put a
 // 32-entity scan on ordinary bullet-hell frames that cannot contain a ware.
 static u8 room_has_shop_wares;
@@ -966,6 +967,7 @@ static u8 room_scroll_y(void) {
 // Cold direction decoder is shared by weapon edges only. Keeping it in the
 // new feature bank recovers emergency headroom in the always-hot room bank.
 u8 room_input_dir8(u8 keys, u8 facing) BANKED;
+extern u8 player_penta_aim;
 
 void room_enter(void) {
     g_vbl_ticks = 0;   // run clock: don't count time spent off-room
@@ -1090,7 +1092,7 @@ void room_enter(void) {
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
     if (procgen_current_room_is_boss) {
-        sfx_play(SFX_ROAR);
+        boss_voice(room_stage(), BOSS_VOICE_ARRIVE);
         // Entry drama: the arena starts dark and trembling, then the
         // light pops as the fight begins.
         room_apply_pause_palettes(1);
@@ -1219,7 +1221,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Entering the amber threshold's approach gives one low roar and tremor.
     // The room itself is a full-heal sanctuary, so this is a fair commitment
     // warning rather than an ambush or an extra confirmation dialog.
-    if (!boss_threshold_warned && !procgen_current_room_is_boss
+    if ((!boss_threshold_warned || !entity_anim_counter) && !procgen_current_room_is_boss
         && !run_state.world_mode
         && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
         u8 near = 0;
@@ -1253,7 +1255,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
         if (near) {
             boss_threshold_warned = 1;
-            sfx_play(SFX_ROAR);
+            boss_voice(room_stage(), BOSS_VOICE_DOOR);
             room_shake(1, 12);
         }
     }
@@ -1306,11 +1308,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         u8 animate_walk = 0;
         i8 dx = 0, dy = 0;
         u8 steps;
+        u8 previous_facing = player.facing;
 
         if (keys & J_LEFT)  { dx = -1; player.facing = FACE_W; moved = 1; }
         if (keys & J_RIGHT) { dx = +1; player.facing = FACE_E; moved = 1; }
         if (keys & J_UP)    { dy = -1; player.facing = FACE_N; moved = 1; }
         if (keys & J_DOWN)  { dy = +1; player.facing = FACE_S; moved = 1; }
+
+        // A-fire diagonals lean away from a retained cardinal heading.
+        if (player_penta_aim && (keys & (J_A | J_B)) == J_A && dx && dy
+            && ((previous_facing == FACE_N && dy < 0)
+                || (previous_facing == FACE_S && dy > 0)
+                || (previous_facing == FACE_W && dx < 0)
+                || (previous_facing == FACE_E && dx > 0)))
+            player.facing = previous_facing;
 
         if (moved) {
             u8 move_stat = STATUS_PLAYER_INVERTED()
@@ -1768,30 +1779,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 player.fire_cooldown--;
         }
 
-        // ---- Weapon 2 (B, edge): a dependable class signature. It has a
-        // short class/SPD-shaped cooldown but spends neither MP nor Will;
-        // those resources belong to A+B/Oaths and A MAX respectively.
         if ((pressed & J_B) && !(keys & J_A)) {
             u8 dir = room_input_dir8(keys, player.facing);
-            u8 used = 0;
-            if (!muted && player.active_charge == 0) {
-                u8 dmg = (u8)(w->p1 + 1 + effective_atk);
-                if (will_fire_signature(dir, dmg)) {
-                    will_begin_signature();
-                    used = 1;
-                }
-            }
-            if (!used) used = projectile_throw_boomerang(dir);
-            if (!used && (muted || player.active_charge == 0)) {
-                sfx_play(SFX_HURT);
-            }
+            secondary_fire(dir,keys & (J_LEFT|J_RIGHT|J_UP|J_DOWN),
+                (u8)(w->p1+1+effective_atk));
         }
-        if (player.active_charge > 0 && --player.active_charge == 0) {
-            // A quiet flash makes B/A+B readiness visible without adding a
-            // repetitive chime to already-dense combat audio.
-            fx_spawn(SPR_FX_IMPACT, 6,
-                (i16)player.x + 4, (i16)player.y + 2, 6);
-        }
+        if (player.active_charge) secondary_cooldown_tick();
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_transform_ticks--;
             if (room_transform_ticks == 0 && !room_hurt_pose_ticks) {
@@ -2074,9 +2067,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
             return SCREEN_SELF;
         }
-        // ---- Hazard floor: spikes bite on contact; Shadow panels hurt once
-        // when they vanish underfoot, then stumble the hero onto the intact
-        // processional. Picsean's swim passive applies only to Toxic Mire.
+        else if (feet_tile == BGT_VOID
+            && room_stage_event_kind == STAGE_EVENT_FADING_FLOOR
+            && !RUN_IS_EASY()) {
+            stage_event_resolve_fall();
+            if (!player.hp) {
+                room_start_death();
+                return SCREEN_SELF;
+            }
+        }
+        // Easy retains recoverable falls; spikes keep their normal damage.
         else if ((feet_tile == BGT_SPIKES
                 || (feet_tile == BGT_VOID
                     && room_stage_event_kind == STAGE_EVENT_FADING_FLOOR))
@@ -2435,22 +2435,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 }
 
 void room_draw(void) {
-    if (procgen_current_room_is_boss && room_stage() == 4) {
-        u8 i;
-        for (i = 0; i < MAX_ENTITIES; ++i) {
-            entity_t *e = &entities[i];
-            if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
-                && e->ai_data[0] == ENEMY_STONE_SENTINEL
-                && (e->ai_data[3] & 1) && e->ai_data[2] == 4) {
-                u8 phase = (u8)(e->state & 1);
-                if (phase != room_mire_projection_state) {
-                    tiles_paint_mire_projection(phase, 1);
-                    room_mire_projection_state = phase;
-                }
-                break;
-            }
-        }
-    }
     if (room_world_width > ROOM_VIEW_W_PX
         || room_world_height > ROOM_VIEW_H_PX) {
         if ((u8)player.x != camera_player_x
@@ -2482,39 +2466,6 @@ void room_draw(void) {
     if (cinder_pack_active) cinder_draw();
 
     if (procgen_current_room_is_boss) VBK_REG = 0;
-
-    if (procgen_current_room_is_boss && room_stage() == 3
-        && (loop_frame_counter & 0x0F) == 0) {
-        // The web and paired eyes pulse together; the OBJ weak point's live
-        // warning/blink remains authoritative combat timing.
-        tiles_animate_spider_bg((loop_frame_counter & 0x20) != 0);
-    }
-
-    if (procgen_current_room_is_boss && room_stage() == 5
-        && (loop_frame_counter & 0x0F) == 0) {
-        tiles_animate_reaper_bg((loop_frame_counter & 0x20) != 0);
-    }
-
-    if (procgen_current_room_is_boss && room_stage() == 6
-        && (loop_frame_counter & 0x0F) == 0) {
-        // A brief stone sleep makes the paired sun-rune wake-up readable;
-        // projectile timing still comes entirely from the existing boss AI.
-        tiles_animate_golem_bg((loop_frame_counter & 0x7F) >= 0x60);
-    }
-
-    if (procgen_current_room_is_boss && room_stage() == 7
-        && (loop_frame_counter & 0x0F) == 0) {
-        // Side heads and centre head alternate their open breath posture. The
-        // existing five-stream volley remains authoritative combat timing.
-        tiles_animate_hydra_bg((loop_frame_counter & 0x20) != 0);
-    }
-
-    if (procgen_current_room_is_boss && room_stage() == 8
-        && (loop_frame_counter & 0x0F) == 0) {
-        // Brief synchronized blink: the background creature is alive, while
-        // the OBJ core remains the only vulnerable body.
-        tiles_animate_colossus_bg((loop_frame_counter & 0x7F) >= 0x70);
-    }
 
     // Impact shake is added to the real camera rather than replacing it.
     if (shake_timer) {

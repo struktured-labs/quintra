@@ -22,7 +22,7 @@ def check(version):
     result = build(version)
     assert result.returncode == 0, result.stdout + result.stderr
     metadata = json.loads((ROOT / "builds/itch-web/build.json").read_text())
-    expected = version or "v0.20.19-beta27"
+    expected = version or "v0.20.19-beta29"
     assert metadata["version"] == expected, metadata
     with zipfile.ZipFile(ROOT / f"builds/quintra-itch-web-{expected}.zip") as archive:
         assert json.loads(archive.read("build.json"))["version"] == expected

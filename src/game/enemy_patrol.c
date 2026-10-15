@@ -11,6 +11,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/hud.h"
@@ -336,7 +337,14 @@ void stage_reaper_update(entity_t *e) BANKED {
             // ordinary damage; only the clearly distinct central scythe owns
             // the cut-to-one-heart rule.
             for (side = 1; side <= 2; ++side) {
-                u8 wing = projectile_spawn_enemy_v(
+                u8 wing;
+                if (!RUN_IS_EASY()) {
+                    boss_projectile_spawn(e->x+4,e->y+5,
+                        ((dir+(side==1 ? 1 : 7))<<2)&31,
+                        BOSS_SHOT_WAVE,1,2);
+                    continue;
+                }
+                wing = projectile_spawn_enemy_v(
                     FIX8_TO_INT(e->x) + 4,
                     FIX8_TO_INT(e->y) + 5,
                     dir8_dx[(u8)((dir + (side == 1 ? 1 : 7)) & 7)],

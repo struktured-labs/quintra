@@ -8,21 +8,18 @@
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/projectile.h"
+#include "game/boss_projectile.h"
 
 // Internal bank-3 entry point from projectile.c. It deliberately is not part
 // of the cross-bank public API.
 void projectile_update_one(entity_t *e, u8 idx);
 void entity_update_nonprojectile(u8 idx);
 
-static void fx_update_one(entity_t *e, u8 idx) {
-    if (e->state_timer == 0) {
-        entity_kill(idx);
-        return;
-    }
+static void fx_update_local(entity_t *e, u8 idx) {
+    if (!e->state_timer) { entity_kill(idx); return; }
     e->state_timer--;
     if (e->ai_data[6] == PROJ_AUX_BEAM_TRAIL) {
-        e->x = (ppos_t)(e->x + e->vx);
-        e->y = (ppos_t)(e->y + e->vy);
+        e->x += e->vx; e->y += e->vy;
     }
 }
 
@@ -33,7 +30,7 @@ void entity_update_from(u8 start) BANKED {
         if (entities[i].type == ENT_PROJECTILE)
             projectile_update_one(&entities[i], i);
         else if (entities[i].type == ENT_FX)
-            fx_update_one(&entities[i], i);
+            fx_update_local(&entities[i], i);
         else
             entity_update_nonprojectile(i);
     }
