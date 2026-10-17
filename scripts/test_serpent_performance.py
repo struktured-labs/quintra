@@ -3,6 +3,7 @@
 import hashlib
 import json
 import re
+import time
 from pathlib import Path
 from make_stage_states import (boot_to_stage, advance_to_sanctuary, advance_to_boss,
                                symbol_addresses, select_rom_topology, put16)
@@ -61,11 +62,16 @@ def run(rom, length):
 
 
 def main():
+    started=time.monotonic()
     parent = run(ROOT / 'builds/serpent-sprite-parent-89a32fb9/quintra.gbc', 20)
     candidate = run(ROOT / 'rom/working/quintra.gbc', 48)
-    out = ROOT / 'tmp' / f'serpent-performance-{candidate["rom_sha256"]}.json'
-    out.write_text(json.dumps(dict(parent=parent, candidate=candidate)))
+    script_sha=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    out = ROOT / 'builds' / f'serpent-performance-{candidate["rom_sha256"][:8]}-{script_sha[:8]}'
+    out.mkdir(parents=True,exist_ok=True)
     ratio = candidate['updates']/parent['updates']
+    (out/'capture.json').write_text(json.dumps(dict(parent=parent,candidate=candidate,
+        script_sha256=script_sha,elapsed_s=time.monotonic()-started,
+        ratio=ratio,minimum_ratio=.95,passed=ratio>=.95)))
     print(f'[serpent-performance] parent={parent["updates"]}/1200, '
           f'candidate={candidate["updates"]}/1200, ratio={ratio:.3f}')
     assert ratio >= .95, 'larger tail costs more than the 5% regression budget'

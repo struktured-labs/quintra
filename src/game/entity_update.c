@@ -25,12 +25,13 @@ static void fx_update_local(entity_t *e, u8 idx) {
 
 void entity_update_from(u8 start) BANKED {
     u8 i;
-    for (i = start; i < MAX_ENTITIES; ++i) {
-        if (!(entities[i].flags & EF_ACTIVE)) continue;
-        if (entities[i].type == ENT_PROJECTILE)
-            projectile_update_one(&entities[i], i);
-        else if (entities[i].type == ENT_FX)
-            fx_update_local(&entities[i], i);
+    entity_t *e=&entities[start];
+    for (i = start; i < MAX_ENTITIES; ++i,++e) {
+        if (!(e->flags & EF_ACTIVE)) continue;
+        if (e->type == ENT_PROJECTILE)
+            projectile_update_one(e, i);
+        else if (e->type == ENT_FX)
+            fx_update_local(e, i);
         else
             entity_update_nonprojectile(i);
     }

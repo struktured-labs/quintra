@@ -41,9 +41,14 @@ projectiles are capped to protect the Game Boy's limited sprite and CPU budget.
 This development cartridge is ahead of the tagged release and published browser
 build. Emulator checks are not a substitute for Pocket/MiSTer playtesting.
 
-Known performance work remains: the full-growth Serpent comparison and the
-fixed-roster room test currently miss their frame-cadence targets. Those checks
-remain strict and failing; this is a development build, not a performance sign-off.
+The October 16 local performance pass restores the full-growth Serpent target:
+754 updates per 1,200 display frames, up from 652, without shortening its tail.
+The held-A six-enemy fixture improves from 399 to 433 updates per 720 frames,
+and projectile saturation improves from 128 to 139 per 180 (target: 135).
+The fixed-roster room still misses its unchanged 167/180 target at 164/180.
+These are native emulator fixtures, not hardware measurements or a full
+performance sign-off. Projectile motion is checked against the parent by age;
+elapsed display-frame timing intentionally differs.
 
 ![Quintra gameplay](docs/media/gameplay.gif)
 

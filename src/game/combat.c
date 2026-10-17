@@ -328,41 +328,25 @@ static u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) {
     return shot_spent_for_split;
 }
 
-u8 combat_resolve(void) BANKED {
+static void combat_player_shots(void) {
     u8 i, j;
-    u8 player_died = 0;
-    // One Convergence chord launches eight arcs at once. A giant's 32x32
-    // collision body used to overlap every arc in this same sweep, turning a
-    // crowd-control crescendo into an accidental eightfold boss delete.
-    // This counter is local to the sweep: the chord still hits every ordinary
-    // enemy it reaches, while a colossus receives at most four readable
-    // hits per cast rather than all eight overlapping arcs.
+    entity_t *shot=entities;
+    // One chord may hit a giant at most four times in this sweep.
     u8 convergence_giant_hits = 0;
-
-    if (!player.hp) {
-        boss_link_pending = 0;
-        return 1;
-    }
-
-    // Tick down per-frame timers
-    if (player.iframes > 0) player.iframes--;
-    if (status_confused_projectiles)
-        status_resolve_confused_projectiles();
-
     // 1) Player-projectile -> enemy collisions
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if (!(entities[i].flags & EF_ACTIVE)) continue;
-        if (entities[i].type   != ENT_PROJECTILE) continue;
-        if (!(entities[i].flags & EF_PLAYER_PROJ)) continue;
+    for (i = 0; i < MAX_ENTITIES; ++i,++shot) {
+        if (!(shot->flags & EF_ACTIVE)) continue;
+        if (shot->type != ENT_PROJECTILE) continue;
+        if (!(shot->flags & EF_PLAYER_PROJ)) continue;
         // Splash arming happens in the next frame's projectile update. It then
         // receives exactly one complete sweep independent of entity slot order.
-        if (entities[i].ai_data[6] == PROJ_AUX_SPLASH) {
-            if (entities[i].ai_data[7] == 3) {
+        if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
+            if (shot->ai_data[7] == 3) {
                 entity_kill(i);
                 continue;
             }
-            if (entities[i].ai_data[7] != 2) continue;
-            entities[i].ai_data[7] = 3;
+            if (shot->ai_data[7] != 2) continue;
+            shot->ai_data[7] = 3;
         }
         for (j = 0; j < MAX_ENTITIES; ++j) {
             u8 eid, weakness, poise, dmg;
@@ -376,33 +360,33 @@ u8 combat_resolve(void) BANKED {
             // melee gains defensive space without taxing ordinary bullets.
             if (entities[j].type == ENT_PROJECTILE
                 && !(entities[j].flags & EF_PLAYER_PROJ)
-                && entities[i].ai_data[2]
-                && aabb_overlap_ee(&entities[i], &entities[j])) {
+                && shot->ai_data[2]
+                && aabb_overlap_ee(shot, &entities[j])) {
                 fx_spawn(SPR_FX_IMPACT, 6,
                     FIX8_TO_INT(entities[j].x),
                     FIX8_TO_INT(entities[j].y), 7);
                 entity_kill(j);
                 sfx_play(SFX_HIT);
-                if (entities[i].hp <= 1) {
+                if (shot->hp <= 1) {
                     entity_kill(i);
                     break;
                 }
-                entities[i].hp--;
+                shot->hp--;
                 continue;
             }
             if (entities[j].type != ENT_ENEMY) continue;
-            if (entities[i].ai_data[6] == PROJ_AUX_SPLASH) {
-                if (entities[i].ai_data[5] == j
-                    || !splash_reaches_enemy(&entities[i], &entities[j]))
+            if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
+                if (shot->ai_data[5] == j
+                    || !splash_reaches_enemy(shot, &entities[j]))
                     continue;
             } else if (j == large_boss_index) {
-                if (!large_boss_shot_overlap(&entities[i], &entities[j])) continue;
-            } else if (!aabb_overlap_ee(&entities[i], &entities[j])) continue;
+                if (!large_boss_shot_overlap(shot, &entities[j])) continue;
+            } else if (!aabb_overlap_ee(shot, &entities[j])) continue;
 
             eid      = entities[j].ai_data[0];
-            if (entities[i].ai_data[6] == PROJ_AUX_HOOKSHOT
-                || entities[i].ai_data[6] == PROJ_AUX_FUSE_BOMB) continue;
-            if (entities[i].ai_data[6] == PROJ_AUX_BOOMERANG) {
+            if (shot->ai_data[6] == PROJ_AUX_HOOKSHOT
+                || shot->ai_data[6] == PROJ_AUX_FUSE_BOMB) continue;
+            if (shot->ai_data[6] == PROJ_AUX_BOOMERANG) {
                 if (!(entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE))
                     && eid != ENEMY_STONE_SENTINEL
                     && eid != ENEMY_STAGE_REAPER
@@ -422,15 +406,15 @@ u8 combat_resolve(void) BANKED {
                 // Projectile retirement is the authoritative rejection
                 // result. Avoid carrying an SDCC banked return byte through
                 // the helper's nested visual/audio calls.
-                if (!(entities[i].flags & EF_ACTIVE)) break;
+                if (!(shot->flags & EF_ACTIVE)) break;
             }
             // Fang Forms is a two-body cleave, not two consecutive damage
             // ticks against one overlapping body. Preserve the projectile so
             // it can strike a different enemy farther down the same lane.
-            if (entities[i].ai_data[6] == PROJ_AUX_WOLFKIN_FANG
-                && entities[i].ai_data[5] == j) continue;
+            if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+                && shot->ai_data[5] == j) continue;
             if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
-                && (entities[i].ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
+                && (shot->ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
                 if (convergence_giant_hits >= 4) {
                     // The spectacle has already landed on this colossus;
                     // spend the overlapping duplicate instead of applying
@@ -441,7 +425,7 @@ u8 combat_resolve(void) BANKED {
                 convergence_giant_hits++;
             }
             if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
-                && (entities[i].ai_data[3] & PROJ_FLAG_HOWL)) {
+                && (shot->ai_data[3] & PROJ_FLAG_HOWL)) {
                 if (will_howl_giant_hits >= WILL_HOWL_GIANT_HIT_CAP) {
                     entity_kill(i);
                     break;
@@ -449,7 +433,7 @@ u8 combat_resolve(void) BANKED {
                 will_howl_giant_hits++;
                 // Each Howl lane may touch this giant only once. It retains
                 // its normal pierce value against separate crowd bodies.
-                entities[i].hp = 1;
+                shot->hp = 1;
             }
             weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
             // Large bosses reuse the Stone Sentinel entity definition for
@@ -466,8 +450,8 @@ u8 combat_resolve(void) BANKED {
             // Per-hit damage: base + elemental x2 (weapon element in
             // projectile ai_data[1]) + crit x2 (LCK * 5% chance).
             // Vespine's venom synergy (perk 5): elemental hits bite +1.
-            dmg = entities[i].damage;
-            u8 weak = (entities[i].ai_data[1] & weakness) ? 1 : 0;
+            dmg = shot->damage;
+            u8 weak = (shot->ai_data[1] & weakness) ? 1 : 0;
             if (weak) {
                 dmg = (u8)(dmg + ((dmg + 1) >> 1));
                 if (player.class_id == 4) dmg++;
@@ -491,8 +475,8 @@ u8 combat_resolve(void) BANKED {
                     break;
                 }
             }
-            if (entities[i].ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
-                entities[i].ai_data[5] = j;
+            if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
+                shot->ai_data[5] = j;
 
             // A fully built run can otherwise erase the one-byte (255 HP)
             // late bosses in a few rapid-fire beats. Ember Depths onward,
@@ -521,7 +505,7 @@ u8 combat_resolve(void) BANKED {
                 if (dmg > cap) dmg = cap;
             }
 
-            if (boss_link_active && boss_link_reflect(&entities[j], &entities[i], dmg)) {
+            if (boss_link_active && boss_link_reflect(&entities[j], shot, dmg)) {
                 entity_kill(i);
                 break;
             }
@@ -529,11 +513,11 @@ u8 combat_resolve(void) BANKED {
             // impact consumes the marker and leaves a one-frame 15x15 burst.
             // Its payload remembers the struck slot so the target never takes
             // both direct and splash damage from the same hit.
-            if (entities[i].ai_data[3] & PROJ_FLAG_SPLASH) {
-                entities[i].ai_data[3] &= (u8)~PROJ_FLAG_SPLASH;
+            if (shot->ai_data[3] & PROJ_FLAG_SPLASH) {
+                shot->ai_data[3] &= (u8)~PROJ_FLAG_SPLASH;
                 projectile_spawn_splash(
-                    FIX8_TO_INT(entities[i].x) + 3,
-                    FIX8_TO_INT(entities[i].y) + 3,
+                    FIX8_TO_INT(shot->x) + 3,
+                    FIX8_TO_INT(shot->y) + 3,
                     dmg > 1 ? (u8)((dmg + 1) >> 1) : 1, j);
             }
 
@@ -543,7 +527,7 @@ u8 combat_resolve(void) BANKED {
                     entities[j].hp = (u8)(entities[j].hp - dmg);
                     status_try_player_shot(j, i);
                     entities[j].ai_data[7] = weak ? 7 : 4;  // hit-flash frames
-                    knockback_enemy(&entities[j], entities[i].vx, entities[i].vy, poise);
+                    knockback_enemy(&entities[j], shot->vx, shot->vy, poise);
                     if (g_hitstop < (weak ? 2 : 1)) g_hitstop = weak ? 2 : 1;
                     if (weak) {
                         // "Super effective": bright spark at the hit + crystal ping
@@ -563,18 +547,36 @@ u8 combat_resolve(void) BANKED {
                 if (shot_spent_for_split) break;
                 // Impact FX at bullet position (spawn on every hit, even non-kill)
                 fx_spawn(SPR_FX_IMPACT, 2,
-                    (i16)FIX8_TO_INT(entities[i].x),
-                    (i16)FIX8_TO_INT(entities[i].y), 4);
+                    (i16)FIX8_TO_INT(shot->x),
+                    (i16)FIX8_TO_INT(shot->y), 4);
                 // Projectile pierce
-                if (entities[i].hp <= 1) {
+                if (shot->hp <= 1) {
                     entity_kill(i);
                     break;     // this projectile is dead, move on
                 } else {
-                    entities[i].hp--;
+                    shot->hp--;
                 }
             }
         }
     }
+
+}
+
+u8 combat_resolve(void) BANKED {
+    u8 i, j;
+    u8 player_died = 0;
+
+    if (!player.hp) {
+        boss_link_pending = 0;
+        return 1;
+    }
+
+    // Tick down per-frame timers
+    if (player.iframes > 0) player.iframes--;
+    if (status_confused_projectiles)
+        status_resolve_confused_projectiles();
+
+    combat_player_shots();
 
     // 2) Pickup collisions (always processed; doesn't require iframes)
     pickup_check_player_collision();
@@ -597,27 +599,28 @@ u8 combat_resolve(void) BANKED {
 
     // 3) Enemy bodies AND enemy projectiles -> player
     if (player.iframes == 0 && player.shield_timer == 0) {
-        for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *hostile_entity=entities;
+        for (i = 0; i < MAX_ENTITIES; ++i,++hostile_entity) {
             u8 hostile, touching;
-            if (!(entities[i].flags & EF_ACTIVE)) continue;
-            hostile = (entities[i].type == ENT_ENEMY)
-                || (entities[i].type == ENT_PROJECTILE
-                    && !(entities[i].flags & EF_PLAYER_PROJ));
+            if (!(hostile_entity->flags & EF_ACTIVE)) continue;
+            hostile = (hostile_entity->type == ENT_ENEMY)
+                || (hostile_entity->type == ENT_PROJECTILE
+                    && !(hostile_entity->flags & EF_PLAYER_PROJ));
             if (!hostile) continue;
             // Sleeping field bodies and authored vanish phases share one
             // authoritative collision flag. Compact enemies spawn visible.
-            if (entities[i].type == ENT_ENEMY
-                && !(entities[i].flags & EF_ON_SCREEN)) continue;
+            if (hostile_entity->type == ENT_ENEMY
+                && !(hostile_entity->flags & EF_ON_SCREEN)) continue;
             // An attached Gloam Leech uses its own timed drain; ordinary body
             // collision would double-charge damage every iframe cycle.
-            if (entities[i].type == ENT_ENEMY && entities[i].ai_data[0] == ENEMY_GLOAM_LEECH
-                && entities[i].ai_data[6]) continue;
-            if (i == large_boss_index) touching=large_boss_contact(&entities[i]);
-            else touching=aabb_overlap_player(&entities[i]);
+            if (hostile_entity->type == ENT_ENEMY && hostile_entity->ai_data[0] == ENEMY_GLOAM_LEECH
+                && hostile_entity->ai_data[6]) continue;
+            if (i == large_boss_index) touching=large_boss_contact(hostile_entity);
+            else touching=aabb_overlap_player(hostile_entity);
             if (touching) {
-                u8 was_projectile = (entities[i].type == ENT_PROJECTILE);
+                u8 was_projectile = (hostile_entity->type == ENT_PROJECTILE);
                 if (was_projectile
-                    && entities[i].ai_data[6] == PROJ_AUX_MORTAL_SCYTHE) {
+                    && hostile_entity->ai_data[6] == PROJ_AUX_MORTAL_SCYTHE) {
                     stage_reaper_mortal_hit(i);
                     break;
                 }
@@ -626,9 +629,9 @@ u8 combat_resolve(void) BANKED {
                 // bullet pattern. Its body is a positioning tax, not a
                 // second full-strength projectile.
                 u8 taken = status_hostile_damage_taken(i);
-                if (entities[i].type == ENT_ENEMY
-                    && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
-                    && entities[i].ai_data[3]) {
+                if (hostile_entity->type == ENT_ENEMY
+                    && hostile_entity->ai_data[0] == ENEMY_STONE_SENTINEL
+                    && hostile_entity->ai_data[3]) {
                     // Boss body contact is half its computed hit (round up,
                     // min 1): a real cost that scales with the stage without
                     // turning the body into a second full-strength bullet.
@@ -649,9 +652,9 @@ u8 combat_resolve(void) BANKED {
                     // dungeon and boss hit pacing remains unchanged.
                     {
                         u8 recovery = run_state.world_mode ? 60
-                            : (entities[i].type == ENT_ENEMY
-                               && entities[i].ai_data[0] == ENEMY_STONE_SENTINEL
-                               && entities[i].ai_data[3]) ? 45 : 30;
+                            : (hostile_entity->type == ENT_ENEMY
+                               && hostile_entity->ai_data[0] == ENEMY_STONE_SENTINEL
+                               && hostile_entity->ai_data[3]) ? 45 : 30;
                         // Easy is a deliberately coarse deep-test assist, not
                         // a separately authored encounter table. The extended
                         // post-hit read/reposition beat keeps late bullet hell
@@ -683,8 +686,8 @@ u8 combat_resolve(void) BANKED {
                     // source, one wall-checked pixel at a time (Zelda feel +
                     // breaks contact so iframes aren't instantly re-spent).
                     {
-                        i16 sx = FIX8_TO_INT(entities[i].x);
-                        i16 sy = FIX8_TO_INT(entities[i].y);
+                        i16 sx = FIX8_TO_INT(hostile_entity->x);
+                        i16 sy = FIX8_TO_INT(hostile_entity->y);
                         i8 kx = ((i16)player.x > sx) ? 1 : ((i16)player.x < sx) ? -1 : 0;
                         i8 ky = ((i16)player.y > sy) ? 1 : ((i16)player.y < sy) ? -1 : 0;
                         u8 n;

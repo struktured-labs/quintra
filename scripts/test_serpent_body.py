@@ -83,6 +83,12 @@ def main():
             pb.button(button)
             pb.tick(90)
         assert pb.memory[a['_loop_current_screen']] == 5
+        report['menu_before_settle'] = dict(
+            dirty=pb.memory[a['_serpent_body_dirty']],
+            cells=[i for i,v in enumerate(attrs(pb)) if v==6])
+        # LCD ticks can stop between trail simulation and its VRAM upload.
+        pb.memory[boss+5] = 240
+        pb.tick(6)
         assert bytes(pb.memory[0x9370:0x9400]) == tile_art, 'menu lost body atlas'
         expected = set()
         for i in range(1, 49):

@@ -101,14 +101,12 @@ u8 aabb_overlap_ee(const entity_t *a, const entity_t *b) {
 // y+9..y+14). Bullet-hell fairness: the 16x16 body is generous to look
 // at, stingy to hit — standard shmup design.
 u8 aabb_overlap_player(const entity_t *e) {
-    i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
-    i16 px = (i16)player.x, py = (i16)player.y;     // player is i16 pixels
-    u8  ew = hitbox_w(e), eh = hitbox_h(e);
-    px += 5; py += 9;
-    if (px + 6 <= ex) return 0;
-    if (ex + (i16)ew <= px) return 0;
-    if (py + 6 <= ey) return 0;
-    if (ey + (i16)eh <= py) return 0;
+    i16 p = (i16)player.x + 5;
+    if (p + 6 <= e->x) return 0;
+    if (e->x + (i16)hitbox_w(e) <= p) return 0;
+    p = (i16)player.y + 9;
+    if (p + 6 <= e->y) return 0;
+    if (e->y + (i16)hitbox_h(e) <= p) return 0;
     return 1;
 }
 
@@ -121,35 +119,36 @@ u8 aabb_overlap_player(const entity_t *e) {
 // here for the complete scan; the first projectile or effect transfers only
 // the unprocessed suffix to bank 3, where both updates are direct calls.
 void entity_update_nonprojectile(u8 idx) {
-    switch (entities[idx].type) {
+    entity_t *e=&entities[idx];
+    switch (e->type) {
         case ENT_ENEMY:
             if ((room_world_width <= ROOM_VIEW_W_PX
                     && room_world_height <= ROOM_VIEW_H_PX)
                 // A Colossus owns the complete scrolling arena. Its pattern
                 // cannot freeze merely because a blink, weave, or player
                 // camera move puts its body beyond the current viewport.
-                || (entities[idx].ai_data[3] & 1)
+                || (e->ai_data[3] & 1)
                 // A Shade deliberately clears EF_ON_SCREEN while vanished;
                 // its hidden return timer must still reach materialization.
-                || (entities[idx].ai_data[0] == ENEMY_SHADE
-                    && entities[idx].ai_data[2] != 0)
-                || (entities[idx].flags & EF_ON_SCREEN)) {
+                || (e->ai_data[0] == ENEMY_SHADE
+                    && e->ai_data[2] != 0)
+                || (e->flags & EF_ON_SCREEN)) {
                 if (enemy_status_kind[idx] == QSTATUS_NONE) {
                     status_enemy_actor = idx;
-                    enemy_update(&entities[idx], idx);
+                    enemy_update(e, idx);
                     status_enemy_actor = 0xFF;
                 } else status_update_enemy_condition(idx);
             }
             break;
         case ENT_PICKUP:
-            if (entities[idx].ai_data[0] == PICKUP_COMPANION) {
+            if (e->ai_data[0] == PICKUP_COMPANION) {
                 // The follower owns deliberate two-frame animation beats.
                 // Dispatch it directly instead of paying pickup-bank then
                 // companion-bank trampolines every video frame.
                 if (!(entity_anim_counter & 1))
-                    companion_update(&entities[idx], idx);
+                    companion_update(e, idx);
             } else {
-                pickup_update(&entities[idx], idx);
+                pickup_update(e, idx);
             }
             break;
         default:
@@ -159,6 +158,7 @@ void entity_update_nonprojectile(u8 idx) {
 
 void entity_update_all(void) {
     u8 i;
+    entity_t *e=entities;
     // Scrolling fields can hold a full district population, but only the
     // current camera cluster spends AI/projectile time. Refresh when either
     // camera axis enters a new 16px sector. This keeps activation responsive
@@ -172,10 +172,10 @@ void entity_update_all(void) {
         visibility_sector_y = (u8)(room_camera_y >> 4);
         entity_refresh_world_visibility();
     }
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if (!(entities[i].flags & EF_ACTIVE)) continue;
-        if (entities[i].type == ENT_PROJECTILE
-            || entities[i].type == ENT_FX) {
+    for (i = 0; i < MAX_ENTITIES; ++i,++e) {
+        if (!(e->flags & EF_ACTIVE)) continue;
+        if (e->type == ENT_PROJECTILE
+            || e->type == ENT_FX) {
             entity_update_from(i);
             return;
         }

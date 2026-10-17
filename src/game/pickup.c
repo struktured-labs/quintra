@@ -657,10 +657,11 @@ static void grant_special_item(u8 item_id) {
 u8 pickup_check_player_collision(void) BANKED {
     u8 i;
     u8 any = 0;
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if (!(entities[i].flags & EF_ACTIVE)) continue;
-        if (entities[i].type != ENT_PICKUP)   continue;
-        if (aabb_overlap_player_wide(&entities[i])) {
+    entity_t *pickup=entities;
+    for (i = 0; i < MAX_ENTITIES; ++i,++pickup) {
+        if (!(pickup->flags & EF_ACTIVE)) continue;
+        if (pickup->type != ENT_PICKUP) continue;
+        if (aabb_overlap_player_wide(pickup)) {
             // Permanent visual residents never vanish on contact and have no
             // purchase/blessing effect. Share this result instead of keeping
             // one identical collision branch per civic silhouette.
