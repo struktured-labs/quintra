@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """ROM regression: CGB double-speed keeps a dense room near video rate."""
 import re
+import os
+import json
+import hashlib
 from pathlib import Path
 
 from pyboy import PyBoy
 
 ROOT = Path(__file__).resolve().parent.parent
-ROM = ROOT / "rom/working/quintra.gbc"
+ROM = Path(os.environ.get('QUINTRA_TEST_ROM', ROOT / "rom/working/quintra.gbc"))
 NOI = ROM.with_suffix(".noi").read_text()
 ROOM_W = 20
 
@@ -143,7 +146,21 @@ def main():
     before = loop_frames(fixed_pb)
     fixed_pb.tick(180)
     ordinary = (loop_frames(fixed_pb) - before) & 0xFFFF
+    sha=hashlib.sha256(ROM.read_bytes()).hexdigest()
+    script_sha=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    out=ROOT/'builds'/f'room-performance-{sha[:8]}-{script_sha[:8]}'
+    out.mkdir(parents=True,exist_ok=True)
+    fixed_pb.screen.image.save(str(out/'fixed-roster.png'))
     fixed_pb.stop(save=False)
+
+    (out/'capture.json').write_text(json.dumps(dict(
+        rom_sha256=sha, script_sha256=script_sha,
+        fixture='Fresh boot; generated district, stationary shot saturation, fixed species roster. Native 180-LCD-frame windows; no stalls removed.',
+        generated=generated, generated_floor=generated_floor,
+        fixed_roster=ordinary, fixed_floor=167, dense=loops, dense_floor=135,
+        population=population, active_projectiles=active,
+        passed=ordinary>=167 and active>=10 and loops>=135),indent=2))
+    print(f'[performance] measured generated={generated}, fixed={ordinary}, dense={loops} /180',flush=True)
 
     assert ordinary >= 167, (
         f"fixed-roster room missed video rate: {ordinary}/180 loop frames"

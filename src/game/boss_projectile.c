@@ -157,9 +157,31 @@ static void split_projectile(entity_t *e,u8 idx) {
     sfx_play(SFX_TICK);
 }
 
+static u8 return_motion(entity_t *e,u8 idx,u8 age,u8 angle) {
+    u8 tile;
+    i16 forward,side;
+    if (age >= 32 && age < 40) {
+        e->palette = (age & 2) ? 4 : 5;
+        return 0;
+    }
+    if (age >= 40) age -= 8;
+    if (age >= 64) {
+        e->x=e->x_pad; e->y=e->y_pad;
+        if (age > 64) entity_kill(idx);
+        return 0;
+    }
+    e->palette = 5;
+    tile = age >> 1;
+    forward = ((16-sine[(tile+8)&31])*3) >> 1;
+    side = (sine[tile]*3) >> 2;
+    e->x = (i16)e->x_pad + ((sine[angle]*forward + sine[(angle+8)&31]*side) >> 4);
+    e->y = (i16)e->y_pad + ((-sine[(angle+8)&31]*forward + sine[angle]*side) >> 4);
+    return 1;
+}
+
 void boss_projectile_update(entity_t *e, u8 idx) BANKED {
-    u8 age, angle, tile, pattern, width, height, split_age;
-    i16 delta, forward, side;
+    u8 age, angle, pattern, width, height, split_age;
+    i16 delta, forward;
     i8 dx, dy;
     if (!e->state_timer) { entity_kill(idx); return; }
     // A child born later in the table must not receive an extra update.
@@ -195,22 +217,7 @@ void boss_projectile_update(entity_t *e, u8 idx) BANKED {
         e->x = (i16)e->x_pad + spiral_offset[forward][angle];
         e->y = (i16)e->y_pad - spiral_offset[forward][(angle+8)&31];
     } else if (pattern == BOSS_SHOT_RETURN) {
-        if (age >= 32 && age < 40) {
-            e->palette = (age & 2) ? 4 : 5;
-            return;
-        }
-        if (age >= 40) age -= 8;
-        if (age >= 64) {
-            e->x=e->x_pad; e->y=e->y_pad;
-            if (age > 64) entity_kill(idx);
-            return;
-        }
-        e->palette = 5;
-        tile = age >> 1;
-        forward = ((16-sine[(tile+8)&31])*3) >> 1;
-        side = (sine[tile]*3) >> 2;
-        e->x = (i16)e->x_pad + ((sine[angle]*forward + sine[(angle+8)&31]*side) >> 4);
-        e->y = (i16)e->y_pad + ((-sine[(angle+8)&31]*forward + sine[angle]*side) >> 4);
+        if (!return_motion(e,idx,age,angle)) return;
     } else {
         dx = sine[angle]; dy = -sine[(angle+8)&31];
         if (e->state == 1) { dx >>= 1; dy >>= 1; }
