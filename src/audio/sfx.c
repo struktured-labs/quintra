@@ -23,6 +23,7 @@
 #define PEND_SIGIL_NOTE5 14
 #define PEND_SIGIL_NOTE6 15
 #define PEND_PORTAL_ARRIVE 16
+#define PEND_WILL_NOTE2 17
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -30,6 +31,10 @@ static u8 ch1_busy_frames;
 static u8 ch4_busy_frames;
 static u8 melody_lock_frames;
 static u8 melody_lock_priority;
+// A full Will meter can fill while a shot, hurt snap, or fanfare still owns
+// CH1. Hold the chime until that voice releases the pulse instead of cutting
+// it off; the cue is one-shot and must not be dropped.
+static u8 will_chime_pending;
 
 #define MELODY_PRIORITY_NONE   0
 #define MELODY_PRIORITY_CLEAR  1
@@ -43,6 +48,8 @@ static u8 melody_priority_for(u8 id) {
     if (id == SFX_CLEAR) return MELODY_PRIORITY_CLEAR;
     return MELODY_PRIORITY_NONE;
 }
+
+static void advance_pending_sfx(void);
 
 static void melody_lock(u8 priority, u8 frames) {
     melody_lock_priority = priority;
@@ -76,6 +83,14 @@ static void ch4(u8 nr43, u8 nr42) {
 
 void sfx_play(u8 id) {
     u8 priority = melody_priority_for(id);
+    // The Will chime is lower priority than anything already using the
+    // harmony pulse or a scheduled figure. Defer rather than replace: combat
+    // voices and the discovery/clear/victory-length fanfares keep the channel.
+    if (id == SFX_WILL && (melody_lock_frames || pend_kind != PEND_NONE
+            || ch1_busy_frames > 2)) {
+        will_chime_pending = 1;
+        return;
+    }
     // A pushed-block reward can be collected on the same frame its passage
     // opens. Do not let that coin/heart/equip voice replace the remaining
     // scheduled discovery notes. A true secret may still supersede the
@@ -204,6 +219,19 @@ void sfx_play(u8 id) {
             sfx_claim_channels(70, 16);
             melody_lock(MELODY_PRIORITY_MAJOR, 70);
             break;
+        case SFX_WILL:
+            // Full Will is a two-note rising chime on the harmony pulse only.
+            // Duty 50% at volume 8 then 9 is a clear positive cue, quieter
+            // and far shorter than the discovery fanfare or the victory
+            // theme. CH2 (music lead), CH3 (bass), and CH4 (hits, ticks,
+            // drums) are left alone, and nothing locks the effect bus, so
+            // the next combat voice replaces this chime immediately.
+            will_chime_pending = 0;
+            ch1(0x00, 0x80, 0x82, 1923);             // C6
+            pend_kind = PEND_WILL_NOTE2;
+            pend_timer = 3;
+            sfx_claim_channels(20, 0);
+            break;
         default:
             break;
     }
@@ -229,8 +257,19 @@ void sfx_tick(void) {
         melody_lock_frames--;
         if (!melody_lock_frames) melody_lock_priority = MELODY_PRIORITY_NONE;
     }
-    if (pend_kind == PEND_NONE) return;
-    if (--pend_timer) return;
+    if (pend_kind != PEND_NONE) {
+        if (--pend_timer) return;
+        advance_pending_sfx();
+        return;
+    }
+    // A deferred full-Will chime starts only once the pulse and the
+    // scheduled-note slot are both free. Waiting keeps it from chopping a
+    // shot, a hurt snap, or the tail of a fanfare.
+    if (will_chime_pending && !melody_lock_frames && ch1_busy_frames <= 2)
+        sfx_play(SFX_WILL);
+}
+
+static void advance_pending_sfx(void) {
     switch (pend_kind) {
         case PEND_PORTAL_ARRIVE:
             ch1(0x26, 0x40, 0xA2, 1720);
@@ -317,6 +356,11 @@ void sfx_tick(void) {
             NR12_REG = 0xF7;
             NR13_REG = (u8)(1922 & 0xFF);             // C6 resolve
             NR14_REG = (u8)(0x80 | (1922 >> 8));
+            break;
+        case PEND_WILL_NOTE2:
+            NR12_REG = 0x91;                           // slightly brighter, dies fast
+            NR13_REG = (u8)(1949 & 0xFF);              // E6
+            NR14_REG = (u8)(0x80 | (1949 >> 8));
             break;
     }
     pend_kind = PEND_NONE;
