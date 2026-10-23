@@ -61,9 +61,10 @@ static void title_hide_spirits(void) {
     // The spirits occupy objects 0..19. GAME OVER and VICTORY only clear the
     // LCDC sprite enable, so the previous fight stays queued in shadow OAM.
     // A Colossus drawn after its own shots leaves its bottom row in slots
-    // 20..23; later bullets, Cinder vents, and the wide Frost body use the
-    // rest of the table. Parking all 40 objects here is what keeps that
-    // clipped remnant off the title when sprites are shown again.
+    // 20..23, on the PRESS START line. The pellets that pushed it there,
+    // Cinder vents, Void shots, and the wide Frost body use the rest of the
+    // table. Parking all 40 objects here keeps both the clipped body and
+    // those bullets off the title when sprites are shown again.
     for (i = 0; i < 40; ++i)
         move_sprite(i, 0, 0);
 }

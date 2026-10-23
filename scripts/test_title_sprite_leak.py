@@ -3,8 +3,13 @@
 
 GAME OVER hides sprites by clearing the LCDC bit and leaves shadow OAM
 alone. The title then enables sprites for its five champions (objects
-0..19). Anything still sitting in slots 20..39 — the bottom row of a
-Colossus, boss shots, or a crowded room — is drawn on top of the menu.
+0..19). Anything still sitting in slots 20..39 is drawn on top of the menu.
+
+On the Crystal Colossus that is both halves of the owner's capture: the
+body's bottom row (tiles 52..55) sits on PRESS START, and the boss pellets
+that were drawn first (tile 208, plus an impact spark at tile 33) remain
+as the stray dots around the logo. A death that only produced one of those
+does not prove the title clears the other.
 """
 import shutil
 import tempfile
@@ -22,6 +27,15 @@ WALK_BASE = 82
 STRIDE = 4
 SETTLE = 16
 OUT = ROOT / "tmp" / "title-sprite-leak"
+# SPR_BOSS_BIG is the 4x4 Colossus, sixteen tiles.
+BODY_LO = 40
+BODY_HI = 55
+# Boss rooms replace the resident atlas at 208..223 with shot art
+# (pellet, orb, seed, bolt, crescent, and the split frames). Ordinary
+# bullets are 28/29; the impact spark is 33.
+BOSS_SHOT_TILES = set(range(208, 224))
+BULLET_TILES = {28, 29, 33}
+PROJECTILE_TILES = BOSS_SHOT_TILES | BULLET_TILES
 
 
 def font_tiles(text):
@@ -71,12 +85,45 @@ def oam_bytes(pb, index):
 
 
 def live_tail(pb):
-    return [i for i in range(20, 40) if oam_bytes(pb, i)[0] or oam_bytes(pb, i)[1]]
+    rows = []
+    for index in range(20, 40):
+        y, x, tile, prop = oam_bytes(pb, index)
+        if y or x:
+            rows.append((index, y, x, tile, prop))
+    return rows
+
+
+def sprite_kind(tile):
+    if BODY_LO <= tile <= BODY_HI:
+        return "boss body"
+    if tile in PROJECTILE_TILES:
+        return "projectile"
+    return "other"
+
+
+def describe_tail(rows):
+    return ", ".join(
+        f"{index}@y={y} x={x} tile={tile} ({sprite_kind(tile)})"
+        for index, y, x, tile, _prop in rows
+    )
 
 
 def assert_title_sprites(pb, label):
     assert pb.memory[SCREEN] == 1, f"{label} left screen {pb.memory[SCREEN]}"
     assert pb.memory[0xFF40] & 0x02, f"{label} left sprites disabled"
+    leftovers = []
+    for sprite in range(40):
+        y, x, tile, _prop = oam_bytes(pb, sprite)
+        if not (y or x):
+            continue
+        kind = sprite_kind(tile)
+        if kind != "other" or sprite >= 20:
+            leftovers.append(
+                f"{sprite}@y={y} x={x} tile={tile} ({kind})"
+            )
+    assert not leftovers, (
+        f"{label} left the fight on the title: " + ", ".join(leftovers)
+    )
     for sprite in range(20):
         y, x, tile, _prop = oam_bytes(pb, sprite)
         champion, part = divmod(sprite, 4)
@@ -88,15 +135,6 @@ def assert_title_sprites(pb, label):
             f"{label} title spirit {sprite} drifted: "
             f"y={y} x={x} tile={tile} expected {expected}"
         )
-    leaked = live_tail(pb)
-    assert not leaked, (
-        f"{label} left gameplay sprites on the title: "
-        + ", ".join(
-            f"{i}@y={oam_bytes(pb, i)[0]} x={oam_bytes(pb, i)[1]} "
-            f"tile={oam_bytes(pb, i)[2]}"
-            for i in leaked
-        )
-    )
 
 
 def frame_bytes(pb):
@@ -134,11 +172,12 @@ def assert_suspend_cleared(pb, label):
     assert magic != b"QS", f"{label} left the suspend save runnable: {magic!r}"
 
 
-def kill_to_title(pb, label):
+def kill_to_title(pb, label, need_body=False, projectile_tiles=None):
     pb.memory[PL + 2] = 0
     wait_screen(pb, 11, 240, f"{label} game over")
     # Give the banked game-over enter a frame to finish its LCDC write
-    # before sampling the OAM the fight left behind.
+    # before sampling the OAM the fight left behind. Slots 0..19 are
+    # rewritten by the champions, so only 20..39 can still be on screen.
     pb.tick()
     assert pb.memory[0xFF40] & 0x02 == 0, f"{label} game over still showed sprites"
     tail = live_tail(pb)
@@ -146,6 +185,20 @@ def kill_to_title(pb, label):
         f"{label} never parked a sprite in OAM 20..39, so this death "
         "cannot prove the title clears the tail"
     )
+    if need_body:
+        body = [row for row in tail if BODY_LO <= row[3] <= BODY_HI]
+        assert body, (
+            f"{label} game over left no Colossus body in OAM 20..39 "
+            f"({describe_tail(tail)}). That row is the striped remnant "
+            "on PRESS START; a shot-only tail does not cover it."
+        )
+    if projectile_tiles is not None:
+        shots = [row for row in tail if row[3] in projectile_tiles]
+        assert shots, (
+            f"{label} game over left no projectile in OAM 20..39 "
+            f"({describe_tail(tail)}). Those are the stray dots around "
+            "the title; a body-only tail does not cover them."
+        )
     press(pb, "start")
     wait_screen(pb, 1, 60, f"{label} title")
     settle_title(pb)
@@ -184,7 +237,7 @@ def spawn_hostile_shots(pb, count):
         pb.memory[ep + 1] = 0x03
         put_fix8(pb, ep + 2, px)
         put_fix8(pb, ep + 6, py)
-        pb.memory[ep + 12] = 33
+        pb.memory[ep + 12] = 28  # SPR_BULLET
         pb.memory[ep + 13] = 4
         pb.memory[ep + 14] = 1
         pb.memory[ep + 16] = 255
@@ -254,7 +307,11 @@ def assert_same_frame(actual, expected, label):
 
 def boss_death(reference):
     pb, _boss = enter_boss(0, keep_open=True)
-    image = kill_to_title(pb, "crystal boss")
+    # The owner's title capture is this exact pair: body tiles on the
+    # prompt, and boss pellets (tile 208) still queued behind them.
+    image = kill_to_title(
+        pb, "crystal boss", need_body=True, projectile_tiles=BOSS_SHOT_TILES
+    )
     save_frame(pb, "crystal-title-after.png")
     assert_same_frame(image, reference, "crystal boss")
     # Class select shows sprites too, and it only rewrites objects 0..4.
@@ -275,8 +332,10 @@ def crowded_enemy_death(reference):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     boot_room(pb)
     spawn_hostile_shots(pb, 16)
-    assert live_tail(pb), "enemy volley never reached OAM 20..39"
-    image = kill_to_title(pb, "enemy volley")
+    assert any(row[3] == 28 for row in live_tail(pb)), (
+        "enemy volley never reached OAM 20..39"
+    )
+    image = kill_to_title(pb, "enemy volley", projectile_tiles=BULLET_TILES)
     save_frame(pb, "enemy-title-after.png")
     assert_same_frame(image, reference, "enemy volley")
     pb.stop(save=False)
@@ -310,8 +369,12 @@ def continue_then_die(reference):
         press(second, "a")
         wait_room_ready(second, "continued room")
         spawn_hostile_shots(second, 16)
-        assert live_tail(second), "continued room volley never reached OAM 20..39"
-        image = kill_to_title(second, "continued run")
+        assert any(row[3] == 28 for row in live_tail(second)), (
+            "continued room volley never reached OAM 20..39"
+        )
+        image = kill_to_title(
+            second, "continued run", projectile_tiles=BULLET_TILES
+        )
         save_frame(second, "continue-title-after.png")
         assert_same_frame(image, reference, "continued run")
         # A on this title must not walk back into the dead run.
@@ -329,8 +392,9 @@ def main():
     crowded_enemy_death(reference)
     continue_then_die(reference)
     print(
-        "[title-sprite-leak] PASS crystal boss, enemy volley, and "
-        "continue-then-death leave only the five title spirits"
+        "[title-sprite-leak] PASS crystal boss (body and pellets), "
+        "enemy volley, and continue-then-death leave only the five "
+        "title spirits"
     )
 
 
