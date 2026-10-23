@@ -81,6 +81,9 @@ jobs:
       - name: PyBoy suspend power-cycle
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
 
+      - name: PyBoy title sprite leak
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_title_sprite_leak.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 

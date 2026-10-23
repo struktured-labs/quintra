@@ -39,6 +39,12 @@ static const u16 title_palette_steady[4] = {
     BGR555(30, 30, 31),    // 3: near-white
 };
 
+// Objects 0, 6 and 7 are not used by the five champions. GAME OVER leaves
+// the room's skeleton, Colossus tint, and orc palettes in those slots.
+static const u16 title_obj_unused[4] = {
+    BGR555(0, 0, 0), BGR555(0, 0, 0), BGR555(0, 0, 0), BGR555(0, 0, 0)
+};
+
 // 0 = main title, 1 = records, 2/3 = first-run help pages.
 static u8 showing_records;
 static u8 showing_stage_warp;
@@ -52,13 +58,20 @@ u8 title_stage_warp = 0xFF;
 #define TITLE_SPIRIT_SPRITES 4
 
 // A living lineup makes the opening myth about people rather than only text.
-// Five complete 16x16 metasprites fit above the logo, reuse the in-game hero
-// atlas, and are parked on every exit so no title OAM leaks into class select.
+// Five complete 16x16 metasprites fit above the logo and reuse the in-game hero
+// atlas. Parking them on every exit keeps that procession out of class select.
 static const u8 title_spirit_x[TITLE_SPIRIT_COUNT] = { 24, 52, 80, 108, 136 };
 
 static void title_hide_spirits(void) {
     u8 i;
-    for (i = 0; i < (u8)(TITLE_SPIRIT_COUNT * TITLE_SPIRIT_SPRITES); ++i)
+    // The spirits occupy objects 0..19. GAME OVER and VICTORY only clear the
+    // LCDC sprite enable, so the previous fight stays queued in shadow OAM.
+    // A Colossus drawn after its own shots leaves its bottom row in slots
+    // 20..23, on the PRESS START line. The pellets that pushed it there,
+    // Cinder vents, Void shots, and the wide Frost body use the rest of the
+    // table. Parking all 40 objects here keeps both the clipped body and
+    // those bullets off the title when sprites are shown again.
+    for (i = 0; i < 40; ++i)
         move_sprite(i, 0, 0);
 }
 
@@ -90,6 +103,12 @@ static void title_init_spirits(void) {
         for (part = 0; part < TITLE_SPIRIT_SPRITES; ++part)
             set_sprite_prop((u8)(id + part), (u8)(spirit + 1));
     }
+    // Champions own OBJ palettes 1..5. Clear the three slots the fight uses
+    // for skeletons, the stage boss tint, and orcs so a cold boot and a
+    // return from GAME OVER carry the same palette RAM.
+    palette_obj_load(0, title_obj_unused);
+    palette_obj_load(6, title_obj_unused);
+    palette_obj_load(7, title_obj_unused);
     title_draw_spirits();
 }
 
@@ -192,13 +211,20 @@ static void render_help(void) {
     }
 }
 
+static void title_load_bg_palettes(const u16 *pal) {
+    u8 slot;
+    // The map uses palette 0, and palette 7 mirrors it for the font. Slots
+    // 1..6 are unreferenced, but GAME OVER used to leave the dungeon floor,
+    // walls, crack glow, and HUD colors sitting in them.
+    for (slot = 0; slot < 8; ++slot)
+        palette_bg_load(slot, pal);
+}
+
 void title_enter(void) {
     DISPLAY_OFF;
     VBK_REG = 0;
 
-    palette_bg_load(0, title_palette_steady);
-    // Mirror to palette 7 so font_init's choice of palette doesn't surprise us
-    palette_bg_load(7, title_palette_steady);
+    title_load_bg_palettes(title_palette_steady);
 
     font_init();
     {

@@ -255,6 +255,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
+	uv run --quiet --with pyboy python scripts/test_title_sprite_leak.py
 	$(PYBOY_RUN) scripts/test_corner_slide.py
 	$(PYBOY_RUN) scripts/test_waygear_layout.py
 	$(PYBOY_RUN) scripts/test_auto_waygear.py
@@ -316,6 +317,7 @@ demo-check: demo-kit
 	$(PYBOY_RUN) scripts/test_performance.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
 	$(PYBOY_RUN) scripts/test_gameover.py
+	$(PYBOY_RUN) scripts/test_title_sprite_leak.py
 	$(PYBOY_RUN) scripts/test_corner_slide.py
 	$(PYBOY_RUN) scripts/test_suspend.py
 	tools/build_itch_web.sh
