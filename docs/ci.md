@@ -19,7 +19,7 @@ that at a cached GBDK-2020 4.5.0 tree.
 | `make gen` and `make rom/working/quintra.gbc` (link runs `scripts/check_rom_layout.py`) | ROM job |
 | `scripts/check_cartridge.py` | ROM job |
 | `scripts/test_suspend.py` under PyBoy 2.7.0 (the battery power-cycle from `make preflight`, plus the stage-0 cold-resume OBJ palette and miniboss tiles) | ROM job |
-| `scripts/test_title_sprite_leak.py` under PyBoy 2.7.0 (Crystal Colossus death must leak both the boss body and its pellets into OAM 20–39, and that death, a crowded bullet volley, and continue-then-death must leave only the five title spirits) | ROM job |
+| `scripts/test_title_sprite_leak.py` under PyBoy 2.7.0 (Crystal Colossus death must leak both the boss body and its pellets into OAM 20–39; that death, a crowded bullet volley, and continue-then-death must leave only the five title spirits; title BG/OBJ palette RAM and the picture must match a fresh boot, and the first room's palettes must match after New Game and Continue) | ROM job |
 | `scripts/test_smoke.sh` under headless mGBA (the cart walk from `make test`) | ROM job |
 
 The ROM job uploads `quintra.gbc` plus the linker `.map` and `.noi` as the
