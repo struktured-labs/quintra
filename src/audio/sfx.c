@@ -30,6 +30,11 @@ static u8 ch1_busy_frames;
 static u8 ch4_busy_frames;
 static u8 melody_lock_frames;
 static u8 melody_lock_priority;
+// A full Will meter can fill while a shot, hurt snap, or fanfare still owns
+// CH1. Hold the power-up until that voice releases the pulse instead of
+// cutting it off; the cue is one-shot and must not be dropped.
+static u8 will_chime_pending;
+u8 sfx_will_active;
 
 #define MELODY_PRIORITY_NONE   0
 #define MELODY_PRIORITY_CLEAR  1
@@ -43,6 +48,8 @@ static u8 melody_priority_for(u8 id) {
     if (id == SFX_CLEAR) return MELODY_PRIORITY_CLEAR;
     return MELODY_PRIORITY_NONE;
 }
+
+static void advance_pending_sfx(void);
 
 static void melody_lock(u8 priority, u8 frames) {
     melody_lock_priority = priority;
@@ -76,11 +83,22 @@ static void ch4(u8 nr43, u8 nr42) {
 
 void sfx_play(u8 id) {
     u8 priority = melody_priority_for(id);
+    // The Will chime is lower priority than anything already using the
+    // harmony pulse or a scheduled figure. Defer rather than replace: combat
+    // voices and the discovery/clear/victory-length fanfares keep the channel.
+    if (id == SFX_WILL && (melody_lock_frames || pend_kind != PEND_NONE
+            || ch1_busy_frames > 2)) {
+        will_chime_pending = 1;
+        return;
+    }
     // A pushed-block reward can be collected on the same frame its passage
     // opens. Do not let that coin/heart/equip voice replace the remaining
     // scheduled discovery notes. A true secret may still supersede the
     // shorter room-clear figure.
     if (melody_lock_frames && priority < melody_lock_priority) return;
+    // A shot, hit, or pickup that actually takes CH1 ends a power-up in
+    // progress so a later scheduled note does not talk over it.
+    if (id != SFX_WILL) sfx_will_active = 0;
     switch (id) {
         case SFX_FIRE:
             // CH1 duty 25%, 1150Hz, sweep down (1,3), env (12,down,1)
@@ -204,6 +222,13 @@ void sfx_play(u8 id) {
             sfx_claim_channels(70, 16);
             melody_lock(MELODY_PRIORITY_MAJOR, 70);
             break;
+        case SFX_WILL:
+            // Rising power-up on the harmony pulse. The figure itself lives
+            // in the banked reward voice. No melody lock, so the next combat
+            // voice replaces it, and CH2/CH3/CH4 stay with music and hits.
+            will_chime_pending = 0;
+            sfx_play_will();
+            break;
         default:
             break;
     }
@@ -219,6 +244,7 @@ void sfx_play_rune(u8 step) {
     // disappears at exactly the moment the champion begins the puzzle.
     if (step > 4) step = 4;
     pend_kind = PEND_NONE;
+    sfx_will_active = 0;
     ch1(0x00, 0x80, 0xA2, notes[step]);
 }
 
@@ -229,8 +255,22 @@ void sfx_tick(void) {
         melody_lock_frames--;
         if (!melody_lock_frames) melody_lock_priority = MELODY_PRIORITY_NONE;
     }
-    if (pend_kind == PEND_NONE) return;
-    if (--pend_timer) return;
+    if (pend_kind != PEND_NONE) {
+        if (--pend_timer) return;
+        advance_pending_sfx();
+        return;
+    }
+    if (sfx_will_active) {
+        sfx_tick_will();
+        return;
+    }
+    // A deferred full-Will power-up starts only once the pulse and the
+    // scheduled-note slot are both free.
+    if (will_chime_pending && !melody_lock_frames && ch1_busy_frames <= 2)
+        sfx_play(SFX_WILL);
+}
+
+static void advance_pending_sfx(void) {
     switch (pend_kind) {
         case PEND_PORTAL_ARRIVE:
             ch1(0x26, 0x40, 0xA2, 1720);

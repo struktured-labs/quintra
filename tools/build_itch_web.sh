@@ -10,7 +10,7 @@ if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
 fi
 archive="$project_root/builds/quintra-itch-web-$version.zip"
 rom="$project_root/rom/working/quintra.gbc"
-expected_rom_sha="57321748552396f336fae31f0705397d4a9daa51b32db8430f5972e8566b1978"
+expected_rom_sha="b10d12893823d845a1800468ce7368026b3d54ce6e3e3be30963d7a0e2f985f3"
 wasmboy_sha="3cffca75e29b90559437cc4984b5c8166e66a04a1edb295a51eb487fe9fa5b47"
 
 actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)

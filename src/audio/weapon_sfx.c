@@ -24,6 +24,7 @@ static void weapon_ch4(u8 nr43, u8 nr42) {
 
 void sfx_play_weapon(u8 projectile_kind) BANKED {
     if (sfx_melody_locked()) return;
+    sfx_will_active = 0;
     if (projectile_kind == PROJ_FLAIL) {
         // Low 75%-duty head impact plus loose 7-bit chain chatter.
         weapon_ch1(0x3A, 0xC0, 0xD3, 1440);
@@ -40,6 +41,7 @@ void sfx_play_weapon(u8 projectile_kind) BANKED {
 
 void sfx_play_boomerang(u8 caught) BANKED {
     if (sfx_melody_locked()) return;
+    sfx_will_active = 0;
     if (caught) {
         weapon_ch1(0x00, 0x80, 0x71, 1942);
         weapon_ch4(0x17, 0x41);
@@ -53,6 +55,7 @@ void sfx_play_equip(void) BANKED {
     // Bright forged ping plus a soft locking click. This stays distinct from
     // both paid coin feedback and the longer puzzle/room-clear fanfares.
     if (sfx_melody_locked()) return;
+    sfx_will_active = 0;
     weapon_ch1(0x00, 0x80, 0xD4, 1949);
     weapon_ch4(0x24, 0x51);
 }
