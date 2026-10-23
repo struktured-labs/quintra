@@ -52,13 +52,19 @@ u8 title_stage_warp = 0xFF;
 #define TITLE_SPIRIT_SPRITES 4
 
 // A living lineup makes the opening myth about people rather than only text.
-// Five complete 16x16 metasprites fit above the logo, reuse the in-game hero
-// atlas, and are parked on every exit so no title OAM leaks into class select.
+// Five complete 16x16 metasprites fit above the logo and reuse the in-game hero
+// atlas. Parking them on every exit keeps that procession out of class select.
 static const u8 title_spirit_x[TITLE_SPIRIT_COUNT] = { 24, 52, 80, 108, 136 };
 
 static void title_hide_spirits(void) {
     u8 i;
-    for (i = 0; i < (u8)(TITLE_SPIRIT_COUNT * TITLE_SPIRIT_SPRITES); ++i)
+    // The spirits occupy objects 0..19. GAME OVER and VICTORY only clear the
+    // LCDC sprite enable, so the previous fight stays queued in shadow OAM.
+    // A Colossus drawn after its own shots leaves its bottom row in slots
+    // 20..23; later bullets, Cinder vents, and the wide Frost body use the
+    // rest of the table. Parking all 40 objects here is what keeps that
+    // clipped remnant off the title when sprites are shown again.
+    for (i = 0; i < 40; ++i)
         move_sprite(i, 0, 0);
 }
 

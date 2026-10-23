@@ -54,6 +54,7 @@ jobs:
           make -j"$(nproc)" rom/working/quintra.gbc
           python3 scripts/check_cartridge.py rom/working/quintra.gbc
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
+          uv run --quiet --with "pyboy==2.7.0" python scripts/test_title_sprite_leak.py
           bash scripts/test_smoke.sh rom/working/quintra.gbc
           sha256sum rom/working/quintra.gbc
 
