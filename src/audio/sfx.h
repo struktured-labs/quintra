@@ -25,7 +25,7 @@ enum {
     SFX_DASH,         // double-tap dodge: short rising wind-cut, never a door
     SFX_SIGIL,        // major dungeon key: six-note, one-second claim fanfare
     SFX_PORTAL,       // descending warp pull, then rising arrival shimmer
-    SFX_WILL,         // full Will meter: short quiet C6->E6 rising chime
+    SFX_WILL,         // full Will meter: short rising power-up on CH1
 };
 
 // Banked reward voices keep pickups mechanically legible without bloating the
@@ -46,6 +46,10 @@ void sfx_play_weapon(u8 projectile_kind) BANKED;
 void sfx_play_boomerang(u8 caught) BANKED;
 void sfx_play_equip(void) BANKED;
 void sfx_play_reward(u8 kind) BANKED;
+// Full-Will power-up. Banked so the resident dispatcher stays a few bytes.
+void sfx_play_will(void) BANKED;
+void sfx_tick_will(void) BANKED;
+extern u8 sfx_will_active;
 // Ordered floor runes answer with one of five stable major-pentatonic pitches.
 void sfx_play_rune(u8 step);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps

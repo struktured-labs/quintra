@@ -26,6 +26,7 @@ void sfx_play_reward(u8 kind) BANKED {
     // collected during that window stays mechanically collected but silent,
     // rather than cutting the fanfare into unrelated fragments.
     if (kind != SFX_REWARD_SIGIL && sfx_melody_locked()) return;
+    sfx_will_active = 0;
     switch (kind) {
         case SFX_REWARD_MAGIC:
             // Clean high upward shimmer: MP/wells, never currency.
@@ -60,4 +61,49 @@ void sfx_play_reward(u8 kind) BANKED {
             reward_ch4(0x24, 0x51);
             break;
     }
+}
+
+// Full Will is a power-up, not a pickup. CH1 only. A sweep climbs from C4
+// while the volume swells from 4 toward 10, then a short 25% duty G6 ring
+// shimmers at the top. Peak volume stays under a shot (12). Nothing here
+// writes the music lead or the noise channel, and nothing locks the effect
+// bus. The whole gesture is about 0.45s, with none of the coin's B5-E6 pair.
+#define WILL_NOTES 2
+#define WILL_CLAIM 34
+static const u8 will_gap[WILL_NOTES] = { 20, 0 };
+static const u8 will_sweep[WILL_NOTES] = { 0x55, 0x00 };
+static const u8 will_duty[WILL_NOTES] = { 0x80, 0x40 };
+static const u8 will_env[WILL_NOTES] = { 0x4C, 0xA1 };
+static const u16 will_freq[WILL_NOTES] = { 1547, 1964 };
+
+static u8 will_step;
+static u8 will_timer;
+
+static void will_emit(u8 step) {
+    NR10_REG = will_sweep[step];
+    NR11_REG = will_duty[step];
+    NR12_REG = will_env[step];
+    NR13_REG = (u8)(will_freq[step] & 0xFF);
+    NR14_REG = (u8)(0x80 | (will_freq[step] >> 8));
+}
+
+void sfx_play_will(void) BANKED {
+    sfx_will_active = 1;
+    will_step = 0;
+    will_timer = will_gap[0];
+    sfx_claim_channels(WILL_CLAIM, 0);
+    will_emit(0);
+}
+
+void sfx_tick_will(void) BANKED {
+    u8 next;
+    if (--will_timer) return;
+    next = (u8)(will_step + 1);
+    will_step = next;
+    will_emit(next);
+    if ((u8)(next + 1) >= WILL_NOTES) {
+        sfx_will_active = 0;
+        return;
+    }
+    will_timer = will_gap[next];
 }
