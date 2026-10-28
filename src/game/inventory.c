@@ -188,7 +188,7 @@ static void inventory_aim_enter(void) {
     HIDE_SPRITES;
     cls();
     gotoxy(3, 1); text_write("AIM / B WEAPON");
-    gotoxy(2, 3); text_write(player_penta_aim ? "MODE: PENTA HOLD" : "MODE: CLASSIC");
+    gotoxy(2, 3); text_write(player_penta_aim ? "MODE: HOLD AIM" : "MODE: CLASSIC");
     gotoxy(2, 5); text_write("A: SWITCH MODE");
     gotoxy(2, 7); text_write(player_penta_aim ? "DIAGONAL KEEPS" : "DIAGONAL PICKS");
     gotoxy(2, 8); text_write(player_penta_aim ? "PREVIOUS HEADING" : "VERTICAL HEADING");

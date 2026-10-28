@@ -13,7 +13,10 @@ tables at build time.
 
 [![CI](https://github.com/struktured-labs/quintra/actions/workflows/ci.yml/badge.svg)](https://github.com/struktured-labs/quintra/actions/workflows/ci.yml)
 
-[Download Quintra v0.20.19: Clean Return](https://github.com/struktured-labs/quintra/releases/download/v0.20.19/quintra.gbc)
+The cartridge is not in this repository and is not attached to GitHub
+Releases. Build it with `make` (`rom/working/quintra.gbc`), or take the
+`quintra-gbc` artifact from CI. The current title version is v0.20.19 —
+Clean Return.
 
 The September 8 movement update adds gentle alignment through narrow gaps:
 hold a direction within three pixels of an opening to ease into it. Collision
@@ -21,9 +24,6 @@ boxes, diagonal control, and dashes are unchanged. The September 21 combat
 update adds Will tiers, automatic Waygear, patterned enemy fire, and guarded
 Farfold Cache rewards. The itch build is beta27; the cartridge title still
 displays v0.20.19.
-
-The repository copy of the current working cartridge is
-[`rom/working/quintra.gbc`](rom/working/quintra.gbc).
 
 ### October development build
 
@@ -941,8 +941,8 @@ biome-specific CH4 percussion; combat SFX temporarily claim those shared
 channels so attacks and discovery jingles retain priority. Ordinary room
 transitions preserve the exact section and row.
 
-This work is built into the attached `rom/working/quintra.gbc` release
-cartridge. The arrangements remain deliberately replaceable so creator-written
+This work shipped in that version's cartridge. The arrangements remain
+deliberately replaceable so creator-written
 melodies can be composed and auditioned score by score without rewriting the
 sequencer.
 
@@ -3636,12 +3636,13 @@ Normal play remains the authority for whether combat is fun. Do not nerf
 Normal to satisfy this small heuristic pilot, and do not tune Easy beyond its
 coarse testing assist until Normal's intended curve is established.
 
-For a GitHub ROM milestone, commit the verified ROM/media first, write the
-release notes to a file, then run
-`scripts/release_rom.sh vX.Y.Z path/to/notes.md`. The helper runs preflight,
-refuses an uncommitted ROM, pins the remote tag to the exact `HEAD` commit,
-and uses GitHub's `--verify-tag` mode before uploading. This avoids a release
-silently tagging the repository's default branch instead of the build source.
+For a GitHub release, commit the notes as `docs/releases/vX.Y.Z.md` and push
+the tag (`git tag vX.Y.Z && git push origin vX.Y.Z`). The release workflow
+builds the cartridge, leaves `quintra.gbc` off the Release, and uploads the
+itch web zip. The standalone cartridge is the `quintra-gbc` CI artifact.
+`scripts/release_rom.sh` is the manual notes path: it runs preflight, prints
+the local cartridge SHA-256, pins the tag to `HEAD`, and creates the Release
+without the cartridge file. Do not commit `rom/working/quintra.gbc`.
 
 `make balance` runs the actual cartridge under **mGBA headless** with five
 heuristic
@@ -4107,5 +4108,7 @@ Quintra's software source and build tooling are licensed under **MPL-2.0**.
 Original art, music, writing, media, and branding remain separately protected;
 the future self-hosted WasmBoy browser player is **GPL-3.0-or-later**. Read the
 [license map](LICENSES/README.md), root [MPL-2.0 license](LICENSE),
+[third-party notices](THIRD_PARTY_NOTICES.md),
 [contribution terms](CONTRIBUTING.md), and [branding notice](TRADEMARKS.md)
-before redistributing or modifying the project.
+before redistributing or modifying the project. The cartridge links the
+GBDK-2020 4.5.0 runtime (GPLv2 with the SDCC linking exception).

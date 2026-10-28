@@ -77,22 +77,27 @@ The release workflow
 only on tags that look like `v0.20.19` (`v<major>.<minor>.<patch>`). It does
 not run on pull requests or on ordinary pushes to `main`.
 
-1. Bump `QUINTRA_VERSION`, update the pinned ROM hash inside
-   `tools/build_itch_web.sh` if the cartridge bytes changed, and add
-   `docs/releases/vX.Y.Z.md` when that tag should carry those notes.
+1. Bump `QUINTRA_VERSION` and add `docs/releases/vX.Y.Z.md` when that tag
+   should carry those notes. Do not commit `rom/working/quintra.gbc`, and do
+   not put a cartridge SHA back into `tools/build_itch_web.sh`. The script
+   hashes the cartridge it was just given.
 2. Tag the release commit and push the tag:
    `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. The workflow links the ROM, runs the same cart checks as CI, and builds
-   the itch web directory with `tools/build_itch_web.sh`. That script refuses
-   to pack a ROM whose SHA-256 does not match its pin.
+   the itch web directory with `tools/build_itch_web.sh`. The recorded
+   SHA-256 is the hash of that built `rom/working/quintra.gbc`.
    The workflow passes `QUINTRA_WEB_VERSION` from the tag so the archive,
    browser version label, and `build.json` agree with the release. Manual
    builds retain the beta default unless that variable is explicitly set.
    `python3 tools/test_itch_version.py` checks tag/default packaging and invalid
-   versions before release packaging; it never publishes.
-4. It opens a GitHub Release titled `Quintra vX.Y.Z` with `quintra.gbc` and
-   the zip `tools/build_itch_web.sh` writes. Release notes come from
-   `docs/releases/<tag>.md` when that file exists.
+   versions before release packaging; it never publishes. It needs a cartridge
+   already at `rom/working/quintra.gbc` (`make rom/working/quintra.gbc`).
+4. It opens a GitHub Release titled `Quintra vX.Y.Z` with the zip
+   `tools/build_itch_web.sh` writes. It does not attach `quintra.gbc`.
+   The standalone cartridge from the same build is the `quintra-gbc` CI
+   artifact (also uploaded by the pull-request ROM job). Release notes come
+   from `docs/releases/<tag>.md` when that file exists. The itch zip still
+   contains `quintra.gbc` because the browser player loads it.
 
 ### itch.io
 
@@ -108,8 +113,9 @@ butler push --if-changed --userversion <tag> builds/itch-web struktured/quintra:
 
 The spec also names a `rom` channel for a separate cartridge download. That
 channel is still an open product decision, and the live deploy script only
-pushes `web`, so the workflow does not create a `rom` channel. The `.gbc` is
-attached to the GitHub Release instead.
+pushes `web`, so the workflow does not create a `rom` channel. The standalone
+`.gbc` is not attached to the GitHub Release. Take it from the `quintra-gbc`
+CI artifact, or build `rom/working/quintra.gbc` locally.
 
 The step runs only when the repository secret **`BUTLER_API_KEY`** is set
 (an itch.io API key). If the secret is absent, the step is skipped and the

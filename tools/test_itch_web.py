@@ -27,6 +27,9 @@ required = (
     "licenses/WASMBOY-LICENSE.txt",
     "licenses/QUINTRA-LICENSE-MAP.md",
     "licenses/THIRD-PARTY-NOTICES.md",
+    "licenses/CARTRIDGE-THIRD-PARTY-NOTICES.md",
+    "licenses/GBDK-2020-4.5.0-GPLV2-LE.txt",
+    "licenses/SDCC-runtime-notice.txt",
     "media/cover.png",
 )
 
