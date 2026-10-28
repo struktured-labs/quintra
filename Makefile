@@ -108,7 +108,10 @@ $(OBJDIR)/src/game/title.o: force-title $(SRCDIR)/game/version.h
 # builds byte-identical.
 force-link:
 
+# The cartridge is gitignored, so a fresh checkout has no rom/working.
+# CI links this target directly and does not run the dirs prerequisite.
 $(BINDIR)/$(PROJECT).gbc: $(OBJS) Makefile force-link
+	@mkdir -p $(BINDIR)
 	@$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	@python3 scripts/check_rom_layout.py $(BINDIR)/$(PROJECT)
