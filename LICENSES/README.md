@@ -62,6 +62,11 @@ Third-party components retain their own copyright and license terms. Their
 notices must remain with source and binary distributions. No third-party work
 is relicensed by this map.
 
+The cartridge links the GBDK-2020 4.5.0 runtime and the SDCC 4.5.1 runtime
+that ships with it (GPLv2 with the linking exception). The browser package
+vendors WasmBoy (GPL-3.0-or-later). Names, versions, and the copied license
+texts are in [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
+
 ## Branding
 
 No software or content license grants rights to the Quintra name, logo, or

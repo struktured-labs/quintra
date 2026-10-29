@@ -10,14 +10,15 @@ if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
 fi
 archive="$project_root/builds/quintra-itch-web-$version.zip"
 rom="$project_root/rom/working/quintra.gbc"
-expected_rom_sha="57321748552396f336fae31f0705397d4a9daa51b32db8430f5972e8566b1978"
 wasmboy_sha="3cffca75e29b90559437cc4984b5c8166e66a04a1edb295a51eb487fe9fa5b47"
 
-actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
-if [[ "$actual_rom_sha" != "$expected_rom_sha" ]]; then
-  echo "ROM hash mismatch: expected $expected_rom_sha, got $actual_rom_sha" >&2
+if [[ ! -f "$rom" ]]; then
+  echo "Missing $rom. Build it first: make rom/working/quintra.gbc" >&2
   exit 1
 fi
+# Hash whatever cartridge this tree just linked. Do not pin a SHA: a stale
+# pin refuses every later ROM, including the one CI built in this job.
+actual_rom_sha=$(sha256sum "$rom" | cut -d' ' -f1)
 
 actual_wasmboy_sha=$(sha256sum "$project_root/web/itch/vendor/wasmboy-0.8.14.umd.js" | cut -d' ' -f1)
 if [[ "$actual_wasmboy_sha" != "$wasmboy_sha" ]]; then
@@ -41,6 +42,9 @@ cp "$project_root/web/itch/vendor/WASMBOY-LICENSE.txt" "$output_dir/licenses/WAS
 cp "$project_root/web/itch/THIRD-PARTY-NOTICES.md" "$output_dir/licenses/THIRD-PARTY-NOTICES.md"
 cp "$project_root/LICENSES/GPL-3.0-or-later.txt" "$output_dir/licenses/GPL-3.0-or-later.txt"
 cp "$project_root/LICENSES/README.md" "$output_dir/licenses/QUINTRA-LICENSE-MAP.md"
+cp "$project_root/THIRD_PARTY_NOTICES.md" "$output_dir/licenses/CARTRIDGE-THIRD-PARTY-NOTICES.md"
+cp "$project_root/LICENSES/GBDK-2020-4.5.0-GPLV2-LE.txt" "$output_dir/licenses/GBDK-2020-4.5.0-GPLV2-LE.txt"
+cp "$project_root/LICENSES/SDCC-runtime-notice.txt" "$output_dir/licenses/SDCC-runtime-notice.txt"
 cp "$project_root/docs/media/itch/quintra-cover-current-630x500.png" "$output_dir/media/cover.png"
 cp "$rom" "$output_dir/quintra.gbc"
 

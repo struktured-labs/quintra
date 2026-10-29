@@ -65,6 +65,9 @@ jobs:
           QUINTRA_WEB_VERSION: ${{ github.ref_name }}
         run: tools/build_itch_web.sh
 
+      # The standalone cartridge stays off the public Release. CI already
+      # uploads it as the quintra-gbc artifact. The itch zip is still attached;
+      # the browser player inside that zip loads quintra.gbc.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -76,7 +79,6 @@ jobs:
           test -f "$zip"
           args=(
             release create "$tag"
-            rom/working/quintra.gbc
             "$zip"
             --repo "${GITHUB_REPOSITORY}"
             --verify-tag
@@ -86,7 +88,7 @@ jobs:
           if [ -f "$notes_file" ]; then
             args+=(--notes-file "$notes_file")
           else
-            args+=(--notes "Cartridge and itch web bundle built from ${GITHUB_SHA}.")
+            args+=(--notes "itch web bundle built from ${GITHUB_SHA}. The standalone cartridge is the quintra-gbc CI artifact and is not attached to this Release.")
           fi
           gh "${args[@]}"
 

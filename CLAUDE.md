@@ -4,43 +4,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Quintra** — a top-down action roguelike for Game Boy Color, native CGB, written in C with GBDK-2020. Pure roguelike (only knowledge persists), 5 monster-human classes, procgen rooms every run, rest-room saves only, item-driven builds (no XP grinding). Heavy Penta Dragon mechanical influence (bullet-hell projectile patterns, form-energy mechanics) crossed with Zelda LA / FF Adventure / Ultima ROV (top-down maze exploration, items as permanent character expansions).
+**Quintra** — a top-down action roguelike for Game Boy Color, native CGB, written in C with GBDK-2020. Pure roguelike (only knowledge persists), 5 monster-human classes, procgen rooms every run, a suspend save on every room entry that is wiped on death, item-driven builds (no XP grinding). Heavy Penta Dragon mechanical influence (bullet-hell projectile patterns, form-energy mechanics) crossed with Zelda LA / FF Adventure / Ultima ROV (top-down maze exploration, items as permanent character expansions).
 
 **The novelty layer:** all *dev-host* tooling and content authoring is in Rust under `tools/`. The C runtime is the only thing that ships on cart. Typed Rust content schema catches invalid items/enemies/biomes at `cargo build`, never at runtime. The seam is `src/generated/`.
 
 **Lineage:** this project began as a Penta Dragon DX colorization effort (that history lives in the separate `penta-dragon-dx` repo) and pivoted into Quintra, a Penta-inspired but wholly original game.
 
-**Current Status:** v0.20.x (check `git tag` for latest; this summary dates
-from v0.15 and undercounts content — e.g. 32 enemies now, plus the Riftwild
-overworld, colossus bosses, and the itch.io browser player under `web/`) —
-9-stage roguelike, playable end to end, **banked
-ROM** (autobank; see the 2026-07-05 banking spec — new gameplay files need
-`#pragma bank 255` + `BANKED`, and `scripts/check_rom_layout.py` gates every
-link). TITLE (pulsing + music, CONTINUE when a suspend save exists, BEST
-score) → CLASS_SELECT (5 classes, live preview + cursor + SFX) → 9 stages of
-6 rooms each, styled distinctly (Crystal Caverns → Verdant Hollow → Ember
-Depths → Frost Vault → Toxic Mire → Shadow Keep → Golden Temple → Bloodmoon
-→ Void Sanctum), each fading in from darkness. Per stage: normal rooms in 8
-procgen shapes, ~12% elite enemies (boss-glow, 2x HP), a mini-boss (drops
-A-weapon swap orbs), a merchant, and a **32x32 large-sprite stage boss** — 9
-distinct bosses with HUD HP bar, death explosion + screen shake. Beat all 9
-→ VICTORY. Combat: A = per-class primary weapon, B = signature move costing
-2 MP (blue HUD digits; MP regens, +1 on room clear), DEF/LCK/elemental,
-hit-flash + hit-stop + knockback both ways, pickup magnetism, room-clear
-chime. Full audio: per-stage music, boss theme, title/victory/gameover,
-9 SFX. START = pack/stats screen (stage names, weapon/signature). SRAM:
-suspend save every room (dies with you — permadeath holds) + persistent
-best/runs/wins. Zelda-style shootable cracked walls → treasure rooms.
-5 classes / 15 items / 8 enemies (incl. exploding Bombers, teleporting
-Shades) / 9 stage themes with designed weighted rosters + boss stats —
-all compiled from typed Rust content; `make verify` runs cargo tests,
-the gameplay smoke, and the C<->Rust procgen parity check.
+**Current Status:** v0.20.19 (`QUINTRA_VERSION` in `src/game/version.h`;
+latest tag `v0.20.19`). Playable end to end, **banked ROM** (autobank; see
+the 2026-07-05 banking spec — new gameplay files need `#pragma bank 255` +
+`BANKED`, and `scripts/check_rom_layout.py` gates every link). The cartridge
+is not in git. `make` writes `rom/working/quintra.gbc`; the ROM CI job
+uploads that file as the `quintra-gbc` artifact. The itch.io browser player
+lives under `web/`.
+
+TITLE (pulsing + music, CONTINUE when a suspend save exists, SELECT for
+records and help) → CLASS_SELECT (Wolfkin, Sauran, Corvin, Picsean, Vespine;
+live preview + cursor + SFX) → nine themed dungeons (Crystal Caverns →
+Verdant Hollow → Ember Depths → Frost Vault → Toxic Mire → Shadow Keep →
+Golden Temple → Bloodmoon → Void Sanctum). Dungeons are procedural grids of
+up to 6×5 cells, three to a region, with a
+three-screen village between regions and the 4×4 Riftwild overworld after a
+cleared dungeon. Each dungeon has a mini-boss, a merchant, and a Colossus
+with a HUD HP bar. Beat all 9 → VICTORY, then an optional post-win descent.
+
+Combat: A = class primary, B = the selected hero power (free, on a cooldown;
+the Pack aim page also picks a secondary B weapon), A+B = Oath at 2 MP and
+full-MP Spirit Convergence, plus a Will meter. DEF/LCK/elemental, hit-flash
++ hit-stop + knockback both ways, pickup magnetism, dodge-dash. SRAM bank 0
+suspends the run on room entry and clears it on death (permadeath holds);
+SRAM bank 1 keeps best score, runs, wins, and best win time. Shoot cracked
+walls for treasure rooms.
+
+Content counts are the `registry_counts` test in `content/src/lib.rs`:
+**5 classes, 28 items, 35 enemies, 9 stages**, plus one Zelda overworld.
+That replaces the v0.15 summary (15 items, 8 enemies, six rooms a stage).
+`make verify` runs cargo tests, the gameplay smoke, and the C↔Rust procgen
+parity check.
 
 ### Controls
 - D-pad move (double-tap a direction to dodge-dash with i-frames) · A
-  primary weapon · B signature move (2 MP) · START pack screen · SELECT
-  quick-pause · shoot the glowing amber cracked walls for secrets · title:
-  A = continue a suspended run.
+  primary weapon · B selected hero power (free, cooldown) · A+B oath (2 MP)
+  · START pack screen · SELECT map/compass · shoot the glowing amber cracked
+  walls for secrets · title: A continues a suspended run, SELECT opens
+  records and help.
 
 ### Toolchain
 
@@ -105,7 +112,7 @@ penta-dragon-remake/
 ├── content/              # hand-authored content (Rust source)
 ├── assets/               # raw PNGs + music
 ├── docs/superpowers/specs/    # design docs
-├── rom/working/          # build output (gitignored)
+├── rom/working/          # local/CI build output (gitignored; not a Release asset)
 └── Makefile
 ```
 
