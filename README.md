@@ -15,7 +15,7 @@ tables at build time.
 
 The cartridge is not in this repository and is not attached to GitHub
 Releases. Build it with `make` (`rom/working/quintra.gbc`), or take the
-`quintra-gbc` artifact from CI. The current title version is v0.20.19 —
+`quintra-gbc` artifact from CI. The current title version is v0.20.20 —
 Clean Return.
 
 The September 8 movement update adds gentle alignment through narrow gaps:
@@ -23,7 +23,7 @@ hold a direction within three pixels of an opening to ease into it. Collision
 boxes, diagonal control, and dashes are unchanged. The September 21 combat
 update adds Will tiers, automatic Waygear, patterned enemy fire, and guarded
 Farfold Cache rewards. The itch build is beta27; the cartridge title still
-displays v0.20.19.
+displays v0.20.20.
 
 ### October development build
 
@@ -63,7 +63,7 @@ the cartridge runtime.
 
 ### Current release
 
-The current cartridge is **v0.20.19 — Clean Return**, the public-demo beta
+The current cartridge is **v0.20.20 — Playtest Polish**, the public-demo beta
 cut. Waking and Hollow Riftwild form one tool-gated counterpart world;
 return routes can spring named trap minibosses; all five champions expose
 distinct B powers, Oath Arts, status feedback, and expanded build choices.

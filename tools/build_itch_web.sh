@@ -3,7 +3,7 @@ set -euo pipefail
 
 project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 output_dir="$project_root/builds/itch-web"
-version="${QUINTRA_WEB_VERSION:-v0.20.19-beta29}"
+version="${QUINTRA_WEB_VERSION:-v0.20.20-beta31}"
 if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
   echo "Invalid web version: $version" >&2
   exit 1

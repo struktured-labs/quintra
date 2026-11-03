@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Lineage:** this project began as a Penta Dragon DX colorization effort (that history lives in the separate `penta-dragon-dx` repo) and pivoted into Quintra, a Penta-inspired but wholly original game.
 
-**Current Status:** v0.20.19 (`QUINTRA_VERSION` in `src/game/version.h`;
-latest tag `v0.20.19`). Playable end to end, **banked ROM** (autobank; see
+**Current Status:** v0.20.20 (`QUINTRA_VERSION` in `src/game/version.h`;
+latest tag `v0.20.20`). Playable end to end, **banked ROM** (autobank; see
 the 2026-07-05 banking spec — new gameplay files need `#pragma bank 255` +
 `BANKED`, and `scripts/check_rom_layout.py` gates every link). The cartridge
 is not in git. `make` writes `rom/working/quintra.gbc`; the ROM CI job
