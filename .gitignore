@@ -1,9 +1,13 @@
-# ROM files (cannot redistribute)
+# ROM files (cannot redistribute). The working cartridge is a local/CI
+# build product. `make` and the ROM CI job write rom/working/quintra.gbc;
+# CI uploads that file as the quintra-gbc artifact. Do not `git add -f` it,
+# and do not attach it to a public GitHub Release.
 *.gb
 *.gbc
 *.gba
 rom/**/*.gb
 rom/**/*.gbc
+rom/working/quintra.gbc
 rom/**/*.ram
 rom/**/*.sav
 

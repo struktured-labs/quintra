@@ -213,6 +213,24 @@ canvas:focus-visible { box-shadow: inset 0 0 0 3px var(--gold); }
 .launch:disabled { cursor: wait; }
 .launch[hidden] { display: none; }
 
+/* Shown whenever the browser holds the emulator's AudioContext suspended. */
+.sound-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  background: #080a11e6;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  z-index: 2;
+}
+.sound-banner[hidden] { display: none; }
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

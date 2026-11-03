@@ -17,6 +17,8 @@
 #define HUD_NOTICE_HOOKSHOT 0x7D
 #define HUD_NOTICE_SECONDARY 0x7C
 #define HUD_NOTICE_BOSS_LINK 0x7B
+#define HUD_NOTICE_NOHEAL 0x7A
+#define HUD_NOTICE_MPFULL 0x79
 #define HUD_NOTICE_QUEUE  4
 
 u8 hud_notice_ticks;
@@ -99,6 +101,12 @@ static u8 status_word(u8 status, u8 *row) {
         case HUD_NOTICE_HUNGER:
             row[0]=BGT_AREA_H; row[1]=HUD_STATUS_U; row[2]=BGT_AREA_N;
             row[3]=BGT_AREA_G; row[4]=BGT_AREA_E; row[5]=BGT_AREA_R; return 6;
+        case HUD_NOTICE_NOHEAL:
+            row[0]=BGT_AREA_N; row[1]=BGT_AREA_O; row[2]=BGT_AREA_H;
+            row[3]=BGT_AREA_E; row[4]=BGT_AREA_A; row[5]=BGT_AREA_L; return 6;
+        case HUD_NOTICE_MPFULL:
+            row[0]=BGT_AREA_M; row[1]=BGT_AREA_P; row[2]=BGT_AREA_F;
+            row[3]=HUD_STATUS_U; row[4]=BGT_AREA_L; row[5]=BGT_AREA_L; return 6;
         default:
             row[0]=BGT_AREA_I; row[1]=BGT_AREA_N; row[2]=BGT_AREA_V;
             row[3]=BGT_AREA_E; row[4]=BGT_AREA_R; row[5]=BGT_AREA_T; return 6;
@@ -122,6 +130,7 @@ static u8 notice_palette(u8 kind) {
     }
     if (value == QSTATUS_BURN || value == QSTATUS_BRITTLE
         || value == QSTATUS_BLEED) return 7;
+    if (value == HUD_NOTICE_MPFULL) return 6;
     if (value == QSTATUS_SLOW || value == QSTATUS_STOP
         || value == QSTATUS_HASTE) return 6;
     palette_bg_load(5, notice_violet);
@@ -257,13 +266,28 @@ void hud_show_status(u8 status) BANKED {
     begin_notice(kind, 0);
 }
 
-void hud_show_healing_blocked(void) BANKED {
-    u8 kind = (u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HUNGER);
+static void show_unique_notice(u8 kind) {
     if (hud_notice_ticks) {
         if (!notice_already_queued(kind)) queue_notice(kind, 0);
         return;
     }
     begin_notice(kind, 0);
+}
+
+// Heart/shop refusals under Hunger spell out the rule: HUNGER, NOHEAL.
+void hud_show_healing_blocked(void) BANKED {
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HUNGER));
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_NOHEAL));
+}
+
+// A Hunger curse names both itself and its effect: HUNGER, then NOHEAL.
+void hud_show_hunger_curse(void) BANKED {
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HUNGER));
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_NOHEAL));
+}
+
+void hud_show_mp_full(void) BANKED {
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_MPFULL));
 }
 
 void hud_show_boomerang(void) BANKED {

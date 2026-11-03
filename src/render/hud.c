@@ -4,6 +4,7 @@
 #include <gb/cgb.h>
 
 #include "core/types.h"
+#include "game/curse.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -188,6 +189,17 @@ void hud_redraw_depth(void) BANKED {
     u8 row[2];
     if (hud_notice_ticks) return;
     u8 d = run_state.room_counter;
+    if (player.curse_flags & CURSE_HUNGER) {
+        // Hunger is a timed "hearts cannot heal" curse. While it lasts, the
+        // depth slot shows H + rooms left so the rule never feels like a bug.
+        d = player.curse_rooms;
+        if (d > 9) d = 9;
+        row[0] = BGT_AREA_H;
+        row[1] = (u8)(HUD_DIGIT_0 + d);
+        VBK_REG = 0;
+        set_win_tiles(10, 0, 2, 1, row);
+        return;
+    }
     if (d > 99) d = 99;
     row[0] = (u8)(HUD_DIGIT_0 + (d / 10));
     row[1] = (u8)(HUD_DIGIT_0 + (d % 10));

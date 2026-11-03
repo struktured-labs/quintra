@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Publish a source-pinned Quintra ROM release.
+# Publish release notes for a verified commit without attaching the cartridge.
 #
 # GitHub otherwise defaults a newly created release tag to its default branch,
-# which can differ from the verified release commit. This helper makes the
-# source/binary relationship explicit: preflight, ensure the committed ROM is
-# the one being uploaded, create the remote tag at HEAD, then ask gh to verify
-# that existing tag rather than inventing one.
+# which can differ from the verified release commit. This helper pins the tag
+# to HEAD, then asks gh to verify that existing tag rather than inventing one.
+#
+# rom/working/quintra.gbc is a local build product. It is gitignored and is
+# not a GitHub Release asset. preflight still builds it so the SHA-256 below
+# is the cartridge this commit produced. The tag workflow in
+# .github/workflows/release.yml also creates a Release (itch zip only) when
+# the tag push arrives, so do not run this and that creator against the same
+# new tag.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -34,12 +39,14 @@ if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1;
 fi
 
 make -s preflight
-if ! git diff --quiet HEAD -- "$ROM"; then
-  echo "$ROM differs from HEAD; commit the verified ROM before publishing" >&2
+if [ ! -f "$ROM" ]; then
+  echo "missing built cartridge: $ROM" >&2
   exit 2
 fi
+echo "Built cartridge (not uploaded; CI artifact name: quintra-gbc):"
+sha256sum "$ROM"
 
 COMMIT="$(git rev-parse HEAD)"
 git push origin "$COMMIT:refs/tags/$VERSION"
-env -u GH_TOKEN gh release create "$VERSION" "$ROM" --repo "$REPO" \
+env -u GH_TOKEN gh release create "$VERSION" --repo "$REPO" \
   --verify-tag --target "$COMMIT" --title "Quintra $VERSION" --notes-file "$NOTES_FILE"

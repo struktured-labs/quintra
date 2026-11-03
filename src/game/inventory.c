@@ -188,7 +188,7 @@ static void inventory_aim_enter(void) {
     HIDE_SPRITES;
     cls();
     gotoxy(3, 1); text_write("AIM / B WEAPON");
-    gotoxy(2, 3); text_write(player_penta_aim ? "MODE: PENTA HOLD" : "MODE: CLASSIC");
+    gotoxy(2, 3); text_write(player_penta_aim ? "MODE: HOLD AIM" : "MODE: CLASSIC");
     gotoxy(2, 5); text_write("A: SWITCH MODE");
     gotoxy(2, 7); text_write(player_penta_aim ? "DIAGONAL KEEPS" : "DIAGONAL PICKS");
     gotoxy(2, 8); text_write(player_penta_aim ? "PREVIOUS HEADING" : "VERTICAL HEADING");
@@ -268,7 +268,10 @@ void inventory_enter(void) {
     gotoxy(5, 4); text_write(" VITALS ");
     gotoxy(7, 8); text_write(" ARMS ");
     gotoxy(6, 13); text_write(" QUEST ");
-    gotoxy(1, 17); text_write("SEL B KIT  B BACK");
+    // The run's difficulty stays visible even when the vitals label is
+    // busy naming a status, curse, or boost.
+    gotoxy(13, 13); text_write(RUN_IS_EASY() ? " EASY " : "NORMAL");
+    gotoxy(1, 17); text_write("A TOOL  SEL B KIT");
     inventory_prepare_sprites();
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);

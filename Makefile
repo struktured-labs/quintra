@@ -108,7 +108,10 @@ $(OBJDIR)/src/game/title.o: force-title $(SRCDIR)/game/version.h
 # builds byte-identical.
 force-link:
 
+# The cartridge is gitignored, so a fresh checkout has no rom/working.
+# CI links this target directly and does not run the dirs prerequisite.
 $(BINDIR)/$(PROJECT).gbc: $(OBJS) Makefile force-link
+	@mkdir -p $(BINDIR)
 	@$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	$(LCC) $(LCCFLAGS) -o $@ $(OBJS)
 	@python3 scripts/check_rom_layout.py $(BINDIR)/$(PROJECT)
@@ -164,6 +167,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_pickup_feedback.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_will_tiers.py
+	$(PYBOY_RUN) scripts/test_will_sfx.py
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_status_effects.py

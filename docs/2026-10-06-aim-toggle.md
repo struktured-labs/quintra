@@ -2,10 +2,13 @@
 
 ROM `c4490bad91a71e3b0e7c62ee414d6807f033a4ada272aad4985640de09b87f00`.
 
-START → SELECT opens AIM TEST. A switches CLASSIC / PENTA HOLD. B or START
+START → SELECT opens AIM TEST. A switches CLASSIC / HOLD AIM. The on-screen
+label is `MODE: HOLD AIM` (it used to read `MODE: PENTA HOLD`; the retained
+heading is still the Penta-style spike described in
+`2026-10-06-penta-aim-spike.md`). B or START
 resumes the same room. SELECT continues to Gear, Status, Combat Help, then Pack.
-The mode persists across menu/room changes for this session and resets to Penta
-Hold on ROM restart. No SRAM-format change. The menu shows the right → up-right
+The mode persists across menu/room changes for this session and resets to Hold
+Aim on ROM restart. No SRAM-format change. The menu shows the right → up-right
 → neutral-fire comparison and its expected result for the selected mode.
 
 `test_aim_toggle.py` switches Classic/Penta/Classic through actual menu input

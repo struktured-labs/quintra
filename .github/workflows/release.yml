@@ -66,6 +66,9 @@ jobs:
           QUINTRA_WEB_VERSION: ${{ github.ref_name }}
         run: tools/build_itch_web.sh
 
+      # Never attach build assets (.gbc or the itch web zip, which contains
+      # the cartridge) to a GitHub Release. The cartridge is the quintra-gbc
+      # CI artifact; builds/itch-web is used only by the butler step below.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,12 +76,8 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
           notes_file="docs/releases/${tag}.md"
-          zip="builds/quintra-itch-web-${tag}.zip"
-          test -f "$zip"
           args=(
             release create "$tag"
-            rom/working/quintra.gbc
-            "$zip"
             --repo "${GITHUB_REPOSITORY}"
             --verify-tag
             --target "${GITHUB_SHA}"
@@ -87,7 +86,7 @@ jobs:
           if [ -f "$notes_file" ]; then
             args+=(--notes-file "$notes_file")
           else
-            args+=(--notes "Cartridge and itch web bundle built from ${GITHUB_SHA}.")
+            args+=(--notes "Built from ${GITHUB_SHA}. The standalone cartridge is the quintra-gbc CI artifact and is not attached to this Release.")
           fi
           gh "${args[@]}"
 
