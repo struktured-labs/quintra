@@ -92,12 +92,11 @@ not run on pull requests or on ordinary pushes to `main`.
    `python3 tools/test_itch_version.py` checks tag/default packaging and invalid
    versions before release packaging; it never publishes. It needs a cartridge
    already at `rom/working/quintra.gbc` (`make rom/working/quintra.gbc`).
-4. It opens a GitHub Release titled `Quintra vX.Y.Z` with the zip
-   `tools/build_itch_web.sh` writes. It does not attach `quintra.gbc`.
-   The standalone cartridge from the same build is the `quintra-gbc` CI
-   artifact (also uploaded by the pull-request ROM job). Release notes come
-   from `docs/releases/<tag>.md` when that file exists. The itch zip still
-   contains `quintra.gbc` because the browser player loads it.
+4. It opens a GitHub Release titled `Quintra vX.Y.Z` with **no attached
+   files**: neither `quintra.gbc` nor the itch web zip (which contains the
+   cartridge). The standalone cartridge from the same build is the
+   `quintra-gbc` CI artifact (also uploaded by the pull-request ROM job).
+   Release notes come from `docs/releases/<tag>.md` when that file exists.
 
 ### itch.io
 
