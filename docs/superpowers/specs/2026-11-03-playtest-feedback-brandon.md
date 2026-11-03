@@ -39,3 +39,24 @@ an existing rule visible.
   shootable crystals/rubble. Blue flame = MP wisp (PICKUP_MP) ignored at full MP.
 - Fix: MPFULL notice (blue) when touching a wisp at full MP, rate-limited.
   Pillar art/hit feedback is proposed follow-up, not in this change.
+
+## Refusal sound — SFX_REFUSE (follow-up request)
+Touching something the champion cannot take must *sound* refused, not silent
+or like damage/success.
+- Voice: CH1 only, no sweep, 25% duty (hollow, unlike SFX_WEAK's bright 50%
+  rising ping and the noise-channel hit/death cues). A4 (x=1750) env (9,down,1)
+  for 5 frames, then retrigger E4 (x=1650) env (9,down,2): a falling fourth,
+  "nuh-uh", ~0.2 s audible. Claims CH1 for 14 frames so the music yields
+  CH1 briefly and keeps CH2/CH3/CH4; it never overrides a melody lock.
+- Resident (sfx.c) because the second note rides the existing pend scheduler.
+- Triggers, each rate-limited per item via `ai_data[4]` = 90 frames (~1.5 s)
+  while in contact, reset on stepping away:
+  - heart under Hunger (replaces SFX_WEAK), with HUNGER/NOHEAL notice;
+  - heart at full HP without a usable Moon Flask (was silent);
+  - MP wisp at full MP (replaces SFX_HIT), with MPFULL notice;
+  - shop ware refused (Hunger, cap reached, no Pack space) or not enough coins
+    (replaces SFX_HURT; the shop latch became the same 90-frame countdown);
+  - coin at a full 999 purse (was silent).
+- Evidence: `evidence/fixes/refuse-sfx-triggers.json` (sfx_play hook log),
+  `evidence/fixes/refuse_sfx.wav` (480 kHz capture, CH1 routed alone, DC
+  removed, 5 ms fades).
