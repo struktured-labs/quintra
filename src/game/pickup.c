@@ -428,15 +428,30 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         // making paid stock look like broken loose currency. ai_data[4] is a
         // contact latch for the reject
         // buzz; reset it only after the player actually steps away.
+        // Since the refusal cue it is also a ~1.5 s countdown, so standing
+        // on an unaffordable ware repeats SFX_REFUSE at the notice cadence.
         if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        else if (e->ai_data[4]) e->ai_data[4]--;
         if (e->state > 0) e->state--;
         return;
     }
     // Hunger deliberately leaves recovery on the floor. Re-arm its one-shot
     // rejection cue only after the champion steps away, so standing on a
     // heart cannot buzz or refill the notice queue every frame.
+    // ai_data[4] is a rejection-cue cooldown: cleared when the champion
+    // steps away, otherwise counted down so standing on a blocked heart
+    // re-fires the HUNGER notice at most once every ~1.5 s.
     if (e->ai_data[0] == PICKUP_HEART_HALF
-        && !aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        || e->ai_data[0] == PICKUP_MP
+        || e->ai_data[0] == PICKUP_COIN_1
+        || e->ai_data[0] == PICKUP_COIN_5) {
+        if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        else if (e->ai_data[4]) e->ai_data[4]--;
+    }
+    // Hunger-blocked hearts draw in the pale bone palette (OBJ 0) so they
+    // read as "not available" instead of as a broken pickup.
+    if (e->ai_data[0] == PICKUP_HEART_HALF)
+        e->palette = STATUS_PLAYER_HEALING_BLOCKED() ? 0x00 : 0x04;
     if (e->ai_data[0] == PICKUP_MERCHANT) {
         // The floor labels and HUD identify each price; this one small thought
         // bubble tells a nearby player that the character is actually a
@@ -654,6 +669,15 @@ static void grant_special_item(u8 item_id) {
     }
 }
 
+// Audible "can't take that" (SFX_REFUSE), at most once per ~1.5 s per
+// item while in contact. Returns 1 when the cue fired this frame.
+static u8 refuse_cue(u8 i) {
+    if (entities[i].ai_data[4]) return 0;
+    entities[i].ai_data[4] = 90;
+    sfx_play(SFX_REFUSE);
+    return 1;
+}
+
 u8 pickup_check_player_collision(void) BANKED {
     u8 i;
     u8 any = 0;
@@ -683,17 +707,18 @@ u8 pickup_check_player_collision(void) BANKED {
                     // MP, making old heart drops tactically useful to every
                     // champion. If both gauges are full, leave it in place.
                     if (STATUS_PLAYER_HEALING_BLOCKED()) {
-                        if (!entities[i].ai_data[4]) {
-                            entities[i].ai_data[4] = 1;
-                            hud_show_healing_blocked();
-                            sfx_play(SFX_WEAK);
-                        }
+                        if (refuse_cue(i)) hud_show_healing_blocked();
                         any = 1;
                         continue;
                     }
                     if (player.hp >= player.hp_max) {
                         if (!player_has_item(ITEM_ID_MOON_FLASK)
-                            || player.mp >= player.mp_max) continue;
+                            || player.mp >= player.mp_max) {
+                            // Full health: the heart stays. Say so once per
+                            // ~1.5 s instead of ignoring the contact silently.
+                            refuse_cue(i);
+                            continue;
+                        }
                         player.mp++;
                         hud_redraw_mp();
                         sfx_play(SFX_HEART);
@@ -708,13 +733,21 @@ u8 pickup_check_player_collision(void) BANKED {
                     // Match capped hearts/MP: a full purse must not eat a
                     // visible coin, play the happy chime, and leave the HUD
                     // unchanged. Keep it available until the player spends.
-                    if (player.coins >= COIN_CAP) continue;
+                    if (player.coins >= COIN_CAP) {
+                        // Full purse: refuse audibly at the notice cadence.
+                        refuse_cue(i);
+                        continue;
+                    }
                     player.coins++;
                     hud_redraw_coins();
                     sfx_play(SFX_COIN);
                     break;
                 case PICKUP_COIN_5:
-                    if (player.coins >= COIN_CAP) continue;
+                    if (player.coins >= COIN_CAP) {
+                        // Full purse: refuse audibly at the notice cadence.
+                        refuse_cue(i);
+                        continue;
+                    }
                     player.coins = (u16)(player.coins + 5);
                     if (player.coins > COIN_CAP) player.coins = COIN_CAP;
                     hud_redraw_coins();
@@ -768,7 +801,12 @@ u8 pickup_check_player_collision(void) BANKED {
                     // with a cheerful chime but no visible HUD change reads
                     // as a broken pickup. Leave it available until it can
                     // actually restore one point.
-                    if (player.mp >= player.mp_max) continue;
+                    if (player.mp >= player.mp_max) {
+                        // Say why the wisp stays: it is a magic refill,
+                        // not an enemy, and MP is already full.
+                        if (refuse_cue(i)) hud_show_mp_full();
+                        continue;
+                    }
                     player.mp++;
                     hud_redraw_mp();
                     sfx_play_reward(SFX_REWARD_MAGIC);
@@ -931,10 +969,9 @@ u8 pickup_check_player_collision(void) BANKED {
                                 || ware == WARE_BOOMERANG || ware == WARE_HOOKSHOT
                                 || ware == WARE_MORNINGSTAR || ware == WARE_BOMBS)
                             && !player_has_inventory_space())) {
-                        if (entities[i].ai_data[4] == 0) {
-                            sfx_play(SFX_HURT);
-                            entities[i].ai_data[4] = 1;
-                        }
+                        if (refuse_cue(i) && ware == WARE_HEART
+                            && STATUS_PLAYER_HEALING_BLOCKED())
+                            hud_show_healing_blocked();
                         any = 1;
                         continue;
                     }
@@ -1059,10 +1096,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 break;
                         }
                         entity_kill(i);
-                    } else if (entities[i].ai_data[4] == 0) {
-                        sfx_play(SFX_HURT);
-                        entities[i].ai_data[4] = 1; // once until contact ends
-                    }
+                    } else refuse_cue(i);           // not enough coins
                     any = 1;
                     continue;
                 }

@@ -1,0 +1,58 @@
+{
+ "before_gesture": {
+  "master": "running",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "after_enter_launch": {
+  "master": "running",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "banner_after_launch": false,
+ "after_forced_suspend": {
+  "master": "suspended",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "banner_while_suspended": true,
+ "after_click": {
+  "master": "running",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "banner_after_click": false,
+ "after_suspend_then_key": {
+  "master": "running",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "banner_after_key": false,
+ "safari_interrupted": {
+  "master": "interrupted",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "banner_interrupted": true,
+ "after_tap_from_interrupted": {
+  "master": "running",
+  "channel1": null,
+  "channel2": null,
+  "channel3": null,
+  "channel4": null
+ },
+ "banner_after_tap": false
+}
+

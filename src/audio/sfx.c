@@ -23,6 +23,7 @@
 #define PEND_SIGIL_NOTE5 14
 #define PEND_SIGIL_NOTE6 15
 #define PEND_PORTAL_ARRIVE 16
+#define PEND_REFUSE_NOTE2 17
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -204,6 +205,16 @@ void sfx_play(u8 id) {
             sfx_claim_channels(70, 16);
             melody_lock(MELODY_PRIORITY_MAJOR, 70);
             break;
+        case SFX_REFUSE:
+            // "Nuh-uh": a dull 25%-duty A4 then a quick drop to E4 (a fourth
+            // down), no sweep, mid-quiet envelopes. Falling and hollow where
+            // SFX_WEAK rises bright on 50% duty, and tonal where hits are
+            // noise. ~0.2 s of CH1 only, so music keeps CH2/CH3/CH4.
+            ch1(0x00, 0x40, 0x91, 1750);              // A4, env (9,down,1)
+            pend_kind = PEND_REFUSE_NOTE2;
+            pend_timer = 5;
+            sfx_claim_channels(14, 0);
+            break;
         default:
             break;
     }
@@ -234,6 +245,11 @@ void sfx_tick(void) {
     switch (pend_kind) {
         case PEND_PORTAL_ARRIVE:
             ch1(0x26, 0x40, 0xA2, 1720);
+            break;
+        case PEND_REFUSE_NOTE2:
+            NR12_REG = 0x92;                           // retrigger, env (9,down,2)
+            NR13_REG = (u8)(1650 & 0xFF);              // E4
+            NR14_REG = (u8)(0x80 | (1650 >> 8));
             break;
         case PEND_COIN_NOTE2:
             NR13_REG = (u8)(1949 & 0xFF);

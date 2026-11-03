@@ -44,11 +44,12 @@ void dungeon_tools_draw_pack(void) BANKED {
     };
     gotoxy(3, 15); text_write("                ");
     gotoxy(3, 15);
-    text_write("<>");
+    // Labelled as a TOOL (consumable, A uses it here) so it is not read as
+    // the QUEST goal above it or the B-button kit chosen with SELECT.
+    text_write("TOOL ");
     text_write(tool_names[selected_tool]);
     text_write(" x");
     text_u16(tool_count(tool_ids[selected_tool]));
-    text_write(" A");
     set_sprite_tile(8, icons[selected_tool]);
     set_sprite_prop(8, 3);
     // The tool and Oath glyphs occupy consecutive PACK rows. Keep the tool

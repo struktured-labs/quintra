@@ -1,0 +1,69 @@
+{
+ "sfx_refuse_id": 17,
+ "sfx_play_addr": "0xac3",
+ "heart_hunger": {
+  "refuse_frames": [
+   0,
+   90,
+   180
+  ],
+  "other": [
+   "SFX_PUZZLE"
+  ]
+ },
+ "mp_full": {
+  "refuse_frames": [
+   0,
+   90,
+   180
+  ]
+ },
+ "heart_full_hp": {
+  "refuse_frames": [
+   0,
+   90,
+   180
+  ],
+  "other": [
+   "SFX_PUZZLE"
+  ]
+ },
+ "heart_full_hp_after_step_away": {
+  "refuse_frames": [
+   0
+  ],
+  "other": []
+ },
+ "coin_full_purse": {
+  "refuse_frames": [
+   0,
+   90,
+   180
+  ],
+  "other": [
+   "SFX_PUZZLE"
+  ]
+ },
+ "shop_no_money": {
+  "refuse_frames": [
+   0,
+   96,
+   195
+  ],
+  "other": [
+   "SFX_PUZZLE"
+  ]
+ },
+ "shop_heart_hunger": {
+  "refuse_frames": [
+   0,
+   95,
+   194
+  ],
+  "other": [
+   "SFX_HEART",
+   "SFX_PUZZLE",
+   "SFX_HEART"
+  ]
+ }
+}

@@ -19,6 +19,7 @@
   const exportSave = document.querySelector("#export-save");
   const importSave = document.querySelector("#import-save");
   const saveFile = document.querySelector("#save-file");
+  const soundBanner = document.querySelector("#sound-banner");
   const gamepadStatus = document.querySelector("#gamepad-status");
   const touchControls = document.querySelector(".touch-controls");
   const touchButtons = Array.from(document.querySelectorAll("[data-touch-input]"));
@@ -37,6 +38,11 @@
   let gamepadStatusText = "";
   let resumeAfterVisibility = false;
   let visibilityTask = Promise.resolve();
+  let gamepadPollHandle = 0;
+  const gamepadButtonsDown = new Map();
+  // Standard-mapping indices: 0/1 are the two lower face buttons (Nintendo
+  // pads report A as 1, Xbox-style pads as 0) and 9 is Start/Plus.
+  const launchGamepadButtons = [0, 1, 9];
   const touchPointers = new Map();
   const touchState = {
     UP: false, RIGHT: false, DOWN: false, LEFT: false,
@@ -245,20 +251,123 @@
     await api.loadROM("quintra.gbc", { fileName: "quintra.gbc" });
     ready = true;
     launch.querySelector("strong").textContent = "Enter the Riftwild";
-    launch.querySelector("span").textContent = "Click to start with sound";
+    launch.querySelector("span").textContent = "Click, tap, or press A / Start to play with sound";
     launch.setAttribute("aria-busy", "false");
     launch.disabled = false;
     exportSave.disabled = false;
     importSave.disabled = false;
-    setStatus("Ready — click to play");
+    setStatus("Ready — click or press Start to play");
+  }
+
+  // WasmBoy keeps one AudioContext per GB channel. Browsers create them
+  // suspended outside a user gesture and may suspend ("interrupted" on
+  // Safari) them again after tab switches, fullscreen or audio-route changes.
+  function audioContexts() {
+    let channels = {};
+    try { channels = api._getAudioChannels() || {}; } catch (error) { return []; }
+    return Object.values(channels)
+      .map(channel => channel && channel.audioContext ? { channel, context: channel.audioContext } : null)
+      .filter(Boolean);
+  }
+
+  function audioRunning() {
+    const contexts = audioContexts();
+    return contexts.length > 0 && contexts.every(({ context }) => context.state === "running");
+  }
+
+  function refreshSoundBanner() {
+    if (!soundBanner) return;
+    soundBanner.hidden = !started || muted || audioRunning();
+    if (!soundBanner.hidden) ensureGamepadPolling();
+  }
+
+  // Safari/WebKit: prime a suspended or "interrupted" webkitAudioContext
+  // with a one-sample silent buffer inside the gesture; iOS will not unlock
+  // output otherwise, even after resume() resolves.
+  function primeContext(context) {
+    try {
+      const buffer = context.createBuffer(1, 1, context.sampleRate || 44100);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      if (source.start) source.start(0); else if (source.noteOn) source.noteOn(0);
+    } catch (error) { /* priming is best effort */ }
+  }
+
+  async function resumeAudio() {
+    if (!api) return false;
+    // Creates the contexts on first use (inside the gesture when possible).
+    try { api.resumeAudioContext(); } catch (error) { /* contexts not created yet */ }
+    // WasmBoy only resumes "suspended"; Safari also reports "interrupted".
+    // resume() is called synchronously here so it stays inside the gesture.
+    const pending = audioContexts()
+      .filter(({ context }) => context.state !== "running" && context.state !== "closed")
+      .map(async ({ channel, context }) => {
+        primeContext(context);
+        try {
+          await context.resume();
+          // Restart the channel clock so queued samples do not lag behind.
+          channel.audioPlaytime = context.currentTime;
+        } catch (error) {
+          console.warn("Could not resume audio", error);
+        }
+      });
+    await Promise.all(pending);
+    refreshSoundBanner();
+    return audioRunning();
+  }
+
+  // No de-duplication: a resume attempt started outside a gesture (focus,
+  // visibilitychange) must not swallow the next real tap or key press.
+  function unlockAudio() {
+    if (audioRunning()) { refreshSoundBanner(); return Promise.resolve(true); }
+    return resumeAudio();
+  }
+
+  function watchAudioState() {
+    audioContexts().forEach(({ context }) => {
+      if (context.__quintraWatched) return;
+      context.__quintraWatched = true;
+      if (context.addEventListener) context.addEventListener("statechange", refreshSoundBanner);
+      else context.onstatechange = refreshSoundBanner;
+    });
+    refreshSoundBanner();
+  }
+
+  function pollGamepadButtons() {
+    gamepadPollHandle = 0;
+    let pressedNow = false;
+    let launchPressed = false;
+    getConnectedGamepads().forEach(gamepad => {
+      const previous = gamepadButtonsDown.get(gamepad.index) || [];
+      const current = gamepad.buttons.map(button => button.pressed || button.value > 0.5);
+      current.forEach((down, index) => {
+        if (!down || previous[index]) return;
+        pressedNow = true;
+        if (launchGamepadButtons.includes(index)) launchPressed = true;
+      });
+      gamepadButtonsDown.set(gamepad.index, current);
+    });
+    if (launchPressed && ready && !started) start().catch(fail);
+    else if (pressedNow) unlockAudio();
+    // Only watch raw buttons while there is something to do: before launch,
+    // or while sound is still suspended. Gameplay input stays on WasmBoy's
+    // own once-per-frame ResponsiveGamepad poll.
+    if (!started || !audioRunning()) ensureGamepadPolling();
+  }
+
+  function ensureGamepadPolling() {
+    if (gamepadPollHandle || typeof requestAnimationFrame !== "function") return;
+    gamepadPollHandle = requestAnimationFrame(pollGamepadButtons);
   }
 
   async function start() {
     if (!ready || started) return;
     started = true;
     launch.hidden = true;
-    await api.resumeAudioContext();
+    await unlockAudio();
     await api.play();
+    watchAudioState();
     canvas.focus();
     setStatus("Playing");
   }
@@ -333,6 +442,8 @@
     muted = !muted;
     const master = api._getAudioChannels().master;
     if (muted) master.mute(); else master.unmute();
+    if (!muted) unlockAudio();
+    refreshSoundBanner();
     mute.textContent = muted ? "Unmute" : "Mute";
     mute.setAttribute("aria-pressed", String(muted));
     canvas.focus();
@@ -357,6 +468,7 @@
   }
 
   document.addEventListener("fullscreenchange", () => {
+    if (started) unlockAudio();
     fullscreen.textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
     requestAnimationFrame(updateFullscreenLayout);
   });
@@ -368,7 +480,17 @@
   importSave.addEventListener("click", () => saveFile.click());
   saveFile.addEventListener("change", () => importCartridgeSave(saveFile.files[0]));
 
+  // Any gesture may (re)unlock audio. Capture phase so handlers that stop
+  // propagation (touch D-pad, launch) still count.
+  ["keydown", "pointerdown", "touchstart", "touchend", "mousedown", "click"].forEach(type => {
+    document.addEventListener(type, () => { if (started) unlockAudio(); }, { capture: true, passive: true });
+  });
+  if (soundBanner) soundBanner.addEventListener("click", () => { unlockAudio(); canvas.focus(); });
+  window.addEventListener("focus", () => { if (started) unlockAudio(); });
+  ensureGamepadPolling();
+
   window.addEventListener("gamepadconnected", event => {
+    ensureGamepadPolling();
     if (activeGamepadIndex === null) activeGamepadIndex = event.gamepad.index;
     updateGamepadStatus(event.gamepad);
   });
@@ -379,6 +501,10 @@
   });
 
   document.addEventListener("keydown", event => {
+    if (!started && ready && (event.code === "Enter" || event.code === "KeyX")
+        && document.activeElement !== launch) {
+      start().catch(fail);
+    }
     if (started && handledKeys.has(event.code)) event.preventDefault();
   }, { passive: false });
 
@@ -397,6 +523,7 @@
         await api.play();
         setStatus("Playing");
       }
+      if (!hidden && started) await unlockAudio();
     }).catch(error => console.error("Could not update player visibility", error));
   });
 
