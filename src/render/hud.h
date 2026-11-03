@@ -36,6 +36,8 @@ void hud_low_hp_pulse(u8 phase) BANKED;
 void hud_show_stat_gain(u8 stat, u8 amount) BANKED;
 void hud_show_status(u8 status) BANKED;
 void hud_show_healing_blocked(void) BANKED;
+void hud_show_hunger_curse(void) BANKED;
+void hud_show_mp_full(void) BANKED;
 void hud_show_boomerang(void) BANKED;
 void hud_show_hookshot(void) BANKED;
 void hud_show_secondary(u8 bomb) BANKED;

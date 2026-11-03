@@ -435,8 +435,18 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // Hunger deliberately leaves recovery on the floor. Re-arm its one-shot
     // rejection cue only after the champion steps away, so standing on a
     // heart cannot buzz or refill the notice queue every frame.
+    // ai_data[4] is a rejection-cue cooldown: cleared when the champion
+    // steps away, otherwise counted down so standing on a blocked heart
+    // re-fires the HUNGER notice at most once every ~1.5 s.
     if (e->ai_data[0] == PICKUP_HEART_HALF
-        && !aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        || e->ai_data[0] == PICKUP_MP) {
+        if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        else if (e->ai_data[4]) e->ai_data[4]--;
+    }
+    // Hunger-blocked hearts draw in the pale bone palette (OBJ 0) so they
+    // read as "not available" instead of as a broken pickup.
+    if (e->ai_data[0] == PICKUP_HEART_HALF)
+        e->palette = STATUS_PLAYER_HEALING_BLOCKED() ? 0x00 : 0x04;
     if (e->ai_data[0] == PICKUP_MERCHANT) {
         // The floor labels and HUD identify each price; this one small thought
         // bubble tells a nearby player that the character is actually a
@@ -684,7 +694,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // champion. If both gauges are full, leave it in place.
                     if (STATUS_PLAYER_HEALING_BLOCKED()) {
                         if (!entities[i].ai_data[4]) {
-                            entities[i].ai_data[4] = 1;
+                            entities[i].ai_data[4] = 90;
                             hud_show_healing_blocked();
                             sfx_play(SFX_WEAK);
                         }
@@ -768,7 +778,16 @@ u8 pickup_check_player_collision(void) BANKED {
                     // with a cheerful chime but no visible HUD change reads
                     // as a broken pickup. Leave it available until it can
                     // actually restore one point.
-                    if (player.mp >= player.mp_max) continue;
+                    if (player.mp >= player.mp_max) {
+                        // Say why the wisp stays: it is a magic refill,
+                        // not an enemy, and MP is already full.
+                        if (!entities[i].ai_data[4]) {
+                            entities[i].ai_data[4] = 90;
+                            hud_show_mp_full();
+                            sfx_play(SFX_HIT);
+                        }
+                        continue;
+                    }
                     player.mp++;
                     hud_redraw_mp();
                     sfx_play_reward(SFX_REWARD_MAGIC);
@@ -933,6 +952,9 @@ u8 pickup_check_player_collision(void) BANKED {
                             && !player_has_inventory_space())) {
                         if (entities[i].ai_data[4] == 0) {
                             sfx_play(SFX_HURT);
+                            if (ware == WARE_HEART
+                                && STATUS_PLAYER_HEALING_BLOCKED())
+                                hud_show_healing_blocked();
                             entities[i].ai_data[4] = 1;
                         }
                         any = 1;

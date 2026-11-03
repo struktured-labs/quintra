@@ -116,6 +116,11 @@ static void render(void) {
         text_u16((u16)c->base_stats.spd);
         text_write(class_select_easy_mode ? " SEL>NORMAL" : " SEL>EASY");
     }
+    // One-line meaning of the SELECT toggle: EASY drops more hearts, makes
+    // status procs rarer, and never applies permanent curses.
+    gotoxy(0, 13);
+    text_write(class_select_easy_mode ? "EASY MORE HP FEW HEX"
+                                      : "SEL EASY MORE HEARTS");
     gotoxy(1, 17); text_write("A CHOOSE   B BACK");
 }
 
