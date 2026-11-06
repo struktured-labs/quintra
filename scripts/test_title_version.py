@@ -141,8 +141,9 @@ def main():
         11: "B 8 SHOTS BRIEF WARD",
         12: "TRAIT FAST MOVEMENT",
         14: "HEALTH 14 MAGIC 4",
+        13: "NORMAL  SEL FOR EASY",
         15: "ATTACK 2 ARMOR 1",
-        16: "SPEED 6 SEL>EASY",
+        16: "SPEED 6 MODE NORMAL",
     }
     for row, label in class_rows.items():
         expected_row = font_tiles(label)
@@ -158,10 +159,15 @@ def main():
         )
     pb.button("select")
     pb.tick(8)
-    easy_mode = font_tiles("SPEED 6 SEL>NORMAL")
+    easy_mode = font_tiles("SPEED 6 MODE EASY")
     assert list(pb.memory[0x9800 + 16 * 32:
                           0x9800 + 16 * 32 + len(easy_mode)]) == easy_mode, (
-        "class-select SELECT did not expose Easy as an explicit mode"
+        "class-select SELECT did not switch the current-mode label to EASY"
+    )
+    easy_hint = font_tiles("EASY MORE HP FEW HEX")
+    assert list(pb.memory[0x9800 + 13 * 32:
+                          0x9800 + 13 * 32 + len(easy_hint)]) == easy_hint, (
+        "class-select Easy page lost its current-mode explanation"
     )
 
     # A browser emulator may retain VRAM across cartridge reloads, and real

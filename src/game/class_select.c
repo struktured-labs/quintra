@@ -114,13 +114,16 @@ static void render(void) {
         text_write(" ARMOR "); text_u16((u16)c->base_stats.def);
         gotoxy(0, 16); text_write("SPEED ");
         text_u16((u16)c->base_stats.spd);
-        text_write(class_select_easy_mode ? " SEL>NORMAL" : " SEL>EASY");
+        // Name the current mode with glyphs font_min can actually draw.
+        // "SEL>NORMAL" rendered as "SEL NORMAL" and read as the current
+        // choice while the toggle was already on Easy.
+        text_write(class_select_easy_mode ? " MODE EASY" : " MODE NORMAL");
     }
-    // One-line meaning of the SELECT toggle: EASY drops more hearts, makes
-    // status procs rarer, and never applies permanent curses.
+    // Current mode first. The Normal line says how to reach Easy without
+    // looking like Easy is already selected. font_min has no '>'.
     gotoxy(0, 13);
     text_write(class_select_easy_mode ? "EASY MORE HP FEW HEX"
-                                      : "SEL EASY MORE HEARTS");
+                                      : "NORMAL  SEL FOR EASY");
     gotoxy(1, 17); text_write("A CHOOSE   B BACK");
 }
 
