@@ -190,6 +190,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_dungeon_districts.py
 	$(PYBOY_RUN) scripts/test_continuous_districts.py
 	$(PYBOY_RUN) scripts/test_difficulty_mode.py
+	$(PYBOY_RUN) scripts/test_difficulty_persist.py
 	$(PYBOY_RUN) scripts/test_title_stage_warp.py
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
 	$(PYBOY_RUN) scripts/test_sanctuary_escape.py
