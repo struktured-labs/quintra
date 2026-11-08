@@ -4,8 +4,13 @@
 LCD-frame boots are not a fair compare: a faster cartridge completes more
 updates before a frame-counted boot returns. This script waits until
 room_tick is entered, writes the fixture there (before that update mutates
-it), then snapshots on the 20th later entry. Both ROMs therefore simulate
-the same 20 updates from the same entities, RNG, camera, and iframe seed.
+it), then snapshots on a later entry. Both ROMs therefore simulate the same
+number of updates from the same entities, RNG, camera, and iframe seed.
+
+The default gate is 20 updates on every injected scene. A second pass runs
+200 updates on the collision fixtures (player shots that miss, player shots
+that overlap, and sixteen awake crawlers) so a disagreement that shows up
+only after the short window still fails the script.
 
 Natural and fixed-crawler scenes keep whatever the boot spawned, so they
 are reported but not required to match. Injected scenes are the gate.
@@ -22,6 +27,12 @@ BEFORE_ROM = Path(os.environ.get("QUINTRA_BEFORE_ROM", "/tmp/quintra-before.gbc"
 BEFORE_NOI = Path(os.environ.get("QUINTRA_BEFORE_NOI", "/tmp/quintra-before.noi"))
 AFTER_ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.gbc"))
 UPDATES = 20
+LONG_UPDATES = 200
+LONG_SCENES = (
+    "player_shots_miss",
+    "player_shots_overlap",
+    "walkers16_pinned",
+)
 GATED = {
     "empty_room",
     "dense12_stationary",
@@ -68,7 +79,7 @@ def first_diff(a, b):
     return "length"
 
 
-def run_scene(bench, rom, sym, setup):
+def run_scene(bench, rom, sym, setup, updates):
     bank, addr = bench.cpu_site(sym["_room_tick"])
     state = {"phase": "wait", "seen": 0, "snap": None, "info": None}
 
@@ -84,7 +95,7 @@ def run_scene(bench, rom, sym, setup):
             pb.memory[sym["_g_hitstop"]] = 0
             pb.memory[sym["_player"] + 15] = 80
             # will_charge ticks once per room update and drifts during the
-            # frame-counted boot. Seed it so the 20 measured updates start
+            # frame-counted boot. Seed it so the measured updates start
             # from the same meter.
             pb.memory[sym["_player"] + 42] = 0
             if "_will_charge_fraction" in sym:
@@ -97,7 +108,7 @@ def run_scene(bench, rom, sym, setup):
             state["seen"] = 0
             return
         state["seen"] += 1
-        if state["seen"] == UPDATES:
+        if state["seen"] == updates:
             state["snap"] = take_snapshot(pb, sym)
             state["phase"] = "done"
 
@@ -112,8 +123,8 @@ def run_scene(bench, rom, sym, setup):
         while state["phase"] != "done":
             pb.tick(1, render=False, sound=False)
             guard += 1
-            if guard > UPDATES * 6 + 30:
-                raise RuntimeError(f"did not finish {UPDATES} aligned updates")
+            if guard > updates * 8 + 40:
+                raise RuntimeError(f"did not finish {updates} aligned updates")
         pb.hook_deregister(bank, addr)
         return state["snap"]
     finally:
@@ -130,22 +141,29 @@ def main():
             raise SystemExit(f"{name} moved in WRAM")
     catalog = {item[0]: item[1] for item in bench.build_scenes(None)}
     failed = False
-    for name, setup in catalog.items():
-        print(f"[equiv] {name}", flush=True)
-        before = run_scene(bench, BEFORE_ROM, before_syms, setup)
-        after = run_scene(bench, AFTER_ROM, after_syms, setup)
+
+    def compare(name, setup, updates, gated):
+        nonlocal failed
+        print(f"[equiv] {name} updates={updates}", flush=True)
+        before = run_scene(bench, BEFORE_ROM, before_syms, setup, updates)
+        after = run_scene(bench, AFTER_ROM, after_syms, setup, updates)
         scene_failed = False
         for field in before:
             if before[field] != after[field]:
                 scene_failed = True
                 print(f"  DIFF {field} {first_diff(before[field], after[field])}",
                       flush=True)
-        if name not in GATED:
+        if not gated:
             print("  (boot-seeded scene, not a gate)", flush=True)
-            continue
+            return
         failed = failed or scene_failed
         if not scene_failed:
-            print(f"  match after {UPDATES} room updates", flush=True)
+            print(f"  match after {updates} room updates", flush=True)
+
+    for name, setup in catalog.items():
+        compare(name, setup, UPDATES, name in GATED)
+    for name in LONG_SCENES:
+        compare(name, catalog[name], LONG_UPDATES, True)
     if failed:
         raise SystemExit(1)
     print("[equiv] PASS", flush=True)
