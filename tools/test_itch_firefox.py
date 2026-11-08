@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import time
+from pathlib import Path
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -22,6 +23,7 @@ def main() -> None:
     parser.add_argument("--portrait", action="store_true")
     parser.add_argument("--firefox-binary")
     parser.add_argument("--headed", action="store_true")
+    parser.add_argument("--series-out", help="write the 50 ms audio sample series as JSON")
     args = parser.parse_args()
     if args.duration < 3:
         parser.error("--duration must be at least 3 seconds")
@@ -38,7 +40,12 @@ def main() -> None:
     options.set_preference("media.autoplay.blocking_policy", 0)
     driver = webdriver.Firefox(options=options)
     try:
-        driver.set_window_size(1200, 900)
+        # Headless portrait uses the MOZ_HEADLESS screen. The window size has
+        # to match that screen or the pre-fullscreen layout is landscape.
+        if args.portrait:
+            driver.set_window_size(500, 814)
+        else:
+            driver.set_window_size(1200, 900)
         driver.get(args.url)
         wait = WebDriverWait(driver, 30)
         wait.until(lambda browser: browser.find_element(By.ID, "status").text.startswith("Ready"))
@@ -55,6 +62,9 @@ def main() -> None:
         )
         driver.find_element(By.ID, "launch").click()
         wait.until(lambda browser: browser.find_element(By.ID, "status").text == "Playing")
+        audio_before_hide = driver.execute_script(
+            "return window.WasmBoy.WasmBoy.getAudioDiagnostics();"
+        )
         driver.execute_script(
             """
             window.__quintraVisibilityEvents = [];
@@ -69,6 +79,9 @@ def main() -> None:
         time.sleep(0.5)
         driver.switch_to.window(game_window)
         time.sleep(1)
+        audio_after_show = driver.execute_script(
+            "return window.WasmBoy.WasmBoy.getAudioDiagnostics();"
+        )
         lifecycle = driver.execute_script(
             """
             return {
@@ -80,17 +93,24 @@ def main() -> None:
         )
         driver.execute_script(
             """
+            window.__quintraGateT0 = performance.now();
             window.__quintraGateSamples = [];
             window.__quintraGateTimer = setInterval(() => {
               const d = window.WasmBoy.WasmBoy.getAudioDiagnostics();
-              if (!d || !d.worklet) return;
+              if (!d || !d.worklet || !d.producer) return;
               window.__quintraGateSamples.push({
+                tMs: Math.round(performance.now() - window.__quintraGateT0),
                 underruns: d.worklet.underrunFrames,
                 drops: d.worklet.droppedFrames,
                 trim: d.worklet.driftTrim,
                 rate: d.worklet.playbackRate,
                 queue: d.worklet.queuedSeconds,
-                timeouts: d.producer.ackTimeouts
+                timeouts: d.producer.ackTimeouts,
+                pacingMs: d.producer.pacingDelayMs,
+                projectedMs: d.producer.projectedLatencySeconds == null
+                  ? null : d.producer.projectedLatencySeconds * 1000,
+                readingAgeMs: d.producer.readingAgeMs,
+                blocksInFlight: d.producer.blocksInFlight
               });
             }, 50);
             """
@@ -173,6 +193,32 @@ def main() -> None:
     worklet = final["worklet"]
     producer = final["producer"]
     samples = result.pop("samples")
+    if args.series_out:
+        Path(args.series_out).write_text(json.dumps({
+            "beforeHide": audio_before_hide,
+            "afterShow": audio_after_show,
+            "baseline": baseline,
+            "samples": samples,
+        }, indent=2))
+
+    def counter(diag, key):
+        block = (diag or {}).get("worklet") or {}
+        return block.get(key)
+
+    increases = []
+    previous = None
+    for sample in samples:
+        count = sample["underruns"]
+        if previous is None or count != previous:
+            increases.append({
+                "tMs": sample["tMs"],
+                "underruns": count,
+                "queueMs": None if sample["queue"] is None else sample["queue"] * 1000,
+                "rate": sample["rate"],
+                "pacingMs": sample["pacingMs"],
+                "projectedMs": sample["projectedMs"],
+            })
+            previous = count
     report = {
         "audioChecked": not args.layout_only,
         "status": result["status"],
@@ -186,6 +232,10 @@ def main() -> None:
     if not args.layout_only:
         report.update({
             "sampleRate": result["sampleRate"],
+            "underrunsBeforeHide": counter(audio_before_hide, "underrunFrames"),
+            "underrunsAfterShow": counter(audio_after_show, "underrunFrames"),
+            "baselineUnderrunFrames": baseline["worklet"]["underrunFrames"],
+            "finalUnderrunFrames": worklet["underrunFrames"],
             "underrunDelta": worklet["underrunFrames"] - baseline["worklet"]["underrunFrames"],
             "dropDelta": worklet["droppedFrames"] - baseline["worklet"]["droppedFrames"],
             "ackTimeoutDelta": producer["ackTimeouts"] - baseline["producer"]["ackTimeouts"],
@@ -194,6 +244,9 @@ def main() -> None:
             "finalPlaybackRate": worklet["playbackRate"],
             "minimumPlaybackRate": min(sample["rate"] for sample in samples),
             "maximumPlaybackRate": max(sample["rate"] for sample in samples),
+            "minimumQueueMs": min(sample["queue"] for sample in samples) * 1000,
+            "underrunChanges": increases,
+            "hostLoad": Path("/proc/loadavg").read_text().strip(),
         })
     failures = []
     if report["status"] != "Playing":
@@ -202,7 +255,7 @@ def main() -> None:
         "disabled": False,
         "busy": "false",
         "title": "Enter the Riftwild",
-        "detail": "Click to start with sound",
+        "detail": "Click, tap, or press A / Start to play with sound",
     }:
         failures.append("ready cartridge did not expose the sound-enabled launch action")
     if report["lifecycle"] != {
