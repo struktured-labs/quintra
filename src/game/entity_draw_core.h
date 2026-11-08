@@ -11,6 +11,8 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     // When a crowded scanline or several 16x16 bodies exceed hardware OAM,
     // every entity receives display priority on following frames instead of
     // later-spawned bullets/enemies becoming permanently invisible.
+    // A pointer step here was measured slower than this multiply on the
+    // inactive-slot scan, so the index stays.
     u8 slot = (u8)((i + (entity_anim_counter >> 1))
         & (MAX_ENTITIES - 1));
     entity_t *e = &entities[slot];
@@ -81,23 +83,20 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         }
         if (flash) e->ai_data[7]--;
         if (flash && (e->ai_data[7] & 1)) {
-            move_sprite(oam, 0, 0);
-            move_sprite((u8)(oam + 1), 0, 0);
-            move_sprite((u8)(oam + 2), 0, 0);
-            move_sprite((u8)(oam + 3), 0, 0);
+            // move_sprite(n, 0, 0) writes Y and X only.
+            OAM_item_t *it = &shadow_OAM[oam];
+            it[0].y = 0; it[0].x = 0;
+            it[1].y = 0; it[1].x = 0;
+            it[2].y = 0; it[2].x = 0;
+            it[3].y = 0; it[3].x = 0;
         } else {
-            set_sprite_tile(oam, t);
-            set_sprite_tile((u8)(oam + 1), (u8)(t + 1));
-            set_sprite_tile((u8)(oam + 2), (u8)(t + 2));
-            set_sprite_tile((u8)(oam + 3), (u8)(t + 3));
-            set_sprite_prop(oam, pal);
-            set_sprite_prop((u8)(oam + 1), pal);
-            set_sprite_prop((u8)(oam + 2), pal);
-            set_sprite_prop((u8)(oam + 3), pal);
-            move_sprite(oam, bx, by);
-            move_sprite((u8)(oam + 1), (u8)(bx + 8), by);
-            move_sprite((u8)(oam + 2), bx, (u8)(by + 8));
-            move_sprite((u8)(oam + 3), (u8)(bx + 8), (u8)(by + 8));
+            OAM_item_t *it = &shadow_OAM[oam];
+            u8 bx8 = (u8)(bx + 8);
+            u8 by8 = (u8)(by + 8);
+            it->y = by;  it->x = bx;  it->tile = t;           it->prop = pal; ++it;
+            it->y = by;  it->x = bx8; it->tile = (u8)(t + 1); it->prop = pal; ++it;
+            it->y = by8; it->x = bx;  it->tile = (u8)(t + 2); it->prop = pal; ++it;
+            it->y = by8; it->x = bx8; it->tile = (u8)(t + 3); it->prop = pal;
         }
         oam += 4;
         continue;
@@ -109,8 +108,8 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         e->ai_data[7]--;
         if (e->ai_data[7] & 0x01) continue;
     }
-    set_sprite_tile(oam, e->sprite_tile);
     {
+        OAM_item_t *it = &shadow_OAM[oam];
         u8 prop = pal;
         if (e->type == ENT_ENEMY && (entity_anim_counter & 0x10))
             prop |= S_FLIPX;
@@ -118,9 +117,11 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
             if (e->ai_data[4] & PROJ_VIS_FLIP_X) prop |= S_FLIPX;
             if (e->ai_data[4] & PROJ_VIS_FLIP_Y) prop |= S_FLIPY;
         }
-        set_sprite_prop(oam, prop);
+        it->y = sy;
+        it->x = sx;
+        it->tile = e->sprite_tile;
+        it->prop = prop;
     }
-    move_sprite(oam, sx, sy);
     oam++;
 }
 // Park only sprites that were occupied on the preceding frame. Room entry

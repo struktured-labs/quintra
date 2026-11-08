@@ -328,43 +328,46 @@ static u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) {
     return shot_spent_for_split;
 }
 
-static void combat_player_shots(void) {
-    u8 i, j;
-    entity_t *shot=entities;
-    // One chord may hit a giant at most four times in this sweep.
-    u8 convergence_giant_hits = 0;
-    // 1) Player-projectile -> enemy collisions
-    for (i = 0; i < MAX_ENTITIES; ++i,++shot) {
-        if (!(shot->flags & EF_ACTIVE)) continue;
-        if (shot->type != ENT_PROJECTILE) continue;
-        if (!(shot->flags & EF_PLAYER_PROJ)) continue;
-        // Splash arming happens in the next frame's projectile update. It then
-        // receives exactly one complete sweep independent of entity slot order.
-        if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
-            if (shot->ai_data[7] == 3) {
-                entity_kill(i);
-                continue;
-            }
-            if (shot->ai_data[7] != 2) continue;
-            shot->ai_data[7] = 3;
-        }
-        for (j = 0; j < MAX_ENTITIES; ++j) {
+// Shot box is invariant across the inner scan. A miss on X never reads Y.
+// The four inequalities match aabb_overlap_ee, including the 4-bit hitbox split.
+static u8 combat_shot_overlaps(i16 sx, i16 sy, i16 s_right, i16 s_bottom,
+                               const entity_t *b) {
+    i16 ex = b->x;
+    u8 hb = b->hitbox;
+    i16 ey;
+    if (s_right <= ex) return 0;
+    if ((i16)(ex + (u8)(hb >> 4)) <= sx) return 0;
+    ey = b->y;
+    if (s_bottom <= ey) return 0;
+    if ((i16)(ey + (u8)(hb & 0x0F)) <= sy) return 0;
+    return 1;
+}
+
+static void combat_resolve_player_shot(entity_t *shot, u8 i, u8 *giant_hits) {
+    i16 sx = shot->x;
+    i16 sy = shot->y;
+    i16 s_right = (i16)(sx + (u8)(shot->hitbox >> 4));
+    i16 s_bottom = (i16)(sy + (u8)(shot->hitbox & 0x0F));
+    u8 j;
+    entity_t *ej;
+
+        for (j = 0, ej = entities; j < MAX_ENTITIES; ++j, ++ej) {
             u8 eid, weakness, poise, dmg;
             u8 shot_spent_for_split = 0;
             if (j == i) continue;
-            if (!(entities[j].flags & EF_ACTIVE)) continue;
-            if (entities[j].type == ENT_ENEMY
-                && !(entities[j].flags & EF_ON_SCREEN)) continue;
+            if (!(ej->flags & EF_ACTIVE)) continue;
+            if (ej->type == ENT_ENEMY
+                && !(ej->flags & EF_ON_SCREEN)) continue;
             // Physical A weapons can cut hostile shots. Reuse the outer
             // player-projectile sweep instead of adding another 32x32 pass:
             // melee gains defensive space without taxing ordinary bullets.
-            if (entities[j].type == ENT_PROJECTILE
-                && !(entities[j].flags & EF_PLAYER_PROJ)
+            if (ej->type == ENT_PROJECTILE
+                && !(ej->flags & EF_PLAYER_PROJ)
                 && shot->ai_data[2]
-                && aabb_overlap_ee(shot, &entities[j])) {
+                && combat_shot_overlaps(sx, sy, s_right, s_bottom, ej)) {
                 fx_spawn(SPR_FX_IMPACT, 6,
-                    FIX8_TO_INT(entities[j].x),
-                    FIX8_TO_INT(entities[j].y), 7);
+                    FIX8_TO_INT(ej->x),
+                    FIX8_TO_INT(ej->y), 7);
                 entity_kill(j);
                 sfx_play(SFX_HIT);
                 if (shot->hp <= 1) {
@@ -374,23 +377,23 @@ static void combat_player_shots(void) {
                 shot->hp--;
                 continue;
             }
-            if (entities[j].type != ENT_ENEMY) continue;
+            if (ej->type != ENT_ENEMY) continue;
             if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
                 if (shot->ai_data[5] == j
-                    || !splash_reaches_enemy(shot, &entities[j]))
+                    || !splash_reaches_enemy(shot, ej))
                     continue;
             } else if (j == large_boss_index) {
-                if (!large_boss_shot_overlap(shot, &entities[j])) continue;
-            } else if (!aabb_overlap_ee(shot, &entities[j])) continue;
+                if (!large_boss_shot_overlap(shot, ej)) continue;
+            } else if (!combat_shot_overlaps(sx, sy, s_right, s_bottom, ej)) continue;
 
-            eid      = entities[j].ai_data[0];
+            eid      = ej->ai_data[0];
             if (shot->ai_data[6] == PROJ_AUX_HOOKSHOT
                 || shot->ai_data[6] == PROJ_AUX_FUSE_BOMB) continue;
             if (shot->ai_data[6] == PROJ_AUX_BOOMERANG) {
-                if (!(entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE))
+                if (!(ej->flags & (EF_ELITE | EF_ALPHA | EF_RARE))
                     && eid != ENEMY_STONE_SENTINEL
                     && eid != ENEMY_STAGE_REAPER
-                    && entities[j].ai_data[2] != ENEMY_AUX_BELLWARDEN
+                    && ej->ai_data[2] != ENEMY_AUX_BELLWARDEN
                     && enemy_status_kind[j] != QSTATUS_STOP) {
                     status_enemy_apply(j, QSTATUS_STOP, 14);
                 }
@@ -413,18 +416,18 @@ static void combat_player_shots(void) {
             // it can strike a different enemy farther down the same lane.
             if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
                 && shot->ai_data[5] == j) continue;
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
+            if (eid == ENEMY_STONE_SENTINEL && ej->ai_data[3]
                 && (shot->ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
-                if (convergence_giant_hits >= 4) {
+                if ((*giant_hits) >= 4) {
                     // The spectacle has already landed on this colossus;
                     // spend the overlapping duplicate instead of applying
                     // another simultaneous full-damage arc.
                     entity_kill(i);
                     break;
                 }
-                convergence_giant_hits++;
+                (*giant_hits)++;
             }
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
+            if (eid == ENEMY_STONE_SENTINEL && ej->ai_data[3]
                 && (shot->ai_data[3] & PROJ_FLAG_HOWL)) {
                 if (will_howl_giant_hits >= WILL_HOWL_GIANT_HIT_CAP) {
                     entity_kill(i);
@@ -443,7 +446,7 @@ static void combat_player_shots(void) {
             // and let an untouched starter kit erase early colossi before
             // their patterns could become a fight. Ordinary enemies and
             // mini-bosses retain their authored matchups.
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) weakness = 0;
+            if (eid == ENEMY_STONE_SENTINEL && ej->ai_data[3]) weakness = 0;
             poise    = (eid < N_ENEMIES) ? enemies[eid].stats.poise    : 0;
             poise = status_enemy_effective_poise(j, poise);
 
@@ -491,10 +494,10 @@ static void combat_player_shots(void) {
             // This intentionally applies only to giant stage bosses; normal
             // enemies, mini-bosses, and the first two bosses keep their full
             // weapon/elemental payoff.
-            if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
-                && entities[j].ai_data[3]
-                && entities[j].ai_data[2] >= 2
-                && entities[j].ai_data[2] <= 8) {
+            if (ej->ai_data[0] == ENEMY_STONE_SENTINEL
+                && ej->ai_data[3]
+                && ej->ai_data[2] >= 2
+                && ej->ai_data[2] <= 8) {
                 // Easy is the hands-on deep-content mode. Keep the same
                 // Colossus HP, patterns, arena, and one-hit damage contract,
                 // but let the strengthened tester kit pierce more Rift Armor
@@ -505,7 +508,7 @@ static void combat_player_shots(void) {
                 if (dmg > cap) dmg = cap;
             }
 
-            if (boss_link_active && boss_link_reflect(&entities[j], shot, dmg)) {
+            if (boss_link_active && boss_link_reflect(ej, shot, dmg)) {
                 entity_kill(i);
                 break;
             }
@@ -523,23 +526,23 @@ static void combat_player_shots(void) {
 
             {
                 // Apply damage
-                if (entities[j].hp > dmg) {
-                    entities[j].hp = (u8)(entities[j].hp - dmg);
+                if (ej->hp > dmg) {
+                    ej->hp = (u8)(ej->hp - dmg);
                     status_try_player_shot(j, i);
-                    entities[j].ai_data[7] = weak ? 7 : 4;  // hit-flash frames
-                    knockback_enemy(&entities[j], shot->vx, shot->vy, poise);
+                    ej->ai_data[7] = weak ? 7 : 4;  // hit-flash frames
+                    knockback_enemy(ej, shot->vx, shot->vy, poise);
                     if (g_hitstop < (weak ? 2 : 1)) g_hitstop = weak ? 2 : 1;
                     if (weak) {
                         // "Super effective": bright spark at the hit + crystal ping
-                        i16 hx = FIX8_TO_INT(entities[j].x) + 4;
-                        i16 hy = FIX8_TO_INT(entities[j].y) + 4;
+                        i16 hx = FIX8_TO_INT(ej->x) + 4;
+                        i16 hy = FIX8_TO_INT(ej->y) + 4;
                         fx_spawn(SPR_FX_IMPACT, 3, hx, hy, 10);
                         sfx_play(SFX_WEAK);
                     } else {
                         sfx_play(SFX_HIT);
-                        if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
-                            && (entities[j].ai_data[3] & 1))
-                            boss_voice(entities[j].ai_data[2], BOSS_VOICE_PAIN);
+                        if (ej->ai_data[0] == ENEMY_STONE_SENTINEL
+                            && (ej->ai_data[3] & 1))
+                            boss_voice(ej->ai_data[2], BOSS_VOICE_PAIN);
                     }
                 } else {
                     shot_spent_for_split = combat_defeat_enemy(j,i,weak);
@@ -558,9 +561,32 @@ static void combat_player_shots(void) {
                 }
             }
         }
-    }
-
 }
+
+static void combat_player_shots(void) {
+    u8 i;
+    entity_t *shot=entities;
+    // One chord may hit a giant at most four times in this sweep.
+    u8 convergence_giant_hits = 0;
+    // 1) Player-projectile -> enemy collisions
+    for (i = 0; i < MAX_ENTITIES; ++i,++shot) {
+        if (!(shot->flags & EF_ACTIVE)) continue;
+        if (shot->type != ENT_PROJECTILE) continue;
+        if (!(shot->flags & EF_PLAYER_PROJ)) continue;
+        // Splash arming happens in the next frame's projectile update. It then
+        // receives exactly one complete sweep independent of entity slot order.
+        if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
+            if (shot->ai_data[7] == 3) {
+                entity_kill(i);
+                continue;
+            }
+            if (shot->ai_data[7] != 2) continue;
+            shot->ai_data[7] = 3;
+        }
+        combat_resolve_player_shot(shot, i, &convergence_giant_hits);
+    }
+}
+
 
 u8 combat_resolve(void) BANKED {
     u8 i, j;

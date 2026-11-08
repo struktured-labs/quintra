@@ -44,9 +44,6 @@ void entity_update_from(u8 start) BANKED;
 const i8 dir8_dx[8] = {  0, +1, +1, +1,  0, -1, -1, -1 };
 const i8 dir8_dy[8] = { -1, -1,  0, +1, +1, +1,  0, -1 };
 
-static u8 hitbox_w(const entity_t *e) { return (e->hitbox >> 4) & 0x0F; }
-static u8 hitbox_h(const entity_t *e) { return  e->hitbox       & 0x0F; }
-
 u8 entity_spawn(u8 type) {
     u8 i;
     for (i = 0; i < MAX_ENTITIES; ++i) {
@@ -86,14 +83,16 @@ void entity_kill(u8 idx) {
 }
 
 u8 aabb_overlap_ee(const entity_t *a, const entity_t *b) {
-    i16 ax = FIX8_TO_INT(a->x), ay = FIX8_TO_INT(a->y);
-    i16 bx = FIX8_TO_INT(b->x), by = FIX8_TO_INT(b->y);
-    u8  aw = hitbox_w(a),       ah = hitbox_h(a);
-    u8  bw = hitbox_w(b),       bh = hitbox_h(b);
-    if (ax + (i16)aw <= bx) return 0;
-    if (bx + (i16)bw <= ax) return 0;
-    if (ay + (i16)ah <= by) return 0;
-    if (by + (i16)bh <= ay) return 0;
+    i16 ax = a->x;
+    i16 bx = b->x;
+    u8 ah = a->hitbox;
+    u8 bh = b->hitbox;
+    if ((i16)(ax + (u8)(ah >> 4)) <= bx) return 0;
+    if ((i16)(bx + (u8)(bh >> 4)) <= ax) return 0;
+    ax = a->y;
+    bx = b->y;
+    if ((i16)(ax + (u8)(ah & 0x0F)) <= bx) return 0;
+    if ((i16)(bx + (u8)(bh & 0x0F)) <= ax) return 0;
     return 1;
 }
 
@@ -102,11 +101,15 @@ u8 aabb_overlap_ee(const entity_t *a, const entity_t *b) {
 // at, stingy to hit — standard shmup design.
 u8 aabb_overlap_player(const entity_t *e) {
     i16 p = (i16)player.x + 5;
-    if (p + 6 <= e->x) return 0;
-    if (e->x + (i16)hitbox_w(e) <= p) return 0;
+    i16 ex = e->x;
+    u8 hb;
+    if (p + 6 <= ex) return 0;
+    hb = e->hitbox;
+    if (ex + (i16)(hb >> 4) <= p) return 0;
     p = (i16)player.y + 9;
-    if (p + 6 <= e->y) return 0;
-    if (e->y + (i16)hitbox_h(e) <= p) return 0;
+    ex = e->y;
+    if (p + 6 <= ex) return 0;
+    if (ex + (i16)(hb & 0x0F) <= p) return 0;
     return 1;
 }
 
