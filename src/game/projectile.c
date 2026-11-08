@@ -180,6 +180,9 @@ static u8 projectile_update_player(entity_t *e, u8 idx) {
     return 1;
 }
 
+// Bank 16. Bank 3 cannot hold this beside the shot scan and the 256-byte floor.
+void projectile_update_hostile(entity_t *e, u8 idx) BANKED;
+
 void projectile_update_one(entity_t *e, u8 idx) {
     // Cache flags for the dense bullet path. SDCC otherwise reloads this
     // struct byte for each material check below; twelve simultaneous hostile
@@ -197,13 +200,19 @@ void projectile_update_one(entity_t *e, u8 idx) {
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 
+    if (!(flags & EF_PLAYER_PROJ)) {
+        projectile_update_hostile(e, idx);
+        return;
+    }
+
     e->x = (ppos_t)(e->x + e->vx);
     e->y = (ppos_t)(e->y + e->vy);
 
     // Area bursts are born during combat resolution, after this updater has
     // already passed. Arm them here on the following frame so their collision
     // sweep never depends on the parent's current table index.
-    if ((flags & EF_PLAYER_PROJ) && !projectile_update_player(e, idx)) return;
+    // Hostile shots returned above; this tail is player fire only.
+    if (!projectile_update_player(e, idx)) return;
 
     {
         i16 px = FIX8_TO_INT(e->x);
@@ -214,25 +223,14 @@ void projectile_update_one(entity_t *e, u8 idx) {
         // ~half of all cracked walls unshootable.
         i16 sx = px + 4, sy = py + 4;
         u8 t;
-        if (!(flags & EF_PLAYER_PROJ)) {
-            // Hostile shots cannot open secrets. Reject their out-of-bounds
-            // path first, then sample known-valid coordinates without four
-            // clamps per bullet. This is the ordinary bullet-hell hot path.
-            if (px < 8 || px > (i16)(room_world_width - 8)
-                || py < 8 || py > (i16)(room_world_height - 8)) {
-                entity_kill(idx);
-                return;
-            }
-        } else {
-            // Player fire samples the border before despawning so a shot that
-            // reaches a north/west cracked wall can still open it.
-            if (sx < 0) sx = 0;
-            else if (sx > (i16)(room_world_width - 1))
-                sx = room_world_width - 1;
-            if (sy < 0) sy = 0;
-            else if (sy > (i16)(room_world_height - 1))
-                sy = room_world_height - 1;
-        }
+        // Player fire samples the border before despawning so a shot that
+        // reaches a north/west cracked wall can still open it.
+        if (sx < 0) sx = 0;
+        else if (sx > (i16)(room_world_width - 1))
+            sx = room_world_width - 1;
+        if (sy < 0) sy = 0;
+        else if (sy > (i16)(room_world_height - 1))
+            sy = room_world_height - 1;
         // sx/sy are clamped to the room above, so this is exactly the
         // in-bounds branch of room_tile_at_px().  Keep the hot projectile
         // path in this bank instead of paying a banked helper call for every
@@ -245,8 +243,19 @@ void projectile_update_one(entity_t *e, u8 idx) {
             ? room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)]
             : room_tile_at_px(sx, sy);
 
-        if (flags & EF_PLAYER_PROJ) {
-            if (e->ai_data[6] == PROJ_AUX_BOOMERANG) {
+        // Open floor skips the solid, crack, crystal, and pot tails. The
+        // edge despawn below still runs. Boomerangs and ricochets keep the
+        // full tail because they react to the border itself.
+        if (t <= BGT_FLOOR3 && t != BGT_WALL
+            && e->ai_data[6] != PROJ_AUX_BOOMERANG
+            && !(e->ai_data[3] & PROJ_FLAG_RICOCHET)) {
+            if (px < 8 || px > (i16)(room_world_width - 8)
+                || py < 8 || py > (i16)(room_world_height - 8)) {
+                entity_kill(idx);
+            }
+            return;
+        }
+        if (e->ai_data[6] == PROJ_AUX_BOOMERANG) {
                 if (!e->state
                     && (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE
                         || t == BGT_CRYSTAL || t == BGT_WALL_CRACK
@@ -302,19 +311,6 @@ void projectile_update_one(entity_t *e, u8 idx) {
                 projectile_ricochet(e, px, py);
                 return;
             }
-        } else if (e->damage >= 2 && t == BGT_CRYSTAL) {
-            // Powerful enemy and Colossus patterns reshape their own arena:
-            // cover is temporary, but the shattered mana remains claimable.
-            room_break_crystal((u8)(sx >> 3), (u8)(sy >> 3));
-            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
-            entity_kill(idx);
-            return;
-        } else if (e->damage >= 2 && t == BGT_POT) {
-            room_break_pot((u8)(sx >> 3), (u8)(sy >> 3));
-            fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
-            entity_kill(idx);
-            return;
-        }
         if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE || t == BGT_CRYSTAL
             || t == BGT_WALL_CRACK || t == BGT_POT) {
             fx_spawn(SPR_FX_IMPACT, 2, px, py, 4);

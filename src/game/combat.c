@@ -91,7 +91,12 @@ static void boss_clear_hostile_projectiles(void) {
     }
 }
 
-static u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) {
+// Set when a piercing shot splits a Rift Ooze into a later slot. The
+// prefiltered enemy list would miss that new body; the caller finishes
+// the slot walk with the original pointer scan.
+static u8 combat_tail_rescan;
+
+u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
     u8 eid=entities[j].ai_data[0];
     u8 boss_retired_for_rewards=0, shot_spent_for_split=0;
     sfx_play(SFX_DEATH);
@@ -323,19 +328,170 @@ static u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) {
                 entities[b].ai_data[2] = ENEMY_AUX_OOZE_FRAGMENT;
                 enemy_try_step(&entities[b], 1, 0);
             }
+            // A still-piercing shot must see a fragment that landed past j.
+            if (!shot_spent_for_split) combat_tail_rescan = 1;
         }
     }
     return shot_spent_for_split;
 }
 
+// The shot box is invariant across one sweep. Absolute WRAM loads stay
+// cheaper than stack slots, and the damage body lives in its own function
+// so a miss does not spill those temps on every entity.
+static i16 shot_sx, shot_sy, shot_right, shot_bottom;
+static u8 shot_sx_b, shot_sy_b, shot_right_b, shot_bottom_b, shot_box_wide;
+static u8 shot_targets[MAX_ENTITIES];
+static u8 shot_list_n;
+static u8 shot_list_ready;
+
+#define SHOT_MISSES(ej) ( \
+    shot_right <= (ej)->x \
+    || (i16)((ej)->x + (u8)((ej)->hitbox >> 4)) <= shot_sx \
+    || shot_bottom <= (ej)->y \
+    || (i16)((ej)->y + (u8)((ej)->hitbox & 0x0F)) <= shot_sy)
+
+static void combat_load_shot_box(const entity_t *shot) {
+    shot_sx = shot->x;
+    shot_sy = shot->y;
+    shot_right = (i16)(shot_sx + (u8)(shot->hitbox >> 4));
+    shot_bottom = (i16)(shot_sy + (u8)(shot->hitbox & 0x0F));
+    shot_sx_b = (u8)shot_sx;
+    shot_sy_b = (u8)shot_sy;
+    shot_right_b = (u8)shot_right;
+    shot_bottom_b = (u8)shot_bottom;
+    shot_box_wide = (u8)((u8)((u16)shot_sx >> 8) | (u8)((u16)shot_sy >> 8)
+        | (u8)((u16)shot_right >> 8) | (u8)((u16)shot_bottom >> 8));
+}
+
+// In-room bodies fit in unsigned bytes. The signed fallback stays for a box
+// that crosses 255 or goes negative, where a byte compare would wrap.
+static u8 combat_shot_misses(entity_t *ej) {
+    u8 ex, ey, hb;
+    if (shot_box_wide) return SHOT_MISSES(ej);
+    ex = (u8)ej->x;
+    ey = (u8)ej->y;
+    if ((u8)((u16)ej->x >> 8) | (u8)((u16)ej->y >> 8) || ex > 240 || ey > 240)
+        return SHOT_MISSES(ej);
+    hb = ej->hitbox;
+    if (shot_right_b <= ex) return 1;
+    if ((u8)(ex + (hb >> 4)) <= shot_sx_b) return 1;
+    if (shot_bottom_b <= ey) return 1;
+    if ((u8)(ey + (hb & 0x0F)) <= shot_sy_b) return 1;
+    return 0;
+}
+
+static void combat_collect_targets(void) {
+    u8 n = 0;
+    u8 j;
+    entity_t *ej = entities;
+    for (j = 0; j < MAX_ENTITIES; ++j, ++ej) {
+        u8 flags = ej->flags;
+        if ((flags & (EF_ACTIVE | EF_ON_SCREEN)) != (EF_ACTIVE | EF_ON_SCREEN))
+            continue;
+        if (ej->type != ENT_ENEMY) continue;
+        shot_targets[n++] = j;
+    }
+    shot_list_n = n;
+    shot_list_ready = 1;
+}
+
+// Returns 1 when this shot is finished and the slot walk must stop.
+u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
+                                       u8 j, u8 *giant_hits) BANKED;
+
+static u8 combat_cut_hostile_shot(entity_t *shot, u8 i, entity_t *ej, u8 j) {
+    if (ej->type != ENT_PROJECTILE) return 0;
+    if (ej->flags & EF_PLAYER_PROJ) return 0;
+    if (!shot->ai_data[2]) return 0;
+    if (combat_shot_misses(ej)) return 0;
+    fx_spawn(SPR_FX_IMPACT, 6,
+        FIX8_TO_INT(ej->x),
+        FIX8_TO_INT(ej->y), 7);
+    entity_kill(j);
+    sfx_play(SFX_HIT);
+    if (shot->hp <= 1) {
+        entity_kill(i);
+        return 1;
+    }
+    shot->hp--;
+    return 0;
+}
+
+// Full slot walk used by melee, splash, and the tail after an ooze split.
+// Returns 1 when the shot is spent.
+static u8 combat_scan_slots(entity_t *shot, u8 i, u8 start, u8 *giant_hits) {
+    u8 j;
+    entity_t *ej = &entities[start];
+    u8 splash = (u8)(shot->ai_data[6] == PROJ_AUX_SPLASH);
+    for (j = start; j < MAX_ENTITIES; ++j, ++ej) {
+        u8 flags;
+        if (j == i) continue;
+        flags = ej->flags;
+        if (!(flags & EF_ACTIVE)) continue;
+        if (ej->type == ENT_ENEMY && !(flags & EF_ON_SCREEN)) continue;
+        if (combat_cut_hostile_shot(shot, i, ej, j)) return 1;
+        if (ej->type != ENT_ENEMY) continue;
+        if (splash) {
+            if (shot->ai_data[5] == j || !splash_reaches_enemy(shot, ej))
+                continue;
+        } else if (j == large_boss_index) {
+            if (!large_boss_shot_overlap(shot, ej)) continue;
+        } else if (combat_shot_misses(ej)) continue;
+        if (combat_apply_player_shot_hit(shot, i, ej, j, giant_hits)) return 1;
+        if (combat_tail_rescan) {
+            combat_tail_rescan = 0;
+            // The fragment is already in a later slot of this same walk.
+        }
+    }
+    return 0;
+}
+
+// Ordinary bullets only overlap on-screen enemies. Build that slot list
+// once, in ascending order, and test the box inline. A split re-enters
+// the full walk so a new fragment is not skipped.
+static void combat_resolve_ordinary(entity_t *shot, u8 i, u8 *giant_hits) {
+    u8 j, k;
+    entity_t *ej;
+    combat_load_shot_box(shot);
+    combat_tail_rescan = 0;
+    if (!shot_list_ready) combat_collect_targets();
+    for (k = 0; k < shot_list_n; ++k) {
+        j = shot_targets[k];
+        ej = &entities[j];
+        if (!(ej->flags & EF_ACTIVE)) continue;
+        if (j == large_boss_index) {
+            if (!large_boss_shot_overlap(shot, ej)) continue;
+        } else if (combat_shot_misses(ej)) continue;
+        if (combat_apply_player_shot_hit(shot, i, ej, j, giant_hits)) return;
+        if (combat_tail_rescan) {
+            combat_tail_rescan = 0;
+            shot_list_ready = 0;
+            combat_scan_slots(shot, i, (u8)(j + 1), giant_hits);
+            return;
+        }
+    }
+}
+
+static void combat_resolve_player_shot(entity_t *shot, u8 i, u8 *giant_hits) {
+    combat_load_shot_box(shot);
+    combat_tail_rescan = 0;
+    combat_scan_slots(shot, i, 0, giant_hits);
+    shot_list_ready = 0;
+}
+
 static void combat_player_shots(void) {
-    u8 i, j;
+    u8 i;
     entity_t *shot=entities;
     // One chord may hit a giant at most four times in this sweep.
     u8 convergence_giant_hits = 0;
+    shot_list_ready = 0;
     // 1) Player-projectile -> enemy collisions
     for (i = 0; i < MAX_ENTITIES; ++i,++shot) {
         if (!(shot->flags & EF_ACTIVE)) continue;
+        if (shot->type == ENT_PICKUP) {
+            entity_pickup_pending = 1;
+            continue;
+        }
         if (shot->type != ENT_PROJECTILE) continue;
         if (!(shot->flags & EF_PLAYER_PROJ)) continue;
         // Splash arming happens in the next frame's projectile update. It then
@@ -348,219 +504,15 @@ static void combat_player_shots(void) {
             if (shot->ai_data[7] != 2) continue;
             shot->ai_data[7] = 3;
         }
-        for (j = 0; j < MAX_ENTITIES; ++j) {
-            u8 eid, weakness, poise, dmg;
-            u8 shot_spent_for_split = 0;
-            if (j == i) continue;
-            if (!(entities[j].flags & EF_ACTIVE)) continue;
-            if (entities[j].type == ENT_ENEMY
-                && !(entities[j].flags & EF_ON_SCREEN)) continue;
-            // Physical A weapons can cut hostile shots. Reuse the outer
-            // player-projectile sweep instead of adding another 32x32 pass:
-            // melee gains defensive space without taxing ordinary bullets.
-            if (entities[j].type == ENT_PROJECTILE
-                && !(entities[j].flags & EF_PLAYER_PROJ)
-                && shot->ai_data[2]
-                && aabb_overlap_ee(shot, &entities[j])) {
-                fx_spawn(SPR_FX_IMPACT, 6,
-                    FIX8_TO_INT(entities[j].x),
-                    FIX8_TO_INT(entities[j].y), 7);
-                entity_kill(j);
-                sfx_play(SFX_HIT);
-                if (shot->hp <= 1) {
-                    entity_kill(i);
-                    break;
-                }
-                shot->hp--;
-                continue;
-            }
-            if (entities[j].type != ENT_ENEMY) continue;
-            if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
-                if (shot->ai_data[5] == j
-                    || !splash_reaches_enemy(shot, &entities[j]))
-                    continue;
-            } else if (j == large_boss_index) {
-                if (!large_boss_shot_overlap(shot, &entities[j])) continue;
-            } else if (!aabb_overlap_ee(shot, &entities[j])) continue;
-
-            eid      = entities[j].ai_data[0];
-            if (shot->ai_data[6] == PROJ_AUX_HOOKSHOT
-                || shot->ai_data[6] == PROJ_AUX_FUSE_BOMB) continue;
-            if (shot->ai_data[6] == PROJ_AUX_BOOMERANG) {
-                if (!(entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE))
-                    && eid != ENEMY_STONE_SENTINEL
-                    && eid != ENEMY_STAGE_REAPER
-                    && entities[j].ai_data[2] != ENEMY_AUX_BELLWARDEN
-                    && enemy_status_kind[j] != QSTATUS_STOP) {
-                    status_enemy_apply(j, QSTATUS_STOP, 14);
-                }
-                continue;
-            }
-            // Keep specialist rejection out of this already-large resolver's
-            // stack frame. The helper is entered only for authored armor,
-            // shell, or projection bodies—not every ordinary contact.
-            if (eid == ENEMY_FACET_RAM || eid == ENEMY_FOLD_STAR
-                    || (eid < N_ENEMIES
-                        && enemies[eid].ai_kind == AI_COUNTER_GUARD)) {
-                enemy_special_reject_hit(i, j);
-                // Projectile retirement is the authoritative rejection
-                // result. Avoid carrying an SDCC banked return byte through
-                // the helper's nested visual/audio calls.
-                if (!(shot->flags & EF_ACTIVE)) break;
-            }
-            // Fang Forms is a two-body cleave, not two consecutive damage
-            // ticks against one overlapping body. Preserve the projectile so
-            // it can strike a different enemy farther down the same lane.
-            if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
-                && shot->ai_data[5] == j) continue;
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
-                && (shot->ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
-                if (convergence_giant_hits >= 4) {
-                    // The spectacle has already landed on this colossus;
-                    // spend the overlapping duplicate instead of applying
-                    // another simultaneous full-damage arc.
-                    entity_kill(i);
-                    break;
-                }
-                convergence_giant_hits++;
-            }
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]
-                && (shot->ai_data[3] & PROJ_FLAG_HOWL)) {
-                if (will_howl_giant_hits >= WILL_HOWL_GIANT_HIT_CAP) {
-                    entity_kill(i);
-                    break;
-                }
-                will_howl_giant_hits++;
-                // Each Howl lane may touch this giant only once. It retains
-                // its normal pierce value against separate crowd bodies.
-                shot->hp = 1;
-            }
-            weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
-            // Large bosses reuse the Stone Sentinel entity definition for
-            // storage/AI, but must not inherit its lightning-only weakness.
-            // They also deliberately have no elemental weakness: making every
-            // boss weak to every champion was an invisible 50% damage bonus
-            // and let an untouched starter kit erase early colossi before
-            // their patterns could become a fight. Ordinary enemies and
-            // mini-bosses retain their authored matchups.
-            if (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]) weakness = 0;
-            poise    = (eid < N_ENEMIES) ? enemies[eid].stats.poise    : 0;
-            poise = status_enemy_effective_poise(j, poise);
-
-            // Per-hit damage: base + elemental x2 (weapon element in
-            // projectile ai_data[1]) + crit x2 (LCK * 5% chance).
-            // Vespine's venom synergy (perk 5): elemental hits bite +1.
-            dmg = shot->damage;
-            u8 weak = (shot->ai_data[1] & weakness) ? 1 : 0;
-            if (weak) {
-                dmg = (u8)(dmg + ((dmg + 1) >> 1));
-                if (player.class_id == 4) dmg++;
-            }
-            if (rng_range(100)
-                < (u8)(status_player_effective_stat(QSTATUS_STAT_LCK) * 5))
-                dmg = (u8)(dmg << 1);
-            if (player.class_id == 2 && will_corvin_mark_ticks
-                && j == will_corvin_mark_slot) {
-                dmg = (u8)(dmg + WILL_CORVIN_MARK_BONUS);
-            }
-            // Last Stand: down to your final heart (the low-HP pulse zone),
-            // desperation lends +1 damage — a comeback edge one hit from death.
-            if (player.hp <= 2 && player.hp > 0) dmg++;
-            if (dmg == 0) dmg = 1;
-            dmg = status_enemy_hit_damage(j, dmg);
-            if (j == room_encounter_target && room_return_echo_kind >= 4) {
-                dmg = dungeon_return_hit_damage(dmg);
-                if (!dmg) {
-                    entity_kill(i);
-                    break;
-                }
-            }
-            if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
-                shot->ai_data[5] = j;
-
-            // A fully built run can otherwise erase the one-byte (255 HP)
-            // late bosses in a few rapid-fire beats. Ember Depths onward,
-            // their Rift Armor turns a huge single projectile into a readable
-            // sequence of hits rather than pretending the cartridge can hold
-            // ever-larger HP values. That leaves the first three encounters
-            // as accessible pattern lessons, while every later Colossus gets
-            // time to show its authored phase break. The Void Lord is included
-            // now that the controller has a tested, controller-only response
-            // to its announced World Collapse pocket; it can no longer be
-            // erased before that positional fight happens.
-            // This intentionally applies only to giant stage bosses; normal
-            // enemies, mini-bosses, and the first two bosses keep their full
-            // weapon/elemental payoff.
-            if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
-                && entities[j].ai_data[3]
-                && entities[j].ai_data[2] >= 2
-                && entities[j].ai_data[2] <= 8) {
-                // Easy is the hands-on deep-content mode. Keep the same
-                // Colossus HP, patterns, arena, and one-hit damage contract,
-                // but let the strengthened tester kit pierce more Rift Armor
-                // so a late mechanic can be replayed without every attempt
-                // ending a few hits short. Normal retains its authored
-                // three-damage endurance cap.
-                u8 cap = RUN_IS_EASY() ? 5 : 3;
-                if (dmg > cap) dmg = cap;
-            }
-
-            if (boss_link_active && boss_link_reflect(&entities[j], shot, dmg)) {
-                entity_kill(i);
-                break;
-            }
-            // Blast Seed is a true area interaction: the first direct body
-            // impact consumes the marker and leaves a one-frame 15x15 burst.
-            // Its payload remembers the struck slot so the target never takes
-            // both direct and splash damage from the same hit.
-            if (shot->ai_data[3] & PROJ_FLAG_SPLASH) {
-                shot->ai_data[3] &= (u8)~PROJ_FLAG_SPLASH;
-                projectile_spawn_splash(
-                    FIX8_TO_INT(shot->x) + 3,
-                    FIX8_TO_INT(shot->y) + 3,
-                    dmg > 1 ? (u8)((dmg + 1) >> 1) : 1, j);
-            }
-
-            {
-                // Apply damage
-                if (entities[j].hp > dmg) {
-                    entities[j].hp = (u8)(entities[j].hp - dmg);
-                    status_try_player_shot(j, i);
-                    entities[j].ai_data[7] = weak ? 7 : 4;  // hit-flash frames
-                    knockback_enemy(&entities[j], shot->vx, shot->vy, poise);
-                    if (g_hitstop < (weak ? 2 : 1)) g_hitstop = weak ? 2 : 1;
-                    if (weak) {
-                        // "Super effective": bright spark at the hit + crystal ping
-                        i16 hx = FIX8_TO_INT(entities[j].x) + 4;
-                        i16 hy = FIX8_TO_INT(entities[j].y) + 4;
-                        fx_spawn(SPR_FX_IMPACT, 3, hx, hy, 10);
-                        sfx_play(SFX_WEAK);
-                    } else {
-                        sfx_play(SFX_HIT);
-                        if (entities[j].ai_data[0] == ENEMY_STONE_SENTINEL
-                            && (entities[j].ai_data[3] & 1))
-                            boss_voice(entities[j].ai_data[2], BOSS_VOICE_PAIN);
-                    }
-                } else {
-                    shot_spent_for_split = combat_defeat_enemy(j,i,weak);
-                }
-                if (shot_spent_for_split) break;
-                // Impact FX at bullet position (spawn on every hit, even non-kill)
-                fx_spawn(SPR_FX_IMPACT, 2,
-                    (i16)FIX8_TO_INT(shot->x),
-                    (i16)FIX8_TO_INT(shot->y), 4);
-                // Projectile pierce
-                if (shot->hp <= 1) {
-                    entity_kill(i);
-                    break;     // this projectile is dead, move on
-                } else {
-                    shot->hp--;
-                }
-            }
-        }
+        // Melee that cuts shots, and splash bursts, still walk every slot.
+        // Ordinary bullets only test the on-screen enemy list.
+        if (shot->ai_data[2] || shot->ai_data[6] == PROJ_AUX_SPLASH)
+            combat_resolve_player_shot(shot, i, &convergence_giant_hits);
+        else
+            combat_resolve_ordinary(shot, i, &convergence_giant_hits);
     }
-
 }
+
 
 u8 combat_resolve(void) BANKED {
     u8 i, j;
@@ -570,6 +522,7 @@ u8 combat_resolve(void) BANKED {
         boss_link_pending = 0;
         return 1;
     }
+    entity_pickup_pending = 0;
 
     // Tick down per-frame timers
     if (player.iframes > 0) player.iframes--;
@@ -578,8 +531,9 @@ u8 combat_resolve(void) BANKED {
 
     combat_player_shots();
 
-    // 2) Pickup collisions (always processed; doesn't require iframes)
-    pickup_check_player_collision();
+    // Pickups are noted by the slot walk above, or by entity_spawn when a
+    // drop appears during that walk. An empty field skips the banked scan.
+    if (entity_pickup_pending) pickup_check_player_collision();
 
     // Sauran shield catches hostile shots; contact bodies are harmless while
     // it is raised. active_charge supplies the post-use cooldown.
