@@ -1,6 +1,7 @@
-#pragma bank 6
-// Cold whole-body collision paths. Ordinary movement stays in room.c's hot
-// bank; damage knockback and spike recovery call this stricter shared check.
+#pragma bank 8
+// Whole-body collision. Bank 6 no longer had room for the compact-map fast
+// path. Callers already use a banked call, so the bank change is not an
+// extra trampoline on the crawler step.
 
 #include <gb/gb.h>
 
@@ -28,9 +29,69 @@ static u8 player_walkable(i16 x, i16 y) {
     return room_tile_walkable(tile) || WAYGEAR_TILE_PASSABLE(tile);
 }
 
+// Probes at x+13 and y+15 stay inside the 20x17 tilemap when the body
+// origin is in this rectangle. Wider coordinates keep the streamed lookup.
+#define CLEAR_FAST_X 146
+#define CLEAR_FAST_Y 120
+
+static u8 masked_walkable(u8 tile) {
+    tile = (u8)(tile & 0x7F);
+    return room_tile_walkable(tile) || WAYGEAR_TILE_PASSABLE(tile);
+}
+
+static u8 masked_body_block(u8 tile) {
+    tile = (u8)(tile & 0x7F);
+    return (u8)(tile == BGT_PILLAR || tile == BGT_BLOCK
+        || tile == BGT_BLOCK_TR || tile == BGT_BLOCK_BL
+        || tile == BGT_BLOCK_BR);
+}
+
+static u8 row_feet(u8 *row, u8 a, u8 b, u8 c) {
+    if (!masked_walkable(row[a])) return 0;
+    if (b != a && !masked_walkable(row[b])) return 0;
+    if (c != a && c != b && !masked_walkable(row[c])) return 0;
+    return 1;
+}
+
+static u8 row_body(u8 *row, u8 a, u8 b, u8 c) {
+    if (masked_body_block(row[a])) return 0;
+    if (b != a && masked_body_block(row[b])) return 0;
+    if (c != a && c != b && masked_body_block(row[c])) return 0;
+    return 1;
+}
+
 u8 room_player_position_clear(i16 x, i16 y) BANKED {
-    return room_player_position_in_bounds(x, y)
-        && player_walkable(x + 2,  y + 8)
+    if (x < 0 || y < 0
+        || x > (i16)(room_world_width - 16)
+        || y > (i16)(room_world_height - 16)) return 0;
+    // Same 12 probes as the calls below. Inside the compact map each row
+    // pointer replaces three tile lookups, and a repeated row is one test.
+    if (x <= CLEAR_FAST_X && y <= CLEAR_FAST_Y) {
+        u8 ux = (u8)x;
+        u8 uy = (u8)y;
+        u8 tx0 = (u8)((ux + 2) >> 3);
+        u8 tx1 = (u8)((ux + 8) >> 3);
+        u8 tx2 = (u8)((ux + 13) >> 3);
+        u8 ty = (u8)((uy + 8) >> 3);
+        u8 ty2;
+        u8 *row = room_tilemap[ty];
+        if (!row_feet(row, tx0, tx1, tx2)) return 0;
+        ty2 = (u8)((uy + 15) >> 3);
+        if (ty2 != ty) {
+            row = room_tilemap[ty2];
+            if (!row_feet(row, tx0, tx1, tx2)) return 0;
+        }
+        ty = (u8)(uy >> 3);
+        row = room_tilemap[ty];
+        if (!row_body(row, tx0, tx1, tx2)) return 0;
+        ty2 = (u8)((uy + 7) >> 3);
+        if (ty2 != ty) {
+            row = room_tilemap[ty2];
+            if (!row_body(row, tx0, tx1, tx2)) return 0;
+        }
+        return 1;
+    }
+    return player_walkable(x + 2,  y + 8)
         && player_walkable(x + 8,  y + 8)
         && player_walkable(x + 13, y + 8)
         && player_walkable(x + 2,  y + 15)

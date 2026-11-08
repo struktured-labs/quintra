@@ -180,8 +180,7 @@ static u8 projectile_update_player(entity_t *e, u8 idx) {
     return 1;
 }
 
-// Defined in projectile_hostile.c, bank 16. Bank 3 cannot hold this beside
-// the player resolver and still keep the 256-byte emergency floor.
+// Bank 16. Bank 3 cannot hold this beside the shot scan and the 256-byte floor.
 void projectile_update_hostile(entity_t *e, u8 idx) BANKED;
 
 void projectile_update_one(entity_t *e, u8 idx) {
@@ -244,6 +243,18 @@ void projectile_update_one(entity_t *e, u8 idx) {
             ? room_tilemap[(u8)(sy >> 3)][(u8)(sx >> 3)]
             : room_tile_at_px(sx, sy);
 
+        // Open floor skips the solid, crack, crystal, and pot tails. The
+        // edge despawn below still runs. Boomerangs and ricochets keep the
+        // full tail because they react to the border itself.
+        if (t <= BGT_FLOOR3 && t != BGT_WALL
+            && e->ai_data[6] != PROJ_AUX_BOOMERANG
+            && !(e->ai_data[3] & PROJ_FLAG_RICOCHET)) {
+            if (px < 8 || px > (i16)(room_world_width - 8)
+                || py < 8 || py > (i16)(room_world_height - 8)) {
+                entity_kill(idx);
+            }
+            return;
+        }
         if (e->ai_data[6] == PROJ_AUX_BOOMERANG) {
                 if (!e->state
                     && (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE

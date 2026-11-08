@@ -64,6 +64,10 @@ static u8 offer_ware = 0xFF;
 static u8 loot_seconds = 0xFF;
 static u8 lane_palette = 0xFF;
 static u8 will_full_palette = 0xFF;
+static u8 will_cached_level = 0xFF;
+static u8 will_cached_segs = 0xFF;
+static u8 will_thresh_1;
+static u8 will_thresh_2;
 static u8 hud_hp_seen;
 extern u8 hud_notice_ticks;
 void hud_notice_reset(void) BANKED;
@@ -95,6 +99,8 @@ void hud_init(void) BANKED {
     palette_bg_load(5, hud_palette_will);
     lane_palette = 5;
     will_full_palette = 0;
+    will_cached_level = 0xFF;
+    will_cached_segs = 0xFF;
     loot_seconds = 0xFF;
     hud_hp_seen = player.hp;
     hud_notice_reset();
@@ -314,30 +320,38 @@ void hud_redraw_boss(u8 cur, u8 max) BANKED {
 void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     u8 row[4];
     u8 segs, i;
+    u8 level, full;
     if (hud_notice_ticks || max == 0) return;
-    max = WILL_NEXT_MAX;
-    {
-        u8 full = player.will_level >= WILL_LEVEL_CAP ? 1 : 0;
-        // The normal room path redraws Will repeatedly. Avoid even the local
-        // helper call once the lane already owns palette 5; this preserves
-        // the dense-room frame budget while still switching immediately
-        // after a shop offer or boss bar used the shared cells.
-        if (lane_palette != 5) hud_set_lane_palette(5);
-        if (full != will_full_palette) {
-            palette_bg_load(5,
-                full ? hud_palette_will_full : hud_palette_will);
-            will_full_palette = full;
-        }
+    level = player.will_level;
+    full = level >= WILL_LEVEL_CAP ? 1 : 0;
+    // WILL_NEXT_MAX depends on the tier, not on the passed max. Segment
+    // edges are ceil(k * max / 3), so a charge tick inside a segment does
+    // not divide and does not rewrite the WINDOW.
+    if (level != will_cached_level) {
+        u8 next = WILL_NEXT_MAX;
+        will_thresh_1 = (u8)(((u16)next + 2u) / 3u);
+        will_thresh_2 = (u8)((((u16)next << 1) + 2u) / 3u);
+        will_cached_level = level;
+        will_cached_segs = 0xFF;
     }
-    segs = (u8)(((u16)cur * 3u) / max);
-    if (player.will_level >= WILL_LEVEL_CAP) segs = 3;
-    if (segs > 3) segs = 3;
-    row[0] = HUD_DIGIT_0 + player.will_level;
+    if (full) segs = 3;
+    else if (cur >= will_thresh_2) segs = 2;
+    else if (cur >= will_thresh_1) segs = 1;
+    else segs = 0;
+    // Shop, boss, and loot writers change lane_palette, so a matching
+    // segment is only reusable while this lane still owns the Will palette.
+    if (lane_palette == 5 && full == will_full_palette
+        && segs == will_cached_segs) return;
+    if (lane_palette != 5) hud_set_lane_palette(5);
+    if (full != will_full_palette) {
+        palette_bg_load(5,
+            full ? hud_palette_will_full : hud_palette_will);
+        will_full_palette = full;
+    }
+    will_cached_segs = segs;
+    row[0] = HUD_DIGIT_0 + level;
     for (i = 0; i < 3; ++i)
         row[i + 1] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
-    // This lane can be replaced by a shop offer immediately after the hero
-    // moves. Four WINDOW tiles per normal Wolfkin frame is intentionally
-    // cheap and avoids a stale cached charge bar after that context change.
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
 }
@@ -361,6 +375,7 @@ void hud_notice_restore_context(void) BANKED {
     offer_ware = 0xFF;
     loot_seconds = 0xFF;
     lane_palette = 0xFF;
+    will_cached_segs = 0xFF;
     will_full_palette = player.will_level >= WILL_LEVEL_CAP ? 1 : 0;
     palette_bg_load(5, will_full_palette
         ? hud_palette_will_full : hud_palette_will);

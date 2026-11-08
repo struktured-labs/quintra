@@ -1,8 +1,6 @@
 #pragma bank 16
-// Hostile bullet motion lives outside bank 3. That bank already holds the
-// player-shot resolver and was under the 256-byte emergency floor once the
-// fast path was added beside it. Bank 16 has the room. The call is banked;
-// the common floor case below does not make another one.
+// Hostile motion stays in bank 16. Bank 3 is at the emergency floor once the
+// miss scan and the hit handler are split, so this remains a banked call.
 
 #include <gb/gb.h>
 
@@ -36,7 +34,7 @@ void projectile_update_hostile(entity_t *e, u8 idx) BANKED {
     tx = (u8)(sx >> 3);
     ty = (u8)(sy >> 3);
     t = (room_world_width == ROOM_VIEW_W_PX
-            || (sx < ROOM_VIEW_W_PX && sy < ROOM_VIEW_H_PX))
+            || (tx < ROOM_W && ty < ROOM_H))
         ? room_tilemap[ty][tx]
         : room_tile_at_px(sx, sy);
     if (t <= BGT_FLOOR3 && t != BGT_WALL) return;

@@ -8,9 +8,9 @@ it), then snapshots on a later entry. Both ROMs therefore simulate the same
 number of updates from the same entities, RNG, camera, and iframe seed.
 
 The default gate is 20 updates on every injected scene. A second pass runs
-200 updates on the collision fixtures (player shots that miss, player shots
-that overlap, and sixteen awake crawlers) so a disagreement that shows up
-only after the short window still fails the script.
+200 updates on every injected scene, including missed shots, overlapping
+shots, hostile bullets, and the pinned crawler, orc, and wisp crowds, so a
+disagreement that shows up only after the short window still fails.
 
 Natural and fixed-crawler scenes keep whatever the boot spawned, so they
 are reported but not required to match. Injected scenes are the gate.
@@ -29,9 +29,15 @@ AFTER_ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.
 UPDATES = 20
 LONG_UPDATES = 200
 LONG_SCENES = (
+    "empty_room",
+    "dense12_stationary",
+    "walkers8_pinned",
+    "walkers16_pinned",
+    "orcs8_pinned",
+    "wisps6_live",
     "player_shots_miss",
     "player_shots_overlap",
-    "walkers16_pinned",
+    "hostile16_moving",
 )
 GATED = {
     "empty_room",
@@ -137,8 +143,15 @@ def main():
     after_syms = bench.load_noi(AFTER_ROM.with_suffix(".noi"))
     for name in ("_entities", "_player", "_rng_state", "_shadow_OAM",
                  "_room_tilemap", "_run_state", "_entity_anim_counter"):
-        if before_syms[name] != after_syms[name]:
-            raise SystemExit(f"{name} moved in WRAM")
+        if name not in before_syms or name not in after_syms:
+            raise SystemExit(f"{name} missing from a ROM map")
+    # A new BSS byte can slide absolute WRAM addresses. The player blob is
+    # the span from _player to _run_state, so that distance is the layout gate.
+    before_span = before_syms["_run_state"] - before_syms["_player"]
+    after_span = after_syms["_run_state"] - after_syms["_player"]
+    if before_span != after_span or before_span <= 0:
+        raise SystemExit(
+            f"player WRAM span changed ({before_span} -> {after_span})")
     catalog = {item[0]: item[1] for item in bench.build_scenes(None)}
     failed = False
 

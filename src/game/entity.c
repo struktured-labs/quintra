@@ -23,6 +23,7 @@ entity_t entities[MAX_ENTITIES];
 // Maintained alongside the fixed table so an empty post-combat field does not
 // keep paying the banked camera-sector scan while its last bullets expire.
 u8 entity_enemy_count;
+u8 entity_pickup_pending;
 // Visibility is a camera-sector concern, not an animation concern. A sentinel
 // forces the first wide-field population scan; subsequent scans happen only
 // after the camera crosses a 16px sector boundary.
@@ -52,6 +53,7 @@ u8 entity_spawn(u8 type) {
             enemy_status_kind[i] = QSTATUS_NONE;
             entities[i].type    = type;
             entities[i].flags   = EF_ACTIVE | EF_ALIVE;
+            if (type == ENT_PICKUP) entity_pickup_pending = 1;
             if (type == ENT_ENEMY) {
                 // Compact-room bodies are visible immediately. Wide fields
                 // run the forced first camera-sector refresh below and clear
