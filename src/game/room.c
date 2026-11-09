@@ -86,6 +86,8 @@ u8 secret_door_x;
 u8 secret_door_y;
 u8 secret_door_x2;   // secret doors open as a 2-tile pair
 u8 secret_door_y2;   // (the wide feet box needs 16px)
+// Frames of the first Road Echo reveal before the greeting box opens.
+static u8 companion_greeting;
 // Block-push state: current lean direction + how long it's been held.
 static u8 push_dir;
 static u8 push_timer;
@@ -1212,7 +1214,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         room_draw_major_reward_tableau();
         return SCREEN_SELF;
     }
-    if (room_secret_loot_timer) room_update_secret_loot_timer();
+    if (room_secret_loot_timer && !companion_greeting)
+        room_update_secret_loot_timer();
+    if (companion_greeting) {
+        // The vault and the spirit are on screen. Hold the champion, let
+        // the reveal sound and the companion's flash play, then greet.
+        if (--companion_greeting == 0) {
+            dialog_prepare_reward(PICKUP_COMPANION, companion_active_kind());
+            return SCREEN_DIALOG;
+        }
+        keys = 0;
+        pressed = 0;
+    }
     if (law_action_latch) {
         if (keys & J_A) {
             keys &= (u8)~J_A;
@@ -2299,6 +2312,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     // stages it inside that vault; later rooms merely respawn
                     // the same seed-stable travelling spirit.
                     companion_intro = companion_discovered() ? 0 : 1;
+                    // Arm before the next banked call. SDCC does not keep
+                    // this local alive across the seam's far calls.
+                    if (companion_intro) companion_greeting = 36;
                     companion_discover();
                     if (room_hidden_secret_kind == HIDDEN_SECRET_WALK)
                         run_state.dungeon_phase |= room_hidden_secret_bit;
@@ -2484,10 +2500,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // idempotent commit makes the fully settled run/player state
                 // authoritative on both emulator and battery-backed carts.
                 sram_save_run();
-                if (companion_intro) {
-                    dialog_prepare_reward(PICKUP_COMPANION,
-                        companion_active_kind());
-                    return SCREEN_DIALOG;
+                if (companion_greeting) {
+                    // The vault is on screen now. Play the reveal, then let
+                    // room_tick hold the beat before the greeting box.
+                    sfx_play(SFX_CLEAR);
                 }
                 if (source_world_mode && !run_state.world_mode
                     && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
