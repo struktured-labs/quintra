@@ -1283,7 +1283,8 @@ void procgen_generate_current_room(void) BANKED {
                 // A one-dungeon full chart is a tactical alternative to
                 // raw stats: it lets a cash-rich player plan every branch,
                 // while the chartwright's free touch still scouts two cells.
-                spawn_shop_ware(48, 96, WARE_CHART, 15);
+                if (!(run_state.shop_civic & 1))
+                    spawn_shop_ware(48, 96, WARE_CHART, 15);
                 pickup_spawn_waykeeper(FIX8(80), FIX8(24));
                 // The arrival square now carries four distinct civic roles:
                 // healer, route reader, gate guide, and lore witness. This
@@ -1297,30 +1298,38 @@ void procgen_generate_current_room(void) BANKED {
                 pickup_spawn_bellkeeper(FIX8(24), FIX8(112));
             } else if (run_state.world_return_screen == TOWN_MARKET) {
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
-                spawn_shop_ware(48, 72, WARE_HEART, 5);
+                if (!(run_state.shop_bought & 0x10))
+                    spawn_shop_ware(48, 72, WARE_HEART, 5);
                 // A visible, seed-stable weapon trade replaces the former
                 // generic random-relic shelf. The market keeps four offers,
                 // so both town entity pressure and the established route
                 // geometry remain stable while the player gains a deliberate
                 // Flail-or-Spear build fork.
-                spawn_shop_ware(80, 72, WARE_WEAPON, 30);
-                spawn_shop_ware(112, 72, WARE_BIG, 35);
+                if (!(run_state.shop_bought & 0x20))
+                    spawn_shop_ware(80, 72, WARE_WEAPON, 30);
+                if (!(run_state.shop_bought & 0x40))
+                    spawn_shop_ware(112, 72, WARE_BIG, 35);
                 // A village stop is an intentional build choice, not just a
                 // refill. The far shelf makes the temporary attack-speed and
                 // damage burst reliably purchasable before the next dungeon.
-                spawn_shop_ware(144, 72, WARE_SURGE, 20);
-                paint_shop_price(16, 20);
+                if (!(run_state.shop_bought & 0x80)) {
+                    spawn_shop_ware(144, 72, WARE_SURGE, 20);
+                    paint_shop_price(16, 20);
+                }
             } else {
                 pickup_spawn_smith(FIX8(40), FIX8(48));
                 pickup_spawn_apothecary(FIX8(120), FIX8(96));
-                spawn_shop_ware(40, 80, WARE_FORGE, 30);
+                if (!(run_state.shop_civic & 2))
+                    spawn_shop_ware(40, 80, WARE_FORGE, 30);
                 // The apothecary is more than a Mana counter: its crimson
                 // shelf gives every three-dungeon village a legible chance
                 // to buy the run-long sustain build the roguelike promises.
                 // Unlike a random relic roll, the player can plan around
                 // its fifth-kill half-heart rhythm before the next region.
-                spawn_shop_ware(88, 64, WARE_VAMP, 35);
-                spawn_shop_ware(120, 64, WARE_RUNE, 30);
+                if (!(run_state.shop_civic & 4))
+                    spawn_shop_ware(88, 64, WARE_VAMP, 35);
+                if (!(run_state.shop_civic & 8))
+                    spawn_shop_ware(120, 64, WARE_RUNE, 30);
             }
             player.iframes = 60;
             return;
@@ -1533,17 +1542,24 @@ void procgen_generate_current_room(void) BANKED {
                 u8 build_price = pickup_dungeon_ware_price(build);
                 u8 tactical_price = pickup_dungeon_ware_price(tactical);
                 pickup_spawn_merchant(FIX8(80), FIX8(40));
-                spawn_shop_ware(44, 64, WARE_HEART, 10);
-                spawn_shop_ware(68, 64, WARE_ITEM, 25);
-                spawn_shop_ware(92, 64, build, build_price);
-                spawn_shop_ware(116, 64, tactical, tactical_price);
-                // Price tags painted on the floor under each ware:
-                // [coin][d][d], amber, walkable. The nearby HUD replaces the
-                // generic orb with its semantic effect icon before purchase.
-                paint_shop_price(4, 10);
-                paint_shop_price(7, 25);
-                paint_shop_price(10, build_price);
-                paint_shop_price(13, tactical_price);
+                // Bought slots stay empty until the next dungeon. Re-entering
+                // this room must not brew a new heart or the next relic.
+                if (!(run_state.shop_bought & 1)) {
+                    spawn_shop_ware(44, 64, WARE_HEART, 10);
+                    paint_shop_price(4, 10);
+                }
+                if (!(run_state.shop_bought & 2)) {
+                    spawn_shop_ware(68, 64, WARE_ITEM, 25);
+                    paint_shop_price(7, 25);
+                }
+                if (!(run_state.shop_bought & 4)) {
+                    spawn_shop_ware(92, 64, build, build_price);
+                    paint_shop_price(10, build_price);
+                }
+                if (!(run_state.shop_bought & 8)) {
+                    spawn_shop_ware(116, 64, tactical, tactical_price);
+                    paint_shop_price(13, tactical_price);
+                }
             }
         } else {
             // A 31x31 district spans almost three LCD areas. Penta-like
