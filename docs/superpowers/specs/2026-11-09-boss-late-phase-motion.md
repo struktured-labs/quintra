@@ -23,5 +23,15 @@ While the Reaper link is up, its volley is a three-lane fan instead of
 one re-aimed bolt. Shots already in flight keep `PROJ_PRELINK` grace.
 Damage, HP, and the link timer are unchanged.
 
-Sprite art, palettes, projectile rotation, and unused mural data are
-out of scope.
+Bolt and crescent shots stay the existing tiles. The bolt points right
+and the crescent's solid back is on the left. Hardware sprites can
+mirror those glyphs. They cannot rotate them by 90 degrees, so a
+north or south lane still shows the horizontal picture and keeps the
+authored hitbox. Westbound bolts mirror. Eastbound crescents mirror
+so the solid back leads. No new pixels are added.
+
+The screen-scale mural painters and their unused blink frames are
+gone. Nothing called them, and a moving boss already enters with no
+projection cells. Room entry still uploads the nine shared background
+tiles, because the serpent contour reuses those IDs and the Cinder
+room test reads tile 56. That upload is not a painted mural.

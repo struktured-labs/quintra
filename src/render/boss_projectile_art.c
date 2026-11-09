@@ -39,14 +39,34 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
         set_sprite_tile(oam,e->sprite_tile); set_sprite_prop(oam,e->palette);
         move_sprite(oam,x,y); return oam+1;
     }
-    u8 i, count = e->ai_data[4] == BOSS_SHAPE_SEED
-        || e->ai_data[4] == BOSS_SHAPE_CRESCENT ? 4
-        : e->ai_data[4] == BOSS_SHAPE_BOLT ? 2 : 1;
+    u8 shape = e->ai_data[4];
+    u8 ang = e->ai_data[0] & 31;
+    u8 prop = e->palette;
+    u8 mirror_x = 0;
+    u8 i, col, row, count = shape == BOSS_SHAPE_SEED
+        || shape == BOSS_SHAPE_CRESCENT ? 4
+        : shape == BOSS_SHAPE_BOLT ? 2 : 1;
+    // Both glyphs are horizontal. OAM can mirror them. It cannot rotate
+    // them onto a vertical lane, and this pass does not add tiles.
+    // The bolt's point sits on its right. Mirror it when the lane is west.
+    // The crescent's solid back sits on its left, so an eastbound shot
+    // mirrors and the back leads. A vertical mirror would not turn that
+    // C to face north or south.
+    if (shape == BOSS_SHAPE_BOLT && ang > 16) {
+        prop |= S_FLIPX;
+        mirror_x = 1;
+    } else if (shape == BOSS_SHAPE_CRESCENT && ang > 0 && ang < 16) {
+        prop |= S_FLIPX;
+        mirror_x = 1;
+    }
     if (oam + count > 40) return oam;
     for (i = 0; i < count; ++i) {
+        col = i & 1;
+        row = i >> 1;
+        if (mirror_x && count > 1) col = (u8)(1 - col);
         set_sprite_tile(oam, e->sprite_tile + i);
-        set_sprite_prop(oam, e->palette);
-        move_sprite(oam, x + ((i & 1) << 3), y + ((i >> 1) << 3));
+        set_sprite_prop(oam, prop);
+        move_sprite(oam, x + (col << 3), y + (row << 3));
         oam++;
     }
     return oam;
