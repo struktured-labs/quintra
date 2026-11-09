@@ -200,10 +200,16 @@ u8 boss_phase_motion(entity_t *e) BANKED {
     u8 stage = e->ai_data[2], d, clock = boss_phase_clock & 127;
     i8 dx, dy;
     if (!boss_phase || stage == 1 || stage == 2 || stage == 5) return 0;
+    // Crystal wells, Spider blinks, Mire pulses, Hydra bounces, and Void
+    // anchors stay active below half health. The shared east/west stepper
+    // took 32 east steps and, because ticks 64..111 are a cast pause, only
+    // 8 west steps per 128, so Spider and Hydra pinned on the east wall.
+    // Mire still holds still for its root cast and the hollow ring after it.
     if (stage == 4 && (mire_root_active
         || (boss_phase_clock >= 112 && boss_phase_clock < 148))) return 1;
+    if (stage != 6) return 0;
     if (boss_phase_clock >= 64 && boss_phase_clock < 112) return 1;
-    if (stage == 0 || stage == 6) {
+    if (stage == 6) {
         if (clock == 1) {
             e->vy = magnitude(player.x-e->x)>magnitude(player.y-e->y)
                 ? (player.x>e->x ? 2 : 6) : (player.y>e->y ? 4 : 0);
@@ -214,27 +220,13 @@ u8 boss_phase_motion(entity_t *e) BANKED {
             enemy_try_step(e,dir8_dx[d],dir8_dy[d]);
             if (boss_phase==2) enemy_try_step(e,dir8_dx[d],dir8_dy[d]);
         }
-        if (stage == 6 && ((clock >= 48 && clock < 64) || clock >= 112)) {
+        if ((clock >= 48 && clock < 64) || clock >= 112) {
             i16 cx = (room_world_width >> 1) - 16;
             i16 cy = (room_world_height >> 1) - 16;
             dx = e->x < cx ? 1 : e->x > cx ? -1 : 0;
             dy = e->y < cy ? 1 : e->y > cy ? -1 : 0;
             if (dx) enemy_try_step(e,dx,0);
             if (dy) enemy_try_step(e,0,dy);
-        }
-    } else if (stage == 3 || stage == 7) {
-        if (!(clock & 1)) {
-            dx = clock<64 ? 1 : -1;
-            dy = (clock&32) ? 1 : -1;
-            enemy_try_step(e,dx,0);
-            if (boss_phase==2) enemy_try_step(e,0,dy);
-        }
-    } else {
-        if (!(clock & 1)) {
-            dx = player.y>e->y ? 1 : -1;
-            dy = player.x>e->x ? -1 : 1;
-            if (boss_phase==2 && (clock&64)) { dx=-dx; dy=-dy; }
-            if (!enemy_try_step(e,dx,dy)) enemy_try_step(e,-dx,-dy);
         }
     }
     return 1;

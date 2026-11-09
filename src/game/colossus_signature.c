@@ -120,6 +120,13 @@ static void signature_warn(entity_t *e) {
         distance = (i16)(12 + step * 8);
         if (step & 1) x += (step & 2) ? distance : -distance;
         else y += (step & 2) ? distance : -distance;
+    } else if (stage == 8) {
+        // Event Horizon hurts the chebyshev square of radius 96. Markers
+        // sit on that perimeter. The blast size is unchanged.
+        static const i8 edge_x[8] = { 96, 96, 0, -96, -96, -96, 0, 96 };
+        static const i8 edge_y[8] = { 0, 96, 96, 96, 0, -96, -96, -96 };
+        x += edge_x[step & 7];
+        y += edge_y[step & 7];
     } else {
         distance = (i16)(10 + step * 8);
         x += (i16)dir8_dx[(step & 3) << 1] * distance;

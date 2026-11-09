@@ -406,15 +406,7 @@ void tiles_load_standard_floor(void) BANKED;      // restore dungeon cracks afte
 void tiles_load_stage_scenery(u8 stage) BANKED;   // stage-local pillar/crystal/debris silhouettes
 void tiles_load_cinder_maw_medium_sprite(void) BANKED;
 void tiles_load_map_bg(void) BANKED;              // dungeon set + Compass glyphs
-void tiles_load_colossus_bg(u8 stage) BANKED;     // nine screen-scale boss bodies
-void tiles_paint_crystal_projection(void) BANKED;
-void tiles_paint_cinder_projection(void) BANKED;
-void tiles_paint_spider_projection(void) BANKED;
-void tiles_paint_reaper_projection(void) BANKED;
-void tiles_paint_golem_projection(void) BANKED;
-void tiles_paint_mire_projection(u8 expanded, u8 draw_vram) BANKED;
-void tiles_paint_hydra_projection(void) BANKED;
-void tiles_paint_void_projection(void) BANKED;
+void tiles_load_colossus_bg(u8 stage) BANKED;     // nine shared BG tiles, not a mural
 void tiles_prepare_colossal_edges(void) BANKED; // safe 0..3px camera overscan
 void tiles_prepare_crystal_wide_arena(void) BANKED; // BG cols 20..28 for 224px arena
 void tiles_prepare_wide_field(void) BANKED; // generated BG cols/rows through 31x31
@@ -430,11 +422,4 @@ void tiles_load_boss_cue_bg(void) BANKED;         // sanctuary skull/barred thre
 void tiles_draw_boss_cue(u8 entered_from) BANKED; // project its 16x16 edge seal
 void tiles_load_area_labels(void) BANKED;          // RIFTWILD + village quarter landmarks
 void tiles_draw_area_label(u8 kind) BANKED;        // 1 Riftwild, 2 Village, 3 Market, 4 Forge
-void tiles_animate_colossus_bg(u8 closed) BANKED; // blink the BG-plane eyes
-void tiles_animate_cinder_bg(u8 active) BANKED;   // breath/lunge vs recovery jaw
-void tiles_animate_spider_bg(u8 closed) BANKED;   // web charge + eye pulse
-void tiles_animate_reaper_bg(u8 phased) BANKED;   // spectral cloak fade
-void tiles_animate_golem_bg(u8 dormant) BANKED;   // stone sleep / sun-rune wake
-void tiles_animate_hydra_bg(u8 center_open) BANKED;
-
 #endif

@@ -208,7 +208,9 @@ void boss_motion_tick(entity_t *e) BANKED {
             e->state = next;
             e->x = FIX8(anchor_x[next]);
             e->y = FIX8(anchor_y[next]);
-            e->ai_data[7] = 12;
+            // Draw hides on the odd value after each decrement. Twelve
+            // ticks hide 6 frames (6/36 of the hold). Four ticks hide 2.
+            e->ai_data[7] = 4;
             fx_spawn(SPR_FX_IMPACT, 2, anchor_x[next] + 12,
                 anchor_y[next] + 12, 12);
             boss_voice(8, BOSS_VOICE_ATTACK);
