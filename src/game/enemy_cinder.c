@@ -678,7 +678,34 @@ void cinder_draw(void) BANKED {
                 u8 col = cinder_rex_facing ? c : (u8)(3 - c);
                 u8 prop = (flash && (e->ai_data[7] & 1)) ? 0 : pal;
                 if (!cinder_rex_facing) prop |= S_FLIPX;
-                set_sprite_tile(oam, (u8)(SPR_CINDER_REX + (r << 2) + col));
+                // Bank 1 keeps a roar on the head row and a stride on the
+                // legs. The bit is per sprite, so the beats can split.
+                // The jaw opens on the breath, the spit, and the charge
+                // telegraph. The legs stride on the stomp, the charge, and
+                // every other beat of the walk.
+                u8 pose = 0;
+                if (prop && r == 0) {
+                    if (cinder_pattern == 0 && ((cinder_timer >= 28 && cinder_timer < 48)
+                            || (cinder_timer >= 68 && cinder_timer < 88)))
+                        pose = 1;
+                    else if (cinder_pattern == 1 && ((cinder_timer >= 16 && cinder_timer < 40)
+                            || (cinder_timer >= 56 && cinder_timer < 80)))
+                        pose = 1;
+                    else if (cinder_pattern == 3 && cinder_timer >= 16 && cinder_timer < 34)
+                        pose = 1;
+                }
+                if (prop && r == 1) {
+                    if ((cinder_pattern == 2 && cinder_timer >= 42 && cinder_timer < 88)
+                        || (cinder_pattern == 3 && cinder_timer >= 34 && cinder_timer < 78)
+                        || (entity_anim_counter & 16))
+                        pose = 1;
+                }
+                // Pose tiles sit at bank-1 OBJ 128..135, clear of Hexa
+                // 40..55 and 88..127, large-boss poses 64..87, and shots 208..213.
+                if (pose) prop |= 0x08;
+                set_sprite_tile(oam, pose
+                    ? (u8)(128 + (r << 2) + col)
+                    : (u8)(SPR_CINDER_REX + (r << 2) + col));
                 set_sprite_prop(oam, prop);
                 move_sprite(oam, (u8)(sx + 4 + (c << 3)), (u8)(sy + (r << 3)));
                 oam++;
