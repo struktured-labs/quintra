@@ -118,6 +118,8 @@ void room_stumble_off_hazard(void) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.
 u8 room_tile_walkable(u8 t) NONBANKED;
 // A player shot hit a cracked wall: convert it to a secret door.
+// 0xFF means this room has no opened vault mouth. The pair is the 16px gap.
+extern u8 secret_door_x, secret_door_y, secret_door_x2, secret_door_y2;
 void room_open_secret(u8 tx, u8 ty) BANKED;
 // A player shot shattered a crystal: floor it, maybe drop a +1 MP wisp.
 void room_break_crystal(u8 tx, u8 ty) BANKED;

@@ -80,11 +80,12 @@ static u8 camera_follow_ticks;
 // menu tapping cannot erase time; g_vbl_ticks itself is cleared on re-entry so
 // time spent reading those screens remains paused.
 static u8 run_clock_fraction;
-// Secret door opened by shooting a cracked wall this room (0xFF = none)
-static u8 secret_door_x;
-static u8 secret_door_y;
-static u8 secret_door_x2;   // secret doors open as a 2-tile pair
-static u8 secret_door_y2;   // (the wide feet box needs 16px)
+// Secret door opened by shooting a cracked wall this room (0xFF = none).
+// File scope so the seal renderer and the unseal pass can see the same gap.
+u8 secret_door_x;
+u8 secret_door_y;
+u8 secret_door_x2;   // secret doors open as a 2-tile pair
+u8 secret_door_y2;   // (the wide feet box needs 16px)
 // Block-push state: current lean direction + how long it's been held.
 static u8 push_dir;
 static u8 push_timer;
@@ -1118,11 +1119,12 @@ void room_enter(void) {
     if (room_encounter_kind == ENCOUNTER_HUNT) play_boss_music();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
-    room_draw_tilemap();
-    place_player_sprite();
-
+    // Drop the previous room's vault mouth before the first paint. A stale
+    // coordinate would keep that tile looking open through a combat seal.
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
+    room_draw_tilemap();
+    place_player_sprite();
     if (procgen_current_room_is_boss) {
         boss_voice(room_stage(), BOSS_VOICE_ARRIVE);
         // Entry drama: the arena starts dark and trembling, then the
@@ -2191,6 +2193,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             u8 return_door = (run_state.entered_from != DIR_NONE
                 && dir == back_dir) ? 1 : 0;
             u8 companion_intro = 0;
+            // A blasted vault mouth is an overlay hole, not a graph exit.
+            // Combat and puzzle seals still hold the ordinary doors.
+            u8 opened_secret = (secret_door_x != 0xFF
+                && ((tx == secret_door_x && ty == secret_door_y)
+                    || (tx == secret_door_x2 && ty == secret_door_y2)))
+                ? 1 : 0;
             // A nonlinear Rift, suspend/resume, or streamed transition can
             // arrive without a trustworthy cardinal entered_from direction.
             // The first hardening only recognized numerically lower cells;
@@ -2222,7 +2230,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // return from optional treasure—not an attempt to enter the
                 // boss—so never apply mission prerequisites while state 2
                 // proves that the hero is inside the overlay.
-                if (run_state.secret_pending != 2
+                if (!opened_secret && run_state.secret_pending != 2
                     && is_forward_boss_door(tx, ty, BGT_DOOR)
                     && (!(run_state.dungeon_puzzles & RUN_TRIAL_BIT)
                         || !(run_state.rift_sigils
@@ -2241,7 +2249,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // A discovered cache is an overlay attached to its parent
                 // graph cell, not another campaign node. Its only exit is the
                 // threshold back to that parent.
-                if (run_state.secret_pending == 2
+                if (!opened_secret && run_state.secret_pending == 2
                     && !(run_state.entered_from != DIR_NONE && dir == back_dir)) {
                     room_hold_at_door(dir, SFX_TICK, 4);
                     return SCREEN_SELF;
@@ -2251,7 +2259,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // Paired phase rooms instead author a physical remote wall;
                 // they must never globally seal doors because procedural fold
                 // edges can approach either side before the switch is found.
-                if (room_puzzle_locked
+                if (!opened_secret && room_puzzle_locked
                     && !return_door) {
                     room_hold_at_door(dir, SFX_TICK, 4);
                     return SCREEN_SELF;
@@ -2259,7 +2267,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // Dungeon combat rooms gate unexplored exits. Riftwild is an
                 // overworld, not a chain of arenas: its fights are optional
                 // and every authored graph exit remains fleeable.
-                if (room_combat_sealed && hostiles_now != 0
+                if (!opened_secret && room_combat_sealed && hostiles_now != 0
                     && (!return_door
                         || room_encounter_kind == ENCOUNTER_HUNT)) {
                     // A locked doorway is still walkable terrain so the hero

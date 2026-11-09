@@ -116,6 +116,9 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
 static u8 compact_door_locked(u8 x, u8 y) {
     u8 dir = DIR_NONE;
     u8 neighbor;
+    // An opened vault mouth stays a door. Redraws must not bar it.
+    if ((x == secret_door_x && y == secret_door_y)
+        || (x == secret_door_x2 && y == secret_door_y2)) return 0;
     if (!(room_combat_sealed || room_puzzle_locked)) return 0;
     if (y == 0) dir = DIR_N;
     else if (x == ROOM_W - 1) dir = DIR_E;

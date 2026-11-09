@@ -93,6 +93,24 @@ void room_unseal_doors(void) BANKED {
         }
         VBK_REG = 0;
     }
+    // The vault mouth is not a graph neighbour, so the loop above skips it.
+    // Paint the open door explicitly; a sealed redraw must not leave it barred
+    // after the room is cleared.
+    if (secret_door_x != 0xFF) {
+        u8 door = BGT_DOOR;
+        u8 attr = BGPAL_DOOR;
+        VBK_REG = 0;
+        set_bkg_tiles(ROOM_BG_MAP_X(secret_door_x),
+            ROOM_BG_MAP_Y(secret_door_y), 1, 1, &door);
+        set_bkg_tiles(ROOM_BG_MAP_X(secret_door_x2),
+            ROOM_BG_MAP_Y(secret_door_y2), 1, 1, &door);
+        VBK_REG = 1;
+        set_bkg_tiles(ROOM_BG_MAP_X(secret_door_x),
+            ROOM_BG_MAP_Y(secret_door_y), 1, 1, &attr);
+        set_bkg_tiles(ROOM_BG_MAP_X(secret_door_x2),
+            ROOM_BG_MAP_Y(secret_door_y2), 1, 1, &attr);
+        VBK_REG = 0;
+    }
     if (procgen_current_room_is_boss
         && room_world_width > ROOM_VIEW_W_PX)
         tiles_open_crystal_far_exit();
