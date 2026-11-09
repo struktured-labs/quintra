@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Golden Temple's monumental idol and OBJ heart."""
+"""Live-ROM contract for Golden Temple's moving heart, without a mural."""
 from pathlib import Path
 
-from test_boss_identity import PL, TM, addr, enter_boss, put16
+from test_boss_identity import PL, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BODY_MIN, BODY_MAX = 55, 63
 EYE_TILE, RUNE_TILE = 59, 61
 FRAME = addr("_loop_frame_counter")
-
-
-def body_tiles(pb):
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
 
 
 def position(pb, entity):
@@ -41,20 +34,7 @@ def wake_art(frame):
 
 def main():
     pb, boss = enter_boss(6, keep_open=True)
-    body = body_tiles(pb)
-    xs = [x for x, _, _ in body]
-    ys = [y for _, y, _ in body]
-    assert len(body) == 106, f"Golden Golem idol drifted: {len(body)} tiles"
-    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (14, 9), (
-        f"Golem lost its 112x72 footprint: x={min(xs)}..{max(xs)} "
-        f"y={min(ys)}..{max(ys)}")
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    assert tiles[5 * 20 + 6] == EYE_TILE
-    assert tiles[5 * 20 + 13] == EYE_TILE, "Golem lost its paired idol eyes"
-    assert tiles[6 * 20 + 7] == RUNE_TILE
-    assert tiles[6 * 20 + 12] == RUNE_TILE, "Golem lost its paired sun seals"
-    assert all(not BODY_MIN <= tiles[11 * 20 + x] <= BODY_MAX
-               for x in (9, 10)), "Golem lost its split stone feet"
+    assert projection_cells(pb) == 0, "Golem still paints a detached idol mural"
 
     # The projected stone is scenery only; the original moving 32x32 heart
     # remains the encounter's sole collision and vulnerability contract.
@@ -80,10 +60,12 @@ def main():
 
     awake_eye, bright_rune = wake_art(0x4E)
     sleeping_eye, dim_rune = wake_art(0x6E)
-    assert awake_eye != sleeping_eye and bright_rune != dim_rune, (
-        "Golem stopped alternating stone sleep and sun-rune wake")
-    print(f"[colossal-golem] PASS {len(body)} BG tiles, 112x72 temple idol, "
-          f"moving heart {before}->{after}, animated sun seals, walkable")
+    assert awake_eye == sleeping_eye and bright_rune == dim_rune, (
+        "Retired golem mural blinked again")
+    assert awake_eye != bright_rune and any(awake_eye) and any(bright_rune), (
+        "Golem BG atlas lost its distinct eye and rune")
+    print(f"[colossal-golem] PASS no mural, moving heart {before}->{after}, "
+          f"static atlas, walkable")
 
 
 if __name__ == "__main__":

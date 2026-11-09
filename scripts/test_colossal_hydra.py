@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Bloodmoon's three-headed BG coil and OBJ core."""
+"""Live-ROM contract for Bloodmoon's moving core, without a painted coil."""
 from pathlib import Path
 
-from test_boss_identity import PL, TM, addr, enter_boss, put16
+from test_boss_identity import PL, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BODY_MIN, BODY_MAX = 55, 63
 EYE_TILE, MAW_TILE = 59, 62
 FRAME = addr("_loop_frame_counter")
 CAMERA_X = addr("_room_camera_x")
-
-
-def body_tiles(pb):
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
 
 
 def position(pb, entity):
@@ -47,17 +40,7 @@ def head_art(frame):
 
 def main():
     pb, boss = enter_boss(7, keep_open=True)
-    body = body_tiles(pb)
-    xs = [x for x, _, _ in body]
-    ys = [y for _, y, _ in body]
-    assert len(body) == 100, f"Hydra coil drifted: {len(body)} tiles"
-    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (14, 8), (
-        f"Hydra lost its 112x64 footprint: x={min(xs)}..{max(xs)} "
-        f"y={min(ys)}..{max(ys)}")
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    assert tiles[4 * 20 + 6] == EYE_TILE
-    assert tiles[4 * 20 + 9] == MAW_TILE
-    assert tiles[4 * 20 + 13] == EYE_TILE, "Hydra lost its three head anchors"
+    assert projection_cells(pb) == 0, "Hydra still paints a detached coil mural"
 
     # Projection remains walkable; only the original 32x32 mobile core can
     # receive attacks or deal contact damage.
@@ -99,15 +82,15 @@ def main():
     pb.screen.image.save(screenshot)
     pb.stop(save=False)
 
-    side_open, centre_closed = head_art(0x0E)
-    side_closed, centre_open = head_art(0x1E)
-    assert side_open != side_closed, "Hydra heads did not animate"
-    assert side_open == centre_open and centre_closed == side_closed, (
-        "Hydra side/centre heads did not exchange breath posture")
+    side_a, centre_a = head_art(0x0E)
+    side_b, centre_b = head_art(0x1E)
+    assert side_a == side_b and centre_a == centre_b, (
+        "Retired hydra mural swapped head tiles")
+    assert side_a != centre_a and any(side_a) and any(centre_a), (
+        "Hydra BG atlas lost its distinct head tiles")
 
-    print(f"[colossal-hydra] PASS {len(body)} BG tiles, 112x64 three-head "
-          f"coil, moving core {before}->{after}, camera 0..64, "
-          f"alternating heads, walkable")
+    print(f"[colossal-hydra] PASS no mural, moving core {before}->{after}, "
+          f"camera 0..64, static atlas, walkable")
 
 
 if __name__ == "__main__":

@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Shadow Keep's spectral cloak and mobile weak point."""
+"""Live-ROM contract for the Reaper's flank blink, without a painted cloak."""
 from pathlib import Path
 
-from test_boss_identity import PL, TM, addr, enter_boss, put16
+from test_boss_identity import PL, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BODY_MIN, BODY_MAX = 55, 63
 VOID_TILE, EYE_TILE = 55, 59
 FRAME = addr("_loop_frame_counter")
-
-
-def body_tiles(pb):
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
 
 
 def position(pb, entity):
@@ -38,16 +31,7 @@ def phase_art(frame):
 
 def main():
     pb, boss = enter_boss(5, keep_open=True)
-    body = body_tiles(pb)
-    xs = [x for x, _, _ in body]
-    ys = [y for _, y, _ in body]
-    assert len(body) == 96, f"Dusk Reaper cloak drifted: {len(body)} tiles"
-    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (14, 8), (
-        f"Reaper lost its 112x64 footprint: x={min(xs)}..{max(xs)} "
-        f"y={min(ys)}..{max(ys)}")
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    assert all(not BODY_MIN <= tiles[11 * 20 + x] <= BODY_MAX
-               for x in (6, 8, 11, 13)), "Reaper lost its tattered hem"
+    assert projection_cells(pb) == 0, "Reaper still paints a detached cloak mural"
 
     put16(pb, PL + 9, 24)
     put16(pb, PL + 11, 72)
@@ -77,10 +61,12 @@ def main():
 
     solid_void, open_eye = phase_art(0x0E)
     phased_void, closed_eye = phase_art(0x2E)
-    assert solid_void != phased_void and open_eye != closed_eye, (
-        "Reaper cloak stopped phasing")
-    print(f"[colossal-reaper] PASS {len(body)} BG tiles, 112x64 tattered "
-          f"cloak, weak-point re-entry {leap}px, animated phase, walkable")
+    assert solid_void == phased_void and open_eye == closed_eye, (
+        "Retired reaper mural phased again")
+    assert solid_void != open_eye and any(solid_void) and any(open_eye), (
+        "Reaper BG atlas lost its distinct cloak tiles")
+    print(f"[colossal-reaper] PASS no mural, weak-point re-entry {leap}px, "
+          f"static atlas, walkable")
 
 
 if __name__ == "__main__":

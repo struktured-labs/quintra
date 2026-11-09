@@ -37,6 +37,17 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
+def projection_cells(pb, width=28, height=17):
+    """BG cells still using the retired colossus mural ids (55..63)."""
+    bank = pb.memory[0xFF4F]
+    pb.memory[0xFF4F] = 0
+    count = sum(
+        55 <= pb.memory[0x9800 + y * 32 + x] <= 63
+        for y in range(height) for x in range(width))
+    pb.memory[0xFF4F] = bank
+    return count
+
+
 def enter_boss(stage, keep_open=False):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     for _ in range(240):

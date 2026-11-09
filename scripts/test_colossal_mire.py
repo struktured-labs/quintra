@@ -1,58 +1,36 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Toxic Mire's expanding BG body and OBJ heart."""
+"""Live-ROM contract for Toxic Mire's pulse, without a painted body."""
 from pathlib import Path
 
-from test_boss_identity import EN, PL, TM, addr, enter_boss, put16
+from test_boss_identity import PL, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
-ENTITY_SIZE = 28
-BODY_MIN, BODY_MAX = 55, 63
 CAMERA_X = addr("_room_camera_x")
 
 
-def body_tiles(pb):
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
-
-
-def footprint(body):
-    xs = [x for x, _, _ in body]
-    ys = [y for _, y, _ in body]
-    return max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
-
-
-def tick_until_phase(pb, boss, phase):
-    for _ in range(8):
-        pb.tick()
+def assert_phase(pb, boss, phase):
+    for _ in range(64):
         if (pb.memory[boss + 15] & 1) == phase:
-            body = body_tiles(pb)
-            expected = 84 if phase else 36
-            if len(body) == expected:
-                return body
+            assert projection_cells(pb) == 0, (
+                f"Mire phase {phase} painted a detached body")
+            return
+        pb.tick()
     raise AssertionError(
-        f"Mire never rendered phase {phase}: state={pb.memory[boss + 15]}, "
-        f"tiles={len(body_tiles(pb))}")
+        f"Mire never reached phase {phase}: state={pb.memory[boss + 15]}")
 
 
 def main():
     pb, boss = enter_boss(4, keep_open=True)
 
-    # Reconcile to the clenched phase, then force the existing 48-beat motion
-    # timer across both transitions. The background silhouette—not a test-only
-    # marker—must follow the live boss state.
+    # The pulse still toggles the live state bit. It no longer paints a
+    # background silhouette for that state.
     pb.memory[boss + 15] = 0
     pb.memory[boss + 10] = 12
-    clenched = tick_until_phase(pb, boss, 0)
-    assert len(clenched) == 36 and footprint(clenched) == (8, 6), (
-        f"Mire clenched body drifted: {len(clenched)} tiles {footprint(clenched)}")
+    assert_phase(pb, boss, 0)
 
     pb.memory[boss + 10] = 1
-    expanded = tick_until_phase(pb, boss, 1)
-    assert len(expanded) == 84 and footprint(expanded) == (12, 8), (
-        f"Mire expansion lost its 96x64 footprint: "
-        f"{len(expanded)} tiles {footprint(expanded)}")
+    assert_phase(pb, boss, 1)
 
     # Projection tiles remain walkable. The only physical/vulnerable boss body
     # is still the 32x32 OBJ heart, so the spectacle cannot create invisible
@@ -88,12 +66,11 @@ def main():
 
     pb.memory[boss + 15] = 1
     pb.memory[boss + 10] = 1
-    contracted_again = tick_until_phase(pb, boss, 0)
-    assert len(contracted_again) == 36, "Mire did not visibly contract again"
+    assert_phase(pb, boss, 0)
     pb.stop(save=False)
 
-    print("[colossal-mire] PASS 64x48 clenched -> 96x64 expanded -> "
-          "64x48 clenched; camera 0..64; BG projection walkable")
+    print("[colossal-mire] PASS pulse clenched -> expanded -> clenched; "
+          "no mural; camera 0..64; arena walkable")
 
 
 if __name__ == "__main__":

@@ -2,14 +2,13 @@
 """Live-ROM contract for the BG-body/OBJ-core Void Colossus arena."""
 from pathlib import Path
 
-from test_boss_identity import EN, PL, TM, addr, enter_boss, put16
+from test_boss_identity import EN, PL, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
 ENTITY_SIZE = 28
 ENT_PROJECTILE = 1
 ENT_FX = 4
-BODY_MIN, BODY_MAX = 55, 63
 EYE_TILE = 59
 FRAME = addr("_loop_frame_counter")
 CAMERA_X = addr("_room_camera_x")
@@ -51,16 +50,7 @@ def eye_art_at(frame=None):
 
 def main():
     pb, boss = enter_boss(8, keep_open=True)
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    body = [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
-    assert len(body) >= 130, f"colossal BG body is too sparse: {len(body)} tiles"
-    xs, ys = [x for x, _, _ in body], [y for _, y, _ in body]
-    assert max(xs) - min(xs) + 1 == 16 and max(ys) - min(ys) + 1 == 10, (
-        f"colossal body lost its 128x80 footprint: "
-        f"x={min(xs)}..{max(xs)} y={min(ys)}..{max(ys)}")
-    assert tiles[4 * 20 + 6] == EYE_TILE and tiles[4 * 20 + 13] == EYE_TILE, \
-        "screen-scale face lost its paired animated eyes"
+    assert projection_cells(pb) == 0, "Void Lord still paints a detached mural"
 
     # Projection art is traversable; the 32x32 OBJ core remains the only
     # physical boss body. Walking across a scale tile must not create an
@@ -114,9 +104,9 @@ def main():
     # chamber without moving the fixed WINDOW HUD.
     (eye_open, open_frame) = eye_art_at(0x7F)
     (eye_closed, closed_frame) = eye_art_at(0x6F)
-    assert eye_open != eye_closed, ("colossal BG eyes did not animate; "
-                                    f"frames={open_frame}/{closed_frame} "
-                                    f"tile={eye_open.hex()}/{eye_closed.hex()}")
+    assert eye_open == eye_closed and any(eye_open), (
+        "Retired Void mural blinked, or its eye tile was not uploaded; "
+        f"frames={open_frame}/{closed_frame}")
     put16(pb, PL + 9, 200)
     for _ in range(80):
         pb.tick()
@@ -127,8 +117,8 @@ def main():
     screenshot = ROOT / "tmp" / "void-colossal-arena.png"
     pb.screen.image.save(screenshot)
     pb.stop(save=False)
-    print(f"[colossal-void] PASS {len(body)} BG tiles, 128x80 body, "
-          f"anchor {before}->{after}, marked Collapse pocket, animated eyes")
+    print(f"[colossal-void] PASS no mural, anchor {before}->{after}, "
+          f"marked Collapse pocket, static eye atlas")
 
 
 if __name__ == "__main__":

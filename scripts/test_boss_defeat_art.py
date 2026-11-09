@@ -3,16 +3,12 @@
 import hashlib
 import json
 from pathlib import Path
-from test_boss_identity import ROM, ROOT, EN, PL, RS, TM, addr, enter_boss, put16
+from test_boss_identity import (
+    ROM, ROOT, EN, PL, RS, TM, addr, enter_boss, projection_cells, put16)
 
 
 def projection_count(pb):
-    bank = pb.memory[0xFF4F]
-    pb.memory[0xFF4F] = 0
-    count = sum(55 <= pb.memory[0x9800+y*32+x] <= 63
-                for y in range(17) for x in range(28))
-    pb.memory[0xFF4F] = bank
-    return count
+    return projection_cells(pb)
 
 
 def main():
