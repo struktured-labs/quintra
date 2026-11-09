@@ -223,6 +223,37 @@ fn boss_maw() -> Grid {
     g
 }
 
+/// Head row is the roar, leg row is the stride. Drawn with S_BANK per row
+/// from VRAM bank 1, so the idle atlas in bank 0 stays put.
+pub fn cinder_rex_pose() -> Grid {
+    const POSE: [&str; 16] = [
+        "........3333..33................",
+        ".......213333112................",
+        "......2113333311222.............",
+        "...22..21113311111112.......2332",
+        ".221133311111111212122.....21332",
+        "21113333111111123232312...21122.",
+        "233333331111112332332112.2112...",
+        "2221111221111123323321112112....",
+        ".323232..211112132132111112.....",
+        "..232322.21111122222111112......",
+        ".211111122211111111111112.......",
+        "221111122..21112....22112.......",
+        "21112......21112......2112......",
+        ".211312...211312................",
+        "2232322..2232322................",
+        "....2222....2222................",
+    ];
+    let mut g = vec![vec![0u8; 32]; 16];
+    for (y, row) in POSE.iter().enumerate() {
+        assert_eq!(row.len(), 32);
+        for (x, pixel) in row.bytes().enumerate() {
+            g[y][x] = if pixel == b'.' { 0 } else { pixel - b'0' };
+        }
+    }
+    g
+}
+
 /// Stage 3 — Frost Spider: plated abdomen and eight jointed ice legs.
 fn boss_spider() -> Grid {
     let mut g = blank();
@@ -535,5 +566,21 @@ mod tests {
             g[*y][11..16].iter().any(|&p| p != 0) && g[*y][21..26].iter().any(|&p| p != 0)
         }).count();
         assert!(planted >= 4, "both pillar legs reach the floor");
+    }
+
+    #[test]
+    fn cinder_rex_roar_opens_the_jaw_and_the_stride_reaches() {
+        let idle = boss_maw();
+        let pose = super::cinder_rex_pose();
+        let changed = |rows: std::ops::Range<usize>| {
+            idle[rows.start + 16..rows.end + 16].iter().flatten()
+                .zip(pose[rows].iter().flatten())
+                .filter(|(a, b)| a != b).count()
+        };
+        assert!(changed(0..8) > 20, "roar matches the closed jaw");
+        assert!(changed(8..16) > 20, "stride matches the planted legs");
+        assert!(pose[6][..6].contains(&3), "jaw did not open");
+        assert_ne!(pose[15][4], 0, "stride has no trailing foot");
+        assert_eq!(pose[15][8], 0, "planted foot is still under the body");
     }
 }
