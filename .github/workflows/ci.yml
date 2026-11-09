@@ -120,6 +120,9 @@ jobs:
       - name: PyBoy Crystal Colossus pose
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_crystal_pose.py
 
+      - name: PyBoy Sun Golem pose
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_golem_pose.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 

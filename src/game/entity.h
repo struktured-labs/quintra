@@ -79,8 +79,8 @@ void entity_update_all(void);
 void entity_draw_all(void);
 // Cold two-axis OAM projection used by every scrolling field.
 void entity_draw_all_world(void) BANKED;
-// 3x3 and 4x4 colossus bodies. Direct shadow-OAM writes, plus Crystal's
-// bank-1 pose bit. Kept out of home so the square-boss drawer can grow.
+// 3x3 and 4x4 colossus bodies. Direct shadow-OAM writes, plus the
+// bank-1 pose for Crystal and the Sun Golem. Kept out of home.
 u8 colossus_oam_draw(u8 oam, u8 sx, u8 sy, u8 tile, u8 pal, u8 side,
     const entity_t *e, u8 hide) BANKED;
 // Mark only enemies inside the current scrolling camera sector as awake.

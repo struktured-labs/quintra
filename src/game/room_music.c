@@ -38,16 +38,16 @@ void room_load_stage_obj_identity(void) BANKED {
     palette_obj_load(6, boss_stage_pal[stage]);
     tiles_load_miniboss(stage);
     tiles_load_boss_big(stage);
-    /* Crystal writes 16 tiles at bank-1 OBJ 128 and the Rex writes 8.
-       Only those rooms wipe the shared window, so a stage change cannot
-       keep the other boss's bytes. */
-    if (stage == 0 || stage == 2) {
+    /* Crystal and the Sun Golem write 16 tiles at bank-1 OBJ 128.
+       The Rex writes 8. Those rooms wipe the shared window first. */
+    if (stage == 0 || stage == 2 || stage == 6) {
         VBK_REG = 1;
         for (i = 0; i < 16; ++i) set_sprite_data((u8)(128 + i), 1, zero_tile);
         VBK_REG = 0;
     }
     if (stage == 2) cinder_rex_pose_b_load();
     if (stage == 0) crystal_pose_b_load();
+    if (stage == 6) golem_pose_b_load();
     if (room_return_echo_kind >= 4) {
         tiles_load_return_reaper();
         palette_obj_load(6, return_palette);
