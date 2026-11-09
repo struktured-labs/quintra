@@ -53,19 +53,12 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         if (slot == large_boss_index) continue;
         if (hexa_boss_active && e->ai_data[2] == HEXA_STAGE) continue;
         u8 side = e->ai_data[0] == ENEMY_STONE_SENTINEL ? 4 : 3;
-        u8 r, c, tile = side == 3 ? SPR_BOSS_BIG : e->sprite_tile;
+        u8 tile = side == 3 ? SPR_BOSS_BIG : e->sprite_tile;
         if (side == 3) { sx -= 4; sy -= 8; }
         if (flash) e->ai_data[7]--;
         if (oam + (side == 3 ? 9 : 16) > 40) continue;
-        for (r = 0; r < side; ++r) {
-            for (c = 0; c < side; ++c) {
-                set_sprite_tile(oam, tile);
-                set_sprite_prop(oam, pal);
-                if (flash && (e->ai_data[7] & 1)) move_sprite(oam, 0, 0);
-                else move_sprite(oam, (u8)(sx + c * 8), (u8)(sy + r * 8));
-                oam++; tile++;
-            }
-        }
+        oam = colossus_oam_draw(oam, sx, sy, tile, pal, side, e,
+            (u8)(flash && (e->ai_data[7] & 1)));
         continue;
     }
 

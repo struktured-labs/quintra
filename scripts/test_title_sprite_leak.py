@@ -6,7 +6,8 @@ alone. The title then enables sprites for its five champions (objects
 0..19). Anything still sitting in slots 20..39 is drawn on top of the menu.
 
 On the Crystal Colossus that is both halves of the owner's capture: the
-body's bottom row (tiles 52..55) sits on PRESS START, and the boss pellets
+body's bottom row (tiles 52..55, or 140..143 while the refraction pose is
+showing) sits on PRESS START, and the boss pellets
 that were drawn first (tile 208, plus an impact spark at tile 33) remain
 as the stray dots around the logo. A death that only produced one of those
 does not prove the title clears the other.
@@ -35,9 +36,12 @@ WALK_BASE = 82
 STRIDE = 4
 SETTLE = 16
 OUT = ROOT / "tmp" / "title-sprite-leak"
-# SPR_BOSS_BIG is the 4x4 Colossus, sixteen tiles.
+# SPR_BOSS_BIG is the 4x4 Colossus, sixteen tiles. The refraction pose
+# uses the same sixteen sprites at bank-1 OBJ 128..143.
 BODY_LO = 40
 BODY_HI = 55
+POSE_B_LO = 128
+POSE_B_HI = 143
 # Boss rooms replace the resident atlas at 208..223 with shot art
 # (pellet, orb, seed, bolt, crescent, and the split frames). Ordinary
 # bullets are 28/29; the impact spark is 33.
@@ -101,8 +105,12 @@ def live_tail(pb):
     return rows
 
 
+def is_boss_body(tile):
+    return BODY_LO <= tile <= BODY_HI or POSE_B_LO <= tile <= POSE_B_HI
+
+
 def sprite_kind(tile):
-    if BODY_LO <= tile <= BODY_HI:
+    if is_boss_body(tile):
         return "boss body"
     if tile in PROJECTILE_TILES:
         return "projectile"
@@ -220,7 +228,7 @@ def kill_to_title(pb, label, need_body=False, projectile_tiles=None):
         "cannot prove the title clears the tail"
     )
     if need_body:
-        body = [row for row in tail if BODY_LO <= row[3] <= BODY_HI]
+        body = [row for row in tail if is_boss_body(row[3])]
         assert body, (
             f"{label} game over left no Colossus body in OAM 20..39 "
             f"({describe_tail(tail)}). That row is the striped remnant "
