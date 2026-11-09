@@ -119,10 +119,10 @@ def main() -> None:
                     stage_animation.append(
                         pyboy.screen.image.convert("RGB").copy())
                 if stage == 2:
-                    # This encounter owns ten visible OBJ pieces instead of
-                    # painting the old rectangular projection into the BG.
-                    # Select the fully formed Rex for the static panel.
-                    current_tiles = (10 if pyboy.memory[cinder_phase] == 2
+                    # The Rex is eight native OBJ tiles, not a stretched ten-tile
+                    # body and not the old rectangular BG projection. Select
+                    # the fully formed Rex for the static panel.
+                    current_tiles = (8 if pyboy.memory[cinder_phase] == 2
                                      and pyboy.memory[giants[0] + 24] == 0
                                      else 0)
                 else:

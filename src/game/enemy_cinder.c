@@ -18,7 +18,8 @@
 
 // Five independent bodies and eight delayed floor brands are the visual
 // budget for this encounter. The dedicated renderer owns OAM 4..21; generic
-// entities begin at 22 while the encounter is active.
+// entities begin at 22 while the encounter is active. Act 2 draws the
+// authored 4x2 Rex (eight sprites) centered in the unchanged 40x16 hitbox.
 u8 cinder_pack_active;
 u8 cinder_boss_index = 0xFF;
 u8 cinder_damage_open;
@@ -669,17 +670,17 @@ void cinder_draw(void) BANKED {
     if (cinder_phase == 2) {
         i16 sx = FIX8_TO_INT(e->x) - room_camera_x + 8;
         i16 sy = FIX8_TO_INT(e->y) - room_camera_y + 16;
-        static const u8 stretched_col[5] = { 0,1,2,2,3 };
         u8 r, c;
+        // Native 4x2. The atlas faces west, so an east step (facing == 0)
+        // mirrors it. sx+4 centers the 32px body in the 40px hitbox.
         for (r = 0; r < 2; ++r) {
-            for (c = 0; c < 5; ++c) {
-                u8 col = cinder_rex_facing
-                    ? stretched_col[4 - c] : stretched_col[c];
+            for (c = 0; c < 4; ++c) {
+                u8 col = cinder_rex_facing ? c : (u8)(3 - c);
                 u8 prop = (flash && (e->ai_data[7] & 1)) ? 0 : pal;
-                if (cinder_rex_facing) prop |= S_FLIPX;
-                set_sprite_tile(oam, (u8)(SPR_CINDER_REX + r * 4 + col));
+                if (!cinder_rex_facing) prop |= S_FLIPX;
+                set_sprite_tile(oam, (u8)(SPR_CINDER_REX + (r << 2) + col));
                 set_sprite_prop(oam, prop);
-                move_sprite(oam, (u8)(sx + c * 8), (u8)(sy + r * 8));
+                move_sprite(oam, (u8)(sx + 4 + (c << 3)), (u8)(sy + (r << 3)));
                 oam++;
             }
         }
