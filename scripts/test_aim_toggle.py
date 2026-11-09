@@ -47,7 +47,10 @@ try:
             if player_shots(pb): break
         e = player_shots(pb)[0]
         velocity = [signed(pb.memory[e+10]), signed(pb.memory[e+11])]
-        assert velocity[0] > 0 and velocity[1] == 0 if expected else velocity[0] == 0 and velocity[1] < 0
+        if expected:
+            assert velocity[0] > 0 and velocity[1] < 0, velocity
+        else:
+            assert velocity[0] == 0 and velocity[1] < 0, velocity
         results.append(dict(mode=expected, neutral_velocity=velocity))
         pb.button_release('a'); pb.tick(3)
     # Existing pages remain available after the new aim page.
