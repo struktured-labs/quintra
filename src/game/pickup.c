@@ -262,7 +262,19 @@ u8 pickup_nearby_speaker(u8 *kind_out, u8 *topic_out) BANKED {
         dy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
-        if (dx > 28 || dy > 28) continue;
+        // About 2.5 tiles. Farther than that, A still attacks.
+        if (dx > 20 || dy > 20) continue;
+        // At the edge of the box, facing away must not open dialogue.
+        // Contact (14px) still talks from any facing so a crowded counter
+        // stays reachable.
+        if (dx > 14 || dy > 14) {
+            i16 sx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
+            i16 sy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
+            if (player.facing == FACE_E && sx < 0) continue;
+            if (player.facing == FACE_W && sx > 0) continue;
+            if (player.facing == FACE_S && sy < 0) continue;
+            if (player.facing == FACE_N && sy > 0) continue;
+        }
         distance = (u8)(dx + dy);
         if (!found || distance < best_distance) {
             found = 1;
@@ -404,7 +416,7 @@ static void pickup_near_callout(entity_t *e, u8 palette, u8 tile) {
         i16 dy = FIX8_TO_INT(e->y) - (i16)player.y;
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
-        if (dx <= 32 && dy <= 32
+        if (dx <= 20 && dy <= 20
             && fx_spawn(tile, palette,
                 FIX8_TO_INT(e->x), FIX8_TO_INT(e->y) - 10, 45) != 0xFF)
             e->state_timer = 105; // visible 0.75s, then a short rest
