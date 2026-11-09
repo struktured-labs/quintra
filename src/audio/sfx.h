@@ -53,6 +53,9 @@ void sfx_tick_will(void) BANKED;
 extern u8 sfx_will_active;
 // Ordered floor runes answer with one of five stable major-pentatonic pitches.
 void sfx_play_rune(u8 step);
+// Sequence puzzles call this instead of sfx_play(SFX_PUZZLE) so the last
+// floor note is audible before the fanfare takes CH1. Gameplay is not delayed.
+void sfx_play_puzzle_after_note(void);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps
 void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames);
 // Long discovery/clear figures own the effect bus until their scheduled

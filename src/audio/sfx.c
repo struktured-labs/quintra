@@ -24,6 +24,7 @@
 #define PEND_SIGIL_NOTE6 15
 #define PEND_PORTAL_ARRIVE 16
 #define PEND_REFUSE_NOTE2 17
+#define PEND_PUZZLE_DELAY 18
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -51,6 +52,7 @@ static u8 melody_priority_for(u8 id) {
 }
 
 static void advance_pending_sfx(void);
+static void start_puzzle_fanfare(void);
 
 static void melody_lock(u8 priority, u8 frames) {
     melody_lock_priority = priority;
@@ -181,17 +183,7 @@ void sfx_play(u8 id) {
             sfx_claim_channels(11, 0);
             break;
         case SFX_PUZZLE:
-            // A landscape secret should linger, not read as another pickup.
-            // Start with a stone-deep noise breath, then climb a deliberately
-            // uncanny diminished figure (D4-F4-Ab4) into a clear D5 resolve.
-            // At twelve frames between attacks the full reveal lasts roughly
-            // three quarters of a second before the final note decays.
-            ch4(0x5D, 0x84);
-            ch1(0x00, 0xC0, 0xA4, 1602);              // D4
-            pend_kind = PEND_PUZZLE_NOTE2;
-            pend_timer = 12;
-            sfx_claim_channels(45, 10);
-            melody_lock(MELODY_PRIORITY_SECRET, 45);
+            start_puzzle_fanfare();
             break;
         case SFX_DISTRICT:
             // A restrained threshold bell: low A4 establishes distance,
@@ -243,6 +235,25 @@ void sfx_play(u8 id) {
         default:
             break;
     }
+}
+
+static void start_puzzle_fanfare(void) {
+    // A landscape secret should linger, not read as another pickup.
+    // Start with a stone-deep noise breath, then climb a deliberately
+    // uncanny diminished figure (D4-F4-Ab4) into a clear D5 resolve.
+    ch4(0x5D, 0x84);
+    ch1(0x00, 0xC0, 0xA4, 1602);              // D4
+    pend_kind = PEND_PUZZLE_NOTE2;
+    pend_timer = 12;
+    sfx_claim_channels(45, 10);
+    melody_lock(MELODY_PRIORITY_SECRET, 45);
+}
+
+void sfx_play_puzzle_after_note(void) {
+    // The final rune already owns CH1. Let it speak, then start the fanfare.
+    pend_kind = PEND_PUZZLE_DELAY;
+    pend_timer = 12;
+    sfx_claim_channels(12, 0);
 }
 
 void sfx_play_rune(u8 step) {
@@ -319,6 +330,9 @@ static void advance_pending_sfx(void) {
             NR13_REG = (u8)(2010 & 0xFF);              // up an octave-ish
             NR14_REG = (u8)(0x80 | (2010 >> 8));
             break;
+        case PEND_PUZZLE_DELAY:
+            start_puzzle_fanfare();
+            return;
         case PEND_PUZZLE_NOTE2:
             NR12_REG = 0xA4;
             NR13_REG = (u8)(1673 & 0xFF);              // F4

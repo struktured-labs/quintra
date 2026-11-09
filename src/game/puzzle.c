@@ -89,14 +89,15 @@ static u8 puzzle_solved(void) {
     return (bit && (run_state.dungeon_puzzles & bit)) ? 1 : 0;
 }
 
-static void mark_puzzle_solved(void) {
+static void mark_puzzle_solved(u8 delay_fanfare) {
     u8 cell = run_state_dungeon_cell();
     if (cell == run_state.mission_trial_cell)
         run_state.dungeon_puzzles |= RUN_TRIAL_BIT;
     else if (cell == run_state.mission_waystone_cell)
         run_state.dungeon_puzzles |= RUN_WAYSTONE_BIT;
     room_puzzle_locked = 0;
-    sfx_play(SFX_PUZZLE);
+    if (delay_fanfare) sfx_play_puzzle_after_note();
+    else sfx_play(SFX_PUZZLE);
     room_shake(1, 18);
     // Every mandatory puzzle pays one physical tool charge. The seed and
     // local cell choose the implement, so routing changes the tactical Pack
@@ -391,7 +392,7 @@ u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED {
     }
     if (room_puzzle_kind != PUZZLE_PUSH_SEAL || !room_puzzle_locked) return 0;
     if (old_x != puzzle_block_x || old_y != puzzle_block_y) return 0;
-    mark_puzzle_solved();
+    mark_puzzle_solved(0);
     return 1;
 }
 
@@ -474,7 +475,8 @@ static u8 update_sequence(u8 tx, u8 ty) {
     sfx_play_rune(rune_pitch(rune_progress));
     rune_progress++;
     if (rune_progress < rune_count) return 0;
-    mark_puzzle_solved();
+    // The room unlocks now. Only the fanfare waits, so the last note is heard.
+    mark_puzzle_solved(1);
     return 1;
 }
 
