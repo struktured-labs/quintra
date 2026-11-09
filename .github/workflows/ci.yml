@@ -87,6 +87,9 @@ jobs:
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
+      - name: Hexa Dragmar
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_dragmar.py
+
       - name: Upload ROM
         uses: actions/upload-artifact@v4
         with:

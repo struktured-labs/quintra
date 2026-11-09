@@ -45,7 +45,12 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     if (oam + count > 40) return oam;
     for (i = 0; i < count; ++i) {
         set_sprite_tile(oam, e->sprite_tile + i);
-        set_sprite_prop(oam, e->palette);
+        {
+            u8 prop = e->palette;
+            if (e->ai_data[5] & 0x08) prop |= S_FLIPX;
+            if (e->ai_data[5] & 0x10) prop |= S_FLIPY;
+            set_sprite_prop(oam, prop);
+        }
         move_sprite(oam, x + ((i & 1) << 3), y + ((i >> 1) << 3));
         oam++;
     }

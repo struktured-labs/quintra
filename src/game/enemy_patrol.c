@@ -6,6 +6,7 @@
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
+#include "game/hexa_boss.h"
 #include "game/combat.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
@@ -31,7 +32,8 @@ static void retire_special_projectile(void) {
     entity_t *shot = &entities[special_projectile_idx];
     shot->flags &= (u8)~(EF_ACTIVE | EF_ALIVE);
     shot->type = ENT_NONE;
-    move_sprite(shot->oam_slot, 0, 0);
+    if (!hexa_boss_active || shot->oam_slot < 4 || shot->oam_slot >= 24)
+        move_sprite(shot->oam_slot, 0, 0);
 }
 
 void enemy_patrol_init(entity_t *e, u8 enemy_content_id) BANKED {

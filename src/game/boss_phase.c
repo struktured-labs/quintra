@@ -196,7 +196,7 @@ u8 boss_phase_tick(entity_t *e) BANKED {
 u8 boss_phase_motion(entity_t *e) BANKED {
     u8 stage = e->ai_data[2], d, clock = boss_phase_clock & 127;
     i8 dx, dy;
-    if (!boss_phase || stage == 1 || stage == 2 || stage == 5) return 0;
+    if (!boss_phase || stage == 1 || stage == 2 || stage == 5 || stage == 9) return 0;
     if (boss_phase_clock >= 64 && boss_phase_clock < 112) return 1;
     if (stage == 0 || stage == 6) {
         if (clock == 1) {

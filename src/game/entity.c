@@ -15,6 +15,7 @@
 #include "game/status.h"
 #include "render/tiles.h"
 #include "render/large_boss.h"
+#include "game/hexa_boss.h"
 #include "content.h"
 
 void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;
@@ -81,7 +82,11 @@ void entity_kill(u8 idx) {
     enemy_status_kind[idx] = QSTATUS_NONE;
     entities[idx].flags &= (u8)~(EF_ACTIVE | EF_ALIVE);
     entities[idx].type   = ENT_NONE;
-    move_sprite(entities[idx].oam_slot, 0, 0);   // hide
+    /* Slots 4..23 are Hexa Dragmar's limb quads. Hiding a projectile must
+       not punch a hole in that picture between update and the limb redraw. */
+    if (!hexa_boss_active || entities[idx].oam_slot < 4
+        || entities[idx].oam_slot >= 24)
+        move_sprite(entities[idx].oam_slot, 0, 0);
 }
 
 u8 aabb_overlap_ee(const entity_t *a, const entity_t *b) {

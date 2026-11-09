@@ -13,6 +13,7 @@
 #include "game/status.h"
 #include "render/tiles.h"
 #include "render/large_boss.h"
+#include "game/hexa_boss.h"
 #include "content.h"
 
 void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;

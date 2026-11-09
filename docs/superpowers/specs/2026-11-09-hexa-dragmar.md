@@ -176,7 +176,7 @@ active / recovery for the short attack:
 | Limb | Telegraph | Active (A) | Recovery |
 | --- | --- | --- | --- |
 | Wolfkin | 20 | 18 | 34 |
-| Sauran | 24 | 20 | 40 |
+| Sauran | 24 | 20 | 32 |
 | Corvin | 18 | 16 | 30 |
 | Picsean | 22 | 14 | 36 |
 | Vespine | 16 | 10 | 28 |
@@ -196,11 +196,11 @@ Attacks are exaggerated class signatures. Motion uses the existing
    (`projectile.c` spike lane) and Howl's 8-way ring plus
    `will_howl_clear_nearby_shots`.
 2. **Sauran — Longtail / Stoneskin.** Heavy bolt, then three forward
-   splinters (A). Signature guard, **64 ticks**: that limb takes 0 damage
+   splinters (A). Signature guard, **28 ticks**: that limb takes 0 damage
    and deflects the shot; the core takes half damage. A hit on Wolfkin or
-   Corvin ends the guard. The draft's 72/96 window drops Sauran below four
-   full cycles in 600 frames once the spotlight also forces a signature, so
-   the guard is 64. Evidence: Tail Spike and Stoneskin in `will.c`.
+   Corvin ends the guard. The draft's 72/96 window, plus the fairness shunt
+   stretching telegraphs, drops Sauran below four full cycles in 600 frames,
+   so the guard is 28 and recovery is 32. Evidence: Tail Spike and Stoneskin.
 3. **Corvin — Featherbarb / Raven Mark.** Two `BOSS_SHOT_RETURN` arcs (A).
    A reticle locks `hexa_mark_x/y`, then three bolts converge on it (B).
    The mark is pushed away from a live Undertow shot so its center is not

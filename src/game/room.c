@@ -21,6 +21,7 @@
 #include "game/dungeon_tools.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
+#include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/oath_arts.h"
 #include "game/pickup.h"
@@ -1066,12 +1067,36 @@ void room_enter(void) {
     // Select audio before the banked generator. The destination counter is
     // already authoritative, while post-bcall audio calls are unreliable on
     // this SDCC build (and previously collapsed later stages to track 0).
-    if (run_state_is_boss_room()) {
+    if (run_state_is_boss_room()
+        || ((run_state.dungeon_puzzles & RUN_HEXA_SANCTUM_BIT)
+            && run_state.bosses_beaten == BOSSES_TO_WIN)) {
         play_boss_music();
     } else {
         play_stage_music();
     }
 
+    // Hidden sanctum: one locked screen, no procgen, no stage advance.
+    if ((run_state.dungeon_puzzles & RUN_HEXA_SANCTUM_BIT)
+        && run_state.bosses_beaten == BOSSES_TO_WIN) {
+        tiles_load_colossus_bg(8);
+        room_load_dynamic_fx_identity();
+        hexa_sanctum_enter();
+        room_draw_tilemap();
+        hexa_refresh_attrs();
+        place_player_sprite();
+        arrival_sprite_grace = 60;
+        hostiles_prev = 0;
+        hostiles_now = 0;
+        boss_threshold_warned = 0;
+        sram_save_run();
+        status_player_refresh_visual();
+        SHOW_SPRITES;
+        SHOW_BKG;
+        DISPLAY_ON;
+        return;
+    }
+
+    hexa_boss_clear();
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
     arrival_sprite_grace = 60;

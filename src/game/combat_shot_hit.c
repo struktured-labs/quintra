@@ -2,6 +2,7 @@
 // Cold player-shot damage. The miss scan stays in bank 3 and must not carry
 // this frame: SDCC spills every local of the function that contains both.
 #include "audio/sfx.h"
+#include "game/hexa_boss.h"
 #include "audio/boss_voice.h"
 #include "core/rng.h"
 #include "core/types.h"
@@ -127,6 +128,15 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
         && ej->ai_data[2] <= 8) {
         u8 cap = RUN_IS_EASY() ? 5 : 3;
         if (dmg > cap) dmg = cap;
+    }
+    if (ej->ai_data[0] == ENEMY_STONE_SENTINEL
+        && (ej->ai_data[3] & 1)
+        && ej->ai_data[2] == HEXA_STAGE) {
+        dmg = hexa_filter_damage(dmg);
+        if (!dmg) {
+            entity_kill(i);
+            return 1;
+        }
     }
 
     if (boss_link_active && boss_link_reflect(ej, shot, dmg)) {

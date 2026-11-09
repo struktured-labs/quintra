@@ -8,6 +8,7 @@
 #include "game/rare_enemy.h"
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
+#include "game/hexa_boss.h"
 #include "game/enemy_mirror.h"
 #include "game/enemy_spore.h"
 #include "game/player.h"
@@ -489,6 +490,12 @@ static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
 
 static void boss_tick(entity_t *e) {
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
+    // Hexa Dragmar owns its limbs. The shared phase driver would freeze
+    // the body and add a generic area blast on top of them.
+    if ((e->ai_data[3] & 1) && e->ai_data[2] == HEXA_STAGE) {
+        hexa_boss_tick(e);
+        return;
+    }
     if ((e->ai_data[3] & 1) && boss_phase_tick(e)) return;
 
     // Ember is a bespoke two-act encounter. Its five physical Kilnbacks,
@@ -555,62 +562,7 @@ static void boss_tick(entity_t *e) {
         return;
     }
 
-    {
-        u8 dmg   = e->damage;
-        u8 d, k;
-        i16 cx = FIX8_TO_INT(e->x) + 8;
-        i16 cy = FIX8_TO_INT(e->y) + 8;
-        u8 cadence;
-
-        {
-            // Three distinct mini-boss archetypes (ai_data[2] = variant:
-            // 0 Sentinel / 1 Orc / 2 Skeleton) so they play differently,
-            // not just recolored. Enrage tightens the slow ones below.
-            switch (e->ai_data[2]) {
-                case 1:   // Orc — relentless aimed 3-shot spear, fast & heavy
-                    d = aim_dir8(cx, cy);
-                    boss_shot(cx, cy, d, 3, dmg);
-                    boss_shot(cx, cy, (u8)((d + 1) & 7), 3, dmg);
-                    boss_shot(cx, cy, (u8)((d + 7) & 7), 3, dmg);
-                    cadence = 46;
-                    break;
-                case 2:   // Skeleton — slow dense full 8-ring to weave through
-                    for (d = 0; d < 8; ++d) boss_shot(cx, cy, d, 2, dmg);
-                    cadence = 90;
-                    break;
-                case 3:   // Bomber — fast rotating cross that sweeps the room
-                    for (k = 0; k < 4; ++k)
-                        boss_shot(cx, cy, (u8)((e->ai_data[5] * 3 + k * 2) & 7), 2, dmg);
-                    cadence = 34;
-                    break;
-                case 4:   // Warlock — aimed 5-shot cone (spread bolt volley)
-                    d = aim_dir8(cx, cy);
-                    boss_shot(cx, cy, d, 2, dmg);
-                    boss_shot(cx, cy, (u8)((d + 1) & 7), 2, dmg);
-                    boss_shot(cx, cy, (u8)((d + 7) & 7), 2, dmg);
-                    boss_shot(cx, cy, (u8)((d + 2) & 7), 2, dmg);
-                    boss_shot(cx, cy, (u8)((d + 6) & 7), 2, dmg);
-                    cadence = 58;
-                    break;
-                case 0:   // Sentinel — steady alternating half-ring zoner
-                default:
-                    for (d = (u8)(e->ai_data[5] & 1); d < 8; d = (u8)(d + 2))
-                        boss_shot(cx, cy, d, 2, dmg);
-                    cadence = 70;
-                    break;
-            }
-        }
-
-        // Void Lord reserves ai_data[5] for the announced safe-corner slot;
-        // rotating it after selection made the marker and resolved blast
-        // disagree by one corner. Other bosses retain their rotation counter.
-        if (e->ai_data[2] != 8) e->ai_data[5]++;
-        // Enrage below half HP — only tighten the longer cadences so short
-        // burst timers can't underflow.
-        if (cadence > 34 && e->hp < (u8)(e->ai_data[6] >> 1))
-            cadence = (u8)(cadence - 18);
-        e->ai_data[1] = cadence;
-    }
+    miniboss_volley_fire(e);
 }
 
 // ---------------- Dispatch ----------------------------------------------

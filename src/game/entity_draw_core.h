@@ -6,6 +6,9 @@
 // banked two-axis world renderer cannot drift apart.
 entity_anim_counter++;
 if (large_boss_index != 255) oam = large_boss_draw(oam);
+/* Limb quads own OAM 4..23. Projectiles start after them, and the quads are
+   written again after this pass so a projectile hide cannot punch a hole. */
+if (hexa_boss_active && oam < 24) oam = 24;
 for (i = 0; i < MAX_ENTITIES; ++i) {
     // Rotate the 32 logical slots through the 36 non-player OAM entries.
     // When a crowded scanline or several 16x16 bodies exceed hardware OAM,
@@ -48,6 +51,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         && ((e->ai_data[0] == ENEMY_STONE_SENTINEL && e->ai_data[3])
             || (room_return_echo_kind >= 4 && slot == room_encounter_target))) {
         if (slot == large_boss_index) continue;
+        if (hexa_boss_active && e->ai_data[2] == HEXA_STAGE) continue;
         u8 side = e->ai_data[0] == ENEMY_STONE_SENTINEL ? 4 : 3;
         u8 r, c, tile = side == 3 ? SPR_BOSS_BIG : e->sprite_tile;
         if (side == 3) { sx -= 4; sy -= 8; }
@@ -133,3 +137,4 @@ while (i < entity_oam_high) {
     i++;
 }
 entity_oam_high = oam;
+if (hexa_boss_active) hexa_boss_draw(4);

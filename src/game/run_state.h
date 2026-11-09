@@ -162,6 +162,8 @@ typedef struct {
 #define RUN_STAGE_SIGIL_BIT(stage) ((u16)(1u << ((stage) % BOSSES_TO_WIN)))
 #define RUN_TRIAL_BIT       ((u8)(1u << 0))
 #define RUN_REAPER_CLEARED_BIT ((u8)(1u << 2))
+// Bit 7 is RUN_WAYSTONE_BIT. Hexa uses the free bit 4.
+#define RUN_HEXA_SANCTUM_BIT ((u8)(1u << 4))
 #define RUN_REAPER_HUNT_BIT    ((u8)(1u << 7))
 #define RUN_WARDEN_BOON_BIT ((u8)(1u << 3))
 #define RUN_DEEP_GATE_BIT    ((u8)(1u << 6))

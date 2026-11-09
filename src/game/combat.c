@@ -8,6 +8,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/combat.h"
+#include "game/hexa_boss.h"
 #include "game/enemy_ai.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
@@ -434,6 +435,8 @@ static u8 combat_scan_slots(entity_t *shot, u8 i, u8 start, u8 *giant_hits) {
         if (splash) {
             if (shot->ai_data[5] == j || !splash_reaches_enemy(shot, ej))
                 continue;
+        } else if (hexa_boss_active && j == hexa_core_entity) {
+            if (!hexa_shot_overlap(shot)) continue;
         } else if (j == large_boss_index) {
             if (!large_boss_shot_overlap(shot, ej)) continue;
         } else if (combat_shot_misses(ej)) continue;
@@ -459,7 +462,9 @@ static void combat_resolve_ordinary(entity_t *shot, u8 i, u8 *giant_hits) {
         j = shot_targets[k];
         ej = &entities[j];
         if (!(ej->flags & EF_ACTIVE)) continue;
-        if (j == large_boss_index) {
+        if (hexa_boss_active && j == hexa_core_entity) {
+            if (!hexa_shot_overlap(shot)) continue;
+        } else if (j == large_boss_index) {
             if (!large_boss_shot_overlap(shot, ej)) continue;
         } else if (combat_shot_misses(ej)) continue;
         if (combat_apply_player_shot_hit(shot, i, ej, j, giant_hits)) return;
@@ -570,6 +575,8 @@ u8 combat_resolve(void) BANKED {
             if (hostile_entity->type == ENT_ENEMY && hostile_entity->ai_data[0] == ENEMY_GLOAM_LEECH
                 && hostile_entity->ai_data[6]) continue;
             if (i == large_boss_index) touching=large_boss_contact(hostile_entity);
+            else if (hexa_boss_active && i == hexa_core_entity)
+                touching = hexa_touches_player();
             else touching=aabb_overlap_player(hostile_entity);
             if (touching) {
                 u8 was_projectile = (hostile_entity->type == ENT_PROJECTILE);
