@@ -13,8 +13,9 @@ large-boss poses at 64..87, and the vertical shots at 208..213 alone.
 Status marks start at 224. The upload runs from
 `room_load_stage_obj_identity` (bank 13) when the stage is 0. Bank 2 has no
 room for another call. Every stage-identity load wipes bank-1 OBJ
-128..143 first, so a later Rex room cannot keep Crystal's tiles. The
-draw points the 16 sprites at 128 and sets the bank bit.
+128..143 first when that stage is entered, so a later Rex room cannot
+keep Crystal's tiles. The draw points the 16 sprites at 128 and sets the
+bank bit.
 
 The idle frame stays the checked-in Crystal grid. The second frame lifts the
 fists, pulls the legs up, and swaps the torso highlights. It is selected
