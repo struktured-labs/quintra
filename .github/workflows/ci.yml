@@ -105,6 +105,9 @@ jobs:
       - name: PyBoy companion greeting
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_companion_greeting.py
 
+      - name: PyBoy merchant stock
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_merchant_stock.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 

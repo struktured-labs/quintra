@@ -152,5 +152,7 @@ u8   pickup_nearby_shop_offer(u8 *ware_out, u8 *price_out) BANKED;
 u8   pickup_nearby_speaker(u8 *kind_out, u8 *topic_out) BANKED;
 void pickup_echo_primary(u8 primary, u8 dir, u8 damage) BANKED;
 u8   pickup_try_phoenix_revive(void) BANKED;
+// Record a bought shelf. Implemented in shop.c (bank 7).
+void shop_note_bought(u8 x) BANKED;
 
 #endif

@@ -150,6 +150,13 @@ typedef struct {
     // reality; bits 1..3 persist the three Hollow-only relic claims for this
     // three-dungeon region. Appended to preserve the complete historical ABI.
     u8  riftwild_shadow;
+    // Low 4 bits: this stage's dungeon merchant slots already bought.
+    // High 4 bits: this village market's four shelves. Cleared when the
+    // next dungeon begins. Appended so older suspends load.
+    u8  shop_bought;
+    // Village screens that are not the market. Bit 0 arrival chart,
+    // bit 1 forge, bit 2 vamp, bit 3 rune. Same lifetime as the market bits.
+    u8  shop_civic;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03

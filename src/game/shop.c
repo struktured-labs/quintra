@@ -123,3 +123,23 @@ u8 pickup_dungeon_ware_price(u8 ware) BANKED {
         || ware == WARE_BIG || ware == WARE_THORN) return 35;
     return 30;
 }
+
+void shop_note_bought(u8 x) BANKED {
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        if (run_state.world_return_screen == TOWN_MARKET) {
+            u8 slot = (x < 64) ? 0 : (x < 96) ? 1 : (x < 128) ? 2 : 3;
+            run_state.shop_bought |= (u8)(0x10u << slot);
+        } else if (run_state.world_return_screen == TOWN_ARRIVAL) {
+            run_state.shop_civic |= 1;
+        } else {
+            // Quarter: forge near x=40, vamp near x=88, rune near x=120.
+            run_state.shop_civic |= (x < 64) ? 2 : (x < 104) ? 4 : 8;
+        }
+        return;
+    }
+    if (run_state_is_shop()) {
+        u8 slot = (x < 56) ? 0 : (x < 80) ? 1
+            : (x < 104) ? 2 : (x < 140) ? 3 : 0xFF;
+        if (slot < 4) run_state.shop_bought |= (u8)(1u << slot);
+    }
+}

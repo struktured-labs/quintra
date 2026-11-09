@@ -108,6 +108,10 @@ void run_state_begin_world(void) BANKED {
         run_state.world_seen_xhi = 0;
         run_state.world_seen_xxhi = 0;
         run_state.riftwild_shadow = 0;
+        // A new region opens a new village. The previous market's sold
+        // shelves (high nibble) must not follow into it.
+        run_state.shop_bought &= 0x0F;
+        run_state.shop_civic = 0;
     }
     // Every dungeon exit returns to the remembered world. Hollow relic
     // claims remain regional, but a suspend or campaign transition never
@@ -135,6 +139,8 @@ void run_state_begin_dungeon(void) BANKED {
     run_state.next_dungeon_reveal_xhi = 0;
     run_state.next_dungeon_reveal_xxhi = 0;
     run_state.dungeon_puzzles = 0;
+    run_state.shop_bought = 0;
+    run_state.shop_civic = 0;
     run_state.dungeon_phase = 0;
     run_state.return_echo_flags = 0;
     run_state.dungeon_visited = 0;
