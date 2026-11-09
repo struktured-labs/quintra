@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Bolt and crescent metasprites mirror with travel. They do not rotate."""
+"""Bolt and crescent metasprites mirror east and west.
+
+North and south use a second glyph in VRAM bank 1. OAM cannot rotate.
+"""
 from test_boss_identity import EN, enter_boss, put16
 
 FLIPX = 0x20
+FLIPY = 0x40
+BANK = 0x08
 ENTITY = 28
 
 
@@ -41,7 +46,7 @@ def main():
         for i in range(32):
             pb.memory[EN + i * ENTITY] = 0
         # Slot 0 is the boss and is reclaimed if cleared. East, west, then
-        # north. North must stay the horizontal glyph.
+        # north. North uses the bank-1 vertical glyph.
         place(pb, 2, 32, 48, 3, 214, 8)
         place(pb, 3, 80, 48, 3, 214, 24)
         place(pb, 4, 120, 48, 3, 214, 0)
@@ -50,8 +55,8 @@ def main():
         place(pb, 7, 120, 80, 4, 216, 0)
         for _ in range(6):
             pb.tick()
-        bolts = sprites(pb, {214, 215})
-        crescents = sprites(pb, {216, 217, 218, 219})
+        bolts = sprites(pb, {208, 209, 214, 215})
+        crescents = sprites(pb, {210, 211, 212, 213, 216, 217, 218, 219})
         assert len(bolts) == 6, bolts
         assert len(crescents) == 12, crescents
 
@@ -66,8 +71,10 @@ def main():
         assert all((prop & FLIPX) == 0 for *_, prop in east), east
         assert [tile for _x, _y, tile, _prop in west] == [215, 214], west
         assert all(prop & FLIPX for *_, prop in west), west
-        assert [tile for _x, _y, tile, _prop in north] == [214, 215], north
-        assert all((prop & FLIPX) == 0 for *_, prop in north), north
+        assert [tile for _x, _y, tile, _prop in north] == [208, 209], north
+        assert len({x for x, _y, _tile, _prop in north}) == 1, north
+        assert all((prop & FLIPX) == 0 and (prop & FLIPY) == 0 and (prop & BANK)
+                   for *_, prop in north), north
 
         def top_row(x_min, x_max):
             rows = pair(crescents, x_min, x_max)
@@ -81,9 +88,10 @@ def main():
         assert all(prop & FLIPX for *_, prop in east_c), east_c
         assert [tile for _x, _y, tile, _prop in west_c] == [216, 217], west_c
         assert all((prop & FLIPX) == 0 for *_, prop in west_c), west_c
-        assert [tile for _x, _y, tile, _prop in north_c] == [216, 217], north_c
-        assert all((prop & FLIPX) == 0 for *_, prop in north_c), north_c
-        print('[shot-facing] PASS east/west mirror, north stays horizontal')
+        assert [tile for _x, _y, tile, _prop in north_c] == [210, 211], north_c
+        assert all((prop & FLIPX) == 0 and (prop & FLIPY) == 0 and (prop & BANK)
+                   for *_, prop in north_c), north_c
+        print('[shot-facing] PASS east/west mirror, north uses bank-1 art')
     finally:
         pb.stop(save=False)
 
