@@ -4,6 +4,7 @@
 #include "game/enemy_ai.h"
 #include "game/room.h"
 #include "game/player.h"
+#include "game/mire_roots.h"
 
 u8 large_boss_index = 255;
 
@@ -50,7 +51,9 @@ u8 large_boss_draw(u8 oam) BANKED {
     if (!(e->flags&EF_ON_SCREEN)) return oam;
     width=e->ai_data[2]==4 ? 4:6;
     height=e->ai_data[2]==4 ? 6:4;
-    if (height==6) {
+    if (height==6 && mire_root_windup) {
+        if ((mire_root_u & 7) < 4) tile=64;
+    } else if (height==6) {
         u8 beat=entity_anim_counter&63;
         if (beat<6 || (beat>=12 && beat<18)) tile=64;
     }

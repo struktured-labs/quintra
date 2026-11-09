@@ -87,6 +87,9 @@ jobs:
       - name: PyBoy persistent eight-way aim
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_persistent_aim.py
 
+      - name: PyBoy Mire Heart roots
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_mire_roots.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
