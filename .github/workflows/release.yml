@@ -3,8 +3,9 @@ name: Release
 on:
   push:
     # GitHub tag filters are globs, not regular expressions. These cover
-    # v0.20.19-style tags (one or two digits per component) and ignore
-    # suffixed historical tags such as v4.10-organic-arena-reached.
+    # v0.20.19-style tags (one or two digits per component) and the
+    # v0.20.20-beta34 playtest tags. Other suffixed historical tags, such as
+    # v4.10-organic-arena-reached, still do not publish.
     tags:
       - "v[0-9].[0-9].[0-9]"
       - "v[0-9].[0-9].[0-9][0-9]"
@@ -14,6 +15,14 @@ on:
       - "v[0-9][0-9].[0-9].[0-9][0-9]"
       - "v[0-9][0-9].[0-9][0-9].[0-9]"
       - "v[0-9][0-9].[0-9][0-9].[0-9][0-9]"
+      - "v[0-9].[0-9].[0-9]-beta[0-9]"
+      - "v[0-9].[0-9].[0-9]-beta[0-9][0-9]"
+      - "v[0-9].[0-9].[0-9][0-9]-beta[0-9]"
+      - "v[0-9].[0-9].[0-9][0-9]-beta[0-9][0-9]"
+      - "v[0-9].[0-9][0-9].[0-9]-beta[0-9]"
+      - "v[0-9].[0-9][0-9].[0-9]-beta[0-9][0-9]"
+      - "v[0-9].[0-9][0-9].[0-9][0-9]-beta[0-9]"
+      - "v[0-9].[0-9][0-9].[0-9][0-9]-beta[0-9][0-9]"
 
 permissions:
   contents: write
@@ -87,6 +96,11 @@ jobs:
             args+=(--notes-file "$notes_file")
           else
             args+=(--notes "Built from ${GITHUB_SHA}. The standalone cartridge is the quintra-gbc CI artifact and is not attached to this Release.")
+          fi
+          # Playtest tags stay prereleases. A plain vX.Y.Z tag stays a full
+          # release. Neither form attaches a cartridge or a web zip.
+          if [[ "$tag" == *-beta* ]]; then
+            args+=(--prerelease)
           fi
           gh "${args[@]}"
 

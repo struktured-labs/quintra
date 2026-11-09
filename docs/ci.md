@@ -77,8 +77,10 @@ They are not required checks.
 
 The release workflow
 ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) runs
-only on tags that look like `v0.20.19` (`v<major>.<minor>.<patch>`). It does
-not run on pull requests or on ordinary pushes to `main`.
+only on tags that look like `v0.20.19` (`v<major>.<minor>.<patch>`) or a
+playtest tag such as `v0.20.20-beta34`. A playtest tag is published as a
+prerelease. Other suffixed tags are ignored. The workflow does not run on
+pull requests or on ordinary pushes to `main`.
 
 1. Bump `QUINTRA_VERSION` and add `docs/releases/vX.Y.Z.md` when that tag
    should carry those notes. Do not commit `rom/working/quintra.gbc`, and do
