@@ -10,7 +10,7 @@ if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
 fi
 archive="$project_root/builds/quintra-itch-web-$version.zip"
 rom="$project_root/rom/working/quintra.gbc"
-wasmboy_sha="3cffca75e29b90559437cc4984b5c8166e66a04a1edb295a51eb487fe9fa5b47"
+wasmboy_sha="24991be0ce6cc7a6d8c42e041987c6069c8e809b230fd7ace8d45c9a1d72f516"
 
 if [[ ! -f "$rom" ]]; then
   echo "Missing $rom. Build it first: make rom/working/quintra.gbc" >&2
@@ -64,7 +64,7 @@ cat > "$output_dir/build.json" <<JSON
   "gitCommit": "$git_commit",
   "sourceDirty": $source_dirty,
   "romSha256": "$actual_rom_sha",
-  "emulator": "wasmboy-0.8.14-stable-sram",
+  "emulator": "wasmboy-0.8.14-stable-sram+queue-catchup",
   "emulatorCommit": "1d73f9c54c3401891ddd5fb9303a7ae9da520da9",
   "emulatorSha256": "$actual_wasmboy_sha",
   "channel": "web"
