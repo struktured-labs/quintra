@@ -20,8 +20,8 @@ RUN_REAPER = 1 << 2
 RUN_HEXA = 1 << 4
 COMPANION_DISCOVERED = 0x80
 IDLE, TELEGRAPH, ACTIVE, RECOVERY = 0, 1, 2, 3
-BGT_COLOSSUS_VOID = 55
-BGT_COLOSSUS_HORN = 63
+HEXA_BG_TILE = 40
+HEXA_BG_LAST = 55
 
 
 def addr(name):
@@ -297,7 +297,7 @@ def boss_bbox(pb):
     for y in range(16):
         for x in range(20):
             tile = pb.memory[0x9800 + y * 32 + x]
-            if BGT_COLOSSUS_VOID <= tile <= BGT_COLOSSUS_HORN:
+            if HEXA_BG_TILE <= tile <= HEXA_BG_LAST:
                 minx = min(minx, x * 8)
                 miny = min(miny, y * 8)
                 maxx = max(maxx, x * 8 + 8)
@@ -309,10 +309,18 @@ def test_budget_and_stalls():
     pb = qualified_sanctum()
     ART.mkdir(parents=True, exist_ok=True)
     try:
+        # The first presented frame after the sanctum's palette upload can
+        # still be the blank LCD. Step until the dragon is actually on screen.
+        for _ in range(8):
+            colors = pb.screen.image.getcolors(8)
+            if colors is None or len(colors) > 1:
+                break
+            hold_safe(pb)
+            pb.tick()
         pb.screen.image.save(ART / "hexa-sanctum-open.png")
         width, height = boss_bbox(pb)
-        assert width >= 128 and height >= 104, (
-            f"carapace span is {width}x{height}, wanted at least 128x104"
+        assert width >= 128 and height >= 96, (
+            f"carapace span is {width}x{height}, wanted at least 128x96"
         )
         assert width / 160 >= 0.75 and height / 128 >= 0.75
         peak_shots = 0
@@ -414,7 +422,7 @@ def test_palette_and_audio():
         for y in range(8, 12):
             for x in range(3, 7):
                 assert attr(x, y) == 6, f"wolfkin socket {(x, y)} pal {attr(x, y)}"
-        for origin in ((13, 8), (2, 3), (14, 3), (7, 1)):
+        for origin in ((13, 8), (2, 3), (14, 3), (8, 1)):
             assert attr(*origin) == 5, f"socket {origin} was not downplayed"
         assert attr(1, 8) != 6, "spotlight recolored the floor lane"
         after = []

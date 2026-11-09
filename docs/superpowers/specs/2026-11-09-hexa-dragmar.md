@@ -151,9 +151,14 @@ OBJ heads move at most ±12 px from those anchors so the scanline bands in
 - VRAM bank 1 tiles 88..127: 5 limbs × 2 poses × 4 tiles, generated at
   sanctum entry. Bank 1 tiles 40..87 stay with the animated Spider, Mire,
   and Hydra poses, and 208..213 stay free for vertical shot glyphs.
-  Bank 0 projectile tiles 208..223 are untouched.
+  Bank 0 projectile tiles 208..223 are untouched. The sanctum body
+  uses BG indices 40..55 with patterns in VRAM bank 1 (see
+  `2026-11-09-hexa-dragmar-art.md`); it does not reuse tiles 148..163.
 - BG palette 5 is the downplayed body. BG palette 6 is the spotlight
-  socket only. BG palette 0 is never rewritten by the spotlight.
+  socket and, while a spotlight is on, the core as well, so the core
+  takes that class's hue. With no spotlight the sealed core stays on
+  palette 5 and the open core uses the default palette 6. BG palette 0
+  is never rewritten by the spotlight.
 - OBJ 5 downplayed heads, OBJ 6 spotlight head, OBJ 7 telegraph flash,
   OBJ 0 a 6-frame hit flash that does **not** hide the sprite.
 - New gameplay C is `#pragma bank 255` and `BANKED`. The draft's fixed

@@ -80,6 +80,20 @@
 #define BGT_COLOSSUS_RUNE   61
 #define BGT_COLOSSUS_MAW    62
 #define BGT_COLOSSUS_HORN   63
+/* Hexa Dragmar's 16 body patterns. Indices 148..163 are not usable: GBDK
+   writes BG data at 0x9000, so tile 128+ spills into the tilemap, and those
+   indices also alias OBJ slots (items, beams, walk cycle). 40..54 are the
+   shop-offer and compass glyphs, which are never placed in a room tilemap.
+   55 is the already-walkable colossus/root slot. The patterns themselves are
+   stored in VRAM bank 1 at 0x9000, clear of bank-1 OBJ 64..87, 88..127, and
+   208..213. Mire roots keep bank-0 tiles 55..63. */
+#define HEXA_BG_TILE    40
+#define HEXA_BG_COUNT   16
+#define HEXA_BG_SL      51
+#define HEXA_BG_CC      52
+#define HEXA_BG_CO      53
+#define HEXA_BG_CP      54
+#define HEXA_BG_TR      55
 
 // Compass-only 8px legend letters. Keeping these as authored BG tiles avoids
 // invoking the console/font system or turning the map back into a text page.
