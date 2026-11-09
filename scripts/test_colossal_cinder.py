@@ -161,7 +161,8 @@ def main():
         f"player={(pb.memory[PL+9], pb.memory[PL+11])}")
 
     # Each 24-HP band removes one animal. Crossing the 120-HP midpoint begins
-    # the visible five-husk metamorphosis, then produces a ten-sprite 40x16 Rex.
+    # the visible five-husk metamorphosis, then produces a native 4x2 Rex.
+    # The contact box stays 40x16; the picture is the centered 32x16 atlas.
     pb.memory[boss + 14] = 216
     keep_alive(pb, 2)
     assert pb.memory[CINDER_ALIVE] == 4, "first Kilnback segment did not break"
@@ -181,9 +182,11 @@ def main():
             break
         keep_alive(pb, 1)
     assert pb.memory[CINDER_PHASE] == 2, "Cinder Rex did not unfold"
-    rex_tiles = oam_tiles(pb)
-    assert len([t for t in rex_tiles if 48 <= t <= 55]) == 10, (
-        f"40x16 Cinder Rex lost its stretched ten-sprite body: {rex_tiles}")
+    rex_tiles = [t for t in oam_tiles(pb) if 48 <= t <= 55]
+    assert len(rex_tiles) == 8, (
+        f"native 32x16 Cinder Rex is not an eight-sprite body: {rex_tiles}")
+    assert len(set(rex_tiles)) == 8, (
+        f"Cinder Rex repeated a column: {rex_tiles}")
 
     # Furnace Breath is a broad wall with one traversable gap, followed later
     # by a reverse wall. Seven projectiles prove this is arena geometry, not
@@ -239,7 +242,7 @@ def main():
     pb.stop(save=False)
     print("[colossal-cinder] PASS five legal 16x8 Kilnbacks; Wheel, Press, "
           "Brandwalk, Broken Cadence; armored/open vent; 5->Rex metamorphosis; "
-          "40x16 Rex; Furnace, Slag, Stomp, Charge; critical Brandwalk reprise")
+          "32x16 Rex in a 40px box; Furnace, Slag, Stomp, Charge; critical Brandwalk reprise")
 
 
 if __name__ == "__main__":
