@@ -21,5 +21,12 @@ u16  sram_meta_best_time(void) BANKED; // fastest WIN in seconds (0xFFFF = none)
 // Record a run's end. Returns flag bits: 1 = new best score,
 // 2 = new fastest win (only possible when won).
 u8   sram_meta_record(u16 score, u8 won, u16 time_s) BANKED;
+// meta_flags bits. Checksum moved to the following byte; legacy v2
+// records migrate in place instead of being wiped.
+#define META_FLAG_VOID_LORD_CLEARED 0x01
+#define META_FLAG_HEXA_BEATEN       0x02
+u8   sram_meta_flags(void) BANKED;
+// Badge + optional best score. Does not change runs or wins.
+u8   sram_meta_note_hexa(u16 score) BANKED;
 
 #endif

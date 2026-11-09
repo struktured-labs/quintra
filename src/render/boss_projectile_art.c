@@ -65,6 +65,8 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
         row = i >> 1;
         if (mirror_x && count > 1) col = (u8)(1 - col);
         set_sprite_tile(oam, e->sprite_tile + i);
+        if (e->ai_data[5] & 0x08) prop |= S_FLIPX;
+        if (e->ai_data[5] & 0x10) prop |= S_FLIPY;
         set_sprite_prop(oam, prop);
         move_sprite(oam, x + (col << 3), y + (row << 3));
         oam++;

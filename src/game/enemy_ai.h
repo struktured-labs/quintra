@@ -31,6 +31,9 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED;
 // 16 KiB cartridge-bank budget.
 void boss_motion_tick(entity_t *e) BANKED;
 void boss_volley_tick(entity_t *e) BANKED;
+// Mini-boss patterns moved out of bank 2 so the Hexa dispatch still
+// leaves the 256-byte emergency floor.
+void miniboss_volley_fire(entity_t *e) BANKED;
 // Bank-9 tightening-spiral movement for Verdant's Snake-like Colossus cycle.
 void serpent_feed_tick(entity_t *e) BANKED;
 void serpent_motion_tick(entity_t *e) BANKED;

@@ -8,6 +8,7 @@
 
 #include "audio/music.h"
 #include "core/types.h"
+#include "game/companion.h"
 #include "game/run_state.h"
 #include "game/sram.h"
 #include "game/victory.h"
@@ -17,9 +18,16 @@
 BANKREF(victory_enter)
 
 static u8 pulse;
-static u8 ending_beat;
+u8 victory_ending_beat;
 static u8 spark_pose;
 static u16 ending_frames;
+
+static u8 dragmar_ready(void) {
+    return (run_state.bosses_beaten == BOSSES_TO_WIN
+        && (run_state.dungeon_puzzles & RUN_REAPER_CLEARED_BIT)
+        && !(run_state.dungeon_puzzles & RUN_HEXA_SANCTUM_BIT)
+        && companion_discovered()) ? 1 : 0;
+}
 
 static const u16 victory_palette[4] = {
     BGR555( 0,  4,  2),    // 0: deep emerald
@@ -34,18 +42,22 @@ static void render_ending(void) {
     cls();
     gotoxy(2, 16); text_write("START SKIPS ENDING");
 
-    if (ending_beat == 0) {
+    if (victory_ending_beat == 0) {
         gotoxy(3, 3);  text_write("THE RIFT IS BOUND");
         gotoxy(2, 8);  text_write("NINE COLOSSI FALL");
         gotoxy(2, 11); text_write("FIVE SPARKS RISE");
-    } else if (ending_beat == 1) {
+    } else if (victory_ending_beat == 1) {
         gotoxy(3, 3);  text_write("THE SPIRITS WAKE");
         gotoxy(2, 8);  text_write("FANG SCALE WING");
         gotoxy(2, 10); text_write("FIN STING RETURN");
-    } else if (ending_beat == 2) {
+    } else if (victory_ending_beat == 2) {
         gotoxy(2, 3);  text_write("THE ROADS REMEMBER");
         gotoxy(3, 8);  text_write("DAWN HAS A NAME");
         gotoxy(4, 11); text_write("QUINTRA ENDURES");
+    } else if (victory_ending_beat == 4) {
+        gotoxy(1, 3);  text_write("SIX SPARKS UNBOUND");
+        gotoxy(4, 8);  text_write("DRAGMAR FALLS");
+        gotoxy(2, 11); text_write("THE SIXTH FALLS");
     } else {
         gotoxy(6, 2);  text_write("VICTORY!");
         gotoxy(2, 5);  text_write("9 depths freed");
@@ -58,13 +70,14 @@ static void render_ending(void) {
         text_write(":"); text_digit((u8)((run_state.run_timer % 60) / 10));
         text_digit((u8)(run_state.run_timer % 10));
         if (new_best & 2) text_write(" FAST!");
-        gotoxy(0, 15); text_write("START=END A=DESCEND");
+        gotoxy(0, 15);
+        text_write(dragmar_ready() ? "START=END A=DRAGMAR" : "START=END A=DESCEND");
         gotoxy(2, 16); text_write("                  ");
     }
 }
 
 static void render_sparks(void) {
-    if (ending_beat >= 3) return;
+    if (victory_ending_beat >= 3) return;
     // Draw in place: font_min's blank glyph does not share the console's CGB
     // backdrop colour, so clearing a moving row exposes ugly black bars.
     if (spark_pose) {
@@ -80,8 +93,17 @@ void victory_enter(void) {
     // (10th, 11th, ...) reopen this screen but shouldn't inflate the
     // runs/wins counters — best score still updates via later deaths.
     new_best = 0;
-    if (run_state.bosses_beaten == BOSSES_TO_WIN) {
-        new_best = sram_meta_record(run_state.score, 1, run_state.run_timer);
+    {
+        u8 hexa_clear = ((run_state.dungeon_puzzles & RUN_HEXA_SANCTUM_BIT)
+            && run_state.bosses_beaten == (u8)(BOSSES_TO_WIN + 1)) ? 1 : 0;
+        if (run_state.bosses_beaten == BOSSES_TO_WIN) {
+            new_best = sram_meta_record(run_state.score, 1, run_state.run_timer);
+        } else if (hexa_clear) {
+            // The sixth colossus is a badge and a score, not another win.
+            new_best = sram_meta_note_hexa(run_state.score);
+            run_state.dungeon_puzzles &= (u8)~RUN_HEXA_SANCTUM_BIT;
+        }
+        ending_frames = hexa_clear;
     }
     DISPLAY_OFF;
     VBK_REG = 0;
@@ -97,9 +119,10 @@ void victory_enter(void) {
     pulse = 0;
     // The founding epilogue belongs to the canonical ninth-boss clear. Later
     // optional endless-descent colossi go straight to their results page.
-    ending_beat = (run_state.bosses_beaten == BOSSES_TO_WIN) ? 0 : 3;
-    spark_pose = 0;
+    victory_ending_beat = ending_frames ? 4
+        : (run_state.bosses_beaten == BOSSES_TO_WIN) ? 0 : 3;
     ending_frames = 0;
+    spark_pose = 0;
     render_ending();
     render_sparks();
     music_play_victory();
@@ -112,8 +135,8 @@ void victory_exit(void) {}
 screen_id_t victory_tick(u8 keys, u8 pressed) {
     keys;
     if (pressed & J_START) {
-        if (ending_beat < 3) {
-            ending_beat = 3;
+        if (victory_ending_beat != 3) {
+            victory_ending_beat = 3;
             ending_frames = 0;
             render_ending();
             return SCREEN_SELF;
@@ -123,8 +146,14 @@ screen_id_t victory_tick(u8 keys, u8 pressed) {
     // Endless descent keeps the run but resumes in Riftwild. Explicit stage
     // topology clamps boss identity at stage nine, so regenerating room 220
     // would simply rebuild the sealed Void arena and trap the champion.
-    if ((pressed & J_A) && ending_beat >= 3) {
+    // A qualified Void Lord clear offers Hexa Dragmar from this same page.
+    if ((pressed & J_A) && victory_ending_beat == 3) {
         run_state.victory = 0;
+        if (dragmar_ready()) {
+            run_state.pending_unseal = 0;
+            run_state.dungeon_puzzles |= RUN_HEXA_SANCTUM_BIT;
+            return SCREEN_ROOM;
+        }
         run_state_begin_world();
         return SCREEN_ROOM;
     }
@@ -139,15 +168,16 @@ void victory_draw(void) {
     // Three skippable three-second epilogue tableaux, then settle on results.
     // The five rising glyphs shift every half-second as a cheap, legible GBC
     // animation; START and A remain responsive throughout.
-    if (ending_beat < 3) {
+    if (victory_ending_beat < 3 || victory_ending_beat == 4) {
         ending_frames++;
-        if ((ending_frames % 30) == 0) {
+        if (victory_ending_beat < 3 && (ending_frames % 30) == 0) {
             spark_pose ^= 1;
             render_sparks();
         }
         if (ending_frames >= 180) {
             ending_frames = 0;
-            ending_beat++;
+            victory_ending_beat = (victory_ending_beat == 4)
+                ? 3 : (u8)(victory_ending_beat + 1);
             render_ending();
             render_sparks();
         }

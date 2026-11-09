@@ -205,6 +205,7 @@ u8 boss_phase_motion(entity_t *e) BANKED {
     // took 32 east steps and, because ticks 64..111 are a cast pause, only
     // 8 west steps per 128, so Spider and Hydra pinned on the east wall.
     // Mire still holds still for its root cast and the hollow ring after it.
+    // Hexa Dragmar (stage 9) is not this stepper either.
     if (stage == 4 && (mire_root_active
         || (boss_phase_clock >= 112 && boss_phase_clock < 148))) return 1;
     if (stage != 6) return 0;
