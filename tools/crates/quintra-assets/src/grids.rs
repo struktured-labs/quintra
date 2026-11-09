@@ -1143,15 +1143,17 @@ pub const BGT_PILLAR: [&str; 8] = [
     "22222222",
 ];
 
+// Floor-rooted cluster: uneven spires on a wide base. The old symmetric
+// diamond read as a pendant sitting on a pedestal.
 pub const BGT_CRYSTAL: [&str; 8] = [
-    "00033000",
-    "00322300",
-    "03222230",
+    "03000300",
+    "03300330",
+    "03222330",
+    "33222223",
+    "32322232",
+    "33322333",
+    "33333333",
     "32222223",
-    "03222230",
-    "00322300",
-    "02333320",
-    "22222222",
 ];
 
 pub const BGT_RUBBLE: [&str; 8] = [
