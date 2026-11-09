@@ -18,6 +18,7 @@ void player_clear_fields(void) BANKED {
     player.atk = player.def = player.spd = player.lck = 0;
     player.x = player.y = 0;
     player.facing = FACE_S;
+    player_aim_dir = 4;
     player.anim_frame = 0;
     player.iframes = 0;
     player.coins = 0;

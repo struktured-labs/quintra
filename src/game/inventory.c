@@ -190,8 +190,8 @@ static void inventory_aim_enter(void) {
     gotoxy(3, 1); text_write("AIM / B WEAPON");
     gotoxy(2, 3); text_write(player_penta_aim ? "MODE: HOLD AIM" : "MODE: CLASSIC");
     gotoxy(2, 5); text_write("A: SWITCH MODE");
-    gotoxy(2, 7); text_write(player_penta_aim ? "DIAGONAL KEEPS" : "DIAGONAL PICKS");
-    gotoxy(2, 8); text_write(player_penta_aim ? "PREVIOUS HEADING" : "VERTICAL HEADING");
+    gotoxy(2, 7); text_write(player_penta_aim ? "RELEASE KEEPS" : "DIAGONAL PICKS");
+    gotoxy(2, 8); text_write(player_penta_aim ? "LAST 8-WAY AIM" : "VERTICAL HEADING");
     gotoxy(1, 10); text_write("UP/DOWN: B WEAPON");
     gotoxy(1, 11); text_write("> "); text_write(item_name_by_id(player.active_item));
     gotoxy(1, 13); text_write(active_tip_by_id(player.active_item));

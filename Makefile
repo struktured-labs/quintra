@@ -142,6 +142,7 @@ verify: all check-balance-bot
 	cargo test -q
 	cargo build --release -q -p quintra-procgen
 	bash scripts/test_smoke.sh
+	$(PYBOY_RUN) scripts/test_persistent_aim.py
 	uv run --quiet --with pyboy python scripts/test_procgen_parity.py
 	uv run --quiet --with pyboy python scripts/test_town.py
 	$(PYBOY_RUN) scripts/test_dialogue.py

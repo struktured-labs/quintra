@@ -61,9 +61,10 @@ try:
                     pb.screen.image.save(str(out/'diagonal.png'))
                 pb.button_release(first); pb.button_release(second); pb.tick(2)
                 neutral = fresh_shot(pb)
+                # Released diagonal keeps the 8-way aim, not the first cardinal.
                 if not observe_parent:
-                    assert (neutral[0]*dx>0 if dx else neutral[0]==0), neutral
-                    assert (neutral[1]*dy>0 if dy else neutral[1]==0), neutral
+                    assert (neutral[0]*(dx+sx)>0), neutral
+                    assert (neutral[1]*(dy+sy)>0), neutral
                 if hero == 2 and first == 'right' and second == 'up':
                     pb.screen.image.save(str(out/'neutral.png'))
                 # A single held axis intentionally changes the heading.
