@@ -401,8 +401,24 @@ def new_game_from_title(pb, label):
     wait_room_ready(pb, label)
 
 
+def park_colossus_tail(pb):
+    """Line the crystal quad's bottom row up with the title leak.
+
+    Game over samples OAM after 99 more draws. The quad is 16 sprites
+    from slot 4, so tiles 52..55 stay below that leak unless one of the
+    three shots already in the air is rotated in front of the body and
+    the other two stay behind it. Phase 3 is that rotation. Setting it
+    avoids waiting, which would let the boss fire again and bury the
+    pellets under the quad.
+    """
+    # (35 + 99) >> 1 == 67, and 67 & 31 == 3.
+    pb.memory[addr("_entity_anim_counter")] = 35
+    pb.memory[PL + 15] = 255
+
+
 def boss_death(reference, room_reference):
     pb, _boss = enter_boss(0, keep_open=True)
+    park_colossus_tail(pb)
     # The owner's title capture is this exact pair: body tiles on the
     # prompt, and boss pellets (tile 208) still queued behind them.
     kill_to_title(
