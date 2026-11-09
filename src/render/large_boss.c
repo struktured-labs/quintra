@@ -51,11 +51,15 @@ u8 large_boss_draw(u8 oam) BANKED {
     if (!(e->flags&EF_ON_SCREEN)) return oam;
     width=e->ai_data[2]==4 ? 4:6;
     height=e->ai_data[2]==4 ? 6:4;
+    // Mire's test is the original lub-dub. Spider and Hydra only pay the
+    // final else, one bit of the anim counter, so the root redraw still fits.
     if (height==6 && mire_root_windup) {
         if ((mire_root_u & 7) < 4) tile=64;
     } else if (height==6) {
         u8 beat=entity_anim_counter&63;
         if (beat<6 || (beat>=12 && beat<18)) tile=64;
+    } else if (entity_anim_counter & 16) {
+        tile = 64;
     }
     x=e->x-room_camera_x+8-(width==6 ? 8:0);
     y=e->y-room_camera_y+16-(height==6 ? 8:0);
