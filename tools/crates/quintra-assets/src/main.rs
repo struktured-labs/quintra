@@ -336,6 +336,7 @@ fn main() -> Result<()> {
             write_if_changed(&args.high_out, &generate_high())?;
             write_if_changed(&args.reaper_out, &generate_reaper())?;
             write_if_changed(&PathBuf::from("src/render/large_boss_gen.c"), &large_bosses::generate())?;
+            write_if_changed(&PathBuf::from("src/render/large_boss_pose_b.c"), &large_bosses::generate_pose_b())?;
         }
     }
     Ok(())
