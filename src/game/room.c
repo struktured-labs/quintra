@@ -22,6 +22,7 @@
 #include "game/entity.h"
 #include "game/enemy_ai.h"
 #include "game/loop.h"
+#include "game/mire_roots.h"
 #include "game/oath_arts.h"
 #include "game/pickup.h"
 #include "game/player.h"
@@ -1042,6 +1043,7 @@ void room_enter(void) {
         room_refresh_shop_wares();
         room_load_dynamic_fx_identity();
         room_draw_tilemap();
+        mire_roots_redraw();
         entity_draw_all();
         place_player_sprite();
         SCX_REG = room_scroll_x();
@@ -1075,6 +1077,8 @@ void room_enter(void) {
         play_stage_music();
     }
 
+    // A previous room's root overlay is not part of the new tilemap.
+    mire_roots_clear();
     // Procgen builds the tilemap + spawns enemies + positions player
     procgen_generate_current_room();
     arrival_sprite_grace = 60;

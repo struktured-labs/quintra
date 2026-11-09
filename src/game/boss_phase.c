@@ -1,5 +1,6 @@
 #pragma bank 15
 #include "game/boss_phase.h"
+#include "game/mire_roots.h"
 #include "game/boss_projectile.h"
 #include "game/enemy_ai.h"
 #include "game/player.h"
@@ -83,17 +84,17 @@ static void mire_ring_tick(void) {
     static const i8 dy[8] = { -24,-17,0,17,24,17,0,-17 };
     u8 i;
     i16 x, y, distance;
-    if (boss_phase_clock == 64) {
+    if (boss_phase_clock == 112) {
         area_x = player.x + 8;
         area_y = player.y + 12;
         area_armed = 1;
         boss_voice(4,BOSS_VOICE_ATTACK);
     }
-    if (area_armed && boss_phase_clock >= 64 && boss_phase_clock < 96 && !(boss_phase_clock & 7))
+    if (area_armed && boss_phase_clock >= 112 && boss_phase_clock < 144 && !(boss_phase_clock & 7))
         for (i=0;i<8;++i)
             if (fx_spawn(SPR_SHIELD_AURA,3,(i16)area_x+dx[i]-4,(i16)area_y+dy[i]-4,7) == 0xFF)
                 area_armed = 0;
-    if (boss_phase_clock != 96 || !area_armed) return;
+    if (boss_phase_clock != 144 || !area_armed) return;
     area_armed = 0;
     for (i=0;i<8;++i)
         fx_spawn(SPR_FX_IMPACT,3,(i16)area_x+dx[i]-4,(i16)area_y+dy[i]-4,16);
@@ -149,6 +150,7 @@ u8 boss_phase_tick(entity_t *e) BANKED {
         area_armed = 0;
     }
     if (phase + 1 > e->x_frac) {
+        if (e->ai_data[2] == 4) mire_roots_clear();
         e->x_frac = phase + 1;
         e->x_pad = 40;
         e->y_frac = 0;
@@ -165,6 +167,7 @@ u8 boss_phase_tick(entity_t *e) BANKED {
     boss_phase_clock = e->y_frac;
     if (e->x_pad) { e->x_pad--; return 1; }
     boss_phase_clock = ++e->y_frac;
+    if (e->ai_data[2] == 4 && mire_roots_service(e)) hurt(2);
     if (e->ai_data[2] == 5 && boss_phase) {
         linked = boss_phase_clock >= 128 && boss_phase_clock < 224;
         if (linked && !boss_link_active) {
@@ -201,6 +204,9 @@ u8 boss_phase_motion(entity_t *e) BANKED {
     // anchors stay active below half health. The shared east/west stepper
     // took 32 east steps and, because ticks 64..111 are a cast pause, only
     // 8 west steps per 128, so Spider and Hydra pinned on the east wall.
+    // Mire still holds still for its root cast and the hollow ring after it.
+    if (stage == 4 && (mire_root_active
+        || (boss_phase_clock >= 112 && boss_phase_clock < 148))) return 1;
     if (stage != 6) return 0;
     if (boss_phase_clock >= 64 && boss_phase_clock < 112) return 1;
     if (stage == 6) {

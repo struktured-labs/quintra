@@ -25,7 +25,12 @@ def main():
             report['records'].append(r)
             try:
                 r['initial_projection_cells'] = projection_count(pb)
-                if stage in (0, 3, 4, 5, 6, 7, 8):
+                if stage == 4:
+                    # Roots reuse tiles 55..63 on the hardware map only. The
+                    # logical arena must stay floor so the overlay is not terrain.
+                    logical = sum(55 <= v <= 63 for v in pb.memory[TM:TM + 20 * 17])
+                    assert logical == 0, 'Mire roots wrote the logical map'
+                elif stage in (0, 3, 5, 6, 7, 8):
                     assert r['initial_projection_cells'] == 0, 'Moving boss still has a detached mural'
                     r['entry_oam_trace'] = []
                     stable = 0

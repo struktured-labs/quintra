@@ -13,6 +13,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "game/entity.h"
 #include "game/rare_enemy.h"
 #include "game/boss_phase.h"
+#include "game/mire_roots.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -174,6 +175,7 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
             // The giant and its bullets release their slots
             // before effects. Rewards therefore remain real
             // pickups even in a completely saturated fight.
+            if (entities[j].ai_data[2] == 4) mire_roots_clear();
             entity_kill(j);
             boss_retired_for_rewards = 1;
             boss_link_active = boss_link_pending = 0;

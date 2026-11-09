@@ -1,40 +1,51 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Toxic Mire's pulse, without a painted body."""
+"""Live-ROM contract for Toxic Mire's expanding BG body and OBJ heart."""
 from pathlib import Path
 
-from test_boss_identity import PL, addr, enter_boss, projection_cells, put16
+from test_boss_identity import EN, PL, TM, addr, enter_boss, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
+ENTITY_SIZE = 28
+BODY_MIN, BODY_MAX = 55, 63
 CAMERA_X = addr("_room_camera_x")
 
 
-def assert_phase(pb, boss, phase):
-    for _ in range(64):
-        if (pb.memory[boss + 15] & 1) == phase:
-            assert projection_cells(pb) == 0, (
-                f"Mire phase {phase} painted a detached body")
-            return
+def body_tiles(pb):
+    tiles = list(pb.memory[TM:TM + 20 * 17])
+    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
+            if BODY_MIN <= tile <= BODY_MAX]
+
+
+def footprint(body):
+    xs = [x for x, _, _ in body]
+    ys = [y for _, y, _ in body]
+    return max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+
+
+def tick_until_phase(pb, boss, phase):
+    for _ in range(8):
         pb.tick()
+        if (pb.memory[boss + 15] & 1) == phase:
+            body = body_tiles(pb)
+            expected = 84 if phase else 36
+            if len(body) == expected:
+                return body
     raise AssertionError(
-        f"Mire never reached phase {phase}: state={pb.memory[boss + 15]}")
+        f"Mire never rendered phase {phase}: state={pb.memory[boss + 15]}, "
+        f"tiles={len(body_tiles(pb))}")
 
 
 def main():
     pb, boss = enter_boss(4, keep_open=True)
 
-    # The pulse still toggles the live state bit. It no longer paints a
-    # background silhouette for that state.
-    pb.memory[boss + 15] = 0
-    pb.memory[boss + 10] = 12
-    assert_phase(pb, boss, 0)
+    # The detached mural is gone. Tiles 55..63 stay off the logical map so the
+    # root overlay can reuse their VRAM without becoming terrain.
+    assert body_tiles(pb) == [], (
+        f"Mire map still paints colossus slots: {body_tiles(pb)[:6]}")
 
-    pb.memory[boss + 10] = 1
-    assert_phase(pb, boss, 1)
-
-    # Projection tiles remain walkable. The only physical/vulnerable boss body
-    # is still the 32x32 OBJ heart, so the spectacle cannot create invisible
-    # collision across the expanded shape.
+    # The only physical boss body is the OBJ heart. Floor under it stays
+    # walkable, including while a root cast may be on the BG.
     put16(pb, PL + 9, 32)
     put16(pb, PL + 11, 32)
     pb.memory[PL + 15] = 255
@@ -61,16 +72,14 @@ def main():
         f"camera={pb.memory[CAMERA_X]} SCX={scroll[-1][0]}")
     assert {y for _, y in scroll} == {0}, f"Mire camera tilted: {set(scroll)}"
 
-    screenshot = ROOT / "tmp" / "mire-colossal-expanded.png"
-    pb.screen.image.save(screenshot)
-
-    pb.memory[boss + 15] = 1
-    pb.memory[boss + 10] = 1
-    assert_phase(pb, boss, 0)
+    image = getattr(pb.screen, "image", None)
+    if image is not None:
+        image.save(ROOT / "tmp" / "mire-colossal-expanded.png")
+    assert body_tiles(pb) == [], "scrolling the arena wrote colossus tiles into the map"
     pb.stop(save=False)
 
-    print("[colossal-mire] PASS pulse clenched -> expanded -> clenched; "
-          "no mural; camera 0..64; arena walkable")
+    print("[colossal-mire] PASS slots 55..63 unused on the map; "
+          "camera 0..64; floor under the heart stays walkable")
 
 
 if __name__ == "__main__":
