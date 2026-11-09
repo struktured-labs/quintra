@@ -99,6 +99,9 @@ jobs:
       - name: Hexa Dragmar
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_dragmar.py
 
+      - name: Hexa Dragmar body art
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_body_art_and_contrast.py
+
       - name: Upload ROM
         uses: actions/upload-artifact@v4
         with:

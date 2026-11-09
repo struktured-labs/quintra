@@ -15,6 +15,7 @@
 #include "game/procgen.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "render/hexa_bg.h"
 #include "render/large_boss.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -54,8 +55,6 @@ static u8 limb_tiles[640];
 
 static const u8 limb_x[5] = { 32, 112, 24, 120, 72 };
 static const u8 limb_y[5] = { 72, 72, 32, 32, 16 };
-static const u8 sock_x[5] = { 3, 13, 2, 14, 7 };
-static const u8 sock_y[5] = { 8, 8, 3, 3, 1 };
 static const u8 idle_reload[5] = { 37, 43, 35, 41, 29 };
 static const u8 tele_len[5] = { 20, 24, 18, 22, 16 };
 static const u8 active_a[5] = { 18, 20, 16, 14, 10 };
@@ -63,23 +62,8 @@ static const u8 active_b[5] = { 12, 28, 16, 36, 80 };
 static const u8 rec_len[5] = { 34, 32, 30, 36, 28 };
 static const u8 spawn_idle[5] = { 19, 43, 11, 53, 31 };
 
-static const u16 body_bg[4] = {
-    BGR555(4, 2, 7), BGR555(8, 5, 12), BGR555(14, 10, 18), BGR555(20, 16, 24)
-};
-static const u16 body_obj[4] = {
-    BGR555(0, 0, 0), BGR555(6, 4, 10), BGR555(15, 12, 20), BGR555(23, 20, 27)
-};
 static const u16 tele_obj[4] = {
     BGR555(0, 0, 0), BGR555(31, 24, 12), BGR555(31, 31, 20), BGR555(31, 31, 31)
-};
-// c1 class shadow, c2 class hue, c3 shared specular. c0 matches the floor
-// blend so a spotlighted socket does not draw a hard rectangle.
-static const u16 spot_bg[20] = {
-    BGR555(4, 2, 7), BGR555(14, 6, 4), BGR555(28, 12, 6), BGR555(31, 31, 28),
-    BGR555(4, 2, 7), BGR555(4, 12, 4), BGR555(8, 26, 8), BGR555(31, 31, 28),
-    BGR555(4, 2, 7), BGR555(6, 6, 16), BGR555(12, 14, 30), BGR555(31, 31, 28),
-    BGR555(4, 2, 7), BGR555(4, 10, 14), BGR555(8, 22, 28), BGR555(31, 31, 28),
-    BGR555(4, 2, 7), BGR555(16, 12, 2), BGR555(30, 24, 4), BGR555(31, 31, 28)
 };
 static const u16 spot_obj[20] = {
     BGR555(0, 0, 0), BGR555(14, 6, 4), BGR555(28, 12, 6), BGR555(31, 31, 28),
@@ -191,38 +175,18 @@ static void clear_player_near(i16 x, i16 y) {
     }
 }
 
-static void paint_socket(u8 limb, u8 pal) {
-    u8 r, c, attr;
-    attr = pal;
-    for (r = 0; r < 4; ++r) {
-        for (c = 0; c < 4; ++c) {
-            VBK_REG = 1;
-            set_bkg_tiles((u8)(sock_x[limb] + c), (u8)(sock_y[limb] + r),
-                          1, 1, &attr);
-            VBK_REG = 0;
-        }
-    }
-}
-
 static void load_spot(u8 limb) {
-    palette_bg_load(6, &spot_bg[limb * 4]);
     palette_obj_load(6, &spot_obj[limb * 4]);
 }
 
 static void load_body_pals(void) {
-    palette_bg_load(5, body_bg);
-    palette_obj_load(5, body_obj);
     palette_obj_load(7, tele_obj);
 }
 
 void hexa_refresh_attrs(void) BANKED {
-    u8 i;
     load_body_pals();
-    for (i = 0; i < 5; ++i) paint_socket(i, 5);
-    if (hexa_spotlight_limb < 5) {
-        paint_socket(hexa_spotlight_limb, 6);
-        load_spot(hexa_spotlight_limb);
-    }
+    hexa_bg_stamp(hexa_spotlight_limb, hexa_phase);
+    if (hexa_spotlight_limb < 5) load_spot(hexa_spotlight_limb);
     applied_spot = hexa_spotlight_limb;
 }
 
@@ -263,19 +227,7 @@ static void gen_limb_tiles(void) {
 }
 
 static void paint_carapace(void) {
-    u8 x, y;
-    for (y = 0; y < ROOM_H; ++y) {
-        for (x = 0; x < ROOM_W; ++x) {
-            u8 tile = BGT_FLOOR;
-            if (x == 0 || y == 0 || x == (ROOM_W - 1)) tile = BGT_WALL;
-            else if (x >= 2 && x <= 17 && y >= 1 && y <= 13) {
-                tile = (u8)(BGT_COLOSSUS_VOID + ((x + (y * 3)) % 9));
-                if (x >= 7 && x <= 12 && y >= 3 && y <= 8)
-                    tile = (y < 6) ? BGT_COLOSSUS_EYE : BGT_COLOSSUS_MAW;
-            }
-            room_tilemap[y][x] = tile;
-        }
-    }
+    hexa_bg_prepare();
 }
 
 void hexa_boss_clear(void) BANKED {
@@ -528,13 +480,10 @@ static void spotlight_tick(void) {
         }
     }
     if (applied_spot != hexa_spotlight_limb) {
-        /* Repaint only the sockets that changed. Rewriting all five during
+        /* Recolor only the sockets that changed. Rewriting all five during
            the active frame blew past vblank and tore the limb timers. */
-        if (applied_spot < 5) paint_socket(applied_spot, 5);
-        if (hexa_spotlight_limb < 5) {
-            paint_socket(hexa_spotlight_limb, 6);
-            load_spot(hexa_spotlight_limb);
-        }
+        hexa_bg_retint(applied_spot, hexa_spotlight_limb, hexa_phase);
+        if (hexa_spotlight_limb < 5) load_spot(hexa_spotlight_limb);
         applied_spot = hexa_spotlight_limb;
     }
 }
@@ -616,6 +565,7 @@ static void phase_tick(entity_t *e) {
         }
         attack_noise(1);
         room_shake(1, 16);
+        hexa_bg_set_phase(hexa_phase, hexa_spotlight_limb);
     }
     if (roar_timer) roar_timer--;
 }
@@ -636,7 +586,9 @@ static void converge_tick(void) {
         fx_spawn(SPR_FX_IMPACT, 1, 72, 8, 8);
         fx_spawn(SPR_FX_IMPACT, 1, 72, 100, 8);
     }
+    if ((converge & 3) == 0) hexa_bg_core_blink((converge & 4) ? 1 : 0);
     if (!converge) {
+        hexa_bg_set_phase(hexa_phase, hexa_spotlight_limb);
         for (i = 0; i < 6; ++i) {
             u8 slot = boss_projectile_spawn(80, 48, ang[i], BOSS_SHOT_BOLT, 0, 1);
             if (slot == 0xFF) continue;
