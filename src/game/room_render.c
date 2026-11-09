@@ -72,6 +72,9 @@ static u8 arrival_directive(void) {
 static void present_labels(void) {
     u8 directive;
     u8 district = 0;
+    // A colossus arena paints its attack on the same BG map. A district
+    // card, and the row restore that clears it, erase that overlay.
+    if (procgen_current_room_is_boss) return;
     if (run_state.world_mode) {
         hold_static_sign();
         tiles_draw_area_label(RUN_RIFTWILD_IS_HOLLOW() ? 17 : 1);

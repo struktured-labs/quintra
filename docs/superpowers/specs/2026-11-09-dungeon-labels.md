@@ -13,6 +13,7 @@ does not replace `RIFTWILD`.
 
 In a dungeon, a new depth shows its district name. If that room also has a
 directive, the district stays for a short beat and the directive follows.
+A boss arena does not take that card: its floor overlay shares the map.
 The same district does not repeat its name; a new directive still does.
 Kind 14 is the four-letter `RIFT` return card, not an accidental slice of
 `RIFTWILD`.
