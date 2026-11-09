@@ -60,21 +60,39 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     u8 ang = e->ai_data[0] & 31;
     u8 prop = e->palette;
     u8 mirror_x = 0;
-    u8 mirror_y = 0;
-    u8 vertical = 0;
-    u8 base = e->sprite_tile;
     u8 i, col, row, count = shape == BOSS_SHAPE_SEED
         || shape == BOSS_SHAPE_CRESCENT ? 4
         : shape == BOSS_SHAPE_BOLT ? 2 : 1;
-    // East and west still mirror the bank-0 glyphs. North and south use
-    // bank-1 art, because OAM cannot rotate a sprite by 90 degrees.
+    // 1 = north, 2 = south. One load instead of the lane compares on every shot.
+    static const u8 vertical_lane[32] = {
+        1,1,1,1,
+        0,0,0,0, 0,0,0,0, 0,
+        2,2,2,2,2,2,2,
+        0,0,0,0, 0,0,0,0, 0,
+        1,1,1
+    };
     if ((shape == BOSS_SHAPE_BOLT || shape == BOSS_SHAPE_CRESCENT)
-        && (ang < 4 || ang > 28 || (ang > 12 && ang < 20))) {
-        vertical = 1;
+        && vertical_lane[ang]) {
+        u8 base = shape == BOSS_SHAPE_BOLT ? 208 : 210;
         prop |= 0x08;
-        base = shape == BOSS_SHAPE_BOLT ? 208 : 210;
-        if (ang > 12 && ang < 20) mirror_y = 1;
-    } else if (shape == BOSS_SHAPE_BOLT && ang > 16) {
+        if (oam + count > 40) return oam;
+        for (i = 0; i < count; ++i) {
+            col = shape == BOSS_SHAPE_BOLT ? 0 : (u8)(i & 1);
+            row = shape == BOSS_SHAPE_BOLT ? i : (u8)(i >> 1);
+            if (vertical_lane[ang] == 2) {
+                prop |= S_FLIPY;
+                row = (u8)(1 - row);
+            }
+            if (e->ai_data[5] & 0x08) prop |= S_FLIPX;
+            if (e->ai_data[5] & 0x10) prop |= S_FLIPY;
+            set_sprite_tile(oam, (u8)(base + i));
+            set_sprite_prop(oam, prop);
+            move_sprite(oam, x + (col << 3), y + (row << 3));
+            oam++;
+        }
+        return oam;
+    }
+    if (shape == BOSS_SHAPE_BOLT && ang > 16) {
         prop |= S_FLIPX;
         mirror_x = 1;
     } else if (shape == BOSS_SHAPE_CRESCENT && ang > 0 && ang < 16) {
@@ -83,16 +101,12 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     }
     if (oam + count > 40) return oam;
     for (i = 0; i < count; ++i) {
-        col = (vertical && shape == BOSS_SHAPE_BOLT) ? 0 : (u8)(i & 1);
-        row = (vertical && shape == BOSS_SHAPE_BOLT) ? i : (u8)(i >> 1);
+        col = (u8)(i & 1);
+        row = (u8)(i >> 1);
         if (mirror_x && count > 1) col = (u8)(1 - col);
-        if (mirror_y) {
-            prop |= S_FLIPY;
-            row = (u8)(1 - row);
-        }
+        set_sprite_tile(oam, (u8)(e->sprite_tile + i));
         if (e->ai_data[5] & 0x08) prop |= S_FLIPX;
         if (e->ai_data[5] & 0x10) prop |= S_FLIPY;
-        set_sprite_tile(oam, (u8)(base + i));
         set_sprite_prop(oam, prop);
         move_sprite(oam, x + (col << 3), y + (row << 3));
         oam++;
