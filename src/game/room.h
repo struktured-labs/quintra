@@ -80,6 +80,9 @@ extern u8 room_sigil_status;
 // Visible run equipment tier: 0 base, 1 blue, 2 red, 3 pearl-gold.
 // Kept resident so combat can size shields without a cross-bank scan.
 extern u8 room_appearance_tier;
+// Last 8-way aim (dir8 index: 0 N .. 7 NW). Directional input replaces it.
+// Releasing the D-pad does not. Not part of the suspend payload.
+extern u8 player_aim_dir;
 
 // Called immediately after procgen clears the entity table, before optional
 // combat/loot population can consume every slot. Idempotent on later room

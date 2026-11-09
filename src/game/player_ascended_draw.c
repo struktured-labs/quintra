@@ -7,6 +7,8 @@
 #include "game/room.h"
 #include "render/tiles.h"
 
+extern u8 player_penta_aim;
+
 // Cold powered-form OAM helper: paid only during the 18-second convergence,
 // keeping the always-hot room bank comfortably below its emergency floor.
 void room_draw_ascended_walk_lower(u8 class_id, u8 frame, u8 prop) BANKED {
@@ -37,6 +39,9 @@ u8 room_input_dir8(u8 keys, u8 facing) BANKED {
     }
     if (keys & J_RIGHT) return 2;
     if (keys & J_LEFT) return 6;
+    // Hold Aim keeps the last 8-way heading, diagonals included. Classic
+    // still collapses a released diagonal onto the cardinal facing byte.
+    if (player_penta_aim) return (u8)(player_aim_dir & 7);
     switch (facing) {
         case FACE_N: return 0;
         case FACE_E: return 2;
