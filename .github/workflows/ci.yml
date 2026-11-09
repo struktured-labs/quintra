@@ -93,6 +93,9 @@ jobs:
       - name: PyBoy secret door seal
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_secret_door_seal.py
 
+      - name: PyBoy heart HUD
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_heart_hud.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
