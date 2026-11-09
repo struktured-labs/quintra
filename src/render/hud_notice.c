@@ -19,6 +19,7 @@
 #define HUD_NOTICE_BOSS_LINK 0x7B
 #define HUD_NOTICE_NOHEAL 0x7A
 #define HUD_NOTICE_MPFULL 0x79
+#define HUD_NOTICE_HPFULL 0x78
 #define HUD_NOTICE_QUEUE  4
 
 u8 hud_notice_ticks;
@@ -107,6 +108,9 @@ static u8 status_word(u8 status, u8 *row) {
         case HUD_NOTICE_MPFULL:
             row[0]=BGT_AREA_M; row[1]=BGT_AREA_P; row[2]=BGT_AREA_F;
             row[3]=HUD_STATUS_U; row[4]=BGT_AREA_L; row[5]=BGT_AREA_L; return 6;
+        case HUD_NOTICE_HPFULL:
+            row[0]=BGT_AREA_H; row[1]=BGT_AREA_P; row[2]=BGT_AREA_F;
+            row[3]=HUD_STATUS_U; row[4]=BGT_AREA_L; row[5]=BGT_AREA_L; return 6;
         default:
             row[0]=BGT_AREA_I; row[1]=BGT_AREA_N; row[2]=BGT_AREA_V;
             row[3]=BGT_AREA_E; row[4]=BGT_AREA_R; row[5]=BGT_AREA_T; return 6;
@@ -131,6 +135,7 @@ static u8 notice_palette(u8 kind) {
     if (value == QSTATUS_BURN || value == QSTATUS_BRITTLE
         || value == QSTATUS_BLEED) return 7;
     if (value == HUD_NOTICE_MPFULL) return 6;
+    if (value == HUD_NOTICE_HPFULL) return 7;
     if (value == QSTATUS_SLOW || value == QSTATUS_STOP
         || value == QSTATUS_HASTE) return 6;
     palette_bg_load(5, notice_violet);
@@ -288,6 +293,10 @@ void hud_show_hunger_curse(void) BANKED {
 
 void hud_show_mp_full(void) BANKED {
     show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_MPFULL));
+}
+
+void hud_show_hp_full(void) BANKED {
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HPFULL));
 }
 
 void hud_show_boomerang(void) BANKED {

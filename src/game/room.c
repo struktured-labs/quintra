@@ -1330,12 +1330,19 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // and a soft heartbeat blip sounds in the quiet between shots.
     {
         static u8 lowhp_t;
+        static u8 lowhp_active;
         if (player.hp <= 2 && player.hp > 0) {
+            lowhp_active = 1;
             lowhp_t++;
             hud_low_hp_pulse((u8)((lowhp_t & 0x10) ? 1 : 0));
+            // The wrap clears the counter, not the warning. Gating the
+            // restore on the counter left a white HUD when that wrap and a
+            // heal landed together.
             if (lowhp_t >= 96) { lowhp_t = 0; sfx_play(SFX_LOWHP); }
-        } else if (lowhp_t) {
+        } else if (lowhp_active) {
+            lowhp_active = 0;
             lowhp_t = 0;
+            hud_heart_force = 1;
             hud_low_hp_pulse(0);
         }
     }

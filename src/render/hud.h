@@ -31,6 +31,9 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED;
 // Low-HP danger pulse: phase 1 flashes the heart color white-hot,
 // phase 0 restores it. Cached — safe to call every frame.
 void hud_low_hp_pulse(u8 phase) BANKED;
+// Set before hud_low_hp_pulse(0) so a wrapped counter or a borrowed
+// palette 7 cannot skip the restore to heart-red.
+extern u8 hud_heart_force;
 // Brief pickup/status card in cols 10..15. Multi-effect relics retain every
 // meaningful stat/status card instead of silently hiding later effects.
 void hud_show_stat_gain(u8 stat, u8 amount) BANKED;
@@ -38,6 +41,7 @@ void hud_show_status(u8 status) BANKED;
 void hud_show_healing_blocked(void) BANKED;
 void hud_show_hunger_curse(void) BANKED;
 void hud_show_mp_full(void) BANKED;
+void hud_show_hp_full(void) BANKED;
 void hud_show_boomerang(void) BANKED;
 void hud_show_hookshot(void) BANKED;
 void hud_show_secondary(u8 bomb) BANKED;

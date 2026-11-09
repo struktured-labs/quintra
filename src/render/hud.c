@@ -21,6 +21,22 @@ static const u16 hud_palette[4] = {
     BGR555(31, 20,  6),    // 2: coin gold
     BGR555(31,  6,  8),    // 3: heart red
 };
+u8 hud_heart_force;
+static u8 heart_phase = 0xFF;
+
+static void write_heart_phase(u8 phase) {
+    u16 pal[4];
+    u8 i;
+    if (hud_heart_force) {
+        hud_heart_force = 0;
+        heart_phase = 0xFF;
+    }
+    if (phase == heart_phase) return;
+    heart_phase = phase;
+    for (i = 0; i < 4; ++i) pal[i] = hud_palette[i];
+    if (phase) pal[3] = BGR555(31, 26, 24);
+    palette_bg_load(7, pal);
+}
 
 // MP variant: same tiles, color 3 flips to magic blue. Assigned to the
 // MP digit columns via per-tile attributes — no extra tile data needed.
@@ -95,6 +111,7 @@ void hud_init(void) BANKED {
     // Place HUD on BG palette slot 7 (won't collide with room pal 0);
     // slot 6 is the blue MP variant for the MP digit columns.
     palette_bg_load(7, hud_palette);
+    heart_phase = 0;
     palette_bg_load(6, hud_palette_mp);
     palette_bg_load(5, hud_palette_will);
     lane_palette = 5;
@@ -145,6 +162,10 @@ void hud_redraw_hp(void) BANKED {
         room_player_pose_base = SPR_CLASS_HURT_BASE;
     }
     hud_hp_seen = player.hp;
+    if (player.hp == 0 || player.hp > 2) {
+        hud_heart_force = 1;
+        write_heart_phase(0);
+    }
 
     for (i = 0; i < HUD_MAX_HEARTS; ++i) {
         u8 cap_full  = (u8)(2 + (i * 2));    // half-hearts up to and including full
@@ -357,15 +378,7 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
 }
 
 void hud_low_hp_pulse(u8 phase) BANKED {
-    // Swap HUD palette color 3 (heart red) between normal and white-hot.
-    static u8 last_phase = 0xFF;
-    u16 pal[4];
-    u8 i;
-    if (phase == last_phase) return;
-    last_phase = phase;
-    for (i = 0; i < 4; ++i) pal[i] = hud_palette[i];
-    if (phase) pal[3] = BGR555(31, 26, 24);   // white-hot flash
-    palette_bg_load(7, pal);
+    write_heart_phase(phase);
 }
 
 void hud_notice_restore_context(void) BANKED {

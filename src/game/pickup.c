@@ -714,9 +714,9 @@ u8 pickup_check_player_collision(void) BANKED {
                     if (player.hp >= player.hp_max) {
                         if (!player_has_item(ITEM_ID_MOON_FLASK)
                             || player.mp >= player.mp_max) {
-                            // Full health: the heart stays. Say so once per
-                            // ~1.5 s instead of ignoring the contact silently.
-                            refuse_cue(i);
+                            // Full health: the heart stays. Name the reason;
+                            // a bare buzz reads as a broken pickup.
+                            if (refuse_cue(i)) hud_show_hp_full();
                             continue;
                         }
                         player.mp++;
@@ -969,9 +969,12 @@ u8 pickup_check_player_collision(void) BANKED {
                                 || ware == WARE_BOOMERANG || ware == WARE_HOOKSHOT
                                 || ware == WARE_MORNINGSTAR || ware == WARE_BOMBS)
                             && !player_has_inventory_space())) {
-                        if (refuse_cue(i) && ware == WARE_HEART
-                            && STATUS_PLAYER_HEALING_BLOCKED())
-                            hud_show_healing_blocked();
+                        if (refuse_cue(i) && ware == WARE_HEART) {
+                            if (STATUS_PLAYER_HEALING_BLOCKED())
+                                hud_show_healing_blocked();
+                            else if (player.hp >= player.hp_max)
+                                hud_show_hp_full();
+                        }
                         any = 1;
                         continue;
                     }
