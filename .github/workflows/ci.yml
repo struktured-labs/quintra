@@ -99,6 +99,9 @@ jobs:
       - name: PyBoy puzzle final note
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_puzzle_note.py
 
+      - name: PyBoy dialogue radius
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_dialogue_radius.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
