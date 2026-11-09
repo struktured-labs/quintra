@@ -205,6 +205,22 @@ def solve_runes(pb, runes):
                 assert pb.memory[PL + 2] == hp_before, (
                     "correct rune damaged the champion"
                 )
+                if not pb.memory[LOCKED]:
+                    # The solve frame must still be the final rune, not the fanfare.
+                    assert pb.memory[0xFF12] == 0xA2, (
+                        f"final note was cut off: env=0x{pb.memory[0xFF12]:02X}")
+                    held = 0
+                    for _ in range(16):
+                        if pb.memory[0xFF12] != 0xA2:
+                            break
+                        held += 1
+                        pb.tick()
+                    assert held >= 8, f"final rune lasted only {held} extra frames"
+                    # One host tick can cross the fanfare's D4 into its F4.
+                    # Either envelope means the solved figure followed the note.
+                    assert pb.memory[0xFF12] in (0xC0, 0xA4), (
+                        f"puzzle fanfare did not follow the note: "
+                        f"0x{pb.memory[0xFF12]:02X}")
                 found = candidate
                 prefix.append(candidate)
                 step_off(pb)
@@ -345,6 +361,8 @@ def late_depth_puzzle_contract():
         for _ in range(120):
             pb.tick()
             if not pb.memory[LOCKED]:
+                assert pb.memory[0xFF12] == 0xC0, (
+                    "push-block solve delayed its fanfare")
                 break
         pb.button_release("right")
     else:
