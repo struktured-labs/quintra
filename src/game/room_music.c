@@ -33,10 +33,18 @@ void room_load_stage_obj_identity(void) BANKED {
         BGR555(23, 11, 26), BGR555(31, 29, 20),
     };
     u8 stage = destination_stage();
+    u8 i;
+    static const u8 zero_tile[16] = {0};
     palette_obj_load(6, boss_stage_pal[stage]);
     tiles_load_miniboss(stage);
     tiles_load_boss_big(stage);
+    /* Crystal writes 16 tiles here and the Rex writes 8. Wipe the shared
+       bank-1 OBJ window on entry so the other boss cannot linger. */
+    VBK_REG = 1;
+    for (i = 0; i < 16; ++i) set_sprite_data((u8)(128 + i), 1, zero_tile);
+    VBK_REG = 0;
     if (stage == 2) cinder_rex_pose_b_load();
+    if (stage == 0) crystal_pose_b_load();
     if (room_return_echo_kind >= 4) {
         tiles_load_return_reaper();
         palette_obj_load(6, return_palette);

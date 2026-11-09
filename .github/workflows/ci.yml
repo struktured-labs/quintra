@@ -117,6 +117,9 @@ jobs:
       - name: PyBoy Rift Wild label
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_riftwild_label.py
 
+      - name: PyBoy Crystal Colossus pose
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_crystal_pose.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
