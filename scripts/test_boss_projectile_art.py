@@ -20,9 +20,12 @@ def main():
         for i in range(32*28): pb.memory[en+i]=0
         put16(pb, pl+9, 64)
         put16(pb, pl+11, 100)
-        for slot, (x, y, shape, tile, hitbox, pal) in enumerate(((32,48,0,208,0x44,4),
-                (64,48,1,209,0x77,5),(96,48,2,210,0xEE,3),
-                (56,80,3,214,0xE6,4),(104,80,4,216,0xEE,5))):
+        # Slot 0 is the boss. Clearing it does not keep the slot: the
+        # encounter reclaims it, which used to erase the pellet.
+        shots = ((32,48,0,208,0x44,4),
+                 (64,48,1,209,0x77,5),(96,48,2,210,0xEE,3),
+                 (56,80,3,214,0xE6,4),(104,80,4,216,0xEE,5))
+        for slot, (x, y, shape, tile, hitbox, pal) in enumerate(shots, start=1):
             e=en+slot*28
             pb.memory[e]=1; pb.memory[e+1]=0x87
             put16(pb,e+3,x); put16(pb,e+7,y)

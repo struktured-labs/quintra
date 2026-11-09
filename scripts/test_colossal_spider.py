@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""Live-ROM contract for Frost's hollow web-spider and blinking weak point."""
+"""Live-ROM contract for Frost's blink and a mural-free arena."""
 from pathlib import Path
 
-from test_boss_identity import PL, TM, addr, enter_boss, put16
+from test_boss_identity import PL, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BODY_MIN, BODY_MAX = 55, 63
 EYE_TILE, WEB_TILE = 59, 61
 FRAME = addr("_loop_frame_counter")
-
-
-def body_tiles(pb):
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
 
 
 def position(pb, entity):
@@ -38,18 +31,7 @@ def pulse_art(frame):
 
 def main():
     pb, boss = enter_boss(3, keep_open=True)
-    body = body_tiles(pb)
-    xs = [x for x, _, _ in body]
-    ys = [y for _, y, _ in body]
-    assert len(body) == 94, f"Frost web-spider drifted: {len(body)} tiles"
-    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (14, 8), (
-        f"Spider lost its 112x64 footprint: x={min(xs)}..{max(xs)} "
-        f"y={min(ys)}..{max(ys)}")
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    assert all(not BODY_MIN <= tiles[7 * 20 + x] <= BODY_MAX
-               for x in range(8, 12)), "Spider lost its hollow web cavity"
-    assert all(not BODY_MIN <= tiles[9 * 20 + x] <= BODY_MAX
-               for x in range(9, 11)), "Spider lost its lower web opening"
+    assert projection_cells(pb) == 0, "Frost still paints a detached web mural"
 
     put16(pb, PL + 9, 24)
     put16(pb, PL + 11, 72)
@@ -83,10 +65,11 @@ def main():
 
     open_eye, open_web = pulse_art(0x0E)
     closed_eye, charged_web = pulse_art(0x2E)
-    assert open_eye != closed_eye and open_web != charged_web, (
-        "Spider eyes/web stopped pulsing")
-    print(f"[colossal-spider] PASS {len(body)} BG tiles, 112x64 hollow "
-          f"web-spider, weak-point blink {leap}px, animated charge, walkable")
+    assert open_eye == closed_eye and open_web == charged_web, (
+        "Retired web mural blinked again")
+    assert any(open_eye) and any(open_web), "Spider BG atlas was not uploaded"
+    print(f"[colossal-spider] PASS no mural, weak-point blink {leap}px, "
+          f"static atlas, walkable")
 
 
 if __name__ == "__main__":

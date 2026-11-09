@@ -3,16 +3,12 @@
 import hashlib
 import json
 from pathlib import Path
-from test_boss_identity import ROM, ROOT, EN, PL, RS, TM, addr, enter_boss, put16
+from test_boss_identity import (
+    ROM, ROOT, EN, PL, RS, TM, addr, enter_boss, projection_cells, put16)
 
 
 def projection_count(pb):
-    bank = pb.memory[0xFF4F]
-    pb.memory[0xFF4F] = 0
-    count = sum(55 <= pb.memory[0x9800+y*32+x] <= 63
-                for y in range(17) for x in range(28))
-    pb.memory[0xFF4F] = bank
-    return count
+    return projection_cells(pb)
 
 
 def main():
@@ -29,7 +25,12 @@ def main():
             report['records'].append(r)
             try:
                 r['initial_projection_cells'] = projection_count(pb)
-                if stage in (0, 3, 4, 5, 6, 7, 8):
+                if stage == 4:
+                    # Roots reuse tiles 55..63 on the hardware map only. The
+                    # logical arena must stay floor so the overlay is not terrain.
+                    logical = sum(55 <= v <= 63 for v in pb.memory[TM:TM + 20 * 17])
+                    assert logical == 0, 'Mire roots wrote the logical map'
+                elif stage in (0, 3, 5, 6, 7, 8):
                     assert r['initial_projection_cells'] == 0, 'Moving boss still has a detached mural'
                     r['entry_oam_trace'] = []
                     stable = 0

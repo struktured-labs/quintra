@@ -6,6 +6,31 @@ from pathlib import Path
 from test_boss_identity import ROM, PL, EN, addr, enter_boss, put16
 
 
+def settle_ring(pb, boss):
+    """PyBoy can apply the clock write a few frames late. Hold the lock
+    until it shows, and drop hostile shots born while a root cast was
+    still the live clock. The ring's own resolution is left untouched."""
+    active = addr('_mire_root_active')
+    clock = addr('_boss_phase_clock')
+    for _ in range(8):
+        pb.memory[boss + 18] = 250
+        pb.memory[boss + 20] = 1
+        pb.memory[boss + 5] = 0
+        pb.memory[boss + 6] = 111
+        for slot in range(32):
+            entity = EN + slot * 28
+            if (entity != boss and pb.memory[entity] == 1
+                    and not (pb.memory[entity + 1] & 0x10)):
+                pb.memory[entity] = pb.memory[entity + 1] = 0
+        pb.tick()
+        if pb.memory[clock] >= 112 and pb.memory[active] == 0:
+            break
+    else:
+        raise AssertionError('ring clock did not reach its lock')
+    pb.memory[PL + 2] = pb.memory[PL + 1]
+    pb.memory[PL + 15] = pb.memory[PL + 20] = 0
+
+
 def main():
     sha = hashlib.sha256(ROM.read_bytes()).hexdigest()
     script = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -41,8 +66,7 @@ def main():
                 pb.memory[boss+2] = 2
                 pb.memory[boss+5] = 0
                 pb.memory[boss+6] = 111
-                pb.memory[PL+2] = pb.memory[PL+1]
-                pb.memory[PL+15] = pb.memory[PL+20] = 0
+                settle_ring(pb, boss)
                 hp = pb.memory[PL+2]
                 moved = False
                 captured = False
