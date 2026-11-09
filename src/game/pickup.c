@@ -1110,6 +1110,8 @@ u8 pickup_check_player_collision(void) BANKED {
                                 hud_show_secondary(1);
                                 break;
                         }
+                        // Shelf identity lives in bank 7 so this bank keeps its floor.
+                        shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
                         entity_kill(i);
                     } else refuse_cue(i);           // not enough coins
                     any = 1;
