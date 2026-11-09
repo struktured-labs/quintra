@@ -24,11 +24,28 @@ static const u8 shot_tiles[256] = {
     0xf3,0xff,0xf3,0xff,0xe7,0xff,0xc6,0xfe,0x0e,0xfe,0x1c,0xfc,0xf8,0xf8,0xe0,0xe0
 };
 
+// North-leading glyphs in VRAM bank 1. OAM cannot rotate the bank-0
+// pictures, so a vertical lane uses these instead. South flips them.
+static const u8 bolt_north[32] = {
+    0x10,0x10,0x38,0x38,0x7c,0x7c,0x28,0x3c,0x00,0x18,0x00,0x18,0x00,0x18,0x10,0x08,
+    0x10,0x08,0x00,0x18,0x10,0x08,0x00,0x18,0x10,0x08,0x24,0x3c,0x18,0x18,0x00,0x00
+};
+static const u8 crescent_north[64] = {
+    0x00,0x00,0x3f,0x3f,0x40,0x7f,0x9f,0xe0,0x10,0x60,0x10,0x20,0x10,0x00,0x00,0x00,
+    0x00,0x00,0xfc,0xfc,0x02,0xfe,0xf9,0x07,0x08,0x06,0x08,0x04,0x08,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x10,0x10,0x30,0x30,0x50,0x50,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x08,0x08,0x0c,0x0c,0x0a,0x0a,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
 void boss_projectile_load_art(void) BANKED {
     static const u16 violet[4] = {
         BGR555(0,0,0), BGR555(10,3,15), BGR555(28,8,27), BGR555(31,26,31)
     };
     set_sprite_data(208, 16, shot_tiles);
+    VBK_REG = 1;
+    set_sprite_data(208, 2, bolt_north);
+    set_sprite_data(210, 4, crescent_north);
+    VBK_REG = 0;
     palette_obj_load(3, violet);
 }
 
@@ -43,16 +60,21 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     u8 ang = e->ai_data[0] & 31;
     u8 prop = e->palette;
     u8 mirror_x = 0;
+    u8 mirror_y = 0;
+    u8 vertical = 0;
+    u8 base = e->sprite_tile;
     u8 i, col, row, count = shape == BOSS_SHAPE_SEED
         || shape == BOSS_SHAPE_CRESCENT ? 4
         : shape == BOSS_SHAPE_BOLT ? 2 : 1;
-    // Both glyphs are horizontal. OAM can mirror them. It cannot rotate
-    // them onto a vertical lane, and this pass does not add tiles.
-    // The bolt's point sits on its right. Mirror it when the lane is west.
-    // The crescent's solid back sits on its left, so an eastbound shot
-    // mirrors and the back leads. A vertical mirror would not turn that
-    // C to face north or south.
-    if (shape == BOSS_SHAPE_BOLT && ang > 16) {
+    // East and west still mirror the bank-0 glyphs. North and south use
+    // bank-1 art, because OAM cannot rotate a sprite by 90 degrees.
+    if ((shape == BOSS_SHAPE_BOLT || shape == BOSS_SHAPE_CRESCENT)
+        && (ang < 4 || ang > 28 || (ang > 12 && ang < 20))) {
+        vertical = 1;
+        prop |= 0x08;
+        base = shape == BOSS_SHAPE_BOLT ? 208 : 210;
+        if (ang > 12 && ang < 20) mirror_y = 1;
+    } else if (shape == BOSS_SHAPE_BOLT && ang > 16) {
         prop |= S_FLIPX;
         mirror_x = 1;
     } else if (shape == BOSS_SHAPE_CRESCENT && ang > 0 && ang < 16) {
@@ -61,12 +83,16 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     }
     if (oam + count > 40) return oam;
     for (i = 0; i < count; ++i) {
-        col = i & 1;
-        row = i >> 1;
+        col = (vertical && shape == BOSS_SHAPE_BOLT) ? 0 : (u8)(i & 1);
+        row = (vertical && shape == BOSS_SHAPE_BOLT) ? i : (u8)(i >> 1);
         if (mirror_x && count > 1) col = (u8)(1 - col);
-        set_sprite_tile(oam, e->sprite_tile + i);
+        if (mirror_y) {
+            prop |= S_FLIPY;
+            row = (u8)(1 - row);
+        }
         if (e->ai_data[5] & 0x08) prop |= S_FLIPX;
         if (e->ai_data[5] & 0x10) prop |= S_FLIPY;
+        set_sprite_tile(oam, (u8)(base + i));
         set_sprite_prop(oam, prop);
         move_sprite(oam, x + (col << 3), y + (row << 3));
         oam++;
