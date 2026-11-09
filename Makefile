@@ -219,6 +219,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_colossal_cinder.py
 	$(PYBOY_RUN) scripts/test_colossal_spider.py
 	$(PYBOY_RUN) scripts/test_colossal_mire.py
+	$(PYBOY_RUN) scripts/test_mire_roots.py
 	$(PYBOY_RUN) scripts/test_colossal_reaper.py
 	$(PYBOY_RUN) scripts/test_colossal_golem.py
 	$(PYBOY_RUN) scripts/test_colossal_hydra.py

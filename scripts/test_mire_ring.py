@@ -12,7 +12,7 @@ def main():
     out = Path('builds')/f'mire-ring-{sha[:8]}-{script[:8]}'
     out.mkdir(parents=True, exist_ok=True)
     report = dict(rom_sha256=sha, script_sha256=script, records=[],
-        fixture='Fresh boss entry; half HP and clock 63; unrelated attacks suppressed; '
+        fixture='Fresh boss entry; half HP and clock 111; unrelated attacks suppressed; '
                 'fixed initial positions. Escape thereafter uses held right, not position writes.')
     cases = [('center',0,0,False), ('inner',12,0,False), ('band',24,0,True),
              ('diagonal_band',14,14,True), ('outside',48,0,False),
@@ -40,7 +40,7 @@ def main():
                 pb.memory[boss+14] = pb.memory[boss+23]//2
                 pb.memory[boss+2] = 2
                 pb.memory[boss+5] = 0
-                pb.memory[boss+6] = 63
+                pb.memory[boss+6] = 111
                 pb.memory[PL+2] = pb.memory[PL+1]
                 pb.memory[PL+15] = pb.memory[PL+20] = 0
                 hp = pb.memory[PL+2]
@@ -56,21 +56,21 @@ def main():
                              if pb.memory[EN+i*28] == 4 and pb.memory[EN+i*28+1]&1
                              and pb.memory[EN+i*28+12] == 127]
                     record['trace'].append([frame,clock,pb.memory[PL+2],pb.memory[PL+9],pb.memory[PL+11],marks])
-                    if clock < 96:
+                    if clock < 144:
                         before_resolution = pb.memory[PL+2]
-                    if 66 <= clock < 96 and len(set(marks)) == 8 and not captured:
+                    if 114 <= clock < 144 and len(set(marks)) == 8 and not captured:
                         assert set(marks) == {(68+x,80+y) for x,y in
                             ((0,-24),(17,-17),(24,0),(17,17),(0,24),(-17,17),(-24,0),(-17,-17))}
                         pb.screen.image.save(str(out/f'{name}-warning.png'))
                         captured = True
-                    if clock >= 66 and not moved:
+                    if clock >= 114 and not moved:
                         if name == 'escape':
                             pb.button_press('right')
                         else:
                             put16(pb,PL+9,64+dx)
                             put16(pb,PL+11,72+dy)
                         moved = True
-                    if clock >= 108:
+                    if clock >= 156:
                         break
                 else:
                     raise AssertionError('ring cycle stalled')

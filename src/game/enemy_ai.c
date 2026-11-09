@@ -13,6 +13,7 @@
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/boss_phase.h"
+#include "game/mire_roots.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
@@ -524,7 +525,9 @@ static void boss_tick(entity_t *e) {
 
     boss_motion_tick(e);
 
-    if (e->ai_data[1] != 0) {
+    if (mire_root_active && e->ai_data[2] == 4 && (e->ai_data[3] & 1)) {
+        // Hold the volley countdown while the heart is rooted.
+    } else if (e->ai_data[1] != 0) {
         e->ai_data[1]--;
         // World Collapse's one survivable corner flickers throughout the
         // charge from the actual large-boss driver. ai_data[4] is the charge

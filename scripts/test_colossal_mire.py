@@ -39,24 +39,13 @@ def tick_until_phase(pb, boss, phase):
 def main():
     pb, boss = enter_boss(4, keep_open=True)
 
-    # Reconcile to the clenched phase, then force the existing 48-beat motion
-    # timer across both transitions. The background silhouette—not a test-only
-    # marker—must follow the live boss state.
-    pb.memory[boss + 15] = 0
-    pb.memory[boss + 10] = 12
-    clenched = tick_until_phase(pb, boss, 0)
-    assert len(clenched) == 36 and footprint(clenched) == (8, 6), (
-        f"Mire clenched body drifted: {len(clenched)} tiles {footprint(clenched)}")
+    # The detached mural is gone. Tiles 55..63 stay off the logical map so the
+    # root overlay can reuse their VRAM without becoming terrain.
+    assert body_tiles(pb) == [], (
+        f"Mire map still paints colossus slots: {body_tiles(pb)[:6]}")
 
-    pb.memory[boss + 10] = 1
-    expanded = tick_until_phase(pb, boss, 1)
-    assert len(expanded) == 84 and footprint(expanded) == (12, 8), (
-        f"Mire expansion lost its 96x64 footprint: "
-        f"{len(expanded)} tiles {footprint(expanded)}")
-
-    # Projection tiles remain walkable. The only physical/vulnerable boss body
-    # is still the 32x32 OBJ heart, so the spectacle cannot create invisible
-    # collision across the expanded shape.
+    # The only physical boss body is the OBJ heart. Floor under it stays
+    # walkable, including while a root cast may be on the BG.
     put16(pb, PL + 9, 32)
     put16(pb, PL + 11, 32)
     pb.memory[PL + 15] = 255
@@ -83,17 +72,14 @@ def main():
         f"camera={pb.memory[CAMERA_X]} SCX={scroll[-1][0]}")
     assert {y for _, y in scroll} == {0}, f"Mire camera tilted: {set(scroll)}"
 
-    screenshot = ROOT / "tmp" / "mire-colossal-expanded.png"
-    pb.screen.image.save(screenshot)
-
-    pb.memory[boss + 15] = 1
-    pb.memory[boss + 10] = 1
-    contracted_again = tick_until_phase(pb, boss, 0)
-    assert len(contracted_again) == 36, "Mire did not visibly contract again"
+    image = getattr(pb.screen, "image", None)
+    if image is not None:
+        image.save(ROOT / "tmp" / "mire-colossal-expanded.png")
+    assert body_tiles(pb) == [], "scrolling the arena wrote colossus tiles into the map"
     pb.stop(save=False)
 
-    print("[colossal-mire] PASS 64x48 clenched -> 96x64 expanded -> "
-          "64x48 clenched; camera 0..64; BG projection walkable")
+    print("[colossal-mire] PASS slots 55..63 unused on the map; "
+          "camera 0..64; floor under the heart stays walkable")
 
 
 if __name__ == "__main__":
