@@ -3,7 +3,8 @@
 Below half health, `boss_phase_motion` replaced several bosses' own
 movement with one shared stepper. Spider and Hydra took more east steps
 than west, because a 48-tick cast pause sat inside the west half of the
-128-tick clock, and they walked into the east wall. Crystal lost its
+128-tick clock, and they walked into the east wall. Replaying that retired clock for
+256 ticks nets +24 px east. Crystal lost its
 wells, Mire lost its pulse, and Void Lord lost its anchors. Sun Golem
 keeps the cardinal charge; that pattern is its own.
 
