@@ -148,8 +148,10 @@ OBJ heads move at most ±12 px from those anchors so the scanline bands in
 - Hostile projectile cap stays `boss_projectile_has_room` (12 shots). A
   limb that cannot spawn reclaims one hostile shot with `state_timer < 20`
   and still leaves `LIMB_ACTIVE` on schedule.
-- VRAM bank 1 tiles 40..79: 5 limbs × 2 poses × 4 tiles, generated at
-  sanctum entry. Bank 0 projectile tiles 208..223 are untouched.
+- VRAM bank 1 tiles 88..127: 5 limbs × 2 poses × 4 tiles, generated at
+  sanctum entry. Bank 1 tiles 40..87 stay with the animated Spider, Mire,
+  and Hydra poses, and 208..213 stay free for vertical shot glyphs.
+  Bank 0 projectile tiles 208..223 are untouched.
 - BG palette 5 is the downplayed body. BG palette 6 is the spotlight
   socket only. BG palette 0 is never rewritten by the spotlight.
 - OBJ 5 downplayed heads, OBJ 6 spotlight head, OBJ 7 telegraph flash,

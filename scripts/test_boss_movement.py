@@ -106,14 +106,15 @@ def main():
         f"Spider fired through its post-blink re-engagement beat: {pb.memory[spider + 18]}")
 
     # Frost's danger is an alternating normal-speed web plus the blink, not
-    # a hidden fast aimed bolt that fills its own lane gap. Force its first
-    # volley and pin the exact four readable lanes for the encounter.
+    # a hidden fast aimed bolt that fills its own lane gap. Boss shots keep
+    # direction in the 32-step angle and speed in state. The vx/vy bytes are
+    # the subpixel step and stay 0 on the spawn frame.
     for i in range(32):
         ep = EN + i * 28
         if pb.memory[ep] == 1:
             pb.memory[ep] = pb.memory[ep + 1] = 0
-    pb.memory[spider + 18] = 0
-    pb.memory[spider + 21] = 0
+    pb.memory[spider + 18] = 0  # volley cadence, ai_data[1]
+    pb.memory[spider + 22] = 0  # even phase: cardinal lanes
     web = []
     for _ in range(20):
         pb.tick()
@@ -121,14 +122,15 @@ def main():
         for i in range(32):
             ep = EN + i * 28
             if (pb.memory[ep] == 1 and pb.memory[ep + 1] & 1
-                    and not pb.memory[ep + 1] & 0x10):
-                vx, vy = pb.memory[ep + 10], pb.memory[ep + 11]
-                web.append((vx - 256 if vx >= 128 else vx,
-                            vy - 256 if vy >= 128 else vy))
-        if web:
+                    and not (pb.memory[ep + 1] & 0x10)):
+                web.append((pb.memory[ep + 17] & 31, pb.memory[ep + 15]))
+        if len(web) >= 4:
             break
-    assert len(web) == 4 and all(max(abs(vx), abs(vy)) == 2 for vx, vy in web), (
-        f"Spider web lost its four normal-speed lanes: {web}")
+    assert len(web) == 4, f"Spider web lost its four lanes: {web}"
+    assert {angle for angle, _speed in web} == {0, 8, 16, 24}, (
+        f"Spider web left the cardinal lanes: {web}")
+    assert all(speed == 2 for _angle, speed in web), (
+        f"Spider web left normal speed: {web}")
     pb.stop(save=False)
 
     # Stage 5's Toxic Mire keeps its six mixed-speed scatter bolts, but must

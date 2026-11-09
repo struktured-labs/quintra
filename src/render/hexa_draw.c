@@ -27,7 +27,7 @@ u8 hexa_boss_draw(u8 oam) BANKED {
     for (i = 0; i < 5; ++i) {
         u8 pose = (hexa_limb_state[i] == HEXA_LIMB_TELEGRAPH
                    || hexa_limb_state[i] == HEXA_LIMB_ACTIVE) ? 4 : 0;
-        u8 base = (u8)(40 + (i * 8) + pose);
+        u8 base = (u8)(HEXA_LIMB_TILE + (i * 8) + pose);
         u8 pal = (hexa_spotlight_limb == i) ? 6 : 5;
         u8 sx = (u8)((i16)limb_x[i] + hexa_limb_ox[i] + 8);
         u8 sy = (u8)((i16)limb_y[i] + hexa_limb_oy[i] + 16);

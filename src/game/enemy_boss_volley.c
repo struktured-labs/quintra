@@ -82,6 +82,17 @@ void boss_volley_tick(entity_t *e) BANKED {
             cadence = 34;
             break;
         case 5: // Reaper: three-shot burst, then a real pause.
+            // The link used to be one re-aimed bolt. A three-lane fan still
+            // leaves a dodge, but standing on one tile no longer waits it out.
+            // Shots already airborne keep PROJ_PRELINK and do not share.
+            if (boss_link_active) {
+                d = volley_aim(cx, cy);
+                volley_shot(cx, cy, d, 2, damage);
+                volley_shot(cx, cy, (u8)((d + 1) & 7), 2, damage);
+                volley_shot(cx, cy, (u8)((d + 7) & 7), 2, damage);
+                cadence = 54;
+                break;
+            }
             volley_shot(cx, cy, volley_aim(cx, cy), 3, damage);
             e->ai_data[4]++;
             if (e->ai_data[4] < 3) {

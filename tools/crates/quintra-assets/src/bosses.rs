@@ -135,96 +135,91 @@ fn boss_serpent() -> Grid {
 
 /// Stage 2 — Kilnback pack / Cinder Rex atlas.
 ///
-/// The first two tile rows contain four 16x8 pack poses (walk A/B, exposed
-/// furnace vent, and burning husk). The lower half is one long 32x16 Cinder
-/// Rex. Runtime composes five independent animals from the upper tiles, then
-/// unfolds the surviving pack into the lower silhouette. Keeping every
-/// Kilnback only two OBJ tiles wide is intentional: five in a phalanx consume
-/// exactly the real GBC's ten-sprites-per-scanline limit.
+/// The first two tile rows contain four 16x8 crucible poses (closed walk A/B,
+/// open vent, collapsed husk). The lower half is one native 32x16 furnace
+/// hound. Runtime draws that grid 1:1: four columns, no duplicated tile.
+/// Five Kilnbacks in a phalanx are still exactly ten sprites on one scanline.
+///
+/// Ember's live OBJ palette is not "1 = darkest". Index 1 is the rust brick
+/// (`BGR555` 22,9,4), index 2 is the near-black iron (6,2,1), and index 3 is
+/// the yellow heat (31,27,10). The strings below use those hardware indices:
+/// brick volume is 1, iron rims and stompers are 2, magma is 3.
 fn boss_maw() -> Grid {
     let mut g = blank();
     const WALK_A: [&str; 8] = [
-        "....3..3..33....", // dorsal vents, not a round body
-        "...1221221111...",
-        "..122222233211..", // one pale eye behind the wedge jaw
-        "112223322222211.",
-        ".122222222333221",
-        "..112211221111..",
-        "...11....11.....", // separated piston legs
-        "..11......11....",
+        "....22..22......",
+        "..2211221122....",
+        ".2111111111122..",
+        "211211211211332.",
+        "2111111111112222",
+        ".22211111122222.",
+        "..2112....2112..",
+        "..2222....2222..",
     ];
     const WALK_B: [&str; 8] = [
-        "....3..3..33....",
-        "...1221221111...",
-        "..122222233211..",
-        "112223322222211.",
-        ".122222222333221",
-        "..112211221111..",
-        "..11......11....",
-        "....11..11......",
+        "....22..22......",
+        "..2211221122....",
+        ".2111111111122..",
+        "211211211211332.",
+        "2111111111112222",
+        ".22211111122222.",
+        "....21122112....",
+        "....22222222....",
     ];
     const VENT: [&str; 8] = [
-        "....3..33333....",
-        "...1221333311...",
-        "..122223313211..", // open white-hot rear furnace
-        "112223333122211.",
-        ".122222222333221",
-        "..112211221111..",
-        "...11....11.....",
-        "..11......11....",
+        "...333333.21....",
+        "..23333332212...",
+        ".2133333311122..",
+        "211133331111332.",
+        "2111111111112222",
+        ".22211111122222.",
+        "..2112....2112..",
+        "..2222....2222..",
     ];
     const HUSK: [&str; 8] = [
-        "..3.3..333.3....",
-        ".3.1221331313...",
-        "..13232331321...",
-        "131223331322.13.",
-        ".123313233313.31",
-        "..11.31.21.11...",
-        "...3.....3......",
-        "..3.......3.....",
+        "................",
+        "................",
+        "....3....3......",
+        "..2212..2312....",
+        ".2123122132122..",
+        "211322332211222.",
+        "2222123221222222",
+        ".22222..222222..",
     ];
+    // Authored facing west: column 0 is the jaw, column 3 is the slag hammer.
+    // East travel sets S_FLIPX. Nothing here is stamped twice.
     const REX: [&str; 16] = [
-        "................................",
-        "..............3.....3...........",
-        "............131...131...........",
-        "..........11221112211......33...",
-        "........112222222222111..1131...",
-        "..1111112222332222222221123211..", // low wedge snout enters before the torso
-        "..11132222222222222223322222221.", // single white-hot eye, never a round face
-        "11222222222222222222222223322111",
-        ".11333122222222222222222222.111.", // tooth-lit lower jaw separates from the ground
-        "..1311122112211221122111111.....",
-        "......11....11....11....11......",
-        ".....131...131...131...131......",
-        "....11.1..11.1..11.1..11.1......",
-        "...11..1.11..1.11..1.11..1......",
-        "..11.....11.....11.....11.......",
-        "................................",
+        "..........33..33................",
+        ".........21122112...............",
+        "........211111111222............",
+        "...22..21113311111112.......2332",
+        ".221122111111111212122.....21332",
+        "21111331111111123232312...21122.",
+        "211113311111112332332112.2112...",
+        "2221111221111123323321112112....",
+        ".323232..211112132132111112.....",
+        "..232322.21111122222111112......",
+        ".211111122211111111111112.......",
+        ".22111122..21112....21112.......",
+        "...2222....21112....21112.......",
+        "..........21112....21112........",
+        ".........211312...211312........",
+        "........2232322..2232322........",
     ];
 
-    let mut stamp = |ox: usize, oy: usize, art: &[&str]| {
+    let mut stamp = |ox: usize, oy: usize, art: &[&str], width: usize| {
         for (y, row) in art.iter().enumerate() {
+            assert_eq!(row.len(), width, "cinder row {y} at {ox},{oy}");
             for (x, pixel) in row.bytes().enumerate() {
                 g[oy + y][ox + x] = if pixel == b'.' { 0 } else { pixel - b'0' };
             }
         }
     };
-    stamp(0, 0, &WALK_A);
-    stamp(16, 0, &WALK_B);
-    stamp(0, 8, &VENT);
-    stamp(16, 8, &HUSK);
-    stamp(0, 16, &REX);
-    // Small silhouette polish: a higher broken dorsal ridge and a readable
-    // tail hook give the long Rex a beginning and end at native scale. These
-    // occupy formerly transparent pixels and do not change its 32x16 budget.
-    paint(&mut g, 3, &[
-        (16, 13), (16, 18), (17, 10), (17, 21),
-        (18, 8), (18, 23), (19, 6), (19, 25),
-    ]);
-    paint(&mut g, 1, &[
-        (20, 4), (19, 3), (18, 2), (17, 1),
-        (21, 2), (22, 1), (23, 0),
-    ]);
+    stamp(0, 0, &WALK_A, 16);
+    stamp(16, 0, &WALK_B, 16);
+    stamp(0, 8, &VENT, 16);
+    stamp(16, 8, &HUSK, 16);
+    stamp(0, 16, &REX, 32);
     g
 }
 
@@ -507,4 +502,38 @@ pub fn boss_stages() -> Vec<Grid> {
         boss_hydra(),    // 7
         boss_voidlord(), // 8 final
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::boss_maw;
+
+    #[test]
+    fn cinder_rex_is_a_native_four_column_furnace_hound() {
+        let g = boss_maw();
+        let ink = |rows: std::ops::Range<usize>, x0: usize, x1: usize, color: u8| {
+            g[rows].iter().flat_map(|row| &row[x0..x1]).filter(|&&p| p == color).count()
+        };
+        // Closed armor has no magma speckles. The vent is a solid cauldron.
+        assert_eq!(ink(0..6, 0, 16, 3), 2, "walk eye slit only");
+        assert!(ink(8..12, 0, 16, 3) > 20, "vent cauldron");
+        assert!(g[8][16..32].iter().all(|&p| p == 0) && g[9][16..32].iter().all(|&p| p == 0),
+            "husk roof collapsed");
+        assert!(g[14][16..32].iter().any(|&p| p != 0), "husk rests on the floor");
+        // One eye, two pillar legs, four distinct columns. No stretched twin.
+        assert_eq!(&g[21][5..7], &[3, 3]);
+        assert_eq!(&g[22][5..7], &[3, 3]);
+        let cols: Vec<Vec<u8>> = (0..4).map(|c| {
+            (16..32).flat_map(|y| g[y][c * 8..c * 8 + 8].to_vec()).collect()
+        }).collect();
+        for i in 0..4 {
+            for j in i + 1..4 {
+                assert_ne!(cols[i], cols[j], "rex columns {i} and {j} match");
+            }
+        }
+        let planted = (27..32).filter(|y| {
+            g[*y][11..16].iter().any(|&p| p != 0) && g[*y][21..26].iter().any(|&p| p != 0)
+        }).count();
+        assert!(planted >= 4, "both pillar legs reach the floor");
+    }
 }

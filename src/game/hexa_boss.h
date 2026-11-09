@@ -8,6 +8,9 @@
 #include "game/entity.h"
 
 #define HEXA_STAGE 9
+/* VRAM bank 1, 40 tiles (88..127). Bank 1 tiles 40..87 are the animated
+   Spider/Mire/Hydra poses, and 208..213 are reserved for vertical shot glyphs. */
+#define HEXA_LIMB_TILE 88
 
 #define HEXA_LIMB_IDLE 0
 #define HEXA_LIMB_TELEGRAPH 1

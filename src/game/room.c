@@ -23,6 +23,7 @@
 #include "game/enemy_ai.h"
 #include "game/hexa_boss.h"
 #include "game/loop.h"
+#include "game/mire_roots.h"
 #include "game/oath_arts.h"
 #include "game/pickup.h"
 #include "game/player.h"
@@ -172,6 +173,9 @@ u8 room_transform_ticks;
 // Surge Spark lasts 120 eighth-second beats (about 15 seconds). It is room
 // runtime state, like Spirit Convergence, rather than permanent save data.
 u8 room_weapon_surge_ticks;
+// South matches the champion's room-entry facing. Hold Aim fires this after
+// the D-pad is released; a later direction replaces it and then sticks.
+u8 player_aim_dir = 4;
 
 // These timers are hot only while a B effect is visibly active. Keep their
 // cheap per-frame bookkeeping beside room_tick in bank 1; a far call into the
@@ -1040,6 +1044,7 @@ void room_enter(void) {
         room_refresh_shop_wares();
         room_load_dynamic_fx_identity();
         room_draw_tilemap();
+        mire_roots_redraw();
         entity_draw_all();
         place_player_sprite();
         SCX_REG = room_scroll_x();
@@ -1075,6 +1080,8 @@ void room_enter(void) {
         play_stage_music();
     }
 
+    // A previous room's root overlay is not part of the new tilemap.
+    mire_roots_clear();
     // Hidden sanctum: one locked screen, no procgen, no stage advance.
     if ((run_state.dungeon_puzzles & RUN_HEXA_SANCTUM_BIT)
         && run_state.bosses_beaten == BOSSES_TO_WIN) {
@@ -1168,6 +1175,21 @@ void room_exit(void) {
     // the room's entities/player/music to be intact. Real room changes
     // re-init entities in procgen_generate_current_room(). Leaving music
     // running also avoids a restart blip every time the pack is toggled.
+}
+
+// dir8 index for a live step. Callers only pass a nonzero axis pair.
+static u8 room_aim_from_step(i8 dx, i8 dy) {
+    if (dy < 0) {
+        if (dx > 0) return 1;
+        if (dx < 0) return 7;
+        return 0;
+    }
+    if (dy > 0) {
+        if (dx > 0) return 3;
+        if (dx < 0) return 5;
+        return 4;
+    }
+    return (dx < 0) ? 6 : 2;
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
@@ -1340,7 +1362,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (keys & J_UP)    { dy = -1; player.facing = FACE_N; moved = 1; }
         if (keys & J_DOWN)  { dy = +1; player.facing = FACE_S; moved = 1; }
 
-        // A-fire diagonals lean away from a retained cardinal heading.
+        // Any live direction, including a diagonal, becomes the retained aim.
+        // Releasing the pad leaves player_aim_dir untouched.
+        if (dx || dy) player_aim_dir = room_aim_from_step(dx, dy);
+
+        // The cardinal facing byte still prefers the previous heading when an
+        // A-only diagonal includes it. Shots read player_aim_dir instead.
         if (player_penta_aim && (keys & (J_A | J_B)) == J_A && dx && dy
             && ((previous_facing == FACE_N && dy < 0)
                 || (previous_facing == FACE_S && dy > 0)

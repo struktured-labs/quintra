@@ -2,20 +2,13 @@
 """Live-ROM contract for Crystal's 224px camera-travelling Colossus arena."""
 from pathlib import Path
 
-from test_boss_identity import PL, RS, TM, addr, enter_boss, put16
+from test_boss_identity import PL, RS, addr, enter_boss, projection_cells, put16
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BODY_MIN, BODY_MAX = 55, 63
-FRAME = addr("_loop_frame_counter")
+EYE_TILE = 59
 WORLD_W = addr("_room_world_width")
 CAMERA_X = addr("_room_camera_x")
-
-
-def body_tiles(pb):
-    tiles = list(pb.memory[TM:TM + 20 * 17])
-    return [(i % 20, i // 20, tile) for i, tile in enumerate(tiles)
-            if BODY_MIN <= tile <= BODY_MAX]
 
 
 def position(pb, entity):
@@ -35,13 +28,7 @@ def bg_tile_art(pb, tile):
 
 def main():
     pb, boss = enter_boss(0, keep_open=True)
-    body = body_tiles(pb)
-    xs = [x for x, _, _ in body]
-    ys = [y for _, y, _ in body]
-    assert len(body) == 118, f"opening Colossus body drifted: {len(body)} tiles"
-    assert (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1) == (16, 10), (
-        f"opening Colossus lost its 128x80 footprint: "
-        f"x={min(xs)}..{max(xs)} y={min(ys)}..{max(ys)}")
+    assert projection_cells(pb) == 0, "Crystal still paints a detached mural"
 
     # The enormous statue is projection art; only the original 32x32 heart is
     # physical. Crossing its outer shoulder cannot create an invisible wall.
@@ -113,7 +100,7 @@ def main():
 
     screenshot = ROOT / "tmp" / "crystal-colossal-arena.png"
     pb.screen.image.save(screenshot)
-    crystal_art = bg_tile_art(pb, BODY_MIN)
+    crystal_art = bg_tile_art(pb, EYE_TILE)
 
     # The extension ends at a physical wall during combat. Once the Colossus
     # is retired, the normal pending-unseal transaction must open the actual
@@ -145,16 +132,16 @@ def main():
     mire, _ = enter_boss(4, keep_open=True)
     assert mire.memory[WORLD_W] == 224 and mire.memory[CAMERA_X] <= 64, (
         "Mire did not receive the shared scrolling Colossus field")
-    mire_art = bg_tile_art(mire, BODY_MIN)
+    mire_art = bg_tile_art(mire, EYE_TILE)
     mire.stop(save=False)
     void, _ = enter_boss(8, keep_open=True)
-    void_art = bg_tile_art(void, BODY_MIN)
+    void_art = bg_tile_art(void, EYE_TILE)
     void.stop(save=False)
     assert len({crystal_art, mire_art, void_art}) == 3, (
         "Crystal/Mire/Void projections lost their distinct runtime BG art")
 
-    print(f"[colossal-crystal] PASS {len(body)} BG tiles, 128x80 body, "
-          f"224px walkable arena, seam x={crossed_x}, camera 0..64, "
+    print(f"[colossal-crystal] PASS no mural, 224px walkable arena, "
+          f"seam x={crossed_x}, camera 0..64, "
           f"well warp {before}->{after}, art distinct from Mire/Void")
 
 

@@ -6,6 +6,7 @@
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
+#include "game/mire_roots.h"
 #include "game/entity.h"
 #include "game/boss_phase.h"
 #include "game/player.h"
@@ -159,7 +160,10 @@ void boss_motion_tick(entity_t *e) BANKED {
             }
             return;
 
-        case 4: // Mire: pulse outward, then contract into a crushing advance
+        case 4: // Mire: pulse outward, then contract into a crushing advance.
+            // A live root cast anchors the heart. The phase-clock path also
+            // returns before this case; phase 0 reaches it directly.
+            if (mire_root_active) return;
             if (e->vx == 0) { e->vx = 48; e->state = 0; }
             if ((e->vx & 7) == 0)
                 fx_spawn(SPR_FX_IMPACT, 0x05, FIX8_TO_INT(e->x) + 10,
@@ -204,7 +208,9 @@ void boss_motion_tick(entity_t *e) BANKED {
             e->state = next;
             e->x = FIX8(anchor_x[next]);
             e->y = FIX8(anchor_y[next]);
-            e->ai_data[7] = 12;
+            // Draw hides on the odd value after each decrement. Twelve
+            // ticks hide 6 frames (6/36 of the hold). Four ticks hide 2.
+            e->ai_data[7] = 4;
             fx_spawn(SPR_FX_IMPACT, 2, anchor_x[next] + 12,
                 anchor_y[next] + 12, 12);
             boss_voice(8, BOSS_VOICE_ATTACK);

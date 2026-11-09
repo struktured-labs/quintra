@@ -5,9 +5,11 @@ It forms one browser program with WasmBoy and is licensed under
 GPL-3.0-or-later. See `../../LICENSES/GPL-3.0-or-later.txt`.
 
 The vendored browser bundle is built from Quintra's maintained WasmBoy fork,
-at commit `1d73f9c54c3401891ddd5fb9303a7ae9da520da9`. The player uses its direct
-AudioWorklet path with a 42 ms target, bounded 512-frame blocks, and
-acknowledgement-based producer flow control. Its 44.1 kHz context, centered
+at commit `1d73f9c54c3401891ddd5fb9303a7ae9da520da9`, plus a local scheduler
+change: when the projected audio queue is below the 42 ms target, the worker
+shortens the next frame delay so a stall can refill without lowering pitch.
+The player uses its direct AudioWorklet path with a 42 ms target, bounded
+512-frame blocks, and acknowledgement-based producer flow control. Its 44.1 kHz context, centered
 sample decode, and starvation-only rate guard preserve pitch and avoid
 low-level crossover distortion. The fork also includes the Game Boy
 wave-channel pitch correction, deterministic startup memory, rendering

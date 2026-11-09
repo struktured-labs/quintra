@@ -258,7 +258,7 @@ static void gen_limb_tiles(void) {
         }
     }
     VBK_REG = 1;
-    set_sprite_data(40, 40, limb_tiles);
+    set_sprite_data(HEXA_LIMB_TILE, 40, limb_tiles);
     VBK_REG = 0;
 }
 
@@ -316,7 +316,7 @@ void hexa_sanctum_enter(void) BANKED {
         e->damage = 1;
         e->hitbox = 0xEE;
         e->palette = 5;
-        e->sprite_tile = 40;
+        e->sprite_tile = HEXA_LIMB_TILE;
         e->ai_data[0] = ENEMY_STONE_SENTINEL;
         e->ai_data[1] = 0;
         e->ai_data[2] = HEXA_STAGE;

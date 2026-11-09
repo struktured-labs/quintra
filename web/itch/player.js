@@ -275,6 +275,17 @@
     return contexts.length > 0 && contexts.every(({ context }) => context.state === "running");
   }
 
+  // Pausing the emulator stops new samples. The worklet keeps rendering, so
+  // an unsuspended context drains the 42 ms queue and then counts silence.
+  async function suspendAudio() {
+    const pending = audioContexts()
+      .filter(({ context }) => context.state === "running" && typeof context.suspend === "function")
+      .map(async ({ context }) => {
+        try { await context.suspend(); } catch (error) { /* best effort */ }
+      });
+    await Promise.all(pending);
+  }
+
   function refreshSoundBanner() {
     if (!soundBanner) return;
     soundBanner.hidden = !started || muted || audioRunning();
@@ -516,14 +527,19 @@
       if (hidden) {
         const playing = started && api.isPlaying();
         resumeAfterVisibility = resumeAfterVisibility || playing;
-        if (playing) await api.pause();
+        if (playing) {
+          await api.pause();
+          await suspendAudio();
+        }
         await api.saveLoadedCartridge({ title: "Quintra" });
       } else if (resumeAfterVisibility && document.visibilityState === "visible") {
         resumeAfterVisibility = false;
         await api.play();
         setStatus("Playing");
+        if (started) await unlockAudio();
+      } else if (!hidden && started) {
+        await unlockAudio();
       }
-      if (!hidden && started) await unlockAudio();
     }).catch(error => console.error("Could not update player visibility", error));
   });
 

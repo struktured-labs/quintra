@@ -20,6 +20,8 @@ that at a cached GBDK-2020 4.5.0 tree.
 | `scripts/check_cartridge.py` | ROM job |
 | `scripts/test_suspend.py` under PyBoy 2.7.0 (the battery power-cycle from `make preflight`, plus the stage-0 cold-resume OBJ palette and miniboss tiles) | ROM job |
 | `scripts/test_title_sprite_leak.py` under PyBoy 2.7.0 (Crystal Colossus death must leak both the boss body and its pellets into OAM 20–39; that death, a crowded bullet volley, and continue-then-death must leave only the five title spirits; title BG/OBJ palette RAM and the picture must match a fresh boot, and the first room's palettes must match after New Game and Continue) | ROM job |
+| `scripts/test_persistent_aim.py` under PyBoy 2.7.0 (Hold Aim keeps all eight directions after the D-pad is released, including hold-up-right then stationary fire) | ROM job |
+| `scripts/test_mire_roots.py` under PyBoy 2.7.0 (Mire Heart ghost-path roots: windup, sub-tile hit, 16px gap, shots over the overlay, ring starts only after roots clear) | ROM job |
 | `scripts/test_smoke.sh` under headless mGBA (the cart walk from `make test`) | ROM job |
 
 The ROM job uploads `quintra.gbc` plus the linker `.map` and `.noi` as the
@@ -75,8 +77,10 @@ They are not required checks.
 
 The release workflow
 ([`.github/workflows/release.yml`](../.github/workflows/release.yml)) runs
-only on tags that look like `v0.20.19` (`v<major>.<minor>.<patch>`). It does
-not run on pull requests or on ordinary pushes to `main`.
+only on tags that look like `v0.20.19` (`v<major>.<minor>.<patch>`) or a
+playtest tag such as `v0.20.20-beta34`. A playtest tag is published as a
+prerelease. Other suffixed tags are ignored. The workflow does not run on
+pull requests or on ordinary pushes to `main`.
 
 1. Bump `QUINTRA_VERSION` and add `docs/releases/vX.Y.Z.md` when that tag
    should carry those notes. Do not commit `rom/working/quintra.gbc`, and do
