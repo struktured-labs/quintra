@@ -377,7 +377,12 @@ pub fn reaper_pose(pose: u8) -> Grid {
 }
 
 /// Stage 6 — Golem: separated limbs, temple crown, and a sun-heart.
-fn boss_golem() -> Grid {
+fn boss_golem() -> Grid { golem_pose(false) }
+
+/// Raised arms, a halo over the crown, and a lifted foot.
+pub fn golem_halo() -> Grid { golem_pose(true) }
+
+fn golem_pose(halo: bool) -> Grid {
     let mut g = blank();
     for y in 3..11 { span(&mut g, y, 9, 22, 2, 1); }
     for y in 10..14 { span(&mut g, y, 0, 31, 2, 1); }
@@ -421,6 +426,27 @@ fn boss_golem() -> Grid {
         (17, 5), (17, 25), (22, 4), (22, 7), (22, 12), (22, 19), (22, 24), (22, 27),
         (27, 10), (27, 21),
     ]);
+    if halo {
+        for y in 10..25 {
+            for x in 0..9 { g[y][x] = 0; }
+            for x in 23..32 { g[y][x] = 0; }
+        }
+        for y in 30..32 { for x in 6..15 { g[y][x] = 0; } }
+        for x in 7..25 { g[0][x] = if x == 7 || x == 24 { 1 } else { 3 }; }
+        for x in 10..22 { g[1][x] = 3; }
+        for y in 4..16 {
+            span(&mut g, y, 0, 7, 2, 1);
+            span(&mut g, y, 24, 31, 2, 1);
+        }
+        for y in 4..8 {
+            for x in 1..4 { g[y][x] = 3; }
+            for x in 28..31 { g[y][x] = 1; }
+        }
+        paint(&mut g, 3, &[
+            (15, 14), (15, 17), (21, 14), (21, 17),
+            (17, 12), (17, 19), (19, 12), (19, 19),
+        ]);
+    }
     g
 }
 
