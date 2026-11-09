@@ -503,7 +503,13 @@ fn boss_hydra() -> Grid {
 }
 
 /// Stage 8 — Void Lord: a crowned hollow mantle and event-horizon mask.
-fn boss_voidlord() -> Grid {
+fn boss_voidlord() -> Grid { void_pose(false) }
+
+/// Crown flared and mantle pulled in. Shown before the existing blink,
+/// which stays four ticks.
+pub fn void_blink() -> Grid { void_pose(true) }
+
+fn void_pose(blink: bool) -> Grid {
     let mut g = blank();
     for y in 7..13 {
         span(&mut g, y, 10, 21, 2, 1);
@@ -543,6 +549,15 @@ fn boss_voidlord() -> Grid {
         (10, 5), (11, 6), (12, 7), (10, 26), (11, 25), (12, 24),
         (21, 10), (22, 11), (23, 12), (21, 21), (22, 20), (23, 19),
     ]);
+    if blink {
+        for y in 11..24 {
+            for x in 0..5 { g[y][x] = 0; }
+            for x in 27..32 { g[y][x] = 0; }
+        }
+        for x in 11..21 { g[0][x] = 3; g[1][x] = if x > 13 && x < 18 { 3 } else { 2 }; }
+        for x in 6..26 { g[15][x] = 3; }
+        for x in 9..23 { g[14][x] = 3; }
+    }
     g
 }
 

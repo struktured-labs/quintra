@@ -415,6 +415,7 @@ void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16
 void cinder_rex_pose_b_load(void) BANKED;
 void crystal_pose_b_load(void) BANKED;
 void golem_pose_b_load(void) BANKED;
+void void_pose_b_load(void) BANKED;
 void tiles_load_return_reaper(void) BANKED;
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
 void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
