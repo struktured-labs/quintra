@@ -1246,9 +1246,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         }
     }
     if (room_district_label_ticks
-        && --room_district_label_ticks == 0) {
-        tiles_stream_wide_row(1, ROOM_BG_MAP_Y(1));
-    }
+        && --room_district_label_ticks == 0)
+        room_finish_arrival_label();
     // Consume active-room wall time before any route can leave this screen.
     // This preserves the fraction earned before START/SELECT was pressed.
     room_clock_consume();

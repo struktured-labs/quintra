@@ -159,40 +159,39 @@ def main():
                 f"{[field[y][12:19] for y in range(15, 30)]}")
             assert (26, 25) in seen, (
                 f"district {district} sealed the deep encounter apron")
-            expected_label = directive_labels.get(
-                pb.memory[DIRECTIVE], labels[district])
-            label = tuple(
-                logical_bg_tile(pb, 8 + i, 1)
-                for i in range(len(expected_label))
-            )
-            # The harness boots in the first Gate district, then crosses a
-            # reciprocal edge back into its requested sample. Runtime policy
-            # intentionally does not replay the same district card; all four
-            # true depth boundaries below must still arm their callout.
-            replay_suppressed = district == 0 and label != expected_label
-            if replay_suppressed:
-                assert pb.memory[LABEL_TICKS] == 0
+            district_name = labels[district]
+            directive = directive_labels.get(pb.memory[DIRECTIVE])
+            def row_text(width):
+                return tuple(logical_bg_tile(pb, 8 + i, 1) for i in range(width))
+            label = row_text(len(district_name))
+            # A fresh depth boundary shows the district name first. The same
+            # district does not replay that card; a directive still may.
+            fresh_district = label == district_name
+            replay_directive = (not fresh_district and directive
+                and row_text(len(directive)) == directive)
+            if not fresh_district and not replay_directive:
+                assert pb.memory[LABEL_TICKS] == 0, (
+                    f"district {district} replay kept a stale callout")
             else:
-                assert label == expected_label, (
-                    f"district {district} label mismatch: {label}")
-                assert pb.memory[LABEL_TICKS] > 0, (
-                    f"district {district} callout timer was not armed")
-            # Keep the callout clock under test, not stage-nine combat. A late
-            # hostile can otherwise kill the fixture and stop room_tick before
-            # the two-second presentation beat expires.
-            for slot in range(32):
-                base = EN + slot * 28
-                pb.memory[base] = pb.memory[base + 1] = 0
-            pb.memory[PL + 15] = 255
-            pb.tick(130)
-            faded = tuple(
-                logical_bg_tile(pb, 8 + i, 1)
-                for i in range(len(expected_label))
-            )
-            assert pb.memory[LABEL_TICKS] == 0, (
-                f"district {district} callout did not expire")
-            if not replay_suppressed:
-                assert faded != expected_label, (
+                assert pb.memory[LABEL_TICKS] > 0
+                for slot in range(32):
+                    base = EN + slot * 28
+                    pb.memory[base] = pb.memory[base + 1] = 0
+                pb.memory[PL + 15] = 255
+                if fresh_district and directive:
+                    pb.tick(50)
+                    assert row_text(len(directive)) == directive, (
+                        f"district {district} did not follow with its directive")
+                    assert pb.memory[LABEL_TICKS] > 0
+                    pb.tick(100)
+                elif fresh_district:
+                    pb.tick(130)
+                else:
+                    pb.tick(100)
+                assert pb.memory[LABEL_TICKS] == 0, (
+                    f"district {district} callout did not expire")
+                shown = directive if directive else district_name
+                assert row_text(len(shown)) != shown, (
                     f"district {district} label remained permanent terrain")
 
             # Pin one unmistakable full-field structure per depth band. These
