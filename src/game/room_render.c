@@ -13,6 +13,8 @@
 u8 room_district_label_ticks;
 static u8 room_district_label_kind;
 static u8 room_district_label_stage;
+u8 room_label_phase;
+u8 room_pending_directive;
 
 void room_show_district_label(u8 kind) BANKED {
     if (kind != room_district_label_kind
@@ -29,12 +31,85 @@ void room_show_district_label(u8 kind) BANKED {
     }
 }
 
-void room_show_directive_label(u8 kind) BANKED {
+static void paint_directive(u8 kind) {
     // Unlike a district name, a directive is a new first-visit event even if
     // the previous room happened to roll the same verb. Always replay its
     // compact arrival card, then let the ordinary row restore erase it.
+    room_label_phase = 2;
+    room_pending_directive = 0;
     room_district_label_ticks = 90;
     tiles_draw_area_label(kind);
+}
+
+void room_show_directive_label(u8 kind) BANKED {
+    paint_directive(kind);
+}
+
+static void hold_static_sign(void) {
+    room_district_label_ticks = 0;
+    room_label_phase = 0;
+    room_pending_directive = 0;
+    // Leaving the dungeon must not suppress the next GATE or LOWER card.
+    room_district_label_kind = 0xFF;
+}
+
+static u8 arrival_directive(void) {
+    if (room_encounter_kind == ENCOUNTER_HUNT)
+        return (u8)(run_state.bosses_beaten % 3 == 0 ? 15
+            : run_state.bosses_beaten % 3 == 1 ? 18 : 19);
+    if (room_return_echo_kind == 4) return 12;
+    if (room_return_echo_kind) return 14;
+    if (!run_state.world_mode
+        && run_state_dungeon_local() == run_state_dungeon_cache_cell()
+        && !(run_state.dungeon_phase & RUN_FARFOLD_CACHE_BIT))
+        return 20;
+    if (room_encounter_kind == ENCOUNTER_STAGE_EVENT) return 14;
+    if (room_encounter_kind != ENCOUNTER_SKIRMISH)
+        return (u8)(9 + room_encounter_kind);
+    return 0;
+}
+
+static void present_labels(void) {
+    u8 directive;
+    u8 district = 0;
+    if (run_state.world_mode) {
+        hold_static_sign();
+        tiles_draw_area_label(RUN_RIFTWILD_IS_HOLLOW() ? 17 : 1);
+        return;
+    }
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        hold_static_sign();
+        tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
+        return;
+    }
+    directive = arrival_directive();
+    if (procgen_current_room_is_large)
+        district = (u8)(5 + run_state_dungeon_local() / DUNGEON_GRID_W);
+    if (district && (district != room_district_label_kind
+            || run_state.bosses_beaten != room_district_label_stage)) {
+        room_district_label_kind = district;
+        room_district_label_stage = run_state.bosses_beaten;
+        room_pending_directive = directive;
+        room_label_phase = 1;
+        // District first, and only briefly when a directive follows it.
+        room_district_label_ticks = directive ? 45 : 120;
+        tiles_draw_area_label(district);
+        return;
+    }
+    if (directive) {
+        paint_directive(directive);
+        return;
+    }
+    room_label_phase = 0;
+    room_pending_directive = 0;
+    if (room_district_label_ticks) {
+        room_district_label_ticks = 0;
+        tiles_stream_wide_row(1, ROOM_BG_MAP_Y(1));
+    }
+}
+
+void room_present_arrival_labels(void) BANKED {
+    present_labels();
 }
 
 static u8 render_attr(u8 x, u8 y, u8 tile) {
@@ -179,27 +254,5 @@ void room_draw_tilemap(void) BANKED {
     else if (procgen_current_room_is_boss)
         tiles_prepare_colossal_edges();
     VBK_REG = 0;
-    if (run_state.world_mode
-        && run_state_riftwild_guard_active(run_state.world_screen))
-        room_show_directive_label(16);
-    else if (run_state.world_mode)
-        tiles_draw_area_label(RUN_RIFTWILD_IS_HOLLOW() ? 17 : 1);
-    else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
-        tiles_draw_area_label((u8)(2 + run_state.world_return_screen));
-    else if (room_encounter_kind == ENCOUNTER_HUNT)
-        room_show_directive_label(run_state.bosses_beaten % 3 == 0 ? 15
-            : run_state.bosses_beaten % 3 == 1 ? 18 : 19);
-    else if (room_return_echo_kind == 4)
-        room_show_directive_label(12); // champion-scale ELITE miniboss
-    else if (room_return_echo_kind)
-        room_show_directive_label(14); // unmistakable RIFT return card
-    else if (!run_state.world_mode
-        && run_state_dungeon_local() == run_state_dungeon_cache_cell()
-        && !(run_state.dungeon_phase & RUN_FARFOLD_CACHE_BIT))
-        room_show_directive_label(20);
-    else if (room_encounter_kind != ENCOUNTER_SKIRMISH)
-        room_show_directive_label((u8)(9 + room_encounter_kind));
-    else if (procgen_current_room_is_large)
-        room_show_district_label((u8)(5
-            + run_state_dungeon_local() / DUNGEON_GRID_W));
+    present_labels();
 }

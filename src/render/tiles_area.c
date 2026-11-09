@@ -201,7 +201,7 @@ void tiles_stream_wide_column(u8 logical_x, u8 physical_x) BANKED {
     VBK_REG = 0;
 }
 
-void tiles_stream_wide_row(u8 logical_y, u8 physical_y) BANKED {
+static void stream_wide_row(u8 logical_y, u8 physical_y) {
     u8 logical_x;
     u8 outdoor = run_state.world_mode;
     u8 tiles[32];
@@ -220,7 +220,7 @@ void tiles_stream_wide_row(u8 logical_y, u8 physical_y) BANKED {
     VBK_REG = 0;
 }
 
-void tiles_draw_area_label(u8 kind) BANKED {
+static void draw_area_label(u8 kind) {
     static const u8 riftwild[8] = {
         BGT_AREA_R, BGT_AREA_I, BGT_AREA_F, BGT_AREA_T,
         BGT_AREA_W, BGT_AREA_I, BGT_AREA_L, BGT_AREA_D
@@ -299,13 +299,14 @@ void tiles_draw_area_label(u8 kind) BANKED {
     else if (kind == 11) { letters = wave; x = 8; width = 4; }
     else if (kind == 12) { letters = elite; x = 8; width = 5; }
     else if (kind == 13) { letters = hold; x = 8; width = 4; }
+    else if (kind == 14) { letters = riftwild; x = 8; width = 4; }
     else if (kind == 15) { letters = reaper; x = 7; width = 6; }
     else if (kind == 16) { letters = warden; x = 7; width = 6; }
     else if (kind == 17) { letters = hollow; x = 7; width = 6; }
     else if (kind == 18) { letters = weaver; x = 7; width = 6; }
     else if (kind == 19) { letters = maw; x = 9; width = 3; }
     else if (kind == 20) { letters = warded; x = 7; width = 6; }
-    else { letters = riftwild; x = 8; width = 4; }
+    else return;
     // A Riftwild field may have crossed several continuous seams. Project the
     // display-only sign through the same logical-to-physical origin instead
     // of writing it into the previous field's canonical top-left.
@@ -323,4 +324,29 @@ void tiles_draw_area_label(u8 kind) BANKED {
         VBK_REG = 1; set_bkg_tiles(x, 1, width, 1, attrs);
     }
     VBK_REG = 0;
+}
+
+void tiles_stream_wide_row(u8 logical_y, u8 physical_y) BANKED {
+    stream_wide_row(logical_y, physical_y);
+}
+
+void tiles_draw_area_label(u8 kind) BANKED {
+    draw_area_label(kind);
+}
+
+void room_finish_arrival_label(void) BANKED {
+    // Same bank as the tile writers, so the resident room tick makes one
+    // hop. A finish wrapper in the render bank hops again and can corrupt
+    // the return on a cold continue.
+    if (room_label_phase == 1 && room_pending_directive) {
+        u8 kind = room_pending_directive;
+        room_label_phase = 2;
+        room_pending_directive = 0;
+        room_district_label_ticks = 90;
+        draw_area_label(kind);
+        return;
+    }
+    room_label_phase = 0;
+    room_pending_directive = 0;
+    stream_wide_row(1, ROOM_BG_MAP_Y(1));
 }

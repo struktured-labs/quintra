@@ -104,6 +104,12 @@ void room_draw_tilemap(void) BANKED;
 void room_unseal_doors(void) BANKED;
 void room_show_district_label(u8 kind) BANKED;
 void room_show_directive_label(u8 kind) BANKED;
+// One arrival sign: Rift Wild and towns stay put. A dungeon shows its
+// district briefly, then a directive if this room has one.
+void room_present_arrival_labels(void) BANKED;
+void room_finish_arrival_label(void) BANKED;
+extern u8 room_label_phase;
+extern u8 room_pending_directive;
 
 // Tile id at world pixel position (BGT_WALL for out-of-bounds).
 u8 room_tile_at_px(i16 px, i16 py) NONBANKED;
