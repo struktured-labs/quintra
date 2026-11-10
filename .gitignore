@@ -37,6 +37,10 @@ __pycache__/
 *.egg-info/
 .venv/
 
+# Instruction-manual build products (PDFs, HTML preview, contact sheets).
+# Source of truth is docs/manual/content/. Rebuild with `make manual`.
+docs/manual/build/
+
 # Temp / log
 tmp/
 test_output/

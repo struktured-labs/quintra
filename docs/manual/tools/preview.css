@@ -1,0 +1,152 @@
+/* Local preview only. The Next.js site styles the Markdown itself.
+   This file is not part of the content package's prose. */
+
+:root {
+  color-scheme: light;
+  --paper: #f6f0e4;
+  --ink: #1c140e;
+  --muted: #5c4a38;
+  --rule: #b4532a;
+  --deep: #140c18;
+  --gold: #e6c27a;
+  --focus: #0b5f73;
+  --max: 40rem;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Noto Serif", "Palatino Linotype", Palatino, serif;
+  line-height: 1.55;
+}
+
+a { color: #6b2a22; }
+a:hover { color: var(--focus); }
+
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.skip {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  background: var(--deep);
+  color: var(--paper);
+  padding: 0.4rem 0.7rem;
+  z-index: 2;
+}
+
+.skip:focus { top: 0.5rem; }
+
+.banner {
+  background: var(--deep);
+  color: var(--gold);
+  padding: 0.8rem 1.25rem 1rem;
+}
+
+.banner a { color: var(--gold); text-decoration: none; }
+.banner a:hover { text-decoration: underline; }
+
+.banner p {
+  margin: 0.35rem 0 0;
+  max-width: var(--max);
+  font-family: "Noto Sans", sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+
+.banner strong {
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  font-size: 1.05rem;
+}
+
+nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  list-style: none;
+  padding: 0.55rem 1.25rem;
+  margin: 0;
+  background: #efe4d0;
+  border-bottom: 1px solid #ddcbb0;
+  font-family: "Noto Sans", sans-serif;
+  font-size: 0.78rem;
+}
+
+nav a { text-decoration: none; }
+nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 0.2em; }
+
+main {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3rem;
+}
+
+h1, h2, h3 {
+  font-family: "Noto Sans", sans-serif;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 1.7rem;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.02em;
+}
+
+h2 { font-size: 1.15rem; margin: 1.4rem 0 0.4rem; color: #3d2914; }
+h3 { font-size: 1rem; margin: 1.1rem 0 0.3rem; }
+
+p { margin: 0.55rem 0; }
+
+ul { padding-left: 1.15rem; }
+li { margin: 0.28rem 0; }
+
+blockquote {
+  margin: 0.8rem 0;
+  padding: 0.2rem 0 0.2rem 0.8rem;
+  border-left: 3px solid var(--rule);
+  color: #3d2914;
+  font-style: italic;
+}
+
+figure { margin: 1rem 0 1.15rem; }
+
+img {
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+figcaption {
+  font-family: "Noto Sans", sans-serif;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+
+footer.colophon {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 1.25rem 2rem;
+  font-family: "Noto Sans", sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+@media (max-width: 40rem) {
+  main { padding: 1rem 1rem 2.5rem; }
+  h1 { font-size: 1.45rem; }
+  nav ul { gap: 0.45rem 0.7rem; }
+}
