@@ -30,6 +30,11 @@ void palette_obj_cache_title(void) BANKED;
 extern u16 obj_pal_cache[8][4];
 extern volatile u8 palette_obj_pending_commit;
 
+// Cached BG palettes. Class select fills this (and obj_pal_cache) and
+// class_select_vblank_step() commits both in four-palette half-bursts,
+// PALETTE_OBJ_COMMIT_PASSES rotating passes each, one half per frame.
+extern u16 bg_pal_cache[8][4];
+
 // Load N consecutive BG palettes starting at slot
 void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors);
 

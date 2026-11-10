@@ -135,17 +135,21 @@ def run_mode(cart: Path, *, easy: bool) -> None:
             press(first, "select")
             for _ in range(16):
                 first.tick()
-            assert_row(first, 13, "EASY MORE HP FEW HEX")
-            assert_row(first, 16, "SPEED 6 MODE EASY")
+            assert_row(first, 16, "EASY MORE HP FEW HEX")
+            assert_row(first, 14, "HP14 MP4 AT2 DF1 SP6")
             # The old inverted prompt rendered as "SEL NORMAL" here.
             assert row_text(first, 16) != font_tiles("SPEED 6 SEL NORMAL"), (
                 "Easy page still looks like the current mode is NORMAL"
             )
+            assert row_text(first, 13) == [0] * 20, (
+                "Easy page overwrote the blank separator at row 13"
+            )
             expected = DIFFICULTY_EASY
             hp_max = 16
         else:
-            assert_row(first, 13, "NORMAL  SEL FOR EASY")
-            assert_row(first, 16, "SPEED 6 MODE NORMAL")
+            assert_row(first, 16, "NORMAL  SEL FOR EASY")
+            assert_row(first, 14, "HP14 MP4 AT2 DF1 SP6")
+            assert row_text(first, 13) == [0] * 20
             assert "HARD" not in "NORMAL  SEL FOR EASY"
             expected = DIFFICULTY_NORMAL
             hp_max = 14
