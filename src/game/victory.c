@@ -125,6 +125,12 @@ void victory_enter(void) {
     spark_pose = 0;
     render_ending();
     render_sparks();
+    // Console glyph writes touch tile ids only. The colossus arenas (Hexa
+    // Dragmar's sanctum above all) leave bank-1 attribute bytes that select
+    // VRAM bank 1 and the carapace palettes, which painted the old body over
+    // the results and hid most label glyphs. Reset every visible cell to the
+    // victory palette in VRAM bank 0, as GAME OVER already does.
+    palette_bg_fill_attrs(0);
     music_play_victory();
     SHOW_BKG;
     DISPLAY_ON;
