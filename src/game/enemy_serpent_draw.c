@@ -1,4 +1,4 @@
-#pragma bank 5
+#pragma bank 9
 
 #include <gb/gb.h>
 
@@ -12,7 +12,7 @@ extern u8 entity_anim_counter;
 void serpent_draw(void) BANKED {
     entity_t *e;
     u8 oam = 4;
-    u8 r, c, pal, flash, head_pal;
+    u8 r, c, pal, flash, head_pal, tile;
     i16 sx, sy;
     if (!serpent_tail_active || serpent_head_index >= MAX_ENTITIES) return;
     serpent_body_draw();
@@ -30,11 +30,18 @@ void serpent_draw(void) BANKED {
     head_pal = (flash && (e->ai_data[7] & 1)) ? 0 : pal;
     sx = FIX8_TO_INT(e->x) - room_camera_x + 8;
     sy = FIX8_TO_INT(e->y) - room_camera_y + 16;
+    // The open jaw is the meal approach and the existing storm charge.
+    // Twelve sprites, same places. Bank-1 tiles 128..139 hold that picture.
+    tile = e->sprite_tile;
+    if (e->state == 1 || (e->state == 0 && (u8)e->vy == 3)) {
+        tile = 128;
+        head_pal |= 0x08;
+    }
 
     // A broad cobra head, not the generic square 4x4 Colossus frame.
     for (r = 0; r < 3; ++r) {
         for (c = 0; c < 4; ++c) {
-            set_sprite_tile(oam, (u8)(e->sprite_tile + r * 4 + c));
+            set_sprite_tile(oam, (u8)(tile + r * 4 + c));
             set_sprite_prop(oam, head_pal);
             move_sprite(oam, (u8)(sx + c * 8), (u8)(sy + r * 8));
             oam++;
