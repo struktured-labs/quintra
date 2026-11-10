@@ -347,11 +347,24 @@ fn boss_eye() -> Grid {
     g
 }
 
-/// Stage 5 — Reaper: pointed hood, blade shoulders, and a tattered mantle.
+/// Stage 5 — Reaper: pointed hood, a crescent scythe, and a tattered mantle.
 fn boss_reaper() -> Grid {
     reaper_pose(0)
 }
 
+fn reaper_haft(g: &mut Grid, y0: usize, x0: usize, y1: usize, x1: usize) {
+    line(g, (y0, x0), (y1, x1), 3);
+    line(g, (y0, x0 + 1), (y1, x1 + 1), 1);
+}
+
+fn reaper_crescent(g: &mut Grid, rows: &[(usize, usize, usize)]) {
+    for &(y, left, right) in rows {
+        for x in left..=right { g[y][x] = 3; }
+    }
+}
+
+/// Pose 0 rests the scythe on the shoulder. Pose 1 lifts the crescent.
+/// Pose 2 reaches it out on the link. The cloak underneath is shared.
 pub fn reaper_pose(pose: u8) -> Grid {
     let mut g = blank();
     for y in 1..14 {
@@ -372,22 +385,29 @@ pub fn reaper_pose(pose: u8) -> Grid {
         span(&mut g, y, 18, 19, 1, 1);
     }
     paint(&mut g, 1, &[(10,15),(10,16),(12,14),(12,17)]);
-    for side in 0..2 {
-        for step in 0..if pose == 2 { 20 } else { 10 } {
-            let x = if side == 0 { 6+step } else { 25-step };
-            let y = match pose {
-                1 => 5+step,
-                2 => 13+step/2,
-                _ => 20-step/2,
-            };
-            for d in 0..3 { g[y+d][x] = if d == 1 { 3 } else { 2 }; }
+    match pose {
+        1 => {
+            reaper_haft(&mut g, 4, 22, 20, 22);
+            reaper_crescent(&mut g, &[
+                (1, 10, 22), (2, 9, 12), (2, 20, 23), (3, 10, 11), (3, 21, 22), (4, 11, 18),
+            ]);
         }
-    }
-    if pose == 0 {
-        line(&mut g, (6,28), (28,25), 3);
-        for x in 22..31 { g[3][x] = 3; g[4][x] = 2; }
-        paint(&mut g, 3, &[(4,21),(5,20),(6,19),(7,19)]);
-        ellipse(&mut g, 16.0, 19.0, 2.0, 3.0, 3, 2);
+        2 => {
+            reaper_haft(&mut g, 16, 4, 16, 12);
+            reaper_haft(&mut g, 15, 18, 15, 26);
+            reaper_crescent(&mut g, &[
+                (11, 26, 31), (12, 25, 27), (12, 30, 31), (13, 26, 26), (13, 31, 31), (14, 28, 31),
+            ]);
+            for x in 6..11 { g[17][x] = 3; }
+        }
+        _ => {
+            // Haft stays on the cloak's right edge so the blade does not
+            // cross the eyes.
+            reaper_haft(&mut g, 6, 26, 24, 26);
+            reaper_crescent(&mut g, &[
+                (2, 20, 30), (3, 19, 22), (3, 28, 31), (4, 20, 21), (4, 29, 30),
+            ]);
+        }
     }
     g
 }

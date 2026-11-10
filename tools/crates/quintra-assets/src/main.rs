@@ -536,6 +536,12 @@ mod tests {
                 assert!(changed >= 70, "Reaper pose difference too subtle: {changed}");
             }
         }
+        assert_eq!(poses[0][2][24], 3, "rested crescent missing");
+        assert_ne!(poses[0][1][16], 3, "rested pose still holds the blade overhead");
+        assert_eq!(poses[1][1][16], 3, "raised crescent missing");
+        assert_eq!(poses[1][8][25], 0, "raised pose still rests the blade");
+        assert_eq!(poses[2][16][4], 3, "link arm missing");
+        assert_eq!(poses[2][11][28], 3, "extended blade missing");
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
         assert_eq!(generate_reaper(), std::fs::read_to_string(
             format!("{root}/src/render/reaper_gen.c")).unwrap());
