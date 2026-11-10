@@ -6,6 +6,8 @@
 #include <gb/cgb.h>
 
 #include "core/types.h"
+#include "content.h"
+#include "game/class_select.h"
 #include "render/class_palettes.h"
 #include "render/palette.h"
 
@@ -82,4 +84,84 @@ void palette_obj_cache_title(void) BANKED {
         obj_pal_cache[6][i] = 0;
         obj_pal_cache[7][i] = 0;
     }
+}
+
+#define CS_PAL_BODY 0
+#define CS_PAL_GOLD 1
+#define CS_PAL_ACCENT 2
+#define CS_PAL_LAVENDER 3
+
+static u8 *cs_attr_map(void) {
+    return (u8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800);
+}
+
+static void cs_attr_span(u8 x, u8 y, u8 n, u8 pal) {
+    u8 *cell;
+    u8 i;
+    if (n == 0) return;
+    cell = cs_attr_map() + (u16)y * 32u + x;
+    VBK_REG = 1;
+    for (i = 0; i < n; ++i) cell[i] = (u8)(pal & 7);
+    VBK_REG = 0;
+}
+
+static void cs_fill_rows(u8 y0, u8 n) {
+    u8 *map = cs_attr_map();
+    u8 row, col;
+    VBK_REG = 1;
+    for (row = 0; row < n; ++row) {
+        u8 *line = map + (u16)(y0 + row) * 32u;
+        for (col = 0; col < 20; ++col) line[col] = CS_PAL_BODY;
+    }
+    VBK_REG = 0;
+}
+
+static void cs_paint_spans(void) {
+    u8 *map = cs_attr_map();
+    u8 col, name_len;
+    u8 stats[20];
+
+    cs_attr_span(2, 1, 16, CS_PAL_GOLD);
+    name_len = 0;
+    {
+        const char *name = classes[class_select_cursor].name;
+        while (name[name_len]) name_len++;
+    }
+    cs_attr_span(4, (u8)(3 + class_select_cursor), name_len, CS_PAL_ACCENT);
+    cs_attr_span(0, 9, 4, CS_PAL_GOLD);
+    cs_attr_span(6, 9, 14, CS_PAL_ACCENT);
+    cs_attr_span(0, 10, 1, CS_PAL_GOLD);
+    cs_attr_span(0, 11, 1, CS_PAL_GOLD);
+    cs_attr_span(0, 12, 5, CS_PAL_GOLD);
+    for (col = 0; col < 20; ++col) {
+        u8 t = map[(u16)(14 * 32 + col)];
+        stats[col] = (t >= 11 && t <= 36) ? CS_PAL_GOLD : CS_PAL_BODY;
+    }
+    VBK_REG = 1;
+    for (col = 0; col < 20; ++col) map[(u16)(14 * 32 + col)] = stats[col];
+    VBK_REG = 0;
+    if (class_select_easy_mode) {
+        cs_attr_span(0, 16, 4, CS_PAL_GOLD);
+        cs_attr_span(5, 16, 15, CS_PAL_LAVENDER);
+    } else {
+        cs_attr_span(8, 16, 12, CS_PAL_LAVENDER);
+    }
+    cs_attr_span(1, 17, 1, CS_PAL_GOLD);
+    cs_attr_span(3, 17, 6, CS_PAL_LAVENDER);
+    cs_attr_span(12, 17, 1, CS_PAL_GOLD);
+    cs_attr_span(14, 17, 4, CS_PAL_LAVENDER);
+}
+
+// Phases 1..3 store six body rows. Phase 4 stamps the colored spans.
+// Called after loop_frame_counter increments. Six direct stores fit in
+// the blank; the old set_tiles fill inside enter did not.
+void class_select_attr_vblank(void) BANKED {
+    if (class_select_attr_phase == 0) return;
+    if (class_select_attr_phase <= 3) {
+        cs_fill_rows((u8)((class_select_attr_phase - 1) * 6), 6);
+        class_select_attr_phase++;
+        return;
+    }
+    cs_paint_spans();
+    class_select_attr_phase = 0;
 }

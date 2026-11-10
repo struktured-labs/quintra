@@ -38,8 +38,11 @@ seams stay invisible. `font_min` draws with color 3.
 - BG3 dim lavender: color 3 is `cs_palette` color 2 `(20,16,28)`
 - BG4–7 mirror body white so a stray attribute cannot leak title colors
 
-`class_select_enter` calls `palette_bg_fill_attrs` and then paints the
-spans above. It must not inherit the title attribute map. BG (and the
+The attribute map is stored from bank 4 with direct VRAM writes, six
+body rows per vblank, after `loop_frame_counter` increments. Doing the
+fill inside `class_select_enter` crossed a vblank before that counter
+moved and shifted the New Game seed. Colored spans are stamped on the
+next vblank. The screen must not inherit the title attribute map. BG (and the
 preview/cursor OBJ slots) are written from a WRAM cache during VBlank
 after `loop_run`’s `wait_vbl_done()`, re-armed per color, for
 `PALETTE_OBJ_COMMIT_PASSES` frames with a rotating start slot, matching

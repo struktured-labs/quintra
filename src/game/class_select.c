@@ -21,6 +21,7 @@ BANKREF(class_select_enter)
 
 u8 class_select_cursor;
 u8 class_select_easy_mode;
+u8 class_select_attr_phase;
 
 static const u16 cs_palette[4] = {
     BGR555( 0,  2,  6),    // 0: deep blue
@@ -119,65 +120,6 @@ static void cache_and_arm_palettes(void) {
     palette_obj_pending_commit = PALETTE_OBJ_COMMIT_PASSES;
 }
 
-// set_tiles honors an explicit map address and writes attribute bytes
-// verbatim, unlike set_bkg_tiles which would apply the font tile offset.
-static void attr_span(u8 x, u8 y, u8 n, u8 pal) {
-    u8 row[20];
-    u8 i;
-    u8 *map = (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
-    if (n == 0) return;
-    pal &= 7;
-    for (i = 0; i < n; ++i) row[i] = pal;
-    VBK_REG = 1;
-    set_tiles(x, y, n, 1, map, row);
-    VBK_REG = 0;
-}
-
-static void paint_attrs(void) {
-    u8 *map = (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
-    u8 col, name_len;
-    u8 stats[20];
-
-    palette_bg_fill_attrs(CS_PAL_BODY);
-
-    attr_span(2, 1, 16, CS_PAL_GOLD);
-
-    name_len = 0;
-    {
-        const char *name = classes[class_select_cursor].name;
-        while (name[name_len]) name_len++;
-    }
-    attr_span(4, (u8)(3 + class_select_cursor), name_len, CS_PAL_ACCENT);
-
-    attr_span(0, 9, 4, CS_PAL_GOLD);
-    attr_span(6, 9, 14, CS_PAL_ACCENT);
-    attr_span(0, 10, 1, CS_PAL_GOLD);
-    attr_span(0, 11, 1, CS_PAL_GOLD);
-    attr_span(0, 12, 5, CS_PAL_GOLD);
-
-    for (col = 0; col < 20; ++col) {
-        u8 t = map[(u16)(14 * 32 + col)];
-        stats[col] = (t >= 11 && t <= 36) ? CS_PAL_GOLD : CS_PAL_BODY;
-    }
-    VBK_REG = 1;
-    set_tiles(0, 14, 20, 1, map, stats);
-    VBK_REG = 0;
-
-    if (class_select_easy_mode) {
-        attr_span(0, 16, 4, CS_PAL_GOLD);
-        attr_span(5, 16, 15, CS_PAL_LAVENDER);
-    } else {
-        attr_span(8, 16, 12, CS_PAL_LAVENDER);
-    }
-
-    // "A CHOOSE   B BACK" starts at column 1.
-    attr_span(1, 17, 1, CS_PAL_GOLD);
-    attr_span(3, 17, 6, CS_PAL_LAVENDER);
-    attr_span(12, 17, 1, CS_PAL_GOLD);
-    attr_span(14, 17, 4, CS_PAL_LAVENDER);
-
-}
-
 // Live 16x16 preview of the highlighted class, in its own colors.
 static void update_preview(void) {
     u8 base = (u8)(SPR_CLASS_BASE + (u8)(class_select_cursor * SPR_CLASS_STRIDE));
@@ -244,8 +186,7 @@ static void render(void) {
     text_write(class_select_easy_mode ? "EASY MORE HP FEW HEX"
                                       : "NORMAL  SEL FOR EASY");
     gotoxy(1, 17); text_write("A CHOOSE   B BACK");
-
-    paint_attrs();
+    class_select_attr_phase = 1;
 }
 
 static void refresh(void) {
@@ -282,6 +223,7 @@ void class_select_exit(void) {
     move_sprite(0, 0, 0); move_sprite(1, 0, 0);
     move_sprite(2, 0, 0); move_sprite(3, 0, 0);
     move_sprite(4, 0, 0);
+    class_select_attr_phase = 0;
     palette_bg_pending_commit = 0;
     palette_obj_pending_commit = 0;
 }
