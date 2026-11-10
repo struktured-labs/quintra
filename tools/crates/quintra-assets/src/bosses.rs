@@ -133,6 +133,22 @@ fn boss_serpent() -> Grid {
     g
 }
 
+/// Open the 4x3 hood. Rows 24..31 stay the tail frames.
+pub fn serpent_jaw() -> Grid {
+    let mut g = boss_serpent();
+    for y in 15..18 {
+        for x in 13..19 { g[y][x] = 0; }
+    }
+    g[15][12] = 1;
+    g[15][19] = 1;
+    g[16][13] = 3;
+    g[16][18] = 3;
+    g[17][14] = 3;
+    g[17][17] = 3;
+    for x in 12..20 { g[18][x] = 1; }
+    g
+}
+
 /// Stage 2 — Kilnback pack / Cinder Rex atlas.
 ///
 /// The first two tile rows contain four 16x8 crucible poses (closed walk A/B,
