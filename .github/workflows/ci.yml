@@ -129,6 +129,9 @@ jobs:
       - name: PyBoy Serpent jaw
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_serpent_jaw.py
 
+      - name: PyBoy Reaper pose
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_reaper_pose.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
