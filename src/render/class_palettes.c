@@ -66,3 +66,11 @@ const u16 weapon_obj_palettes[4][4] = {
 void class_palette_load_obj(u8 slot, u8 class_id) BANKED {
     palette_obj_load(slot, class_obj_palettes[class_id < 5 ? class_id : 0]);
 }
+
+void class_palette_cache_obj(u8 slot, u8 class_id) BANKED {
+    u8 i;
+    const u16 *src = class_obj_palettes[class_id < 5 ? class_id : 0];
+    slot &= 7;
+    for (i = 0; i < 4; ++i)
+        obj_pal_cache[slot][i] = src[i];
+}

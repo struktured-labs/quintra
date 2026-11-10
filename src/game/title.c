@@ -47,6 +47,7 @@ static const u16 title_obj_unused[4] = {
 
 // 0 = main title, 1 = records, 2/3 = first-run help pages.
 static u8 showing_records;
+static u8 title_obj_committed;
 static u8 showing_stage_warp;
 static u8 lore_beat;
 static u8 lore_hold;
@@ -61,6 +62,7 @@ u8 title_stage_warp = 0xFF;
 // Five complete 16x16 metasprites fit above the logo and reuse the in-game hero
 // atlas. Parking them on every exit keeps that procession out of class select.
 static const u8 title_spirit_x[TITLE_SPIRIT_COUNT] = { 24, 52, 80, 108, 136 };
+
 
 static void title_hide_spirits(void) {
     u8 i;
@@ -94,21 +96,36 @@ static void title_draw_spirits(void) {
     }
 }
 
-static void title_init_spirits(void) {
+// Cache all eight OBJ slots, then commit them in one VBlank. Champions
+// own 1..5; 0, 6 and 7 stay black so a cold boot and a return from GAME
+// OVER carry the same palette RAM. Mid-frame HBlank bursts were dropping
+// writes on the MiSTer Gameboy core and zeroing later slots.
+static void title_cache_obj_palettes(void) {
+    u8 spirit, i;
+    for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit)
+        class_palette_cache_obj((u8)(spirit + 1), spirit);
+    // title_obj_unused lives in this bank; write WRAM directly so we
+    // never pass a banked pointer into another bank.
+    for (i = 0; i < 4; ++i) {
+        obj_pal_cache[0][i] = title_obj_unused[i];
+        obj_pal_cache[6][i] = title_obj_unused[i];
+        obj_pal_cache[7][i] = title_obj_unused[i];
+    }
+}
+
+static void title_set_spirit_props(void) {
     u8 spirit, part;
-    tiles_load_all_class_sprites();
     for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit) {
         u8 id = (u8)(spirit * TITLE_SPIRIT_SPRITES);
-        class_palette_load_obj((u8)(spirit + 1), spirit);
         for (part = 0; part < TITLE_SPIRIT_SPRITES; ++part)
             set_sprite_prop((u8)(id + part), (u8)(spirit + 1));
     }
-    // Champions own OBJ palettes 1..5. Clear the three slots the fight uses
-    // for skeletons, the stage boss tint, and orcs so a cold boot and a
-    // return from GAME OVER carry the same palette RAM.
-    palette_obj_load(0, title_obj_unused);
-    palette_obj_load(6, title_obj_unused);
-    palette_obj_load(7, title_obj_unused);
+}
+
+static void title_init_spirits(void) {
+    tiles_load_all_class_sprites();
+    title_set_spirit_props();
+    title_cache_obj_palettes();
     title_draw_spirits();
 }
 
@@ -242,7 +259,8 @@ void title_enter(void) {
     render_title();
     palette_bg_fill_attrs(0);
 
-    pulse_phase         = 0;
+    pulse_phase          = 0;
+    title_obj_committed  = 0;
     last_palette_color2 = title_palette_steady[2];
     title_hide_spirits();
     title_init_spirits();
@@ -251,9 +269,14 @@ void title_enter(void) {
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
+    // OBJ palettes are reloaded in title_draw once the LCD is on.
+    // wait_vbl_done() here would consume a frame before loop_run starts
+    // and shift loop_frame_counter, which is the New Game seed.
 }
 
 void title_exit(void) {
+    /* Do not keep writing title OBJ palettes over the next screen. */
+    palette_obj_pending_commit = 0;
     title_hide_spirits();
 }
 
@@ -374,5 +397,15 @@ void title_draw(void) {
         palette_bg_load(0, pal);
         palette_bg_load(7, pal);
         last_palette_color2 = c2;
+    }
+    // Arm a multi-frame VBlank commit after LCD-on. The LCD-off load in
+    // title_enter is dropped on this core for some slots, and mid-frame
+    // reloads were zeroing later palettes. The burst runs after the loop's
+    // existing wait_vbl_done(), so loop_frame_counter is unchanged.
+    if (!title_obj_committed) {
+        title_set_spirit_props();
+        title_cache_obj_palettes();
+        palette_obj_pending_commit = PALETTE_OBJ_COMMIT_PASSES;
+        title_obj_committed = 1;
     }
 }
