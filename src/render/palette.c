@@ -28,7 +28,17 @@ void palette_bg_load(u8 slot, const u16 *colors) {
     load_to_pal(0, slot, colors);
 }
 
+static void palette_obj_wait_access(void) {
+    // CGB OBJ palette RAM is writable while the LCD is off, or in STAT
+    // mode 0/1 (HBlank/VBlank). STATF_BUSY is set in modes 2 and 3.
+    if (LCDC_REG & LCDCF_ON) {
+        while (STAT_REG & STATF_BUSY)
+            ;
+    }
+}
+
 void palette_obj_load(u8 slot, const u16 *colors) {
+    palette_obj_wait_access();
     load_to_pal(1, slot, colors);
 }
 

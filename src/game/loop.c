@@ -13,6 +13,7 @@
 #include "game/inventory.h"
 #include "game/map.h"
 #include "game/dialog.h"
+#include "render/palette.h"
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
 u16         loop_frame_counter  = 0;
@@ -102,7 +103,10 @@ void loop_run(void) {
 
         audio_tick();
 
-        if (g_vbl_epoch == vbl_at_start) wait_vbl_done();
+        if (g_vbl_epoch == vbl_at_start) {
+            wait_vbl_done();
+            if (palette_obj_pending_commit) palette_obj_commit_vblank();
+        }
         loop_frame_counter++;
         // Mix a bit of the frame counter into the RNG state for entropy
         if ((loop_frame_counter & 0x3FFF) == 0) rng_next();

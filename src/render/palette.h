@@ -2,6 +2,7 @@
 #ifndef QUINTRA_RENDER_PALETTE_H
 #define QUINTRA_RENDER_PALETTE_H
 
+#include <gb/gb.h>
 #include "core/types.h"
 
 // Pack 5-bit r/g/b channels into BGR555 word (CGB native).
@@ -16,6 +17,18 @@ void palette_bg_load(u8 slot, const u16 *colors);
 
 // Load 4-color palette into OBJ palette slot 0..7
 void palette_obj_load(u8 slot, const u16 *colors);
+
+// Cached OBJ palettes. Title fills this, sets palette_obj_pending_commit
+// to PALETTE_OBJ_COMMIT_PASSES, and loop_run writes the cache during
+// VBlank after wait_vbl_done(). Re-arming OCPS per color avoids index
+// desync if a write is dropped.
+#define PALETTE_OBJ_COMMIT_PASSES 16
+void palette_obj_commit_vblank(void) BANKED;
+// Five champion palettes plus black slots 0, 6 and 7. Lives with the
+// VBlank commit so title.c (bank 12) does not hold the copy loop.
+void palette_obj_cache_title(void) BANKED;
+extern u16 obj_pal_cache[8][4];
+extern volatile u8 palette_obj_pending_commit;
 
 // Load N consecutive BG palettes starting at slot
 void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors);
