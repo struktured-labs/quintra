@@ -14,7 +14,6 @@
 #include "game/sram.h"
 #include "game/title.h"
 #include "game/version.h"
-#include "render/class_palettes.h"
 #include "render/palette.h"
 #include "render/text.h"
 #include "render/tiles.h"
@@ -37,12 +36,6 @@ static const u16 title_palette_steady[4] = {
     BGR555( 6,  2, 14),    // 1: purple
     BGR555(20,  8, 26),    // 2: magenta-pink (starting)
     BGR555(30, 30, 31),    // 3: near-white
-};
-
-// Objects 0, 6 and 7 are not used by the five champions. GAME OVER leaves
-// the room's skeleton, Colossus tint, and orc palettes in those slots.
-static const u16 title_obj_unused[4] = {
-    BGR555(0, 0, 0), BGR555(0, 0, 0), BGR555(0, 0, 0), BGR555(0, 0, 0)
 };
 
 // 0 = main title, 1 = records, 2/3 = first-run help pages.
@@ -96,23 +89,6 @@ static void title_draw_spirits(void) {
     }
 }
 
-// Cache all eight OBJ slots, then commit them in one VBlank. Champions
-// own 1..5; 0, 6 and 7 stay black so a cold boot and a return from GAME
-// OVER carry the same palette RAM. Mid-frame HBlank bursts were dropping
-// writes on the MiSTer Gameboy core and zeroing later slots.
-static void title_cache_obj_palettes(void) {
-    u8 spirit, i;
-    for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit)
-        class_palette_cache_obj((u8)(spirit + 1), spirit);
-    // title_obj_unused lives in this bank; write WRAM directly so we
-    // never pass a banked pointer into another bank.
-    for (i = 0; i < 4; ++i) {
-        obj_pal_cache[0][i] = title_obj_unused[i];
-        obj_pal_cache[6][i] = title_obj_unused[i];
-        obj_pal_cache[7][i] = title_obj_unused[i];
-    }
-}
-
 static void title_set_spirit_props(void) {
     u8 spirit, part;
     for (spirit = 0; spirit < TITLE_SPIRIT_COUNT; ++spirit) {
@@ -125,7 +101,7 @@ static void title_set_spirit_props(void) {
 static void title_init_spirits(void) {
     tiles_load_all_class_sprites();
     title_set_spirit_props();
-    title_cache_obj_palettes();
+    palette_obj_cache_title();
     title_draw_spirits();
 }
 
@@ -404,7 +380,7 @@ void title_draw(void) {
     // existing wait_vbl_done(), so loop_frame_counter is unchanged.
     if (!title_obj_committed) {
         title_set_spirit_props();
-        title_cache_obj_palettes();
+        palette_obj_cache_title();
         palette_obj_pending_commit = PALETTE_OBJ_COMMIT_PASSES;
         title_obj_committed = 1;
     }

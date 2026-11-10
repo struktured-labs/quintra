@@ -6,6 +6,7 @@
 #include <gb/cgb.h>
 
 #include "core/types.h"
+#include "render/class_palettes.h"
 #include "render/palette.h"
 
 u16 obj_pal_cache[8][4];
@@ -43,4 +44,17 @@ void palette_obj_commit_vblank(void) BANKED {
     }
     if (palette_obj_pending_commit)
         palette_obj_pending_commit--;
+}
+
+void palette_obj_cache_title(void) BANKED {
+    u8 spirit, i;
+    for (spirit = 0; spirit < 5; ++spirit)
+        class_palette_cache_obj((u8)(spirit + 1), spirit);
+    // Slots 0, 6 and 7 stay black. The bytes are zero, so this does not
+    // read title.c's bank.
+    for (i = 0; i < 4; ++i) {
+        obj_pal_cache[0][i] = 0;
+        obj_pal_cache[6][i] = 0;
+        obj_pal_cache[7][i] = 0;
+    }
 }

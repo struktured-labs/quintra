@@ -1,6 +1,7 @@
 #pragma bank 7
 
 #include <gb/gb.h>
+#include <string.h>
 
 #include "core/types.h"
 #include "render/class_palettes.h"
@@ -68,9 +69,8 @@ void class_palette_load_obj(u8 slot, u8 class_id) BANKED {
 }
 
 void class_palette_cache_obj(u8 slot, u8 class_id) BANKED {
-    u8 i;
-    const u16 *src = class_obj_palettes[class_id < 5 ? class_id : 0];
-    slot &= 7;
-    for (i = 0; i < 4; ++i)
-        obj_pal_cache[slot][i] = src[i];
+    // One library copy. The open-coded loop was 101 bytes and put bank 7
+    // under the 256-byte floor (249 free).
+    if (class_id >= 5) class_id = 0;
+    memcpy(obj_pal_cache[slot & 7], class_obj_palettes[class_id], 8);
 }

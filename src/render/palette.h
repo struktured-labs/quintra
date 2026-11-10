@@ -24,6 +24,9 @@ void palette_obj_load(u8 slot, const u16 *colors);
 // desync if a write is dropped.
 #define PALETTE_OBJ_COMMIT_PASSES 16
 void palette_obj_commit_vblank(void) BANKED;
+// Five champion palettes plus black slots 0, 6 and 7. Lives with the
+// VBlank commit so title.c (bank 12) does not hold the copy loop.
+void palette_obj_cache_title(void) BANKED;
 extern u16 obj_pal_cache[8][4];
 extern volatile u8 palette_obj_pending_commit;
 
