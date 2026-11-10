@@ -1,6 +1,6 @@
 # The Window
 
-The strip along the top is a window, not part of the room.
+The strip along the bottom is a window, not part of the room. It sits on the last eight scanlines.
 
 Health is counted in half-hearts. Two points of health are one full heart. A heart can show full, half, or empty. Wolfkin begins at 14, which is seven hearts. Vespine begins at 13, six hearts and a half. Easy raises the maximum to at least 16, eight hearts, if the champion had fewer.
 

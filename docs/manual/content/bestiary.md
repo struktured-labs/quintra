@@ -31,7 +31,7 @@ Names are the ones in the content tables, abbreviations included. Health is the 
 - **Skeleton.** Health 10. Chases.
 - **Sentry.** Health 12. Does not walk. It rotates and fires. Shoot it between turns.
 - **Frost Lancer.** Health 13. A long tell, then a rush down a lane.
-- **Mirror Moth.** Health 10. A mirror shooter. Do not stand where a bounced shot can find you twice.
+- **Mirror Moth.** Health 10. It steps the opposite way from you, then fires a slow bolt back toward you. Standing still stops the step. It does not stop the shot.
 
 ## Toxic Mire
 

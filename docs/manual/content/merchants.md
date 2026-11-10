@@ -11,7 +11,7 @@ On that counter, where the room still has them: a heart refill for 10 coins, a r
 - Boomerang, 30.
 - Blast Seed, 32.
 - Hookshot, Phoenix thread, Vampiric Sigil, Iron Heart, or Thorn Crown, 35.
-- Morningstar and Bombs, 30.
+- Morningstar and the Bomb Bag, 30.
 
 The village is three screens of civic ground, not a second dungeon. The market’s heart refill is 5 coins, and its weapon trade is 30. The forge sells Power Stone, attack +1, for 30. The smith’s line, if you ask: “Power raises attack. Weapons change A. Gold means strong.” Beside that quarter, the Vampiric Sigil is 35 and the apothecary’s Mana Gem is 30. The arrival square sells the cartographer’s chart for 15.
 

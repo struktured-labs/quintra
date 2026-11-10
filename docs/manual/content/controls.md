@@ -20,7 +20,7 @@ Caption: Hold Aim keeps all eight directions. The boxed mark is the one that sta
 
 - A is the primary weapon. Beside a red weapon orb, A swaps that weapon in and leaves the old one on the ground.
 - Let go of A and Will charges. The next A, once Will is stored, spends it on a heavier form of the weapon you hold. Talking does not spend Will. A shield or Mute pauses the charge. Menus pause the world.
-- B is the selected hero power. It is free, and it must cool down. On the Aim page, Up and Down choose a secondary B weapon you already own: Boomerang, Hookshot, Morningstar, or Bombs. The cycle returns to the champion’s own power.
+- B is the selected hero power. It is free, and it must cool down. On the Aim page, Up and Down choose a secondary B weapon you already own: Boomerang, Hookshot, Morningstar, or the Bomb Bag. The cycle returns to the champion’s own power.
 - A and B together, while magic is not full, fires the Oath you have selected. The cartridge subtracts 1 magic. The Combat page prints “A+B OATH: 2 MP.” Trust the meter, not that line: the cost in the program is 1.
 - A and B together at full magic is Spirit Convergence. It does not charge the 1-magic cost. It empties the meter, throws an eight-way volley, and holds the ascended stance for a long beat. Mute blocks Oaths, Convergence, and Will.
 - Double-tap a direction to dodge-dash. The dash grants a brief invulnerable moment.
