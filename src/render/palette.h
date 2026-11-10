@@ -30,13 +30,10 @@ void palette_obj_cache_title(void) BANKED;
 extern u16 obj_pal_cache[8][4];
 extern volatile u8 palette_obj_pending_commit;
 
-// Cached BG palettes. Class select (and any other text screen that must
-// survive the MiSTer Gameboy core's dropped BCPS bursts) fills this,
-// sets palette_bg_pending_commit to PALETTE_OBJ_COMMIT_PASSES, and
-// loop_run writes the cache during VBlank after wait_vbl_done().
-void palette_bg_commit_vblank(void) BANKED;
+// Cached BG palettes. Class select fills this (and obj_pal_cache) and
+// class_select_vblank_step() commits both in four-palette half-bursts,
+// PALETTE_OBJ_COMMIT_PASSES rotating passes each, one half per frame.
 extern u16 bg_pal_cache[8][4];
-extern volatile u8 palette_bg_pending_commit;
 
 // Load N consecutive BG palettes starting at slot
 void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors);

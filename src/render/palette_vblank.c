@@ -4,6 +4,7 @@
 
 #include <gb/gb.h>
 #include <gb/cgb.h>
+#include <string.h>
 
 #include "core/types.h"
 #include "content.h"
@@ -14,7 +15,6 @@
 u16 obj_pal_cache[8][4];
 volatile u8 palette_obj_pending_commit;
 u16 bg_pal_cache[8][4];
-volatile u8 palette_bg_pending_commit;
 
 // Called only after loop_run actually waited for VBlank (not on frames
 // that already crossed LY=144 during draw). Write each color once per
@@ -51,28 +51,6 @@ void palette_obj_commit_vblank(void) BANKED {
 }
 
 
-void palette_bg_commit_vblank(void) BANKED {
-    u8 i, ci, start;
-
-    /* Start-of-VBlank only. Skip (and retry later) if this call is late. */
-    if (LY_REG < 144u || LY_REG >= 150u)
-        return;
-
-    start = (u8)((PALETTE_OBJ_COMMIT_PASSES - palette_bg_pending_commit) & 7);
-    for (i = 0; i < 8; ++i) {
-        u8 slot = (u8)((start + i) & 7);
-        for (ci = 0; ci < 4; ++ci) {
-            u8 lo = (u8)(bg_pal_cache[slot][ci] & 0xFF);
-            u8 hi = (u8)(bg_pal_cache[slot][ci] >> 8);
-            rBCPS = (u8)(0x80 | (slot << 3) | (ci << 1));
-            rBCPD = lo;
-            rBCPD = hi;
-        }
-    }
-    if (palette_bg_pending_commit)
-        palette_bg_pending_commit--;
-}
-
 void palette_obj_cache_title(void) BANKED {
     u8 spirit, i;
     for (spirit = 0; spirit < 5; ++spirit)
@@ -91,77 +69,157 @@ void palette_obj_cache_title(void) BANKED {
 #define CS_PAL_ACCENT 2
 #define CS_PAL_LAVENDER 3
 
-static u8 *cs_attr_map(void) {
-    return (u8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800);
+#define G CS_PAL_GOLD
+#define A CS_PAL_ACCENT
+#define L CS_PAL_LAVENDER
+
+// Final 20-column attribute rows. The VBlank job only memcpy's rows, so
+// every stored row costs the same few hundred cycles and no frame overruns.
+static const u8 cs_row_zero[20];
+static const u8 cs_row_title[20] = {
+    0, 0, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, 0, 0 };
+static const u8 cs_row_role[20] = {
+    G, G, G, G, 0, 0, A, A, A, A, A, A, A, A, A, A, A, A, A, A };
+static const u8 cs_row_ab[20] = { G };
+static const u8 cs_row_trait[20] = { G, G, G, G, G };
+static const u8 cs_row_normal[20] = {
+    0, 0, 0, 0, 0, 0, 0, 0, L, L, L, L, L, L, L, L, L, L, L, L };
+static const u8 cs_row_easy[20] = {
+    G, G, G, G, 0, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L };
+static const u8 cs_row_prompt[20] = {
+    0, G, 0, L, L, L, L, L, L, 0, 0, 0, G, 0, L, L, L, L, 0, 0 };
+
+static const u8 *const cs_rows[18] = {
+    cs_row_zero, cs_row_title, cs_row_zero,
+    cs_row_zero, cs_row_zero, cs_row_zero, cs_row_zero, cs_row_zero,
+    cs_row_zero, cs_row_role, cs_row_ab, cs_row_ab, cs_row_trait,
+    cs_row_zero, 0, cs_row_zero, 0, cs_row_prompt,
+};
+
+#undef G
+#undef A
+#undef L
+
+// Page-dependent rows, built outside VBlank by class_select_attr_prepare.
+static u8 cs_row_name[20];
+static u8 cs_row_stats[20];
+
+// First row of each VBlank job; job n stores rows [start[n], start[n+1]).
+static const u8 cs_job_rows[7] = { 0, 3, 6, 9, 12, 15, 18 };
+
+static u8 *cs_digits(u8 *p, u8 v) {
+    *p++ = CS_PAL_BODY;
+    if (v >= 10) *p++ = CS_PAL_BODY;
+    if (v >= 100) *p++ = CS_PAL_BODY;
+    return p;
 }
 
-static void cs_attr_span(u8 x, u8 y, u8 n, u8 pal) {
-    u8 *cell;
-    u8 i;
-    if (n == 0) return;
-    cell = cs_attr_map() + (u16)y * 32u + x;
+static u8 *cs_label(u8 *p, u8 space) {
+    if (space) *p++ = CS_PAL_BODY;
+    *p++ = CS_PAL_GOLD;
+    *p++ = CS_PAL_GOLD;
+    return p;
+}
+
+void class_select_attr_prepare(void) BANKED {
+    const class_def_t *c = &classes[class_select_cursor];
+    u8 *p = cs_row_stats;
+    // Selected name in its accent; the "> " cursor stays body white.
+    memset(cs_row_name, CS_PAL_BODY, sizeof cs_row_name);
+    memset(cs_row_name + 4, CS_PAL_ACCENT, class_select_name_len);
+    // Stat row, mirroring write_stats(): labels gold, digits and spaces
+    // body. Built from the numbers, not read back from VRAM.
+    memset(cs_row_stats, CS_PAL_BODY, sizeof cs_row_stats);
+    p = cs_label(p, 0);
+    p = cs_digits(p, c->base_stats.hp_max);
+    p = cs_label(p, c->base_stats.mp_max < 10);
+    p = cs_digits(p, c->base_stats.mp_max);
+    p = cs_label(p, 1);
+    p = cs_digits(p, c->base_stats.atk);
+    p = cs_label(p, 1);
+    p = cs_digits(p, c->base_stats.def);
+    p = cs_label(p, 1);
+    cs_digits(p, c->base_stats.spd);
+}
+
+static void cs_store_rows(u8 job) {
+    u8 r = cs_job_rows[job];
+    u8 end = cs_job_rows[job + 1];
+    u8 *dst = (u8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800)
+              + (u16)r * 32u;
+    u8 name_row = (u8)(3 + class_select_cursor);
     VBK_REG = 1;
-    for (i = 0; i < n; ++i) cell[i] = (u8)(pal & 7);
+    do {
+        const u8 *src = cs_rows[r];
+        if (r == name_row) src = cs_row_name;
+        else if (r == 14) src = cs_row_stats;
+        else if (r == 16)
+            src = class_select_easy_mode ? cs_row_easy : cs_row_normal;
+        memcpy(dst, src, 20);
+        dst += 32;
+    } while (++r != end);
     VBK_REG = 0;
 }
 
-static void cs_fill_rows(u8 y0, u8 n) {
-    u8 *map = cs_attr_map();
-    u8 row, col;
-    VBK_REG = 1;
-    for (row = 0; row < n; ++row) {
-        u8 *line = map + (u16)(y0 + row) * 32u;
-        for (col = 0; col < 20; ++col) line[col] = CS_PAL_BODY;
-    }
-    VBK_REG = 0;
+// Four consecutive palettes from base, re-arming the index before every
+// color so a dropped data write cannot desync auto-increment.
+static void cs_burst_bg(u8 base) {
+    u8 n = 4;
+    do {
+        u8 slot = (u8)(base & 7);
+        const u8 *src = (const u8 *)bg_pal_cache[slot];
+        u8 idx = (u8)(0x80 | (slot << 3));
+        u8 ci = 4;
+        do {
+            rBCPS = idx;
+            rBCPD = *src++;
+            rBCPD = *src++;
+            idx += 2;
+        } while (--ci);
+        base++;
+    } while (--n);
 }
 
-static void cs_paint_spans(void) {
-    u8 *map = cs_attr_map();
-    u8 col, name_len;
-    u8 stats[20];
-
-    cs_attr_span(2, 1, 16, CS_PAL_GOLD);
-    name_len = 0;
-    {
-        const char *name = classes[class_select_cursor].name;
-        while (name[name_len]) name_len++;
-    }
-    cs_attr_span(4, (u8)(3 + class_select_cursor), name_len, CS_PAL_ACCENT);
-    cs_attr_span(0, 9, 4, CS_PAL_GOLD);
-    cs_attr_span(6, 9, 14, CS_PAL_ACCENT);
-    cs_attr_span(0, 10, 1, CS_PAL_GOLD);
-    cs_attr_span(0, 11, 1, CS_PAL_GOLD);
-    cs_attr_span(0, 12, 5, CS_PAL_GOLD);
-    for (col = 0; col < 20; ++col) {
-        u8 t = map[(u16)(14 * 32 + col)];
-        stats[col] = (t >= 11 && t <= 36) ? CS_PAL_GOLD : CS_PAL_BODY;
-    }
-    VBK_REG = 1;
-    for (col = 0; col < 20; ++col) map[(u16)(14 * 32 + col)] = stats[col];
-    VBK_REG = 0;
-    if (class_select_easy_mode) {
-        cs_attr_span(0, 16, 4, CS_PAL_GOLD);
-        cs_attr_span(5, 16, 15, CS_PAL_LAVENDER);
-    } else {
-        cs_attr_span(8, 16, 12, CS_PAL_LAVENDER);
-    }
-    cs_attr_span(1, 17, 1, CS_PAL_GOLD);
-    cs_attr_span(3, 17, 6, CS_PAL_LAVENDER);
-    cs_attr_span(12, 17, 1, CS_PAL_GOLD);
-    cs_attr_span(14, 17, 4, CS_PAL_LAVENDER);
+static void cs_burst_obj(u8 base) {
+    u8 n = 4;
+    do {
+        u8 slot = (u8)(base & 7);
+        const u8 *src = (const u8 *)obj_pal_cache[slot];
+        u8 idx = (u8)(0x80 | (slot << 3));
+        u8 ci = 4;
+        do {
+            rOCPS = idx;
+            rOCPD = *src++;
+            rOCPD = *src++;
+            idx += 2;
+        } while (--ci);
+        base++;
+    } while (--n);
 }
 
-// Phases 1..3 store six body rows. Phase 4 stamps the colored spans.
-// Called after loop_frame_counter increments. Six direct stores fit in
-// the blank; the old set_tiles fill inside enter did not.
-void class_select_attr_vblank(void) BANKED {
-    if (class_select_attr_phase == 0) return;
-    if (class_select_attr_phase <= 3) {
-        cs_fill_rows((u8)((class_select_attr_phase - 1) * 6), 6);
-        class_select_attr_phase++;
+// One job per frame, from the top of class_select_tick (right after
+// loop_run's input_poll), while LY is at the top of VBlank. Attribute
+// jobs 1..6 store three finished rows each (0-2 ... 15-17). Then palette
+// half-bursts: step k (0..PASSES*4-1) uses bit 0 for the half, bit 1 for
+// BG or OBJ, and k>>2 as the pass, rotating the start slot like the
+// title's commit so the MiSTer core's dropped-write window cannot pin one
+// slot. Nothing
+// here touches the frame counter or delays the input sample, and the
+// tick skips it on A/B frames, so New Game seeds and timing match main.
+void class_select_vblank_step(void) BANKED {
+    /* Top of VBlank only (the enter frame polls mid-screen). */
+    if (LY_REG < 144u || LY_REG >= 150u)
         return;
+    if (class_select_attr_phase) {
+        cs_store_rows((u8)(class_select_attr_phase - 1));
+        if (++class_select_attr_phase > 6)
+            class_select_attr_phase = 0;
+    } else if (class_select_pal_steps) {
+        u8 k;
+        class_select_pal_steps--;
+        k = (u8)(PALETTE_OBJ_COMMIT_PASSES * 4 - 1 - class_select_pal_steps);
+        if (k & 2) cs_burst_obj((u8)((k >> 2) + ((k & 1) << 2)));
+        else       cs_burst_bg((u8)((k >> 2) + ((k & 1) << 2)));
     }
-    cs_paint_spans();
-    class_select_attr_phase = 0;
+    class_select_vbl_work = (u8)(class_select_attr_phase | class_select_pal_steps);
 }

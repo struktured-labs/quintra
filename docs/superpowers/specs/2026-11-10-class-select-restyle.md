@@ -38,17 +38,34 @@ seams stay invisible. `font_min` draws with color 3.
 - BG3 dim lavender: color 3 is `cs_palette` color 2 `(20,16,28)`
 - BG4–7 mirror body white so a stray attribute cannot leak title colors
 
-The attribute map is stored from bank 4 with direct VRAM writes, six
-body rows per vblank, after `loop_frame_counter` increments. Doing the
-fill inside `class_select_enter` crossed a vblank before that counter
-moved and shifted the New Game seed. Colored spans are stamped on the
-next vblank. The screen must not inherit the title attribute map. BG (and the
-preview/cursor OBJ slots) are written from a WRAM cache during VBlank
-after `loop_run`’s `wait_vbl_done()`, re-armed per color, for
-`PALETTE_OBJ_COMMIT_PASSES` frames with a rotating start slot, matching
-the title OBJ fix. Mid-frame palette loads are not the source of truth.
-`class_select_exit` clears both pending commit counters so the next
-screen’s palettes are not overwritten.
+All of the screen's VRAM attribute and palette work happens in VBlank,
+one bounded job per frame, from `class_select_vblank_step` (bank 4).
+`class_select_tick` calls it first, which is right after `loop_run`'s
+`input_poll()` and still at the top of the blank. Nothing is added
+between `wait_vbl_done()` and the poll, and `loop.c` is unchanged from
+before the restyle. That way input is sampled at the same LY, and
+`loop_frame_counter` (the New Game seed) advances exactly as before. The
+tick skips the job on frames where A or B is pressed, so the frame that
+seeds a run, or returns to the title, does no extra work.
+
+- `render()` (outside VBlank) builds the page-dependent attribute rows:
+  the selected name in its accent, and the stat row with gold letters,
+  derived from the stat numbers rather than read back from VRAM.
+- Attribute jobs 1–6 `memcpy` three finished 20-column rows each into
+  VRAM bank 1. Static rows are const templates, so no read-modify-write
+  happens inside the blank. The screen never inherits the title
+  attribute map.
+- Then come 64 palette half-bursts: BG 4 slots, BG 4 slots, OBJ 4 slots,
+  OBJ 4 slots per pass, for `PALETTE_OBJ_COMMIT_PASSES` passes. Each
+  color re-arms BCPS/OCPS, and the start slot rotates each pass the same
+  way as the title's OBJ commit. Mid-frame palette loads are not the
+  source of truth.
+
+In PyBoy, every job finishes by LY 151 when started at LY 146. A sweep of
+title Start frames 150–400 against A delays 1–90 gives the same
+`loop_frame_counter`/seed and later frame counters as main.
+`class_select_exit` clears the queue so the next screen's palettes are
+not overwritten.
 
 ## Non-goals
 

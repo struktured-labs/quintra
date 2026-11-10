@@ -22,6 +22,9 @@ BANKREF(class_select_enter)
 u8 class_select_cursor;
 u8 class_select_easy_mode;
 u8 class_select_attr_phase;
+u8 class_select_pal_steps;
+u8 class_select_vbl_work;
+u8 class_select_name_len;
 
 static const u16 cs_palette[4] = {
     BGR555( 0,  2,  6),    // 0: deep blue
@@ -116,8 +119,9 @@ static void cache_and_arm_palettes(void) {
         obj_pal_cache[slot][3] = 0;
     }
 
-    palette_bg_pending_commit = PALETTE_OBJ_COMMIT_PASSES;
-    palette_obj_pending_commit = PALETTE_OBJ_COMMIT_PASSES;
+    // Four half-bursts (BG lo/hi, OBJ lo/hi) per rotating pass.
+    class_select_pal_steps = (u8)(PALETTE_OBJ_COMMIT_PASSES * 4);
+    class_select_vbl_work = 1;
 }
 
 // Live 16x16 preview of the highlighted class, in its own colors.
@@ -181,11 +185,18 @@ static void render(void) {
     text_write(trait_tips[class_select_cursor]);
 
     write_stats(c);
+    {
+        const char *name = c->name;
+        u8 n = 0;
+        while (name[n]) n++;
+        class_select_name_len = n;
+    }
 
     gotoxy(0, 16);
     text_write(class_select_easy_mode ? "EASY MORE HP FEW HEX"
                                       : "NORMAL  SEL FOR EASY");
     gotoxy(1, 17); text_write("A CHOOSE   B BACK");
+    class_select_attr_prepare();
     class_select_attr_phase = 1;
 }
 
@@ -224,12 +235,17 @@ void class_select_exit(void) {
     move_sprite(2, 0, 0); move_sprite(3, 0, 0);
     move_sprite(4, 0, 0);
     class_select_attr_phase = 0;
-    palette_bg_pending_commit = 0;
-    palette_obj_pending_commit = 0;
+    class_select_pal_steps = 0;
+    class_select_vbl_work = 0;
 }
 
 screen_id_t class_select_tick(u8 keys, u8 pressed) {
     keys;
+    // Queued attribute/palette VBlank work. loop_run calls this tick right
+    // after input_poll(), still at the top of the blank. Skip on A/B: that
+    // frame leaves the screen (and A seeds the run) exactly like main.
+    if (class_select_vbl_work && !(pressed & (J_A | J_B)))
+        class_select_vblank_step();
     if (pressed & J_UP) {
         if (class_select_cursor == 0)
             class_select_cursor = (u8)(N_CLASSES - 1);
