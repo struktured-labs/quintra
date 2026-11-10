@@ -132,18 +132,17 @@ def main():
             f"title spirit OAM {sprite} leaked into class select"
         )
 
-    # The selector uses one plain-language row for each concept: role, A, B,
-    # trait, then fully named stats. Pin Wolfkin's complete initial page on the
-    # rendered 20-column cartridge screen rather than accepting abbreviations.
+    # The selector uses gold labels, a compact stat row, and blank separators
+    # at rows 13 and 15. Pin Wolfkin's complete initial page, including the
+    # two-space ROLE alignment and the 20-column stat line.
     class_rows = {
-        9: "ROLE BLADE FIGHTER",
+        9: "ROLE  BLADE FIGHTER",
         10: "A STAB SLASH DASH",
         11: "B 8 SHOTS BRIEF WARD",
         12: "TRAIT FAST MOVEMENT",
-        14: "HEALTH 14 MAGIC 4",
-        13: "NORMAL  SEL FOR EASY",
-        15: "ATTACK 2 ARMOR 1",
-        16: "SPEED 6 MODE NORMAL",
+        14: "HP14 MP4 AT2 DF1 SP6",
+        16: "NORMAL  SEL FOR EASY",
+        17: " A CHOOSE   B BACK",
     }
     for row, label in class_rows.items():
         expected_row = font_tiles(label)
@@ -157,17 +156,105 @@ def main():
                    for col in range(len(expected_row), 20)), (
             f"class-select row {row} left stale edge glyphs"
         )
+    for row in (13, 15):
+        assert all(pb.memory[0x9800 + row * 32 + col] == 0 for col in range(20)), (
+            f"class-select row {row} should be a blank separator"
+        )
+
+    # Class select must own its attribute map: title gold, selected name
+    # accent, ROLE label gold, role value accent, A/B/TRAIT labels gold.
+    pb.memory[0xFF4F] = 1
+    def attrs(row, start, width):
+        return list(pb.memory[0x9800 + row * 32 + start:
+                              0x9800 + row * 32 + start + width])
+    title_attrs = attrs(1, 2, 16)
+    assert title_attrs == [1] * 16, f"title not gold: {title_attrs}"
+    name_attrs = attrs(3, 4, 7)
+    assert name_attrs == [2] * 7, f"Wolfkin name not accent: {name_attrs}"
+    assert attrs(9, 0, 4) == [1] * 4, "ROLE label not gold"
+    assert attrs(9, 6, 13) == [2] * 13, "role value not accent"
+    assert attrs(10, 0, 1) == [1] and attrs(11, 0, 1) == [1]
+    assert attrs(12, 0, 5) == [1] * 5, "TRAIT label not gold"
+    # HP/MP/AT/DF/SP letters gold, digits and spaces body white.
+    stat = attrs(14, 0, 20)
+    expected_stat = []
+    for ch in "HP14 MP4 AT2 DF1 SP6":
+        expected_stat.append(1 if "A" <= ch <= "Z" else 0)
+    assert stat == expected_stat, f"stat attributes drifted: {stat}"
+    assert attrs(16, 8, 12) == [3] * 12, "SEL FOR EASY not lavender"
+    assert attrs(17, 1, 1) == [1] and attrs(17, 3, 6) == [3] * 6
+    assert attrs(17, 12, 1) == [1] and attrs(17, 14, 4) == [3] * 4
+    pb.memory[0xFF4F] = 0
+
+    # Every hero page must fit the 20-column LCD, including the two
+    # former overflows (Picsean trait, Vespine trait) and Corvin's B line
+    # which can no longer rely on a missing '+' glyph.
+    hero_pages = [
+        {
+            9: "ROLE  BLADE FIGHTER",
+            10: "A STAB SLASH DASH",
+            11: "B 8 SHOTS BRIEF WARD",
+            12: "TRAIT FAST MOVEMENT",
+            14: "HP14 MP4 AT2 DF1 SP6",
+        },
+        {
+            9: "ROLE  ARMORED TANK",
+            10: "A HEAVY TAIL STRIKE",
+            11: "B BLOCKS ALL HITS",
+            12: "TRAIT HEALTH REGEN",
+            14: "HP16 MP3 AT2 DF2 SP5",
+        },
+        {
+            9: "ROLE  RANGED HUNTER",
+            10: "A RETURNING FEATHER",
+            11: "B MARK RAVEN DIVES",
+            12: "TRAIT SHOW ENEMY HP",
+            14: "HP14 MP8 AT2 DF1 SP5",
+        },
+        {
+            9: "ROLE  MAGIC CASTER",
+            10: "A PIERCING BUBBLE",
+            11: "B 3 BUBBLES AND WARD",
+            12: "TRAIT FAST MP REGEN",
+            14: "HP14MP10 AT1 DF1 SP5",
+        },
+        {
+            9: "ROLE  FAST STRIKER",
+            10: "A FAST STINGER",
+            11: "B ROTATING STINGERS",
+            12: "TRAIT ELEMENT POWER",
+            14: "HP13 MP5 AT4 DF1 SP7",
+        },
+    ]
+    for hero, page in enumerate(hero_pages):
+        if hero:
+            pb.button("down")
+            pb.tick(8)
+        for row, label in page.items():
+            expected_row = font_tiles(label)
+            rendered_row = list(pb.memory[
+                0x9800 + row * 32:0x9800 + row * 32 + len(expected_row)
+            ])
+            assert rendered_row == expected_row, (
+                f"hero {hero} row {row} clipped or drifted: {rendered_row}"
+            )
+            assert all(pb.memory[0x9800 + row * 32 + col] == 0
+                       for col in range(len(expected_row), 20)), (
+                f"hero {hero} row {row} left stale edge glyphs"
+            )
+    # Return to Wolfkin so the Easy-toggle asserts stay on a known page.
+    pb.button("down")
+    pb.tick(8)
+
     pb.button("select")
     pb.tick(8)
-    easy_mode = font_tiles("SPEED 6 MODE EASY")
+    easy_hint = font_tiles("EASY MORE HP FEW HEX")
     assert list(pb.memory[0x9800 + 16 * 32:
-                          0x9800 + 16 * 32 + len(easy_mode)]) == easy_mode, (
+                          0x9800 + 16 * 32 + len(easy_hint)]) == easy_hint, (
         "class-select SELECT did not switch the current-mode label to EASY"
     )
-    easy_hint = font_tiles("EASY MORE HP FEW HEX")
-    assert list(pb.memory[0x9800 + 13 * 32:
-                          0x9800 + 13 * 32 + len(easy_hint)]) == easy_hint, (
-        "class-select Easy page lost its current-mode explanation"
+    assert all(pb.memory[0x9800 + 13 * 32 + col] == 0 for col in range(20)), (
+        "class-select Easy page overwrote the blank separator at row 13"
     )
 
     # A browser emulator may retain VRAM across cartridge reloads, and real

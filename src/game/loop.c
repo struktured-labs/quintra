@@ -106,6 +106,7 @@ void loop_run(void) {
         if (g_vbl_epoch == vbl_at_start) {
             wait_vbl_done();
             if (palette_obj_pending_commit) palette_obj_commit_vblank();
+            if (palette_bg_pending_commit) palette_bg_commit_vblank();
         }
         loop_frame_counter++;
         // Mix a bit of the frame counter into the RNG state for entropy

@@ -59,7 +59,7 @@ def main():
 
         # Hero choice uses one plain-language line per concept rather than an
         # abbreviation wall or repeated A/B labels.
-        row(pb, 9, 0, "ROLE BLADE FIGHTER")
+        row(pb, 9, 0, "ROLE  BLADE FIGHTER")
         row(pb, 10, 0, "A STAB SLASH DASH")
         row(pb, 12, 0, "TRAIT FAST MOVEMENT")
         (ROOT / "tmp").mkdir(exist_ok=True)
