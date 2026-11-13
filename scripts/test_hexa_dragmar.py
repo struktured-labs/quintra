@@ -107,6 +107,32 @@ def offer_victory(pb, reaper=False, companion=False, bosses=9):
     )
 
 
+def assert_clean_victory_attrs(pb, label):
+    """Every visible cell must use bank-0 glyphs and the victory palette.
+
+    The Hexa sanctum stamps bank-1 attribute bytes (VRAM bank bit 3 plus the
+    carapace palettes 5/6) over most of the arena. Console text rewrites only
+    tile ids, so stale attributes painted the old body over the results and
+    hid the label glyphs (issue seen on rivalmage after a Hexa kill).
+    """
+    # victory_enter runs with the LCD off; inspect only the committed screen.
+    for _ in range(60):
+        if pb.memory[0xFF40] & 0x80:
+            break
+        pb.tick()
+    assert pb.memory[0xFF40] & 0x80, f"{label}: LCD never came back on"
+    pb.tick(2)
+    base = 0x9C00 if pb.memory[0xFF40] & 0x08 else 0x9800
+    stale = [
+        (x, y, pb.memory[1, base + y * 32 + x])
+        for y in range(18) for x in range(20)
+        if pb.memory[1, base + y * 32 + x]
+    ]
+    assert not stale, (
+        f"{label}: {len(stale)} stale CGB attribute cells, first {stale[:6]}"
+    )
+
+
 def skip_to_results(pb):
     press(pb, "start")
     assert pb.memory[SCREEN] == SCREEN_VICTORY
@@ -189,7 +215,9 @@ def test_unlock_kill():
         wins, flags = read_wins(pb)
         assert wins == 1, f"canonical win count is {wins}"
         assert flags & 1, f"Void Lord meta flag missing ({flags:#x})"
+        assert_clean_victory_attrs(pb, "Void Lord epilogue")
         skip_to_results(pb)
+        assert_clean_victory_attrs(pb, "Void Lord results")
         enter_sanctum(pb)
         core = EN + pb.memory[HEXA_CORE] * ENTITY
         assert pb.memory[core + 19] == 9, "sanctum boss is not stage 9"
@@ -480,6 +508,11 @@ def test_hexa_kill_and_migration():
         assert wins == wins_before, f"Hexa kill changed wins {wins_before} -> {wins}"
         assert flags & 2, f"HEXA_BEATEN missing ({flags:#x})"
         assert not (pb.memory[RS + 27] & RUN_HEXA), "sanctum bit survived the card"
+        assert_clean_victory_attrs(pb, "Hexa card")
+        skip_to_results(pb)
+        assert_clean_victory_attrs(pb, "Hexa results")
+        if ART.is_dir():
+            pb.screen.image.save(ART / "hexa_victory_results.png")
         print(f"[hexa] PASS kill badge without a win increment (wins={wins})")
     finally:
         pb.stop(save=False)

@@ -84,6 +84,9 @@ jobs:
       - name: PyBoy title sprite leak
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_title_sprite_leak.py
 
+      - name: PyBoy title cold OBJ palettes
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_title_cold_obj_palettes.py
+
       - name: PyBoy persistent eight-way aim
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_persistent_aim.py
 
@@ -105,11 +108,17 @@ jobs:
       - name: PyBoy dialogue radius
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_dialogue_radius.py
 
+      - name: PyBoy merchant counter reach
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_merchant_counter.py
+
       - name: PyBoy companion greeting
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_companion_greeting.py
 
       - name: PyBoy merchant stock
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_merchant_stock.py
+
+      - name: PyBoy Wolfkin Will wave
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_wolfkin_will_wave.py
 
       - name: PyBoy crystal cluster
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_crystal_cluster.py

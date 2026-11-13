@@ -23,6 +23,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "game/status.h"
 #include "game/waygear.h"
 #include "game/will.h"
+#include "game/wolfkin_wave.h"
 #include "render/tiles.h"
 #include "render/hud.h"
 #include "content.h"
@@ -558,6 +559,9 @@ u8 combat_resolve(void) BANKED {
         }
     }
 
+    // Wolfkin's Will wave: eat frontal shots, animate, end its flash.
+    if (wolfkin_wave_guard_ticks | wolfkin_wave_fx_ticks) wolfkin_wave_tick();
+
     // 3) Enemy bodies AND enemy projectiles -> player
     if (player.iframes == 0 && player.shield_timer == 0) {
         entity_t *hostile_entity=entities;
@@ -580,6 +584,10 @@ u8 combat_resolve(void) BANKED {
             else if (hexa_boss_active && i == hexa_core_entity)
                 touching = hexa_touches_player();
             else touching=aabb_overlap_player(hostile_entity);
+            // The rush's frontal guard absorbs this contact; sides and
+            // back still land below. Nothing is shoved either way.
+            if (touching && wolfkin_wave_guard_ticks
+                && wolfkin_wave_absorb(i)) continue;
             if (touching) {
                 u8 was_projectile = (hostile_entity->type == ENT_PROJECTILE);
                 if (was_projectile

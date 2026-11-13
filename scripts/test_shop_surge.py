@@ -4,7 +4,10 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_BOSS_ROOM, dungeon_direction
+from quintra_topology import (
+    STAGE_BOSS_ROOM, dungeon_cache_cell, dungeon_direction,
+    dungeon_maze_neighbor, dungeon_size,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -24,6 +27,58 @@ RS, PL, EN, TM, SURGE, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, ESTATUS, HNO
     "_room_world_width", "_room_world_height",
     "_room_camera_x", "_room_camera_y", "_enemy_status_kind",
     "_hud_notice_ticks"))
+SCREEN = addr("_loop_current_screen")
+SCREEN_ROOM = 5
+SCREEN_MAP = 8
+BGT_VOID = 0
+BGT_MAP_PATH_H = 53
+BGT_MAP_PATH_V = 54
+BGT_MAP_BIG_UNKNOWN = 106
+BGT_MAP_BIG_CACHE = 123
+MAP_GX = (1, 4, 7, 10, 13, 16, 16, 13, 10, 7, 4, 1,
+          1, 4, 7, 10, 13, 16, 16, 13, 10, 7, 4, 1,
+          1, 4, 7, 10, 13, 16)
+MAP_GY = (2,) * 6 + (5,) * 6 + (8,) * 6 + (11,) * 6 + (14,) * 6
+
+
+def compass_tile(pb, x, y):
+    return pb.memory[0x9800 + y * 32 + x]
+
+
+def compass_node(pb, cell):
+    return compass_tile(pb, MAP_GX[cell], MAP_GY[cell])
+
+
+def hold_until_screen(pb, button, wanted):
+    pb.button_press(button)
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[SCREEN] == wanted:
+                for _ in range(90):
+                    pb.tick()
+                return
+    finally:
+        pb.button_release(button)
+    raise AssertionError(f"{button} did not reach screen {wanted}")
+
+
+def compass_links(pb, size, seed):
+    """Return (x, y, tile) for every real corridor in the opening dungeon."""
+    links = []
+    for source in range(size):
+        for direction in (1, 2):
+            target = dungeon_maze_neighbor(source, size, direction, seed, 0)
+            if target is None:
+                continue
+            if MAP_GX[source] == MAP_GX[target]:
+                links.append((MAP_GX[source],
+                              min(MAP_GY[source], MAP_GY[target]) + 2,
+                              BGT_MAP_PATH_V))
+            else:
+                links.append((min(MAP_GX[source], MAP_GX[target]) + 2,
+                              MAP_GY[source], BGT_MAP_PATH_H))
+    return links
 
 
 def put16(pb, where, value):
@@ -285,6 +340,39 @@ def main():
                  for offset in (25, 30, 32, 34)) == (0, 0, 0, 0), \
         "dungeon chart leaked into the next-dungeon reveal queue"
     chart_pb.stop(save=False)
+
+    # The Compass is earned: before a Chart, unvisited rooms and their
+    # corridors are blank. Buying the Chart fills in the full active layout:
+    # every room, every corridor, and the unclaimed optional cache.
+    fog_pb = boot_shop(8)
+    seed = sum(fog_pb.memory[RS + 2 + i] << (i * 8) for i in range(4))
+    size = dungeon_size(0)
+    cache = dungeon_cache_cell(size, seed, 0)
+    links = compass_links(fog_pb, size, seed)
+    hold_until_screen(fog_pb, "select", SCREEN_MAP)
+    assert compass_node(fog_pb, cache) == BGT_VOID, \
+        "Compass revealed the unvisited cache before a Chart"
+    assert sum(compass_node(fog_pb, cell) == BGT_VOID
+               for cell in range(size)) >= size // 2, \
+        "Compass revealed most of the dungeon before a Chart"
+    assert any(compass_tile(fog_pb, x, y) == BGT_VOID for x, y, _ in links), \
+        "Compass drew every corridor before a Chart"
+    hold_until_screen(fog_pb, "b", SCREEN_ROOM)
+    for _ in range(60):
+        fog_pb.tick()
+    buy(fog_pb, 7)
+    hold_until_screen(fog_pb, "select", SCREEN_MAP)
+    assert all(compass_node(fog_pb, cell) not in (BGT_VOID, BGT_MAP_BIG_UNKNOWN)
+               for cell in range(size)), (
+        "purchased Chart did not reveal every room: "
+        f"{[compass_node(fog_pb, cell) for cell in range(size)]}")
+    assert compass_node(fog_pb, cache) == BGT_MAP_BIG_CACHE, \
+        "purchased Chart did not reveal the optional cache"
+    missing = [(x, y) for x, y, tile in links
+               if compass_tile(fog_pb, x, y) != tile]
+    assert not missing, f"purchased Chart left corridors blank: {missing}"
+    fog_pb.screen.image.save(ROOT / "tmp" / "compass-charted.png")
+    fog_pb.stop(save=False)
 
     # The same chart cannot be repurchased once the active route is already
     # completely known.

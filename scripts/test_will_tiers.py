@@ -76,10 +76,12 @@ def main():
             pb.screen.image.save('/tmp/quintra-will-tier4.png')
     pb.stop(save=False)
 
+    # Wolfkin's Moonfang counts include the Will wave's three crescent
+    # pieces at every tier (2026-11-12 Will wave spec).
     for hero in range(5):
         pb = boot(hero)
         previous = 0
-        expected_shots = ((3, 5, 7, 8), (1, 3, 5, 7), (5, 6, 7, 8),
+        expected_shots = ((6, 8, 10, 11), (1, 3, 5, 7), (5, 6, 7, 8),
                           (5, 6, 7, 8), (3, 5, 7, 8))[hero]
         for level in range(1, 5):
             clear_arena(pb)

@@ -14,5 +14,6 @@ extern const u16 class_obj_upgrade_palettes[5][3][4];
 // Primary-attack palettes: spirit/ranged, steel, Rift Flail, Astral Spear.
 extern const u16 weapon_obj_palettes[4][4];
 void class_palette_load_obj(u8 slot, u8 class_id) BANKED;
+void class_palette_cache_obj(u8 slot, u8 class_id) BANKED;
 
 #endif
