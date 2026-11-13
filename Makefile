@@ -56,6 +56,10 @@ LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
 
+# Bare `make` must build the cartridge. The manual target is declared
+# first, so pin the default explicitly instead of relying on order.
+.DEFAULT_GOAL := all
+
 .PHONY: all clean cleangen cleanall dirs gen build force-link force-title test verify preflight repro-check demo-check balance endurance fatal-report fixed-controller-matrix boss-pacing boss-curriculum-audit room-curriculum-audit picsean-endurance victory-proof final-sigil-proof media media-check showcase showcase-check play play-state play-mgba-state play-timed-state play-timed-mgba-state info check-balance-bot agent-events stall-maps stage-states pocket-test-saves demo-kit mgba-states mgba-state-smoke timed-states timed-mgba-states manual
 
 # Print booklet and local HTML preview. Does not link the cartridge.
