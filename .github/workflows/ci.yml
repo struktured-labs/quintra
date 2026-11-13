@@ -159,3 +159,36 @@ jobs:
             rom/working/quintra.gbc
             rom/working/quintra.map
             rom/working/quintra.noi
+
+  manual:
+    name: Instruction manual
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Typst
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/typst.tar.xz" \
+            https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz
+          tar -xJf "$RUNNER_TEMP/typst.tar.xz" -C "$RUNNER_TEMP"
+          sudo install -m 755 "$RUNNER_TEMP/typst-x86_64-unknown-linux-musl/typst" /usr/local/bin/typst
+          typst --version
+
+      - name: Python libraries
+        run: python3 -m pip install --user --break-system-packages pillow pypdf
+
+      - name: Build the booklet and preview
+        run: make manual
+
+      - name: Upload manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: quintra-manual
+          if-no-files-found: error
+          path: |
+            docs/manual/build/pdf/quintra-manual.pdf
+            docs/manual/build/pdf/quintra-manual-booklet.pdf
+            docs/manual/build/contact/spreads-contact.png
+            docs/manual/build/site/
