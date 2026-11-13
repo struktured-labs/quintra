@@ -40,30 +40,41 @@ pub fn crystal() -> Grid { crystal_pose(false) }
 pub fn crystal_refract() -> Grid { crystal_pose(true) }
 
 fn crystal_pose(refract: bool) -> Grid {
+    // GPT Image 2.6 Sunburst pass (2026-11-13), hand-quantized to 32x32:
+    // lit crown facets, a visor with a toothed grin, diagonally faceted
+    // fists, an outlined chest gem and ivory-capped feet.
     let mut g=vec![vec![0;32];32];
     for &(cx,top,bottom,w) in &[(16,0,10,4),(7,5,13,3),(25,3,13,3)] {
         for y in top..bottom {let r=(y-top).min(w); for x in cx-r..=cx+r {
-            dot(&mut g,x,y,if x==cx-r || x==cx+r {1}else if x<=cx {3}else{2});
+            let lit = x<cx || (x==cx && y-top<w);
+            dot(&mut g,x,y,if x==cx-r || x==cx+r {1}else if lit {3}else{2});
         }}
     }
     for y in 11..27 {let inset=if y<14 {14-y}else if y>22 {y-22}else{0};
-        for x in 8+inset..=24-inset {dot(&mut g,x,y,if x==8+inset || x==24-inset {1}else if x<16 {3}else{2});}
+        for x in 8+inset..=24-inset {
+            let lit = x<12 || (x<14 && y<16);
+            dot(&mut g,x,y,if x==8+inset || x==24-inset {1}else if lit {3}else{2});
+        }
     }
     let fist_top = if refract { 11 } else { 13 };
     let fist_bot = if refract { 23 } else { 25 };
     for &(left,right) in &[(1,8),(24,31)] {for y in fist_top..fist_bot {for x in left..right {
         let edge=x==left || x==right-1 || y==fist_bot-1;
-        dot(&mut g,x,y,if edge {1}else if y<fist_top+5 || x==left+1 {3}else{2});
+        // One diagonal facet splits the lit outer-top plane from the block.
+        let facet=(if left==1 {x-left} else {right-1-x})+(y-fist_top);
+        dot(&mut g,x,y,if edge {1}else if facet<6 {3}else if facet==6 {1}else{2});
     }}}
-    for y in 8..17 {for x in 9..24 {dot(&mut g,x,y,if y==8 || x==9 || x==23 {1}else{2});}}
+    for y in 8..17 {for x in 9..24 {dot(&mut g,x,y,if y==8 || x==9 || x==23 {1}else if y==9 {3}else{2});}}
     for y in 11..14 {for x in 11..22 {dot(&mut g,x,y,1);}}
     for &(x,y) in &[(11,12),(12,12),(13,13),(21,12),(20,12),(19,13)] {dot(&mut g,x,y,3);}
-    for x in 13..20 {dot(&mut g,x,16,1);}
-    dot(&mut g,14,17,3); dot(&mut g,18,17,3);
-    for y in 19i32..24 {let r=2-(y-21).abs(); for x in 16-r..=16+r {dot(&mut g,x,y,if x<=16 {3}else{1});}}
+    for x in 13..20 {dot(&mut g,x,15,1);}
+    for x in 13..20 {dot(&mut g,x,16,if (x-13)%2==0 {3}else{1});}
+    for y in 18i32..25 {let r=3-(y-21).abs(); for x in 16-r..=16+r {
+        dot(&mut g,x,y,if (x-16).abs()==r {1}else if y<21 || (y==21 && x<16) {3}else{2});
+    }}
     let leg_top = if refract { 29 } else { 27 };
     for &(left,right) in &[(7,14),(19,26)] {for y in leg_top..32 {for x in left..right {
-        dot(&mut g,x,y,if y==31 || x==right-1 {1}else if x<left+4 {3}else{2});
+        dot(&mut g,x,y,if y==31 || x==right-1 || x==left {1}else if y==leg_top || x<left+3 {3}else{2});
     }}}
     if refract {
         for y in 14..22 { for x in 12..20 {
