@@ -1,0 +1,70 @@
+name: Deploy manual to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/manual/**"
+      - ".github/workflows/manual-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build manual site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Typst 0.13.x
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/typst.tar.xz" \
+            https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz
+          tar -xJf "$RUNNER_TEMP/typst.tar.xz" -C "$RUNNER_TEMP"
+          sudo install -m 755 "$RUNNER_TEMP/typst-x86_64-unknown-linux-musl/typst" /usr/local/bin/typst
+          typst --version
+
+      - name: Install Python packages and confirm fonts
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user --break-system-packages pillow pypdf
+          test -f docs/manual/fonts/NotoSerif-Regular.ttf
+          test -f docs/manual/fonts/NotoSerif-Bold.ttf
+          test -f docs/manual/fonts/NotoSerif-Italic.ttf
+          test -f docs/manual/fonts/NotoSans-Regular.ttf
+          test -f docs/manual/fonts/NotoSans-Bold.ttf
+          ls docs/manual/fonts/*.ttf
+
+      - name: Build the booklet and preview
+        run: make manual
+
+      - name: Assemble the Pages artifact
+        run: python3 docs/manual/tools/assemble_pages.py
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        name: Deploy
+        uses: actions/deploy-pages@v4
