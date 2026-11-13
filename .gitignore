@@ -41,6 +41,9 @@ __pycache__/
 # Source of truth is docs/manual/content/. Rebuild with `make manual`.
 docs/manual/build/
 
+# GitHub Pages assemble output (root of the repo).
+_site/
+
 # Temp / log
 tmp/
 test_output/

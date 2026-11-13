@@ -5,6 +5,12 @@ single source for the print booklet and for the struktured labs site.
 `make manual` reads it and writes a reader PDF, a saddle-stitched booklet,
 and a local HTML preview. It does not link the cartridge.
 
+The rendered manual is at
+[struktured-labs.github.io/quintra/manual/](https://struktured-labs.github.io/quintra/manual/).
+The reader PDF is at
+[quintra-manual.pdf](https://struktured-labs.github.io/quintra/manual/quintra-manual.pdf).
+A push to `main` that touches `docs/manual/` publishes that site via GitHub Pages.
+
 ## Content package
 
 `docs/manual/content/`
