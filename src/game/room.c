@@ -1756,7 +1756,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         dash_cd = 45;
                         dash_dx = dir8_dx[dir];
                         dash_dy = dir8_dy[dir];
-                        if (player.iframes < 16) player.iframes = 16;
+                        // No blanket i-frames: the Will wave guards only
+                        // his front, and only while this dash lasts.
                     }
                 }
             }
