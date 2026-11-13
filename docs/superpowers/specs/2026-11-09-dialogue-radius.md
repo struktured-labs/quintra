@@ -9,7 +9,8 @@ A resident or wayfarer answers A inside a 20-pixel box. Inside 14 pixels
 any facing talks, so a counter you are touching still works. Between 14
 and 20 pixels, facing away does not talk and A attacks instead. Farther
 than 20 pixels, A attacks. The nearest speaker still wins. The overhead
-cue uses the same 20-pixel box. Rooms without speakers still skip the check.
+cue uses the same 20-pixel box. Rooms without speakers still skip the check. Shopkeepers behind a counter
+also answer across it; see `2026-11-12-merchant-counter-reach.md`.
 
 ## Evidence
 
