@@ -1,0 +1,167 @@
+{
+  "title": "Quintra",
+  "work_title": "Instruction Manual",
+  "version_label": "v0.20.20",
+  "status": "In development",
+  "blurb": "nine-stage action roguelike for Game Boy Color, five monster-human champions, procedural dungeons, bullet-hell bosses",
+  "base_path": "/games/quintra/manual/",
+  "language": "en",
+  "sections": [
+    {
+      "slug": "cover",
+      "title": "Cover",
+      "source": "cover.md",
+      "web": true,
+      "pdf": "cover"
+    },
+    {
+      "slug": "caution",
+      "title": "Before You Play",
+      "source": "caution.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "cartridge",
+      "title": "The Cartridge",
+      "source": "cartridge.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "title-page",
+      "title": "Title",
+      "source": "title-page.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "contents",
+      "title": "Contents",
+      "source": "contents.md",
+      "web": true,
+      "pdf": "body",
+      "toc": true
+    },
+    {
+      "slug": "prologue",
+      "title": "Five Sparks",
+      "source": "prologue.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "getting-started",
+      "title": "Getting Started",
+      "source": "getting-started.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "controls",
+      "title": "Controls",
+      "source": "controls.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "the-hud",
+      "title": "The Window",
+      "source": "the-hud.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "champions",
+      "title": "Champions",
+      "source": "champions.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "companions",
+      "title": "Road Echoes",
+      "source": "companions.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "arms-and-relics",
+      "title": "Arms and Relics",
+      "source": "arms-and-relics.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "merchants",
+      "title": "Merchants and the Forge",
+      "source": "merchants.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "curses",
+      "title": "Curses and Boons",
+      "source": "curses.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "the-road",
+      "title": "The Road",
+      "source": "the-road.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "bestiary",
+      "title": "Bestiary",
+      "source": "bestiary.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "colossi",
+      "title": "Colossi",
+      "source": "colossi.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "after-the-sanctum",
+      "title": "After the Sanctum",
+      "source": "snippets/after-the-sanctum.md",
+      "web": false,
+      "pdf": "body"
+    },
+    {
+      "slug": "fieldcraft",
+      "title": "Fieldcraft",
+      "source": "fieldcraft.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "credits",
+      "title": "Credits",
+      "source": "credits.md",
+      "web": true,
+      "pdf": "body"
+    },
+    {
+      "slug": "notes",
+      "title": "Notes",
+      "source": "notes.md",
+      "web": true,
+      "pdf": "body",
+      "ruled": true
+    },
+    {
+      "slug": "back-cover",
+      "title": "Back Cover",
+      "source": "back-cover.md",
+      "web": true,
+      "pdf": "back"
+    }
+  ]
+}

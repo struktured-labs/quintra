@@ -9,6 +9,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/will.h"
+#include "game/wolfkin_wave.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -182,6 +183,9 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
             dir8_dy[(u8)((dir + 1) & 7)], (u8)(damage + 2), PROJ_SPIKE);
         max_spawn(dir8_dx[(u8)((dir + 7) & 7)],
             dir8_dy[(u8)((dir + 7) & 7)], (u8)(damage + 2), PROJ_SPIKE);
+        // The rush throws a wave of force ahead and guards his front while
+        // the body dash lasts (2026-11-12 Will wave spec).
+        if (first != 0xFF) wolfkin_wave_begin(dir, damage);
     // Tail Spike — Thunderline. One unusually long, wide, penetrating lane.
     } else if (weapon_index == classes[1].starter_weapon) {
         first = max_spawn(dir8_dx[dir], dir8_dy[dir],

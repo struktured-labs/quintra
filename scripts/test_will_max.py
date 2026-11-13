@@ -117,8 +117,14 @@ def main():
         if class_id == 0:
             after_x = pb.memory[PLAYER + 9] | (pb.memory[PLAYER + 10] << 8)
             assert after_x > before_x + 6, "Moonfang MAX did not body-dash"
-            assert all(pb.memory[s + 12] == 122 for s in shots), (
-                "Moonfang MAX stopped being a physical cleave")
+            # Three physical claw lanes plus the Will wave's crescent
+            # (OBJ tiles 200..203; 2026-11-12 Will wave spec).
+            claws = [s for s in shots if pb.memory[s + 12] == 122]
+            waves = [s for s in shots if 200 <= pb.memory[s + 12] <= 203]
+            assert len(claws) >= 3, "Moonfang MAX stopped being a physical cleave"
+            assert len(waves) == 3, "Moonfang MAX lost its Will wave"
+            assert len(claws) + len(waves) == len(shots), (
+                "Moonfang MAX spawned an unexpected shot")
         elif class_id == 1:
             assert pb.memory[shots[0] + 12] == 123
             assert pb.memory[shots[0] + 14] == 6

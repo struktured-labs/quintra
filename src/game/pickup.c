@@ -244,32 +244,58 @@ static u8 pickup_is_visual_town_resident(u8 kind) {
         || kind == PICKUP_WAYFARER || kind == PICKUP_COMPANION;
 }
 
+// Shopkeepers who stand behind their own wares (merchant, smith, rune
+// tender, chartwright). Their shelves sit 24-32px in front of them, just
+// outside the ordinary talk box, so they also answer across the counter.
+static u8 pickup_is_counter_keeper(u8 kind) {
+    return kind == PICKUP_MERCHANT || kind == PICKUP_SMITH
+        || kind == PICKUP_APOTHECARY || kind == PICKUP_CARTOGRAPHER;
+}
+
 // A is intentionally contextual only inside this small proximity box. The
 // player can still attack normally elsewhere in the room, while standing by
 // a resident or peaceful wayfarer makes the conversation win over a stray
 // turbo shot. The nearest speaker wins when a village crowd overlaps ranges.
+//
+// Counter reach (2026-11-12 spec): a counter keeper also answers from the
+// far side of its ware row, up to COUNTER_REACH_Y vertically and
+// COUNTER_REACH_X sideways, but only while the player faces it vertically.
+// Standing at a ware always yields A back to the shelf, so a counter
+// keeper's reach can never steal the purchase stance.
+#define COUNTER_REACH_X 24
+#define COUNTER_REACH_Y 56
+#define WARE_STANCE     12
 u8 pickup_nearby_speaker(u8 *kind_out, u8 *topic_out) BANKED {
     u8 i, found = 0, best_distance = 0xFF;
     for (i = 0; i < MAX_ENTITIES; ++i) {
-        i16 dx, dy;
+        i16 dx, dy, sx, sy;
         u8 kind, distance;
         if (!(entities[i].flags & EF_ACTIVE)
             || entities[i].type != ENT_PICKUP) continue;
         kind = entities[i].ai_data[0];
+        sx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
+        sy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
+        dx = sx < 0 ? -sx : sx;
+        dy = sy < 0 ? -sy : sy;
+        if (kind == PICKUP_SHOP) {
+            // At a ware, A belongs to the shelf, never to the keeper.
+            if (dx <= WARE_STANCE && dy <= WARE_STANCE) return 0;
+            continue;
+        }
         if (!pickup_is_town_resident(kind) && kind != PICKUP_WAYFARER)
             continue;
-        dx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
-        dy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
-        // About 2.5 tiles. Farther than that, A still attacks.
-        if (dx > 20 || dy > 20) continue;
-        // At the edge of the box, facing away must not open dialogue.
-        // Contact (14px) still talks from any facing so a crowded counter
-        // stays reachable.
-        if (dx > 14 || dy > 14) {
-            i16 sx = FIX8_TO_INT(entities[i].x) - (i16)player.x;
-            i16 sy = FIX8_TO_INT(entities[i].y) - (i16)player.y;
+        if (dx > 20 || dy > 20) {
+            // About 2.5 tiles. Farther than that, A still attacks, except
+            // across a keeper's counter while facing the keeper.
+            if (!pickup_is_counter_keeper(kind) || dy <= 20
+                || dx > COUNTER_REACH_X || dy > COUNTER_REACH_Y)
+                continue;
+            if (sy < 0 ? player.facing != FACE_N
+                       : player.facing != FACE_S) continue;
+        } else if (dx > 14 || dy > 14) {
+            // At the edge of the box, facing away must not open dialogue.
+            // Contact (14px) still talks from any facing so a crowded
+            // counter stays reachable.
             if (player.facing == FACE_E && sx < 0) continue;
             if (player.facing == FACE_W && sx > 0) continue;
             if (player.facing == FACE_S && sy < 0) continue;

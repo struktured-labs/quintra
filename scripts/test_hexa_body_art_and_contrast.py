@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Hexa Dragmar body art: silhouette, reserved VRAM, and luminance."""
+import os
+
 from test_hexa_dragmar import (
     EN,
     HEXA_CORE,
@@ -44,6 +46,54 @@ def obj_color(pb, slot, index):
     pb.memory[0xFF6A] = base + 1
     hi = pb.memory[0xFF6B]
     return lo | (hi << 8)
+
+
+def wcag_l(color):
+    """WCAG relative luminance of a CGB BGR555 colour (sRGB = 5-bit << 3)."""
+    out = 0.0
+    for shift, weight in ((0, 0.2126), (5, 0.7152), (10, 0.0722)):
+        c = (((color >> shift) & 31) << 3) / 255.0
+        c = c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+        out += weight * c
+    return out
+
+
+def ratio(a, b):
+    la, lb = wcag_l(a), wcag_l(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+# Floor/monster separation (2026-11-10 redesign, owner hard requirement).
+# Report-only by default because beta36 fails it; HEXA_CONTRAST_GATE=1
+# turns it into a gate once the redesigned palettes land.
+CONTRAST_MIN = {
+    "floor/body c2": 3.0,
+    "floor/body c3": 3.0,
+    "floor/limb c2": 3.0,
+    "body c2/shot warm c2": 3.0,
+    "body c2/shot cool c2": 3.0,
+    "floor/shot warm c2": 3.0,
+    "floor/shot cool c2": 3.0,
+}
+
+
+def floor_monster_contrast(pb):
+    # Floor tile BGT_FLOOR is dominated by colour index 2 of BG palette 0.
+    floor = bg_color(pb, 0, 2)
+    got = {
+        "floor/body c2": ratio(floor, bg_color(pb, 5, 2)),
+        "floor/body c3": ratio(floor, bg_color(pb, 5, 3)),
+        "floor/limb c2": ratio(floor, obj_color(pb, 5, 2)),
+        "body c2/shot warm c2": ratio(bg_color(pb, 5, 2), obj_color(pb, 3, 2)),
+        "body c2/shot cool c2": ratio(bg_color(pb, 5, 2), obj_color(pb, 4, 2)),
+        "floor/shot warm c2": ratio(floor, obj_color(pb, 3, 2)),
+        "floor/shot cool c2": ratio(floor, obj_color(pb, 4, 2)),
+    }
+    for name, value in got.items():
+        print(f"[hexa-art] contrast {name}: {value:.2f}:1 (min {CONTRAST_MIN[name]})")
+    if os.environ.get("HEXA_CONTRAST_GATE") == "1":
+        bad = {k: round(v, 2) for k, v in got.items() if v < CONTRAST_MIN[k]}
+        assert not bad, f"floor/monster contrast below minimum: {bad}"
 
 
 def cell(pb, x, y):
@@ -97,6 +147,7 @@ def main():
         shot4 = y_of(obj_color(pb, 4, 3))
         assert limb - bg5[1] >= 18.0, (limb, bg5[1])
         assert shot3 - bg5[2] >= 19.0 and shot4 - bg5[2] >= 19.0, (shot3, shot4, bg5[2])
+        floor_monster_contrast(pb)
 
         pb.memory[SPOT] = 2
         pb.memory[SPOT_T] = 120

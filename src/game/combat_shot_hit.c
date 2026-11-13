@@ -155,7 +155,8 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
         ej->hp = (u8)(ej->hp - dmg);
         status_try_player_shot(j, i);
         ej->ai_data[7] = weak ? 7 : 4;
-        knockback_enemy(ej, shot->vx, shot->vy, poise);
+        if (!(shot->ai_data[3] & PROJ_FLAG_WILL_WAVE))
+            knockback_enemy(ej, shot->vx, shot->vy, poise);
         if (g_hitstop < (weak ? 2 : 1)) g_hitstop = weak ? 2 : 1;
         if (weak) {
             i16 hx = FIX8_TO_INT(ej->x) + 4;
