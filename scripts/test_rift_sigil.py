@@ -272,8 +272,8 @@ def main():
         "claimed Sigil did not reveal the Warden GOAL node"
     assert pb.memory[bg + 4 * 32 + 9] == BGT_VOID, \
         "tutorial Compass incorrectly revealed a nonlinear Rift link"
-    assert node_tile(19) == BGT_MAP_BIG_UNKNOWN, \
-        "unseen boss cell leaked its identity through the dim footprint"
+    assert node_tile(19) == BGT_VOID, \
+        "unseen boss cell leaked onto the Compass before the sanctuary"
     pb.screen.image.save(ROOT / "tmp" / "dungeon-tile-map.png")
     pb.button("b")
     for _ in range(30):
