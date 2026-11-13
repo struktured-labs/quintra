@@ -20,6 +20,7 @@ PICKUP_FARFOLD_RELIC = 19
 RUN_FARFOLD_CACHE_BIT = 0x02
 SCREEN_ROOM = 5
 SCREEN_MAP = 8
+BGT_VOID = 0
 BGT_MAP_BIG_CACHE = 123
 GX = (1, 4, 7, 10, 13, 16,
       16, 13, 10, 7, 4, 1,
@@ -143,12 +144,21 @@ def main():
         size = dungeon_size(0)
         cache = dungeon_cache_cell(size, seed, 0)
 
-        # SELECT advertises the optional destination before the player walks
-        # there, while keeping it semantically separate from required GOAL.
+        # The optional destination is earned map knowledge: the first SELECT
+        # keeps it blank, while a visited or charted cache room shows the
+        # LOOT node, still semantically separate from the required GOAL.
+        open_compass(pb)
+        assert map_node(pb, cache) == BGT_VOID, (
+            f"cache cell {cache} was revealed before it was visited")
+        close_compass(pb)
+        seen_offset = (20, 29, 31, 33)[cache // 8]
+        seen_before = pb.memory[RS + seen_offset]
+        pb.memory[RS + seen_offset] = seen_before | (1 << (cache % 8))
         open_compass(pb)
         assert map_node(pb, cache) == BGT_MAP_BIG_CACHE, (
-            f"cache cell {cache} lacks its optional LOOT node")
+            f"known cache cell {cache} lacks its optional LOOT node")
         close_compass(pb)
+        pb.memory[RS + seen_offset] = seen_before
 
         # Enter the generated cache cell through the cartridge's real
         # Riftwild-to-dungeon transaction so all room banks and runtime
