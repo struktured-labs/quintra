@@ -139,6 +139,7 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
 }
 
 u8 treasure_cache_guarded(void) BANKED;
+u8 treasure_cache_refused(entity_t *e) BANKED;
 
 u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_MP, x, y);
@@ -846,7 +847,13 @@ u8 pickup_check_player_collision(void) BANKED {
                     }
                     break;
                 case PICKUP_FARFOLD_RELIC:
-                    if (treasure_cache_guarded()) continue;
+                    // Guarded caches stay red until every foe in the
+                    // reliquary falls (some may be off-screen in the large
+                    // room); bank 13 names the reason with a GUARD notice.
+                    if (treasure_cache_refused(&entities[i])) {
+                        any = 1;
+                        continue;
+                    }
                     if (refuse_capped_item(i, entities[i].ai_data[1])) {
                         any = 1;
                         continue;
