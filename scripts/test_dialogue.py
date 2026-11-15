@@ -76,6 +76,10 @@ def boot_waypoint(stage):
     pb, _ram, _entry = boot_to_stage(ROM, addrs, stage, "normal", 0)
     target = advance_to_court(pb, addrs, stage)
     clear_hostiles(pb)
+    # Let the court finish its stage-reveal fade and drop leftover i-frames
+    # from the approach. A held too early neither talks nor shoots.
+    tick(pb, 90)
+    pb.memory[PL + 15] = 0
     speakers = pickups(pb, PICKUP_WAYFARER)
     assert len(speakers) == 1, (
         f"stage {stage + 1} waypoint has {len(speakers)} peaceful creatures")
