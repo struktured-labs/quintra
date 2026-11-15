@@ -179,6 +179,9 @@ u8 room_weapon_surge_ticks;
 // South matches the champion's room-entry facing. Hold Aim fires this after
 // the D-pad is released; a later direction replaces it and then sticks.
 u8 player_aim_dir = 4;
+// Thumbs almost never release both diagonal keys on the same frame. Keep the
+// stored diagonal for this many leftover-cardinal frames, then accept it.
+u8 aim_release_grace;
 
 // These timers are hot only while a B effect is visibly active. Keep their
 // cheap per-frame bookkeeping beside room_tick in bank 1; a far call into the
@@ -1033,6 +1036,7 @@ void room_enter(void) {
         set_sprite_prop(3, 0x01);
     }
     player.facing        = FACE_S;
+    aim_release_grace    = 0;
     player.fire_cooldown = 0;
     player.anim_frame    = 0;
     room_hurt_pose_ticks = 0;
@@ -1181,19 +1185,11 @@ void room_exit(void) {
     // running also avoids a restart blip every time the pack is toggled.
 }
 
-// dir8 index for a live step. Callers only pass a nonzero axis pair.
+// dir8 index for a live step. dx, dy are -1, 0, or +1.
+// A table avoids SDCC's expensive signed comparisons (was ~98 bytes).
+static const u8 room_aim_step_table[9] = {7, 0, 1, 6, 4, 2, 5, 4, 3};
 static u8 room_aim_from_step(i8 dx, i8 dy) {
-    if (dy < 0) {
-        if (dx > 0) return 1;
-        if (dx < 0) return 7;
-        return 0;
-    }
-    if (dy > 0) {
-        if (dx > 0) return 3;
-        if (dx < 0) return 5;
-        return 4;
-    }
-    return (dx < 0) ? 6 : 2;
+    return room_aim_step_table[(u8)((dy + 1) * 3 + (dx + 1))];
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
@@ -1384,8 +1380,20 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (keys & J_DOWN)  { dy = +1; player.facing = FACE_S; moved = 1; }
 
         // Any live direction, including a diagonal, becomes the retained aim.
-        // Releasing the pad leaves player_aim_dir untouched.
-        if (dx || dy) player_aim_dir = room_aim_from_step(dx, dy);
+        // Releasing the pad leaves player_aim_dir untouched, including the
+        // one-frame cardinal a staggered diagonal release produces.
+        if (dx || dy) {
+            u8 n = room_aim_from_step(dx, dy);
+            if (dx && dy) aim_release_grace = 5;
+            else if (aim_release_grace) aim_release_grace--;
+            if (!(player_penta_aim && aim_release_grace
+                  && (player_aim_dir & 1)
+                  && (n == (u8)((player_aim_dir - 1) & 7)
+                      || n == (u8)((player_aim_dir + 1) & 7))))
+                player_aim_dir = n;
+        } else {
+            aim_release_grace = 0;
+        }
 
         // The cardinal facing byte still prefers the previous heading when an
         // A-only diagonal includes it. Shots read player_aim_dir instead.
