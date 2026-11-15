@@ -413,7 +413,8 @@ void tiles_load_spear_sprite(void) BANKED;
 // index, and the defensive slot for the active champion's shield identity.
 void tiles_load_weapon_sprite(u8 weapon_index) BANKED;
 void tiles_load_shield_sprite(u8 class_id) BANKED;
-void tiles_load_miniboss(u8 stage) BANKED;        // stage's distinct 16x16 mini-boss into SPR_BOSS
+void tiles_load_miniboss(u8 stage) BANKED;
+void miniboss_pose_load(u8 pose_key) BANKED;  // variant * 3 + pose into SPR_BOSS        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
 void cinder_rex_pose_b_load(void) BANKED;
 void crystal_pose_b_load(void) BANKED;
