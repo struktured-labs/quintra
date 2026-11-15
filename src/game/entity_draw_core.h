@@ -7,7 +7,10 @@
 entity_anim_counter++;
 // Two-frame enemy animation replaces the old whole-sprite X flip: on each
 // 16-frame beat the present enemy types stream their frame into OBJ VRAM.
-if (!(entity_anim_counter & 15)) enemy_anim_tick();
+// Rooms with no hostiles (shops, towns) and the Hexa sanctum, which runs on a
+// measured frame budget, skip the call entirely.
+if (!(entity_anim_counter & 15) && entity_enemy_count && !hexa_boss_active)
+    enemy_anim_tick();
 if (large_boss_index != 255) oam = large_boss_draw(oam);
 /* Limb quads own OAM 4..23. Projectiles start after them, and the quads are
    written again after this pass so a projectile hide cannot punch a hole. */
