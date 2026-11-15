@@ -138,7 +138,6 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
 }
 
 u8 treasure_cache_guarded(void) BANKED;
-void treasure_cache_tick(entity_t *e) BANKED;
 u8 treasure_cache_refused(entity_t *e) BANKED;
 
 u8 pickup_spawn_mp(fix8_t x, fix8_t y) BANKED {
@@ -524,7 +523,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_FARFOLD_RELIC) {
-        treasure_cache_tick(e);
+        e->palette = treasure_cache_guarded() ? 4 : 6;
         return;
     }
     if (e->ai_data[0] == PICKUP_RIFTWELL
