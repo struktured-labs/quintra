@@ -42,6 +42,8 @@ void hud_show_healing_blocked(void) BANKED;
 void hud_show_hunger_curse(void) BANKED;
 void hud_show_mp_full(void) BANKED;
 void hud_show_hp_full(void) BANKED;
+// Name the capped stat when a boost cannot apply, e.g. SPDMAX.
+void hud_show_stat_max(u8 stat) BANKED;
 void hud_show_boomerang(void) BANKED;
 void hud_show_hookshot(void) BANKED;
 void hud_show_secondary(u8 bomb) BANKED;
