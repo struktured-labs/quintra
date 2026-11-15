@@ -602,14 +602,14 @@ pub const MIRE_SPORE: [&str; 8] = [ // folded cap, bright volatile core, rootlet
 ];
 
 pub const ECHO_GUARD: [&str; 8] = [ // tall shield, eye slit, countering spear
-    "..111.3.",
-    ".1222133",
-    "1233323.",
-    "1231323.",
-    "1233323.",
-    ".1222133",
-    "..111.3.",
-    ".1.1..3.",
+    ".2222.3.",
+    "21111233",
+    "2211223.",
+    "2133123.",
+    "2111123.",
+    ".211223.",
+    "..22223.",
+    ".2.2..3.",
 ];
 
 pub const FROST_LANCER: [&str; 8] = [ // icy visor, raised lance, split skates
@@ -646,14 +646,14 @@ pub const SHARD_CRAB: [&str; 8] = [ // low crystal shell, bright cracked core
 ];
 
 pub const VOID_HALO: [&str; 8] = [ // fractured ring with a dark central void
-    "..1331..",
-    ".132231.",
-    "132..231",
-    "32.33.23",
-    "32.33.23",
-    "132..231",
-    ".132231.",
-    "..1331..",
+    "..3223..",
+    ".321123.",
+    "32111123",
+    "21311312",
+    "21111112",
+    "32111123",
+    ".321123.",
+    "..3223..",
 ];
 
 pub const RIFT_CANTOR: [&str; 8] = [ // antlered mask around an open chanting mouth
@@ -680,24 +680,24 @@ pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
 
 pub const DREAD_BELL: [&str; 8] = [ // hanging iron bell; pale clapper reads at a glance
     "...33...",
-    "..3223..",
-    ".321112.",
-    "32111123",
-    "32111123",
-    ".233332.",
     "..2112..",
-    ".3.22.3.",
+    ".211112.",
+    ".221122.",
+    "21211212",
+    "21111112",
+    "33333333",
+    ".3.33.3.",
 ];
 
 pub const RIFT_WARDEN: [&str; 8] = [ // split-mask sentinel, open outer lanes
     "...33...",
     "..3223..",
+    ".322223.",
+    "32122123",
+    "32111123",
     ".321123.",
-    "32133123",
-    "32133123",
-    ".312213.",
-    "..31.13.",
-    ".3.1..3.",
+    ".31..13.",
+    ".32..23.",
 ];
 
 pub const PRISM_SKITTER: [&str; 8] = [ // faceted core with asymmetric orbit fins
@@ -712,25 +712,25 @@ pub const PRISM_SKITTER: [&str; 8] = [ // faceted core with asymmetric orbit fin
 ];
 
 pub const DUSK_MIDGE: [&str; 8] = [ // forked wings, bright eyes, tail spark
-    "...3.3..",
-    "..32132.",
-    ".3211123",
-    "32133123",
-    "21111112",
-    ".321112.",
-    "..3.2.3.",
-    ".3.....3",
+    "..3..3..",
+    "..2..2..",
+    ".211112.",
+    "32311323",
+    "32111123",
+    ".211112.",
+    ".3.33.3.",
+    "3.3..3.3",
 ];
 
 pub const SUNWHEEL: [&str; 8] = [ // radiant ring, offset spokes, dark core
-    "...3.3..",
-    ".332123.",
-    ".3211123",
-    "32133123",
-    "21133112",
-    ".3211123",
-    ".312123.",
-    "..3.3...",
+    "...33...",
+    ".311113.",
+    ".122221.",
+    "31322313",
+    "31222213",
+    ".122221.",
+    ".311113.",
+    "...33...",
 ];
 
 pub const CINDER_KITE: [&str; 8] = [ // wide ember wings, suspended furnace core
@@ -1823,6 +1823,105 @@ pub const RIFT_CANTOR_B: [&str; 8] = [
     ".3.22.3.",
 ];
 
+pub const ECHO_GUARD_B: [&str; 8] = [
+    ".2222...",
+    "211112..",
+    "221122..",
+    "21331333",
+    "211112..",
+    ".21122..",
+    "..2222..",
+    ".2..2...",
+];
+pub const DREAD_BELL_B: [&str; 8] = [
+    "........",
+    "...33...",
+    "..2112..",
+    ".211112.",
+    ".212212.",
+    "21111112",
+    "33333333",
+    "3..33..3",
+];
+pub const RIFT_WARDEN_B: [&str; 8] = [
+    "........",
+    "...33...",
+    "..3223..",
+    ".322223.",
+    "32122123",
+    "32111123",
+    ".321123.",
+    "3.3..3.3",
+];
+pub const DUSK_MIDGE_B: [&str; 8] = [
+    "..3..3..",
+    "..2..2..",
+    ".211112.",
+    ".231132.",
+    "32111123",
+    "33211233",
+    "3.3..3.3",
+    ".3.33.3.",
+];
+pub const SUNWHEEL_B: [&str; 8] = [
+    "3......3",
+    ".311113.",
+    ".122221.",
+    "11322311",
+    "11222211",
+    ".122221.",
+    ".311113.",
+    "3......3",
+];
+pub const VOID_HALO_B: [&str; 8] = [
+    "..2332..",
+    ".231132.",
+    "23111132",
+    "31311313",
+    "31111113",
+    "23111132",
+    ".231132.",
+    "..2332..",
+];
+// Warlock bruiser redrawn at native 16x16 (was 2x-scaled 8x8): hooded caster,
+// hands raised with sparks on B.
+pub const BRUISER_WARLOCK_A: [&str; 16] = [
+    "................",
+    ".......22.......",
+    "......2112......",
+    ".....211112.....",
+    "....21333312....",
+    "...2112222112...",
+    "...2123223212...",
+    ".33211222211233.",
+    "3332111221112333",
+    ".33211111111233.",
+    "..211111111112..",
+    "..211111111112..",
+    "..211112211112..",
+    "..21112..21112..",
+    "..2222....2222..",
+    "................",
+];
+pub const BRUISER_WARLOCK_B: [&str; 16] = [
+    "..3..........3..",
+    ".333...22...333.",
+    "..3...2112...3..",
+    "..2..211112..2..",
+    "..2.21333312.2..",
+    "..221122221122..",
+    "...2123223212...",
+    "...2112222112...",
+    "...2111221112...",
+    "..211111111112..",
+    "..211111111112..",
+    ".21111111111112.",
+    ".21111122111112.",
+    ".21112....21112.",
+    ".2222......2222.",
+    "................",
+];
+
 pub struct EnemyAnim {
     pub eid: u8,
     pub slot: u8,
@@ -1837,7 +1936,7 @@ const fn anim(eid: u8, slot: u8, a: &'static [&'static str],
 
 // Content enemy id -> canonical OBJ slot (content/src/ids.rs). Bosses, the
 // mini-boss Sentinel, Facet Ram and the Reaper own their own pose drivers.
-pub const ENEMY_ANIM: [EnemyAnim; 31] = [
+pub const ENEMY_ANIM: [EnemyAnim; 32] = [
     anim( 0,  20, &CRAWLER, Some(&CRAWLER_B)),
     anim( 2,  21, &HORNET, Some(&HORNET_B)),
     anim( 3,  22, &SKELETON, Some(&SKELETON_B)),
@@ -1845,6 +1944,7 @@ pub const ENEMY_ANIM: [EnemyAnim; 31] = [
     anim( 5,  34, &WISP, Some(&WISP_B)),
     anim( 6,  60, &BRUISER_BOMBER_A, Some(&BRUISER_BOMBER_B)),
     anim( 7,  37, &SHADE, Some(&SHADE_B)),
+    anim( 8,  64, &BRUISER_WARLOCK_A, Some(&BRUISER_WARLOCK_B)),
     anim( 9,  39, &ROPE, Some(&ROPE_B)),
     anim(10,  68, &SENTRY, Some(&SENTRY_B)),
     anim(11,  72, &FOLD_STAR, Some(&FOLD_STAR_B)),
@@ -1854,20 +1954,20 @@ pub const ENEMY_ANIM: [EnemyAnim; 31] = [
     anim(15,  76, &RIFT_OOZE, Some(&RIFT_OOZE_B)),
     anim(16,  77, &MIRROR_MOTH, Some(&MIRROR_MOTH_B)),
     anim(17,  78, &MIRE_SPORE, Some(&MIRE_SPORE_B)),
-    anim(18,  80, &ECHO_GUARD, None),
+    anim(18,  80, &ECHO_GUARD, Some(&ECHO_GUARD_B)),
     anim(19, 124, &RUNE_LANTERN, Some(&RUNE_LANTERN_B)),
-    anim(20, 125, &DREAD_BELL, None),
-    anim(21,  81, &RIFT_WARDEN, None),
+    anim(20, 125, &DREAD_BELL, Some(&DREAD_BELL_B)),
+    anim(21,  81, &RIFT_WARDEN, Some(&RIFT_WARDEN_B)),
     anim(22,  69, &PRISM_SKITTER, Some(&PRISM_SKITTER_B)),
-    anim(23,  79, &DUSK_MIDGE, None),
-    anim(24,  79, &SUNWHEEL, None),
+    anim(23,  79, &DUSK_MIDGE, Some(&DUSK_MIDGE_B)),
+    anim(24,  79, &SUNWHEEL, Some(&SUNWHEEL_B)),
     anim(25,  79, &CINDER_KITE, Some(&CINDER_KITE_B)),
     anim(26,  79, &BOG_TOAD, Some(&BOG_TOAD_B)),
     anim(27,  79, &BRAMBLE_SPRITE, Some(&BRAMBLE_SPRITE_B)),
     anim(28,  79, &FROST_LANCER, Some(&FROST_LANCER_B)),
     anim(29,  79, &VINE_COIL, Some(&VINE_COIL_B)),
     anim(30,  79, &SHARD_CRAB, Some(&SHARD_CRAB_B)),
-    anim(31,  79, &VOID_HALO, None),
+    anim(31,  79, &VOID_HALO, Some(&VOID_HALO_B)),
     anim(32,  70, &RIFT_CANTOR, Some(&RIFT_CANTOR_B)),
 ];
 
@@ -2011,5 +2111,5 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 15] = [
 pub const BRUISER_SRC: [(&str, &[&str]); 3] = [
     ("orc", &BRUISER_ORC_A),
     ("bomber", &BRUISER_BOMBER_A),
-    ("warlock", &WARLOCK),
+    ("warlock", &BRUISER_WARLOCK_A),
 ];
