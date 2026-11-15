@@ -522,6 +522,9 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     }
     if (pickup_is_town_resident(e->ai_data[0])) return;
     if (e->ai_data[0] == PICKUP_FARFOLD_RELIC) {
+        // ai_data[4] paces the GUARD refusal cue like the heart/MP rule.
+        if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        else if (e->ai_data[4]) e->ai_data[4]--;
         e->palette = treasure_cache_guarded() ? 4 : 6;
         return;
     }
@@ -873,7 +876,14 @@ u8 pickup_check_player_collision(void) BANKED {
                     }
                     break;
                 case PICKUP_FARFOLD_RELIC:
-                    if (treasure_cache_guarded()) continue;
+                    // Guarded caches stay red until every foe in the
+                    // reliquary falls (some may be off-screen in the large
+                    // room). Say so instead of silently ignoring the hero.
+                    if (treasure_cache_guarded()) {
+                        if (refuse_cue(i)) hud_show_cache_guarded();
+                        any = 1;
+                        continue;
+                    }
                     if (refuse_capped_item(i, entities[i].ai_data[1])) {
                         any = 1;
                         continue;
