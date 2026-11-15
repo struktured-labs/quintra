@@ -117,6 +117,9 @@ jobs:
       - name: PyBoy merchant stock
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_merchant_stock.py
 
+      - name: PyBoy Antidote and poison
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_antidote.py
+
       - name: PyBoy Wolfkin Will wave
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_wolfkin_will_wave.py
 

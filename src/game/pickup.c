@@ -1197,7 +1197,9 @@ u8 pickup_check_player_collision(void) BANKED {
                                 break;
                         }
                         // Shelf identity lives in bank 7 so this bank keeps its floor.
-                        shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
+                        // The restocked Antidote shelf owns no sold-out bit.
+                        if (ware != WARE_ANTIDOTE)
+                            shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
                         entity_kill(i);
                     } else refuse_cue(i);           // not enough coins
                     any = 1;

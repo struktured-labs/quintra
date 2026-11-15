@@ -77,9 +77,9 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
 #define ANTIDOTE_TOWN_X 152
 #define ANTIDOTE_TOWN_Y 64
 #define RIFT_TRADER_X   128
-#define RIFT_TRADER_Y   40
+#define RIFT_TRADER_Y   20
 #define RIFT_ANTIDOTE_X 128
-#define RIFT_ANTIDOTE_Y 64
+#define RIFT_ANTIDOTE_Y 40
 
 static void paint_shop_price(u8 tx, u8 price) {
     room_tilemap[10][tx]     = HUD_COIN;
@@ -1404,6 +1404,8 @@ void procgen_generate_current_room(void) BANKED {
             // Wayside trader: the Riftwild's one shop. It sells only the
             // Antidote, restocked on every visit, because the overworld's
             // Mire Spores and Brambles poison far from any town healer.
+            // The vial sits north of the y=64 trail so walking past the
+            // crossing never buys it by accident.
             pickup_spawn_merchant(FIX8(RIFT_TRADER_X), FIX8(RIFT_TRADER_Y));
             spawn_shop_ware(RIFT_ANTIDOTE_X, RIFT_ANTIDOTE_Y,
                 WARE_ANTIDOTE, ANTIDOTE_PRICE);
@@ -1591,9 +1593,9 @@ void procgen_generate_current_room(void) BANKED {
                     spawn_shop_ware(116, 64, tactical, tactical_price);
                     paint_shop_price(13, tactical_price);
                 }
-                // Antidote shelf: always restocked (x=140 is outside the
-                // shop_bought slot map), so poison always has a known cure.
-                spawn_shop_ware(140, 64, WARE_ANTIDOTE, ANTIDOTE_PRICE);
+                // Antidote shelf: always restocked (its purchase never
+                // sets a shop_bought bit), so poison always has a cure.
+                spawn_shop_ware(136, 64, WARE_ANTIDOTE, ANTIDOTE_PRICE);
                 paint_shop_price(16, ANTIDOTE_PRICE);
             }
         } else {

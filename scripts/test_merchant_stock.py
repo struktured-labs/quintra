@@ -43,8 +43,10 @@ def shelves(pb):
     found = []
     for i in range(32):
         entity = EN + i * 28
+        # Ware 22 is the always-restocked Antidote; it has no sold bit.
         if (pb.memory[entity] == 3
-                and pb.memory[entity + 17] == PICKUP_SHOP):
+                and pb.memory[entity + 17] == PICKUP_SHOP
+                and pb.memory[entity + 18] != 22):
             found.append((
                 pb.memory[entity + 3],
                 pb.memory[entity + 18],
