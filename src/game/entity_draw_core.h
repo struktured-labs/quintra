@@ -5,6 +5,9 @@
 // lives as one source fragment so the zero-cost one-screen renderer and the
 // banked two-axis world renderer cannot drift apart.
 entity_anim_counter++;
+// Two-frame enemy animation replaces the old whole-sprite X flip: on each
+// 16-frame beat the present enemy types stream their frame into OBJ VRAM.
+if (!(entity_anim_counter & 15)) enemy_anim_tick();
 if (large_boss_index != 255) oam = large_boss_draw(oam);
 /* Limb quads own OAM 4..23. Projectiles start after them, and the quads are
    written again after this pass so a projectile hide cannot punch a hole. */
@@ -108,8 +111,6 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     {
         OAM_item_t *it = &shadow_OAM[oam];
         u8 prop = pal;
-        if (e->type == ENT_ENEMY && (entity_anim_counter & 0x10))
-            prop |= S_FLIPX;
         if (e->type == ENT_PROJECTILE) {
             if (e->ai_data[4] & PROJ_VIS_FLIP_X) prop |= S_FLIPX;
             if (e->ai_data[4] & PROJ_VIS_FLIP_Y) prop |= S_FLIPY;

@@ -66,6 +66,8 @@ extern u8 entity_enemy_count;
 // combat_resolve clears it, then skips the pickup scan if it stays clear.
 extern u8 entity_pickup_pending;
 extern u8 entity_anim_counter;
+// Streams the current two-frame enemy beat into OBJ VRAM (enemy_anim_gen.c).
+void enemy_anim_tick(void) BANKED;
 
 // 8-direction movement deltas (px scaled per dir index)
 extern const i8 dir8_dx[8];

@@ -259,12 +259,12 @@ pub const CRAWLER: [&str; 8] = [   // spider/tick: splayed legs, wide body
 ];
 
 pub const HORNET: [&str; 8] = [    // wasp: wings out, narrow body, stinger
-    "3..22..3",
-    "33.11.33",
+    "33.22.33",
+    "33233233",
     ".321123.",
-    "..2132..",
     "..2112..",
-    "..2312..",
+    "..2222..",
+    "..2112..",
     "...22...",
     "...2....",
 ];
@@ -1504,6 +1504,252 @@ pub const MINIBOSS_ANIM: [(&str, [&[&str]; 3]); 5] = [
     ("warlock", [&MB_WARLOCK_IDLE, &MB_WARLOCK_STEP, &MB_WARLOCK_TELL]),
 ];
 
+// ---- Enemy animation (GPT Image 2.6 Sunburst monster pass, 2026-11-15) ----
+// Second frames for the redrawn rank and file. Frame A stays the resident
+// art above; enemy_anim_tick streams A/B into the canonical OBJ slot on the
+// shared 16-frame beat. Enemies without an authored B use their mirrored A,
+// which reproduces the old whole-sprite X flip exactly.
+pub const CRAWLER_B: [&str; 8] = [
+    ".2....2.",
+    "..2112..",
+    "22211222",
+    ".231132.",
+    ".211112.",
+    "22211222",
+    "..2..2..",
+    ".2....2.",
+];
+pub const HORNET_B: [&str; 8] = [
+    "...22...",
+    "..2332..",
+    "33211233",
+    "33211233",
+    ".322223.",
+    "..2112..",
+    "...22...",
+    "...2....",
+];
+pub const ROPE_B: [&str; 8] = [
+    ".22.....",
+    "211323..",
+    "211122..",
+    ".2211122",
+    "....2112",
+    "...2112.",
+    "..2112..",
+    ".222....",
+];
+pub const FOLD_STAR_B: [&str; 8] = [
+    "...22...",
+    "..2112..",
+    ".213312.",
+    "21333312",
+    "21333312",
+    ".213312.",
+    "..2112..",
+    "...22...",
+];
+pub const FLUTTERBAT_B: [&str; 8] = [
+    "........",
+    "...22...",
+    "..2112..",
+    "12133121",
+    "11222211",
+    "11.22.11",
+    "1......1",
+    "........",
+];
+pub const GLOAM_LEECH_B: [&str; 8] = [
+    "........",
+    "..2222..",
+    ".231132.",
+    "23133132",
+    ".231132.",
+    "..2222..",
+    "..2..2..",
+    ".2....2.",
+];
+pub const RIFT_OOZE_B: [&str; 8] = [
+    "........",
+    ".1....1.",
+    "..2222..",
+    ".123321.",
+    "12322321",
+    "12222221",
+    ".222222.",
+    "........",
+];
+pub const CINDER_KITE_B: [&str; 8] = [
+    "3.3..3.3",
+    "33.22.33",
+    ".332233.",
+    "..2112..",
+    ".213312.",
+    "..2112..",
+    "...33...",
+    "........",
+];
+pub const VINE_COIL_B: [&str; 8] = [
+    "..2.2...",
+    ".23232..",
+    ".2311132",
+    "23122132",
+    "23133132",
+    ".2311132",
+    "..23232.",
+    "..2.2...",
+];
+pub const SHARD_CRAB_B: [&str; 8] = [
+    "3..33..3",
+    ".332233.",
+    "32111123",
+    "31122113",
+    "31233213",
+    "32111123",
+    "3.3..3.3",
+    ".3....3.",
+];
+// Bruiser tier redrawn at native 16x16 (was 2x-scaled 8x8 art). A bruiser
+// sits a size class below its mini-boss cousin so the two never read alike.
+pub const BRUISER_ORC_A: [&str; 16] = [
+    "................",
+    "................",
+    ".....222222.....",
+    "....21111112....",
+    "...2111111112...",
+    "..222133133122..",
+    ".2321111111112..",
+    ".2332131131312..",
+    ".23322111111222.",
+    "..2332222222112.",
+    "..2112111111212.",
+    "...222111111222.",
+    ".....2111112....",
+    "....2112.2112...",
+    "....2112.2112...",
+    "....222..222....",
+];
+pub const BRUISER_ORC_B: [&str; 16] = [
+    "................",
+    "................",
+    "................",
+    ".....222222.....",
+    "....21111112....",
+    "...2111111112...",
+    ".22.2133133122..",
+    "2332111111112...",
+    "23322131131312..",
+    ".23322111111222.",
+    "..2112222222112.",
+    "...222111111212.",
+    ".....2111112222.",
+    "....2112.2112...",
+    "...2112...2112..",
+    "...222.....222..",
+];
+pub const BRUISER_BOMBER_A: [&str; 16] = [
+    "................",
+    "..........3.....",
+    ".........3.3....",
+    "........2.......",
+    ".......2........",
+    ".....22222......",
+    "....2111112.....",
+    "...211111132....",
+    "...213113112....",
+    "...213113112....",
+    "...211111112....",
+    "...212222212....",
+    "....2111112.....",
+    ".....22222......",
+    "....212..212....",
+    "....22....22....",
+];
+pub const BRUISER_BOMBER_B: [&str; 16] = [
+    "................",
+    "................",
+    "..........3.....",
+    "........2333....",
+    ".......2..3.....",
+    ".....22222......",
+    "....2111112.....",
+    "...211111132....",
+    "...213113112....",
+    "...213113112....",
+    "...211111112....",
+    "...212222212....",
+    "....2111112.....",
+    ".....22222......",
+    "...212....212...",
+    "...22......22...",
+];
+pub const CINDER_MAW_MEDIUM_B: [&str; 16] = [
+    ".....3.33.3.....",
+    "......3223......",
+    "....32111123....",
+    "....32111123....",
+    "...3211331123...",
+    "...3213333123...",
+    "...3213333123...",
+    "...3211331123...",
+    "....32111123....",
+    "....33211233....",
+    ".....321123.....",
+    ".....321123.....",
+    "......3223......",
+    ".....33..33.....",
+    ".....3....3.....",
+    "................",
+];
+
+pub struct EnemyAnim {
+    pub eid: u8,
+    pub slot: u8,
+    pub a: &'static [&'static str],
+    pub b: Option<&'static [&'static str]>,
+}
+
+const fn anim(eid: u8, slot: u8, a: &'static [&'static str],
+              b: Option<&'static [&'static str]>) -> EnemyAnim {
+    EnemyAnim { eid, slot, a, b }
+}
+
+// Content enemy id -> canonical OBJ slot (content/src/ids.rs). Bosses, the
+// mini-boss Sentinel, Facet Ram and the Reaper own their own pose drivers.
+pub const ENEMY_ANIM: [EnemyAnim; 31] = [
+    anim( 0,  20, &CRAWLER, Some(&CRAWLER_B)),
+    anim( 2,  21, &HORNET, Some(&HORNET_B)),
+    anim( 3,  22, &SKELETON, None),
+    anim( 4,  56, &BRUISER_ORC_A, Some(&BRUISER_ORC_B)),
+    anim( 5,  34, &WISP, None),
+    anim( 6,  60, &BRUISER_BOMBER_A, Some(&BRUISER_BOMBER_B)),
+    anim( 7,  37, &SHADE, None),
+    anim( 9,  39, &ROPE, Some(&ROPE_B)),
+    anim(10,  68, &SENTRY, None),
+    anim(11,  72, &FOLD_STAR, Some(&FOLD_STAR_B)),
+    anim(12,  73, &FLUTTERBAT, Some(&FLUTTERBAT_B)),
+    anim(13,  74, &GLOAM_LEECH, Some(&GLOAM_LEECH_B)),
+    anim(14,  64, &CINDER_MAW_MEDIUM, Some(&CINDER_MAW_MEDIUM_B)),
+    anim(15,  76, &RIFT_OOZE, Some(&RIFT_OOZE_B)),
+    anim(16,  77, &MIRROR_MOTH, None),
+    anim(17,  78, &MIRE_SPORE, None),
+    anim(18,  80, &ECHO_GUARD, None),
+    anim(19, 124, &RUNE_LANTERN, None),
+    anim(20, 125, &DREAD_BELL, None),
+    anim(21,  81, &RIFT_WARDEN, None),
+    anim(22,  69, &PRISM_SKITTER, None),
+    anim(23,  79, &DUSK_MIDGE, None),
+    anim(24,  79, &SUNWHEEL, None),
+    anim(25,  79, &CINDER_KITE, Some(&CINDER_KITE_B)),
+    anim(26,  79, &BOG_TOAD, None),
+    anim(27,  79, &BRAMBLE_SPRITE, None),
+    anim(28,  79, &FROST_LANCER, None),
+    anim(29,  79, &VINE_COIL, Some(&VINE_COIL_B)),
+    anim(30,  79, &SHARD_CRAB, Some(&SHARD_CRAB_B)),
+    anim(31,  79, &VOID_HALO, None),
+    anim(32,  70, &RIFT_CANTOR, None),
+];
+
 // ---- Emission lists (order matters — matches the Python pipeline) ----
 
 pub const PLAYERS: [(&str, &[&str]); 5] = [
@@ -1642,7 +1888,7 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 15] = [
 // Bruiser tier: heavy enemies rendered at player size (16x16). The C side
 // loads these into 4-tile blocks and flags eids 4/6/8 as big16.
 pub const BRUISER_SRC: [(&str, &[&str]); 3] = [
-    ("orc", &ORC),
-    ("bomber", &BOMBER),
+    ("orc", &BRUISER_ORC_A),
+    ("bomber", &BRUISER_BOMBER_A),
     ("warlock", &WARLOCK),
 ];
