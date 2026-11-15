@@ -193,6 +193,13 @@ u8   run_state_boss_room(u8 stage);
 u8   run_state_dungeon_size(void);
 u8   run_state_dungeon_local(void);
 u8   run_state_dungeon_cell(void);
+// Seed-and-stage local cell where the current dungeon begins. The pick is
+// deterministic, stays a fair walk from the boss, and spreads starts across
+// corners, edges, and interior cells instead of always using the upper left.
+u8   run_state_dungeon_entry_cell(void) BANKED;
+void run_state_place_at_entry(void) BANKED;
+void run_state_enter_from_world(void) BANKED;
+void run_state_queue_next_dungeon_prefix(u8 count) BANKED;
 // Return the local cell of the reciprocal 6x5 maze neighbour in `dir`, or
 // 0xFF when that edge is absent. Seed-selected safe folds give each dungeon
 // horizontal districts, meaningful branches/dead ends, and one fixed

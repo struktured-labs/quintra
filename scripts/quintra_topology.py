@@ -75,21 +75,134 @@ def dungeon_maze_neighbor(cell: int, size: int, direction: int,
     return neighbor if col == fold_col else None
 
 
+ENTRY_MIN_BOSS_DIST = 7
+
+
+def dungeon_entry_mix(run_seed: int, stage: int) -> int:
+    """Mirror the cartridge's 16-bit start-cell mixer."""
+    mix = (run_seed & 0xFF) | (((run_seed >> 8) & 0xFF) << 8)
+    mix ^= ((run_seed >> 16) & 0xFF) | (((run_seed >> 24) & 0xFF) << 8)
+    mix ^= (stage * 251)
+    return mix & 0xFFFF
+
+
+def dungeon_grid_kind(cell: int, size: int) -> int:
+    """0=corner, 1=edge, 2=interior on the occupied 6x5 footprint."""
+    col, row = dungeon_cell_xy(cell)
+    degree = 0
+    for ncol, nrow in ((col, row - 1), (col + 1, row),
+                       (col, row + 1), (col - 1, row)):
+        if not (0 <= ncol < GRID_W and 0 <= nrow < GRID_H):
+            continue
+        offset = (GRID_W - 1 - ncol) if nrow & 1 else ncol
+        neighbor = nrow * GRID_W + offset
+        if neighbor < size:
+            degree += 1
+    if degree <= 2:
+        return 0
+    if degree == 3:
+        return 1
+    return 2
+
+
+def dungeon_distances_from(size: int, run_seed: int, stage: int,
+                           start: int) -> dict[int, int]:
+    from collections import deque
+    queue = deque([start])
+    result = {start: 0}
+    while queue:
+        cell = queue.popleft()
+        for direction in range(4):
+            neighbor = dungeon_maze_neighbor(
+                cell, size, direction, run_seed, stage)
+            if neighbor is not None and neighbor not in result:
+                result[neighbor] = result[cell] + 1
+                queue.append(neighbor)
+    return result
+
+
+def dungeon_entry_cell(size: int, run_seed: int, stage: int) -> int:
+    """Mirror run_state_dungeon_entry_cell."""
+    if size < 4:
+        return 0
+    dist = dungeon_distances_from(size, run_seed, stage, size - 1)
+    mix = dungeon_entry_mix(run_seed, stage)
+    rot = mix % 3
+    for step in range(3):
+        kind = (rot + step) % 3
+        candidates = [
+            cell for cell in range(size - 3)
+            if dist.get(cell, 0xFF) >= ENTRY_MIN_BOSS_DIST
+            and dist.get(cell, 0xFF) != 0xFF
+            and dungeon_grid_kind(cell, size) == kind
+            and cell not in (5, 11, 17, 23)
+            and sum(
+                dungeon_maze_neighbor(cell, size, direction, run_seed, stage)
+                is not None for direction in range(4)
+            ) <= 2
+        ]
+        if not candidates:
+            continue
+        return candidates[(mix >> 3) % len(candidates)]
+    return 0
+
+
+def dungeon_entry_room(stage: int, run_seed: int) -> int:
+    """Return the global room counter of a stage's seeded entry room."""
+    return STAGE_START[stage] + dungeon_entry_cell(
+        dungeon_size(stage), run_seed, stage)
+
+
+def dungeon_entry_prefix(size: int, run_seed: int, stage: int,
+                         count: int) -> list[int]:
+    """First ``count`` cells discovered from the seeded entry, including it."""
+    if count <= 0:
+        return []
+    entry = dungeon_entry_cell(size, run_seed, stage)
+    from collections import deque
+    seen = {entry}
+    queue = deque([entry])
+    prefix = []
+    while queue and len(prefix) < count:
+        cell = queue.popleft()
+        prefix.append(cell)
+        for direction in range(4):
+            neighbor = dungeon_maze_neighbor(
+                cell, size, direction, run_seed, stage)
+            if neighbor is None or neighbor in seen:
+                continue
+            seen.add(neighbor)
+            queue.append(neighbor)
+    return prefix
+
+
+def dungeon_entry_prefix_mask(size: int, run_seed: int, stage: int,
+                              count: int) -> int:
+    """Bit 0 of the low byte is cell 0, matching next_dungeon_reveal."""
+    mask = 0
+    for cell in dungeon_entry_prefix(size, run_seed, stage, count):
+        mask |= 1 << cell
+    return mask
+
+
 def mission_graph(size: int, run_seed: int, stage: int) -> dict[str, int]:
     """Mirror the cartridge's pre-room seeded objective graph."""
     limit = size - 3
     mix = (run_seed ^ (run_seed >> 8) ^ (run_seed >> 16)
            ^ (run_seed >> 24)) & 0xFF
     mix = (mix + stage * 41) & 0xFF
-    reserved = {0, 2, 5, 8, 11, 15, 17, 23}
+    entry = dungeon_entry_cell(size, run_seed, stage)
+    landmarks = {0, 2, 5, 8, 11, 15, 17, 23}
     cache_reserve = next((cell for cell in range(size - 4, 0, -1)
-        if cell not in reserved and sum(
+        if cell not in landmarks and sum(
             dungeon_maze_neighbor(cell, size, direction, run_seed, stage)
             is not None for direction in range(4)) == 1), None)
+    reserved = set(landmarks)
+    reserved.add(entry)
     if cache_reserve is not None:
         reserved.add(cache_reserve)
-    queue = [0]
-    seen = {0}
+    queue = [entry]
+    seen = {entry}
     eligible = []
     for cell in queue:
         if cell < limit and cell not in reserved:

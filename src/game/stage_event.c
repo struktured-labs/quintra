@@ -125,7 +125,8 @@ void stage_event_prepare_room(void) BANKED {
     // grammar before introducing its signature verb. Thereafter, one event
     // in each four-cell phrase is common enough to define the region without
     // turning the first post-foyer route into an unexplained mandatory gate.
-    if (local < 5 || (local & 3) != 1) return;
+    if (local == run_state_dungeon_entry_cell()
+        || local < 5 || (local & 3) != 1) return;
     if (run_state.bosses_beaten == 1) prepare_roots();
     else if (run_state.bosses_beaten == 2) prepare_furnace();
     else if (run_state.bosses_beaten == 3) stage_event_prepare_arrows();

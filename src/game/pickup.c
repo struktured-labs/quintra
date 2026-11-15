@@ -1240,7 +1240,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // dungeon; dungeon_seen belongs to the current screen
                     // and is reset at the north gate.
                     if (entities[i].state == 0) {
-                        run_state.next_dungeon_reveal |= 0x03;
+                        run_state_queue_next_dungeon_prefix(2);
                         entities[i].state = 1;
                         entities[i].palette = 0x02;
                         sfx_play_reward(SFX_REWARD_MAGIC);

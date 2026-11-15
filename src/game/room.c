@@ -2093,8 +2093,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 const zelda_screen_t *cell =
                     &zelda_overworlds[0].screen_grid[run_state.world_screen];
                 if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
-                    run_state_begin_dungeon();
-                    run_state.room_counter++;
+                    run_state_enter_from_world();
                 } else if (cell->kind == ZELDA_CELL_VAULT) {
                     run_state.world_screen =
                         (u8)(run_state.world_return_screen & 0x3Fu);
@@ -2354,8 +2353,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                                 // from the current compass. Entering north is
                                 // a genuine dungeon transition, so consume it
                                 // here just as Riftwild cave gates do.
-                                run_state_begin_dungeon();
-                                run_state.room_counter++;
+                                run_state_enter_from_world();
                             }
                         } else {
                             run_state.world_return_screen = TOWN_ARRIVAL;

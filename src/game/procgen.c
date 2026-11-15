@@ -1258,6 +1258,13 @@ void procgen_generate_current_room(void) BANKED {
                 || run_state_dungeon_local() == 11
                 || run_state_dungeon_local() == 17
                 || run_state_dungeon_local() == 23)) ? 1 : 0;
+        // Later stages enter at a seeded cell, not always room 0. Keep
+        // that foyer off trap/hold/wave/elite directives so its pack
+        // stays a readable introduction.
+        u8 is_stage_foyer = (!run_state.world_mode
+            && run_state.bosses_beaten > 0
+            && run_state_dungeon_local()
+                == run_state_dungeon_entry_cell()) ? 1 : 0;
 
         // Every ordinary combat field first chooses a room-level roster:
         // one-species brood, two-species pair, leader/minion command pack, or
@@ -1274,12 +1281,12 @@ void procgen_generate_current_room(void) BANKED {
         // by the director.
         dungeon_director_choose((u8)(!is_town && !run_state.world_mode
             && !is_boss_room && !is_miniboss && !is_shop && !is_rest
-            && !is_puzzle_room && !is_waypoint
+            && !is_puzzle_room && !is_waypoint && !is_stage_foyer
             && procgen_current_room_is_large
             && run_state_dungeon_local() >= 4), room_was_visited);
         dungeon_director_choose_return((u8)(!is_town && !run_state.world_mode
             && !is_boss_room && !is_miniboss && !is_shop && !is_rest
-            && !is_puzzle_room && !is_waypoint
+            && !is_puzzle_room && !is_waypoint && !is_stage_foyer
             && procgen_current_room_is_large), room_was_visited);
 
         if (is_town) {
@@ -1580,11 +1587,8 @@ void procgen_generate_current_room(void) BANKED {
             // is especially important after a village/Riftwild handoff, where
             // the first Golden Temple room could combine an elite Echo Guard
             // with a full late pack. The foyer remains procedural combat, but
-            // caps at five compact / six scrolling bodies and defers elites;
+            // stays inside a 13..14 (11 on Easy) body band and defers elites;
             // every later ordinary room keeps the complete denser budget.
-            u8 is_stage_foyer = (!run_state.world_mode
-                && run_state.bosses_beaten > 0
-                && run_state_dungeon_local() == 0) ? 1 : 0;
             // The first dungeon is the player's first proof of the combat
             // loop, not a prolonged tutorial. Give its ordinary rooms extra
             // bodies (especially on canonical Normal); puzzle guards use the
@@ -1607,9 +1611,12 @@ void procgen_generate_current_room(void) BANKED {
             if (run_state.world_mode && RUN_RIFTWILD_IS_HOLLOW())
                 enemy_count = (u8)(enemy_count + (RUN_IS_EASY() ? 2 : 4));
             enemy_count = dungeon_director_adjust_initial_count(enemy_count);
-            if (is_stage_foyer
-                && enemy_count > (RUN_IS_EASY() ? 11 : 14))
-                enemy_count = RUN_IS_EASY() ? 11 : 14;
+            if (is_stage_foyer) {
+                u8 foyer_cap = RUN_IS_EASY() ? 11 : 14;
+                u8 foyer_floor = RUN_IS_EASY() ? 11 : 13;
+                if (enemy_count > foyer_cap) enemy_count = foyer_cap;
+                if (enemy_count < foyer_floor) enemy_count = foyer_floor;
+            }
             u8 ptx = (u8)(player.x >> 3);
             u8 pty = (u8)(player.y >> 3);
             u8 spawned = 0;
@@ -1639,7 +1646,11 @@ void procgen_generate_current_room(void) BANKED {
             // two-enemy floor back into one crawler. Retry a bounded four
             // sites per desired body; this remains deterministic and never
             // risks an unbounded procgen loop in a dense room archetype.
-            while (spawned < enemy_count && attempts < (u8)(enemy_count << 3)) {
+            // Foyers may be denser corridors than the old upper-left
+            // cell, so give their pack more site rolls before giving up.
+            u8 spawn_budget = (u8)(enemy_count << 3);
+            if (is_stage_foyer) spawn_budget = 220;
+            while (spawned < enemy_count && attempts < spawn_budget) {
                 u8 tx;
                 u8 ty;
                 attempts++;

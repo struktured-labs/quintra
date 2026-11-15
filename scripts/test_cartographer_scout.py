@@ -5,7 +5,10 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM
+from quintra_topology import (
+    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_entry_prefix_mask,
+    dungeon_entry_room, dungeon_size,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -59,33 +62,50 @@ def main():
     clear_hostiles()
     pb.memory[tilemap + 8 * 20 + 10] = 34
     place(72, 52)
-    tick(45)
+    # The room counter flips as soon as the gate is accepted; the banked
+    # village generate can lag ~100 ticks behind, as with seeded foyers.
+    chartwright = None
+    for _ in range(240):
+        tick(1)
+        if pb.memory[run_state + 1] != town_room:
+            continue
+        for index in range(32):
+            entity = entities + index * 28
+            if pb.memory[entity] == 3 and pb.memory[entity + 17] == 12:
+                chartwright = entity
+                break
+        if chartwright is not None:
+            break
     assert pb.memory[run_state + 1] == town_room \
         and pb.memory[run_state + 19] == 0
     assert pb.memory[run_state + 25] == 0, "town inherited stale route knowledge"
-
-    chartwright = None
-    for index in range(32):
-        entity = entities + index * 28
-        if pb.memory[entity] == 3 and pb.memory[entity + 17] == 12:
-            chartwright = entity
-            break
     assert chartwright is not None, "arrival square lacks Chartwright"
 
     # Touch the resident normally. The queued knowledge is deliberately
     # separate from the town compass, then consumed by the real north gate.
     place(pb.memory[chartwright + 3], (pb.memory[chartwright + 7] - 8) & 0xFF)
-    tick(6)
-    assert pb.memory[run_state + 25] == 0x03, "Chartwright did not queue two cells"
+    seed = int.from_bytes(bytes(pb.memory[run_state + 2:run_state + 6]), "little")
+    queued = dungeon_entry_prefix_mask(dungeon_size(3), seed, 3, 2) & 0xFF
+    for _ in range(60):
+        tick(1)
+        if pb.memory[run_state + 25] == queued:
+            break
+    assert pb.memory[run_state + 25] == queued, \
+        f"Chartwright queued {pb.memory[run_state + 25]:02x}, expected {queued:02x}"
 
     place(72, 0)
-    tick(45)
-    assert pb.memory[run_state + 1] == STAGE_START[3], \
-        "town north gate did not enter dungeon"
+    expected = dungeon_entry_room(3, seed)
+    for _ in range(240):
+        tick(1)
+        if pb.memory[run_state + 1] == expected:
+            break
+    assert pb.memory[run_state + 1] == expected, \
+        f"town north gate entered room {pb.memory[run_state + 1]}, " \
+        f"expected {expected}"
     # The entrance itself is marked by normal fog-of-war. Require the
     # Chartwright's two promised bits without rejecting that discovery mark.
-    assert pb.memory[run_state + 20] & 0x03 == 0x03, \
-        f"free scout did not reveal first two cells (seen={pb.memory[run_state + 20]:02x})"
+    assert pb.memory[run_state + 20] & queued == queued, \
+        f"free scout did not reveal prefix {queued:02x} (seen={pb.memory[run_state + 20]:02x})"
     assert pb.memory[run_state + 25] == 0, "free scout leaked beyond one dungeon"
 
     pb.stop(save=False)

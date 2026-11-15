@@ -14,6 +14,7 @@ static u8 mission_seen[MAX_DUNGEON_CELLS];
 static u8 mission_queue[MAX_DUNGEON_CELLS];
 static u8 mission_eligible[MAX_DUNGEON_CELLS];
 static u8 mission_cache_reserve;
+static u8 mission_entry;
 
 static u8 mission_mix(void) {
     u8 mix = (u8)run_state.run_seed;
@@ -44,7 +45,7 @@ static u8 mission_seed_cache_cell(void) {
 }
 
 static u8 mission_reserved(u8 cell, u8 limit) {
-    if (cell == 0 || cell >= limit) return 1;
+    if (cell == mission_entry || cell >= limit) return 1;
     // Keep nonlinear wells, quiet witnesses, and the optional third Warden
     // available as stable spatial punctuation around the generated quest.
     return (mission_landmark_reserved(cell)
@@ -60,9 +61,10 @@ static u8 mission_discover(void) {
     u8 head = 0, tail = 0, count = 0, i;
     u8 mix = mission_mix();
     mission_cache_reserve = mission_seed_cache_cell();
+    mission_entry = run_state_dungeon_entry_cell();
     for (i = 0; i < MAX_DUNGEON_CELLS; ++i) mission_seen[i] = 0;
-    mission_seen[0] = 1;
-    mission_queue[tail++] = 0;
+    mission_seen[mission_entry] = 1;
+    mission_queue[tail++] = mission_entry;
     while (head < tail) {
         u8 cell = mission_queue[head++];
         u8 turn = (u8)((mix + cell * 3) & 3);

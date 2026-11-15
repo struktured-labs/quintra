@@ -73,7 +73,9 @@ u8 puzzle_combat_seal_policy(void) BANKED {
     u8 chosen;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)) return 0;
     local = run_state_dungeon_local();
-    if (local == 0) return run_state.room_counter ? 1 : 0;
+    if (local == run_state_dungeon_entry_cell())
+        return (run_state.bosses_beaten == 0
+            && run_state.room_counter == local) ? 0 : 1;
     if (local == run_state.mission_warden_cell
         || local == run_state.mission_deep_warden_cell) return 1;
     if (local >= 4) return 0;

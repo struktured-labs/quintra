@@ -151,3 +151,16 @@ void run_state_begin_dungeon(void) BANKED {
     run_state.mission_ready = 0;
     run_state_ensure_dungeon_law();
 }
+
+void run_state_enter_from_world(void) BANKED {
+    u8 next = (u8)(run_state.room_counter + 1);
+    run_state_begin_dungeon();
+    if (run_state_room_is_town(next)) {
+        run_state.room_counter = next;
+        return;
+    }
+    run_state.room_counter = (u8)(run_state_stage_start(run_state.bosses_beaten)
+        + run_state_dungeon_entry_cell());
+    run_state_reveal_dungeon_cell(run_state_dungeon_entry_cell());
+}
+

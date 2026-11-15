@@ -55,7 +55,7 @@ void run_init_enter(void) {
     if (title_stage_warp < BOSSES_TO_WIN) {
         u8 stage = title_stage_warp;
         run_state.bosses_beaten = stage;
-        run_state.room_counter = run_state_stage_start(stage);
+        run_state_place_at_entry();
         run_state.rooms_cleared = (u8)(stage * 4u);
         run_state.score = (u16)(stage * 750u);
         run_state.enemies_killed = (u8)(stage * 12u);
