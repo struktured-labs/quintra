@@ -20,7 +20,7 @@ static void clear_run_state(void) {
     run_state.world_mode = 0;
     run_state.world_screen = 0;
     run_state.world_return_screen = 0;
-    run_state.dungeon_seen = 1;
+    run_state.dungeon_seen = 0;
     run_state.world_seen = 0;
     run_state.rift_sigils = 0;
     run_state.next_dungeon_reveal = 0;
@@ -42,7 +42,7 @@ static void clear_run_state(void) {
     run_state.world_seen_xxhi = 0;
     run_state.companion_cooldown = 0;
     run_state.return_echo_flags = 0;
-    run_state.dungeon_visited = 1;
+    run_state.dungeon_visited = 0;
     run_state.dungeon_visited_hi = 0;
     run_state.dungeon_visited_xhi = 0;
     run_state.dungeon_visited_xxhi = 0;
@@ -54,4 +54,5 @@ void run_state_init(u32 seed) BANKED {
     run_state.run_seed = (seed == 0UL) ? 0xCAFE1234UL : seed;
     run_state.biome_id = 0;
     run_state_ensure_dungeon_law();
+    run_state_place_at_entry();
 }

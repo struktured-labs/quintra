@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom" / "working" / "quintra.gbc"
 NOI = ROM.with_suffix(".noi")
 BLANK_SRAM = bytes(32 * 1024)
-STAGE_START = (0, 20, 41, 64, 87, 111, 137, 163, 191)
+from quintra_topology import STAGE_START, dungeon_entry_room
 CODE = ("up", "right", "down", "left", "right",
         "up", "left", "down", "b", "a")
 
@@ -74,8 +74,10 @@ def main():
     player = symbol("player")
     assert pb.memory[rs + 11] == 8, \
         f"Rift Index selected wrong stage: {pb.memory[rs + 11]}"
-    assert pb.memory[rs + 1] == STAGE_START[8], \
-        f"Stage 9 opened in wrong room: {pb.memory[rs + 1]}"
+    seed = int.from_bytes(bytes(pb.memory[rs + 2:rs + 6]), "little")
+    assert pb.memory[rs + 1] == dungeon_entry_room(8, seed), \
+        f"Stage 9 opened in wrong room: {pb.memory[rs + 1]} " \
+        f"expected {dungeon_entry_room(8, seed)} seed={seed:#x}"
     assert list(pb.memory[player + 24:player + 32]) == \
         [22, 27, 29, 22, 27, 29, 22, 27], \
         "Stage 9 did not receive its deterministic prior-boss build"
@@ -104,8 +106,10 @@ def main():
             raise AssertionError(f"Stage {stage + 1} did not reach gameplay")
         assert pb.memory[rs + 11] == stage, \
             f"selector destination {stage + 1} became {pb.memory[rs + 11] + 1}"
-        assert pb.memory[rs + 1] == STAGE_START[stage], \
-            f"Stage {stage + 1} opened in room {pb.memory[rs + 1]}"
+        seed = int.from_bytes(bytes(pb.memory[rs + 2:rs + 6]), "little")
+        assert pb.memory[rs + 1] == dungeon_entry_room(stage, seed), \
+            f"Stage {stage + 1} opened in room {pb.memory[rs + 1]} " \
+            f"expected {dungeon_entry_room(stage, seed)} seed={seed:#x}"
         pb.stop(save=False)
 
     print("[title-stage-warp] PASS code, cancel, all 9 stages, class/Easy flow, progression")

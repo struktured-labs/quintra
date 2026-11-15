@@ -20,8 +20,8 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_predecessor,
-    dungeon_size,
+    STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_entry_room,
+    dungeon_predecessor, dungeon_size,
 )
 
 
@@ -121,11 +121,10 @@ def get32(pyboy: PyBoy, address: int) -> int:
     return sum(pyboy.memory[address + i] << (i * 8) for i in range(4))
 
 
-def stage_entry_room(stage: int) -> int:
+def stage_entry_room(stage: int, seed: int = 0x51A6D00D) -> int:
     """Return the first actual combat room for zero-based stage ``stage``."""
-    # A fresh title flow already owns room 0; synthetic deep-stage entry uses
-    # a portal transaction and therefore targets room 1 for the tutorial.
-    return 1 if stage == 0 else STAGE_START[stage]
+    # A genuine Riftwild or title-warp entry lands on the seeded start cell.
+    return dungeon_entry_room(stage, seed)
 
 
 def riftwild_return_screen(bosses_beaten: int) -> int:
@@ -616,7 +615,9 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     pyboy.tick(90)
 
     target = stage_entry_room(stage)
-    pyboy.memory[rs + 1] = target - 1
+    # The world gate now places the seeded entry rather than incrementing
+    # this counter. Room 0 cannot subtract in a u8 fixture.
+    pyboy.memory[rs + 1] = 10 if target == 0 else target - 1
     for i, byte in enumerate((0x51A6D00D).to_bytes(4, "little")):
         pyboy.memory[rs + 2 + i] = byte
     pyboy.memory[rs + 11] = stage

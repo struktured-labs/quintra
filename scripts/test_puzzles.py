@@ -97,8 +97,21 @@ def load(stage):
 def feet_on(pb, tx, ty):
     put16(pb, PL + 9, tx * 8 - 8)
     put16(pb, PL + 11, ty * 8 - 12)
-    for _ in range(3):
+    # Charge, the pitched clue, and the CH4 impact land a few frames after
+    # the warp, and an APU envelope can already have decayed by a fixed
+    # tick count. Record what was heard instead of sampling only the last
+    # frame.
+    heard_ch1, heard_ch4 = set(), set()
+    for i in range(12):
         pb.tick()
+        heard_ch1.add(pb.memory[0xFF12])
+        heard_ch4.add(pb.memory[0xFF21])
+        # Damage lands around tick 4 and the note on tick 5. Stop once the
+        # note is still speaking so the final-rune hold can be measured.
+        if i >= 4 and pb.memory[0xFF12] == 0xA2:
+            break
+    return heard_ch1, heard_ch4
+
 
 
 def step_off(pb):
@@ -200,14 +213,14 @@ def solve_runes(pb, runes):
                     feet_on(pb, *rune)
                     step_off(pb)
             hp_before = pb.memory[PL + 2]
-            feet_on(pb, *candidate)
+            heard_ch1, heard_ch4 = feet_on(pb, *candidate)
             if not pb.memory[LOCKED] or all(lit(rune) for rune in (*prefix, candidate)):
                 assert pb.memory[PL + 2] == hp_before, (
                     "correct rune damaged the champion"
                 )
                 if not pb.memory[LOCKED]:
                     # The solve frame must still be the final rune, not the fanfare.
-                    assert pb.memory[0xFF12] == 0xA2, (
+                    assert 0xA2 in heard_ch1 and pb.memory[0xFF12] == 0xA2, (
                         f"final note was cut off: env=0x{pb.memory[0xFF12]:02X}")
                     held = 0
                     for _ in range(16):
@@ -232,16 +245,16 @@ def solve_runes(pb, runes):
                         hp_before_revisit = pb.memory[PL + 2]
                         lit_before_revisit = tuple(lit(rune) for rune in prefix)
                         pb.memory[0xFF12] = 0
-                        feet_on(pb, *confirmed)
+                        heard_ch1, _ = feet_on(pb, *confirmed)
                         assert pb.memory[PL + 2] == hp_before_revisit, (
                             "revisiting a lit rune damaged the champion"
                         )
                         assert tuple(lit(rune) for rune in prefix) == lit_before_revisit, (
                             "revisiting a lit rune reset the confirmed phrase"
                         )
-                        assert pb.memory[0xFF12] == 0xA2, (
+                        assert 0xA2 in heard_ch1, (
                             "lit rune did not retrigger its pitched clue: "
-                            f"env=0x{pb.memory[0xFF12]:02X} "
+                            f"env=0x{pb.memory[0xFF12]:02X} heard={sorted(heard_ch1)} "
                             f"confirmed={confirmed} prefix={prefix}"
                         )
                         step_off(pb)
@@ -249,11 +262,11 @@ def solve_runes(pb, runes):
             assert pb.memory[PL + 2] == hp_before - 1, (
                 "wrong rune did not charge exactly one half-heart"
             )
-            assert pb.memory[0xFF12] == 0xA2, (
-                "wrong rune muted its pitched sequence hint"
+            assert 0xA2 in heard_ch1, (
+                f"wrong rune muted its pitched sequence hint: heard={sorted(heard_ch1)}"
             )
-            assert pb.memory[0xFF21] == 0xC1, (
-                "wrong rune lost its separate impact voice"
+            assert 0xC1 in heard_ch4, (
+                f"wrong rune lost its separate impact voice: heard={sorted(heard_ch4)}"
             )
             # This routine intentionally discovers the hidden order through
             # mistakes. Refill only its test vessel so later candidates can
@@ -292,7 +305,19 @@ def rune_sequence_contract():
     assert len(active_hostiles(pb)) >= 4, (
         "rune puzzle did not retain its live guard pack")
     assert visible_hostiles(pb), "rune puzzle looked empty on arrival"
+    guards = active_hostiles(pb)
     clear_hostiles(pb)  # isolate note/damage mechanics after proving population
+    # Zeroing every guard trips the room-clear jingle, which melody-locks
+    # the APU and swallows the wrong-rune CH4 impact. Park one inert body
+    # far from the court so the room stays "live." Drop leftover i-frames
+    # from the approach so the first plate can charge a half-heart.
+    ep = EN + guards[0] * 28
+    pb.memory[ep] = 2
+    pb.memory[ep + 1] = 0x01
+    put16(pb, ep + 3, 8)
+    put16(pb, ep + 7, 200)
+    pb.memory[ep + 10] = pb.memory[ep + 11] = 0
+    pb.memory[PL + 15] = 0
     runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
              if pb.memory[TM + y * 20 + x] == 33]
     assert len(runes) == 4, f"stage two needs four runes, got {runes}"

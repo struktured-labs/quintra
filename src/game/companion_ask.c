@@ -30,7 +30,7 @@ static entity_t *ask_companion_entity(void) {
 static void companion_reveal_route(void) {
     u8 dir;
     if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-        run_state.next_dungeon_reveal |= 0x0F;
+        run_state_queue_next_dungeon_prefix(4);
         return;
     }
     if (run_state.world_mode) {

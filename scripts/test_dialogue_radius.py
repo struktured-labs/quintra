@@ -20,7 +20,10 @@ def place(pb, x, y, facing):
     put16(pb, PL + 11, y)
     pb.memory[PL + 13] = facing
     pb.memory[PL + 22] = 0
+    pb.memory[PL + 15] = 0
     tick(pb, 2)
+    pb.memory[PL + 15] = 0
+    pb.memory[PL + 22] = 0
 
 
 def press_a(pb):

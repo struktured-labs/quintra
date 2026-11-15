@@ -6,7 +6,8 @@ from pathlib import Path
 from pyboy import PyBoy
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_direction,
-    dungeon_predecessor, dungeon_size,
+    dungeon_entry_prefix_mask, dungeon_entry_room, dungeon_predecessor,
+    dungeon_size,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,7 +97,18 @@ def main():
                 pb.memory[tilemap + ty * 20 + tx] = 3
         for off, value in ((9, x), (10, 0), (11, y), (12, 0)):
             pb.memory[pl + off] = value
-        tick(45)
+        # Gate transactions update the counter before the destination
+        # finishes generating, especially on the village portal path.
+        seen = None
+        for i in range(240):
+            tick(1)
+            if pb.memory[rs + 1] == target:
+                if seen is None:
+                    seen = i
+                # Allow the banked generate/heal pass to finish after the
+                # counter flip (~100 ticks on seeded or village arrivals).
+                if i - seen >= 150:
+                    break
         assert pb.memory[rs + 1] == target, f"could not enter room {target}"
 
     def leave(direction):
@@ -128,7 +140,8 @@ def main():
     # than scenery, while the fourth resident makes the civic space feel
     # inhabited without changing the economy.
     town_room = VILLAGE_ROOM[3]
-    next_room = STAGE_START[3]
+    seed = int.from_bytes(bytes(pb.memory[rs + 2:rs + 6]), "little")
+    next_room = dungeon_entry_room(3, seed)
     enter_from_previous(town_room)
     assert pb.memory[rs + 19] == 0, "town did not begin in arrival square"
     elder = entities(7)
@@ -197,12 +210,17 @@ def main():
     # The Lorekeeper's distinct open-scroll cue appears nearby. This is a
     # readable lore invitation, not a purchase or a hidden stat interaction.
     lx, ly = pb.memory[lorekeeper[0] + 3], (pb.memory[lorekeeper[0] + 7] - 8) & 0xFF
-    for off, value in ((9, lx), (10, 0), (11, ly - 24), (12, 0)):
+    # Stay inside the 20px callout radius (ly is already 8px above).
+    for off, value in ((9, lx), (10, 0), (11, ly), (12, 0)):
         pb.memory[pl + off] = value
-    tick(4)
-    assert any(pb.memory[fx + 12] == 125 and pb.memory[fx + 13] == 6
-               for fx in entities_by_type(4)), \
-        "nearby Lorekeeper did not show its distinct scroll cue"
+    shown = False
+    for _ in range(60):
+        tick(1)
+        if any(pb.memory[fx + 12] == 125 and pb.memory[fx + 13] == 6
+               for fx in entities_by_type(4)):
+            shown = True
+            break
+    assert shown, "nearby Lorekeeper did not show its distinct scroll cue"
 
     # SELECT stays a graphical compass in a village too. The old text-only
     # town report made a three-screen settlement read like one strange room;
@@ -247,8 +265,18 @@ def main():
     ex, ey = pb.memory[chartwright[0] + 3], (pb.memory[chartwright[0] + 7] - 8) & 0xFF
     for off, value in ((9, ex), (10, 0), (11, ey), (12, 0)):
         pb.memory[pl + off] = value
-    tick(5)
-    assert pb.memory[rs + 25] == 0x03, "Chartwright did not scout two route rooms"
+    queued = dungeon_entry_prefix_mask(dungeon_size(3), seed, 3, 2)
+    got = 0
+    for _ in range(60):
+        tick(1)
+        got = (pb.memory[rs + 25]
+               | (pb.memory[rs + 30] << 8)
+               | (pb.memory[rs + 32] << 16)
+               | (pb.memory[rs + 34] << 24))
+        if got == queued:
+            break
+    assert got == queued, (
+        f"Chartwright queued {got:08x}, expected {queued:08x}")
     assert pb.memory[chartwright[0] + 15] == 1, "Chartwright blessing did not latch"
     # The paid chart is a stronger, clearly signposted town service. Its map
     # glyph and price must appear before contact; buying it through ordinary
@@ -367,12 +395,23 @@ def main():
     # Touch one unaffordable offer: it survives and latches one reject buzz.
     for off, value in ((9, wx), (10, 0), (11, wy), (12, 0)):
         pb.memory[pl + off] = value
-    tick(6)
-    assert pb.memory[ware] == 3 and pb.memory[ware + 21] == 1
-    tick(50)
-    pb.memory[0xFF4F] = 0
-    assert pb.memory[0x9C00 + 12] == 40, \
-        "market contact did not preserve the healing offer icon"
+    latched = False
+    for _ in range(60):
+        tick(1)
+        if pb.memory[ware] == 3 and pb.memory[ware + 21]:
+            latched = True
+            break
+    assert latched, (
+        f"unaffordable ware latch failed (type={pb.memory[ware]} "
+        f"latch={pb.memory[ware + 21]})")
+    icon = None
+    for _ in range(90):
+        pb.memory[0xFF4F] = 0
+        if pb.memory[0x9C00 + 12] == 40:
+            icon = 40
+            break
+        tick(1)
+    assert icon == 40, "market contact did not preserve the healing offer icon"
     pb.screen.image.save(ROOT / "tmp" / "town-market.png")
 
     # A sold ware removes its own marker. Restore currency only for this

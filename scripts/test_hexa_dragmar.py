@@ -97,7 +97,9 @@ def offer_victory(pb, reaper=False, companion=False, bosses=9):
         pb.memory[RS + 27] = pb.memory[RS + 27] | RUN_REAPER
     if companion:
         pb.memory[RS + 51] = pb.memory[RS + 51] | COMPANION_DISCOVERED
-    for _ in range(40):
+    # A seeded foyer can still be playing its stage-entry card when this
+    # fixture pokes the victory flags; 40 ticks was too short.
+    for _ in range(180):
         pb.tick()
         if pb.memory[SCREEN] == SCREEN_VICTORY:
             pb.tick(12)

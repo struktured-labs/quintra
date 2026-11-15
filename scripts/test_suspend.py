@@ -12,6 +12,9 @@ import tempfile
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_topology import (
+    dungeon_entry_room, dungeon_maze_neighbor, dungeon_size,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -25,9 +28,9 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, SCREEN, WORLD_WIDTH = map(
+RS, PL, EN, SCREEN, WORLD_WIDTH, WORLD_HEIGHT = map(
     addr, ("_run_state", "_player", "_entities", "_loop_current_screen",
-           "_room_world_width")
+           "_room_world_width", "_room_world_height")
 )
 
 
@@ -124,8 +127,10 @@ def main():
 
         first = PyBoy(str(cart), window="null", cgb=True)
         boot_fresh(first)
-        assert first.memory[RS + 1] == 0, (
-            f"fresh run settled in room {first.memory[RS + 1]}, expected foyer"
+        seed = int.from_bytes(bytes(first.memory[RS + 2:RS + 6]), "little")
+        foyer = dungeon_entry_room(0, seed)
+        assert first.memory[RS + 1] == foyer, (
+            f"fresh run settled in room {first.memory[RS + 1]}, expected foyer {foyer}"
         )
         put16(first, PL + 16, 321)       # distinctive persisted player value
         put16(first, RS + 14, 0x1234)   # distinctive persisted run value
@@ -133,17 +138,37 @@ def main():
             ep = EN + i * 28
             if first.memory[ep] == 2:
                 first.memory[ep] = first.memory[ep + 1] = 0
-        # Dungeon zero's guaranteed maze spine begins eastward (cell 0→1).
-        # Its foyer is now a real scrolling field, so use the cartridge's live
-        # width rather than the former compact x=144 threshold. This still
-        # crosses the authored far-east door and exercises room-entry SRAM.
-        put16(first, PL + 9, first.memory[WORLD_WIDTH] - 16)
-        put16(first, PL + 11, 60)
-        for _ in range(60):
-            first.tick()
-            if first.memory[RS + 1] == 1:
+        # Walk one real maze edge from the seeded foyer so room-entry SRAM
+        # is exercised even when the start cell is no longer upper-left.
+        size = dungeon_size(0)
+        next_room = None
+        walk_dir = None
+        for direction in range(4):
+            neighbor = dungeon_maze_neighbor(foyer, size, direction, seed, 0)
+            if neighbor is not None:
+                next_room = neighbor
+                walk_dir = direction
                 break
-        assert first.memory[RS + 1] == 1, "could not create room-entry suspend"
+        assert next_room is not None, f"foyer {foyer} has no maze neighbor"
+        # These WRAM counters are byte widths in practice; the next byte is
+        # not a high-order dimension and must not be folded into the edge.
+        width = first.memory[WORLD_WIDTH]
+        height = first.memory[WORLD_HEIGHT]
+        door = {
+            0: (72, 0),
+            1: (width - 16, 60),
+            2: (72, height - 16),
+            3: (0, 60),
+        }[walk_dir]
+        put16(first, PL + 9, door[0])
+        put16(first, PL + 11, door[1])
+        for _ in range(90):
+            first.tick()
+            if first.memory[RS + 1] == next_room:
+                break
+        assert first.memory[RS + 1] == next_room, (
+            f"could not create room-entry suspend (room={first.memory[RS + 1]}, "
+            f"foyer={foyer}, want={next_room}, dir={walk_dir})")
         # The counter changes near the beginning of room_enter(). Wait on the
         # actual SRAM payload rather than a host-frame delay: reachability work
         # deliberately makes room-generation duration layout-dependent.
@@ -157,7 +182,7 @@ def main():
             player_off = run_off + rs_len
             saved = (
                 bytes(first.memory[0xA000:0xA002]) == b"QS"
-                and first.memory[run_off + 1] == 1
+                and first.memory[run_off + 1] == next_room
                 and first.memory[run_off + 14] == 0x34
                 and first.memory[run_off + 15] == 0x12
                 and first.memory[player_off + 16] == 0x41
@@ -189,7 +214,7 @@ def main():
             raise AssertionError(
                 f"room-entry SRAM transaction did not commit: {observed!r}"
             )
-        assert first.memory[RS + 1] == 1, "room advanced again during suspend setup"
+        assert first.memory[RS + 1] == next_room, "room advanced again during suspend setup"
 
         # Inspect the cartridge bytes, not merely the C globals.
         first.memory[0x0000] = 0x0A
@@ -216,9 +241,10 @@ def main():
         assert second.memory[SCREEN] == 5, "cold boot did not resume SCREEN_ROOM"
         coins = second.memory[PL + 16] | (second.memory[PL + 17] << 8)
         score = second.memory[RS + 14] | (second.memory[RS + 15] << 8)
-        assert second.memory[RS + 1] == 1, (
+        assert second.memory[RS + 1] == next_room, (
             f"room counter did not survive power cycle "
-            f"(room={second.memory[RS + 1]}, coins={coins}, score=0x{score:04X})"
+            f"(room={second.memory[RS + 1]}, expected {next_room}, "
+            f"coins={coins}, score=0x{score:04X})"
         )
         assert coins == 321, f"player payload drifted across power cycle: {coins}"
         assert score == 0x1234, f"run payload drifted across power cycle: 0x{score:04X}"

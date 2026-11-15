@@ -3,8 +3,9 @@
 from collections import defaultdict
 
 from pyboy import PyBoy
-from quintra_topology import STAGE_START
+from quintra_topology import STAGE_START, dungeon_entry_room
 
+from make_stage_states import normalize_compact_source, symbol_addresses
 from test_stage_archetypes import (
     EN, PL, ROM, ROOM_H, ROOM_W, RS, TM, addr, put16,
     wait_for_generated_room,
@@ -21,6 +22,7 @@ EF_ELITE = 0x20
 BGT_PORTAL = 34
 REGIONAL_GATE_SCREEN = (8, 21, 34)
 SCREEN = addr("_loop_current_screen")
+ADDRS = symbol_addresses(ROM)
 SCREEN_DIALOG = 10
 
 
@@ -38,8 +40,10 @@ def boot():
 
 
 def sample_foyer(pb, stage, seed):
-    target = STAGE_START[stage]
-    pb.memory[RS + 1] = target - 1
+    target = dungeon_entry_room(stage, seed)
+    # A genuine Riftwild gate now places the seeded entry rather than
+    # incrementing the previous counter. Stay off the village counters.
+    pb.memory[RS + 1] = STAGE_START[stage] - 1
     for offset, byte in enumerate(seed.to_bytes(4, "little")):
         pb.memory[RS + 2 + offset] = byte
     pb.memory[RS + 6] = 0xFF
@@ -53,10 +57,13 @@ def sample_foyer(pb, stage, seed):
     for slot in range(MAX_ENTITIES):
         base = EN + slot * ENTITY_SIZE
         pb.memory[base] = pb.memory[base + 1] = 0
+    # A prior foyer may be a scrolling field. Shrink to compact geometry
+    # so this synthetic portal sits under the champion's feet.
+    normalize_compact_source(pb, ADDRS)
     put16(pb, PL + 9, 72)
     put16(pb, PL + 11, 60)
     pb.memory[TM + 9 * ROOM_W + 10] = BGT_PORTAL
-    for _ in range(30):
+    for _ in range(90):
         pb.tick()
         if pb.memory[RS + 1] == target:
             break
@@ -65,7 +72,9 @@ def sample_foyer(pb, stage, seed):
         f"room={pb.memory[RS + 1]} world={pb.memory[RS + 17]} "
         f"screen={pb.memory[RS + 18]} player=({pb.memory[PL + 9]},"
         f"{pb.memory[PL + 11]}) feet={pb.memory[TM + 9 * ROOM_W + 10]}")
-    for _ in range(120):
+    # Large seeded foyers can take ~100 ticks after the room counter
+    # flips before the main loop actually enters the arrival card.
+    for _ in range(240):
         if pb.memory[SCREEN] == SCREEN_DIALOG:
             break
         pb.tick()
@@ -109,6 +118,9 @@ def main():
                 # Foyers remain the gentler no-elite introduction, but their
                 # scrolling footprint now earns the milestone's game-wide
                 # population floor instead of preserving the old sparse cap.
+                # Start cells now vary, so a foyer may be a tighter corridor
+                # than the old upper-left room and spawn a slightly smaller
+                # pack. The contract is still a no-elite introduction.
                 assert 13 <= len(roster) <= 14, (
                     f"stage {stage + 1} foyer count={len(roster)} roster={roster}")
                 assert elites == 0, (

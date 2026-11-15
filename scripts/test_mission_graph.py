@@ -3,7 +3,10 @@
 
 from pyboy import PyBoy
 
-from quintra_topology import STAGE_START, dungeon_size, mission_graph
+from quintra_topology import (
+    STAGE_START, dungeon_entry_room, dungeon_size, mission_graph,
+)
+from make_stage_states import normalize_compact_source, symbol_addresses
 from test_stage_archetypes import EN, PL, ROM, RS, TM, addr, put16
 
 
@@ -15,6 +18,7 @@ MISSION_READY = 0xA5
 ENTITY_SIZE, MAX_ENTITIES = 28, 32
 BGT_PORTAL = 34
 ROOM_COMMIT = addr("_room_puzzle_kind")
+ADDRS = symbol_addresses(ROM)
 SEEDS = (0xCAFE1234, 0x51A7E001, 0xF00D739B, 0x11223344)
 
 
@@ -31,8 +35,10 @@ def boot():
 def generate(pb, stage, seed):
     # Enter through the real Riftwild gate so run_state_begin_dungeon clears
     # all per-stage progress before procgen asks the graph for room semantics.
-    target = STAGE_START[stage] + 4
-    pb.memory[RS + RS_ROOM] = target - 1
+    target = dungeon_entry_room(stage, seed)
+    # The world gate now lands on the seeded entry. The previous counter
+    # only has to avoid a village room.
+    pb.memory[RS + RS_ROOM] = STAGE_START[stage] - 1 if stage else 10
     for i, byte in enumerate(seed.to_bytes(4, "little")):
         pb.memory[RS + RS_SEED + i] = byte
     pb.memory[RS + RS_STAGE] = stage
@@ -48,6 +54,7 @@ def generate(pb, stage, seed):
     for slot in range(MAX_ENTITIES):
         base = EN + slot * ENTITY_SIZE
         pb.memory[base] = pb.memory[base + 1] = 0
+    normalize_compact_source(pb, ADDRS)
     put16(pb, PL + 9, 72)
     put16(pb, PL + 11, 60)
     pb.memory[PL + 15] = 120

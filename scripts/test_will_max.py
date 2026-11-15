@@ -24,8 +24,10 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PLAYER, ENTITIES, SCREEN, TILEMAP = map(
-    addr, ("_player", "_entities", "_loop_current_screen", "_room_tilemap")
+PLAYER, ENTITIES, SCREEN, TILEMAP, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
+    addr, ("_player", "_entities", "_loop_current_screen", "_room_tilemap",
+           "_procgen_current_room_is_large", "_room_world_width",
+           "_room_world_height", "_room_camera_x", "_room_camera_y")
 )
 
 
@@ -57,6 +59,13 @@ def boot(class_id):
 def clear_arena(pb):
     for i in range(32 * ENTITY_SIZE):
         pb.memory[ENTITIES + i] = 0
+    # Seeded foyers can be large scrolling rooms. Knockback and MAX geometry
+    # tests need a compact, obstacle-free court, not the live start cell.
+    pb.memory[LARGE] = 0
+    pb.memory[WORLD_W] = 20 * 8
+    pb.memory[WORLD_H] = 17 * 8
+    pb.memory[CAMERA_X] = pb.memory[CAMERA_Y] = 0
+    pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     for i in range(20 * 17):
         pb.memory[TILEMAP + i] = 1
     put16(pb, PLAYER + 9, 80)
