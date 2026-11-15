@@ -56,53 +56,76 @@ static u16 entry_mix(void) {
     return mix;
 }
 
+/* The foyer is a pure function of (run_seed, bosses_beaten), but the solver
+ * walks the folded maze through ~100 banked neighbour probes. Uncached, each
+ * call cost 15-35 frames and room entry makes about five of them, stalling
+ * every dungeon doorway by a second or more. Memoize per seed and stage.
+ * The tag stores bosses_beaten + 1 so zeroed WRAM reads as "empty" without
+ * an initializer in the home bank. */
+static u32 entry_cache_seed;
+static u8 entry_cache_tag;
+static u8 entry_cache_cell;
+
 u8 run_state_dungeon_entry_cell(void) BANKED {
     /* WRAM scratch: a 30-cell BFS from the boss would overflow the stack. */
     static u8 dist[MAX_DUNGEON_CELLS];
     static u8 queue[MAX_DUNGEON_CELLS];
-    u8 size = run_state_dungeon_size();
-    u8 boss = (u8)(size - 1);
-    u8 head = 0, tail = 0, i, dir;
+    static u8 cand_kind[MAX_DUNGEON_CELLS];
+    u8 size, boss, limit;
+    u8 head = 0, tail = 0, i, dir, cell;
+    u8 result = 0;
     u16 mix;
     u8 rot;
 
-    if (size < 4) return 0;
-    for (i = 0; i < MAX_DUNGEON_CELLS; ++i) dist[i] = 0xFF;
-    dist[boss] = 0;
-    queue[tail++] = boss;
-    while (head < tail) {
-        u8 cell = queue[head++];
-        for (dir = DIR_N; dir <= DIR_W; ++dir) {
-            u8 next = run_state_dungeon_cell_neighbor(cell, dir);
-            if (next == 0xFF || dist[next] != 0xFF) continue;
-            dist[next] = (u8)(dist[cell] + 1);
-            queue[tail++] = next;
-        }
-    }
+    if (entry_cache_tag == (u8)(run_state.bosses_beaten + 1)
+        && entry_cache_seed == run_state.run_seed)
+        return entry_cache_cell;
 
-    mix = entry_mix();
-    rot = (u8)(mix % 3);
-    for (i = 0; i < 3; ++i) {
-        u8 kind = (u8)((u8)(rot + i) % 3);
-        u8 count = 0;
-        u8 cell;
-        for (cell = 0; cell < (u8)(size - 3); ++cell) {
-            if (!entry_candidate_ok(cell, size, dist[cell])) continue;
-            if (entry_grid_kind(cell, size) == kind) count++;
-        }
-        if (!count) continue;
-        {
-            u8 index = (u8)((mix >> 3) % count);
-            u8 seen = 0;
-            for (cell = 0; cell < (u8)(size - 3); ++cell) {
-                if (!entry_candidate_ok(cell, size, dist[cell])) continue;
-                if (entry_grid_kind(cell, size) != kind) continue;
-                if (seen == index) return cell;
-                seen++;
+    size = run_state_dungeon_size();
+    if (size >= 4) {
+        boss = (u8)(size - 1);
+        limit = (u8)(size - 3);
+        for (i = 0; i < MAX_DUNGEON_CELLS; ++i) dist[i] = 0xFF;
+        dist[boss] = 0;
+        queue[tail++] = boss;
+        while (head < tail) {
+            u8 at = queue[head++];
+            for (dir = DIR_N; dir <= DIR_W; ++dir) {
+                u8 next = run_state_dungeon_cell_neighbor(at, dir);
+                if (next == 0xFF || dist[next] != 0xFF) continue;
+                dist[next] = (u8)(dist[at] + 1);
+                queue[tail++] = next;
             }
         }
+        /* One candidate/kind pass instead of re-probing the maze per kind. */
+        for (cell = 0; cell < limit; ++cell)
+            cand_kind[cell] = entry_candidate_ok(cell, size, dist[cell])
+                ? entry_grid_kind(cell, size) : 0xFF;
+
+        mix = entry_mix();
+        rot = (u8)(mix % 3);
+        for (i = 0; i < 3; ++i) {
+            u8 kind = (u8)((u8)(rot + i) % 3);
+            u8 count = 0;
+            for (cell = 0; cell < limit; ++cell)
+                if (cand_kind[cell] == kind) count++;
+            if (!count) continue;
+            {
+                u8 index = (u8)((mix >> 3) % count);
+                u8 seen = 0;
+                for (cell = 0; cell < limit; ++cell) {
+                    if (cand_kind[cell] != kind) continue;
+                    if (seen == index) { result = cell; break; }
+                    seen++;
+                }
+            }
+            break;
+        }
     }
-    return 0;
+    entry_cache_seed = run_state.run_seed;
+    entry_cache_tag = (u8)(run_state.bosses_beaten + 1);
+    entry_cache_cell = result;
+    return result;
 }
 
 void run_state_place_at_entry(void) BANKED {

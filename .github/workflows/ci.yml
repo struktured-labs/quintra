@@ -150,6 +150,13 @@ jobs:
       - name: Hexa Dragmar body art
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_body_art_and_contrast.py
 
+      - name: PyBoy seeded-room fixtures (archetypes, spinners, Cinder Maw, Farfold Cache)
+        run: |
+          mkdir -p tmp
+          for t in stage_archetypes bramble_sprite sunwheel void_halo medium_cinder farfold_cache; do
+            uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_$t.py
+          done
+
       - name: Upload ROM
         uses: actions/upload-artifact@v4
         with:
