@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import STAGE_START, dungeon_size, mission_graph
+from test_stage_archetypes import generated_room
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -45,55 +46,20 @@ def put16(pb, address, value):
 
 
 def boot_to_miniboss(stage, role="warden"):
-    """Generate one real authored miniboss through the Riftwild gate."""
-    pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240)
-    pb.button("start")
-    pb.tick(30)
-    pb.button("a")
-    pb.tick(60)
+    """Generate one real authored miniboss in its seeded mission cell.
 
-    # The gate invokes the actual room generator and palette/sprite orchestration.
-    # Target the generated mission role directly so this encounter contract is
-    # independent of the deliberately nonlinear player route to it.
-    local = mission_graph(
-        dungeon_size(stage), 0xCAFE1234, stage)[role]
-    target = STAGE_START[stage] + local
-    pb.memory[RS + 1] = target - 1
-    for i, byte in enumerate((0xCAFE1234).to_bytes(4, "little")):
-        pb.memory[RS + 2 + i] = byte
-    pb.memory[RS + 11] = stage
-    pb.memory[RS + 12] = 0
-    pb.memory[RS + 13] = 0
-    pb.memory[RS + 17] = 1
-    pb.memory[RS + 18] = (8, 21, 34)[(stage - 1) % 3 if stage else 0]
-    for i in range(32):
-        entity = EN + i * ENTITY_SIZE
-        if pb.memory[entity] in (ENT_ENEMY, ENT_PROJECTILE):
-            pb.memory[entity] = pb.memory[entity + 1] = 0
-    pb.memory[TM + 9 * ROOM_W + 10] = 34  # BGT_PORTAL under feet center
-    put16(pb, PL + 9, 72)
-    put16(pb, PL + 11, 60)
-    for _ in range(90):
-        pb.tick()
-        if pb.memory[RS + 1] == target:
-            break
-    assert pb.memory[RS + 1] == target, (
-        f"could not generate stage {stage} miniboss; got room={pb.memory[RS + 1]} "
-        f"world={pb.memory[RS + 17]} entered={pb.memory[RS + 6]}")
-    for _ in range(180):
-        if pb.memory[SCREEN] == SCREEN_DIALOG:
-            break
-        pb.tick()
-    assert pb.memory[SCREEN] == SCREEN_DIALOG, "stage card did not appear"
-    pb.tick(30)
-    pb.button_press("a")
-    for _ in range(90):
-        pb.tick()
-        if pb.memory[SCREEN] == SCREEN_ROOM:
-            break
-    pb.button_release("a")
-    assert pb.memory[SCREEN] == SCREEN_ROOM, "stage card did not dismiss"
+    Since #78 the Riftwild gate lands on the seeded foyer instead of
+    incrementing the room counter, so it can no longer be aimed at an
+    arbitrary role cell. Enter the stage through the live gate, then cross
+    the real maze edge into the role cell (shared archetype harness).
+    """
+    local = mission_graph(dungeon_size(stage), 0xCAFE1234, stage)[role]
+    pb = generated_room(stage, 0xCAFE1234, local_room=local,
+                        keep_running=True)
+    assert pb.memory[RS + 1] == STAGE_START[stage] + local, (
+        f"could not generate stage {stage} miniboss; "
+        f"got room={pb.memory[RS + 1]}")
+    assert pb.memory[SCREEN] == SCREEN_ROOM, "miniboss room is not live"
     pb.tick(60)
     return pb
 
@@ -105,21 +71,28 @@ def enemies(pb):
 
 
 def kill_bellwarden_for_reward(pb, bell):
-    """Deliver a real lethal player shot; only the tagged Bell may pay a weapon."""
-    shot = next(EN + i * ENTITY_SIZE for i in range(32)
-                if not (pb.memory[EN + i * ENTITY_SIZE + 1] & 1))
-    bell_x, bell_y = pb.memory[bell + 3], pb.memory[bell + 7]
+    """Deliver a real lethal player shot; only the tagged Bell may pay a weapon.
+
+    The generated court is a scrolling arena, so line the Bell up beside the
+    champion and fire the real B weapon rather than poking a synthetic
+    projectile into a reused entity slot.
+    """
+    def g16(address):
+        return pb.memory[address] | (pb.memory[address + 1] << 8)
+
     pb.memory[bell + 14] = 1
-    pb.memory[shot] = ENT_PROJECTILE
-    pb.memory[shot + 1] = EF_ACTIVE_ALIVE | EF_PLAYER_PROJ
-    put16(pb, shot + 3, bell_x)
-    put16(pb, shot + 7, bell_y)
-    pb.memory[shot + 14] = 1
-    pb.memory[shot + 16] = 90
-    pb.memory[shot + 25] = 0x77
-    pb.memory[shot + 26] = 1
-    put16(pb, PL + 9, 144)
-    put16(pb, PL + 11, 112)
+    for _ in range(8):
+        if pb.memory[bell] != ENT_ENEMY or not pb.memory[bell + 1] & 1:
+            break
+        pb.memory[PL + 15] = 120
+        # Face into the court, away from the edge door just walked through.
+        side = "left" if g16(PL + 9) >= 96 else "right"
+        put16(pb, bell + 3, g16(PL + 9) + (-32 if side == "left" else 32))
+        put16(pb, bell + 7, g16(PL + 11))
+        pb.button(side)
+        pb.tick(2)
+        pb.button("b")
+        pb.tick(10)
     pb.tick(8)
     kinds = [pb.memory[EN + i * ENTITY_SIZE + 17] for i in range(32)
              if pb.memory[EN + i * ENTITY_SIZE] == ENT_PICKUP
