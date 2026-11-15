@@ -179,6 +179,9 @@ u8 room_weapon_surge_ticks;
 // South matches the champion's room-entry facing. Hold Aim fires this after
 // the D-pad is released; a later direction replaces it and then sticks.
 u8 player_aim_dir = 4;
+// Thumbs almost never release both diagonal keys on the same frame. Keep the
+// stored diagonal for this many leftover-cardinal frames, then accept it.
+u8 aim_release_grace;
 
 // These timers are hot only while a B effect is visibly active. Keep their
 // cheap per-frame bookkeeping beside room_tick in bank 1; a far call into the
@@ -975,6 +978,7 @@ static u8 room_scroll_y(void) {
 // Cold direction decoder is shared by weapon edges only. Keeping it in the
 // new feature bank recovers emergency headroom in the always-hot room bank.
 u8 room_input_dir8(u8 keys, u8 facing) BANKED;
+void room_retain_aim(i8 dx, i8 dy) BANKED;
 extern u8 player_penta_aim;
 
 void room_enter(void) {
@@ -1033,6 +1037,7 @@ void room_enter(void) {
         set_sprite_prop(3, 0x01);
     }
     player.facing        = FACE_S;
+    aim_release_grace    = 0;
     player.fire_cooldown = 0;
     player.anim_frame    = 0;
     room_hurt_pose_ticks = 0;
@@ -1179,21 +1184,6 @@ void room_exit(void) {
     // the room's entities/player/music to be intact. Real room changes
     // re-init entities in procgen_generate_current_room(). Leaving music
     // running also avoids a restart blip every time the pack is toggled.
-}
-
-// dir8 index for a live step. Callers only pass a nonzero axis pair.
-static u8 room_aim_from_step(i8 dx, i8 dy) {
-    if (dy < 0) {
-        if (dx > 0) return 1;
-        if (dx < 0) return 7;
-        return 0;
-    }
-    if (dy > 0) {
-        if (dx > 0) return 3;
-        if (dx < 0) return 5;
-        return 4;
-    }
-    return (dx < 0) ? 6 : 2;
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
@@ -1384,8 +1374,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (keys & J_DOWN)  { dy = +1; player.facing = FACE_S; moved = 1; }
 
         // Any live direction, including a diagonal, becomes the retained aim.
-        // Releasing the pad leaves player_aim_dir untouched.
-        if (dx || dy) player_aim_dir = room_aim_from_step(dx, dy);
+        // Releasing the pad leaves player_aim_dir untouched, including the
+        // one-frame cardinal a staggered diagonal release produces.
+        if (dx || dy || aim_release_grace) room_retain_aim(dx, dy);
 
         // The cardinal facing byte still prefers the previous heading when an
         // A-only diagonal includes it. Shots read player_aim_dir instead.
