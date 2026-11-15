@@ -219,8 +219,12 @@ static u8 facet_choose_facing(entity_t *e) {
     return (u8)((roll & 3) << 1);
 }
 
+void facet_ram_anim_tick(void) BANKED;
+
 void facet_ram_update(entity_t *e) BANKED {
     u8 facing = (u8)(e->state & 6);
+
+    facet_ram_anim_tick();
 
     if (e->state_timer) e->state_timer--;
     if (e->state_timer == 0) {
