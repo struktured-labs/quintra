@@ -70,6 +70,8 @@ void room_begin_secret_loot_timer(void) BANKED {
         if (!(entities[i].flags & EF_ACTIVE)
             || entities[i].type != ENT_PICKUP
             || !room_secret_loot_kind(entities[i].ai_data[0])) continue;
+        // Visit-persistent boss rewards must not be tied to the vault clock.
+        if (entities[i].ai_data[7] & PICKUP_VISIT_PERSIST_MARK) continue;
         entities[i].ai_data[7] |= PICKUP_SECRET_TIMER_MARK;
         // One visible room clock owns expiry. Individual u8 timers used to
         // remove early pieces while the player was still opening the ring.
@@ -108,7 +110,8 @@ void room_update_secret_loot_timer(void) BANKED {
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if ((entities[i].flags & EF_ACTIVE)
             && entities[i].type == ENT_PICKUP
-            && (entities[i].ai_data[7] & PICKUP_SECRET_TIMER_MARK))
+            && (entities[i].ai_data[7] & PICKUP_SECRET_TIMER_MARK)
+            && !(entities[i].ai_data[7] & PICKUP_VISIT_PERSIST_MARK))
             entity_kill(i);
     }
     hud_clear_loot_timer();

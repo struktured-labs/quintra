@@ -241,6 +241,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_hexa_body_art_and_contrast.py
 	uv run --quiet --with pyboy python scripts/test_void_collapse.py
 	uv run --quiet --with pyboy python scripts/test_boss_rewards.py
+	$(PYBOY_RUN) scripts/test_boss_drop_persist.py
 	uv run --quiet --with pyboy python scripts/test_convergence_boss_cap.py
 	uv run --quiet --with pyboy python scripts/test_convergence_transform.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
@@ -338,6 +339,7 @@ demo-check: demo-kit
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_boss_identity.py
 	$(PYBOY_RUN) scripts/test_boss_rewards.py
+	$(PYBOY_RUN) scripts/test_boss_drop_persist.py
 	$(PYBOY_RUN) scripts/test_performance.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
 	$(PYBOY_RUN) scripts/test_gameover.py

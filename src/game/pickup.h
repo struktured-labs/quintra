@@ -38,6 +38,8 @@
 // Room-owned secret-vault countdown. Marked loot bypasses its old individual
 // u8 lifespan and is retired together by the visible twelve-second clock.
 #define PICKUP_SECRET_TIMER_MARK 0x80
+// Boss and mini-boss rewards stay until collected or the player leaves the room.
+#define PICKUP_VISIT_PERSIST_MARK 0x40
 
 // Shop ware kinds
 #define WARE_HEART   0   // +2 HP refill, 10 coins
@@ -128,7 +130,7 @@ u8   pickup_dungeon_ware_price(u8 ware) BANKED;
 // Spawn a +1 MP wisp (shattered-crystal drop)
 u8   pickup_spawn_mp(fix8_t x, fix8_t y) BANKED;
 void pickup_spawn_surge(fix8_t x, fix8_t y) BANKED;
-void pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED;
+u8   pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED;
 void pickup_resolve_wildcard(void) BANKED;
 
 // Spawn a permanent town elder who restores HP/MP once per room visit.
@@ -146,6 +148,8 @@ u8   pickup_spawn_shop_tag(fix8_t x, fix8_t y) BANKED;
 
 // RNG-driven drop on enemy death, including a rare optional Wildcard.
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED;
+// Keep a live pickup for the rest of this room visit. 0xFF is a no-op.
+void pickup_mark_persistent(u8 idx) BANKED;
 
 // Per-frame update (dispatch in entity_update_all)
 void pickup_update(entity_t *e, u8 idx) BANKED;

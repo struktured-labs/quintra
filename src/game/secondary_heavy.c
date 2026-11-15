@@ -4,6 +4,7 @@
 #include "game/player.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
+#include "game/sun_lattice.h"
 #include "game/room.h"
 #include "render/hud.h"
 #include "render/tiles.h"
@@ -49,7 +50,12 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
     if (e->ai_data[6]==PROJ_AUX_MORNINGSTAR) {
         a=(++e->ai_data[0]>>1)&15;
         e->x=player.x+4+sx[a]; e->y=player.y+4-sx[(a+4)&15];
-        if (!room_tile_walkable(room_tile_at_px(e->x+4,e->y+4))) entity_kill(idx);
+        t=room_tile_at_px(e->x+4,e->y+4);
+        if (!room_tile_walkable(t)) {
+            // The ball turns a Sun Lattice vane it sweeps into.
+            if (t==BGT_PILLAR) sun_lattice_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
+            entity_kill(idx);
+        }
         return;
     }
     if (e->state_timer>32) {
@@ -68,8 +74,13 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
         entity_kill(idx);
         for (dy=-1;dy<=1;++dy)
             for (dx=-1;dx<=1;++dx)
-                if (room_tile_at_px(x+dx*8,y+dy*8)==BGT_WALL_CRACK)
+            {
+                t=room_tile_at_px(x+dx*8,y+dy*8);
+                if (t==BGT_WALL_CRACK)
                     room_open_secret((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
+                else if (t==BGT_PILLAR)
+                    sun_lattice_strike((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
+            }
         projectile_spawn_splash(x,y,damage,0xFF);
         fx_spawn(SPR_FX_IMPACT,4,x-14,y-14,16);
         fx_spawn(SPR_FX_IMPACT,4,x+10,y-14,16);

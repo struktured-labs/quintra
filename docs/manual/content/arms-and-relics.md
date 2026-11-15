@@ -17,7 +17,7 @@ Howl: eight shots and a brief ward. Stoneskin: blocks hits for a time. Raven Mar
 The Aim page cycles only what is in the pack.
 
 - Boomerang. The shop line is “B: stun and fetch.” It goes out, stops ordinary monsters for a moment, cuts hostile shots, and brings loose hearts, coins, magic, and relics home. Elites, mini-bosses, colossi, stock, and terrain ignore the stun. Dungeon price 30.
-- Hookshot. “Latch and pull self.” Price 35. This is a weapon, not the Rift Hook that crosses holes.
+- Hookshot. “Latch and pull self.” Price 35. This is a weapon, not the Rift Hook that crosses holes. In a sun lattice it snags a Helio Vane, turns it a quarter, and comes back without pulling you.
 - Morningstar. “Swing around you.” Price 30.
 - Bomb Bag. The pack prints that name. The shelf says “1 MP: throw or drop.” Stand still to drop, or hold a direction to throw. Price 30. The consumable Rift Bomb is a different, single-use pack item: it breaks cover and bursts the nearby lanes.
 

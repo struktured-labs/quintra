@@ -19,7 +19,7 @@ static u8 wildcard_add_capped(u8 value, u8 delta, u8 cap) {
     return (u8)(value + delta);
 }
 
-void pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED {
+u8 pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_WILDCARD, x, y);
     if (idx != 0xFF) {
         entity_t *e = &entities[idx];
@@ -29,6 +29,7 @@ void pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED {
         e->state_timer = 255;
         e->state = (u8)(rng_next_u8() & 31);
     }
+    return idx;
 }
 
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {

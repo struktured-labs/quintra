@@ -202,14 +202,14 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
                 hud_redraw_hp();
                 sfx_play(SFX_HEART);
             }
-            pickup_spawn(PICKUP_HEART_HALF, boss_x - FIX8(8), boss_y);
-            pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y);
-            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8));
-            pickup_spawn(PICKUP_COIN_5, boss_x, boss_y + FIX8(16));
+            pickup_mark_persistent(pickup_spawn(PICKUP_HEART_HALF, boss_x - FIX8(8), boss_y));
+            pickup_mark_persistent(pickup_spawn(PICKUP_HEART_HALF, boss_x + FIX8(16), boss_y));
+            pickup_mark_persistent(pickup_spawn(PICKUP_COIN_5, boss_x, boss_y - FIX8(8)));
+            pickup_mark_persistent(pickup_spawn(PICKUP_COIN_5, boss_x, boss_y + FIX8(16)));
             // Every colossus yields a class-attuned passive
             // item — the run's guaranteed power curve.
-            pickup_spawn_item(pickup_boss_relic_for_class(),
-                boss_x + FIX8(4), boss_y + FIX8(4));
+            pickup_mark_persistent(pickup_spawn_item(pickup_boss_relic_for_class(),
+                boss_x + FIX8(4), boss_y + FIX8(4)));
             // Death explosion: staggered ring of impact FX.
             // These are allowed to drop if a later effect
             // burst fills the table; the rewards are not.
@@ -256,12 +256,12 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
                 if (gear < WAYGEAR_COUNT
                     && !(player.waygear_owned
                         & WAYGEAR_BIT(gear)))
-                    pickup_spawn_waygear(gear,
+                    pickup_mark_persistent(pickup_spawn_waygear(gear,
                         entities[j].x + FIX8(12),
-                        entities[j].y);
-                else pickup_spawn_wildcard(
+                        entities[j].y));
+                else pickup_mark_persistent(pickup_spawn_wildcard(
                     entities[j].x + FIX8(12),
-                    entities[j].y);
+                    entities[j].y));
             } else if (!run_state.world_mode) {
                 u8 local = run_state_dungeon_local();
                 if (local == run_state.mission_warden_cell)
@@ -271,15 +271,17 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
                     run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
             }
             g_hitstop = 5;
-            pickup_spawn(PICKUP_HEART_HALF, entities[j].x, entities[j].y - FIX8(8));
-            pickup_spawn(PICKUP_COIN_5,     entities[j].x, entities[j].y + FIX8(8));
+            pickup_mark_persistent(pickup_spawn(PICKUP_HEART_HALF,
+                entities[j].x, entities[j].y - FIX8(8)));
+            pickup_mark_persistent(pickup_spawn(PICKUP_COIN_5,
+                entities[j].x, entities[j].y + FIX8(8)));
             if (!world_guard) {
                 u8 w = pickup_weapon_from_roll(
                     rng_range(pickup_weapon_count()));
                 if (w == player.starter_weapon)
                     w = pickup_next_weapon(w);
-                pickup_spawn_weapon(w,
-                    entities[j].x + FIX8(12), entities[j].y);
+                pickup_mark_persistent(pickup_spawn_weapon(w,
+                    entities[j].x + FIX8(12), entities[j].y));
             }
         }
     }
