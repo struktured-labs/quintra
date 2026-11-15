@@ -39,6 +39,31 @@ SHOP_BOUGHT = 58
 CURED_TILES = (94, 65, 76, 86, 82)
 
 
+# Antidote vial: its own OBJ tile in VRAM bank 1 (beside the Morningstar),
+# drawn with OBJ palette 7 and the bank bit.
+SPR_ITEM_ANTIDOTE, ANTIDOTE_ICON_PROP = 238, 0x0F
+SPR_ITEM_FLASK = 149
+ANTIDOTE_ICON = bytes((0x3C, 0x3C, 0x18, 0x3C, 0x00, 0x18, 0x3C, 0x42,
+                       0x7E, 0x99, 0x7E, 0xBD, 0x7E, 0x99, 0x00, 0x7E))
+SHADOW_OAM = addr("_shadow_OAM")
+
+
+def vram1_tile(pb, tile):
+    old = pb.memory[0xFF4F]
+    pb.memory[0xFF4F] = 1
+    data = bytes(pb.memory[0x8000 + tile * 16 + i] for i in range(16))
+    pb.memory[0xFF4F] = old
+    return data
+
+
+def assert_antidote_icon(pb, entity, where):
+    tile, prop = pb.memory[entity + 12], pb.memory[entity + 13]
+    assert (tile, prop) == (SPR_ITEM_ANTIDOTE, ANTIDOTE_ICON_PROP), (
+        f"{where}: Antidote drawn as tile {tile} prop {prop:#x}")
+    assert vram1_tile(pb, SPR_ITEM_ANTIDOTE) == ANTIDOTE_ICON, (
+        f"{where}: Antidote icon missing from VRAM bank 1")
+
+
 def tick(pb, frames):
     for _ in range(frames):
         pb.tick()
@@ -136,6 +161,11 @@ def test_pack_tool():
         press(pb, "start", held=4, released=40)
         assert pb.memory[SCREEN] != SCREEN_ROOM, "Pack did not open"
         pb.screen.image.save(SHOTS / "antidote-pack.png")
+        oam8 = SHADOW_OAM + 8 * 4
+        assert (pb.memory[oam8 + 2], pb.memory[oam8 + 3]) == (
+            SPR_ITEM_ANTIDOTE, ANTIDOTE_ICON_PROP), "Pack TOOL icon is not the vial"
+        assert vram1_tile(pb, SPR_ITEM_ANTIDOTE) == ANTIDOTE_ICON, \
+            "Pack lost the Antidote icon tile"
         press(pb, "a", held=4, released=60)
         assert pb.memory[SCREEN] == SCREEN_ROOM, "Antidote use did not resume"
         assert pb.memory[STATUS] == QSTATUS_NONE, "Pack Antidote did not cure"
@@ -160,6 +190,7 @@ def test_dungeon_merchant():
         shelf = stock[0]
         assert pb.memory[shelf + 19] == 12, "Antidote price drifted"
         assert len(wares(pb)) == 5, "Antidote displaced a featured shelf"
+        assert_antidote_icon(pb, shelf, "dungeon merchant")
         pb.screen.image.save(SHOTS / "antidote-merchant.png")
         set_inventory(pb, [])
         put16(pb, PLAYER + 16, 50)
@@ -198,6 +229,7 @@ def test_riftwild_trader():
         assert any(pb.memory[ENTITIES + i * ENTITY_SIZE] == ENT_PICKUP
                    and pb.memory[ENTITIES + i * ENTITY_SIZE + 17] == PICKUP_MERCHANT
                    for i in range(32)), "Riftwild trader has no keeper"
+        assert_antidote_icon(pb, stock[0], "Riftwild trader")
         pb.screen.image.save(SHOTS / "antidote-riftwild-trader.png")
         set_inventory(pb, [])
         put16(pb, PLAYER + 16, 30)

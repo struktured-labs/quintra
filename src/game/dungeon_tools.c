@@ -52,7 +52,7 @@ void dungeon_tools_pack_focus(void) BANKED {
 void dungeon_tools_draw_pack(void) BANKED {
     static const u8 icons[TOOL_COUNT] = {
         SPR_ITEM_RIFT_BOMB, SPR_ITEM_ECHO_CHIME, SPR_ITEM_MIRROR_SHARD,
-        SPR_ITEM_FLASK
+        SPR_ITEM_ANTIDOTE
     };
     gotoxy(3, 15); text_write("                ");
     gotoxy(3, 15);
@@ -63,7 +63,7 @@ void dungeon_tools_draw_pack(void) BANKED {
     text_write(" x");
     text_u16(tool_count(tool_ids[selected_tool]));
     set_sprite_tile(8, icons[selected_tool]);
-    set_sprite_prop(8, selected_tool == TOOL_ANTIDOTE ? 7 : 3);
+    set_sprite_prop(8, selected_tool == TOOL_ANTIDOTE ? ANTIDOTE_ICON_PROP : 3);
     // The tool and Oath glyphs occupy consecutive PACK rows. Keep the tool
     // one scanline high so silhouettes such as Echo Chime (which use their
     // bottom tile row) do not touch the Oath flare's top row below.

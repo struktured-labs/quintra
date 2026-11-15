@@ -70,8 +70,8 @@ u8 antidote_collect(u8 bought) BANKED {
 u8 antidote_spawn(fix8_t x, fix8_t y) BANKED {
     u8 idx = pickup_spawn(PICKUP_ANTIDOTE, x, y);
     if (idx != 0xFF) {
-        entities[idx].sprite_tile = SPR_ITEM_FLASK;
-        entities[idx].palette = 0x07;   // poison/regen green
+        entities[idx].sprite_tile = SPR_ITEM_ANTIDOTE;
+        entities[idx].palette = ANTIDOTE_ICON_PROP; // green vial, bank 1
         // 0xB1 is pickup_update's "never expires" reward mark: a cure
         // must not vanish before the poisoned champion reaches it.
         entities[idx].ai_data[5] = 0xB1;

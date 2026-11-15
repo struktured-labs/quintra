@@ -127,7 +127,8 @@ def approach_and_talk(pb, speaker, expected_kind, expected_topic):
             oam = 0xFE00 + slot * 4
             assert pb.memory[oam] == y * 8 + 16 and pb.memory[oam + 1] == 8
             assert pb.memory[oam + 2] == pb.memory[ware + 12]
-            assert (pb.memory[oam + 3] & 7) == pb.memory[ware + 13]
+            # Palette plus the VRAM-bank bit (the Antidote vial lives in bank 1).
+            assert (pb.memory[oam + 3] & 0x0F) == (pb.memory[ware + 13] & 0x0F)
         assert pb.memory[0xFF40] & 0x02, "merchant catalog icons are hidden"
         pb.screen.image.save(ROOT / "tmp" / "merchant-stock.png")
     else:
