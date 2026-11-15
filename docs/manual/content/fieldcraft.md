@@ -20,6 +20,8 @@ The village is part of combat. Fill health and magic before north. Thirty coins 
 
 On Normal, do not expect the game to top you off. Stay above half if you can, and know that an alpha will pay you in coins instead of a heart while you are comfortable. That is intentional. Easy is for learning the shapes. It is not a secret true ending. There is no Hard. If Normal feels unfair, it is often because a diagonal was still loaded.
 
+From Ember Depths on, the puzzle rooms are sun lattices. A brazier throws a beam, the vanes bend it, and every obelisk has to drink it at once. A strike turns a vane: a shot, the Boomerang, the Morningstar, a bomb, or the Hookshot from across the room. Fixed vanes and wedges do not turn. A crystal across the first beam is meant to be shattered. Every vane you need can be reached on foot from dry floor, so if it looks like an island, it is a decoy.
+
 Cracks are amber in every biome. If the wall is amber, shoot it. If a vault says it will not refill, believe it. Take the gift before you leave.
 
 And when you fall, the title is telling the truth. Only knowledge persists. The next vessel can be a different one. The Serpent will still coil. You will know when to flee it.

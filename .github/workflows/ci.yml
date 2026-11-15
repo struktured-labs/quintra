@@ -146,6 +146,9 @@ jobs:
       - name: PyBoy Reaper pose
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_reaper_pose.py
 
+      - name: PyBoy Sun Lattice Hookshot and Morningstar
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_sun_lattice_tools.py
+
       - name: Headless mGBA smoke
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
