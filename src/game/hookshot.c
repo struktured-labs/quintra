@@ -4,8 +4,10 @@
 #include "game/player.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
+#include "game/puzzle.h"
 #include "game/room.h"
 #include "game/status.h"
+#include "game/sun_lattice.h"
 #include "game/will.h"
 #include "render/tiles.h"
 
@@ -78,6 +80,12 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
             if (e->x<0 || e->y<0 || e->x+7>=room_world_width
                 || e->y+7>=room_world_height) { e->state=2; break; }
             tile=room_tile_at_px(e->x+3,e->y+3);
+            // Sun Lattice snag-and-spin (spec Q3): a rotatable Helio Vane
+            // turns 90 degrees and the hook retracts without pulling.
+            if (tile==BGT_PILLAR && room_puzzle_kind==PUZZLE_SUN_LATTICE
+                && sun_lattice_hook((u8)((e->x+3)>>3),(u8)((e->y+3)>>3))) {
+                e->state=2; break;
+            }
             if (tile==BGT_WALL || tile==BGT_PILLAR || tile==BGT_TREE
                 || tile==BGT_CRYSTAL || tile==BGT_WALL_CRACK) {
                 e->state=1; break;
