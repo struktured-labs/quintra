@@ -89,7 +89,7 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
         e->hitbox     = (6 << 4) | 6;
         e->damage     = 0;
         e->hp         = 1;
-        e->state_timer = 240;    // despawn after 4 seconds
+        e->state_timer = 240;    // ordinary drops despawn after 4 seconds
         // Specialized pickup constructors replace this default art below;
         // only hearts differ from the coin/orb placeholder here.
         if (kind == PICKUP_HEART_HALF) {
@@ -101,6 +101,14 @@ u8 pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED {
         }
     }
     return idx;
+}
+
+void pickup_mark_persistent(u8 idx) BANKED {
+    if (idx == 0xFF) return;
+    // state_timer 0 would otherwise mean "expire now" for timed drops.
+    // The persist mark makes pickup_update skip that clock entirely.
+    entities[idx].state_timer = 0;
+    entities[idx].ai_data[7] |= PICKUP_VISIT_PERSIST_MARK;
 }
 
 u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
@@ -549,6 +557,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     }
     if (e->ai_data[5] == 0xB1 || e->ai_data[5] == 0xB2) return;
     if (e->ai_data[7] & PICKUP_SECRET_TIMER_MARK) return;
+    if (e->ai_data[7] & PICKUP_VISIT_PERSIST_MARK) return;
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
 
