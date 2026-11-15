@@ -199,6 +199,7 @@ verify: all check-balance-bot
 	python3 scripts/test_dungeon_topology.py
 	python3 scripts/test_start_cell_distribution.py
 	$(PYBOY_RUN) scripts/test_farfold_cache.py
+	$(PYBOY_RUN) scripts/test_farfold_guard_notice.py
 	$(PYBOY_RUN) scripts/test_dungeon_courts.py
 	$(PYBOY_RUN) scripts/test_dungeon_districts.py
 	$(PYBOY_RUN) scripts/test_continuous_districts.py

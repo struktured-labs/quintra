@@ -50,8 +50,8 @@ extern u8 sl_fixbits[SL_BITS];
 extern u8 sl_attempts;            // generator attempts used (0xFF = fallback)
 
 // Build the solved optical tree for this seed and stage, then scramble it.
-// role: 0 Trial, 1 Waystone. stage: run_state.bosses_beaten.
-void sl_generate(u32 seed, u8 stage, u8 role) SL_BANKED;
+// role: 0 Trial, 1 Waystone; bosses_beaten: run_state.bosses_beaten.
+void sl_generate(u32 seed, u8 bosses_beaten, u8 role) SL_BANKED;
 // Trace every beam into sl_beam_h / sl_beam_v and sl_lit. When use_map is
 // nonzero, room_tilemap terrain can stop a beam (walls, pillars, crystals).
 // Returns 1 when every Obelisk is lit.
