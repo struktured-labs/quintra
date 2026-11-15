@@ -1145,11 +1145,15 @@ void room_enter(void) {
     door_bump_cd = 0;
 
     // Stage-entry reveal: the first room of a new stage (or of a fresh run)
-    // starts dimmed and pops to full in ~0.4s. room_counter == 0 forces that
-    // reveal when a second champion in the same power cycle is also in
-    // stage 0. Cold boot uses the 0xFF initializer above: a suspended run
-    // is already past room 0, so this assignment does not run.
-    if (run_state.room_counter == 0) stage_seen = 0xFF;
+    // starts dimmed and pops to full in ~0.4s. A second champion in the same
+    // power cycle can also be in stage 0, so treat the seeded foyer — not
+    // only cell 0 — as a new-run start and force the reveal. Cold boot uses
+    // the 0xFF initializer above: a suspended run is already past the foyer,
+    // so this assignment does not run.
+    if (run_state.room_counter
+        == (u8)(run_state_stage_start(run_state.bosses_beaten)
+            + run_state_dungeon_entry_cell()))
+        stage_seen = 0xFF;
     if (room_stage() != stage_seen) {
         stage_seen = room_stage();
         room_load_stage_obj_identity();

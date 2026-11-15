@@ -305,12 +305,24 @@ def wait_room_ready(pb, label):
     raise AssertionError(f"{label} never presented the player sprite")
 
 
+FRAME = addr("_loop_frame_counter")
+# A fixed start frame makes New Game and the fresh-boot reference share a
+# seed, and therefore the same foyer cell and room palettes.
+PINNED_START_FRAME = 0x0120
+
+
+def pin_start_frame(pb):
+    pb.memory[FRAME] = PINNED_START_FRAME & 0xFF
+    pb.memory[FRAME + 1] = PINNED_START_FRAME >> 8
+
+
 def boot_room(pb):
     for _ in range(240):
         pb.tick()
     press(pb, "start")
     for _ in range(30):
         pb.tick()
+    pin_start_frame(pb)
     press(pb, "a")
     wait_room_ready(pb, "fresh room")
 
@@ -405,6 +417,7 @@ def new_game_from_title(pb, label):
     press(pb, "start")
     for _ in range(30):
         pb.tick()
+    pin_start_frame(pb)
     press(pb, "a")
     wait_room_ready(pb, label)
 
@@ -445,6 +458,7 @@ def boss_death(reference, room_reference):
         if oam_bytes(pb, i)[0] or oam_bytes(pb, i)[1]
     ]
     assert not leaked, f"class select inherited title/fight sprites: {leaked}"
+    pin_start_frame(pb)
     press(pb, "a")
     wait_room_ready(pb, "new game after crystal death")
     assert_room_palettes(pb, room_reference, "new game after crystal death")
