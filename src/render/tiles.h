@@ -94,6 +94,11 @@
 #define HEXA_BG_CO      53
 #define HEXA_BG_CP      54
 #define HEXA_BG_TR      55
+/* Sun Lattice light-puzzle fixtures and beams (VRAM bank 1, BG 56..62):
+   Brazier, Helio Vane (hflip = '\\'), Bifrost Wedge, Solar Obelisk, beam
+   horizontal, vertical, crossing. Clear of Hexa 40..55 and bank-1 OBJ. */
+#define SUN_LATTICE_TILE       56
+#define SUN_LATTICE_TILE_COUNT 7
 
 // Compass-only 8px legend letters. Keeping these as authored BG tiles avoids
 // invoking the console/font system or turning the map back into a text page.

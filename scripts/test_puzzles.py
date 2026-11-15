@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live-ROM contracts for the three procedural dungeon puzzle families."""
+"""Live-ROM contracts for the procedural dungeon puzzle families."""
 
 import re
 from pathlib import Path
@@ -343,87 +343,33 @@ def exit_to(pb, target, stage):
 
 def late_depth_puzzle_contract():
     # Expanded dungeons spend their new depth on a second authored puzzle
-    # beat at local room seven, rather than padding the route with only
-    # ordinary extermination rooms.
-    pb = load(3)
-    seed = sum(pb.memory[RS + 2 + i] << (8 * i) for i in range(4))
-    waystone = mission_graph(dungeon_size(2), seed, 2)["waystone"]
-    source, _ = dungeon_predecessor(waystone, dungeon_size(2), seed, 2)
-    target = STAGE_START[2] + waystone
-    pb.memory[RS + 1] = STAGE_START[2] + source
-    for i in range(32):
-        ep = EN + i * 28
-        if pb.memory[ep] == 2:
-            pb.memory[ep] = pb.memory[ep + 1] = 0
-    pb.memory[COMBAT] = 0
-    pb.memory[LOCKED] = 0
-    cross_edge(pb, source, waystone)
-    for _ in range(60):
-        pb.tick()
-        if (pb.memory[RS + 1] == target and pb.memory[KIND] in (1, 2)
-                and pb.memory[LOCKED]):
-            break
-    assert pb.memory[RS + 1] == target, "could not enter late-depth puzzle room"
-    assert pb.memory[KIND] in (1, 2) and pb.memory[LOCKED] == 1, \
-        "generated Waystone became filler instead of a mechanical puzzle"
-    assert len(active_hostiles(pb)) >= 4, \
-        "late-depth puzzle did not retain its live guard pack"
-    assert visible_hostiles(pb), "late-depth puzzle looked empty on arrival"
-    clear_hostiles(pb)  # isolate fixture completion after proving population
-    fixture_count = sum(
-        pb.memory[TM + y * 20 + x] in (25, 33)
-        for y in range(1, 16) for x in range(1, 19))
-    assert fixture_count >= (1 if pb.memory[KIND] == 1 else 5), \
-        "late-depth puzzle has no readable fixture"
-    if pb.memory[KIND] == 1:
-        bx, by = next(
-            (x, y) for y in range(1, 16) for x in range(1, 19)
-            if pb.memory[TM + y * 20 + x] == 25
-        )
-        put16(pb, PL + 9, bx * 8 - 16)
-        put16(pb, PL + 11, by * 8 - 8)
-        pb.button_press("right")
-        for _ in range(120):
-            pb.tick()
-            if not pb.memory[LOCKED]:
-                assert pb.memory[0xFF12] == 0xC0, (
-                    "push-block solve delayed its fanfare")
-                break
-        pb.button_release("right")
-    else:
-        runes = [
-            (x, y) for y in range(1, 16) for x in range(1, 19)
-            if pb.memory[TM + y * 20 + x] == 33
-        ]
-        assert len(runes) == 5, f"stage three Waystone needs five runes: {runes}"
-        solve_runes(pb, runes)
-    assert pb.memory[LOCKED] == 0, "generated Waystone could not be solved"
-    assert pb.memory[RS + 27] & (1 << 7), \
-        "Waystone solve did not persist its stable route bit"
-    pb.stop(save=False)
+    # beat. From Stage 3 on that Waystone is a Sun Lattice light puzzle.
+    sun_lattice_contract(3, "waystone")
 
 
 def wide_waystone_circuit_contract():
     # The fixed full-campaign world once produced a horizontal Stage 7 court
-    # whose first rune was reachable but whose lower note was an isolated
-    # floor island. Mandatory phrases must retain their unknown order without
-    # asking the player to cross solid procedural scenery.
+    # whose mandatory fixture sat on an isolated floor island. Its Waystone
+    # is now a Sun Lattice: every vane on the light path must stay reachable
+    # by a walking champion in that same wide court.
     stage = 6
     seed = 2064128163
     waystone = mission_graph(dungeon_size(stage), seed, stage)["waystone"]
 
     def probe(pb, tiles):
-        assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
+        assert pb.memory[KIND] == slh.PUZZLE_SUN_LATTICE and pb.memory[LOCKED] == 1
         assert len(active_hostiles(pb)) >= 5, \
             "late Waystone did not retain its scaled guard pack"
         assert visible_hostiles(pb), "late Waystone looked empty on arrival"
-        runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
-                 if pb.memory[TM + y * 20 + x] == 33]
-        assert len(runes) == 5, f"Stage 7 Waystone lost notes: {runes}"
-        reachable = body_component(tiles, runes[0])
-        assert set(runes) <= reachable, (
-            f"wide-court Waystone marooned required notes: "
-            f"{set(runes) - reachable}")
+        fixtures = slh.read_state(pb, SL)
+        sh, sv, _ = slh.trace(fixtures, [f["solved"] for f in fixtures])
+        component = lattice_component(pb, tilemap(pb))
+        for f in fixtures:
+            if f["kind"] == slh.SLK_VANE and any(
+                    (f["x"] + dx, f["y"] + dy) in (sh | sv)
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                assert slh.melee_reachable(component, f["x"], f["y"]), (
+                    f"wide-court Waystone marooned vane {(f['x'], f['y'])}")
 
     generated_room(stage, seed, local_room=waystone, probe=probe)
 
@@ -528,16 +474,235 @@ def deep_phase_contract():
                    probe=open_gate_probe)
 
 
+# ---- Sun Lattice (PUZZLE_SUN_LATTICE, Stage 3+ Trial / Waystone) ----------
+
+import sun_lattice_harness as slh  # noqa: E402
+
+SL = slh.symbols(NOI)
+
+
+def tilemap(pb):
+    return [pb.memory[TM + i] for i in range(20 * 17)]
+
+
+def lattice_beams_match(pb, fixtures):
+    tiles = tilemap(pb)
+    h = slh.read_bits(pb, SL["_sl_beam_h"])
+    v = slh.read_bits(pb, SL["_sl_beam_v"])
+    ph, pv, lit = slh.trace(fixtures, [f["ang"] for f in fixtures], tiles)
+    assert (h, v) == (ph, pv), (
+        f"ROM beam differs from reference trace: rom={sorted(h | v)} "
+        f"ref={sorted(ph | pv)}")
+    assert {i for i, f in enumerate(fixtures) if f["lit"]} == lit
+    return h | v
+
+
+def solve_sun_lattice(pb, frames=None):
+    """Turn the room's vanes with real strikes until every Obelisk is lit.
+
+    frames, when given, collects a screenshot after each strike.
+    """
+    def snap():
+        if frames is not None:
+            frames.append(pb.screen.image.copy())
+
+    fixtures = slh.read_state(pb, SL)
+    obelisks = {i for i, f in enumerate(fixtures) if f["kind"] == slh.SLK_OBELISK}
+    lit = slh.trace(fixtures, [f["ang"] for f in fixtures], tilemap(pb))[2]
+    assert not obelisks <= lit, "Sun Lattice spawned already lit"
+    cx, cy = pb.memory[SL["_sl_crystal_x"]], pb.memory[SL["_sl_crystal_y"]]
+    if cx != 0xFF and pb.memory[TM + cy * 20 + cx] == 22:
+        hit = slh.strike(pb, PL, TM, cx, cy,
+                         lambda: pb.memory[TM + cy * 20 + cx] != 22)
+        assert hit, f"could not shatter the lattice crystal at {(cx, cy)}"
+        for _ in range(10):
+            pb.tick()
+        snap()
+        lattice_beams_match(pb, slh.read_state(pb, SL))
+    # Replan after every strike: spread shots can graze a neighbouring vane,
+    # exactly as they would for a player.
+    turned = []
+    for _ in range(16):
+        if not pb.memory[LOCKED]:
+            break
+        fixtures = slh.read_state(pb, SL)
+        plan = slh.solve(fixtures, tilemap(pb))
+        assert plan is not None, f"no vane setting lights every Obelisk: {fixtures}"
+        if not plan:
+            for _ in range(30):
+                pb.tick()
+            continue
+        i = plan[0]
+        f = fixtures[i]
+        before = pb.memory[SL["_sl_ang"] + i]
+        hit = slh.strike(pb, PL, TM, f["x"], f["y"],
+                         lambda: pb.memory[SL["_sl_ang"] + i] != before)
+        assert hit, f"no strike could turn vane {i} at {(f['x'], f['y'])}"
+        turned.append(i)
+        for _ in range(10):   # past the 8-frame per-vane debounce
+            pb.tick()
+        snap()
+        lattice_beams_match(pb, slh.read_state(pb, SL))
+    plan = turned
+    for _ in range(30):
+        pb.tick()
+        if not pb.memory[LOCKED]:
+            break
+    for _ in range(120):   # let the unlock fanfare settle
+        pb.tick()
+    snap()
+    return plan
+
+
+def enter_mission_cell(stage, role, seed=0x51A6D00D):
+    """Boot the stage and cross a real maze edge into its Trial/Waystone."""
+    stage_index = stage - 1
+    select_rom_topology(ROM)
+    addrs = symbol_addresses(ROM)
+    pb, _ram, _entry = boot_to_stage(ROM, addrs, stage_index, "normal", 0)
+    run_seed = sum(pb.memory[RS + 2 + i] << (8 * i) for i in range(4))
+    local = mission_graph(dungeon_size(stage_index), run_seed, stage_index)[role]
+    target = STAGE_START[stage_index] + local
+    if pb.memory[RS + 1] != target:
+        source, direction_id = dungeon_predecessor(
+            local, dungeon_size(stage_index), run_seed, stage_index)
+        pb.memory[RS + 1] = STAGE_START[stage_index] + source
+        pb.memory[RS + 6] = 0xFF
+        pb.memory[LOCKED] = 0
+        pb.memory[COMBAT] = 0
+        normalize_compact_source(pb, addrs)
+        for i in range(32):
+            ep = EN + i * 28
+            if pb.memory[ep] == 2:
+                pb.memory[ep] = pb.memory[ep + 1] = 0
+        direction = ("up", "right", "down", "left")[direction_id]
+        cross_graph_edge(pb, PL, TM, direction)
+        for _ in range(120):
+            pb.tick()
+            if pb.memory[RS + 1] == target:
+                break
+        pb.button_release(direction)
+    assert pb.memory[RS + 1] == target, f"could not enter stage {stage} {role}"
+    for _ in range(90):
+        pb.tick()
+    return pb
+
+
+def lattice_component(pb, tiles):
+    """2x2-body cells reachable from where the champion entered."""
+    px = pb.memory[PL + 9] | pb.memory[PL + 10] << 8
+    py = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
+    fx, fy = min(19, max(1, (px + 8) >> 3)), min(16, max(1, (py + 12) >> 3))
+    best = set()
+    for sx in range(fx - 1, fx + 2):
+        for sy in range(fy - 1, fy + 2):
+            comp = slh.body_component(tiles, (sx, sy))
+            if len(comp) > len(best):
+                best = comp
+    return best
+
+
+def lattice_vram_contract(pb, fixtures):
+    """Fixtures draw from VRAM bank 1 tiles 56..59, and survive the Pack
+    and compass screens, which rebuild the room through room_draw_tilemap."""
+    ox, oy = addr("_room_bg_origin_x"), addr("_room_bg_origin_y")
+    expect = {slh.SLK_EMITTER: 56, slh.SLK_VANE: 57, slh.SLK_FIXED: 57,
+              slh.SLK_BIFROST: 58, slh.SLK_OBELISK: 59}
+
+    def cells():
+        out = []
+        for f in fixtures:
+            a = (0x9800 + ((pb.memory[oy] + f["y"]) & 31) * 32
+                 + ((pb.memory[ox] + f["x"]) & 31))
+            out.append((pb.memory[0, a], pb.memory[1, a]))
+        return out
+
+    for (tile, attr), f in zip(cells(), fixtures):
+        assert tile == expect[f["kind"]] and attr & 0x08, (
+            f"fixture {f} drew tile {tile} attr {attr:#x}")
+        if f["kind"] in (slh.SLK_VANE, slh.SLK_FIXED):
+            assert bool(attr & 0x20) == bool(f["ang"]), "vane flip mismatch"
+    before = cells()
+    for button in ("start", "select"):
+        for _ in range(2):
+            pb.button_press(button)
+            pb.tick()
+            pb.button_release(button)
+            for _ in range(60):
+                pb.tick()
+        assert cells() == before, f"{button} screen lost the lattice overlay"
+
+
+def sun_lattice_contract(stage, role="trial", gif=None):
+    pb = enter_mission_cell(stage, role)
+    bit = 1 if role == "trial" else 1 << 7
+    assert pb.memory[KIND] == slh.PUZZLE_SUN_LATTICE, (
+        f"stage {stage} {role} is kind {pb.memory[KIND]}, not Sun Lattice")
+    assert pb.memory[LOCKED] == 1 and not (pb.memory[RS + 27] & bit)
+    assert len(active_hostiles(pb)) >= 4, "lattice room lost its guard pack"
+    clear_hostiles(pb)
+    fixtures = slh.read_state(pb, SL)
+    kinds = [f["kind"] for f in fixtures]
+    assert kinds.count(slh.SLK_EMITTER) == 1 and slh.SLK_OBELISK in kinds
+    if stage >= 4 and pb.memory[SL["_sl_attempts"]] != 0xFF:
+        assert slh.SLK_BIFROST in kinds, "Frost Vault+ lattice lost its Wedge"
+    tiles = tilemap(pb)
+    # Every fixture is a solid 8x8 post in the collision map.
+    assert all(tiles[f["y"] * 20 + f["x"]] == 21 for f in fixtures)
+    # Spec question 4: each rotatable vane on the solved light path can be
+    # struck in melee from dry floor the champion can actually walk to.
+    component = lattice_component(pb, tiles)
+    solved_h, solved_v, solved_lit = slh.trace(
+        fixtures, [f["solved"] for f in fixtures])
+    assert solved_lit == slh.obelisks(fixtures), "solved tree is not lit"
+    on_path = set()
+    for i, f in enumerate(fixtures):
+        if f["kind"] == slh.SLK_VANE:
+            neighbours = {(f["x"] + dx, f["y"] + dy)
+                          for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))}
+            if neighbours & (solved_h | solved_v):
+                on_path.add(i)
+                assert slh.melee_reachable(component, f["x"], f["y"]), (
+                    f"mandatory vane {i} at {(f['x'], f['y'])} is not "
+                    f"melee-reachable from dry floor")
+    assert on_path, "no rotatable vane on the light path"
+    lattice_beams_match(pb, fixtures)
+    for _ in range(60):   # let the arrival label and palette fade settle
+        pb.tick()
+    lattice_vram_contract(pb, fixtures)
+    frames = [pb.screen.image.copy()] if gif is not None else None
+    plan = solve_sun_lattice(pb, frames)
+    assert pb.memory[LOCKED] == 0, f"lit lattice did not unlock: plan={plan}"
+    assert pb.memory[RS + 27] & bit, "lattice solve did not persist its bit"
+    fixtures = slh.read_state(pb, SL)
+    assert all(f["lit"] for f in fixtures if f["kind"] == slh.SLK_OBELISK)
+    # A solved room freezes its vanes: a further strike changes nothing.
+    vane = next(i for i in on_path)
+    before = pb.memory[SL["_sl_ang"] + vane]
+    slh.strike(pb, PL, TM, fixtures[vane]["x"], fixtures[vane]["y"],
+               lambda: pb.memory[SL["_sl_ang"] + vane] != before, frames=20)
+    assert pb.memory[SL["_sl_ang"] + vane] == before, "solved vane still turns"
+    if gif is not None:
+        frames[0].save(gif, save_all=True, append_images=frames[1:],
+                       duration=700, loop=0)
+    pb.stop(save=False)
+    return plan
+
+
 def main():
     push_seal_contract()
     rune_sequence_contract()
     late_depth_puzzle_contract()
-    wide_waystone_circuit_contract()
     opening_shop_is_not_a_puzzle()
     deep_phase_contract()
+    for stage in range(3, 10):
+        sun_lattice_contract(stage)
+    # Last: this archetype-harness entry already reaches kind 0 on main
+    # (f022ab00), before any Sun Lattice change.
+    wide_waystone_circuit_contract()
     print("[puzzles] PASS populated Trial/Waystone + safe/audio-complete ordered "
           "runes + service exclusion + populated remote Aether Lattice/gate "
-          "circuit + persistent gate crossing")
+          "circuit + persistent gate crossing + Sun Lattice Stages 3-9")
 
 
 if __name__ == "__main__":

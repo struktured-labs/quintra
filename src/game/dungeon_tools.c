@@ -11,6 +11,7 @@
 #include "game/pickup.h"
 #include "game/projectile.h"
 #include "game/puzzle.h"
+#include "game/sun_lattice.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
@@ -104,6 +105,7 @@ static void tool_bomb(void) {
             else if (t == BGT_POT) room_break_pot(x, y);
             else if (t == BGT_WALL_CRACK) room_open_secret(x, y);
             else if (t == BGT_WALL) puzzle_try_hidden_shot(x, y);
+            else if (t == BGT_PILLAR) sun_lattice_strike(x, y);
         }
     }
     for (d = 0; d < 8; ++d) {
