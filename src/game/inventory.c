@@ -323,6 +323,7 @@ void inventory_enter(void) {
     gotoxy(2, 12);
     text_write(active_tip_by_id(player.active_item));
     inventory_write_current_goal();
+    dungeon_tools_pack_focus();
     dungeon_tools_draw_pack();
     oath_arts_draw_pack();
 

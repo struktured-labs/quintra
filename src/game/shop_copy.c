@@ -46,6 +46,7 @@ static const char *effect(u8 ware, u8 item_index) {
         case WARE_HOOKSHOT: return "B: HOOK + PULL";
         case WARE_MORNINGSTAR: return "B: CHAIN SWING";
         case WARE_BOMBS: return "B: BOMB / 1 MP";
+        case WARE_ANTIDOTE: return "CURES POISON";
         default: return "HEARTS TO MP";
     }
 }
@@ -53,7 +54,7 @@ static const char *effect(u8 ware, u8 item_index) {
 void shop_write_live_stock(void) BANKED {
     u8 i, row = 5, icon = 0;
     gotoxy(1, 3); text_write("TODAYS WARES / COST");
-    for (i = 0; i < MAX_ENTITIES && row <= 11; ++i) {
+    for (i = 0; i < MAX_ENTITIES && row <= 13; ++i) {
         if (!(entities[i].flags & EF_ACTIVE)
             || entities[i].type != ENT_PICKUP
             || entities[i].ai_data[0] != PICKUP_SHOP) continue;

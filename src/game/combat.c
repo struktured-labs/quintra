@@ -7,6 +7,7 @@ u8 large_boss_shot_overlap(const entity_t *shot, const entity_t *boss) BANKED;
 u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "core/rng.h"
 #include "core/types.h"
+#include "game/antidote.h"
 #include "game/combat.h"
 #include "game/hexa_boss.h"
 #include "game/enemy_ai.h"
@@ -295,7 +296,7 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
             ? PICKUP_HEART_HALF : PICKUP_COIN_5,
             entities[j].x, entities[j].y);
         score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
-    } else {
+    } else if (!antidote_try_drop(eid, entities[j].x, entities[j].y)) {
         pickup_roll_drop(entities[j].x, entities[j].y);
     }
     {

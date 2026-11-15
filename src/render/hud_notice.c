@@ -21,6 +21,7 @@
 #define HUD_NOTICE_MPFULL 0x79
 #define HUD_NOTICE_HPFULL 0x78
 #define HUD_NOTICE_STATMAX 0x77
+#define HUD_NOTICE_CURED 0x76
 #define HUD_NOTICE_QUEUE  4
 
 u8 hud_notice_ticks;
@@ -112,6 +113,9 @@ static u8 status_word(u8 status, u8 *row) {
         case HUD_NOTICE_MPFULL:
             row[0]=BGT_AREA_M; row[1]=BGT_AREA_P; row[2]=BGT_AREA_F;
             row[3]=HUD_STATUS_U; row[4]=BGT_AREA_L; row[5]=BGT_AREA_L; return 6;
+        case HUD_NOTICE_CURED:
+            row[0]=HUD_STATUS_C; row[1]=HUD_STATUS_U; row[2]=BGT_AREA_R;
+            row[3]=BGT_AREA_E; row[4]=BGT_AREA_D; return 5;
         case HUD_NOTICE_HPFULL:
             row[0]=BGT_AREA_H; row[1]=BGT_AREA_P; row[2]=BGT_AREA_F;
             row[3]=HUD_STATUS_U; row[4]=BGT_AREA_L; row[5]=BGT_AREA_L; return 6;
@@ -134,7 +138,8 @@ static u8 notice_palette(u8 kind, u8 amount) {
         if (value == STAT_LCK) { palette_bg_load(5, notice_gold); return 5; }
         return 7;
     }
-    if (value == QSTATUS_POISON || value == QSTATUS_REGEN) {
+    if (value == QSTATUS_POISON || value == QSTATUS_REGEN
+        || value == HUD_NOTICE_CURED) {
         palette_bg_load(5, notice_green); return 5;
     }
     if (value == QSTATUS_BURN || value == QSTATUS_BRITTLE
@@ -325,6 +330,10 @@ void hud_show_mp_full(void) BANKED {
 
 void hud_show_hp_full(void) BANKED {
     show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HPFULL));
+}
+
+void hud_show_cured(void) BANKED {
+    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_CURED));
 }
 
 void hud_show_stat_max(u8 stat) BANKED {

@@ -5,6 +5,7 @@
 
 #include "audio/sfx.h"
 #include "core/types.h"
+#include "game/antidote.h"
 #include "game/dungeon_tools.h"
 #include "game/entity.h"
 #include "game/player.h"
@@ -19,13 +20,15 @@
 #include "render/tiles.h"
 #include "content.h"
 
-#define TOOL_COUNT 3
+#define TOOL_COUNT 4
+#define TOOL_ANTIDOTE 3
 
 static const u8 tool_ids[TOOL_COUNT] = {
-    ITEM_ID_RIFT_BOMB, ITEM_ID_ECHO_CHIME, ITEM_ID_MIRROR_SHARD
+    ITEM_ID_RIFT_BOMB, ITEM_ID_ECHO_CHIME, ITEM_ID_MIRROR_SHARD,
+    ITEM_ID_ANTIDOTE
 };
 static const char *const tool_names[TOOL_COUNT] = {
-    "BOMB", "CHIME", "MIRROR"
+    "BOMB", "CHIME", "MIRROR", "ANTIDOTE"
 };
 static u8 selected_tool;
 // Queued across the Pack-screen bank transition. The room-resume path
@@ -39,9 +42,17 @@ static u8 tool_count(u8 id) {
     return n;
 }
 
+// Opening the Pack while poisoned with an Antidote in hand points the TOOL
+// row at it, so the cure is one A press away.
+void dungeon_tools_pack_focus(void) BANKED {
+    if (player_status_kind == QSTATUS_POISON
+        && tool_count(ITEM_ID_ANTIDOTE)) selected_tool = TOOL_ANTIDOTE;
+}
+
 void dungeon_tools_draw_pack(void) BANKED {
     static const u8 icons[TOOL_COUNT] = {
-        SPR_ITEM_RIFT_BOMB, SPR_ITEM_ECHO_CHIME, SPR_ITEM_MIRROR_SHARD
+        SPR_ITEM_RIFT_BOMB, SPR_ITEM_ECHO_CHIME, SPR_ITEM_MIRROR_SHARD,
+        SPR_ITEM_FLASK
     };
     gotoxy(3, 15); text_write("                ");
     gotoxy(3, 15);
@@ -52,7 +63,7 @@ void dungeon_tools_draw_pack(void) BANKED {
     text_write(" x");
     text_u16(tool_count(tool_ids[selected_tool]));
     set_sprite_tile(8, icons[selected_tool]);
-    set_sprite_prop(8, 3);
+    set_sprite_prop(8, selected_tool == TOOL_ANTIDOTE ? 7 : 3);
     // The tool and Oath glyphs occupy consecutive PACK rows. Keep the tool
     // one scanline high so silhouettes such as Echo Chime (which use their
     // bottom tile row) do not touch the Oath flare's top row below.
@@ -75,6 +86,11 @@ u8 dungeon_tools_pack_input(u8 pressed) BANKED {
         return 1;
     }
     if (!(pressed & J_A)) return 0;
+    // An Antidote only spends itself on an actual Poison.
+    if (selected_tool == TOOL_ANTIDOTE && player_status_kind != QSTATUS_POISON) {
+        sfx_play(SFX_HURT);
+        return 1;
+    }
     for (i = 0; i < INVENTORY_SLOTS; ++i) {
         if (player.inventory[i] == tool_ids[selected_tool]) {
             pending_tool = selected_tool;
@@ -173,5 +189,6 @@ void dungeon_tools_apply_pending(void) BANKED {
     pending_tool = 0xFF;
     if (tool == 0) tool_bomb();
     else if (tool == 1) tool_chime();
+    else if (tool == TOOL_ANTIDOTE) antidote_cure();
     else tool_mirror();
 }

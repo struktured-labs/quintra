@@ -70,6 +70,7 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
         case WARE_HOOKSHOT: entities[idx].sprite_tile = SPR_WAYGEAR_HOOK; break;
         case WARE_MORNINGSTAR: entities[idx].sprite_tile = 237; break;
         case WARE_BOMBS: entities[idx].sprite_tile = SPR_ITEM_RIFT_BOMB; break;
+        case WARE_ANTIDOTE: entities[idx].sprite_tile = SPR_ITEM_FLASK; break;
         default:           entities[idx].sprite_tile = SPR_ITEM_POWER_STONE; break;
     }
     entities[idx].palette = (ware == WARE_ITEM || ware == WARE_FORGE
@@ -80,6 +81,7 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
             || ware == WARE_FLASK || ware == WARE_BOOMERANG) ? 0x06
         : 0x04;
     if (ware==WARE_MORNINGSTAR) entities[idx].palette=13;
+    if (ware==WARE_ANTIDOTE) entities[idx].palette=0x07; // poison green
 }
 
 u8 pickup_dungeon_featured_ware(u8 shelf) BANKED {
