@@ -110,6 +110,9 @@
 // Compass reloads its own glyph atlas; returning to play reloads these.
 #define HUD_STATUS_B 64
 #define HUD_STATUS_U 65
+// X is only needed by compact HUD notices (SPDMAX). Slot 66 is the
+// Compass letter U; hud_init reloads this glyph when play resumes.
+#define HUD_STATUS_X 66
 
 // Sanctuary-only boss threshold art. The room tilemap retains BGT_DOOR for
 // collision/progression; rendering substitutes these unmistakable gate tiles.
