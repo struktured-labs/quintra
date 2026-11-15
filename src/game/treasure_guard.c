@@ -7,6 +7,8 @@
 #include "game/room.h"
 #include "content.h"
 #include "core/rng.h"
+#include "audio/sfx.h"
+#include "render/hud.h"
 
 u8 pickup_boss_relic_for_class(void) BANKED {
     return pickup_farfold_relic_for_class(rng_range(3));
@@ -26,6 +28,28 @@ u8 treasure_cache_guarded(void) BANKED {
         if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY)
             return 1;
     return 0;
+}
+
+// Farfold relic per-frame upkeep: red (OBJ 4) while guarded, violet once
+// claimable. ai_data[4] paces the refusal cue like the heart/MP rule: it
+// re-arms when the hero steps away, else counts down from 90 frames.
+void treasure_cache_tick(entity_t *e) BANKED {
+    if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+    else if (e->ai_data[4]) e->ai_data[4]--;
+    e->palette = treasure_cache_guarded() ? 4 : 6;
+}
+
+// The relic stays put while its reliquary still has a living foe, including
+// off-screen guards and WAVE/TRAP/HOLD refills. It used to ignore the hero
+// with no word of why; now it buzzes and shows a red GUARD notice.
+u8 treasure_cache_refused(entity_t *e) BANKED {
+    if (!treasure_cache_guarded()) return 0;
+    if (!e->ai_data[4]) {
+        e->ai_data[4] = 90;
+        sfx_play(SFX_REFUSE);
+        hud_show_cache_guarded();
+    }
+    return 1;
 }
 
 void treasure_cache_prepare(void) BANKED {
