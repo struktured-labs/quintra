@@ -89,6 +89,9 @@ def kill_bellwarden_for_reward(pb, bell):
         side = "left" if g16(PL + 9) >= 96 else "right"
         put16(pb, bell + 3, g16(PL + 9) + (-32 if side == "left" else 32))
         put16(pb, bell + 7, g16(PL + 11))
+        # Scrolling courts gate AI/collision on EF_ON_SCREEN, refreshed only
+        # when the camera changes sector; a teleported Bell must carry it.
+        pb.memory[bell + 1] |= 0x04
         pb.button(side)
         pb.tick(2)
         pb.button("b")

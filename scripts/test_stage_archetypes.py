@@ -6,8 +6,8 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_START, dungeon_maze_neighbor, dungeon_predecessor, dungeon_size,
-    mission_graph,
+    STAGE_START, dungeon_entry_cell, dungeon_maze_neighbor,
+    dungeon_predecessor, dungeon_size, mission_graph,
 )
 from make_stage_states import (
     boot_to_stage, cross_graph_edge, normalize_compact_source,
@@ -43,8 +43,18 @@ def wait_for_generated_room(pb):
     """Return only after the cartridge has committed and displayed the room."""
     previous = None
     stable = 0
-    for _ in range(480):
+    # A dungeon doorway blanks the LCD while the destination is authored.
+    # The pre-load frames can hold the *source* tilemap perfectly still for
+    # 30+ frames (seeded-foyer solver, #78), so a stable window only counts
+    # once that load blank has been seen. Streamed transitions that never
+    # blank fall back to the stable window after 150 frames.
+    loaded = False
+    for frame in range(480):
         pb.tick()
+        if not pb.memory[0xFF40] & 0x80:
+            loaded = True
+        if not loaded and frame < 150:
+            continue
         tiles = bytes(pb.memory[TM + i] for i in range(ROOM_W * ROOM_H))
         lcd_on = bool(pb.memory[0xFF40] & 0x80)
         committed = not any(value & 0x80 for value in tiles)
@@ -63,6 +73,8 @@ def wait_for_generated_room(pb):
 def archetype_sample_cell(stage, seed, preferred=4):
     """Choose an ordinary wide court with no role/secret terrain overlay."""
     roles = set(mission_graph(dungeon_size(stage), seed, stage)["sequence"])
+    # Since #78 the seeded foyer is a paced introduction, not an archetype.
+    roles.add(dungeon_entry_cell(dungeon_size(stage), seed, stage))
     for cell in (preferred, 4, 6, 10, 12, 13, 14, 16, 18, 20, 22, 24, 25, 26):
         if cell >= dungeon_size(stage) - 3 or cell in roles or cell == 15:
             continue
@@ -71,6 +83,27 @@ def archetype_sample_cell(stage, seed, preferred=4):
         if ((room_seed >> 16) & 31) > 2:
             return cell
     raise AssertionError(f"no ordinary archetype sample stage={stage} seed={seed:#x}")
+
+
+def is_ordinary_cell(stage, seed, cell):
+    """True when ``cell`` carries no mission role and is not the foyer."""
+    size = dungeon_size(stage)
+    return (cell not in mission_graph(size, seed, stage)["sequence"]
+            and cell != dungeon_entry_cell(size, seed, stage))
+
+
+def ordinary_seed(stage, base, *cells):
+    """First seed from ``base`` whose fixed fixture cells stay ordinary.
+
+    Mission roles and the foyer are seed-first and BFS from the seeded entry
+    (#78), so a hard-coded (seed, cell) pair can silently turn into a Warden
+    or foyer room. Pin the cell and walk the seed instead.
+    """
+    for step in range(256):
+        seed = (base + step) & 0xFFFFFFFF
+        if all(is_ordinary_cell(stage, seed, cell) for cell in cells):
+            return seed
+    raise AssertionError(f"no ordinary seed for stage={stage} cells={cells}")
 
 
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
@@ -250,19 +283,20 @@ def main():
             f"wing landmark lost its light patrol pacing beat ({enemies})"
         )
 
-    grove = generated_room(1, 2064128938, local_room=4)  # controller-agent seed 1
+    grove_seed = ordinary_seed(1, 2064128938, 4, 11)  # controller-agent seed 1
+    grove = generated_room(1, grove_seed, local_room=4)
     assert_no_false_one_tile_gaps("Verdant grove", grove)
     grove_sites = [(4, 4), (5, 4), (14, 4), (15, 4),
                    (4, 12), (5, 12), (14, 12), (15, 12)]
     grove_crystals = sum(tile(grove, x, y) == BGT_CRYSTAL for x, y in grove_sites)
     assert grove_crystals >= 4, f"Verdant grove silhouette missing ({grove_crystals}/8)"
     grove_exits = reachable_exits(grove, (18, 9))
-    assert_graph_exits("Verdant grove", grove_exits, 1, 4, 2064128938)
+    assert_graph_exits("Verdant grove", grove_exits, 1, 4, grove_seed)
     # Room eleven begins the second long wing. It must repeat the stage's
     # authored identity and use a lighter combat patrol, not fall back to an
     # anonymous dense procgen room.
     grove_wing = generated_room(
-        1, 2064128938, local_room=11, probe=assert_waypoint_patrol
+        1, grove_seed, local_room=11, probe=assert_waypoint_patrol
     )
     assert_no_false_one_tile_gaps("Verdant second wing", grove_wing)
     # Verdant now owns six asymmetric clearing silhouettes instead of one
@@ -274,13 +308,14 @@ def main():
     )
     assert_graph_exits(
         "Verdant second wing",
-        reachable_exits(grove_wing, (18, 9)), 1, 11, 2064128938, wide=True
+        reachable_exits(grove_wing, (18, 9)), 1, 11, grove_seed, wide=True
     )
 
     # Ember is a phase-family dungeon: room 1's compact central switch apron
     # leaves both authored hazard seams intact, whereas room 2 deliberately
     # adds the cross-room phase wall.
-    ember = generated_room(2, local_room=1)
+    ember_seed = ordinary_seed(2, 0xCAFE1234, 1)
+    ember = generated_room(2, ember_seed, local_room=1)
     assert_no_false_one_tile_gaps("Ember gauntlet", ember)
     seam_spikes = sum(
         tile(ember, x, y) == BGT_SPIKES
@@ -292,13 +327,15 @@ def main():
     assert any(tile(ember, 5, y) != BGT_SPIKES for y in range(4, 14))
     assert any(tile(ember, 14, y) != BGT_SPIKES for y in range(4, 14))
     ember_exits = reachable_exits(ember, (18, 9))
-    assert_graph_exits("Ember gauntlet", ember_exits, 2, 1)
+    assert_graph_exits("Ember gauntlet", ember_exits, 2, 1, ember_seed)
 
     # Sample a non-Rift chamber so this contract measures the complete
     # octagonal vault silhouette. Rift landing geometry has its own live-ROM
     # reachability suite and deliberately carves a broad cardinal cross.
+    frost_seed = ordinary_seed(3, 0xCAFE1234, 4, 17)
     frost = generated_room(
-        3, screenshot=ROOT / "tmp" / "frost-vault.png", local_room=4
+        3, frost_seed, screenshot=ROOT / "tmp" / "frost-vault.png",
+        local_room=4,
     )
     assert_no_false_one_tile_gaps("Frost vault", frost)
     vault_sites = [
@@ -317,11 +354,11 @@ def main():
         (5, 8), (5, 9), (14, 8), (14, 9),
     ))
     frost_exits = reachable_exits(frost, (18, 9))
-    assert_graph_exits("Frost vault", frost_exits, 3, 4)
+    assert_graph_exits("Frost vault", frost_exits, 3, 4, frost_seed)
     # Room seventeen is the later wing threshold. Sampling a different
     # archetype here proves both landmark slots survive into deep traversal.
     frost_wing = generated_room(
-        3, local_room=17, probe=assert_waypoint_patrol
+        3, frost_seed, local_room=17, probe=assert_waypoint_patrol
     )
     assert_no_false_one_tile_gaps("Frost late wing", frost_wing)
     frost_wing_crystals = sum(
@@ -332,7 +369,7 @@ def main():
     )
     assert_graph_exits(
         "Frost late wing", reachable_exits(frost_wing, (18, 9)), 3, 17,
-        wide=True
+        frost_seed, wide=True
     )
 
     def assert_mire_swim_passive(pb, tiles):
@@ -345,6 +382,11 @@ def main():
             # non-player entity types rather than assuming only enemies can
             # interfere with the two-frame damage observation.
             pb.memory[ep] = pb.memory[ep + 1] = 0
+        # Clearing every body is a room clear: the cartridge then spends a
+        # few frames placing the clear reward on a reachable floor cell.
+        # Drain that so the two-frame hazard samples below measure live room
+        # ticks rather than the reward solver.
+        pb.tick(24)
         site = next((x, y) for y in range(4, 14) for x in range(4, 16)
                     if tile(tiles, x, y) == BGT_SPIKES)
         put16(pb, PL + 9, site[0] * 8 - 8)

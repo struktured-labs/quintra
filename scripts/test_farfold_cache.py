@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from test_stage_archetypes import generated_room
 from quintra_topology import (
     STAGE_START, dungeon_cache_cell, dungeon_maze_neighbor, dungeon_size,
 )
@@ -160,24 +161,14 @@ def main():
         close_compass(pb)
         pb.memory[RS + seen_offset] = seen_before
 
-        # Enter the generated cache cell through the cartridge's real
-        # Riftwild-to-dungeon transaction so all room banks and runtime
-        # orchestration execute exactly as they do in play.
+        # Enter the cache through its one real maze edge. Since #78 the
+        # Riftwild gate lands on the seeded foyer, and BGT_PORTAL is now an
+        # intra-stage rift well, so neither is a generic "next room" hop.
+        # The shared fixture crosses the reciprocal edge in the live ROM,
+        # so all room banks and runtime orchestration still execute.
+        pb.stop(save=False)
         target = STAGE_START[0] + cache
-        pb.memory[RS + 1] = target - 1
-        pb.memory[RS + 11] = 0
-        pb.memory[RS + 12] = 0
-        pb.memory[RS + 13] = 0
-        pb.memory[RS + 17] = 1
-        pb.memory[RS + 18] = 8
-        clear_hostiles(pb)
-        put16(pb, PL + 9, 72)
-        put16(pb, PL + 11, 60)
-        pb.memory[TM + 9 * 20 + 10] = 34
-        for _ in range(30):
-            pb.tick()
-            if pb.memory[RS + 1] == target:
-                break
+        pb = generated_room(0, seed, local_room=cache, keep_running=True)
         settle(pb, 120)
         assert pb.memory[RS + 1] == target
         assert pb.memory[LARGE] == 1
