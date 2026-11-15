@@ -2153,3 +2153,58 @@ pub const BRUISER_SRC: [(&str, &[&str]); 3] = [
     ("bomber", &BRUISER_BOMBER_A),
     ("warlock", &BRUISER_WARLOCK_A),
 ];
+
+// Water ride (Tide Raft and Picsean swim). Reference: GPT Image 2.6
+// Sunburst raft/swim candidates (docs/previews/water-ride/), hand-quantized.
+// The raft uses OBJ palette 5 (coin): 1 = gold log, 2 = brown seam/hull,
+// 3 = cream rope and foam. Frame B lifts the waterline foam and shifts the
+// wake so the two-beat bob reads as the raft riding the swell.
+pub const WATER_RAFT_A: [&str; 8] = [
+    ".2222222222222222222222.",
+    ".2112112112112112112112.",
+    ".2332332332332332332332.",
+    ".2112112112112112112112.",
+    ".2112112112112112112112.",
+    "322222222222222222222223",
+    ".3222222222222222222223.",
+    "3..33...3..33...3..33..3",
+];
+
+pub const WATER_RAFT_B: [&str; 8] = [
+    ".2222222222222222222222.",
+    ".2112112112112112112112.",
+    ".2332332332332332332332.",
+    ".2112112112112112112112.",
+    "321121121121121121121123",
+    ".2222222222222222222222.",
+    "332222222222222222222233",
+    ".33..3...33..3...33..33.",
+];
+
+// Picsean's swim ring replaces the champion's lower 16x8 strip in the class
+// palette (1 = river blue, 2 = deep water, 3 = pale foam). Foam and deep
+// water carry the outline because river blue alone vanishes on the water
+// tile. The open centre
+// lets the water tile show where the legs would be; frame B widens the ring
+// and throws foam at its corners like a kick.
+pub const WATER_SWIM_A: [&str; 8] = [
+    "...3333333333...",
+    ".33222111122233.",
+    "3322........2233",
+    "32............23",
+    "32............23",
+    "3322........2233",
+    ".33222111122233.",
+    "...3333333333...",
+];
+
+pub const WATER_SWIM_B: [&str; 8] = [
+    "3.333333333333.3",
+    ".32221111112223.",
+    "322..........223",
+    "32............23",
+    "32............23",
+    "322..........223",
+    ".32221111112223.",
+    "3.333333333333.3",
+];
