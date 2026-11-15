@@ -44,8 +44,12 @@ Visual only: no new WRAM, no hitbox, timing, or AI changes.
 
 ## Budget
 
-`[layout] OK`: home ends 0x3F76 (was 0x3F7C, 6 B freed by dropping the flip),
-bank 6 free 661 → 458 B (atlas + tick), bank 2 unchanged at 535 B.
+`[layout] OK`: home ends 0x3F82 (was 0x3F7C; +6 B for the call and its gate),
+bank 6 free 661 → 446 B (atlas + tick), bank 2 unchanged at 535 B.
+
+The call is skipped when `entity_enemy_count` is zero (shops, towns) and in
+the Hexa sanctum, whose limb volleys run against a measured frame budget: an
+ungated tick tipped `test_merchant_counter` and `test_hexa_dragmar` timing.
 
 ## Verification
 
