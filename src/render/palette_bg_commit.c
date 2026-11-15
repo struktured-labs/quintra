@@ -20,8 +20,10 @@ void palette_bg_commit_vblank(void) BANKED {
 
     mask = palette_bg_dirty;
     start = palette_bg_pending_commit;
-    for (i = 0; i < 8; ++i) {
-        u8 slot = (u8)((start + i) & 7);
+    start = (u8)(start % PALETTE_BG_HEAL_SLOTS);
+    for (i = 0; i < PALETTE_BG_HEAL_SLOTS; ++i) {
+        u8 slot = (u8)(start + i);
+        if (slot >= PALETTE_BG_HEAL_SLOTS) slot -= PALETTE_BG_HEAL_SLOTS;
         const u8 *src;
         u8 idx;
         if (!(mask & (u8)(1u << slot))) continue;

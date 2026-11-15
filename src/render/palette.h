@@ -35,19 +35,19 @@ extern volatile u8 palette_obj_pending_commit;
 // PALETTE_OBJ_COMMIT_PASSES rotating passes each, one half per frame.
 extern u16 bg_pal_cache[8][4];
 
-// Shadow of the last colours requested for each BG slot. palette_bg_load
-// arms palette_bg_dirty/palette_bg_pending_commit when the LCD is on, and
+// Shadow of the last colours requested for room BG slots. palette_bg_load
+// arms palette_bg_dirty/palette_bg_pending_commit when a room slot (0..4)
+// is written with the LCD on, and
 // loop_run re-writes the dirty slots at the top of VBlank for
 // PALETTE_BG_COMMIT_PASSES waited frames (re-arming BCPS per colour), so a
 // mid-frame write dropped in mode 3 cannot leave a room mis-coloured.
 #define PALETTE_BG_COMMIT_PASSES 4
-extern u16 palette_bg_shadow[8][4];
+#define PALETTE_BG_HEAL_SLOTS 5
+extern u16 palette_bg_shadow[PALETTE_BG_HEAL_SLOTS][4];
 extern volatile u8 palette_bg_dirty;
 extern volatile u8 palette_bg_pending_commit;
 void palette_bg_commit_vblank(void) BANKED;
 
-// Load N consecutive BG palettes starting at slot
-void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors);
 
 // Set every visible background cell to one known CGB palette. Text screens
 // must call this after font setup so dungeon attributes cannot leak through.

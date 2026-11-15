@@ -8,14 +8,14 @@ const u16 boss_arena_floor_palette[4] = {
 };
 
 static void load_to_pal(u8 ps_reg_select_lo, u8 slot, const u16 *colors) {
-    // Auto-increment + start at (slot * 8) — each palette is 4 colors × 2 bytes
+    // Auto-increment + start at (slot * 8): 4 colours x 2 bytes, low first.
+    const u8 *src = (const u8 *)colors;
+    u8 n = 8;
     if (ps_reg_select_lo == 0) {
         rBCPS = 0x80 | (u8)(slot << 3);
-        rBCPD = (u8)(colors[0] & 0xFF); rBCPD = (u8)(colors[0] >> 8);
-        rBCPD = (u8)(colors[1] & 0xFF); rBCPD = (u8)(colors[1] >> 8);
-        rBCPD = (u8)(colors[2] & 0xFF); rBCPD = (u8)(colors[2] >> 8);
-        rBCPD = (u8)(colors[3] & 0xFF); rBCPD = (u8)(colors[3] >> 8);
+        do { rBCPD = *src++; } while (--n);
     } else {
+        // OBJ stays unrolled: it races one HBlank after the STAT wait.
         rOCPS = 0x80 | (u8)(slot << 3);
         rOCPD = (u8)(colors[0] & 0xFF); rOCPD = (u8)(colors[0] >> 8);
         rOCPD = (u8)(colors[1] & 0xFF); rOCPD = (u8)(colors[1] >> 8);
@@ -30,25 +30,29 @@ static void load_to_pal(u8 ps_reg_select_lo, u8 slot, const u16 *colors) {
 // colours (a dimmed green pops "brown") until a menu reloads it. Mid-room
 // writes therefore also arm a short VBlank re-commit of that slot, so the
 // palette heals within a frame. LCD-off writes are reliable and disarm it.
-u16 palette_bg_shadow[8][4];
+u16 palette_bg_shadow[PALETTE_BG_HEAL_SLOTS][4];
 volatile u8 palette_bg_dirty;
 volatile u8 palette_bg_pending_commit;
 
 void palette_bg_load(u8 slot, const u16 *colors) {
-    u16 *dst;
     u8 bit;
-    slot &= 7;
-    dst = palette_bg_shadow[slot];
-    dst[0] = colors[0]; dst[1] = colors[1];
-    dst[2] = colors[2]; dst[3] = colors[3];
+    load_to_pal(0, slot, colors);
+    // Only the room slots (floor, wall, crystal, door, crack) are healed.
+    // HUD lanes 5..7 are rewritten by their owners on every change and
+    // must not steal the top of VBlank from tile streaming. LCD-off loads
+    // (room entry, menus) are reliable and skip the copy entirely.
+    if (slot >= PALETTE_BG_HEAL_SLOTS) return;
     bit = (u8)(1u << slot);
     if (LCDC_REG & LCDCF_ON) {
+        u8 *dst = (u8 *)palette_bg_shadow[slot];
+        const u8 *src = (const u8 *)colors;
+        u8 n = 8;
+        do { *dst++ = *src++; } while (--n);
         palette_bg_dirty |= bit;
         palette_bg_pending_commit = PALETTE_BG_COMMIT_PASSES;
     } else {
         palette_bg_dirty &= (u8)~bit;
     }
-    load_to_pal(0, slot, colors);
 }
 
 static void palette_obj_wait_access(void) {
@@ -63,11 +67,4 @@ static void palette_obj_wait_access(void) {
 void palette_obj_load(u8 slot, const u16 *colors) {
     palette_obj_wait_access();
     load_to_pal(1, slot, colors);
-}
-
-void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors) {
-    u8 i;
-    for (i = 0; i < n; ++i) {
-        palette_bg_load((u8)(first_slot + i), colors + (u16)(i * 4));
-    }
 }
