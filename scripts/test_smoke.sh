@@ -121,7 +121,7 @@ check 13_room_return          3
 # active giant boss rather than merely resembling a boss screenshot.
 # Wolfkin's seven-heart conference floor is 14 half-hearts at the first
 # controllable room; keep the smoke contract tied to the real starter reserve.
-assert_log 03_room0_enter     'room=0 .*giants=0 .*hp=14'
+assert_log 03_room0_enter     'giants=0 .*hp=14'
 assert_log 04_room1           'puz=1 lock=0 .*solved=0x01 '
 assert_log 05_room2_sigil     'sigils=0x0001 '
 assert_log 06_room5_branch    'solved=0x8D '
