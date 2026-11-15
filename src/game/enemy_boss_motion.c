@@ -19,13 +19,39 @@
 // by enemy bodies, so the state survives an emulator save without new WRAM.
 static void boss_chase_tick(entity_t *e, u8 divider) {
     e->state_timer++;
-    if (e->state_timer >= divider) {
+    if (e->state_timer < divider) return;
+    e->state_timer = 0;
+    {
         i16 ex = FIX8_TO_INT(e->x), ey = FIX8_TO_INT(e->y);
+        i16 adx, ady;
         i8 sx = ((i16)player.x > ex) ? 1 : ((i16)player.x < ex) ? -1 : 0;
         i8 sy = ((i16)player.y > ey) ? 1 : ((i16)player.y < ey) ? -1 : 0;
-        e->state_timer = 0;
-        if (sx) enemy_try_step(e, sx, 0);
-        if (sy) enemy_try_step(e, 0, sy);
+        i8 side = (e->state & 1) ? 1 : -1;
+        u8 moved;
+        adx = (i16)player.x - ex; if (adx < 0) adx = (i16)-adx;
+        ady = (i16)player.y - ey; if (ady < 0) ady = (i16)-ady;
+        // Pursue the farther axis so a mid-slide does not step back into
+        // the blocked column. If that axis is solid, keep one edge-follow
+        // direction until it opens; back off when even the sides clip.
+        if (adx >= ady) {
+            moved = sx ? enemy_try_step(e, sx, 0) : 1;
+            if (!moved) {
+                if (!enemy_try_step(e, 0, side)) {
+                    if (enemy_try_step(e, 0, (i8)-side)) e->state ^= 1;
+                    else if (sx) { enemy_try_step(e, (i8)-sx, 0); e->state ^= 1; }
+                    else e->state ^= 1;
+                }
+            }
+        } else {
+            moved = sy ? enemy_try_step(e, 0, sy) : 1;
+            if (!moved) {
+                if (!enemy_try_step(e, side, 0)) {
+                    if (enemy_try_step(e, (i8)-side, 0)) e->state ^= 1;
+                    else if (sy) { enemy_try_step(e, 0, (i8)-sy); e->state ^= 1; }
+                    else e->state ^= 1;
+                }
+            }
+        }
     }
 }
 

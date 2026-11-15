@@ -853,16 +853,22 @@ void procgen_generate_current_room(void) BANKED {
 
             // Pushable crates — 0-2 per room, hero-sized (2x2 tiles),
             // kept clear of the door lanes so they never wall a door.
+            // Warden courts still pay the same RNG draws, but do not stamp
+            // the crates: the compact mid-boss used to pin itself on one
+            // and surrender the fight. The chase AI also slides around cover, so a
+            // crate the champion pushes mid-fight cannot recreate the cheese.
             {
                 u8 nb = (u8)(rng_next_u8() % 3);
                 u8 i;
+                u8 skip = run_state_is_miniboss();
                 for (i = 0; i < nb; ++i) {
                     u8 bx = (u8)(3 + rng_range(ROOM_W - 6));
                     u8 by = (u8)(3 + rng_range(ROOM_H - 6));
                     if (bx >= 8 && bx <= 11) continue;   // cols bx..bx+1 vs lane 9-11
                     if (by >= 6 && by <= 9)  continue;   // rows by..by+1 vs lane 7-9
                     if (bx + 1 >= ROOM_W - 1 || by + 1 >= ROOM_H - 1) continue;
-                    if (room_tilemap[by][bx] == BGT_FLOOR
+                    if (!skip
+                        && room_tilemap[by][bx] == BGT_FLOOR
                         && room_tilemap[by][bx + 1] == BGT_FLOOR
                         && room_tilemap[by + 1][bx] == BGT_FLOOR
                         && room_tilemap[by + 1][bx + 1] == BGT_FLOOR) {
