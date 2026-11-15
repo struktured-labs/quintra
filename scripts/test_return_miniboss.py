@@ -1,6 +1,26 @@
 #!/usr/bin/env python3
 """Fresh-ROM return champion burst, entrance, escort, and art contracts."""
+from quintra_topology import dungeon_entry_cell, dungeon_size, mission_graph
 from test_stage_archetypes import EN, PL, RS, TM, addr, generated_room, put16
+
+SEED = 0x7A11BEEF
+WAYPOINTS = {5, 11, 17, 23}
+
+
+def return_cell(stage, seed=SEED):
+    """An ordinary large court below cell 8 that the hunt may claim.
+
+    The start cell is seeded since #78, so the mission graph BFS (and the
+    roles it assigns) moves with it. Pick a cell that is neither the foyer,
+    a mission role, nor a fixed waypoint instead of hard-coding cell 4.
+    """
+    size = dungeon_size(stage)
+    roles = set(mission_graph(size, seed, stage)["sequence"])
+    entry = dungeon_entry_cell(size, seed, stage)
+    for cell in (4, 7, 2, 6, 3, 1):
+        if cell not in roles and cell != entry and cell not in WAYPOINTS:
+            return cell
+    raise AssertionError(f"no ordinary return court stage={stage}")
 
 TARGET = addr('_room_encounter_target')
 GUARD = addr('_room_return_guard_ticks')
@@ -32,12 +52,13 @@ def shoot_burst(pb):
 
 
 def check(easy, stage=0):
+    cell = return_cell(stage)
     original_atlas = []
     def prepare(pb, _):
         original_atlas.append(bytes(pb.memory[0x8280:0x8310]))
         pb.memory[RS + 26] = easy
         pb.memory[RS + 23] |= 1 << stage
-        pb.memory[RS + 53] |= 1 << 4
+        pb.memory[RS + 53] |= 1 << cell
 
     def inspect(pb, _):
         target = EN + pb.memory[TARGET] * 28
@@ -130,7 +151,7 @@ def check(easy, stage=0):
         if stage == 0:
             assert restored == original_atlas[0], 'ordinary room atlas changed'
 
-    generated_room(stage, 0x51A70000, local_room=4, pre_cross=prepare, probe=inspect)
+    generated_room(stage, SEED, local_room=cell, pre_cross=prepare, probe=inspect)
 
 
 if __name__ == '__main__':
