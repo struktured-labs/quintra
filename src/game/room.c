@@ -978,7 +978,6 @@ static u8 room_scroll_y(void) {
 // Cold direction decoder is shared by weapon edges only. Keeping it in the
 // new feature bank recovers emergency headroom in the always-hot room bank.
 u8 room_input_dir8(u8 keys, u8 facing) BANKED;
-void room_retain_aim(i8 dx, i8 dy) BANKED;
 extern u8 player_penta_aim;
 
 void room_enter(void) {
@@ -1186,6 +1185,13 @@ void room_exit(void) {
     // running also avoids a restart blip every time the pack is toggled.
 }
 
+// dir8 index for a live step. dx, dy are -1, 0, or +1.
+// A table avoids SDCC's expensive signed comparisons (was ~98 bytes).
+static const u8 room_aim_step_table[9] = {7, 0, 1, 6, 4, 2, 5, 4, 3};
+static u8 room_aim_from_step(i8 dx, i8 dy) {
+    return room_aim_step_table[(u8)((dy + 1) * 3 + (dx + 1))];
+}
+
 screen_id_t room_tick(u8 keys, u8 pressed) {
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.
@@ -1376,7 +1382,18 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // Any live direction, including a diagonal, becomes the retained aim.
         // Releasing the pad leaves player_aim_dir untouched, including the
         // one-frame cardinal a staggered diagonal release produces.
-        if (dx || dy || aim_release_grace) room_retain_aim(dx, dy);
+        if (dx || dy) {
+            u8 n = room_aim_from_step(dx, dy);
+            if (dx && dy) aim_release_grace = 5;
+            else if (aim_release_grace) aim_release_grace--;
+            if (!(player_penta_aim && aim_release_grace
+                  && (player_aim_dir & 1)
+                  && (n == (u8)((player_aim_dir - 1) & 7)
+                      || n == (u8)((player_aim_dir + 1) & 7))))
+                player_aim_dir = n;
+        } else {
+            aim_release_grace = 0;
+        }
 
         // The cardinal facing byte still prefers the previous heading when an
         // A-only diagonal includes it. Shots read player_aim_dir instead.
