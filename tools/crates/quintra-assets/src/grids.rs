@@ -270,11 +270,11 @@ pub const HORNET: [&str; 8] = [    // wasp: wings out, narrow body, stinger
 ];
 
 pub const SKELETON: [&str; 8] = [  // skull: eye sockets + jaw
-    "..2222..",
-    ".211112.",
-    ".231132.",
-    ".211112.",
-    ".221122.",
+    ".222222.",
+    "21111112",
+    "21311312",
+    "21122112",
+    ".212212.",
     "..2112..",
     ".212212.",
     ".2.22.2.",
@@ -305,11 +305,11 @@ pub const BOMBER: [&str; 8] = [
 pub const SHADE: [&str; 8] = [     // hooded phantom with a wispy tail
     "..2222..",
     ".211112.",
-    ".231132.",
+    "21311312",
+    "21111112",
+    "21111112",
     ".211112.",
-    ".211112.",
-    "..21112.",
-    "..2.21..",
+    ".21.212.",
     ".2...2..",
 ];
 
@@ -337,12 +337,12 @@ pub const ROPE: [&str; 8] = [   // snake: S-slither with a raised head
 
 pub const SENTRY: [&str; 8] = [   // turret orb: 4 cardinal cannon ports
     "...33...",
-    "..2112..",
+    "..2222..",
     ".211112.",
-    "32111123",
-    "32111123",
+    "32311323",
+    "32211223",
     ".211112.",
-    "..2112..",
+    "..2222..",
     "...33...",
 ];
 
@@ -582,23 +582,23 @@ pub const RIFT_OOZE: [&str; 8] = [ // unstable blob with two budding fragments
 pub const MIRROR_MOTH: [&str; 8] = [ // bilateral wings around an icy mirror core
     "1..22..1",
     "11.22.11",
-    ".132231.",
-    "..1331..",
+    ".112211.",
     "..2332..",
-    ".13..31.",
+    "..1331..",
+    ".11..11.",
     "11....11",
     "1......1",
 ];
 
 pub const MIRE_SPORE: [&str; 8] = [ // folded cap, bright volatile core, rootlets
-    "...11...",
-    "..1221..",
-    ".123321.",
-    "12333321",
-    ".122221.",
-    "..1331..",
-    ".1.11.1.",
-    "1..11..1",
+    "..2222..",
+    ".211112.",
+    "21211212",
+    ".233332.",
+    ".232232.",
+    "..2332..",
+    "..2112..",
+    ".21..12.",
 ];
 
 pub const ECHO_GUARD: [&str; 8] = [ // tall shield, eye slit, countering spear
@@ -613,14 +613,14 @@ pub const ECHO_GUARD: [&str; 8] = [ // tall shield, eye slit, countering spear
 ];
 
 pub const FROST_LANCER: [&str; 8] = [ // icy visor, raised lance, split skates
-    "...3.3..",
-    "..3223..",
-    ".321123.",
-    "32111123",
-    ".123321.",
-    "..1331..",
-    ".31..13.",
-    "3..3...3",
+    "..3.3.3.",
+    ".222223.",
+    "2311323.",
+    "2111123.",
+    "2333323.",
+    ".211223.",
+    "21..123.",
+    "33..33..",
 ];
 
 pub const VINE_COIL: [&str; 8] = [ // coiled vine bulb, thorned leaf crown
@@ -657,24 +657,24 @@ pub const VOID_HALO: [&str; 8] = [ // fractured ring with a dark central void
 ];
 
 pub const RIFT_CANTOR: [&str; 8] = [ // antlered mask around an open chanting mouth
-    "3..33..3",
+    "3.3..3.3",
     ".3.22.3.",
-    "..3223..",
-    ".321123.",
-    "32133123",
-    ".123321.",
-    "..3113..",
-    ".3.11.3.",
+    "3.2222.3",
+    ".211112.",
+    "21311312",
+    ".213312.",
+    "..2332..",
+    ".3.22.3.",
 ];
 
 pub const RUNE_LANTERN: [&str; 8] = [ // hooded lantern with a four-rune halo
     "...33...",
-    "..3223..",
-    ".321123.",
-    "32133123",
-    "21133112",
-    ".123321.",
-    "..3113..",
+    "..2222..",
+    "32211223",
+    ".223322.",
+    ".233332.",
+    ".213312.",
+    "..2112..",
     ".3.11.3.",
 ];
 
@@ -701,14 +701,14 @@ pub const RIFT_WARDEN: [&str; 8] = [ // split-mask sentinel, open outer lanes
 ];
 
 pub const PRISM_SKITTER: [&str; 8] = [ // faceted core with asymmetric orbit fins
-    "...3.3..",
-    "..32132.",
-    ".3211123",
-    "32133123",
-    "21133112",
-    ".3211123",
-    "..31213.",
-    ".3...23.",
+    "..3.3.3.",
+    ".323232.",
+    "32111123",
+    "21311312",
+    "32111123",
+    ".322223.",
+    ".3.22.3.",
+    "3..3.3..",
 ];
 
 pub const DUSK_MIDGE: [&str; 8] = [ // forked wings, bright eyes, tail spark
@@ -745,25 +745,25 @@ pub const CINDER_KITE: [&str; 8] = [ // wide ember wings, suspended furnace core
 ];
 
 pub const BOG_TOAD: [&str; 8] = [ // squat mire toad, wide eyes and pounce legs
-    ".3....3.",
-    ".321123.",
-    "32133123",
+    ".33..33.",
+    "32311323",
     "21111112",
-    ".122221.",
-    "..2112..",
-    ".21..12.",
-    "2......2",
+    "21333312",
+    "21111112",
+    ".211112.",
+    "21122112",
+    "22....22",
 ];
 
 pub const BRAMBLE_SPRITE: [&str; 8] = [ // thorned leaf halo, bright seed core
-    "...2.2..",
-    ".231132.",
-    "231..132",
-    "21.33.12",
-    "21.33.12",
-    "231..132",
-    ".213312.",
-    "..2.2...",
+    ".2.22.2.",
+    ".211112.",
+    "21333312",
+    "13233231",
+    "13333331",
+    "21333312",
+    ".211112.",
+    ".2.22.2.",
 ];
 
 pub const BULLET_A: [&str; 8] = [
@@ -838,12 +838,12 @@ pub const IMPACT: [&str; 8] = [
 pub const WISP: [&str; 8] = [      // floating flame/teardrop, no legs
     "...2....",
     "..232...",
-    ".23132..",
+    ".23332..",
     ".231132.",
+    "21311312",
+    "21111112",
     ".211112.",
-    ".231132.",
-    "..2112..",
-    "...22...",
+    "..2222..",
 ];
 
 pub const ITEM_ORB: [&str; 8] = [
@@ -1702,6 +1702,127 @@ pub const CINDER_MAW_MEDIUM_B: [&str; 16] = [
     "................",
 ];
 
+pub const SKELETON_B: [&str; 8] = [
+    "........",
+    ".222222.",
+    "21111112",
+    "21311312",
+    "21111112",
+    ".221122.",
+    ".212212.",
+    ".2.22.2.",
+];
+pub const WISP_B: [&str; 8] = [
+    "....2...",
+    "...232..",
+    "..23332.",
+    ".231132.",
+    "21311312",
+    "21111112",
+    ".211112.",
+    "..2222..",
+];
+pub const SENTRY_B: [&str; 8] = [
+    "3......3",
+    ".322223.",
+    ".211112.",
+    ".231132.",
+    ".221122.",
+    ".211112.",
+    ".322223.",
+    "3......3",
+];
+pub const MIRROR_MOTH_B: [&str; 8] = [
+    ".1.22.1.",
+    "1..22..1",
+    "11.22.11",
+    ".123321.",
+    "..2332..",
+    "..1..1..",
+    ".1....1.",
+    "........",
+];
+pub const MIRE_SPORE_B: [&str; 8] = [
+    ".222222.",
+    "21111112",
+    "21211212",
+    ".233332.",
+    ".232232.",
+    "..2332..",
+    ".2.11.2.",
+    "2..11..2",
+];
+pub const SHADE_B: [&str; 8] = [
+    "..2222..",
+    ".211112.",
+    "21311312",
+    "21111112",
+    ".211112.",
+    ".21112..",
+    "..212.2.",
+    "...2...2",
+];
+pub const RUNE_LANTERN_B: [&str; 8] = [
+    ".3.33.3.",
+    "..2222..",
+    ".221122.",
+    "32233223",
+    ".233332.",
+    ".233332.",
+    "..2112..",
+    "3..11..3",
+];
+pub const PRISM_SKITTER_B: [&str; 8] = [
+    ".3.3.3..",
+    ".232323.",
+    "32111123",
+    "21311312",
+    "32111123",
+    ".322223.",
+    "..3.2.3.",
+    ".3.3..3.",
+];
+pub const BOG_TOAD_B: [&str; 8] = [
+    "........",
+    ".33..33.",
+    "32311323",
+    "21111112",
+    "21333312",
+    "21111112",
+    "2.2222.2",
+    "22....22",
+];
+pub const BRAMBLE_SPRITE_B: [&str; 8] = [
+    "2..22..2",
+    ".211112.",
+    "21333312",
+    "21233212",
+    "21333312",
+    "21322312",
+    ".211112.",
+    "2..22..2",
+];
+pub const FROST_LANCER_B: [&str; 8] = [
+    "..3.3...",
+    ".22222..",
+    "231132..",
+    "21111333",
+    "233332..",
+    ".21122..",
+    ".21.12..",
+    ".33.33..",
+];
+pub const RIFT_CANTOR_B: [&str; 8] = [
+    "33....33",
+    "3.3223.3",
+    "..2222..",
+    ".211112.",
+    "21311312",
+    ".233332.",
+    "..2112..",
+    ".3.22.3.",
+];
+
 pub struct EnemyAnim {
     pub eid: u8,
     pub slot: u8,
@@ -1719,35 +1840,35 @@ const fn anim(eid: u8, slot: u8, a: &'static [&'static str],
 pub const ENEMY_ANIM: [EnemyAnim; 31] = [
     anim( 0,  20, &CRAWLER, Some(&CRAWLER_B)),
     anim( 2,  21, &HORNET, Some(&HORNET_B)),
-    anim( 3,  22, &SKELETON, None),
+    anim( 3,  22, &SKELETON, Some(&SKELETON_B)),
     anim( 4,  56, &BRUISER_ORC_A, Some(&BRUISER_ORC_B)),
-    anim( 5,  34, &WISP, None),
+    anim( 5,  34, &WISP, Some(&WISP_B)),
     anim( 6,  60, &BRUISER_BOMBER_A, Some(&BRUISER_BOMBER_B)),
-    anim( 7,  37, &SHADE, None),
+    anim( 7,  37, &SHADE, Some(&SHADE_B)),
     anim( 9,  39, &ROPE, Some(&ROPE_B)),
-    anim(10,  68, &SENTRY, None),
+    anim(10,  68, &SENTRY, Some(&SENTRY_B)),
     anim(11,  72, &FOLD_STAR, Some(&FOLD_STAR_B)),
     anim(12,  73, &FLUTTERBAT, Some(&FLUTTERBAT_B)),
     anim(13,  74, &GLOAM_LEECH, Some(&GLOAM_LEECH_B)),
     anim(14,  64, &CINDER_MAW_MEDIUM, Some(&CINDER_MAW_MEDIUM_B)),
     anim(15,  76, &RIFT_OOZE, Some(&RIFT_OOZE_B)),
-    anim(16,  77, &MIRROR_MOTH, None),
-    anim(17,  78, &MIRE_SPORE, None),
+    anim(16,  77, &MIRROR_MOTH, Some(&MIRROR_MOTH_B)),
+    anim(17,  78, &MIRE_SPORE, Some(&MIRE_SPORE_B)),
     anim(18,  80, &ECHO_GUARD, None),
-    anim(19, 124, &RUNE_LANTERN, None),
+    anim(19, 124, &RUNE_LANTERN, Some(&RUNE_LANTERN_B)),
     anim(20, 125, &DREAD_BELL, None),
     anim(21,  81, &RIFT_WARDEN, None),
-    anim(22,  69, &PRISM_SKITTER, None),
+    anim(22,  69, &PRISM_SKITTER, Some(&PRISM_SKITTER_B)),
     anim(23,  79, &DUSK_MIDGE, None),
     anim(24,  79, &SUNWHEEL, None),
     anim(25,  79, &CINDER_KITE, Some(&CINDER_KITE_B)),
-    anim(26,  79, &BOG_TOAD, None),
-    anim(27,  79, &BRAMBLE_SPRITE, None),
-    anim(28,  79, &FROST_LANCER, None),
+    anim(26,  79, &BOG_TOAD, Some(&BOG_TOAD_B)),
+    anim(27,  79, &BRAMBLE_SPRITE, Some(&BRAMBLE_SPRITE_B)),
+    anim(28,  79, &FROST_LANCER, Some(&FROST_LANCER_B)),
     anim(29,  79, &VINE_COIL, Some(&VINE_COIL_B)),
     anim(30,  79, &SHARD_CRAB, Some(&SHARD_CRAB_B)),
     anim(31,  79, &VOID_HALO, None),
-    anim(32,  70, &RIFT_CANTOR, None),
+    anim(32,  70, &RIFT_CANTOR, Some(&RIFT_CANTOR_B)),
 ];
 
 // ---- Emission lists (order matters — matches the Python pipeline) ----
