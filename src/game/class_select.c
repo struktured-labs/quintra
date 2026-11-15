@@ -121,6 +121,9 @@ static void cache_and_arm_palettes(void) {
 
     // Four half-bursts (BG lo/hi, OBJ lo/hi) per rotating pass.
     class_select_pal_steps = (u8)(PALETTE_OBJ_COMMIT_PASSES * 4);
+    // Class select owns BG palettes via bg_pal_cache bursts from here on.
+    palette_bg_dirty = 0;
+    palette_bg_pending_commit = 0;
     class_select_vbl_work = 1;
 }
 

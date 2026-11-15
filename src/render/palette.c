@@ -24,7 +24,30 @@ static void load_to_pal(u8 ps_reg_select_lo, u8 slot, const u16 *colors) {
     }
 }
 
+// Every BG palette write is mirrored here. A write made while the LCD is on
+// can land in STAT mode 3, where the CGB (and the MiSTer Gameboy core)
+// ignores BCPD; the room then keeps a half-written mix of old and new
+// colours (a dimmed green pops "brown") until a menu reloads it. Mid-room
+// writes therefore also arm a short VBlank re-commit of that slot, so the
+// palette heals within a frame. LCD-off writes are reliable and disarm it.
+u16 palette_bg_shadow[8][4];
+volatile u8 palette_bg_dirty;
+volatile u8 palette_bg_pending_commit;
+
 void palette_bg_load(u8 slot, const u16 *colors) {
+    u16 *dst;
+    u8 bit;
+    slot &= 7;
+    dst = palette_bg_shadow[slot];
+    dst[0] = colors[0]; dst[1] = colors[1];
+    dst[2] = colors[2]; dst[3] = colors[3];
+    bit = (u8)(1u << slot);
+    if (LCDC_REG & LCDCF_ON) {
+        palette_bg_dirty |= bit;
+        palette_bg_pending_commit = PALETTE_BG_COMMIT_PASSES;
+    } else {
+        palette_bg_dirty &= (u8)~bit;
+    }
     load_to_pal(0, slot, colors);
 }
 
@@ -45,20 +68,6 @@ void palette_obj_load(u8 slot, const u16 *colors) {
 void palette_bg_load_n(u8 first_slot, u8 n, const u16 *colors) {
     u8 i;
     for (i = 0; i < n; ++i) {
-        load_to_pal(0, (u8)(first_slot + i), colors + (u16)(i * 4));
+        palette_bg_load((u8)(first_slot + i), colors + (u16)(i * 4));
     }
-}
-
-void palette_bg_fill_attrs(u8 slot) {
-    u8 row[20];
-    u8 x, y;
-    u8 *map = (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
-    slot &= 7;
-    for (x = 0; x < 20; ++x) row[x] = slot;
-    VBK_REG = 1;
-    // set_bkg_tiles honors the console's global font tile offset, which is
-    // correct for glyph IDs but corrupts raw attribute zeroes. set_tiles uses
-    // the explicit map address and writes the palette bytes verbatim.
-    for (y = 0; y < 18; ++y) set_tiles(0, y, 20, 1, map, row);
-    VBK_REG = 0;
 }
