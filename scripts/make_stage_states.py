@@ -98,7 +98,10 @@ def symbol_addresses(rom: Path) -> dict[str, int]:
                  "_loop_current_screen", "_room_puzzle_kind",
                  "_room_puzzle_locked", "_room_world_width",
                  "_room_world_height", "_room_camera_x", "_room_camera_y",
-                 "_procgen_current_room_is_large"):
+                 "_procgen_current_room_is_large",
+                 "_sl_n", "_sl_x", "_sl_y", "_sl_kind", "_sl_ang",
+                 "_sl_solved_ang", "_sl_lit", "_sl_crystal_x",
+                 "_sl_crystal_y"):
         match = re.search(rf"DEF {re.escape(name)} 0x([0-9A-Fa-f]+)", text)
         if not match:
             raise RuntimeError(f"missing ROM symbol {name} in {noi}")
@@ -325,7 +328,39 @@ def solve_entry_puzzle(pyboy: PyBoy, addrs: dict[str, int]) -> None:
                     f"rune puzzle exposed no valid tone after {prefix}")
         if not pyboy.memory[locked]:
             return
+    elif kind == 5:  # PUZZLE_SUN_LATTICE
+        _solve_sun_lattice(pyboy, addrs, player, tilemap, locked)
+        if not pyboy.memory[locked]:
+            return
     raise RuntimeError(f"could not solve entry puzzle kind {kind}")
+
+
+def _solve_sun_lattice(pyboy, addrs, player, tilemap, locked) -> None:
+    """Shatter any blocker, then strike the vanes a BFS says to turn."""
+    import sun_lattice_harness as slh
+    sym = {name: addrs[name] for name in (
+        "_sl_n", "_sl_x", "_sl_y", "_sl_kind", "_sl_ang", "_sl_solved_ang",
+        "_sl_lit", "_sl_crystal_x", "_sl_crystal_y")}
+    cx = pyboy.memory[sym["_sl_crystal_x"]]
+    cy = pyboy.memory[sym["_sl_crystal_y"]]
+    if cx != 0xFF and pyboy.memory[tilemap + cy * ROOM_W + cx] == 22:
+        slh.strike(pyboy, player, tilemap, cx, cy,
+                   lambda: pyboy.memory[tilemap + cy * ROOM_W + cx] != 22)
+    # Replan after each strike: spread shots can graze a neighbouring vane.
+    for _ in range(16):
+        if not pyboy.memory[locked]:
+            return
+        fixtures = slh.read_state(pyboy, sym)
+        tiles = [pyboy.memory[tilemap + i] for i in range(ROOM_W * ROOM_H)]
+        plan = slh.solve(fixtures, tiles)
+        if plan is None:
+            return
+        if plan:
+            i = plan[0]
+            before = pyboy.memory[sym["_sl_ang"] + i]
+            slh.strike(pyboy, player, tilemap, fixtures[i]["x"], fixtures[i]["y"],
+                       lambda: pyboy.memory[sym["_sl_ang"] + i] != before)
+        pyboy.tick(30 if not plan else 10)
 
 
 def advance_to_court(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int:

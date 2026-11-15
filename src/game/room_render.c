@@ -6,6 +6,7 @@
 #include "game/dungeon_director.h"
 #include "game/procgen.h"
 #include "game/puzzle.h"
+#include "game/sun_lattice.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
@@ -256,6 +257,7 @@ void room_draw_tilemap(void) BANKED {
         tiles_prepare_crystal_wide_arena();
     else if (procgen_current_room_is_boss)
         tiles_prepare_colossal_edges();
+    if (room_puzzle_kind == PUZZLE_SUN_LATTICE) sun_lattice_paint_all();
     VBK_REG = 0;
     present_labels();
 }

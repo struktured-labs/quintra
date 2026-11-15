@@ -7,6 +7,8 @@
 #include "game/dungeon_director.h"
 #include "game/player.h"
 #include "game/room.h"
+#include "game/puzzle.h"
+#include "game/sun_lattice.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
 
@@ -136,4 +138,6 @@ void room_stream_wide_seam(u8 dir) BANKED {
     // display-only geographic sign here in the roomy streaming bank instead
     // of burdening the resident combat loop.
     room_present_arrival_labels();
+    // Streamed lines carry the lattice fixtures as plain pillars.
+    if (room_puzzle_kind == PUZZLE_SUN_LATTICE) sun_lattice_paint_all();
 }

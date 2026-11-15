@@ -749,3 +749,50 @@ Dens are still a proposal. If #79 is approved and built:
    both are built). Persist only for the den visit with ordinary dungeon
    flags; cross-visit clears use #79's reserved bits. CAIRN dens stay on the
    original four kinds. #79's own questions remain open.
+
+## Implementation notes (owner approved "yes to all", 2026-11-15)
+
+Runtime: `src/game/sun_lattice.c` (VRAM overlay, strikes, dwell) and
+`src/game/sun_lattice_gen.c` (generator + tracer, host-compilable). Decisions
+taken while building:
+
+- **Slot:** Stage 3+ (`bosses_beaten >= 2`) Trial and Waystone cells are
+  always `PUZZLE_SUN_LATTICE`; Stages 1-2 keep Push Seal / Rune Sequence.
+  Solving uses `mark_puzzle_solved()` (`RUN_TRIAL_BIT` / `RUN_WAYSTONE_BIT`);
+  no new SRAM. Re-entering a solved room regenerates it from the seed in
+  the solved, lit, frozen state.
+- **Collision:** fixtures are `BGT_PILLAR` in `room_tilemap`; beams are
+  display-only. The lattice layer paints both from VRAM bank 1 tiles 56..62
+  (Brazier, Vane, Wedge, Obelisk, beam H, beam V, beam crossing; `\` is the
+  `/` tile with the CGB H-flip attribute). The overlay is repainted at the end
+  of `room_draw_tilemap()` (room entry, slides, Pack/compass return) and after
+  a wide seam stream. Beams are drawn only over plain floor; over spikes,
+  plates, water or chasm the ray continues but stays submerged so hazard art
+  is never hidden.
+- **Generation:** a seeded xorshift16 lays a solved optical tree (emitter,
+  vanes, up to two Wedges, one Obelisk per leaf) inside x 3..16, y 3..13 with
+  fixtures 3+ tiles apart, then scrambles at least half the path vanes and
+  proves the result is unlit. Per-stage shape: vanes 2/2/3/3/3/3/3, Wedges
+  0/1/1/1/1/2/2, Fixed Vanes 0/0/0/1/1/2/2, decoys 0/0/1/1/2/2/2 (+1 in
+  Waystones) for Ember..Void. Stage 3 Trials always add a shatterable
+  `BGT_CRYSTAL` on the first run (1 in 4 rooms from Stage 6). After 64
+  failed attempts (about 1% of late seeds) the hand-checked Layout 1 is used.
+  The seven teaching layouts above are not stamped verbatim.
+- **Reachability (Q4):** the solved path is carved as a 3-wide floor road,
+  every fixture gets a 5x5 floor apron, and the body-width cross joins all
+  four doors, so every mandatory vane is melee-reachable from dry floor in
+  every stage, Mire and Keep included.
+- **Tracer:** at most 5 queued rays (emitter + 2 per Wedge) x 32 steps,
+  traced only when a vane turns or a crystal shatters (the spec sketch said
+  3 rays; two Wedges need 5); the 12-frame lit
+  dwell runs per frame.
+- **Strikes:** any player shot that reaches a vane turns it and is
+  consumed (8-frame per-vane debounce; spread shots can graze a neighbour);
+  boomerangs and bombs do too. Hostile shots do not. Morningstar and crate
+  shutters are not implemented. Sun Turn has no lattice interaction (Q5).
+  Dens are deferred until #79 (Q6).
+- **Hookshot (Q3):** snag-and-spin lands in a follow-up PR; until then a
+  Hookshot treats every lattice fixture as a pillar.
+- **Known gaps:** during a room slide the incoming lattice briefly shows as
+  plain pillars until the final redraw; the Lua balance bot cannot solve
+  Sun Lattice rooms yet.

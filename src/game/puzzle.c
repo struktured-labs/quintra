@@ -12,6 +12,7 @@
 #include "game/puzzle.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/sun_lattice.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 
@@ -301,10 +302,14 @@ void puzzle_prepare_room(void) BANKED {
         // Roomier mid/late dungeons get a second mechanical beat before the
         // back half. Keep it within the persisted eight-bit puzzle mask and
         // alternate its vocabulary so it does not merely repeat room one.
-        room_puzzle_kind = ((family + (u8)seed) & 1)
+        // From Stage 3 (Ember) on, both mandatory puzzle cells are a Sun
+        // Lattice light puzzle; Stages 1-2 keep the Push Seal / Rune pair.
+        room_puzzle_kind = (run_state.bosses_beaten >= 2) ? PUZZLE_SUN_LATTICE
+            : ((family + (u8)seed) & 1)
             ? PUZZLE_PUSH_SEAL : PUZZLE_RUNE_SEQUENCE;
     } else if (local == run_state.mission_trial_cell)
-        room_puzzle_kind = (family & 1)
+        room_puzzle_kind = (run_state.bosses_beaten >= 2) ? PUZZLE_SUN_LATTICE
+            : (family & 1)
             ? PUZZLE_RUNE_SEQUENCE : PUZZLE_PUSH_SEAL;
     else {
         // These are the same stable spatial punctuation cells reserved by
@@ -376,6 +381,12 @@ void puzzle_prepare_room(void) BANKED {
         if (!puzzle_solved()) prepare_push(seed);
     } else if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) {
         if (!puzzle_solved()) prepare_sequence(seed);
+    } else if (room_puzzle_kind == PUZZLE_SUN_LATTICE) {
+        u8 solved = puzzle_solved();
+        clear_all_cairns();
+        sun_lattice_prepare(seed, local == run_state.mission_waystone_cell,
+            solved);
+        room_puzzle_locked = solved ? 0 : 1;
     } else if (room_puzzle_kind == PUZZLE_PHASE_SWITCH) {
         prepare_phase_switch(room_puzzle_phase_bit, seed);
     } else {
@@ -514,5 +525,9 @@ u8 puzzle_update_player(void) BANKED {
         return update_sequence(tx, ty);
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH)
         update_phase_switch(tx, ty);
+    if (room_puzzle_kind == PUZZLE_SUN_LATTICE && sun_lattice_tick()) {
+        mark_puzzle_solved(0);
+        return 1;
+    }
     return 0;
 }

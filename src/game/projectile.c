@@ -9,6 +9,7 @@
 #include "game/boss_projectile.h"
 #include "game/player.h"
 #include "game/puzzle.h"
+#include "game/sun_lattice.h"
 #include "game/room.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -262,6 +263,8 @@ void projectile_update_one(entity_t *e, u8 idx) {
                         || t == BGT_POT || px < 8
                         || px > (i16)(room_world_width - 8)
                         || py < 8 || py > (i16)(room_world_height - 8))) {
+                    if (t == BGT_PILLAR)
+                        sun_lattice_strike((u8)(sx >> 3), (u8)(sy >> 3));
                     e->x = (ppos_t)(e->x - e->vx);
                     e->y = (ppos_t)(e->y - e->vy);
                     e->state = 1;
@@ -278,6 +281,13 @@ void projectile_update_one(entity_t *e, u8 idx) {
             if (t == BGT_WALL
                 && puzzle_try_hidden_shot((u8)(sx >> 3), (u8)(sy >> 3))) {
                 fx_spawn(SPR_FX_IMPACT, 2, px, py, 10);
+                entity_kill(idx);
+                return;
+            }
+            // Any player strike turns a Sun Lattice Helio Vane.
+            if (t == BGT_PILLAR && room_puzzle_kind == PUZZLE_SUN_LATTICE
+                && sun_lattice_strike((u8)(sx >> 3), (u8)(sy >> 3))) {
+                fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
                 entity_kill(idx);
                 return;
             }

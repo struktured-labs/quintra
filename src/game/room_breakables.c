@@ -7,6 +7,8 @@
 #include "core/types.h"
 #include "game/pickup.h"
 #include "game/room.h"
+#include "game/puzzle.h"
+#include "game/sun_lattice.h"
 #include "game/stage_event.h"
 #include "render/tiles.h"
 
@@ -32,6 +34,7 @@ void room_break_crystal(u8 tx, u8 ty) BANKED {
     if (rng_next_u8() < 64)
         pickup_spawn_mp(FIX8((i16)tx * 8), FIX8((i16)ty * 8));
     stage_event_on_crystal_break(tx, ty);
+    if (room_puzzle_kind == PUZZLE_SUN_LATTICE) sun_lattice_retrace();
 }
 
 void room_break_pot(u8 tx, u8 ty) BANKED {
