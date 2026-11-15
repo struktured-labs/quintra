@@ -50,12 +50,22 @@ def place_on_tile(pb, tx, ty):
     put16(pb, PL + 11, ty * 8 + 4 - 12)
 
 
+def clear_enemy_shots(pb):
+    # quiet_boss freezes locomotion, but a volley already in the air can
+    # still land during the ghost-path and gap assertions.
+    for i in range(32):
+        ep = EN + i * 28
+        if pb.memory[ep] == 1 and not (pb.memory[ep + 1] & 0x10):
+            pb.memory[ep] = pb.memory[ep + 1] = 0
+
+
 def quiet_boss(pb, boss):
     pb.memory[boss + 20] = 1
     pb.memory[boss + 5] = 0
     pb.memory[boss + 2] = 1
     if pb.memory[boss + 23]:
         pb.memory[boss + 14] = pb.memory[boss + 23]
+    clear_enemy_shots(pb)
 
 
 def arm(pb, boss):
@@ -95,6 +105,7 @@ def main():
         preview_hp = pb.memory[PL + 2]
         pb.memory[PL + 7] = 5
         while pb.memory[U] < 20:
+            clear_enemy_shots(pb)
             pb.tick()
         cells = root_cells(pb)
         assert len(cells) >= 8, cells
@@ -108,6 +119,7 @@ def main():
         flee = 'down' if hazard[1] < 8 else 'up'
         pb.button_press(flee)
         while pb.memory[U] < 48:
+            clear_enemy_shots(pb)
             pb.tick()
             tile = pb.memory[0xFE00 + 4 * 4 + 2]
             if tile >= 64:
@@ -128,6 +140,7 @@ def main():
         place_on_tile(pb, *gap)
         hold_hp = pb.memory[PL + 2]
         while pb.memory[U] < 88:
+            clear_enemy_shots(pb)
             pb.tick()
             assert pb.memory[PL + 2] == hold_hp, 'gap tile dealt damage'
         assert pb.memory[TM + gap[1] * 20 + gap[0]] in (1, 19, 20)
@@ -152,6 +165,7 @@ def main():
         assert pb.memory[PL + 15] == 45
         after = pb.memory[PL + 2]
         while pb.memory[ACTIVE] and pb.memory[U] < 88:
+            clear_enemy_shots(pb)
             pb.tick()
             assert pb.memory[PL + 2] == after, 'roots hit twice in one cast'
         assert bg(pb, *hazard) != pb.memory[TM + hazard[1] * 20 + hazard[0]]
