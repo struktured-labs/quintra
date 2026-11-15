@@ -716,6 +716,61 @@ static u8 refuse_cue(u8 i) {
     return 1;
 }
 
+// First already-capped StatBoost on this item, or 0xFF if it has none.
+static u8 item_first_capped_stat(u8 item_idx) {
+    const item_def_t *it;
+    u8 k;
+    if (item_idx >= N_ITEMS) return 0xFF;
+    it = &items[item_idx];
+    for (k = 0; k < it->n_effects; ++k) {
+        const effect_t *ef = &it->effects[k];
+        if (ef->kind != EFFECT_STAT_BOOST) continue;
+        if ((ef->d0 == STAT_HP && player.hp_max >= HP_CAP)
+            || (ef->d0 == STAT_MP && player.mp_max >= 20)
+            || (ef->d0 == STAT_ATK && player.atk >= 15)
+            || (ef->d0 == STAT_DEF && player.def >= 10)
+            || (ef->d0 == STAT_SPD && player.spd >= 9)
+            || (ef->d0 == STAT_LCK && player.lck >= 10)) return ef->d0;
+    }
+    return 0xFF;
+}
+
+// Presence-based relics still do something after their stats cap, but only
+// on the first pickup. Duplicates do not need another registration.
+static u8 item_presence_matters(u8 item_idx) {
+    u8 id, k;
+    if (item_idx >= N_ITEMS) return 0;
+    id = (u8)items[item_idx].id;
+    if (id == ITEM_ID_BLOOD_SIGIL || id == ITEM_ID_WARD_CHARM
+        || id == ITEM_ID_ECHO_PRISM || id == ITEM_ID_RICOCHET_RUNE
+        || id == ITEM_ID_THORN_CROWN || id == ITEM_ID_WAR_DRUM
+        || id == ITEM_ID_MOON_FLASK || id == ITEM_ID_BLAST_SEED
+        || id == ITEM_ID_RIFT_LENS || id == ITEM_ID_PHOENIX_THREAD
+        || id == ITEM_ID_GLASS_FANG)
+        return (u8)!player_has_item(id);
+    for (k = 0; k < items[item_idx].n_effects; ++k)
+        if (items[item_idx].effects[k].kind != EFFECT_STAT_BOOST) return 1;
+    return 0;
+}
+
+// 1 if this boost should stay on the ground and explain the cap.
+static u8 item_stat_refuse(u8 item_idx, u8 *capped_out) {
+    u8 capped;
+    if (item_would_change_stats(item_idx) || item_presence_matters(item_idx))
+        return 0;
+    capped = item_first_capped_stat(item_idx);
+    if (capped_out) *capped_out = capped;
+    return (u8)(capped != 0xFF);
+}
+
+static u8 refuse_capped_item(u8 i, u8 item_idx) {
+    u8 capped = 0xFF;
+    if (!item_stat_refuse(item_idx, &capped)) return 0;
+    if (refuse_cue(i)) hud_show_stat_max(capped);
+    return 1;
+}
+
+
 u8 pickup_check_player_collision(void) BANKED {
     u8 i;
     u8 any = 0;
@@ -792,6 +847,10 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_COIN);
                     break;
                 case PICKUP_ITEM:
+                    if (refuse_capped_item(i, entities[i].ai_data[1])) {
+                        any = 1;
+                        continue;
+                    }
                     if (!apply_item_effects(entities[i].ai_data[1])) {
                         any = 1;
                         continue;
@@ -806,6 +865,10 @@ u8 pickup_check_player_collision(void) BANKED {
                     break;
                 case PICKUP_FARFOLD_RELIC:
                     if (treasure_cache_guarded()) continue;
+                    if (refuse_capped_item(i, entities[i].ai_data[1])) {
+                        any = 1;
+                        continue;
+                    }
                     if (!apply_item_effects(entities[i].ai_data[1])) {
                         any = 1;
                         continue;
@@ -948,6 +1011,9 @@ u8 pickup_check_player_collision(void) BANKED {
                     // beep with a retry delay so it doesn't spam.
                     u8 price = entities[i].ai_data[2];
                     u8 ware = entities[i].ai_data[1];
+                    u8 item_capped = 0xFF;
+                    u8 item_stat_blocked = (u8)((ware == WARE_ITEM)
+                        && item_stat_refuse(entities[i].ai_data[3], &item_capped));
                     hud_show_offer(entities[i].ai_data[1], price);
                     // Unique contracts cannot be bought twice, and Glass
                     // Fang must always collect its promised one-heart stake.
@@ -980,8 +1046,7 @@ u8 pickup_check_player_collision(void) BANKED {
                         || (ware == WARE_HEART
                             && (player.hp >= player.hp_max
                                 || STATUS_PLAYER_HEALING_BLOCKED()))
-                        || (ware == WARE_ITEM
-                            && !item_would_change_stats(entities[i].ai_data[3]))
+                        || item_stat_blocked
                         || (ware == WARE_BIG && player.hp_max >= HP_CAP)
                         || (ware == WARE_FORGE && player.atk >= 15)
                         || (ware == WARE_RUNE && player.mp_max >= 20)
@@ -1007,11 +1072,20 @@ u8 pickup_check_player_collision(void) BANKED {
                                 || ware == WARE_BOOMERANG || ware == WARE_HOOKSHOT
                                 || ware == WARE_MORNINGSTAR || ware == WARE_BOMBS)
                             && !player_has_inventory_space())) {
-                        if (refuse_cue(i) && ware == WARE_HEART) {
-                            if (STATUS_PLAYER_HEALING_BLOCKED())
-                                hud_show_healing_blocked();
-                            else if (player.hp >= player.hp_max)
-                                hud_show_hp_full();
+                        if (refuse_cue(i)) {
+                            if (ware == WARE_HEART) {
+                                if (STATUS_PLAYER_HEALING_BLOCKED())
+                                    hud_show_healing_blocked();
+                                else if (player.hp >= player.hp_max)
+                                    hud_show_hp_full();
+                            } else if (item_stat_blocked)
+                                hud_show_stat_max(item_capped);
+                            else if (ware == WARE_BIG)
+                                hud_show_stat_max(STAT_HP);
+                            else if (ware == WARE_FORGE)
+                                hud_show_stat_max(STAT_ATK);
+                            else if (ware == WARE_RUNE)
+                                hud_show_stat_max(STAT_MP);
                         }
                         any = 1;
                         continue;

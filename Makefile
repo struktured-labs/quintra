@@ -175,6 +175,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_attack_relics.py
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_pickup_feedback.py
+	$(PYBOY_RUN) scripts/test_stat_max_pickup.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_will_tiers.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
@@ -184,6 +185,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py
 	$(PYBOY_RUN) scripts/test_world_interactions.py
 	$(PYBOY_RUN) scripts/test_oath_arts.py
+	$(PYBOY_RUN) scripts/test_riftwild_oath_sfx.py
 	$(PYBOY_RUN) scripts/test_dungeon_law.py
 	$(PYBOY_RUN) scripts/test_mission_graph.py
 	uv run --quiet --with pyboy python scripts/test_champion_animation.py

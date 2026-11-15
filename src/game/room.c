@@ -1740,7 +1740,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 player.active_charge = OATH_COOLDOWN;
                 if (player.iframes < 10) player.iframes = 10;
                 room_shake(1, 14);
-                sfx_play(SFX_PUZZLE);
+                // Reserved: SFX_PUZZLE is the landscape-secret discovery cue.
+                sfx_play(SFX_DASH);
                 hud_redraw_hp();
                 hud_redraw_mp();
             } else {
@@ -2024,7 +2025,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 room_combat_sealed = 0;
                 room_unseal_doors();
                 sfx_play_reward(SFX_REWARD_UNLOCK);
-            } else if (!room_encounter_complete) {
+            } else if (!room_encounter_complete && !run_state.world_mode) {
+                // Riftwild fights are optional field encounters. Do not spend
+                // the Zelda-secret arpeggio on a screen clear there; sealed
+                // dungeon rooms already use the latch-release voice instead.
                 sfx_play(SFX_CLEAR);
             }
             if (run_state.rooms_cleared < 255) run_state.rooms_cleared++;
