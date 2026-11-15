@@ -34,6 +34,7 @@ void boss_volley_tick(entity_t *e) BANKED;
 // Mini-boss patterns moved out of bank 2 so the Hexa dispatch still
 // leaves the 256-byte emergency floor.
 void miniboss_volley_fire(entity_t *e) BANKED;
+void miniboss_anim_tick(entity_t *e) BANKED;
 // Bank-9 tightening-spiral movement for Verdant's Snake-like Colossus cycle.
 void serpent_feed_tick(entity_t *e) BANKED;
 void serpent_motion_tick(entity_t *e) BANKED;

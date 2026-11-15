@@ -491,6 +491,7 @@ static void boss_shot(i16 cx, i16 cy, u8 d, i8 spd, u8 dmg) {
 
 static void boss_tick(entity_t *e) {
     if (e->ai_data[6] == 0) e->ai_data[6] = e->hp;
+    if (!(e->ai_data[3] & 1)) miniboss_anim_tick(e);
     // Hexa Dragmar owns its limbs. The shared phase driver would freeze
     // the body and add a generic area blast on top of them.
     if ((e->ai_data[3] & 1) && e->ai_data[2] == HEXA_STAGE) {

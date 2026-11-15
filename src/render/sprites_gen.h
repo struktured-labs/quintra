@@ -120,8 +120,6 @@ extern const u8 bgt_block16_br[16];
 
 // 16x16 mini-boss and bruiser metasprites
 extern const u8 sprite_boss_sentinel[64];
-extern const u8 sprite_miniboss_orc[64];
-extern const u8 sprite_miniboss_skeleton[64];
 extern const u8 sprite_bruiser_orc[64];
 extern const u8 sprite_bruiser_bomber[64];
 extern const u8 sprite_bruiser_warlock[64];

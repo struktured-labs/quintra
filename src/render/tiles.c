@@ -272,13 +272,11 @@ void tiles_load_spear_sprite(void) BANKED {
 
 void tiles_load_miniboss(u8 stage) BANKED {
     // Load this stage's 16x16 mini-boss into the shared SPR_BOSS slot so each
-    // stage's mini-boss looks distinct. Variant table must match the palette
-    // table in procgen.c (miniboss spawn). 0=sentinel,1=orc,2=skel,3=crawl,4=hornet
-    static const u8 *const mb[5] = {
-        sprite_boss_sentinel, sprite_miniboss_orc, sprite_miniboss_skeleton,
-        sprite_bruiser_bomber, sprite_bruiser_warlock,
-    };
-    set_sprite_data(SPR_BOSS, 4, mb[stage_mb_variant[stage < 9 ? stage : 8]]);
+    // stage's mini-boss looks distinct. Variant must match the palette table
+    // in procgen.c (miniboss spawn): 0=sentinel,1=orc,2=skeleton,3=bomber,
+    // 4=warlock. Pose 0 is resident until miniboss_anim_tick streams the
+    // step and telegraph poses into the same four tiles.
+    miniboss_pose_load((u8)(stage_mb_variant[stage < 9 ? stage : 8] * 3u));
 }
 
 void reaper_pose_load(u8 pose) BANKED;
