@@ -150,6 +150,9 @@ jobs:
       - name: Hexa Dragmar body art
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_body_art_and_contrast.py
 
+      - name: PyBoy boss drop persist
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_boss_drop_persist.py
+
       - name: PyBoy seeded-room fixtures (archetypes, spinners, Cinder Maw, Farfold Cache)
         run: |
           mkdir -p tmp
