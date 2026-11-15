@@ -7,6 +7,9 @@
 #include "game/room.h"
 #include "content.h"
 #include "core/rng.h"
+#include "audio/sfx.h"
+#include "render/hud.h"
+#include "game/loop.h"
 
 u8 pickup_boss_relic_for_class(void) BANKED {
     return pickup_farfold_relic_for_class(rng_range(3));
@@ -26,6 +29,26 @@ u8 treasure_cache_guarded(void) BANKED {
         if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY)
             return 1;
     return 0;
+}
+
+// The relic stays put while its reliquary still has a living foe, including
+// off-screen guards and WAVE/TRAP/HOLD refills. It used to ignore the hero
+// with no word of why; now it buzzes and shows a red GUARD notice at most
+// every 90 VBlanks (1.5 s, the HPFULL/SPDMAX cadence). The cue is paced from
+// the touch path alone (ai_data[4] = VBlank stamp, 0 = never shown), so a
+// cache room pays no extra per-frame cost: these 248x248 reliquaries already
+// run at the edge of the frame budget with a dozen-plus guards awake.
+u8 treasure_cache_refused(entity_t *e) BANKED {
+    u8 now;
+    if (!treasure_cache_guarded()) return 0;
+    now = g_vbl_epoch;
+    if (!now) now = 1;
+    if (!e->ai_data[4] || (u8)(now - e->ai_data[4]) >= 90) {
+        e->ai_data[4] = now;
+        sfx_play(SFX_REFUSE);
+        hud_show_cache_guarded();
+    }
+    return 1;
 }
 
 void treasure_cache_prepare(void) BANKED {
