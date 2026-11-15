@@ -56,7 +56,7 @@ static u8 pq_n;
 static const i8 sl_dx[4] = { 0, 1, 0, -1 };
 static const i8 sl_dy[4] = { -1, 0, 1, 0 };
 
-// Per-stage shape (index = min(stage, 8) - 2): main-branch vanes, Bifrost
+// Per-stage shape (index = min(bosses_beaten, 8) - 2; 0 = Stage 3): main vanes, Bifrost
 // Wedges, vanes per wedge child, Fixed Vanes, decoy vanes.
 static const u8 sl_main_v[7] = { 2, 2, 3, 3, 3, 3, 3 };
 static const u8 sl_wedges[7] = { 0, 1, 1, 1, 1, 2, 2 };
@@ -230,12 +230,16 @@ static void fallback_tree(void) {
     add_fixture(14, 4, SLK_VANE, 1);
     add_fixture(14, 12, SLK_VANE, 0);
     add_fixture(4, 12, SLK_OBELISK, 0);
+    // Reserve the solved path so decoys never land on it.
+    seg_mark(3, 4, 1, 11);
+    seg_mark(14, 4, 2, 8);
+    seg_mark(14, 12, 3, 10);
     sl_attempts = 0xFF;
 }
 
-void sl_generate(u32 seed, u8 stage, u8 role) SL_BANKED {
-    u8 s, i, k, want, flipped, rot, fixed_left;
-    s = (u8)((stage > 8 ? 8 : stage < 2 ? 2 : stage) - 2);
+void sl_generate(u32 seed, u8 bosses_beaten, u8 role) SL_BANKED {
+    u8 s, i, k, want, flipped, rot, fixed_left, path_n;
+    s = (u8)((bosses_beaten > 8 ? 8 : bosses_beaten < 2 ? 2 : bosses_beaten) - 2);
     sl_rs = (u16)((u16)seed ^ (u16)(seed >> 16));
     if (role) sl_rs ^= 0x5A5A;
     if (!sl_rs) sl_rs = 0xACE1;
@@ -262,6 +266,7 @@ void sl_generate(u32 seed, u8 stage, u8 role) SL_BANKED {
         }
     }
 
+    path_n = sl_n;
     // Decoy vanes sit off the solved light path. They never block the
     // solution but catch a mis-turned beam.
     want = (u8)(sl_decoy[s] + (role ? 1 : 0));
@@ -285,19 +290,21 @@ void sl_generate(u32 seed, u8 stage, u8 role) SL_BANKED {
         sl_crystal_y = (u8)(sl_y[0] + sl_dy[d] * 2);
     }
 
-    // Scramble backwards from the solved tree: flip vanes until at least
-    // half of the rotatable path vanes' worth are wrong (rounded up) and the
-    // room is provably not already lit.
+    // Scramble backwards from the solved tree. Only the solved path's
+    // rotatable vanes count: decoys already start at a random angle and
+    // turning them never helps. Stage 3 teaches with half of them wrong
+    // (rounded up); from Stage 4 every path vane starts wrong, so the
+    // fewest-turn solution grows with the tree instead of shrinking when
+    // late stages harden vanes into Fixed Vanes.
     flipped = 0;
-    want = (u8)((rot + 1) >> 1);
-    for (i = 0; i < sl_n; ++i) {
-        if (sl_kind[i] == SLK_VANE && sl_ang[i] == sl_solved_ang[i]
-            && (rnd() & 1)) {
+    want = s ? rot : (u8)((rot + 1) >> 1);
+    for (i = 0; i < path_n; ++i) {
+        if (sl_kind[i] == SLK_VANE && (rnd() & 1)) {
             sl_ang[i] ^= 1;
             flipped++;
         }
     }
-    for (i = 0; i < sl_n && (flipped < want || sl_trace(0)); ++i) {
+    for (i = 0; i < path_n && (flipped < want || sl_trace(0)); ++i) {
         if (sl_kind[i] == SLK_VANE && sl_ang[i] == sl_solved_ang[i]) {
             sl_ang[i] ^= 1;
             flipped++;

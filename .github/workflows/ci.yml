@@ -49,6 +49,11 @@ jobs:
       - name: Test
         run: cargo test --workspace --locked --all-targets
 
+      - name: Sun Lattice C/Rust generator parity
+        run: |
+          cargo build --release --locked -p quintra-procgen --bin sun-lattice-dump
+          python3 scripts/test_sun_lattice_parity.py 3000
+
   rom:
     name: ROM build and cart smoke
     runs-on: ubuntu-24.04

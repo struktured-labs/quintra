@@ -771,8 +771,10 @@ taken while building:
   is never hidden.
 - **Generation:** a seeded xorshift16 lays a solved optical tree (emitter,
   vanes, up to two Wedges, one Obelisk per leaf) inside x 3..16, y 3..13 with
-  fixtures 3+ tiles apart, then scrambles at least half the path vanes and
-  proves the result is unlit. Per-stage shape: vanes 2/2/3/3/3/3/3, Wedges
+  fixtures 3+ tiles apart, then scrambles the solved path's rotatable vanes
+  (half of them, rounded up, in the Stage 3 teaching rooms; all of them from
+  Stage 4) and proves the result is unlit. Decoys keep their random angle and
+  never count toward the scramble. Per-stage shape: vanes 2/2/3/3/3/3/3, Wedges
   0/1/1/1/1/2/2, Fixed Vanes 0/0/0/1/1/2/2, decoys 0/0/1/1/2/2/2 (+1 in
   Waystones) for Ember..Void. Stage 3 Trials always add a shatterable
   `BGT_CRYSTAL` on the first run (1 in 4 rooms from Stage 6). After 64
@@ -782,6 +784,16 @@ taken while building:
   every fixture gets a 5x5 floor apron, and the body-width cross joins all
   four doors, so every mandatory vane is melee-reachable from dry floor in
   every stage, Mire and Keep included.
+- **Solver parity (PR B):** `quintra-procgen::sun_lattice` mirrors the
+  generator and tracer and adds `solve()`, a fewest-turn search over the
+  rotatable vanes that never reads `solved_ang`. CI's Rust job diffs the
+  host-compiled C against Rust for 3000 seeds x 7 stages x 2 roles and checks
+  the Rust solver against the Python BFS that drives the PyBoy strikes;
+  `test_puzzles.py` also checks that the SDCC-built cart generates exactly
+  the Rust room for its live room seed. Fewest turns from the arrival state
+  (3000 seeds each): Stage 3 1-2 (mean 1.2), Stage 4 4, Stage 5 2-5 (5.0),
+  Stages 6-7 2-5 (4.0), Stages 8-9 2-3 (2.1). Stages 8-9 lean on three
+  Obelisks, Fixed Vanes and decoys rather than turn count.
 - **Tracer:** at most 5 queued rays (emitter + 2 per Wedge) x 32 steps,
   traced only when a vane turns or a crystal shatters (the spec sketch said
   3 rays; two Wedges need 5); the 12-frame lit

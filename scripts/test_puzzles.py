@@ -2,6 +2,7 @@
 """Live-ROM contracts for the procedural dungeon puzzle families."""
 
 import re
+import subprocess
 from pathlib import Path
 
 from quintra_topology import (
@@ -633,6 +634,41 @@ def lattice_vram_contract(pb, fixtures):
         assert cells() == before, f"{button} screen lost the lattice overlay"
 
 
+SL_DUMP = Path(__file__).resolve().parent.parent / "target/release/sun-lattice-dump"
+
+
+def lattice_rom_matches_rust(pb, fixtures, role):
+    """The cart's SDCC build of sl_generate() must equal the Rust reference.
+
+    The host parity script proves gcc and Rust agree; this closes the loop
+    on the real ROM (SDCC u8/u16 promotion, banked call, live room seed).
+    """
+    if not SL_DUMP.exists():
+        subprocess.run(["cargo", "build", "--release", "--locked", "-p",
+                        "quintra-procgen", "--bin", "sun-lattice-dump"],
+                       cwd=SL_DUMP.parents[2], check=True)
+    run_seed = sum(pb.memory[RS + 2 + i] << (8 * i) for i in range(4))
+    seed = (run_seed ^ (pb.memory[RS] << 16)
+            ^ (pb.memory[RS + 1] * 0x9E3779B9)) & 0xFFFFFFFF
+    bb = pb.memory[RS + 11]
+    out = subprocess.run(
+        [str(SL_DUMP), "--room", f"0x{seed:08x}", str(bb),
+         "1" if role == "waystone" else "0"],
+        check=True, capture_output=True, text=True).stdout.split()
+    assert out[0] == f"{seed:08x}"
+    assert int(out[1]) == pb.memory[SL["_sl_attempts"]], "attempts differ"
+    rust = [tuple(map(int, t.split(","))) for t in out[3:]
+            if t[0].isdigit()]
+    rom = [(f["x"], f["y"], f["kind"], f["ang"], f["solved"]) for f in fixtures]
+    assert rom == rust, f"ROM lattice differs from Rust:\n rom={rom}\nrust={rust}"
+    crystal = next(t for t in out if t.startswith("C"))[1:]
+    assert crystal == f"{pb.memory[SL['_sl_crystal_x']]},{pb.memory[SL['_sl_crystal_y']]}"
+    plan = next(t for t in out if t.startswith("P"))[1:]
+    py = slh.solve(fixtures, None)
+    assert plan == ",".join(map(str, py)), f"solver parity: rust={plan} python={py}"
+    return seed, len(py)
+
+
 def sun_lattice_contract(stage, role="trial", gif=None):
     pb = enter_mission_cell(stage, role)
     bit = 1 if role == "trial" else 1 << 7
@@ -646,6 +682,9 @@ def sun_lattice_contract(stage, role="trial", gif=None):
     assert kinds.count(slh.SLK_EMITTER) == 1 and slh.SLK_OBELISK in kinds
     if stage >= 4 and pb.memory[SL["_sl_attempts"]] != 0xFF:
         assert slh.SLK_BIFROST in kinds, "Frost Vault+ lattice lost its Wedge"
+    seed, turns = lattice_rom_matches_rust(pb, fixtures, role)
+    print(f"  stage {stage} {role}: room seed {seed:08x}, ROM == Rust, "
+          f"{turns} turn(s)")
     tiles = tilemap(pb)
     # Every fixture is a solid 8x8 post in the collision map.
     assert all(tiles[f["y"] * 20 + f["x"]] == 21 for f in fixtures)
