@@ -10,6 +10,7 @@
 
 pub mod rng;
 pub mod room;
+pub mod sun_lattice;
 
 pub use rng::Xorshift32;
 pub use room::{generate_tilemap, room_kind, room_seed, Tilemap};
