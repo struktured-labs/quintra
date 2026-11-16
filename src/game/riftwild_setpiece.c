@@ -416,8 +416,72 @@ static void scatter(u8 base) {
     }
 }
 
+
+// Ordinary-field ordinal 0..22; 0xFF = fixture (apply returns first).
+static const u8 ordinary_ord[36] = {
+    0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5,
+    6, 7, 8, 9, 10, 11, 0xFF, 0xFF, 12, 13,
+    14, 0xFF, 15, 0xFF, 16, 17, 18, 0xFF, 19, 0xFF,
+    0xFF, 20, 0xFF, 21, 0xFF, 22
+};
+
+static void place_piece(u8 id, u8 x0, u8 y0, u8 base) {
+    stamp_piece(id, x0, y0, next_hash() & 1, base);
+    clear_ring(x0, y0, piece_w[id], piece_h[id], base);
+    riftwild_setpiece_id = id;
+    riftwild_setpiece_x = x0;
+    riftwild_setpiece_y = y0;
+}
+
+// Search for a fit. lattice=1 uses a 2-tile grid; otherwise `cap` random probes.
+// Returns 1 and places the piece when a pocket exists.
+static u8 try_place(u8 id, u8 lattice, u8 cap, u8 base) {
+    u8 w = piece_w[id], h = piece_h[id];
+    u8 span_x = (u8)(25 - w);
+    u8 span_y = (u8)(25 - h);
+    u8 x0, y0;
+    if (span_x == 0 || span_y == 0) return 0;
+    if (lattice) {
+        u8 xs = (u8)(next_hash() % span_x);
+        u8 ys = (u8)(next_hash() % span_y);
+        u8 dx, dy;
+        for (dy = 0; dy < span_y; dy += 2) {
+            for (dx = 0; dx < span_x; dx += 2) {
+                x0 = (u8)(3 + (xs + dx) % span_x);
+                y0 = (u8)(3 + (ys + dy) % span_y);
+                if (id == PIECE_CRAGS) {
+                    x0 = (u8)((x0 + 1) & 0xFE);
+                    y0 = (u8)((y0 + 1) & 0xFE);
+                    if (x0 < 3 || (u8)(x0 + w + 1) > 28) continue;
+                }
+                if (fits(x0, y0, w, h, base)) {
+                    place_piece(id, x0, y0, base);
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+    {
+        u8 tries;
+        for (tries = 0; tries < cap; ++tries) {
+            x0 = (u8)(3 + next_hash() % span_x);
+            y0 = (u8)(3 + next_hash() % span_y);
+            if (id == PIECE_CRAGS) {
+                x0 = (u8)((x0 + 1) & 0xFE);
+                y0 = (u8)((y0 + 1) & 0xFE);
+            }
+            if (fits(x0, y0, w, h, base)) {
+                place_piece(id, x0, y0, base);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 void riftwild_setpiece_apply(u8 base) BANKED {
-    u8 id, tries, k;
+    u8 id, k;
     rw_stamp_n = 0;
     rw_box_x0 = 0xFF;
     riftwild_setpiece_id = RW_SETPIECE_NONE;
@@ -428,102 +492,25 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     hash_state = riftwild_field_salt(1);
     den_here = riftwild_den_in_field();
     lift_old_blobs(base);
-    // Ordinary-field ordinal (0..22) plus a seed salt spreads preferred
-    // large ids across the region. A 2-tile lattice finds a pocket if one
-    // exists; ten random probes were missing most of them. Trees in the
-    // ring are allowed and then cleared to ground.
-    // 0xFF = fixture (this function returns before using the table).
-    static const u8 ordinary_ord[36] = {
-        0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5,
-        6, 7, 8, 9, 10, 11, 0xFF, 0xFF, 12, 13,
-        14, 0xFF, 15, 0xFF, 16, 17, 18, 0xFF, 19, 0xFF,
-        0xFF, 20, 0xFF, 21, 0xFF, 22
-    };
+    // Seeded ordinal spreads preferred large ids. A 2-tile lattice finds a
+    // pocket if one exists; trees in the ring are cleared to ground.
     id = (u8)((ordinary_ord[run_state.world_screen] + riftwild_field_salt(4))
               % PIECE_LARGE);
     for (k = 0; k < PIECE_LARGE && riftwild_setpiece_id == RW_SETPIECE_NONE;
          ++k) {
-        u8 w = piece_w[id], h = piece_h[id];
-        u8 span_x = (u8)(25 - w);
-        u8 span_y = (u8)(25 - h);
-        // Lattice the preferred piece and the next two; random probes for
-        // the rest. Worst case stays inside the field-build budget.
-        if (k < 3 && span_x > 0 && span_y > 0) {
-            u8 xs = (u8)(next_hash() % span_x);
-            u8 ys = (u8)(next_hash() % span_y);
-            u8 dx, dy, x0, y0;
-            for (dy = 0; dy < span_y
-                 && riftwild_setpiece_id == RW_SETPIECE_NONE; dy += 2) {
-                for (dx = 0; dx < span_x
-                     && riftwild_setpiece_id == RW_SETPIECE_NONE;
-                     dx += 2) {
-                    x0 = (u8)(3 + (xs + dx) % span_x);
-                    y0 = (u8)(3 + (ys + dy) % span_y);
-                    if (id == PIECE_CRAGS) {
-                        x0 = (u8)((x0 + 1) & 0xFE);
-                        y0 = (u8)((y0 + 1) & 0xFE);
-                        if (x0 < 3 || (u8)(x0 + w + 1) > 28) continue;
-                    }
-                    if (fits(x0, y0, w, h, base)) {
-                        stamp_piece(id, x0, y0, next_hash() & 1, base);
-                        clear_ring(x0, y0, w, h, base);
-                        riftwild_setpiece_id = id;
-                        riftwild_setpiece_x = x0;
-                        riftwild_setpiece_y = y0;
-                    }
-                }
-            }
-        } else {
-            for (tries = 0; tries < 10; ++tries) {
-                u8 x0 = (u8)(3 + next_hash() % span_x);
-                u8 y0 = (u8)(3 + next_hash() % span_y);
-                if (id == PIECE_CRAGS) {
-                    x0 = (u8)((x0 + 1) & 0xFE);
-                    y0 = (u8)((y0 + 1) & 0xFE);
-                }
-                if (fits(x0, y0, w, h, base)) {
-                    stamp_piece(id, x0, y0, next_hash() & 1, base);
-                    clear_ring(x0, y0, w, h, base);
-                    riftwild_setpiece_id = id;
-                    riftwild_setpiece_x = x0;
-                    riftwild_setpiece_y = y0;
-                    break;
-                }
-            }
+        // Lattice the preferred piece and the next two; random probes after.
+        if (!try_place(id, k < 3, 10, base)) {
+            if (++id >= PIECE_LARGE) id = 0;
         }
-        if (++id >= PIECE_LARGE) id = 0;
     }
     if (riftwild_setpiece_id == RW_SETPIECE_NONE) {
-        // Tight fields fall back to the compact 3x3..4x5 markers. A coarse
-        // 2-tile lattice from a seeded origin, no frame yields (yielding
-        // here stalled the seam camera and input).
         id = (u8)(PIECE_LARGE + (next_hash() & 3));
         for (k = PIECE_LARGE;
              k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
              ++k) {
-            u8 w = piece_w[id], h = piece_h[id];
-            u8 span_x = (u8)(25 - w);
-            u8 span_y = (u8)(25 - h);
-            u8 xs = (u8)(next_hash() % span_x);
-            u8 ys = (u8)(next_hash() % span_y);
-            u8 dx, dy, x0, y0;
-            for (dy = 0; dy < span_y
-                 && riftwild_setpiece_id == RW_SETPIECE_NONE; dy += 2) {
-                for (dx = 0; dx < span_x
-                     && riftwild_setpiece_id == RW_SETPIECE_NONE;
-                     dx += 2) {
-                    x0 = (u8)(3 + (xs + dx) % span_x);
-                    y0 = (u8)(3 + (ys + dy) % span_y);
-                    if (fits(x0, y0, w, h, base)) {
-                        stamp_piece(id, x0, y0, next_hash() & 1, base);
-                        clear_ring(x0, y0, w, h, base);
-                        riftwild_setpiece_id = id;
-                        riftwild_setpiece_x = x0;
-                        riftwild_setpiece_y = y0;
-                    }
-                }
+            if (!try_place(id, 1, 0, base)) {
+                if (++id >= PIECE_COUNT) id = PIECE_LARGE;
             }
-            if (++id >= PIECE_COUNT) id = PIECE_LARGE;
         }
     }
     scatter(base);
