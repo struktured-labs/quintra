@@ -57,8 +57,7 @@
       <section class="toolbar" aria-label="Player controls">
         <button id="mute" type="button" aria-pressed="false">Mute</button>
         <button id="fullscreen" type="button">Fullscreen</button>
-        <button id="display-mode" type="button" title="Cycle display: fit, integer scale, stretch">Display: Fit</button>
-        <button id="swap-ab" type="button" aria-pressed="false" title="Swap the gamepad A and B buttons">Swap A/B</button>
+        <button id="settings" type="button" aria-haspopup="dialog" title="Buttons, controller and display (gamepad: Home, or hold Select + Start)">Settings</button>
         <button id="export-save" type="button" disabled>Export save</button>
         <button id="import-save" type="button" disabled>Import save</button>
         <input id="save-file" type="file" accept=".sav,application/octet-stream" hidden>
@@ -83,6 +82,32 @@
         Cartridge saves remain in this browser and can be exported as a 32 KiB <code>.sav</code> file.
       </footer>
       </div>
+      </div>
+      <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+        <div class="settings-card">
+          <h2 id="settings-title">Settings</h2>
+          <button class="settings-item" id="swap-ab" type="button" aria-pressed="false">Swap A/B: Off</button>
+          <div class="settings-row" role="group" aria-label="Display">
+            <span>Display</span>
+            <button class="settings-item" type="button" data-display-mode="fit" aria-pressed="true">Fit</button>
+            <button class="settings-item" type="button" data-display-mode="integer" aria-pressed="false">Integer</button>
+            <button class="settings-item" type="button" data-display-mode="stretch" aria-pressed="false">Stretch</button>
+          </div>
+          <button class="settings-item" id="recalibrate" type="button">Recalibrate controller</button>
+          <button class="settings-item" id="reset-mapping" type="button">Reset controller mapping</button>
+          <button class="settings-item" id="settings-close" type="button">Close</button>
+          <p class="settings-status" id="settings-status" aria-live="polite"></p>
+          <p class="settings-hint">Gamepad: D-pad moves, A chooses, B closes. Open it with Home, or hold Select + Start. Keyboard: Tab, Enter, Esc.</p>
+        </div>
+      </div>
+
+      <div class="pad-calibration" id="pad-calibration" role="dialog" aria-live="assertive" aria-labelledby="pad-calibration-title" hidden>
+        <div class="pad-calibration-card">
+          <strong id="pad-calibration-title">Press the button labelled A on your controller</strong>
+          <span id="pad-calibration-detail">step 1 of 2</span>
+          <span class="pad-calibration-hint">Keyboard and touch still work. Skip with Esc or the button below; it also skips itself after 20 seconds.</span>
+          <button id="pad-calibration-skip" type="button">Skip</button>
+        </div>
       </div>
     </main>
 

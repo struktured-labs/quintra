@@ -66,6 +66,7 @@ jobs:
           node --check web/itch/player.js
           node tools/test_itch_gamepad.mjs web/itch/player.js
           node tools/test_itch_gamepad_layouts.mjs web/itch/player.js
+          node tools/test_itch_pad_calibration.mjs web/itch/player.js
 
   rom:
     name: ROM build and cart smoke
