@@ -36,11 +36,13 @@ void stage_event_resolve_fall(void) BANKED;
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/riftwild_phase.h"
+#include "game/riftwild_den.h"
 #include "game/sram.h"
 #include "game/stage_event.h"
 #include "game/status.h"
 #include "game/will.h"
 #include "game/water_ride.h"
+#include "game/picsean_vortex.h"
 #include "game/waygear.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
@@ -1262,6 +1264,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         && (keys & J_SELECT) && (keys & J_B)
         && (pressed & (J_SELECT | J_B))
         && riftwild_shift_execute(keys, pressed)) return SCREEN_SELF;
+    if (riftwild_den_armed) riftwild_den_tick();
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
     }
@@ -2097,18 +2100,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         else if (feet_tile == BGT_PORTAL) {
             u8 portal_from_world = run_state.world_mode;
             if (run_state.world_mode) {
-                const zelda_screen_t *cell =
-                    &zelda_overworlds[0].screen_grid[run_state.world_screen];
-                if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
-                    run_state_enter_from_world();
-                } else if (cell->kind == ZELDA_CELL_VAULT) {
-                    run_state.world_screen =
-                        (u8)(run_state.world_return_screen & 0x3Fu);
-                } else if (cell->stairs != ID_NONE_U8) {
-                    run_state.world_return_screen = (u8)(run_state.world_screen
-                        | (run_state.world_return_screen & RIFTWELL_USED_FLAG));
-                    run_state.world_screen = cell->stairs;
-                }
+                // Arches, cave/vault stairs, and den stairs (cold bank).
+                riftwild_take_portal(rtx, rty);
             } else {
                 u8 base = run_state_stage_start(run_state.bosses_beaten);
                 u8 local = run_state_dungeon_local();
@@ -2564,8 +2557,9 @@ void room_draw(void) {
         entity_draw_all();
         place_player_sprite();
     }
-    if (serpent_tail_active) serpent_draw();
-    if (cinder_pack_active) cinder_draw();
+    // Serpent, Cinder pack and Tide Vortex art (one banked call keeps
+    // bank 1 above its emergency floor).
+    room_draw_overlays();
 
     if (procgen_current_room_is_boss) VBK_REG = 0;
 

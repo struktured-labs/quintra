@@ -145,7 +145,8 @@ static void restore_nearest_position(i16 old_x, i16 old_y) {
 u8 riftwild_shift_execute(u8 keys, u8 pressed) BANKED {
     i16 old_x, old_y;
     u8 camera_x, camera_y, scroll_x, scroll_y;
-    if (!run_state.world_mode
+    // Dens are caves under one reality; the Worldglass sleeps inside.
+    if (!run_state.world_mode || RUN_IN_RIFT_DEN()
         || !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_WORLDGLASS))
         || !((keys & J_SELECT) && (keys & J_B))
         || !(pressed & (J_SELECT | J_B))) return 0;

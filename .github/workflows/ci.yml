@@ -131,11 +131,17 @@ jobs:
       - name: PyBoy Wolfkin Will wave
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_wolfkin_will_wave.py
 
+      - name: PyBoy Picsean Tide Vortex
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_picsean_tide_vortex.py
+
       - name: PyBoy crystal cluster
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_crystal_cluster.py
 
       - name: PyBoy Rift Wild label
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_riftwild_label.py
+
+      - name: PyBoy Riftwild dens
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_riftwild_dens.py
 
       - name: PyBoy Riftwild set pieces and tile art
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_setpiece.py

@@ -35,7 +35,9 @@ static void companion_reveal_route(void) {
     }
     if (run_state.world_mode) {
         u8 here = run_state.world_screen;
-        u8 edges = zelda_overworlds[0].screen_grid[here].edges;
+        u8 edges;
+        if (here >= RIFT_DEN_SCREEN_BASE) return;
+        edges = zelda_overworlds[0].screen_grid[here].edges;
         if ((edges & 1) && here >= ZELDA_WORLD_W)
             run_state_reveal_world_cell((u8)(here - ZELDA_WORLD_W));
         if ((edges & 2) && (here % ZELDA_WORLD_W) + 1 < ZELDA_WORLD_W)
