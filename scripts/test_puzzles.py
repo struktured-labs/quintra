@@ -61,6 +61,30 @@ RUNE_PAL_LOW = (0x42, 0x10, 0x04, 0x71, 0x04, 0x63, 0x9F, 0x13)
 RUNE_PAL_HIGH = (0x42, 0x10, 0x1F, 0x0A, 0x1C, 0x61, 0xFF, 0x6B)
 
 
+
+def brighten_bgr555_bytes(lo, hi):
+    """Match brighten_colour() in rune_notes.c: 60% of the way toward white."""
+    colour = lo | (hi << 8)
+    r, g, b = colour & 31, (colour >> 5) & 31, (colour >> 10) & 31
+    r = r + (31 - r) * 3 // 5
+    g = g + (31 - g) * 3 // 5
+    b = b + (31 - b) * 3 // 5
+    word = r | (g << 5) | (b << 10)
+    return (word & 0xFF, word >> 8)
+
+
+def palette_with_pressed(base, pressed_pitches, low=True):
+    pal = list(base)
+    for pitch in pressed_pitches:
+        if low and pitch > 2:
+            continue
+        if not low and pitch < 3:
+            continue
+        i = 2 + (pitch * 2 if pitch <= 2 else (pitch - 3) * 2)
+        pal[i], pal[i + 1] = brighten_bgr555_bytes(base[i], base[i + 1])
+    return tuple(pal)
+
+
 def is_rune_plate_tile(tile):
     return BGT_NOTE_0 <= tile <= BGT_NOTE_FLASH
 
@@ -511,6 +535,85 @@ def rune_scale_source_contract():
 
 
 
+
+def assert_pressed_persists(pb, addrs):
+    """A correct step stays sunken and brighter until a wrong note resets it."""
+    count = pb.memory[addrs["_room_rune_count"]]
+    xs = addrs["_room_rune_x"]
+    ys = addrs["_room_rune_y"]
+    pitches = addrs["_room_rune_pitch"]
+    plates = [(pb.memory[xs + i], pb.memory[ys + i],
+               pb.memory[pitches + i]) for i in range(count)]
+
+    def plate_tile(plate):
+        x, y, _ = plate
+        return pb.memory[TM + y * 20 + x]
+
+    def assert_idle_all():
+        for x, y, pitch in plates:
+            tile = pb.memory[TM + y * 20 + x]
+            assert tile == RUNE_IDLE_TILE[pitch], (
+                f"plate at {(x, y)} tile {tile} want idle {RUNE_IDLE_TILE[pitch]}")
+            attr = room_tile_attr(pb, x, y, addrs)
+            assert attr == RUNE_NOTE_PAL[pitch], (
+                f"plate at {(x, y)} pal {attr} want {RUNE_NOTE_PAL[pitch]}")
+        low = cgb_bg_palette(pb, 2)
+        high = cgb_bg_palette(pb, 3)
+        assert low == RUNE_PAL_LOW, f"idle crystal palette {low} != {RUNE_PAL_LOW}"
+        assert high == RUNE_PAL_HIGH, f"idle door palette {high} != {RUNE_PAL_HIGH}"
+
+    def assert_latched(pressed):
+        pressed_pitches = [p for _, _, p in pressed]
+        for x, y, pitch in plates:
+            want = (RUNE_LIT_TILE[pitch] if (x, y, pitch) in pressed
+                    else RUNE_IDLE_TILE[pitch])
+            tile = pb.memory[TM + y * 20 + x]
+            assert tile == want, (
+                f"plate at {(x, y)} pitch {pitch} tile {tile}, want {want}")
+            attr = room_tile_attr(pb, x, y, addrs)
+            assert attr == RUNE_NOTE_PAL[pitch], (
+                f"plate at {(x, y)} dropped pitch palette {attr}")
+        want_low = palette_with_pressed(RUNE_PAL_LOW, pressed_pitches, True)
+        want_high = palette_with_pressed(RUNE_PAL_HIGH, pressed_pitches, False)
+        got_low = cgb_bg_palette(pb, 2)
+        got_high = cgb_bg_palette(pb, 3)
+        assert got_low == want_low, f"pressed crystal palette {got_low} != {want_low}"
+        assert got_high == want_high, f"pressed door palette {got_high} != {want_high}"
+
+    hp = pb.memory[PL + 15]
+    if hp < 2:
+        pb.memory[PL + 15] = 6
+        hp = 6
+    assert_idle_all()
+    confirmed = []
+    for candidate in plates:
+        for x, y, _ in confirmed:
+            feet_on(pb, x, y)
+            wait_rune_flash(pb)
+        feet_on(pb, candidate[0], candidate[1])
+        wait_rune_flash(pb)
+        if is_lit_plate(plate_tile(candidate)) and pb.memory[PL + 15] == hp:
+            confirmed.append(candidate)
+            assert_latched(confirmed)
+            step_off(pb)
+            if len(confirmed) >= 1:
+                break
+        else:
+            # This candidate was wrong; the court already reset to idle.
+            hp = pb.memory[PL + 15]
+            step_off(pb)
+            assert_idle_all()
+    assert confirmed, "could not latch a correct note for pressed-state"
+    assert_latched(confirmed)
+
+    wrong = next((p for p in plates if p not in confirmed), None)
+    assert wrong is not None, "need a remaining plate to prove the reset"
+    feet_on(pb, wrong[0], wrong[1])
+    wait_rune_flash(pb)
+    assert pb.memory[PL + 15] == hp - 1, "wrong note did not charge a half-heart"
+    assert_idle_all()
+
+
 def load_rune_room(stage_index, role):
     """Boot a specific Trial or Waystone rune-sequence room and keep PyBoy running."""
     seed = 0x51A6D00D
@@ -537,6 +640,7 @@ def rune_color_contract():
     addrs = {**symbol_addresses(ROM), **rune_addrs()}
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
     assert_note_colors(pb, addrs, 4)
+    assert_pressed_persists(pb, addrs)
     runes = find_rune_plates(pb)
     assert_flash_then_restore(pb, addrs, runes[0])
     if pb.memory[LOCKED]:
@@ -559,6 +663,7 @@ def rune_color_contract():
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1, (
         f"stage 1 waystone was kind={pb.memory[KIND]} locked={pb.memory[LOCKED]}")
     assert_note_colors(pb, addrs, 3)
+    assert_pressed_persists(pb, addrs)
     pb.stop(save=False)
 
 

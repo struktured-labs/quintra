@@ -64,10 +64,57 @@ def find_plates(pb):
             if pb.memory[puzzles.TM + y * 20 + x] == BGT_SWITCH]
 
 
+def record_ticks(pb, frames, count):
+    for _ in range(count):
+        frames.append(scale(pb.screen.image.copy()))
+        pb.tick()
+
+
+def capture_pressed_sequence(pb, out, prefix, label):
+    """Walk accepted notes so the GIF shows plates staying pressed."""
+    plates = puzzles.find_rune_plates(pb)
+    if len(plates) < 2:
+        return
+    frames = [scale(pb.screen.image.copy())]
+    snap(pb, out, f"{prefix}{label}-pressed-idle")
+    confirmed = []
+    failed = []
+    hp = pb.memory[puzzles.PL + 15]
+    safety = 0
+    while pb.memory[puzzles.LOCKED] and len(confirmed) < min(3, len(plates)):
+        safety += 1
+        if safety > 16:
+            break
+        candidate = next((p for p in plates if p not in confirmed and p not in failed), None)
+        if candidate is None:
+            break
+        for rx, ry in confirmed:
+            puzzles.feet_on(pb, rx, ry)
+            record_ticks(pb, frames, 8)
+        puzzles.feet_on(pb, *candidate)
+        record_ticks(pb, frames, 16)
+        tile = pb.memory[puzzles.TM + candidate[1] * 20 + candidate[0]]
+        if puzzles.is_lit_plate(tile) and pb.memory[puzzles.PL + 15] == hp:
+            confirmed.append(candidate)
+            failed = []
+            snap(pb, out, f"{prefix}{label}-pressed-{len(confirmed)}")
+            puzzles.step_off(pb)
+            record_ticks(pb, frames, 8)
+        else:
+            failed.append(candidate)
+            hp = pb.memory[puzzles.PL + 15]
+            puzzles.step_off(pb)
+            record_ticks(pb, frames, 8)
+    if len(frames) > 1:
+        gif = out / f"{prefix}{label}-pressed.gif"
+        frames[0].save(gif, save_all=True, append_images=frames[1:],
+                       duration=80, loop=0)
+        print(f"wrote {gif} ({len(frames)} frames, latched={len(confirmed)})")
+
+
 def capture_room(prefix, out, stage_role):
     if stage_role == "stage2-trial":
         pb = puzzles.load(2)
-        addrs = None
         label = "stage2-trial"
     else:
         try:
@@ -100,6 +147,21 @@ def capture_room(prefix, out, stage_role):
                        duration=80, loop=0)
         print(f"wrote {gif} ({len(frames)} frames)")
     pb.stop(save=False)
+
+    # Fresh room for the persistent pressed-state GIF so a mid-phrase
+    # wrong step from the voice tour cannot empty the court first.
+    if stage_role == "stage2-trial":
+        pb = puzzles.load(2)
+    else:
+        try:
+            pb, _ = puzzles.load_rune_room(0, "waystone")
+        except RuntimeError:
+            pb = None
+    if pb is not None:
+        for _ in range(30):
+            pb.tick()
+        capture_pressed_sequence(pb, out, prefix, label)
+        pb.stop(save=False)
 
 
 def main():

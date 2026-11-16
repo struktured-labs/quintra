@@ -13,9 +13,12 @@
 static const u8 bgt_note_a[16] = { 0x00, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x00, 0x00 };
 static const u8 bgt_note_b[16] = { 0x00, 0x00, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x00 };
 static const u8 bgt_note_c[16] = { 0x00, 0x00, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x7E, 0x00, 0x00 };
-static const u8 bgt_note_lit_a[16] = { 0x00, 0x00, 0x00, 0x00, 0x3C, 0x00, 0x24, 0x00, 0x24, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x00 };
-static const u8 bgt_note_lit_b[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x3C, 0x00, 0x24, 0x00, 0x24, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00 };
-static const u8 bgt_note_lit_c[16] = { 0x00, 0x00, 0x00, 0x00, 0x3C, 0x3C, 0x24, 0x24, 0x24, 0x24, 0x3C, 0x3C, 0x00, 0x00, 0x00, 0x00 };
+/* Sunken/pressed variants: a thicker top and left shadow with a smaller
+   fill shifted down-right, so a latched plate stays visually distinct
+   after the flash without spending another tile id or palette slot. */
+static const u8 bgt_note_lit_a[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7C, 0x00, 0x7C, 0x00, 0x7C, 0x00, 0x7C, 0x00, 0x00, 0x00 };
+static const u8 bgt_note_lit_b[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7C, 0x00, 0x7C, 0x00, 0x7C, 0x00, 0x7C, 0x00, 0x00 };
+static const u8 bgt_note_lit_c[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7C, 0x7C, 0x7C, 0x7C, 0x7C, 0x7C, 0x7C, 0x7C, 0x00, 0x00 };
 
 /* Packed note palettes, borrowed only while a rune-sequence room is loaded.
    Colour 0 is a shared dark outline. Pitches differ in both hue and
@@ -71,15 +74,44 @@ static void load_note_slot(u8 slot, const u16 *pal, u8 dim) {
     palette_bg_load(slot, tmp);
 }
 
+/* 60% of the way toward white, so a latched plate keeps its hue but
+   clearly steps up in luminance once the flash is over. */
+static u16 brighten_colour(u16 c) {
+    u8 r = (u8)(c & 31);
+    u8 g = (u8)((c >> 5) & 31);
+    u8 b = (u8)((c >> 10) & 31);
+    r = (u8)(r + (u8)(((u8)(31 - r) * 3u) / 5u));
+    g = (u8)(g + (u8)(((u8)(31 - g) * 3u) / 5u));
+    b = (u8)(b + (u8)(((u8)(31 - b) * 3u) / 5u));
+    return BGR555(r, g, b);
+}
+
 void puzzle_apply_note_palettes(u8 dim) BANKED {
-    tiles_load_note_plates();
-    if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_rune_count) {
-        load_note_slot(BGPAL_CRYSTAL, rune_pal_low, dim);
-        load_note_slot(BGPAL_DOOR, rune_pal_high, dim);
+    u16 low[4], high[4];
+    u8 i;
+    if (room_puzzle_kind != PUZZLE_RUNE_SEQUENCE || !room_rune_count)
+        return;
+    for (i = 0; i < 4; ++i) {
+        low[i] = rune_pal_low[i];
+        high[i] = rune_pal_high[i];
     }
+    for (i = 0; i < room_rune_count; ++i) {
+        if (puzzle_plate_is_lit(i)) {
+            u8 pitch = room_rune_pitch[i];
+            if (pitch <= 2)
+                low[pitch + 1] = brighten_colour(rune_pal_low[pitch + 1]);
+            else
+                high[(u8)(pitch - 2)] = brighten_colour(rune_pal_high[(u8)(pitch - 2)]);
+        }
+    }
+    load_note_slot(BGPAL_CRYSTAL, low, dim);
+    load_note_slot(BGPAL_DOOR, high, dim);
 }
 
 void puzzle_load_note_palettes(void) BANKED {
+    if (room_puzzle_kind != PUZZLE_RUNE_SEQUENCE || !room_rune_count)
+        return;
+    tiles_load_note_plates();
     puzzle_apply_note_palettes(0);
 }
 
@@ -115,12 +147,14 @@ void tick_rune_flash(void) BANKED {
 void rune_paint_all(void) BANKED {
     u8 i;
     rune_cancel_flash();
+    puzzle_apply_note_palettes(0);
     for (i = 0; i < room_rune_count; ++i)
         rune_paint_plate(i);
 }
 
 void voice_plate(u8 plate) BANKED {
     sfx_play_rune(room_rune_pitch[plate]);
+    puzzle_apply_note_palettes(0);
     rune_start_flash(plate);
 }
 
