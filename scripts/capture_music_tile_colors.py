@@ -65,7 +65,15 @@ def capture_room(prefix, out, stage_role):
         addrs = None
         label = "stage2-trial"
     else:
-        pb, addrs = puzzles.load_rune_room(0, "waystone")
+        try:
+            pb, addrs = puzzles.load_rune_room(0, "waystone")
+        except RuntimeError:
+            # Baseline ROMs predate room_rune_* symbols.
+            from quintra_topology import dungeon_size, mission_graph
+            from test_stage_archetypes import generated_room
+            seed = 0x51A6D00D
+            cell = mission_graph(dungeon_size(0), seed, 0)["waystone"]
+            pb = generated_room(0, seed=seed, local_room=cell, keep_running=True)
         label = "stage1-waystone"
     for _ in range(60):
         pb.tick()
