@@ -76,9 +76,22 @@ static void cinder_hurt_player(void) {
     sfx_play(SFX_HURT);
 }
 
+// Rex's position for the pool spawn rule (set every Rex tick).
+static const entity_t *cinder_rex_ent;
+static u8 rex_bx(const entity_t *e);
+static u8 rex_by(const entity_t *e);
+
 // Rex's brands are 24x24, the pack's 16x16. The pool is the hazard.
+// Fairness (Argon review): a bigger square needs more lead time, so every
+// pool warns for at least CINDER_POOL_WARN_P1 / _P2 frames (the burn time
+// is kept, not eaten by the longer tell). While the 48x32 body is within
+// 48px of a wall, pools keep 16px off that wall, so the body plus a pool
+// cluster can never seal the champion into a corner.
 static void cinder_hazard_add(u8 x, u8 y, u8 delay, u8 ttl) {
-    cinder_fire_add(x, y, delay, ttl, cinder_phase == 2 ? 3 : 2);
+    if (cinder_phase == 2 && cinder_rex_ent)
+        cinder_fire_add_fair(x, y, delay, ttl, 3,
+            rex_bx(cinder_rex_ent), rex_by(cinder_rex_ent));
+    else cinder_fire_add_fair(x, y, delay, ttl, 2, 0xFF, 0xFF);
 }
 
 static void cinder_hazards_tick(void) {
@@ -110,8 +123,11 @@ static void cinder_body_contact(const entity_t *e) {
         // Inset from the 48x32 art: spikes, tail tip and toes are safe.
         u8 x = rex_bx(e);
         u8 y = rex_by(e);
-        if (px >= (u8)(x + 4) && px < (u8)(x + 44)
-            && py >= (u8)(y + 6) && py < (u8)(y + 34)) cinder_hurt_player();
+        // 36x24, biased down (Argon): 6px off each side, 6px off the top
+        // spikes, 2px off the toes. A Rex edge column that loses its
+        // scanline (OAM tail) never leaves invisible hitbox outside the art.
+        if (px >= (u8)(x + 6) && px < (u8)(x + 42)
+            && py >= (u8)(y + 10) && py < (u8)(y + 34)) cinder_hurt_player();
         return;
     }
     count = (cinder_phase == 0) ? cinder_pack_alive : CINDER_KILNBACKS;
@@ -468,15 +484,19 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
     u8 bx = rex_bx(e);
     for (k = 0; k < 8; ++k) {
         i16 x = (i16)base + k * 20;
+        i16 y0 = from_bottom ? 116 : 12;
         if (k == gap) continue;
-        // The wall parts around the 48px hound: a lane through its own
-        // furnace body adds nothing to dodge but costs a sprite on every
-        // scanline the body already fills.
-        if (x + 8 > (i16)bx && x < (i16)bx + CINDER_REX_W) continue;
         if (x < 12) x = 12;
         if (x > room_world_width - 12) x = room_world_width - 12;
-        boss_projectile_vector(x,
-            from_bottom ? 116 : 12, 0, from_bottom ? -2 : 2, damage, BOSS_SHOT_LANE, 0);
+        // Lanes through the 48px hound pass behind the furnace body
+        // (cinder_lanes_skip_body), so there is no safe pocket on either
+        // side of it and no lane sprite on the scanlines the body fills.
+        if (x + 4 > (i16)bx && x - 4 < (i16)bx + CINDER_REX_W) {
+            i16 by = rex_by(e);
+            if (y0 + 4 > by && y0 - 4 < by + CINDER_REX_H)
+                y0 = from_bottom ? by - 4 : by + CINDER_REX_H + 4;
+        }
+        boss_projectile_vector(x, y0, 0, from_bottom ? -2 : 2, damage, BOSS_SHOT_LANE, 0);
     }
     room_shake(2, 16);
     boss_voice(2, BOSS_VOICE_ATTACK);
@@ -485,6 +505,10 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
 
 static void cinder_rex_tick(entity_t *e, u8 damage) {
     u8 i;
+    cinder_rex_ent = e;
+    // Only Furnace Breath fires body lanes (walls at 36 and 76, ~60f trip).
+    if (cinder_pattern == 0 && cinder_timer >= 36)
+        cinder_lanes_skip_body(rex_bx(e), rex_by(e));
     if (cinder_timer == 0) cinder_rex_begin(e);
     cinder_damage_open = cinder_timer >= (RUN_IS_EASY() ? 64 : 112);
     e->state = (u8)(4 + cinder_pattern);
@@ -546,8 +570,8 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
                 cinder_rex_step(e, cinder_rex_dir, 3);
             if (cinder_timer == 88) {
                 // Slag-hammer slam: five overlapping 24px pools make one
-                // wide 104x24 burn band along the feet. A longer 20-frame
-                // tell keeps the bigger band fair to step out of.
+                // wide 104x24 burn band along the feet. cinder_hazard_add
+                // raises the 20-frame tell to the 28-frame Rex floor.
                 u8 x = (u8)(rex_bx(e) + 24);
                 u8 y = (u8)(rex_by(e) + 28);
                 for (i = 0; i < 5; ++i)
@@ -610,6 +634,7 @@ void cinder_pack_reset(void) BANKED {
     }
     cinder_fire_reset();
     cinder_phase = 0;
+    cinder_rex_ent = 0;
     cinder_pattern = 0;
     cinder_pack_alive = CINDER_KILNBACKS;
     cinder_timer = 0;

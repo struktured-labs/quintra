@@ -52,3 +52,17 @@ Banks: new code/art in bank 18 (~13 KB free), bank 9 ~1 KB free, home 0x3F7B.
   furnace wall parts around the Rex, no low-OAM sprite dropped.
 - `test_colossal_cinder.py` and `test_cinder_rex_pose.py` updated for the new
   geometry (`test_colossal_cinder` was already failing on main; it passes now).
+
+## Argon review (ship-with-changes), applied
+- **Pool warning floor:** every pool warns >= 24 frames (16x16) / 28 frames (24x24); the authored burn time is kept
+  (ttl grows by the added warning). The slab-tail slam's 20-frame tell is now 28. Last 6 frames flash: flame (3) ->
+  ring (3) -> burn. Fixes the unreactable 12-20 frame slam centred on the champion.
+- **Corner seal:** while the 48x32 body is within 48px of a wall, pools keep 16px off that wall, so a 16x16 escape
+  strip along the wall always stays clear (Stomp, Brandwalk trail, slam band).
+- **Contact box 36x24, biased down:** 6px off each side, 6px off the top spikes, 2px off the toes. A Rex edge column
+  dropped on a crowded scanline never leaves invisible hitbox outside the art.
+- **Furnace Breath:** lanes through the Rex columns are no longer skipped. A lane that reaches the body hops to its far
+  edge, so there is no safe pocket on either side and still no lane sprite on the body's scanlines.
+- **Kiln Press:** test asserts no pinch: neighbouring crucibles (excluding the vaulting one) leave either no gap or >= 12px.
+- Cost: Rex-phase gameplay updates 1062 -> 1004 per 1200 frames (main 1064). About 35 of the drop is the extra
+  Furnace Breath lanes, about 14 the flash. Bullet/hazard sprite drops stay at 0 (main 377).

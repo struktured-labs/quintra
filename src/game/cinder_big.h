@@ -13,6 +13,12 @@
 #define CINDER_REX_OAM_BASE 16   /* Rex owns OAM 16..39 */
 #define CINDER_FIRE_TILE 64
 #define CINDER_FIRE_TILES 8
+/* Pool fairness (Argon review of the bigger Rex). */
+#define CINDER_POOL_WARN_P1 24   /* min warning frames, 16x16 pools */
+#define CINDER_POOL_WARN_P2 28   /* min warning frames, 24x24 pools */
+#define CINDER_POOL_FLASH 6      /* ring flashes for the last 6 frames */
+#define CINDER_POOL_WALL_GAP 16  /* pool edge to wall, Rex near that wall */
+#define CINDER_POOL_REX_NEAR 48  /* "near": body within 48px of the wall */
 
 /* OAM window of the generic entity pass while the Ember boss is active:
    [cinder_oam_end, cinder_oam_limit). Pack: 4 + 4 per Kilnback .. 40.
@@ -33,6 +39,14 @@ void cinder_fire_reset(void) BANKED;        /* forget pools, no VRAM */
 void cinder_fire_clear_all(void) BANKED;    /* restore floor under pools */
 /* x/y are the world-pixel centre. size 2 = 16x16 pool, 3 = 24x24. */
 void cinder_fire_add(u8 x, u8 y, u8 delay, u8 ttl, u8 size) BANKED;
+/* cinder_fire_add with the fairness rules: warning floor (24 frames for
+   16x16 pools, 28 for 24x24, burn time kept) and, when the Rex body top-left
+   (bx, by) is within 48px of a wall, a 16px pool-free strip along that wall.
+   bx = 0xFF means no Rex. */
+void cinder_fire_add_fair(u8 x, u8 y, u8 delay, u8 ttl, u8 size,
+    u8 bx, u8 by) BANKED;
+/* Furnace Breath lanes that reach the Rex body hop to its far edge. */
+void cinder_lanes_skip_body(i16 bx, i16 by) BANKED;
 /* Ages pools; returns 1 when the champion's feet stand in a lit pool. */
 u8 cinder_fire_tick(void) BANKED;
 /* Re-stamp every pool after the room renderer redrew the background. */

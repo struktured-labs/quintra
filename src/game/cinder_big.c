@@ -5,6 +5,8 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/cinder_big.h"
+#include "game/entity.h"
+#include "game/boss_projectile.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "render/tiles.h"
@@ -207,10 +209,15 @@ u8 cinder_fire_tick(void) BANKED {
         if (!cinder_fire_ttl[i]) continue;
         if (!--cinder_fire_ttl[i]) { fire_unstamp(i); continue; }
         if (cinder_fire_delay[i]) {
-            if (!--cinder_fire_delay[i]) {
+            u8 d = --cinder_fire_delay[i];
+            if (!d) {
                 fire_painted[i] = 2;
                 fire_stamp(i);
                 sfx_play(SFX_TICK);
+            } else if (d == CINDER_POOL_FLASH || d == CINDER_POOL_FLASH / 2) {
+                /* Last-6-frame flash: flame for 3, ring for 3, then it burns. */
+                fire_painted[i] = d == CINDER_POOL_FLASH ? 2 : 1;
+                fire_stamp(i);
             }
             continue;
         }
@@ -265,4 +272,55 @@ void cinder_rex_big_park(void) BANKED {
     u8 *o = (u8 *)&shadow_OAM[CINDER_REX_OAM_BASE];
     u8 n;
     for (n = 0; n < CINDER_REX_OAM; ++n) { *o = 0; o[1] = 0; o += 4; }
+}
+
+/* Fairness (Argon review): a bigger square needs more lead time, so every
+   pool warns for at least CINDER_POOL_WARN_P1 / _P2 frames and keeps its
+   authored burn time. While the 48x32 body is within 48px of a wall, pools
+   keep 16px off that wall, so the body plus a pool cluster can never seal
+   the champion into a corner. */
+void cinder_fire_add_fair(u8 x, u8 y, u8 delay, u8 ttl, u8 size,
+    u8 bx, u8 by) BANKED {
+    u8 floor = size == 3 ? CINDER_POOL_WARN_P2 : CINDER_POOL_WARN_P1;
+    if (delay < floor) {
+        ttl = (u8)(ttl + (floor - delay));
+        delay = floor;
+    }
+    if (bx != 0xFF) {
+        u8 half = (u8)(size << 2);
+        u8 lo = (u8)(8 + CINDER_POOL_WALL_GAP + half);
+        u8 hi_x = (u8)(room_world_width - 8 - CINDER_POOL_WALL_GAP - half);
+        u8 hi_y = (u8)(room_world_height - 8 - CINDER_POOL_WALL_GAP - half);
+        if (bx < (u8)(8 + CINDER_POOL_REX_NEAR) && x < lo) x = lo;
+        if ((u16)bx + CINDER_REX_W + CINDER_POOL_REX_NEAR
+                > (u16)(room_world_width - 8) && x > hi_x) x = hi_x;
+        if (by < (u8)(8 + CINDER_POOL_REX_NEAR) && y < lo) y = lo;
+        if ((u16)by + CINDER_REX_H + CINDER_POOL_REX_NEAR
+                > (u16)(room_world_height - 8) && y > hi_y) y = hi_y;
+    }
+    cinder_fire_add(x, y, delay, ttl, size);
+}
+
+/* A Furnace Breath lane that reaches the body hops to its far edge: the
+   wall keeps going behind the hound (no safe pocket on either side) and
+   never puts a lane sprite on the scanlines the body already fills. */
+void cinder_lanes_skip_body(i16 bx, i16 by) BANKED {
+    u8 i;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *s = &entities[i];
+        u8 w, h;
+        if ((s->flags & (EF_ACTIVE | EF_BOSS_PROJECTILE))
+                != (EF_ACTIVE | EF_BOSS_PROJECTILE)
+            || s->ai_data[1] != BOSS_SHOT_LANE) continue;
+        w = s->hitbox >> 4; h = s->hitbox & 15;
+        if (s->x + w <= bx || s->x >= bx + CINDER_REX_W) continue;
+        /* Look 4px ahead: the lane moves after this check this frame. */
+        if (s->ai_data[0] == 16) {
+            if (s->y + h + 4 > by && s->y < by + CINDER_REX_H)
+                s->y = by + CINDER_REX_H;
+        } else if (s->ai_data[0] == 0) {
+            if (s->y < by + CINDER_REX_H + 4 && s->y + h > by)
+                s->y = by - h;
+        }
+    }
 }
