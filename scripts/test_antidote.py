@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Live-ROM contract: Poison is lethal, and the Antidote tool cures it.
+"""Live-ROM contract: Poison drains to the last half-heart, and the Antidote
+tool cures it (scripts/test_status_floor.py covers Burn and Bleed).
 
-Covers the poison tick (damage + repeating POISON notice), the lethal
-last-half-heart rule, the automatic Antidote rescue, manual use from the
+Covers the poison tick (damage + repeating POISON notice), the half-heart
+floor, the automatic Antidote rescue, manual use from the
 Pack TOOL row, and Antidote stock at the dungeon merchant and the Riftwild
 wayside trader (restocked, no sold-out bit, three-vial pouch cap).
 """
@@ -141,12 +142,16 @@ def test_poison_tick_and_rescue():
             f"rescue did not show CURED: {window_notice(pb)}")
         pb.screen.image.save(SHOTS / "antidote-cured.png")
 
-        # Without one, Poison is lethal: the same tick takes the last HP.
+        # Without one, Poison stops at the floor: the tick re-names itself
+        # but never takes the last half-heart.
         tick(pb, 60)
         pb.memory[PLAYER + 2] = 1
+        pb.memory[NOTICE] = 0
         poison(pb, 17)
         tick(pb, 12)
-        assert pb.memory[PLAYER + 2] == 0, "poison no longer takes the last HP"
+        assert pb.memory[PLAYER + 2] == 1, "poison took the last half-heart"
+        assert pb.memory[STATUS] == QSTATUS_POISON
+        assert pb.memory[NOTICE] > 0, "floored poison tick stayed silent"
     finally:
         pb.stop(save=False)
 
@@ -274,7 +279,7 @@ def main():
     test_pack_tool()
     test_dungeon_merchant()
     test_riftwild_trader()
-    print("[antidote] PASS lethal poison tick + notice, auto rescue, Pack cure, "
+    print("[antidote] PASS poison tick + notice + half-heart floor, auto rescue, Pack cure, "
           "merchant and Riftwild trader stock")
 
 

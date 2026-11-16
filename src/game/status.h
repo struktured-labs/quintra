@@ -103,4 +103,18 @@ u8 status_player_effective_stat(u8 stat) BANKED;
 #define STATUS_PLAYER_INVERTED() \
     (player_status_kind == QSTATUS_INVERSION)
 
+// Damage-over-time conditions. None of them takes the last half-heart on
+// its own (a hit, not a condition, ends a run), and the Antidote cures all
+// three. Regen and Haste are the only boons; everything else is harm and
+// gets a reminder while it lasts and a CURED card when it ends.
+#define STATUS_KIND_IS_DOT(k) \
+    ((k) == QSTATUS_POISON || (k) == QSTATUS_BURN || (k) == QSTATUS_BLEED)
+#define STATUS_PLAYER_DOT() STATUS_KIND_IS_DOT(player_status_kind)
+#define STATUS_KIND_IS_HARM(k) \
+    ((k) != QSTATUS_NONE && (k) != QSTATUS_REGEN && (k) != QSTATUS_HASTE)
+// Bleed: one half-heart per this many frames spent moving.
+#define STATUS_BLEED_STRIDE 128
+// Burn: one half-heart every this many eight-frame beats.
+#define STATUS_BURN_PERIOD  12
+
 #endif
