@@ -518,6 +518,11 @@ static void combat_player_shots(void) {
             if (shot->ai_data[7] != 2) continue;
             shot->ai_data[7] = 3;
         }
+        // The Serpent's plated coil stops shots and deflects blades.
+        if (serpent_tail_active && serpent_tail_blocks(shot)) {
+            entity_kill(i);
+            continue;
+        }
         // Melee that cuts shots, and splash bursts, still walk every slot.
         // Ordinary bullets only test the on-screen enemy list.
         if (shot->ai_data[2] || shot->ai_data[6] == PROJ_AUX_SPLASH)

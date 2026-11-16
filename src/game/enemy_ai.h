@@ -61,6 +61,15 @@ void serpent_tail_reset(u8 head_x, u8 head_y) BANKED;
 void serpent_tail_update(entity_t *e) BANKED;
 void serpent_tail_contact(void) BANKED;
 void serpent_draw(void) BANKED;
+// Plated tail: the drawn coil cells (bit per 8x8 BG cell, 4 bytes per row)
+// stop player shots and deflect melee while the shield is up. Only the hood
+// takes damage. The plates go slack (grey palette) while the serpent unwinds
+// after a storm charge, which is the open window.
+extern u8 serpent_body_cells[68];
+extern u8 serpent_tail_flash;
+extern u8 serpent_tail_pal_mode;
+u8 serpent_tail_blocks(entity_t *shot) BANKED;
+void serpent_tail_shield_tick(entity_t *e) BANKED;
 
 // Ember Depths' two-act stage boss is rendered and simulated as a real pack,
 // not as the shared 32x32 Colossus body. Five low Kilnbacks execute formation
