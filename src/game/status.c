@@ -70,6 +70,7 @@ u8 status_hostile_damage_taken(u8 idx) BANKED {
 }
 
 u8 status_clock;
+extern u8 hud_notice_ticks;
 static u8 player_status_aux;
 static u8 confusion_mode;
 static u8 confusion_streak;
@@ -153,7 +154,7 @@ static u8 status_duration(u8 kind) {
         case QSTATUS_CONFUSION: return 90;
         case QSTATUS_MUTE:      return 75;
         case QSTATUS_BRITTLE:   return 75;
-        case QSTATUS_BLEED:     return 90;
+        case QSTATUS_BLEED:     return 60;  // 8 seconds (was 12)
         case QSTATUS_CURSE:     return 90;
         case QSTATUS_REGEN:     return 90;
         case QSTATUS_HASTE:     return 90;
@@ -459,8 +460,19 @@ u8 status_player_effective_stat(u8 stat) BANKED {
     return curse_adjust_stat(stat, values[stat]);
 }
 
-static void player_status_damage(void) {
-    if (player.hp) player.hp--;
+// One damage-over-time tick. A condition never takes the last half-heart:
+// at the floor the tick only re-names itself, or, with an Antidote carried,
+// the vial breaks and cures so the champion is not left pinned at half a
+// heart. Every tick re-shows the condition so the drain is never silent.
+// Returns 0 when the condition was cured (the caller must stop).
+static u8 player_status_damage(void) {
+    u8 kind = player_status_kind;
+    if (player.hp <= 1) {
+        if (antidote_try_rescue()) return 0;
+        hud_show_status(kind);
+        return 1;
+    }
+    player.hp--;
     player.iframes = player.iframes < 8 ? 8 : player.iframes;
     room_hurt_pose_ticks = 10;
     room_player_pose_locked = 1;
@@ -468,6 +480,8 @@ static void player_status_damage(void) {
     room_shake(1, 4);
     sfx_play(SFX_HURT);
     hud_redraw_hp();
+    hud_show_status(kind);
+    return 1;
 }
 
 void status_enemy_moved(u8 idx) BANKED {
@@ -514,12 +528,12 @@ void status_tick(void) BANKED {
         if (player.x != bleed_last_x || player.y != bleed_last_y) {
             bleed_last_x = player.x;
             bleed_last_y = player.y;
-            // Count meaningful travel, not each animation beat. At 64 pixels
-            // a full Normal Bleed can punish sustained flight several times,
-            // but cannot consume an entire healthy champion by itself.
-            if (++player_status_aux >= 64) {
+            // Count frames spent moving. A full Normal Bleed (480 frames)
+            // costs at most three half-hearts even while sprinting the whole
+            // time; standing still costs nothing.
+            if (++player_status_aux >= STATUS_BLEED_STRIDE) {
                 player_status_aux = 0;
-                player_status_damage();
+                if (!player_status_damage()) return;
             }
         }
     }
@@ -528,15 +542,16 @@ void status_tick(void) BANKED {
     if (player_status_kind != QSTATUS_NONE && player_status_ticks) {
         u8 kind = player_status_kind;
         player_status_ticks--;
-        if (kind == QSTATUS_POISON && (player_status_ticks & 15) == 0) {
-            // Poison is lethal. A carried Antidote is spent automatically
-            // instead of the last half-heart; otherwise each tick re-names
-            // the condition in the HUD so a long poison never goes unread.
-            if (player.hp <= 1 && antidote_try_rescue()) return;
-            player_status_damage();
-            hud_show_status(QSTATUS_POISON);
-        } else if (kind == QSTATUS_BURN && (player_status_ticks & 7) == 0) {
-            player_status_damage();
+        if ((kind == QSTATUS_POISON && (player_status_ticks & 15) == 0)
+            || (kind == QSTATUS_BURN
+                && (player_status_ticks % STATUS_BURN_PERIOD) == 0)) {
+            if (!player_status_damage()) return;
+        } else if (STATUS_KIND_IS_HARM(kind) && !hud_notice_ticks
+            && (player_status_ticks & 15) == 8) {
+            // Non-draining harm (and Bleed while standing) re-names itself
+            // about every two seconds when the notice lane is free, so a
+            // pickup card is never pushed aside by a reminder.
+            hud_show_status(kind);
         } else if (kind == QSTATUS_REGEN && (player_status_ticks % 12) == 0
             && player.hp < player.hp_max) {
             player.hp++;
@@ -553,6 +568,8 @@ void status_tick(void) BANKED {
             if (was_blind) room_status_blind_visual(0);
             fx_spawn(SPR_FX_IMPACT, 5,
                 (i16)player.x + 4, (i16)player.y + 2, 10);
+            // Harm that wears off says so; boons simply fade.
+            if (STATUS_KIND_IS_HARM(kind)) hud_show_cured();
         }
     }
 

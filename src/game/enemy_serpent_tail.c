@@ -44,7 +44,7 @@ void serpent_tail_update(entity_t *e) BANKED {
         serpent_tail_y[0] = cy;
         serpent_body_dirty = 1;
     }
-
+    serpent_tail_shield_tick(e);
 }
 
 void serpent_tail_contact(void) BANKED {
