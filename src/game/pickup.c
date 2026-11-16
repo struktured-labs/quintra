@@ -118,7 +118,8 @@ u8 pickup_spawn_item(u8 item_index, fix8_t x, fix8_t y) BANKED {
         // Category tint for the passive orbs (indices 10..19):
         // offense = red, defense = bone-white, utility/luck = gold.
         static const u8 tint[10] = {
-            0x00,   // 10 Iron Heart   (defense)
+            0x05,   // 10 Iron Heart   (gold heart container: max HP,
+                    //    never the pale "can't heal" heart)
             0x05,   // 11 Speed Ring   (utility)
             0x04,   // 12 PowerStone   (offense)
             0x00,   // 13 Tough Skin   (defense)
@@ -461,10 +462,15 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // ai_data[4] is a rejection-cue cooldown: cleared when the champion
     // steps away, otherwise counted down so standing on a blocked heart
     // re-fires the HUNGER notice at most once every ~1.5 s.
+    // Floor relics and vials share the latch: a capped Iron Heart used to
+    // say HPMAX once, then refuse silently forever because nothing re-armed
+    // its ai_data[4] (the Stage 1 "white heart I can't pick up").
     if (e->ai_data[0] == PICKUP_HEART_HALF
         || e->ai_data[0] == PICKUP_MP
         || e->ai_data[0] == PICKUP_COIN_1
-        || e->ai_data[0] == PICKUP_COIN_5) {
+        || e->ai_data[0] == PICKUP_COIN_5
+        || e->ai_data[0] == PICKUP_ITEM
+        || e->ai_data[0] == PICKUP_ANTIDOTE) {
         if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
         else if (e->ai_data[4]) e->ai_data[4]--;
     }
@@ -527,6 +533,8 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // orb must never silently replace a champion's primary weapon.
     if (e->ai_data[0] == PICKUP_WEAPON) {
         if (e->state > 0) e->state--;
+        if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
+        else if (e->ai_data[4]) e->ai_data[4]--;
         return;
     }
     if (e->ai_data[5] == 0xB1 || e->ai_data[5] == 0xB2) return;
@@ -577,6 +585,7 @@ static u8 apply_item_effects(u8 item_idx) {
         for (k = 0; k < INVENTORY_SLOTS; ++k) {
             if (player.inventory[k] == 0xFF) {
                 player.inventory[k] = (u8)it->id;
+                hud_show_item((u8)it->id);
                 return 1;
             }
         }
@@ -642,6 +651,7 @@ static u8 apply_item_effects(u8 item_idx) {
                 break;
         }
     }
+    hud_show_item((u8)it->id);
     hud_redraw_all();
     projectile_sync_player_relics();
     room_refresh_player_appearance(1);
@@ -683,6 +693,7 @@ static void grant_special_item(u8 item_id) {
     for (i = 0; i < INVENTORY_SLOTS; ++i) {
         if (player.inventory[i] == 0xFF) {
             player.inventory[i] = item_id;
+            hud_show_item(item_id);
             projectile_sync_player_relics();
             room_refresh_player_appearance(1);
             return;
@@ -746,6 +757,11 @@ static u8 item_stat_refuse(u8 item_idx, u8 *capped_out) {
     return (u8)(capped != 0xFF);
 }
 
+// A full Pack used to leave a floor relic/tool in place with no word at all.
+static void refuse_no_room(u8 i) {
+    if (refuse_cue(i)) hud_show_word(NW_NOROOM);
+}
+
 static u8 refuse_capped_item(u8 i, u8 item_idx) {
     u8 capped = 0xFF;
     if (!item_stat_refuse(item_idx, &capped)) return 0;
@@ -797,12 +813,14 @@ u8 pickup_check_player_collision(void) BANKED {
                         }
                         player.mp++;
                         hud_redraw_mp();
+                        hud_show_mana(1);
                         sfx_play(SFX_HEART);
                         break;
                     }
                     player.hp = (u8)(player.hp + 1);
                     if (player.hp > player.hp_max) player.hp = player.hp_max;
                     hud_redraw_hp();
+                    hud_show_heal(1);
                     sfx_play(SFX_HEART);
                     break;
                 case PICKUP_COIN_1:
@@ -811,7 +829,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // unchanged. Keep it available until the player spends.
                     if (player.coins >= COIN_CAP) {
                         // Full purse: refuse audibly at the notice cadence.
-                        refuse_cue(i);
+                        if (refuse_cue(i)) hud_show_word(NW_COINMAX);
                         continue;
                     }
                     player.coins++;
@@ -821,7 +839,7 @@ u8 pickup_check_player_collision(void) BANKED {
                 case PICKUP_COIN_5:
                     if (player.coins >= COIN_CAP) {
                         // Full purse: refuse audibly at the notice cadence.
-                        refuse_cue(i);
+                        if (refuse_cue(i)) hud_show_word(NW_COINMAX);
                         continue;
                     }
                     player.coins = (u16)(player.coins + 5);
@@ -830,11 +848,13 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_COIN);
                     break;
                 case PICKUP_ITEM:
+                    if (pickup_iron_heart_overflow(entities[i].ai_data[1])) break;
                     if (refuse_capped_item(i, entities[i].ai_data[1])) {
                         any = 1;
                         continue;
                     }
                     if (!apply_item_effects(entities[i].ai_data[1])) {
+                        refuse_no_room(i);
                         any = 1;
                         continue;
                     }
@@ -859,6 +879,7 @@ u8 pickup_check_player_collision(void) BANKED {
                         continue;
                     }
                     if (!apply_item_effects(entities[i].ai_data[1])) {
+                        refuse_no_room(i);
                         any = 1;
                         continue;
                     }
@@ -899,6 +920,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     }
                     player.mp++;
                     hud_redraw_mp();
+                    hud_show_mana(1);
                     sfx_play_reward(SFX_REWARD_MAGIC);
                     break;
                 case PICKUP_SURGE:
@@ -908,7 +930,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     // A full pouch leaves the vial on the floor (it never
                     // expires) rather than silently eating it.
                     if (!antidote_collect(0)) {
-                        refuse_cue(i);
+                        refuse_no_room(i);
                         any = 1;
                         continue;
                     }
@@ -994,9 +1016,17 @@ u8 pickup_check_player_collision(void) BANKED {
                     // immediately ping-pong between the two orbs.
                     u8 old_w = player.starter_weapon;
                     if (entities[i].state > 0) { any = 1; continue; }
-                    if (!(input_pressed & J_A)) { any = 1; continue; }
+                    if (!(input_pressed & J_A)) {
+                        // Walking over a weapon orb never trades; say how.
+                        if (!entities[i].ai_data[4]) {
+                            entities[i].ai_data[4] = 90;
+                            hud_show_word(NW_ASWAP);
+                        }
+                        any = 1; continue;
+                    }
                     player.starter_weapon = entities[i].ai_data[1];
                     room_refresh_player_appearance(1);
+                    hud_show_word(NW_WEAPON);
                     if (old_w < N_ITEMS && items[old_w].kind == ITEM_KIND_WEAPON) {
                         pickup_spawn_weapon(old_w, entities[i].x, entities[i].y);
                     }
@@ -1091,6 +1121,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 hud_show_stat_max(STAT_ATK);
                             else if (ware == WARE_RUNE)
                                 hud_show_stat_max(STAT_MP);
+                            else shop_refuse_explain(ware);
                         }
                         any = 1;
                         continue;
@@ -1104,6 +1135,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 player.hp = (u8)(player.hp + 2);
                                 if (player.hp > player.hp_max) player.hp = player.hp_max;
                                 hud_redraw_hp();
+                                hud_show_heal(2);
                                 break;
                             case WARE_ITEM:
                                 apply_item_effects(entities[i].ai_data[3]);
@@ -1138,6 +1170,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                     run_state.dungeon_seen_xhi = 0xFF;
                                     run_state.dungeon_seen_xxhi = 0x3F;
                                 }
+                                hud_show_word(NW_CHART);
                                 break;
                             case WARE_WEAPON: {
                                 u8 weapon = entities[i].ai_data[3];
@@ -1149,6 +1182,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                     && items[weapon].kind == ITEM_KIND_WEAPON) {
                                     player.starter_weapon = weapon;
                                     room_refresh_player_appearance(1);
+                                    hud_show_word(NW_WEAPON);
                                 }
                                 break;
                             }
@@ -1167,6 +1201,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                     (u8)(player.spd - old_spd));
                                 grant_special_item(ITEM_ID_GLASS_FANG);
                                 player.hp_max = (u8)(player.hp_max - 2);
+                                hud_show_stat_loss(STAT_HP, 2);
                                 if (player.hp > player.hp_max)
                                     player.hp = player.hp_max;
                                 hud_redraw_hp();
@@ -1228,7 +1263,8 @@ u8 pickup_check_player_collision(void) BANKED {
                             shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
                             entity_kill(i);
                         }
-                    } else refuse_cue(i);           // not enough coins
+                    } else if (refuse_cue(i))       // not enough coins
+                        hud_show_need(price);
                     any = 1;
                     continue;
                 }
@@ -1244,6 +1280,7 @@ u8 pickup_check_player_collision(void) BANKED {
                         entities[i].state = 1;
                         entities[i].palette = 0x06;
                         hud_redraw_all();
+                        hud_show_word(NW_HEALED);
                         sfx_play(SFX_HEART);
                         status_player_apply(QSTATUS_REGEN, 90);
                     }
@@ -1258,6 +1295,7 @@ u8 pickup_check_player_collision(void) BANKED {
                         run_state_queue_next_dungeon_prefix(2);
                         entities[i].state = 1;
                         entities[i].palette = 0x02;
+                        hud_show_word(NW_SCOUT);
                         sfx_play_reward(SFX_REWARD_MAGIC);
                     }
                     any = 1;
@@ -1277,6 +1315,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     player.mp = add_capped(player.mp, 2, player.mp_max);
                     run_state.riftwild_flags |= RIFT_REGION_WELL_USED_BIT;
                     hud_redraw_all();
+                    hud_show_word(NW_HEALED);
                     sfx_play_reward(SFX_REWARD_MAGIC);
                     status_player_apply(QSTATUS_REGEN, 60);
                     break;

@@ -62,6 +62,7 @@ u8 antidote_try_rescue(void) BANKED {
 
 u8 antidote_collect(u8 bought) BANKED {
     if (!antidote_grant()) return 0;
+    hud_show_word(NW_CURE1);
     if (!bought) sfx_play_reward(SFX_REWARD_RELIC);
     else if (STATUS_PLAYER_DOT()) antidote_try_rescue();
     return 1;
