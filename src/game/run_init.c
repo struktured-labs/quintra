@@ -29,7 +29,7 @@ static void apply_stage_warp_progression(u8 stage) {
         u8 item = rewards[i % 3];
         player.inventory[i] = item;
         if (player.atk < 15) player.atk++;
-        if (item == ITEM_ID_SWIFT_FANG && player.spd < 9) player.spd++;
+        if (item == ITEM_ID_SWIFT_FANG && player.spd < PLAYER_SPD_MAX) player.spd++;
         if (item == ITEM_ID_BLOOD_SIGIL && player.hp_max < 30)
             player.hp_max++;
     }

@@ -67,7 +67,7 @@ void player_apply_class(u8 class_id) BANKED {
     // passive_perk/class at their point of effect.
     switch (c->passive_perk) {
         case 1:   // Wolfkin: +20% move speed
-            if (player.spd < 9) player.spd++;
+            if (player.spd < PLAYER_SPD_MAX) player.spd++;
             break;
         // case 2 (Sauran HP+2/slow regen): the +2 is pre-baked into his
         // 16-half-heart base; the regen half ticks in room.c.
