@@ -9,6 +9,7 @@
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/rare_enemy.h"
+#include "game/antidote.h"
 #include "game/curse.h"
 #include "game/enemy_ai.h"
 #include "game/player.h"
@@ -527,8 +528,14 @@ void status_tick(void) BANKED {
     if (player_status_kind != QSTATUS_NONE && player_status_ticks) {
         u8 kind = player_status_kind;
         player_status_ticks--;
-        if ((kind == QSTATUS_POISON && (player_status_ticks & 15) == 0)
-            || (kind == QSTATUS_BURN && (player_status_ticks & 7) == 0)) {
+        if (kind == QSTATUS_POISON && (player_status_ticks & 15) == 0) {
+            // Poison is lethal. A carried Antidote is spent automatically
+            // instead of the last half-heart; otherwise each tick re-names
+            // the condition in the HUD so a long poison never goes unread.
+            if (player.hp <= 1 && antidote_try_rescue()) return;
+            player_status_damage();
+            hud_show_status(QSTATUS_POISON);
+        } else if (kind == QSTATUS_BURN && (player_status_ticks & 7) == 0) {
             player_status_damage();
         } else if (kind == QSTATUS_REGEN && (player_status_ticks % 12) == 0
             && player.hp < player.hp_max) {

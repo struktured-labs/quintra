@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
 NOI = ROM.with_suffix(".noi").read_text()
 
+# Floor-note CH1 envelope: volume 15, decrease, period 3. Louder and
+# slower than the old 0xA2 (vol 10, period 2) so each plate rings clearly.
+RUNE_ENV = 0xF3
+
 
 def addr(name):
     match = re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", NOI)
@@ -109,7 +113,7 @@ def feet_on(pb, tx, ty):
         heard_ch4.add(pb.memory[0xFF21])
         # Damage lands around tick 4 and the note on tick 5. Stop once the
         # note is still speaking so the final-rune hold can be measured.
-        if i >= 4 and pb.memory[0xFF12] == 0xA2:
+        if i >= 4 and pb.memory[0xFF12] == RUNE_ENV:
             break
     return heard_ch1, heard_ch4
 
@@ -221,15 +225,18 @@ def solve_runes(pb, runes):
                 )
                 if not pb.memory[LOCKED]:
                     # The solve frame must still be the final rune, not the fanfare.
-                    assert 0xA2 in heard_ch1 and pb.memory[0xFF12] == 0xA2, (
+                    # NR10 bit 7 is unused and reads back as 1 on the APU.
+                    assert (pb.memory[0xFF10] & 0x7F) == 0x00, (
+                        f"final rune grew a sweep: NR10=0x{pb.memory[0xFF10]:02X}")
+                    assert RUNE_ENV in heard_ch1 and pb.memory[0xFF12] == RUNE_ENV, (
                         f"final note was cut off: env=0x{pb.memory[0xFF12]:02X}")
                     held = 0
-                    for _ in range(16):
-                        if pb.memory[0xFF12] != 0xA2:
+                    for _ in range(24):
+                        if pb.memory[0xFF12] != RUNE_ENV:
                             break
                         held += 1
                         pb.tick()
-                    assert held >= 8, f"final rune lasted only {held} extra frames"
+                    assert held >= 10, f"final rune lasted only {held} extra frames"
                     # One host tick can cross the fanfare's D4 into its F4.
                     # Either envelope means the solved figure followed the note.
                     assert pb.memory[0xFF12] in (0xC0, 0xA4), (
@@ -237,6 +244,22 @@ def solve_runes(pb, runes):
                         f"0x{pb.memory[0xFF12]:02X}")
                 found = candidate
                 prefix.append(candidate)
+                if pb.memory[LOCKED]:
+                    # Mid-phrase notes must outlast the old 8-frame music
+                    # restore cut. The slow envelope keeps NR12 at 0xF3
+                    # until the claim window is nearly done.
+                    held_mid = 0
+                    nr10 = pb.memory[0xFF10]
+                    for _ in range(48):
+                        if pb.memory[0xFF12] != RUNE_ENV:
+                            break
+                        held_mid += 1
+                        pb.tick()
+                    assert (nr10 & 0x7F) == 0x00, (
+                        f"mid-phrase rune grew a sweep: NR10=0x{nr10:02X}")
+                    assert held_mid >= 24, (
+                        f"mid-phrase rune rang only {held_mid} frames"
+                    )
                 step_off(pb)
                 if pb.memory[LOCKED]:
                     # Every accepted, visibly lit note is safe to cross while
@@ -253,7 +276,7 @@ def solve_runes(pb, runes):
                         assert tuple(lit(rune) for rune in prefix) == lit_before_revisit, (
                             "revisiting a lit rune reset the confirmed phrase"
                         )
-                        assert 0xA2 in heard_ch1, (
+                        assert RUNE_ENV in heard_ch1, (
                             "lit rune did not retrigger its pitched clue: "
                             f"env=0x{pb.memory[0xFF12]:02X} heard={sorted(heard_ch1)} "
                             f"confirmed={confirmed} prefix={prefix}"
@@ -263,7 +286,7 @@ def solve_runes(pb, runes):
             assert pb.memory[PL + 2] == hp_before - 1, (
                 "wrong rune did not charge exactly one half-heart"
             )
-            assert 0xA2 in heard_ch1, (
+            assert RUNE_ENV in heard_ch1, (
                 f"wrong rune muted its pitched sequence hint: heard={sorted(heard_ch1)}"
             )
             assert 0xC1 in heard_ch4, (
@@ -297,6 +320,17 @@ def rune_scale_source_contract():
         "seeded descending traversal disappeared"
     assert "sfx_play_rune(rune_pitch(i));" in puzzle, \
         "physical rune pitches are no longer stable by order rank"
+    rune = sfx.split("void sfx_play_rune", 1)[1].split("void sfx_tick", 1)[0]
+    assert "ch1(0x00, 0x80, 0xF3, notes[step])" in rune, \
+        "rune envelope is no longer volume 15 / decay period 3"
+    assert "sfx_claim_channels(40, 0)" in rune, \
+        "rune notes no longer hold CH1 for the slow decay"
+    after = sfx.split("void sfx_play_puzzle_after_note", 1)[1].split(
+        "void sfx_play_rune", 1)[0]
+    assert "pend_timer = 20" in after, \
+        "final-note fanfare delay is no longer 20 frames"
+    assert "melody_lock(MELODY_PRIORITY_SECRET, 65)" in after, \
+        "delayed fanfare is no longer locked against pickup voices"
 
 
 def rune_sequence_contract():

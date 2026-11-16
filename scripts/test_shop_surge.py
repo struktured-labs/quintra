@@ -144,7 +144,9 @@ def shop_wares(pb):
     wares = []
     for i in range(32):
         e = EN + i * 28
-        if pb.memory[e] == 3 and pb.memory[e + 17] == 4:
+        # Ware 22 is the restocked Antidote shelf, not a featured offer.
+        if (pb.memory[e] == 3 and pb.memory[e + 17] == 4
+                and pb.memory[e + 18] != 22):
             wares.append(e)
     assert len(wares) == 4, f"merchant stock missing: {len(wares)}"
     return {pb.memory[e + 18]: e for e in wares}

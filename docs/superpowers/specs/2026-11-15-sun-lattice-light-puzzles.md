@@ -800,11 +800,16 @@ taken while building:
   dwell runs per frame.
 - **Strikes:** any player shot that reaches a vane turns it and is
   consumed (8-frame per-vane debounce; spread shots can graze a neighbour);
-  boomerangs and bombs do too. Hostile shots do not. Morningstar and crate
-  shutters are not implemented. Sun Turn has no lattice interaction (Q5).
+  boomerangs, bombs, the Morningstar and the Hookshot do too. Hostile
+  shots do not. Crate shutters are not implemented. Sun Turn has no lattice interaction (Q5).
   Dens are deferred until #79 (Q6).
-- **Hookshot (Q3):** snag-and-spin lands in a follow-up PR; until then a
-  Hookshot treats every lattice fixture as a pillar.
+- **Hookshot (Q3, PR C):** a Hookshot tip that reaches a rotatable Helio
+  Vane in an unsolved room turns it 90 degrees (same 8-frame debounce) and
+  retracts without pulling. Braziers, Obelisks, Wedges, Fixed Vanes and a
+  solved room's frozen vanes keep latch-and-pull.
+- **Morningstar and fuse bombs (PR C):** the Morningstar ball turns the vane it
+  sweeps into; a fuse bomb turns every vane in its 3x3 blast, like the
+  Rift bomb's 7x7.
 - **Known gaps:** during a room slide the incoming lattice briefly shows as
   plain pillars until the final redraw; the Lua balance bot cannot solve
   Sun Lattice rooms yet.

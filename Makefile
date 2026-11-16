@@ -199,12 +199,14 @@ verify: all check-balance-bot
 	python3 scripts/test_dungeon_topology.py
 	python3 scripts/test_start_cell_distribution.py
 	$(PYBOY_RUN) scripts/test_farfold_cache.py
+	$(PYBOY_RUN) scripts/test_farfold_guard_notice.py
 	$(PYBOY_RUN) scripts/test_dungeon_courts.py
 	$(PYBOY_RUN) scripts/test_dungeon_districts.py
 	$(PYBOY_RUN) scripts/test_continuous_districts.py
 	$(PYBOY_RUN) scripts/test_difficulty_mode.py
 	$(PYBOY_RUN) scripts/test_difficulty_persist.py
 	$(PYBOY_RUN) scripts/test_title_stage_warp.py
+	$(PYBOY_RUN) scripts/test_palette_heal.py
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
 	$(PYBOY_RUN) scripts/test_sanctuary_escape.py
 	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py
@@ -275,6 +277,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_riftwild_landmarks.py
 	$(PYBOY_RUN) scripts/test_riftwild_phase.py
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
+	$(PYBOY_RUN) scripts/test_antidote.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
 	uv run --quiet --with pyboy python scripts/test_title_sprite_leak.py

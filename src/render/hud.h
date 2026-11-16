@@ -42,6 +42,9 @@ void hud_show_healing_blocked(void) BANKED;
 void hud_show_hunger_curse(void) BANKED;
 void hud_show_mp_full(void) BANKED;
 void hud_show_hp_full(void) BANKED;
+// Antidote cue: CURED in green.
+void hud_show_cured(void) BANKED;
+void hud_show_cache_guarded(void) BANKED;
 // Name the capped stat when a boost cannot apply, e.g. SPDMAX.
 void hud_show_stat_max(u8 stat) BANKED;
 void hud_show_boomerang(void) BANKED;

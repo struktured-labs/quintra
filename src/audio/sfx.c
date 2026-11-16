@@ -250,10 +250,14 @@ static void start_puzzle_fanfare(void) {
 }
 
 void sfx_play_puzzle_after_note(void) {
-    // The final rune already owns CH1. Let it speak, then start the fanfare.
+    // The final rune already owns CH1. Let it speak for a third of a
+    // second, then start the fanfare before the slow decay smears into it.
+    // Lock the bus for the hold plus the fanfare so a coincident tool
+    // pickup cannot cancel the pending resolve.
     pend_kind = PEND_PUZZLE_DELAY;
-    pend_timer = 12;
-    sfx_claim_channels(12, 0);
+    pend_timer = 20;
+    sfx_claim_channels(20, 0);
+    melody_lock(MELODY_PRIORITY_SECRET, 65);
 }
 
 void sfx_play_rune(u8 step) {
@@ -267,7 +271,12 @@ void sfx_play_rune(u8 step) {
     if (step > 4) step = 4;
     pend_kind = PEND_NONE;
     sfx_will_active = 0;
-    ch1(0x00, 0x80, 0xA2, notes[step]);
+    // Near-max attack, period-3 decay: the plate rings ~40 frames, long
+    // enough to learn the pitch, short enough that a walk to the next
+    // plate retriggers cleanly instead of stacking a muddy chord. Music
+    // stays off CH1 until the envelope is nearly silent.
+    ch1(0x00, 0x80, 0xF3, notes[step]);
+    sfx_claim_channels(40, 0);
 }
 
 void sfx_tick(void) {

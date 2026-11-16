@@ -4,6 +4,7 @@
 #include <gb/gb.h>
 #include "core/types.h"
 
+void dungeon_tools_pack_focus(void) BANKED;
 void dungeon_tools_draw_pack(void) BANKED;
 // 0 = no action, 1 = screen redrawn, 2 = charge consumed and room requested.
 u8 dungeon_tools_pack_input(u8 pressed) BANKED;

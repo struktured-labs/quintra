@@ -17,7 +17,7 @@ Howl: eight shots and a brief ward. Stoneskin: blocks hits for a time. Raven Mar
 The Aim page cycles only what is in the pack.
 
 - Boomerang. The shop line is “B: stun and fetch.” It goes out, stops ordinary monsters for a moment, cuts hostile shots, and brings loose hearts, coins, magic, and relics home. Elites, mini-bosses, colossi, stock, and terrain ignore the stun. Dungeon price 30.
-- Hookshot. “Latch and pull self.” Price 35. This is a weapon, not the Rift Hook that crosses holes.
+- Hookshot. “Latch and pull self.” Price 35. This is a weapon, not the Rift Hook that crosses holes. In a sun lattice it snags a Helio Vane, turns it a quarter, and comes back without pulling you.
 - Morningstar. “Swing around you.” Price 30.
 - Bomb Bag. The pack prints that name. The shelf says “1 MP: throw or drop.” Stand still to drop, or hold a direction to throw. Price 30. The consumable Rift Bomb is a different, single-use pack item: it breaks cover and bursts the nearby lanes.
 
@@ -28,6 +28,8 @@ Iron Heart, maximum health +2. Speed Ring, speed +1. Power Stone, attack +1. Tou
 ## Tools and strange verbs
 
 Rift Bomb, Echo Chime, and Mirror Shard are single uses. The chime stills bullets and shows a secret and the nearby paths. The shard turns hostile shots back on whoever fired them.
+
+The Antidote is the green vial with the amber cross. It cures Poison. Mire Spores and Bramble Sprites carry it, so Toxic Mire, Shadow Keep and the Riftwild that leads to them are where you want one. You can hold three. Open the pack while poisoned and the TOOL row is already on it: press A. It will not waste itself on a healthy body. Poison can take your last half-heart, but not while you carry a vial: the Antidote breaks on its own and the window says CURED. Spores and Bramble drop one now and then, and while you are poisoned with none, any kill might.
 
 Blast Seed makes the first impact of a shot bloom. Rift Lens makes every third primary attack a heavy beam. Both are found in Hollow Riftwild caches, not in an ordinary shop, and the cartridge tells you they belong to Hollow.
 

@@ -108,9 +108,10 @@ def approach_and_talk(pb, speaker, expected_kind, expected_topic):
         f"A did not advance lore to the advice page: "
         f"screen={pb.memory[SCREEN]} page={pb.memory[DIALOG_PAGE]}")
     if expected_kind == PICKUP_MERCHANT:
-        # Page two is generated from the live four shelves. Every effect row
-        # and its right-aligned price must contain visible font tiles.
-        for y in (5, 7, 9, 11):
+        # Page two is generated from the live shelves (four relic shelves
+        # plus the restocked Antidote). Every effect row and its
+        # right-aligned price must contain visible font tiles.
+        for y in (5, 7, 9, 11, 13):
             effect = bytes(pb.memory[0x9800 + y * 32 + 1:
                                      0x9800 + y * 32 + 14])
             price = bytes(pb.memory[0x9800 + y * 32 + 15:
@@ -121,12 +122,13 @@ def approach_and_talk(pb, speaker, expected_kind, expected_topic):
         # This is real OBJ art from the live generated stock, not a repeated
         # text bullet that leaves visually distinct relics ambiguous.
         wares = pickups(pb, 4)
-        assert len(wares) == 4
-        for slot, (y, ware) in enumerate(zip((5, 7, 9, 11), wares)):
+        assert len(wares) == 5
+        for slot, (y, ware) in enumerate(zip((5, 7, 9, 11, 13), wares)):
             oam = 0xFE00 + slot * 4
             assert pb.memory[oam] == y * 8 + 16 and pb.memory[oam + 1] == 8
             assert pb.memory[oam + 2] == pb.memory[ware + 12]
-            assert (pb.memory[oam + 3] & 7) == pb.memory[ware + 13]
+            # Palette plus the VRAM-bank bit (the Antidote vial lives in bank 1).
+            assert (pb.memory[oam + 3] & 0x0F) == (pb.memory[ware + 13] & 0x0F)
         assert pb.memory[0xFF40] & 0x02, "merchant catalog icons are hidden"
         pb.screen.image.save(ROOT / "tmp" / "merchant-stock.png")
     else:
