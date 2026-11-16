@@ -425,7 +425,7 @@ the Lua balance bot can solve Sun Lattice rooms (a known gap today).
 8. More puzzles per dungeon: keep two mandatory slots and add the optional
    third beat, or go to three mandatory puzzle rooms in Stages 5+?
 
-## 8. Batch 1: decisions and as-built (Prism Toggle, Push Seal socket)
+## 8. Batch 1: decisions and as-built (Prism Toggle, Law Lock, Push Seal socket)
 
 Carmelo's answers to §7: (1) Prism Toggle + Law Lock first, Push Seal gets a
 real socket; (2) Colossus Cipher is a shortcut only, later; (3) Law Lock may
@@ -474,8 +474,79 @@ DOOR-gold and repaints after the crate passes over it.
 `quintra-procgen::push_seal` mirrors the layout and runs a sokoban BFS from
 every apron start; the live test seats the crate with real pushes.
 
-### 8.4 Known gaps
+### 8.5 Law Lock as built (`src/game/law_lock.c`, `law_lock_gen.c`, bank 255)
 
-- `scripts/quintra_balance_bot.lua` still only knows the old push-right
-  Push Seal and has no Prism or socket policy (not in CI).
-- Optional third puzzle (bit 5) and Law Lock follow in later PRs.
+- Stage 1 is Law-free. Stages 2–3 try 1 gate, Stages 4–6 try 2, Stages 7–9
+  try 3, falling back to fewer when no placement passes the caps below.
+  Over 3000 seeds a Law Lock is generated in 41% of Stage 2, 71% of
+  Stage 3 and 78–99% of Stage 4–9 dungeons.
+- A gate is one maze **doorway** on the required tour (never a mid-room
+  divider), drawn as a solid two-tile `BGT_PILLAR` pair while closed and an
+  ordinary door while open. The pillar wears the colour of the state that
+  opens it: cyan (Crystal palette) = opens in WAX, warm (Crack palette) =
+  opens in WANE. Prism/Thorn/Stone ambient aprons are untouched, so nothing
+  can shatter or damage-boost through a gate.
+- Gates never touch the entry, the first three cells, the last three cells,
+  or the Deep Switch / Deep Phase Gate cells. Altars never sit in a gate
+  room, a mission-role room, the cache, the rift-portal rooms (2, 8) or 15;
+  so the state never changes while you stand in a gated room, and a suspend
+  (the Law bit saves on every flip) always reloads into one connected court.
+- An altar (`BGT_SWITCH`) stands three tiles inside the room's first real
+  doorway on a carved 2×4 apron; contextual A or a melee hit flips it. It
+  replaces the ambient every-sixth-cell Law altar in Law Lock dungeons.
+- Zero new SRAM: gates and altars are a pure function of (run seed, stage);
+  the WAX/WANE state is the existing `dungeon_law` bit 7. WRAM: ~0.4 KB of
+  generator scratch.
+- Compass: a gate corridor wears its opening colour, a charted altar shows
+  the active colour, `LAW` in the legend is drawn in the active colour, and
+  when the route must flip first the GOAL marker points at that altar. The
+  director/Compass route is a BFS over (cell × Law state).
+- Proof: `quintra-procgen::law_lock` mirrors the C generator; the
+  `law_lock_parity` cargo test compiles `law_lock_gen.c` on the host and
+  compares it for all 9 stages × 3000 seeds. The validator BFSes the
+  (cell × state) product graph (every cell reachable, undirected, so no
+  state can strand you), checks the 1.5× and +4/+6/+7 direct-route caps,
+  and a bitmask BFS over (cell × state × objectives) caps the full
+  mission-tour overhead at +6/+10/+12 (worst seen: 4, 6, 6, 6, 6, 8, 6, 9).
+  `scripts/test_law_lock.py` checks on the cartridge (Stages 2/5/8) that
+  the gates and altars equal Rust (so the cart's maze and roles match
+  `topology.rs`), both states of a gated doorway, the altar flip and its
+  save byte, and the Compass legend colour.
+
+### 8.6 Known gaps
+
+- `scripts/quintra_balance_bot.lua` has no Prism, socket or Law Lock policy
+  (not in CI).
+- Argon's tighter per-band ratios (1.35× Stages 2–3, 1.45× Stages 4–6) are
+  not applied: they cut Law Lock frequency to 34% / 59% in Stages 2–3. The
+  absolute tour caps (24/32/38) are below many plain mission tours, so they
+  are not enforced either.
+- Optional third puzzle (bit 5) is a later PR.
+
+## 9. Argon review (round 4, against main @ 1c522cfc)
+
+Full text: Gemini Bridge `round4/puzzles.md`. Adopted:
+
+- **A. Law Lock.** Barriers only on doorway aprons (mid-room dividers
+  softlock on suspend); mandatory gates are solid pillars, never Crystal or
+  Spikes; Law Lock stays off Deep Phase Gate cells; altars never in gated
+  rooms; the director routes over (cell × state) so the Compass never points
+  into a closed gate. No-softlock validator over the product graph across
+  many seeds in `cargo test`.
+- **B. Colossus Cipher** (later batch, shortcut only): a resonance lock —
+  k−1 stones energise the room and the last rune is deduced; the Compass
+  shows dim glyphs on visited stones and a GOAL marker after you enter the
+  Sanctuary.
+- **C. Sunline Relay is replaced by Solar Conduit:** a single hub in the
+  Sanctuary (Solar Obelisk plus 2–3 wall Conduit Prisms), each lit by a
+  self-contained Sun Lattice receptor room. No cross-room beam steering.
+- **D. New proposal: Worldglass Echo.** Rift Mirrors in 2–3 rooms shift the
+  whole dungeon between Waking and Hollow (0 new SRAM, maybe `dungeon_law`
+  bit 2). Not scheduled.
+- **E. Route caps.** Keep the 1.5× entry-to-boss cap and add a
+  mission-tour overhead check (bitmask BFS) in `quintra-procgen` — done in
+  §8.5.
+- **F. Roster.** Ship Prism Toggle first (this batch), then Rime Slide.
+  Ember Vigil without wind vents; keep Hollow Mirror. **Snag Gallery is
+  deferred. Kindred Weight is cut.** Required rooms stay solvable with base
+  movement and melee.

@@ -527,6 +527,9 @@ pub fn validate(inp: &Input, missions: &Missions, law: &LawLock) -> Result<(), S
         if law.law_boss as u16 * 2 > law.plain_boss as u16 * 3 {
             return Err(format!("route {} > 1.5x plain {}", law.law_boss, law.plain_boss));
         }
+        if law.law_boss > law.plain_boss + boss_slack(inp.bb) {
+            return Err(format!("route {} > plain {} + {}", law.law_boss, law.plain_boss, boss_slack(inp.bb)));
+        }
         let plain = tour_steps(inp, missions, None);
         let with = tour_steps(inp, missions, Some(law));
         if with == u32::MAX || with > plain + tour_slack(inp.bb) {
