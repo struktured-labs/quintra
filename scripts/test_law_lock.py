@@ -177,6 +177,23 @@ def run_stage(stage, want_gates):
             law_kind["kind"] = law & 3
             check_gate(pb, d, opens, state, f"{tag} cell {cell}")
             name = "closed" if opens != state else "open"
+            # Walk the camera to the gated doorway for the capture.
+            for i in range(32):
+                e = addr("_entities") + i * 28
+                if pb.memory[e] == 2:
+                    pb.memory[e] = pb.memory[e + 1] = 0
+            (x0, y0), _ = door_cells(pb, d)
+            ix, iy = {0: (0, 3), 1: (-4, 0), 2: (0, -4), 3: (3, 0)}[d]
+            put16(pb, PL + 9, (x0 + ix) * 8)
+            put16(pb, PL + 11, (y0 + iy) * 8)
+            away = ("down", "left", "up", "right")[d]
+            pb.button_press(away)  # a step lets the camera follow
+            for _ in range(60):
+                pb.memory[PL + PL_IFRAMES] = 120
+                pb.tick()
+                if _ == 4:
+                    pb.button_release(away)
+            check_gate(pb, d, opens, state, f"{tag} cell {cell} (near)")
             pb.screen.image.save(OUT / f"law-lock-{tag}-gate-{name}.png")
         return probe
 
