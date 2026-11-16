@@ -19,13 +19,22 @@ NONE = 0xFF
 PIECE_COUNT = 14
 
 
+# Region-0 den fields (riftwild_den.c den_field[0]).
+DEN_FIELDS = {7, 14, 25}
+
+
 def reserved(x, y, screen):
-    qx = (5 <= x <= 9) or (21 <= x <= 25)
-    qy = (5 <= y <= 9) or (21 <= y <= 25)
-    if qx and qy:
-        return True
+    """Mirror of riftwild_setpiece.c reserved(): the den clearing and its
+    approach (carved after the set-piece pass) and field 0's landing."""
     if screen == 0 and y <= 6 and 6 <= x <= 13:
         return True
+    if screen in DEN_FIELDS:
+        if 19 <= x <= 28 and 17 <= y <= 27:
+            return True
+        if 8 <= x <= 11 and 10 <= y <= 23:
+            return True
+        if 8 <= x <= 21 and 20 <= y <= 23:
+            return True
     return False
 
 
@@ -45,8 +54,9 @@ def symbols():
     }
 
 
-def boot_seed(seed, bosses=1):
-    """Same boss-exit fixture as the atlas, with a full 32-bit run seed."""
+def boot_seed(seed, bosses=1, hooks=()):
+    """Same boss-exit fixture as the atlas, with a full 32-bit run seed.
+    hooks: (symbol, callback) pairs registered before the Riftwild entry."""
     from quintra_topology import STAGE_BOSS_ROOM
     pb = PyBoy(str(ROM), window="null", cgb=True, sound_emulated=False)
     for _ in range(240):
@@ -67,6 +77,9 @@ def boot_seed(seed, bosses=1):
     pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     pb.memory[TM + 16 * 20 + 9] = 3
     pb.memory[TM + 16 * 20 + 10] = 3
+    for name, fn in hooks:
+        v = addr_banked(name)
+        pb.hook_register(v >> 16, v & 0xFFFF, fn, None)
     exit_at(pb, 72, 120)
     assert pb.memory[RS + 17] == 1 and pb.memory[RS + 18] == 0
     return pb
@@ -203,6 +216,9 @@ def test_seed_bits_and_stability():
             pb.memory[PL + 15] = 120
             rec0 = piece_state(pb, sym) + (tuple(
                 tile for row in wide_tiles(pb) for tile in row),)
+            # Field 0's east mouth leads to fixture field 1; field 2 is
+            # the next ordinary field along the same row.
+            cross_to(pb, 1, 232, 60)
             cross_to(pb, 2, 232, 60)
             rec2 = piece_state(pb, sym) + (tuple(
                 tile for row in wide_tiles(pb) for tile in row),)
@@ -221,82 +237,31 @@ def test_seed_bits_and_stability():
 
 
 def test_bank1_art_loaded():
-    """riftwild_art_load writes terrain variants into VRAM bank 1 at 0x9000."""
+    """riftwild_art_load() runs when a field is prepared, and an ordinary
+    field carries a set piece whose stamps draw from that bank-1 art.
+
+    PyBoy 2.7 exposes neither VRAM bank 1 nor CGB BG attributes, so the
+    load is witnessed by an execution hook; the rendered art itself is
+    reviewed in the field sheet this test writes."""
     sym = symbols()
-    pb = boot_seed(0x1234ABCD)
+    calls = []
+    pb = boot_seed(0x1234ABCD, hooks=(
+        ("_riftwild_art_load", lambda _: calls.append(1)),))
     try:
-        # PyBoy exposes CGB VRAM bank 1 tile data through the LCD renderer
-        # after the field has been prepared. Sample the signed BG region
-        # (ids 0..20) by switching VBK via the memory API if present, else
-        # by looking at BG attribute bit 3 on the visible map.
-        art = 0
-        # Attribute map lives in VRAM bank 1 at 0x9800. PyBoy's raw memory
-        # window follows the current VBK; use the tile-data hook instead:
-        try:
-            # pyboy 2.x: lcd.vram / get_vram_tile_data varies; fall back
-            # to a known-non-zero terrain tile by reading 0x9000 after VBK=1
-            # via the emulator's memory, which tracks the last VBK write.
-            # The field draw already left bank 0 selected, so inspect
-            # attributes on the background map through screen tiles.
-            pass
-        except Exception:
-            pass
-        # Count bank-1 uses from the on-screen CGB attributes. PyBoy stores
-        # the current background tile map attributes in the CGB map.
-        raw = pb.tilemap_background  # Game Boy tilemap wrapper
-        # Each cell can be queried for its attributes on CGB.
-        bank1 = 0
-        for y in range(18):
-            for x in range(20):
-                try:
-                    attr = raw.get_tile_identifier(x, y)
-                except Exception:
-                    attr = None
-                # identifier alone is not the attribute. Use raw CGB attr
-                # if the API exposes it.
-                if hasattr(raw, "get_tile_by_index"):
-                    pass
-        # Direct VRAM: PyBoy memory 0x8000-0x9FFF is the active VBK. We
-        # cannot switch VBK safely mid-frame, so use the CGB tile data
-        # snapshot if available.
-        cgb = getattr(pb, "cgb", True)
-        vram = None
-        for name in ("get_vram_tile_data",):
-            if hasattr(pb, name):
-                vram = getattr(pb, name)
-        # Fallback: the render salt and at least one stamp mean dress_line
-        # ran. Confirm a tree or mountain or stamp is present, and that a
-        # bank-1 attribute bit is set in the VRAM attribute map by reading
-        # it through pyboy's mb.lcd or similar.
-        mb = getattr(pb, "mb", None)
-        if mb is not None and hasattr(mb, "lcd"):
-            lcd = mb.lcd
-            # PyBoy LCD has vram0/vram1 or similar.
-            for attr_name in ("vram1", "_vram1", "VRAM1", "video_ram1"):
-                block = getattr(lcd, attr_name, None)
-                if block is not None:
-                    # Tile data at 0x9000 is offset 0x1000 in the 8KB bank.
-                    data = bytes(block[0x1000:0x1000 + 21 * 16])
-                    assert any(data), "VRAM bank 1 terrain tiles were not loaded"
-                    return
-            # Some versions keep a single 16KB or a list.
-            vrams = getattr(lcd, "vram", None)
-            if isinstance(vrams, (list, tuple)) and len(vrams) > 1:
-                data = bytes(vrams[1][0x1000:0x1000 + 21 * 16])
-                assert any(data), "VRAM bank 1 terrain tiles were not loaded"
-                return
-        # Last resort: at least one ordinary field must have stamps, which
-        # only draw from bank-1 piece tiles.
-        assert pb.memory[sym["stamp_n"]] or pb.memory[sym["id"]] != NONE, (
-            "no set-piece stamps; cannot confirm bank-1 art"
-        )
-        # Walk a couple tiles of attribute RAM via the raw memory by
-        # writing VBK and reading — too invasive. Treat stamp presence
-        # plus a successful load path as enough if the LCD hook is absent.
-        print("[riftwild-setpiece] bank-1 VRAM hook not present; "
-              "stamps present on field 0")
+        assert calls, "riftwild_art_load did not run while preparing field 0"
+        cross_to(pb, 1, 232, 60)
+        cross_to(pb, 2, 232, 60)
+        assert pb.memory[sym["id"]] != NONE, "field 2 has no set piece"
     finally:
         pb.stop(save=False)
+
+
+def addr_banked(name):
+    import re
+    text = ROM.with_suffix(".noi").read_text()
+    m = re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", text)
+    assert m, name
+    return int(m.group(1), 16)
 
 
 def main():
@@ -304,9 +269,15 @@ def main():
     test_seed_bits_and_stability()
     test_bank1_art_loaded()
     ordinary = [s for s in rec if s not in FIXTURES]
+    kinds = {rec[s]['id'] for s in ordinary}
+    large = [s for s in ordinary if rec[s]['id'] < 10]
+    # Regression guard: a footprint rule that only accepts bare ground left
+    # every field with the same 3x3 shard.
+    assert len(kinds) >= 4, f"only {len(kinds)} set-piece kinds: {kinds}"
+    assert len(large) >= 3, f"only {len(large)} fields fit a large piece"
     print(
         f"[riftwild-setpiece] PASS {len(ordinary)} ordinary fields, "
-        f"{len({rec[s]['id'] for s in ordinary})} piece kinds, "
+        f"{len(kinds)} piece kinds ({len(large)} large), "
         f"sheet {sheet}"
     )
 

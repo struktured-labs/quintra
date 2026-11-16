@@ -6,6 +6,7 @@
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/pickup.h"
+#include "game/riftwild_den.h"
 #include "game/riftwild_setpiece.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -40,6 +41,7 @@ static u8 rw_box_x0 = 0xFF, rw_box_y0, rw_box_x1, rw_box_y1;
 //  V  Worldglass spire 2x3 U  guardian statue 2x3 G  elder tree 3x3
 //  O  obelisk 1x2          +  covered by a stamp (skipped)
 #define PIECE_LARGE 10
+#define PIECE_CRAGS 5
 #define PIECE_COUNT 14
 static const u8 piece_w[PIECE_COUNT] = { 9, 8, 7, 9, 9, 8, 8, 8, 9, 7, 3, 4, 3, 4 };
 static const u8 piece_h[PIECE_COUNT] = { 7, 6, 6, 7, 9, 7, 6, 7, 7, 7, 5, 4, 3, 4 };
@@ -207,15 +209,33 @@ static u8 open_ring(u8 t, u8 base) {
         || t == BGT_WILD_SAND || t == BGT_WILD_MUD || t == BGT_RUBBLE;
 }
 
-// Keep the hidden dens' quadrant tells (spec: 4..8 tiles off the trail
-// cross, at about (7,7) (23,7) (7,23) (23,23)) and the boss-exit landing
-// apron clear, so this pass never claims a spot another system needs.
+// The footprint may clear soft scenery (groves, stones, stumps, rubble, a
+// stray climate floor): the walkable two-tile ring around it is what keeps
+// every route intact, so overwriting what sat inside cannot cut a path.
+// Paths, water, sinkholes, ridges, reeds, gates and portals stay untouched,
+// so climate silhouettes, den ponds and trail crosses survive. Requiring
+// bare ground here left no room for any large piece in a real field (every
+// field fell back to the 3x3 shard).
+static u8 soft(u8 t, u8 base) {
+    return open_ring(t, base) && t != BGT_PATH
+        || t == BGT_TREE || t == BGT_WILD_STONE || t == BGT_WILD_STUMP;
+}
+
+// Keep every spot another system rewrites after this pass clear, so a
+// stamp is never half-overwritten (its bank-1 art would then sit on the
+// wrong collision). A den field carves its 7x7 clearing at (21..27,
+// 19..25) and an approach down x 9..10 / along y 21..22 after this pass
+// (riftwild_den_stamp_field); field 0 keeps its boss-exit landing apron.
+// Reserved cells are also never cleared as part of a ring.
+static u8 den_here;
+
 static u8 reserved(u8 x, u8 y) {
-    u8 qx = (x >= 5 && x <= 9) || (x >= 21 && x <= 25);
-    u8 qy = (y >= 5 && y <= 9) || (y >= 21 && y <= 25);
-    if (qx && qy) return 1;
     if (run_state.world_screen == 0 && y <= 6 && x >= 6 && x <= 13)
         return 1;
+    if (!den_here) return 0;
+    if (x >= 19 && x <= 28 && y >= 17 && y <= 27) return 1;
+    if (x >= 8 && x <= 11 && y >= 10 && y <= 23) return 1;
+    if (x >= 8 && x <= 21 && y >= 20 && y <= 23) return 1;
     return 0;
 }
 
@@ -238,7 +258,7 @@ static u8 fits(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
             u8 inside = (x >= x0 && y >= y0
                 && x < (u8)(x0 + w) && y < (u8)(y0 + h));
             if (inside) {
-                if (!ground(tile_at(x, y), base) || reserved(x, y))
+                if (!soft(tile_at(x, y), base) || reserved(x, y))
                     return 0;
             } else if (!open_ring(tile_at(x, y), base)) {
                 return 0;
@@ -384,6 +404,7 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     if (!run_state.world_mode || fixture_field(run_state.world_screen))
         return;
     hash_state = riftwild_field_salt(1);
+    den_here = riftwild_den_in_field();
     lift_old_blobs(base);
     // Neighbouring fields start from different pieces (screen * 3), and the
     // seed rotates the whole assignment; a piece that does not fit here
@@ -394,10 +415,16 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     for (k = 0; k < PIECE_LARGE && riftwild_setpiece_id == RW_SETPIECE_NONE;
          ++k) {
         u8 w = piece_w[id], h = piece_h[id];
-        for (tries = 0; tries < 8; ++tries) {
-            // Even anchors keep 2x2 crag and canopy art aligned.
-            u8 x0 = (u8)(4 + ((next_hash() % (u8)(23 - w)) & 0xFE));
-            u8 y0 = (u8)(4 + ((next_hash() % (u8)(23 - h)) & 0xFE));
+        for (tries = 0; tries < 10; ++tries) {
+            // Any anchor with room for the ring (x0 >= 3, x0 + w + 1 <= 28).
+            // The crag piece keeps even anchors so its 2x2 peak art lines
+            // up with the field's crag quarters.
+            u8 x0 = (u8)(3 + next_hash() % (u8)(25 - w));
+            u8 y0 = (u8)(3 + next_hash() % (u8)(25 - h));
+            if (id == PIECE_CRAGS) {
+                x0 = (u8)((x0 + 1) & 0xFE);
+                y0 = (u8)((y0 + 1) & 0xFE);
+            }
             if (fits(x0, y0, w, h, base)) {
                 stamp_piece(id, x0, y0, next_hash() & 1, base);
                 riftwild_setpiece_id = id;
@@ -410,11 +437,11 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     }
     if (riftwild_setpiece_id == RW_SETPIECE_NONE) {
         // Tight fields (return landings, a lake plus the trail cross) fall
-        // back to the compact 3x3..4x5 markers, smallest first. A coarse
+        // back to the compact 3x3..4x5 markers, from a seeded start. A coarse
         // 2-tile lattice from a seeded origin keeps the worst case to ~130
         // fits() probes per marker, all inside the field build, with no
         // frame yields (yielding here stalled the seam camera and input).
-        id = 12;
+        id = (u8)(PIECE_LARGE + (next_hash() & 3));
         for (k = PIECE_LARGE;
              k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
              ++k) {
