@@ -246,7 +246,8 @@ def main():
             case(pb, "Ware: War Drum", ["DRUM"], S, 15, 28),
             case(pb, "Ware: Moon Flask", ["FLASK"], S, 16, 20),
             case(pb, "Ware: Blast Seed", ["BLAST"], S, 17, 32),
-            case(pb, "Ware: Antidote", ["CURE+1"], S, 22, 12),
+            # The Antidote shelf restocks: the vial stays on the counter.
+            case(pb, "Ware: Antidote", ["CURE+1"], S, 22, 12, stays=True),
             case(pb, "Ware: too dear", ["NEED35"], S, 10, 35, stays=True,
                  coins=5),
             case(pb, "Ware: already owned", ["OWNED"], S, 10, 35,
