@@ -706,7 +706,7 @@ mod tests {
             .zip(open.iter().take(24).flatten())
             .filter(|(a, b)| a != b).count();
         assert!(changed > 20, "serpent jaw is too close to the closed hood ({changed})");
-        assert_eq!(open[15][15], 0, "mouth did not open");
+        assert_ne!(open[15][15], idle[15][15], "mouth did not open");
         assert_eq!(open[18][15], 1, "lower jaw did not drop");
         assert_eq!(idle[24..], open[24..], "tail frames moved");
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");

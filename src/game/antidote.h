@@ -5,7 +5,7 @@
 #include "core/types.h"
 
 // Antidote: a stackable Pack TOOL (inventory id ITEM_ID_ANTIDOTE) that cures
-// Poison. It lives in the ordinary saved inventory bytes, so suspend saves
+// every damage-over-time condition: Poison, Burn and Bleed. It lives in the ordinary saved inventory bytes, so suspend saves
 // need no new field. Up to ANTIDOTE_CARRY_MAX are carried at once.
 #define ANTIDOTE_CARRY_MAX 3
 #define ANTIDOTE_PRICE     12
@@ -14,13 +14,14 @@ u8   antidote_count(void) BANKED;
 u8   antidote_can_carry(void) BANKED;
 // Adds one carried Antidote. 0 when the pouch or the inventory is full.
 u8   antidote_grant(void) BANKED;
-// Cures the current Poison with the cured cue (does not touch inventory).
+// Cures the current condition with the cured cue (does not touch inventory).
 void antidote_cure(void) BANKED;
-// Lethal-poison safety net: when a Poison tick would take the last
-// half-heart, spend a carried Antidote instead. 1 when it fired.
+// Floor safety net: when a Poison/Burn/Bleed tick reaches the last
+// half-heart (which it never takes), spend a carried Antidote to end the
+// condition. 1 when it fired.
 u8   antidote_try_rescue(void) BANKED;
 // Floor vial (bought=0) or shop purchase (bought=1). A purchase made while
-// poisoned is used on the spot. 0 when the pouch is full.
+// poisoned, burning or bleeding is used on the spot. 0 when the pouch is full.
 u8   antidote_collect(u8 bought) BANKED;
 u8   antidote_spawn(fix8_t x, fix8_t y) BANKED;
 // Poison-source kills (and kills made while poisoned and empty-handed) can

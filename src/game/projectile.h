@@ -30,6 +30,8 @@ extern u8 g_shot_element;
 #define ATTACK_TRAIT_BLOOD 0x04
 #define ATTACK_TRAIT_SPLASH 0x08
 #define ATTACK_TRAIT_BEAM   0x10
+// Picsean Tide Vortex damage carrier: inert to the shot sweep.
+#define PROJ_AUX_VORTEX       0xF0
 #define PROJ_AUX_WOLFKIN_FANG 0xF1
 #define PROJ_AUX_SPLASH        0xF2
 #define PROJ_AUX_BEAM_TRAIL    0xF3

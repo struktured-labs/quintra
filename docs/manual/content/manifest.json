@@ -101,7 +101,7 @@
     },
     {
       "slug": "curses",
-      "title": "Curses and Boons",
+      "title": "Curses, Conditions and Boons",
       "source": "curses.md",
       "web": true,
       "pdf": "body"
