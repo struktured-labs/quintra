@@ -5,6 +5,7 @@
 #include <gb/gb.h>
 
 #include "core/types.h"
+#include "game/riftwild_density.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
@@ -138,6 +139,11 @@ void dungeon_director_choose_return(u8 eligible, u8 was_seen) BANKED {
 }
 
 u8 dungeon_director_adjust_initial_count(u8 proposed) BANKED {
+    // Riftwild fields are a journey, not a dungeon arena: a seeded 3..6
+    // band with about one quiet field in four (audit L5). The rolled count
+    // has already consumed its RNG draws, so dungeon procgen is untouched.
+    // Only the ordinary-encounter branch calls this; Wardens are mini-bosses.
+    if (run_state.world_mode) return riftwild_field_enemy_count(proposed);
     if (room_encounter_kind == ENCOUNTER_HUNT) return 0;
     // A first-visit trap starts with visible sentries; the later pack changes
     // pressure instead of presenting an apparently empty field. A warned

@@ -202,6 +202,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_merchant_map.py
 	$(PYBOY_RUN) scripts/test_quest_guidance.py
 	uv run --quiet --with "$(PYBOY_SPEC)" --with pillow python scripts/test_riftwild_mission.py
+	uv run --quiet --with "$(PYBOY_SPEC)" --with pillow python scripts/test_riftwild_density.py
 	python3 scripts/test_dungeon_topology.py
 	python3 scripts/test_start_cell_distribution.py
 	$(PYBOY_RUN) scripts/test_farfold_cache.py
