@@ -161,6 +161,12 @@ jobs:
       - name: Hexa Dragmar body art
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_body_art_and_contrast.py
 
+      - name: PyBoy pickup notices (every pickup names its effect)
+        run: |
+          uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_notices.py
+          uv run --quiet --with "pyboy==2.7.0" python scripts/test_stat_max_pickup.py
+          uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_feedback.py
+
       - name: PyBoy boss drop persist
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_boss_drop_persist.py
 

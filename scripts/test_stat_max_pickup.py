@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM: capped stat boosts stay put and name the cap (SPDMAX)."""
 
-from test_performance import EN, PL, boot_room, put32
+from test_performance import EN, PL, addr, boot_room, put32
 
 
 WIN = 0x9C00
@@ -64,9 +64,16 @@ def hud_row(pb):
     return tiles, attrs
 
 
+TICKS = addr("_hud_notice_ticks")
+
+
 def wait_notice(pb):
-    for _ in range(55):
+    # Drain the whole notice queue (pickup cards hold 105 frames).
+    for _ in range(1500):
+        if not pb.memory[TICKS]:
+            return
         pb.tick()
+    raise AssertionError("HUD notice queue never drained")
 
 
 def pickup_alive(pb):
@@ -106,6 +113,11 @@ def main():
         assert pb.memory[PL + SPD] == 9
         assert pb.memory[PL + ATK] == 5
         assert pb.memory[PL + INV] == ITEM_ID_SWIFT_FANG
+        # The capped SPD line now says so first, then the real ATK gain.
+        assert tiles == SPDMAX, tiles
+        for _ in range(105):
+            pb.tick()
+        tiles, attrs = hud_row(pb)
         assert tiles == ATKPLUS, tiles
         wait_notice(pb)
 
@@ -131,11 +143,15 @@ def main():
         assert pb.memory[PL + ATK] == 5
         assert pb.memory[PL + COINS] == 74
         assert pb.memory[PL + INV] == ITEM_ID_SWIFT_FANG
+        assert tiles == SPDMAX, tiles
+        for _ in range(105):
+            pb.tick()
+        tiles, attrs = hud_row(pb)
         assert tiles == ATKPLUS, tiles
     finally:
         pb.stop(save=False)
 
-    print("[stat-max-pickup] PASS floor/shop Speed Ring refuse + SPDMAX; Swift Fang still applies ATK")
+    print("[stat-max-pickup] PASS floor/shop Speed Ring refuse + SPDMAX; Swift Fang names SPDMAX then applies ATK")
 
 
 if __name__ == "__main__":

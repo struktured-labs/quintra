@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM contract for colored pickup and condition HUD callouts."""
 
-from test_performance import EN, PL, boot_room, put32
+from test_performance import EN, PL, addr, boot_room, put32
 
 
 WIN = 0x9C00
@@ -50,9 +50,16 @@ def hud_row(pb):
     return tiles, attrs
 
 
+TICKS = addr("_hud_notice_ticks")
+
+
 def wait_notice(pb):
-    for _ in range(55):
+    # Drain the whole notice queue (pickup cards hold 105 frames).
+    for _ in range(1500):
+        if not pb.memory[TICKS]:
+            return
         pb.tick()
+    raise AssertionError("HUD notice queue never drained")
 
 
 def main():
@@ -68,13 +75,14 @@ def main():
         wait_notice(pb)
 
         clear_entities(pb)
-        # Ward Charm has two effects. DEF+1 displays first; LCK+1 is queued.
+        # Ward Charm has two stats. DEF+1 displays first; LCK+1 is queued
+        # (then WARD). Pickup cards hold 45 + 60 frames.
         spawn_pickup(pb, 3, 16)
         pb.tick()
         tiles, attrs = hud_row(pb)
         assert tiles == (D, E, F, PLUS, DIGIT_1, HUD_BLANK), tiles
         assert attrs == (5, 5, 5, 5, 5, 5), attrs
-        for _ in range(45):
+        for _ in range(105):
             pb.tick()
         tiles, attrs = hud_row(pb)
         assert tiles == (L, C, K, PLUS, DIGIT_1, HUD_BLANK), tiles
@@ -91,9 +99,15 @@ def main():
         wait_notice(pb)
 
         clear_entities(pb)
-        # The elder's actual REGEN application exercises green status text.
+        # The elder names the full restore (green HEALED), then its actual
+        # REGEN application exercises green status text.
         spawn_pickup(pb, 7)
         pb.tick()
+        tiles, attrs = hud_row(pb)
+        assert tiles == (H, E, A, L, E, D), tiles
+        assert attrs == (5, 5, 5, 5, 5, 5), attrs
+        for _ in range(105):
+            pb.tick()
         tiles, attrs = hud_row(pb)
         assert tiles == (R, E, G, E, N, HUD_BLANK), tiles
         assert attrs == (5, 5, 5, 5, 5, 5), attrs

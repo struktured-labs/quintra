@@ -162,5 +162,7 @@ void pickup_echo_primary(u8 primary, u8 dir, u8 damage) BANKED;
 u8   pickup_try_phoenix_revive(void) BANKED;
 // Record a bought shelf. Implemented in shop.c (bank 7).
 void shop_note_bought(u8 x) BANKED;
+// Name why a ware the champion can afford still stays on the counter.
+void shop_refuse_explain(u8 ware) BANKED;
 
 #endif

@@ -59,22 +59,28 @@ void pickup_resolve_wildcard(void) BANKED {
             player.coins = (u16)(player.coins + 15);
             if (player.coins > COIN_CAP) player.coins = COIN_CAP;
             hud_redraw_coins();
+            hud_show_coins(15);
         }
         sfx_play_reward(SFX_REWARD_RELIC);
     } else if (fate == 1) {
+        if (player.curse_flags) hud_show_word(NW_CLEAN);
         curse_cleanse();
         player.hp = player.hp_max;
         player.mp = player.mp_max;
         hud_redraw_all();
+        hud_show_word(NW_HEALED);
         sfx_play_reward(SFX_REWARD_MAGIC);
     } else if (fate == 2) {
         player.coins = (u16)(player.coins + 25);
         if (player.coins > COIN_CAP) player.coins = COIN_CAP;
         hud_redraw_coins();
+        hud_show_coins(25);
         sfx_play_reward(SFX_REWARD_PURCHASE);
     } else if (fate == 3) {
-        if (player.curse_flags) curse_cleanse();
-        else {
+        if (player.curse_flags) {
+            hud_show_word(NW_CLEAN);
+            curse_cleanse();
+        } else {
             u8 before = player.lck;
             player.lck = wildcard_add_capped(player.lck, 1, 10);
             hud_show_stat_gain(STAT_LCK, (u8)(player.lck - before));

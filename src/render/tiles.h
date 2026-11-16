@@ -118,6 +118,9 @@
 // X is only needed by compact HUD notices (SPDMAX). Slot 66 is the
 // Compass letter U; hud_init reloads this glyph when play resumes.
 #define HUD_STATUS_X 66
+// Minus for pickup costs (MAX heart-2, ATK-1). Slot 67 is the Compass letter
+// S; like X above, hud_init reloads it when play resumes.
+#define HUD_STATUS_MINUS 67
 
 // Sanctuary-only boss threshold art. The room tilemap retains BGT_DOOR for
 // collision/progression; rendering substitutes these unmistakable gate tiles.
