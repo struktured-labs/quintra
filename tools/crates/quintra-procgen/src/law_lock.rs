@@ -90,7 +90,7 @@ pub fn gate_at(gates: &[Gate], cell: u8, dir: u8) -> Option<usize> {
 }
 
 pub fn edge_open(gates: &[Gate], cell: u8, dir: u8, state: u8) -> bool {
-    gate_at(gates, cell, dir).is_none_or(|g| gates[g].open == state)
+    gate_at(gates, cell, dir).map_or(true, |g| gates[g].open == state)
 }
 
 struct Gen<'a> {
@@ -280,7 +280,7 @@ impl Gen<'_> {
             if comp[anchor as usize] != NONE {
                 continue;
             }
-            if self.altars.len() >= MAX_GATES + 1 {
+            if self.altars.len() > MAX_GATES {
                 return false;
             }
             match self.label(&mut comp, anchor, label) {

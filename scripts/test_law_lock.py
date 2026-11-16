@@ -197,10 +197,12 @@ def run_stage(stage, want_gates):
         ay = pb.memory[sym("_law_lock_altar_y")]
         assert tile(pb, ax, ay) == SWITCH, f"{tag}: altar tile {tile(pb, ax, ay)}"
         assert attr(pb, ax, ay) == BGPAL_CRYSTAL, "WAX altar is not cyan"
-        legend = open_compass(pb, OUT / f"law-lock-{tag}-compass-wax.png")
-        assert legend == [BGPAL_DOOR] * 3, f"WAX LAW legend palette {legend}"
         pb.screen.image.save(OUT / f"law-lock-{tag}-altar-wax.png")
         before = pb.memory[RS + RS_LAW]
+        for i in range(32):  # this test owns the altar, not combat
+            e = addr("_entities") + i * 28
+            if pb.memory[e] == 2:
+                pb.memory[e] = pb.memory[e + 1] = 0
         put16(pb, PL + 9, ax * 8 - 4)
         put16(pb, PL + 11, ay * 8 - 8)
         pb.memory[PL + PL_IFRAMES] = 120
@@ -219,6 +221,19 @@ def run_stage(stage, want_gates):
         pb.screen.image.save(OUT / f"law-lock-{tag}-altar-wane.png")
         legend = open_compass(pb, OUT / f"law-lock-{tag}-compass-wane.png")
         assert legend == [BGPAL_CRACK] * 3, f"WANE LAW legend palette {legend}"
+        # Flip back to WAX and check the legend follows.
+        pb.tick(60)
+        assert pb.memory[sym("_law_lock_has_altar")], "altar lost after Compass"
+        put16(pb, PL + 9, ax * 8 - 4)
+        put16(pb, PL + 11, ay * 8 - 8)
+        pb.memory[PL + PL_IFRAMES] = 120
+        pb.button_press("a")
+        pb.tick(24)
+        pb.button_release("a")
+        pb.tick(40)
+        assert pb.memory[RS + RS_LAW] == before, "second flip did not return to WAX"
+        legend = open_compass(pb, OUT / f"law-lock-{tag}-compass-wax.png")
+        assert legend == [BGPAL_DOOR] * 3, f"WAX LAW legend palette {legend}"
 
     generated_room(stage, seed, local_room=altar, probe=altar_probe)
     print(f"  {tag} seed {seed:#010x}: {len(gates)} gate(s) {gates}, altars "
