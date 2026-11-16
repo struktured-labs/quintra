@@ -10,7 +10,11 @@
 
 pub mod rng;
 pub mod room;
+pub mod prism_toggle;
+pub mod law_lock;
+pub mod push_seal;
 pub mod sun_lattice;
+pub mod topology;
 
 pub use rng::Xorshift32;
 pub use room::{generate_tilemap, room_kind, room_seed, Tilemap};

@@ -171,16 +171,48 @@ def push_seal_contract():
     blocks = [(x, y) for y in range(1, 16) for x in range(1, 19)
               if pb.memory[TM + y * 20 + x] == 25]
     assert len(blocks) == 1, f"push seal needs one readable cairn, got {blocks}"
-    bx, by = blocks[0]
-    put16(pb, PL + 9, bx * 8 - 16)
-    put16(pb, PL + 11, by * 8 - 8)
-    pb.button_press("right")
-    for _ in range(120):
+    sx, sy = pb.memory[addr("_room_socket_x")], pb.memory[addr("_room_socket_y")]
+    assert (sx, sy) != (0xFF, 0xFF), "push seal has no gold socket"
+    assert all(pb.memory[TM + (sy + dy) * 20 + sx + dx] == 20
+               for dy in (0, 1) for dx in (0, 1)), "socket is not a 2x2 gold plate"
+    assert blocks[0][0] != sx and blocks[0][1] != sy, (
+        "socket must sit on an L route, not a straight shove")
+
+    def cairn():
+        return next((x, y) for y in range(1, 16) for x in range(1, 19)
+                    if pb.memory[TM + y * 20 + x] == 25)
+
+    def shove(direction):
+        bx, by = cairn()
+        hx, hy = {"right": (bx * 8 - 20, by * 8 - 8),
+                  "left": ((bx + 2) * 8 + 4, by * 8 - 8),
+                  "down": (bx * 8, by * 8 - 20),
+                  "up": (bx * 8, (by + 2) * 8 + 4)}[direction]
+        put16(pb, PL + 9, hx)
+        put16(pb, PL + 11, hy)
+        pb.button_press(direction)
+        for _ in range(120):
+            pb.tick()
+            if cairn() != (bx, by) or not pb.memory[LOCKED]:
+                break
+        pb.button_release(direction)
+        for _ in range(30):  # let the slide finish before the next setup
+            pb.tick()
+        assert cairn() != (bx, by), f"cairn at {bx},{by} would not move {direction}"
+
+    shoves = 0
+    while cairn()[0] != sx:
+        shove("right" if cairn()[0] < sx else "left")
+        shoves += 1
+        if shoves == 1:
+            assert pb.memory[LOCKED] == 1, "an off-socket shove released the seal"
+    while cairn()[1] != sy and pb.memory[LOCKED]:
+        shove("down" if cairn()[1] < sy else "up")
+        shoves += 1
+    for _ in range(30):
         pb.tick()
-        if pb.memory[LOCKED] == 0:
-            break
-    pb.button_release("right")
-    assert pb.memory[LOCKED] == 0, "moving the ordinary cairn did not release seal"
+    assert shoves >= 4, f"socket route was trivial ({shoves} shoves)"
+    assert pb.memory[LOCKED] == 0, "seating the cairn on the socket did not release seal"
     assert pb.memory[RS + 27] & 1, "Trial solve did not persist its stable bit"
     # Large dungeon courts continue beyond the legacy 20x17 viewport. Door
     # release must target the real 31x31 perimeter; stamping the old south

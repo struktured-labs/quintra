@@ -424,3 +424,58 @@ the Lua balance bot can solve Sun Lattice rooms (a known gap today).
    water. Agree, or do you want it anyway with a swim-proof twist?
 8. More puzzles per dungeon: keep two mandatory slots and add the optional
    third beat, or go to three mandatory puzzle rooms in Stages 5+?
+
+## 8. Batch 1: decisions and as-built (Prism Toggle, Push Seal socket)
+
+Carmelo's answers to §7: (1) Prism Toggle + Law Lock first, Push Seal gets a
+real socket; (2) Colossus Cipher is a shortcut only, later; (3) Law Lock may
+gate 1–3 required rooms; (4) companion STAY approved but later; (5) timed
+puzzles OK with generous windows, none in this batch; (8) keep two mandatory
+slots plus an optional third beat (bit 5, not in this batch).
+
+### 8.1 Puzzle pool (`puzzle_slot_kind`, mirrored in `quintra_topology.py`)
+
+`mix = xor(run_seed bytes) + stage * 51`. Stage 1 picks from
+{Push Seal, Rune, Prism} and Stage 2 from {Rune, Prism, Push Seal}; slot 0
+(Trial) takes `mix % 3`, slot 1 (Waystone) a different entry, so one dungeon
+never repeats a kind. Stages 3–6: Waystone becomes Prism Toggle on
+`(mix >> 3) & 1`, else Sun Lattice; Trial stays Sun Lattice from Stage 3 on,
+so Sun Lattice is still guaranteed every dungeon. Stages 7–9 are unchanged.
+
+### 8.2 Prism Toggle as built (`src/game/prism_toggle.c`, bank 255)
+
+- Five hand-authored 12×11 chamber templates in tiers (Stage 1: tier 0,
+  2 flips; Stages 2–3: tier 1, 3 flips; Stages 4–6: tier 2, 4 flips), with
+  a seeded mirror and colour swap. Chamber sits in a walkable floor ring;
+  the goal is a 2×2 gold seal inside the chamber.
+- Amber barriers use the CRACK palette, azure the CRYSTAL palette. Raised =
+  solid `BGT_PILLAR`, lowered = tinted `BGT_FLOOR2`, so both states read by
+  colour. The orb glows in the colour that is currently raised.
+- Any player hit flips: melee, shot, boomerang, bomb blast, Hookshot (hook
+  retracts). 20-frame cooldown; orbs never shatter; hostile shots never flip.
+- A barrier that would rise under the hero waits (up to 6 pending tiles)
+  until the hero steps clear, so a flip can never entomb the player.
+- Feet on the seal opens the room, persists the slot bit and lowers every
+  barrier. Leaving re-generates the unsolved chamber from the room seed.
+- Proof: `quintra-procgen::prism_toggle` parses the C templates, models
+  melee, ranged (range 3 + line of sight) and deferred raises, and proves for
+  every template × mirror × swap that the goal is reachable by melee alone
+  from every state reachable by any tool, and that each tier needs at least
+  its flip budget. `scripts/test_prism_toggle.py` checks ROM == Rust tile for
+  tile on Stages 1/2/3/6, colour clarity, a live melee flip, the unbreakable
+  orb and the seal.
+
+### 8.3 Push Seal socket
+
+The crate no longer solves by moving one tile. Each room places a 2×2 gold
+socket on an L route (2–3 horizontal + 2–3 vertical shoves) inside a cleared
+apron; only seating the crate on the socket opens the seal. The socket glows
+DOOR-gold and repaints after the crate passes over it.
+`quintra-procgen::push_seal` mirrors the layout and runs a sokoban BFS from
+every apron start; the live test seats the crate with real pushes.
+
+### 8.4 Known gaps
+
+- `scripts/quintra_balance_bot.lua` still only knows the old push-right
+  Push Seal and has no Prism or socket policy (not in CI).
+- Optional third puzzle (bit 5) and Law Lock follow in later PRs.

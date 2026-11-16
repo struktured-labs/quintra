@@ -5,6 +5,7 @@
 #include "game/companion.h"
 #include "game/dungeon_director.h"
 #include "game/map.h"
+#include "game/law_lock.h"
 #include "game/mission_graph.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -149,6 +150,12 @@ static void map_big_node(u8 x, u8 y, u8 base) {
     map_put((u8)(x + 1), (u8)(y + 1), (u8)(base + 3));
 }
 
+// Law Lock Compass colours: cyan = WAX, red = WANE (the warm/cool split the
+// room barriers use). A gate corridor wears the state that opens it.
+static u8 map_law_attr(u8 state) {
+    return state ? BGPAL_CRACK : BGPAL_DOOR;
+}
+
 
 static void draw_world_grid(void) {
     static const u8 wx[6] = { 1, 3, 5, 7, 9, 11 };
@@ -232,9 +239,13 @@ static void draw_dungeon_grid(void) {
     u8 route_dir = dungeon_director_direction_from(here);
     u8 route_next = (route_dir == DIR_NONE) ? 0xFF
         : run_state_dungeon_cell_neighbor(here, route_dir);
+    u8 law = law_lock_active();
+    u8 law_now = (run_state.dungeon_law & DUNGEON_LAW_STATE_BIT) ? 1 : 0;
     u8 cache_cell = run_state_dungeon_cache_cell();
     u8 cache_done = (run_state.dungeon_phase
         & RUN_FARFOLD_CACHE_BIT) ? 1 : 0;
+    // When the route must flip the Law first, its altar is the next GOAL.
+    if (law && law_lock_waypoint != 0xFF) next_trial = law_lock_waypoint;
     for (i = 0; i < size; ++i) {
         u8 seen = run_state_dungeon_cell_seen(i);
         // The boss node appears once you are in the room that holds its
@@ -255,6 +266,13 @@ static void draw_dungeon_grid(void) {
             icon = BGT_MAP_BIG_CACHE;
         icon = map_dungeon_shop_icon(i, here, icon);
         map_big_node(gx[i], gy[i], icon);
+        // A charted altar wears the current Law colour in its lower half.
+        if (law && seen && icon == BGT_MAP_BIG_ROOM && ll_is_altar(i)) {
+            map_put_attr(gx[i], (u8)(gy[i] + 1), BGT_MAP_BIG_ROOM + 2,
+                map_law_attr(law_now));
+            map_put_attr((u8)(gx[i] + 1), (u8)(gy[i] + 1),
+                BGT_MAP_BIG_ROOM + 3, map_law_attr(law_now));
+        }
     }
     // Depth numbers appear only for rows that contain a room you have
     // actually entered.
@@ -275,6 +293,7 @@ static void draw_dungeon_grid(void) {
         u8 a_seen = run_state_dungeon_cell_seen(i);
         for (j = (u8)(i + 1); j < size; ++j) {
             u8 b_seen = run_state_dungeon_cell_seen(j);
+            u8 gate;
             u8 adjacent = (gy[i] == gy[j]
                     && (gx[i] + 3 == gx[j] || gx[j] + 3 == gx[i]))
                 || (gx[i] == gx[j]
@@ -282,11 +301,17 @@ static void draw_dungeon_grid(void) {
             if (!a_seen || !b_seen) continue;
             if (!adjacent || !run_state_dungeon_cells_connected(i, j))
                 continue;
+            gate = law ? law_lock_edge_gate_state(i, j) : 0xFF;
             if (gy[i] == gy[j]) {
                 u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
                 u8 route_edge = ((i == here && j == route_next)
                     || (j == here && i == route_next));
-                if (route_edge) {
+                if (gate != 0xFF && !route_edge) {
+                    map_put_attr((u8)(left + 2), gy[i], BGT_MAP_PATH_H,
+                        map_law_attr(gate));
+                    map_put_attr((u8)(left + 2), (u8)(gy[i] + 1),
+                        BGT_MAP_PATH_H, map_law_attr(gate));
+                } else if (route_edge) {
                     map_put_attr((u8)(left + 2), gy[i], BGT_MAP_PATH_H,
                         BGPAL_CRYSTAL);
                     map_put_attr((u8)(left + 2), (u8)(gy[i] + 1),
@@ -299,7 +324,12 @@ static void draw_dungeon_grid(void) {
                 u8 top = gy[i] < gy[j] ? gy[i] : gy[j];
                 u8 route_edge = ((i == here && j == route_next)
                     || (j == here && i == route_next));
-                if (route_edge) {
+                if (gate != 0xFF && !route_edge) {
+                    map_put_attr(gx[i], (u8)(top + 2), BGT_MAP_PATH_V,
+                        map_law_attr(gate));
+                    map_put_attr((u8)(gx[i] + 1), (u8)(top + 2),
+                        BGT_MAP_PATH_V, map_law_attr(gate));
+                } else if (route_edge) {
                     map_put_attr(gx[i], (u8)(top + 2), BGT_MAP_PATH_V,
                         BGPAL_CRYSTAL);
                     map_put_attr((u8)(gx[i] + 1), (u8)(top + 2),
@@ -322,6 +352,13 @@ static void draw_dungeon_grid(void) {
             map_put(9, 4, BGT_MAP_RIFT);
     }
     map_draw_dungeon_legend();
+    // "LAW" in the colour of the active state: corridors of the same colour
+    // are open now, the others wait for an altar.
+    if (law) {
+        map_put_attr(16, 16, BGT_AREA_L, map_law_attr(law_now));
+        map_put_attr(17, 16, BGT_AREA_A, map_law_attr(law_now));
+        map_put_attr(18, 16, BGT_AREA_W, map_law_attr(law_now));
+    }
 }
 
 // Towns are a fixed, legible respite between procedural regions. Unlike a

@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include "game/dungeon_director.h"
 #include "game/procgen.h"
+#include "game/law_lock.h"
 #include "game/puzzle.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
@@ -117,6 +118,14 @@ void room_present_arrival_labels(void) BANKED {
 }
 
 static u8 render_attr(u8 x, u8 y, u8 tile) {
+    {
+        u8 fixture = PUZZLE_ATTR_OVERRIDE(x, y, tile);
+        if (fixture != 0xFF) return fixture;
+    }
+    {
+        u8 gate = LAW_LOCK_ATTR_OVERRIDE(x, y, tile);
+        if (gate != 0xFF) return gate;
+    }
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH && y == 8
         && (x == 4 || x == 8 || x == 12 || x == 16)
         && tile == BGT_FLOOR2) return BGPAL_CRYSTAL;

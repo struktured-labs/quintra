@@ -277,3 +277,32 @@ def dungeon_predecessor(target: int, size: int, run_seed: int,
                     source, size, direction, run_seed, stage) == target:
                 return source, direction
     raise ValueError(f"no graph approach to stage {stage + 1} cell {target}")
+
+
+PUZZLE_PUSH_SEAL = 1
+PUZZLE_RUNE_SEQUENCE = 2
+PUZZLE_SUN_LATTICE = 5
+PUZZLE_PRISM_TOGGLE = 6
+_EARLY_POOL = (
+    (PUZZLE_PUSH_SEAL, PUZZLE_RUNE_SEQUENCE, PUZZLE_PRISM_TOGGLE),
+    (PUZZLE_RUNE_SEQUENCE, PUZZLE_PRISM_TOGGLE, PUZZLE_PUSH_SEAL),
+)
+
+
+def puzzle_slot_kind(run_seed: int, stage: int, slot: int) -> int:
+    """Mirror puzzle_slot_kind() in src/game/puzzle.c (slot 0 Trial, 1 Waystone)."""
+    mix = (run_seed ^ (run_seed >> 8) ^ (run_seed >> 16) ^ (run_seed >> 24)) & 0xFF
+    mix = (mix + stage * 51) & 0xFF
+    if stage < 2:
+        first = mix % 3
+        if slot:
+            first = (first + 1 + ((mix >> 2) & 1)) % 3
+        return _EARLY_POOL[stage][first]
+    if slot and stage <= 5 and (mix >> 3) & 1:
+        return PUZZLE_PRISM_TOGGLE
+    return PUZZLE_SUN_LATTICE
+
+
+def room_seed(run_seed: int, biome: int, room_counter: int) -> int:
+    """Mirror procgen_room_seed()."""
+    return (run_seed ^ (biome << 16) ^ ((room_counter * 0x9E3779B9) & 0xFFFFFFFF)) & 0xFFFFFFFF

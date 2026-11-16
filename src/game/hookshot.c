@@ -86,6 +86,11 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
                 && sun_lattice_hook((u8)((e->x+3)>>3),(u8)((e->y+3)>>3))) {
                 e->state=2; break;
             }
+            // A Prism Toggle orb flips the chamber and the hook retracts.
+            if (tile==BGT_CRYSTAL && room_puzzle_kind==PUZZLE_PRISM_TOGGLE
+                && prism_strike((u8)((e->x+3)>>3),(u8)((e->y+3)>>3))) {
+                e->state=2; break;
+            }
             if (tile==BGT_WALL || tile==BGT_PILLAR || tile==BGT_TREE
                 || tile==BGT_CRYSTAL || tile==BGT_WALL_CRACK) {
                 e->state=1; break;

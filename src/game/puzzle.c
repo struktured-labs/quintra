@@ -8,6 +8,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/pickup.h"
+#include "game/prism_toggle.h"
 #include "game/procgen.h"
 #include "game/puzzle.h"
 #include "game/room.h"
@@ -26,6 +27,8 @@ u8 room_hidden_secret_y;
 u8 room_hidden_secret_x2;
 u8 room_hidden_secret_y2;
 u8 room_hidden_secret_bit;
+u8 room_socket_x = 0xFF;
+u8 room_socket_y = 0xFF;
 
 static u8 puzzle_block_x;
 static u8 puzzle_block_y;
@@ -138,11 +141,31 @@ static void set_tile_live(u8 x, u8 y, u8 tile, u8 attr) {
     VBK_REG = 0;
 }
 
+// Push Seal: the crate must be shoved onto a 2x2 gold socket along an
+// L-shaped route (two legs of 2-3 shoves). The Rust mirror
+// (quintra-procgen push_seal.rs) proves every variant solvable from any
+// tile of the cleared apron under the push rules in room.c. A crate wedged
+// off-route is reset by stepping out through the always-open return door.
 static void prepare_push(u32 seed) {
-    u8 x = (seed & 1) ? 6 : 12;
-    u8 y = (seed & 2) ? 5 : 10;
+    u8 sel = (u8)(seed >> 4) & 3;
+    u8 sx = (sel & 1) ? 10 : 8;
+    u8 sy = (sel & 2) ? 8 : 6;
+    u8 hx = (u8)(2 + ((seed >> 2) & 1));
+    u8 vy = (u8)(2 + ((seed >> 3) & 1));
+    u8 x, y, x0, x1, y0, y1;
+    if ((seed & 2) && sy == 6) vy = 2;
+    x = (seed & 1) ? (u8)(sx - hx) : (u8)(sx + hx);
+    y = (seed & 2) ? (u8)(sy - vy) : (u8)(sy + vy);
+    x0 = (u8)(((x < sx) ? x : sx) - 3); if (x0 < 1) x0 = 1;
+    x1 = (u8)(((x > sx) ? x : sx) + 4); if (x1 > 18) x1 = 18;
+    y0 = (u8)(((y < sy) ? y : sy) - 3); if (y0 < 1 || y0 > 200) y0 = 1;
+    y1 = (u8)(((y > sy) ? y : sy) + 4); if (y1 > 15) y1 = 15;
     clear_all_cairns();
-    floor_rect((u8)(x - 3), (u8)(y - 2), 8, 6);
+    floor_rect(x0, y0, (u8)(x1 - x0 + 1), (u8)(y1 - y0 + 1));
+    room_socket_x = sx;
+    room_socket_y = sy;
+    room_tilemap[sy][sx] = room_tilemap[sy][sx + 1] = BGT_FLOOR3;
+    room_tilemap[sy + 1][sx] = room_tilemap[sy + 1][sx + 1] = BGT_FLOOR3;
     room_tilemap[y][x] = BGT_BLOCK;
     room_tilemap[y][x + 1] = BGT_BLOCK_TR;
     room_tilemap[y + 1][x] = BGT_BLOCK_BL;
@@ -269,9 +292,35 @@ static void prepare_phase_gate(u8 bit) {
     room_puzzle_locked = 0;
 }
 
+// Per-stage puzzle pool (spec 2.1 + batch-1 addendum). One dungeon-level
+// mix picks the Trial (slot 0) and Waystone (slot 1) kinds; the two slots of
+// one dungeon never repeat a kind in Stages 1-2. From Stage 3 the Trial stays
+// a Sun Lattice, and through Stage 6 the Waystone may become a Prism Toggle.
+// Mirrored by puzzle_slot_kinds() in scripts/quintra_topology.py.
+static const u8 puzzle_early_pool[2][3] = {
+    { PUZZLE_PUSH_SEAL, PUZZLE_RUNE_SEQUENCE, PUZZLE_PRISM_TOGGLE },
+    { PUZZLE_RUNE_SEQUENCE, PUZZLE_PRISM_TOGGLE, PUZZLE_PUSH_SEAL },
+};
+
+u8 puzzle_slot_kind(u8 slot) BANKED {
+    u8 bb = run_state.bosses_beaten;
+    u8 mix = (u8)run_state.run_seed;
+    u8 first;
+    mix ^= (u8)(run_state.run_seed >> 8);
+    mix ^= (u8)(run_state.run_seed >> 16);
+    mix ^= (u8)(run_state.run_seed >> 24);
+    mix = (u8)(mix + bb * 51);
+    if (bb < 2) {
+        first = (u8)(mix % 3);
+        if (slot) first = (u8)((first + 1 + ((mix >> 2) & 1)) % 3);
+        return puzzle_early_pool[bb][first];
+    }
+    if (slot && bb <= 5 && ((mix >> 3) & 1)) return PUZZLE_PRISM_TOGGLE;
+    return PUZZLE_SUN_LATTICE;
+}
+
 void puzzle_prepare_room(void) BANKED {
     u8 local;
-    u8 family;
     u32 seed;
     room_puzzle_kind = PUZZLE_NONE;
     room_puzzle_locked = 0;
@@ -279,13 +328,13 @@ void puzzle_prepare_room(void) BANKED {
     room_puzzle_phase_bit = RUN_PHASE_OPEN_BIT;
     room_hidden_secret_kind = HIDDEN_SECRET_NONE;
     room_hidden_secret_bit = 0;
+    room_socket_x = room_socket_y = 0xFF;
     puzzle_contact = 0;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
         || procgen_current_room_is_boss || run_state.secret_pending
         || run_state_is_shop() || run_state_is_sanctuary()) return;
 
     local = run_state_dungeon_local();
-    family = (u8)(run_state.bosses_beaten % 3);
     seed = procgen_room_seed(run_state.run_seed, run_state.biome_id,
                             run_state.room_counter);
 
@@ -299,18 +348,9 @@ void puzzle_prepare_room(void) BANKED {
         room_puzzle_kind = PUZZLE_PHASE_GATE;
         room_puzzle_phase_bit = RUN_DEEP_PHASE_OPEN_BIT;
     } else if (local == run_state.mission_waystone_cell) {
-        // Roomier mid/late dungeons get a second mechanical beat before the
-        // back half. Keep it within the persisted eight-bit puzzle mask and
-        // alternate its vocabulary so it does not merely repeat room one.
-        // From Stage 3 (Ember) on, both mandatory puzzle cells are a Sun
-        // Lattice light puzzle; Stages 1-2 keep the Push Seal / Rune pair.
-        room_puzzle_kind = (run_state.bosses_beaten >= 2) ? PUZZLE_SUN_LATTICE
-            : ((family + (u8)seed) & 1)
-            ? PUZZLE_PUSH_SEAL : PUZZLE_RUNE_SEQUENCE;
+        room_puzzle_kind = puzzle_slot_kind(1);
     } else if (local == run_state.mission_trial_cell)
-        room_puzzle_kind = (run_state.bosses_beaten >= 2) ? PUZZLE_SUN_LATTICE
-            : (family & 1)
-            ? PUZZLE_RUNE_SEQUENCE : PUZZLE_PUSH_SEAL;
+        room_puzzle_kind = puzzle_slot_kind(0);
     else {
         // These are the same stable spatial punctuation cells reserved by
         // the mission graph: nonlinear Rifts, named stage wings, witnesses,
@@ -381,6 +421,11 @@ void puzzle_prepare_room(void) BANKED {
         if (!puzzle_solved()) prepare_push(seed);
     } else if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) {
         if (!puzzle_solved()) prepare_sequence(seed);
+    } else if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE) {
+        u8 solved = puzzle_solved();
+        clear_all_cairns();
+        prism_prepare(seed, run_state.bosses_beaten, solved);
+        room_puzzle_locked = solved ? 0 : 1;
     } else if (room_puzzle_kind == PUZZLE_SUN_LATTICE) {
         u8 solved = puzzle_solved();
         clear_all_cairns();
@@ -405,6 +450,34 @@ u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED {
     }
     if (room_puzzle_kind != PUZZLE_PUSH_SEAL || !room_puzzle_locked) return 0;
     if (old_x != puzzle_block_x || old_y != puzzle_block_y) return 0;
+    {
+        // Follow the crate one tile, then repaint any socket quadrant the
+        // shove floored. Only a crate seated exactly on the socket solves.
+        u8 nx = old_x, ny = old_y, i, j;
+        if (old_x + 1 < ROOM_W && room_tilemap[old_y][old_x + 1] == BGT_BLOCK)
+            nx = (u8)(old_x + 1);
+        else if (old_x && room_tilemap[old_y][old_x - 1] == BGT_BLOCK)
+            nx = (u8)(old_x - 1);
+        else if (old_y + 1 < ROOM_H && room_tilemap[old_y + 1][old_x] == BGT_BLOCK)
+            ny = (u8)(old_y + 1);
+        else if (old_y && room_tilemap[old_y - 1][old_x] == BGT_BLOCK)
+            ny = (u8)(old_y - 1);
+        puzzle_block_x = nx;
+        puzzle_block_y = ny;
+        for (j = 0; j < 2; ++j)
+            for (i = 0; i < 2; ++i) {
+                u8 tx = (u8)(room_socket_x + i), ty = (u8)(room_socket_y + j);
+                // The shove redraw used plain terrain colours; restore the
+                // gold socket on every quadrant the crate does not cover.
+                if (room_tilemap[ty][tx] == BGT_FLOOR
+                    || room_tilemap[ty][tx] == BGT_FLOOR3)
+                    set_tile_live(tx, ty, BGT_FLOOR3, BGPAL_DOOR);
+            }
+        if (nx != room_socket_x || ny != room_socket_y) {
+            sfx_play_rune((u8)((nx + ny) & 3));
+            return 0;
+        }
+    }
     mark_puzzle_solved(0);
     return 1;
 }
@@ -525,6 +598,10 @@ u8 puzzle_update_player(void) BANKED {
         return update_sequence(tx, ty);
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH)
         update_phase_switch(tx, ty);
+    if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE && prism_tick()) {
+        mark_puzzle_solved(0);
+        return 1;
+    }
     if (room_puzzle_kind == PUZZLE_SUN_LATTICE && sun_lattice_tick()) {
         mark_puzzle_solved(0);
         return 1;
