@@ -439,6 +439,12 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_BLOCK_BR, 1, bgt_block16_br);
     set_bkg_data(BGT_SPIKES,   1, bgt_spikes);
     set_bkg_data(BGT_POT,      1, bgt_pot);
+    set_bkg_data(BGT_NOTE_A,     1, bgt_note_a);
+    set_bkg_data(BGT_NOTE_B,     1, bgt_note_b);
+    set_bkg_data(BGT_NOTE_C,     1, bgt_note_c);
+    set_bkg_data(BGT_NOTE_LIT_A, 1, bgt_note_lit_a);
+    set_bkg_data(BGT_NOTE_LIT_B, 1, bgt_note_lit_b);
+    set_bkg_data(BGT_NOTE_LIT_C, 1, bgt_note_lit_c);
     set_bkg_data(BGT_SWITCH,   1, bgt_switch);
     set_bkg_data(BGT_PORTAL,   1, bgt_portal);
     set_bkg_data(BGT_GRASS,    1, bgt_grass);

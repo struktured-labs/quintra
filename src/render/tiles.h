@@ -195,6 +195,15 @@
 #define BGT_WILD_MOUNTAIN 109 // solid high ridge
 #define BGT_WILD_REEDS    110 // solid wetland growth
 
+// Rune-sequence pitch plates. SELECT overwrites 110..117 with Compass
+// node art; tiles_load_dungeon_bg restores these when play resumes.
+#define BGT_NOTE_A     111  // fill colour index 1 (pitches 0 and 3)
+#define BGT_NOTE_B     112  // fill colour index 2 (pitches 1 and 4)
+#define BGT_NOTE_C     113  // fill colour index 3 (pitch 2, or the flash)
+#define BGT_NOTE_LIT_A 114
+#define BGT_NOTE_LIT_B 115
+#define BGT_NOTE_LIT_C 116
+
 // Compass-only dim connections. These expose the active dungeon lattice from
 // the first visit while discovered routes overwrite them with the bright
 // path tiles above. Slots 100–101 are otherwise unused by every map atlas.

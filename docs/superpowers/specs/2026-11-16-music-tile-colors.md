@@ -1,6 +1,6 @@
 # Music puzzle note colours
 
-Status: **specified.** Each rune-sequence plate shows a unique colour for
+Status: **implemented.** Each rune-sequence plate shows a unique colour for
 its pitch so the phrase can be solved with the sound off.
 
 ## Rule

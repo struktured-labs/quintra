@@ -3,6 +3,7 @@
 
 #include <gb/gb.h>
 #include "core/types.h"
+#include "render/tiles.h"
 #include "game/prism_toggle.h"
 
 enum {
@@ -55,6 +56,41 @@ u8 puzzle_try_hidden_shot(u8 tx, u8 ty) BANKED;
 // Echo Chime resolves the active room's optional disguised secret, if any.
 u8 puzzle_chime_reveal(void) BANKED;
 
+// Active rune-sequence plates. Valid while room_puzzle_kind is
+// PUZZLE_RUNE_SEQUENCE and room_rune_count > 0 (the prepared, unsolved
+// or just-solved visit). Cleared at the start of the next room prepare.
+extern u8 room_rune_count;
+extern u8 room_rune_x[5];
+extern u8 room_rune_y[5];
+extern u8 room_rune_pitch[5];
+
+// Pitch 0..2 pack into BGPAL_CRYSTAL (colour indices 1..3); pitches 3..4
+// pack into BGPAL_DOOR (indices 1..2). Colour 3 of the door palette is
+// reserved for the near-white flash-on-play tile (BGT_NOTE_C).
+#define RUNE_NOTE_PAL(p) ((u8)((p) <= 2 ? BGPAL_CRYSTAL : BGPAL_DOOR))
+#define RUNE_IDLE_TILE(p) ((u8)(BGT_NOTE_A + ((p) <= 2 ? (p) : (u8)((p) - 3))))
+#define RUNE_LIT_TILE(p)  ((u8)(BGT_NOTE_LIT_A + ((p) <= 2 ? (p) : (u8)((p) - 3))))
+#define RUNE_IS_PLATE_TILE(t) ((u8)((t) >= BGT_NOTE_A && (t) <= BGT_NOTE_LIT_C))
+#define RUNE_FLASH_TILE BGT_NOTE_C
+#define RUNE_FLASH_PAL  BGPAL_DOOR
+
+#define RUNE_ATTR_AT(x, y, tile) \
+    ((room_rune_count > 0 && (x) == room_rune_x[0] && (y) == room_rune_y[0]) \
+        ? RUNE_NOTE_PAL(room_rune_pitch[0]) \
+    : (room_rune_count > 1 && (x) == room_rune_x[1] && (y) == room_rune_y[1]) \
+        ? RUNE_NOTE_PAL(room_rune_pitch[1]) \
+    : (room_rune_count > 2 && (x) == room_rune_x[2] && (y) == room_rune_y[2]) \
+        ? RUNE_NOTE_PAL(room_rune_pitch[2]) \
+    : (room_rune_count > 3 && (x) == room_rune_x[3] && (y) == room_rune_y[3]) \
+        ? RUNE_NOTE_PAL(room_rune_pitch[3]) \
+    : (room_rune_count > 4 && (x) == room_rune_x[4] && (y) == room_rune_y[4]) \
+        ? RUNE_NOTE_PAL(room_rune_pitch[4]) \
+    : ((tile) == BGT_DOOR || (tile) == BGT_DOOR_LOCKED \
+        || (tile) == BGT_CRYSTAL || (tile) == BGT_PORTAL) ? BGPAL_CRACK \
+    : 0xFF)
+
+void puzzle_load_note_palettes(void) BANKED;
+
 // Shared palette override for authored puzzle fixtures (Push Seal socket,
 // Prism Toggle chamber). 0xFF means "use the ordinary terrain palette".
 // Inline so the hot render paths never pay a far call per tile.
@@ -63,6 +99,8 @@ u8 puzzle_chime_reveal(void) BANKED;
 #define PUZZLE_ATTR_OVERRIDE(x, y, tile) \
     ((room_puzzle_kind == PUZZLE_PRISM_TOGGLE) ? PRISM_ATTR_AT(x, y) \
     : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR3 \
-        && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR : 0xFF)
+        && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR \
+    : (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) ? RUNE_ATTR_AT(x, y, tile) \
+    : 0xFF)
 
 #endif

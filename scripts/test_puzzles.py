@@ -39,6 +39,116 @@ RS, PL, EN, TM, KIND, LOCKED, COMBAT, WORLD_W, WORLD_H = map(addr, (
 ))
 
 
+
+# Rune-sequence pitch plates (BGT_NOTE_A..LIT_C). A voiced plate flashes as
+# BGT_NOTE_C (113) with the door palette (3) for 8 frames, then restores.
+BGT_NOTE_A, BGT_NOTE_LIT_A, BGT_NOTE_LIT_C = 111, 114, 116
+BGT_NOTE_C, RUNE_FLASH_PAL = 113, 3
+RUNE_IDLE_TILE = (111, 112, 113, 111, 112)
+RUNE_LIT_TILE = (114, 115, 116, 114, 115)
+RUNE_NOTE_PAL = (2, 2, 2, 3, 3)  # crystal, crystal, crystal, door, door
+# Packed BGR555 words, little-endian byte pairs, matching puzzle.c.
+RUNE_PAL_LOW = (0x42, 0x10, 0x04, 0x71, 0x04, 0x63, 0x9F, 0x13)
+RUNE_PAL_HIGH = (0x42, 0x10, 0x1F, 0x0A, 0x1C, 0x61, 0xFF, 0x6B)
+
+
+def is_rune_plate_tile(tile):
+    return BGT_NOTE_A <= tile <= BGT_NOTE_LIT_C
+
+
+def is_lit_plate(tile):
+    return BGT_NOTE_LIT_A <= tile <= BGT_NOTE_LIT_C
+
+
+def find_rune_plates(pb):
+    return [(x, y) for y in range(1, 16) for x in range(1, 19)
+            if is_rune_plate_tile(pb.memory[TM + y * 20 + x])]
+
+
+def room_tile_attr(pb, x, y, addrs, origin=None):
+    """Read the on-screen CGB palette index for room tile (x, y)."""
+    if origin is None:
+        ox = pb.memory[addrs["_room_bg_origin_x"]]
+        oy = pb.memory[addrs["_room_bg_origin_y"]]
+    else:
+        ox, oy = origin
+    old = pb.memory[0xFF4F]
+    pb.memory[0xFF4F] = 1
+    attr = pb.memory[0x9800 + ((oy + y) & 31) * 32 + ((ox + x) & 31)] & 7
+    pb.memory[0xFF4F] = old
+    return attr
+
+
+def cgb_bg_palette(pb, slot):
+    result = []
+    for offset in range(8):
+        pb.memory[0xFF68] = slot * 8 + offset
+        result.append(pb.memory[0xFF69])
+    return tuple(result)
+
+
+def wait_rune_flash(pb):
+    """Let the 8-frame white flash settle so lit/idle tiles can be sampled."""
+    for _ in range(12):
+        pb.tick()
+
+
+def assert_note_colors(pb, addrs, expected_count):
+    """Every visible plate uses a unique pitch colour from the fixed map."""
+    count_addr = addrs["_room_rune_count"]
+    xs = addrs["_room_rune_x"]
+    ys = addrs["_room_rune_y"]
+    pitches = addrs["_room_rune_pitch"]
+    count = pb.memory[count_addr]
+    assert count == expected_count, f"room_rune_count={count}, want {expected_count}"
+    plates = find_rune_plates(pb)
+    assert len(plates) == count, f"visible plates {plates} != count {count}"
+    seen_pitch = []
+    for i in range(count):
+        x, y = pb.memory[xs + i], pb.memory[ys + i]
+        pitch = pb.memory[pitches + i]
+        tile = pb.memory[TM + y * 20 + x]
+        assert 0 <= pitch <= 4, f"plate {i} pitch {pitch} out of range"
+        assert pitch not in seen_pitch, f"pitch {pitch} used on two plates"
+        seen_pitch.append(pitch)
+        assert tile == RUNE_IDLE_TILE[pitch], (
+            f"plate {i} at {(x, y)} pitch {pitch} tile {tile}, "
+            f"want idle {RUNE_IDLE_TILE[pitch]}")
+        attr = room_tile_attr(pb, x, y, addrs)
+        assert attr == RUNE_NOTE_PAL[pitch], (
+            f"plate {i} at {(x, y)} pitch {pitch} pal {attr}, "
+            f"want {RUNE_NOTE_PAL[pitch]}")
+        assert (x, y) in plates
+    pairs = [(RUNE_IDLE_TILE[p], RUNE_NOTE_PAL[p]) for p in seen_pitch]
+    assert len(set(pairs)) == count, f"colour pairs collided: {pairs}"
+    low = cgb_bg_palette(pb, 2)
+    high = cgb_bg_palette(pb, 3)
+    assert low == RUNE_PAL_LOW, f"crystal/note palette {low} != {RUNE_PAL_LOW}"
+    assert high == RUNE_PAL_HIGH, f"door/note palette {high} != {RUNE_PAL_HIGH}"
+
+
+def assert_flash_then_restore(pb, addrs, plate):
+    """Stepping on a plate flashes white, then restores to idle or lit colour."""
+    x, y = plate
+    before = pb.memory[TM + y * 20 + x]
+    feet_on(pb, x, y)
+    flashed = False
+    restored = None
+    for _ in range(16):
+        tile = pb.memory[TM + y * 20 + x]
+        attr = room_tile_attr(pb, x, y, addrs)
+        if tile == BGT_NOTE_C and attr == RUNE_FLASH_PAL:
+            flashed = True
+        elif flashed:
+            restored = tile
+            break
+        pb.tick()
+    assert flashed, f"plate {plate} never flashed white after being voiced"
+    assert restored == before or is_lit_plate(restored), (
+        f"plate {plate} restored to unexpected tile {restored} (was {before})")
+    wait_rune_flash(pb)
+
+
 def put16(pb, address, value):
     pb.memory[address] = value & 0xFF
     pb.memory[address + 1] = (value >> 8) & 0xFF
@@ -251,7 +361,7 @@ def solve_runes(pb, runes):
 
     def lit(rune):
         x, y = rune
-        return pb.memory[TM + y * 20 + x] == 19
+        return is_lit_plate(pb.memory[TM + y * 20 + x])
 
     while pb.memory[LOCKED] and len(prefix) < len(runes):
         found = None
@@ -263,9 +373,11 @@ def solve_runes(pb, runes):
             if prefix and not all(lit(rune) for rune in prefix):
                 for rune in prefix:
                     feet_on(pb, *rune)
+                    wait_rune_flash(pb)
                     step_off(pb)
             hp_before = pb.memory[PL + 2]
             heard_ch1, heard_ch4 = feet_on(pb, *candidate)
+            wait_rune_flash(pb)
             if not pb.memory[LOCKED] or all(lit(rune) for rune in (*prefix, candidate)):
                 assert pb.memory[PL + 2] == hp_before, (
                     "correct rune damaged the champion"
@@ -380,6 +492,52 @@ def rune_scale_source_contract():
         "delayed fanfare is no longer locked against pickup voices"
 
 
+
+def load_rune_room(stage_index, role):
+    """Boot a specific Trial or Waystone rune-sequence room and keep PyBoy running."""
+    seed = 0x51A6D00D
+    cell = mission_graph(dungeon_size(stage_index), seed, stage_index)[role]
+    from make_stage_states import symbol_addresses
+    pb = generated_room(stage_index, seed=seed, local_room=cell, keep_running=True)
+    addrs = symbol_addresses(ROM)
+    return pb, addrs
+
+
+def rune_color_contract():
+    """Each distinct pitch uses a distinct, stable CGB colour, even with sound off."""
+    rune_scale_source_contract()
+    from make_stage_states import symbol_addresses
+
+    # Stage 2 Trial is a four-note phrase (load() path, same seed).
+    pb = load(2)
+    addrs = symbol_addresses(ROM)
+    assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
+    assert_note_colors(pb, addrs, 4)
+    runes = find_rune_plates(pb)
+    assert_flash_then_restore(pb, addrs, runes[0])
+    if pb.memory[LOCKED]:
+        count = pb.memory[addrs["_room_rune_count"]]
+        seen = set()
+        for i in range(count):
+            x = pb.memory[addrs["_room_rune_x"] + i]
+            y = pb.memory[addrs["_room_rune_y"] + i]
+            pitch = pb.memory[addrs["_room_rune_pitch"] + i]
+            tile = pb.memory[TM + y * 20 + x]
+            attr = room_tile_attr(pb, x, y, addrs)
+            assert attr == RUNE_NOTE_PAL[pitch]
+            assert tile in (RUNE_IDLE_TILE[pitch], RUNE_LIT_TILE[pitch])
+            seen.add(pitch)
+        assert len(seen) == count
+    pb.stop(save=False)
+
+    # Stage 1 Waystone is a three-note phrase for this seed.
+    pb, addrs = load_rune_room(0, "waystone")
+    assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1, (
+        f"stage 1 waystone was kind={pb.memory[KIND]} locked={pb.memory[LOCKED]}")
+    assert_note_colors(pb, addrs, 3)
+    pb.stop(save=False)
+
+
 def rune_sequence_contract():
     rune_scale_source_contract()
     pb = load(2)
@@ -400,8 +558,7 @@ def rune_sequence_contract():
     put16(pb, ep + 7, 200)
     pb.memory[ep + 10] = pb.memory[ep + 11] = 0
     pb.memory[PL + 15] = 0
-    runes = [(x, y) for y in range(1, 16) for x in range(1, 19)
-             if pb.memory[TM + y * 20 + x] == 33]
+    runes = find_rune_plates(pb)
     assert len(runes) == 4, f"stage two needs four runes, got {runes}"
     assert max(x for x, _ in runes) - min(x for x, _ in runes) >= 12
     assert max(y for _, y in runes) - min(y for _, y in runes) >= 8
@@ -811,6 +968,7 @@ def sun_lattice_contract(stage, role="trial", gif=None):
 
 def main():
     push_seal_contract()
+    rune_color_contract()
     rune_sequence_contract()
     late_depth_puzzle_contract()
     opening_shop_is_not_a_puzzle()
@@ -820,7 +978,7 @@ def main():
     # Last: this archetype-harness entry already reaches kind 0 on main
     # (f022ab00), before any Sun Lattice change.
     wide_waystone_circuit_contract()
-    print("[puzzles] PASS populated Trial/Waystone + safe/audio-complete ordered "
+    print("[puzzles] PASS populated Trial/Waystone + distinct note colours + safe/audio-complete ordered "
           "runes + service exclusion + populated remote Aether Lattice/gate "
           "circuit + persistent gate crossing + Sun Lattice Stages 3-9")
 
