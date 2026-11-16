@@ -23,6 +23,7 @@
   const gamepadStatus = document.querySelector("#gamepad-status");
   const touchControls = document.querySelector(".touch-controls");
   const touchButtons = Array.from(document.querySelectorAll("[data-touch-input]"));
+  const swapAbButton = document.querySelector("#swap-ab");
   const saveSize = 32 * 1024;
   const handledKeys = new Set([
     "ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft",
@@ -43,6 +44,10 @@
   // Standard-mapping indices: 0/1 are the two lower face buttons (Nintendo
   // pads report A as 1, Xbox-style pads as 0) and 9 is Start/Plus.
   const launchGamepadButtons = [0, 1, 9];
+  const swapAbStorageKey = "quintra.swapAB";
+  const pageParams = readPageParams();
+  let swapAB = readSwapAB();
+  let padDebugElement = null;
   const touchPointers = new Map();
   const touchState = {
     UP: false, RIGHT: false, DOWN: false, LEFT: false,
@@ -96,6 +101,48 @@
   window.addEventListener("blur", clearTouchPointers);
   window.addEventListener("pagehide", clearTouchPointers);
 
+  function readPageParams() {
+    try {
+      const search = typeof location !== "undefined" && location ? location.search : "";
+      if (typeof URLSearchParams === "function") return new URLSearchParams(search || "");
+    } catch (error) { /* fall through */ }
+    return { get: () => null };
+  }
+
+  function storage() {
+    try {
+      return typeof localStorage !== "undefined" ? localStorage : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Manual A/B swap fallback: ?swapab=1 turns it on, ?swapab=0 off; either
+  // choice (and the toolbar toggle) persists in localStorage.
+  function readSwapAB() {
+    const store = storage();
+    const param = pageParams.get("swapab");
+    if (param === "1" || param === "0") {
+      try { if (store) store.setItem(swapAbStorageKey, param); } catch (error) { /* private mode */ }
+      return param === "1";
+    }
+    try { return !!store && store.getItem(swapAbStorageKey) === "1"; } catch (error) { return false; }
+  }
+
+  function setSwapAB(value) {
+    swapAB = !!value;
+    const store = storage();
+    try { if (store) store.setItem(swapAbStorageKey, swapAB ? "1" : "0"); } catch (error) { /* private mode */ }
+    refreshSwapAbButton();
+    gamepadStatusText = "";
+  }
+
+  function refreshSwapAbButton() {
+    if (!swapAbButton) return;
+    swapAbButton.setAttribute("aria-pressed", swapAB ? "true" : "false");
+    swapAbButton.textContent = swapAB ? "A/B swapped" : "Swap A/B";
+  }
+
   function getConnectedGamepads() {
     if (typeof navigator.getGamepads !== "function") return [];
     return Array.from(navigator.getGamepads()).filter(Boolean);
@@ -103,21 +150,43 @@
 
   function hasGamepadInput(gamepad) {
     if (gamepad.buttons.some(button => button.pressed || button.value > 0.5)) return true;
-    const directInput = isEightBitDoDirectInput(gamepad);
+    const hatAxis = usesHatAxis(gamepad);
     return gamepad.axes.some((axis, index) => {
-      if (directInput && index === 9) {
+      if (hatAxis && index === 9) {
         return Object.values(readHatSwitch(gamepad)).some(Boolean);
       }
       return Math.abs(axis) > 0.35;
     });
   }
 
+  // Nintendo pads (Switch Pro, Joy-Con, NSO pads) print A on the east face
+  // button and B on the south one. Every browser layout we know of reports
+  // south at index 0 and east at index 1: Chromium's "standard" mapping, the
+  // raw Bluetooth HID report (B, A, Y, X, ...) and Linux hid-nintendo's
+  // BTN_SOUTH/BTN_EAST order. So Nintendo pads read GB A from 1, B from 0.
+  function isNintendoPad(gamepad) {
+    return /057e|nintendo|pro controller|joy-?con/i.test(gamepad.id || "");
+  }
+
+  // Generic HID (non-standard) pads, including 8BitDo DirectInput and a
+  // Switch Pro seen as plain Bluetooth HID, report the D-pad as a hat on
+  // axis 9 instead of buttons 12-15.
+  function usesHatAxis(gamepad) {
+    return gamepad.mapping !== "standard" && typeof gamepad.axes[9] === "number";
+  }
+
+  function padLayoutLabel(gamepad) {
+    if (isEightBitDoDirectInput(gamepad) || isNintendoPad(gamepad)) return "Nintendo layout";
+    return "";
+  }
+
   function updateGamepadStatus(gamepad) {
     if (!gamepadStatus) return;
+    const layout = gamepad ? padLayoutLabel(gamepad) : "";
     const nextText = gamepad
       ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}${
-          isEightBitDoDirectInput(gamepad) ? " · Nintendo layout" : ""
-        }`
+          layout ? ` · ${layout}` : ""
+        }${swapAB ? " · A/B swapped" : ""}`
       : "Gamepad: not detected — press a button";
     if (nextText === gamepadStatusText) return;
     gamepadStatusText = nextText;
@@ -146,7 +215,8 @@
   }
 
   function readHatSwitch(gamepad) {
-    // 8BitDo's DirectInput modes commonly expose the D-pad as axis 9:
+    // Generic HID pads (8BitDo DirectInput, Switch Pro over plain Bluetooth
+    // HID) commonly expose the D-pad as axis 9:
     // -1.0 is up, then seven 2/7 steps clockwise. Neutral is outside
     // the normal [-1, 1] axis range (usually about 3.29).
     const value = gamepad.axes[9];
@@ -169,32 +239,97 @@
       typeof gamepad.axes[9] === "number";
   }
 
+  function readNintendoEvdevHat(gamepad) {
+    // Linux hid-nintendo exposes the Pro Controller D-pad as ABS_HAT0X/Y,
+    // which Chromium's non-standard mapping reports as axes 4 and 5.
+    const none = { UP: false, RIGHT: false, DOWN: false, LEFT: false };
+    if (gamepad.mapping === "standard" || !isNintendoPad(gamepad)) return none;
+    if (typeof gamepad.axes[9] === "number" || gamepad.axes.length !== 6) return none;
+    const x = gamepad.axes[4] || 0;
+    const y = gamepad.axes[5] || 0;
+    return { UP: y < -0.5, RIGHT: x > 0.5, DOWN: y > 0.5, LEFT: x < -0.5 };
+  }
+
+  function gamepadButtonLayout(gamepad) {
+    // 8BitDo DirectInput: Nintendo labels, Select/Start at 10/11.
+    if (isEightBitDoDirectInput(gamepad)) {
+      return { a: [1], b: [0], select: 10, start: 11 };
+    }
+    // Nintendo pads: A is east (1), B is south (0). In the standard
+    // mapping X (north, 3) and Y (west, 2) double as A and B by label.
+    if (isNintendoPad(gamepad)) {
+      return gamepad.mapping === "standard"
+        ? { a: [1, 3], b: [0, 2], select: 8, start: 9 }
+        : { a: [1], b: [0], select: 8, start: 9 };
+    }
+    // Everything else (Xbox, PlayStation, generic): positional, as WasmBoy
+    // always did: south/west -> GB A, east/north -> GB B.
+    return { a: [0, 2], b: [1, 3], select: 8, start: 9 };
+  }
+
   function readGamepadState(gamepad) {
     const horizontal = gamepad.axes[0] || 0;
     const vertical = gamepad.axes[1] || 0;
-    const hat = readHatSwitch(gamepad);
-    // Linux exposes the Pro 2's Nintendo-labelled face/menu buttons at these
-    // DirectInput indices. Preserve the standard browser mapping in XInput.
-    const eightBitDoDirectInput = isEightBitDoDirectInput(gamepad);
-    const aButton = eightBitDoDirectInput ? 1 : 0;
-    const bButton = eightBitDoDirectInput ? 0 : 1;
-    const selectButton = eightBitDoDirectInput ? 10 : 8;
-    const startButton = eightBitDoDirectInput ? 11 : 9;
+    const hat = usesHatAxis(gamepad)
+      ? readHatSwitch(gamepad)
+      : readNintendoEvdevHat(gamepad);
+    const layout = gamepadButtonLayout(gamepad);
+    const pressedA = layout.a.some(index => isPressed(gamepad, index));
+    const pressedB = layout.b.some(index => isPressed(gamepad, index));
     return {
       UP: isPressed(gamepad, 12) || vertical < -0.35 || hat.UP,
       RIGHT: isPressed(gamepad, 15) || horizontal > 0.35 || hat.RIGHT,
       DOWN: isPressed(gamepad, 13) || vertical > 0.35 || hat.DOWN,
       LEFT: isPressed(gamepad, 14) || horizontal < -0.35 || hat.LEFT,
-      A: isPressed(gamepad, aButton),
-      B: isPressed(gamepad, bButton),
-      SELECT: isPressed(gamepad, selectButton),
-      START: isPressed(gamepad, startButton)
+      A: swapAB ? pressedB : pressedA,
+      B: swapAB ? pressedA : pressedB,
+      SELECT: isPressed(gamepad, layout.select),
+      START: isPressed(gamepad, layout.start)
     };
+  }
+
+  function updatePadDebug(gamepad, mapped) {
+    if (pageParams.get("paddebug") !== "1") return;
+    if (!padDebugElement) {
+      if (typeof document.createElement !== "function" || !document.body) return;
+      padDebugElement = document.createElement("pre");
+      padDebugElement.id = "pad-debug";
+      padDebugElement.setAttribute("aria-live", "off");
+      padDebugElement.style.cssText = "position:fixed;left:4px;bottom:4px;z-index:9999;" +
+        "margin:0;padding:6px 8px;max-width:96vw;white-space:pre-wrap;" +
+        "font:12px/1.35 monospace;color:#0f0;background:rgba(0,0,0,.82);" +
+        "border:1px solid #0f0;pointer-events:none";
+      document.body.appendChild(padDebugElement);
+    }
+    const lines = getConnectedGamepads().map(pad => {
+      const pressed = pad.buttons
+        .map((button, index) => (button.pressed || button.value > 0.5) ? index : -1)
+        .filter(index => index >= 0);
+      const axes = pad.axes.map(axis => axis.toFixed(2)).join(" ");
+      return `#${pad.index}${gamepad && pad.index === gamepad.index ? "*" : ""} ` +
+        `id="${pad.id}" mapping="${pad.mapping || ""}" ` +
+        `layout=${padLayoutLabel(pad) || "positional"}\n` +
+        `  buttons=${pad.buttons.length} pressed=[${pressed.join(",")}] axes=[${axes}]`;
+    });
+    const gb = mapped
+      ? Object.keys(mapped).filter(input => mapped[input]).join(" ") || "-"
+      : "-";
+    padDebugElement.textContent =
+      `${lines.join("\n") || "no gamepads"}\nGB: ${gb}  swapAB=${swapAB ? 1 : 0}`;
   }
 
   function enableAnyConnectedGamepad() {
     const responsive = api && api.ResponsiveGamepad;
     if (!responsive || typeof responsive.getState !== "function") return;
+
+    // WasmBoy's built-in gamepad reader maps browser button 0 -> A and 1 -> B
+    // (plus 2/3 via its X/Y plugin) on gamepad 0, positionally, whatever the
+    // controller. OR-ing that with our own mapping made a Switch Pro's B
+    // (south, index 0) press GB A and its A press GB B. Silence it so only
+    // readGamepadState below decides what a pad's buttons mean.
+    if (responsive.Gamepad && typeof responsive.Gamepad.getState === "function") {
+      responsive.Gamepad.getState = () => ({});
+    }
 
     const getState = responsive.getState.bind(responsive);
     responsive.getState = () => {
@@ -203,12 +338,16 @@
         state[input] = state[input] || touchState[input];
       });
       const gamepad = selectGamepad();
-      if (!gamepad) return state;
+      if (!gamepad) {
+        updatePadDebug(null, null);
+        return state;
+      }
 
       const directState = readGamepadState(gamepad);
       Object.keys(directState).forEach(input => {
         state[input] = state[input] || directState[input];
       });
+      updatePadDebug(gamepad, directState);
       return state;
     };
   }
@@ -499,6 +638,14 @@
   if (soundBanner) soundBanner.addEventListener("click", () => { unlockAudio(); canvas.focus(); });
   window.addEventListener("focus", () => { if (started) unlockAudio(); });
   ensureGamepadPolling();
+
+  refreshSwapAbButton();
+  if (swapAbButton) {
+    swapAbButton.addEventListener("click", () => {
+      setSwapAB(!swapAB);
+      updateGamepadStatus(selectGamepad());
+    });
+  }
 
   window.addEventListener("gamepadconnected", event => {
     ensureGamepadPolling();

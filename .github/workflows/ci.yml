@@ -54,6 +54,19 @@ jobs:
           cargo build --release --locked -p quintra-procgen --bin sun-lattice-dump
           python3 scripts/test_sun_lattice_parity.py 3000
 
+  web:
+    name: Browser player gamepad mapping
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gamepad input checks
+        run: |
+          node --check web/itch/player.js
+          node tools/test_itch_gamepad.mjs web/itch/player.js
+          node tools/test_itch_gamepad_layouts.mjs web/itch/player.js
+
   rom:
     name: ROM build and cart smoke
     runs-on: ubuntu-24.04
