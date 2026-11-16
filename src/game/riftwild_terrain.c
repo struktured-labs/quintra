@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 #include "game/room.h"
+#include "game/riftwild_den.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
 
@@ -227,4 +228,5 @@ void riftwild_terrain_apply(u8 seed_low) BANKED {
         || run_state.world_screen == 21) carve_return_landing(base);
     if (RUN_RIFTWILD_IS_HOLLOW()) hollow_world_apply(base);
     carve_edge_mouths(terrain_edges(run_state.world_screen), base);
+    riftwild_den_stamp_field();   // hidden den clearing, after all terrain
 }
