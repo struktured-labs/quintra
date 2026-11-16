@@ -18,7 +18,8 @@
         <p class="status" id="status" role="status">Preparing cartridge…</p>
       </header>
 
-      <section class="screen-wrap" aria-label="Quintra game screen">
+      <div class="player-stage" id="player-stage">
+      <section class="screen-wrap" id="screen-wrap" aria-label="Quintra game screen">
         <canvas id="game" width="160" height="144" tabindex="0"></canvas>
         <button class="launch" id="launch" type="button" aria-busy="true" disabled>
           <strong>Preparing cartridge…</strong>
@@ -28,7 +29,9 @@
           🔇 Press any button or tap to enable sound
         </button>
       </section>
+      </div>
 
+      <div class="player-side">
       <section class="touch-controls" aria-label="Touch controls">
         <div class="touch-dpad" aria-label="Directional pad">
           <button class="touch-diagonal" type="button" data-touch-input="UP LEFT" aria-label="Up left"></button>
@@ -54,12 +57,14 @@
       <section class="toolbar" aria-label="Player controls">
         <button id="mute" type="button" aria-pressed="false">Mute</button>
         <button id="fullscreen" type="button">Fullscreen</button>
+        <button id="display-mode" type="button" title="Cycle display: fit, integer scale, stretch">Display: Fit</button>
         <button id="swap-ab" type="button" aria-pressed="false" title="Swap the gamepad A and B buttons">Swap A/B</button>
         <button id="export-save" type="button" disabled>Export save</button>
         <button id="import-save" type="button" disabled>Import save</button>
         <input id="save-file" type="file" accept=".sav,application/octet-stream" hidden>
       </section>
 
+      <div class="player-extras">
       <details>
         <summary>Controls</summary>
         <div class="controls-grid">
@@ -77,6 +82,8 @@
         <a href="licenses/THIRD-PARTY-NOTICES.md" target="_blank" rel="noreferrer">WasmBoy player</a>.
         Cartridge saves remain in this browser and can be exported as a 32 KiB <code>.sav</code> file.
       </footer>
+      </div>
+      </div>
     </main>
 
     <script src="emulator/wasmboy.js?v=__QUINTRA_WEB_VERSION__"></script>

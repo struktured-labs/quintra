@@ -24,6 +24,9 @@
   const touchControls = document.querySelector(".touch-controls");
   const touchButtons = Array.from(document.querySelectorAll("[data-touch-input]"));
   const swapAbButton = document.querySelector("#swap-ab");
+  const displayModeButton = document.querySelector("#display-mode");
+  const stage = document.querySelector("#player-stage");
+  const screenWrap = document.querySelector("#screen-wrap");
   const saveSize = 32 * 1024;
   const handledKeys = new Set([
     "ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft",
@@ -48,6 +51,15 @@
   const pageParams = readPageParams();
   let swapAB = readSwapAB();
   let padDebugElement = null;
+  let padDebugGamepad = null;
+  let padDebugMapped = null;
+  const displayModes = ["fit", "integer", "stretch"];
+  const displayModeLabels = { fit: "Fit", integer: "Integer", stretch: "Stretch" };
+  const displayStorageKey = "quintra.display";
+  let displayMode = readDisplayMode();
+  let displayLayoutHandle = 0;
+  let lastFit = { mode: "", scale: 0, width: 0, height: 0, stageWidth: 0, stageHeight: 0, layout: "" };
+  const viewportEvents = { resize: 0, orientationchange: 0, visualViewport: 0 };
   const touchPointers = new Map();
   const touchState = {
     UP: false, RIGHT: false, DOWN: false, LEFT: false,
@@ -141,6 +153,115 @@
     if (!swapAbButton) return;
     swapAbButton.setAttribute("aria-pressed", swapAB ? "true" : "false");
     swapAbButton.textContent = swapAB ? "A/B swapped" : "Swap A/B";
+  }
+
+  // Display mode: ?display=fit|integer|stretch, the toolbar button, or the
+  // stored choice; "fit" by default. Persisted in localStorage.
+  function readDisplayMode() {
+    const store = storage();
+    const param = pageParams.get("display");
+    if (displayModes.includes(param)) {
+      try { if (store) store.setItem(displayStorageKey, param); } catch (error) { /* private mode */ }
+      return param;
+    }
+    let stored = null;
+    try { stored = store ? store.getItem(displayStorageKey) : null; } catch (error) { stored = null; }
+    return displayModes.includes(stored) ? stored : "fit";
+  }
+
+  // Largest Game Boy screen (160x144, 10:9) for an area of availWidth x
+  // availHeight CSS px. fit: integer scale when it is at least 85% of the
+  // largest possible size (crisp pixels, little waste), else fractional.
+  // integer: always a whole-number scale (fractional only below 1x).
+  // stretch: fill the whole area, ignoring aspect.
+  function computeGameRect(availWidth, availHeight, mode) {
+    const width = Math.max(0, Math.floor(availWidth));
+    const height = Math.max(0, Math.floor(availHeight));
+    const maxScale = Math.min(width / 160, height / 144);
+    if (!(maxScale > 0)) return { width: 0, height: 0, scale: 0 };
+    if (mode === "stretch") return { width, height, scale: maxScale };
+    const whole = Math.floor(maxScale);
+    let scale = maxScale;
+    if (whole >= 1 && (mode === "integer" || whole / maxScale >= 0.85)) scale = whole;
+    return {
+      width: Math.min(width, Math.round(160 * scale)),
+      height: Math.min(height, Math.round(144 * scale)),
+      scale
+    };
+  }
+
+  function viewportSize() {
+    const viewport = typeof window.visualViewport === "object" ? window.visualViewport : null;
+    const width = viewport && viewport.width ? viewport.width : window.innerWidth;
+    const height = viewport && viewport.height ? viewport.height : window.innerHeight;
+    return { width: Math.floor(width || 0), height: Math.floor(height || 0) };
+  }
+
+  function setStyleVar(node, name, value) {
+    if (node && node.style && typeof node.style.setProperty === "function") {
+      node.style.setProperty(name, value);
+    }
+  }
+
+  function toggleClass(node, name, on) {
+    if (node && node.classList) node.classList.toggle(name, on);
+  }
+
+  function layoutDisplay() {
+    displayLayoutHandle = 0;
+    const root = document.documentElement;
+    const fullscreenActive = !!document.fullscreenElement;
+    toggleClass(root, "fit-layout", !fullscreenActive);
+    toggleClass(shell, "fit-layout", !fullscreenActive);
+    if (fullscreenActive) {
+      updateFullscreenLayout();
+      renderPadDebug();
+      return;
+    }
+    const viewport = viewportSize();
+    setStyleVar(shell, "--fit-viewport-height", `${viewport.height}px`);
+    const side = viewport.width >= 600 && viewport.width >= viewport.height * 1.15;
+    toggleClass(shell, "layout-side", side);
+    toggleClass(shell, "layout-stack", !side);
+    toggleClass(shell, "layout-short", !side && viewport.height < 560);
+    const stageWidth = stage ? stage.clientWidth : 0;
+    const stageHeight = stage ? stage.clientHeight : 0;
+    const rect = computeGameRect(stageWidth, stageHeight, displayMode);
+    if (screenWrap && rect.width > 0) {
+      // The wrap has a 2px border on each side; keep the canvas at the scale.
+      const border = displayMode === "stretch" ? 0 : 4;
+      const fitted = computeGameRect(Math.max(0, stageWidth - border), Math.max(0, stageHeight - border), displayMode);
+      setStyleVar(screenWrap, "--fit-game-width", `${fitted.width + border}px`);
+      setStyleVar(screenWrap, "--fit-game-height", `${fitted.height + border}px`);
+      lastFit = {
+        mode: displayMode, scale: fitted.scale, width: fitted.width, height: fitted.height,
+        stageWidth, stageHeight, layout: side ? "side" : "stack"
+      };
+    }
+    renderPadDebug();
+  }
+
+  function scheduleDisplayLayout() {
+    if (displayLayoutHandle) return;
+    if (typeof requestAnimationFrame !== "function") {
+      layoutDisplay();
+      return;
+    }
+    displayLayoutHandle = requestAnimationFrame(layoutDisplay);
+  }
+
+  function refreshDisplayModeButton() {
+    if (!displayModeButton) return;
+    displayModeButton.textContent = `Display: ${displayModeLabels[displayMode]}`;
+  }
+
+  function setDisplayMode(mode) {
+    if (!displayModes.includes(mode)) return;
+    displayMode = mode;
+    const store = storage();
+    try { if (store) store.setItem(displayStorageKey, mode); } catch (error) { /* private mode */ }
+    refreshDisplayModeButton();
+    scheduleDisplayLayout();
   }
 
   function getConnectedGamepads() {
@@ -290,6 +411,16 @@
 
   function updatePadDebug(gamepad, mapped) {
     if (pageParams.get("paddebug") !== "1") return;
+    padDebugGamepad = gamepad;
+    padDebugMapped = mapped;
+    renderPadDebug();
+  }
+
+  // ?paddebug=1: an on-screen probe for the car. Shows each gamepad's id,
+  // mapping and raw pressed indices, the mapped GB buttons, and the live
+  // viewport (window, visualViewport, DPR, screen) with the current fit.
+  function renderPadDebug() {
+    if (pageParams.get("paddebug") !== "1") return;
     if (!padDebugElement) {
       if (typeof document.createElement !== "function" || !document.body) return;
       padDebugElement = document.createElement("pre");
@@ -301,6 +432,8 @@
         "border:1px solid #0f0;pointer-events:none";
       document.body.appendChild(padDebugElement);
     }
+    const gamepad = padDebugGamepad;
+    const mapped = padDebugMapped;
     const lines = getConnectedGamepads().map(pad => {
       const pressed = pad.buttons
         .map((button, index) => (button.pressed || button.value > 0.5) ? index : -1)
@@ -314,8 +447,23 @@
     const gb = mapped
       ? Object.keys(mapped).filter(input => mapped[input]).join(" ") || "-"
       : "-";
+    const num = value => (typeof value === "number" ? Math.round(value * 100) / 100 : "?");
+    const vv = typeof window.visualViewport === "object" && window.visualViewport
+      ? window.visualViewport : null;
+    const scr = typeof screen === "object" && screen ? screen : (window.screen || null);
+    const viewportLine =
+      `inner=${num(window.innerWidth)}x${num(window.innerHeight)} ` +
+      `vv=${vv ? `${num(vv.width)}x${num(vv.height)}@${num(vv.scale)}` : "n/a"} ` +
+      `dpr=${num(window.devicePixelRatio)} ` +
+      `screen=${scr ? `${num(scr.width)}x${num(scr.height)}` : "?"}`;
+    const fitLine =
+      `display=${displayMode} layout=${document.fullscreenElement ? "fullscreen" : lastFit.layout || "?"} ` +
+      `stage=${lastFit.stageWidth}x${lastFit.stageHeight} game=${lastFit.width}x${lastFit.height} ` +
+      `scale=${num(lastFit.scale)} events: resize=${viewportEvents.resize} ` +
+      `orient=${viewportEvents.orientationchange} vv=${viewportEvents.visualViewport}`;
     padDebugElement.textContent =
-      `${lines.join("\n") || "no gamepads"}\nGB: ${gb}  swapAB=${swapAB ? 1 : 0}`;
+      `${lines.join("\n") || "no gamepads"}\nGB: ${gb}  swapAB=${swapAB ? 1 : 0}\n` +
+      `${viewportLine}\n${fitLine}`;
   }
 
   function enableAnyConnectedGamepad() {
@@ -620,11 +768,37 @@
   document.addEventListener("fullscreenchange", () => {
     if (started) unlockAudio();
     fullscreen.textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
-    requestAnimationFrame(updateFullscreenLayout);
+    scheduleDisplayLayout();
   });
   window.addEventListener("resize", () => {
-    if (document.fullscreenElement === shell) requestAnimationFrame(updateFullscreenLayout);
+    viewportEvents.resize += 1;
+    scheduleDisplayLayout();
   });
+  window.addEventListener("orientationchange", () => {
+    viewportEvents.orientationchange += 1;
+    scheduleDisplayLayout();
+  });
+  if (typeof window.visualViewport === "object" && window.visualViewport &&
+      typeof window.visualViewport.addEventListener === "function") {
+    ["resize", "scroll"].forEach(type => window.visualViewport.addEventListener(type, () => {
+      viewportEvents.visualViewport += 1;
+      scheduleDisplayLayout();
+    }));
+  }
+  if (typeof ResizeObserver === "function" && stage) {
+    new ResizeObserver(() => scheduleDisplayLayout()).observe(stage);
+  }
+  refreshDisplayModeButton();
+  if (displayModeButton) {
+    displayModeButton.addEventListener("click", () => {
+      setDisplayMode(displayModes[(displayModes.indexOf(displayMode) + 1) % displayModes.length]);
+    });
+  }
+  layoutDisplay();
+  if (pageParams.get("paddebug") === "1" && typeof setInterval === "function") {
+    setInterval(renderPadDebug, 250);
+  }
+  window.QuintraDisplay = { computeGameRect, layoutDisplay, get mode() { return displayMode; } };
 
   exportSave.addEventListener("click", exportCartridgeSave);
   importSave.addEventListener("click", () => saveFile.click());

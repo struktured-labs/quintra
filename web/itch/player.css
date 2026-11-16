@@ -345,3 +345,135 @@ a { color: #b9a9ff; }
   .touch-menu { gap: 4px; }
   .touch-menu button { padding-inline: 6px; }
 }
+
+/* Windowed fit layout (default when not fullscreen; issue: the Tesla
+ * browser window cut the game off). The player owns the whole viewport,
+ * the game stage takes whatever is left, and player.js sizes the 10:9
+ * screen inside it. No page scrollbars; extras scroll inside the panel. */
+html.fit-layout,
+html.fit-layout body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.fit-layout body {
+  display: block;
+  padding: 0;
+}
+
+.player.fit-layout {
+  width: 100%;
+  height: var(--fit-viewport-height, 100vh);
+  max-width: none;
+  padding: 8px;
+  border: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.player-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.player.fit-layout .player-stage {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.player.fit-layout .screen-wrap {
+  width: var(--fit-game-width, 160px);
+  height: var(--fit-game-height, 144px);
+  aspect-ratio: auto;
+}
+
+.player.fit-layout .player-side { min-height: 0; }
+.player.fit-layout .toolbar { margin: 8px 0; }
+.player.fit-layout .toolbar button { flex-basis: 100px; min-height: 34px; }
+
+/* Wide window: game on the left, controls in a scrolling side column. */
+.player.fit-layout.layout-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(240px, 26vw, 320px);
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: 10px;
+}
+
+.player.fit-layout.layout-side header {
+  grid-column: 2;
+  grid-row: 1;
+  flex-direction: column;
+  align-items: start;
+  gap: 4px;
+}
+
+.player.fit-layout.layout-side .status { text-align: left; }
+
+.player.fit-layout.layout-side .player-stage {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.player.fit-layout.layout-side .player-side {
+  grid-column: 2;
+  grid-row: 2;
+  overflow-y: auto;
+}
+
+/* Tall/narrow window: header, game, then controls; the help/footer area
+ * scrolls inside its own box instead of the page. */
+.player.fit-layout.layout-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.player.fit-layout.layout-stack header { margin-bottom: 6px; }
+.player.fit-layout.layout-stack .player-stage { flex: 1 1 0; }
+
+.player.fit-layout.layout-stack .player-side {
+  flex: 0 1 auto;
+  max-height: 60%;
+  overflow-y: auto;
+}
+
+.player.fit-layout.layout-stack .player-extras footer { display: none; }
+
+.player.fit-layout.layout-stack.layout-short header { display: none; }
+
+.player.fit-layout .touch-controls { padding-top: 8px; }
+
+.player:fullscreen .player-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Fill the sized wrap exactly (stretch included); the canvas' intrinsic
+ * 10:9 ratio must not override the wrap size. */
+.player.fit-layout .screen-wrap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Narrow side column: D-pad and A/B side by side, Select/Start below. */
+.player.fit-layout.layout-side .touch-controls {
+  grid-template-columns: auto auto;
+  grid-template-areas: "dpad actions" "menu menu";
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 6px 4px;
+}
+.player.fit-layout.layout-side .touch-dpad {
+  grid-area: dpad;
+  grid-template-columns: repeat(3, 36px);
+  grid-template-rows: repeat(3, 36px);
+}
+.player.fit-layout.layout-side .touch-dpad button { min-width: 36px; min-height: 36px; }
+.player.fit-layout.layout-side .touch-actions { grid-area: actions; gap: 8px; }
+.player.fit-layout.layout-side .touch-actions button { width: 46px; height: 46px; }
+.player.fit-layout.layout-side .touch-menu { grid-area: menu; }
