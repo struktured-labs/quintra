@@ -42,10 +42,10 @@ static u8 tool_count(u8 id) {
     return n;
 }
 
-// Opening the Pack while poisoned with an Antidote in hand points the TOOL
-// row at it, so the cure is one A press away.
+// Opening the Pack while poisoned, burning or bleeding with an Antidote in
+// hand points the TOOL row at it, so the cure is one A press away.
 void dungeon_tools_pack_focus(void) BANKED {
-    if (player_status_kind == QSTATUS_POISON
+    if (STATUS_PLAYER_DOT()
         && tool_count(ITEM_ID_ANTIDOTE)) selected_tool = TOOL_ANTIDOTE;
 }
 
@@ -86,8 +86,8 @@ u8 dungeon_tools_pack_input(u8 pressed) BANKED {
         return 1;
     }
     if (!(pressed & J_A)) return 0;
-    // An Antidote only spends itself on an actual Poison.
-    if (selected_tool == TOOL_ANTIDOTE && player_status_kind != QSTATUS_POISON) {
+    // An Antidote only spends itself on an actual Poison, Burn or Bleed.
+    if (selected_tool == TOOL_ANTIDOTE && !STATUS_PLAYER_DOT()) {
         sfx_play(SFX_HURT);
         return 1;
     }

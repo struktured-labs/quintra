@@ -156,7 +156,9 @@ def main():
         assert heart_color(pb) == HEART_RED, (
             f"white pulse stuck after leaving one heart: {heart_color(pb)}")
 
-        # Full gauge: stay put and say HPFULL.
+        # Full gauge: stay put and say HPFULL. Let the HEAL+1 card from the
+        # pulse heal above finish first (pickup cards hold 105 frames).
+        tick(pb, 110)
         pb.memory[PL + 2] = pb.memory[PL + 1]
         heart = spawn_heart(pb)
         pb.tick()
@@ -164,7 +166,7 @@ def main():
         assert pb.memory[PL + 2] == pb.memory[PL + 1]
         assert notice(pb) == HPFULL, f"full HP refusal was silent: {notice(pb)}"
         pb.memory[heart] = pb.memory[heart + 1] = 0
-        tick(pb, 50)
+        tick(pb, 110)
 
         # Short a heart, but Hunger blocks it and says so.
         pb.memory[PL + 2] = pb.memory[PL + 1] - 1

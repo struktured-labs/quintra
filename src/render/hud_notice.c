@@ -4,6 +4,8 @@
 #include <gb/cgb.h>
 
 #include "core/types.h"
+#include "game/curse.h"
+#include "game/player.h"
 #include "game/status.h"
 #include "render/hud.h"
 #include "render/palette.h"
@@ -12,6 +14,9 @@
 
 #define HUD_NOTICE_STATUS 0x80
 #define HUD_NOTICE_FRAMES 45
+// Pickup results (stat cards, item words, refusals) hold one extra second so
+// a champion mid-fight can actually read what the thing they touched did.
+#define HUD_NOTICE_PICKUP_FRAMES (HUD_NOTICE_FRAMES + 60)
 #define HUD_NOTICE_HUNGER 0x7F
 #define HUD_NOTICE_BOOMERANG 0x7E
 #define HUD_NOTICE_HOOKSHOT 0x7D
@@ -23,7 +28,7 @@
 #define HUD_NOTICE_STATMAX 0x77
 #define HUD_NOTICE_GUARD  0x76
 #define HUD_NOTICE_CURED 0x75
-#define HUD_NOTICE_QUEUE  4
+#define HUD_NOTICE_QUEUE  6
 
 u8 hud_notice_ticks;
 static u8 notice_kind;
@@ -46,7 +51,7 @@ static const u16 notice_violet[4] = {
     BGR555(0, 0, 0), BGR555(9, 5, 14), BGR555(18, 8, 24), BGR555(27, 15, 31)
 };
 
-static const u8 status_letters[6][16] = {
+static const u8 status_letters[7][16] = {
     { 0x3C,0x3C, 0x42,0x42, 0x40,0x40, 0x3C,0x3C,
       0x02,0x02, 0x42,0x42, 0x3C,0x3C, 0x00,0x00 }, // S
     { 0x3C,0x3C, 0x42,0x42, 0x40,0x40, 0x40,0x40,
@@ -59,12 +64,15 @@ static const u8 status_letters[6][16] = {
       0x42,0x42, 0x42,0x42, 0x3C,0x3C, 0x00,0x00 }, // U
     { 0x42,0x42, 0x42,0x42, 0x24,0x24, 0x18,0x18,
       0x24,0x24, 0x42,0x42, 0x42,0x42, 0x00,0x00 }, // X
+    { 0x00,0x00, 0x00,0x00, 0x00,0x00, 0x7E,0x7E,
+      0x00,0x00, 0x00,0x00, 0x00,0x00, 0x00,0x00 }, // -
 };
 
 void hud_notice_load_glyphs(void) BANKED {
     set_bkg_data(HUD_STATUS_S, 3, status_letters[0]);
     set_bkg_data(HUD_STATUS_B, 2, status_letters[3]);
     set_bkg_data(HUD_STATUS_X, 1, status_letters[5]);
+    set_bkg_data(HUD_STATUS_MINUS, 1, status_letters[6]);
 }
 
 static u8 status_word(u8 status, u8 *row) {
@@ -156,6 +164,30 @@ static u8 notice_palette(u8 kind, u8 amount) {
     return 5;
 }
 
+static u8 stat_word(u8 stat, u8 *row) {
+    switch (stat) {
+        case STAT_HP:
+            row[0]=BGT_AREA_H; row[1]=BGT_AREA_P; return 2;
+        case STAT_MP:
+            row[0]=BGT_AREA_M; row[1]=BGT_AREA_P; return 2;
+        case STAT_ATK:
+            row[0]=BGT_AREA_A; row[1]=BGT_AREA_T; row[2]=BGT_AREA_K; return 3;
+        case STAT_DEF:
+            row[0]=BGT_AREA_D; row[1]=BGT_AREA_E; row[2]=BGT_AREA_F; return 3;
+        case STAT_SPD:
+            row[0]=HUD_STATUS_S; row[1]=BGT_AREA_P; row[2]=BGT_AREA_D; return 3;
+        default:
+            row[0]=BGT_AREA_L; row[1]=HUD_STATUS_C; row[2]=BGT_AREA_K; return 3;
+    }
+}
+
+static u8 pal_code(u8 code) {
+    if (code == 0) { palette_bg_load(5, notice_gold); return 5; }
+    if (code == 1) { palette_bg_load(5, notice_violet); return 5; }
+    if (code == 2) { palette_bg_load(5, notice_green); return 5; }
+    return code;
+}
+
 static void draw_notice(u8 kind, u8 amount) {
     u8 row[6] = { HUD_BLANK, HUD_BLANK, HUD_BLANK,
         HUD_BLANK, HUD_BLANK, HUD_BLANK };
@@ -198,48 +230,59 @@ static void draw_notice(u8 kind, u8 amount) {
         }
     }
     else if (kind == HUD_NOTICE_STATMAX) {
-        switch (amount) {
-            case STAT_HP:
-                row[0]=BGT_AREA_H; row[1]=BGT_AREA_P; width=2; break;
-            case STAT_MP:
-                row[0]=BGT_AREA_M; row[1]=BGT_AREA_P; width=2; break;
-            case STAT_ATK:
-                row[0]=BGT_AREA_A; row[1]=BGT_AREA_T;
-                row[2]=BGT_AREA_K; width=3; break;
-            case STAT_DEF:
-                row[0]=BGT_AREA_D; row[1]=BGT_AREA_E;
-                row[2]=BGT_AREA_F; width=3; break;
-            case STAT_SPD:
-                row[0]=HUD_STATUS_S; row[1]=BGT_AREA_P;
-                row[2]=BGT_AREA_D; width=3; break;
-            default:
-                row[0]=BGT_AREA_L; row[1]=HUD_STATUS_C;
-                row[2]=BGT_AREA_K; width=3; break;
-        }
+        if (amount == STAT_HP) {
+            // Max HP reads as a gold heart container, not the red refill.
+            pal = pal_code(0);
+            row[0] = HUD_HEART_FULL; width = 1;
+        } else width = stat_word(amount, row);
         row[width++] = BGT_AREA_M;
         row[width++] = BGT_AREA_A;
         row[width++] = HUD_STATUS_X;
     }
+    else if (kind == HUD_NOTICE_WORD) {
+        pal = pal_code(hud_notice_word_fill(amount, row));
+        width = 6;
+        while (width && row[width - 1] == HUD_BLANK) width--;
+    }
+    else if (kind == HUD_NOTICE_NEED) {
+        row[0]=BGT_AREA_N; row[1]=BGT_AREA_E; row[2]=BGT_AREA_E; row[3]=BGT_AREA_D;
+        width = 4;
+        if (amount > 99) amount = 99;
+        if (amount >= 10) row[width++] = (u8)(HUD_DIGIT_0 + amount / 10);
+        row[width++] = (u8)(HUD_DIGIT_0 + amount % 10);
+        pal = 7;
+    }
+    else if (kind == HUD_NOTICE_COIN) {
+        row[0] = HUD_COIN; row[1] = HUD_STATUS_PLUS; width = 2;
+        if (amount > 99) amount = 99;
+        if (amount >= 10) row[width++] = (u8)(HUD_DIGIT_0 + amount / 10);
+        row[width++] = (u8)(HUD_DIGIT_0 + amount % 10);
+        pal = pal_code(0);
+    }
     else {
-        switch (kind) {
-            case STAT_HP:
-                row[0]=BGT_AREA_H; row[1]=BGT_AREA_P; width=2; break;
-            case STAT_MP:
-                row[0]=BGT_AREA_M; row[1]=BGT_AREA_P; width=2; break;
-            case STAT_ATK:
-                row[0]=BGT_AREA_A; row[1]=BGT_AREA_T;
-                row[2]=BGT_AREA_K; width=3; break;
-            case STAT_DEF:
-                row[0]=BGT_AREA_D; row[1]=BGT_AREA_E;
-                row[2]=BGT_AREA_F; width=3; break;
-            case STAT_SPD:
-                row[0]=HUD_STATUS_S; row[1]=BGT_AREA_P;
-                row[2]=BGT_AREA_D; width=3; break;
-            default:
-                row[0]=BGT_AREA_L; row[1]=HUD_STATUS_C;
-                row[2]=BGT_AREA_K; width=3; break;
+        u8 sign = HUD_STATUS_PLUS;
+        u8 stat = kind;
+        if (kind == HUD_NOTICE_HEAL || kind == HUD_NOTICE_MANA) {
+            row[0] = kind == HUD_NOTICE_HEAL ? BGT_AREA_H : BGT_AREA_M;
+            row[1] = kind == HUD_NOTICE_HEAL ? BGT_AREA_E : BGT_AREA_A;
+            row[2] = kind == HUD_NOTICE_HEAL ? BGT_AREA_A : BGT_AREA_N;
+            row[3] = kind == HUD_NOTICE_HEAL ? BGT_AREA_L : BGT_AREA_A;
+            width = 4;
+            pal = kind == HUD_NOTICE_HEAL ? 7 : 6;
+            stat = 0xFF;
+        } else if (kind == HUD_NOTICE_LOSS) {
+            stat = (u8)(amount >> 4);
+            amount &= 0x0F;
+            sign = HUD_STATUS_MINUS;
+            pal = 7;
         }
-        row[width++] = HUD_STATUS_PLUS;
+        if (stat == STAT_HP) {
+            // Item HP is permanent max HP: MAX(heart)+2 / MAX(heart)-2.
+            row[0]=BGT_AREA_M; row[1]=BGT_AREA_A; row[2]=HUD_STATUS_X;
+            row[3]=HUD_HEART_FULL; width = 4;
+            if (kind == STAT_HP) pal = pal_code(0);
+        } else if (stat != 0xFF) width = stat_word(stat, row);
+        row[width++] = sign;
         if (amount > 9) amount = 9;
         row[width++] = (u8)(HUD_DIGIT_0 + amount);
     }
@@ -257,7 +300,12 @@ static void draw_notice(u8 kind, u8 amount) {
 static void begin_notice(u8 kind, u8 amount) {
     notice_kind = kind;
     notice_amount = amount;
-    hud_notice_ticks = HUD_NOTICE_FRAMES;
+    // Real status ailments keep the short card; every pickup result,
+    // refusal, and curse holds HUD_NOTICE_PICKUP_FRAMES.
+    hud_notice_ticks = ((kind & HUD_NOTICE_STATUS)
+            && (u8)(kind & 0x7F) < QSTATUS_COUNT
+            && (u8)(kind & 0x7F) != QSTATUS_CURSE)
+        ? HUD_NOTICE_FRAMES : HUD_NOTICE_PICKUP_FRAMES;
     draw_notice(notice_kind, notice_amount);
 }
 
@@ -278,6 +326,17 @@ static u8 notice_already_queued(u8 kind) {
     return 0;
 }
 
+static u8 notice_pair_queued(u8 kind, u8 amount) {
+    u8 i, q;
+    if (hud_notice_ticks && notice_kind == kind && notice_amount == amount)
+        return 1;
+    for (i = 0; i < queue_count; ++i) {
+        q = (u8)((queue_head + i) % HUD_NOTICE_QUEUE);
+        if (queued_kind[q] == kind && queued_amount[q] == amount) return 1;
+    }
+    return 0;
+}
+
 static void queue_notice(u8 kind, u8 amount) {
     u8 tail;
     if (queue_count >= HUD_NOTICE_QUEUE) return;
@@ -287,8 +346,18 @@ static void queue_notice(u8 kind, u8 amount) {
     queue_count++;
 }
 
+static void show_pair(u8 kind, u8 amount) {
+    if (hud_notice_ticks) {
+        if (!notice_pair_queued(kind, amount)) queue_notice(kind, amount);
+        return;
+    }
+    begin_notice(kind, amount);
+}
+
 void hud_show_stat_gain(u8 stat, u8 amount) BANKED {
-    if (!amount) return;
+    // A boost that could not move its stat says so (SPDMAX) instead of
+    // silently dropping one line of a multi-stat relic.
+    if (!amount) { hud_show_stat_max(stat); return; }
     if (hud_notice_ticks) {
         queue_notice(stat, amount);
         return;
@@ -317,8 +386,11 @@ static void show_unique_notice(u8 kind) {
 }
 
 // Heart/shop refusals under Hunger spell out the rule: HUNGER, NOHEAL.
+// A short Curse status blocks healing too; name that instead of HUNGER.
 void hud_show_healing_blocked(void) BANKED {
-    show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HUNGER));
+    show_unique_notice(CURSE_PLAYER_HEALING_BLOCKED()
+        ? (u8)(HUD_NOTICE_STATUS | HUD_NOTICE_HUNGER)
+        : (u8)(HUD_NOTICE_STATUS | QSTATUS_CURSE));
     show_unique_notice((u8)(HUD_NOTICE_STATUS | HUD_NOTICE_NOHEAL));
 }
 
@@ -347,12 +419,11 @@ void hud_show_cache_guarded(void) BANKED {
 }
 
 void hud_show_stat_max(u8 stat) BANKED {
-    if (hud_notice_ticks) {
-        if (!notice_already_queued(HUD_NOTICE_STATMAX))
-            queue_notice(HUD_NOTICE_STATMAX, stat);
-        return;
-    }
-    begin_notice(HUD_NOTICE_STATMAX, stat);
+    show_pair(HUD_NOTICE_STATMAX, stat);
+}
+
+void hud_notice_pair(u8 kind, u8 amount) BANKED {
+    show_pair(kind, amount);
 }
 
 void hud_show_boomerang(void) BANKED {

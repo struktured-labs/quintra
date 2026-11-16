@@ -74,6 +74,7 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
         default:           entities[idx].sprite_tile = SPR_ITEM_POWER_STONE; break;
     }
     entities[idx].palette = (ware == WARE_ITEM || ware == WARE_FORGE
+            || ware == WARE_BIG
             || ware == WARE_PHOENIX || ware == WARE_DRUM) ? 0x05
         : (ware == WARE_SURGE || ware == WARE_RUNE
             || ware == WARE_CHART || ware == WARE_ASCEND

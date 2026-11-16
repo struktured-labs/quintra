@@ -1,4 +1,4 @@
-# Curses and Boons
+# Curses, Conditions and Boons
 
 A Wildcard is an optional pulsing orb. It can be a boon. It can be a curse. You touch it because you decided to. The Pack and the window will say which you received.
 
@@ -14,3 +14,17 @@ The Pack prints them as FRAIL, MISFORT, and DULL. Hunger has its own notice.
 Ward Charm stops a curse that comes from a monster. It does not stop you from touching a Wildcard. It converts the permanent pair into the short pair: Frail becomes Dull, Misfortune becomes Hunger. That is the difference between a curse you could not see and a curse you picked up with your eyes open.
 
 Boons are the other half of the same language. Surge, a raised shield, a temporary haste, an ascended beat: the window says BOOSTED, and Status lists them in green and gold. Do not spend a heal into Hunger. Do not open a boss door on Dull if the fight is a damage race. Six rooms is a long time when the rooms are cruel, and a short time if you are willing to clear side halls first.
+
+## Conditions
+
+A condition is shorter than a curse and you carry only one at a time: a new one replaces the old. The window names it when it lands, names it again every couple of seconds while it lasts, and says CURED when it ends. Your champion takes its color, and the Pack's Status page prints it.
+
+Three conditions drain hearts. None of them can kill you. They stop at your last half-heart; only a hit finishes a run.
+
+- Poison, green. Half a heart every two seconds for sixteen seconds: four hearts at most. Mire Spores, Bramble Sprites, and a rare enemy's touch.
+- Burn, red. Half a heart every second and a half for eight seconds: two and a half hearts at most. Cinder Maws and Cinder Kites.
+- Bleed, red. Half a heart for every two seconds you spend moving, for eight seconds: a hard sprint costs a heart and a half. Stand still and it costs nothing. Ropes and Facet Rams.
+
+The Antidote cures all three, from the Pack or on its own at the half-heart floor. The town healer and the Riftwell cure any condition.
+
+The rest cost you control, not hearts, and simply run out. Slow halves your step. Stop freezes you for two seconds. Blind darkens the room. Confuse turns the pad and changes the turn when you adapt. Mute stops your power. Brittle makes every hit one worse. Invert swaps your best stat with your worst. Easy halves every condition’s length.

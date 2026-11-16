@@ -23,13 +23,13 @@ The Aim page cycles only what is in the pack.
 
 ## Relics that change the body
 
-Iron Heart, maximum health +2. Speed Ring, speed +1 (speed stops at 12). Power Stone, attack +1. Tough Skin, defense +1. Lucky Coin, luck +2. Mana Gem, maximum magic +2. Ward Charm, defense +1 and luck +1, and it is a real ward: a curse from a monster is stopped, and a curse you accept from a Wildcard is softened. Swift Fang, speed +1 and attack +1. Hunter’s Eye, luck +3. Vampiric Sigil, attack +1 and maximum health +1, and a heal on every fifth kill.
+Iron Heart, maximum health +2; it is the gold heart, never the pale one. At the eight-heart limit it mends two health instead, or waits on the floor if you are already full. Speed Ring, speed +1 (speed stops at 12). Power Stone, attack +1. Tough Skin, defense +1. Lucky Coin, luck +2. Mana Gem, maximum magic +2. Ward Charm, defense +1 and luck +1, and it is a real ward: a curse from a monster is stopped, and a curse you accept from a Wildcard is softened. Swift Fang, speed +1 and attack +1. Hunter’s Eye, luck +3. Vampiric Sigil, attack +1 and maximum health +1, and a heal on every fifth kill.
 
 ## Tools and strange verbs
 
 Rift Bomb, Echo Chime, and Mirror Shard are single uses. The chime stills bullets and shows a secret and the nearby paths. The shard turns hostile shots back on whoever fired them.
 
-The Antidote is the green vial with the amber cross. It cures Poison. Mire Spores and Bramble Sprites carry it, so Toxic Mire, Shadow Keep and the Riftwild that leads to them are where you want one. You can hold three. Open the pack while poisoned and the TOOL row is already on it: press A. It will not waste itself on a healthy body. Poison can take your last half-heart, but not while you carry a vial: the Antidote breaks on its own and the window says CURED. Spores and Bramble drop one now and then, and while you are poisoned with none, any kill might.
+The Antidote is the green vial with the amber cross. It cures Poison, Burn and Bleed; the counter lists it as PSN BURN BLEED. Mire Spores and Bramble Sprites carry it, so Toxic Mire, Shadow Keep and the Riftwild that leads to them are where you want one. You can hold three. Open the pack while poisoned, burning or bleeding and the TOOL row is already on it: press A. It will not waste itself on a healthy body. None of the three can take your last half-heart, but sitting at half a heart is no place to stay: when a tick reaches that floor and you carry a vial, it breaks on its own and the window says CURED. Spores and Bramble drop one now and then, and while one of the three is on you and your pouch is empty, any kill might.
 
 Blast Seed makes the first impact of a shot bloom. Rift Lens makes every third primary attack a heavy beam. Both are found in Hollow Riftwild caches, not in an ordinary shop, and the cartridge tells you they belong to Hollow.
 

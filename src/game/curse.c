@@ -34,6 +34,7 @@ u8 curse_apply(u8 kind, u8 rooms, u8 monster_source) BANKED {
             fx_spawn(SPR_FX_IMPACT, 5, (i16)player.x + 4,
                 (i16)player.y + 2, 14);
             sfx_play_reward(SFX_REWARD_MAGIC);
+            hud_show_word(NW_WARDED);
             return 0;
         }
         if (kind == CURSE_FRAIL) kind = CURSE_DULL;
@@ -50,8 +51,7 @@ u8 curse_apply(u8 kind, u8 rooms, u8 monster_source) BANKED {
         (i16)player.y + 2, 18);
     room_shake(1, 6);
     sfx_play(SFX_WEAK);
-    if (kind & CURSE_HUNGER) hud_show_hunger_curse();
-    else hud_show_status(QSTATUS_CURSE);
+    hud_show_curse(kind);
     hud_redraw_depth();
     return 1;
 }
