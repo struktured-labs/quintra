@@ -26,6 +26,8 @@ local PK_ADDR = tonumber(os.getenv("QUINTRA_PUZZLE_KIND_ADDR") or "0") or 0
 local PLK_ADDR = tonumber(os.getenv("QUINTRA_PUZZLE_LOCK_ADDR") or "0") or 0
 local WW_ADDR = tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR") or "0") or 0
 local WH_ADDR = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
+local SX_ADDR = tonumber(os.getenv("QUINTRA_SOCKET_X_ADDR") or "0") or 0
+local SY_ADDR = tonumber(os.getenv("QUINTRA_SOCKET_Y_ADDR") or "0") or 0
 
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
@@ -425,39 +427,82 @@ local function record_warden_boon(cell)
     return true
 end
 
-local function solve_opening_push_seal()
-    if TM_ADDR == 0 or PL_ADDR == 0 or PLK_ADDR == 0 then return false end
-    if emu:read8(PLK_ADDR) == 0 then return true end
+local function find_cairn()
     for y = 1, 15 do
         for x = 1, 18 do
-            if emu:read8(TM_ADDR + y * 20 + x) == 25 then
-                -- Try every legal face. Seeded stage silhouettes can make a
-                -- particular direction a poor shove even though the cairn
-                -- itself remains solvable. Each attempt still uses the real
-                -- ten-frame player/block transaction; WRAM placement only
-                -- removes pathfinding from this cartridge smoke proof.
-                local attempts = {
-                    {KEY_RIGHT, x * 8 - 14, y * 8 - 8},
-                    {KEY_LEFT, (x + 2) * 8 - 2, y * 8 - 8},
-                    {KEY_DOWN, x * 8, y * 8 - 16},
-                    {KEY_UP, x * 8, (y + 2) * 8},
-                }
-                for _, attempt in ipairs(attempts) do
-                    emu:setKeys(0); tick(16)
-                    emu:write8(PL_ADDR + 9, math.max(0, attempt[2]))
+            if emu:read8(TM_ADDR + y * 20 + x) == 25 then return x, y end
+        end
+    end
+    return nil
+end
+
+-- One real shove: stand on the far side of the cairn and walk into it.
+local function shove_cairn(key)
+    local bx, by = find_cairn()
+    if not bx then return false end
+    local px, py
+    if key == KEY_RIGHT then px, py = bx * 8 - 20, by * 8 - 8
+    elseif key == KEY_LEFT then px, py = (bx + 2) * 8 + 4, by * 8 - 8
+    elseif key == KEY_DOWN then px, py = bx * 8, by * 8 - 20
+    else px, py = bx * 8, (by + 2) * 8 + 4 end
+    emu:setKeys(0); tick(4)
+    emu:write8(PL_ADDR + 9, math.max(0, px))
+    emu:write8(PL_ADDR + 10, 0)
+    emu:write8(PL_ADDR + 11, math.max(0, py))
+    emu:write8(PL_ADDR + 12, 0)
+    for _ = 1, 120 do
+        emu:setKeys(key)
+        emu:runFrame()
+        local nx, ny = find_cairn()
+        if nx ~= bx or ny ~= by or emu:read8(PLK_ADDR) == 0 then break end
+    end
+    emu:setKeys(0)
+    tick(30)  -- let the slide finish before the next setup
+    local nx, ny = find_cairn()
+    return nx ~= bx or ny ~= by
+end
+
+-- Push Seal: seat the cairn on its 2x2 gold socket with real shoves along
+-- the L route (horizontal leg, then vertical), as scripts/test_puzzles.py.
+local function solve_push_seal()
+    if TM_ADDR == 0 or PL_ADDR == 0 or PLK_ADDR == 0 then return false end
+    if emu:read8(PLK_ADDR) == 0 then return true end
+    if SX_ADDR == 0 or SY_ADDR == 0 then return false end
+    local sx, sy = emu:read8(SX_ADDR), emu:read8(SY_ADDR)
+    if sx == 0xFF then return false end
+    for _ = 1, 8 do
+        local bx = find_cairn()
+        if not bx or bx == sx then break end
+        if not shove_cairn(bx < sx and KEY_RIGHT or KEY_LEFT) then break end
+    end
+    for _ = 1, 8 do
+        if emu:read8(PLK_ADDR) == 0 then break end
+        local _, by = find_cairn()
+        if not by or by == sy then break end
+        if not shove_cairn(by < sy and KEY_DOWN or KEY_UP) then break end
+    end
+    tick(30)
+    return emu:read8(PLK_ADDR) == 0
+end
+
+-- Prism Toggle: this reachability smoke steps onto the gold seal (the
+-- melee-only solvability proof lives in quintra-procgen::prism_toggle and
+-- the live strike/seal contract in scripts/test_prism_toggle.py).
+local function solve_prism_toggle()
+    if emu:read8(PLK_ADDR) == 0 then return true end
+    for y = 1, 14 do
+        for x = 1, 17 do
+            local at = TM_ADDR + y * 20 + x
+            if emu:read8(at) == 20 and emu:read8(at + 1) == 20
+                and emu:read8(at + 20) == 20 and emu:read8(at + 21) == 20 then
+                for _ = 1, 30 do
+                    emu:write8(PL_ADDR + 9, x * 8)
                     emu:write8(PL_ADDR + 10, 0)
-                    emu:write8(PL_ADDR + 11, math.max(0, attempt[3]))
+                    emu:write8(PL_ADDR + 11, y * 8 - 4)
                     emu:write8(PL_ADDR + 12, 0)
-                    for _ = 1, 60 do
-                        if emu:read8(PLK_ADDR) == 0 then
-                            emu:setKeys(0); tick(4)
-                            return true
-                        end
-                        emu:setKeys(attempt[1])
-                        emu:runFrame()
-                    end
+                    emu:runFrame()
+                    if emu:read8(PLK_ADDR) == 0 then break end
                 end
-                emu:setKeys(0)
                 tick(4)
                 return emu:read8(PLK_ADDR) == 0
             end
@@ -469,25 +514,16 @@ end
 -- Local room seven is deliberately a second mechanical beat in every wider
 -- stage. Solve either authored vocabulary through ordinary champion contact
 -- so this smoke path proves the Waystone is obtainable, not just writable.
-local function solve_waystone()
+local function solve_room_puzzle()
     if TM_ADDR == 0 or PL_ADDR == 0 or PK_ADDR == 0 or PLK_ADDR == 0 then
         return false
     end
     local kind = emu:read8(PK_ADDR)
     if emu:read8(PLK_ADDR) == 0 then return true end
     if kind == 1 then
-        for y = 1, 15 do
-            for x = 1, 18 do
-                if emu:read8(TM_ADDR + y * 20 + x) == 25 then
-                    emu:write8(PL_ADDR + 9, math.max(0, x * 8 - 16))
-                    emu:write8(PL_ADDR + 10, 0)
-                    emu:write8(PL_ADDR + 11, math.max(0, y * 8 - 8))
-                    emu:write8(PL_ADDR + 12, 0)
-                    hold(KEY_RIGHT, 120)
-                    return emu:read8(PLK_ADDR) == 0
-                end
-            end
-        end
+        return solve_push_seal()
+    elseif kind == 6 then
+        return solve_prism_toggle()
     elseif kind == 2 then
         local runes = {}
         for y = 1, 15 do
@@ -603,7 +639,7 @@ local branch = emu:read8(RS_ADDR + 38) % 2 == 1
     and {{warden, "warden"}, {sigil, "sigil"}}
     or {{sigil, "sigil"}, {warden, "warden"}}
 
-navigate_to(trial); solve_opening_push_seal(); shot("04_room1")
+navigate_to(trial); solve_room_puzzle(); dismiss_reward_dialog(); shot("04_room1")
 for _, role in ipairs(branch) do
     navigate_to(role[1])
     if role[2] == "sigil" then
@@ -612,7 +648,7 @@ for _, role in ipairs(branch) do
         record_warden_boon(role[1])
     end
 end
-navigate_to(waystone); solve_waystone(); dismiss_reward_dialog()
+navigate_to(waystone); solve_room_puzzle(); dismiss_reward_dialog()
 shot("06_room5_branch")
 navigate_to(deep_warden); record_deep_warden_boon(deep_warden)
 shot("07_room9_threshold")
