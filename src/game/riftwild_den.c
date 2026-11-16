@@ -140,6 +140,11 @@ static u8 field_den(u8 field) {
     return 0xFF;
 }
 
+u8 riftwild_den_in_field(void) BANKED {
+    if (!run_state.world_mode || in_den()) return 0;
+    return field_den(run_state.world_screen) != 0xFF ? 1 : 0;
+}
+
 u8 riftwild_field_screen(void) BANKED {
     if (in_den()) return (u8)(run_state.world_return_screen & 0x3Fu);
     return run_state.world_screen;

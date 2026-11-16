@@ -96,6 +96,13 @@ def reach_riftwell(seed, bosses):
     put16(pb, PLAYER + 11, 120)
     tick(pb, 180)
     assert pb.memory[RS + 17] == 1, f"seed {seed}: did not enter the Riftwild"
+    # The walk to the Riftwell is fixture, not the subject: clear field 0's
+    # encounter and grant i-frames so a seeded enemy beside the east mouth
+    # cannot knock the hero back off the seam (set pieces move spawns).
+    ents = addr("_entities")
+    for slot in range(32):
+        pb.memory[ents + slot * 28] = pb.memory[ents + slot * 28 + 1] = 0
+    pb.memory[PLAYER + 15] = 120
     put16(pb, PLAYER + 9, 232)
     put16(pb, PLAYER + 11, 60)
     tick(pb, 90)

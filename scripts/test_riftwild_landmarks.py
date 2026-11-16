@@ -15,7 +15,6 @@ from quintra_topology import STAGE_BOSS_ROOM
 ROOM_W, ROOM_H = 20, 17
 WIDE_W, WIDE_H = 31, 31
 EXT_W, BOTTOM_H = WIDE_W - ROOM_W, WIDE_H - ROOM_H
-LANDMARKS = (96, 97, 98, 99)
 CLIMATE = (105, 106, 107, 108, 109, 110)
 WALKABLE = {1, 3, 8, *range(9, 21), 23, 24, *range(33, 37), 96,
             105, 106, 107}
@@ -128,29 +127,9 @@ def boot_world():
 
 def inspect_cell(pb, screen, seed_low, seen_families, biome_counts, shots):
     assert pb.memory[RS + 18] == screen
-    tiles = list(pb.memory[TM:TM + ROOM_W * ROOM_H])
-    counts = Counter(tile for tile in tiles if tile in LANDMARKS)
-    extension = list(pb.memory[
-        WORLD_EXT:WORLD_EXT + EXT_W * ROOM_H])
-    extension_counts = Counter(tile for tile in extension if tile in LANDMARKS)
-    bottom = list(pb.memory[
-        WORLD_BOTTOM:WORLD_BOTTOM + BOTTOM_H * WIDE_W])
-    bottom_counts = Counter(tile for tile in bottom if tile in LANDMARKS)
-    expected = LANDMARKS[(seed_low + screen) & 3]
-    assert counts[expected] >= 6, (
-        f"Riftwild cell {screen} expected landmark {expected}, got {counts}"
-    )
-    # Climate-scale lakes, oases, ridges, and wetland growth deliberately use
-    # the same outdoor vocabulary around the smaller landmark stamp. Preserve
-    # a recognizable core instead of requiring the old empty-field counts.
-    assert extension_counts[expected] >= 6, (
-        f"Riftwild far field {screen} expected landmark {expected}, "
-        f"got {extension_counts}"
-    )
-    assert bottom_counts[expected] >= 6, (
-        f"Riftwild south field {screen} expected landmark {expected}, "
-        f"got {bottom_counts}"
-    )
+    # The old four-part 2x2 landmark family is lifted on ordinary fields and
+    # replaced by a set piece (test_riftwild_setpiece.py). This contract keeps
+    # mouths, climates, and the camera bounds.
     assert (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
     wide = wide_tiles(pb)
     edges = field_edges(screen)
@@ -198,22 +177,64 @@ def inspect_cell(pb, screen, seed_low, seen_families, biome_counts, shots):
     assert (pb.memory[0xFF43], pb.memory[0xFF42]) == (
         ((pb.memory[ORIGIN_X] << 3) + 88) & 0xFF,
         ((pb.memory[ORIGIN_Y] << 3) + 112) & 0xFF)
-    seen_families[expected] += 1
     shots[screen] = pb.screen.image.copy()
+
+
+def stand_at_mouth(pb, x, y):
+    """Stand on a path mouth tile so climate jitter cannot park the hero
+    in a lake or tree just inside the authored edge coordinate."""
+    wide = wide_tiles(pb)
+    if x == 232:
+        cols, rows = (30, 29, 28), range(6, 12)
+    elif x == 0:
+        cols, rows = (0, 1, 2), range(6, 12)
+    elif y == 232:
+        cols, rows = range(7, 13), (30, 29, 28)
+    else:
+        cols, rows = range(7, 13), (0, 1, 2)
+    for prefer in (36, None):
+        for ty in rows:
+            for tx in cols:
+                tile = wide[ty][tx]
+                if tile == prefer or (prefer is None and tile in WALKABLE):
+                    if x == 232:
+                        return tx * 8 + 7, ty * 8 + 4
+                    if x == 0:
+                        return tx * 8, ty * 8 + 4
+                    if y == 232:
+                        return tx * 8 + 4, ty * 8 + 7
+                    return tx * 8 + 4, ty * 8
+
+    return x, y
 
 
 def cross_to(pb, target, x, y):
     for slot in range(32):
         base = EN + slot * 28
         pb.memory[base] = pb.memory[base + 1] = 0
-    put16(pb, PL + 9, x)
-    put16(pb, PL + 11, y)
+    stand_x, stand_y = stand_at_mouth(pb, x, y)
+    put16(pb, PL + 9, stand_x)
+    put16(pb, PL + 11, stand_y)
+    if x == 232:
+        hold = "right"
+    elif x == 0:
+        hold = "left"
+    elif y == 232:
+        hold = "down"
+    else:
+        hold = "up"
+    pb.button_press(hold)
     stable = 0
-    expected = LANDMARKS[(pb.memory[RS + 2] + target) & 3]
-    expected_camera_x = 88 if x == 0 else 0
-    expected_camera_y = 112 if y == 0 else 0
-    for _ in range(180):
+    held = True
+    player_x = player_y = 0
+    for _ in range(240):
+        # Keep incidental fire from killing the geography walk.
+        pb.memory[PL + 2] = pb.memory[PL + 1]
+        pb.memory[PL + 15] = 120
         pb.tick()
+        if held and pb.memory[RS + 18] == target:
+            pb.button_release(hold)
+            held = False
         tiles = pb.memory[TM:TM + ROOM_W * ROOM_H]
         player_x = pb.memory[PL + 9] | pb.memory[PL + 10] << 8
         player_y = pb.memory[PL + 11] | pb.memory[PL + 12] << 8
@@ -221,28 +242,31 @@ def cross_to(pb, target, x, y):
                               or (x == 0 and player_x > 200)
                               or (y == 232 and player_y < 24)
                               or (y == 0 and player_y > 200))
+        expected_x = ((pb.memory[ORIGIN_X] << 3) + pb.memory[CAMERA_X]) & 0xFF
+        expected_y = ((pb.memory[ORIGIN_Y] << 3) + pb.memory[CAMERA_Y]) & 0xFF
         ready = (pb.memory[RS + 17] == 1
                  and pb.memory[RS + 18] == target
                  and reciprocal_arrival
                  and pb.memory[0xFF40] & 0x02
-                 and pb.memory[0xFF43]
-                    == (((pb.memory[ORIGIN_X] << 3)
-                         + expected_camera_x) & 0xFF)
-                 and pb.memory[0xFF42]
-                    == (((pb.memory[ORIGIN_Y] << 3)
-                         + expected_camera_y) & 0xFF)
-                 and sum(tile == expected for tile in tiles) >= 6
+                 and (pb.memory[WORLD_W], pb.memory[WORLD_H]) == (248, 248)
+                 and (pb.memory[0xFF43], pb.memory[0xFF42]) == (expected_x, expected_y)
                  and not any(tile & 0x80 for tile in tiles))
         stable = stable + 1 if ready else 0
         if stable >= 10:
+            if held:
+                pb.button_release(hold)
             return
+    if held:
+        pb.button_release(hold)
     raise AssertionError(
         f"Riftwild seam did not settle at {target}: "
         f"cell={pb.memory[RS + 18]} screen={pb.memory[RS + 17]} "
         f"lcdc={pb.memory[0xFF40]:02x} scx={pb.memory[0xFF43]} "
         f"scy={pb.memory[0xFF42]} origin="
         f"{pb.memory[ORIGIN_X]},{pb.memory[ORIGIN_Y]} "
-        f"expected_camera={expected_camera_x},{expected_camera_y}"
+        f"cam={pb.memory[CAMERA_X]},{pb.memory[CAMERA_Y]} "
+        f"player={player_x},{player_y} world="
+        f"{pb.memory[WORLD_W]},{pb.memory[WORLD_H]}"
     )
 
 
@@ -268,7 +292,7 @@ def verify_broad_mire_thresholds():
 def main():
     pb = boot_world()
     seed_low = pb.memory[RS + 2]
-    family_counts = Counter()
+    family_counts = Counter()  # unused; kept so inspect_cell signature stays
     biome_counts = [Counter() for _ in range(6)]
     shots = {}
     try:
@@ -286,7 +310,6 @@ def main():
     finally:
         pb.stop(save=False)
 
-    assert family_counts == Counter({tile: 9 for tile in LANDMARKS}), family_counts
     # Six horizontal climate belts must remain mechanically and visually
     # distinct after landmark, gate, encounter, and reward orchestration.
     required = (
@@ -314,8 +337,8 @@ def main():
     out.parent.mkdir(exist_ok=True)
     sheet.save(out)
     print(
-        "[riftwild-landmarks] PASS 36 scrolling 248x248 fields, four-part "
-        "seed-rotated landmarks, six climates, broad outdoor thresholds"
+        "[riftwild-landmarks] PASS 36 scrolling 248x248 fields, "
+        "six climates, broad outdoor thresholds"
     )
 
 
