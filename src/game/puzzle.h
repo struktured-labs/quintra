@@ -75,8 +75,7 @@ extern u8 room_rune_pitch[5];
 #define RUNE_FLASH_TILE BGT_NOTE_FLASH
 #define RUNE_FLASH_PAL  BGPAL_DOOR
 
-#define RUNE_ATTR_AT(x, y, tile) \
-    ((tile) == BGT_NOTE_FLASH ? BGPAL_DOOR     : ((tile) >= BGT_NOTE_0 && (tile) <= BGT_NOTE_LIT_4)         ? RUNE_NOTE_PAL(RUNE_PITCH_FROM_TILE(tile))     : ((tile) == BGT_DOOR || (tile) == BGT_DOOR_LOCKED         || (tile) == BGT_CRYSTAL || (tile) == BGT_PORTAL) ? BGPAL_CRACK     : 0xFF)
+#define RUNE_ATTR_AT(x, y, tile) puzzle_rune_attr(tile)
 
 void puzzle_load_note_palettes(void) BANKED;
 void tiles_load_note_plates(void) BANKED;
@@ -86,6 +85,7 @@ void tick_rune_flash(void) BANKED;
 void rune_paint_all(void) BANKED;
 void voice_plate(u8 plate) BANKED;
 u8 puzzle_plate_is_lit(u8 plate) BANKED;
+u8 puzzle_rune_attr(u8 tile) BANKED;
 
 // Shared palette override for authored puzzle fixtures (Push Seal socket,
 // Prism Toggle chamber). 0xFF means "use the ordinary terrain palette".

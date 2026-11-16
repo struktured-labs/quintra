@@ -107,3 +107,13 @@ void voice_plate(u8 plate) BANKED {
     sfx_play_rune(room_rune_pitch[plate]);
     rune_start_flash(plate);
 }
+
+u8 puzzle_rune_attr(u8 tile) BANKED {
+    if (tile == BGT_NOTE_FLASH) return BGPAL_DOOR;
+    if (tile >= BGT_NOTE_0 && tile <= BGT_NOTE_LIT_4)
+        return RUNE_NOTE_PAL(RUNE_PITCH_FROM_TILE(tile));
+    if (tile == BGT_DOOR || tile == BGT_DOOR_LOCKED
+        || tile == BGT_CRYSTAL || tile == BGT_PORTAL)
+        return BGPAL_CRACK;
+    return 0xFF;
+}
