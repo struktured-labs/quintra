@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 18
 
 // Riftwild hidden dens ("dens"): three optional secrets per region, each with
 // one subtle field tell, one gate made from verbs that already exist, and a
@@ -185,8 +185,11 @@ static u8 world_get(u8 x, u8 y) {
     return room_world_bottom[y - ROOM_H][x];
 }
 
+// Only solid ground is cleared: walkable landmarks, flowers and paths that
+// already cross the approach stay exactly as the field generated them.
 static void carve(u8 x, u8 y, u8 floor) {
-    if (carve_ok(world_get(x, y))) world_set(x, y, floor);
+    u8 t = (u8)(world_get(x, y) & 0x7F);
+    if (!room_tile_walkable(t) && carve_ok(t)) world_set(x, y, floor);
 }
 
 void riftwild_den_stamp_field(void) BANKED {
@@ -197,12 +200,15 @@ void riftwild_den_stamp_field(void) BANKED {
     if (d == 0xFF) return;
     kind = den_kind[region()][d];
     floor = field_floor();
-    // An ordinary-looking clearing joined to the trail cross. The route to
-    // the clearing is always open; only the tell itself is gated.
+    // A walkable approach from the trail cross to the den. The route is
+    // always open; only the tell itself is gated.
     for (y = 10; y <= 22; ++y) { carve(9, y, floor); carve(10, y, floor); }
     for (x = 9; x <= 20; ++x) { carve(x, 21, floor); carve(x, 22, floor); }
-    for (y = 18; y <= 26; ++y)
-        for (x = 20; x <= 28; ++x) carve(x, y, floor);
+    // Climate features around the den (stone outcrops, lakes, reeds) stay;
+    // only the den's own 7x7 footprint is rewritten below.
+    if (kind == RIFT_DEN_CAIRN)
+        for (y = 19; y <= 25; ++y)
+            for (x = 21; x <= 27; ++x) carve(x, y, floor);
     stair = (den_found(d) || kind != RIFT_DEN_CAIRN) && den_manifest(d)
         ? BGT_PORTAL : BGT_WILD_STONE;
     if (kind == RIFT_DEN_CAIRN) {
