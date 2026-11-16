@@ -164,5 +164,7 @@ u8   pickup_try_phoenix_revive(void) BANKED;
 void shop_note_bought(u8 x) BANKED;
 // Name why a ware the champion can afford still stays on the counter.
 void shop_refuse_explain(u8 ware) BANKED;
+// Iron Heart at the max-HP cap mends 2 HP if hurt (bank 17, pickup_notice.c).
+u8   pickup_iron_heart_overflow(u8 item_idx) BANKED;
 
 #endif

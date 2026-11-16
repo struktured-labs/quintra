@@ -762,20 +762,6 @@ static void refuse_no_room(u8 i) {
     if (refuse_cue(i)) hud_show_word(NW_NOROOM);
 }
 
-// Iron Heart at the max-HP cap: still a heart, so if the champion is hurt
-// it mends two HP instead of sitting on the floor as a dead white heart.
-static u8 iron_heart_overflow(u8 item_idx) {
-    if (item_idx >= N_ITEMS || items[item_idx].id != ITEM_ID_IRON_HEART
-        || player.hp_max < HP_CAP || player.hp >= player.hp_max
-        || STATUS_PLAYER_HEALING_BLOCKED()) return 0;
-    player.hp = add_capped(player.hp, 2, player.hp_max);
-    hud_redraw_hp();
-    hud_show_stat_max(STAT_HP);
-    hud_show_heal(2);
-    sfx_play(SFX_HEART);
-    return 1;
-}
-
 static u8 refuse_capped_item(u8 i, u8 item_idx) {
     u8 capped = 0xFF;
     if (!item_stat_refuse(item_idx, &capped)) return 0;
@@ -862,7 +848,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     sfx_play(SFX_COIN);
                     break;
                 case PICKUP_ITEM:
-                    if (iron_heart_overflow(entities[i].ai_data[1])) break;
+                    if (pickup_iron_heart_overflow(entities[i].ai_data[1])) break;
                     if (refuse_capped_item(i, entities[i].ai_data[1])) {
                         any = 1;
                         continue;

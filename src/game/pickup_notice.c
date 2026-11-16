@@ -5,6 +5,7 @@
 
 #include <gb/gb.h>
 
+#include "audio/sfx.h"
 #include "core/types.h"
 #include "game/antidote.h"
 #include "game/pickup.h"
@@ -161,4 +162,21 @@ void shop_refuse_explain(u8 ware) BANKED {
         hud_show_stat_max(STAT_ATK); return;
     }
     hud_show_word(NW_NOROOM);   // full Pack or a full Antidote pouch
+}
+
+// Iron Heart at the max-HP cap: still a heart, so if the champion is hurt
+// it mends two HP instead of sitting on the floor as a dead white heart.
+// Lives here because the pickup bank (5) sits at its emergency floor.
+u8 pickup_iron_heart_overflow(u8 item_idx) BANKED {
+    u8 hp;
+    if (item_idx >= N_ITEMS || items[item_idx].id != ITEM_ID_IRON_HEART
+        || player.hp_max < HP_CAP || player.hp >= player.hp_max
+        || STATUS_PLAYER_HEALING_BLOCKED()) return 0;
+    hp = (u8)(player.hp + 2);
+    player.hp = hp > player.hp_max ? player.hp_max : hp;
+    hud_redraw_hp();
+    hud_show_stat_max(STAT_HP);
+    hud_show_heal(2);
+    sfx_play(SFX_HEART);
+    return 1;
 }
