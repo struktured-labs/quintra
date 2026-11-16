@@ -1,4 +1,6 @@
-#pragma bank 255
+#pragma bank 19
+// Pinned with law_lock_gen: after merging hidden dens, autobank first-fit
+// placed this in bank 17 and left only 198 bytes, under the 256-byte floor.
 // Prism Toggle: Oracle / Link's Awakening style crystal-switch chamber.
 // Spec: docs/superpowers/specs/2026-11-15-puzzle-variety-and-dungeon-wide-puzzles.md
 // (Section 3.2 and the "Batch 1 implementation" addendum).
