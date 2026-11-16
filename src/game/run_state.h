@@ -59,6 +59,10 @@ enum {
 #define RIFT_REGION_GUARD_1_BIT    0x04
 #define RIFT_REGION_GUARD_2_BIT    0x08
 #define RIFT_REGION_GUARD_3_BIT    0x10
+// Set when the champion actually enters the Riftwell field and meets the
+// wayside trader. ASK may reveal that cell without this bit; the Compass
+// must not show the gold coin until the visit itself.
+#define RIFT_REGION_TRADER_FOUND_BIT 0x40
 #define RIFT_REGION_READY_BIT      0x80
 #define RIFTWILD_WAKING 0
 #define RIFTWILD_HOLLOW 1
@@ -218,6 +222,8 @@ u8   run_state_was_cleared_boss(void);
 u8   run_state_is_sanctuary(void);
 u8   run_state_is_miniboss(void) BANKED;
 u8   run_state_is_shop(void);
+/* Local cell of this stage's dungeon merchant (size-3). 0xFF if none. */
+u8   run_state_dungeon_shop_cell(void);
 u8   run_state_room_is_town(u8 room_counter);
 u8   run_state_dungeon_cell_seen(u8 cell);
 u8   run_state_dungeon_cell_visited(u8 cell);

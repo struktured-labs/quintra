@@ -40,7 +40,8 @@ BGT_MAP_UNKNOWN = 95
 BGT_MAP_PATH_H_DIM = 100
 BGT_MAP_PATH_V_DIM = 101
 BGT_MAP_BIG_ROOM = 102
-BGT_MAP_BIG_UNKNOWN = 106
+BGT_MAP_BIG_SHOP = 106
+BGT_MAP_BIG_UNKNOWN = 106  # retired; shop reuses the slot
 BGT_MAP_BIG_HERE = 110
 BGT_MAP_BIG_GOAL = 114
 BGT_MAP_BIG_BOSS = 118
@@ -171,7 +172,11 @@ def main() -> None:
     cache = dungeon_cache_cell(dungeon_size(0), seed, 0)
     assert node_tile(pb, cache) == BGT_VOID, \
         f"Compass revealed unvisited cache cell {cache}"
-    assert sum(node_tile(pb, i) == BGT_MAP_BIG_UNKNOWN for i in range(20)) == 0, \
+    assert sum(node_tile(pb, i) == BGT_MAP_BIG_SHOP for i in range(20)) == 0, \
+        "Compass marked the merchant before that room was visited"
+    assert sum(node_tile(pb, i) not in (BGT_VOID, BGT_MAP_BIG_HERE, BGT_MAP_BIG_GOAL)
+               for i in range(20)
+               if i not in (0, graph0["trial"])) == 0, \
         "Compass still ghosts unvisited rooms"
     assert map_tile(pb, 19, 2) == HUD_DIGIT_0 + 1, \
         "Compass hid the depth band of the room you are standing in"
@@ -408,7 +413,7 @@ def main() -> None:
         "thirty-room Compass lost the final boss hint"
     assert map_tile(pb, 7, 0) == HUD_DIGIT_0 + 9, \
         "final Compass heading did not identify stage nine"
-    assert all(node_tile(pb, i) not in (BGT_VOID, BGT_MAP_BIG_UNKNOWN)
+    assert all(node_tile(pb, i) != BGT_VOID
                for i in range(30)), \
         "thirty-room Compass failed to render explored extra-byte cells"
     pb.screen.image.save(ROOT / "tmp" / "compass-thirty-room.png")

@@ -37,6 +37,11 @@ static const u16 map_pal_player[4] = {
 static const u16 map_pal_boss[4] = {
     BGR555(1,3,2), BGR555(14,3,1), BGR555(27,7,1), BGR555(31,20,4)
 };
+// Coin gold, distinct from lime HERE, violet SIGIL, cyan LOOT, and red BOSS.
+static const u16 map_pal_shop[4] = {
+    BGR555(1,3,2), BGR555(16,8,1), BGR555(28,20,2), BGR555(31,29,10)
+};
+#define BGPAL_SHOP 5
 
 static u8 map_attr(u8 tile) {
     if (tile == BGT_WALL || tile == BGT_PILLAR || tile == BGT_ROOF
@@ -51,6 +56,9 @@ static u8 map_attr(u8 tile) {
     if (tile == BGT_MAP_CACHE
         || (tile >= BGT_MAP_BIG_CACHE
             && tile < BGT_MAP_BIG_CACHE + 4)) return BGPAL_DOOR;
+    if (tile == BGT_MAP_SHOP
+        || (tile >= BGT_MAP_BIG_SHOP
+            && tile < BGT_MAP_BIG_SHOP + 4)) return BGPAL_SHOP;
     if (tile == BGT_MAP_HERE
         || (tile >= BGT_MAP_BIG_HERE
             && tile < BGT_MAP_BIG_HERE + 4)) return 7;
@@ -171,6 +179,13 @@ static void draw_dungeon_legend(void) {
     for (i = 0; i < 4; ++i) map_put((u8)(10 + i), 17, boss[i]);
     map_put(14, 17, BGT_MAP_CACHE);
     for (i = 0; i < 4; ++i) map_put((u8)(15 + i), 17, loot[i]);
+    // Row 16 sits below the deepest 2x2 nodes (y=14..15) and above the
+    // packed YOU/GOAL/BOSS/LOOT key. The gold coin is the found-shop mark.
+    map_put(0, 16, BGT_MAP_SHOP);
+    map_put(1, 16, BGT_MAP_LABEL_S);
+    map_put(2, 16, BGT_MAP_LABEL_H);
+    map_put(3, 16, BGT_MAP_LABEL_O);
+    map_put(4, 16, BGT_MAP_LABEL_P);
 }
 
 static void draw_world_grid(void) {
@@ -191,7 +206,8 @@ static void draw_world_grid(void) {
             // scale without returning to tiny terrain screenshots or text.
             if (cell == run_state.world_screen) icon = BGT_MAP_HERE;
             else if (cell == RIFTWELL_WORLD_SCREEN)
-                icon = BGT_MAP_RIFT;
+                icon = (run_state.riftwild_flags & RIFT_REGION_TRADER_FOUND_BIT)
+                    ? BGT_MAP_SHOP : BGT_MAP_RIFT;
             else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE)
                 icon = (cell == active_gate) ? BGT_PORTAL : BGT_MAP_ROOM;
             else if (z->kind == ZELDA_CELL_VAULT)
@@ -245,6 +261,11 @@ static void draw_world_legend(void) {
     for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 8, rift[i]);
     map_put(13, 11, BGT_MAP_BOSS);
     for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 11, boss[i]);
+    map_put(13, 14, BGT_MAP_SHOP);
+    map_put(14, 14, BGT_MAP_LABEL_S);
+    map_put(15, 14, BGT_MAP_LABEL_H);
+    map_put(16, 14, BGT_MAP_LABEL_O);
+    map_put(17, 14, BGT_MAP_LABEL_P);
 }
 
 static void draw_dungeon_grid(void) {
@@ -285,6 +306,7 @@ static void draw_dungeon_grid(void) {
     u8 cache_cell = run_state_dungeon_cache_cell();
     u8 cache_done = (run_state.dungeon_phase
         & RUN_FARFOLD_CACHE_BIT) ? 1 : 0;
+    u8 shop_cell = run_state_dungeon_shop_cell();
     for (i = 0; i < size; ++i) {
         u8 seen = run_state_dungeon_cell_seen(i);
         // The boss node appears once you are in the room that holds its
@@ -303,6 +325,12 @@ static void draw_dungeon_grid(void) {
         // The cache appears only after that room is visited or charted.
         if (seen && i == cache_cell && !cache_done && i != here)
             icon = BGT_MAP_BIG_CACHE;
+        // Merchants stay hidden until the room is actually entered. A Chart
+        // can mark the cell as seen, but the gold coin requires a visit.
+        // HERE still wins while the champion stands in the shop.
+        if (i == shop_cell && i != here
+            && run_state_dungeon_cell_visited(i))
+            icon = BGT_MAP_BIG_SHOP;
         map_big_node(gx[i], gy[i], icon);
     }
     // Depth numbers appear only for rows that contain a room you have
@@ -402,7 +430,13 @@ static void draw_town_grid(void) {
     if (plaza > TOWN_QUARTER) plaza = TOWN_ARRIVAL;
     here = plaza_node[plaza];
     for (i = 0; i < 3; ++i) {
-        map_room_box(tx[i], ty[i], i == here ? BGT_MAP_HERE : icon[i]);
+        {
+            u8 center = icon[i];
+            // Visual order is quarter, arrival, market. The market is already
+            // labelled; the gold coin is the same found-shop mark as dungeons.
+            if (i == 2) center = BGT_MAP_SHOP;
+            map_room_box(tx[i], ty[i], i == here ? BGT_MAP_HERE : center);
+        }
     }
     // East/west civic lanes and the north route back into the next dungeon.
     for (i = 0; i < 3; ++i) {
@@ -435,6 +469,7 @@ void map_enter(void) {
     palette_bg_load(BGPAL_CRYSTAL, map_pal_sigil);
     palette_bg_load(BGPAL_DOOR, map_pal_landmark);
     palette_bg_load(BGPAL_CRACK, map_pal_boss);
+    palette_bg_load(BGPAL_SHOP, map_pal_shop);
     palette_bg_load(7, map_pal_player);
     if (run_state.world_mode) {
         // The area alphabet supplies G/A/E for GATE, then the Compass atlas
