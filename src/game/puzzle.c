@@ -14,7 +14,6 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/sun_lattice.h"
-#include "render/palette.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 
@@ -44,13 +43,7 @@ u8 room_rune_count;
 u8 room_rune_x[5];
 u8 room_rune_y[5];
 u8 room_rune_pitch[5];
-
-u8 puzzle_plate_is_lit(u8 plate) BANKED {
-    u8 i;
-    for (i = 0; i < rune_progress; ++i)
-        if (rune_order[i] == plate) return 1;
-    return 0;
-}
+u8 room_rune_lit_mask;
 
 static u8 phase_switch_state;
 
@@ -254,15 +247,14 @@ static void prepare_sequence(u32 seed) {
         }
     }
     rune_progress = 0;
+    room_rune_lit_mask = 0;
     rune_cancel_flash();
     room_rune_count = rune_count;
     for (i = 0; i < rune_count; ++i) {
         room_rune_x[i] = rune_x[i];
         room_rune_y[i] = rune_y[i];
-        room_rune_pitch[i] = 0;
-    }
-    for (i = 0; i < rune_count; ++i)
         room_rune_pitch[rune_order[i]] = rune_pitch(i);
+    }
     for (i = 0; i < rune_count; ++i)
         room_tilemap[rune_y[i]][rune_x[i]] = RUNE_IDLE_TILE(room_rune_pitch[i]);
     room_puzzle_locked = 1;
@@ -353,6 +345,7 @@ void puzzle_prepare_room(void) BANKED {
     room_hidden_secret_bit = 0;
     room_socket_x = room_socket_y = 0xFF;
     room_rune_count = 0;
+    room_rune_lit_mask = 0;
     rune_cancel_flash();
     puzzle_contact = 0;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
@@ -536,6 +529,7 @@ u8 puzzle_chime_reveal(void) BANKED {
 
 static void reset_runes(void) {
     rune_progress = 0;
+    room_rune_lit_mask = 0;
     rune_paint_all();
 }
 
@@ -581,6 +575,7 @@ static u8 update_sequence(u8 tx, u8 ty) {
         return 0;
     }
     rune_progress++;
+    room_rune_lit_mask |= (u8)(1u << touched);
     voice_plate(touched);
     if (rune_progress < rune_count) return 0;
     // The room unlocks now. Only the fanfare waits, so the last note is heard.

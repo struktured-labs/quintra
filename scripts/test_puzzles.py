@@ -507,6 +507,12 @@ def rune_color_contract():
     """Each distinct pitch uses a distinct, stable CGB colour, even with sound off."""
     rune_scale_source_contract()
     from make_stage_states import symbol_addresses
+    # All five authored pitch colours stay unique even when a live room only
+    # uses three or four plates (Stages 3+ no longer assign rune phrases).
+    assert len(set(zip(RUNE_IDLE_TILE, RUNE_NOTE_PAL))) == 5
+    fills = (RUNE_PAL_LOW[2:4], RUNE_PAL_LOW[4:6], RUNE_PAL_LOW[6:8],
+             RUNE_PAL_HIGH[2:4], RUNE_PAL_HIGH[4:6])
+    assert len(set(fills)) == 5, f"packed pitch colours collided: {fills}"
 
     # Stage 2 Trial is a four-note phrase (load() path, same seed).
     pb = load(2)

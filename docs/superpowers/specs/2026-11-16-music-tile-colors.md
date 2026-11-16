@@ -47,7 +47,10 @@ palettes return on the next room load.
 
 ## Evidence
 
-`scripts/test_puzzles.py` asserts that every visible plate in a 3-, 4-,
-and 5-note room uses a distinct pitch colour from this map, and that a
-voiced plate flashes then restores. Existing rune audio and solve
-contracts remain.
+`scripts/test_puzzles.py` asserts that every visible plate in a live
+3-note (Stage 1) and 4-note (Stage 2) room uses a distinct pitch colour
+from this map, that all five packed pitch colours stay unique, and that
+a voiced plate flashes then restores. Existing rune audio and solve
+contracts remain. Five-note layouts are still authored in
+`prepare_sequence` for Ember and later, but Stages 3+ currently assign
+Sun Lattice or Prism Toggle instead of a rune phrase.

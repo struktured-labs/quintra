@@ -63,6 +63,7 @@ extern u8 room_rune_count;
 extern u8 room_rune_x[5];
 extern u8 room_rune_y[5];
 extern u8 room_rune_pitch[5];
+extern u8 room_rune_lit_mask;
 
 // Pitch 0..2 pack into BGPAL_CRYSTAL (colour indices 1..3); pitches 3..4
 // pack into BGPAL_DOOR (indices 1..2). Colour 3 of the door palette is
@@ -84,8 +85,8 @@ void rune_start_flash(u8 plate) BANKED;
 void tick_rune_flash(void) BANKED;
 void rune_paint_all(void) BANKED;
 void voice_plate(u8 plate) BANKED;
-u8 puzzle_plate_is_lit(u8 plate) BANKED;
 u8 puzzle_rune_attr(u8 tile) BANKED;
+#define puzzle_plate_is_lit(plate) ((u8)(room_rune_lit_mask & (u8)(1u << (plate))))
 
 // Shared palette override for authored puzzle fixtures (Push Seal socket,
 // Prism Toggle chamber). 0xFF means "use the ordinary terrain palette".

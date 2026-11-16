@@ -61,6 +61,7 @@ void tiles_load_note_plates(void) BANKED {
 }
 
 void puzzle_load_note_palettes(void) BANKED {
+    tiles_load_note_plates();
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_rune_count) {
         palette_bg_load(BGPAL_CRYSTAL, rune_pal_low);
         palette_bg_load(BGPAL_DOOR, rune_pal_high);

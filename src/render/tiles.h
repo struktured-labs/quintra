@@ -196,7 +196,7 @@
 #define BGT_WILD_REEDS    110 // solid wetland growth
 
 // Rune-sequence pitch plates. SELECT overwrites 110..121 with Compass
-// node art; tiles_load_dungeon_bg restores these when play resumes.
+// node art; puzzle_load_note_palettes restores these when play resumes.
 // Each pitch owns a unique idle and lit tile id so render attrs can be
 // derived from the tile itself without a per-coordinate lookup.
 #define BGT_NOTE_0      111  // fill colour 1, packed in BGPAL_CRYSTAL
