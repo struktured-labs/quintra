@@ -477,8 +477,13 @@ def rune_scale_source_contract():
         f"rune degrees are not a rising scale: {notes}"
     assert "rune_count - 1 - order_rank" in puzzle, \
         "seeded descending traversal disappeared"
-    assert "sfx_play_rune(rune_pitch(i));" in puzzle, \
+    assert "room_rune_pitch[rune_order[i]] = rune_pitch(i);" in puzzle, \
         "physical rune pitches are no longer stable by order rank"
+    notes_c = (ROOT / "src/game/rune_notes.c").read_text()
+    assert "sfx_play_rune(room_rune_pitch[plate]);" in notes_c, \
+        "voiced plates no longer play their bound pitch"
+    assert puzzle.count("voice_plate(touched);") >= 3, \
+        "walk/wrong/revisit paths no longer voice the touched plate"
     rune = sfx.split("void sfx_play_rune", 1)[1].split("void sfx_tick", 1)[0]
     assert "ch1(0x00, 0x80, 0xF3, notes[step])" in rune, \
         "rune envelope is no longer volume 15 / decay period 3"
