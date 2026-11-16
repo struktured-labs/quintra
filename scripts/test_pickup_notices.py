@@ -166,6 +166,22 @@ def main():
         assert m[TICKS] == 0 and hud_text(pb) != text("ATK+1")
         wait_quiet(pb)
 
+        # Regression (Stage 1 white heart): a refused floor relic must keep
+        # explaining itself on every touch, not once per lifetime.
+        prep(pb, hpmax=16, hp=16)
+        ep = spawn_on_player(pb, PICKUP_ITEM, 10)
+        first = record(pb)
+        assert first[:1] == [text("hMAX")], first
+        px = m[PL + 9] | (m[PL + 10] << 8)
+        put32(pb, ep + 2, (px + 40) << 8)        # step away
+        for _ in range(10):
+            pb.tick()
+        put32(pb, ep + 2, px << 8)               # and touch it again
+        again = record(pb)
+        assert again[:1] == [text("hMAX")], f"second touch was silent: {again}"
+        assert alive(pb)
+        clear_entities(pb)
+
         I = PICKUP_ITEM
         rows += [
             case(pb, "Iron Heart", ["MAXh+2"], I, 10,

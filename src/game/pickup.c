@@ -462,10 +462,15 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
     // ai_data[4] is a rejection-cue cooldown: cleared when the champion
     // steps away, otherwise counted down so standing on a blocked heart
     // re-fires the HUNGER notice at most once every ~1.5 s.
+    // Floor relics and vials share the latch: a capped Iron Heart used to
+    // say HPMAX once, then refuse silently forever because nothing re-armed
+    // its ai_data[4] (the Stage 1 "white heart I can't pick up").
     if (e->ai_data[0] == PICKUP_HEART_HALF
         || e->ai_data[0] == PICKUP_MP
         || e->ai_data[0] == PICKUP_COIN_1
-        || e->ai_data[0] == PICKUP_COIN_5) {
+        || e->ai_data[0] == PICKUP_COIN_5
+        || e->ai_data[0] == PICKUP_ITEM
+        || e->ai_data[0] == PICKUP_ANTIDOTE) {
         if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
         else if (e->ai_data[4]) e->ai_data[4]--;
     }
