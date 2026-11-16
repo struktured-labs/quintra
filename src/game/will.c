@@ -5,6 +5,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/picsean_vortex.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
@@ -204,33 +205,14 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
             if (first == 0xFF) first = shot;
             if (shot != 0xFF) entities[shot].hp = 4;
         }
-    // BubbleBolt — Moon Tide. A five-lane forward ice breaker: the broad,
-    // piercing center carries the damage while widening side currents fill
-    // the forward half-plane. Protection belongs to B's Undertow, so MAX is
-    // now an offensive positioning commitment rather than a second shield.
+    // BubbleBolt — Tide Vortex. Four spiral arms spin out from Picsean and
+    // grow until the front has swept the whole visible room, hitting every
+    // body it passes and washing out hostile shots (2026-11-15 spec).
     } else if (weapon_index == classes[3].starter_weapon) {
-        first = max_spawn(dir8_dx[dir], dir8_dy[dir],
-            (u8)(damage + 4), PROJ_BUBBLE);
-        if (first != 0xFF) {
-            entities[first].hp = 6;
-            entities[first].hitbox = 0xBB;
-        }
-        shot = max_spawn(dir8_dx[(u8)((dir + 1) & 7)],
-            dir8_dy[(u8)((dir + 1) & 7)],
-            (u8)(damage + 3), PROJ_BUBBLE);
-        if (shot != 0xFF) { entities[shot].hp = 4; entities[shot].hitbox = 0x99; }
-        shot = max_spawn(dir8_dx[(u8)((dir + 7) & 7)],
-            dir8_dy[(u8)((dir + 7) & 7)],
-            (u8)(damage + 3), PROJ_BUBBLE);
-        if (shot != 0xFF) { entities[shot].hp = 4; entities[shot].hitbox = 0x99; }
-        shot = max_spawn(dir8_dx[(u8)((dir + 2) & 7)],
-            dir8_dy[(u8)((dir + 2) & 7)],
-            (u8)(damage + 2), PROJ_BUBBLE);
-        if (shot != 0xFF) { entities[shot].hp = 3; entities[shot].hitbox = 0x88; }
-        shot = max_spawn(dir8_dx[(u8)((dir + 6) & 7)],
-            dir8_dy[(u8)((dir + 6) & 7)],
-            (u8)(damage + 2), PROJ_BUBBLE);
-        if (shot != 0xFF) { entities[shot].hp = 3; entities[shot].hitbox = 0x88; }
+        picsean_vortex_begin(damage);
+        room_shake(2, 12);
+        sfx_play(SFX_ROAR);
+        return 1;
     // Stinger — Queen's Needle. A fast central venom lance with two biting
     // side-lines: visually and tactically unlike Sauran's single heavy lane.
     } else if (weapon_index == classes[4].starter_weapon) {

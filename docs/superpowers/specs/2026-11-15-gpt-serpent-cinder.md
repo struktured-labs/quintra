@@ -45,7 +45,7 @@ Fairness:
 
 Exceptions: Rift Bombs and splash bursts are area damage, so the tail
 ignores them. The hookshot is a tool. Max-Will signatures (Howl, Moonfang
-wave) and Spirit Convergence chords cut through the plates and still respect
+wave, Tide Vortex) and Spirit Convergence chords cut through the plates and still respect
 the existing boss caps.
 
 Code: `src/game/serpent_shield.c` (pinned to bank 17), one check in
@@ -57,7 +57,7 @@ Code: `src/game/serpent_shield.c` (pinned to bank 17), one check in
 - `[layout] OK`: bank 3 has 303 B free and bank 8 has 439 B. Every bank is
   above the floor.
 - New `scripts/test_serpent_tail_shield.py` covers a shot blocked by plates,
-  a blade deflected, hood damage while shielded, a Convergence chord passing
+  a blade deflected, hood damage while shielded, a Convergence chord and a Tide Vortex carrier passing
   and the slack window passing. It also checks the plated, flash and slack
   palettes.
 - Existing boss tests give the same results as merged main.

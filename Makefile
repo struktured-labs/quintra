@@ -180,6 +180,8 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_speed_cap.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_will_tiers.py
+	$(PYBOY_RUN) scripts/test_picsean_tide_vortex.py
+	$(PYBOY_RUN) scripts/test_serpent_tail_shield.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
@@ -218,6 +220,7 @@ verify: all check-balance-bot
 	python3 scripts/test_playtest_report.py
 	$(PYBOY_RUN) scripts/test_stage_states.py
 	$(PYBOY_RUN) scripts/test_sram_compat.py
+	$(PYBOY_RUN) scripts/test_sram_garbage_boot.py
 	python3 scripts/make_mgba_states.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
 		--mgba "$(MGBA_BIN)" --difficulty easy

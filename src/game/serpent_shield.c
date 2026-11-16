@@ -63,11 +63,12 @@ u8 serpent_tail_blocks(entity_t *shot) BANKED {
     if (h->type != ENT_ENEMY || !(h->flags & EF_ACTIVE) || h->state == 2)
         return 0;
     // Bombs and splash bursts are area damage, not a lane the tail can
-    // cover; the hookshot is a tool. Max-Will signatures and Spirit
-    // Convergence chords cut straight through the plates.
+    // cover; the hookshot is a tool. Max-Will signatures (including
+    // Picsean's Tide Vortex) and Spirit Convergence chords cut
+    // straight through the plates.
     aux = shot->ai_data[6];
     if (aux == PROJ_AUX_FUSE_BOMB || aux == PROJ_AUX_SPLASH
-        || aux == PROJ_AUX_HOOKSHOT) return 0;
+        || aux == PROJ_AUX_HOOKSHOT || aux == PROJ_AUX_VORTEX) return 0;
     if (shot->ai_data[3]
         & (PROJ_FLAG_CONVERGENCE | PROJ_FLAG_HOWL | PROJ_FLAG_WILL_WAVE))
         return 0;
