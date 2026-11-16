@@ -390,7 +390,9 @@ def test_budget_and_stalls():
                 if (pb.memory[base + 1] & 1) and pb.memory[base] == 1 and not (pb.memory[base + 1] & 0x10):
                     shots += 1
             peak_shots = max(peak_shots, shots)
-            if frame == 180:
+            # First presented frame from 180 on: a busy frame can span two
+            # ticks, so tick 180 itself may be a stalled one.
+            if frame >= 180 and not shot:
                 pb.screen.image.save(ART / "hexa-limbs-live.png")
                 shot = True
         assert presented >= 520, f"only {presented} frames finished a draw"
