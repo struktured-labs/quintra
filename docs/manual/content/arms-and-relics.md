@@ -27,7 +27,7 @@ Iron Heart, maximum health +2; it is the gold heart, never the pale one. At the 
 
 ## Tools and strange verbs
 
-Rift Bomb, Echo Chime, and Mirror Shard are single uses. The chime stills bullets and shows a secret and the nearby paths. The shard turns hostile shots back on whoever fired them.
+Rift Bomb, Echo Chime, and Mirror Shard are single uses. The chime stills bullets and shows a secret and the nearby paths. In a Riftwild field, it marks a hidden den on the Compass. The shard turns hostile shots back on whoever fired them.
 
 The Antidote is the green vial with the amber cross. It cures Poison, Burn and Bleed; the counter lists it as PSN BURN BLEED. Mire Spores and Bramble Sprites carry it, so Toxic Mire, Shadow Keep and the Riftwild that leads to them are where you want one. You can hold three. Open the pack while poisoned, burning or bleeding and the TOOL row is already on it: press A. It will not waste itself on a healthy body. None of the three can take your last half-heart, but sitting at half a heart is no place to stay: when a tick reaches that floor and you carry a vial, it breaks on its own and the window says CURED. Spores and Bramble drop one now and then, and while one of the three is on you and your pouch is empty, any kill might.
 

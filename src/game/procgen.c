@@ -553,7 +553,9 @@ static void carve_stage_escape_rails(void) {
     }
 }
 
-void procgen_generate_current_room(void) BANKED {
+// Den rooms are dispatched by procgen_generate_current_room (riftwild_den.c)
+// so this bank-tight body never sees a world_screen beyond the 6x6 grid.
+void procgen_generate_room_body(void) BANKED {
     const biome_def_t *bio = &biomes[run_state.biome_id];
     u8 world_kind = run_state.world_mode
         ? zelda_overworlds[0].screen_grid[run_state.world_screen].kind

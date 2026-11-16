@@ -1,6 +1,6 @@
 # Riftwild hidden dungeons ("dens")
 
-Date: 2026-11-15 · Status: **proposal for review, nothing implemented**
+Date: 2026-11-15 · Status: **implemented** (`feat/riftwild-dens`; see *As built* at the end)
 Audit: [`2026-11-15-riftwild-wonder-audit.md`](2026-11-15-riftwild-wonder-audit.md) (finding F3)
 
 ## Goal
@@ -231,3 +231,31 @@ keeper.
    marked bushes) for a fourth gate, or skip fire?
 8. **Hookshot over water**: allow a Hookshot pull across water to an island
    pillar (small change), or keep water strictly Raft/Picsean?
+
+## As built (2026-11-15)
+
+Carmelo's answers: fixed 3 dens per region, early access through class
+innates and shop tools allowed, existing mini-boss art for keepers, fixed
+placement for now. Argon's review (round 4) was applied. Decisions made
+while building, beyond the proposal:
+
+| Topic | Decision |
+|---|---|
+| Placement | Fixed table in `riftwild_den.c`, 3 fields per region, never the Warden/Gate/vault/stairs fields. Region 0: CAIRN 7, DROWNED 14, SCAR 25 (Hollow-only). Region 1: SCAR 4, CAIRN 20 (Hollow-only), DROWNED 28. Region 2: DROWNED 9 (Hollow-only), SCAR 13, CAIRN 33. Seeding is a later change of one table. |
+| Gates | Only real gates. CAIRN: Titan Glove or Sauran (push into the stone ~0.5 s), bombs, Morningstar, Rift Bomb burst. DROWNED: Tide Raft or Picsean. SCAR: Rift Hook or Corvin. No fire gate; the Hookshot is not a water verb. |
+| Hollow den | One per region. In Waking its island holds a plain stone; a strike only knocks (`SFX_TICK`). |
+| Footprint | Den tell at (24,22). The approach from the trail cross only clears *solid* tiles; walkable decorations stay. Climate features around the den stay; only the den's own 7x7 is rewritten. |
+| Size | 2 / 3 / 4 rooms (CAIRN / DROWNED / SCAR), compact 20x17 caves at `world_screen` 36 + den*4 + room. West door always open; den rooms rebuild on re-entry, so a mis-pushed crate is never a softlock. |
+| Puzzle | A den-local crate-to-socket push (FLOOR3 socket, not `BGT_SWITCH`, so it never fires a north-wall secret and never touches `dungeon_puzzles` bits). |
+| Keeper | Stone Sentinel configured with *this* stage's mini-boss art (already resident), hardened with ordinal 0 so the Hollow palette is kept. |
+| Rewards | No stat items. CAIRN: region's dungeon tool, coins, full mend. DROWNED: tool, Wild Chart (if anything is still unrevealed) or a second tool, Riftwell re-armed if spent, coins, mend. SCAR: choice of Blast Seed/Rift Lens or Boomerang, coins, mend. The claim bit is set when the reward spawns (vault rule). |
+| State | 0 new SRAM. Found = `world_seen_xxhi` bit 4+d. Claimed = `riftwild_shadow` bit 4+d with found. `riftwild_shadow` mask at `begin_world` widened to 0x7E (relics 1-3 + dens 4-6; Hollow bit 0 still clears). |
+| Echo Chime | In a field with an unfound den, sets the unused (open=0, claim=1) pair: a dim chest on the Compass. Entering the den rewrites it to found/unclaimed. No new tiles; tiles 111-112 are not used. |
+| Return | Leaving a den lands at the parent field's centre (`DIR_NONE`), never on the island. |
+| Worldglass | Disabled inside dens; district label suppressed; companion ask uses the parent field. |
+| Banks | Den code pinned to bank 18. Field stamp runs at the end of `riftwild_terrain_apply`; den/field dispatch lives in `procgen_generate_current_room` (den bank) so bank 4 is unchanged. |
+
+Tests: `scripts/test_riftwild_dens.py` (gated discovery, BFS reachability
+with and without each gate, real crate pushes, trial, keeper, rewards, no stat
+items, claim across backtracking, a dungeon trip and a battery power cycle,
+Compass reveal, Echo Chime hint). Captures: `scripts/capture_riftwild_dens.py`.

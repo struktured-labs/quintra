@@ -71,6 +71,14 @@ enum {
 #define RIFT_SHADOW_RELIC_2_BIT 0x04
 #define RIFT_SHADOW_RELIC_3_BIT 0x08
 #define RIFT_SHADOW_RELIC_MASK  0x0E
+// Hidden dens (riftwild_den.c). Bits 4..6 of riftwild_shadow record a claimed
+// den reward; bits 4..6 of world_seen_xxhi record a found den. Both survive
+// dungeon trips and reset with the region. world_screen 36 + den*4 + room
+// means "inside a den"; world_return_screen low 6 bits hold its parent field.
+#define RIFT_SHADOW_DEN_MASK    0x70
+#define RIFT_DEN_SCREEN_BASE    36
+#define RUN_IN_RIFT_DEN() (run_state.world_mode \
+    && run_state.world_screen >= RIFT_DEN_SCREEN_BASE)
 #define RUN_RIFTWILD_IS_HOLLOW() ((run_state.riftwild_shadow \
     & RIFT_SHADOW_HOLLOW_BIT) ? 1 : 0)
 #define RUN_RIFTWELL_USED() ((run_state.riftwild_flags \
@@ -135,7 +143,7 @@ typedef struct {
     // fields without shifting any historical suspend/debug offsets.
     u8  world_seen_hi;       // cells 16..23
     u8  world_seen_xhi;      // cells 24..31
-    u8  world_seen_xxhi;     // cells 32..35 (upper nibble reserved)
+    u8  world_seen_xxhi;     // cells 32..35; bits 4..6 found dens; bit 7 reserved
     // Low six bits: active seconds until ASK recovers. High bits persist the
     // optional cache discovery/reveal without shifting the suspend ABI. The
     // companion role is derived once from the run seed and stays stable.

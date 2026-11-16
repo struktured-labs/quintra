@@ -8,6 +8,7 @@
 #include "game/mission_graph.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/riftwild_den.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -155,6 +156,7 @@ static void draw_world_grid(void) {
     static const u8 wy[6] = { 2, 4, 6, 8, 10, 12 };
     u8 r, c;
     u8 active_gate = run_state_riftwild_gate_screen();
+    u8 here = riftwild_field_screen();
     for (r = 0; r < ZELDA_WORLD_H; ++r) {
         for (c = 0; c < ZELDA_WORLD_W; ++c) {
             u8 cell = (u8)(r * ZELDA_WORLD_W + c);
@@ -166,7 +168,7 @@ static void draw_world_grid(void) {
             // Thirty-six nodes fit because each one is already a complete
             // scrolling field. The graph therefore communicates geographic
             // scale without returning to tiny terrain screenshots or text.
-            if (cell == run_state.world_screen) icon = BGT_MAP_HERE;
+            if (cell == here) icon = BGT_MAP_HERE;
             else if (cell == RIFTWELL_WORLD_SCREEN)
                 icon = BGT_MAP_RIFT;
             else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE)
@@ -180,8 +182,11 @@ static void draw_world_grid(void) {
             // The fixed 6x6 lattice is safe knowledge; show unseen positions
             // as dim hollow cells so a partial route reads as a square grid.
             // Identity and connectivity remain fogged until actually visited.
-            if (seen) icon = map_world_shop_icon(cell, icon);
-            map_put(x, y, seen ? icon : BGT_MAP_UNKNOWN);
+            if (seen) icon = riftwild_den_map_icon(cell,
+                map_world_shop_icon(cell, icon));
+            // A Chime-heard den is a dim chest until it is actually found.
+            if (icon & 0x80) map_put_attr(x, y, (u8)(icon & 0x7F), BGPAL_WALL);
+            else map_put(x, y, seen ? icon : BGT_MAP_UNKNOWN);
             if (c + 1 < ZELDA_WORLD_W && seen
                 && run_state_world_cell_seen((u8)(cell + 1))
                 && (zelda_overworlds[0].screen_grid[cell].edges & 2)) {
