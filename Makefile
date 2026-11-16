@@ -180,6 +180,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_speed_cap.py
 	$(PYBOY_RUN) scripts/test_will_max.py
 	$(PYBOY_RUN) scripts/test_will_tiers.py
+	$(PYBOY_RUN) scripts/test_picsean_tide_vortex.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py

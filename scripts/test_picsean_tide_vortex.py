@@ -3,11 +3,12 @@
 
 Spec: docs/superpowers/specs/2026-11-15-picsean-tide-vortex.md
 
-Checks: the front grows from the hero to past the farthest corner, every
-body around him (front, back, sides, corners) is hit in distance order,
+Checks: the front grows from the cast point to past the farthest corner,
+every body around it (front, back, sides, corners) is hit in distance order,
 hostile shots are washed out, a heavy body takes capped damage and at most
-two hits, the arm art is in OAM, and it all cleans up. A crowded fixture
-compares logic updates during the vortex against the same room idle.
+two hits, the arm art is in OAM, the eye stays put after Picsean swims
+away, and it all cleans up. A crowded fixture compares logic updates
+during the vortex against the same room idle.
 
 Set QUINTRA_VORTEX_GIF=<path> to also record a GIF of a real room.
 """
@@ -204,6 +205,53 @@ def contract(pb):
           f"iframes={pb.memory[IFRAMES]}")
 
 
+def anchored(pb):
+    """The spiral stays at the tile where Will was spent.
+
+    After the MAX fires, Picsean is teleported on top of a far body.
+    If the eye followed her, that body would be hit immediately (it
+    sits in the new 10px core). An anchored eye hits the body next to
+    the original cast point first, and the far body only once the
+    front has grown across the room.
+    """
+    arm(pb)
+    near = make_crawler(pb, 10, 96, 64)
+    far = make_crawler(pb, 11, 16, 16)
+    pb.memory[COUNT] = 2
+    near_hp0 = pb.memory[near + 14]
+    far_hp0 = pb.memory[far + 14]
+    fire_max(pb)
+    check("anchor: vortex active after the MAX", pb.memory[TICKS] > 0,
+          f"ticks={pb.memory[TICKS]}")
+    # Swim away onto the far body. Keep HP/i-frames honest so a
+    # contact thump cannot be mistaken for a vortex hit.
+    put16(pb, PLAYER + 9, 16)
+    put16(pb, PLAYER + 11, 16)
+    pb.memory[HP] = pb.memory[PLAYER + 1]
+    pb.memory[IFRAMES] = 60
+    near_frame = far_frame = None
+    near_hp, far_hp = near_hp0, far_hp0
+    for frame in range(220):
+        pb.tick()
+        n = pb.memory[near + 14]
+        f = pb.memory[far + 14]
+        if near_frame is None and n < near_hp:
+            near_frame = frame
+        if far_frame is None and f < far_hp:
+            far_frame = frame
+        near_hp, far_hp = n, f
+        if near_frame is not None and far_frame is not None:
+            break
+        if not pb.memory[TICKS] and frame > 10:
+            break
+    check("anchor: body at the cast point is still hit after Picsean leaves",
+          near_frame is not None,
+          f"near_frame={near_frame} far_frame={far_frame}")
+    check("anchor: body under Picsean's new tile is not hit first",
+          far_frame is not None and near_frame < far_frame,
+          f"near={near_frame} far={far_frame}")
+
+
 def crowded_updates(cast):
     """Logic updates over 96 frames in a 14-body room (fresh boot each run).
 
@@ -277,6 +325,14 @@ def gif(pb, path):
         if i == 6:
             pb.button_release("a")
             pb.button_release("right")
+        if i == 18:
+            # Swim toward the upper-left so the GIF shows the eye
+            # staying at the cast tile.
+            pb.button_press("left")
+            pb.button_press("up")
+        if i == 70:
+            pb.button_release("left")
+            pb.button_release("up")
         frames.append(pb.screen.image.copy().convert("RGB"))
     frames = [f.resize((320, 288), Image.NEAREST) for f in frames]
     frames[0].save(path, save_all=True, append_images=frames[1:],
@@ -288,6 +344,7 @@ def main():
     pb = boot(3)
     try:
         contract(pb)
+        anchored(pb)
     finally:
         pb.stop(save=False)
     idle = crowded_updates(cast=False)

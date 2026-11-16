@@ -5,7 +5,7 @@
 #include "core/types.h"
 
 // Picsean's full-Will Moon Tide becomes the Tide Vortex: four spiral arms
-// spin out from the hero and grow until the front sweeps the whole view.
+// spin out from the cast point and grow until the front sweeps the whole view.
 // Spec: docs/superpowers/specs/2026-11-15-picsean-tide-vortex.md
 
 // Logic ticks. The front grows for VORTEX_GROW_TICKS on a smoothstep and

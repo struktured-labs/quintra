@@ -19,12 +19,17 @@ fan: competent, but it looked like a bigger primary.
   about 2.6 turns over the cast). Each arm twists more the farther out it
   goes (angle += radius/4 in 64ths), so it reads as a whirlpool, not spokes.
 - **Growth.** The front radius rises from 10px on a smoothstep over 72
-  ticks (1.2 s): a slow wind-up at the hero, a fast sweep through the room,
+  ticks (1.2 s): a slow wind-up at the eye, a fast sweep through the room,
   then a settling crest. Its maximum is the distance from the cast point to
   the farthest corner of the visible room plus 12px (cap 240), so it always
-  spans the whole screen wherever Picsean stands. A 12-tick crest at full
-  size follows (84 ticks, 1.4 s in all). The vortex is centred on Picsean
-  and follows him.
+  spans the whole screen wherever Picsean stood. A 12-tick crest at full
+  size follows (84 ticks, 1.4 s in all).
+- **Anchor.** The vortex is centred on the tile where Picsean spent Will
+  and stays there, so she can swim away while it fills the room. This is
+  Argon's Abyssal Maelstrom default: she is a fragile control-mage, and
+  personal protection already belongs to B's Undertow. A following eye
+  would force her to stand in the storm. The eye sprite parks at that
+  same origin.
 - **Arms widen.** Arm points use three cels (drop, curl, crest). Outer
   points use the bigger cels, and every 28 ticks all points step up one cel.
   An arm's hit band is ±4/64 of a turn around the spiral curve, widening to
@@ -80,6 +85,28 @@ fan: competent, but it looked like a bigger primary.
   case. The vortex is the cheapest of the multi-hit MAX arts there and
   faster than the Moon Tide it replaces. The test fails below 70 or below
   75% of idle.
+
+## Argon review (2026-11-15, main @ 1c522cfc)
+
+Argon named this art **Abyssal Maelstrom** and proposed a 4–6 satellite
+entity spiral growing from 10px to 84px, OBJ tiles 200..203, a bullet
+squeegee, zero i-frames, and a 3-hit Colossus cap. What we adopted or
+kept:
+
+- **Adopted:** the cast-point anchor (see above). The room-wide shot
+  wash, OBJ 200..203, zero i-frames, and Colossus/heavy caps were
+  already in the first implementation.
+- **Kept, on purpose:** the multiplexed 24-point OAM arms and a front
+  that grows to the farthest visible corner (cap 240), not Argon's 84px
+  radius. 84px was a budget for a 4-satellite entity design and would
+  not fill a 160x136 room from a corner (or even quite from the centre,
+  where a corner is ~105px away). Carmelo asked for a spiral that
+  "spans the entire room"; the OAM-arm approach can actually do that
+  without spending 4–6 entity slots. The natural hit structure is one
+  front hit plus one arm hit, so the heavy/Colossus cap stays at two
+  hits per cast (capped at 6 damage each) rather than Argon's 3.
+- The shipped name stays **Tide Vortex**. Abyssal Maelstrom is the
+  review name.
 
 ## Code
 `src/game/picsean_vortex.c` is a new file, pinned to bank 18 (`#pragma bank

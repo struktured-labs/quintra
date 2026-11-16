@@ -1,144 +1,164 @@
-# Max-Will signatures: one overhaul per champion
+# Max-Will signatures for the other champions (Argon, proposal)
 
-Date: 2026-11-15. Status: **spec only.** Only Picsean's Tide Vortex is
-implemented (`2026-11-15-picsean-tide-vortex.md`). Nothing else here is
-built yet.
+Date: 2026-11-15. Status: **proposal — for Carmelo's review, not
+implemented.** Picsean's Tide Vortex is implemented (see
+`2026-11-15-picsean-tide-vortex.md`). Wolfkin's Moonfang Rush (#63)
+is unchanged and remains the bar.
 
-## Why
-Carmelo (2026-11-15): "the special per char needs to be more awesome.
-Wolfkin is cool now ... think powerful for each char, or highly defensive."
-The full-Will A MAX is the one moment a champion is supposed to feel
-outsized. Today Sauran, Corvin and Vespine's MAX arts are wider or longer
-versions of their primary, so they read as a bigger bullet. Each overhaul
-below is either devastating or a fortress, and no two are alike.
+These three arts replace the earlier Basalt Bastion / Night of Ravens /
+Venom Bloom sketches. They come from Argon's review of `main @ 1c522cfc`
+(`/workspace/quintra-argon/round4/maxwill.md`), fact-checked against
+the live kit: A-button full-Will (`will_fire_max`) when
+`player.will_level > 0`, B-button signatures unchanged, OBJ tiles
+200..203 reused per cast (one champion per run), `PROJ_FLAG_CONVERGENCE`
+plus a per-cast Colossus hit cap, and no blanket i-frames.
 
-The roster is in `content/` (5 classes): Wolfkin, Sauran, Corvin, Picsean,
-Vespine.
+## Sauran: Thunderline Bastion (proposal)
 
-| Champion | Today (A MAX) | Overhaul | Role |
-|---|---|---|---|
-| Wolfkin | Moonfang Rush + Will wave (#63) | **unchanged**, it is the bar | frontal ram + guard |
-| Picsean | ~~Moon Tide~~ | **Tide Vortex** (built) | room-wide sweep |
-| Sauran | Thunderline lance | **Basalt Bastion** | highly defensive |
-| Corvin | Murderstorm fan | **Night of Ravens** | devastating, single-target pressure on every foe |
-| Vespine | Queen's Needle | **Venom Bloom** | devastating, chain reaction |
+Highly defensive. Current Thunderline is a fat spear plus parallel
+side spears at higher tiers, which leaves slow-recovery Sauran exposed
+and eats up to 7 entity slots. **Thunderline Bastion** keeps the
+central piercing fault spear and replaces the broom of side spears
+with two slow-marching monolith pylons that form a narrow corridor
+ahead of him.
 
-## Shared rules (every overhaul)
-- **Trigger.** The class starter weapon's A MAX with full Will, at any tier.
-  The Will tier adds to damage exactly as today (`damage += level - 1`).
-  B powers, Oaths, ordinary A, the dodge dash, and the alternate weapons'
-  MAX arts (Worldwheel, Farstrike, generic three-lane) stay unchanged.
-- **Damage path.** All damage goes through `combat_apply_player_shot_hit`
-  (a projectile or the vortex-style inert carrier), so weakness, LCK,
-  status riders, the Colossus stage cap (3, easy 5), Hexa and return-echo
-  filters, boss links and kill rewards apply unchanged.
-- **Heavy bodies** (Colossi and Sentinels, Stage Reaper, elites, alphas,
-  rares, Bellwardens, the large-boss anchor, Hexa) take at most 6 per hit
-  before LCK and weakness, plus the per-move hit limit below. No signature
-  may delete a Colossus phase.
-- **Mortal Scythe** is never blocked, reflected or washed out.
-- **Art budget.** OBJ tiles 200..203 are the per-run signature cels: one
-  champion per run, and each art reloads its cels on cast. Moves needing
-  more reuse existing projectile tiles. OAM for transient art is 24..35
-  (12, multiplexed by alternating frames). It drops to 32..35 while the
-  Serpent owns 4..31, and Hexa keeps 4..23. 36..39 stay with the raft and
-  the boss overlay.
-- **CPU.** No division or 32-bit math per entity per tick. Every move must
-  pass the crowded fixture with no fewer logic updates than idle play
-  (`scripts/test_picsean_tide_vortex.py` shows the method), and
-  `check_rom_layout.py` must pass. Each lives in its own `#pragma bank 255`
-  file like `wolfkin_wave.c` and `picsean_vortex.c`.
-- **Room exit** cancels any lingering signature on `entity_init_room`.
-- Each ships with its own spec, headless test and GIF before merge.
+- **Hook.** New banked module (or a shared `will_max_fx.c`), from
+  `will_fire_max` when the equipped weapon is Tail Spike, ticked from
+  `combat_resolve`.
+- **Pylons.** Two `PROJ_SPEAR`/`PROJ_SPIKE` bodies spawn 10px ahead
+  and ±8px off the aim line, crawl at 1px/tick for `28 + level * 6`
+  ticks (`34..52`, 0.56–0.86 s), hitbox `0xAA`. They crush hostile
+  shots (not the Reaper's Mortal Scythe) in a 32×22px frontal corridor
+  between Sauran and the pylons, and stall frontal bodies. Flanks and
+  rear are open. Never writes `player.shield_timer` or `iframes`, so
+  B's Stoneskin stays a personal bubble he can still pop if flanked.
+- **Central fault.** Existing `max_spawn` spear, `damage + 4`, pierce
+  `6 + level`, duration `54 + level * 8`. Pylons deal
+  `damage + 2 + (level >> 1)`. At Will 3–4, expired or wall-stopped
+  pylons leave a Blast Seed splash at their terminal tile.
+- **Budget.** 3 entity slots + 1 short `ENT_FX` (down from 7 at Will
+  4). OBJ 200..203: jagged amber obelisk (E/W) and a fault slab
+  (N/S). Palette 2 flashes amber/granite for 18 ticks. Peak 3 OBJ
+  on one scanline. `room_shake(2, 12)` on cast.
+- **Colossus.** All three pieces carry `PROJ_FLAG_CONVERGENCE` and the
+  pylons also carry `PROJ_FLAG_WILL_WAVE`, so a stationary boss takes
+  one chord on contact, not a multi-tick shred.
+- **Spawn failure.** If the central spear cannot spawn, `will_fire_max`
+  returns 0 and keeps the Will charge. If a pylon fails, the corridor
+  check still runs from the cast pose.
 
-## Sauran: Basalt Bastion (highly defensive)
-Sauran plants the tail spike, and eight basalt scales rise and orbit him as
-a living wall.
-- **Mechanics.** 8 scale pieces orbit at 18px radius (one full turn a
-  second) for 240 ticks (4 s). A hostile shot touching a scale is
-  **reflected**: its velocity is reversed, it becomes player-owned, and it
-  keeps its damage +1. A body touching a scale takes MAX damage +2
-  (once per 30 ticks per body) and is shoved out with poise respected.
-  Each scale holds 3 blocks, then cracks and falls. Sauran is rooted (no
-  walk or dodge) for the first 30 ticks while the wall rises, then moves at
-  half speed. Pressing A again, or the timer ending, **detonates** the
-  surviving scales outward as 8 piercing basalt lanes (MAX damage +3 each,
-  pierce 3).
-- **What it isn't.** It is not Stoneskin (B), which is a short timed full
-  shield. Bastion leaves gaps between scales: a shot threading a gap still
-  hits. No blanket i-frames.
-- **Animation.** 2 cels (scale, cracked scale) plus 1 shard cel in
-  200..202. On the rise, the BG floor palette darkens to basalt for 8
-  frames, there is a 2px shake, and the ROAR plays. Reflected shots flash
-  the foam-white of OBJ palette 2.
-- **Budget.** 8 OBJ (12 slots allow it without multiplexing). Per tick that
-  is 8 sine lookups and an 8-box test per hostile shot or body within 26px
-  (a cheap Manhattan pre-check). Shots far from him cost one compare.
-- **Fairness.** Reflected shots against heavy bodies count toward the
-  per-hit cap of 6 and at most 6 reflected hits per cast. Body contact still
-  hurts through the gaps. Rooted start: committing in the wrong place is a
-  real risk.
-- **Duration.** 4 s of wall plus the detonation. This is the longest-lived
-  signature, offset by being mostly defensive.
+## Corvin: Murderstorm Eclipse (proposal)
 
-## Corvin: Night of Ravens (devastating)
-The room goes dark, and every foe gets a raven.
-- **Mechanics.** On cast, every awake enemy on screen is **marked** (up to
-  12, nearest first). Over 120 ticks (2 s) ravens dive from the screen edge
-  nearest each mark in three waves (ticks 20, 60, 100). Each dive is one
-  hit of MAX damage +2. A marked enemy that falls below 25% of its spawn HP
-  is **executed** by the next dive. Corvin's own primary shots against a
-  marked foe get the existing Raven Mark bonus for the duration. Hostile
-  shots are not touched, so this is pure offense.
-- **Animation.** BG palettes dim to a night ramp for the whole 2 s (the
-  same halving used by pause and blind), and the ravens and marks stay
-  bright. The 2 cels in 200..201 are a raven with folded and open wings.
-  Marks reuse the existing impact FX in purple. A screech plays on each
-  wave.
-- **Budget.** At most 12 ravens in flight per wave, drawn in OAM 24..35 and
-  multiplexed when a wave overlaps the next. Ravens are not entities, just a
-  table of 12 positions lerped edge-to-target with shift math, so the
-  entity pool is untouched. One damage apply per raven arrival.
-- **Fairness.** Heavy bodies get one raven per wave (3 total), capped at 6,
-  and are never executed. The darkness never hides hostile shots: they keep
-  their own bright palettes. If no enemy is on screen, the cast still
-  spends Will but only plays the screech (same as the corvin-mark miss today).
-- **Duration.** 2 s.
+Devastating single-target execution with a short evasive veil. Current
+Murderstorm is a wider boomerang fan, which B (Raven Mark) was already
+redesigned not to duplicate. **Murderstorm Eclipse** pays off the
+mark: four diagonal blades sweep out, then cross-converge on the
+marked body (or a point 44px ahead if nothing is marked).
 
-## Vespine: Venom Bloom (devastating, chain reaction)
-Vespine's needle plants a pheromone seed, and the room blooms with poison.
-- **Mechanics.** The needle flies along the aim and stops at the first body,
-  wall, or 56px. After a 30-tick (0.5 s) visible fuse, a **venom bloom**
-  expands from the seed to a 48px radius over 24 ticks. Every enemy inside
-  takes MAX damage +3 once and is **Poisoned** (the existing status) and
-  **Slowed** for 180 ticks. Any enemy that dies while poisoned by the
-  bloom **bursts** into a 24px secondary bloom (MAX damage +1, applies
-  poison), so a packed room chains. Hostile shots inside the main bloom
-  dissolve.
-- **What it isn't.** It is not the Tide Vortex, which centres on the hero
-  and spans the room. The bloom is placed, local, and pays off on clustering
-  and kills.
-- **Animation.** 3 cels in 200..202: a seed, a petal and a spore puff. The
-  bloom ring is 12 petals in OAM 24..35 on a growing circle, using the same
-  sine table as the vortex. Secondary bursts use 4 petals each,
-  multiplexed. OBJ palette 2 turns venom green and magenta. There is a short
-  BG floor tint at bloom (5 frames) and a 1px shake.
-- **Budget.** At most 3 live blooms at once (main plus 2 secondaries); a
-  further burst queues until a slot frees. One distance per body per live
-  bloom per tick.
-- **Fairness.** The chain depth is capped at 4 bursts per cast. Heavy bodies
-  take one bloom hit (capped at 6) and poison at the normal heavy duration,
-  and they never burst. The fuse is visible, so a fast enemy can walk out.
-- **Duration.** 0.5 s fuse, 0.4 s bloom, and poison lasting 3 s.
+- **Cast.** A 14-tick shadow decoy (`ENT_FX`, tile 202) stays at the
+  departure tile. Hostile shots within 24px of that tile are erased.
+  Corvin gets a 12-tick projectile slip-veil (`corvin_veil_ticks`);
+  shots pass through him, but enemy body contact still hurts. No
+  blanket i-frames.
+- **Blades.** 4 `PROJ_SHURIKEN` on the diagonals (`dir+1,3,5,7`),
+  `damage + 3` (tuning: `damage + 2` at the live `will_level` bonus,
+  `hp = 4 + level`). Ticks 24..15: outward 2px/tick X-sweep. On tick
+  14, all four re-aim at 3px/tick toward the focal point: the active
+  `will_corvin_mark_slot` if `will_corvin_mark_ticks > 0`, else 44px
+  ahead of the cast facing. If the marked body dies mid-flight, the
+  blades keep the last known tile.
+- **Mark payoff.** A blade that hits the marked body deals an extra
+  +2 once per cast and refreshes the mark by +30 ticks instead of
+  consuming it.
+- **Tiers.** Will 2: veil 16 ticks. Will 3+: a 5th central piercing
+  feather (`damage + 4`) down the aim line. Will 4: on the first
+  convergence tick the blades pulse outward for 8 more ticks (a
+  pinwheel).
+- **Budget.** 4 blades + 1 decoy FX (5 at Will 3+), down from 8 at
+  Will 4 today. OBJ 200..203: eclipse talon and a shadow plume.
+  Palettes 1 and 2 flash indigo/bone for 16 ticks. Peak 2 OBJ per
+  scanline, 4 only on the two convergence frames. Re-aim happens once,
+  with `dir_toward`; no per-frame trig. Total window 28 ticks.
+- **Colossus.** All blades carry `PROJ_FLAG_CONVERGENCE`, plus a
+  per-cast 2-blade boss cap (`corvin_eclipse_boss_hits <= 2`, same
+  idea as `WILL_HOWL_GIANT_HIT_CAP`). A marked Colossus takes a
+  chunky 2-hit chord plus the mark bonus, never 5 simultaneous hits.
 
-## Wolfkin: Moonfang Rush (unchanged)
-It stays exactly as in `2026-11-12-wolfkin-will-wave.md`: three claw lanes,
-a three-piece crescent wave and the frontal guard for the length of the
-dash. It is the reference for how big a signature should feel.
+## Vespine: Queen's Royal Decree (proposal)
+
+Aggressive parry-thrust plus a delayed venom burst. Current Queen's
+Needle is a 3-shot trident with no poison interaction and no mobility.
+**Queen's Royal Decree** is a 6-tick forward dart with a 7-tick
+frontal wing-parry, a poison lance, and a Venom Sac that ruptures
+about 14 ticks later.
+
+- **Dart and parry.** `dash_timer = 6` (same collision-checked step
+  Wolfkin uses, so she cannot tunnel into walls or vents she cannot
+  pass). Any hostile shot in a forward 90° cone, reach 24px, is sliced
+  into a 1-tick acid spark. Frontal body contact is parried for those
+  7 ticks. Sides and back stay open; no blanket i-frames. At 6.5
+  hearts she has to time the window.
+- **Lance.** Central `PROJ_SPEAR` (`damage + 4`, pierce `5 + level`,
+  36 ticks, hitbox `0xAA`) tagged so it applies Poison and trips
+  `PERK_POISON_SYNERGY`, plus two inward pincer `PROJ_SPIKE`s
+  (`damage + 2`) that converge 32px ahead rather than flying off at
+  45°.
+- **Venom Sac.** When the central lance hits a body, a wall, or tick
+  18, it stops and becomes a pulsing sac (tiles 202/203, 14-tick
+  countdown). On expiry it detonates with `projectile_spawn_splash`
+  (`damage + 2 + level`). Will 2+: also 4 short diagonal spore
+  needles (10 ticks, `damage + 1`). Will 3, if Swarm (B) is already
+  running: +32 Swarm ticks and +1 Swarm damage. Will 4: a mini-splash
+  at tick 7 of the sac, then the full rupture at tick 14.
+- **Budget.** Staggered: 3 projectiles + 1 FX on the lunge, 1 sac
+  while it pulses, then 1 splash (or 5 at Will 2+). Peak 5 slots,
+  even with Swarm still firing its 16-frame stinger. OBJ 200..203:
+  barbed stinger tip and the throbbing sac. Palettes 1 and 2 flash
+  acid-green / royal-gold for 14 ticks. Peak 3 OBJ per scanline.
+  Total lifecycle about 42 ticks.
+- **Colossus.** The three lance pieces share `PROJ_FLAG_CONVERGENCE`
+  (one chord on the thrust). The delayed sac splash is a separate
+  event, and Will 2+ rupture needles also converge. A Colossus takes
+  at most one impale chord plus one delayed rupture chord, plus
+  poison ticks — not an instant delete despite `atk: 4`.
+
+## What stays the same
+
+- Wolfkin's Moonfang Rush is the reference and is not being revisited.
+- Picsean's Tide Vortex is already shipped: a room-filling spiral from
+  10px out to the farthest visible corner, hostile shots washed out,
+  OBJ 200..203, heavy/Colossus caps, zero i-frames, anchored at the
+  cast point. See that spec for what was kept vs. Argon's 84px
+  4-satellite sketch (review name: Abyssal Maelstrom).
+- These three arts should fire from each champion's starter weapon,
+  matching Wolfkin, unless Carmelo answers open question 5 the other
+  way.
 
 ## Open questions for Carmelo
-1. Should Bastion's reflected shots also damage heavy bodies, or only the
-   crowd?
-2. Should Night of Ravens executions drop extra coins, so it is a "farm" MAX?
-3. Should Venom Bloom's chain be allowed to cross into the next wave of a
-   Warden court?
+
+1. **Shared bank-255 module vs. per-hero files.** Wolfkin's wave lives
+   in `wolfkin_wave.c` (`#pragma bank 255`) and claims OBJ 200..203.
+   Since `class_id` is fixed per run and those four tiles are reloaded
+   on every cast, should all five MAX ticks/tiles live in one banked
+   `will_max_fx.c` with a shared WRAM state struct, or stay as
+   separate modules?
+2. **Picsean vortex centre.** Implemented as **anchored at the cast
+   point** (Argon's default, and the one that lets a fragile
+   control-mage swim away). The other option is a following eye locked
+   to `(player.x, player.y)`. Say if it should follow instead.
+3. **Corvin unmarked fallback.** If Murderstorm Eclipse is fired with
+   no active Raven Mark, the four blades converge 44px (~5.5 tiles)
+   ahead of the cast facing. Prefer that, or should they auto-acquire
+   the nearest on-screen enemy when one exists?
+4. **Vespine dart direction.** Should the 6-frame Queen's Royal Decree
+   dart always lunge forward (`+dir8_dx/dy`, a shorter, faster cousin
+   of Wolfkin's rush), or should holding away on the D-pad during the
+   A press do a wasp back-sting hop while the lance still fires
+   forward?
+5. **Non-starter weapons.** `will_fire_max` currently branches on
+   `weapon_index == classes[i].starter_weapon`. Should these four
+   bespoke MAX effects trigger only on each champion's starter
+   (matching Wolfkin's `class_id == 0 && starter_weapon` check), or
+   should the class half (Sauran's pylons, Corvin's veil, Picsean's
+   vortex, Vespine's wing-parry) also ride on a mid-run weapon such as
+   the Rift Flail or Astral Spear?

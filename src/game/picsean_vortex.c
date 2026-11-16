@@ -40,6 +40,9 @@ u8 picsean_vortex_abort;
 static u8 vortex_carrier = 0xFF;
 static u8 vortex_damage;
 static u8 vortex_rmax;
+// World-space eye, snapped in begin() so the spiral stays at the
+// cast point while Picsean swims away (Argon's Abyssal Maelstrom default).
+static i16 vortex_wx, vortex_wy;
 static u8 vortex_giant_hits;
 static u8 vortex_fx_budget;
 static u8 vortex_flashing;
@@ -198,13 +201,13 @@ static u8 carrier_ok(void) {
 
 static void carrier_park(void) {
     entity_t *c = &entities[vortex_carrier];
-    c->x = (ppos_t)(player.x + 4);
-    c->y = (ppos_t)(player.y + 4);
+    c->x = (ppos_t)(vortex_wx - 4);
+    c->y = (ppos_t)(vortex_wy - 4);
     c->vx = c->vy = 0;
     c->hp = 200;
     c->state_timer = 60;
     c->hitbox = 0x88;
-    // The eye spins at the hero's centre (projectile shimmer is undone).
+    // The eye spins at the cast point (projectile shimmer is undone).
     c->sprite_tile = SPR_FX_VORTEX_EYE;
     c->palette = 2;
     c->ai_data[4] = (u8)((picsean_vortex_ticks & 4)
@@ -316,6 +319,8 @@ void picsean_vortex_begin(u8 damage) BANKED {
         ay = (i16)room_camera_y + ROOM_VIEW_H_PX - cy;
     r = vdist(ax, ay) + 12;
     vortex_rmax = (u8)(r > PICSEAN_VORTEX_MAX_R ? PICSEAN_VORTEX_MAX_R : r);
+    vortex_wx = cx;
+    vortex_wy = cy;
     set_sprite_data(SPR_FX_VORTEX_DROP, 4, vortex_tiles);
     palette_obj_load(2, tide_obj_palette);
     picsean_vortex_ticks = PICSEAN_VORTEX_TICKS;
@@ -335,6 +340,12 @@ void picsean_vortex_begin(u8 damage) BANKED {
 #define ADD_CLIP(c, o, hi) ((u8)(o) < (u8)((hi) - (c)) ? (u8)((c) + (o)) : 0)
 #define SUB_CLIP(c, o, lo) ((c) > (u8)(o) && (u8)((c) - (o)) >= (lo) \
     ? (u8)((c) - (o)) : 0)
+static u8 clip_oam_x(i16 x) {
+    return (x >= 1 && x < VX_HI) ? (u8)x : 0;
+}
+static u8 clip_oam_y(i16 y) {
+    return (y >= VY_LO && y < VY_HI) ? (u8)y : 0;
+}
 #define SEG_PUT(o, X, Y, T, P) do { \
     u8 x_ = (X), y_ = (Y); \
     if (x_ && y_) { (o)[0] = y_; (o)[1] = x_; (o)[2] = (T); (o)[3] = (P); } \
@@ -347,10 +358,15 @@ static void vortex_layout(u8 t, u8 r) {
     u8 phase = (u8)(t << 1);
     // Cels fatten as the vortex grows.
     u8 grow = (u8)(t >= 56 ? 2 : t >= 28 ? 1 : 0);
-    // Hero centre in OAM space (OBJ origin is -8,-16; cels are 8x8). The
-    // hero is always on screen, so it fits a byte.
-    u8 cx = (u8)((i16)player.x + 12 - (i16)room_camera_x);
-    u8 cy = (u8)((i16)player.y + 20 - (i16)room_camera_y);
+    // Cast-point centre in OAM space (OBJ origin is -8,-16; cels are 8x8).
+    i16 ocx = vortex_wx + 4 - (i16)room_camera_x;
+    i16 ocy = vortex_wy + 12 - (i16)room_camera_y;
+    // Fast 8-bit path when the eye is on screen (fixed rooms, and the
+    // start of a scrolling room). Off-screen origins still draw any arm
+    // point that has scrolled into view.
+    u8 on = (u8)(ocx >= 1 && ocx < VX_HI && ocy >= VY_LO && ocy < VY_HI);
+    u8 cx = on ? (u8)ocx : 0;
+    u8 cy = on ? (u8)ocy : 0;
     for (j = (u8)(t & 1); j < 6; j += 2) {
         u8 rho = (u8)(mul8(r, seg_frac[j]) >> 4);
         u8 cel = (u8)((j >> 1) + grow);
@@ -363,6 +379,18 @@ static void vortex_layout(u8 t, u8 r) {
         // Signed offsets of arm 0: (ox, oy). Arms 1..3 are quarter turns:
         // (-oy, ox), (-ox, -oy), (oy, -ox).
         u8 x_pox, x_mox, x_poy, x_moy, y_pox, y_mox, y_poy, y_moy, tile;
+        if (cel > 2) cel = 2;
+        tile = (u8)(SPR_FX_VORTEX_DROP + cel);
+        if (!on) {
+            i16 ox = (i16)(cs < 0 ? -(i16)ax : ax);
+            i16 oy = (i16)(sn < 0 ? -(i16)ay : ay);
+            SEG_PUT(o,      clip_oam_x(ocx + ox), clip_oam_y(ocy + oy), tile, 2);
+            SEG_PUT(o + 4,  clip_oam_x(ocx - oy), clip_oam_y(ocy + ox), tile, 2 | S_FLIPX);
+            SEG_PUT(o + 8,  clip_oam_x(ocx - ox), clip_oam_y(ocy - oy), tile, 2 | S_FLIPX | S_FLIPY);
+            SEG_PUT(o + 12, clip_oam_x(ocx + oy), clip_oam_y(ocy - ox), tile, 2 | S_FLIPY);
+            o += 16;
+            continue;
+        }
         if (cs < 0) {   // ox = -ax
             x_pox = SUB_CLIP(cx, ax, 1);  x_mox = ADD_CLIP(cx, ax, VX_HI);
             y_pox = SUB_CLIP(cy, ax, VY_LO); y_mox = ADD_CLIP(cy, ax, VY_HI);
@@ -377,8 +405,6 @@ static void vortex_layout(u8 t, u8 r) {
             x_poy = ADD_CLIP(cx, ay, VX_HI); x_moy = SUB_CLIP(cx, ay, 1);
             y_poy = ADD_CLIP(cy, ay, VY_HI); y_moy = SUB_CLIP(cy, ay, VY_LO);
         }
-        if (cel > 2) cel = 2;
-        tile = (u8)(SPR_FX_VORTEX_DROP + cel);
         // Mirror bits alternate so the spiral reads as churning water.
         SEG_PUT(o,      x_pox, y_poy, tile, 2);
         SEG_PUT(o + 4,  x_moy, y_pox, tile, 2 | S_FLIPX);
@@ -430,8 +456,8 @@ void picsean_vortex_tick(void) BANKED {
         if (!picsean_vortex_ticks) vortex_end();
         return;
     }
-    cx = (i16)player.x + 8;
-    cy = (i16)player.y + 8;
+    cx = vortex_wx;
+    cy = vortex_wy;
     // Arm half-width in 64ths of a turn widens 4..6 as the vortex grows.
     // A body is visited every 4 ticks while the arms turn 8/64, so a
     // half-width of 4 can never skip over it.
