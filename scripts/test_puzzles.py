@@ -580,10 +580,20 @@ def assert_pressed_persists(pb, addrs):
         assert got_low == want_low, f"pressed crystal palette {got_low} != {want_low}"
         assert got_high == want_high, f"pressed door palette {got_high} != {want_high}"
 
-    hp = pb.memory[PL + 15]
-    if hp < 2:
-        pb.memory[PL + 15] = 6
-        hp = 6
+    # Isolate the court: live guards can chip HP on a correct step and
+    # make a latched plate look like a failed attempt. Park one inert
+    # body so the room-clear jingle does not steal the APU either.
+    guards = active_hostiles(pb)
+    clear_hostiles(pb)
+    if guards:
+        ep = EN + guards[0] * 28
+        pb.memory[ep] = 2
+        pb.memory[ep + 1] = 0x01
+        put16(pb, ep + 3, 8)
+        put16(pb, ep + 7, 200)
+        pb.memory[ep + 10] = pb.memory[ep + 11] = 0
+    pb.memory[PL + 15] = 6
+    hp = 6
     assert_idle_all()
     confirmed = []
     for candidate in plates:
