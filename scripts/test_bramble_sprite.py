@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROM contract: Shadow Keep's Bramble Sprite is a live, distinct lane prompt."""
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from spinner_contract import assert_told_spiral
 from test_stage_archetypes import EN, PL, TM, addr, generated_room
 
@@ -36,19 +36,7 @@ def main():
         seen.append(1)
 
         expected = generated_sprite("sprite_enemy_bramble_sprite")
-        # enemy_anim_tick streams a two-frame walk into this shared slot
-        # (atlas unit 0x4C/0x4D, beat = entity_anim_counter >> 4). Room
-        # entry now spends a different number of frames (Law Lock
-        # generate, sealed suspend snapshot), so the first settled
-        # sample can land on the off-beat. Wait one walk cycle for the
-        # authored base tile; the contract is unchanged.
-        actual = None
-        for _ in range(32):
-            actual = bytes(pb.memory[0x8000 + SPR_BRAMBLE_SPRITE * 16:
-                                     0x8000 + (SPR_BRAMBLE_SPRITE + 1) * 16])
-            if actual == expected:
-                break
-            pb.tick()
+        actual = wait_for_obj_tile(pb, SPR_BRAMBLE_SPRITE, expected)
         assert actual == expected, "Shadow Keep did not install Bramble Sprite art"
         assert actual != generated_sprite("sprite_enemy_sunwheel"), \
             "Bramble Sprite reused Golden Temple's Sunwheel silhouette"

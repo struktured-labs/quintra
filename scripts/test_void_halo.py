@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROM contract: Void Halo is a slow, readable Void Sanctum lane shaper."""
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from spinner_contract import assert_told_spiral
 from test_stage_archetypes import EN, PL, TM, generated_room
 
@@ -39,8 +39,9 @@ def main():
 
         # Stage eight owns slot 79 in dungeon combat. The real room loader
         # must replace its town/default art before the generated Halo draws.
-        actual = bytes(pb.memory[0x8000 + 79 * 16:0x8000 + 80 * 16])
-        assert actual == generated_sprite("sprite_enemy_void_halo"), (
+        expected = generated_sprite("sprite_enemy_void_halo")
+        actual = wait_for_obj_tile(pb, 79, expected)
+        assert actual == expected, (
             "Void Sanctum did not install Void Halo art in OBJ slot 79")
 
         # Exercise the live generated entity on a clear board: one told

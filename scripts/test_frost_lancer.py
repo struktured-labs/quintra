@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from test_stage_archetypes import EN, TM, generated_room
 
 
@@ -38,9 +38,8 @@ def main():
             return
         seen.append(1)
 
-        actual = bytes(pb.memory[0x8000 + SPR_FROST_LANCER * 16:
-                                 0x8000 + (SPR_FROST_LANCER + 1) * 16])
         expected = generated_sprite("sprite_enemy_frost_lancer")
+        actual = wait_for_obj_tile(pb, SPR_FROST_LANCER, expected)
         assert actual == expected, "Frost Vault did not install Frost Lancer OBJ art"
         assert actual != generated_sprite("sprite_enemy_mirror_moth"), \
             "Frost Lancer reused Mirror Moth's silhouette"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROM contract: Ember's Cinder Kite is a live procedural harrier."""
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from test_stage_archetypes import EN, PL, TM, generated_room
 
 
@@ -43,9 +43,8 @@ def main():
 
         # Ember must replace the phase-safe apothecary slot with the Kite,
         # not accidentally retain the later Midge or Temple Sunwheel art.
-        actual = bytes(pb.memory[0x8000 + SPR_CINDER_KITE * 16:
-                                 0x8000 + (SPR_CINDER_KITE + 1) * 16])
         expected = generated_sprite("sprite_enemy_cinder_kite")
+        actual = wait_for_obj_tile(pb, SPR_CINDER_KITE, expected)
         assert actual == expected, "Ember Depths did not install Cinder Kite OBJ art"
         assert actual != generated_sprite("sprite_enemy_cinder_maw"), \
             "Cinder Kite reused the rooted Cinder Maw silhouette"
