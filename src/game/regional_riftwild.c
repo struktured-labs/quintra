@@ -116,7 +116,9 @@ void run_state_begin_world(void) BANKED {
     // Every dungeon exit returns to the remembered world. Hollow relic
     // claims remain regional, but a suspend or campaign transition never
     // resumes inside the more dangerous counterpart unexpectedly.
-    run_state.riftwild_shadow &= RIFT_SHADOW_RELIC_MASK;
+    // Den claims (bits 4..6) are regional too; they survive the trip.
+    run_state.riftwild_shadow &= (u8)(RIFT_SHADOW_RELIC_MASK
+        | RIFT_SHADOW_DEN_MASK);
     run_state.world_mode = 1;
     run_state.world_screen = regional_return_screen[step];
     run_state.world_return_screen = 0;
