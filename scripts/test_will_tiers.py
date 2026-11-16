@@ -81,8 +81,10 @@ def main():
     for hero in range(5):
         pb = boot(hero)
         previous = 0
+        # Picsean's Tide Vortex is one carrier at every tier; its tier
+        # scaling is damage (2026-11-15 Tide Vortex spec).
         expected_shots = ((6, 8, 10, 11), (1, 3, 5, 7), (5, 6, 7, 8),
-                          (5, 6, 7, 8), (3, 5, 7, 8))[hero]
+                          (1, 1, 1, 1), (3, 5, 7, 8))[hero]
         for level in range(1, 5):
             clear_arena(pb)
             pb.memory[PLAYER + 44] = 7
@@ -91,7 +93,8 @@ def main():
             mp = pb.memory[PLAYER + 4]
             fire_right(pb)
             shots = player_shots(pb)
-            assert len(shots) > previous, (hero, level, len(shots), previous)
+            assert hero == 3 or len(shots) > previous, (
+                hero, level, len(shots), previous)
             assert len(shots) == expected_shots[level - 1], (hero, level, len(shots))
             previous = len(shots)
             assert pb.memory[PLAYER + LEVEL_OFFSET] == 0, (hero, level)
