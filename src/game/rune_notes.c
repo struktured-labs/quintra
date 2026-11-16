@@ -60,12 +60,27 @@ void tiles_load_note_plates(void) BANKED {
     set_bkg_data(BGT_NOTE_FLASH, 1, bgt_note_c);
 }
 
-void puzzle_load_note_palettes(void) BANKED {
+static void load_note_slot(u8 slot, const u16 *pal, u8 dim) {
+    u16 tmp[4];
+    u8 i;
+    if (!dim) {
+        palette_bg_load(slot, pal);
+        return;
+    }
+    for (i = 0; i < 4; ++i) tmp[i] = (u16)((pal[i] >> 1) & 0x3DEF);
+    palette_bg_load(slot, tmp);
+}
+
+void puzzle_apply_note_palettes(u8 dim) BANKED {
     tiles_load_note_plates();
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_rune_count) {
-        palette_bg_load(BGPAL_CRYSTAL, rune_pal_low);
-        palette_bg_load(BGPAL_DOOR, rune_pal_high);
+        load_note_slot(BGPAL_CRYSTAL, rune_pal_low, dim);
+        load_note_slot(BGPAL_DOOR, rune_pal_high, dim);
     }
+}
+
+void puzzle_load_note_palettes(void) BANKED {
+    puzzle_apply_note_palettes(0);
 }
 
 static void rune_paint_plate(u8 plate) {

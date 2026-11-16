@@ -567,6 +567,7 @@ static void room_apply_pause_palettes(u8 dim) {
         palette_bg_load(BGPAL_CRYSTAL, sp[2]);
         palette_bg_load(BGPAL_DOOR,    sp[3]);
     }
+    puzzle_apply_note_palettes(dim);
 }
 
 void room_status_blind_visual(u8 blind) BANKED {

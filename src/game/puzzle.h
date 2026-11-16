@@ -79,6 +79,7 @@ extern u8 room_rune_lit_mask;
 #define RUNE_ATTR_AT(x, y, tile) puzzle_rune_attr(tile)
 
 void puzzle_load_note_palettes(void) BANKED;
+void puzzle_apply_note_palettes(u8 dim) BANKED;
 void tiles_load_note_plates(void) BANKED;
 void rune_cancel_flash(void) BANKED;
 void rune_start_flash(u8 plate) BANKED;
