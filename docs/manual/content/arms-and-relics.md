@@ -23,7 +23,7 @@ The Aim page cycles only what is in the pack.
 
 ## Relics that change the body
 
-Iron Heart, maximum health +2. Speed Ring, speed +1 (speed stops at 12). Power Stone, attack +1. Tough Skin, defense +1. Lucky Coin, luck +2. Mana Gem, maximum magic +2. Ward Charm, defense +1 and luck +1, and it is a real ward: a curse from a monster is stopped, and a curse you accept from a Wildcard is softened. Swift Fang, speed +1 and attack +1. Hunter’s Eye, luck +3. Vampiric Sigil, attack +1 and maximum health +1, and a heal on every fifth kill.
+Iron Heart, maximum health +2; it is the gold heart, never the pale one. At the eight-heart limit it mends two health instead, or waits on the floor if you are already full. Speed Ring, speed +1 (speed stops at 12). Power Stone, attack +1. Tough Skin, defense +1. Lucky Coin, luck +2. Mana Gem, maximum magic +2. Ward Charm, defense +1 and luck +1, and it is a real ward: a curse from a monster is stopped, and a curse you accept from a Wildcard is softened. Swift Fang, speed +1 and attack +1. Hunter’s Eye, luck +3. Vampiric Sigil, attack +1 and maximum health +1, and a heal on every fifth kill.
 
 ## Tools and strange verbs
 

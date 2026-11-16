@@ -2,7 +2,7 @@
 #define QUINTRA_GAME_MAP_MARKS_H
 #include "core/types.h"
 
-// Bank 14 helpers so the Compass shop mark does not consume bank 7 headroom.
+// Bank 17 helpers so the Compass shop mark does not consume bank 7 headroom.
 void map_load_shop_palette(void) BANKED;
 void map_draw_dungeon_legend(void) BANKED;
 void map_draw_world_legend(void) BANKED;

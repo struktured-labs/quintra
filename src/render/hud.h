@@ -47,6 +47,33 @@ void hud_show_cured(void) BANKED;
 void hud_show_cache_guarded(void) BANKED;
 // Name the capped stat when a boost cannot apply, e.g. SPDMAX.
 void hud_show_stat_max(u8 stat) BANKED;
+// Pickup words (six HUD cells). Keep in sync with notice_words[].
+enum {
+    NW_REVIVE, NW_FORK, NW_BOUNCE, NW_THORNS, NW_DRUM, NW_FLASK, NW_BLAST,
+    NW_BEAM, NW_VAMP, NW_WARD, NW_CHART, NW_WEAPON, NW_HEALED, NW_SCOUT,
+    NW_CLEAN, NW_BURST, NW_CHIME, NW_MIRROR, NW_CURE1, NW_HURT1,
+    NW_COINMAX, NW_OWNED, NW_NOROOM, NW_KNOWN, NW_LOWHP, NW_ASWAP,
+    NW_WARDED, NW_COUNT
+};
+// Pickup notice kinds (below the 0x80 status flag, above the stat ids).
+#define HUD_NOTICE_WORD  0x74   // amount = NW_* word id
+#define HUD_NOTICE_HEAL  0x73   // HEAL+n
+#define HUD_NOTICE_MANA  0x72   // MANA+n
+#define HUD_NOTICE_COIN  0x71   // coin +nn
+#define HUD_NOTICE_LOSS  0x70   // amount = stat << 4 | n: ATK-1, MAX heart-2
+#define HUD_NOTICE_NEED  0x6F   // NEEDnn: a ware costs more than the purse
+// Bank 14: queue a pickup card unless the same kind+amount is already up.
+void hud_notice_pair(u8 kind, u8 amount) BANKED;
+// Bank 17 (pickup_notice.c): fill six word cells, return its palette code.
+u8 hud_notice_word_fill(u8 word, u8 *row) BANKED;
+void hud_show_word(u8 word) BANKED;       // 0xFF / out of range: no-op
+void hud_show_heal(u8 n) BANKED;          // HEAL+n (refill, not max HP)
+void hud_show_mana(u8 n) BANKED;          // MANA+n (refill, not max MP)
+void hud_show_coins(u8 n) BANKED;         // coin +nn
+void hud_show_need(u8 price) BANKED;      // NEEDnn: ware too expensive
+void hud_show_stat_loss(u8 stat, u8 n) BANKED; // ATK-1, MAX heart-2
+void hud_show_item(u8 item_id) BANKED;    // presence relic / tool word
+void hud_show_curse(u8 kind) BANKED;      // CURSE + its concrete cost
 void hud_show_boomerang(void) BANKED;
 void hud_show_hookshot(void) BANKED;
 void hud_show_secondary(u8 bomb) BANKED;
