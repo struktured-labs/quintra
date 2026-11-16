@@ -16,9 +16,9 @@ int main(void) {
     while (scanf("%u %u %u %u %u %u", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) == 6) {
         ll_size = (u8)v[0]; ll_entry = (u8)v[1]; ll_cache = (u8)v[2];
         ll_order = (u8)v[3]; ll_mix = (u8)v[4]; ll_bb = (u8)v[5];
-        for (i = 0; i < LL_ROLES; ++i) { scanf("%u", &v[0]); ll_role[i] = (u8)v[0]; }
+        for (i = 0; i < LL_ROLES; ++i) { if (scanf("%u", &v[0]) != 1) return 1; ll_role[i] = (u8)v[0]; }
         for (i = 0; i < ll_size; ++i)
-            for (d = 0; d < 4; ++d) { scanf("%u", &v[0]); ll_nb[i][d] = (u8)v[0]; }
+            for (d = 0; d < 4; ++d) { if (scanf("%u", &v[0]) != 1) return 1; ll_nb[i][d] = (u8)v[0]; }
         ll_generate();
         printf("%u", ll_gate_n);
         for (i = 0; i < ll_gate_n; ++i)
