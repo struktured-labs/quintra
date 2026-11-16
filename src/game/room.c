@@ -756,10 +756,6 @@ static u8 is_forward_boss_door(u8 x, u8 y, u8 tile) {
 }
 
 static u8 attr_for_room_tile(u8 x, u8 y, u8 tile) {
-    {
-        u8 fixture = PUZZLE_ATTR_OVERRIDE(x, y, tile);
-        if (fixture != 0xFF) return fixture;
-    }
     // The paired phase gate uses ordinary pillar/floor geometry with a
     // persistent dungeon color. This keeps collision simple while making a
     // switch in one room visibly raise/lower the wall in the next.
