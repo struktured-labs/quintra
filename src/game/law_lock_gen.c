@@ -1,4 +1,5 @@
-#pragma bank 255
+#pragma bank 19
+// Pinned to its own bank: autobank first-fit left banks 17/18 under the floor.
 // Law Lock generator and product-graph validator. Plain C: also compiled on
 // the host (LL_HOST) by the quintra-procgen `law_lock_parity` cargo test
 // against tools/crates/quintra-procgen/src/law_lock.rs. Keep every step in
@@ -112,11 +113,34 @@ static u8 ll_altar_cell_ok(u8 cell) {
         ? 1 : 0;
 }
 
+// Per-BFS lookup tables (rebuilt on every call; gates and altars change
+// between calls): doorways closed in each state, and altar cells.
+static u8 ll_block[2][LL_CELLS];
+static u8 ll_alt[LL_CELLS];
+
 // Breadth-first search over (cell, state). Returns steps to `goal` in any
 // state (a flip costs one step) or LL_NONE; ll_dist keeps every visit.
-static u8 ll_bfs(u8 start, u8 state, u8 mode, u8 goal) {
+// With full = 0 the search stops once every reachable state node of `goal`
+// has its (final, BFS-order) distance, which keeps the answer, ll_dist of
+// the goal and the ll_from chain identical to a full search.
+static u8 ll_bfs(u8 start, u8 state, u8 mode, u8 goal, u8 full) {
     u8 head = 0, tail = 0, i, found = LL_NONE;
+    u8 g0 = (u8)(goal * 2);
     for (i = 0; i < (u8)(LL_CELLS * 2); ++i) ll_dist[i] = 0;
+    for (i = 0; i < LL_CELLS; ++i) {
+        ll_block[0][i] = 0;
+        ll_block[1][i] = 0;
+        ll_alt[i] = 0;
+    }
+    if (mode != LL_MODE_PLAIN)
+        for (i = 0; i < ll_gate_n; ++i) {
+            u8 shut = (u8)(ll_gate_open[i] ^ 1);
+            u8 da = ll_gate_dir[i];
+            ll_block[shut][ll_gate_a[i]] |= (u8)(1 << da);
+            ll_block[shut][ll_gate_b[i]] |= (u8)(1 << ((u8)(da + 2) & 3));
+        }
+    if (mode == LL_MODE_LAW)
+        for (i = 0; i < ll_altar_n; ++i) ll_alt[ll_altar[i]] = 1;
     ll_dist[(u8)(start * 2 + state)] = 1;
     ll_from[(u8)(start * 2 + state)] = (u8)(start * 2 + state);
     ll_queue[tail++] = (u8)(start * 2 + state);
@@ -124,19 +148,18 @@ static u8 ll_bfs(u8 start, u8 state, u8 mode, u8 goal) {
         u8 node = ll_queue[head++];
         u8 cell = (u8)(node >> 1), st = (u8)(node & 1), d;
         u8 step = (u8)(ll_dist[node] + 1);
-        if (cell == goal && found == LL_NONE) found = (u8)(ll_dist[node] - 1);
+        u8 blk = ll_block[st][cell];
         for (d = 0; d < 6; ++d) {
             u8 next, nst = st, idx;
             if (d < 4) {
+                if (blk & (u8)(1 << d)) continue;
                 next = ll_nb[cell][d];
                 if (next == LL_NONE) continue;
-                if (mode != LL_MODE_PLAIN && !ll_edge_open(cell, d, st))
-                    continue;
             } else if (d == 4) {
                 next = ll_portal_peer(cell);
                 if (next == LL_NONE) continue;
             } else {
-                if (mode != LL_MODE_LAW || !ll_is_altar(cell)) continue;
+                if (!ll_alt[cell]) continue;
                 next = cell;
                 nst = (u8)(st ^ 1);
             }
@@ -146,6 +169,15 @@ static u8 ll_bfs(u8 start, u8 state, u8 mode, u8 goal) {
             ll_from[idx] = node;
             ll_queue[tail++] = idx;
         }
+        if (!full && ((mode == LL_MODE_LAW)
+                ? (ll_dist[g0] && ll_dist[(u8)(g0 + 1)])
+                : ll_dist[(u8)(g0 + state)] != 0)) break;
+    }
+    // BFS: the nearer of the goal's state nodes is the one dequeued first.
+    for (i = 0; i < 2; ++i) {
+        u8 dd = ll_dist[(u8)(g0 + i)];
+        if (dd && (found == LL_NONE || (u8)(dd - 1) < found))
+            found = (u8)(dd - 1);
     }
     return found;
 }
@@ -244,7 +276,7 @@ static u8 ll_tour(u8 mode) {
         next_cost[0] = next_cost[1] = 0xFFFF;
         for (s = 0; s < 2; ++s) {
             if (cost[s] == 0xFFFF) continue;
-            ll_bfs(at, s, mode, next);
+            ll_bfs(at, s, mode, next, 0);
             for (s2 = 0; s2 < 2; ++s2) {
                 u8 d = ll_dist[(u8)(next * 2 + s2)];
                 if (d && (u16)(cost[s] + d - 1) < next_cost[s2])
@@ -334,14 +366,14 @@ static u8 ll_try(u8 want) {
     }
     // Nontrivial: without a flip some mission room or the sanctuary stays
     // out of reach.
-    ll_bfs(ll_entry, 0, LL_MODE_FROZEN, sanctuary);
+    ll_bfs(ll_entry, 0, LL_MODE_FROZEN, sanctuary, 1);
     for (i = 0, g = 1; i < LL_ROLES; ++i)
         if (!ll_reached(ll_role[i])) g = 0;
     if (g && ll_reached(sanctuary)) return 0;
     // Solvable: every cell (all missions, sanctuary, boss) is reachable from
     // the arrival node. The product graph is undirected, so every node
     // reached can also return: no reachable state is a trap.
-    ll_law_boss = ll_bfs(ll_entry, 0, LL_MODE_LAW, sanctuary);
+    ll_law_boss = ll_bfs(ll_entry, 0, LL_MODE_LAW, sanctuary, 1);
     if (ll_law_boss == LL_NONE) return 0;
     for (i = 0; i < ll_size; ++i)
         if (!ll_reached(i)) return 0;
@@ -357,7 +389,7 @@ void ll_generate(void) LL_BANKED {
     u8 want;
     ll_gate_n = 0;
     ll_altar_n = 0;
-    ll_plain_boss = ll_bfs(ll_entry, 0, LL_MODE_PLAIN, (u8)(ll_size - 2));
+    ll_plain_boss = ll_bfs(ll_entry, 0, LL_MODE_PLAIN, (u8)(ll_size - 2), 0);
     ll_law_boss = ll_plain_boss;
     ll_plain_tour = ll_tour(LL_MODE_PLAIN);
     ll_law_tour = ll_plain_tour;
@@ -378,7 +410,7 @@ u8 ll_route_first(u8 start, u8 state, u8 goal) LL_BANKED {
     u8 node, prev, d, best = LL_NONE, first;
     ll_route_altar = LL_NONE;
     if (start == goal) return LL_NONE;
-    ll_bfs(start, state, LL_MODE_LAW, goal);
+    ll_bfs(start, state, LL_MODE_LAW, goal, 0);
     // The nearer of the goal's two state nodes (BFS: smaller ll_dist).
     for (d = 0; d < 2; ++d) {
         node = (u8)(goal * 2 + d);
