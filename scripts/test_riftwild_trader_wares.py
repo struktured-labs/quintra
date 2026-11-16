@@ -165,7 +165,7 @@ def check_seed(seed, bosses, shots=False):
         texts, shot = talk_page(pb)
         if shots:
             shot.save(SHOTS / "riftwild-trader-wares.png")
-        assert any("CURES POISON" in t for t in texts), \
+        assert any("PSN/BURN/BLEED" in t for t in texts), \
             f"{tag}: TODAYS WARES lists nothing: {texts[3:12]}"
 
         # A deliberate purchase keeps the restocked vial on the counter and
