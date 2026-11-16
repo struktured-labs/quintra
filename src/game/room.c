@@ -40,6 +40,7 @@ void stage_event_resolve_fall(void) BANKED;
 #include "game/stage_event.h"
 #include "game/status.h"
 #include "game/will.h"
+#include "game/water_ride.h"
 #include "game/waygear.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
@@ -951,6 +952,8 @@ static void place_player_sprite(void) {
         move_sprite(2, sx,         (u8)(sy+8));
         move_sprite(3, (u8)(sx+8), (u8)(sy+8));
     }
+    // Tide Raft under the feet, or Picsean's swim pose, while on water.
+    water_ride_place();
 }
 
 static void room_draw_major_reward_tableau(void) {
@@ -2556,8 +2559,10 @@ void room_draw(void) {
         camera_player_x = (u8)player.x;
         camera_player_y = (u8)player.y;
         camera_follow_ticks = 0;
-        place_player_sprite();
+        // Entities first, as in scrolling rooms, so the Tide Raft drawn with
+        // the champion keeps OAM 36..38 even in a crowded compact room.
         entity_draw_all();
+        place_player_sprite();
     }
     if (serpent_tail_active) serpent_draw();
     if (cinder_pack_active) cinder_draw();
