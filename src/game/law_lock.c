@@ -1,4 +1,5 @@
-#pragma bank 255
+#pragma bank 18
+// Pinned: autobank first-fit left bank 5 under the 256-byte layout floor.
 // Law Lock cartridge glue: feeds the seeded maze to the plain-C generator
 // (law_lock_gen.c), paints the gated doorways and the altar of the current
 // room, and answers the Compass/director's product-graph route questions.

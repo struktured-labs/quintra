@@ -474,7 +474,7 @@ DOOR-gold and repaints after the crate passes over it.
 `quintra-procgen::push_seal` mirrors the layout and runs a sokoban BFS from
 every apron start; the live test seats the crate with real pushes.
 
-### 8.5 Law Lock as built (`src/game/law_lock.c`, `law_lock_gen.c`, bank 255)
+### 8.4 Law Lock as built (`src/game/law_lock.c`, `law_lock_gen.c`, bank 255)
 
 - Stage 1 is Law-free. Stages 2–3 try 1 gate, Stages 4–6 try 2, Stages 7–9
   try 3, falling back to fewer when no placement passes the caps below.
@@ -513,7 +513,7 @@ every apron start; the live test seats the crate with real pushes.
   `topology.rs`), both states of a gated doorway, the altar flip and its
   save byte, and the Compass legend colour.
 
-### 8.6 Known gaps
+### 8.5 Known gaps
 
 - `scripts/quintra_balance_bot.lua` has no Prism, socket or Law Lock policy
   (not in CI).
@@ -545,7 +545,7 @@ Full text: Gemini Bridge `round4/puzzles.md`. Adopted:
   bit 2). Not scheduled.
 - **E. Route caps.** Keep the 1.5× entry-to-boss cap and add a
   mission-tour overhead check (bitmask BFS) in `quintra-procgen` — done in
-  §8.5.
+  §8.4.
 - **F. Roster.** Ship Prism Toggle first (this batch), then Rime Slide.
   Ember Vigil without wind vents; keep Hollow Mirror. **Snag Gallery is
   deferred. Kindred Weight is cut.** Required rooms stay solvable with base
