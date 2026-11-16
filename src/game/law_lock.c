@@ -176,14 +176,39 @@ u8 law_lock_attr_at(u8 x, u8 y) BANKED {
     return 0xFF;
 }
 
-u8 law_lock_edge_gate_state(u8 a, u8 b) BANKED {
+static u8 law_map_attr(u8 state) {
+    return state ? BGPAL_CRACK : BGPAL_DOOR;
+}
+
+static void law_map_put(u8 x, u8 y, u8 tile, u8 attr) {
+    VBK_REG = 0; set_bkg_tiles(x, y, 1, 1, &tile);
+    VBK_REG = 1; set_bkg_tiles(x, y, 1, 1, &attr);
+    VBK_REG = 0;
+}
+
+u8 law_lock_edge_attr(u8 a, u8 b) BANKED {
     u8 g;
     if (!law_lock_active()) return LL_NONE;
     for (g = 0; g < ll_gate_n; ++g)
         if ((ll_gate_a[g] == a && ll_gate_b[g] == b)
             || (ll_gate_a[g] == b && ll_gate_b[g] == a))
-            return ll_gate_open[g];
+            return law_map_attr(ll_gate_open[g]);
     return LL_NONE;
+}
+
+void law_lock_map_altar(u8 x, u8 y, u8 cell) BANKED {
+    u8 attr;
+    if (!ll_is_altar(cell)) return;
+    attr = law_map_attr(law_state());
+    law_map_put(x, (u8)(y + 1), BGT_MAP_BIG_ROOM + 2, attr);
+    law_map_put((u8)(x + 1), (u8)(y + 1), BGT_MAP_BIG_ROOM + 3, attr);
+}
+
+void law_lock_map_legend(void) BANKED {
+    u8 attr = law_map_attr(law_state());
+    law_map_put(16, 16, BGT_AREA_L, attr);
+    law_map_put(17, 16, BGT_AREA_A, attr);
+    law_map_put(18, 16, BGT_AREA_W, attr);
 }
 
 u8 law_lock_route(u8 start, u8 target) BANKED {

@@ -84,8 +84,12 @@ u8 law_lock_cell_is_altar(u8 cell) BANKED;
 void law_lock_apply_room(u8 live) BANKED;
 // BG palette for a gate pillar at (x, y), 0xFF if not a gate tile.
 u8 law_lock_attr_at(u8 x, u8 y) BANKED;
-// Map: the Law state that opens the corridor (a, b), or LL_NONE.
-u8 law_lock_edge_gate_state(u8 a, u8 b) BANKED;
+// Compass (cold, kept out of the map's bank): cyan = opens in WAX, warm =
+// opens in WANE. Corridor (a, b) palette or LL_NONE when it has no gate;
+// a charted altar node's lower half in the active colour; the LAW legend.
+u8 law_lock_edge_attr(u8 a, u8 b) BANKED;
+void law_lock_map_altar(u8 x, u8 y, u8 cell) BANKED;
+void law_lock_map_legend(void) BANKED;
 // Product-graph route from `start` toward `target` in the current state.
 // Returns the first doorway or DIR_NONE; law_lock_waypoint is the altar the
 // route must flip at first (or `target` when no flip is needed).
