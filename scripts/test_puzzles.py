@@ -624,6 +624,9 @@ def assert_pressed_persists(pb, addrs):
     wait_rune_flash(pb)
     assert pb.memory[PL + 2] == hp - 1, "wrong note did not charge a half-heart"
     assert_idle_all()
+    # Leave the court so the next contract can voice a plate; standing on a
+    # rune keeps puzzle_contact latched and swallows the flash.
+    step_off(pb)
 
 
 def load_rune_room(stage_index, role):
