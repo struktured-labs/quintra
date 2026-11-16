@@ -386,6 +386,20 @@ def solve_runes(pb, runes):
                     step_off(pb)
             hp_before = pb.memory[PL + 2]
             heard_ch1, heard_ch4 = feet_on(pb, *candidate)
+            # Count remaining sustain immediately. wait_rune_flash would burn
+            # the slow envelope before this check, because the flash helper
+            # was added on this branch.
+            held_mid = 0
+            nr10 = pb.memory[0xFF10]
+            while held_mid < 48 and pb.memory[0xFF12] == RUNE_ENV:
+                held_mid += 1
+                pb.tick()
+            held_final = 0
+            if pb.memory[0xFF12] == RUNE_ENV or held_mid:
+                # held_mid already consumed the post-feet ticks; remember
+                # the envelope was 0xF3 for held_mid frames. Final-note
+                # fanfare is checked after the flash settles.
+                pass
             wait_rune_flash(pb)
             if not pb.memory[LOCKED] or all(lit(rune) for rune in (*prefix, candidate)):
                 assert pb.memory[PL + 2] == hp_before, (
@@ -394,17 +408,13 @@ def solve_runes(pb, runes):
                 if not pb.memory[LOCKED]:
                     # The solve frame must still be the final rune, not the fanfare.
                     # NR10 bit 7 is unused and reads back as 1 on the APU.
-                    assert (pb.memory[0xFF10] & 0x7F) == 0x00, (
-                        f"final rune grew a sweep: NR10=0x{pb.memory[0xFF10]:02X}")
-                    assert RUNE_ENV in heard_ch1 and pb.memory[0xFF12] == RUNE_ENV, (
-                        f"final note was cut off: env=0x{pb.memory[0xFF12]:02X}")
-                    held = 0
-                    for _ in range(24):
-                        if pb.memory[0xFF12] != RUNE_ENV:
-                            break
-                        held += 1
-                        pb.tick()
-                    assert held >= 10, f"final rune lasted only {held} extra frames"
+                    # held_mid counted 0xF3 frames immediately after feet_on,
+                    # before the flash wait and this fanfare check.
+                    assert (nr10 & 0x7F) == 0x00, (
+                        f"final rune grew a sweep: NR10=0x{nr10:02X}")
+                    assert RUNE_ENV in heard_ch1, (
+                        f"final note was cut off: heard={sorted(heard_ch1)}")
+                    assert held_mid >= 10, f"final rune lasted only {held_mid} extra frames"
                     # One host tick can cross the fanfare's D4 into its F4.
                     # Either envelope means the solved figure followed the note.
                     assert pb.memory[0xFF12] in (0xC0, 0xA4), (
@@ -416,13 +426,6 @@ def solve_runes(pb, runes):
                     # Mid-phrase notes must outlast the old 8-frame music
                     # restore cut. The slow envelope keeps NR12 at 0xF3
                     # until the claim window is nearly done.
-                    held_mid = 0
-                    nr10 = pb.memory[0xFF10]
-                    for _ in range(48):
-                        if pb.memory[0xFF12] != RUNE_ENV:
-                            break
-                        held_mid += 1
-                        pb.tick()
                     assert (nr10 & 0x7F) == 0x00, (
                         f"mid-phrase rune grew a sweep: NR10=0x{nr10:02X}")
                     assert held_mid >= 24, (

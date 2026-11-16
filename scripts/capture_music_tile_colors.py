@@ -24,6 +24,11 @@ def bind_rom(rom: Path) -> None:
     noi = noi_path.read_text()
     puzzles.ROM = rom
     puzzles.NOI = noi
+    # generated_room / boot helpers read this module-level path, not puzzles.ROM.
+    import test_stage_archetypes as archetypes
+    import os
+    os.environ["QUINTRA_TEST_ROM"] = str(rom)
+    archetypes.ROM = rom
 
     def addr(name):
         match = re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", noi)
