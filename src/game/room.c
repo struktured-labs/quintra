@@ -42,6 +42,7 @@ void stage_event_resolve_fall(void) BANKED;
 #include "game/status.h"
 #include "game/will.h"
 #include "game/water_ride.h"
+#include "game/picsean_vortex.h"
 #include "game/waygear.h"
 #include "render/class_palettes.h"
 #include "render/hud.h"
@@ -2556,8 +2557,9 @@ void room_draw(void) {
         entity_draw_all();
         place_player_sprite();
     }
-    if (serpent_tail_active) serpent_draw();
-    if (cinder_pack_active) cinder_draw();
+    // Serpent, Cinder pack and Tide Vortex art (one banked call keeps
+    // bank 1 above its emergency floor).
+    room_draw_overlays();
 
     if (procgen_current_room_is_boss) VBK_REG = 0;
 

@@ -11,6 +11,7 @@
 #include "game/run_state.h"
 #include "game/status.h"
 #include "game/will.h"
+#include "game/picsean_vortex.h"
 
 void entity_init_room(void) BANKED {
     u8 i;
@@ -24,6 +25,8 @@ void entity_init_room(void) BANKED {
     // may continue naturally across that doorway.
     will_corvin_mark_slot = 0xFF;
     will_corvin_mark_ticks = 0;
+    // The Tide Vortex belongs to the room it was cast in.
+    if (picsean_vortex_ticks) picsean_vortex_abort = 1;
     // Park entity sprites (slots 4..35) + boss metasprite overlay (36..39).
     for (i = 4; i < 40; ++i)
         move_sprite(i, 0, 0);

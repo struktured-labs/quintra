@@ -99,7 +99,9 @@ def fire_right(pb):
 def main():
     # Minimum simultaneous hitbox counts distinguish the five authored MAX
     # geometries without pinning harmless animation/velocity tuning.
-    expected = (3, 1, 5, 5, 3)
+    # Picsean's MAX is the Tide Vortex: one inert damage carrier drives the
+    # spiral (2026-11-15 spec), so it owns exactly one player projectile.
+    expected = (3, 1, 5, 1, 3)
     for class_id, minimum in enumerate(expected):
         pb = boot(class_id)
         clear_arena(pb)
@@ -141,17 +143,16 @@ def main():
         elif class_id == 2:
             assert all(pb.memory[s + 14] == 4 for s in shots)
         elif class_id == 3:
-            # Moon Tide is a forward offensive fan, not Undertow again: all
-            # five right-facing lanes remain in the forward half-plane, the
-            # center is the broadest/piercing breaker, and MAX grants no ward.
-            assert all(pb.memory[s + 10] < 0x80 for s in shots), (
-                "Picsean Moon Tide still emitted a rear/radial lane")
-            assert any(pb.memory[s + 25] == 0xBB and pb.memory[s + 14] == 6
-                       for s in shots), "Moon Tide lost its central breaker"
+            # Tide Vortex: one carrier (PROJ_AUX_VORTEX) and a live spiral
+            # that grants no ward; it is offense, Undertow stays the guard.
+            assert len(shots) == 1 and pb.memory[shots[0] + 23] == 0xF0, (
+                "Tide Vortex lost its damage carrier")
+            assert pb.memory[addr("_picsean_vortex_ticks")] > 0, (
+                "Tide Vortex did not start")
             assert pb.memory[PLAYER + 15] == 0, (
-                "Moon Tide still granted defensive invulnerability")
+                "Tide Vortex granted defensive invulnerability")
             assert pb.memory[PLAYER + 20] == 0, (
-                "Moon Tide still duplicated Undertow's shield")
+                "Tide Vortex duplicated Undertow's shield")
         elif class_id == 4:
             assert any(pb.memory[s + 12] == 123 for s in shots)
 

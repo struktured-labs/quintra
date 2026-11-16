@@ -58,7 +58,7 @@ def wall_drawn(pb):
     return rows
 
 
-def spawn_shot(pb, x, y, vx, melee=False, flags=0):
+def spawn_shot(pb, x, y, vx, melee=False, flags=0, aux=0):
     for i in range(32):
         e = EN + i * 28
         if pb.memory[e] == 0:
@@ -78,6 +78,7 @@ def spawn_shot(pb, x, y, vx, melee=False, flags=0):
     pb.memory[e + 16] = 18 if melee else 60
     pb.memory[e + 17 + 2] = 1 if melee else 0
     pb.memory[e + 17 + 3] = flags
+    pb.memory[e + 17 + 6] = aux
     pb.memory[e + 25] = 0x88 if melee else 0x77
     pb.memory[e + 26] = 4
     return e
@@ -151,7 +152,14 @@ def main():
     max_x, _, _ = fly(pb, boss, 0, chord, 30)
     assert max_x > WALL_X + 12, f"Convergence chord was blocked (x={max_x})"
 
-    # 5. Unwinding after a storm charge: plates slack (grey), shots pass.
+    # 5. Picsean's Tide Vortex (PROJ_AUX_VORTEX) cuts through, even
+    # without the Convergence flag (Max-Will contract).
+    settle(pb, boss, 0, 10)
+    vortex = spawn_shot(pb, 32, 64, 3, aux=0xF0)
+    max_x, _, _ = fly(pb, boss, 0, vortex, 30)
+    assert max_x > WALL_X + 12, f"Tide Vortex was blocked by the plated coil (x={max_x})"
+
+    # 6. Unwinding after a storm charge: plates slack (grey), shots pass.
     settle(pb, boss, 2, 12)
     assert bg_palette(pb, 6) == SLACK, f"slack coil palette {bg_palette(pb, 6)}"
     shot = spawn_shot(pb, 32, 64, 3)
@@ -159,7 +167,7 @@ def main():
     assert max_x > WALL_X + 12, f"slack coil still blocked the shot (x={max_x} flash={flash} cells={wall_drawn(pb)} hp={pb.memory[boss+14]} st={pb.memory[boss+15]} {list(pb.memory[shot:shot+28])})"
     pb.screen.image.save("tmp/serpent-tail-slack.png")
     pb.stop(save=False)
-    print("serpent tail shield: block, deflect, hood damage, signature, slack window OK")
+    print("serpent tail shield: block, deflect, hood damage, signature, vortex, slack window OK")
 
 
 if __name__ == "__main__":
