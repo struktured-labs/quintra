@@ -200,7 +200,10 @@ def test_dungeon_merchant():
             f"purchase failed: vials={antidotes(pb)} coins={coins(pb)}")
         assert pb.memory[RS + SHOP_BOUGHT] == bought_before, (
             "Antidote purchase marked a featured shelf sold")
-        assert not wares(pb, WARE_ANTIDOTE), "bought Antidote stayed on the counter"
+        # Restocked shelf: the vial stays on the counter after a sale so
+        # the merchant never stands over an empty Antidote shelf.
+        assert len(wares(pb, WARE_ANTIDOTE)) == 1, \
+            "bought Antidote left the restocked shelf empty"
     finally:
         pb.stop(save=False)
 

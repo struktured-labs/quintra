@@ -33,7 +33,8 @@ SCREEN_MAP = 8
 BGT_VOID = 0
 BGT_MAP_PATH_H = 53
 BGT_MAP_PATH_V = 54
-BGT_MAP_BIG_UNKNOWN = 106
+BGT_MAP_BIG_SHOP = 106
+BGT_MAP_BIG_UNKNOWN = 106  # retired alias of BIG_SHOP
 BGT_MAP_BIG_CACHE = 123
 MAP_GX = (1, 4, 7, 10, 13, 16, 16, 13, 10, 7, 4, 1,
           1, 4, 7, 10, 13, 16, 16, 13, 10, 7, 4, 1,
@@ -364,10 +365,13 @@ def main():
         fog_pb.tick()
     buy(fog_pb, 7)
     hold_until_screen(fog_pb, "select", SCREEN_MAP)
-    assert all(compass_node(fog_pb, cell) not in (BGT_VOID, BGT_MAP_BIG_UNKNOWN)
+    assert all(compass_node(fog_pb, cell) != BGT_VOID
                for cell in range(size)), (
         "purchased Chart did not reveal every room: "
         f"{[compass_node(fog_pb, cell) for cell in range(size)]}")
+    shop = size - 3
+    assert compass_node(fog_pb, shop) != BGT_MAP_BIG_SHOP, \
+        "Chart revealed the merchant coin before that room was visited"
     assert compass_node(fog_pb, cache) == BGT_MAP_BIG_CACHE, \
         "purchased Chart did not reveal the optional cache"
     missing = [(x, y) for x, y, tile in links

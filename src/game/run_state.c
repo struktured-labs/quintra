@@ -59,10 +59,14 @@ u8 run_state_is_sanctuary(void) {
             == run_state_boss_room(run_state.bosses_beaten)) ? 1 : 0;
 }
 
-u8 run_state_is_shop(void) {
+u8 run_state_dungeon_shop_cell(void) {
     u8 size = run_state_dungeon_size();
+    return (size >= 3) ? (u8)(size - 3) : 0xFF;
+}
+
+u8 run_state_is_shop(void) {
     return (!run_state.world_mode && !run_state_is_boss_room()
-        && run_state_dungeon_local() == (u8)(size - 3)) ? 1 : 0;
+        && run_state_dungeon_local() == run_state_dungeon_shop_cell()) ? 1 : 0;
 }
 
 u8 run_state_room_is_town(u8 room_counter) {
@@ -107,6 +111,8 @@ u8 run_state_dungeon_cell_visited(u8 cell) {
 void run_state_mark_visited(void) {
     if (run_state.world_mode) {
         run_state_reveal_world_cell(run_state.world_screen);
+        if (run_state.world_screen == RIFTWELL_WORLD_SCREEN)
+            run_state.riftwild_flags |= RIFT_REGION_TRADER_FOUND_BIT;
     } else {
         u8 cell = run_state_dungeon_cell();
         if (cell < 8)

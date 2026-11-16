@@ -11,6 +11,7 @@
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/map_marks.h"
 
 BANKREF(map_enter)
 
@@ -37,7 +38,6 @@ static const u16 map_pal_player[4] = {
 static const u16 map_pal_boss[4] = {
     BGR555(1,3,2), BGR555(14,3,1), BGR555(27,7,1), BGR555(31,20,4)
 };
-
 static u8 map_attr(u8 tile) {
     if (tile == BGT_WALL || tile == BGT_PILLAR || tile == BGT_ROOF
         || tile == BGT_FENCE || tile == BGT_TREE
@@ -51,6 +51,9 @@ static u8 map_attr(u8 tile) {
     if (tile == BGT_MAP_CACHE
         || (tile >= BGT_MAP_BIG_CACHE
             && tile < BGT_MAP_BIG_CACHE + 4)) return BGPAL_DOOR;
+    if (tile == BGT_MAP_SHOP
+        || (tile >= BGT_MAP_BIG_SHOP
+            && tile < BGT_MAP_BIG_SHOP + 4)) return 5;
     if (tile == BGT_MAP_HERE
         || (tile >= BGT_MAP_BIG_HERE
             && tile < BGT_MAP_BIG_HERE + 4)) return 7;
@@ -146,32 +149,6 @@ static void map_big_node(u8 x, u8 y, u8 base) {
     map_put((u8)(x + 1), (u8)(y + 1), (u8)(base + 3));
 }
 
-static void draw_dungeon_legend(void) {
-    static const u8 you[3] = {
-        BGT_MAP_LABEL_Y, BGT_MAP_LABEL_O, BGT_MAP_LABEL_U
-    };
-    static const u8 goal[4] = {
-        BGT_MAP_LABEL_G, BGT_MAP_LABEL_O, BGT_AREA_A, BGT_MAP_LABEL_L
-    };
-    static const u8 boss[4] = {
-        BGT_MAP_LABEL_B, BGT_MAP_LABEL_O, BGT_MAP_LABEL_S, BGT_MAP_LABEL_S
-    };
-    static const u8 loot[4] = {
-        BGT_MAP_LABEL_L, BGT_MAP_LABEL_O, BGT_MAP_LABEL_O, BGT_MAP_LABEL_T
-    };
-    u8 i;
-    // A single bottom key is enough once room identities are 16x16 shapes.
-    // It preserves the semantic colors without surrendering forty percent of
-    // the LCD to a vertical legend.
-    map_put(0, 17, BGT_MAP_HERE);
-    for (i = 0; i < 3; ++i) map_put((u8)(1 + i), 17, you[i]);
-    map_put(4, 17, BGT_MAP_SIGIL);
-    for (i = 0; i < 4; ++i) map_put((u8)(5 + i), 17, goal[i]);
-    map_put(9, 17, BGT_MAP_BOSS);
-    for (i = 0; i < 4; ++i) map_put((u8)(10 + i), 17, boss[i]);
-    map_put(14, 17, BGT_MAP_CACHE);
-    for (i = 0; i < 4; ++i) map_put((u8)(15 + i), 17, loot[i]);
-}
 
 static void draw_world_grid(void) {
     static const u8 wx[6] = { 1, 3, 5, 7, 9, 11 };
@@ -203,6 +180,7 @@ static void draw_world_grid(void) {
             // The fixed 6x6 lattice is safe knowledge; show unseen positions
             // as dim hollow cells so a partial route reads as a square grid.
             // Identity and connectivity remain fogged until actually visited.
+            if (seen) icon = map_world_shop_icon(cell, icon);
             map_put(x, y, seen ? icon : BGT_MAP_UNKNOWN);
             if (c + 1 < ZELDA_WORLD_W && seen
                 && run_state_world_cell_seen((u8)(cell + 1))
@@ -218,34 +196,6 @@ static void draw_world_grid(void) {
     }
 }
 
-// The right-hand legend is deliberately part of the cartridge rendering,
-// not README lore. It explains the four symbols that affect a Riftwild route;
-// treasure vaults retain the already-familiar violet Sigil diamond.
-static void draw_world_legend(void) {
-    static const u8 you[3] = {
-        BGT_MAP_LABEL_Y, BGT_MAP_LABEL_O, BGT_MAP_LABEL_U
-    };
-    static const u8 gate[4] = {
-        BGT_AREA_G, BGT_AREA_A, BGT_MAP_LABEL_T, BGT_AREA_E
-    };
-    static const u8 rift[4] = {
-        BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
-        BGT_MAP_LABEL_F, BGT_MAP_LABEL_T
-    };
-    static const u8 boss[4] = {
-        BGT_MAP_LABEL_B, BGT_MAP_LABEL_O,
-        BGT_MAP_LABEL_S, BGT_MAP_LABEL_S
-    };
-    u8 i;
-    map_put(13, 2, BGT_MAP_HERE);
-    for (i = 0; i < 3; ++i) map_put((u8)(14 + i), 2, you[i]);
-    map_put(13, 5, BGT_PORTAL);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 5, gate[i]);
-    map_put(13, 8, BGT_MAP_RIFT);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 8, rift[i]);
-    map_put(13, 11, BGT_MAP_BOSS);
-    for (i = 0; i < 4; ++i) map_put((u8)(14 + i), 11, boss[i]);
-}
 
 static void draw_dungeon_grid(void) {
     //  0 - 1 - 2 - 3 - 4 - 5
@@ -303,6 +253,7 @@ static void draw_dungeon_grid(void) {
         // The cache appears only after that room is visited or charted.
         if (seen && i == cache_cell && !cache_done && i != here)
             icon = BGT_MAP_BIG_CACHE;
+        icon = map_dungeon_shop_icon(i, here, icon);
         map_big_node(gx[i], gy[i], icon);
     }
     // Depth numbers appear only for rows that contain a room you have
@@ -370,7 +321,7 @@ static void draw_dungeon_grid(void) {
             || run_state_dungeon_cell_seen(8))
             map_put(9, 4, BGT_MAP_RIFT);
     }
-    draw_dungeon_legend();
+    map_draw_dungeon_legend();
 }
 
 // Towns are a fixed, legible respite between procedural regions. Unlike a
@@ -402,7 +353,8 @@ static void draw_town_grid(void) {
     if (plaza > TOWN_QUARTER) plaza = TOWN_ARRIVAL;
     here = plaza_node[plaza];
     for (i = 0; i < 3; ++i) {
-        map_room_box(tx[i], ty[i], i == here ? BGT_MAP_HERE : icon[i]);
+        map_room_box(tx[i], ty[i],
+            map_town_shop_center(i, here, icon[i]));
     }
     // East/west civic lanes and the north route back into the next dungeon.
     for (i = 0; i < 3; ++i) {
@@ -435,6 +387,7 @@ void map_enter(void) {
     palette_bg_load(BGPAL_CRYSTAL, map_pal_sigil);
     palette_bg_load(BGPAL_DOOR, map_pal_landmark);
     palette_bg_load(BGPAL_CRACK, map_pal_boss);
+    map_load_shop_palette();
     palette_bg_load(7, map_pal_player);
     if (run_state.world_mode) {
         // The area alphabet supplies G/A/E for GATE, then the Compass atlas
@@ -442,7 +395,7 @@ void map_enter(void) {
         tiles_load_area_labels(); tiles_load_map_bg(); map_clear_tiles();
         draw_map_heading();
         draw_world_grid();
-        draw_world_legend();
+        map_draw_world_legend();
         draw_ask_prompt();
         SHOW_BKG; DISPLAY_ON;
         return;

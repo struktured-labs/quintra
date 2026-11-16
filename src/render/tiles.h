@@ -199,18 +199,24 @@
 // the first visit while discovered routes overwrite them with the bright
 // path tiles above. Slots 100–101 are otherwise unused by every map atlas.
 #define BGT_MAP_PATH_H_DIM 100
-#define BGT_MAP_PATH_V_DIM 101
+// Slot 101 was the unused dim vertical path. The SHOP legend letter H
+// reclaims it; unvisited rooms stay blank instead of using dim corridors.
+#define BGT_MAP_LABEL_H      101
 
 // Full-size dungeon Compass nodes. Each identity occupies a 2x2 tile
 // metasquare in TL/TR/BL/BR order, turning the 6x5 pocket graph into the
 // dominant screen element instead of a tiny diagram beside a tall legend.
 #define BGT_MAP_BIG_ROOM     102 // 102..105
-#define BGT_MAP_BIG_UNKNOWN  106 // 106..109
+#define BGT_MAP_BIG_SHOP     106 // 106..109 gold coin, only after a real visit
+#define BGT_MAP_BIG_UNKNOWN  106 // retired alias; unvisited rooms stay blank
 #define BGT_MAP_BIG_HERE     110 // 110..113
 #define BGT_MAP_BIG_GOAL     114 // 114..117
 #define BGT_MAP_BIG_BOSS     118 // 118..121
 #define BGT_MAP_CACHE        122 // single chest glyph for the LOOT legend
 #define BGT_MAP_BIG_CACHE    123 // 123..126 optional Farfold Cache node
+// Compass-only gold coin. SELECT overwrites in-play HUD_OFFER_BOUNCE at 127;
+// returning to play reloads the offer atlas. Used on Riftwild, town, legend.
+#define BGT_MAP_SHOP         127
 // Dungeon-only barred threshold. SELECT overwrites slot 126 with the final
 // Farfold-cache quadrant; returning to play reloads this portcullis tile.
 #define BGT_DOOR_LOCKED      126
