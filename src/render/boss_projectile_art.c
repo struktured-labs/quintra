@@ -52,7 +52,7 @@ void boss_projectile_load_art(void) BANKED {
 u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     if (!(e->flags & EF_BOSS_PROJECTILE)) {
         if (e->ai_data[6] != PROJ_AUX_FUSE_BOMB) return hookshot_draw(e,oam,x,y);
-        if (oam>=40) return oam;
+        if (oam>=entity_oam_cap) return oam;
         set_sprite_tile(oam,e->sprite_tile); set_sprite_prop(oam,e->palette);
         move_sprite(oam,x,y); return oam+1;
     }
@@ -75,7 +75,7 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
         && vertical_lane[ang]) {
         u8 base = shape == BOSS_SHAPE_BOLT ? 208 : 210;
         prop |= 0x08;
-        if (oam + count > 40) return oam;
+        if (oam + count > entity_oam_cap) return oam;
         for (i = 0; i < count; ++i) {
             col = shape == BOSS_SHAPE_BOLT ? 0 : (u8)(i & 1);
             row = shape == BOSS_SHAPE_BOLT ? i : (u8)(i >> 1);
@@ -99,7 +99,7 @@ u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
         prop |= S_FLIPX;
         mirror_x = 1;
     }
-    if (oam + count > 40) return oam;
+    if (oam + count > entity_oam_cap) return oam;
     for (i = 0; i < count; ++i) {
         col = (u8)(i & 1);
         row = (u8)(i >> 1);
