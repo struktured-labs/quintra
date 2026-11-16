@@ -2504,6 +2504,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     stage_fade = 26;
                     room_apply_pause_palettes(1);
                 }
+                // Start the snapshot at a frame boundary so a host tick
+                // cannot return mid-write after this already-long seam path.
+                wait_vbl_done();
                 sram_save_run();   // suspend save on every room entry
                 // SDCC can expose the pre-seam payload to the first home-bank
                 // call after this long banked streaming path. An immediate

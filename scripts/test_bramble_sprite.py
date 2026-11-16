@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROM contract: Shadow Keep's Bramble Sprite is a live, distinct lane prompt."""
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from spinner_contract import assert_told_spiral
 from test_stage_archetypes import EN, PL, TM, addr, generated_room
 
@@ -35,9 +35,8 @@ def main():
             return
         seen.append(1)
 
-        actual = bytes(pb.memory[0x8000 + SPR_BRAMBLE_SPRITE * 16:
-                                 0x8000 + (SPR_BRAMBLE_SPRITE + 1) * 16])
         expected = generated_sprite("sprite_enemy_bramble_sprite")
+        actual = wait_for_obj_tile(pb, SPR_BRAMBLE_SPRITE, expected)
         assert actual == expected, "Shadow Keep did not install Bramble Sprite art"
         assert actual != generated_sprite("sprite_enemy_sunwheel"), \
             "Bramble Sprite reused Golden Temple's Sunwheel silhouette"

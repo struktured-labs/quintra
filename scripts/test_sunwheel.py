@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROM contract: Sunwheel is a readable Golden Temple lane-shaper."""
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from spinner_contract import assert_told_spiral
 from test_stage_archetypes import EN, PL, TM, generated_room
 
@@ -33,8 +33,9 @@ def main():
         # Golden Temple must install Sunwheel art into the phase-safe slot 79
         # before anything is drawn. This catches a loader regression where
         # the correct typed enemy could spawn with the late-game Midge art.
-        actual = bytes(pb.memory[0x8000 + 79 * 16:0x8000 + 80 * 16])
-        assert actual == generated_sprite("sprite_enemy_sunwheel"), (
+        expected = generated_sprite("sprite_enemy_sunwheel")
+        actual = wait_for_obj_tile(pb, 79, expected)
+        assert actual == expected, (
             "Golden Temple did not install Sunwheel art in OBJ slot 79")
 
         # Exercise the live generated entity on a clear board: one told

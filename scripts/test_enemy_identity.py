@@ -82,6 +82,23 @@ def generated_sprite(name):
     return bytes(int(token.strip(), 0) for token in match.group(1).split(",") if token.strip())
 
 
+def wait_for_obj_tile(pb, slot, expected, frames=32):
+    """Sample OBJ VRAM slot until it matches the authored base tile.
+
+    enemy_anim_tick streams a two-frame walk into several specialist slots
+    (beat = entity_anim_counter >> 4). A longer room-entry path can land
+    the first settled sample on the off-beat, so wait one walk cycle.
+    """
+    tiles = max(1, len(expected) // 16)
+    actual = None
+    for _ in range(frames):
+        actual = bytes(pb.memory[0x8000 + slot * 16:0x8000 + (slot + tiles) * 16])
+        if actual == expected:
+            return actual
+        pb.tick()
+    return actual
+
+
 def main():
     assert "e->sprite_tile = def->sprite_set;" in SPAWN_SOURCE
     assert "e->palette     = def->palette;" in SPAWN_SOURCE

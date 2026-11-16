@@ -29,6 +29,8 @@ PK_ADDR=$(grep 'DEF _room_puzzle_kind ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{pr
 PLK_ADDR=$(grep 'DEF _room_puzzle_locked ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 WW_ADDR=$(grep 'DEF _room_world_width ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 WH_ADDR=$(grep 'DEF _room_world_height ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+SX_ADDR=$(grep 'DEF _room_socket_x ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+SY_ADDR=$(grep 'DEF _room_socket_y ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
@@ -37,6 +39,7 @@ QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
     QUINTRA_EN_ADDR="$EN_ADDR" QUINTRA_TM_ADDR="$TM_ADDR" QUINTRA_SCREEN_ADDR="$LS_ADDR" \
     QUINTRA_PUZZLE_KIND_ADDR="$PK_ADDR" QUINTRA_PUZZLE_LOCK_ADDR="$PLK_ADDR" \
     QUINTRA_WORLD_WIDTH_ADDR="$WW_ADDR" QUINTRA_WORLD_HEIGHT_ADDR="$WH_ADDR" \
+    QUINTRA_SOCKET_X_ADDR="$SX_ADDR" QUINTRA_SOCKET_Y_ADDR="$SY_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 >"$OUT_DIR/emulator.log" 2>&1 &
@@ -122,7 +125,8 @@ check 13_room_return          3
 # Wolfkin's seven-heart conference floor is 14 half-hearts at the first
 # controllable room; keep the smoke contract tied to the real starter reserve.
 assert_log 03_room0_enter     'giants=0 .*hp=14'
-assert_log 04_room1           'puz=1 lock=0 .*solved=0x01 '
+# The opening Trial is a seeded Push Seal, Rune or Prism Toggle (spec 8.1).
+assert_log 04_room1           'puz=[126] lock=0 .*solved=0x01 '
 assert_log 05_room2_sigil     'sigils=0x0001 '
 assert_log 06_room5_branch    'solved=0x8D '
 assert_log 07_room9_threshold 'phase=0x80 '

@@ -37,12 +37,16 @@
 #define PRE_TIER_PL_SIZE 48
 
 static void sram_write_open(void) {
+    /* VBlank must not run while cart RAM is unlocked: the ISR clobbers
+       registers holding the running checksum in save/validate loops. */
+    disable_interrupts();
     ENABLE_RAM_MBC5;
     SWITCH_RAM_MBC5(0);
 }
 
 static void sram_write_close(void) {
     DISABLE_RAM_MBC5;
+    enable_interrupts();
 }
 
 u8 sram_run_valid(void) BANKED {

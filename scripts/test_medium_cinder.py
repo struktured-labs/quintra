@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from test_stage_archetypes import EN, PL, TM, generated_room
+from test_enemy_identity import wait_for_obj_tile
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,8 +69,7 @@ def main():
             f"spawned Cinder Maw used tile {pb.memory[maw + 12]}, not medium slot 64")
         assert pb.memory[maw + 25] == 0x8D, (
             f"medium Cinder Maw hitbox drifted: {pb.memory[maw + 25]:02x}")
-        actual = bytes(pb.memory[0x8000 + SPR_MEDIUM_CINDER_MAW * 16:
-                                 0x8000 + (SPR_MEDIUM_CINDER_MAW + 4) * 16])
+        actual = wait_for_obj_tile(pb, SPR_MEDIUM_CINDER_MAW, expected)
         assert actual == expected, "Ember did not install all four medium Maw tiles"
 
         # Isolate it and inspect hardware OAM after the real renderer runs.

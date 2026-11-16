@@ -29,6 +29,8 @@ void room_break_crystal(u8 tx, u8 ty) BANKED {
     if (tx >= (u8)(room_world_width >> 3)
         || ty >= (u8)(room_world_height >> 3)) return;
     if (room_tile_at_px((i16)tx << 3, (i16)ty << 3) != BGT_CRYSTAL) return;
+    // Prism orbs are switches, never mana nodes: nothing shatters them.
+    if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE && PRISM_IS_ORB(tx, ty)) return;
     breakable_set_tile(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
     sfx_play(SFX_HIT);
     if (rng_next_u8() < 64)

@@ -225,6 +225,8 @@ verify: all check-balance-bot
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \
 		--mgba "$(MGBA_BIN)" --difficulty easy
 	$(PYBOY_RUN) scripts/test_puzzles.py
+	$(PYBOY_RUN) scripts/test_prism_toggle.py
+	$(PYBOY_RUN) scripts/test_law_lock.py
 	$(PYBOY_RUN) scripts/test_hidden_secrets.py
 	$(PYBOY_RUN) scripts/test_transition_audio.py
 	$(PYBOY_RUN) scripts/test_timed_states.py

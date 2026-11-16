@@ -392,8 +392,18 @@ def main() -> None:
     pb.memory[rs + 28] = 0
     open_compass(pb, screen)
     graph5 = mission_graph(dungeon_size(5), seed, 5)
-    assert node_tile(pb, graph5["deep_warden"]) == BGT_MAP_BIG_GOAL, \
-        "completed Waystone did not reveal the deep Warden"
+    # A Law Lock (Stage 2+) may close a doorway on the way: the Compass then
+    # names the altar the route must flip at as the next GOAL instead.
+    waypoint = pb.memory[addr("_law_lock_waypoint")]
+    altars = [pb.memory[addr("_ll_altar") + i]
+              for i in range(pb.memory[addr("_ll_altar_n")])]
+    goal5 = graph5["deep_warden"]
+    if waypoint != goal5:
+        assert waypoint in altars, (
+            f"Law Lock waypoint {waypoint} is neither the deep Warden nor an altar")
+        goal5 = waypoint
+    assert node_tile(pb, goal5) == BGT_MAP_BIG_GOAL, \
+        "completed Waystone did not reveal the deep Warden (or its Law altar)"
 
     # The final dungeon must exercise all four explored-room bytes. A fully
     # explored sanctuary shows all thirty cells, the extra-byte current
@@ -408,7 +418,7 @@ def main() -> None:
     pb.memory[rs + 33] = 0x1F
     open_compass(pb, screen)
     assert node_tile(pb, 28) == BGT_MAP_BIG_HERE, \
-        "extra-byte sanctuary marker is misplaced"
+        f"extra-byte sanctuary marker is misplaced: {node_tile(pb, 28)} vs {BGT_MAP_BIG_HERE}, cell {pb.memory[rs + 1]}"
     assert node_tile(pb, 29) == BGT_MAP_BIG_BOSS, \
         "thirty-room Compass lost the final boss hint"
     assert map_tile(pb, 7, 0) == HUD_DIGIT_0 + 9, \

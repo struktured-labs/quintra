@@ -118,7 +118,10 @@ static void tool_bomb(void) {
     for (y = y0; y <= y1; ++y) {
         for (x = x0; x <= x1; ++x) {
             u8 t = room_tilemap[y][x];
-            if (t == BGT_CRYSTAL) room_break_crystal(x, y);
+            if (t == BGT_CRYSTAL) {
+                if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE) prism_strike(x, y);
+                room_break_crystal(x, y);
+            }
             else if (t == BGT_POT) room_break_pot(x, y);
             else if (t == BGT_WALL_CRACK) room_open_secret(x, y);
             else if (t == BGT_WALL) puzzle_try_hidden_shot(x, y);

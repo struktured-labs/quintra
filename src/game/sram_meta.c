@@ -17,8 +17,16 @@
 // best_win_time u16 (seconds; 0xFFFF = no win yet) |
 // meta_flags | checksum over bytes [0..11].
 // Legacy v2 stored sum([3..10]) at [11]. That shape is rewritten on read.
-static void meta_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(1); }
-static void meta_close(void) { DISABLE_RAM_MBC5; }
+static void meta_open(void)  {
+    /* Pair with sram_write_open: keep VBlank off while cart RAM is unlocked. */
+    disable_interrupts();
+    ENABLE_RAM_MBC5;
+    SWITCH_RAM_MBC5(1);
+}
+static void meta_close(void) {
+    DISABLE_RAM_MBC5;
+    enable_interrupts();
+}
 
 static u8 meta_sum_range(u8 from, u8 to) {
     u8 s = 0, i;

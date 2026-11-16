@@ -4,6 +4,7 @@
 #include <gb/cgb.h>
 
 #include "game/dungeon_director.h"
+#include "game/law_lock.h"
 #include "game/procgen.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -61,7 +62,8 @@ void room_unseal_doors(void) BANKED {
         // latch opens; a palette-only change left an amber portcullis behind.
         VBK_REG = 0;
         for (dir = 0; dir < 4; ++dir) {
-            if (!cleared_boss && run_state_dungeon_neighbor(dir) == 0xFF)
+            if (!cleared_boss && (run_state_dungeon_neighbor(dir) == 0xFF
+                    || (law_lock_closed_dirs & (u8)(1 << dir))))
                 continue;
             if (cleared_boss && dir == DIR_E
                 && room_world_width > ROOM_VIEW_W_PX) continue;
@@ -76,7 +78,8 @@ void room_unseal_doors(void) BANKED {
         }
         VBK_REG = 1;
         for (dir = 0; dir < 4; ++dir) {
-            if (!cleared_boss && run_state_dungeon_neighbor(dir) == 0xFF)
+            if (!cleared_boss && (run_state_dungeon_neighbor(dir) == 0xFF
+                    || (law_lock_closed_dirs & (u8)(1 << dir))))
                 continue;
             if (cleared_boss && dir == DIR_E
                 && room_world_width > ROOM_VIEW_W_PX) continue;

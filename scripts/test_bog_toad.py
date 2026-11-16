@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from test_stage_archetypes import EN, TM, generated_room
 
 
@@ -37,9 +37,8 @@ def main():
         if toad is None:
             return
         seen.append(1)
-        actual = bytes(pb.memory[0x8000 + SPR_BOG_TOAD * 16:
-                                 0x8000 + (SPR_BOG_TOAD + 1) * 16])
         expected = generated_sprite("sprite_enemy_bog_toad")
+        actual = wait_for_obj_tile(pb, SPR_BOG_TOAD, expected)
         assert actual == expected, "Toxic Mire did not install Bog Toad OBJ art"
         assert actual != generated_sprite("sprite_enemy_mire_spore"), \
             "Bog Toad reused the Mine silhouette"

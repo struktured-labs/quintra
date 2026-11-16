@@ -7,6 +7,7 @@
 #include "core/rng.h"
 #include "core/types.h"
 #include "game/dungeon_director.h"
+#include "game/law_lock.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/pickup.h"
@@ -312,7 +313,11 @@ u8 dungeon_director_direction_from(u8 start) BANKED {
     u8 parent[MAX_DUNGEON_CELLS];
     u8 queue[MAX_DUNGEON_CELLS];
     u8 head = 0, tail = 0, i;
+    law_lock_waypoint = target;
     if (target == 0xFF || target == start) return DIR_NONE;
+    // A Law Lock routes over (cell x Law state): never into a closed gate,
+    // and via the altar the route must flip at (law_lock_waypoint).
+    if (law_lock_active()) return law_lock_route(start, target);
     for (i = 0; i < MAX_DUNGEON_CELLS; ++i) parent[i] = 0xFF;
     parent[start] = start;
     queue[tail++] = start;

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ROM contract: Crystal's Shard Crab has a live shell-counter lesson."""
 
-from test_enemy_identity import generated_sprite
+from test_enemy_identity import generated_sprite, wait_for_obj_tile
 from test_stage_archetypes import EN, PL, TM, generated_room
 
 
@@ -54,9 +54,9 @@ def main():
             return
         seen.append(1)
 
-        actual = bytes(pb.memory[0x8000 + SPR_SHARD_CRAB * 16:
-                                 0x8000 + (SPR_SHARD_CRAB + 1) * 16])
-        assert actual == generated_sprite("sprite_enemy_shard_crab"), \
+        expected = generated_sprite("sprite_enemy_shard_crab")
+        actual = wait_for_obj_tile(pb, SPR_SHARD_CRAB, expected)
+        assert actual == expected, \
             "Crystal Caverns did not install Shard Crab shell art"
         assert actual != generated_sprite("sprite_enemy_vine_coil"), \
             "Shard Crab reused Verdant Hollow's Vine Coil silhouette"

@@ -5,6 +5,7 @@
 
 #include "game/dungeon_director.h"
 #include "game/room.h"
+#include "game/law_lock.h"
 #include "game/puzzle.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
@@ -88,6 +89,14 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
                 : (tile == BGT_WILD_STUMP || tile == BGT_WILD_SAND
                     || tile == BGT_DOOR)
                     ? BGPAL_DOOR : BGPAL_FLOOR;
+    }
+    {
+        u8 fixture = PUZZLE_ATTR_OVERRIDE(x, y, tile);
+        if (fixture != 0xFF) return fixture;
+    }
+    {
+        u8 gate = LAW_LOCK_ATTR_OVERRIDE(x, y, tile);
+        if (gate != 0xFF) return gate;
     }
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH && y == 8
         && (x == 4 || x == 8 || x == 12 || x == 16)

@@ -3,6 +3,7 @@
 
 #include <gb/gb.h>
 #include "core/types.h"
+#include "game/prism_toggle.h"
 
 enum {
     PUZZLE_NONE = 0,
@@ -11,6 +12,7 @@ enum {
     PUZZLE_PHASE_SWITCH,
     PUZZLE_PHASE_GATE,
     PUZZLE_SUN_LATTICE,
+    PUZZLE_PRISM_TOGGLE,
 };
 
 enum {
@@ -33,9 +35,14 @@ extern u8 room_hidden_secret_y;
 extern u8 room_hidden_secret_x2;
 extern u8 room_hidden_secret_y2;
 extern u8 room_hidden_secret_bit;
+// Push Seal socket (2x2 gold plate, top-left), 0xFF when absent.
+extern u8 room_socket_x;
+extern u8 room_socket_y;
 
 // Deterministically layer this dungeon's puzzle fixture over procgen.
 void puzzle_prepare_room(void) BANKED;
+// Mandatory puzzle kind for slot 0 (Trial) or 1 (Waystone) this dungeon.
+u8 puzzle_slot_kind(u8 slot) BANKED;
 // Final room-authoring boundary: prepare a fixture, sanitize procgen marks,
 // and publish whether ordinary combat sealing applies.
 void puzzle_prepare_room_role(void) BANKED;
@@ -47,5 +54,15 @@ u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED;
 u8 puzzle_try_hidden_shot(u8 tx, u8 ty) BANKED;
 // Echo Chime resolves the active room's optional disguised secret, if any.
 u8 puzzle_chime_reveal(void) BANKED;
+
+// Shared palette override for authored puzzle fixtures (Push Seal socket,
+// Prism Toggle chamber). 0xFF means "use the ordinary terrain palette".
+// Inline so the hot render paths never pay a far call per tile.
+#define PUZZLE_SOCKET_AT(x, y) (room_socket_x != 0xFF \
+    && (u8)((u8)(x) - room_socket_x) < 2 && (u8)((u8)(y) - room_socket_y) < 2)
+#define PUZZLE_ATTR_OVERRIDE(x, y, tile) \
+    ((room_puzzle_kind == PUZZLE_PRISM_TOGGLE) ? PRISM_ATTR_AT(x, y) \
+    : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR3 \
+        && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR : 0xFF)
 
 #endif

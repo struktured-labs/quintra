@@ -9,6 +9,7 @@
 #include "game/boss_projectile.h"
 #include "game/player.h"
 #include "game/puzzle.h"
+#include "game/prism_toggle.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
 #include "render/tiles.h"
@@ -263,8 +264,7 @@ void projectile_update_one(entity_t *e, u8 idx) {
                         || t == BGT_POT || px < 8
                         || px > (i16)(room_world_width - 8)
                         || py < 8 || py > (i16)(room_world_height - 8))) {
-                    if (t == BGT_PILLAR)
-                        sun_lattice_strike((u8)(sx >> 3), (u8)(sy >> 3));
+                    prism_shot_tile(t, (u8)(sx >> 3), (u8)(sy >> 3));
                     e->x = (ppos_t)(e->x - e->vx);
                     e->y = (ppos_t)(e->y - e->vy);
                     e->state = 1;
@@ -300,6 +300,8 @@ void projectile_update_one(entity_t *e, u8 idx) {
             // Crystals shatter under PLAYER fire (mana nodes); they still
             // block enemy shots, so they double as destructible cover.
             if (t == BGT_CRYSTAL) {
+                // A Prism Toggle orb flips the chamber instead of shattering.
+                prism_shot_tile(BGT_CRYSTAL, (u8)(sx >> 3), (u8)(sy >> 3));
                 room_break_crystal((u8)(sx >> 3), (u8)(sy >> 3));
                 fx_spawn(SPR_FX_IMPACT, 2, px, py, 8);
                 entity_kill(idx);

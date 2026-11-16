@@ -178,8 +178,15 @@ def main():
             first.memory[0x0000] = 0x0A
             first.memory[0x4000] = 0
             rs_len = first.memory[0xA003]
+            pl_len = first.memory[0xA004]
             run_off = 0xA005
             player_off = run_off + rs_len
+            n = (rs_len + pl_len) & 0xFF
+            payload = bytes(first.memory[run_off:run_off + n])
+            csum = first.memory[run_off + n]
+            # Room entry can be heavy enough that a host tick returns mid
+            # sram_save_run (payload already written, checksum still stale).
+            # Wait for a sealed transaction, not a torn mid-write snapshot.
             saved = (
                 bytes(first.memory[0xA000:0xA002]) == b"QS"
                 and first.memory[run_off + 1] == next_room
@@ -187,6 +194,7 @@ def main():
                 and first.memory[run_off + 15] == 0x12
                 and first.memory[player_off + 16] == 0x41
                 and first.memory[player_off + 17] == 0x01
+                and csum == (sum(payload) & 0xFF)
             )
             first.memory[0x0000] = 0
             if saved:

@@ -7,6 +7,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/dungeon_law.h"
+#include "game/law_lock.h"
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/puzzle.h"
@@ -42,7 +43,9 @@ static u8 law_room_active(void) {
 static u8 law_room_has_switch(void) {
     // Every Compass row begins with an altar. The state therefore remains
     // revisable throughout a 20..30-cell expedition without scattering an
-    // interactive plate into every combat formation.
+    // interactive plate into every combat formation. A Law Lock dungeon
+    // replaces these with its validated per-region altars (law_lock.c).
+    if (law_lock_active()) return 0;
     return (law_room_active() && (run_state_dungeon_local() % 6) == 0) ? 1 : 0;
 }
 
@@ -110,9 +113,17 @@ static void law_apply_room(u8 live) {
 
 void dungeon_law_apply_room(u8 live) BANKED {
     law_apply_room(live);
+    law_lock_apply_room(live);
 }
 
 static u8 law_try_toggle_at(u8 tx, u8 ty) {
+    if (law_lock_has_altar) {
+        if (tx != law_lock_altar_x || ty != law_lock_altar_y) return 0;
+        run_state.dungeon_law ^= DUNGEON_LAW_STATE_BIT;
+        dungeon_law_apply_room(1);
+        dungeon_law_toggle_pending = 1;
+        return 1;
+    }
     if (!law_room_has_switch() || tx != LAW_SWITCH_X || ty != LAW_SWITCH_Y)
         return 0;
     run_state.dungeon_law ^= DUNGEON_LAW_STATE_BIT;
