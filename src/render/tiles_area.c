@@ -7,6 +7,8 @@
 #include "game/puzzle.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
+#include "game/riftwild_setpiece.h"
+#include "render/riftwild_art.h"
 
 // Compact all-caps outdoor signage. Every lit pixel uses colour 3 so the
 // labels remain crisp in the amber door palette against grass and paths.
@@ -165,6 +167,7 @@ void tiles_prepare_wide_field(void) BANKED {
     u8 tiles[32];
     u8 attrs[32];
     if (!(room_world_height & 0x40)) return;
+    if (outdoor) riftwild_art_load();
     for (logical_y = 0; logical_y < 32; ++logical_y) {
         u8 physical_y = ROOM_BG_MAP_Y(logical_y);
         for (logical_x = 0; logical_x < 32; ++logical_x) {
@@ -174,6 +177,8 @@ void tiles_prepare_wide_field(void) BANKED {
             attrs[physical_x] = wide_attr(tile, outdoor,
                 logical_x, logical_y);
         }
+        if (outdoor) riftwild_dress_line(tiles, attrs, logical_y, 0,
+            room_bg_origin_x);
         VBK_REG = 0;
         set_bkg_tiles(0, physical_y, 32, 1, tiles);
         VBK_REG = 1;
@@ -194,6 +199,8 @@ void tiles_stream_wide_column(u8 logical_x, u8 physical_x) BANKED {
         attrs[physical_y] = wide_attr(tile, outdoor,
             logical_x, logical_y);
     }
+    if (outdoor) riftwild_dress_line(tiles, attrs, logical_x, 1,
+        room_bg_origin_y);
     VBK_REG = 0;
     set_bkg_tiles(physical_x, 0, 1, 32, tiles);
     VBK_REG = 1;
@@ -213,6 +220,8 @@ static void stream_wide_row(u8 logical_y, u8 physical_y) {
         attrs[physical_x] = wide_attr(tile, outdoor,
             logical_x, logical_y);
     }
+    if (outdoor) riftwild_dress_line(tiles, attrs, logical_y, 0,
+        room_bg_origin_x);
     VBK_REG = 0;
     set_bkg_tiles(0, physical_y, 32, 1, tiles);
     VBK_REG = 1;
