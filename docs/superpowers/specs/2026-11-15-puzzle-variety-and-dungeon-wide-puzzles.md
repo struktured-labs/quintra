@@ -442,7 +442,7 @@ never repeats a kind. Stages 3–6: Waystone becomes Prism Toggle on
 `(mix >> 3) & 1`, else Sun Lattice; Trial stays Sun Lattice from Stage 3 on,
 so Sun Lattice is still guaranteed every dungeon. Stages 7–9 are unchanged.
 
-### 8.2 Prism Toggle as built (`src/game/prism_toggle.c`, bank 255)
+### 8.2 Prism Toggle as built (`src/game/prism_toggle.c`, bank 19)
 
 - Five hand-authored 12×11 chamber templates in tiers (Stage 1: tier 0,
   2 flips; Stages 2–3: tier 1, 3 flips; Stages 4–6: tier 2, 4 flips), with
@@ -474,7 +474,7 @@ DOOR-gold and repaints after the crate passes over it.
 `quintra-procgen::push_seal` mirrors the layout and runs a sokoban BFS from
 every apron start; the live test seats the crate with real pushes.
 
-### 8.4 Law Lock as built (`src/game/law_lock.c`, `law_lock_gen.c`, bank 255)
+### 8.4 Law Lock as built (`src/game/law_lock.c` bank 18, `law_lock_gen.c` bank 19)
 
 - Stage 1 is Law-free. Stages 2–3 try 1 gate, Stages 4–6 try 2, Stages 7–9
   try 3, falling back to fewer when no placement passes the caps below.
