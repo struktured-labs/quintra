@@ -40,77 +40,16 @@ static u8 rune_order[5];
 static u8 rune_x[5];
 static u8 rune_y[5];
 static u8 rune_descending;
-static void set_tile_live(u8 x, u8 y, u8 tile, u8 attr);
-
 u8 room_rune_count;
 u8 room_rune_x[5];
 u8 room_rune_y[5];
 u8 room_rune_pitch[5];
 
-static u8 rune_flash_index = 0xFF;
-static u8 rune_flash_frames;
-
-// Packed note palettes, borrowed only while a rune-sequence room is
-// loaded. Colour 0 is a shared dark outline. Pitches differ in both
-// hue and luminance so red-green colour blindness still separates them.
-static const u16 rune_pal_low[4] = {
-    BGR555(2, 2, 4),     // outline
-    BGR555(4, 8, 28),    // pitch 0: deep blue, low luminance
-    BGR555(4, 24, 24),   // pitch 1: teal, mid-low
-    BGR555(31, 28, 4),   // pitch 2: gold yellow, high
-};
-static const u16 rune_pal_high[4] = {
-    BGR555(2, 2, 4),
-    BGR555(31, 16, 2),   // pitch 3: orange, mid-high
-    BGR555(28, 8, 24),   // pitch 4: magenta, mid
-    BGR555(31, 31, 26),  // flash: near-white
-};
-
-void puzzle_load_note_palettes(void) BANKED {
-    if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_rune_count) {
-        palette_bg_load(BGPAL_CRYSTAL, rune_pal_low);
-        palette_bg_load(BGPAL_DOOR, rune_pal_high);
-    }
-}
-
-static u8 plate_is_lit(u8 plate) {
+u8 puzzle_plate_is_lit(u8 plate) BANKED {
     u8 i;
     for (i = 0; i < rune_progress; ++i)
         if (rune_order[i] == plate) return 1;
     return 0;
-}
-
-static void rune_paint_plate(u8 plate) {
-    u8 pitch = room_rune_pitch[plate];
-    u8 tile = plate_is_lit(plate) ? RUNE_LIT_TILE(pitch) : RUNE_IDLE_TILE(pitch);
-    set_tile_live(room_rune_x[plate], room_rune_y[plate],
-                  tile, RUNE_NOTE_PAL(pitch));
-}
-
-static void rune_cancel_flash(void) {
-    rune_flash_index = 0xFF;
-    rune_flash_frames = 0;
-}
-
-static void rune_start_flash(u8 plate) {
-    if (rune_flash_index != 0xFF && rune_flash_index != plate)
-        rune_paint_plate(rune_flash_index);
-    rune_flash_index = plate;
-    rune_flash_frames = 8;
-    set_tile_live(room_rune_x[plate], room_rune_y[plate],
-                  RUNE_FLASH_TILE, RUNE_FLASH_PAL);
-}
-
-static void tick_rune_flash(void) {
-    if (rune_flash_index == 0xFF) return;
-    if (--rune_flash_frames) return;
-    rune_paint_plate(rune_flash_index);
-    rune_cancel_flash();
-}
-
-static void voice_plate(u8 plate) {
-    sfx_play_rune(room_rune_pitch[plate]);
-    rune_start_flash(plate);
 }
 
 static u8 phase_switch_state;
@@ -596,11 +535,8 @@ u8 puzzle_chime_reveal(void) BANKED {
 }
 
 static void reset_runes(void) {
-    u8 i;
-    rune_cancel_flash();
     rune_progress = 0;
-    for (i = 0; i < rune_count; ++i)
-        rune_paint_plate(i);
+    rune_paint_all();
 }
 
 static u8 update_sequence(u8 tx, u8 ty) {

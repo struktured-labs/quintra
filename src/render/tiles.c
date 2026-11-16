@@ -3,6 +3,7 @@
 
 #include "core/types.h"
 #include "render/tiles.h"
+#include "game/puzzle.h"
 #include "render/sprites_gen.h"
 #include "render/large_boss.h"
 #include "stages.h"
@@ -439,17 +440,7 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_BLOCK_BR, 1, bgt_block16_br);
     set_bkg_data(BGT_SPIKES,   1, bgt_spikes);
     set_bkg_data(BGT_POT,      1, bgt_pot);
-    set_bkg_data(BGT_NOTE_0,     1, bgt_note_a);
-    set_bkg_data(BGT_NOTE_1,     1, bgt_note_b);
-    set_bkg_data(BGT_NOTE_2,     1, bgt_note_c);
-    set_bkg_data(BGT_NOTE_3,     1, bgt_note_a);
-    set_bkg_data(BGT_NOTE_4,     1, bgt_note_b);
-    set_bkg_data(BGT_NOTE_LIT_0, 1, bgt_note_lit_a);
-    set_bkg_data(BGT_NOTE_LIT_1, 1, bgt_note_lit_b);
-    set_bkg_data(BGT_NOTE_LIT_2, 1, bgt_note_lit_c);
-    set_bkg_data(BGT_NOTE_LIT_3, 1, bgt_note_lit_a);
-    set_bkg_data(BGT_NOTE_LIT_4, 1, bgt_note_lit_b);
-    set_bkg_data(BGT_NOTE_FLASH, 1, bgt_note_c);
+    tiles_load_note_plates();
     set_bkg_data(BGT_SWITCH,   1, bgt_switch);
     set_bkg_data(BGT_PORTAL,   1, bgt_portal);
     set_bkg_data(BGT_GRASS,    1, bgt_grass);
