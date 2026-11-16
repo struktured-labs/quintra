@@ -74,6 +74,7 @@ JSON
 python3 "$project_root/tools/test_itch_web.py" "$output_dir"
 node "$project_root/tools/test_itch_gamepad.mjs" "$output_dir/emulator/quintra-player.js"
 node "$project_root/tools/test_itch_gamepad_layouts.mjs" "$output_dir/emulator/quintra-player.js"
+node "$project_root/tools/test_itch_pad_calibration.mjs" "$output_dir/emulator/quintra-player.js"
 
 rm -f "$archive"
 (cd "$output_dir" && zip -q -9 -r "$archive" .)

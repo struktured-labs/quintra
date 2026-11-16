@@ -25,6 +25,17 @@
   const touchButtons = Array.from(document.querySelectorAll("[data-touch-input]"));
   const swapAbButton = document.querySelector("#swap-ab");
   const displayModeButton = document.querySelector("#display-mode");
+  const settingsButton = document.querySelector("#settings");
+  const settingsPanel = document.querySelector("#settings-panel");
+  const settingsClose = document.querySelector("#settings-close");
+  const settingsStatus = document.querySelector("#settings-status");
+  const recalibrateButton = document.querySelector("#recalibrate");
+  const resetMappingButton = document.querySelector("#reset-mapping");
+  const displayChoiceButtons = Array.from(document.querySelectorAll("[data-display-mode]") || []);
+  const calibrationOverlay = document.querySelector("#pad-calibration");
+  const calibrationTitle = document.querySelector("#pad-calibration-title");
+  const calibrationDetail = document.querySelector("#pad-calibration-detail");
+  const calibrationSkip = document.querySelector("#pad-calibration-skip");
   const stage = document.querySelector("#player-stage");
   const screenWrap = document.querySelector("#screen-wrap");
   const saveSize = 32 * 1024;
@@ -60,6 +71,22 @@
   let displayLayoutHandle = 0;
   let lastFit = { mode: "", scale: 0, width: 0, height: 0, stageWidth: 0, stageHeight: 0, layout: "" };
   const viewportEvents = { resize: 0, orientationchange: 0, visualViewport: 0 };
+  // Per-controller calibration ("press the button labelled A"), keyed by
+  // gamepad.id: { a, b } raw indices, or { skipped: true }.
+  const padMapStorageKey = "quintra.padmap.v1";
+  const calibrationTimeoutMs = 20000;
+  const calibrationPrompted = new Set();
+  let padMap = readPadMap();
+  let calibration = null;
+  let settingsOpen = false;
+  let settingsFocus = 0;
+  let overlayPaused = false;
+  let uiTimer = 0;
+  let uiPadPrevious = {};
+  let chordSince = 0;
+  let homeWasDown = false;
+  let suppressPadUntilRelease = false;
+  let lastPolledPads = [];
   const touchPointers = new Map();
   const touchState = {
     UP: false, RIGHT: false, DOWN: false, LEFT: false,
@@ -152,7 +179,39 @@
   function refreshSwapAbButton() {
     if (!swapAbButton) return;
     swapAbButton.setAttribute("aria-pressed", swapAB ? "true" : "false");
-    swapAbButton.textContent = swapAB ? "A/B swapped" : "Swap A/B";
+    swapAbButton.textContent = swapAB ? "Swap A/B: On" : "Swap A/B: Off";
+  }
+
+  function readPadMap() {
+    const store = storage();
+    try {
+      const raw = store ? store.getItem(padMapStorageKey) : null;
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function writePadMap() {
+    const store = storage();
+    try { if (store) store.setItem(padMapStorageKey, JSON.stringify(padMap)); } catch (error) { /* private mode */ }
+  }
+
+  function calibrationFor(gamepad) {
+    const entry = gamepad ? padMap[gamepad.id || ""] : null;
+    return entry && Number.isInteger(entry.a) && Number.isInteger(entry.b) && entry.a !== entry.b
+      ? entry : null;
+  }
+
+  function calibrationStatus(gamepad) {
+    if (calibration && gamepad && calibration.padIndex === gamepad.index) {
+      return `calibrating (press ${calibration.step})`;
+    }
+    const entry = gamepad ? padMap[gamepad.id || ""] : null;
+    if (!entry) return "none";
+    if (entry.skipped) return "skipped";
+    return calibrationFor(gamepad) ? `saved a=${entry.a} b=${entry.b}` : "invalid";
   }
 
   // Display mode: ?display=fit|integer|stretch, the toolbar button, or the
@@ -251,6 +310,10 @@
   }
 
   function refreshDisplayModeButton() {
+    displayChoiceButtons.forEach(button => {
+      const on = button.dataset && button.dataset.displayMode === displayMode;
+      button.setAttribute("aria-pressed", on ? "true" : "false");
+    });
     if (!displayModeButton) return;
     displayModeButton.textContent = `Display: ${displayModeLabels[displayMode]}`;
   }
@@ -296,7 +359,27 @@
     return gamepad.mapping !== "standard" && typeof gamepad.axes[9] === "number";
   }
 
+  function isXboxPad(gamepad) {
+    return /xbox|xinput|x-box|045e|microsoft/i.test(gamepad.id || "");
+  }
+
+  function isPlayStationPad(gamepad) {
+    return /playstation|dualshock|dualsense|054c|sony/i.test(gamepad.id || "");
+  }
+
+  // Families we have a deliberate default for. Anything else is offered a
+  // one-time "press the button labelled A" calibration.
+  function padFamily(gamepad) {
+    if (isEightBitDoDirectInput(gamepad)) return "8bitdo";
+    if (isNintendoPad(gamepad)) return "nintendo";
+    if (/8bitdo|2dc8/i.test(gamepad.id || "")) return "8bitdo";
+    if (isXboxPad(gamepad)) return "xbox";
+    if (isPlayStationPad(gamepad)) return "playstation";
+    return "unknown";
+  }
+
   function padLayoutLabel(gamepad) {
+    if (calibrationFor(gamepad)) return "calibrated";
     if (isEightBitDoDirectInput(gamepad) || isNintendoPad(gamepad)) return "Nintendo layout";
     return "";
   }
@@ -304,6 +387,7 @@
   function updateGamepadStatus(gamepad) {
     if (!gamepadStatus) return;
     const layout = gamepad ? padLayoutLabel(gamepad) : "";
+    // (padLayoutLabel reports "calibrated" when a saved mapping applies.)
     const nextText = gamepad
       ? `Gamepad: ${gamepad.id || `controller ${gamepad.index + 1}`}${
           layout ? ` · ${layout}` : ""
@@ -316,6 +400,7 @@
 
   function selectGamepad() {
     const gamepads = getConnectedGamepads();
+    lastPolledPads = gamepads;
     const usedGamepad = gamepads.find(hasGamepadInput);
 
     if (usedGamepad) activeGamepadIndex = usedGamepad.index;
@@ -371,21 +456,30 @@
     return { UP: y < -0.5, RIGHT: x > 0.5, DOWN: y > 0.5, LEFT: x < -0.5 };
   }
 
-  function gamepadButtonLayout(gamepad) {
+  function familyButtonLayout(gamepad) {
     // 8BitDo DirectInput: Nintendo labels, Select/Start at 10/11.
     if (isEightBitDoDirectInput(gamepad)) {
-      return { a: [1], b: [0], select: 10, start: 11 };
+      return { a: [1], b: [0], select: 10, start: 11, source: "8bitdo" };
     }
     // Nintendo pads: A is east (1), B is south (0). In the standard
     // mapping X (north, 3) and Y (west, 2) double as A and B by label.
     if (isNintendoPad(gamepad)) {
       return gamepad.mapping === "standard"
-        ? { a: [1, 3], b: [0, 2], select: 8, start: 9 }
-        : { a: [1], b: [0], select: 8, start: 9 };
+        ? { a: [1, 3], b: [0, 2], select: 8, start: 9, source: "nintendo" }
+        : { a: [1], b: [0], select: 8, start: 9, source: "nintendo" };
     }
     // Everything else (Xbox, PlayStation, generic): positional, as WasmBoy
     // always did: south/west -> GB A, east/north -> GB B.
-    return { a: [0, 2], b: [1, 3], select: 8, start: 9 };
+    return { a: [0, 2], b: [1, 3], select: 8, start: 9, source: "positional" };
+  }
+
+  // Effective layout before the player's Swap A/B preference: a saved
+  // calibration for this exact gamepad.id wins over the family default.
+  function gamepadButtonLayout(gamepad) {
+    const base = familyButtonLayout(gamepad);
+    const calibrated = calibrationFor(gamepad);
+    if (!calibrated) return base;
+    return { a: [calibrated.a], b: [calibrated.b], select: base.select, start: base.start, source: "calibrated" };
   }
 
   function readGamepadState(gamepad) {
@@ -461,9 +555,266 @@
       `stage=${lastFit.stageWidth}x${lastFit.stageHeight} game=${lastFit.width}x${lastFit.height} ` +
       `scale=${num(lastFit.scale)} events: resize=${viewportEvents.resize} ` +
       `orient=${viewportEvents.orientationchange} vv=${viewportEvents.visualViewport}`;
+    let mapLine = "map: -";
+    if (gamepad) {
+      const layout = gamepadButtonLayout(gamepad);
+      mapLine = `family=${padFamily(gamepad)} calib=${calibrationStatus(gamepad)} ` +
+        `map(${layout.source}) A=[${(swapAB ? layout.b : layout.a).join(",")}] ` +
+        `B=[${(swapAB ? layout.a : layout.b).join(",")}] select=${layout.select} start=${layout.start}`;
+    }
     padDebugElement.textContent =
-      `${lines.join("\n") || "no gamepads"}\nGB: ${gb}  swapAB=${swapAB ? 1 : 0}\n` +
+      `${lines.join("\n") || "no gamepads"}\nGB: ${gb}  swapAB=${swapAB ? 1 : 0}\n${mapLine}\n` +
       `${viewportLine}\n${fitLine}`;
+  }
+
+  function now() {
+    return Date.now();
+  }
+
+  function pressedIndices(gamepad) {
+    return gamepad.buttons
+      .map((button, index) => (button && (button.pressed || button.value > 0.5)) ? index : -1)
+      .filter(index => index >= 0);
+  }
+
+  // After an overlay closes, ignore the pad until every button is up so the
+  // press that answered the prompt does not leak into the game.
+  function padInputSuppressed(gamepad) {
+    if (!suppressPadUntilRelease) return false;
+    if (pressedIndices(gamepad).length === 0) suppressPadUntilRelease = false;
+    return suppressPadUntilRelease;
+  }
+
+  function pauseForOverlay() {
+    if (overlayPaused || !started || !api || typeof api.isPlaying !== "function") return;
+    if (!api.isPlaying()) return;
+    overlayPaused = true;
+    Promise.resolve(api.pause()).catch(error => console.error("Could not pause", error));
+  }
+
+  function resumeAfterOverlay() {
+    if (!overlayPaused || calibration || settingsOpen) return;
+    overlayPaused = false;
+    Promise.resolve(api.play()).catch(error => console.error("Could not resume", error));
+  }
+
+  function ensureUiTimer() {
+    if (uiTimer || typeof setInterval !== "function") return;
+    uiTimer = setInterval(() => {
+      padUiTick();
+      if (!calibration && !settingsOpen && typeof clearInterval === "function") {
+        clearInterval(uiTimer);
+        uiTimer = 0;
+      }
+    }, 50);
+  }
+
+  function renderCalibration() {
+    if (!calibrationOverlay) return;
+    calibrationOverlay.hidden = !calibration;
+    if (!calibration) return;
+    if (calibrationTitle) {
+      calibrationTitle.textContent = `Press the button labelled ${calibration.step} on your controller`;
+    }
+    if (calibrationDetail) {
+      calibrationDetail.textContent = calibration.step === "A"
+        ? `${calibration.padId || "Controller"} · step 1 of 2`
+        : `Now the button labelled B · step 2 of 2 (A = button ${calibration.a})`;
+    }
+  }
+
+  function startCalibration(gamepad, manual = false) {
+    if (!calibrationOverlay || !gamepad) return false;
+    if (settingsOpen) closeSettings(false);
+    calibration = {
+      padIndex: gamepad.index,
+      padId: gamepad.id || "",
+      step: "A",
+      a: null,
+      manual,
+      waitRelease: true,
+      deadline: now() + calibrationTimeoutMs
+    };
+    calibrationPrompted.add(calibration.padId);
+    renderCalibration();
+    pauseForOverlay();
+    ensureUiTimer();
+    renderPadDebug();
+    return true;
+  }
+
+  function finishCalibration(reason) {
+    if (!calibration) return;
+    const { padId, a, step } = calibration;
+    if (reason === "skip" || reason === "timeout") {
+      if (step === "B" && a !== null) {
+        // A was recorded; assume B is its partner on the other face button.
+        const pad = getConnectedGamepads().find(item => (item.id || "") === padId);
+        const base = pad ? familyButtonLayout(pad).b[0] : 0;
+        const b = a === 0 ? 1 : a === 1 ? 0 : (base !== a ? base : (a === 0 ? 1 : 0));
+        padMap[padId] = { a, b, at: now(), partial: true };
+        writePadMap();
+      } else if (!padMap[padId]) {
+        padMap[padId] = { skipped: true, at: now() };
+        writePadMap();
+      }
+    }
+    calibration = null;
+    suppressPadUntilRelease = true;
+    gamepadStatusText = "";
+    renderCalibration();
+    if (settingsStatus) {
+      settingsStatus.textContent = reason === "saved"
+        ? "Controller calibrated." : `Calibration ${reason}.`;
+    }
+    resumeAfterOverlay();
+    renderPadDebug();
+  }
+
+  function calibrationTick(pads = getConnectedGamepads()) {
+    if (!calibration) return;
+    const pad = pads.find(item =>
+      item.index === calibration.padIndex && (item.id || "") === calibration.padId);
+    if (!pad) {
+      calibration = null;
+      renderCalibration();
+      resumeAfterOverlay();
+      return;
+    }
+    if (now() > calibration.deadline) {
+      finishCalibration("timeout");
+      return;
+    }
+    const pressed = pressedIndices(pad);
+    if (calibration.waitRelease) {
+      if (pressed.length === 0) calibration.waitRelease = false;
+      return;
+    }
+    if (pressed.length === 0) return;
+    const index = pressed[0];
+    if (calibration.step === "A") {
+      calibration.a = index;
+      calibration.step = "B";
+      calibration.waitRelease = true;
+      calibration.deadline = now() + calibrationTimeoutMs;
+      renderCalibration();
+      return;
+    }
+    if (index === calibration.a) return;
+    padMap[calibration.padId] = { a: calibration.a, b: index, at: now() };
+    writePadMap();
+    finishCalibration("saved");
+  }
+
+  // Unknown controller families get the prompt once (per id, per page and
+  // until skipped or calibrated); known families keep their defaults.
+  function maybeAutoCalibrate(gamepad) {
+    if (!gamepad || !calibrationOverlay || calibration || settingsOpen) return;
+    if (padFamily(gamepad) !== "unknown") return;
+    const id = gamepad.id || "";
+    if (padMap[id] || calibrationPrompted.has(id)) return;
+    if (!gamepad.buttons || gamepad.buttons.length < 2) return;
+    startCalibration(gamepad, false);
+  }
+
+  function settingsItems() {
+    if (!settingsPanel || typeof settingsPanel.querySelectorAll !== "function") return [];
+    return Array.from(settingsPanel.querySelectorAll(".settings-item"))
+      .filter(item => !item.disabled && !item.hidden);
+  }
+
+  function focusSettingsItem(index) {
+    const items = settingsItems();
+    if (!items.length) return;
+    settingsFocus = (index + items.length) % items.length;
+    items.forEach((item, i) => toggleClass(item, "is-focused", i === settingsFocus));
+    if (typeof items[settingsFocus].focus === "function") items[settingsFocus].focus();
+  }
+
+  function openSettings() {
+    if (!settingsPanel || settingsOpen) return;
+    if (calibration) finishCalibration("skip");
+    settingsOpen = true;
+    settingsPanel.hidden = false;
+    if (settingsStatus) settingsStatus.textContent = "";
+    uiPadPrevious = {};
+    focusSettingsItem(0);
+    pauseForOverlay();
+    ensureUiTimer();
+  }
+
+  function closeSettings(resume = true) {
+    if (!settingsPanel || !settingsOpen) return;
+    settingsOpen = false;
+    settingsPanel.hidden = true;
+    suppressPadUntilRelease = true;
+    if (resume) resumeAfterOverlay();
+    if (canvas && typeof canvas.focus === "function") canvas.focus();
+  }
+
+  function settingsTick(gamepad) {
+    if (!settingsOpen || !gamepad) return;
+    if (padInputSuppressed(gamepad)) return;
+    const state = readGamepadState(gamepad);
+    const edge = input => state[input] && !uiPadPrevious[input];
+    if (edge("UP") || edge("LEFT")) focusSettingsItem(settingsFocus - 1);
+    else if (edge("DOWN") || edge("RIGHT")) focusSettingsItem(settingsFocus + 1);
+    else if (edge("A")) {
+      const item = settingsItems()[settingsFocus];
+      if (item && typeof item.click === "function") item.click();
+    } else if (edge("B") || edge("START")) {
+      closeSettings();
+    }
+    uiPadPrevious = state;
+  }
+
+  // Gamepad route into settings: Home/Guide (standard index 16), or hold
+  // Select + Start together for about half a second.
+  function settingsChordTick(gamepad) {
+    if (!gamepad || settingsOpen || calibration || !settingsPanel) return;
+    const home = isPressed(gamepad, 16);
+    const layout = gamepadButtonLayout(gamepad);
+    const chord = isPressed(gamepad, layout.select) && isPressed(gamepad, layout.start);
+    if (home && !homeWasDown) {
+      homeWasDown = true;
+      openSettings();
+      return;
+    }
+    homeWasDown = home;
+    if (!chord) {
+      chordSince = 0;
+      return;
+    }
+    if (!chordSince) chordSince = now();
+    else if (now() - chordSince >= 500) {
+      chordSince = 0;
+      openSettings();
+    }
+  }
+
+  function padUiTick(pads = getConnectedGamepads()) {
+    if (calibration) {
+      calibrationTick(pads);
+      return;
+    }
+    const active = pads.find(pad => pad.index === activeGamepadIndex) || pads[0] || null;
+    if (settingsOpen) {
+      settingsTick(active);
+      return;
+    }
+    if (active) {
+      settingsChordTick(active);
+      maybeAutoCalibrate(active);
+    }
+  }
+
+  function resetPadMapping() {
+    padMap = {};
+    writePadMap();
+    calibrationPrompted.clear();
+    gamepadStatusText = "";
+    if (settingsStatus) settingsStatus.textContent = "Saved controller mappings cleared.";
+    updateGamepadStatus(selectGamepad());
   }
 
   function enableAnyConnectedGamepad() {
@@ -491,6 +842,11 @@
         return state;
       }
 
+      padUiTick(lastPolledPads);
+      if (calibration || settingsOpen || padInputSuppressed(gamepad)) {
+        updatePadDebug(gamepad, null);
+        return state;
+      }
       const directState = readGamepadState(gamepad);
       Object.keys(directState).forEach(input => {
         state[input] = state[input] || directState[input];
@@ -646,6 +1002,13 @@
       });
       gamepadButtonsDown.set(gamepad.index, current);
     });
+    // A press that answered (or is answering) an overlay must not launch.
+    const overlayBefore = !!(calibration || settingsOpen || suppressPadUntilRelease);
+    padUiTick();
+    if (suppressPadUntilRelease && getConnectedGamepads().every(pad => pressedIndices(pad).length === 0)) {
+      suppressPadUntilRelease = false;
+    }
+    if (overlayBefore || calibration || settingsOpen || suppressPadUntilRelease) launchPressed = false;
     if (launchPressed && ready && !started) start().catch(fail);
     else if (pressedNow) unlockAudio();
     // Only watch raw buttons while there is something to do: before launch,
@@ -799,6 +1162,19 @@
     setInterval(renderPadDebug, 250);
   }
   window.QuintraDisplay = { computeGameRect, layoutDisplay, get mode() { return displayMode; } };
+  // Test/diagnostic hooks for the pad UI.
+  window.QuintraPads = {
+    tick: () => padUiTick(),
+    startCalibration: () => startCalibration(selectGamepad(), true),
+    skipCalibration: () => finishCalibration("skip"),
+    openSettings,
+    closeSettings: () => closeSettings(),
+    resetMapping: resetPadMapping,
+    get calibrating() { return calibration ? calibration.step : null; },
+    get settingsOpen() { return settingsOpen; },
+    layoutFor: gamepad => gamepadButtonLayout(gamepad),
+    familyOf: gamepad => padFamily(gamepad)
+  };
 
   exportSave.addEventListener("click", exportCartridgeSave);
   importSave.addEventListener("click", () => saveFile.click());
@@ -820,11 +1196,29 @@
       updateGamepadStatus(selectGamepad());
     });
   }
+  displayChoiceButtons.forEach(button => {
+    button.addEventListener("click", () => setDisplayMode(button.dataset.displayMode));
+  });
+  if (settingsButton) settingsButton.addEventListener("click", () => openSettings());
+  if (settingsClose) settingsClose.addEventListener("click", () => closeSettings());
+  if (recalibrateButton) {
+    recalibrateButton.addEventListener("click", () => {
+      const pad = selectGamepad();
+      if (!pad) {
+        if (settingsStatus) settingsStatus.textContent = "Connect a controller and press any button first.";
+        return;
+      }
+      startCalibration(pad, true);
+    });
+  }
+  if (resetMappingButton) resetMappingButton.addEventListener("click", resetPadMapping);
+  if (calibrationSkip) calibrationSkip.addEventListener("click", () => finishCalibration("skip"));
 
   window.addEventListener("gamepadconnected", event => {
     ensureGamepadPolling();
     if (activeGamepadIndex === null) activeGamepadIndex = event.gamepad.index;
     updateGamepadStatus(event.gamepad);
+    maybeAutoCalibrate(event.gamepad);
   });
 
   window.addEventListener("gamepaddisconnected", event => {
@@ -833,6 +1227,13 @@
   });
 
   document.addEventListener("keydown", event => {
+    if (event.code === "Escape" && (calibration || settingsOpen)) {
+      if (calibration) finishCalibration("skip");
+      else closeSettings();
+      event.preventDefault();
+      return;
+    }
+    if (settingsOpen) return;
     if (!started && ready && (event.code === "Enter" || event.code === "KeyX")
         && document.activeElement !== launch) {
       start().catch(fail);
