@@ -20,7 +20,7 @@ u8 law_lock_closed_dirs;
 u8 law_lock_waypoint;
 u8 law_lock_east;
 u8 law_lock_south;
-u8 law_lock_gate_attr;
+u8 law_lock_wane_dirs;   // gated doorways that open in WANE
 u8 law_lock_has_altar;
 u8 law_lock_altar_x;
 u8 law_lock_altar_y;
@@ -109,6 +109,7 @@ void law_lock_apply_room(u8 live) BANKED {
     u8 cell, state, d, half, g;
     law_lock_gate_dirs = 0;
     law_lock_closed_dirs = 0;
+    law_lock_wane_dirs = 0;
     law_lock_has_altar = 0;
     if (!law_lock_active()) return;
     cell = run_state_dungeon_local();
@@ -123,13 +124,13 @@ void law_lock_apply_room(u8 live) BANKED {
         else if (ll_gate_b[g] == cell) d = (u8)((ll_gate_dir[g] + 2) & 3);
         else continue;
         law_lock_gate_dirs |= (u8)(1 << d);
-        law_lock_gate_attr = law_state_attr(ll_gate_open[g]);
+        if (ll_gate_open[g]) law_lock_wane_dirs |= (u8)(1 << d);
         if (ll_gate_open[g] != state) law_lock_closed_dirs |= (u8)(1 << d);
         for (half = 0; half < 2; ++half) {
             u8 closed = (law_lock_closed_dirs >> d) & 1;
             law_lock_set(door_x(d, half), door_y(d, half),
                 closed ? BGT_PILLAR : BGT_DOOR,
-                closed ? law_lock_gate_attr : BGPAL_DOOR, live);
+                closed ? law_state_attr(ll_gate_open[g]) : BGPAL_DOOR, live);
         }
     }
     if (!ll_is_altar(cell)) return;
@@ -162,9 +163,15 @@ void law_lock_apply_room(u8 live) BANKED {
 u8 law_lock_attr_at(u8 x, u8 y) BANKED {
     if (law_lock_has_altar && x == law_lock_altar_x && y == law_lock_altar_y)
         return law_state_attr(law_state());
-    if (law_lock_gate_dirs
-        && (x == 0 || y == 0 || x == law_lock_east || y == law_lock_south))
-        return law_lock_gate_attr;
+    // Each gated doorway wears the colour of the state that opens it (two
+    // gates in one room may open in different states).
+    {
+        u8 d = (x == 0) ? DIR_W : (y == 0) ? DIR_N
+            : (x == law_lock_east) ? DIR_E : (y == law_lock_south) ? DIR_S
+            : 0xFF;
+        if (d != 0xFF && ((law_lock_gate_dirs >> d) & 1))
+            return law_state_attr((law_lock_wane_dirs >> d) & 1);
+    }
     return 0xFF;
 }
 

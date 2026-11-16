@@ -302,41 +302,31 @@ static void draw_dungeon_grid(void) {
             if (!adjacent || !run_state_dungeon_cells_connected(i, j))
                 continue;
             gate = law ? law_lock_edge_gate_state(i, j) : 0xFF;
-            if (gy[i] == gy[j]) {
-                u8 left = gx[i] < gx[j] ? gx[i] : gx[j];
+            {
+                u8 x0, y0, x1, y1, t, pal;
                 u8 route_edge = ((i == here && j == route_next)
                     || (j == here && i == route_next));
-                if (gate != 0xFF && !route_edge) {
-                    map_put_attr((u8)(left + 2), gy[i], BGT_MAP_PATH_H,
-                        map_law_attr(gate));
-                    map_put_attr((u8)(left + 2), (u8)(gy[i] + 1),
-                        BGT_MAP_PATH_H, map_law_attr(gate));
-                } else if (route_edge) {
-                    map_put_attr((u8)(left + 2), gy[i], BGT_MAP_PATH_H,
-                        BGPAL_CRYSTAL);
-                    map_put_attr((u8)(left + 2), (u8)(gy[i] + 1),
-                        BGT_MAP_PATH_H, BGPAL_CRYSTAL);
+                // Route edge glows cyan; a Law Lock corridor wears the
+                // colour of the state that opens it; others stay plain.
+                pal = route_edge ? BGPAL_CRYSTAL
+                    : (gate != 0xFF) ? map_law_attr(gate) : 0xFF;
+                if (gy[i] == gy[j]) {
+                    x0 = x1 = (u8)((gx[i] < gx[j] ? gx[i] : gx[j]) + 2);
+                    y0 = gy[i];
+                    y1 = (u8)(y0 + 1);
+                    t = BGT_MAP_PATH_H;
                 } else {
-                    map_put((u8)(left + 2), gy[i], BGT_MAP_PATH_H);
-                    map_put((u8)(left + 2), (u8)(gy[i] + 1), BGT_MAP_PATH_H);
+                    x0 = gx[i];
+                    x1 = (u8)(x0 + 1);
+                    y0 = y1 = (u8)((gy[i] < gy[j] ? gy[i] : gy[j]) + 2);
+                    t = BGT_MAP_PATH_V;
                 }
-            } else {
-                u8 top = gy[i] < gy[j] ? gy[i] : gy[j];
-                u8 route_edge = ((i == here && j == route_next)
-                    || (j == here && i == route_next));
-                if (gate != 0xFF && !route_edge) {
-                    map_put_attr(gx[i], (u8)(top + 2), BGT_MAP_PATH_V,
-                        map_law_attr(gate));
-                    map_put_attr((u8)(gx[i] + 1), (u8)(top + 2),
-                        BGT_MAP_PATH_V, map_law_attr(gate));
-                } else if (route_edge) {
-                    map_put_attr(gx[i], (u8)(top + 2), BGT_MAP_PATH_V,
-                        BGPAL_CRYSTAL);
-                    map_put_attr((u8)(gx[i] + 1), (u8)(top + 2),
-                        BGT_MAP_PATH_V, BGPAL_CRYSTAL);
+                if (pal == 0xFF) {
+                    map_put(x0, y0, t);
+                    map_put(x1, y1, t);
                 } else {
-                    map_put(gx[i], (u8)(top + 2), BGT_MAP_PATH_V);
-                    map_put((u8)(gx[i] + 1), (u8)(top + 2), BGT_MAP_PATH_V);
+                    map_put_attr(x0, y0, t, pal);
+                    map_put_attr(x1, y1, t, pal);
                 }
             }
         }

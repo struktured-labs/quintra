@@ -23,6 +23,7 @@
 #include "game/prism_toggle.h"
 #include "game/puzzle.h"
 #include "game/room.h"
+#include "game/sun_lattice.h"
 #include "render/tiles.h"
 
 #define PRISM_TEMPLATE_COUNT 5
@@ -227,6 +228,12 @@ u8 prism_strike(u8 tx, u8 ty) BANKED {
     sfx_play_rune(prism_raised ? 4 : 0);
     room_shake(1, 4);
     return 1;
+}
+
+void prism_shot_tile(u8 t, u8 tx, u8 ty) BANKED {
+    if (t == BGT_PILLAR) sun_lattice_strike(tx, ty);
+    else if (t == BGT_CRYSTAL && room_puzzle_kind == PUZZLE_PRISM_TOGGLE)
+        prism_strike(tx, ty);
 }
 
 u8 prism_tick(void) BANKED {

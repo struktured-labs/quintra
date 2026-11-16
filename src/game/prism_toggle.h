@@ -43,6 +43,9 @@ extern u8 prism_raised;
 void prism_prepare(u32 seed, u8 bosses_beaten, u8 solved) BANKED;
 // A player strike landed on (tx, ty). Returns 1 when it hit a prism orb.
 u8 prism_strike(u8 tx, u8 ty) BANKED;
+// A player shot stopped on tile t at (tx, ty): Sun Lattice vane (pillar) or
+// Prism Toggle orb (crystal). Keeps both dispatches out of bank 3.
+void prism_shot_tile(u8 t, u8 tx, u8 ty) BANKED;
 // Per-frame: strike cooldown, deferred barrier raises, goal check.
 // Returns 1 on the frame the goal plate is reached.
 u8 prism_tick(void) BANKED;
