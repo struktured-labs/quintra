@@ -12,6 +12,7 @@
 #include "game/player.h"
 #include "game/room.h"
 #include "game/water_ride.h"
+#include "game/waygear.h"
 #include "render/tiles.h"
 
 #define PICSEAN_CLASS 3
@@ -41,6 +42,13 @@ void water_ride_place(void) BANKED {
     u8 mode = WATER_RIDE_NONE;
     u8 sx, sy, beat, bob;
     OAM_item_t *it;
+    // Hot path: this runs every frame. Only a Picsean or a Tide Raft owner
+    // can ever stand on water, so everyone else skips the tile probe.
+    if (player.class_id != PICSEAN_CLASS
+        && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_RAFT))) {
+        if (water_ride_mode) water_ride_hide();
+        return;
+    }
     if (player.hp && feet_on_water())
         mode = player.class_id == PICSEAN_CLASS
             ? WATER_RIDE_SWIM : WATER_RIDE_RAFT;
