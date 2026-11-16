@@ -164,6 +164,9 @@ jobs:
       - name: PyBoy boss drop persist
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_boss_drop_persist.py
 
+      - name: PyBoy water ride (Tide Raft and Picsean swim)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_water_ride.py
+
       - name: PyBoy seeded-room fixtures (archetypes, spinners, Cinder Maw, Farfold Cache)
         run: |
           mkdir -p tmp
