@@ -474,6 +474,9 @@ def main():
         0x18, 0x00, 0x3C, 0x18, 0x66, 0x3C, 0x7E, 0x24,
         0x24, 0x18, 0x7E, 0x18, 0x66, 0x24, 0x24, 0x00,
     )), "craft-quarter apothecary inherited Bellkeeper art"
+    # The apothecary also keeps a restocked Antidote shelf (ware 22).
+    assert any(pb.memory[w + 18] == 22 for w in wares), "quarter lacks Antidote"
+    wares = [w for w in wares if pb.memory[w + 18] != 22]
     assert len(wares) == 3 and {pb.memory[w + 18] for w in wares} == {3, 4, 6}
     pb.memory[0xFF4F] = 0
     assert bytes(pb.memory[0x9800 + 1 * 32 + 8:0x9800 + 1 * 32 + 13]) == \
@@ -500,7 +503,10 @@ def main():
     for off, value in ((9, vx), (10, 0), (11, vy), (12, 0)):
         pb.memory[pl + off] = value
     tick(6)
-    assert pb.memory[vamp] == 0, "Vampiric Sigil shelf could not be purchased"
+    # The freed slot may be reused at once (an impact FX), so check that
+    # the Vampiric Sigil ware itself is gone rather than an empty slot.
+    assert not (pb.memory[vamp] == 3 and pb.memory[vamp + 17] == 4
+                and pb.memory[vamp + 18] == 6),         "Vampiric Sigil shelf could not be purchased"
     assert (pb.memory[pl + 1] == min(16, old_hp_max + 1)
             and pb.memory[pl + 5] == old_atk + 1), \
         ("Vampiric Sigil did not apply its permanent health/attack build effects "

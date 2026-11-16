@@ -22,6 +22,13 @@ static const u8 glyphs[14][8] = {
     {0x18,0x5A,0x3C,0xFF,0xFF,0x3C,0x5A,0x18}
 };
 
+// Antidote vial: amber cork, glass neck, round green body with an amber
+// cross (GPT Image 2.6 Sunburst reference, hand-quantized to 8x8, OBJ pal 7).
+static const u8 antidote_icon[16] = {
+    0x3C,0x3C,0x18,0x3C,0x00,0x18,0x3C,0x42,
+    0x7E,0x99,0x7E,0xBD,0x7E,0x99,0x00,0x7E,
+};
+
 void status_effects_load(void) BANKED {
     u8 tile[16],i,y;
     VBK_REG=1;
@@ -32,6 +39,7 @@ void status_effects_load(void) BANKED {
         }
         set_sprite_data(224+i,1,tile);
     }
+    set_sprite_data(238,1,antidote_icon); /* SPR_ITEM_ANTIDOTE */
     VBK_REG=0;
 }
 

@@ -29,6 +29,8 @@ Iron Heart, maximum health +2. Speed Ring, speed +1. Power Stone, attack +1. Tou
 
 Rift Bomb, Echo Chime, and Mirror Shard are single uses. The chime stills bullets and shows a secret and the nearby paths. The shard turns hostile shots back on whoever fired them.
 
+The Antidote is the green vial with the amber cross. It cures Poison. Mire Spores and Bramble Sprites carry it, so Toxic Mire, Shadow Keep and the Riftwild that leads to them are where you want one. You can hold three. Open the pack while poisoned and the TOOL row is already on it: press A. It will not waste itself on a healthy body. Poison can take your last half-heart, but not while you carry a vial: the Antidote breaks on its own and the window says CURED. Spores and Bramble drop one now and then, and while you are poisoned with none, any kill might.
+
 Blast Seed makes the first impact of a shot bloom. Rift Lens makes every third primary attack a heavy beam. Both are found in Hollow Riftwild caches, not in an ordinary shop, and the cartridge tells you they belong to Hollow.
 
 The shop also names wares beyond that list. Read the shelf. The words on the glass are the contract: a heart refill, an alternate A weapon, “HP for ATK+SPD” on the Glass Fang pact, one revive on the Phoenix thread, magic plus a weapon surge, a fork on every fourth A, a shot that bounces once, a counter-volley when you are hit, B and magic back on every fifth kill, and surplus hearts turned into magic.

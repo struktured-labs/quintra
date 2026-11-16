@@ -5,6 +5,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/pickup.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -20,7 +21,8 @@ static u8 progression_tier(void) {
     u8 i;
     u8 relics = 0;
     for (i = 0; i < INVENTORY_SLOTS; ++i)
-        if (player.inventory[i] != 0xFF) relics++;
+        if (player.inventory[i] != 0xFF
+            && player.inventory[i] != ITEM_ID_ANTIDOTE) relics++;
     if (run_state.bosses_beaten >= 6 || relics >= 6) return 3;
     if (run_state.bosses_beaten >= 3 || relics >= 3) return 2;
     if (run_state.bosses_beaten >= 1 || relics >= 1) return 1;

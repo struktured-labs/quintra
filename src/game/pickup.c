@@ -4,6 +4,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "core/rng.h"
+#include "game/antidote.h"
 #include "game/entity.h"
 #include "game/curse.h"
 #include "game/pickup.h"
@@ -27,7 +28,7 @@ static u8 pickup_kind_collectible(u8 kind) {
         || kind == PICKUP_SURGE || kind == PICKUP_RIFTWELL
         || kind == PICKUP_FARFOLD_RELIC || kind == PICKUP_BOON_CHOICE
         || kind == PICKUP_WAYGEAR || kind == PICKUP_WILDCARD
-        || kind == PICKUP_HOLLOW_RELIC;
+        || kind == PICKUP_HOLLOW_RELIC || kind == PICKUP_ANTIDOTE;
 }
 
 static u8 pickup_tile_safe(u8 tile) {
@@ -347,34 +348,6 @@ u8 pickup_next_weapon(u8 current) BANKED {
         if (i == current) found = 1;
     }
     return first == 0xFF ? 0 : first;
-}
-
-u8 pickup_spawn_weapon(u8 weapon_index, fix8_t x, fix8_t y) BANKED {
-    u8 idx;
-    if (weapon_index >= N_ITEMS || items[weapon_index].kind != ITEM_KIND_WEAPON)
-        return 0xFF;
-    idx = pickup_spawn(PICKUP_WEAPON, x, y);
-    if (idx != 0xFF) {
-        entities[idx].ai_data[1]  = weapon_index;
-        entities[idx].sprite_tile = SPR_ITEM_WEAPON;
-        entities[idx].palette     = 0x04;      // red orb = weapon
-        entities[idx].state       = 45;        // grace: no instant pickup
-    }
-    return idx;
-}
-
-u8 pickup_spawn_farfold_relic(u8 item_index, fix8_t x, fix8_t y) BANKED {
-    u8 idx = pickup_spawn(PICKUP_FARFOLD_RELIC, x, y);
-    if (idx != 0xFF) {
-        entities[idx].ai_data[1] = item_index;
-        entities[idx].sprite_tile = pickup_item_sprite(item_index);
-        entities[idx].palette = 0x06;
-        entities[idx].hitbox = (u8)0x88;
-        // Optional exploration cannot be a four-second reaction test. The
-        // cache orb persists until claimed or the player leaves the district.
-        entities[idx].state_timer = 0;
-    }
-    return idx;
 }
 
 u8 pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED {
@@ -931,6 +904,15 @@ u8 pickup_check_player_collision(void) BANKED {
                 case PICKUP_SURGE:
                     room_start_weapon_surge();
                     break;
+                case PICKUP_ANTIDOTE:
+                    // A full pouch leaves the vial on the floor (it never
+                    // expires) rather than silently eating it.
+                    if (!antidote_collect(0)) {
+                        refuse_cue(i);
+                        any = 1;
+                        continue;
+                    }
+                    break;
                 case PICKUP_WILDCARD: {
                     pickup_resolve_wildcard();
 #if 0
@@ -1058,6 +1040,7 @@ u8 pickup_check_player_collision(void) BANKED {
                             && player_has_item(ITEM_ID_MORNINGSTAR))
                         || (ware == WARE_BOMBS
                             && player_has_item(ITEM_ID_BOMBS))
+                        || (ware == WARE_ANTIDOTE && !antidote_can_carry())
                         || (ware == WARE_GLASS && player.hp_max <= 2)
                         || (ware == WARE_HEART
                             && (player.hp >= player.hp_max
@@ -1225,9 +1208,14 @@ u8 pickup_check_player_collision(void) BANKED {
                                 grant_special_item(ITEM_ID_BOMBS);
                                 hud_show_secondary(1);
                                 break;
+                            case WARE_ANTIDOTE:
+                                antidote_collect(1);
+                                break;
                         }
                         // Shelf identity lives in bank 7 so this bank keeps its floor.
-                        shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
+                        // The restocked Antidote shelf owns no sold-out bit.
+                        if (ware != WARE_ANTIDOTE)
+                            shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
                         entity_kill(i);
                     } else refuse_cue(i);           // not enough coins
                     any = 1;

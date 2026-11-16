@@ -33,6 +33,7 @@
 #define PICKUP_COMPANION       23 // nonblocking Road Echo follower; ai_data[1]=role
 #define PICKUP_WILDCARD        24 // optional pulsing fate orb: boon or run curse
 #define PICKUP_HOLLOW_RELIC    25 // Worldglass-only counterpart cache; ai1=item id, ai2=claim bit
+#define PICKUP_ANTIDOTE        26 // carried Pack tool that cures Poison (enemy drop)
 
 // Room-owned secret-vault countdown. Marked loot bypasses its old individual
 // u8 lifespan and is retired together by the visible twelve-second clock.
@@ -63,6 +64,7 @@
 #define WARE_HOOKSHOT 19
 #define WARE_MORNINGSTAR 20
 #define WARE_BOMBS 21
+#define WARE_ANTIDOTE 22 // carried Antidote: Pack TOOL that cures Poison
 
 // Stable content ids used by runtime hooks outside generated content tables.
 #define ITEM_ID_IRON_HEART    20u
@@ -88,6 +90,8 @@
 #define ITEM_ID_HOOKSHOT          46u
 #define ITEM_ID_MORNINGSTAR       47u
 #define ITEM_ID_BOMBS             48u
+// C-only consumable tool id (not in content items[]); stacks up to three.
+#define ITEM_ID_ANTIDOTE          49u
 
 // Spawn a pickup at the given world coordinates (e.g. enemy death drop)
 u8   pickup_spawn(u8 kind, fix8_t x, fix8_t y) BANKED;

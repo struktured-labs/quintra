@@ -1,6 +1,6 @@
 # Merchants and the Forge
 
-A dungeon merchant keeps four shelves and no enemies. Stand near a ware. The window shows the icon and the cost. A talks. Touch buys. Bought shelves stay empty if you leave and come back. They restock when the next dungeon begins, not when you pace the room.
+A dungeon merchant keeps five shelves and no enemies. Stand near a ware. The window shows the icon and the cost. A talks. Touch buys. Bought shelves stay empty if you leave and come back. They restock when the next dungeon begins, not when you pace the room. The fifth shelf is the exception: the Antidote, 12 coins, is back every time you walk in.
 
 On that counter, where the room still has them: a heart refill for 10 coins, a random stat relic for 25, and two featured shelves, one for the build and one for a tactic. Featured prices, when that ware is the one on offer:
 
@@ -12,8 +12,11 @@ On that counter, where the room still has them: a heart refill for 10 coins, a r
 - Blast Seed, 32.
 - Hookshot, Phoenix thread, Vampiric Sigil, Iron Heart, or Thorn Crown, 35.
 - Morningstar and the Bomb Bag, 30.
+- Antidote, 12, on every counter, every visit.
 
-The village is three screens of civic ground, not a second dungeon. The market’s heart refill is 5 coins, and its weapon trade is 30. The forge sells Power Stone, attack +1, for 30. The smith’s line, if you ask: “Power raises attack. Weapons change A. Gold means strong.” Beside that quarter, the Vampiric Sigil is 35 and the apothecary’s Mana Gem is 30. The arrival square sells the cartographer’s chart for 15.
+The village is three screens of civic ground, not a second dungeon. The market’s heart refill is 5 coins, and its weapon trade is 30. The forge sells Power Stone, attack +1, for 30. The smith’s line, if you ask: “Power raises attack. Weapons change A. Gold means strong.” Beside that quarter, the Vampiric Sigil is 35 and the apothecary’s Mana Gem is 30, and an Antidote there is 12. The arrival square sells the cartographer’s chart for 15.
+
+In the Riftwild, a wayside trader waits at the Riftwell crossing, just north of the trail, with Antidotes at 12. Walking the trail past the trader buys nothing. Step onto the vial to buy.
 
 The people who are not selling:
 

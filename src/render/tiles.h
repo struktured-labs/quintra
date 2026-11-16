@@ -314,6 +314,10 @@
 #define SPR_ITEM_THORN       147
 #define SPR_ITEM_DRUM        148
 #define SPR_ITEM_FLASK       149
+// Antidote vial lives in OBJ VRAM bank 1 (status-glyph bank, beside the
+// Morningstar at 237), so draw it with ANTIDOTE_ICON_PROP (bank bit set).
+#define SPR_ITEM_ANTIDOTE    238
+#define ANTIDOTE_ICON_PROP   0x0F // OBJ palette 7 (green/amber) | VRAM bank 1
 #define SPR_ITEM_ASCEND      150
 #define SPR_ITEM_RIFT_SIGIL  151
 #define SPR_ITEM_RIFT_BOMB   152

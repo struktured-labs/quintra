@@ -276,6 +276,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_riftwild_landmarks.py
 	$(PYBOY_RUN) scripts/test_riftwild_phase.py
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
+	$(PYBOY_RUN) scripts/test_antidote.py
 	uv run --quiet --with pyboy python scripts/test_victory.py
 	uv run --quiet --with pyboy python scripts/test_gameover.py
 	uv run --quiet --with pyboy python scripts/test_title_sprite_leak.py

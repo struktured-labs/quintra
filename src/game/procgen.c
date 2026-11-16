@@ -7,6 +7,7 @@
 #include "game/dungeon_director.h"
 #include "game/companion.h"
 #include "game/enemy_ai.h"
+#include "game/antidote.h"
 #include "game/entity.h"
 #include "game/rare_enemy.h"
 #include "game/mission_graph.h"
@@ -72,6 +73,13 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     }
     return idx;
 }
+
+#define ANTIDOTE_TOWN_X 152
+#define ANTIDOTE_TOWN_Y 64
+#define RIFT_TRADER_X   128
+#define RIFT_TRADER_Y   20
+#define RIFT_ANTIDOTE_X 128
+#define RIFT_ANTIDOTE_Y 40
 
 static void paint_shop_price(u8 tx, u8 price) {
     room_tilemap[10][tx]     = HUD_COIN;
@@ -1343,6 +1351,10 @@ void procgen_generate_current_room(void) BANKED {
                     spawn_shop_ware(88, 64, WARE_VAMP, 35);
                 if (!(run_state.shop_civic & 8))
                     spawn_shop_ware(120, 64, WARE_RUNE, 30);
+                // The apothecary also keeps a restocked Antidote shelf
+                // (no purchase bit; buying more is always allowed).
+                spawn_shop_ware(ANTIDOTE_TOWN_X, ANTIDOTE_TOWN_Y,
+                    WARE_ANTIDOTE, ANTIDOTE_PRICE);
             }
             player.iframes = 60;
             return;
@@ -1389,6 +1401,14 @@ void procgen_generate_current_room(void) BANKED {
                 // feet-anchored, so y=64 is deliberately on the east/west
                 // trail rather than visually near it but uncollectible.
                 pickup_spawn_riftwell(FIX8(80), FIX8(64));
+            // Wayside trader: the Riftwild's one shop. It sells only the
+            // Antidote, restocked on every visit, because the overworld's
+            // Mire Spores and Brambles poison far from any town healer.
+            // The vial sits north of the y=64 trail so walking past the
+            // crossing never buys it by accident.
+            pickup_spawn_merchant(FIX8(RIFT_TRADER_X), FIX8(RIFT_TRADER_Y));
+            spawn_shop_ware(RIFT_ANTIDOTE_X, RIFT_ANTIDOTE_Y,
+                WARE_ANTIDOTE, ANTIDOTE_PRICE);
             player.iframes = 60;
             return;
         }
@@ -1573,6 +1593,10 @@ void procgen_generate_current_room(void) BANKED {
                     spawn_shop_ware(116, 64, tactical, tactical_price);
                     paint_shop_price(13, tactical_price);
                 }
+                // Antidote shelf: always restocked (its purchase never
+                // sets a shop_bought bit), so poison always has a cure.
+                spawn_shop_ware(136, 64, WARE_ANTIDOTE, ANTIDOTE_PRICE);
+                paint_shop_price(16, ANTIDOTE_PRICE);
             }
         } else {
             // A 31x31 district spans almost three LCD areas. Penta-like
