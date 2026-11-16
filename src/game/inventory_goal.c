@@ -3,12 +3,13 @@
 #include <gbdk/console.h>
 
 #include "game/inventory_copy.h"
+#include "game/riftwild_mission.h"
 #include "game/run_state.h"
 #include "render/text.h"
 
 void inventory_write_current_goal(void) BANKED {
     gotoxy(4, 14);
-    if (run_state.world_mode) text_write("FIND DUNGEON");
+    if (run_state.world_mode) riftwild_mission_write_goal();
     else if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         text_write("REST THEN NORTH");
     else if (run_state_is_boss_room()) text_write("BREAK COLOSSUS");

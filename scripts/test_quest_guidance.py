@@ -132,7 +132,7 @@ def main():
         # actual commitment fight rather than leaking dungeon-only advice.
         pb.memory[rs + 17] = 1  # world_mode
         open_pack(pb)
-        row(pb, 14, 4, "FIND DUNGEON")
+        row(pb, 14, 4, "FIND THE WARDEN")
         pb.button("b")
         settle(pb, 20)
 

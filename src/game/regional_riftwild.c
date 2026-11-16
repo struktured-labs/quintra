@@ -88,6 +88,15 @@ u8 run_state_riftwild_guard_gear(u8 screen) BANKED {
     return 0xFF;
 }
 
+u8 run_state_riftwild_guard_screen(void) BANKED {
+    return regional_guard_screen[current_region_step()];
+}
+
+u8 run_state_riftwild_guard_down(void) BANKED {
+    return (run_state.riftwild_flags
+        & regional_guard_bit[current_region_step()]) ? 1 : 0;
+}
+
 void run_state_riftwild_clear_guard(void) BANKED {
     u8 step = current_region_step();
     run_state.riftwild_flags |= regional_guard_bit[step];
