@@ -158,131 +158,196 @@ pub fn serpent_jaw() -> Grid {
     g
 }
 
-/// Stage 2 — Kilnback pack / Cinder Rex atlas.
+/// Stage 2 — Kilnback pack atlas (Cinder Rex lives in bank 1, see below).
 ///
-/// GPT Image 2.6 pass: hand-reduced from a `gpt-image-2.6-sunburst` sheet.
-/// Kilnbacks are walking crucibles with a dark iron grate (heat shows only
-/// when the vent blows its lid); Rex is an iron-jawed furnace hound with
-/// dorsal heat spikes, a barred furnace grate on the flank and a slag-hammer
-/// tail.
-///
-/// The first two tile rows contain four 16x8 crucible poses (closed walk A/B,
-/// open vent, collapsed husk). The lower half is one native 32x16 furnace
-/// hound. Runtime draws that grid 1:1: four columns, no duplicated tile.
-/// Five Kilnbacks in a phalanx are still exactly ten sprites on one scanline.
+/// GPT Image 2.6 pass 2 (`gpt-image-2.6-sunburst`), hand-reduced. Carmelo
+/// asked for a bigger Ember boss, so each Kilnback is now a 16x16 walking
+/// crucible (four sprites) instead of a 16x8 sliver. The 32x32 atlas holds
+/// four poses as quadrants: walk A (top-left), walk B (top-right), open vent
+/// (bottom-left) and collapsed husk (bottom-right). Pose `k` starts at atlas
+/// tile {0,2,8,10}[k]; its four tiles are base, base+1, base+4, base+5.
 ///
 /// Ember's live OBJ palette is not "1 = darkest". Index 1 is the rust brick
 /// (`BGR555` 22,9,4), index 2 is the near-black iron (6,2,1), and index 3 is
-/// the yellow heat (31,27,10). The strings below use those hardware indices:
-/// brick volume is 1, iron rims and stompers are 2, magma is 3.
+/// the yellow heat (31,27,10).
 fn boss_maw() -> Grid {
     let mut g = blank();
-    const WALK_A: [&str; 8] = [
-        ".....2112.......",
-        "...2211112......",
-        "..211111111122..",
+    const WALK_A: [&str; 16] = [
+        "................",
+        ".....2222.......",
+        "....211112......",
+        "...22122222.....",
+        "..2111111112....",
+        ".211111111112...",
+        ".222222222222...",
+        "21111111111112..",
         ".22222222222222.",
-        ".212121212122222",
-        ".211111111112332",
-        "..2112...2112.2.",
-        "..222....222....",
+        "2112323333112112",
+        "2112323333112232",
+        ".221111111122133",
+        "2111111111211212",
+        "211122222221122.",
+        "1112..211121112.",
+        "112...2112.2112.",
     ];
-    const WALK_B: [&str; 8] = [
-        ".....2112.......",
-        "...2211112......",
-        "..211111111122..",
-        ".22222222222222.",
-        ".212121212122222",
-        ".211111111112332",
-        "...2112...2112..",
-        "....222....222..",
-    ];
-    const VENT: [&str; 8] = [
-        "..2112..3.33.3..",
-        ".21112.3333333..",
-        "..22.333333333..",
-        ".22223333333222.",
-        ".213333333122222",
-        ".211111111112332",
-        "..2112...2112.2.",
-        "..222....222....",
-    ];
-    const HUSK: [&str; 8] = [
+    const WALK_B: [&str; 16] = [
         "................",
         "................",
         "................",
-        "......3.........",
-        "...22.232.22....",
-        "..21123312112...",
-        ".2111132311112..",
-        ".22222222222222.",
+        "....2222........",
+        "...211112.......",
+        "...2222222......",
+        "..211111112.....",
+        ".21111111122....",
+        "2111111111112...",
+        "21111111111222..",
+        ".21232323212112.",
+        ".21232323112332.",
+        ".21111111112232.",
+        "21121111121122..",
+        "11122222221112..",
+        "1122112...2112..",
     ];
-    // Authored facing west: column 0 is the jaw, column 3 is the slag hammer.
-    // East travel sets S_FLIPX. Nothing here is stamped twice.
-    const REX: [&str; 16] = [
-        "...........3...3...3......22222.",
-        "..2222222.232.232.232....2333332",
-        ".211111112211111111112...2323232",
-        "21122111112111111111112..2333332",
-        "2113321111111132222111122.22222.",
-        "2113311111113123333211112.212...",
-        "23333332111131232323211121112...",
-        "23232322111311123232111111122...",
-        "2111111211311122222213111112....",
-        ".2222222111112111111131112......",
-        "........21111111111111112.......",
-        ".......2111211211121112112......",
-        "......21112.2112..2112.2112.....",
-        "......2112..2112..2112..2112....",
-        ".....23332..23332.23332..23332..",
-        ".....22222..22222.22222..22222..",
+    const VENT: [&str; 16] = [
+        "....22..........",
+        ".222112...2.....",
+        "2111121222322...",
+        "11112222322232..",
+        "111123322.232...",
+        "1112333332.2....",
+        "112.233333232...",
+        "1122223333332...",
+        "22111133333312..",
+        "..2222132313222.",
+        ".211232323222112",
+        ".211232323212332",
+        "..21111111112123",
+        ".211211111121122",
+        "211122222222112.",
+        "21122112....2112",
+    ];
+    const HUSK: [&str; 16] = [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "........22......",
+        ".....2.2332.....",
+        "....212231222...",
+        "...21112322312..",
+        "..2122123321222.",
+        ".211123332221112",
+        "2222133211121122",
+        "1111123211112211",
+        "1121123211111111",
     ];
 
-    let mut stamp = |ox: usize, oy: usize, art: &[&str], width: usize| {
+    let mut stamp = |ox: usize, oy: usize, art: &[&str]| {
         for (y, row) in art.iter().enumerate() {
-            assert_eq!(row.len(), width, "cinder row {y} at {ox},{oy}");
+            assert_eq!(row.len(), 16, "kilnback row {y} at {ox},{oy}");
             for (x, pixel) in row.bytes().enumerate() {
                 g[oy + y][ox + x] = if pixel == b'.' { 0 } else { pixel - b'0' };
             }
         }
     };
-    stamp(0, 0, &WALK_A, 16);
-    stamp(16, 0, &WALK_B, 16);
-    stamp(0, 8, &VENT, 16);
-    stamp(16, 8, &HUSK, 16);
-    stamp(0, 16, &REX, 32);
+    stamp(0, 0, &WALK_A);
+    stamp(16, 0, &WALK_B);
+    stamp(0, 16, &VENT);
+    stamp(16, 16, &HUSK);
     g
 }
 
-/// Head row is the roar, leg row is the stride. Drawn with S_BANK per row
-/// from VRAM bank 1, so the idle atlas in bank 0 stays put.
-pub fn cinder_rex_pose() -> Grid {
-    const POSE: [&str; 16] = [
-        ".2222......3...3...3......22222.",
-        "211112....232.232.232....2333332",
-        "2113311..2211111111112...2323232",
-        "21111111212111111111112..2333332",
-        "22222222.1111132222111122.22222.",
-        "3333.....1113123333211112.212...",
-        "33333....11131232323211121112...",
-        "333.2321.11311123232111111122...",
-        "2111111211311122222213111112....",
-        ".2222222111112111111131112......",
-        "........21111111111111112.......",
-        "......211112.21111112.21112.....",
-        "....211122...2112...2111112.....",
-        "..21112.....2112.......21112....",
-        ".23332.....23332........23332...",
-        ".22222.....22222........22222...",
+fn grid48(art: &[&str]) -> Grid {
+    assert_eq!(art.len(), 32);
+    art.iter().map(|row| {
+        assert_eq!(row.len(), 48);
+        row.bytes().map(|p| if p == b'.' { 0 } else { p - b'0' }).collect()
+    }).collect()
+}
+
+/// Cinder Rex, 48x32 (6x4 sprites), authored facing west: the iron jaw is
+/// on the left, the slag-hammer tail curls up on the right. Drawn from
+/// VRAM bank 1 OBJ 64..87. Reduced from the same GPT sheet as the pose.
+pub fn cinder_rex_big() -> Grid {
+    const REX: [&str; 32] = [
+        ".........................................222....",
+        ".............2222....222................21112...",
+        "............233332..23332...........2.2211122...",
+        "...........2333332.233332.22.......21212111212..",
+        "..........2333333223333322332.....2111112123212.",
+        ".........233333332333333333332...2111211123332..",
+        "........222112222131122223332222.21122111223332.",
+        ".......211111121113111111123233322111221233322..",
+        ".....2211111121211331111113123332.211222.2332...",
+        ".2222111111221123333311133221222.221111221232...",
+        "211111112232221231113133221122.22322212122.2....",
+        "21121223333211112111333211112123232..21112......",
+        "1111111233211212211131211222212212...211112.....",
+        "111111111111121121133311232232111122.21212......",
+        "111111111111121121222322333233222111211112......",
+        "222222222222112222111211333233212111121112......",
+        "232332323321112111111111333233212111112112......",
+        "23233232332111221111112133323321222221122.......",
+        "2323323233211122122221222222222221311212........",
+        ".22222222211112.21311211111111112113112.........",
+        "2111111111111122111311211111111121131112........",
+        "21111111111222.21113111222222222113331112.......",
+        ".22222222122..211333333112....211311333112......",
+        ".......2111122111311331112....2131113111112.....",
+        "......211111112131113111112.221222223111112.....",
+        ".....222221111222222222211221112....22222112....",
+        "....21111122112...21111122.211112..21111112.....",
+        "...21111111122...211111111211112..2111111112....",
+        "...2111111112....211111111211112..2111111112....",
+        "..232332321112..2322322221111112.233233232112..2",
+        ".2332332332112.2332332332112222..233333333112.23",
+        ".232332333222..233332332212.....233233233222..23",
     ];
-    let mut g = vec![vec![0u8; 32]; 16];
-    for (y, row) in POSE.iter().enumerate() {
-        assert_eq!(row.len(), 32);
-        for (x, pixel) in row.bytes().enumerate() {
-            g[y][x] = if pixel == b'.' { 0 } else { pixel - b'0' };
-        }
-    }
-    g
+    grid48(&REX)
+}
+
+/// Roar + stride, same box: jaw thrown open with fire in the mouth and the
+/// legs in a long reaching step. Bank 1 OBJ 88..111. Runtime picks idle or
+/// pose per 16px row band, so the head can roar while the legs plant.
+pub fn cinder_rex_big_pose() -> Grid {
+    const POSE: [&str; 32] = [
+        "................................................",
+        "................................................",
+        "................................................",
+        "...........................................22...",
+        "....................222...................2112..",
+        "...................23332.222............2.21122.",
+        "..................23333223332.........2212111212",
+        "......2222...2222233333233332222.....21111112321",
+        ".....2111122211111332222223323332...211121122332",
+        "....2111121111111121113311122333222.211221233232",
+        "...211111123333222211113111113232332211122.2332.",
+        "....22222112332121121133311111123332.211122.232.",
+        "....233322111111211233113111221222322.222112.2..",
+        ".....222.23111112112311133321212122232..2112....",
+        ".....222..2221121111311113212222113232..21112...",
+        ".22.233322222122112311113311332321232.222122....",
+        "233222333333212.22322112132233233221121111112...",
+        ".2233333333321121321111122123323311111111112....",
+        "..23333333332112321111111212332331122212112.....",
+        "..2223333332111212231211112222222221112.22......",
+        ".232.22222221112211311211111111111113112........",
+        "..2..2323211122.2111311212111111112133112.......",
+        ".....23233112.22111333122.22222222133311122.....",
+        ".....2111112221311331332.21112..213311331112....",
+        "......22222211113331112.2111112..231111121112...",
+        "........21111111313222221111112...222312111112..",
+        "...2222211121112122..211112112.......2221122222.",
+        "..2111112111212.2...211111122..........211111112",
+        ".2111111121122.....2212111112...........21111112",
+        "232323311222......23323232112............2323232",
+        "3333233212........23233332112............2323333",
+        "3232232.2.........2323223222.............2323323",
+    ];
+    grid48(&POSE)
 }
 
 /// Stage 3 — Frost Spider: plated abdomen and eight jointed ice legs.
@@ -632,47 +697,39 @@ mod tests {
     use super::boss_maw;
 
     #[test]
-    fn cinder_rex_is_a_native_four_column_furnace_hound() {
+    fn kilnbacks_are_square_crucibles_with_a_blown_vent() {
         let g = boss_maw();
-        let ink = |rows: std::ops::Range<usize>, x0: usize, x1: usize, color: u8| {
-            g[rows].iter().flat_map(|row| &row[x0..x1]).filter(|&&p| p == color).count()
+        let ink = |x0: usize, y0: usize, color: u8| {
+            g[y0..y0 + 16].iter().flat_map(|row| &row[x0..x0 + 16])
+                .filter(|&&p| p == color).count()
         };
-        // Closed armor has no magma speckles. The vent is a solid cauldron.
-        assert_eq!(ink(0..6, 0, 16, 3), 2, "walk eye slit only");
-        assert!(ink(8..12, 0, 16, 3) > 20, "vent cauldron");
-        assert!(g[8][16..32].iter().all(|&p| p == 0) && g[9][16..32].iter().all(|&p| p == 0),
-            "husk roof collapsed");
-        assert!(g[14][16..32].iter().any(|&p| p != 0), "husk rests on the floor");
-        // One eye, two pillar legs, four distinct columns. No stretched twin.
-        assert_eq!(&g[20][3..5], &[3, 3]);
-        assert_eq!(&g[21][3..5], &[3, 3]);
-        let cols: Vec<Vec<u8>> = (0..4).map(|c| {
-            (16..32).flat_map(|y| g[y][c * 8..c * 8 + 8].to_vec()).collect()
-        }).collect();
-        for i in 0..4 {
-            for j in i + 1..4 {
-                assert_ne!(cols[i], cols[j], "rex columns {i} and {j} match");
-            }
+        // Walk frames are mostly brick and iron; the vent pours heat.
+        assert!(ink(0, 16, 3) > ink(0, 0, 3) + 10, "vent shows molten heat");
+        assert!(ink(0, 0, 1) > 40 && ink(16, 0, 1) > 40, "walk bodies");
+        assert_ne!(g[15][0..16], g[15][16..32], "walk frames move the feet");
+        // Every pose is a full 16px-tall body, not the old 16x8 sliver.
+        for (x0, y0) in [(0, 0), (16, 0), (0, 16)] {
+            assert!(g[y0 + 3..y0 + 6].iter().any(|r| r[x0..x0 + 16].iter().any(|&p| p != 0)),
+                "pose at {x0},{y0} has an upper half");
         }
-        let planted = (27..32).filter(|y| {
-            g[*y][11..16].iter().any(|&p| p != 0) && g[*y][21..26].iter().any(|&p| p != 0)
-        }).count();
-        assert!(planted >= 4, "both pillar legs reach the floor");
     }
 
     #[test]
-    fn cinder_rex_roar_opens_the_jaw_and_the_stride_reaches() {
-        let idle = boss_maw();
-        let pose = super::cinder_rex_pose();
-        let changed = |rows: std::ops::Range<usize>| {
-            idle[rows.start + 16..rows.end + 16].iter().flatten()
-                .zip(pose[rows].iter().flatten())
-                .filter(|(a, b)| a != b).count()
-        };
-        assert!(changed(0..8) > 20, "roar matches the closed jaw");
-        assert!(changed(8..16) > 20, "stride matches the planted legs");
-        assert!(pose[6][..6].contains(&3), "jaw did not open");
-        assert_ne!(pose[15][4], 0, "stride has no trailing foot");
-        assert_eq!(pose[15][8], 0, "planted foot is still under the body");
+    fn cinder_rex_is_a_48x32_furnace_hound_with_a_roar() {
+        let idle = super::cinder_rex_big();
+        let pose = super::cinder_rex_big_pose();
+        assert_eq!((idle.len(), idle[0].len()), (32, 48));
+        let tiles = |g: &Vec<Vec<u8>>| (0..24).filter(|t| {
+            let (r, c) = (t / 6, t % 6);
+            g[r * 8..r * 8 + 8].iter().any(|row| row[c * 8..c * 8 + 8].iter().any(|&p| p != 0))
+        }).count();
+        assert!(tiles(&idle) >= 20, "rex fills its 6x4 box");
+        let changed = |rows: std::ops::Range<usize>| idle[rows.clone()].iter().flatten()
+            .zip(pose[rows].iter().flatten()).filter(|(a, b)| a != b).count();
+        assert!(changed(0..16) > 60, "roar changes the head band");
+        assert!(changed(16..32) > 60, "stride changes the leg band");
+        // Four planted feet in the idle frame.
+        let feet = (0..48).filter(|&x| idle[31][x] != 0).count();
+        assert!(feet >= 16, "feet reach the floor");
     }
 }

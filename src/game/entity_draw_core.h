@@ -5,6 +5,9 @@
 // lives as one source fragment so the zero-cost one-screen renderer and the
 // banked two-axis world renderer cannot drift apart.
 entity_anim_counter++;
+// The 48x32 Cinder Rex owns the OAM tail (16..39) so a crowded scanline drops
+// a boss edge, never a shot. Every generic writer respects this cap.
+entity_oam_cap = cinder_pack_active ? cinder_oam_limit : 40;
 // Two-frame enemy animation replaces the old whole-sprite X flip: on each
 // 16-frame beat the present enemy types stream their frame into OBJ VRAM.
 // Rooms with no hostiles (shops, towns) and the Hexa sanctum, which runs on a
@@ -31,7 +34,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     // renderer. Leaving its head in this generic pass would recreate the old
     // sprite-swapped Colossus and overwrite the articulated body.
     if (serpent_tail_active && slot == serpent_head_index) continue;
-    // The Ember boss likewise owns five 16x8 pack bodies or one 32x16 Rex.
+    // The Ember boss likewise owns five 16x16 pack bodies or one 48x32 Rex.
     // Its logical entity remains the current armor/vent collision anchor but
     // must never leak the legacy generic 32x32 picture into the formation.
     if (cinder_pack_active && slot == cinder_boss_index) continue;
@@ -62,7 +65,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         u8 tile = side == 3 ? SPR_BOSS_BIG : e->sprite_tile;
         if (side == 3) { sx -= 4; sy -= 8; }
         if (flash) e->ai_data[7]--;
-        if (oam + (side == 3 ? 9 : 16) > 40) continue;
+        if (oam + (side == 3 ? 9 : 16) > entity_oam_cap) continue;
         oam = colossus_oam_draw(oam, sx, sy, tile, pal, side, e,
             (u8)(flash && (e->ai_data[7] & 1)));
         continue;
@@ -78,7 +81,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
             bx = (u8)(bx - 4);
             by = (u8)(by - 8);
         }
-        if (oam + 4 > 40) continue;
+        if (oam + 4 > entity_oam_cap) continue;
         if (e->type == ENT_ENEMY && e->ai_data[0] == ENEMY_FACET_RAM) {
             facet_ram_draw(e, oam, bx, by, pal);
             oam += 4;
@@ -106,7 +109,7 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     }
 
     // 8x8 — everything else (small enemies, projectiles, pickups, fx)
-    if (oam >= 40) continue;
+    if (oam >= entity_oam_cap) continue;
     if (flash) {
         e->ai_data[7]--;
         if (e->ai_data[7] & 0x01) continue;

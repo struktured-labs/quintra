@@ -90,6 +90,8 @@ void entity_refresh_world_visibility(void) BANKED;
 
 // AABB test: returns 1 if hitboxes overlap. Hitbox interpreted as
 // 4-bit w in high nibble, 4-bit h in low nibble; box anchored at (x,y).
+// Exclusive end of the OAM window generic entities may write this frame.
+extern u8 entity_oam_cap;
 u8   aabb_overlap_ee(const entity_t *a, const entity_t *b);
 u8   aabb_overlap_player(const entity_t *e);        // small center HURTBOX
 u8   aabb_overlap_player_wide(const entity_t *e) BANKED;   // full visible body (pickups)

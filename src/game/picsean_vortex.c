@@ -9,6 +9,7 @@
 #include "game/entity.h"
 #include "game/hexa_boss.h"
 #include "game/picsean_vortex.h"
+#include "game/cinder_big.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/rare_enemy.h"
@@ -517,7 +518,12 @@ void picsean_vortex_tick(void) BANKED {
 }
 
 void picsean_vortex_draw(void) BANKED {
-    u8 oam = serpent_tail_active ? 32 : PICSEAN_VORTEX_OAM_LO;
+    // Big bodies own the OAM tail (Serpent 4..31, Cinder Rex 16..39): the
+    // vortex keeps only its last four segments there rather than tearing
+    // twelve pieces out of the champion.
+    u8 oam = (serpent_tail_active
+              || (cinder_pack_active && cinder_oam_limit < 40))
+        ? 32 : PICSEAN_VORTEX_OAM_LO;
     u8 *dst = (u8 *)&shadow_OAM[oam];
     u8 k = (u8)(PICSEAN_VORTEX_OAM_HI - oam);
     // Last eight ticks: blink out.
