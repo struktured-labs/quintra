@@ -27,4 +27,4 @@ The people who are not selling:
 - The bellkeeper is a landmark, not a shop.
 - The forge keeper speaks of steel that remembers a fang.
 
-A chart reveals. It does not move the walls. Buy it when you are lost, not when you are merely impatient. The sigil is never on a shelf. It is the key of the dungeon, and claiming it wakes the next trial. The Compass shows the path.
+A chart reveals. It does not move the walls. Buy it when you are lost, not when you are merely impatient. The sigil is never on a shelf. It is the key of the dungeon, and claiming it wakes the next trial. The Compass shows the path. After you walk into a merchant room, that cell wears a gold coin. A Chart can reveal the room without the coin; the mark waits until you enter. The same coin appears on the Riftwell after you meet the wayside trader, and on the village Market node.
