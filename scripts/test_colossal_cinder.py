@@ -18,11 +18,9 @@ CINDER_TIMER = addr("_cinder_timer")
 CINDER_X = addr("_cinder_pack_x")
 CINDER_Y = addr("_cinder_pack_y")
 ANIM_COUNTER = addr("_entity_anim_counter")
-# The encounter's private WRAM block follows its exported globals: x[5],
-# y[5], then hazard x/y/ttl/delay arrays. This live test intentionally checks
-# the runtime hazard lifetime rather than an OAM snapshot that can land during
-# the GBC's ten-sprites-per-scanline selection.
-CINDER_HAZARD_TTL = CINDER_ACTIVE + 0x20
+# Fire pools are background tiles now (cinder_big.c); check their exported
+# lifetimes rather than any OAM snapshot.
+CINDER_HAZARD_TTL = addr("_cinder_fire_ttl")
 
 
 def hostile_count(pb):
@@ -62,7 +60,7 @@ def place_player_shot(pb, x, y):
     raise AssertionError("no free entity slot for armor probe")
 
 
-def oam_tiles(pb, start=4, end=22):
+def oam_tiles(pb, start=4, end=40):
     return [pb.memory[OAM + i * 4 + 2] for i in range(start, end)
             if pb.memory[OAM + i * 4] and pb.memory[OAM + i * 4 + 1]]
 
@@ -106,7 +104,7 @@ def main():
     assert projected == 0, f"legacy furnace projection survived: {projected} tiles"
 
     pack_tiles = oam_tiles(pb)
-    assert len([t for t in pack_tiles if 40 <= t <= 47]) >= 6, (
+    assert len([t for t in pack_tiles if 40 <= t <= 55]) >= 12, (
         f"five-body Kilnback renderer absent from OAM: {pack_tiles}")
     before = tuple(pb.memory[CINDER_X + i] for i in range(5)) + tuple(
         pb.memory[CINDER_Y + i] for i in range(5))
@@ -155,14 +153,14 @@ def main():
         "Crucible Wheel recovery vent did not peel into a cardinal weapon lane: "
         f"vent={(vent_x, vent_y)} player={(player_x, player_y)}")
     vent_tiles = oam_tiles(pb)
-    assert any(t in (44, 45) for t in vent_tiles), (
+    assert any(t in (48, 49, 52, 53) for t in vent_tiles), (
         f"open vent pose did not reach OAM: {vent_tiles}; "
         f"pack={[(pb.memory[CINDER_X+i], pb.memory[CINDER_Y+i]) for i in range(5)]}; "
         f"player={(pb.memory[PL+9], pb.memory[PL+11])}")
 
     # Each 24-HP band removes one animal. Crossing the 120-HP midpoint begins
-    # the visible five-husk metamorphosis, then produces a native 4x2 Rex.
-    # The contact box stays 40x16; the picture is the centered 32x16 atlas.
+    # the visible five-husk metamorphosis, then produces a native 6x4 Rex:
+    # 48x32, 24 bank-1 sprites at the OAM tail (16..39).
     pb.memory[boss + 14] = 216
     keep_alive(pb, 2)
     assert pb.memory[CINDER_ALIVE] == 4, "first Kilnback segment did not break"
@@ -182,11 +180,14 @@ def main():
             break
         keep_alive(pb, 1)
     assert pb.memory[CINDER_PHASE] == 2, "Cinder Rex did not unfold"
-    rex_tiles = [t for t in oam_tiles(pb) if 48 <= t <= 55]
-    assert len(rex_tiles) == 8, (
-        f"native 32x16 Cinder Rex is not an eight-sprite body: {rex_tiles}")
-    assert len(set(rex_tiles)) == 8, (
-        f"Cinder Rex repeated a column: {rex_tiles}")
+    keep_alive(pb, 2)
+    rex_tiles = [pb.memory[OAM + i * 4 + 2] for i in range(16, 40)
+                 if pb.memory[OAM + i * 4] and pb.memory[OAM + i * 4 + 1]
+                 and pb.memory[OAM + i * 4 + 3] & 0x08]
+    assert len(rex_tiles) == 24 and all(64 <= t < 112 for t in rex_tiles), (
+        f"native 48x32 Cinder Rex is not a 24-sprite body: {rex_tiles}")
+    assert len(set(rex_tiles)) == 24, (
+        f"Cinder Rex repeated a tile: {rex_tiles}")
 
     # Furnace Breath is a broad wall with one traversable gap, followed later
     # by a reverse wall. Seven projectiles prove this is arena geometry, not
@@ -195,8 +196,10 @@ def main():
     pb.memory[CINDER_PATTERN] = 0
     pb.memory[CINDER_TIMER] = 35
     keep_alive(pb, 3)
-    assert hostile_count(pb) == 7, (
-        f"Furnace Breath lost its seven-lane wall: {hostile_count(pb)}")
+    # The wall parts around the 48px body, so 4..7 lanes depending on where
+    # Rex stands; the champion's own lane is always the one gap.
+    assert 4 <= hostile_count(pb) <= 7, (
+        f"Furnace Breath lost its lane wall: {hostile_count(pb)}")
 
     clear_hostiles(pb)
     pb.memory[CINDER_PATTERN] = 1
@@ -240,9 +243,9 @@ def main():
     final_shot = ROOT / "tmp" / "cinder-rex-live.png"
     pb.screen.image.save(final_shot)
     pb.stop(save=False)
-    print("[colossal-cinder] PASS five legal 16x8 Kilnbacks; Wheel, Press, "
+    print("[colossal-cinder] PASS five 16x16 Kilnbacks; Wheel, Press, "
           "Brandwalk, Broken Cadence; armored/open vent; 5->Rex metamorphosis; "
-          "32x16 Rex in a 40px box; Furnace, Slag, Stomp, Charge; critical Brandwalk reprise")
+          "48x32 Rex; Furnace, Slag, Stomp, Charge; critical Brandwalk reprise")
 
 
 if __name__ == "__main__":

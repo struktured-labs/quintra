@@ -134,7 +134,7 @@ u8 hookshot_draw(entity_t *e,u8 oam,u8 x,u8 y) BANKED {
     i16 dx=(player.x+4-e->x)/4, dy=(player.y+4-e->y)/4;
     i16 sx,sy;
     x; y;
-    for (n=0; n<4 && oam<40; ++n) {
+    for (n=0; n<4 && oam<entity_oam_cap; ++n) {
         sx=e->x-room_camera_x+8+dx*n;
         sy=e->y-room_camera_y+16+dy*n;
         set_sprite_tile(oam,n ? SPR_BULLET : e->sprite_tile);

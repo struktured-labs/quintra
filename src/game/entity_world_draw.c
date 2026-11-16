@@ -6,6 +6,7 @@
 #include "game/entity.h"
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
+#include "game/cinder_big.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/boss_projectile.h"
@@ -20,6 +21,7 @@ void facet_ram_draw(entity_t *e, u8 oam, u8 bx, u8 by, u8 pal) BANKED;
 
 extern u8 entity_anim_counter;
 extern u8 entity_oam_high;
+u8 entity_oam_cap = 40;
 
 static u8 enemy_is_big16(const entity_t *e) {
     u8 eid = e->ai_data[0];
@@ -51,7 +53,7 @@ static u8 world_camera_step(u8 current, i16 player_pos,
 
 void entity_draw_all_world(void) BANKED {
     u8 i;
-    u8 oam = serpent_tail_active ? 16 : cinder_pack_active ? 22 : 4;
+    u8 oam = serpent_tail_active ? 16 : cinder_pack_active ? cinder_oam_end : 4;
     room_camera_x = (room_world_width > ROOM_VIEW_W_PX)
         ? world_camera_step(room_camera_x, player.x,
             room_world_width, ROOM_VIEW_W_PX) : 0;

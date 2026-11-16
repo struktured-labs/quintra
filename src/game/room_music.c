@@ -9,6 +9,7 @@
 #include "game/room.h"
 #include "game/boss_projectile.h"
 #include "game/enemy_ai.h"
+#include "game/cinder_big.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -39,14 +40,16 @@ void room_load_stage_obj_identity(void) BANKED {
     tiles_load_miniboss(stage);
     tiles_load_boss_big(stage);
     /* Crystal, the Sun Golem, and the Void Lord write 16 tiles at
-       bank-1 OBJ 128. The Serpent writes 12 and the Rex writes 8.
+       bank-1 OBJ 128. The Serpent writes 12. The 48x32 Rex lives at
+       bank-1 OBJ 64..111 instead (free outside the stage 3/7 large bosses
+       and the Hexa sanctum).
        Those rooms wipe the shared window first. */
     if (stage == 0 || stage == 1 || stage == 2 || stage == 6 || stage == 8) {
         VBK_REG = 1;
         for (i = 0; i < 16; ++i) set_sprite_data((u8)(128 + i), 1, zero_tile);
         VBK_REG = 0;
     }
-    if (stage == 2) cinder_rex_pose_b_load();
+    if (stage == 2) cinder_big_load();   // 48x32 Rex + fire pool tiles
     if (stage == 0) crystal_pose_b_load();
     if (stage == 1) serpent_jaw_load();
     if (stage == 6) golem_pose_b_load();
