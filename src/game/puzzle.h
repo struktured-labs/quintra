@@ -68,26 +68,15 @@ extern u8 room_rune_pitch[5];
 // pack into BGPAL_DOOR (indices 1..2). Colour 3 of the door palette is
 // reserved for the near-white flash-on-play tile (BGT_NOTE_C).
 #define RUNE_NOTE_PAL(p) ((u8)((p) <= 2 ? BGPAL_CRYSTAL : BGPAL_DOOR))
-#define RUNE_IDLE_TILE(p) ((u8)(BGT_NOTE_A + ((p) <= 2 ? (p) : (u8)((p) - 3))))
-#define RUNE_LIT_TILE(p)  ((u8)(BGT_NOTE_LIT_A + ((p) <= 2 ? (p) : (u8)((p) - 3))))
-#define RUNE_IS_PLATE_TILE(t) ((u8)((t) >= BGT_NOTE_A && (t) <= BGT_NOTE_LIT_C))
-#define RUNE_FLASH_TILE BGT_NOTE_C
+#define RUNE_IDLE_TILE(p) ((u8)(BGT_NOTE_0 + (p)))
+#define RUNE_LIT_TILE(p)  ((u8)(BGT_NOTE_LIT_0 + (p)))
+#define RUNE_IS_PLATE_TILE(t) ((u8)((t) >= BGT_NOTE_0 && (t) <= BGT_NOTE_FLASH))
+#define RUNE_PITCH_FROM_TILE(t) ((u8)((t) >= BGT_NOTE_LIT_0 && (t) <= BGT_NOTE_LIT_4     ? (t) - BGT_NOTE_LIT_0 : (t) - BGT_NOTE_0))
+#define RUNE_FLASH_TILE BGT_NOTE_FLASH
 #define RUNE_FLASH_PAL  BGPAL_DOOR
 
 #define RUNE_ATTR_AT(x, y, tile) \
-    ((room_rune_count > 0 && (x) == room_rune_x[0] && (y) == room_rune_y[0]) \
-        ? RUNE_NOTE_PAL(room_rune_pitch[0]) \
-    : (room_rune_count > 1 && (x) == room_rune_x[1] && (y) == room_rune_y[1]) \
-        ? RUNE_NOTE_PAL(room_rune_pitch[1]) \
-    : (room_rune_count > 2 && (x) == room_rune_x[2] && (y) == room_rune_y[2]) \
-        ? RUNE_NOTE_PAL(room_rune_pitch[2]) \
-    : (room_rune_count > 3 && (x) == room_rune_x[3] && (y) == room_rune_y[3]) \
-        ? RUNE_NOTE_PAL(room_rune_pitch[3]) \
-    : (room_rune_count > 4 && (x) == room_rune_x[4] && (y) == room_rune_y[4]) \
-        ? RUNE_NOTE_PAL(room_rune_pitch[4]) \
-    : ((tile) == BGT_DOOR || (tile) == BGT_DOOR_LOCKED \
-        || (tile) == BGT_CRYSTAL || (tile) == BGT_PORTAL) ? BGPAL_CRACK \
-    : 0xFF)
+    ((tile) == BGT_NOTE_FLASH ? BGPAL_DOOR     : ((tile) >= BGT_NOTE_0 && (tile) <= BGT_NOTE_LIT_4)         ? RUNE_NOTE_PAL(RUNE_PITCH_FROM_TILE(tile))     : ((tile) == BGT_DOOR || (tile) == BGT_DOOR_LOCKED         || (tile) == BGT_CRYSTAL || (tile) == BGT_PORTAL) ? BGPAL_CRACK     : 0xFF)
 
 void puzzle_load_note_palettes(void) BANKED;
 

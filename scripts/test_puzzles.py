@@ -40,12 +40,12 @@ RS, PL, EN, TM, KIND, LOCKED, COMBAT, WORLD_W, WORLD_H = map(addr, (
 
 
 
-# Rune-sequence pitch plates (BGT_NOTE_A..LIT_C). A voiced plate flashes as
-# BGT_NOTE_C (113) with the door palette (3) for 8 frames, then restores.
-BGT_NOTE_A, BGT_NOTE_LIT_A, BGT_NOTE_LIT_C = 111, 114, 116
-BGT_NOTE_C, RUNE_FLASH_PAL = 113, 3
-RUNE_IDLE_TILE = (111, 112, 113, 111, 112)
-RUNE_LIT_TILE = (114, 115, 116, 114, 115)
+# Rune-sequence pitch plates (BGT_NOTE_0..FLASH). A voiced plate flashes as
+# BGT_NOTE_FLASH (121) with the door palette (3) for 8 frames, then restores.
+BGT_NOTE_0, BGT_NOTE_LIT_0, BGT_NOTE_FLASH = 111, 116, 121
+RUNE_FLASH_PAL = 3
+RUNE_IDLE_TILE = (111, 112, 113, 114, 115)
+RUNE_LIT_TILE = (116, 117, 118, 119, 120)
 RUNE_NOTE_PAL = (2, 2, 2, 3, 3)  # crystal, crystal, crystal, door, door
 # Packed BGR555 words, little-endian byte pairs, matching puzzle.c.
 RUNE_PAL_LOW = (0x42, 0x10, 0x04, 0x71, 0x04, 0x63, 0x9F, 0x13)
@@ -53,11 +53,11 @@ RUNE_PAL_HIGH = (0x42, 0x10, 0x1F, 0x0A, 0x1C, 0x61, 0xFF, 0x6B)
 
 
 def is_rune_plate_tile(tile):
-    return BGT_NOTE_A <= tile <= BGT_NOTE_LIT_C
+    return BGT_NOTE_0 <= tile <= BGT_NOTE_FLASH
 
 
 def is_lit_plate(tile):
-    return BGT_NOTE_LIT_A <= tile <= BGT_NOTE_LIT_C
+    return BGT_NOTE_LIT_0 <= tile <= (BGT_NOTE_LIT_0 + 4)
 
 
 def find_rune_plates(pb):
@@ -137,7 +137,7 @@ def assert_flash_then_restore(pb, addrs, plate):
     for _ in range(16):
         tile = pb.memory[TM + y * 20 + x]
         attr = room_tile_attr(pb, x, y, addrs)
-        if tile == BGT_NOTE_C and attr == RUNE_FLASH_PAL:
+        if tile == BGT_NOTE_FLASH and attr == RUNE_FLASH_PAL:
             flashed = True
         elif flashed:
             restored = tile
