@@ -5,17 +5,39 @@ Usage:
   python3 scripts/capture_music_tile_colors.py OUT_DIR
   python3 scripts/capture_music_tile_colors.py OUT_DIR --before ROM
 """
-import os
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-if len(sys.argv) > 3 and sys.argv[2] == "--before":
-    os.environ.setdefault("QUINTRA_ROM", str(Path(sys.argv[3]).resolve()))
-
 import test_puzzles as puzzles  # noqa: E402
+
+BGT_SWITCH = 33
+
+
+def bind_rom(rom: Path) -> None:
+    """Point test_puzzles at a ROM and rebind tilemap/kind addresses from its .noi."""
+    rom = rom.resolve()
+    noi_path = rom.with_suffix(".noi")
+    noi = noi_path.read_text()
+    puzzles.ROM = rom
+    puzzles.NOI = noi
+
+    def addr(name):
+        match = re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", noi)
+        if not match:
+            raise RuntimeError(f"{name} missing in {noi_path}")
+        return int(match.group(1), 16)
+
+    (puzzles.RS, puzzles.PL, puzzles.EN, puzzles.TM, puzzles.KIND,
+     puzzles.LOCKED, puzzles.COMBAT, puzzles.WORLD_W, puzzles.WORLD_H) = map(
+        addr, (
+            "_run_state", "_player", "_entities", "_room_tilemap",
+            "_room_puzzle_kind", "_room_puzzle_locked", "_room_combat_sealed",
+            "_room_world_width", "_room_world_height",
+        ))
 
 
 def scale(img):
@@ -24,52 +46,59 @@ def scale(img):
 
 def snap(pb, out, name):
     out.mkdir(parents=True, exist_ok=True)
-    scale(pb.screen.image).save(out / f"{name}.png")
+    path = out / f"{name}.png"
+    scale(pb.screen.image).save(path)
+    print(f"wrote {path}")
 
 
-def capture_four_note(prefix, out):
-    pb = puzzles.load(2)
-    # Let arrival labels and palettes settle.
+def find_plates(pb):
+    plates = puzzles.find_rune_plates(pb)
+    if plates:
+        return plates
+    return [(x, y) for y in range(1, 16) for x in range(1, 19)
+            if pb.memory[puzzles.TM + y * 20 + x] == BGT_SWITCH]
+
+
+def capture_room(prefix, out, stage_role):
+    if stage_role == "stage2-trial":
+        pb = puzzles.load(2)
+        addrs = None
+        label = "stage2-trial"
+    else:
+        pb, addrs = puzzles.load_rune_room(0, "waystone")
+        label = "stage1-waystone"
     for _ in range(60):
         pb.tick()
-    snap(pb, out, f"{prefix}stage2-trial-idle")
-    runes = puzzles.find_rune_plates(pb) if hasattr(puzzles, "find_rune_plates") else [
-        (x, y) for y in range(1, 16) for x in range(1, 19)
-        if pb.memory[puzzles.TM + y * 20 + x] == 33
-    ]
+    snap(pb, out, f"{prefix}{label}-idle")
+    plates = find_plates(pb)
+    print(f"{label} plates={plates}")
     frames = [scale(pb.screen.image.copy())]
-    if runes:
-        puzzles.feet_on(pb, *runes[0])
-        for _ in range(16):
-            frames.append(scale(pb.screen.image.copy()))
-            pb.tick()
-        snap(pb, out, f"{prefix}stage2-trial-voiced")
-    frames[0].save(out / f"{prefix}stage2-trial-voice.gif",
-                   save_all=True, append_images=frames[1:],
-                   duration=80, loop=0)
-    pb.stop(save=False)
-
-
-def capture_three_note(prefix, out):
-    if not hasattr(puzzles, "load_rune_room"):
-        return
-    pb, _ = puzzles.load_rune_room(0, "waystone")
-    for _ in range(60):
-        pb.tick()
-    snap(pb, out, f"{prefix}stage1-waystone-idle")
+    if plates:
+        # Walk each plate so the voiced flash (and, after, pitch colour) is visible.
+        for plate in plates:
+            puzzles.feet_on(pb, *plate)
+            for _ in range(16):
+                frames.append(scale(pb.screen.image.copy()))
+                pb.tick()
+            snap(pb, out, f"{prefix}{label}-voiced")
+    if len(frames) > 1:
+        gif = out / f"{prefix}{label}-voice.gif"
+        frames[0].save(gif, save_all=True, append_images=frames[1:],
+                       duration=80, loop=0)
+        print(f"wrote {gif} ({len(frames)} frames)")
     pb.stop(save=False)
 
 
 def main():
     out = Path(sys.argv[1])
-    prefix = "before_" if (len(sys.argv) > 3 and sys.argv[2] == "--before") else "after_"
-    if prefix == "before_":
-        rom = Path(sys.argv[3]).resolve()
-        puzzles.ROM = rom
-        # NOI must sit beside the ROM for symbol lookup.
-    capture_four_note(prefix, out)
-    if prefix == "after_":
-        capture_three_note(prefix, out)
+    if len(sys.argv) > 3 and sys.argv[2] == "--before":
+        prefix = "before_"
+        bind_rom(Path(sys.argv[3]))
+    else:
+        prefix = "after_"
+        bind_rom(puzzles.ROM)
+    capture_room(prefix, out, "stage2-trial")
+    capture_room(prefix, out, "stage1-waystone")
 
 
 if __name__ == "__main__":
