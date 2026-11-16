@@ -248,7 +248,6 @@ static void prepare_sequence(u32 seed) {
     }
     rune_progress = 0;
     room_rune_lit_mask = 0;
-    rune_cancel_flash();
     room_rune_count = rune_count;
     for (i = 0; i < rune_count; ++i) {
         room_rune_x[i] = rune_x[i];
