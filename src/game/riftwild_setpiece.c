@@ -209,13 +209,6 @@ static u8 open_ring(u8 t, u8 base) {
         || t == BGT_WILD_SAND || t == BGT_WILD_MUD || t == BGT_RUBBLE;
 }
 
-// The walkable ring may also sit on trees or stumps: those are cleared to
-// ground when the piece lands, so a grove no longer blocks a large stamp.
-// Paths, water, sinkholes, ridges, stones, reeds, gates and portals stay.
-static u8 ring_ok(u8 t, u8 base) {
-    return open_ring(t, base) || t == BGT_TREE || t == BGT_WILD_STUMP;
-}
-
 // The footprint may clear soft scenery (groves, stones, stumps, rubble, a
 // stray climate floor): the walkable two-tile ring around it is what keeps
 // every route intact, so overwriting what sat inside cannot cut a path.
@@ -246,21 +239,6 @@ static u8 reserved(u8 x, u8 y) {
     return 0;
 }
 
-static void clear_ring(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
-    u8 x, y;
-    u8 x1 = (u8)(x0 + w + 1), y1 = (u8)(y0 + h + 1);
-    for (y = (u8)(y0 - 2); y <= y1; ++y)
-        for (x = (u8)(x0 - 2); x <= x1; ++x) {
-            if (x >= x0 && y >= y0 && x < (u8)(x0 + w) && y < (u8)(y0 + h))
-                continue;
-            if (reserved(x, y)) continue;
-            {
-                u8 t = tile_at(x, y);
-                if (t == BGT_TREE || t == BGT_WILD_STUMP) tile_put(x, y, base);
-            }
-        }
-}
-
 // Out-of-field neighbours read as the tree line, matching tiles_area.c.
 static u8 view_at(u8 x, u8 y) {
     if (x >= ROOM_WIDE_W_TILES || y >= ROOM_WIDE_H_TILES) return BGT_TREE;
@@ -282,7 +260,7 @@ static u8 fits(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
             if (inside) {
                 if (!soft(tile_at(x, y), base) || reserved(x, y))
                     return 0;
-            } else if (!ring_ok(tile_at(x, y), base)) {
+            } else if (!open_ring(tile_at(x, y), base)) {
                 return 0;
             }
         }
@@ -416,72 +394,8 @@ static void scatter(u8 base) {
     }
 }
 
-
-// Ordinary-field ordinal 0..22; 0xFF = fixture (apply returns first).
-static const u8 ordinary_ord[36] = {
-    0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5,
-    6, 7, 8, 9, 10, 11, 0xFF, 0xFF, 12, 13,
-    14, 0xFF, 15, 0xFF, 16, 17, 18, 0xFF, 19, 0xFF,
-    0xFF, 20, 0xFF, 21, 0xFF, 22
-};
-
-static void place_piece(u8 id, u8 x0, u8 y0, u8 base) {
-    stamp_piece(id, x0, y0, next_hash() & 1, base);
-    clear_ring(x0, y0, piece_w[id], piece_h[id], base);
-    riftwild_setpiece_id = id;
-    riftwild_setpiece_x = x0;
-    riftwild_setpiece_y = y0;
-}
-
-// Search for a fit. lattice=1 uses a 2-tile grid; otherwise `cap` random probes.
-// Returns 1 and places the piece when a pocket exists.
-static u8 try_place(u8 id, u8 lattice, u8 cap, u8 base) {
-    u8 w = piece_w[id], h = piece_h[id];
-    u8 span_x = (u8)(25 - w);
-    u8 span_y = (u8)(25 - h);
-    u8 x0, y0;
-    if (span_x == 0 || span_y == 0) return 0;
-    if (lattice) {
-        u8 xs = (u8)(next_hash() % span_x);
-        u8 ys = (u8)(next_hash() % span_y);
-        u8 dx, dy;
-        for (dy = 0; dy < span_y; dy += 2) {
-            for (dx = 0; dx < span_x; dx += 2) {
-                x0 = (u8)(3 + (xs + dx) % span_x);
-                y0 = (u8)(3 + (ys + dy) % span_y);
-                if (id == PIECE_CRAGS) {
-                    x0 = (u8)((x0 + 1) & 0xFE);
-                    y0 = (u8)((y0 + 1) & 0xFE);
-                    if (x0 < 3 || (u8)(x0 + w + 1) > 28) continue;
-                }
-                if (fits(x0, y0, w, h, base)) {
-                    place_piece(id, x0, y0, base);
-                    return 1;
-                }
-            }
-        }
-        return 0;
-    }
-    {
-        u8 tries;
-        for (tries = 0; tries < cap; ++tries) {
-            x0 = (u8)(3 + next_hash() % span_x);
-            y0 = (u8)(3 + next_hash() % span_y);
-            if (id == PIECE_CRAGS) {
-                x0 = (u8)((x0 + 1) & 0xFE);
-                y0 = (u8)((y0 + 1) & 0xFE);
-            }
-            if (fits(x0, y0, w, h, base)) {
-                place_piece(id, x0, y0, base);
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
 void riftwild_setpiece_apply(u8 base) BANKED {
-    u8 id, k;
+    u8 id, tries, k;
     rw_stamp_n = 0;
     rw_box_x0 = 0xFF;
     riftwild_setpiece_id = RW_SETPIECE_NONE;
@@ -492,25 +406,67 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     hash_state = riftwild_field_salt(1);
     den_here = riftwild_den_in_field();
     lift_old_blobs(base);
-    // Seeded ordinal spreads preferred large ids. A 2-tile lattice finds a
-    // pocket if one exists; trees in the ring are cleared to ground.
-    id = (u8)((ordinary_ord[run_state.world_screen] + riftwild_field_salt(4))
-              % PIECE_LARGE);
+    // Neighbouring fields start from different pieces (screen * 3), and the
+    // seed rotates the whole assignment; a piece that does not fit here
+    // hands over to the next one in the library.
+    // Prefer a large authored stamp. Tight fields (return landings, a lake
+    // plus the trail cross) fall back to the compact 3x3..4x5 markers.
+    id = (u8)((next_hash() + run_state.world_screen * 3u) % PIECE_LARGE);
     for (k = 0; k < PIECE_LARGE && riftwild_setpiece_id == RW_SETPIECE_NONE;
          ++k) {
-        // Lattice the preferred piece and the next two; random probes after.
-        if (!try_place(id, k < 3, 10, base)) {
-            if (++id >= PIECE_LARGE) id = 0;
+        u8 w = piece_w[id], h = piece_h[id];
+        for (tries = 0; tries < 10; ++tries) {
+            // Any anchor with room for the ring (x0 >= 3, x0 + w + 1 <= 28).
+            // The crag piece keeps even anchors so its 2x2 peak art lines
+            // up with the field's crag quarters.
+            u8 x0 = (u8)(3 + next_hash() % (u8)(25 - w));
+            u8 y0 = (u8)(3 + next_hash() % (u8)(25 - h));
+            if (id == PIECE_CRAGS) {
+                x0 = (u8)((x0 + 1) & 0xFE);
+                y0 = (u8)((y0 + 1) & 0xFE);
+            }
+            if (fits(x0, y0, w, h, base)) {
+                stamp_piece(id, x0, y0, next_hash() & 1, base);
+                riftwild_setpiece_id = id;
+                riftwild_setpiece_x = x0;
+                riftwild_setpiece_y = y0;
+                break;
+            }
         }
+        if (++id >= PIECE_LARGE) id = 0;
     }
     if (riftwild_setpiece_id == RW_SETPIECE_NONE) {
+        // Tight fields (return landings, a lake plus the trail cross) fall
+        // back to the compact 3x3..4x5 markers, from a seeded start. A coarse
+        // 2-tile lattice from a seeded origin keeps the worst case to ~130
+        // fits() probes per marker, all inside the field build, with no
+        // frame yields (yielding here stalled the seam camera and input).
         id = (u8)(PIECE_LARGE + (next_hash() & 3));
         for (k = PIECE_LARGE;
              k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
              ++k) {
-            if (!try_place(id, 1, 0, base)) {
-                if (++id >= PIECE_COUNT) id = PIECE_LARGE;
+            u8 w = piece_w[id], h = piece_h[id];
+            u8 span_x = (u8)(26 - w);
+            u8 span_y = (u8)(26 - h);
+            u8 xs = (u8)(next_hash() % span_x);
+            u8 ys = (u8)(next_hash() % span_y);
+            u8 dx, dy, x0, y0;
+            for (dy = 0; dy < span_y
+                 && riftwild_setpiece_id == RW_SETPIECE_NONE; dy += 2) {
+                for (dx = 0; dx < span_x
+                     && riftwild_setpiece_id == RW_SETPIECE_NONE;
+                     dx += 2) {
+                    x0 = (u8)(3 + (xs + dx) % span_x);
+                    y0 = (u8)(3 + (ys + dy) % span_y);
+                    if (fits(x0, y0, w, h, base)) {
+                        stamp_piece(id, x0, y0, next_hash() & 1, base);
+                        riftwild_setpiece_id = id;
+                        riftwild_setpiece_x = x0;
+                        riftwild_setpiece_y = y0;
+                    }
+                }
             }
+            if (++id >= PIECE_COUNT) id = PIECE_LARGE;
         }
     }
     scatter(base);
