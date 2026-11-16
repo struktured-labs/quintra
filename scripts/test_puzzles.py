@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Live-ROM contracts for the procedural dungeon puzzle families."""
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -167,7 +168,15 @@ def push_seal_contract():
     assert len(active_hostiles(pb)) >= 4, (
         "push puzzle did not retain its live guard pack")
     assert visible_hostiles(pb), "push puzzle looked empty on arrival"
+    out = Path(os.environ.get("PUSH_SEAL_PREVIEW_DIR", ROOT / "tmp"))
+    out.mkdir(parents=True, exist_ok=True)
+    frames = [pb.screen.image.copy()]
+    frames[-1].save(out / "push-seal-arrival.png")
     clear_hostiles(pb)  # isolate cairn mechanics after proving population
+    for _ in range(8):
+        pb.tick()
+    frames.append(pb.screen.image.copy())
+    frames[-1].save(out / "push-seal-socket.png")
     blocks = [(x, y) for y in range(1, 16) for x in range(1, 19)
               if pb.memory[TM + y * 20 + x] == 25]
     assert len(blocks) == 1, f"push seal needs one readable cairn, got {blocks}"
@@ -206,6 +215,8 @@ def push_seal_contract():
         shoves += 1
         if shoves == 1:
             assert pb.memory[LOCKED] == 1, "an off-socket shove released the seal"
+            frames.append(pb.screen.image.copy())
+            frames[-1].save(out / "push-seal-mid.png")
     while cairn()[1] != sy and pb.memory[LOCKED]:
         shove("down" if cairn()[1] < sy else "up")
         shoves += 1
@@ -213,6 +224,10 @@ def push_seal_contract():
         pb.tick()
     assert shoves >= 4, f"socket route was trivial ({shoves} shoves)"
     assert pb.memory[LOCKED] == 0, "seating the cairn on the socket did not release seal"
+    frames.append(pb.screen.image.copy())
+    frames[-1].save(out / "push-seal-solved.png")
+    frames[0].save(out / "push-seal.gif", save_all=True, append_images=frames[1:],
+                   duration=700, loop=0)
     assert pb.memory[RS + 27] & 1, "Trial solve did not persist its stable bit"
     # Large dungeon courts continue beyond the legacy 20x17 viewport. Door
     # release must target the real 31x31 perimeter; stamping the old south

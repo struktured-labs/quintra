@@ -266,6 +266,21 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for stage, want in ((1, 1), (4, 2), (7, 3)):
         run_stage(stage, want)
+    from PIL import Image
+    for stage in (2, 5, 8):
+        frames = []
+        for name in (f"law-lock-stage{stage}-gate-closed.png",
+                     f"law-lock-stage{stage}-altar-wax.png",
+                     f"law-lock-stage{stage}-compass-wax.png",
+                     f"law-lock-stage{stage}-altar-wane.png",
+                     f"law-lock-stage{stage}-gate-open.png",
+                     f"law-lock-stage{stage}-compass-wane.png"):
+            path = OUT / name
+            if path.exists():
+                frames.append(Image.open(path).copy())
+        if frames:
+            frames[0].save(OUT / f"law-lock-stage{stage}.gif", save_all=True,
+                           append_images=frames[1:], duration=700, loop=0)
     print("[law-lock] PASS cart == Rust gates/altars, doorway pillars in the "
           "opening colour, altar flip + save, Compass legend, Stages 2/5/8")
 
