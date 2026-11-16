@@ -75,39 +75,49 @@ def capture_pressed_sequence(pb, out, prefix, label):
     plates = puzzles.find_rune_plates(pb)
     if len(plates) < 2:
         return
+    guards = puzzles.active_hostiles(pb)
+    puzzles.clear_hostiles(pb)
+    if guards:
+        ep = puzzles.EN + guards[0] * 28
+        pb.memory[ep] = 2
+        pb.memory[ep + 1] = 0x01
+        puzzles.put16(pb, ep + 3, 8)
+        puzzles.put16(pb, ep + 7, 200)
+        pb.memory[ep + 10] = pb.memory[ep + 11] = 0
+    pb.memory[puzzles.PL + 15] = 0
     frames = [scale(pb.screen.image.copy())]
     snap(pb, out, f"{prefix}{label}-pressed-idle")
     confirmed = []
-    failed = []
-    hp = pb.memory[puzzles.PL + 2]
+    failed_first = []
     safety = 0
     while pb.memory[puzzles.LOCKED] and len(confirmed) < min(3, len(plates)):
         safety += 1
         if safety > 16:
             break
-        candidate = next((p for p in plates if p not in confirmed and p not in failed), None)
+        candidate = next((p for p in plates
+                          if p not in confirmed and p not in failed_first), None)
         if candidate is None:
             break
         for rx, ry in confirmed:
             puzzles.feet_on(pb, rx, ry)
-            record_ticks(pb, frames, 8)
+            record_ticks(pb, frames, 10)
+            puzzles.feet_on(pb, 10, 8)
+            record_ticks(pb, frames, 4)
         puzzles.feet_on(pb, *candidate)
         record_ticks(pb, frames, 16)
         tile = pb.memory[puzzles.TM + candidate[1] * 20 + candidate[0]]
-        if puzzles.is_lit_plate(tile) and pb.memory[puzzles.PL + 2] == hp:
+        if puzzles.is_lit_plate(tile):
             confirmed.append(candidate)
-            failed = []
+            failed_first = []
             snap(pb, out, f"{prefix}{label}-pressed-{len(confirmed)}")
-            puzzles.step_off(pb)
+            puzzles.feet_on(pb, 10, 8)
             record_ticks(pb, frames, 8)
         else:
-            # Only blacklist a failed first note. A miss later in the
-            # phrase resets the court; the same plate may still be next
-            # after the prefix is replayed.
+            # A miss on the first note can be skipped later. A miss after a
+            # prefix already reset the court; do not blacklist that plate.
             if not confirmed:
-                failed.append(candidate)
-            hp = pb.memory[puzzles.PL + 2]
-            puzzles.step_off(pb)
+                failed_first.append(candidate)
+            puzzles.feet_on(pb, 10, 8)
             record_ticks(pb, frames, 8)
     if len(frames) > 1:
         gif = out / f"{prefix}{label}-pressed.gif"
