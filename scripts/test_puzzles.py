@@ -32,6 +32,15 @@ def addr(name):
     return int(match.group(1), 16)
 
 
+def rune_addrs():
+    """Symbols the shared stage-state helper does not currently export."""
+    names = (
+        "_room_rune_count", "_room_rune_x", "_room_rune_y", "_room_rune_pitch",
+        "_room_rune_lit_mask", "_room_bg_origin_x", "_room_bg_origin_y",
+    )
+    return {name: addr(name) for name in names}
+
+
 RS, PL, EN, TM, KIND, LOCKED, COMBAT, WORLD_W, WORLD_H = map(addr, (
     "_run_state", "_player", "_entities", "_room_tilemap",
     "_room_puzzle_kind", "_room_puzzle_locked", "_room_combat_sealed",
@@ -504,7 +513,7 @@ def load_rune_room(stage_index, role):
     cell = mission_graph(dungeon_size(stage_index), seed, stage_index)[role]
     from make_stage_states import symbol_addresses
     pb = generated_room(stage_index, seed=seed, local_room=cell, keep_running=True)
-    addrs = symbol_addresses(ROM)
+    addrs = {**symbol_addresses(ROM), **rune_addrs()}
     return pb, addrs
 
 
@@ -521,7 +530,7 @@ def rune_color_contract():
 
     # Stage 2 Trial is a four-note phrase (load() path, same seed).
     pb = load(2)
-    addrs = symbol_addresses(ROM)
+    addrs = {**symbol_addresses(ROM), **rune_addrs()}
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
     assert_note_colors(pb, addrs, 4)
     runes = find_rune_plates(pb)
