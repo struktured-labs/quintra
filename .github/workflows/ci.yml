@@ -113,6 +113,9 @@ jobs:
       - name: PyBoy Cinder Rex pose
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_rex_pose.py
 
+      - name: PyBoy bigger Cinder Rex and fire pools
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_big.py
+
       - name: PyBoy dialogue radius
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_dialogue_radius.py
 

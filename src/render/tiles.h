@@ -370,11 +370,12 @@
 // Ember's stage-3 atlas deliberately multiplexes the same sixteen slots:
 // four 16x8 Kilnback poses in the top half and one 32x16 Cinder Rex below.
 // Stage-local loading means these never coexist with the Serpent meanings.
+// 16x16 Kilnback poses are atlas quadrants (tiles t, t+1, t+4, t+5).
+// Cinder Rex is 48x32 in VRAM bank-1 OBJ 64..111 (game/cinder_big.h).
 #define SPR_KILNBACK_WALK_A (SPR_BOSS_BIG + 0)
 #define SPR_KILNBACK_WALK_B (SPR_BOSS_BIG + 2)
-#define SPR_KILNBACK_VENT   (SPR_BOSS_BIG + 4)
-#define SPR_KILNBACK_HUSK   (SPR_BOSS_BIG + 6)
-#define SPR_CINDER_REX      (SPR_BOSS_BIG + 8)
+#define SPR_KILNBACK_VENT   (SPR_BOSS_BIG + 8)
+#define SPR_KILNBACK_HUSK   (SPR_BOSS_BIG + 10)
 // Bruiser tier: heavy enemies rendered player-sized (16x16 = 4 tiles each)
 #define SPR_BRUISER_ORC     56   // 56..59
 #define SPR_BRUISER_BOMBER  60   // 60..63
@@ -434,7 +435,6 @@ void tiles_load_shield_sprite(u8 class_id) BANKED;
 void tiles_load_miniboss(u8 stage) BANKED;
 void miniboss_pose_load(u8 pose_key) BANKED;  // variant * 3 + pose into SPR_BOSS        // stage's distinct 16x16 mini-boss into SPR_BOSS
 void tiles_load_boss_big(u8 stage) BANKED;        // load stage's 32x32 boss (16 tiles at SPR_BOSS_BIG)
-void cinder_rex_pose_b_load(void) BANKED;
 void crystal_pose_b_load(void) BANKED;
 void golem_pose_b_load(void) BANKED;
 void void_pose_b_load(void) BANKED;

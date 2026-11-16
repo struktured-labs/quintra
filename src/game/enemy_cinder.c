@@ -15,11 +15,14 @@
 #include "game/run_state.h"
 #include "render/hud.h"
 #include "render/tiles.h"
+#include "game/cinder_big.h"
 
-// Five independent bodies and eight delayed floor brands are the visual
-// budget for this encounter. The dedicated renderer owns OAM 4..21; generic
-// entities begin at 22 while the encounter is active. Act 2 draws the
-// authored 4x2 Rex (eight sprites) centered in the unchanged 40x16 hitbox.
+// Five independent 16x16 Kilnbacks (four sprites each, OAM 4..23) and one
+// 48x32 Cinder Rex (6x4, 24 sprites from VRAM bank 1, OAM 16..39 so shots
+// always win the scanline). Generic entities use [cinder_oam_end,
+// cinder_oam_limit). The eight
+// delayed floor brands are 16x16 or 24x24 fire pools painted into the
+// background (cinder_big.c, bank 18), so they cost no OAM at any size.
 u8 cinder_pack_active;
 u8 cinder_boss_index = 0xFF;
 u8 cinder_damage_open;
@@ -30,11 +33,6 @@ u8 cinder_timer;
 u8 cinder_pack_x[CINDER_KILNBACKS];
 u8 cinder_pack_y[CINDER_KILNBACKS];
 
-static u8 cinder_hazard_x[CINDER_HAZARDS];
-static u8 cinder_hazard_y[CINDER_HAZARDS];
-static u8 cinder_hazard_ttl[CINDER_HAZARDS];
-static u8 cinder_hazard_delay[CINDER_HAZARDS];
-static u8 cinder_hazard_cursor;
 static u8 cinder_last_hp;
 static u8 cinder_brand_variant;
 static u8 cinder_rex_dir;
@@ -78,31 +76,29 @@ static void cinder_hurt_player(void) {
     sfx_play(SFX_HURT);
 }
 
+// Rex's brands are 24x24, the pack's 16x16. The pool is the hazard.
 static void cinder_hazard_add(u8 x, u8 y, u8 delay, u8 ttl) {
-    u8 i = cinder_hazard_cursor;
-    cinder_hazard_cursor = (u8)((cinder_hazard_cursor + 1) & 7);
-    cinder_hazard_x[i] = x;
-    cinder_hazard_y[i] = y;
-    cinder_hazard_delay[i] = delay;
-    cinder_hazard_ttl[i] = ttl;
+    cinder_fire_add(x, y, delay, ttl, cinder_phase == 2 ? 3 : 2);
 }
 
 static void cinder_hazards_tick(void) {
-    u8 i;
-    u8 px = (u8)(player.x + 8);
-    u8 py = (u8)(player.y + 12);
-    for (i = 0; i < CINDER_HAZARDS; ++i) {
-        if (!cinder_hazard_ttl[i]) continue;
-        cinder_hazard_ttl[i]--;
-        if (cinder_hazard_delay[i]) {
-            cinder_hazard_delay[i]--;
-            if (!cinder_hazard_delay[i]) sfx_play(SFX_TICK);
-            continue;
-        }
-        if (cinder_abs_diff(px, cinder_hazard_x[i]) < 9
-            && cinder_abs_diff(py, cinder_hazard_y[i]) < 9)
-            cinder_hurt_player();
-    }
+    if (cinder_fire_tick()) cinder_hurt_player();
+}
+
+// Rex's logical anchor is its head (the damage window), so it sits at the
+// front of the 48x32 body: x+0 facing west, x+32 facing east, 9px down.
+static u8 rex_bx(const entity_t *e) {
+    u8 x = (u8)FIX8_TO_INT(e->x);
+    return cinder_rex_facing ? x : (u8)(x - 32);
+}
+
+static u8 rex_by(const entity_t *e) {
+    return (u8)(FIX8_TO_INT(e->y) - 9);
+}
+
+static void rex_place(entity_t *e, u8 bx, u8 by) {
+    e->x = FIX8(cinder_rex_facing ? bx : (u8)(bx + 32));
+    e->y = FIX8((u8)(by + 9));
 }
 
 static void cinder_body_contact(const entity_t *e) {
@@ -111,16 +107,17 @@ static void cinder_body_contact(const entity_t *e) {
     u8 py = (u8)(player.y + 12);
     if (player.iframes || player.shield_timer) return;
     if (cinder_phase == 2) {
-        u8 x = (u8)FIX8_TO_INT(e->x);
-        u8 y = (u8)FIX8_TO_INT(e->y);
-        if (px >= x && px < (u8)(x + 40)
-            && py >= y && py < (u8)(y + 16)) cinder_hurt_player();
+        // Inset from the 48x32 art: spikes, tail tip and toes are safe.
+        u8 x = rex_bx(e);
+        u8 y = rex_by(e);
+        if (px >= (u8)(x + 4) && px < (u8)(x + 44)
+            && py >= (u8)(y + 6) && py < (u8)(y + 34)) cinder_hurt_player();
         return;
     }
     count = (cinder_phase == 0) ? cinder_pack_alive : CINDER_KILNBACKS;
     for (i = 0; i < count; ++i) {
-        if (px >= cinder_pack_x[i] && px < (u8)(cinder_pack_x[i] + 16)
-            && py >= cinder_pack_y[i] && py < (u8)(cinder_pack_y[i] + 8)) {
+        if (px >= (u8)(cinder_pack_x[i] + 1) && px < (u8)(cinder_pack_x[i] + 15)
+            && py >= (u8)(cinder_pack_y[i] + 4) && py < (u8)(cinder_pack_y[i] + 18)) {
             cinder_hurt_player();
             return;
         }
@@ -132,15 +129,15 @@ static u8 cinder_shot_touches_body(const entity_t *shot, const entity_t *e) {
     u8 x = (u8)(FIX8_TO_INT(shot->x) + 3);
     u8 y = (u8)(FIX8_TO_INT(shot->y) + 3);
     if (cinder_phase == 2) {
-        u8 bx = (u8)FIX8_TO_INT(e->x);
-        u8 by = (u8)FIX8_TO_INT(e->y);
-        return x >= bx && x < (u8)(bx + 40)
-            && y >= by && y < (u8)(by + 16);
+        u8 bx = rex_bx(e);
+        u8 by = rex_by(e);
+        return x >= bx && x < (u8)(bx + CINDER_REX_W)
+            && y >= (u8)(by + 2) && y < (u8)(by + CINDER_REX_H);
     }
     count = cinder_phase == 0 ? cinder_pack_alive : CINDER_KILNBACKS;
     for (i = 0; i < count; ++i)
         if (x >= cinder_pack_x[i] && x < (u8)(cinder_pack_x[i] + 16)
-            && y >= cinder_pack_y[i] && y < (u8)(cinder_pack_y[i] + 8))
+            && y >= cinder_pack_y[i] && y < (u8)(cinder_pack_y[i] + 16))
             return 1;
     return 0;
 }
@@ -188,7 +185,7 @@ static void cinder_pack_anchor(entity_t *e) {
     u8 vulnerable = cinder_pack_alive ? (u8)(cinder_pack_alive - 1) : 0;
     e->x = FIX8(cinder_pack_x[vulnerable]);
     e->y = FIX8(cinder_pack_y[vulnerable]);
-    e->hitbox = 0xF8;
+    e->hitbox = 0xFE;
 }
 
 static void cinder_pack_fire(u8 mode, u8 damage) {
@@ -200,12 +197,12 @@ static void cinder_pack_fire(u8 mode, u8 damage) {
         i8 dx = cinder_pack_x[i] < 104 ? 2 : -2;
         i8 dy = cinder_pack_y[i] < 64 ? 1 : -1;
         boss_projectile_vector((i16)cinder_pack_x[i] + 8,
-            (i16)cinder_pack_y[i] + 4, dx, dy, damage, BOSS_SHOT_SPIRAL, 0);
+            (i16)cinder_pack_y[i] + 8, dx, dy, damage, BOSS_SHOT_SPIRAL, 0);
         boss_projectile_vector((i16)cinder_pack_x[i] + 8,
-            (i16)cinder_pack_y[i] + 4, (i8)-dx, (i8)-dy, damage, BOSS_SHOT_SPIRAL, 0);
+            (i16)cinder_pack_y[i] + 8, (i8)-dx, (i8)-dy, damage, BOSS_SHOT_SPIRAL, 0);
     } else {
         cinder_aimed_shot((u8)(cinder_pack_x[i] + 8),
-            (u8)(cinder_pack_y[i] + 4),
+            (u8)(cinder_pack_y[i] + 8),
             (i8)(1 + ((cinder_timer >> 4) & 1)), damage);
     }
 }
@@ -237,7 +234,10 @@ static void cinder_press_tick(u8 damage) {
         if (i == (u8)(cinder_pack_alive >> 1)
             && cinder_timer >= 52 && cinder_timer < 92)
             x = (u8)(x + ((cinder_timer & 0x20) ? 20 : 232));
-        cinder_move_member(i, x, y, 2);
+        // Odd crucibles ride one body height behind the line, so a formed
+        // 16x16 press puts three bodies on a scanline (four while it
+        // regroups) instead of the old five-body, ten-sprite phalanx.
+        cinder_move_member(i, x, (i & 1) ? (u8)(y > 40 ? y - 16 : y + 16) : y, 2);
     }
     if (cinder_timer == 96 || cinder_timer == 120) {
         for (i = 0; i < cinder_pack_alive; ++i)
@@ -265,7 +265,7 @@ static void cinder_brand_tick(u8 fast, u8 damage) {
     }
     if ((cinder_timer % beat) == 0) {
         u8 node = paths[variant][step & 7];
-        cinder_hazard_add((u8)(nx[node] + 8), (u8)(ny[node] + 4),
+        cinder_hazard_add((u8)(nx[node] + 8), (u8)(ny[node] + 8),
             fast ? 8 : 18, fast ? 64 : 92);
     }
     if ((cinder_timer % (fast ? 20 : 36)) == 10)
@@ -317,7 +317,7 @@ static void cinder_update_alive(entity_t *e) {
     while (next < cinder_pack_alive) {
         u8 fallen = (u8)(cinder_pack_alive - 1);
         cinder_hazard_add((u8)(cinder_pack_x[fallen] + 8),
-            (u8)(cinder_pack_y[fallen] + 4), 0, 40);
+            (u8)(cinder_pack_y[fallen] + 8), 0, 40);
         cinder_pack_alive--;
         room_shake(1, 14);
         sfx_play(SFX_DEATH);
@@ -391,15 +391,14 @@ static void cinder_transform_tick(entity_t *e) {
     for (i = 0; i < CINDER_KILNBACKS; ++i)
         cinder_move_member(i, (u8)(80 + i * 8), 58, 2);
     if ((cinder_timer & 7) == 0) {
-        cinder_hazard_add((u8)(88 + (cinder_timer & 31)), 62, 4, 24);
+        cinder_hazard_add((u8)(96 + (cinder_timer & 31)), 66, 4, 24);
         room_shake(1, 5);
     }
     if (++cinder_timer >= 64) {
         cinder_phase = 2;
         cinder_pattern = 0;
         cinder_timer = 0;
-        e->x = FIX8(96);
-        e->y = FIX8(56);
+        rex_place(e, 88, 50);
         e->hitbox = 0xFD;
         e->state = 0;
         e->ai_data[7] = 16;
@@ -408,31 +407,55 @@ static void cinder_transform_tick(entity_t *e) {
     }
 }
 
+static void cinder_rex_face(entity_t *e, u8 west) {
+    u8 bx;
+    if (west == cinder_rex_facing) return;
+    bx = rex_bx(e);
+    cinder_rex_facing = west;
+    // The body stays put; only the head anchor swaps ends.
+    rex_place(e, bx, rex_by(e));
+}
+
 static void cinder_rex_step(entity_t *e, u8 dir, u8 steps) {
     u8 n;
+    u8 max_x = (u8)(room_world_width - 8 - CINDER_REX_W);
+    u8 max_y = (u8)(room_world_height - 8 - CINDER_REX_H);
+    if (dir8_dx[dir] < 0) cinder_rex_face(e, 1);
+    else if (dir8_dx[dir] > 0) cinder_rex_face(e, 0);
     for (n = 0; n < steps; ++n) {
         u8 moved = 0;
+        fix8_t ox = e->x, oy = e->y;
         if (dir8_dx[dir]) moved |= enemy_try_step(e, dir8_dx[dir], 0);
         if (dir8_dy[dir]) moved |= enemy_try_step(e, 0, dir8_dy[dir]);
+        // The anchor is only the head; keep the whole 48x32 body on the
+        // floor so a charge can never bury the hound in a wall.
+        if (rex_bx(e) < 8 || rex_bx(e) > max_x
+            || rex_by(e) < 8 || rex_by(e) > max_y) {
+            e->x = ox; e->y = oy;
+            moved = 0;
+        }
         if (!moved) break;
     }
-    if (dir8_dx[dir] < 0) cinder_rex_facing = 1;
-    else if (dir8_dx[dir] > 0) cinder_rex_facing = 0;
 }
 
 static u8 cinder_cardinal_aim(entity_t *e) {
-    i16 dx = (i16)player.x - FIX8_TO_INT(e->x);
-    i16 dy = (i16)player.y - FIX8_TO_INT(e->y);
-    if (dx < 0) dx = -dx;
-    if (dy < 0) dy = -dy;
-    if (dx >= dy) return ((i16)player.x < FIX8_TO_INT(e->x)) ? 6 : 2;
-    return ((i16)player.y < FIX8_TO_INT(e->y)) ? 0 : 4;
+    i16 cx = (i16)rex_bx(e) + 16, cy = (i16)rex_by(e) + 8;
+    i16 dx = (i16)player.x - cx;
+    i16 dy = (i16)player.y - cy;
+    i16 ax = dx < 0 ? -dx : dx;
+    i16 ay = dy < 0 ? -dy : dy;
+    if (ax >= ay) return dx < 0 ? 6 : 2;
+    return dy < 0 ? 0 : 4;
 }
 
 static void cinder_rex_begin(entity_t *e) {
     i16 px = player.x;
-    cinder_rex_target_x = (u8)(px < 112 ? px + 56 : px - 56);
-    if (cinder_rex_target_x > 184) cinder_rex_target_x = 184;
+    // Body target: stand a full Rex-length off the champion's lane.
+    i16 t = px < 112 ? px + 48 : px - 72;
+    i16 max_x = (i16)room_world_width - 8 - CINDER_REX_W;
+    if (t < 8) t = 8;
+    if (t > max_x) t = max_x;
+    cinder_rex_target_x = (u8)t;
     cinder_rex_dir = cinder_cardinal_aim(e);
     e->ai_data[7] = 12;
     sfx_play(SFX_TICK);
@@ -442,9 +465,14 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
     u8 k;
     u8 gap = (u8)(((u8)(player.x - room_camera_x) + 10) / 20);
     u8 base = (u8)(room_camera_x + 10);
+    u8 bx = rex_bx(e);
     for (k = 0; k < 8; ++k) {
         i16 x = (i16)base + k * 20;
         if (k == gap) continue;
+        // The wall parts around the 48px hound: a lane through its own
+        // furnace body adds nothing to dodge but costs a sprite on every
+        // scanline the body already fills.
+        if (x + 8 > (i16)bx && x < (i16)bx + CINDER_REX_W) continue;
         if (x < 12) x = 12;
         if (x > room_world_width - 12) x = room_world_width - 12;
         boss_projectile_vector(x,
@@ -463,7 +491,7 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
     switch (cinder_pattern) {
         case 0: // Furnace Breath: two broad walls with different approach.
             if ((entity_anim_counter & 3) == 0) {
-                u8 ex = (u8)FIX8_TO_INT(e->x);
+                u8 ex = rex_bx(e);
                 if (ex < cinder_rex_target_x) cinder_rex_step(e, 2, 1);
                 else if (ex > cinder_rex_target_x) cinder_rex_step(e, 6, 1);
             }
@@ -472,8 +500,9 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
             break;
         case 1: // Slag Spit: mixed-speed globs plus delayed molten pools.
             if (cinder_timer == 28 || cinder_timer == 68) {
-                u8 x = (u8)(FIX8_TO_INT(e->x) + 16);
-                u8 y = (u8)(FIX8_TO_INT(e->y) + 8);
+                // From the jaw, at the front of the 48px body.
+                u8 x = (u8)(rex_bx(e) + (cinder_rex_facing ? 6 : 42));
+                u8 y = (u8)(rex_by(e) + 16);
                 cinder_aimed_shot(x, y, 1, damage);
                 cinder_aimed_shot(x, y, 2, damage);
                 cinder_hazard_add((u8)(player.x + 8),
@@ -496,13 +525,13 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
             if (cinder_timer >= 42 && cinder_timer < 88) {
                 cinder_rex_step(e, cinder_rex_dir, 1);
                 if ((cinder_timer & 7) == 0)
-                    cinder_hazard_add((u8)(FIX8_TO_INT(e->x) + 16),
-                        (u8)(FIX8_TO_INT(e->y) + 12), 30, 88);
+                    cinder_hazard_add((u8)(rex_bx(e) + 24),
+                        (u8)(rex_by(e) + 28), 30, 88);
             }
             if (cinder_timer == 88) {
                 for (i = 0; i < 8; i += 2)
-                    boss_projectile_vector(FIX8_TO_INT(e->x) + 16,
-                        FIX8_TO_INT(e->y) + 8,
+                    boss_projectile_vector((i16)rex_bx(e) + 24,
+                        (i16)rex_by(e) + 16,
                         (i8)(dir8_dx[i] * 2), (i8)(dir8_dy[i] * 2), damage, BOSS_SHOT_WAVE, 1);
                 room_shake(3, 22);
             }
@@ -516,10 +545,13 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
             if (cinder_timer >= 34 && cinder_timer < 78)
                 cinder_rex_step(e, cinder_rex_dir, 3);
             if (cinder_timer == 88) {
-                u8 x = (u8)(FIX8_TO_INT(e->x) + 16);
-                u8 y = (u8)(FIX8_TO_INT(e->y) + 8);
+                // Slag-hammer slam: five overlapping 24px pools make one
+                // wide 104x24 burn band along the feet. A longer 20-frame
+                // tell keeps the bigger band fair to step out of.
+                u8 x = (u8)(rex_bx(e) + 24);
+                u8 y = (u8)(rex_by(e) + 28);
                 for (i = 0; i < 5; ++i)
-                    cinder_hazard_add((u8)(x + (i * 16) - 32), y, 12, 72);
+                    cinder_hazard_add((u8)(x + (i * 20) - 40), y, 20, 72);
                 room_shake(3, 24);
                 sfx_play(SFX_DEATH);
             }
@@ -547,8 +579,7 @@ static void cinder_fire_pack_tick(entity_t *e, u8 damage) {
         cinder_phase = 2;
         cinder_pattern = 3;
         cinder_timer = 0;
-        e->x = FIX8(96);
-        e->y = FIX8(56);
+        rex_place(e, 88, 50);
         e->hitbox = 0xFD;
         e->ai_data[7] = 14;
         room_shake(2, 20);
@@ -577,11 +608,7 @@ void cinder_pack_reset(void) BANKED {
         cinder_pack_x[i] = start_x[i];
         cinder_pack_y[i] = start_y[i];
     }
-    for (i = 0; i < CINDER_HAZARDS; ++i) {
-        cinder_hazard_ttl[i] = 0;
-        cinder_hazard_delay[i] = 0;
-    }
-    cinder_hazard_cursor = 0;
+    cinder_fire_reset();
     cinder_phase = 0;
     cinder_pattern = 0;
     cinder_pack_alive = CINDER_KILNBACKS;
@@ -597,6 +624,8 @@ void cinder_pack_reset(void) BANKED {
     entities[cinder_boss_index].vx = entities[cinder_boss_index].vy = 0;
     entities[cinder_boss_index].hitbox = 0xF8;
     cinder_pack_anchor(&entities[cinder_boss_index]);
+    cinder_oam_end = (u8)(4 + 4 * CINDER_KILNBACKS);
+    cinder_oam_limit = 40;
     cinder_pack_active = 1;
 }
 
@@ -605,7 +634,10 @@ void cinder_pack_retire(void) BANKED {
     cinder_pack_active = 0;
     cinder_damage_open = 0;
     cinder_boss_index = 0xFF;
-    for (oam = 4; oam < 22; ++oam) move_sprite(oam, 0, 0);
+    cinder_fire_clear_all();
+    cinder_oam_end = 4;
+    cinder_oam_limit = 40;
+    for (oam = 4; oam < 40; ++oam) move_sprite(oam, 0, 0);
 }
 
 void cinder_boss_tick(entity_t *e) BANKED {
@@ -622,8 +654,8 @@ void cinder_boss_tick(entity_t *e) BANKED {
         cinder_timer = 0;
         cinder_damage_open = 0;
         for (i = 0; i < CINDER_KILNBACKS; ++i) {
-            cinder_pack_x[i] = (u8)(FIX8_TO_INT(e->x) + 8);
-            cinder_pack_y[i] = (u8)(FIX8_TO_INT(e->y) + 4);
+            cinder_pack_x[i] = (u8)(rex_bx(e) + 16);
+            cinder_pack_y[i] = (u8)(rex_by(e) + 8);
         }
         room_shake(2, 18);
         boss_voice(2, BOSS_VOICE_PHASE);
@@ -634,6 +666,16 @@ void cinder_boss_tick(entity_t *e) BANKED {
     else if (cinder_phase == 2) cinder_rex_tick(e, damage);
     else cinder_fire_pack_tick(e, damage);
     cinder_body_contact(e);
+    if (cinder_phase == 2) {
+        cinder_oam_end = 4;
+        cinder_oam_limit = CINDER_REX_OAM_BASE;
+    } else {
+        // Leaving Rex: clear its 16..39 block before the generic pass runs.
+        if (cinder_oam_limit != 40) cinder_rex_big_park();
+        cinder_oam_end = (u8)(4 + 4 * (cinder_phase == 0
+            ? cinder_pack_alive : CINDER_KILNBACKS));
+        cinder_oam_limit = 40;
+    }
     // EF_ON_SCREEN is also combat's authoritative targetability bit. Keep the
     // logical anchor untargetable behind furnace brick, while this bank still
     // consumes colliding shots with a visible armor spark. The exposed vent
@@ -643,18 +685,18 @@ void cinder_boss_tick(entity_t *e) BANKED {
     else e->flags &= (u8)~EF_ON_SCREEN;
 }
 
+// Kilnback poses are 16x16 atlas quadrants: tiles t, t+1, t+4, t+5.
 static u8 cinder_draw_member(u8 oam, u8 x, u8 y, u8 tile, u8 pal) {
     i16 sx = (i16)x - room_camera_x + 8;
     i16 sy = (i16)y - room_camera_y + 16;
-    if (sx < -15 || sx >= ROOM_VIEW_W_PX || sy < -7 || sy >= ROOM_VIEW_H_PX)
+    OAM_item_t *it = &shadow_OAM[oam];
+    if (sx < -15 || sx >= ROOM_VIEW_W_PX + 8 || sy < -15 || sy >= ROOM_VIEW_H_PX + 16)
         return oam;
-    set_sprite_tile(oam, tile);
-    set_sprite_tile((u8)(oam + 1), (u8)(tile + 1));
-    set_sprite_prop(oam, pal);
-    set_sprite_prop((u8)(oam + 1), pal);
-    move_sprite(oam, (u8)sx, (u8)sy);
-    move_sprite((u8)(oam + 1), (u8)(sx + 8), (u8)sy);
-    return (u8)(oam + 2);
+    it->y = (u8)sy; it->x = (u8)sx; it->tile = tile; it->prop = pal; ++it;
+    it->y = (u8)sy; it->x = (u8)(sx + 8); it->tile = (u8)(tile + 1); it->prop = pal; ++it;
+    it->y = (u8)(sy + 8); it->x = (u8)sx; it->tile = (u8)(tile + 4); it->prop = pal; ++it;
+    it->y = (u8)(sy + 8); it->x = (u8)(sx + 8); it->tile = (u8)(tile + 5); it->prop = pal;
+    return (u8)(oam + 4);
 }
 
 void cinder_draw(void) BANKED {
@@ -668,49 +710,29 @@ void cinder_draw(void) BANKED {
     if (flash) e->ai_data[7]--;
 
     if (cinder_phase == 2) {
-        i16 sx = FIX8_TO_INT(e->x) - room_camera_x + 8;
-        i16 sy = FIX8_TO_INT(e->y) - room_camera_y + 16;
-        u8 r, c;
-        // Native 4x2. The atlas faces west, so an east step (facing == 0)
-        // mirrors it. sx+4 centers the 32px body in the 40px hitbox.
-        for (r = 0; r < 2; ++r) {
-            for (c = 0; c < 4; ++c) {
-                u8 col = cinder_rex_facing ? c : (u8)(3 - c);
-                u8 prop = (flash && (e->ai_data[7] & 1)) ? 0 : pal;
-                if (!cinder_rex_facing) prop |= S_FLIPX;
-                // Bank 1 keeps a roar on the head row and a stride on the
-                // legs. The bit is per sprite, so the beats can split.
-                // The jaw opens on the breath, the spit, and the charge
-                // telegraph. The legs stride on the stomp, the charge, and
-                // every other beat of the walk.
-                u8 pose = 0;
-                if (prop && r == 0) {
-                    if (cinder_pattern == 0 && ((cinder_timer >= 28 && cinder_timer < 48)
-                            || (cinder_timer >= 68 && cinder_timer < 88)))
-                        pose = 1;
-                    else if (cinder_pattern == 1 && ((cinder_timer >= 16 && cinder_timer < 40)
-                            || (cinder_timer >= 56 && cinder_timer < 80)))
-                        pose = 1;
-                    else if (cinder_pattern == 3 && cinder_timer >= 16 && cinder_timer < 34)
-                        pose = 1;
-                }
-                if (prop && r == 1) {
-                    if ((cinder_pattern == 2 && cinder_timer >= 42 && cinder_timer < 88)
-                        || (cinder_pattern == 3 && cinder_timer >= 34 && cinder_timer < 78)
-                        || (entity_anim_counter & 16))
-                        pose = 1;
-                }
-                // Pose tiles sit at bank-1 OBJ 128..135, clear of Hexa
-                // 40..55 and 88..127, large-boss poses 64..87, and shots 208..213.
-                if (pose) prop |= 0x08;
-                set_sprite_tile(oam, pose
-                    ? (u8)(128 + (r << 2) + col)
-                    : (u8)(SPR_CINDER_REX + (r << 2) + col));
-                set_sprite_prop(oam, prop);
-                move_sprite(oam, (u8)(sx + 4 + (c << 3)), (u8)(sy + (r << 3)));
-                oam++;
-            }
-        }
+        i16 sx = (i16)rex_bx(e) - room_camera_x + 8;
+        i16 sy = (i16)rex_by(e) - room_camera_y + 16;
+        u8 hide = (u8)(flash && (e->ai_data[7] & 1));
+        u8 pose = 0;
+        // The jaw roars on the breath, the spit and the charge telegraph.
+        // The legs stride on the stomp, the charge, and every other beat of
+        // the walk. Head and leg bands pick their bank-1 frame separately.
+        if (cinder_pattern == 0 && ((cinder_timer >= 28 && cinder_timer < 48)
+                || (cinder_timer >= 68 && cinder_timer < 88)))
+            pose = 1;
+        else if (cinder_pattern == 1 && ((cinder_timer >= 16 && cinder_timer < 40)
+                || (cinder_timer >= 56 && cinder_timer < 80)))
+            pose = 1;
+        else if (cinder_pattern == 3 && cinder_timer >= 16 && cinder_timer < 34)
+            pose = 1;
+        if ((cinder_pattern == 2 && cinder_timer >= 42 && cinder_timer < 88)
+            || (cinder_pattern == 3 && cinder_timer >= 34 && cinder_timer < 78)
+            || (entity_anim_counter & 16))
+            pose |= 2;
+        // A white hit flash swaps to palette 0 rather than blinking out.
+        cinder_rex_big_draw(sx, sy, cinder_rex_facing, hide ? 0 : pose,
+            hide ? 0 : pal);
+        return;
     } else {
         u8 count = cinder_phase == 0 ? cinder_pack_alive : CINDER_KILNBACKS;
         for (i = 0; i < count; ++i) {
@@ -729,20 +751,6 @@ void cinder_draw(void) BANKED {
         }
     }
 
-    for (i = 0; i < CINDER_HAZARDS && oam < 22; ++i) {
-        i16 sx, sy;
-        u8 tile, hazard_pal;
-        if (!cinder_hazard_ttl[i]) continue;
-        sx = (i16)cinder_hazard_x[i] - room_camera_x + 4;
-        sy = (i16)cinder_hazard_y[i] - room_camera_y + 12;
-        if (sx < -7 || sx >= ROOM_VIEW_W_PX || sy < -7 || sy >= ROOM_VIEW_H_PX)
-            continue;
-        tile = cinder_hazard_delay[i] ? SPR_FX_IMPACT : SPR_BULLET_B;
-        hazard_pal = cinder_hazard_delay[i] ? 0 : pal;
-        set_sprite_tile(oam, tile);
-        set_sprite_prop(oam, hazard_pal);
-        move_sprite(oam, (u8)sx, (u8)sy);
-        oam++;
-    }
-    while (oam < 22) move_sprite(oam++, 0, 0);
+    // Fire pools are background tiles now; only park unused pack slots.
+    while (oam < cinder_oam_end) move_sprite(oam++, 0, 0);
 }

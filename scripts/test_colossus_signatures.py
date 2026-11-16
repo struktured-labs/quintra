@@ -48,8 +48,10 @@ def main():
             if stage == 2:
                 # Ember no longer enters the shared one-shot signature
                 # dispatcher: its entire fight is a pack/Rex curriculum. Force
-                # the first Rex attack and prove Furnace Breath creates seven
-                # parallel lanes around one gap after a long warning beat.
+                # the first Rex attack and prove Furnace Breath creates one
+                # unified wall of parallel lanes after a long warning beat. The
+                # wall parts around the 48px Rex body and the champion's own
+                # gap, so the first wall is 4..7 lanes.
                 phase = addr("_cinder_phase")
                 pattern = addr("_cinder_pattern")
                 timer = addr("_cinder_timer")
@@ -64,11 +66,11 @@ def main():
                         clear_disposable(pb)
                     pb.tick()
                     record['trace'].append([pb.memory[timer], hostile_projectiles(pb)])
-                    if len(hostile_projectiles(pb)) >= expected:
+                    if pb.memory[timer] > 36 and hostile_projectiles(pb):
                         break
                 shots = hostile_projectiles(pb)
-                assert len(shots) == expected, (
-                    f"Furnace Breath emitted {len(shots)}, expected {expected}")
+                assert 4 <= len(shots) <= expected, (
+                    f"Furnace Breath emitted {len(shots)}, expected 4..{expected}")
                 assert len(set(shots)) == 1 and shots[0][0] in (0,16) and shots[0][1] == 6, (
                     f"Furnace Breath lost its unified vertical wall: {shots}")
                 report.append(f"3:Kilnback/Cinder Rex Furnace Breath={len(shots)}")
