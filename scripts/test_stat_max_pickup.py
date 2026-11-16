@@ -93,24 +93,32 @@ def prep_stats(pb, spd, atk=4, coins=99):
 def main():
     pb = boot_room()
     try:
-        # Floor Speed Ring at SPD 9: stays, names the cap, no inventory grant.
-        prep_stats(pb, 9)
+        # One below the raised cap (old cap was 9): Speed Ring is taken.
+        prep_stats(pb, 11)
+        spawn_on_player(pb, PICKUP_ITEM, ITEM_SPEED_RING)
+        pb.tick()
+        assert not pickup_alive(pb), "floor Speed Ring at SPD 11 stayed"
+        assert pb.memory[PL + SPD] == 12, pb.memory[PL + SPD]
+        wait_notice(pb)
+
+        # Floor Speed Ring at SPD 12: stays, names the cap, no inventory grant.
+        prep_stats(pb, 12)
         spawn_on_player(pb, PICKUP_ITEM, ITEM_SPEED_RING)
         pb.tick()
         tiles, attrs = hud_row(pb)
-        assert pickup_alive(pb), "floor Speed Ring at SPD 9 was swallowed"
-        assert pb.memory[PL + SPD] == 9
+        assert pickup_alive(pb), "floor Speed Ring at SPD 12 was swallowed"
+        assert pb.memory[PL + SPD] == 12
         assert pb.memory[PL + INV] == 0xFF
         assert tiles == SPDMAX, tiles
         wait_notice(pb)
 
-        # Floor Swift Fang at SPD 9: ATK still applies, item is taken.
-        prep_stats(pb, 9, atk=4)
+        # Floor Swift Fang at SPD 12: ATK still applies, item is taken.
+        prep_stats(pb, 12, atk=4)
         spawn_on_player(pb, PICKUP_ITEM, ITEM_SWIFT_FANG)
         pb.tick()
         tiles, attrs = hud_row(pb)
-        assert not pickup_alive(pb), "floor Swift Fang at SPD 9 stayed"
-        assert pb.memory[PL + SPD] == 9
+        assert not pickup_alive(pb), "floor Swift Fang at SPD 12 stayed"
+        assert pb.memory[PL + SPD] == 12
         assert pb.memory[PL + ATK] == 5
         assert pb.memory[PL + INV] == ITEM_ID_SWIFT_FANG
         # The capped SPD line now says so first, then the real ATK gain.
@@ -121,25 +129,25 @@ def main():
         assert tiles == ATKPLUS, tiles
         wait_notice(pb)
 
-        # Shop Speed Ring at SPD 9: refused, coins kept, SPDMAX notice.
-        prep_stats(pb, 9, coins=99)
+        # Shop Speed Ring at SPD 12: refused, coins kept, SPDMAX notice.
+        prep_stats(pb, 12, coins=99)
         spawn_on_player(pb, PICKUP_SHOP, WARE_ITEM, 25, ITEM_SPEED_RING)
         pb.tick()
         tiles, attrs = hud_row(pb)
-        assert pickup_alive(pb), "shop Speed Ring at SPD 9 was sold"
-        assert pb.memory[PL + SPD] == 9
+        assert pickup_alive(pb), "shop Speed Ring at SPD 12 was sold"
+        assert pb.memory[PL + SPD] == 12
         assert pb.memory[PL + COINS] == 99
         assert pb.memory[PL + INV] == 0xFF
         assert tiles == SPDMAX, tiles
         wait_notice(pb)
 
-        # Shop Swift Fang at SPD 9: sold, ATK+1, coins deducted.
-        prep_stats(pb, 9, atk=4, coins=99)
+        # Shop Swift Fang at SPD 12: sold, ATK+1, coins deducted.
+        prep_stats(pb, 12, atk=4, coins=99)
         spawn_on_player(pb, PICKUP_SHOP, WARE_ITEM, 25, ITEM_SWIFT_FANG)
         pb.tick()
         tiles, attrs = hud_row(pb)
-        assert not pickup_alive(pb), "shop Swift Fang at SPD 9 stayed"
-        assert pb.memory[PL + SPD] == 9
+        assert not pickup_alive(pb), "shop Swift Fang at SPD 12 stayed"
+        assert pb.memory[PL + SPD] == 12
         assert pb.memory[PL + ATK] == 5
         assert pb.memory[PL + COINS] == 74
         assert pb.memory[PL + INV] == ITEM_ID_SWIFT_FANG

@@ -191,6 +191,11 @@ def main():
             case(pb, "Iron Heart at cap, full", ["hMAX"], I, 10, stays=True,
                  hpmax=16, hp=16),
             case(pb, "Speed Ring", ["SPD+1"], I, 11),
+            # PLAYER_SPD_MAX is 12 (#98): 9 is no longer a cap.
+            case(pb, "Speed Ring at 9", ["SPD+1"], I, 11, spd=9,
+                 check=mem_is(SPD, 10)),
+            case(pb, "Speed Ring at cap", ["SPDMAX"], I, 11, stays=True,
+                 spd=12),
             case(pb, "Power Stone", ["ATK+1"], I, 12),
             case(pb, "Power Stone at cap", ["ATKMAX"], I, 12, stays=True,
                  atk=15),

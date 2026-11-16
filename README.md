@@ -832,8 +832,8 @@ The cartridge now has a complete seven-part systemic layer:
    Pressing A with any banked tier invokes a distinct MAX form for every champion's
    primary weapon and for both procedural melee weapons; an ordinary attack
    spends partial charge. Each traversal Waygear discovery raises the tier cap,
-   starting at one. At SPD 5, tiers take another 3/4/5/6 seconds; higher SPD
-   improves charge rate up to +25%. The HUD shows stored tier and next-tier
+   starting at one. At SPD 4, tiers take another 3/4/5/6 seconds; higher SPD
+   improves charge rate up to +40% at the SPD cap of 12. The HUD shows stored tier and next-tier
    progress; the Pack shows stored/cap. B preserves Will, and A+B retains MP
    spells. See [Will tiers](docs/will-tiers.md) for details.
    Will pauses while Stoneskin or Undertow is physically raised,

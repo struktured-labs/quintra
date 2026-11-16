@@ -140,7 +140,7 @@ def main():
         10: "A STAB SLASH DASH",
         11: "B 8 SHOTS BRIEF WARD",
         12: "TRAIT FAST MOVEMENT",
-        14: "HP14 MP4 AT2 DF1 SP6",
+        14: "HP14 MP4 AT2 DF1 SP5",
         16: "NORMAL  SEL FOR EASY",
         17: " A CHOOSE   B BACK",
     }
@@ -178,7 +178,7 @@ def main():
     # HP/MP/AT/DF/SP letters gold, digits and spaces body white.
     stat = attrs(14, 0, 20)
     expected_stat = []
-    for ch in "HP14 MP4 AT2 DF1 SP6":
+    for ch in "HP14 MP4 AT2 DF1 SP5":
         expected_stat.append(1 if "A" <= ch <= "Z" else 0)
     assert stat == expected_stat, f"stat attributes drifted: {stat}"
     assert attrs(16, 8, 12) == [3] * 12, "SEL FOR EASY not lavender"
@@ -195,35 +195,35 @@ def main():
             10: "A STAB SLASH DASH",
             11: "B 8 SHOTS BRIEF WARD",
             12: "TRAIT FAST MOVEMENT",
-            14: "HP14 MP4 AT2 DF1 SP6",
+            14: "HP14 MP4 AT2 DF1 SP5",
         },
         {
             9: "ROLE  ARMORED TANK",
             10: "A HEAVY TAIL STRIKE",
             11: "B BLOCKS ALL HITS",
             12: "TRAIT HEALTH REGEN",
-            14: "HP16 MP3 AT2 DF2 SP5",
+            14: "HP16 MP3 AT2 DF2 SP4",
         },
         {
             9: "ROLE  RANGED HUNTER",
             10: "A RETURNING FEATHER",
             11: "B MARK RAVEN DIVES",
             12: "TRAIT SHOW ENEMY HP",
-            14: "HP14 MP8 AT2 DF1 SP5",
+            14: "HP14 MP8 AT2 DF1 SP4",
         },
         {
             9: "ROLE  MAGIC CASTER",
             10: "A PIERCING BUBBLE",
             11: "B 3 BUBBLES AND WARD",
             12: "TRAIT FAST MP REGEN",
-            14: "HP14MP10 AT1 DF1 SP5",
+            14: "HP14MP10 AT1 DF1 SP4",
         },
         {
             9: "ROLE  FAST STRIKER",
             10: "A FAST STINGER",
             11: "B ROTATING STINGERS",
             12: "TRAIT ELEMENT POWER",
-            14: "HP13 MP5 AT4 DF1 SP7",
+            14: "HP13 MP5 AT4 DF1 SP6",
         },
     ]
     for hero, page in enumerate(hero_pages):

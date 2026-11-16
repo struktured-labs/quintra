@@ -566,7 +566,7 @@ static u8 item_would_change_stats(u8 item_idx) {
             || (ef->d0 == STAT_MP && player.mp_max < 20)
             || (ef->d0 == STAT_ATK && player.atk < 15)
             || (ef->d0 == STAT_DEF && player.def < 10)
-            || (ef->d0 == STAT_SPD && player.spd < 9)
+            || (ef->d0 == STAT_SPD && player.spd < PLAYER_SPD_MAX)
             || (ef->d0 == STAT_LCK && player.lck < 10)) return 1;
     }
     return 0;
@@ -641,7 +641,7 @@ static u8 apply_item_effects(u8 item_idx) {
                 break;
             case STAT_SPD:
                 before = player.spd;
-                player.spd = add_capped(player.spd, ef->d1, 9);
+                player.spd = add_capped(player.spd, ef->d1, PLAYER_SPD_MAX);
                 hud_show_stat_gain(STAT_SPD, (u8)(player.spd - before));
                 break;
             case STAT_LCK:
@@ -723,7 +723,7 @@ static u8 item_first_capped_stat(u8 item_idx) {
             || (ef->d0 == STAT_MP && player.mp_max >= 20)
             || (ef->d0 == STAT_ATK && player.atk >= 15)
             || (ef->d0 == STAT_DEF && player.def >= 10)
-            || (ef->d0 == STAT_SPD && player.spd >= 9)
+            || (ef->d0 == STAT_SPD && player.spd >= PLAYER_SPD_MAX)
             || (ef->d0 == STAT_LCK && player.lck >= 10)) return ef->d0;
     }
     return 0xFF;
@@ -1208,7 +1208,7 @@ u8 pickup_check_player_collision(void) BANKED {
                                 u8 old_atk = player.atk;
                                 u8 old_spd = player.spd;
                                 player.atk = add_capped(player.atk, 2, 15);
-                                player.spd = add_capped(player.spd, 1, 9);
+                                player.spd = add_capped(player.spd, 1, PLAYER_SPD_MAX);
                                 hud_show_stat_gain(STAT_ATK,
                                     (u8)(player.atk - old_atk));
                                 hud_show_stat_gain(STAT_SPD,

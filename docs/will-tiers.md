@@ -9,10 +9,10 @@ and Rift Hook adds one tier, up to four. Equipping a different tool does not rem
 an unlock. The reward card announces the raised limit. The Pack shows stored/cap,
 and the contextual HUD shows a stored-tier digit followed by the next tier's bar.
 
-At SPD 5, successive tiers take 3, 4, 5, and 6 additional seconds of exposed
-gameplay: 18 seconds total for tier 4. Charge rate is `(15 + min(SPD, 10)) / 20`
-times that baseline. Each SPD point above 5 adds 5% to rate, capped at +25%; lower
-SPD slows it down. Inversion uses effective SPD. Shields and Mute pause charging.
+At SPD 4 (the slowest starting champions), successive tiers take 3, 4, 5, and 6
+additional seconds of exposed gameplay: 18 seconds total for tier 4. Charge rate
+is `(16 + min(SPD, 12)) / 20` times that baseline. Each SPD point above 4 adds 5%
+to rate, up to +40% at the SPD cap of 12; lower SPD slows it down. Inversion uses effective SPD. Shields and Mute pause charging.
 Menus pause gameplay. Times are gameplay ticks, not a real-time guarantee under
 hardware slowdown. Temporary movement-only Haste does not separately multiply Will.
 
