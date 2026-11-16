@@ -111,6 +111,22 @@ mod tests {
     }
 
     #[test]
+    fn starter_speed_is_slow_and_wolfkin_stays_fastest() {
+        // SPD is fifths of a pixel per frame. Starters were lowered by one
+        // (2026-11-15) so run-earned speed toward the cap of 12 is felt.
+        // Wolfkin gets +1 from FAST MOVEMENT at init, tying Vespine on top.
+        assert_eq!(classes::WOLFKIN.base_stats.spd, 5);
+        assert_eq!(classes::SAURAN.base_stats.spd, 4);
+        assert_eq!(classes::CORVIN.base_stats.spd, 4);
+        assert_eq!(classes::PICSEAN.base_stats.spd, 4);
+        assert_eq!(classes::VESPINE.base_stats.spd, 6);
+        let wolfkin = classes::WOLFKIN.base_stats.spd + 1;
+        for c in [&classes::SAURAN, &classes::CORVIN, &classes::PICSEAN, &classes::VESPINE] {
+            assert!(wolfkin >= c.base_stats.spd, "{} outran Wolfkin", c.name);
+        }
+    }
+
+    #[test]
     fn starter_cadence_leaves_room_for_run_earned_speed() {
         use quintra_content::ItemKind;
 

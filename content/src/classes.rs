@@ -22,7 +22,7 @@ pub const WOLFKIN: Class = Class {
         mp_max: 4,
         atk:    2,
         def:    1,
-        spd:    6,
+        spd:    5,
     },
 };
 
@@ -39,7 +39,7 @@ pub const SAURAN: Class = Class {
     // speed left its long Tail Spike recovery unable to reclaim a safe lane
     // before the next contact cycle. Stoneskin and positioning remain the
     // answer to projectile patterns, not a global enemy-stat concession.
-    base_stats: BaseStats { hp_max: 16, mp_max: 3, atk: 2, def: 2, spd: 5 },
+    base_stats: BaseStats { hp_max: 16, mp_max: 3, atk: 2, def: 2, spd: 4 },
 };
 
 pub const CORVIN: Class = Class {
@@ -53,7 +53,7 @@ pub const CORVIN: Class = Class {
     // Featherbarb's returning arc demands sustained positioning time. Seven
     // hearts compensate for low DEF through the first Riftwild crossing
     // without inflating its safe ranged damage.
-    base_stats: BaseStats { hp_max: 14, mp_max: 8, atk: 2, def: 1, spd: 5 },
+    base_stats: BaseStats { hp_max: 14, mp_max: 8, atk: 2, def: 1, spd: 4 },
 };
 
 pub const PICSEAN: Class = Class {
@@ -67,7 +67,7 @@ pub const PICSEAN: Class = Class {
     // Slow piercing shots require prolonged spacing and carry the roster's
     // lowest ATK. Seven hearts offset its long projectile commitment while
     // low ATK/DEF preserve the fragile control-mage identity.
-    base_stats: BaseStats { hp_max: 14, mp_max: 10, atk: 1, def: 1, spd: 5 },
+    base_stats: BaseStats { hp_max: 14, mp_max: 10, atk: 1, def: 1, spd: 4 },
 };
 
 pub const VESPINE: Class = Class {
@@ -82,7 +82,7 @@ pub const VESPINE: Class = Class {
     // speed. Six-and-a-half hearts keeps her below both durable melee
     // vessels while giving Swarm's committed finish window one real exchange
     // instead of asking the player to end an opening boss at one hit.
-    base_stats: BaseStats { hp_max: 13, mp_max: 5, atk: 4, def: 1, spd: 7 },
+    base_stats: BaseStats { hp_max: 13, mp_max: 5, atk: 4, def: 1, spd: 6 },
 };
 
 pub fn register(r: &mut Registry) {

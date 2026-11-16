@@ -8,7 +8,7 @@ Dash is a resource, not a walk. The invulnerable moment is short. Spend it throu
 
 B is free and it is on a clock. Use Howl to delete a fan, not to open a room that Fang Forms would have cleared. Use Stoneskin when you have already chosen the tile you will stand on. A ward in the wrong tile is a statue. Raven Mark is one target. Pick the summoner, the bell, the thing that makes the room worse by existing. Swarm and Tidal Wave are commitments. Do not press them as a flinch.
 
-Will is the attack you were patient for. Release A while you move. The charge hates a shield and it hates Mute, and it does not care that you are in a menu. At speed 5 the tiers take longer as they climb. Faster champions charge faster, up to a cap. Do not hoard tier 4 for a boss if tier 2 would have saved the room that was about to end the run. A stored Will that you die holding is worth zero.
+Will is the attack you were patient for. Release A while you move. The charge hates a shield and it hates Mute, and it does not care that you are in a menu. At speed 4 the tiers take longer as they climb. Faster champions charge faster, up to the speed cap of 12. Do not hoard tier 4 for a boss if tier 2 would have saved the room that was about to end the run. A stored Will that you die holding is worth zero.
 
 Spirit Convergence is the full meter, not a panic button you can afford twice. It empties magic, and magic is also how you pay for an Oath and for bombs. Go into a colossus with a full meter if you can. Spend Convergence on the crisis, the last quarter, the moment the pattern stops being the pattern you learned.
 

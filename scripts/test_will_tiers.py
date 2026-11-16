@@ -14,7 +14,7 @@ def main():
     symbol = addr("_will_charge_tick")
     pb.hook_register(symbol >> 16, symbol & 0xFFFF,
                      lambda counts: counts.__setitem__(0, counts[0] + 1), counter)
-    for speed in (0, 3, 5, 10, 30):
+    for speed in (0, 3, 4, 12, 30):
         pb.memory[PLAYER + 7] = speed
         pb.memory[PLAYER + 44] = 7
         pb.memory[PLAYER + LEVEL_OFFSET] = 0
@@ -31,7 +31,7 @@ def main():
             else:
                 raise AssertionError(("tier never filled", speed, level))
             duration = counter[0] - start
-            expected = (90 + 30 * (level - 1)) * 40 / (15 + min(speed, 10))
+            expected = (90 + 30 * (level - 1)) * 40 / (16 + min(speed, 12))
             assert abs(duration - expected) <= 2, (speed, level, duration, expected)
             assert duration > previous, ("higher tier not slower", speed, level)
             previous, start = duration, counter[0]

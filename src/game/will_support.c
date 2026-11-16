@@ -17,8 +17,10 @@ void will_charge_tick(void) BANKED {
     if (player.will_level >= WILL_LEVEL_CAP) return;
     speed = STATUS_PLAYER_INVERTED()
         ? status_player_effective_stat(QSTATUS_STAT_SPD) : player.spd;
-    if (speed > 10) speed = 10;
-    will_charge_fraction += (u8)(15 + speed);
+    // SPD 4 (slowest starter) charges at 20/40 per frame; each point above
+    // adds one, up to the SPD cap.
+    if (speed > PLAYER_SPD_MAX) speed = PLAYER_SPD_MAX;
+    will_charge_fraction += (u8)(16 + speed);
     if (will_charge_fraction < 40) return;
     will_charge_fraction -= 40;
     if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
@@ -37,7 +39,8 @@ void will_bank_charge(void) BANKED {
 
 void will_begin_signature(void) BANKED {
     u8 cd;
-    u8 speed_bonus = (player.spd > 5) ? (u8)((player.spd - 5) * 3) : 0;
+    u8 speed_bonus = (player.spd > PLAYER_SPD_WILL_BASE)
+        ? (u8)((player.spd - PLAYER_SPD_WILL_BASE) * 3) : 0;
     switch (player.class_id) {
         case 0: cd = SIGNATURE_CD_WOLFKIN; break;
         case 1: cd = SIGNATURE_CD_SAURAN;  break;

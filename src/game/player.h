@@ -9,6 +9,15 @@
 #define INVENTORY_SLOTS 16   // Phase 4-5; bumped to 64 in Phase 6+
 #define COIN_CAP        999  // HUD width and shop economy contract
 
+// SPD is a movement rate in fifths of a pixel per frame (move_acc: 5 = 1px),
+// so SPD 4 = 0.8 px/f and SPD 12 = 2.4 px/f. Movement is applied one
+// collision-checked pixel at a time, so a higher cap cannot tunnel walls.
+// Every run-earned SPD source clamps here.
+#define PLAYER_SPD_MAX  12
+// The slowest starting SPD. Will charge and signature-cooldown bonuses are
+// measured from here, so lowering the starters did not slow Will.
+#define PLAYER_SPD_WILL_BASE 4
+
 // Facing direction (4-dir, mapped to D-pad bits in tick fns)
 enum {
     FACE_S = 0,    // default-facing-down at game start
