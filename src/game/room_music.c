@@ -92,7 +92,12 @@ void room_load_dynamic_fx_identity(void) BANKED {
         tiles_load_prism_skitter_sprite();
         tiles_load_rift_cantor_sprite();
     }
-    if (run_state_is_boss_room() || run_state_was_cleared_boss())
+    // room_counter keeps naming the cleared Colossus room for the whole
+    // Riftwild, so world fields used to reload the boss shot atlas over the
+    // resident tiles 208..223: the wayside trader and wayfarers drew as
+    // fireballs. The open world has no Colossus; restore the residents.
+    if (run_state.world_mode) tiles_load_town_big_sprites();
+    else if (run_state_is_boss_room() || run_state_was_cleared_boss())
         boss_projectile_load_art();
     if (serpent_tail_active) serpent_body_reset();
     room_refresh_player_appearance(0);

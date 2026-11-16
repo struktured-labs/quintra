@@ -78,8 +78,11 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
 #define ANTIDOTE_TOWN_Y 64
 #define RIFT_TRADER_X   128
 #define RIFT_TRADER_Y   20
-#define RIFT_ANTIDOTE_X 128
-#define RIFT_ANTIDOTE_Y 40
+// Beside the keeper, never between the east-west trail and the keeper:
+// walking up to talk used to touch (and buy) the vial on the way, leaving
+// a merchant with no wares. Keeper reach still covers the trail below.
+#define RIFT_ANTIDOTE_X 156
+#define RIFT_ANTIDOTE_Y 32
 
 static void paint_shop_price(u8 tx, u8 price) {
     room_tilemap[10][tx]     = HUD_COIN;
@@ -1404,8 +1407,8 @@ void procgen_generate_current_room(void) BANKED {
             // Wayside trader: the Riftwild's one shop. It sells only the
             // Antidote, restocked on every visit, because the overworld's
             // Mire Spores and Brambles poison far from any town healer.
-            // The vial sits north of the y=64 trail so walking past the
-            // crossing never buys it by accident.
+            // The vial sits north of the y=64 trail and east of the keeper
+            // so neither walking past nor walking up to talk buys it.
             pickup_spawn_merchant(FIX8(RIFT_TRADER_X), FIX8(RIFT_TRADER_Y));
             spawn_shop_ware(RIFT_ANTIDOTE_X, RIFT_ANTIDOTE_Y,
                 WARE_ANTIDOTE, ANTIDOTE_PRICE);
