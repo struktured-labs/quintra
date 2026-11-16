@@ -1,6 +1,7 @@
 #pragma bank 14
 
 #include <gb/gb.h>
+#include "game/riftwild_setpiece.h"
 #include <gb/cgb.h>
 
 #include "audio/audio.h"
@@ -210,6 +211,8 @@ void riftwild_prepare_hollow_field(void) BANKED {
     };
     u8 step;
     u8 idx;
+    // Set-piece caches share this post-entity_init_room() hook.
+    riftwild_setpiece_spawn();
     if (!run_state.world_mode || !RUN_RIFTWILD_IS_HOLLOW()) return;
     step = hollow_step();
     if (run_state.world_screen != screen[step]

@@ -1,12 +1,15 @@
 #pragma bank 11
 #include <gb/gb.h>
 #include <gb/cgb.h>
+#include <string.h>
 
 #include "game/dungeon_director.h"
 #include "game/room.h"
 #include "game/puzzle.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
+#include "game/riftwild_setpiece.h"
+#include "render/riftwild_art.h"
 
 // Compact all-caps outdoor signage. Every lit pixel uses colour 3 so the
 // labels remain crisp in the amber door palette against grass and paths.
@@ -156,6 +159,46 @@ static u8 wide_tile(u8 x, u8 y, u8 outdoor) {
     return tile;
 }
 
+// Outdoor palette per logical id: the same answers as wide_attr(t, 1, ..),
+// as one lookup (BGPAL_FLOOR is 0, so unlisted ids read as floor).
+static const u8 outdoor_attr_lut[256] = {
+    [BGT_GATE_WATER] = BGPAL_CRYSTAL, [BGT_GATE_CHASM] = BGPAL_CRYSTAL,
+    [BGT_GATE_BOULDER] = BGPAL_WALL, [BGT_GATE_THORNS] = BGPAL_WALL,
+    [BGT_GATE_VENT] = BGPAL_WALL,
+    [BGT_TREE] = BGPAL_WALL, [BGT_WILD_STONE] = BGPAL_WALL,
+    [BGT_WILD_MOUNTAIN] = BGPAL_WALL, [BGT_WILD_REEDS] = BGPAL_WALL,
+    [BGT_WILD_WATER] = BGPAL_CRYSTAL, [BGT_WILD_FLOWER] = BGPAL_CRYSTAL,
+    [BGT_WILD_SNOW] = BGPAL_CRYSTAL,
+    [BGT_WILD_HOLE] = BGPAL_CRACK,
+    [BGT_WILD_STUMP] = BGPAL_DOOR, [BGT_WILD_SAND] = BGPAL_DOOR,
+    [BGT_DOOR] = BGPAL_DOOR,
+};
+
+// One outdoor (Riftwild) BG row in physical order. Outdoor wide_tile() never
+// consults door locks, so a row is a straight copy of the logical arrays plus
+// the tree-line overscan; this keeps the field prepare inside the budget it
+// had before the bank-1 dress pass was added on top of it.
+static void outdoor_row(u8 logical_y, u8 *tiles, u8 *attrs) {
+    u8 row[32];
+    u8 i, t, p = (u8)(room_bg_origin_x & 31);
+    if (logical_y < ROOM_H) {
+        memcpy(row, room_tilemap[logical_y], ROOM_W);
+        memcpy(row + ROOM_W, room_world_extension[logical_y],
+            ROOM_WIDE_EXT_TILES);
+    } else if (logical_y < ROOM_WIDE_H_TILES) {
+        memcpy(row, room_world_bottom[logical_y - ROOM_H], ROOM_WIDE_W_TILES);
+    } else {
+        memset(row, BGT_TREE, ROOM_WIDE_W_TILES);
+    }
+    row[31] = BGT_TREE;
+    for (i = 0; i < 32; ++i) {
+        t = row[i];
+        tiles[p] = t;
+        attrs[p] = outdoor_attr_lut[t];
+        p = (u8)((p + 1) & 31);
+    }
+}
+
 // Render a complete logical 31x31 field plus its deterministic overscan into
 // the rotated hardware map. Building each physical row in a 32-byte buffer
 // avoids any assumption that GBDK's rectangular writer wraps at map edges.
@@ -165,14 +208,21 @@ void tiles_prepare_wide_field(void) BANKED {
     u8 tiles[32];
     u8 attrs[32];
     if (!(room_world_height & 0x40)) return;
+    if (outdoor) riftwild_art_load();
     for (logical_y = 0; logical_y < 32; ++logical_y) {
         u8 physical_y = ROOM_BG_MAP_Y(logical_y);
-        for (logical_x = 0; logical_x < 32; ++logical_x) {
-            u8 physical_x = ROOM_BG_MAP_X(logical_x);
-            u8 tile = wide_tile(logical_x, logical_y, outdoor);
-            tiles[physical_x] = tile;
-            attrs[physical_x] = wide_attr(tile, outdoor,
-                logical_x, logical_y);
+        if (outdoor) {
+            outdoor_row(logical_y, tiles, attrs);
+            riftwild_dress_line(tiles, attrs, logical_y, 0,
+                room_bg_origin_x);
+        } else {
+            for (logical_x = 0; logical_x < 32; ++logical_x) {
+                u8 physical_x = ROOM_BG_MAP_X(logical_x);
+                u8 tile = wide_tile(logical_x, logical_y, outdoor);
+                tiles[physical_x] = tile;
+                attrs[physical_x] = wide_attr(tile, outdoor,
+                    logical_x, logical_y);
+            }
         }
         VBK_REG = 0;
         set_bkg_tiles(0, physical_y, 32, 1, tiles);
@@ -194,6 +244,8 @@ void tiles_stream_wide_column(u8 logical_x, u8 physical_x) BANKED {
         attrs[physical_y] = wide_attr(tile, outdoor,
             logical_x, logical_y);
     }
+    if (outdoor) riftwild_dress_line(tiles, attrs, logical_x, 1,
+        room_bg_origin_y);
     VBK_REG = 0;
     set_bkg_tiles(physical_x, 0, 1, 32, tiles);
     VBK_REG = 1;
@@ -206,12 +258,17 @@ static void stream_wide_row(u8 logical_y, u8 physical_y) {
     u8 outdoor = run_state.world_mode;
     u8 tiles[32];
     u8 attrs[32];
-    for (logical_x = 0; logical_x < 32; ++logical_x) {
-        u8 physical_x = ROOM_BG_MAP_X(logical_x);
-        u8 tile = wide_tile(logical_x, logical_y, outdoor);
-        tiles[physical_x] = tile;
-        attrs[physical_x] = wide_attr(tile, outdoor,
-            logical_x, logical_y);
+    if (outdoor) {
+        outdoor_row(logical_y, tiles, attrs);
+        riftwild_dress_line(tiles, attrs, logical_y, 0, room_bg_origin_x);
+    } else {
+        for (logical_x = 0; logical_x < 32; ++logical_x) {
+            u8 physical_x = ROOM_BG_MAP_X(logical_x);
+            u8 tile = wide_tile(logical_x, logical_y, outdoor);
+            tiles[physical_x] = tile;
+            attrs[physical_x] = wide_attr(tile, outdoor,
+                logical_x, logical_y);
+        }
     }
     VBK_REG = 0;
     set_bkg_tiles(0, physical_y, 32, 1, tiles);

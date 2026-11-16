@@ -3,6 +3,7 @@
 #include <gb/gb.h>
 
 #include "core/types.h"
+#include "game/riftwild_setpiece.h"
 #include "game/room.h"
 #include "game/riftwild_den.h"
 #include "game/run_state.h"
@@ -163,7 +164,9 @@ static void hollow_world_apply(u8 base) {
 void riftwild_terrain_apply(u8 seed_low) BANKED {
     u8 x, y;
     u8 zone = (u8)(run_state.world_screen / 6);
-    u8 salt = (u8)(seed_low + run_state.riftwild_region * 17u);
+    // All 32 seed bits steer the climate silhouettes (audit L3), so two
+    // runs no longer share 92% of every field.
+    u8 salt = (u8)(riftwild_field_salt(3) ^ seed_low);
     u8 base = climate_floor(zone);
 
     // Broad regional ground first: frost north, wetlands south-west, dunes
@@ -176,49 +179,54 @@ void riftwild_terrain_apply(u8 seed_low) BANKED {
 
     if (zone == 0) {
         // Frostfell: a frozen lake basin and a hard northern mountain crown.
-        stamp_land((u8)(21 + (salt & 1)), 21, 7, 5,
-            BGT_WILD_WATER, base);
-        stamp_land((u8)(6 + ((salt >> 1) & 3)), 5, 6, 3,
+        stamp_land((u8)(18 + (salt & 7)), (u8)(19 + ((salt >> 3) & 3)),
+            (u8)(5 + ((salt >> 5) & 3)), 5, BGT_WILD_WATER, base);
+        stamp_land((u8)(4 + ((salt >> 1) & 7)), 5, 6, 3,
             BGT_WILD_MOUNTAIN, base);
     } else if (zone == 1) {
         // Lakewood: dense old growth bends around one large blue lake.
-        stamp_land((u8)(7 + (salt & 3)), 22, 6, 5,
-            BGT_WILD_WATER, base);
-        stamp_land(23, (u8)(5 + ((salt >> 2) & 3)), 6, 4,
-            BGT_TREE, base);
-        stamp_land(5, 6, 3, 3, BGT_TREE, base);
+        stamp_land((u8)(5 + (salt & 7)), (u8)(20 + ((salt >> 3) & 3)),
+            (u8)(5 + ((salt >> 6) & 1)), 5, BGT_WILD_WATER, base);
+        stamp_land((u8)(20 + ((salt >> 1) & 7)), (u8)(5 + ((salt >> 2) & 3)),
+            6, 4, BGT_TREE, base);
+        stamp_land((u8)(4 + ((salt >> 4) & 3)), 6, 3, 3, BGT_TREE, base);
     } else if (zone == 2) {
         // High ridge: two staggered masses make genuine mountain passes.
-        stamp_land((u8)(7 + (salt & 3)), 7, 7, 4,
+        stamp_land((u8)(5 + (salt & 7)), 7, 7, 4,
             BGT_WILD_MOUNTAIN, base);
-        stamp_land((u8)(22 - ((salt >> 2) & 3)), 22, 7, 4,
+        stamp_land((u8)(18 + ((salt >> 2) & 7)), 22, 7, 4,
             BGT_WILD_STONE, base);
-        stamp_land(24, 5, 3, 3, BGT_WILD_HOLE, base);
+        stamp_land((u8)(22 + ((salt >> 5) & 3)), 5, 3, 3,
+            BGT_WILD_HOLE, base);
     } else if (zone == 3) {
         // Riverplain: a connected meander and broad central lake. PATH cells
         // survive as visible bridges wherever a route crosses the water.
-        u8 river = (u8)(5 + (salt & 3));
+        u8 river = (u8)(4 + (salt & 7));
         for (y = 1; y < ROOM_WIDE_H_TILES - 1; ++y) {
             if ((y & 3) == 0 && river < 23) river++;
             for (x = river; x <= (u8)(river + 2); ++x)
                 if (feature_floor(world_tile(x, y), base))
                     world_put(x, y, BGT_WILD_WATER);
         }
-        stamp_land(22, (u8)(20 + ((salt >> 3) & 3)), 6, 5,
+        stamp_land((u8)(20 + ((salt >> 5) & 3)), (u8)(20 + ((salt >> 3) & 3)), 6, 5,
             BGT_WILD_WATER, base);
     } else if (zone == 4) {
         // Mire: mud is traversable; pools, reeds, stumps, and sinkholes shape
         // slower-looking lanes without adding hidden movement penalties.
-        stamp_land((u8)(6 + (salt & 3)), 7, 5, 4,
+        stamp_land((u8)(5 + (salt & 7)), 7, 5, 4,
             BGT_WILD_WATER, base);
-        stamp_land(23, 21, 6, 5, BGT_WILD_REEDS, base);
-        stamp_land(6, 24, 3, 3, BGT_WILD_HOLE, base);
-        stamp_land(24, 6, 3, 3, BGT_WILD_STUMP, base);
+        stamp_land((u8)(20 + ((salt >> 3) & 7)), 21, 6, 5,
+            BGT_WILD_REEDS, base);
+        stamp_land((u8)(5 + ((salt >> 6) & 3)), 24, 3, 3,
+            BGT_WILD_HOLE, base);
+        stamp_land((u8)(22 + ((salt >> 1) & 3)), 6, 3, 3,
+            BGT_WILD_STUMP, base);
     } else {
         // Sunscar: open sand, a broken canyon, mountain teeth, and one oasis.
-        stamp_land((u8)(6 + (salt & 3)), 7, 6, 3,
+        stamp_land((u8)(5 + (salt & 7)), 7, 6, 3,
             BGT_WILD_MOUNTAIN, base);
-        stamp_land(20, 22, 7, 3, BGT_WILD_HOLE, base);
+        stamp_land((u8)(18 + ((salt >> 3) & 7)), 22, 7, 3,
+            BGT_WILD_HOLE, base);
         stamp_land(24, 7, 4, 3, BGT_WILD_WATER, base);
         stamp_land(24, 7, 5, 4, BGT_WILD_FLOWER, base);
         stamp_land(24, 7, 3, 2, BGT_WILD_WATER, base);
@@ -226,6 +234,9 @@ void riftwild_terrain_apply(u8 seed_low) BANKED {
 
     if (run_state.world_screen == 0 || run_state.world_screen == 8
         || run_state.world_screen == 21) carve_return_landing(base);
+    // One authored set piece and seeded clumps per ordinary field. Before
+    // the Hollow pass so the counterpart world erodes them like the rest.
+    riftwild_setpiece_apply(base);
     if (RUN_RIFTWILD_IS_HOLLOW()) hollow_world_apply(base);
     carve_edge_mouths(terrain_edges(run_state.world_screen), base);
     riftwild_den_stamp_field();   // hidden den clearing, after all terrain

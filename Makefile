@@ -282,6 +282,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_overworld.py
 	$(PYBOY_RUN) scripts/test_regional_riftwild.py
 	$(PYBOY_RUN) scripts/test_riftwild_landmarks.py
+	$(PYBOY_RUN) scripts/test_riftwild_setpiece.py
 	$(PYBOY_RUN) scripts/test_riftwild_phase.py
 	uv run --quiet --with pyboy python scripts/test_riftwell.py
 	$(PYBOY_RUN) scripts/test_riftwild_dens.py
