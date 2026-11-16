@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""The last sequence-puzzle note is heard before the solved fanfare."""
-from test_puzzles import rune_sequence_contract
+"""Sequence-puzzle floor notes are loud, sustained, and precede the fanfare."""
+from test_puzzles import RUNE_ENV, rune_sequence_contract
 
 
 if __name__ == "__main__":
     rune_sequence_contract()
-    print("[puzzle-note] PASS final rune stays before the fanfare")
+    print(
+        "[puzzle-note] PASS "
+        f"CH1 NR12=0x{RUNE_ENV:02X} (vol 15, down, period 3), "
+        "40-frame music claim, mid-phrase sustain >= 24 frames, "
+        "final rune holds >= 10 frames before the fanfare"
+    )
