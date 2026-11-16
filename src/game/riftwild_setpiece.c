@@ -27,6 +27,9 @@ u8 riftwild_setpiece_y;
 u8 riftwild_cache_x = 0xFF;
 u8 riftwild_cache_y = 0xFF;
 u8 riftwild_render_salt;
+// Union of every stamp footprint (x1/y1 exclusive); x0 = 0xFF when empty.
+// One bounds test per streamed cell replaces the per-stamp scan.
+static u8 rw_box_x0 = 0xFF, rw_box_y0, rw_box_x1, rw_box_y1;
 
 // Template alphabet. Unlisted characters (space) leave the terrain alone.
 //  .  base ground          f  meadow flowers      $  cache spot (ground)
@@ -374,6 +377,7 @@ static void scatter(u8 base) {
 void riftwild_setpiece_apply(u8 base) BANKED {
     u8 id, tries, k;
     rw_stamp_n = 0;
+    rw_box_x0 = 0xFF;
     riftwild_setpiece_id = RW_SETPIECE_NONE;
     riftwild_cache_x = riftwild_cache_y = 0xFF;
     riftwild_render_salt = riftwild_field_salt(0);
@@ -405,24 +409,26 @@ void riftwild_setpiece_apply(u8 base) BANKED {
         if (++id >= PIECE_LARGE) id = 0;
     }
     if (riftwild_setpiece_id == RW_SETPIECE_NONE) {
-        // Smallest first so a tight pocket is found quickly. Yield to
-        // vblank every row so a worst-case search cannot desync seams.
+        // Tight fields (return landings, a lake plus the trail cross) fall
+        // back to the compact 3x3..4x5 markers, smallest first. A coarse
+        // 2-tile lattice from a seeded origin keeps the worst case to ~130
+        // fits() probes per marker, all inside the field build, with no
+        // frame yields (yielding here stalled the seam camera and input).
         id = 12;
         for (k = PIECE_LARGE;
              k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
              ++k) {
             u8 w = piece_w[id], h = piece_h[id];
-            u8 xs = (u8)(3 + (next_hash() % (u8)(26 - w)));
-            u8 ys = (u8)(3 + (next_hash() % (u8)(26 - h)));
-            u8 dx, dy, x0, y0;
             u8 span_x = (u8)(26 - w);
             u8 span_y = (u8)(26 - h);
+            u8 xs = (u8)(next_hash() % span_x);
+            u8 ys = (u8)(next_hash() % span_y);
+            u8 dx, dy, x0, y0;
             for (dy = 0; dy < span_y
-                 && riftwild_setpiece_id == RW_SETPIECE_NONE; ++dy) {
-                wait_vbl_done();
+                 && riftwild_setpiece_id == RW_SETPIECE_NONE; dy += 2) {
                 for (dx = 0; dx < span_x
                      && riftwild_setpiece_id == RW_SETPIECE_NONE;
-                     ++dx) {
+                     dx += 2) {
                     x0 = (u8)(3 + (xs + dx) % span_x);
                     y0 = (u8)(3 + (ys + dy) % span_y);
                     if (fits(x0, y0, w, h, base)) {
@@ -437,6 +443,19 @@ void riftwild_setpiece_apply(u8 base) BANKED {
         }
     }
     scatter(base);
+    for (k = 0; k < rw_stamp_n; ++k) {
+        u8 x1 = (u8)(rw_stamp_x[k] + rw_stamp_w[k]);
+        u8 y1 = (u8)(rw_stamp_y[k] + rw_stamp_h[k]);
+        if (rw_box_x0 == 0xFF) {
+            rw_box_x0 = rw_stamp_x[k]; rw_box_y0 = rw_stamp_y[k];
+            rw_box_x1 = x1; rw_box_y1 = y1;
+            continue;
+        }
+        if (rw_stamp_x[k] < rw_box_x0) rw_box_x0 = rw_stamp_x[k];
+        if (rw_stamp_y[k] < rw_box_y0) rw_box_y0 = rw_stamp_y[k];
+        if (x1 > rw_box_x1) rw_box_x1 = x1;
+        if (y1 > rw_box_y1) rw_box_y1 = y1;
+    }
 }
 
 // Called after entity_init_room(). About one ordinary field in four holds a
@@ -471,19 +490,29 @@ void riftwild_setpiece_spawn(void) BANKED {
 // so a field redraws identically on every stream.
 static u8 cell_attr;
 
-static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y) {
-    u8 h, i;
-    for (i = 0; i < rw_stamp_n; ++i) {
-        u8 dx = (u8)(x - rw_stamp_x[i]);
-        u8 dy = (u8)(y - rw_stamp_y[i]);
-        if (dx < rw_stamp_w[i] && dy < rw_stamp_h[i]) {
-            cell_attr = rw_stamp_attr[i];
-            return (u8)(rw_stamp_art[i] + dy * rw_stamp_w[i] + dx);
+static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
+    u8 i;
+    if (x >= rw_box_x0 && x < rw_box_x1 && y >= rw_box_y0 && y < rw_box_y1) {
+        for (i = 0; i < rw_stamp_n; ++i) {
+            u8 dx = (u8)(x - rw_stamp_x[i]);
+            u8 dy = (u8)(y - rw_stamp_y[i]);
+            if (dx < rw_stamp_w[i] && dy < rw_stamp_h[i]) {
+                cell_attr = rw_stamp_attr[i];
+                return (u8)(rw_stamp_art[i] + dy * rw_stamp_w[i] + dx);
+            }
         }
     }
-    h = (u8)(x * 0x1Du + y * 0x3Bu + riftwild_render_salt);
-    h ^= (u8)(h >> 3);
-    h += (u8)(y << 3) ^ x;
+    // Undressed ids leave the cell exactly as the base renderer drew it.
+    switch (tile) {
+        case BGT_GRASS: case BGT_WILD_SNOW: case BGT_WILD_SAND:
+        case BGT_WILD_MUD: case BGT_PATH: case BGT_TREE:
+        case BGT_WILD_MOUNTAIN: case BGT_PILLAR: case BGT_FLOOR:
+        case BGT_WILD_WATER:
+            break;
+        default:
+            cell_attr = a;
+            return tile;
+    }
     cell_attr = a;
     switch (tile) {
         case BGT_GRASS:
@@ -563,14 +592,117 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y) {
 
 // Dress one streamed BG line in place. The arrays are in physical (rotated)
 // order: logical cell i lives at slot (origin + i) & 31. Called from bank 11
-// once per row/column, so the per-cell work never pays a banked call.
+// once per row/column, for all 32 rows when a field is prepared and for each
+// streamed seam line, so it is on the field-entry and scroll budget. Plain
+// ground, canopy and crag quarters resolve inline from a kind table and an
+// incremental hash (no multiply, no call); only stamps, shorelines, ruins and
+// the 1-in-4 dressed ground cell pay dress_cell(). The per-cell hash is the
+// same as before: h = x*0x1D + y*0x3B + salt; h ^= h >> 3; h += (y<<3) ^ x.
+#define RWK_SKIP   0
+#define RWK_GRASS  1   // dressed when !(h & 3), three tuft variants
+#define RWK_SNOW   2   // snow / sand / mud: dressed when !(h & 3), two art
+#define RWK_SAND   3
+#define RWK_MUD    4
+#define RWK_PATH   5   // dressed when !(h & 7)
+#define RWK_TREE   6
+#define RWK_CRAG   7
+#define RWK_SLOW   8   // shoreline / ruin / stamp: dress_cell()
+static const u8 rw_kind[256] = {
+    [BGT_GRASS] = RWK_GRASS, [BGT_WILD_SNOW] = RWK_SNOW,
+    [BGT_WILD_SAND] = RWK_SAND, [BGT_WILD_MUD] = RWK_MUD,
+    [BGT_PATH] = RWK_PATH, [BGT_TREE] = RWK_TREE,
+    [BGT_WILD_MOUNTAIN] = RWK_CRAG, [BGT_PILLAR] = RWK_SLOW,
+    [BGT_FLOOR] = RWK_SLOW, [BGT_WILD_WATER] = RWK_SLOW,
+};
+// (h & 0x10) ? alt_b : alt_a, matching dress_cell() for snow, sand and mud.
+static const u8 rw_alt_a[5] = { 0, 0, RWA_SNOW_DRIFT, RWA_SAND_SHELL,
+    RWA_MUD_PUDDLE };
+static const u8 rw_alt_b[5] = { 0, 0, RWA_SNOW_GLINT, RWA_SAND_CRACK,
+    RWA_MUD_ROOTS };
+
+// Line invariants live in statics so the hot loop keeps its few locals in
+// registers instead of shuffling an SDCC stack frame per cell.
+static u8 dl_vertical, dl_fixed, dl_step, dl_mix, dl_par, dl_lo, dl_hi;
+
+static void dress_slow(u8 *tp, u8 *ap, u8 i, u8 h) {
+    u8 x = dl_vertical ? dl_fixed : i;
+    u8 y = dl_vertical ? i : dl_fixed;
+    *tp = dress_cell(*tp, *ap, x, y, h);
+    *ap = cell_attr;
+}
+
+// One loop body per orientation, so the cell path never re-tests it.
+// PAR(i): canopy/crag quarter from parity; MIX(i): the (y << 3) ^ x term.
+#define DRESS_RUN(name, PAR, MIX)                                           \
+static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
+    u8 k, h;                                                                \
+    for (; n; --n, ++tp, ++ap, ++i, hb += dl_step) {                        \
+        k = rw_kind[*tp];                                                   \
+        if (!k) continue;                                                   \
+        if (i >= dl_lo && i < dl_hi) k = RWK_SLOW;                          \
+        if (k >= RWK_TREE) {                                                \
+            if (k == RWK_SLOW) {                                            \
+                h = (u8)(hb ^ (hb >> 3)); h += (u8)(MIX(i));                \
+                dress_slow(tp, ap, i, h);                                   \
+                continue;                                                   \
+            }                                                               \
+            *ap |= 0x08;                                                    \
+            *tp = (u8)((k == RWK_TREE ? RWA_TREE_TL : RWA_CRAG_TL)          \
+                + dl_par + (u8)(PAR(i)));                                   \
+            continue;                                                       \
+        }                                                                   \
+        h = (u8)(hb ^ (hb >> 3)); h += (u8)(MIX(i));                        \
+        if (k == RWK_PATH) {                                                \
+            if (h & 7) continue;                                            \
+            *ap |= 0x08;                                                    \
+            *tp = RWA_PATH_STONES;                                          \
+            continue;                                                       \
+        }                                                                   \
+        if (h & 3) continue;                                                \
+        *ap |= (u8)((h & 0x80) ? 0x28 : 0x08);                              \
+        if (k == RWK_GRASS) {                                               \
+            h = (u8)((h >> 3) & 3);                                         \
+            *tp = (u8)(RWA_GRASS_TUFT + (h == 3 ? 0 : h));                  \
+        } else {                                                            \
+            *tp = (h & 0x10) ? rw_alt_b[k] : rw_alt_a[k];                   \
+        }                                                                   \
+    }                                                                       \
+}
+#define PAR_H(i) ((i) & 1)
+#define MIX_H(i) (dl_mix ^ (i))
+#define PAR_V(i) (((i) & 1) << 1)
+#define MIX_V(i) (((u8)((i) << 3)) ^ dl_fixed)
+DRESS_RUN(dress_run_h, PAR_H, MIX_H)
+DRESS_RUN(dress_run_v, PAR_V, MIX_V)
+
 void riftwild_dress_line(u8 *tiles, u8 *attrs, u8 fixed, u8 vertical,
                          u8 origin) BANKED {
-    u8 i;
-    for (i = 0; i < 32; ++i) {
-        u8 p = (u8)((origin + i) & 31);
-        tiles[p] = vertical ? dress_cell(tiles[p], attrs[p], fixed, i)
-                            : dress_cell(tiles[p], attrs[p], i, fixed);
-        attrs[p] = cell_attr;
+    u8 p = (u8)(origin & 31);
+    u8 first = (u8)(32 - p);
+    u8 hb;
+    dl_vertical = vertical;
+    dl_fixed = fixed;
+    dl_step = vertical ? 0x3Bu : 0x1Du;
+    hb = (u8)(fixed * (vertical ? 0x1Du : 0x3Bu) + riftwild_render_salt);
+    dl_mix = (u8)(fixed << 3);
+    dl_par = vertical ? (u8)(fixed & 1) : (u8)((fixed & 1) << 1);
+    // Stamp cells along this line, as a logical [lo, hi) range.
+    dl_lo = dl_hi = 0;
+    if (rw_box_x0 != 0xFF) {
+        if (vertical && fixed >= rw_box_x0 && fixed < rw_box_x1) {
+            dl_lo = rw_box_y0; dl_hi = rw_box_y1;
+        } else if (!vertical && fixed >= rw_box_y0 && fixed < rw_box_y1) {
+            dl_lo = rw_box_x0; dl_hi = rw_box_x1;
+        }
+    }
+    // Logical 0..first-1 sit at physical p..31, the rest wrap to 0.
+    if (vertical) {
+        dress_run_v(tiles + p, attrs + p, 0, first, hb);
+        if (p) dress_run_v(tiles, attrs, first, p,
+            (u8)(hb + first * dl_step));
+    } else {
+        dress_run_h(tiles + p, attrs + p, 0, first, hb);
+        if (p) dress_run_h(tiles, attrs, first, p,
+            (u8)(hb + first * dl_step));
     }
 }
