@@ -101,7 +101,11 @@ def capture_pressed_sequence(pb, out, prefix, label):
             puzzles.step_off(pb)
             record_ticks(pb, frames, 8)
         else:
-            failed.append(candidate)
+            # Only blacklist a failed first note. A miss later in the
+            # phrase resets the court; the same plate may still be next
+            # after the prefix is replayed.
+            if not confirmed:
+                failed.append(candidate)
             hp = pb.memory[puzzles.PL + 2]
             puzzles.step_off(pb)
             record_ticks(pb, frames, 8)
