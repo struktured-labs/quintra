@@ -5,7 +5,7 @@
 #include "core/types.h"
 
 #define RW_ART_TERRAIN_BASE 0
-#define RW_ART_TERRAIN_COUNT 21
+#define RW_ART_TERRAIN_COUNT 26
 #define RW_ART_PIECE_BASE 64
 #define RW_ART_PIECE_COUNT 27
 #define RWA_GRASS_TUFT 0
@@ -29,6 +29,11 @@
 #define RWA_SHORE_N 18
 #define RWA_SHORE_W 19
 #define RWA_SHORE_NW 20
+#define RWA_SHORE_INNER 21
+#define RWA_HOLE_N 22
+#define RWA_HOLE_W 23
+#define RWA_HOLE_NW 24
+#define RWA_HOLE_INNER 25
 #define RWA_COLUMN_TOP 64
 #define RWA_COLUMN_BASE 65
 #define RWA_COLUMN_BROKEN 66

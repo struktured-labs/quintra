@@ -212,6 +212,57 @@ T["shore_nw"] = """
 ..3.2211
 ..3.1221
 ...3..22"""
+
+# Inner corner: all cardinal neighbours are water, land only on the NW
+# diagonal. Flips cover NE/SW/SE. Rounds the stairsteps of diamond lakes.
+T["shore_inner"] = """
+..332211
+.3.22112
+3.221122
+22112211
+12211221
+22112211
+12211221
+2211.22."""
+# Sinkhole edges (crack palette). Same three-plus-inner set as water; flips
+# cover the other sides. Color 0 is the surrounding earth, 3 the amber rim.
+T["hole_n"] = """
+........
+........
+3.323.33
+11211121
+.11..11.
+11121112
+21112111
+..11..11"""
+T["hole_w"] = """
+..3.1112
+..3.2111
+..3.1112
+...3.11.
+..3.1121
+..3.2111
+...3..11
+..3.1112"""
+T["hole_nw"] = """
+........
+........
+.....333
+....3112
+...3.11.
+..3.1121
+..3.2111
+...3..11"""
+T["hole_inner"] = """
+..331112
+.3.11121
+3.111211
+11121112
+21112111
+11121112
+21112111
+1112.11."""
+
 # Set-piece props (walkable or solid tiles keep their logical BGT id).
 T["column_top"] = """
 .333333.
@@ -380,7 +431,8 @@ TERRAIN = [
     "mud_puddle", "mud_roots", "path_stones",
     "tree_tl", "tree_tr", "tree_bl", "tree_br",
     "crag_tl", "crag_tr", "crag_bl", "crag_br",
-    "shore_n", "shore_w", "shore_nw",
+    "shore_n", "shore_w", "shore_nw", "shore_inner",
+    "hole_n", "hole_w", "hole_nw", "hole_inner",
 ]
 PROPS = ["column_top", "column_base", "column_broken", "flagstone",
          "obelisk_top", "obelisk_base"]
@@ -459,6 +511,9 @@ PREVIEW_PAL = {
 }
 
 
+PREVIEW_PAL["crack"] = [(16, 8, 0), (74, 32, 8), (180, 90, 16), (255, 197, 74)]
+
+
 def pal_for(name):
     if name.startswith(("tree", "crag", "great_tree")):
         return "wall"
@@ -466,6 +521,8 @@ def pal_for(name):
         return "crystal"
     if name.startswith(("sand", "column", "flagstone", "statue")):
         return "door"
+    if name.startswith("hole"):
+        return "crack"
     return "floor"
 
 

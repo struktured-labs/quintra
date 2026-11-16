@@ -209,6 +209,13 @@ static u8 open_ring(u8 t, u8 base) {
         || t == BGT_WILD_SAND || t == BGT_WILD_MUD || t == BGT_RUBBLE;
 }
 
+// The walkable ring may also sit on trees or stumps: those are cleared to
+// ground when the piece lands, so a grove no longer blocks a large stamp.
+// Paths, water, sinkholes, ridges, stones, reeds, gates and portals stay.
+static u8 ring_ok(u8 t, u8 base) {
+    return open_ring(t, base) || t == BGT_TREE || t == BGT_WILD_STUMP;
+}
+
 // The footprint may clear soft scenery (groves, stones, stumps, rubble, a
 // stray climate floor): the walkable two-tile ring around it is what keeps
 // every route intact, so overwriting what sat inside cannot cut a path.
@@ -239,6 +246,21 @@ static u8 reserved(u8 x, u8 y) {
     return 0;
 }
 
+static void clear_ring(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
+    u8 x, y;
+    u8 x1 = (u8)(x0 + w + 1), y1 = (u8)(y0 + h + 1);
+    for (y = (u8)(y0 - 2); y <= y1; ++y)
+        for (x = (u8)(x0 - 2); x <= x1; ++x) {
+            if (x >= x0 && y >= y0 && x < (u8)(x0 + w) && y < (u8)(y0 + h))
+                continue;
+            if (reserved(x, y)) continue;
+            {
+                u8 t = tile_at(x, y);
+                if (t == BGT_TREE || t == BGT_WILD_STUMP) tile_put(x, y, base);
+            }
+        }
+}
+
 // Out-of-field neighbours read as the tree line, matching tiles_area.c.
 static u8 view_at(u8 x, u8 y) {
     if (x >= ROOM_WIDE_W_TILES || y >= ROOM_WIDE_H_TILES) return BGT_TREE;
@@ -260,7 +282,7 @@ static u8 fits(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
             if (inside) {
                 if (!soft(tile_at(x, y), base) || reserved(x, y))
                     return 0;
-            } else if (!open_ring(tile_at(x, y), base)) {
+            } else if (!ring_ok(tile_at(x, y), base)) {
                 return 0;
             }
         }
@@ -406,48 +428,82 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     hash_state = riftwild_field_salt(1);
     den_here = riftwild_den_in_field();
     lift_old_blobs(base);
-    // Neighbouring fields start from different pieces (screen * 3), and the
-    // seed rotates the whole assignment; a piece that does not fit here
-    // hands over to the next one in the library.
-    // Prefer a large authored stamp. Tight fields (return landings, a lake
-    // plus the trail cross) fall back to the compact 3x3..4x5 markers.
-    id = (u8)((next_hash() + run_state.world_screen * 3u) % PIECE_LARGE);
+    // Ordinary-field ordinal (0..22) plus a seed salt spreads preferred
+    // large ids across the region. A 2-tile lattice finds a pocket if one
+    // exists; ten random probes were missing most of them. Trees in the
+    // ring are allowed and then cleared to ground.
+    // 0xFF = fixture (this function returns before using the table).
+    static const u8 ordinary_ord[36] = {
+        0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5,
+        6, 7, 8, 9, 10, 11, 0xFF, 0xFF, 12, 13,
+        14, 0xFF, 15, 0xFF, 16, 17, 18, 0xFF, 19, 0xFF,
+        0xFF, 20, 0xFF, 21, 0xFF, 22
+    };
+    id = (u8)((ordinary_ord[run_state.world_screen] + riftwild_field_salt(4))
+              % PIECE_LARGE);
     for (k = 0; k < PIECE_LARGE && riftwild_setpiece_id == RW_SETPIECE_NONE;
          ++k) {
         u8 w = piece_w[id], h = piece_h[id];
-        for (tries = 0; tries < 10; ++tries) {
-            // Any anchor with room for the ring (x0 >= 3, x0 + w + 1 <= 28).
-            // The crag piece keeps even anchors so its 2x2 peak art lines
-            // up with the field's crag quarters.
-            u8 x0 = (u8)(3 + next_hash() % (u8)(25 - w));
-            u8 y0 = (u8)(3 + next_hash() % (u8)(25 - h));
-            if (id == PIECE_CRAGS) {
-                x0 = (u8)((x0 + 1) & 0xFE);
-                y0 = (u8)((y0 + 1) & 0xFE);
+        u8 span_x = (u8)(25 - w);
+        u8 span_y = (u8)(25 - h);
+        // Lattice the preferred piece and the next two; random probes for
+        // the rest. Worst case stays inside the field-build budget.
+        if (k < 3 && span_x > 0 && span_y > 0) {
+            u8 xs = (u8)(next_hash() % span_x);
+            u8 ys = (u8)(next_hash() % span_y);
+            u8 dx, dy, x0, y0;
+            for (dy = 0; dy < span_y
+                 && riftwild_setpiece_id == RW_SETPIECE_NONE; dy += 2) {
+                for (dx = 0; dx < span_x
+                     && riftwild_setpiece_id == RW_SETPIECE_NONE;
+                     dx += 2) {
+                    x0 = (u8)(3 + (xs + dx) % span_x);
+                    y0 = (u8)(3 + (ys + dy) % span_y);
+                    if (id == PIECE_CRAGS) {
+                        x0 = (u8)((x0 + 1) & 0xFE);
+                        y0 = (u8)((y0 + 1) & 0xFE);
+                        if (x0 < 3 || (u8)(x0 + w + 1) > 28) continue;
+                    }
+                    if (fits(x0, y0, w, h, base)) {
+                        stamp_piece(id, x0, y0, next_hash() & 1, base);
+                        clear_ring(x0, y0, w, h, base);
+                        riftwild_setpiece_id = id;
+                        riftwild_setpiece_x = x0;
+                        riftwild_setpiece_y = y0;
+                    }
+                }
             }
-            if (fits(x0, y0, w, h, base)) {
-                stamp_piece(id, x0, y0, next_hash() & 1, base);
-                riftwild_setpiece_id = id;
-                riftwild_setpiece_x = x0;
-                riftwild_setpiece_y = y0;
-                break;
+        } else {
+            for (tries = 0; tries < 10; ++tries) {
+                u8 x0 = (u8)(3 + next_hash() % span_x);
+                u8 y0 = (u8)(3 + next_hash() % span_y);
+                if (id == PIECE_CRAGS) {
+                    x0 = (u8)((x0 + 1) & 0xFE);
+                    y0 = (u8)((y0 + 1) & 0xFE);
+                }
+                if (fits(x0, y0, w, h, base)) {
+                    stamp_piece(id, x0, y0, next_hash() & 1, base);
+                    clear_ring(x0, y0, w, h, base);
+                    riftwild_setpiece_id = id;
+                    riftwild_setpiece_x = x0;
+                    riftwild_setpiece_y = y0;
+                    break;
+                }
             }
         }
         if (++id >= PIECE_LARGE) id = 0;
     }
     if (riftwild_setpiece_id == RW_SETPIECE_NONE) {
-        // Tight fields (return landings, a lake plus the trail cross) fall
-        // back to the compact 3x3..4x5 markers, from a seeded start. A coarse
-        // 2-tile lattice from a seeded origin keeps the worst case to ~130
-        // fits() probes per marker, all inside the field build, with no
-        // frame yields (yielding here stalled the seam camera and input).
+        // Tight fields fall back to the compact 3x3..4x5 markers. A coarse
+        // 2-tile lattice from a seeded origin, no frame yields (yielding
+        // here stalled the seam camera and input).
         id = (u8)(PIECE_LARGE + (next_hash() & 3));
         for (k = PIECE_LARGE;
              k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
              ++k) {
             u8 w = piece_w[id], h = piece_h[id];
-            u8 span_x = (u8)(26 - w);
-            u8 span_y = (u8)(26 - h);
+            u8 span_x = (u8)(25 - w);
+            u8 span_y = (u8)(25 - h);
             u8 xs = (u8)(next_hash() % span_x);
             u8 ys = (u8)(next_hash() % span_y);
             u8 dx, dy, x0, y0;
@@ -460,6 +516,7 @@ void riftwild_setpiece_apply(u8 base) BANKED {
                     y0 = (u8)(3 + (ys + dy) % span_y);
                     if (fits(x0, y0, w, h, base)) {
                         stamp_piece(id, x0, y0, next_hash() & 1, base);
+                        clear_ring(x0, y0, w, h, base);
                         riftwild_setpiece_id = id;
                         riftwild_setpiece_x = x0;
                         riftwild_setpiece_y = y0;
@@ -511,7 +568,8 @@ void riftwild_setpiece_spawn(void) BANKED {
 
 // Riftwild render pass (audit L2/L3). Logical ids and collision never
 // change; only the VRAM cell does. Ground picks seeded bank-1 variants and
-// flips, trees and crags tile as 2x2 canopies/peaks, water grows shorelines,
+// flips, trees and crags tile as 2x2 canopies/peaks, water and sinkholes grow
+// shorelines (edges, outer and inner corners),
 // ruins read as columns and flagstones, and set-piece stamps draw their
 // multi-tile art. Everything is keyed by position plus the per-field salt,
 // so a field redraws identically on every stream.
@@ -534,7 +592,7 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
         case BGT_GRASS: case BGT_WILD_SNOW: case BGT_WILD_SAND:
         case BGT_WILD_MUD: case BGT_PATH: case BGT_TREE:
         case BGT_WILD_MOUNTAIN: case BGT_PILLAR: case BGT_FLOOR:
-        case BGT_WILD_WATER:
+        case BGT_WILD_WATER: case BGT_WILD_HOLE:
             break;
         default:
             cell_attr = a;
@@ -589,24 +647,46 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
         case BGT_FLOOR:
             cell_attr = BGPAL_DOOR | 0x08 | ((h & 0x40) ? 0x20 : 0);
             return RWA_FLAGSTONE;
-        case BGT_WILD_WATER: {
-            u8 n = view_at(x, (u8)(y - 1)) != BGT_WILD_WATER;
-            u8 s = view_at(x, (u8)(y + 1)) != BGT_WILD_WATER;
-            u8 w = view_at((u8)(x - 1), y) != BGT_WILD_WATER;
-            u8 e = view_at((u8)(x + 1), y) != BGT_WILD_WATER;
+        case BGT_WILD_WATER:
+        case BGT_WILD_HOLE: {
+            u8 body = tile;
+            u8 n = view_at(x, (u8)(y - 1)) != body;
+            u8 s = view_at(x, (u8)(y + 1)) != body;
+            u8 w = view_at((u8)(x - 1), y) != body;
+            u8 e = view_at((u8)(x + 1), y) != body;
+            u8 id_n = (body == BGT_WILD_WATER) ? RWA_SHORE_N : RWA_HOLE_N;
+            u8 id_w = (body == BGT_WILD_WATER) ? RWA_SHORE_W : RWA_HOLE_W;
+            u8 id_nw = (body == BGT_WILD_WATER) ? RWA_SHORE_NW : RWA_HOLE_NW;
+            u8 id_in = (body == BGT_WILD_WATER) ? RWA_SHORE_INNER : RWA_HOLE_INNER;
             u8 flip = (u8)((s && !n) ? 0x40 : 0);
             if (e && !w) flip |= 0x20;
             if ((n || s) && (w || e)) {
                 cell_attr = a | 0x08 | flip;
-                return RWA_SHORE_NW;
+                return id_nw;
             }
             if (n || s) {
                 cell_attr = a | 0x08 | flip;
-                return RWA_SHORE_N;
+                return id_n;
             }
             if (w || e) {
                 cell_attr = a | 0x08 | flip;
-                return RWA_SHORE_W;
+                return id_w;
+            }
+            // Inner corners: all cardinals are body, a diagonal is land.
+            // One tile plus flips covers NW/NE/SW/SE and rounds diamond lakes.
+            {
+                u8 nw = view_at((u8)(x - 1), (u8)(y - 1)) != body;
+                u8 ne = view_at((u8)(x + 1), (u8)(y - 1)) != body;
+                u8 sw = view_at((u8)(x - 1), (u8)(y + 1)) != body;
+                u8 se = view_at((u8)(x + 1), (u8)(y + 1)) != body;
+                if (nw || ne || sw || se) {
+                    if (nw) flip = 0;
+                    else if (ne) flip = 0x20;
+                    else if (sw) flip = 0x40;
+                    else flip = (u8)(0x20 | 0x40);
+                    cell_attr = a | 0x08 | flip;
+                    return id_in;
+                }
             }
             cell_attr = a | ((h & 0x40) ? 0x20 : 0);
             break;
@@ -640,6 +720,7 @@ static const u8 rw_kind[256] = {
     [BGT_PATH] = RWK_PATH, [BGT_TREE] = RWK_TREE,
     [BGT_WILD_MOUNTAIN] = RWK_CRAG, [BGT_PILLAR] = RWK_SLOW,
     [BGT_FLOOR] = RWK_SLOW, [BGT_WILD_WATER] = RWK_SLOW,
+    [BGT_WILD_HOLE] = RWK_SLOW,
 };
 // (h & 0x10) ? alt_b : alt_a, matching dress_cell() for snow, sand and mud.
 static const u8 rw_alt_a[5] = { 0, 0, RWA_SNOW_DRIFT, RWA_SAND_SHELL,
