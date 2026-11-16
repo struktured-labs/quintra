@@ -32,7 +32,8 @@ void entity_init_room(void) BANKED {
     // the feet half, so x=72 centers it on north/south doors and y=60 on the
     // east/west pair.
     dir = run_state.entered_from;
-    large = (run_state.world_mode || procgen_current_room_is_large) ? 1 : 0;
+    large = ((run_state.world_mode && !RUN_IN_RIFT_DEN())
+        || procgen_current_room_is_large) ? 1 : 0;
     if (dir == DIR_N) {
         player.x = 72;
         player.y = large ? (ROOM_WIDE_H_PX - 24) : 112;

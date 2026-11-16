@@ -52,7 +52,7 @@ void serpent_tail_reset(u8 head_x, u8 head_y) BANKED {
 
 u8 room_apply_world_arena(void) BANKED {
     u8 stage;
-    u8 generated_wide = (run_state.world_mode
+    u8 generated_wide = ((run_state.world_mode && !RUN_IN_RIFT_DEN())
         || procgen_current_room_is_large) ? 1 : 0;
     if (serpent_tail_active) {
         u8 oam;

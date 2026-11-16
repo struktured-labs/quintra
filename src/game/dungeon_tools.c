@@ -5,6 +5,7 @@
 
 #include "audio/sfx.h"
 #include "core/types.h"
+#include "game/riftwild_den.h"
 #include "game/antidote.h"
 #include "game/dungeon_tools.h"
 #include "game/entity.h"
@@ -124,6 +125,7 @@ static void tool_bomb(void) {
             else if (t == BGT_PILLAR) sun_lattice_strike(x, y);
         }
     }
+    riftwild_den_burst(tx, ty);
     for (d = 0; d < 8; ++d) {
         u8 shot = projectile_spawn_player(dir8_dx[d], dir8_dy[d],
             (u8)((STATUS_PLAYER_INVERTED()
@@ -156,7 +158,7 @@ static void tool_chime(void) {
             if (next != 0xFF) run_state_reveal_dungeon_cell(next);
         }
         puzzle_chime_reveal();
-    }
+    } else riftwild_den_chime();
     room_shake(1, 12);
     sfx_play(SFX_PUZZLE);
 }
