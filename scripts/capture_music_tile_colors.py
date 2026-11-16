@@ -79,7 +79,7 @@ def capture_pressed_sequence(pb, out, prefix, label):
     snap(pb, out, f"{prefix}{label}-pressed-idle")
     confirmed = []
     failed = []
-    hp = pb.memory[puzzles.PL + 15]
+    hp = pb.memory[puzzles.PL + 2]
     safety = 0
     while pb.memory[puzzles.LOCKED] and len(confirmed) < min(3, len(plates)):
         safety += 1
@@ -94,7 +94,7 @@ def capture_pressed_sequence(pb, out, prefix, label):
         puzzles.feet_on(pb, *candidate)
         record_ticks(pb, frames, 16)
         tile = pb.memory[puzzles.TM + candidate[1] * 20 + candidate[0]]
-        if puzzles.is_lit_plate(tile) and pb.memory[puzzles.PL + 15] == hp:
+        if puzzles.is_lit_plate(tile) and pb.memory[puzzles.PL + 2] == hp:
             confirmed.append(candidate)
             failed = []
             snap(pb, out, f"{prefix}{label}-pressed-{len(confirmed)}")
@@ -102,7 +102,7 @@ def capture_pressed_sequence(pb, out, prefix, label):
             record_ticks(pb, frames, 8)
         else:
             failed.append(candidate)
-            hp = pb.memory[puzzles.PL + 15]
+            hp = pb.memory[puzzles.PL + 2]
             puzzles.step_off(pb)
             record_ticks(pb, frames, 8)
     if len(frames) > 1:

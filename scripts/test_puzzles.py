@@ -592,8 +592,10 @@ def assert_pressed_persists(pb, addrs):
         put16(pb, ep + 3, 8)
         put16(pb, ep + 7, 200)
         pb.memory[ep + 10] = pb.memory[ep + 11] = 0
-    pb.memory[PL + 15] = 6
-    hp = 6
+    pb.memory[PL + 15] = 0  # drop leftover i-frames
+    if pb.memory[PL + 2] < 2:
+        pb.memory[PL + 2] = 6
+    hp = pb.memory[PL + 2]
     assert_idle_all()
     confirmed = []
     for candidate in plates:
@@ -602,7 +604,7 @@ def assert_pressed_persists(pb, addrs):
             wait_rune_flash(pb)
         feet_on(pb, candidate[0], candidate[1])
         wait_rune_flash(pb)
-        if is_lit_plate(plate_tile(candidate)) and pb.memory[PL + 15] == hp:
+        if is_lit_plate(plate_tile(candidate)) and pb.memory[PL + 2] == hp:
             confirmed.append(candidate)
             assert_latched(confirmed)
             step_off(pb)
@@ -610,7 +612,7 @@ def assert_pressed_persists(pb, addrs):
                 break
         else:
             # This candidate was wrong; the court already reset to idle.
-            hp = pb.memory[PL + 15]
+            hp = pb.memory[PL + 2]
             step_off(pb)
             assert_idle_all()
     assert confirmed, "could not latch a correct note for pressed-state"
@@ -620,7 +622,7 @@ def assert_pressed_persists(pb, addrs):
     assert wrong is not None, "need a remaining plate to prove the reset"
     feet_on(pb, wrong[0], wrong[1])
     wait_rune_flash(pb)
-    assert pb.memory[PL + 15] == hp - 1, "wrong note did not charge a half-heart"
+    assert pb.memory[PL + 2] == hp - 1, "wrong note did not charge a half-heart"
     assert_idle_all()
 
 
