@@ -1,0 +1,61 @@
+// Quintra — top-down GBC roguelike.
+// HARDWARE DIAGNOSTIC BUILD (not for merge): staged colour markers.
+#include <gb/gb.h>
+#include <gb/cgb.h>
+#include "core/types.h"
+#include "core/rng.h"
+#include "input/input.h"
+#include "audio/audio.h"
+#include "game/loop.h"
+#include "game/screen.h"
+#include "content.h"
+
+const u8 quintra_n_classes = N_CLASSES;
+const u8 quintra_n_items   = N_ITEMS;
+const u8 quintra_n_enemies = N_ENEMIES;
+const u8 quintra_n_biomes  = N_BIOMES;
+const u8 quintra_n_rooms   = N_ROOM_TEMPLATES;
+
+// Fill all 8 BG palettes: colour 0 = marker, colours 1-3 = black, then show
+// the boot logo still in VRAM with normal 0x8000 tile addressing.
+static void diag_mark(u16 c) {
+    u8 i;
+    DISPLAY_OFF;
+    BCPS_REG = 0x80;
+    for (i = 0; i < 8; ++i) {
+        BCPD_REG = (u8)c; BCPD_REG = (u8)(c >> 8);
+        BCPD_REG = 0; BCPD_REG = 0;
+        BCPD_REG = 0; BCPD_REG = 0;
+        BCPD_REG = 0; BCPD_REG = 0;
+    }
+    LCDC_REG = 0x91;
+}
+static void diag_hold(u8 frames) {
+    while (frames--) {
+        while (LY_REG != 144) ;
+        while (LY_REG == 144) ;
+    }
+}
+#define C_RED    0x001F
+#define C_GREEN  0x03E0
+#define C_BLUE   0x7C00
+#define C_YELLOW 0x03FF
+#define C_MAGENTA 0x7C1F
+
+void main(void) {
+    diag_mark(C_RED);      diag_hold(90);   // 1 RED: game code is running
+#ifndef QDIAG_NOFAST
+    cpu_fast();
+    diag_mark(C_GREEN);    diag_hold(180);  // 2 GREEN: double speed switch survived
+#else
+    diag_mark(C_MAGENTA);  diag_hold(90);   // 2 MAGENTA: (no double speed build)
+#endif
+    input_init();
+    diag_mark(C_YELLOW);   diag_hold(90);   // 3 YELLOW: input_init done
+    audio_init();
+    rng_seed(0xC0DEBABEUL);
+    diag_mark(C_BLUE);     diag_hold(90);   // 4 BLUE: audio_init done, entering title
+    DISPLAY_OFF;
+    loop_init(SCREEN_TITLE);
+    loop_run();
+}
