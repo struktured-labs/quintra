@@ -195,6 +195,28 @@
 #define BGT_WILD_MOUNTAIN 109 // solid high ridge
 #define BGT_WILD_REEDS    110 // solid wetland growth
 
+// Rune-sequence pitch plates. SELECT overwrites 110..121 with Compass
+// node art; puzzle_load_note_palettes restores these when play resumes.
+// Each pitch owns a unique idle and lit tile id so render attrs can be
+// derived from the tile itself without a per-coordinate lookup.
+#define BGT_NOTE_0      111  // fill colour 1, packed in BGPAL_CRYSTAL
+#define BGT_NOTE_1      112  // fill colour 2, packed in BGPAL_CRYSTAL
+#define BGT_NOTE_2      113  // fill colour 3, packed in BGPAL_CRYSTAL
+#define BGT_NOTE_3      114  // fill colour 1, packed in BGPAL_DOOR
+#define BGT_NOTE_4      115  // fill colour 2, packed in BGPAL_DOOR
+#define BGT_NOTE_LIT_0  116
+#define BGT_NOTE_LIT_1  117
+#define BGT_NOTE_LIT_2  118
+#define BGT_NOTE_LIT_3  119
+#define BGT_NOTE_LIT_4  120
+#define BGT_NOTE_FLASH  121  // fill colour 3 of BGPAL_DOOR (near-white)
+#define BGT_NOTE_A      BGT_NOTE_0
+#define BGT_NOTE_B      BGT_NOTE_1
+#define BGT_NOTE_C      BGT_NOTE_2
+#define BGT_NOTE_LIT_A  BGT_NOTE_LIT_0
+#define BGT_NOTE_LIT_B  BGT_NOTE_LIT_1
+#define BGT_NOTE_LIT_C  BGT_NOTE_LIT_2
+
 // Compass-only dim connections. These expose the active dungeon lattice from
 // the first visit while discovered routes overwrite them with the bright
 // path tiles above. Slots 100–101 are otherwise unused by every map atlas.

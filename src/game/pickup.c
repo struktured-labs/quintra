@@ -20,6 +20,7 @@
 #include "input/input.h"
 #include "render/hud.h"
 #include "render/tiles.h"
+#include "game/puzzle.h"
 #include "content.h"
 
 
@@ -33,7 +34,8 @@ static u8 pickup_kind_collectible(u8 kind) {
 
 static u8 pickup_tile_safe(u8 tile) {
     return room_tile_walkable(tile) && tile != BGT_SPIKES
-        && tile != BGT_PORTAL && tile != BGT_SWITCH;
+        && tile != BGT_PORTAL && tile != BGT_SWITCH
+        && !RUNE_IS_PLATE_TILE(tile);
 }
 
 static u8 pickup_position_safe(i16 px, i16 py) {

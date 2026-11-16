@@ -536,6 +536,7 @@ static void room_load_environment_palettes(void) {
         palette_bg_load(BGPAL_CRYSTAL, sp[2]);
         palette_bg_load(BGPAL_DOOR, sp[3]);
         palette_bg_load(BGPAL_CRACK, stage_pal_crack);
+        puzzle_apply_note_palettes(0);
     }
 }
 
@@ -566,6 +567,7 @@ static void room_apply_pause_palettes(u8 dim) {
         palette_bg_load(BGPAL_CRYSTAL, sp[2]);
         palette_bg_load(BGPAL_DOOR,    sp[3]);
     }
+    puzzle_apply_note_palettes(dim);
 }
 
 void room_status_blind_visual(u8 blind) BANKED {
@@ -1055,6 +1057,7 @@ void room_enter(void) {
         room_resume_flag = 0;
         room_refresh_shop_wares();
         room_load_dynamic_fx_identity();
+        puzzle_load_note_palettes();
         room_draw_tilemap();
         mire_roots_redraw();
         entity_draw_all();
@@ -1134,6 +1137,7 @@ void room_enter(void) {
     // coordinate would keep that tile looking open through a combat seal.
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
+    puzzle_load_note_palettes();
     room_draw_tilemap();
     place_player_sprite();
     if (procgen_current_room_is_boss) {

@@ -3,6 +3,7 @@
 
 #include <gb/gb.h>
 #include "core/types.h"
+#include "render/tiles.h"
 #include "game/prism_toggle.h"
 
 enum {
@@ -55,6 +56,39 @@ u8 puzzle_try_hidden_shot(u8 tx, u8 ty) BANKED;
 // Echo Chime resolves the active room's optional disguised secret, if any.
 u8 puzzle_chime_reveal(void) BANKED;
 
+// Active rune-sequence plates. Valid while room_puzzle_kind is
+// PUZZLE_RUNE_SEQUENCE and room_rune_count > 0 (the prepared, unsolved
+// or just-solved visit). Cleared at the start of the next room prepare.
+extern u8 room_rune_count;
+extern u8 room_rune_x[5];
+extern u8 room_rune_y[5];
+extern u8 room_rune_pitch[5];
+extern u8 room_rune_lit_mask;
+
+// Pitch 0..2 pack into BGPAL_CRYSTAL (colour indices 1..3); pitches 3..4
+// pack into BGPAL_DOOR (indices 1..2). Colour 3 of the door palette is
+// reserved for the near-white flash-on-play tile (BGT_NOTE_C).
+#define RUNE_NOTE_PAL(p) ((u8)((p) <= 2 ? BGPAL_CRYSTAL : BGPAL_DOOR))
+#define RUNE_IDLE_TILE(p) ((u8)(BGT_NOTE_0 + (p)))
+#define RUNE_LIT_TILE(p)  ((u8)(BGT_NOTE_LIT_0 + (p)))
+#define RUNE_IS_PLATE_TILE(t) ((u8)((t) >= BGT_NOTE_0 && (t) <= BGT_NOTE_FLASH))
+#define RUNE_PITCH_FROM_TILE(t) ((u8)((t) >= BGT_NOTE_LIT_0 && (t) <= BGT_NOTE_LIT_4     ? (t) - BGT_NOTE_LIT_0 : (t) - BGT_NOTE_0))
+#define RUNE_FLASH_TILE BGT_NOTE_FLASH
+#define RUNE_FLASH_PAL  BGPAL_DOOR
+
+#define RUNE_ATTR_AT(x, y, tile) puzzle_rune_attr(tile)
+
+void puzzle_load_note_palettes(void) BANKED;
+void puzzle_apply_note_palettes(u8 dim) BANKED;
+void tiles_load_note_plates(void) BANKED;
+void rune_cancel_flash(void) BANKED;
+void rune_start_flash(u8 plate) BANKED;
+void tick_rune_flash(void) BANKED;
+void rune_paint_all(void) BANKED;
+void voice_plate(u8 plate) BANKED;
+u8 puzzle_rune_attr(u8 tile) BANKED;
+#define puzzle_plate_is_lit(plate) ((u8)(room_rune_lit_mask & (u8)(1u << (plate))))
+
 // Shared palette override for authored puzzle fixtures (Push Seal socket,
 // Prism Toggle chamber). 0xFF means "use the ordinary terrain palette".
 // Inline so the hot render paths never pay a far call per tile.
@@ -63,6 +97,8 @@ u8 puzzle_chime_reveal(void) BANKED;
 #define PUZZLE_ATTR_OVERRIDE(x, y, tile) \
     ((room_puzzle_kind == PUZZLE_PRISM_TOGGLE) ? PRISM_ATTR_AT(x, y) \
     : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR3 \
-        && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR : 0xFF)
+        && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR \
+    : (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) ? RUNE_ATTR_AT(x, y, tile) \
+    : 0xFF)
 
 #endif
