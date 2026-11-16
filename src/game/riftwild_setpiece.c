@@ -1,4 +1,5 @@
-#pragma bank 18
+#pragma bank 19
+// Bank 19: dens (PR) already claimed bank 18.
 
 #include <gb/gb.h>
 
@@ -35,9 +36,10 @@ u8 riftwild_render_salt;
 //  m  crag (2x2 aligned)   R  reeds
 //  V  Worldglass spire 2x3 U  guardian statue 2x3 G  elder tree 3x3
 //  O  obelisk 1x2          +  covered by a stamp (skipped)
-#define PIECE_COUNT 10
-static const u8 piece_w[PIECE_COUNT] = { 9, 8, 7, 9, 9, 8, 8, 8, 9, 7 };
-static const u8 piece_h[PIECE_COUNT] = { 7, 6, 6, 7, 9, 7, 6, 7, 7, 7 };
+#define PIECE_LARGE 10
+#define PIECE_COUNT 14
+static const u8 piece_w[PIECE_COUNT] = { 9, 8, 7, 9, 9, 8, 8, 8, 9, 7, 3, 4, 3, 4 };
+static const u8 piece_h[PIECE_COUNT] = { 7, 6, 6, 7, 9, 7, 6, 7, 7, 7, 5, 4, 3, 4 };
 static const char *const piece_rows[PIECE_COUNT] = {
     // 0 Worldglass garden: three glass spires around a hidden hollow.
     ".V+...V+."
@@ -118,6 +120,26 @@ static const char *const piece_rows[PIECE_COUNT] = {
     "..fff.."
     ".k...k."
     "..kkk..",
+    // 10 Waystone: compact obelisk, used when a large stamp cannot fit.
+    "f.f"
+    ".O."
+    ".+."
+    "f$f"
+    ".f.",
+    // 11 Twin stones.
+    ".S.S"
+    "...."
+    ".S$S"
+    "....",
+    // 12 Crystal shard.
+    ".C."
+    "C$C"
+    ".C.",
+    // 13 Stump camp.
+    "k..k"
+    ".f$."
+    ".ff."
+    "k..k",
 };
 
 // Ordinary fields only. Fixtures keep their authored layouts: the Riftwell,
@@ -173,6 +195,15 @@ static u8 ground(u8 t, u8 base) {
     return t == BGT_GRASS || t == base || t == BGT_WILD_FLOWER;
 }
 
+// Clearance around a stamp may already be a trail; PATH is walkable and
+// must not block placement the way a tree or pond does. Climate floors
+// that are not this field's base (a patch of snow in a meadow, etc.)
+// also count as open ground for the ring.
+static u8 open_ring(u8 t, u8 base) {
+    return ground(t, base) || t == BGT_PATH || t == BGT_WILD_SNOW
+        || t == BGT_WILD_SAND || t == BGT_WILD_MUD || t == BGT_RUBBLE;
+}
+
 // Keep the hidden dens' quadrant tells (spec: 4..8 tiles off the trail
 // cross, at about (7,7) (23,7) (7,23) (23,23)) and the boss-exit landing
 // apron clear, so this pass never claims a spot another system needs.
@@ -201,9 +232,14 @@ static u8 fits(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
     if (x0 < 3 || y0 < 3 || x1 > 28 || y1 > 28) return 0;
     for (y = (u8)(y0 - 2); y <= y1; ++y)
         for (x = (u8)(x0 - 2); x <= x1; ++x) {
-            if (!ground(tile_at(x, y), base)) return 0;
-            if (x >= x0 && y >= y0 && x < (u8)(x0 + w) && y < (u8)(y0 + h)
-                && reserved(x, y)) return 0;
+            u8 inside = (x >= x0 && y >= y0
+                && x < (u8)(x0 + w) && y < (u8)(y0 + h));
+            if (inside) {
+                if (!ground(tile_at(x, y), base) || reserved(x, y))
+                    return 0;
+            } else if (!open_ring(tile_at(x, y), base)) {
+                return 0;
+            }
         }
     return 1;
 }
@@ -348,8 +384,10 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     // Neighbouring fields start from different pieces (screen * 3), and the
     // seed rotates the whole assignment; a piece that does not fit here
     // hands over to the next one in the library.
-    id = (u8)((next_hash() + run_state.world_screen * 3u) % PIECE_COUNT);
-    for (k = 0; k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
+    // Prefer a large authored stamp. Tight fields (return landings, a lake
+    // plus the trail cross) fall back to the compact 3x3..4x5 markers.
+    id = (u8)((next_hash() + run_state.world_screen * 3u) % PIECE_LARGE);
+    for (k = 0; k < PIECE_LARGE && riftwild_setpiece_id == RW_SETPIECE_NONE;
          ++k) {
         u8 w = piece_w[id], h = piece_h[id];
         for (tries = 0; tries < 8; ++tries) {
@@ -364,7 +402,39 @@ void riftwild_setpiece_apply(u8 base) BANKED {
                 break;
             }
         }
-        if (++id >= PIECE_COUNT) id = 0;
+        if (++id >= PIECE_LARGE) id = 0;
+    }
+    if (riftwild_setpiece_id == RW_SETPIECE_NONE) {
+        // Smallest first so a tight pocket is found quickly. Yield to
+        // vblank every row so a worst-case search cannot desync seams.
+        id = 12;
+        for (k = PIECE_LARGE;
+             k < PIECE_COUNT && riftwild_setpiece_id == RW_SETPIECE_NONE;
+             ++k) {
+            u8 w = piece_w[id], h = piece_h[id];
+            u8 xs = (u8)(3 + (next_hash() % (u8)(26 - w)));
+            u8 ys = (u8)(3 + (next_hash() % (u8)(26 - h)));
+            u8 dx, dy, x0, y0;
+            u8 span_x = (u8)(26 - w);
+            u8 span_y = (u8)(26 - h);
+            for (dy = 0; dy < span_y
+                 && riftwild_setpiece_id == RW_SETPIECE_NONE; ++dy) {
+                wait_vbl_done();
+                for (dx = 0; dx < span_x
+                     && riftwild_setpiece_id == RW_SETPIECE_NONE;
+                     ++dx) {
+                    x0 = (u8)(3 + (xs + dx) % span_x);
+                    y0 = (u8)(3 + (ys + dy) % span_y);
+                    if (fits(x0, y0, w, h, base)) {
+                        stamp_piece(id, x0, y0, next_hash() & 1, base);
+                        riftwild_setpiece_id = id;
+                        riftwild_setpiece_x = x0;
+                        riftwild_setpiece_y = y0;
+                    }
+                }
+            }
+            if (++id >= PIECE_COUNT) id = PIECE_LARGE;
+        }
     }
     scatter(base);
 }
