@@ -1,4 +1,7 @@
-#pragma bank 11
+#pragma bank 19
+// Moved off bank 11: Prism/Law attr inlines in tiles_area.c plus
+// #114 terrain left that bank 49 bytes under the 256-byte floor.
+// This prepare path is already BANKED from waygear.c.
 #include <gb/gb.h>
 #include "game/entity.h"
 #include "game/pickup.h"
