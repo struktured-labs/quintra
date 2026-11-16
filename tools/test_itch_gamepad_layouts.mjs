@@ -106,7 +106,7 @@ async function loadPlayer({ pads, search = "", store = makeStorage() }) {
   };
   vm.runInNewContext(source, context, { filename: playerPath });
   await new Promise(resolve => setImmediate(resolve));
-  return { state: () => responsiveGamepad.getState(), elements, body, store };
+  return { state: () => responsiveGamepad.getState(), elements, body, store, win: context.window };
 }
 
 function press(p, index) {
@@ -236,3 +236,32 @@ await expectFaces("DualSense standard",
 }
 
 console.log("itch gamepad layout checks passed: Switch Pro standard/HID/evdev, Joy-Con, Xbox, DualSense, swapab, paddebug");
+
+// Display fit math (issue: windowed Tesla browser cut the game off).
+{
+  const store = makeStorage();
+  const player = await loadPlayer({ pads: [], search: "?display=integer", store });
+  const display = player.win.QuintraDisplay;
+  assert.ok(display, "player should expose QuintraDisplay");
+  assert.equal(display.mode, "integer", "?display=integer should select integer mode");
+  assert.equal(store.getItem("quintra.display"), "integer", "?display should persist");
+  const fit = (w, h, m) => display.computeGameRect(w, h, m);
+  assert.deepEqual({ ...fit(640, 600, "fit") }, { width: 640, height: 576, scale: 4 }, "4x fits exactly");
+  assert.deepEqual({ ...fit(700, 620, "fit") }, { width: 640, height: 576, scale: 4 },
+    "fit snaps to integer when it keeps >= 85% of the size");
+  const frac = fit(780, 780, "fit");
+  assert.equal(frac.width, 780); assert.equal(frac.height, 702);
+  assert.ok(frac.scale > 4.8 && frac.scale < 4.9, "fit goes fractional when integer wastes > 15%");
+  assert.deepEqual({ ...fit(780, 780, "integer") }, { width: 640, height: 576, scale: 4 });
+  assert.equal(fit(120, 100, "integer").height, 100, "below 1x integer falls back to fractional");
+  assert.deepEqual({ width: fit(900, 500, "stretch").width, height: fit(900, 500, "stretch").height },
+    { width: 900, height: 500 }, "stretch fills the area");
+  for (const [w, h] of [[1920, 960], [1100, 800], [1280, 650], [1024, 600], [500, 800]]) {
+    for (const m of ["fit", "integer"]) {
+      const r = fit(w, h, m);
+      assert.ok(r.width <= w && r.height <= h, `${m} ${w}x${h} must fit`);
+      assert.ok(Math.abs(r.width / r.height - 10 / 9) < 0.01, `${m} ${w}x${h} keeps 10:9`);
+    }
+  }
+}
+console.log("itch display fit checks passed");
