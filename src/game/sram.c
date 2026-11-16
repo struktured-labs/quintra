@@ -44,8 +44,16 @@
 
 void sram_migrate_run(u8 saved_rs) BANKED;
 
-static void sram_open(void)  { ENABLE_RAM_MBC5; SWITCH_RAM_MBC5(0); }
-static void sram_close(void) { DISABLE_RAM_MBC5; }
+static void sram_open(void)  {
+    /* Pair with sram_write_open: keep VBlank off while cart RAM is unlocked. */
+    disable_interrupts();
+    ENABLE_RAM_MBC5;
+    SWITCH_RAM_MBC5(0);
+}
+static void sram_close(void) {
+    DISABLE_RAM_MBC5;
+    enable_interrupts();
+}
 
 u8 sram_load_run(void) BANKED {
     u8 *rs = (u8 *)&run_state;
