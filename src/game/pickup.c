@@ -451,7 +451,7 @@ void pickup_update(entity_t *e, u8 idx) BANKED {
         // Since the refusal cue it is also a ~1.5 s countdown, so standing
         // on an unaffordable ware repeats SFX_REFUSE at the notice cadence.
         if (!aabb_overlap_player_wide(e)) e->ai_data[4] = 0;
-        else if (e->ai_data[4]) e->ai_data[4]--;
+        else if (e->ai_data[4] && e->ai_data[4] != 0xFF) e->ai_data[4]--;
         if (e->state > 0) e->state--;
         return;
     }
@@ -1013,6 +1013,12 @@ u8 pickup_check_player_collision(void) BANKED {
                     u8 item_stat_blocked = (u8)((ware == WARE_ITEM)
                         && item_stat_refuse(entities[i].ai_data[3], &item_capped));
                     hud_show_offer(entities[i].ai_data[1], price);
+                    // A restocked shelf that just sold waits for a fresh
+                    // contact (0xFF latch, cleared on stepping away).
+                    if (entities[i].ai_data[4] == 0xFF) {
+                        any = 1;
+                        continue;
+                    }
                     // Unique contracts cannot be bought twice, and Glass
                     // Fang must always collect its promised one-heart stake.
                     // Every paid transaction must also have somewhere to put
@@ -1213,10 +1219,15 @@ u8 pickup_check_player_collision(void) BANKED {
                                 break;
                         }
                         // Shelf identity lives in bank 7 so this bank keeps its floor.
-                        // The restocked Antidote shelf owns no sold-out bit.
-                        if (ware != WARE_ANTIDOTE)
+                        // The restocked Antidote shelf never empties: the
+                        // vial stays on the counter (the pouch cap limits
+                        // stock), so its keeper always shows a ware.
+                        if (ware == WARE_ANTIDOTE)
+                            entities[i].ai_data[4] = 0xFF;
+                        else {
                             shop_note_bought((u8)FIX8_TO_INT(entities[i].x));
-                        entity_kill(i);
+                            entity_kill(i);
+                        }
                     } else refuse_cue(i);           // not enough coins
                     any = 1;
                     continue;

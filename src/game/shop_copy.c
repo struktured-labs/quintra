@@ -70,4 +70,9 @@ void shop_write_live_stock(void) BANKED {
         icon++;
         row = (u8)(row + 2);
     }
+    // Every shelf bought: say so instead of an empty catalog.
+    if (!icon) {
+        gotoxy(6, 6); text_write("SOLD OUT");
+        gotoxy(1, 8); text_write("EVERY WARE IS GONE");
+    }
 }
