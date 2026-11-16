@@ -441,6 +441,7 @@ def solve_runes(pb, runes):
                         lit_before_revisit = tuple(lit(rune) for rune in prefix)
                         pb.memory[0xFF12] = 0
                         heard_ch1, _ = feet_on(pb, *confirmed)
+                        wait_rune_flash(pb)
                         assert pb.memory[PL + 2] == hp_before_revisit, (
                             "revisiting a lit rune damaged the champion"
                         )
