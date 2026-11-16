@@ -129,18 +129,20 @@ test with `QUINTRA_VORTEX_GIF=<path>`).
 
 Carmelo (2026-11-15), on the shipped GIF: the vortex "looks really cool but
 not what I meant, I meant more like a swirlly thing but it looks pretty
-cool as is." This variant keeps the #105 gameplay (anchored at the cast
-point, room-filling front, shot wash, heavy/Colossus caps, OBJ 200..203,
-12 OAM multiplex) and only changes the look:
+cool as is." Later: "can have droplets near edges of it?" This variant
+keeps the #105 gameplay (anchored at the cast point, room-filling front,
+shot wash, heavy/Colossus caps, OBJ 200..203, 12 OAM) and only changes
+the look:
 
-- Four arms wrap more tightly (about 5/8 turn per 64px) and spin faster
-  (`3/64` of a turn a tick), so they read as curling ribbons, not a
-  growing ring of dots.
-- Samples sit along the arm (fractions 3/5/8/10/13/15) instead of on
-  the exact front radius, which is what made the shipped art look like
-  an expanding circle.
-- New ribbon / hook / foam-tip cels, flipped to follow each arm's
-  tangent. The eye is a tight whirlpool.
+- The body is one continuous water stream: ten overlapping stroke cels
+  (`\\`, `--`, `|`) packed at a 4px step along a curling spiral, so
+  they read as a connected ribbon rather than a ring of dots or a
+  dashed arc. It spins at `3/64` of a turn a tick.
+- A light spray of droplets breaks off along the outer edge and ahead
+  of the leading tip (two decorative sprites, plus mist pixels baked
+  into the stroke cels). Droplets are visual only; hit bands stay #105.
+- Tile 203 is a compact water drop, used for the eye and the loose
+  spray. Same budget: OBJ 200..203, 12 OAM (24..35).
 
 Build with `make VORTEX_SWIRL=1` (`-DPICSEAN_VORTEX_SWIRL=1`). The
 default build is the shipped #105 vortex, unchanged. Carmelo will pick.
