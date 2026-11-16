@@ -25,6 +25,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "game/waygear.h"
 #include "game/will.h"
 #include "game/wolfkin_wave.h"
+#include "game/picsean_vortex.h"
 #include "render/tiles.h"
 #include "render/hud.h"
 #include "content.h"
@@ -505,6 +506,8 @@ static void combat_player_shots(void) {
         }
         if (shot->type != ENT_PROJECTILE) continue;
         if (!(shot->flags & EF_PLAYER_PROJ)) continue;
+        // The Tide Vortex applies its own hits through its carrier.
+        if (shot->ai_data[6] == PROJ_AUX_VORTEX) continue;
         // Splash arming happens in the next frame's projectile update. It then
         // receives exactly one complete sweep independent of entity slot order.
         if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
@@ -569,6 +572,8 @@ u8 combat_resolve(void) BANKED {
 
     // Wolfkin's Will wave: eat frontal shots, animate, end its flash.
     if (wolfkin_wave_guard_ticks | wolfkin_wave_fx_ticks) wolfkin_wave_tick();
+    // Picsean's Tide Vortex: grow, sweep, wash out shots.
+    if (picsean_vortex_ticks) picsean_vortex_tick();
 
     // 3) Enemy bodies AND enemy projectiles -> player
     if (player.iframes == 0 && player.shield_timer == 0) {
