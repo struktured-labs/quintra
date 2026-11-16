@@ -179,6 +179,13 @@ jobs:
       - name: PyBoy water ride (Tide Raft and Picsean swim)
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_water_ride.py
 
+      - name: PyBoy status effects (no DoT death, notices, Antidote cures)
+        run: |
+          mkdir -p tmp
+          uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_status_floor.py
+          uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_antidote.py
+          uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_trader_wares.py
+
       - name: PyBoy seeded-room fixtures (archetypes, spinners, Cinder Maw, Farfold Cache)
         run: |
           mkdir -p tmp

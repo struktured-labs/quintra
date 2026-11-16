@@ -22,7 +22,7 @@ Arms and Relics
 
 Merchants and the Forge
 
-Curses and Boons
+Curses, Conditions and Boons
 
 The Road
 
