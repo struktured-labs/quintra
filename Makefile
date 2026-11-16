@@ -55,6 +55,11 @@ LCCFLAGS += -Wm-ya4             # 4 SRAM banks (32KB)
 LCCFLAGS += -Wm-yC              # CGB only (Quintra is GBC-native)
 LCCFLAGS += -Wm-yn"QUINTRA"     # cart/flash-tool header title
 LCCFLAGS += -I$(SRCDIR) -I$(GENDIR)
+# Prototype swirl look for Picsean's Tide Vortex (gameplay unchanged).
+#   make VORTEX_SWIRL=1 rom/working/quintra.gbc
+ifeq ($(VORTEX_SWIRL),1)
+LCCFLAGS += -DPICSEAN_VORTEX_SWIRL=1
+endif
 
 # Bare `make` must build the cartridge. The manual target is declared
 # first, so pin the default explicitly instead of relying on order.
