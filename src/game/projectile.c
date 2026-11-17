@@ -3,6 +3,7 @@
 
 #include "audio/sfx.h"
 #include "core/types.h"
+#include "game/riftwild_setpiece.h"
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
@@ -276,6 +277,8 @@ void projectile_update_one(entity_t *e, u8 idx) {
                  || (u8)(t - BGT_NOTE_0) <= (u8)(BGT_NOTE_LIT_4 - BGT_NOTE_0))
                 && room_elemental_tile((u8)(sx >> 3), (u8)(sy >> 3),
                     e->ai_data[1])) {
+                if (t == BGT_TREE)
+                    riftwild_tree_burned((u8)(sx >> 3), (u8)(sy >> 3));
                 fx_spawn(SPR_FX_IMPACT, 6, px, py, 10);
                 entity_kill(idx);
                 return;
