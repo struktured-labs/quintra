@@ -25,6 +25,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
+#include "game/vignette.h"
 #include "game/will.h"
 #include "render/palette.h"
 #include "render/text.h"
@@ -196,6 +197,8 @@ static void inventory_aim_enter(void) {
     gotoxy(1, 11); text_write("> "); text_write(item_name_by_id(player.active_item));
     gotoxy(1, 13); text_write(active_tip_by_id(player.active_item));
     gotoxy(1, 15); text_write("A+B OATH UNCHANGED");
+    gotoxy(1, 16); text_write(vignette_cutscenes_off()
+        ? "L/R CUTSCENES OFF" : "L/R CUTSCENES ONCE");
     gotoxy(1, 17); text_write("SEL GEAR B RETURN");
     palette_bg_fill_attrs(0);
     attr_row(1, 1); attr_row(3, 2); attr_row(5, 1); attr_row(13, 3);
@@ -358,6 +361,10 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
                 inventory_waygear_enter();
             } else if (pressed & J_A) {
                 player_penta_aim ^= 1;
+                sfx_play(SFX_TICK);
+                inventory_aim_enter();
+            } else if (pressed & (J_LEFT | J_RIGHT)) {
+                vignette_toggle_cutscenes();
                 sfx_play(SFX_TICK);
                 inventory_aim_enter();
             } else if (pressed & (J_UP | J_DOWN)) {

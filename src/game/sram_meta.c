@@ -147,3 +147,12 @@ u8 sram_meta_note_hexa(u16 score) BANKED {
     meta_close();
     return flags;
 }
+
+void sram_meta_set_flag(u8 bit, u8 on) BANKED {
+    meta_open();
+    if (!meta_valid()) meta_reset();
+    if (on) SRAM_BASE[11] |= bit;
+    else SRAM_BASE[11] &= (u8)~bit;
+    meta_seal();
+    meta_close();
+}

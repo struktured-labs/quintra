@@ -18,6 +18,7 @@ from test_overworld import (
 )
 from test_riftwild_landmarks import WALKABLE, wide_tiles
 from quintra_topology import STAGE_BOSS_ROOM
+from quintra_vignettes import mute_vignettes
 
 MODE = addr("_water_ride_mode")
 WATER = (97, 101)
@@ -41,6 +42,7 @@ def boot(cls):
     pb.button("a")
     pb.tick(60)
     assert pb.memory[PL] == cls, f"class select picked {pb.memory[PL]}"
+    mute_vignettes(pb, ROM)
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
     pb.memory[LARGE] = 0

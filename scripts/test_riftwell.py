@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+
+from quintra_vignettes import mute_vignettes
 from quintra_topology import STAGE_BOSS_ROOM
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +59,7 @@ def main():
     tick(pb, 240)
     pb.button("start"); tick(pb, 30)
     pb.button("a"); tick(pb, 90)
+    mute_vignettes(pb, ROM)
 
     # Simulate the real post-boss handoff, then cross authored 0 -> 1.
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]

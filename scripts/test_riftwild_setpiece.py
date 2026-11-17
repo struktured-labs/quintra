@@ -5,6 +5,8 @@ from collections import Counter
 from PIL import Image, ImageDraw
 from pyboy import PyBoy
 
+from quintra_vignettes import mute_vignettes
+
 from test_overworld import (
     CAMERA_X, CAMERA_Y, EN, LARGE, ORIGIN_X, ORIGIN_Y, PL, ROM, ROOT, RS, TM,
     WORLD_BOTTOM, WORLD_EXT, WORLD_H, WORLD_W, addr, exit_at, put16,
@@ -67,6 +69,7 @@ def boot_seed(seed, bosses=1, hooks=()):
     pb.button("a")
     for _ in range(60):
         pb.tick()
+    mute_vignettes(pb, ROM)
     for i in range(4):
         pb.memory[RS + 2 + i] = (seed >> (8 * i)) & 255
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[bosses - 1]

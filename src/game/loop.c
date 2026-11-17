@@ -13,6 +13,7 @@
 #include "game/inventory.h"
 #include "game/map.h"
 #include "game/dialog.h"
+#include "game/vignette.h"
 #include "render/palette.h"
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
@@ -41,6 +42,7 @@ BANKREF_EXTERN(map_enter)
 BANKREF_EXTERN(dialog_enter)
 BANKREF_EXTERN(gameover_enter)
 BANKREF_EXTERN(victory_enter)
+BANKREF_EXTERN(vignette_enter)
 
 // The screen table. Each screen lives in its own translation unit; banked
 // screens carry their BANK(fn) so the dispatcher can map them first.
@@ -51,7 +53,7 @@ const screen_t screens[SCREEN_COUNT] = {
     [SCREEN_RUN_INIT]     = { BANK(run_init_enter), run_init_enter, run_init_exit, run_init_tick, run_init_draw },
     [SCREEN_PROCGEN]      = { 0, 0, 0, 0, 0 },
     [SCREEN_ROOM]         = { BANK(room_enter), room_enter,         room_exit,         room_tick,         room_draw         },
-    [SCREEN_REST_ROOM]    = { 0, 0, 0, 0, 0 },
+    [SCREEN_VIGNETTE]     = { BANK(vignette_enter), vignette_enter, 0, vignette_tick, 0 },
     [SCREEN_BOSS]         = { 0, 0, 0, 0, 0 },
     [SCREEN_MAP]          = { BANK(map_enter), map_enter, map_exit, map_tick, map_draw },
     [SCREEN_INVENTORY]    = { BANK(inventory_enter), inventory_enter, inventory_exit, inventory_tick, inventory_draw },

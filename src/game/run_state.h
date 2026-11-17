@@ -169,6 +169,9 @@ typedef struct {
     // Village screens that are not the market. Bit 0 arrival chart,
     // bit 1 forge, bit 2 vamp, bit 3 rune. Same lifetime as the market bits.
     u8  shop_civic;
+    // Stage-transition vignettes already shown this run (bit = VIG_* id).
+    // Appended so older suspends load with every vignette unseen.
+    u16 vignette_seen;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03

@@ -163,6 +163,12 @@ jobs:
       - name: PyBoy Riftwild set pieces and tile art
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_setpiece.py
 
+      - name: Stage vignette data is current
+        run: uv run --quiet --with numpy --with pillow python scripts/gen_vignettes.py --check
+
+      - name: Stage vignette play, skip, once, CUTSCENES OFF (headless)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow --with numpy python scripts/test_stage_vignettes.py
+
       - name: PyBoy Crystal Colossus pose
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_crystal_pose.py
 

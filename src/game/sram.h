@@ -25,8 +25,12 @@ u8   sram_meta_record(u16 score, u8 won, u16 time_s) BANKED;
 // records migrate in place instead of being wiped.
 #define META_FLAG_VOID_LORD_CLEARED 0x01
 #define META_FLAG_HEXA_BEATEN       0x02
+// Player option, not a trophy: CUTSCENES OFF (clear = ONCE per run).
+#define META_FLAG_CUTSCENES_OFF     0x04
 u8   sram_meta_flags(void) BANKED;
 // Badge + optional best score. Does not change runs or wins.
 u8   sram_meta_note_hexa(u16 score) BANKED;
+// Set or clear one meta_flags bit (option bits such as CUTSCENES OFF).
+void sram_meta_set_flag(u8 bit, u8 on) BANKED;
 
 #endif
