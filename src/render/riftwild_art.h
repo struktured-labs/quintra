@@ -7,7 +7,7 @@
 #define RW_ART_TERRAIN_BASE 0
 #define RW_ART_TERRAIN_COUNT 40
 #define RW_ART_PIECE_BASE 64
-#define RW_ART_PIECE_COUNT 28
+#define RW_ART_PIECE_COUNT 35
 #define RWA_GRASS_TUFT 0
 #define RWA_GRASS_PEBBLE 1
 #define RWA_GRASS_BLOOM 2
@@ -76,6 +76,13 @@
 #define RWA_GREAT_TREE_2_1 89
 #define RWA_GREAT_TREE_2_2 90
 #define RWA_SHARD 91
+#define RWA_PATH_N 92
+#define RWA_PATH_W 93
+#define RWA_PATH_NW 94
+#define RWA_PATH_STRAIT_H 95
+#define RWA_PATH_STRAIT_V 96
+#define RWA_GRASS_TUFT_B 97
+#define RWA_GRASS_SPRIG 98
 
 // Loads every Riftwild bank-1 tile; idempotent and cheap to repeat.
 void riftwild_art_load(void) BANKED;

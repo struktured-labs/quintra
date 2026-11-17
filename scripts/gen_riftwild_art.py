@@ -101,14 +101,14 @@ T["mud_roots"] = """
 ........
 ........"""
 T["path_stones"] = """
-11111111
-11122111
-11233211
-11122111
-11111111
-11111221
-11112332
-11111221"""
+22222222
+22223222
+22231122
+22221122
+22222222
+22322222
+23112222
+22222222"""
 # 2x2 canopy: a forest border reads as round crowns instead of 8px dots.
 T["tree_tl"] = """
 .....111
@@ -298,14 +298,14 @@ T["grass_plain"] = """
 ........
 ........"""
 T["path_plain"] = """
-11111111
-11111111
-11111111
-11111111
-11111111
-11111111
-11111111
-11111111"""
+22222222
+22222222
+22122222
+22222222
+22222232
+22222222
+21222222
+22222222"""
 T["shore_lone"] = """
 ........
 ........
@@ -396,6 +396,76 @@ T["hole_strait_v"] = """
 ..3013..
 ..3013..
 ..3013.."""
+
+# Ground-life pass 2: off-centre marks so clumps never line up on the
+# tile grid.
+T["grass_tuft_b"] = """
+........
+.1.1....
+..1.....
+........
+........
+.....1..
+....1...
+........"""
+T["grass_sprig"] = """
+........
+........
+........
+........
+........
+......1.
+.....1..
+........"""
+
+# Trail edges (tiles pass 2): the side facing ground frays into colour 0
+# with darker grit along the worn lip. Flips cover S/E and the other
+# corners; straits are one-tile trails.
+T["path_n"] = """
+...1....
+.1121..1
+12222112
+22222222
+22222222
+22212222
+22222222
+22222222"""
+T["path_w"] = """
+.1222222
+..122222
+..122222
+.1222222
+12222222
+.1222122
+..122222
+.1222222"""
+T["path_nw"] = """
+........
+.....1..
+...11221
+..122222
+.1222222
+.1222222
+12222122
+.1222222"""
+T["path_strait_h"] = """
+...1....
+.1121..1
+12222112
+22222222
+22212222
+22222222
+21122221
+1..1211."""
+T["path_strait_v"] = """
+.122221.
+..12221.
+..12221.
+.122221.
+1222221.
+.12221..
+..12221.
+.122221."""
 
 # Worldglass shard cluster (crystal palette): BGT_CRYSTAL out in the
 # Riftwild drew the square dungeon crystal block; this sits on the ground.
@@ -594,6 +664,8 @@ TERRAIN = [
     "hole_strait_h",
     "hole_strait_v",
 ]
+TRAIL = ["path_n", "path_w", "path_nw", "path_strait_h", "path_strait_v",
+         "grass_tuft_b", "grass_sprig"]
 PROPS = ["column_top", "column_base", "column_broken", "flagstone",
          "obelisk_top", "obelisk_base"]
 
@@ -608,6 +680,7 @@ def tiles():
     pieces += slice_big("statue", STATUE)
     pieces += slice_big("great_tree", TREE)
     pieces += [("shard", T["shard"].strip("\n").split("\n"))]
+    pieces += [(n, T[n].strip("\n").split("\n")) for n in TRAIL]
     return out, pieces
 
 
@@ -681,7 +754,7 @@ def pal_for(name):
         return "wall"
     if name.startswith(("snow", "shore", "spire", "obelisk", "shard")):
         return "crystal"
-    if name.startswith(("sand", "column", "flagstone", "statue")):
+    if name.startswith(("sand", "column", "flagstone", "statue", "path")):
         return "door"
     if name.startswith("hole"):
         return "crack"
