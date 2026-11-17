@@ -91,12 +91,13 @@ def main():
     terrain_probe(pb, tile=39, element=1, expected=23)
     terrain_probe(pb, tile=31, element=2, expected=19)
 
-    # Lightning throws a phase switch from range and keeps its visible switch.
+    # Lightning throws a phase switch from range. Aether Lattice switches
+    # are note plates (BGT_NOTE_0.., matching their voiced pitch).
     clear_entities(pb)
     pb.memory[PUZZLE] = 3
     pb.memory[PHASE_BIT] = 1
     pb.memory[RUN + 28] = 0
-    pb.memory[TILEMAP + 8 * 20 + 10] = 33  # BGT_SWITCH
+    pb.memory[TILEMAP + 8 * 20 + 10] = 111  # BGT_NOTE_0
     projectile(pb, 0, True, 80, 64, element=4)
     pb.tick(10)
     assert pb.memory[RUN + 28] & 1, "lightning did not toggle remote phase state"

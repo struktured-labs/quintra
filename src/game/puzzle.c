@@ -278,9 +278,19 @@ static void prepare_phase_switch(u8 bit, u32 seed) {
             if (presses & (1u << i))
                 phase_switch_state ^= phase_switch_mask[i];
     }
-    for (i = 0; i < 4; ++i)
+    // The row voices pitches 0..3 (sfx_play_rune(i)), so each switch wears
+    // the same per-pitch note plate and colour as a rune-sequence phrase:
+    // raised and plain while dark, sunken and brighter while lit.
+    room_rune_count = 4;
+    room_rune_lit_mask = phase_switch_state;
+    for (i = 0; i < 4; ++i) {
+        room_rune_x[i] = phase_switch_x[i];
+        room_rune_y[i] = 8;
+        room_rune_pitch[i] = i;
         room_tilemap[8][phase_switch_x[i]] =
-            (phase_switch_state & (1u << i)) ? BGT_FLOOR2 : BGT_SWITCH;
+            (phase_switch_state & (1u << i)) ? RUNE_LIT_TILE(i)
+                                             : RUNE_IDLE_TILE(i);
+    }
     room_puzzle_visual_y = 8;
     room_puzzle_phase_bit = bit;
 }
@@ -594,17 +604,22 @@ static void update_phase_switch(u8 tx, u8 ty) {
     puzzle_contact = 1;
     if (run_state.dungeon_phase & room_puzzle_phase_bit) return;
     phase_switch_state ^= phase_switch_mask[touched];
-    for (i = 0; i < 4; ++i) {
-        u8 lit = phase_switch_state & (1u << i);
-        set_tile_live(phase_switch_x[i], 8,
-            lit ? BGT_FLOOR2 : BGT_SWITCH,
-            lit ? BGPAL_CRYSTAL : BGPAL_DOOR);
-    }
+    room_rune_lit_mask = phase_switch_state;
+    rune_paint_all();
     if (phase_switch_state == 0x0F) {
         run_state.dungeon_phase |= room_puzzle_phase_bit;
         sfx_play(SFX_PUZZLE);
         room_shake(1, 12);
-    } else sfx_play_rune(touched);
+    } else voice_plate(touched);
+}
+
+void puzzle_phase_switch_zap(void) BANKED {
+    // Lightning throws the whole remote lattice from range.
+    run_state.dungeon_phase ^= room_puzzle_phase_bit;
+    if (run_state.dungeon_phase & room_puzzle_phase_bit)
+        phase_switch_state = 0x0F;
+    room_rune_lit_mask = phase_switch_state;
+    rune_paint_all();
 }
 
 u8 puzzle_update_player(void) BANKED {

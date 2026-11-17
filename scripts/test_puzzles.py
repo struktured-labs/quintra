@@ -842,11 +842,32 @@ def deep_phase_contract():
         assert not (pb.memory[RS + 28] & bit)
         xs = (4, 8, 12, 16)
         masks = (0x03, 0x07, 0x0E, 0x0C)
+        addrs = rune_addrs()
 
         def state():
-            return sum((pb.memory[TM + 8 * 20 + x] == 19) << i
+            return sum((pb.memory[TM + 8 * 20 + x] == RUNE_LIT_TILE[i]) << i
                        for i, x in enumerate(xs))
 
+        def assert_switch_notes():
+            """Switch i voices pitch i, so it wears note plate/colour i:
+            idle art while dark, sunken art and a brighter shade while lit
+            (same colour as that pitch in a rune phrase)."""
+            lit = state()
+            for i, x in enumerate(xs):
+                tile = pb.memory[TM + 8 * 20 + x]
+                want = RUNE_LIT_TILE[i] if lit & (1 << i) else RUNE_IDLE_TILE[i]
+                assert tile == want, f"switch {i} tile {tile}, want {want}"
+                attr = room_tile_attr(pb, x, 8, addrs)
+                assert attr == RUNE_NOTE_PAL[i], (
+                    f"switch {i} palette {attr}, want {RUNE_NOTE_PAL[i]}")
+                assert_plate_art(pb, tile, i, (x, 8))
+            pressed = [i for i in range(4) if lit & (1 << i)]
+            want_low = palette_with_pressed(RUNE_PAL_LOW, pressed, True)
+            want_high = palette_with_pressed(RUNE_PAL_HIGH, pressed, False)
+            assert cgb_bg_palette(pb, 2) == want_low, "switch row low palette"
+            assert cgb_bg_palette(pb, 3) == want_high, "switch row high palette"
+
+        assert_switch_notes()
         initial = state()
         assert initial != 0x0F, "deep Aether Lattice spawned already solved"
         # Solve from the cartridge's visible state, not from its seed. This
@@ -871,8 +892,10 @@ def deep_phase_contract():
             before = state()
             feet_on(pb, xs[press], 8)
             step_off(pb)
+            wait_rune_flash(pb)
             assert state() == (before ^ masks[press]), \
                 f"plate {press} did not transform its neighbor lattice"
+            assert_switch_notes()
         assert pb.memory[RS + 28] & bit, \
             "solved deep Aether Lattice did not persist its remote phase bit"
         assert state() == 0x0F, "solved Aether Lattice did not finish fully lit"
@@ -898,7 +921,10 @@ def deep_phase_contract():
 
     seed = 0xDEED1200
     graph = mission_graph(dungeon_size(0), seed, 0)
-    generated_room(0, seed, local_room=graph["deep_switch"], probe=switch_probe)
+    # Entered through a door with the shared plate slots holding stale art:
+    # the door path itself must upload the note tiles.
+    generated_room(0, seed, local_room=graph["deep_switch"], probe=switch_probe,
+                   pre_cross=lambda pb, _addrs: poison_plate_vram(pb))
     generated_room(0, seed, local_room=graph["deep_gate"], dungeon_phase=0,
                    probe=closed_gate_probe)
     generated_room(0, seed, local_room=graph["deep_gate"], dungeon_phase=bit,
