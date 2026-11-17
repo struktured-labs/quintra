@@ -39,40 +39,46 @@ heavy cap alone.
 
 ## Behavior
 
-- After a Tide Vortex is successfully begun, the next Will pip accrues
-  on every other `will_charge_tick` (exactly 2× the ordinary first-pip
-  time at the current SPD). At SPD 4 that is 360 frames, 6.00 s. Speed
-  Ring and Swift Fang still shorten it, because the half-rate wraps the
-  existing `16+spd` rule rather than replacing it with a fixed timer.
-- The Will bar fills the whole time, just more slowly, so the longer
-  wait is readable without a new HUD or a change to the vortex visuals.
-- Once that first pip banks, the slow rate ends. Later tiers (4 / 5 /
-  6 exposed seconds at SPD 5) are unchanged, and every other champion's
-  MAX recharge is unchanged.
-- Ordinary A still dumps in-progress charge. Undertow, MP, and Oath
-  Arts are untouched. Recasting mid-vortex is no longer possible in
-  practice, because Will is empty until the delayed pip banks, after
-  the 84-tick (1.4 s) cast has already ended.
-- Damage, growth, shot wash, heavy/Colossus caps, i-frames, and OAM
-  budget stay as specified in `2026-11-15-picsean-tide-vortex.md`.
+- After a Tide Vortex is successfully begun, the next Tide Vortex is
+  locked for 360 frames (6.00 s) on `loop_frame_counter`. This is
+  exactly 2× the ordinary first-pip time at SPD 4. The lock is a
+  recast gate in `will_fire_max`, not a change to the shared Will
+  charge tick, so other champions, idle frames, and crowded Serpent
+  rooms pay nothing.
+- Will still banks on its ordinary clock (180 frames / 3.00 s at
+  SPD 4). During the remaining lock an A press is a normal BubbleBolt
+  and does not spend the banked pip, so the charge is not wasted.
+  Speed Ring and Swift Fang still shorten the time to that first pip;
+  the recast lock itself is a fixed 360 frames so the 2× wait cannot
+  shrink back to a 3 s room-clear on a stacked-SPD run.
+- Later tiers, Undertow, MP, and Oath Arts are unchanged. Damage,
+  growth, shot wash, heavy/Colossus caps, i-frames, and OAM budget
+  stay as specified in `2026-11-15-picsean-tide-vortex.md`. Vortex
+  visuals are unchanged.
 
 ## Rationale
 
-Doubling only the first pip after a vortex matches the request (~2×
-current cooldown) and preserves the spectacle. Waiting to a full
-Waygear cap before the next MAX would be a 6× wait (about 18 s) and
-would punish a mid-run dump more than a Will-1 dump, even though both
-already deal the same early-game damage. A hidden "MAX locked" timer
-that let the bar go lavender early would feel like a missed input.
+Doubling the recast wait matches the request (~2× current cooldown)
+and preserves the spectacle. A shared-tick half-rate or a doubled
+first-pip cost was rejected: either change sits on the Will charge
+or HUD path, and even a few extra cycles there made the Serpent
+plated-tail fixture miss its Tide Vortex pass-through by one pixel
+(max_x 83 vs 84) in a crowded boss room already on the CPU edge.
+Gating only `will_fire_max` keeps that path idle-cost-free.
+Waiting to a full Waygear cap before the next MAX would be a 6× wait
+(about 18 s) and would punish a mid-run dump more than a Will-1 dump,
+even though both already deal the same early-game damage.
 
 ## Code
 
-`picsean_vortex_slow_charge` is set in `picsean_vortex_begin` and
-cleared in `will_bank_charge` (and on `player_clear_fields`).
-`will_charge_tick` skips every other fraction increment while it is
-set. `will_charge_fraction` is zeroed at the start of the vortex so
-the 2× refill is deterministic.
+`picsean_vortex_slow_charge` and `picsean_vortex_ready_at` are set in
+`picsean_vortex_begin` (`ready_at = loop_frame_counter + 360`) and
+cleared on `player_clear_fields`. `will_fire_max` (BubbleBolt branch)
+returns 0 while the lock is held (wrap-safe unsigned compare). A
+successful recast starts a new 360-frame lock. `will_charge_tick` is
+unchanged.
 
+## Evidence
 ## Evidence
 
 `scripts/test_picsean_tide_vortex.py` asserts the post-vortex first pip

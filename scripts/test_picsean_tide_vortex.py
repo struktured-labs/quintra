@@ -101,6 +101,8 @@ def arm(pb):
     pb.memory[LCK] = 0               # no crit doubling: exact cap check
     pb.memory[PLAYER + WILL_OFFSET] = 90
     pb.memory[PLAYER + LEVEL_OFFSET] = 1
+    # Fixture recasts should not wait out the 360-frame play lock.
+    pb.memory[addr("_picsean_vortex_slow_charge")] = 0
 
 
 def fire_max(pb):
@@ -253,58 +255,53 @@ def anchored(pb):
 
 
 
+def try_fire_max(pb, ticks=8):
+    """Press A without requiring the MAX to spend Will."""
+    pb.button_press("right")
+    pb.button_press("a")
+    for _ in range(ticks):
+        pb.tick()
+    pb.button_release("a")
+    pb.button_release("right")
+
+
 def recharge_cooldown(pb):
-    """After Tide Vortex the next Will pip takes twice as long.
+    """After Tide Vortex the next MAX is locked for 360 frames.
 
     Spec: docs/superpowers/specs/2026-11-17-picsean-vortex-cooldown.md
-    At Picsean's starting SPD 4 the old first pip was 180 frames (3.00 s).
-    After a vortex it is 360 frames (6.00 s). The following tier returns
-    to the ordinary 240-frame (4.00 s) cost once Waygear raises the cap.
+    Will still banks on the ordinary first-pip clock (180 frames at
+    SPD 4). A press during the remaining lock is a normal BubbleBolt
+    and does not spend the banked pip. At 360 frames the MAX recasts.
     """
     arm(pb)
     pb.memory[PLAYER + 7] = 4
-    # Own all three Waygear bits before the delayed pip banks so the cap
-    # is 4 and the first bank does not clamp will_charge at WILL_MAX.
     pb.memory[PLAYER + 44] = 7
     pb.memory[addr("_will_charge_fraction")] = 0
     fire_max(pb)
     check("vortex spent every banked pip",
           pb.memory[PLAYER + LEVEL_OFFSET] == 0
           and pb.memory[PLAYER + WILL_OFFSET] == 0)
-    # fire_max releases A, so the following idle frames charge Will.
-    for frame in range(180):
+    # Let the first vortex finish, then the ordinary 3s pip bank.
+    for _ in range(180):
         pb.memory[IFRAMES] = 60
         pb.tick()
-    check("old 3s Will refill is no longer enough after a vortex",
-          pb.memory[PLAYER + LEVEL_OFFSET] == 0,
+    check("ordinary first pip still banks at 180 frames (3.00s)",
+          pb.memory[PLAYER + LEVEL_OFFSET] >= 1,
           f"level={pb.memory[PLAYER + LEVEL_OFFSET]} "
           f"charge={pb.memory[PLAYER + WILL_OFFSET]}")
-    ready = None
-    for frame in range(250):
+    try_fire_max(pb, ticks=8)
+    check("old 3s recast is locked; the banked pip is kept",
+          pb.memory[PLAYER + LEVEL_OFFSET] >= 1
+          and pb.memory[TICKS] == 0,
+          f"level={pb.memory[PLAYER + LEVEL_OFFSET]} ticks={pb.memory[TICKS]}")
+    # 180 + 8 try-fire ticks; 360 - 188 = 172 more, plus slack.
+    for _ in range(172):
         pb.memory[IFRAMES] = 60
         pb.tick()
-        if pb.memory[PLAYER + LEVEL_OFFSET] >= 1:
-            ready = 180 + frame + 1
-            break
-    check("next Will pip takes 360 frames (6.00s) at SPD 4",
-          ready is not None and abs(ready - 360) <= 3,
-          f"ready={ready}")
-    # Second pip uses the ordinary 120-charge tier, not another 2x delay.
-    pb.memory[addr("_will_charge_fraction")] = 0
-    second = None
-    start = pb.memory[PLAYER + LEVEL_OFFSET]
-    for frame in range(400):
-        pb.memory[IFRAMES] = 60
-        pb.tick()
-        if pb.memory[PLAYER + LEVEL_OFFSET] > start:
-            second = frame + 1
-            break
-    check("following tier is the ordinary 240-frame (4.00s) cost",
-          second is not None and abs(second - 240) <= 3,
-          f"second={second}")
     fire_max(pb)
-    check("vortex recasts once the delayed pip has banked",
-          pb.memory[TICKS] > 0 and pb.memory[PLAYER + LEVEL_OFFSET] == 0)
+    check("vortex recasts at 360 frames (6.00s)",
+          pb.memory[TICKS] > 0 and pb.memory[PLAYER + LEVEL_OFFSET] == 0,
+          f"ticks={pb.memory[TICKS]} level={pb.memory[PLAYER + LEVEL_OFFSET]}")
 
 
 def crowded_updates(cast):

@@ -39,7 +39,7 @@ void player_clear_fields(void) BANKED {
     player.will_level = 0;
     will_charge_fraction = 0;
     picsean_vortex_slow_charge = 0;
-    picsean_vortex_slow_gate = 0;
+    picsean_vortex_ready_at = 0;
     will_corvin_mark_slot = 0xFF;
     will_corvin_mark_ticks = 0;
     will_howl_giant_hits = 0;

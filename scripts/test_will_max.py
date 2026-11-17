@@ -82,6 +82,12 @@ def player_shots(pb):
 
 
 def fire_right(pb):
+    # Picsean's play-side recast lock is 360 frames; fixture tests poke
+    # a full Will bar and expect the MAX to fire on this press.
+    try:
+        pb.memory[addr("_picsean_vortex_slow_charge")] = 0
+    except RuntimeError:
+        pass
     pb.button_press("right")
     pb.button_press("a")
     # Multi-lane MAX arts can cross several VBlanks on real 4 MHz hardware.

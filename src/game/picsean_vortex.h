@@ -41,11 +41,13 @@
 #define PICSEAN_VORTEX_OAM_HI 36
 #define PICSEAN_VORTEX_SEGS   12
 
-// After a successful Tide Vortex, the next Will pip accrues on every
-// other charge tick (2x the ordinary first-pip time at the current SPD).
-// Cleared when that pip banks. See 2026-11-17-picsean-vortex-cooldown.md.
+// After a successful Tide Vortex, the next MAX is locked until
+// loop_frame_counter reaches picsean_vortex_ready_at (360 frames /
+// 6.00s at any SPD; Will still banks on its ordinary first-pip
+// clock). See 2026-11-17-picsean-vortex-cooldown.md.
+#define PICSEAN_VORTEX_RECAST_FRAMES 360
 extern u8 picsean_vortex_slow_charge;
-extern u8 picsean_vortex_slow_gate;
+extern u16 picsean_vortex_ready_at;
 
 // Ticks remaining; 0 when idle. Read by combat and room_draw.
 extern u8 picsean_vortex_ticks;

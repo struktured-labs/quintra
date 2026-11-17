@@ -150,8 +150,8 @@ default build is the shipped #105 vortex, unchanged. Carmelo will pick.
 ## Cooldown (2026-11-17)
 
 Carmelo: the art is awesome but too powerful and needs a longer
-cooldown. After a successful Tide Vortex the next Will pip takes twice
-as long (360 frames / 6.00 s at SPD 4, still SPD-scaled). Damage,
-visuals, and later tiers are unchanged. See
+cooldown. After a successful Tide Vortex the next MAX is locked for
+360 frames (6.00 s). Will still banks on its ordinary clock; damage
+and visuals are unchanged. See
 `2026-11-17-picsean-vortex-cooldown.md`.
 

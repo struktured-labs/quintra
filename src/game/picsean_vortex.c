@@ -15,7 +15,7 @@
 #include "game/rare_enemy.h"
 #include "game/room.h"
 #include "game/status.h"
-#include "game/will.h"
+#include "game/loop.h"
 #include "render/large_boss.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -36,7 +36,7 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
 extern u8 entity_oam_high;
 
 u8 picsean_vortex_slow_charge;
-u8 picsean_vortex_slow_gate;
+u16 picsean_vortex_ready_at;
 u8 picsean_vortex_ticks;
 u8 picsean_vortex_radius;
 u8 picsean_vortex_abort;
@@ -352,11 +352,11 @@ void picsean_vortex_begin(u8 damage) BANKED {
     carrier_ensure();
     vortex_flash(1, 0);
     sfx_play_weapon(PROJ_BUBBLE);
-    // Next pip takes twice as long. Zero the leftover fraction so the
-    // 2x refill is deterministic rather than a few frames short.
+    // Lock the next MAX for 360 frames. Will still banks on its
+    // ordinary first-pip clock; will_fire_max refuses until ready_at.
     picsean_vortex_slow_charge = 1;
-    picsean_vortex_slow_gate = 0;
-    will_charge_fraction = 0;
+    picsean_vortex_ready_at = (u16)(loop_frame_counter
+        + PICSEAN_VORTEX_RECAST_FRAMES);
 }
 
 // Screen-space clip helpers in 8-bit math (SDCC's 16-bit compares cost
