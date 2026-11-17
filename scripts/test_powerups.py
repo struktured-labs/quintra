@@ -23,12 +23,15 @@ PICKUP_POWERUP = 27
 AEGIS, LIMITLESS, MEND = 1, 2, 3
 HUD_BLANK, HUD_DIGIT_0 = 8, 9
 HUD_OFFER_HEAL, HUD_OFFER_VITAL, HUD_OFFER_RUNE = 40, 42, 44
+HUD_AEGIS_PIPS = 124
 SPR_SHIELD_AURA = 127
 ENT_PROJECTILE, ENT_PICKUP, ENT_FX = 1, 3, 4
 NOTICE_POWERUP_FRAMES = 45 + 60 + 60
+QSTATUS_MUTE, QSTATUS_CURSE = 7, 10
 
 # player_state_t offsets
-HP_MAX, HP, MP_MAX, MP, X, Y, IFRAMES, WILL_CHARGE, WILL_LEVEL = 1, 2, 3, 4, 9, 11, 15, 42, 48
+HP_MAX, HP, MP_MAX, MP, X, Y, IFRAMES, SHIELD_TIMER, WILL_CHARGE, WILL_LEVEL = (
+    1, 2, 3, 4, 9, 11, 15, 20, 42, 48)
 
 
 def addr(name):
@@ -160,8 +163,12 @@ def main():
     assert auras, "Aegis drew no orbiting ward shard"
     wait_notices_clear(pb, notice)
     lane = hud_lane(pb)
-    assert lane[0] == HUD_OFFER_VITAL and lane[3] == HUD_DIGIT_0 + 3, f"Aegis HUD lane wrong: {lane}"
+    assert lane[0] == HUD_OFFER_VITAL and lane[3] == HUD_AEGIS_PIPS, f"Aegis HUD pips wrong: {lane}"
+    assert HUD_DIGIT_0 <= lane[1] <= HUD_DIGIT_0 + 9, f"Aegis HUD tens missing: {lane}"
     assert HUD_DIGIT_0 <= lane[2] <= HUD_DIGIT_0 + 9, f"Aegis HUD seconds missing: {lane}"
+    # Zero-padded seconds must not kern into a fake two-digit "71".
+    tens, units = lane[1] - HUD_DIGIT_0, lane[2] - HUD_DIGIT_0
+    assert tens * 10 + units < 20, f"Aegis HUD seconds implausible: {lane}"
     hp0 = pb.memory[player + HP]
     for hit in range(3):
         pb.memory[player + IFRAMES] = 0
@@ -175,6 +182,25 @@ def main():
     hostile_shot_on_player(pb, player, entities, 30)
     for _ in range(4): pb.tick()
     assert pb.memory[player + HP] < hp0, "a hit after Aegis ended was still absorbed"
+
+    # Stoneskin (shield_timer) must consume a hit before Aegis spends a charge.
+    clear_entities(pb, entities)
+    drop_capsule(pb, player, entities, AEGIS)
+    gif.grab(pb, n=3)
+    wait_notices_clear(pb, notice)
+    assert pb.memory[pu_id] == AEGIS and pb.memory[pu_hits] == 3
+    hp1 = pb.memory[player + HP]
+    pb.memory[player + IFRAMES] = 0
+    pb.memory[player + SHIELD_TIMER] = 30
+    shot = hostile_shot_on_player(pb, player, entities, 30)
+    gif.grab(pb, n=4)
+    assert pb.memory[player + HP] == hp1, "Stoneskin/Aegis overlap still cost HP"
+    assert pb.memory[pu_hits] == 3, "Aegis spent a charge while Stoneskin was up"
+    pb.memory[player + SHIELD_TIMER] = 0
+    # Burn the refreshed Aegis so Limitless starts from a clean slot.
+    pb.memory[pu_id] = 0
+    pb.memory[pu_ticks] = 0
+    pb.memory[pu_hits] = 0
     gif.save("aegis.gif")
 
     # ---- LIMITLESS: Oath-sized spends refunded, Convergence not ----
@@ -199,6 +225,14 @@ def main():
     pb.memory[transform] = 135
     pb.tick()
     assert pb.memory[player + MP] <= 1, "Limitless refunded a full Convergence drain"
+    # Same-frame beat may decrement 135 -> 134 before powerup_tick; still
+    # must not refund a full drain as if it were a 1-MP Oath.
+    pb.memory[player + MP] = mp_max
+    for _ in range(2): pb.tick()
+    pb.memory[player + MP] = 0
+    pb.memory[transform] = 134
+    pb.tick()
+    assert pb.memory[player + MP] <= 1, "Limitless refunded Convergence at ticks=134"
     pb.memory[transform] = 0
     gif.grab(pb, every=2, n=40)
     wait_notices_clear(pb, notice)
@@ -232,14 +266,45 @@ def main():
     pb.memory[pu_ticks] = 90
     for _ in range(3): pb.tick()
     assert hud_lane(pb)[0] == HUD_OFFER_HEAL, f"Mend HUD icon wrong: {hud_lane(pb)}"
+
+    # Curse blocks Mend healing; the timer keeps running and NO HEAL fires once.
+    status_kind, status_ticks = map(
+        addr, ("_player_status_kind", "_player_status_ticks"))
+    hp_blocked = pb.memory[player + HP]
+    pb.memory[status_kind] = QSTATUS_CURSE
+    pb.memory[status_ticks] = 90
+    gif.grab(pb, every=3, n=12 * 8 + 8)
+    assert pb.memory[player + HP] == hp_blocked, "Mend healed through Curse"
+    assert pb.memory[pu_id] == MEND, "Mend expired while blocked by Curse"
+    pb.memory[status_kind] = 0
+    pb.memory[status_ticks] = 0
     gif.save("mend.gif")
 
     # ---- same power-up again refreshes, capped at 1.5x ----
     drop_capsule(pb, player, entities, MEND)
     pb.tick(); pb.tick()
     assert pb.memory[pu_ticks] <= 135 and pb.memory[pu_ticks] > 90, "Mend refresh rule broken"
+
+    # Muted heroes do not bank a Will charge on Limitless collect.
+    clear_entities(pb, entities)
+    pb.memory[pu_id] = 0
+    pb.memory[pu_ticks] = 0
+    for _ in range(20): pb.tick()
+    wait_notices_clear(pb, notice)
+    status_kind, status_ticks = map(addr, ("_player_status_kind", "_player_status_ticks"))
+    pb.memory[status_kind] = QSTATUS_MUTE
+    pb.memory[status_ticks] = 90
+    pb.memory[player + WILL_LEVEL] = 0
+    pb.memory[player + WILL_CHARGE] = 0
+    drop_capsule(pb, player, entities, LIMITLESS)
+    gif.grab(pb, n=3)
+    assert pb.memory[pu_id] == LIMITLESS, "Limitless not collected while muted"
+    assert pb.memory[player + WILL_LEVEL] == 0, "Limitless banked Will while muted"
+    pb.memory[status_kind] = 0
+    pb.memory[status_ticks] = 0
+
     pb.stop(save=False)
-    print("[powerups] PASS Aegis/Limitless/Mend: collect, announce, HUD, absorb, refund, heal, clip, expiry")
+    print("[powerups] PASS Aegis/Limitless/Mend: collect, announce, HUD, absorb, refund, heal, clip, expiry, curse, mute")
 
 
 if __name__ == "__main__":

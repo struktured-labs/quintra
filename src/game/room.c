@@ -2028,7 +2028,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
             // The contextual four-slot lane is otherwise the shared Will
             // meter. Full means the next A edge becomes that weapon's MAX.
-            if (!room_has_shop_wares)
+            // Shop offers outrank the power-up / Will lane; when no stall
+            // is in view, show the power-up timer even in a shop room.
+            if (!shop_offer_visible)
                 hud_redraw_action_charge(player.will_charge, WILL_MAX);
         }
 

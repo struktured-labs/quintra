@@ -610,6 +610,9 @@ u8 combat_resolve(void) BANKED {
                     break;
                 }
                 // AEGIS spends a charge instead of HP (never the Scythe).
+                // This walk is already gated on iframes == 0 and
+                // shield_timer == 0, so Stoneskin and i-frames consume
+                // the hit first, as the power-up spec requires.
                 if (powerup_aegis_absorb(i)) break;
                 // DEF soaks incoming damage (min 1 half-heart gets through).
                 // A giant colossus is already a moving wall inside a dense

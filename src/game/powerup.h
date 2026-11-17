@@ -30,6 +30,9 @@ void powerup_collect(u8 id) BANKED;
 void powerup_tick(void) BANKED;
 // Contextual HUD lane widget (icon, seconds, Aegis charges).
 void powerup_hud(void) BANKED;
+// Pack Status line: writes the active name + seconds and returns 1,
+// or returns 0 if no power-up is running.
+u8   powerup_pack_line(void) BANKED;
 // Hostile contact/projectile about to hurt: spend an Aegis charge instead.
 u8   powerup_aegis_absorb(u8 hostile_idx) BANKED;
 

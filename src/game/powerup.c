@@ -7,7 +7,6 @@
 // All hot-path hooks test one WRAM byte before far-calling into this bank.
 
 #include <gb/gb.h>
-
 #include "audio/sfx.h"
 #include "core/rng.h"
 #include "core/types.h"
@@ -22,6 +21,7 @@
 #include "game/will.h"
 #include "game/oath_arts.h"
 #include "render/hud.h"
+#include "render/text.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -35,6 +35,7 @@ static u8 powerup_aux;
 static u8 powerup_flags;
 static u8 powerup_last_mp;
 #define PF_BOSS_CLIPPED 0x01
+#define PF_CURSE_WARNED 0x02
 
 // Normal durations in beats (8 frames): 12 s, 15 s, 12 s.
 static const u8 pu_duration[POWERUP_COUNT] = { 0, 90, 112, 90 };
@@ -77,7 +78,9 @@ u8 powerup_spawn(u8 id, fix8_t x, fix8_t y) BANKED {
 
 static void powerup_roll_capsule(fix8_t x, fix8_t y) {
     u8 i;
-    if (procgen_current_room_is_boss) return;
+    if (procgen_current_room_is_boss || run_state_is_boss_room()
+        || run_state_is_miniboss() || run_state_is_shop()
+        || run_state_room_is_town(run_state.room_counter)) return;
     for (i = 0; i < MAX_ENTITIES; ++i)
         if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_PICKUP
             && entities[i].ai_data[0] == PICKUP_POWERUP) return;
@@ -139,12 +142,14 @@ void powerup_collect(u8 id) BANKED {
             ? POWERUP_AEGIS_BOSS_HITS : POWERUP_AEGIS_HITS;
         sfx_play_reward(SFX_REWARD_RELIC);
     } else if (id == POWERUP_LIMITLESS) {
-        if (player.mp_max && player.mp == 0) {
+        // mp_max == 1 would make this bump look like a full meter and
+        // re-arm Spirit Convergence. Leave a true empty bar empty then.
+        if (player.mp_max > 1 && player.mp == 0) {
             player.mp = 1;
             hud_redraw_mp();
         }
         powerup_last_mp = player.mp;
-        if (!player.will_level) {
+        if (!player.will_level && !STATUS_PLAYER_MUTED()) {
             player.will_level = 1;
             player.will_charge = 0;
         }
@@ -193,12 +198,13 @@ void powerup_tick(void) BANKED {
     powerup_clock++;
     if (id == POWERUP_LIMITLESS) {
         // Oath Arts cost OATH_MP_COST at their call site in room.c (bank 1
-        // has no headroom), so refund that spend here on the next frame.
-        // Convergence (full MP -> 0, starts the 135-beat transform) is not
-        // refunded: full MP stays reserved for it, as without Limitless.
+        // has no headroom), so refund that spend here on the same frame.
+        // Convergence drains full MP and sets room_transform_ticks = 135,
+        // which may decrement to 134 before this tick; any non-zero
+        // transform timer means "do not refund" (full MP stays reserved).
         if (player.mp < powerup_last_mp
             && (u8)(powerup_last_mp - player.mp) <= OATH_MP_COST
-            && room_transform_ticks != 135) {
+            && !room_transform_ticks) {
             player.mp = powerup_last_mp;
             hud_redraw_mp();
         }
@@ -214,10 +220,11 @@ void powerup_tick(void) BANKED {
         static const i8 ox[4] = { -12, 12, 12, -12 };
         static const i8 oy[4] = { -12, -12, 12, 12 };
         u8 ph = (u8)((powerup_clock >> 2) & 3);
+        // 4-frame life, spawned every 4 frames: two live shards, not four.
         fx_spawn(SPR_SHIELD_AURA, 1, (i16)player.x + 4 + ox[ph],
-            (i16)player.y + 4 + oy[ph], 8);
+            (i16)player.y + 4 + oy[ph], 4);
         fx_spawn(SPR_SHIELD_AURA, 1, (i16)player.x + 4 + ox[(u8)((ph + 2) & 3)],
-            (i16)player.y + 4 + oy[(u8)((ph + 2) & 3)], 8);
+            (i16)player.y + 4 + oy[(u8)((ph + 2) & 3)], 4);
     } else if (id == POWERUP_LIMITLESS && (powerup_clock & 31) == 0
         && pu_free_slots() > 6) {
         fx_spawn(SPR_FX_IMPACT, 0x06, (i16)player.x + 4,
@@ -231,12 +238,19 @@ void powerup_tick(void) BANKED {
         u8 period = procgen_current_room_is_boss ? 18 : 12;
         if (++powerup_aux >= period) {
             powerup_aux = 0;
-            if (player.hp < player.hp_max && !STATUS_PLAYER_HEALING_BLOCKED()) {
-                player.hp++;
-                hud_redraw_hp();
-                sfx_play(SFX_HEART);
-                status_effect(QSTATUS_REGEN, 7, (i16)player.x + 4,
-                    (i16)player.y + 2);
+            if (player.hp < player.hp_max) {
+                if (STATUS_PLAYER_HEALING_BLOCKED()) {
+                    if (!(powerup_flags & PF_CURSE_WARNED)) {
+                        powerup_flags |= PF_CURSE_WARNED;
+                        hud_show_healing_blocked();
+                    }
+                } else {
+                    player.hp++;
+                    hud_redraw_hp();
+                    sfx_play(SFX_HEART);
+                    status_effect(QSTATUS_REGEN, 7, (i16)player.x + 4,
+                        (i16)player.y + 2);
+                }
             }
         }
     } else if (id == POWERUP_LIMITLESS) {
@@ -263,12 +277,41 @@ void powerup_tick(void) BANKED {
     if (powerup_ticks == 0) pu_end();
 }
 
-void powerup_hud(void) BANKED {
+u8 powerup_pack_line(void) BANKED {
+    static const char *const names[POWERUP_COUNT] = {
+        "", "AEGIS ", "LIMIT ", "MEND  "
+    };
     u8 secs;
+    if (!powerup_id || powerup_id >= POWERUP_COUNT) return 0;
+    text_write(names[powerup_id]);
+    secs = (u8)(((u16)powerup_ticks * 8u + 59u) / 60u);
+    text_u16(secs);
+    text_write("S");
+    return 1;
+}
+
+void powerup_hud(void) BANKED {
+    u8 secs, hits;
     if (!powerup_id || powerup_id >= POWERUP_COUNT) return;
     secs = (u8)(((u16)powerup_ticks * 8u + 59u) / 60u);
-    hud_show_powerup(pu_hud_icon[powerup_id], secs,
-        powerup_id == POWERUP_AEGIS ? powerup_aegis_hits : 0xFF,
+    hits = powerup_id == POWERUP_AEGIS ? powerup_aegis_hits : 0xFF;
+    if (hits != 0xFF) {
+        // Window-only pip tile lives at HUD_AEGIS_PIPS; data stays here
+        // so bank 8 (hud.c) does not drop under its 256-byte floor.
+        static const u8 pips[4][16] = {
+            {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+            {0,0,0,0,0xC0,0xC0,0xC0,0xC0,0xC0,0xC0,0,0,0,0,0,0},
+            {0,0,0,0,0xD8,0xD8,0xD8,0xD8,0xD8,0xD8,0,0,0,0,0,0},
+            {0,0,0,0,0xDB,0xDB,0xDB,0xDB,0xDB,0xDB,0,0,0,0,0,0},
+        };
+        static u8 loaded = 0xFF;
+        u8 n = hits > 3 ? 3 : hits;
+        if (n != loaded) {
+            set_bkg_data(HUD_AEGIS_PIPS, 1, pips[n]);
+            loaded = n;
+        }
+    }
+    hud_show_powerup(pu_hud_icon[powerup_id], secs, hits,
         (powerup_ticks <= 22 && (powerup_clock & 16)) ? 1 : 0);
 }
 

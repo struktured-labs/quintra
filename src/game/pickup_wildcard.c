@@ -32,7 +32,7 @@ u8 pickup_spawn_wildcard(fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
-// pickup_roll_drop lives in powerup.c (autobank): bank 13 is at its floor.
+// pickup_roll_drop lives in powerup.c (bank 20): bank 13 is at its floor.
 
 void pickup_resolve_wildcard(void) BANKED {
     u8 fate = (u8)rng_range(8);

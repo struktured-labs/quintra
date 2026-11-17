@@ -20,8 +20,9 @@ void hud_redraw_coins(void) BANKED;  // call when player.coins changes
 void hud_redraw_depth(void) BANKED;  // call when run_state.room_counter changes
 void hud_show_offer(u8 ware, u8 price) BANKED; // icon + market price in cols 12..15
 void hud_clear_offer(void) BANKED;    // clear a proximity price after leaving the stall
-// Active power-up in the contextual lane: icon, seconds, optional charge
-// digit (0xFF = none). blink hides the icon during the last seconds.
+// Active power-up in the contextual lane: icon, zero-padded seconds,
+// optional Aegis pip tile (hits 0xFF = none). blink hides the icon
+// during the last seconds.
 void hud_show_powerup(u8 icon, u8 secs, u8 hits, u8 blink) BANKED;
 void hud_powerup_release(void) BANKED;
 void hud_show_loot_timer(u8 seconds) BANKED; // secret-vault relic icon + seconds

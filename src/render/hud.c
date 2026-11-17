@@ -299,9 +299,12 @@ void hud_show_powerup(u8 icon, u8 secs, u8 hits, u8 blink) BANKED {
         && hits == pu_hits && blink == pu_blink) return;
     pu_icon = icon; pu_secs = secs; pu_hits = hits; pu_blink = blink;
     row[0] = blink ? HUD_BLANK : icon;
-    row[1] = secs >= 10 ? (u8)(HUD_DIGIT_0 + secs / 10) : HUD_BLANK;
+    // Always write both second digits so "07" + charges cannot kern into "71".
+    row[1] = (u8)(HUD_DIGIT_0 + secs / 10);
     row[2] = (u8)(HUD_DIGIT_0 + secs % 10);
-    row[3] = (hits == 0xFF) ? HUD_BLANK : (u8)(HUD_DIGIT_0 + (hits > 9 ? 9 : hits));
+    // Pip pixels are uploaded from bank 20 (powerup_hud) so this bank
+    // stays above the 256-byte floor. Col 15 is never an Arabic numeral.
+    row[3] = (hits == 0xFF) ? HUD_BLANK : HUD_AEGIS_PIPS;
     attrs[0] = attrs[1] = attrs[2] = 7;
     attrs[3] = 6;   // MP blue: charges never read as part of the seconds
     VBK_REG = 0; set_win_tiles(12, 0, 4, 1, row);
