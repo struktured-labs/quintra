@@ -34,7 +34,8 @@ void main(void) {
     audio_init();
     rng_seed(0xC0DEBABEUL);
 
-    loop_init(SCREEN_TITLE);
+    // The lore intro plays once per power-on, then hands to the title.
+    loop_init(SCREEN_INTRO);
     loop_run();
     // unreachable
 }
