@@ -1,8 +1,14 @@
 # Temporary power-ups, roulette capsules, Confusion retune, gem currency (proposal)
 
 Date: 2026-11-16. Status: **proposal for Carmelo's review.** Phase 1
-(framework + Aegis, Limitless, Mend) is implemented in a separate PR;
-everything else here is spec only. Source request (Carmelo, verbatim):
+(framework + Aegis, Limitless, Mend) is implemented in a separate PR
+(`feat/powerups-phase1`); everything else here is spec only. Phase 1
+notes: the drop table moved from `pickup_wildcard.c` (bank 13, at its
+floor) into `powerup.c`, pinned to empty bank 20; the power-up clock
+rides `status_tick()` (the room only calls it when a status or power-up
+is live); the HUD widget replaces the Will lane while active; no bank-0
+bytes are added. The 20 s drop cooldown and elite double chance are
+deferred to Phase 2. Source request (Carmelo, verbatim):
 
 > more power ups dropped from monsters or pick up able on map one time per
 > run like Penta dragon. Ideas: replicates ur attack in parallel formations
@@ -134,24 +140,24 @@ never extended).
 
 ### 4.1 Per-class behaviour
 
-**AEGIS (P1).** All classes: `powerup_aegis_hits = 3`; a hostile
-contact or projectile that would hurt instead consumes a hit, grants 18
-frames of i-frames, plays a glass "tink" (CH4) and flashes the ring.
-DEF+2 via `status_player_effective_stat` while active (so a 4th hit, if
-the timer remains with 0 hits, does not apply; the bubble is gone when
-hits reach 0). Sauran: Stoneskin and Aegis stack (Stoneskin checks
-first, so Aegis hits are only spent when Stoneskin is down). Never
-blocks Mortal Scythe or boss "unblockable" signatures (same exception
-list as `player.shield_timer` checks).
+**AEGIS (P1).** All classes: `powerup_aegis_hits = 3` (2 in boss
+rooms). A hostile contact or projectile that would hurt instead spends a
+charge, grants 30 frames of i-frames, deletes the projectile, shakes
+lightly and plays the bright crystal ping (`SFX_WEAK`). The bubble ends
+when the charges or the timer run out (no separate DEF bonus: while it is
+up every hit is absorbed). Two ward shards (`SPR_SHIELD_AURA`) orbit the
+hero, flickering on the last charge. Sauran: Stoneskin is checked first,
+so Aegis charges are spent only when Stoneskin is down. Never blocks the
+Reaper's Mortal Scythe (the absorb hook runs after that branch).
 
-**LIMITLESS (P2).** `player.mp` is not decremented by Oath Arts, Bomb
-B, or Convergence while active; HUD MP digits pulse white/blue. Cooldowns
-(`active_charge`) still apply, so it is "free", not "spam". Convergence
-(which normally drains full MP) is allowed once per 4 s. Will: on A
-release, `will_charge` refills to the next tier's threshold at most once
-per 2 s (so Max-Will signatures are available roughly every 2 s, gated
-by their own cooldowns). Class specifics: Wolfkin Oath dash cooldown
-unchanged; Vespine swarm still capped by its own counter.
+**LIMITLESS (P2).** Oath Arts and Bombs cost no MP (bombs are guarded at
+their call site; the Oath spend is refunded on the next frame because
+bank 1 has no headroom for a guard). Convergence, which drains full MP,
+is not refunded, so full MP stays reserved for it exactly as without
+Limitless (this avoids Convergence every 3 s). At least 1 MP is kept
+showing so an Oath stays castable. Will: on grab, and then every 2 s
+while the Will bank is empty, one MAX charge is banked (Max-Will
+signatures keep their own convergence caps). Muted heroes do not bank.
 
 **MEND (P3).** A dedicated timer (`powerup_ticks`), **not** the status
 slot, so a Poison hit does not erase it (Carmelo found statuses too
