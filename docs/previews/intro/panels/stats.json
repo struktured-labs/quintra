@@ -1,0 +1,128 @@
+{
+ "valley": {
+  "cells": 600,
+  "unique_tiles": 355,
+  "tile_bytes": 5680,
+  "map_bytes": 1200,
+  "palettes": 7
+ },
+ "torn": {
+  "cells": 600,
+  "unique_tiles": 398,
+  "tile_bytes": 6368,
+  "map_bytes": 1200,
+  "palettes": 7
+ },
+ "shrine": {
+  "cells": 280,
+  "unique_tiles": 172,
+  "tile_bytes": 2752,
+  "map_bytes": 560,
+  "palettes": 7
+ },
+ "cliff": {
+  "cells": 384,
+  "unique_tiles": 320,
+  "tile_bytes": 5120,
+  "map_bytes": 768,
+  "palettes": 7
+ },
+ "riftgate": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "riftgate_b": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "ember": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "ember_b": {
+  "cells": 168,
+  "unique_tiles": 127,
+  "tile_bytes": 2032,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "busts": {
+  "cells": 280,
+  "unique_tiles": 216,
+  "tile_bytes": 3456,
+  "map_bytes": 560,
+  "palettes": 7
+ },
+ "stage_1_crystal": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_2_verdant": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_3_ember": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_4_frost": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_5_mire": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_6_shadow": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_7_golden": {
+  "cells": 168,
+  "unique_tiles": 127,
+  "tile_bytes": 2032,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_8_bloodmoon": {
+  "cells": 168,
+  "unique_tiles": 126,
+  "tile_bytes": 2016,
+  "map_bytes": 336,
+  "palettes": 6
+ },
+ "stage_9_void": {
+  "cells": 168,
+  "unique_tiles": 128,
+  "tile_bytes": 2048,
+  "map_bytes": 336,
+  "palettes": 6
+ }
+}
