@@ -287,7 +287,9 @@ void hud_clear_offer(void) BANKED {
 
 // Power-up lane: [icon][secs][secs][charges]. The custom per-cell palette
 // marks lane_palette 0xFE so every other lane writer re-asserts its own.
-static u8 pu_icon = 0xFF, pu_secs = 0xFF, pu_hits = 0xFF, pu_blink = 0xFF;
+// Uninitialised on purpose (no bank-0 initializer bytes): lane_palette starts
+// at 0xFF, so the first call always draws.
+static u8 pu_icon, pu_secs, pu_hits, pu_blink;
 void hud_show_powerup(u8 icon, u8 secs, u8 hits, u8 blink) BANKED {
     u8 row[4];
     u8 attrs[4];
