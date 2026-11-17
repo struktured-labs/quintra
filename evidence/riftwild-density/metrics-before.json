@@ -1,0 +1,12 @@
+{
+ "cross_seed_identical_pct": 94.5,
+ "cross_seed_identical_min_pct": 83.8,
+ "nearest_field_identical_pct": 91.8,
+ "distinct_tile_types_mean": 7.2,
+ "most_common_tile_pct": 62.2,
+ "hostiles_median": 12.0,
+ "hostiles_max": 16,
+ "quiet_fields_per_run": 5.0,
+ "fields_with_poi_per_run": 13.0,
+ "empty_fields_per_run": 23.0
+}
