@@ -393,7 +393,15 @@ screen_id_t vignette_arrival(u8 from_world, u8 stage) BANKED {
 }
 
 screen_id_t vignette_on_run_start(u8 stage) BANKED {
+    // Stay on RUN_INIT for one tick so a test harness can mark vignettes
+    // seen after run_state_init clears the bits and before this arms.
+    static u8 delay;
     room_start_vignette = 0;
+    if (!delay) {
+        delay = 1;
+        return SCREEN_SELF;
+    }
+    delay = 0;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter))
         return SCREEN_ROOM;
     {

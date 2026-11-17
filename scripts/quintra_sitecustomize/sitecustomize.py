@@ -72,10 +72,10 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
             return self._quintra_syms
 
         def _quintra_maybe_mute(self):
-            if self._quintra_muted:
-                return
+            # A second New Game in the same process re-inits run_state and
+            # clears vignette_seen. Remute on every RUN_INIT, not once per
+            # PyBoy instance.
             if os.environ.get("QUINTRA_KEEP_VIGNETTES") == "1":
-                self._quintra_muted = True
                 return
             syms = self._quintra_load_syms()
             if not syms or not syms.get("screen"):
@@ -84,7 +84,16 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
                 scr = self.memory[syms["screen"]]
             except Exception:
                 return
-            # 3 = RUN_INIT, 5 = ROOM, 6 = VIGNETTE
+            # 3 = RUN_INIT (seen was just cleared). 5/6 are fallbacks if a
+            # batched tick skipped past that screen before this hook ran.
+            if scr != 6:
+                self._quintra_vig_t = 0
+                if getattr(self, "_quintra_skipping", False):
+                    try:
+                        self.button_release("start")
+                    except Exception:
+                        pass
+                    self._quintra_skipping = False
             if scr not in (3, 5, 6):
                 return
             try:
@@ -92,13 +101,20 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
                 self.memory[syms["seen"] + 1] = 0xFF
                 if syms.get("pending") is not None:
                     self.memory[syms["pending"]] = 0
+                # Held START through the vignette fade-in does not skip.
+                # Press it from frame 8, the first legal skip beat.
+                if scr == 6:
+                    self._quintra_vig_t = getattr(self, "_quintra_vig_t", 0) + 1
+                    if self._quintra_vig_t >= 8 and not getattr(self, "_quintra_skipping", False):
+                        self.button_press("start")
+                        self._quintra_skipping = True
             except Exception:
                 return
-            self._quintra_muted = True
 
         def tick(self, *args, **kwargs):
-            # Mute between frames so a batched tick(90) cannot skip past RUN_INIT.
-            if self._quintra_muted:
+            # Check between frames so a second RUN_INIT cannot hide inside
+            # a batched tick(n) after the first run was already muted.
+            if os.environ.get("QUINTRA_KEEP_VIGNETTES") == "1":
                 return super().tick(*args, **kwargs)
             count = 1
             if args and isinstance(args[0], int):
@@ -108,15 +124,6 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
             for _ in range(max(1, count)):
                 result = super().tick(1, *args, **kwargs)
                 self._quintra_maybe_mute()
-                if self._quintra_muted and count > 1:
-                    left = count - 1 - _
-                    # After mute, finish the batch in one call if any remain.
-                    # The loop already completed this frame; remaining are left-1?
-                    # We ran (_+1) frames so far; remaining = count - (_+1)
-                    remain = count - (_ + 1)
-                    if remain > 0:
-                        result = super().tick(remain, *args, **kwargs)
-                    break
             return result
 
     _pyboy_mod.PyBoy = _PyBoy
