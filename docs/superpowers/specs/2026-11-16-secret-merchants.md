@@ -48,24 +48,36 @@ Public shop is always `size-3`; sanctuary is `size-2`; the colossus is `size-1`.
 
 ## 1. Goal and non-goals
 
-**Goal.** Exactly one hidden merchant — a **Veil Trader** — in each of the
-nine stages. Finding one should feel like a Zelda secret: a fair, biome-native
-tell, a verb you already have, a quiet stall behind the mouth, and stock you
+**Goal.** Exactly one hidden **Veil Trader** in each of the nine stages,
+and a few hidden **cave merchants** in each Riftwild region (§6). Finding
+one should feel like a Zelda 1 secret: a fair, biome-native tell, a verb
+you already have, a quiet stall *inside a cave or vault*, and stock you
 cannot get on the public counter.
+
+**Cave rule (Zelda 1).** Every secret merchant — Veil Trader and Riftwild
+cave merchant alike — lives *inside* a hidden cave or vault. The overworld
+field and the dungeon host room never show the keeper or the shelves in
+the open. Only a concealed entrance is visible outside. Carmelo
+(2026-11-16): "But merchants are hidden in caves like Zelda 1 not out in
+open." The one exception is the existing **Riftwell wayside trader**,
+already a known open-air Antidote stall; this spec does not move or hide
+it, and it is not a secret merchant.
 
 **Non-goals.**
 
 - No second public merchant, and no change to public / village / Riftwell stock
   or prices.
 - No secret merchant in a village (those already have four civic shops).
-- No secret merchant in Riftwild in this version (the wayside trader and the
-  dens already pay tools, coins, a mend, and a chart). A per-region peddler is
-  an open question, §11.
+- No open-air secret stall in Riftwild or in a dungeon host room. Secret
+  merchants are cave interiors only (§6).
 - No stat-cap relics (Iron Heart, Mana Gem, Power Stone, and the rest of the
   dens' excluded list). The stall is for rare power, consumables, and one
   signature charm.
 - No new SRAM migration story beyond appended bytes; older suspends load as
   "not found, nothing bought."
+- No burnable-bush entrance in v1: the cartridge still has no fire tool
+  (see the dens spec). If one ships, a bush tell can be added as an
+  alternate for CAVE-THICKET.
 
 ## 2. Placement
 
@@ -78,6 +90,8 @@ every mission-graph role (trial, sigil, warden, waystone, deep warden / switch
 / gate). If Power Shrines have shipped, also exclude that stage's shrine cell:
 hash the Veil host first (`run_seed ^ stage * 0x9E3779B9 ^ 'VEIL'`), then let
 the shrine pick from what remains, so the two specs cannot collide.
+Riftwild shrine cells are reserved after dens and after the cave merchants
+in §6.2, never the other way around.
 
 **Prefer** a dead-end or off-path room with a wall or water edge that can hold
 the tell (same instinct as the Farfold filter). If the first candidate has no
@@ -102,10 +116,13 @@ every non-host room). Then a post-pass on the *single* Veil host cell:
    reed island, hook gap, and so on), and, once `mouth_open` is set, the
    16 px vault mouth.
 
-The host room may still be a quieter combat room. The trader is not standing
-in the open. Opening the tell paints a vault mouth (`room_open_secret` / the
-existing 16 px `BGT_DOOR` pair). Walking in enters a **compact overlay stall**
-(no enemies, no graph exit), then returns to the host at the mouth. Opened
+The host room may still be a quieter combat room. **The trader is never
+standing in that room.** Opening the tell paints a vault mouth
+(`room_open_secret` / the existing 16 px `BGT_DOOR` pair). Walking in
+enters a **compact cave-vault stall** (no enemies, no graph exit), then
+returns to the host at the mouth. Until the mouth is open, the host
+contains only the tell; after it is open, only the mouth. The shelves
+exist solely inside the vault, same as a Zelda 1 dungeon cave. Opened
 mouths stay enterable after a leave and a return, same contract as
 `2026-11-09-secret-door-seal.md`, keyed on `secret_shop` bit 2 (`mouth_open`),
 not on `dungeon_phase` hidden-secret slots.
@@ -170,7 +187,8 @@ as an alternate so every Region 1 waygear shows up somewhere.
 
 ## 4. The stall
 
-- Quiet overlay. No enemies. One Veil Trader behind a short counter of
+- Quiet cave-vault overlay. No enemies. The keeper is only here, never
+  in the host room. One Veil Trader behind a short counter of
   **three shelves**. Reuse counter-reach (56 px vertical, 24 px sideways,
   must face the keeper) and “standing on a ware never talks.”
 - Talk first: a one-line biome greeting, then the existing `TODAYS WARES / COST`
@@ -268,20 +286,199 @@ Draught’s 18, because it is a full MP top-up with no Surge attached.
 Shelf A tonics are drunk immediately; they do not occupy the power-up
 slot and they do not add a fourth Antidote to the pack.
 
-## 6. Persistence and save
+## 6. Riftwild cave merchants
 
-Append two fields to `run_state_t` (suspend-compatible, older layouts
-read as zero). Append `u8 secret_shop` then `u16 veil_charms` with **no
-padding**. SDCC/gbz80 is byte-aligned; host-side Python in
-`test_sram_compat.py` must unpack with an explicit little-endian layout
-(for example `<...BH`), never native alignment.
+Carmelo (2026-11-16): "Rift wild should definitely have a few merchants."
+And, separately: "But merchants are hidden in caves like Zelda 1 not out
+in open." This section is the answer. The existing Riftwell wayside
+trader and the three dens per region stay as they are.
+
+### 6.1 Count and role
+
+**Three hidden cave merchants per Riftwild region** (the middle of
+"about 2–4"), one in each two-row band, plus the open Riftwell trader
+(unchanged). A full run therefore has nine cave stalls in the wild, on
+top of the nine Veil Traders. If a band has no legal field after the
+exclusions below, that band is skipped; a region always places **at
+least two** caves, so the count stays inside 2–4. When only two caves
+place, the permutation is applied to the *placed* bands and must
+include **CAVE-STONE** (so the region Wild charm is obtainable) and
+at least one no-item kind (STONE or THICKET) whose Hollow-only flag
+is off, so visit-1 Waking still has a cave that opens without the
+Warden’s Glove.
+
+They are not dens. A merchant cave is a **single-room shop** with no
+keeper-boss, no reward chest, and no stat relics. Dens keep their chest
+or trial payoff; these caves only sell.
+
+### 6.2 Placement
+
+**Candidates** are the same no-fixture fields dens use, minus fields
+that already hold a den, minus Hollow relic fields {22, 35}, and minus
+the Riftwell (the open trader is already there). Power Shrines, if PR
+#120 has shipped, pick from what remains *after* caves, and must not
+be subtracted first — otherwise they would shift the `'CAVE'` hash.
+On today’s fixed layout the dens’ 20 candidates split 7 / 7 / 6 per
+band; after three dens that leaves 6 / 6 / 5, so all three bands place.
+A future seeded layout may still trip the two-cave fallback in §6.1.
+
+**Hash order**, all isolated xorshift32 chains that never consume the
+room RNG:
+
+1. Dens (already shipped): `run_seed ^ region * 0x9E3779B9 ^ 'RIFT'`.
+2. Cave merchants (this spec): `run_seed ^ region * 0x9E3779B9 ^ 'CAVE'`,
+   picking from what dens left.
+3. Power Shrines (PR #120): pick from what remains.
+
+**Spread:** one cave per two-row band (rows 0–1, 2–3, 4–5), always a
+different field from that band’s den, so a biome slice never hides a
+den and a shop in the same screen.
+
+**Tell spot** inside the field: a quadrant 4–8 tiles from the central
+trail cross, visible from the cross, not on the cross, not in a
+six-tile edge mouth, not in the return landing apron, and not inside an
+existing setpiece stamp. Same instinct as dens, different tell art
+(§6.3), so a shop cave is never mistaken for a cairn, island stair, or
+chasm scar.
+
+### 6.3 Hidden entrances
+
+The merchant is **never** in the field. The field shows only a
+concealed cave mouth, Zelda 1 style (bombable wall, pushable rock,
+walk-into thicket). There is no burnable-bush tell in v1, because
+Quintra still has no fire tool; if one ships, it becomes an alternate
+for CAVE-THICKET.
+
+A seeded permutation of the three kinds below is laid over the three
+bands. **One of the three is Hollow-only.** Worldglass is required to
+even see a usable tell; it does **not** skip the cave’s gate verb:
+
+- In **Waking**, that field always shows a dead ring with no mouth,
+  even after `mouth_open[i]` is set. Re-entering still needs Worldglass.
+- In **Hollow**, while `mouth_open[i] == 0`, the field shows the
+  concealed STONE / BLAST / THICKET tell and still needs that verb.
+- In **Hollow**, once `mouth_open[i] == 1`, the mouth stays open for
+  the rest of the region’s Hollow visits.
+
+Echo Chime and Wayfarer’s Bell **do** react to the Waking dead ring
+(flash / 24 px hum). That cues Worldglass without spoiling the verb.
+The Hollow-only flag may land on any kind, except as restricted by
+the two-cave fallback above, because two of the three kinds need no
+item, so visit-1 Waking still has at least one no-item cave.
+
+| Kind | Tell (not a den tell, not amber) | Gate | Availability |
+|---|---|---|---|
+| **CAVE-STONE** | A field rock one intra-palette step paler, with a coin-scratch (not the den cairn’s carved standing stone), one tile off a shallow socket. | Push into the socket, or lift with Titan Glove / Sauran. Push always works, so this cave is never Glove-gated. | Visit 1, no item. |
+| **CAVE-BLAST** | A boarded or cracked cliff face, biome-coloured, not amber, at the end of a short 3-tile accent line. | Bomb, Rift Bomb, Morningstar, or a Titan Glove / Sauran touch (same verb set as a den cairn, different art). Primary shots do **not** open it. | Glove is on this region’s first Warden, so the cave may wait until after that fight on region 1 visit 1. The STONE and THICKET caves still exist. |
+| **CAVE-THICKET** | A bush, ivy, or reed curtain that matches the field, except one leaf tile is flipped. | Walk into the curtain. | Visit 1, no item. |
+
+On opening, the tell becomes a `BGT_WILD_STAIR` or cave-mouth pair.
+Stepping on it enters a **one-room stall cave**. Prefer the same portal
+path dens use, with `world_screen = 48 + i` for cave `i` in 0..2 (dens
+already own 36..47). A shared helper (`world_effective_field(ws)` or
+equivalent) must test `ws >= 48` (parent = cave field `i`) *before*
+any existing `ws >= 36` den guard. A den index of
+`(ws - 36) >> 2` would otherwise become 3 on screens 48..50 and read
+off the end of a 3-den table. The helper also suppresses field-entry
+effects (Cache Lure, Wayfarer's Bell, Hollow Wick, Worldglass) for
+every `ws >= 36`. Suspend inside 48..50 must rebuild the parent field
+and the safe exit tile before the player can walk out. Worldglass is
+disabled inside, as in dens. Leaving lands on a safe tile at the
+mouth, never in water or a hole (same softlock rule as the Stage 5
+Veil island).
+
+**CAVE-BLAST terrain.** The tell sits in an open quadrant 4–8 tiles
+from the trail cross, which may have no natural cliff. The post-pass
+stamps a self-contained bluff of existing biome rock tiles plus one
+crack, so the boarded face is never a detached wall on flat grass.
+
+**CAVE-STONE lift.** If Titan Glove / Sauran lifts the rock, `mouth_open`
+fires on the lift itself, not on a later throw into the socket, so
+tossing the rock off-socket cannot break the gate until a reload.
+
+The mouth stays open for the rest of the region (`rift_caves`
+`mouth_open`, §7). Echo Chime in the parent field flashes the tell and,
+if the cave is still unfound, sets `chime_hinted` and a **dim small
+coin** on that field (dens keep the chest glyph, so the two secrets
+read apart on the Compass). A Chart never prints the coin. A seeded
+Riftwild wayfarer rumour names the *method*, never the field, e.g.
+`A ROCK WITH A COIN SCRATCH / HIDES A DOOR`.
+
+### 6.4 Stock
+
+Three shelves, same A / B / C rules as the Veil stall (A restocks, B is
+a bottle that **arms at the counter and uncorks on the next combat
+entry**, C is unique), but the goods are **Riftwild-flavoured** and must
+not duplicate a Veil signature, a stage tonic, or the open Riftwell’s
+role as the cheap Antidote stop. Shelf B still uses the combat-entry
+latch: next hostile Riftwild field, den keeper room, or, if the bottle
+is still armed when the champion enters a dungeon, that dungeon’s next
+combat room. The latch lives in `rift_caves`, not in `secret_shop`, so
+`run_state_begin_dungeon` does not erase it.
+
+If temporary power-ups have not shipped at all, every cave’s shelf B
+uses the same Grand Surge stand-in as the Veil stall (24 coins, 20 s),
+also latched. If Phase 1 of PR #120 has shipped (Aegis, Limitless,
+Mend) but not the later bottles, use those named commons where the
+table asks for them, and Grand Surge where it asks for an uncommon or
+rare that is not in yet. Do not write “else Limitless” in one row and
+“else Grand Surge” in the prose.
+
+Prices stay numerals if Shards ship. Public reference is unchanged:
+Riftwell Antidote 12, dungeon Chart 15, Surge 20, Bomb Bag 30.
+
+| Cave kind | A. Tonic (restocks) | B. Bottle (once / region, uncorks in next fight) | C. Unique (once / run or once / region, see below) |
+|---|---|---|---|
+| CAVE-STONE | Rift Tonic: 1 heart + 1 MP, 16 | Mend or Aegis, 24 | The **region Wild charm** (table below), 40 / 45 / 55 in regions 1 / 2 / 3. If already owned, the shelf is empty. |
+| CAVE-BLAST | Rift Tonic, 16. Not an Antidote shelf — the open Riftwell keeps that job. | Uncommon bottle (Formation, Halo, or Blast Assist, seeded), 36 | Bomb Bag at 30 if unowned, else a Rift Bomb at 20. Bomb Bag is once per run; a bought Rift Bomb does not restock this region. |
+| CAVE-THICKET | Rift Tonic, 16 | Rare bottle (Wingmates, Clarity, or Lodestar) at 48 if that bottle has shipped, else the §6.4 fallback (Grand Surge at 24 until the named rare exists). | Echo Chime at 20 if the pack has none, else a **Riftwell re-arm** at 25 (clears `RIFT_REGION_WELL_USED_BIT`). Re-arm is once per region and is not offered if the well is already fresh. If both are unavailable, the shelf is empty. |
+
+If the Hollow-only flag lands on a cave, shelf B upgrades to a rare
+bottle when the rare list has shipped (Stillwater, Nova, or Wingmates
+at 48), uncorking in the next fight — including a Hollow field. Shelf C
+does not start selling Blast Seed or Rift Lens; those stay Hollow-cache
+rewards so the caves do not undercut Hollow exploration.
+
+**Region Wild charms** (flag charms, same always-on rule as Veil
+charms, stored in `veil_charms` bits 9–11, shown as pips 10–12 on the
+Pack `VEIL` row):
+
+| Region | Charm | Effect | Price |
+|---|---|---|---|
+| 1 | **Wayfarer's Bell** | While owned, an unfound merchant-cave tell in the current field hums when the hero is within 24 px (reuse an existing SFX, the optional proximity hum from the dens spec). Echo Chime already flashes a cave tell; the Bell does not repeat that, it is a close-range tell without spending the Chime. | 40 |
+| 2 | **Cache Lure** | On field entry, setpiece coin caches and loose den coin piles glint for 1 s (Cave Light’s cousin, for wild loot, not cracks). | 45 |
+| 3 | **Hollow Wick** | In Hollow, on field entry, Hollow-only den and cave tells *and* any still-unclaimed Hollow relic cache in that field glint for 1 s. The cache glint keeps the charm useful late in region 3, when few Hollow-only dens or caves may remain. | 55 |
+
+These three must not copy a Veil effect (no secret-wall glint, no
+conditional ATK, no lethal save). Buying one prints a named notice.
+
+### 6.5 Map, return, and region lifetime
+
+- Unopened caves are never drawn. Charts never reveal them.
+- Chime hint: dim `BGT_MAP_SHOP` on the parent field, persisted in
+  `chime_hinted`. Found: bright small coin. The Riftwell trader keeps
+  its existing small coin after a meeting. Dens keep the chest.
+- Stock, mouth, and found flags **persist across the three dungeon
+  trips of the region** and clear only when a *new* Riftwild region
+  begins (`run_state_begin_world` for a fresh region, not on each
+  return to the same map). Death wipes the run as usual.
+
+## 7. Persistence and save
+
+Append three fields to `run_state_t` (suspend-compatible, older layouts
+read as zero), packed with **no padding**, in this order: `u8
+secret_shop`, `u16 veil_charms`, `u32 rift_caves`. SDCC/gbz80 is
+byte-aligned; host-side Python in `test_sram_compat.py` must unpack
+with an explicit little-endian layout (for example `<...BHL`), never
+native alignment.
 
 | Field | Size | Lifetime |
 |---|---|---|
-| `secret_shop` | `u8` | Cleared when the next dungeon begins, at the same moment as `shop_bought`. Bit layout is fixed: |
-| `veil_charms` | `u16` | Bits 0–8 = signatures 1–9 owned this run. Cleared only on run end / death. |
+| `secret_shop` | `u8` | Cleared when the next dungeon begins, at the same moment as `shop_bought`. Bit layout is fixed below. |
+| `veil_charms` | `u16` | Bits 0–8 = Veil signatures 1–9; bits 9–11 = region Wild charms 1–3. Cleared only on run end / death. Bits 12–15 reserved, must read as zero. |
+| `rift_caves` | `u32` | The three cave merchants of the *current* region. Cleared when a new Riftwild region begins, **not** when a dungeon begins. |
 
-`secret_shop` bits:
+`secret_shop` bits (dungeon Veil stall only):
 
 | Bit | Name | Meaning |
 |---|---|---|
@@ -289,42 +486,83 @@ padding**. SDCC/gbz80 is byte-aligned; host-side Python in
 | 1 | `shelf_c_bought` | Shelf C sold out this stage (also implied by the matching `veil_charms` bit). |
 | 2 | `mouth_open` | The vault mouth stays open across leaves and suspends. Do not reuse `dungeon_phase` hidden-secret slots. |
 | 3 | `chime_hinted` | Echo Chime was rung in this unfound host; Compass draws the dim small coin until found. |
-| 4 | `bottle_armed` | Shelf B is paid for and waiting to uncork on the next combat-room entry. Cleared on uncork, and also when `secret_shop` is cleared at the next dungeon. |
+| 4 | `bottle_armed` | Shelf B is paid for and waiting to uncork on the next combat-room entry. Cleared on uncork, and also when `secret_shop` is cleared at the next dungeon. A Riftwild-armed bottle is *not* stored here. |
 | 5–6 | reserved | Must read as zero. |
 | 7 | `found` | The player entered the stall. Compass draws the bright small coin. |
 
-Shelf A has no bit (it restocks). Shelf C also consults `veil_charms`, so
-a later stall never offers a duplicate and a mid-dungeon re-entry does
-not restock a sold signature.
+`rift_caves` bits, for cave `i` in 0..2:
 
-Death wipes the run as usual. Suspend on room entry already covers being
-inside the overlay; the stall rebuilds deterministically from
-`(run_seed, stage, secret_shop, veil_charms)`.
+| Bits | Name | Meaning |
+|---|---|---|
+| 0–2 | `found[i]` | The player entered cave `i`. |
+| 3–5 | `mouth_open[i]` | The cave mouth stays open for the rest of the region. |
+| 6–8 | `chime_hinted[i]` | Echo Chime was rung in that unfound field. |
+| 9–11 | `shelf_b_bought[i]` | Cave `i` shelf B sold out this region. |
+| 12–14 | `shelf_c_bought[i]` | Cave `i` shelf C sold out this region (also implied by a Wild-charm bit when that is what C sells). |
+| 15 | `bottle_armed` | A Riftwild bottle is paid for and waiting to uncork. One latch, because there is only one timed power-up slot. |
+| 16–17 | `bottle_from` | Which cave’s bottle is armed (0..2). Ignored unless bit 15 is set. |
+| 18–31 | reserved | Must read as zero. |
 
-## 7. Sprite, tile, and bank budget
+There is only one timed power-up slot, so the two armed bits are
+mutually exclusive in play. **Either** `secret_shop.bottle_armed` **or**
+`rift_caves.bottle_armed` may be set, never both. Every Veil and
+Riftwild shelf B refuses with `A BOTTLE IS ARMED` if either bit is
+set.
+
+A Riftwild `bottle_armed` survives `run_state_begin_dungeon` and uncorks
+in the first dungeon combat room if it is still armed. It clears on
+uncork, and also when `rift_caves` is cleared at a new region (the
+coins stay spent). A Veil `secret_shop.bottle_armed` clears on uncork,
+when the next dungeon begins, **and** when the current dungeon is
+exited or completed, so a leftover dungeon bottle cannot follow the
+champion back into Riftwild and sit alongside a new wild latch.
+
+Shelf A has no bit (it restocks). Death wipes the run as usual. Suspend
+on room entry already covers being inside a vault or a cave; the stall
+rebuilds from `(run_seed, stage or region, secret_shop, veil_charms,
+rift_caves)` plus the live flags a shelf C already consults (Bomb Bag
+ownership, Echo Chime count, `RIFT_REGION_WELL_USED_BIT`). A
+CAVE-THICKET shelf C that was empty because the well was fresh or a
+Chime was in the pack may fill later in the region if `shelf_c_bought`
+is still 0. A dungeon Veil vault that is suspended and resumed must
+rebuild as the overlay, never as the host room with
+`pickup_spawn_merchant` standing in the open.
+
+`run_state_t` must be packed (or these three fields kept at the tail
+with an explicit pack pragma). Host-side C that includes the struct
+natively would otherwise insert a padding byte after `u8 secret_shop`
+before the `u16`. SRAM tests use `<...BHL` and do not rely on host
+alignment.
+
+## 8. Sprite, tile, and bank budget
 
 | Budget | Plan |
 |---|---|
-| Keeper | Reuse `SPR_MERCHANT` + veil palette. 0 new combat OBJ tiles. Optional hooded variant later, shop-atlas only. |
-| Host-room tells | Intra-palette shading or 1–2 biome BG tiles. At most one tell OBJ, or a 2-frame BG anim. No new CGB BG palette. |
+| Keeper | Reuse `SPR_MERCHANT`. Veil stalls use a violet / dusk palette; Riftwild cave stalls use a travel / cloak palette, distinct from the public town merchant and from the Veil. 0 new combat OBJ tiles. Optional hooded variant later, shop-atlas only. |
+| Host-room and field tells | Intra-palette shading or 1–2 biome BG tiles. At most one tell OBJ, or a 2-frame BG anim. No new CGB BG palette. Cave tells must not reuse den cairn / island-stair / scar art. CAVE-THICKET’s flipped leaf should use CGB VRAM1 X/Y flip on an existing bush or reed tile (0 new BG tiles), leaving the 1–2 tile budget for the STONE socket and the BLAST bluff stamp. |
 | Ware icons | Stall is a no-enemy overlay, so it may load a **shop-only atlas** (the public stall already does this). Tonics can share one flask tile with per-stage palettes. Power-up bottles use the PR #120 icons when those exist, otherwise the Surge spark. Charm icons: one 8×8 loaded for the highlighted Pack pip; the stall shows the current stage’s charm only. Target: ≤12 shop-atlas tiles, 0 crowded-room OAM pressure. |
-| Pack `VEIL` row | Two shared pip tiles + one dynamic 8×8. Pause/menu VRAM only. |
-| Map | No new tiles. Found = `BGT_MAP_SHOP`. Chime hint = same tile, dim palette. Public merchant stays `BGT_MAP_BIG_SHOP`. |
-| Code | Do not grow scarce bank 4 or bank 0. Pin placement + stall build to a free bank (dens already took 18; pick the next free one at implement time). Reuse `shop.c` price/configure hooks, `pickup_spawn_merchant`, `shop_write_live_stock`, and counter reach. |
+| Pack `VEIL` row | Two shared pip tiles + one dynamic 8×8. Split across two Pack rows so it fits a 20-tile screen: `VEIL` (4 tiles) + 9 pips on one row (13), and `WILD` (4) + 3 pips on the next (7). Both sit inside an 18-tile inner width with room to spare. Pause/menu VRAM only. |
+| Map | No new tiles. Found Veil host or found cave field = `BGT_MAP_SHOP`. Chime hint = same tile, dim palette. Public dungeon merchant stays `BGT_MAP_BIG_SHOP`. Dens keep the chest. Riftwell keeps its existing coin after a meeting. |
+| Code | Do not grow scarce bank 4 or bank 0. Pin placement + stall build to a free bank (dens already took 18; pick the next free one at implement time). Reuse `shop.c` price/configure hooks, `pickup_spawn_merchant`, `shop_write_live_stock`, and counter reach. Cave travel reuses the den portal path. A shared helper must dispatch `world_screen >= 48` *before* any `>= 36` den index, and must suppress field-entry effects inside both dens and caves. |
 | Audio | Opening the mouth: existing secret / vault sting. Purchase: existing buy cue (or the matching Shard arpeggio if Shards have shipped). Uncork: the power-up’s own fanfare. No new music. |
-| SRAM | +3 bytes (`u8` + `u16`), packed with no padding. `test_sram_compat.py` must pass. |
-| RNG | Placement hash is isolated. Ordinary rooms, including their hidden secrets, do not drift. Only the one host cell is rewritten by the post-pass. |
+| SRAM | +7 bytes (`u8` + `u16` + `u32`), packed with no padding. `test_sram_compat.py` must pass. |
+| RNG | Placement hashes are isolated (`'VEIL'`, `'CAVE'`, and the shipped den `'RIFT'`). Ordinary rooms and ordinary Riftwild fields do not drift. Only the Veil host cell and the cave fields are rewritten by their post-passes. |
 
-## 8. What does not change
+## 9. What does not change
 
 - Public dungeon, village, and Riftwell stock, prices, and restock rules.
+  The Riftwell trader stays in the open, selling Antidotes at 12.
 - Ordinary hidden secrets in other rooms (shot / walk / push / cracked
   walls) still pay their current vault rewards. Only the reserved host
   cell is stripped of a colliding ordinary secret and given a Veil mouth.
-- Sigils, charts, and waygear stay off this counter.
-- Den rewards and Power Shrines stay as specified in their own docs.
+- Sigils, dungeon Charts, and waygear stay off this counter. Cave
+  shelf C may *sell* an Echo Chime, a Bomb Bag, a Rift Bomb, or a
+  Riftwell re-arm; it does not grant waygear and it does not sell a
+  Chart (dens remain the Wild Chart source).
+- Den placement, tells, rewards, and Power Shrines stay as specified in
+  their own docs. Caves hash after dens and never share a field.
 
-## 9. Test plan
+## 10. Test plan
 
 Headless PyBoy, in the style of `test_merchant_stock.py`,
 `test_hidden_secrets.py`, and `test_riftwild_dens.py`. One script
@@ -353,9 +591,13 @@ For every stage (loop the nine, with a fixture seed that lands a legal host):
    refuses by name.
 4. **Shelf B latch.** Buying B does not start a power-up inside the stall.
    Entering the next combat room uncorks it, plays the notice, and clears
-   `bottle_armed`. Buying B and then finishing the dungeon without a fight
-   leaves the bottle uncorked and spent. Nova, if sold, deals its damage
-   in that combat room, not in the stall.
+   `bottle_armed`. Buying a Veil B and then finishing or leaving the
+   dungeon without a fight leaves the bottle still corked; the dungeon
+   armed bit clears on that exit so it cannot follow the champion into
+   Riftwild. Nova, if sold, deals its damage in that combat room, not
+   in the stall. Buying a second bottle while either latch is armed
+   refuses with `A BOTTLE IS ARMED`, including across the
+   wild / dungeon boundary.
 5. **Persistence.** Buy B and C, leave the overlay, leave the host cell,
    return: B and C stay empty, A is back, the mouth is still open.
    Suspend in the stall and resume: same stock. Chime, leave, suspend,
@@ -378,28 +620,65 @@ For every stage (loop the nine, with a fixture seed that lands a legal host):
    is possible.
 9. **Budgets.** `scripts/check_rom_layout.py` and `scripts/report_budget.py`
    stay green. No new always-mapped bank-0 growth for the stall path.
-   SRAM unpack uses explicit little-endian `u8` + `u16` with no padding.
-10. **Regressions.** `test_merchant_stock`, `test_merchant_counter`,
+   SRAM unpack uses explicit little-endian `u8` + `u16` + `u32` with no
+    padding.
+10. **Cave rule.** In every Veil host and every Riftwild cave field, no
+    merchant sprite and no shop ware is present in the open room or
+    field. The keeper and shelves exist only after entering the mouth.
+11. **Riftwild caves.** For a fixture seed in each region: three caves
+    land in three bands, never on a den, the Riftwell, a shrine, a relic
+    field, or a reserved fixture; or, if a band is empty, at least two
+    caves still place, including CAVE-STONE and one no-item cave in
+    Waking. The same seed boots twice agree. `'CAVE'` placement is
+    unchanged if a Power Shrine is also present. `test_procgen_parity.py`
+    still passes for fields that are not cave hosts. Each kind opens
+    only with its verb (push or lift opens STONE; a shot does not open
+    BLAST; walking the flipped-leaf tile opens THICKET, while a shot or
+    bomb does not, and walking an ordinary bush does nothing). One cave
+    is Hollow-only: Waking shows a dead ring with no mouth, even after
+    it has been opened in Hollow; Hollow still requires the kind’s verb
+    before the mouth opens. Echo Chime and Wayfarer’s Bell react to the
+    dead ring in Waking. Echo Chime marks a dim coin, not a chest.
+    Entering writes a small coin. Buy B and C, visit a dungeon, return
+    to the same Riftwild: stock, mouth, and found bits remain; start a
+    *new* region and they clear. A bottle bought in a cave and still
+    armed uncorks in the first dungeon combat room, and does not occupy
+    `secret_shop` bit 4. Suspend inside `world_screen` 48..50, resume,
+    and exit onto the parent field’s safe landing tile. Leaving a cave
+    always lands on safe ground. Shelf C never sells a Veil signature,
+    a Chart, or a Blast Seed / Rift Lens. CAVE-THICKET’s re-arm clears
+    `RIFT_REGION_WELL_USED_BIT` and is hidden while the well is fresh;
+    CAVE-BLAST swaps Bomb Bag (30) for a Rift Bomb (20) once the Bag is
+    owned. Wayfarer's Bell hums within 24 px of an unfound cave tell and
+    is silent once found; Cache Lure glints caches for 1 s on field
+    entry; Hollow Wick glints Hollow-only tells and unclaimed Hollow
+    caches. Pack pips 10–12 match the three Wild charms.
+12. **Regressions.** `test_merchant_stock`, `test_merchant_counter`,
     `test_hidden_secrets`, `test_secret_door_seal`, `test_riftwild_dens`,
     `test_sram_compat` remain green.
 
-## 10. Implementation phases
+## 11. Implementation phases
 
 1. Spec (this PR).
-2. Placement hash, host post-pass (strip ordinary secrets, stamp tell),
-   vault overlay, empty stall, Compass / Chime marks, mouth_open
-   persistence, tests 1–3, 6, and 8. Palette-only keeper.
-3. Stock: tonics, Grand Surge stand-in or real bottles with the combat
-   latch, signatures, Pack `VEIL` pips, tests 4, 5, and 7.
-4. Manual page (a short addendum to `docs/manual/content/merchants.md`)
+2. Veil placement hash, host post-pass (strip ordinary secrets, stamp
+   tell), cave-vault overlay, empty stall, Compass / Chime marks,
+   mouth_open persistence, tests 1–3, 6, 8, and 10. Palette-only keeper.
+3. Veil stock: tonics, Grand Surge stand-in or real bottles with the
+   combat latch, signatures, Pack `VEIL` pips, tests 4, 5, and 7.
+4. Riftwild cave placement (after dens), hidden entrances, one-room
+   cave screens 48..50, tests 10–11. Still no open-air keeper.
+5. Riftwild stock, region Wild charms, region-lifetime `rift_caves`,
+   bottle latch that survives a dungeon trip.
+6. Manual page (a short addendum to `docs/manual/content/merchants.md`)
    and, if Carmelo wants art, a hooded GPT Image keeper.
 
-## 11. Open questions for Carmelo
+## 12. Open questions for Carmelo
 
-1. **Scope.** This proposal is nine dungeon stalls only. Do you also want
-   one secret peddler per Riftwild region (a fourth den-like find), or is
-   the wayside trader plus dens enough there? Villages are left without a
-   secret stall on purpose.
+1. **Scope (answered).** Carmelo: Riftwild should definitely have a few
+   merchants, and they must be hidden in caves like Zelda 1, not out in
+   the open. This spec places three cave merchants per region (at least
+   two if a band is full), never in the open field. The Riftwell trader
+   stays the one open-air stall. Villages still have no secret stall.
 2. **Last Light** (Void signature) is a once-per-run lethal save, with
    Phoenix still first in line. Want that insurance, or a less
    safety-net charm (for example a run-long secret-glint upgrade of Cave
@@ -416,7 +695,7 @@ For every stage (loop the nine, with a fixture seed that lands a legal host):
 6. **Crimson Pact** gives conditional ATK +1 at low health. Acceptable as
    a signature, or too close to a cap raise?
 
-## 12. Carbon review (folded)
+## 13. Carbon review (folded)
 
 Carbon’s verdict on the first draft was **ship-with-changes**. The five
 required changes are in this text:
@@ -441,3 +720,33 @@ Stage 9 rumour-before-host and a high-contrast star-dot; Pack `VEIL` as a
 tests; Stage 5 dry-island return; wayfarer rumours come from existing
 waypoint witnesses; Gloam Lamp no longer duplicates Cave Light’s Veil
 glint.
+
+A second Carbon pass (2026-11-16) reviewed the Riftwild cave section
+and the cave rule. Verdict: **ship-with-changes.** The fixes folded
+into this text:
+
+1. Veil and Riftwild bottle latches are mutually exclusive; either
+   stall refuses with `A BOTTLE IS ARMED`, and a Veil armed bit also
+   clears when the dungeon is exited, not only when the next one begins.
+2. Hollow-only caves still need their gate verb in Hollow; Waking
+   always shows a dead ring, even after `mouth_open`; Chime and
+   Wayfarer’s Bell react to that ring.
+3. `world_screen` 48..50 is dispatched before any `>= 36` den index,
+   field-entry effects are suppressed inside caves, and a suspend
+   inside a cave or a Veil vault cannot rebuild a keeper in the open.
+4. Hash order is dens, then caves, then shrines (prose no longer
+   subtracts the shrine first). A two-cave fallback always keeps
+   CAVE-STONE and one no-item Waking cave.
+5. §9 no longer says caves sell a Chart. Shelf B’s pre-#120 fallback
+   is one rule (Grand Surge, or a shipped Phase 1 common). Hollow Wick
+   also glints unclaimed Hollow caches so it stays useful in region 3.
+6. The Pack row is a VEIL 9-pip row plus a WILD 3-pip row, which fits
+   the 20-tile screen.
+7. Tests cover the latch collision, Hollow Waking re-entry, cave
+   suspend, THICKET’s real verb (not “walking water”), and the three
+   Wild charms.
+
+Risks adopted: a self-contained BLAST bluff stamp; STONE opens on
+Glove lift, not only on a socket throw; packed `run_state_t` so host
+C does not insert padding; stall rebuild reads live Chime / Bomb Bag /
+well flags. CAVE-THICKET’s flipped leaf uses a CGB attribute flip.
