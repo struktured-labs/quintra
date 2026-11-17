@@ -214,7 +214,11 @@ void tiles_prepare_wide_field(void) BANKED {
     u8 tiles[32];
     u8 attrs[32];
     if (!(room_world_height & 0x40)) return;
-    if (outdoor) riftwild_art_load();
+    if (outdoor) {
+        riftwild_art_load();
+        // Whole 2x2 tree/crag metatiles, after every terrain writer ran.
+        riftwild_meta_scan();
+    }
     for (logical_y = 0; logical_y < 32; ++logical_y) {
         u8 physical_y = ROOM_BG_MAP_Y(logical_y);
         if (outdoor) {

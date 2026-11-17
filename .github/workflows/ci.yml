@@ -169,6 +169,9 @@ jobs:
       - name: PyBoy Riftwild set pieces and tile art
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_setpiece.py
 
+      - name: PyBoy Riftwild tiles (no orphan quarters, open calm fields)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_tiles.py
+
       - name: Stage vignette data is current
         run: uv run --quiet --with numpy --with pillow python scripts/gen_vignettes.py --check
 

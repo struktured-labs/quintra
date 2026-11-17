@@ -31,6 +31,22 @@ extern u8 riftwild_cache_y;
 // Per-field render salt for ground variants (all 32 seed bits).
 extern u8 riftwild_render_salt;
 
+// Whole 2x2 tree/crag metatiles: 16 block rows x 2 bytes (bit = block x
+// & 7 of byte x >> 3). Written by riftwild_meta_scan() after the field's
+// final terrain write; the renderer draws canopy/peak quarters only inside
+// set blocks and a self-contained lone tile everywhere else.
+#define RW_BLOCK_BYTES 32
+extern u8 rw_block_ok[RW_BLOCK_BYTES];
+// Palette slot of this field's ground (trails are drawn in it).
+extern u8 rw_ground_slot;
+void riftwild_tidy_field(u8 base) BANKED;
+void riftwild_meta_scan(void) BANKED;
+// Wide-seam hook, once per slide step: step 0 rescans the destination's
+// metatiles (fixtures and events write terrain after procgen); step 8 of an
+// N/S slide swaps the shared ground colour 0 between climate rows.
+void riftwild_hollow_reeds(void) BANKED;
+void riftwild_seam_step(u8 step, u8 dir) BANKED;
+
 void riftwild_setpiece_apply(u8 base) BANKED;
 void riftwild_setpiece_spawn(void) BANKED;
 u8   riftwild_field_salt(u8 k) BANKED;

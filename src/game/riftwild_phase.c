@@ -45,16 +45,28 @@ static const u16 hollow_palettes[5][4] = {
     { BGR555(4,0,1), BGR555(13,1,4), BGR555(28,5,9), BGR555(31,22,19) },
 };
 
+// Riftwild ground slot per climate row (riftwild_terrain.c climate_floor):
+// frost = CRYSTAL, mire/meadow = FLOOR, sunscar = DOOR. Every outdoor slot
+// shares that ground's colour 0, so a stump, pond rim, flower or shard sits
+// on the same earth as the field instead of inside a dark 8px box (tiles
+// audit 2026-11-17). Towns keep the authored per-slot backgrounds.
+static const u8 zone_ground_slot[6] = { 2, 0, 0, 0, 0, 3 };
+
 static void load_palette_set(const u16 palettes[5][4], u8 dim) {
     u8 slot, color;
     u16 tmp[4];
+    u16 ground = palettes[0][0];
+    if (run_state.world_mode) {
+        u8 zone = (u8)(run_state.world_screen / 6);
+        ground = palettes[zone < 6 ? zone_ground_slot[zone] : 0][0];
+    }
     for (slot = 0; slot < 5; ++slot) {
-        if (!dim) palette_bg_load(slot, palettes[slot]);
-        else {
-            for (color = 0; color < 4; ++color)
-                tmp[color] = (u16)((palettes[slot][color] >> 1) & 0x3DEF);
-            palette_bg_load(slot, tmp);
+        for (color = 0; color < 4; ++color) {
+            u16 c = palettes[slot][color];
+            if (!color && run_state.world_mode) c = ground;
+            tmp[color] = dim ? (u16)((c >> 1) & 0x3DEF) : c;
         }
+        palette_bg_load(slot, tmp);
     }
 }
 
