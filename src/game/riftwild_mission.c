@@ -8,6 +8,28 @@
 #include "render/text.h"
 #include "render/tiles.h"
 
+// These two getters used to live in bank-10 regional_riftwild.c, but after
+// later main landings (notably morningstar art) that bank sat on the
+// 256-byte emergency floor. Keep the screen list in lockstep with
+// regional_guard_screen there.
+static u8 mission_region_step(void) {
+    u8 cleared = run_state.bosses_beaten;
+    if (!cleared) return 0;
+    cleared--;
+    while (cleared >= DUNGEONS_PER_REGION)
+        cleared = (u8)(cleared - DUNGEONS_PER_REGION);
+    return cleared;
+}
+
+u8 run_state_riftwild_guard_screen(void) BANKED {
+    static const u8 screens[3] = { 3, 17, 29 };
+    return screens[mission_region_step()];
+}
+
+u8 run_state_riftwild_guard_down(void) BANKED {
+    return run_state_riftwild_gate_active(run_state_riftwild_gate_screen());
+}
+
 // Pack goal and Compass pull for the Riftwild. The old Pack line always read
 // FIND DUNGEON while the arch was sealed and the real goal was the Warden;
 // the Compass never showed where that Warden waited. Both now follow the
