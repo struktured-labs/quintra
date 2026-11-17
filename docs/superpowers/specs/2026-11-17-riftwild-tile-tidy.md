@@ -14,7 +14,7 @@ then reads the BG map, attributes and palettes from VRAM.
 | metric | before | after (3 seeds) |
 |---|---|---|
 | orphan 2x2 quarters | 4591 (~127/field) | 0 |
-| open floor mean / min | 83.7% / 77.5% | 85.8-86.1% / ≥79% |
+| open floor mean / min | 83.7% / 77.5% | 85.8-86.1% / ≥78.7% |
 | prop clusters per field | 15.1 | 6.0-6.7 |
 | one/two-cell props per field | 11.8 | 1.8-2.9 |
 | ground cells carrying a mark | 100% | ~13% |
@@ -89,3 +89,12 @@ lattice.
 - marked ground ≤ 25%.
 
 The baseline ROM fails every check.
+
+## Review
+Carbon reviewed the change twice. Round 1 said ship it. Notes that were
+applied: sinkhole depth, runtime tree burn, dot lattice, and water-channel
+pruning. Round 2 cleared the row tables, the pointer walks and `reserved()`.
+It flagged `riftwild_tree_burned` writing to off-screen BG cells, which is a
+non-issue here: a 31x31 field fits whole in the 32x32 BG map, so every field
+cell is resident. Known nit: flipped south/east sinkhole edges repeat the
+north/west shadow band, so pits read as a dark-rimmed basin.
