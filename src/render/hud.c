@@ -10,6 +10,7 @@
 #include "game/run_state.h"
 #include "game/will.h"
 #include "render/hud.h"
+#include "game/powerup.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "render/tiles.h"
@@ -376,6 +377,7 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     u8 segs, i;
     u8 level, full;
     if (hud_notice_ticks || max == 0) return;
+    if (powerup_id) { powerup_hud(); return; }
     level = player.will_level;
     full = level >= WILL_LEVEL_CAP ? 1 : 0;
     // WILL_NEXT_MAX depends on the tier, not on the passed max. Segment

@@ -1,5 +1,7 @@
-#pragma bank 255
+#pragma bank 20
 
+// Pinned to bank 20: banks 1..19 sit at their 256-byte floors and autobank
+// would otherwise land this file in bank 2.
 // Temporary power-ups, Phase 1: framework + AEGIS, LIMITLESS, MEND.
 // See docs/superpowers/specs/2026-11-16-temporary-powerups.md.
 // All hot-path hooks test one WRAM byte before far-calling into this bank.
@@ -18,6 +20,7 @@
 #include "game/run_state.h"
 #include "game/status.h"
 #include "game/will.h"
+#include "game/oath_arts.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -30,6 +33,7 @@ u8 powerup_aegis_hits;
 static u8 powerup_clock;
 static u8 powerup_aux;
 static u8 powerup_flags;
+static u8 powerup_last_mp;
 #define PF_BOSS_CLIPPED 0x01
 
 // Normal durations in beats (8 frames): 12 s, 15 s, 12 s.
@@ -71,13 +75,35 @@ u8 powerup_spawn(u8 id, fix8_t x, fix8_t y) BANKED {
     return idx;
 }
 
-void powerup_roll_drop(fix8_t x, fix8_t y) BANKED {
+static void powerup_roll_capsule(fix8_t x, fix8_t y) {
     u8 i;
     if (procgen_current_room_is_boss) return;
     for (i = 0; i < MAX_ENTITIES; ++i)
         if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_PICKUP
             && entities[i].ai_data[0] == PICKUP_POWERUP) return;
     powerup_spawn((u8)(1 + rng_range(POWERUP_COUNT - 1)), x, y);
+}
+
+// RNG-driven enemy-death drop (moved here from pickup_wildcard.c, whose
+// bank 13 sits at its emergency floor). Bands are unchanged except that a
+// Capsule takes 3% (Easy ~4%) from the former "nothing" share.
+void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
+    u8 r = rng_next_u8();
+    if (RUN_IS_EASY()) {
+        if (r < 72) pickup_spawn(PICKUP_HEART_HALF, x, y);
+        else if (r < 179) pickup_spawn(PICKUP_COIN_1, x, y);
+        else if (r < 187) pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
+        else if (r < 207) pickup_spawn_surge(x, y);
+        else if (r < 212) pickup_spawn_wildcard(x, y);
+        else if (r < 222) powerup_roll_capsule(x, y);
+    } else {
+        if (r < 31) pickup_spawn(PICKUP_HEART_HALF, x, y);
+        else if (r < 146) pickup_spawn(PICKUP_COIN_1, x, y);
+        else if (r < 151) pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
+        else if (r < 166) pickup_spawn_surge(x, y);
+        else if (r < 176) pickup_spawn_wildcard(x, y);
+        else if (r < 184) powerup_roll_capsule(x, y);
+    }
 }
 
 static u8 pu_base_duration(u8 id) {
@@ -117,6 +143,7 @@ void powerup_collect(u8 id) BANKED {
             player.mp = 1;
             hud_redraw_mp();
         }
+        powerup_last_mp = player.mp;
         if (!player.will_level) {
             player.will_level = 1;
             player.will_charge = 0;
@@ -164,6 +191,19 @@ void powerup_tick(void) BANKED {
     } else powerup_flags &= (u8)~PF_BOSS_CLIPPED;
 
     powerup_clock++;
+    if (id == POWERUP_LIMITLESS) {
+        // Oath Arts cost OATH_MP_COST at their call site in room.c (bank 1
+        // has no headroom), so refund that spend here on the next frame.
+        // Convergence (full MP -> 0, starts the 135-beat transform) is not
+        // refunded: full MP stays reserved for it, as without Limitless.
+        if (player.mp < powerup_last_mp
+            && (u8)(powerup_last_mp - player.mp) <= OATH_MP_COST
+            && room_transform_ticks != 135) {
+            player.mp = powerup_last_mp;
+            hud_redraw_mp();
+        }
+        powerup_last_mp = player.mp;
+    }
     // Aegis: two ward shards orbit the hero (opposite corners, rotating),
     // faster and flickering on the last charge. Skips in a full field so
     // crowded-room spawn floors stay intact.
@@ -204,6 +244,7 @@ void powerup_tick(void) BANKED {
         // showing so an Oath stays castable after a Convergence drain.
         if (player.mp_max && player.mp == 0) {
             player.mp = 1;
+            powerup_last_mp = 1;
             hud_redraw_mp();
         }
         // Will banks one MAX charge every two seconds when empty.

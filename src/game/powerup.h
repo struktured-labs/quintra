@@ -25,9 +25,6 @@ extern u8 powerup_aegis_hits;  // shield charges left (Aegis only)
 
 void powerup_reset(void) BANKED;
 u8   powerup_spawn(u8 id, fix8_t x, fix8_t y) BANKED;
-// Enemy-death Capsule roll band; respects one live Capsule per room and
-// never drops in boss rooms.
-void powerup_roll_drop(fix8_t x, fix8_t y) BANKED;
 void powerup_collect(u8 id) BANKED;
 // Once per room frame while powerup_id != 0.
 void powerup_tick(void) BANKED;

@@ -610,7 +610,7 @@ u8 combat_resolve(void) BANKED {
                     break;
                 }
                 // AEGIS spends a charge instead of HP (never the Scythe).
-                if (powerup_aegis_hits && powerup_aegis_absorb(i)) break;
+                if (powerup_aegis_absorb(i)) break;
                 // DEF soaks incoming damage (min 1 half-heart gets through).
                 // A giant colossus is already a moving wall inside a dense
                 // bullet pattern. Its body is a positioning tax, not a

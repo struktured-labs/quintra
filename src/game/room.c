@@ -34,7 +34,6 @@ void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
 #include "game/room.h"
-#include "game/powerup.h"
 #include "game/run_state.h"
 #include "game/riftwild_phase.h"
 #include "game/riftwild_den.h"
@@ -1750,8 +1749,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             u8 dir = room_input_dir8(keys, player.facing);
             if (player.active_charge == 0 && player.mp >= OATH_MP_COST
                 && oath_arts_fire(dir)) {
-                if (!POWERUP_FREE_MP())
-                    player.mp = (u8)(player.mp - OATH_MP_COST);
+                player.mp = (u8)(player.mp - OATH_MP_COST);
                 mp_regen = 0;
                 player.active_charge = OATH_COOLDOWN;
                 if (player.iframes < 10) player.iframes = 10;
@@ -1900,7 +1898,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 fx_spawn(SPR_FX_IMPACT, 0x06, (i16)player.x + 4,
                     (i16)player.y + 2, 12);
         }
-        if (powerup_id) powerup_tick();
         if (player.shield_timer > 0) {
             player.shield_timer--;
             if ((player.shield_timer & 7) == 0)
@@ -2028,10 +2025,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
             // The contextual four-slot lane is otherwise the shared Will
             // meter. Full means the next A edge becomes that weapon's MAX.
-            if (!room_has_shop_wares) {
-                if (powerup_id) powerup_hud();
-                else hud_redraw_action_charge(player.will_charge, WILL_MAX);
-            }
+            if (!room_has_shop_wares)
+                hud_redraw_action_charge(player.will_charge, WILL_MAX);
         }
 
         // Last hostile down restores MP. A room that truly required the clear

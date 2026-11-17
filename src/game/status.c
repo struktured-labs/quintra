@@ -526,6 +526,7 @@ void status_update_enemy_condition(u8 idx) BANKED {
 void status_tick(void) BANKED {
     u8 i;
     status_clock++;
+    if (powerup_id) powerup_tick();
     if (player_status_kind == QSTATUS_BLEED) {
         if (player.x != bleed_last_x || player.y != bleed_last_y) {
             bleed_last_x = player.x;
