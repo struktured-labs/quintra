@@ -89,7 +89,7 @@ static u16 brighten_colour(u16 c) {
 void puzzle_apply_note_palettes(u8 dim) BANKED {
     u16 low[4], high[4];
     u8 i;
-    if (room_puzzle_kind != PUZZLE_RUNE_SEQUENCE || !room_rune_count)
+    if (!PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) || !room_rune_count)
         return;
     for (i = 0; i < 4; ++i) {
         low[i] = rune_pal_low[i];
@@ -109,7 +109,7 @@ void puzzle_apply_note_palettes(u8 dim) BANKED {
 }
 
 void puzzle_load_note_palettes(void) BANKED {
-    if (room_puzzle_kind != PUZZLE_RUNE_SEQUENCE || !room_rune_count)
+    if (!PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) || !room_rune_count)
         return;
     tiles_load_note_plates();
     puzzle_apply_note_palettes(0);

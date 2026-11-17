@@ -638,14 +638,13 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
         room_set_tile_vbl(tx, ty, BGT_RUBBLE, BGPAL_CRACK);
     } else if ((element & 2) && tile == BGT_SPIKES) {
         room_set_tile_vbl(tx, ty, BGT_FLOOR2, BGPAL_CRYSTAL);
+    } else if ((element & 4) && room_puzzle_kind == PUZZLE_PHASE_SWITCH
+               && RUNE_IS_PLATE_TILE(tile)) {
+        significant = 1;
+        puzzle_phase_switch_zap();
     } else if ((element & 4) && tile == BGT_SWITCH) {
         significant = 1;
-        if (room_puzzle_kind == PUZZLE_PHASE_SWITCH) {
-            run_state.dungeon_phase ^= room_puzzle_phase_bit;
-            room_set_tile_vbl(tx, ty, BGT_SWITCH,
-                (run_state.dungeon_phase & room_puzzle_phase_bit)
-                    ? BGPAL_CRYSTAL : BGPAL_CRACK);
-        } else if (dungeon_law_try_toggle_at(tx, ty)) {
+        if (dungeon_law_try_toggle_at(tx, ty)) {
             // The law helper owns its full-room animation, persistence, and
             // feedback. Do not add a second shake/chime below.
             return 1;

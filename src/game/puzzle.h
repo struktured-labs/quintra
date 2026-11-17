@@ -77,6 +77,11 @@ extern u8 room_rune_lit_mask;
 #define RUNE_FLASH_PAL  BGPAL_DOOR
 
 #define RUNE_ATTR_AT(x, y, tile) puzzle_rune_attr(tile)
+// Rooms whose fixtures are note plates: rune phrases and the Aether Lattice
+// switch row (PUZZLE_PHASE_SWITCH). Both borrow the packed note palettes.
+#define PUZZLE_KIND_HAS_NOTES(k) ((k) == PUZZLE_RUNE_SEQUENCE \
+    || (k) == PUZZLE_PHASE_SWITCH)
+void puzzle_phase_switch_zap(void) BANKED;
 
 void puzzle_load_note_palettes(void) BANKED;
 void puzzle_apply_note_palettes(u8 dim) BANKED;
@@ -98,7 +103,7 @@ u8 puzzle_rune_attr(u8 tile) BANKED;
     ((room_puzzle_kind == PUZZLE_PRISM_TOGGLE) ? PRISM_ATTR_AT(x, y) \
     : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR3 \
         && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR \
-    : (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) ? RUNE_ATTR_AT(x, y, tile) \
+    : PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) ? RUNE_ATTR_AT(x, y, tile) \
     : 0xFF)
 
 #endif

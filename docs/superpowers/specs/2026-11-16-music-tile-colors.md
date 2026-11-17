@@ -88,3 +88,20 @@ does it before choosing slide/seam/rebuild; the portal path before
 `room_draw_tilemap()`. `scripts/test_puzzles.py` enters the Stage 2 Trial
 through a door with the plate slots poisoned and decodes each plate's VRAM
 tile (idle and latched) to its pitch fill colour.
+
+## Addendum 2026-11-17: Aether Lattice switch row
+
+The second musical puzzle, the Aether Lattice (`PUZZLE_PHASE_SWITCH`), is a
+row of four switches at y=8 (x=4, 8, 12, 16) and voices pitches 0..3. It
+used to draw plain gold `BGT_SWITCH` / `BGT_FLOOR2` tiles. Switch i is now
+note plate i, with the same tile, palette slot and colour as pitch i in a
+rune phrase. A dark switch shows the raised idle plate; a lit switch shows
+the sunken plate in a brighter shade of its colour; a press flashes white
+and then settles. The room publishes its row through `room_rune_*` (count
+4, lit mask = switch state), so palette borrowing, attribute overrides,
+pause dimming and the per-entry tile upload all follow the rune room rules
+(`PUZZLE_KIND_HAS_NOTES`). Lightning throws the lattice with
+`puzzle_phase_switch_zap()`. `deep_phase_contract` enters through a door
+with the plate slots poisoned and checks each switch's tile, attribute,
+decoded art and palette brightness after every press.
+

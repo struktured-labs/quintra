@@ -271,7 +271,9 @@ void projectile_update_one(entity_t *e, u8 idx) {
                 }
                 return;
             }
-            if ((t == BGT_TREE || t == BGT_SPIKES || t == BGT_SWITCH)
+            // Note plates: Aether Lattice switches (lightning throws them).
+            if ((t == BGT_TREE || t == BGT_SPIKES || t == BGT_SWITCH
+                 || (u8)(t - BGT_NOTE_0) <= (u8)(BGT_NOTE_LIT_4 - BGT_NOTE_0))
                 && room_elemental_tile((u8)(sx >> 3), (u8)(sy >> 3),
                     e->ai_data[1])) {
                 fx_spawn(SPR_FX_IMPACT, 6, px, py, 10);

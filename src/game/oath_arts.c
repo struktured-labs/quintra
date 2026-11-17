@@ -234,7 +234,8 @@ static u8 sun_turn(void) {
     // current field, joining combat rhythm to dungeon routing.
     for (y = 0; y < (u8)(room_world_height >> 3); ++y) {
         for (x = 0; x < (u8)(room_world_width >> 3); ++x) {
-            if (room_tile_at_px((i16)x << 3, (i16)y << 3) == BGT_SWITCH
+            u8 t = room_tile_at_px((i16)x << 3, (i16)y << 3);
+            if ((t == BGT_SWITCH || (t >= BGT_NOTE_0 && t <= BGT_NOTE_LIT_4))
                 && room_elemental_tile(x, y, 4)) return 1;
         }
     }

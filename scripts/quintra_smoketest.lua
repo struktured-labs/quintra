@@ -583,9 +583,10 @@ local function open_deep_phase_seal(cell)
     local xs = {4, 8, 12, 16}
     local masks = {0x03, 0x07, 0x0E, 0x0C}
     local state = 0
-    -- BGT_FLOOR2 is the lit/crystal plate state; BGT_SWITCH is dark.
+    -- Switch i is note plate i: BGT_NOTE_LIT_0 + i (116..) when lit,
+    -- BGT_NOTE_0 + i (111..) when dark.
     for i, x in ipairs(xs) do
-        if emu:read8(TM_ADDR + 8 * 20 + x) == 19 then
+        if emu:read8(TM_ADDR + 8 * 20 + x) == 115 + i then
             state = state | (1 << (i - 1))
         end
     end
