@@ -17,6 +17,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
+#include "game/powerup.h"
 #include "render/hud.h"
 #include "render/text.h"
 #include "render/tiles.h"
@@ -210,6 +211,7 @@ void status_reset_all(void) BANKED {
     confusion_streak = 0;
     inversion_tie = 0;
     bleed_last_x = bleed_last_y = 0;
+    powerup_reset();
 }
 
 void status_player_cure(void) BANKED {

@@ -7,6 +7,7 @@
 #include "game/sun_lattice.h"
 #include "game/room.h"
 #include "game/riftwild_den.h"
+#include "game/powerup.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -14,7 +15,7 @@
 u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     u8 i,bomb=player.active_item==ITEM_ID_BOMBS;
     entity_t *e;
-    if (player.active_charge || (bomb && !player.mp)) return 0;
+    if (player.active_charge || (bomb && !player.mp && !POWERUP_FREE_MP())) return 0;
     for (i=0;i<INVENTORY_SLOTS;++i)
         if (player.inventory[i]==player.active_item) break;
     if (i==INVENTORY_SLOTS) return 0;
@@ -37,7 +38,7 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     e->ai_data[6]=bomb ? PROJ_AUX_FUSE_BOMB : PROJ_AUX_MORNINGSTAR;
     if (bomb) {
         if (moving) { e->vx=dir8_dx[dir&7]*2; e->vy=dir8_dy[dir&7]*2; }
-        player.mp--; hud_redraw_mp();
+        if (!POWERUP_FREE_MP()) { player.mp--; hud_redraw_mp(); }
     }
     player.active_charge=bomb ? 72 : 56;
     sfx_play_weapon(PROJ_FLAIL);

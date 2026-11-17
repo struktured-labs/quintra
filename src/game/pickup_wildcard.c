@@ -9,6 +9,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/pickup.h"
+#include "game/powerup.h"
 #include "game/run_state.h"
 #include "render/hud.h"
 #include "render/tiles.h"
@@ -40,12 +41,14 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
         else if (r < 187) pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
         else if (r < 207) pickup_spawn_surge(x, y);
         else if (r < 212) pickup_spawn_wildcard(x, y);
+        else if (r < 222) powerup_roll_drop(x, y);        // ~4% Capsule
     } else {
         if (r < 31) pickup_spawn(PICKUP_HEART_HALF, x, y);
         else if (r < 146) pickup_spawn(PICKUP_COIN_1, x, y);
         else if (r < 151) pickup_spawn_item((u8)(10 + rng_range(10)), x, y);
         else if (r < 166) pickup_spawn_surge(x, y);
         else if (r < 176) pickup_spawn_wildcard(x, y);
+        else if (r < 184) powerup_roll_drop(x, y);        // ~3% Capsule
     }
 }
 

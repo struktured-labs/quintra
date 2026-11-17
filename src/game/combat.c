@@ -1,5 +1,6 @@
 #pragma bank 3
 #include "audio/sfx.h"
+#include "game/powerup.h"
 #include "audio/boss_voice.h"
 #include "render/large_boss.h"
 
@@ -608,6 +609,8 @@ u8 combat_resolve(void) BANKED {
                     stage_reaper_mortal_hit(i);
                     break;
                 }
+                // AEGIS spends a charge instead of HP (never the Scythe).
+                if (powerup_aegis_hits && powerup_aegis_absorb(i)) break;
                 // DEF soaks incoming damage (min 1 half-heart gets through).
                 // A giant colossus is already a moving wall inside a dense
                 // bullet pattern. Its body is a positioning tax, not a

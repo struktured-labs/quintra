@@ -284,6 +284,38 @@ void hud_clear_offer(void) BANKED {
     set_win_tiles(12, 0, 4, 1, row);
 }
 
+// Power-up lane: [icon][secs][secs][charges]. The custom per-cell palette
+// marks lane_palette 0xFE so every other lane writer re-asserts its own.
+static u8 pu_icon = 0xFF, pu_secs = 0xFF, pu_hits = 0xFF, pu_blink = 0xFF;
+void hud_show_powerup(u8 icon, u8 secs, u8 hits, u8 blink) BANKED {
+    u8 row[4];
+    u8 attrs[4];
+    if (hud_notice_ticks) return;
+    if (secs > 99) secs = 99;
+    if (lane_palette == 0xFE && icon == pu_icon && secs == pu_secs
+        && hits == pu_hits && blink == pu_blink) return;
+    pu_icon = icon; pu_secs = secs; pu_hits = hits; pu_blink = blink;
+    row[0] = blink ? HUD_BLANK : icon;
+    row[1] = secs >= 10 ? (u8)(HUD_DIGIT_0 + secs / 10) : HUD_BLANK;
+    row[2] = (u8)(HUD_DIGIT_0 + secs % 10);
+    row[3] = (hits == 0xFF) ? HUD_BLANK : (u8)(HUD_DIGIT_0 + (hits > 9 ? 9 : hits));
+    attrs[0] = attrs[1] = attrs[2] = 7;
+    attrs[3] = 6;   // MP blue: charges never read as part of the seconds
+    VBK_REG = 0; set_win_tiles(12, 0, 4, 1, row);
+    VBK_REG = 1; set_win_tiles(12, 0, 4, 1, attrs);
+    VBK_REG = 0;
+    lane_palette = 0xFE;
+}
+
+void hud_powerup_release(void) BANKED {
+    static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
+    pu_icon = pu_secs = pu_hits = pu_blink = 0xFF;
+    lane_palette = 0xFF;
+    will_cached_segs = 0xFF;
+    if (hud_notice_ticks) return;
+    VBK_REG = 0; set_win_tiles(12, 0, 4, 1, row);
+}
+
 void hud_show_loot_timer(u8 seconds) BANKED {
     u8 row[4];
     if (hud_notice_ticks) return;

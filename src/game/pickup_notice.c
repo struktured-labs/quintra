@@ -42,6 +42,8 @@
 #define N_X HUD_STATUS_X
 #define N__ HUD_BLANK
 #define N_1 (HUD_DIGIT_0 + 1)
+#define N_3 (HUD_DIGIT_0 + 3)
+#define N_G BGT_AREA_G
 static const u8 notice_words[NW_COUNT][6] = {
     { N_R,N_E,N_V,N_I,N_V,N_E },          // NW_REVIVE   Phoenix Thread
     { N_F,N_O,N_R,N_K,N__,N__ },          // NW_FORK     Echo Prism
@@ -70,12 +72,20 @@ static const u8 notice_words[NW_COUNT][6] = {
     { HUD_HEART_FULL,N_L,N_O,N_W,N__,N__ }, // NW_LOWHP  pact needs max HP
     { N_A,N__,N_S,N_W,N_A,N_P },          // NW_ASWAP    press A to trade
     { N_W,N_A,N_R,N_D,N_E,N_D },          // NW_WARDED   curse blocked
+    { N_A,N_E,N_G,N_I,N_S,N__ },          // NW_AEGIS    power-up: shield
+    { N_B,N_L,N_O,N_C,N_K,N_3 },          // NW_BLOCK3   absorbs three hits
+    { N_L,N_I,N_M,N_I,N_T,N__ },          // NW_LIMIT    power-up: Limitless
+    { N_F,N_R,N_E,N_E,N_M,N_P },          // NW_FREEMP   Oaths/Bombs cost no MP
+    { N_M,N_E,N_N,N_D,N__,N__ },          // NW_MEND     power-up: regen
+    { N_R,N_E,N_G,N_E,N_N,N__ },          // NW_REGEN    heals over time
+    { N_E,N_N,N_D,N_E,N_D,N__ },          // NW_ENDED    power-up expired
 };
 // 0 gold, 1 violet, 2 green, 6 MP blue, 7 HUD red.
 static const u8 notice_word_pal[NW_COUNT] = {
     0, 1, 1, 7, 0, 6, 7, 1, 7, 1,
     6, 0, 2, 6, 2, 7, 6, 1, 2, 7,
     7, 7, 7, 7, 7, 0, 1,
+    0, 0, 6, 6, 2, 2, 7,
 };
 
 u8 hud_notice_word_fill(u8 word, u8 *row) BANKED {

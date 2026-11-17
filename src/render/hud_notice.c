@@ -17,6 +17,8 @@
 // Pickup results (stat cards, item words, refusals) hold one extra second so
 // a champion mid-fight can actually read what the thing they touched did.
 #define HUD_NOTICE_PICKUP_FRAMES (HUD_NOTICE_FRAMES + 60)
+// Power-up cards hold one more second than ordinary pickup cards.
+#define HUD_NOTICE_POWERUP_FRAMES (HUD_NOTICE_PICKUP_FRAMES + 60)
 #define HUD_NOTICE_HUNGER 0x7F
 #define HUD_NOTICE_BOOMERANG 0x7E
 #define HUD_NOTICE_HOOKSHOT 0x7D
@@ -305,7 +307,9 @@ static void begin_notice(u8 kind, u8 amount) {
     hud_notice_ticks = ((kind & HUD_NOTICE_STATUS)
             && (u8)(kind & 0x7F) < QSTATUS_COUNT
             && (u8)(kind & 0x7F) != QSTATUS_CURSE)
-        ? HUD_NOTICE_FRAMES : HUD_NOTICE_PICKUP_FRAMES;
+        ? HUD_NOTICE_FRAMES
+        : (kind == HUD_NOTICE_WORD && amount >= NW_AEGIS)
+            ? HUD_NOTICE_POWERUP_FRAMES : HUD_NOTICE_PICKUP_FRAMES;
     draw_notice(notice_kind, notice_amount);
 }
 
