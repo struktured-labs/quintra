@@ -354,6 +354,7 @@
 // index was still colliding with status glyph 13 at 237.
 #define SPR_ITEM_MORNINGSTAR 239
 #define SPR_ITEM_BOMB_BAG    240 // distinct from relic SPR_ITEM_RIFT_BOMB
+#define SPR_ITEM_MORNINGSTAR_BIG 241 // 16x16 head, tiles 241-244 bank 1
 #define SPR_MORNINGSTAR_PROP 13  // coin gold | VRAM bank 1
 #define SPR_BOMB_BAG_PROP    12  // heart red  | VRAM bank 1
 #define SPR_BOMB_BAG_FLASH   13  // coin gold  | VRAM bank 1 (fuse warning)

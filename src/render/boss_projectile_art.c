@@ -51,6 +51,7 @@ void boss_projectile_load_art(void) BANKED {
 
 u8 boss_projectile_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
     if (!(e->flags & EF_BOSS_PROJECTILE)) {
+        if (e->ai_data[6] == PROJ_AUX_MORNINGSTAR) return morningstar_draw(e,oam,x,y);
         if (e->ai_data[6] != PROJ_AUX_FUSE_BOMB) return hookshot_draw(e,oam,x,y);
         if (oam>=entity_oam_cap) return oam;
         set_sprite_tile(oam,e->sprite_tile); set_sprite_prop(oam,e->palette);

@@ -48,3 +48,22 @@ Speed Ring / Swift Fang (#61) and the antidote icon.
 Skipped: class signature B moves, primary attack FX (sword, flail,
 spear, spike, beam, arrow), Waygear glove/raft/worldglass, hook chain
 links (shared bullet tile), all relic icons including Rift Bomb.
+
+## Pass 2 (morningstar in motion)
+
+The 8x8 world tip was still lost in flight because `hookshot_draw` spent
+4 OAM on a bright `SPR_BULLET` chain plus an 8x8 head. Shop/inventory
+keep the 8x8 at 239. The in-world projectile now uses a 16x16 head
+(`SPR_ITEM_MORNINGSTAR_BIG` = 241, tiles 241-244, bank 1) drawn with
+`morningstar_draw`: 4 OAM, centered on the same point (`x-4, y-4`).
+Hitbox stays 0xAA (10x10). Timing, damage, and cooldown unchanged.
+Live OAM use stays 4 (budget-neutral vs the previous chain).
+Boomerang, hookshot, and bomb bag art are unchanged in this pass.
+
+## Pack-resume test
+
+`scripts/test_secret_door_seal.py` waited a fixed 4 ticks after pack
+close. `room_enter` runs with the LCD off, and PyBoy ticks make limited
+progress in that state, so the extra bank-1 tile copies raced the
+resume blit (inventory frame tile 246 still in VRAM). The test now
+waits for `DISPLAY_ON` (capped at 40 ticks).

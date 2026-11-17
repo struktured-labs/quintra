@@ -122,7 +122,15 @@ def redraw(pb, sealed):
     else:
         raise AssertionError("pack did not return to the room")
     pb.button_release("b")
-    tick(pb, 4)
+    # room_enter turns the LCD off while it reloads tiles. PyBoy ticks make
+    # limited progress with the LCD off, so a fixed 4-tick wait races the
+    # resume blit (inventory frame 246 left in VRAM). Wait for DISPLAY_ON.
+    for n in range(40):
+        pb.tick()
+        if (pb.memory[0xFF40] & 0x80) and pb.memory[SCREEN] == SCREEN_ROOM:
+            break
+    else:
+        raise AssertionError("room did not finish resuming after pack close")
     assert pb.memory[SCREEN] == SCREEN_ROOM, (
         f"pack did not return to the room, screen={pb.memory[SCREEN]}")
 
