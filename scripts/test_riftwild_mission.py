@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_overworld import EN, PL, RS, SCREEN, addr, put16  # noqa: E402
-from test_riftwild_landmarks import ROUTE, boot_world  # noqa: E402
+from test_riftwild_landmarks import ROUTE, boot_world, cross_to  # noqa: E402
 from test_quest_guidance import open_pack, row, settle  # noqa: E402
 
 SCREEN_ROOM, SCREEN_MAP, SCREEN_DIALOG = 5, 8, 10
@@ -70,21 +70,6 @@ def pack(pb, text, shot=None):
         pb.screen.image.save(str(OUT / shot))
     pb.button("b")
     keep(pb, 40)
-
-
-def cross_to(pb, target, x, y):
-    for i in range(32):
-        p = EN + i * 28
-        if pb.memory[p] == 2:
-            pb.memory[p] = pb.memory[p + 1] = 0
-    put16(pb, PL + 9, x)
-    put16(pb, PL + 11, y)
-    for _ in range(200):
-        keep(pb, 1)
-        if pb.memory[RS + WORLD_SCREEN] == target and pb.memory[0xFF40] & 2:
-            break
-    keep(pb, 30)
-    assert pb.memory[RS + WORLD_SCREEN] == target, target
 
 
 def main():
