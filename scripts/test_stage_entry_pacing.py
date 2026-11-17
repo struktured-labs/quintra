@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from pyboy import PyBoy
 from quintra_topology import STAGE_START, dungeon_entry_room
+from quintra_vignettes import mute_vignettes
 
 from make_stage_states import normalize_compact_source, symbol_addresses
 from test_stage_archetypes import (
@@ -36,6 +37,7 @@ def boot():
     pb.button("a")
     for _ in range(60):
         pb.tick()
+    mute_vignettes(pb, ROM)
     return pb
 
 

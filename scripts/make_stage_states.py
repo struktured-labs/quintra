@@ -23,6 +23,7 @@ from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_entry_room,
     dungeon_predecessor, dungeon_size,
 )
+from quintra_vignettes import mute_vignettes
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -648,6 +649,7 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     pyboy.tick(6)
     pyboy.button_release("a")
     pyboy.tick(90)
+    mute_vignettes(pyboy, rom)
 
     target = stage_entry_room(stage)
     # The world gate now places the seeded entry rather than incrementing

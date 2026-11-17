@@ -10,6 +10,7 @@ from test_overworld import (
     WORLD_BOTTOM, WORLD_EXT, WORLD_H, WORLD_W, addr, exit_at, put16,
 )
 from quintra_topology import STAGE_BOSS_ROOM
+from quintra_vignettes import mute_vignettes
 
 
 ROOM_W, ROOM_H = 20, 17
@@ -102,6 +103,7 @@ def boot_world():
     pb.button("a")
     for _ in range(60):
         pb.tick()
+    mute_vignettes(pb, ROM)
     pb.memory[RS + 1] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + 11] = 1
     # This debugger fixture changes the logical room to the defeated compact

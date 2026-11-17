@@ -33,6 +33,7 @@ void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
+#include "game/vignette.h"
 #include "game/room.h"
 #include "game/powerup.h"
 #include "game/run_state.h"
@@ -1268,7 +1269,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         && (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_WORLDGLASS))
         && (keys & J_SELECT) && (keys & J_B)
         && (pressed & (J_SELECT | J_B))
-        && riftwild_shift_execute(keys, pressed)) return SCREEN_SELF;
+        && riftwild_shift_execute(keys, pressed))
+        return vignette_after_shift();
     if (riftwild_den_armed) riftwild_den_tick();
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
@@ -2154,12 +2156,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             DISPLAY_ON;
             hostiles_prev = 0;
             sram_save_run();
-            if (portal_from_world && !run_state.world_mode
-                && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-                room_prepare_stage_arrival(room_stage());
-                return SCREEN_DIALOG;
-            }
-            return SCREEN_SELF;
+            // First Riftwild / dungeon entry: vignette, else stage card.
+            return vignette_arrival(portal_from_world, room_stage());
         }
         else if (feet_tile == BGT_VOID
             && room_stage_event_kind == STAGE_EVENT_FADING_FLOOR
@@ -2527,12 +2525,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     // room_tick hold the beat before the greeting box.
                     sfx_play(SFX_CLEAR);
                 }
-                if (source_world_mode && !run_state.world_mode
-                    && !RUN_ROOM_IS_TOWN(run_state.room_counter)) {
-                    room_prepare_stage_arrival(room_stage());
-                    return SCREEN_DIALOG;
-                }
-                return SCREEN_SELF;
+                return vignette_arrival(source_world_mode, room_stage());
         }
     }
 

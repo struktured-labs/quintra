@@ -12,7 +12,7 @@ enum {
     SCREEN_RUN_INIT,        // Phase 4
     SCREEN_PROCGEN,
     SCREEN_ROOM,
-    SCREEN_REST_ROOM,
+    SCREEN_VIGNETTE,        // stage-transition vignette (was unused REST_ROOM)
     SCREEN_BOSS,
     SCREEN_MAP,
     SCREEN_INVENTORY,
