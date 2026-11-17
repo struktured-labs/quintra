@@ -102,7 +102,7 @@ static u8 push_timer;
 // "already loaded" and a cold continue past that dungeon's first room
 // skipped palette 6 and the stage sprite tiles.
 static u8 stage_seen = 0xFF;
-static u8 stage_fade;
+u8 stage_fade;
 
 // Room-clear chime: hostiles seen alive this room (reset on every room
 // generation so walking into an empty room never false-fires the chime).

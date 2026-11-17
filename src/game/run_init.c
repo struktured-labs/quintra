@@ -14,6 +14,7 @@
 #include "game/run_state.h"
 #include "game/sram.h"
 #include "game/title.h"
+#include "game/vignette.h"
 
 BANKREF(run_init_enter)
 
@@ -73,7 +74,9 @@ void run_init_exit(void) {}
 
 screen_id_t run_init_tick(u8 keys, u8 pressed) {
     keys; pressed;
-    return SCREEN_ROOM;
+    // Foyer vignette or ROOM. Failure is mapped to SCREEN_ROOM in the callee
+    // so this bank does not need a local compare.
+    return vignette_on_run_start(run_state.bosses_beaten);
 }
 
 void run_init_draw(void) {}

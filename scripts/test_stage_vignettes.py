@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Live-ROM contract for stage-transition vignettes (spec 2026-11-16 §2).
 
-Triggers each implemented vignette through the real seams (Riftwild gate
-portal into Ember Depths, a defeated boss's south door into the Riftwild,
-and the Worldglass shift into Hollow), then checks:
+Triggers each implemented vignette through the real seams (a new-game
+foyer into Crystal Caverns, a Riftwild gate portal into Verdant Hollow and
+Ember Depths, a defeated boss's south door into the Riftwild, and the
+Worldglass shift into Hollow), then checks:
   * the vignette screen plays (~3 s) and returns to the room,
   * A/B/START skip from frame 8,
   * play-once per run (the second entry falls back to the stage card),
@@ -12,6 +13,9 @@ and the Worldglass shift into Hollow), then checks:
 GIFs from the real ROM go to builds/vignettes-<sha8>/ (160x144 and 4x), or
 to $QUINTRA_VIGNETTE_GIF_DIR.
 """
+import os
+os.environ["QUINTRA_KEEP_VIGNETTES"] = "1"
+
 import hashlib
 import os
 import sys
@@ -34,7 +38,10 @@ A = symbol_addresses(ROM)
 RS, PL, EN, TM = A["_run_state"], A["_player"], A["_entities"], A["_room_tilemap"]
 SCREEN = A["_loop_current_screen"]
 NOI = ROM.with_suffix(".noi").read_text()
-VIG_STAGE_EMBER = 2  # src/render/vignette_data.h
+# IDs from src/render/vignette_data.h. Crystal/Verdant are appended so
+# the already-shipped Ember id stays 2.
+VIG_RIFT_WAKING, VIG_RIFT_HOLLOW, VIG_STAGE_EMBER = 0, 1, 2
+VIG_STAGE_CRYSTAL, VIG_STAGE_VERDANT = 3, 4
 SEEN = seen_address(ROM)  # run_state.vignette_seen (u16, saved with the run)
 SCREEN_ROOM, SCREEN_VIGNETTE, SCREEN_INVENTORY, SCREEN_DIALOG = 5, 6, 9, 10
 WAYGEAR_OWNED, RIFTWILD_SHADOW = 44, 57
@@ -55,13 +62,26 @@ def tap(pb, key, hold=4, after=8):
     pb.tick(after)
 
 
-def boot():
+def boot(consume_start=True):
+    """Title + class select. Stage 1's foyer vignette starts from run_init_tick;
+    consume it (no GIF) unless the caller is the stage 1 contract.
+    """
     pb = PyBoy(str(ROM), window="null", cgb=True)
     pb.tick(240)
     tap(pb, "start", after=30)
-    tap(pb, "a", after=90)
-    assert pb.memory[SCREEN] == SCREEN_ROOM
-    assert pb.memory[SEEN] == 0 and pb.memory[SEEN + 1] == 0
+    pb.button_press("a")
+    pb.tick(4)
+    pb.button_release("a")
+    # run_init_tick returns SCREEN_VIGNETTE (or ROOM if muted / already seen).
+    got = wait_screen(pb, (SCREEN_VIGNETTE, SCREEN_ROOM), 240)
+    if consume_start and got == SCREEN_VIGNETTE:
+        play_through(pb, [])
+        got = pb.memory[SCREEN]
+    if consume_start:
+        assert got == SCREEN_ROOM, f"boot did not reach the room ({got})"
+        # Stage 1's seen bit is expected; high byte still clear.
+        assert pb.memory[SEEN] & (1 << VIG_STAGE_CRYSTAL)
+        assert pb.memory[SEEN + 1] == 0
     return pb
 
 
@@ -322,9 +342,103 @@ def riftwild_contract():
     print("[vignettes] riftwild: Waking on entry, Hollow on first shift, once each")
 
 
+def skip_with(pb, key, skip_at=24):
+    """Skip the current vignette with A, B or START; return frames spent."""
+    frames = []
+    spent = 0
+    while pb.memory[SCREEN] == SCREEN_VIGNETTE and spent < 400:
+        if spent == skip_at:
+            pb.button_press(key)
+        if spent == skip_at + 3:
+            pb.button_release(key)
+        pb.memory[PL + 15] = 200
+        pb.tick()
+        spent += 1
+        frames.append(pb.screen.image.copy())
+    pb.button_release(key)
+    for _ in range(30):
+        pb.tick()
+        frames.append(pb.screen.image.copy())
+    return spent, frames
+
+
+def crystal_contract():
+    pb = boot(consume_start=False)
+    try:
+        got = wait_screen(pb, (SCREEN_VIGNETTE, SCREEN_ROOM), 240)
+        assert got == SCREEN_VIGNETTE, \
+            f"new-game foyer did not play Crystal Caverns (screen {got})"
+        saved = pb.memory[0, 0xA000 + 5 + VIGNETTE_SEEN_OFFSET]
+        assert saved & (1 << VIG_STAGE_CRYSTAL), f"seen bit not saved ({saved:#x})"
+        frames = [pb.screen.image.copy()]
+        spent = play_through(pb, frames)
+        assert 180 <= spent <= 250, f"Crystal vignette length {spent} frames"
+        assert pb.memory[SCREEN] == SCREEN_ROOM, "vignette did not resume the room"
+        save_gif(frames, "stage1-crystal-caverns")
+        check_vignette_frames(frames, 0, "crystal")
+        # Re-entering the same foyer mid-run must not replay it.
+        # The pending flag is one-shot; a later room_enter of the foyer
+        # with run_timer > 0 also must not queue it.
+        assert pb.memory[SEEN] & (1 << VIG_STAGE_CRYSTAL)
+    finally:
+        pb.stop(save=False)
+    print(f"[vignettes] crystal: plays {spent} frames on new-game foyer")
+
+
+def verdant_contract():
+    pb = boot()
+    try:
+        frames = []
+        portal_into_stage(pb, 1)
+        got = wait_screen(pb, (SCREEN_VIGNETTE, SCREEN_DIALOG), 240)
+        assert got == SCREEN_VIGNETTE, \
+            f"Verdant Hollow entry did not play its vignette (screen {got})"
+        frames.append(pb.screen.image.copy())
+        spent = play_through(pb, frames)
+        assert 180 <= spent <= 250, f"Verdant vignette length {spent} frames"
+        assert pb.memory[SCREEN] == SCREEN_ROOM
+        save_gif(frames, "stage2-verdant-hollow")
+        check_vignette_frames(frames, 0, "verdant")
+        portal_into_stage(pb, 1)
+        got = wait_screen(pb, (SCREEN_VIGNETTE, SCREEN_DIALOG), 240)
+        assert got == SCREEN_DIALOG, f"second Verdant entry replayed vignette ({got})"
+    finally:
+        pb.stop(save=False)
+    print(f"[vignettes] verdant: plays {spent} frames, once per run")
+
+
+def start_skip_contract():
+    """START (and B) skip from frame 8, same as A. Uses the new-game foyer."""
+    results = {}
+    for key in ("start", "b"):
+        pb = boot(consume_start=False)
+        try:
+            assert wait_screen(pb, (SCREEN_VIGNETTE,), 240) == SCREEN_VIGNETTE
+            # Held through the black load must not skip.
+            pb.button_press(key)
+            pb.tick(4)
+            pb.button_release(key)
+            pb.tick(2)
+            assert pb.memory[SCREEN] == SCREEN_VIGNETTE, \
+                f"{key} skip fired before frame 8"
+            spent, frames = skip_with(pb, key, skip_at=24)
+            assert spent <= 24 + 40, f"{key} skip took {spent} frames"
+            assert pb.memory[SCREEN] == SCREEN_ROOM
+            if key == "start":
+                save_gif(frames, "stage1-start-skip")
+            results[key] = spent
+        finally:
+            pb.stop(save=False)
+    print(f"[vignettes] skip: START at frame 24 returned after {results['start']} "
+          f"frames, B after {results['b']}")
+
+
 def main():
+    crystal_contract()
+    verdant_contract()
     ember_contract()
     skip_contract()
+    start_skip_contract()
     cutscenes_off_contract()
     riftwild_contract()
     print(f"[vignettes] PASS gifs in {OUT}")

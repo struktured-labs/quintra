@@ -151,6 +151,9 @@ def main():
         assert arm(pb, boss), 'second cast fizzled'
         while pb.memory[U] < 72:
             pb.tick()
+        # The growth overlay is committed at the start of the next LCD
+        # frame. One settle tick avoids reading mid-transfer empty VRAM.
+        pb.tick()
         hazard = next((tx, ty) for tx, ty, tile in root_cells(pb) if tile != ROOT)
         before = pb.memory[PL + 2]
         hit = None
