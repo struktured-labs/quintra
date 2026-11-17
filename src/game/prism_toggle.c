@@ -110,10 +110,15 @@ static const u8 prism_template_tier[PRISM_TEMPLATE_COUNT] = { 0, 1, 1, 2, 2 };
 
 u8 prism_class[PRISM_H][PRISM_W];
 u8 prism_raised;
+u8 prism_inmate_idx;
+u8 prism_inmate_tx, prism_inmate_ty;
+u8 prism_pocket_x0, prism_pocket_x1;
+u8 prism_pocket_y0, prism_pocket_y1;
 static u8 prism_cooldown;
 static u8 prism_pending_n;
 static u8 prism_pending_x[PRISM_PENDING];
 static u8 prism_pending_y[PRISM_PENDING];
+
 
 static u8 prism_tier(u8 bosses_beaten) {
     if (bosses_beaten == 0) return 0;
@@ -140,6 +145,22 @@ static u8 prism_under_player(u8 x, u8 y) {
 
 static u8 prism_barrier_colour(u8 cls) {
     return (cls == PRISM_CLASS_AMBER) ? 0 : 1;
+}
+
+
+void prism_pen_inmate(void) BANKED {
+    entity_t *e;
+    if (prism_inmate_idx == 0xFF || !room_puzzle_locked) return;
+    e = &entities[prism_inmate_idx];
+    if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) {
+        prism_inmate_idx = 0xFF;
+        return;
+    }
+    // Hold the inmate on its off-seal stand for the whole locked visit so
+    // it cannot walk onto the gold plate or out a lowered gate mid-puzzle.
+    e->x = FIX8((i16)prism_inmate_tx * 8);
+    e->y = FIX8((i16)prism_inmate_ty * 8);
+    e->vx = e->vy = 0;
 }
 
 void prism_prepare(u32 seed, u8 bosses_beaten, u8 solved) BANKED {
@@ -177,17 +198,9 @@ void prism_prepare(u32 seed, u8 bosses_beaten, u8 solved) BANKED {
             room_tilemap[(u8)(PRISM_Y0 + y)][(u8)(PRISM_X0 + x)] = tile;
         }
     }
-    // Guards remain in the open ring; any body generated inside the chamber
-    // would be sealed in a pocket or a raised barrier.
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY) {
-            u8 ex = (u8)((FIX8_TO_INT(entities[i].x) + 8) >> 3);
-            u8 ey = (u8)((FIX8_TO_INT(entities[i].y) + 8) >> 3);
-            if (ex + 1 >= PRISM_X0 && ex <= PRISM_X0 + PRISM_W
-                && ey + 1 >= PRISM_Y0 && ey <= PRISM_Y0 + PRISM_H)
-                entities[i].flags = 0;
-        }
-    }
+    // Ring guards stay in the open apron. One staged inmate occupies the
+    // goal pocket; accidental bodies inside other pockets are removed.
+    prism_place_flavor_guards();
 }
 
 static void prism_paint_barriers(u8 open_all) {

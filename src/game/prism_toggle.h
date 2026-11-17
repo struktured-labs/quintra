@@ -49,5 +49,14 @@ void prism_shot_tile(u8 t, u8 tx, u8 ty) BANKED;
 // Per-frame: strike cooldown, deferred barrier raises, goal check.
 // Returns 1 on the frame the goal plate is reached.
 u8 prism_tick(void) BANKED;
+// After entity updates in a still-locked chamber: snap the center inmate
+// back if it walked out of the goal pocket through a lowered gate.
+void prism_pen_inmate(void) BANKED;
+void prism_place_flavor_guards(void) BANKED;
+// 0xFF when this visit has no contained center inmate.
+extern u8 prism_inmate_idx;
+extern u8 prism_inmate_tx, prism_inmate_ty;
+extern u8 prism_pocket_x0, prism_pocket_x1;
+extern u8 prism_pocket_y0, prism_pocket_y1;
 
 #endif
