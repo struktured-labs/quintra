@@ -6,6 +6,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/will.h"
+#include "game/picsean_vortex.h"
 #include "render/tiles.h"
 #include "audio/sfx.h"
 #include "game/status.h"
@@ -20,7 +21,10 @@ void will_charge_tick(void) BANKED {
     // SPD 4 (slowest starter) charges at 20/40 per frame; each point above
     // adds one, up to the SPD cap.
     if (speed > PLAYER_SPD_MAX) speed = PLAYER_SPD_MAX;
-    will_charge_fraction += (u8)(16 + speed);
+    // Tide Vortex: skip every other increment so the next pip takes 2x
+    // as long at the current SPD. Other champions never set the flag.
+    if (!picsean_vortex_slow_charge || (picsean_vortex_slow_gate ^= 1))
+        will_charge_fraction += (u8)(16 + speed);
     if (will_charge_fraction < 40) return;
     will_charge_fraction -= 40;
     if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
@@ -28,6 +32,8 @@ void will_charge_tick(void) BANKED {
 
 void will_bank_charge(void) BANKED {
     if (player.will_level >= WILL_LEVEL_CAP) return;
+    picsean_vortex_slow_charge = 0;
+    picsean_vortex_slow_gate = 0;
     player.will_level++;
     player.will_charge = player.will_level >= WILL_LEVEL_CAP ? WILL_MAX : 0;
     // Cap is the rising power-up. A tier that still has room above it keeps

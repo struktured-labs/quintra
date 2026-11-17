@@ -252,6 +252,61 @@ def anchored(pb):
           f"near={near_frame} far={far_frame}")
 
 
+
+def recharge_cooldown(pb):
+    """After Tide Vortex the next Will pip takes twice as long.
+
+    Spec: docs/superpowers/specs/2026-11-17-picsean-vortex-cooldown.md
+    At Picsean's starting SPD 4 the old first pip was 180 frames (3.00 s).
+    After a vortex it is 360 frames (6.00 s). The following tier returns
+    to the ordinary 240-frame (4.00 s) cost once Waygear raises the cap.
+    """
+    arm(pb)
+    pb.memory[PLAYER + 7] = 4
+    # Own all three Waygear bits before the delayed pip banks so the cap
+    # is 4 and the first bank does not clamp will_charge at WILL_MAX.
+    pb.memory[PLAYER + 44] = 7
+    pb.memory[addr("_will_charge_fraction")] = 0
+    fire_max(pb)
+    check("vortex spent every banked pip",
+          pb.memory[PLAYER + LEVEL_OFFSET] == 0
+          and pb.memory[PLAYER + WILL_OFFSET] == 0)
+    # fire_max releases A, so the following idle frames charge Will.
+    for frame in range(180):
+        pb.memory[IFRAMES] = 60
+        pb.tick()
+    check("old 3s Will refill is no longer enough after a vortex",
+          pb.memory[PLAYER + LEVEL_OFFSET] == 0,
+          f"level={pb.memory[PLAYER + LEVEL_OFFSET]} "
+          f"charge={pb.memory[PLAYER + WILL_OFFSET]}")
+    ready = None
+    for frame in range(250):
+        pb.memory[IFRAMES] = 60
+        pb.tick()
+        if pb.memory[PLAYER + LEVEL_OFFSET] >= 1:
+            ready = 180 + frame + 1
+            break
+    check("next Will pip takes 360 frames (6.00s) at SPD 4",
+          ready is not None and abs(ready - 360) <= 3,
+          f"ready={ready}")
+    # Second pip uses the ordinary 120-charge tier, not another 2x delay.
+    pb.memory[addr("_will_charge_fraction")] = 0
+    second = None
+    start = pb.memory[PLAYER + LEVEL_OFFSET]
+    for frame in range(400):
+        pb.memory[IFRAMES] = 60
+        pb.tick()
+        if pb.memory[PLAYER + LEVEL_OFFSET] > start:
+            second = frame + 1
+            break
+    check("following tier is the ordinary 240-frame (4.00s) cost",
+          second is not None and abs(second - 240) <= 3,
+          f"second={second}")
+    fire_max(pb)
+    check("vortex recasts once the delayed pip has banked",
+          pb.memory[TICKS] > 0 and pb.memory[PLAYER + LEVEL_OFFSET] == 0)
+
+
 def crowded_updates(cast):
     """Logic updates over 96 frames in a 14-body room (fresh boot each run).
 
@@ -345,6 +400,7 @@ def main():
     try:
         contract(pb)
         anchored(pb)
+        recharge_cooldown(pb)
     finally:
         pb.stop(save=False)
     idle = crowded_updates(cast=False)
