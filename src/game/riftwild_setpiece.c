@@ -457,7 +457,7 @@ static void scatter(u8 base) {
         tile_put(x0, y0, singles[zone][h & 3]);
         lone--;
     }
-    for (tries = 0; tries < 16 && placed < want; ++tries) {
+    for (tries = 0; tries < 22 && placed < want; ++tries) {
         u8 h = next_hash();
         u8 kind = kinds[zone][h & 3];
         u8 x0 = (u8)(4 + ((next_hash() % 22) & 0xFE));
@@ -613,7 +613,7 @@ static u8 cell_attr;
 // Worn trail: an edge piece frays into the ground wherever the neighbour
 // is not trail. A neighbour outside the field counts as trail, so mouths run
 // on into the next field. dress_trail() reads all four neighbours; the
-// streamer's trail_cell() takes the two along its line from the line itself
+// streamer's trail_run() takes the two along its line from the line itself
 // and the two across from row pointers prepared once per line.
 #define RAW(x, y) (((y) < ROOM_H && (x) >= ROOM_W)                           \
     ? sp_row_hi[y][(u8)((x) - ROOM_W)] : sp_row_lo[y][x])
@@ -667,7 +667,7 @@ static const u8 rw_cy[16] = { 0x9F, 0x26, 0xD1, 0x4C, 0x08, 0xB3, 0x6E, 0xF5,
                               0x31, 0x8A, 0x57, 0xEC, 0x12, 0x7D, 0xC0, 0x95 };
 // rw_mk[b]: a clump block's mark art, or 0 off-clump. One lookup in the hot
 // loop instead of the CLUMP test plus the variant pick: blocks with
-// (b & 15) < 5 are clumps (5 in 16), and bits 5..6 pick tufts (two art) or
+// (b & 15) < 6 are clumps (6 in 16), and bits 5..6 pick tufts (two art) or
 // pebbles with small flowers. The caller XORs h bit 5 into b first, so half
 // a clump's cells swap within the pair: mixed, not stamped.
 #define T RWA_GRASS_TUFT
@@ -675,22 +675,22 @@ static const u8 rw_cy[16] = { 0x9F, 0x26, 0xD1, 0x4C, 0x08, 0xB3, 0x6E, 0xF5,
 #define P RWA_GRASS_PEBBLE
 #define F RWA_GRASS_BLOOM
 static const u8 rw_mk[256] = {
-    T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 #undef T
 #undef B
@@ -854,7 +854,7 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
 #define RWK_SNOW   2   // snow / sand / mud: clumped marks, two art
 #define RWK_SAND   3
 #define RWK_MUD    4
-#define RWK_PATH   5   // worn trail: trail_cell(), edge pieces from neighbours
+#define RWK_PATH   5   // worn trail: trail_run(), edge pieces from neighbours
 #define RWK_TREE   6
 #define RWK_CRAG   7
 #define RWK_SLOW   8   // shoreline / ruin / stamp: dress_cell()
@@ -888,10 +888,11 @@ static void dress_slow(u8 *tp, u8 *ap, u8 i, u8 h) {
 // PAR(i): canopy/crag quarter from parity; MIX(i): the (y << 3) ^ x term;
 // WHOLE(i): the cell's aligned 2x2 block is a complete tree/crag metatile.
 // BLK(i): the cell's 2x2-block clump hash (rw_mk); trail cells go to
-// trail_cell().
+// trail_run().
 #define DRESS_RUN(name, PAR, MIX, WHOLE, BLK)                                  \
 static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
-    u8 k, h, b, i0 = i;                                                             \
+    u8 k, h, b;                                                             \
+    dl_i0 = i;                                                              \
     for (; n; --n, ++tp, ++ap, ++i, hb += dl_step) {                        \
         k = rw_kind[*tp];                                                   \
         if (!k) continue;                                                   \
@@ -913,8 +914,8 @@ static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
         }                                                                   \
         h = (u8)(hb ^ (hb >> 3)); h += (u8)(MIX(i));                        \
         if (k == RWK_PATH) {                                                \
-            dl_ti = i; dl_tlast = (u8)(n == 1); dl_tfirst = (u8)(i == i0);  \
-            trail_cell(tp, ap, h);                                          \
+            b = (u8)(trail_run(tp, ap, i, n, hb) - 1);                      \
+            tp += b; ap += b; i += b; n -= b; hb = dl_hb_out;               \
             continue;                                                       \
         }                                                                   \
         b = BLK(i);                                                         \
@@ -944,8 +945,8 @@ static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
 #define TRAIL_ART(t) ((t) == RWA_PATH_PLAIN || (t) == RWA_PATH_STONES            \
     || (u8)((t) - RWA_PATH_N) <= (u8)(RWA_PATH_STRAIT_V - RWA_PATH_N))
 #define TRAIL_AT(tp, ap) ((*(ap) & 0x08) && TRAIL_ART(*(tp)))
-static u8 dl_run_prev, dl_run_next, dl_ti, dl_tfirst, dl_tlast;
-// Across-line neighbours for trail_cell(). Horizontal line y: the rows
+static u8 dl_run_prev, dl_run_next;
+// Across-line neighbours for trail_run(). Horizontal line y: the rows
 // above/below as lo (x < split) and hi (x >= split, pre-offset by -ROOM_W)
 // pointers; outside the field they point at an all-trail row. Vertical line
 // x: columns x - 1 / x + 1 as row offsets and whether they sit in the
@@ -970,45 +971,79 @@ static void trail_rows(u8 y, const u8 **lo, const u8 **hi, u8 *split) {
         *lo = *hi = sp_row_lo[y]; *split = 32;
     }
 }
-// One streamed trail cell (kept out of the hot loop so the plain-ground
-// path keeps its registers). Along-line neighbours come from the line
-// itself: the dressed previous cell (or the run's carried-in edge) and the
-// raw next one; past cell 30 is outside the field, which counts as trail.
-static void trail_cell(u8 *tp, u8 *ap, u8 h) {
-    u8 i = dl_ti, code = 0;
-    if (i >= (u8)(ROOM_WIDE_W_TILES - 1)) {
-        if (i > (u8)(ROOM_WIDE_W_TILES - 1)) {   // overscan cell 31
-            *tp = RWA_PATH_PLAIN; *ap = rw_path_attr;
-            return;
-        }
-    } else if ((dl_tlast ? dl_run_next : tp[1]) != BGT_PATH) {
-        code = 2;                                // next along the line
+// A stretch of consecutive streamed trail cells, from the hot loop's
+// current cell on, in one call (a trail row is 31 cells, so the call and
+// frame setup are paid once, not per cell). Along-line neighbours come from
+// the line itself: the dressed previous cell (or the run's carried-in edge)
+// and the raw next one; past cell 30 is outside the field, which counts as
+// trail. Across-line neighbours come from the pointers riftwild_dress_line()
+// prepared. Returns the cells consumed; dl_hb_out is the last cell's hash
+// base, so the caller's loop steps on from there.
+static u8 dl_i0, dl_hb_out;
+static u8 trail_run(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {
+    u8 m = 0, code, h, nx, prev, nx_attr;
+    const u8 *pu = 0, *pd = 0;
+    prev = (i == dl_i0) ? dl_run_prev : TRAIL_AT(tp - 1, ap - 1);
+    if (!dl_vertical) {
+        pu = (i < dl_up_split ? dl_up_lo : dl_up_hi) + i;
+        pd = (i < dl_dn_split ? dl_dn_lo : dl_dn_hi) + i;
     }
-    if (dl_tfirst ? !dl_run_prev : !TRAIL_AT(tp - 1, ap - 1)) code |= 1;
-    // Across the line: rows above/below (horizontal) or columns either side
-    // (vertical), from the pointers riftwild_dress_line() prepared.
-    if (dl_vertical) {
-        // along = N (1) / S (2); across = W (4) / E (8)
-        if (i < ROOM_H) {
-            if ((dl_wx_hi ? sp_row_hi[i][dl_wx] : sp_row_lo[i][dl_wx])
-                != BGT_PATH) code |= 4;
-            if ((dl_ex_hi ? sp_row_hi[i][dl_ex] : sp_row_lo[i][dl_ex])
-                != BGT_PATH) code |= 8;
+    for (;;) {
+        dl_hb_out = hb;
+        h = (u8)(hb ^ (hb >> 3));
+        if (i >= (u8)(ROOM_WIDE_W_TILES - 1)) {
+            nx = BGT_PATH;
+            if (i > (u8)(ROOM_WIDE_W_TILES - 1)) {   // overscan cell 31
+                *tp = RWA_PATH_PLAIN; *ap = rw_path_attr;
+                return (u8)(m + 1);
+            }
         } else {
-            if (sp_row_lo[i][dl_wx_lo] != BGT_PATH) code |= 4;
-            if (sp_row_lo[i][dl_ex_lo] != BGT_PATH) code |= 8;
+            nx = (n == 1) ? dl_run_next : tp[1];
         }
-        if (!dl_fixed) code &= (u8)~4;           // west of x 0: outside
-    } else {
-        // along = W (4) / E (8); across = N (1) / S (2)
-        code = (u8)(((code & 1) << 2) | ((code & 2) << 2));
-        if ((i < dl_up_split ? dl_up_lo[i] : dl_up_hi[i]) != BGT_PATH)
-            code |= 1;
-        if ((i < dl_dn_split ? dl_dn_lo[i] : dl_dn_hi[i]) != BGT_PATH)
-            code |= 2;
+        if (dl_vertical) {
+            // along = N (1) / S (2); across = W (4) / E (8)
+            h += (u8)((u8)(i << 3) ^ dl_fixed);
+            code = prev ? 0 : 1;
+            if (nx != BGT_PATH) code |= 2;
+            if (i < ROOM_H) {
+                if ((dl_wx_hi ? sp_row_hi[i][dl_wx] : sp_row_lo[i][dl_wx])
+                    != BGT_PATH) code |= 4;
+                if ((dl_ex_hi ? sp_row_hi[i][dl_ex] : sp_row_lo[i][dl_ex])
+                    != BGT_PATH) code |= 8;
+            } else {
+                if (sp_row_lo[i][dl_wx_lo] != BGT_PATH) code |= 4;
+                if (sp_row_lo[i][dl_ex_lo] != BGT_PATH) code |= 8;
+            }
+            if (!dl_fixed) code &= (u8)~4;       // west of x 0: outside
+        } else {
+            // along = W (4) / E (8); across = N (1) / S (2). Inline pick:
+            // this is the full-row case (a trail running along the line).
+            if (i == dl_up_split) pu = dl_up_hi + i;
+            if (i == dl_dn_split) pd = dl_dn_hi + i;
+            code = prev ? 0 : 4;
+            if (nx != BGT_PATH) code |= 8;
+            if (*pu != BGT_PATH) code |= 1;
+            if (*pd != BGT_PATH) code |= 2;
+            ++pu; ++pd;
+            h += (u8)(dl_mix ^ i);
+            nx_attr = (u8)(rw_path_attr | rw_tr_flip[code]);
+            if (h & 0x80) nx_attr ^= rw_tr_jit[code];
+            *ap = nx_attr;
+            *tp = code ? rw_tr_art[code]
+                : (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
+            goto next;
+        }
+        *tp = trail_pick(code, h);
+        *ap = cell_attr;
+next:
+        ++m;
+        // Stop at the stretch's end, the line's end, or a stamp box (its
+        // cells take dress_cell()).
+        if (nx != BGT_PATH || n == 1) return m;
+        ++tp; ++ap; ++i; --n; hb += dl_step;
+        if (i >= dl_lo && i < dl_hi) return m;
+        prev = 1;
     }
-    *tp = trail_pick(code, h);
-    *ap = cell_attr;
 }
 DRESS_RUN(dress_run_h, PAR_H, MIX_H, WHOLE_H, BLK_H)
 DRESS_RUN(dress_run_v, PAR_V, MIX_V, WHOLE_V, BLK_V)

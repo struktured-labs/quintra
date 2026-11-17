@@ -14,10 +14,10 @@ too sanitary. The light green path is arguably worse."
 
 - Ground marks grow in clumps. A seeded 2x2-block hash (per-axis tables
   `rw_cx`/`rw_cy`, odd block rows staggered by a cell so the clumps never
-  line up in a grid) picks about 5 in 16 blocks. Inside a picked block, 3 of 4
+  line up in a grid) picks about 6 in 16 blocks. Inside a picked block, 3 of 4
   cells carry a mark, and a stray sprig lands on about 1 in 32 other cells.
-  That works out to about 22-24% of ground cells marked (1 in 4-5), up from
-  12-13%. A clump's look is either tufts (two art variants, one of them
+  That works out to about 21% of ground cells marked in the Waking and about
+  19.5% in the Hollow (roughly 1 in 5), up from 12-13%. A clump's look is either tufts (two art variants, one of them
   off-centre) or pebbles with small flowers. Half the cells swap within the
   pair, so a clump is mixed rather than stamped. Snow, sand and mud use
   their two climate marks the same way.
@@ -25,7 +25,7 @@ too sanitary. The light green path is arguably worse."
   4x2 pair or a 4x4 grove/ridge/flower patch; two to four land), plus three
   or four complete standalone props (a lone bush, rock or stump), up from
   1-2 clusters and no singles.
-- Open floor averages about 85.3% in the Waking and about 84.6% in the
+- Open floor averages 85.3-85.7% in the Waking and 84.6-84.9% in the
   Hollow, against 85.5-86.1% after the tidy and 83.1-83.9% originally.
 
 ## Worn-earth trails
@@ -40,9 +40,17 @@ too sanitary. The light green path is arguably worse."
   repeats. A neighbour outside the field counts as trail, so mouths run on
   seamlessly. The edge frays into colour 0 with an irregular dark lip,
   instead of the old hard light-green stripe.
-- Trails stay on the inline dress fast path. `dress_trail()` reads the four
-  neighbours straight from the room row tables, without calling `tile_at`
-  or `dress_cell`, so streamed seams stay on budget.
+- Trails stay on the dress fast path. `trail_run()` dresses a whole stretch
+  of consecutive trail cells in one call. It takes the two along-line
+  neighbours from the line itself and the two across-line neighbours from
+  row pointers prepared once per line. Ground marks are one 256-byte lookup
+  (`rw_mk`).
+- Cost: `fits()` now uses a classification lookup, which saves about 3
+  frames of scatter, so field entry is level with main (the
+  test_riftwild_landmarks camera settles in 62 frames on both). A full
+  redraw (for example after closing a dialogue) is about 1.5 frames slower.
+  test_riftwild_polish now waits 10 frames after closing a dialogue before
+  the next approach.
 
 ## Banks
 
