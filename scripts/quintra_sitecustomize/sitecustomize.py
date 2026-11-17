@@ -88,14 +88,20 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
                 return
 
         def tick(self, *args, **kwargs):
-            # Do not split batched tick(n): some fight contracts are
-            # frame-count sensitive. Stamp seen before and after so a
-            # New Game still gets the delay-tick window.
+            # Split tick(n) so a boot_room-style tick(90) cannot run
+            # run_state_init, the one-frame delay, and the foyer arm in
+            # one host call (seen would be cleared then armed unobserved).
             if os.environ.get("QUINTRA_KEEP_VIGNETTES") == "1":
                 return super().tick(*args, **kwargs)
-            self._quintra_mark_seen()
-            result = super().tick(*args, **kwargs)
-            self._quintra_mark_seen()
+            count = 1
+            rest = args
+            if args and isinstance(args[0], int):
+                count = args[0]
+                rest = args[1:]
+            result = None
+            for _ in range(max(1, count)):
+                result = super().tick(1, *rest, **kwargs)
+                self._quintra_mark_seen()
             return result
 
     _pyboy_mod.PyBoy = _PyBoy
