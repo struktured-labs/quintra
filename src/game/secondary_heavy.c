@@ -2,7 +2,6 @@
 #include <gb/gb.h>
 #include "audio/sfx.h"
 #include "game/player.h"
-#include "game/entity.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
 #include "game/sun_lattice.h"
@@ -93,23 +92,4 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
         fx_spawn(SPR_FX_IMPACT,4,x+10,y+10,16);
         room_shake(2,10); sfx_play(SFX_ROAR);
     }
-}
-
-u8 morningstar_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED {
-    u8 i;
-    i16 sx, sy;
-    static const i8 ox[4] = { -4, 4, -4, 4 };
-    static const i8 oy[4] = { -4, -4, 4, 4 };
-    for (i = 0; i < 4 && oam < entity_oam_cap; ++i) {
-        sx = (i16)x + ox[i];
-        sy = (i16)y + oy[i];
-        set_sprite_tile(oam, (u8)(SPR_ITEM_MORNINGSTAR_BIG + i));
-        set_sprite_prop(oam, e->palette);
-        if (sx > 0 && sx < 168 && sy > 0 && sy < 152)
-            move_sprite(oam, (u8)sx, (u8)sy);
-        else
-            move_sprite(oam, 0, 0);
-        oam++;
-    }
-    return oam;
 }
