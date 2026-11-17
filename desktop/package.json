@@ -1,0 +1,20 @@
+{
+  "name": "quintra-desktop",
+  "productName": "Quintra",
+  "version": "0.21.0",
+  "description": "Quintra, a Game Boy Color action adventure, as a desktop app",
+  "main": "main.js",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "author": "Quintra contributors",
+  "homepage": "https://github.com/struktured-labs/quintra",
+  "scripts": {
+    "stage": "node scripts/stage.mjs",
+    "package": "bash scripts/package.sh",
+    "selftest": "node test/selftest.mjs"
+  },
+  "devDependencies": {
+    "electron": "45.3.4",
+    "electron-builder": "26.18.0"
+  }
+}

@@ -1,0 +1,32 @@
+# Quintra desktop packaging. Unpacked "dir" targets only: Steam depots ship
+# the unpacked app, and scripts/package.sh makes the archives itself so they
+# are byte-for-byte reproducible.
+appId: com.strukturedlabs.quintra
+productName: Quintra
+executableName: quintra
+copyright: Copyright 2025-2026 Quintra contributors
+directories:
+  output: ../builds/desktop/electron
+  buildResources: build-resources
+files:
+  - main.js
+  - preload.js
+  - package.json
+  - app/**/*
+asar: true
+electronLanguages:
+  - en-US
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+publish: null
+linux:
+  target:
+    - target: dir
+      arch: [x64]
+  category: Game
+win:
+  target:
+    - target: dir
+      arch: [x64]
+  signAndEditExecutable: false

@@ -67,6 +67,7 @@ jobs:
       - name: Gamepad input checks
         run: |
           node --check web/itch/player.js
+          for f in desktop/main.js desktop/preload.js desktop/renderer/desktop.js desktop/scripts/stage.mjs desktop/test/selftest.mjs; do node --check "$f"; done
           node tools/test_itch_gamepad.mjs web/itch/player.js
           node tools/test_itch_gamepad_layouts.mjs web/itch/player.js
           node tools/test_itch_pad_calibration.mjs web/itch/player.js
@@ -252,6 +253,73 @@ jobs:
             rom/working/quintra.gbc
             rom/working/quintra.map
             rom/working/quintra.noi
+
+  desktop:
+    name: Desktop wrapper (Electron, Windows + Linux)
+    needs: rom
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Download ROM
+        uses: actions/download-artifact@v4
+        with:
+          name: quintra-gbc
+          path: rom/working
+
+      - name: Install Xvfb and Electron runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth zip \
+            libnss3 libgbm1 libasound2t64 libgtk-3-0t64 libxss1
+
+      - name: Build the web bundle
+        run: tools/build_itch_web.sh
+
+      - name: Install wrapper dependencies
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+
+      - name: Package Windows and Linux builds
+        run: bash desktop/scripts/package.sh
+
+      - name: Headless self-test (Linux build)
+        run: node desktop/test/selftest.mjs
+
+      - name: Upload Linux build
+        uses: actions/upload-artifact@v4
+        with:
+          name: quintra-desktop-linux-x64
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            builds/desktop/quintra-desktop-*-linux-x64.tar.gz
+            builds/desktop/SHA256SUMS
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: quintra-desktop-win-x64
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            builds/desktop/quintra-desktop-*-win-x64.zip
+            builds/desktop/SHA256SUMS
+
+      - name: Upload self-test captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quintra-desktop-selftest
+          if-no-files-found: warn
+          path: builds/desktop/selftest/
 
   manual:
     name: Instruction manual

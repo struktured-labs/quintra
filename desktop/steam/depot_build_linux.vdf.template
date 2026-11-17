@@ -1,0 +1,12 @@
+// Linux x64 depot: the unpacked Electron app (launch executable quintra).
+"DepotBuild"
+{
+	"DepotID" "__STEAM_DEPOT_LINUX__"
+	"ContentRoot" "../content/linux/"
+	"FileMapping"
+	{
+		"LocalPath" "*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+}

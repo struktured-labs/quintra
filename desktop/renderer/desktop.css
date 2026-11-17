@@ -1,0 +1,97 @@
+/*
+ * Quintra desktop wrapper styles
+ * Copyright 2026 Quintra contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+html.desktop,
+html.desktop body { background: #000; }
+html.desktop.hide-cursor,
+html.desktop.hide-cursor * { cursor: none !important; }
+
+/* Game only: no page chrome, touch controls, toolbar or help text. */
+html.desktop .player header,
+html.desktop .player .player-side,
+html.desktop .player .sound-banner,
+html.desktop.running .player .launch { display: none !important; }
+
+html.desktop .player.fit-layout,
+html.desktop .player.fit-layout.layout-side,
+html.desktop .player.fit-layout.layout-stack {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  padding: 0 !important;
+  background: #000;
+}
+
+html.desktop .player.fit-layout .player-stage {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100%;
+  height: 100%;
+}
+
+html.desktop .player.fit-layout .screen-wrap { border-color: #000; }
+
+/* Credits and licenses overlay. */
+.desktop-credits {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #05060bf0;
+}
+.desktop-credits[hidden] { display: none; }
+.desktop-credits-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(900px, 100%);
+  height: min(680px, 100%);
+  padding: 16px;
+  border: 1px solid var(--gold);
+  background: var(--panel);
+}
+.desktop-credits-head { display: flex; align-items: center; gap: 10px; }
+.desktop-credits-head h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: .08em;
+  text-align: center;
+}
+.desktop-credits pre {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--edge);
+  background: #0b0e17;
+  color: var(--ink);
+  font-size: .82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  outline: none;
+}
+.desktop-credits-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.desktop-credits button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--edge);
+  background: #1b2030;
+  color: var(--ink);
+  cursor: pointer;
+}
+.desktop-credits button:focus-visible,
+.desktop-credits button:hover { border-color: var(--gold); outline: none; }
