@@ -126,14 +126,25 @@ static u8 hollow_reward_screen(void) {
 static void hollow_world_apply(u8 base) {
     u8 x, y;
     // Erase the living world's meaning rather than merely dimming it:
-    // flowers become broken earth, standing water becomes void holes, and
+    // flowers become broken earth, shorelines choke with dead reeds, and
     // strips of remembered ground survive as bone-pale snow/mud islands.
     for (y = 1; y < ROOM_WIDE_H_TILES - 1; ++y) {
         for (x = 1; x < ROOM_WIDE_W_TILES - 1; ++x) {
             u8 tile = world_tile(x, y);
             if (tile == BGT_WILD_FLOWER) world_put(x, y, BGT_WILD_HOLE);
-            else if (tile == BGT_WILD_WATER && ((x + y) & 1))
-                world_put(x, y, BGT_WILD_REEDS);
+            // Dead reeds choke each shoreline (a coherent ring, not the old
+            // water/reed checkerboard whose every cell drew a cut corner).
+            else if (tile == BGT_WILD_WATER) {
+                u8 n = world_tile(x, (u8)(y - 1));
+                u8 s = world_tile(x, (u8)(y + 1));
+                u8 w = world_tile((u8)(x - 1), y);
+                u8 e = world_tile((u8)(x + 1), y);
+                if ((n != BGT_WILD_WATER && n != BGT_WILD_REEDS)
+                    || (s != BGT_WILD_WATER && s != BGT_WILD_REEDS)
+                    || (w != BGT_WILD_WATER && w != BGT_WILD_REEDS)
+                    || (e != BGT_WILD_WATER && e != BGT_WILD_REEDS))
+                    world_put(x, y, BGT_WILD_REEDS);
+            }
             else if ((tile == BGT_GRASS || tile == base)
                 && ((u8)(x * 3 + y * 5 + run_state.world_screen) & 15) < 3)
                 world_put(x, y, (x & 1) ? BGT_WILD_MUD : BGT_WILD_SNOW);
@@ -195,7 +206,7 @@ void riftwild_terrain_apply(u8 seed_low) BANKED {
         stamp_land((u8)(5 + (salt & 7)), 7, 7, 4,
             BGT_WILD_MOUNTAIN, base);
         stamp_land((u8)(18 + ((salt >> 2) & 7)), 22, 7, 4,
-            BGT_WILD_STONE, base);
+            BGT_WILD_MOUNTAIN, base);
         stamp_land((u8)(22 + ((salt >> 5) & 3)), 5, 3, 3,
             BGT_WILD_HOLE, base);
     } else if (zone == 3) {

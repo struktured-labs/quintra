@@ -5,9 +5,9 @@
 #include "core/types.h"
 
 #define RW_ART_TERRAIN_BASE 0
-#define RW_ART_TERRAIN_COUNT 26
+#define RW_ART_TERRAIN_COUNT 40
 #define RW_ART_PIECE_BASE 64
-#define RW_ART_PIECE_COUNT 27
+#define RW_ART_PIECE_COUNT 28
 #define RWA_GRASS_TUFT 0
 #define RWA_GRASS_PEBBLE 1
 #define RWA_GRASS_BLOOM 2
@@ -34,6 +34,20 @@
 #define RWA_HOLE_W 23
 #define RWA_HOLE_NW 24
 #define RWA_HOLE_INNER 25
+#define RWA_TREE_LONE 26
+#define RWA_CRAG_LONE 27
+#define RWA_GRASS_PLAIN 28
+#define RWA_PATH_PLAIN 29
+#define RWA_SHORE_LONE 30
+#define RWA_SHORE_CAP_N 31
+#define RWA_SHORE_CAP_W 32
+#define RWA_SHORE_STRAIT_H 33
+#define RWA_SHORE_STRAIT_V 34
+#define RWA_HOLE_LONE 35
+#define RWA_HOLE_CAP_N 36
+#define RWA_HOLE_CAP_W 37
+#define RWA_HOLE_STRAIT_H 38
+#define RWA_HOLE_STRAIT_V 39
 #define RWA_COLUMN_TOP 64
 #define RWA_COLUMN_BASE 65
 #define RWA_COLUMN_BROKEN 66
@@ -61,6 +75,7 @@
 #define RWA_GREAT_TREE_2_0 88
 #define RWA_GREAT_TREE_2_1 89
 #define RWA_GREAT_TREE_2_2 90
+#define RWA_SHARD 91
 
 // Loads every Riftwild bank-1 tile; idempotent and cheap to repeat.
 void riftwild_art_load(void) BANKED;

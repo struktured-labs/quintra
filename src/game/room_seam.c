@@ -8,6 +8,7 @@
 #include "game/player.h"
 #include "game/room.h"
 #include "game/puzzle.h"
+#include "game/riftwild_setpiece.h"
 #include "game/sun_lattice.h"
 #include "game/water_ride.h"
 #include "game/run_state.h"
@@ -65,6 +66,8 @@ void room_stream_wide_seam(u8 dir) BANKED {
     // The raft would otherwise hang at its old screen spot during the slide.
     water_ride_hide();
     for (step = 0; step < steps; ++step) {
+        // Riftwild: metatile scan before line 0, ground palette mid-slide.
+        riftwild_seam_step(step, dir);
         seam_vbl();
         if (dir == DIR_E) {
             u8 logical = step;
