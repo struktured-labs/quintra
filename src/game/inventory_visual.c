@@ -32,8 +32,8 @@ void inventory_prepare_sprites(void) BANKED {
         : player.active_item == 14 ? SPR_ITEM_THORN
         : player.active_item == ITEM_ID_BOOMERANG ? SPR_ITEM_BOOMERANG
         : player.active_item == ITEM_ID_HOOKSHOT ? SPR_WAYGEAR_HOOK
-        : player.active_item == ITEM_ID_MORNINGSTAR ? 237
-        : player.active_item == ITEM_ID_BOMBS ? SPR_ITEM_RIFT_BOMB : SPR_ITEM_ASCEND;
+        : player.active_item == ITEM_ID_MORNINGSTAR ? SPR_ITEM_MORNINGSTAR
+        : player.active_item == ITEM_ID_BOMBS ? SPR_ITEM_BOMB_BAG : SPR_ITEM_ASCEND;
     class_palette_load_obj(1, player.class_id);
     palette_obj_load(2, gold);
     palette_obj_load(3, magic);
@@ -49,6 +49,7 @@ void inventory_prepare_sprites(void) BANKED {
     icon(4, SPR_ITEM_WEAPON, 3, 9, 2);
     icon(5, signature, 3, 11, 3);
     if (player.active_item == ITEM_ID_MORNINGSTAR) set_sprite_prop(5,11);
+    if (player.active_item == ITEM_ID_BOMBS) set_sprite_prop(5, SPR_BOMB_BAG_PROP);
     icon(6, SPR_ITEM_RIFT_SIGIL, 2, 14, 2);
     icon(7, SPR_COIN, 7, 7, 2);
 }
