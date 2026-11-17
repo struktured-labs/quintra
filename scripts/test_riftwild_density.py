@@ -10,11 +10,14 @@ import statistics
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from capture_riftwild_wins import cross_to, settle  # noqa: E402
+sys.path.insert(0, str(ROOT / "docs/superpowers/specs/assets/riftwild-wonder"))
+from capture_riftwild_wins import settle  # noqa: E402
 from capture_riftwild_atlas import boot, entities  # noqa: E402
-from test_overworld import RS  # noqa: E402
-from test_riftwild_landmarks import ROUTE  # noqa: E402
+from test_overworld import ROM, RS  # noqa: E402
+from test_riftwild_landmarks import ROUTE, cross_to  # noqa: E402
+from quintra_vignettes import mute_vignettes  # noqa: E402
 
 SEEDS = (0x1234ABCD, 0x00C0FFEE, 0x7E57BEEF)
 # Fixtures with their own population: Riftwell trader, arches (sealed or
@@ -24,6 +27,7 @@ FIXTURE_FIELDS = {1, 3, 8, 17, 21, 27, 29, 30, 34}
 
 def walk(seed, hollow=False):
     pb = boot(seed, 1)
+    mute_vignettes(pb, ROM)
     counts = {}
     try:
         if hollow:
