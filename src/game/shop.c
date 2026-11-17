@@ -68,8 +68,8 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
         case WARE_BLAST:   entities[idx].sprite_tile = SPR_ITEM_BLAST_SEED; break;
         case WARE_BOOMERANG: entities[idx].sprite_tile = SPR_ITEM_BOOMERANG; break;
         case WARE_HOOKSHOT: entities[idx].sprite_tile = SPR_WAYGEAR_HOOK; break;
-        case WARE_MORNINGSTAR: entities[idx].sprite_tile = 237; break;
-        case WARE_BOMBS: entities[idx].sprite_tile = SPR_ITEM_RIFT_BOMB; break;
+        case WARE_MORNINGSTAR: entities[idx].sprite_tile = SPR_ITEM_MORNINGSTAR; break;
+        case WARE_BOMBS: entities[idx].sprite_tile = SPR_ITEM_BOMB_BAG; break;
         case WARE_ANTIDOTE: entities[idx].sprite_tile = SPR_ITEM_ANTIDOTE; break;
         default:           entities[idx].sprite_tile = SPR_ITEM_POWER_STONE; break;
     }
@@ -81,7 +81,8 @@ void pickup_configure_shop_ware(u8 idx, u8 ware) BANKED {
             || ware == WARE_ECHO || ware == WARE_RICOCHET
             || ware == WARE_FLASK || ware == WARE_BOOMERANG) ? 0x06
         : 0x04;
-    if (ware==WARE_MORNINGSTAR) entities[idx].palette=13;
+    if (ware==WARE_MORNINGSTAR) entities[idx].palette=SPR_MORNINGSTAR_PROP;
+    if (ware==WARE_BOMBS) entities[idx].palette=SPR_BOMB_BAG_PROP;
     if (ware==WARE_ANTIDOTE) entities[idx].palette=ANTIDOTE_ICON_PROP; // green vial, bank 1
 }
 

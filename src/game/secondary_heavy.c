@@ -27,8 +27,8 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     e=&entities[i];
     e->flags |= EF_PLAYER_PROJ;
     e->x=player.x+4; e->y=player.y+4;
-    e->sprite_tile=bomb ? SPR_ITEM_RIFT_BOMB : 237;
-    e->palette=bomb ? 4 : 13;
+    e->sprite_tile=bomb ? SPR_ITEM_BOMB_BAG : SPR_ITEM_MORNINGSTAR;
+    e->palette=bomb ? SPR_BOMB_BAG_PROP : SPR_MORNINGSTAR_PROP;
     e->hitbox=0xAA; e->hp=8;
     e->damage=player.atk+(bomb ? 8 : 3);
     e->state_timer=bomb ? 48 : 40;
@@ -66,7 +66,7 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
         e->x+=e->vx; e->y+=e->vy;
     }
     if (e->state_timer<16) {
-        e->palette=(e->state_timer&2) ? 4 : 5;
+        e->palette=(e->state_timer&2) ? SPR_BOMB_BAG_PROP : SPR_BOMB_BAG_FLASH;
         if (!(e->state_timer&7)) sfx_play(SFX_TICK);
     }
     if (!e->state_timer) {

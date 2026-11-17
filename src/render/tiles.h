@@ -345,10 +345,18 @@
 #define SPR_ITEM_THORN       147
 #define SPR_ITEM_DRUM        148
 #define SPR_ITEM_FLASK       149
-// Antidote vial lives in OBJ VRAM bank 1 (status-glyph bank, beside the
-// Morningstar at 237), so draw it with ANTIDOTE_ICON_PROP (bank bit set).
+// Antidote vial lives in OBJ VRAM bank 1 (status-glyph bank, tiles 224-237
+// are the 14 status glyphs). Draw it with ANTIDOTE_ICON_PROP (bank bit set).
 #define SPR_ITEM_ANTIDOTE    238
 #define ANTIDOTE_ICON_PROP   0x0F // OBJ palette 7 (green/amber) | VRAM bank 1
+// Dedicated B-weapon tiles in bank 1, after the antidote. Palette props
+// already carried the bank bit (13 = pal 5, 11 = pal 3); only the tile
+// index was still colliding with status glyph 13 at 237.
+#define SPR_ITEM_MORNINGSTAR 239
+#define SPR_ITEM_BOMB_BAG    240 // distinct from relic SPR_ITEM_RIFT_BOMB
+#define SPR_MORNINGSTAR_PROP 13  // coin gold | VRAM bank 1
+#define SPR_BOMB_BAG_PROP    12  // heart red  | VRAM bank 1
+#define SPR_BOMB_BAG_FLASH   13  // coin gold  | VRAM bank 1 (fuse warning)
 #define SPR_ITEM_ASCEND      150
 #define SPR_ITEM_RIFT_SIGIL  151
 #define SPR_ITEM_RIFT_BOMB   152
