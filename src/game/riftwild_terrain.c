@@ -132,19 +132,8 @@ static void hollow_world_apply(u8 base) {
         for (x = 1; x < ROOM_WIDE_W_TILES - 1; ++x) {
             u8 tile = world_tile(x, y);
             if (tile == BGT_WILD_FLOWER) world_put(x, y, BGT_WILD_HOLE);
-            // Dead reeds choke each shoreline (a coherent ring, not the old
-            // water/reed checkerboard whose every cell drew a cut corner).
-            else if (tile == BGT_WILD_WATER) {
-                u8 n = world_tile(x, (u8)(y - 1));
-                u8 s = world_tile(x, (u8)(y + 1));
-                u8 w = world_tile((u8)(x - 1), y);
-                u8 e = world_tile((u8)(x + 1), y);
-                if ((n != BGT_WILD_WATER && n != BGT_WILD_REEDS)
-                    || (s != BGT_WILD_WATER && s != BGT_WILD_REEDS)
-                    || (w != BGT_WILD_WATER && w != BGT_WILD_REEDS)
-                    || (e != BGT_WILD_WATER && e != BGT_WILD_REEDS))
-                    world_put(x, y, BGT_WILD_REEDS);
-            }
+            // Shoreline reeds: riftwild_hollow_reeds() below (a coherent
+            // fringe, not the old water/reed checkerboard).
             else if ((tile == BGT_GRASS || tile == base)
                 && ((u8)(x * 3 + y * 5 + run_state.world_screen) & 15) < 3)
                 world_put(x, y, (x & 1) ? BGT_WILD_MUD : BGT_WILD_SNOW);
@@ -248,7 +237,10 @@ void riftwild_terrain_apply(u8 seed_low) BANKED {
     // One authored set piece and seeded clumps per ordinary field. Before
     // the Hollow pass so the counterpart world erodes them like the rest.
     riftwild_setpiece_apply(base);
-    if (RUN_RIFTWILD_IS_HOLLOW()) hollow_world_apply(base);
+    if (RUN_RIFTWILD_IS_HOLLOW()) {
+        hollow_world_apply(base);
+        riftwild_hollow_reeds();
+    }
     carve_edge_mouths(terrain_edges(run_state.world_screen), base);
     riftwild_den_stamp_field();   // hidden den clearing, after all terrain
 }

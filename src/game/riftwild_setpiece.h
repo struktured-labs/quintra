@@ -44,6 +44,7 @@ void riftwild_meta_scan(void) BANKED;
 // Wide-seam hook, once per slide step: step 0 rescans the destination's
 // metatiles (fixtures and events write terrain after procgen); step 8 of an
 // N/S slide swaps the shared ground colour 0 between climate rows.
+void riftwild_hollow_reeds(void) BANKED;
 void riftwild_seam_step(u8 step, u8 dir) BANKED;
 
 void riftwild_setpiece_apply(u8 base) BANKED;

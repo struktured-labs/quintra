@@ -29,6 +29,8 @@ u8 riftwild_cache_x = 0xFF;
 u8 riftwild_cache_y = 0xFF;
 u8 riftwild_render_salt;
 u8 rw_ground_slot;
+#define RW_PATH_ATTR ((u8)((rw_ground_slot == BGPAL_CRYSTAL ? BGPAL_DOOR \
+    : rw_ground_slot) | 0x08))
 // Union of every stamp footprint (x1/y1 exclusive); x0 = 0xFF when empty.
 // One bounds test per streamed cell replaces the per-stamp scan.
 static u8 rw_box_x0 = 0xFF, rw_box_y0, rw_box_x1, rw_box_y1;
@@ -595,7 +597,7 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
             }
             break;
         case BGT_PATH:
-            cell_attr = (u8)(rw_ground_slot | 0x08);
+            cell_attr = RW_PATH_ATTR;
             return (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
         case BGT_TREE:
         case BGT_WILD_MOUNTAIN:
@@ -731,7 +733,8 @@ static void dress_slow(u8 *tp, u8 *ap, u8 i, u8 h) {
 // One loop body per orientation, so the cell path never re-tests it.
 // PAR(i): canopy/crag quarter from parity; MIX(i): the (y << 3) ^ x term;
 // WHOLE(i): the cell's aligned 2x2 block is a complete tree/crag metatile.
-// Trails draw in the field's ground palette slot (dl_path_attr).
+// Trails draw in the field's ground palette slot (dl_path_attr); on snow
+// they use the sand slot, a trodden-earth trail that never reads as water.
 #define DRESS_RUN(name, PAR, MIX, WHOLE)                                    \
 static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
     u8 k, h;                                                                \
@@ -794,7 +797,7 @@ void riftwild_dress_line(u8 *tiles, u8 *attrs, u8 fixed, u8 vertical,
     hb = (u8)(fixed * (vertical ? 0x1Du : 0x3Bu) + riftwild_render_salt);
     dl_mix = (u8)(fixed << 3);
     dl_par = vertical ? (u8)(fixed & 1) : (u8)((fixed & 1) << 1);
-    dl_path_attr = (u8)(rw_ground_slot | 0x08);
+    dl_path_attr = RW_PATH_ATTR;
     dl_brow = (u8)((fixed >> 1) << 1);
     dl_bhi = (u8)(fixed >> 4);
     dl_bbit = rw_bit[(fixed >> 1) & 7];

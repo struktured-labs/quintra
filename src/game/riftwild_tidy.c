@@ -119,3 +119,33 @@ void riftwild_seam_step(u8 step, u8 dir) BANKED {
     else if (step == 8 && (dir == DIR_N || dir == DIR_S))
         riftwild_load_world_palettes(0);
 }
+
+// Hollow shorelines choke with dead reeds. A water cell turns to reeds only
+// when exactly one side is land and two open-water cells lie behind it, so
+// the fringe reads as one coherent ring and swimmable channels never thin
+// below two tiles (the old water/reed checkerboard drew a cut corner on
+// every cell and could wall off a river).
+static u8 wet(u8 x, u8 y) {
+    u8 t = at(x, y);
+    return t == BGT_WILD_WATER || t == BGT_WILD_REEDS;
+}
+
+static u8 deep(u8 x, u8 y, i8 dx, i8 dy) {
+    return at((u8)(x + dx), (u8)(y + dy)) == BGT_WILD_WATER
+        && at((u8)(x + dx + dx), (u8)(y + dy + dy)) == BGT_WILD_WATER;
+}
+
+void riftwild_hollow_reeds(void) BANKED {
+    u8 x, y, n, s, w, e;
+    for (y = 1; y < ROOM_WIDE_H_TILES - 1; ++y) {
+        for (x = 1; x < ROOM_WIDE_W_TILES - 1; ++x) {
+            if (at(x, y) != BGT_WILD_WATER) continue;
+            n = wet(x, (u8)(y - 1)); s = wet(x, (u8)(y + 1));
+            w = wet((u8)(x - 1), y); e = wet((u8)(x + 1), y);
+            if ((u8)(n + s + w + e) != 3) continue;
+            if (!n ? deep(x, y, 0, 1) : !s ? deep(x, y, 0, -1)
+                : !w ? deep(x, y, 1, 0) : deep(x, y, -1, 0))
+                put(x, y, BGT_WILD_REEDS);
+        }
+    }
+}
