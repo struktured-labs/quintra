@@ -124,6 +124,9 @@ jobs:
       - name: PyBoy puzzle final note
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_puzzle_note.py
 
+      - name: PyBoy puzzle contracts (rune plate art, colours, pressed state)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_puzzles.py
+
       - name: PyBoy Cinder Rex pose
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_rex_pose.py
 
