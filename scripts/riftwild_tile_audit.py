@@ -57,6 +57,17 @@ def ink_table(pb):
     return out
 
 
+def bg_colour0(pb):
+    """Colour 0 (BGR555) of BG palette slots 0-4, read through BCPS/BCPD."""
+    out = []
+    for slot in range(5):
+        pb.memory[0xFF68] = slot * 8
+        lo = pb.memory[0xFF69]
+        pb.memory[0xFF68] = slot * 8 + 1
+        out.append(lo | (pb.memory[0xFF69] << 8))
+    return out
+
+
 def field_cells(pb):
     idx, att = bg_cells(pb)
     ox, oy = pb.memory[ORIGIN_X], pb.memory[ORIGIN_Y]
@@ -149,6 +160,7 @@ def run(seed, hollow, png_dir):
             cells = field_cells(pb)
             res[screen] = analyse(meta["tiles"], cells, ink_table(pb))
             res[screen]["wide"] = meta["tiles"]
+            res[screen]["colour0"] = bg_colour0(pb)
             if png_dir:
                 img.resize((img.width * 4, img.height * 4)).save(
                     png_dir / f"field_{screen:02d}.png")
