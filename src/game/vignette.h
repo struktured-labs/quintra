@@ -9,7 +9,7 @@
 #include "core/types.h"
 #include "game/screen.h"
 
-// Per-run seen bits, one per vignette id. Cleared by run_state_init.
+// Per-run seen bits live in run_state.vignette_seen (saved with the run).
 
 void vignette_enter(void);
 screen_id_t vignette_tick(u8 keys, u8 pressed);
