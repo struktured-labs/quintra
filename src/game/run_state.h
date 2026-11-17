@@ -143,7 +143,7 @@ typedef struct {
     // fields without shifting any historical suspend/debug offsets.
     u8  world_seen_hi;       // cells 16..23
     u8  world_seen_xhi;      // cells 24..31
-    u8  world_seen_xxhi;     // cells 32..35; bits 4..6 found dens; bit 7 reserved
+    u8  world_seen_xxhi;     // cells 32..35; bits 4..6 found dens; bit 7 Warden named
     // Low six bits: active seconds until ASK recovers. High bits persist the
     // optional cache discovery/reveal without shifting the suspend ABI. The
     // companion role is derived once from the run seed and stays stable.
@@ -250,6 +250,8 @@ u8   run_state_riftwild_guard_active(u8 screen) BANKED;
 u8   run_state_riftwild_guard_cleared(u8 screen) BANKED;
 u8   run_state_riftwild_guard_gear(u8 screen) BANKED;
 void run_state_riftwild_clear_guard(void) BANKED;
+u8   run_state_riftwild_guard_screen(void) BANKED;
+u8   run_state_riftwild_guard_down(void) BANKED;
 void run_state_ensure_dungeon_law(void) BANKED;
 u16  run_state_enemies_killed_total(void);
 void run_state_record_enemy_kill(void) BANKED;

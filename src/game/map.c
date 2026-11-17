@@ -14,6 +14,7 @@
 #include "render/tiles.h"
 #include "content.h"
 #include "game/map_marks.h"
+#include "game/riftwild_mission.h"
 
 BANKREF(map_enter)
 
@@ -184,9 +185,13 @@ static void draw_world_grid(void) {
             // Identity and connectivity remain fogged until actually visited.
             if (seen) icon = riftwild_den_map_icon(cell,
                 map_world_shop_icon(cell, icon));
+            // The Warden (then the woken gate) is marked once earned, even
+            // through fog, so the Compass always shows the next step.
+            icon = riftwild_compass_goal_icon(cell,
+                seen ? icon : BGT_MAP_UNKNOWN);
             // A Chime-heard den is a dim chest until it is actually found.
             if (icon & 0x80) map_put_attr(x, y, (u8)(icon & 0x7F), BGPAL_WALL);
-            else map_put(x, y, seen ? icon : BGT_MAP_UNKNOWN);
+            else map_put(x, y, icon);
             if (c + 1 < ZELDA_WORLD_W && seen
                 && run_state_world_cell_seen((u8)(cell + 1))
                 && (zelda_overworlds[0].screen_grid[cell].edges & 2)) {

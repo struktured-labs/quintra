@@ -16,6 +16,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/run_state.h"
+#include "game/riftwild_mission.h"
 #include "game/waygear.h"
 #include "game/room.h"
 #include "game/shop_copy.h"
@@ -144,6 +145,7 @@ static void wayfarer_lore(void) {
         case 10: dialog_lines("THIS ARCH SLEEPS", "ANOTHER BURNS BLUE", "FOLLOW YOUR MAP"); break;
         case 11: dialog_lines("FARFOLD STAIRS BEND", "LINK DISTANT WOODS", "DESCEND TO CROSS"); break;
         case 13:
+            riftwild_name_warden();
             if (run_state.world_screen == run_state_riftwild_gate_screen())
                 dialog_lines("THIS ARCH IS ^4SEALED", "A ^4WARDEN^0 HOLDS IT", "ITS FALL WAKES FIRE");
             else dialog_lines("THIS ARCH SLEEPS", "YOUR ROAD GOES ON", "ANOTHER ARCH WAITS");
@@ -174,9 +176,18 @@ static void wayfarer_advice(void) {
         case 11: dialog_lines("^1TOOLS^0 OPEN GROVES", "REMEMBER ^1OLD GATES", "^3RETURN WITH GEAR"); break;
         case 12: dialog_lines("TAKE THE ^1GIFTS", "^3BEFORE YOU LEAVE", "VAULTS ^4NEVER REFILL"); break;
         case 13:
-            if (run_state.world_screen == run_state_riftwild_gate_screen())
-                dialog_lines("SEEK ^3NORTHEAST", "DEFEAT THE ^4WARDEN", "RETURN TO THIS ARCH");
-            else dialog_lines("SEEK THE ^1NEXT ARCH", "ITS ^4WARDEN^0 HOLDS IT", "^3SELECT^0 OPENS MAP");
+            // Name the real direction (the Warden, or the woken gate once
+            // it falls) and earn the Compass mark for it.
+            riftwild_name_warden();
+            if (run_state_riftwild_guard_down())
+                dialog_lines("THE ^1NEXT ARCH^0 WAKES",
+                    riftwild_seek_line(),
+                    "^3SELECT^0 OPENS MAP");
+            else dialog_lines(
+                riftwild_seek_line(),
+                "DEFEAT THE ^4WARDEN",
+                run_state.world_screen == run_state_riftwild_gate_screen()
+                    ? "RETURN TO THIS ARCH" : "^3SELECT^0 MARKS IT");
             break;
         case 14:
             dialog_lines("REST BY ^2MY SPRING", "SEE THE ^1LAKE SHRINE",
@@ -189,7 +200,10 @@ static void wayfarer_advice(void) {
                 ? "MY ^1SPARK^0 IS YOURS" : "TAKE THIS ^1SPARK",
                 "AND KEEP A SONG", "FOR THE WAY HOME");
             break;
-        default: dialog_lines("WILD WARDEN HOLDS", "FIND ITS RED MARK", "WIN WAKES THIS ARCH"); break;
+        default:
+            riftwild_name_warden();
+            dialog_lines("WILD WARDEN HOLDS", "FIND ITS RED MARK", "WIN WAKES THIS ARCH");
+            break;
     }
 }
 
