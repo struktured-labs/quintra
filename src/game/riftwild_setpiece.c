@@ -185,19 +185,48 @@ u8 riftwild_field_salt(u8 k) BANKED {
     return s ? s : 0x5A;
 }
 
+// Row tables: no 2-D index multiply per cell. Rows 0..16 start in
+// room_tilemap and continue at x >= 20 in room_world_extension (indexed
+// from x - 20); rows 17..30 are whole rows of room_world_bottom. fits()
+// probes thousands of cells per field build, so cell access stays cheap.
+static u8 * const sp_row_lo[ROOM_WIDE_H_TILES] = {
+    &room_tilemap[0][0], &room_tilemap[1][0], &room_tilemap[2][0],
+    &room_tilemap[3][0], &room_tilemap[4][0], &room_tilemap[5][0],
+    &room_tilemap[6][0], &room_tilemap[7][0], &room_tilemap[8][0],
+    &room_tilemap[9][0], &room_tilemap[10][0], &room_tilemap[11][0],
+    &room_tilemap[12][0], &room_tilemap[13][0], &room_tilemap[14][0],
+    &room_tilemap[15][0], &room_tilemap[16][0], &room_world_bottom[0][0],
+    &room_world_bottom[1][0], &room_world_bottom[2][0],
+    &room_world_bottom[3][0], &room_world_bottom[4][0],
+    &room_world_bottom[5][0], &room_world_bottom[6][0],
+    &room_world_bottom[7][0], &room_world_bottom[8][0],
+    &room_world_bottom[9][0], &room_world_bottom[10][0],
+    &room_world_bottom[11][0], &room_world_bottom[12][0],
+    &room_world_bottom[13][0]
+};
+static u8 * const sp_row_hi[ROOM_H] = {
+    &room_world_extension[0][0], &room_world_extension[1][0],
+    &room_world_extension[2][0], &room_world_extension[3][0],
+    &room_world_extension[4][0], &room_world_extension[5][0],
+    &room_world_extension[6][0], &room_world_extension[7][0],
+    &room_world_extension[8][0], &room_world_extension[9][0],
+    &room_world_extension[10][0], &room_world_extension[11][0],
+    &room_world_extension[12][0], &room_world_extension[13][0],
+    &room_world_extension[14][0], &room_world_extension[15][0],
+    &room_world_extension[16][0]
+};
+
+static u8 *cell_ptr(u8 x, u8 y) {
+    if (y < ROOM_H && x >= ROOM_W) return sp_row_hi[y] + (u8)(x - ROOM_W);
+    return sp_row_lo[y] + x;
+}
+
 static u8 tile_at(u8 x, u8 y) {
-    if (y < ROOM_H) {
-        if (x < ROOM_W) return room_tilemap[y][x];
-        return room_world_extension[y][x - ROOM_W];
-    }
-    return room_world_bottom[y - ROOM_H][x];
+    return *cell_ptr(x, y);
 }
 
 static void tile_put(u8 x, u8 y, u8 t) {
-    if (y < ROOM_H) {
-        if (x < ROOM_W) room_tilemap[y][x] = t;
-        else room_world_extension[y][x - ROOM_W] = t;
-    } else room_world_bottom[y - ROOM_H][x] = t;
+    *cell_ptr(x, y) = t;
 }
 
 static u8 ground(u8 t, u8 base) {
@@ -234,8 +263,14 @@ static u8 soft(u8 t, u8 base) {
 static u8 den_here;
 
 static u8 reserved(u8 x, u8 y) {
+    u8 i;
     if (run_state.world_screen == 0 && y <= 6 && x >= 6 && x <= 13)
         return 1;
+    // Placed stamps (and a one-tile margin) are never overdrawn by scatter:
+    // a grove written over a column stamp left the stamp art on tree cells.
+    for (i = 0; i < rw_stamp_n; ++i)
+        if ((u8)(x + 1 - rw_stamp_x[i]) <= rw_stamp_w[i]
+            && (u8)(y + 1 - rw_stamp_y[i]) <= rw_stamp_h[i]) return 1;
     if (!den_here) return 0;
     if (x >= 19 && x <= 28 && y >= 17 && y <= 27) return 1;
     if (x >= 8 && x <= 11 && y >= 10 && y <= 23) return 1;
@@ -254,20 +289,23 @@ static u8 view_at(u8 x, u8 y) {
 // stamp can never cut a path, and nothing sits on a trail or a mouth. The
 // footprint itself also stays off the reserved spots.
 static u8 fits(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
-    u8 x, y;
+    u8 x, y, t, inrow, *p;
     u8 x1 = (u8)(x0 + w + 1), y1 = (u8)(y0 + h + 1);
+    u8 xe = (u8)(x0 + w);
     if (x0 < 3 || y0 < 3 || x1 > 28 || y1 > 28) return 0;
-    for (y = (u8)(y0 - 2); y <= y1; ++y)
-        for (x = (u8)(x0 - 2); x <= x1; ++x) {
-            u8 inside = (x >= x0 && y >= y0
-                && x < (u8)(x0 + w) && y < (u8)(y0 + h));
-            if (inside) {
-                if (!soft(tile_at(x, y), base) || reserved(x, y))
-                    return 0;
-            } else if (!open_ring(tile_at(x, y), base)) {
+    for (y = (u8)(y0 - 2); y <= y1; ++y) {
+        inrow = y >= y0 && y < (u8)(y0 + h);
+        p = cell_ptr((u8)(x0 - 2), y);
+        for (x = (u8)(x0 - 2); x <= x1; ++x, ++p) {
+            if (x == ROOM_W && y < ROOM_H) p = sp_row_hi[y];
+            t = *p;
+            if (inrow && x >= x0 && x < xe) {
+                if (!soft(t, base) || reserved(x, y)) return 0;
+            } else if (!open_ring(t, base)) {
                 return 0;
             }
         }
+    }
     return 1;
 }
 

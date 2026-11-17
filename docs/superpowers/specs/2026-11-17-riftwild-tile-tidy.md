@@ -14,11 +14,11 @@ then reads the BG map, attributes and palettes from VRAM.
 | metric | before | after (3 seeds) |
 |---|---|---|
 | orphan 2x2 quarters | 4591 (~127/field) | 0 |
-| open floor mean / min | 83.7% / 77.5% | 86.7-87.0% / 79.9% |
-| prop clusters per field | 15.1 | 6.4-6.9 |
-| one/two-cell props per field | 11.8 | 2.3-2.9 |
+| open floor mean / min | 83.7% / 77.5% | 85.8-86.1% / ≥79% |
+| prop clusters per field | 15.1 | 6.0-6.7 |
+| one/two-cell props per field | 11.8 | 1.8-2.9 |
 | ground cells carrying a mark | 100% | ~13% |
-| Hollow props / singles | 37.8 / 34.2 | 11.7 / 7.2 |
+| Hollow props / singles | 37.8 / 34.2 | 10.0 / 5.6 |
 
 Fragment causes:
 1. Trees and crags render as 2x2 canopies/peaks chosen only by x/y parity.
@@ -45,11 +45,19 @@ lattice.
   `crag_lone` tile. A tree burned at runtime clears its bit and redraws the
   surviving cells as lone trees (`riftwild_tree_burned`).
 - **Tidy pass** (`riftwild_tidy_field`, ordinary and fixture fields, before set
-  pieces): erode incomplete interior tree/crag blocks to ground, and prune
-  one-tile water/sinkhole tips and channels. Cells only ever become walkable,
-  so routes only widen. Cells next to capability gates (100-104) and portals
-  are pinned. Rim blocks, landmarks, cave entrances (CAVE-STONE / BLAST /
-  THICKET) and fixtures written after the pass are kept.
+  pieces): erode incomplete interior tree/crag blocks to ground. Cells only
+  ever become walkable, so routes only widen. Cells next to capability gates
+  (100-104) and portals are pinned, and so is the Riftwell trader's counter
+  tree (16, 4), which stops a player walking up to talk. Rim blocks,
+  landmarks, cave entrances (CAVE-STONE / BLAST / THICKET) and fixtures
+  written after the pass are kept. Water/sinkhole tips and one-tile channels
+  are drawn with the shore set rather than pruned: a pruning scan cost about
+  5 frames per field build.
+- **Build cost**: field entry stays within 3 frames of main (74 vs 71 frames
+  from the boss exit). The tidy and set-piece passes read cells through
+  per-row pointer tables instead of 2-D index arithmetic, and `fits()` walks
+  row pointers. Scatter never overdraws a placed stamp (a grove written over
+  a column stamp left stamp art on tree cells).
 - **Shared ground colour**: in world mode every BG slot 0-4 takes the zone
   ground slot's colour 0 (snow: crystal slot, sand: door slot, else floor),
   so props sit directly on the earth. N/S seams reload palettes at slide

@@ -19,7 +19,7 @@ from riftwild_tile_audit import run  # noqa: E402
 CASES = [(0x1234ABCD, False), (0x00C0FFEE, False), (0x7E57BEEF, False),
          (0x1234ABCD, True)]
 OPEN_MIN = 78.0          # per field; was 77.5 before the tidy pass
-OPEN_MEAN = 85.5         # was 83.1-83.9
+OPEN_MEAN = 85.0         # was 83.1-83.9
 PROPS_MEAN = {False: 9.0, True: 14.0}     # was 15.1 / 37.8
 SINGLES_MEAN = {False: 4.0, True: 9.0}    # was 11.8 / 34.2
 DETAIL_MEAN = 25.0       # was 100 (every ground cell carried texture)
