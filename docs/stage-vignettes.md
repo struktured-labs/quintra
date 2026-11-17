@@ -28,7 +28,7 @@ existing stage card; a new-run foyer or town-to-dungeon entry keeps the ordinary
 - The vignette leaves through `room_request_resume()`, the same path PACK, MAP and DIALOG use. That
   path redraws the room's BG tiles and map. The vignette uses only BG slots 0x80-0xFF and 0x40-0x6E
   (175 tiles maximum). It zero-fills the few slots that the resume path leaves alone.
-- The player is pinned to bank 20. Crystal Caverns and Verdant Hollow data live in bank 21.
+- The player lives in bank 21 with the Crystal Caverns and Verdant Hollow pictures. Bank 20 keeps the Ember/Riftgate pictures, village music, and other fixed residents.
 
 ## Adding a dungeon
 1. Draw a 112x96 picture (6 BG palettes or fewer, about 120 unique tiles) into `assets/vignettes/<name>.png`.

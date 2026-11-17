@@ -1,4 +1,4 @@
-#pragma bank 20
+#pragma bank 21
 // Pinned: autobank (255) packed these into nearly-full banks 2/17/19.
 // Banks 20+ were empty; one bank keeps the player and its art together.
 // Stage-transition vignettes. Data-driven: every picture, text line, effect
