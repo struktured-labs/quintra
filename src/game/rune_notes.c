@@ -1,4 +1,5 @@
-#pragma bank 19
+#pragma bank 21
+// Bank 21 since the Riftwild tile-life pass (bank 19 filled up).
 
 #include <gb/gb.h>
 #include <gb/cgb.h>

@@ -32,17 +32,17 @@ too sanitary. The light green path is arguably worse."
 
 - Trails draw in the door/earth slot in the Waking for every climate: tan
   dirt with darker grit, readable on dark grass, snow and sand alike. In the
-  Hollow they use the ground slot, because its door slot is the void-cyan
-  landmark colour.
+  Hollow they use the muted floor slot, because its door and crystal slots
+  are the loud void-cyan and magenta landmark colours.
 - A trail cell picks an edge piece from its N/S/W/E neighbours: mid,
   N-edge, W-edge, corner, or one-tile horizontal or vertical strait. Flips
   give the other sides, and edges flip again by hash so the fray never
   repeats. A neighbour outside the field counts as trail, so mouths run on
   seamlessly. The edge frays into colour 0 with an irregular dark lip,
   instead of the old hard light-green stripe.
-- Trails left the inline dress fast path and now go through `dress_cell`.
-  Field build is about +3 frames against main (77 vs 74 in the
-  boss-to-overworld probe).
+- Trails stay on the inline dress fast path. `dress_trail()` reads the four
+  neighbours straight from the room row tables, without calling `tile_at`
+  or `dress_cell`, so streamed seams stay on budget.
 
 ## Banks
 

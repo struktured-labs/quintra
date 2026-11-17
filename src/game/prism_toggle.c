@@ -1,4 +1,5 @@
-#pragma bank 19
+#pragma bank 21
+// Bank 21 since the Riftwild tile-life pass (bank 19 filled up).
 // Pinned with law_lock_gen: after merging hidden dens, autobank first-fit
 // placed this in bank 17 and left only 198 bytes, under the 256-byte floor.
 // Prism Toggle: Oracle / Link's Awakening style crystal-switch chamber.

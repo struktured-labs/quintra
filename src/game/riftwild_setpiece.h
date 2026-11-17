@@ -37,7 +37,7 @@ extern u8 riftwild_render_salt;
 // set blocks and a self-contained lone tile everywhere else.
 #define RW_BLOCK_BYTES 32
 extern u8 rw_block_ok[RW_BLOCK_BYTES];
-// Palette slot of this field's ground (trails are drawn in it).
+// Palette slot of this field's ground.
 extern u8 rw_ground_slot;
 void riftwild_tidy_field(u8 base) BANKED;
 void riftwild_meta_scan(void) BANKED;
