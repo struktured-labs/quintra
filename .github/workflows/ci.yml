@@ -14,6 +14,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # Mute the new-run foyer vignette in PyBoy contracts. The vignette
+  # test itself sets QUINTRA_KEEP_VIGNETTES=1.
+  PYTHONPATH: scripts/quintra_sitecustomize
 
 jobs:
   rust:

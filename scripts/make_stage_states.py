@@ -648,8 +648,8 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     pyboy.button_press("a")
     pyboy.tick(6)
     pyboy.button_release("a")
-    pyboy.tick(90)
-    mute_vignettes(pyboy, rom)
+    from quintra_vignettes import mute_after_class_select
+    mute_after_class_select(pyboy, rom, settle=90)
 
     target = stage_entry_room(stage)
     # The world gate now places the seeded entry rather than incrementing

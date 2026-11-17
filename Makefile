@@ -36,6 +36,11 @@ export UV_CACHE_DIR
 PYBOY_SPEC ?= pyboy==2.7.0
 PYBOY_RUN = uv run --quiet --with "$(PYBOY_SPEC)" python
 
+# Auto-mute the new-run foyer vignette in PyBoy tests (see
+# scripts/quintra_sitecustomize/sitecustomize.py). test_stage_vignettes
+# opts out with QUINTRA_KEEP_VIGNETTES=1.
+export PYTHONPATH := $(CURDIR)/scripts/quintra_sitecustomize$(if $(PYTHONPATH),:$(PYTHONPATH))
+
 # All .c under src/ (including generated)
 # Link order affects autobank placement and therefore the ROM hash. `find`
 # order varies by filesystem/copy history, so sort the manifest explicitly.

@@ -34,6 +34,9 @@
 #define VM_FRAMES 16
 #define VM_SFX 17
 #define VM_VARIANT 18
+#define VM_FX 19
+#define VIG_FX_NONE 0
+#define VIG_FX_LEAVES 1
 #define VM_EV 24
 #define VM_CYC 56
 #define VM_CYC_COL 72
@@ -46,14 +49,22 @@ void vig_io_riftgate(u8 op, u8 arg, u8 *dst) BANKED;
 void vig_io_ember_depths(u8 op, u8 arg, u8 *dst) BANKED;
 #define VIG_FILE_EMBER_DEPTHS 1
 #define VIG_STAGE_EMBER 2
-#define VIG_COUNT 3
+void vig_io_crystal_caverns(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_CRYSTAL_CAVERNS 2
+#define VIG_STAGE_CRYSTAL 3
+void vig_io_verdant_hollow(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_VERDANT_HOLLOW 3
+#define VIG_STAGE_VERDANT 4
+#define VIG_COUNT 5
 // id -> (file << 4) | variant
-#define VIG_TABLE { 0x00, 0x01, 0x10 }
+#define VIG_TABLE { 0x00, 0x01, 0x10, 0x20, 0x30 }
 // dungeon stage (0..8) -> vignette id, 0xFF = none yet
-#define VIG_STAGE_TABLE { 0xFF, 0xFF, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
+#define VIG_STAGE_TABLE { 3, 4, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
 #define VIG_DISPATCH(file, op, arg, dst) do { switch (file) { \
     case 0: vig_io_riftgate((op), (arg), (dst)); break; \
     case 1: vig_io_ember_depths((op), (arg), (dst)); break; \
+    case 2: vig_io_crystal_caverns((op), (arg), (dst)); break; \
+    case 3: vig_io_verdant_hollow((op), (arg), (dst)); break; \
     } } while (0)
 
 #endif

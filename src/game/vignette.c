@@ -48,6 +48,27 @@ static u8 vig_hero_k;    // hero fade step, 4 = hidden
 #define VIG_ROW_STEPS 3
 #define VIG_BLACK BGR555(1, 0, 3)
 #define VIG_WHITE BGR555(31, 31, 31)
+// Leaves borrow an exclusive-OBJ tile (0x8000-0x87FF). BG 8800 mode does
+// not use that range, and room_enter reloads every OBJ tile on resume.
+#define VIG_LEAF_TILE 32
+#define VIG_LEAF_SPR  4
+#define VIG_FX_LEAVES 1
+
+u8 room_start_vignette;
+u8 vig_from_town;
+extern u8 stage_fade;
+
+// 8x8 leaf, colours 1=dark, 2=mid, 3=light rim.
+static const u8 vig_leaf_tile[16] = {
+    0x18, 0x00,
+    0x3C, 0x08,
+    0x7E, 0x1C,
+    0x7C, 0x38,
+    0x3C, 0x18,
+    0x18, 0x08,
+    0x08, 0x00,
+    0x00, 0x00
+};
 
 static const u8 vig_table[VIG_COUNT] = VIG_TABLE;
 static const u8 vig_stage_table[9] = VIG_STAGE_TABLE;
@@ -129,6 +150,49 @@ static void hide_hero(void) {
     for (i = 0; i < 4; ++i) move_sprite(i, 0, 0);
 }
 
+static void hide_leaves(void) {
+    u8 i;
+    for (i = 0; i < 4; ++i) move_sprite((u8)(VIG_LEAF_SPR + i), 0, 0);
+}
+
+static void load_leaf_obj(void) {
+    static const u16 leaf_pal[4] = {
+        VIG_BLACK,
+        BGR555(8, 14, 3),
+        BGR555(16, 22, 4),
+        BGR555(22, 26, 8)
+    };
+    u8 i;
+    set_sprite_data(VIG_LEAF_TILE, 1, vig_leaf_tile);
+    if (LY_REG < 144) wait_vbl_done();
+    OCPS_REG = 0x90;     // OBJ palette 2
+    for (i = 0; i < 4; ++i) {
+        OCPD_REG = (u8)leaf_pal[i];
+        OCPD_REG = (u8)(leaf_pal[i] >> 8);
+    }
+    hide_leaves();
+}
+
+static void place_leaves(void) {
+    static const u8 lx[4] = { 36, 56, 104, 124 };
+    static const u8 lphase[4] = { 0, 37, 74, 111 };
+    static const u8 lspd[4] = { 1, 2, 1, 2 };
+    u8 i;
+    if (vig_meta[VM_FX] != VIG_FX_LEAVES) return;
+    for (i = 0; i < 4; ++i) {
+        u8 t = (u8)(vig_t + lphase[i]);
+        u8 y = (u8)(12 + (u8)((u16)t * lspd[i] % 100));
+        u8 x = (u8)(lx[i] + ((t >> 3) & 2) - 1);
+        u8 spr = (u8)(VIG_LEAF_SPR + i);
+        if (y >= 112) { move_sprite(spr, 0, 0); continue; }
+        set_sprite_tile(spr, VIG_LEAF_TILE);
+        set_sprite_prop(spr, (u8)(0x02
+            | ((t >> 4) & 1 ? S_FLIPX : 0)
+            | ((t >> 5) & 1 ? S_FLIPY : 0)));
+        move_sprite(spr, (u8)(x + 8), (u8)(y + 16));
+    }
+}
+
 static void place_hero(void) {
     u8 t0 = vig_meta[VM_WALK_T0];
     u8 t1 = vig_meta[VM_WALK_T1];
@@ -205,11 +269,14 @@ void vignette_enter(void) {
     vig_cyc_phase = 0;
     vig_hero_k = 0;
     if (vig_meta[VM_SFX]) sfx_play_reward(SFX_REWARD_MAGIC);
+    if (vig_meta[VM_FX] == VIG_FX_LEAVES) load_leaf_obj();
+    else hide_leaves();
 }
 
 static screen_id_t vignette_finish(void) {
     u8 i;
     hide_hero();
+    hide_leaves();
     HIDE_SPRITES;
     OCPS_REG = 0x88;
     for (i = 0; i < 4; ++i) {
@@ -265,6 +332,7 @@ screen_id_t vignette_tick(u8 keys, u8 pressed) {
         vig_hero_k = k > 4 ? 4 : k;
     }
     place_hero();
+    place_leaves();
     {
         u8 k = 0, white = 0;
         u8 flash = vig_meta[VM_FLASH_T];
@@ -297,22 +365,45 @@ static u8 vig_arm(u8 id) {
     return 1;
 }
 
+static screen_id_t vig_try_stage(u8 stage, u8 use_card) {
+    u8 slot = stage;
+    while (slot >= 9) slot = (u8)(slot - 9);
+    if (vig_arm(vig_stage_table[slot])) return SCREEN_VIGNETTE;
+    if (!use_card) return SCREEN_SELF;
+    room_prepare_stage_arrival(stage);
+    return SCREEN_DIALOG;
+}
+
 screen_id_t vignette_arrival(u8 from_world, u8 stage) BANKED {
+    u8 from_town = vig_from_town;
+    vig_from_town = 0;
     if (!run_state.world_mode) {
-        if (!from_world || RUN_ROOM_IS_TOWN(run_state.room_counter))
+        if (RUN_ROOM_IS_TOWN(run_state.room_counter))
             return SCREEN_SELF;
-        {
-            u8 slot = stage;
-            while (slot >= 9) slot = (u8)(slot - 9);
-            if (vig_arm(vig_stage_table[slot])) return SCREEN_VIGNETTE;
-        }
-        room_prepare_stage_arrival(stage);
-        return SCREEN_DIALOG;
+        if (!from_world && !from_town)
+            return SCREEN_SELF;
+        // Riftwild-to-dungeon falls back to the classic stage card.
+        // Town and new-run foyer keep the existing dim fade instead.
+        return vig_try_stage(stage, from_world);
     }
     if (!from_world
         && vig_arm(RUN_RIFTWILD_IS_HOLLOW() ? VIG_RIFT_HOLLOW : VIG_RIFT_WAKING))
         return SCREEN_VIGNETTE;
     return SCREEN_SELF;
+}
+
+screen_id_t vignette_on_run_start(u8 stage) BANKED {
+    room_start_vignette = 0;
+    if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter))
+        return SCREEN_ROOM;
+    {
+        screen_id_t next = vig_try_stage(stage, 0);
+        if (next == SCREEN_VIGNETTE) {
+            stage_fade = 0;
+            return SCREEN_VIGNETTE;
+        }
+        return SCREEN_ROOM;
+    }
 }
 
 screen_id_t vignette_after_shift(void) BANKED {

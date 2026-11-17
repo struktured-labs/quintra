@@ -164,5 +164,11 @@ void run_state_enter_from_world(void) BANKED {
     run_state.room_counter = (u8)(run_state_stage_start(run_state.bosses_beaten)
         + run_state_dungeon_entry_cell());
     run_state_reveal_dungeon_cell(run_state_dungeon_entry_cell());
+    // Town (and den-stair) arrivals into a dungeon foyer: play the stage
+    // vignette once. The door/portal path reads this before falling through.
+    {
+        extern u8 vig_from_town;
+        vig_from_town = 1;
+    }
 }
 
