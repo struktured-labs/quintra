@@ -71,3 +71,20 @@ the court to idle. Existing rune audio and solve contracts remain.
 Five-note layouts are still authored in `prepare_sequence` for Ember
 and later, but Stages 3+ currently assign Sun Lattice or Prism Toggle
 instead of a rune phrase.
+
+## Addendum 2026-11-17: upload on every entry path
+
+Hardware report on main c8207761: plates were black squares with cut-off
+art and no pitch colour until the room was solved or the pack was opened.
+The palettes and attributes were right; the tile data was not. Note tiles
+111..121 share VRAM with Compass node art (SELECT) and were uploaded only
+by a fresh `room_enter` build and the pack-resume path. Door slides, wide
+seams, blanked rebuilds and Riftwild portal entries skipped the upload, so
+plates drew stale Compass art or blank (all colour 0) tiles.
+
+Rule: every path that runs `puzzle_prepare_room_role()` also calls
+`puzzle_load_note_palettes()` before the room is painted. The door path
+does it before choosing slide/seam/rebuild; the portal path before
+`room_draw_tilemap()`. `scripts/test_puzzles.py` enters the Stage 2 Trial
+through a door with the plate slots poisoned and decodes each plate's VRAM
+tile (idle and latched) to its pitch fill colour.

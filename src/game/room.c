@@ -2149,6 +2149,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             procgen_repair_enemy_spawns();
             boss_threshold_warned = 0;
             room_load_environment_palettes();
+            // Rune plates share VRAM 111..121 with Compass art; upload them
+            // on every entry path, not only fresh builds and pack resumes.
+            puzzle_load_note_palettes();
             room_draw_tilemap();
             place_player_sprite();
             hud_redraw_all();
@@ -2422,6 +2425,11 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 stage_event_prepare_room();
                 dungeon_director_activate();
                 procgen_repair_enemy_spawns();
+                // Upload this room's pitch-plate tiles before any slide,
+                // seam stream or blanked rebuild paints them. Door entries
+                // used to skip this, leaving the plates on stale Compass art
+                // (or blank VRAM) until a pack resume reloaded them.
+                puzzle_load_note_palettes();
                 if (room_encounter_kind == ENCOUNTER_HUNT)
                     play_boss_music();
                 // A wide-to-wide edge is a continuous district seam. Rotate

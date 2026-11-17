@@ -120,6 +120,47 @@ def cgb_bg_palette(pb, slot):
     return tuple(result)
 
 
+# Fill colour index each pitch's plate art draws with (bgt_note_a/b/c in
+# rune_notes.c): pitches 0/3 use colour 1, 1/4 colour 2, 2 colour 3.
+RUNE_FILL_INDEX = (1, 2, 3, 1, 2)
+
+
+def bg_tile_pixels(pb, tile):
+    """Decode BG tile `tile` (8800 addressing, VRAM bank 0) to colour indices."""
+    base = (0x9000 + tile * 16) if tile < 128 else (0x8000 + tile * 16)
+    raw = [pb.memory[0, base + i] for i in range(16)]
+    pixels = []
+    for row in range(8):
+        lo, hi = raw[row * 2], raw[row * 2 + 1]
+        for bit in range(7, -1, -1):
+            pixels.append(((lo >> bit) & 1) | (((hi >> bit) & 1) << 1))
+    return pixels
+
+
+def assert_plate_art(pb, tile, pitch, where=""):
+    """The plate's VRAM art is the authored note tile, not stale/blank data.
+
+    Regression for door entries that never uploaded tiles 111..121: plates
+    rendered as solid outline-black squares, or as leftover Compass node
+    art, until a pack resume reloaded them.
+    """
+    pixels = bg_tile_pixels(pb, tile)
+    want = RUNE_FILL_INDEX[pitch]
+    fill = pixels.count(want)
+    stray = [c for c in pixels if c not in (0, want)]
+    assert fill >= 16 and not stray, (
+        f"plate {where} tile {tile} pitch {pitch}: VRAM art wrong "
+        f"(fill colour {want} x{fill}, stray {sorted(set(stray))})")
+
+
+def poison_plate_vram(pb):
+    """Simulate stale Compass art left in the shared 111..121 slots."""
+    for tile in range(BGT_NOTE_0, BGT_NOTE_FLASH + 1):
+        for i in range(16):
+            pb.memory[0, 0x9000 + tile * 16 + i] = 0xFF
+    assert bg_tile_pixels(pb, BGT_NOTE_0) == [3] * 64, "VRAM poison did not stick"
+
+
 def wait_rune_flash(pb):
     """Let the 8-frame white flash settle so lit/idle tiles can be sampled."""
     for _ in range(12):
@@ -147,6 +188,7 @@ def assert_note_colors(pb, addrs, expected_count):
         assert tile == RUNE_IDLE_TILE[pitch], (
             f"plate {i} at {(x, y)} pitch {pitch} tile {tile}, "
             f"want idle {RUNE_IDLE_TILE[pitch]}")
+        assert_plate_art(pb, tile, pitch, (x, y))
         attr = room_tile_attr(pb, x, y, addrs)
         assert attr == RUNE_NOTE_PAL[pitch], (
             f"plate {i} at {(x, y)} pitch {pitch} pal {attr}, "
@@ -206,12 +248,14 @@ def cross_edge(pb, source_local, target_local):
         pb.tick()
 
 
-def load(stage):
+def load(stage, before_cross=None):
     stage_index = stage - 1
     seed = 0x51A6D00D
     select_rom_topology(ROM)
     addrs = symbol_addresses(ROM)
     pb, _ram, _entry = boot_to_stage(ROM, addrs, stage_index, "normal", 0)
+    if before_cross is not None:
+        before_cross(pb)
     trial = mission_graph(
         dungeon_size(stage_index), seed, stage_index)["trial"]
     target = STAGE_START[stage_index] + trial
@@ -554,6 +598,7 @@ def assert_pressed_persists(pb, addrs):
             tile = pb.memory[TM + y * 20 + x]
             assert tile == RUNE_IDLE_TILE[pitch], (
                 f"plate at {(x, y)} tile {tile} want idle {RUNE_IDLE_TILE[pitch]}")
+            assert_plate_art(pb, tile, pitch, (x, y))
             attr = room_tile_attr(pb, x, y, addrs)
             assert attr == RUNE_NOTE_PAL[pitch], (
                 f"plate at {(x, y)} pal {attr} want {RUNE_NOTE_PAL[pitch]}")
@@ -570,6 +615,7 @@ def assert_pressed_persists(pb, addrs):
             tile = pb.memory[TM + y * 20 + x]
             assert tile == want, (
                 f"plate at {(x, y)} pitch {pitch} tile {tile}, want {want}")
+            assert_plate_art(pb, tile, pitch, (x, y))
             attr = room_tile_attr(pb, x, y, addrs)
             assert attr == RUNE_NOTE_PAL[pitch], (
                 f"plate at {(x, y)} dropped pitch palette {attr}")
@@ -650,8 +696,10 @@ def rune_color_contract():
              RUNE_PAL_HIGH[2:4], RUNE_PAL_HIGH[4:6])
     assert len(set(fills)) == 5, f"packed pitch colours collided: {fills}"
 
-    # Stage 2 Trial is a four-note phrase (load() path, same seed).
-    pb = load(2)
+    # Stage 2 Trial is a four-note phrase (load() path, same seed). It is
+    # entered through a door, with the shared plate slots pre-filled with
+    # stale art: the door path must upload the note tiles itself.
+    pb = load(2, before_cross=poison_plate_vram)
     addrs = {**symbol_addresses(ROM), **rune_addrs()}
     assert pb.memory[KIND] == 2 and pb.memory[LOCKED] == 1
     assert_note_colors(pb, addrs, 4)
