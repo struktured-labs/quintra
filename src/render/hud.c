@@ -10,6 +10,7 @@
 #include "game/run_state.h"
 #include "game/will.h"
 #include "render/hud.h"
+#include "game/powerup.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "render/tiles.h"
@@ -284,6 +285,43 @@ void hud_clear_offer(void) BANKED {
     set_win_tiles(12, 0, 4, 1, row);
 }
 
+// Power-up lane: [icon][secs][secs][charges]. The custom per-cell palette
+// marks lane_palette 0xFE so every other lane writer re-asserts its own.
+// Uninitialised on purpose (no bank-0 initializer bytes): lane_palette starts
+// at 0xFF, so the first call always draws.
+static u8 pu_icon, pu_secs, pu_hits, pu_blink;
+void hud_show_powerup(u8 icon, u8 secs, u8 hits, u8 blink) BANKED {
+    u8 row[4];
+    u8 attrs[4];
+    if (hud_notice_ticks) return;
+    if (secs > 99) secs = 99;
+    if (lane_palette == 0xFE && icon == pu_icon && secs == pu_secs
+        && hits == pu_hits && blink == pu_blink) return;
+    pu_icon = icon; pu_secs = secs; pu_hits = hits; pu_blink = blink;
+    row[0] = blink ? HUD_BLANK : icon;
+    // Always write both second digits so "07" + charges cannot kern into "71".
+    row[1] = (u8)(HUD_DIGIT_0 + secs / 10);
+    row[2] = (u8)(HUD_DIGIT_0 + secs % 10);
+    // Pip pixels are uploaded from bank 20 (powerup_hud) so this bank
+    // stays above the 256-byte floor. Col 15 is never an Arabic numeral.
+    row[3] = (hits == 0xFF) ? HUD_BLANK : HUD_AEGIS_PIPS;
+    attrs[0] = attrs[1] = attrs[2] = 7;
+    attrs[3] = 6;   // MP blue: charges never read as part of the seconds
+    VBK_REG = 0; set_win_tiles(12, 0, 4, 1, row);
+    VBK_REG = 1; set_win_tiles(12, 0, 4, 1, attrs);
+    VBK_REG = 0;
+    lane_palette = 0xFE;
+}
+
+void hud_powerup_release(void) BANKED {
+    static const u8 row[4] = { HUD_BLANK, HUD_BLANK, HUD_BLANK, HUD_BLANK };
+    pu_icon = pu_secs = pu_hits = pu_blink = 0xFF;
+    lane_palette = 0xFF;
+    will_cached_segs = 0xFF;
+    if (hud_notice_ticks) return;
+    VBK_REG = 0; set_win_tiles(12, 0, 4, 1, row);
+}
+
 void hud_show_loot_timer(u8 seconds) BANKED {
     u8 row[4];
     if (hud_notice_ticks) return;
@@ -344,6 +382,7 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     u8 segs, i;
     u8 level, full;
     if (hud_notice_ticks || max == 0) return;
+    if (powerup_id) { powerup_hud(); return; }
     level = player.will_level;
     full = level >= WILL_LEVEL_CAP ? 1 : 0;
     // WILL_NEXT_MAX depends on the tier, not on the passed max. Segment

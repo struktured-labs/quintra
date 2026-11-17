@@ -10,6 +10,7 @@
 #include "game/inventory_waygear.h"
 #include "game/curse.h"
 #include "game/player.h"
+#include "game/powerup.h"
 #include "game/room.h"
 #include "game/status.h"
 #include "game/waygear.h"
@@ -178,7 +179,9 @@ void inventory_status_enter(void) BANKED {
     if (player.shield_timer) write_frame_seconds(player.shield_timer);
     else text_write("-");
     gotoxy(1, 12);
-    if (will_corvin_mark_ticks) {
+    if (powerup_pack_line()) {
+        /* name + seconds; hides signature FX only while a power-up is up */
+    } else if (will_corvin_mark_ticks) {
         text_write("RAVEN   "); write_frame_seconds(will_corvin_mark_ticks);
     } else if (will_vespine_swarm_ticks) {
         text_write("SWARM   "); write_frame_seconds(will_vespine_swarm_ticks);

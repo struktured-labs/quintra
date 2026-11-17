@@ -310,6 +310,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_sauran_shield.py
 	uv run --quiet --with pyboy python scripts/test_sauran_regen.py
 	uv run --quiet --with pyboy python scripts/test_surge.py
+	uv run --quiet --with pyboy python scripts/test_powerups.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc
 	uv run --quiet --with pyboy python scripts/test_miniboss_spawn_reach.py
 	$(PYBOY_RUN) scripts/test_trap_boss_unstick.py

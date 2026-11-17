@@ -34,6 +34,7 @@ void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
 #include "game/room.h"
+#include "game/powerup.h"
 #include "game/run_state.h"
 #include "game/riftwild_phase.h"
 #include "game/riftwild_den.h"
@@ -1939,7 +1940,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Most actors in most frames are unconditioned. Preserve the free-running
     // clock locally, but avoid a bank-13 call (and its periodic 32-slot scan)
     // until the player or at least one enemy actually has a status.
-    if (player_status_kind != QSTATUS_NONE || status_enemy_active)
+    // An active temporary power-up rides the same banked clock.
+    if (player_status_kind != QSTATUS_NONE || status_enemy_active
+        || powerup_id)
         status_tick();
     else status_clock++;
 
@@ -2025,7 +2028,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             }
             // The contextual four-slot lane is otherwise the shared Will
             // meter. Full means the next A edge becomes that weapon's MAX.
-            if (!room_has_shop_wares)
+            // Shop offers outrank the power-up / Will lane; when no stall
+            // is in view, show the power-up timer even in a shop room.
+            if (!shop_offer_visible)
                 hud_redraw_action_charge(player.will_charge, WILL_MAX);
         }
 

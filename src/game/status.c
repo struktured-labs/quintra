@@ -17,6 +17,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
+#include "game/powerup.h"
 #include "render/hud.h"
 #include "render/text.h"
 #include "render/tiles.h"
@@ -210,6 +211,7 @@ void status_reset_all(void) BANKED {
     confusion_streak = 0;
     inversion_tie = 0;
     bleed_last_x = bleed_last_y = 0;
+    powerup_reset();
 }
 
 void status_player_cure(void) BANKED {
@@ -524,6 +526,7 @@ void status_update_enemy_condition(u8 idx) BANKED {
 void status_tick(void) BANKED {
     u8 i;
     status_clock++;
+    if (powerup_id) powerup_tick();
     if (player_status_kind == QSTATUS_BLEED) {
         if (player.x != bleed_last_x || player.y != bleed_last_y) {
             bleed_last_x = player.x;

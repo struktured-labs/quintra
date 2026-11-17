@@ -20,6 +20,11 @@ void hud_redraw_coins(void) BANKED;  // call when player.coins changes
 void hud_redraw_depth(void) BANKED;  // call when run_state.room_counter changes
 void hud_show_offer(u8 ware, u8 price) BANKED; // icon + market price in cols 12..15
 void hud_clear_offer(void) BANKED;    // clear a proximity price after leaving the stall
+// Active power-up in the contextual lane: icon, zero-padded seconds,
+// optional Aegis pip tile (hits 0xFF = none). blink hides the icon
+// during the last seconds.
+void hud_show_powerup(u8 icon, u8 secs, u8 hits, u8 blink) BANKED;
+void hud_powerup_release(void) BANKED;
 void hud_show_loot_timer(u8 seconds) BANKED; // secret-vault relic icon + seconds
 void hud_clear_loot_timer(void) BANKED;
 // Boss HP as a 4-segment bar (cols 12-15). max==0 clears the bar.
@@ -53,7 +58,10 @@ enum {
     NW_BEAM, NW_VAMP, NW_WARD, NW_CHART, NW_WEAPON, NW_HEALED, NW_SCOUT,
     NW_CLEAN, NW_BURST, NW_CHIME, NW_MIRROR, NW_CURE1, NW_HURT1,
     NW_COINMAX, NW_OWNED, NW_NOROOM, NW_KNOWN, NW_LOWHP, NW_ASWAP,
-    NW_WARDED, NW_COUNT
+    NW_WARDED,
+    // Power-up cards (held HUD_NOTICE_POWERUP_FRAMES). Keep NW_AEGIS first.
+    NW_AEGIS, NW_BLOCK3, NW_LIMIT, NW_FREEMP, NW_MEND, NW_REGEN, NW_ENDED,
+    NW_COUNT
 };
 // Pickup notice kinds (below the 0x80 status flag, above the stat ids).
 #define HUD_NOTICE_WORD  0x74   // amount = NW_* word id

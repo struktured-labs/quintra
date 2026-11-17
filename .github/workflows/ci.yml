@@ -199,6 +199,9 @@ jobs:
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_stat_max_pickup.py
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_feedback.py
 
+      - name: PyBoy temporary power-ups
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_powerups.py
+
       - name: PyBoy boss drop persist
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_boss_drop_persist.py
 

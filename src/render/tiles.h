@@ -24,6 +24,7 @@
 #define HUD_BAR_EMPTY  27
 // Merchant proximity offer icons. These live only on the WINDOW HUD, so the
 // dungeon tilemap never interprets them as terrain.
+#define HUD_AEGIS_PIPS  124 // window-only 1/2/3 charge pips; rewritten on change
 #define HUD_OFFER_HEAL   40
 #define HUD_OFFER_RELIC  41
 #define HUD_OFFER_VITAL  42
