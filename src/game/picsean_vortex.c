@@ -121,10 +121,27 @@ static u16 mul8(u8 a, u8 b) {
 }
 
 // Arm points along each arm in sixteenths of the front radius. Even ticks
-// draw 3/7/12, odd ticks 5/9/16, so 24 points flicker in 12 OBJ.
+// draw one set, odd ticks the other, so 24 points flicker in 12 OBJ.
+#if !PICSEAN_VORTEX_SWIRL
+// Shipped #105: 3/7/12 and 5/9/16.
 static const u8 seg_frac[6] = { 3, 5, 7, 9, 12, 16 };
+#endif
 
 // drop, curl, crest, eye (colour 1 deep blue, 2 aqua, 3 foam).
+#if PICSEAN_VORTEX_SWIRL
+// One continuous stream: \, --, | strokes with a little edge mist,
+// plus a compact water drop used at the eye and as loose spray.
+static const u8 vortex_tiles[64] = {
+    0x00, 0xE0, 0x80, 0x70, 0x42, 0x3A, 0x20, 0x1C,
+    0x11, 0x0F, 0x48, 0x47, 0x04, 0x03, 0x02, 0x01,
+    0x00, 0x00, 0x38, 0x3C, 0x41, 0x3F, 0x80, 0x7F,
+    0x80, 0x7E, 0x62, 0x1A, 0x10, 0x10, 0x00, 0x00,
+    0x20, 0x10, 0x48, 0x38, 0x40, 0x30, 0x44, 0x34,
+    0x48, 0x38, 0x42, 0x32, 0x40, 0x30, 0x20, 0x10,
+    0x00, 0x00, 0x00, 0x18, 0x00, 0x38, 0x42, 0x3E,
+    0x40, 0x3C, 0x20, 0x18, 0x10, 0x00, 0x00, 0x00,
+};
+#else
 static const u8 vortex_tiles[64] = {
     0x00, 0x00, 0x3C, 0x00, 0x4E, 0x3C, 0x5A, 0x3C,
     0x42, 0x3C, 0x66, 0x18, 0x3C, 0x00, 0x00, 0x00,
@@ -135,6 +152,7 @@ static const u8 vortex_tiles[64] = {
     0x00, 0x3C, 0x3C, 0x42, 0x7E, 0xBD, 0x72, 0xA1,
     0x4E, 0x85, 0x7E, 0xBD, 0x3C, 0x42, 0x00, 0x3C,
 };
+#endif
 
 static const u16 tide_obj_palette[4] = {
     BGR555( 0,  0,  0),
@@ -353,12 +371,46 @@ static u8 clip_oam_y(i16 y) {
     else (o)[0] = 0; \
 } while (0)
 
+#if PICSEAN_VORTEX_SWIRL
+// Sector (th+20)>>3: 0/4 --, 1/5 \\, 2/6 |, 3/7 /. Flips keep the
+// stroke along the tangent and the baked mist roughly outward.
+static const u8 swirl_tile[8] = {
+    SPR_FX_VORTEX_CURL, SPR_FX_VORTEX_DROP,
+    SPR_FX_VORTEX_CREST, SPR_FX_VORTEX_DROP,
+    SPR_FX_VORTEX_CURL, SPR_FX_VORTEX_DROP,
+    SPR_FX_VORTEX_CREST, SPR_FX_VORTEX_DROP
+};
+static const u8 swirl_flip[8] = {
+    0, 0, 0, S_FLIPX,
+    S_FLIPY, (u8)(S_FLIPX | S_FLIPY), S_FLIPX, S_FLIPY
+};
+#define SWIRL_PUT_RAD(o, cs, sn, ax, ay, tile, attr) do { \
+    if (on) { \
+        u8 sx = (cs < 0) ? SUB_CLIP(cx, ax, 1) : ADD_CLIP(cx, ax, VX_HI); \
+        u8 sy = (sn < 0) ? SUB_CLIP(cy, ay, VY_LO) : ADD_CLIP(cy, ay, VY_HI); \
+        SEG_PUT((o), sx, sy, (tile), (attr)); \
+    } else { \
+        i16 ox_ = (cs < 0) ? -(i16)(ax) : (i16)(ax); \
+        i16 oy_ = (sn < 0) ? -(i16)(ay) : (i16)(ay); \
+        SEG_PUT((o), clip_oam_x(ocx + ox_), clip_oam_y(ocy + oy_), \
+                (tile), (attr)); \
+    } \
+} while (0)
+#endif
+
 static void vortex_layout(u8 t, u8 r) {
+#if !PICSEAN_VORTEX_SWIRL
     u8 j;
+#endif
     u8 *o = seg_oam;
+#if PICSEAN_VORTEX_SWIRL
+    // Faster spin (visual only; hit bands stay #105).
+    u8 phase = (u8)(t * 3);
+#else
     u8 phase = (u8)(t << 1);
     // Cels fatten as the vortex grows.
     u8 grow = (u8)(t >= 56 ? 2 : t >= 28 ? 1 : 0);
+#endif
     // Cast-point centre in OAM space (OBJ origin is -8,-16; cels are 8x8).
     i16 ocx = vortex_wx + 4 - (i16)room_camera_x;
     i16 ocy = vortex_wy + 12 - (i16)room_camera_y;
@@ -368,6 +420,56 @@ static void vortex_layout(u8 t, u8 r) {
     u8 on = (u8)(ocx >= 1 && ocx < VX_HI && ocy >= VY_LO && ocy < VY_HI);
     u8 cx = on ? (u8)ocx : 0;
     u8 cy = on ? (u8)ocy : 0;
+#if PICSEAN_VORTEX_SWIRL
+    // One connected stream packed at a fixed step so the body stays a
+    // ribbon, plus two decorative droplets at the tip and outer edge.
+    {
+        u8 spacing = 4;
+        u8 start_r = 2;
+        u8 j;
+        i8 tip_cs = 0, tip_sn = 0, mid_cs = 0, mid_sn = 0;
+        u8 tip_ax = 0, tip_ay = 0, mid_ax = 0, mid_ay = 0;
+        if (r > 38) start_r = (u8)(r - 36);
+        // Leading tip first so a Serpent-shrunk 4-slot draw still shows
+        // the connected head of the stream.
+        for (j = 10; j != 0; --j) {
+            u8 rho = (u8)(start_r + (u8)(j - 1) * spacing);
+            u8 th, sec, ax, ay;
+            i8 cs, sn;
+            if (rho > r) rho = r;
+            th = (u8)((phase + (rho >> 2)) & 63);
+            cs = vortex_sin[(u8)((th + 16) & 63)];
+            sn = vortex_sin[th];
+            ax = (u8)(mul8(rho, (u8)(cs < 0 ? -cs : cs)) >> 6);
+            ay = (u8)(mul8(rho, (u8)(sn < 0 ? -sn : sn)) >> 6);
+            sec = (u8)(((u8)(th + 20) >> 3) & 7);
+            SWIRL_PUT_RAD(o, cs, sn, ax, ay,
+                          swirl_tile[sec], (u8)(2 | swirl_flip[sec]));
+            o += 4;
+            if (j == 1) {
+                tip_cs = cs; tip_sn = sn; tip_ax = ax; tip_ay = ay;
+            } else if (j == 5) {
+                mid_cs = cs; mid_sn = sn; mid_ax = ax; mid_ay = ay;
+            }
+        }
+        // Decorative spray, derived from the tip and mid-stream (no
+        // extra trig). Hit bands stay on the #105 angle test.
+        {
+            u8 off = (u8)(4 + (t & 3));
+            u8 ax = (u8)(tip_ax + (mul8(off, (u8)(tip_cs < 0 ? -tip_cs : tip_cs)) >> 6));
+            u8 ay = (u8)(tip_ay + (mul8(off, (u8)(tip_sn < 0 ? -tip_sn : tip_sn)) >> 6));
+            SWIRL_PUT_RAD(o, tip_cs, tip_sn, ax, ay, SPR_FX_VORTEX_EYE,
+                          (u8)(2 | ((t >> 1) & 1 ? S_FLIPX : 0)
+                                 | ((t >> 2) & 1 ? S_FLIPY : 0)));
+            o += 4;
+            off = 5;
+            ax = (u8)(mid_ax + (mul8(off, (u8)(mid_cs < 0 ? -mid_cs : mid_cs)) >> 6));
+            ay = (u8)(mid_ay + (mul8(off, (u8)(mid_sn < 0 ? -mid_sn : mid_sn)) >> 6));
+            SWIRL_PUT_RAD(o, mid_cs, mid_sn, ax, ay, SPR_FX_VORTEX_EYE, 2);
+            o += 4;
+        }
+    }
+#else
     for (j = (u8)(t & 1); j < 6; j += 2) {
         u8 rho = (u8)(mul8(r, seg_frac[j]) >> 4);
         u8 cel = (u8)((j >> 1) + grow);
@@ -413,6 +515,7 @@ static void vortex_layout(u8 t, u8 r) {
         SEG_PUT(o + 12, x_poy, y_mox, tile, 2 | S_FLIPY);
         o += 16;
     }
+#endif
     seg_n = 12;
 }
 

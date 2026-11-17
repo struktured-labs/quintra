@@ -124,3 +124,26 @@ the vortex instead of the Moon Tide fan, and `test_will_tiers.py` expects
 one carrier per Picsean MAX. GIF:
 `evidence/2026-11-15-picsean-tide-vortex/tide-vortex.gif` (recorded by the
 test with `QUINTRA_VORTEX_GIF=<path>`).
+
+## Swirl variant (prototype, not the default)
+
+Carmelo (2026-11-15), on the shipped GIF: the vortex "looks really cool but
+not what I meant, I meant more like a swirlly thing but it looks pretty
+cool as is." Later: "can have droplets near edges of it?" This variant
+keeps the #105 gameplay (anchored at the cast point, room-filling front,
+shot wash, heavy/Colossus caps, OBJ 200..203, 12 OAM) and only changes
+the look:
+
+- The body is one continuous water stream: ten overlapping stroke cels
+  (`\\`, `--`, `|`) packed at a 4px step along a curling spiral, so
+  they read as a connected ribbon rather than a ring of dots or a
+  dashed arc. It spins at `3/64` of a turn a tick.
+- A light spray of droplets breaks off along the outer edge and ahead
+  of the leading tip (two decorative sprites, plus mist pixels baked
+  into the stroke cels). Droplets are visual only; hit bands stay #105.
+- Tile 203 is a compact water drop, used for the eye and the loose
+  spray. Same budget: OBJ 200..203, 12 OAM (24..35).
+
+Build with `make VORTEX_SWIRL=1` (`-DPICSEAN_VORTEX_SWIRL=1`). The
+default build is the shipped #105 vortex, unchanged. Carmelo will pick.
+

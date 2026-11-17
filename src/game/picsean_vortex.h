@@ -21,6 +21,13 @@
 #define PICSEAN_VORTEX_ARM_BONUS   2
 #define PICSEAN_VORTEX_HEAVY_CAP   6
 
+// Visual variant: 1 draws curling whirlpool arms (prototype). Gameplay
+// is unchanged from the shipped #105 vortex. Override with
+// -DPICSEAN_VORTEX_SWIRL=1 or `make VORTEX_SWIRL=1`.
+#ifndef PICSEAN_VORTEX_SWIRL
+#define PICSEAN_VORTEX_SWIRL 0
+#endif
+
 // The arms borrow Wolfkin's free OBJ tiles 200..203. Only one champion is
 // ever in a run, and both arts reload their cels on every cast.
 #define SPR_FX_VORTEX_DROP  200
