@@ -151,13 +151,17 @@ so Aegis charges are spent only when Stoneskin is down. Never blocks the
 Reaper's Mortal Scythe (the absorb hook runs after that branch).
 
 **LIMITLESS (P2).** Oath Arts and Bombs cost no MP (bombs are guarded at
-their call site; the Oath spend is refunded on the next frame because
-bank 1 has no headroom for a guard). Convergence, which drains full MP,
-is not refunded, so full MP stays reserved for it exactly as without
-Limitless (this avoids Convergence every 3 s). At least 1 MP is kept
-showing so an Oath stays castable. Will: on grab, and then every 2 s
-while the Will bank is empty, one MAX charge is banked (Max-Will
-signatures keep their own convergence caps). Muted heroes do not bank.
+their call site; the Oath spend is refunded on the same frame from
+bank 20, because bank 1 has no headroom for a guard). Convergence,
+which drains full MP and sets `room_transform_ticks = 135`, is not
+refunded for as long as that timer is non-zero (it may already have
+decremented to 134 before `powerup_tick` runs). Full MP stays reserved
+for Convergence exactly as without Limitless. At least 1 MP is kept
+showing so an Oath stays castable, but only when `mp_max > 1` (bumping
+a 1-MP bar to full would re-arm Convergence). Will: on grab, and then
+every 2 s while the Will bank is empty, one MAX charge is banked
+(Max-Will signatures keep their own convergence caps). Muted heroes
+do not bank, including on the grab itself.
 
 **MEND (P3).** A dedicated timer (`powerup_ticks`), **not** the status
 slot, so a Poison hit does not erase it (Carmelo found statuses too
@@ -174,10 +178,19 @@ are thinner side spears (shorter `state_timer`). Corvin: copies on the
 existing Gale lane rule (no 5-way). Picsean: copies are bubbles that pop
 after 24 px. Vespine: copies pierce 1. All copies carry
 `PROJ_FLAG_CONVERGENCE`. Skipped when `free <= 8` entity slots.
+When more than 10 OBJ share a scanline, copies **flicker** via the
+existing OAM rotator in `entity_draw_core.h` rather than refusing to
+spawn. Fire-copy hooks live in the banked `pickup_echo_primary()`
+path, not in `room.c` (bank 1 is at its floor).
 
 **HALO (P5).** Every 3rd A shot also spawns an 8-way ring of the class
 projectile at `(d+1)/2` damage, range 40 px. Wolfkin: ring is a spin
 slash (one 0xFF hitbox, 12 frames). Skipped when `free <= 10`.
+Scanline overflow flickers via the OAM rotator, same as Formation.
+Halo copies share a per-volley tag with the primary shot so a
+multi-entity boss (Hexa limbs, Serpent segments, Cinder pack) takes
+**at most 2 copy hits per cast across all parts**.
+`PROJ_FLAG_CONVERGENCE` alone only caps repeats on a single entity.
 
 **LONG REACH (P6).** "4x radius" interpreted as **4x area** (hitbox
 nibbles doubled, capped 0xFF; travel +50%). True 4x radius (32 px
@@ -193,17 +206,24 @@ lobbed bomb on every 2nd shot instead (they fire faster).
 
 **WINGMATES (P8).** Two `ENT_FX`-type buddies (new `ENT_BUDDY` not
 needed: reuse companion follow code) hover ±16 px to the hero's sides
-(Life Force options), trailing 4 frames behind. Each fires a copy of
-every 2nd A shot at half damage and absorbs one hostile projectile
-(then pops). Coexists with the Road Echo companion. Buddy colour is the
-class tier palette. Corvin buddies are ravens, Vespine are hornets,
-others are glowing orbs (1 tile each).
+(Life Force options), trailing 4 frames behind, and **offset -4 px
+vertically** from the hero's Y centre so they share only one of the
+hero's two sprite scanline bands. Each fires a copy of every 2nd A
+shot at half damage and absorbs one hostile projectile (then pops).
+Wingmates do **not** pop or deal contact damage against boss bodies.
+Their shots share Halo's per-volley 2-hit cap across all boss parts.
+Scanline overflow flickers via the OAM rotator. Coexists with the
+Road Echo companion. Buddy colour is the class tier palette. Corvin
+buddies are ravens, Vespine are hornets, others are glowing orbs
+(1 tile each).
 
 ### 4.2 Stacking and replacement
 - **One timed slot** (`powerup_id`, `powerup_ticks`) plus Aegis's hit
   counter. Same power-up again: refresh to full duration plus 25%, capped
   at 1.5x base. A different power-up replaces the current one, with a
-  card "AEGIS -> HALO". Instants (NOVA) never occupy the slot.
+  name card then an effect card for the new power-up (six-letter notice
+  words, e.g. `AEGIS` then `BLOCK3`, or `LIMIT` then `FREEMP`). Instants
+  (NOVA) never occupy the slot.
 - Independent of Surge (Surge keeps `room_weapon_surge_ticks`) and of the
   status slot. Surge + Formation stack; damage of copies uses the
   surge-boosted base.
@@ -213,9 +233,14 @@ others are glowing orbs (1 tile each).
 ## 5. Balance
 - Colossus and mini-boss rooms: on entry, `powerup_ticks` is clipped to
   the Boss column; all extra projectiles carry `PROJ_FLAG_CONVERGENCE`
-  so the existing per-cast chord cap limits boss damage; Aegis capped at
-  2 hits in boss rooms; NOVA deals 2 and never interrupts a boss phase.
-- No Capsule drops in boss rooms; the Roulette never shows NOVA there.
+  so the existing per-cast chord cap limits boss damage. That flag is
+  **not enough on its own** for multi-entity bosses: Halo and Wingmate
+  copies also share a per-volley tag so Hexa limbs, Serpent segments,
+  and the Cinder pack take at most 2 copy hits per cast across all
+  parts. Aegis is capped at 2 hits in boss rooms; NOVA deals 2 and never
+  interrupts a boss phase.
+- No Capsule drops in Colossus rooms, mini-boss rooms, towns, or shops;
+  the Roulette never shows NOVA in a boss room.
 - Easy: durations +25%, drop rates above.
 - Power-ups do not affect score multipliers.
 - Deaths during a power-up are logged in the telemetry trace so the
@@ -227,7 +252,7 @@ others are glowing orbs (1 tile each).
 
 | Id | Icon (8x8, OBJ pal) | On-hero indication | Grab SFX |
 |---|---|---|---|
-| AEGIS | blue round shield, pal 3 | `room_spawn_shield_aura()` ring every 8 frames + hero palette flash every 32 frames; ring flickers fast when 1 hit left | CH1 rising fifth + CH4 shimmer |
+| AEGIS | blue round shield, pal 3 | two `SPR_SHIELD_AURA` shards orbit every 4 frames (4-frame life, so 2 live slots); flickers on the last charge | CH1 rising fifth + CH4 shimmer |
 | LIMITLESS | blue droplet with ∞, pal 6 violet | HUD MP digits pulse; small sparkle above head every 2 s | CH1 rising arpeggio |
 | MEND | green heart+cross, pal 7 | green "+" FX rising each heal (status glyph 224+REGEN) | `SFX_HEART` doubled |
 | FORMATION | three arrows, pal 2 | copies themselves | `SFX_REWARD_SURGE` |
@@ -237,27 +262,37 @@ others are glowing orbs (1 tile each).
 | WINGMATES | two dots, class pal | buddies | two-note chime |
 
 Expiry: 3 s before end the HUD icon blinks and a soft `SFX_TICK` plays
-once per second (accessibility: visible and audible). On expiry a
-"fade" card names it ("AEGIS ENDS").
+once per second (accessibility: visible and audible). On expiry the
+queue shows the name word then `ENDED` (e.g. `AEGIS` / `ENDED`), matching
+the six-letter notice grammar, not a free-form "AEGIS ENDS" string.
 
-Tiles: 8 power-up icons + 1 capsule shell + 1 aura frame. The OBJ tile
-map is full (status glyphs 224..237, antidote 238, waygear 204..207,
-town residents 208..). Icons go in the room-swapped range used by
-`SPR_SURGE_ORB`-style overlays: load only the icons needed by the live
-pickups in the current room (max 2 distinct per room by the one-capsule
-rule) into 2 reserved slots, plus 1 HUD BG tile. Phase 1 reuses existing
-tiles (shield aura, heart, MP wisp, Surge orb) and adds no OBJ tiles.
+Tiles: 8 power-up icons + 1 capsule shell + 1 aura frame. Status glyphs
+are OBJ **VRAM bank 1** tiles 224..237, antidote 238. Bank 0 high OBJ
+(waygear 204..207, town residents 208..223, companions 224..231,
+ascended 232..241) is packed. **Carbon (2026-11-16):** put the capsule
+shell and the 2 room-swapped icon slots at **OBJ VRAM bank 1, tiles
+239, 240, and 241**, drawn with `S_BANK1` (`prop | 0x08`), the first
+free bank-1 slots after the antidote. Load only the icons needed by the
+live pickups in the current room (max 2 distinct per room by the
+one-capsule rule), plus 1 HUD BG tile (`HUD_AEGIS_PIPS` at 124) for
+Aegis charges. Phase 1 reuses existing tiles (shield aura, heart, MP
+wisp, offer icons) and adds no OBJ tiles.
 
 ## 7. HUD
 - The contextual lane (cols 12..15) already arbitrates boss HP, shop
   offers, loot timer, and action charge. Power-up uses the same lane with
-  priority **below boss HP and shop offer, above action charge**: col 12
-  = power-up icon (BG tile), cols 13..14 = seconds left (2 digits),
-  col 15 = Aegis hits (pips) or blank.
+  priority **below boss HP and shop offer, above action charge** (and
+  still yields to a live loot timer). Col 12 = power-up icon (BG tile),
+  cols 13..14 = seconds left as **zero-padded two digits** (`07`, never
+  a leading blank), col 15 = Aegis charges as the graphical
+  `HUD_AEGIS_PIPS` tile (1/2/3 lit pips) or blank. A leading blank plus
+  a charge digit would kern into a fake "71".
 - In boss rooms, where the boss bar owns the lane, the remaining time is
   shown by the hero blink cadence and the 3 s warning ticks; the Pack
-  screen (`inventory_waygear.c`, like Surge's `write_beat_seconds`) lists
-  the active power-up and seconds.
+  screen lists the active power-up and seconds. The line is drawn by
+  `powerup_pack_line()` in bank 20, called from `inventory_waygear.c`
+  (bank 12 is within ~50 bytes of the 256-byte floor, so the body stays
+  out of that bank).
 - **Announcement:** grab shows a name card ("AEGIS") then an effect card
   ("SHIELD x3") through the existing queue. Power-up cards use
   `HUD_NOTICE_POWERUP_FRAMES = HUD_NOTICE_PICKUP_FRAMES + 60` (~2.75 s),
@@ -268,18 +303,29 @@ tiles (shield aura, heart, MP wisp, Surge orb) and adds no OBJ tiles.
   (Aegis hits / Halo counter / Limitless refill clock), `powerup_flags` 1
   (boss-clipped, warned), buddy state 4 (2x pos offset/hp) = **8 bytes**
   plus `run_state.powerup_shrines` 1 byte (also saved in SRAM).
-- **ROM:** new `#pragma bank 255` file `src/game/powerup.c` (autobank)
-  for apply/tick/HUD; hot-path hooks are one `if (powerup_id)` byte test
-  in ROM0 call sites (`room.c` fire path, `combat.c` hurt path), so
-  ordinary frames pay a load+branch. Bank 0 headroom must stay above the
-  `report_budget` 384-byte floor (pre-existing fail on main: do not
-  worsen). Estimated 1.5-2.5 KB banked for Phase 1, ~6 KB total.
-- **OAM:** Aegis ring and Mend FX are `ENT_FX` entities (count against the
-  32-entity pool and the 40-OAM window), max 1 aura FX live at a time.
-  Buddies: 2 OBJ, on the hero's scanline band, which already carries the
-  hero (2x2 = 2 per line) + weapon: worst case 2+1+2 = 5 of 10 per line.
-  Formation/Halo copies obey `free <= 8/10` floors; status FX keep their
-  cap of 3. The crowded-scene benchmark
+- **ROM:** `src/game/powerup.c` is `#pragma bank 20` (pinned). Banks 1..19
+  sit at their 256-byte floors and autobank (`bank 255`) would have
+  landed this file in bank 2 and overflowed it. **Zero ROM0 bytes are
+  added.** Hooks live in banked gameplay modules: Aegis absorb in
+  `combat.c` (bank 3), the clock in `status.c` (bank 13), Bomb free-MP
+  in `secondary_heavy.c` (bank 16), and Phase 3 A-fire copies in the
+  banked `pickup_echo_primary()` path — not in `room.c` (bank 1). Bank 0
+  headroom must stay above the `report_budget` 384-byte floor
+  (pre-existing fail on main: do not worsen). The cart is already 32
+  banks / 512 KiB on main; `report_budget.py`'s `banks > 16` check is a
+  stale 256 KiB target and is already failing on main, so do not treat
+  bank 20 as a new size regression. Estimated 1.5-2.5 KB banked for
+  Phase 1, ~6 KB total.
+- **OAM:** Aegis shards and Mend FX are `ENT_FX` entities (count against
+  the 32-entity pool and the 40-OAM window). Aegis keeps **2 live shards**
+  (4-frame life, spawned every 4 frames) and skips spawning when
+  `pu_free_slots() <= 6`. Buddies: 2 OBJ, offset -4 px on Y from the
+  hero so they share only one of the hero's two scanline bands. Worst
+  horizontal volley (hero 2 + Wingmates 2 + Road Echo 2 + 3-shot burst
+  3) is already 9 of 10 before any enemy bullet; overflow **flickers**
+  via `entity_draw_core.h`'s OAM rotator rather than skipping the shot.
+  Formation/Halo copies still obey `free <= 8/10` entity-pool floors;
+  status FX keep their cap of 3. The crowded-scene benchmark
   (`scripts/bench_crowded_baseline.py`, `test_crowded_equivalence.py`)
   must not regress.
 
@@ -441,18 +487,25 @@ prices.
 3. Power-ups lost on resume (proposed, like Surge) or saved?
 4. Confusion: 3 s, fixed mirror/reverse, no reshuffle (proposed)?
 
-## 15. Questions for Argon
-1. OAM/scanline: with Wingmates (2 OBJ) beside the hero, Formation copies
-   and the crowded-room fixture, where does the 10-per-line limit bite,
-   and should copies skip spawning or flicker?
-2. OBJ tile VRAM: best place for 2 room-swapped icon slots + capsule
-   shell without colliding with status glyphs (224..238) or the
-   per-room big-resident overlays?
-3. Is a one-byte `if (powerup_id)` test in the ROM0 fire and hurt paths
-   cheap enough vs the bank-0 headroom floor, or should the hooks live
-   entirely in the banked fire path?
-4. Boss fairness: is `PROJ_FLAG_CONVERGENCE` on all copies + duration
-   clip enough to keep each power-up from deleting a Colossus phase
-   (especially Halo vs. Hexa limbs and Wingmates vs. Serpent)?
-5. Roulette readability at 6 frames/face on GBC LCD ghosting and Pocket:
-   too fast? Should faces alternate palette and shape every frame?
+## 15. Carbon answers (2026-11-16)
+
+Locked for later phases; Phase 1 already follows (3) and the HUD pip
+rule in (6).
+
+1. **OAM/scanline:** copies **flicker** via the existing OAM rotator;
+   keep `free <= 8` (Formation) and `free <= 10` (Halo). Offset
+   Wingmates -4 px on Y. Horizontal volleys already hit 9 of 10 on the
+   hero band before enemy bullets; skipping the shot would create
+   dead-fire zones.
+2. **OBJ VRAM:** capsule shell + 2 room-swapped icons at **bank 1 tiles
+   239..241**, `S_BANK1` (`0x08`). Bank 1 is empty after antidote 238.
+3. **Hooks:** no ROM0 bytes. Keep the banked split already in Phase 1;
+   keep fire/hurt hooks out of `room.c` (bank 1).
+4. **Boss fairness:** `PROJ_FLAG_CONVERGENCE` + duration clip is not
+   enough. Add a per-volley cap of 2 copy hits across all parts of a
+   multi-entity boss, and disable Wingmate contact/pop damage on boss
+   bodies.
+5. **Roulette:** 8 frames/face Normal, 12 Easy; adjacent faces must
+   change both palette and silhouette.
+6. **Aegis HUD "71":** zero-pad seconds (`07`) and draw charges as
+   graphical pips in col 15, never a digit.
