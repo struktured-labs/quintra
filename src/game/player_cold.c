@@ -5,6 +5,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/will.h"
+#include "game/picsean_vortex.h"
 #include "content.h"
 
 // Field-only leaves called by the always-mapped construction wrappers. They
@@ -37,6 +38,8 @@ void player_clear_fields(void) BANKED {
     player.will_charge = 0;
     player.will_level = 0;
     will_charge_fraction = 0;
+    picsean_vortex_slow_charge = 0;
+    picsean_vortex_ready_at = 0;
     will_corvin_mark_slot = 0xFF;
     will_corvin_mark_ticks = 0;
     will_howl_giant_hits = 0;

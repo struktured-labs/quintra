@@ -147,3 +147,11 @@ the look:
 Build with `make VORTEX_SWIRL=1` (`-DPICSEAN_VORTEX_SWIRL=1`). The
 default build is the shipped #105 vortex, unchanged. Carmelo will pick.
 
+## Cooldown (2026-11-17)
+
+Carmelo: the art is awesome but too powerful and needs a longer
+cooldown. After a successful Tide Vortex the next MAX is locked for
+360 frames (6.00 s). Will still banks on its ordinary clock; damage
+and visuals are unchanged. See
+`2026-11-17-picsean-vortex-cooldown.md`.
+

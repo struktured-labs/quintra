@@ -101,6 +101,8 @@ def arm(pb):
     pb.memory[LCK] = 0               # no crit doubling: exact cap check
     pb.memory[PLAYER + WILL_OFFSET] = 90
     pb.memory[PLAYER + LEVEL_OFFSET] = 1
+    # Fixture recasts should not wait out the 360-frame play lock.
+    pb.memory[addr("_picsean_vortex_slow_charge")] = 0
 
 
 def fire_max(pb):
@@ -252,6 +254,56 @@ def anchored(pb):
           f"near={near_frame} far={far_frame}")
 
 
+
+def try_fire_max(pb, ticks=8):
+    """Press A without requiring the MAX to spend Will."""
+    pb.button_press("right")
+    pb.button_press("a")
+    for _ in range(ticks):
+        pb.tick()
+    pb.button_release("a")
+    pb.button_release("right")
+
+
+def recharge_cooldown(pb):
+    """After Tide Vortex the next MAX is locked for 360 frames.
+
+    Spec: docs/superpowers/specs/2026-11-17-picsean-vortex-cooldown.md
+    Will still banks on the ordinary first-pip clock (180 frames at
+    SPD 4). A press during the remaining lock is a normal BubbleBolt
+    and does not spend the banked pip. At 360 frames the MAX recasts.
+    """
+    arm(pb)
+    pb.memory[PLAYER + 7] = 4
+    pb.memory[PLAYER + 44] = 7
+    pb.memory[addr("_will_charge_fraction")] = 0
+    fire_max(pb)
+    check("vortex spent every banked pip",
+          pb.memory[PLAYER + LEVEL_OFFSET] == 0
+          and pb.memory[PLAYER + WILL_OFFSET] == 0)
+    # Let the first vortex finish, then the ordinary 3s pip bank.
+    for _ in range(180):
+        pb.memory[IFRAMES] = 60
+        pb.tick()
+    check("ordinary first pip still banks at 180 frames (3.00s)",
+          pb.memory[PLAYER + LEVEL_OFFSET] >= 1,
+          f"level={pb.memory[PLAYER + LEVEL_OFFSET]} "
+          f"charge={pb.memory[PLAYER + WILL_OFFSET]}")
+    try_fire_max(pb, ticks=8)
+    check("old 3s recast is locked; the banked pip is kept",
+          pb.memory[PLAYER + LEVEL_OFFSET] >= 1
+          and pb.memory[TICKS] == 0,
+          f"level={pb.memory[PLAYER + LEVEL_OFFSET]} ticks={pb.memory[TICKS]}")
+    # 180 + 8 try-fire ticks; 360 - 188 = 172 more, plus slack.
+    for _ in range(172):
+        pb.memory[IFRAMES] = 60
+        pb.tick()
+    fire_max(pb)
+    check("vortex recasts at 360 frames (6.00s)",
+          pb.memory[TICKS] > 0 and pb.memory[PLAYER + LEVEL_OFFSET] == 0,
+          f"ticks={pb.memory[TICKS]} level={pb.memory[PLAYER + LEVEL_OFFSET]}")
+
+
 def crowded_updates(cast):
     """Logic updates over 96 frames in a 14-body room (fresh boot each run).
 
@@ -345,6 +397,7 @@ def main():
     try:
         contract(pb)
         anchored(pb)
+        recharge_cooldown(pb)
     finally:
         pb.stop(save=False)
     idle = crowded_updates(cast=False)

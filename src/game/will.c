@@ -10,6 +10,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/will.h"
+#include "game/loop.h"
 #include "game/wolfkin_wave.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -209,6 +210,12 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     // grow until the front has swept the whole visible room, hitting every
     // body it passes and washing out hostile shots (2026-11-15 spec).
     } else if (weapon_index == classes[3].starter_weapon) {
+        // 360-frame recast lock. Wrap-safe: not ready while now - ready
+        // still looks like a large unsigned value (delay is 360, << 32k).
+        if (picsean_vortex_slow_charge
+            && (u16)(loop_frame_counter - picsean_vortex_ready_at) >= 0x8000)
+            return 0;
+        picsean_vortex_slow_charge = 0;
         picsean_vortex_begin(damage);
         room_shake(2, 12);
         sfx_play(SFX_ROAR);
