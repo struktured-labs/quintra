@@ -1934,6 +1934,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Entity updates
     entity_update_all();
+    if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE && room_puzzle_locked)
+        prism_pen_inmate();
 
     // Conditions advance only during live room play. Their damage lands
     // before combat's death check, so poison/burn/bleed share the same fall

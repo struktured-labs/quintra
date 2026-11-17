@@ -550,3 +550,11 @@ Full text: Gemini Bridge `round4/puzzles.md`. Adopted:
   Ember Vigil without wind vents; keep Hollow Mirror. **Snag Gallery is
   deferred. Kindred Weight is cut.** Required rooms stay solvable with base
   movement and melee.
+
+### 8.6 Chamber guards (2026-11-17)
+
+The Prism Toggle court now keeps a slightly denser open-ring pack and
+places one melee inmate in the walled goal pocket for flavor. See
+`2026-11-17-prism-toggle-chamber-guards.md`. Accidental procgen bodies
+inside the fixture are still removed, so orb pockets stay empty and
+the seal stays solvable.
