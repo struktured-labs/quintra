@@ -42,8 +42,11 @@ lattice.
   final terrain write (full draw in `tiles_prepare_wide_field`, and seam step
   0 via `riftwild_seam_step`). The dress pass draws quarters only in whole
   blocks; any other tree/crag cell draws the self-contained `tree_lone` /
-  `crag_lone` tile. A tree burned at runtime clears its bit and redraws the
-  surviving cells as lone trees (`riftwild_tree_burned`).
+  `crag_lone` tile.
+  Known limit: when fire burns one cell of a whole tree at runtime, the
+  other three quarters keep their art until the next redraw (as on main).
+  A redraw hook in projectile.c broke the Wolfkin claw-knockback test in
+  CI, so it was dropped.
 - **Tidy pass** (`riftwild_tidy_field`, ordinary and fixture fields, before set
   pieces): erode incomplete interior tree/crag blocks to ground. Cells only
   ever become walkable, so routes only widen. Cells next to capability gates
@@ -94,7 +97,7 @@ The baseline ROM fails every check.
 Carbon reviewed the change twice. Round 1 said ship it. Notes that were
 applied: sinkhole depth, runtime tree burn, dot lattice, and water-channel
 pruning. Round 2 cleared the row tables, the pointer walks and `reserved()`.
-It flagged `riftwild_tree_burned` writing to off-screen BG cells, which is a
-non-issue here: a 31x31 field fits whole in the 32x32 BG map, so every field
-cell is resident. Known nit: flipped south/east sinkhole edges repeat the
+It flagged the burned-tree redraw writing to off-screen BG cells, which was
+a non-issue: a 31x31 field fits whole in the 32x32 BG map. That hook was
+later dropped (see above). Known nit: flipped south/east sinkhole edges repeat the
 north/west shadow band, so pits read as a dark-rimmed basin.

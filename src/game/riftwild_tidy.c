@@ -26,7 +26,6 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
-#include "render/riftwild_art.h"
 
 BANKREF(riftwild_tidy_field)
 
@@ -208,23 +207,4 @@ void riftwild_hollow_reeds(void) BANKED {
             if (*p == BGT_WILD_WATER) reed_cell(x, y);
         }
     }
-}
-
-void riftwild_tree_burned(u8 tx, u8 ty) BANKED {
-    u8 i, x, y, t, a = BGPAL_WALL | 0x08;
-    u8 *row = &rw_block_ok[(u8)((ty >> 1) << 1) + (tx >> 4)];
-    u8 bit = (u8)(1u << ((tx >> 1) & 7));
-    if (!run_state.world_mode || !(*row & bit)) return;
-    *row &= (u8)~bit;
-    t = RWA_TREE_LONE;
-    for (i = 0; i < 4; ++i) {
-        x = (u8)((tx & 0xFE) + (i & 1));
-        y = (u8)((ty & 0xFE) + (i >> 1));
-        if (at(x, y) != BGT_TREE) continue;
-        VBK_REG = 0;
-        set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y), 1, 1, &t);
-        VBK_REG = 1;
-        set_bkg_tiles(ROOM_BG_MAP_X(x), ROOM_BG_MAP_Y(y), 1, 1, &a);
-    }
-    VBK_REG = 0;
 }

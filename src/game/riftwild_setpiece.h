@@ -45,9 +45,6 @@ void riftwild_meta_scan(void) BANKED;
 // metatiles (fixtures and events write terrain after procgen); step 8 of an
 // N/S slide swaps the shared ground colour 0 between climate rows.
 void riftwild_hollow_reeds(void) BANKED;
-// Fire burned one cell of a tree: redraw the rest of its 2x2 canopy as
-// lone trees so no orphan quarter is left on screen.
-void riftwild_tree_burned(u8 tx, u8 ty) BANKED;
 void riftwild_seam_step(u8 step, u8 dir) BANKED;
 
 void riftwild_setpiece_apply(u8 base) BANKED;
