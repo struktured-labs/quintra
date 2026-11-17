@@ -32,7 +32,6 @@ BANKREF(vignette_enter)
 
 void room_prepare_stage_arrival(u8 stage) BANKED;
 
-u16 vignette_seen;
 static u8 vig_id;
 static u8 vig_file;
 static u8 vig_meta[VIG_META_SIZE];
@@ -79,6 +78,9 @@ static u16 mix(u16 c, u16 target, u8 k) {
 
 static void write_bg_palettes(void) {
     u8 i;
+    // loop.c skips its VBlank wait after an overrun frame (the chunked art
+    // load can overrun). CRAM ignores writes in mode 3, so only write in VBlank.
+    if (LY_REG < 144) wait_vbl_done();
     BCPS_REG = 0x80;
     for (i = 0; i < 32; ++i) {
         BCPD_REG = (u8)vig_pal[i];
@@ -169,6 +171,8 @@ static void apply_events(void) {
     }
 }
 
+// vignette_enter/vignette_tick are reached only through the screens[] table
+// in loop.c, which switches to BANK(vignette_enter) before the call.
 void vignette_enter(void) {
     u8 i;
     u8 entry = vig_table[vig_id];
@@ -207,6 +211,11 @@ static screen_id_t vignette_finish(void) {
     u8 i;
     hide_hero();
     HIDE_SPRITES;
+    OCPS_REG = 0x88;
+    for (i = 0; i < 4; ++i) {
+        OCPD_REG = (u8)vig_hero_base[i];
+        OCPD_REG = (u8)(vig_hero_base[i] >> 8);
+    }
     for (i = 0; i < sizeof(vig_blank_slots); ++i)
         set_bkg_data(vig_blank_slots[i], 1, vig_zero);
     // Presentation time is not run time (same rule as the reward tableau).
@@ -218,7 +227,8 @@ static screen_id_t vignette_finish(void) {
 screen_id_t vignette_tick(u8 keys, u8 pressed) {
     u8 tiles_steps;
     keys;
-    // Top of VBlank: commit last frame's colours first.
+    // Top of VBlank: commit last frame's colours first. 72 CRAM bytes, well
+    // inside mode 1 when the loop dispatches right after wait_vbl_done().
     write_bg_palettes();
     if (vig_load != VIG_LOADED) {
         tiles_steps = (u8)((vig_meta[VM_TILES] + 31) >> 5);
@@ -277,10 +287,13 @@ static u8 vig_arm(u8 id) {
     u16 bit;
     if (id >= VIG_COUNT) return 0;
     bit = (u16)1 << id;
-    if (vignette_seen & bit) return 0;
+    if (run_state.vignette_seen & bit) return 0;
     if (vignette_cutscenes_off()) return 0;
-    vignette_seen |= bit;
+    run_state.vignette_seen |= bit;
     vig_id = id;
+    // The seam already saved the suspend; save again so a save-and-quit or
+    // power cycle mid-run cannot replay this vignette.
+    sram_save_run();
     return 1;
 }
 
@@ -288,8 +301,11 @@ screen_id_t vignette_arrival(u8 from_world, u8 stage) BANKED {
     if (!run_state.world_mode) {
         if (!from_world || RUN_ROOM_IS_TOWN(run_state.room_counter))
             return SCREEN_SELF;
-        while (stage >= 9) stage = (u8)(stage - 9);
-        if (vig_arm(vig_stage_table[stage])) return SCREEN_VIGNETTE;
+        {
+            u8 slot = stage;
+            while (slot >= 9) slot = (u8)(slot - 9);
+            if (vig_arm(vig_stage_table[slot])) return SCREEN_VIGNETTE;
+        }
         room_prepare_stage_arrival(stage);
         return SCREEN_DIALOG;
     }

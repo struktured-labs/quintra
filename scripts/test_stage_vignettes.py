@@ -26,6 +26,7 @@ from make_stage_states import (  # noqa: E402
     symbol_addresses,
 )
 from quintra_topology import STAGE_BOSS_ROOM, STAGE_START, dungeon_entry_room  # noqa: E402
+from quintra_vignettes import VIGNETTE_SEEN_OFFSET, seen_address  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.gbc")).resolve()
@@ -33,7 +34,8 @@ A = symbol_addresses(ROM)
 RS, PL, EN, TM = A["_run_state"], A["_player"], A["_entities"], A["_room_tilemap"]
 SCREEN = A["_loop_current_screen"]
 NOI = ROM.with_suffix(".noi").read_text()
-SEEN = int(NOI.split("DEF _vignette_seen 0x")[1].split()[0], 16)
+VIG_STAGE_EMBER = 2  # src/render/vignette_data.h
+SEEN = seen_address(ROM)  # run_state.vignette_seen (u16, saved with the run)
 SCREEN_ROOM, SCREEN_VIGNETTE, SCREEN_INVENTORY, SCREEN_DIALOG = 5, 6, 9, 10
 WAYGEAR_OWNED, RIFTWILD_SHADOW = 44, 57
 SHA = hashlib.sha256(ROM.read_bytes()).hexdigest()
@@ -155,6 +157,10 @@ def ember_contract():
         assert got == SCREEN_VIGNETTE, \
             f"Ember Depths entry did not play its vignette (screen {got})"
         before = bg_tiles(pb)
+        # The seen bit rides in the run suspend (SRAM bank 0 run record:
+        # 5-byte header, then run_state), so save-and-quit cannot replay it.
+        saved = pb.memory[0, 0xA000 + 5 + VIGNETTE_SEEN_OFFSET]
+        assert saved & (1 << VIG_STAGE_EMBER), f"seen bit not saved ({saved:#x})"
         frames.append(pb.screen.image.copy())
         spent = play_through(pb, frames)
         assert 180 <= spent <= 230, f"Ember vignette length {spent} frames"

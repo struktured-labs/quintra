@@ -30,6 +30,7 @@
 #define PRE_VISITED_RS_SIZE 53
 #define PRE_SHADOW_RS_SIZE 57
 #define PRE_SHOP_RS_SIZE 58
+#define PRE_VIGNETTE_RS_SIZE 60
 #define PRE_WILL_PL_SIZE 42
 #define PRE_OATH_PL_SIZE 43
 #define PRE_WAYGEAR_PL_SIZE 44
@@ -56,6 +57,7 @@ u8 sram_run_valid(void) BANKED {
         && SRAM_BASE[2] == SAVE_VERSION
         && (SRAM_BASE[3] == (u8)sizeof(run_state_t)
             || SRAM_BASE[3] == PRE_SHOP_RS_SIZE
+            || SRAM_BASE[3] == PRE_VIGNETTE_RS_SIZE
             || SRAM_BASE[3] == PRE_SHADOW_RS_SIZE
             || SRAM_BASE[3] == PRE_VISITED_RS_SIZE
             || SRAM_BASE[3] == PRE_RETURN_ECHO_RS_SIZE

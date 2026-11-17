@@ -1,7 +1,6 @@
 #pragma bank 14
 
 #include "core/types.h"
-#include "game/vignette.h"
 #include "game/run_state.h"
 
 static void clear_run_state(void) {
@@ -52,7 +51,7 @@ static void clear_run_state(void) {
 
 void run_state_init(u32 seed) BANKED {
     clear_run_state();
-    vignette_seen = 0;
+    run_state.vignette_seen = 0;
     run_state.run_seed = (seed == 0UL) ? 0xCAFE1234UL : seed;
     run_state.biome_id = 0;
     run_state_ensure_dungeon_law();

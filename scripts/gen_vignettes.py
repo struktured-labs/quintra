@@ -31,6 +31,11 @@ BLACK = (1, 0, 3)               # RGB555 of the ROV-style violet black
 FRAME_MID = (12, 11, 16)
 FRAME_LIGHT = (28, 28, 30)
 MAX_TILES = 175
+TILE_CHUNK = 32   # tiles per VIG_OP_TILES step (emitted as arg << 5)
+# A chunk must never straddle the 0xFF -> 0x40 slot seam: set_bkg_data wraps
+# to 0x00 (0x9000), not 0x40.
+assert 128 % TILE_CHUNK == 0 and TILE_CHUNK == 1 << 5
+assert MAX_TILES <= 128 + (0x6F - 0x40)
 META_SIZE = 152
 
 FONT = {
@@ -282,7 +287,34 @@ def slot(i):
     return 0x80 + i if i < 128 else 0x40 + (i - 128)
 
 
+def validate(pic_def):
+    """Reject data the u8 player cannot run (see src/game/vignette.c)."""
+    name, h = pic_def["name"], pic_def["hero"]
+    def need(ok, why):
+        if not ok:
+            raise SystemExit(f"{name}: {why}")
+    need(len(pic_def["events"]) <= 16, "more than 16 events (VM_EV holds 16)")
+    need(all(0 <= f < pic_def["exit_t"] for f, _s in pic_def["events"]),
+         "event frame outside 0..exit_t")
+    # vig_t is u8 and the exit fade runs 16 frames past exit_t.
+    need(16 <= pic_def["exit_t"] <= 235, "exit_t must be 16..235")
+    need(h["step"] > 0, "hero fade step must be > 0")
+    need(h["t1"] > h["t0"], "hero walk needs t1 > t0")
+    need(0 <= h["x"] <= 144 and 0 <= h["y1"] <= h["y0"] <= 128,
+         "hero path off screen")
+    if pic_def.get("flash"):
+        need(pic_def["flash"] + 8 <= 255, "flash too late for u8 time")
+    if pic_def.get("cycle"):
+        need(1 <= pic_def["cycle"]["period"] <= 255, "cycle period 1..255")
+    for v in pic_def["variants"]:
+        for line in (v["title"], v["motto"]):
+            need(len(line) <= 20, f"text over 20 cells: {line!r}")
+            missing = sorted({ch for ch in line if ch != " " and ch not in FONT})
+            need(not missing, f"no FONT glyph for {missing} in {line!r}")
+
+
 def build(pic_def):
+    validate(pic_def)
     pic = load(pic_def["png"])
     pic555 = np.array([[to555(c) for c in row] for row in pic])
     pals = recover_palettes(pic)

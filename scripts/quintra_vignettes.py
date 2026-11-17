@@ -8,11 +8,16 @@ after class select, so their timing and screen expectations are unchanged.
 import re
 from pathlib import Path
 
+# offsetof(run_state_t, vignette_seen): appended u16 after shop_civic (59).
+VIGNETTE_SEEN_OFFSET = 60
+
+
+def seen_address(rom):
+    noi = Path(rom).with_suffix(".noi").read_text()
+    match = re.search(r"DEF _run_state 0x([0-9A-Fa-f]+)", noi)
+    return int(match.group(1), 16) + VIGNETTE_SEEN_OFFSET
+
 
 def mute_vignettes(pb, rom):
-    noi = Path(rom).with_suffix(".noi").read_text()
-    match = re.search(r"DEF _vignette_seen 0x([0-9A-Fa-f]+)", noi)
-    if not match:  # ROMs older than the vignette player
-        return
-    addr = int(match.group(1), 16)
+    addr = seen_address(rom)
     pb.memory[addr] = pb.memory[addr + 1] = 0xFF

@@ -10,7 +10,6 @@
 #include "game/screen.h"
 
 // Per-run seen bits, one per vignette id. Cleared by run_state_init.
-extern u16 vignette_seen;
 
 void vignette_enter(void);
 screen_id_t vignette_tick(u8 keys, u8 pressed);
