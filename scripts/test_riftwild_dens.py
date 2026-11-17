@@ -14,6 +14,7 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import STAGE_BOSS_ROOM
+from quintra_vignettes import mute_vignettes
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = Path(os.environ.get("QUINTRA_DENS_ROM", ROOT / "rom/working/quintra.gbc"))
@@ -143,6 +144,7 @@ def enter_riftwild(pb):
     tick(pb, 240)
     pb.button("start"); tick(pb, 30)
     pb.button("a"); tick(pb, 90)
+    mute_vignettes(pb, ROM)
     pb.memory[RS + RS_ROOM] = STAGE_BOSS_ROOM[0]
     pb.memory[RS + RS_BOSSES] = 1
     pb.memory[LARGE] = 0
