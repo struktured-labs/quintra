@@ -37,6 +37,11 @@
 #define VM_FX 19
 #define VIG_FX_NONE 0
 #define VIG_FX_LEAVES 1
+#define VIG_FX_SNOW 2
+#define VIG_FX_BATS 3
+#define VIG_FX_SHARDS 4
+#define VM_PULSE_PERIOD 16
+#define VM_PULSE_MASK 20
 #define VM_EV 24
 #define VM_CYC 56
 #define VM_CYC_COL 72
@@ -55,16 +60,40 @@ void vig_io_crystal_caverns(u8 op, u8 arg, u8 *dst) BANKED;
 void vig_io_verdant_hollow(u8 op, u8 arg, u8 *dst) BANKED;
 #define VIG_FILE_VERDANT_HOLLOW 3
 #define VIG_STAGE_VERDANT 4
-#define VIG_COUNT 5
+void vig_io_frost_vault(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_FROST_VAULT 4
+#define VIG_STAGE_FROST 5
+void vig_io_toxic_mire(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_TOXIC_MIRE 5
+#define VIG_STAGE_MIRE 6
+void vig_io_shadow_keep(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_SHADOW_KEEP 6
+#define VIG_STAGE_SHADOW 7
+void vig_io_golden_temple(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_GOLDEN_TEMPLE 7
+#define VIG_STAGE_GOLDEN 8
+void vig_io_bloodmoon(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_BLOODMOON 8
+#define VIG_STAGE_BLOODMOON 9
+void vig_io_void_sanctum(u8 op, u8 arg, u8 *dst) BANKED;
+#define VIG_FILE_VOID_SANCTUM 9
+#define VIG_STAGE_VOID 10
+#define VIG_COUNT 11
 // id -> (file << 4) | variant
-#define VIG_TABLE { 0x00, 0x01, 0x10, 0x20, 0x30 }
+#define VIG_TABLE { 0x00, 0x01, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90 }
 // dungeon stage (0..8) -> vignette id, 0xFF = none yet
-#define VIG_STAGE_TABLE { 3, 4, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
+#define VIG_STAGE_TABLE { 3, 4, 2, 5, 6, 7, 8, 9, 10 }
 #define VIG_DISPATCH(file, op, arg, dst) do { switch (file) { \
     case 0: vig_io_riftgate((op), (arg), (dst)); break; \
     case 1: vig_io_ember_depths((op), (arg), (dst)); break; \
     case 2: vig_io_crystal_caverns((op), (arg), (dst)); break; \
     case 3: vig_io_verdant_hollow((op), (arg), (dst)); break; \
+    case 4: vig_io_frost_vault((op), (arg), (dst)); break; \
+    case 5: vig_io_toxic_mire((op), (arg), (dst)); break; \
+    case 6: vig_io_shadow_keep((op), (arg), (dst)); break; \
+    case 7: vig_io_golden_temple((op), (arg), (dst)); break; \
+    case 8: vig_io_bloodmoon((op), (arg), (dst)); break; \
+    case 9: vig_io_void_sanctum((op), (arg), (dst)); break; \
     } } while (0)
 
 #endif

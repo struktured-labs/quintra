@@ -50,9 +50,15 @@ static u8 vig_hero_k;    // hero fade step, 4 = hidden
 #define VIG_WHITE BGR555(31, 31, 31)
 // Leaves borrow an exclusive-OBJ tile (0x8000-0x87FF). BG 8800 mode does
 // not use that range, and room_enter reloads every OBJ tile on resume.
-#define VIG_LEAF_TILE 32
-#define VIG_LEAF_SPR  4
+#define VIG_FX_TILE 32
+#define VIG_FX_SPR  4
+#define VIG_FX_MAX  6
 #define VIG_FX_LEAVES 1
+#define VIG_FX_SNOW   2
+#define VIG_FX_BATS   3
+#define VIG_FX_SHARDS 4
+#define VIG_LEAF_TILE VIG_FX_TILE
+#define VIG_LEAF_SPR  VIG_FX_SPR
 
 u8 room_start_vignette;
 u8 vig_from_town;
@@ -67,6 +73,42 @@ static const u8 vig_leaf_tile[16] = {
     0x3C, 0x18,
     0x18, 0x08,
     0x08, 0x00,
+    0x00, 0x00
+};
+
+// 8x8 snowflake, colours 1=mid, 2=light, 3=white.
+static const u8 vig_snow_tile[16] = {
+    0x10, 0x00,
+    0x54, 0x10,
+    0x38, 0x10,
+    0xFE, 0x38,
+    0x38, 0x10,
+    0x54, 0x10,
+    0x10, 0x00,
+    0x00, 0x00
+};
+
+// 8x8 bat, flapped with X/Y flips.
+static const u8 vig_bat_tile[16] = {
+    0xC6, 0x00,
+    0x6C, 0x44,
+    0x38, 0x28,
+    0x10, 0x10,
+    0x00, 0x00,
+    0x00, 0x00,
+    0x00, 0x00,
+    0x00, 0x00
+};
+
+// 8x8 stone shard that drifts up.
+static const u8 vig_shard_tile[16] = {
+    0x10, 0x00,
+    0x38, 0x10,
+    0x7C, 0x38,
+    0x7C, 0x28,
+    0x38, 0x10,
+    0x10, 0x00,
+    0x00, 0x00,
     0x00, 0x00
 };
 
@@ -134,6 +176,26 @@ static void compose_palettes(u8 k, u8 white) {
         while (c >= len) c = (u8)(c - len);
         vig_pal[s] = meta16((u8)(VM_CYC_COL + (c << 1)));
     }
+    if (vig_meta[VM_PULSE_MASK] | vig_meta[VM_PULSE_MASK + 1]
+        | vig_meta[VM_PULSE_MASK + 2] | vig_meta[VM_PULSE_MASK + 3]) {
+        u8 per = vig_meta[VM_PULSE_PERIOD];
+        u8 ph, half, pk;
+        if (!per) per = 16;
+        ph = (u8)(vig_t % per);
+        half = (u8)(per >> 1);
+        if (!half) half = 1;
+        pk = (u8)(ph < half
+            ? (u16)ph * 3u / half
+            : (u16)(per - 1u - ph) * 3u / half);
+        if (pk > 3) pk = 3;
+        if (pk) {
+            for (i = 0; i < 32; ++i) {
+                u8 bit = vig_meta[(u8)(VM_PULSE_MASK + (i >> 3))];
+                if (bit & (u8)(1 << (i & 7)))
+                    vig_pal[i] = mix(vig_pal[i], VIG_WHITE, pk);
+            }
+        }
+    }
     if (k) {
         u16 target = white ? VIG_WHITE : VIG_BLACK;
         for (i = 0; i < 32; ++i) vig_pal[i] = mix(vig_pal[i], target, k);
@@ -150,27 +212,43 @@ static void hide_hero(void) {
     for (i = 0; i < 4; ++i) move_sprite(i, 0, 0);
 }
 
-static void hide_leaves(void) {
+static void hide_fx(void) {
     u8 i;
-    for (i = 0; i < 4; ++i) move_sprite((u8)(VIG_LEAF_SPR + i), 0, 0);
+    for (i = 0; i < VIG_FX_MAX; ++i) move_sprite((u8)(VIG_FX_SPR + i), 0, 0);
 }
 
-static void load_leaf_obj(void) {
+static void hide_leaves(void) {
+    hide_fx();
+}
+
+static void load_fx_obj(void) {
     static const u16 leaf_pal[4] = {
-        VIG_BLACK,
-        BGR555(8, 14, 3),
-        BGR555(16, 22, 4),
-        BGR555(22, 26, 8)
+        VIG_BLACK, BGR555(8, 14, 3), BGR555(16, 22, 4), BGR555(22, 26, 8)
     };
+    static const u16 snow_pal[4] = {
+        VIG_BLACK, BGR555(16, 22, 28), BGR555(22, 26, 31), BGR555(31, 31, 31)
+    };
+    static const u16 bat_pal[4] = {
+        VIG_BLACK, BGR555(8, 2, 10), BGR555(14, 4, 16), BGR555(22, 8, 18)
+    };
+    static const u16 shard_pal[4] = {
+        VIG_BLACK, BGR555(10, 4, 16), BGR555(18, 8, 24), BGR555(24, 16, 28)
+    };
+    const u16 *pal = leaf_pal;
+    const u8 *tile = vig_leaf_tile;
+    u8 fx = vig_meta[VM_FX];
     u8 i;
-    set_sprite_data(VIG_LEAF_TILE, 1, vig_leaf_tile);
+    if (fx == VIG_FX_SNOW) { tile = vig_snow_tile; pal = snow_pal; }
+    else if (fx == VIG_FX_BATS) { tile = vig_bat_tile; pal = bat_pal; }
+    else if (fx == VIG_FX_SHARDS) { tile = vig_shard_tile; pal = shard_pal; }
+    set_sprite_data(VIG_FX_TILE, 1, tile);
     if (LY_REG < 144) wait_vbl_done();
     OCPS_REG = 0x90;     // OBJ palette 2
     for (i = 0; i < 4; ++i) {
-        OCPD_REG = (u8)leaf_pal[i];
-        OCPD_REG = (u8)(leaf_pal[i] >> 8);
+        OCPD_REG = (u8)pal[i];
+        OCPD_REG = (u8)(pal[i] >> 8);
     }
-    hide_leaves();
+    hide_fx();
 }
 
 static void place_leaves(void) {
@@ -189,6 +267,49 @@ static void place_leaves(void) {
         set_sprite_prop(spr, (u8)(0x02
             | ((t >> 4) & 1 ? S_FLIPX : 0)
             | ((t >> 5) & 1 ? S_FLIPY : 0)));
+        move_sprite(spr, (u8)(x + 8), (u8)(y + 16));
+    }
+}
+
+static void place_fx(void) {
+    u8 fx = vig_meta[VM_FX];
+    u8 i, n, spr, x, y, t, prop;
+    static const u8 snow_x[6] = { 32, 48, 64, 88, 108, 128 };
+    static const u8 snow_ph[6] = { 0, 21, 47, 70, 96, 118 };
+    static const u8 snow_sp[6] = { 1, 2, 1, 1, 2, 1 };
+    static const u8 bat_x[3] = { 28, 48, 64 };
+    static const u8 bat_y[3] = { 22, 30, 18 };
+    static const u8 bat_ph[3] = { 0, 40, 80 };
+    static const u8 shard_x[4] = { 20, 44, 100, 124 };
+    static const u8 shard_ph[4] = { 0, 28, 52, 84 };
+    if (fx == VIG_FX_NONE) return;
+    if (fx == VIG_FX_LEAVES) { place_leaves(); return; }
+    n = (u8)(fx == VIG_FX_SNOW ? 6 : fx == VIG_FX_BATS ? 3 : 4);
+    for (i = 0; i < VIG_FX_MAX; ++i) {
+        spr = (u8)(VIG_FX_SPR + i);
+        if (i >= n) { move_sprite(spr, 0, 0); continue; }
+        t = (u8)(vig_t + (fx == VIG_FX_SNOW ? snow_ph[i]
+                          : fx == VIG_FX_BATS ? bat_ph[i] : shard_ph[i]));
+        if (fx == VIG_FX_SNOW) {
+            y = (u8)(8 + (u8)((u16)t * snow_sp[i] % 100));
+            x = (u8)(snow_x[i] + ((t >> 4) & 3) - 1);
+            prop = (u8)(0x02 | ((t >> 5) & 1 ? S_FLIPX : 0));
+            if (y >= 108) { move_sprite(spr, 0, 0); continue; }
+        } else if (fx == VIG_FX_BATS) {
+            x = (u8)(bat_x[i] + (u8)((t >> 1) & 31) - 8);
+            y = (u8)(bat_y[i] + ((t >> 3) & 4));
+            prop = (u8)(0x02
+                | ((t >> 4) & 1 ? S_FLIPX : 0)
+                | ((t >> 3) & 1 ? S_FLIPY : 0));
+            if (y >= 108 || y < 8) { move_sprite(spr, 0, 0); continue; }
+        } else {
+            y = (u8)(104 - (u8)((u16)t % 96));
+            x = (u8)(shard_x[i] + ((t >> 3) & 2) - 1);
+            prop = (u8)(0x02 | ((t >> 4) & 1 ? S_FLIPX : 0));
+            if (y < 8 || y >= 108) { move_sprite(spr, 0, 0); continue; }
+        }
+        set_sprite_tile(spr, VIG_FX_TILE);
+        set_sprite_prop(spr, prop);
         move_sprite(spr, (u8)(x + 8), (u8)(y + 16));
     }
 }
@@ -269,8 +390,8 @@ void vignette_enter(void) {
     vig_cyc_phase = 0;
     vig_hero_k = 0;
     if (vig_meta[VM_SFX]) sfx_play_reward(SFX_REWARD_MAGIC);
-    if (vig_meta[VM_FX] == VIG_FX_LEAVES) load_leaf_obj();
-    else hide_leaves();
+    if (vig_meta[VM_FX]) load_fx_obj();
+    else hide_fx();
 }
 
 static screen_id_t vignette_finish(void) {
@@ -332,7 +453,7 @@ screen_id_t vignette_tick(u8 keys, u8 pressed) {
         vig_hero_k = k > 4 ? 4 : k;
     }
     place_hero();
-    place_leaves();
+    place_fx();
     {
         u8 k = 0, white = 0;
         u8 flash = vig_meta[VM_FLASH_T];
