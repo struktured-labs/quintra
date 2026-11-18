@@ -34,7 +34,7 @@ LIGHT_GREY = (24, 24, 27)
 LINE = (12, 11, 16)
 MAX_POOL = 512
 BANK_LIMIT = 15800      # bytes of data per 16 KiB bank (headroom for code)
-FIRST_BANK = 23
+FIRST_BANK = 27   # 26 holds intro.c; 20-23 are stage vignettes
 ROWS_PER_PART = 4
 TGT_BG, TGT_WIN = 0, 1
 

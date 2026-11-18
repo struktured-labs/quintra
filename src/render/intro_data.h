@@ -27,7 +27,7 @@ extern u16 intro_pal[32];
 #define IB_VALLEY_TORE 7
 #define IB_VALLEY_DEVOUR 8
 #define IPAL_VALLEY_SETS 3
-// valley: 484 tiles, bank 23
+// valley: 484 tiles, bank 27
 #define IB_BUSTS_MAP 0
 #define IB_BUSTS_BUST0 1
 #define IB_BUSTS_BUST1 2
@@ -40,11 +40,11 @@ extern u16 intro_pal[32];
 #define IB_BUSTS_BUST8 9
 #define IB_BUSTS_COLOSSI 10
 #define IPAL_BUSTS_SETS 1
-// busts: 229 tiles, bank 24
+// busts: 229 tiles, bank 28
 #define IB_SHRINE_MAP 0
 #define IB_SHRINE_SPIRITS 1
 #define IPAL_SHRINE_SETS 1
-// shrine: 187 tiles, bank 24
+// shrine: 187 tiles, bank 28
 #define IB_CHOSEN_MAP 0
 #define IB_CHOSEN_HERO0 1
 #define IB_CHOSEN_HERO1 2
@@ -52,18 +52,18 @@ extern u16 intro_pal[32];
 #define IB_CHOSEN_HERO3 4
 #define IB_CHOSEN_HERO4 5
 #define IPAL_CHOSEN_SETS 1
-// chosen: 22 tiles, bank 24
+// chosen: 22 tiles, bank 28
 #define IB_CLIFF_MAP 0
 #define IB_CLIFF_WILD 1
 #define IB_CLIFF_BIND 2
 #define IPAL_CLIFF_SETS 1
-// cliff: 335 tiles, bank 25
+// cliff: 335 tiles, bank 29
 #define IB_TITLE_MAP 0
 #define IB_TITLE_VESSEL 1
 #define IB_TITLE_PRESS 2
 #define IB_TITLE_CLEAR 3
 #define IPAL_TITLE_SETS 1
-// title: 23 tiles, bank 25
+// title: 23 tiles, bank 29
 
 u8 intro_io_valley(u8 op, u8 a, u8 b) BANKED;
 u8 intro_io_busts(u8 op, u8 a, u8 b) BANKED;

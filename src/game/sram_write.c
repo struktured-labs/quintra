@@ -1,4 +1,4 @@
-#pragma bank 22
+#pragma bank 26
 // Moved from bank 10 with the attract demo SRAM gate (bank 10 hit its floor).
 
 // Cold battery writes live with other utility transactions so the validator

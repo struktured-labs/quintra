@@ -6,9 +6,11 @@
 2. CUTSCENES OFF (meta flag 0x04) skips the power-on intro.
 3. Twelve idle seconds on the title start attract: demo after a boot intro,
    then the intro replay, then the next demo, back to the title each time.
-4. Any button during a demo or an intro replay returns to the title.
+4. Any button during a demo or an intro replay returns to the title, also
+   a button the demo itself is holding at that moment.
 5. A demo run leaves all cart RAM byte-identical (suspend save and trophies).
 6. Demo playback follows its recording (deterministic seed and input).
+7. Continue after a demo resumes the suspended run, not the demo's state.
 
 The other PyBoy tests mute the intro through _attract_mute (sitecustomize);
 this one opts out with QUINTRA_KEEP_INTRO=1.
@@ -34,6 +36,7 @@ def sym(name):
 
 SCR, CNT, MUTE = sym("_loop_current_screen"), sym("_loop_frame_counter"), sym("_attract_mute")
 DEMO, PL = sym("_attract_demo"), sym("_player")
+KEYS, RS = sym("_input_keys"), sym("_run_state")
 TITLE, CLASS_SELECT, RUN_INIT, INTRO, ROOM, DIALOG = 1, 2, 3, 4, 5, 10
 IDLE = 720                 # ATTRACT_TITLE_IDLE
 DEMO_FRAMES = 900          # ATTRACT_DEMO_FRAMES (loop iterations)
@@ -234,6 +237,49 @@ def test_exit_and_loop(save):
     e.pb.stop(save=False)
 
 
+def test_held_key_exit(save):
+    """A press of the key the demo is holding still ends the demo."""
+    e = Emu(save)
+    skip_boot(e)
+    e.until(lambda: e.m[DEMO] == 1, IDLE + 120)
+    e.until(lambda: e.scr() == ROOM, 300)
+    n = e.until(lambda: e.m[KEYS] & 0x10, 600)
+    check(n >= 0, "demo 0 holds A at some point")
+    e.pb.button_press("a")
+    n = e.until(lambda: e.scr() == TITLE and not e.m[DEMO], 6)
+    e.tick(20)
+    e.pb.button_release("a")
+    check(n >= 0, "pressing A while the demo holds A returns to the title")
+    e.tick(60)
+    check(e.scr() == TITLE, "A held through the hand-back does not act on the title")
+    e.pb.stop(save=False)
+
+
+def continue_state(e):
+    e.tap("a")
+    e.until(lambda: e.scr() == ROOM, 600)
+    e.tick(2)
+    return bytes(e.m[PL:PL + 48]), bytes(e.m[RS:RS + 60])
+
+
+def test_continue_after_demo(save):
+    e = Emu(save)
+    skip_boot(e)
+    e.tick(30)
+    want = continue_state(e)
+    e.pb.stop(save=False)
+    e = Emu(save)
+    skip_boot(e)
+    e.until(lambda: e.m[DEMO] == 1, IDLE + 120)
+    e.until(lambda: e.m[DEMO] == 0, DEMO_WALL)
+    e.until(lambda: e.scr() == TITLE, 120)
+    e.tick(30)
+    got = continue_state(e)
+    check(got[0] == want[0], "Continue after a demo restores the saved hero")
+    check(got[1] == want[1], "Continue after a demo restores the saved run state")
+    e.pb.stop(save=False)
+
+
 def main():
     test_boot_intro()
     save = make_save()
@@ -241,6 +287,8 @@ def main():
     test_cutscenes_off(save)
     test_exit_and_loop(save)
     test_demos(save)
+    test_held_key_exit(save)
+    test_continue_after_demo(save)
     if FAIL:
         print(f"{len(FAIL)} failure(s)")
         sys.exit(1)

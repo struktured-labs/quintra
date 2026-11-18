@@ -1,9 +1,9 @@
-#pragma bank 22
+#pragma bank 26
 // Lore intro (spec 2026-11-16 §1) and title attract mode (2026-11-17
 // addendum). Seven shots in the Ultima: Runes of Virtue grammar: panels that
 // pan, a window text band, cell swaps, palette fades and small OBJ parades.
 // Pictures, text and palettes are DATA from scripts/gen_intro.py
-// (src/render/intro_*.c, banks 23+); this file owns the timeline.
+// (src/render/intro_*.c, banks 27+); this file owns the timeline.
 //
 // Each scene loads with the LCD on under black palettes (32 tiles or four
 // map rows a frame), then fades in, so a load never shows. The window band
@@ -99,8 +99,10 @@ static void compose(void) {
 
 static void commit(void) {
     u8 i;
-    // CRAM ignores writes in mode 3: commit at the top of VBlank only.
-    if (LY_REG < 144) wait_vbl_done();
+    // CRAM ignores writes in mode 3: commit at the top of a fresh VBlank.
+    // (Already inside VBlank at LY 150+ would spill into line 0.) loop_run
+    // then skips its own wait because the VBlank epoch moved.
+    wait_vbl_done();
     BCPS_REG = 0x80;
     for (i = 0; i < 32; ++i) {
         BCPD_REG = (u8)in_cur[i];
@@ -427,12 +429,15 @@ screen_id_t attract_begin(void) BANKED {
     return SCREEN_RUN_INIT;
 }
 
-static screen_id_t attract_demo_end(void) {
+static screen_id_t attract_demo_end(u8 raw) {
     attract_demo = 0;
     class_select_easy_mode = demo_saved_easy;
     loop_frame_counter = (u16)(demo_saved_frame + demo_frames);
     title_stage_warp = 0xFF;
-    input_keys = input_pressed = input_released = 0;
+    // Keep the real buttons as the previous state: a button held through the
+    // hand-back is not a fresh press on the title.
+    input_keys = raw;
+    input_pressed = input_released = 0;
     if (++attract_demo_idx >= ATTRACT_DEMO_COUNT) attract_demo_idx = 0;
     return SCREEN_TITLE;
 }
@@ -441,9 +446,12 @@ screen_id_t attract_demo_frame(void) BANKED {
     const u8 *d = attract_demos[attract_demo_idx];
     u8 scr = loop_current_screen;
     u8 keys = 0;
-    if (input_pressed || ++demo_frames >= ATTRACT_DEMO_FRAMES
+    // input_keys is still the real joypad here. Any held button ends the demo
+    // (attract only starts with none held). input_pressed is not used: its
+    // previous state is the demo's keys, so it misses a key the demo holds.
+    if (input_keys || ++demo_frames >= ATTRACT_DEMO_FRAMES
         || (scr != SCREEN_RUN_INIT && scr != SCREEN_ROOM && scr != SCREEN_DIALOG))
-        return attract_demo_end();
+        return attract_demo_end(input_keys);
     if (scr == SCREEN_RUN_INIT) {
         // Demo runs skip the foyer vignette: the intro already shows the art.
         run_state.vignette_seen = 0xFFFF;
