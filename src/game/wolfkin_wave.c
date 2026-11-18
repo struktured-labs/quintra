@@ -82,7 +82,7 @@ void wolfkin_wave_begin(u8 dir, u8 damage) BANKED {
             py -= wave_dy * 4;
         }
         shot = projectile_spawn_player(wave_dx, wave_dy,
-            (u8)(damage + (k ? 3 : 4)), PROJ_SPIKE);
+            (u8)(damage + (k ? 1 : 2)), PROJ_SPIKE);
         wave_slot[k + 1] = shot;
         if (shot == 0xFF) continue;
         entities[shot].x = px;

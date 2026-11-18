@@ -109,7 +109,9 @@ def main():
     # geometries without pinning harmless animation/velocity tuning.
     # Picsean's MAX is the Tide Vortex: one inert damage carrier drives the
     # spiral (2026-11-15 spec), so it owns exactly one player projectile.
-    expected = (3, 1, 5, 1, 3)
+    # Sauran, Corvin and Vespine use the same carrier model since max-Will v2
+    # (2026-11-17 spec); their art is palette washes and direct OAM.
+    expected = (3, 1, 1, 1, 1)
     for class_id, minimum in enumerate(expected):
         pb = boot(class_id)
         clear_arena(pb)
@@ -144,12 +146,11 @@ def main():
             assert len(waves) == 3, "Moonfang MAX lost its Will wave"
             assert len(claws) + len(waves) == len(shots), (
                 "Moonfang MAX spawned an unexpected shot")
-        elif class_id == 1:
-            assert pb.memory[shots[0] + 12] == 123
-            assert pb.memory[shots[0] + 14] == 6
-            assert pb.memory[shots[0] + 25] == 0x99
-        elif class_id == 2:
-            assert all(pb.memory[s + 14] == 4 for s in shots)
+        elif class_id in (1, 2, 4):
+            assert len(shots) == 1 and pb.memory[shots[0] + 23] == 0xF0, (
+                f"class {class_id} v2 MAX lost its damage carrier")
+            assert pb.memory[addr("_will_maxfx_live")] == class_id + 1, (
+                f"class {class_id} v2 MAX art did not start")
         elif class_id == 3:
             # Tide Vortex: one carrier (PROJ_AUX_VORTEX) and a live spiral
             # that grants no ward; it is offense, Undertow stays the guard.
@@ -161,8 +162,6 @@ def main():
                 "Tide Vortex granted defensive invulnerability")
             assert pb.memory[PLAYER + 20] == 0, (
                 "Tide Vortex duplicated Undertow's shield")
-        elif class_id == 4:
-            assert any(pb.memory[s + 12] == 123 for s in shots)
 
         # An ordinary primary attack spends partial Will. This is what makes
         # restraint a combat choice instead of another automatic cooldown.

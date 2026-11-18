@@ -12,6 +12,7 @@
 #include "game/will.h"
 #include "game/loop.h"
 #include "game/wolfkin_wave.h"
+#include "game/will_maxfx.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -174,6 +175,10 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     if (!level) return 0;
     if (level > WILL_LEVEL_CAP) level = WILL_LEVEL_CAP;
     damage += (u8)(level - 1);
+    // Every champion's starter MAX shares the Tide Vortex's 360-frame recast
+    // lock; A stays an ordinary shot meanwhile (2026-11-17 max-Will v2).
+    if (weapon_index == classes[player.class_id].starter_weapon
+        && will_maxfx_locked()) return 0;
 
     // Fang Forms — Moonfang Rush. Three steel lanes travel with a brief
     // body-dash applied by room.c: broad enough to read as a slash, short
@@ -187,52 +192,29 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
             dir8_dy[(u8)((dir + 7) & 7)], (u8)(damage + 2), PROJ_SPIKE);
         // The rush throws a wave of force ahead and guards his front while
         // the body dash lasts (2026-11-12 Will wave spec).
-        if (first != 0xFF) wolfkin_wave_begin(dir, damage);
-    // Tail Spike — Thunderline. One unusually long, wide, penetrating lane.
-    } else if (weapon_index == classes[1].starter_weapon) {
-        first = max_spawn(dir8_dx[dir], dir8_dy[dir],
-            (u8)(damage + 4), PROJ_SPEAR);
         if (first != 0xFF) {
-            entities[first].state_timer = 54;
-            entities[first].hp = 6;
-            entities[first].hitbox = 0x99;
+            wolfkin_wave_begin(dir, damage);
+            will_maxfx_begin(0, dir, damage);   // claw scars + cross-rend
         }
-    // Featherbarb — Murderstorm. A five-lane returning fan.
+    // Tail Spike — Thunderline Bastion; Featherbarb — Murderstorm Eclipse.
+    // Authored controllers in bank 23 own their art, sound and hits.
+    } else if (weapon_index == classes[1].starter_weapon) {
+        return will_maxfx_begin(1, dir, damage);
     } else if (weapon_index == classes[2].starter_weapon) {
-        for (d = 0; d < 5; ++d) {
-            shot = max_spawn(dir8_dx[(u8)((dir + d + 6) & 7)],
-                dir8_dy[(u8)((dir + d + 6) & 7)],
-                (u8)(damage + 2), PROJ_SHURIKEN);
-            if (first == 0xFF) first = shot;
-            if (shot != 0xFF) entities[shot].hp = 4;
-        }
+        return will_maxfx_begin(2, dir, damage);
     // BubbleBolt — Tide Vortex. Four spiral arms spin out from Picsean and
     // grow until the front has swept the whole visible room, hitting every
     // body it passes and washing out hostile shots (2026-11-15 spec).
     } else if (weapon_index == classes[3].starter_weapon) {
-        // 360-frame recast lock. Wrap-safe: not ready while now - ready
-        // still looks like a large unsigned value (delay is 360, << 32k).
-        if (picsean_vortex_slow_charge
-            && (u16)(loop_frame_counter - picsean_vortex_ready_at) >= 0x8000)
-            return 0;
+        // The shared 360-frame recast lock is checked above.
         picsean_vortex_slow_charge = 0;
         picsean_vortex_begin(damage);
         room_shake(2, 12);
         sfx_play(SFX_ROAR);
         return 1;
-    // Stinger — Queen's Needle. A fast central venom lance with two biting
-    // side-lines: visually and tactically unlike Sauran's single heavy lane.
+    // Stinger — Royal Stinger and Venom Sac.
     } else if (weapon_index == classes[4].starter_weapon) {
-        first = max_spawn(dir8_dx[dir], dir8_dy[dir],
-            (u8)(damage + 3), PROJ_SPEAR);
-        if (first != 0xFF) {
-            entities[first].hp = 5;
-            entities[first].state_timer = 38;
-        }
-        max_spawn(dir8_dx[(u8)((dir + 1) & 7)],
-            dir8_dy[(u8)((dir + 1) & 7)], (u8)(damage + 2), PROJ_SPIKE);
-        max_spawn(dir8_dx[(u8)((dir + 7) & 7)],
-            dir8_dy[(u8)((dir + 7) & 7)], (u8)(damage + 2), PROJ_SPIKE);
+        return will_maxfx_begin(4, dir, damage);
     // Rift Flail — Worldwheel. A close eight-way sweep clears breathing room.
     } else if (kind == PROJ_FLAIL) {
         for (d = 0; d < 8; ++d) {
@@ -302,7 +284,8 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
             }
         }
         room_shake(2, 12);
-        sfx_play(SFX_ROAR);
+        // Moonfang voices its own dash-cut and cross-rend (max-Will v2).
+        if (player.class_id) sfx_play(SFX_ROAR);
         return 1;
     }
     return 0;
