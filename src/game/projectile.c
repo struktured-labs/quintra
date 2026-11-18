@@ -12,6 +12,7 @@
 #include "game/prism_toggle.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
+#include "game/magic.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -174,7 +175,9 @@ static u8 projectile_update_player(entity_t *e, u8 idx) {
     }
 
     // Ordinary player bullets shimmer; melee arcs and beams stay solid.
-    if (e->ai_data[2] == 0 && !(e->ai_data[3] & PROJ_FLAG_BEAM)) {
+    // Spells animate their own art (magic.c).
+    if (e->ai_data[2] == 0 && !(e->ai_data[3] & PROJ_FLAG_BEAM)
+        && !MAGIC_IS_SHOT(e)) {
         e->ai_data[0] = (u8)(e->ai_data[0] + 1);
         e->sprite_tile = (u8)((e->ai_data[0] & 0x02)
             ? SPR_BULLET_B : SPR_BULLET);

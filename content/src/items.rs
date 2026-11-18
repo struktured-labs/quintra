@@ -22,8 +22,8 @@ pub const CLAW_COMBO: Item = Item {
 
 pub const HOWL: Item = Item {
     id:          ITEM_HOWL,
-    name:        "Howl",
-    description: "8-way burst; clears nearby shots.",
+    name:        "Moonfire",
+    description: "Tap: homing fire. Hold: flame ward.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL,
     palette:     OBJ_PAL_ITEM_GOLD,
@@ -74,16 +74,16 @@ pub const STINGER: Item = Item {
 // --- Actives
 
 pub const STONESKIN: Item = Item {
-    id: ITEM_STONESKIN, name: "Stoneskin",
-    description: "Timed shot/body guard.",
+    id: ITEM_STONESKIN, name: "Thunder",
+    description: "Tap: sure stun bolt. Hold: stoneskin.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
 };
 
 pub const MURDER: Item = Item {
-    id: ITEM_MURDER, name: "Raven Mark",
-    description: "Mark aimed foe; ravens focus it.",
+    id: ITEM_MURDER, name: "Hex",
+    description: "Tap: confusion orb. Hold: shadow veil.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     // Runtime marks one concrete live target. It complements Murderstorm's
@@ -92,16 +92,16 @@ pub const MURDER: Item = Item {
 };
 
 pub const TIDAL_WAVE: Item = Item {
-    id: ITEM_TIDAL_WAVE, name: "TidalWave",
-    description: "3-way bubble wall + long guard.",
+    id: ITEM_TIDAL_WAVE, name: "Blizzard",
+    description: "Tap: steered icicle. Hold: cure.",
     kind: ItemKind::Active { cooldown_rooms: 2 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],
 };
 
 pub const SWARM: Item = Item {
-    id: ITEM_SWARM, name: "Swarm",
-    description: "Rotating stings + attack ward.",
+    id: ITEM_SWARM, name: "Bramble",
+    description: "Tap: poison thorns. Hold: thorn mirror.",
     kind: ItemKind::Active { cooldown_rooms: 3 },
     icon_sprite: SPRITE_ITEM_HOWL, palette: OBJ_PAL_ITEM_GOLD, rarity: Rarity::Rare,
     effects: &[],

@@ -23,9 +23,12 @@ static const char *const oath_names[OATH_ART_COUNT] = {
     "RIFT EXCHANGE",
 };
 
+// Shard Wake is known from the start of a run, so A+B below full MP is
+// always a real special (B spells keep MP below full); each Colossus
+// victory unlocks the next art (2026-11-17 magic spec).
 static u8 unlocked_count(void) {
-    return run_state.bosses_beaten < OATH_ART_COUNT
-        ? run_state.bosses_beaten : OATH_ART_COUNT;
+    return run_state.bosses_beaten < OATH_ART_COUNT - 1
+        ? (u8)(run_state.bosses_beaten + 1) : OATH_ART_COUNT;
 }
 
 static void sanitize_selection(void) {
