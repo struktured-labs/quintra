@@ -8,6 +8,7 @@
 #include "game/entity.h"
 #include "game/curse.h"
 #include "game/pickup.h"
+#include "game/secret_merchant.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/room.h"
@@ -1053,6 +1054,11 @@ u8 pickup_check_player_collision(void) BANKED {
                     // A restocked shelf that just sold waits for a fresh
                     // contact (0xFF latch, cleared on stepping away).
                     if (entities[i].ai_data[4] == 0xFF) {
+                        any = 1;
+                        continue;
+                    }
+                    if (ware == WARE_SECRET) {
+                        secret_merchant_touch(i);
                         any = 1;
                         continue;
                     }

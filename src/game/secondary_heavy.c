@@ -7,6 +7,7 @@
 #include "game/sun_lattice.h"
 #include "game/room.h"
 #include "game/riftwild_den.h"
+#include "game/puzzle.h"
 #include "game/powerup.h"
 #include "render/hud.h"
 #include "render/tiles.h"
@@ -85,6 +86,8 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
                     sun_lattice_strike((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
                 else if (t==BGT_WILD_STONE)
                     riftwild_den_strike((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
+                else if (t==BGT_WALL)
+                    puzzle_try_hidden_shot((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
             }
         projectile_spawn_splash(x,y,damage,0xFF);
         fx_spawn(SPR_FX_IMPACT,4,x-14,y-14,16);

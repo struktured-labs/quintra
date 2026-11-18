@@ -14,6 +14,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
+#include "game/secret_merchant.h"
 #include "game/procgen_spawn.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -1206,6 +1207,8 @@ void procgen_generate_room_body(void) BANKED {
                 room_tilemap[8][ROOM_W - 1] = BGT_DOOR;
                 room_tilemap[9][ROOM_W - 1] = BGT_DOOR;
             }
+            // A Veil host's mouth leads to the Veil Trader's stall instead.
+            if (secret_merchant_build_stall()) return;
             // The vault: a shootable crystal ring guards the hoard —
             // crack it open or slip around the corner gaps.
             for (i = 7; i <= 12; ++i) {

@@ -17,6 +17,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
+#include "game/secret_merchant.h"
 #include "game/powerup.h"
 #include "render/hud.h"
 #include "render/text.h"
@@ -233,6 +234,7 @@ void status_player_refresh_visual(void) BANKED {
 void status_player_apply(u8 kind, u8 ticks) BANKED {
     u8 was_blind;
     if (kind == QSTATUS_NONE || kind >= QSTATUS_COUNT) return;
+    if (secret_merchant_block_status(kind)) return;
     was_blind = (player_status_kind == QSTATUS_BLIND);
     if (!ticks) ticks = status_duration(kind);
     // Easy is the deep-route tester assist. Keep every condition mechanically
@@ -545,7 +547,10 @@ void status_tick(void) BANKED {
     if (player_status_kind != QSTATUS_NONE && player_status_ticks) {
         u8 kind = player_status_kind;
         player_status_ticks--;
-        if ((kind == QSTATUS_POISON && (player_status_ticks & 15) == 0)
+        // Filter Mask (Veil charm): Poison ticks half as often.
+        if ((kind == QSTATUS_POISON && (player_status_ticks
+                & ((run_state.veil_charms & VEIL_CHARM_BIT(VEIL_FILTER_MASK))
+                    ? 31 : 15)) == 0)
             || (kind == QSTATUS_BURN
                 && (player_status_ticks % STATUS_BURN_PERIOD) == 0)) {
             if (!player_status_damage()) return;

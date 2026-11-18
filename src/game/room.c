@@ -35,6 +35,7 @@ void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
 #include "game/vignette.h"
 #include "game/room.h"
+#include "game/secret_merchant.h"
 #include "game/powerup.h"
 #include "game/run_state.h"
 #include "game/riftwild_phase.h"
@@ -659,19 +660,7 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
     return 1;
 }
 
-void room_open_secret(u8 tx, u8 ty) BANKED {
-    u8 tx2 = tx, ty2 = ty;
-    if (tx >= ROOM_W || ty >= ROOM_H) return;
-    // Open a second tile along the wall so the doorway is 16px wide
-    // (cracks spawn at 2..N-3, so the +1 neighbor is never a corner).
-    if (ty == 0 || ty == ROOM_H - 1) tx2 = (u8)(tx + 1);
-    else                             ty2 = (u8)(ty + 1);
-    room_set_tile_vbl(tx, ty, BGT_DOOR, BGPAL_DOOR);
-    room_set_tile_vbl(tx2, ty2, BGT_DOOR, BGPAL_DOOR);
-    secret_door_x = tx;   secret_door_y = ty;
-    secret_door_x2 = tx2; secret_door_y2 = ty2;
-    sfx_play(SFX_DOOR);
-}
+// room_open_secret lives in secret_merchant.c (bank 21).
 
 // CGB palette attribute per tile id
 static u8 attr_for_tile(u8 t) {
@@ -1126,6 +1115,11 @@ void room_enter(void) {
     room_refresh_shop_wares();
     room_load_dynamic_fx_identity();
     room_spawn_progression_fixture();
+    // Drop the previous room's vault mouth before the room's own authoring
+    // (a Veil host repaints its persistent mouth in puzzle preparation). A
+    // stale coordinate would keep that tile looking open through a seal.
+    secret_door_x = secret_door_y = 0xFF;
+    secret_door_x2 = secret_door_y2 = 0xFF;
     puzzle_prepare_room_role();
     dungeon_law_apply_room(0);
     stage_event_prepare_room();
@@ -1134,10 +1128,6 @@ void room_enter(void) {
     if (room_encounter_kind == ENCOUNTER_HUNT) play_boss_music();
     boss_threshold_warned = 0;
     room_load_environment_palettes();
-    // Drop the previous room's vault mouth before the first paint. A stale
-    // coordinate would keep that tile looking open through a combat seal.
-    secret_door_x = secret_door_y = 0xFF;
-    secret_door_x2 = secret_door_y2 = 0xFF;
     puzzle_load_note_palettes();
     room_draw_tilemap();
     place_player_sprite();
@@ -1271,6 +1261,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         && riftwild_shift_execute(keys, pressed))
         return vignette_after_shift();
     if (riftwild_den_armed) riftwild_den_tick();
+    if (secret_merchant_armed) secret_merchant_tick();
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
     }

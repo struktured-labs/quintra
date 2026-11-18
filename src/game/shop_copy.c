@@ -6,6 +6,7 @@
 #include "core/types.h"
 #include "game/entity.h"
 #include "game/pickup.h"
+#include "game/secret_merchant.h"
 #include "game/shop_copy.h"
 #include "render/text.h"
 #include "content.h"
@@ -65,7 +66,9 @@ void shop_write_live_stock(void) BANKED {
         set_sprite_prop(icon, entities[i].palette);
         move_sprite(icon, 8, (u8)(row * 8 + 16));
         gotoxy(1, row);
-        text_write(effect(entities[i].ai_data[1], entities[i].ai_data[3]));
+        if (entities[i].ai_data[1] == WARE_SECRET)
+            secret_merchant_write_effect(entities[i].ai_data[3]);
+        else text_write(effect(entities[i].ai_data[1], entities[i].ai_data[3]));
         gotoxy(15, row); text_u16(entities[i].ai_data[2]); text_write("G");
         icon++;
         row = (u8)(row + 2);

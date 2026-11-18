@@ -11,6 +11,7 @@
 #include "game/prism_toggle.h"
 #include "game/procgen.h"
 #include "game/puzzle.h"
+#include "game/secret_merchant.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/sun_lattice.h"
@@ -357,6 +358,7 @@ void puzzle_prepare_room(void) BANKED {
     room_rune_lit_mask = 0;
     rune_cancel_flash();
     puzzle_contact = 0;
+    secret_merchant_room_ready();
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
         || procgen_current_room_is_boss || run_state.secret_pending
         || run_state_is_shop() || run_state_is_sanctuary()) return;
@@ -384,6 +386,7 @@ void puzzle_prepare_room(void) BANKED {
         // and the optional third Warden. A disguised secret's clearing apron
         // must not erase a Mire pool, Frost vault, Temple colonnade, or other
         // lore fixture. Ordinary courts still provide ample fuzzy secrets.
+        if (secret_merchant_prepare_host()) return;
         if (local == 2 || local == 5 || local == 8 || local == 11
             || local == 15 || local == 17 || local == 23) return;
         // Roughly three rooms in 32 contain a true optional secret. Unlike

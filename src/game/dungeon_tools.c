@@ -16,6 +16,7 @@
 #include "game/sun_lattice.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/secret_merchant.h"
 #include "game/status.h"
 #include "render/text.h"
 #include "render/tiles.h"
@@ -160,7 +161,7 @@ static void tool_chime(void) {
             u8 next = run_state_dungeon_cell_neighbor(here, dir);
             if (next != 0xFF) run_state_reveal_dungeon_cell(next);
         }
-        puzzle_chime_reveal();
+        if (!secret_merchant_chime()) puzzle_chime_reveal();
     } else riftwild_den_chime();
     room_shake(1, 12);
     sfx_play(SFX_PUZZLE);

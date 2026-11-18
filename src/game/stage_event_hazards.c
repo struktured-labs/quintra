@@ -118,6 +118,8 @@ static void tick_arrows(void) {
     if (hazard_cursor == ARROW_TRAP_COUNT) hazard_cursor = 0;
 }
 
+extern u8 secret_floor_warn;
+
 static void tick_fading(void) {
     u8 tile, attr;
     hazard_timer++;
@@ -133,7 +135,8 @@ static void tick_fading(void) {
             tile = BGT_SWITCH; attr = BGPAL_DOOR;
             break;
         case 2:
-            if (hazard_timer < 60) return;
+            // Gloam Lamp / Rime Skates lengthen the warning by 20 frames.
+            if (hazard_timer < secret_floor_warn) return;
             hazard_timer = hazard_cursor = 0;
             room_stage_event_phase = 3;
             room_shake(1, 8);

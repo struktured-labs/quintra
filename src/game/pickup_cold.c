@@ -1,4 +1,4 @@
-#pragma bank 10
+#pragma bank 21
 
 // Low-frequency world fixtures and temporary-reward constructors. Keeping
 // these wrappers out of the combat pickup bank preserves emergency headroom;

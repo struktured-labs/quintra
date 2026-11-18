@@ -30,6 +30,7 @@
 #include "game/riftwild_phase.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/secret_merchant.h"
 #include "game/waygear.h"
 #include "input/input.h"
 #include "render/hud.h"
@@ -140,6 +141,10 @@ static u8 field_den(u8 field) {
     return 0xFF;
 }
 
+u8 riftwild_den_field_of(u8 d) BANKED {
+    return d < RIFT_DEN_COUNT ? den_field[region()][d] : 0xFF;
+}
+
 u8 riftwild_den_in_field(void) BANKED {
     if (!run_state.world_mode || in_den()) return 0;
     return field_den(run_state.world_screen) != 0xFF ? 1 : 0;
@@ -201,6 +206,8 @@ void riftwild_den_stamp_field(void) BANKED {
     u8 x, y, d, kind, floor, stair;
     riftwild_den_armed = 0;
     if (!run_state.world_mode || in_den()) return;
+    // Cave-merchant fields never hold a den (secret_merchant.c).
+    if (secret_cave_stamp_field()) return;
     d = field_den(run_state.world_screen);
     if (d == 0xFF) return;
     kind = den_kind[region()][d];
@@ -262,6 +269,7 @@ static u8 field_cairn_closed(void) {
 
 u8 riftwild_den_strike(u8 tx, u8 ty) BANKED {
     u8 d;
+    if (secret_cave_strike(tx, ty)) return 1;
     if (tx != RIFT_DEN_TELL_X || ty != RIFT_DEN_TELL_Y) return 0;
     d = field_cairn_closed();
     if (d == 0xFF) return 0;
@@ -307,6 +315,7 @@ u8 riftwild_den_map_icon(u8 cell, u8 icon) BANKED {
 void riftwild_den_chime(void) BANKED {
     u8 d;
     if (!run_state.world_mode || in_den()) return;
+    if (secret_cave_chime()) return;
     d = field_den(run_state.world_screen);
     if (d == 0xFF || den_found(d)) return;
     run_state.riftwild_shadow |= DEN_CLAIM_BIT(d);
@@ -598,6 +607,7 @@ void riftwild_den_tick(void) BANKED {
 // Rift Bomb: the burst covers seven tiles around the hero.
 void riftwild_den_burst(u8 tx, u8 ty) BANKED {
     if (!run_state.world_mode || in_den()) return;
+    secret_cave_burst(tx, ty);
     if (tx + 3 >= RIFT_DEN_TELL_X && tx <= RIFT_DEN_TELL_X + 3
         && ty + 3 >= RIFT_DEN_TELL_Y && ty <= RIFT_DEN_TELL_Y + 3)
         riftwild_den_strike(RIFT_DEN_TELL_X, RIFT_DEN_TELL_Y);
@@ -607,6 +617,7 @@ void riftwild_den_burst(u8 tx, u8 ty) BANKED {
 // vault, and cave staircase fixtures (moved here from bank 1 unchanged).
 void riftwild_take_portal(u8 tx, u8 ty) BANKED {
     const zelda_screen_t *cell;
+    if (secret_cave_portal(tx, ty)) return;
     if (riftwild_den_portal(tx, ty)) return;
     cell = &zelda_overworlds[0].screen_grid[run_state.world_screen];
     if (cell->kind == ZELDA_CELL_DUNGEON_ENTRANCE) {
@@ -624,6 +635,9 @@ void riftwild_take_portal(u8 tx, u8 ty) BANKED {
 // Room-generation entry point: dens build their own compact cave; every other
 // room (dungeon, town, Riftwild field) runs the shared procgen body.
 void procgen_generate_current_room(void) BANKED {
-    if (RUN_IN_RIFT_DEN()) riftwild_den_build_room();
+    if (run_state.world_mode
+        && run_state.world_screen >= SECRET_CAVE_SCREEN_BASE)
+        secret_cave_build_room();
+    else if (RUN_IN_RIFT_DEN()) riftwild_den_build_room();
     else procgen_generate_room_body();
 }

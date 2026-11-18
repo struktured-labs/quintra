@@ -1,4 +1,4 @@
-#pragma bank 7
+#pragma bank 21
 
 #include <gb/gb.h>
 
@@ -8,6 +8,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/room.h"
+#include "game/secret_merchant.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 
@@ -26,5 +27,6 @@ u8 pickup_try_phoenix_revive(void) BANKED {
             return 1;
         }
     }
-    return 0;
+    // Last Light (Veil charm) answers only after Phoenix declines.
+    return secret_merchant_last_light();
 }
