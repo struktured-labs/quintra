@@ -213,8 +213,13 @@ static void strip_ordinary(void) {
 
 u8 secret_merchant_prepare_host(void) BANKED {
     u8 kind, mx, my, mx2, my2, i;
+    u8 local = run_state_dungeon_local();
     secret_merchant_host_here = 0;
-    if (run_state_dungeon_local() != secret_merchant_host_cell()) return 0;
+    // The foyer is never the host: skip the one-time host search there so
+    // the first room of a stage costs exactly what it did before.
+    if (run_state.world_mode || local == run_state_dungeon_entry_cell())
+        return 0;
+    if (local != secret_merchant_host_cell()) return 0;
     secret_merchant_host_here = 1;
     kind = secret_merchant_host_kind();
     wall_spot();
