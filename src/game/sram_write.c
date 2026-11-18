@@ -1,4 +1,5 @@
-#pragma bank 10
+#pragma bank 26
+// Moved from bank 10 with the attract demo SRAM gate (bank 10 hit its floor).
 
 // Cold battery writes live with other utility transactions so the validator
 // and migration reader retain emergency room in the dedicated SRAM bank.
@@ -9,6 +10,7 @@
 #include "game/player.h"
 #include "game/run_state.h"
 #include "game/sram.h"
+#include "game/attract.h"
 
 #define SRAM_BASE    ((volatile u8 *)0xA000)
 #define SAVE_VERSION 1
@@ -94,6 +96,7 @@ void sram_save_run(void) BANKED {
     const u8 *pl = (const u8 *)&player;
     u8 sum = 0, i;
     u16 off = HDR_SIZE;
+    if (attract_demo) return;     // attract demos never touch the save
     sram_write_open();
     SRAM_BASE[0] = 'Q';
     SRAM_BASE[1] = 'S';
@@ -113,6 +116,7 @@ void sram_save_run(void) BANKED {
 }
 
 void sram_clear_run(void) BANKED {
+    if (attract_demo) return;
     sram_write_open();
     SRAM_BASE[0] = 0x00;
     sram_write_close();

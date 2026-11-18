@@ -1,4 +1,4 @@
-# Intro animation and stage-transition vignettes (spec, not implemented)
+# Intro animation and stage-transition vignettes (spec; implemented, see 2026-11-17-attract-mode.md)
 
 Status: **proposal for struktured's review. Nothing is built in the ROM.** This PR
 adds only this spec, previews and the preview tooling. No ROM, itch, rivalmage or SD-card change.

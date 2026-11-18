@@ -169,6 +169,8 @@ The Makefile chains these. `cargo build` failures fail the whole build — no RO
 - Save-state anchors at title / mid-combat / rest-room / boss for fast regression
 - NEVER launch mgba-qt GUI during automated testing (KDE Wayland)
 - ALWAYS clean stray Xvfb procs: `pkill -9 -f 'Xvfb :'`
+- Power-on boots into the lore intro (`SCREEN_INTRO`). PyBoy tests mute it, and the foyer vignette, via `scripts/quintra_sitecustomize` (`PYTHONPATH`, set by the Makefile and CI). It writes `_attract_mute = 1` every frame, which also disables title attract. Opt out with `QUINTRA_KEEP_INTRO=1` / `QUINTRA_KEEP_VIGNETTES=1`. New boot-timed scripts must do the same.
+- Attract demos are recorded inputs (`assets/attract/*.json`). Rerecord them with `scripts/record_attract_demo.py` after gameplay changes to the stage 1 or Verdant Hollow opening, then run `--emit`. `test_attract_mode.py` reports a drift.
 
 ### Rust unit tests
 - `cargo test` — content validation, procgen determinism, codegen output,

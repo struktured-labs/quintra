@@ -18,5 +18,6 @@ extern volatile u8 g_vbl_epoch;
 
 void loop_init(screen_id_t start);
 void loop_run(void);
+void loop_switch(screen_id_t next);   // exit current screen, enter next
 
 #endif

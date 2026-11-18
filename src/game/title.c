@@ -10,6 +10,7 @@
 #include "audio/music.h"
 #include "audio/sfx.h"
 #include "core/types.h"
+#include "game/attract.h"
 #include "game/loop.h"
 #include "game/sram.h"
 #include "game/title.h"
@@ -44,6 +45,7 @@ static u8 title_obj_committed;
 static u8 showing_stage_warp;
 static u8 lore_beat;
 static u8 lore_hold;
+static u16 title_idle;   // frames with no key held (attract timer)
 
 u8 title_stage_warp = 0xFF;
 
@@ -232,6 +234,7 @@ void title_enter(void) {
     title_cheat_reset();
     lore_beat = 0;
     lore_hold = 0;
+    title_idle = 0;
     render_title();
     palette_bg_fill_attrs(0);
 
@@ -257,7 +260,10 @@ void title_exit(void) {
 }
 
 screen_id_t title_tick(u8 keys, u8 pressed) {
-    keys;
+    // Attract: 12 s untouched on the main title plays the intro or a demo.
+    if (keys || showing_records || showing_stage_warp) title_idle = 0;
+    else if (++title_idle >= ATTRACT_TITLE_IDLE && !attract_mute)
+        return attract_begin();
     if (showing_stage_warp) {
         screen_id_t result;
         if (!pressed) return SCREEN_SELF;

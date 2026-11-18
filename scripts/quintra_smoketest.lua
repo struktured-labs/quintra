@@ -28,6 +28,7 @@ local WW_ADDR = tonumber(os.getenv("QUINTRA_WORLD_WIDTH_ADDR") or "0") or 0
 local WH_ADDR = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
 local SX_ADDR = tonumber(os.getenv("QUINTRA_SOCKET_X_ADDR") or "0") or 0
 local SY_ADDR = tonumber(os.getenv("QUINTRA_SOCKET_Y_ADDR") or "0") or 0
+local MUTE_ADDR = tonumber(os.getenv("QUINTRA_ATTRACT_MUTE_ADDR") or "0") or 0
 
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
@@ -613,8 +614,14 @@ local function open_deep_phase_seal(cell)
     return math.floor(emu:read8(RS_ADDR + 28) / 4) % 2 == 1
 end
 
--- Boot
-tick(120); shot("01_title")
+-- Boot. attract_mute keeps the power-on lore intro and title attract out of
+-- this script. Write it every boot frame: the boot ROM and crt0 run first and
+-- crt0 clears WRAM, so a single early write does not stick.
+for _ = 1, 120 do
+    emu:runFrame()
+    if MUTE_ADDR ~= 0 then emu:write8(MUTE_ADDR, 1) end
+end
+shot("01_title")
 tap(KEY_START); tick(40); shot("02_class_select")
 
 -- Cycle through all 5 classes to confirm cursor + stats update

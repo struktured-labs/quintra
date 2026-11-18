@@ -1,4 +1,5 @@
-#pragma bank 12
+#pragma bank 26
+// Moved from bank 12 (title) to make room for the attract idle timer.
 // Cold presentation for the hidden title-screen stage selector. Input stays
 // in title.c so an idle title never pays a far call merely to track a code.
 
