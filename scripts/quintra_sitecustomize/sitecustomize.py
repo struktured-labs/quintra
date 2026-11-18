@@ -7,8 +7,10 @@ foyer flag) as soon as run_state exists, between PyBoy frames.
 
 test_stage_vignettes.py sets QUINTRA_KEEP_VIGNETTES=1 to opt out.
 
-It also sets attract_mute every frame, so the power-on lore intro and the
-title-idle attract mode never run under a fixed-frame boot script.
+It also sets attract_mute at main()'s entry (a PyBoy hook, after crt0 has
+cleared WRAM) and every frame after, so the power-on lore intro and the
+title-idle attract mode never run under a fixed-frame boot script, and boot
+timing matches a build without the intro.
 test_attract_mode.py sets QUINTRA_KEEP_INTRO=1 to opt out.
 A cart copied into a temp dir without its .noi still resolves symbols
 from rom/working/quintra.noi in the worktree.
@@ -32,6 +34,17 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
             self._quintra_syms = None
             rom = args[0] if args else kwargs.get("gamerom") or kwargs.get("filename")
             self._quintra_rom = str(rom) if rom else None
+            self._quintra_hook_main()
+
+        def _quintra_hook_main(self):
+            if os.environ.get("QUINTRA_KEEP_INTRO") == "1":
+                return
+            try:
+                syms = self._quintra_load_syms()
+                if syms and syms.get("main") is not None and syms.get("mute"):
+                    self.hook_register(0, syms["main"], lambda _c: self._quintra_mute_intro(), None)
+            except Exception:
+                return
 
         def _quintra_find_noi(self, rom):
             """Temp cart copies often omit the .noi next to the .gbc."""
@@ -73,6 +86,7 @@ if _pyboy_mod is not None and not getattr(_pyboy_mod, "_quintra_mute_wrapped", F
                 "seen": (sym("_run_state") or 0) + 60,
                 "pending": sym("_room_start_vignette"),
                 "mute": sym("_attract_mute"),
+                "main": sym("_main"),
             }
             return self._quintra_syms
 

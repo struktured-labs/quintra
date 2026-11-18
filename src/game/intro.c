@@ -200,6 +200,14 @@ static void start_shot(u8 shot) {
     shot_setup();
 }
 
+screen_id_t intro_boot_screen(void) BANKED {
+    if (attract_mute || vignette_cutscenes_off()) {
+        in_attract = 1;     // any later intro is an attract replay
+        return SCREEN_TITLE;
+    }
+    return SCREEN_INTRO;
+}
+
 static screen_id_t intro_finish(void) {
     intro_exit();
     return SCREEN_TITLE;
@@ -362,12 +370,17 @@ screen_id_t intro_tick(u8 keys, u8 pressed) {
     SCY_REG = in_scy;
 
     if (in_settle < IN_BOOT_SETTLE) {
-        // Power-on: two blank frames so a headless harness can set
-        // attract_mute before the first picture; then CUTSCENES OFF and the
-        // mute go straight to the title.
+        // Power-on: two blank frames. intro_boot_screen() already handled
+        // CUTSCENES OFF; this catches a harness that can only set
+        // attract_mute between frames (the mGBA smoke script).
         if (++in_settle < IN_BOOT_SETTLE) return SCREEN_SELF;
-        if (!in_attract && (attract_mute || vignette_cutscenes_off()))
+        if (!in_attract && (attract_mute || vignette_cutscenes_off())) {
+            // Hand the settle frames back: the counter at each title frame
+            // (and so every fixed-frame New Game seed in the test harnesses)
+            // matches a build without the intro.
+            loop_frame_counter -= IN_BOOT_SETTLE;
             return intro_finish();
+        }
         begin_intro();
         return SCREEN_SELF;
     }

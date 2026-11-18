@@ -18,6 +18,10 @@ extern u8 attract_mute;
 // the demo never touches the suspend save, records, or unlock flags.
 extern u8 attract_demo;
 
+// Power-on screen: SCREEN_INTRO, or SCREEN_TITLE when muted or CUTSCENES OFF.
+// Deciding before loop_init keeps a muted boot frame-identical to a build
+// without the intro (the PyBoy harness sets attract_mute at main's entry).
+screen_id_t intro_boot_screen(void) BANKED;
 void intro_enter(void);
 void intro_exit(void);
 screen_id_t intro_tick(u8 keys, u8 pressed);

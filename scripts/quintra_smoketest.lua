@@ -614,11 +614,14 @@ local function open_deep_phase_seal(cell)
     return math.floor(emu:read8(RS_ADDR + 28) / 4) % 2 == 1
 end
 
--- Boot. attract_mute (set after the first frame, before the intro decides)
--- keeps the power-on lore intro and title attract out of this script.
-emu:runFrame()
-if MUTE_ADDR ~= 0 then emu:write8(MUTE_ADDR, 1) end
-tick(119); shot("01_title")
+-- Boot. attract_mute keeps the power-on lore intro and title attract out of
+-- this script. Write it every boot frame: the boot ROM and crt0 run first and
+-- crt0 clears WRAM, so a single early write does not stick.
+for _ = 1, 120 do
+    emu:runFrame()
+    if MUTE_ADDR ~= 0 then emu:write8(MUTE_ADDR, 1) end
+end
+shot("01_title")
 tap(KEY_START); tick(40); shot("02_class_select")
 
 -- Cycle through all 5 classes to confirm cursor + stats update

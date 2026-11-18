@@ -9,6 +9,7 @@
 #include "core/rng.h"
 #include "input/input.h"
 #include "audio/audio.h"
+#include "game/attract.h"
 #include "game/loop.h"
 #include "game/screen.h"
 #include "content.h"
@@ -35,7 +36,8 @@ void main(void) {
     rng_seed(0xC0DEBABEUL);
 
     // The lore intro plays once per power-on, then hands to the title.
-    loop_init(SCREEN_INTRO);
+    // CUTSCENES OFF (and a muted test harness) boot straight to the title.
+    loop_init(intro_boot_screen());
     loop_run();
     // unreachable
 }
