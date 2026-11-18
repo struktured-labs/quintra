@@ -14,8 +14,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # Mute the new-run foyer vignette in PyBoy contracts. The vignette
-  # test itself sets QUINTRA_KEEP_VIGNETTES=1.
+  # Mute the new-run foyer vignette and the power-on lore intro in PyBoy
+  # contracts. test_stage_vignettes sets QUINTRA_KEEP_VIGNETTES=1 and
+  # test_attract_mode sets QUINTRA_KEEP_INTRO=1.
   PYTHONPATH: scripts/quintra_sitecustomize
 
 jobs:
@@ -178,6 +179,12 @@ jobs:
 
       - name: Stage vignette play, skip, once, CUTSCENES OFF (headless)
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow --with numpy python scripts/test_stage_vignettes.py
+
+      - name: Lore intro data is current
+        run: uv run --quiet --with numpy --with pillow python scripts/gen_intro.py --check
+
+      - name: Lore intro skip and attract mode (idle, exit, no SRAM writes, demo replay)
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_attract_mode.py
 
       - name: PyBoy Riftwild mission pull (Warden, then gate)
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_mission.py

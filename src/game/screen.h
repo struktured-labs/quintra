@@ -10,7 +10,7 @@ enum {
     SCREEN_TITLE,
     SCREEN_CLASS_SELECT,    // Phase 4
     SCREEN_RUN_INIT,        // Phase 4
-    SCREEN_PROCGEN,
+    SCREEN_INTRO,           // lore intro + attract replay (was unused PROCGEN)
     SCREEN_ROOM,
     SCREEN_VIGNETTE,        // stage-transition vignette (was unused REST_ROOM)
     SCREEN_BOSS,

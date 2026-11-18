@@ -7,6 +7,7 @@
 
 #include "core/types.h"
 #include "game/sram.h"
+#include "game/attract.h"
 
 #define SRAM_BASE     ((volatile u8 *)0xA000)
 #define META_VERSION  2
@@ -54,7 +55,7 @@ static u8 meta_valid(void) {
     if (SRAM_BASE[12] == meta_sum_range(0, 12)) return 1;
     // Old 12-byte record: checksum of [3..10] lives at [11].
     if (SRAM_BASE[11] == meta_sum_range(3, 11)) {
-        meta_migrate_legacy();
+        if (!attract_demo) meta_migrate_legacy();
         return 1;
     }
     return 0;
@@ -113,6 +114,7 @@ u16 sram_meta_best_time(void) BANKED {
 u8 sram_meta_record(u16 score, u8 won, u16 time_s) BANKED {
     u8 flags = 0;
     u16 count;
+    if (attract_demo) return 0;   // demo runs record nothing
     meta_open();
     if (!meta_valid()) meta_reset();
     if (score > meta_get16(3)) { meta_put16(3, score); flags |= 1; }
@@ -139,6 +141,7 @@ u8 sram_meta_flags(void) BANKED {
 
 u8 sram_meta_note_hexa(u16 score) BANKED {
     u8 flags = 0;
+    if (attract_demo) return 0;
     meta_open();
     if (!meta_valid()) meta_reset();
     if (score > meta_get16(3)) { meta_put16(3, score); flags |= 1; }
@@ -149,6 +152,7 @@ u8 sram_meta_note_hexa(u16 score) BANKED {
 }
 
 void sram_meta_set_flag(u8 bit, u8 on) BANKED {
+    if (attract_demo) return;
     meta_open();
     if (!meta_valid()) meta_reset();
     if (on) SRAM_BASE[11] |= bit;

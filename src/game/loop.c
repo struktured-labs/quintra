@@ -14,6 +14,7 @@
 #include "game/map.h"
 #include "game/dialog.h"
 #include "game/vignette.h"
+#include "game/attract.h"
 #include "render/palette.h"
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
@@ -43,6 +44,7 @@ BANKREF_EXTERN(dialog_enter)
 BANKREF_EXTERN(gameover_enter)
 BANKREF_EXTERN(victory_enter)
 BANKREF_EXTERN(vignette_enter)
+BANKREF_EXTERN(intro_enter)
 
 // The screen table. Each screen lives in its own translation unit; banked
 // screens carry their BANK(fn) so the dispatcher can map them first.
@@ -51,7 +53,7 @@ const screen_t screens[SCREEN_COUNT] = {
     [SCREEN_TITLE]        = { BANK(title_enter), title_enter,   title_exit,   title_tick,   title_draw   },
     [SCREEN_CLASS_SELECT] = { BANK(class_select_enter), class_select_enter, class_select_exit, class_select_tick, class_select_draw },
     [SCREEN_RUN_INIT]     = { BANK(run_init_enter), run_init_enter, run_init_exit, run_init_tick, run_init_draw },
-    [SCREEN_PROCGEN]      = { 0, 0, 0, 0, 0 },
+    [SCREEN_INTRO]        = { BANK(intro_enter), intro_enter, intro_exit, intro_tick, 0 },
     [SCREEN_ROOM]         = { BANK(room_enter), room_enter,         room_exit,         room_tick,         room_draw         },
     [SCREEN_VIGNETTE]     = { BANK(vignette_enter), vignette_enter, 0, vignette_tick, 0 },
     [SCREEN_BOSS]         = { 0, 0, 0, 0, 0 },
@@ -78,8 +80,19 @@ void loop_init(screen_id_t start) {
     if (screens[start].enter) screens[start].enter();
 }
 
-void loop_run(void) {
+// Exit the current screen and enter `next`. Home-only: it maps other banks.
+// input_poll() also calls it when an attract demo hands back to the title.
+void loop_switch(screen_id_t next) {
     screen_id_t cur = loop_current_screen;
+    screen_map(cur);
+    if (screens[cur].exit) screens[cur].exit();
+    loop_current_screen = next;
+    screen_map(next);
+    if (screens[next].enter) screens[next].enter();
+}
+
+void loop_run(void) {
+    screen_id_t cur;
     screen_id_t next;
 
     for (;;) {
@@ -88,16 +101,14 @@ void loop_run(void) {
         // straight from 60 to 30 Hz in modest bullet-heavy rooms.
         u8 vbl_at_start = g_vbl_epoch;
         input_poll();
+        cur = loop_current_screen;
 
         screen_map(cur);
         if (screens[cur].tick) {
             next = screens[cur].tick(input_keys, input_pressed);
             if (next != SCREEN_SELF && next != cur) {
-                if (screens[cur].exit)  screens[cur].exit();
+                loop_switch(next);
                 cur = next;
-                loop_current_screen = cur;
-                screen_map(cur);
-                if (screens[cur].enter) screens[cur].enter();
             }
         }
 
