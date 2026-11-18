@@ -1197,6 +1197,8 @@ static u8 room_aim_from_step(i8 dx, i8 dy) {
     return room_aim_step_table[(u8)((dy + 1) * 3 + (dx + 1))];
 }
 
+static u8 room_stop_pressed;
+
 screen_id_t room_tick(u8 keys, u8 pressed) {
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.
@@ -1364,12 +1366,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
 
     // ---- Hit-stop: freeze the world a few frames on impact for weight,
     // but keep drawing so the flash/knockback is visible.
+    // A/B edges that land on a frozen frame are kept for the first live one:
+    // a spell or weapon hitstop must never swallow a tap or the A+B chord.
     if (g_hitstop) {
         g_hitstop--;
+        room_stop_pressed |= (u8)(pressed & (J_A | J_B));
         place_player_sprite();
         entity_draw_all();
         return SCREEN_SELF;
     }
+    pressed |= (u8)(room_stop_pressed & keys);
+    room_stop_pressed = 0;
 
     // ---- Movement: SPD-scaled sub-pixel accumulator.
     // acc += spd; each 5 accumulated = 1 px step. spd 5 = 1.0 px/f,
