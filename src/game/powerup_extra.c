@@ -330,6 +330,34 @@ u8 powerup_try_collect(u8 slot) BANKED {
     return 0;
 }
 
+void pickup_roll_elite_bonus(fix8_t x, fix8_t y) BANKED {
+    // Elites already drop a guaranteed heart or coin; this is the doubled
+    // Capsule chance (6% Normal, 8% Easy) on top.
+    // Mix the chance and Capsule id from the run seed, clock and drop
+    // cell so this roll does not consume the encounter RNG stream.
+    // Attract-demo AI (and any later drops in the same room) stay on
+    // the Phase 1 sequence.
+    u8 r = (u8)run_state.run_seed
+        ^ (u8)(run_state.run_seed >> 8)
+        ^ (u8)(run_state.run_seed >> 16)
+        ^ (u8)(run_state.run_seed >> 24)
+        ^ (u8)run_state.run_timer
+        ^ (u8)((u16)x * 3u)
+        ^ (u8)((u16)y * 5u);
+    u8 idmix;
+    if (RUN_IS_EASY()) {
+        if (r >= 20) return;
+    } else if (r >= 15) {
+        return;
+    }
+    idmix = (u8)(r * 37u + (u8)(run_state.run_seed >> 11));
+    if (idmix < 179) r = (u8)(POWERUP_AEGIS + (idmix % 3));
+    else if (idmix < 243) r = (u8)(POWERUP_FORMATION + ((u8)(idmix >> 2) & 3));
+    else r = POWERUP_WINGMATES;
+    powerup_try_spawn_capsule(r, x, y);
+}
+
+
 void powerup_echo_primary(u8 primary, u8 dir, u8 damage) BANKED {
     pickup_echo_primary(primary, dir, damage);
     if (powerup_id >= POWERUP_FORMATION)

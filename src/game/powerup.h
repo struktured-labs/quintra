@@ -65,6 +65,7 @@ void powerup_note_drop(void) BANKED;
 void powerup_place_room_shrine(void) BANKED;
 // Elite/alpha/rare bonus: double capsule chance, after the guaranteed drop.
 void pickup_roll_elite_bonus(fix8_t x, fix8_t y) BANKED;
+void powerup_try_spawn_capsule(u8 id, fix8_t x, fix8_t y) BANKED;
 
 // Fire-copy hooks (banked). Relic/combat leaves test a WRAM byte first.
 void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED;

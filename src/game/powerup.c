@@ -172,15 +172,9 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     }
 }
 
-void pickup_roll_elite_bonus(fix8_t x, fix8_t y) BANKED {
-    // Elites already drop a guaranteed heart or coin; this is the doubled
-    // Capsule chance (6% Normal, 8% Easy) on top.
-    u8 r = rng_next_u8();
-    if (RUN_IS_EASY()) {
-        if (r < 20) powerup_roll_capsule(x, y);
-    } else {
-        if (r < 15) powerup_roll_capsule(x, y);
-    }
+void powerup_try_spawn_capsule(u8 id, fix8_t x, fix8_t y) BANKED {
+    if (pu_blocked_room() || pu_cool_blocked() || pu_live_capsule()) return;
+    powerup_spawn(id, x, y);
 }
 
 static u8 pu_base_duration(u8 id) {
