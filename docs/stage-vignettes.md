@@ -34,6 +34,12 @@ existing stage card; a new-run foyer or town-to-dungeon entry keeps the ordinary
 - The vignette leaves through `room_request_resume()`, the same path PACK, MAP and DIALOG use. That
   path redraws the room's BG tiles and map. The vignette uses only BG slots 0x80-0xFF and 0x40-0x6E
   (175 tiles maximum). It zero-fills the few slots that the resume path leaves alone.
+- Exception: the new-run foyer vignette plays from RUN_INIT, before any room exists. It loads the
+  champion tiles and class palette itself and exits through a fresh `room_enter` (procgen, spawn,
+  stage music), never the resume path. Resuming there left the hero at (0,0) in a blank, silent room.
+  `scripts/test_new_game_start.py` guards this for every hero and boot path.
+- The champion walks in by alternating its idle pose and its authored stride beat every 8 frames,
+  like the room does. It is never mirrored (an H-flip swivelled side-facing heads).
 - The player lives in bank 21 with the Crystal Caverns and Verdant Hollow pictures. Bank 20 keeps the Ember/Riftgate pictures, village music, and other fixed residents. Stages 4-6 (Frost, Mire, Shadow) live in bank 22; stages 7-9 (Golden, Bloodmoon, Void) live in bank 23.
 
 ## Adding a dungeon
