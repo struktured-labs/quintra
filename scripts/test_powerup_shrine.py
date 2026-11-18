@@ -11,8 +11,9 @@ NOI = ROM.with_suffix(".noi").read_text()
 
 ENT_PICKUP = 3
 PICKUP_POWERUP, PICKUP_ROULETTE = 27, 28
-# run_state.vignette_seen is at +60 (u16). powerup_shrines is the next byte.
-SHRINE_OFF = 62
+# run_state.vignette_seen is at +60 (u16). #137 then appends secret_shop (+62),
+# veil_charms (+63 u16) and rift_caves (+65 u32). powerup_shrines follows.
+SHRINE_OFF = 69
 
 
 def addr(name):

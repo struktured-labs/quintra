@@ -1,8 +1,8 @@
-#pragma bank 255
+#pragma bank 31
 
-// Autobanked Phase 2-4 bodies: roulette, shrines, fire copies, Wingmates,
-// Confusion stars. Keep this out of banks 19-21's remaining floors; if
-// bankpack lands it in a tight bank, pin it to 21 (see the layout report).
+// Phase 2-4 bodies: roulette, shrines, fire copies, Wingmates,
+// Confusion stars. Pinned to bank 31 so autobank cannot drop
+// this file onto a bank that is already on its 256-byte floor.
 // Called through BANKED prototypes in powerup.h.
 
 #include <gb/gb.h>

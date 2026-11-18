@@ -12,7 +12,6 @@
 #include "game/rare_enemy.h"
 #include "game/mission_graph.h"
 #include "game/pickup.h"
-#include "game/powerup.h"
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/secret_merchant.h"
@@ -1860,7 +1859,6 @@ void procgen_generate_room_body(void) BANKED {
                     FIX8(216), FIX8(208));
                 treasure_cache_prepare();
             }
-            powerup_place_room_shrine();
             if (!direct_wide) clear_reach_marks_local();
         }
     }

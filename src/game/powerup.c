@@ -4,7 +4,7 @@
 // would otherwise land this file in bank 2.
 // Temporary power-ups, Phases 1-4: framework + all Carmelo-list power-ups.
 // Combat copies, roulette, shrines and Wingmates live in powerup_extra.c
-// (autobank / bank 255) so this file stays inside bank 20's remaining room.
+// (bank 31) so this file stays inside bank 20's remaining room.
 // See docs/superpowers/specs/2026-11-16-temporary-powerups.md.
 
 #include <gb/gb.h>

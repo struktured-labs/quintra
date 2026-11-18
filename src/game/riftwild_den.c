@@ -25,6 +25,7 @@
 #include "game/enemy_ai.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/powerup.h"
 #include "game/procgen.h"
 #include "game/riftwild_den.h"
 #include "game/riftwild_phase.h"
@@ -644,4 +645,7 @@ void procgen_generate_current_room(void) BANKED {
         secret_cave_build_room();
     else if (RUN_IN_RIFT_DEN()) riftwild_den_build_room();
     else procgen_generate_room_body();
+    // After the room body (or a den/cave) so bank 4 does not pay for the
+    // banked call. The function no-ops unless this is the shrine cell.
+    powerup_place_room_shrine();
 }
