@@ -44,6 +44,7 @@ enum {
 };
 
 extern u8 player_status_kind;
+extern u8 confusion_immune;
 extern u8 player_status_ticks;
 extern u8 enemy_status_kind[MAX_ENTITIES];
 extern u8 enemy_status_ticks[MAX_ENTITIES];
@@ -78,6 +79,7 @@ u8 status_hostile_kind_for_enemy(u8 enemy_id) BANKED;
 
 // Active-room clock and adaptive control filter.
 void status_tick(void) BANKED;
+void status_tick_gate(void) BANKED;
 void status_player_filter_input(u8 *keys, u8 *pressed) BANKED;
 void status_enemy_moved(u8 idx) BANKED;
 // Cold-path hostile update used only while an enemy is conditioned. Ordinary

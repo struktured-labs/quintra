@@ -55,6 +55,7 @@ void run_state_init(u32 seed) BANKED {
     run_state.secret_shop = 0;
     run_state.veil_charms = 0;
     run_state.rift_caves = 0;
+    run_state.powerup_shrines = 0;
     run_state.run_seed = (seed == 0UL) ? 0xCAFE1234UL : seed;
     run_state.biome_id = 0;
     run_state_ensure_dungeon_law();

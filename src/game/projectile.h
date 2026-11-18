@@ -21,6 +21,7 @@ extern u8 g_shot_element;
 #define PROJ_FLAG_FRACTAL     0x10 // Echo child: forks once after a short flight
 #define PROJ_FLAG_WILL_WAVE   0x40 // Moonfang force wave: no enemy knockback
 #define PROJ_FLAG_BEAM        0x20 // Rift Lens: wide two-sprite heavy projectile
+#define PROJ_FLAG_PU_COPY     0x80 // Formation/Halo/Wingmate copy (boss volley cap)
 
 // Cached visible/mechanical mutations granted by ordinary run relics. These
 // make a pickup alter the champion's actual attack rather than only changing

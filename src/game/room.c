@@ -1804,7 +1804,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         entities[shot].hitbox = 0xBB;
                     }
                     if (shot != 0xFF && !muted) player.will_charge = 0;
-                    pickup_echo_primary(shot, dir, dmg);
+                    powerup_echo_primary(shot, dir, dmg);
                     player.fire_cooldown = player_fire_delay(w->p0);
                 }
             }
@@ -1857,7 +1857,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                         }
                     }
                     if (shot != 0xFF && !muted) player.will_charge = 0;
-                    pickup_echo_primary(shot, dir, dmg);
+                    powerup_echo_primary(shot, dir, dmg);
                 }
                 player.fire_cooldown = cooldown;
             }
@@ -1930,14 +1930,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Conditions advance only during live room play. Their damage lands
     // before combat's death check, so poison/burn/bleed share the same fall
     // beat as bullets and hazards instead of hard-cutting to GAME OVER.
-    // Most actors in most frames are unconditioned. Preserve the free-running
-    // clock locally, but avoid a bank-13 call (and its periodic 32-slot scan)
-    // until the player or at least one enemy actually has a status.
-    // An active temporary power-up rides the same banked clock.
-    if (player_status_kind != QSTATUS_NONE || status_enemy_active
-        || powerup_id)
-        status_tick();
-    else status_clock++;
+    // The gate lives in bank 13 so bank 1 stays on its emergency floor.
+    // Idle frames only increment the free-running clock; the 32-slot scan
+    // still runs only when a status, power-up, roulette, or immunity is live.
+    status_tick_gate();
 
     // ---- Combat
     if (combat_resolve() || player.hp == 0) {

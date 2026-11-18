@@ -20,6 +20,9 @@ static const u8 dungeon_fold_cols[32] = {
 void run_state_ensure_dungeon_law(void) BANKED {
     u8 mix;
     if (run_state.dungeon_law & DUNGEON_LAW_READY_BIT) return;
+    // Fresh law means a new dungeon (begin_dungeon zeros dungeon_law first).
+    // Mid-dungeon ensure calls hit the READY return above and keep the claim.
+    run_state.powerup_shrines &= (u8)~0x01;
     mix = (u8)run_state.run_seed;
     mix ^= (u8)(run_state.run_seed >> 8);
     mix ^= (u8)(run_state.run_seed >> 16);
