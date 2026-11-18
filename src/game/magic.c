@@ -552,13 +552,13 @@ static void tick_thunder(void) {
         hit_cy = HERO_Y;
         if (th_target != 0xFF) {
             hit_body(th_target, th_dmg, 4, QSTATUS_STOP, 10);
+            g_hitstop = 3;   // weight only on a real strike
         } else {
             memset(ring_mask, 0, sizeof(ring_mask));
             hit_ring(th_x, th_y, 10, ring_mask, th_dmg, 4, QSTATUS_STOP, 10);
             if (th_x >= 0 && th_y >= 0)
                 room_elemental_tile((u8)(th_x >> 3), (u8)(th_y >> 3), 4);
         }
-        g_hitstop = 3;
         room_shake(1, 6);
         v4(0xF3, 0x52, 20);
         v1(0x00, 0x80, 0xF2, 380, 12);
