@@ -26,6 +26,9 @@ void intro_enter(void);
 void intro_exit(void);
 screen_id_t intro_tick(u8 keys, u8 pressed);
 
+// Records page WATCH INTRO: replay the lore intro on demand. A, B or START
+// skip; it hands back to the title, which reopens the records page.
+screen_id_t intro_watch(void) BANKED;
 // Title idle timeout fired: returns SCREEN_INTRO or the demo's first screen.
 screen_id_t attract_begin(void) BANKED;
 // Called by input_poll() each frame while attract_demo is set.
