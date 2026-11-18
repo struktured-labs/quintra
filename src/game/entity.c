@@ -225,10 +225,11 @@ static u8 enemy_is_big16(const entity_t *e) {
         return e->sprite_tile >= SPR_TOWN_RESIDENT_BIG
             && e->sprite_tile < SPR_BIG_ACTOR_END;
     if (e->type != ENT_ENEMY) return 0;
-    if (eid == ENEMY_STONE_SENTINEL) return 1;
-    return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
+    return (eid == ENEMY_STONE_SENTINEL || eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
         || eid == ENEMY_CINDER_MAW || eid == ENEMY_FACET_RAM
-        || eid == ENEMY_STAGE_REAPER);
+        || eid == ENEMY_STAGE_REAPER
+        /* Vault Hand 37 and Bane Brute 38: 16x16 art and 13x13 hitboxes. */
+        || (u8)(eid - ENEMY_VAULT_HAND) < 2);
 }
 
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a
