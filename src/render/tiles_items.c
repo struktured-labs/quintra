@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include "render/tiles.h"
 #include "game/entity.h"
+#include "game/pickup.h"
 
 // Shape language for run upgrades. The defining feature of every relic is
 // exaggerated at native GBC scale so no purchase depends on memorizing an
@@ -89,4 +90,24 @@ void tiles_load_item_sprites(void) BANKED {
     set_sprite_data(SPR_ITEM_BOMB_BAG, 1, sprite_bomb_bag);
     set_sprite_data(SPR_ITEM_MORNINGSTAR_BIG, 4, sprite_morningstar_big);
     VBK_REG = 0;
+}
+
+void tiles_load_hud_b_icon(u8 item_id) BANKED {
+    // Gold "B" on HUD palette 7 (color 2 is coin gold).
+    static const u8 letter_b[16] = {
+        0x00,0x7C, 0x00,0x66, 0x00,0x66, 0x00,0x7C,
+        0x00,0x66, 0x00,0x66, 0x00,0x7C, 0x00,0x00
+    };
+    const u8 *src = 0;
+    set_bkg_data(HUD_B_LETTER, 1, letter_b);
+    if (item_id == ITEM_ID_BOOMERANG) src = sprite_boomerang;
+    else if (item_id == ITEM_ID_HOOKSHOT) src = sprite_item_icons[28];
+    else if (item_id == ITEM_ID_MORNINGSTAR) src = sprite_morningstar;
+    else if (item_id == ITEM_ID_BOMBS) src = sprite_bomb_bag;
+    else if (item_id == 10) src = sprite_item_icons[SPR_ITEM_SWIFT_FANG - SPR_ITEM_IRON_HEART];
+    else if (item_id == 11) src = sprite_item_icons[SPR_ITEM_WARD_CHARM - SPR_ITEM_IRON_HEART];
+    else if (item_id == 12) src = sprite_item_icons[SPR_ITEM_HUNTER_EYE - SPR_ITEM_IRON_HEART];
+    else if (item_id == 13) src = sprite_item_icons[SPR_ITEM_MANA_GEM - SPR_ITEM_IRON_HEART];
+    else if (item_id == 14) src = sprite_item_icons[SPR_ITEM_THORN - SPR_ITEM_IRON_HEART];
+    if (src) set_bkg_data(HUD_B_ICON, 1, src);
 }
