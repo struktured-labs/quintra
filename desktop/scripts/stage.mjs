@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Stage the itch web package as the desktop app content.
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,6 +43,14 @@ fs.writeFileSync(indexPath, html);
 
 const build = JSON.parse(fs.readFileSync(path.join(app, "build.json"), "utf8"));
 build.channel = "desktop";
+// Name the exact commit in the in-game source offer (GPL-3.0 section 6).
+let sourceCommit = process.env.QUINTRA_SOURCE_COMMIT || "";
+if (!sourceCommit) {
+  try {
+    sourceCommit = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  } catch (error) { /* not a git checkout */ }
+}
+if (/^[0-9a-f]{40}$/.test(sourceCommit)) build.sourceCommit = sourceCommit;
 fs.writeFileSync(path.join(app, "build.json"), `${JSON.stringify(build, null, 2)}\n`);
 // The web zip's ROM checksum file stays; the itch-only cover is not needed.
 console.log(`Staged ${app} (web ${build.version}, ROM ${build.romSha256.slice(0, 12)})`);

@@ -46,6 +46,8 @@
     writing = writing.then(async () => {
       if (!bytes || bytes.length !== SAVE_SIZE) return;
       if (!force && sameBytes(bytes, lastWritten)) return;
+      // Never let a blank read (reset, glitch) replace a save that has data.
+      if (!force && isBlank(bytes) && lastWritten && !isBlank(lastWritten)) return;
       await host.writeSave(bytes);
       lastWritten = bytes.slice();
       state.writes += 1;
@@ -56,10 +58,19 @@
     return writing;
   }
 
+  // The emulator keeps running while we read, so take two reads a moment
+  // apart and only trust them when they agree (no half-written save).
+  async function readStableRam() {
+    const first = await player.readRamLive();
+    await new Promise(resolve => setTimeout(resolve, 40));
+    const second = await player.readRamLive();
+    return sameBytes(first, second) ? second : null;
+  }
+
   async function flush() {
     if (!player.ready) return;
     try {
-      await persist(await player.readRamLive());
+      await persist((await readStableRam()) || (await player.readRamLive()));
     } catch (error) {
       state.lastError = String(error);
     }
@@ -90,7 +101,7 @@
     document.documentElement.classList.add("running");
     setInterval(() => {
       if (!player.started) return;
-      player.readRamLive().then(bytes => persist(bytes)).catch(error => { state.lastError = String(error); });
+      readStableRam().then(bytes => (bytes ? persist(bytes) : null)).catch(error => { state.lastError = String(error); });
     }, POLL_MS);
   }
 
@@ -154,9 +165,11 @@
   });
   if (saveInput) {
     // The player's own handler imports into cartridge RAM; write it to disk.
-    saveInput.addEventListener("change", () => setTimeout(() => {
-      flush().then(() => { if (settingsStatus) settingsStatus.textContent = "Save imported and written to disk."; });
-    }, 500));
+    window.addEventListener("quintra:save-imported", event => {
+      persist(new Uint8Array(event.detail), true).then(() => {
+        if (settingsStatus) settingsStatus.textContent = "Save imported and written to disk.";
+      });
+    });
   }
 
   addItem("desktop-credits-item", "Credits and licenses", () => openCredits());
@@ -230,6 +243,13 @@
 
   async function aboutText() {
     info = info || await host.info();
+    let commit = "";
+    try {
+      commit = String((await (await fetch("build.json")).json()).sourceCommit || "");
+    } catch (error) { /* older bundle */ }
+    const exact = /^[0-9a-f]{40}$/.test(commit)
+      ? [`Exact source of this build: https://github.com/struktured-labs/quintra/tree/${commit}`]
+      : [];
     return [
       "QUINTRA",
       "",
@@ -247,6 +267,7 @@
       "player, the desktop wrapper and the WasmBoy fork) is published at:",
       "  https://github.com/struktured-labs/quintra  (web/ and desktop/)",
       "  https://github.com/struktured-labs/wasmboy",
+      ...exact,
       "For at least three years after we last distribute this version, anyone",
       "may also request that source by opening an issue on the quintra",
       "repository; we will provide it at no more than the cost of distribution.",

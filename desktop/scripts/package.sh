@@ -3,6 +3,7 @@
 # plus a SteamPipe-ready content tree. Never uploads anything.
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
+umask 022
 
 desktop=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 root=$(cd "$desktop/.." && pwd)
@@ -38,13 +39,17 @@ for platform in $platforms; do
     *) echo "Unknown platform $platform" >&2; exit 1 ;;
   esac
 done
+# Fixed mtimes and modes on everything that goes into app.asar.
+find "$desktop/app" "$desktop/main.js" "$desktop/preload.js" "$desktop/package.json" \
+  -exec touch -h -d "$stamp" {} +
 npx --no-install electron-builder --config electron-builder.yml --x64 "${builder_args[@]}" \
   "-c.extraMetadata.version=${version#v}"
 
 normalise() {
   find "$1" -exec touch -h -d "$stamp" {} +
   find "$1" -type d -exec chmod 755 {} +
-  find "$1" -type f -exec chmod u+rw,go+r,go-w {} +
+  find "$1" -type f -perm -u+x -exec chmod 755 {} +
+  find "$1" -type f ! -perm -u+x -exec chmod 644 {} +
 }
 
 # Steam depots and archives both use a "Quintra" top-level directory.

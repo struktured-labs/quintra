@@ -64,12 +64,11 @@ runs the self-test, and stores them as workflow artifacts
    - Byte quota 1048576, number of files 10. The save is one 32 KiB file
      plus a `.bak`.
    - Root path: **WinAppDataRoaming**, subdirectory `Quintra/saves`,
-     pattern `*.sav`, OS Windows, not recursive.
+     pattern `quintra.sav` (exactly; not `*`, so the `.bak` and `.tmp` files
+     never sync), OS Windows, not recursive.
    - Root override for Linux: original root WinAppDataRoaming, new root
      **LinuxXdgDataHome**, OS Linux, add or replace path `Quintra/saves`.
      With this override, saves sync both ways between Windows and Linux/Deck.
-   - Do not sync `.bak`. If you only want the main file, pattern `quintra.sav`
-     also works.
    - The wrapper writes `%APPDATA%\Quintra\saves\quintra.sav` on Windows and
      `${XDG_DATA_HOME:-~/.local/share}/Quintra/saves/quintra.sav` on Linux.
      Writes are atomic (temp file, fsync, rename). The save is a raw 32 KiB
@@ -84,9 +83,18 @@ runs the self-test, and stores them as workflow artifacts
    "Default configuration" to **Gamepad** (the official "Gamepad" template),
    and leave Steam Input opted in for all controller types. Players can still
    use Settings > Swap A/B and Recalibrate.
-6. **Steam Deck**: Linux depot with the Steam Linux Runtime. The wrapper
-   adds `--no-sandbox` by itself when `chrome-sandbox` is not setuid root,
-   because SteamPipe does not keep setuid bits.
+6. **Linux runtime / Steam Deck**: under Installation > Linux Runtime, pick
+   **Steam Linux Runtime 3.0 (sniper)** for the Linux depot. Electron 45 needs
+   its newer glibc/NSS/GBM. SteamPipe does not keep setuid bits and the
+   runtime container blocks user namespaces, so the wrapper adds
+   `--no-sandbox` by itself when `chrome-sandbox` is not setuid root. That
+   turns off Chromium's OS-level sandbox on Linux. This is acceptable
+   because the app loads only bundled files, blocks every network request,
+   and keeps contextIsolation and a validated IPC surface. In Deck Game Mode,
+   Gamescope keeps the game fullscreen whatever the Window mode setting says.
+7. **Launch options are fixed**: the test switches (`--quintra-selftest`,
+   `--quintra-save-dir`, `--quintra-user-data`) are ignored in packaged
+   builds unless `QUINTRA_ALLOW_SELFTEST=1` is set, so do not add them.
 
 ## 3. Upload a build (manual)
 
@@ -130,6 +138,13 @@ The first login asks for the Steam Guard code. `app_build.vdf` has
   Home or Select+Start.
 - **Redistributables**: confirm none are installed or required. The game
   starts on a clean Windows 10/11 VM.
+- **Deck Exit Game**: save in-game, press the Steam button > Exit Game right
+  away, and relaunch. The wrapper flushes on SIGTERM.
+- **Steam overlay**: press Shift+Tab during play and with Settings open. The
+  overlay must open and close cleanly.
+- **Switch Pro with Steam Input on and off**: A must be confirm in both cases.
+  Check that Steam's translation plus the game's Nintendo layout never
+  double-swaps A/B.
 - **Offline**: the game makes no network requests (the self-test checks
   this), so it runs in Steam offline mode.
 
@@ -139,8 +154,10 @@ The wrapper and the browser player are GPL-3.0-or-later. WasmBoy is
 GPL-3.0-or-later. Electron is MIT, and Chromium ships its own notices in
 `LICENSES.chromium.html` next to the executable. The in-game Credits and
 licenses screen (Settings) shows every notice plus a written source offer.
-Each build that ships must match a public commit of
-`struktured-labs/quintra`. Tag the commit you upload.
+The About page names the exact source commit, taken from
+`build.json` `sourceCommit`. Build Steam uploads only from a commit that
+is pushed to `struktured-labs/quintra` (for example a tag on `main`), never
+from a PR merge ref or a local-only commit.
 
 The store page's content survey includes the Generative AI disclosure. Some
 art in Quintra was made with image-generation tools, so you must disclose it

@@ -25,9 +25,14 @@ function argValue(name) {
   return hit ? hit.slice(prefix.length) : null;
 }
 
-const selftestDir = argValue("quintra-selftest");
-const userDataOverride = argValue("quintra-user-data");
-const saveDirOverride = argValue("quintra-save-dir");
+// Test-only switches (self-test output, profile and save overrides, DevTools)
+// are ignored in packaged builds unless the self-test harness opts in through
+// the environment, so a Steam launch option cannot redirect saves or files.
+const allowTestArgs = !app.isPackaged || process.env.QUINTRA_ALLOW_SELFTEST === "1";
+const testArg = name => (allowTestArgs ? argValue(name) : null);
+const selftestDir = testArg("quintra-selftest");
+const userDataOverride = testArg("quintra-user-data");
+const saveDirOverride = testArg("quintra-save-dir");
 
 app.setName("Quintra");
 if (userDataOverride) app.setPath("userData", path.resolve(userDataOverride));
@@ -99,7 +104,9 @@ function writeSettings(patch) {
   const next = { ...readSettings(), ...patch };
   try {
     fs.mkdirSync(path.dirname(settingsPath()), { recursive: true });
-    fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2));
+    const temp = `${settingsPath()}.tmp`;
+    fs.writeFileSync(temp, JSON.stringify(next, null, 2));
+    fs.renameSync(temp, settingsPath());
   } catch (error) {
     console.error("Could not write desktop settings", error);
   }
@@ -116,8 +123,23 @@ function readSaveFile(file) {
   }
 }
 
+const isBlankSave = bytes => bytes.every(v => v === 0) || bytes.every(v => v === 0xff);
+
+// Prefer the main file. Fall back to the backup when the main file is
+// missing, the wrong size, or blank while the backup still holds data.
 function readSave() {
-  return readSaveFile(savePath()) || readSaveFile(`${savePath()}.bak`);
+  const main = readSaveFile(savePath());
+  const backup = readSaveFile(`${savePath()}.bak`);
+  if (main && (!isBlankSave(main) || !backup || isBlankSave(backup))) return main;
+  return backup || main;
+}
+
+function syncDir(dir) {
+  if (process.platform === "win32") return;
+  try {
+    const fd = fs.openSync(dir, "r");
+    try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+  } catch (error) { /* best effort */ }
 }
 
 function writeSave(bytes) {
@@ -128,7 +150,8 @@ function writeSave(bytes) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const current = readSaveFile(file);
   if (current && current.equals(bytes)) return false;
-  const temp = `${file}.tmp-${process.pid}`;
+  // One fixed temp name: the single-instance lock means one writer.
+  const temp = `${file}.tmp`;
   const fd = fs.openSync(temp, "w");
   try {
     fs.writeSync(fd, bytes, 0, bytes.length, 0);
@@ -140,6 +163,7 @@ function writeSave(bytes) {
     try { fs.copyFileSync(file, `${file}.bak`); } catch (error) { /* best effort */ }
   }
   fs.renameSync(temp, file);
+  syncDir(path.dirname(file));
   return true;
 }
 
@@ -164,11 +188,17 @@ const blockedRequests = [];
 function serveApp(request) {
   const url = new URL(request.url);
   if (url.host !== HOST) return new Response("Not found", { status: 404 });
-  let rel = decodeURIComponent(url.pathname);
+  let rel;
+  try {
+    rel = decodeURIComponent(url.pathname);
+  } catch (error) {
+    return new Response("Bad request", { status: 400 });
+  }
   if (rel.endsWith("/")) rel += "index.html";
   const root = webRoot();
-  const file = path.normalize(path.join(root, rel));
-  if (file !== root && !file.startsWith(root + path.sep)) {
+  const file = path.resolve(root, `.${path.posix.normalize(`/${rel}`)}`);
+  const inside = path.relative(root, file);
+  if (!inside || inside.startsWith("..") || path.isAbsolute(inside)) {
     return new Response("Forbidden", { status: 403 });
   }
   try {
@@ -180,9 +210,10 @@ function serveApp(request) {
         "content-type": type,
         "cache-control": "no-store",
         "content-security-policy":
-          "default-src 'self' app: data: blob:; script-src 'self' app: 'unsafe-eval' 'wasm-unsafe-eval' blob:; " +
+          "default-src 'self' app: data: blob:; script-src 'self' app: 'wasm-unsafe-eval' blob:; " +
           "worker-src 'self' app: blob: data:; style-src 'self' app: 'unsafe-inline'; img-src 'self' app: data: blob:; " +
-          "connect-src 'self' app: data: blob:; media-src 'self' app: blob: data:"
+          "connect-src 'self' app: data: blob:; media-src 'self' app: blob: data:; " +
+          "object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
       }
     });
   } catch (error) {
@@ -192,7 +223,7 @@ function serveApp(request) {
 
 function lockDownSession(ses) {
   ses.webRequest.onBeforeRequest((details, callback) => {
-    const allowed = /^(app|data|blob|devtools|chrome-extension):/i.test(details.url);
+    const allowed = /^(app|data|blob|devtools):/i.test(details.url);
     if (!allowed) blockedRequests.push(details.url);
     callback({ cancel: !allowed });
   });
@@ -275,13 +306,16 @@ function flushThenQuit() {
   flushPromise = (async () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       const contents = mainWindow.webContents;
-      await Promise.race([
-        new Promise(resolve => {
-          ipcMain.once("quintra:flushed", () => resolve());
-          contents.send("quintra:flush");
-        }),
-        new Promise(resolve => setTimeout(resolve, 3000))
-      ]);
+      await new Promise(resolve => {
+        const done = () => {
+          clearTimeout(timer);
+          ipcMain.removeListener("quintra:flushed", done);
+          resolve();
+        };
+        const timer = setTimeout(done, 3000);
+        ipcMain.on("quintra:flushed", done);
+        contents.send("quintra:flush");
+      });
     }
     quitting = true;
     app.quit();
@@ -291,19 +325,32 @@ function flushThenQuit() {
 
 // --- IPC ------------------------------------------------------------------
 
+// Only the game page may call the host API.
+function fromApp(event) {
+  const url = event.senderFrame && event.senderFrame.url;
+  return typeof url === "string" && url.startsWith(`${ORIGIN}/`);
+}
+
+function guard(channel, handler) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!fromApp(event)) throw new Error("Rejected IPC sender");
+    return handler(event, ...args);
+  });
+}
+
 function registerIpc() {
-  ipcMain.handle("quintra:read-save", () => {
+  guard("quintra:read-save", () => {
     const bytes = readSave();
     return bytes ? new Uint8Array(bytes) : null;
   });
-  ipcMain.handle("quintra:write-save", (event, data) => {
+  guard("quintra:write-save", (event, data) => {
     const bytes = Buffer.from(data instanceof Uint8Array ? data : new Uint8Array(data || []));
     return writeSave(bytes);
   });
-  ipcMain.handle("quintra:get-fullscreen", () => (mainWindow ? mainWindow.isFullScreen() : false));
-  ipcMain.handle("quintra:set-fullscreen", (event, on) => setFullscreen(on));
-  ipcMain.handle("quintra:quit", () => { flushThenQuit(); });
-  ipcMain.handle("quintra:info", () => ({
+  guard("quintra:get-fullscreen", () => (mainWindow ? mainWindow.isFullScreen() : false));
+  guard("quintra:set-fullscreen", (event, on) => setFullscreen(on));
+  guard("quintra:quit", () => { flushThenQuit(); });
+  guard("quintra:info", () => ({
     version: app.getVersion(),
     electron: process.versions.electron,
     chrome: process.versions.chrome,
@@ -312,7 +359,7 @@ function registerIpc() {
     selftest: !!selftestDir,
     chromiumLicenses: !!chromiumLicensePath()
   }));
-  ipcMain.handle("quintra:open-chromium-licenses", async () => {
+  guard("quintra:open-chromium-licenses", async () => {
     const file = chromiumLicensePath();
     if (!file) return false;
     const viewer = new BrowserWindow({
@@ -504,4 +551,10 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on("window-all-closed", () => app.quit());
+
+  // Steam (Deck "Exit Game", Stop) and session logout end the game with a
+  // signal; write the latest save before going.
+  for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+    process.on(signal, () => { flushThenQuit(); });
+  }
 }

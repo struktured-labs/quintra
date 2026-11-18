@@ -31,7 +31,9 @@ function run(mode, profile) {
     `--quintra-user-data=${path.join(tmp, profile)}`, `--quintra-save-dir=${saveDir}`
   ];
   const started = Date.now();
-  const result = spawnSync("xvfb-run", args, { encoding: "utf8", timeout: 180000 });
+  const result = spawnSync("xvfb-run", args, {
+    encoding: "utf8", timeout: 180000, env: { ...process.env, QUINTRA_ALLOW_SELFTEST: "1" }
+  });
   fs.writeFileSync(path.join(out, `log-${mode}.txt`), `${result.stdout || ""}\n${result.stderr || ""}`);
   const reportFile = path.join(out, `report-${mode}.json`);
   const report = fs.existsSync(reportFile) ? JSON.parse(fs.readFileSync(reportFile, "utf8")) : { ok: false, error: "no report" };

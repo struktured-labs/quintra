@@ -1123,6 +1123,7 @@
       setStatus("Importing save…");
       await importRam(bytes);
       setStatus("Save imported");
+      window.dispatchEvent(new CustomEvent("quintra:save-imported", { detail: bytes }));
     } catch (error) {
       console.error(error);
       setStatus(error.message || "Could not import save", true);
