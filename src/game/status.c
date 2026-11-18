@@ -618,7 +618,12 @@ void status_tick(void) BANKED {
         // through the ordinary reward/score/death path on the next strike.
         if (((kind == QSTATUS_POISON && (enemy_status_ticks[i] & 7) == 0)
                 || (kind == QSTATUS_BURN && (enemy_status_ticks[i] & 3) == 0))
-            && e->hp > 1) {
+            && e->hp > 1
+            /* During the Ember fight, authored invuln (closed vent, late
+               husks) clears EF_ON_SCREEN. Do not let Poison/Burn chip
+               through a window the player cannot punish. Other colossi
+               and off-camera fodder keep their ordinary DOT. */
+            && ((e->flags & EF_ON_SCREEN) || !cinder_pack_active)) {
             e->hp--;
             e->ai_data[7] = 7;
         } else if (kind == QSTATUS_REGEN
