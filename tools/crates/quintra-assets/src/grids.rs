@@ -1237,6 +1237,7 @@ pub const BGT_SWITCH: [&str; 8] = [
 
 // Not in DUNGEON_TILES: the 16-byte array lives in src/render/tiles_switch.c
 // (bank 22) so bank 2 stays at the 256-byte floor.
+#[allow(dead_code)] // referenced by the banked-source gold test
 pub const BGT_SWITCH_PRESSED: [&str; 8] = [
     "23222232",
     "21000012",
