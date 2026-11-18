@@ -22,6 +22,7 @@ u8 leybeam_beam_live;
 u8 leybeam_flush_pending;
 u8 new_monsters_busy;
 u8 new_monsters_in_room;
+u8 confusion_swirl_live;
 
 static u8 beam_dir;
 static u8 beam_len;
@@ -901,6 +902,7 @@ void new_monsters_post_spawn(void) BANKED {
     fuse_bombs_clear();
     new_monsters_busy = 0;
     new_monsters_in_room = 0;
+    confusion_swirl_live = 0;
 
     despawn_extra(ENEMY_VEIL_MAGUS, 2);
     despawn_extra(ENEMY_ZAG_DART, 2);
@@ -983,6 +985,7 @@ void new_monsters_draw(void) BANKED {
     if (!any && player_status_kind != QSTATUS_CONFUSION) {
         new_monsters_busy = 0;
         new_monsters_in_room = 0;
+        confusion_swirl_live = 0;
         move_sprite(35, 0, 0);
         move_sprite(36, 0, 0);
         move_sprite(37, 0, 0);
@@ -1019,8 +1022,10 @@ void new_monsters_draw(void) BANKED {
         move_sprite(38, sx, sy);
         set_sprite_tile(38, 237);
         set_sprite_prop(38, (u8)(((sys_time >> 3) & 1) ? S_FLIPX : 0) | 6);
+        confusion_swirl_live = 1;
     } else {
         move_sprite(38, 0, 0);
+        confusion_swirl_live = 0;
     }
     if (leybeam_beam_live) {
         /* Muzzle flare at the locked origin. The shaft is a VBlank-stamped
