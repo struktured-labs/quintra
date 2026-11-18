@@ -1206,7 +1206,16 @@ static u8 room_aim_from_step(i8 dx, i8 dy) {
 screen_id_t room_tick(u8 keys, u8 pressed) {
     if (pending_foyer_warp) {
         new_monsters_foyer_warp();
-        return SCREEN_ROOM;
+        DISPLAY_OFF;
+        procgen_generate_current_room();
+        room_draw_tilemap();
+        place_player_sprite();
+        hud_redraw_all();
+        SHOW_SPRITES;
+        SHOW_BKG;
+        DISPLAY_ON;
+        sram_save_run();
+        return SCREEN_SELF;
     }
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.

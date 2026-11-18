@@ -639,9 +639,10 @@ void new_monsters_foyer_warp(void) BANKED {
         + entry);
     run_state.entered_from = DIR_S;
     player.iframes = 60;
-    room_enter();
-    /* Do not spawn a Hand in the foyer on this entry. */
-    despawn_extra(ENEMY_VAULT_HAND, 0);
+    /* room_tick reloads the foyer in-place (same as a door seam). Do not
+       call room_enter() from inside the tick — the loop will not re-enter
+       SCREEN_ROOM, and the nested enter crashes the machine. post_spawn
+       already despawns a Hand in the foyer. */
 }
 
 void new_monsters_draw(void) BANKED {
