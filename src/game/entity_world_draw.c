@@ -35,7 +35,9 @@ static u8 enemy_is_big16(const entity_t *e) {
     if (eid == ENEMY_STONE_SENTINEL) return 1;
     return (eid == ENEMY_ORC || eid == ENEMY_BOMBER || eid == ENEMY_WARLOCK
         || eid == ENEMY_CINDER_MAW || eid == ENEMY_FACET_RAM
-        || eid == ENEMY_STAGE_REAPER);
+        || eid == ENEMY_STAGE_REAPER
+        /* Vault Hand 37 and Bane Brute 38: 16x16 art and 13x13 hitboxes. */
+        || (u8)(eid - ENEMY_VAULT_HAND) < 2);
 }
 
 static u8 world_camera_step(u8 current, i16 player_pos,
