@@ -18,6 +18,7 @@
 #include "game/class_select.h"
 #include "game/loop.h"
 #include "game/player.h"
+#include "game/room.h"
 #include "game/run_state.h"
 #include "game/title.h"
 #include "game/vignette.h"
@@ -458,6 +459,7 @@ static screen_id_t attract_demo_end(u8 raw) {
     class_select_easy_mode = demo_saved_easy;
     loop_frame_counter = (u16)(demo_saved_frame + demo_frames);
     title_stage_warp = 0xFF;
+    death_timer = 0;
     // Keep the real buttons as the previous state: a button held through the
     // hand-back is not a fresh press on the title.
     input_keys = raw;
