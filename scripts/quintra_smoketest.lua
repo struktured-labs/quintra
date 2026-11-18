@@ -29,6 +29,9 @@ local WH_ADDR = tonumber(os.getenv("QUINTRA_WORLD_HEIGHT_ADDR") or "0") or 0
 local SX_ADDR = tonumber(os.getenv("QUINTRA_SOCKET_X_ADDR") or "0") or 0
 local SY_ADDR = tonumber(os.getenv("QUINTRA_SOCKET_Y_ADDR") or "0") or 0
 local MUTE_ADDR = tonumber(os.getenv("QUINTRA_ATTRACT_MUTE_ADDR") or "0") or 0
+local ROW_LEN_ADDR = tonumber(os.getenv("QUINTRA_ROW_LEN_ADDR") or "0") or 0
+local ROW_PHRASE_ADDR = tonumber(os.getenv("QUINTRA_ROW_PHRASE_ADDR") or "0") or 0
+local ROW_ECHO_ADDR = tonumber(os.getenv("QUINTRA_ROW_ECHO_ADDR") or "0") or 0
 
 local LOG_FILE = OUT_DIR .. "/debug.log"
 local log_fh = io.open(LOG_FILE, "w")
@@ -572,44 +575,40 @@ local function record_deep_warden_boon(cell)
     return true
 end
 
--- The long-form dungeon route now owns a seeded four-panel Aether Lattice.
--- Read its four visible tile states, solve the tiny linear transform, then
--- step the real plates through the normal player update path. Do not write the
--- phase bit directly, because that would hide a broken lattice trigger.
+-- The deep switch room is a seeded call-and-response Aether Lattice.
+-- Wait out the entry echo, then step the published phrase through the
+-- normal player update path. Do not write the phase bit directly.
+local function wait_row_echo_idle()
+    for _ = 1, 240 do
+        if ROW_ECHO_ADDR == 0 or emu:read8(ROW_ECHO_ADDR) == 0 then
+            return
+        end
+        tick(1)
+    end
+end
+
 local function open_deep_phase_seal(cell)
     if RS_ADDR == 0 or PL_ADDR == 0 or PK_ADDR == 0 then return false end
     if room_counter() ~= cell or emu:read8(PK_ADDR) ~= 3 then return false end
     local before = emu:read8(RS_ADDR + 28)
     if math.floor(before / 4) % 2 == 1 then return true end
+    if ROW_LEN_ADDR == 0 or ROW_PHRASE_ADDR == 0 then return false end
+    wait_row_echo_idle()
     local xs = {4, 8, 12, 16}
-    local masks = {0x03, 0x07, 0x0E, 0x0C}
-    local state = 0
-    -- Switch i is note plate i: BGT_NOTE_LIT_0 + i (116..) when lit,
-    -- BGT_NOTE_0 + i (111..) when dark.
-    for i, x in ipairs(xs) do
-        if emu:read8(TM_ADDR + 8 * 20 + x) == 115 + i then
-            state = state | (1 << (i - 1))
-        end
-    end
-    local solution = nil
-    for presses = 0, 15 do
-        local result = state
-        for i = 1, 4 do
-            if (presses & (1 << (i - 1))) ~= 0 then result = result ~ masks[i] end
-        end
-        if result == 0x0F then solution = presses; break end
-    end
-    if solution == nil then return false end
-    for i, x in ipairs(xs) do
-        if (solution & (1 << (i - 1))) ~= 0 then
-            -- puzzle_update_player samples center/feet at (x,8).
-            emu:write8(PL_ADDR + 9, x * 8 - 8); emu:write8(PL_ADDR + 10, 0)
-            emu:write8(PL_ADDR + 11, 52); emu:write8(PL_ADDR + 12, 0)
-            tick(8)
-            emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
-            emu:write8(PL_ADDR + 11, 92); emu:write8(PL_ADDR + 12, 0)
-            tick(8)
-        end
+    local ys = {7, 9, 7, 9}
+    local n = emu:read8(ROW_LEN_ADDR)
+    if n < 3 or n > 5 then return false end
+    for i = 0, n - 1 do
+        local plate = emu:read8(ROW_PHRASE_ADDR + i) % 4
+        local x, y = xs[plate + 1], ys[plate + 1]
+        -- puzzle_update_player samples center/feet at (px+8)/8, (py+12)/8.
+        emu:write8(PL_ADDR + 9, x * 8 - 8); emu:write8(PL_ADDR + 10, 0)
+        emu:write8(PL_ADDR + 11, y * 8 - 12); emu:write8(PL_ADDR + 12, 0)
+        tick(8)
+        emu:write8(PL_ADDR + 9, 72); emu:write8(PL_ADDR + 10, 0)
+        emu:write8(PL_ADDR + 11, 92); emu:write8(PL_ADDR + 12, 0)
+        tick(12)
+        wait_row_echo_idle()
     end
     return math.floor(emu:read8(RS_ADDR + 28) / 4) % 2 == 1
 end
