@@ -25,6 +25,7 @@
 #define PEND_PORTAL_ARRIVE 16
 #define PEND_REFUSE_NOTE2 17
 #define PEND_PUZZLE_DELAY 18
+#define PEND_PUZZLE_BREATH 19
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -53,6 +54,8 @@ static u8 melody_priority_for(u8 id) {
 
 static void advance_pending_sfx(void);
 static void start_puzzle_fanfare(void);
+static void start_puzzle_fanfare_breath(void);
+static void start_puzzle_fanfare_ch1(void);
 
 static void melody_lock(u8 priority, u8 frames) {
     melody_lock_priority = priority;
@@ -62,6 +65,10 @@ static void melody_lock(u8 priority, u8 frames) {
 void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames) {
     if (ch1_frames > ch1_busy_frames) ch1_busy_frames = ch1_frames;
     if (ch4_frames > ch4_busy_frames) ch4_busy_frames = ch4_frames;
+}
+
+void sfx_lock_secret(u8 frames) {
+    melody_lock(MELODY_PRIORITY_SECRET, frames);
 }
 
 u8 sfx_music_ch1_clear(void) { return ch1_busy_frames == 0; }
@@ -237,27 +244,36 @@ void sfx_play(u8 id) {
     }
 }
 
-static void start_puzzle_fanfare(void) {
-    // A landscape secret should linger, not read as another pickup.
-    // Start with a stone-deep noise breath, then climb a deliberately
-    // uncanny diminished figure (D4-F4-Ab4) into a clear D5 resolve.
-    ch4(0x5D, 0x84);
+static void start_puzzle_fanfare_ch1(void) {
     ch1(0x00, 0xC0, 0xA4, 1602);              // D4
     pend_kind = PEND_PUZZLE_NOTE2;
     pend_timer = 12;
     sfx_claim_channels(45, 10);
+}
+
+static void start_puzzle_fanfare_breath(void) {
+    // Stone-deep noise first, so the last plate can keep CH1 a little longer.
+    ch4(0x5D, 0x84);
+    sfx_claim_channels(0, 10);
+    pend_kind = PEND_PUZZLE_BREATH;
+    pend_timer = 8;
+}
+
+static void start_puzzle_fanfare(void) {
+    // Immediate landscape-secret path: breath and D4 together.
+    start_puzzle_fanfare_breath();
+    start_puzzle_fanfare_ch1();
     melody_lock(MELODY_PRIORITY_SECRET, 45);
 }
 
 void sfx_play_puzzle_after_note(void) {
-    // The final rune already owns CH1. Let it speak for a third of a
-    // second, then start the fanfare before the slow decay smears into it.
-    // Lock the bus for the hold plus the fanfare so a coincident tool
-    // pickup cannot cancel the pending resolve.
+    // The final rune already owns CH1. Hold the pitch 40 frames, then the
+    // fanfare starts on CH4 for 8 frames before taking CH1, so the last
+    // note stays audible as the jingle begins.
     pend_kind = PEND_PUZZLE_DELAY;
-    pend_timer = 20;
-    sfx_claim_channels(20, 0);
-    melody_lock(MELODY_PRIORITY_SECRET, 65);
+    pend_timer = 40;
+    sfx_claim_channels(40, 0);
+    melody_lock(MELODY_PRIORITY_SECRET, 93);
 }
 
 void sfx_play_rune(u8 step) {
@@ -278,6 +294,7 @@ void sfx_play_rune(u8 step) {
     ch1(0x00, 0x80, 0xF3, notes[step]);
     sfx_claim_channels(40, 0);
 }
+
 
 void sfx_tick(void) {
     if (ch1_busy_frames) ch1_busy_frames--;
@@ -340,7 +357,10 @@ static void advance_pending_sfx(void) {
             NR14_REG = (u8)(0x80 | (2010 >> 8));
             break;
         case PEND_PUZZLE_DELAY:
-            start_puzzle_fanfare();
+            start_puzzle_fanfare_breath();
+            return;
+        case PEND_PUZZLE_BREATH:
+            start_puzzle_fanfare_ch1();
             return;
         case PEND_PUZZLE_NOTE2:
             NR12_REG = 0xA4;

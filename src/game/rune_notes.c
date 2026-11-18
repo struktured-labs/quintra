@@ -7,6 +7,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/puzzle.h"
+#include "game/run_state.h"
 #include "game/room.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -155,6 +156,12 @@ void rune_paint_all(void) BANKED {
 
 void voice_plate(u8 plate) BANKED {
     sfx_play_rune(room_rune_pitch[plate]);
+    puzzle_apply_note_palettes(0);
+    rune_start_flash(plate);
+}
+
+void voice_plate_final(u8 plate) BANKED {
+    sfx_play_rune_final(room_rune_pitch[plate]);
     puzzle_apply_note_palettes(0);
     rune_start_flash(plate);
 }
