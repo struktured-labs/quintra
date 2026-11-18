@@ -673,6 +673,27 @@ mod tests {
     }
 
     #[test]
+    fn pressed_switch_tile_matches_banked_source() {
+        let bytes = tile_2bpp_bytes(&parse_grid(&grids::BGT_SWITCH_PRESSED));
+        assert_eq!(bytes.len(), 16);
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
+        let path = format!("{root}/src/render/tiles_switch.c");
+        let src = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {path}: {e}"));
+        let region = src
+            .split("bgt_switch_pressed[16]")
+            .nth(1)
+            .and_then(|rest| rest.split('}').next())
+            .expect("tiles_switch.c lost bgt_switch_pressed");
+        let got: Vec<u8> = region
+            .split("0x")
+            .skip(1)
+            .filter_map(|tok| u8::from_str_radix(tok.get(..2)?, 16).ok())
+            .collect();
+        assert_eq!(got, bytes, "tiles_switch.c drifted from BGT_SWITCH_PRESSED");
+    }
+
+    #[test]
     fn reaper_poses_have_distinct_silhouettes_and_generated_loader() {
         let poses: Vec<_> = (0..3).map(bosses::reaper_pose).collect();
         for i in 0..3 {

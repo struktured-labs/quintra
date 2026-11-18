@@ -1235,6 +1235,8 @@ pub const BGT_SWITCH: [&str; 8] = [
     "21111110",
 ];
 
+// Not in DUNGEON_TILES: the 16-byte array lives in src/render/tiles_switch.c
+// (bank 22) so bank 2 stays at the 256-byte floor.
 pub const BGT_SWITCH_PRESSED: [&str; 8] = [
     "23222232",
     "21000012",
@@ -2139,7 +2141,7 @@ pub const FX_8: [(&str, &[&str]); 21] = [
     ("apothecary", &APOTHECARY),
 ];
 
-pub const DUNGEON_TILES: [(&str, &[&str]); 16] = [
+pub const DUNGEON_TILES: [(&str, &[&str]); 15] = [
     ("floor_plain", &BGT_FLOOR_PLAIN),
     ("floor_crack", &BGT_FLOOR_CRACK),
     ("floor_pebble", &BGT_FLOOR_PEBBLE),
@@ -2154,7 +2156,6 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 16] = [
     ("spikes", &BGT_SPIKES),
     ("pot", &BGT_POT),
     ("switch", &BGT_SWITCH),
-    ("switch_pressed", &BGT_SWITCH_PRESSED),
     ("portal", &BGT_PORTAL),
 ];
 

@@ -2,7 +2,6 @@
 
 #include <gb/gb.h>
 #include "render/tiles.h"
-#include "render/sprites_gen.h"
 
 const u8 bgt_switch_pressed[16] = {
     0x42, 0xFF, 0x42, 0x81, 0x3C, 0x81, 0x24, 0x99,
