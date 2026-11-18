@@ -54,7 +54,11 @@ TITLE idle 12 s -> next demo -> TITLE ...
 - Moved to bank 26 to keep the 256 B floor in banks 10 and 12: `sram_write.c` and `title_cheat.c`.
 - Palette commits wait for a fresh VBlank every time. Starting inside VBlank near LY 153 would spill CRAM writes into line 0. `loop_run` then skips its own wait, because the VBlank epoch moved.
 - ROM size is unchanged at 512 KiB, since banks 24-31 were empty.
-- Test harnesses mute the intro by writing `_attract_mute = 1` every frame (`scripts/quintra_sitecustomize`, and the mGBA smoke script through `QUINTRA_ATTRACT_MUTE_ADDR`). Fixed-frame boot scripts keep their old timing. `attract_mute` also disables the title idle timer.
+- `main()` calls `intro_boot_screen()`. It returns the title directly when the intro is muted or CUTSCENES is OFF, and the intro otherwise.
+- Test harnesses mute the intro by setting `_attract_mute = 1`:
+  - PyBoy (`scripts/quintra_sitecustomize`) sets it from a hook at `main()`'s entry, after crt0 clears WRAM, and then every frame. A muted boot is frame-identical to a build without the intro, with the same title frame, the same `loop_frame_counter` and so the same fixed-frame New Game seeds.
+  - The mGBA smoke script has no hook. It writes the byte every boot frame, and the intro's two settle frames catch the write. That path hands the two frames back to `loop_frame_counter`.
+  - `attract_mute` also disables the title idle timer.
 
 ## Tests
 `scripts/test_attract_mode.py` (CI):
