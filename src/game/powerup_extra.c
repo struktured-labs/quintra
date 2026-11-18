@@ -254,15 +254,15 @@ static void handle_test_cmd(void) {
     u8 cmd = powerup_test_cmd;
     powerup_test_cmd = 0;
     if (cmd == 1)
-        powerup_spawn_roulette(FIX8((i16)player.x + 8),
-            FIX8((i16)player.y + 8), 0);
+        powerup_spawn_roulette(FIX8((i16)player.x + 40),
+            FIX8((i16)player.y), 0);
     else if (cmd == 2)
-        powerup_spawn_roulette(FIX8((i16)player.x + 8),
-            FIX8((i16)player.y + 8),
+        powerup_spawn_roulette(FIX8((i16)player.x + 40),
+            FIX8((i16)player.y),
             (u8)(ROULETTE_SHRINE | ROULETTE_UNCOMMON));
     else if (cmd == 3)
         powerup_spawn(POWERUP_WINGMATES,
-            FIX8((i16)player.x + 8), FIX8((i16)player.y + 8));
+            FIX8((i16)player.x + 24), FIX8((i16)player.y));
     else if (cmd == 4)
         powerup_place_room_shrine();
 }

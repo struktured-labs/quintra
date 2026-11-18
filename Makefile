@@ -325,10 +325,10 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_sauran_regen.py
 	uv run --quiet --with pyboy python scripts/test_surge.py
 	uv run --quiet --with pyboy python scripts/test_powerups.py
-	uv run --quiet --with pyboy python scripts/test_powerup_phase2.py
-	uv run --quiet --with pyboy python scripts/test_powerup_roulette.py
-	uv run --quiet --with pyboy python scripts/test_powerup_shrine.py
-	uv run --quiet --with pyboy python scripts/test_confusion.py
+	$(PYBOY_RUN) scripts/test_powerup_phase2.py
+	$(PYBOY_RUN) scripts/test_powerup_roulette.py
+	$(PYBOY_RUN) scripts/test_powerup_shrine.py
+	$(PYBOY_RUN) scripts/test_confusion.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc
 	uv run --quiet --with pyboy python scripts/test_miniboss_spawn_reach.py
 	$(PYBOY_RUN) scripts/test_trap_boss_unstick.py

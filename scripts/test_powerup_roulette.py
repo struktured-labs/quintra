@@ -76,7 +76,8 @@ def main():
             pb.memory[entities + i] = 0
         pb.tick()
 
-    # Stand still, spawn a roulette beside the hero via the test hook.
+    # Stand still, spawn a roulette well beside the hero via the test hook
+    # (offset is 40px so overlap cannot lock the face mid-cycle).
     pb.memory[addr("_powerup_world_live")] = 1
     pb.memory[test_cmd] = 1
     gif.grab(pb, n=4)
@@ -89,13 +90,12 @@ def main():
     assert slot, "test hook did not spawn a roulette capsule"
     face0 = pb.memory[slot + 18]
     tile0 = pb.memory[slot + 12]
-    # 8 frames/face on Normal: after 8 ticks the face must have advanced.
-    gif.grab(pb, n=8)
+    # 8 frames/face Normal, 12 Easy: wait a full Easy period plus one.
+    gif.grab(pb, n=13)
     face1 = pb.memory[slot + 18]
     tile1 = pb.memory[slot + 12]
     assert face1 != face0 or tile1 != tile0, (
-        f"roulette did not cycle in 8 frames (face {face0}->{face1})")
-    # Keep cycling a bit so the GIF reads as a fast rotate.
+        f"roulette did not cycle in 13 frames (face {face0}->{face1})")
     gif.grab(pb, every=1, n=24)
     latched = pb.memory[slot + 19]  # ai_data[2], the visible face
     # Move the capsule onto the player so overlap locks that face.

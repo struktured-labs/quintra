@@ -11,7 +11,8 @@ NOI = ROM.with_suffix(".noi").read_text()
 
 ENT_PICKUP = 3
 PICKUP_POWERUP, PICKUP_ROULETTE = 27, 28
-ROULETTE_SHRINE = 0x01
+# run_state.vignette_seen is at +60 (u16). powerup_shrines is the next byte.
+SHRINE_OFF = 62
 
 
 def addr(name):
@@ -39,26 +40,21 @@ def boot_class(class_id, screen, player):
     return pb
 
 
+def poke_cmd(pb, cmd):
+    pb.memory[addr("_powerup_world_live")] = 1
+    pb.memory[addr("_powerup_test_cmd")] = cmd
+
+
 def main():
     player, entities, screen = map(addr, ("_player", "_entities", "_loop_current_screen"))
-    pu_id, flags, test_cmd = map(
-        addr, ("_powerup_id", "_run_state", "_powerup_test_cmd"))
-    # run_state.powerup_shrines is the last byte of the struct. Look up
-    # the field via the known symbol if exported, else scan after boot.
-    try:
-        shrines = addr("_run_state")  # placeholder, replaced below
-    except RuntimeError:
-        shrines = None
-    # Prefer an explicit symbol if the compiler emitted one; otherwise
-    # poke via the test hook and observe the claim bit after collect.
     pb = boot_class(1, screen, player)
     for _ in range(2):
         for i in range(32 * 28):
             pb.memory[entities + i] = 0
         pb.tick()
 
-    # Spawn a dungeon-shrine roulette on the hero (test cmd 2).
-    pb.memory[addr("_powerup_test_cmd"), addr("_powerup_world_live")] = 2
+    # Spawn a dungeon-shrine roulette beside the hero (test cmd 2).
+    poke_cmd(pb, 2)
     for _ in range(6):
         pb.tick()
     slot = None
@@ -82,27 +78,16 @@ def main():
     assert pb.memory[addr("_powerup_id")] in range(4, 9), (
         f"shrine roulette awarded {pb.memory[addr('_powerup_id')]}, want uncommon+")
 
-    # The claim bit must be set so a second shrine cannot spawn this stage.
-    # Locate powerup_shrines by walking the run_state symbol size: we expose
-    # it as the byte immediately after vignette_seen (u16), i.e. last byte.
     rs = addr("_run_state")
-    # Search a short window at the tail of run_state for a now-set bit 0.
-    found = 0
-    # typical sizeof is ~60-80; check last 16 bytes
-    for off in range(50, 90):
-        if pb.memory[rs + off] & 0x01:
-            found = 1
-            bit_at = off
-            break
-    assert found, "dungeon shrine claim bit was not set on collect"
+    assert pb.memory[rs + SHRINE_OFF] & 0x01, (
+        f"dungeon shrine claim bit was not set on collect "
+        f"(byte {pb.memory[rs + SHRINE_OFF]} at +{SHRINE_OFF})")
 
-    # A second cmd-2 spawn is still allowed by the hook; the place_room_shrine
-    # path (cmd 4) must refuse once claimed.
+    # cmd 4 (place_room_shrine) must refuse once the dungeon bit is claimed.
     for i in range(32 * 28):
-        # do not clear the live power-up, only lingering pickups
         if pb.memory[entities + i] == ENT_PICKUP:
             pb.memory[entities + i] = 0
-    pb.memory[addr("_powerup_test_cmd"), addr("_powerup_world_live")] = 4
+    poke_cmd(pb, 4)
     for _ in range(4):
         pb.tick()
     leftover = [i for i in range(32)

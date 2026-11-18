@@ -75,19 +75,27 @@ class Frames:
         self.frames = []
 
 
-def player_shots(pb, entities):
+def shot_info(pb, entities):
     out = []
     for i in range(32):
         e = entities + i * 28
-        if pb.memory[e] == ENT_PROJECTILE and (pb.memory[e + 1] & EF_ACTIVE):
-            if pb.memory[e + 1] & EF_PLAYER_PROJ:
-                out.append(i)
+        if pb.memory[e] != ENT_PROJECTILE or not (pb.memory[e + 1] & EF_ACTIVE):
+            continue
+        if not (pb.memory[e + 1] & EF_PLAYER_PROJ):
+            continue
+        out.append((i, pb.memory[e + 20], pb.memory[e + 25], pb.memory[e + 16]))
     return out
 
 
-def fire_a(pb, frames, n=12):
-    pb.button("a")
-    frames.grab(pb, n=n)
+def fire_once(pb, frames, hold=5):
+    """Primary fire needs a facing (spawn rejects dx=dy=0). Snapshot early:
+    Sauran Formation copies only live ~14 frames after the -8 ttl trim.
+    """
+    pb.button("right", True)
+    pb.button("a", True)
+    frames.grab(pb, n=hold)
+    pb.button("a", False)
+    pb.button("right", False)
 
 
 def main():
@@ -104,54 +112,36 @@ def main():
     pb.memory[pu_ticks] = 90
     for _ in range(4):
         pb.tick()
-    fire_a(pb, gif, n=16)
-    shots = player_shots(pb, entities)
-    copies = 0
-    for i in shots:
-        flags = pb.memory[entities + i * 28 + 17 + 3]  # ai_data[3] at +20?
-        # entity: type, flags, x_frac, x(2), x_pad, y_frac, y(2), y_pad, vx, vy,
-        # sprite, pal, hp, state, state_timer, ai_data[8], hitbox, damage, oam
-        # offsets: 0 type, 1 flags, 2 x_frac, 3-4 x, 5 x_pad, 6 y_frac, 7-8 y,
-        # 9 y_pad, 10 vx, 11 vy, 12 tile, 13 pal, 14 hp, 15 state, 16 timer,
-        # 17..24 ai_data, 25 hitbox, 26 damage, 27 oam
-    # recompute properly
-    shots_info = []
-    for i in range(32):
-        e = entities + i * 28
-        if pb.memory[e] != ENT_PROJECTILE or not (pb.memory[e + 1] & EF_ACTIVE):
-            continue
-        if not (pb.memory[e + 1] & EF_PLAYER_PROJ):
-            continue
-        ai3 = pb.memory[e + 17 + 3]
-        shots_info.append((i, ai3))
-    copies = sum(1 for _, ai3 in shots_info if ai3 & PROJ_FLAG_PU_COPY)
+    fire_once(pb, gif, hold=5)
+    shots_info = shot_info(pb, entities)
+    copies = sum(1 for _, ai3, *_ in shots_info if ai3 & PROJ_FLAG_PU_COPY)
     assert len(shots_info) >= 3, f"Formation did not spawn copies: {shots_info}"
     assert copies >= 2, f"Formation copies missing PU_COPY: {shots_info}"
     gif.grab(pb, every=2, n=40)
     gif.save("formation.gif")
 
     # ---- HALO: every 3rd shot grows an 8-way ring ----
+    # fire_count is static and already includes Formation, so look after
+    # every shot instead of only at the end (ring ttl is 20 frames).
     clear_entities(pb, entities)
     pb.memory[pu_id] = HALO
     pb.memory[pu_ticks] = 75
     for _ in range(2):
         pb.tick()
+    best = []
     for n in range(3):
-        fire_a(pb, gif, n=20)
-        for _ in range(8):
-            pb.button("a", False)
+        fire_once(pb, gif, hold=5)
+        shots_info = shot_info(pb, entities)
+        if len(shots_info) > len(best):
+            best = shots_info
+        for _ in range(12):
             pb.tick()
-    shots_info = []
-    for i in range(32):
-        e = entities + i * 28
-        if pb.memory[e] != ENT_PROJECTILE or not (pb.memory[e + 1] & EF_ACTIVE):
-            continue
-        if not (pb.memory[e + 1] & EF_PLAYER_PROJ):
-            continue
-        shots_info.append((i, pb.memory[e + 20]))
-    copies = sum(1 for _, ai3 in shots_info if ai3 & PROJ_FLAG_PU_COPY)
-    assert copies >= 4, f"Halo ring too small: {len(shots_info)} shots, {copies} copies"
-    gif.grab(pb, every=2, n=30)
+        clear_entities(pb, entities)
+        pb.memory[pu_id] = HALO
+        pb.memory[pu_ticks] = 75
+    copies = sum(1 for _, ai3, *_ in best if ai3 & PROJ_FLAG_PU_COPY)
+    assert copies >= 4, f"Halo ring too small: {best} (best copies {copies})"
+    gif.grab(pb, every=2, n=20)
     gif.save("halo.gif")
 
     # ---- LONG REACH: hitbox nibbles doubled, travel +50% ----
@@ -160,30 +150,30 @@ def main():
     pb.memory[pu_ticks] = 0
     for _ in range(4):
         pb.tick()
-    fire_a(pb, gif, n=4)
+    fire_once(pb, gif, hold=4)
     base = None
-    for i in range(32):
+    shots_info = shot_info(pb, entities)
+    if shots_info:
+        i = shots_info[0][0]
         e = entities + i * 28
-        if (pb.memory[e] == ENT_PROJECTILE and (pb.memory[e + 1] & EF_PLAYER_PROJ)
-                and (pb.memory[e + 1] & EF_ACTIVE)):
-            base = (pb.memory[e + 25], pb.memory[e + 16])
-            break
+        base = (pb.memory[e + 25], pb.memory[e + 16])
     assert base, "no baseline spear to compare Long Reach against"
+    # Wait out the primary fire cooldown so the Long Reach shot can spawn.
+    for _ in range(24):
+        pb.tick()
     clear_entities(pb, entities)
     pb.memory[pu_id] = LONGREACH
     pb.memory[pu_ticks] = 75
     for _ in range(4):
         pb.tick()
-    fire_a(pb, gif, n=4)
+    fire_once(pb, gif, hold=4)
     got = None
-    for i in range(32):
+    shots_info = shot_info(pb, entities)
+    if shots_info:
+        i = shots_info[0][0]
         e = entities + i * 28
-        if (pb.memory[e] == ENT_PROJECTILE and (pb.memory[e + 1] & EF_PLAYER_PROJ)
-                and (pb.memory[e + 1] & EF_ACTIVE)):
-            got = (pb.memory[e + 25], pb.memory[e + 16])
-            break
+        got = (pb.memory[e + 25], pb.memory[e + 16])
     assert got, "Long Reach fired no spear"
-    # hitbox nibbles should have grown (unless already 0xF)
     bw, bh = (base[0] >> 4) & 0xF, base[0] & 0xF
     gw, gh = (got[0] >> 4) & 0xF, got[0] & 0xF
     assert gw >= min(0xF, bw * 2) or gh >= min(0xF, bh * 2) or got[1] > base[1], (
@@ -197,14 +187,8 @@ def main():
     pb.memory[pu_ticks] = 90
     for _ in range(4):
         pb.tick()
-    fire_a(pb, gif, n=8)
-    marked = 0
-    for i in range(32):
-        e = entities + i * 28
-        if (pb.memory[e] == ENT_PROJECTILE and (pb.memory[e + 1] & EF_ACTIVE)
-                and (pb.memory[e + 1] & EF_PLAYER_PROJ)
-                and (pb.memory[e + 20] & PROJ_FLAG_SPLASH)):
-            marked += 1
+    fire_once(pb, gif, hold=5)
+    marked = sum(1 for _, ai3, *_ in shot_info(pb, entities) if ai3 & PROJ_FLAG_SPLASH)
     assert marked >= 1, "Blast Assist did not mark a shot with SPLASH"
     gif.grab(pb, every=2, n=40)
     gif.save("blast.gif")
@@ -234,7 +218,7 @@ def main():
     buddies = [i for i in range(32) if pb.memory[entities + i * 28] == ENT_FX
                and (pb.memory[entities + i * 28 + 1] & EF_ACTIVE)]
     assert len(buddies) >= 2, f"Wingmates did not spawn two buddies: {buddies}"
-    fire_a(pb, gif, n=16)
+    fire_once(pb, gif, hold=5)
     gif.grab(pb, every=2, n=40)
     gif.save("wingmates.gif")
 
