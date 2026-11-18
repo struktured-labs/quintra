@@ -27,6 +27,7 @@
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "render/vignette_data.h"
+#include "render/class_palettes.h"
 
 BANKREF(vignette_enter)
 
@@ -43,6 +44,12 @@ static u8 vig_t;         // frame since fade-in start
 static u8 vig_exit_k;    // exit fade progress (0 = not exiting)
 static u8 vig_cyc_phase;
 static u8 vig_hero_k;    // hero fade step, 4 = hidden
+// 1 when the new-run foyer vignette plays before the first room_enter.
+// There is no room yet, so the exit must take the fresh room_enter path
+// (procgen, spawn, stage music) rather than the resume path, and the
+// champion art and palette must be loaded here (VRAM still holds the
+// class select screen).
+static u8 vig_fresh;
 
 #define VIG_LOADED 0xFF
 #define VIG_ROW_STEPS 3
@@ -321,8 +328,10 @@ static void place_hero(void) {
     u8 y1 = vig_meta[VM_HERO_Y1];
     u8 x = vig_meta[VM_HERO_X];
     u8 y;
-    u8 base = (u8)(SPR_CLASS_BASE + (u8)(player.class_id * SPR_CLASS_STRIDE));
-    u8 flip = (vig_t >> 3) & 1;
+    // Walk cycle: alternate the idle pose and the authored stride beat
+    // every 8 frames, as the room does. An H-flip mirrored side-facing
+    // heads (Corvin's beak, Sauran's snout) back and forth every 8 frames.
+    u8 base = (u8)(((vig_t >> 3) & 1) ? SPR_CLASS_WALK_A_BASE : SPR_CLASS_BASE);
     if (vig_hero_k >= 4) { hide_hero(); return; }
     if (vig_t <= t0) y = y0;
     else if (vig_t >= t1) y = y1;
@@ -332,16 +341,13 @@ static void place_hero(void) {
         u32 e = ((u32)p * p * (768u - 2u * p)) >> 16;
         y = (u8)(y0 - (u8)(((u16)(y0 - y1) * (u16)e) >> 8));
     }
-    // Walk cycle: H-flip the 16x16 champion every 8 frames.
-    set_sprite_tile(0, (u8)(base + (flip ? 1 : 0)));
-    set_sprite_tile(1, (u8)(base + (flip ? 0 : 1)));
-    set_sprite_tile(2, (u8)(base + (flip ? 3 : 2)));
-    set_sprite_tile(3, (u8)(base + (flip ? 2 : 3)));
-    {
-        u8 prop = (u8)(0x01 | (flip ? S_FLIPX : 0));
-        set_sprite_prop(0, prop); set_sprite_prop(1, prop);
-        set_sprite_prop(2, prop); set_sprite_prop(3, prop);
-    }
+    base = (u8)(base + (u8)(player.class_id * SPR_CLASS_STRIDE));
+    set_sprite_tile(0, (u8)(base + 0));
+    set_sprite_tile(1, (u8)(base + 1));
+    set_sprite_tile(2, (u8)(base + 2));
+    set_sprite_tile(3, (u8)(base + 3));
+    set_sprite_prop(0, 0x01); set_sprite_prop(1, 0x01);
+    set_sprite_prop(2, 0x01); set_sprite_prop(3, 0x01);
     move_sprite(0, (u8)(x + 8), (u8)(y + 16));
     move_sprite(1, (u8)(x + 16), (u8)(y + 16));
     move_sprite(2, (u8)(x + 8), (u8)(y + 24));
@@ -374,6 +380,9 @@ void vignette_enter(void) {
     VBK_REG = 0;
     for (i = 0; i < 40; ++i) move_sprite(i, 0, 0);
     wait_vbl_done();
+    // No room has loaded yet on the new-run foyer: palette 1 is still class
+    // select's. Load the champion's colours in this VBlank, before capture.
+    if (vig_fresh) class_palette_load_obj(1, player.class_id);
     // Capture the champion's OBJ palette before blacking everything out.
     for (i = 0; i < 4; ++i) {
         OCPS_REG = (u8)(0x08 + (i << 1));
@@ -383,6 +392,10 @@ void vignette_enter(void) {
     }
     black_palettes();
     write_bg_palettes();
+    // Foyer: the champion art is class select's until now. Copy it only once
+    // every palette is black (the copy also refreshes 0x8A00+ stride/hurt art
+    // that aliases BG tiles); the vignette's own BG art streams in after.
+    if (vig_fresh) tiles_load_all_class_sprites();
     SHOW_SPRITES;
     vig_load = 0;
     vig_t = 0;
@@ -408,7 +421,11 @@ static screen_id_t vignette_finish(void) {
         set_bkg_data(vig_blank_slots[i], 1, vig_zero);
     // Presentation time is not run time (same rule as the reward tableau).
     g_vbl_ticks = 0;
-    room_request_resume();
+    // New-run foyer: no room exists yet, so build it fresh (procgen, spawn
+    // position, stage music). Resuming here left the player at (0,0) in an
+    // empty, silent room on every new game since #127.
+    if (vig_fresh) vig_fresh = 0;
+    else room_request_resume();
     return SCREEN_ROOM;
 }
 
@@ -480,6 +497,7 @@ static u8 vig_arm(u8 id) {
     if (vignette_cutscenes_off()) return 0;
     run_state.vignette_seen |= bit;
     vig_id = id;
+    vig_fresh = 0;
     // The seam already saved the suspend; save again so a save-and-quit or
     // power cycle mid-run cannot replay this vignette.
     sram_save_run();
@@ -529,6 +547,7 @@ screen_id_t vignette_on_run_start(u8 stage) BANKED {
         screen_id_t next = vig_try_stage(stage, 0);
         if (next == SCREEN_VIGNETTE) {
             stage_fade = 0;
+            vig_fresh = 1;
             return SCREEN_VIGNETTE;
         }
         return SCREEN_ROOM;
