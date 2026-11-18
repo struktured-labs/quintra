@@ -648,20 +648,34 @@ static u8 shrine_reserved_cell(u8 cell) {
     return 0;
 }
 
+// 0xFE = not yet computed this dungeon. 0xFF = no eligible dead-end.
+static u8 shrine_cell_cache = 0xFE;
+static u8 shrine_cell_beaten;
+static u32 shrine_cell_seed;
+
 static u8 dungeon_shrine_cell(void) {
-    u8 size = run_state_dungeon_size();
-    u8 start, tries, dir;
-    if (!size || size == 0xFF) return 0xFF;
-    start = (u8)((u8)(run_state.run_seed >> 8) + run_state.bosses_beaten * 17);
-    for (tries = 0; tries < size; ++tries) {
-        u8 c = (u8)((start + tries) % size);
-        u8 degree = 0;
-        if (shrine_reserved_cell(c)) continue;
-        for (dir = 0; dir < 4; ++dir)
-            if (run_state_dungeon_cell_neighbor(c, dir) != 0xFF) degree++;
-        if (degree == 1) return c;
+    u8 size, start, tries, dir, found;
+    if (shrine_cell_cache != 0xFE
+        && shrine_cell_beaten == run_state.bosses_beaten
+        && shrine_cell_seed == run_state.run_seed)
+        return shrine_cell_cache;
+    found = 0xFF;
+    size = run_state_dungeon_size();
+    if (size && size != 0xFF) {
+        start = (u8)((u8)(run_state.run_seed >> 8) + run_state.bosses_beaten * 17);
+        for (tries = 0; tries < size; ++tries) {
+            u8 c = (u8)((start + tries) % size);
+            u8 degree = 0;
+            if (shrine_reserved_cell(c)) continue;
+            for (dir = 0; dir < 4; ++dir)
+                if (run_state_dungeon_cell_neighbor(c, dir) != 0xFF) degree++;
+            if (degree == 1) { found = c; break; }
+        }
     }
-    return 0xFF;
+    shrine_cell_cache = found;
+    shrine_cell_beaten = run_state.bosses_beaten;
+    shrine_cell_seed = run_state.run_seed;
+    return found;
 }
 
 static u8 rift_shrine_screen(void) {
@@ -694,6 +708,10 @@ void powerup_place_room_shrine(void) BANKED {
         return;
     }
     if (run_state.powerup_shrines & PU_SHRINE_DUNGEON) return;
+    // The entry cell is reserved, so it can never host the shrine. Skip the
+    // neighbor walk on foyer/stage-start entry: that search is too heavy to
+    // run inside room_enter (it delayed the stage-fade pop by ~10 frames).
+    if (run_state_dungeon_local() == run_state_dungeon_entry_cell()) return;
     if (run_state_dungeon_local() != dungeon_shrine_cell()) return;
     powerup_spawn_roulette(FIX8(80), FIX8(72),
         (u8)(ROULETTE_SHRINE | ROULETTE_UNCOMMON));
