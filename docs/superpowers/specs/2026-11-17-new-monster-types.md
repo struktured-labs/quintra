@@ -179,9 +179,10 @@ A stationary-enough caster with a **wide, continuous laser**.
 
 - Slow cardinal drift while on cooldown (8-tick step, like a classic shooter).
 - **Charge tell** 40 frames Normal / 52 Easy: body glows (palette strobe) and
-  a *thin* 1-px-class aim line locks toward the hero's position at the start
-  of the charge (cardinal or diagonal, 8-way). The line does **not** track
-  after lock. `SFX_TICK` at start and at 8 frames before fire.
+  a *thin* aim line locks to the **nearest cardinal** toward the hero at the
+  start of the charge (4-way only; walk onto an axis first if needed). The
+  line does **not** track after lock. Diagonals are rejected: an 8x8 BG
+  stamp cannot make a clean 16-px diagonal ray. `SFX_TICK` at start and at 8 frames before fire.
 - **Beam** 36 frames: a 16-px-wide sustained band along the locked aim,
   running to the first solid wall (or the room edge). The hero must sidestep.
   Damage is 1, applied at most once per 20-frame iframe window so a worst-case
@@ -191,12 +192,14 @@ A stationary-enough caster with a **wide, continuous laser**.
 
 **GBC budget for the beam.** Do not spend a row of OBJ on the shaft.
 
-- Prefer **BG tiles**: stamp a reserved beam metatile strip onto the visible
-  tiles along the locked ray, restore the original tiles when the beam ends
-  or the room exits. Palette: a bright high-contrast colour already in the
-  stage BG set (Temple gold, Ember red, Sanctum violet).
-- If a stage's BG is too tight, fall back to the **window layer** for a
-  horizontal beam only, or to two stretched end-cap sprites plus BG fill.
+- **BG tiles only, cardinal rays.** Stamp a reserved 2–4 tile beam strip
+  (horizontal or vertical, 16 px / 2 tiles wide, grid-aligned) along the
+  locked ray through the existing VBlank tile path, at most one row or
+  column per frame, finishing during the last two charge frames. Restore
+  from the RAM room-map when the beam ends, the caster dies or is Stopped,
+  or the room exits. Palette: a bright colour already in the stage BG set
+  (Temple gold, Ember red, Sanctum violet). Do **not** use the Window layer
+  (it covers everything right/below WX,WY and fights the HUD).
 - The Leybeam body itself is an 8x8 two-frame walker (glow frame B).
 
 - HP 14, damage 1 (beam and contact), speed 32, score 48, weakness shadow
@@ -262,15 +265,22 @@ recoloured with palette 6). No new projectile tile is required.
   - `ZigZag { tell_ticks, burst_ticks, cooldown_ticks }`
   - `BeamCaster { tell_ticks, beam_ticks, cooldown_ticks }`
 
-- Dispatch from `enemy_update` into banked ticks. Grouping logic lives in
+- Dispatch from `enemy_update` into banked ticks. **Narrow the existing
+  `if (id >= ENEMY_FACET_RAM)` patrol intercept to
+  `id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER`**, or the new IDs 35–40
+  will never reach their `ai_kind` cases. Put the new ticks in a fresh bank
+  (`enemy_new_ai.c`) from day one. Grouping logic lives in
   the room population path (procgen / spawn), not in the per-frame AI.
 - Bane Brute knockback: a special case in the existing contact knockback
   loop (the 6 px shove in `combat.c`) when `ai_data[0] == ENEMY_BANE_BRUTE`.
-- Vault Hand warp: set `run_state.room_counter` to
-  `run_state_stage_start(bosses_beaten) + run_state_dungeon_entry_cell()`,
-  `entered_from` to a safe foyer door, then take the ordinary `room_enter`
-  rebuild. Do not call `run_state_place_at_entry()` (that function clears
-  dungeon seen/visited bits and would wipe map progress).
+- Vault Hand warp: do **not** call `room_enter` from inside `enemy_update`.
+  Set a deferred flag (`pending_foyer_warp`) handled at the top of the main
+  room loop after the entity tick. That handler sets `run_state.room_counter`
+  to `run_state_stage_start(bosses_beaten) + run_state_dungeon_entry_cell()`,
+  picks an `entered_from` that lands on a walkable foyer tile, clears live
+  projectiles and FX, then takes the ordinary `room_enter` rebuild. Do not
+  call `run_state_place_at_entry()` (that function clears dungeon seen/
+  visited bits and would wipe map progress).
 - Leybeam BG stamp must restore on beam end, room exit, and death.
 
 ## 6. Tests (headless PyBoy, no GUI)
@@ -295,7 +305,7 @@ lists beside the other enemy tests.
 - `test_leybeam.py`: charge line locks and does not track; beam is 16 px wide
   and stops at a wall; standing in it damages; a sidestep one tile off the
   band takes no damage; cooldown elapses before the next tell; tiles restore.
-- `test_confusion.py` (see §7).
+- `test_confusion_fx.py` (see §7).
 - `test_performance.py` must still pass on a crowded screen that includes at
   least one new specialist (Magus + Walker + a Leybeam is the stress case;
   skip Vault Hand carry and beam-BG restore mid-bench).
@@ -327,7 +337,7 @@ numbered PR stream).
   (power-ups Phase 2). It is **not** on `main`.
 - No persistent swirl-star sprite over the confused hero on `main`.
 - `scripts/test_status_effects.py` has no Confusion coverage; there is no
-  `test_confusion.py` on `main` (it exists only on the Phase 2 branch).
+  `test_confusion_fx.py` on `main` (it exists only on the Phase 2 branch).
 - Pack Antidote already calls `status_player_cure()`, which clears
   Confusion. Auto-rescue (`antidote_try_rescue`) is still DoT-only
   (Poison / Burn / Bleed).
@@ -342,7 +352,7 @@ cover:
 - Pack Antidote remains the cure; document and test that using the Antidote
   tool clears Confusion and removes the swirl. Auto-rescue stays DoT-only
   (a control effect is not lethal by itself).
-- `scripts/test_confusion.py` on *current* main behaviour: apply Confusion,
+- `scripts/test_confusion_fx.py` on *current* main behaviour: apply Confusion,
   hold RIGHT, assert the hero does not travel the un-remapped direction;
   assert the swirl is present then gone after cure / expiry; assert Pack
   Antidote clears the kind and the FX. Do not assert reshuffle-or-not, so
@@ -392,3 +402,34 @@ are worse fits.
 - No hero kit edits, no Max-Will number changes.
 - No Confusion duration / immunity retune (that remains PR #136).
 - No new status kinds.
+
+## 11. Review fixes (Carbon, 2026-11-17)
+
+Carbon verdict: ship-with-changes. Cost $0.0578; running logged total $6.5113.
+Agreed and applied to the body above, plus:
+
+- Vault Hand also gates on `!run_state_is_miniboss()` and
+  `!run_state_was_cleared_boss()`. Mash reads **raw** joypad edges, before
+  `status_player_filter_input`. `QSTATUS_STOP` auto-breaks or forbids a grab
+  (Stop zeroes D-pad and A/B). Pause `confusion_streak` while grabbed so a
+  mid-grab remap does not land as the hero escapes. Killing the Hand mid-grab
+  releases the hero and clears hidden/lock flags. Test both.
+- Bane Brute grouping **replaces** existing non-status rolled slots rather
+  than appending past the room/OAM budget. Ally tiles must be walkable. If
+  two status allies cannot be placed, despawn the Brute. Diagonal knockback
+  caps at 13 steps (~18 px of diagonal travel) and tries axis slides when a
+  corner blocks.
+- `ai_data[0]` remains the content id, `ai_data[7]` the materialize shimmer.
+  Phase and timers live in `ai_data[1..6]`. `BeamCaster` parameters fit in
+  `ai_p0..p2` as (tell, beam, cooldown).
+- Confusion swirl is drawn in the hero/HUD overlay OAM path, not via
+  `fx_spawn`. Hide it during a Vault Hand carry and during death. Keep it
+  across room transitions via `status_player_refresh_visual`. Pack Antidote
+  must be usable while confused (pack menu bypasses the D-pad filter, or a
+  test proves the tool can still be activated). Auto-rescue stays DoT-only.
+  Name the test `test_confusion_fx.py` so it does not collide with PR #136's
+  `test_confusion.py`.
+- Leybeam stays out of rooms that also roll Slow sources. Restore stamped BG
+  immediately if the caster dies or is Stopped mid-beam. Test that restore.
+- Max-Will proposal: Carbon agrees Picsean is the right starter for a future
+  wide tide-beam. No hero code in this PR.
