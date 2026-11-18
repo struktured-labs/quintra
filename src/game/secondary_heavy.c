@@ -1,4 +1,4 @@
-#pragma bank 16
+#pragma bank 26
 #include <gb/gb.h>
 #include "audio/sfx.h"
 #include "game/player.h"
@@ -18,14 +18,14 @@ static const i8 mstar_sx[16] = {
     0, 9, 17, 22, 24, 22, 17, 9,
     0, -9, -17, -22, -24, -22, -17, -9
 };
-// Peak orbit radius in pixels for will_b_tier 0..3.
-static const u8 mstar_peak[4] = {24, 28, 34, 40};
+// 8.8 orbit scale for will_b_tier 0..3: 24, 27, 33, 39 px (24 * n/8).
+static const u8 mstar_scale[4] = {8, 9, 11, 13};
 static const u8 mstar_life[4] = {40, 40, 44, 48};
 static const u8 mstar_box[4]  = {0xAA, 0xAA, 0xCC, 0xDD};
 static const u8 mstar_bonus[4] = {3, 3, 4, 5};
 
-static i16 mstar_offset(i8 base, u8 peak) {
-    return (i16)(((i16)base * (i16)peak) / 24);
+static i16 mstar_offset(i8 base, u8 scale) {
+    return (i16)(((i16)base * (i16)scale) >> 3);
 }
 
 static void mstar_clamp(entity_t *e) {
@@ -82,18 +82,22 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
 }
 
 void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
-    u8 a,t,tier,peak;
+    u8 a,t,tier;
     if (!e->state_timer--) { entity_kill(idx); return; }
     if (e->ai_data[6]==PROJ_AUX_MORNINGSTAR) {
         tier=e->ai_data[7]&3;
-        peak=mstar_peak[tier];
         a=(++e->ai_data[0]>>1)&15;
-        e->x=player.x+4+mstar_offset(mstar_sx[a], peak);
-        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], peak);
+        e->x=player.x+4+mstar_offset(mstar_sx[a], mstar_scale[tier]);
+        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], mstar_scale[tier]);
         mstar_clamp(e);
         t=room_tile_at_px(e->x+4,e->y+4);
-        if (t==BGT_PILLAR) sun_lattice_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
-        else if (t==BGT_WILD_STONE) riftwild_den_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
+        // One strike per swing: a full orbit would otherwise toggle a vane
+        // twice and leave it unchanged (the old swing died on first contact).
+        if (t==BGT_PILLAR && !(e->ai_data[5]&1)) {
+            if (sun_lattice_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3)))
+                e->ai_data[5]|=1;
+        } else if (t==BGT_WILD_STONE)
+            riftwild_den_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
         if (tier>=3 && !(e->state_timer&3)) {
             fx_spawn(SPR_FX_IMPACT, 6, e->x+4, e->y+4, 6);
             // Keep VRAM bank 1 so the 16x16 head tiles stay in view.

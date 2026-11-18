@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 19
 
 #include <gb/gb.h>
 

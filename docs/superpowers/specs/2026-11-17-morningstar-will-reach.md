@@ -41,14 +41,14 @@ per-target i-frames).
 
 | | Tier 0 | Tier 1 | Tier 2 | Tier 3 (full Will) |
 |---|---|---|---|---|
-| Peak radius | 24 px | 28 px | 34 px | **40 px** (~2.5 tiles) |
+| Peak radius | 24 px | 27 px | 33 px | **39 px** (~2.5 tiles) |
 | Hitbox | `0xAA` 10×10 | `0xAA` | `0xCC` 12×12 | `0xDD` 13×13 |
 | Damage | `atk + 3` | `atk + 3` | `atk + 4` | `atk + 5` |
 | Lifetime | 40 | 40 | 44 | 48 |
 | Pierce / cooldown | 8 / 56 | 8 / 56 | 8 / 56 | 8 / 56 |
 | Visual | Current 16×16 head | Current | One chain link toward the hero | Two chain links, impact sparks, gold/violet flicker, `room_shake(1, 8)` on press |
 
-Orbit points are `sx[i] * peak / 24`. Trails and chain links are visual only
+Orbit points are `sx[i] * scale >> 3` with scale 8/9/11/13 (24/27/33/39 px). Trails and chain links are visual only
 and do not apply damage.
 
 **Obstacles.** The swing is never cancelled by a tile. Pillars still turn
@@ -93,3 +93,24 @@ stun-immune. Stun duration is unchanged in this pass.
 
 Hookshot range, Bomb Bag splash, class signatures, boomerang stun scaling,
 and cutting hostile shots. Those remain in the 2026-11-15 proposal.
+
+## Implementation notes
+
+- Morningstar and Boomerang code moved to bank 26 / 19 so the 256-byte
+  emergency floor stays intact in the packed low banks. `will_b_tier` lives
+  with the existing Will bank (11).
+- A swing that no longer dies on a vane would toggle it twice in one orbit
+  and leave it unchanged. The star now records a one-shot latch
+  (`ai_data[5]`) so a Sun Lattice vane turns at most once per swing.
+- Headless measurements on the built ROM (player-relative peak / outbound
+  travel). Will is not spent.
+
+| | Before (all Will) | After t0 | After t1 | After t2 | After t3 |
+|---|---|---|---|---|---|
+| Morningstar peak | 24 px | 24 px | 28.3 px | 33.9 px | **39.6 px** |
+| Morningstar life, open | 40 | 40 | 40 | 44 | 48 |
+| Morningstar life, pillar | **0** (cancelled) | 40 | — | — | 48 |
+| Morningstar life, corner | **10** | 40 | — | — | 48 |
+| Boomerang travel | 85 px | 85 px | 109 px | 133 px | **169 px** |
+| Boomerang vs mid pillar | **34 px** (early return) | 85 px | — | — | 169 px |
+| Boomerang vs true wall | 34 px (returns) | 34 px (unchanged) | — | — | — |

@@ -142,19 +142,28 @@ def hook_pulls(pb, fixtures, tiles, kinds, label, frames_out=None):
 
 
 def morningstar_spins(pb, fixtures, tiles):
+    # Will now scales the orbit (24/27/33/39 px). Clear it so the classic
+    # 24 px stance still hits, and also try farther stances so a juiced
+    # swing is not a false miss.
+    pb.memory[PL + 42] = 0
+    pb.memory[PL + 48] = 0
     for i, f in enumerate(fixtures):
         if f["kind"] != slh.SLK_VANE:
             continue
         x, y = f["x"], f["y"]
-        for d8, px, py in ((2, 8 * x - 28, 8 * y - 4), (6, 8 * x - 4, 8 * y - 28),
-                           (4, 8 * x - 28, 8 * y - 4), (0, 8 * x - 4, 8 * y - 28)):
-            if px < 8 or py < 8 or not body_free(tiles, px, py):
-                continue
-            before = pb.memory[SL["_sl_ang"] + i]
-            fire(pb, MORNINGSTAR, "right" if px < 8 * x else "down", d8, px, py, 50)
-            if pb.memory[SL["_sl_ang"] + i] != before:
-                tp.lattice_beams_match(pb, slh.read_state(pb, SL))
-                return i
+        for dist in (28, 36, 44):
+            for d8, px, py in ((2, 8 * x - dist, 8 * y - 4),
+                               (6, 8 * x - 4, 8 * y - dist),
+                               (4, 8 * x - dist, 8 * y - 4),
+                               (0, 8 * x - 4, 8 * y - dist)):
+                if px < 8 or py < 8 or not body_free(tiles, px, py):
+                    continue
+                before = pb.memory[SL["_sl_ang"] + i]
+                fire(pb, MORNINGSTAR, "right" if px < 8 * x else "down",
+                     d8, px, py, 50)
+                if pb.memory[SL["_sl_ang"] + i] != before:
+                    tp.lattice_beams_match(pb, slh.read_state(pb, SL))
+                    return i
     raise AssertionError("the Morningstar never turned a vane")
 
 
