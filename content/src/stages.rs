@@ -125,12 +125,12 @@ pub const STAGES: [StageTheme; 9] = [
         boss_dmg_bonus: 3, mb_variant: 2, room_archetype: 5,
         // Gloam Bramble replaces a small Prism Skitter slice with a slower
         // opposite-lane orbit. Shadow Keep stays a deliberate positioning
-        // test without increasing generated body count. Keep the prefix
-        // through id 27 identical to main so the Mixed-room fixture
-        // (seed 0xB4A60022, local room 4) still rolls a Bramble; specialists
-        // take their slice from the former id-32 tail so the CDF below 94
-        // is unchanged.
-        enemy_pool: &[(7, 28), (5, 18), (11, 18), (19, 15), (22, 10), (27, 5), (32, 2), (35, 2), (37, 1), (41, 1)],
+        // test without increasing generated body count. Keep Rift Cantor
+        // (id 32) at weight 6 to satisfy the late-stage bounded-slice
+        // contract. Specialist weight comes from ids 7 and 11, not from
+        // Cantor or from Bramble's 5-point band; test_bramble_sprite uses a
+        // Mixed-room seed that still rolls id 27 under this CDF.
+        enemy_pool: &[(7, 15), (5, 18), (11, 12), (19, 15), (22, 10), (27, 5), (32, 6), (35, 8), (37, 6), (41, 5)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {

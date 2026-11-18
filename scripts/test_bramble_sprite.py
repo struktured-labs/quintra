@@ -59,7 +59,10 @@ def main():
     # Brambles deliberately cannot fill Brood/Pair slots: a full orbiting pack
     # can wall a generated lane. This fixed Mixed room proves they remain in
     # Shadow Keep's weighted hodgepodge vocabulary and exercises their live AI.
-    generated_room(5, 0xB4A60022, probe=probe, local_room=4)
+    # Room 4 was the main-pool fixture; after specialists took weight from
+    # ids 7 and 11 (Cantor stays at 6), the same seed still rolls a Bramble
+    # in Mixed room 3.
+    generated_room(5, 0xB4A60022, probe=probe, local_room=3)
     assert seen, "Bramble Sprite disappeared from Shadow Keep Mixed rooms"
     print("[bramble-sprite] PASS Shadow Keep procgen spawn + distinct art + live told spiral")
 
