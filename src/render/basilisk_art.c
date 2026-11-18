@@ -176,6 +176,9 @@ static const u8 bas_blast[256] = {
 static const u8 bas_debris[16] = {
     0x20, 0x07, 0x00, 0x07, 0x00, 0x07, 0x00, 0x07, 0x00, 0x3F, 0x0E, 0x71, 0x1F, 0xE0, 0x1E, 0xE1,
 };
+static const u8 bas_blank[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
 
 /* tier 0..2 loads that basilisk's three 32x32 poses; 0xFF loads only the
    blast. Called from room post-spawn (display may be on: the copy routine
@@ -192,4 +195,5 @@ void basilisk_art_load(u8 tier) BANKED {
     set_sprite_data(214, 2, bas_blast + 224);
     set_sprite_data(BLAST_TILE_DEBRIS, 1, bas_debris);
     VBK_REG = 0;
+    if (tier < 3) set_sprite_data(BAS_CORE_TILE, 1, bas_blank);  /* bank-0 core */
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared fixtures for the six 2026-11-17 specialist tests."""
+"""Shared fixtures for the 2026-11-17 specialist tests (+ basilisk tiers)."""
 from test_will_max import boot, clear_arena, addr, put16, PLAYER, ENTITIES, TILEMAP
 
 ENTITY_SIZE = 28
@@ -10,6 +10,8 @@ ENEMY_BANE_BRUTE = 38
 ENEMY_ZAG_DART = 39
 ENEMY_LEYBEAM = 40
 ENEMY_FUSE_HURLER = 41
+ENEMY_SUN_BASILISK = 42
+ENEMY_NOX_BASILISK = 43
 
 # entity_t
 OFF_TYPE, OFF_FLAGS = 0, 1
@@ -41,6 +43,8 @@ def poke_enemy(pb, enemy_id, x, y, hp=8, i=0, phase=0, timer=0, hitbox=0x66, dam
     pb.memory[e + OFF_AI2] = phase
     pb.memory[e + OFF_HITBOX] = hitbox
     pb.memory[e + OFF_DAMAGE] = damage
+    # A real spawn raises this so the specialist draw/bomb pass runs.
+    pb.memory[addr('_new_monsters_in_room')] = 1
     return e
 
 

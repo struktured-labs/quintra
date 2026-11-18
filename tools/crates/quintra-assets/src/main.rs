@@ -785,7 +785,7 @@ mod tests {
                 assert_ne!(e.a, b, "enemy {} frame B equals A", e.eid);
             }
         }
-        for skipped in [1u8, 33, 34] {
+        for skipped in [1u8, 33, 34, 40] {
             assert!(!seen.contains(&skipped), "enemy {skipped} has its own pose driver");
         }
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");

@@ -2041,28 +2041,8 @@ pub const ZAG_DART_B: [&str; 8] = [
     "........",
     "........",
 ];
-// Basilisk core: blank. The 32x32 body is GPT art in bank-1 OBJ
-// (src/render/basilisk_art.c), drawn by new_monsters_draw().
-pub const LEYBEAM: [&str; 8] = [
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-];
-pub const LEYBEAM_B: [&str; 8] = [
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-    "........",
-];
+// Enemy 40 (Ley Basilisk) and its tiers have their own 32x32 pose driver:
+// GPT art in bank-1 OBJ (src/render/basilisk_art.c); OBJ 219 is a blank core.
 pub const FUSE_HURLER: [&str; 8] = [
     "...1....",
     "..232...",
@@ -2171,7 +2151,7 @@ const fn anim(eid: u8, slot: u8, a: &'static [&'static str],
 
 // Content enemy id -> canonical OBJ slot (content/src/ids.rs). Bosses, the
 // mini-boss Sentinel, Facet Ram and the Reaper own their own pose drivers.
-pub const ENEMY_ANIM: [EnemyAnim; 39] = [
+pub const ENEMY_ANIM: [EnemyAnim; 38] = [
     anim( 0,  20, &CRAWLER, Some(&CRAWLER_B)),
     anim( 2,  21, &HORNET, Some(&HORNET_B)),
     anim( 3,  22, &SKELETON, Some(&SKELETON_B)),
@@ -2209,7 +2189,6 @@ pub const ENEMY_ANIM: [EnemyAnim; 39] = [
     anim(37, 212, &VAULT_HAND, Some(&VAULT_HAND_B)),
     anim(38, 208, &BANE_BRUTE, Some(&BANE_BRUTE_B)),
     anim(39, 218, &ZAG_DART, Some(&ZAG_DART_B)),
-    anim(40, 219, &LEYBEAM, Some(&LEYBEAM_B)),
     anim(41, 220, &FUSE_HURLER, Some(&FUSE_HURLER_B)),
 ];
 

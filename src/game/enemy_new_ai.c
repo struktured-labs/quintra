@@ -36,6 +36,9 @@ static u8 beam_lane[4];
 
 #define LEY_VBL_BURST 16
 static u8 ley_n, ley_k, ley_flush, ley_art_want, ley_art_have;
+/* Resident bank-1 OBJ art: 0 none, 1..3 basilisk tier + blast, 4 blast only.
+   Cleared on room entry (vignettes and bosses reuse those tiles). */
+static u8 bas_art_have;
 
 /* Uploaded to VRAM bank 1 at LEYBEAM_BG_TILE. Ghost dots mark the exact
    lanes during the charge; two solid glow frames shimmer while firing. */
@@ -450,6 +453,12 @@ static void basilisk_face(entity_t *e) {
     e->ai_data[4] = ((i16)player.x + 8 < FIX8_TO_INT(e->x) + 8) ? 1 : 0;
 }
 
+static void bas_art_need(u8 want) {
+    if (bas_art_have == want || (want == 4 && bas_art_have)) return;
+    basilisk_art_load(want == 4 ? 0xFF : (u8)(want - 1));
+    bas_art_have = want;
+}
+
 static void leybeam_tick(entity_t *e, const enemy_def_t *def) {
     u8 tell = def->ai_p0 ? def->ai_p0 : 40;
     u8 beam = def->ai_p1 ? def->ai_p1 : 36;
@@ -461,6 +470,7 @@ static void leybeam_tick(entity_t *e, const enemy_def_t *def) {
         if (beam_owner == me) leybeam_restore();
         return;
     }
+    bas_art_need((u8)(basilisk_lanes(e->ai_data[0]) - 1));
     if (PHASE == 0) {
         if ((++e->state_timer & 7) == 0) {
             u8 h = e->state & 3;
@@ -560,6 +570,7 @@ static void boom_sfx(u8 big) {
    the Chebyshev square FUSE_RADIUS around the centre is live for the first
    BLAST_HOT frames, which is exactly while the fireball is on screen. */
 static void blast_start(u8 i, i16 cx, i16 cy) {
+    bas_art_need(4);
     fb_live[i] = 1;
     fb_phase[i] = 2;
     fb_timer[i] = 0;
@@ -574,16 +585,12 @@ static void blast_tick(u8 i) {
     i16 x = fb_x[i], y = fb_y[i];
     if (t < BLAST_HOT) fuse_hurt_at(x, y, FUSE_RADIUS);
     if (t == 2) {
-        /* Debris ring on the edge of the damage square. */
+        /* Debris kicked to the corners of the damage square. */
         u8 pal = BLAST_PAL | 0x08;
-        fx_spawn(BLAST_TILE_DEBRIS, pal, x - FUSE_RADIUS - 4, y - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, pal, x + FUSE_RADIUS - 4, y - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, pal, x - 4, y - FUSE_RADIUS - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, pal, x - 4, y + FUSE_RADIUS - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPX), x - FUSE_RADIUS - 4, y - FUSE_RADIUS - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPY), x + FUSE_RADIUS - 4, y - FUSE_RADIUS - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPX | S_FLIPY), x - FUSE_RADIUS - 4, y + FUSE_RADIUS - 4, 10);
-        fx_spawn(BLAST_TILE_DEBRIS, pal, x + FUSE_RADIUS - 4, y + FUSE_RADIUS - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, pal, x - FUSE_RADIUS - 4, y - FUSE_RADIUS - 4, 12);
+        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPX), x + FUSE_RADIUS - 4, y - FUSE_RADIUS - 4, 12);
+        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPY), x - FUSE_RADIUS - 4, y + FUSE_RADIUS - 4, 12);
+        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPX | S_FLIPY), x + FUSE_RADIUS - 4, y + FUSE_RADIUS - 4, 12);
     }
     if (t == 7) boom_sfx(0); /* crackle tail */
     if (++fb_timer[i] >= BLAST_FRAMES) fb_live[i] = 0;
@@ -1067,9 +1074,11 @@ void new_monsters_post_spawn(void) BANKED {
         || count_id(ENEMY_FUSE_HURLER));
     new_monsters_in_room = new_monsters_busy;
 
+    bas_art_have = 0;
     {
         u8 tier = basilisk_tier();
-        if (tier != 0xFF || count_id(ENEMY_FUSE_HURLER)) basilisk_art_load(tier);
+        if (tier != 0xFF) bas_art_need((u8)(tier + 1));
+        else if (count_id(ENEMY_FUSE_HURLER)) bas_art_need(4);
     }
 
     if (!count_id(ENEMY_BANE_BRUTE)) return;
@@ -1118,7 +1127,20 @@ void new_monsters_foyer_warp(void) BANKED {
    crowded scene leaves no room they borrow the top of the entity range on
    alternate frames, which is the same fair flicker the allocator uses. */
 #define XO_CAP 35
-static u8 xo;
+static u8 xo, xo_hi;
+
+/* The extras never raise entity_oam_high: the allocator would park their
+   slots at the top of its next pass, and a frame that overruns VBlank
+   between that park and the rewrite below would DMA a missing burst. They
+   park their own leftovers instead. */
+static void xo_park(u8 from) {
+    if (from < entity_oam_high) from = entity_oam_high;
+    while (from < xo_hi) {
+        shadow_OAM[from].y = 0;
+        from++;
+    }
+    xo_hi = 0;
+}
 
 static void xo_begin(u8 need) {
     xo = entity_oam_high;
@@ -1170,7 +1192,9 @@ static void xo_block(i16 wx, i16 wy, const u8 *tiles, const u8 *props) {
 static u8 xb_tile[16], xb_prop[16];
 
 static void basilisk_draw(u8 slot, entity_t *e) {
-    u8 base = BAS_TILE_IDLE, pal = e->palette & 7, prop, k, left;
+    static const u8 tier_pal[3] = { 7, 4, 6 };   /* green, red, Void stage */
+    u8 base = BAS_TILE_IDLE, prop, k, left;
+    u8 pal = tier_pal[(u8)(basilisk_lanes(e->ai_data[0]) - 2)];
     if (!(e->flags & EF_ON_SCREEN)) return;
     if (e->ai_data[7] & 1) return;             /* hit flash (allocator ticks it) */
     if (PHASE == 2 || (PHASE == 1 && TIMER >= 16)) base = BAS_TILE_FIRE;
@@ -1229,7 +1253,7 @@ static void extras_draw(void) {
             && is_basilisk(entities[i].ai_data[0]) && entities[i].hp) need += 16;
     for (i = 0; i < FUSE_BOMB_MAX; ++i)
         if (fb_live[i]) need += (fb_phase[i] == 2) ? 16 : (fb_phase[i] == 1) ? 4 : 0;
-    if (!need) return;
+    if (!need) { xo_park(4); return; }
     xo_begin(need > 31 ? 31 : need);
     for (i = 0; i < FUSE_BOMB_MAX; ++i) {
         if (!fb_live[i]) continue;
@@ -1243,7 +1267,11 @@ static void extras_draw(void) {
         if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
             && is_basilisk(e->ai_data[0]) && e->hp) basilisk_draw(i, e);
     }
-    if (xo > entity_oam_high && xo <= XO_CAP) entity_oam_high = xo;
+    {
+        u8 end = xo;
+        xo_park(end);
+        if (end > entity_oam_high) xo_hi = end;
+    }
 }
 
 void new_monsters_draw(void) BANKED {
@@ -1275,6 +1303,7 @@ void new_monsters_draw(void) BANKED {
         move_sprite(37, 0, 0);
         move_sprite(38, 0, 0);
         move_sprite(39, 0, 0);
+        xo_park(4);
         return;
     }
     if (any) { new_monsters_busy = 1; new_monsters_in_room = 1; }

@@ -9,6 +9,9 @@
 #define BAS_TILE_WALK     192
 #define BAS_TILE_FIRE     10
 #define BLAST_TILE_DEBRIS 216
+/* Bank-0 OBJ the basilisk entity itself points at (SPR_ENEMY_LEYBEAM): kept
+   blank so the allocator's 8x8 for it draws nothing. */
+#define BAS_CORE_TILE     219
 /* Blast frame f quadrant tile j (0 TL, 1 TR, 2 BL, 3 BR of the 16x16 quad):
    frames 0..2 at 26 + f*4 + j; frame 3 at 38, 39, 214, 215. */
 #define BLAST_TILE(f, j) ((u8)((f) < 3 ? 26 + ((f) << 2) + (j) : ((j) < 2 ? 38 + (j) : 212 + (j))))
