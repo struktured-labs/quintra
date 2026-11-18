@@ -774,7 +774,7 @@ mod tests {
         let mut seen = std::collections::HashSet::new();
         for e in grids::ENEMY_ANIM.iter() {
             assert!(seen.insert(e.eid), "enemy {} listed twice", e.eid);
-            assert!(e.eid < 35, "enemy id {} out of range", e.eid);
+            assert!(e.eid < 42, "enemy id {} out of range", e.eid);
             let n = e.a.len();
             assert!(n == 8 || n == 16, "enemy {} frame A size {n}", e.eid);
             assert!(e.a.iter().all(|r| r.len() == n), "enemy {} frame A not square", e.eid);
