@@ -267,7 +267,10 @@ mod tests {
         assert!(stages::STAGES[1].enemy_pool.iter().any(|&(id, _)| id == 36));
         assert!(stages::STAGES[5].enemy_pool.iter().any(|&(id, _)| id == 37));
         assert!(stages::STAGES[4].enemy_pool.iter().any(|&(id, _)| id == 38));
-        assert!(stages::STAGES[0].enemy_pool.iter().any(|&(id, _)| id == 39));
+        // Crystal Caverns stays identical to main so the opening-district
+        // performance fixture is not knocked out of phase by a Zag Dart roll.
+        assert!(stages::STAGES[1].enemy_pool.iter().any(|&(id, _)| id == 39));
+        assert!(stages::STAGES[0].enemy_pool.iter().all(|&(id, _)| id < 35));
         assert!(stages::STAGES[6].enemy_pool.iter().any(|&(id, _)| id == 40));
         assert!(stages::STAGES[2].enemy_pool.iter().any(|&(id, _)| id == 41));
         for stage in &stages::STAGES {
