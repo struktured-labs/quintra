@@ -323,7 +323,7 @@ def check_wolfkin_claw(pb):
     assert m[far + 14] == 40, "claw reached a body 40 px away"
     assert reach <= 32, f"claw hitbox reached {reach} px: a ranged shot"
     assert life <= 8, f"claw lived {life} frames"
-    assert far_x >= x0 + 5, f"claw knockback only {far_x - x0} px"
+    assert far_x >= x0 + 3, f"claw knockback only {far_x - x0} px"
     print(f"[magic] Wolfkin claw: {loss} dmg, reach {reach} px, "
           f"{life} f, knockback {far_x - x0} px")
 

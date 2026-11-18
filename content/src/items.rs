@@ -9,7 +9,7 @@ pub const CLAW_COMBO: Item = Item {
     name:        "Fang Forms",
     description: "Close claw arc, no reach; Max dash.",
     kind: ItemKind::Weapon {
-        fire_rate:  24,    // deliberate no-upgrade cadence; run-earned SPD accelerates it
+        fire_rate:  20,    // melee-only claw: fastest contact cadence; SPD accelerates it
         damage:     1,
         projectile: ProjectileKind::Spike,
         mp_cost:    0,

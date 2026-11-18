@@ -99,8 +99,11 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     // geometry or wall-clearance behaviour.
     if (player.class_id == 0 && kind == PROJ_SPIKE
         && player.starter_weapon == classes[0].starter_weapon) {
-        e->x = (ppos_t)(e->x + (i16)dx * 8);
-        e->y = (ppos_t)(e->y + (i16)dy * 8);
+        // The claw starts 2 px further out so its tile sample still
+        // reaches a wall face one row beyond his own edge.
+        u8 lead = g_fang_claw ? 10 : 8;
+        e->x = (ppos_t)(e->x + (i16)dx * lead);
+        e->y = (ppos_t)(e->y + (i16)dy * lead);
     }
     e->vx          = (i8)((i16)dx * speed);
     e->vy          = (i8)((i16)dy * speed);

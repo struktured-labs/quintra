@@ -82,8 +82,8 @@ static const u8 ward_cost[5] = { 2, 2, 2, 5, 2 };
 static const i8 ring_x[8] = { 0, 10, 14, 10, 0, -10, -14, -10 };
 static const i8 ring_y[8] = { -14, -10, 0, 10, 14, 10, 0, -10 };
 // 12-step orbit, radius 16 (30 degree steps).
-static const i8 orb_x[12] = { 16, 14, 8, 0, -8, -14, -16, -14, -8, 0, 8, 14 };
-static const i8 orb_y[12] = { 0, 8, 14, 16, 14, 8, 0, -8, -14, -16, -14, -8 };
+static const i8 orb_x[12] = { 20, 17, 10, 0, -10, -17, -20, -17, -10, 0, 10, 17 };
+static const i8 orb_y[12] = { 0, 10, 17, 20, 17, 10, 0, -10, -17, -20, -17, -10 };
 
 // ---- tracked moving spells ------------------------------------------------
 #define SHOTS 3
@@ -421,13 +421,14 @@ void magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
         if (!survives) return;
         status_try_player_shot(j, i);
         // Wolfkin's Fang Claw (slow contact arc, see projectile.c) shoves
-        // light bodies 3 px beyond the ordinary knockback.
+        // light bodies 1 px beyond the ordinary knockback, so they stay
+        // inside his follow-up arc (Carbon balance review).
         if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
             && shot->vx >= -2 && shot->vx <= 2
             && shot->vy >= -2 && shot->vy <= 2 && !is_heavy(ej, j)) {
             i8 kx = (i8)(shot->vx > 0 ? 1 : shot->vx < 0 ? -1 : 0);
             i8 ky = (i8)(shot->vy > 0 ? 1 : shot->vy < 0 ? -1 : 0);
-            for (k = 0; k < 3; ++k) enemy_try_step(ej, kx, ky);
+            enemy_try_step(ej, kx, ky);
         }
         return;
     }
@@ -474,9 +475,9 @@ static void tick_shots(u8 keys) {
         shot_ly[k] = e->y + 3;
         if (shot_kind[k] == SPELL_MOONFIRE) {
             e->sprite_tile = (shot_age[k] & 4) ? MAGIC_T_FIRE_B : MAGIC_T_FIRE_A;
-            // FFA Fire: re-target the nearest body ahead every 4 frames and
+            // FFA Fire: re-target the nearest body ahead every 3 frames and
             // turn one 45-degree step toward it.
-            if ((shot_age[k] & 3) == 0) {
+            if ((shot_age[k] % 3) == 0) {
                 u8 i, best = 0xFF;
                 u16 bd = 97;
                 entity_t *b = entities;
@@ -495,7 +496,7 @@ static void tick_shots(u8 keys) {
                         BODY_X(&entities[best]) - shot_lx[k],
                         BODY_Y(&entities[best]) - shot_ly[k]);
                     shot_dir[k] = turn_toward(shot_dir[k], want);
-                    set_heading(e, shot_dir[k], 2);
+                    set_heading(e, shot_dir[k], 3);
                 }
             }
         } else if (shot_kind[k] == SPELL_BLIZZARD) {
@@ -764,7 +765,7 @@ static u8 cast_tap(u8 dir) {
     u8 made = 0;
     switch (c) {
         case 0:   // MOONFIRE
-            made = spawn_shot(SPELL_MOONFIRE, dir, spell_damage(4), 2, 100, 1,
+            made = spawn_shot(SPELL_MOONFIRE, dir, spell_damage(4), 3, 80, 1,
                 MAGIC_T_FIRE_A);
             if (made) {
                 v4(0xA2, 0x36, 10);
@@ -804,7 +805,7 @@ static u8 cast_tap(u8 dir) {
             br_y = HERO_Y;
             br_dx = dir8_dx[dir];
             br_dy = dir8_dy[dir];
-            br_dmg = spell_damage(2);
+            br_dmg = spell_damage(3);
             memset(br_mask, 0, sizeof(br_mask));
             br_step = 0;
             br_t = 1;
@@ -836,14 +837,14 @@ static u8 cast_ward(void) {
             v1(0x15, 0x80, 0xB3, 1300, 14);
             break;
         case 1:   // STONESKIN + STATIC
-            player.shield_timer = 120;
+            player.shield_timer = 90;
             if (player.iframes < 8) player.iframes = 8;
             memset(ring_mask, 0, sizeof(ring_mask));
             hit_ring(HERO_X, HERO_Y, 28, ring_mask, 2, 4, QSTATUS_STOP, 8);
             for (i = 1; i < 8; i += 2)
                 fx(MAGIC_T_FLASH, 5 | BANK1,
                     HERO_X + ring_x[i], HERO_Y + ring_y[i], 8);
-            magic_ward_ticks = 120;
+            magic_ward_ticks = 90;
             v4(0xF2, 0x66, 14);
             v1(0x00, 0xC0, 0xC2, 640, 14);
             break;

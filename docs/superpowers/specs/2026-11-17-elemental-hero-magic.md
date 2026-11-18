@@ -3,7 +3,8 @@
 Date: 2026-11-17. Status: approved to build by Carmelo ("respec it as genuine
 FF Adventure style magic but elemental for each character ... or Sword of
 Mana"; addenda: one homing spell, tap = offensive / hold = defensive, A+B
-must still be a special, balance the whole kit). Replaces the five B
+must still be a special, balance the whole kit; one hero melee-only on A).
+Replaces the five B
 "signatures" (Howl, Stoneskin, Raven Mark, Undertow, Swarm) when the hero
 power is the selected B item. Hookshot, Boomerang, Morningstar and Bombs keep
 their press-to-use B behaviour.
@@ -87,14 +88,27 @@ other B items keep their press-to-use path (`secondary_fire`).
 
 ### Wolfkin (fire 0x01): melee kit, so his magic reaches out and guards
 
+- **A: FANG CLAW (melee-only, addendum 5).** No projectile at all. Each
+  press (or the 24 f held cadence) rakes a ~120 deg arc in the aim
+  direction, reaching 18 px from his centre to the nearest edge of a body
+  (about 10 px past his own sprite; a Colossus counts by its 32 px box).
+  Every 20 f, up to 3 bodies per swing for p1 + atk + 2 = 5 at base (was a 3-damage
+  spike that travelled 62 px), physical (no element), with 1 extra px of
+  knockback on light bodies (4 px total, so they stay in his follow-up
+  arc; heavies immovable). It is a 6-frame arc held at arm length (speed
+  1, about 10 px past his sprite), so it still throws switches, turns
+  vanes and breaks crystals it touches. No Echo copy,
+  splash or rebound: it is contact only. His only ranged options are
+  Moonfire (homing), A+B and the Moonfang Cross-Rend dash.
+
 - **Tap: MOONFIRE** (1 MP, 36 f). FFA Fire, **the game's homing spell**.
-  Flies along the aim at 2 px/f; every 4 frames it picks the nearest body
+  Flies along the aim at 3 px/f; every 3 frames it picks the nearest body
   within 96 px in its forward half-plane and turns one dir8 step toward it
-  (arcs, never U-turns). TTL 100 f. Direct hit S = 4 + 1 = 5 at base,
+  (arcs, never U-turns). TTL 80 f. Direct hit S = 4 + 1 = 5 at base,
   hitstop 3, guaranteed BURN; on disappearance (hit, wall or TTL) it bursts
   for 3 to every other body within 14 px. Burns trees, opens cracked walls,
   breaks crystals (ordinary fire projectile tile rules).
-- **Hold: FLAME WARD** (2 MP, up to 3.0 s). Three wisps orbit at 16 px.
+- **Hold: FLAME WARD** (2 MP, up to 3.0 s). Three wisps orbit at 20 px.
   Each wisp has 2 charges: touching a hostile shot erases it (boss shells
   included, not the Reaper scythe) or touching a body sears it for 2 +
   BURN (each wisp at most once per 24 f). The ward ends when all wisps are
@@ -108,7 +122,7 @@ other B items keep their press-to-use path (`secondary_fire`).
   hitstop 3, screen shake. On frame 15 it chains once to the nearest other
   body within 48 px for half damage + SLOW. No body: it strikes the floor
   40 px ahead and throws a switch or phase plate there.
-- **Hold: STONESKIN + STATIC** (2 MP). The proven 120 f shot/body shield
+- **Hold: STONESKIN + STATIC** (2 MP). A 90 f shot/body shield
   (`shield_timer`) plus a static pulse at cast: 2 dmg + STOP 8 to bodies
   within 28 px.
 
@@ -137,7 +151,7 @@ other B items keep their press-to-use path (`secondary_fire`).
 
 - **Tap: BRAMBLE** (1 MP, 40 f). Thorns erupt along the aim: four eruptions
   at 16/30/44/58 px, 5 frames apart, each hitting bodies within 12 px; each
-  body at most once per cast for S = 2 + 2 = 4, guaranteed POISON. Stops at
+  body at most once per cast for S = 3 + 2 = 5, guaranteed POISON. Stops at
   the first wall; wilts trees into rubble.
 - **Hold: THORN MIRROR** (2 MP, 2.0 s). Hostile shots entering 14 px turn
   back as her own poison shots (dmg 3, reversed). Boss shells are erased
@@ -150,11 +164,16 @@ Picsean 1.6 s); "burst" is the cooldown cadence from a full bar.
 
 | Hero | A (free) | B tap (1 MP) | B hold | A+B | MAX (full Will) |
 |---|---|---|---|---|---|
-| Wolfkin | Fang 3/24 f = 7.5 DPS, 64 px melee arc, pierce 2. Role: damage | Moonfire 5 + 3 splash + burn, homing 96 px. ~2 DPS sustained, 8 burst. Role: reach | Flame Ward 2 MP: 6 shot/sear charges over 3 s. Role: bullet defence | Oath 1 MP / Convergence full MP (8 lanes) | Moonfang Cross-Rend ~29-33, 360 f lock |
-| Sauran | Tail 6/28 f = 12.9 DPS, 48 px. Role: damage | Thunder 6 + 3 chain + stun, 104 px sure hit. ~2.5 DPS sustained. Role: certainty + stun | Stoneskin 2 MP: 2 s shield + static 2 + stun 28 px. Role: tank | same | Thunderline Bastion ~18 + pylons, 360 f |
-| Corvin | Feather 3/22 f = 8.2 DPS, long, pierce 2. Role: damage | Hex 4 in 18 px + confusion. Role: control | Shadow Veil 2 MP: haste 20 beats + i-frames + shot clear. Role: escape | same | Murderstorm Eclipse 16/21, 360 f |
-| Picsean | Bubble 3/30 f = 6 DPS, room range. Role: damage | Blizzard 3 x2 bodies + freeze, steerable. Role: control + puzzles | Cure 5 MP once/room: +1 heart, cleanse. Role: sustain | same | Tide Vortex room sweep, 360 f |
-| Vespine | Stinger 6/20 f = 18 DPS, 48 px. Role: damage | Bramble 4 x up to 4 bodies + poison along a line. Role: area | Thorn Mirror 2 MP: 2 s reflect. Role: punish shooters | same | Royal Stinger ~20 + poison, 360 f |
+| Wolfkin | Fang Claw 5/20 f = 15 DPS, **melee only** (~10 px past his sprite, 3 bodies, +1 px knockback). Role: brawler | Moonfire 5 + 3 splash + burn, homing 96 px. ~2 DPS sustained, 8 burst. Role: his only reach | Flame Ward 2 MP: 6 shot/sear charges over 3 s. Role: bullet defence while closing in | Oath 1 MP / Convergence full MP (8 lanes) | Moonfang Cross-Rend 29 + body dash, 6 s recast |
+| Sauran | Tail 6/28 f = 12.9 DPS, 48 px. Role: damage | Thunder 6 + 3 chain + stun, 104 px sure hit. ~2.5 DPS sustained. Role: certainty + stun | Stoneskin 2 MP: 1.5 s shield + static 2 + stun 28 px. Role: tank | same | Thunderline Bastion 18 + pylons, 6 s |
+| Corvin | Feather 3/22 f = 8.2 DPS, long, pierce 2. Role: damage | Hex 4 in 18 px + confusion. Role: control | Shadow Veil 2 MP: haste 20 beats + i-frames + shot clear. Role: escape | same | Murderstorm Eclipse 16-21, 6 s |
+| Picsean | Bubble 3/30 f = 6 DPS, room range. Role: damage | Blizzard 3 x2 bodies + freeze, steerable. Role: control + puzzles | Cure 5 MP once/room: +1 heart, cleanse. Role: sustain | same | Tide Vortex room sweep, 6 s |
+| Vespine | Stinger 6/20 f = 18 DPS, 48 px. Role: damage | Bramble 5 x up to 4 bodies + poison along a line. Role: area | Thorn Mirror 2 MP: 2 s reflect. Role: punish shooters | same | Royal Stinger 21 + poison, 6 s |
+
+MAX numbers are main's Max-Will v2 (#137) at Will 1. Wolfkin's claw DPS
+(15, up to 3 bodies) beats Sauran's 48 px tail (12.9) and stays under
+Vespine's glass-cannon stinger (18); it pays for having no reach, since
+every other hero's A hits from 48 px to a full room.
 
 Roles: **A** is sustained damage and costs nothing. **Tap** is the elemental
 tool: reach (Wolfkin), certainty (Sauran), control (Corvin, Picsean), area
@@ -185,6 +204,16 @@ lockout); Will paused while a ward is up; no MP-regen reset on cast; no
 Will bonus on spell damage; hitstop on Thunder and Moonfire; no persistent
 entity slots for ward logic; Shard Wake from run start.
 
+## Carbon balance review 2 (whole kit + melee Wolfkin, $0.029)
+
+Verdict: ship with changes. Adopted: claw cadence 24 -> 20 f (beats
+Sauran's single-target A); claw bonus knockback 3 -> 1 px; Moonfire 3 px/f,
+turn every 3 f, TTL 80; Flame Ward orbit 16 -> 20 px; Stoneskin shield
+120 -> 90 f; Bramble base 2 -> 3. The claw already triggers adjacent
+switches, vanes and crystals (it is a projectile-backed contact arc).
+Watch in playtest: Shard Wake + tap burst at 2 MP, Picsean's Cure economy,
+and losing both spells while a dungeon tool holds B.
+
 ## Implementation
 
 - New `src/game/magic.c` (`#pragma bank 31`, the empty bank) + `magic.h`
@@ -210,6 +239,10 @@ entity slots for ward logic; Shard Wake from run start.
 - Room-bound state (tracked shots, pending strikes, Cure flag) drops when
   `entity_init_room` bumps `magic_room_serial`; wards cross doorways. New
   heroes call `magic_reset` from `player_apply_class`.
+- Wolfkin's starter A calls `magic_fang(dir, dmg)` (bank 31) instead of
+  spawning a `PROJ_SPIKE`; Convergence, Oath and Moonfang still use their
+  own spike lanes. A one-frame carrier routes each claw hit through
+  `combat_apply_player_shot_hit`.
 - Copy: help page "B TAP SPELL 1 MP" / "B HOLD WARD 2+ MP"; Pack tips,
   class-select tips and item names (Moonfire, Thunder, Hex, Blizzard,
   Bramble) updated.
@@ -222,6 +255,8 @@ no spell; too little MP refuses without spending. Spell checks: Moonfire
 turns toward an off-axis body and hits it; Blizzard follows a held D-pad;
 Thunder stuns and chains; Hex confuses; Bramble poisons each body once;
 Flame Ward erases a hostile shot; Stoneskin raises the shield; Veil hastes;
-Cure heals once per room; Thorn Mirror reflects a shot. `test_new_game_start.py`
+Cure heals once per room; Thorn Mirror reflects a shot. Wolfkin's claw
+hits an adjacent body for >= 5, spawns no player projectile, misses a body
+40 px away and knocks a light body back >= 5 px. `test_new_game_start.py`
 and `test_watch_intro.py` keep passing; `test_signature_balance.py` is
 replaced.
