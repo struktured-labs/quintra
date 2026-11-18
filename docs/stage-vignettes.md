@@ -1,7 +1,7 @@
 # Stage-transition vignettes
 
 Implements spec PR #123 (`docs/superpowers/specs/2026-11-16-intro-and-stage-vignettes.md`),
-stage-transition half only. The title intro is not built yet.
+stage-transition half. The power-on lore intro and attract mode are in `docs/superpowers/specs/2026-11-17-attract-mode.md`.
 
 ## What plays
 | id | picture | text | trigger |
