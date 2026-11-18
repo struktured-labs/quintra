@@ -65,6 +65,8 @@ extern u8 magic_room_serial;
 // One call per room frame from the weapon block (replaces the old B press
 // branch). Also ticks live spells.
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
+// Combat status dispatch (one call for ordinary and magic hits).
+void magic_hit_status(u8 j, u8 i, u8 survives) BANKED;
 // Room entry and Pack/map return: reload spell tiles, drop any charge.
 void magic_room_enter(void) BANKED;
 // New run: clear everything.

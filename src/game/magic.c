@@ -58,6 +58,7 @@ u8 magic_room_serial;
 static u8 seen_serial;
 
 static u8 charging;
+static u8 prev_b;
 static u16 last_frame;
 static u8 carrier = 0xFF;
 static u8 giant_hits;
@@ -91,7 +92,6 @@ static u8 shot_dir[SHOTS];
 static u8 shot_direct[SHOTS];     // body slot the shot struck (burst skips it)
 static u8 shot_age[SHOTS];
 static u8 shot_dmg[SHOTS];
-static u8 shot_hp[SHOTS], shot_ttl[SHOTS];
 static i16 shot_lx[SHOTS], shot_ly[SHOTS];
 
 // ---- strikes ----------------------------------------------------------------
@@ -362,8 +362,6 @@ static u8 spawn_shot(u8 kind, u8 dir, u8 dmg, u8 speed, u8 ttl, u8 pierce,
     shot_direct[k] = 0xFF;
     shot_age[k] = 0;
     shot_dmg[k] = dmg;
-    shot_hp[k] = pierce;
-    shot_ttl[k] = ttl;
     shot_lx[k] = e->x + 3;
     shot_ly[k] = e->y + 3;
     return 1;
@@ -412,25 +410,35 @@ static void hex_burst(u8 k) {
     v1(0x2F, 0x40, 0x93, 1500, 16);
 }
 
-// A tracked spell struck body j (seen as a pierce drop or the shot's end
-// beside a body). Spells carry a guaranteed condition on top of the hit
-// that combat_apply_player_shot_hit already dealt; detecting it here keeps
-// the combat bank untouched.
-static void on_struck(u8 k, u8 j) {
+// One hook before the normal combat damage branch. Keep the tag test and
+// guaranteed spell status here, away from the near-full combat bank.
+void magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
+    u8 k;
+    entity_t *shot = &entities[i];
     entity_t *ej = &entities[j];
-    if (shot_direct[k] == 0xFF) shot_direct[k] = j;
-    switch (shot_kind[k]) {
+    if (!MAGIC_IS_SHOT(shot)) {
+        if (survives) status_try_player_shot(j, i);
+        return;
+    }
+    for (k = 0; k < SHOTS; ++k) {
+        if (shot_slot[k] != i) continue;
+        if (shot_direct[k] == 0xFF) shot_direct[k] = j;
+        shot_lx[k] = shot->x + 3;
+        shot_ly[k] = shot->y + 3;
+        break;
+    }
+    if ((shot->ai_data[7] & 15) == SPELL_MOONFIRE) g_hitstop = 3;
+    if (!survives) return;
+    switch (shot->ai_data[7] & 15) {
         case SPELL_MOONFIRE:
             status_enemy_apply(j, QSTATUS_BURN, 0);
-            g_hitstop = 3;
             break;
         case SPELL_HEX:
             status_enemy_apply(j, is_heavy(ej, j)
                 ? QSTATUS_MUTE : QSTATUS_CONFUSION, 16);
             break;
         case SPELL_BLIZZARD:
-            if (is_heavy(ej, j)) status_enemy_apply(j, QSTATUS_SLOW, 0);
-            else status_enemy_apply(j, QSTATUS_STOP, 12);
+            status_enemy_apply(j, QSTATUS_STOP, 12);
             fx(MAGIC_T_CURE, 1 | BANK1, BODY_X(ej), BODY_Y(ej) - 4, 8);
             break;
     }
@@ -442,8 +450,6 @@ static void tick_shots(u8 keys) {
         entity_t *e;
         if (shot_slot[k] == 0xFF) continue;
         if (!shot_alive(k)) {
-            u8 j = nearest_body(shot_lx[k], shot_ly[k], 12, shot_direct[k]);
-            if (j != 0xFF && shot_age[k] < shot_ttl[k]) on_struck(k, j);
             // Moonfire and Hex burst where they ended: a body, a wall, or
             // the end of their flight.
             if (shot_kind[k] == SPELL_MOONFIRE) moonfire_burst(k);
@@ -452,11 +458,6 @@ static void tick_shots(u8 keys) {
             continue;
         }
         e = &entities[shot_slot[k]];
-        if (e->hp < shot_hp[k]) {
-            u8 j = nearest_body(shot_lx[k], shot_ly[k], 12, shot_direct[k]);
-            shot_hp[k] = e->hp;
-            if (j != 0xFF) on_struck(k, j);
-        }
         shot_age[k]++;
         shot_lx[k] = e->x + 3;
         shot_ly[k] = e->y + 3;
@@ -605,64 +606,74 @@ static void wisp_fx_drop(void) {
 }
 
 static void tick_flame_ward(void) {
-    u8 k;
+    u8 k, i;
+    i16 wx[3], wy[3];
+    entity_t *e;
     if (!(ward_beat & 3)) ward_angle = (u8)((ward_angle + 1) % 12);
     for (k = 0; k < 3; ++k) {
-        u8 bit = (u8)(1 << k), idx, i;
-        i16 x, y;
-        entity_t *e;
-        if (!(wisp_live & bit)) continue;
+        u8 idx = (u8)((ward_angle + k * 4) % 12);
+        wx[k] = (i16)(HERO_X + orb_x[idx]);
+        wy[k] = (i16)(HERO_Y + orb_y[idx]);
         if (wisp_cd[k]) wisp_cd[k]--;
-        idx = (u8)((ward_angle + k * 4) % 12);
-        x = (i16)(HERO_X + orb_x[idx]);
-        y = (i16)(HERO_Y + orb_y[idx]);
-        // A wisp eats a hostile shot it touches...
-        e = entities;
-        for (i = 0; i < MAX_ENTITIES && wisp_charges[k]; ++i, ++e) {
-            if (!hostile_shot(e)) continue;
-            if (vdist((i16)(e->x + 3) - x, (i16)(e->y + 3) - y) > 7) continue;
-            fx_spawn(SPR_FX_IMPACT, 4, e->x, e->y, 6);
-            entity_kill(i);
-            wisp_charges[k]--;
-            v4(0x81, 0x33, 4);
-        }
-        // ...and sears one body at a time.
-        if (wisp_charges[k] && !wisp_cd[k]) {
-            u8 j = nearest_body(x, y, 9, 0xFF);
-            if (j != 0xFF) {
+    }
+    // One pass over the room with a cheap box reject around the hero: a
+    // wisp eats a hostile shot it touches and sears one body at a time.
+    e = entities;
+    for (i = 0; i < MAX_ENTITIES; ++i, ++e) {
+        u8 shot;
+        i16 ex, ey, dx, dy;
+        if (!(e->flags & EF_ACTIVE)) continue;
+        shot = hostile_shot(e);
+        if (shot) { ex = (i16)(e->x + 3); ey = (i16)(e->y + 3); }
+        else if (is_body(e)) { ex = BODY_X(e); ey = BODY_Y(e); }
+        else continue;
+        dx = ex - HERO_X;
+        dy = ey - HERO_Y;
+        if (dx < -26 || dx > 26 || dy < -26 || dy > 26) continue;
+        for (k = 0; k < 3; ++k) {
+            if (!(wisp_live & (u8)(1 << k)) || !wisp_charges[k]) continue;
+            if (vdist(ex - wx[k], ey - wy[k]) > (shot ? 7 : 9)) continue;
+            if (shot) {
+                fx_spawn(SPR_FX_IMPACT, 4, e->x, e->y, 6);
+                entity_kill(i);
+                wisp_charges[k]--;
+                v4(0x81, 0x33, 4);
+                break;
+            }
+            if (!wisp_cd[k]) {
                 hit_cx = HERO_X;
                 hit_cy = HERO_Y;
-                hit_body(j, 2, 1, QSTATUS_BURN, 0);
                 wisp_charges[k]--;
                 wisp_cd[k] = 24;
+                hit_body(i, 2, 1, QSTATUS_BURN, 0);
+                break;
             }
         }
+    }
+    for (k = 0; k < 3; ++k) {
+        u8 bit = (u8)(1 << k), s;
+        if (!(wisp_live & bit)) continue;
+        s = wisp_fx[k];
         if (!wisp_charges[k]) {
             wisp_live &= (u8)~bit;
-            fx(SPR_FX_IMPACT, 4, x, y, 8);
-            {
-                u8 s = wisp_fx[k];
-                if (s != 0xFF && entities[s].type == ENT_FX
-                    && entities[s].sprite_tile == MAGIC_T_WISP)
-                    entity_kill(s);
-                wisp_fx[k] = 0xFF;
-            }
+            fx(SPR_FX_IMPACT, 4, wx[k], wy[k], 8);
+            if (s != 0xFF && entities[s].type == ENT_FX
+                && entities[s].sprite_tile == MAGIC_T_WISP)
+                entity_kill(s);
+            wisp_fx[k] = 0xFF;
             continue;
         }
         // Visual: one short FX per wisp, re-parked each frame.
-        {
-            u8 s = wisp_fx[k];
-            if (s == 0xFF || entities[s].type != ENT_FX
-                || entities[s].sprite_tile != MAGIC_T_WISP
-                || !(entities[s].flags & EF_ACTIVE)) {
-                s = fx_spawn(MAGIC_T_WISP, 4 | BANK1, x - 4, y - 4, 4);
-                wisp_fx[k] = s;
-            }
-            if (s != 0xFF) {
-                entities[s].x = (ppos_t)(x - 4);
-                entities[s].y = (ppos_t)(y - 4);
-                entities[s].state_timer = 4;
-            }
+        if (s == 0xFF || entities[s].type != ENT_FX
+            || entities[s].sprite_tile != MAGIC_T_WISP
+            || !(entities[s].flags & EF_ACTIVE)) {
+            s = fx_spawn(MAGIC_T_WISP, 4 | BANK1, wx[k] - 4, wy[k] - 4, 4);
+            wisp_fx[k] = s;
+        }
+        if (s != 0xFF) {
+            entities[s].x = (ppos_t)(wx[k] - 4);
+            entities[s].y = (ppos_t)(wy[k] - 4);
+            entities[s].state_timer = 4;
         }
     }
     if (!wisp_live) magic_ward_ticks = 1;   // ends below
@@ -929,6 +940,8 @@ static void tick_live(u8 keys) {
 
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED {
     u8 hold;
+    u8 b_edge = ((keys & J_B) && !prev_b) ? 1 : 0;
+    prev_b = (keys & J_B) ? 1 : 0;
     // A gap in room frames (Pack, map, dialogue, transitions) drops a
     // charge, so a B release after a menu never ghost-casts.
     if ((u16)(loop_frame_counter - last_frame) > 8) {
@@ -971,7 +984,9 @@ void magic_input(u8 keys, u8 pressed, u8 damage) BANKED {
         }
         return;
     }
-    if ((pressed & J_B) && !(keys & J_A)) {
+    // Own B edge: a press that lands on a hitstop frame (the room skips
+    // its input edge then) still starts the charge on the next room frame.
+    if (b_edge && !(keys & J_A)) {
         if (STATUS_PLAYER_MUTED() || !mp_ok(1)) { refuse(); return; }
         charging = 1;
         magic_hold = 1;

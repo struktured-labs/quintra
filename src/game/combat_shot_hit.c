@@ -19,6 +19,7 @@
 #include "game/run_state.h"
 #include "game/status.h"
 #include "game/will.h"
+#include "game/magic.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -151,9 +152,9 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
             dmg > 1 ? (u8)((dmg + 1) >> 1) : 1, j);
     }
 
+    magic_hit_status(j, i, ej->hp > dmg);
     if (ej->hp > dmg) {
         ej->hp = (u8)(ej->hp - dmg);
-        status_try_player_shot(j, i);
         ej->ai_data[7] = weak ? 7 : 4;
         if (!(shot->ai_data[3] & PROJ_FLAG_WILL_WAVE))
             knockback_enemy(ej, shot->vx, shot->vy, poise);

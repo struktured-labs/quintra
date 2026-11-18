@@ -93,6 +93,7 @@ def arena(pb, mp=None):
     pb.memory[PLAYER + PL_HP] = pb.memory[PLAYER + PL_HP_MAX]
     pb.memory[PLAYER + PL_MP] = pb.memory[PLAYER + PL_MP_MAX] if mp is None else mp
     pb.memory[TAP_CD] = pb.memory[WARD_CD] = pb.memory[WARD_TICKS] = 0
+    pb.memory[CURE_USED] = 0   # a fresh room for Cure's once-per-room rule
     pb.memory[PSTATUS] = 0
     # A distant durable body keeps the room's clear reward (MP refund) away.
     entity(pb, 31, 2, 150, 8, hp=200)
@@ -208,10 +209,13 @@ def check_spells(pb, c):
         assert m[ESTATUS] == ST_BURN, f"Moonfire status {m[ESTATUS]}"
         # Flame Ward erases a hostile shot flying at the hero.
         arena(pb)
-        shot = entity(pb, 0, 1, 104, 64, hp=1, vx=-1)
-        hold(pb)
-        assert m[WARD_TICKS] > 0
-        run_until(pb, 40, lambda: not (m[shot + 1] & 1))
+        shot = entity(pb, 0, 1, 140, 64, hp=1, vx=-1)
+        casts = m[CASTS]
+        charged = hold(pb)
+        assert m[CASTS] == (casts + 1) & 0xFF, (
+            f"Flame Ward not cast: hold {charged} mp {m[PLAYER + PL_MP]} "
+            f"last {m[LAST]} cd {m[WARD_CD]}")
+        run_until(pb, 90, lambda: not (m[shot + 1] & 1))
         assert not (m[shot + 1] & 1), "Flame Ward did not eat the shot"
     elif c == 1:
         # Thunder: sure strike + stun, then a chain that slows a neighbour.
