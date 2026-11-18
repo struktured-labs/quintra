@@ -547,6 +547,22 @@ static void combat_player_shots(void) {
 }
 
 
+
+static void combat_contact_knockback(const entity_t *hostile, i8 kx, i8 ky) {
+    u8 n;
+    if (hostile->type == ENT_ENEMY && hostile->ai_data[0] == ENEMY_BANE_BRUTE) {
+        bane_brute_apply_knockback(kx, ky);
+        return;
+    }
+    for (n = 0; n < 6; ++n) {
+        i16 nx = (i16)(player.x + kx);
+        i16 ny = (i16)(player.y + ky);
+        if (!room_player_position_clear(nx, ny)) break;
+        player.x = (ppos_t)nx;
+        player.y = (ppos_t)ny;
+    }
+}
+
 u8 combat_resolve(void) BANKED {
     u8 i, j;
     u8 player_died = 0;
@@ -693,17 +709,7 @@ u8 combat_resolve(void) BANKED {
                         i16 sy = FIX8_TO_INT(hostile_entity->y);
                         i8 kx = ((i16)player.x > sx) ? 1 : ((i16)player.x < sx) ? -1 : 0;
                         i8 ky = ((i16)player.y > sy) ? 1 : ((i16)player.y < sy) ? -1 : 0;
-                        u8 n;
-                        if (hostile_entity->type == ENT_ENEMY
-                            && hostile_entity->ai_data[0] == ENEMY_BANE_BRUTE) {
-                            bane_brute_apply_knockback(kx, ky);
-                        } else for (n = 0; n < 6; ++n) {
-                            i16 nx = (i16)(player.x + kx);
-                            i16 ny = (i16)(player.y + ky);
-                            if (!room_player_position_clear(nx, ny)) break;
-                            player.x = (ppos_t)nx;
-                            player.y = (ppos_t)ny;
-                        }
+                        combat_contact_knockback(hostile_entity, kx, ky);
                     }
                 } else {
                     player.hp = 0;

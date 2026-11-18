@@ -952,7 +952,33 @@ void new_monsters_foyer_warp(void) BANKED {
 }
 
 void new_monsters_draw(void) BANKED {
-    u8 i, live_beam = 0, bi, used = 0;
+    u8 i, live_beam = 0, bi, used = 0, any = 0;
+    /* Drop the sticky busy flag once no specialist, bomb, or beam remains
+       so a converted/cleared room does not bank-call this every frame. */
+    for (i = 0; i < FUSE_BOMB_MAX; ++i) if (fb_live[i]) any = 1;
+    if (leybeam_beam_live || vault_hand_holding) any = 1;
+    if (!any) {
+        for (i = 0; i < MAX_ENTITIES; ++i) {
+            entity_t *e = &entities[i];
+            u8 id;
+            if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) continue;
+            id = e->ai_data[0];
+            if (id >= ENEMY_VEIL_MAGUS && id <= ENEMY_FUSE_HURLER) {
+                any = 1;
+                break;
+            }
+        }
+    }
+    if (!any && player_status_kind != QSTATUS_CONFUSION) {
+        new_monsters_busy = 0;
+        move_sprite(35, 0, 0);
+        move_sprite(36, 0, 0);
+        move_sprite(37, 0, 0);
+        move_sprite(38, 0, 0);
+        move_sprite(39, 0, 0);
+        return;
+    }
+    if (any) new_monsters_busy = 1;
     fuse_bombs_tick();
     if (leybeam_beam_live) {
         for (i = 0; i < MAX_ENTITIES; ++i)

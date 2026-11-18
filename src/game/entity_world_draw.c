@@ -4,7 +4,8 @@
 
 #include "core/types.h"
 #include "game/entity.h"
-#include "game/enemy_new_ai.h"
+extern u8 new_monsters_busy;
+void new_monsters_draw(void) BANKED;
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/cinder_big.h"

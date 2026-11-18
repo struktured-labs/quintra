@@ -53,3 +53,24 @@ void palette_bg_fill_attrs(u8 slot) BANKED {
     for (y = 0; y < 18; ++y) set_tiles(0, y, 20, 1, map, row);
     VBK_REG = 0;
 }
+
+extern u8 leybeam_flush_pending;
+void leybeam_vblank_flush(void) BANKED;
+
+/* Called from loop_run only after a tick already crossed VBlank and a
+   palette heal or Leybeam stamp is still pending. First pass lands in
+   LY 144-149 (immediately if we are still in that window, otherwise one
+   extra wait). Later armed passes ride a future on-time frame so a busy
+   effect (Tide Vortex) is not forced to 30 Hz. */
+void loop_overrun_vblank_flush(void) BANKED {
+    if (!(LY_REG >= 144u && LY_REG < 150u)) {
+        if (!(palette_bg_pending_commit == PALETTE_BG_COMMIT_PASSES
+              || palette_obj_pending_commit == PALETTE_OBJ_COMMIT_PASSES
+              || leybeam_flush_pending))
+            return;
+        wait_vbl_done();
+    }
+    if (palette_obj_pending_commit) palette_obj_commit_vblank();
+    else if (palette_bg_pending_commit) palette_bg_commit_vblank();
+    if (leybeam_flush_pending) leybeam_vblank_flush();
+}

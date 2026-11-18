@@ -1204,6 +1204,16 @@ static u8 room_aim_from_step(i8 dx, i8 dy) {
     return room_aim_step_table[(u8)((dy + 1) * 3 + (dx + 1))];
 }
 
+
+/* SDCC lifts locals from nested blocks to the function frame.
+   A 16-byte enemy_def_t here would bloat every room_tick. */
+static u8 room_enemy_table_hp(u8 eid) {
+    enemy_def_t edef;
+    if (eid >= N_ENEMIES) return 0;
+    enemy_load_def(eid, &edef);
+    return edef.stats.hp;
+}
+
 screen_id_t room_tick(u8 keys, u8 pressed) {
     if (pending_foyer_warp) {
         new_monsters_foyer_warp();
@@ -2027,12 +2037,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // visible loss by several true hits.
         if (!found && player.class_id == 2 && corvin_i != 0xFF) {
             u8 eid = entities[corvin_i].ai_data[0];
-            u8 max = 0;
-            if (eid < N_ENEMIES) {
-                enemy_def_t edef;
-                enemy_load_def(eid, &edef);
-                max = edef.stats.hp;
-            }
+            u8 max = room_enemy_table_hp(eid);
             if (max) {
                 if (!run_state.world_mode
                     && run_state_dungeon_local() < 3) {

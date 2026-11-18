@@ -20,6 +20,7 @@
 /* Bare decls: do not include enemy_new_ai.h (pulls entity.h into HOME). */
 extern u8 leybeam_flush_pending;
 void leybeam_vblank_flush(void) BANKED;
+void loop_overrun_vblank_flush(void) BANKED;
 
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
@@ -120,35 +121,19 @@ void loop_run(void) {
         audio_tick();
 
         // If this iteration already crossed VBlank, skip a second wait so
-        // a tiny overrun stays at 60 Hz. A first mid-room palette heal
-        // pass (or a Leybeam BG stamp) must still land in LY 144-149:
-        // commit immediately when still in that window, otherwise wait
-        // once if no pass has landed yet. Later pending passes ride a
-        // future on-time frame so a busy effect (Tide Vortex) is not
-        // forced to 30 Hz for every armed heal.
-        {
-            u8 can_commit = 0;
-            if (g_vbl_epoch == vbl_at_start) {
-                wait_vbl_done();
-                can_commit = 1;
-            } else if (palette_obj_pending_commit
-                       || palette_bg_pending_commit
-                       || leybeam_flush_pending) {
-                if (LY_REG >= 144u && LY_REG < 150u) {
-                    can_commit = 1;
-                } else if (palette_bg_pending_commit == PALETTE_BG_COMMIT_PASSES
-                           || palette_obj_pending_commit == PALETTE_OBJ_COMMIT_PASSES
-                           || leybeam_flush_pending) {
-                    wait_vbl_done();
-                    can_commit = 1;
-                }
-            }
-            if (can_commit) {
-                // OBJ first: the title commit needs the top VBlank lines.
-                if (palette_obj_pending_commit) palette_obj_commit_vblank();
-                else if (palette_bg_pending_commit) palette_bg_commit_vblank();
-                if (leybeam_flush_pending) leybeam_vblank_flush();
-            }
+        // a tiny overrun stays at 60 Hz. Pending palette heals / Leybeam
+        // stamps still land in LY 144-149 via a banked helper so this
+        // home path stays as tight as the pre-specialist loop.
+        if (g_vbl_epoch == vbl_at_start) {
+            wait_vbl_done();
+            // OBJ first: the title commit needs the top VBlank lines.
+            if (palette_obj_pending_commit) palette_obj_commit_vblank();
+            else if (palette_bg_pending_commit) palette_bg_commit_vblank();
+            if (leybeam_flush_pending) leybeam_vblank_flush();
+        } else if (palette_obj_pending_commit
+                   || palette_bg_pending_commit
+                   || leybeam_flush_pending) {
+            loop_overrun_vblank_flush();
         }
 
         loop_frame_counter++;
