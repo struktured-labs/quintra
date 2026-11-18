@@ -269,7 +269,7 @@ recoloured with palette 6). No new projectile tile is required.
   `if (id >= ENEMY_FACET_RAM)` patrol intercept to
   `id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER`**, or the new IDs 35–40
   will never reach their `ai_kind` cases. Put the new ticks in a fresh bank
-  (`enemy_new_ai.c`) from day one. Grouping logic lives in
+  (`enemy_new_ai.c`, **bank 25** — bank 31 is now `powerup_extra.c` after PR #136) from day one. Grouping logic lives in
   the room population path (procgen / spawn), not in the per-frame AI.
 - Bane Brute knockback: a special case in the existing contact knockback
   loop (the 6 px shove in `combat.c`) when `ai_data[0] == ENEMY_BANE_BRUTE`.
@@ -317,35 +317,24 @@ lists beside the other enemy tests.
 **Did the 2026-11-16 “D-pad sends the hero the wrong way” request land on
 main?**
 
-**Yes, the core effect is already on main.** `QSTATUS_CONFUSION` remaps the
-D-pad in `status_player_filter_input` (`src/game/status.c`): four modes
-(quarter-turn, horizontal mirror, half-turn, axis swap), duration 90 beats
-(~12 s), and a mid-effect reshuffle after 36 frames of held direction.
-Rune Lantern and Dusk Midge inflict it; shadow-element player shots can too.
-The HUD already shows `CONFUSE`. It landed in `a7b2daa5` (“feat: add rift
-conditions and inverted hunt”), which is an ancestor of current `main` and
-does not carry a GitHub PR number in its message (it predates the later
-numbered PR stream).
+**Yes. The core effect and the 2026-11-16 retune are both on main.** The
+core D-pad remap landed in `a7b2daa5` ("feat: add rift conditions and
+inverted hunt"). The retune (3.2 s / 24 beats, horizontal mirror or
+half-turn only, no mid-effect reshuffle, 4 s `confusion_immune`, standing
+still shortens the effect) merged in
+[PR #136](https://github.com/struktured-labs/quintra/pull/136) at `f830836f`.
+Rune Lantern and Dusk Midge inflict it; `scripts/test_confusion.py` is on
+main. **Do not re-implement the retune.**
 
-**What did not land on main**
+**What is still missing on main**
 
-- The 2026-11-16 *retune* (3.2 s, mirror/reverse only, no reshuffle, 4 s
-  immunity, standing-still shortens) is specified in merged
-  [PR #120](https://github.com/struktured-labs/quintra/pull/120) and
-  implemented only on the still-open
-  [PR #136](https://github.com/struktured-labs/quintra/pull/136)
-  (power-ups Phase 2). It is **not** on `main`.
-- No persistent swirl-star sprite over the confused hero on `main`.
-- `scripts/test_status_effects.py` has no Confusion coverage; there is no
-  `test_confusion_fx.py` on `main` (it exists only on the Phase 2 branch).
+- No persistent swirl-star sprite over the confused hero.
 - Pack Antidote already calls `status_player_cure()`, which clears
-  Confusion. Auto-rescue (`antidote_try_rescue`) is still DoT-only
+  Confusion. Auto-rescue (`antidote_try_rescue`) stays DoT-only
   (Poison / Burn / Bleed).
 
-**This PR will not re-implement PR #136's retune** (duration, immunity,
-no-reshuffle), to avoid a merge war with the open power-ups branch. It will
-add only the missing player-facing pieces that #136 also does not fully
-cover:
+**This PR will not touch the retune, `status.c` cadence, or
+`scripts/test_confusion.py`.** It only adds the missing tell:
 
 - A two-frame swirl-star FX over the hero for the whole Confusion duration,
   gone on expiry or cure.
@@ -433,3 +422,7 @@ Agreed and applied to the body above, plus:
   immediately if the caster dies or is Stopped mid-beam. Test that restore.
 - Max-Will proposal: Carbon agrees Picsean is the right starter for a future
   wide tide-beam. No hero code in this PR.
+- Confusion retune merged in PR #136 (`f830836f`) after the first draft of
+  this spec. The retune, `confusion_immune`, and `test_confusion.py` are
+  now on main and must not be re-implemented. Bank 31 is `powerup_extra.c`;
+  new AI is pinned to unused bank 25.
