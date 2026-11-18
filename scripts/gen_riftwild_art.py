@@ -419,24 +419,25 @@ T["grass_sprig"] = """
 ........"""
 
 # Trail edges (tiles pass 2): the side facing ground frays into colour 0
-# with darker grit along the worn lip. Flips cover S/E and the other
+# with darker grit along the worn lip; one long shelf and one step per tile
+# (not a regular sawtooth), so flips give irregular 6-10px spans. Flips cover S/E and the other
 # corners; straits are one-tile trails.
 T["path_n"] = """
-...1....
-.1121..1
-12222112
-22222222
+....1...
+11221...
+22222111
 22222222
 22212222
 22222222
+22222212
 22222222"""
 T["path_w"] = """
 .1222222
-..122222
-..122222
 .1222222
 12222222
-.1222122
+..122222
+..122222
+..122122
 ..122222
 .1222222"""
 T["path_nw"] = """
@@ -449,23 +450,23 @@ T["path_nw"] = """
 12222122
 .1222222"""
 T["path_strait_h"] = """
-...1....
-.1121..1
-12222112
-22222222
+....1...
+11221...
+22222111
 22212222
 22222222
-21122221
-1..1211."""
+22222221
+1112221.
+...1...."""
 T["path_strait_v"] = """
 .122221.
-..12221.
-..12221.
-.122221.
-1222221.
 .12221..
+122221..
+.122221.
 ..12221.
-.122221."""
+..122221
+.122221.
+.12221.."""
 
 # Worldglass shard cluster (crystal palette): BGT_CRYSTAL out in the
 # Riftwild drew the square dungeon crystal block; this sits on the ground.

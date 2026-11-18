@@ -636,6 +636,7 @@ static const u8 rw_tr_jit[16] = {
 static u8 trail_pick(u8 code, u8 h) {
     u8 a = (u8)(rw_path_attr | rw_tr_flip[code]);
     if (h & 0x80) a ^= rw_tr_jit[code];
+    if (!code && (h & 0x40)) a ^= 0x40;   // mid grit: four orientations
     cell_attr = a;
     if (!code) return (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
     return rw_tr_art[code];
@@ -744,6 +745,7 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
             i = (u8)(BX(x, y) ^ rw_cy[(y >> 1) & 15] ^ riftwild_render_salt);
             if (MARKED(rw_mk[i], h)) {
                 cell_attr = a | 0x08 | ((h & 0x80) ? 0x20 : 0);
+                i ^= h;   // cells in a clump mix its two marks
                 if (tile == BGT_WILD_SNOW)
                     return (i & 0x40) ? RWA_SNOW_GLINT : RWA_SNOW_DRIFT;
                 if (tile == BGT_WILD_SAND)
@@ -866,7 +868,7 @@ static const u8 rw_kind[256] = {
     [BGT_FLOOR] = RWK_SLOW, [BGT_WILD_WATER] = RWK_SLOW,
     [BGT_WILD_HOLE] = RWK_SLOW, [BGT_CRYSTAL] = RWK_SLOW,
 };
-// (b & 0x40) ? alt_b : alt_a, matching dress_cell() for snow, sand and mud.
+// ((b ^ h) & 0x40) ? alt_b : alt_a, matching dress_cell() for snow, sand, mud.
 static const u8 rw_alt_a[5] = { 0, 0, RWA_SNOW_DRIFT, RWA_SAND_SHELL,
     RWA_MUD_PUDDLE };
 static const u8 rw_alt_b[5] = { 0, 0, RWA_SNOW_GLINT, RWA_SAND_CRACK,
@@ -927,7 +929,7 @@ static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
         }                                                                   \
         if (!MARKED(rw_mk[b], h)) continue;                                 \
         *ap |= (u8)((h & 0x80) ? 0x28 : 0x08);                              \
-        *tp = (b & 0x40) ? rw_alt_b[k] : rw_alt_a[k];                       \
+        *tp = ((b ^ h) & 0x40) ? rw_alt_b[k] : rw_alt_a[k];                 \
     }                                                                       \
 }
 #define PAR_H(i) ((i) & 1)
@@ -1028,6 +1030,7 @@ static u8 trail_run(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {
             h += (u8)(dl_mix ^ i);
             nx_attr = (u8)(rw_path_attr | rw_tr_flip[code]);
             if (h & 0x80) nx_attr ^= rw_tr_jit[code];
+            if (!code && (h & 0x40)) nx_attr ^= 0x40;
             *ap = nx_attr;
             *tp = code ? rw_tr_art[code]
                 : (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
