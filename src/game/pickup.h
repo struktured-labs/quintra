@@ -111,6 +111,12 @@ u8   pickup_boss_relic_for_class(void) BANKED;
 // Seed-pure counterpart used by the optional Farfold Cache. `roll` selects
 // one of the active champion's same three useful build branches.
 u8   pickup_farfold_relic_for_class(u8 roll) BANKED;
+// Random 10-orb roll with diminishing ATK/SPD/LCK weights. One RNG byte;
+// at full weights this is exactly 10 + (r % 10).
+u8   pickup_roll_stat_relic(void) BANKED;
+u8   pickup_map_stat_relic(u8 r) BANKED;
+// Director boon: one entry from the 5-item sustain/utility table (roll wraps).
+u8   pickup_boon_relic(u8 roll) BANKED;
 
 // Spawn a weapon orb (generated weapon item index). Permanent, never magnetizes;
 // overlap it and press A to swap the A-weapon, dropping the old one in place.

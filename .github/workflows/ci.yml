@@ -241,6 +241,7 @@ jobs:
         run: |
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_notices.py
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_stat_max_pickup.py
+          python3 scripts/test_stat_drop_curve.py
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_feedback.py
 
       - name: PyBoy temporary power-ups

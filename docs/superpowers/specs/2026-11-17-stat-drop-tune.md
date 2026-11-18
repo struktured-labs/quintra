@@ -183,3 +183,52 @@ file in a free bank and is declared in `pickup.h`.
 
 LCK-influenced drops, Easy-mode starting bonuses, changing Glass Fang,
 per-stage hard caps, and any deploy / SD-card copy.
+
+## Carbon review (2026-11-17)
+
+Verdict: **approve with changes**. Carbon call $0.1782; running total
+$6.4536 logged. Taken:
+
+1. Corvin also loses structured Speed Ring (pool is now Power, Mana Gem,
+   Tough Skin). Structured SPD for any hero was putting Corvin near-max
+   at stage 4.
+2. SPD high-taper is now an absolute `SPD >= 8` (so it fires before
+   near-max for the SPD-6 starters). Swift Fang weight drops to 0 once
+   either ATK or SPD is in the high taper.
+3. Vespine's structured pool is Power, Tough Skin, Mana Gem — not Lucky
+   Coin or Iron Heart — so LCK and her low-HP identity are not overwritten.
+   Boons are a 5-item table `{Iron, Tough, Lucky, Mana, Ward}` (Hunter's
+   Eye removed). Lucky/Hunter orbs taper to weight 1 once `LCK >= 6`.
+4. `pickup_boon_relic(roll)` wraps the full 0..4 table; the director's
+   seed-sized roll is no longer reduced mod 3.
+5. `pickup_map_stat_relic` has an explicit `total == 40` fast path that
+   returns `10 + (r % 10)`, matching historical `10 + rng_range(10)`.
+6. Earned-stat subtraction is guarded so a value below the baseline
+   cannot wrap a `u8` and lock the taper.
+
+### Final class tables
+
+| Hero    | Shop / Farfold / boss        |
+|---------|------------------------------|
+| Wolfkin | Power, Iron Heart, Ward Charm |
+| Sauran  | Iron Heart, Ward Charm, Blood Sigil (unchanged) |
+| Corvin  | Power, Mana Gem, Tough Skin  |
+| Picsean | Power, Mana Gem, Ward Charm (unchanged) |
+| Vespine | Power, Tough Skin, Mana Gem  |
+
+### Final explorer curve (400 Normal thorough runs)
+
+| Hero    | S2 ATK/SPD | S2 near-max | S6 ATK/SPD | S6 near-max | First near-max |
+|---------|------------|-------------|------------|-------------|----------------|
+| Vespine | 8.4 / 7.5  | 0% / 2%     | 14.2 / 9.4 | 86% / 41%   | 5.0 / 7.2      |
+| Wolfkin | 6.4 / 7.6  | 0% / 2%     | 13.1 / 9.4 | 66% / 44%   | 6.1 / 7.0      |
+| Corvin  | 6.5 / 5.9  | 0% / 0%     | 13.2 / 8.2 | 69% / 18%   | 6.0 / 8.6      |
+| Sauran  | 6.6 / 5.8  | 0% / 0%     | 13.2 / 8.4 | 68% / 20%   | 6.0 / 8.4      |
+| Picsean | 5.5 / 5.7  | 0% / 0%     | 12.5 / 8.2 | 52% / 16%   | 6.6 / 8.6      |
+
+Nobody is near-max at stage 2. Early game still pays (Vespine 4/6 to
+8.4/7.5). ATK near-max clusters at stage 6 for four of five heroes;
+Vespine, the highest starter, arrives a little earlier (mean first 5.0)
+because she starts four points closer to the cap. Buying both village
+ATK wares after stages 3 and 6 pulls a shopper about one stage ahead
+and still does not max anyone in stage 2.

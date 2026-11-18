@@ -126,7 +126,7 @@ def main():
     assert kinds.count(PICKUP_HEART_HALF) >= 2, f"missing boss hearts: {kinds}"
     assert kinds.count(PICKUP_COIN_5) >= 2, f"missing boss coins: {kinds}"
     assert PICKUP_ITEM in kinds, f"missing guaranteed boss relic: {kinds}"
-    assert any(relic in (12, 17, 19) for relic in relic_indices), (
+    assert any(relic in (12, 10, 16) for relic in relic_indices), (
         f"Wolfkin boss reward ignored its combat-relic pool: {relic_indices}")
     assert pb.memory[MUSIC] == 19, "boss clear did not resolve to victory music"
     arena_floor = cgb_palette(pb, 0xFF68, 0xFF69, 0)
@@ -142,11 +142,11 @@ def main():
     pb.stop(save=False)
 
     pools = {
-        0: (12, 17, 19),
+        0: (12, 10, 16),
         1: (10, 16, 19),
-        2: (11, 12, 17),
+        2: (12, 15, 13),
         3: (12, 15, 16),
-        4: (12, 17, 19),
+        4: (12, 13, 15),
     }
     chosen = {class_id: relic_for_class(class_id) for class_id in pools}
     assert all(chosen[class_id] in pool for class_id, pool in pools.items()), (

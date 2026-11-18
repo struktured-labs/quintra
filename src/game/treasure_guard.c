@@ -16,8 +16,12 @@ u8 pickup_boss_relic_for_class(void) BANKED {
 }
 
 u8 pickup_farfold_relic_for_class(u8 roll) BANKED {
+    /* At most one ATK and at most one SPD relic per hero (Swift counts as
+       both and is not used here). Wolfkin/Vespine start at SPD 6, so Speed
+       Ring is not in their structured pool; Corvin likewise gets mobility
+       only from the tapered 10-orb roll. */
     static const u8 relics[5][3] = {
-        {12,17,19}, {10,16,19}, {11,12,17}, {12,15,16}, {12,17,19}
+        {12,10,16}, {10,16,19}, {12,15,13}, {12,15,16}, {12,13,15}
     };
     while (roll >= 3) roll -= 3;
     return relics[player.class_id < 5 ? player.class_id : 0][roll];

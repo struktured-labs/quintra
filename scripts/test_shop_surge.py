@@ -266,7 +266,7 @@ def main():
             "class-attuned relic fell back to a generic orb"
         # WARE_ITEM payload is one of Wolfkin's class-attuned combat relics,
         # not a purchase-time random low-stat roll.
-        assert pb.memory[shop_wares(pb)[1] + 20] in (12, 17, 19)
+        assert pb.memory[shop_wares(pb)[1] + 20] in (12, 10, 16)
         pb.stop(save=False)
 
     # A later merchant must advance past a unique relic already carried.
