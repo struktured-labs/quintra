@@ -260,10 +260,25 @@ mod tests {
     }
 
     #[test]
+    fn new_specialists_author_into_stage_pools_without_weight_inflation() {
+        // Veil Magus 35, Hex Walker 36, Vault Hand 37, Bane Brute 38,
+        // Zag Dart 39, Leybeam 40. Every stage table still sums to 100.
+        assert!(stages::STAGES[3].enemy_pool.iter().any(|&(id, _)| id == 35));
+        assert!(stages::STAGES[1].enemy_pool.iter().any(|&(id, _)| id == 36));
+        assert!(stages::STAGES[5].enemy_pool.iter().any(|&(id, _)| id == 37));
+        assert!(stages::STAGES[4].enemy_pool.iter().any(|&(id, _)| id == 38));
+        assert!(stages::STAGES[0].enemy_pool.iter().any(|&(id, _)| id == 39));
+        assert!(stages::STAGES[6].enemy_pool.iter().any(|&(id, _)| id == 40));
+        for stage in &stages::STAGES {
+            assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
+        }
+    }
+
+    #[test]
     fn void_sanctum_authors_void_halo_without_weight_inflation() {
         let void_sanctum = &stages::STAGES[8];
         assert!(void_sanctum.enemy_pool.iter().any(|&(id, w)| id == 31 && w == 8));
-        assert_eq!(void_sanctum.enemy_pool.len(), 7);
+        assert_eq!(void_sanctum.enemy_pool.len(), 10);
         assert_eq!(void_sanctum.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);
         assert_eq!(enemies::VOID_HALO.ai_script,
             quintra_content::AiScriptId::Spinner { radius: 52, fire_rate: 150 });

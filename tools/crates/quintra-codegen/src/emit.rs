@@ -101,6 +101,12 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_SPORE_MINE 11\n\
          #define AI_COUNTER_GUARD 12\n\
          #define AI_SUMMONER 13\n\
+         #define AI_BLINK_CASTER 14\n\
+         #define AI_WALK_CASTER 15\n\
+         #define AI_GRABBER 16\n\
+         #define AI_SHOVER 17\n\
+         #define AI_ZIGZAG 18\n\
+         #define AI_BEAM_CASTER 19\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -415,6 +421,17 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_COUNTER_GUARD", guard_cooldown, rush_ticks, 0),
         AiScriptId::Summoner { sight_radius, tell_ticks } =>
             ("AI_SUMMONER", sight_radius, tell_ticks, 0),
+        AiScriptId::BlinkCaster { vanish_ticks, tell_ticks } =>
+            ("AI_BLINK_CASTER", vanish_ticks, tell_ticks, 0),
+        AiScriptId::WalkCaster { walk_ticks, tell_ticks } =>
+            ("AI_WALK_CASTER", walk_ticks, tell_ticks, 0),
+        AiScriptId::Grabber { shadow_ticks, grab_ticks } =>
+            ("AI_GRABBER", shadow_ticks, grab_ticks, 0),
+        AiScriptId::Shover => ("AI_SHOVER", 0, 0, 0),
+        AiScriptId::ZigZag { tell_ticks, burst_ticks, cooldown_ticks } =>
+            ("AI_ZIGZAG", tell_ticks, burst_ticks, cooldown_ticks),
+        AiScriptId::BeamCaster { tell_ticks, beam_ticks, cooldown_ticks } =>
+            ("AI_BEAM_CASTER", tell_ticks, beam_ticks, cooldown_ticks),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\
@@ -737,7 +754,7 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          extern const u8 stage_room_archetype[N_STAGES];\n\
          /* Weighted normal-room rosters per stage (ids + weights,\n\
             stage_pool_n entries each; weights sum <= 255) */\n\
-         #define STAGE_POOL_MAX 7\n\
+         #define STAGE_POOL_MAX 10\n\
          extern const u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_n[N_STAGES];\n\

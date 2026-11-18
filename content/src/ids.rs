@@ -81,6 +81,13 @@ pub const ENEMY_VOID_HALO:       EnemyId = EnemyId::new(31);   // Void Sanctum w
 pub const ENEMY_RIFT_CANTOR:     EnemyId = EnemyId::new(32);   // chants once, then calls bounded escorts
 pub const ENEMY_FACET_RAM:       EnemyId = EnemyId::new(33);   // rear-vulnerable patrol, fires backward
 pub const ENEMY_STAGE_REAPER:    EnemyId = EnemyId::new(34);   // one mortal encounter per dungeon
+pub const ENEMY_VEIL_MAGUS:      EnemyId = EnemyId::new(35);   // blink, tell, bolt, vanish
+pub const ENEMY_HEX_WALKER:      EnemyId = EnemyId::new(36);   // walk, stop, aimed bolt
+pub const ENEMY_VAULT_HAND:      EnemyId = EnemyId::new(37);   // ceiling grabber, foyer return
+pub const ENEMY_BANE_BRUTE:      EnemyId = EnemyId::new(38);   // long-shove bruiser with status allies
+pub const ENEMY_ZAG_DART:        EnemyId = EnemyId::new(39);   // zig-zag burst, rare cooldown bolt
+pub const ENEMY_LEYBEAM:         EnemyId = EnemyId::new(40);   // cardinal wide laser
+
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -191,6 +198,15 @@ pub const SPRITE_VOID_HALO:      SpriteRef = SpriteRef::new(79);
 pub const SPRITE_RIFT_CANTOR:    SpriteRef = SpriteRef::new(70);
 pub const SPRITE_FACET_RAM:      SpriteRef = SpriteRef::new(242);
 pub const SPRITE_STAGE_REAPER:   SpriteRef = SpriteRef::new(250);
+// Dungeon combat reclaims town-only 16x16 actor tiles (208..223). Towns
+// never spawn these specialists.
+pub const SPRITE_BANE_BRUTE:    SpriteRef = SpriteRef::new(208);
+pub const SPRITE_VAULT_HAND:    SpriteRef = SpriteRef::new(212);
+pub const SPRITE_VEIL_MAGUS:    SpriteRef = SpriteRef::new(216);
+pub const SPRITE_HEX_WALKER:    SpriteRef = SpriteRef::new(217);
+pub const SPRITE_ZAG_DART:      SpriteRef = SpriteRef::new(218);
+pub const SPRITE_LEYBEAM:       SpriteRef = SpriteRef::new(219);
+
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);
 

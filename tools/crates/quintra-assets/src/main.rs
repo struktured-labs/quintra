@@ -254,7 +254,7 @@ fn mirror_x(g: &[Vec<u8>]) -> Vec<Vec<u8>> {
 pub fn generate_enemy_anim() -> String {
     // eid -> first 16-byte unit of frame A (frame B follows), tile count and
     // canonical slot. 0xFF marks enemies with their own pose drivers.
-    const N_EIDS: usize = 35;
+    const N_EIDS: usize = 41;
     let mut unit = [0xFFu8; N_EIDS];
     let mut tiles_n = [0u8; N_EIDS];
     let mut slot = [0u8; N_EIDS];

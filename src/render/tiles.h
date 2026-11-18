@@ -307,6 +307,12 @@
 #define SPR_ENEMY_VINE_COIL    SPR_APOTHECARY // Verdant-only orbiting seed-pair caster
 #define SPR_ENEMY_SHARD_CRAB   SPR_APOTHECARY // Crystal-only shell-counter skirmisher
 #define SPR_ENEMY_VOID_HALO    SPR_APOTHECARY // Void-only wide orbit lane shaper
+#define SPR_ENEMY_BANE_BRUTE  208 // 208..211 dungeon-only 16x16 bruiser
+#define SPR_ENEMY_VAULT_HAND  212 // 212..215 dungeon-only 16x16 grabber
+#define SPR_ENEMY_VEIL_MAGUS  216
+#define SPR_ENEMY_HEX_WALKER  217
+#define SPR_ENEMY_ZAG_DART    218
+#define SPR_ENEMY_LEYBEAM     219
 // Arrival-square only reuse: the Bellkeeper is a civic landmark, while the
 // apothecary owns this tile in the craft quarter. Those residents never share
 // a town screen, and dungeon entry reloads the stage specialist before combat.

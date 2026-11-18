@@ -685,10 +685,24 @@ u8 combat_resolve(void) BANKED {
                         i8 kx = ((i16)player.x > sx) ? 1 : ((i16)player.x < sx) ? -1 : 0;
                         i8 ky = ((i16)player.y > sy) ? 1 : ((i16)player.y < sy) ? -1 : 0;
                         u8 n;
-                        for (n = 0; n < 6; ++n) {
+                        u8 steps = 6;
+                        if (hostile_entity->type == ENT_ENEMY
+                            && hostile_entity->ai_data[0] == ENEMY_BANE_BRUTE)
+                            steps = (kx && ky) ? 13 : 18;
+                        for (n = 0; n < steps; ++n) {
                             i16 nx = (i16)(player.x + kx);
                             i16 ny = (i16)(player.y + ky);
                             if (!room_player_position_clear(nx, ny)) {
+                                if (kx && ky) {
+                                    if (room_player_position_clear((i16)(player.x + kx), (i16)player.y)) {
+                                        player.x = (ppos_t)(player.x + kx);
+                                        continue;
+                                    }
+                                    if (room_player_position_clear((i16)player.x, (i16)(player.y + ky))) {
+                                        player.y = (ppos_t)(player.y + ky);
+                                        continue;
+                                    }
+                                }
                                 break;
                             }
                             player.x = (ppos_t)nx;

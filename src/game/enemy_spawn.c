@@ -38,7 +38,7 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         if (def->ai_kind == AI_COUNTER_GUARD || def->ai_kind == AI_SUMMONER)
             e->state = 0;
         e->state_timer = 30;
-        if (enemy_content_id >= ENEMY_FACET_RAM) {
+        if (enemy_content_id >= ENEMY_FACET_RAM && enemy_content_id <= ENEMY_STAGE_REAPER) {
             enemy_patrol_init(e, enemy_content_id);
             return idx;
         }
@@ -49,7 +49,9 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         } else if (enemy_content_id == ENEMY_STONE_SENTINEL
             || enemy_content_id == ENEMY_ORC
             || enemy_content_id == ENEMY_BOMBER
-            || enemy_content_id == ENEMY_WARLOCK) {
+            || enemy_content_id == ENEMY_WARLOCK
+            || enemy_content_id == ENEMY_BANE_BRUTE
+            || enemy_content_id == ENEMY_VAULT_HAND) {
             e->hitbox = (u8)0xDD;
         } else {
             e->hitbox = (6 << 4) | 6;

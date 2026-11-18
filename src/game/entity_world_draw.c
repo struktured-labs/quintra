@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/enemy_new_ai.h"
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/cinder_big.h"
@@ -67,4 +68,5 @@ void entity_draw_all_world(void) BANKED {
 #include "game/entity_draw_core.h"
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
+    new_monsters_draw();
 }

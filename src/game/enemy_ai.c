@@ -8,6 +8,7 @@
 #include "game/rare_enemy.h"
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_new_ai.h"
 #include "game/hexa_boss.h"
 #include "game/enemy_mirror.h"
 #include "game/enemy_spore.h"
@@ -595,7 +596,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
-    if (id >= ENEMY_FACET_RAM) { enemy_patrol_update(e, id); return; }
+    if (id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER) { enemy_patrol_update(e, id); return; }
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
@@ -608,6 +609,12 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
         case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;
         case AI_SUMMONER: rift_cantor_update(e, def);                     break;
+        case AI_BLINK_CASTER:
+        case AI_WALK_CASTER:
+        case AI_GRABBER:
+        case AI_SHOVER:
+        case AI_ZIGZAG:
+        case AI_BEAM_CASTER: new_monster_update(e, def);                  break;
         default:         walker_tick(e);                   break;
     }
 }

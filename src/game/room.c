@@ -21,6 +21,7 @@
 #include "game/dungeon_tools.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_new_ai.h"
 #include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/mire_roots.h"
@@ -1202,6 +1203,10 @@ static u8 room_aim_from_step(i8 dx, i8 dy) {
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
+    if (pending_foyer_warp) {
+        new_monsters_foyer_warp();
+        return SCREEN_ROOM;
+    }
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.
     if (dungeon_law_toggle_pending) room_finish_law_toggle();
@@ -1278,6 +1283,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         || player_status_kind == QSTATUS_SLOW
         || player_status_kind == QSTATUS_CONFUSION)
         status_player_filter_input(&keys, &pressed);
+    if (vault_hand_holding) {
+        keys &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
+        pressed &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
+    }
     // A law altar is a contextual world action. Resolve it before ordinary
     // A fire so a deliberate switch press does not also spend Will or launch
     // a stray attack into the reshaping architecture.

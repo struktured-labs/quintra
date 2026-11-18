@@ -52,7 +52,20 @@ pub enum AiScriptId {
     /// Holds position until the champion enters its awareness radius, then
     /// performs a readable chant before calling a single bounded escort wave.
     Summoner     { sight_radius: u8, tell_ticks: u8 },
+    /// Vanish, reappear at a fair distance, telegraph, shoot, vanish again.
+    BlinkCaster  { vanish_ticks: u8, tell_ticks: u8 },
+    /// Cardinal walk, stop, telegraph, one aimed bolt, walk again.
+    WalkCaster   { walk_ticks: u8, tell_ticks: u8 },
+    /// Shadow grows, body drops, grab; a full grab warps to the foyer.
+    Grabber      { shadow_ticks: u8, grab_ticks: u8 },
+    /// Slow walker whose contact knockback is unusually long.
+    Shover,
+    /// Tell, then a zig-zag burst. Rare cooldown bolt is flavour only.
+    ZigZag       { tell_ticks: u8, burst_ticks: u8, cooldown_ticks: u8 },
+    /// Charge tell, then a cardinal 16-px-wide sustained beam.
+    BeamCaster   { tell_ticks: u8, beam_ticks: u8, cooldown_ticks: u8 },
 }
+
 
 // Container with &'static str and &'static [BiomeId] — no serde.
 #[derive(Clone, PartialEq, Eq, Debug)]

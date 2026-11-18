@@ -27,7 +27,7 @@ pub const STAGES: [StageTheme; 9] = [
         // while a rare Facet Ram creates a directional armor problem and a
         // dangerous rear lane. Passive crawler/flutter weight pays for both,
         // leaving the table and procgen density at exactly 100.
-        enemy_pool: &[(0, 18), (30, 6), (12, 22), (9, 18), (13, 14), (33, 12), (2, 10)],
+        enemy_pool: &[(0, 18), (30, 6), (12, 16), (9, 16), (13, 14), (33, 12), (2, 10), (39, 8)],
     },
     // 1 — Verdant Hollow (mossy green)
     StageTheme {
@@ -46,7 +46,7 @@ pub const STAGES: [StageTheme; 9] = [
         // readable opposite-pair lane prompt. The table remains exactly 100:
         // this makes Verdant Hollow more distinct without adding bodies,
         // inflating enemy HP, or perturbing the procgen RNG draw count.
-        enemy_pool: &[(12, 17), (2, 15), (4, 25), (9, 15), (13, 20), (29, 8)],
+        enemy_pool: &[(12, 11), (2, 15), (4, 17), (9, 15), (13, 20), (29, 8), (36, 8), (39, 6)],
     },
     // 2 — Ember Depths (molten red/orange)
     StageTheme {
@@ -69,7 +69,7 @@ pub const STAGES: [StageTheme; 9] = [
         // blooms into invulnerable echoes then contracts, the latter splits,
         // scatters, and reforms.  They replace the old Skeleton slice rather
         // than adding bodies, HP, or a new procgen draw.
-        enemy_pool: &[(11, 8), (6, 30), (4, 22), (14, 16), (25, 12), (15, 12)],
+        enemy_pool: &[(11, 8), (6, 24), (4, 16), (14, 16), (25, 12), (15, 12), (40, 6), (39, 6)],
     },
     // 3 — Frost Vault (icy cyan/white)
     StageTheme {
@@ -90,7 +90,7 @@ pub const STAGES: [StageTheme; 9] = [
         // readable lane hazard, while Frost Lancers take the upper 8% of the
         // old Wisp band. The total stays 100: a new lane decision, not more
         // bodies or a changed procgen draw count.
-        enemy_pool: &[(5, 15), (28, 8), (3, 20), (6, 22), (10, 10), (16, 19), (32, 6)],
+        enemy_pool: &[(5, 15), (28, 8), (3, 12), (6, 14), (10, 10), (16, 19), (32, 6), (35, 8), (36, 8)],
     },
     // 4 — Toxic Mire (sickly yellow-green)
     StageTheme {
@@ -108,7 +108,7 @@ pub const STAGES: [StageTheme; 9] = [
         // the upper eight points of the former Spore band become Bog Toad.
         // That gives procgen a new encounter without perturbing established
         // deterministic controller routes or increasing room population.
-        enemy_pool: &[(12, 15), (5, 15), (6, 14), (15, 25), (17, 17), (26, 8), (32, 6)],
+        enemy_pool: &[(12, 15), (5, 15), (6, 14), (15, 17), (17, 17), (26, 8), (32, 6), (38, 8)],
     },
     // 5 — Shadow Keep (cold grey/violet)
     StageTheme {
@@ -123,7 +123,7 @@ pub const STAGES: [StageTheme; 9] = [
         // Gloam Bramble replaces a small Prism Skitter slice with a slower
         // opposite-lane orbit. Shadow Keep stays a deliberate positioning
         // test without increasing generated body count.
-        enemy_pool: &[(7, 28), (5, 18), (11, 18), (19, 15), (22, 10), (27, 5), (32, 6)],
+        enemy_pool: &[(7, 20), (5, 18), (11, 12), (19, 15), (22, 10), (27, 5), (32, 6), (35, 8), (37, 6)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {
@@ -138,7 +138,7 @@ pub const STAGES: [StageTheme; 9] = [
         // The Sunwheel makes the Temple a positioning test: it maintains a
         // compact orbit and marks a changing opposite lane, while the rest
         // of the pool preserves room for melee and counter-play lessons.
-        enemy_pool: &[(4, 18), (7, 18), (18, 18), (20, 15), (21, 15), (24, 10), (32, 6)],
+        enemy_pool: &[(4, 10), (7, 13), (18, 10), (20, 15), (21, 15), (24, 10), (32, 6), (36, 8), (40, 8), (37, 5)],
     },
     // 7 — Bloodmoon (crimson/black)
     StageTheme {
@@ -154,7 +154,7 @@ pub const STAGES: [StageTheme; 9] = [
         // real weaving and the three-head animation extend it naturally.
         boss_hp_bonus: 248, boss_hp_cap: 150, endless_boss_hp_cap: 150,
         boss_dmg_bonus: 4, mb_variant: 0, room_archetype: 7,
-        enemy_pool: &[(7, 26), (11, 24), (8, 15), (20, 11), (21, 11), (23, 7), (32, 6)],
+        enemy_pool: &[(7, 16), (11, 17), (8, 15), (20, 11), (21, 11), (23, 7), (32, 6), (35, 7), (37, 5), (38, 5)],
     },
     // 8 — Void Sanctum (deep purple/toxic green, final)
     StageTheme {
@@ -170,7 +170,7 @@ pub const STAGES: [StageTheme; 9] = [
         // wider, slower opposite-pair lane puzzle. Midge still owns its
         // Bloodmoon encounter; the final pool remains seven entries and 100
         // weight, so this changes neither body density nor procgen draw count.
-        enemy_pool: &[(11, 21), (15, 20), (19, 15), (20, 17), (21, 13), (31, 8), (32, 6)],
+        enemy_pool: &[(11, 13), (15, 14), (19, 9), (20, 17), (21, 13), (31, 8), (32, 6), (40, 8), (35, 6), (39, 6)],
     },
 ];
 

@@ -486,6 +486,62 @@ pub const STAGE_REAPER: Enemy = Enemy {
     biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+
+pub const VEIL_MAGUS: Enemy = Enemy {
+    id: ENEMY_VEIL_MAGUS, symbol: "VEIL_MAGUS", name: "Veil Magus",
+    sprite_set: SPRITE_VEIL_MAGUS, palette: OBJ_PAL_MAGIC,
+    // Blink in, telegraph, one bolt, vanish. Not a Shade: never rematerializes
+    // beside the hero, and the shot is the threat.
+    stats: EnemyStats { hp: 12, damage: 2, speed: 32, score: 40, weakness: 0x04, poise: 0 },
+    ai_script: AiScriptId::BlinkCaster { vanish_ticks: 20, tell_ticks: 24 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const HEX_WALKER: Enemy = Enemy {
+    id: ENEMY_HEX_WALKER, symbol: "HEX_WALKER", name: "Hex Walker",
+    sprite_set: SPRITE_HEX_WALKER, palette: OBJ_PAL_CRAWLER,
+    // Zelda-1 blue wizrobe: stays on screen, walks, then casts one bolt.
+    stats: EnemyStats { hp: 10, damage: 1, speed: 56, score: 28, weakness: 0x01, poise: 0 },
+    ai_script: AiScriptId::WalkCaster { walk_ticks: 48, tell_ticks: 16 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const VAULT_HAND: Enemy = Enemy {
+    id: ENEMY_VAULT_HAND, symbol: "VAULT_HAND", name: "Vault Hand",
+    sprite_set: SPRITE_VAULT_HAND, palette: OBJ_PAL_BONE,
+    // Ceiling grabber. A successful carry returns the hero to the foyer.
+    stats: EnemyStats { hp: 16, damage: 1, speed: 40, score: 50, weakness: 0x04, poise: 2 },
+    ai_script: AiScriptId::Grabber { shadow_ticks: 48, grab_ticks: 48 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const BANE_BRUTE: Enemy = Enemy {
+    id: ENEMY_BANE_BRUTE, symbol: "BANE_BRUTE", name: "Bane Brute",
+    sprite_set: SPRITE_BANE_BRUTE, palette: OBJ_PAL_GREEN,
+    // Long knockback. Always grouped with status-inflicting allies.
+    stats: EnemyStats { hp: 22, damage: 2, speed: 40, score: 45, weakness: 0x10, poise: 3 },
+    ai_script: AiScriptId::Shover,
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const ZAG_DART: Enemy = Enemy {
+    id: ENEMY_ZAG_DART, symbol: "ZAG_DART", name: "Zag Dart",
+    sprite_set: SPRITE_ZAG_DART, palette: OBJ_PAL_GOLD,
+    // Zig-zag burst is the threat. A rare slow bolt may fire on cooldown.
+    stats: EnemyStats { hp: 8, damage: 2, speed: 96, score: 22, weakness: 0x02, poise: 0 },
+    ai_script: AiScriptId::ZigZag { tell_ticks: 18, burst_ticks: 28, cooldown_ticks: 90 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const LEYBEAM: Enemy = Enemy {
+    id: ENEMY_LEYBEAM, symbol: "LEYBEAM", name: "Leybeam",
+    sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_GOLD,
+    // Charge tell, then a cardinal 16-px BG beam. No 8-way rays.
+    stats: EnemyStats { hp: 14, damage: 1, speed: 32, score: 48, weakness: 0x08, poise: 1 },
+    ai_script: AiScriptId::BeamCaster { tell_ticks: 40, beam_ticks: 36, cooldown_ticks: 100 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -522,4 +578,10 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(RIFT_CANTOR.clone());
     r.add_enemy(FACET_RAM.clone());
     r.add_enemy(STAGE_REAPER.clone());
+    r.add_enemy(VEIL_MAGUS.clone());
+    r.add_enemy(HEX_WALKER.clone());
+    r.add_enemy(VAULT_HAND.clone());
+    r.add_enemy(BANE_BRUTE.clone());
+    r.add_enemy(ZAG_DART.clone());
+    r.add_enemy(LEYBEAM.clone());
 }

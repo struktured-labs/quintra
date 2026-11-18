@@ -5,6 +5,7 @@
 #include "game/companion.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
+#include "game/enemy_new_ai.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/boss_projectile.h"
@@ -244,4 +245,5 @@ void entity_draw_all(void) {
 #include "game/entity_draw_core.h"
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
+    new_monsters_draw();
 }
