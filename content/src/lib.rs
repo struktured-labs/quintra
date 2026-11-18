@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         28);   // + merchant Boomerang
-        assert_eq!(r.n_enemies(),       42);   // + specialists including Fuse Hurler
+        assert_eq!(r.n_enemies(),       44);   // + Sun and Nox Basilisk tiers
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);
@@ -271,7 +271,10 @@ mod tests {
         // performance fixture is not knocked out of phase by a Zag Dart roll.
         assert!(stages::STAGES[1].enemy_pool.iter().any(|&(id, _)| id == 39));
         assert!(stages::STAGES[0].enemy_pool.iter().all(|&(id, _)| id < 35));
-        assert!(stages::STAGES[6].enemy_pool.iter().any(|&(id, _)| id == 40));
+        // Basilisk tiers by depth: Ley (40) Ember, Sun (42) Temple, Nox (43) Void.
+        assert!(stages::STAGES[2].enemy_pool.iter().any(|&(id, _)| id == 40));
+        assert!(stages::STAGES[6].enemy_pool.iter().any(|&(id, _)| id == 42));
+        assert!(stages::STAGES[8].enemy_pool.iter().any(|&(id, _)| id == 43));
         assert!(stages::STAGES[2].enemy_pool.iter().any(|&(id, _)| id == 41));
         for stage in &stages::STAGES {
             assert_eq!(stage.enemy_pool.iter().map(|&(_, w)| w as u16).sum::<u16>(), 100);

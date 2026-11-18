@@ -65,6 +65,8 @@ static u8 enemy_can_fill_room(u8 id) {
         && id != ENEMY_VAULT_HAND
         && id != ENEMY_BANE_BRUTE
         && id != ENEMY_LEYBEAM
+        && id != ENEMY_SUN_BASILISK
+        && id != ENEMY_NOX_BASILISK
         && id != ENEMY_FUSE_HURLER;
 }
 

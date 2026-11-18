@@ -145,7 +145,7 @@ pub const STAGES: [StageTheme; 9] = [
         // The Sunwheel makes the Temple a positioning test: it maintains a
         // compact orbit and marks a changing opposite lane, while the rest
         // of the pool preserves room for melee and counter-play lessons.
-        enemy_pool: &[(4, 10), (7, 13), (18, 10), (20, 15), (21, 15), (24, 10), (32, 6), (36, 8), (40, 8), (37, 5)],
+        enemy_pool: &[(4, 10), (7, 13), (18, 10), (20, 15), (21, 15), (24, 10), (32, 6), (36, 8), (42, 8), (37, 5)],
     },
     // 7 — Bloodmoon (crimson/black)
     StageTheme {
@@ -177,7 +177,7 @@ pub const STAGES: [StageTheme; 9] = [
         // wider, slower opposite-pair lane puzzle. Midge still owns its
         // Bloodmoon encounter; the final pool remains seven entries and 100
         // weight, so this changes neither body density nor procgen draw count.
-        enemy_pool: &[(11, 13), (15, 14), (19, 9), (20, 17), (21, 13), (31, 8), (32, 6), (40, 8), (35, 6), (39, 6)],
+        enemy_pool: &[(11, 13), (15, 14), (19, 9), (20, 17), (21, 13), (31, 8), (32, 6), (43, 8), (35, 6), (39, 6)],
     },
 ];
 

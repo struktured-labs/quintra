@@ -63,7 +63,7 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         }
     }
     if (enemy_content_id >= ENEMY_VEIL_MAGUS
-        && enemy_content_id <= ENEMY_FUSE_HURLER)
+        && enemy_content_id <= ENEMY_NOX_BASILISK)
         new_monsters_in_room = 1;
     return idx;
 }

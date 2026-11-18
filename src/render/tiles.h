@@ -312,7 +312,7 @@
 #define SPR_ENEMY_VEIL_MAGUS  216
 #define SPR_ENEMY_HEX_WALKER  217
 #define SPR_ENEMY_ZAG_DART    218
-#define SPR_ENEMY_LEYBEAM     219
+#define SPR_ENEMY_LEYBEAM     219 /* blank basilisk core; body is bank-1 OBJ */
 #define SPR_ENEMY_FUSE_HURLER 220
 /* Leybeam shaft art is uploaded to VRAM bank 1 at this index (after
    Sun Lattice 56..62, before compass letters 64). Never written into

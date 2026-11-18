@@ -70,8 +70,10 @@ Names are the ones in the content tables, abbreviations included. Health is the 
 - **Vault Hand.** Health 16. A growing shadow, then a grab. Mash edges or land a hit to escape; otherwise it carries you back to the dungeon foyer and keeps your inventory. One per room, never in the foyer, a boss fight, a shop, or a cutscene.
 - **Bane Brute.** Health 22. A long knockback. It only stays if at least two status allies share the room, and it tries to shove you into them. Mire, Shadow, Bloodmoon.
 - **Zag Dart.** Health 8. The zig-zag rush is the threat. A rare slow bolt may appear during cooldown. Crystal, Verdant, Ember, Sanctum.
-- **Leybeam.** Health 14. Cardinal charge, then a 16-pixel-wide beam you must sidestep. One per room. Ember, Temple, Sanctum.
-- **Fuse Hurler.** Health 12. Lobs a fused bomb that shows its blast radius before it bursts, or winds up and explodes around itself if you close in. The blast deals one heart and will not finish you. Ember, Mire, Shadow. At most two in a room. Distinct from the Bomber (a walker that bursts on death) and the Mire Spore (a proximity mine).
+- **Ley Basilisk.** Health 14. A crowned serpent that rears back, marks a lane with dotted ghost tiles, then breathes a 16-pixel beam down it. Step off the dotted lane before it flares. One per room. Ember.
+- **Sun Basilisk.** Health 20. The frilled red tier: the same tell with a 24-pixel beam. Temple.
+- **Nox Basilisk.** Health 26. The hooded void tier: a 32-pixel beam, with a slightly longer tell. Sanctum.
+- **Fuse Hurler.** Health 12. Lobs a fused bomb that marks the edge of its blast with flashing sparks before it bursts in a big fireball, or winds up and explodes around itself if you close in. The blast deals one heart and will not finish you. Ember, Mire, Shadow. At most two in a room. Distinct from the Bomber (a walker that bursts on death) and the Mire Spore (a proximity mine).
 
 ## On the roster, off the ordinary mix
 

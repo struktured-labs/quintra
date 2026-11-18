@@ -533,12 +533,32 @@ pub const ZAG_DART: Enemy = Enemy {
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+// Basilisk family (AI_BEAM_CASTER). A 32x32 coiled serpent drawn from bank-1
+// OBJ (GPT Image art); the beam width grows with the tier: Ley 16 px, Sun
+// 24 px, Nox 32 px. Charge stamps ghost dots on the exact lanes, then the
+// whole lane flips to the beam on one frame. Symbol LEYBEAM is kept for
+// save/test stability; SPRITE_LEYBEAM (219) is a blank core tile.
 pub const LEYBEAM: Enemy = Enemy {
-    id: ENEMY_LEYBEAM, symbol: "LEYBEAM", name: "Leybeam",
-    sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_GOLD,
-    // Charge tell, then a cardinal 16-px BG beam. No 8-way rays.
+    id: ENEMY_LEYBEAM, symbol: "LEYBEAM", name: "Ley Basilisk",
+    sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_GREEN,
     stats: EnemyStats { hp: 14, damage: 1, speed: 32, score: 48, weakness: 0x08, poise: 1 },
     ai_script: AiScriptId::BeamCaster { tell_ticks: 40, beam_ticks: 36, cooldown_ticks: 100 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const SUN_BASILISK: Enemy = Enemy {
+    id: ENEMY_SUN_BASILISK, symbol: "SUN_BASILISK", name: "Sun Basilisk",
+    sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_RED,
+    stats: EnemyStats { hp: 20, damage: 1, speed: 32, score: 64, weakness: 0x08, poise: 1 },
+    ai_script: AiScriptId::BeamCaster { tell_ticks: 44, beam_ticks: 40, cooldown_ticks: 96 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
+pub const NOX_BASILISK: Enemy = Enemy {
+    id: ENEMY_NOX_BASILISK, symbol: "NOX_BASILISK", name: "Nox Basilisk",
+    sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_MAGIC,
+    stats: EnemyStats { hp: 26, damage: 1, speed: 32, score: 80, weakness: 0x08, poise: 1 },
+    ai_script: AiScriptId::BeamCaster { tell_ticks: 48, beam_ticks: 44, cooldown_ticks: 90 },
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
@@ -596,4 +616,6 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(ZAG_DART.clone());
     r.add_enemy(LEYBEAM.clone());
     r.add_enemy(FUSE_HURLER.clone());
+    r.add_enemy(SUN_BASILISK.clone());
+    r.add_enemy(NOX_BASILISK.clone());
 }
