@@ -36,10 +36,14 @@ ENTITY_SIZE = 28
 HP, FLAGS, DMG = 14, 1, 26
 STAGE, ROOM_W = 2, 20
 SPARKS = addr("_cinder_armor_sparks")
+CINDER_BOSS = addr("_cinder_boss_index")
 SWARM = addr("_will_vespine_swarm_ticks")
 SCREEN = addr("_loop_current_screen")
+STATUS_KIND = addr("_enemy_status_kind")
+STATUS_TICKS = addr("_enemy_status_ticks")
 NORMAL_CAP = 3
 PHASE3_MAX = 72   # authored 64, plus a few frames of settle
+QSTATUS_POISON = 1
 
 
 def u16(pb, a):
@@ -223,7 +227,7 @@ def test_windows_and_cap():
     print("[cinder-absorb] PASS windows, cap, sparks, short late split")
 
 
-def test_vespine_swarm_and_max():
+def test_vespine_swarm_closed_and_recombine():
     # Vespine is class 4. boot() requires the intro mute sitecustomize.
     pb = boot(4)
     mute_vignettes(pb, ROM)
@@ -281,9 +285,55 @@ def test_vespine_swarm_and_max():
     print("[cinder-absorb] PASS Vespine Swarm on closed Rex and phase-3 husks")
 
 
+def test_poison_pauses_on_closed_rex():
+    """Poison/Burn must not chip Rex during authored invuln, then resume."""
+    # status_tick only commits every 8 frames, and Poison chips when the
+    # post-decrement timer is a multiple of 8, so 33 is one beat from a hit.
+    # Poke status_enemy_active too: room_tick skips the banked scan until
+    # status_enemy_apply has set that flag.
+    pb, boss = enter_boss(2, keep_open=True)
+    to_rex(pb, boss, 80)
+    idx = (boss - EN) // ENTITY_SIZE
+    assert pb.memory[CINDER_BOSS] == idx, (
+        f"cinder boss index drifted: sym={pb.memory[CINDER_BOSS]} calc={idx}")
+    pkind = addr("_player_status_kind")
+    pticks = addr("_player_status_ticks")
+    enemy_active = addr("_status_enemy_active")
+
+    def drive_status(frames, timer):
+        pb.memory[pkind] = 0
+        pb.memory[pticks] = 0
+        pb.memory[PL + 2] = 255
+        pb.memory[PL + 15] = 255
+        pb.memory[STATUS_KIND + idx] = QSTATUS_POISON
+        pb.memory[STATUS_TICKS + idx] = 33
+        # status_tick is skipped unless this flag is set (status_enemy_apply).
+        pb.memory[enemy_active] = 1
+        pb.memory[boss + HP] = 80
+        for _ in range(frames):
+            pb.memory[CINDER_TIMER] = timer
+            pb.memory[CINDER_PATTERN] = 1
+            pb.memory[PL + 15] = 255
+            pb.tick()
+        return pb.memory[boss + HP], pb.memory[STATUS_TICKS + idx]
+
+    closed_hp, closed_ticks = drive_status(24, 40)
+    assert closed_hp == 80, f"poison chipped a closed Rex: hp={closed_hp}"
+    assert closed_ticks < 33, f"poison timer did not run while closed: {closed_ticks}"
+    open_hp, open_ticks = drive_status(24, 130)
+    assert open_hp < 80, (
+        f"poison did not resume on an open vent: hp={open_hp} ticks={open_ticks} "
+        f"kind={pb.memory[STATUS_KIND+idx]} open={pb.memory[CINDER_DAMAGE_OPEN]} "
+        f"on={pb.memory[boss+FLAGS]&4}")
+    pb.memory[STATUS_KIND + idx] = 0
+    pb.memory[STATUS_TICKS + idx] = 0
+    print("[cinder-absorb] PASS poison pauses on a closed vent, resumes open")
+
+
 def main():
     test_windows_and_cap()
-    test_vespine_swarm_and_max()
+    test_poison_pauses_on_closed_rex()
+    test_vespine_swarm_closed_and_recombine()
     print("[cinder-absorb] PASS")
 
 

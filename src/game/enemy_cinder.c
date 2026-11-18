@@ -166,8 +166,7 @@ static u8 cinder_shot_touches_body(const entity_t *shot, const entity_t *e) {
 // Cooled so a Swarm or MAX volley stays a readable clink, not a noise wall.
 static void cinder_armor_clink(void) {
     if (cinder_clink_cool) return;
-    if (sfx_melody_locked()) return;
-    sfx_will_active = 0;
+    if (sfx_melody_locked() || sfx_will_active) return;
     sfx_claim_channels(8, 8);
     NR10_REG = 0x00;
     NR11_REG = 0x00;
@@ -786,11 +785,20 @@ void cinder_draw(void) BANKED {
             || (cinder_pattern == 3 && cinder_timer >= 34 && cinder_timer < 78)
             || (entity_anim_counter & 16))
             pose |= 2;
-        // Open-window tell and real damage flashes light only the head/vent.
-        // The armored torso stays its own colour so body shots are not invited.
-        if (cinder_damage_open && flash && (e->ai_data[7] & 1))
-            pose |= 4;
+        // Head-only flash: the open-window tell and a real vent hit both
+        // set ai_data[7]. Do not gate on cinder_damage_open, or a hit on
+        // the last open frame would lose its flash as the window closes.
         cinder_rex_big_draw(sx, sy, cinder_rex_facing, pose, pal);
+        /* Head-only flash lives here (bank 9) so bank 18 stays under the
+           emergency floor. The atlas is west-facing: cols 0-1 when facing
+           west, cols 4-5 when facing east, top two rows only. */
+        if (flash && (e->ai_data[7] & 1)) {
+            u8 lo = cinder_rex_facing ? 0 : 4;
+            u8 r, c;
+            for (r = 0; r < 2; ++r)
+                for (c = lo; c < (u8)(lo + 2); ++c)
+                    shadow_OAM[CINDER_REX_OAM_BASE + r * 6 + c].prop &= (u8)~0x07;
+        }
         return;
     } else {
         u8 count = cinder_phase == 0 ? cinder_pack_alive : CINDER_KILNBACKS;
@@ -799,11 +807,11 @@ void cinder_draw(void) BANKED {
             u8 member_pal = pal;
             if (cinder_phase == 1 || cinder_phase == 3) {
                 tile = SPR_KILNBACK_HUSK;
-                /* Late husks pulse so the 64-frame invuln reads as a
-                   silhouette reprise, not five targetable animals. */
+                /* Late husks pulse on the armor-spark palette, not pal 0:
+                   pal 0 is the Phase 0 "shoot this vent" tell. */
                 if (cinder_phase == 3
                     && ((entity_anim_counter & 8) || cinder_armor_flash))
-                    member_pal = 0;
+                    member_pal = 1;
             }
             else if (cinder_damage_open && i == (u8)(cinder_pack_alive - 1)) {
                 tile = SPR_KILNBACK_VENT;

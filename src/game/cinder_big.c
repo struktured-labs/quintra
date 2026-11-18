@@ -256,9 +256,6 @@ void cinder_rex_big_draw(i16 sx, i16 sy, u8 facing, u8 pose, u8 prop) BANKED {
         u8 y = (y16 <= 0 || y16 >= 160) ? 0 : (u8)y16;
         u8 band = r < 2 ? (pose & 1) : (pose & 2);
         u8 base = (u8)((band ? 88 : 64) + r * 6);
-        /* pose bit 2: flash only the head/vent (palette 0), so an open
-           damage window does not invite shots into the armored torso. */
-        u8 p = ((pose & 4) && r < 2) ? (u8)(prop & (u8)~0x07) : prop;
         for (c = 0; c < 6; ++c) {
             u8 x = colx[c];
             /* A clipped column parks Y too: an X=0 sprite still costs the
@@ -266,7 +263,7 @@ void cinder_rex_big_draw(i16 sx, i16 sy, u8 facing, u8 pose, u8 prop) BANKED {
             *o++ = x ? y : 0;
             *o++ = x;
             *o++ = facing ? (u8)(base + c) : (u8)(base + 5 - c);
-            *o++ = p;
+            *o++ = prop;
         }
     }
 }
