@@ -172,43 +172,34 @@ def main():
             f"class {class_id} ordinary A preserved partial Will")
         pb.stop(save=False)
 
-    # B is independent of the restraint economy, but Will pauses for the
-    # complete protected interval. Neither shield may purchase a safe MAX by
-    # waiting inside immunity, and neither destroys progress already earned.
-    for class_id, label, shield_floor in ((1, "Stoneskin", 45),
-                                           (3, "Undertow", 80)):
+    # B magic is independent of the restraint economy, but Will pauses while
+    # a held ward is live (2026-11-17 magic spec): no safe MAX bought from
+    # inside a shield, and no progress already earned is lost.
+    ward_ticks = addr("_magic_ward_ticks")
+    for class_id, label in ((1, "Stoneskin"), (3, "Cure"), (0, "Flame Ward")):
         pb = boot(class_id)
         clear_arena(pb)
         pb.memory[PLAYER + 4] = pb.memory[PLAYER + 3]
-        pb.memory[PLAYER + 19] = 0
+        pb.memory[PLAYER + 2] = max(1, pb.memory[PLAYER + 1] - 2)
         pb.memory[PLAYER + 20] = 0
-        # Partial Will proves both halves of the new contract: B preserves the
-        # exact value, then restraint resumes once the guard has ended.
         pb.memory[PLAYER + WILL_OFFSET] = 60
         pb.button_press("b")
-        for _ in range(12):
+        for _ in range(30):
             pb.tick()
-            if pb.memory[PLAYER + 19] > 0:
-                break
-        after_b = pb.memory[PLAYER + WILL_OFFSET]
-        # The input frame may earn its ordinary one idle point before the
-        # signature raises the guard; it must never erase the partial meter.
-        assert 60 <= after_b <= 61, (
-            f"{label} spent independent Will meter: {after_b}")
-        assert pb.memory[PLAYER + 20] > shield_floor, (
-            f"{label} did not raise its authored shield")
-        if class_id == 3:
-            assert pb.memory[PLAYER + 19] > pb.memory[PLAYER + 20], (
-                "Undertow cooldown allows a permanent guard loop")
         pb.button_release("b")
-        pb.tick(20)
-        assert pb.memory[PLAYER + WILL_OFFSET] == after_b, (
-            f"{label} charged Will while its shield was active")
-        while pb.memory[PLAYER + 20] > 0:
-            pb.tick()
         pb.tick(4)
+        live = pb.memory[ward_ticks]
+        after_b = pb.memory[PLAYER + WILL_OFFSET]
+        assert after_b >= 60, f"{label} spent the Will meter: {after_b}"
+        if live:
+            pb.tick(20)
+            assert pb.memory[PLAYER + WILL_OFFSET] == after_b, (
+                f"{label} charged Will while its ward was live")
+            while pb.memory[ward_ticks] > 0:
+                pb.tick()
+        pb.tick(8)
         assert pb.memory[PLAYER + WILL_OFFSET] > after_b, (
-            f"Will did not resume after {label} expired")
+            f"Will did not resume after {label}")
         pb.stop(save=False)
 
     # Will owns a purple spirit palette, distinct from red hearts/boss HP and

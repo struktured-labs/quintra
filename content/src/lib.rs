@@ -132,11 +132,13 @@ mod tests {
 
         // A held A button remains turbo-friendly, but the opening kit must
         // not erase the first room before SPD relics have a chance to matter.
-        // Keep Claw Combo, Featherbarb, and the deliberately close-range
-        // Stinger at their proven survival cadences; BubbleBolt starts two
-        // frames slower and speed upgrades subtract two frames in player.c.
+        // Keep Featherbarb and the deliberately close-range Stinger at their
+        // proven survival cadences; BubbleBolt starts two frames slower and
+        // speed upgrades subtract two frames in player.c. Wolfkin's melee-only
+        // Fang Claw swings at 20 f to pay for having no reach (2026-11-17
+        // elemental magic spec, Carbon balance review).
         let expected = [
-            (classes::WOLFKIN.starter_weapon, 24),
+            (classes::WOLFKIN.starter_weapon, 20),
             (classes::SAURAN.starter_weapon, 28),
             (classes::CORVIN.starter_weapon, 22),
             (classes::PICSEAN.starter_weapon, 30),

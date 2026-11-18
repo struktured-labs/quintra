@@ -86,11 +86,11 @@ static const char *item_name_by_id(u16 id) {
 // content and shop context; these are one-line action reminders that never
 // clip or repeat the B label already shown above.
 static const char *const active_tips[5] = {
-    "8 SHOTS AND WARD",  // Howl, item id 10
-    "FULL HIT SHIELD", // Stoneskin, 11
-    "MARK RAVEN DIVE", // Raven Mark, 12
-    "3 BUBBLES AND WARD", // Tidal Wave, 13
-    "ORBITING STINGERS", // Swarm, 14
+    "HOLD: FLAME WARD",  // Moonfire, item id 10
+    "HOLD: STONESKIN",   // Thunder, 11
+    "HOLD: SHADOW VEIL", // Hex, 12
+    "HOLD: CURE 5 MP",   // Blizzard, 13
+    "HOLD THORN MIRROR", // Bramble, 14
 };
 
 static const char *active_tip_by_id(u16 id) {

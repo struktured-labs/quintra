@@ -189,8 +189,8 @@ static void render_help(void) {
         gotoxy(5, 1); text_write("- CONTROLS -");
         gotoxy(1, 3); text_write("D PAD   MOVE / AIM");
         gotoxy(1, 5); text_write("A       PRIMARY/MAX");
-        gotoxy(1, 7); text_write("B       HERO POWER");
-        gotoxy(1, 8); text_write("        FREE + COOL");
+        gotoxy(1, 7); text_write("B TAP   SPELL 1 MP");
+        gotoxy(1, 8); text_write("B HOLD  WARD  2+ MP");
         gotoxy(1, 10); text_write("A+B   OATH USES MP");
         gotoxy(1, 11); text_write("FULL MP CONVERGENCE");
         gotoxy(1, 13); text_write("2X D PAD = DASH");

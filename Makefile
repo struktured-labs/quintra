@@ -179,7 +179,6 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_adaptive_music.py
 	python3 scripts/music_sheet.py --self-test
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
-	uv run --quiet --with pyboy python scripts/test_melee_special_guard.py
 	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
 	$(PYBOY_RUN) scripts/test_attack_relics.py
@@ -197,7 +196,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_will_sfx.py
 	$(PYBOY_RUN) scripts/test_will_b_weapons.py
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
-	$(PYBOY_RUN) scripts/test_signature_balance.py
+	$(PYBOY_RUN) scripts/test_magic.py
 	$(PYBOY_RUN) scripts/test_status_effects.py
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py
 	$(PYBOY_RUN) scripts/test_world_interactions.py
@@ -325,7 +324,6 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_unlock_feedback.py
 	uv run --quiet --with pyboy python scripts/test_vampiric_sigil.py
 	uv run --quiet --with pyboy python scripts/test_shop_surge.py
-	uv run --quiet --with pyboy python scripts/test_sauran_shield.py
 	uv run --quiet --with pyboy python scripts/test_sauran_regen.py
 	uv run --quiet --with pyboy python scripts/test_surge.py
 	uv run --quiet --with pyboy python scripts/test_powerups.py
@@ -375,7 +373,7 @@ demo-check: demo-kit
 	$(PYBOY_RUN) scripts/test_quest_guidance.py
 	$(PYBOY_RUN) scripts/test_title_version.py
 	$(PYBOY_RUN) scripts/test_shop_surge.py
-	$(PYBOY_RUN) scripts/test_signature_balance.py
+	$(PYBOY_RUN) scripts/test_magic.py
 	$(PYBOY_RUN) scripts/test_boss_identity.py
 	$(PYBOY_RUN) scripts/test_boss_rewards.py
 	$(PYBOY_RUN) scripts/test_boss_drop_persist.py

@@ -33,22 +33,19 @@ def main():
             pb.memory[ENTITIES + 14] = 30
             pb.memory[ENTITIES + 25] = 0x88
 
-        # B is a free class verb now: using it must leave the icy full-MP cue
-        # intact for the separate A+B Convergence decision.
+        # B is now MP magic (2026-11-17 magic spec): a tap spell spends one
+        # MP, so the icy full-MP cue must drop with it; refilling restores it.
         pb.button_press("b")
-        try:
-            for _ in range(16):
-                pb.tick()
-                if pb.memory[PLAYER + 19] > 0:
-                    break
-        finally:
-            pb.button_release("b")
-        assert pb.memory[PLAYER + 4] == pb.memory[PLAYER + 3], (
-            f"class {class_id} B incorrectly spent A+B magic")
+        for _ in range(3):
+            pb.tick()
+        pb.button_release("b")
         for _ in range(8):
             pb.tick()
-        assert READY in mp_colors(pb), (
-            f"class {class_id} B erased Convergence's ready cue")
+        assert pb.memory[PLAYER + 4] == pb.memory[PLAYER + 3] - 1, (
+            f"class {class_id} B tap did not spend one MP")
+        assert READY not in mp_colors(pb), (
+            f"class {class_id} kept the full-MP cue below full MP")
+        pb.memory[PLAYER + 4] = pb.memory[PLAYER + 3]   # back to full for A+B
 
         # The chord still owns the actual MP spend and returns the meter to
         # ordinary blue. Free the B cooldown/entity table so this checks only
@@ -67,7 +64,7 @@ def main():
             pb.button_release("a")
             pb.button_release("b")
         assert pb.memory[PLAYER + 4] == 0, (
-            f"class {class_id} full-MP A+B did not spend Convergence magic")
+            f"class {class_id} full-MP A+B did not spend Convergence magic: mp {pb.memory[PLAYER + 4]}/{pb.memory[PLAYER + 3]} cd {pb.memory[PLAYER + 19]}")
         for _ in range(8):
             pb.tick()
         colors = mp_colors(pb)

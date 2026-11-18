@@ -96,11 +96,11 @@ static const char *item_name(u8 id) {
     if (id == ITEM_ID_MORNINGSTAR) return "MORNINGSTAR";
     if (id == ITEM_ID_BOMBS) return "BOMB BAG";
     switch (id) {
-        case 10: return "HOWL";
-        case 11: return "STONESKIN";
-        case 12: return "RAVEN MARK";
-        case 13: return "TIDAL WAVE";
-        case 14: return "SWARM";
+        case 10: return "MOONFIRE";
+        case 11: return "THUNDER";
+        case 12: return "HEX";
+        case 13: return "BLIZZARD";
+        case 14: return "BRAMBLE";
         default: return "ITEM";
     }
 }
@@ -111,11 +111,11 @@ static const char *item_tip(u8 id) {
     if (id == ITEM_ID_MORNINGSTAR) return "SWING AROUND YOU";
     if (id == ITEM_ID_BOMBS) return "1 MP THROW OR DROP";
     switch (id) {
-        case 10: return "8 SHOTS AND WARD";
-        case 11: return "FULL HIT SHIELD";
-        case 12: return "MARK RAVEN DIVE";
-        case 13: return "3 BUBBLES AND WARD";
-        case 14: return "ORBITING STINGERS";
+        case 10: return "HOLD: FLAME WARD";
+        case 11: return "HOLD: STONESKIN";
+        case 12: return "HOLD: SHADOW VEIL";
+        case 13: return "HOLD: CURE 5 MP";
+        case 14: return "HOLD THORN MIRROR";
         default: return "SEE SIG";
     }
 }

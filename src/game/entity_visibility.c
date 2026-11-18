@@ -5,6 +5,7 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/magic.h"
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/room.h"
@@ -18,6 +19,7 @@ void entity_init_room(void) BANKED {
     u8 dir;
     u8 large;
     memset(entities, 0, sizeof(entities));
+    magic_room_serial++;   // spells drop room-bound state (magic.c)
     status_clear_enemies();
     entity_enemy_count = 0;
     // A target mark belongs to its concrete entity, never to a slot reused

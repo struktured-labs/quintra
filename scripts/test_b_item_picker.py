@@ -25,7 +25,7 @@ ITEM_BOOMERANG = 45
 ITEM_HOOKSHOT = 46
 ITEM_MORNINGSTAR = 47
 ITEM_BOMBS = 48
-CLASS_POWER = 10  # Wolfkin Howl
+CLASS_POWER = 10  # Wolfkin Moonfire
 
 INV_FRAME_H = 0xF6
 INV_FRAME_VL = 0xF7
@@ -202,8 +202,8 @@ def main():
             assert well_attr(pb, slot) == 0, f"unowned well {slot} pal {well_attr(pb, slot)}"
             assert not icon_visible(pb, slot), f"unowned well {slot} showed an icon"
         assert icon_visible(pb, 0), "class power icon missing"
-        assert "HOWL" in decode_row(pb, 8, 1, 18), decode_row(pb, 8, 1, 18)
-        assert "8 SHOTS AND WARD" in decode_row(pb, 9, 1, 18), decode_row(pb, 9, 1, 18)
+        assert "MOONFIRE" in decode_row(pb, 8, 1, 18), decode_row(pb, 8, 1, 18)
+        assert "FLAME WARD" in decode_row(pb, 9, 1, 18), decode_row(pb, 9, 1, 18)
         assert pb.memory[ACTIVE] == CLASS_POWER
         save_shot(pb, "picker-howl")
 

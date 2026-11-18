@@ -51,6 +51,12 @@ def projectiles(pb):
 
 
 def fire(pb):
+    # Wolfkin's Fang Claw is a 6-frame arm-length arc: let the previous one
+    # expire so a reused entity slot is not mistaken for an old attack.
+    for _ in range(12):
+        if not projectiles(pb):
+            break
+        pb.tick()
     pb.memory[PL + 22] = 0
     pb.memory[PL + 42] = 0
     before = set(projectiles(pb))
