@@ -97,6 +97,8 @@ def arm(pb, will=True):
     pb.memory[SHIELD] = 0
     pb.memory[PLAYER + WILL_OFFSET] = 90 if will else 0
     pb.memory[PLAYER + LEVEL_OFFSET] = 1 if will else 0
+    # Every starter MAX shares the 360-frame recast lock (max-Will v2).
+    pb.memory[addr("_picsean_vortex_slow_charge")] = 0
     pb.tick(2)
     pb.memory[IFRAMES] = 0
 

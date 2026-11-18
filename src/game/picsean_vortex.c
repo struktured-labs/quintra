@@ -9,6 +9,7 @@
 #include "game/entity.h"
 #include "game/hexa_boss.h"
 #include "game/picsean_vortex.h"
+#include "game/will_maxfx.h"
 #include "game/cinder_big.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -534,6 +535,11 @@ void picsean_vortex_tick(void) BANKED {
     i16 cx, cy;
     entity_t *e;
     if (!picsean_vortex_ticks) return;
+    // The other champions' max-Will v2 arts share this dispatch.
+    if (will_maxfx_live && player.class_id != 3) {
+        will_maxfx_tick();
+        return;
+    }
     if (picsean_vortex_abort || player.class_id != 3) {
         vortex_end();
         return;
@@ -560,8 +566,11 @@ void picsean_vortex_tick(void) BANKED {
         set_sprite_data(SPR_FX_VORTEX_DROP, 4, vortex_tiles);
         vortex_flash(1, 1);
         room_shake(3, 10);
-        sfx_play(SFX_ROAR);
     }
+    // Crest voice: a surf crash under a three-note bubbling run (max-Will v2).
+    if (t == PICSEAN_VORTEX_GROW_TICKS || t == PICSEAN_VORTEX_GROW_TICKS + 3
+        || t == PICSEAN_VORTEX_GROW_TICKS + 6)
+        will_maxfx_surf((u8)(t - PICSEAN_VORTEX_GROW_TICKS));
 
     if (!carrier_ensure()) {
         // Full table: try again next tick; nothing is marked as hit.
@@ -629,6 +638,10 @@ void picsean_vortex_tick(void) BANKED {
 }
 
 void picsean_vortex_draw(void) BANKED {
+    if (will_maxfx_live) {
+        will_maxfx_draw();
+        return;
+    }
     // Big bodies own the OAM tail (Serpent 4..31, Cinder Rex 16..39): the
     // vortex keeps only its last four segments there rather than tearing
     // twelve pieces out of the champion.
