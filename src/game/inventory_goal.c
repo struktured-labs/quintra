@@ -1,4 +1,4 @@
-#pragma bank 10
+#pragma bank 24
 
 #include <gbdk/console.h>
 
