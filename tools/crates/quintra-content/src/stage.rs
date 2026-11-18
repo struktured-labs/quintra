@@ -76,7 +76,7 @@ pub struct StageTheme {
 pub const MB_VARIANTS: u8 = 5;
 // Seven entries lets the two final stages retain a readable core roster while
 // adding a low-weight harrier; generated C stores variable-length pools.
-pub const MAX_POOL: usize = 7;
+pub const MAX_POOL: usize = 10;
 
 impl StageTheme {
     pub fn validate(&self) -> Result<(), String> {

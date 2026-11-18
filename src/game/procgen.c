@@ -7,7 +7,6 @@
 #include "game/dungeon_director.h"
 #include "game/companion.h"
 #include "game/enemy_ai.h"
-#include "game/enemy_new_ai.h"
 #include "game/antidote.h"
 #include "game/entity.h"
 #include "game/rare_enemy.h"
@@ -1880,7 +1879,5 @@ void procgen_generate_room_body(void) BANKED {
     // The false-gap normalizer above is intentionally the final terrain
     // writer. It can close a visually misleading slit beneath a body that was
     // valid when population ran, so validate every hostile one last time.
-    new_monsters_post_spawn();
-
     player.iframes = 60;    // brief invuln on room entry
 }

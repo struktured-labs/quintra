@@ -22,6 +22,7 @@
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 // Per-AI scratch layout in entity_t:
 //   ai_data[0] = content enemy id (all AIs)
@@ -574,7 +575,10 @@ static void boss_tick(entity_t *e) {
 
 void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
-    const enemy_def_t *def = &enemies[id];
+    enemy_def_t def_buf;
+    const enemy_def_t *def;
+    enemy_load_def(id, &def_buf);
+    def = &def_buf;
     if ((e->flags & EF_RARE) && rare_enemy_tick(e)) return;
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
     // Return-echo elites are 24x24 Reaper/Weaver/Maw. Weaver and Maw take
@@ -597,6 +601,10 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     if (id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER) { enemy_patrol_update(e, id); return; }
+    if (def->ai_kind >= AI_BLINK_CASTER && def->ai_kind <= AI_BEAM_CASTER) {
+        new_monster_update(e, def);
+        return;
+    }
     switch (def->ai_kind) {
         case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
         case AI_CHARGER: charger_tick(e, def);             break;
@@ -609,12 +617,6 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
         case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;
         case AI_SUMMONER: rift_cantor_update(e, def);                     break;
-        case AI_BLINK_CASTER:
-        case AI_WALK_CASTER:
-        case AI_GRABBER:
-        case AI_SHOVER:
-        case AI_ZIGZAG:
-        case AI_BEAM_CASTER: new_monster_update(e, def);                  break;
         default:         walker_tick(e);                   break;
     }
 }

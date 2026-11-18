@@ -50,7 +50,7 @@ mod tests {
         let r = registry();
         assert_eq!(r.n_classes(),        5);   // Wolfkin/Sauran/Corvin/Picsean/Vespine
         assert_eq!(r.n_items(),         28);   // + merchant Boomerang
-        assert_eq!(r.n_enemies(),       35);   // Facet Ram + one-per-stage Reaper
+        assert_eq!(r.n_enemies(),       41);   // + Veil Magus, Hex Walker, Vault Hand, Bane Brute, Zag Dart, Leybeam
         assert_eq!(r.n_biomes(),         1);
         assert_eq!(r.n_zelda_overworlds(), 1);
         assert_eq!(r.n_room_templates(), 1);

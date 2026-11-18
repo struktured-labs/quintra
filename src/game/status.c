@@ -23,6 +23,7 @@
 #include "render/text.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 u8 player_status_kind;
 void status_effect(u8 kind,u8 palette,i16 x,i16 y) BANKED;
@@ -270,9 +271,11 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
 
 static u8 inversion_enemy_aspect(const entity_t *e) {
     u8 eid = e->ai_data[0];
+    enemy_def_t def_buf;
     const enemy_def_t *def;
     if (eid >= N_ENEMIES) return QSTATUS_INVERT_SPEED;
-    def = &enemies[eid];
+    enemy_load_def(eid, &def_buf);
+    def = &def_buf;
     if (def->stats.poise >= 3) return QSTATUS_INVERT_POISE;
     if (def->stats.hp >= 20) return QSTATUS_INVERT_ARMOR;
     if (def->stats.damage >= 5) return QSTATUS_INVERT_DAMAGE;

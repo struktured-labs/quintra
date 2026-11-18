@@ -383,7 +383,9 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
     write_if_changed(out.join("enemies.h"), h)?;
 
     let mut b = String::from(HEADER_NOTE);
-    b.push_str("#include \"enemies.h\"\n\n");
+    // The roster used to live in bank 0. Six new specialists pushed HOME/GSINIT
+    // past 0x4000 (white-screen boot). Bank 25 already holds their AI.
+    b.push_str("#pragma bank 25\n#include \"enemies.h\"\n\n");
     b.push_str("const enemy_def_t enemies[] = {\n");
     for e in &reg.enemies { b.push_str(&emit_enemy(e)); }
     b.push_str("};\n");
@@ -808,16 +810,16 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
 
     c.push_str("\nconst u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ids = [0u8; 7];
+        let mut ids = [0u8; 10];
         for (i, &(eid, _)) in s.enemy_pool.iter().enumerate() { ids[i] = eid; }
-        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], ids[6]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], ids[6], ids[7], ids[8], ids[9]));
     }
     c.push_str("};\n");
     c.push_str("const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ws = [0u8; 7];
+        let mut ws = [0u8; 10];
         for (i, &(_, w)) in s.enemy_pool.iter().enumerate() { ws[i] = w; }
-        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4], ws[5], ws[6]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4], ws[5], ws[6], ws[7], ws[8], ws[9]));
     }
     c.push_str("};\n");
     c.push_str(&format!("const u8 stage_pool_n[N_STAGES] = {{ {} }};\n",

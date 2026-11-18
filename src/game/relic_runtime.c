@@ -1,4 +1,7 @@
-#pragma bank 2
+#pragma bank 29
+
+// Moved off bank 2 so the new specialist dispatch can fit under the
+// 256-byte emergency floor. Every entry point here is already BANKED.
 
 #include <gb/gb.h>
 

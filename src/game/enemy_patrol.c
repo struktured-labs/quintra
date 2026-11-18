@@ -18,6 +18,7 @@
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 // SDCC's banked argument window is not stable across a nested banked/FX call.
 // Preserve the one projectile slot these cold rejection transactions retire
@@ -165,19 +166,22 @@ void enemy_special_reject_hit(u8 shot_idx, u8 enemy_idx) BANKED {
         (void)facet_ram_reject_hit(shot_idx, enemy_idx);
         return;
     }
-    if (eid < N_ENEMIES && enemies[eid].ai_kind == AI_COUNTER_GUARD
-        && enemy->state == 0) {
-        enemy->state = 1;
-        enemy->state_timer = enemies[eid].ai_p1;
-        enemy->ai_data[6] = enemies[eid].ai_p0;
-        enemy->palette = 4;
-        enemy->ai_data[7] = 10;
-        fx_spawn(SPR_FX_IMPACT, 3,
-            FIX8_TO_INT(entities[shot_idx].x),
-            FIX8_TO_INT(entities[shot_idx].y), 8);
-        sfx_play(SFX_WEAK);
-        retire_special_projectile();
-        return;
+    if (eid < N_ENEMIES && enemy->state == 0) {
+        enemy_def_t edef;
+        enemy_load_def(eid, &edef);
+        if (edef.ai_kind == AI_COUNTER_GUARD) {
+            enemy->state = 1;
+            enemy->state_timer = edef.ai_p1;
+            enemy->ai_data[6] = edef.ai_p0;
+            enemy->palette = 4;
+            enemy->ai_data[7] = 10;
+            fx_spawn(SPR_FX_IMPACT, 3,
+                FIX8_TO_INT(entities[shot_idx].x),
+                FIX8_TO_INT(entities[shot_idx].y), 8);
+            sfx_play(SFX_WEAK);
+            retire_special_projectile();
+            return;
+        }
     }
     if (eid == ENEMY_FOLD_STAR && enemy->state != 0) {
         sfx_play(SFX_HIT);
@@ -360,7 +364,11 @@ void stage_reaper_update(entity_t *e) BANKED {
                     entities[wing].state_timer = 110;
                 }
             }
-            e->palette = (e->flags & EF_ELITE) ? 6 : enemies[ENEMY_STAGE_REAPER].palette;
+            {
+                enemy_def_t edef;
+                enemy_load_def(ENEMY_STAGE_REAPER, &edef);
+                e->palette = (e->flags & EF_ELITE) ? 6 : edef.palette;
+            }
             e->ai_data[2] = 2;
             e->ai_data[3] = 60;
         }

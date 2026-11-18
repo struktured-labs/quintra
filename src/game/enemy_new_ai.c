@@ -573,6 +573,31 @@ static void place_allies_behind_brute(void) {
     }
 }
 
+
+void bane_brute_apply_knockback(i8 kx, i8 ky) BANKED {
+    u8 n;
+    u8 steps = (kx && ky) ? 13 : 18;
+    for (n = 0; n < steps; ++n) {
+        i16 nx = (i16)(player.x + kx);
+        i16 ny = (i16)(player.y + ky);
+        if (!room_player_position_clear(nx, ny)) {
+            if (kx && ky) {
+                if (room_player_position_clear((i16)(player.x + kx), (i16)player.y)) {
+                    player.x = (ppos_t)(player.x + kx);
+                    continue;
+                }
+                if (room_player_position_clear((i16)player.x, (i16)(player.y + ky))) {
+                    player.y = (ppos_t)(player.y + ky);
+                    continue;
+                }
+            }
+            break;
+        }
+        player.x = (ppos_t)nx;
+        player.y = (ppos_t)ny;
+    }
+}
+
 void new_monsters_post_spawn(void) BANKED {
     u8 allies = 0, i;
     leybeam_beam_live = 0;

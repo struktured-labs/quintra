@@ -8,6 +8,7 @@
 #include "game/player.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 // A Rift Ooze's two crawler fragments are real enemies: kill either before
 // their scatter clock ends, or they reverse course and reform a weakened ooze.
@@ -45,11 +46,15 @@ void ooze_fragment_update(entity_t *e, u8 idx) BANKED {
             e->ai_data[1] = e->ai_data[2] = 0;
             e->state = 0;
             e->state_timer = 30;
-            e->sprite_tile = enemies[ENEMY_RIFT_OOZE].sprite_set;
-            e->palette = enemies[ENEMY_RIFT_OOZE].palette;
+            {
+                enemy_def_t edef;
+                enemy_load_def(ENEMY_RIFT_OOZE, &edef);
+                e->sprite_tile = edef.sprite_set;
+                e->palette = edef.palette;
+                e->damage = edef.stats.damage;
+            }
             // A reformed ooze is a pressure reset, not a full second boss.
             e->hp = 8;
-            e->damage = enemies[ENEMY_RIFT_OOZE].stats.damage;
             e->ai_data[7] = 10;
             entity_kill(i);
             fx_spawn(SPR_FX_IMPACT, 0x05, ex, ey, 14);

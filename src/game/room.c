@@ -56,6 +56,7 @@ void stage_event_resolve_fall(void) BANKED;
 
 void tiles_load_switch_pressed(void) BANKED;
 #include "content.h"
+#include "game/enemy_def.h"
 
 BANKREF(room_enter)
 
@@ -2008,7 +2009,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // visible loss by several true hits.
         if (!found && player.class_id == 2 && corvin_i != 0xFF) {
             u8 eid = entities[corvin_i].ai_data[0];
-            u8 max = (eid < N_ENEMIES) ? enemies[eid].stats.hp : 0;
+            u8 max = 0;
+            if (eid < N_ENEMIES) {
+                enemy_def_t edef;
+                enemy_load_def(eid, &edef);
+                max = edef.stats.hp;
+            }
             if (max) {
                 if (!run_state.world_mode
                     && run_state_dungeon_local() < 3) {

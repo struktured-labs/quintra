@@ -7,6 +7,7 @@
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 // Spawn-only initializer owned by the feature bank. Keeping the declaration
 // private avoids making every translation unit depend on this cold hook.
@@ -24,7 +25,10 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
     if (idx == 0xFF) return 0xFF;
     e = &entities[idx];
     {
-        const enemy_def_t *def = &enemies[enemy_content_id];
+        enemy_def_t def_buf;
+        const enemy_def_t *def;
+        enemy_load_def(enemy_content_id, &def_buf);
+        def = &def_buf;
         e->x           = FIX8((i16)tile_x * 8);
         e->y           = FIX8((i16)tile_y * 8);
         e->vx = e->vy  = 0;

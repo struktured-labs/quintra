@@ -10,6 +10,7 @@ void new_monster_update(entity_t *e, const enemy_def_t *def) BANKED;
 void new_monsters_post_spawn(void) BANKED;
 void new_monsters_draw(void) BANKED;
 void new_monsters_foyer_warp(void) BANKED;
+void bane_brute_apply_knockback(i8 kx, i8 ky) BANKED;
 void leybeam_clear_beam(void) BANKED;
 u8   vault_hand_may_act(void) BANKED;
 

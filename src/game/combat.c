@@ -14,6 +14,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "game/enemy_ai.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
+#include "game/enemy_new_ai.h"
 #include "game/rare_enemy.h"
 #include "game/boss_phase.h"
 #include "game/mire_roots.h"
@@ -31,6 +32,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "render/tiles.h"
 #include "render/hud.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 u8 status_enemy_effective_poise(u8 idx, u8 poise) BANKED;
 u8 status_enemy_hit_damage(u8 idx, u8 damage) BANKED;
@@ -119,7 +121,10 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
     {
         if (eid < N_ENEMIES) {
             // Endless descent pays double
-            u16 pts = enemies[eid].stats.score;
+            enemy_def_t edef;
+            u16 pts;
+            enemy_load_def(eid, &edef);
+            pts = edef.stats.score;
             if (run_state.bosses_beaten >= BOSSES_TO_WIN) pts = (u16)(pts << 1);
             score_add(pts);
         }
@@ -301,7 +306,11 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
             ? PICKUP_HEART_HALF : PICKUP_COIN_5,
             entities[j].x, entities[j].y);
         pickup_roll_elite_bonus(entities[j].x, entities[j].y);
-        score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
+        if (eid < N_ENEMIES) {
+            enemy_def_t edef;
+            enemy_load_def(eid, &edef);
+            score_add(edef.stats.score);
+        }
     } else if (!antidote_try_drop(eid, entities[j].x, entities[j].y)) {
         pickup_roll_drop(entities[j].x, entities[j].y);
     }
@@ -685,26 +694,13 @@ u8 combat_resolve(void) BANKED {
                         i8 kx = ((i16)player.x > sx) ? 1 : ((i16)player.x < sx) ? -1 : 0;
                         i8 ky = ((i16)player.y > sy) ? 1 : ((i16)player.y < sy) ? -1 : 0;
                         u8 n;
-                        u8 steps = 6;
                         if (hostile_entity->type == ENT_ENEMY
-                            && hostile_entity->ai_data[0] == ENEMY_BANE_BRUTE)
-                            steps = (kx && ky) ? 13 : 18;
-                        for (n = 0; n < steps; ++n) {
+                            && hostile_entity->ai_data[0] == ENEMY_BANE_BRUTE) {
+                            bane_brute_apply_knockback(kx, ky);
+                        } else for (n = 0; n < 6; ++n) {
                             i16 nx = (i16)(player.x + kx);
                             i16 ny = (i16)(player.y + ky);
-                            if (!room_player_position_clear(nx, ny)) {
-                                if (kx && ky) {
-                                    if (room_player_position_clear((i16)(player.x + kx), (i16)player.y)) {
-                                        player.x = (ppos_t)(player.x + kx);
-                                        continue;
-                                    }
-                                    if (room_player_position_clear((i16)player.x, (i16)(player.y + ky))) {
-                                        player.y = (ppos_t)(player.y + ky);
-                                        continue;
-                                    }
-                                }
-                                break;
-                            }
+                            if (!room_player_position_clear(nx, ny)) break;
                             player.x = (ppos_t)nx;
                             player.y = (ppos_t)ny;
                         }
