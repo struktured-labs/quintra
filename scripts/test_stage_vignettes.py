@@ -87,6 +87,10 @@ def boot(consume_start=True):
     if consume_start and got == SCREEN_VIGNETTE:
         play_through(pb, [])
         got = pb.memory[SCREEN]
+        # The foyer vignette now exits through a fresh room_enter (procgen,
+        # spawn, music) instead of the resume path; let the new room settle.
+        pb.tick(60)
+        got = pb.memory[SCREEN]
     if consume_start:
         assert got == SCREEN_ROOM, f"boot did not reach the room ({got})"
         # Stage 1's seen bit is expected; high byte still clear.
