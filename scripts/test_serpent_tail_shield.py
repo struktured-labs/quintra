@@ -156,7 +156,10 @@ def main():
     # without the Convergence flag (Max-Will contract).
     settle(pb, boss, 0, 10)
     vortex = spawn_shot(pb, 32, 64, 3, aux=0xF0)
-    max_x, _, _ = fly(pb, boss, 0, vortex, 30)
+    # 40 frames, not 30: this boss room lags to about 2 frames per tick, and
+    # 30 frames passed WALL_X + 12 by a single 3 px step, so any change in
+    # frame phase elsewhere in the ROM flipped the verdict.
+    max_x, _, _ = fly(pb, boss, 0, vortex, 40)
     assert max_x > WALL_X + 12, f"Tide Vortex was blocked by the plated coil (x={max_x})"
 
     # 6. Unwinding after a storm charge: plates slack (grey), shots pass.
