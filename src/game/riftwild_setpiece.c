@@ -29,8 +29,11 @@ u8 riftwild_cache_x = 0xFF;
 u8 riftwild_cache_y = 0xFF;
 u8 riftwild_render_salt;
 u8 rw_ground_slot;
-#define RW_PATH_ATTR ((u8)((rw_ground_slot == BGPAL_CRYSTAL ? BGPAL_DOOR \
-    : rw_ground_slot) | 0x08))
+// Trails are worn earth: the door/earth slot in the Waking (tan dirt on
+// every climate), the muted floor slot in the Hollow (its door and crystal
+// slots are the loud void-cyan / magenta landmark colours). Set with
+// rw_ground_slot.
+static u8 rw_path_attr;
 // Union of every stamp footprint (x1/y1 exclusive); x0 = 0xFF when empty.
 // One bounds test per streamed cell replaces the per-stamp scan.
 static u8 rw_box_x0 = 0xFF, rw_box_y0, rw_box_x1, rw_box_y1;
@@ -284,6 +287,17 @@ static u8 view_at(u8 x, u8 y) {
     return tile_at(x, y);
 }
 
+
+// open_ring()/soft() as one lookup for fits(), whose ring walk is the
+// scatter's main cost: bit 0 = open ring ground, bit 1 = soft footprint.
+// The field base is always one of the climate floors listed here.
+static const u8 rw_fit[256] = {
+    [BGT_GRASS] = 3, [BGT_WILD_FLOWER] = 3, [BGT_WILD_SNOW] = 3,
+    [BGT_WILD_SAND] = 3, [BGT_WILD_MUD] = 3, [BGT_RUBBLE] = 3,
+    [BGT_PATH] = 1, [BGT_TREE] = 2, [BGT_WILD_STONE] = 2,
+    [BGT_WILD_STUMP] = 2,
+};
+
 // Footprint plus a two-tile ring must be open ground: the ring keeps every
 // route around the piece at least 16px wide (the hero body is 12px), so a
 // stamp can never cut a path, and nothing sits on a trail or a mouth. The
@@ -300,8 +314,9 @@ static u8 fits(u8 x0, u8 y0, u8 w, u8 h, u8 base) {
             if (x == ROOM_W && y < ROOM_H) p = sp_row_hi[y];
             t = *p;
             if (inrow && x >= x0 && x < xe) {
-                if (!soft(t, base) || reserved(x, y)) return 0;
-            } else if (!open_ring(t, base)) {
+                if (!(rw_fit[t] & 2) && !soft(t, base)) return 0;
+                if (reserved(x, y)) return 0;
+            } else if (!(rw_fit[t] & 1) && !open_ring(t, base)) {
                 return 0;
             }
         }
@@ -407,11 +422,12 @@ static void lift_old_blobs(u8 base) {
     }
 }
 
-// One or two seeded clusters break the open ground: a grove (canopy art),
-// a crag ridge (peak art) or a flower patch, weighted by climate row. Tiles
-// pass 2026-11-17: fewer, larger, metatile-aligned clusters instead of 3..6
-// clumps plus lone stones and stumps, so a field reads as open ground with a
-// few deliberate shapes (Zelda / Link's Awakening clarity).
+// Seeded clusters break the open ground: a grove (canopy art), a crag
+// ridge (peak art) or a flower patch, weighted by climate row. Three or
+// four are tried (two to four land once fits() rejects crowded spots), plus
+// three or four complete standalone props (lone bush, rock, stump). The
+// 2026-11-17 tiles pass cut this to 1..2 clusters and no singles, which read
+// too sanitary; the tile-life pass restores a middle ground (~84-85% open).
 static void scatter(u8 base) {
     static const u8 kinds[6][4] = {
         { BGT_WILD_MOUNTAIN, BGT_TREE, BGT_TREE, BGT_WILD_MOUNTAIN },
@@ -423,16 +439,33 @@ static void scatter(u8 base) {
     };
     u8 zone = (u8)(run_state.world_screen / 6);
     u8 tries, placed = 0;
-    u8 want = (u8)(1 + (next_hash() & 1));
-    for (tries = 0; tries < 14 && placed < want; ++tries) {
+    static const u8 singles[6][4] = {
+        { BGT_WILD_STONE, BGT_TREE, BGT_WILD_STONE, BGT_WILD_STUMP },
+        { BGT_TREE, BGT_WILD_STONE, BGT_WILD_STUMP, BGT_TREE },
+        { BGT_WILD_STONE, BGT_TREE, BGT_WILD_STUMP, BGT_WILD_STONE },
+        { BGT_TREE, BGT_WILD_STUMP, BGT_WILD_STONE, BGT_TREE },
+        { BGT_WILD_STUMP, BGT_TREE, BGT_WILD_STUMP, BGT_WILD_STONE },
+        { BGT_WILD_STONE, BGT_WILD_STONE, BGT_TREE, BGT_WILD_STONE },
+    };
+    u8 want = (u8)(3 + (next_hash() & 1));
+    u8 lone = (u8)(3 + (next_hash() & 1));
+    for (tries = 0; tries < 8 && lone; ++tries) {
+        u8 h = next_hash();
+        u8 x0 = (u8)(3 + next_hash() % 25);
+        u8 y0 = (u8)(3 + next_hash() % 25);
+        if (!fits(x0, y0, 1, 1, base)) continue;
+        tile_put(x0, y0, singles[zone][h & 3]);
+        lone--;
+    }
+    for (tries = 0; tries < 22 && placed < want; ++tries) {
         u8 h = next_hash();
         u8 kind = kinds[zone][h & 3];
         u8 x0 = (u8)(4 + ((next_hash() % 22) & 0xFE));
         u8 y0 = (u8)(4 + ((next_hash() % 22) & 0xFE));
-        u8 w = 4, hgt = (h & 0x10) ? 4 : 2;
-        if (kind == BGT_WILD_FLOWER || kind == BGT_WILD_REEDS) {
-            w = 4; hgt = 2;
-        }
+        // Small clusters: one 2x2 metatile, a 4x2 pair, or a 4x4 grove.
+        u8 w = (h & 0x60) ? 4 : 2;
+        u8 hgt = (w == 4 && (h & 0x10)) ? 4 : 2;
+        if (kind == BGT_WILD_FLOWER || kind == BGT_WILD_REEDS) hgt = 2;
         if (!fits(x0, y0, w, hgt, base)) continue;
         fill(x0, y0, w, hgt, kind);
         placed++;
@@ -448,6 +481,8 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     riftwild_render_salt = riftwild_field_salt(0);
     rw_ground_slot = base == BGT_WILD_SNOW ? BGPAL_CRYSTAL
         : base == BGT_WILD_SAND ? BGPAL_DOOR : BGPAL_FLOOR;
+    rw_path_attr = (u8)((RUN_RIFTWILD_IS_HOLLOW() ? BGPAL_FLOOR
+        : BGPAL_DOOR) | 0x08);
     if (!run_state.world_mode || run_state.world_screen >= 36) return;
     // Fixture fields are tidied too: their authored layouts are written
     // after this pass, so the tidy only sees shared procgen/climate terrain.
@@ -574,7 +609,99 @@ void riftwild_setpiece_spawn(void) BANKED {
 // multi-tile art. Everything is keyed by position plus the per-field salt,
 // so a field redraws identically on every stream.
 static u8 cell_attr;
+
+// Worn trail: an edge piece frays into the ground wherever the neighbour
+// is not trail. A neighbour outside the field counts as trail, so mouths run
+// on into the next field. dress_trail() reads all four neighbours; the
+// streamer's trail_run() takes the two along its line from the line itself
+// and the two across from row pointers prepared once per line.
+#define RAW(x, y) (((y) < ROOM_H && (x) >= ROOM_W)                           \
+    ? sp_row_hi[y][(u8)((x) - ROOM_W)] : sp_row_lo[y][x])
+// Edge piece by open side (bit 0 N, 1 S, 2 W, 3 E = not trail): art, its
+// flips, and the extra flip a hash bit adds (a single fray or the mid never
+// repeats along a run).
+static const u8 rw_tr_art[16] = {
+    RWA_PATH_PLAIN, RWA_PATH_N, RWA_PATH_N, RWA_PATH_STRAIT_H,
+    RWA_PATH_W, RWA_PATH_NW, RWA_PATH_NW, RWA_PATH_STRAIT_H,
+    RWA_PATH_W, RWA_PATH_NW, RWA_PATH_NW, RWA_PATH_STRAIT_H,
+    RWA_PATH_STRAIT_V, RWA_PATH_STRAIT_V, RWA_PATH_STRAIT_V,
+    RWA_PATH_STRAIT_H,
+};
+static const u8 rw_tr_flip[16] = {
+    0, 0, 0x40, 0, 0, 0, 0x40, 0, 0x20, 0x20, 0x60, 0, 0, 0, 0, 0,
+};
+static const u8 rw_tr_jit[16] = {
+    0x20, 0x20, 0x20, 0, 0x40, 0, 0, 0, 0x40, 0, 0, 0, 0, 0, 0, 0,
+};
+static u8 trail_pick(u8 code, u8 h) {
+    u8 a = (u8)(rw_path_attr | rw_tr_flip[code]);
+    if (h & 0x80) a ^= rw_tr_jit[code];
+    if (!code && (h & 0x40)) a ^= 0x40;   // mid grit: four orientations
+    cell_attr = a;
+    if (!code) return (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
+    return rw_tr_art[code];
+}
+static u8 dress_trail(u8 x, u8 y, u8 h) {
+    u8 code = 0;
+    if (x >= ROOM_WIDE_W_TILES || y >= ROOM_WIDE_H_TILES) {
+        cell_attr = rw_path_attr;
+        return RWA_PATH_PLAIN;
+    }
+    if (y && RAW(x, (u8)(y - 1)) != BGT_PATH) code |= 1;
+    if (y < (u8)(ROOM_WIDE_H_TILES - 1) && RAW(x, (u8)(y + 1)) != BGT_PATH)
+        code |= 2;
+    if (x && RAW((u8)(x - 1), y) != BGT_PATH) code |= 4;
+    if (x < (u8)(ROOM_WIDE_W_TILES - 1) && RAW((u8)(x + 1), y) != BGT_PATH)
+        code |= 8;
+    return trail_pick(code, h);
+}
 static const u8 rw_bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+
+// Ground detail grows in small clumps: 2x2 cell blocks are picked by a
+// seeded block hash (5 in 16 staggered blocks), and inside a picked block about
+// three cells in four carry a mark whose variant is shared by the clump.
+// Net ~23% of ground cells, never uniform noise. Per-axis tables keep the
+// horizontal and vertical streamers in agreement without a multiply.
+static const u8 rw_cx[16] = { 0x3A, 0xC5, 0x17, 0x8E, 0x61, 0xF2, 0x2D, 0xB9,
+                              0x54, 0x0B, 0xE7, 0x9C, 0x76, 0x23, 0xAF, 0x48 };
+static const u8 rw_cy[16] = { 0x9F, 0x26, 0xD1, 0x4C, 0x08, 0xB3, 0x6E, 0xF5,
+                              0x31, 0x8A, 0x57, 0xEC, 0x12, 0x7D, 0xC0, 0x95 };
+// rw_mk[b]: a clump block's mark art, or 0 off-clump. One lookup in the hot
+// loop instead of the CLUMP test plus the variant pick: blocks with
+// (b & 15) < 6 are clumps (6 in 16), and bits 5..6 pick tufts (two art) or
+// pebbles with small flowers. The caller XORs h bit 5 into b first, so half
+// a clump's cells swap within the pair: mixed, not stamped.
+#define T RWA_GRASS_TUFT
+#define B RWA_GRASS_TUFT_B
+#define P RWA_GRASS_PEBBLE
+#define F RWA_GRASS_BLOOM
+static const u8 rw_mk[256] = {
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    T, T, T, T, T, T, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    B, B, B, B, B, B, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    P, P, P, P, P, P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    F, F, F, F, F, F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+#undef T
+#undef B
+#undef P
+#undef F
+// A mark inside a clump on 3 of 4 cells, else a stray sprig on 1 in 32.
+#define MARKED(c, h) ((c) ? ((h) & 3) : !((h) & 31))
+// Blocks are staggered bricks (odd block rows shift a cell) so clumps
+// never line up in a grid.
+#define BX(x, y) rw_cx[((u8)((x) + (((y) >> 1) & 1)) >> 1) & 15]
 
 static u8 block_whole(u8 x, u8 y) {
     return rw_block_ok[(u8)((y >> 1) << 1) + (x >> 4)] & rw_bit[(x >> 1) & 7];
@@ -610,33 +737,24 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
     switch (tile) {
         case BGT_GRASS:
             cell_attr = a | 0x08 | ((h & 0x80) ? 0x20 : 0);
-            if (!(h & 7)) {
-                h = (u8)((h >> 3) & 7);
-                return (u8)(h == 7 ? RWA_GRASS_BLOOM
-                    : (h & 1) ? RWA_GRASS_PEBBLE : RWA_GRASS_TUFT);
-            }
-            return RWA_GRASS_PLAIN;
-        case BGT_WILD_SNOW:
-            if (!(h & 7)) {
+            i = rw_mk[(u8)(BX(x, y) ^ rw_cy[(y >> 1) & 15]
+                ^ riftwild_render_salt ^ (h & 0x20))];
+            if (!MARKED(i, h)) return RWA_GRASS_PLAIN;
+            return i ? i : RWA_GRASS_SPRIG;
+        case BGT_WILD_SNOW: case BGT_WILD_SAND: case BGT_WILD_MUD:
+            i = (u8)(BX(x, y) ^ rw_cy[(y >> 1) & 15] ^ riftwild_render_salt);
+            if (MARKED(rw_mk[i], h)) {
                 cell_attr = a | 0x08 | ((h & 0x80) ? 0x20 : 0);
-                return (h & 0x10) ? RWA_SNOW_GLINT : RWA_SNOW_DRIFT;
-            }
-            break;
-        case BGT_WILD_SAND:
-            if (!(h & 7)) {
-                cell_attr = a | 0x08 | ((h & 0x80) ? 0x20 : 0);
-                return (h & 0x10) ? RWA_SAND_CRACK : RWA_SAND_SHELL;
-            }
-            break;
-        case BGT_WILD_MUD:
-            if (!(h & 7)) {
-                cell_attr = a | 0x08 | ((h & 0x80) ? 0x20 : 0);
-                return (h & 0x10) ? RWA_MUD_ROOTS : RWA_MUD_PUDDLE;
+                i ^= h;   // cells in a clump mix its two marks
+                if (tile == BGT_WILD_SNOW)
+                    return (i & 0x40) ? RWA_SNOW_GLINT : RWA_SNOW_DRIFT;
+                if (tile == BGT_WILD_SAND)
+                    return (i & 0x40) ? RWA_SAND_CRACK : RWA_SAND_SHELL;
+                return (i & 0x40) ? RWA_MUD_ROOTS : RWA_MUD_PUDDLE;
             }
             break;
         case BGT_PATH:
-            cell_attr = RW_PATH_ATTR;
-            return (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
+            return dress_trail(x, y, h);
         case BGT_TREE:
         case BGT_WILD_MOUNTAIN:
             cell_attr = a | 0x08;
@@ -734,11 +852,11 @@ static u8 dress_cell(u8 tile, u8 a, u8 x, u8 y, u8 h) {
 // nothing else pays dress_cell(). The per-cell hash is the
 // same as before: h = x*0x1D + y*0x3B + salt; h ^= h >> 3; h += (y<<3) ^ x.
 #define RWK_SKIP   0
-#define RWK_GRASS  1   // plain, or a quiet mark when !(h & 7)
-#define RWK_SNOW   2   // snow / sand / mud: dressed when !(h & 7), two art
+#define RWK_GRASS  1   // plain, or a clumped mark (CLUMP)
+#define RWK_SNOW   2   // snow / sand / mud: clumped marks, two art
 #define RWK_SAND   3
 #define RWK_MUD    4
-#define RWK_PATH   5   // plain trail, stepping stones when !(h & 7)
+#define RWK_PATH   5   // worn trail: trail_run(), edge pieces from neighbours
 #define RWK_TREE   6
 #define RWK_CRAG   7
 #define RWK_SLOW   8   // shoreline / ruin / stamp: dress_cell()
@@ -750,7 +868,7 @@ static const u8 rw_kind[256] = {
     [BGT_FLOOR] = RWK_SLOW, [BGT_WILD_WATER] = RWK_SLOW,
     [BGT_WILD_HOLE] = RWK_SLOW, [BGT_CRYSTAL] = RWK_SLOW,
 };
-// (h & 0x10) ? alt_b : alt_a, matching dress_cell() for snow, sand and mud.
+// ((b ^ h) & 0x40) ? alt_b : alt_a, matching dress_cell() for snow, sand, mud.
 static const u8 rw_alt_a[5] = { 0, 0, RWA_SNOW_DRIFT, RWA_SAND_SHELL,
     RWA_MUD_PUDDLE };
 static const u8 rw_alt_b[5] = { 0, 0, RWA_SNOW_GLINT, RWA_SAND_CRACK,
@@ -759,7 +877,7 @@ static const u8 rw_alt_b[5] = { 0, 0, RWA_SNOW_GLINT, RWA_SAND_CRACK,
 // Line invariants live in statics so the hot loop keeps its few locals in
 // registers instead of shuffling an SDCC stack frame per cell.
 static u8 dl_vertical, dl_fixed, dl_step, dl_mix, dl_par, dl_lo, dl_hi;
-static u8 dl_path_attr, dl_brow, dl_bhi, dl_bbit;
+static u8 dl_bfix, dl_boff, dl_brow, dl_bhi, dl_bbit;
 
 static void dress_slow(u8 *tp, u8 *ap, u8 i, u8 h) {
     u8 x = dl_vertical ? dl_fixed : i;
@@ -771,11 +889,12 @@ static void dress_slow(u8 *tp, u8 *ap, u8 i, u8 h) {
 // One loop body per orientation, so the cell path never re-tests it.
 // PAR(i): canopy/crag quarter from parity; MIX(i): the (y << 3) ^ x term;
 // WHOLE(i): the cell's aligned 2x2 block is a complete tree/crag metatile.
-// Trails draw in the field's ground palette slot (dl_path_attr); on snow
-// they use the sand slot, a trodden-earth trail that never reads as water.
-#define DRESS_RUN(name, PAR, MIX, WHOLE)                                    \
+// BLK(i): the cell's 2x2-block clump hash (rw_mk); trail cells go to
+// trail_run().
+#define DRESS_RUN(name, PAR, MIX, WHOLE, BLK)                                  \
 static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
-    u8 k, h;                                                                \
+    u8 k, h, b;                                                             \
+    dl_i0 = i;                                                              \
     for (; n; --n, ++tp, ++ap, ++i, hb += dl_step) {                        \
         k = rw_kind[*tp];                                                   \
         if (!k) continue;                                                   \
@@ -797,21 +916,20 @@ static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
         }                                                                   \
         h = (u8)(hb ^ (hb >> 3)); h += (u8)(MIX(i));                        \
         if (k == RWK_PATH) {                                                \
-            *ap = dl_path_attr;                                             \
-            *tp = (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;               \
+            b = (u8)(trail_run(tp, ap, i, n, hb) - 1);                      \
+            tp += b; ap += b; i += b; n -= b; hb = dl_hb_out;               \
             continue;                                                       \
         }                                                                   \
+        b = BLK(i);                                                         \
         if (k == RWK_GRASS) {                                               \
             *ap |= (u8)((h & 0x80) ? 0x28 : 0x08);                          \
-            if (h & 7) { *tp = RWA_GRASS_PLAIN; continue; }                 \
-            h = (u8)((h >> 3) & 7);                                         \
-            *tp = h == 7 ? RWA_GRASS_BLOOM                                  \
-                : (h & 1) ? RWA_GRASS_PEBBLE : RWA_GRASS_TUFT;              \
+            b = rw_mk[(u8)(b ^ (h & 0x20))];                                \
+            *tp = !MARKED(b, h) ? RWA_GRASS_PLAIN : b ? b : RWA_GRASS_SPRIG; \
             continue;                                                       \
         }                                                                   \
-        if (h & 7) continue;                                                \
+        if (!MARKED(rw_mk[b], h)) continue;                                 \
         *ap |= (u8)((h & 0x80) ? 0x28 : 0x08);                              \
-        *tp = (h & 0x10) ? rw_alt_b[k] : rw_alt_a[k];                       \
+        *tp = ((b ^ h) & 0x40) ? rw_alt_b[k] : rw_alt_a[k];                 \
     }                                                                       \
 }
 #define PAR_H(i) ((i) & 1)
@@ -821,8 +939,117 @@ static void name(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {                       \
 #define WHOLE_H(i) (rw_block_ok[(u8)(dl_brow + ((i) >> 4))]                 \
     & rw_bit[((i) >> 1) & 7])
 #define WHOLE_V(i) (rw_block_ok[(u8)((((i) >> 1) << 1) + dl_bhi)] & dl_bbit)
-DRESS_RUN(dress_run_h, PAR_H, MIX_H, WHOLE_H)
-DRESS_RUN(dress_run_v, PAR_V, MIX_V, WHOLE_V)
+#define BLK_H(i) (rw_cx[((u8)((i) + dl_boff) >> 1) & 15] ^ dl_bfix)
+#define BLK_V(i) (BX(dl_fixed, (i)) ^ rw_cy[((i) >> 1) & 15] ^ dl_bfix)
+// A dressed cell is trail when it holds bank-1 (attr bit 3) trail art; the
+// bank check keeps raw bank-0 ids that share those numbers (flowers = 96)
+// from reading as trail.
+#define TRAIL_ART(t) ((t) == RWA_PATH_PLAIN || (t) == RWA_PATH_STONES            \
+    || (u8)((t) - RWA_PATH_N) <= (u8)(RWA_PATH_STRAIT_V - RWA_PATH_N))
+#define TRAIL_AT(tp, ap) ((*(ap) & 0x08) && TRAIL_ART(*(tp)))
+static u8 dl_run_prev, dl_run_next;
+// Across-line neighbours for trail_run(). Horizontal line y: the rows
+// above/below as lo (x < split) and hi (x >= split, pre-offset by -ROOM_W)
+// pointers; outside the field they point at an all-trail row. Vertical line
+// x: columns x - 1 / x + 1 as row offsets and whether they sit in the
+// extension (x >= ROOM_W) for rows above ROOM_H.
+static const u8 rw_trail_row[32] = {
+    BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH,
+    BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH,
+    BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH,
+    BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH,
+    BGT_PATH, BGT_PATH, BGT_PATH, BGT_PATH,
+};
+static const u8 *dl_up_lo, *dl_up_hi, *dl_dn_lo, *dl_dn_hi;
+static u8 dl_up_split, dl_dn_split;
+static u8 dl_wx, dl_ex, dl_wx_hi, dl_ex_hi, dl_wx_lo, dl_ex_lo;
+
+static void trail_rows(u8 y, const u8 **lo, const u8 **hi, u8 *split) {
+    if (y >= ROOM_WIDE_H_TILES) {        // also y - 1 from 0
+        *lo = *hi = rw_trail_row; *split = 32;
+    } else if (y < ROOM_H) {
+        *lo = sp_row_lo[y]; *hi = sp_row_hi[y] - ROOM_W; *split = ROOM_W;
+    } else {
+        *lo = *hi = sp_row_lo[y]; *split = 32;
+    }
+}
+// A stretch of consecutive streamed trail cells, from the hot loop's
+// current cell on, in one call (a trail row is 31 cells, so the call and
+// frame setup are paid once, not per cell). Along-line neighbours come from
+// the line itself: the dressed previous cell (or the run's carried-in edge)
+// and the raw next one; past cell 30 is outside the field, which counts as
+// trail. Across-line neighbours come from the pointers riftwild_dress_line()
+// prepared. Returns the cells consumed; dl_hb_out is the last cell's hash
+// base, so the caller's loop steps on from there.
+static u8 dl_i0, dl_hb_out;
+static u8 trail_run(u8 *tp, u8 *ap, u8 i, u8 n, u8 hb) {
+    u8 m = 0, code, h, nx, prev, nx_attr;
+    const u8 *pu = 0, *pd = 0;
+    prev = (i == dl_i0) ? dl_run_prev : TRAIL_AT(tp - 1, ap - 1);
+    if (!dl_vertical) {
+        pu = (i < dl_up_split ? dl_up_lo : dl_up_hi) + i;
+        pd = (i < dl_dn_split ? dl_dn_lo : dl_dn_hi) + i;
+    }
+    for (;;) {
+        dl_hb_out = hb;
+        h = (u8)(hb ^ (hb >> 3));
+        if (i >= (u8)(ROOM_WIDE_W_TILES - 1)) {
+            nx = BGT_PATH;
+            if (i > (u8)(ROOM_WIDE_W_TILES - 1)) {   // overscan cell 31
+                *tp = RWA_PATH_PLAIN; *ap = rw_path_attr;
+                return (u8)(m + 1);
+            }
+        } else {
+            nx = (n == 1) ? dl_run_next : tp[1];
+        }
+        if (dl_vertical) {
+            // along = N (1) / S (2); across = W (4) / E (8)
+            h += (u8)((u8)(i << 3) ^ dl_fixed);
+            code = prev ? 0 : 1;
+            if (nx != BGT_PATH) code |= 2;
+            if (i < ROOM_H) {
+                if ((dl_wx_hi ? sp_row_hi[i][dl_wx] : sp_row_lo[i][dl_wx])
+                    != BGT_PATH) code |= 4;
+                if ((dl_ex_hi ? sp_row_hi[i][dl_ex] : sp_row_lo[i][dl_ex])
+                    != BGT_PATH) code |= 8;
+            } else {
+                if (sp_row_lo[i][dl_wx_lo] != BGT_PATH) code |= 4;
+                if (sp_row_lo[i][dl_ex_lo] != BGT_PATH) code |= 8;
+            }
+            if (!dl_fixed) code &= (u8)~4;       // west of x 0: outside
+        } else {
+            // along = W (4) / E (8); across = N (1) / S (2). Inline pick:
+            // this is the full-row case (a trail running along the line).
+            if (i == dl_up_split) pu = dl_up_hi + i;
+            if (i == dl_dn_split) pd = dl_dn_hi + i;
+            code = prev ? 0 : 4;
+            if (nx != BGT_PATH) code |= 8;
+            if (*pu != BGT_PATH) code |= 1;
+            if (*pd != BGT_PATH) code |= 2;
+            ++pu; ++pd;
+            h += (u8)(dl_mix ^ i);
+            nx_attr = (u8)(rw_path_attr | rw_tr_flip[code]);
+            if (h & 0x80) nx_attr ^= rw_tr_jit[code];
+            if (!code && (h & 0x40)) nx_attr ^= 0x40;
+            *ap = nx_attr;
+            *tp = code ? rw_tr_art[code]
+                : (h & 7) ? RWA_PATH_PLAIN : RWA_PATH_STONES;
+            goto next;
+        }
+        *tp = trail_pick(code, h);
+        *ap = cell_attr;
+next:
+        ++m;
+        // Stop at the stretch's end, the line's end, or a stamp box (its
+        // cells take dress_cell()).
+        if (nx != BGT_PATH || n == 1) return m;
+        ++tp; ++ap; ++i; --n; hb += dl_step;
+        if (i >= dl_lo && i < dl_hi) return m;
+        prev = 1;
+    }
+}
+DRESS_RUN(dress_run_h, PAR_H, MIX_H, WHOLE_H, BLK_H)
+DRESS_RUN(dress_run_v, PAR_V, MIX_V, WHOLE_V, BLK_V)
 
 void riftwild_dress_line(u8 *tiles, u8 *attrs, u8 fixed, u8 vertical,
                          u8 origin) BANKED {
@@ -835,7 +1062,9 @@ void riftwild_dress_line(u8 *tiles, u8 *attrs, u8 fixed, u8 vertical,
     hb = (u8)(fixed * (vertical ? 0x1Du : 0x3Bu) + riftwild_render_salt);
     dl_mix = (u8)(fixed << 3);
     dl_par = vertical ? (u8)(fixed & 1) : (u8)((fixed & 1) << 1);
-    dl_path_attr = RW_PATH_ATTR;
+    dl_boff = (u8)((fixed >> 1) & 1);
+    dl_bfix = (u8)((vertical ? 0 : rw_cy[(fixed >> 1) & 15])
+        ^ riftwild_render_salt);
     dl_brow = (u8)((fixed >> 1) << 1);
     dl_bhi = (u8)(fixed >> 4);
     dl_bbit = rw_bit[(fixed >> 1) & 7];
@@ -848,13 +1077,34 @@ void riftwild_dress_line(u8 *tiles, u8 *attrs, u8 fixed, u8 vertical,
             dl_lo = rw_box_x0; dl_hi = rw_box_x1;
         }
     }
-    // Logical 0..first-1 sit at physical p..31, the rest wrap to 0.
+    if (vertical) {
+        u8 wx = fixed ? (u8)(fixed - 1) : 0;
+        u8 ex = (u8)(fixed + 1);
+        if (ex >= ROOM_WIDE_W_TILES) ex = (u8)(ROOM_WIDE_W_TILES - 1);
+        dl_wx_lo = wx; dl_ex_lo = ex;
+        dl_wx_hi = wx >= ROOM_W; dl_ex_hi = ex >= ROOM_W;
+        dl_wx = dl_wx_hi ? (u8)(wx - ROOM_W) : wx;
+        dl_ex = dl_ex_hi ? (u8)(ex - ROOM_W) : ex;
+    } else {
+        trail_rows((u8)(fixed - 1), &dl_up_lo, &dl_up_hi, &dl_up_split);
+        trail_rows((u8)(fixed + 1), &dl_dn_lo, &dl_dn_hi, &dl_dn_split);
+    }
+    // Logical 0..first-1 sit at physical p..31, the rest wrap to 0. A run
+    // carries its trail neighbours across the wrap: before logical 0 is
+    // outside the field (trail); the first run's last cell is followed by
+    // physical 0, still raw; the second run follows the dressed physical 31.
+    dl_run_prev = 1;
+    dl_run_next = p ? (u8)(tiles[0] == BGT_PATH) : 1;
     if (vertical) {
         dress_run_v(tiles + p, attrs + p, 0, first, hb);
+        dl_run_prev = TRAIL_AT(tiles + 31, attrs + 31);
+        dl_run_next = 1;
         if (p) dress_run_v(tiles, attrs, first, p,
             (u8)(hb + first * dl_step));
     } else {
         dress_run_h(tiles + p, attrs + p, 0, first, hb);
+        dl_run_prev = TRAIL_AT(tiles + 31, attrs + 31);
+        dl_run_next = 1;
         if (p) dress_run_h(tiles, attrs, first, p,
             (u8)(hb + first * dl_step));
     }

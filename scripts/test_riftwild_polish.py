@@ -53,6 +53,11 @@ def talk(expected, label):
     pb.screen.image.save(str(out / f'{label}-advice.png'))
     advice = hashlib.sha256(pb.screen.image.tobytes()).hexdigest()
     tap('b')
+    # Closing the dialogue redraws the whole 31x31 field (room_draw_tilemap);
+    # let that finish before the next approach so an A tap is not swallowed
+    # mid-redraw (main cleared it with ~1 frame to spare; trail edge pieces
+    # add ~1.5 frames to the redraw).
+    step(10)
     return lore, advice
 
 try:
