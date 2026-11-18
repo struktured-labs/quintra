@@ -189,6 +189,9 @@ jobs:
       - name: Lore intro skip and attract mode (idle, exit, no SRAM writes, demo replay)
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_attract_mode.py
 
+      - name: WATCH INTRO on the records page (play, A/B/START skip, back to records)
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_watch_intro.py
+
       - name: PyBoy Riftwild mission pull (Warden, then gate)
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_mission.py
 

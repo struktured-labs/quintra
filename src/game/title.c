@@ -48,6 +48,8 @@ static u8 lore_hold;
 static u16 title_idle;   // frames with no key held (attract timer)
 
 u8 title_stage_warp = 0xFF;
+// Set when WATCH INTRO leaves the records page: the title comes back to it.
+static u8 title_reopen_records;
 
 #define N_LORE_BEATS 7
 #define TITLE_SPIRIT_COUNT 5
@@ -177,6 +179,7 @@ static void render_records(void) {
     }
     gotoxy(2, 14); text_write("ONLY KNOWLEDGE");
     gotoxy(2, 15); text_write("PERSISTS.");
+    gotoxy(1, 16); text_write("START  WATCH INTRO");
     gotoxy(2, 17); text_write("A HELP  B = BACK");
 }
 
@@ -243,6 +246,13 @@ void title_enter(void) {
     last_palette_color2 = title_palette_steady[2];
     title_hide_spirits();
     title_init_spirits();
+    if (title_reopen_records) {
+        // Back from WATCH INTRO: land where it was launched.
+        title_reopen_records = 0;
+        showing_records = 1;
+        title_hide_spirits();
+        render_records();
+    }
 
     music_play_title();
     SHOW_SPRITES;
@@ -279,6 +289,13 @@ screen_id_t title_tick(u8 keys, u8 pressed) {
     // Records page: SELECT toggles, B backs out. Blocks run-start inputs
     // so a stray START on the stats page doesn't launch a game.
     if (showing_records) {
+        if (showing_records == 1 && (pressed & J_START)) {
+            // Rewatch the lore intro; A, B or START skip it, and the title
+            // reopens on this page when it ends.
+            sfx_play(SFX_COIN);
+            title_reopen_records = 1;
+            return intro_watch();
+        }
         if (pressed & (J_B | J_START)) {
             showing_records = 0;
             sfx_play(SFX_COIN);
