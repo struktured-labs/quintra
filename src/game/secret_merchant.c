@@ -110,7 +110,7 @@ static u8 stage(void) {
 
 static u8 host_cache_stage = 0xFF;
 static u32 host_cache_seed;
-static u8 host_cache_cell;
+u8 secret_host_cell_cache;   // global: read by the headless tests
 
 static u8 host_legal(u8 cell, u8 size, u8 entry, u8 cache) {
     if (cell == 0 || cell == entry || cell == cache
@@ -131,28 +131,28 @@ u8 secret_merchant_host_cell(void) BANKED {
     u8 size, entry, cache, start, i, pass;
     if (run_state.world_mode || stage() >= 9) return 0xFF;
     if (host_cache_stage == stage() && host_cache_seed == run_state.run_seed)
-        return host_cache_cell;
+        return secret_host_cell_cache;
     mission_graph_ensure();
     size = run_state_dungeon_size();
     entry = run_state_dungeon_entry_cell();
     cache = run_state_dungeon_cache_cell();
     seed_hash(stage(), 0x5645494CUL);   // 'VEIL'
     start = (u8)(next_hash() % size);
-    host_cache_cell = 0xFF;
+    secret_host_cell_cache = 0xFF;
     // Prefer a dead end (Farfold instinct), then any legal off-role cell.
-    for (pass = 0; pass < 2 && host_cache_cell == 0xFF; ++pass) {
+    for (pass = 0; pass < 2 && secret_host_cell_cache == 0xFF; ++pass) {
         for (i = 0; i < size; ++i) {
             u8 cell = (u8)(start + i);
             if (cell >= size) cell = (u8)(cell - size);
             if (!host_legal(cell, size, entry, cache)) continue;
             if (pass == 0 && degree(cell) != 1) continue;
-            host_cache_cell = cell;
+            secret_host_cell_cache = cell;
             break;
         }
     }
     host_cache_stage = stage();
     host_cache_seed = run_state.run_seed;
-    return host_cache_cell;
+    return secret_host_cell_cache;
 }
 
 u8 secret_merchant_host_kind(void) BANKED {
@@ -583,8 +583,7 @@ void secret_merchant_room_ready(void) BANKED {
         ? 80 : 60;
     // A dungeon bottle never follows the champion out into Riftwild.
     if (run_state.world_mode) run_state.secret_shop &= (u8)~SECRET_SHOP_ARMED;
-    if (entity_enemy_count && !run_state.secret_pending && !in_cave()
-        && !RUN_IN_RIFT_DEN()) {
+    if (entity_enemy_count && !run_state.secret_pending && !in_cave()) {
         if (run_state.secret_shop & SECRET_SHOP_ARMED) {
             run_state.secret_shop &= (u8)~SECRET_SHOP_ARMED;
             uncork(veil_bottle[stage() < 9 ? stage() : 0]);
@@ -747,8 +746,8 @@ u8 secret_merchant_block_status(u8 kind) BANKED {
 
 static u8 cave_cache_region = 0xFF;
 static u32 cave_cache_seed;
-static u8 cave_field[SECRET_CAVE_COUNT];
-static u8 cave_kind[SECRET_CAVE_COUNT];
+u8 secret_cave_fields[SECRET_CAVE_COUNT];   // global: read by the headless tests
+u8 secret_cave_kinds[SECRET_CAVE_COUNT];
 
 static u8 region(void) {
     u8 r = run_state.riftwild_region;
@@ -782,10 +781,10 @@ static void caves_ensure(void) {
         for (f = (u8)(b * 12); f < (u8)(b * 12 + 12); ++f)
             if (cave_candidate(f) && f != den) list[n++] = f;
         pick = next_hash();
-        cave_field[b] = n ? list[pick % n] : 0xFF;
+        secret_cave_fields[b] = n ? list[pick % n] : 0xFF;
     }
     p = (u8)(next_hash() % 6);
-    for (b = 0; b < SECRET_CAVE_COUNT; ++b) cave_kind[b] = perm[p][b];
+    for (b = 0; b < SECRET_CAVE_COUNT; ++b) secret_cave_kinds[b] = perm[p][b];
     cave_cache_region = r;
     cave_cache_seed = run_state.run_seed;
 }
@@ -794,13 +793,13 @@ u8 secret_cave_field_index(u8 field) BANKED {
     u8 i;
     caves_ensure();
     for (i = 0; i < SECRET_CAVE_COUNT; ++i)
-        if (cave_field[i] == field) return i;
+        if (secret_cave_fields[i] == field) return i;
     return 0xFF;
 }
 
 u8 secret_cave_kind(u8 cave) BANKED {
     caves_ensure();
-    return cave < SECRET_CAVE_COUNT ? cave_kind[cave] : 0;
+    return cave < SECRET_CAVE_COUNT ? secret_cave_kinds[cave] : 0;
 }
 
 static u8 cave_open(u8 i) {
@@ -856,7 +855,7 @@ u8 secret_cave_stamp_field(void) BANKED {
     if (!run_state.world_mode || run_state.world_screen >= 36) return 0;
     i = secret_cave_field_index(run_state.world_screen);
     if (i == 0xFF) return 0;
-    kind = cave_kind[i];
+    kind = secret_cave_kinds[i];
     floor = field_floor();
     for (y = 11; y <= 16; ++y)
         for (x = 13; x <= 19; ++x)
@@ -914,7 +913,7 @@ static u8 field_cave_closed(void) {
 
 static void open_cave(u8 i) {
     run_state.rift_caves |= RIFT_CAVE_MOUTH(i);
-    if (cave_kind[i] == SECRET_KIND_STONE)
+    if (secret_cave_kinds[i] == SECRET_KIND_STONE)
         live_set(TX + 1, TY, BGT_WILD_STONE, BGPAL_WALL);
     live_set(TX, TY, BGT_PORTAL, BGPAL_FLOOR);
     room_shake(1, 10);
@@ -925,7 +924,7 @@ u8 secret_cave_strike(u8 tx, u8 ty) BANKED {
     u8 i;
     if (tx != TX || ty != TY) return 0;
     i = field_cave_closed();
-    if (i == 0xFF || cave_kind[i] != SECRET_KIND_BLAST) return 0;
+    if (i == 0xFF || secret_cave_kinds[i] != SECRET_KIND_BLAST) return 0;
     open_cave(i);
     return 1;
 }
@@ -952,7 +951,7 @@ static void cave_field_tick(void) {
     u8 i = field_cave_closed();
     u8 fx, fy, kind, near;
     if (i == 0xFF) return;
-    kind = cave_kind[i];
+    kind = secret_cave_kinds[i];
     fx = (u8)((player.x + 8) >> 3);
     fy = (u8)((player.y + 12) >> 3);
     near = (fx + 1 >= TX && fx <= TX + 1 && fy + 1 >= TY && fy <= TY + 1);
@@ -996,25 +995,29 @@ void secret_cave_build_room(void) BANKED {
     entity_init_room();
     companion_spawn_current();
     room_spawn_progression_fixture();
-    keeper(80, 8);
-    shelf(48, 40, SM_TONIC_RIFT, 16);
+    keeper(80, 24);
+    shelf(48, 56, SM_TONIC_RIFT, 16);
     if (!(run_state.rift_caves & RIFT_CAVE_B(i)))
-        shelf(80, 40, cave_bottle(i), 24);
+        shelf(80, 56, cave_bottle(i), 24);
     if (!(run_state.rift_caves & RIFT_CAVE_C(i))) {
         if (kind == SECRET_KIND_STONE) {
             if (!VEIL_HAS(VEIL_WAYFARER_BELL + r))
-                shelf(112, 40, (u8)(SM_CHARM + VEIL_WAYFARER_BELL + r),
+                shelf(112, 56, (u8)(SM_CHARM + VEIL_WAYFARER_BELL + r),
                     charm_price[VEIL_WAYFARER_BELL + r]);
         } else if (kind == SECRET_KIND_BLAST) {
-            if (inventory_count(ITEM_ID_BOMBS)) shelf(112, 40, SM_RIFT_BOMB, 20);
-            else shelf(112, 40, SM_BOMB_BAG, 30);
+            if (inventory_count(ITEM_ID_BOMBS)) shelf(112, 56, SM_RIFT_BOMB, 20);
+            else shelf(112, 56, SM_BOMB_BAG, 30);
         } else {
             if (!inventory_count(ITEM_ID_ECHO_CHIME))
-                shelf(112, 40, SM_ECHO_CHIME, 20);
-            else if (RUN_RIFTWELL_USED()) shelf(112, 40, SM_REARM_WELL, 25);
+                shelf(112, 56, SM_ECHO_CHIME, 20);
+            else if (RUN_RIFTWELL_USED()) shelf(112, 56, SM_REARM_WELL, 25);
         }
     }
     secret_merchant_armed = 0;
+    // Arrive beside the stair, clear of the shelves (the generic portal
+    // arrival at 72,60 would step straight onto the bottle).
+    player.x = 40;
+    player.y = 88;
     player.iframes = 60;
 }
 
