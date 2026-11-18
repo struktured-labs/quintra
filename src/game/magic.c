@@ -9,6 +9,7 @@
 #include "game/boss_projectile.h"
 #include "game/combat.h"
 #include "game/entity.h"
+#include "game/enemy_ai.h"
 #include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/magic.h"
@@ -42,6 +43,7 @@
 u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
                                 u8 j, u8 *giant_hits) BANKED;
 void secondary_fire(u8 dir, u8 moving, u8 damage) BANKED;
+void sfx_play_weapon(u8 kind) BANKED;
 u8 room_input_dir8(u8 keys, u8 facing) BANKED;
 
 #include "game/magic_art.inc"
@@ -878,6 +880,52 @@ static u8 cast_ward(void) {
     ward_beat = 0;
     spend(magic_ward_kind, ward_cost[c]);
     return 1;
+}
+
+// Wolfkin's starter A is a 120-degree contact claw, never a travelling
+// projectile. Its one-frame carrier is retired before combat_update sees
+// it, so splash/echo/rebound cannot secretly turn the claw into a bullet.
+void magic_fang(u8 dir, u8 damage) BANKED {
+    u8 i, hits = 0;
+    entity_t *e = entities;
+    i8 ax = dir8_dx[dir], ay = dir8_dy[dir];
+    i16 cx = HERO_X, cy = HERO_Y;
+    for (i = 0; i < MAX_ENTITIES && hits < 3; ++i, ++e) {
+        i16 dx, dy, nx, ny, dot, cross, w, h;
+        if (!is_body(e)) continue;
+        // Reach is measured to the body's nearest edge, so a Colossus is
+        // as touchable as a slime.
+        if (e->ai_data[0] == ENEMY_STONE_SENTINEL && (e->ai_data[3] & 1)) {
+            w = 32; h = 32;
+        } else {
+            w = (i16)((e->hitbox >> 4) + 1);
+            h = (i16)((e->hitbox & 15) + 1);
+        }
+        nx = cx < e->x ? e->x : (cx > e->x + w ? e->x + w : cx);
+        ny = cy < e->y ? e->y : (cy > e->y + h ? e->y + h : cy);
+        if (vdist(nx - cx, ny - cy) > 18) continue;
+        dx = (i16)(e->x + (w >> 1)) - cx;
+        dy = (i16)(e->y + (h >> 1)) - cy;
+        dot = dx * ax + dy * ay;
+        cross = dx * ay - dy * ax;
+        if (cross < 0) cross = -cross;
+        if (dot < -4 || cross > dot * 2 + 12) continue;
+        hit_cx = cx;
+        hit_cy = cy;
+        if (!hit_body(i, damage, 0, 0, 0)) break;   // physical, unaspected
+        hits++;
+        // The pipeline gives 3 px; the claw adds 3 more on light bodies.
+        if (is_body(e) && !is_heavy(e, i)) {
+            u8 n;
+            for (n = 0; n < 3; ++n) enemy_try_step(e, ax, ay);
+        }
+    }
+    carrier_close();
+    // Three close slash tiles, 8 frames, exactly one arm's reach away.
+    fx(MAGIC_T_CLAW, 2 | BANK1, cx + ax * 12, cy + ay * 12, 8);
+    fx(MAGIC_T_CLAW, 2 | BANK1, cx + ax * 10 - ay * 8, cy + ay * 10 + ax * 8, 6);
+    fx(MAGIC_T_CLAW, 2 | BANK1, cx + ax * 10 + ay * 8, cy + ay * 10 - ax * 8, 6);
+    sfx_play_weapon(PROJ_SPIKE);
 }
 
 // ---- charge tell (Sword of Mana: the spirit circles the hero) ------------------

@@ -32,7 +32,7 @@
 
 // VRAM bank-1 OBJ tiles 160..175 (free in rooms).
 #define MAGIC_TILE          160
-#define MAGIC_TILE_COUNT    16
+#define MAGIC_TILE_COUNT    17
 #define MAGIC_T_FIRE_A      160
 #define MAGIC_T_FIRE_B      161
 #define MAGIC_T_BOLT        162
@@ -49,6 +49,7 @@
 #define MAGIC_T_VEIL        173
 #define MAGIC_T_CURE        174
 #define MAGIC_T_ICE_H       175
+#define MAGIC_T_CLAW        176
 
 // Test / HUD telemetry.
 extern u8 magic_hold;          // frames B has been held (0 = not charging)
@@ -65,6 +66,8 @@ extern u8 magic_room_serial;
 // One call per room frame from the weapon block (replaces the old B press
 // branch). Also ticks live spells.
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
+// Wolfkin starter A: physical close arc, no persistent projectile.
+void magic_fang(u8 dir, u8 damage) BANKED;
 // Combat status dispatch (one call for ordinary and magic hits).
 void magic_hit_status(u8 j, u8 i, u8 survives) BANKED;
 // Room entry and Pack/map return: reload spell tiles, drop any charge.

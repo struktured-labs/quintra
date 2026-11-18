@@ -31,6 +31,7 @@
 #include "game/projectile.h"
 void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
+void magic_fang(u8 dir, u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
@@ -1794,18 +1795,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     u8 dmg = (u8)(w->p1 + effective_atk);
                     u8 shot;
                     if (room_weapon_surge_ticks) dmg++;
-                    shot = projectile_spawn_player(
-                        dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
-                    if (room_weapon_surge_ticks && shot != 0xFF)
-                        entities[shot].hp++;
-                    if (shot != 0xFF
-                        && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
-                        // Neutral A sweeps a wider close arc while retaining
-                        // one hitbox, so bosses cannot be blendered.
-                        entities[shot].hitbox = 0xBB;
-                    }
-                    if (shot != 0xFF && !muted) player.will_charge = 0;
-                    pickup_echo_primary(shot, dir, dmg);
+                    // Pure close claw: no projectile, no Echo copy.
+                    magic_fang(dir, (u8)(dmg + 2));
+                    if (!muted) player.will_charge = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
                 }
             }

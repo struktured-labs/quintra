@@ -289,11 +289,49 @@ def check_spells(pb, c):
         assert signed(m[shot + 10]) > 0
 
 
+def player_projectiles(pb):
+    return sum(1 for i in range(32)
+               if pb.memory[slot(i)] == 1 and pb.memory[slot(i) + 1] & 0x11 == 0x11)
+
+
+def check_wolfkin_claw(pb):
+    """Wolfkin's A is a contact claw: no projectile, short reach, heavy."""
+    m = pb.memory
+    arena(pb)
+    m[PLAYER + 8] = 0                       # no LCK crit noise
+    near = entity(pb, 0, 2, 92, 64, enemy_id=3)   # light Skeleton, ~6 px out
+    far = entity(pb, 1, 2, 120, 64)         # 40 px: out of claw reach
+    x0 = get16(pb, near + 3)
+    seen = 0
+    far_x = x0
+    pb.button_press("right")
+    pb.button_press("a")
+    for _ in range(6):
+        pb.tick()
+        seen = max(seen, player_projectiles(pb))
+        far_x = max(far_x, get16(pb, near + 3))
+    pb.button_release("a")
+    pb.button_release("right")
+    for _ in range(10):
+        pb.tick()
+        seen = max(seen, player_projectiles(pb))
+        far_x = max(far_x, get16(pb, near + 3))
+    loss = 40 - m[near + 14]
+    assert loss >= 5, f"claw dealt {loss}"
+    assert m[far + 14] == 40, "claw reached a body 40 px away"
+    assert seen == 0, f"claw spawned {seen} player projectiles"
+    assert far_x >= x0 + 5, f"claw knockback only {far_x - x0} px"
+    print(f"[magic] Wolfkin claw: {loss} dmg, knockback {far_x - x0} px, "
+          "0 projectiles")
+
+
 def main():
     for c, name in enumerate(HEROES):
         pb = boot(c)
         check_inputs(pb, c)
         check_spells(pb, c)
+        if c == 0:
+            check_wolfkin_claw(pb)
         pb.stop(save=False)
         print(f"[magic] {name}: {SPELLS[c * 2]} / {SPELLS[c * 2 + 1]} / A+B ok")
     print("[magic] PASS tap spell, hold ward and A+B for all five heroes")
