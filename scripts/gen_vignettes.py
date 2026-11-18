@@ -184,6 +184,85 @@ def flower(c):
     return r > 100 and b > 70 and g < 90 and r > g
 
 
+def ice(c):
+    """Bright frost highlights."""
+    r, g, b = from555(c)
+    return b > 220 and g > 180 and r > 150
+
+
+def bubble(c):
+    """Lime slime drips for the mire bubble cycle."""
+    r, g, b = from555(c)
+    return g > 150 and b < 80 and 80 < r < 200
+
+
+def heart(c):
+    """Darker mire moss, pulsed as the dark heart."""
+    r, g, b = from555(c)
+    return 40 < g < 100 and r < 90 and b < 90 and g >= r and (r + g + b) > 80
+
+
+def torch(c):
+    """Pale brazier cores and the keep window, not the mid-purple sky."""
+    r, g, b = from555(c)
+    return r > 220 and b > 220 and g > 170
+
+
+def sun(c):
+    """Warm mid-pale gold (sun disk and a few gleams), not sky white or brick gold."""
+    r, g, b = from555(c)
+    return r > 230 and 220 < g < 240 and 120 < b < 160
+
+
+def moon(c):
+    """Blood-red moon body."""
+    r, g, b = from555(c)
+    return r > 180 and g < 80 and b < 80
+
+
+def shimmer(c):
+    """Void rift wisps."""
+    r, g, b = from555(c)
+    return r > 140 and b > 160 and g < 120
+
+
+def _is_iron(rgb):
+    r, g, b = (int(v) for v in rgb)
+    return b > r >= g and (r - g) >= 12 and 150 < r + g + b < 500
+
+
+def portcullis_states(pic, pals):
+    """Raise the iron bars inside the Shadow Keep arch in 3 steps."""
+    pals = pals
+    h, w, _ = pic.shape
+    void = (16, 16, 16)
+    x0, x1, y0, y1 = 44, 72, 46, 81
+    bars = np.zeros((h, w), bool)
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if _is_iron(pic[y, x]):
+                bars[y, x] = True
+    lum = pic.sum(2)
+    opening = np.zeros((h, w), bool)
+    opening[40:81, 44:72] = (lum[40:81, 44:72] < 360) | bars[40:81, 44:72]
+    out = []
+    for dy in (8, 16, 28):
+        st = pic.copy()
+        ys, xs = np.where(bars)
+        st[ys, xs] = void
+        for y, x in zip(ys, xs):
+            ny = y - dy
+            if 0 <= ny < h and 44 <= x < 72 and ny >= 36:
+                if lum[ny, x] >= 400 and not bars[ny, x]:
+                    continue
+                if opening[ny, x] or ny < y0:
+                    st[ny, x] = pic[y, x]
+        out.append(st)
+    return out
+
+
+
+
 # One picture = one ROM file. Variants share its tiles and differ in text and
 # palettes. Times are frames from the end of the black load (60 fps).
 PICTURES = [
@@ -226,6 +305,63 @@ PICTURES = [
          sfx=1,
          variants=[dict(id="VIG_STAGE_VERDANT", title="VERDANT HOLLOW",
                         motto="THE ROOTS HUNGER", pal=None, stage=1)]),
+    dict(name="frost_vault", png="frost_vault.png", states=lambda pic, pals: [],
+         bank=22, fx="snow",
+         events=[],
+         hero=dict(x=VX + 48, y0=VY + 100, y1=VY + 54, t0=16, t1=116,
+                   fade=92, step=9),
+         flash=0, exit_t=164, exit_white=0, cycle=None,
+         sfx=1,
+         variants=[dict(id="VIG_STAGE_FROST", title="FROST VAULT",
+                        motto="NOTHING THAWS HERE", pal=None, stage=3)]),
+    dict(name="toxic_mire", png="toxic_mire.png", states=lambda pic, pals: [],
+         bank=22, fx=None,
+         events=[],
+         hero=dict(x=VX + 48, y0=VY + 100, y1=VY + 54, t0=16, t1=116,
+                   fade=92, step=9),
+         flash=0, exit_t=164, exit_white=0, cycle=dict(period=10, match=bubble),
+         pulse=dict(period=24, match=heart),
+         sfx=1,
+         variants=[dict(id="VIG_STAGE_MIRE", title="TOXIC MIRE",
+                        motto="A DARK HEART BEATS", pal=None, stage=4)]),
+    dict(name="shadow_keep", png="shadow_keep.png", states=portcullis_states,
+         bank=22, fx=None,
+         events=[(0, 0), (40, 1), (80, 2), (120, 3)],
+         hero=dict(x=VX + 48, y0=VY + 100, y1=VY + 54, t0=16, t1=116,
+                   fade=92, step=9),
+         flash=0, exit_t=164, exit_white=0, cycle=dict(period=6, match=torch),
+         sfx=1,
+         variants=[dict(id="VIG_STAGE_SHADOW", title="SHADOW KEEP",
+                        motto="THE GATE WATCHES", pal=None, stage=5)]),
+    dict(name="golden_temple", png="golden_temple.png", states=lambda pic, pals: [],
+         bank=23, fx=None,
+         events=[],
+         hero=dict(x=VX + 48, y0=VY + 100, y1=VY + 54, t0=16, t1=116,
+                   fade=92, step=9),
+         flash=0, exit_t=164, exit_white=0, cycle=None,
+         pulse=dict(period=16, match=sun),
+         sfx=1,
+         variants=[dict(id="VIG_STAGE_GOLDEN", title="GOLDEN TEMPLE",
+                        motto="THE SUN NEVER SETS", pal=None, stage=6)]),
+    dict(name="bloodmoon", png="bloodmoon.png", states=lambda pic, pals: [],
+         bank=23, fx="bats",
+         events=[],
+         hero=dict(x=VX + 48, y0=VY + 100, y1=VY + 54, t0=16, t1=116,
+                   fade=92, step=9),
+         flash=0, exit_t=164, exit_white=0, cycle=None,
+         pulse=dict(period=20, match=moon),
+         sfx=1,
+         variants=[dict(id="VIG_STAGE_BLOODMOON", title="BLOODMOON",
+                        motto="THE MOON BLEEDS", pal=None, stage=7)]),
+    dict(name="void_sanctum", png="void_sanctum.png", states=lambda pic, pals: [],
+         bank=23, fx="shards",
+         events=[],
+         hero=dict(x=VX + 48, y0=VY + 100, y1=VY + 54, t0=16, t1=116,
+                   fade=92, step=9),
+         flash=0, exit_t=164, exit_white=0, cycle=dict(period=8, match=shimmer),
+         sfx=1,
+         variants=[dict(id="VIG_STAGE_VOID", title="VOID SANCTUM",
+                        motto="WHERE NAMES END", pal=None, stage=8)]),
 ]
 
 
@@ -466,6 +602,13 @@ def build(pic_def):
                 if c in cyc_cols and len(cyc_slots) < 8:
                     cyc_slots.append(((pi << 2) | e, cyc_cols.index(c)))
 
+    pulse_mask = 0
+    if pic_def.get("pulse"):
+        for pi, p in enumerate(pals):
+            for e, c in enumerate(p):
+                if pic_def["pulse"]["match"](c):
+                    pulse_mask |= 1 << (pi * 4 + e)
+
     metas = []
     for vi, v in enumerate(pic_def["variants"]):
         h = pic_def["hero"]
@@ -483,8 +626,16 @@ def build(pic_def):
         m[16] = 180
         m[17] = pic_def["sfx"]
         m[18] = vi
-        if pic_def.get("fx") == "leaves":
-            m[19] = 1
+        fx_ids = {"leaves": 1, "snow": 2, "bats": 3, "shards": 4}
+        if pic_def.get("fx") in fx_ids:
+            m[19] = fx_ids[pic_def["fx"]]
+        pulse = pic_def.get("pulse")
+        if pulse and pulse_mask:
+            m[16] = pulse["period"]
+            m[20] = pulse_mask & 0xFF
+            m[21] = (pulse_mask >> 8) & 0xFF
+            m[22] = (pulse_mask >> 16) & 0xFF
+            m[23] = (pulse_mask >> 24) & 0xFF
         for i, (f, s) in enumerate(pic_def["events"]):
             m[24 + i * 2], m[25 + i * 2] = f, s
         for i, (sl, b) in enumerate(cyc_slots):
@@ -656,6 +807,11 @@ def emit_h(builds):
         "#define VM_FX 19",
         "#define VIG_FX_NONE 0",
         "#define VIG_FX_LEAVES 1",
+        "#define VIG_FX_SNOW 2",
+        "#define VIG_FX_BATS 3",
+        "#define VIG_FX_SHARDS 4",
+        "#define VM_PULSE_PERIOD 16",
+        "#define VM_PULSE_MASK 20",
         "#define VM_EV 24",
         "#define VM_CYC 56",
         "#define VM_CYC_COL 72",

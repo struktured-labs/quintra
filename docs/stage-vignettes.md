@@ -11,10 +11,16 @@ stage-transition half only. The title intro is not built yet.
 | `VIG_STAGE_EMBER` | `assets/vignettes/ember_depths.png` | EMBER DEPTHS / THE KILN WAKES | the first Riftwild to stage 3 entry |
 | `VIG_STAGE_CRYSTAL` | `assets/vignettes/crystal_caverns.png` | CRYSTAL CAVERNS / CRYSTALS LISTEN | a new run's stage 1 foyer, or a later town-to-dungeon entry |
 | `VIG_STAGE_VERDANT` | `assets/vignettes/verdant_hollow.png` | VERDANT HOLLOW / THE ROOTS HUNGER | the first Riftwild to stage 2 entry |
+| `VIG_STAGE_FROST` | `assets/vignettes/frost_vault.png` | FROST VAULT / NOTHING THAWS HERE | the first Riftwild to stage 4 entry |
+| `VIG_STAGE_MIRE` | `assets/vignettes/toxic_mire.png` | TOXIC MIRE / A DARK HEART BEATS | the first Riftwild to stage 5 entry |
+| `VIG_STAGE_SHADOW` | `assets/vignettes/shadow_keep.png` | SHADOW KEEP / THE GATE WATCHES | the first Riftwild to stage 6 entry |
+| `VIG_STAGE_GOLDEN` | `assets/vignettes/golden_temple.png` | GOLDEN TEMPLE / THE SUN NEVER SETS | the first Riftwild to stage 7 entry |
+| `VIG_STAGE_BLOODMOON` | `assets/vignettes/bloodmoon.png` | BLOODMOON / THE MOON BLEEDS | the first Riftwild to stage 8 entry |
+| `VIG_STAGE_VOID` | `assets/vignettes/void_sanctum.png` | VOID SANCTUM / WHERE NAMES END | the first Riftwild to stage 9 entry |
 
 Each vignette runs about 3 s. It shows a framed picture, the stage name and motto, the class hero walking
 in from behind the frame, and one cheap effect: the rift tear plus a white flash, the lava colour cycle,
-a crystal palette glint, or four falling leaves with a flower palette pulse.
+a crystal palette glint, four falling leaves with a flower palette pulse, snowflakes, a mire heartbeat and bubble cycle, a rising portcullis and torch flicker, a sun ramp, a moon pulse with bats, or drifting void shards with a rift shimmer.
 A, B or START skips after 8 frames. Each one plays once per run, tracked by `vignette_seen`, which is
 cleared in `run_state_init`.
 **PACK → aim page → LEFT/RIGHT** toggles `CUTSCENES ONCE/OFF`. The setting is stored in SRAM meta
@@ -28,12 +34,12 @@ existing stage card; a new-run foyer or town-to-dungeon entry keeps the ordinary
 - The vignette leaves through `room_request_resume()`, the same path PACK, MAP and DIALOG use. That
   path redraws the room's BG tiles and map. The vignette uses only BG slots 0x80-0xFF and 0x40-0x6E
   (175 tiles maximum). It zero-fills the few slots that the resume path leaves alone.
-- The player lives in bank 21 with the Crystal Caverns and Verdant Hollow pictures. Bank 20 keeps the Ember/Riftgate pictures, village music, and other fixed residents.
+- The player lives in bank 21 with the Crystal Caverns and Verdant Hollow pictures. Bank 20 keeps the Ember/Riftgate pictures, village music, and other fixed residents. Stages 4-6 (Frost, Mire, Shadow) live in bank 22; stages 7-9 (Golden, Bloodmoon, Void) live in bank 23.
 
 ## Adding a dungeon
 1. Draw a 112x96 picture (6 BG palettes or fewer, about 120 unique tiles) into `assets/vignettes/<name>.png`.
 2. Add a `PICTURES` entry in `scripts/gen_vignettes.py` with the name, motto, `stage=`, hero path,
-   events and an optional colour cycle. Set `bank=21` (or higher) once bank 20 is full.
+   events and an optional colour cycle. Set `bank=22` or `bank=23` once banks 20-21 are full.
 3. Run `python3 scripts/gen_vignettes.py`. It regenerates `src/render/vignette_<name>.c` and
    `vignette_data.h`, including the stage table and dispatch. No code changes are needed for a
    Riftwild-to-dungeon arrival. Town-to-dungeon and the new-run foyer already share that table.
@@ -48,7 +54,9 @@ settle ticks lets the stage 1 foyer vignette start and breaks timing contracts. 
 and `mute_after_class_select` already do this. `scripts/quintra_sitecustomize` also mutes
 automatically for any PyBoy test unless `QUINTRA_KEEP_VIGNETTES=1`.
 
-## Not yet hooked
-Stages 4–9 have no pictures yet, so their table slots stay `0xFF`. The town-to-dungeon and
-new-run foyer hooks will play them once those pictures are added.
+## Coverage
+All nine dungeon stages plus both Riftwild phases are hooked. Town-to-dungeon and the
+new-run foyer share the stage table; Riftwild-to-dungeon arrivals use the same table.
+Leaving Riftwild has no extra vignette (the dungeon vignette *is* the leave beat). The
+Hexa sanctum stays unannounced.
 Vignette-seen bits are per boot: a continue after power-off can replay a vignette once.

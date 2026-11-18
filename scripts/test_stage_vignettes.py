@@ -42,12 +42,22 @@ NOI = ROM.with_suffix(".noi").read_text()
 # the already-shipped Ember id stays 2.
 VIG_RIFT_WAKING, VIG_RIFT_HOLLOW, VIG_STAGE_EMBER = 0, 1, 2
 VIG_STAGE_CRYSTAL, VIG_STAGE_VERDANT = 3, 4
+VIG_STAGE_FROST, VIG_STAGE_MIRE, VIG_STAGE_SHADOW = 5, 6, 7
+VIG_STAGE_GOLDEN, VIG_STAGE_BLOODMOON, VIG_STAGE_VOID = 8, 9, 10
 SEEN = seen_address(ROM)  # run_state.vignette_seen (u16, saved with the run)
 SCREEN_ROOM, SCREEN_VIGNETTE, SCREEN_INVENTORY, SCREEN_DIALOG = 5, 6, 9, 10
 WAYGEAR_OWNED, RIFTWILD_SHADOW = 44, 57
 SHA = hashlib.sha256(ROM.read_bytes()).hexdigest()
 OUT = Path(os.environ.get("QUINTRA_VIGNETTE_GIF_DIR", ROOT / "builds" / f"vignettes-{SHA[:8]}"))
 GATE_SCREEN = (8, 21, 34)
+
+
+def seen_byte(pb, vig_id, sram=False):
+    """Low or high byte of vignette_seen (WRAM, or the run record in SRAM)."""
+    if sram:
+        base = 0xA000 + 5 + VIGNETTE_SEEN_OFFSET
+        return pb.memory[0, base + (1 if vig_id >= 8 else 0)]
+    return pb.memory[SEEN + (1 if vig_id >= 8 else 0)]
 
 
 def put16(pb, address, value):
@@ -404,7 +414,44 @@ def verdant_contract():
         assert got == SCREEN_DIALOG, f"second Verdant entry replayed vignette ({got})"
     finally:
         pb.stop(save=False)
+
     print(f"[vignettes] verdant: plays {spent} frames, once per run")
+
+
+LATER = (
+    (3, VIG_STAGE_FROST, "stage4-frost-vault", "frost"),
+    (4, VIG_STAGE_MIRE, "stage5-toxic-mire", "mire"),
+    (5, VIG_STAGE_SHADOW, "stage6-shadow-keep", "shadow"),
+    (6, VIG_STAGE_GOLDEN, "stage7-golden-temple", "golden"),
+    (7, VIG_STAGE_BLOODMOON, "stage8-bloodmoon", "bloodmoon"),
+    (8, VIG_STAGE_VOID, "stage9-void-sanctum", "void"),
+)
+
+
+def later_stage_contract(stage, vig_id, gif_name, label):
+    """Riftwild-to-dungeon arrival for stages 4-9 (0-based stage index)."""
+    pb = boot()
+    try:
+        frames = []
+        portal_into_stage(pb, stage)
+        got = wait_screen(pb, (SCREEN_VIGNETTE, SCREEN_DIALOG), 240)
+        assert got == SCREEN_VIGNETTE, \
+            f"{label} entry did not play its vignette (screen {got})"
+        saved = seen_byte(pb, vig_id, sram=True)
+        assert saved & (1 << (vig_id & 7)), f"{label} seen bit not saved ({saved:#x})"
+        frames.append(pb.screen.image.copy())
+        spent = play_through(pb, frames)
+        assert 180 <= spent <= 250, f"{label} vignette length {spent} frames"
+        assert pb.memory[SCREEN] == SCREEN_ROOM, f"{label} did not resume the room"
+        save_gif(frames, gif_name)
+        check_vignette_frames(frames, 0, label)
+        # Re-entry falls back to the stage card (play-once).
+        portal_into_stage(pb, stage)
+        got = wait_screen(pb, (SCREEN_VIGNETTE, SCREEN_DIALOG, SCREEN_ROOM), 240)
+        assert got != SCREEN_VIGNETTE, f"{label} replayed on the second entry"
+        print(f"[vignettes] {label}: plays {spent} frames, once per run")
+    finally:
+        pb.stop(save=False)
 
 
 def start_skip_contract():
@@ -437,6 +484,8 @@ def main():
     crystal_contract()
     verdant_contract()
     ember_contract()
+    for args in LATER:
+        later_stage_contract(*args)
     skip_contract()
     start_skip_contract()
     cutscenes_off_contract()
