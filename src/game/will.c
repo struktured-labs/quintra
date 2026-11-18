@@ -197,7 +197,7 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
             will_maxfx_begin(0, dir, damage);   // claw scars + cross-rend
         }
     // Tail Spike — Thunderline Bastion; Featherbarb — Murderstorm Eclipse.
-    // Authored controllers in bank 23 own their art, sound and hits.
+    // Authored controllers in bank 30 own their art, sound and hits.
     } else if (weapon_index == classes[1].starter_weapon) {
         return will_maxfx_begin(1, dir, damage);
     } else if (weapon_index == classes[2].starter_weapon) {

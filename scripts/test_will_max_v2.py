@@ -314,7 +314,7 @@ def structural():
     assert "will_maxfx_tick();" in vortex and "will_maxfx_draw();" in vortex
     assert "will_maxfx" not in (ROOT / "src/game/combat.c").read_text()
     fx = (ROOT / "src/game/will_maxfx.c").read_text()
-    assert fx.startswith("#pragma bank 27")
+    assert fx.startswith("#pragma bank 30")
     assert "sfx_play(SFX_ROAR)" not in fx
 
 

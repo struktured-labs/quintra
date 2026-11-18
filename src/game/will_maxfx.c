@@ -1,4 +1,4 @@
-#pragma bank 27
+#pragma bank 30
 
 #include <gb/gb.h>
 #include <string.h>
@@ -8,6 +8,7 @@
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "game/hexa_boss.h"
+#include "game/cinder_big.h"
 #include "game/loop.h"
 #include "game/picsean_vortex.h"
 #include "game/player.h"
@@ -52,8 +53,8 @@ static i16 fx_px, fx_py;     // spear tip / stinger / apex / blade target
 static i16 fx_ax, fx_ay;     // Sauran pylon A
 static i16 fx_bx, fx_by;     // Sauran pylon B
 static i16 fx_kx, fx_ky;     // carrier park point (floor)
-static u8 hit_a[MAX_ENTITIES / 8];
-static u8 hit_b[MAX_ENTITIES / 8];
+static u8 hit_a[(MAX_ENTITIES + 7) / 8];
+static u8 hit_b[(MAX_ENTITIES + 7) / 8];
 static u8 fx_oam[WILL_MAXFX_OAM_N * 4];
 
 #define FX_T(n) ((u8)(WILL_MAXFX_TILE + (n)))
@@ -151,7 +152,8 @@ static const u16 wash_moon[8] = {
 };
 
 static void wash(const u16 *w) {
-    if (hexa_boss_active) return;   // the sanctum owns its BG palettes
+    // The sanctum owns its BG palettes; Blind keeps its blackout.
+    if (hexa_boss_active || player_status_kind == QSTATUS_BLIND) return;
     palette_bg_load(BGPAL_FLOOR, w);
     palette_bg_load(BGPAL_WALL, w + 4);
     fx_washed = 1;
@@ -400,6 +402,14 @@ static void sauran_tick(u8 t) {
             hit_ring(fx_bx, fx_by, (u8)(24 + fx_reach), hit_b,
                 (u8)(fx_damage + 2));
     }
+    if (t == 43) palette_obj_load(2, pal_white);
+    if (t == 44) {
+        if (fx_pyl & 1)
+            fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_ax - 4), (i16)(fx_ay - 4), 10);
+        if (fx_pyl & 2)
+            fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_bx - 4), (i16)(fx_by - 4), 10);
+    }
+    if (t == 46) palette_obj_load(2, pal_sauran);
     if (t == 48) unwash();
     // Standing pylons are a gate: they eat hostile shots and stall rushers.
     if (t < 44 && (t & 1)) {
@@ -527,7 +537,7 @@ static const i8 diag_y[4] = { 1, -1, 1, -1 };
 static const u8 diag_prop[4] = { S_FLIPY, 0, S_FLIPX | S_FLIPY, S_FLIPX };
 
 static void blade_pos(u8 k, u8 t, i16 *x, i16 *y) {
-    u8 r = (u8)((t > 20 ? 20 : t) << 1);
+    u8 r = (u8)((t > 20 ? 20 : t) * 3);
     i16 o = (i16)((r * 11) >> 4);     // r * 0.7 on the diagonal
     i16 hx = (i16)(fx_cx + diag_x[k] * o);
     i16 hy = (i16)(fx_cy + diag_y[k] * o);
@@ -536,6 +546,11 @@ static void blade_pos(u8 k, u8 t, i16 *x, i16 *y) {
         hx = (i16)(hx + (i16)((fx_px - hx) * (i16)s) / 12);
         hy = (i16)(hy + (i16)((fx_py - hy) * (i16)s) / 12);
     }
+    if (t >= 40) {
+        // The four feathers lock into a white X-crest over the target.
+        hx = (i16)(fx_px + diag_x[k] * 5);
+        hy = (i16)(fx_py + diag_y[k] * 5);
+    }
     *x = hx;
     *y = hy;
 }
@@ -543,7 +558,7 @@ static void blade_pos(u8 k, u8 t, i16 *x, i16 *y) {
 static void corvin_tick(u8 t) {
     u8 k;
     i16 x, y;
-    if (t < 32) eat_shots(fx_cx, fx_cy, 18, 0);
+    if (t < 32) eat_shots(fx_kx, fx_ky, 18, 0);
     if (t <= 20 || (t >= 28 && t < 40)) {
         // Fan-out sweep and the snap flight: one feather hit per body. The
         // slow fan visits a quarter of the table per tick; the fast snap
@@ -595,6 +610,7 @@ static void corvin_tick(u8 t) {
         u8 i;
         entity_t *e = entities;
         wash(wash_eclipse);
+        palette_obj_load(2, pal_white);
         room_shake(2, 6);
         fx_ch1(0x00, 0x80, 0xC5, 1899, 6);
         fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_px - 4), (i16)(fx_py - 4), 10);
@@ -620,7 +636,7 @@ static void corvin_tick(u8 t) {
     fx_cflip = 0;
     if (carrier_ok()) carrier_park();
     hide_all();
-    if (t < 44 && !(t > 40 && (t & 1))) {
+    if (t < 44 && !(t > 41 && (t & 1))) {
         for (k = 0; k < 4; ++k) {
             u8 tile = (t >= 20 && t < 28 && ((t >> 1) & 1))
                 ? FX_T(1) : WILL_MAXFX_TILE;
@@ -646,12 +662,14 @@ static void wolfkin_tick(u8 t) {
         fx_ky = fx_floor(fx_px, fx_py) ? fx_py : (i16)player.y + 8;
         fx_ctile = FX_T(3);
         fx_cflip = 0;
-        hit_ring(fx_px, fx_py, fx_reach, hit_a, fx_damage);
+        hit_ring(fx_px, fx_py, fx_reach, hit_a, (u8)(fx_damage + 1));
+        wash(wash_eclipse);
         room_shake(2, 6);
         fx_ch1(0x16, 0x40, 0xD3, 1800, 10);
         fx_ch4(0x81, 0x1B, 8);
     }
     if (t == 36) palette_obj_load(2, pal_wolfkin);
+    if (t == 38) unwash();
     if (carrier_ok()) carrier_park();
     hide_all();
     if (t <= 16) {
@@ -718,9 +736,9 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
             fx_bx = (i16)(fx_cx + fx_dx * 40 - px * 10);
             fx_by = (i16)(fx_cy + fx_dy * 40 - py * 10);
             fx_reach = (u8)((level - 1) << 2);
+            if (!carrier_ensure()) return 0;
             set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_sauran);
             palette_obj_load(2, pal_sauran);
-            if (!carrier_ensure()) return 0;
             wash(wash_ochre);
             room_shake(2, 10);
             sfx_thud(1160);
@@ -728,9 +746,9 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
         }
         case 4:
             fx_reach = (u8)(28 + ((level - 1) << 2));
+            if (!carrier_ensure()) return 0;
             set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_vespine);
             palette_obj_load(2, pal_vespine);
-            if (!carrier_ensure()) return 0;
             wash(wash_venom);
             // Wing buzz.
             fx_ch1(0x00, 0x00, 0xB3, 1780, 10);
@@ -740,10 +758,17 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
             fx_reach = (u8)(20 + ((level - 1) << 2));
             fx_px = (i16)(fx_cx + fx_dx * ((fx_dx && fx_dy) ? 34 : 48));
             fx_py = (i16)(fx_cy + fx_dy * ((fx_dx && fx_dy) ? 34 : 48));
+            fx_ctile = FX_T(2);
+            {
+                // The effigy stays a step behind where Corvin stood.
+                u8 back = (fx_dx && fx_dy) ? 9 : 12;
+                i16 ex = (i16)(fx_cx - fx_dx * (i8)back);
+                i16 ey = (i16)(fx_cy - fx_dy * (i8)back);
+                if (fx_floor(ex, ey)) { fx_kx = ex; fx_ky = ey; }
+            }
+            if (!carrier_ensure()) return 0;
             set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_corvin);
             palette_obj_load(2, pal_corvin);
-            fx_ctile = FX_T(2);
-            if (!carrier_ensure()) return 0;
             wash(wash_night);
             // Soft feather whoosh: a rising noise swell.
             fx_ch4(0x2D, 0x45, 16);
@@ -809,5 +834,14 @@ void will_maxfx_tick(void) BANKED {
 }
 
 void will_maxfx_draw(void) BANKED {
+    // Cinder Rex can own 32..35: leave its cels alone where no FX is lit.
+    if (cinder_pack_active) {
+        u8 k;
+        const u8 *src = fx_oam;
+        u8 *dst = (u8 *)&shadow_OAM[WILL_MAXFX_OAM_LO];
+        for (k = 0; k < WILL_MAXFX_OAM_N; ++k, src += 4, dst += 4)
+            if (*src) memcpy(dst, src, 4);
+        return;
+    }
     memcpy(&shadow_OAM[WILL_MAXFX_OAM_LO], fx_oam, sizeof(fx_oam));
 }
