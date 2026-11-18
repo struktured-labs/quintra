@@ -42,6 +42,7 @@ u8 attract_demo;
 #define IN_BOOT_SETTLE 2
 
 static u8 in_attract;       // 0 = power-on intro, 1 = attract replay
+static u8 in_watch;         // 1 = WATCH INTRO from the records page
 static u8 in_shot;
 static u8 in_scene;
 static u8 in_load;
@@ -242,6 +243,7 @@ void intro_exit(void) {
     VBK_REG = 0;
     palette_obj_pending_commit = 0;
     in_attract = 1;     // every later intro is an attract replay
+    in_watch = 0;
 }
 
 static void begin_intro(void) {
@@ -385,7 +387,8 @@ screen_id_t intro_tick(u8 keys, u8 pressed) {
         return SCREEN_SELF;
     }
     // Boot intro: A, B or START skip. Attract replay: any button.
-    if (pressed & (in_attract ? 0xFF : (J_A | J_B | J_START)))
+    // WATCH INTRO: A, B or START, like the boot intro.
+    if (pressed & ((in_attract && !in_watch) ? 0xFF : (J_A | J_B | J_START)))
         return intro_finish();
 
     if (in_blk != IN_NONE) {
@@ -415,6 +418,14 @@ static u16 demo_saved_frame;
 static u16 demo_frames;
 static u16 demo_i;
 static u8 demo_left, demo_keys, demo_prev;
+
+screen_id_t intro_watch(void) BANKED {
+    // Replay entry (no boot settle), skip keys of the boot intro. Plays even
+    // with CUTSCENES OFF: the player asked for it.
+    in_attract = 1;
+    in_watch = 1;
+    return SCREEN_INTRO;
+}
 
 screen_id_t attract_begin(void) BANKED {
     const u8 *d;

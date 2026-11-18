@@ -87,3 +87,18 @@ Carbon review 1 (`gemini-4-carbon`, $0.05 logged) was verdict "ship with fixes".
 - Not changed:
   - **Legacy (v1) meta read during a demo.** Migration runs at the first meta read on boot or on the title, long before attract, so a demo never sees an unmigrated record.
   - **CUTSCENES OFF attract order.** It is documented above as intended.
+
+## Watch intro on demand (2026-11-17)
+
+Carmelo asked for a way to rewatch the lore intro.
+
+- Entry: title SELECT opens RECORDS. That page gains a row `START  WATCH INTRO` (row 16). It is the
+  title's options page, so the main title layout and its START / A CONTINUE contract do not change.
+- START there plays the same intro (`intro_watch()`, replay entry, no boot settle). Title music,
+  as in the boot intro.
+- A, B or START skip it, as in the boot intro. Other buttons do not (unlike the attract replay).
+- Played out or skipped, it returns to the title, which reopens the RECORDS page: back where it was
+  launched. B then backs out to the main title as before.
+- It plays even with CUTSCENES OFF: the player asked for it.
+- `scripts/test_watch_intro.py` (CI) covers entry, all three skip keys, non-skip keys, the full
+  play-through, return to RECORDS, CUTSCENES OFF, and that START / attract still work afterwards.
