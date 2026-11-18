@@ -12,6 +12,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
+#include "render/basilisk_art.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -24,31 +25,46 @@ u8 new_monsters_busy;
 u8 new_monsters_in_room;
 u8 confusion_swirl_live;
 
-static u8 beam_dir;
-static u8 beam_len;
-static i16 beam_ox, beam_oy;
+extern u8 entity_oam_high;
+extern u8 entity_anim_counter;
 
-#define LEY_STAMP_MAX 48
+/* Locked beam lanes (no initializers: banked RAM is set up on first use). */
+static u8 beam_dir, beam_w, beam_vert, beam_hot, beam_owner, beam_maxlen;
+static i8 beam_step;
+static u8 beam_tx0, beam_ty0;
+static u8 beam_lane[4];
+
 #define LEY_VBL_BURST 16
-static u8 ley_n, ley_i, ley_flush, ley_art_ok;
-static u8 ley_tx[LEY_STAMP_MAX], ley_ty[LEY_STAMP_MAX];
+static u8 ley_n, ley_k, ley_flush, ley_art_want, ley_art_have;
 
-/* Uploaded to VRAM bank 1, index LEYBEAM_BG_TILE. Crossing-bar glow so
-   the same 8x8 reads as a shaft in both orientations. */
-static const u8 ley_beam_art[16] = {
-    0x38, 0xFF, 0x1C, 0xFF, 0x38, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xFF, 0x1C, 0xFF, 0x38, 0xFF, 0x1C, 0xFF
+/* Uploaded to VRAM bank 1 at LEYBEAM_BG_TILE. Ghost dots mark the exact
+   lanes during the charge; two solid glow frames shimmer while firing. */
+#define LEY_ART_GHOST 1
+#define LEY_ART_BEAM  2
+#define LEY_ART_BEAM2 3
+static const u8 ley_art[4][16] = {
+    { 0 },
+    { 0x00, 0x00, 0x22, 0x22, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x88, 0x88, 0x00, 0x00, 0x00, 0x00 },
+    { 0x38, 0xFF, 0x1C, 0xFF, 0x38, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0x1C, 0xFF, 0x38, 0xFF, 0x1C, 0xFF },
+    { 0x1C, 0xFF, 0x38, 0xFF, 0xFF, 0xFF, 0x38, 0xFF,
+      0x1C, 0xFF, 0xFF, 0xFF, 0x1C, 0xFF, 0x38, 0xFF },
 };
 
 #define FUSE_BOMB_MAX 2
 #define FUSE_FLIGHT 16
 #define FUSE_TICKS  40
-#define FUSE_RADIUS 16
+#define FUSE_RADIUS 18   /* Chebyshev reach, centre to hero centre: the fireball (r 16) plus half the hurtbox */
+#define BLAST_FRAMES 22
+#define BLAST_HOT    10  /* damage live while the fireball is drawn */
+#define BLAST_PAL    4   /* heart red: orange-red body, dark rim, yellow core */
 static u8  fb_live[FUSE_BOMB_MAX];
-static u8  fb_phase[FUSE_BOMB_MAX]; /* 0 flight, 1 fuse */
+static u8  fb_phase[FUSE_BOMB_MAX]; /* 0 flight, 1 fuse, 2 blast */
 static u8  fb_timer[FUSE_BOMB_MAX];
-static i16 fb_x[FUSE_BOMB_MAX], fb_y[FUSE_BOMB_MAX];
+static i16 fb_x[FUSE_BOMB_MAX], fb_y[FUSE_BOMB_MAX]; /* centre px */
 static i8  fb_vx[FUSE_BOMB_MAX], fb_vy[FUSE_BOMB_MAX];
+
 
 #define PHASE e->ai_data[2]
 #define TIMER e->ai_data[1]
@@ -245,12 +261,31 @@ static void zag_dart_tick(entity_t *e, const enemy_def_t *def) {
     }
 }
 
-/* ---- Leybeam: cardinal tell + 16-px BG beam ---- */
-/* [1] timer [2] phase 0 cool 1 tell 2 beam [3] dir 0..3 */
+/* ---- Basilisk (Leybeam family): cardinal ghost-lane tell + wide BG beam ----
+   [1] timer [2] phase 0 drift 1 charge 2 beam [3] dir 0..3 [4] bit0 face-left
+   Three tiers share this tick: Ley (2 tiles wide), Glare (3), Void (4).
+   The 32x32 body (x-8..x+23, y-16..y+15) is drawn from bank-1 OBJ in
+   new_monsters_draw(); the entity's own 8x8 tile (219) is blank, and its
+   15x15 hitbox is the coil at x..x+15, y..y+15. Lanes leave the mouth. */
+
+static u8 is_basilisk(u8 id) {
+    return id == ENEMY_LEYBEAM || id == ENEMY_SUN_BASILISK
+        || id == ENEMY_NOX_BASILISK;
+}
+
+static u8 basilisk_lanes(u8 id) {
+    return id == ENEMY_NOX_BASILISK ? 4 : id == ENEMY_SUN_BASILISK ? 3 : 2;
+}
+
+/* Mouth point the beam lanes are centred on. */
+static i16 head_x(entity_t *e) {
+    return FIX8_TO_INT(e->x) + ((e->ai_data[4] & 1) ? -2 : 18);
+}
+static i16 head_y(entity_t *e) { return FIX8_TO_INT(e->y) - 6; }
 
 static u8 nearest_cardinal(i16 ex, i16 ey) {
-    i16 dx = (i16)player.x - ex;
-    i16 dy = (i16)player.y - ey;
+    i16 dx = (i16)player.x + 8 - ex;
+    i16 dy = (i16)player.y + 12 - ey;
     i16 ax = dx < 0 ? (i16)-dx : dx;
     i16 ay = dy < 0 ? (i16)-dy : dy;
     if (ax >= ay) return (dx >= 0) ? 1 : 3;
@@ -270,176 +305,203 @@ static void ley_put(u8 tx, u8 ty, u8 tile, u8 attr) {
     VBK_REG = 0;
 }
 
+/* Lane cell (k across, n along) in room tile coordinates. */
+static u8 lane_tx(u8 k, u8 n) {
+    return beam_vert ? (u8)(beam_tx0 + k) : (u8)(beam_tx0 + (i8)n * beam_step);
+}
+static u8 lane_ty(u8 k, u8 n) {
+    return beam_vert ? (u8)(beam_ty0 + (i8)n * beam_step) : (u8)(beam_ty0 + k);
+}
+
+/* Called right after VBlank. ley_flush 1 stamps the locked lanes, 2 puts
+   the floor back. The shared BG tile's art (ghost dots during the charge,
+   solid glow while firing) is a single 16-byte upload, so the whole lane
+   flips from tell to beam on one frame no matter how wide it is. */
 void leybeam_vblank_flush(void) BANKED {
     u8 burst = 0;
-    if (!ley_flush) return;
-    if (ley_flush == 1 && !ley_art_ok) {
+    if (ley_art_want != ley_art_have) {
         VBK_REG = 1;
-        set_bkg_data(LEYBEAM_BG_TILE, 1, ley_beam_art);
+        set_bkg_data(LEYBEAM_BG_TILE, 1, ley_art[ley_art_want]);
         VBK_REG = 0;
-        ley_art_ok = 1;
-        burst++;
+        ley_art_have = ley_art_want;
+        burst += 2;
     }
-    while (ley_i < ley_n && burst < LEY_VBL_BURST) {
-        u8 tx = ley_tx[ley_i];
-        u8 ty = ley_ty[ley_i];
-        if (ley_flush == 1) {
-            /* Bank-1 glow tile, stage crystal palette. */
-            ley_put(tx, ty, LEYBEAM_BG_TILE, (u8)(0x08 | BGPAL_CRYSTAL));
-        } else {
-            u8 t = room_tile_at_px((i16)tx << 3, (i16)ty << 3);
-            ley_put(tx, ty, t, BGPAL_FLOOR);
+    while (ley_flush && burst < LEY_VBL_BURST) {
+        if (ley_n >= beam_maxlen) {
+            if (ley_flush == 2) room_draw_tilemap(); /* exact attrs from the RAM map */
+            ley_flush = 0;
+            break;
         }
-        ley_i++;
+        if (ley_n < beam_lane[ley_k]) {
+            u8 tx = lane_tx(ley_k, ley_n);
+            u8 ty = lane_ty(ley_k, ley_n);
+            u8 t = room_tile_at_px((i16)tx << 3, (i16)ty << 3);
+            if (ley_floorish(t)) {
+                if (ley_flush == 1)
+                    ley_put(tx, ty, LEYBEAM_BG_TILE, (u8)(0x08 | BGPAL_CRYSTAL));
+                else
+                    ley_put(tx, ty, t, BGPAL_FLOOR);
+            }
+        }
         burst++;
+        if (++ley_k >= beam_w) { ley_k = 0; ley_n++; }
     }
-    if (ley_i >= ley_n) {
-        if (ley_flush == 2) room_draw_tilemap(); /* exact attrs from the RAM map */
-        ley_flush = 0;
-    }
-    leybeam_flush_pending = ley_flush;
+    leybeam_flush_pending = (u8)(ley_flush || ley_art_want != ley_art_have);
 }
 
 static void leybeam_restore(void) {
-    if (!leybeam_beam_live && !ley_n) return;
+    if (!leybeam_beam_live) return;
     leybeam_beam_live = 0;
-    if (ley_n) {
-        ley_i = 0;
-        ley_flush = 2;
-        leybeam_flush_pending = 1;
-    } else {
-        room_draw_tilemap();
-    }
+    beam_hot = 0;
+    ley_n = 0;
+    ley_k = 0;
+    ley_flush = 2;
+    leybeam_flush_pending = 1;
 }
 
 void leybeam_clear_beam(void) BANKED {
     leybeam_restore();
 }
 
-static void leybeam_collect(void) {
-    i8 dx = card_dx[beam_dir];
-    i8 dy = card_dy[beam_dir];
-    i8 ax = (beam_dir == 0 || beam_dir == 2) ? 1 : 0;
-    i8 ay = (beam_dir == 1 || beam_dir == 3) ? 1 : 0;
-    u8 n;
-    ley_n = 0;
-    for (n = 0; n <= beam_len; ++n) {
-        i16 px = beam_ox + (i16)dx * (i16)n * 8;
-        i16 py = beam_oy + (i16)dy * (i16)n * 8;
-        i8 across;
-        for (across = -8; across <= 0; across += 8) {
-            i16 x = px + (i16)ax * across;
-            i16 y = py + (i16)ay * across;
-            u8 tx, ty, tile;
-            if (x < 0 || y < 0) continue;
-            tx = (u8)(x >> 3);
-            ty = (u8)(y >> 3);
-            if ((u16)tx >= (u16)(room_world_width >> 3)
-                || (u16)ty >= (u16)(room_world_height >> 3)) continue;
-            tile = room_tile_at_px(x, y);
-            if (!ley_floorish(tile)) continue;
-            if (ley_n < LEY_STAMP_MAX) {
-                ley_tx[ley_n] = tx;
-                ley_ty[ley_n] = ty;
-                ley_n++;
-            }
+/* Lock the lanes at the start of the charge. Each lane runs from the body's
+   centre row/column until its own first wall, so a pillar shadows only the
+   lanes it actually blocks and the damage test reads the same table. */
+static void leybeam_lock(entity_t *e) {
+    i16 cx = head_x(e);
+    i16 cy = head_y(e);
+    u8 d = e->ai_data[3] & 3;
+    u8 k, n;
+    i16 across = (d == 0 || d == 2) ? cx : cy;
+    i16 first = (i16)((across + 4 - (i16)basilisk_lanes(e->ai_data[0]) * 4) >> 3);
+    if (first < 0) first = 0;
+    beam_dir = d;
+    beam_w = basilisk_lanes(e->ai_data[0]);
+    beam_vert = (d == 0 || d == 2) ? 1 : 0;
+    beam_step = (d == 1 || d == 2) ? 1 : -1;
+    if (beam_vert) { beam_tx0 = (u8)first; beam_ty0 = (u8)(cy >> 3); }
+    else { beam_ty0 = (u8)first; beam_tx0 = (u8)(cx >> 3); }
+    beam_maxlen = 0;
+    for (k = 0; k < beam_w; ++k) {
+        for (n = 0; n < 24; ++n) {
+            i16 tx = (i16)lane_tx(k, n);
+            i16 ty = (i16)lane_ty(k, n);
+            if (tx < 1 || ty < 1 || tx >= (i16)(room_world_width >> 3) - 1
+                || ty >= (i16)(room_world_height >> 3) - 1) break;
+            if (!room_tile_walkable(room_tile_at_px(tx << 3, ty << 3))) break;
         }
+        beam_lane[k] = n;
+        if (n > beam_maxlen) beam_maxlen = n;
     }
-}
-
-static void leybeam_stamp(void) {
-    leybeam_collect();
-    ley_i = 0;
+    ley_n = 0;
+    ley_k = 0;
     ley_flush = 1;
+    ley_art_want = LEY_ART_GHOST;
     leybeam_flush_pending = 1;
     leybeam_beam_live = 1;
-    puff_at(beam_ox, beam_oy);
+    beam_hot = 0;
 }
 
+/* Hurtbox (x+5..x+10, y+9..y+14) against the stamped lanes, inset 1 px so
+   grazing the glow edge never costs a heart. */
 u8 leybeam_hits_player(void) {
-    i16 px, py, along, across;
-    if (!leybeam_beam_live) return 0;
-    px = (i16)player.x + 4;
-    py = (i16)player.y + 4;
-    if (beam_dir == 0 || beam_dir == 2) {
-        across = px - beam_ox;
-        along = (beam_dir == 2) ? (py - beam_oy) : (beam_oy - py);
+    i16 lo, hi, along, a0, base;
+    u8 k, n;
+    if (!beam_hot) return 0;
+    if (beam_vert) {
+        lo = (i16)player.x + 6; hi = (i16)player.x + 9;
+        along = (i16)player.y + 12;
+        base = (i16)beam_tx0 << 3;
+        a0 = (i16)beam_ty0;
     } else {
-        across = py - beam_oy;
-        along = (beam_dir == 1) ? (px - beam_ox) : (beam_ox - px);
+        lo = (i16)player.y + 10; hi = (i16)player.y + 13;
+        along = (i16)player.x + 8;
+        base = (i16)beam_ty0 << 3;
+        a0 = (i16)beam_tx0;
     }
-    if (across < 0) across = (i16)-across;
-    if (along < 0) return 0;
-    if (along > (i16)beam_len * 8) return 0;
-    return (across <= 8) ? 1 : 0;
+    {
+        i16 dn = (i16)((along >> 3) - a0);
+        if (beam_step < 0) dn = (i16)-dn;
+        if (dn < 0 || dn >= 24) return 0;
+        n = (u8)dn;
+    }
+    for (k = 0; k < beam_w; ++k) {
+        i16 l0 = (i16)(base + ((i16)k << 3));
+        if (hi < l0 || lo > l0 + 7) continue;
+        if (n < beam_lane[k]) return 1;
+    }
+    return 0;
 }
 
-static void leybeam_lock_length(i16 ox, i16 oy, u8 dir) {
-    i8 dx = card_dx[dir];
-    i8 dy = card_dy[dir];
-    u8 n;
-    beam_len = 0;
-    for (n = 1; n < 24; ++n) {
-        i16 x = ox + (i16)dx * (i16)n * 8;
-        i16 y = oy + (i16)dy * (i16)n * 8;
-        if (x < 8 || y < 8 || x >= (i16)room_world_width
-            || y >= (i16)room_world_height) break;
-        if (!room_tile_walkable(room_tile_at_px(x, y))) break;
-        beam_len = n;
+/* Body-aware drift: the 32x32 body (x-8..x+23, y-16..y+15) stays on
+   floor, so the head never pokes through a wall. walkable_px tests the
+   tile under (x+4, y+4). */
+static u8 basilisk_clear(i16 x, i16 y) {
+    return walkable_px(x - 8, y - 16) && walkable_px(x + 16, y - 16)
+        && walkable_px(x - 8, y + 8) && walkable_px(x + 16, y + 8)
+        && walkable_px(x + 4, y - 4);
+}
+
+static void basilisk_face(entity_t *e) {
+    u8 d = e->ai_data[3] & 3;
+    if (PHASE && (d == 1 || d == 3)) {
+        e->ai_data[4] = (d == 3) ? 1 : 0;
+        return;
     }
+    e->ai_data[4] = ((i16)player.x + 8 < FIX8_TO_INT(e->x) + 8) ? 1 : 0;
 }
 
 static void leybeam_tick(entity_t *e, const enemy_def_t *def) {
     u8 tell = def->ai_p0 ? def->ai_p0 : 40;
     u8 beam = def->ai_p1 ? def->ai_p1 : 36;
     u8 cool = def->ai_p2 ? def->ai_p2 : 100;
+    u8 me = (u8)(e - entities);
     if (RUN_IS_EASY() && tell < 200) tell = (u8)(tell + (tell >> 2));
 
     if (!(e->flags & EF_ACTIVE) || !e->hp) {
-        leybeam_restore();
+        if (beam_owner == me) leybeam_restore();
         return;
     }
     if (PHASE == 0) {
         if ((++e->state_timer & 7) == 0) {
             u8 h = e->state & 3;
-            if (!enemy_try_step(e, card_dx[h], card_dy[h]))
-                e->state = (u8)(rng_next_u8() & 3);
+            i16 x = FIX8_TO_INT(e->x) + card_dx[h];
+            i16 y = FIX8_TO_INT(e->y) + card_dy[h];
+            if (basilisk_clear(x, y)) { e->x = FIX8(x); e->y = FIX8(y); }
+            else e->state = (u8)(rng_next_u8() & 3);
         }
+        basilisk_face(e);
         if (++TIMER >= cool) {
+            /* One lane on the map at a time; a second caster waits. */
+            if (leybeam_beam_live || ley_flush) { TIMER = cool - 1; return; }
             PHASE = 1;
             TIMER = 0;
-            e->ai_data[3] = nearest_cardinal(FIX8_TO_INT(e->x), FIX8_TO_INT(e->y));
-            e->ai_data[7] = 8;
+            e->ai_data[3] = nearest_cardinal(head_x(e), head_y(e));
+            basilisk_face(e);   /* turn first: the mouth moves with facing */
+            beam_owner = me;
+            leybeam_lock(e);
             sfx_play(SFX_TICK);
         }
         return;
     }
     if (PHASE == 1) {
-        if (TIMER == 0 || TIMER + 8 == tell) sfx_play(SFX_TICK);
-        /* Start the VBlank shaft in the last charge frames so the full
-           16-px band is on the map when the beam goes live. */
-        if (!leybeam_beam_live && (u8)(TIMER + 3) >= tell) {
-            beam_dir = e->ai_data[3] & 3;
-            beam_ox = FIX8_TO_INT(e->x) + 4;
-            beam_oy = FIX8_TO_INT(e->y) + 4;
-            leybeam_lock_length(beam_ox, beam_oy, beam_dir);
-            leybeam_stamp();
-        }
+        if (TIMER + 8 == tell || TIMER + 16 == tell) sfx_play(SFX_TICK);
         if (++TIMER >= tell) {
-            if (!leybeam_beam_live) {
-                beam_dir = e->ai_data[3] & 3;
-                beam_ox = FIX8_TO_INT(e->x) + 4;
-                beam_oy = FIX8_TO_INT(e->y) + 4;
-                leybeam_lock_length(beam_ox, beam_oy, beam_dir);
-                leybeam_stamp();
-            }
             PHASE = 2;
             TIMER = 0;
+            beam_hot = 1;
+            ley_art_want = LEY_ART_BEAM;
+            leybeam_flush_pending = 1;
+            sfx_play(SFX_ROAR);
+            room_shake(1, 6);
         }
         return;
     }
     /* fire: damage at most once per 20-frame window via ordinary iframes */
-    if (leybeam_hits_player() && player.iframes == 0 && player.hp) {
+    if ((TIMER & 3) == 0) {
+        ley_art_want = (TIMER & 4) ? LEY_ART_BEAM2 : LEY_ART_BEAM;
+        leybeam_flush_pending = 1;
+    }
+    if (leybeam_hits_player() && player.iframes == 0 && player.hp && !death_timer) {
         if (player.hp > 1) player.hp--;
         else player.hp = 1; /* leave death to combat; beam never instant-kills */
         player.iframes = 20;
@@ -454,8 +516,8 @@ static void leybeam_tick(entity_t *e, const enemy_def_t *def) {
     }
 }
 
-
-/* ---- Fuse Hurler: lobbed fused bomb + close-range wind-up ---- */
+/* ---- Fuse Hurler: lobbed fused bomb + close-range wind-up ----
+   Bomb phases: 0 flight, 1 fuse, 2 exploding (fb_timer counts up). */
 
 static void fuse_bombs_clear(void) {
     u8 i;
@@ -463,8 +525,8 @@ static void fuse_bombs_clear(void) {
 }
 
 static void fuse_hurt_at(i16 x, i16 y, u8 radius) {
-    i16 px = (i16)player.x + 4;
-    i16 py = (i16)player.y + 4;
+    i16 px = (i16)player.x + 8;
+    i16 py = (i16)player.y + 12;
     i16 dx = px - x;
     i16 dy = py - y;
     if (dx < 0) dx = (i16)-dx;
@@ -476,20 +538,55 @@ static void fuse_hurt_at(i16 x, i16 y, u8 radius) {
     player.iframes = 24;
     hud_redraw_hp();
     sfx_play(SFX_HURT);
-    room_shake(1, 6);
 }
 
-static void fuse_explode(u8 i) {
+/* Deep noise thump on CH4 plus a falling CH1 growl. Owns both channels
+   briefly so the score cannot swallow it. */
+static void boom_sfx(u8 big) {
+    sfx_claim_channels(big ? 20 : 8, big ? 36 : 18);
+    NR42_REG = big ? 0xF7 : 0xC4;
+    NR43_REG = big ? 0x71 : 0x54;
+    NR44_REG = 0x80;
+    if (big) {
+        NR10_REG = 0x7F;
+        NR11_REG = 0xC0;
+        NR12_REG = 0xF5;
+        NR13_REG = 0x40;
+        NR14_REG = 0x82;
+    }
+}
+
+/* Start a blast centred on (cx, cy). Damage follows the visible burst:
+   the Chebyshev square FUSE_RADIUS around the centre is live for the first
+   BLAST_HOT frames, which is exactly while the fireball is on screen. */
+static void blast_start(u8 i, i16 cx, i16 cy) {
+    fb_live[i] = 1;
+    fb_phase[i] = 2;
+    fb_timer[i] = 0;
+    fb_x[i] = cx;
+    fb_y[i] = cy;
+    room_shake(3, 14);
+    boom_sfx(1);
+}
+
+static void blast_tick(u8 i) {
+    u8 t = fb_timer[i];
     i16 x = fb_x[i], y = fb_y[i];
-    fb_live[i] = 0;
-    puff_at(x, y);
-    puff_at(x - FUSE_RADIUS, y);
-    puff_at(x + FUSE_RADIUS, y);
-    puff_at(x, y - FUSE_RADIUS);
-    puff_at(x, y + FUSE_RADIUS);
-    room_shake(2, 8);
-    sfx_play(SFX_ROAR);
-    fuse_hurt_at(x, y, FUSE_RADIUS);
+    if (t < BLAST_HOT) fuse_hurt_at(x, y, FUSE_RADIUS);
+    if (t == 2) {
+        /* Debris ring on the edge of the damage square. */
+        u8 pal = BLAST_PAL | 0x08;
+        fx_spawn(BLAST_TILE_DEBRIS, pal, x - FUSE_RADIUS - 4, y - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, pal, x + FUSE_RADIUS - 4, y - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, pal, x - 4, y - FUSE_RADIUS - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, pal, x - 4, y + FUSE_RADIUS - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPX), x - FUSE_RADIUS - 4, y - FUSE_RADIUS - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPY), x + FUSE_RADIUS - 4, y - FUSE_RADIUS - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, (u8)(pal | S_FLIPX | S_FLIPY), x - FUSE_RADIUS - 4, y + FUSE_RADIUS - 4, 10);
+        fx_spawn(BLAST_TILE_DEBRIS, pal, x + FUSE_RADIUS - 4, y + FUSE_RADIUS - 4, 10);
+    }
+    if (t == 7) boom_sfx(0); /* crackle tail */
+    if (++fb_timer[i] >= BLAST_FRAMES) fb_live[i] = 0;
 }
 
 static u8 fuse_bomb_lob(i16 sx, i16 sy, i16 tx, i16 ty) {
@@ -521,7 +618,7 @@ static u8 fuse_bomb_lob(i16 sx, i16 sy, i16 tx, i16 ty) {
         fb_vx[i] = sign8(land_x - sx);
         fb_vy[i] = sign8(land_y - sy);
     }
-    puff_at(sx, sy);
+    puff_at(sx - 4, sy - 4);
     sfx_play(SFX_TICK);
     return 1;
 }
@@ -530,6 +627,7 @@ static void fuse_bombs_tick(void) {
     u8 i;
     for (i = 0; i < FUSE_BOMB_MAX; ++i) {
         if (!fb_live[i]) continue;
+        if (fb_phase[i] == 2) { blast_tick(i); continue; }
         if (fb_phase[i] == 0) {
             fb_x[i] += fb_vx[i];
             fb_y[i] += fb_vy[i];
@@ -537,20 +635,14 @@ static void fuse_bombs_tick(void) {
             if (!fb_timer[i] || !walkable_px(fb_x[i] - 4, fb_y[i] - 4)) {
                 fb_phase[i] = 1;
                 fb_timer[i] = FUSE_TICKS;
-                puff_at(fb_x[i], fb_y[i]);
             }
             continue;
         }
-        /* Visible blast-radius tell: pulse sparks on the four cardinals. */
-        if ((fb_timer[i] & 7) == 0) {
-            puff_at(fb_x[i] - FUSE_RADIUS, fb_y[i]);
-            puff_at(fb_x[i] + FUSE_RADIUS, fb_y[i]);
-            puff_at(fb_x[i], fb_y[i] - FUSE_RADIUS);
-            puff_at(fb_x[i], fb_y[i] + FUSE_RADIUS);
-            sfx_play(SFX_TICK);
-        }
+        /* The fuse tell (eight corner/edge sparks on the damage square) is
+           drawn every frame in new_monsters_draw; tick faster near the end. */
+        if ((fb_timer[i] & ((fb_timer[i] < 16) ? 3 : 7)) == 0) sfx_play(SFX_TICK);
         if (fb_timer[i]) fb_timer[i]--;
-        if (!fb_timer[i]) fuse_explode(i);
+        if (!fb_timer[i]) blast_start(i, fb_x[i], fb_y[i]);
     }
 }
 
@@ -563,8 +655,8 @@ static void fuse_hurler_tick(entity_t *e, const enemy_def_t *def) {
     if (!(e->flags & EF_ACTIVE) || !e->hp) return;
     ex = FIX8_TO_INT(e->x);
     ey = FIX8_TO_INT(e->y);
-    adx = (i16)player.x - ex;
-    ady = (i16)player.y - ey;
+    adx = (i16)player.x + 4 - ex;
+    ady = (i16)player.y + 8 - ey;
     if (adx < 0) adx = (i16)-adx;
     if (ady < 0) ady = (i16)-ady;
     manh = (i16)(adx + ady);
@@ -594,7 +686,7 @@ static void fuse_hurler_tick(entity_t *e, const enemy_def_t *def) {
         if (TIMER == 0 || (TIMER & 7) == 0) sfx_play(SFX_TICK);
         if (++TIMER >= tell) {
             if (fuse_bomb_lob(ex + 4, ey + 4,
-                    (i16)player.x + 4, (i16)player.y + 4)) {
+                    (i16)player.x + 8, (i16)player.y + 12)) {
                 PHASE = 2;
                 TIMER = 0;
             } else {
@@ -605,18 +697,19 @@ static void fuse_hurler_tick(entity_t *e, const enemy_def_t *def) {
         return;
     }
     if (PHASE == 3) {
-        /* Close-range exploder wind-up: long flash, then a self-centered
-           burst. The Hurler survives (this is not the Bomber death burst). */
-        if ((TIMER & 3) == 0) puff_at(ex, ey);
+        /* Close-range wind-up: long flash, then the same full blast centred
+           on the Hurler. The Hurler survives (not the Bomber death burst). */
+        if ((TIMER & 3) == 0) e->ai_data[7] = 2;
         if ((TIMER & 7) == 0) sfx_play(SFX_TICK);
         if (++TIMER >= 28) {
-            puff_at(ex - FUSE_RADIUS, ey);
-            puff_at(ex + FUSE_RADIUS, ey);
-            puff_at(ex, ey - FUSE_RADIUS);
-            puff_at(ex, ey + FUSE_RADIUS);
-            room_shake(2, 8);
-            sfx_play(SFX_ROAR);
-            fuse_hurt_at(ex + 4, ey + 4, FUSE_RADIUS);
+            u8 i;
+            for (i = 0; i < FUSE_BOMB_MAX; ++i) if (!fb_live[i]) break;
+            if (i < FUSE_BOMB_MAX) blast_start(i, ex + 4, ey + 4);
+            else {
+                room_shake(3, 14);
+                boom_sfx(1);
+                fuse_hurt_at(ex + 4, ey + 4, FUSE_RADIUS);
+            }
             PHASE = 2;
             TIMER = 0;
         }
@@ -824,7 +917,7 @@ static u8 convert_slot_to(u8 id) {
         if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) continue;
         cur = e->ai_data[0];
         if (cur == ENEMY_BANE_BRUTE || cur == ENEMY_VAULT_HAND
-            || cur == ENEMY_LEYBEAM || cur == ENEMY_VEIL_MAGUS
+            || is_basilisk(cur) || cur == ENEMY_VEIL_MAGUS
             || cur == ENEMY_FUSE_HURLER
             || is_status_ally(cur)) continue;
         /* Replace this rolled body with a status ally. */
@@ -891,6 +984,56 @@ void bane_brute_apply_knockback(i8 kx, i8 ky) BANKED {
     }
 }
 
+static u8 basilisk_count(void) {
+    u8 i, n = 0;
+    for (i = 0; i < MAX_ENTITIES; ++i)
+        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY
+            && is_basilisk(entities[i].ai_data[0])) n++;
+    return n;
+}
+
+/* Tier of the room's (single) basilisk: 0 Ley, 1 Glare, 2 Void, 0xFF none. */
+static u8 basilisk_tier(void) {
+    u8 i, id;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        if (!(entities[i].flags & EF_ACTIVE) || entities[i].type != ENT_ENEMY)
+            continue;
+        id = entities[i].ai_data[0];
+        if (is_basilisk(id)) return (u8)(basilisk_lanes(id) - 2);
+    }
+    return 0xFF;
+}
+
+/* One basilisk per room (they share one beam and one art slot). The keeper
+   gets the blank core tile, the full 15x15 coil hitbox, and a nudge until
+   its 32x32 body sits on open floor. */
+static void basilisk_setup(void) {
+    static const i8 nudge_x[8] = { 0, 8, -8, 0, 16, -16, 8, -8 };
+    static const i8 nudge_y[8] = { 8, 0, 0, 16, 8, 8, 16, 16 };
+    u8 i, k, kept = 0;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *e = &entities[i];
+        i16 x, y;
+        if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY
+            || !is_basilisk(e->ai_data[0])) continue;
+        if (kept) { entity_kill(i); continue; }
+        kept = 1;
+        e->sprite_tile = SPR_ENEMY_LEYBEAM;   /* blank: body is drawn in OAM */
+        e->hitbox = 0xFF;
+        e->ai_data[4] = 0;
+        x = FIX8_TO_INT(e->x);
+        y = FIX8_TO_INT(e->y);
+        if (basilisk_clear(x, y)) continue;
+        for (k = 0; k < 8; ++k) {
+            if (basilisk_clear(x + nudge_x[k], y + nudge_y[k])) {
+                e->x = FIX8(x + nudge_x[k]);
+                e->y = FIX8(y + nudge_y[k]);
+                break;
+            }
+        }
+    }
+}
+
 void new_monsters_post_spawn(void) BANKED {
     u8 allies = 0, i;
     leybeam_beam_live = 0;
@@ -908,7 +1051,7 @@ void new_monsters_post_spawn(void) BANKED {
     despawn_extra(ENEMY_ZAG_DART, 2);
     despawn_extra(ENEMY_HEX_WALKER, 3);
     despawn_extra(ENEMY_VAULT_HAND, 1);
-    despawn_extra(ENEMY_LEYBEAM, 1);
+    basilisk_setup();
     despawn_extra(ENEMY_BANE_BRUTE, 1);
     despawn_extra(ENEMY_FUSE_HURLER, 2);
 
@@ -920,9 +1063,14 @@ void new_monsters_post_spawn(void) BANKED {
         || count_id(ENEMY_VAULT_HAND)
         || count_id(ENEMY_BANE_BRUTE)
         || count_id(ENEMY_ZAG_DART)
-        || count_id(ENEMY_LEYBEAM)
+        || basilisk_count()
         || count_id(ENEMY_FUSE_HURLER));
     new_monsters_in_room = new_monsters_busy;
+
+    {
+        u8 tier = basilisk_tier();
+        if (tier != 0xFF || count_id(ENEMY_FUSE_HURLER)) basilisk_art_load(tier);
+    }
 
     if (!count_id(ENEMY_BANE_BRUTE)) return;
     for (i = 0; i < MAX_ENTITIES; ++i)
@@ -940,7 +1088,7 @@ void new_monsters_post_spawn(void) BANKED {
         || count_id(ENEMY_VAULT_HAND)
         || count_id(ENEMY_BANE_BRUTE)
         || count_id(ENEMY_ZAG_DART)
-        || count_id(ENEMY_LEYBEAM)
+        || basilisk_count()
         || count_id(ENEMY_FUSE_HURLER));
     new_monsters_in_room = new_monsters_busy;
 }
@@ -963,20 +1111,156 @@ void new_monsters_foyer_warp(void) BANKED {
        SCREEN_ROOM, and the nested enter crashes the machine. post_spawn
        already despawns a Hand in the foyer. */
 }
+/* ---- appended OAM: basilisk bodies, blasts, fuse tells ----
+   The shared allocator has already written entities into 4..entity_oam_high.
+   These extras go after it (below the fixed 35..39 specialist slots); a
+   blast is written before a body so the hazard wins any shortfall. When a
+   crowded scene leaves no room they borrow the top of the entity range on
+   alternate frames, which is the same fair flicker the allocator uses. */
+#define XO_CAP 35
+static u8 xo;
+
+static void xo_begin(u8 need) {
+    xo = entity_oam_high;
+    if (xo < 4) xo = 4;
+    if ((u8)(xo + need) > XO_CAP)
+        xo = (entity_anim_counter & 1) ? (u8)(XO_CAP - need) : XO_CAP;
+}
+
+/* World-space 8x8 put with per-sprite clipping (slow path). */
+static void xo_put(i16 wx, i16 wy, u8 tile, u8 prop) {
+    i16 ox = (i16)(wx - (i16)room_camera_x + 8);
+    i16 oy = (i16)(wy - (i16)room_camera_y + 16);
+    OAM_item_t *it;
+    if (xo >= XO_CAP) return;
+    if (ox <= 0 || ox >= 168 || oy <= 0 || oy >= 160) return;
+    it = &shadow_OAM[xo++];
+    it->y = (u8)oy;
+    it->x = (u8)ox;
+    it->tile = tile;
+    it->prop = prop;
+}
+
+/* 4x4 block of OAM. Fully visible blocks take the u8 fast path; edge
+   blocks clip per sprite. tiles[] is row-major, already mirrored. */
+static void xo_block(i16 wx, i16 wy, const u8 *tiles, const u8 *props) {
+    i16 ox = (i16)(wx - (i16)room_camera_x + 8);
+    i16 oy = (i16)(wy - (i16)room_camera_y + 16);
+    u8 r, c, k = 0;
+    if (ox >= 1 && ox <= 136 && oy >= 1 && oy <= 128 && xo + 16 <= XO_CAP) {
+        OAM_item_t *it = &shadow_OAM[xo];
+        u8 y = (u8)oy;
+        for (r = 0; r < 4; ++r, y += 8) {
+            u8 x = (u8)ox;
+            for (c = 0; c < 4; ++c, ++k, x += 8, ++it) {
+                it->y = y;
+                it->x = x;
+                it->tile = tiles[k];
+                it->prop = props[k];
+            }
+        }
+        xo += 16;
+        return;
+    }
+    for (r = 0; r < 4; ++r)
+        for (c = 0; c < 4; ++c, ++k)
+            xo_put(wx + (i16)(c << 3), wy + (i16)(r << 3), tiles[k], props[k]);
+}
+
+static u8 xb_tile[16], xb_prop[16];
+
+static void basilisk_draw(u8 slot, entity_t *e) {
+    u8 base = BAS_TILE_IDLE, pal = e->palette & 7, prop, k, left;
+    if (!(e->flags & EF_ON_SCREEN)) return;
+    if (e->ai_data[7] & 1) return;             /* hit flash (allocator ticks it) */
+    if (PHASE == 2 || (PHASE == 1 && TIMER >= 16)) base = BAS_TILE_FIRE;
+    else if (PHASE == 0 && ((entity_anim_counter >> 4) & 1)) base = BAS_TILE_WALK;
+    if (PHASE == 1 && (TIMER & 4)) pal = 5;    /* charge strobe: gold */
+    if (enemy_status_kind[slot] != QSTATUS_NONE && (entity_anim_counter & 8))
+        pal = status_enemy_palette_prop(slot) & 7;
+    left = e->ai_data[4] & 1;
+    prop = (u8)(pal | 0x08 | (left ? S_FLIPX : 0));
+    for (k = 0; k < 16; ++k) {
+        xb_tile[k] = (u8)(base + (left ? ((k & 0x0C) | (3 - (k & 3))) : k));
+        xb_prop[k] = prop;
+    }
+    xo_block(FIX8_TO_INT(e->x) - 8, FIX8_TO_INT(e->y) - 16, xb_tile, xb_prop);
+}
+
+/* 32x32 burst from one 16x16 GPT quadrant, mirrored four ways. */
+static const u8 blast_q[16] = { 0, 1, 1, 0,  2, 3, 3, 2,  2, 3, 3, 2,  0, 1, 1, 0 };
+static const u8 blast_f[16] = {
+    0, 0, S_FLIPX, S_FLIPX,  0, 0, S_FLIPX, S_FLIPX,
+    S_FLIPY, S_FLIPY, S_FLIPX | S_FLIPY, S_FLIPX | S_FLIPY,
+    S_FLIPY, S_FLIPY, S_FLIPX | S_FLIPY, S_FLIPX | S_FLIPY };
+
+static void blast_draw(u8 i) {
+    u8 t = fb_timer[i], k;
+    u8 f = t < 3 ? 0 : t < 8 ? 1 : t < 14 ? 2 : 3;
+    for (k = 0; k < 16; ++k) {
+        xb_tile[k] = BLAST_TILE(f, blast_q[k]);
+        xb_prop[k] = (u8)(BLAST_PAL | 0x08 | blast_f[k]);
+    }
+    xo_block(fb_x[i] - 16, fb_y[i] - 16, xb_tile, xb_prop);
+}
+
+/* Fuse tell: the eight edge points of the exact damage square, corners and
+   edge midpoints alternating every 4 frames, bomb flashing faster late. */
+static void fuse_tell_draw(u8 i) {
+    i16 x = fb_x[i] - 4, y = fb_y[i] - 4;
+    u8 p = (fb_timer[i] < 16 && (fb_timer[i] & 2)) ? 5 : 4;
+    if (fb_timer[i] & 4) {
+        xo_put(x - FUSE_RADIUS, y - FUSE_RADIUS, SPR_FX_IMPACT, p);
+        xo_put(x + FUSE_RADIUS, y - FUSE_RADIUS, SPR_FX_IMPACT, p);
+        xo_put(x - FUSE_RADIUS, y + FUSE_RADIUS, SPR_FX_IMPACT, p);
+        xo_put(x + FUSE_RADIUS, y + FUSE_RADIUS, SPR_FX_IMPACT, p);
+    } else {
+        xo_put(x - FUSE_RADIUS, y, SPR_FX_IMPACT, p);
+        xo_put(x + FUSE_RADIUS, y, SPR_FX_IMPACT, p);
+        xo_put(x, y - FUSE_RADIUS, SPR_FX_IMPACT, p);
+        xo_put(x, y + FUSE_RADIUS, SPR_FX_IMPACT, p);
+    }
+}
+
+static void extras_draw(void) {
+    u8 i, need = 0, blast_drawn = 0;
+    for (i = 0; i < MAX_ENTITIES; ++i)
+        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY
+            && is_basilisk(entities[i].ai_data[0]) && entities[i].hp) need += 16;
+    for (i = 0; i < FUSE_BOMB_MAX; ++i)
+        if (fb_live[i]) need += (fb_phase[i] == 2) ? 16 : (fb_phase[i] == 1) ? 4 : 0;
+    if (!need) return;
+    xo_begin(need > 31 ? 31 : need);
+    for (i = 0; i < FUSE_BOMB_MAX; ++i) {
+        if (!fb_live[i]) continue;
+        if (fb_phase[i] == 2) {
+            if (!blast_drawn) blast_draw(i);
+            blast_drawn = 1;
+        } else if (fb_phase[i] == 1) fuse_tell_draw(i);
+    }
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *e = &entities[i];
+        if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
+            && is_basilisk(e->ai_data[0]) && e->hp) basilisk_draw(i, e);
+    }
+    if (xo > entity_oam_high && xo <= XO_CAP) entity_oam_high = xo;
+}
 
 void new_monsters_draw(void) BANKED {
     u8 i, live_beam = 0, bi, used = 0, any = 0;
     /* Drop the sticky busy flag once no specialist, bomb, or beam remains
        so a converted/cleared room does not bank-call this every frame. */
     for (i = 0; i < FUSE_BOMB_MAX; ++i) if (fb_live[i]) any = 1;
-    if (leybeam_beam_live || vault_hand_holding) any = 1;
+    /* A pending lane restore keeps the room flag up until the floor is back. */
+    if (leybeam_beam_live || vault_hand_holding || ley_flush
+        || leybeam_flush_pending) any = 1;
     if (!any) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
             entity_t *e = &entities[i];
             u8 id;
             if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) continue;
             id = e->ai_data[0];
-            if (id >= ENEMY_VEIL_MAGUS && id <= ENEMY_FUSE_HURLER) {
+            if (id >= ENEMY_VEIL_MAGUS && id <= ENEMY_NOX_BASILISK) {
                 any = 1;
                 break;
             }
@@ -998,7 +1282,7 @@ void new_monsters_draw(void) BANKED {
     if (leybeam_beam_live) {
         for (i = 0; i < MAX_ENTITIES; ++i)
             if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY
-                && entities[i].ai_data[0] == ENEMY_LEYBEAM && entities[i].hp)
+                && is_basilisk(entities[i].ai_data[0]) && entities[i].hp)
                 live_beam = 1;
         if (!live_beam) leybeam_clear_beam();
     }
@@ -1027,23 +1311,14 @@ void new_monsters_draw(void) BANKED {
         move_sprite(38, 0, 0);
         confusion_swirl_live = 0;
     }
-    if (leybeam_beam_live) {
-        /* Muzzle flare at the locked origin. The shaft is a VBlank-stamped
-           BG strip; a spark at the far end marks the lane end. */
-        u8 sx = (u8)(beam_ox - room_camera_x + 8);
-        u8 sy = (u8)(beam_oy - room_camera_y + 16);
-        move_sprite(37, sx, sy);
-        set_sprite_tile(37, SPR_FX_MUZZLE);
-        set_sprite_prop(37, 5);
-    } else {
-        move_sprite(37, 0, 0);
-    }
+    /* The basilisk's open jaw and orb are the muzzle now; 37 stays parked. */
+    move_sprite(37, 0, 0);
     for (bi = 0; bi < FUSE_BOMB_MAX; ++bi) {
         u8 slot = (u8)(35 + used);
-        if (!fb_live[bi]) continue;
+        if (!fb_live[bi] || fb_phase[bi] == 2) continue;
         {
-            u8 sx = (u8)(fb_x[bi] - room_camera_x + 8);
-            u8 sy = (u8)(fb_y[bi] - room_camera_y + 16);
+            u8 sx = (u8)(fb_x[bi] - 4 - room_camera_x + 8);
+            u8 sy = (u8)(fb_y[bi] - 4 - room_camera_y + 16);
             move_sprite(slot, sx, sy);
             set_sprite_tile(slot, SPR_FX_IMPACT);
             set_sprite_prop(slot, (u8)((fb_phase[bi] && (fb_timer[bi] & 2)) ? 5 : 4));
@@ -1052,5 +1327,6 @@ void new_monsters_draw(void) BANKED {
     }
     if (used < 1) move_sprite(35, 0, 0);
     if (used < 2) move_sprite(36, 0, 0);
+    extras_draw();
 }
 

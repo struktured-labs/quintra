@@ -86,8 +86,10 @@ pub const ENEMY_HEX_WALKER:      EnemyId = EnemyId::new(36);   // walk, stop, ai
 pub const ENEMY_VAULT_HAND:      EnemyId = EnemyId::new(37);   // ceiling grabber, foyer return
 pub const ENEMY_BANE_BRUTE:      EnemyId = EnemyId::new(38);   // long-shove bruiser with status allies
 pub const ENEMY_ZAG_DART:        EnemyId = EnemyId::new(39);   // zig-zag burst, rare cooldown bolt
-pub const ENEMY_LEYBEAM:         EnemyId = EnemyId::new(40);   // cardinal wide laser
+pub const ENEMY_LEYBEAM:         EnemyId = EnemyId::new(40);   // Ley Basilisk, tier 1: 16-px cardinal beam
 pub const ENEMY_FUSE_HURLER:     EnemyId = EnemyId::new(41);   // lobs fused bombs; close-range wind-up blast
+pub const ENEMY_SUN_BASILISK:  EnemyId = EnemyId::new(42);   // basilisk tier 2: 24-px beam (Golden Temple)
+pub const ENEMY_NOX_BASILISK:   EnemyId = EnemyId::new(43);   // basilisk tier 3: 32-px beam (Void Sanctum)
 
 
 // ----- Biomes
