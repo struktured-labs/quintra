@@ -28,6 +28,7 @@ u8 cinder_boss_index = 0xFF;
 u8 cinder_damage_open;
 u8 cinder_phase;
 u8 cinder_pattern;
+u8 cinder_breath_lanes;
 u8 cinder_pack_alive;
 u8 cinder_timer;
 u8 cinder_pack_x[CINDER_KILNBACKS];
@@ -523,6 +524,7 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
         }
         boss_projectile_vector(x, y0, 0, from_bottom ? -2 : 2, damage, BOSS_SHOT_LANE, 0);
     }
+    cinder_breath_lanes = 1;
     room_shake(2, 16);
     boss_voice(2, BOSS_VOICE_ATTACK);
     e->ai_data[7] = 10;
@@ -531,8 +533,10 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
 static void cinder_rex_tick(entity_t *e, u8 damage) {
     u8 i;
     cinder_rex_ent = e;
-    // Only Furnace Breath fires body lanes (walls at 36 and 76, ~60f trip).
-    if (cinder_pattern == 0 && cinder_timer >= 36)
+    // Furnace Breath walls (~60f trip) hop the body, including leftover
+    // lanes after the pattern has moved on, so they never sit on the
+    // scanlines the 48px hound already fills.
+    if ((cinder_pattern == 0 && cinder_timer >= 36) || cinder_breath_lanes)
         cinder_lanes_skip_body(rex_bx(e), rex_by(e));
     if (cinder_timer == 0) cinder_rex_begin(e);
     cinder_damage_open = cinder_timer >= (RUN_IS_EASY() ? 64 : 112);
