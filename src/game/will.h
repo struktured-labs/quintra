@@ -43,6 +43,10 @@ extern u8 will_vespine_swarm_ticks;
 extern u8 will_vespine_swarm_dir;
 extern u8 will_vespine_swarm_damage;
 
+// Heat of the Will gauge for B tools. 0..3, read not spent.
+// Aligns with the HUD digit + 3-segment bar.
+u8 will_b_tier(void) BANKED;
+
 // Launch the equipped weapon's full-Will art. Returns nonzero only if at
 // least one gameplay hitbox could be allocated, so a saturated entity table
 // never silently steals the charge.

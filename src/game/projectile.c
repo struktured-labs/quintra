@@ -258,16 +258,20 @@ void projectile_update_one(entity_t *e, u8 idx) {
             return;
         }
         if (e->ai_data[6] == PROJ_AUX_BOOMERANG) {
-                if (!e->state
-                    && (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE
-                        || t == BGT_CRYSTAL || t == BGT_WALL_CRACK
-                        || t == BGT_POT || px < 8
+                // Interior obstacles (pillars, pots, crystals, trees, cracks)
+                // no longer bounce the disk. True room walls and the court
+                // bounds still turn it around so the return stays sane.
+                if (!e->state) {
+                    u8 at_wall = (u8)(t == BGT_WALL || px < 8
                         || px > (i16)(room_world_width - 8)
-                        || py < 8 || py > (i16)(room_world_height - 8))) {
-                    prism_shot_tile(t, (u8)(sx >> 3), (u8)(sy >> 3));
-                    e->x = (ppos_t)(e->x - e->vx);
-                    e->y = (ppos_t)(e->y - e->vy);
-                    e->state = 1;
+                        || py < 8 || py > (i16)(room_world_height - 8));
+                    if (at_wall || t == BGT_PILLAR || t == BGT_CRYSTAL)
+                        prism_shot_tile(t, (u8)(sx >> 3), (u8)(sy >> 3));
+                    if (at_wall) {
+                        e->x = (ppos_t)(e->x - e->vx);
+                        e->y = (ppos_t)(e->y - e->vy);
+                        e->state = 1;
+                    }
                 }
                 return;
             }

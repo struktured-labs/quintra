@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 19
 
 #include <gb/gb.h>
 
@@ -8,7 +8,11 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/will.h"
 #include "render/tiles.h"
+
+// Outbound frames at 3 px/tick for will_b_tier 0..3: 84 / 108 / 132 / 168 px.
+static const u8 boom_outbound[4] = {28, 36, 44, 56};
 
 static u8 owned(void) {
     u8 i;
@@ -24,7 +28,7 @@ static u8 fetches(u8 kind) {
 }
 
 u8 projectile_throw_boomerang(u8 dir) BANKED {
-    u8 i;
+    u8 i, tier;
     entity_t *e;
     if (!owned()) return 0;
     for (i = 0; i < MAX_ENTITIES; ++i) {
@@ -36,6 +40,7 @@ u8 projectile_throw_boomerang(u8 dir) BANKED {
     if (i == 0xFF) return 0;
     e = &entities[i];
     dir &= 7;
+    tier = will_b_tier();
     e->flags |= EF_PLAYER_PROJ;
     e->x = FIX8((i16)player.x + 4);
     e->y = FIX8((i16)player.y + 4);
@@ -44,9 +49,9 @@ u8 projectile_throw_boomerang(u8 dir) BANKED {
     e->sprite_tile = SPR_ITEM_BOOMERANG;
     e->palette = 6;
     e->hp = 255;
-    e->state_timer = 120;
+    e->state_timer = 180;
     e->hitbox = 0x77;
-    e->ai_data[0] = 28;
+    e->ai_data[0] = boom_outbound[tier];
     e->ai_data[2] = 1;
     e->ai_data[6] = PROJ_AUX_BOOMERANG;
     sfx_play_boomerang(0);

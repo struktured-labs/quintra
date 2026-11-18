@@ -76,3 +76,12 @@ void will_howl_clear_nearby_shots(void) BANKED {
         }
     }
 }
+
+u8 will_b_tier(void) BANKED {
+    if (player.will_level >= WILL_LEVEL_CAP) return 3;
+    if (player.will_level >= 1) return 2;
+    // will_level is 0, so the current bar tops out at WILL_MAX (90).
+    if (player.will_charge >= (u8)(WILL_MAX / 3)) return 1;
+    return 0;
+}
+
