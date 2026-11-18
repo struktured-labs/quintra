@@ -45,6 +45,10 @@ def main(stem):
         if end > 0x8000:
             fail(f"area {name} ends at 0x{end:04X} -- past the 0x8000 ROM "
                  f"window. Code/init would execute from open bus at boot.")
+        if end > 0x4000:
+            fail(f"area {name} ends at 0x{end:04X} -- past the fixed home "
+                 f"bank. Boot would run GSINIT/GSFINAL or read initializers "
+                 f"from whatever switchable bank is mapped at 0x4000.")
         worst_home_end = max(worst_home_end, end)
 
     # Fixed bank areas are reported with linearized addresses (bank N at

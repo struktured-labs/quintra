@@ -48,10 +48,10 @@ u8 room_input_dir8(u8 keys, u8 facing) BANKED;
 #include "game/magic_art.inc"
 
 u8 magic_hold;
-u8 magic_last_spell = 0xFF;
+u8 magic_last_spell;
 u8 magic_casts;
 u8 magic_ward_ticks;
-u8 magic_ward_kind = 0xFF;
+u8 magic_ward_kind;
 u8 magic_tap_cd;
 u8 magic_ward_cd;
 u8 magic_cure_used;
@@ -61,7 +61,11 @@ static u8 seen_serial;
 static u8 charging;
 static u8 prev_b;
 static u16 last_frame;
-static u8 carrier = 0xFF;
+static u8 carrier;
+// No initialized globals here: _INITIALIZER lives in the full home bank.
+// The 0xFF sentinels are set by magic_reset, which magic_room_enter runs
+// once per power-on (New Game, Continue and attract all enter a room).
+static u8 magic_inited;
 static u8 giant_hits;
 static i16 hit_cx, hit_cy;       // knockback origin of the current hit batch
 
@@ -87,7 +91,7 @@ static const i8 orb_y[12] = { 0, 10, 17, 20, 17, 10, 0, -10, -17, -20, -17, -10 
 
 // ---- tracked moving spells ------------------------------------------------
 #define SHOTS 3
-static u8 shot_slot[SHOTS] = { 0xFF, 0xFF, 0xFF };
+static u8 shot_slot[SHOTS];
 static u8 shot_kind[SHOTS];
 static u8 shot_dir[SHOTS];
 static u8 shot_direct[SHOTS];     // body slot the shot struck (burst skips it)
@@ -1008,6 +1012,7 @@ void magic_input(u8 keys, u8 pressed, u8 damage) BANKED {
 // Every room entry and Pack resume: reload the spell tiles (other screens
 // reuse bank-1 OBJ VRAM) and drop any charge.
 void magic_room_enter(void) BANKED {
+    if (!magic_inited) magic_reset();
     VBK_REG = 1;
     set_sprite_data(MAGIC_TILE, MAGIC_TILE_COUNT, magic_art);
     VBK_REG = 0;
@@ -1016,6 +1021,7 @@ void magic_room_enter(void) BANKED {
 }
 
 void magic_reset(void) BANKED {
+    magic_inited = 1;
     charging = 0;
     magic_hold = 0;
     drop_room_state();
