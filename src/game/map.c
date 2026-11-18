@@ -278,7 +278,7 @@ static void draw_dungeon_grid(void) {
     {
         u8 v = secret_merchant_map_cell();
         u8 c = (u8)(v & 0x7F);
-        if (v != 0xFF && c < size && c != here) {
+        if (v != 0xFF && c < size) {
             if (v & 0x80)
                 map_put_attr((u8)(gx[c] + 1), (u8)(gy[c] + 1), BGT_MAP_SHOP,
                     BGPAL_WALL);

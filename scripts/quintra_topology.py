@@ -306,3 +306,32 @@ def puzzle_slot_kind(run_seed: int, stage: int, slot: int) -> int:
 def room_seed(run_seed: int, biome: int, room_counter: int) -> int:
     """Mirror procgen_room_seed()."""
     return (run_seed ^ (biome << 16) ^ ((room_counter * 0x9E3779B9) & 0xFFFFFFFF)) & 0xFFFFFFFF
+
+
+_VEIL_GOLDEN = (0x00000000, 0x9E3779B9, 0x3C6EF372, 0xDAA66D2B, 0x78DDE6E4,
+                0x1715609D, 0xB54CDA56, 0x5384540F, 0xF1BBCDC8)
+
+
+def veil_host_cell(run_seed: int, stage: int) -> int | None:
+    """Mirror secret_merchant_host_cell: the stage's hidden Veil vault host."""
+    size = dungeon_size(stage)
+    entry = dungeon_entry_cell(size, run_seed, stage)
+    cache = dungeon_cache_cell(size, run_seed, stage)
+    roles = set(mission_graph(size, run_seed, stage)["sequence"])
+    h = (run_seed ^ _VEIL_GOLDEN[stage] ^ 0x5645494C) & 0xFFFFFFFF or 0x2545F491
+    h ^= (h << 13) & 0xFFFFFFFF
+    h ^= h >> 17
+    h ^= (h << 5) & 0xFFFFFFFF
+    start = ((h >> 8) & 0xFF) % size
+    for dead_end_only in (True, False):
+        for i in range(size):
+            cell = (start + i) % size
+            if (cell in (0, entry, cache) or cell + 3 >= size
+                    or cell in (2, 5, 8, 11, 15, 17, 23) or cell in roles):
+                continue
+            degree = sum(dungeon_maze_neighbor(cell, size, d, run_seed, stage)
+                         is not None for d in range(4))
+            if dead_end_only and degree != 1:
+                continue
+            return cell
+    return None

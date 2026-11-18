@@ -26,7 +26,7 @@ from pathlib import Path
 from PIL import Image
 from pyboy import PyBoy
 from quintra_topology import (
-    dungeon_cache_cell, dungeon_entry_cell, dungeon_maze_neighbor,
+    veil_host_cell, dungeon_cache_cell, dungeon_entry_cell, dungeon_maze_neighbor,
     dungeon_size, mission_graph,
 )
 from test_stage_archetypes import (
@@ -271,6 +271,7 @@ def check_graph():
         for stage in range(9):
             host = mirror_host(seed, stage)
             assert host is not None, f"no Veil host stage={stage} seed={seed:#x}"
+            assert veil_host_cell(seed, stage) == host, "topology mirror drift"
             assert graph_reachable(seed, stage, host), (
                 f"Veil host {host} unreachable stage={stage} seed={seed:#x}")
     print("[secret-merchants] graph: one reachable role-free host per stage x "
@@ -470,6 +471,8 @@ def check_reveal_and_shop(seed):
     assert pb.memory[RS + RS_CHARMS] & 1, "Cave Light charm not owned"
     assert pb.memory[RS + RS_SHOP] & SHOP_C
     assert ware_at(pb, 104) is None, "charm shelf did not empty"
+    assert all(pb.memory[TM + 10 * 20 + x] == 1 for x in (12, 13, 14)), (
+        "sold-out charm left its painted price behind")
     save("veil_shop_after.png", pb.screen.image)
     save_gif("veil_shop.gif", shop_gif, 80)
     # Suspend inside the vault and cold boot: discoveries ride the save.
@@ -548,6 +551,11 @@ def check_caves():
                 "BLAST plug opened by a bare shove"
             pb.memory[PL + dens.PL_WAYGEAR] |= dens.GLOVE
         if kind == STONE:
+            # From the socket side the rock would land on the hero: refused.
+            dens.feet_on(pb, CAVE_TX + 1, CAVE_TY)
+            dens.hold(pb, "left", 40)
+            assert dens.wide_tile(pb, CAVE_TX, CAVE_TY) != dens.PORTAL, \
+                "STONE opened from its socket side"
             dens.feet_on(pb, CAVE_TX - 1, CAVE_TY)
             button = "right"
         else:

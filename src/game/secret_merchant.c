@@ -85,6 +85,8 @@ static const u8 charm_word[12] = {
 
 static u32 hs;
 
+static void live_set(u8 x, u8 y, u8 tile, u8 attr);
+
 static u8 next_hash(void) {
     hs ^= hs << 13;
     hs ^= hs >> 17;
@@ -356,10 +358,11 @@ static void shelf(u8 px, u8 py, u8 code, u8 price) {
     paint_price((u8)((px >> 3) - 1), (u8)((py >> 3) + 2), price);
 }
 
-static void keeper(u8 px, u8 py) {
+static void keeper(u8 px, u8 py, u8 pal) {
     u8 idx = pickup_spawn_merchant(FIX8(px), FIX8(py));
-    // The Veil Trader is kin to the public merchant, not a twin.
-    if (idx != 0xFF) entities[idx].palette = 0x06;
+    // Veil (violet dusk) and cave (travel cloak) keepers are kin to the
+    // public merchant, not twins.
+    if (idx != 0xFF) entities[idx].palette = pal;
 }
 
 u8 secret_merchant_build_stall(void) BANKED {
@@ -375,7 +378,7 @@ u8 secret_merchant_build_stall(void) BANKED {
                 ? BGT_FLOOR2 : BGT_FLOOR;
     room_tilemap[3][3] = room_tilemap[3][16] = BGT_CRYSTAL;
     room_tilemap[13][3] = room_tilemap[13][16] = BGT_CRYSTAL;
-    keeper(80, 40);
+    keeper(80, 40, 0x06);
     shelf(56, 64, (u8)(SM_TONIC_VEIL + s), tonic_price[s]);
     if (!(run_state.secret_shop & SECRET_SHOP_B_BOUGHT))
         shelf(80, 64, veil_bottle[s], 24);
@@ -539,7 +542,16 @@ void secret_merchant_touch(u8 i) BANKED {
     deliver(code);
     // Tonics restock like the public Antidote: wait for a fresh contact.
     if (code <= SM_TONIC_RIFT) entities[i].ai_data[4] = 0xFF;
-    else entity_kill(i);
+    else {
+        // Sold out: lift the painted price with the ware.
+        u8 tx = (u8)((u8)(FIX8_TO_INT(entities[i].x) >> 3) - 1);
+        u8 ty = (u8)((u8)(FIX8_TO_INT(entities[i].y) >> 3) + 2);
+        u8 k;
+        entity_kill(i);
+        for (k = 0; k < 3; ++k)
+            if ((u8)(tx + k) < ROOM_W - 1 && ty < ROOM_H - 1)
+                live_set((u8)(tx + k), ty, BGT_FLOOR, BGPAL_FLOOR);
+    }
 }
 
 void secret_merchant_write_effect(u8 code) BANKED {
@@ -579,8 +591,9 @@ void secret_merchant_room_ready(void) BANKED {
     secret_merchant_host_here = 0;
     cinder_used = 0;
     touch_ticks = 0;
-    secret_floor_warn = (VEIL_HAS(VEIL_GLOAM_LAMP) || VEIL_HAS(VEIL_RIME_SKATES))
-        ? 80 : 60;
+    secret_floor_warn = 60;
+    if (VEIL_HAS(VEIL_GLOAM_LAMP)) secret_floor_warn += 20;
+    if (VEIL_HAS(VEIL_RIME_SKATES)) secret_floor_warn += 20;
     // A dungeon bottle never follows the champion out into Riftwild.
     if (run_state.world_mode) run_state.secret_shop &= (u8)~SECRET_SHOP_ARMED;
     if (entity_enemy_count && !run_state.secret_pending && !in_cave()) {
@@ -667,11 +680,12 @@ static void honeycomb(void) {
         k = e->ai_data[0];
         if (k != PICKUP_HEART_HALF && k != PICKUP_COIN_1 && k != PICKUP_COIN_5)
             continue;
-        dx = (i16)player.x - e->x;
-        dy = (i16)player.y - e->y;
+        // Entity coordinates are FIX8; the hero's are whole pixels.
+        dx = (i16)player.x - (i16)FIX8_TO_INT(e->x);
+        dy = (i16)player.y - (i16)FIX8_TO_INT(e->y);
         if (dx > 24 || dx < -24 || dy > 24 || dy < -24) continue;
-        if (dx > 1) e->x++; else if (dx < -1) e->x--;
-        if (dy > 1) e->y++; else if (dy < -1) e->y--;
+        if (dx > 1) e->x += FIX8(1); else if (dx < -1) e->x -= FIX8(1);
+        if (dy > 1) e->y += FIX8(1); else if (dy < -1) e->y -= FIX8(1);
     }
 }
 
@@ -954,15 +968,22 @@ static void cave_field_tick(void) {
     kind = secret_cave_kinds[i];
     fx = (u8)((player.x + 8) >> 3);
     fy = (u8)((player.y + 12) >> 3);
-    near = (fx + 1 >= TX && fx <= TX + 1 && fy + 1 >= TY && fy <= TY + 1);
+    // The hero must press *into* the tell from its open face: STONE from
+    // the west toward its socket (never from the socket, which the rock
+    // lands on), BLAST and THICKET from the approach below.
+    if (kind == SECRET_KIND_STONE)
+        near = (fx == TX - 1 && fy == TY && (input_keys & J_RIGHT));
+    else
+        near = (fx == TX && (fy == TY + 1 || fy == TY)
+            && (input_keys & J_UP));
     if (VEIL_HAS(VEIL_WAYFARER_BELL)
         && fx + 3 >= TX && fx <= TX + 3 && fy + 3 >= TY && fy <= TY + 3
         && !(++bell_clock & 31)) sfx_play(SFX_TICK);
-    if (!near || !(input_keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
+    if (!near) {
         touch_ticks = 0;
         return;
     }
-    // STONE: any shove slides the rock into its socket. BLAST: only the
+    // STONE: a shove from the west slides the rock into its socket. BLAST: only the
     // Titan Glove / a Sauran's grip tears the plug out by hand. THICKET:
     // walking into the odd leaf parts the curtain.
     if (kind == SECRET_KIND_BLAST && !(player.class_id == 1
@@ -995,7 +1016,8 @@ void secret_cave_build_room(void) BANKED {
     entity_init_room();
     companion_spawn_current();
     room_spawn_progression_fixture();
-    keeper(80, 24);
+    keeper(80, 24, 0x05);
+    riftwild_den_armed = 0;
     shelf(48, 56, SM_TONIC_RIFT, 16);
     if (!(run_state.rift_caves & RIFT_CAVE_B(i)))
         shelf(80, 56, cave_bottle(i), 24);
