@@ -146,6 +146,7 @@ u8 shake_mag;
 // room rewrite spans several VBlanks; without this latch, turbo fire resumes
 // after the animation and can immediately strike the same altar a second time.
 static u8 law_action_latch;
+extern u8 shop_buy_a_latch;
 
 extern u8 dungeon_law_toggle_pending;
 
@@ -1251,6 +1252,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             keys &= (u8)~J_A;
             pressed &= (u8)~J_A;
         } else law_action_latch = 0;
+    }
+    // A paid shop purchase already spent this A on the shelf. Keep the
+    // counter-reach talk from stealing a held press after the ware despawns.
+    if (shop_buy_a_latch) {
+        if (keys & J_A) {
+            keys &= (u8)~J_A;
+            pressed &= (u8)~J_A;
+        } else shop_buy_a_latch = 0;
     }
     if (door_bump_cd) door_bump_cd--;
     if (arrival_sprite_grace) arrival_sprite_grace--;
