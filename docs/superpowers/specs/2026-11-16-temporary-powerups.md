@@ -509,3 +509,35 @@ rule in (6).
    change both palette and silhouette.
 6. **Aegis HUD "71":** zero-pad seconds (`07`) and draw charges as
    graphical pips in col 15, never a digit.
+
+## 16. Implementation notes (Phase 2–4, 2026-11-17)
+
+Carmelo said "do everything"; this ships official spec phases 2, 3 and 4
+in one PR (everything on his original list that Phase 1 did not cover).
+Proposals P9–P13 and gem Shards (§10) stay later — they still need a pick.
+
+Locked choices used here (Carbon 2026-11-16 plus the Phase 1 defaults):
+
+- One timed slot, lost on resume, like Surge.
+- "4x radius" is 4x area (hitbox nibbles doubled, travel +50%).
+- Roulette cycles at **8 frames/face Normal, 12 Easy**; adjacent faces
+  change both palette and silhouette. Lock = the face drawn on the
+  overlap frame, then a 20-frame freeze.
+- Formation/Halo copies flicker via the OAM rotator; spawn floors stay
+  `free <= 8` / `free <= 10`. Wingmates sit 4 px above the hero band.
+- Copies carry `PROJ_FLAG_CONVERGENCE | PROJ_FLAG_PU_COPY` and share a
+  per-volley cap of 2 boss-part hits. Wingmates do not pop on boss bodies.
+- Confusion: 24 beats Normal / 16 Easy, horizontal-mirror or reverse
+  only, no reshuffle, 25%/10% chance, 4 s immunity, star FX, still-1 s
+  shortens by 8 beats. Antidote already cures it.
+- Drop table adds Roulette (~1.2% Normal, 2% Easy) after the Capsule
+  band. 20 s cooldown and doubled Capsule chance on elites/alphas/rares
+  are in. Capsule rarity is Common 70 / Uncommon 25 / Rare 5.
+- Shrines: one dungeon dead-end cell per stage (seed-stable, not the
+  Farfold cache or a required cell) holds an Uncommon-or-better roulette;
+  each Riftwild region has a fixed Rare (Wingmates). `run_state.powerup_shrines`
+  is appended; bit 0 clears at the next dungeon start.
+- New gameplay lives in `powerup_extra.c` (`#pragma bank 255` + BANKED)
+  so bank 20 (framework + village music) and banks 19/21 stay off the
+  floor. Hooks stay out of ROM0 and out of `room.c` except a wider
+  `status_tick()` condition.

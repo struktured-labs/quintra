@@ -35,6 +35,7 @@
 #define PICKUP_HOLLOW_RELIC    25 // Worldglass-only counterpart cache; ai1=item id, ai2=claim bit
 #define PICKUP_ANTIDOTE        26 // carried Pack tool that cures Poison (enemy drop)
 #define PICKUP_POWERUP         27 // temporary power-up Capsule; ai_data[1]=POWERUP_*
+#define PICKUP_ROULETTE        28 // cycling boon capsule; face in ai_data[1]/[2]
 
 // Room-owned secret-vault countdown. Marked loot bypasses its old individual
 // u8 lifespan and is retired together by the visible twelve-second clock.

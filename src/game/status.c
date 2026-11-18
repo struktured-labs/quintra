@@ -76,6 +76,7 @@ extern u8 hud_notice_ticks;
 static u8 player_status_aux;
 static u8 confusion_mode;
 static u8 confusion_streak;
+u8 confusion_immune;
 static u8 inversion_tie;
 static ppos_t bleed_last_x;
 static ppos_t bleed_last_y;
@@ -153,7 +154,7 @@ static u8 status_duration(u8 kind) {
         case QSTATUS_SLOW:      return 90;
         case QSTATUS_STOP:      return 14;  // brief, fair hard disable
         case QSTATUS_BLIND:     return 75;
-        case QSTATUS_CONFUSION: return 90;
+        case QSTATUS_CONFUSION: return 24;
         case QSTATUS_MUTE:      return 75;
         case QSTATUS_BRITTLE:   return 75;
         case QSTATUS_BLEED:     return 60;  // 8 seconds (was 12)
@@ -210,6 +211,7 @@ void status_reset_all(void) BANKED {
     status_clock = 0;
     confusion_mode = 0;
     confusion_streak = 0;
+    confusion_immune = 0;
     inversion_tie = 0;
     bleed_last_x = bleed_last_y = 0;
     powerup_reset();
@@ -217,6 +219,7 @@ void status_reset_all(void) BANKED {
 
 void status_player_cure(void) BANKED {
     u8 was_blind = (player_status_kind == QSTATUS_BLIND);
+    if (player_status_kind == QSTATUS_CONFUSION) confusion_immune = 240;
     player_status_kind = QSTATUS_NONE;
     player_status_ticks = 0;
     player_status_aux = 0;
@@ -240,15 +243,20 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
     // Easy is the deep-route tester assist. Keep every condition mechanically
     // present, but halve hostile duration so one unlucky proc cannot erase a
     // long test run after the initiating enemy is already gone.
+    if (kind == QSTATUS_CONFUSION && confusion_immune) return;
     if (RUN_IS_EASY() && kind != QSTATUS_REGEN && kind != QSTATUS_HASTE)
         ticks = (u8)((ticks + 1) >> 1);
+    if (kind == QSTATUS_CONFUSION) {
+        ticks = RUN_IS_EASY() ? 16 : 24;
+        // Horizontal mirror or full reverse only; never reshuffle.
+        confusion_mode = (rng_next_u8() & 1) ? 1 : 2;
+        confusion_streak = 0;
+    }
+    if (player_status_kind == QSTATUS_CONFUSION && kind != QSTATUS_CONFUSION)
+        confusion_immune = 240;
     player_status_kind = kind;
     player_status_ticks = ticks;
     player_status_aux = 0;
-    if (kind == QSTATUS_CONFUSION) {
-        confusion_mode = (u8)(rng_next_u8() & 3);
-        confusion_streak = 0;
-    }
     if (kind == QSTATUS_INVERSION) inversion_tie++;
     if (kind == QSTATUS_BLEED) {
         bleed_last_x = player.x;
@@ -335,9 +343,14 @@ void status_try_hostile_hit(u8 hostile_idx) BANKED {
             : QSTATUS_NONE)
         : status_hostile_kind_for_enemy(e->ai_data[0]);
     if (kind == QSTATUS_NONE || kind >= QSTATUS_COUNT) return;
-    chance = RUN_IS_EASY() ? 16 : 42;
-    if ((e->type == ENT_ENEMY && (e->flags & EF_RARE))
-        || (e->type == ENT_PROJECTILE && (e->ai_data[5] & 0x80))) chance = 100;
+    if (kind == QSTATUS_CONFUSION) {
+        if (confusion_immune) return;
+        chance = RUN_IS_EASY() ? 10 : 25;
+    } else {
+        chance = RUN_IS_EASY() ? 16 : 42;
+        if ((e->type == ENT_ENEMY && (e->flags & EF_RARE))
+            || (e->type == ENT_PROJECTILE && (e->ai_data[5] & 0x80))) chance = 100;
+    }
     if (rng_range(100) >= chance) return;
     if (kind == QSTATUS_CURSE) {
         // Gloam Leeches seed a room-scale hex instead of occupying the short
@@ -428,17 +441,14 @@ void status_player_filter_input(u8 *keys, u8 *pressed) BANKED {
         return;
     }
     if (player_status_kind != QSTATUS_CONFUSION) return;
-    if (dirs) {
-        if (++confusion_streak >= 36) {
-            // Change as soon as a sustained input suggests the player has
-            // adapted. The flash/click announces the new mapping fairly.
+    // No reshuffle. Standing still for 1 s shortens the effect by 8 beats.
+    if (!dirs) {
+        if (++confusion_streak >= 60) {
             confusion_streak = 0;
-            confusion_mode = (u8)((confusion_mode + 1
-                + (rng_next_u8() & 1)) & 3);
-            status_signal_at(QSTATUS_CONFUSION,
-                (i16)player.x + 4, (i16)player.y + 2);
+            if (player_status_ticks > 8) player_status_ticks = (u8)(player_status_ticks - 8);
+            else player_status_ticks = 1;
         }
-    } else if (confusion_streak) confusion_streak--;
+    } else confusion_streak = 0;
     *keys = remap_dirs(*keys, confusion_mode);
     *pressed = remap_dirs(*pressed, confusion_mode);
 }
@@ -525,7 +535,20 @@ void status_update_enemy_condition(u8 idx) BANKED {
         status_enemy_moved(idx);
 }
 
+
+void status_tick_gate(void) BANKED {
+    if (player_status_kind != QSTATUS_NONE || status_enemy_active
+        || powerup_id || powerup_world_live || confusion_immune)
+        status_tick();
+    else
+        status_clock++;
+}
+
 void status_tick(void) BANKED {
+    if (confusion_immune) confusion_immune--;
+    powerup_tick_cooldown();
+    if (player_status_kind == QSTATUS_CONFUSION)
+        powerup_confusion_stars();
     u8 i;
     status_clock++;
     if (powerup_id) powerup_tick();
@@ -570,6 +593,7 @@ void status_tick(void) BANKED {
             status_effect(kind,status_palette(kind),player.x+4,player.y+2);
         if (player_status_ticks == 0) {
             u8 was_blind = (kind == QSTATUS_BLIND);
+            if (kind == QSTATUS_CONFUSION) confusion_immune = 240;
             player_status_kind = QSTATUS_NONE;
             player_status_aux = 0;
             confusion_streak = 0;

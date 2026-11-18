@@ -178,6 +178,10 @@ typedef struct {
     u8  secret_shop;
     u16 veil_charms;
     u32 rift_caves;
+    // Power shrines claimed this run. Bit 0 = this stage's dungeon shrine
+    // (cleared at the next dungeon start). Bits 1..3 = Riftwild regions 0..2.
+    // Appended so older suspends load as unclaimed (0).
+    u8  powerup_shrines;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03

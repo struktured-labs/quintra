@@ -43,6 +43,7 @@
 #define N__ HUD_BLANK
 #define N_1 (HUD_DIGIT_0 + 1)
 #define N_3 (HUD_DIGIT_0 + 3)
+#define N_4 (HUD_DIGIT_0 + 4)
 #define N_G BGT_AREA_G
 static const u8 notice_words[NW_COUNT][6] = {
     { N_R,N_E,N_V,N_I,N_V,N_E },          // NW_REVIVE   Phoenix Thread
@@ -93,6 +94,16 @@ static const u8 notice_words[NW_COUNT][6] = {
     { N_M,N_E,N_N,N_D,N__,N__ },          // NW_MEND     power-up: regen
     { N_R,N_E,N_G,N_E,N_N,N__ },          // NW_REGEN    heals over time
     { N_E,N_N,N_D,N_E,N_D,N__ },          // NW_ENDED    power-up expired
+    { N_F,N_O,N_R,N_M,N__,N__ },          // NW_FORM     Formation
+    { N_C,N_O,N_P,N_I,N_E,N_S },          // NW_COPIES   parallel copies
+    { N_H,N_A,N_L,N_O,N__,N__ },          // NW_HALO     Halo
+    { N_R,N_I,N_N,N_G,N__,N__ },          // NW_RING8    8-way ring
+    { N_R,N_E,N_A,N_C,N_H,N__ },          // NW_REACH    Long Reach
+    { N_A,N_R,N_E,N_A,N_4,N__ },          // NW_AREA4    4x area
+    { N_A,N_S,N_S,N_I,N_S,N_T },          // NW_ASST     Blast Assist
+    { N_B,N_L,N_O,N_O,N_M,N__ },          // NW_BLOOM    impact bloom
+    { N_W,N_I,N_N,N_G,N_S,N__ },          // NW_WINGS    Wingmates
+    { N_M,N_A,N_T,N_E,N_S,N__ },          // NW_MATES    flank buddies
 };
 // 0 gold, 1 violet, 2 green, 6 MP blue, 7 HUD red.
 static const u8 notice_word_pal[NW_COUNT] = {
@@ -101,6 +112,7 @@ static const u8 notice_word_pal[NW_COUNT] = {
     7, 7, 7, 7, 7, 0, 1,
     0, 2, 0, 0, 7, 6, 2, 1, 0, 7, 1, 0, 0, 1,
     0, 0, 6, 6, 2, 2, 7,
+    0, 0, 0, 0, 0, 0, 7, 7, 1, 1,
 };
 
 u8 hud_notice_word_fill(u8 word, u8 *row) BANKED {

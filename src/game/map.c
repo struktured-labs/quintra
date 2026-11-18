@@ -10,6 +10,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/secret_merchant.h"
+#include "game/powerup.h"
 #include "game/riftwild_den.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -267,6 +268,9 @@ static void draw_dungeon_grid(void) {
         // The cache appears only after that room is visited or charted.
         if (seen && i == cache_cell && !cache_done && i != here)
             icon = BGT_MAP_BIG_CACHE;
+        // Unclaimed shrine: gold mark on the earned compass after a visit.
+        if (seen && i != here && powerup_shrine_map_mark(i))
+            icon = BGT_MAP_BIG_SHOP;
         icon = map_dungeon_shop_icon(i, here, icon);
         map_big_node(gx[i], gy[i], icon);
         // A charted altar wears the current Law colour in its lower half.

@@ -2,9 +2,10 @@
 
 // Pinned to bank 20: banks 1..19 sit at their 256-byte floors and autobank
 // would otherwise land this file in bank 2.
-// Temporary power-ups, Phase 1: framework + AEGIS, LIMITLESS, MEND.
+// Temporary power-ups, Phases 1-4: framework + all Carmelo-list power-ups.
+// Combat copies, roulette, shrines and Wingmates live in powerup_extra.c
+// (bank 31) so this file stays inside bank 20's remaining room.
 // See docs/superpowers/specs/2026-11-16-temporary-powerups.md.
-// All hot-path hooks test one WRAM byte before far-calling into this bank.
 
 #include <gb/gb.h>
 #include "audio/sfx.h"
@@ -30,6 +31,16 @@ void status_effect(u8 kind, u8 palette, i16 x, i16 y) BANKED;
 u8 powerup_id;
 u8 powerup_ticks;
 u8 powerup_aegis_hits;
+u8 powerup_drop_cool;
+static u16 powerup_drop_at;
+void powerup_note_drop(void) BANKED {
+    powerup_drop_cool = 150;
+    // run_timer sticks at 0 before the first second; store 1 so
+    // pu_cool_blocked does not treat this as "no drop yet".
+    powerup_drop_at = run_state.run_timer ? run_state.run_timer : 1;
+}
+u8 powerup_world_live;
+u8 powerup_test_cmd;
 static u8 powerup_clock;
 static u8 powerup_aux;
 static u8 powerup_flags;
@@ -37,19 +48,35 @@ static u8 powerup_last_mp;
 #define PF_BOSS_CLIPPED 0x01
 #define PF_CURSE_WARNED 0x02
 
-// Normal durations in beats (8 frames): 12 s, 15 s, 12 s.
-static const u8 pu_duration[POWERUP_COUNT] = { 0, 90, 112, 90 };
-// Colossus / mini-boss rooms clip (never extend) on entry.
-static const u8 pu_boss_duration[POWERUP_COUNT] = { 0, 60, 75, 90 };
-static const u8 pu_tile[POWERUP_COUNT] = {
-    0, SPR_ITEM_WARD_CHARM, SPR_ITEM_MANA_GEM, SPR_HEART
+// Normal durations in beats (8 frames).
+static const u8 pu_duration[POWERUP_COUNT] = {
+    0, 90, 112, 90, 90, 75, 75, 90, 150
 };
-// OBJ palettes: 1 ward/aura, 6 rift violet (MP), 7 green (regen).
-static const u8 pu_pal[POWERUP_COUNT] = { 0, 0x01, 0x06, 0x07 };
-static const u8 pu_name[POWERUP_COUNT] = { 0, NW_AEGIS, NW_LIMIT, NW_MEND };
-static const u8 pu_effect[POWERUP_COUNT] = { 0, NW_BLOCK3, NW_FREEMP, NW_REGEN };
+// Colossus / mini-boss rooms clip (never extend) on entry.
+static const u8 pu_boss_duration[POWERUP_COUNT] = {
+    0, 60, 75, 90, 60, 45, 45, 60, 90
+};
+static const u8 pu_tile[POWERUP_COUNT] = {
+    0, SPR_ITEM_WARD_CHARM, SPR_ITEM_MANA_GEM, SPR_HEART,
+    SPR_FX_SWING, SPR_SURGE_ORB, SPR_FX_SPEAR, SPR_ITEM_BLAST_SEED,
+    SPR_FX_IMPACT
+};
+// OBJ palettes per the spec colour table.
+static const u8 pu_pal[POWERUP_COUNT] = {
+    0, 0x01, 0x06, 0x07, 0x02, 0x05, 0x04, 0x04, 0x01
+};
+static const u8 pu_name[POWERUP_COUNT] = {
+    0, NW_AEGIS, NW_LIMIT, NW_MEND,
+    NW_FORM, NW_HALO, NW_REACH, NW_ASST, NW_WINGS
+};
+static const u8 pu_effect[POWERUP_COUNT] = {
+    0, NW_BLOCK3, NW_FREEMP, NW_REGEN,
+    NW_COPIES, NW_RING8, NW_AREA4, NW_BLOOM, NW_MATES
+};
 static const u8 pu_hud_icon[POWERUP_COUNT] = {
-    0, HUD_OFFER_VITAL, HUD_OFFER_RUNE, HUD_OFFER_HEAL
+    0, HUD_OFFER_VITAL, HUD_OFFER_RUNE, HUD_OFFER_HEAL,
+    HUD_OFFER_WEAPON, HUD_OFFER_SURGE, HUD_OFFER_FORGE, HUD_OFFER_RELIC,
+    HUD_OFFER_CHART
 };
 
 void powerup_reset(void) BANKED {
@@ -59,6 +86,33 @@ void powerup_reset(void) BANKED {
     powerup_clock = 0;
     powerup_aux = 0;
     powerup_flags = 0;
+    powerup_helpers_on_end();
+}
+
+static u8 pu_blocked_room(void) {
+    return (procgen_current_room_is_boss || run_state_is_boss_room()
+        || run_state_is_miniboss() || run_state_is_shop()
+        || run_state_room_is_town(run_state.room_counter)) ? 1 : 0;
+}
+
+
+static u8 pu_cool_blocked(void) {
+    if (!powerup_drop_at) return 0;
+    // 20 s of run time since the last Capsule or Roulette drop.
+    if ((u16)(run_state.run_timer - powerup_drop_at) < 20) return 1;
+    powerup_drop_at = 0;
+    powerup_drop_cool = 0;
+    return 0;
+}
+
+static u8 pu_live_capsule(void) {
+    u8 i;
+    for (i = 0; i < MAX_ENTITIES; ++i)
+        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_PICKUP
+            && (entities[i].ai_data[0] == PICKUP_POWERUP
+                || entities[i].ai_data[0] == PICKUP_ROULETTE))
+            return 1;
+    return 0;
 }
 
 u8 powerup_spawn(u8 id, fix8_t x, fix8_t y) BANKED {
@@ -72,24 +126,31 @@ u8 powerup_spawn(u8 id, fix8_t x, fix8_t y) BANKED {
         e->palette = pu_pal[id];
         e->hitbox = 0x88;
         e->state_timer = 255;   // lingers like a relic (~4 s)
+        powerup_note_drop();
     }
     return idx;
 }
 
-static void powerup_roll_capsule(fix8_t x, fix8_t y) {
-    u8 i;
-    if (procgen_current_room_is_boss || run_state_is_boss_room()
-        || run_state_is_miniboss() || run_state_is_shop()
-        || run_state_room_is_town(run_state.room_counter)) return;
-    for (i = 0; i < MAX_ENTITIES; ++i)
-        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_PICKUP
-            && entities[i].ai_data[0] == PICKUP_POWERUP) return;
-    powerup_spawn((u8)(1 + rng_range(POWERUP_COUNT - 1)), x, y);
+// Common 70 / uncommon 25 / rare 5, rolled when the Capsule spawns.
+static u8 pu_roll_id(void) {
+    u8 r = rng_range(100);
+    if (r < 70) return (u8)(POWERUP_AEGIS + rng_range(3));
+    if (r < 95) return (u8)(POWERUP_FORMATION + rng_range(4));
+    return POWERUP_WINGMATES;
 }
 
-// RNG-driven enemy-death drop (moved here from pickup_wildcard.c, whose
-// bank 13 sits at its emergency floor). Bands are unchanged except that a
-// Capsule takes 3% (Easy ~4%) from the former "nothing" share.
+static void powerup_roll_capsule(fix8_t x, fix8_t y) {
+    if (pu_blocked_room() || pu_cool_blocked() || pu_live_capsule()) return;
+    powerup_spawn(pu_roll_id(), x, y);
+}
+
+static void powerup_roll_roulette_drop(fix8_t x, fix8_t y) {
+    if (pu_blocked_room() || pu_cool_blocked() || pu_live_capsule()) return;
+    powerup_spawn_roulette(x, y, 0);
+}
+
+// RNG-driven enemy-death drop (moved here from pickup_wildcard.c).
+// Capsule 3% / Roulette ~1.2% on Normal, taken from the former nothing band.
 void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
     u8 r = rng_next_u8();
     if (RUN_IS_EASY()) {
@@ -99,6 +160,7 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
         else if (r < 207) pickup_spawn_surge(x, y);
         else if (r < 212) pickup_spawn_wildcard(x, y);
         else if (r < 222) powerup_roll_capsule(x, y);
+        else if (r < 227) powerup_roll_roulette_drop(x, y);
     } else {
         if (r < 31) pickup_spawn(PICKUP_HEART_HALF, x, y);
         else if (r < 146) pickup_spawn(PICKUP_COIN_1, x, y);
@@ -106,11 +168,18 @@ void pickup_roll_drop(fix8_t x, fix8_t y) BANKED {
         else if (r < 166) pickup_spawn_surge(x, y);
         else if (r < 176) pickup_spawn_wildcard(x, y);
         else if (r < 184) powerup_roll_capsule(x, y);
+        else if (r < 187) powerup_roll_roulette_drop(x, y);
     }
 }
 
+void powerup_try_spawn_capsule(u8 id, fix8_t x, fix8_t y) BANKED {
+    if (pu_blocked_room() || pu_cool_blocked() || pu_live_capsule()) return;
+    powerup_spawn(id, x, y);
+}
+
 static u8 pu_base_duration(u8 id) {
-    u8 d = procgen_current_room_is_boss ? pu_boss_duration[id] : pu_duration[id];
+    u8 d = (procgen_current_room_is_boss || run_state_is_miniboss())
+        ? pu_boss_duration[id] : pu_duration[id];
     if (RUN_IS_EASY()) d = (u8)(d + (d >> 2));
     return d;
 }
@@ -131,14 +200,17 @@ void powerup_collect(u8 id) BANKED {
             + (u16)(base >> 2);
         powerup_ticks = (t > cap) ? cap : (u8)t;
     } else {
+        powerup_helpers_on_end();
         powerup_id = id;
         powerup_ticks = base;
         powerup_aux = 0;
         powerup_aegis_hits = 0;
     }
-    powerup_flags = procgen_current_room_is_boss ? PF_BOSS_CLIPPED : 0;
+    powerup_flags = (procgen_current_room_is_boss || run_state_is_miniboss())
+        ? PF_BOSS_CLIPPED : 0;
     if (id == POWERUP_AEGIS) {
-        powerup_aegis_hits = procgen_current_room_is_boss
+        powerup_aegis_hits = (procgen_current_room_is_boss
+            || run_state_is_miniboss())
             ? POWERUP_AEGIS_BOSS_HITS : POWERUP_AEGIS_HITS;
         sfx_play_reward(SFX_REWARD_RELIC);
     } else if (id == POWERUP_LIMITLESS) {
@@ -154,9 +226,14 @@ void powerup_collect(u8 id) BANKED {
             player.will_charge = 0;
         }
         sfx_play_reward(SFX_REWARD_MAGIC);
-    } else {
+    } else if (id == POWERUP_MEND) {
         sfx_play(SFX_HEART);
+    } else if (id == POWERUP_BLAST) {
+        sfx_play(SFX_FIRE);
+    } else {
+        sfx_play_reward(SFX_REWARD_SURGE);
     }
+    powerup_helpers_on_collect(id);
     fx_spawn(pu_tile[id], pu_pal[id], (i16)player.x + 4,
         (i16)player.y - 8, 30);
     pu_announce(id);
@@ -168,6 +245,7 @@ static void pu_end(void) {
     powerup_ticks = 0;
     powerup_aegis_hits = 0;
     powerup_aux = 0;
+    powerup_helpers_on_end();
     if (id < POWERUP_COUNT && id) {
         hud_show_word(pu_name[id]);
         hud_show_word(NW_ENDED);
@@ -185,7 +263,7 @@ static u8 pu_free_slots(void) {
 void powerup_tick(void) BANKED {
     u8 id = powerup_id;
     if (id == POWERUP_NONE || id >= POWERUP_COUNT) { powerup_reset(); return; }
-    if (procgen_current_room_is_boss) {
+    if (procgen_current_room_is_boss || run_state_is_miniboss()) {
         if (!(powerup_flags & PF_BOSS_CLIPPED)) {
             powerup_flags |= PF_BOSS_CLIPPED;
             if (powerup_ticks > pu_boss_duration[id])
@@ -230,12 +308,14 @@ void powerup_tick(void) BANKED {
         fx_spawn(SPR_FX_IMPACT, 0x06, (i16)player.x + 4,
             (i16)player.y - 10, 10);
     }
+    powerup_helpers_tick();
     if (powerup_clock & 7) return;
 
     // ---- one beat ----
     if (powerup_ticks) powerup_ticks--;
     if (id == POWERUP_MEND) {
-        u8 period = procgen_current_room_is_boss ? 18 : 12;
+        u8 period = (procgen_current_room_is_boss || run_state_is_miniboss())
+            ? 18 : 12;
         if (++powerup_aux >= period) {
             powerup_aux = 0;
             if (player.hp < player.hp_max) {
@@ -279,7 +359,8 @@ void powerup_tick(void) BANKED {
 
 u8 powerup_pack_line(void) BANKED {
     static const char *const names[POWERUP_COUNT] = {
-        "", "AEGIS ", "LIMIT ", "MEND  "
+        "", "AEGIS ", "LIMIT ", "MEND  ",
+        "FORM  ", "HALO  ", "REACH ", "BLAST ", "WINGS "
     };
     u8 secs;
     if (!powerup_id || powerup_id >= POWERUP_COUNT) return 0;

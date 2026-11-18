@@ -19,6 +19,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "game/mire_roots.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/procgen.h"
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -299,6 +300,7 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
         pickup_spawn(recovery
             ? PICKUP_HEART_HALF : PICKUP_COIN_5,
             entities[j].x, entities[j].y);
+        pickup_roll_elite_bonus(entities[j].x, entities[j].y);
         score_add((eid < N_ENEMIES) ? enemies[eid].stats.score : 0);
     } else if (!antidote_try_drop(eid, entities[j].x, entities[j].y)) {
         pickup_roll_drop(entities[j].x, entities[j].y);
@@ -526,6 +528,8 @@ static void combat_player_shots(void) {
         }
         // Melee that cuts shots, and splash bursts, still walk every slot.
         // Ordinary bullets only test the on-screen enemy list.
+        // Copy-vs-boss cap is applied in combat_apply_player_shot_hit when
+        // a boss part is actually overlapped, so mid-air copies stay live.
         if (shot->ai_data[2] || shot->ai_data[6] == PROJ_AUX_SPLASH)
             combat_resolve_player_shot(shot, i, &convergence_giant_hits);
         else

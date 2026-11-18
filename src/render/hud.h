@@ -64,6 +64,8 @@ enum {
     NW_LAMP, NW_SEAL, NW_PACT, NW_LAST, NW_BELL, NW_LURE, NW_WICK,
     // Power-up cards (held HUD_NOTICE_POWERUP_FRAMES). Keep NW_AEGIS first.
     NW_AEGIS, NW_BLOCK3, NW_LIMIT, NW_FREEMP, NW_MEND, NW_REGEN, NW_ENDED,
+    NW_FORM, NW_COPIES, NW_HALO, NW_RING8, NW_REACH, NW_AREA4,
+    NW_ASST, NW_BLOOM, NW_WINGS, NW_MATES,
     NW_COUNT
 };
 // Pickup notice kinds (below the 0x80 status flag, above the stat ids).

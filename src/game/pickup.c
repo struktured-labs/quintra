@@ -32,7 +32,7 @@ static u8 pickup_kind_collectible(u8 kind) {
         || kind == PICKUP_FARFOLD_RELIC || kind == PICKUP_BOON_CHOICE
         || kind == PICKUP_WAYGEAR || kind == PICKUP_WILDCARD
         || kind == PICKUP_HOLLOW_RELIC || kind == PICKUP_ANTIDOTE
-        || kind == PICKUP_POWERUP;
+        || kind >= PICKUP_POWERUP;
 }
 
 static u8 pickup_tile_safe(u8 tile) {
@@ -932,7 +932,8 @@ u8 pickup_check_player_collision(void) BANKED {
                     room_start_weapon_surge();
                     break;
                 case PICKUP_POWERUP:
-                    powerup_collect(entities[i].ai_data[1]);
+                case PICKUP_ROULETTE:
+                    if (powerup_try_collect(i)) { any = 1; continue; }
                     break;
                 case PICKUP_ANTIDOTE:
                     // A full pouch leaves the vial on the floor (it never
