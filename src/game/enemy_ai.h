@@ -85,6 +85,8 @@ extern u8 cinder_pack_alive;
 extern u8 cinder_timer;
 extern u8 cinder_pack_x[CINDER_KILNBACKS];
 extern u8 cinder_pack_y[CINDER_KILNBACKS];
+// Armor rejects this fight (body shots, closed windows, late husks).
+extern u8 cinder_armor_sparks;
 void cinder_pack_reset(void) BANKED;
 void cinder_boss_tick(entity_t *e) BANKED;
 void cinder_draw(void) BANKED;

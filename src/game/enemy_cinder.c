@@ -39,8 +39,12 @@ static u8 cinder_rex_dir;
 static u8 cinder_rex_facing;
 static u8 cinder_rex_target_x;
 static u8 cinder_late_split_spent;
+static u8 cinder_clink_cool;
+static u8 cinder_armor_flash;
+u8 cinder_armor_sparks;
 
 extern u8 entity_anim_counter;
+extern u8 sfx_will_active;
 
 static u8 cinder_abs_diff(u8 a, u8 b) {
     return a > b ? (u8)(a - b) : (u8)(b - a);
@@ -158,6 +162,23 @@ static u8 cinder_shot_touches_body(const entity_t *shot, const entity_t *e) {
     return 0;
 }
 
+// Metallic ping, not SFX_HIT: a rejected shot must not sound like damage.
+// Cooled so a Swarm or MAX volley stays a readable clink, not a noise wall.
+static void cinder_armor_clink(void) {
+    if (cinder_clink_cool) return;
+    if (sfx_melody_locked() || sfx_will_active) return;
+    sfx_claim_channels(8, 8);
+    NR10_REG = 0x00;
+    NR11_REG = 0x00;
+    NR12_REG = 0xC1;
+    NR13_REG = (u8)(2008 & 0xFF);
+    NR14_REG = 0x80 | (u8)(2008 >> 8);
+    NR42_REG = 0x91;
+    NR43_REG = 0x14;
+    NR44_REG = 0x80;
+    cinder_clink_cool = 8;
+}
+
 static void cinder_armor_collision(entity_t *e) {
     u8 i;
     for (i = 0; i < MAX_ENTITIES; ++i) {
@@ -172,10 +193,14 @@ static void cinder_armor_collision(entity_t *e) {
         if (cinder_damage_open && e->hitbox
             && aabb_overlap_ee(&entities[i], e)) continue;
         if (!cinder_shot_touches_body(&entities[i], e)) continue;
-        fx_spawn(SPR_FX_IMPACT, 0,
-            FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 6);
+        // Palette 1 and a slightly longer spark, plus the clink, so this
+        // reject is not mistaken for a damaging SFX_HIT crunch.
+        fx_spawn(SPR_FX_IMPACT, 1,
+            FIX8_TO_INT(entities[i].x), FIX8_TO_INT(entities[i].y), 8);
         entity_kill(i);
-        sfx_play(SFX_HIT);
+        cinder_armor_clink();
+        if (cinder_armor_sparks < 255) cinder_armor_sparks++;
+        cinder_armor_flash = 6;
     }
 }
 
@@ -599,7 +624,9 @@ static void cinder_fire_pack_tick(entity_t *e, u8 damage) {
     e->x = FIX8(cinder_pack_x[4]);
     e->y = FIX8(cinder_pack_y[4]);
     e->hitbox = 0;
-    if (++cinder_timer >= 96) {
+    /* 64 frames (~1.1s): long enough to read the five-husk surprise,
+       short enough that a late volley is not a silent 1.6s absorb. */
+    if (++cinder_timer >= 64) {
         cinder_phase = 2;
         cinder_pattern = 3;
         cinder_timer = 0;
@@ -644,6 +671,9 @@ void cinder_pack_reset(void) BANKED {
     cinder_rex_dir = 2;
     cinder_rex_facing = 0;
     cinder_late_split_spent = 0;
+    cinder_armor_sparks = 0;
+    cinder_clink_cool = 0;
+    cinder_armor_flash = 0;
     entities[cinder_boss_index].state = 0;
     entities[cinder_boss_index].state_timer = 0;
     entities[cinder_boss_index].vx = entities[cinder_boss_index].vy = 0;
@@ -690,6 +720,8 @@ void cinder_boss_tick(entity_t *e) BANKED {
     else if (cinder_phase == 1) cinder_transform_tick(e);
     else if (cinder_phase == 2) cinder_rex_tick(e, damage);
     else cinder_fire_pack_tick(e, damage);
+    if (cinder_clink_cool) cinder_clink_cool--;
+    if (cinder_armor_flash) cinder_armor_flash--;
     cinder_body_contact(e);
     if (cinder_phase == 2) {
         cinder_oam_end = 4;
@@ -737,7 +769,6 @@ void cinder_draw(void) BANKED {
     if (cinder_phase == 2) {
         i16 sx = (i16)rex_bx(e) - room_camera_x + 8;
         i16 sy = (i16)rex_by(e) - room_camera_y + 16;
-        u8 hide = (u8)(flash && (e->ai_data[7] & 1));
         u8 pose = 0;
         // The jaw roars on the breath, the spit and the charge telegraph.
         // The legs stride on the stomp, the charge, and every other beat of
@@ -754,16 +785,34 @@ void cinder_draw(void) BANKED {
             || (cinder_pattern == 3 && cinder_timer >= 34 && cinder_timer < 78)
             || (entity_anim_counter & 16))
             pose |= 2;
-        // A white hit flash swaps to palette 0 rather than blinking out.
-        cinder_rex_big_draw(sx, sy, cinder_rex_facing, hide ? 0 : pose,
-            hide ? 0 : pal);
+        // Head-only flash: the open-window tell and a real vent hit both
+        // set ai_data[7]. Do not gate on cinder_damage_open, or a hit on
+        // the last open frame would lose its flash as the window closes.
+        cinder_rex_big_draw(sx, sy, cinder_rex_facing, pose, pal);
+        /* Head-only flash lives here (bank 9) so bank 18 stays under the
+           emergency floor. The atlas is west-facing: cols 0-1 when facing
+           west, cols 4-5 when facing east, top two rows only. */
+        if (flash && (e->ai_data[7] & 1)) {
+            u8 lo = cinder_rex_facing ? 0 : 4;
+            u8 r, c;
+            for (r = 0; r < 2; ++r)
+                for (c = lo; c < (u8)(lo + 2); ++c)
+                    shadow_OAM[CINDER_REX_OAM_BASE + r * 6 + c].prop &= (u8)~0x07;
+        }
         return;
     } else {
         u8 count = cinder_phase == 0 ? cinder_pack_alive : CINDER_KILNBACKS;
         for (i = 0; i < count; ++i) {
             u8 tile;
             u8 member_pal = pal;
-            if (cinder_phase == 1 || cinder_phase == 3) tile = SPR_KILNBACK_HUSK;
+            if (cinder_phase == 1 || cinder_phase == 3) {
+                tile = SPR_KILNBACK_HUSK;
+                /* Late husks pulse on the armor-spark palette, not pal 0:
+                   pal 0 is the Phase 0 "shoot this vent" tell. */
+                if (cinder_phase == 3
+                    && ((entity_anim_counter & 8) || cinder_armor_flash))
+                    member_pal = 1;
+            }
             else if (cinder_damage_open && i == (u8)(cinder_pack_alive - 1)) {
                 tile = SPR_KILNBACK_VENT;
                 member_pal = (entity_anim_counter & 8) ? 0 : pal;

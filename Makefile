@@ -255,6 +255,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_colossal_serpent.py
 	$(PYBOY_RUN) scripts/test_colossal_cinder.py
 	$(PYBOY_RUN) scripts/test_cinder_big.py
+	$(PYBOY_RUN) scripts/test_cinder_absorb.py
 	$(PYBOY_RUN) scripts/test_colossal_spider.py
 	$(PYBOY_RUN) scripts/test_colossal_mire.py
 	$(PYBOY_RUN) scripts/test_mire_roots.py
