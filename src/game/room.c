@@ -1261,7 +1261,6 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         && riftwild_shift_execute(keys, pressed))
         return vignette_after_shift();
     if (riftwild_den_armed) riftwild_den_tick();
-    if (secret_merchant_armed) secret_merchant_tick();
     if (pressed & J_START) {
         return SCREEN_INVENTORY;
     }

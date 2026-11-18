@@ -498,6 +498,7 @@ static void deliver(u8 code) {
         run_state.veil_charms |= VEIL_CHARM_BIT(c);
         hud_show_word(charm_word[c]);
         secret_merchant_armed = 1;
+        riftwild_den_armed |= 0x02;
         glint_pending = 1;
         return;
     }
@@ -622,6 +623,8 @@ void secret_merchant_room_ready(void) BANKED {
     if (run_state.world_mode && run_state.world_screen < 36
         && secret_cave_field_index(run_state.world_screen) != 0xFF) armed = 1;
     secret_merchant_armed = armed;
+    if (armed) riftwild_den_armed |= 0x02;
+    else riftwild_den_armed &= 0x01;
     glint_pending = armed;
 }
 
@@ -1041,6 +1044,7 @@ void secret_cave_build_room(void) BANKED {
         }
     }
     secret_merchant_armed = 0;
+    riftwild_den_armed &= 0x01;
     // Arrive beside the stair, clear of the shelves (the generic portal
     // arrival at 72,60 would step straight onto the bottle).
     player.x = 40;

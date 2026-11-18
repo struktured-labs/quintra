@@ -204,7 +204,7 @@ static void carve(u8 x, u8 y, u8 floor) {
 
 void riftwild_den_stamp_field(void) BANKED {
     u8 x, y, d, kind, floor, stair;
-    riftwild_den_armed = 0;
+    riftwild_den_armed &= 0x02;   // keep the secret-merchant tick bit
     if (!run_state.world_mode || in_den()) return;
     // Cave-merchant fields never hold a den (secret_merchant.c).
     if (secret_cave_stamp_field()) return;
@@ -248,7 +248,7 @@ void riftwild_den_stamp_field(void) BANKED {
         // will manifest, so the Waking tell still reads as "something here".
     }
     world_set(RIFT_DEN_TELL_X, RIFT_DEN_TELL_Y, stair);
-    riftwild_den_armed = 1;
+    riftwild_den_armed |= 1;
 }
 
 static void open_cairn(u8 d) {
@@ -532,7 +532,7 @@ void riftwild_den_build_room(void) BANKED {
             }
         }
     }
-    riftwild_den_armed = 1;
+    riftwild_den_armed |= 1;
     player.iframes = 60;
 }
 
@@ -577,7 +577,7 @@ static void den_room_tick(void) {
 static void field_tick(void) {
     u8 d = field_cairn_closed();
     u8 fx, fy;
-    if (d == 0xFF) { riftwild_den_armed = 0; return; }
+    if (d == 0xFF) { riftwild_den_armed &= 0x02; return; }
     // Titan Glove (or a Sauran's grip) heaves the stone aside: stand
     // beside it and push into it for a moment.
     if (!(player.class_id == 1
@@ -595,8 +595,12 @@ static void field_tick(void) {
     } else den_touch = 0;
 }
 
+// Bit 1 rides the same room_tick guard for the secret-merchant charms
+// (secret_merchant.c), so ordinary rooms pay no extra per-frame check.
 void riftwild_den_tick(void) BANKED {
-    if (!run_state.world_mode) { riftwild_den_armed = 0; return; }
+    if (riftwild_den_armed & 0x02) secret_merchant_tick();
+    if (!(riftwild_den_armed & 0x01)) return;
+    if (!run_state.world_mode) { riftwild_den_armed &= 0x02; return; }
     if (in_den()) {
         if ((++den_frame & 7) == 0) den_room_tick();
         return;
