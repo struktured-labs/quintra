@@ -26,6 +26,7 @@ TAP_CD = addr("_magic_tap_cd")
 WARD_CD = addr("_magic_ward_cd")
 CURE_USED = addr("_magic_cure_used")
 HOLD = addr("_magic_hold")
+ROOM_SERIAL = addr("_magic_room_serial")
 RUN = addr("_run_state")
 ENEMY_COUNT = addr("_entity_enemy_count")
 ESTATUS = addr("_enemy_status_kind")
@@ -95,6 +96,10 @@ def arena(pb, mp=None):
     pb.memory[TAP_CD] = pb.memory[WARD_CD] = pb.memory[WARD_TICKS] = 0
     pb.memory[CURE_USED] = 0   # a fresh room for Cure's once-per-room rule
     pb.memory[PSTATUS] = 0
+    # entity_init_room bumps this so magic.c drops tracked shots and pending
+    # strikes. A bare entity-table wipe leaves Convergence/ward/thunder
+    # statics live; those leftovers can eat the Thunder ST_STOP apply.
+    pb.memory[ROOM_SERIAL] = (pb.memory[ROOM_SERIAL] + 1) & 0xFF
     # A distant durable body keeps the room's clear reward (MP refund) away.
     entity(pb, 31, 2, 150, 8, hp=200)
     pb.memory[slot(31) + 1] = 0x03   # off screen: no spell targets it
@@ -220,6 +225,9 @@ def check_spells(pb, c):
     elif c == 1:
         # Thunder: sure strike + stun, then a chain that slows a neighbour.
         arena(pb)
+        # tick_live drops room-bound leftovers (Convergence, pending thunder)
+        # on a new magic_room_serial before this cast's FX shares the table.
+        pb.tick()
         foe = entity(pb, 0, 2, 120, 64)
         near = entity(pb, 1, 2, 136, 80)
         tap(pb)

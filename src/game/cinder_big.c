@@ -304,14 +304,16 @@ void cinder_fire_add_fair(u8 x, u8 y, u8 delay, u8 ttl, u8 size,
 /* A Furnace Breath lane that reaches the body hops to its far edge: the
    wall keeps going behind the hound (no safe pocket on either side) and
    never puts a lane sprite on the scanlines the body already fills. */
+extern u8 cinder_breath_lanes;
 void cinder_lanes_skip_body(i16 bx, i16 by) BANKED {
-    u8 i;
+    u8 i, live = 0;
     for (i = 0; i < MAX_ENTITIES; ++i) {
         entity_t *s = &entities[i];
         u8 w, h;
         if ((s->flags & (EF_ACTIVE | EF_BOSS_PROJECTILE))
                 != (EF_ACTIVE | EF_BOSS_PROJECTILE)
             || s->ai_data[1] != BOSS_SHOT_LANE) continue;
+        live = 1;
         w = s->hitbox >> 4; h = s->hitbox & 15;
         if (s->x + w <= bx || s->x >= bx + CINDER_REX_W) continue;
         /* Look 4px ahead: the lane moves after this check this frame. */
@@ -323,4 +325,5 @@ void cinder_lanes_skip_body(i16 bx, i16 by) BANKED {
                 s->y = by - h;
         }
     }
+    cinder_breath_lanes = live;
 }

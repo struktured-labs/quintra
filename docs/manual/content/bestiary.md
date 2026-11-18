@@ -62,6 +62,17 @@ Names are the ones in the content tables, abbreviations included. Health is the 
 
 - **Void Halo.** Health 12. A wide, slow orbit. The pair of lanes is the puzzle. Do not chase the rim.
 
+
+## New specialists (2026-11-17)
+
+- **Veil Magus.** Health 12. Blink-caster: vanishes, reappears at least 24 pixels from you, telegraphs, then fires one bolt. Frost, Shadow, Bloodmoon, Sanctum. At most two in a room.
+- **Hex Walker.** Health 10. Walks a short cardinal stretch, telegraphs, then fires one bolt. Verdant, Frost, Temple.
+- **Vault Hand.** Health 16. A growing shadow, then a grab. Mash edges or land a hit to escape; otherwise it carries you back to the dungeon foyer and keeps your inventory. One per room, never in the foyer, a boss fight, a shop, or a cutscene.
+- **Bane Brute.** Health 22. A long knockback. It only stays if at least two status allies share the room, and it tries to shove you into them. Mire, Shadow, Bloodmoon.
+- **Zag Dart.** Health 8. The zig-zag rush is the threat. A rare slow bolt may appear during cooldown. Crystal, Verdant, Ember, Sanctum.
+- **Leybeam.** Health 14. Cardinal charge, then a 16-pixel-wide beam you must sidestep. One per room. Ember, Temple, Sanctum.
+- **Fuse Hurler.** Health 12. Lobs a fused bomb that shows its blast radius before it bursts, or winds up and explodes around itself if you close in. The blast deals one heart and will not finish you. Ember, Mire, Shadow. At most two in a room. Distinct from the Bomber (a walker that bursts on death) and the Mire Spore (a proximity mine).
+
 ## On the roster, off the ordinary mix
 
 - **S.Sentinel.** Health 50 in the table. Walks. The same enemy id, when flagged as a giant, is how a colossus is marked. Killing the giant advances the stage. Killing a mini-boss does not.

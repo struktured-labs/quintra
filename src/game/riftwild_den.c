@@ -23,6 +23,7 @@
 #include "game/entity.h"
 #include "game/companion.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_new_ai.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/powerup.h"
@@ -648,4 +649,5 @@ void procgen_generate_current_room(void) BANKED {
     // After the room body (or a den/cave) so bank 4 does not pay for the
     // banked call. The function no-ops unless this is the shrine cell.
     powerup_place_room_shrine();
+    new_monsters_post_spawn();
 }

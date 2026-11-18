@@ -21,6 +21,10 @@
 #include "game/dungeon_tools.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
+extern u8 pending_foyer_warp;
+extern u8 vault_hand_holding;
+extern u8 new_monsters_in_room;
+void new_monsters_foyer_warp(void) BANKED;
 #include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/mire_roots.h"
@@ -55,6 +59,7 @@ void stage_event_resolve_fall(void) BANKED;
 
 void tiles_load_switch_pressed(void) BANKED;
 #include "content.h"
+#include "game/enemy_def.h"
 
 BANKREF(room_enter)
 
@@ -144,6 +149,7 @@ u8 shake_mag;
 // room rewrite spans several VBlanks; without this latch, turbo fire resumes
 // after the animation and can immediately strike the same altar a second time.
 static u8 law_action_latch;
+extern u8 shop_buy_a_latch;
 
 extern u8 dungeon_law_toggle_pending;
 
@@ -1201,7 +1207,33 @@ static u8 room_aim_from_step(i8 dx, i8 dy) {
     return room_aim_step_table[(u8)((dy + 1) * 3 + (dx + 1))];
 }
 
+
+/* SDCC lifts locals from nested blocks to the function frame.
+   A 16-byte enemy_def_t here would bloat every room_tick. */
+static u8 room_enemy_table_hp(u8 eid) {
+    enemy_def_t edef;
+    if (eid >= N_ENEMIES) return 0;
+    enemy_load_def(eid, &edef);
+    return edef.stats.hp;
+}
+
+static screen_id_t room_apply_foyer_warp(void) {
+    new_monsters_foyer_warp();
+    DISPLAY_OFF;
+    procgen_generate_current_room();
+    room_draw_tilemap();
+    place_player_sprite();
+    hud_redraw_all();
+    SHOW_SPRITES;
+    SHOW_BKG;
+    DISPLAY_ON;
+    sram_save_run();
+    return SCREEN_SELF;
+}
+
 screen_id_t room_tick(u8 keys, u8 pressed) {
+    if (new_monsters_in_room && pending_foyer_warp)
+        return room_apply_foyer_warp();
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.
     if (dungeon_law_toggle_pending) room_finish_law_toggle();
@@ -1236,6 +1268,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             keys &= (u8)~J_A;
             pressed &= (u8)~J_A;
         } else law_action_latch = 0;
+    }
+    // A paid shop purchase already spent this A on the shelf. Keep the
+    // counter-reach talk from stealing a held press after the ware despawns.
+    if (shop_buy_a_latch) {
+        if (keys & J_A) {
+            keys &= (u8)~J_A;
+            pressed &= (u8)~J_A;
+        } else shop_buy_a_latch = 0;
     }
     if (door_bump_cd) door_bump_cd--;
     if (arrival_sprite_grace) arrival_sprite_grace--;
@@ -1278,6 +1318,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         || player_status_kind == QSTATUS_SLOW
         || player_status_kind == QSTATUS_CONFUSION)
         status_player_filter_input(&keys, &pressed);
+    if (new_monsters_in_room && vault_hand_holding) {
+        keys &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
+        pressed &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
+    }
     // A law altar is a contextual world action. Resolve it before ordinary
     // A fire so a deliberate switch press does not also spend Will or launch
     // a stray attack into the reshaping architecture.
@@ -1999,7 +2043,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // visible loss by several true hits.
         if (!found && player.class_id == 2 && corvin_i != 0xFF) {
             u8 eid = entities[corvin_i].ai_data[0];
-            u8 max = (eid < N_ENEMIES) ? enemies[eid].stats.hp : 0;
+            u8 max = room_enemy_table_hp(eid);
             if (max) {
                 if (!run_state.world_mode
                     && run_state_dungeon_local() < 3) {

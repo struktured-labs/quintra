@@ -101,6 +101,13 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_SPORE_MINE 11\n\
          #define AI_COUNTER_GUARD 12\n\
          #define AI_SUMMONER 13\n\
+         #define AI_BLINK_CASTER 14\n\
+         #define AI_WALK_CASTER 15\n\
+         #define AI_GRABBER 16\n\
+         #define AI_SHOVER 17\n\
+         #define AI_ZIGZAG 18\n\
+         #define AI_BEAM_CASTER 19\n\
+         #define AI_BOMB_LOBBER 20\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -377,7 +384,9 @@ fn write_enemies(out: &Path, reg: &Registry) -> Result<()> {
     write_if_changed(out.join("enemies.h"), h)?;
 
     let mut b = String::from(HEADER_NOTE);
-    b.push_str("#include \"enemies.h\"\n\n");
+    // The roster used to live in bank 0. Six new specialists pushed HOME/GSINIT
+    // past 0x4000 (white-screen boot). Bank 25 already holds their AI.
+    b.push_str("#pragma bank 25\n#include \"enemies.h\"\n\n");
     b.push_str("const enemy_def_t enemies[] = {\n");
     for e in &reg.enemies { b.push_str(&emit_enemy(e)); }
     b.push_str("};\n");
@@ -415,6 +424,19 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_COUNTER_GUARD", guard_cooldown, rush_ticks, 0),
         AiScriptId::Summoner { sight_radius, tell_ticks } =>
             ("AI_SUMMONER", sight_radius, tell_ticks, 0),
+        AiScriptId::BlinkCaster { vanish_ticks, tell_ticks } =>
+            ("AI_BLINK_CASTER", vanish_ticks, tell_ticks, 0),
+        AiScriptId::WalkCaster { walk_ticks, tell_ticks } =>
+            ("AI_WALK_CASTER", walk_ticks, tell_ticks, 0),
+        AiScriptId::Grabber { shadow_ticks, grab_ticks } =>
+            ("AI_GRABBER", shadow_ticks, grab_ticks, 0),
+        AiScriptId::Shover => ("AI_SHOVER", 0, 0, 0),
+        AiScriptId::ZigZag { tell_ticks, burst_ticks, cooldown_ticks } =>
+            ("AI_ZIGZAG", tell_ticks, burst_ticks, cooldown_ticks),
+        AiScriptId::BeamCaster { tell_ticks, beam_ticks, cooldown_ticks } =>
+            ("AI_BEAM_CASTER", tell_ticks, beam_ticks, cooldown_ticks),
+        AiScriptId::BombLobber { walk_ticks, tell_ticks, cooldown_ticks } =>
+            ("AI_BOMB_LOBBER", walk_ticks, tell_ticks, cooldown_ticks),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\
@@ -737,7 +759,7 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
          extern const u8 stage_room_archetype[N_STAGES];\n\
          /* Weighted normal-room rosters per stage (ids + weights,\n\
             stage_pool_n entries each; weights sum <= 255) */\n\
-         #define STAGE_POOL_MAX 7\n\
+         #define STAGE_POOL_MAX 10\n\
          extern const u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX];\n\
          extern const u8 stage_pool_n[N_STAGES];\n\
@@ -791,16 +813,16 @@ fn write_stages(out: &Path, reg: &Registry) -> Result<()> {
 
     c.push_str("\nconst u8 stage_pool_ids[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ids = [0u8; 7];
+        let mut ids = [0u8; 10];
         for (i, &(eid, _)) in s.enemy_pool.iter().enumerate() { ids[i] = eid; }
-        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], ids[6]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {} }},\n", ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], ids[6], ids[7], ids[8], ids[9]));
     }
     c.push_str("};\n");
     c.push_str("const u8 stage_pool_w[N_STAGES][STAGE_POOL_MAX] = {\n");
     for s in &reg.stages {
-        let mut ws = [0u8; 7];
+        let mut ws = [0u8; 10];
         for (i, &(_, w)) in s.enemy_pool.iter().enumerate() { ws[i] = w; }
-        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4], ws[5], ws[6]));
+        c.push_str(&format!("    {{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {} }},\n", ws[0], ws[1], ws[2], ws[3], ws[4], ws[5], ws[6], ws[7], ws[8], ws[9]));
     }
     c.push_str("};\n");
     c.push_str(&format!("const u8 stage_pool_n[N_STAGES] = {{ {} }};\n",

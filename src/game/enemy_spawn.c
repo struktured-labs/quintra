@@ -7,6 +7,8 @@
 #include "game/enemy_ai.h"
 #include "game/entity.h"
 #include "content.h"
+#include "game/enemy_def.h"
+extern u8 new_monsters_in_room;
 
 // Spawn-only initializer owned by the feature bank. Keeping the declaration
 // private avoids making every translation unit depend on this cold hook.
@@ -24,7 +26,10 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
     if (idx == 0xFF) return 0xFF;
     e = &entities[idx];
     {
-        const enemy_def_t *def = &enemies[enemy_content_id];
+        enemy_def_t def_buf;
+        const enemy_def_t *def;
+        enemy_load_def(enemy_content_id, &def_buf);
+        def = &def_buf;
         e->x           = FIX8((i16)tile_x * 8);
         e->y           = FIX8((i16)tile_y * 8);
         e->vx = e->vy  = 0;
@@ -38,7 +43,7 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         if (def->ai_kind == AI_COUNTER_GUARD || def->ai_kind == AI_SUMMONER)
             e->state = 0;
         e->state_timer = 30;
-        if (enemy_content_id >= ENEMY_FACET_RAM) {
+        if (enemy_content_id >= ENEMY_FACET_RAM && enemy_content_id <= ENEMY_STAGE_REAPER) {
             enemy_patrol_init(e, enemy_content_id);
             return idx;
         }
@@ -49,11 +54,16 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         } else if (enemy_content_id == ENEMY_STONE_SENTINEL
             || enemy_content_id == ENEMY_ORC
             || enemy_content_id == ENEMY_BOMBER
-            || enemy_content_id == ENEMY_WARLOCK) {
+            || enemy_content_id == ENEMY_WARLOCK
+            || enemy_content_id == ENEMY_BANE_BRUTE
+            || enemy_content_id == ENEMY_VAULT_HAND) {
             e->hitbox = (u8)0xDD;
         } else {
             e->hitbox = (6 << 4) | 6;
         }
     }
+    if (enemy_content_id >= ENEMY_VEIL_MAGUS
+        && enemy_content_id <= ENEMY_FUSE_HURLER)
+        new_monsters_in_room = 1;
     return idx;
 }

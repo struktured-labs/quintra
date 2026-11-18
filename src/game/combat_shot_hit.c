@@ -24,11 +24,17 @@
 #include "game/magic.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/enemy_def.h"
 extern u8 large_boss_index;
 
 u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED;
 u8 status_enemy_effective_poise(u8 idx, u8 poise) BANKED;
 u8 status_enemy_hit_damage(u8 idx, u8 damage) BANKED;
+
+/* BSS, not a function-local: two 16-byte enemy_def_t copies on this
+   BANKED frame made the shot-hit stack 40 bytes and could prevent
+   hit_body from applying a status after the impact FX. */
+static enemy_def_t combat_edef;
 
 static void knockback_enemy(entity_t *e, i8 bvx, i8 bvy, u8 poise) {
     u8 n;
@@ -72,12 +78,17 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     // Keep specialist rejection out of the miss scan's stack frame. The
     // helper is entered only for authored armor, shell, or projection
     // bodies—not every ordinary contact.
-    if (eid == ENEMY_FACET_RAM || eid == ENEMY_FOLD_STAR
-            || (eid < N_ENEMIES
-                && enemies[eid].ai_kind == AI_COUNTER_GUARD)) {
-        enemy_special_reject_hit(i, j);
-        // Projectile retirement is the authoritative rejection result.
-        if (!(shot->flags & EF_ACTIVE)) return 1;
+    {
+        u8 armor = (eid == ENEMY_FACET_RAM || eid == ENEMY_FOLD_STAR);
+        if (!armor && eid < N_ENEMIES) {
+            enemy_load_def(eid, &combat_edef);
+            armor = (combat_edef.ai_kind == AI_COUNTER_GUARD);
+        }
+        if (armor) {
+            enemy_special_reject_hit(i, j);
+            // Projectile retirement is the authoritative rejection result.
+            if (!(shot->flags & EF_ACTIVE)) return 1;
+        }
     }
     // Fang Forms is a two-body cleave, not two consecutive damage ticks
     // against one overlapping body. Preserve the projectile so it can
@@ -103,11 +114,16 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
         // normal pierce value against separate crowd bodies.
         shot->hp = 1;
     }
-    weakness = (eid < N_ENEMIES) ? enemies[eid].stats.weakness : 0;
+    weakness = 0;
+    poise = 0;
+    if (eid < N_ENEMIES) {
+        enemy_load_def(eid, &combat_edef);
+        weakness = combat_edef.stats.weakness;
+        poise = combat_edef.stats.poise;
+    }
     // Large bosses reuse the Stone Sentinel definition but must not inherit
     // its lightning-only weakness, and they have no elemental weakness.
     if (eid == ENEMY_STONE_SENTINEL && ej->ai_data[3]) weakness = 0;
-    poise = (eid < N_ENEMIES) ? enemies[eid].stats.poise : 0;
     poise = status_enemy_effective_poise(j, poise);
 
     dmg = shot->damage;

@@ -1879,6 +1879,5 @@ void procgen_generate_room_body(void) BANKED {
     // The false-gap normalizer above is intentionally the final terrain
     // writer. It can close a visually misleading slit beneath a body that was
     // valid when population ran, so validate every hostile one last time.
-
     player.iframes = 60;    // brief invuln on room entry
 }

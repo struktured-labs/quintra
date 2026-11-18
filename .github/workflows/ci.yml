@@ -105,6 +105,15 @@ jobs:
       - name: PyBoy new game and Continue start, all heroes and boot paths (room, spawn, music, vignette champion)
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_new_game_start.py
 
+      - name: PyBoy new specialists (Wizrobe, Hand, Brute, Dart, Leybeam, Fuse Hurler)
+        run: |
+          for t in veil_magus hex_walker vault_hand bane_brute zag_dart leybeam fuse_hurler confusion_fx; do
+            uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_$t.py
+          done
+
+      - name: PyBoy room performance (CGB double-speed)
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_performance.py
+
       - name: PyBoy suspend power-cycle
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
 

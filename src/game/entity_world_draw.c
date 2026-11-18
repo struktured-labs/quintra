@@ -4,6 +4,9 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+extern u8 new_monsters_in_room;
+extern u8 confusion_swirl_live;
+void new_monsters_draw(void) BANKED;
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/cinder_big.h"
@@ -67,4 +70,7 @@ void entity_draw_all_world(void) BANKED {
 #include "game/entity_draw_core.h"
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
+    if (new_monsters_in_room || player_status_kind == QSTATUS_CONFUSION
+        || confusion_swirl_live)
+        new_monsters_draw();
 }

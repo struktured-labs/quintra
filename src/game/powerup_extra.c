@@ -1,8 +1,8 @@
-#pragma bank 31
+#pragma bank 29
 
 // Phase 2-4 bodies: roulette, shrines, fire copies, Wingmates,
-// Confusion stars. Pinned to bank 31 so autobank cannot drop
-// this file onto a bank that is already on its 256-byte floor.
+// Confusion stars. Pinned with relic_runtime in bank 29 so bank 31
+// can hold elemental magic without opening a 1MB (bank 32) cartridge.
 // Called through BANKED prototypes in powerup.h.
 
 #include <gb/gb.h>

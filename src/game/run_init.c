@@ -10,6 +10,7 @@
 #include "game/loop.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "game/room.h"
 #include "game/run_init.h"
 #include "game/run_state.h"
 #include "game/sram.h"
@@ -68,6 +69,10 @@ void run_init_enter(void) {
         apply_stage_warp_progression(stage);
     }
     sram_clear_run();   // a fresh run invalidates any suspend save
+    // An attract demo can die (for example when stage pools change) and leave
+    // death_timer armed. The title hands back cleanly, but the next New Game
+    // would then count that leftover beat and jump to GAME OVER in the foyer.
+    death_timer = 0;
 }
 
 void run_init_exit(void) {}

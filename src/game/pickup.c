@@ -249,6 +249,11 @@ static u8 pickup_is_town_resident(u8 kind) {
         || kind == PICKUP_LOREKEEPER || kind == PICKUP_BELLKEEPER;
 }
 
+// After a paid shelf purchase, hold A must not immediately open the
+// keeper's counter talk. The ware entity is already gone, so the
+// WARE_STANCE check cannot protect this press. Cleared once A is up.
+u8 shop_buy_a_latch;
+
 // These residents provide visual context (and, in the merchant/Lorekeeper
 // cases, an update-time proximity cue) but no collision-time transaction.
 // Keep the healer and Chartwright out of this set: their one-per-visit
@@ -1144,6 +1149,7 @@ u8 pickup_check_player_collision(void) BANKED {
                     }
                     if (player.coins >= price) {
                         player.coins = (u16)(player.coins - price);
+                        shop_buy_a_latch = 1;
                         hud_redraw_coins();
                         sfx_play_reward(SFX_REWARD_PURCHASE);
                         switch (entities[i].ai_data[1]) {

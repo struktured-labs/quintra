@@ -8,6 +8,7 @@
 #include "game/rare_enemy.h"
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_new_ai.h"
 #include "game/hexa_boss.h"
 #include "game/enemy_mirror.h"
 #include "game/enemy_spore.h"
@@ -21,6 +22,7 @@
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
+#include "game/enemy_def.h"
 
 // Per-AI scratch layout in entity_t:
 //   ai_data[0] = content enemy id (all AIs)
@@ -571,9 +573,37 @@ static void boss_tick(entity_t *e) {
 
 // ---------------- Dispatch ----------------------------------------------
 
+/* SDCC allocates the union of a function's locals at entry, including
+   nested blocks. A 16-byte enemy_def_t on enemy_update's stack was
+   enough for sixteen Blue Crawlers to miss video rate after #145.
+   Keep this helper out of the walker hot path. */
+static void enemy_update_from_def(entity_t *e, u8 id) {
+    enemy_def_t def_buf;
+    const enemy_def_t *def;
+    enemy_load_def(id, &def_buf);
+    def = &def_buf;
+    if (def->ai_kind >= AI_BLINK_CASTER && def->ai_kind <= AI_BOMB_LOBBER) {
+        new_monster_update(e, def);
+        return;
+    }
+    switch (def->ai_kind) {
+        case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
+        case AI_CHARGER: charger_tick(e, def);             break;
+        case AI_SHOOTER: shooter_tick(e, def);             break;
+        case AI_SPINNER: spinner_update(e, def);           break;
+        case AI_TELEPORT: teleport_tick(e, def);           break;
+        case AI_TURRET:   turret_tick(e, def);             break;
+        case AI_REPLICATOR: fold_star_update(e, def);        break;
+        case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
+        case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
+        case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;
+        case AI_SUMMONER: rift_cantor_update(e, def);                     break;
+        default:         walker_tick(e);                   break;
+    }
+}
+
 void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
-    const enemy_def_t *def = &enemies[id];
     if ((e->flags & EF_RARE) && rare_enemy_tick(e)) return;
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
     // Return-echo elites are 24x24 Reaper/Weaver/Maw. Weaver and Maw take
@@ -592,22 +622,11 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     if (id == ENEMY_BLUE_CRAWLER) {
         blue_crawler_pattern_tick(e, idx);
         if (e->ai_data[4] == 2 && e->ai_data[3] >= 145) return;
+        walker_tick(e);
+        return;
     }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
-    if (id >= ENEMY_FACET_RAM) { enemy_patrol_update(e, id); return; }
-    switch (def->ai_kind) {
-        case AI_CHASER:  chaser_tick(e, def->stats.speed); break;
-        case AI_CHARGER: charger_tick(e, def);             break;
-        case AI_SHOOTER: shooter_tick(e, def);             break;
-        case AI_SPINNER: spinner_update(e, def);           break;
-        case AI_TELEPORT: teleport_tick(e, def);           break;
-        case AI_TURRET:   turret_tick(e, def);             break;
-        case AI_REPLICATOR: fold_star_update(e, def);        break;
-        case AI_MIRROR: mirror_moth_update(e, def->ai_p0);   break;
-        case AI_SPORE_MINE: mire_spore_update(e, def->ai_p0, def->ai_p1); break;
-        case AI_COUNTER_GUARD: counter_guard_tick(e, def);                break;
-        case AI_SUMMONER: rift_cantor_update(e, def);                     break;
-        default:         walker_tick(e);                   break;
-    }
+    if (id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER) { enemy_patrol_update(e, id); return; }
+    enemy_update_from_def(e, id);
 }
