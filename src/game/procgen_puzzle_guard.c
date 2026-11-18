@@ -13,7 +13,7 @@ void procgen_place_visible_puzzle_guard(void) BANKED {
     // one existing puzzle guard onto the arm visible from the arrival camera,
     // far enough inward to read as a sentry rather than a doorway collision.
     // The west/north screen uses x=104 rather than the x=120 batch anchor so
-    // the body never covers the Aether plate at (16,8).
+    // the body never covers the Aether plate at (16,9).
     i16 px = room_camera_x ? 176 : 104;
     i16 py = room_camera_y ? 176 : 64;
     if (room_camera_y) px = 72;

@@ -46,13 +46,6 @@ u8 room_rune_y[5];
 u8 room_rune_pitch[5];
 u8 room_rune_lit_mask;
 
-static u8 phase_switch_state;
-
-static const u8 phase_switch_x[4] = { 4, 8, 12, 16 };
-// Each plate transforms itself and its neighbor(s), producing a compact
-// four-bit Lights-Out grammar instead of a one-step remote door button.
-static const u8 phase_switch_mask[4] = { 0x03, 0x07, 0x0E, 0x0C };
-static const u8 phase_switch_solutions[5] = { 0x07, 0x0B, 0x0D, 0x0E, 0x0F };
 
 static const u8 rune_orders[18] = {
     0,1,2, 0,2,1, 1,0,2, 1,2,0, 2,0,1, 2,1,0
@@ -261,39 +254,17 @@ static void prepare_sequence(u32 seed) {
 }
 
 static void prepare_phase_switch(u8 bit, u32 seed) {
-    u8 i, presses;
-    // This room can own W/E/S graph exits. A stage archetype may leave its
-    // central switch visible while a 12px hero still cannot reach the east
-    // Sigil threshold through the surrounding pillars. Carve explicit
-    // body-width cardinal lanes before placing the switch so every authored
-    // graph edge remains physically usable, not merely present in the border.
+    // Body-width cardinal lanes so every authored graph edge stays usable.
     floor_rect(1, 7, ROOM_W - 2, 3);
     floor_rect(9, 1, 3, ROOM_H - 2);
-    phase_switch_state = 0x0F;
-    if (!(run_state.dungeon_phase & bit)) {
-        // Generate backwards from the solved state using a three/four-press
-        // seed-stable solution. The line transform is invertible, so every
-        // published lattice has exactly one solution and never soft-locks.
-        presses = phase_switch_solutions[(u8)seed % 5];
-        for (i = 0; i < 4; ++i)
-            if (presses & (1u << i))
-                phase_switch_state ^= phase_switch_mask[i];
-    }
-    // The row voices pitches 0..3 (sfx_play_rune(i)), so each switch wears
-    // the same per-pitch note plate and colour as a rune-sequence phrase:
-    // raised and plain while dark, sunken and brighter while lit.
-    room_rune_count = 4;
-    room_rune_lit_mask = phase_switch_state;
-    for (i = 0; i < 4; ++i) {
-        room_rune_x[i] = phase_switch_x[i];
-        room_rune_y[i] = 8;
-        room_rune_pitch[i] = i;
-        room_tilemap[8][phase_switch_x[i]] =
-            (phase_switch_state & (1u << i)) ? RUNE_LIT_TILE(i)
-                                             : RUNE_IDLE_TILE(i);
-    }
     room_puzzle_visual_y = 8;
     room_puzzle_phase_bit = bit;
+    /* Fold the 32-bit seed here so the banked prepare does not pay
+       SDCC's expensive u32-argument trampoline. */
+    {
+        u8 mix = (u8)(seed ^ (seed >> 8) ^ (seed >> 16) ^ (seed >> 21));
+        rune_row_prepare(bit, mix);
+    }
 }
 
 static void prepare_phase_gate(u8 bit) {
@@ -588,51 +559,26 @@ static u8 update_sequence(u8 tx, u8 ty) {
     }
     rune_progress++;
     room_rune_lit_mask |= (u8)(1u << touched);
-    voice_plate(touched);
-    if (rune_progress < rune_count) return 0;
-    // The room unlocks now. Only the fanfare waits, so the last note is heard.
+    if (rune_progress < rune_count) {
+        voice_plate(touched);
+        return 0;
+    }
+    // Atomic final note + ducked delayed fanfare. mark() re-arms the delay
+    // without starting the jingle immediately.
+    voice_plate_final(touched);
     mark_puzzle_solved(1);
     return 1;
-}
-
-static void update_phase_switch(u8 tx, u8 ty) {
-    u8 i, touched = 0xFF;
-    for (i = 0; i < 4; ++i)
-        if (tx == phase_switch_x[i] && ty == 8) touched = i;
-    if (touched == 0xFF) {
-        puzzle_contact = 0;
-        return;
-    }
-    if (puzzle_contact) return;
-    puzzle_contact = 1;
-    if (run_state.dungeon_phase & room_puzzle_phase_bit) return;
-    phase_switch_state ^= phase_switch_mask[touched];
-    room_rune_lit_mask = phase_switch_state;
-    rune_paint_all();
-    if (phase_switch_state == 0x0F) {
-        run_state.dungeon_phase |= room_puzzle_phase_bit;
-        sfx_play(SFX_PUZZLE);
-        room_shake(1, 12);
-    } else voice_plate(touched);
-}
-
-void puzzle_phase_switch_zap(void) BANKED {
-    // Lightning throws the whole remote lattice from range.
-    run_state.dungeon_phase ^= room_puzzle_phase_bit;
-    if (run_state.dungeon_phase & room_puzzle_phase_bit)
-        phase_switch_state = 0x0F;
-    room_rune_lit_mask = phase_switch_state;
-    rune_paint_all();
 }
 
 u8 puzzle_update_player(void) BANKED {
     u8 tx = (u8)((player.x + 8) >> 3);
     u8 ty = (u8)((player.y + 12) >> 3);
     tick_rune_flash();
+    rune_echo_tick();
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_puzzle_locked)
         return update_sequence(tx, ty);
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH)
-        update_phase_switch(tx, ty);
+        rune_row_tick(tx, ty);
     if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE && prism_tick()) {
         mark_puzzle_solved(0);
         return 1;
