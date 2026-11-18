@@ -243,6 +243,9 @@ jobs:
       - name: Hexa Dragmar body art
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_body_art_and_contrast.py
 
+      - name: PyBoy B-item icon picker and equipped-B HUD
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_b_item_picker.py
+
       - name: PyBoy pickup notices (every pickup names its effect)
         run: |
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_notices.py

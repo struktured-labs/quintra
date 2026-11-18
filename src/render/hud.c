@@ -104,7 +104,7 @@ static void hud_set_lane_palette(u8 palette) {
 // 1-row HUD layout (20 tiles wide):
 //
 //   col:  0.......7 8 9 10 11 12.....15 16 17 18 19
-//        [hearts ×8][MP] [depth] [boss×4] [$] [coins]
+//        [hearts ×8][MP] [B+icon] [boss×4] [$] [coins]
 
 void hud_init(void) BANKED {
     tiles_load_hud();
@@ -211,27 +211,31 @@ void hud_redraw_mp(void) BANKED {
 }
 
 void hud_redraw_depth(void) BANKED {
-    // Room depth as 2 digits (cols 10-11). Stage identity remains available
-    // from biome art and the pack screen; the old redundant digit made max-HP
-    // relics impossible to display for Sauran.
+    // Cols 10-11 show the equipped B item (letter + icon). Hunger still
+    // takes this slot so "hearts cannot heal" never feels like a bug.
+    // Notices cover the box and this redraw restores it when they expire.
+    // Room depth remains on the Pack.
     u8 row[2];
     if (hud_notice_ticks) return;
-    u8 d = run_state.room_counter;
     if (player.curse_flags & CURSE_HUNGER) {
-        // Hunger is a timed "hearts cannot heal" curse. While it lasts, the
-        // depth slot shows H + rooms left so the rule never feels like a bug.
-        d = player.curse_rooms;
+        u8 d = player.curse_rooms;
         if (d > 9) d = 9;
         row[0] = BGT_AREA_H;
         row[1] = (u8)(HUD_DIGIT_0 + d);
-        VBK_REG = 0;
-        set_win_tiles(10, 0, 2, 1, row);
-        return;
+    } else {
+        tiles_load_hud_b_icon(player.active_item);
+        row[0] = HUD_B_LETTER;
+        row[1] = HUD_B_ICON;
     }
-    if (d > 99) d = 99;
-    row[0] = (u8)(HUD_DIGIT_0 + (d / 10));
-    row[1] = (u8)(HUD_DIGIT_0 + (d % 10));
-    VBK_REG = 0;
+    // Notices can paint cols 10-15 on a temporary palette. Restore pal 7
+    // here; hud_set_lane_palette only covers the 12-15 lane.
+    {
+        u8 attr[2];
+        attr[0] = attr[1] = 7;
+        VBK_REG = 1;
+        set_win_tiles(10, 0, 2, 1, attr);
+        VBK_REG = 0;
+    }
     set_win_tiles(10, 0, 2, 1, row);
 }
 

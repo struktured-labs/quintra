@@ -1,9 +1,15 @@
 # B-item icon picker
 
-Status: **spec only.** Issue #71. Carmelo could not discover how to equip
-the Hookshot. This document proposes a Zelda-style icon picker and an
-always-visible equipped-B HUD box. No gameplay code in this change; wait
-for his approval before implementing.
+Status: **implemented** (defaults for the unanswered design questions).
+Issue #71. The Aim page is a Zelda-style icon picker, and the 1-row HUD
+shows the equipped B item in cols 10-11 (Hunger still uses that slot).
+Carmelo never answered the HUD / first-pickup questions, so this ships
+the playfield-safe 1-row box, leaves the class power equipped on a first
+tool pickup, keeps the aim-mode toggle on this page, always shows five
+wells, and uses the already-redrawn Hookshot and Morningstar tiles.
+CUTSCENES ONCE/OFF moved to Combat Help (LEFT/RIGHT) so the picker can
+use LEFT/RIGHT to choose an item. First-pickup still uses the short HUD
+word; a three-line claim dialog is a follow-up.
 
 ## Current behavior
 

@@ -23,7 +23,7 @@ in from behind the frame, and one cheap effect: the rift tear plus a white flash
 a crystal palette glint, four falling leaves with a flower palette pulse, snowflakes, a mire heartbeat and bubble cycle, a rising portcullis and torch flicker, a sun ramp, a moon pulse with bats, or drifting void shards with a rift shimmer.
 A, B or START skips after 8 frames. Each one plays once per run, tracked by `vignette_seen`, which is
 cleared in `run_state_init`.
-**PACK → aim page → LEFT/RIGHT** toggles `CUTSCENES ONCE/OFF`. The setting is stored in SRAM meta
+**PACK → Combat Help (SELECT four times) → LEFT/RIGHT** toggles `CUTSCENES ONCE/OFF`. The setting is stored in SRAM meta
 (`META_FLAG_CUTSCENES_OFF`). When a vignette is not played, a Riftwild-to-dungeon entry shows the
 existing stage card; a new-run foyer or town-to-dungeon entry keeps the ordinary dim fade.
 
