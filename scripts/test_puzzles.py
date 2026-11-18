@@ -23,6 +23,10 @@ NOI = ROM.with_suffix(".noi").read_text()
 # Floor-note CH1 envelope: volume 15, decrease, period 3. Louder and
 # slower than the old 0xA2 (vol 10, period 2) so each plate rings clearly.
 RUNE_ENV = 0xF3
+# Final accepted note: volume 15, decrease, period 7, so the pitch holds
+# through the 40-frame delay before the reveal jingle takes CH1.
+RUNE_ENV_FINAL = 0xF7
+RUNE_ENV_ECHO = 0xF2
 
 
 def addr(name):
@@ -37,6 +41,8 @@ def rune_addrs():
     names = (
         "_room_rune_count", "_room_rune_x", "_room_rune_y", "_room_rune_pitch",
         "_room_rune_lit_mask", "_room_bg_origin_x", "_room_bg_origin_y",
+        "_room_row_len", "_room_row_phrase", "_room_row_progress",
+        "_room_echo_mode",
     )
     return {name: addr(name) for name in names}
 
@@ -301,7 +307,7 @@ def feet_on(pb, tx, ty):
         heard_ch4.add(pb.memory[0xFF21])
         # Damage lands around tick 4 and the note on tick 5. Stop once the
         # note is still speaking so the final-rune hold can be measured.
-        if i >= 4 and pb.memory[0xFF12] == RUNE_ENV:
+        if i >= 4 and pb.memory[0xFF12] in (RUNE_ENV, RUNE_ENV_FINAL, RUNE_ENV_ECHO):
             break
     return heard_ch1, heard_ch4
 
@@ -458,36 +464,47 @@ def solve_runes(pb, runes):
             # the slow envelope before this check, because the flash helper
             # was added on this branch.
             held_mid = 0
-            nr10 = pb.memory[0xFF10]
-            while held_mid < 48 and pb.memory[0xFF12] == RUNE_ENV:
-                held_mid += 1
-                pb.tick()
             held_final = 0
-            if pb.memory[0xFF12] == RUNE_ENV or held_mid:
-                # held_mid already consumed the post-feet ticks; remember
-                # the envelope was 0xF3 for held_mid frames. Final-note
-                # fanfare is checked after the flash settles.
-                pass
-            wait_rune_flash(pb)
+            nr10 = pb.memory[0xFF10]
+            # Count mid-phrase 0xF3 or the longer 0xF7 final before the
+            # ducked fanfare takes CH1 at frame 40+8.
+            while (held_mid + held_final) < 80:
+                env = pb.memory[0xFF12]
+                if env == RUNE_ENV:
+                    held_mid += 1
+                elif env == RUNE_ENV_FINAL:
+                    held_final += 1
+                else:
+                    break
+                pb.tick()
+            if pb.memory[LOCKED]:
+                wait_rune_flash(pb)
             if not pb.memory[LOCKED] or all(lit(rune) for rune in (*prefix, candidate)):
                 assert pb.memory[PL + 2] == hp_before, (
                     "correct rune damaged the champion"
                 )
                 if not pb.memory[LOCKED]:
-                    # The solve frame must still be the final rune, not the fanfare.
                     # NR10 bit 7 is unused and reads back as 1 on the APU.
-                    # held_mid counted 0xF3 frames immediately after feet_on,
-                    # before the flash wait and this fanfare check.
                     assert (nr10 & 0x7F) == 0x00, (
                         f"final rune grew a sweep: NR10=0x{nr10:02X}")
-                    assert RUNE_ENV in heard_ch1, (
+                    assert RUNE_ENV_FINAL in heard_ch1 or held_final, (
                         f"final note was cut off: heard={sorted(heard_ch1)}")
-                    assert held_mid >= 10, f"final rune lasted only {held_mid} extra frames"
-                    # One host tick can cross the fanfare's D4 into its F4.
-                    # Either envelope means the solved figure followed the note.
+                    assert held_final >= 24, (
+                        f"final rune lasted only {held_final} frames of 0xF7")
+                    # Hold should outlast the old 20-frame delay. Then CH4
+                    # breath (8 frames) and D4 (0xA4) take CH1.
+                    if pb.memory[0xFF12] == RUNE_ENV_FINAL:
+                        for _ in range(40):
+                            pb.tick()
+                            if pb.memory[0xFF12] != RUNE_ENV_FINAL:
+                                break
+                    for _ in range(16):
+                        if pb.memory[0xFF12] in (0xC0, 0xA4):
+                            break
+                        pb.tick()
                     assert pb.memory[0xFF12] in (0xC0, 0xA4), (
-                        f"puzzle fanfare did not follow the note: "
-                        f"0x{pb.memory[0xFF12]:02X}")
+                        f"puzzle fanfare did not follow the ducked final note: "
+                        f"0x{pb.memory[0xFF12]:02X} after {held_final} frames")
                 found = candidate
                 prefix.append(candidate)
                 if pb.memory[LOCKED]:
@@ -572,10 +589,24 @@ def rune_scale_source_contract():
         "rune notes no longer hold CH1 for the slow decay"
     after = sfx.split("void sfx_play_puzzle_after_note", 1)[1].split(
         "void sfx_play_rune", 1)[0]
-    assert "pend_timer = 20" in after, \
-        "final-note fanfare delay is no longer 20 frames"
-    assert "melody_lock(MELODY_PRIORITY_SECRET, 65)" in after, \
+    assert "pend_timer = 40" in after, \
+        "final-note fanfare delay is no longer 40 frames"
+    assert "melody_lock(MELODY_PRIORITY_SECRET, 93)" in after, \
         "delayed fanfare is no longer locked against pickup voices"
+    rune_final = (ROOT / "src/audio/sfx_rune.c").read_text()
+    assert "rune_ch1(0xF7, rune_notes[step])" in rune_final, \
+        "final rune envelope is no longer volume 15 / decay period 7"
+    assert "sfx_claim_channels(56, 0)" in rune_final, \
+        "final rune no longer reserves CH1 through the ducked jingle start"
+    assert "sfx_play_puzzle_after_note()" in rune_final, \
+        "final rune no longer schedules the ducked reveal jingle"
+    assert "rune_ch1(0xF2, rune_notes[step])" in rune_final, \
+        "echo notes no longer use the softer 0xF2 envelope"
+    row = (ROOT / "src/game/rune_row.c").read_text()
+    assert "row_echo_start(20)" in row, "Aether Lattice no longer echoes on entry"
+    assert "sfx_play(SFX_HIT)" in row, "wrong row step no longer buzzes on CH4"
+    assert "voice_plate_final(touched)" in row, "row solve no longer holds the last note"
+    assert "voice_plate_final" in puzzle, "rune solve no longer holds the last note"
 
 
 
@@ -833,72 +864,258 @@ def opening_shop_is_not_a_puzzle():
 def deep_phase_contract():
     bit = 1 << 2
 
-    def switch_probe(pb, _tiles):
+    def switch_probe(pb, _tiles, frames=None, echo_log=None):
         assert pb.memory[KIND] == 3 and pb.memory[LOCKED] == 0
         assert len(active_hostiles(pb)) >= 4, \
             "Aether Lattice did not retain its live guard pack"
         assert visible_hostiles(pb), "Aether Lattice looked empty on arrival"
         clear_hostiles(pb)
         assert not (pb.memory[RS + 28] & bit)
-        xs = (4, 8, 12, 16)
-        masks = (0x03, 0x07, 0x0E, 0x0C)
         addrs = rune_addrs()
+        positions = ((4, 7), (8, 9), (12, 7), (16, 9))
+        length = pb.memory[addrs["_room_row_len"]]
+        phrase = tuple(pb.memory[addrs["_room_row_phrase"] + i]
+                       for i in range(length))
+        assert length in (3, 4, 5), f"unexpected row length {length}"
+        # Stage 1 (bosses_beaten == 0) uses a 3-note phrase.
+        assert length == 3, f"stage 1 Aether Lattice length {length}, want 3"
+        assert phrase[0] != phrase[1], f"consecutive repeat in phrase {phrase}"
+        assert phrase[:3] not in ((0, 1, 2), (3, 2, 1)), \
+            f"phrase {phrase} is a banned left-to-right or right-to-left sweep"
 
-        def state():
-            return sum((pb.memory[TM + 8 * 20 + x] == RUNE_LIT_TILE[i]) << i
-                       for i, x in enumerate(xs))
+        def snap():
+            if frames is not None:
+                frames.append(pb.screen.image.copy())
 
-        def assert_switch_notes():
-            """Switch i voices pitch i, so it wears note plate/colour i:
-            idle art while dark, sunken art and a brighter shade while lit
-            (same colour as that pitch in a rune phrase)."""
-            lit = state()
-            for i, x in enumerate(xs):
-                tile = pb.memory[TM + 8 * 20 + x]
-                want = RUNE_LIT_TILE[i] if lit & (1 << i) else RUNE_IDLE_TILE[i]
-                assert tile == want, f"switch {i} tile {tile}, want {want}"
-                attr = room_tile_attr(pb, x, 8, addrs)
+        def plate_tile(i):
+            x, y = positions[i]
+            return pb.memory[TM + y * 20 + x]
+
+        def assert_row_notes(lit=False):
+            for i, (x, y) in enumerate(positions):
+                tile = plate_tile(i)
+                want = RUNE_LIT_TILE[i] if lit else RUNE_IDLE_TILE[i]
+                assert tile == want, (
+                    f"plate {i} at {(x, y)} tile {tile}, want {want} lit={lit}")
+                attr = room_tile_attr(pb, x, y, addrs)
                 assert attr == RUNE_NOTE_PAL[i], (
-                    f"switch {i} palette {attr}, want {RUNE_NOTE_PAL[i]}")
-                assert_plate_art(pb, tile, i, (x, 8))
-            pressed = [i for i in range(4) if lit & (1 << i)]
-            want_low = palette_with_pressed(RUNE_PAL_LOW, pressed, True)
-            want_high = palette_with_pressed(RUNE_PAL_HIGH, pressed, False)
-            assert cgb_bg_palette(pb, 2) == want_low, "switch row low palette"
-            assert cgb_bg_palette(pb, 3) == want_high, "switch row high palette"
+                    f"plate {i} palette {attr}, want {RUNE_NOTE_PAL[i]}")
+                assert_plate_art(pb, tile, i, (x, y))
+            want_low = palette_with_pressed(RUNE_PAL_LOW, list(range(4)) if lit else [], True)
+            want_high = palette_with_pressed(RUNE_PAL_HIGH, list(range(4)) if lit else [], False)
+            assert cgb_bg_palette(pb, 2) == want_low, "row low palette"
+            assert cgb_bg_palette(pb, 3) == want_high, "row high palette"
 
-        assert_switch_notes()
-        initial = state()
-        assert initial != 0x0F, "deep Aether Lattice spawned already solved"
-        # Solve from the cartridge's visible state, not from its seed. This
-        # mirrors a player reasoning about the transformation rule and proves
-        # the generated fixture is genuinely solvable in three/four presses.
-        pending = [(initial, ())]
-        seen = {initial}
-        solution = None
-        while pending:
-            current, path = pending.pop(0)
-            if current == 0x0F:
-                solution = path
-                break
-            for i, mask in enumerate(masks):
-                nxt = current ^ mask
-                if nxt not in seen:
-                    seen.add(nxt)
-                    pending.append((nxt, path + (i,)))
-        assert solution is not None and len(solution) >= 3, \
-            f"deep Aether Lattice was trivial or unsolvable: {initial:04b}"
-        for press in solution:
-            before = state()
-            feet_on(pb, xs[press], 8)
+        def echo_mode():
+            return pb.memory[addrs["_room_echo_mode"]]
+
+        def plates_flashing():
+            return any(pb.memory[TM + y * 20 + x] == BGT_NOTE_FLASH
+                       for x, y in positions)
+
+        def wait_plates_idle(budget=40):
+            for _ in range(budget):
+                if not plates_flashing():
+                    return
+                pb.tick()
+                snap()
+            assert False, (
+                f"plates still flashing: "
+                f"{[pb.memory[TM + y * 20 + x] for x, y in positions]}")
+
+        def wait_echo_idle(budget=250):
+            heard_ch1, flashes = set(), []
+            # Drain a leftover flash even when the echo state machine is idle.
+            for _ in range(16):
+                if echo_mode() == 0 and not plates_flashing():
+                    break
+                pb.tick()
+            for _ in range(budget):
+                if echo_mode() == 0 and not heard_ch1 and not flashes and not plates_flashing():
+                    # Already idle with nothing recorded this wait: done.
+                    return heard_ch1, flashes
+                env = pb.memory[0xFF12]
+                heard_ch1.add(env)
+                for i, (x, y) in enumerate(positions):
+                    if pb.memory[TM + y * 20 + x] == BGT_NOTE_FLASH:
+                        if i not in flashes:
+                            flashes.append(i)
+                if echo_mode() == 0 and flashes and not plates_flashing():
+                    snap()
+                    return heard_ch1, flashes
+                pb.tick()
+                snap()
+            assert False, (
+                f"echo never finished: mode={echo_mode()} heard={heard_ch1} "
+                f"flashes={flashes}")
+
+        # Entry echo was recorded by the wrapping wait, if provided.
+        if echo_log is not None:
+            assert echo_log.get("echo_seen") or echo_log.get("flashes"), (
+                f"Aether Lattice did not echo its phrase on entry: {echo_log}")
+            assert RUNE_ENV_ECHO in echo_log.get("envs", set()) or echo_log.get("flashes"), (
+                f"entry echo had no 0xF2 envelope: {echo_log}")
+        # Park off the row before asserting idle art: an arrival that ends
+        # on a plate would voice it the moment the entry echo finishes.
+        step_off(pb)
+        wait_rune_flash(pb)
+        heard, flashes = wait_echo_idle()
+        assert_row_notes(lit=False)
+        # Mid-phrase work must not latch sunken tiles; only a solved row does.
+        assert pb.memory[addrs["_room_rune_lit_mask"]] == 0
+
+        def step_plate(i):
+            x, y = positions[i]
+            heard_ch1, heard_ch4 = feet_on(pb, x, y)
+            snap()
+            return heard_ch1, heard_ch4
+
+        # A left-to-right or right-to-left mash must not open the gate.
+        # Fast presses after a wrong step land during the re-echo and are ignored.
+        for order, label in ((range(4), "L-R"), (range(3, -1, -1), "R-L")):
+            wait_echo_idle()
+            assert_row_notes(lit=False)
+            for i in order:
+                step_plate(i)
+                # Only a few frames — do not wait out a 40-frame re-echo rest.
+                for _ in range(6):
+                    pb.tick()
+            for _ in range(8):
+                pb.tick()
+            assert not (pb.memory[RS + 28] & bit), \
+                f"{label} mash solved the row: phrase={phrase} progress={pb.memory[addrs['_room_row_progress']]}"
+            # Let a mid-mash re-echo finish so the next trial starts clean.
+            wait_echo_idle()
+            pb.memory[addrs["_room_row_progress"]] = 0
+            # Park off any plate so the next contact can arm.
             step_off(pb)
-            wait_rune_flash(pb)
-            assert state() == (before ^ masks[press]), \
-                f"plate {press} did not transform its neighbor lattice"
-            assert_switch_notes()
+
+        # A deliberate wrong first step voices the plate, buzzes CH4, and re-echoes.
+        wait_echo_idle()
+        wrong = next(i for i in range(4) if i != phrase[0])
+        heard_ch1, heard_ch4 = step_plate(wrong)
+        assert RUNE_ENV in heard_ch1, (
+            f"wrong step muted its pitch: heard={sorted(heard_ch1)}")
+        # SFX_HIT writes NR42=0xC1; a slightly later tick may already decay it.
+        assert 0xC1 in heard_ch4 or any(v & 0xF0 == 0xC0 for v in heard_ch4), (
+            f"wrong step lost its CH4 buzz: heard={sorted(heard_ch4)}")
+        assert pb.memory[addrs["_room_row_progress"]] == 0
+        wait_plates_idle()
+        step_off(pb)
+        wait_plates_idle()
+        assert_row_notes(lit=False)
+        # Re-echo starts after a 40-frame rest; input is ignored until idle.
+        reecho_started = False
+        for _ in range(50):
+            if echo_mode() != 0:
+                reecho_started = True
+                break
+            pb.tick()
+        assert reecho_started, "wrong step did not restart the phrase echo"
+        heard, flashes = wait_echo_idle()
+        assert RUNE_ENV_ECHO in heard or flashes, (
+            f"re-echo was silent: heard={heard} flashes={flashes}")
+        assert flashes == list(phrase) or not flashes or set(flashes) <= set(phrase), (
+            f"re-echo flashed {flashes}, phrase is {phrase}")
+        step_off(pb)
+
+        # Walking the echoed phrase solves the row and holds the final note.
+        wait_echo_idle()
+        for index, plate in enumerate(phrase):
+            heard_ch1, heard_ch4 = step_plate(plate)
+            held_final = 0
+            if index == len(phrase) - 1:
+                while held_final < 80 and pb.memory[0xFF12] == RUNE_ENV_FINAL:
+                    held_final += 1
+                    pb.tick()
+                assert RUNE_ENV_FINAL in heard_ch1 or held_final, (
+                    f"row final note was cut off: heard={sorted(heard_ch1)}")
+                assert held_final >= 24, (
+                    f"row final note lasted only {held_final} frames")
+                if pb.memory[0xFF12] == RUNE_ENV_FINAL:
+                    for _ in range(40):
+                        pb.tick()
+                        if pb.memory[0xFF12] != RUNE_ENV_FINAL:
+                            break
+                for _ in range(16):
+                    if pb.memory[0xFF12] in (0xC0, 0xA4):
+                        break
+                    pb.tick()
+                assert pb.memory[0xFF12] in (0xC0, 0xA4), (
+                    f"row fanfare did not follow the ducked final note: "
+                    f"0x{pb.memory[0xFF12]:02X}")
+                snap()
+            else:
+                assert RUNE_ENV in heard_ch1, (
+                    f"correct mid step muted its pitch: heard={sorted(heard_ch1)}")
+                wait_plates_idle()
+                step_off(pb)
+                wait_plates_idle()
+                assert_row_notes(lit=False)
+                assert pb.memory[addrs["_room_row_progress"]] == index + 1
+                snap()
         assert pb.memory[RS + 28] & bit, \
             "solved deep Aether Lattice did not persist its remote phase bit"
-        assert state() == 0x0F, "solved Aether Lattice did not finish fully lit"
+        assert_row_notes(lit=True)
+        step_off(pb)
+
+        # Lightning zap closes the gate, resets the row, and re-echoes.
+        # A second zap (after the re-echo) opens it again without walking.
+        def zap_plate():
+            # Retire leftover shots, then fire lightning at plate 0.
+            for i in range(32 * 28):
+                pb.memory[EN + i] = 0
+            pb.tick(4)
+            for i in range(32 * 28):
+                pb.memory[EN + i] = 0
+            x, y = positions[0]
+            e = EN
+            pb.memory[e] = 1
+            pb.memory[e + 1] = 0x13
+            put16(pb, e + 3, x * 8)
+            put16(pb, e + 7, y * 8)
+            pb.memory[e + 10] = 0
+            pb.memory[e + 11] = 0
+            pb.memory[e + 12] = 28
+            pb.memory[e + 14] = 2
+            pb.memory[e + 16] = 30
+            pb.memory[e + 18] = 4  # lightning
+            pb.memory[e + 19] = 0
+            pb.memory[e + 25] = 0x77
+            pb.memory[e + 26] = 2
+            for _ in range(16):
+                pb.tick()
+            snap()
+
+        zap_plate()
+        assert not (pb.memory[RS + 28] & bit), "first zap did not close the remote gate"
+        assert_row_notes(lit=False)
+        assert pb.memory[addrs["_room_row_progress"]] == 0
+        heard, flashes = wait_echo_idle()
+        assert echo_mode() == 0
+        assert RUNE_ENV_ECHO in heard or flashes, (
+            f"zap close did not re-echo the phrase: heard={heard} flashes={flashes}")
+        # Re-walk still solves after a zap reset.
+        for index, plate in enumerate(phrase):
+            step_plate(plate)
+            if index < len(phrase) - 1:
+                wait_rune_flash(pb)
+                step_off(pb)
+            else:
+                for _ in range(60):
+                    pb.tick()
+        assert pb.memory[RS + 28] & bit, "re-echo + walk after zap did not re-solve"
+        assert_row_notes(lit=True)
+        step_off(pb)
+        # Second close, then zap open without walking.
+        zap_plate()
+        assert not (pb.memory[RS + 28] & bit)
+        wait_echo_idle()
+        step_off(pb)
+        zap_plate()
+        assert pb.memory[RS + 28] & bit, "second zap did not reopen the remote gate"
+        assert_row_notes(lit=True)
+        pb.tick(20)
 
     def closed_gate_probe(pb, _tiles):
         assert pb.memory[KIND] == 4 and pb.memory[LOCKED] == 0
@@ -923,8 +1140,59 @@ def deep_phase_contract():
     graph = mission_graph(dungeon_size(0), seed, 0)
     # Entered through a door with the shared plate slots holding stale art:
     # the door path itself must upload the note tiles.
-    generated_room(0, seed, local_room=graph["deep_switch"], probe=switch_probe,
-                   pre_cross=lambda pb, _addrs: poison_plate_vram(pb))
+    echo_log = {"envs": set(), "flashes": [], "echo_seen": False, "modes": set()}
+    gif_frames = []
+    import test_stage_archetypes as tsa
+    orig_wait = tsa.wait_for_generated_room
+
+    def recording_wait(pb):
+        previous = None
+        stable = 0
+        loaded = False
+        from test_stage_archetypes import ROOM_W, ROOM_H
+        for frame in range(480):
+            pb.tick()
+            mode = pb.memory[addr("_room_echo_mode")]
+            echo_log["modes"].add(mode)
+            if mode != 0:
+                echo_log["echo_seen"] = True
+            echo_log["envs"].add(pb.memory[0xFF12])
+            for i, (x, y) in enumerate(((4, 7), (8, 9), (12, 7), (16, 9))):
+                if pb.memory[TM + y * 20 + x] == BGT_NOTE_FLASH:
+                    if i not in echo_log["flashes"]:
+                        echo_log["flashes"].append(i)
+            if frame % 4 == 0:
+                gif_frames.append(pb.screen.image.copy())
+            if not pb.memory[0xFF40] & 0x80:
+                loaded = True
+            if not loaded and frame < 150:
+                continue
+            tiles = bytes(pb.memory[TM + i] for i in range(ROOM_W * ROOM_H))
+            lcd_on = bool(pb.memory[0xFF40] & 0x80)
+            committed = not any(value & 0x80 for value in tiles)
+            stable = stable + 1 if lcd_on and committed and tiles == previous else 0
+            previous = tiles
+            if stable >= 30:
+                return list(tiles)
+        raise AssertionError("room generation did not settle within 480 frames")
+
+    tsa.wait_for_generated_room = recording_wait
+    try:
+        generated_room(
+            0, seed, local_room=graph["deep_switch"],
+            probe=lambda pb, tiles: switch_probe(pb, tiles, gif_frames, echo_log),
+            pre_cross=lambda pb, _addrs: poison_plate_vram(pb))
+    finally:
+        tsa.wait_for_generated_room = orig_wait
+    if gif_frames:
+        from pathlib import Path as _P
+        out = _P("/tmp/quintra-musicpz-gifs/aether-lattice-echo-solve.gif")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        # Keep the file small: at most ~90 frames, 80ms each.
+        step = max(1, len(gif_frames) // 90)
+        slim = gif_frames[::step][:90]
+        slim[0].save(out, save_all=True, append_images=slim[1:],
+                     duration=80, loop=0)
     generated_room(0, seed, local_room=graph["deep_gate"], dungeon_phase=0,
                    probe=closed_gate_probe)
     generated_room(0, seed, local_room=graph["deep_gate"], dungeon_phase=bit,
@@ -1184,6 +1452,84 @@ def sun_lattice_contract(stage, role="trial", gif=None):
     return plan
 
 
+
+def _parse_c_tile_bytes(src: Path, symbol: str) -> list[int]:
+    text = src.read_text()
+    match = re.search(
+        rf"const u8 {re.escape(symbol)}\[16\]\s*=\s*\{{([^}}]+)\}}",
+        text,
+    )
+    assert match, f"{symbol} disappeared from {src}"
+    values = [int(token, 0) for token in re.findall(r"0x[0-9A-Fa-f]+", match.group(1))]
+    assert len(values) == 16, f"{symbol} in {src} has {len(values)} bytes, want 16"
+    return values
+
+
+def door_switch_art_contract():
+    """Pressed door-switch keeps a sunken plate and yields VRAM 122 to the map."""
+    room = (ROOT / "src/game/room.c").read_text()
+    assert "BGT_SWITCH_PRESSED, BGPAL_DOOR" in room, \
+        "activate_switch no longer leaves a sunken door-switch plate"
+    assert "BGT_FLOOR, BGPAL_FLOOR" not in room.split("static void activate_switch", 1)[1].split("room_open_secret", 1)[0], \
+        "activate_switch still replaces the plate with floor"
+    assert "tiles_load_switch_pressed()" in room, \
+        "room_enter no longer reloads the sunken switch into VRAM 122"
+    switch_c = (ROOT / "src/render/tiles_switch.c").read_text()
+    assert "set_bkg_data(BGT_SWITCH_PRESSED, 1, bgt_switch_pressed)" in switch_c
+    assert "#pragma bank 22" in switch_c
+    world = (ROOT / "src/game/room_world.c").read_text()
+    assert "BGT_SWITCH_PRESSED" in world
+    pressed = _parse_c_tile_bytes(ROOT / "src/render/tiles_switch.c", "bgt_switch_pressed")
+    unpressed = _parse_c_tile_bytes(ROOT / "src/render/sprites_gen.c", "bgt_switch")
+    cache = _parse_c_tile_bytes(ROOT / "src/render/tiles_map.c", "bgt_map_cache")
+    assert pressed != unpressed and pressed != cache
+    assert len(pressed) == 16
+
+    from make_stage_states import symbol_addresses
+    pb = load(1)
+    screen = addr("_loop_current_screen")
+    player = PL
+    vram = 0x9000 + 122 * 16
+
+    def tile_vram():
+        return [pb.memory[vram + i] for i in range(16)]
+
+    assert tile_vram() == pressed, (
+        f"room VRAM 122 is not the sunken switch: {tile_vram()} vs {pressed}")
+    # SELECT loads the Compass cache glyph into the shared slot.
+    pb.button_press("select")
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[screen] == 8:
+                for _ in range(90):
+                    pb.tick()
+                break
+        else:
+            raise AssertionError("SELECT did not open the Compass")
+    finally:
+        pb.button_release("select")
+    assert tile_vram() == cache, (
+        f"Compass did not overwrite VRAM 122 with the cache glyph: {tile_vram()}")
+    pb.button_press("b")
+    try:
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[screen] == 5:
+                break
+        else:
+            raise AssertionError("B did not return from the Compass")
+    finally:
+        pb.button_release("b")
+    for _ in range(90):
+        pb.memory[player + 2] = 14
+        pb.memory[player + 15] = 60
+        pb.tick()
+    assert tile_vram() == pressed, (
+        f"resume did not restore the sunken switch to VRAM 122: {tile_vram()}")
+    pb.stop(save=False)
+
+
 def main():
     push_seal_contract()
     rune_color_contract()
@@ -1191,6 +1537,7 @@ def main():
     late_depth_puzzle_contract()
     opening_shop_is_not_a_puzzle()
     deep_phase_contract()
+    door_switch_art_contract()
     for stage in range(3, 10):
         sun_lattice_contract(stage)
     # Last: this archetype-harness entry already reaches kind 0 on main

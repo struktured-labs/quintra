@@ -59,7 +59,7 @@ static void law_set_raw(u8 x, u8 y, u8 tile) {
 static u8 law_attr(u8 tile) {
     if (tile == BGT_CRYSTAL) return BGPAL_CRYSTAL;
     if (tile == BGT_SPIKES) return BGPAL_CRACK;
-    if (tile == BGT_SWITCH) return BGPAL_DOOR;
+    if (tile == BGT_SWITCH || tile == BGT_SWITCH_PRESSED) return BGPAL_DOOR;
     if (tile == BGT_PILLAR) return BGPAL_WALL;
     return BGPAL_FLOOR;
 }
