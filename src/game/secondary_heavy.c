@@ -9,12 +9,39 @@
 #include "game/riftwild_den.h"
 #include "game/puzzle.h"
 #include "game/powerup.h"
+#include "game/will.h"
 #include "render/hud.h"
 #include "render/tiles.h"
 #include "content.h"
 
+static const i8 mstar_sx[16] = {
+    0, 9, 17, 22, 24, 22, 17, 9,
+    0, -9, -17, -22, -24, -22, -17, -9
+};
+// Peak orbit radius in pixels for will_b_tier 0..3.
+static const u8 mstar_peak[4] = {24, 28, 34, 40};
+static const u8 mstar_life[4] = {40, 40, 44, 48};
+static const u8 mstar_box[4]  = {0xAA, 0xAA, 0xCC, 0xDD};
+static const u8 mstar_bonus[4] = {3, 3, 4, 5};
+
+static i16 mstar_offset(i8 base, u8 peak) {
+    return (i16)(((i16)base * (i16)peak) / 24);
+}
+
+static void mstar_clamp(entity_t *e) {
+    i16 max_x = (i16)room_world_width - 8;
+    i16 max_y = (i16)room_world_height - 8;
+    if (max_x < 0) max_x = 0;
+    if (max_y < 0) max_y = 0;
+    if (e->x < 0) e->x = 0;
+    else if (e->x > max_x) e->x = max_x;
+    if (e->y < 0) e->y = 0;
+    else if (e->y > max_y) e->y = max_y;
+}
+
 u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     u8 i,bomb=player.active_item==ITEM_ID_BOMBS;
+    u8 tier;
     entity_t *e;
     if (player.active_charge || (bomb && !player.mp && !POWERUP_FREE_MP())) return 0;
     for (i=0;i<INVENTORY_SLOTS;++i)
@@ -31,15 +58,23 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     e->x=player.x+4; e->y=player.y+4;
     e->sprite_tile=bomb ? SPR_ITEM_BOMB_BAG : SPR_ITEM_MORNINGSTAR;
     e->palette=bomb ? SPR_BOMB_BAG_PROP : SPR_MORNINGSTAR_PROP;
-    e->hitbox=0xAA; e->hp=8;
-    e->damage=player.atk+(bomb ? 8 : 3);
-    e->state_timer=bomb ? 48 : 40;
+    e->hp=8;
     e->ai_data[0]=dir*2;
     e->ai_data[2]=1;
     e->ai_data[6]=bomb ? PROJ_AUX_FUSE_BOMB : PROJ_AUX_MORNINGSTAR;
     if (bomb) {
+        e->hitbox=0xAA;
+        e->damage=player.atk+8;
+        e->state_timer=48;
         if (moving) { e->vx=dir8_dx[dir&7]*2; e->vy=dir8_dy[dir&7]*2; }
         if (!POWERUP_FREE_MP()) { player.mp--; hud_redraw_mp(); }
+    } else {
+        tier=will_b_tier();
+        e->ai_data[7]=tier;
+        e->hitbox=mstar_box[tier];
+        e->damage=player.atk+mstar_bonus[tier];
+        e->state_timer=mstar_life[tier];
+        if (tier>=3) room_shake(1, 8);
     }
     player.active_charge=bomb ? 72 : 56;
     sfx_play_weapon(PROJ_FLAIL);
@@ -47,18 +82,22 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
 }
 
 void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
-    static const i8 sx[16]={0,9,17,22,24,22,17,9,0,-9,-17,-22,-24,-22,-17,-9};
-    u8 a,t;
+    u8 a,t,tier,peak;
     if (!e->state_timer--) { entity_kill(idx); return; }
     if (e->ai_data[6]==PROJ_AUX_MORNINGSTAR) {
+        tier=e->ai_data[7]&3;
+        peak=mstar_peak[tier];
         a=(++e->ai_data[0]>>1)&15;
-        e->x=player.x+4+sx[a]; e->y=player.y+4-sx[(a+4)&15];
+        e->x=player.x+4+mstar_offset(mstar_sx[a], peak);
+        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], peak);
+        mstar_clamp(e);
         t=room_tile_at_px(e->x+4,e->y+4);
-        if (!room_tile_walkable(t)) {
-            // The ball turns a Sun Lattice vane it sweeps into.
-            if (t==BGT_PILLAR) sun_lattice_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
-            else if (t==BGT_WILD_STONE) riftwild_den_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
-            entity_kill(idx);
+        if (t==BGT_PILLAR) sun_lattice_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
+        else if (t==BGT_WILD_STONE) riftwild_den_strike((u8)((e->x+4)>>3),(u8)((e->y+4)>>3));
+        if (tier>=3 && !(e->state_timer&3)) {
+            fx_spawn(SPR_FX_IMPACT, 6, e->x+4, e->y+4, 6);
+            // Keep VRAM bank 1 so the 16x16 head tiles stay in view.
+            e->palette=(e->state_timer&4) ? (u8)(8+6) : SPR_MORNINGSTAR_PROP;
         }
         return;
     }
