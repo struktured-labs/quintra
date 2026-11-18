@@ -224,7 +224,9 @@ def test_exit_and_loop(save):
         order.append(kind)
         check(kind is not None, f"cycle {cycle}: title idle starts attract ({kind})")
         e.tick(200 + 37 * cycle)
-        e.tap(button, 2)
+        # A busy room loop can take three frames between joypad polls; a
+        # four-frame tap is the shortest press a player can rely on.
+        e.tap(button, 4)
         n = e.until(lambda: e.scr() == TITLE and not e.m[DEMO], 30)
         check(n >= 0, f"cycle {cycle}: {button.upper()} during the {kind} returns to the title")
         e.tick(90)
