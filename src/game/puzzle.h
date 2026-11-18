@@ -82,6 +82,17 @@ extern u8 room_rune_lit_mask;
 #define PUZZLE_KIND_HAS_NOTES(k) ((k) == PUZZLE_RUNE_SEQUENCE \
     || (k) == PUZZLE_PHASE_SWITCH)
 void puzzle_phase_switch_zap(void) BANKED;
+void rune_row_prepare(u8 bit, u8 mix) BANKED;
+void rune_row_tick(u8 tx, u8 ty) BANKED;
+void rune_echo_tick(void) BANKED;
+void rune_echo_cancel(void) BANKED;
+void voice_plate_final(u8 plate) BANKED;
+
+// Seeded Aether Lattice phrase, published for tests and palettes.
+extern u8 room_row_len;
+extern u8 room_row_phrase[5];
+extern u8 room_row_progress;
+extern u8 room_echo_mode;
 
 void puzzle_load_note_palettes(void) BANKED;
 void puzzle_apply_note_palettes(u8 dim) BANKED;

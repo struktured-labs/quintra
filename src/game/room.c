@@ -51,6 +51,8 @@ void stage_event_resolve_fall(void) BANKED;
 #include "render/hud.h"
 #include "render/palette.h"
 #include "render/tiles.h"
+
+void tiles_load_switch_pressed(void) BANKED;
 #include "content.h"
 
 BANKREF(room_enter)
@@ -685,7 +687,8 @@ static u8 attr_for_tile(u8 t) {
         case BGT_BLOCK_BR:
             return BGPAL_WALL;      // secret cairns blend into the landscape
         case BGT_POT:
-        case BGT_SWITCH:  return BGPAL_DOOR;      // gold-ish, reads as interactive
+        case BGT_SWITCH:
+        case BGT_SWITCH_PRESSED: return BGPAL_DOOR; // gold-ish, reads as interactive
         case BGT_CRYSTAL:
         case BGT_PORTAL:
         case BGT_WILD_FLOWER:
@@ -767,7 +770,7 @@ static void activate_switch(u8 tx, u8 ty) {
     // A cairn already occupies the plate when the legitimate solve arrives;
     // do not punch an invisible floor quadrant through its freshly moved art.
     if (room_tilemap[ty][tx] == BGT_SWITCH)
-        room_set_tile_vbl(tx, ty, BGT_FLOOR, BGPAL_FLOOR);
+        room_set_tile_vbl(tx, ty, BGT_SWITCH_PRESSED, BGPAL_DOOR);
     room_open_secret(tx, 0);
     sfx_play(SFX_PUZZLE);
 }
@@ -997,6 +1000,7 @@ void room_enter(void) {
     palette_obj_load(7, orc_palette);
 
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
+    tiles_load_switch_pressed();
     tiles_load_boss_cue_bg();             // unmistakable sanctuary threshold
     // District, directive, and return-echo cards share this tiny alphabet.
     // Load it on every room entry: previously a dungeon reached without an
@@ -1554,9 +1558,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 if (open) {
                     u8 a = room_tilemap[t1y][t1x], b = room_tilemap[t2y][t2x];
                     open = (a == BGT_FLOOR || a == BGT_FLOOR2 || a == BGT_FLOOR3
-                            || a == BGT_SWITCH)
+                            || a == BGT_SWITCH || a == BGT_SWITCH_PRESSED)
                         && (b == BGT_FLOOR || b == BGT_FLOOR2 || b == BGT_FLOOR3
-                            || b == BGT_SWITCH);
+                            || b == BGT_SWITCH || b == BGT_SWITCH_PRESSED);
                 }
                 // A 2x2 cairn needs two clear body tiles between it and a
                 // threshold. Otherwise a legal shove can leave the visible

@@ -53,11 +53,18 @@ void sfx_tick_will(void) BANKED;
 extern u8 sfx_will_active;
 // Ordered floor runes answer with one of five stable major-pentatonic pitches.
 void sfx_play_rune(u8 step);
+// Short call-and-response echo (env 0xF2, 24-frame claim).
+void sfx_play_rune_echo(u8 step) BANKED;
+// Final accepted note: env 0xF7, 56-frame claim, and in the same call
+// arms the ducked delayed puzzle fanfare (40f pitch, CH4 breath, 8f, CH1).
+void sfx_play_rune_final(u8 step) BANKED;
 // Sequence puzzles call this instead of sfx_play(SFX_PUZZLE) so the last
 // floor note is audible before the fanfare takes CH1. Gameplay is not delayed.
+// Prefer sfx_play_rune_final() at a solve; this remains the delay arm.
 void sfx_play_puzzle_after_note(void);
 void sfx_tick(void);      // per-frame: second notes / mid-sound bumps
 void sfx_claim_channels(u8 ch1_frames, u8 ch4_frames);
+void sfx_lock_secret(u8 frames);
 // Long discovery/clear figures own the effect bus until their scheduled
 // notes resolve. Banked pickup and weapon voices use this to avoid replacing
 // a fanfare halfway through its melody.

@@ -119,7 +119,8 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
             return BGPAL_CRYSTAL;
         return BGPAL_DOOR;
     }
-    if (tile == BGT_POT || tile == BGT_SWITCH) return BGPAL_DOOR;
+    if (tile == BGT_POT || tile == BGT_SWITCH || tile == BGT_SWITCH_PRESSED)
+        return BGPAL_DOOR;
     if (tile == BGT_CRYSTAL || tile == BGT_PORTAL) return BGPAL_CRYSTAL;
     if (tile == HUD_COIN || (tile >= HUD_DIGIT_0
         && tile <= HUD_DIGIT_0 + 9)) return BGPAL_CRACK;

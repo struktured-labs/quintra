@@ -32,6 +32,9 @@ WH_ADDR=$(grep 'DEF _room_world_height ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{p
 SX_ADDR=$(grep 'DEF _room_socket_x ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 SY_ADDR=$(grep 'DEF _room_socket_y ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 MUTE_ADDR=$(grep 'DEF _attract_mute ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+RLEN_ADDR=$(grep 'DEF _room_row_len ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+RPH_ADDR=$(grep 'DEF _room_row_phrase ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
+RECHO_ADDR=$(grep 'DEF _room_echo_mode ' "${ROM%.gbc}.noi" 2>/dev/null | awk '{print $3}')
 
 echo "[smoke] running $ROM under headless mGBA (run_state @ ${RS_ADDR:-unknown})..."
 unset DISPLAY WAYLAND_DISPLAY
@@ -42,6 +45,8 @@ QT_QPA_PLATFORM=offscreen SDL_AUDIODRIVER=dummy \
     QUINTRA_WORLD_WIDTH_ADDR="$WW_ADDR" QUINTRA_WORLD_HEIGHT_ADDR="$WH_ADDR" \
     QUINTRA_SOCKET_X_ADDR="$SX_ADDR" QUINTRA_SOCKET_Y_ADDR="$SY_ADDR" \
     QUINTRA_ATTRACT_MUTE_ADDR="$MUTE_ADDR" \
+    QUINTRA_ROW_LEN_ADDR="$RLEN_ADDR" QUINTRA_ROW_PHRASE_ADDR="$RPH_ADDR" \
+    QUINTRA_ROW_ECHO_ADDR="$RECHO_ADDR" \
     timeout 60 xvfb-run -a mgba-qt "$ROM" \
         --script "$SCRIPT_DIR/quintra_smoketest.lua" \
         -l 0 >"$OUT_DIR/emulator.log" 2>&1 &

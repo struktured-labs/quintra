@@ -166,6 +166,7 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
             return BGPAL_CRACK;
         case BGT_POT:
         case BGT_SWITCH:
+        case BGT_SWITCH_PRESSED:
         case BGT_WILD_STUMP:
         case BGT_WILD_SAND:
             return BGPAL_DOOR;

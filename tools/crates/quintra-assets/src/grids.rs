@@ -1221,17 +1221,32 @@ pub const BGT_POT: [&str; 8] = [
     "..2222..",
 ];
 
-// Recessed floor pressure plate. The bright center and dark rim make it
-// readable without borrowing the spike/rubble semantics used by procgen.
+// Recessed floor pressure plate. GPT Image 2.6 Sunburst concept, hand-
+// quantized to the 4-colour BGPAL_DOOR indices: raised gold bezel, inner
+// well, and a jewel highlight. Pressed is the same silhouette, sunken.
 pub const BGT_SWITCH: [&str; 8] = [
-    "22222222",
-    "21111112",
-    "21333312",
-    "21322312",
-    "21322312",
-    "21333312",
-    "21111112",
-    "22222222",
+    "23333332",
+    "32111123",
+    "31233313",
+    "31332313",
+    "31333313",
+    "31233313",
+    "32111123",
+    "21111110",
+];
+
+// Not in DUNGEON_TILES: the 16-byte array lives in src/render/tiles_switch.c
+// (bank 22) so bank 2 stays at the 256-byte floor.
+#[allow(dead_code)] // referenced by the banked-source gold test
+pub const BGT_SWITCH_PRESSED: [&str; 8] = [
+    "23222232",
+    "21000012",
+    "20111102",
+    "20122102",
+    "20111102",
+    "20111102",
+    "21000013",
+    "22222221",
 ];
 
 // An asymmetric spiral makes orientation intentionally difficult after a hop.

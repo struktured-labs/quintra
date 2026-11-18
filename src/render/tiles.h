@@ -57,6 +57,8 @@
 #define BGT_SPIKES     31  // floor hazard: walkable but damages on contact
 #define BGT_POT        32  // breakable clay pot: solid, shoot for loot
 #define BGT_SWITCH     33  // one-shot pressure plate: player or block activates it
+// In-play sunken plate. SELECT overwrites VRAM 122 with BGT_MAP_CACHE;
+// tiles_load_switch_pressed, called from room_enter, restores it.
 #define BGT_PORTAL     34  // nonlinear intra-stage rift well
 #define BGT_GRASS      35  // outdoor ground: Riftwild + villages
 #define BGT_PATH       36  // worn civic/wilderness trail
@@ -239,6 +241,7 @@
 #define BGT_MAP_BIG_HERE     110 // 110..113
 #define BGT_MAP_BIG_GOAL     114 // 114..117
 #define BGT_MAP_BIG_BOSS     118 // 118..121
+#define BGT_SWITCH_PRESSED  122 // in-play sunken door-switch (BGPAL_DOOR)
 #define BGT_MAP_CACHE        122 // single chest glyph for the LOOT legend
 #define BGT_MAP_BIG_CACHE    123 // 123..126 optional Farfold Cache node
 // Compass-only gold coin. SELECT overwrites in-play HUD_OFFER_BOUNCE at 127;
