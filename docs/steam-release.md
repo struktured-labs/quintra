@@ -86,8 +86,10 @@ runs the self-test, and stores them as workflow artifacts
 6. **Linux runtime / Steam Deck**: under Installation > Linux Runtime, pick
    **Steam Linux Runtime 3.0 (sniper)** for the Linux depot. Electron 45 needs
    its newer glibc/NSS/GBM. SteamPipe does not keep setuid bits and the
-   runtime container blocks user namespaces, so the wrapper adds
-   `--no-sandbox` by itself when `chrome-sandbox` is not setuid root. That
+   runtime container blocks user namespaces. Chromium picks its sandbox
+   before any app code runs, so the Linux depot's `quintra` is a small
+   launcher script. It runs `quintra.bin --no-sandbox` unless `chrome-sandbox`
+   is setuid root. That
    turns off Chromium's OS-level sandbox on Linux. This is acceptable
    because the app loads only bundled files, blocks every network request,
    and keeps contextIsolation and a validated IPC surface. In Deck Game Mode,

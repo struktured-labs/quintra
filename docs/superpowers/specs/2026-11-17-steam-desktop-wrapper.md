@@ -163,3 +163,9 @@ with `--quintra-selftest=<outdir>` and isolated userData/save dirs:
   The pinned fork makes them stable. The self-test covers the read path.
 - GPL plus a future Steamworks SDK: out of scope. Revisit before adding any SDK.
 - Steam Deck runs the native Linux build. Proton isn't needed.
+- Chromium's OS sandbox needs a setuid-root `chrome-sandbox` or unprivileged
+  user namespaces. Steam depots drop setuid bits, and the Steam runtime and
+  AppArmor on Ubuntu 24.04+ block namespaces. The Linux depot therefore ships
+  `quintra` as a launcher script that execs `quintra.bin --no-sandbox` unless
+  the helper is setuid root. Mitigations: only bundled content, all network
+  blocked, contextIsolation, and a sender-checked IPC surface.

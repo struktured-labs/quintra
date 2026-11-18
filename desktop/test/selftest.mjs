@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const desktop = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const root = path.resolve(desktop, "..");
-const bin = process.argv[2] || path.join(root, "builds/desktop/electron/linux-unpacked/quintra");
+const bin = process.argv[2] || path.join(root, "builds/steam/content/linux/quintra");
 const out = path.resolve(process.argv[3] || path.join(root, "builds/desktop/selftest"));
 if (!fs.existsSync(bin)) {
   console.error(`Missing ${bin}. Run desktop/scripts/package.sh first.`);

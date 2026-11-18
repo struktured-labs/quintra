@@ -59,6 +59,25 @@ for platform in $platforms; do
     win) src="$out/electron/win-unpacked"; depot="$steam/content/windows"; label=win-x64 ;;
   esac
   cp -a "$src" "$depot"
+  if [[ "$platform" == linux ]]; then
+    # Chromium decides on its sandbox before main.js runs, so --no-sandbox
+    # has to be on the real command line. Steam depots drop the setuid bit on
+    # chrome-sandbox, and the Steam runtime (or AppArmor on Ubuntu 24.04+)
+    # blocks user namespaces; without the switch Chromium aborts at startup.
+    mv "$depot/quintra" "$depot/quintra.bin"
+    cat > "$depot/quintra" <<'LAUNCH'
+#!/bin/sh
+# Quintra launcher. SPDX-License-Identifier: GPL-3.0-or-later
+here=$(dirname "$(readlink -f "$0")")
+sandbox="$here/chrome-sandbox"
+if [ -u "$sandbox" ] && [ "$(stat -c %u "$sandbox" 2>/dev/null)" = 0 ]; then
+  exec "$here/quintra.bin" "$@"
+fi
+# The app loads only bundled files and blocks all network requests.
+exec "$here/quintra.bin" --no-sandbox "$@"
+LAUNCH
+    chmod 755 "$depot/quintra"
+  fi
   normalise "$depot"
   stage_dir="$out/stage-$label"
   rm -rf "$stage_dir"

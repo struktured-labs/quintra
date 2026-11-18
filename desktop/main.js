@@ -42,6 +42,8 @@ app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-background-timer-throttling");
 
+// The Linux depot's `quintra` launcher script passes --no-sandbox on the real
+// command line (Chromium decides before this file runs); this is a backstop.
 // Steam depots do not keep the setuid bit on chrome-sandbox, and Steam's
 // Linux runtime container may block user namespaces. Without either, Chromium
 // aborts at startup. The app loads only bundled local content and blocks all
