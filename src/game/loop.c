@@ -16,7 +16,11 @@
 #include "game/vignette.h"
 #include "game/attract.h"
 #include "render/palette.h"
-#include "game/enemy_new_ai.h"
+
+/* Bare decls: do not include enemy_new_ai.h (pulls entity.h into HOME). */
+extern u8 leybeam_flush_pending;
+void leybeam_vblank_flush(void) BANKED;
+
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
 u16         loop_frame_counter  = 0;
@@ -97,9 +101,7 @@ void loop_run(void) {
     screen_id_t next;
 
     for (;;) {
-        // If this iteration itself crosses VBlank, do not then wait for a
-        // second one. The old unconditional wait quantized any tiny overrun
-        // straight from 60 to 30 Hz in modest bullet-heavy rooms.
+        // Record the VBlank epoch at the start of the iteration.
         u8 vbl_at_start = g_vbl_epoch;
         input_poll();
         cur = loop_current_screen;
@@ -117,13 +119,21 @@ void loop_run(void) {
 
         audio_tick();
 
-        if (g_vbl_epoch == vbl_at_start) {
+        // If this iteration already crossed VBlank, skip a second wait so
+        // a tiny overrun stays at 60 Hz. Palette heals (and Leybeam BG
+        // stamps) must still land in LY 144-149, so wait one more VBlank
+        // when those writes are pending.
+        if (g_vbl_epoch == vbl_at_start
+            || palette_obj_pending_commit
+            || palette_bg_pending_commit
+            || leybeam_flush_pending) {
             wait_vbl_done();
             // OBJ first: the title commit needs the top VBlank lines.
             if (palette_obj_pending_commit) palette_obj_commit_vblank();
             else if (palette_bg_pending_commit) palette_bg_commit_vblank();
             if (leybeam_flush_pending) leybeam_vblank_flush();
         }
+
         loop_frame_counter++;
         // Mix a bit of the frame counter into the RNG state for entropy
         if ((loop_frame_counter & 0x3FFF) == 0) rng_next();
