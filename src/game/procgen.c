@@ -1226,7 +1226,7 @@ void procgen_generate_room_body(void) BANKED {
             pickup_spawn(PICKUP_COIN_1,     FIX8(64), FIX8(64));
             pickup_spawn(PICKUP_COIN_1,     FIX8(96), FIX8(64));
             pickup_spawn(PICKUP_COIN_1,     FIX8(80), FIX8(48));
-            pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
+            pickup_spawn_item(pickup_roll_stat_relic(), FIX8(80), FIX8(64));
             pickup_spawn_item((u8)(22 + rng_range(3)), FIX8(56), FIX8(80));
             if (rng_next_u8() & 1) {
                 u8 w = pickup_weapon_from_roll(rng_range(pickup_weapon_count()));
@@ -1379,7 +1379,7 @@ void procgen_generate_room_body(void) BANKED {
         if (run_state.world_mode && world_kind == ZELDA_CELL_VAULT) {
             u8 vault_slot;
             if (!(run_state.riftwild_flags & RIFT_REGION_VAULT_USED_BIT)) {
-                pickup_spawn_item((u8)(10 + rng_range(10)), FIX8(80), FIX8(64));
+                pickup_spawn_item(pickup_roll_stat_relic(), FIX8(80), FIX8(64));
                 pickup_spawn_item((u8)(22 + rng_range(3)), FIX8(80), FIX8(80));
                 pickup_spawn(PICKUP_COIN_5, FIX8(64), FIX8(72));
                 pickup_spawn(PICKUP_COIN_5, FIX8(96), FIX8(72));

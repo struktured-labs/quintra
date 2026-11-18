@@ -375,11 +375,13 @@ u8 pickup_spawn_choice(u8 item_index, fix8_t x, fix8_t y) BANKED {
 }
 
 void pickup_spawn_boon_pair(u8 roll) BANKED {
-    u8 first = pickup_farfold_relic_for_class(roll);
-    u8 second = pickup_farfold_relic_for_class((u8)(roll + 1));
+    u8 first = pickup_boon_relic(roll);
+    u8 second = pickup_boon_relic((u8)(roll + 1));
     // The director queues this transaction, then the room calls it only
     // after the director bank has returned. Keep all constructors local to
-    // the pickup bank so completion cannot strand a sealed room.
+    // the pickup bank so completion cannot strand a sealed room. Boons use
+    // the sustain/utility table (pickup_boon_relic wraps the full 0..4
+    // range) rather than the class ATK/SPD pool.
     pickup_spawn_choice(first, FIX8(104), FIX8(120));
     pickup_spawn_choice(second, FIX8(136), FIX8(120));
 }

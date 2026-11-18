@@ -186,6 +186,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_pickup_feedback.py
 	$(PYBOY_RUN) scripts/test_stat_max_pickup.py
+	python3 scripts/test_stat_drop_curve.py
 	$(PYBOY_RUN) scripts/test_pickup_notices.py
 	$(PYBOY_RUN) scripts/test_speed_cap.py
 	$(PYBOY_RUN) scripts/test_will_max.py
