@@ -398,7 +398,8 @@ screen_id_t intro_tick(u8 keys, u8 pressed) {
 static u8 demo_saved_easy;
 static u16 demo_saved_frame;
 static u16 demo_frames;
-static u8 demo_i, demo_left, demo_keys, demo_prev;
+static u16 demo_i;
+static u8 demo_left, demo_keys, demo_prev;
 
 screen_id_t attract_begin(void) BANKED {
     const u8 *d;
@@ -450,7 +451,7 @@ screen_id_t attract_demo_frame(void) BANKED {
     } else {
         // ROOM and DIALOG follow the recording (A dismisses a stage card).
         if (!demo_left) {
-            u16 off = (u16)(4u + (u16)demo_i * 2u);
+            u16 off = (u16)(4u + demo_i * 2u);
             if (d[off + 1] == 0) {
                 demo_keys = 0;
                 demo_left = 0xFF;
