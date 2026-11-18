@@ -24,7 +24,7 @@ screen_id_t intro_tick(u8 keys, u8 pressed);
 
 // Title idle timeout fired: returns SCREEN_INTRO or the demo's first screen.
 screen_id_t attract_begin(void) BANKED;
-// Called by loop_run before the screen tick while attract_demo is set.
+// Called by input_poll() each frame while attract_demo is set.
 // Replaces the joypad with the recorded demo input; returns SCREEN_TITLE
 // when a real button is pressed or the demo ends, else SCREEN_SELF.
 screen_id_t attract_demo_frame(void) BANKED;

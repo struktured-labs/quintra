@@ -11,7 +11,6 @@
 
 #include <gb/gb.h>
 #include <gb/cgb.h>
-#include <string.h>
 
 #include "audio/music.h"
 #include "core/types.h"
@@ -215,7 +214,10 @@ void intro_enter(void) {
     in_k = 4;
     in_white = 0;
     in_dirty = 0;
-    memset(intro_pal, 0, sizeof(intro_pal));
+    {
+        u8 i;
+        for (i = 0; i < 32; ++i) intro_pal[i] = 0;
+    }
     if (in_attract) {
         in_settle = IN_BOOT_SETTLE;
         begin_intro();
@@ -310,8 +312,10 @@ static void tick_shot(void) {
             if (t == at) queue_block((u8)(IB_CHOSEN_HERO0 + i));
             slide = (u8)(t - at);
             if (slide > 16) slide = 16;
-            if (left) x = (i16)(8 - 24 + (24 * slide) / 16);
-            else x = (i16)(136 + 24 - (24 * slide) / 16);
+            // Unsigned shifts only: signed division pulls a library
+            // routine into the full home bank.
+            if (left) x = (i16)((u16)(24u * slide) >> 4) - 16;
+            else x = (i16)(160u - ((u16)(24u * slide) >> 4));
             put_hero(i, x, (u8)((3 + i * 3) * 8 - (((t >> 4) + i) & 1)),
                      slide < 16 ? (u8)((t >> 3) & 1) : 0);
         }
@@ -328,7 +332,7 @@ static void tick_shot(void) {
             u8 bob = 0;
             u8 dt = (u8)(t > (u8)(i * 8) ? t - i * 8 : 0);
             if (dt >= 90) { dt = 90; walking = 0; bob = (u8)(((t / 20) + i) & 1); }
-            x = (i16)(-20 + ((i16)dt * (36 + 28 * i)) / 90);
+            x = (i16)((u16)((u16)dt * (u16)(36u + 28u * i)) / 90u) - 20;
             put_hero(i, x, (u8)(47 - bob), walking ? (u8)(((t + i * 5) >> 3) & 1) : 0);
         }
         if (t == 100) queue_block(IB_TITLE_PRESS);

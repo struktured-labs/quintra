@@ -80,8 +80,19 @@ void loop_init(screen_id_t start) {
     if (screens[start].enter) screens[start].enter();
 }
 
-void loop_run(void) {
+// Exit the current screen and enter `next`. Home-only: it maps other banks.
+// input_poll() also calls it when an attract demo hands back to the title.
+void loop_switch(screen_id_t next) {
     screen_id_t cur = loop_current_screen;
+    screen_map(cur);
+    if (screens[cur].exit) screens[cur].exit();
+    loop_current_screen = next;
+    screen_map(next);
+    if (screens[next].enter) screens[next].enter();
+}
+
+void loop_run(void) {
+    screen_id_t cur;
     screen_id_t next;
 
     for (;;) {
@@ -90,21 +101,14 @@ void loop_run(void) {
         // straight from 60 to 30 Hz in modest bullet-heavy rooms.
         u8 vbl_at_start = g_vbl_epoch;
         input_poll();
-        // Attract demo: recorded input replaces the joypad; a real press
-        // (or the end of the recording) returns SCREEN_TITLE.
-        next = SCREEN_SELF;
-        if (attract_demo) next = attract_demo_frame();
+        cur = loop_current_screen;
 
         screen_map(cur);
         if (screens[cur].tick) {
-            if (next == SCREEN_SELF)
-                next = screens[cur].tick(input_keys, input_pressed);
+            next = screens[cur].tick(input_keys, input_pressed);
             if (next != SCREEN_SELF && next != cur) {
-                if (screens[cur].exit)  screens[cur].exit();
+                loop_switch(next);
                 cur = next;
-                loop_current_screen = cur;
-                screen_map(cur);
-                if (screens[cur].enter) screens[cur].enter();
             }
         }
 

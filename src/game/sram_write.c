@@ -1,4 +1,5 @@
-#pragma bank 10
+#pragma bank 22
+// Moved from bank 10 with the attract demo SRAM gate (bank 10 hit its floor).
 
 // Cold battery writes live with other utility transactions so the validator
 // and migration reader retain emergency room in the dedicated SRAM bank.
