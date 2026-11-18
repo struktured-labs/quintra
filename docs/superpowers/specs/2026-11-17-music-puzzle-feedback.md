@@ -20,17 +20,16 @@ Rule:
 
 - Mid-phrase plates keep the current envelope (`0xF3`, 40-frame CH1
   claim) so walking to the next plate retriggers cleanly.
-- The accepted **final** note uses a longer envelope (`0xF7`, volume 15
-  with period-7 decay) and a 56-frame CH1 claim.
-- The reveal fanfare is delayed **40 frames**, then starts on CH4
-  (the existing stone-breath) while CH1 of the fanfare waits 8 more
-  frames, so the last pitch is still audible as the jingle begins.
+- The accepted **final** note is `sfx_play_rune_final(step)` in the
+  resident dispatcher: envelope `0xF7` (volume 15, period-7 decay),
+  a 56-frame CH1 claim, and in the same call it arms
+  `PEND_PUZZLE_DELAY` (40 frames of the last pitch, then CH4
+  stone-breath, then 8 frames later the fanfare’s CH1 D4 figure).
   Melody lock covers the hold plus the fanfare
   (`melody_lock(MELODY_PRIORITY_SECRET, 40+8+45)`).
-- Every music-puzzle solve, including the row, calls
-  `sfx_play_puzzle_after_note()` after voicing the last plate. Hidden
-  landscape secrets that are not a pitched plate keep the immediate
-  `sfx_play(SFX_PUZZLE)`.
+- Hidden landscape secrets that are not a pitched plate keep the
+  immediate `sfx_play(SFX_PUZZLE)`. `sfx_play_puzzle_after_note()`
+  remains only as the delay arm used by the atomic final-note call.
 
 Verify with headless APU capture in `scripts/test_puzzles.py`: on the
 solve frame, CH1 is still the last plate’s frequency (no sweep), the
@@ -71,51 +70,64 @@ open, mark the phrase complete and light every plate; if now closed,
 clear progress and idle the row). Replace Lights-Out with a
 seed-deterministic melody the player must walk.
 
-- On room entry, after a short 20-frame rest, the row **echoes the
-  target phrase** once: each step flashes and voices its pitch with
-  the mid-phrase envelope, ~16 frames apart. Input is ignored during
-  the echo. After a wrong reset, the phrase echoes again following a
-  20-frame rest so the player can hear what to retry.
+- Plate layout is a zigzag along the east-west aisle, not a straight
+  line on y=8: plates sit at `(4,7), (8,9), (12,7), (16,9)` so the
+  player can walk the centre lane without being forced across a
+  neighbour. Cardinal body-width lanes stay carved as they are now.
+- On room entry, after a 20-frame rest, the row **echoes the target
+  phrase** once: each step flashes and voices its pitch with a short
+  echo envelope (`0xF2`) at **24 frames** per note. Movement and
+  combat stay free; only plate input is ignored. `melody_lock` covers
+  the echo so BGM cannot eat a cue note. After a wrong reset, the
+  phrase echoes again following a **40-frame** rest. A lightning zap
+  cancels any active echo immediately.
 - Length by dungeon depth (`run_state.bosses_beaten`): 3 notes in
-  stage 1, 4 in stage 2, 5 in stage 3+ (a 5-note phrase reuses one
-  plate, so "step on each once" cannot solve it).
-- Phrase construction is seed-stable. Consecutive steps may not be
-  the same plate (no instant double-tap). Stage 3+ includes exactly
-  one revisited plate. Pitches stay bound to physical plates 0..3.
-- A correct step latches that plate’s pressed look (a revisit lights
-  it again after any interim idle), voices its pitch, and advances.
-  The final accepted note uses the long envelope and delayed fanfare
-  above, then sets the phase bit and leaves every plate in the
-  phrase lit.
-- A wrong step plays `SFX_REFUSE` on CH1 after a short wrong-pitch
-  voice is skipped (the refuse cue *is* the buzz; do not also play
-  the plate’s pitch, or the clue fights the error). Flash the bad
-  plate, shake, clear the lit mask, and idle every plate. No HP
-  charge: this row is a remote shortcut wall, not a mandatory Trial.
+  stage 1, 4 in stage 2, 5 in stage 3+ (a 5-note phrase reuses exactly
+  one plate, so "step on each once" cannot solve it).
+- Phrase construction is seed-stable and must not use only low entropy
+  bits of the seed. Consecutive steps may not be the same plate.
+  Stage 3+ includes exactly one revisited plate. Pitches stay bound
+  to physical plates 0..3. Published phrases must not be the
+  monotonic left-to-right or right-to-left sweeps
+  (`0,1,2[,3]` / `3,2,1[,0]` or a 3-note prefix of either).
+- Mid-phrase presses **pulse-flash** and voice the pitch; they do not
+  latch `room_rune_lit_mask`. Only the solve (or a successful zap)
+  lights every plate. That way a revisited note in a 5-note phrase
+  is not already sunken when it is needed again, and walking the
+  aisle never looks like partial progress.
+- The accepted final note is one atomic resident call,
+  `sfx_play_rune_final(pitch)`: envelope `0xF7`, 56-frame CH1 claim,
+  and it arms the 40+8-frame ducked fanfare itself. Do not call
+  `sfx_play_rune` and `sfx_play_puzzle_after_note` as two steps;
+  the first would clear `pend_kind`. Then set the phase bit and
+  latch all four plates lit.
+- A wrong step voices the touched plate (so the pitch is still a
+  learnable clue) and plays `SFX_HIT` on CH4, then flashes, shakes,
+  and idles every plate. No HP charge: this row is a remote shortcut
+  wall, not a mandatory Trial. Re-echo starts after a 40-frame rest
+  so the refuse/hit cue and the first echo note do not overlap.
 - The contact latch still requires stepping off before the next
-  press, so walking a tile cannot double-count.
-- Accidental left-to-right mashing must fail the source contract and
-  the live test for every published phrase.
+  press. While an echo is playing, and on the frame it ends, if the
+  champion is standing on a plate then `puzzle_contact` is set so
+  that standing still cannot fire a press on the first open frame.
+- Accidental left-to-right or right-to-left mashing must fail the
+  source contract and the live test for every published phrase.
 
 ## 3. Rune-sequence plates (`PUZZLE_RUNE_SEQUENCE`)
 
 Keep the existing grammar: 3 / 4 / 5 plates by stage, stable
 per-plate pitches, rising or falling traversal, wrong note costs one
 half-heart, confirmed notes stay safe to revisit and still voice.
+The longer final note and ducked fanfare from section 1 apply here.
 
-Slightly more complex, still fair:
+Carbon review (2026-11-17): do **not** echo or flash the required
+order on entry or reset. This is a scale-deduction puzzle; giving
+away the walk order would turn it into Simon Says and remove the
+pitch/colour routing clue. Length already grows by stage. A more
+complex rune rule is deferred until the Lattice overhaul is played.
 
-- **Echo on entry** (and after a wrong reset), same call-and-response
-  cadence as the row. The echo flashes plates in required order so
-  the phrase is learnable with the sound off as well as on. Input
-  during the echo is ignored; a player already standing on a plate
-  must step off and back on after the echo to count a press.
-- Stage 3+ five-note phrases already exist in `prepare_sequence` even
-  when later stages currently assign Sun Lattice / Prism Toggle to
-  the Trial/Waystone slots. Do not change that assignment. When a
-  five-note room does appear, the echo plus the longer final note
-  make the larger court readable.
-- No HP change, no new plate count, no new banks of tiles.
+- No entry echo, no new plate count, no HP change, no assignment
+  change for later-stage Trial/Waystone slots.
 
 ## 4. Door-switch floor button art (addendum)
 
@@ -145,9 +157,11 @@ the button vanishes. There is no pressed state.
 
 ## 5. Banks, tests, shipping
 
-- `puzzle.c` is bank 6 (historically tight). Echo playback and the
-  row melody tick live in `rune_notes.c` (bank 21). `sfx.c` changes
-  stay in the resident dispatcher and must stay a few bytes.
+- `puzzle.c` is bank 6 (historically tight). Echo state, the row
+  phrase, and `rune_row_prepare` / `rune_row_tick` live in
+  `rune_notes.c` (bank 21) with WRAM arrays; bank 6 only makes those
+  two banked calls. `sfx.c` changes stay in the resident dispatcher
+  and must stay a few bytes.
 - `scripts/check_rom_layout.py` must stay green (256-byte emergency
   floor per bank). `scripts/test_new_game_start.py` must keep
   passing.
@@ -155,14 +169,18 @@ the button vanishes. There is no pressed state.
   - Source + live APU contract for the 40-frame final-note hold and
     ducked fanfare, on both a rune phrase and the row.
   - Row: echo plays the published phrase before input is accepted;
-    a wrong step buzzes, clears lit plates, and re-echoes; a correct
-    walk solves and persists the remote phase bit; a left-to-right
-    mash does not solve; lightning zap still opens the gate;
-    door-entry still uploads note tiles (poisoned VRAM contract).
-  - Rune rooms: echo on entry, existing colour / flash / damage /
-    revisit contracts still hold.
+    a wrong step voices the plate, buzzes on CH4, clears lit plates,
+    and re-echoes after 40 frames; a correct walk solves and persists
+    the remote phase bit; left-to-right and right-to-left mashes do
+    not solve; lightning zap opens the gate, a second zap closes and
+    resets progress, and a re-echo plus walk still solves; door-entry
+    still uploads note tiles (poisoned VRAM contract).
+  - Rune rooms: existing colour / flash / damage / revisit contracts
+    still hold, plus the longer final-note APU hold.
   - Door switch: activating a `BGT_SWITCH` leaves `BGT_SWITCH_PRESSED`
-    (walkable, door palette), not `BGT_FLOOR`.
+    (walkable, door palette), not `BGT_FLOOR`. Opening and closing
+    SELECT after a press restores VRAM tile 122 to the pressed
+    graphic, not Compass cache pixels.
 - No deploys. PR, then squash-merge when CI is green.
 
 ## 6. Non-goals
@@ -172,3 +190,21 @@ geometry stay as they are. Rune plate colours and packed palettes
 stay as specified in `2026-11-16-music-tile-colors.md`. Do not
 reassign later-stage Trial/Waystone kinds solely to show five-note
 phrases.
+
+## 7. Carbon review (2026-11-17)
+
+Verdict: approve with changes. The amendments above were taken:
+
+- No order-revealing echo on rune phrases (keeps scale deduction).
+- Zigzag row so the aisle is not a forced crossing; mid-phrase does
+  not latch the sunken look (revisit stays readable).
+- Wrong row press still teaches the plate’s pitch; 40-frame rest
+  before re-echo.
+- `sfx_play_rune_final` is one atomic resident call.
+- Echo cadence is 24 frames with `melody_lock`; zap cancels echo;
+  contact is armed if the champion stands on a plate during/at the
+  end of an echo.
+- Both monotonic sweeps are banned; SELECT resume and double-zap
+  are tested; slot 122 is an explicit walkable tile.
+
+Carbon call $0.0303; running total $6.2279 logged.
