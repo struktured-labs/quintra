@@ -218,10 +218,12 @@ u8 powerup_roulette_try_lock(u8 idx) BANKED {
     e = &entities[idx];
     if (!(e->flags & EF_ACTIVE) || e->type != ENT_PICKUP
         || e->ai_data[0] != PICKUP_ROULETTE) return 0;
+    if (roulette_slot != 0xFF && idx != roulette_slot) return 0;
     if (roulette_lock == 0xFF) return 1;
     if (!roulette_lock) {
         // Lock the face drawn this frame (already latched in ai_data[2]).
         roulette_lock = 1;
+        roulette_slot = idx;
         sfx_play(SFX_TICK);
         apply_face(e, e->ai_data[2]);
     }
@@ -230,8 +232,8 @@ u8 powerup_roulette_try_lock(u8 idx) BANKED {
 
 static void blink_capsule(entity_t *e) {
     // Last ~3 s of the pickup lifespan: blink the sprite.
-    if (e->state_timer && e->state_timer < 45)
-        e->palette = (e->state_timer & 4) ? 0x00 : e->palette;
+    if (e->state_timer && e->state_timer < 45 && e->ai_data[1] < POWERUP_COUNT)
+        e->palette = (e->state_timer & 4) ? 0x00 : face_pal[e->ai_data[1]];
 }
 
 static void world_tick(void) {
@@ -241,6 +243,7 @@ static void world_tick(void) {
         if (!(e->flags & EF_ACTIVE) || e->type != ENT_PICKUP) continue;
         if (e->ai_data[0] == PICKUP_ROULETTE) {
             any = 1;
+            if (roulette_slot == 0xFF) roulette_slot = i;
             roulette_tick_one(e, i);
         } else if (e->ai_data[0] == PICKUP_POWERUP) {
             any = 1;
@@ -248,6 +251,12 @@ static void world_tick(void) {
         }
     }
     powerup_world_live = any;
+    // Leaving a room mid-freeze used to leave roulette_lock set, so the
+    // next capsule could auto-award or entity_kill a stale slot.
+    if (!any) {
+        roulette_lock = 0;
+        roulette_slot = 0xFF;
+    }
 }
 
 static void handle_test_cmd(void) {
@@ -351,7 +360,10 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
         w = (u8)(w << 1); if (w > 0x0F) w = 0x0F;
         h = (u8)(h << 1); if (h > 0x0F) h = 0x0F;
         s->hitbox = (u8)((w << 4) | h);
-        s->state_timer = (u8)(s->state_timer + (s->state_timer >> 1));
+        // 4x area is the hitbox; +50% travel only if the shot actually moves.
+        // A stationary Wolfkin claw must not become a lingering melee wall.
+        if (s->vx || s->vy)
+            s->state_timer = (u8)(s->state_timer + (s->state_timer >> 1));
     }
 
     if (id == POWERUP_FORMATION && free_slots() > 8) {
@@ -442,6 +454,9 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
     }
 }
 
+// Blast Assist marks PROJ_FLAG_SPLASH; combat_shot_hit.c already blooms
+// on that flag (same path as Blast Seed). This helper is kept for tests
+// or a wall-expiry hook, and is safe to call more than once (clears the flag).
 void powerup_on_proj_impact(u8 idx, i16 x, i16 y) BANKED {
     entity_t *e;
     u8 dmg;
@@ -546,7 +561,10 @@ void powerup_helpers_tick(void) BANKED {
             || !(entities[buddy_idx[i]].flags & EF_ACTIVE)
             || entities[buddy_idx[i]].type != ENT_FX) {
             if (buddy_hp[i]) spawn_buddy(i);
-            else continue;
+            if (buddy_idx[i] >= MAX_ENTITIES
+                || !(entities[buddy_idx[i]].flags & EF_ACTIVE)
+                || entities[buddy_idx[i]].type != ENT_FX)
+                continue;
         }
         b = &entities[buddy_idx[i]];
         tx = trail_x[aged] + (i ? 16 : -16);

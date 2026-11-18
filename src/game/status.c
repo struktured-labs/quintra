@@ -252,6 +252,8 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
         confusion_mode = (rng_next_u8() & 1) ? 1 : 2;
         confusion_streak = 0;
     }
+    if (player_status_kind == QSTATUS_CONFUSION && kind != QSTATUS_CONFUSION)
+        confusion_immune = 240;
     player_status_kind = kind;
     player_status_ticks = ticks;
     player_status_aux = 0;

@@ -35,7 +35,9 @@ u8 powerup_drop_cool;
 static u16 powerup_drop_at;
 void powerup_note_drop(void) BANKED {
     powerup_drop_cool = 150;
-    powerup_drop_at = run_state.run_timer;
+    // run_timer sticks at 0 before the first second; store 1 so
+    // pu_cool_blocked does not treat this as "no drop yet".
+    powerup_drop_at = run_state.run_timer ? run_state.run_timer : 1;
 }
 u8 powerup_world_live;
 u8 powerup_test_cmd;

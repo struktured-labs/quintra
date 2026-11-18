@@ -3,6 +3,7 @@
 // this frame: SDCC spills every local of the function that contains both.
 #include "audio/sfx.h"
 #include "game/hexa_boss.h"
+#include "render/large_boss.h"
 #include "audio/boss_voice.h"
 #include "core/rng.h"
 #include "core/types.h"
@@ -14,6 +15,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/powerup.h"
 #include "game/rare_enemy.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -21,6 +23,7 @@
 #include "game/will.h"
 #include "render/tiles.h"
 #include "content.h"
+extern u8 large_boss_index;
 
 u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED;
 u8 status_enemy_effective_poise(u8 idx, u8 poise) BANKED;
@@ -45,6 +48,16 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     eid = ej->ai_data[0];
     if (shot->ai_data[6] == PROJ_AUX_HOOKSHOT
         || shot->ai_data[6] == PROJ_AUX_FUSE_BOMB) return 0;
+    // Per-volley cap of 2 copy hits on boss parts, counted only when the
+    // copy actually overlaps a boss/miniboss body (not mid-air, not minions).
+    if (shot->ai_data[3] & PROJ_FLAG_PU_COPY) {
+        u8 boss_part = (j == large_boss_index);
+        if (hexa_boss_active && j == hexa_core_entity) boss_part = 1;
+        if (run_state_is_miniboss()
+            && (eid == ENEMY_STONE_SENTINEL || eid == ENEMY_STAGE_REAPER))
+            boss_part = 1;
+        if (boss_part && !powerup_copy_hit_ok()) return 0;
+    }
     if (shot->ai_data[6] == PROJ_AUX_BOOMERANG) {
         if (!(ej->flags & (EF_ELITE | EF_ALPHA | EF_RARE))
             && eid != ENEMY_STONE_SENTINEL

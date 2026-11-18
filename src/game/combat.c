@@ -528,10 +528,8 @@ static void combat_player_shots(void) {
         }
         // Melee that cuts shots, and splash bursts, still walk every slot.
         // Ordinary bullets only test the on-screen enemy list.
-        if ((shot->ai_data[3] & PROJ_FLAG_PU_COPY)
-            && (procgen_current_room_is_boss || run_state_is_miniboss())
-            && !powerup_copy_hit_ok())
-            continue;
+        // Copy-vs-boss cap is applied in combat_apply_player_shot_hit when
+        // a boss part is actually overlapped, so mid-air copies stay live.
         if (shot->ai_data[2] || shot->ai_data[6] == PROJ_AUX_SPLASH)
             combat_resolve_player_shot(shot, i, &convergence_giant_hits);
         else
