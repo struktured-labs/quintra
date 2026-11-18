@@ -222,14 +222,20 @@ void hud_redraw_depth(void) BANKED {
         if (d > 9) d = 9;
         row[0] = BGT_AREA_H;
         row[1] = (u8)(HUD_DIGIT_0 + d);
-        VBK_REG = 0;
-        set_win_tiles(10, 0, 2, 1, row);
-        return;
+    } else {
+        tiles_load_hud_b_icon(player.active_item);
+        row[0] = HUD_B_LETTER;
+        row[1] = HUD_B_ICON;
     }
-    tiles_load_hud_b_icon(player.active_item);
-    row[0] = HUD_B_LETTER;
-    row[1] = HUD_B_ICON;
-    VBK_REG = 0;
+    // Notices can paint cols 10-15 on a temporary palette. Restore pal 7
+    // here; hud_set_lane_palette only covers the 12-15 lane.
+    {
+        u8 attr[2];
+        attr[0] = attr[1] = 7;
+        VBK_REG = 1;
+        set_win_tiles(10, 0, 2, 1, attr);
+        VBK_REG = 0;
+    }
     set_win_tiles(10, 0, 2, 1, row);
 }
 

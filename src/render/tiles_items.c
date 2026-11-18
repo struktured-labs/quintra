@@ -99,9 +99,14 @@ void tiles_load_hud_b_icon(u8 item_id) BANKED {
         0x00,0x66, 0x00,0x66, 0x00,0x7C, 0x00,0x00
     };
     const u8 *src = 0;
+    // Waygear icons sit in sprite_item_icons[26..] (after the 26 pickup
+    // icons). Do not use SPR_WAYGEAR_HOOK - SPR_ITEM_IRON_HEART: VRAM
+    // tile numbers jump from the pickup block to 204.
+    u8 hook = (u8)(26 + (SPR_WAYGEAR_HOOK - SPR_WAYGEAR_GLOVE));
+    VBK_REG = 0;
     set_bkg_data(HUD_B_LETTER, 1, letter_b);
     if (item_id == ITEM_ID_BOOMERANG) src = sprite_boomerang;
-    else if (item_id == ITEM_ID_HOOKSHOT) src = sprite_item_icons[28];
+    else if (item_id == ITEM_ID_HOOKSHOT) src = sprite_item_icons[hook];
     else if (item_id == ITEM_ID_MORNINGSTAR) src = sprite_morningstar;
     else if (item_id == ITEM_ID_BOMBS) src = sprite_bomb_bag;
     else if (item_id == 10) src = sprite_item_icons[SPR_ITEM_SWIFT_FANG - SPR_ITEM_IRON_HEART];

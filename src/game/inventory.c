@@ -137,10 +137,9 @@ static void inventory_help_enter(void) {
     gotoxy(1, 12); text_write("NEXT A SPENDS WILL");
 
     gotoxy(1, 14); text_write("WEAPONS: ORB + A");
-    gotoxy(1, 15); text_write("PACK: SEL FOR AIM");
-    gotoxy(1, 16); text_write(vignette_cutscenes_off()
+    gotoxy(1, 15); text_write(vignette_cutscenes_off()
         ? "L R CUTSCENES OFF" : "L R CUTSCENES ONCE");
-    gotoxy(1, 17); text_write("SEL PACK B RETURN");
+    gotoxy(1, 16); text_write("SEL PACK B RETURN");
 
     palette_bg_fill_attrs(0);
     inventory_attr_row(0, 1); inventory_attr_row(4, 1); inventory_attr_row(8, 2);
@@ -261,6 +260,7 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
         if (inventory_page == 4) {
             u8 aim = inventory_aim_tick(pressed);
             if (aim == 1) {
+                sfx_play(SFX_COIN);
                 room_request_resume();
                 return SCREEN_ROOM;
             }

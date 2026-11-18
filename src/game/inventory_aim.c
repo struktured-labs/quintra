@@ -199,10 +199,10 @@ static u8 selected_slot(void) {
     return 0;
 }
 
-static void place_icons(void) {
+static void place_icons(u8 reload) {
     u8 i, tile, prop, pal, col;
     u8 sel = selected_slot();
-    tiles_load_pickup_sprites();
+    if (reload) tiles_load_pickup_sprites();
     for (i = 0; i < 40; ++i) move_sprite(i, 0, 0);
     for (i = 0; i < 5; ++i) {
         if (!owns(slot_item(i))) continue;
@@ -213,6 +213,30 @@ static void place_icons(void) {
         set_sprite_prop(i, pal);
         move_sprite(i, (u8)(8 + (col + 1) * 8), (u8)(16 + 5 * 8));
     }
+}
+
+// LCD-on update used when the cursor or aim mode changes. A full
+// DISPLAY_OFF / cls / tile-reload flashes the CGB screen on every step.
+static void inventory_aim_refresh(void) {
+    u8 i, pal, col;
+    u8 sel = selected_slot();
+    u8 id = slot_item(sel);
+    extern u8 player_penta_aim;
+
+    for (i = 0; i < 5; ++i) {
+        col = (u8)(2 + i * 3);
+        if (i == sel) pal = 1;
+        else if (owns(slot_item(i))) pal = 2;
+        else pal = 0;
+        attr_cells(col, 4, 3, 3, pal);
+    }
+    gotoxy(1, 8); write_field(item_name(id), 18);
+    attr_cells(1, 8, 18, 1, 1);
+    gotoxy(1, 9); write_field(item_tip(id), 18);
+    attr_cells(1, 9, 18, 1, 3);
+    gotoxy(1, 12); text_write(player_penta_aim ? "MODE  HOLD AIM" : "MODE  CLASSIC");
+    attr_cells(1, 12, 18, 1, 2);
+    place_icons(0);
 }
 
 void inventory_aim_enter(void) BANKED {
@@ -252,7 +276,7 @@ void inventory_aim_enter(void) BANKED {
     gotoxy(1, 14); text_write("LEFT RIGHT TO PICK");
     gotoxy(1, 16); text_write("SEL GEAR  B PLAY");
 
-    place_icons();
+    place_icons(1);
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
@@ -265,19 +289,19 @@ u8 inventory_aim_tick(u8 pressed) BANKED {
     if (pressed & J_A) {
         player_penta_aim ^= 1;
         sfx_play(SFX_TICK);
-        inventory_aim_enter();
+        inventory_aim_refresh();
         return 0;
     }
     if (pressed & (J_RIGHT | J_DOWN)) {
         secondary_cycle_step(1);
         sfx_play(SFX_TICK);
-        inventory_aim_enter();
+        inventory_aim_refresh();
         return 0;
     }
     if (pressed & (J_LEFT | J_UP)) {
         secondary_cycle_step((i8)-1);
         sfx_play(SFX_TICK);
-        inventory_aim_enter();
+        inventory_aim_refresh();
         return 0;
     }
     return 0;
