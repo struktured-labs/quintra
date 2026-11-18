@@ -21,7 +21,10 @@
 #include "game/dungeon_tools.h"
 #include "game/entity.h"
 #include "game/enemy_ai.h"
-#include "game/enemy_new_ai.h"
+extern u8 pending_foyer_warp;
+extern u8 vault_hand_holding;
+extern u8 new_monsters_in_room;
+void new_monsters_foyer_warp(void) BANKED;
 #include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/mire_roots.h"
@@ -1214,20 +1217,23 @@ static u8 room_enemy_table_hp(u8 eid) {
     return edef.stats.hp;
 }
 
+static screen_id_t room_apply_foyer_warp(void) {
+    new_monsters_foyer_warp();
+    DISPLAY_OFF;
+    procgen_generate_current_room();
+    room_draw_tilemap();
+    place_player_sprite();
+    hud_redraw_all();
+    SHOW_SPRITES;
+    SHOW_BKG;
+    DISPLAY_ON;
+    sram_save_run();
+    return SCREEN_SELF;
+}
+
 screen_id_t room_tick(u8 keys, u8 pressed) {
-    if (pending_foyer_warp) {
-        new_monsters_foyer_warp();
-        DISPLAY_OFF;
-        procgen_generate_current_room();
-        room_draw_tilemap();
-        place_player_sprite();
-        hud_redraw_all();
-        SHOW_SPRITES;
-        SHOW_BKG;
-        DISPLAY_ON;
-        sram_save_run();
-        return SCREEN_SELF;
-    }
+    if (new_monsters_in_room && pending_foyer_warp)
+        return room_apply_foyer_warp();
     // Projectile-triggered Law altars finish on the next resident room tick;
     // contextual A finishes below immediately after the far call returns.
     if (dungeon_law_toggle_pending) room_finish_law_toggle();
@@ -1312,7 +1318,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         || player_status_kind == QSTATUS_SLOW
         || player_status_kind == QSTATUS_CONFUSION)
         status_player_filter_input(&keys, &pressed);
-    if (vault_hand_holding) {
+    if (new_monsters_in_room && vault_hand_holding) {
         keys &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
         pressed &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
     }

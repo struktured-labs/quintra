@@ -5,7 +5,7 @@
 #include "game/companion.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
-extern u8 new_monsters_busy;
+extern u8 new_monsters_in_room;
 void new_monsters_draw(void) BANKED;
 #include "game/player.h"
 #include "game/projectile.h"
@@ -246,6 +246,6 @@ void entity_draw_all(void) {
 #include "game/entity_draw_core.h"
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
-    if (new_monsters_busy || player_status_kind == QSTATUS_CONFUSION)
+    if (new_monsters_in_room || player_status_kind == QSTATUS_CONFUSION)
         new_monsters_draw();
 }

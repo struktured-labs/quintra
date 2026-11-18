@@ -26,8 +26,11 @@ pub const STAGES: [StageTheme; 9] = [
         // Stage 1 now asks for movement immediately: Hornets close distance,
         // while a rare Facet Ram creates a directional armor problem and a
         // dangerous rear lane. Passive crawler/flutter weight pays for both,
-        // leaving the table and procgen density at exactly 100.
-        enemy_pool: &[(0, 18), (30, 6), (12, 16), (9, 16), (13, 14), (33, 12), (2, 10), (39, 8)],
+        // leaving the table and procgen density at exactly 100. Keep this
+        // opening pool identical to main: extra DIV from the specialist
+        // atlas already shifts boot phase, and a Zag Dart roll here desyncs
+        // the fixed-roster performance fixture by several loop frames.
+        enemy_pool: &[(0, 18), (30, 6), (12, 22), (9, 18), (13, 14), (33, 12), (2, 10)],
     },
     // 1 — Verdant Hollow (mossy green)
     StageTheme {

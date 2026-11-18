@@ -20,5 +20,6 @@ extern u8 vault_hand_holding;
 extern u8 leybeam_beam_live;
 extern u8 leybeam_flush_pending;
 extern u8 new_monsters_busy;
+extern u8 new_monsters_in_room;
 
 #endif

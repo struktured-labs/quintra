@@ -21,6 +21,7 @@ u8 vault_hand_holding;
 u8 leybeam_beam_live;
 u8 leybeam_flush_pending;
 u8 new_monsters_busy;
+u8 new_monsters_in_room;
 
 static u8 beam_dir;
 static u8 beam_len;
@@ -899,6 +900,7 @@ void new_monsters_post_spawn(void) BANKED {
     vault_hand_holding = 0;
     fuse_bombs_clear();
     new_monsters_busy = 0;
+    new_monsters_in_room = 0;
 
     despawn_extra(ENEMY_VEIL_MAGUS, 2);
     despawn_extra(ENEMY_ZAG_DART, 2);
@@ -918,6 +920,7 @@ void new_monsters_post_spawn(void) BANKED {
         || count_id(ENEMY_ZAG_DART)
         || count_id(ENEMY_LEYBEAM)
         || count_id(ENEMY_FUSE_HURLER));
+    new_monsters_in_room = new_monsters_busy;
 
     if (!count_id(ENEMY_BANE_BRUTE)) return;
     for (i = 0; i < MAX_ENTITIES; ++i)
@@ -930,6 +933,14 @@ void new_monsters_post_spawn(void) BANKED {
     }
     if (allies < 2) despawn_extra(ENEMY_BANE_BRUTE, 0);
     else place_allies_behind_brute();
+    new_monsters_busy = (u8)(count_id(ENEMY_VEIL_MAGUS)
+        || count_id(ENEMY_HEX_WALKER)
+        || count_id(ENEMY_VAULT_HAND)
+        || count_id(ENEMY_BANE_BRUTE)
+        || count_id(ENEMY_ZAG_DART)
+        || count_id(ENEMY_LEYBEAM)
+        || count_id(ENEMY_FUSE_HURLER));
+    new_monsters_in_room = new_monsters_busy;
 }
 
 void new_monsters_foyer_warp(void) BANKED {
@@ -971,6 +982,7 @@ void new_monsters_draw(void) BANKED {
     }
     if (!any && player_status_kind != QSTATUS_CONFUSION) {
         new_monsters_busy = 0;
+        new_monsters_in_room = 0;
         move_sprite(35, 0, 0);
         move_sprite(36, 0, 0);
         move_sprite(37, 0, 0);
@@ -978,7 +990,7 @@ void new_monsters_draw(void) BANKED {
         move_sprite(39, 0, 0);
         return;
     }
-    if (any) new_monsters_busy = 1;
+    if (any) { new_monsters_busy = 1; new_monsters_in_room = 1; }
     fuse_bombs_tick();
     if (leybeam_beam_live) {
         for (i = 0; i < MAX_ENTITIES; ++i)

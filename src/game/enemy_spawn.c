@@ -8,6 +8,7 @@
 #include "game/entity.h"
 #include "content.h"
 #include "game/enemy_def.h"
+extern u8 new_monsters_in_room;
 
 // Spawn-only initializer owned by the feature bank. Keeping the declaration
 // private avoids making every translation unit depend on this cold hook.
@@ -61,5 +62,8 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
             e->hitbox = (6 << 4) | 6;
         }
     }
+    if (enemy_content_id >= ENEMY_VEIL_MAGUS
+        && enemy_content_id <= ENEMY_FUSE_HURLER)
+        new_monsters_in_room = 1;
     return idx;
 }

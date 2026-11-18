@@ -19,6 +19,7 @@
 
 /* Bare decls: do not include enemy_new_ai.h (pulls entity.h into HOME). */
 extern u8 leybeam_flush_pending;
+extern u8 new_monsters_in_room;
 void leybeam_vblank_flush(void) BANKED;
 void loop_overrun_vblank_flush(void) BANKED;
 
@@ -129,10 +130,11 @@ void loop_run(void) {
             // OBJ first: the title commit needs the top VBlank lines.
             if (palette_obj_pending_commit) palette_obj_commit_vblank();
             else if (palette_bg_pending_commit) palette_bg_commit_vblank();
-            if (leybeam_flush_pending) leybeam_vblank_flush();
+            if (new_monsters_in_room && leybeam_flush_pending)
+                leybeam_vblank_flush();
         } else if (palette_obj_pending_commit
                    || palette_bg_pending_commit
-                   || leybeam_flush_pending) {
+                   || (new_monsters_in_room && leybeam_flush_pending)) {
             loop_overrun_vblank_flush();
         }
 

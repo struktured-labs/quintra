@@ -31,6 +31,11 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED;
 u8 status_enemy_effective_poise(u8 idx, u8 poise) BANKED;
 u8 status_enemy_hit_damage(u8 idx, u8 damage) BANKED;
 
+/* BSS, not a function-local: two 16-byte enemy_def_t copies on this
+   BANKED frame made the shot-hit stack 40 bytes and could prevent
+   hit_body from applying a status after the impact FX. */
+static enemy_def_t combat_edef;
+
 static void knockback_enemy(entity_t *e, i8 bvx, i8 bvy, u8 poise) {
     u8 n;
     if (poise >= 3) return;
@@ -76,9 +81,8 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     {
         u8 armor = (eid == ENEMY_FACET_RAM || eid == ENEMY_FOLD_STAR);
         if (!armor && eid < N_ENEMIES) {
-            enemy_def_t edef;
-            enemy_load_def(eid, &edef);
-            armor = (edef.ai_kind == AI_COUNTER_GUARD);
+            enemy_load_def(eid, &combat_edef);
+            armor = (combat_edef.ai_kind == AI_COUNTER_GUARD);
         }
         if (armor) {
             enemy_special_reject_hit(i, j);
@@ -113,10 +117,9 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     weakness = 0;
     poise = 0;
     if (eid < N_ENEMIES) {
-        enemy_def_t edef;
-        enemy_load_def(eid, &edef);
-        weakness = edef.stats.weakness;
-        poise = edef.stats.poise;
+        enemy_load_def(eid, &combat_edef);
+        weakness = combat_edef.stats.weakness;
+        poise = combat_edef.stats.poise;
     }
     // Large bosses reuse the Stone Sentinel definition but must not inherit
     // its lightning-only weakness, and they have no elemental weakness.

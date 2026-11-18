@@ -15,10 +15,11 @@ static const u8 enemy_anim_bit[8] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 
 // sprite_tile was re-pointed (bosses, special poses) are left alone.
 void enemy_anim_tick(void) BANKED {
     u8 i, eid, n, u, m;
-    u8 done[5];
+    /* 6 bytes cover EID 0..47; N_EIDS is 42 so IDs 40-41 must not wrap. */
+    u8 done[6];
     u8 beat = (u8)((entity_anim_counter >> 4) & 1);
     entity_t *e = entities;
-    done[0] = done[1] = done[2] = done[3] = done[4] = 0;
+    done[0] = done[1] = done[2] = done[3] = done[4] = done[5] = 0;
     for (i = 0; i < MAX_ENTITIES; ++i, ++e) {
         if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY) continue;
         eid = e->ai_data[0];
