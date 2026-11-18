@@ -194,6 +194,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_will_max_v2.py
 	$(PYBOY_RUN) scripts/test_serpent_tail_shield.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
+	$(PYBOY_RUN) scripts/test_will_b_weapons.py
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_signature_balance.py
 	$(PYBOY_RUN) scripts/test_status_effects.py
