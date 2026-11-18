@@ -19,10 +19,34 @@
 u8 pending_foyer_warp;
 u8 vault_hand_holding;
 u8 leybeam_beam_live;
+u8 leybeam_flush_pending;
+u8 new_monsters_busy;
 
 static u8 beam_dir;
 static u8 beam_len;
 static i16 beam_ox, beam_oy;
+
+#define LEY_STAMP_MAX 48
+#define LEY_VBL_BURST 16
+static u8 ley_n, ley_i, ley_flush, ley_art_ok;
+static u8 ley_tx[LEY_STAMP_MAX], ley_ty[LEY_STAMP_MAX];
+
+/* Uploaded to VRAM bank 1, index LEYBEAM_BG_TILE. Crossing-bar glow so
+   the same 8x8 reads as a shaft in both orientations. */
+static const u8 ley_beam_art[16] = {
+    0x38, 0xFF, 0x1C, 0xFF, 0x38, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0x1C, 0xFF, 0x38, 0xFF, 0x1C, 0xFF
+};
+
+#define FUSE_BOMB_MAX 2
+#define FUSE_FLIGHT 16
+#define FUSE_TICKS  40
+#define FUSE_RADIUS 16
+static u8  fb_live[FUSE_BOMB_MAX];
+static u8  fb_phase[FUSE_BOMB_MAX]; /* 0 flight, 1 fuse */
+static u8  fb_timer[FUSE_BOMB_MAX];
+static i16 fb_x[FUSE_BOMB_MAX], fb_y[FUSE_BOMB_MAX];
+static i8  fb_vx[FUSE_BOMB_MAX], fb_vy[FUSE_BOMB_MAX];
 
 #define PHASE e->ai_data[2]
 #define TIMER e->ai_data[1]
@@ -231,23 +255,103 @@ static u8 nearest_cardinal(i16 ex, i16 ey) {
     return (dy >= 0) ? 2 : 0;
 }
 
+static u8 ley_floorish(u8 tile) {
+    return (u8)(tile == BGT_FLOOR || tile == BGT_FLOOR2
+        || tile == BGT_FLOOR3 || tile == BGT_RUBBLE);
+}
+
+static void ley_put(u8 tx, u8 ty, u8 tile, u8 attr) {
+    VBK_REG = 0;
+    set_bkg_tiles(ROOM_BG_MAP_X(tx), ROOM_BG_MAP_Y(ty), 1, 1, &tile);
+    VBK_REG = 1;
+    set_bkg_tiles(ROOM_BG_MAP_X(tx), ROOM_BG_MAP_Y(ty), 1, 1, &attr);
+    VBK_REG = 0;
+}
+
+void leybeam_vblank_flush(void) BANKED {
+    u8 burst = 0;
+    if (!ley_flush) return;
+    if (ley_flush == 1 && !ley_art_ok) {
+        VBK_REG = 1;
+        set_bkg_data(LEYBEAM_BG_TILE, 1, ley_beam_art);
+        VBK_REG = 0;
+        ley_art_ok = 1;
+        burst++;
+    }
+    while (ley_i < ley_n && burst < LEY_VBL_BURST) {
+        u8 tx = ley_tx[ley_i];
+        u8 ty = ley_ty[ley_i];
+        if (ley_flush == 1) {
+            /* Bank-1 glow tile, stage crystal palette. */
+            ley_put(tx, ty, LEYBEAM_BG_TILE, (u8)(0x08 | BGPAL_CRYSTAL));
+        } else {
+            u8 t = room_tile_at_px((i16)tx << 3, (i16)ty << 3);
+            ley_put(tx, ty, t, BGPAL_FLOOR);
+        }
+        ley_i++;
+        burst++;
+    }
+    if (ley_i >= ley_n) {
+        if (ley_flush == 2) room_draw_tilemap(); /* exact attrs from the RAM map */
+        ley_flush = 0;
+    }
+    leybeam_flush_pending = ley_flush;
+}
+
 static void leybeam_restore(void) {
-    if (!leybeam_beam_live) return;
+    if (!leybeam_beam_live && !ley_n) return;
     leybeam_beam_live = 0;
-    /* Redraw the stamped strip from the RAM map. A full tilemap blit is
-       heavy but safe and uses no extra backup buffer. */
-    room_draw_tilemap();
+    if (ley_n) {
+        ley_i = 0;
+        ley_flush = 2;
+        leybeam_flush_pending = 1;
+    } else {
+        room_draw_tilemap();
+    }
 }
 
 void leybeam_clear_beam(void) BANKED {
     leybeam_restore();
 }
 
+static void leybeam_collect(void) {
+    i8 dx = card_dx[beam_dir];
+    i8 dy = card_dy[beam_dir];
+    i8 ax = (beam_dir == 0 || beam_dir == 2) ? 1 : 0;
+    i8 ay = (beam_dir == 1 || beam_dir == 3) ? 1 : 0;
+    u8 n;
+    ley_n = 0;
+    for (n = 0; n <= beam_len; ++n) {
+        i16 px = beam_ox + (i16)dx * (i16)n * 8;
+        i16 py = beam_oy + (i16)dy * (i16)n * 8;
+        i8 across;
+        for (across = -8; across <= 0; across += 8) {
+            i16 x = px + (i16)ax * across;
+            i16 y = py + (i16)ay * across;
+            u8 tx, ty, tile;
+            if (x < 0 || y < 0) continue;
+            tx = (u8)(x >> 3);
+            ty = (u8)(y >> 3);
+            if ((u16)tx >= (u16)(room_world_width >> 3)
+                || (u16)ty >= (u16)(room_world_height >> 3)) continue;
+            tile = room_tile_at_px(x, y);
+            if (!ley_floorish(tile)) continue;
+            if (ley_n < LEY_STAMP_MAX) {
+                ley_tx[ley_n] = tx;
+                ley_ty[ley_n] = ty;
+                ley_n++;
+            }
+        }
+    }
+}
+
 static void leybeam_stamp(void) {
-    /* Visual: room_draw is deferred to VBlank-friendly full restore later.
-       Collision uses beam_ox/oy/dir/len. A thin muzzle puff marks the lock. */
-    puff_at(beam_ox, beam_oy);
+    leybeam_collect();
+    ley_i = 0;
+    ley_flush = 1;
+    leybeam_flush_pending = 1;
     leybeam_beam_live = 1;
+    puff_at(beam_ox, beam_oy);
 }
 
 u8 leybeam_hits_player(void) {
@@ -310,12 +414,23 @@ static void leybeam_tick(entity_t *e, const enemy_def_t *def) {
     }
     if (PHASE == 1) {
         if (TIMER == 0 || TIMER + 8 == tell) sfx_play(SFX_TICK);
-        if (++TIMER >= tell) {
+        /* Start the VBlank shaft in the last charge frames so the full
+           16-px band is on the map when the beam goes live. */
+        if (!leybeam_beam_live && (u8)(TIMER + 3) >= tell) {
             beam_dir = e->ai_data[3] & 3;
             beam_ox = FIX8_TO_INT(e->x) + 4;
             beam_oy = FIX8_TO_INT(e->y) + 4;
             leybeam_lock_length(beam_ox, beam_oy, beam_dir);
             leybeam_stamp();
+        }
+        if (++TIMER >= tell) {
+            if (!leybeam_beam_live) {
+                beam_dir = e->ai_data[3] & 3;
+                beam_ox = FIX8_TO_INT(e->x) + 4;
+                beam_oy = FIX8_TO_INT(e->y) + 4;
+                leybeam_lock_length(beam_ox, beam_oy, beam_dir);
+                leybeam_stamp();
+            }
             PHASE = 2;
             TIMER = 0;
         }
@@ -332,6 +447,180 @@ static void leybeam_tick(entity_t *e, const enemy_def_t *def) {
     }
     if (++TIMER >= beam) {
         leybeam_restore();
+        PHASE = 0;
+        TIMER = 0;
+    }
+}
+
+
+/* ---- Fuse Hurler: lobbed fused bomb + close-range wind-up ---- */
+
+static void fuse_bombs_clear(void) {
+    u8 i;
+    for (i = 0; i < FUSE_BOMB_MAX; ++i) fb_live[i] = 0;
+}
+
+static void fuse_hurt_at(i16 x, i16 y, u8 radius) {
+    i16 px = (i16)player.x + 4;
+    i16 py = (i16)player.y + 4;
+    i16 dx = px - x;
+    i16 dy = py - y;
+    if (dx < 0) dx = (i16)-dx;
+    if (dy < 0) dy = (i16)-dy;
+    if (dx > radius || dy > radius) return;
+    if (player.iframes || !player.hp || death_timer) return;
+    if (player.hp > 1) player.hp--;
+    else player.hp = 1;
+    player.iframes = 24;
+    hud_redraw_hp();
+    sfx_play(SFX_HURT);
+    room_shake(1, 6);
+}
+
+static void fuse_explode(u8 i) {
+    i16 x = fb_x[i], y = fb_y[i];
+    fb_live[i] = 0;
+    puff_at(x, y);
+    puff_at(x - FUSE_RADIUS, y);
+    puff_at(x + FUSE_RADIUS, y);
+    puff_at(x, y - FUSE_RADIUS);
+    puff_at(x, y + FUSE_RADIUS);
+    room_shake(2, 8);
+    sfx_play(SFX_ROAR);
+    fuse_hurt_at(x, y, FUSE_RADIUS);
+}
+
+static u8 fuse_bomb_lob(i16 sx, i16 sy, i16 tx, i16 ty) {
+    u8 i;
+    i16 dx, dy, land_x, land_y;
+    for (i = 0; i < FUSE_BOMB_MAX; ++i) if (!fb_live[i]) break;
+    if (i >= FUSE_BOMB_MAX) return 0;
+    dx = tx - sx;
+    dy = ty - sy;
+    /* Land about three-quarters of the way to the hero, on walkable floor. */
+    land_x = sx + dx - (dx >> 2);
+    land_y = sy + dy - (dy >> 2);
+    if (!walkable_px(land_x - 4, land_y - 4)) {
+        land_x = tx;
+        land_y = ty;
+        if (!walkable_px(land_x - 4, land_y - 4)) {
+            land_x = sx + sign8(dx) * 24;
+            land_y = sy + sign8(dy) * 24;
+        }
+    }
+    fb_live[i] = 1;
+    fb_phase[i] = 0;
+    fb_timer[i] = FUSE_FLIGHT;
+    fb_x[i] = sx;
+    fb_y[i] = sy;
+    fb_vx[i] = (i8)((land_x - sx) / (i8)FUSE_FLIGHT);
+    fb_vy[i] = (i8)((land_y - sy) / (i8)FUSE_FLIGHT);
+    if (!fb_vx[i] && !fb_vy[i]) {
+        fb_vx[i] = sign8(land_x - sx);
+        fb_vy[i] = sign8(land_y - sy);
+    }
+    puff_at(sx, sy);
+    sfx_play(SFX_TICK);
+    return 1;
+}
+
+static void fuse_bombs_tick(void) {
+    u8 i;
+    for (i = 0; i < FUSE_BOMB_MAX; ++i) {
+        if (!fb_live[i]) continue;
+        if (fb_phase[i] == 0) {
+            fb_x[i] += fb_vx[i];
+            fb_y[i] += fb_vy[i];
+            if (fb_timer[i]) fb_timer[i]--;
+            if (!fb_timer[i] || !walkable_px(fb_x[i] - 4, fb_y[i] - 4)) {
+                fb_phase[i] = 1;
+                fb_timer[i] = FUSE_TICKS;
+                puff_at(fb_x[i], fb_y[i]);
+            }
+            continue;
+        }
+        /* Visible blast-radius tell: pulse sparks on the four cardinals. */
+        if ((fb_timer[i] & 7) == 0) {
+            puff_at(fb_x[i] - FUSE_RADIUS, fb_y[i]);
+            puff_at(fb_x[i] + FUSE_RADIUS, fb_y[i]);
+            puff_at(fb_x[i], fb_y[i] - FUSE_RADIUS);
+            puff_at(fb_x[i], fb_y[i] + FUSE_RADIUS);
+            sfx_play(SFX_TICK);
+        }
+        if (fb_timer[i]) fb_timer[i]--;
+        if (!fb_timer[i]) fuse_explode(i);
+    }
+}
+
+static void fuse_hurler_tick(entity_t *e, const enemy_def_t *def) {
+    u8 walk = def->ai_p0 ? def->ai_p0 : 48;
+    u8 tell = def->ai_p1 ? def->ai_p1 : 20;
+    u8 cool = def->ai_p2 ? def->ai_p2 : 90;
+    i16 ex, ey, manh, adx, ady;
+    if (RUN_IS_EASY() && tell < 200) tell = (u8)(tell + (tell >> 2));
+    if (!(e->flags & EF_ACTIVE) || !e->hp) return;
+    ex = FIX8_TO_INT(e->x);
+    ey = FIX8_TO_INT(e->y);
+    adx = (i16)player.x - ex;
+    ady = (i16)player.y - ey;
+    if (adx < 0) adx = (i16)-adx;
+    if (ady < 0) ady = (i16)-ady;
+    manh = (i16)(adx + ady);
+
+    if (PHASE == 0) {
+        if (manh < 20) {
+            PHASE = 3;
+            TIMER = 0;
+            puff_at(ex, ey);
+            sfx_play(SFX_TICK);
+            return;
+        }
+        if ((++e->state_timer & 7) == 0) {
+            u8 h = e->state & 3;
+            if (!enemy_try_step(e, card_dx[h], card_dy[h]))
+                e->state = (u8)(rng_next_u8() & 3);
+        }
+        if (++TIMER >= walk) {
+            PHASE = 1;
+            TIMER = 0;
+            puff_at(ex, ey);
+            sfx_play(SFX_TICK);
+        }
+        return;
+    }
+    if (PHASE == 1) {
+        if (TIMER == 0 || (TIMER & 7) == 0) sfx_play(SFX_TICK);
+        if (++TIMER >= tell) {
+            if (fuse_bomb_lob(ex + 4, ey + 4,
+                    (i16)player.x + 4, (i16)player.y + 4)) {
+                PHASE = 2;
+                TIMER = 0;
+            } else {
+                TIMER = tell; /* hold the tell until a bomb slot frees */
+                if (TIMER) TIMER--;
+            }
+        }
+        return;
+    }
+    if (PHASE == 3) {
+        /* Close-range exploder wind-up: long flash, then a self-centered
+           burst. The Hurler survives (this is not the Bomber death burst). */
+        if ((TIMER & 3) == 0) puff_at(ex, ey);
+        if ((TIMER & 7) == 0) sfx_play(SFX_TICK);
+        if (++TIMER >= 28) {
+            puff_at(ex - FUSE_RADIUS, ey);
+            puff_at(ex + FUSE_RADIUS, ey);
+            puff_at(ex, ey - FUSE_RADIUS);
+            puff_at(ex, ey + FUSE_RADIUS);
+            room_shake(2, 8);
+            sfx_play(SFX_ROAR);
+            fuse_hurt_at(ex + 4, ey + 4, FUSE_RADIUS);
+            PHASE = 2;
+            TIMER = 0;
+        }
+        return;
+    }
+    if (++TIMER >= cool) {
         PHASE = 0;
         TIMER = 0;
     }
@@ -470,6 +759,7 @@ void new_monster_update(entity_t *e, const enemy_def_t *def) BANKED {
     else if (kind == AI_SHOVER) bane_brute_tick(e);
     else if (kind == AI_ZIGZAG) zag_dart_tick(e, def);
     else if (kind == AI_BEAM_CASTER) leybeam_tick(e, def);
+    else if (kind == AI_BOMB_LOBBER) fuse_hurler_tick(e, def);
     else if (kind == AI_GRABBER) {
         vault_hand_tick(e, def);
         vault_hand_offer_grab(e);
@@ -533,6 +823,7 @@ static u8 convert_slot_to(u8 id) {
         cur = e->ai_data[0];
         if (cur == ENEMY_BANE_BRUTE || cur == ENEMY_VAULT_HAND
             || cur == ENEMY_LEYBEAM || cur == ENEMY_VEIL_MAGUS
+            || cur == ENEMY_FUSE_HURLER
             || is_status_ally(cur)) continue;
         /* Replace this rolled body with a status ally. */
         {
@@ -601,8 +892,13 @@ void bane_brute_apply_knockback(i8 kx, i8 ky) BANKED {
 void new_monsters_post_spawn(void) BANKED {
     u8 allies = 0, i;
     leybeam_beam_live = 0;
+    ley_n = 0;
+    ley_flush = 0;
+    leybeam_flush_pending = 0;
     pending_foyer_warp = 0;
     vault_hand_holding = 0;
+    fuse_bombs_clear();
+    new_monsters_busy = 0;
 
     despawn_extra(ENEMY_VEIL_MAGUS, 2);
     despawn_extra(ENEMY_ZAG_DART, 2);
@@ -610,9 +906,18 @@ void new_monsters_post_spawn(void) BANKED {
     despawn_extra(ENEMY_VAULT_HAND, 1);
     despawn_extra(ENEMY_LEYBEAM, 1);
     despawn_extra(ENEMY_BANE_BRUTE, 1);
+    despawn_extra(ENEMY_FUSE_HURLER, 2);
 
     if (count_id(ENEMY_VAULT_HAND) && !vault_hand_may_act())
         despawn_extra(ENEMY_VAULT_HAND, 0);
+
+    new_monsters_busy = (u8)(count_id(ENEMY_VEIL_MAGUS)
+        || count_id(ENEMY_HEX_WALKER)
+        || count_id(ENEMY_VAULT_HAND)
+        || count_id(ENEMY_BANE_BRUTE)
+        || count_id(ENEMY_ZAG_DART)
+        || count_id(ENEMY_LEYBEAM)
+        || count_id(ENEMY_FUSE_HURLER));
 
     if (!count_id(ENEMY_BANE_BRUTE)) return;
     for (i = 0; i < MAX_ENTITIES; ++i)
@@ -633,6 +938,7 @@ void new_monsters_foyer_warp(void) BANKED {
     pending_foyer_warp = 0;
     vault_hand_holding = 0;
     leybeam_restore();
+    fuse_bombs_clear();
     for (i = 0; i < MAX_ENTITIES; ++i)
         if (entities[i].flags & EF_ACTIVE) entity_kill(i);
     run_state.room_counter = (u8)(run_state_stage_start(run_state.bosses_beaten)
@@ -646,7 +952,8 @@ void new_monsters_foyer_warp(void) BANKED {
 }
 
 void new_monsters_draw(void) BANKED {
-    u8 i, live_beam = 0;
+    u8 i, live_beam = 0, bi, used = 0;
+    fuse_bombs_tick();
     if (leybeam_beam_live) {
         for (i = 0; i < MAX_ENTITIES; ++i)
             if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY
@@ -678,13 +985,29 @@ void new_monsters_draw(void) BANKED {
         move_sprite(38, 0, 0);
     }
     if (leybeam_beam_live) {
-        /* Muzzle flare at the locked origin. Shaft collision is logical;
-           a second spark marks the far end so the lane is readable. */
+        /* Muzzle flare at the locked origin. The shaft is a VBlank-stamped
+           BG strip; a spark at the far end marks the lane end. */
         u8 sx = (u8)(beam_ox - room_camera_x + 8);
         u8 sy = (u8)(beam_oy - room_camera_y + 16);
         move_sprite(37, sx, sy);
         set_sprite_tile(37, SPR_FX_MUZZLE);
         set_sprite_prop(37, 5);
+    } else {
+        move_sprite(37, 0, 0);
     }
+    for (bi = 0; bi < FUSE_BOMB_MAX; ++bi) {
+        u8 slot = (u8)(35 + used);
+        if (!fb_live[bi]) continue;
+        {
+            u8 sx = (u8)(fb_x[bi] - room_camera_x + 8);
+            u8 sy = (u8)(fb_y[bi] - room_camera_y + 16);
+            move_sprite(slot, sx, sy);
+            set_sprite_tile(slot, SPR_FX_IMPACT);
+            set_sprite_prop(slot, (u8)((fb_phase[bi] && (fb_timer[bi] & 2)) ? 5 : 4));
+            used++;
+        }
+    }
+    if (used < 1) move_sprite(35, 0, 0);
+    if (used < 2) move_sprite(36, 0, 0);
 }
 

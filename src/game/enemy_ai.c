@@ -577,8 +577,8 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
     enemy_def_t def_buf;
     const enemy_def_t *def;
-    enemy_load_def(id, &def_buf);
-    def = &def_buf;
+    /* Defer the bank-25 def copy until a path actually needs it. Sixteen
+       walkers paying that switch every frame is what missed video rate. */
     if ((e->flags & EF_RARE) && rare_enemy_tick(e)) return;
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
     // Return-echo elites are 24x24 Reaper/Weaver/Maw. Weaver and Maw take
@@ -597,11 +597,15 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
     if (id == ENEMY_BLUE_CRAWLER) {
         blue_crawler_pattern_tick(e, idx);
         if (e->ai_data[4] == 2 && e->ai_data[3] >= 145) return;
+        walker_tick(e);
+        return;
     }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     if (id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER) { enemy_patrol_update(e, id); return; }
-    if (def->ai_kind >= AI_BLINK_CASTER && def->ai_kind <= AI_BEAM_CASTER) {
+    enemy_load_def(id, &def_buf);
+    def = &def_buf;
+    if (def->ai_kind >= AI_BLINK_CASTER && def->ai_kind <= AI_BOMB_LOBBER) {
         new_monster_update(e, def);
         return;
     }

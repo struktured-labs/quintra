@@ -1,4 +1,4 @@
-# New monster types: Veil Magus, Hex Walker, Vault Hand, Bane Brute, Zag Dart, Leybeam
+# New monster types: Veil Magus, Hex Walker, Vault Hand, Bane Brute, Zag Dart, Leybeam, Fuse Hurler
 
 Date: 2026-11-17. Requested from playtest: Zelda-style wizrobes, a Wallmaster-style
 grabber, a knockback bruiser that groups with status casters, a zig-zag burster,
@@ -209,11 +209,36 @@ A stationary-enough caster with a **wide, continuous laser**.
   cramped puzzle closets; the visible-puzzle guard path already knows this
   kind of rejection).
 
+### 2.7 Fuse Hurler — `ENEMY_FUSE_HURLER` = 41
+
+A walking bombardier that lobs a **fused bomb** with a readable blast-radius
+tell. Distinct from the existing Bomber (a walker whose threat is a 4-way
+*death* burst) and the Mire Spore (a proximity-armed mine).
+
+- Walks a short cardinal stretch (48 frames), then a 20-frame tell (Easy +25%)
+  and lobs one bomb toward the hero. The bomb flies ~16 frames, lands on
+  walkable floor about three-quarters of the way to the hero, then fuses for
+  40 frames.
+- **Blast-radius tell.** While the fuse burns, four cardinal sparks pulse on
+  the 16-px Chebyshev edge of the blast, and the bomb sprite flashes. The
+  blast is a 16-px square, damage 1, applied with 24-frame iframes. It will
+  not reduce the hero below 1 HP (no one-shots). At most two live bombs.
+- **Close-range exploder.** If the hero is within 20 px Manhattan during a
+  walk, the Hurler instead winds up for 28 frames (body puffs + tick) and
+  bursts around itself with the same 16-px, 1-damage, never-lethal contract.
+  The Hurler survives; this is not a suicide or a death burst.
+- Cooldown 90 frames after a lob or a self-burst. At most two Hurlers per
+  room. Despawned from foyers and excluded from fill-the-room.
+- HP 12, damage 1 (contact and blast), speed 40, score 36, weakness fire
+  (`0x02`).
+- Stages: Ember Depths (6), Toxic Mire (6), Shadow Keep (5). Weights still
+  sum to 100. Tile 220, bank 25, `AI_BOMB_LOBBER` 20.
+
 ## 3. Shared rules
 
 - Telegraph timings above are Normal. Easy adds ~25% to every tell and does
   not shorten cooldowns. No new Easy-only patterns.
-- All six respect `enemy_try_step` / walkable tests. Teleports and drops use
+- All seven respect `enemy_try_step` / walkable tests. Teleports and drops use
   `room_tile_walkable` and stay 8 px inside the room bounds.
 - Contact still goes through the shared combat path, then status procs, so
   Bane Brute shoves *and* a status ally can still apply on the resulting
@@ -246,6 +271,7 @@ logged, or committed. Spend alert at $100; prior spend about $6.6.
 | Bane Brute | 16x16 bruiser class (same as Orc/Bomber) | 7 green or 4 red | step / shoulder down | Mid-scale 4-tile block, Mire/Shadow/Bloodmoon only so it does not collide with Orc's Temple slot. |
 | Zag Dart | 8x8 | 5 gold or 4 red | lean into the zig | Slot-79 style stage multiplex is fine in Crystal/Verdant/Ember/Sanctum if those rooms do not already use 79 for another specialist. Crystal already has Shard Crab on 79 — give Zag its own small slot or share only in stages without a 79 specialist. |
 | Leybeam | 8x8 body | 5 gold (Temple), 4 red (Ember), 6 violet (Sanctum) | glow | Body is one slot. Beam shaft is BG, not OBJ. |
+| Fuse Hurler | 8x8 | 4 red | toss / flash | Tile 220. Bomb is an FX sprite plus radius sparks, not a new BG tile. |
 | Confusion swirl | 8x8 FX, two-frame star swirl | 6 violet | rotate | One FX tile, drawn over the hero while `QSTATUS_CONFUSION` is live. Recycle `SPR_FX_IMPACT` only if a second FX slot cannot be spared; prefer a distinct swirl. |
 
 Magic bolt for both wizrobes reuses the hostile bullet sprite (possibly

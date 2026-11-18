@@ -71,6 +71,7 @@ Names are the ones in the content tables, abbreviations included. Health is the 
 - **Bane Brute.** Health 22. A long knockback. It only stays if at least two status allies share the room, and it tries to shove you into them. Mire, Shadow, Bloodmoon.
 - **Zag Dart.** Health 8. The zig-zag rush is the threat. A rare slow bolt may appear during cooldown. Crystal, Verdant, Ember, Sanctum.
 - **Leybeam.** Health 14. Cardinal charge, then a 16-pixel-wide beam you must sidestep. One per room. Ember, Temple, Sanctum.
+- **Fuse Hurler.** Health 12. Lobs a fused bomb that shows its blast radius before it bursts, or winds up and explodes around itself if you close in. The blast deals one heart and will not finish you. Ember, Mire, Shadow. At most two in a room. Distinct from the Bomber (a walker that bursts on death) and the Mire Spore (a proximity mine).
 
 ## On the roster, off the ordinary mix
 

@@ -245,5 +245,6 @@ void entity_draw_all(void) {
 #include "game/entity_draw_core.h"
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
-    new_monsters_draw();
+    if (new_monsters_busy || player_status_kind == QSTATUS_CONFUSION)
+        new_monsters_draw();
 }

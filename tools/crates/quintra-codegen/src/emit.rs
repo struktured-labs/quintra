@@ -107,6 +107,7 @@ fn write_enums(out: &Path) -> Result<()> {
          #define AI_SHOVER 17\n\
          #define AI_ZIGZAG 18\n\
          #define AI_BEAM_CASTER 19\n\
+         #define AI_BOMB_LOBBER 20\n\
          #define AI_SPRAY      6\n\
          #define AI_AIMEDBURST 7\n\
          #define AI_TELEPORT   8\n\
@@ -434,6 +435,8 @@ fn emit_enemy(e: &Enemy) -> String {
             ("AI_ZIGZAG", tell_ticks, burst_ticks, cooldown_ticks),
         AiScriptId::BeamCaster { tell_ticks, beam_ticks, cooldown_ticks } =>
             ("AI_BEAM_CASTER", tell_ticks, beam_ticks, cooldown_ticks),
+        AiScriptId::BombLobber { walk_ticks, tell_ticks, cooldown_ticks } =>
+            ("AI_BOMB_LOBBER", walk_ticks, tell_ticks, cooldown_ticks),
     };
     format!(
         "    {{ .id={}, .name=\"{}\", .sprite_set={}, .palette={},\n\

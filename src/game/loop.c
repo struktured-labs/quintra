@@ -16,6 +16,7 @@
 #include "game/vignette.h"
 #include "game/attract.h"
 #include "render/palette.h"
+#include "game/enemy_new_ai.h"
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
 u16         loop_frame_counter  = 0;
@@ -121,6 +122,7 @@ void loop_run(void) {
             // OBJ first: the title commit needs the top VBlank lines.
             if (palette_obj_pending_commit) palette_obj_commit_vblank();
             else if (palette_bg_pending_commit) palette_bg_commit_vblank();
+            if (leybeam_flush_pending) leybeam_vblank_flush();
         }
         loop_frame_counter++;
         // Mix a bit of the frame counter into the RNG state for entropy

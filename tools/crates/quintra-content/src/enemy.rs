@@ -64,6 +64,8 @@ pub enum AiScriptId {
     ZigZag       { tell_ticks: u8, burst_ticks: u8, cooldown_ticks: u8 },
     /// Charge tell, then a cardinal 16-px-wide sustained beam.
     BeamCaster   { tell_ticks: u8, beam_ticks: u8, cooldown_ticks: u8 },
+    /// Walk, telegraph, lob a fused bomb; close-range wind-up blast.
+    BombLobber   { walk_ticks: u8, tell_ticks: u8, cooldown_ticks: u8 },
 }
 
 

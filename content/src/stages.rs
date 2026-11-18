@@ -69,7 +69,7 @@ pub const STAGES: [StageTheme; 9] = [
         // blooms into invulnerable echoes then contracts, the latter splits,
         // scatters, and reforms.  They replace the old Skeleton slice rather
         // than adding bodies, HP, or a new procgen draw.
-        enemy_pool: &[(11, 8), (6, 24), (4, 16), (14, 16), (25, 12), (15, 12), (40, 6), (39, 6)],
+        enemy_pool: &[(11, 8), (6, 18), (4, 16), (14, 16), (25, 12), (15, 12), (40, 6), (39, 6), (41, 6)],
     },
     // 3 — Frost Vault (icy cyan/white)
     StageTheme {
@@ -108,7 +108,7 @@ pub const STAGES: [StageTheme; 9] = [
         // the upper eight points of the former Spore band become Bog Toad.
         // That gives procgen a new encounter without perturbing established
         // deterministic controller routes or increasing room population.
-        enemy_pool: &[(12, 15), (5, 15), (6, 14), (15, 17), (17, 17), (26, 8), (32, 6), (38, 8)],
+        enemy_pool: &[(12, 15), (5, 15), (6, 14), (15, 17), (17, 11), (26, 8), (32, 6), (38, 8), (41, 6)],
     },
     // 5 — Shadow Keep (cold grey/violet)
     StageTheme {
@@ -123,7 +123,7 @@ pub const STAGES: [StageTheme; 9] = [
         // Gloam Bramble replaces a small Prism Skitter slice with a slower
         // opposite-lane orbit. Shadow Keep stays a deliberate positioning
         // test without increasing generated body count.
-        enemy_pool: &[(7, 20), (5, 18), (11, 12), (19, 15), (22, 10), (27, 5), (32, 6), (35, 8), (37, 6)],
+        enemy_pool: &[(7, 15), (5, 18), (11, 12), (19, 15), (22, 10), (27, 5), (32, 6), (35, 8), (37, 6), (41, 5)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {

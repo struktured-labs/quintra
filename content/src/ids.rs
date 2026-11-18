@@ -87,6 +87,7 @@ pub const ENEMY_VAULT_HAND:      EnemyId = EnemyId::new(37);   // ceiling grabbe
 pub const ENEMY_BANE_BRUTE:      EnemyId = EnemyId::new(38);   // long-shove bruiser with status allies
 pub const ENEMY_ZAG_DART:        EnemyId = EnemyId::new(39);   // zig-zag burst, rare cooldown bolt
 pub const ENEMY_LEYBEAM:         EnemyId = EnemyId::new(40);   // cardinal wide laser
+pub const ENEMY_FUSE_HURLER:     EnemyId = EnemyId::new(41);   // lobs fused bombs; close-range wind-up blast
 
 
 // ----- Biomes
@@ -206,6 +207,7 @@ pub const SPRITE_VEIL_MAGUS:    SpriteRef = SpriteRef::new(216);
 pub const SPRITE_HEX_WALKER:    SpriteRef = SpriteRef::new(217);
 pub const SPRITE_ZAG_DART:      SpriteRef = SpriteRef::new(218);
 pub const SPRITE_LEYBEAM:       SpriteRef = SpriteRef::new(219);
+pub const SPRITE_FUSE_HURLER:   SpriteRef = SpriteRef::new(220);
 
 pub const SPRITE_ITEM_CLAW:   SpriteRef = SpriteRef::new(2);
 pub const SPRITE_ITEM_HOWL:   SpriteRef = SpriteRef::new(3);

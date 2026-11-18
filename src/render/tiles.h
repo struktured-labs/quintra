@@ -313,6 +313,11 @@
 #define SPR_ENEMY_HEX_WALKER  217
 #define SPR_ENEMY_ZAG_DART    218
 #define SPR_ENEMY_LEYBEAM     219
+#define SPR_ENEMY_FUSE_HURLER 220
+/* Leybeam shaft art is uploaded to VRAM bank 1 at this index (after
+   Sun Lattice 56..62, before compass letters 64). Never written into
+   room_tilemap, so collision stays the RAM floor. */
+#define LEYBEAM_BG_TILE       63
 // Arrival-square only reuse: the Bellkeeper is a civic landmark, while the
 // apothecary owns this tile in the craft quarter. Those residents never share
 // a town screen, and dungeon entry reloads the stage specialist before combat.

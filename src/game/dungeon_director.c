@@ -64,7 +64,8 @@ static u8 enemy_can_fill_room(u8 id) {
         && id != ENEMY_VEIL_MAGUS
         && id != ENEMY_VAULT_HAND
         && id != ENEMY_BANE_BRUTE
-        && id != ENEMY_LEYBEAM;
+        && id != ENEMY_LEYBEAM
+        && id != ENEMY_FUSE_HURLER;
 }
 
 static u8 themed_stage_enemy(u8 stage, u8 start, u8 avoid) {

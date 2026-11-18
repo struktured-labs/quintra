@@ -542,6 +542,17 @@ pub const LEYBEAM: Enemy = Enemy {
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+pub const FUSE_HURLER: Enemy = Enemy {
+    id: ENEMY_FUSE_HURLER, symbol: "FUSE_HURLER", name: "Fuse Hurler",
+    sprite_set: SPRITE_FUSE_HURLER, palette: OBJ_PAL_RED,
+    // Lobs a fused bomb with a visible blast-radius tell. At close range
+    // it winds up and bursts in place. Distinct from Bomber (death burst)
+    // and Mire Spore (proximity mine). Never a one-shot.
+    stats: EnemyStats { hp: 12, damage: 1, speed: 40, score: 36, weakness: 0x02, poise: 0 },
+    ai_script: AiScriptId::BombLobber { walk_ticks: 48, tell_ticks: 20, cooldown_ticks: 90 },
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -584,4 +595,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(BANE_BRUTE.clone());
     r.add_enemy(ZAG_DART.clone());
     r.add_enemy(LEYBEAM.clone());
+    r.add_enemy(FUSE_HURLER.clone());
 }
