@@ -203,7 +203,7 @@ def main():
             assert not icon_visible(pb, slot), f"unowned well {slot} showed an icon"
         assert icon_visible(pb, 0), "class power icon missing"
         assert "MOONFIRE" in decode_row(pb, 8, 1, 18), decode_row(pb, 8, 1, 18)
-        assert "8 SHOTS AND WARD" in decode_row(pb, 9, 1, 18), decode_row(pb, 9, 1, 18)
+        assert "FLAME WARD" in decode_row(pb, 9, 1, 18), decode_row(pb, 9, 1, 18)
         assert pb.memory[ACTIVE] == CLASS_POWER
         save_shot(pb, "picker-howl")
 
