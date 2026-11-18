@@ -171,6 +171,12 @@ jobs:
       - name: PyBoy Riftwild dens
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_riftwild_dens.py
 
+      - name: PyBoy secret merchants (Veil vaults and Riftwild caves)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_secret_merchants.py
+
+      - name: PyBoy suspend layout compatibility
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_sram_compat.py
+
       - name: PyBoy Riftwild set pieces and tile art
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_setpiece.py
 

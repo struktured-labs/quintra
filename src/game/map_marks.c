@@ -4,6 +4,7 @@
 #include "core/types.h"
 #include "game/map_marks.h"
 #include "game/run_state.h"
+#include "game/secret_merchant.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 
@@ -99,7 +100,7 @@ u8 map_world_shop_icon(u8 cell, u8 icon) BANKED {
         && cell == RIFTWELL_WORLD_SCREEN
         && (run_state.riftwild_flags & RIFT_REGION_TRADER_FOUND_BIT))
         return BGT_MAP_SHOP;
-    return icon;
+    return secret_cave_map_icon(cell, icon);
 }
 
 u8 map_dungeon_shop_icon(u8 cell, u8 here, u8 icon) BANKED {

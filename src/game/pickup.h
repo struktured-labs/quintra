@@ -66,6 +66,7 @@
 #define WARE_MORNINGSTAR 20
 #define WARE_BOMBS 21
 #define WARE_ANTIDOTE 22 // carried Antidote: Pack TOOL that cures Poison
+#define WARE_SECRET 23   // Veil / Riftwild cave shelf; ai_data[3] = SM_* code
 
 // Stable content ids used by runtime hooks outside generated content tables.
 #define ITEM_ID_IRON_HEART    20u

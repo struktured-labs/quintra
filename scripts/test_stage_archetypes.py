@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
-    STAGE_START, dungeon_entry_cell, dungeon_maze_neighbor,
+    STAGE_START, veil_host_cell, dungeon_entry_cell, dungeon_maze_neighbor,
     dungeon_predecessor, dungeon_size, mission_graph,
 )
 from make_stage_states import (
@@ -75,6 +75,8 @@ def archetype_sample_cell(stage, seed, preferred=4):
     roles = set(mission_graph(dungeon_size(stage), seed, stage)["sequence"])
     # Since #78 the seeded foyer is a paced introduction, not an archetype.
     roles.add(dungeon_entry_cell(dungeon_size(stage), seed, stage))
+    # The hidden Veil vault host carves its own lanes (secret merchants).
+    roles.add(veil_host_cell(seed, stage))
     for cell in (preferred, 4, 6, 10, 12, 13, 14, 16, 18, 20, 22, 24, 25, 26):
         if cell >= dungeon_size(stage) - 3 or cell in roles or cell == 15:
             continue
@@ -89,7 +91,8 @@ def is_ordinary_cell(stage, seed, cell):
     """True when ``cell`` carries no mission role and is not the foyer."""
     size = dungeon_size(stage)
     return (cell not in mission_graph(size, seed, stage)["sequence"]
-            and cell != dungeon_entry_cell(size, seed, stage))
+            and cell != dungeon_entry_cell(size, seed, stage)
+            and cell != veil_host_cell(seed, stage))
 
 
 def ordinary_seed(stage, base, *cells):

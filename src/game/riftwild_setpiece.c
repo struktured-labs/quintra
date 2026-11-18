@@ -10,6 +10,7 @@
 #include "game/riftwild_setpiece.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/secret_merchant.h"
 #include "render/riftwild_art.h"
 #include "render/tiles.h"
 
@@ -264,6 +265,7 @@ static u8 soft(u8 t, u8 base) {
 // (riftwild_den_stamp_field); field 0 keeps its boss-exit landing apron.
 // Reserved cells are also never cleared as part of a ring.
 static u8 den_here;
+static u8 cave_here;   // cave-merchant footprint (secret_merchant.c)
 
 static u8 reserved(u8 x, u8 y) {
     u8 i;
@@ -274,6 +276,7 @@ static u8 reserved(u8 x, u8 y) {
     for (i = 0; i < rw_stamp_n; ++i)
         if ((u8)(x + 1 - rw_stamp_x[i]) <= rw_stamp_w[i]
             && (u8)(y + 1 - rw_stamp_y[i]) <= rw_stamp_h[i]) return 1;
+    if (cave_here && x >= 12 && x <= 20 && y >= 10 && y <= 17) return 1;
     if (!den_here) return 0;
     if (x >= 19 && x <= 28 && y >= 17 && y <= 27) return 1;
     if (x >= 8 && x <= 11 && y >= 10 && y <= 23) return 1;
@@ -492,6 +495,7 @@ void riftwild_setpiece_apply(u8 base) BANKED {
     }
     hash_state = riftwild_field_salt(1);
     den_here = riftwild_den_in_field();
+    cave_here = secret_cave_field_index(run_state.world_screen) != 0xFF;
     lift_old_blobs(base);
     riftwild_tidy_field(base);
     // Neighbouring fields start from different pieces (screen * 3), and the

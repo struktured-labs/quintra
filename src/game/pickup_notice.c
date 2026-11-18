@@ -72,6 +72,20 @@ static const u8 notice_words[NW_COUNT][6] = {
     { HUD_HEART_FULL,N_L,N_O,N_W,N__,N__ }, // NW_LOWHP  pact needs max HP
     { N_A,N__,N_S,N_W,N_A,N_P },          // NW_ASWAP    press A to trade
     { N_W,N_A,N_R,N_D,N_E,N_D },          // NW_WARDED   curse blocked
+    { N_A,N_R,N_M,N_E,N_D,N__ },          // NW_ARMED    bottle waits for a fight
+    { N_R,N_E,N_A,N_R,N_M,N__ },          // NW_REARM    Riftwell re-armed
+    { N_L,N_I,N_G,N_H,N_T,N__ },          // NW_LIGHT    Cave Light
+    { N_C,N_O,N_M,N_B,N__,N__ },          // NW_COMB     Honeycomb Charm
+    { N_C,N_I,N_N,N_D,N_E,N_R },          // NW_CINDER   Cinder Veil
+    { N_S,N_K,N_A,N_T,N_E,N_S },          // NW_SKATES   Rime Skates
+    { N_M,N_A,N_S,N_K,N__,N__ },          // NW_MASK     Filter Mask
+    { N_L,N_A,N_M,N_P,N__,N__ },          // NW_LAMP     Gloam Lamp
+    { N_S,N_E,N_A,N_L,N__,N__ },          // NW_SEAL     Sun Seal
+    { N_P,N_A,N_C,N_T,N__,N__ },          // NW_PACT     Crimson Pact
+    { N_L,N_A,N_S,N_T,N__,N__ },          // NW_LAST     Last Light
+    { N_B,N_E,N_L,N_L,N__,N__ },          // NW_BELL     Wayfarer's Bell
+    { N_L,N_U,N_R,N_E,N__,N__ },          // NW_LURE     Cache Lure
+    { N_W,N_I,N_C,N_K,N__,N__ },          // NW_WICK     Hollow Wick
     { N_A,N_E,N_G,N_I,N_S,N__ },          // NW_AEGIS    power-up: shield
     { N_B,N_L,N_O,N_C,N_K,N_3 },          // NW_BLOCK3   absorbs three hits
     { N_L,N_I,N_M,N_I,N_T,N__ },          // NW_LIMIT    power-up: Limitless
@@ -85,6 +99,7 @@ static const u8 notice_word_pal[NW_COUNT] = {
     0, 1, 1, 7, 0, 6, 7, 1, 7, 1,
     6, 0, 2, 6, 2, 7, 6, 1, 2, 7,
     7, 7, 7, 7, 7, 0, 1,
+    0, 2, 0, 0, 7, 6, 2, 1, 0, 7, 1, 0, 0, 1,
     0, 0, 6, 6, 2, 2, 7,
 };
 

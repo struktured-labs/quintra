@@ -24,6 +24,8 @@ u8 riftwild_field_screen(void) BANKED;
 // Nonzero when the current Riftwild field hosts a den (its south-east
 // clearing and approach are carved after the set-piece pass).
 u8 riftwild_den_in_field(void) BANKED;
+// This region's den field d (one den per two-row band), 0xFF out of range.
+u8 riftwild_den_field_of(u8 d) BANKED;
 // Field terrain post-pass. Call after climate painting, before population.
 void riftwild_den_stamp_field(void) BANKED;
 // Complete den-room transaction (tiles, entities, player) for world_screen >= 36.

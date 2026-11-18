@@ -9,6 +9,7 @@
 #include "game/mission_graph.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/secret_merchant.h"
 #include "game/riftwild_den.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -271,6 +272,18 @@ static void draw_dungeon_grid(void) {
         // A charted altar wears the current Law colour in its lower half.
         if (law && seen && icon == BGT_MAP_BIG_ROOM)
             law_lock_map_altar(gx[i], gy[i], i);
+    }
+    // The found Veil host wears the small coin in its node's corner (the
+    // public merchant keeps the big coin); a Chime-heard host is dim.
+    {
+        u8 v = secret_merchant_map_cell();
+        u8 c = (u8)(v & 0x7F);
+        if (v != 0xFF && c < size) {
+            if (v & 0x80)
+                map_put_attr((u8)(gx[c] + 1), (u8)(gy[c] + 1), BGT_MAP_SHOP,
+                    BGPAL_WALL);
+            else map_put((u8)(gx[c] + 1), (u8)(gy[c] + 1), BGT_MAP_SHOP);
+        }
     }
     // Depth numbers appear only for rows that contain a room you have
     // actually entered.

@@ -1,4 +1,4 @@
-#pragma bank 10
+#pragma bank 24
 
 #include <gb/gb.h>
 
@@ -112,6 +112,7 @@ void run_state_begin_world(void) BANKED {
         // shelves (high nibble) must not follow into it.
         run_state.shop_bought &= 0x0F;
         run_state.shop_civic = 0;
+        run_state.rift_caves = 0;   // a new region brings new caves
     }
     // Every dungeon exit returns to the remembered world. Hollow relic
     // claims remain regional, but a suspend or campaign transition never
@@ -143,6 +144,7 @@ void run_state_begin_dungeon(void) BANKED {
     run_state.dungeon_puzzles = 0;
     run_state.shop_bought = 0;
     run_state.shop_civic = 0;
+    run_state.secret_shop = 0;
     run_state.dungeon_phase = 0;
     run_state.return_echo_flags = 0;
     run_state.dungeon_visited = 0;

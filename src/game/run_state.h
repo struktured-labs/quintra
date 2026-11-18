@@ -172,6 +172,12 @@ typedef struct {
     // Stage-transition vignettes already shown this run (bit = VIG_* id).
     // Appended so older suspends load with every vignette unseen.
     u16 vignette_seen;
+    // Secret merchants (2026-11-16-secret-merchants.md). Appended in this
+    // order with no padding (gbz80 is byte-aligned): the Veil stall bits of
+    // this stage, run-long Veil/Wild charms, and this region's three caves.
+    u8  secret_shop;
+    u16 veil_charms;
+    u32 rift_caves;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03

@@ -750,3 +750,93 @@ Risks adopted: a self-contained BLAST bluff stamp; STONE opens on
 Glove lift, not only on a socket throw; packed `run_state_t` so host
 C does not insert padding; stall rebuild reads live Chime / Bomb Bag /
 well flags. CAVE-THICKET’s flipped leaf uses a CGB attribute flip.
+
+---
+
+## Implementation notes (v1, feat/secret-merchants-impl)
+
+What shipped, and every place the first implementation deliberately differs
+from the text above. Code: `src/game/secret_merchant.{c,h}` (bank 24);
+contract test: `scripts/test_secret_merchants.py` (CI).
+
+### Veil Trader vaults
+- **Host pick:** seeded xorshift (`run_seed ^ golden[stage] ^ 'VEIL'`), never
+  cell 0, the foyer, the cache, the last three cells, the reserved landmark
+  locals (2/5/8/11/15/17/23) or a mission role. Dead ends are preferred
+  (Farfold instinct), otherwise any legal cell. Exactly one per stage.
+- **Tells use the three cave kinds**, carried on the existing hidden-secret
+  machinery (no new tile art or palette):
+  - BLAST = hidden SHOT wall: fresh FLOOR2 cracks plus one rubble chip at the
+    foot of an ordinary wall pair. Player shots *and* Bomb Bag blasts open it.
+    As a side effect, Bomb Bag blasts now open every hidden SHOT wall.
+  - THICKET = hidden WALK wall: a FLOOR3 trail runs into an ordinary wall
+    pair, and walking into it enters the vault.
+  - STONE = hidden PUSH cairn: an ordinary 2x2 cairn at (6,6) with scrape
+    marks. Shoving it north opens (6..7,0).
+  - Stage order: BLAST, THICKET, BLAST, STONE, STONE, BLAST, THICKET, BLAST,
+    THICKET.
+  - The spec's bespoke stage 5–9 gates (raft, braziers, lattice, hook, pit)
+    are **deferred**.
+- **Host room:** amber border cracks are stripped, so Echo Chime and Cave Light
+  have exactly one target. Two-wide lanes are carved from the tell to the
+  trail crossing, so the tell is always reachable and graph exits stay intact.
+- **Persistence:** `run_state.secret_shop` stores B/C bought, MOUTH (opened
+  mouths stay open after leaving or a suspend), CHIMED, ARMED and FOUND.
+  `veil_charms` is a u16: bits 0–11 are owned charms, bit 14 is Last Light
+  spent, bit 15 is Crimson applied. `rift_caves` is a u32. The run layout
+  grows from 62 to 69 bytes (`PRE_MERCHANT_RS_SIZE`); older saves migrate
+  with zeroed fields.
+- **Stall:**
+  - The tonic restocks.
+  - The bottle (24) is one per stage, armed at the counter and uncorked on the
+    next combat-room entry, den rooms included.
+  - The charm is one per stage and is hidden once owned.
+  - Grand Surge stands in for the not-yet-shipped uncommon/rare bottles.
+  - Refusals (full HP, a bottle already armed, already owned, no room) and
+    short purses charge nothing.
+- **Echo Chime** in the host room marks the Compass with a dim coin and shows
+  SCOUT, but does not open the mouth. Once the vault is found, the coin is
+  bright.
+
+### Charm approximations
+- Cave Light, Sun Seal, Cache Lure and Hollow Wick are tile glints, not
+  auras.
+- Honeycomb drifts loose coins 24 px toward the hero.
+- Crimson Pact gives +1 ATK at half HP or less, with no aura.
+- Cinder Veil blocks the first Burn in each room. Rime Skates ignores Slow.
+- Gloam Lamp and Rime Skates add 20 frames of warning to fading floors.
+- Last Light triggers once per run.
+- Filter Mask slows poison ticks.
+
+### Riftwild caves
+- **Three per region**, one in each 12-field band. They never share a field
+  with a den, the discovery field, the Riftwell, Warden groves, gates, class
+  groves, boss landmarks, the vault or Hollow relic fields. The kinds are a
+  seeded permutation of STONE, BLAST and THICKET.
+- **Mouth:** a cleared 7x6 footprint east of the trail cross with an
+  always-open approach. The mouth at (16,13) is made of whole standalone
+  tiles:
+  - STONE: a lone rock beside a worn PATH socket. Any shove slides it.
+  - BLAST: a three-crag bluff with a plugged face and a PATH accent line.
+    Bombs or a strike open it; by hand only with the Titan Glove or a
+    Sauran.
+  - THICKET: a tree curtain with one reed tile. Walking in parts it.
+- **Hollow-only caves are deferred.** Every cave appears in both Waking and
+  Hollow.
+- **Cave room (world screen 48+i):**
+  - Compact, with a stair home at (3,12). The hero arrives at (40,88), clear
+    of the shelves.
+  - Stock: Rift Tonic 16 and a bottle 24 (STONE caves roll Aegis or Mend,
+    otherwise Surge).
+  - The kind ware depends on the cave:
+    - STONE: that region's Wild charm (40/45/55).
+    - BLAST: Bomb Bag 30, or Rift Bomb 20 once the bag is owned.
+    - THICKET: Echo Chime 20, or a Riftwell re-arm 25 after the well is used.
+- **Compass:** chimed caves show a dim coin; found caves show the shop coin.
+
+### Deferred
+- The Pack VEIL row.
+- Wayfarer rumours.
+- Bespoke stage 5–9 gates.
+- Hollow-only caves.
+- Charm auras.
