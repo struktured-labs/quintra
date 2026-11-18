@@ -1,0 +1,13 @@
+// Windows x64 depot: the unpacked Electron app (launch executable quintra.exe).
+"DepotBuild"
+{
+	"DepotID" "__STEAM_DEPOT_WINDOWS__"
+	"ContentRoot" "../content/windows/"
+	"FileMapping"
+	{
+		"LocalPath" "*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+	"FileExclusion" "*.pdb"
+}

@@ -592,8 +592,20 @@
     Promise.resolve(api.pause()).catch(error => console.error("Could not pause", error));
   }
 
+  // A host overlay (the desktop wrapper's credits screen) owns the pad and
+  // keeps the game paused while it is open.
+  let hostOverlay = false;
+  function setHostOverlay(on, resume = true) {
+    hostOverlay = !!on;
+    if (hostOverlay) pauseForOverlay();
+    else {
+      suppressPadUntilRelease = true;
+      if (resume) resumeAfterOverlay();
+    }
+  }
+
   function resumeAfterOverlay() {
-    if (!overlayPaused || calibration || settingsOpen) return;
+    if (!overlayPaused || calibration || settingsOpen || hostOverlay) return;
     overlayPaused = false;
     Promise.resolve(api.play()).catch(error => console.error("Could not resume", error));
   }
@@ -793,6 +805,7 @@
   }
 
   function padUiTick(pads = getConnectedGamepads()) {
+    if (hostOverlay) return;
     if (calibration) {
       calibrationTick(pads);
       return;
@@ -900,6 +913,9 @@
     exportSave.disabled = false;
     importSave.disabled = false;
     setStatus("Ready — click or press Start to play");
+    if (typeof window.dispatchEvent === "function" && typeof Event === "function") {
+      window.dispatchEvent(new Event("quintra:ready"));
+    }
   }
 
   // WasmBoy keeps one AudioContext per GB channel. Browsers create them
@@ -1067,6 +1083,34 @@
     }
   }
 
+  // Replace cartridge RAM with exactly saveSize bytes (save import, and the
+  // desktop wrapper's on-disk save).
+  async function importRam(bytes) {
+    if (!bytes || bytes.byteLength !== saveSize) {
+      throw new Error(`Quintra saves must be exactly ${saveSize} bytes`);
+    }
+    const resume = api.isPlaying();
+    const state = await api.saveState();
+    const currentRam = state.wasmboyMemory.cartridgeRam;
+    const importedRam = new Uint8Array(currentRam.byteLength);
+    importedRam.set(bytes);
+    state.wasmboyMemory.cartridgeRam = importedRam;
+    await api.loadState(state);
+    await api.saveLoadedCartridge({ title: "Quintra" });
+    if (resume) await api.play();
+  }
+
+  // Live battery RAM straight from the core's memory, without pausing the
+  // emulator (saveState would pause and drop queued audio).
+  let cartridgeRamLocation = null;
+  async function readRamLive() {
+    if (cartridgeRamLocation === null) {
+      cartridgeRamLocation = await api._getWasmConstant("CARTRIDGE_RAM_LOCATION");
+    }
+    const section = await api._getWasmMemorySection(cartridgeRamLocation, cartridgeRamLocation + saveSize);
+    return new Uint8Array(section).slice(0, saveSize);
+  }
+
   async function importCartridgeSave(file) {
     if (!file || saveBusy) return;
     saveBusy = true;
@@ -1077,16 +1121,9 @@
       }
 
       setStatus("Importing save…");
-      const resume = api.isPlaying();
-      const state = await api.saveState();
-      const currentRam = state.wasmboyMemory.cartridgeRam;
-      const importedRam = new Uint8Array(currentRam.byteLength);
-      importedRam.set(bytes);
-      state.wasmboyMemory.cartridgeRam = importedRam;
-      await api.loadState(state);
-      await api.saveLoadedCartridge({ title: "Quintra" });
-      if (resume) await api.play();
+      await importRam(bytes);
       setStatus("Save imported");
+      window.dispatchEvent(new CustomEvent("quintra:save-imported", { detail: bytes }));
     } catch (error) {
       console.error(error);
       setStatus(error.message || "Could not import save", true);
@@ -1174,6 +1211,18 @@
     get settingsOpen() { return settingsOpen; },
     layoutFor: gamepad => gamepadButtonLayout(gamepad),
     familyOf: gamepad => padFamily(gamepad)
+  };
+  // Host hooks for the desktop wrapper (desktop/renderer/desktop.js). The
+  // web page does not use them.
+  window.QuintraPlayer = {
+    get ready() { return ready; },
+    get started() { return started; },
+    start: () => start(),
+    importRam,
+    readRamLive,
+    snapshotRam,
+    closeSettings: (resume = true) => closeSettings(resume),
+    setHostOverlay
   };
 
   exportSave.addEventListener("click", exportCartridgeSave);

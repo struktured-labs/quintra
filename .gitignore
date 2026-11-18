@@ -73,3 +73,7 @@ setenv.sh
 
 # Claude harness local state
 .claude/scheduled_tasks.lock
+
+# Desktop wrapper (Electron) build products
+desktop/node_modules/
+desktop/app/
