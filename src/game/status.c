@@ -618,7 +618,14 @@ void status_tick(void) BANKED {
         // through the ordinary reward/score/death path on the next strike.
         if (((kind == QSTATUS_POISON && (enemy_status_ticks[i] & 7) == 0)
                 || (kind == QSTATUS_BURN && (enemy_status_ticks[i] & 3) == 0))
-            && e->hp > 1) {
+            && e->hp > 1
+            /* Authored invuln (Cinder's closed vent, vanished shades that
+               clear EF_ON_SCREEN, late husks) must not keep ticking DOT
+               through a window the player cannot punish. Ordinary off-
+               camera fodder still takes its poison. */
+            && ((e->flags & EF_ON_SCREEN)
+                || !((e->ai_data[0] == ENEMY_STONE_SENTINEL)
+                     && (e->ai_data[3] & 1)))) {
             e->hp--;
             e->ai_data[7] = 7;
         } else if (kind == QSTATUS_REGEN
