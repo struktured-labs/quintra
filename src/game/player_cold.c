@@ -5,6 +5,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/will.h"
+#include "game/magic.h"
 #include "game/picsean_vortex.h"
 #include "game/will_maxfx.h"
 #include "content.h"
@@ -55,6 +56,7 @@ void player_clear_fields(void) BANKED {
 
 void player_apply_class(u8 class_id) BANKED {
     const class_def_t *c = &classes[class_id];
+    magic_reset();   // a fresh hero starts with no ward or cooldown
     player.class_id = c->id;
     player.hp_max   = c->base_stats.hp_max;
     player.hp       = c->base_stats.hp_max;

@@ -30,6 +30,7 @@
 #include "game/procgen.h"
 #include "game/projectile.h"
 void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
+void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
@@ -1793,15 +1794,21 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     u8 dmg = (u8)(w->p1 + effective_atk);
                     u8 shot;
                     if (room_weapon_surge_ticks) dmg++;
+                    // Fang Claw: a slow contact arc held at arm length
+                    // (projectile.c), never a travelling shot. Pays for the
+                    // missing reach with +2 damage, 3 bodies and knockback.
+                    dmg = (u8)(dmg + 2);
+                    g_fang_claw = 1;
                     shot = projectile_spawn_player(
                         dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
+                    g_fang_claw = 0;
                     if (room_weapon_surge_ticks && shot != 0xFF)
                         entities[shot].hp++;
                     if (shot != 0xFF
                         && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
                         // Neutral A sweeps a wider close arc while retaining
                         // one hitbox, so bosses cannot be blendered.
-                        entities[shot].hitbox = 0xBB;
+                        entities[shot].hitbox = 0xCC;
                     }
                     if (shot != 0xFF && !muted) player.will_charge = 0;
                     powerup_echo_primary(shot, dir, dmg);
@@ -1868,11 +1875,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 player.fire_cooldown--;
         }
 
-        if ((pressed & J_B) && !(keys & J_A)) {
-            u8 dir = room_input_dir8(keys, player.facing);
-            secondary_fire(dir,keys & (J_LEFT|J_RIGHT|J_UP|J_DOWN),
-                (u8)(w->p1+1+effective_atk));
-        }
+        // B: hero magic (tap = attack spell, hold = ward) or the selected
+        // tool. Runs after the A+B chord, which always wins.
+        magic_input(keys, pressed, (u8)(w->p1+1+effective_atk));
         if (player.active_charge) secondary_cooldown_tick();
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_transform_ticks--;
@@ -1898,10 +1903,10 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         if (will_corvin_mark_ticks || will_vespine_swarm_ticks)
             room_update_signatures();
 
-        // MP trickle: +1 every ~3.2s while below max — Picsean's
-        // MP-attuned passive (perk 4) regenerates twice as fast.
+        // MP trickle: +1 every 2.4s while below max (B spells spend it);
+        // Picsean's MP-attuned passive (perk 4) keeps 1 per 1.6s.
         if (player.mp < player.mp_max) {
-            u8 thresh = (player.class_id == 3) ? 96 : 192;
+            u8 thresh = (player.class_id == 3) ? 96 : 144;
             if (++mp_regen >= thresh) {
                 mp_regen = 0;
                 player.mp++;

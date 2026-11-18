@@ -16,6 +16,7 @@
 
 static u8 return_identity_loaded;
 void status_effects_load(void) BANKED;
+void magic_room_enter(void) BANKED;
 
 static u8 destination_stage(void) {
     u8 s = run_state.bosses_beaten;
@@ -73,6 +74,7 @@ void room_load_dynamic_fx_identity(void) BANKED {
     if (!run_state.world_mode && !town) tiles_load_stage_scenery(stage);
     tiles_load_fx_sprites();
     status_effects_load();
+    magic_room_enter();
     if (!town) {
         switch (stage) {
             case 0: tiles_load_shard_crab_sprite(); break;

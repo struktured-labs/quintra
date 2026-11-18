@@ -6,6 +6,7 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/will.h"
+#include "game/magic.h"
 #include "render/tiles.h"
 #include "audio/sfx.h"
 #include "game/status.h"
@@ -15,6 +16,8 @@ u8 will_charge_fraction;
 void will_charge_tick(void) BANKED {
     u8 speed;
     if (player.will_level >= WILL_LEVEL_CAP) return;
+    // A live ward is protection, not restraint (as Stoneskin's shield).
+    if (magic_ward_ticks) return;
     speed = STATUS_PLAYER_INVERTED()
         ? status_player_effective_stat(QSTATUS_STAT_SPD) : player.spd;
     // SPD 4 (slowest starter) charges at 20/40 per frame; each point above
