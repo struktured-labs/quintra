@@ -660,7 +660,7 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
     return 1;
 }
 
-// room_open_secret lives in secret_merchant.c (bank 21).
+// room_open_secret lives in secret_merchant.c (bank 24).
 
 // CGB palette attribute per tile id
 static u8 attr_for_tile(u8 t) {

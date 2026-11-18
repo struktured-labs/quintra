@@ -1,4 +1,4 @@
-#pragma bank 21
+#pragma bank 24
 
 #include "core/types.h"
 #include "game/run_state.h"

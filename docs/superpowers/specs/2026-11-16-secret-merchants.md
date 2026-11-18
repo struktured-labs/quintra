@@ -756,7 +756,7 @@ well flags. CAVE-THICKET’s flipped leaf uses a CGB attribute flip.
 ## Implementation notes (v1, feat/secret-merchants-impl)
 
 What shipped, and every place the first implementation deliberately differs
-from the text above. Code: `src/game/secret_merchant.{c,h}` (bank 22);
+from the text above. Code: `src/game/secret_merchant.{c,h}` (bank 24);
 contract test: `scripts/test_secret_merchants.py` (CI).
 
 ### Veil Trader vaults

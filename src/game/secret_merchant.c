@@ -1,4 +1,4 @@
-#pragma bank 22
+#pragma bank 24
 
 // Secret merchants (docs/superpowers/specs/2026-11-16-secret-merchants.md).
 //
