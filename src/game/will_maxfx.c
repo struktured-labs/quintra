@@ -37,6 +37,7 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
 
 u8 will_maxfx_live;
 u8 will_maxfx_t;
+u8 will_maxfx_dir;            // aim of the live art (dir8), for tests
 
 static u8 fx_carrier = 0xFF;
 static u8 fx_damage;
@@ -707,6 +708,7 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
     if (!level) level = 1;
     if (will_maxfx_live) fx_end();
     for (k = 0; k < (u8)sizeof(hit_a); ++k) hit_a[k] = hit_b[k] = 0;
+    will_maxfx_dir = (u8)(dir & 7);
     fx_dx = dir8_dx[dir & 7];
     fx_dy = dir8_dy[dir & 7];
     fx_cx = (i16)player.x + 8;

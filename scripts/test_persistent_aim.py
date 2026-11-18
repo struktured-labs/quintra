@@ -280,9 +280,15 @@ def will_max_after_stagger(pb, records):
     shots = player_shots(pb)
     assert shots, 'Will MAX produced no shots'
     assert pb.memory[AIM] == 1, ('will max aim', pb.memory[AIM])
-    # At least one lane must travel northeast, proving the shared heading.
     velocities = [(signed(pb.memory[s + 10]), signed(pb.memory[s + 11])) for s in shots]
-    assert any(matches(v, 1, -1) for v in velocities), ('will max lanes', velocities)
+    if pb.memory[addr('_will_maxfx_live')]:
+        # Authored max-Will arts deliver through one parked carrier; the
+        # art itself must have taken the northeast heading.
+        assert pb.memory[addr('_will_maxfx_dir')] == 1, (
+            'will max art aim', pb.memory[addr('_will_maxfx_dir')])
+    else:
+        # At least one lane must travel northeast, proving the shared heading.
+        assert any(matches(v, 1, -1) for v in velocities), ('will max lanes', velocities)
     records.append(dict(case='will-max', velocities=[list(v) for v in velocities]))
 
 
