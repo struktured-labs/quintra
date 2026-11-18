@@ -15,7 +15,7 @@ invulnerability with misleading feedback, not a dropped-damage bug:
 
 This contract locks the readable reject (spark + clink counter), the
 shortened late split, the vent-only damage window, the damage cap, and
-Vespine Swarm / a MAX volley on both the closed husks and the open head.
+Vespine Bramble (B tap; replaced the old Swarm) / a MAX volley on both the closed husks and the open head.
 """
 from test_boss_identity import EN, PL, addr, enter_boss, put16
 from test_colossal_cinder import (
@@ -37,7 +37,9 @@ HP, FLAGS, DMG = 14, 1, 26
 STAGE, ROOM_W = 2, 20
 SPARKS = addr("_cinder_armor_sparks")
 CINDER_BOSS = addr("_cinder_boss_index")
-SWARM = addr("_will_vespine_swarm_ticks")
+CASTS = addr("_magic_casts")
+TAP_CD = addr("_magic_tap_cd")
+PL_MP = 4
 SCREEN = addr("_loop_current_screen")
 STATUS_KIND = addr("_enemy_status_kind")
 STATUS_TICKS = addr("_enemy_status_ticks")
@@ -239,10 +241,14 @@ def test_vespine_swarm_closed_and_recombine():
     put16(pb, PL + 11, max(8, ay - 8))
     pb.memory[PL + 13] = 1
 
-    # Swarm against a closed body: no HP change, but the swarm still runs.
+    # Bramble (Vespine's B tap) against a closed body: no HP change, but
+    # the spell still casts.
     pb.memory[CINDER_PATTERN] = 1
     pb.memory[CINDER_TIMER] = 40
     hp0 = pb.memory[boss + HP]
+    pb.memory[PL + PL_MP] = 9
+    pb.memory[TAP_CD] = 0
+    casts0 = pb.memory[CASTS]
     pb.button_press("b")
     keep_alive(pb, 4)
     pb.button_release("b")
@@ -251,11 +257,11 @@ def test_vespine_swarm_closed_and_recombine():
         pb.memory[CINDER_PATTERN] = 1
         pb.memory[PL + 15] = 255
         keep_alive(pb, 1)
-    assert pb.memory[SWARM] > 0, "Vespine Swarm did not start"
+    assert pb.memory[CASTS] != casts0, "Vespine Bramble did not cast"
     assert pb.memory[boss + HP] == hp0, (
-        f"Swarm damaged a closed Rex: {hp0}->{pb.memory[boss + HP]}")
+        f"Bramble damaged a closed Rex: {hp0}->{pb.memory[boss + HP]}")
 
-    # Late split rejects Swarm too.
+    # Late split rejects Bramble too.
     pb.memory[boss + HP] = 40
     for _ in range(80):
         keep_alive(pb, 1)
@@ -263,6 +269,8 @@ def test_vespine_swarm_closed_and_recombine():
             break
     assert pb.memory[CINDER_PHASE] == 3
     hp0 = pb.memory[boss + HP]
+    pb.memory[PL + PL_MP] = 9
+    pb.memory[TAP_CD] = 0
     pb.button_press("b")
     keep_alive(pb, 4)
     pb.button_release("b")
@@ -272,7 +280,7 @@ def test_vespine_swarm_closed_and_recombine():
         pb.memory[PL + 15] = 255
         keep_alive(pb, 1)
     assert pb.memory[boss + HP] == hp0, (
-        f"Swarm damaged phase-3 husks: {hp0}->{pb.memory[boss + HP]}")
+        f"Bramble damaged phase-3 husks: {hp0}->{pb.memory[boss + HP]}")
 
     # After recombine, an open-head shot still deals the cap (sanity for Vespine).
     while pb.memory[CINDER_PHASE] == 3:
@@ -282,7 +290,7 @@ def test_vespine_swarm_closed_and_recombine():
     assert r["dhp"] == NORMAL_CAP, r
 
     pb.stop(save=False)
-    print("[cinder-absorb] PASS Vespine Swarm on closed Rex and phase-3 husks")
+    print("[cinder-absorb] PASS Vespine Bramble on closed Rex and phase-3 husks")
 
 
 def test_poison_pauses_on_closed_rex():
