@@ -36,10 +36,12 @@ def boot(class_moves):
         for _ in range(8):
             pb.tick()
     press(pb, "a")
-    for _ in range(60):
+    # Foyer arrival can swallow a short START for about a second, so wait
+    # a little longer and hold START long enough to catch a clean edge.
+    for _ in range(90):
         pb.tick()
-    press(pb, "start")
-    for _ in range(20):
+    press(pb, "start", held=8, released=16)
+    for _ in range(16):
         pb.tick()
     return pb
 

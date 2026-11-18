@@ -229,6 +229,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_boss_threshold.py
 	$(PYBOY_RUN) scripts/test_sanctuary_escape.py
 	uv run --quiet --with pyboy python scripts/test_inventory_action_tip.py
+	$(PYBOY_RUN) scripts/test_b_item_picker.py
 	uv run --quiet --with pyboy python scripts/test_full_mp_hud.py
 	$(PYBOY_RUN) scripts/test_pyboy_env.py
 	python3 scripts/test_playtest_report.py

@@ -38,13 +38,6 @@ void secondary_cooldown_tick(void) BANKED {
         fx_spawn(SPR_FX_IMPACT,6,player.x+4,player.y+2,6);
 }
 
-void secondary_cycle(void) BANKED {
-    u8 id=player.active_item<ITEM_ID_BOOMERANG ? ITEM_ID_BOOMERANG : player.active_item+1;
-    for (;id<=ITEM_ID_BOMBS;++id)
-        if (owns(id)) { player.active_item=id; return; }
-    player.active_item=10+player.class_id;
-}
-
 u8 projectile_throw_hookshot(u8 dir) BANKED {
     u8 i;
     entity_t *e;

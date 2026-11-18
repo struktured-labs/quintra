@@ -8,7 +8,7 @@ Worldglass shift into Hollow), then checks:
   * the vignette screen plays (~3 s) and returns to the room,
   * A/B/START skip from frame 8,
   * play-once per run (the second entry falls back to the stage card),
-  * CUTSCENES OFF (PACK aim page, LEFT/RIGHT) suppresses it,
+  * CUTSCENES OFF (PACK Combat Help page, LEFT/RIGHT) suppresses it,
   * every borrowed BG tile is restored after the room resumes.
 GIFs from the real ROM go to builds/vignettes-<sha8>/ (160x144 and 4x), or
 to $QUINTRA_VIGNETTE_GIF_DIR.
@@ -250,7 +250,10 @@ def cutscenes_off_contract():
     try:
         tap(pb, "start", after=20)
         assert pb.memory[SCREEN] == SCREEN_INVENTORY
-        tap(pb, "select", after=20)
+        tap(pb, "select", after=20)  # Aim / B-item picker
+        tap(pb, "select", after=20)  # Gear
+        tap(pb, "select", after=20)  # Status
+        tap(pb, "select", after=20)  # Combat Help
         tap(pb, "right", after=20)
         OUT.mkdir(parents=True, exist_ok=True)
         pb.screen.image.save(OUT / "pack-cutscenes-off.png")

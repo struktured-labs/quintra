@@ -25,6 +25,10 @@
 // Merchant proximity offer icons. These live only on the WINDOW HUD, so the
 // dungeon tilemap never interprets them as terrain.
 #define HUD_AEGIS_PIPS  124 // window-only 1/2/3 charge pips; rewritten on change
+// Equipped-B HUD box. High slots stay free of room tiles; pack frames
+// start at 0xF6 and waygear at 0xF2, so these only live while the window is shown.
+#define HUD_B_LETTER    0xF0
+#define HUD_B_ICON      0xF1
 #define HUD_OFFER_HEAL   40
 #define HUD_OFFER_RELIC  41
 #define HUD_OFFER_VITAL  42
@@ -494,5 +498,6 @@ void tiles_open_crystal_far_exit(void) BANKED;
 void tiles_load_boss_cue_bg(void) BANKED;         // sanctuary skull/barred threshold
 void tiles_draw_boss_cue(u8 entered_from) BANKED; // project its 16x16 edge seal
 void tiles_load_area_labels(void) BANKED;          // RIFTWILD + village quarter landmarks
+void tiles_load_hud_b_icon(u8 item_id) BANKED;     // window tiles for the equipped-B box
 void tiles_draw_area_label(u8 kind) BANKED;        // 1 Riftwild, 2 Village, 3 Market, 4 Forge
 #endif

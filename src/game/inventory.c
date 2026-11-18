@@ -14,6 +14,8 @@
 #include "game/inventory.h"
 #include "game/inventory_copy.h"
 #include "game/inventory_visual.h"
+#include "game/inventory_aim.h"
+#include "game/inventory_frame.h"
 #include "game/inventory_waygear.h"
 #include "game/dungeon_tools.h"
 #include "game/curse.h"
@@ -56,37 +58,6 @@ static const u16 inv_quest_bg[4] = {
 // Dedicated 2bpp rails replace the old literal '+', '-' and '|' glyphs.
 // Bright inner strokes and a darker one-pixel bevel make the four PACK
 // regions read as one carved interface on color, grayscale, and IPS panels.
-#define INV_FRAME_BASE ((u8)0xF6u)
-#define INV_FRAME_H    ((u8)0xF6u)
-#define INV_FRAME_VL   ((u8)0xF7u)
-#define INV_FRAME_VR   ((u8)0xF8u)
-#define INV_FRAME_TL   ((u8)0xF9u)
-#define INV_FRAME_TR   ((u8)0xFAu)
-#define INV_FRAME_BL   ((u8)0xFBu)
-#define INV_FRAME_BR   ((u8)0xFCu)
-#define INV_FRAME_TLJ  ((u8)0xFDu)
-#define INV_FRAME_TRJ  ((u8)0xFEu)
-
-static const u8 inv_frame_tiles[9][16] = {
-    { 0,0, 0,0, 0,0, 0xFF,0xFF, 0,0xFF, 0,0, 0,0, 0,0 },
-    { 0x10,0x18, 0x10,0x18, 0x10,0x18, 0x10,0x18,
-      0x10,0x18, 0x10,0x18, 0x10,0x18, 0x10,0x18 },
-    { 0x08,0x18, 0x08,0x18, 0x08,0x18, 0x08,0x18,
-      0x08,0x18, 0x08,0x18, 0x08,0x18, 0x08,0x18 },
-    { 0,0, 0,0, 0,0, 0x1F,0x1F, 0x10,0x1F,
-      0x10,0x18, 0x10,0x18, 0x10,0x18 },
-    { 0,0, 0,0, 0,0, 0xF8,0xF8, 0x08,0xF8,
-      0x08,0x18, 0x08,0x18, 0x08,0x18 },
-    { 0x10,0x18, 0x10,0x18, 0x10,0x18, 0x1F,0x1F,
-      0,0x1F, 0,0, 0,0, 0,0 },
-    { 0x08,0x18, 0x08,0x18, 0x08,0x18, 0xF8,0xF8,
-      0,0xF8, 0,0, 0,0, 0,0 },
-    { 0x10,0x18, 0x10,0x18, 0x10,0x18, 0x1F,0x1F,
-      0x10,0x1F, 0x10,0x18, 0x10,0x18, 0x10,0x18 },
-    { 0x08,0x18, 0x08,0x18, 0x08,0x18, 0xF8,0xF8,
-      0x08,0xF8, 0x08,0x18, 0x08,0x18, 0x08,0x18 },
-};
-
 static const char *class_name(u8 id) {
     if (id < N_CLASSES) return classes[id].name;
     return "?";
@@ -123,10 +94,10 @@ static const char *const active_tips[5] = {
 };
 
 static const char *active_tip_by_id(u16 id) {
-    if (id == ITEM_ID_BOOMERANG) return "STUN + LONG FETCH";
-    if (id == ITEM_ID_HOOKSHOT) return "LATCH + PULL SELF";
+    if (id == ITEM_ID_BOOMERANG) return "STUN AND FETCH";
+    if (id == ITEM_ID_HOOKSHOT) return "LATCH AND PULL";
     if (id == ITEM_ID_MORNINGSTAR) return "SWING AROUND YOU";
-    if (id == ITEM_ID_BOMBS) return "1 MP: THROW / DROP";
+    if (id == ITEM_ID_BOMBS) return "1 MP THROW OR DROP";
     return (id >= 10 && id < 15) ? active_tips[id - 10] : "SEE SIG";
 }
 
@@ -139,79 +110,14 @@ static void write_field(const char *s, u8 width) {
     while (width--) putchar(' ');
 }
 
-static u8 *inventory_bg_map(void) {
-    return (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
-}
-
-static void frame_row(u8 y, u8 left, u8 right) {
-    u8 row[20];
-    u8 x;
-    row[0] = left;
-    for (x = 1; x < 19; ++x) row[x] = INV_FRAME_H;
-    row[19] = right;
-    set_tiles(0, y, 20, 1, inventory_bg_map(), row);
-}
-
-static void frame_sides(u8 y) {
-    u8 tile = INV_FRAME_VL;
-    set_tiles(0, y, 1, 1, inventory_bg_map(), &tile);
-    tile = INV_FRAME_VR;
-    set_tiles(19, y, 1, 1, inventory_bg_map(), &tile);
-}
-
-static void draw_pack_frames(void) {
-    u8 y;
-    VBK_REG = 0;
-    set_bkg_data(INV_FRAME_BASE, 9, inv_frame_tiles[0]);
-    frame_row(0, INV_FRAME_TL, INV_FRAME_TR);
-    for (y = 1; y <= 3; ++y) frame_sides(y);
-    frame_row(4, INV_FRAME_TLJ, INV_FRAME_TRJ);
-    for (y = 5; y <= 7; ++y) frame_sides(y);
-    frame_row(8, INV_FRAME_TLJ, INV_FRAME_TRJ);
-    for (y = 9; y <= 12; ++y) frame_sides(y);
-    frame_row(13, INV_FRAME_TLJ, INV_FRAME_TRJ);
-    for (y = 14; y <= 16; ++y) frame_sides(y);
-    frame_row(17, INV_FRAME_BL, INV_FRAME_BR);
-}
-
-static void attr_row(u8 y, u8 slot) {
-    u8 attrs[20];
-    u8 x;
-    u8 *map = (LCDC_REG & LCDCF_BG9C00) ? (u8 *)0x9C00 : (u8 *)0x9800;
-    for (x = 0; x < 20; ++x) attrs[x] = slot;
-    VBK_REG = 1;
-    set_tiles(0, y, 20, 1, map, attrs);
-    VBK_REG = 0;
-}
-
-static void inventory_aim_enter(void) {
-    DISPLAY_OFF;
-    HIDE_SPRITES;
-    cls();
-    gotoxy(3, 1); text_write("AIM / B WEAPON");
-    gotoxy(2, 3); text_write(player_penta_aim ? "MODE: HOLD AIM" : "MODE: CLASSIC");
-    gotoxy(2, 5); text_write("A: SWITCH MODE");
-    gotoxy(2, 7); text_write(player_penta_aim ? "RELEASE KEEPS" : "DIAGONAL PICKS");
-    gotoxy(2, 8); text_write(player_penta_aim ? "LAST 8-WAY AIM" : "VERTICAL HEADING");
-    gotoxy(1, 10); text_write("UP/DOWN: B WEAPON");
-    gotoxy(1, 11); text_write("> "); text_write(item_name_by_id(player.active_item));
-    gotoxy(1, 13); text_write(active_tip_by_id(player.active_item));
-    gotoxy(1, 15); text_write("A+B OATH UNCHANGED");
-    gotoxy(1, 16); text_write(vignette_cutscenes_off()
-        ? "L/R CUTSCENES OFF" : "L/R CUTSCENES ONCE");
-    gotoxy(1, 17); text_write("SEL GEAR B RETURN");
-    palette_bg_fill_attrs(0);
-    attr_row(1, 1); attr_row(3, 2); attr_row(5, 1); attr_row(13, 3);
-    SHOW_BKG;
-    DISPLAY_ON;
-}
+/* inventory_aim_enter lives in inventory_aim.c (bank 22). */
 
 static void inventory_help_enter(void) {
     u8 i;
     DISPLAY_OFF;
     HIDE_SPRITES;
     cls();
-    draw_pack_frames();
+    inventory_draw_pack_frames();
     gotoxy(5, 0); text_write(" COMBAT ");
     gotoxy(5, 4); text_write(" SIGNATURE ");
     gotoxy(5, 8); text_write(" SPIRIT ");
@@ -231,16 +137,16 @@ static void inventory_help_enter(void) {
     gotoxy(1, 12); text_write("NEXT A SPENDS WILL");
 
     gotoxy(1, 14); text_write("WEAPONS: ORB + A");
-    gotoxy(1, 15); text_write("PACK: SEL FOR AIM");
-    gotoxy(1, 16); text_write("OWNED GEAR AUTO ON");
-    gotoxy(1, 17); text_write("SEL PACK B RETURN");
+    gotoxy(1, 15); text_write(vignette_cutscenes_off()
+        ? "L R CUTSCENES OFF" : "L R CUTSCENES ONCE");
+    gotoxy(1, 16); text_write("SEL PACK B RETURN");
 
     palette_bg_fill_attrs(0);
-    attr_row(0, 1); attr_row(4, 1); attr_row(8, 2);
-    for (i = 9; i <= 12; ++i) attr_row(i, 2);
-    attr_row(13, 3);
-    for (i = 14; i <= 16; ++i) attr_row(i, 3);
-    attr_row(17, 1);
+    inventory_attr_row(0, 1); inventory_attr_row(4, 1); inventory_attr_row(8, 2);
+    for (i = 9; i <= 12; ++i) inventory_attr_row(i, 2);
+    inventory_attr_row(13, 3);
+    for (i = 14; i <= 16; ++i) inventory_attr_row(i, 3);
+    inventory_attr_row(17, 1);
     SHOW_BKG;
     DISPLAY_ON;
 }
@@ -266,7 +172,7 @@ void inventory_enter(void) {
     { font_t f = font_load(font_min); font_set(f); }
     cls();
 
-    draw_pack_frames();
+    inventory_draw_pack_frames();
     gotoxy(5, 0); text_write(" QUINTRA ");
     gotoxy(5, 4); text_write(" VITALS ");
     gotoxy(7, 8); text_write(" ARMS ");
@@ -331,11 +237,11 @@ void inventory_enter(void) {
     oath_arts_draw_pack();
 
     palette_bg_fill_attrs(0);
-    attr_row(0, 1); attr_row(4, 1); attr_row(8, 2);
-    for (i = 9; i <= 12; ++i) attr_row(i, 2);
-    attr_row(13, 3);
-    for (i = 14; i <= 16; ++i) attr_row(i, 3);
-    attr_row(17, 1);
+    inventory_attr_row(0, 1); inventory_attr_row(4, 1); inventory_attr_row(8, 2);
+    for (i = 9; i <= 12; ++i) inventory_attr_row(i, 2);
+    inventory_attr_row(13, 3);
+    for (i = 14; i <= 16; ++i) inventory_attr_row(i, 3);
+    inventory_attr_row(17, 1);
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
@@ -352,25 +258,15 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
     keys;
     if (inventory_page) {
         if (inventory_page == 4) {
-            if (pressed & (J_START | J_B)) {
+            u8 aim = inventory_aim_tick(pressed);
+            if (aim == 1) {
+                sfx_play(SFX_COIN);
                 room_request_resume();
                 return SCREEN_ROOM;
             }
-            if (pressed & J_SELECT) {
+            if (aim == 2) {
                 inventory_page = 1;
                 inventory_waygear_enter();
-            } else if (pressed & J_A) {
-                player_penta_aim ^= 1;
-                sfx_play(SFX_TICK);
-                inventory_aim_enter();
-            } else if (pressed & (J_LEFT | J_RIGHT)) {
-                vignette_toggle_cutscenes();
-                sfx_play(SFX_TICK);
-                inventory_aim_enter();
-            } else if (pressed & (J_UP | J_DOWN)) {
-                secondary_cycle();
-                sfx_play(SFX_TICK);
-                inventory_aim_enter();
             }
             return SCREEN_SELF;
         }
@@ -382,6 +278,12 @@ screen_id_t inventory_tick(u8 keys, u8 pressed) {
             }
             if (pressed & J_SELECT) {
                 inventory_enter();
+                return SCREEN_SELF;
+            }
+            if (pressed & (J_LEFT | J_RIGHT)) {
+                vignette_toggle_cutscenes();
+                sfx_play(SFX_TICK);
+                inventory_help_enter();
                 return SCREEN_SELF;
             }
             return SCREEN_SELF;

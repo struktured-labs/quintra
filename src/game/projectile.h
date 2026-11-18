@@ -89,6 +89,7 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED;
 u8 hookshot_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED;
 u8 morningstar_draw(entity_t *e, u8 oam, u8 x, u8 y) BANKED;
 void secondary_cycle(void) BANKED;
+void secondary_cycle_step(i8 dir) BANKED;
 u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED;
 void secondary_heavy_update(entity_t *e,u8 idx) BANKED;
 
