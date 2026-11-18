@@ -39,6 +39,8 @@ static void projectile_ricochet(entity_t *e, i16 px, i16 py) {
     sfx_play(SFX_HIT);
 }
 
+u8 g_fang_claw;
+
 u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     u8 idx;
     entity_t *e;
@@ -56,9 +58,13 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
             // strike across a deliberate lane, never enough to read as a
             // ranged bullet. The broad/slash versus narrow/stab choice is
             // shaped by room.c's input handling, not by projectile distance.
+            // Fang Claw (A, melee-only): a slow 6-frame arc held at arm
+            // length, about 10 px past his body; three bodies per swing.
+            // Max/Oath/Convergence spike lanes keep the old thrust.
             if (player.class_id == 0
                 && player.starter_weapon == classes[0].starter_weapon) {
-                speed = 3; ttl = 18; pierce = 2;
+                if (g_fang_claw) { speed = 1; ttl = 6; pierce = 3; }
+                else { speed = 3; ttl = 18; pierce = 2; }
             }
             else { speed = 4; ttl = 12; pierce = 1; }
             break;
@@ -109,7 +115,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
     // touch a small enemy while missing by the old one-pixel square gap.
     // Other projectiles retain their established 7x7 collision geometry.
     e->hitbox      = (player.class_id == 0 && kind == PROJ_SPIKE
-        && player.starter_weapon == classes[0].starter_weapon) ? 0x88 : 0x77;
+        && player.starter_weapon == classes[0].starter_weapon)
+        ? (g_fang_claw ? 0xAA : 0x88) : 0x77;
     e->damage      = damage;
     e->ai_data[0]  = 0;              // anim phase
     e->ai_data[1]  = g_shot_element; // element for weakness bonus

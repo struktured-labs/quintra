@@ -295,34 +295,37 @@ def player_projectiles(pb):
 
 
 def check_wolfkin_claw(pb):
-    """Wolfkin's A is a contact claw: no projectile, short reach, heavy."""
+    """Wolfkin's A is a contact claw: an arm-length arc, never a shot."""
     m = pb.memory
     arena(pb)
     m[PLAYER + 8] = 0                       # no LCK crit noise
     near = entity(pb, 0, 2, 92, 64, enemy_id=3)   # light Skeleton, ~6 px out
     far = entity(pb, 1, 2, 120, 64)         # 40 px: out of claw reach
     x0 = get16(pb, near + 3)
-    seen = 0
-    far_x = x0
+    hero_x = get16(pb, PLAYER + PL_X)
+    far_x, reach, life = x0, 0, 0
     pb.button_press("right")
     pb.button_press("a")
-    for _ in range(6):
+    for f in range(20):
+        if f == 5:
+            pb.button_release("a")
+            pb.button_release("right")
         pb.tick()
-        seen = max(seen, player_projectiles(pb))
         far_x = max(far_x, get16(pb, near + 3))
-    pb.button_release("a")
-    pb.button_release("right")
-    for _ in range(10):
-        pb.tick()
-        seen = max(seen, player_projectiles(pb))
-        far_x = max(far_x, get16(pb, near + 3))
+        live = [slot(i) for i in range(31)
+                if m[slot(i)] == 1 and m[slot(i) + 1] & 0x11 == 0x11]
+        if live:
+            life += 1
+        for e in live:
+            reach = max(reach, get16(pb, e + 3) + (m[e + 25] >> 4) - hero_x)
     loss = 40 - m[near + 14]
     assert loss >= 5, f"claw dealt {loss}"
     assert m[far + 14] == 40, "claw reached a body 40 px away"
-    assert seen == 0, f"claw spawned {seen} player projectiles"
+    assert reach <= 32, f"claw hitbox reached {reach} px: a ranged shot"
+    assert life <= 8, f"claw lived {life} frames"
     assert far_x >= x0 + 5, f"claw knockback only {far_x - x0} px"
-    print(f"[magic] Wolfkin claw: {loss} dmg, knockback {far_x - x0} px, "
-          "0 projectiles")
+    print(f"[magic] Wolfkin claw: {loss} dmg, reach {reach} px, "
+          f"{life} f, knockback {far_x - x0} px")
 
 
 def main():

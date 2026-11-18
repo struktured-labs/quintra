@@ -8,6 +8,8 @@
 
 // Element bitmask applied to the next player shot(s).
 extern u8 g_shot_element;
+// Set by room.c around Wolfkin's A spawn: the short Fang Claw arc.
+extern u8 g_fang_claw;
 
 // ai_data[3] on player projectiles is spare runtime metadata. Spirit
 // Convergence tags its eight-way chord so combat can preserve the burst
