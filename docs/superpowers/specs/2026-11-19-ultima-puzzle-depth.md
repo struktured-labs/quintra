@@ -35,7 +35,9 @@ a killed tool-beast, or a shut door.
 
 **Primary: a Pack menu action, "Reset room."** It is available in any
 authored puzzle room, from anywhere on the floor, even if the hero is
-boxed in. That matters: a plate you cannot walk to is not a reset.
+boxed in or **pinned** by a body, a boulder, or a closing door.
+That matters: a plate you cannot walk to is not a reset. Pack input
+must not depend on the hero being able to move.
 
 **Secondary, taught first: a marked reset plate next to the
 entrance.** Same function as Pack reset. Players learn it by seeing
@@ -86,25 +88,34 @@ trade. Tool-beasts return to the kennel.
 
 ### Contrast with Runes of Virtue (what we refuse)
 
-ROV *likes* gotchas. ASchultz: you reset a goofed floor only by
-visiting two other areas first. The Ankh teleports you to the castle
-and **wipes keys, hammers, and boots**. Deceit has trap squares that
-send you back to the top of the dungeon, and treasures that vanish
-when touched. Some rooms hold a nice item with no exit unless you
-already have a specific tool (TAS: a second Fireball Wand that is
-impossible to obtain). Failure often means leaving the whole cavern.
+ROV *likes* gotchas. Quintra will not use any of these:
 
-Quintra deliberately avoids that. A mistake is a reset, not a
-dungeon-eject, not a key-wipe, and never a room with no door out.
+- **[FAQ]** Trap squares that send you back to the top floor (Deceit).
+- **[FAQ]** Treasures that vanish when touched (Deceit Wand path).
+- **[FAQ]** The Ankh escape that wipes keys, hammers, and boots.
+- **[FAQ]** Resets that require visiting two other areas first
+  (ASchultz).
+- **[FAQ / TAS]** A room that holds a nice item with no way out
+  unless you already have a specific tool (the unreachable second
+  Fireball Wand).
+- **[Rec]** Lakes, cobwebs, and leviathans copied as a layout.
+  The causal pattern is fine; the set dressing is not.
+
+A mistake in Quintra is a Pack or plate reset, not a dungeon-eject,
+not a key-wipe, and never a room with no door out.
 
 ### Automated check
 
 Every authored puzzle fixture ships with a solvability-and-reset
 test (see M1–M5). From every reachable phase mask: the entrance is
-walkable, Pack reset returns the entry state, no item is duplicated,
-and either the goal is still reachable or reset makes it reachable
-again. The Rust solver and the C↔Rust parity job already used for
-Sun Lattice are the right harness.
+walkable, Pack reset returns the entry state (including while the
+hero is pinned), no item is duplicated, and either the goal is still
+reachable or reset makes it reachable again. **[Rec]** No moving
+actor (boulder, roamer, tool-beast) may come to rest on the entrance
+path or on the path to the reset plate; a boulder lane that closes a
+*side* route is fine. The solver must check that rest rule. The Rust
+solver and the C↔Rust parity job already used for Sun Lattice are
+the right harness.
 
 ## Relation to earlier puzzle work
 
@@ -151,19 +162,21 @@ Everything from the verbal dump, and where it lives in this spec:
 | North star (Zelda / FFA / Ultima / Penta Dragon) | Top of this document | Verbatim in spirit |
 | Floor or room as a state machine | §3, §5, study §4.1–4.3 | Isolated wide floor first |
 | Switches rewrite tiles / materials | §6.1 | Cairns → rift-stream in the slice, not lakes |
-| Invincible monster that forces thought | §6.2 | Route, trap, freeze; never DPS |
+| Invincible monster that forces thought | §6.2 | No flash, no weapon exceptions; rolling stone may kill it |
 | Freeze-all item; do Chime / Bomb / Mirror already freeze? | §2.4, §6.3 | **No. None of them freeze bodies.** New verb. |
 | Pressure plates that spawn packs, teleport skip | §6.4, M4 / M5 annex | Kept, not in M1 |
 | Turret shots hit a switch, semi-random churn | §6.6 | Fair cadence, on-camera tell, freeze pauses it |
 | Lakes / leviathans / cobwebs / water bridge | Study §4.8; slice is §5 | **Inspiration only. Do not copy.** Pattern: spawn, transform, route, tool. |
 | Trap monsters in rooms | §6.2, M1 | Closable door, bodies that cannot use doors |
-| Avoid monsters by not opening doors | §5 beat 2, M1 / M4 | Optional-combat door; intended line is to walk past |
+| Avoid monsters by not opening doors | §5, at most once per dungeon | Optional-combat door; not in the M1 teach room |
 | Monsters fanning out on their own | §6.2, study §4.5 | Invincible roamer spreads after entry or a trigger |
 | Item-grab wall traps | §6.5, M4 | Extend `BGT_ARROW_TRAP` |
 | Water- and fire-breathing creature routing | §5, study §4.8 | Same pattern, Quintra dressing (Cinder Kite on a rift-stream) |
-| Matching keys (heart, star, moon, …) | §6.7 | 3 types; showcase uses 2–3 |
+| Matching keys (heart, star, moon, …) | §6.7 | One of each type; a Heart opens only one of two Heart doors |
+| Cheese-like lure | §6.8, M3 or M4 | Drop, cannot pick up, reset returns it |
+| Flip-conveyors | §6.9, M4 | Same rewrite table; both directions previewed |
 | One room vs scattered across a dungeon | §4 | Open. Recommend isolated floor first. |
-| Iterations in the game, not only a spec | §7 | Milestones M1–M5; start at M1 |
+| Iterations in the game, not only a spec | §7 | M1 teach in dungeon N−1; M5 combines in dungeon N |
 
 ## 2. Engine inventory (checked against `origin/main`)
 
@@ -282,6 +295,59 @@ Do not overload the Chime. Freeze is a new verb (§6.3).
    floor. Reset, leave, and mid-floor suspend all return to entry
    until a solved bit is earned.
 7. **No softlocks, ever.** The constraint at the top of this spec.
+8. **One meaning per graphic, everywhere. [ROM / Rec]** A new
+   behavior gets a new graphic. Cairns, streams, crystal locks, and
+   conveyor arrows never share art with a tile that means something
+   else.
+9. **Introduce, then combine, then use under pressure. [Rec]** About
+   one new verb per dungeon. Freeze and the invincible roamer are
+   taught in a tiny optional room one dungeon before the Ember
+   Conduit floor, which is where verbs combine.
+10. **Restraint at most once per dungeon. [Rec]** A "do not open
+    this door" tax may appear at most once in any dungeon, including
+    the showcase dungeon.
+
+### 3.1 Readability rules (Ultima ROV Dx guidance)
+
+Tags: **[ROM]** from the original ROM or DX notes, **[FAQ]** from
+public walkthroughs, **[Rec]** a rule we are adopting on Dx / Carmelo
+advice.
+
+1. **[ROM / Rec]** Rewrite pairs must use art the player has already
+   seen. Both materials in a pair (cairn and rift-stream, or both
+   conveyor directions) appear somewhere on the floor *before* the
+   switch is first used — as a short sample path or a placed tile,
+   not only after the flip.
+2. **[ROM / Rec]** One meaning per graphic everywhere. A new behavior
+   gets a new graphic.
+3. **[FAQ / Rec]** An invincible monster simply does not flash when
+   hit. This is **absolute in the slice**: no special-weapon
+   exceptions (ROV itself has a few late-weapon cases; we do not).
+   A scripted **hazard** may still be a tool (§6.2).
+4. **[Rec]** A rewrite of off-camera cells plays a distinct SFX, and
+   the changed cells blink once when the camera arrives. That is the
+   cheaper option we will ship first. A camera nudge toward the
+   change is the alternative, not the default.
+5. **[Rec]** Every player toggle has a two-state glyph showing its
+   current position (Switch A/B, conveyor flip, and any later
+   rewrite lever).
+6. **[Rec]** No moving actor may come to rest on the entrance path
+   or the reset-plate path. Pack reset works while pinned. A boulder
+   that closes a side route is fine.
+7. **[Rec / FAQ]** Hazards can be tools. In the slice, a rolling-
+   stone lane kills the Jagger if it is lured or frozen in that
+   lane (cousin: TAS, a sentient boulder killing an invincible
+   Warlock). Weapons still never work on it.
+8. **[FAQ / Rec]** A cheese-like lure is a drop that monsters path
+   toward, cannot be picked back up, and returns on reset. M3 or M4
+   B-item candidate (§6.8).
+9. **[ROM / Rec]** Arrow-floor conveyors exist in Hatred `$19`. A
+   switch may flip their direction using the same rewrite table,
+   with both directions previewed on the floor (§6.9).
+10. **[Rec]** Pacing and restraint: see principles 9 and 10, and §7.
+11. **[FAQ / Rec]** Choice keys: you hold **one key of each type**
+    at a time, and a Heart key opens only one of two Heart doors
+    (§6.7).
 
 ## 4. Open question: one big room, or a puzzle scattered across a dungeon?
 
@@ -321,48 +387,44 @@ leviathans swim across and shoot the far cobweb, freeing that rock
 (study §4.8). The pattern we keep is spawn → transform → route →
 use a monster as a tool.
 
-The floor, in one sentence: you release a Cinder Kite, raise cairns
-and turn them into a rift-stream so the Kite can cross a gap and
-shatter a crystal lock, while an invincible roamer, matching keys,
-and a switch-hitting turret make you freeze, route, and time the
-churn — and a Pack reset or the entrance plate can always unwind a
-mistake.
+This is a **combine-and-pressure** floor in dungeon N. Freeze and
+the Jagger were already taught in a tiny optional room in dungeon
+N−1 (M1). Rewrite, the Kite chain, and choice keys were introduced
+in modest rooms before this floor (M2–M4). The Conduit is where
+those verbs run together, under turret pressure, not where they are
+first seen.
 
-Beats, in teaching order:
+The floor, in one sentence: you already know how to freeze a Jagger
+and flip cairns into a rift-stream; here you release a Cinder Kite,
+build that stream across a gap so it can shatter a crystal lock,
+spend a choice key, and time a turret door — and a Pack reset or
+the entrance plate can always unwind a mistake.
 
-1. **Anteroom.** A freeze **pedestal** that dispenses one local charge
-   whenever the hero holds none and the room timer is at 0. The
-   **reset plate** sits next to the always-open entrance. Pack
-   "Reset room" is already live. The player does not need a run-long
-   Pack tool to try the machine.
-2. **Invincible roamer (fan + avoid).** A Stone Jagger fans out along
-   the first lane. Hits do not flash. Freeze holds it long enough to
-   cross. A side door hides an optional pack: the intended line is
-   **not to open it**. A closable alcove can also trap the Jagger.
-3. **Rewrite switches, in a dead-end first.** Switch A raises a short
-   run of stone cairns in a fixed region (not the pushable crate).
-   Switch B turns those cairns into a rift-stream. The hero walks a
-   parallel dry catwalk. No Picsean / Raft gate.
-4. **Spawn, transform, route, tool.** A plate releases a **Cinder
-   Kite** from a kennel (puzzle-flagged, invincible or kennel-respawn;
-   the companion holds fire and ignores it). Build the conduit across
-   a gap. The Kite will only travel the stream. Once it crosses, its
-   fire shatters a **crystal lock** on a crate or a Star-door plaque.
-   Wolfkin fire, Rift Bomb, and combat Bombs may break the lock as a
-   shortcut; they must not skip a trigger the Kite's release is
-   supposed to set. A second lock further along may reuse the same
-   verbs with new geometry — not a second lake and web.
-5. **Matching keys.** Two types on the mandatory line (Heart in a
-   visible chest for a side cache that holds a rewrite switch or a
-   second freeze pip; Star for the mid-floor gate the Kite unlocks
-   or that leads to the turret court). A third type, Moon, may sit
-   on an optional alcove on the same floor if the layout still
-   reads; otherwise Moon waits for a later floor. See §6.7.
-6. **Turret churn,** once the player has the verbs. A stuck shooter,
-   its gold plate, and a *side* exit door (never the entrance) share
-   **one camera quadrant**. The turret pings the plate and cycles
-   that door. Freeze it when the door is open, then leave. No pack
-   is spawned on shut.
+Beats, once the earlier teaching rooms have done their job:
+
+1. **Anteroom.** Freeze pedestal, reset plate by the always-open
+   entrance, Pack reset already known from M1. A short sample of
+   **both** cairn and rift-stream art is already visible here, before
+   any rewrite switch is used.
+2. **Jagger, now with a tool.** The Stone Jagger fans out. Hits still
+   never flash, and **no weapon** in the slice can hurt it. A
+   **rolling-stone lane** will crush it if the player lures it or
+   freezes it in that lane. One optional-combat door, at most, may
+   appear on this dungeon floor (restraint, once). A closable alcove
+   can still trap it. No actor may rest on the entrance or reset-
+   plate path.
+3. **Conduit, already taught, now in combination.** Switches A and B
+   carry two-state glyphs. Off-camera rewrites play a distinct SFX,
+   and the cells blink once when you arrive. The Kite is released,
+   rides the stream, and shatters the crystal lock. Shortcuts must
+   not skip the release trigger. The lock, cairn, and stream each
+   have their own graphic.
+4. **Choice keys.** The hero may hold one Heart, one Star, and one
+   Moon at a time. A Heart key opens only one of two Heart doors
+   (one is optional treasure, never the only way out). See §6.7.
+5. **Turret churn under pressure.** Same rules as §6.6. The side door
+   (never the entrance) shares a camera quadrant with the turret and
+   its plate.
 
 Success is: the floor is solvable without a FAQ, the state is always
 visible, a softlock is impossible (Pack reset, entrance plate, or
@@ -386,11 +448,24 @@ First materials for the slice:
 - Crystal lock (blocks a crate or a door plaque; shattered by the
   Kite's fire, or by fire/Bomb as a shortcut).
 
+**[ROM / Rec] Preview.** Both tiles of a rewrite pair are already
+visible on the floor before the switch is first used. **[ROM / Rec]
+One graphic, one meaning.** The lock is not a recolored crate; the
+stream is not a decorative water tile with different collision.
+
+**[Rec] Glyphs.** Switches A and B (and any conveyor flip) show a
+two-state glyph for the current position.
+
+**[Rec] Off-camera.** If a rewrite changes cells off-screen, play a
+distinct SFX immediately; when those cells enter the camera, blink
+them once. A camera nudge is the alternative, not the default.
+
 Collision: if Switch A would raise a cairn on a cell the hero, crate,
 roamer, or Kite occupies, the switch **refuses** (dud clunk). Closing
 doors use the same rule, and also nudge an overlapping actor one tile
 out. Switch B only converts the **fixed cairn region**, never a crate
-the player has pushed off its home cell.
+the player has pushed off its home cell. Moving actors may not come
+to rest on the entrance path or the reset-plate path.
 
 Budget: a rewrite touches at most **8–12 tiles** and is amortized
 over 2–3 frames, in the Law Lock / Prism Toggle style. No full 31×31
@@ -406,14 +481,22 @@ A definition flag, not an `EF_*`. Provisional name: **Stone Jagger**
 less on the nose. Mid-size, slow roam, cardinal or slightly drunk
 walk, **fans out on its own** after entry or after a trigger (a
 picked-up key, a opened side door), **cannot use doors**, contact
-damage 1 heart, never lethal, **no HP flash, no damage, no status
-except the room-level freeze.**
+damage 1 heart, never lethal. **[FAQ / Rec] It simply does not flash
+when hit.** In the slice this is absolute: melee, Bombs, Oaths,
+Morningstar, hero magic, and any other weapon do nothing. There are
+no special-weapon exceptions.
 
 Used only in authored puzzle rooms. The procgen pack roller must not
-select it. Max one on the showcase floor.
+select it. Max one on the showcase floor. It must not come to rest
+on the entrance or reset-plate path.
 
-Neutralize by: freeze, closing a door on it, routing around, or
-(later) a teleport crush. Not by DPS, Bombs, or Oaths.
+Neutralize by: freeze, closing a door on it, routing around, a lure
+into a trap, or (later) a teleport crush. **[Rec]** Hazards can be
+tools: on the Ember Conduit floor, a rolling-stone lane **kills**
+the Jagger if it is lured or frozen in that lane. That is an
+environmental tool, not a weapon exception. If the Jagger dies this
+way, it stays gone until a Pack or plate reset (which is always
+available).
 
 Cost: S–M. One enemy id, simple roam AI in bank 25, art via GPT
 Image 2.6 when we implement, not in this PR.
@@ -541,21 +624,22 @@ alone (Heart, six-point Star, crescent Moon). Palette can still
 help: Heart uses the fire/heart red, Star the coin gold, Moon a
 cool grey.
 
-**HUD and Pack.** While the hero holds any floor-local key, a slim
-row of up to three bow icons plus a count (1–3) sits in the Pack
-and as a small HUD pip (reuse the tool-icon slot language, not a
-new home-bank draw path). Empty types are dim or absent. The
-showcase never needs more than one of each type at a time, but the
-display should show a count so a later floor can hold two Stars.
+**HUD and Pack.** **[FAQ / Rec]** The hero may hold **one key of
+each type** at a time (one Heart, one Star, one Moon). A slim row
+of up to three bow icons sits in the Pack and as a small HUD pip
+(reuse the tool-icon slot language, not a new home-bank draw path).
+Empty types are dim or absent. There is no count, because the cap
+is one. A second key of a type the hero already holds stays on the
+pedestal (or refuses) until the first is spent or a reset returns
+both.
 
 **SRAM.** For M1–M5, keys are **floor-local**: 3 bits "chest still
-has its key" and 3 bits "hero is holding this type" plus 3 bits
-"this door is open" live in the room phase mask (WRAM). 0 new SRAM,
-0 `player_t` growth. Reset clears held floor-local keys back onto
-their pedestals and relocks the doors. If a later milestone wants
-run-long keys, append **2 bytes** to `player_t` (three 4-bit
-counts, cap 15 each, one nibble reserved) and migrate; that is not
-required to prove the pattern.
+has its key," 3 bits "hero is holding this type," and 3 bits "this
+door is open" live in the room phase mask (WRAM). 0 new SRAM, 0
+`player_t` growth. Reset clears held floor-local keys back onto
+their pedestals and relocks the doors. Run-long keys, if ever
+added, can use 3 bits of held-type plus chest bits, not a stack of
+15, unless a later design revisits the cap.
 
 **How doors read.** A locked matching door uses `BGT_DOOR_LOCKED`
 (or a pair) plus the plaque tile on the lintel, facing the approach.
@@ -566,9 +650,11 @@ matching door.**
 **Consumption.** Spending a matching key unlocks that door and the
 door stays open in the phase mask for the rest of this visit (and
 after the floor is solved). The key is consumed on a successful
-unlock, not on a refused bump. Two doors of the same type with only
-one key is a *choice*, as in Hatred L2; the "wrong" room may be
-optional treasure, never the only way out.
+unlock, not on a refused bump. **[FAQ / Rec]** A Heart key opens
+**only one of two Heart doors** — a real choice, as in Hatred L2.
+The unchosen door stays locked. The "wrong" room is optional
+treasure, never the only way out, and Pack reset returns the key
+if the player wants the other door.
 
 **Softlocks.** In addition to the top-of-spec rule:
 
@@ -576,118 +662,168 @@ optional treasure, never the only way out.
   line, before its door.
 - Reset returns held floor-local keys to chests and relocks unsolved
   doors, with no duplicates.
-- A key from outside the floor (if we ever have run-long keys) is
-  not consumed by reset and not refunded if already spent on a
-  *different* floor.
-- We do not copy ROV's "carry only one of each type" cap as a hard
-  limit that bricks a route; the slice cap is 3 per type, which is
-  more than the floor uses.
+- The one-per-type cap is a choice layer, not a brick: the unchosen
+  Heart door is never required, and reset undoes a spend on this
+  unsolved floor.
 - We do not wipe keys as an escape hatch.
 
-**Showcase use.** Beat 5: **two types on the mandatory line**
-(Heart, Star) and an optional **Moon** alcove if the layout still
-reads. If Moon makes the camera or HUD busy, drop it from this
-floor and teach it on the next one. Three types is the ceiling, not
-the goal of the first painting.
+**Showcase use.** Two types on the mandatory line (Heart, Star),
+with two Heart doors and one Heart key so the choice is real. An
+optional Moon alcove may appear if the layout still reads; otherwise
+Moon waits for a later floor. Three types is the ceiling, not the
+goal of the first painting.
 
 Cost: M. Plaque tiles, a tiny key state machine, Pack/HUD pips.
 0 SRAM in the slice. Art later, GPT Image 2.6.
+
+### 6.8 Lure (cheese-like) — M3 or M4 B-item candidate
+
+**[FAQ]** ROV cheese: drop it, monsters run to it, you cannot pick
+it up again (items wiki; Cat's Lair line).
+
+**[Rec]** In Quintra this is a floor-local drop, taught as a B-item
+or a room pickup in **M3 or M4**, not in M1. On use, the lure sits
+on a floor cell and puzzle bodies (Jagger, and later tool-beasts if
+authored to) path toward it. It cannot be picked back up. Reset
+returns it to the pedestal or to the B slot it came from, with no
+duplicate. It must not be placeable on the entrance path or the
+reset-plate path (the drop refuses, dud clunk). Combined with §6.2,
+this is how the player leads a Jagger into the rolling-stone lane.
+
+Cost: S–M. Pathing uses existing roam. 0 SRAM if floor-local.
+
+### 6.9 Flip-conveyors
+
+**[ROM]** Hatred area `$19` already has arrow floors that push the
+player (DX `dungeons.md`). **[Rec]** A switch may flip a conveyor's
+direction using the **same rewrite table** as cairn ↔ stream. Both
+directions' art must already be visible on the floor before the
+first flip. The switch has a two-state glyph. Off-camera flips use
+the same SFX-and-blink rule. Conveyor lanes may close a side route;
+they may not come to rest (or dump a body to rest) on the entrance
+or reset-plate path, and every lane still leads to the entrance or
+to reset. Taught in M4, available on the M5 floor if it stays
+readable.
+
+Cost: M. New pair of directional floor tiles, one toggle. 0 SRAM.
 
 ## 7. Iteration milestones (M1–M5)
 
 These are small **playable** builds, not just engine chores. Each
 one can go on a password-gated itch build and a card once Carmelo
-approves the scope. Each one includes the no-softlock test. No
-gameplay code until he says go, starting with **M1**.
+approves the scope. Each one includes the no-softlock test, the
+rest-path solver check, and Pack reset while pinned. **[Rec]**
+Pacing is introduce, then combine, then use under pressure, about
+one new verb per dungeon. No gameplay code until he says go,
+starting with **M1**.
 
-### M1 — Think, don't fight (recommended first build)
+### M1 — Introduce freeze and the Jagger (recommended first build)
 
-**Scope.** A small authored room (standard 20×17 is enough). One
-Stone Jagger that fans out. One closable alcove. One optional-combat
-door the player is meant to walk past. Rime Pipes pedestal.
-Entrance always open. Pack "Reset room" and the entrance reset
-plate both live.
+**Scope.** A **tiny optional room in dungeon N−1**, one dungeon
+before the Ember Conduit floor. Teach only this verb: a Stone Jagger
+that does not flash, plus Rime Pipes, Pack reset, and the entrance
+plate. A closable alcove is fine. **Do not** put a restraint
+("don't open this door") tax here — save that for at most once in
+the showcase dungeon. No rewrite, no Kite, no keys.
 
 **Engine cost.** S. Def flag in bank 25, room freeze timer, Pack
 entry, no new SRAM, no new Pack item id, no rewrite table yet.
 
 **Acceptance.**
 
-- Hits on the Jagger do no damage and do not flash; freeze holds it;
-  a closed door stops it.
-- Walking past the optional door is a complete solution; opening it
-  is a combat tax, not a requirement.
-- Pack reset and the plate restore the entry state from any legal
-  position, including inside the alcove. Room-local freeze charge
-  returns to the pedestal; HP is not refilled; no duplicated
-  pickups.
-- Entrance is walkable in every state. Suspend mid-room resumes at
-  entry.
+- Hits on the Jagger do no damage and do not flash; no weapon in the
+  room can hurt it. Freeze holds it; a closed alcove stops it.
+- Pack reset works while the hero is pinned, and the plate restores
+  the entry state. The Jagger never comes to rest on the entrance or
+  reset-plate path (solver check).
+- Room-local freeze charge returns to the pedestal; HP is not
+  refilled; no duplicated pickups. Entrance is always walkable.
+  Suspend mid-room resumes at entry.
 - Headless solvability-and-reset test over the phase mask.
   `test_new_game_start.py`, `check_rom_layout` (home unchanged),
   `test_performance` ≥ 167/180.
 
-### M2 — The room rewrites itself
+### M2 — Introduce rewrite
 
-**Scope.** A small room that teaches Switch A (raise cairns) and
-Switch B (cairns become a rift-stream) in a dead-end, with the same
-reset tools as M1. Hero stays on a dry catwalk.
+**Scope.** A small room, its own dungeon slot or a later side room,
+that teaches Switch A (raise cairns) and Switch B (cairns become a
+rift-stream). Both materials are already visible before the first
+flip. Two-state glyphs. Off-camera rewrite uses SFX plus a blink on
+arrival. Hero stays on a dry catwalk. Same reset tools as M1.
 
 **Engine cost.** M. Banked rewrite writer, 8–12 tile cap, refuse-if-
-occupied, 2–4 bit phase mask, 0 SRAM.
+occupied, preview tiles, glyphs, 2–4 bit phase mask, 0 SRAM.
 
 **Acceptance.**
 
 - A then B is reversible and replays from the phase mask after
   reset, leave, or suspend.
-- Switch A refuses if a body occupies a target cell.
-- Solvability-and-reset test; performance and layout as in M1.
+- Switch A refuses if a body occupies a target cell. Both graphics
+  were on the floor before the first use. One graphic, one meaning.
+- Off-camera rewrite SFX and blink are tested.
+- Solvability-and-reset plus rest-path checks; performance and
+  layout as in M1.
 
-### M3 — Spawn, transform, route, tool
+### M3 — Introduce the tool-beast chain (lure candidate)
 
-**Scope.** The Ember Conduit teaching beat: kennel-released Cinder
-Kite, cairn-to-stream conduit across a gap, crystal lock shattered
-only by the Kite (shortcuts may exist, but the release trigger still
-counts). Still a modest room, not the full showcase. Reset-safe
-kennel respawn if the Kite's slot dies.
+**Scope.** A modest teaching room for spawn → transform → route →
+tool: kennel-released Cinder Kite, cairn-to-stream conduit across a
+gap, crystal lock shattered by the Kite. Not the full showcase, and
+not yet under turret pressure. The cheese-like **lure** may appear
+here as a floor-local B-item or pickup (or slip to M4).
 
 **Engine cost.** M. Puzzle-flag the existing Cinder Kite, crystal-lock
-tile, kennel. 0 SRAM.
+tile, kennel, optional lure. 0 SRAM.
 
 **Acceptance.**
 
 - The lock does not break to melee. The Kite, once the stream is
   built, crosses and breaks it. A dead Kite respawns in the kennel.
-- Companion does not kill the Kite. Shortcuts do not skip the
+  Companion does not kill the Kite. Shortcuts do not skip the
   release trigger.
+- If the lure ships here: drop paths a body to it, cannot be picked
+  up, reset returns it, cannot be dropped on the entrance or reset
+  path.
 - Solvability-and-reset test includes "Kite dead," "stream half-
   built," and "lock already broken, crate wedged" — all recoverable.
+  Rest-path check includes the Kite.
 
-### M4 — Keys, and one more dump verb
+### M4 — Introduce choice keys and flip-conveyors
 
-**Scope.** Teach Heart and Star matching doors on a short floor.
-Add **one** of: item-grab wall traps, a spawn-plate plus teleport
-skip, or the optional "do not open this door" pack if it was not
-already clear in M1. Moon may appear as an optional alcove.
+**Scope.** A short floor that teaches Heart and Star matching doors
+under the **one-of-each-type** cap: one Heart key, two Heart doors,
+a real choice, the unchosen door optional. A switch-flipped
+arrow-floor conveyor using the rewrite table, with both directions
+previewed. The lure ships here if it did not ship in M3. Restraint
+is still reserved for the showcase dungeon unless this floor sits
+in a different dungeon (at most once there).
 
-**Engine cost.** M. Plaques, floor-local key mask, `BGT_ARROW_TRAP`
-or portal skip. 0 SRAM.
+**Engine cost.** M. Plaques, floor-local key mask, conveyor tile
+pair, optional lure / `BGT_ARROW_TRAP`. 0 SRAM.
 
 **Acceptance.**
 
 - A Heart key will not open a Star door (no consume, refuse SFX).
+  One Heart key opens only one of two Heart doors. A second Heart
+  cannot be held at the same time.
 - Reset returns floor-local keys to chests and relocks unsolved
-  doors, with no duplicates.
-- The only exit is never behind a missable key. Entrance stays open.
+  doors, with no duplicates. The only exit is never behind a
+  missable or unchosen key. Entrance stays open.
+- Conveyor flip uses the rewrite table, glyphs, preview, and
+  SFX-and-blink. Lanes never rest a body on the entrance or reset
+  path.
 - Solvability-and-reset test covers "spent the Heart on the optional
   door" and still escaping.
 
-### M5 — The showcase floor
+### M5 — Combine under pressure: the Ember Conduit floor
 
-**Scope.** The full Ember Conduit wide floor in §5: M1–M4 verbs
-together, plus the turret churn of §6.6, two or three key types,
-always-open entrance, Pack reset and plate. Optional or tool-reward
-placement, not the only Colossus path.
+**Scope.** Dungeon N, the wide floor in §5. This is where already-
+taught verbs **combine**, under turret pressure: freeze and Jagger
+(from M1), rewrite (M2), the Kite chain (M3), choice keys and
+optional conveyors (M4), plus the turret of §6.6, a rolling-stone
+lane that can crush a lured or frozen Jagger, and **at most one**
+restraint door in this dungeon. Optional or tool-reward placement,
+not the only Colossus path.
 
 **Engine cost.** L. Authored 31×31 fixture, Rust mirror + solver +
 C↔Rust parity, GIF evidence. 0 new SRAM if the solved bit can use
@@ -695,35 +831,45 @@ C↔Rust parity, GIF evidence. 0 new SRAM if the solved bit can use
 
 **Acceptance.**
 
-- All §8 tests, including the solvability-and-reset sweep over the
-  full phase mask.
+- All §8 tests, including the solvability-and-reset sweep, Pack
+  reset while pinned, and the rest-path rule.
+- Jagger still never flashes and never dies to a weapon; the rolling
+  stone does kill it, and reset brings it back.
 - Turret rules from §6.6 (on-camera tell, 144-frame hold, death
-  fail-safe, player shots do not flip).
+  fail-safe, player shots do not flip). Entrance is not that door.
 - `test_new_game_start.py`, `check_rom_layout`, performance ≥ 167/180.
 
 **Recommend starting with M1.** It is the smallest playable proof of
-"think, don't fight," it ships the reset guarantee first, and it
-does not wait on new tiles or the conduit art.
+"think, don't fight," it ships the reset guarantee first, it lands
+one dungeon earlier so the Conduit can be a combine floor, and it
+does not wait on new tiles or conduit art.
 
 ## 8. Tests (when we implement, not now)
 
 Shared across M1–M5:
 
 - Solvability-and-reset: from every reachable phase, the entrance is
-  open, Pack reset and the plate restore the entry state, no room-
-  local item is duplicated, and the goal is reachable after at most
-  one reset.
+  open, Pack reset works while pinned, the plate restores the entry
+  state, no room-local item is duplicated, no moving actor is at
+  rest on the entrance or reset-plate path, and the goal is
+  reachable after at most one reset.
 - Freeze: holds every body including invincible ones and the Kite;
   does not delete in-flight shots; does not clear `QSTATUS_POISON`;
   the pedestal refills when the hero holds none and the timer is 0.
-- Jagger: no HP change, no flash, freeze holds it, a closed door
-  stops it.
+- Jagger: no HP change, no flash, no weapon exception, freeze holds
+  it, a closed door stops it; on M5 a rolling stone in its lane
+  kills it, and reset brings it back.
 - Rewrite: refuses if a body occupies a target cell; replays from
   the mask after reset / leave / suspend.
 - Kite (M3+): lock breaks from Kite fire, not melee; kennel respawn.
-- Keys (M4+): matching only; refused keys are not consumed; reset
-  returns floor-local keys; two same-type doors with one key cannot
-  be the only exit.
+- Keys (M4+): matching only; one of each type at a time; a Heart
+  opens only one of two Heart doors; refused keys are not consumed;
+  reset returns floor-local keys; the unchosen door is never the
+  only exit.
+- Lure (M3/M4+): cannot be picked up; reset returns it; drop
+  refuses on the entrance or reset path.
+- Conveyors (M4+): flip uses the rewrite table; both directions
+  previewed; rest-path rule holds.
 - Turret (M5): tell at least 24 frames and on-camera with its door;
   lockout pauses the fire timer; only turret shots flip the plate;
   death opens the side door; entrance is not that door.
@@ -747,7 +893,9 @@ Shared across M1–M5:
 5. **Turret in the slice:** vulnerable (can be killed to stop the
    clock) or invincible (freeze only)? Recommendation: vulnerable
    first.
-6. **Moon key on the showcase**, or only Heart and Star there?
+6. **Choice keys.** The spec now follows ROV: one of each type at
+   a time, and a Heart key opens only one of two Heart doors. Moon
+   on the showcase, or only Heart and Star there?
 7. After you watch the VOD, does the lakes-and-leviathans memory
    still match, and are you happy with Ember Conduit as an original
    chain in that *spirit* rather than a copy of the lakes?
@@ -774,3 +922,7 @@ level freeze vs `QSTATUS_STOP`, the def-flag (not `EF_*`).
 showcase is no longer a cobweb / lake / leviathan reproduction. It
 is the Ember Conduit, an original spawn → transform → route → tool
 chain. Carbon did not re-review this dressing.
+
+**Ultima ROV Dx guidance** (later the same day) is folded into §3.1,
+the refuse list, §6.1–6.9, and the remapped M1–M5 pacing. It was
+not a second Carbon pass.

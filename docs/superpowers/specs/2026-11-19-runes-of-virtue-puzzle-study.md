@@ -159,9 +159,14 @@ byte if the state has to survive a room leave.
   L5, "Follow the Jagger and take out the cobwebs." The fan is the
   point: the floor changes while you are elsewhere on it.
 - **Quintra.** A new enemy flag on `enemy_load_def` (the entity
-  `flags` byte is full: `EF_RARE` already uses `0x80`). No HP flash,
-  no damage. Contact still hurts. Used only in puzzle rooms, never as
-  ordinary pack filler. The player routes, traps, or freezes them.
+  `flags` byte is full: `EF_RARE` already uses `0x80`). **[FAQ / Rec]**
+  It simply does not flash when hit. In the slice this is absolute:
+  no special-weapon exceptions, even though a few late ROV Jaggers
+  can be dropped by specific late weapons. **[Rec]** A rolling-stone
+  lane may still kill it if it is lured or frozen there (hazard as
+  a tool, not a weapon). Contact still hurts. Used only in puzzle
+  rooms, never as ordinary pack filler. The player routes, traps,
+  freezes, or lures them.
 - **New system** (S–M): the flag and AI roam are small; the design
   work is placement and fairness. Do not drop invincible bodies into
   random combat rooms.
@@ -293,11 +298,12 @@ Confirmed nearby verbs:
   hammers, and boots** — a harsh escape hatch.
 - **Quintra.** Three types — Heart, Star, Moon — with the same
   matching rule. Moon stands in for ROV's door-ankh so we do not
-  collide with other ankh imagery. Full rules, SRAM, HUD, and
-  softlock policy are in design spec §6.7. We do **not** copy the
-  carry-cap of one, and we do **not** wipe keys as an escape hatch
-  (see the no-softlock constraint).
-- **New system** (M), taught on the showcase with 2–3 types.
+  collide with other ankh imagery. **[FAQ / Rec]** The hero holds
+  one of each type at a time, and a Heart key opens only one of two
+  Heart doors (Hatred L2). The unchosen door is optional treasure,
+  never the only way out; Pack reset returns the key. We do **not**
+  wipe keys as an escape hatch. Full rules: design spec §6.7.
+- **New system** (M), taught in M4, combined on the showcase.
 
 #### Fire wand, oil, and the (absent) ice wand
 
@@ -334,9 +340,14 @@ Confirmed nearby verbs:
   direction, sometimes through walls (Codex; TAS). Some pads are
   one-way in feel. Deceit has trap squares that teleport you back
   to the top floor — an intentional gotcha we will not copy.
-- **Quintra.** A later conveyor tile with a fixed vx/vy is
-  feasible (M). Every conveyor lane must still lead to the
-  entrance or a reset, never into a pit with no exit.
+- **Quintra.** **[ROM / Rec]** A conveyor tile with a vx/vy, and a
+  switch that flips its direction using the same rewrite table as
+  cairn ↔ stream (M4). Both directions' art must already be on the
+  floor before the first flip, and the switch has a two-state
+  glyph. Every conveyor lane must still lead to the entrance or a
+  reset, and may not rest a body on those paths. Arrow *teleports*
+  that fling through walls are closer to existing portals; do not
+  mix "push" and "fling" on the same graphic.
 
 #### Pushing blocks onto plates
 
@@ -354,14 +365,16 @@ Confirmed nearby verbs:
 
 | Verb | ROV example | Quintra idea | Cost |
 |---|---|---|---|
-| Cheese / lure | Cat's Lair; items wiki: drop it, monsters run to it, cannot pick it up again | Optional later. | S, later |
+| Cheese / lure | Cat's Lair; items wiki: drop it, monsters run to it, cannot pick it up again | M3 or M4 B-item: drop, cannot pick up, reset returns it. Design spec §6.8. | S–M, M3/M4 |
 | Teleport crush | Codex, TAS: a pad onto a body crushes it, even some invincible ones | Portal kill on a landing cell. | S, later |
 | Monster-vs-monster | Selfishness Reapers; Cowardice L5 "let those monsters kill each other" | Authored friendly fire. | Feasible (S) |
 | Water-breathing routing | Hatred L5 dries a stream; Abyss / Pride / Dishonor sharks and octopi (DX `monsters.md`); the lakes pattern in §4.8 | Inverse of the Ember Conduit: a body that only travels on the stream you build. Same rewrite table. | Covered by §4.8 / §5 |
 | Hourglass / mushroom / crystal ball | ROV2 Selfishness and Pride; Hatred L5 mushroom + plates dry a stream | Same rewrite table, different art. | Parked |
 | Pushable teleport pad | ROV2: push a circle one cell at a time | Heavy. Later. | L, parked |
-| Two-area floor reset | ASchultz ROV1: leave two other areas, then return | **Do not copy.** Quintra's Pack reset and entrance plate work from inside the room. See the no-softlock constraint. | — (replaced) |
+| Two-area floor reset | ASchultz ROV1: leave two other areas, then return | **Do not copy.** Pack reset and the entrance plate work from inside the room. | — (rejected) |
 | Ankh escape that wipes keys | Codex / items wiki | **Do not copy.** You can always walk out or reset. | — (rejected) |
+| Trap squares to the top floor | Deceit (ASchultz / Codex) | **Do not copy.** | — (rejected) |
+| Treasures that vanish when touched | Deceit Wand path | **Do not copy.** | — (rejected) |
 | Ships / overworld routes | ASchultz ROV1 | Out of scope (Riftwild is a different language). | — |
 
 ## 5. Contrast with Final Fantasy Adventure
@@ -392,18 +405,26 @@ more FFA snowman rooms.
 
 The first slice should prove the shape, not port Britannia:
 
-1. One isolated wide floor (or one large room plus a tiny anteroom).
-2. Toggle switches that rewrite materials.
-3. At least one invincible or otherwise unfightable body, plus a
-   freeze that works on it.
+1. Teach freeze and the invincible roamer in a tiny optional room
+   one dungeon earlier (M1). The Ember Conduit wide floor is where
+   already-taught verbs combine under pressure (M5).
+2. Toggle switches that rewrite materials, using art the player has
+   already seen, one meaning per graphic, two-state glyphs, and
+   off-camera SFX plus a blink on arrival.
+3. An invincible body that simply does not flash, with no weapon
+   exceptions in the slice; a rolling-stone hazard may still be a
+   tool.
 4. One original spawn → transform → route → tool-beast chain, in
    the *spirit* of the lakes-and-leviathans floor, not a copy of it.
-5. Authored, solver-checked, and **reset-safe** (every state can
-   reach the entrance or a Pack reset; reset returns the entry
-   state without duping items).
+5. Authored, solver-checked, and **reset-safe**: Pack reset while
+   pinned, no actor resting on the entrance or reset-plate path,
+   no Ankh key-wipe, no vanishing treasure, no top-floor trap
+   squares, no two-area reset.
 
 Dungeon-wide scattering of the same verbs is a later decision. See
-the open question in the design spec.
+the open question in the design spec. Readability rules, choice
+keys, the lure, and flip-conveyors live in design spec §3.1 and
+§6.7–6.9.
 
 ## 7. Per-dungeon atlas (ROV1, plus ROV2 where it is the clearer source)
 
