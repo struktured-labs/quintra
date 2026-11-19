@@ -63,9 +63,9 @@ From `ultima-rov-dx/reverse_engineering/notes/dungeons.md` and
 
 Caveat: public walkthroughs are incomplete and sometimes vague about
 *which* floor a trick lives on. Where an example is uncertain, it is
-marked. Carmelo's combined "leviathan / cobweb / rock-to-water bridge"
-set piece was not found as a single documented room in ROV1; the
-nearest confirmed verbs are listed under that archetype.
+marked. Carmelo later corrected the leviathan / lakes / cobweb set
+piece (see §4.8). It is inspiration for a causal pattern, not a room
+to copy, and it was not pinned to a named FAQ floor.
 
 ## 4. Archetype catalog
 
@@ -121,16 +121,14 @@ byte if the state has to survive a room leave.
   water / bridges (Selfishness level 5 uses a star key to cross a
   river, then a bridge to a heart door) but the documented
   rock-to-water *switch* is a ROV2 verb.
-- **Quintra.** Two rewrite rules on one floor: "spawn rock blocks" and
-  "convert rock to water." Water is walkable for some bodies and for
-  the hero only with Tide Raft or Picsean, matching `BGT_GATE_WATER` /
-  `BGT_WILD_WATER`. A new cobweb material is needed (none exists;
-  `BGT_WILD_REEDS` is solid wetland growth, not a burnable web).
-- **New system** (M): rewrite table plus two or three new tiles
-  (cobweb, maybe a distinct water-bridge floor). Waygear already
-  gates water. Do not make the Raft required on a mandatory route
-  unless the contract in the 2026-11-15 puzzle spec is explicitly
-  relaxed.
+- **Quintra.** A rewrite table with two rules on one floor: "spawn
+  blocks" and "convert those blocks into a path the tool-beast can
+  travel" (in the showcase, stone cairns to a rift-stream; see
+  design spec §5). Do not port cobwebs or lakes. The hero uses a
+  dry catwalk, so Tide Raft / Picsean never gates a mandatory route.
+- **New system** (M): rewrite table plus a short streamed-path tile.
+  Waygear already gates open water; we simply do not use that tile
+  for the hero's walking line.
 
 ### 4.4 Trapping monsters
 
@@ -139,12 +137,16 @@ byte if the state has to survive a room leave.
   cannot leave. Hydras "cannot walk through a door, so you can shoot
   them from a distance" (ASchultz ROV2). Cheese, sold at the Cat's
   Lair, lures monsters (DX `areas.md`, in-game line).
-- **Quintra.** Doors the hero can close (or never open). Some puzzle
-  bodies refuse door tiles, like Jaggers / hydras. Optional lure is a
-  later extra, not the vertical slice.
-- **Feasible** (S) if we add a "cannot use doors" bit on the enemy
-  definition and let puzzle doors be closed by a switch or by walking
-  out. The door-seal path already exists (`room_doors.c`).
+- **Quintra.** Two related verbs. (1) **Trap:** close a door on a
+  body that cannot use door tiles (Jagger / hydra rule). (2) **Avoid
+  by not opening:** a closed door hides an optional pack. Walking
+  past it is the intended line, as in Hatred L2 (Codex: "do not open
+  any doors" if you just want to move on). Opening it is a combat
+  tax, never the only way forward. The entrance of every puzzle
+  floor stays open (design spec, no-softlock constraint).
+- **Feasible** (S) with a "cannot use doors" bit on the enemy
+  definition and authored optional-combat doors. `room_doors.c`
+  already seals and unseals exits.
 
 ### 4.5 Routing around invincible monsters
 
@@ -153,8 +155,9 @@ byte if the state has to survive a room leave.
   (rock beasts in the DX notes) are the type example: most cannot be
   shot, they stun on contact, they change path after you pick up
   treasure, they cannot move through doors, and a teleport onto them
-  crushes them. They fan out and roam. Selfishness level 5: "Follow
-  the Jagger and take out the cobwebs."
+  crushes them. They **fan out and roam on their own** — Selfishness
+  L5, "Follow the Jagger and take out the cobwebs." The fan is the
+  point: the floor changes while you are elsewhere on it.
 - **Quintra.** A new enemy flag on `enemy_load_def` (the entity
   `flags` byte is full: `EF_RARE` already uses `0x80`). No HP flash,
   no damage. Contact still hurts. Used only in puzzle rooms, never as
@@ -195,39 +198,38 @@ byte if the state has to survive a room leave.
 - **Feasible** (S): extend the existing trap tile and the pickup path.
   No new SRAM.
 
-### 4.8 Leviathan spawn, angled fire, cobweb, rock-to-water bridge
+### 4.8 Spawn, transform, route, tool (the lakes-and-leviathans pattern)
 
-Carmelo's recollection, treated as a **complexity target**, not a
-verified transcript:
+Carmelo later corrected the set piece. This is his account of what
+actually happens in ROV, still recollection, not a VOD transcript,
+and not pinned to a named FAQ floor:
 
-> One button spawns fire-breathing creatures. You angle them so their
-> fire burns away a cobweb blocking a rock you need to push. One
-> switch creates rock blocks, and another turns rock into water tiles,
-> building a water bridge so the creatures can cross and repeat the
-> web-clearing.
+> There are two lakes, each south of something, and each has a rock
+> blocked by a cobweb. One switch spawns blocks. Another switch turns
+> a block into water. That lets you build a water bridge between the
+> lakes. The leviathans swim across and shoot the far cobweb, which
+> frees that rock.
 
-Confirmed nearby verbs, not the same room:
+**Do not copy this room.** No twin lakes, no cobwebs, no leviathans
+in Quintra's showcase. What we steal is the **causal chain**:
 
-- ROV1 Selfishness, Magic Chalice, level 5 (Codex): freeze spiders,
-  shoot cobwebs under mages, flip a switch, wait for Reaper shots to
-  kill the middle one, push boulders so Reapers shoot each other,
-  star key to cross a river, bridge to a heart door.
-- ROV1 Deceit level 3: a lever turns a troll 90 degrees so you can
-  steer him toward a door.
-- ROV2 Selfishness: hourglass / switch rewrites boulders and
-  fountains; hydras; webs.
+1. Spawn or release a thing.
+2. Transform a material (blocks become a path).
+3. Build a route with that material.
+4. Use a monster as a tool to clear an obstacle on the far side.
 
-- **Quintra.** The vertical slice should *author this exact machine*
-  (or a slightly simpler first teaching version) as one wide-room
-  fixture: spawn-or-release a fire-breather, let the hero bait its
-  facing, have fire clear cobweb, and use two rewrite switches for
-  rock and water. Fire-breathers can be a puzzle skin of an existing
-  shooter (Seesill / dragon in ROV; we already have Cinder Maw and
-  basilisks). They should ignore water once the bridge exists, and
-  they should not be required kills.
-- **New system** (L): this is the composition of 4.2, 4.3, 4.4, and a
-  fire-clears-web rule. Worth one authored fixture, not a procedural
-  generator, for the first slice.
+Nearby documented cousins, not the same room: Selfishness L5 (Codex)
+uses Jaggers, cobwebs, Reaper lanes, a river, and a bridge; Hatred L5
+dries a stream with plates; Deceit L3 aims a troll with a lever;
+ROV2 Selfishness rewrites boulders and fountains; a TASVideos forum
+note mentions a lever that turns barrels into water.
+
+- **Quintra.** An original chain in that spirit, dressed in Quintra
+  materials (cairns, a rift-stream, a Cinder Kite, a crystal lock).
+  Full layout is design spec §5, working title **Ember Conduit**.
+- **New system** (L): composition of rewrite + a puzzle-flagged
+  tool-beast + a lock that only that beast can break. Authored
+  fixture, not a generator, and not a port of the lakes.
 
 ### 4.9 Turret that hits a switch (semi-random state churn)
 
@@ -278,18 +280,88 @@ Confirmed nearby verbs:
 
 ### 4.11 Other ROV verbs Carmelo did not mention
 
+#### Matching keys (heart, star, ankh)
+
+- **ROV.** Heart, star, and ankh keys each open only the door with
+  the same icon on its face (Codex, items wiki). Hatred L2: two
+  heart doors, one heart key, a real choice (treasure vs. Melissa).
+  Selfishness uses a star key for a river door and a heart door for
+  the exit. ROV2 Pride is a key gauntlet (star keys lead to a heart
+  key, then an ankh key). TAS #9404: you may carry only **one key
+  of each type** at a time, which made routing awkward. The Ankh
+  *item* also teleports you to the castle and **wipes keys,
+  hammers, and boots** — a harsh escape hatch.
+- **Quintra.** Three types — Heart, Star, Moon — with the same
+  matching rule. Moon stands in for ROV's door-ankh so we do not
+  collide with other ankh imagery. Full rules, SRAM, HUD, and
+  softlock policy are in design spec §6.7. We do **not** copy the
+  carry-cap of one, and we do **not** wipe keys as an escape hatch
+  (see the no-softlock constraint).
+- **New system** (M), taught on the showcase with 2–3 types.
+
+#### Fire wand, oil, and the (absent) ice wand
+
+- **ROV.** There is **no ice wand** in ROV1. The Wand of Fireballs
+  (Deceit, Codex / TAS) and throwable oil are the only player fire
+  that burns **dark black webs**; ordinary webs fall to any weapon.
+  Black webs also block a westbound ship on the overworld. Ice in
+  this conversation is an FFA verb (snowmen on plates), not an ROV
+  one. ROV2's Star Wand creates and destroys force fields — a
+  different wand, closer to a rewrite switch than to ice.
+- **Quintra.** Do not add an ice-wand puzzle. Blizzard already
+  exists as hero magic and must stay shallow in the FFA sense, not
+  become the puzzle language. Fire-as-tool belongs to a
+  puzzle-flagged beast (the Ember Conduit's Cinder Kite) or to
+  existing Wolfkin / Bomb shortcuts, not to a new wand item.
+
+#### Invisible and secret paths; Magic Boots
+
+- **ROV.** Secret walls look slightly different (ASchultz, Codex);
+  you can stand in them and shoot the regular floor. Hatred L2: a
+  door that "does not look like it is leading anywhere; the wall is
+  a boundary." Magic Boots (items wiki, TAS) let you walk through
+  walls for one use (1 MP), then vanish.
+- **Quintra.** Keep the existing secret-wall language
+  (`BGT_WALL_CRACK`, hidden shot/walk/push secrets, Echo Chime).
+  Do not add a second "invisible floor" tileset. A Boots-like
+  "walk a ghost path once" is a later optional tool, never the
+  only escape from a room (no-softlock constraint).
+
+#### Conveyors, arrow floors, one-way pads
+
+- **ROV.** Hatred area `$19` (DX `dungeons.md`) has arrow floors
+  that push the player. Arrow *transporters* fling you in a
+  direction, sometimes through walls (Codex; TAS). Some pads are
+  one-way in feel. Deceit has trap squares that teleport you back
+  to the top floor — an intentional gotcha we will not copy.
+- **Quintra.** A later conveyor tile with a fixed vx/vy is
+  feasible (M). Every conveyor lane must still lead to the
+  entrance or a reset, never into a pit with no exit.
+
+#### Pushing blocks onto plates
+
+- **ROV.** `BGT_SWITCH` in Quintra already accepts a player or a
+  block; ROV plates are stepped on, and a body on a plate turns it
+  into a lever (TAS #9404, a bat). ROV2 (ASchultz): a plate drives
+  "grappling arms" that shove jugs, and you push the rest into a
+  row. Not always "park a boulder on a switch and leave it," but
+  the weight-and-block idea is there.
+- **Quintra.** Feasible (S) with the existing plate + `BGT_BLOCK`.
+  Useful on later floors (hold a door, hold a rewrite). The
+  showcase does not depend on it.
+
+#### Remaining short verbs
+
 | Verb | ROV example | Quintra idea | Cost |
 |---|---|---|---|
-| Cheese / lure | Cat's Lair line; bait a body onto a plate or into a trap | Optional later. A dropped bait pickup. | S, later |
-| Conveyor / arrow floors | Hatred area `$19` (DX notes): arrow floors push the player | New floor tile that adds a fixed vx/vy while you stand on it. Easy to read, easy to softlock if used with pits. | M, later |
-| Teleport crush | Codex: an arrow pad onto a monster crushes it; pads are walls to monsters | Portal kill if a body occupies the landing cell. Nice against invincible roamers. | S, later |
-| Monster-vs-monster | Selfishness Reapers; "let those monsters kill each other" (Cowardice L5) | Already possible if friendly fire is on. Puzzle rooms can author it. | Feasible (S) |
-| Occupied plate is a lever | TASVideos #9404 | If a body or block already sits on a plate, bump / shoot it to toggle. | S |
-| Secret walls | Codex: they look *slightly* different; hide and shoot through them | We already have `BGT_WALL_CRACK` and hidden secrets. Keep using those, do not make a second secret language. | Feasible |
-| Keyed doors (heart / star / ankh) | Selfishness river and heart door | Skip as a new key type. We already have Law Lock, seals, and mission tools. | Parked |
-| Hourglass / crystal ball / mushroom as global toggles | ROV2 Selfishness and Pride | Same rewrite table, different art. Not needed in the first slice if two ordinary switches already teach the rule. | Parked |
-| Pushable teleport pad | ROV2: push a teleport circle one cell at a time to choose a destination | Heavy. Hookshot / block push could fake a simpler version later. | L, parked |
-| Floor reset | ASchultz ROV1: leave two other areas, then return, to reset a goofed floor | For authored fixtures, a clearly marked "reset plate" or leaving and re-entering the floor is enough. Do not copy the two-area rule. | S |
+| Cheese / lure | Cat's Lair; items wiki: drop it, monsters run to it, cannot pick it up again | Optional later. | S, later |
+| Teleport crush | Codex, TAS: a pad onto a body crushes it, even some invincible ones | Portal kill on a landing cell. | S, later |
+| Monster-vs-monster | Selfishness Reapers; Cowardice L5 "let those monsters kill each other" | Authored friendly fire. | Feasible (S) |
+| Water-breathing routing | Hatred L5 dries a stream; Abyss / Pride / Dishonor sharks and octopi (DX `monsters.md`); the lakes pattern in §4.8 | Inverse of the Ember Conduit: a body that only travels on the stream you build. Same rewrite table. | Covered by §4.8 / §5 |
+| Hourglass / mushroom / crystal ball | ROV2 Selfishness and Pride; Hatred L5 mushroom + plates dry a stream | Same rewrite table, different art. | Parked |
+| Pushable teleport pad | ROV2: push a circle one cell at a time | Heavy. Later. | L, parked |
+| Two-area floor reset | ASchultz ROV1: leave two other areas, then return | **Do not copy.** Quintra's Pack reset and entrance plate work from inside the room. See the no-softlock constraint. | — (replaced) |
+| Ankh escape that wipes keys | Codex / items wiki | **Do not copy.** You can always walk out or reset. | — (rejected) |
 | Ships / overworld routes | ASchultz ROV1 | Out of scope (Riftwild is a different language). | — |
 
 ## 5. Contrast with Final Fantasy Adventure
@@ -324,10 +396,159 @@ The first slice should prove the shape, not port Britannia:
 2. Toggle switches that rewrite materials.
 3. At least one invincible or otherwise unfightable body, plus a
    freeze that works on it.
-4. One monster-as-tool moment (angled fire, or a turret that hits a
-   switch).
-5. Authored and solver-checked, in the Sun Lattice / Prism Toggle
-   tradition, not a full procedural generator of state machines.
+4. One original spawn → transform → route → tool-beast chain, in
+   the *spirit* of the lakes-and-leviathans floor, not a copy of it.
+5. Authored, solver-checked, and **reset-safe** (every state can
+   reach the entrance or a Pack reset; reset returns the entry
+   state without duping items).
 
 Dungeon-wide scattering of the same verbs is a later decision. See
 the open question in the design spec.
+
+## 7. Per-dungeon atlas (ROV1, plus ROV2 where it is the clearer source)
+
+Carmelo streamed *Runes of Virtue DX*, which is ROV1 (USA). Each entry
+names the cavern, a concrete floor, the verb, and the source. These
+are the examples the catalog above is built from, not a walkthrough
+to play by.
+
+### 7.1 Cavern of Deceit — Rune of Honesty, Wand of Fireballs
+
+- **L2, Honesty path (Codex, ASchultz):** a corridor of pressure
+  plates that reposition granite walls. Zigzag so each plate flips
+  the walls out of the way. The floor is the puzzle.
+- **L3 (Codex):** a boulder court, then a lever that turns a troll
+  90 degrees so you can steer him toward a door.
+- **L5 maze (Codex):** three switches in an odd-shaped room, hit in
+  order, then the Rune.
+- **Fireball Wand path, L2–L5 (Codex, TASVideos #9404):** barrels to
+  push, treasures that vanish or trap, trap squares that teleport
+  you back to the top floor, secret walls. L5 is a warren of secret
+  doors ending at a pressure plate and the Wand. The Wand (and
+  throwable oil) is the only fire that burns **dark black webs**;
+  ordinary webs fall to any weapon. There is **no ice wand** in
+  ROV1. TAS notes you cannot collect both the Rune and the Wand in
+  one descent unless you bring a Heart Key from another dungeon.
+
+### 7.2 Cavern of Cowardice — Rune of Valor, Magic Rope
+
+- **L1 (Codex):** cheese in a plant (lure item, first teaching).
+- **L2:** push a boulder for health; do not eat the mushrooms.
+- **L5:** "Go west and let those monsters kill each other." Then
+  ankh and star keys, a star door beside an ankh door, a switch.
+- **L6:** Magic Rope — one MP, one water tile of bridge, used twice
+  to island-hop (Codex; items wiki).
+- **L7:** run past arrow shots; a pressure plate arms; heart door
+  plus a switch that opens a passage.
+- **L9:** rope to an island; a mushroom makes a new door appear.
+- **L10:** teleport pads and secret walls.
+- **L11:** the Rune hops to the right when touched — "first fast,
+  then slow." A pickup that rewrites its own position.
+
+### 7.3 Cavern of Hatred — Rune of Compassion, Magic Axe
+
+- **L2 (Codex), the dump's exact verb:** "If you just want to move
+  on, just follow the pathway and **do not open any doors**."
+  Opening a west door is an optional combat-and-treasure branch
+  (Sherry, Princess Melissa, a heart key). A heart key opens only
+  one of two heart doors — a matching key, spent on a choice.
+- **L2 also:** a door that does not look like it leads anywhere;
+  the "wall is boundary." Secret / false openings.
+- **L3 (Codex):** a long boulder puzzle. If you mess up, leave and
+  come back to reset. A lever, then a teleport to a star key, then
+  stairs behind the star door.
+- **L4 (Codex):** **do not kill the troll** — he opens and closes
+  the gates. Dodge him counterclockwise and stay two squares away.
+  A monster is the clock. Heart key behind a skeleton; a switch
+  opens the SE gate.
+- **L5 (Codex, ASchultz):** grab one mushroom and step on floor
+  plates to **dry up the stream**, then the Rune. Material rewrite,
+  water to floor.
+- **Area `$19` (DX `dungeons.md`):** arrow floors that push the
+  player (conveyors).
+
+### 7.4 Cavern of Injustice — Rune of Justice, Boomerang, Pan Pipes
+
+- Home of the **Pan Pipes** (Codex item list). Freeze is taught
+  here because later bodies and Jaggers cannot be trusted as
+  fights.
+- TAS #9404: an arrow transporter landing on a body crushes it,
+  even some invincible ones. A side room is a hammer-and-barrel
+  puzzle that rewards a Boomerang.
+- Bring food (Codex). This cavern is why freeze is "incredibly
+  important," not a nice-to-have.
+
+### 7.5 Cavern of Dishonor — Rune of Honor, Magic Whip
+
+- Shorter in the public walkthroughs. Codex flags the Whip here.
+- DX `monsters.md`: sharks, octopus, and serpents share
+  Abyss / Dishonor / Pride — the water-breathing roster.
+
+### 7.6 Cavern of Selfishness — Rune of Sacrifice, Amulet, Chalice
+
+- **L4–L5, Chalice path (Codex):** follow a Jagger (invincible
+  roamer, fanning on its own) and cut cobwebs; teleport arrows;
+  star key to cross a river; freeze spiders; shoot cobwebs under
+  mages; flip a switch; wait for Reaper shots to kill the middle
+  one; push boulders so Reapers shoot each other; bridge to a
+  heart door. This is the closest documented ROV1 cousin of
+  Carmelo's fire-and-web / bridge recollection.
+- **L8, Rune path (Codex):** Wand on **black webs**, walk spikes
+  to a mushroom that opens a SE door; a lever **flips star doors
+  and cobwebs**; smash a barrel to reach the Rune.
+- **ROV2 Selfishness (GameSurge FAQ/5865, ASchultz 50769):**
+  hourglass turns a fountain into a teleport arrow; a switch
+  turns boulders into barrels; push a teleport circle one cell at
+  a time to pick a destination; break a barrel so a skeleton
+  walks onto a pad, arrives next door, and hits a switch. Hydras
+  cannot walk through doors — open one door and shoot through it.
+
+### 7.7 Cavern of Pride — Rune of Humility, Troll Ring, Magic Sword
+
+- Codex calls the path linear and is thin on floors. ROV2 Pride
+  (GameSurge) is the clearer "keys and matching doors" gauntlet:
+  a diamond room with four stair choices; hoard star keys to find
+  a heart key, then an ankh key, then Magic Armor; the Ping-Pong
+  Paddle hits levers behind barred doors.
+
+### 7.8 Great Stygian Abyss — Rune of Spirituality, Magic Armor
+
+- The only cavern with dragons (Codex). TAS #9404: lure a
+  sentient boulder to kill an otherwise-invincible Warlock; a
+  plate that can spawn **infinite rats** if they step on it
+  again; you may carry only **one key of each type** at a time
+  (a cap that made the TAS route awkward). Forum notes on the
+  same run mention a lever that turns barrels in a room into
+  water tiles, and reapers around buttons that spawn a barrel.
+
+### 7.9 Overworld and tools that live between caverns
+
+- Black webs also block a westbound ship (Codex, Wand entry).
+  Fire is a world verb, not only a dungeon verb.
+- Magic Boots (items wiki, TAS): walk through walls for one use
+  (MP 1), then they vanish. Closest thing to an "invisible path"
+  tool. Secret walls themselves look slightly different (ASchultz,
+  Codex) and let you shoot monsters on the regular floor while
+  you stand in the wall.
+- Cheese: drop it and monsters run to it; you cannot pick it up
+  again (items wiki; Cat's Lair line).
+- Trumpet: one-shot freeze-all; Pan Pipes: the reusable version,
+  3 MP (items wiki). Not potion-ammo.
+
+### 7.10 ROV2-only verbs worth stealing later
+
+- Hourglass / mushroom / crystal ball as whole-room or clue
+  toggles (Selfishness, Pride).
+- Star Wand: create and destroy force fields (items wiki).
+- Friendly horn, monster flags, snake staff: temporary allies.
+- Dragonskin boots: lava protection.
+- Crystal ball: peek at a neighboring room's shape (hint sheet).
+
+### 7.11 The lakes-and-leviathans floor (Carmelo's correction)
+
+His corrected account is in §4.8: two lakes, cobweb-blocked rocks,
+a spawn-blocks switch, a block-to-water switch, a water bridge
+between the lakes, leviathans swimming across to shoot the far
+web. Public FAQs did not name this floor. It is the inspiration
+for the Ember Conduit pattern in the design spec. It is not a
+layout to reproduce.
