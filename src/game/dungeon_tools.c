@@ -13,6 +13,7 @@
 #include "game/pickup.h"
 #include "game/projectile.h"
 #include "game/puzzle.h"
+#include "game/rime_room.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -24,6 +25,9 @@
 
 #define TOOL_COUNT 4
 #define TOOL_ANTIDOTE 3
+// Rime chamber only (spec M1): a room-local charge and the room reset.
+#define TOOL_PIPES 4
+#define TOOL_RESET 5
 
 static const u8 tool_ids[TOOL_COUNT] = {
     ITEM_ID_RIFT_BOMB, ITEM_ID_ECHO_CHIME, ITEM_ID_MIRROR_SHARD,
@@ -32,10 +36,14 @@ static const u8 tool_ids[TOOL_COUNT] = {
 static const char *const tool_names[TOOL_COUNT] = {
     "BOMB", "CHIME", "MIRROR", "ANTIDOTE"
 };
-static u8 selected_tool;
+u8 selected_tool;  // global so headless tests can read Pack focus
 // Queued across the Pack-screen bank transition. The room-resume path
 // consumes it once after DISPLAY_ON; ordinary gameplay pays no polling call.
 static u8 pending_tool = 0xFF;
+
+static u8 tool_total(void) {
+    return rime_live ? 6 : TOOL_COUNT;
+}
 
 static u8 tool_count(u8 id) {
     u8 i, n = 0;
@@ -47,6 +55,8 @@ static u8 tool_count(u8 id) {
 // Opening the Pack while poisoned, burning or bleeding with an Antidote in
 // hand points the TOOL row at it, so the cure is one A press away.
 void dungeon_tools_pack_focus(void) BANKED {
+    if (selected_tool >= tool_total()) selected_tool = 0;
+    if (rime_live && rime_charge) selected_tool = TOOL_PIPES;
     if (STATUS_PLAYER_DOT()
         && tool_count(ITEM_ID_ANTIDOTE)) selected_tool = TOOL_ANTIDOTE;
 }
@@ -60,6 +70,11 @@ void dungeon_tools_draw_pack(void) BANKED {
     gotoxy(3, 15);
     // Labelled as a TOOL (consumable, A uses it here) so it is not read as
     // the QUEST goal above it or the B-button kit chosen with SELECT.
+    if (selected_tool >= tool_total()) selected_tool = 0;
+    if (selected_tool >= TOOL_PIPES) {
+        rime_pack_draw(selected_tool == TOOL_PIPES);
+        return;
+    }
     text_write("TOOL ");
     text_write(tool_names[selected_tool]);
     text_write(" x");
@@ -75,19 +90,27 @@ void dungeon_tools_draw_pack(void) BANKED {
 u8 dungeon_tools_pack_input(u8 pressed) BANKED {
     u8 i;
     if (pressed & J_LEFT) {
-        selected_tool = selected_tool ? (u8)(selected_tool - 1) : TOOL_COUNT - 1;
+        selected_tool = selected_tool ? (u8)(selected_tool - 1) : (u8)(tool_total() - 1);
         dungeon_tools_draw_pack();
         sfx_play(SFX_DOOR);
         return 1;
     }
     if (pressed & J_RIGHT) {
         selected_tool++;
-        if (selected_tool == TOOL_COUNT) selected_tool = 0;
+        if (selected_tool >= tool_total()) selected_tool = 0;
         dungeon_tools_draw_pack();
         sfx_play(SFX_DOOR);
         return 1;
     }
     if (!(pressed & J_A)) return 0;
+    if (selected_tool >= tool_total()) selected_tool = 0;
+    // Pack input never depends on the hero being able to move: RESET ROOM
+    // works while boxed in or pinned (spec: no softlocks, ever).
+    if (selected_tool >= TOOL_PIPES) {
+        i = rime_pack_a(selected_tool == TOOL_PIPES);
+        if (i == 2) pending_tool = selected_tool;
+        return i;
+    }
     // An Antidote only spends itself on an actual Poison, Burn or Bleed.
     if (selected_tool == TOOL_ANTIDOTE && !STATUS_PLAYER_DOT()) {
         sfx_play(SFX_HURT);
@@ -196,5 +219,7 @@ void dungeon_tools_apply_pending(void) BANKED {
     if (tool == 0) tool_bomb();
     else if (tool == 1) tool_chime();
     else if (tool == TOOL_ANTIDOTE) antidote_cure();
+    else if (tool == TOOL_PIPES) rime_use_pipes();
+    else if (tool == TOOL_RESET) rime_reset();
     else tool_mirror();
 }

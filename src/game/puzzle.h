@@ -14,6 +14,8 @@ enum {
     PUZZLE_PHASE_GATE,
     PUZZLE_SUN_LATTICE,
     PUZZLE_PRISM_TOGGLE,
+    // M1 Rime chamber (rime_room.c): optional, never sealed.
+    PUZZLE_RIME_ROOM,
 };
 
 enum {

@@ -335,3 +335,35 @@ def veil_host_cell(run_seed: int, stage: int) -> int | None:
                 continue
             return cell
     return None
+
+
+RIME_STAGE = 1
+_RIME_LANDMARKS = (0, 2, 5, 8, 11, 15, 17, 23)
+
+
+def rime_cell_candidates(run_seed: int, stage: int) -> list[int]:
+    """Mirror rime_pick_cell (M1 Rime chamber) in scan order.
+
+    The cartridge takes the first candidate; if an ambient Dungeon Law
+    altar owns it the floor has no chamber at all (altars are not mirrored
+    here, so treat the first candidate as reserved either way).
+    """
+    if stage != RIME_STAGE:
+        return []
+    size = dungeon_size(stage)
+    entry = dungeon_entry_cell(size, run_seed, stage)
+    cache = dungeon_cache_cell(size, run_seed, stage)
+    host = veil_host_cell(run_seed, stage)
+    roles = set(mission_graph(size, run_seed, stage)["sequence"])
+    out = []
+    for cell in range(size - 4, 0, -1):
+        if (cell in (entry, cache, host) or cell in _RIME_LANDMARKS
+                or cell % 6 == 0 or cell in roles):
+            continue
+        out.append(cell)
+    return out
+
+
+def rime_reserved_cells(run_seed: int, stage: int) -> set[int]:
+    """The cell that may host the Rime chamber (first candidate)."""
+    return set(rime_cell_candidates(run_seed, stage)[:1])

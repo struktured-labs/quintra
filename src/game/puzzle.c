@@ -11,6 +11,7 @@
 #include "game/prism_toggle.h"
 #include "game/procgen.h"
 #include "game/puzzle.h"
+#include "game/rime_room.h"
 #include "game/secret_merchant.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -330,11 +331,15 @@ void puzzle_prepare_room(void) BANKED {
     rune_cancel_flash();
     puzzle_contact = 0;
     secret_merchant_room_ready();
+    rime_live = 0;
+    room_freeze_beats = 0;
+    rime_cell = 0xFF;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
         || procgen_current_room_is_boss || run_state.secret_pending
         || run_state_is_shop() || run_state_is_sanctuary()) return;
 
     local = run_state_dungeon_local();
+    rime_cell = rime_pick_cell();
     seed = procgen_room_seed(run_state.run_seed, run_state.biome_id,
                             run_state.room_counter);
 
@@ -357,6 +362,11 @@ void puzzle_prepare_room(void) BANKED {
         // and the optional third Warden. A disguised secret's clearing apron
         // must not erase a Mire pool, Frost vault, Temple colonnade, or other
         // lore fixture. Ordinary courts still provide ample fuzzy secrets.
+        // M1: the optional Rime chamber (Verdant Hollow only).
+        if (local == rime_cell && rime_prepare()) {
+            room_puzzle_kind = PUZZLE_RIME_ROOM;
+            return;
+        }
         if (secret_merchant_prepare_host()) return;
         if (local == 2 || local == 5 || local == 8 || local == 11
             || local == 15 || local == 17 || local == 23) return;
@@ -575,6 +585,10 @@ u8 puzzle_update_player(void) BANKED {
     u8 ty = (u8)((player.y + 12) >> 3);
     tick_rune_flash();
     rune_echo_tick();
+    if (room_puzzle_kind == PUZZLE_RIME_ROOM) {
+        rime_tick();
+        return 0;
+    }
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_puzzle_locked)
         return update_sequence(tx, ty);
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH)
