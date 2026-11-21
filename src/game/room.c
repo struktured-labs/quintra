@@ -1220,7 +1220,9 @@ static u8 room_enemy_table_hp(u8 eid) {
 static screen_id_t room_apply_foyer_warp(void) {
     new_monsters_foyer_warp();
     DISPLAY_OFF;
+    room_respawn_bypass = 1;
     procgen_generate_current_room();
+    room_respawn_bypass = 0;
     room_draw_tilemap();
     place_player_sprite();
     hud_redraw_all();
@@ -2093,6 +2095,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 sfx_play(SFX_CLEAR);
             }
             if (run_state.rooms_cleared < 255) run_state.rooms_cleared++;
+            run_state_record_room_clear();
             if (player.mp < player.mp_max) {
                 player.mp++;
                 hud_redraw_mp();

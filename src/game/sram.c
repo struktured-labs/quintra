@@ -39,6 +39,7 @@
 #define PRE_SHOP_RS_SIZE 58   // before this-stage merchant stock bits
 #define PRE_VIGNETTE_RS_SIZE 60 // before per-run vignette-seen bits
 #define PRE_MERCHANT_RS_SIZE 62 // before secret-merchant bits
+#define PRE_RESPAWN_RS_SIZE 70 // before ordinary-room respawn ring
 #define PRE_SHRINE_RS_SIZE 69 // before power-shrine claim bits
 #define PRE_WILL_PL_SIZE 42 // player layout before the appended Will meter
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection

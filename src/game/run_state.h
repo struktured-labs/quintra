@@ -182,7 +182,24 @@ typedef struct {
     // (cleared at the next dungeon start). Bits 1..3 = Riftwild regions 0..2.
     // Appended so older suspends load as unclaimed (0).
     u8  powerup_shrines;
+    // Ordinary-room clear cooldown. visit_seq ticks on every generated
+    // room entry; a stamped room stays empty until 4 other rooms have
+    // been visited. 6-slot ring, append-only (older suspends load as 0).
+    u8  room_visit_seq;
+    u8  room_clear_tag[6];
+    u8  room_clear_id[6];
+    u8  room_clear_seq[6];
 } run_state_t;
+
+#define ROOM_RESPAWN_COOLDOWN 4
+#define ROOM_RESPAWN_SLOTS    6
+
+extern u8 room_respawn_bypass;
+
+u8   run_state_room_on_cooldown(void) BANKED;
+void run_state_note_room_visit(void) BANKED;
+void run_state_record_room_clear(void) BANKED;
+void run_state_despawn_cooled_enemies(void) BANKED;
 
 #define DUNGEON_LAW_KIND_MASK 0x03
 #define DUNGEON_LAW_READY_BIT 0x40
