@@ -18,6 +18,8 @@ enum {
     PUZZLE_RIME_ROOM,
     // M2 Cairn Ford (rewrite_room.c): optional, never sealed.
     PUZZLE_REWRITE_ROOM,
+    // M3 Kite Kennel (kite_room.c): optional, never sealed.
+    PUZZLE_KITE_ROOM,
 };
 
 enum {
