@@ -16,6 +16,8 @@ enum {
     PUZZLE_PRISM_TOGGLE,
     // M1 Rime chamber (rime_room.c): optional, never sealed.
     PUZZLE_RIME_ROOM,
+    // M2 Cairn Ford (rewrite_room.c): optional, never sealed.
+    PUZZLE_REWRITE_ROOM,
 };
 
 enum {

@@ -14,6 +14,8 @@
 #include "render/rime_art.h"
 #include "game/player.h"
 #include "game/rime_room.h"
+#include "game/rewrite_room.h"
+#include "render/rewrite_art.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -142,6 +144,19 @@ static void rime_draw(void) {
         (i16)((u8)(RIME_Y0 + RIME_PLATE_Y) << 3), RIME_TILE_PLATE, 5 | 0x08);
 }
 
+/* ---- M2 Cairn Ford: two-state switch glyphs and the reset plate ---- */
+#define RW_XO_NEED 16
+static void rw_draw(void) {
+    xo_quad((i16)((u8)(RW_X0 + RW_PLATE_A_X) << 3), (i16)((u8)(RW_Y0 + RW_PLATE_A_Y) << 3),
+        rw_a ? RW_TILE_A_UP : RW_TILE_A_DOWN, 0 | 0x08);
+    xo_quad((i16)((u8)(RW_X0 + RW_PLATE_A2_X) << 3), (i16)((u8)(RW_Y0 + RW_PLATE_A2_Y) << 3),
+        rw_a ? RW_TILE_A_UP : RW_TILE_A_DOWN, 0 | 0x08);
+    xo_quad((i16)((u8)(RW_X0 + RW_PLATE_B_X) << 3), (i16)((u8)(RW_Y0 + RW_PLATE_B_Y) << 3),
+        rw_b ? RW_TILE_B_WAVE : RW_TILE_B_ROCK, 3 | 0x08);
+    xo_quad((i16)((u8)(RW_X0 + RW_RESET_X) << 3), (i16)((u8)(RW_Y0 + RW_RESET_Y) << 3),
+        RW_TILE_PLATE, 5 | 0x08);
+}
+
 static void basilisk_draw(u8 slot, entity_t *e) {
     static const u8 tier_pal[3] = { 7, 4, 6 };   /* green, red, Void stage */
     u8 base = BAS_TILE_IDLE, prop, k, left;
@@ -213,6 +228,7 @@ void nm_extras_draw(void) BANKED {
             && entities[i].ai_data[0] == ENEMY_FUSE_HURLER
             && entities[i].ai_data[2] == 3) need += 4;
     if (rime_live) need += RIME_XO_NEED;
+    if (rw_live) need += RW_XO_NEED;
     if (!need) { xo_park(4); return; }
     xo_begin(need > 31 ? 31 : need);
     /* Two overlapping blasts share the burst by alternating frames. */
@@ -233,6 +249,7 @@ void nm_extras_draw(void) BANKED {
                 (u8)(28 - TIMER));
     }
     if (rime_live) rime_draw();
+    if (rw_live) rw_draw();
     {
         u8 end = xo;
         xo_park(end);

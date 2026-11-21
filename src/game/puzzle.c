@@ -12,6 +12,7 @@
 #include "game/procgen.h"
 #include "game/puzzle.h"
 #include "game/rime_room.h"
+#include "game/rewrite_room.h"
 #include "game/secret_merchant.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -332,6 +333,9 @@ void puzzle_prepare_room(void) BANKED {
     puzzle_contact = 0;
     secret_merchant_room_ready();
     rime_live = 0;
+    rw_live = 0;
+    puzzle_keep_on = 0;
+    puzzle_pack_n = 0;
     room_freeze_beats = 0;
     rime_cell = 0xFF;
     if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter)
@@ -362,10 +366,17 @@ void puzzle_prepare_room(void) BANKED {
         // and the optional third Warden. A disguised secret's clearing apron
         // must not erase a Mire pool, Frost vault, Temple colonnade, or other
         // lore fixture. Ordinary courts still provide ample fuzzy secrets.
-        // M1: the optional Rime chamber (Verdant Hollow only).
-        if (local == rime_cell && rime_prepare()) {
-            room_puzzle_kind = PUZZLE_RIME_ROOM;
-            return;
+        // M1 Rime chamber (Verdant Hollow) / M2 Cairn Ford (Ember Depths).
+        if (local == rime_cell) {
+            if (run_state.bosses_beaten == RW_STAGE) {
+                if (rw_prepare()) {
+                    room_puzzle_kind = PUZZLE_REWRITE_ROOM;
+                    return;
+                }
+            } else if (rime_prepare()) {
+                room_puzzle_kind = PUZZLE_RIME_ROOM;
+                return;
+            }
         }
         if (secret_merchant_prepare_host()) return;
         if (local == 2 || local == 5 || local == 8 || local == 11
@@ -587,6 +598,10 @@ u8 puzzle_update_player(void) BANKED {
     rune_echo_tick();
     if (room_puzzle_kind == PUZZLE_RIME_ROOM) {
         rime_tick();
+        return 0;
+    }
+    if (room_puzzle_kind == PUZZLE_REWRITE_ROOM) {
+        rw_tick();
         return 0;
     }
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_puzzle_locked)

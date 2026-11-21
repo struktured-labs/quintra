@@ -338,6 +338,7 @@ def veil_host_cell(run_seed: int, stage: int) -> int | None:
 
 
 RIME_STAGE = 1
+RW_STAGE = 2   # M2 Cairn Ford shares the pocket-cell rule
 _RIME_LANDMARKS = (0, 2, 5, 8, 11, 15, 17, 23)
 
 
@@ -348,7 +349,7 @@ def rime_cell_candidates(run_seed: int, stage: int) -> list[int]:
     altar owns it the floor has no chamber at all (altars are not mirrored
     here, so treat the first candidate as reserved either way).
     """
-    if stage != RIME_STAGE:
+    if stage not in (RIME_STAGE, RW_STAGE):
         return []
     size = dungeon_size(stage)
     entry = dungeon_entry_cell(size, run_seed, stage)

@@ -491,7 +491,8 @@ void void_pose_b_load(void) BANKED;
 void serpent_jaw_load(void) BANKED;
 void tiles_load_return_reaper(void) BANKED;
 void tiles_load_fx_sprites(void) BANKED;          // bullet (2 frames), muzzle, impact
-void tiles_load_dungeon_bg(void) BANKED;          // dungeon tileset (replaces flat placeholders)
+void tiles_load_dungeon_bg(void) BANKED;
+extern u8 tiles_bg_epoch;          // dungeon tileset (replaces flat placeholders)
 void tiles_load_arena_floor(void) BANKED;         // calm Colossus plane + sparse inlays
 void tiles_load_standard_floor(void) BANKED;      // restore dungeon cracks after a boss
 void tiles_load_stage_scenery(u8 stage) BANKED;   // stage-local pillar/crystal/debris silhouettes
