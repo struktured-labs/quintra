@@ -150,8 +150,8 @@ stricter and is not optional.
    (inspired by, **not copied from**, the lakes-and-leviathans floor)
    plus a turret whose shots churn room state, matching keys, and a
    guaranteed reset.
-5. Leave open whether later puzzles live in one big room or are
-   scattered across a dungeon. Recommend, do not decide.
+5. Each puzzle lives on one self-contained floor or room, with no
+   cross-room or cross-floor state (decided 2026-11-21, §4).
 
 ## 1.1 Carmelo's dump, mapped
 
