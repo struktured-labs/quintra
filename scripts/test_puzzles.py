@@ -375,7 +375,7 @@ def push_seal_contract():
     assert len(blocks) == 1, f"push seal needs one readable cairn, got {blocks}"
     sx, sy = pb.memory[addr("_room_socket_x")], pb.memory[addr("_room_socket_y")]
     assert (sx, sy) != (0xFF, 0xFF), "push seal has no gold socket"
-    assert all(pb.memory[TM + (sy + dy) * 20 + sx + dx] == 20
+    assert all(pb.memory[TM + (sy + dy) * 20 + sx + dx] == 1
                for dy in (0, 1) for dx in (0, 1)), "socket is not a 2x2 gold plate"
     assert blocks[0][0] != sx and blocks[0][1] != sy, (
         "socket must sit on an L route, not a straight shove")

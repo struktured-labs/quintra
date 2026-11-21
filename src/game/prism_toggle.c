@@ -188,7 +188,8 @@ void prism_prepare(u32 seed, u8 bosses_beaten, u8 solved) BANKED {
             u8 tile = BGT_FLOOR;
             if (ch == '#') tile = BGT_WALL;
             else if (ch == 'o') { cls = PRISM_CLASS_ORB; tile = BGT_CRYSTAL; }
-            else if (ch == 'G') { cls = PRISM_CLASS_GOAL; tile = BGT_FLOOR3; }
+            // Plain stone + door palette: pebbled FLOOR3 looked like sand.
+            else if (ch == 'G') { cls = PRISM_CLASS_GOAL; tile = BGT_FLOOR; }
             else if (ch == 'a' || ch == 'b') {
                 u8 colour = (u8)(((ch == 'b') ? 1 : 0) ^ swap);
                 cls = colour ? PRISM_CLASS_AZURE : PRISM_CLASS_AMBER;
