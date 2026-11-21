@@ -20,7 +20,7 @@ AUX_STAR = 0xF6
 BGT_WALL, BGT_PILLAR, BGT_CRYSTAL, BGT_POT = 2, 21, 22, 32
 
 # Peak orbit = sx * peak / 24, with sx peaking at 24.
-PEAK = {0: 24, 1: 27, 2: 33, 3: 39}
+PEAK = {0: 24, 1: 29, 2: 34, 3: 39}
 # Cardinal outbound at 3 px/tick.
 OUT_PX = {0: 84, 1: 108, 2: 132, 3: 168}
 
@@ -200,7 +200,12 @@ def test_star_tiers():
                            if name in ("empty", "full-cap1") else None)
         print(f"[star {name} t{tier}] peak={rec['peak']:.1f} life={rec['life']} "
               f"spent={rec['spent']}")
-        assert not rec["spent"], (name, rec["before"], rec["after"])
+        # Only a max-Will swing spends the gauge; mid tiers stay heat-scaled
+        # without emptying the bank.
+        if tier >= 3:
+            assert rec["spent"], (name, rec["before"], rec["after"])
+        else:
+            assert not rec["spent"], (name, rec["before"], rec["after"])
         assert rec["life"] >= 30, (name, rec["life"])
         assert_near(f"star {name} peak", rec["peak"], PEAK[tier], 1.5)
         if tier >= 3:
@@ -209,6 +214,39 @@ def test_star_tiers():
     # Full Will is clearly wider than empty.
     assert results["full-cap1"]["peak"] - results["empty"]["peak"] >= 14
     return results
+
+
+def test_star_max_resets():
+    """A max-Will Morningstar spends the bank; a second B does not re-fire at max."""
+    pb = scene(ITEM_STAR, x=72, y=64)
+    try:
+        set_will(pb, 1, 90, 0)  # cap 1, full -> tier 3
+        fire_b(pb)
+        assert pb.memory[P + LEVEL_OFFSET] == 0, "max star did not reset will_level"
+        assert pb.memory[P + WILL_OFFSET] == 0, "max star did not reset will_charge"
+        # Let the orbit and the 56-frame item cooldown finish. Do not press A.
+        for _ in range(80):
+            pb.tick()
+        assert pb.memory[P + LEVEL_OFFSET] == 0, "will_level banked back during cooldown"
+        fire_b(pb)
+        cx, cy = 76, 68
+        peak = 0.0
+        for _ in range(90):
+            live = shots(pb, AUX_STAR)
+            if not live:
+                break
+            e = live[0]
+            x, y = i16(pb, e, 3), i16(pb, e, 7)
+            peak = max(peak, math.hypot(x - cx, y - cy))
+            pb.tick()
+        print(f"[star max-reset] second peak={peak:.1f} (max is {PEAK[3]})")
+        # A little natural recharge may promote the empty bar to tier 1,
+        # but it must not still be a max-radius swing.
+        assert peak <= PEAK[1] + 2, (
+            f"second swing still reached {peak}, want well below max {PEAK[3]}")
+        assert pb.memory[P + LEVEL_OFFSET] == 0
+    finally:
+        pb.stop(save=False)
 
 
 def test_star_obstacles():
@@ -307,6 +345,7 @@ def test_boom_obstacles():
 
 def main():
     test_star_tiers()
+    test_star_max_resets()
     test_star_obstacles()
     test_boom_tiers()
     test_boom_obstacles()
