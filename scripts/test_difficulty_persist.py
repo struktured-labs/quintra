@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -131,6 +132,9 @@ def run_mode(cart: Path, *, easy: bool) -> None:
     first = PyBoy(str(cart), window="null", cgb=True)
     try:
         boot_to_class_select(first)
+        # Easy/Normal stat-row and hp_max contracts are pinned on Wolfkin.
+        for _ in range(downs_to_class(0)):
+            press(first, "down")
         if easy:
             press(first, "select")
             for _ in range(16):

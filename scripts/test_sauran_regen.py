@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -95,7 +96,8 @@ def enter_sauran(pb):
         assert pb.memory[SCREEN] == 1, (
             f"title did not route to class select (screen={pb.memory[SCREEN]})")
     assert pb.memory[SCREEN] == 2, "title ignored three released START edges"
-    press(pb, "down")
+    for _ in range(downs_to_class(1)):
+        press(pb, "down")
     press(pb, "a")
     for _ in range(80):
         pb.tick()

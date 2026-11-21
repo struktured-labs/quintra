@@ -220,7 +220,7 @@ void class_select_enter(void) {
     tiles_load_all_class_sprites();
     tiles_load_fx_sprites();
 
-    class_select_cursor = 0;
+    class_select_cursor = CLASS_SELECT_DEFAULT;
     class_select_easy_mode = 0;
     render();
     update_preview();

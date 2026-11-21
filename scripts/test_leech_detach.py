@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +49,10 @@ def main():
     pb.button("start")
     for _ in range(30):
         pb.tick()
-    pb.button("a")  # Wolfkin
+    for _ in range(downs_to_class(0)):
+        pb.button("down")
+        pb.tick(8)
+    pb.button("a")  # Wolfkin (cursor starts on Picsean)
     for _ in range(120):
         pb.tick()
 

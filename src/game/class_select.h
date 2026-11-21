@@ -6,7 +6,10 @@
 #include "core/types.h"
 #include "game/screen.h"
 
-extern u8 class_select_cursor;   // 0..N_CLASSES-1
+// Default highlighted champion on CLASS_SELECT. Class IDs stay
+// 0=Wolfkin, 1=Sauran, 2=Corvin, 3=Picsean, 4=Vespine; do not reorder them.
+#define CLASS_SELECT_DEFAULT 3
+extern u8 class_select_cursor;   // 0..N_CLASSES-1; starts at CLASS_SELECT_DEFAULT
 extern u8 class_select_easy_mode;
 // VBlank work queue: attribute jobs 1..6, then palette half-bursts.
 // class_select_vbl_work is nonzero while either remains.

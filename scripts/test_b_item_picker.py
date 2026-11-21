@@ -14,6 +14,7 @@ from pathlib import Path
 from pyboy import PyBoy
 from PIL import Image
 from quintra_vignettes import mute_vignettes
+from quintra_class_select import downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom" / "working" / "quintra.gbc"
@@ -70,7 +71,7 @@ def press(pb, button, held=5, released=8):
 def boot_wolfkin_pack():
     pb = PyBoy(str(ROM), window="null", cgb=True)
     pb.tick(240)
-    # Power-on intro: START skips it. Title uses START, then A confirms Wolfkin.
+    # Power-on intro: START skips it. Title uses START, then downs to Wolfkin.
     if pb.memory[SCREEN] == SCREEN_INTRO:
         press(pb, "start")
         pb.tick(30)
@@ -79,6 +80,8 @@ def boot_wolfkin_pack():
         pb.tick(30)
     assert pb.memory[SCREEN] == SCREEN_CLASS_SELECT, (
         f"expected class select, got {pb.memory[SCREEN]}")
+    for _ in range(downs_to_class(0)):
+        press(pb, "down")
     press(pb, "a")
     for _ in range(90):
         if pb.memory[SCREEN] in (SCREEN_ROOM, 3, 6):  # run_init or vignette

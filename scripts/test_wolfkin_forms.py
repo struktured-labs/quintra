@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -24,7 +25,11 @@ def boot():
     pb.button("start")
     for _ in range(30):
         pb.tick()
-    pb.button("a")  # Wolfkin is the default highlighted champion
+    for _ in range(downs_to_class(0)):
+        pb.button("down")
+        for _ in range(8):
+            pb.tick()
+    pb.button("a")  # Wolfkin (cursor starts on Picsean; IDs unchanged)
     for _ in range(60):
         pb.tick()
     return pb

@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom" / "working" / "quintra.gbc"
@@ -31,7 +32,7 @@ def boot(class_moves):
     press(pb, "start")
     for _ in range(20):
         pb.tick()
-    for _ in range(class_moves):
+    for _ in range(downs_to_class(class_moves)):
         press(pb, "down")
         for _ in range(8):
             pb.tick()

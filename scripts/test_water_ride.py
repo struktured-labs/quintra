@@ -19,6 +19,7 @@ from test_overworld import (
 from test_riftwild_landmarks import WALKABLE, wide_tiles
 from quintra_topology import STAGE_BOSS_ROOM
 from quintra_vignettes import mute_vignettes
+from quintra_class_select import downs_to_class
 
 MODE = addr("_water_ride_mode")
 WATER = (97, 101)
@@ -36,7 +37,7 @@ def boot(cls):
     pb.tick(240)
     pb.button("start")
     pb.tick(30)
-    for _ in range(cls):
+    for _ in range(downs_to_class(cls)):
         pb.button("down")
         pb.tick(12)
     pb.button("a")

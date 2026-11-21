@@ -34,6 +34,7 @@ from pathlib import Path
 os.environ["QUINTRA_KEEP_INTRO"] = "1"
 os.environ["QUINTRA_KEEP_VIGNETTES"] = "1"
 from pyboy import PyBoy  # noqa: E402
+from quintra_class_select import DEFAULT_CLASS_ID, downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.gbc"))
@@ -48,6 +49,7 @@ def sym(name):
 
 
 SCR, PL, DEMO = sym("_loop_current_screen"), sym("_player"), sym("_attract_demo")
+CURSOR = sym("_class_select_cursor")
 TRACK, ROW = sym("_music_track_id"), sym("_music_row")
 TITLE, CLASS_SELECT, RUN_INIT, INTRO, ROOM, VIGNETTE = 1, 2, 3, 4, 5, 6
 HEROES = ["Wolfkin", "Sauran", "Corvin", "Picsean", "Vespine"]
@@ -165,7 +167,10 @@ def new_game(path, cls):
     e.tap("start")
     check(e.until(lambda: e.scr() == CLASS_SELECT, 200) >= 0, f"{label}: class select")
     e.tick(30)
-    for _ in range(cls):
+    if path == "start" and cls == 0:
+        check(e.m[CURSOR] == DEFAULT_CLASS_ID,
+              f"{label}: class-select cursor starts on {HEROES[DEFAULT_CLASS_ID]}")
+    for _ in range(downs_to_class(cls)):
         e.tap("down")
         e.tick(6)
     e.tap("a")
@@ -215,7 +220,7 @@ def power_cycle_mid_foyer(cls):
     e.tap("start")
     e.until(lambda: e.scr() == CLASS_SELECT, 200)
     e.tick(30)
-    for _ in range(cls):
+    for _ in range(downs_to_class(cls)):
         e.tap("down")
         e.tick(6)
     e.tap("a")

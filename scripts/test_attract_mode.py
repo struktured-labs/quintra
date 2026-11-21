@@ -24,6 +24,7 @@ from pathlib import Path
 
 os.environ["QUINTRA_KEEP_INTRO"] = "1"
 from pyboy import PyBoy  # noqa: E402
+from quintra_class_select import downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.gbc"))
@@ -126,6 +127,8 @@ def make_save():
     skip_boot(e)
     e.tick(30); e.tap("start")
     e.until(lambda: e.scr() == CLASS_SELECT, 120); e.tick(30)
+    for _ in range(downs_to_class(0)):
+        e.tap("down")
     e.tap("a")
     e.until(lambda: e.scr() == ROOM, 600); e.tick(240)
     return with_meta(e.stop_ram(), 0)

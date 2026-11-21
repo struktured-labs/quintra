@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -161,7 +162,7 @@ class QuintraPyBoyEnv:
         self._tick(240)
         self.pb.button("start")
         self._tick(24)
-        for _ in range(class_id):
+        for _ in range(downs_to_class(class_id)):
             self.pb.button("down")
             self._tick(8)
         if difficulty == "easy":
