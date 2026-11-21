@@ -17,14 +17,19 @@
 // weakness, LCK, status, Colossus caps and kill rewards match every other
 // weapon. Each body is hit at most once per beat (per-cast hit masks).
 // Visuals: CGB palette washes (0 OAM), OBJ tiles 200..203 reloaded per cast,
-// and at most four direct OAM entries (32..35) drawn after the entity pass.
-
+// Core FX cels (put 0..3) always land in OAM 32..35, the legacy 4-slot
+// tail. Optional L4 cosmetic cels (put 4..11) use 24..31 only when that
+// window is free (no Serpent, no Cinder pack). Hits stay on the carrier
+// / AABB, so dropped 24..31 cels never take a hit with them.
 #define WILL_MAXFX_OAM_LO 32
 #define WILL_MAXFX_OAM_N  4
+#define WILL_MAXFX_OAM_LO_L4 24
+#define WILL_MAXFX_OAM_N_L4  8
+#define WILL_MAXFX_OAM_MAX   12
 #define WILL_MAXFX_TILE   200
 
 // Lifetimes in combat ticks.
-#define WILL_MAXFX_SAURAN_TICKS  52
+#define WILL_MAXFX_SAURAN_TICKS  64
 #define WILL_MAXFX_VESPINE_TICKS 54
 #define WILL_MAXFX_CORVIN_TICKS  48
 #define WILL_MAXFX_WOLFKIN_TICKS 42

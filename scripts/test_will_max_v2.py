@@ -26,7 +26,7 @@ SWARM = addr("_will_vespine_swarm_ticks")
 SFX_PLAY = addr("_sfx_play")
 
 NAMES = {0: "Wolfkin", 1: "Sauran", 2: "Corvin", 3: "Picsean", 4: "Vespine"}
-LIFE = {0: 42, 1: 52, 2: 48, 4: 54}
+LIFE = {0: 42, 1: 64, 2: 48, 4: 54}
 # Damage on a body in the lane at Will 1, LCK 0 (spec: ~18/20/16; Wolfkin
 # keeps the shipped point-blank total, ~29, across two beats).
 BAND = {0: (18, 34), 1: (14, 24), 2: (12, 22), 4: (16, 26)}

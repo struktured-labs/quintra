@@ -44,17 +44,56 @@ def put16(pb, address, value):
     pb.memory[address + 1] = (value >> 8) & 0xFF
 
 
+def reach_title(pb):
+    """Power-on can land in the intro for well over 240 frames. Wait, or
+    skip with Start, until the title is actually up."""
+    for _ in range(600):
+        if pb.memory[SCREEN] == 1:  # SCREEN_TITLE
+            return
+        pb.tick()
+    if pb.memory[SCREEN] != 1:
+        press(pb, "start")
+        for _ in range(180):
+            if pb.memory[SCREEN] == 1:
+                return
+            pb.tick()
+
+
+def wait_room(pb, limit=400):
+    """Mute may land during RUN_INIT; a foyer vignette can still arm after.
+    Skip it with Start once it has started, then wait for the room."""
+    skipped = False
+    for i in range(limit):
+        if pb.memory[SCREEN] == 5:
+            return
+        if pb.memory[SCREEN] == 6 and not skipped and i >= 8:
+            press(pb, "start")
+            skipped = True
+            continue
+        pb.tick()
+
+
 def boot(class_id):
+    from quintra_vignettes import mute_after_class_select
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240)
+    reach_title(pb)
+    pb.tick(30)  # title must settle before Start is accepted
     press(pb, "start")
+    for _ in range(200):
+        if pb.memory[SCREEN] == 2:  # SCREEN_CLASS_SELECT
+            break
+        pb.tick()
     pb.tick(30)
     for _ in range(class_id):
         press(pb, "down", held=3, released=3)
     press(pb, "a")
+    mute_after_class_select(pb, ROM, settle=8)
+    wait_room(pb)
+    for btn in ("a", "b", "start", "select", "right", "left", "up", "down"):
+        pb.button_release(btn)
+    # Foyer entry still eats A for a beat; Will MAX tests need the room live.
     pb.tick(90)
     assert pb.memory[SCREEN] == 5 and pb.memory[PLAYER] == class_id
-    mute_vignettes(pb, ROM)
     return pb
 
 

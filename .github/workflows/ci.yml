@@ -177,6 +177,9 @@ jobs:
       - name: PyBoy max-Will v2 arts
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_will_max_v2.py
 
+      - name: PyBoy Sauran Aftershock
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_sauran_aftershock.py
+
       - name: PyBoy crystal cluster
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_crystal_cluster.py
 

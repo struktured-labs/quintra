@@ -25,7 +25,8 @@
 
 // Max-Will v2 controller. Spec: docs/superpowers/specs/2026-11-17-max-will-v2.md
 //
-// Sauran   Thunderline Bastion: fault spear, two shot-eating pylons, slam.
+// Sauran   Thunderline Bastion + Aftershock: spear, two pylons, slam,
+//          then a lateral T-fault (PR aftershock / spec 2026-11-21).
 // Vespine  Royal Stinger: lodging poison stinger, pincers, Venom Sac rupture.
 // Corvin   Murderstorm Eclipse: Night Veil, Shadow Effigy, four
 //          scythe-feathers that fan out, glint, then snap onto the Mark.
@@ -56,7 +57,15 @@ static i16 fx_bx, fx_by;     // Sauran pylon B
 static i16 fx_kx, fx_ky;     // carrier park point (floor)
 static u8 hit_a[(MAX_ENTITIES + 7) / 8];
 static u8 hit_b[(MAX_ENTITIES + 7) / 8];
-static u8 fx_oam[WILL_MAXFX_OAM_N * 4];
+static u8 fx_oam[WILL_MAXFX_OAM_MAX * 4];
+static const i8 sauran_ashock_off8[8] = { -40, -28, -16, -6, 6, 16, 28, 40 };
+static const i8 sauran_ashock_off4[4] = { -40, -16, 16, 40 };
+/* Diagonal steps are ~0.7x so the wall stays ~40 px Euclidean (40/sqrt(2)). */
+static const i8 sauran_ashock_off8d[8] = { -28, -20, -12, -4, 4, 12, 20, 28 };
+static const i8 sauran_ashock_off4d[4] = { -28, -12, 12, 28 };
+static u8 fx_l4_owned;   /* last frame wrote OAM 24..31 */
+static i16 fx_mx, fx_my; /* pylon mid, set at the aftershock beat */
+
 
 #define FX_T(n) ((u8)(WILL_MAXFX_TILE + (n)))
 static const u8 slot_bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
@@ -78,6 +87,16 @@ static const u8 fx_tiles_sauran_crack[32] = {
     0x4A, 0x18, 0x42, 0x24, 0x93, 0x30, 0x85, 0x54,
     0x89, 0x28, 0x89, 0x4A, 0x89, 0x18, 0x81, 0x24,
     0x91, 0x52, 0x09, 0x48, 0xD7, 0x00, 0x52, 0x00,
+};
+// L4 aftershock cels (vertical bolt, horizontal crack). Quantized from
+// GPT Image 2 (gpt-image-2.6-sunburst) onto pal_sauran; magenta is color 0.
+static const u8 fx_tiles_sauran_aftershock[32] = {
+    /* GPT Image 2 (gpt-image-2.6-sunburst), pal_sauran, magenta=0.
+       Vertical bolt + rot90 horizontal crack; gold-core extract. */
+    0x5C, 0x28, 0x3A, 0x14, 0x5E, 0x28, 0x2D, 0x1E,
+    0x5D, 0x2A, 0x5A, 0x34, 0x5C, 0x28, 0x38, 0x10,
+    0x75, 0x00, 0x8A, 0x75, 0xF7, 0xAA, 0xFF, 0x5D,
+    0x5D, 0x2A, 0x26, 0x18, 0x18, 0x00, 0x00, 0x00,
 };
 static const u8 fx_tiles_vespine[64] = {
     0x00, 0x00, 0x80, 0x00, 0xA0, 0x40, 0x8E, 0x7C,
@@ -341,8 +360,15 @@ static void eat_shots(i16 x, i16 y, u8 r, u8 front) {
 }
 
 // Screen-space OAM entry for a sprite centred on world (x, y).
+static u8 fx_oam_tight(void) {
+    return (serpent_tail_active
+        || (cinder_pack_active && cinder_oam_limit < 40)) ? 1 : 0;
+}
+
 static void put(u8 k, i16 x, i16 y, u8 tile, u8 prop) {
-    u8 *o = &fx_oam[(u8)(k << 2)];
+    u8 *o;
+    if (k >= WILL_MAXFX_OAM_MAX) return;
+    o = &fx_oam[(u8)(k << 2)];
     i16 sx = (i16)(x - (i16)room_camera_x + 4);
     i16 sy = (i16)(y - (i16)room_camera_y + 12);
     if (sx < 1 || sx > 167 || sy < 9 || sy > 147) { o[0] = 0; return; }
@@ -354,7 +380,7 @@ static void put(u8 k, i16 x, i16 y, u8 tile, u8 prop) {
 
 static void hide_all(void) {
     u8 k;
-    for (k = 0; k < WILL_MAXFX_OAM_N; ++k) fx_oam[(u8)(k << 2)] = 0;
+    for (k = 0; k < WILL_MAXFX_OAM_MAX; ++k) fx_oam[(u8)(k << 2)] = 0;
 }
 
 static void fx_end(void) {
@@ -412,8 +438,57 @@ static void sauran_tick(u8 t) {
     }
     if (t == 46) palette_obj_load(2, pal_sauran);
     if (t == 48) unwash();
-    // Standing pylons are a gate: they eat hostile shots and stall rushers.
-    if (t < 44 && (t & 1)) {
+    if (t == 48) {
+        // Lateral T-fault: one AABB 16 px deep around the pylon mid,
+        // +/-40 px off-axis (dot-space spans grow on diagonals so the
+        // Euclidean size stays honest). Hits bodies the slam missed.
+        // Aftershock itself does not eat shots.
+        u8 i, diag;
+        entity_t *e;
+        i16 span, wide;
+        if (fx_pyl & 3) {
+            if ((fx_pyl & 3) == 3) {
+                fx_mx = (i16)((fx_ax + fx_bx) >> 1);
+                fx_my = (i16)((fx_ay + fx_by) >> 1);
+            } else if (fx_pyl & 1) {
+                fx_mx = fx_ax; fx_my = fx_ay;
+            } else {
+                fx_mx = fx_bx; fx_my = fx_by;
+            }
+            diag = (fx_dx && fx_dy) ? 1 : 0;
+            /* 8 px along-aim each way (~11 in diagonal dot space);
+               40 px off-axis (~56 in diagonal dot space = 28*2).
+               Pad +8 so a 0x77 body at a sprite end still counts;
+               56 on the nose missed SE fixtures in the headless test. */
+            span = diag ? 16 : 8;
+            wide = diag ? 64 : 40;
+            room_shake(2, 6);
+            fx_ch1(0x1F, 0x80, 0xE3, 1100, 12);
+            fx_ch4(0xC3, 0x55, 16);
+            set_sprite_data(FX_T(2), 2, fx_tiles_sauran_aftershock);
+            for (i = 0, e = entities; i < MAX_ENTITIES; ++i, ++e) {
+                i16 ad, cd, bx, by;
+                if (!is_body(e) || MASK_HAS(hit_b, i)) continue;
+                bx = BODY_X(e);
+                by = BODY_Y(e);
+                /* Measure from the pylon mid so a single surviving pylon
+                   keeps the hitbox on the visual wall (offset +/-10). */
+                ad = (i16)((bx - fx_mx) * (i16)fx_dx
+                    + (by - fx_my) * (i16)fx_dy);
+                cd = (i16)((bx - fx_mx) * (i16)(-fx_dy)
+                    + (by - fx_my) * (i16)fx_dx);
+                if (ad < (i16)-span || ad > span) continue;
+                if (cd < 0) cd = (i16)-cd;
+                if (cd > wide) continue;
+                MASK_SET(hit_b, i);
+                fx_hit(i, (u8)(fx_damage + 1));
+                if (fx_carrier == 0xFF) break;
+            }
+        }
+    }
+    // Standing pylons are a gate: they eat hostile shots and stall rushers
+    // until they finish sinking (spec: keep eating through the aftershock).
+    if (t < 56 && (t & 1)) {
         for (k = 0; k < 2; ++k) {
             i16 x = k ? fx_bx : fx_ax, y = k ? fx_by : fx_ay;
             u8 i;
@@ -443,9 +518,39 @@ static void sauran_tick(u8 t) {
         if (t < (u8)(born + 4)) off = (u8)((born + 4 - t) << 1);
         else if (t >= 44) off = (u8)(t - 44);
         else off = 0;
+        if (t >= 48) continue;
         if (t >= 46 && (t & 1)) continue;
         put((u8)(k ? 3 : 1), x, (i16)(y - 8 + off), FX_T(2), 0);
         put((u8)(k ? 0 : 2), x, (i16)(y + off), FX_T(3), 0);
+    }
+    if (t >= 48 && t < WILL_MAXFX_SAURAN_TICKS && (fx_pyl & 3)) {
+        // Cosmetic T-fault wall. Hits already resolved at t==48 from the
+        // AABB; these OAM slots can drop during Serpent without changing
+        // damage. Tight / Cinder: four points in the 32..35 tail
+        // (put 0..3). Free window: eight points in 24..31 (put 4..11).
+        const i8 *off;
+        u8 n, s, tight, extras, diag;
+        i8 qx = (i8)-fx_dy, qy = fx_dx;
+        u8 vert = (fx_dx != 0 && fx_dy == 0) ? 1 : 0;
+        tight = fx_oam_tight();
+        extras = (!tight && !cinder_pack_active) ? 1 : 0;
+        diag = (fx_dx && fx_dy) ? 1 : 0;
+        if (extras) {
+            off = diag ? sauran_ashock_off8d : sauran_ashock_off8;
+            n = 8;
+        } else {
+            off = diag ? sauran_ashock_off4d : sauran_ashock_off4;
+            n = 4;
+        }
+        for (s = 0; s < n; ++s) {
+            u8 tile = (u8)(FX_T(2) + (vert ? 0 : 1));
+            u8 prop = 0;
+            u8 k = extras ? (u8)(4 + s) : s;
+            i16 x = (i16)(fx_mx + (i16)qx * off[s]);
+            i16 y = (i16)(fx_my + (i16)qy * off[s]);
+            if ((t + s) & 1) prop = vert ? S_FLIPY : S_FLIPX;
+            put(k, x, y, tile, prop);
+        }
     }
 }
 
@@ -836,14 +941,35 @@ void will_maxfx_tick(void) BANKED {
 }
 
 void will_maxfx_draw(void) BANKED {
-    // Cinder Rex can own 32..35: leave its cels alone where no FX is lit.
-    if (cinder_pack_active) {
-        u8 k;
-        const u8 *src = fx_oam;
-        u8 *dst = (u8 *)&shadow_OAM[WILL_MAXFX_OAM_LO];
-        for (k = 0; k < WILL_MAXFX_OAM_N; ++k, src += 4, dst += 4)
-            if (*src) memcpy(dst, src, 4);
-        return;
+    // Core put(0..3) always occupies the legacy tail at 32..35, zeros
+    // included, so hide_all / fx_end clear those four slots. Optional
+    // L4 cosmetics (put 4..11) occupy 24..31 only when the window is
+    // free; we write them when lit and explicitly zero them once when
+    // they go dark so we never wipe entity sprites during a 4-cel art
+    // and never leave ghosts after the wall sinks.
+    const u8 *src;
+    u8 *dst;
+    u8 k, extras_lit, extras_ok;
+    memcpy((u8 *)&shadow_OAM[WILL_MAXFX_OAM_LO], fx_oam,
+        (size_t)((u16)WILL_MAXFX_OAM_N << 2));
+    extras_ok = (!fx_oam_tight() && !cinder_pack_active) ? 1 : 0;
+    src = fx_oam + (WILL_MAXFX_OAM_N << 2);
+    extras_lit = 0;
+    if (extras_ok) {
+        for (k = 0; k < WILL_MAXFX_OAM_N_L4; ++k)
+            if (src[(u8)(k << 2)]) { extras_lit = 1; break; }
     }
-    memcpy(&shadow_OAM[WILL_MAXFX_OAM_LO], fx_oam, sizeof(fx_oam));
+    if (extras_ok && extras_lit) {
+        memcpy((u8 *)&shadow_OAM[WILL_MAXFX_OAM_LO_L4], src,
+            (size_t)((u16)WILL_MAXFX_OAM_N_L4 << 2));
+        fx_l4_owned = 1;
+    } else if (fx_l4_owned) {
+        if (extras_ok) {
+            dst = (u8 *)&shadow_OAM[WILL_MAXFX_OAM_LO_L4];
+            for (k = 0; k < WILL_MAXFX_OAM_N_L4; ++k, dst += 4)
+                *dst = 0;
+        }
+        /* If Serpent/Cinder now own 24..31 they already redrew this frame. */
+        fx_l4_owned = 0;
+    }
 }
