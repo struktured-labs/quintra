@@ -390,8 +390,11 @@ def settle(r):
 
 def down_to_ante(r):
     r.wy(fy(13))                                  # across the lane (belt drags west)
-    r.wx(GAP)
-    r.wy(ANTE_Y)
+    for _ in range(3):                            # monsters or the belt can nudge a pixel
+        r.wx(GAP)
+        r.wy(ANTE_Y)
+        if r.pos() == (GAP, ANTE_Y):
+            break
     assert r.pos()[1] == ANTE_Y, f"gate blocked the way down {r.pos()}"
 
 
