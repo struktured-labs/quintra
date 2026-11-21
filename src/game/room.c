@@ -651,7 +651,9 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
     } else if ((element & 4) && room_puzzle_kind == PUZZLE_PHASE_SWITCH
                && RUNE_IS_PLATE_TILE(tile)) {
         significant = 1;
-        puzzle_phase_switch_zap();
+        // Unsolved: one plate press. After the phrase is earned, zap
+        // remains the remote close/reopen tool (even if currently shut).
+        puzzle_phase_switch_hit(tx, ty);
     } else if ((element & 4) && tile == BGT_SWITCH) {
         significant = 1;
         if (dungeon_law_try_toggle_at(tx, ty)) {

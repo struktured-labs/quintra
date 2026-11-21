@@ -1019,6 +1019,69 @@ def deep_phase_contract():
             f"re-echo flashed {flashes}, phrase is {phrase}")
         step_off(pb)
 
+        def zap_plate():
+            # Retire leftover shots, then fire lightning at plate 0.
+            for i in range(32 * 28):
+                pb.memory[EN + i] = 0
+            pb.tick(4)
+            for i in range(32 * 28):
+                pb.memory[EN + i] = 0
+            x, y = positions[0]
+            e = EN
+            pb.memory[e] = 1
+            pb.memory[e + 1] = 0x13
+            put16(pb, e + 3, x * 8)
+            put16(pb, e + 7, y * 8)
+            pb.memory[e + 10] = 0
+            pb.memory[e + 11] = 0
+            pb.memory[e + 12] = 28
+            pb.memory[e + 14] = 2
+            pb.memory[e + 16] = 30
+            pb.memory[e + 18] = 4  # lightning
+            pb.memory[e + 19] = 0
+            pb.memory[e + 25] = 0x77
+            pb.memory[e + 26] = 2
+            for _ in range(16):
+                pb.tick()
+            snap()
+
+        # Center-only, partial phrase, and an unsolved lightning shot
+        # must not open the remote gate. The old zap XOR let one plate
+        # shot solve the 3-note row; a hit is now a single press.
+        wait_echo_idle()
+        step_off(pb)
+        mid = 1 if len(positions) > 1 else 0
+        step_plate(mid)
+        for _ in range(8):
+            pb.tick()
+        assert not (pb.memory[RS + 28] & bit), \
+            f"center plate {mid} alone solved the row: phrase={phrase} progress={pb.memory[addrs['_room_row_progress']]}"
+        wait_echo_idle()
+        pb.memory[addrs["_room_row_progress"]] = 0
+        step_off(pb)
+
+        wait_echo_idle()
+        for plate in phrase[:-1]:
+            step_plate(plate)
+            wait_plates_idle()
+            step_off(pb)
+            wait_plates_idle()
+        assert not (pb.memory[RS + 28] & bit), \
+            f"partial phrase {phrase[:-1]} solved the row: phrase={phrase} progress={pb.memory[addrs['_room_row_progress']]}"
+        assert pb.memory[addrs["_room_row_progress"]] == len(phrase) - 1
+        # A wrong last step (or leaving mid-phrase) must be able to reset.
+        wait_echo_idle()
+        pb.memory[addrs["_room_row_progress"]] = 0
+        step_off(pb)
+
+        wait_echo_idle()
+        zap_plate()
+        assert not (pb.memory[RS + 28] & bit), \
+            f"unsolved lightning on plate 0 opened the gate: progress={pb.memory[addrs['_room_row_progress']]}"
+        wait_echo_idle()
+        pb.memory[addrs["_room_row_progress"]] = 0
+        step_off(pb)
+
         # Walking the echoed phrase solves the row and holds the final note.
         wait_echo_idle()
         for index, plate in enumerate(phrase):
@@ -1061,32 +1124,6 @@ def deep_phase_contract():
 
         # Lightning zap closes the gate, resets the row, and re-echoes.
         # A second zap (after the re-echo) opens it again without walking.
-        def zap_plate():
-            # Retire leftover shots, then fire lightning at plate 0.
-            for i in range(32 * 28):
-                pb.memory[EN + i] = 0
-            pb.tick(4)
-            for i in range(32 * 28):
-                pb.memory[EN + i] = 0
-            x, y = positions[0]
-            e = EN
-            pb.memory[e] = 1
-            pb.memory[e + 1] = 0x13
-            put16(pb, e + 3, x * 8)
-            put16(pb, e + 7, y * 8)
-            pb.memory[e + 10] = 0
-            pb.memory[e + 11] = 0
-            pb.memory[e + 12] = 28
-            pb.memory[e + 14] = 2
-            pb.memory[e + 16] = 30
-            pb.memory[e + 18] = 4  # lightning
-            pb.memory[e + 19] = 0
-            pb.memory[e + 25] = 0x77
-            pb.memory[e + 26] = 2
-            for _ in range(16):
-                pb.tick()
-            snap()
-
         zap_plate()
         assert not (pb.memory[RS + 28] & bit), "first zap did not close the remote gate"
         assert_row_notes(lit=False)
@@ -1530,8 +1567,84 @@ def door_switch_art_contract():
     pb.stop(save=False)
 
 
+
+
+
+def waystone_notes_require_all_contract():
+    """The 3-note Stage 1 Waystone cannot be solved from one center plate,
+    or from a partial phrase. All notes in order still solve; a wrong step resets."""
+    def prep(pb):
+        guards = active_hostiles(pb)
+        clear_hostiles(pb)
+        if guards:
+            ep = EN + guards[0] * 28
+            pb.memory[ep] = 2
+            pb.memory[ep + 1] = 0x01
+            put16(pb, ep + 3, 8)
+            put16(pb, ep + 7, 200)
+            pb.memory[ep + 10] = pb.memory[ep + 11] = 0
+        pb.memory[PL + 15] = 0
+        pb.memory[PL + 2] = 14
+        step_off(pb)
+        wait_rune_flash(pb)
+
+    def press(pb, pos):
+        pb.memory[PL + 2] = 14
+        feet_on(pb, pos[0], pos[1])
+        wait_rune_flash(pb)
+        step_off(pb)
+        wait_rune_flash(pb)
+
+    # Discover the order on a clean court first.
+    pb, addrs = load_rune_room(0, "waystone")
+    notes = find_rune_plates(pb)
+    assert len(notes) == 3, f"stage-1 Waystone expected 3 plates, got {notes}"
+    LOCKED = addrs["_room_puzzle_locked"]
+    prep(pb)
+    order = solve_runes(pb, notes)
+    print(f"[waystone] discovered order={order} locked={pb.memory[LOCKED]}")
+    assert len(order) == 3, f"discovered order {order} locked={pb.memory[LOCKED]}"
+    assert not pb.memory[LOCKED], f"full phrase {order} did not unlock the Waystone"
+    pb.stop(save=False)
+
+    # Fresh room: center-only and every single plate stay locked.
+    pb, addrs = load_rune_room(0, "waystone")
+    LOCKED = addrs["_room_puzzle_locked"]
+    prep(pb)
+    press(pb, notes[1])
+    assert pb.memory[LOCKED], f"center Waystone plate {notes[1]} alone unlocked the room"
+    for pos in notes:
+        press(pb, pos)
+        assert pb.memory[LOCKED], f"single plate {pos} unlocked the Waystone"
+    pb.stop(save=False)
+
+    # Fresh room: a prefix of the known order stays locked; completing it solves.
+    pb, addrs = load_rune_room(0, "waystone")
+    LOCKED = addrs["_room_puzzle_locked"]
+    prep(pb)
+    press(pb, order[0])
+    assert pb.memory[LOCKED], "first correct note unlocked the Waystone"
+    press(pb, order[1])
+    assert pb.memory[LOCKED], "two of three notes unlocked the Waystone"
+    press(pb, order[2])
+    assert not pb.memory[LOCKED], f"full phrase {order} did not unlock the Waystone"
+    pb.stop(save=False)
+
+    # Fresh room: a wrong first note stays locked and does not carry progress.
+    pb, addrs = load_rune_room(0, "waystone")
+    LOCKED = addrs["_room_puzzle_locked"]
+    prep(pb)
+    wrong = next(pos for pos in notes if pos != order[0])
+    press(pb, wrong)
+    assert pb.memory[LOCKED], "wrong first note unlocked the Waystone"
+    if "_room_rune_lit_mask" in addrs:
+        assert pb.memory[addrs["_room_rune_lit_mask"]] == 0, "wrong first note left lit progress"
+    pb.stop(save=False)
+
+
 def main():
     push_seal_contract()
+    waystone_notes_require_all_contract()
     rune_color_contract()
     rune_sequence_contract()
     late_depth_puzzle_contract()
@@ -1545,7 +1658,8 @@ def main():
     wide_waystone_circuit_contract()
     print("[puzzles] PASS populated Trial/Waystone + distinct note colours + safe/audio-complete ordered "
           "runes + service exclusion + populated remote Aether Lattice/gate "
-          "circuit + persistent gate crossing + Sun Lattice Stages 3-9")
+          "circuit + persistent gate crossing + Sun Lattice Stages 3-9 "
+          "+ 3-note center/partial/lightning cannot skip")
 
 
 if __name__ == "__main__":
