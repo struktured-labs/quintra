@@ -358,21 +358,59 @@ HUD cue, and the mid-pip jump. Folded in above.
 ## 4. Per-hero level sketches
 
 Damage numbers below are the art bonuses on top of the usual
-`weapon + ATK + (will_level - 1)` rider. Heavy bodies keep the listed
-per-hit cap. Lifetimes are combat ticks.
+`weapon + ATK + (will_level - 1)` rider, except Picsean (and any other
+art that must hit a 25–35% L1 target) which also scales the **whole
+pre-LCK hit** — see §4.1. Heavy bodies keep the listed per-hit cap.
+Lifetimes are combat ticks.
+
+t554u: L2 and L3 sit evenly between L1 and L4 in size, range, and
+power (no back-loaded jump at the cap). t557u: Picsean L1 must feel
+clearly modest in the pocket, because the shipped vortex is already
+the full L4 and is too strong at the start of a run.
 
 ### Picsean — Tide Vortex (class 3, BubbleBolt)
 
 L4 is the **top-level reference**. Do not change its look, growth,
 front/arm bonuses, heavy cap, shot wash, crest sound, or 84-tick
-lifetime.
+lifetime. The current cartridge art **is** L4; L1–L3 are smaller
+editions of that same vortex, not a new spell.
 
-| Lv | Name | Shape | Max R | Ticks (grow) | Bonuses | Wash | Heavy cap |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| L1 | Tide Pulse | 1 crest around Picsean | 48 px | 24 (18) | front +1 | no | 3 |
-| L2 | Tide Ring | 2 arms | 96 px | 36 (28) | front +2 | no | 4 |
-| L3 | Tide Coil | 3 arms | 160 px | 56 (44) | front +3, arm +1 | no | 5 |
-| L4 | Tide Vortex | 4 arms, full view (current) | 240 px | 84 (72) | front +4, arm +2 | yes | 6 |
+**L1 damage is 30% of L4 pre-LCK front/arm** (mid of the 25–35%
+band), then 53 / 77 / 100. Damage is a percent of the unchanged L4
+formula (`MAX + 4` / `MAX + 2`), not only of the bonus: scaling only
+the +4 would leave L1 around half of L4 once weapon + ATK are
+included, which is not modest.
+
+Reach is **viewport-scaled**, not 30% of the L4 overscan radius.
+`MAX_R = 240` is a corner-to-corner overscan (screen diagonal ≈ 215);
+30% of 240 is 72 px, a 144 px diameter that already covers ~70% of a
+160×144 view from mid-room, and L2 at 128 px would fill the screen,
+leaving L2–L4 indistinguishable except on corner casts. Carbon
+(2026-11-21, spell-levels pass) required pulling L1–L3 down: **48 /
+112 / 176 / 240** (+64 px a level). L1 (48 px, 96 px diameter) covers
+about **31% of the 160×144 screen** from mid-room, inside the 25–35%
+effective-area target. L2 just reaches corners from center, L3 clears
+off-center casts, L4 stays the shipped full view.
+
+On GBC, implement L1–L3 damage with `/256` fixed-point, not `/100`:
+multipliers **77 / 136 / 197** via `(raw * mul + 128) >> 8`, minimum
+1. **L4 bypasses the scale completely** (no multiply) so the shipped
+hit is bit-identical. At very low MAX, L1 front and arm may round to
+the same integer; that is acceptable.
+
+| Lv | Name | Shape | Max R | Ticks (grow) | Damage vs L4 | Wash | Heavy cap | OAM |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| L1 | Tide Pulse | 1 crest around Picsean | **48 px** | 24 (18) | **30%** of L4 front/arm, min 1 | no | 2 | 4 cels in 32–35 |
+| L2 | Tide Ring | 2 arms | **112 px** | 44 (36) | **53%** | no | 3 | 6 cels |
+| L3 | Tide Coil | 3 arms | **176 px** | 64 (54) | **77%** | no | 5 | 8 cels |
+| L4 | Tide Vortex | 4 arms, full view (current) | **240 px** | 84 (72) | 100% (front +4, arm +2, unchanged) | yes | 6 | 12 cels in 24–35 (current) |
+
+Implementation must keep the L4 path bitwise in feel: same ease table
+endpoint, same wash, same crest. L1–L3 cap `picsean_vortex_radius` at
+the level's max R, use fewer arms/cels, skip the shot wash, and apply
+the damage percent before LCK/weakness. Recast lock and first-pip
+charge still follow §3.6 and §3.8 (L1 72 f / 1.20 s charge, 180 f /
+3.00 s lock; L4 180 f / 3.00 s charge, 360 f / 6.00 s lock).
 
 ### Sauran — Thunderline Bastion / Aftershock (class 1, Tail Spike)
 
@@ -424,6 +462,13 @@ crescent. Modest L4 presence only; see §8.
 | L3 | Rush + weaker shear (14 px, no eclipse flash) | 34 | shear MAX+0 |
 | L4 | Shipped Rush + Cross-Rend, larger X and lingering scars | 42 | shear 20→32 px, 3-tick local shake / hit-stop on connect, scars linger through f42 on L4 OAM 24–35 (32×32 X at the 44 px apex). Mechanics and two-beat timing stay. |
 
+Other heroes keep the L1–L4 mechanical sketches below, but size,
+range, and pre-LCK damage should also sit evenly between that hero's
+L1 and L4 (~30% of that L4 at L1, then 53 / 77 / 100). Do not leave
+a large jump only at the cap. Shipped v2 arts stay the listed L3 or
+L4 anchors (Bastion = Sauran L3, Aftershock = Sauran L4, Stinger =
+Vespine L3, Eclipse and Cross-Rend = L4).
+
 ## 5. Test plan
 
 New headless PyBoy script `scripts/test_will_max_levels.py`, plus
@@ -471,11 +516,11 @@ coverage stays intact (a tap, not a hold, fires the shipped art).
 
 ## 6. Open questions for Carmelo
 
-1. **Starting cap.** This draft starts every new run at L1, so early
-   Picsean is weaker than the shipped vortex until L4 (stage 4–5 on a
-   typical run). Alternative: start at L2 so the first rooms already
-   have a respectable ring, and only L3–L4 are earned. L4 itself
-   stays the current art either way.
+1. **Starting cap.** This draft starts every new run at L1. t557u:
+   early Picsean must be clearly modest (~30% of the shipped vortex),
+   so do **not** start at L2 by default. Alternative, only if L1 feels
+   too small in play: start at L2 (53% reach). L4 itself stays the
+   current art either way.
 2. **Meta vs run-only.** Continue/suspend persistence is required.
    Should caps also live in SRAM bank 1 as per-hero knowledge that
    survives death, or does a new run always start at L1 (or L2, per
@@ -624,3 +669,355 @@ or beat-swapped tiles. Carbon call $0.06; running total $7.07 logged.
 
 No images, no deploy, and no implementation until the open questions
 in §6 are settled and Carmelo gives an explicit go-ahead on scope.
+
+## 9. Spell levels (t553u / t554u): same Will cap, linear size and range
+
+Carmelo (t553u): magic spells must also use the Will charge + level
+system. Per level, the spell animation gets larger / fancier and the
+attack range and area widen. t554u: mid levels are roughly linear —
+L2 and L3 sit evenly between L1 and L4 in size, range, and power.
+
+This section is **spec only** (the first code PR implements MAX
+levels, Picsean first). It does not change the 2026-11-17 elemental
+magic input contract.
+
+### 9.1 Shared cap, current kit is L1
+
+Spells share `maxwill_level` (the same 1–4 cap, the same XP pool in
+§3.3, the same HUD pips in §3.5). There is **no second grind**. **No magic cast** awards cap-cast XP: not a 1 MP tap, not a 2 MP
+ward, and not Cure. Only a committed MAX at the current cap does
+(plus kills, as already specified). Otherwise Moonfire or safe-room
+wards would replace combat as the unlock clock. Kills scored *by* a
+spell still award normal kill XP under §3.3. If the cap goes up
+mid-ward, snapshot ward charges at cast; orbit radius may follow the
+live cap.
+
+The **shipped spells are L1**, not L4. Higher levels widen and
+embellish them. This is the opposite of Tide Vortex, whose shipped
+art is L4 and whose early levels shrink it. Do not nerf today's taps
+or wards at run start.
+
+### 9.2 Charge times: MAX table stays on MAX
+
+Tap B / hold B / A+B-wins stay exactly as shipped (`MAGIC_HOLD_FRAMES`
+24, MP costs 1 / 2 / Cure 5, per-class tap cooldowns 36 / 45 / 30 /
+30 / 40). A 1.20–3.00 s Will-style windup on every Moonfire would
+fight the 24-frame ward hold and the Carbon-balanced "no spell beats
+A's sustained DPS" rule.
+
+The §3.8 first-pip table and the §3.6 recast lock apply to **MAX
+arts**. They do not gate spell taps. If a later charged-spell
+(a hold-to-empower that is not the ward) is added, it must use the
+same gentler 72 / 108 / 144 / 180 frame spend table and must not
+collide with the ward hold.
+
+### 9.3 Linear multipliers
+
+From the shipped L1 values:
+
+| Cap | Range / area | Damage (pre-LCK base) | Animation |
+| --- | --- | --- | --- |
+| L1 | 1.00× (current) | 1.00× (current) | current cels |
+| L2 | **1.25×** | **1.15×** | trail / extra mote |
+| L3 | **1.50×** | **1.30×** | larger flash or one extra cel |
+| L4 | **1.75×** | **1.45×** | fullest ring / column / trail |
+
+Damage steps stay shallower than range so A still wins sustained DPS
+at L4. Round to the nearest integer, minimum 1. Status durations may
+follow the range row when they are a reach (STOP/POISON windows,
+ward radius) and the damage row when they are a hit weight.
+
+**§9.4's explicit byte tables are authoritative** over the 1.25 /
+1.50 / 1.75× heuristic above. Some ramps (Blizzard/Moonfire TTL,
+Stoneskin and Veil i-frames, Blizzard STOP) are intentionally
+shallower than a raw multiply.
+
+### 9.4 Per-spell L1–L4 (from the shipped 2026-11-17 kit)
+
+Numbers in the L1 column are what `magic.c` does today. L2–L4 are
+the linear steps above.
+
+**Wolfkin — Moonfire** (1 MP, 36 f). Homing fire orb.
+
+| Lv | Home range | Burst r | Base / burst dmg | TTL | Tell |
+| --- | --- | --- | --- | --- | --- |
+| L1 | 96 px | 14 px | 4 / 3 | 80 | one orb, 14 px flash |
+| L2 | 120 | 18 | 5 / 3 | 90 | mote trail |
+| L3 | 144 | 21 | 5 / 4 | 100 | larger flash |
+| L4 | 168 | 25 | 6 / 4 | 110 | two-cel burst + extra wisps |
+
+**Flame Ward** (2 MP). Three wisps. L1 orbit 20 px, 2 charges each,
+up to 180 f. L2 orbit 25, L3 orbit 30 and 3 charges, L4 orbit 35 and
+3 charges. Same 24 f sear cadence; no new entity slots.
+
+**Sauran — Thunder** (1 MP, 45 f). Aim half-plane, then a column.
+
+| Lv | Aim range | Floor ahead | Chain r | Floor splash | Base dmg | Tell |
+| --- | --- | --- | --- | --- | --- | --- |
+| L1 | 104 px | 40 px | 48 px | 10 px | 5 | 6 f column |
+| L2 | 130 | 50 | 60 | 13 | 6 | taller bolt |
+| L3 | 156 | 60 | 72 | 15 | 7 | bolt + flash |
+| L4 | 182 | 70 | 84 | 18 | 7 | full column + shake already shipped |
+
+**Stoneskin + Static** (2 MP). L1: shield 90 f, pulse r 28, pulse 2.
+L2: 105 f / 35 px / 2. L3: 120 f / 42 px / 3. L4: 135 f / 49 px / 3.
+
+**Corvin — Hex** (1 MP, 30 f). Orb at 2 px/f.
+
+| Lv | Travel | Burst r | Base dmg | TTL | Tell |
+| --- | --- | --- | --- | --- | --- |
+| L1 | 64 px | 18 px | 3 | 32 | one orb, 18 px burst |
+| L2 | 80 | 23 | 3 | 40 | extra burst cels |
+| L3 | 96 | 27 | 4 | 48 | wider ring |
+| L4 | 112 | 32 | 4 | 56 | fullest hex ring |
+
+**Shadow Veil** (2 MP). L1: HASTE / i-frames 20, eat r 20. L2: 24 / 25.
+L3: 28 / 30. L4: 32 / 35.
+
+**Picsean — Blizzard** (1 MP, 30 f). Steerable icicle, up to 2 hits.
+
+| Lv | TTL (range @ 3 px/f) | Hits | Base dmg | STOP | Tell |
+| --- | --- | --- | --- | --- | --- |
+| L1 | 70 f (~210 px) | 2 | 3 | 12 | one icicle, occasional mote |
+| L2 | 80 | 2 | 3 | 14 | denser flake trail |
+| L3 | 90 | 3 | 4 | 16 | wider icicle |
+| L4 | 100 | 3 | 4 | 18 | two-cel shaft + trail |
+
+Steer rate stays one dir8 step per 4 frames. TTL is already long at
+L1; L4 is a longer, fancier shaft, not a new screen-filler.
+
+**Per-target rehit lockout:** L3–L4 may hit 3 bodies, but one steered
+icicle must not land all three hits (and 54 frames of STOP) on a
+single boss every 30 f. Keep a per-target mask for the icicle, same
+idea as Bramble's `br_mask`. Distinct targets only.
+
+**Cure** (5 MP, once per room). Keep the once-per-room and "refuse if
+it would do nothing" rules (including when HP is already at max and
+there is no status to cleanse). Heal clamps at `max_hp`. Do not turn
+Cure into a second max-heal.
+
+| Lv | Heal | i-frames | Tell (reuse tiles 160–175) |
+| --- | --- | --- | --- |
+| L1 | +2 HP | 20 f | current chime + cure cel |
+| L2 | +2 HP | 24 f | extra rising motes (L2 must be visible; +4 f of i-frames alone is not) |
+| L3 | +3 HP | 24 f | wider cure ring |
+| L4 | +3 HP | 30 f | full sparkle column |
+
+**Vespine — Bramble** (1 MP, 40 f). Four eruptions, 12 px each.
+The existing per-cast `br_mask` stays: each body is hit at most
+once even when L4's 21 px splashes overlap on a large hitbox. The
+5th eruption at L3–L4 is the same single cursor (`br_step` 0..N-1),
+not a wider WRAM array. Solid tiles still **stop the chain** as they
+do today (a 128 px vine will usually hit a wall first). Recast is
+already refused while `br_t` is live; that stays, so the stagger
+cannot overlap a second vine.
+
+| Lv | Eruptions (px along aim) | Splash r | Base dmg | Tell |
+| --- | --- | --- | --- | --- |
+| L1 | 16 / 30 / 44 / 58 | 12 | 3 | four thorn pairs |
+| L2 | 20 / 38 / 56 / 74 | 15 | 3 | slightly longer vine |
+| L3 | 24 / 45 / 66 / 87 / 108 (five) | 18 | 4 | one extra eruption |
+| L4 | 28 / 53 / 78 / 103 / 128 (five) | 21 | 4 | fullest vine + extra thorn cels |
+
+**Thorn Mirror** (2 MP). Reflect radius L1 14, L2 18, L3 21, L4 25.
+No second reflector entity; the sparkle can travel farther.
+
+### 9.5 GBC budget
+
+All of this is table-driven in bank 31 (`magic.c` already lives
+there). Four-byte (or 5×4) range / damage / radius tables, looked up
+by a **clamped** `maxwill_level` (init/load clamp 1..4 so
+`maxwill_level - 1` never underflows to 255). No new WRAM if existing
+shot / ward / bramble state just reads a wider radius or a higher
+step count on the same cursor. L2–L3 reuse the 16 shipped magic OBJ
+tiles (160–175); L4 may add motes from that same set, not a new
+sheet. Do not add a second entity walk.
+
+Magic's OAM stays in its existing slot range; L4 trails multiplex or
+alternate frames rather than allocating new slots. Do not align five
+horizontal Bramble thorn pairs (10 sprites) on one scanline without
+stagger or flicker — the 10-sprite/line cap is already tight when a
+ward, a MAX art, and the hero share the line. `will_levels.c` is
+`#pragma bank 255`; confirm on the link map that it never packs into
+bank 8 and that the home bank still ends at 0x3D04.
+`test_performance` floors (167 fixed-roster, 135 dense) stay hard
+gates.
+
+### 9.6 Tests (when this ships)
+
+Extend `scripts/test_magic.py` (or a sibling) so each class at L1
+matches today's numbers, and at L4 the range / area / damage match
+the L4 column, with L2 / L3 on the even steps. Existing magic tests
+seed `maxwill_level = 1` so the shipped kit stays the baseline.
+Existing Tide Vortex and perf tests must seed `maxwill_level = 4`
+once run-start defaults to L1, so L4 regression coverage is not
+silently lost.
+
+**First code PR (Picsean MAX levels only):** wire §3.6 / §3.8 charge
+and recast clocks **per class**. Until Wolfkin, Sauran, Corvin, and
+Vespine have their own L1–L3 MAX scaling, pin those four classes to
+the L4 clocks (180 f charge / 360 f lock) so they cannot fire today's
+full arts twice as often at run start. HUD pips may light while
+spell scaling is still deferred; that is acceptable if QA knows.
+
+## 10. Spirit Convergence takes the equipped element (t563u / t564u)
+
+Carmelo: the A+B attack should take on the equipped elemental magic
+in spirit and visually — one shared effect per element, colorized
+through OBJ palettes (fire red/orange, ice pale blue, lightning
+yellow, and the other class colors), with element behavior (burn
+trail, shatter shards, chain), scaling with the Will levels, and a
+stated GBC palette / OAM budget.
+
+This section is **spec only**.
+
+### 10.1 What A+B does today (narrow read, main)
+
+The chord in `room.c` is two different verbs on one input:
+
+- **A+B at full MP, `active_charge == 0`: Spirit Convergence.** Shared
+  across all five champions. Spawns an eight-way `PROJ_SPIKE` burst
+  at `weapon.p1 + ATK + 2`, tagged `PROJ_FLAG_CONVERGENCE` (Colossus
+  chord cap). Empties MP, sets `mp_regen = 0`, 45 i-frames,
+  `active_charge = 180`, and `room_transform_ticks = 135` (counts
+  down every 8 frames, about 18 s at 60 Hz). The hero locks to
+  `SPR_CLASS_ASCENDED_BASE` (per-class 16×16 ascended tiles, 102–121,
+  with a two-tile walk cycle on the feet). Shake + `SFX_ROAR`. Mute
+  seals the chord.
+- **A+B below full MP:** the selected Oath Art (`oath_arts_fire`,
+  1 MP, 96 f cooldown). Shard Wake is known from run start; further
+  arts unlock per Colossus. Those arts already have their own
+  elements (Wake is crystal-cold, Cinderstep is fire, and so on).
+  This section does **not** retune the Oath ladder.
+
+Convergence already writes `g_shot_element` from the class element
+(`fire 1 / lightning 4 / shadow 8 / ice 2 / poison 16`) so weakness
+math applies. Visually the burst is still a generic steel spike
+(`SPR_FX_SWING` / blade pal). The ascended body keeps the ordinary
+class OBJ palette (`prop = 0x01`); it does not read as a fire, ice,
+or lightning super. That is the gap.
+
+"Equipped elemental magic" here is the champion's class element (the
+same element as their B spells). There is no mid-run element swap.
+
+### 10.2 One shared skeleton, five colorways
+
+Keep the shipped skeleton: full-MP chord, eight-way burst,
+convergence cap, MP dump, 45 i-frames, 180 f charge lock, 18 s
+ascended pose, per-class crown tiles. Do not invent five unique A+B
+ultras.
+
+Color and residue ride on that skeleton:
+
+| Class | Element | OBJ pal (reuse magic slots) | Color | Behavior |
+| --- | --- | --- | --- | --- |
+| Wolfkin | Fire (1) | 4, red / gold | red-orange | Burst cels leave a short **burn trail** (motes on the 8 lanes). Direct hit guaranteed BURN. Trail may ignite trees / cracked walls per ordinary fire tile rules. |
+| Sauran | Lightning (4) | 5, amber / pale yellow | yellow | After the burst lands, **one chain** to the nearest other body in range (half damage + SLOW), same idea as Thunder's follow-up, one hop only. |
+| Corvin | Shadow (8) | **slot 4 or 5**, violet (never pal 1) | violet-black | Burst cels are a darker slash; struck bodies get a short CONFUSION (heavies MUTE), no second orb. |
+| Picsean | Ice (2) | **slot 4 or 5**, pale blue (never pal 1) | pale blue | On death or wall, a spike may shatter into shards (see cap below). Direct hit guaranteed STOP. May bridge spike beds per ice tile rules. |
+| Vespine | Poison (16) | 7, acid green / amber | green | Burst leaves a brief poison mote at each lane; direct hit guaranteed POISON. No lingering puddle entity. |
+
+Palette loads reuse the **already-shipped magic element palettes** in
+`magic.c` (`class_pal[]`, VRAM bank 1). Do not add an 8th unique OBJ
+palette or steal the hero body slot (pal 1) for the whole 18 s
+ascended walk — the champion must stay readable as themselves. The
+ascended body is `prop = 0x01`, so pal 1 is **unconditionally busy**.
+Corvin (shadow) and Picsean (ice) therefore **always** load their
+burst colorway into slot **4 or 5** (whichever is freer; if both are
+in use by enemies, borrow slot 4 and accept a brief enemy FX tint)
+for the life of the burst / shards, then restore the room's prior
+palette when the last cel clears. Tint the burst cels and residual
+motes only. A one-frame elemental flash on the ascended sprite at
+the dump is allowed; a full-duration body recolor is not.
+
+**Fire and poison lane motes are purely visual** (0 damage, no
+per-frame AABB). Tree ignition, cracked walls, and ice bridging are
+triggered by the **moving spike's** tile-probe as it travels, not by
+lingering ground entities. Stagger those tile probes across even/odd
+frames (or cap conversions per frame) so eight L3–L4 lanes cannot
+mutate a whole ring of tiles in one tick.
+
+**Ice shards:** do not spawn 8×2 = 16 live projectiles. Cap total
+live shards at **4** (L2) / **8** (L4), prefer cardinal or
+alternating lanes, and skip a shatter if the pool is full. **Sauran
+chains once per cast**, not once per landed spike. Ice shards and
+the lightning chain **inherit `PROJ_FLAG_CONVERGENCE`** so a
+point-blank wall shatter or chain hop cannot bypass the Colossus
+chord cap. Shards must not spawn with out-of-bounds `x/y`.
+
+### 10.3 Linear Will-level scaling
+
+Shipped Convergence is **L1 of this chord**, not a nerf of the
+current dump. Higher `maxwill_level` widens and embellishes it, with
+even mid steps, using the same shallow damage ramp as §9.3 (range /
+presence 1.00 / 1.25 / 1.50 / 1.75×, damage 1.00 / 1.15 / 1.30 /
+1.45×). L4 must not become a second Tide Vortex.
+
+Reach and damage use `/256` fixed-point, not floats. Reach
+multipliers **256 / 320 / 384 / 448** (1.00–1.75×) scale spike
+**lifetime frames**, not velocity, so faster shots cannot tunnel
+thin walls. Damage multipliers **256 / 294 / 333 / 371**
+(1.00–1.45×) via `(raw * mul + 128) >> 8`. L1 bypasses the scale so
+today's `p1 + ATK + 2` is bit-identical.
+
+| Lv | Reach | Damage vs L1 | Per-class residue / tell |
+| --- | --- | --- | --- |
+| L1 | 256 (current lifetime) | 256, exact `p1 + ATK + 2` | element pal on the 8 spikes only; weakness already applies; no extra cels, no new CC |
+| L2 | 320 | 294 | **Fire:** short visual burn motes. **Lightning:** spark flash, no chain hop. **Shadow:** brief dark slash trail, no CONFUSION/MUTE. **Ice:** up to 4 shards (cap), no STOP on the shards themselves. **Poison:** 2-frame visual puff, no POISON status. |
+| L3 | 384 | 333 | Fuller trail; guaranteed status and tile rules as in §10.2 (BURN / one chain / CONFUSION or MUTE / STOP + shatter / POISON). |
+| L4 | 448 | 371 | Fullest trail + chain / shatter / extra motes; still 8 lanes; still one Colossus chord; shard cap 8. |
+
+The 18 s ascended duration, 45 i-frames, MP dump, and 180 f
+`active_charge` stay **constant across levels** — this is a full
+meter spend either way. Do not award cap-cast XP for Convergence (it
+is a magic-meter dump, not a MAX).
+
+### 10.4 GBC palette and OAM budget
+
+- **OBJ palettes:** 8 slots, already busy (hero, enemies, items,
+  bullets). Convergence must not allocate a new slot. Use the magic
+  element pal already loaded for B spells in VRAM bank 1. Fire uses
+  slot 4, lightning slot 5, poison slot 7. **Shadow and ice always
+  use slot 4 or 5** (never pal 1; see §10.2) and restore the prior
+  palette when the last cel clears.
+- **Tiles:** prefer recoloring existing spike / magic tiles
+  (160–175 and the swing/spike set). New shard / spark tiles only if
+  a recolor is unreadable; if so, GPT Image 2 (`gpt-image-2.6-sunburst`)
+  only, quantized into the same 16-tile magic sheet, no raw 1024s in
+  the repo.
+- **OAM:** the 8 burst lanes already exist. Residues (burn motes,
+  shards, chain bolt, poison motes) multiplex inside the existing
+  magic / FX slot range — at most **4 extra cels** at L4, alternating
+  if a ward or MAX is also live. No 10-sprite line of horizontal
+  residues. Hits stay on the spike / shard AABB, not on a dropped
+  cosmetic.
+- **Banks / perf:** no new home-bank code (stay at 0x3D04). Pin any
+  new Convergence tables in **bank 31** (`magic.c`), not in
+  autobank 255, so they cannot pack into bank 8. The 18 s pose
+  already runs; do not add a per-frame entity walk.
+  `test_performance` floors 167 / 135 stay hard gates. Seed
+  Convergence tests at L1 for the shipped burst and at L4 for the
+  elemental residue.
+
+### 10.5 What not to change
+
+Oath Arts, the full-MP requirement, Mute sealing the chord, the
+Colossus convergence cap, pickup-weapon bypass, and A+B-wins over a
+B-hold stay as they are. Tide Vortex L4 is unchanged. Spell tap/hold
+input is unchanged.
+
+
+### Carbon review (2026-11-21, spell-levels pass)
+
+Verdict: **ship with nits** ($0.1261; running logged total $8.3402).
+Folded above: viewport-scaled Picsean radii 48 / 112 / 176 / 240;
+`/256` damage; Blizzard per-target lockout; Bramble single cursor +
+existing `br_mask` + wall stop; Cure visible L2 tell; no magic-cast
+XP; §9.4 tables authoritative; OAM / bank-8 / underflow clamps;
+first code PR pins unscaled classes to L4 clocks and seeds existing
+vortex tests at L4. A+B elemental Convergence (§10) had its own Carbon pass
+(2026-11-21, $0.0247; running logged total $8.3649): **ship with
+nits**, folded above (unconditional pal 4/5 for Corvin/Picsean,
+shard/chain caps + convergence inheritance, cosmetic motes, `/256`
+lifetime scaling, explicit L2 tells, tables pinned to bank 31).
+
