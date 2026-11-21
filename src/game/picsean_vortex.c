@@ -10,6 +10,7 @@
 #include "game/hexa_boss.h"
 #include "game/picsean_vortex.h"
 #include "game/will_maxfx.h"
+#include "game/will_levels.h"
 #include "game/cinder_big.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -44,6 +45,12 @@ u8 picsean_vortex_abort;
 
 static u8 vortex_carrier = 0xFF;
 static u8 vortex_damage;
+static u8 vortex_level;
+static u8 vortex_life;
+static u8 vortex_grow;
+static u8 vortex_heavy_cap;
+static u8 vortex_dmg_mul;
+
 static u8 vortex_rmax;
 // World-space eye, snapped in begin() so the spiral stays at the
 // cast point while Picsean swims away (Argon's Abyssal Maelstrom default).
@@ -273,8 +280,14 @@ static u8 carrier_ensure(void) {
 static void vortex_hit(u8 j, u8 dmg, i16 dx, i16 dy) {
     entity_t *c = &entities[vortex_carrier];
     entity_t *ej = &entities[j];
-    if (vortex_heavy(ej, j) && dmg > PICSEAN_VORTEX_HEAVY_CAP)
-        dmg = PICSEAN_VORTEX_HEAVY_CAP;
+    if (vortex_dmg_mul) {
+        dmg = (u8)(((u16)dmg * vortex_dmg_mul + 128) >> 8);
+        if (!dmg) dmg = 1;
+    }
+    {
+        u8 cap = vortex_heavy_cap ? vortex_heavy_cap : PICSEAN_VORTEX_HEAVY_CAP;
+        if (vortex_heavy(ej, j) && dmg > cap) dmg = cap;
+    }
     c->damage = dmg;
     c->hp = 200;
     // Impact FX are spawned at the carrier: put it on the body.
@@ -342,11 +355,14 @@ void picsean_vortex_begin(u8 damage) BANKED {
         ay = (i16)room_camera_y + ROOM_VIEW_H_PX - cy;
     r = vdist(ax, ay) + 12;
     vortex_rmax = (u8)(r > PICSEAN_VORTEX_MAX_R ? PICSEAN_VORTEX_MAX_R : r);
+    vortex_level = will_levels_art();
+    will_levels_vortex_setup(&vortex_rmax, &vortex_life, &vortex_grow,
+        &vortex_dmg_mul, &vortex_heavy_cap);
     vortex_wx = cx;
     vortex_wy = cy;
     set_sprite_data(SPR_FX_VORTEX_DROP, 4, vortex_tiles);
     palette_obj_load(2, tide_obj_palette);
-    picsean_vortex_ticks = PICSEAN_VORTEX_TICKS;
+    picsean_vortex_ticks = vortex_life;
     picsean_vortex_radius = PICSEAN_VORTEX_START_R;
     seg_n = 0;
     // A recast while the last vortex runs keeps its carrier (no orphan).
@@ -357,7 +373,7 @@ void picsean_vortex_begin(u8 damage) BANKED {
     // ordinary first-pip clock; will_fire_max refuses until ready_at.
     picsean_vortex_slow_charge = 1;
     picsean_vortex_ready_at = (u16)(loop_frame_counter
-        + PICSEAN_VORTEX_RECAST_FRAMES);
+        + will_levels_recast_frames());
 }
 
 // Screen-space clip helpers in 8-bit math (SDCC's 16-bit compares cost
@@ -544,12 +560,19 @@ void picsean_vortex_tick(void) BANKED {
         vortex_end();
         return;
     }
-    t = (u8)(PICSEAN_VORTEX_TICKS - picsean_vortex_ticks);
+    t = (u8)(vortex_life - picsean_vortex_ticks);
     picsean_vortex_ticks--;
-    if (t <= PICSEAN_VORTEX_GROW_TICKS)
+    if (t <= vortex_grow) {
+        /* Map t into the 0..72 ease table without 16-bit division
+           (that helper was blowing bank 18's 256-byte floor). */
+        u8 ei = t;
+        if (vortex_grow == 18) ei = (u8)(t << 2);
+        else if (vortex_grow == 36) ei = (u8)(t << 1);
+        else if (vortex_grow == 54) ei = (u8)(t + (t >> 1));
+        if (ei > PICSEAN_VORTEX_GROW_TICKS) ei = PICSEAN_VORTEX_GROW_TICKS;
         r = (u8)(PICSEAN_VORTEX_START_R + (u8)(((u16)(vortex_rmax
-            - PICSEAN_VORTEX_START_R) * vortex_ease[t]) >> 8));
-    else
+            - PICSEAN_VORTEX_START_R) * vortex_ease[ei]) >> 8));
+    } else
         r = vortex_rmax;
     picsean_vortex_radius = r;
     vortex_layout(t, r);
@@ -562,15 +585,15 @@ void picsean_vortex_tick(void) BANKED {
         set_sprite_data(SPR_FX_VORTEX_DROP, 4, vortex_tiles);
         vortex_flash(1, 0);
         sfx_play_weapon(PROJ_BUBBLE);
-    } else if (t == PICSEAN_VORTEX_GROW_TICKS) {
+    } else if (t == vortex_grow) {
         set_sprite_data(SPR_FX_VORTEX_DROP, 4, vortex_tiles);
         vortex_flash(1, 1);
         room_shake(3, 10);
     }
     // Crest voice: a surf crash under a three-note bubbling run (max-Will v2).
-    if (t == PICSEAN_VORTEX_GROW_TICKS || t == PICSEAN_VORTEX_GROW_TICKS + 3
-        || t == PICSEAN_VORTEX_GROW_TICKS + 6)
-        will_maxfx_surf((u8)(t - PICSEAN_VORTEX_GROW_TICKS));
+    if (t == vortex_grow || t == (u8)(vortex_grow + 3)
+        || t == (u8)(vortex_grow + 6))
+        will_maxfx_surf((u8)(t - vortex_grow));
 
     if (!carrier_ensure()) {
         // Full table: try again next tick; nothing is marked as hit.
@@ -594,6 +617,7 @@ void picsean_vortex_tick(void) BANKED {
         u8 bit, byte, flags = e->flags;
         if (!(flags & EF_ACTIVE) || i == vortex_carrier) continue;
         if (e->type == ENT_PROJECTILE) {
+            if (vortex_level < 4) continue; /* L4 only keeps the shot wash */
             if (flags & EF_PLAYER_PROJ) continue;
             // The Reaper's warned scythe keeps its own contract.
             if (e->ai_data[6] == PROJ_AUX_MORTAL_SCYTHE) continue;

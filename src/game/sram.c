@@ -16,6 +16,7 @@
 #include "game/sram.h"
 #include "game/status.h"
 #include "game/will.h"
+#include "game/will_levels.h"
 
 #define SRAM_BASE     ((volatile u8 *)0xA000)
 #define SAVE_VERSION  1
@@ -44,6 +45,7 @@
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection
 #define PRE_WAYGEAR_PL_SIZE 44 // Pack layout before permanent traversal gear
 #define PRE_CURSE_PL_SIZE 46 // Waygear layout before appended run curses
+#define PRE_TIER_PL_SIZE 48 // layout before appended max-Will cap/XP
 
 void sram_migrate_run(u8 saved_rs) BANKED;
 
@@ -116,7 +118,7 @@ u8 sram_load_run(void) BANKED {
     // run resumes cleanly rather than inheriting stale WRAM from the title.
     status_reset_all();
     will_charge_fraction = 0;
-    if (saved_pl <= 48) {
+    if (saved_pl <= PRE_TIER_PL_SIZE) {
         if (player.will_charge >= 180) {
             player.will_level = 1;
             player.will_charge = 0;
@@ -126,6 +128,11 @@ u8 sram_load_run(void) BANKED {
         player.will_level = WILL_LEVEL_CAP;
     if (player.will_level >= WILL_LEVEL_CAP) player.will_charge = WILL_MAX;
     else if (player.will_charge >= WILL_NEXT_MAX) player.will_charge = 0;
+    if (saved_pl <= PRE_TIER_PL_SIZE) {
+        player.maxwill_level = 1;
+        player.maxwill_xp = 0;
+    }
+    will_levels_on_load();
     projectile_sync_player_relics();
     return 1;
 }

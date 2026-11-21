@@ -18,6 +18,7 @@
 #include "game/status.h"
 #include "game/will.h"
 #include "game/will_maxfx.h"
+#include "game/will_levels.h"
 #include "render/large_boss.h"
 #include "render/palette.h"
 #include "render/tiles.h"
@@ -210,7 +211,7 @@ u8 will_maxfx_locked(void) BANKED {
 void will_maxfx_arm_lock(void) BANKED {
     picsean_vortex_slow_charge = 1;
     picsean_vortex_ready_at = (u16)(loop_frame_counter
-        + PICSEAN_VORTEX_RECAST_FRAMES);
+        + will_levels_recast_frames());
 }
 
 static u16 vdist(i16 dx, i16 dy) {

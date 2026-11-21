@@ -9,6 +9,8 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/will.h"
+#include "game/will_levels.h"
+#include "game/will_maxfx.h"
 #include "render/hud.h"
 #include "game/powerup.h"
 #include "render/palette.h"
@@ -408,6 +410,7 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     if (lane_palette == 5 && full == will_full_palette
         && segs == will_cached_segs) return;
     if (lane_palette != 5) hud_set_lane_palette(5);
+    if (will_maxfx_locked()) full = 0; /* dim / locked cue while recast holds */
     if (full != will_full_palette) {
         palette_bg_load(5,
             full ? hud_palette_will_full : hud_palette_will);
@@ -419,6 +422,8 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
         row[i + 1] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
+    /* Mastery pips are not redrawn on every Will-bar tick: that was a
+       bank-25 far call each segment. hud_redraw_all and cap-up cover it. */
 }
 
 void hud_low_hp_pulse(u8 phase) BANKED {
@@ -445,4 +450,5 @@ void hud_redraw_all(void) BANKED {
     hud_redraw_coins();
     hud_redraw_depth();
     hud_redraw_boss(0, 0);   // hidden until a boss is polled alive
+    will_levels_hud_pips();
 }

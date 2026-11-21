@@ -40,6 +40,7 @@
 #define PRE_WAYGEAR_PL_SIZE 44
 #define PRE_CURSE_PL_SIZE 46
 #define PRE_TIER_PL_SIZE 48
+#define PRE_MAXWILL_PL_SIZE 48
 
 static void sram_write_open(void) {
     /* VBlank must not run while cart RAM is unlocked: the ISR clobbers
@@ -81,6 +82,7 @@ u8 sram_run_valid(void) BANKED {
             || SRAM_BASE[3] == PRE_SIGIL_RS_SIZE
             || SRAM_BASE[3] == LEGACY_RS_SIZE)
         && (SRAM_BASE[4] == (u8)sizeof(player_state_t)
+            || SRAM_BASE[4] == PRE_MAXWILL_PL_SIZE
             || SRAM_BASE[4] == PRE_TIER_PL_SIZE
             || SRAM_BASE[4] == PRE_CURSE_PL_SIZE
             || SRAM_BASE[4] == PRE_WAYGEAR_PL_SIZE

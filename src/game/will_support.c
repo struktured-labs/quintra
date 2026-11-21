@@ -6,10 +6,13 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/will.h"
+#include "game/will_levels.h"
 #include "game/magic.h"
 #include "render/tiles.h"
 #include "audio/sfx.h"
 #include "game/status.h"
+
+u8 will_levels_picsean_drain(void) BANKED;
 
 u8 will_charge_fraction;
 
@@ -24,9 +27,16 @@ void will_charge_tick(void) BANKED {
     // adds one, up to the SPD cap.
     if (speed > PLAYER_SPD_MAX) speed = PLAYER_SPD_MAX;
     will_charge_fraction += (u8)(16 + speed);
-    if (will_charge_fraction < 40) return;
-    will_charge_fraction -= 40;
-    if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
+    /* Non-Picsean classes keep the shipped L4 spend and the original
+       compare/subtract path. Picsean drain lives in bank 25 so this
+       bank stays under the 256-byte floor. */
+    if (player.class_id != 3) {
+        if (will_charge_fraction < 40) return;
+        will_charge_fraction -= 40;
+        if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
+        return;
+    }
+    if (will_levels_picsean_drain()) will_bank_charge();
 }
 
 void will_bank_charge(void) BANKED {

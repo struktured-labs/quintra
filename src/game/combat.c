@@ -24,6 +24,7 @@ u8 large_boss_contact(const entity_t *boss) BANKED;
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/will_levels.h"
 #include "game/status.h"
 #include "game/waygear.h"
 #include "game/will.h"
@@ -129,6 +130,14 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
             score_add(pts);
         }
         run_state_record_enemy_kill();
+        {
+            u8 mk = 0;
+            if (j == large_boss_index || (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]))
+                mk = 2;
+            else if (entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE))
+                mk = 1;
+            will_levels_on_kill(mk);
+        }
         if (eid == ENEMY_STAGE_REAPER)
             run_state.dungeon_puzzles |= RUN_REAPER_CLEARED_BIT;
         // Vampiric Sigil (item id 29): slow dungeon sustain.

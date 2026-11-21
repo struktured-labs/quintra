@@ -39,15 +39,28 @@ def loop_frames(pb):
 
 
 def boot_room():
+    from quintra_vignettes import mute_after_class_select
+    from test_will_max import reach_title, press, SCREEN
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240)
-    pb.button("start")
+    reach_title(pb)
     pb.tick(30)
-    pb.button("a")
+    press(pb, "start")
+    for _ in range(200):
+        if pb.memory[SCREEN] == 2:
+            break
+        pb.tick()
+    pb.tick(30)
+    press(pb, "a")  # Wolfkin, first class
+    mute_after_class_select(pb, ROM, settle=8)
+    from test_will_max import wait_room
+    wait_room(pb)
+    for btn in ("a", "b", "start", "select", "right", "left", "up", "down"):
+        pb.button_release(btn)
     pb.tick(90)
     assert pb.memory[0xFF4D] & 0x80, "cartridge never entered CGB double-speed mode"
     pb.memory[PL + 1] = pb.memory[PL + 2] = 240
     return pb
+
 
 
 def make_fixed_crawlers(pb):
@@ -72,6 +85,9 @@ def make_fixed_crawlers(pb):
 
 def main():
     pb = boot_room()
+    # Opening packs need a beat after foyer entry before the mixed-AI
+    # cost settles; measuring immediately can miss the 18-body floor by 1.
+    pb.tick(60)
 
     before = loop_frames(pb)
     pb.tick(180)
