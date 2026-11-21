@@ -125,6 +125,7 @@ void cd_restore(void) BANKED {
     cd_jst = CD_J_GUARD;
     room_freeze_beats = 0;
     puzzle_keep_on = 1;
+    puzzle_keep_y1 = (u8)((CD_Y0 + CD_H) * 8);
     cd_on = 0xFF;                   // nothing fires until stepped on afresh
     cd_dirty = 0;
     if (cd_live) {

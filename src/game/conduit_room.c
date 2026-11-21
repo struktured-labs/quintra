@@ -211,9 +211,9 @@ static void pads_step(void) {
     if (edge(foot_on(CD_SPAWN_X, CD_SPAWN_Y), ON_SPAWN) && !cd_armed) {
         cd_armed = 1;
         cd_dirty = 1;
-        // The pack needs to move inside the pocket: keep-out lifts while it
-        // lives (cd_guard still evicts anything else).
-        puzzle_keep_on = 0;
+        // The pack must move in the lower hall: while it lives the keep-out
+        // box shrinks to rows 0..7 (cd_guard still evicts anything else).
+        puzzle_keep_y1 = (u8)((CD_Y0 + 8) * 8);   // lower hall opens to the pack only
         if (cd_pack_id != 0xFF) {
             cd_pack[0] = enemy_spawn(cd_pack_id, CD_WX(7), CD_WY(9));
             cd_pack[1] = enemy_spawn(cd_pack_id, CD_WX(9), CD_WY(9));
@@ -242,7 +242,7 @@ static void guard_step(void) {
     for (i = 0; i < 2; ++i)
         if (cd_pack[i] != 0xFF && (!(entities[cd_pack[i]].flags & EF_ACTIVE)
                 || entities[cd_pack[i]].type != ENT_ENEMY)) cd_pack[i] = 0xFF;
-    if (cd_pack[0] == 0xFF && cd_pack[1] == 0xFF) puzzle_keep_on = 1;
+    if (cd_pack[0] == 0xFF && cd_pack[1] == 0xFF) puzzle_keep_y1 = (u8)((CD_Y0 + CD_H) * 8);
     for (i = 0; i < MAX_ENTITIES; ++i) {
         e = &entities[i];
         if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY

@@ -47,7 +47,7 @@ A 12x18 pocket in one large room of **stage 5** (dungeon index 5), chosen by
   awake one, kills pack monsters, and shoves the hero out of the lane (no
   damage, 20 iframes).
 * **Spawn plate** in the gap releases two of an ordinary enemy already in the
-  room (keep-out lifts while they live); the **teleport pad** jumps to the
+  room (while they live the keep-out box shrinks to the upper pocket, so they roam only the lower hall); the **teleport pad** jumps to the
   hall landing past the plate.
 * **Reset**: Pack RESET ROOM (anywhere, incl. pinned or shut in the wing),
   the reset plate, and walking out all restore everything.
@@ -61,6 +61,6 @@ A 12x18 pocket in one large room of **stage 5** (dungeon index 5), chosen by
 * Jagger shoves instead of damaging; freeze alone can slip past it (lure it
   aside, freeze, walk round), the stone gives the permanent removal.
 * No off-camera cue for the side door (it is always on screen with the wing).
-* Pack keep-out lifts while the pack lives; doors relock after solve on reset.
+* Doors relock after solve on reset (the goal stays pressed).
 * Deferred to **M5b**: rewrite switches A/B, the Kite chain, the Heart
   two-door choice.
