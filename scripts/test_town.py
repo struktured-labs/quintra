@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pyboy import PyBoy
 from quintra_topology import (
+from quintra_class_select import downs_to_class
     STAGE_BOSS_ROOM, STAGE_START, VILLAGE_ROOM, dungeon_direction,
     dungeon_entry_prefix_mask, dungeon_entry_room, dungeon_predecessor,
     dungeon_size,
@@ -123,7 +124,8 @@ def main():
 
     tick(240)
     pb.button("start"); tick(30)
-    pb.button("down"); tick(8)  # Sauran
+    for _ in range(downs_to_class(1)):  # Sauran
+        pb.button("down"); tick(8)
     pb.button("a"); tick(60)
     assert pb.memory[screen] == 5 and pb.memory[pl] == 1
 

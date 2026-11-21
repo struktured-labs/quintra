@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,8 +33,8 @@ def main() -> None:
 
     tick(240)
     pb.button("start"); tick(30)
-    pb.button("down"); tick(8)
-    pb.button("down"); tick(8)  # Corvin
+    for _ in range(downs_to_class(2)):  # Corvin
+        pb.button("down"); tick(8)
     pb.button("a"); tick(90)
     assert pb.memory[screen] == SCREEN_ROOM and pb.memory[player] == 2, \
         "could not enter a Corvin room"

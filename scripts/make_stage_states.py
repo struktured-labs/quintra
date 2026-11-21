@@ -24,6 +24,7 @@ from quintra_topology import (
     dungeon_predecessor, dungeon_size,
 )
 from quintra_vignettes import mute_vignettes
+from quintra_class_select import downs_to_class
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -639,7 +640,7 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     pyboy.tick(240)
     pyboy.button("start")
     pyboy.tick(30)
-    for _ in range(class_id):
+    for _ in range(downs_to_class(class_id)):
         pyboy.button("down")
         pyboy.tick(8)
     if difficulty == "easy":

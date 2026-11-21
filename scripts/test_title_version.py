@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_class_select import downs_to_class
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom" / "working" / "quintra.gbc"
@@ -133,14 +134,14 @@ def main():
         )
 
     # The selector uses gold labels, a compact stat row, and blank separators
-    # at rows 13 and 15. Pin Wolfkin's complete initial page, including the
-    # two-space ROLE alignment and the 20-column stat line.
+    # at rows 13 and 15. Pin Picsean's complete initial page (default cursor),
+    # including the two-space ROLE alignment and the 20-column stat line.
     class_rows = {
-        9: "ROLE  BLADE FIGHTER",
-        10: "A STAB SLASH DASH",
-        11: "B 8 SHOTS BRIEF WARD",
-        12: "TRAIT FAST MOVEMENT",
-        14: "HP14 MP4 AT2 DF1 SP5",
+        9: "ROLE  MAGIC CASTER",
+        10: "A PIERCING BUBBLE",
+        11: "B STEER ICE   CURE",
+        12: "TRAIT FAST MP REGEN",
+        14: "HP14MP10 AT1 DF1 SP4",
         16: "NORMAL  SEL FOR EASY",
         17: " A CHOOSE   B BACK",
     }
@@ -169,8 +170,8 @@ def main():
                               0x9800 + row * 32 + start + width])
     title_attrs = attrs(1, 2, 16)
     assert title_attrs == [1] * 16, f"title not gold: {title_attrs}"
-    name_attrs = attrs(3, 4, 7)
-    assert name_attrs == [2] * 7, f"Wolfkin name not accent: {name_attrs}"
+    name_attrs = attrs(6, 4, 7)
+    assert name_attrs == [2] * 7, f"Picsean name not accent: {name_attrs}"
     assert attrs(9, 0, 4) == [1] * 4, "ROLE label not gold"
     assert attrs(9, 6, 13) == [2] * 13, "role value not accent"
     assert attrs(10, 0, 1) == [1] and attrs(11, 0, 1) == [1]
@@ -178,7 +179,7 @@ def main():
     # HP/MP/AT/DF/SP letters gold, digits and spaces body white.
     stat = attrs(14, 0, 20)
     expected_stat = []
-    for ch in "HP14 MP4 AT2 DF1 SP5":
+    for ch in "HP14MP10 AT1 DF1 SP4":
         expected_stat.append(1 if "A" <= ch <= "Z" else 0)
     assert stat == expected_stat, f"stat attributes drifted: {stat}"
     assert attrs(16, 8, 12) == [3] * 12, "SEL FOR EASY not lavender"
@@ -193,39 +194,45 @@ def main():
         {
             9: "ROLE  BLADE FIGHTER",
             10: "A STAB SLASH DASH",
-            11: "B 8 SHOTS BRIEF WARD",
+            11: "B HOMING FIRE   WARD",
             12: "TRAIT FAST MOVEMENT",
             14: "HP14 MP4 AT2 DF1 SP5",
         },
         {
             9: "ROLE  ARMORED TANK",
             10: "A HEAVY TAIL STRIKE",
-            11: "B BLOCKS ALL HITS",
+            11: "B THUNDER   SHIELD",
             12: "TRAIT HEALTH REGEN",
             14: "HP16 MP3 AT2 DF2 SP4",
         },
         {
             9: "ROLE  RANGED HUNTER",
             10: "A RETURNING FEATHER",
-            11: "B MARK RAVEN DIVES",
+            11: "B HEX   SHADOW VEIL",
             12: "TRAIT SHOW ENEMY HP",
             14: "HP14 MP8 AT2 DF1 SP4",
         },
         {
             9: "ROLE  MAGIC CASTER",
             10: "A PIERCING BUBBLE",
-            11: "B 3 BUBBLES AND WARD",
+            11: "B STEER ICE   CURE",
             12: "TRAIT FAST MP REGEN",
             14: "HP14MP10 AT1 DF1 SP4",
         },
         {
             9: "ROLE  FAST STRIKER",
             10: "A FAST STINGER",
-            11: "B ROTATING STINGERS",
+            11: "B BRAMBLE   MIRROR",
             12: "TRAIT ELEMENT POWER",
             14: "HP13 MP5 AT4 DF1 SP6",
         },
     ]
+    # Cursor starts on Picsean; walk to Wolfkin so pages are
+    # asserted in class-id order, then one wrap returns to Wolfkin.
+    for _ in range(downs_to_class(0)):
+        pb.button("down")
+        pb.tick(8)
+
     for hero, page in enumerate(hero_pages):
         if hero:
             pb.button("down")

@@ -59,9 +59,10 @@ def main():
 
         # Hero choice uses one plain-language line per concept rather than an
         # abbreviation wall or repeated A/B labels.
-        row(pb, 9, 0, "ROLE  BLADE FIGHTER")
-        row(pb, 10, 0, "A STAB SLASH DASH")
-        row(pb, 12, 0, "TRAIT FAST MOVEMENT")
+        # Default cursor is Picsean; IDs are unchanged.
+        row(pb, 9, 0, "ROLE  MAGIC CASTER")
+        row(pb, 10, 0, "A PIERCING BUBBLE")
+        row(pb, 12, 0, "TRAIT FAST MP REGEN")
         (ROOT / "tmp").mkdir(exist_ok=True)
         pb.screen.image.save(ROOT / "tmp" / "quest-controls.png")
 

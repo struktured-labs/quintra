@@ -51,7 +51,7 @@ def boot():
     pb.button("start")
     for _ in range(30):
         pb.tick()
-    pb.button("a")  # Wolfkin; dash movement is shared by all champions.
+    pb.button("a")  # Default champion (Picsean); dash movement is shared by all.
     for _ in range(120):
         pb.tick()
     assert pb.memory[SCREEN] == 5, "fixture did not enter gameplay"

@@ -51,6 +51,7 @@ if __name__ == "__main__" and sys.argv[1:2] == ["--emit"]:
     sys.exit(0)
 from pyboy import PyBoy
 from PIL import Image
+from quintra_class_select import downs_to_class
 rom, cls, seed, out = sys.argv[1], int(sys.argv[2]), int(sys.argv[3], 0), sys.argv[4]
 N = int(sys.argv[5]) if len(sys.argv) > 5 else 1200
 WARP = int(sys.argv[6]) if len(sys.argv) > 6 else 0xFF
@@ -71,7 +72,7 @@ def tap(b, n=4):
 tick(1)
 while m[SCR] != 1: tick()
 tick(30); tap("start"); tick(40)
-for _ in range(cls): tap("down"); tick(10)
+for _ in range(downs_to_class(cls)): tap("down"); tick(10)
 v = (seed - 1) & 0xFFFF
 m[CNT] = v & 0xFF; m[CNT + 1] = v >> 8
 m[sym("_title_stage_warp")] = WARP
