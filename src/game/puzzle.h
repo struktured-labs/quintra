@@ -22,6 +22,8 @@ enum {
     PUZZLE_KITE_ROOM,
     // M4 Lockmire Ferry (lock_room.c): optional, never sealed.
     PUZZLE_LOCK_ROOM,
+    // M5a Ember Conduit (conduit_room.c): optional, never sealed.
+    PUZZLE_CONDUIT_ROOM,
 };
 
 enum {

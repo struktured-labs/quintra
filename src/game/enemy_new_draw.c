@@ -18,6 +18,7 @@
 #include "game/kite_room.h"
 #include "render/kite_art.h"
 #include "game/lock_room.h"
+#include "game/conduit_room.h"
 #include "render/rewrite_art.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -261,7 +262,7 @@ void nm_extras_draw(void) BANKED {
     if (rime_live) need += RIME_XO_NEED;
     if (rw_live) need += RW_XO_NEED;
     if (kt_live) need += KT_XO_NEED;
-    if (lk_live) need += LK_XO_NEED;
+    if (lk_live || cd_live) need += LK_XO_NEED;
     if (!need) { xo_park(4); return; }
     xo_begin(need > 31 ? 31 : need);
     /* Two overlapping blasts share the burst by alternating frames. */
@@ -284,7 +285,7 @@ void nm_extras_draw(void) BANKED {
     if (rime_live) rime_draw();
     if (rw_live) rw_draw();
     if (kt_live) kt_draw();
-    if (lk_live) lk_draw();
+    if (lk_live || cd_live) lk_draw();
     {
         u8 end = xo;
         xo_park(end);

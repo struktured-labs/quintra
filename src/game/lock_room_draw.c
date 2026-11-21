@@ -10,6 +10,7 @@
 #include "game/entity.h"
 #include "game/enemy_new_ai.h"
 #include "game/lock_room.h"
+#include "game/conduit_room.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
@@ -100,6 +101,7 @@ static void sq(u8 x, u8 y, u8 t, u8 p) {
 }
 void lk_sprites(void) BANKED {
     u8 k, n = 0, i = 0, x, y;
+    if (cd_live) { cd_sprites(); return; }
     lk_spr_n = 0;
     sq(lk_jx, lk_jy, (lk_jst == LK_J_SEEK && ((entity_anim_counter >> 3) & 1))
         ? LK_TILE_JAGGER_WALK : LK_TILE_JAGGER, 0 | 0x08);
