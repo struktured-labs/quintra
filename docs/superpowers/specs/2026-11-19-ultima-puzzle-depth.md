@@ -175,7 +175,7 @@ Everything from the verbal dump, and where it lives in this spec:
 | Matching keys (heart, star, moon, …) | §6.7 | One of each type; a Heart opens only one of two Heart doors |
 | Cheese-like lure | §6.8, M3 or M4 | Drop, cannot pick up, reset returns it |
 | Flip-conveyors | §6.9, M4 | Same rewrite table; both directions previewed |
-| One room vs scattered across a dungeon | §4 | Open. Recommend isolated floor first. |
+| One room vs scattered across a dungeon | §4 | **Decided:** self-contained per floor (2026-11-21). |
 | Iterations in the game, not only a spec | §7 | M1 teach in dungeon N−1; M5 combines in dungeon N |
 
 ## 2. Engine inventory (checked against `origin/main`)
@@ -349,10 +349,29 @@ advice.
     at a time, and a Heart key opens only one of two Heart doors
     (§6.7).
 
-## 4. Open question: one big room, or a puzzle scattered across a dungeon?
+## 4. Decision: each puzzle floor is self-contained
 
-Carmelo asked and did not decide. This section lays out the trade and
-a recommendation. It is not a decision.
+**Decided by Carmelo (2026-11-21): self-contained per floor.** Every
+puzzle room or floor owns all of its state. There are no cross-room or
+cross-floor state dependencies: no switch, key, phase bit, or rewrite in
+one room may change, gate, or be required by another room or floor. The
+only thing that leaves a puzzle floor is its reward (and its own
+`dungeon_puzzles` solved bit, which never gates anything else).
+
+Consequences, now rules:
+
+- State is WRAM-only and rebuilt from the seed on entry; 0 SRAM per floor
+  beyond the existing solved bit.
+- Reset (Pack "Reset room" + entrance plate) is always floor-local and
+  restores the whole machine; a softlock can never span rooms.
+- Keys, charges, and tool-beasts are floor-local and never leave the
+  floor; walking out drops them.
+- The Law Lock / Deep Phase dungeon-wide machines stay separate and
+  never interact with a puzzle floor's state.
+- The "scattered across a dungeon" and hybrid options are **rejected**
+  for this spec. The table below is kept for history.
+
+The original trade study, kept for history:
 
 | | One isolated floor / large room | Scattered across the dungeon's rooms |
 |---|---|---|
@@ -363,16 +382,8 @@ a recommendation. It is not a decision.
 | Production | One fixture, one solver, one GIF. Right for a vertical slice. | More rooms, more validation, easy to ship shallow again if we only sprinkle switches. |
 | Risk | A 31×31 authored floor is a lot of on-screen work, but we already scroll those rooms. | We already have dungeon-wide Law Lock. A second dungeon-wide machine can collide with it. |
 
-**Recommendation, not a decision:** ship the vertical slice as **one
-isolated wide floor** (with at most a tiny anteroom). That matches
-Runes of Virtue, keeps SRAM at zero, and is the honest test of depth.
-If the floor feels as good as Carmelo remembers, a later pass can
-scatter the same verbs across a dungeon, using the Law Lock validator
-as the template.
-
-A hybrid is also on the table: the showcase stays one floor, and a
-later dungeon uses a single two-state material law plus one invincible
-roamer in the halls. That is still not a decision.
+**Resolved:** one self-contained floor (or tiny optional room) per
+puzzle, as recommended. No scattered or hybrid machine.
 
 ## 5. Vertical slice — Ember Conduit (original, not a port)
 
@@ -878,9 +889,9 @@ Shared across M1–M5:
 
 ## 9. Questions for Carmelo
 
-1. **The open question in §4.** One isolated floor, scattered across
-   a dungeon, or the hybrid? The recommendation is "isolated floor
-   first."
+1. ~~**The open question in §4.**~~ **Resolved 2026-11-21:** each
+   puzzle floor is self-contained — no cross-room or cross-floor state
+   (see §4).
 2. **Required-route contract.** May a mandatory room demand freeze,
    or must freeze always sit on that floor (or stay in optional /
    tool-reward rooms)?
