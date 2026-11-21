@@ -64,4 +64,12 @@ void rime_art_load(void) BANKED;
 void rime_pack_draw(u8 pipes) BANKED;
 u8 rime_pack_a(u8 pipes) BANKED;
 
+// Shared by every optional puzzle pocket (M1 rime_room, M2 rewrite_room).
+extern u8 puzzle_keep_on;       // ordinary enemies stay out of the pocket
+extern u8 puzzle_keep_x0, puzzle_keep_y0, puzzle_keep_y1;   // entity-centre px box
+extern u8 puzzle_pack_n;        // extra Pack TOOL entries after the 4 tools
+void puzzle_pack_draw(u8 idx) BANKED;
+u8 puzzle_pack_a(u8 idx) BANKED;
+void puzzle_pack_apply(u8 idx) BANKED;
+
 #endif

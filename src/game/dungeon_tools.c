@@ -42,7 +42,7 @@ u8 selected_tool;  // global so headless tests can read Pack focus
 static u8 pending_tool = 0xFF;
 
 static u8 tool_total(void) {
-    return rime_live ? 6 : TOOL_COUNT;
+    return (u8)(TOOL_COUNT + puzzle_pack_n);
 }
 
 static u8 tool_count(u8 id) {
@@ -71,8 +71,8 @@ void dungeon_tools_draw_pack(void) BANKED {
     // Labelled as a TOOL (consumable, A uses it here) so it is not read as
     // the QUEST goal above it or the B-button kit chosen with SELECT.
     if (selected_tool >= tool_total()) selected_tool = 0;
-    if (selected_tool >= TOOL_PIPES) {
-        rime_pack_draw(selected_tool == TOOL_PIPES);
+    if (selected_tool >= TOOL_COUNT) {
+        puzzle_pack_draw((u8)(selected_tool - TOOL_COUNT));
         return;
     }
     text_write("TOOL ");
@@ -106,8 +106,8 @@ u8 dungeon_tools_pack_input(u8 pressed) BANKED {
     if (selected_tool >= tool_total()) selected_tool = 0;
     // Pack input never depends on the hero being able to move: RESET ROOM
     // works while boxed in or pinned (spec: no softlocks, ever).
-    if (selected_tool >= TOOL_PIPES) {
-        i = rime_pack_a(selected_tool == TOOL_PIPES);
+    if (selected_tool >= TOOL_COUNT) {
+        i = puzzle_pack_a((u8)(selected_tool - TOOL_COUNT));
         if (i == 2) pending_tool = selected_tool;
         return i;
     }
@@ -219,7 +219,6 @@ void dungeon_tools_apply_pending(void) BANKED {
     if (tool == 0) tool_bomb();
     else if (tool == 1) tool_chime();
     else if (tool == TOOL_ANTIDOTE) antidote_cure();
-    else if (tool == TOOL_PIPES) rime_use_pipes();
-    else if (tool == TOOL_RESET) rime_reset();
+    else if (tool >= TOOL_COUNT) puzzle_pack_apply((u8)(tool - TOOL_COUNT));
     else tool_mirror();
 }

@@ -22,11 +22,13 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
+#include "game/rewrite_room.h"
 #include "game/rime_room.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/secret_merchant.h"
 #include "render/hud.h"
+#include "render/rewrite_art.h"
 #include "render/rime_art.h"
 #include "render/text.h"
 #include "render/tiles.h"
@@ -42,6 +44,9 @@ u8 room_freeze_beats;
 u8 rime_jx, rime_jy;
 u8 rime_jagger_hold;
 u8 rime_resets;
+u8 puzzle_keep_on;
+u8 puzzle_keep_x0, puzzle_keep_y0, puzzle_keep_y1;
+u8 puzzle_pack_n;
 static u8 rime_frame;
 static u8 rime_art_ok;
 static u8 rime_on_plate;
@@ -103,7 +108,9 @@ static u8 landmark(u8 c) {
 // rime_cell() in scripts/quintra_topology.py.
 u8 rime_pick_cell(void) BANKED {
     u8 size, entry, cache, host, c;
-    if (run_state.world_mode || run_state.bosses_beaten != RIME_STAGE)
+    // M1 (Verdant Hollow) and M2 (Ember Depths) share the pick rule.
+    if (run_state.world_mode || (run_state.bosses_beaten != RIME_STAGE
+            && run_state.bosses_beaten != RW_STAGE))
         return 0xFF;
     mission_graph_ensure();
     size = run_state_dungeon_size();
@@ -210,6 +217,11 @@ u8 rime_prepare(void) BANKED {
     rime_inside = 0;
     rime_safe_x = player.x;
     rime_safe_y = player.y;
+    puzzle_keep_x0 = (u8)RIME_KEEP_X0;
+    puzzle_keep_y0 = (u8)RIME_KEEP_Y0;
+    puzzle_keep_y1 = (u8)RIME_KEEP_Y1;
+    puzzle_keep_on = 1;
+    puzzle_pack_n = 2;
     rime_live = 1;
     new_monsters_in_room = 1;
     return 1;
@@ -377,7 +389,8 @@ void rime_pack_draw(u8 pipes) BANKED {
         text_write("TOOL PIPES x");
         text_u16(rime_charge);
     } else text_write("TOOL RESET ROOM");
-    set_sprite_tile(8, pipes ? RIME_TILE_PIP : RIME_TILE_GLYPH);
+    set_sprite_tile(8, pipes ? RIME_TILE_PIP
+        : rw_live ? RW_TILE_PLATE : RIME_TILE_GLYPH);
     set_sprite_prop(8, pipes ? (3 | 0x08) : (5 | 0x08));
     move_sprite(8, 16, 135);
 }
@@ -389,4 +402,20 @@ u8 rime_pack_a(u8 pipes) BANKED {
     }
     sfx_play(SFX_CLEAR);
     return 2;
+}
+
+// Pack TOOL entries past the four physical tools. M1: PIPES, RESET ROOM.
+// M2: RESET ROOM.
+void puzzle_pack_draw(u8 idx) BANKED {
+    rime_pack_draw((!rw_live && idx == 0) ? 1 : 0);
+}
+
+u8 puzzle_pack_a(u8 idx) BANKED {
+    return rime_pack_a((!rw_live && idx == 0) ? 1 : 0);
+}
+
+void puzzle_pack_apply(u8 idx) BANKED {
+    if (rw_live) rw_reset();
+    else if (idx == 0) rime_use_pipes();
+    else rime_reset();
 }

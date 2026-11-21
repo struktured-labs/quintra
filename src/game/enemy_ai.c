@@ -71,10 +71,10 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 ext_x = ((e->hitbox >> 4) >= 10) ? 14 : 6;
     i16 ext_y = ((e->hitbox & 0x0F) >= 10) ? 14 : 6;
     if (nx < 8 || ny < 8) return 0;
-    // M1 Rime chamber: ordinary enemies never wander in (one lesson only,
+    // Puzzle pockets (M1/M2): ordinary enemies never wander in (one lesson only,
     // and nothing that moves may rest on the entrance or reset path).
-    if (rime_live && nx + 8 >= RIME_KEEP_X0
-        && ny + 8 >= RIME_KEEP_Y0 && ny + 8 < RIME_KEEP_Y1) return 0;
+    if (puzzle_keep_on && nx + 8 >= (i16)puzzle_keep_x0
+        && ny + 8 >= (i16)puzzle_keep_y0 && ny + 8 < (i16)puzzle_keep_y1) return 0;
     if (nx + (ground ? 15 : ext_x) >= (i16)room_world_width
         || ny + (ground ? 15 : ext_y) >= (i16)room_world_height) return 0;
     if (ground) {

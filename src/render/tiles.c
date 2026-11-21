@@ -422,7 +422,10 @@ static const u8 bgt_gate_tiles[5][16] = {
      0xDB,0xDB, 0xDB,0xDB, 0xDB,0xDB, 0xDB,0xDB},
 };
 
+u8 tiles_bg_epoch;   // bumped per dungeon BG load (puzzle pockets re-dress)
+
 void tiles_load_dungeon_bg(void) BANKED {
+    tiles_bg_epoch++;
     // Authored dungeon tileset (slot 0 = void/black; the rest overwrite the
     // former flat placeholders).
     set_bkg_data(BGT_VOID,    1, bg_tile_void);
