@@ -390,8 +390,11 @@ def settle(r):
 
 def down_to_ante(r):
     r.wy(fy(13))                                  # across the lane (belt drags west)
-    r.wx(GAP)
-    r.wy(ANTE_Y)
+    for _ in range(3):                            # monsters or the belt can nudge a pixel
+        r.wx(GAP)
+        r.wy(ANTE_Y)
+        if r.pos() == (GAP, ANTE_Y):
+            break
     assert r.pos()[1] == ANTE_Y, f"gate blocked the way down {r.pos()}"
 
 
@@ -519,7 +522,19 @@ def main():
     setup_run(r)
     flip(r)                                       # Jagger idle: belt flips, it stays
     assert r.m(JST) == J_IDLE
+    # Off the west-running belt and up through the Star door: steer x while
+    # climbing (the belt can leave a plain walk a pixel short of the gap).
     r.wx(GAP)
+    for _ in range(200):
+        x, y = r.pos()
+        if y <= fy(4):
+            break
+        btns = ['up'] + (['right'] if x < GAP else ['left'] if x > GAP else [])
+        for b in btns:
+            r.pb.button_press(b)
+        r.tick()
+        for b in btns:
+            r.pb.button_release(b)
     r.wy(fy(4))
     r.wx(fx(4))
     r.wy(fy(1))
