@@ -20,6 +20,8 @@ enum {
     PUZZLE_REWRITE_ROOM,
     // M3 Kite Kennel (kite_room.c): optional, never sealed.
     PUZZLE_KITE_ROOM,
+    // M4 Lockmire Ferry (lock_room.c): optional, never sealed.
+    PUZZLE_LOCK_ROOM,
 };
 
 enum {

@@ -17,6 +17,7 @@
 #include "game/rewrite_room.h"
 #include "game/kite_room.h"
 #include "render/kite_art.h"
+#include "game/lock_room.h"
 #include "render/rewrite_art.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -146,6 +147,17 @@ static void rime_draw(void) {
         (i16)((u8)(RIME_Y0 + RIME_PLATE_Y) << 3), RIME_TILE_PLATE, 5 | 0x08);
 }
 
+/* ---- M4 Lockmire Ferry: OBJ list built in bank 31 (lk_sprites) ---- */
+#define LK_XO_NEED LK_SPR_MAX
+static void lk_draw(void) {
+    u8 k;
+    i16 lim = (i16)room_camera_y + 129;   /* never over the bottom HUD strip */
+    lk_sprites();
+    for (k = 0; k < lk_spr_n; ++k)
+        if ((i16)lk_spr_y[k] < lim)
+            xo_put(lk_spr_x[k], lk_spr_y[k], lk_spr_t[k], lk_spr_p[k]);
+}
+
 /* ---- M2 Cairn Ford: two-state switch glyphs and the reset plate ---- */
 /* ---- M3 Kite Kennel: the Kite and the three linked/plain plates ---- */
 #define KT_XO_NEED 20
@@ -249,6 +261,7 @@ void nm_extras_draw(void) BANKED {
     if (rime_live) need += RIME_XO_NEED;
     if (rw_live) need += RW_XO_NEED;
     if (kt_live) need += KT_XO_NEED;
+    if (lk_live) need += LK_XO_NEED;
     if (!need) { xo_park(4); return; }
     xo_begin(need > 31 ? 31 : need);
     /* Two overlapping blasts share the burst by alternating frames. */
@@ -271,6 +284,7 @@ void nm_extras_draw(void) BANKED {
     if (rime_live) rime_draw();
     if (rw_live) rw_draw();
     if (kt_live) kt_draw();
+    if (lk_live) lk_draw();
     {
         u8 end = xo;
         xo_park(end);

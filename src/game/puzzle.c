@@ -14,6 +14,7 @@
 #include "game/rime_room.h"
 #include "game/rewrite_room.h"
 #include "game/kite_room.h"
+#include "game/lock_room.h"
 #include "game/secret_merchant.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -336,6 +337,7 @@ void puzzle_prepare_room(void) BANKED {
     rime_live = 0;
     rw_live = 0;
     kt_live = 0;
+    lk_live = 0;
     puzzle_keep_on = 0;
     puzzle_pack_n = 0;
     room_freeze_beats = 0;
@@ -369,9 +371,14 @@ void puzzle_prepare_room(void) BANKED {
         // must not erase a Mire pool, Frost vault, Temple colonnade, or other
         // lore fixture. Ordinary courts still provide ample fuzzy secrets.
         // M1 Rime chamber (Verdant Hollow) / M2 Cairn Ford (Ember Depths) /
-        // M3 Kite Kennel (Frost Vault).
+        // M3 Kite Kennel (Frost Vault) / M4 Lockmire Ferry (Toxic Mire).
         if (local == rime_cell) {
-            if (run_state.bosses_beaten == KT_STAGE) {
+            if (run_state.bosses_beaten == LK_STAGE) {
+                if (lk_prepare()) {
+                    room_puzzle_kind = PUZZLE_LOCK_ROOM;
+                    return;
+                }
+            } else if (run_state.bosses_beaten == KT_STAGE) {
                 if (kt_prepare()) {
                     room_puzzle_kind = PUZZLE_KITE_ROOM;
                     return;
@@ -614,6 +621,10 @@ u8 puzzle_update_player(void) BANKED {
     }
     if (room_puzzle_kind == PUZZLE_KITE_ROOM) {
         kt_tick();
+        return 0;
+    }
+    if (room_puzzle_kind == PUZZLE_LOCK_ROOM) {
+        lk_tick();
         return 0;
     }
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_puzzle_locked)
