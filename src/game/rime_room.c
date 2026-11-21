@@ -22,6 +22,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/procgen.h"
+#include "game/kite_room.h"
 #include "game/rewrite_room.h"
 #include "game/rime_room.h"
 #include "game/room.h"
@@ -108,9 +109,10 @@ static u8 landmark(u8 c) {
 // rime_cell() in scripts/quintra_topology.py.
 u8 rime_pick_cell(void) BANKED {
     u8 size, entry, cache, host, c;
-    // M1 (Verdant Hollow) and M2 (Ember Depths) share the pick rule.
+    // M1 (Verdant Hollow), M2 (Ember Depths), M3 (Frost Vault) share it.
     if (run_state.world_mode || (run_state.bosses_beaten != RIME_STAGE
-            && run_state.bosses_beaten != RW_STAGE))
+            && run_state.bosses_beaten != RW_STAGE
+            && run_state.bosses_beaten != KT_STAGE))
         return 0xFF;
     mission_graph_ensure();
     size = run_state_dungeon_size();
@@ -390,7 +392,7 @@ void rime_pack_draw(u8 pipes) BANKED {
         text_u16(rime_charge);
     } else text_write("TOOL RESET ROOM");
     set_sprite_tile(8, pipes ? RIME_TILE_PIP
-        : rw_live ? RW_TILE_PLATE : RIME_TILE_GLYPH);
+        : (rw_live || kt_live) ? RW_TILE_PLATE : RIME_TILE_GLYPH);
     set_sprite_prop(8, pipes ? (3 | 0x08) : (5 | 0x08));
     move_sprite(8, 16, 135);
 }
@@ -405,17 +407,18 @@ u8 rime_pack_a(u8 pipes) BANKED {
 }
 
 // Pack TOOL entries past the four physical tools. M1: PIPES, RESET ROOM.
-// M2: RESET ROOM.
+// M2 / M3: RESET ROOM.
 void puzzle_pack_draw(u8 idx) BANKED {
-    rime_pack_draw((!rw_live && idx == 0) ? 1 : 0);
+    rime_pack_draw((rime_live && idx == 0) ? 1 : 0);
 }
 
 u8 puzzle_pack_a(u8 idx) BANKED {
-    return rime_pack_a((!rw_live && idx == 0) ? 1 : 0);
+    return rime_pack_a((rime_live && idx == 0) ? 1 : 0);
 }
 
 void puzzle_pack_apply(u8 idx) BANKED {
-    if (rw_live) rw_reset();
+    if (kt_live) kt_reset();
+    else if (rw_live) rw_reset();
     else if (idx == 0) rime_use_pipes();
     else rime_reset();
 }

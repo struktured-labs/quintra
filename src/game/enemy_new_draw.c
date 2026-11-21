@@ -15,6 +15,8 @@
 #include "game/player.h"
 #include "game/rime_room.h"
 #include "game/rewrite_room.h"
+#include "game/kite_room.h"
+#include "render/kite_art.h"
 #include "render/rewrite_art.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -145,6 +147,23 @@ static void rime_draw(void) {
 }
 
 /* ---- M2 Cairn Ford: two-state switch glyphs and the reset plate ---- */
+/* ---- M3 Kite Kennel: the Kite and the three linked/plain plates ---- */
+#define KT_XO_NEED 20
+#define KT_PX(lx) ((i16)((u8)(KT_X0 + (lx)) << 3))
+#define KT_PY(ly) ((i16)((u8)(KT_Y0 + (ly)) << 3))
+static void kt_draw(void) {
+    if (kt_state != KT_DEAD && !(kt_cold > 90 && (kt_frame & 4)))
+        xo_quad(KT_PX(KT_CHAN_X), (i16)kt_ky,
+            kt_state == KT_BREATH ? KT_TILE_BREATH : KT_TILE_KITE, 5 | 0x08);
+    xo_quad(KT_PX(KT_LEVER_X), KT_PY(KT_LEVER_Y),
+        kt_x ? KT_TILE_L_OPEN : KT_TILE_L_SHUT, 0 | 0x08);
+    xo_quad(KT_PX(KT_S1_X), KT_PY(KT_S1_Y),
+        kt_s1 ? KT_TILE_S_STREAM : KT_TILE_S_ROCK, 3 | 0x08);
+    xo_quad(KT_PX(KT_S2_X), KT_PY(KT_S2_Y),
+        kt_x ? KT_TILE_S_ROCK : KT_TILE_S_STREAM, 3 | 0x08);
+    xo_quad(KT_PX(KT_RESET_X), KT_PY(KT_RESET_Y), KT_TILE_PLATE, 5 | 0x08);
+}
+
 #define RW_XO_NEED 16
 static void rw_draw(void) {
     xo_quad((i16)((u8)(RW_X0 + RW_PLATE_A_X) << 3), (i16)((u8)(RW_Y0 + RW_PLATE_A_Y) << 3),
@@ -229,6 +248,7 @@ void nm_extras_draw(void) BANKED {
             && entities[i].ai_data[2] == 3) need += 4;
     if (rime_live) need += RIME_XO_NEED;
     if (rw_live) need += RW_XO_NEED;
+    if (kt_live) need += KT_XO_NEED;
     if (!need) { xo_park(4); return; }
     xo_begin(need > 31 ? 31 : need);
     /* Two overlapping blasts share the burst by alternating frames. */
@@ -250,6 +270,7 @@ void nm_extras_draw(void) BANKED {
     }
     if (rime_live) rime_draw();
     if (rw_live) rw_draw();
+    if (kt_live) kt_draw();
     {
         u8 end = xo;
         xo_park(end);
