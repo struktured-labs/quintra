@@ -4,7 +4,7 @@ Date: 2026-11-21. Status: **draft, spec only** — no gameplay code in this
 PR. Awaiting Carmelo's go-ahead on the remaining open questions before
 implementation.
 
-Source: Carmelo (t534u, t535u, t536u). Picsean's max-Will attack is
+Source: Carmelo (t534u, t535u, t536u, t537u). Picsean's max-Will attack is
 awesome and should not be touched except maybe its cooldown. It should
 grow through multiple levels, unlocked by killing monsters or by firing
 max Will at the current highest level. Will should keep charging **as
@@ -146,15 +146,13 @@ Cumulative time and kills for a typical (not full-clear) run:
 
 ### 3.2 Charging stays as it is today (no hold)
 
-Will banks automatically while A is released, on the existing first-pip
-clock (3.00 s at SPD 4). A tap of A with `will_level >= 1` and a clear
-recast lock fires the **current unlocked art level** immediately and
-clears the gauge, exactly as today's MAX dump, except the art you get
-depends on `maxwill_level` instead of always being the shipped L4.
-
-There is no hold-to-climb and no Secret of Mana charge-up. Carmelo
-(t535u) wants it to keep charging like it does now; that is the
-default.
+Will banks automatically while A is released — no hold-to-climb, no
+Secret of Mana charge-up (t535u). A tap of A with `will_level >= 1`
+and a clear recast lock fires the **current unlocked art level**
+immediately and clears the gauge, exactly as today's MAX dump, except
+the art you get depends on `maxwill_level`. The first-pip clock
+itself gets slower as the cap rises; see §3.8. The recast lock in
+§3.6 is a separate clock.
 
 **Optional, not the default:** once L3 or L4 is unlocked, every dump
 is the big art, with the long lock. A later option could let the
@@ -162,9 +160,9 @@ player pick a lower level (a Pack toggle, or a short hold that
 *downgrades*) for a cheaper, shorter-lock shot in a tight room. Do
 not add that unless the always-cap fire feels bad in play.
 
-`will_charge_tick` is unchanged. Wolfkin's held-A melee stream is
-unchanged when Will is empty or the lock is held; when a MAX actually
-fires, the existing dash still plays on L2–L4 (and the short L1 dash).
+Wolfkin's held-A melee stream is unchanged when Will is empty or the
+lock is held; when a MAX actually fires, the existing dash still plays
+on L2–L4 (and the short L1 dash).
 
 Charge arms only on a **fresh A-press edge**, as today (`pressed & J_A`
 in `room.c`). Pickup weapons bypass this system and fire on press as
@@ -302,6 +300,60 @@ During the lock, A is an ordinary shot and does not spend banked Will.
   **167/180** fixed-roster and 135/180 dense. L1–L3 must be cheaper
   than L4 (fewer OAM, shorter lifetime). L4 cost stays exactly
   today's vortex / maxfx cost.
+
+### 3.8 Charge time scales with the unlocked level
+
+Carmelo (t537u): charging should be slower at higher unlocked levels;
+proportional is a candidate. This scales the **first-pip Will bank**
+(`will_charge_tick`), not the recast lock in §3.6. The two clocks run
+together; the next MAX is ready when both have elapsed.
+
+Today, at the SPD 4 baseline (Sauran, Corvin, Picsean), the first pip
+takes exactly **180 frames (3.00 s)**: `will_charge_fraction` gains
+`(16 + SPD)` per frame, spends 40 to add one point, and the first pip
+needs `WILL_MAX` (90) points. Wolfkin (SPD 5) is 172 frames (2.87 s).
+Vespine (SPD 6) is 164 frames (2.73 s). Speed Ring and Swift Fang
+still add to the per-frame gain. The 360-frame (6.00 s) recast lock,
+not this 3.00 s pip, is what currently stops a Tide Vortex from
+coming back sooner.
+
+**L4 is calibrated to that 180-frame / 3.00 s SPD 4 first pip**, so a
+maxed hero does not charge faster than today. Lower caps charge
+faster. Times below are SPD 4; SPD 5/6 stay proportionally quicker
+(about 0.96× / 0.91×).
+
+| Cap | Proportional (n × L1) | **Gentler (default)** 1 / 1.5 / 2 / 2.5 | Recast lock | Felt cycle (max of charge, lock) |
+| --- | --- | --- | --- | --- |
+| L1 | 45 f / 0.75 s | 72 f / **1.20 s** | 3.00 s | 3.00 s either way |
+| L2 | 90 f / 1.50 s | 108 f / **1.80 s** | 4.00 s | 4.00 s either way |
+| L3 | 135 f / 2.25 s | 144 f / **2.40 s** | 5.00 s | 5.00 s either way |
+| L4 | 180 f / 3.00 s | 180 f / **3.00 s** | 6.00 s | 6.00 s (same as today) |
+
+Proportional is the clean n× rule Carmelo asked about. After a fire,
+though, the lock — not the bar — is the felt recast gate at every
+level, so a 0.75 s L1 bar would slam full and then sit unusable for
+the rest of the 3.00 s lock (worse on Vespine / Speed Ring, down to
+about 0.6 s). Carbon recommended going straight to the **gentler**
+ramp: L1 is still 2.5× faster than today, the HUD can be read, and
+L4 still matches the current 3.00 s pip. That is the default.
+
+Implementation (not in the Aftershock code PR): keep the 90-point pip
+target fixed and look up a 4-byte spend threshold that ends at 40
+(16 / 24 / 32 / 40). Do not multiply 90 or 40 by the cap — that would
+make L4 *slower* than today (up to 12 s) and 90 is not divisible by 4.
+The charge tick must **drain the fraction accumulator repeatedly in
+one frame** whenever `(16 + SPD)` exceeds the spend (true for every
+hero at L1, and for SPD 5+ at proportional L2). Clamp pip points at
+90; do not test equality, because one frame can add more than one
+point. On a mid-pip cap-up the 90-point bar does not jump backward
+(only the remaining points slow down). Put the table in `will_levels.c`
+(bank 255), not bank 8. While the recast lock still holds, the Will
+HUD must look dimmed / locked so a full bar is not mistaken for a
+dropped input.
+
+A short Carbon pass (2026-11-21, $0.07; running total $7.14 logged)
+caught the spend-math trap, the single-subtract overflow, the locked
+HUD cue, and the mid-pip jump. Folded in above.
 
 ## 4. Per-hero level sketches
 
