@@ -86,10 +86,12 @@ def east_cast(pb):
     assert 1 <= dmg_s <= 12, f"south flank missed or overhit: {dmg_s}"
     assert dmg_n == dmg_s, f"flank damage split {dmg_n} vs {dmg_s}"
     assert dmg_f == 0, f"far body should be outside +/-40: {dmg_f}"
-    # Cosmetic wall used 24..31; core tail 32..35 stays empty during it.
+    # Cosmetic wall uses the legacy 32..35 tail after pylons hide.
     if oam_mid:
-        extras = [i for i, y in enumerate(oam_mid["y"][:8]) if y]
-        assert len(extras) >= 4, f"aftershock wall did not light 24..31: {oam_mid['y']}"
+        low = [i for i, y in enumerate(oam_mid["y"][:8]) if y]
+        tail = [i for i, y in enumerate(oam_mid["y"][8:]) if y]
+        assert not low, f"aftershock wall spilled into 24..31: {oam_mid['y']}"
+        assert len(tail) >= 4, f"aftershock wall did not light 32..35: {oam_mid['y']}"
     assert_oam_clear(pb, 24, 36, "after east art ended")
     print(f"  ok  Aftershock flanks +{dmg_n} each, lane skipped, far safe")
     return dmg_n
