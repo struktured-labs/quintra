@@ -38,14 +38,45 @@
 #define CD_SPAWN_X 4            // spawn plate (2x2) in the hall gap
 #define CD_SPAWN_Y 8
 #define CD_LANE_Y 10            // rolling-stone lane rows 10..11
-#define CD_DOOR_X 5             // Star door (2x1) to the vault
+#define CD_DOOR_X 6             // Star door (2x1) to the vault
 #define CD_DOOR_Y 12
-#define CD_GOAL_X 5             // two BGT_SWITCH goal tiles
-#define CD_GOAL_Y 15
+#define CD_GOAL_X 1             // two BGT_SWITCH goal tiles (alcove behind Heart door B)
+#define CD_GOAL_Y 14
 
 #define CD_T_TRACK 105          // borrowed walkable id: stone groove
 #define CD_T_DOOR  37           // borrowed solid id: Star door (M4 art)
 #define CD_T_BARS  99           // borrowed solid id: side door bars (M3)
+
+// ---- M5b vault: rewrite switches, Kite chain, Heart two-door choice ----
+#define CD_SWA_X 7              // rewrite switch A (1x1, hall row 9): flips A and B
+#define CD_SWB_X 9              // rewrite switch B: flips B only
+#define CD_SW_ROW 9
+#define CD_HDB_X 3              // Heart door B (1x2) -> goal alcove (1..2,13..14)
+#define CD_HDA_X 8              // Heart door A (1x2) -> treasure closet (9..10,13..14)
+#define CD_HD_Y 13
+#define CD_LOCK_X 4             // crystal lock (2x2) holding the Heart key
+#define CD_LOCK_Y 13
+#define CD_REL_X 6              // Kite release plate (2x1) under the Star door
+#define CD_REL_Y 14
+#define CD_STREAM_Y 15          // rift-stream rows 15..16 (Kite only)
+#define CD_RA_X 7               // cairn region A (2x2)
+#define CD_RB_X 5               // cairn region B (2x2)
+#define CD_KITE_HOME 9          // Kite kennel cols 9..10; it flies west
+#define CD_KITE_STOP 4          // ... to cols 4..5, under the lock
+#define CD_COIN_X 9
+#define CD_COIN_Y 13
+#define CD_T_CAIRN_TL 98        // M2/M3 cairn ids and art (solid)
+#define CD_T_CAIRN_TR 109
+#define CD_T_CAIRN_BL 110
+#define CD_T_CAIRN_BR 39
+#define CD_T_STREAM 108         // M3 rift-stream (solid to the hero)
+#define CD_T_LOCK 38            // M3 crystal lock plug (solid)
+#define CD_T_GLYPH_ROCK 35      // two-state switch glyphs (walkable)
+#define CD_T_GLYPH_STREAM 36
+#define CD_K_HOME 0             // Kite states
+#define CD_K_FLY 1
+#define CD_K_BREATH 2
+#define CD_K_DONE 3
 
 #define CD_J_GUARD 0
 #define CD_J_DEAD  1
@@ -67,6 +98,13 @@ extern u8 cd_armed, cd_pack[2]; // spawn plate fired; pack entity slots
 extern u8 cd_pend;              // side-door flip held while the hero is in it
 extern u8 cd_frame, cd_resets, cd_refusals, cd_flips, cd_crushed, cd_shoves;
 extern u8 cd_pack_id;           // enemy id for the pack (one already in the room)
+// cd_held: bit 0 Star key, bit 1 Heart key (one of each at a time)
+extern u8 cd_ra, cd_rb;         // regions A/B: 1 = rift-stream, 0 = cairn
+extern u8 cd_kx, cd_kst, cd_kt; // Kite x (world px), state, timer
+extern u8 cd_lockup;            // crystal lock intact (Heart key inside)
+extern u8 cd_hkey;              // Heart key: 1 in the lock, 0 taken
+extern u8 cd_hdoor;             // Heart doors open: bit 0 A (closet), bit 1 B (goal)
+extern u8 cd_coin_given, cd_rewrites;
 
 u8 cd_prepare(void) BANKED;
 void cd_tick(void) BANKED;
@@ -81,6 +119,17 @@ void cd_paint(u8 r) BANKED;     // 0 side door, 1 Star door: world + VRAM
 void cd_redress(void) BANKED;
 void cd_solve(void) BANKED;
 void cd_restore(void) BANKED;
+// M5b: conduit_vault.c (bank 6), conduit_vdoor.c (10), conduit_vpaint.c (31), conduit_vstate.c + conduit_vart.c (29)
+void cd_vault_tick(void) BANKED;
+void cd_vault_prepare(void) BANKED;
+void cd_vault_restore(void) BANKED;
+void cd_vault_redress(void) BANKED;
+void cd_vpaint(u8 r) BANKED;    // 0 region A, 1 region B, 2 lock, 3 door A, 4 door B
+void cd_vblk(u8 lx, u8 ly, u8 w, u8 h) BANKED;   // cd_vt/cd_va -> world (+VRAM if live)
+void cd_vfill(u8 t, u8 a) BANKED;
+void cd_vault_doors(void) BANKED;   // conduit_vdoor.c (bank 10)
+extern u8 cd_vt[4], cd_va[4];
+void cd_vart_load(void) BANKED;
 // art (bank 22)
 void cd_art_load(void) BANKED;
 void cd_bg_art_load(void) BANKED;

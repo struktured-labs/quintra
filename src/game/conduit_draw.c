@@ -7,6 +7,7 @@
 #include "game/lock_room.h"
 #include "game/player.h"
 #include "game/rime_room.h"
+#include "game/room.h"
 #include "render/conduit_art.h"
 #include "render/text.h"
 
@@ -16,7 +17,8 @@
 // ---- OBJ list (shared lk_spr_* buffer, drawn by enemy_new_draw) ----
 static void sp(u8 x, u8 y, u8 t, u8 p) {
     u8 n = lk_spr_n;
-    if (n >= LK_SPR_MAX) return;
+    i16 dy = (i16)y - room_camera_y;
+    if (n >= LK_SPR_MAX || dy < -16 || dy > 136) return;   // off camera: no slot
     lk_spr_x[n] = x; lk_spr_y[n] = y; lk_spr_t[n] = t; lk_spr_p[n] = p;
     lk_spr_n = (u8)(n + 1);
 }
@@ -55,8 +57,13 @@ void cd_sprites(void) BANKED {
     // Held pips above the hero: Star key, Rime charge.
     x = (u8)((u8)player.x + 4);
     y = (u8)((u8)player.y - 9);
-    if (cd_held) { sp(x, y, CD_TILE_BOW, 5 | 0x08); n = 8; }
+    if (cd_held & 1) { sp(x, y, CD_TILE_BOW, 5 | 0x08); n = 8; }
+    if (cd_held & 2) { sp((u8)(x + n), y, CD_TILE_HEART, 4 | 0x08); n += 8; }
     if (cd_charge) sp((u8)(x + n), y, CD_TILE_PIP, 3 | 0x08);
+    // M5b vault: the Kite (flashes while breathing), the Heart key in its lock.
+    sq(cd_kx, PY(CD_STREAM_Y), CD_TILE_KITE,
+        (cd_kst == CD_K_BREATH && (cd_kt & 4)) ? (4 | 0x08) : (5 | 0x08));
+    if (cd_hkey) sp((u8)(PX(CD_LOCK_X) + 4), (u8)(PY(CD_LOCK_Y) + 4), CD_TILE_HEART, 4 | 0x08);
 }
 
 // Pack TOOL entries: 0 = FREEZE, 1 = RESET ROOM.

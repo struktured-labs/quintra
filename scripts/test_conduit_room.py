@@ -35,15 +35,19 @@ PUZZLE_CONDUIT_ROOM = 11
 X0, Y0, W, H = 18, 11, 12, 18
 BGT_FLOOR, BGT_WALL = 1, 2
 TRACK, TPAD, SWITCH, PLATE, DOOR, BARS = 105, 106, 107, 96, 37, 99
-OURS = {TRACK, TPAD, SWITCH, PLATE, DOOR, BARS}
-SOLID = {2, DOOR, BARS} | set(tsa.HARD_SCENERY)
+CAIRN, STREAM, LOCK, G_ROCK, G_STREAM = (98, 109, 110, 39), 108, 38, 35, 36
+OURS = {TRACK, TPAD, SWITCH, PLATE, DOOR, BARS, STREAM, LOCK, G_ROCK, G_STREAM} | set(CAIRN)
+SOLID = {2, DOOR, BARS, STREAM, LOCK} | set(CAIRN) | set(tsa.HARD_SCENERY)
+CLASS = int(os.environ.get("CD_CLASS", "0"))
+PICSEAN = 3
 J_GUARD, J_DEAD = 0, 1
 TOOL_FREEZE, TOOL_RESET = 4, 5
 LANE = 10
 
 A = tsa.addr
 RS, PL, EN = tsa.RS, tsa.PL, tsa.EN
-NAMES = ("live", "side", "key", "held", "open", "charge", "jx", "jy", "jst", "sst",
+NAMES = ("ra", "rb", "kx", "kst", "lockup", "hkey", "hdoor", "coin_given", "rewrites",
+         "live", "side", "key", "held", "open", "charge", "jx", "jy", "jst", "sst",
          "sx", "st", "thp", "tt", "tell", "thead", "lock", "armed", "pend", "frame",
          "resets", "refusals", "flips", "crushed", "shoves", "pack_id", "pack")
 S = {n: A("_cd_" + n) for n in NAMES}
@@ -58,11 +62,12 @@ TM, EXT, BOT = A("_room_tilemap"), A("_room_world_extension"), A("_room_world_bo
 LAYOUT = [
     "############", "#11...#....#", "#11...#....#", "#.....#....#",
     "#33...#..22#", "#33.33#..22#", "....33#....#", "......#....#",
-    "####33######", "#...33.....#", "#==========#", "#==========#",
-    "############", "#..........#", "#..........#", "#....GG....#",
-    "#..........#", "############",
+    "####33######", "#...33.g.g.#", "#==========#", "#==========#",
+    "############", "#..HLL..H..#", "#GGHLLPPH..#", "#SSSSSSCCSS#",
+    "#SSSSSSCCSS#", "############",
 ]
-REGIONS = {(6, 3), (6, 4), (5, 12), (6, 12)}
+REGIONS = {(6, 3), (6, 4), (6, 12), (7, 12)}
+K_HOME, K_FLY, K_BREATH, K_DONE = 0, 1, 2, 3
 
 
 def PX(lx):
@@ -234,16 +239,25 @@ def check_layout(grid):
                 assert v == BGT_WALL, f"wall missing at {lx},{ly}: {v}"
             elif c == "=":
                 assert v == TRACK, f"lane missing at {lx},{ly}: {v}"
-            elif c in ".123G":
+            elif c in ".123GPg":
                 assert v not in SOLID, f"floor blocked at {lx},{ly}: {v}"
+            elif c == "S":
+                assert v == STREAM, f"rift-stream missing at {lx},{ly}: {v}"
+            elif c == "C":
+                assert v in CAIRN, f"cairn missing at {lx},{ly}: {v}"
+            elif c == "L":
+                assert v == LOCK, f"crystal lock missing at {lx},{ly}: {v}"
+            elif c == "H":
+                assert v == DOOR, f"Heart door missing at {lx},{ly}: {v}"
     assert grid[Y0 + 3][X0 + 6] == BARS and grid[Y0 + 4][X0 + 6] == BARS, "side door not shut"
-    assert grid[Y0 + 12][X0 + 5] == DOOR and grid[Y0 + 12][X0 + 6] == DOOR, "Star door not shut"
+    assert grid[Y0 + 12][X0 + 6] == DOOR and grid[Y0 + 12][X0 + 7] == DOOR, "Star door not shut"
+    assert grid[Y0 + 9][X0 + 7] == G_ROCK and grid[Y0 + 9][X0 + 9] == G_STREAM, "switch glyphs wrong"
     seen = bfs(grid, (X0 + 1, Y0 + 6))
     edges = [p for p in seen if p[0] in (0, 30) or p[1] in (0, 30)]
     assert edges, "pocket entrance not reachable from any room edge"
     assert (X0 + 1, Y0 + 1) in seen and (X0 + 8, Y0 + 11) in seen
     assert (X0 + 8, Y0 + 6) not in seen, "wing reachable with the side door shut"
-    assert (X0 + 5, Y0 + 15) not in seen, "vault reachable with the Star door shut"
+    assert (X0 + 6, Y0 + 13) not in seen, "vault reachable with the Star door shut"
     stray = [(x, y, grid[y][x]) for y in range(31) for x in range(31)
              if grid[y][x] in OURS and not (X0 <= x < X0 + W and Y0 <= y < Y0 + H)]
     assert not stray, f"pocket tile ids outside the pocket: {stray[:4]}"
@@ -254,11 +268,13 @@ def try_seed(seed):
     cands = rime_cell_candidates(seed, STAGE)
     if not cands:
         return None
-    pb = tsa.generated_room(STAGE, seed, local_room=cands[0], keep_running=True)
+    pb = tsa.generated_room(STAGE, seed, local_room=cands[0], keep_running=True,
+                            class_id=CLASS)
     real = pb.memory[CELL]
     if real != cands[0] and real in cands:
         pb.stop(save=False)
-        pb = tsa.generated_room(STAGE, seed, local_room=real, keep_running=True)
+        pb = tsa.generated_room(STAGE, seed, local_room=real, keep_running=True,
+                                class_id=CLASS)
     if pb.memory[KIND] != PUZZLE_CONDUIT_ROOM or pb.memory[S["live"]] != 1:
         why = "altar owns the cell" if real == 0xFF else f"kind={pb.memory[KIND]}"
         print(f"  seed {seed:#x}: no pocket ({why})")
@@ -369,15 +385,45 @@ def teleport(r):
 
 
 def to_door(r):
-    """From the hall landing: lure the Jagger east, freeze it, slip to the Star door."""
+    """From the hall landing: lure the Jagger west, freeze it, slip to the Star door."""
     r.wy(PY(LANE) - 12)                 # feet row 10, above the Jagger's feet
     lane_quiet(r)
-    r.wx(fx(9) + 2)
-    assert wait(r, lambda: r.c("jx") >= PX(7), 60), "Jagger did not shadow the hero"
+    r.wx(fx(2))
+    assert wait(r, lambda: r.c("jx") == PX(3), 90), f"Jagger did not shadow the hero {r.c('jx')}"
     r.pack(TOOL_FREEZE)
     assert r.m(FREEZE) > 0 and r.c("charge") == 0
-    r.wx(PX(5))
+    r.wx(PX(6))
     r.wy(PY(LANE))
+
+
+def switches(r):
+    """Hall row 9: A (col 7) flips A and B, B (col 9) flips B -> both streams."""
+    r.wy(PY(LANE) - 12)
+    lane_quiet(r)
+    for col, want in ((7, (1, 0)), (9, (1, 1))):
+        n = r.c("rewrites")
+        r.wx(fx(col))
+        r.wy(fy(9))
+        assert wait(r, lambda: r.c("rewrites") == n + 1, 10), f"switch at col {col} did nothing {r.pos()}"
+        assert (r.c("ra"), r.c("rb")) == want, f"regions {(r.c('ra'), r.c('rb'))} != {want}"
+        r.wy(PY(LANE) - 12)
+    g = world_tiles(r.pb)
+    assert all(g[Y0 + y][X0 + x] == STREAM for x in range(1, 11) for y in (15, 16)), \
+        "stream not continuous after A, B"
+    assert g[Y0 + 9][X0 + 7] == G_STREAM and g[Y0 + 9][X0 + 9] == G_STREAM, "glyphs not flipped"
+
+
+def kite_chain(r):
+    """In the vault: release plate wakes the Kite; it rides west and shatters the lock."""
+    r.wy(fy(13))
+    assert r.pos()[1] == fy(13), f"could not enter the vault {r.pos()}"
+    r.wy(fy(14))
+    assert wait(r, lambda: r.c("kst") != K_HOME, 10), "release plate did not wake the Kite"
+    assert wait(r, lambda: r.c("lockup") == 0, 260), f"Kite never shattered the lock (kx {r.c('kx') - PX(0)})"
+    still(r, "state7_shattered")
+    r.wy(fy(13))
+    r.wx(PX(4))
+    assert wait(r, lambda: r.c("held") & 2, 10), f"Heart key not taken {r.pos()}"
 
 
 def setup_run(r):
@@ -392,7 +438,10 @@ def assert_restored(r, resets):
     assert r.c("resets") == resets, f"resets {r.c('resets')} != {resets}"
     assert r.c("key") == 1 and r.c("held") == 0 and r.c("charge") == 0
     assert r.c("side") == 0 and r.c("open") == 0 and r.c("armed") == 0
-    assert g[Y0 + 3][X0 + 6] == BARS and g[Y0 + 12][X0 + 5] == DOOR
+    assert g[Y0 + 3][X0 + 6] == BARS and g[Y0 + 12][X0 + 6] == DOOR
+    assert (r.c("ra"), r.c("rb"), r.c("kst"), r.c("lockup"), r.c("hkey"), r.c("hdoor")) == \
+        (0, 1, K_HOME, 1, 1, 0), "vault not restored"
+    assert g[Y0 + 13][X0 + 4] == LOCK and g[Y0 + 13][X0 + 3] == DOOR and g[Y0 + 15][X0 + 7] in CAIRN
     assert r.c("jst") == J_GUARD and r.c("thp") == 4
     assert r.m(FREEZE) == 0
 
@@ -464,7 +513,47 @@ def fuzz(r, snap):
     return flips, worst, resets
 
 
+def turret_death():
+    """Picsean (projectile hero): bolts up through the switch kill the turret;
+    the side door opens for good and no bolt ever flips the switch."""
+    global CLASS
+    CLASS = PICSEAN
+    r, _cell = open_room()
+    r.set_pos(PX(-3), PY(6) - 4)
+    r.tick(4)
+    r.pb.memory[S["charge"]] = 1
+    r.set_pos(fx(9), fy(7))
+    r.tick(2)
+    r.pack(TOOL_FREEZE)
+    r.press("up", 3, 2)
+    n, side, hp0 = r.c("flips"), r.c("side"), r.c("thp")
+    for _ in range(40):
+        if r.c("thp") == 0:
+            break
+        r.pb.memory[S["charge"]] = 0
+        if r.m(FREEZE) < 8:
+            r.pb.memory[S["charge"]] = 1
+            r.pack(TOOL_FREEZE)
+            r.press("up", 3, 2)
+        r.press("a", 3, 8)
+    assert r.c("thp") == 0, f"Picsean bolts did not kill the turret (hp {hp0} -> {r.c('thp')})"
+    assert r.c("flips") <= n + 1, "player bolts flipped the switch"
+    r.tick(6)
+    assert r.c("side") == 1 and side_tiles_ok(r), "turret death did not open the side door"
+    r.pb.memory[FREEZE] = 0
+    r.tick(600)
+    assert r.c("side") == 1 and r.c("thp") == 0, "side door shut again after the turret died"
+    still(r, "state1_turret_down")
+    r.pb.stop(save=False)
+    CLASS = 0
+    print(f"  Picsean: {hp0} bolts kill the turret; side door opens for good (600 f); no flips from bolts")
+
+
 def main():
+    if os.environ.get("CD_ONLY_TURRET"):
+        turret_death()
+        print("test_conduit_room OK")
+        return
     r, cell = open_room()
     edges = check_layout(world_tiles(r.pb))
     pid = r.c("pack_id")
@@ -554,17 +643,56 @@ def main():
     assert_restored(r, 3)
     print("  rolling stone crushed the frozen Jagger; reset restored it")
 
-    # --- full solve: key behind the churn, Rime charge, teleport, Star door, goal.
+    # --- M5b: a cairn refuses the Kite; switch A over the stopped Kite refuses.
+    snap.seek(0)
+    r.pb.load_state(snap)
+    mem = r.pb.memory
+    mem[S["kst"]], mem[S["kx"]] = K_FLY, PX(9)
+    r.tick(60)
+    assert r.c("kx") == PX(9), f"Kite flew through the A cairn ({r.c('kx') - PX(0)})"
+    mem[S["ra"]] = 1                         # pretend A was raised to stream: B is stream too
+    r.tick(50)
+    assert r.c("kx") < PX(7) and r.c("kst") == K_FLY
+    ref, n = r.c("refusals"), r.c("rewrites")
+    r.set_pos(fx(7), fy(9) - 3)
+    r.tick(2)
+    r.walk(fx(7), fy(9), axis_first="y")
+    assert wait(r, lambda: r.c("refusals") == ref + 1, 10) and r.c("rewrites") == n, \
+        "switch A raised a cairn onto the Kite"
+    print("  Kite waits at a cairn; switch A refuses to raise one onto it")
+
+    # --- full solve, closet first: Star key, switches, Kite chain, Heart key on
+    # door A (treasure); door B refused; reset returns the key; then door B, goal.
+    snap.seek(0)
+    r.pb.load_state(snap)
     setup_run(r)
+    switches(r)
     to_door(r)
     assert wait(r, lambda: r.c("open") == 1, 20), f"Star key did not open the door {r.pos()}"
     still(r, "state5_open")
-    r.wy(fy(15))
-    r.wx(fx(6))
+    kite_chain(r)
+    r.wx(fx(9))
+    assert wait(r, lambda: r.c("hdoor") == 1, 20), f"Heart door A did not open {r.pos()} {r.c('hdoor')}"
+    assert not (r.c("held") & 2) and r.c("coin_given") == 1, "closet: key not spent / no treasure"
+    still(r, "state8_closet")
+    ref = r.c("refusals")
+    r.wx(PX(4))
+    r.wx(PX(3) - 2)
+    assert r.c("refusals") == ref + 1 and r.c("hdoor") == 1, "Heart door B opened with no key"
+    r.pack(TOOL_RESET)
+    assert r.c("hkey") == 1 and r.c("hdoor") == 0 and r.c("lockup") == 1, "reset did not return the Heart key"
+    print("  Heart key spent on door A (treasure); door B refused; reset returns the key")
+    setup_run(r)
+    switches(r)
+    to_door(r)
+    assert wait(r, lambda: r.c("open") == 1, 20)
+    kite_chain(r)
+    r.wx(PX(3) - 2)
+    assert wait(r, lambda: r.c("hdoor") == 2, 20), f"Heart door B did not open {r.pos()}"
+    r.wy(fy(14))
+    r.wx(fx(2))
     assert wait(r, lambda: r.m(RS + 27) & 0x20, 30), f"goal not solved pos={r.pos()}"
     still(r, "state6_solved")
-    r.wx(fx(5))
-    r.wy(fy(13))
     r.pack(TOOL_RESET)
     r.tick(8)
     r.wy(PY(6) - 4)
@@ -572,7 +700,7 @@ def main():
     r.tick(6)
     assert r.c("open") == 0 and r.c("key") == 1 and r.c("jst") == J_GUARD, "walk-out reset failed"
     assert r.intruders == 0, f"room enemies inside the pocket {r.intruders}x {getattr(r, 'first_bad', None)}"
-    print(f"  solved (key behind churn, freeze, teleport, Star door, goal); walking out resets; "
+    print(f"  solved (Star key behind churn, switches A/B, freeze, Star door, Kite chain, Heart door B, goal); walking out resets; "
           f"no intruders; turret stings {r.hurts}; shoves {r.c('shoves')} refusals {r.c('refusals')}")
 
     if CAPTURE:
@@ -583,6 +711,7 @@ def main():
                        append_images=fr[1:], duration=100, loop=0)
         print(f"  capture: {len(fr)} frames -> {out}")
     r.pb.stop(save=False)
+    turret_death()
     print("test_conduit_room OK")
 
 

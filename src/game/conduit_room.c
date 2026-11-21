@@ -187,7 +187,7 @@ static void pads_step(void) {
     u8 on;
     if (edge(foot_on(CD_KEY_X, CD_KEY_Y), ON_KEY) && cd_key) {
         cd_key = 0;
-        cd_held = 1;
+        cd_held |= 1;
         cd_dirty = 1;
         sfx_play(SFX_COIN);
     }
@@ -223,8 +223,8 @@ static void pads_step(void) {
     // Star door: feet box + 1 px touching it.
     on = hero_box((u8)(PX(CD_DOOR_X) - 1), (u8)(PY(CD_DOOR_Y) - 1), 18, 10);
     if (!cd_open && edge(on, ON_DOOR)) {
-        if (cd_held) {
-            cd_held = 0;
+        if (cd_held & 1) {
+            cd_held &= (u8)~1;
             cd_open = 1;
             cd_dirty = 1;
             cd_paint(1);
@@ -285,6 +285,7 @@ void cd_tick(void) BANKED {
     side_step();
     turret_step();
     cd_lane_step();
+    cd_vault_tick();
     if (!(cd_frame & 7) || cd_frame == 1) guard_step();
 }
 
