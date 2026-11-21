@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from pyboy import PyBoy
+from test_will_max import boot as boot_to_room
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "rom/working/quintra.gbc"
@@ -17,19 +18,6 @@ def addr(name):
     return int(m.group(1), 16)
 
 
-def boot(class_moves=0):
-    pb = PyBoy(str(ROM), window="null", cgb=True)
-    for _ in range(240): pb.tick()
-    pb.button("start")
-    for _ in range(30): pb.tick()
-    for _ in range(class_moves):
-        pb.button("down")
-        for _ in range(8): pb.tick()
-    pb.button("a")
-    for _ in range(60): pb.tick()
-    return pb
-
-
 def first_player_shot(pb, player, entities, tilemap):
     # This is an attack-art contract, not a seed-dependent collision test.
     # Clear the opening room's entities and floor so a nearby body or scenery
@@ -39,8 +27,14 @@ def first_player_shot(pb, player, entities, tilemap):
     for i in range(20 * 17):
         pb.memory[tilemap + i] = 1
     pb.memory[player + 22] = 0
-    pb.button("a")
-    for _ in range(3): pb.tick()
+    # Stay one half-heart below max so Wolfkin's full-heart beam does not
+    # appear beside the melee arc in this art-identity test.
+    hp_max = pb.memory[player + 1]
+    if pb.memory[player] == 0:
+        pb.memory[player + 2] = max(1, hp_max - 1)
+    pb.button_press("a")
+    for _ in range(5): pb.tick()
+    pb.button_release("a")
     for i in range(32):
         e = entities + i * 28
         if pb.memory[e] == 1 and (pb.memory[e + 1] & 0x10):
@@ -53,21 +47,21 @@ def main():
     entities = addr("_entities")
     tilemap = addr("_room_tilemap")
     for moves, name, max_ttl in (
-        # Wolfkin's physical Fang forms deliberately live for 18 frames:
-        # their compact forward lane is the melee kit's needed reach, not a
-        # ranged shot stream. The dedicated forms contract also pins the
-        # directed stab's 64px maximum lane.
-        (0, "Wolfkin", 18),
+        (0, "Wolfkin", 10),
         (1, "Sauran", 12),
         (4, "Vespine", 12),
     ):
-        hero = boot(moves)
+        hero = boot_to_room(moves)
         shot = first_player_shot(hero, player, entities, tilemap)
-        assert hero.memory[shot + 12] == 122, f"{name} melee is not arc art"
+        tile = hero.memory[shot + 12]
+        if name == "Wolfkin":
+            assert 160 <= tile <= 175, f"{name} melee is not longsword art ({tile})"
+        else:
+            assert tile == 122, f"{name} melee is not arc art"
         assert hero.memory[shot + 16] <= max_ttl, f"{name} melee is not short lived"
         hero.stop(save=False)
 
-    corvin = boot(2)
+    corvin = boot_to_room(2)
     shot = first_player_shot(corvin, player, entities, tilemap)
     assert corvin.memory[shot + 12] in (28, 29), "ranged champion lost bullet art"
     corvin.stop(save=False)

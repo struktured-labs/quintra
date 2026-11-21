@@ -69,6 +69,11 @@ void status_player_cure(void) BANKED;
 void status_player_refresh_visual(void) BANKED;
 void status_draw_pack_label(void) BANKED;
 void status_player_apply(u8 kind, u8 ticks) BANKED;
+// 0 = idle. Tests (and only tests) write a QSTATUS_* kind here;
+// status_tick consumes it as a forced status_player_apply(kind, 0).
+extern u8 status_apply_req;
+extern const u8 status_class_resist_kind[5];
+u8 status_resist_adjust(u8 kind, u8 ticks) BANKED;
 void status_enemy_apply(u8 idx, u8 kind, u8 ticks) BANKED;
 
 // Called only on successful combat contacts; these select authored effects,
