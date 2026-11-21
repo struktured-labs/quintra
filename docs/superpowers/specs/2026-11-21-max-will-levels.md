@@ -4,13 +4,13 @@ Date: 2026-11-21. Status: **draft, spec only** — no gameplay code in this
 PR. Awaiting Carmelo's go-ahead on the remaining open questions before
 implementation.
 
-Source: Carmelo (t534u, t535u). Picsean's max-Will attack is awesome and
-should not be touched except maybe its cooldown. It should grow through
-multiple levels, unlocked by killing monsters or by firing max Will at
-the current highest level. Will should keep charging **as it does now,
-without holding**. The point system should be explained as real play
-time: how long to be halfway through the levels, and how long to max
-out, on average.
+Source: Carmelo (t534u, t535u, t536u). Picsean's max-Will attack is
+awesome and should not be touched except maybe its cooldown. It should
+grow through multiple levels, unlocked by killing monsters or by firing
+max Will at the current highest level. Will should keep charging **as
+it does now, without holding**. The point system should be explained as
+real play time. The levels mechanic is agreed; each hero still needs a
+good and unique L4, with Tide Vortex as the bar.
 
 This document extends `2026-11-17-max-will-v2.md`,
 `2026-11-15-picsean-tide-vortex.md`, and
@@ -322,41 +322,55 @@ lifetime.
 | L3 | Tide Coil | 3 arms | 160 px | 56 (44) | front +3, arm +1 | no | 5 |
 | L4 | Tide Vortex | 4 arms, full view (current) | 240 px | 84 (72) | front +4, arm +2 | yes | 6 |
 
-### Sauran — Thunderline Bastion (class 1, Tail Spike)
+### Sauran — Thunderline Bastion / Aftershock (class 1, Tail Spike)
+
+The shipped Bastion (max-Will v2) becomes **L3**. L4 adds a lateral
+aftershock; see §8. This is an upgrade of the shipped art, not a
+replacement.
 
 | Lv | Shape | Ticks | Notes |
 | --- | --- | --- | --- |
 | L1 | Short fault crack, no pylons | 18 | spear travels 6 ticks, MAX+1, no slam |
 | L2 | Fault spear only (no pylons, no slam) | 28 | spear as current, MAX+2 |
-| L3 | Spear + one pylon, smaller slam (18 px) | 40 | slam MAX+1, one shot-eating pylon |
-| L4 | Current Bastion: spear, two pylons, 24 px slam | 52 | MAX+4 spear, MAX+2 slam (unchanged) |
+| L3 | Shipped Bastion: spear, two pylons, 24 px slam | 52 | MAX+4 spear, MAX+2 slam (unchanged v2) |
+| L4 | Bastion + lateral T-fault aftershock | 64 | after the slam, a perpendicular ground wall ±36–40 px off the pylons, MAX+1 once on bodies the slam missed; pylons keep eating shots until they sink. Not a forward chevron (the slam already reaches ~64 px ahead). |
 
-### Vespine — Royal Stinger and Venom Sac (class 4, Stinger)
+### Vespine — Royal Stinger / Brood Rupture (class 4, Stinger)
+
+The shipped Stinger + Sac (max-Will v2) becomes **L3**, except L3
+already ruptures (the current 28 px burst and visual-only droplets).
+L4 makes those droplets real; see §8.
 
 | Lv | Shape | Ticks | Notes |
 | --- | --- | --- | --- |
 | L1 | Short poison dart, no lodge, no pincers | 18 | MAX+1, poison, no sac |
 | L2 | Flying stinger lodges, no sac, no pincers | 28 | MAX+2, poison |
-| L3 | Stinger + pincers + smaller sac burst (18 px), no Swarm add | 42 | MAX+3 lodge / burst |
-| L4 | Current Royal Stinger + Venom Sac rupture, +45 Swarm ticks | 54 | MAX+4 (unchanged) |
+| L3 | Shipped Royal Stinger + Venom Sac rupture, +45 Swarm ticks | 54 | MAX+4 lodge / burst (unchanged v2); droplets stay visual |
+| L4 | Brood Rupture: sac burst plus four damaging droplet pops | 54 | droplets at fixed ±24 px X/Y (~34 px diagonal) from the rupture, each a 16 px MAX+1 pop with poison / Swarm refresh, no extra shot wash. A miss already plants a ground sac and ruptures (keep that full burst); L4 still adds the ring. Stagger the four hit-checks over two frames. |
 
 ### Corvin — Murderstorm Eclipse + Night Veil (class 2, Featherbarb)
+
+**Keep** the shipped Eclipse as L4. No chain, no flock. Modest L4
+presence only; see §8.
 
 | Lv | Shape | Ticks | Notes |
 | --- | --- | --- | --- |
 | L1 | Two shadow feathers, no veil, no eclipse | 20 | MAX+1, no Effigy |
 | L2 | Four feathers fan, no eclipse slam, no Effigy | 28 | MAX+2 |
 | L3 | Room dim + four feathers + smaller eclipse (14 px), Effigy until f24 | 40 | MAX+3 feathers, MAX+4 eclipse; no Mark extension |
-| L4 | Current Eclipse + Night Veil, Mark +45 ticks | 48 | MAX+3 / MAX+7 / +3 marked (unchanged) |
+| L4 | Shipped Eclipse + Night Veil, plus a readability pass | 48 | mechanics unchanged (mark seek already ships). L4 eclipse floor 20→26 px before the Will-pip bonus; a tall shadow pillar / 4-way corona at the snap point using L4 OAM 24–31 (dropped during Serpent). Effigy stays until f48. |
 
 ### Wolfkin — Moonfang Cross-Rend (class 0, Fang Forms)
+
+**Keep** the shipped Cross-Rend as L4. Do not grow a half-room
+crescent. Modest L4 presence only; see §8.
 
 | Lv | Shape | Ticks | Notes |
 | --- | --- | --- | --- |
 | L1 | Short guarded dash, single claw lane, no crescent | 16 | MAX+1, frontal guard for the short dash only |
 | L2 | Moonfang Rush only (dash, three lanes, Will wave); no beat two | 24 | current beat one, no Cross-Rend |
 | L3 | Rush + weaker shear (14 px, no eclipse flash) | 34 | shear MAX+0 |
-| L4 | Current Rush + Cross-Rend X-shear | 42 | beat-one damage and MAX+1 shear (unchanged) |
+| L4 | Shipped Rush + Cross-Rend, larger X and lingering scars | 42 | shear 20→32 px, 3-tick local shake / hit-stop on connect, scars linger through f42 on L4 OAM 24–35 (32×32 X at the 44 px apex). Mechanics and two-beat timing stay. |
 
 ## 5. Test plan
 
@@ -432,5 +446,129 @@ home-bank safety, pickup-weapon bypass, and seeding existing tests at
 L4. Hold-to-climb nits are dropped because Carmelo wants charging to
 stay as it is now.
 
+## 8. L4 audit (t536u): good and unique vs Tide Vortex
+
+Carmelo (t536u): the levels mechanic is reasonable; now make sure each
+hero actually has a good and unique max-Will attack. This section
+audits the **shipped** max-Will v2 arts (merged after the 2026-11-17
+walkthrough Page and Carbon's picks). It does **not** re-propose
+Thunderline Bastion, Royal Stinger and Venom Sac, Murderstorm Eclipse,
+or Moonfang Cross-Rend — those already replaced the old stock spear,
+trident, boomerang fan, and 14-frame rush.
+
+The verb identities are already distinct. The remaining gap is
+**presence and pack coverage**, not a missing hook. Picsean's Tide
+Vortex uses 12 OAM (slots 24–35) and fills the view for 84 ticks
+(1.40 s), 12 damage on every body, and a room-wide shot wash. The
+other four use 4 OAM (32–35) and resolve in 42–54 ticks, with 20–28 px
+payoffs, so a spread pack does not feel a MAX the way the vortex does.
+Lane test bands at Will 1, LCK 0, from `test_will_max_v2.py`: Wolfkin
+18–34 (keeps ~29), Sauran 14–24, Corvin 12–22 unmarked (≥15 marked),
+Vespine 16–26 plus poison. Tide Vortex is 12 / 11 on every body in
+the room.
+
+Shared tropes to keep honest: every hero has some shot-eat beat and a
+palette wash; several have a delayed second beat (Sauran slam f44,
+Vespine rupture f45, Corvin snap f40, Wolfkin shear f34). Upgrades
+must stay architecturally different, and **only Picsean** may wash
+shots across the whole view.
+
+### Verdict per hero
+
+**Picsean — KEEP.** Tide Vortex is the gold standard. No change to
+look, growth, damage, wash, crest audio, or lifetime. The only open
+tune is the optional 360 vs 420 frame lock already in §3.6. The
+compile-flag swirl art stays off unless Carmelo asks. No new art
+required, and none should be generated in this pass.
+
+**Sauran — UPGRADE L4 to Thunderline Aftershock.** The shipped Bastion
+is a good lightning/stone gate (fault spear, two shot-eating pylons,
+24 px slam) and becomes L3. It is still the most lane-locked MAX: the
+slam around the far pylon already reaches about 64 px *ahead*, so a
+forward chevron would re-sweep dead space and miss the real hole —
+packs walking *around* the corridor. L4 keeps the shipped Bastion
+beats, then at about f48–64 a **perpendicular ground fault** branches
+left and right from the two pylons (±36–40 px off-axis, about 16 px
+deep), one MAX+1 hit on bodies the slam missed. Pylons keep eating
+shots until they sink; the aftershock itself does **not** eat shots.
+About 64 ticks, still under 84. This is a wall across the lane, not a
+radial swirl and not Howl rings. Evaluate the fault as one wide AABB
+on a single tick (a `missed_slam` mask), not per-sprite collision.
+
+**Vespine — UPGRADE L4 to Brood Rupture.** The shipped Stinger + Sac
+is a good wasp identity (lodge, poison, pincers, delayed 28 px
+rupture, Swarm feed) and becomes L3. The four diagonal acid droplets
+already draw at f45–54 and deal no damage — that is the hook. L4
+makes them a cluster ring at fixed ±24 px X/Y (~34 px diagonal) from
+the rupture: each pop is 16 px, MAX+1 once, applies poison and
+refreshes Swarm ticks, and does **not** wash shots. Stagger the four
+hit-checks across two frames (NE/SW, then NW/SE) for perf and for a
+readable pop-pop. A miss already plants a ground sac and ruptures at
+that tile in the shipped art; keep that full burst and still add the
+ring (do not halve a planted miss). Still a planted burst, not a room
+vortex.
+
+**Corvin — KEEP the shipped Eclipse, with an L4 readability pass.**
+Night Veil already owns the room's mood; unmarked casts already seek
+the nearest body ahead within 96 px. No second-target chain and no
+flock (both rejected on the walkthrough for uniqueness / OAM). L4
+only: eclipse floor 20→26 px before the Will-pip bonus, so a tight
+cluster catches the edge, and a tall shadow pillar / 4-way corona at
+the snap point on OAM 24–31 (omitted during Serpent). The Effigy stays
+visible until f48. Only the Effigy eats shots, not the flash.
+
+**Wolfkin — KEEP the shipped Cross-Rend, with an L4 readability pass.**
+The two-beat melee hook was already the best close-range feel; do not
+grow a half-room crescent (that turns him into a wave mage and copies
+the vortex). L4 only: shear 20→32 px, 3 ticks of local shake /
+hit-stop on connect, scars linger through f42. With L4 OAM 24–35, six
+scar sprites can hold the dash lane while a 4-sprite 32×32 X flashes
+at the 44 px apex (fallback to 32–35 during Serpent). Timing stays 42
+ticks.
+
+### Shared L4 budget, art, and perf
+
+- **OAM.** L4 for all four non-Picsean heroes may use Picsean's window
+  (24–35), falling back to 32–35 while the Serpent owns 4–31. This is
+  allowed because only one champion is in a run. Slots 24–31 are
+  **cosmetic amplifiers only**; hit detection stays on the single
+  `PROJ_AUX_VORTEX` carrier's timer and anchors, so a Serpent fight
+  can drop 24–31 without changing damage.
+- **Tiles.** OBJ 200–203 remain the only FX VRAM. GPT Image 2 cels
+  (gpt-image-2.6-sunburst), quantized to GBC, should be authored for
+  X/Y flip symmetry so two 8×8 tiles can build a 16×16 or hollow
+  32×32 shape, and/or DMA-swapped at beat boundaries (Vespine stinger
+  / sac for f0–44, rupture / droplet at f45). Current FX is four hand
+  8×8 tiles per hero; new GPT art is wanted for Sauran aftershock /
+  pylons, Vespine sac / droplets, Corvin feathers / corona, and
+  Wolfkin scars / X. Picsean needs no new art. **Do not generate
+  images in this spec pass.**
+- **Banks / perf.** Aftershock and Brood Rupture logic stay in bank 30
+  (`will_maxfx.c`) or a bank-255 helper; no new `combat_tick` hook, no
+  home-bank growth, bank 8 only the existing thin hook. Heavy caps
+  stay. `test_performance.py` must remain 167/180 fixed-roster and
+  135/180 dense. Sauran L4 (two live pylons, one AABB aftershock, 12
+  OAM) is the heaviest non-Picsean tick and is the first
+  implementation on purpose, so it proves the shared L4 OAM allocator
+  and the perf floor before Vespine / Corvin / Wolfkin reuse it.
+
+### Build first
+
+**Sauran Aftershock first**, then Vespine Brood Rupture (the droplets
+already exist visually), then Corvin and Wolfkin readability in one
+polish pass. Carbon agreed: Aftershock also forces the shared L4 OAM
+24–35 allocator and is the worst-case perf test.
+
+### Carbon review (2026-11-21, second pass)
+
+Short Carbon pass on this audit: the diagnosis (presence, not
+identity) and the keep / upgrade split are right. Folded in above:
+Sauran's fault must go *lateral*, not forward; Vespine's ring is
+fixed-offset and does not wash shots, and a miss already plants a
+sac; Corvin and Wolfkin keep their mechanics but get the same L4 12-
+OAM window plus a small radius / shear bump; 24–31 is cosmetic during
+Serpent; droplet hit-checks are staggered; GPT cels use flip symmetry
+or beat-swapped tiles. Carbon call $0.06; running total $7.07 logged.
+
 No images, no deploy, and no implementation until the open questions
-are settled and Carmelo gives an explicit go-ahead on scope.
+in §6 are settled and Carmelo gives an explicit go-ahead on scope.
