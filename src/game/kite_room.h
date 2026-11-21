@@ -66,6 +66,7 @@ extern u8 kt_live;
 extern u8 kt_s1, kt_x;          // segment A stream; linked gate-open/B-closed
 extern u8 kt_broken;            // crystal lock shattered
 extern u8 kt_state, kt_ky, kt_cold, kt_frame;
+extern u8 kt_cool;
 extern u8 kt_resets, kt_deaths, kt_refusals, kt_blink, kt_offcam_sfx;
 
 u8 kt_prepare(void) BANKED;

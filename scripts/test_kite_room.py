@@ -16,6 +16,7 @@ Headless proof for the optional Frost Vault pocket that
   * Pack RESET ROOM (from the vault, and while the Kite is dead) and the
     entrance plate (while the Kite is flying) restore the start state with
     HP kept, and it solves again after a reset;
+  * a plate step landing in the press cooldown fires once ready;
   * the Kite never leaves its channel; no ordinary enemy is ever inside.
 Every hero can solve it: all plates are stepped, nothing needs a shot.
 """
@@ -46,6 +47,7 @@ LIVE, S1, X, BROKEN, STATE, KY, COLD = (A(n) for n in (
     "_kt_live", "_kt_s1", "_kt_x", "_kt_broken", "_kt_state", "_kt_ky", "_kt_cold"))
 RESETS, DEATHS, REFUSE, OFFCAM, BLINK = (A(n) for n in (
     "_kt_resets", "_kt_deaths", "_kt_refusals", "_kt_offcam_sfx", "_kt_blink"))
+COOL = A("_kt_cool")
 CELL = A("_rime_cell")
 KIND = A("_room_puzzle_kind")
 SCREEN = A("_loop_current_screen")
@@ -413,6 +415,17 @@ def main():
     assert r.m(RESETS) == 1 and r.m(BROKEN) == 0 and r.m(S1) == 0 and r.m(X) == 0
     assert reg(r, 6, 11) == [LOCK_T, LOCK_T, LOCK_B, LOCK_B], "lock not restored"
     assert reg(r, 9, 5) == list(CAIRN) and r.hp() == hp1
+    # --- a step that lands during the press cooldown is held, not swallowed.
+    r.go(4, 6)
+    r.pb.memory[COOL] = 200
+    r.go(6, 6)
+    assert r.m(S1) == 0, "press fired during the cooldown"
+    assert wait(r, lambda: r.m(S1) == 1, 260), "held step never fired after the cooldown"
+    r.go(4, 6)
+    r.tick(25)
+    r.plate(5)
+    assert r.m(S1) == 0
+    print("  step during cooldown held, fires once ready (no swallowed edge)")
     # --- Pack reset while the Kite is dead.
     r.plate(3)
     assert wait(r, lambda: r.m(STATE) == KT_DEAD, 320)

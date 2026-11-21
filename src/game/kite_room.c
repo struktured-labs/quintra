@@ -23,8 +23,9 @@ u8 kt_live;
 u8 kt_s1, kt_x, kt_broken;
 u8 kt_state, kt_ky, kt_cold, kt_frame;
 u8 kt_resets, kt_deaths, kt_refusals, kt_blink, kt_offcam_sfx;
+u8 kt_cool;                      // press cooldown (frames)
 static u8 kt_t;                 // breath / respawn timer
-static u8 kt_queue, kt_flash, kt_flash_t, kt_cool, kt_cue, kt_epoch;
+static u8 kt_queue, kt_flash, kt_flash_t, kt_cue, kt_epoch;
 static u8 kt_on_l, kt_on_s1, kt_on_s2, kt_on_reset, kt_on_goal;
 
 #define WX(lx) ((u8)(KT_X0 + (lx)))
@@ -186,6 +187,14 @@ static u8 in_zone(u8 ex, u8 ey) {
     if (ex >= (u8)(KT_X0 - 4) && ey >= KT_Y0 && ey < (u8)(KT_Y0 + KT_H)) return 1;
     return (ex >= 11 && ey >= (u8)(WY(KT_ENTRY_Y) - 1)
         && ey <= (u8)(WY(KT_ENTRY_Y) + 2)) ? 1 : 0;
+}
+
+// Rising edge of a plate, latched only when the press can act.
+static u8 edge(u8 on, u8 *latch, u8 ok) {
+    if (!on) { *latch = 0; return 0; }
+    if (*latch || !ok) return 0;
+    *latch = 1;
+    return 1;
 }
 
 static void kite_home(void) {
@@ -437,17 +446,13 @@ void kt_tick(void) BANKED {
     if (on && !kt_on_reset) { kt_reset(); return; }
     kt_on_reset = on;
 
-    // Edges sampled every frame; cooldown/queue only gate the press.
+    // Edges sampled every frame. A step that lands during the cooldown or a
+    // pending repaint is held, not swallowed: it fires once the room is
+    // ready (Carbon code review). At most one press per frame.
     ok = (!kt_cool && !kt_queue) ? 1 : 0;
-    on = foot_on(KT_LEVER_X, KT_LEVER_Y);
-    if (ok && on && !kt_on_l) { press_link(); ok = 0; }
-    kt_on_l = on;
-    on = foot_on(KT_S1_X, KT_S1_Y);
-    if (ok && on && !kt_on_s1) { press_s1(); ok = 0; }
-    kt_on_s1 = on;
-    on = foot_on(KT_S2_X, KT_S2_Y);
-    if (ok && on && !kt_on_s2) press_link();
-    kt_on_s2 = on;
+    if (edge(foot_on(KT_LEVER_X, KT_LEVER_Y), &kt_on_l, ok)) { press_link(); ok = 0; }
+    if (edge(foot_on(KT_S1_X, KT_S1_Y), &kt_on_s1, ok)) { press_s1(); ok = 0; }
+    if (edge(foot_on(KT_S2_X, KT_S2_Y), &kt_on_s2, ok)) press_link();
 
     on = (foot_on(KT_GOAL_X, KT_GOAL_Y) && ((player.y + 12) >> 3) == WY(KT_GOAL_Y)) ? 1 : 0;
     if (on && !kt_on_goal && !(run_state.dungeon_puzzles & RUN_RIME_SOLVED_BIT))
