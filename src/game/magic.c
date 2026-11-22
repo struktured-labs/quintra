@@ -13,6 +13,7 @@
 #include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/magic.h"
+#include "game/magic_cv.h"
 #include "game/will_levels.h"
 #include "game/pickup.h"
 #include "game/player.h"
@@ -1034,6 +1035,25 @@ static u8 hero_power_selected(void) {
 
 // A new room (entity_init_room) wipes every slot: drop tracked shots and
 // pending strikes silently. Wards are self-effects and cross the doorway.
+
+/* #151 s10 tables stay in bank 31 so they cannot pack into bank 8. */
+const u16 magic_cv_reach[4] = { 256, 320, 384, 448 };
+const u16 magic_cv_dmg[4]   = { 256, 294, 333, 371 };
+const u8  magic_cv_pal_slot[5] = { 4, 5, 4, 4, 7 };
+
+u16 magic_cv_reach_at(u8 lv) BANKED {
+    if (lv > 3) lv = 3;
+    return magic_cv_reach[lv];
+}
+u16 magic_cv_dmg_at(u8 lv) BANKED {
+    if (lv > 3) lv = 3;
+    return magic_cv_dmg[lv];
+}
+u8 magic_cv_pal_at(u8 c) BANKED {
+    if (c > 4) c = 0;
+    return magic_cv_pal_slot[c];
+}
+
 static void drop_room_state(void) {
     u8 k;
     for (k = 0; k < SHOTS; ++k) shot_slot[k] = 0xFF;
@@ -1043,6 +1063,7 @@ static void drop_room_state(void) {
     memset(ice_mask, 0, sizeof(ice_mask));
     carrier = 0xFF;
     magic_cure_used = 0;
+    magic_convergence_reset();
 }
 
 static void tick_live(u8 keys) {
@@ -1056,6 +1077,7 @@ static void tick_live(u8 keys) {
     tick_thunder();
     tick_bramble();
     tick_wards();
+    if (magic_cv_busy) magic_convergence_tick();
     carrier_close();
 }
 

@@ -233,6 +233,11 @@ def check_spells(pb, c):
         near = entity(pb, 1, 2, 136, 80)
         tap(pb)
         assert run_until(pb, 14, lambda: m[foe + 14] < 40), "Thunder missed"
+        # After Spirit Convergence the room can still be burning leftover FX
+        # and the 18s ascent. A host tick may sample the HP write one frame
+        # before status_enemy_apply commits; wait a couple of frames for STOP.
+        if m[ESTATUS] != ST_STOP:
+            run_until(pb, 4, lambda: m[ESTATUS] == ST_STOP)
         assert m[ESTATUS] == ST_STOP, f"Thunder status {m[ESTATUS]}"
         assert run_until(pb, 20, lambda: m[near + 14] < 40), "Thunder no chain"
         assert m[ESTATUS + 1] == ST_SLOW

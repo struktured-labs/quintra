@@ -182,6 +182,7 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     }
 
     if (!magic_hit_status(j, i, ej->hp > dmg)) return 0;
+    if (!magic_convergence_hit(j, i, ej->hp > dmg)) return 0;
     if (ej->hp > dmg) {
         ej->hp = (u8)(ej->hp - dmg);
         ej->ai_data[7] = weak ? 7 : 4;
