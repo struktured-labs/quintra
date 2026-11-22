@@ -431,10 +431,21 @@ def switches(r):
     assert g[Y0 + 9][X0 + 1] == G_STREAM and g[Y0 + 9][X0 + 10] == G_STREAM, "glyphs not flipped"
 
 
-def kite_chain(r):
-    """In the vault: release plate wakes the Kite; it rides west and shatters the lock."""
-    r.wx(PX(6))                          # the 2-cell catwalk is exactly hero-wide
-    r.wy(fy(13))
+def kite_chain(r, off=7):
+    """In the vault: release plate wakes the Kite; it rides west and shatters the lock.
+    Approach the Star door `off` px off-centre holding only DOWN: the door funnel
+    must slide the hero in (beyond the engine's 3 px corner slide)."""
+    r.wx(PX(6) + off)
+    assert abs(r.pos()[0] - PX(6)) >= 6, f"could not stand off-centre ({off:+d}) {r.pos()}"
+    off = r.pos()[0] - PX(6)
+    r.pb.button_press("down")
+    for _ in range(120):
+        if r.pos()[1] >= fy(13):
+            break
+        r.tick()
+    r.pb.button_release("down")
+    r.tick(2)
+    assert r.pos()[0] == PX(6), f"funnel did not centre the hero ({off:+d} px): {r.pos()}"
     if r.pos()[1] < fy(13):
         r.pb.screen.image.save("/tmp/q-m5-logs/fail_vault.png")
     assert r.pos()[1] >= fy(13), f"could not enter the vault {r.pos()} open {r.c('open')} j {r.c('jx') - PX(0)},{r.c('jy') - PY(0)} frz {r.m(FREEZE)}"
@@ -744,7 +755,7 @@ def main():
     switches(r)
     to_door(r)
     assert wait(r, lambda: r.c("open") == 1, 20)
-    kite_chain(r)
+    kite_chain(r, -7)
     r.wx(PX(3) - 2)
     assert wait(r, lambda: r.c("hdoor") == 2, 20), f"Heart door B did not open {r.pos()}"
     r.wy(fy(14))
@@ -775,4 +786,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
