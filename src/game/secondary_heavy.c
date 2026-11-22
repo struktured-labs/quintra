@@ -18,14 +18,15 @@ static const i8 mstar_sx[16] = {
     0, 9, 17, 22, 24, 22, 17, 9,
     0, -9, -17, -22, -24, -22, -17, -9
 };
-// 8.8 orbit scale for will_b_tier 0..3: 24, 27, 33, 39 px (24 * n/8).
-static const u8 mstar_scale[4] = {8, 9, 11, 13};
+// Orbit reach in pixels for will_b_tier 0..3. Was 24, 27, 33, 39
+// (+3, +6, +6); evened to 24, 29, 34, 39 (+5) without shrinking the max.
+static const u8 mstar_reach[4] = {24, 29, 34, 39};
 static const u8 mstar_life[4] = {40, 40, 44, 48};
 static const u8 mstar_box[4]  = {0xAA, 0xAA, 0xCC, 0xDD};
 static const u8 mstar_bonus[4] = {3, 3, 4, 5};
 
-static i16 mstar_offset(i8 base, u8 scale) {
-    return (i16)(((i16)base * (i16)scale) >> 3);
+static i16 mstar_offset(i8 base, u8 reach) {
+    return (i16)(((i16)base * (i16)reach) / 24);
 }
 
 static void mstar_clamp(entity_t *e) {
@@ -74,7 +75,13 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
         e->hitbox=mstar_box[tier];
         e->damage=player.atk+mstar_bonus[tier];
         e->state_timer=mstar_life[tier];
-        if (tier>=3) room_shake(1, 8);
+        if (tier>=3) {
+            room_shake(1, 8);
+            // Max-Will orbits used to leave the gauge armed, so a second
+            // swing at full size was free until a base A-attack spent it.
+            player.will_charge = 0;
+            player.will_level = 0;
+        }
     }
     player.active_charge=bomb ? 72 : 56;
     sfx_play_weapon(PROJ_FLAIL);
@@ -87,8 +94,8 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
     if (e->ai_data[6]==PROJ_AUX_MORNINGSTAR) {
         tier=e->ai_data[7]&3;
         a=(++e->ai_data[0]>>1)&15;
-        e->x=player.x+4+mstar_offset(mstar_sx[a], mstar_scale[tier]);
-        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], mstar_scale[tier]);
+        e->x=player.x+4+mstar_offset(mstar_sx[a], mstar_reach[tier]);
+        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], mstar_reach[tier]);
         mstar_clamp(e);
         t=room_tile_at_px(e->x+4,e->y+4);
         // One strike per swing: a full orbit would otherwise toggle a vane
