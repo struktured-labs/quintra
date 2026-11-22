@@ -81,6 +81,17 @@ static const u8 sprite_morningstar_big[64] = {
     0x8C,0x7C,0xDE,0x26,0x88,0x78,0x10,0xF0,0x38,0xF8,0xD8,0x58,0x80,0x80,0x00,0x00
 };
 
+
+// GPT Image 2.6 Sunburst (`gpt-image-2.6-sunburst`), hand-quantized to 8x8.
+// Shockwave arc: C-shape open to the left, convex on the right. Flips close a ring.
+static const u8 sprite_bomb_wave[16] = {
+    0x48,0x30,0x64,0x38,0x32,0x1C,0x1A,0x0C,0x1A,0x0C,0x24,0x18,0x74,0x38,0x48,0x30
+};
+// Jagged ember fragment with a short spark tail.
+static const u8 sprite_bomb_frag[16] = {
+    0x06,0x00,0x09,0x06,0x11,0x0E,0x2A,0x1C,0x74,0x38,0xF8,0x60,0xE0,0x40,0x40,0x00
+};
+
 void tiles_load_item_sprites(void) BANKED {
     set_sprite_data(SPR_ITEM_BOOMERANG, 1, sprite_boomerang);
     set_sprite_data(SPR_ITEM_IRON_HEART, 26, sprite_item_icons[0]);
@@ -89,6 +100,8 @@ void tiles_load_item_sprites(void) BANKED {
     set_sprite_data(SPR_ITEM_MORNINGSTAR, 1, sprite_morningstar);
     set_sprite_data(SPR_ITEM_BOMB_BAG, 1, sprite_bomb_bag);
     set_sprite_data(SPR_ITEM_MORNINGSTAR_BIG, 4, sprite_morningstar_big);
+    set_sprite_data(SPR_BOMB_WAVE, 1, sprite_bomb_wave);
+    set_sprite_data(SPR_BOMB_FRAG, 1, sprite_bomb_frag);
     VBK_REG = 0;
 }
 
