@@ -6,8 +6,8 @@ use crate::ids::*;
 
 pub const CLAW_COMBO: Item = Item {
     id:          ITEM_CLAW_COMBO,
-    name:        "Fang Forms",
-    description: "Close claw arc, no reach; Max dash.",
+    name:        "Longblade",
+    description: "Slash wide, stab deep. Full hearts fire a beam.",
     kind: ItemKind::Weapon {
         fire_rate:  20,    // melee-only claw: fastest contact cadence; SPD accelerates it
         damage:     1,

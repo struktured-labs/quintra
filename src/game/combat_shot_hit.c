@@ -15,6 +15,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/wolfkin_sword.h"
 #include "game/powerup.h"
 #include "game/rare_enemy.h"
 #include "game/room.h"
@@ -94,6 +95,12 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     // against one overlapping body. Preserve the projectile so it can
     // strike a different enemy farther down the same lane.
     if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+        || shot->ai_data[6] == PROJ_AUX_SWORD_BEAM) {
+        if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+            && !wolfkin_sword_live(shot)) return 0;
+        if (wolfkin_sword_already_hit(j)) return 0;
+    }
+    if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
         && shot->ai_data[5] == j) return 0;
     if (eid == ENEMY_STONE_SENTINEL && ej->ai_data[3]
         && (shot->ai_data[3] & PROJ_FLAG_CONVERGENCE)) {
@@ -149,6 +156,9 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
             return 1;
         }
     }
+    if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+        || shot->ai_data[6] == PROJ_AUX_SWORD_BEAM)
+        wolfkin_sword_mark_hit(j);
     if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
         shot->ai_data[5] = j;
 

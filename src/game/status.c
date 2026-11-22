@@ -26,6 +26,7 @@
 #include "game/enemy_def.h"
 
 u8 player_status_kind;
+u8 status_apply_req;
 void status_effect(u8 kind,u8 palette,i16 x,i16 y) BANKED;
 u8 player_status_ticks;
 u8 enemy_status_kind[MAX_ENTITIES];
@@ -205,6 +206,7 @@ void status_clear_enemies(void) BANKED {
 }
 
 void status_reset_all(void) BANKED {
+    status_apply_req = 0;
     status_clear_enemies();
     player_status_kind = QSTATUS_NONE;
     player_status_ticks = 0;
@@ -245,8 +247,8 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
     // present, but halve hostile duration so one unlucky proc cannot erase a
     // long test run after the initiating enemy is already gone.
     if (kind == QSTATUS_CONFUSION && confusion_immune) return;
-    if (RUN_IS_EASY() && kind != QSTATUS_REGEN && kind != QSTATUS_HASTE)
-        ticks = (u8)((ticks + 1) >> 1);
+    ticks = status_resist_adjust(kind, ticks);
+    if (ticks == 0xFF) return;
     if (kind == QSTATUS_CONFUSION) {
         ticks = RUN_IS_EASY() ? 16 : 24;
         // Horizontal mirror or full reverse only; never reshuffle.
@@ -538,14 +540,6 @@ void status_update_enemy_condition(u8 idx) BANKED {
         status_enemy_moved(idx);
 }
 
-
-void status_tick_gate(void) BANKED {
-    if (player_status_kind != QSTATUS_NONE || status_enemy_active
-        || powerup_id || powerup_world_live || confusion_immune)
-        status_tick();
-    else
-        status_clock++;
-}
 
 void status_tick(void) BANKED {
     if (confusion_immune) confusion_immune--;

@@ -33,6 +33,7 @@ void new_monsters_foyer_warp(void) BANKED;
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/projectile.h"
+#include "game/wolfkin_sword.h"
 void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
@@ -1840,35 +1841,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // never requires button mashing. Weapon swaps keep their authored
         // projectile behaviour.
         if (wolfkin_melee && !(keys & J_B)) {
-            if ((keys & J_A) && !max_fired) {
-                u8 dir = room_input_dir8(keys, player.facing);
-                // A held A is a deliberate physical combo, not a
-                // button-mashing tax: one contact arc every 24 frames.
-                if (player.fire_cooldown == 0) {
-                    u8 dmg = (u8)(w->p1 + effective_atk);
-                    u8 shot;
-                    if (room_weapon_surge_ticks) dmg++;
-                    // Fang Claw: a slow contact arc held at arm length
-                    // (projectile.c), never a travelling shot. Pays for the
-                    // missing reach with +2 damage, 3 bodies and knockback.
-                    dmg = (u8)(dmg + 2);
-                    g_fang_claw = 1;
-                    shot = projectile_spawn_player(
-                        dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
-                    g_fang_claw = 0;
-                    if (room_weapon_surge_ticks && shot != 0xFF)
-                        entities[shot].hp++;
-                    if (shot != 0xFF
-                        && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
-                        // Neutral A sweeps a wider close arc while retaining
-                        // one hitbox, so bosses cannot be blendered.
-                        entities[shot].hitbox = 0xCC;
-                    }
-                    if (shot != 0xFF && !muted) player.will_charge = 0;
-                    powerup_echo_primary(shot, dir, dmg);
-                    player.fire_cooldown = player_fire_delay(w->p0);
-                }
-            }
+            if ((keys & J_A) && !max_fired)
+                wolfkin_sword_try_fire(keys, effective_atk, w->p1, w->p0, muted);
         } else if ((keys & J_A) && !(keys & J_B) && !max_fired) {
             // The ranged path shares the same contextual TALK edge. Checking
             // it before the cooldown gate means a resident always answers,

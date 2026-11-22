@@ -181,6 +181,8 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
 	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
+	$(PYBOY_RUN) scripts/test_wolfkin_longsword.py
+	$(PYBOY_RUN) scripts/test_class_status_resist.py
 	$(PYBOY_RUN) scripts/test_attack_relics.py
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_pickup_feedback.py
