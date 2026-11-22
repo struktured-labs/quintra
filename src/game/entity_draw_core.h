@@ -18,7 +18,18 @@ if (large_boss_index != 255) oam = large_boss_draw(oam);
 /* Limb quads own OAM 4..23. Projectiles start after them, and the quads are
    written again after this pass so a projectile hide cannot punch a hole. */
 if (hexa_boss_active && oam < 24) oam = 24;
+#ifdef ENTITY_DRAW_RUN
+edr_rot = (u8)(entity_anim_counter >> 1);
+#endif
 for (i = 0; i < MAX_ENTITIES; ++i) {
+#ifdef ENTITY_DRAW_RUN
+    // Plain sprites are placed by the register-only scan; it stops at the
+    // next slot that needs this general body (game/entity_draw_run.c).
+    edr_i = i; edr_oam = oam;
+    entity_draw_run();
+    oam = edr_oam; i = edr_i;
+    if (i >= MAX_ENTITIES) break;
+#endif
     // Rotate the 32 logical slots through the 36 non-player OAM entries.
     // When a crowded scanline or several 16x16 bodies exceed hardware OAM,
     // every entity receives display priority on following frames instead of
@@ -38,10 +49,12 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     // Its logical entity remains the current armor/vent collision anchor but
     // must never leak the legacy generic 32x32 picture into the formation.
     if (cinder_pack_active && slot == cinder_boss_index) continue;
+#ifndef ENTITY_DRAW_RUN
     {
         u8 fast = entity_draw_fast(e, slot, oam);
         if (fast != 0xFF) { oam = fast; continue; }
     }
+#endif
     // EF_ON_SCREEN is authoritative in compact rooms, streaming fields, and
     // Shade limbo alike. Every enemy spawns with it; only camera streaming or
     // an authored vanish phase clears it.

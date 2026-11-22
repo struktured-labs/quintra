@@ -351,7 +351,9 @@ void cinder_lanes_skip_body(i16 bx, i16 by) BANKED {
             || s->ai_data[1] != BOSS_SHOT_LANE) continue;
         live = 1;
         w = s->hitbox >> 4; h = s->hitbox & 15;
-        if (s->x + w <= bx || s->x >= bx + CINDER_REX_W) continue;
+        /* 4px side margin: the hound can step onto a lane column after
+           this check in the same frame. */
+        if (s->x + w + 4 <= bx || s->x >= bx + CINDER_REX_W + 4) continue;
         /* Look 4px ahead: the lane moves after this check this frame. */
         if (s->ai_data[0] == 16) {
             if (s->y + h + 4 > by && s->y < by + CINDER_REX_H)
