@@ -35,17 +35,21 @@ PUZZLE_CONDUIT_ROOM = 11
 X0, Y0, W, H = 18, 11, 12, 18
 BGT_FLOOR, BGT_WALL = 1, 2
 TRACK, TPAD, SWITCH, PLATE, DOOR, BARS = 105, 106, 107, 96, 37, 99
-OURS = {TRACK, TPAD, SWITCH, PLATE, DOOR, BARS}
-SOLID = {2, DOOR, BARS} | set(tsa.HARD_SCENERY)
+CAIRN, STREAM, LOCK, G_ROCK, G_STREAM = (98, 109, 110, 39), 108, 38, 35, 36
+OURS = {TRACK, TPAD, SWITCH, PLATE, DOOR, BARS, STREAM, LOCK, G_ROCK, G_STREAM} | set(CAIRN)
+SOLID = {2, DOOR, BARS, STREAM, LOCK} | set(CAIRN) | set(tsa.HARD_SCENERY)
+CLASS = int(os.environ.get("CD_CLASS", "0"))
+PICSEAN = 3
 J_GUARD, J_DEAD = 0, 1
 TOOL_FREEZE, TOOL_RESET = 4, 5
 LANE = 10
 
 A = tsa.addr
 RS, PL, EN = tsa.RS, tsa.PL, tsa.EN
-NAMES = ("live", "side", "key", "held", "open", "charge", "jx", "jy", "jst", "sst",
+NAMES = ("ra", "rb", "kx", "kst", "lockup", "hkey", "hdoor", "coin_given", "rewrites",
+         "live", "side", "key", "held", "open", "charge", "jx", "jy", "jst", "sst",
          "sx", "st", "thp", "tt", "tell", "thead", "lock", "armed", "pend", "frame",
-         "resets", "refusals", "flips", "crushed", "shoves", "pack_id", "pack")
+         "resets", "refusals", "flips", "crushed", "shoves", "pack_id", "pack", "von")
 S = {n: A("_cd_" + n) for n in NAMES}
 CELL = A("_rime_cell")
 KIND = A("_room_puzzle_kind")
@@ -58,11 +62,12 @@ TM, EXT, BOT = A("_room_tilemap"), A("_room_world_extension"), A("_room_world_bo
 LAYOUT = [
     "############", "#11...#....#", "#11...#....#", "#.....#....#",
     "#33...#..22#", "#33.33#..22#", "....33#....#", "......#....#",
-    "####33######", "#...33.....#", "#==========#", "#==========#",
-    "############", "#..........#", "#..........#", "#....GG....#",
-    "#..........#", "############",
+    "####33######", "#g..33....g#", "#==========#", "#==========#",
+    "############", "#..HLL..H..#", "#GGHLLPPH..#", "#SSSSSSCCSS#",
+    "#SSSSSSCCSS#", "############",
 ]
-REGIONS = {(6, 3), (6, 4), (5, 12), (6, 12)}
+REGIONS = {(6, 3), (6, 4), (6, 12), (7, 12)}
+K_HOME, K_FLY, K_BREATH, K_DONE = 0, 1, 2, 3
 
 
 def PX(lx):
@@ -71,6 +76,9 @@ def PX(lx):
 
 def PY(ly):
     return (Y0 + ly) * 8
+
+
+SWX = {1: (X0 + 1) * 8 - 2, 10: (X0 + 10) * 8 - 7}   # hero x: feet centre on a dead-end switch, clear of the wall
 
 
 def fx(lx):          # hero x whose feet centre is in column lx
@@ -110,7 +118,12 @@ class Run:
     def tick(self, n=1):
         for _ in range(n):
             hp0 = self.hp()
+            rw0 = (self.pb.memory[S["rewrites"]], self.pb.memory[S["ra"]], self.pb.memory[S["rb"]])
             self.pb.tick()
+            if getattr(self, "trace", None) is not None:
+                self.trace = (self.trace + [(self.pos()[0], self.pos()[1], self.c("rewrites"), self.c("ra"), self.c("rb"), self.c("von"), self.c("resets"), self.m(SCREEN))])[-40:]
+            if (self.pb.memory[S["rewrites"]], self.pb.memory[S["ra"]], self.pb.memory[S["rb"]]) != rw0:
+                self.rw_log = (getattr(self, "rw_log", []) + [(self.pos(), self.c("rewrites"), self.c("ra"), self.c("rb"), self.c("resets"))])[-10:]
             if self.m(SCREEN) == 5 and self.hp() < hp0:
                 self.hurts += 1
                 if self.heal:
@@ -234,16 +247,25 @@ def check_layout(grid):
                 assert v == BGT_WALL, f"wall missing at {lx},{ly}: {v}"
             elif c == "=":
                 assert v == TRACK, f"lane missing at {lx},{ly}: {v}"
-            elif c in ".123G":
+            elif c in ".123GPg":
                 assert v not in SOLID, f"floor blocked at {lx},{ly}: {v}"
+            elif c == "S":
+                assert v == STREAM, f"rift-stream missing at {lx},{ly}: {v}"
+            elif c == "C":
+                assert v in CAIRN, f"cairn missing at {lx},{ly}: {v}"
+            elif c == "L":
+                assert v == LOCK, f"crystal lock missing at {lx},{ly}: {v}"
+            elif c == "H":
+                assert v == DOOR, f"Heart door missing at {lx},{ly}: {v}"
     assert grid[Y0 + 3][X0 + 6] == BARS and grid[Y0 + 4][X0 + 6] == BARS, "side door not shut"
-    assert grid[Y0 + 12][X0 + 5] == DOOR and grid[Y0 + 12][X0 + 6] == DOOR, "Star door not shut"
+    assert grid[Y0 + 12][X0 + 6] == DOOR and grid[Y0 + 12][X0 + 7] == DOOR, "Star door not shut"
+    assert grid[Y0 + 9][X0 + 1] == G_ROCK and grid[Y0 + 9][X0 + 10] == G_STREAM, "switch glyphs wrong"
     seen = bfs(grid, (X0 + 1, Y0 + 6))
     edges = [p for p in seen if p[0] in (0, 30) or p[1] in (0, 30)]
     assert edges, "pocket entrance not reachable from any room edge"
     assert (X0 + 1, Y0 + 1) in seen and (X0 + 8, Y0 + 11) in seen
     assert (X0 + 8, Y0 + 6) not in seen, "wing reachable with the side door shut"
-    assert (X0 + 5, Y0 + 15) not in seen, "vault reachable with the Star door shut"
+    assert (X0 + 6, Y0 + 13) not in seen, "vault reachable with the Star door shut"
     stray = [(x, y, grid[y][x]) for y in range(31) for x in range(31)
              if grid[y][x] in OURS and not (X0 <= x < X0 + W and Y0 <= y < Y0 + H)]
     assert not stray, f"pocket tile ids outside the pocket: {stray[:4]}"
@@ -254,11 +276,13 @@ def try_seed(seed):
     cands = rime_cell_candidates(seed, STAGE)
     if not cands:
         return None
-    pb = tsa.generated_room(STAGE, seed, local_room=cands[0], keep_running=True)
+    pb = tsa.generated_room(STAGE, seed, local_room=cands[0], keep_running=True,
+                            class_id=CLASS)
     real = pb.memory[CELL]
     if real != cands[0] and real in cands:
         pb.stop(save=False)
-        pb = tsa.generated_room(STAGE, seed, local_room=real, keep_running=True)
+        pb = tsa.generated_room(STAGE, seed, local_room=real, keep_running=True,
+                                class_id=CLASS)
     if pb.memory[KIND] != PUZZLE_CONDUIT_ROOM or pb.memory[S["live"]] != 1:
         why = "altar owns the cell" if real == 0xFF else f"kind={pb.memory[KIND]}"
         print(f"  seed {seed:#x}: no pocket ({why})")
@@ -356,9 +380,15 @@ def take_key(r):
 
 
 def take_charge(r):
+    assert wait(r, lambda: r.m(FREEZE) == 0, 1200), "freeze never ended"   # pedestal refuses mid-freeze
     r.walk(fx(3), fy(4), axis_first="x")
-    r.walk(fx(5), fy(6), axis_first="y")
-    assert wait(r, lambda: r.c("charge") == 1, 10), f"Rime charge not taken {r.pos()}"
+    r.walk(fx(5), fy(6), axis_first="y", until=lambda: r.c("charge") == 1)
+    if not r.c("charge"):
+        r.walk(fx(5), fy(5) + 2, axis_first="y", until=lambda: r.c("charge") == 1)
+    if not wait(r, lambda: r.c("charge") == 1, 10):
+        r.pb.screen.image.save("/tmp/q-m5-logs/fail_charge.png")
+        g = world_tiles(r.pb)
+        raise AssertionError(f"Rime charge not taken {r.pos()} frz {r.m(FREEZE)} rows5-7 {[g[Y0 + y][X0 + 3:X0 + 7] for y in (5, 6, 7)]}")
 
 
 def teleport(r):
@@ -369,15 +399,63 @@ def teleport(r):
 
 
 def to_door(r):
-    """From the hall landing: lure the Jagger east, freeze it, slip to the Star door."""
-    r.wy(PY(LANE) - 12)                 # feet row 10, above the Jagger's feet
+    """From the hall: lure the Jagger east (col 9), freeze it, slip west to the Star door."""
+    r.wy(fy(9))
     lane_quiet(r)
-    r.wx(fx(9) + 2)
-    assert wait(r, lambda: r.c("jx") >= PX(7), 60), "Jagger did not shadow the hero"
+    r.wx(fx(9))
+    assert wait(r, lambda: r.c("jx") == fx(9), 120), f"Jagger did not shadow the hero {r.c('jx') - PX(0)}"
     r.pack(TOOL_FREEZE)
     assert r.m(FREEZE) > 0 and r.c("charge") == 0
-    r.wx(PX(5))
+    r.wx(PX(6))
     r.wy(PY(LANE))
+
+
+def switches(r):
+    """Hall row 9 dead ends: A (col 1) flips A and B, B (col 10) flips B -> both streams."""
+    r.wy(fy(9))
+    r.wx(PX(3))                          # off switch A (the teleport lands on it, latched)
+    lane_quiet(r)
+    for col, want in ((1, (1, 0)), (10, (1, 1))):
+        n = r.c("rewrites")
+        r.trace = []
+        r.wx(SWX[col])
+        if r.c("rewrites") != n + 1:
+            print("TRACE", r.trace)
+        r.trace = None
+        assert wait(r, lambda: r.c("rewrites") == n + 1, 10), f"switch at col {col} did nothing {r.pos()} ref {r.c('refusals')} von {r.c('von')} live {r.c('live')} ra/rb {r.c('ra')}{r.c('rb')} kx {r.c('kx') - PX(0)} kst {r.c('kst')} resets {r.c('resets')} rw {getattr(r, 'rw_log', None)} n {n} rewrites {r.c('rewrites')}"
+        assert (r.c("ra"), r.c("rb")) == want, f"regions {(r.c('ra'), r.c('rb'))} != {want}"
+    r.wx(PX(7))                          # step off B along the hall (no lane bounce)
+    g = world_tiles(r.pb)
+    assert all(g[Y0 + y][X0 + x] == STREAM for x in range(1, 11) for y in (15, 16)), \
+        "stream not continuous after A, B"
+    assert g[Y0 + 9][X0 + 1] == G_STREAM and g[Y0 + 9][X0 + 10] == G_STREAM, "glyphs not flipped"
+
+
+def kite_chain(r, off=7):
+    """In the vault: release plate wakes the Kite; it rides west and shatters the lock.
+    Approach the Star door `off` px off-centre holding only DOWN: the door funnel
+    must slide the hero in (beyond the engine's 3 px corner slide)."""
+    r.wx(PX(6) + off)
+    assert abs(r.pos()[0] - PX(6)) >= 6, f"could not stand off-centre ({off:+d}) {r.pos()}"
+    off = r.pos()[0] - PX(6)
+    r.pb.button_press("down")
+    for _ in range(120):
+        if r.pos()[1] >= fy(13):
+            break
+        r.tick()
+    r.pb.button_release("down")
+    r.tick(2)
+    assert r.pos()[0] == PX(6), f"funnel did not centre the hero ({off:+d} px): {r.pos()}"
+    if r.pos()[1] < fy(13):
+        r.pb.screen.image.save("/tmp/q-m5-logs/fail_vault.png")
+    assert r.pos()[1] >= fy(13), f"could not enter the vault {r.pos()} open {r.c('open')} j {r.c('jx') - PX(0)},{r.c('jy') - PY(0)} frz {r.m(FREEZE)}"
+    r.wy(fy(14))
+    assert wait(r, lambda: r.c("kst") != K_HOME, 10), "release plate did not wake the Kite"
+    assert wait(r, lambda: r.c("lockup") == 0, 420), f"Kite never shattered the lock (kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} frz {r.m(FREEZE)} pos {r.pos()} rw {getattr(r, 'rw_log', None)} X0 {PX(0)} {PY(0)})"
+    still(r, "state7_shattered")
+    r.wy(fy(13))
+    r.wx(PX(4))
+    assert wait(r, lambda: r.c("held") & 2, 10), f"Heart key not taken {r.pos()}"
 
 
 def setup_run(r):
@@ -392,9 +470,50 @@ def assert_restored(r, resets):
     assert r.c("resets") == resets, f"resets {r.c('resets')} != {resets}"
     assert r.c("key") == 1 and r.c("held") == 0 and r.c("charge") == 0
     assert r.c("side") == 0 and r.c("open") == 0 and r.c("armed") == 0
-    assert g[Y0 + 3][X0 + 6] == BARS and g[Y0 + 12][X0 + 5] == DOOR
+    assert g[Y0 + 3][X0 + 6] == BARS and g[Y0 + 12][X0 + 6] == DOOR
+    assert (r.c("ra"), r.c("rb"), r.c("kst"), r.c("lockup"), r.c("hkey"), r.c("hdoor")) == \
+        (0, 1, K_HOME, 1, 1, 0), "vault not restored"
+    assert g[Y0 + 13][X0 + 4] == LOCK and g[Y0 + 13][X0 + 3] == DOOR and g[Y0 + 15][X0 + 7] in CAIRN
     assert r.c("jst") == J_GUARD and r.c("thp") == 4
     assert r.m(FREEZE) == 0
+
+
+def kite_wait(r, snap):
+    snap.seek(0)
+    r.pb.load_state(snap)
+    mem = r.pb.memory
+    mem[S["kst"]], mem[S["kx"]] = K_FLY, PX(9)
+    r.tick(60)
+    assert r.c("kx") == PX(9), f"Kite flew through the A cairn ({r.c('kx') - PX(0)})"
+    mem[S["ra"]] = 1                         # pretend A was raised to stream: B is stream too
+    assert wait(r, lambda: r.c("kx") < PX(7), 120) and r.c("kst") == K_FLY, \
+        f"Kite stuck kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} live {r.c('live')}"
+    ref, n = r.c("refusals"), r.c("rewrites")
+    r.set_pos(SWX[1], fy(9))                 # straight onto switch A (clear of the Jagger)
+    r.tick(2)
+    assert wait(r, lambda: r.c("refusals") == ref + 1, 10) and r.c("rewrites") == n, \
+        f"switch A raised a cairn onto the Kite (ref {r.c('refusals') - ref} rw {r.c('rewrites') - n} pos {r.pos()} kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra/rb {r.c('ra')}{r.c('rb')})"
+    print("  Kite waits at a cairn; switch A refuses to raise one onto it")
+
+
+def refuse_check(r, snap):
+    # --- Star door refused without the key (Jagger frozen aside).
+    snap.seek(0)
+    r.pb.load_state(snap)
+    take_charge(r)
+    teleport(r)
+    to_door(r)
+    if r.c("open") != 0 or r.c("refusals") < 1:
+        r.pb.screen.image.save("/tmp/q-m5-logs/fail_refuse.png")
+    assert r.c("open") == 0 and r.c("refusals") >= 1, \
+        f"Star door not refused without the key ({r.c('refusals')}, pos {r.pos()} j {r.c('jx') - PX(0)},{r.c('jy') - PY(0)} jst {r.c('jst')} frz {r.m(FREEZE)} stone {r.c('sx') - PX(0)} sst {r.c('sst')} held {r.c('held')} open {r.c('open')})"
+    still(r, "state2_refused")
+    r.pack(TOOL_RESET)
+    assert_restored(r, 1)
+    print("  Star door refused without the Star key; Pack reset restores")
+
+
+DBG_K = int(os.environ.get('CD_DBG_K', '-1'))
 
 
 def fuzz(r, snap):
@@ -435,6 +554,9 @@ def fuzz(r, snap):
             # pyboy samples at frame ends, which can land mid-update: a
             # mismatch must persist to count.
             odd = 0 if side_tiles_ok(r) else odd + 1
+            if DBG_K == k and 60 <= f <= 125:
+                g = world_tiles(r.pb)
+                print("dbg", f, r.c("side"), r.c("pend"), r.c("lock"), r.c("flips"), g[Y0 + 3][X0 + 6], g[Y0 + 4][X0 + 6], r.pos(), r.c("kst"), r.c("ra"), r.c("rb"))
             if odd >= 2:
                 tiles_bad += 1
                 if tiles_bad == 1:
@@ -464,7 +586,56 @@ def fuzz(r, snap):
     return flips, worst, resets
 
 
+def turret_death():
+    """Picsean (projectile hero): bolts up through the switch kill the turret;
+    the side door opens for good and no bolt ever flips the switch."""
+    global CLASS
+    CLASS = PICSEAN
+    r, _cell = open_room()
+    r.set_pos(PX(-3), PY(6) - 4)
+    r.tick(4)
+    r.pb.memory[S["charge"]] = 1
+    r.set_pos(fx(9), fy(7))
+    r.tick(2)
+    r.pack(TOOL_FREEZE)
+    r.press("up", 3, 2)
+    n, side, hp0 = r.c("flips"), r.c("side"), r.c("thp")
+    for _ in range(40):
+        if r.c("thp") == 0:
+            break
+        r.pb.memory[S["charge"]] = 0
+        if r.m(FREEZE) < 8:
+            r.pb.memory[S["charge"]] = 1
+            r.pack(TOOL_FREEZE)
+            r.press("up", 3, 2)
+        r.press("up", 2, 1)              # face north (the switch blocks the walk)
+        r.press("a", 3, 2)
+        if os.environ.get("CD_TDBG"):
+            for _k in range(6):
+                pr = [(r.m(EN + i * 28), (r.m(EN + i * 28 + 3) | r.m(EN + i * 28 + 4) << 8) - PX(0),
+                       (r.m(EN + i * 28 + 7) | r.m(EN + i * 28 + 8) << 8) - PY(0))
+                      for i in range(32) if r.m(EN + i * 28 + 1) & 0x11 == 0x11]
+                print("proj", r.pos(), pr, r.c("thp"), r.m(FREEZE))
+                r.tick(1)
+        r.tick(4)
+    assert r.c("thp") == 0, f"Picsean bolts did not kill the turret (hp {hp0} -> {r.c('thp')})"
+    assert r.c("flips") <= n + 1, "player bolts flipped the switch"
+    r.tick(6)
+    assert r.c("side") == 1 and side_tiles_ok(r), "turret death did not open the side door"
+    r.pb.memory[FREEZE] = 0
+    r.tick(600)
+    assert r.c("side") == 1 and r.c("thp") == 0, "side door shut again after the turret died"
+    still(r, "state1_turret_down")
+    r.pb.stop(save=False)
+    CLASS = 0
+    print(f"  Picsean: {hp0} bolts kill the turret; side door opens for good (600 f); no flips from bolts")
+
+
 def main():
+    if os.environ.get("CD_ONLY_TURRET"):
+        turret_death()
+        print("test_conduit_room OK")
+        return
     r, cell = open_room()
     edges = check_layout(world_tiles(r.pb))
     pid = r.c("pack_id")
@@ -478,93 +649,119 @@ def main():
     import io
     snap = io.BytesIO()
     r.pb.save_state(snap)
-    flips, worst, resets = fuzz(r, snap)
-    if os.environ.get("CD_ONLY_FUZZ"):
-        print(f"  fuzz only: {flips} flips, worst {worst}")
+    if os.environ.get("CD_ONLY_KITE"):
+        kite_wait(r, snap)
         return
-    print(f"  turret fuzz: {FUZZ} RNG seeds, {flips} flips, never shut on the hero, "
-          f"lockout held, tiles in sync, longest wing wait {worst} f, {resets} Pack resets")
-    snap.seek(0)
-    r.pb.load_state(snap)
+    if os.environ.get("CD_ONLY_REFUSE"):
+        refuse_check(r, snap)
+        return
+    if os.environ.get("CD_ONLY_SOLVE"):
+        flips = worst = resets = 0
+    else:
+        flips, worst, resets = fuzz(r, snap)
+    if os.environ.get("CD_ONLY_SOLVE"):
+        pass
+    else:
+        if os.environ.get("CD_ONLY_FUZZ"):
+            print(f"  fuzz only: {flips} flips, worst {worst}")
+            return
+        print(f"  turret fuzz: {FUZZ} RNG seeds, {flips} flips, never shut on the hero, "
+              f"lockout held, tiles in sync, longest wing wait {worst} f, {resets} Pack resets")
+        snap.seek(0)
+        r.pb.load_state(snap)
 
-    # --- freeze holds the cadence; player shots never flip; turret death opens.
-    r.pb.memory[S["charge"]] = 1
-    r.set_pos(fx(9), fy(7))             # in the wing, under the switch
-    r.tick(2)
-    side = r.c("side")
-    r.pack(TOOL_FREEZE)
-    tt2, tl2, n, hp0 = r.c("tt"), r.c("tell"), r.c("flips"), r.c("thp")
-    r.press("up", 3, 2)
-    for _ in range(10):                  # fire north through the switch at the turret
-        r.press("a", 3, 6)
-    assert r.m(FREEZE) > 0, "freeze ran out during the volley"
-    assert r.c("tt") == tt2 and r.c("tell") == tl2, "freeze did not hold the turret"
-    assert r.c("flips") == n and r.c("side") == side, "a player shot flipped the switch"
-    hits = hp0 - r.c("thp")
-    if hits:
-        r.pb.memory[S["thp"]] = 1
-        for _ in range(20):
+        # --- freeze holds the cadence; player shots never flip; turret death opens.
+        r.pb.memory[S["charge"]] = 1
+        r.set_pos(fx(9), fy(7))             # in the wing, under the switch
+        r.tick(2)
+        side = r.c("side")
+        r.pack(TOOL_FREEZE)
+        tt2, tl2, n, hp0 = r.c("tt"), r.c("tell"), r.c("flips"), r.c("thp")
+        r.press("up", 3, 2)
+        for _ in range(10):                  # fire north through the switch at the turret
             r.press("a", 3, 6)
-            if r.c("thp") == 0:
-                break
-        r.tick(4)
-        assert r.c("thp") == 0 and r.c("side") == 1 and side_tiles_ok(r), "turret death did not open"
-        r.tick(400)
-        assert r.c("side") == 1, "side door shut after the turret died"
-        still(r, "state1_turret_down")
-    print(f"  freeze held the turret; player shots: {hits} hits, no flip"
-          + ("; turret death opens the side door for good" if hits else " (melee hero)"))
+        assert r.m(FREEZE) > 0, "freeze ran out during the volley"
+        assert r.c("tt") == tt2 and r.c("tell") == tl2, "freeze did not hold the turret"
+        assert r.c("flips") == n and r.c("side") == side, "a player shot flipped the switch"
+        hits = hp0 - r.c("thp")
+        if hits:
+            r.pb.memory[S["thp"]] = 1
+            for _ in range(20):
+                r.press("a", 3, 6)
+                if r.c("thp") == 0:
+                    break
+            r.tick(4)
+            assert r.c("thp") == 0 and r.c("side") == 1 and side_tiles_ok(r), "turret death did not open"
+            r.tick(400)
+            assert r.c("side") == 1, "side door shut after the turret died"
+            still(r, "state1_turret_down")
+        print(f"  freeze held the turret; player shots: {hits} hits, no flip"
+              + ("; turret death opens the side door for good" if hits else " (melee hero)"))
 
-    # --- Star door refused without the key (Jagger frozen aside).
+        refuse_check(r, snap)
+
+        # --- spawn plate releases the pack; the teleport skipped it above.
+        r.walk(PX(4), fy(7), axis_first="x")
+        r.wy(fy(9), until=lambda: r.c("armed"))
+        assert wait(r, lambda: r.c("armed") == 1, 20), f"spawn plate did not arm {r.pos()}"
+        packs = [p for p in (r.m(S["pack"]), r.m(S["pack"] + 1)) if p != 0xFF]
+        assert (pid == 0xFF) or len(packs) == 2, f"pack not released ({packs}, id {pid})"
+        still(r, "state3_pack")
+        r.pack(TOOL_RESET)
+        assert_restored(r, 2)
+        assert r.m(S["pack"]) == 0xFF and r.m(S["pack"] + 1) == 0xFF, "reset left the pack"
+        print(f"  spawn plate released {len(packs)} x id {pid}; teleport skips it; reset clears it")
+
+        # --- stone crushes a frozen Jagger; reset brings it back.
+        r.pb.memory[S["charge"]] = 1
+        teleport(r)
+        r.wy(PY(LANE) - 12)
+        r.wx(fx(3))
+        assert wait(r, lambda: r.c("sst") == 0 and r.c("st") < 30 and r.c("jy") == PY(LANE), 600)
+        r.pack(TOOL_FREEZE)
+        r.wy(fy(9))
+        assert wait(r, lambda: r.c("jst") == J_DEAD, 260), "stone did not crush the frozen Jagger"
+        still(r, "state4_crushed")
+        r.pack(TOOL_RESET)
+        assert_restored(r, 3)
+        print("  rolling stone crushed the frozen Jagger; reset restored it")
+
+        kite_wait(r, snap)
+
+    # --- full solve, closet first: Star key, switches, Kite chain, Heart key on
+    # door A (treasure); door B refused; reset returns the key; then door B, goal.
     snap.seek(0)
     r.pb.load_state(snap)
-    take_charge(r)
-    teleport(r)
-    to_door(r)
-    assert r.c("open") == 0 and r.c("refusals") >= 1, \
-        f"Star door not refused without the key ({r.c('refusals')}, pos {r.pos()})"
-    still(r, "state2_refused")
-    r.pack(TOOL_RESET)
-    assert_restored(r, 1)
-    print("  Star door refused without the Star key; Pack reset restores")
-
-    # --- spawn plate releases the pack; the teleport skipped it above.
-    r.walk(PX(4), fy(7), axis_first="x")
-    r.wy(fy(9), until=lambda: r.c("armed"))
-    assert wait(r, lambda: r.c("armed") == 1, 20), f"spawn plate did not arm {r.pos()}"
-    packs = [p for p in (r.m(S["pack"]), r.m(S["pack"] + 1)) if p != 0xFF]
-    assert (pid == 0xFF) or len(packs) == 2, f"pack not released ({packs}, id {pid})"
-    still(r, "state3_pack")
-    r.pack(TOOL_RESET)
-    assert_restored(r, 2)
-    assert r.m(S["pack"]) == 0xFF and r.m(S["pack"] + 1) == 0xFF, "reset left the pack"
-    print(f"  spawn plate released {len(packs)} x id {pid}; teleport skips it; reset clears it")
-
-    # --- stone crushes a frozen Jagger; reset brings it back.
-    r.pb.memory[S["charge"]] = 1
-    teleport(r)
-    r.wy(PY(LANE) - 12)
-    r.wx(fx(3))
-    assert wait(r, lambda: r.c("sst") == 0 and r.c("st") < 30 and r.c("jy") == PY(LANE), 600)
-    r.pack(TOOL_FREEZE)
-    r.wy(fy(9))
-    assert wait(r, lambda: r.c("jst") == J_DEAD, 260), "stone did not crush the frozen Jagger"
-    still(r, "state4_crushed")
-    r.pack(TOOL_RESET)
-    assert_restored(r, 3)
-    print("  rolling stone crushed the frozen Jagger; reset restored it")
-
-    # --- full solve: key behind the churn, Rime charge, teleport, Star door, goal.
     setup_run(r)
+    switches(r)
     to_door(r)
     assert wait(r, lambda: r.c("open") == 1, 20), f"Star key did not open the door {r.pos()}"
     still(r, "state5_open")
-    r.wy(fy(15))
-    r.wx(fx(6))
+    kite_chain(r)
+    r.wx(fx(9))
+    assert wait(r, lambda: r.c("hdoor") == 1, 20), f"Heart door A did not open {r.pos()} {r.c('hdoor')}"
+    assert not (r.c("held") & 2) and r.c("coin_given") == 1, "closet: key not spent / no treasure"
+    still(r, "state8_closet")
+    ref = r.c("refusals")
+    r.wx(PX(4))
+    r.wx(PX(3) - 2)
+    assert r.c("refusals") == ref + 1 and r.c("hdoor") == 1, "Heart door B opened with no key"
+    r.pack(TOOL_RESET)
+    assert r.c("hkey") == 1 and r.c("hdoor") == 0 and r.c("lockup") == 1, "reset did not return the Heart key"
+    assert (r.c("ra"), r.c("rb"), r.c("kst"), r.c("kx")) == (0, 1, K_HOME, PX(9)), \
+        f"reset left the vault {(r.c('ra'), r.c('rb'), r.c('kst'), r.c('kx') - PX(0))} rw {getattr(r, 'rw_log', None)}"
+    print("  Heart key spent on door A (treasure); door B refused; reset returns the key")
+    setup_run(r)
+    switches(r)
+    to_door(r)
+    assert wait(r, lambda: r.c("open") == 1, 20)
+    kite_chain(r, -7)
+    r.wx(PX(3) - 2)
+    assert wait(r, lambda: r.c("hdoor") == 2, 20), f"Heart door B did not open {r.pos()}"
+    r.wy(fy(14))
+    r.wx(fx(2))
     assert wait(r, lambda: r.m(RS + 27) & 0x20, 30), f"goal not solved pos={r.pos()}"
     still(r, "state6_solved")
-    r.wx(fx(5))
-    r.wy(fy(13))
     r.pack(TOOL_RESET)
     r.tick(8)
     r.wy(PY(6) - 4)
@@ -572,7 +769,7 @@ def main():
     r.tick(6)
     assert r.c("open") == 0 and r.c("key") == 1 and r.c("jst") == J_GUARD, "walk-out reset failed"
     assert r.intruders == 0, f"room enemies inside the pocket {r.intruders}x {getattr(r, 'first_bad', None)}"
-    print(f"  solved (key behind churn, freeze, teleport, Star door, goal); walking out resets; "
+    print(f"  solved (Star key behind churn, switches A/B, freeze, Star door, Kite chain, Heart door B, goal); walking out resets; "
           f"no intruders; turret stings {r.hurts}; shoves {r.c('shoves')} refusals {r.c('refusals')}")
 
     if CAPTURE:
@@ -583,8 +780,11 @@ def main():
                        append_images=fr[1:], duration=100, loop=0)
         print(f"  capture: {len(fr)} frames -> {out}")
     r.pb.stop(save=False)
+    turret_death()
     print("test_conduit_room OK")
 
 
 if __name__ == "__main__":
     main()
+
+

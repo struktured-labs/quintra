@@ -10,6 +10,8 @@
 #define CD_TILE_SHAFT  193
 #define CD_TILE_PIP    194   // Rime charge
 #define CD_TILE_SPARK  195   // turret aim spark
+#define CD_TILE_KITE   196   // M5b: Cinder Kite (2x2, M3 art)
+#define CD_TILE_HEART  200   // M5b: Heart bow (M4 art)
 void cd_bg_art_load(void) BANKED;
 void cd_art_load(void) BANKED;
 #endif

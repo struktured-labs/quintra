@@ -20,6 +20,7 @@
 #include "render/tiles.h"
 
 u8 cd_live;
+extern u8 cd_von;
 u8 cd_side, cd_key, cd_held, cd_open, cd_charge;
 u8 cd_jx, cd_jy, cd_jst;
 u8 cd_sst, cd_sx, cd_st;
@@ -183,11 +184,27 @@ static void turret_step(void) {
 }
 
 // ---- pedestals, plates, doors ----
+// Star door funnel: holding only up or down within 10 px of the 2-cell
+// opening (feet rows 11..13) nudges the hero 1 px/frame toward it, beyond
+// the engine's 3 px corner slide. One joypad read; no work off the funnel.
+static void door_funnel(void) {
+    u8 j, r, d;
+    if (!cd_open) return;
+    r = (u8)((u8)(HY + 12) >> 3);
+    if (r < CD_WY(CD_LANE_Y + 1) || r > CD_WY(CD_DOOR_Y + 1)) return;
+    d = (u8)(HX - (u8)PX(CD_DOOR_X) + 10);       // 0..20 = within 10 px
+    if (d > 20 || d == 10) return;
+    j = joypad();
+    if (!(j & (J_UP | J_DOWN)) || (j & (J_LEFT | J_RIGHT))) return;
+    if (room_player_position_clear(player.x + (d < 10 ? 1 : -1), player.y))
+        player.x += d < 10 ? 1 : -1;
+}
+
 static void pads_step(void) {
     u8 on;
     if (edge(foot_on(CD_KEY_X, CD_KEY_Y), ON_KEY) && cd_key) {
         cd_key = 0;
-        cd_held = 1;
+        cd_held |= 1;
         cd_dirty = 1;
         sfx_play(SFX_COIN);
     }
@@ -199,7 +216,8 @@ static void pads_step(void) {
     }
     if (edge(foot_on(CD_TP_X, CD_TP_Y), ON_TP)) {
         // Teleport skip: lands past the spawn plate, never armed.
-        player.x = (i16)PX(1) - 2;
+        player.x = (i16)PX(1) - 2;      // clear of the Jagger's reach
+        cd_von |= 1;                    // lands on switch A latched: no flip until stepped off
         player.y = (i16)PY(CD_TPD_Y) - 8;
         cd_safe_x = HX;
         cd_safe_y = HY;
@@ -223,8 +241,8 @@ static void pads_step(void) {
     // Star door: feet box + 1 px touching it.
     on = hero_box((u8)(PX(CD_DOOR_X) - 1), (u8)(PY(CD_DOOR_Y) - 1), 18, 10);
     if (!cd_open && edge(on, ON_DOOR)) {
-        if (cd_held) {
-            cd_held = 0;
+        if (cd_held & 1) {
+            cd_held &= (u8)~1;
             cd_open = 1;
             cd_dirty = 1;
             cd_paint(1);
@@ -281,10 +299,12 @@ void cd_tick(void) BANKED {
         player.y = (i16)cd_safe_y;
     } else { cd_safe_x = HX; cd_safe_y = HY; }
 
+    door_funnel();
     pads_step();
     side_step();
     turret_step();
     cd_lane_step();
+    cd_vault_tick();
     if (!(cd_frame & 7) || cd_frame == 1) guard_step();
 }
 
@@ -306,3 +326,4 @@ void cd_pack_apply(u8 idx) BANKED {
     room_freeze_beats = RUN_IS_EASY() ? RIME_FREEZE_EASY : RIME_FREEZE_NORMAL;
     sfx_play(SFX_WILL);
 }
+

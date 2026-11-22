@@ -43,14 +43,14 @@ static const char cd_layout[CD_H][CD_W + 1] = {
     "....33#....#",   // entrance rows 6..7 | Star key (8..9,6..7)
     "......#....#",
     "####33######",   // spawn plate (4..5,8..9) in the gap
-    "#...33.....#",   // hall landing row
+    "#...33.....#",   // hall landing row; rewrite switches A (1) and B (10) at the dead ends
     "#==========#",   // rolling-stone lane rows 10..11 (Jagger guards it)
     "#==========#",
-    "############",   // Star door (5..6,12)
-    "#..........#",   // vault
-    "#..........#",
-    "#....GG....#",
-    "#..........#",
+    "############",   // Star door (6..7,12)
+    "############",   // vault rows 13..16: stamped by cd_vault_prepare
+    "############",
+    "############",
+    "############",
     "############",
 };
 
@@ -109,8 +109,6 @@ u8 cd_prepare(void) BANKED {
             else if (c == '1') t = 106;
             else if (c == '2') t = 107;
             else if (c == '3') t = 96;
-            else if (c == 'G') t = (run_state.dungeon_puzzles & RUN_RIME_SOLVED_BIT)
-                ? BGT_SWITCH_PRESSED : BGT_SWITCH;
             wset(WX(x), WY(y), t);
         }
     for (y = (u8)(CD_ENTRY_Y - 1); y <= (u8)(CD_ENTRY_Y + 2); ++y)
@@ -119,6 +117,8 @@ u8 cd_prepare(void) BANKED {
     for (y = CD_ENTRY_Y; y <= (u8)(CD_ENTRY_Y + 1); ++y)
         for (x = 11; x < (u8)(CD_X0 - 4); ++x)
             wset(x, WY(y), BGT_FLOOR);
+    cd_vault_prepare();
+    cd_coin_given = cd_rewrites = 0;
     cd_shot[0] = cd_shot[1] = cd_pack[0] = cd_pack[1] = 0xFF;
     cd_restore();
     cd_resets = cd_refusals = cd_flips = cd_crushed = cd_shoves = 0;

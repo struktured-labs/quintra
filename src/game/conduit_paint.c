@@ -69,6 +69,7 @@ static void pad(u8 lx, u8 ly, u8 id, u8 pal) {
 
 void cd_redress(void) BANKED {
     u8 t[10], a[10], i;
+    cd_vault_redress();             // M3 cairn/stream/lock art first; door/bars after
     cd_bg_art_load();
     cd_art_load();
     for (i = 0; i < 10; ++i) { t[i] = CD_T_TRACK; a[i] = BGPAL_FLOOR; }
@@ -126,6 +127,7 @@ void cd_restore(void) BANKED {
     room_freeze_beats = 0;
     puzzle_keep_on = 1;
     puzzle_keep_y1 = (u8)((CD_Y0 + CD_H) * 8);
+    cd_vault_restore();
     cd_on = 0xFF;                   // nothing fires until stepped on afresh
     cd_dirty = 0;
     if (cd_live) {
