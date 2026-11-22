@@ -412,9 +412,9 @@ def to_door(r):
 
 def switches(r):
     """Hall row 9 dead ends: A (col 1) flips A and B, B (col 10) flips B -> both streams."""
-    r.wy(PY(LANE) - 12)
-    lane_quiet(r)
     r.wy(fy(9))
+    r.wx(PX(3))                          # off switch A (the teleport lands on it, latched)
+    lane_quiet(r)
     for col, want in ((1, (1, 0)), (10, (1, 1))):
         n = r.c("rewrites")
         r.trace = []
@@ -433,8 +433,11 @@ def switches(r):
 
 def kite_chain(r):
     """In the vault: release plate wakes the Kite; it rides west and shatters the lock."""
+    r.wx(PX(6))                          # the 2-cell catwalk is exactly hero-wide
     r.wy(fy(13))
-    assert r.pos()[1] == fy(13), f"could not enter the vault {r.pos()}"
+    if r.pos()[1] < fy(13):
+        r.pb.screen.image.save("/tmp/q-m5-logs/fail_vault.png")
+    assert r.pos()[1] >= fy(13), f"could not enter the vault {r.pos()} open {r.c('open')} j {r.c('jx') - PX(0)},{r.c('jy') - PY(0)} frz {r.m(FREEZE)}"
     r.wy(fy(14))
     assert wait(r, lambda: r.c("kst") != K_HOME, 10), "release plate did not wake the Kite"
     assert wait(r, lambda: r.c("lockup") == 0, 420), f"Kite never shattered the lock (kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} frz {r.m(FREEZE)} pos {r.pos()} rw {getattr(r, 'rw_log', None)} X0 {PX(0)} {PY(0)})"
@@ -772,3 +775,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
