@@ -88,3 +88,6 @@ r9  #g..33....g#   rewrite switches at the hall dead ends: A (1) flips A and B, 
 * There is no off-camera blink when a rewrite changes a region you can't see; instead every rewrite plays a distinct cue (`SFX_DISTRICT`).
 * All art is reused from M2–M4 (originally GPT-derived): cairn, stream, lock, Kite and the Heart bow. The two glyphs are 8×8 downsamples of the M3 tiles. No new renders were made.
 * The switches sit at the hall's dead ends rather than beside the Star door. A single-row hall otherwise forces the player across them.
+* The Jagger's lane guard now spans cols 3..9 (it was 3..7), because the Star door moved to cols 6..7. The player can lure it either way; luring it east leaves a short dash west to the door that fits inside the freeze window.
+* The teleport lands on switch A already latched (`cd_von` bit 0), so landing never flips it; the player has to step off and back on. The landing spot stays clear of the Jagger, which avoids a shove-back loop.
+* Vault painting writes VRAM without a VBL wait, so a reset or rewrite never adds frames. The Kite costs one compare and one decrement per tick.
