@@ -14,5 +14,13 @@
   "_targets": {
     "stage3_boss_win_rate_average": 0.5,
     "status_death_lift_max": 1.5
+  },
+  "rooms": {
+    "_note": "Room status smoke (balance_rooms.py, stage 3 rooms incl. 2 Cinder rooms per hero, average tier, 3 seeds). Gates sit well past the 2026-11-22 baseline (lift10 1.63, landings per hit 0.18 on 60 fights) so only regressions fail. See docs/superpowers/specs/2026-11-22-room-status-harness.md.",
+    "tier": "average",
+    "min_deaths": 15,
+    "min_hits": 100,
+    "lift10_max_normal": 4.0,
+    "lands_per_hit_max_normal": 0.3
   }
 }
