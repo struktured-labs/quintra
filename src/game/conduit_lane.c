@@ -42,7 +42,7 @@ static void jagger_step(void) {
     // Guard: shadow the hero along the lane in front of the Star door.
     tx = HX;
     if (tx < PX(3)) tx = PX(3);
-    if (tx > PX(7)) tx = PX(7);
+    if (tx > PX(9)) tx = PX(9);         // M5b: door at 6..7; lure either side
     if (tx < cd_jx && jag_fits(cd_jx - 1, cd_jy)) cd_jx--;
     else if (tx > cd_jx && jag_fits(cd_jx + 1, cd_jy)) cd_jx++;
 }

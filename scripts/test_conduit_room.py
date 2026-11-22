@@ -399,11 +399,11 @@ def teleport(r):
 
 
 def to_door(r):
-    """From the hall landing: lure the Jagger west, freeze it, slip to the Star door."""
-    r.wy(PY(LANE) - 12)                 # feet row 10, above the Jagger's feet
+    """From the hall: lure the Jagger east (col 9), freeze it, slip west to the Star door."""
+    r.wy(fy(9))
     lane_quiet(r)
-    r.wx(fx(2))
-    assert wait(r, lambda: r.c("jx") == PX(3), 90), f"Jagger did not shadow the hero {r.c('jx')}"
+    r.wx(fx(9))
+    assert wait(r, lambda: r.c("jx") == fx(9), 120), f"Jagger did not shadow the hero {r.c('jx') - PX(0)}"
     r.pack(TOOL_FREEZE)
     assert r.m(FREEZE) > 0 and r.c("charge") == 0
     r.wx(PX(6))
@@ -481,6 +481,23 @@ def kite_wait(r, snap):
     assert wait(r, lambda: r.c("refusals") == ref + 1, 10) and r.c("rewrites") == n, \
         "switch A raised a cairn onto the Kite"
     print("  Kite waits at a cairn; switch A refuses to raise one onto it")
+
+
+def refuse_check(r, snap):
+    # --- Star door refused without the key (Jagger frozen aside).
+    snap.seek(0)
+    r.pb.load_state(snap)
+    take_charge(r)
+    teleport(r)
+    to_door(r)
+    if r.c("open") != 0 or r.c("refusals") < 1:
+        r.pb.screen.image.save("/tmp/q-m5-logs/fail_refuse.png")
+    assert r.c("open") == 0 and r.c("refusals") >= 1, \
+        f"Star door not refused without the key ({r.c('refusals')}, pos {r.pos()} j {r.c('jx') - PX(0)},{r.c('jy') - PY(0)} jst {r.c('jst')} frz {r.m(FREEZE)} stone {r.c('sx') - PX(0)} sst {r.c('sst')} held {r.c('held')} open {r.c('open')})"
+    still(r, "state2_refused")
+    r.pack(TOOL_RESET)
+    assert_restored(r, 1)
+    print("  Star door refused without the Star key; Pack reset restores")
 
 
 DBG_K = int(os.environ.get('CD_DBG_K', '-1'))
@@ -622,6 +639,9 @@ def main():
     if os.environ.get("CD_ONLY_KITE"):
         kite_wait(r, snap)
         return
+    if os.environ.get("CD_ONLY_REFUSE"):
+        refuse_check(r, snap)
+        return
     if os.environ.get("CD_ONLY_SOLVE"):
         flips = worst = resets = 0
     else:
@@ -665,18 +685,7 @@ def main():
         print(f"  freeze held the turret; player shots: {hits} hits, no flip"
               + ("; turret death opens the side door for good" if hits else " (melee hero)"))
 
-        # --- Star door refused without the key (Jagger frozen aside).
-        snap.seek(0)
-        r.pb.load_state(snap)
-        take_charge(r)
-        teleport(r)
-        to_door(r)
-        assert r.c("open") == 0 and r.c("refusals") >= 1, \
-            f"Star door not refused without the key ({r.c('refusals')}, pos {r.pos()})"
-        still(r, "state2_refused")
-        r.pack(TOOL_RESET)
-        assert_restored(r, 1)
-        print("  Star door refused without the Star key; Pack reset restores")
+        refuse_check(r, snap)
 
         # --- spawn plate releases the pack; the teleport skipped it above.
         r.walk(PX(4), fy(7), axis_first="x")

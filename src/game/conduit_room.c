@@ -20,6 +20,7 @@
 #include "render/tiles.h"
 
 u8 cd_live;
+extern u8 cd_von;
 u8 cd_side, cd_key, cd_held, cd_open, cd_charge;
 u8 cd_jx, cd_jy, cd_jst;
 u8 cd_sst, cd_sx, cd_st;
@@ -199,7 +200,8 @@ static void pads_step(void) {
     }
     if (edge(foot_on(CD_TP_X, CD_TP_Y), ON_TP)) {
         // Teleport skip: lands past the spawn plate, never armed.
-        player.x = (i16)PX(2);          // clear of rewrite switch A (col 1)
+        player.x = (i16)PX(1) - 2;      // clear of the Jagger's reach
+        cd_von |= 1;                    // lands on switch A latched: no flip until stepped off
         player.y = (i16)PY(CD_TPD_Y) - 8;
         cd_safe_x = HX;
         cd_safe_y = HY;
