@@ -216,7 +216,8 @@ void projectile_update_one(entity_t *e, u8 idx) {
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
     if ((flags & EF_PLAYER_PROJ) && e->ai_data[6] == PROJ_AUX_WOLFKIN_FANG) {
-        /* Parented longsword: re-anchor, never a traveling wall collision. */
+        /* Parented longsword: re-anchor without a traveling wall despawn.
+         * Crystal / pot / vane touches live in wolfkin_sword_update. */
         wolfkin_sword_update(e);
         return;
     }

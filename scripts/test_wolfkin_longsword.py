@@ -382,8 +382,35 @@ def test_attract_sword_sprite_reach():
         os.environ.pop("QUINTRA_KEEP_INTRO", None)
 
 
+def test_adjacent_crystal_shatters():
+    """The parented blade must shatter a crystal it overlaps."""
+    from test_will_max import TILEMAP
+    bgt_crystal = 22
+    pb = boot(0)
+    try:
+        clear_arena(pb)
+        drop_hp(pb, full=True)
+        px, py = player_xy(pb)
+        tx, ty = (px + 16) // 8, (py + 8) // 8
+        pb.memory[TILEMAP + ty * 20 + tx] = bgt_crystal
+        face_east(pb)
+        fire_a(pb, direction="right", ticks=2)
+        shattered = False
+        for _ in range(12):
+            if pb.memory[TILEMAP + ty * 20 + tx] != bgt_crystal:
+                shattered = True
+                break
+            pb.tick(1)
+        assert shattered, (
+            f"adjacent crystal at {(tx, ty)} survived a Longblade stab "
+            f"(tile={pb.memory[TILEMAP + ty * 20 + tx]})"
+        )
+    finally:
+        pb.stop(save=False)
+
 def main():
     test_slash_diagonal_and_parented()
+    test_adjacent_crystal_shatters()
     test_stab_reach_and_damage()
     test_beam_only_at_full_hearts_and_no_double_hit()
     test_formation_grants_projectiles()

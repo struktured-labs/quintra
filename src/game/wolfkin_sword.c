@@ -8,6 +8,9 @@
 #include "game/powerup.h"
 #include "game/wolfkin_sword.h"
 #include "game/room.h"
+#include "game/puzzle.h"
+#include "game/sun_lattice.h"
+#include "render/tiles.h"
 #include "audio/sfx.h"
 #include "content.h"
 
@@ -122,12 +125,41 @@ static void place_seg(entity_t *e, u8 dir, u8 slash, u8 seg, u8 age) {
     e->vy = 0;
 }
 
+/* The blade is parented, so projectile_update_one skips traveling wall
+ * despawn. Still interact with tiles the hitbox overlaps: a swing that
+ * visually covers a crystal, pot, or Helio Vane must affect it. */
+static void sword_touch_tiles(entity_t *e, u8 dir) {
+    i16 px = (i16)e->x, py = (i16)e->y;
+    u8 w = (u8)(e->hitbox >> 4);
+    u8 h = (u8)(e->hitbox & 0x0F);
+    i8 dx = dir8_dx[dir], dy = dir8_dy[dir];
+    i16 samples[2][2];
+    u8 i;
+    samples[0][0] = (i16)(px + (w >> 1));
+    samples[0][1] = (i16)(py + (h >> 1));
+    samples[1][0] = (i16)(px + (dx > 0 ? (w ? (u8)(w - 1) : 0) : (dx < 0 ? 0 : (w >> 1))));
+    samples[1][1] = (i16)(py + (dy > 0 ? (h ? (u8)(h - 1) : 0) : (dy < 0 ? 0 : (h >> 1))));
+    for (i = 0; i < 2; i++) {
+        i16 sx = samples[i][0], sy = samples[i][1];
+        u8 t, tx, ty;
+        if (sx < 0 || sy < 0) continue;
+        t = room_tile_at_px(sx, sy);
+        tx = (u8)(sx >> 3);
+        ty = (u8)(sy >> 3);
+        if (t == BGT_CRYSTAL) room_break_crystal(tx, ty);
+        else if (t == BGT_POT) room_break_pot(tx, ty);
+        else if (t == BGT_PILLAR && room_puzzle_kind == PUZZLE_SUN_LATTICE)
+            sun_lattice_strike(tx, ty);
+    }
+}
+
 void wolfkin_sword_update(entity_t *e) BANKED {
     u8 dir = (u8)(e->ai_data[7] & 7);
     u8 slash = (u8)(e->ai_data[7] & 0x80);
     u8 age = e->ai_data[0];
     if (age < 0xF0) e->ai_data[0] = (u8)(age + 1);
     place_seg(e, dir, slash, e->state, e->ai_data[0]);
+    sword_touch_tiles(e, dir);
     /* Tile: slash uses 0..3, cardinal stab 4..7 (H) or 8..11 (V),
        diagonal 12..14, chosen by dir and segment. */
     {
