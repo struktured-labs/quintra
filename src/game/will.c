@@ -10,6 +10,7 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/will.h"
+#include "game/will_levels.h"
 #include "game/loop.h"
 #include "game/wolfkin_wave.h"
 #include "game/will_maxfx.h"
@@ -184,24 +185,15 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     // body-dash applied by room.c: broad enough to read as a slash, short
     // enough to remain the game's true melee MAX.
     if (player.class_id == 0 && weapon_index == classes[0].starter_weapon) {
-        first = max_spawn(dir8_dx[dir], dir8_dy[dir],
-            (u8)(damage + 3), PROJ_SPIKE);
-        max_spawn(dir8_dx[(u8)((dir + 1) & 7)],
-            dir8_dy[(u8)((dir + 1) & 7)], (u8)(damage + 2), PROJ_SPIKE);
-        max_spawn(dir8_dx[(u8)((dir + 7) & 7)],
-            dir8_dy[(u8)((dir + 7) & 7)], (u8)(damage + 2), PROJ_SPIKE);
-        // The rush throws a wave of force ahead and guards his front while
-        // the body dash lasts (2026-11-12 Will wave spec).
-        if (first != 0xFF) {
-            wolfkin_wave_begin(dir, damage);
-            will_maxfx_begin(0, dir, damage);   // claw scars + cross-rend
-        }
+        first = wolfkin_max_fire(dir, damage);
     // Tail Spike — Thunderline Bastion; Featherbarb — Murderstorm Eclipse.
     // Authored controllers in bank 30 own their art, sound and hits.
     } else if (weapon_index == classes[1].starter_weapon) {
-        return will_maxfx_begin(1, dir, damage);
+        if (will_maxfx_begin(1, dir, damage)) { will_levels_on_max_cast(); return 1; }
+        return 0;
     } else if (weapon_index == classes[2].starter_weapon) {
-        return will_maxfx_begin(2, dir, damage);
+        if (will_maxfx_begin(2, dir, damage)) { will_levels_on_max_cast(); return 1; }
+        return 0;
     // BubbleBolt — Tide Vortex. Four spiral arms spin out from Picsean and
     // grow until the front has swept the whole visible room, hitting every
     // body it passes and washing out hostile shots (2026-11-15 spec).
@@ -211,10 +203,12 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
         picsean_vortex_begin(damage);
         room_shake(2, 12);
         sfx_play(SFX_ROAR);
+        will_levels_on_max_cast();
         return 1;
     // Stinger — Royal Stinger and Venom Sac.
     } else if (weapon_index == classes[4].starter_weapon) {
-        return will_maxfx_begin(4, dir, damage);
+        if (will_maxfx_begin(4, dir, damage)) { will_levels_on_max_cast(); return 1; }
+        return 0;
     // Rift Flail — Worldwheel. A close eight-way sweep clears breathing room.
     } else if (kind == PROJ_FLAIL) {
         for (d = 0; d < 8; ++d) {
@@ -243,6 +237,8 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     }
 
     if (first != 0xFF) {
+        if (weapon_index == classes[player.class_id].starter_weapon)
+            will_levels_on_max_cast();
         if (level > 1) {
             if (kind == PROJ_SPEAR || weapon_index == classes[1].starter_weapon) {
                 entities[first].hp = (u8)(entities[first].hp + level);

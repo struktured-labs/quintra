@@ -13,6 +13,8 @@
 #include "game/hexa_boss.h"
 #include "game/loop.h"
 #include "game/magic.h"
+#include "game/magic_cv.h"
+#include "game/will_levels.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/powerup.h"
@@ -27,6 +29,8 @@
 
 // Elemental hero magic. Spec: docs/superpowers/specs/
 // 2026-11-17-elemental-hero-magic.md
+// Max-Will levels: 2026-11-21-max-will-levels.md section 9.
+// The shipped kit is L1; L2-L4 widen and embellish (not L4-shrink).
 //
 // Wolfkin  fire       tap MOONFIRE (homing fireball)   hold FLAME WARD
 // Sauran   lightning  tap THUNDER (sure strike, stun)  hold STONESKIN + static
@@ -82,6 +86,51 @@ static const u8 class_pal[5] = { 4 | BANK1, 5 | BANK1, 1 | BANK1,
 static const u8 tap_cd[5] = { 36, 45, 30, 30, 40 };
 static const u8 ward_cost[5] = { 2, 2, 2, 5, 2 };
 
+/* #151 section 9.4: index is clamped maxwill_level - 1. L1 is shipped. */
+static const u8 mf_home[4]  = { 96, 120, 144, 168 };
+static const u8 mf_burst_r[4] = { 14, 18, 21, 25 };
+static const u8 mf_base[4]  = { 4, 5, 5, 6 };
+static const u8 mf_bdmg[4]  = { 3, 3, 4, 4 };
+static const u8 mf_ttl[4]   = { 80, 90, 100, 110 };
+static const u8 th_aim[4]   = { 104, 130, 156, 182 };
+static const u8 th_ahead[4] = { 40, 50, 60, 70 };
+static const u8 th_chain_r[4] = { 48, 60, 72, 84 };
+static const u8 th_splash[4] = { 10, 13, 15, 18 };
+static const u8 th_base[4]  = { 5, 6, 7, 7 };
+static const u8 hx_ttl[4]   = { 32, 40, 48, 56 };
+static const u8 hx_burst_r[4] = { 18, 23, 27, 32 };
+static const u8 hx_base[4]  = { 3, 3, 4, 4 };
+static const u8 bz_ttl[4]   = { 70, 80, 90, 100 };
+static const u8 bz_hits[4]  = { 2, 2, 3, 3 };
+static const u8 bz_base[4]  = { 3, 3, 4, 4 };
+static const u8 bz_stop[4]  = { 12, 14, 16, 18 };
+static const u8 br_dist[4][5] = {
+    { 16, 30, 44, 58, 0 },
+    { 20, 38, 56, 74, 0 },
+    { 24, 45, 66, 87, 108 },
+    { 28, 53, 78, 103, 128 },
+};
+static const u8 br_n[4]     = { 4, 4, 5, 5 };
+static const u8 br_splash[4] = { 12, 15, 18, 21 };
+static const u8 br_base[4]  = { 3, 3, 4, 4 };
+static const u8 fw_orb[4]   = { 20, 25, 30, 35 };
+static const u8 fw_chg[4]   = { 2, 2, 3, 3 };
+static const u8 sk_time[4]  = { 90, 105, 120, 135 };
+static const u8 sk_r[4]     = { 28, 35, 42, 49 };
+static const u8 sk_pulse[4] = { 2, 2, 3, 3 };
+static const u8 vl_ifr[4]   = { 20, 24, 28, 32 };
+static const u8 vl_eat[4]   = { 20, 25, 30, 35 };
+static const u8 cu_heal[4]  = { 2, 2, 3, 3 };
+static const u8 cu_ifr[4]   = { 20, 24, 24, 30 };
+static const u8 tm_r[4]     = { 14, 18, 21, 25 };
+
+static u8 spell_lv(void) {
+    u8 lv = player.maxwill_level;
+    if (lv < MAXWILL_MIN) lv = MAXWILL_MIN;
+    if (lv > MAXWILL_MAX) lv = MAXWILL_MAX;
+    return (u8)(lv - 1);
+}
+
 // 8-way ring, radius 14 (diagonals 10).
 static const i8 ring_x[8] = { 0, 10, 14, 10, 0, -10, -14, -10 };
 static const i8 ring_y[8] = { -14, -10, 0, 10, 14, 10, 0, -10 };
@@ -97,16 +146,19 @@ static u8 shot_dir[SHOTS];
 static u8 shot_direct[SHOTS];     // body slot the shot struck (burst skips it)
 static u8 shot_age[SHOTS];
 static u8 shot_dmg[SHOTS];
+static u8 shot_lv[SHOTS];
 static i16 shot_lx[SHOTS], shot_ly[SHOTS];
 
 // ---- strikes ----------------------------------------------------------------
-static u8 th_t, th_target, th_chain, th_dmg;
+static u8 th_t, th_target, th_chain, th_dmg, th_lv;
 static i16 th_x, th_y;
-static u8 br_t, br_step, br_dmg;
+static u8 br_t, br_step, br_dmg, br_lv;
 static i16 br_x, br_y;
 static i8 br_dx, br_dy;
+static u8 ice_lv;
 static u8 br_mask[(MAX_ENTITIES + 7) / 8];
 static u8 ring_mask[(MAX_ENTITIES + 7) / 8];
+static u8 ice_mask[(MAX_ENTITIES + 7) / 8];
 
 // ---- wards ------------------------------------------------------------------
 static u8 wisp_live, ward_angle, ward_beat;
@@ -358,6 +410,7 @@ static u8 spawn_shot(u8 kind, u8 dir, u8 dmg, u8 speed, u8 ttl, u8 pierce,
     e->palette = class_pal[player.class_id];
     e->hitbox = 0x77;
     e->ai_data[2] = 0;
+    shot_lv[k] = spell_lv();
     e->ai_data[3] = 0;   // spells are not relic carriers (no splash/echo)
     e->ai_data[4] = 0;
     e->ai_data[7] = (u8)(MAGIC_SHOT_TAG | kind);
@@ -383,12 +436,17 @@ static u8 shot_alive(u8 k) {
 
 static void moonfire_burst(u8 k) {
     i16 x = shot_lx[k], y = shot_ly[k];
+    u8 lv = shot_lv[k];
     memset(ring_mask, 0, sizeof(ring_mask));
     if (shot_direct[k] != 0xFF) MASK_SET(ring_mask, shot_direct[k]);
-    hit_ring(x, y, 14, ring_mask, 3, 1, 0, 0);
-    fx(MAGIC_T_FLASH, 4 | BANK1, x, y, 10);
+    hit_ring(x, y, mf_burst_r[lv], ring_mask, mf_bdmg[lv], 1, 0, 0);
+    fx(MAGIC_T_FLASH, 4 | BANK1, x, y, (u8)(10 + (lv >= 2 ? 4 : 0)));
     fx(MAGIC_T_WISP, 4 | BANK1, x - 8, y - 6, 8);
     fx(MAGIC_T_WISP, 4 | BANK1, x + 8, y - 6, 8);
+    if (lv >= 3) {
+        fx(MAGIC_T_FIRE_B, 4 | BANK1, x, y - 8, 10);
+        fx(MAGIC_T_WISP, 4 | BANK1, x, y + 8, 8);
+    }
     v4(0xC2, 0x45, 14);
 }
 
@@ -403,26 +461,29 @@ static void hex_burst(u8 k) {
     for (i = 0; i < MAX_ENTITIES; ++i, ++e) {
         u8 kind;
         if (!is_body(e) || MASK_HAS(ring_mask, i)) continue;
-        if (vdist(BODY_X(e) - x, BODY_Y(e) - y) > 18) continue;
+        if (vdist(BODY_X(e) - x, BODY_Y(e) - y) > hx_burst_r[shot_lv[k]]) continue;
         MASK_SET(ring_mask, i);
         kind = (rng_next_u8() & 1)
             ? (is_heavy(e, i) ? QSTATUS_MUTE : QSTATUS_CONFUSION) : 0;
         if (!hit_body(i, shot_dmg[k], 8, kind, 16)) break;
     }
-    for (i = 1; i < 8; i += 2)
-        fx(MAGIC_T_HEX_B, 1 | BANK1, x + ring_x[i], y + ring_y[i], 10);
+    {
+        u8 step = (shot_lv[k] >= 2) ? 1 : 2;
+        for (i = (u8)(step == 1 ? 0 : 1); i < 8; i = (u8)(i + step))
+            fx(MAGIC_T_HEX_B, 1 | BANK1, x + ring_x[i], y + ring_y[i], 10);
+    }
     fx(MAGIC_T_HEX_A, 1 | BANK1, x, y, 12);
     v1(0x2F, 0x40, 0x93, 1500, 16);
 }
 
 // One hook before the normal combat damage branch. Keep the tag test and
 // guaranteed spell status here, away from the near-full combat bank.
-void magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
+u8 magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
     u8 k;
     entity_t *shot = &entities[i];
     entity_t *ej = &entities[j];
     if (!MAGIC_IS_SHOT(shot)) {
-        if (!survives) return;
+        if (!survives) return 1;
         status_try_player_shot(j, i);
         // Wolfkin's Fang Claw (slow contact arc, see projectile.c) shoves
         // light bodies 1 px beyond the ordinary knockback, so they stay
@@ -434,7 +495,7 @@ void magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
             i8 ky = (i8)(shot->vy > 0 ? 1 : shot->vy < 0 ? -1 : 0);
             enemy_try_step(ej, kx, ky);
         }
-        return;
+        return 1;
     }
     for (k = 0; k < SHOTS; ++k) {
         if (shot_slot[k] != i) continue;
@@ -444,7 +505,9 @@ void magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
         break;
     }
     if ((shot->ai_data[7] & 15) == SPELL_MOONFIRE) g_hitstop = 3;
-    if (!survives) return;
+    if ((shot->ai_data[7] & 15) == SPELL_BLIZZARD && MASK_HAS(ice_mask, j))
+        return 0;
+    if (!survives) return 1;
     switch (shot->ai_data[7] & 15) {
         case SPELL_MOONFIRE:
             status_enemy_apply(j, QSTATUS_BURN, 0);
@@ -454,10 +517,12 @@ void magic_hit_status(u8 j, u8 i, u8 survives) BANKED {
                 ? QSTATUS_MUTE : QSTATUS_CONFUSION, 16);
             break;
         case SPELL_BLIZZARD:
-            status_enemy_apply(j, QSTATUS_STOP, 12);
+            MASK_SET(ice_mask, j);
+            status_enemy_apply(j, QSTATUS_STOP, bz_stop[ice_lv]);
             fx(MAGIC_T_CURE, 1 | BANK1, BODY_X(ej), BODY_Y(ej) - 4, 8);
             break;
     }
+    return 1;
 }
 
 static void tick_shots(u8 keys) {
@@ -483,7 +548,7 @@ static void tick_shots(u8 keys) {
             // turn one 45-degree step toward it.
             if ((shot_age[k] % 3) == 0) {
                 u8 i, best = 0xFF;
-                u16 bd = 97;
+                u16 bd = (u16)(mf_home[shot_lv[k]] + 1);
                 entity_t *b = entities;
                 for (i = 0; i < MAX_ENTITIES; ++i, ++b) {
                     i16 dx, dy;
@@ -525,8 +590,10 @@ static void tick_shots(u8 keys) {
                     e->ai_data[4] = (d == 2) ? PROJ_VIS_FLIP_X : 0;
                 }
             }
-            if ((shot_age[k] & 7) == 0)
+            if ((shot_age[k] & (shot_lv[k] ? 3 : 7)) == 0)
                 fx(MAGIC_T_MOTE, 1 | BANK1, shot_lx[k], shot_ly[k], 6);
+            if (shot_lv[k] >= 3 && (shot_age[k] & 1) == 0)
+                fx(MAGIC_T_ICE, 1 | BANK1, shot_lx[k], shot_ly[k] - 4, 4);
         } else {
             e->sprite_tile = (shot_age[k] & 4) ? MAGIC_T_HEX_B : MAGIC_T_HEX_A;
         }
@@ -559,14 +626,14 @@ static void tick_thunder(void) {
             g_hitstop = 3;   // weight only on a real strike
         } else {
             memset(ring_mask, 0, sizeof(ring_mask));
-            hit_ring(th_x, th_y, 10, ring_mask, th_dmg, 4, QSTATUS_STOP, 10);
+            hit_ring(th_x, th_y, th_splash[th_lv], ring_mask, th_dmg, 4, QSTATUS_STOP, 10);
             if (th_x >= 0 && th_y >= 0)
                 room_elemental_tile((u8)(th_x >> 3), (u8)(th_y >> 3), 4);
         }
         room_shake(1, 6);
         v4(0xF3, 0x52, 20);
         v1(0x00, 0x80, 0xF2, 380, 12);
-        th_chain = nearest_body(th_x, th_y, 48, th_target);
+        th_chain = nearest_body(th_x, th_y, th_chain_r[th_lv], th_target);
     } else if (th_t == 15) {
         if (th_chain != 0xFF && is_body(&entities[th_chain])) {
             t = &entities[th_chain];
@@ -586,8 +653,8 @@ static void tick_bramble(void) {
     if (!br_t) return;
     br_t++;
     if ((u8)((br_t - 2) % 5) != 0) return;
-    if (br_step >= 4) { br_t = 0; return; }
-    dist = (u8)(16 + 14 * br_step);
+    if (br_step >= br_n[br_lv]) { br_t = 0; return; }
+    dist = br_dist[br_lv][br_step];
     if (br_dx && br_dy) dist = (u8)((dist * 3) >> 2);
     x = (i16)(br_x + br_dx * (i16)dist);
     y = (i16)(br_y + br_dy * (i16)dist);
@@ -603,9 +670,11 @@ static void tick_bramble(void) {
         br_t = 0;
         return;
     }
-    hit_ring(x, y, 12, br_mask, br_dmg, 16, QSTATUS_POISON, 60);
+    hit_ring(x, y, br_splash[br_lv], br_mask, br_dmg, 16, QSTATUS_POISON, 60);
     fx(MAGIC_T_THORN_B, 7 | BANK1, x, y, 16);
     fx(MAGIC_T_THORN_A, 7 | BANK1, x + (br_dy ? 6 : 0), y + (br_dx ? 6 : 0), 12);
+    if (br_lv >= 3)
+        fx(MAGIC_T_THORN_B, 7 | BANK1, x - (br_dy ? 6 : 0), y - (br_dx ? 6 : 0), 10);
     v4(0x92, 0x5D, 6);
 }
 
@@ -628,15 +697,16 @@ static void tick_flame_ward(void) {
     if (!(ward_beat & 3)) ward_angle = (u8)((ward_angle + 1) % 12);
     for (k = 0; k < 3; ++k) {
         u8 idx = (u8)((ward_angle + k * 4) % 12);
-        wx[k] = (i16)(HERO_X + orb_x[idx]);
-        wy[k] = (i16)(HERO_Y + orb_y[idx]);
+        u8 orb = fw_orb[spell_lv()];
+        wx[k] = (i16)(HERO_X + ((i16)orb_x[idx] * (i16)orb) / 20);
+        wy[k] = (i16)(HERO_Y + ((i16)orb_y[idx] * (i16)orb) / 20);
         if (wisp_cd[k]) wisp_cd[k]--;
     }
     // One pass over the room with a cheap box reject around the hero: a
     // wisp eats a hostile shot it touches and sears one body at a time.
     e = entities;
     for (i = 0; i < MAX_ENTITIES; ++i, ++e) {
-        u8 shot;
+        u8 shot, box;
         i16 ex, ey, dx, dy;
         if (!(e->flags & EF_ACTIVE)) continue;
         shot = hostile_shot(e);
@@ -645,7 +715,8 @@ static void tick_flame_ward(void) {
         else continue;
         dx = ex - HERO_X;
         dy = ey - HERO_Y;
-        if (dx < -26 || dx > 26 || dy < -26 || dy > 26) continue;
+        box = (u8)(fw_orb[spell_lv()] + 6);
+        if (dx < -(i16)box || dx > (i16)box || dy < -(i16)box || dy > (i16)box) continue;
         for (k = 0; k < 3; ++k) {
             if (!(wisp_live & (u8)(1 << k)) || !wisp_charges[k]) continue;
             if (vdist(ex - wx[k], ey - wy[k]) > (shot ? 7 : 9)) continue;
@@ -729,7 +800,7 @@ static void tick_thorn_mirror(void) {
     if (mirror_voice) mirror_voice--;
     for (i = 0; i < MAX_ENTITIES; ++i, ++e) {
         if (!hostile_shot(e)) continue;
-        if (vdist((i16)(e->x + 3) - HERO_X, (i16)(e->y + 3) - HERO_Y) > 14)
+        if (vdist((i16)(e->x + 3) - HERO_X, (i16)(e->y + 3) - HERO_Y) > tm_r[spell_lv()])
             continue;
         reflect_shot(i);
     }
@@ -768,24 +839,28 @@ static u8 cast_tap(u8 dir) {
     u8 c = player.class_id < 5 ? player.class_id : 0;
     u8 made = 0;
     switch (c) {
-        case 0:   // MOONFIRE
-            made = spawn_shot(SPELL_MOONFIRE, dir, spell_damage(4), 3, 80, 1,
-                MAGIC_T_FIRE_A);
+        case 0: { // MOONFIRE
+            u8 lv = spell_lv();
+            made = spawn_shot(SPELL_MOONFIRE, dir, spell_damage(mf_base[lv]), 3,
+                mf_ttl[lv], 1, MAGIC_T_FIRE_A);
             if (made) {
                 v4(0xA2, 0x36, 10);
                 v1(0x16, 0x80, 0xA2, 1450, 10);
             }
             break;
-        case 1:   // THUNDER
+        }
+        case 1: { // THUNDER
+            u8 lv = spell_lv();
             if (th_t) break;
-            th_dmg = spell_damage(5);
-            th_target = aimed_body(dir, 104, 0xFF);
+            th_lv = lv;
+            th_dmg = spell_damage(th_base[lv]);
+            th_target = aimed_body(dir, th_aim[lv], 0xFF);
             if (th_target != 0xFF) {
                 th_x = BODY_X(&entities[th_target]);
                 th_y = BODY_Y(&entities[th_target]);
             } else {
-                th_x = (i16)(HERO_X + dir8_dx[dir] * 40);
-                th_y = (i16)(HERO_Y + dir8_dy[dir] * 40);
+                th_x = (i16)(HERO_X + dir8_dx[dir] * (i8)th_ahead[lv]);
+                th_y = (i16)(HERO_Y + dir8_dy[dir] * (i8)th_ahead[lv]);
             }
             th_t = 1;
             th_chain = 0xFF;
@@ -793,29 +868,39 @@ static u8 cast_tap(u8 dir) {
             v4(0x61, 0x21, 5);
             made = 1;
             break;
-        case 2:   // HEX
-            made = spawn_shot(SPELL_HEX, dir, spell_damage(3), 2, 32, 1,
-                MAGIC_T_HEX_A);
+        }
+        case 2: { // HEX
+            u8 lv = spell_lv();
+            made = spawn_shot(SPELL_HEX, dir, spell_damage(hx_base[lv]), 2,
+                hx_ttl[lv], 1, MAGIC_T_HEX_A);
             if (made) v1(0x27, 0x40, 0x83, 1650, 10);
             break;
-        case 3:   // BLIZZARD
-            made = spawn_shot(SPELL_BLIZZARD, dir, spell_damage(3), 3, 70, 2,
-                MAGIC_T_ICE);
+        }
+        case 3: { // BLIZZARD
+            u8 lv = spell_lv();
+            ice_lv = lv;
+            memset(ice_mask, 0, sizeof(ice_mask));
+            made = spawn_shot(SPELL_BLIZZARD, dir, spell_damage(bz_base[lv]), 3,
+                bz_ttl[lv], bz_hits[lv], MAGIC_T_ICE);
             if (made) v1(0x00, 0x00, 0x92, 1950, 8);
             break;
-        default:  // BRAMBLE
+        }
+        default: { // BRAMBLE
+            u8 lv = spell_lv();
             if (br_t) break;
             br_x = HERO_X;
             br_y = HERO_Y;
             br_dx = dir8_dx[dir];
             br_dy = dir8_dy[dir];
-            br_dmg = spell_damage(3);
+            br_lv = lv;
+            br_dmg = spell_damage(br_base[lv]);
             memset(br_mask, 0, sizeof(br_mask));
             br_step = 0;
             br_t = 1;
             made = 1;
             v4(0x72, 0x6E, 6);
             break;
+        }
     }
     if (made) {
         spend((u8)(c << 1), 1);
@@ -828,10 +913,11 @@ static u8 cast_ward(void) {
     u8 c = player.class_id < 5 ? player.class_id : 0;
     u8 i;
     switch (c) {
-        case 0:   // FLAME WARD
+        case 0: { // FLAME WARD
+            u8 lv = spell_lv();
             wisp_live = 7;
             for (i = 0; i < 3; ++i) {
-                wisp_charges[i] = 2;
+                wisp_charges[i] = fw_chg[lv];
                 wisp_cd[i] = 0;
                 wisp_fx[i] = 0xFF;
             }
@@ -840,22 +926,26 @@ static u8 cast_ward(void) {
             v4(0xC3, 0x47, 18);
             v1(0x15, 0x80, 0xB3, 1300, 14);
             break;
-        case 1:   // STONESKIN + STATIC
-            player.shield_timer = 90;
+        }
+        case 1: { // STONESKIN + STATIC
+            u8 lv = spell_lv();
+            player.shield_timer = sk_time[lv];
             if (player.iframes < 8) player.iframes = 8;
             memset(ring_mask, 0, sizeof(ring_mask));
-            hit_ring(HERO_X, HERO_Y, 28, ring_mask, 2, 4, QSTATUS_STOP, 8);
+            hit_ring(HERO_X, HERO_Y, sk_r[lv], ring_mask, sk_pulse[lv], 4, QSTATUS_STOP, 8);
             for (i = 1; i < 8; i += 2)
                 fx(MAGIC_T_FLASH, 5 | BANK1,
                     HERO_X + ring_x[i], HERO_Y + ring_y[i], 8);
-            magic_ward_ticks = 90;
+            magic_ward_ticks = sk_time[lv];
             v4(0xF2, 0x66, 14);
             v1(0x00, 0xC0, 0xC2, 640, 14);
             break;
-        case 2:   // SHADOW VEIL
-            status_player_apply(QSTATUS_HASTE, 20);
-            if (player.iframes < 20) player.iframes = 20;
-            eat_shots(HERO_X, HERO_Y, 20);
+        }
+        case 2: { // SHADOW VEIL
+            u8 lv = spell_lv();
+            status_player_apply(QSTATUS_HASTE, vl_ifr[lv]);
+            if (player.iframes < vl_ifr[lv]) player.iframes = vl_ifr[lv];
+            eat_shots(HERO_X, HERO_Y, vl_eat[lv]);
             for (i = 1; i < 8; i += 2)
                 fx(MAGIC_T_VEIL, 1 | BANK1,
                     HERO_X + ring_x[i], HERO_Y + ring_y[i], 12);
@@ -863,23 +953,38 @@ static u8 cast_ward(void) {
             v1(0x2F, 0x80, 0x72, 1900, 16);
             v4(0x51, 0x23, 12);
             break;
+        }
         case 3: { // CURE
             u8 harm = STATUS_KIND_IS_HARM(player_status_kind);
             u8 can_heal = !STATUS_PLAYER_HEALING_BLOCKED()
                 && player.hp < player.hp_max;
             if (magic_cure_used || (!can_heal && !harm)) return 0;
-            if (can_heal) {
-                player.hp = (u8)(player.hp + 2);
-                if (player.hp > player.hp_max) player.hp = player.hp_max;
+            {
+                u8 lv = spell_lv();
+                if (can_heal) {
+                    player.hp = (u8)(player.hp + cu_heal[lv]);
+                    if (player.hp > player.hp_max) player.hp = player.hp_max;
+                }
+                if (harm) status_player_cure();
+                if (player.iframes < cu_ifr[lv]) player.iframes = cu_ifr[lv];
+                hud_redraw_hp();
+                magic_cure_used = 1;
+                {
+                    u8 step = (lv >= 2) ? 1 : 2;
+                    for (i = (u8)(step == 1 ? 0 : 0); i < 8; i = (u8)(i + step))
+                        fx(MAGIC_T_CURE, 1 | BANK1,
+                            HERO_X + ring_x[i], HERO_Y + ring_y[i], 14);
+                }
+                fx(MAGIC_T_CURE, 1 | BANK1, HERO_X, HERO_Y - 12, 18);
+                if (lv >= 1) {
+                    fx(MAGIC_T_MOTE, 1 | BANK1, HERO_X - 6, HERO_Y - 16, 12);
+                    fx(MAGIC_T_MOTE, 1 | BANK1, HERO_X + 6, HERO_Y - 16, 12);
+                }
+                if (lv >= 3) {
+                    fx(MAGIC_T_CURE, 1 | BANK1, HERO_X, HERO_Y - 20, 16);
+                    fx(MAGIC_T_CURE, 1 | BANK1, HERO_X, HERO_Y - 28, 14);
+                }
             }
-            if (harm) status_player_cure();
-            if (player.iframes < 20) player.iframes = 20;
-            hud_redraw_hp();
-            magic_cure_used = 1;
-            for (i = 0; i < 8; i += 2)
-                fx(MAGIC_T_CURE, 1 | BANK1,
-                    HERO_X + ring_x[i], HERO_Y + ring_y[i], 14);
-            fx(MAGIC_T_CURE, 1 | BANK1, HERO_X, HERO_Y - 12, 18);
             sfx_play(SFX_HEART);
             magic_ward_cd = 120;
             break;
@@ -930,14 +1035,35 @@ static u8 hero_power_selected(void) {
 
 // A new room (entity_init_room) wipes every slot: drop tracked shots and
 // pending strikes silently. Wards are self-effects and cross the doorway.
+
+/* #151 s10 tables stay in bank 31 so they cannot pack into bank 8. */
+const u16 magic_cv_reach[4] = { 256, 320, 384, 448 };
+const u16 magic_cv_dmg[4]   = { 256, 294, 333, 371 };
+const u8  magic_cv_pal_slot[5] = { 4, 5, 4, 4, 7 };
+
+u16 magic_cv_reach_at(u8 lv) BANKED {
+    if (lv > 3) lv = 3;
+    return magic_cv_reach[lv];
+}
+u16 magic_cv_dmg_at(u8 lv) BANKED {
+    if (lv > 3) lv = 3;
+    return magic_cv_dmg[lv];
+}
+u8 magic_cv_pal_at(u8 c) BANKED {
+    if (c > 4) c = 0;
+    return magic_cv_pal_slot[c];
+}
+
 static void drop_room_state(void) {
     u8 k;
     for (k = 0; k < SHOTS; ++k) shot_slot[k] = 0xFF;
     for (k = 0; k < 3; ++k) wisp_fx[k] = 0xFF;
     th_t = 0;
     br_t = 0;
+    memset(ice_mask, 0, sizeof(ice_mask));
     carrier = 0xFF;
     magic_cure_used = 0;
+    magic_convergence_reset();
 }
 
 static void tick_live(u8 keys) {
@@ -951,6 +1077,7 @@ static void tick_live(u8 keys) {
     tick_thunder();
     tick_bramble();
     tick_wards();
+    if (magic_cv_busy) magic_convergence_tick();
     carrier_close();
 }
 

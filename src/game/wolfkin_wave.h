@@ -30,6 +30,12 @@ extern u8 wolfkin_wave_fx_ticks;
 
 // Called by will_fire_max in the Moonfang branch. dir is the dir8 index.
 void wolfkin_wave_begin(u8 dir, u8 damage) BANKED;
+/* L1 Moonfang: frontal guard and aim, no crescent cels. */
+void wolfkin_wave_guard_begin(u8 dir, u8 frames) BANKED;
+/* Starter MAX: L1 is one claw + short dash; L2+ is the shipped rush.
+   Returns the first claw slot, or 0xFF if nothing spawned. */
+u8 wolfkin_max_fire(u8 dir, u8 damage) BANKED;
+extern u8 will_max_dash_timer;
 // Once per combat frame while either counter is live: eats frontal shots,
 // animates the crescent, and ends the Will palette flash.
 void wolfkin_wave_tick(void) BANKED;

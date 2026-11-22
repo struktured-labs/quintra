@@ -35,6 +35,7 @@ void new_monsters_foyer_warp(void) BANKED;
 #include "game/projectile.h"
 void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
+void magic_convergence_fire(u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
@@ -1763,14 +1764,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             sfx_play(SFX_HURT);
         } else if (chord && player.mp == player.mp_max
             && player.active_charge == 0) {
-            u8 sd;
-            for (sd = 0; sd < 8; ++sd) {
-                u8 shot = projectile_spawn_player(dir8_dx[sd], dir8_dy[sd],
-                    (u8)(w->p1 + effective_atk + 2), PROJ_SPIKE);
-                if (shot != 0xFF) {
-                    entities[shot].ai_data[3] |= PROJ_FLAG_CONVERGENCE;
-                }
-            }
+            magic_convergence_fire((u8)(w->p1 + effective_atk + 2));
             player.mp = 0;
             mp_regen = 0;
             player.iframes = 45;
@@ -1816,7 +1810,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     player.will_level = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
                     if (wolfkin_melee) {
-                        dash_timer = 9;
+                        {
+                            extern u8 will_max_dash_timer;
+                            dash_timer = will_max_dash_timer
+                                ? will_max_dash_timer : 9;
+                            will_max_dash_timer = 0;
+                        }
                         dash_cd = 45;
                         dash_dx = dir8_dx[dir];
                         dash_dy = dir8_dy[dir];

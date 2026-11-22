@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from test_will_max import (
+    seed_maxwill, MAXWILL_LEVEL, MAXWILL_XP,
     PLAYER, ENTITIES, ENTITY_SIZE, WILL_OFFSET, LEVEL_OFFSET, WILL_MAX,
     addr, boot, clear_arena,
 )

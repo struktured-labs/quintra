@@ -60,6 +60,10 @@ typedef struct {
     u8     curse_flags;
     u8     curse_rooms;
     u8     will_level;    // banked charges; appended for suspend compatibility
+    // Max-Will mastery cap (1..4) and intra-tier XP (u16 so L3->L4's
+    // 280 threshold fits; leftover XP is kept). Appended for Continue.
+    u8     maxwill_level;
+    u16    maxwill_xp;
 } player_state_t;
 
 extern player_state_t player;
