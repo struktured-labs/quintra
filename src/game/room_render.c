@@ -13,7 +13,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
-#include "game/waygear.h"
+#include "render/gate_boulder.h"
 
 u8 room_district_label_ticks;
 static u8 room_district_label_kind;
@@ -136,7 +136,7 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
             ? BGPAL_CRYSTAL : BGPAL_CRACK;
     switch (tile) {
         case BGT_GATE_BOULDER:
-            return WAYGEAR_BOULDER_ATTR();
+            return gate_boulder_attr;
         case BGT_WALL:
         case BGT_ARROW_TRAP:
         case BGT_PILLAR:

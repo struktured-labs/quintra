@@ -20,6 +20,8 @@ const u8 bgt_gate_boulder_open[16] = {
     0x41, 0x24, 0xE7, 0x3C, 0x76, 0x00, 0x2C, 0x00
 };
 
+u8 gate_boulder_attr = BGPAL_WALL;
+
 static u8 s_cue_done;
 static u8 s_shimmer_ticks;
 static u8 s_shimmer_tx;
@@ -41,6 +43,7 @@ static void poke_attr(u8 tx, u8 ty, u8 attr) {
 }
 
 void tiles_apply_passable_boulder(void) BANKED {
+    gate_boulder_attr = WAYGEAR_BOULDER_ATTR();
     if (WAYGEAR_CAN_PASS_BOULDER())
         set_bkg_data(BGT_GATE_BOULDER, 1, bgt_gate_boulder_open);
 }
