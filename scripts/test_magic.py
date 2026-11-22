@@ -6,7 +6,7 @@ and A+B in either order stays the special (Oath / Spirit Convergence) and
 never casts a spell.
 """
 
-from test_will_max import ENTITIES, ENTITY_SIZE, PLAYER, addr, boot, put16
+from test_will_max import ENTITIES, ENTITY_SIZE, PLAYER, addr, boot, put16, seed_maxwill
 
 HEROES = ("Wolfkin", "Sauran", "Corvin", "Picsean", "Vespine")
 SPELLS = ("MOONFIRE", "FLAME WARD", "THUNDER", "STONESKIN", "HEX",
@@ -72,7 +72,7 @@ def entity(pb, i, kind, x, y, hp=40, vx=0, vy=0, enemy_id=10):
     return e
 
 
-def arena(pb, mp=None):
+def arena(pb, mp=None, cap=1):
     """Compact empty floor, hero centred facing right, spells ready."""
     for i in range(32 * ENTITY_SIZE):
         pb.memory[ENTITIES + i] = 0
@@ -96,6 +96,7 @@ def arena(pb, mp=None):
     pb.memory[TAP_CD] = pb.memory[WARD_CD] = pb.memory[WARD_TICKS] = 0
     pb.memory[CURE_USED] = 0   # a fresh room for Cure's once-per-room rule
     pb.memory[PSTATUS] = 0
+    seed_maxwill(pb, cap, 0)
     # entity_init_room bumps this so magic.c drops tracked shots and pending
     # strikes. A bare entity-table wipe leaves Convergence/ward/thunder
     # statics live; those leftovers can eat the Thunder ST_STOP apply.
@@ -336,6 +337,71 @@ def check_wolfkin_claw(pb):
           f"{life} f, knockback {far_x - x0} px")
 
 
+
+def check_spell_levels(pb, c):
+    """#151 section 9.4: L4 tables, seeded independently of the L1 suite."""
+    m = pb.memory
+    if c == 1:
+        # L1 chain is 48: a body 68 px south of the strike is only in range at L4 (84).
+        arena(pb, cap=1)
+        pb.tick()
+        foe = entity(pb, 0, 2, 110, 56)
+        far = entity(pb, 1, 2, 110, 124)
+        tap(pb)
+        assert run_until(pb, 14, lambda: m[foe + 14] < 40), "L1 Thunder missed the primary"
+        assert not run_until(pb, 20, lambda: m[far + 14] < 40), (
+            f"L1 Thunder chained 68 px (hp {m[far + 14]})")
+        arena(pb, cap=4)
+        pb.tick()
+        foe = entity(pb, 0, 2, 110, 56)
+        far = entity(pb, 1, 2, 110, 124)
+        tap(pb)
+        assert run_until(pb, 14, lambda: m[foe + 14] < 40), "L4 Thunder missed the primary"
+        assert run_until(pb, 20, lambda: m[far + 14] < 40), "L4 Thunder no 68 px chain"
+        arena(pb, cap=4)
+        hold(pb)
+        sh = m[PLAYER + PL_SHIELD]
+        assert sh >= 120, f"L4 Stoneskin shield {sh}, expected ~135"
+    elif c == 2:
+        # L1 Hex travels 64 px; a body ~80 px out is an L4-only hit (112 px).
+        arena(pb, cap=4)
+        foe = entity(pb, 0, 2, 152, 64)
+        tap(pb)
+        assert run_until(pb, 80, lambda: m[foe + 14] < 40), "L4 Hex missed a far body"
+        arena(pb, cap=4)
+        m[PLAYER + PL_IFRAMES] = 0
+        hold(pb)
+        ifr = m[PLAYER + PL_IFRAMES]
+        assert 24 <= ifr <= 32, f"L4 Veil iframes {ifr}"
+    elif c == 3:
+        # L4 Blizzard pierce 3 reaches a third body; L4 Cure heals +3.
+        arena(pb, cap=4)
+        a = entity(pb, 0, 2, 96, 64)
+        b = entity(pb, 1, 2, 112, 64)
+        third = entity(pb, 2, 2, 128, 64)
+        tap(pb)
+        assert run_until(pb, 60, lambda: m[third + 14] < 40), "L4 Blizzard no third pierce"
+        arena(pb, cap=4)
+        m[PLAYER + PL_HP] = m[PLAYER + PL_HP_MAX] - 4
+        hp = m[PLAYER + PL_HP]
+        hold(pb)
+        assert m[PLAYER + PL_HP] == hp + 3, f"L4 Cure healed {m[PLAYER + PL_HP] - hp}"
+    elif c == 4:
+        # L4 Bramble's 5th eruption is at 128 px; L4 Mirror radius 25 covers 22 px.
+        arena(pb, cap=4)
+        put16(pb, PLAYER + PL_X, 16)
+        far = entity(pb, 0, 2, 150, 64)
+        tap(pb)
+        pb.tick(50)
+        loss = 40 - m[far + 14]
+        assert loss >= 1 and m[ESTATUS] == ST_POISON, (
+            f"L4 Bramble missed the 5th eruption (loss {loss} status {m[ESTATUS]})")
+        arena(pb, cap=4)
+        shot = entity(pb, 0, 1, 100, 64, hp=1, vx=-1)  # 22 px from hero (78)
+        hold(pb)
+        assert run_until(pb, 40, lambda: m[shot + 1] & 0x10), "L4 Mirror missed a 22 px shot"
+
+
 def main():
     for c, name in enumerate(HEROES):
         pb = boot(c)
@@ -343,9 +409,10 @@ def main():
         check_spells(pb, c)
         if c == 0:
             check_wolfkin_claw(pb)
+        check_spell_levels(pb, c)
         pb.stop(save=False)
         print(f"[magic] {name}: {SPELLS[c * 2]} / {SPELLS[c * 2 + 1]} / A+B ok")
-    print("[magic] PASS tap spell, hold ward and A+B for all five heroes")
+    print("[magic] PASS tap spell, hold ward, A+B and L4 scaling for all five heroes")
 
 
 if __name__ == "__main__":
