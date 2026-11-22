@@ -570,7 +570,7 @@ void secret_merchant_write_effect(u8 code) BANKED {
         "CAVE LIGHT", "HONEYCOMB", "CINDER VEIL", "RIME SKATES",
         "FILTER MASK", "GLOAM LAMP", "SUN SEAL", "CRIMSON PACT",
         "LAST LIGHT", "WAYFARER BELL", "CACHE LURE", "HOLLOW WICK",
-        "B: BOMB / 1 MP", "TOOL: BOMB", "TOOL: CHIME", "REARM RIFTWELL",
+        "B: BOMB / 2 MP", "TOOL: BOMB", "TOOL: CHIME", "REARM RIFTWELL",
     };
     if (code < SM_CODE_COUNT) text_write(text[code]);
 }

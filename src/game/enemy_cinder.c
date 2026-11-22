@@ -308,7 +308,7 @@ static void cinder_brand_tick(u8 fast, u8 damage) {
     if ((cinder_timer % beat) == 0) {
         u8 node = paths[variant][step & 7];
         cinder_hazard_add((u8)(nx[node] + 8), (u8)(ny[node] + 8),
-            fast ? 8 : 18, fast ? 64 : 92);
+            fast ? 8 : 18, fast ? 56 : 80);
     }
     if ((cinder_timer % (fast ? 20 : 36)) == 10)
         cinder_pack_fire(1, damage);
@@ -428,8 +428,10 @@ static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
     }
 }
 
+
 static void cinder_transform_tick(entity_t *e) {
     u8 i;
+    if (cinder_timer == 0) cinder_drop_phase_hearts();
     for (i = 0; i < CINDER_KILNBACKS; ++i)
         cinder_move_member(i, (u8)(80 + i * 8), 58, 2);
     if ((cinder_timer & 7) == 0) {

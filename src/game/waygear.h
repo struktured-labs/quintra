@@ -20,10 +20,15 @@ enum {
 #define WAYGEAR_BIT(g) ((u8)(1u << (g)))
 
 // Innate abilities and every owned implement remain active together.
+#define WAYGEAR_CAN_PASS_BOULDER() ( \
+    player.class_id == 1 \
+    || (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_GLOVE)))
+
+#define WAYGEAR_BOULDER_ATTR() \
+    (WAYGEAR_CAN_PASS_BOULDER() ? BGPAL_CRACK : BGPAL_WALL)
+
 #define WAYGEAR_TILE_PASSABLE(t) ( \
-    ((t) == BGT_GATE_BOULDER \
-        && (player.class_id == 1 \
-            || (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_GLOVE)))) \
+    ((t) == BGT_GATE_BOULDER && WAYGEAR_CAN_PASS_BOULDER()) \
     || (((t) == BGT_GATE_WATER || (t) == BGT_WILD_WATER) \
         && (player.class_id == 3 \
             || (player.waygear_owned & WAYGEAR_BIT(WAYGEAR_RAFT)))) \

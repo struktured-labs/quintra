@@ -37,6 +37,7 @@ void cinder_big_load(void) BANKED;          /* Rex OBJ + fire BG tiles */
 void cinder_rex_big_load(void) BANKED;      /* generated: Rex OBJ only */
 void cinder_fire_reset(void) BANKED;        /* forget pools, no VRAM */
 void cinder_fire_clear_all(void) BANKED;    /* restore floor under pools */
+void cinder_drop_phase_hearts(void) BANKED;
 /* x/y are the world-pixel centre. size 2 = 16x16 pool, 3 = 24x24. */
 void cinder_fire_add(u8 x, u8 y, u8 delay, u8 ttl, u8 size) BANKED;
 /* cinder_fire_add with the fairness rules: warning floor (24 frames for

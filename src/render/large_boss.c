@@ -1,4 +1,5 @@
 #pragma bank 13
+#include "render/oam_grid.h"
 #include <gb/gb.h>
 #include "render/large_boss.h"
 #include "game/enemy_ai.h"
@@ -65,12 +66,11 @@ u8 large_boss_draw(u8 oam) BANKED {
     y=e->y-room_camera_y+16-(height==6 ? 8:0);
     pal=e->palette|8;
     if(e->ai_data[7]) {--e->ai_data[7]; if(e->ai_data[7]&1) pal=8;}
-    __critical {
-        for(r=0;r<height;++r) for(c=0;c<width;++c) {
-            set_sprite_tile(oam,tile++);
-            set_sprite_prop(oam,pal);
-            move_sprite(oam++,(u8)(x+c*8),(u8)(y+r*8));
-        }
-    }
-    return oam;
+    // Batched grid write (render/oam_grid.c); same cells as the old
+    // per-cell set_sprite_tile/prop/move_sprite loop.
+    og_ptr = (u8 *)&shadow_OAM[oam];
+    og_y = (u8)y; og_x = (u8)x; og_dx = og_dy = 8;
+    og_w = width; og_h = height; og_tile = tile; og_prop = pal;
+    __critical { oam_grid(); }
+    return (u8)(oam + 24);              /* 6x4 or 4x6 */
 }
