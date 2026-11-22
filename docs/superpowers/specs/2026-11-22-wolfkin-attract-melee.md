@@ -32,5 +32,6 @@ the kit change, re-record `demo_wolfkin_crystal` with the same seed.
 
 `wolfkin_sword.c` and `wolfkin_sword_art.c` used fixed bank 23 on #158.
 Current main has filled that bank; stacking them there left 61 bytes free,
-under the 256-byte layout floor. Both files now use `#pragma bank 255`.
+under the 256-byte layout floor. Autobank 255 then packed them into bank 2
+on a clean link (91 bytes free). Both files now live in roomy bank 28.
 
