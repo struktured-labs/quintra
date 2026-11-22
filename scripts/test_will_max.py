@@ -152,8 +152,15 @@ def fire_right(pb):
     pb.button_release("a")
     pb.button_release("right")
     # MAX input is processed in the weapon half of room_tick; body dash and
-    # projectile motion begin on subsequent room ticks.
-    pb.tick(4)
+    # projectile motion begin on subsequent room-loop frames.
+    # MAX FX can overrun VBlank, so host ticks are not 1:1 with room ticks.
+    fc_addr = addr("_loop_frame_counter")
+    start = pb.memory[fc_addr] | (pb.memory[fc_addr + 1] << 8)
+    for _ in range(48):
+        pb.tick()
+        now = pb.memory[fc_addr] | (pb.memory[fc_addr + 1] << 8)
+        if ((now - start) & 0xFFFF) >= 4:
+            break
 
 
 def main():

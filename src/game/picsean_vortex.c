@@ -46,6 +46,7 @@ u8 picsean_vortex_abort;
 static u8 vortex_carrier = 0xFF;
 static u8 vortex_damage;
 static u8 vortex_level;
+u8 vortex_cels;
 static u8 vortex_life;
 static u8 vortex_grow;
 static u8 vortex_heavy_cap;
@@ -69,7 +70,6 @@ static u8 body_d[MAX_ENTITIES];
 // This tick's arm points as ready-made OAM bytes (screen space, Y=0 hides).
 // The draw is a plain copy and the arm test reuses the same bytes.
 static u8 seg_oam[PICSEAN_VORTEX_SEGS * 4];
-static u8 seg_n;
 
 // 64-step sine, amplitude 64.
 static const i8 vortex_sin[64] = {
@@ -327,7 +327,6 @@ static void vortex_end(void) {
     picsean_vortex_ticks = 0;
     picsean_vortex_radius = 0;
     picsean_vortex_abort = 0;
-    seg_n = 0;
     vortex_flash(0, 0);
     vortex_flashing = 0;
     // Weapon and hero OBJ palettes come back from the champion appearance.
@@ -364,7 +363,6 @@ void picsean_vortex_begin(u8 damage) BANKED {
     palette_obj_load(2, tide_obj_palette);
     picsean_vortex_ticks = vortex_life;
     picsean_vortex_radius = PICSEAN_VORTEX_START_R;
-    seg_n = 0;
     // A recast while the last vortex runs keeps its carrier (no orphan).
     carrier_ensure();
     vortex_flash(1, 0);
@@ -541,7 +539,7 @@ static void vortex_layout(u8 t, u8 r) {
         o += 16;
     }
 #endif
-    seg_n = 12;
+    if (vortex_level < 4) will_levels_vortex_trim_oam(seg_oam, vortex_level);
 }
 
 static const u8 slot_bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
@@ -680,12 +678,4 @@ void picsean_vortex_draw(void) BANKED {
         return;
     }
     memcpy(dst, seg_oam, (u8)(k << 2));
-}
-
-// room_draw tail: OBJ overlays drawn after the entity pass and the champion.
-// Lives here rather than in room.c so bank 1 stays above its 256-byte floor.
-void room_draw_overlays(void) BANKED {
-    if (serpent_tail_active) serpent_draw();
-    if (cinder_pack_active) cinder_draw();
-    if (picsean_vortex_ticks) picsean_vortex_draw();
 }

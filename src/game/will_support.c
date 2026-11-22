@@ -36,6 +36,8 @@ void will_charge_tick(void) BANKED {
         if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
         return;
     }
+    /* spend_tab[0] is 16: skip the bank-25 far call until a pip can land. */
+    if (will_charge_fraction < 16) return;
     if (will_levels_picsean_drain()) will_bank_charge();
 }
 

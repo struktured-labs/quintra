@@ -89,6 +89,20 @@ def test_unlock_and_persist(pb):
     assert pb.memory[MAXWILL_LEVEL] == 2 and read_xp(pb) == 0
     print("  ok  cap stays L2 in WRAM")
 
+    # A single award that crosses two thresholds must land on L3, not stop
+    # at L2 (maybe_cap_up is a while, not a one-shot if).
+    seed_maxwill(pb, 1, 0)
+    set_xp(pb, 240)
+    arm(pb)
+    assert press_max(pb), "multi-threshold MAX did not fire"
+    pb.tick(8)
+    lv = pb.memory[MAXWILL_LEVEL]
+    xp = read_xp(pb)
+    print(f"    after 240+2 XP from L1: level={lv} xp={xp}")
+    assert lv == 3, f"expected L3 after crossing 80 and 160, got L{lv}"
+    assert xp == 2, f"expected leftover 2, got {xp}"
+    print("  ok  multi-threshold cap-up reaches L3")
+
 
 def main():
     pb = boot(PICSEAN)

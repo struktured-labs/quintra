@@ -248,7 +248,8 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     }
 
     if (first != 0xFF) {
-        will_levels_on_max_cast();
+        if (weapon_index == classes[player.class_id].starter_weapon)
+            will_levels_on_max_cast();
         if (level > 1) {
             if (kind == PROJ_SPEAR || weapon_index == classes[1].starter_weapon) {
                 entities[first].hp = (u8)(entities[first].hp + level);

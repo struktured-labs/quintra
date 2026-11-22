@@ -407,10 +407,10 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
     else segs = 0;
     // Shop, boss, and loot writers change lane_palette, so a matching
     // segment is only reusable while this lane still owns the Will palette.
+    if (will_maxfx_locked()) full = 0; /* dim / locked cue while recast holds */
     if (lane_palette == 5 && full == will_full_palette
         && segs == will_cached_segs) return;
     if (lane_palette != 5) hud_set_lane_palette(5);
-    if (will_maxfx_locked()) full = 0; /* dim / locked cue while recast holds */
     if (full != will_full_palette) {
         palette_bg_load(5,
             full ? hud_palette_will_full : hud_palette_will);

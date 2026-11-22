@@ -132,7 +132,9 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
         run_state_record_enemy_kill();
         {
             u8 mk = 0;
-            if (j == large_boss_index || (eid == ENEMY_STONE_SENTINEL && entities[j].ai_data[3]))
+            if (j == large_boss_index
+                || (entities[j].ai_data[3] & 1)
+                || (hexa_boss_active && j == hexa_core_entity))
                 mk = 2;
             else if (entities[j].flags & (EF_ELITE | EF_ALPHA | EF_RARE))
                 mk = 1;

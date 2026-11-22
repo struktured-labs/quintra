@@ -40,7 +40,7 @@
 #define PRE_WAYGEAR_PL_SIZE 44
 #define PRE_CURSE_PL_SIZE 46
 #define PRE_TIER_PL_SIZE 48
-#define PRE_MAXWILL_PL_SIZE 48
+#define PRE_MAXWILL_PL_SIZE 49
 
 static void sram_write_open(void) {
     /* VBlank must not run while cart RAM is unlocked: the ISR clobbers

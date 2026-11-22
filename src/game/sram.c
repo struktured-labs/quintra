@@ -45,7 +45,8 @@
 #define PRE_OATH_PL_SIZE 43 // Will-era player layout before Oath selection
 #define PRE_WAYGEAR_PL_SIZE 44 // Pack layout before permanent traversal gear
 #define PRE_CURSE_PL_SIZE 46 // Waygear layout before appended run curses
-#define PRE_TIER_PL_SIZE 48 // layout before appended max-Will cap/XP
+#define PRE_TIER_PL_SIZE 48 // layout before appended will_level
+#define PRE_MAXWILL_PL_SIZE 49 // sizeof(player_state_t) on main (will_level, no cap/XP)
 
 void sram_migrate_run(u8 saved_rs) BANKED;
 
@@ -128,7 +129,9 @@ u8 sram_load_run(void) BANKED {
         player.will_level = WILL_LEVEL_CAP;
     if (player.will_level >= WILL_LEVEL_CAP) player.will_charge = WILL_MAX;
     else if (player.will_charge >= WILL_NEXT_MAX) player.will_charge = 0;
-    if (saved_pl <= PRE_TIER_PL_SIZE) {
+    /* Main writes saved_pl == 49. 48 is pre-will_level; both must
+       migrate missing cap/XP to L1 / 0. */
+    if (saved_pl <= PRE_MAXWILL_PL_SIZE) {
         player.maxwill_level = 1;
         player.maxwill_xp = 0;
     }

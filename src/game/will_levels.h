@@ -29,6 +29,7 @@ void will_levels_hud_pips(void) BANKED;
 // Fill Tide Vortex caps for the current art level. rmax is
 // in/out (already the corner distance). L4 leaves bonuses
 // and wash as the shipped art (mul 0).
+void will_levels_vortex_trim_oam(u8 *seg, u8 level) BANKED;
 void will_levels_vortex_setup(u8 *rmax, u8 *life, u8 *grow,
     u8 *mul, u8 *heavy) BANKED;
 

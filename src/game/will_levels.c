@@ -6,7 +6,10 @@
 #include "game/player.h"
 #include "game/will_levels.h"
 #include "game/will.h"
+#include "game/picsean_vortex.h"
+#include "game/enemy_ai.h"
 #include "render/tiles.h"
+extern u8 vortex_cels;
 #include "audio/sfx.h"
 
 static const u8 spend_tab[4]  = { 16, 24, 32, 40 };
@@ -67,19 +70,22 @@ void will_levels_on_load(void) BANKED {
 }
 
 static void maybe_cap_up(void) {
-    u16 need;
     if (player.maxwill_level >= MAXWILL_MAX) {
         player.maxwill_xp = 0;
         return;
     }
-    need = xp_need[(u8)(player.maxwill_level - 1)];
-    if (player.maxwill_xp < need) return;
-    player.maxwill_xp = (u16)(player.maxwill_xp - need);
-    player.maxwill_level++;
+    while (player.maxwill_level < MAXWILL_MAX) {
+        u16 need = xp_need[(u8)(player.maxwill_level - 1)];
+        if (player.maxwill_xp < need) return;
+        player.maxwill_xp = (u16)(player.maxwill_xp - need);
+        player.maxwill_level++;
+        cap_up_notice = 1;
+    }
     if (player.maxwill_level >= MAXWILL_MAX) player.maxwill_xp = 0;
-    cap_up_notice = 1;
-    sfx_play(SFX_WILL);
-    will_levels_hud_pips();
+    if (cap_up_notice) {
+        sfx_play(SFX_WILL);
+        will_levels_hud_pips();
+    }
 }
 
 void will_levels_on_kill(u8 kind) BANKED {
@@ -124,4 +130,44 @@ void will_levels_vortex_setup(u8 *rmax, u8 *life, u8 *grow,
     *mul = mul_t[(u8)(lv - 1)];
     *heavy = heavy_t[(u8)(lv - 1)];
     if (*rmax > rcap[(u8)(lv - 1)]) *rmax = rcap[(u8)(lv - 1)];
+    vortex_cels = (lv >= 4) ? 12 : (u8)((u8)(lv + 1) << 1);
+}
+
+void will_levels_vortex_trim_oam(u8 *seg, u8 level) BANKED {
+    /* Pack kept cels into the tail of the 12-cel buffer so the
+       unchanged L4 draw path (OAM 24-35) places L1 in 32-35, L2 in
+       30-35, and L3 in 28-35. L4 never calls this. */
+    u8 cels, arms, s, d, off, k;
+    if (level < 1) level = 1;
+    if (level >= 4) return;
+    cels = (u8)((u8)(level + 1) << 1);
+    arms = (level <= 1) ? 4 : level;
+    d = 0;
+    for (s = 0; s < 12 && d < cels; s++) {
+        if ((u8)(s & 3) < arms) {
+            if (d != s) {
+                for (k = 0; k < 4; k++)
+                    seg[(u8)(d * 4 + k)] = seg[(u8)(s * 4 + k)];
+            }
+            d++;
+        }
+    }
+    off = (u8)(12 - d);
+    if (off) {
+        s = d;
+        while (s) {
+            s--;
+            for (k = 0; k < 4; k++)
+                seg[(u8)((s + off) * 4 + k)] = seg[(u8)(s * 4 + k)];
+        }
+        for (s = 0; s < off; s++)
+            seg[(u8)(s * 4)] = 0;
+    }
+    vortex_cels = cels;
+}
+
+void room_draw_overlays(void) BANKED {
+    if (serpent_tail_active) serpent_draw();
+    if (cinder_pack_active) cinder_draw();
+    if (picsean_vortex_ticks) picsean_vortex_draw();
 }
