@@ -20,6 +20,9 @@ from test_will_max import (  # noqa: E402
 from test_will_b_weapons import set_will, fire_b  # noqa: E402
 
 ITEM_BOMBS = 48
+SPR_BOMB_WAVES = {188, 189, 190}
+SPR_BOMB_FRAG = 191
+SHADOW_OAM = 0xC000
 BGT_FLOOR = 1
 WILL = {
     0: ("tier0-empty", 0, 0, 0),
@@ -67,26 +70,36 @@ def capture_tier(tier, name, level, charge, waygear):
     pb.memory[P + 19] = 0
     fire_b(pb)
     frames = []
-    # Fuse is 48 frames; capture the burst window plus a little hang.
+    # Fuse is 48 frames; crystal breaks hitch a few vblanks before draw.
+    # Prefer stills that actually have bank-1 wave/frag tiles in shadow OAM.
     for i in range(80):
         pb.tick(1)
         if 40 <= i <= 72 and (i % 2 == 0):
-            frames.append(scale4(pb.screen.image.copy()))
-    # Best still: the captured frame with the most unique colors (peak FX).
-    def uniq(im):
-        return len(set(im.getdata()))
-    still = max(frames, key=uniq) if frames else None
+            fx = 0
+            for s in range(40):
+                y = pb.memory[SHADOW_OAM + s * 4]
+                tile = pb.memory[SHADOW_OAM + s * 4 + 2]
+                prop = pb.memory[SHADOW_OAM + s * 4 + 3]
+                if (0 < y < 168 and (prop & 0x08)
+                        and (tile in SPR_BOMB_WAVES or tile == SPR_BOMB_FRAG)):
+                    fx += 1
+            frames.append((fx, scale4(pb.screen.image.copy())))
+    def score(item):
+        fx, im = item
+        return (fx, len(set(im.getdata())))
+    still = max(frames, key=score)[1] if frames else None
     OUT.mkdir(parents=True, exist_ok=True)
     still_path = OUT / f"bomb-{name}-4x.png"
     gif_path = OUT / f"bomb-{name}.gif"
     still.save(still_path)
-    if frames:
-        frames[0].save(
-            gif_path, save_all=True, append_images=frames[1:],
+    imgs = [im for _fx, im in frames]
+    if imgs:
+        imgs[0].save(
+            gif_path, save_all=True, append_images=imgs[1:],
             duration=80, loop=0, optimize=False,
         )
     pb.stop()
-    print("wrote", still_path, gif_path, "nframes", len(frames), flush=True)
+    print("wrote", still_path, gif_path, "nframes", len(imgs), flush=True)
 
 
 def main():

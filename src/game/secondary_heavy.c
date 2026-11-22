@@ -53,6 +53,9 @@ static const u8 bomb_bonus[4]    = {8, 10, 12, 14};
 static const u8 bomb_tile_r[4]   = {1, 1, 2, 3};
 static const u8 bomb_splash_d[4] = {0, 10, 16, 22};
 static const u8 bomb_ring_r[4]   = {14, 16, 22, 28};
+/* Diagonal ring offsets ~5/7 of the cardinal radius so the 8-way
+ * shockwave reads as a circle, not a 1.41x square. */
+static const u8 bomb_ring_d[4]   = {10, 11, 16, 20};
 static const u8 bomb_frags[4]    = {0, 0, 4, 8};
 static const u8 bomb_shake[4]    = {2, 2, 3, 3};
 static const u8 bomb_shake_t[4]  = {10, 12, 16, 20};
@@ -83,8 +86,8 @@ static void bomb_spawn_frag(i16 x, i16 y, u8 dir, u8 damage, u8 gold) {
 }
 
 static void bomb_explode(i16 x, i16 y, u8 damage, u8 tier) {
-    u8 dir, step, prop, n;
-    i8 rr;
+    u8 dir, step, prop, n, tile;
+    i8 rr, dx, dy, rad;
     if (tier > 3) tier = 3;
     /* Visuals first so a crystal-rich room cannot spend every entity slot
      * on wisps before the blast exists. Tile breaks follow; each break
@@ -105,12 +108,24 @@ static void bomb_explode(i16 x, i16 y, u8 damage, u8 tier) {
     } else {
         rr = (i8)bomb_ring_r[tier];
         for (dir = 0; dir < 8; dir = (u8)(dir + 1)) {
+            dx = dir8_dx[dir];
+            dy = dir8_dy[dir];
+            if (dx && dy) {
+                tile = SPR_BOMB_WAVE_CORNER;
+                rad = (i8)bomb_ring_d[tier];
+            } else if (dy) {
+                tile = SPR_BOMB_WAVE_H;
+                rad = rr;
+            } else {
+                tile = SPR_BOMB_WAVE;
+                rad = rr;
+            }
             prop = (tier >= 3) ? SPR_BOMB_FX_GOLD : SPR_BOMB_FX_PROP;
-            if (dir8_dx[dir] < 0) prop |= S_FLIPX;
-            if (dir8_dy[dir] > 0) prop |= S_FLIPY;
-            fx_spawn(SPR_BOMB_WAVE, prop,
-                x + (i16)(dir8_dx[dir] * rr) - 4,
-                y + (i16)(dir8_dy[dir] * rr) - 4,
+            if (dx < 0) prop |= S_FLIPX;
+            if (dy > 0) prop |= S_FLIPY;
+            fx_spawn(tile, prop,
+                x + (i16)(dx * rad) - 4,
+                y + (i16)(dy * rad) - 4,
                 (u8)(12 + (tier << 1)));
         }
     }
