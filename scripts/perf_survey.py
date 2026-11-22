@@ -191,6 +191,9 @@ def sc_boss(stage):
             put16(pb, PLAYER + 11, 104)
             # Phase 2 pressure: the busiest native pattern set.
             pb.memory[boss + 14] = pb.memory[boss + 23] >> 1
+            # Let the forced phase change finish (S8/S9 rebuild the arena
+            # with the display off for ~27 frames) before timing combat.
+            measure(pb, 120)
             return measure(pb, 600)
         finally:
             pb.stop(save=False)
