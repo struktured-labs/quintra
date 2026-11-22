@@ -133,13 +133,17 @@ static void sword_touch_tiles(entity_t *e, u8 dir) {
     u8 w = (u8)(e->hitbox >> 4);
     u8 h = (u8)(e->hitbox & 0x0F);
     i8 dx = dir8_dx[dir], dy = dir8_dy[dir];
-    i16 samples[2][2];
+    i16 samples[3][2];
     u8 i;
     samples[0][0] = (i16)(px + (w >> 1));
     samples[0][1] = (i16)(py + (h >> 1));
     samples[1][0] = (i16)(px + (dx > 0 ? (w ? (u8)(w - 1) : 0) : (dx < 0 ? 0 : (w >> 1))));
     samples[1][1] = (i16)(py + (dy > 0 ? (h ? (u8)(h - 1) : 0) : (dy < 0 ? 0 : (h >> 1))));
-    for (i = 0; i < 2; i++) {
+    /* Near (body-side) edge too: a 12x12 slash box tucked against the
+     * body can cover a crystal cell with neither its center nor its tip. */
+    samples[2][0] = (i16)(px + (dx < 0 ? (w ? (u8)(w - 1) : 0) : (dx > 0 ? 0 : (w >> 1))));
+    samples[2][1] = (i16)(py + (dy < 0 ? (h ? (u8)(h - 1) : 0) : (dy > 0 ? 0 : (h >> 1))));
+    for (i = 0; i < 3; i++) {
         i16 sx = samples[i][0], sy = samples[i][1];
         u8 t, tx, ty;
         if (sx < 0 || sy < 0) continue;
