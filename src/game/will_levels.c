@@ -18,6 +18,13 @@ static const u16 xp_need[3]   = { 80, 160, 280 };
 
 static u8 cap_up_notice;
 
+static const u8 maxwill_pip_tiles[4][16] = {
+    {0x70,0x70, 0x70,0x70, 0x70,0x70, 0,0, 0,0, 0,0, 0,0, 0,0},
+    {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0,0, 0,0, 0,0, 0,0},
+    {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0x70,0x70, 0x70,0x70, 0x70,0x70, 0,0},
+    {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0},
+};
+
 u8 will_levels_clamp(u8 level) BANKED {
     if (level < MAXWILL_MIN) return MAXWILL_MIN;
     if (level > MAXWILL_MAX) return MAXWILL_MAX;
@@ -74,7 +81,7 @@ static void maybe_cap_up(void) {
     }
     while (player.maxwill_level < MAXWILL_MAX) {
         u16 need = xp_need[(u8)(player.maxwill_level - 1)];
-        if (player.maxwill_xp < need) return;
+        if (player.maxwill_xp < need) break;
         player.maxwill_xp = (u16)(player.maxwill_xp - need);
         player.maxwill_level++;
         cap_up_notice = 1;
@@ -110,22 +117,24 @@ void will_levels_hud_pips(void) BANKED {
        (palette 5). Geometric 2bpp tiles, no new sheet. Called only on
        cap-up, hud_init / Continue, and hud_redraw_all — not on the
        per-segment Will-bar tick. */
-    static const u8 pip_tiles[4][16] = {
-        /* L1: top-left 3x3 */
-        {0x70,0x70, 0x70,0x70, 0x70,0x70, 0,0, 0,0, 0,0, 0,0, 0,0},
-        /* L2: top row */
-        {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0,0, 0,0, 0,0, 0,0},
-        /* L3: top row + bottom-left */
-        {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0x70,0x70, 0x70,0x70, 0x70,0x70, 0,0},
-        /* L4: both rows */
-        {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0},
-    };
     u8 row[1], attr[1];
-    u8 lv = will_levels_art();
-    set_bkg_data(HUD_MAXWILL_PIPS, 1, pip_tiles[(u8)(lv - 1)]);
+    u8 lv = player.maxwill_level;
+    if (lv < MAXWILL_MIN) lv = MAXWILL_MIN;
+    if (lv > MAXWILL_MAX) lv = MAXWILL_MAX;
+    /* Tile data must land in VRAM bank 0. Resume/FX draws often leave
+       VBK=1, and a later set_bkg_data would write the strip where the
+       window cannot see it. */
+    VBK_REG = 0;
+    /* Mode 3 locks VRAM and HBlank is too short for a 16-byte upload, so
+       a mid-combat STATF_BUSY wait was not enough: the copy started in
+       mode 0 and ran into mode 2/3. hud_init writes with the LCD off.
+       Cap-up is rare (at most three times a run); wait for the next
+       vblank when the LCD is on, matching room_set_tile_vbl. This is
+       not a per-frame cost and does not add a HOME far call. */
+    if (LCDC_REG & LCDCF_ON) wait_vbl_done();
+    set_bkg_data(HUD_MAXWILL_PIPS, 1, maxwill_pip_tiles[(u8)(lv - 1)]);
     row[0] = HUD_MAXWILL_PIPS;
     attr[0] = 5;
-    VBK_REG = 0;
     set_win_tiles(11, 0, 1, 1, row);
     VBK_REG = 1;
     set_win_tiles(11, 0, 1, 1, attr);
