@@ -96,6 +96,66 @@ def matches(velocity, sx, sy):
     return ok_x and ok_y
 
 
+# Wolfkin (class 0) A-button since #187 is the parented Longblade:
+# segments have vx=vy=0 and extend from the body along the shared
+# 8-way heading. A traveling-shot check is a stale Fang Claw contract.
+AUX_FANG = 0xF1
+
+
+def signed16(value):
+    return value if value < 0x8000 else value - 0x10000
+
+
+def entity_xy(pb, entity):
+    x = pb.memory[entity + 3] | (pb.memory[entity + 4] << 8)
+    y = pb.memory[entity + 7] | (pb.memory[entity + 8] << 8)
+    return signed16(x), signed16(y)
+
+
+def attack_heading_matches(pb, velocity, sx, sy):
+    """Traveling shots use velocity; Wolfkin melee uses beam or tip offset.
+
+    The Longblade is parented (vx=vy=0). On the first frame a slash can still
+    have a segment off-axis, so a matching traveling sword beam counts, and
+    parented fang tips are judged after the swing extends.
+    """
+    def live_traveling():
+        for entity in player_shots(pb):
+            evx = signed(pb.memory[entity + 10])
+            evy = signed(pb.memory[entity + 11])
+            if (evx or evy) and matches((evx, evy), sx, sy):
+                return True
+        return False
+
+    if live_traveling() or matches(velocity, sx, sy):
+        return True
+    if pb.memory[PL] != 0:
+        return False
+
+    px, py = pos(pb)
+    best = -1
+    for _ in range(8):
+        for entity in player_shots(pb):
+            if pb.memory[entity + 23] != AUX_FANG:
+                continue
+            evx = signed(pb.memory[entity + 10])
+            evy = signed(pb.memory[entity + 11])
+            if evx or evy:
+                continue
+            ex, ey = entity_xy(pb, entity)
+            box = pb.memory[entity + 25]
+            w, h = box >> 4, box & 0x0F
+            tip_x = ex + (w if sx > 0 else 0)
+            tip_y = ey + (h if sy > 0 else 0)
+            dx, dy = tip_x - px, tip_y - py
+            if matches((dx, dy), sx, sy):
+                best = max(best, abs(dx) + abs(dy))
+        if best >= 8:
+            return True
+        pb.tick(1)
+    return False
+
+
 def stagger_release(pb, keys, first, settle=3):
     """Release one diagonal key one frame before the other."""
     other = keys[0] if first == keys[1] else keys[1]
@@ -196,7 +256,7 @@ def staggered_diagonal_cases(pb, records, label='corvin'):
                 label, keys, first, 'stagger collapsed aim', pb.memory[AIM])
             _, vx, vy = shot_velocity(pb)
             velocity = (vx, vy)
-            assert matches(velocity, sx, sy), (
+            assert attack_heading_matches(pb, velocity, sx, sy), (
                 label, keys, first, 'staggered shot', velocity)
             assert pb.memory[AIM] == direction
             records.append(dict(
