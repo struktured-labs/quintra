@@ -43,7 +43,7 @@ static const char cd_layout[CD_H][CD_W + 1] = {
     "....33#....#",   // entrance rows 6..7 | Star key (8..9,6..7)
     "......#....#",
     "####33######",   // spawn plate (4..5,8..9) in the gap
-    "#...33.....#",   // hall landing row
+    "#...33.....#",   // hall landing row; rewrite switches A (1) and B (10) at the dead ends
     "#==========#",   // rolling-stone lane rows 10..11 (Jagger guards it)
     "#==========#",
     "############",   // Star door (6..7,12)

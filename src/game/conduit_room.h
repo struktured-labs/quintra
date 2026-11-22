@@ -48,8 +48,8 @@
 #define CD_T_BARS  99           // borrowed solid id: side door bars (M3)
 
 // ---- M5b vault: rewrite switches, Kite chain, Heart two-door choice ----
-#define CD_SWA_X 7              // rewrite switch A (1x1, hall row 9): flips A and B
-#define CD_SWB_X 9              // rewrite switch B: flips B only
+#define CD_SWA_X 1              // rewrite switch A (1x1, hall row 9, west dead end): flips A and B
+#define CD_SWB_X 10             // rewrite switch B (east dead end): flips B only
 #define CD_SW_ROW 9
 #define CD_HDB_X 3              // Heart door B (1x2) -> goal alcove (1..2,13..14)
 #define CD_HDA_X 8              // Heart door A (1x2) -> treasure closet (9..10,13..14)
