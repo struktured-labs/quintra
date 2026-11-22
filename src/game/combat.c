@@ -358,7 +358,8 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
 // The shot box is invariant across one sweep. Absolute WRAM loads stay
 // cheaper than stack slots, and the damage body lives in its own function
 // so a miss does not spill those temps on every entity.
-static i16 shot_sx, shot_sy, shot_right, shot_bottom;
+// Shared with combat_filter.c (bank 23).
+i16 shot_sx, shot_sy, shot_right, shot_bottom;
 static u8 shot_sx_b, shot_sy_b, shot_right_b, shot_bottom_b, shot_box_wide;
 static u8 shot_targets[MAX_ENTITIES];
 static u8 shot_list_n;
@@ -437,35 +438,55 @@ static u8 combat_cut_hostile_shot(entity_t *shot, u8 i, entity_t *ej, u8 j) {
     return 0;
 }
 
+// One slot of the melee/splash walk. Returns 1 when the shot is spent.
+static u8 combat_scan_one(entity_t *shot, u8 i, entity_t *ej, u8 j,
+                          u8 *giant_hits) {
+    u8 flags = ej->flags;
+    if (!(flags & EF_ACTIVE)) return 0;
+    if (ej->type == ENT_ENEMY && !(flags & EF_ON_SCREEN)) return 0;
+    if (combat_cut_hostile_shot(shot, i, ej, j)) return 1;
+    if (ej->type != ENT_ENEMY) return 0;
+    if (shot->ai_data[6] == PROJ_AUX_SPLASH) {
+        if (shot->ai_data[5] == j || !splash_reaches_enemy(shot, ej))
+            return 0;
+    } else if (hexa_boss_active && j == hexa_core_entity) {
+        if (!hexa_shot_overlap(shot)) return 0;
+    } else if (j == large_boss_index) {
+        if (!large_boss_shot_overlap(shot, ej)) return 0;
+    } else if (combat_shot_misses(ej)) return 0;
+    if (combat_apply_player_shot_hit(shot, i, ej, j, giant_hits)) return 1;
+    // A split fragment lands in a later slot; the walk reaches it.
+    combat_tail_rescan = 0;
+    return 0;
+}
+
 // Full slot walk used by melee, splash, and the tail after an ooze split.
 // Returns 1 when the shot is spent.
 static u8 combat_scan_slots(entity_t *shot, u8 i, u8 start, u8 *giant_hits) {
     u8 j;
     entity_t *ej = &entities[start];
-    u8 splash = (u8)(shot->ai_data[6] == PROJ_AUX_SPLASH);
     for (j = start; j < MAX_ENTITIES; ++j, ++ej) {
-        u8 flags;
         if (j == i) continue;
-        flags = ej->flags;
-        if (!(flags & EF_ACTIVE)) continue;
-        if (ej->type == ENT_ENEMY && !(flags & EF_ON_SCREEN)) continue;
-        if (combat_cut_hostile_shot(shot, i, ej, j)) return 1;
-        if (ej->type != ENT_ENEMY) continue;
-        if (splash) {
-            if (shot->ai_data[5] == j || !splash_reaches_enemy(shot, ej))
-                continue;
-        } else if (hexa_boss_active && j == hexa_core_entity) {
-            if (!hexa_shot_overlap(shot)) continue;
-        } else if (j == large_boss_index) {
-            if (!large_boss_shot_overlap(shot, ej)) continue;
-        } else if (combat_shot_misses(ej)) continue;
-        if (combat_apply_player_shot_hit(shot, i, ej, j, giant_hits)) return 1;
-        if (combat_tail_rescan) {
-            combat_tail_rescan = 0;
-            // The fragment is already in a later slot of this same walk.
-        }
+        if (combat_scan_one(shot, i, ej, j, giant_hits)) return 1;
     }
     return 0;
+}
+
+// Melee arts (Wolfkin's claw lanes, Corvin's fan, blades) put several
+// cutting shots on screen at once, and each walked all 32 slots through the
+// spilled body above (~2.4k clocks per slot). A slot the shot box misses can
+// never act, so a register-friendly leaf in a roomy bank skips straight to
+// the next slot that may (exact SHOT_MISSES test, giant/Hexa bodies always
+// returned). It re-reads live state on every call, so slots spawned, moved
+// or killed by a hit are seen exactly as the full walk would see them.
+u8 combat_next_cut_candidate(u8 i, u8 start) BANKED;
+
+static void combat_scan_listed(entity_t *shot, u8 i, u8 *giant_hits) {
+    u8 j = 0;
+    while ((j = combat_next_cut_candidate(i, j)) != 0xFF) {
+        if (combat_scan_one(shot, i, &entities[j], j, giant_hits)) return;
+        ++j;
+    }
 }
 
 // Ordinary bullets only overlap on-screen enemies. Build that slot list
@@ -499,7 +520,10 @@ static void combat_resolve_ordinary(entity_t *shot, u8 i, u8 *giant_hits) {
 static void combat_resolve_player_shot(entity_t *shot, u8 i, u8 *giant_hits) {
     combat_load_shot_box(shot);
     combat_tail_rescan = 0;
-    combat_scan_slots(shot, i, 0, giant_hits);
+    if (shot->ai_data[6] == PROJ_AUX_SPLASH)
+        combat_scan_slots(shot, i, 0, giant_hits);
+    else
+        combat_scan_listed(shot, i, giant_hits);
     shot_list_ready = 0;
 }
 
