@@ -578,7 +578,16 @@ def turret_death():
             r.pb.memory[S["charge"]] = 1
             r.pack(TOOL_FREEZE)
             r.press("up", 3, 2)
-        r.press("a", 3, 8)
+        r.press("up", 2, 1)              # face north (the switch blocks the walk)
+        r.press("a", 3, 2)
+        if os.environ.get("CD_TDBG"):
+            for _k in range(6):
+                pr = [(r.m(EN + i * 28), (r.m(EN + i * 28 + 3) | r.m(EN + i * 28 + 4) << 8) - PX(0),
+                       (r.m(EN + i * 28 + 7) | r.m(EN + i * 28 + 8) << 8) - PY(0))
+                      for i in range(32) if r.m(EN + i * 28 + 1) & 0x11 == 0x11]
+                print("proj", r.pos(), pr, r.c("thp"), r.m(FREEZE))
+                r.tick(1)
+        r.tick(4)
     assert r.c("thp") == 0, f"Picsean bolts did not kill the turret (hp {hp0} -> {r.c('thp')})"
     assert r.c("flips") <= n + 1, "player bolts flipped the switch"
     r.tick(6)
