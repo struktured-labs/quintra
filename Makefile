@@ -192,6 +192,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_will_tiers.py
 	$(PYBOY_RUN) scripts/test_picsean_tide_vortex.py
 	$(PYBOY_RUN) scripts/test_will_max_v2.py
+	$(PYBOY_RUN) scripts/test_corvin_max_will_pickup.py
 	$(PYBOY_RUN) scripts/test_serpent_tail_shield.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
 	$(PYBOY_RUN) scripts/test_will_b_weapons.py
