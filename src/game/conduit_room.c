@@ -199,7 +199,7 @@ static void pads_step(void) {
     }
     if (edge(foot_on(CD_TP_X, CD_TP_Y), ON_TP)) {
         // Teleport skip: lands past the spawn plate, never armed.
-        player.x = (i16)PX(1) - 2;
+        player.x = (i16)PX(2);          // clear of rewrite switch A (col 1)
         player.y = (i16)PY(CD_TPD_Y) - 8;
         cd_safe_x = HX;
         cd_safe_y = HY;

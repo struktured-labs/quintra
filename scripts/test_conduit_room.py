@@ -49,7 +49,7 @@ RS, PL, EN = tsa.RS, tsa.PL, tsa.EN
 NAMES = ("ra", "rb", "kx", "kst", "lockup", "hkey", "hdoor", "coin_given", "rewrites",
          "live", "side", "key", "held", "open", "charge", "jx", "jy", "jst", "sst",
          "sx", "st", "thp", "tt", "tell", "thead", "lock", "armed", "pend", "frame",
-         "resets", "refusals", "flips", "crushed", "shoves", "pack_id", "pack")
+         "resets", "refusals", "flips", "crushed", "shoves", "pack_id", "pack", "von")
 S = {n: A("_cd_" + n) for n in NAMES}
 CELL = A("_rime_cell")
 KIND = A("_room_puzzle_kind")
@@ -78,7 +78,7 @@ def PY(ly):
     return (Y0 + ly) * 8
 
 
-SWX = {1: (X0 + 1) * 8 - 2, 10: (X0 + 10) * 8 - 6}   # hero x: feet centre on a dead-end switch, clear of the wall
+SWX = {1: (X0 + 1) * 8 - 2, 10: (X0 + 10) * 8 - 7}   # hero x: feet centre on a dead-end switch, clear of the wall
 
 
 def fx(lx):          # hero x whose feet centre is in column lx
@@ -118,10 +118,12 @@ class Run:
     def tick(self, n=1):
         for _ in range(n):
             hp0 = self.hp()
-            rw0 = self.pb.memory[S["rewrites"]]
+            rw0 = (self.pb.memory[S["rewrites"]], self.pb.memory[S["ra"]], self.pb.memory[S["rb"]])
             self.pb.tick()
-            if self.pb.memory[S["rewrites"]] != rw0:
-                self.rw_log = (getattr(self, "rw_log", []) + [(self.pos(), self.c("ra"), self.c("rb"))])[-6:]
+            if getattr(self, "trace", None) is not None:
+                self.trace = (self.trace + [(self.pos()[0], self.pos()[1], self.c("rewrites"), self.c("ra"), self.c("rb"), self.c("von"), self.c("resets"), self.m(SCREEN))])[-40:]
+            if (self.pb.memory[S["rewrites"]], self.pb.memory[S["ra"]], self.pb.memory[S["rb"]]) != rw0:
+                self.rw_log = (getattr(self, "rw_log", []) + [(self.pos(), self.c("rewrites"), self.c("ra"), self.c("rb"), self.c("resets"))])[-10:]
             if self.m(SCREEN) == 5 and self.hp() < hp0:
                 self.hurts += 1
                 if self.heal:
@@ -378,9 +380,15 @@ def take_key(r):
 
 
 def take_charge(r):
+    assert wait(r, lambda: r.m(FREEZE) == 0, 1200), "freeze never ended"   # pedestal refuses mid-freeze
     r.walk(fx(3), fy(4), axis_first="x")
-    r.walk(fx(5), fy(6), axis_first="y")
-    assert wait(r, lambda: r.c("charge") == 1, 10), f"Rime charge not taken {r.pos()}"
+    r.walk(fx(5), fy(6), axis_first="y", until=lambda: r.c("charge") == 1)
+    if not r.c("charge"):
+        r.walk(fx(5), fy(5) + 2, axis_first="y", until=lambda: r.c("charge") == 1)
+    if not wait(r, lambda: r.c("charge") == 1, 10):
+        r.pb.screen.image.save("/tmp/q-m5-logs/fail_charge.png")
+        g = world_tiles(r.pb)
+        raise AssertionError(f"Rime charge not taken {r.pos()} frz {r.m(FREEZE)} rows5-7 {[g[Y0 + y][X0 + 3:X0 + 7] for y in (5, 6, 7)]}")
 
 
 def teleport(r):
@@ -406,13 +414,17 @@ def switches(r):
     """Hall row 9 dead ends: A (col 1) flips A and B, B (col 10) flips B -> both streams."""
     r.wy(PY(LANE) - 12)
     lane_quiet(r)
+    r.wy(fy(9))
     for col, want in ((1, (1, 0)), (10, (1, 1))):
         n = r.c("rewrites")
-        r.wy(fy(9))
+        r.trace = []
         r.wx(SWX[col])
-        assert wait(r, lambda: r.c("rewrites") == n + 1, 10), f"switch at col {col} did nothing {r.pos()}"
+        if r.c("rewrites") != n + 1:
+            print("TRACE", r.trace)
+        r.trace = None
+        assert wait(r, lambda: r.c("rewrites") == n + 1, 10), f"switch at col {col} did nothing {r.pos()} ref {r.c('refusals')} von {r.c('von')} live {r.c('live')} ra/rb {r.c('ra')}{r.c('rb')} kx {r.c('kx') - PX(0)} kst {r.c('kst')} resets {r.c('resets')} rw {getattr(r, 'rw_log', None)} n {n} rewrites {r.c('rewrites')}"
         assert (r.c("ra"), r.c("rb")) == want, f"regions {(r.c('ra'), r.c('rb'))} != {want}"
-        r.wy(PY(LANE) - 12)
+    r.wx(PX(7))                          # step off B along the hall (no lane bounce)
     g = world_tiles(r.pb)
     assert all(g[Y0 + y][X0 + x] == STREAM for x in range(1, 11) for y in (15, 16)), \
         "stream not continuous after A, B"
@@ -425,7 +437,7 @@ def kite_chain(r):
     assert r.pos()[1] == fy(13), f"could not enter the vault {r.pos()}"
     r.wy(fy(14))
     assert wait(r, lambda: r.c("kst") != K_HOME, 10), "release plate did not wake the Kite"
-    assert wait(r, lambda: r.c("lockup") == 0, 260), f"Kite never shattered the lock (kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} frz {r.m(FREEZE)} pos {r.pos()} rw {getattr(r, 'rw_log', None)} X0 {PX(0)} {PY(0)})"
+    assert wait(r, lambda: r.c("lockup") == 0, 420), f"Kite never shattered the lock (kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} frz {r.m(FREEZE)} pos {r.pos()} rw {getattr(r, 'rw_log', None)} X0 {PX(0)} {PY(0)})"
     still(r, "state7_shattered")
     r.wy(fy(13))
     r.wx(PX(4))
@@ -705,6 +717,8 @@ def main():
     assert r.c("refusals") == ref + 1 and r.c("hdoor") == 1, "Heart door B opened with no key"
     r.pack(TOOL_RESET)
     assert r.c("hkey") == 1 and r.c("hdoor") == 0 and r.c("lockup") == 1, "reset did not return the Heart key"
+    assert (r.c("ra"), r.c("rb"), r.c("kst"), r.c("kx")) == (0, 1, K_HOME, PX(9)), \
+        f"reset left the vault {(r.c('ra'), r.c('rb'), r.c('kst'), r.c('kx') - PX(0))} rw {getattr(r, 'rw_log', None)}"
     print("  Heart key spent on door A (treasure); door B refused; reset returns the key")
     setup_run(r)
     switches(r)

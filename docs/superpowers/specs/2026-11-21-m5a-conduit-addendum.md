@@ -73,13 +73,13 @@ The Star door moves to cols 6..7 of row 12 and opens onto a vault, rows 13..16:
 r12 ############   Star door (6..7)
 r13 #..HLL..H..#   Heart door B (3) | crystal lock (4..5, holds the Heart key) | Heart door A (8) | closet (9..10)
 r14 #GGHLLPPH..#   goal alcove (1..2) | release plate (6..7)
-r15 #SSSSSSCCSS#   rift stream (Kite only): region B (5..6) starts as stream, region A (7..8) starts as cairn
+r15 #SSSSSSCCSS#   rift stream (Kite only, 1 px per tick): region B (5..6) starts as stream, region A (7..8) starts as cairn
 r16 #SSSSSSCCSS#   Kite home (9..10), stops under the lock (4..5)
 r9  #g..33....g#   rewrite switches at the hall dead ends: A (1) flips A and B, B (10) flips B
 ```
 
 * **Rewrite switches.** The pair uses materials the player has already seen in M3: the cairn and the rift stream. A glyph on each switch shows the state of its region. Raising a cairn onto the flying or stopped Kite is refused with the dud clunk.
-* **Kite chain.** Only the release plate wakes the Kite. It rides west at 0.5 px per frame and waits at any cairn in its path. Freeze holds it too. At the lock it breathes for 30 frames and shatters it, which frees the Heart key.
+* **Kite chain.** Only the release plate wakes the Kite. It rides west at 1 px per tick and waits at any cairn in its path. Freeze holds it too. At the lock it breathes for 30 frames and shatters it, which frees the Heart key.
 * **Heart two-door choice.** There is one Heart key and two doors. Door A opens the treasure closet, which spawns a 5-coin pickup once per visit. Door B opens the goal. Using a Pack reset returns the key, the lock, the Kite and the regions, so every choice can be retried and nothing softlocks.
 * **Turret-death fail-safe** is proved in-ROM with a projectile hero (Picsean). The test shoots the turret dead and then checks that the side door stays open for 600 frames and that player bolts never flip it.
 

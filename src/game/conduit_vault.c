@@ -30,8 +30,11 @@ static u8 vedge(u8 cond, u8 b) {
     return 1;
 }
 
-static u8 feet_tile(u8 lx, u8 ly) {
-    return ((u8)((u8)(HX + 8) >> 3) == CD_WX(lx)
+
+// Hero feet centre over cells lx..lx+w-1 on feet row ly.
+static u8 on_cells(u8 lx, u8 w, u8 ly) {
+    u8 x = (u8)(HX + 8);
+    return (x >= PX(lx) && x < PX(lx + w)
         && (u8)((u8)(HY + 12) >> 3) == CD_WY(ly)) ? 1 : 0;
 }
 
@@ -78,7 +81,7 @@ static void kite_step(void) {
         front = (u8)((u8)(cd_kx - 1) >> 3);
         if ((front == CD_WX(CD_RA_X) || front == CD_WX(CD_RA_X + 1)) && !cd_ra) return;
         if ((front == CD_WX(CD_RB_X) || front == CD_WX(CD_RB_X + 1)) && !cd_rb) return;
-        if (!(cd_frame & 1)) cd_kx--;
+        cd_kx--;
         return;
     }
     if (cd_kst == CD_K_BREATH) {
@@ -94,17 +97,10 @@ static void kite_step(void) {
 }
 
 void cd_vault_tick(void) BANKED {
-    u8 on;
     if (cd_live != 1) return;
-    if (vedge(feet_tile(CD_SWA_X, CD_SW_ROW), V_SWA)) rewrite(1);
-    if (vedge(feet_tile(CD_SWB_X, CD_SW_ROW), V_SWB)) rewrite(0);
-    // Release plate (2x1): the only way to wake the Kite.
-    on = (feet_tile(CD_REL_X, CD_REL_Y) || feet_tile(CD_REL_X + 1, CD_REL_Y)) ? 1 : 0;
-    if (vedge(on, V_REL) && cd_kst == CD_K_HOME) {
-        cd_kst = CD_K_FLY;
-        cd_dirty = 1;
-        sfx_play(SFX_ROAR);
-    }
+    if (vedge(on_cells(CD_SWA_X, 1, CD_SW_ROW), V_SWA)) rewrite(1);
+    if (vedge(on_cells(CD_SWB_X, 1, CD_SW_ROW), V_SWB)) rewrite(0);
+    // Release plate (wakes the Kite): cd_vault_doors, bank 10.
     if (!room_freeze_beats) kite_step();      // freeze holds the Kite too
     cd_vault_doors();
 }

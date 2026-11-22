@@ -14,6 +14,7 @@
 
 extern u8 cd_dirty;
 u8 cd_hdon;
+extern u8 cd_von;
 
 static u8 hero_box(u8 x0, u8 y0, u8 w, u8 h) {
     return ((u8)(HX + 13) >= x0 && (u8)(HX + 2) < (u8)(x0 + w)
@@ -46,6 +47,16 @@ static void heart_door(u8 bit, u8 lx) {
 
 void cd_vault_doors(void) BANKED {
     u8 on;
+    // Release plate (2x1, feet on row 14): the only way to wake the Kite.
+    if (!hero_box((u8)(PX(CD_REL_X) + 2), PY(CD_REL_Y), 12, 8)) cd_von &= (u8)~4;
+    else if (!(cd_von & 4)) {
+        cd_von |= 4;
+        if (cd_kst == CD_K_HOME) {
+            cd_kst = CD_K_FLY;
+            cd_dirty = 1;
+            sfx_play(SFX_ROAR);
+        }
+    }
     // Heart key, once the lock is gone (2x2 cells).
     if (!cd_lockup && cd_hkey && hero_box(PX(CD_LOCK_X), PY(CD_LOCK_Y), 16, 16)) {
         cd_hkey = 0;
