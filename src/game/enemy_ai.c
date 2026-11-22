@@ -577,11 +577,17 @@ static void boss_tick(entity_t *e) {
    nested blocks. A 16-byte enemy_def_t on enemy_update's stack was
    enough for sixteen Blue Crawlers to miss video rate after #145.
    Keep this helper out of the walker hot path. */
+/* Definitions are immutable ROM rows, and rooms are usually packs of one
+   species, so keep the last row: a hit skips the banked 16-byte copy that
+   every def-driven enemy otherwise paid on every frame. */
+static enemy_def_t def_cache;
+static u8 def_cache_id = 0xFF;
 static void enemy_update_from_def(entity_t *e, u8 id) {
-    enemy_def_t def_buf;
-    const enemy_def_t *def;
-    enemy_load_def(id, &def_buf);
-    def = &def_buf;
+    const enemy_def_t *def = &def_cache;
+    if (id != def_cache_id) {
+        enemy_load_def(id, &def_cache);
+        def_cache_id = id;
+    }
     if (def->ai_kind >= AI_BLINK_CASTER && def->ai_kind <= AI_BOMB_LOBBER) {
         new_monster_update(e, def);
         return;
@@ -625,6 +631,9 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         walker_tick(e);
         return;
     }
+    // Fold Star reads its definition only on a phase flip (see foldstar.c),
+    // so skip the per-frame 16-byte banked definition copy.
+    if (id == ENEMY_FOLD_STAR) { fold_star_update(e, 0); return; }
     if (id == ENEMY_FLUTTERBAT) { flutterbat_update(e); return; }
     if (id == ENEMY_GLOAM_LEECH) { leech_tick(e); return; }
     if (id >= ENEMY_FACET_RAM && id <= ENEMY_STAGE_REAPER) { enemy_patrol_update(e, id); return; }

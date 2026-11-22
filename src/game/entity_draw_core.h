@@ -38,6 +38,10 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
     // Its logical entity remains the current armor/vent collision anchor but
     // must never leak the legacy generic 32x32 picture into the formation.
     if (cinder_pack_active && slot == cinder_boss_index) continue;
+    {
+        u8 fast = entity_draw_fast(e, slot, oam);
+        if (fast != 0xFF) { oam = fast; continue; }
+    }
     // EF_ON_SCREEN is authoritative in compact rooms, streaming fields, and
     // Shade limbo alike. Every enemy spawns with it; only camera streaming or
     // an authored vanish phase clears it.

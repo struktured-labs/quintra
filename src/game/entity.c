@@ -50,33 +50,54 @@ void entity_update_from(u8 start) BANKED;
 const i8 dir8_dx[8] = {  0, +1, +1, +1,  0, -1, -1, -1 };
 const i8 dir8_dy[8] = { -1, -1,  0, +1, +1, +1,  0, -1 };
 
-u8 entity_spawn(u8 type) {
-    u8 i;
-    for (i = 0; i < MAX_ENTITIES; ++i) {
-        if (!(entities[i].flags & EF_ACTIVE)) {
-            memset(&entities[i], 0, sizeof(entity_t));
-            enemy_status_kind[i] = QSTATUS_NONE;
-            entities[i].type    = type;
-            entities[i].flags   = EF_ACTIVE | EF_ALIVE;
-            if (type == ENT_PICKUP) entity_pickup_pending = 1;
-            if (type == ENT_ENEMY) {
-                // Compact-room bodies are visible immediately. Wide fields
-                // run the forced first camera-sector refresh below and clear
-                // only the distant bodies; teleport limbo also clears this
-                // same authoritative render/collision flag.
-                entities[i].flags |= EF_ON_SCREEN;
-                if (entity_enemy_count == 0) {
-                    visibility_sector_x = 0xFF;
-                    visibility_sector_y = 0xFF;
-                }
-                entity_enemy_count++;
-            }
-            // OAM slots 0-3 reserved for player metasprite; entities use 4+
-            entities[i].oam_slot = (u8)(4 + i);
-            return i;
-        }
-    }
+// Tiny leaf scans: SDCC keeps these loops entirely in registers (~60
+// clocks a probe). Folded into entity_spawn's body, the same scan spilled
+// every step to the stack and cost ~9k clocks when the table was nearly full.
+static u8 entity_find_free(void) {
+    u8 i = 0;
+    const u8 *f = &entities[0].flags;
+    do {
+        if (!(*f & EF_ACTIVE)) return i;
+        f += sizeof(entity_t);
+    } while (++i < MAX_ENTITIES);
     return 0xFF;
+}
+
+u8 entity_free_slots(void) {
+    u8 n = 0, i = MAX_ENTITIES;
+    const u8 *f = &entities[0].flags;
+    do {
+        if (!(*f & EF_ACTIVE)) n++;
+        f += sizeof(entity_t);
+    } while (--i);
+    return n;
+}
+
+u8 entity_spawn(u8 type) {
+    u8 i = entity_find_free();
+    entity_t *slot;
+    if (i == 0xFF) return 0xFF;
+    slot = &entities[i];
+    memset(slot, 0, sizeof(entity_t));
+    enemy_status_kind[i] = QSTATUS_NONE;
+    slot->type    = type;
+    slot->flags   = EF_ACTIVE | EF_ALIVE;
+    if (type == ENT_PICKUP) entity_pickup_pending = 1;
+    if (type == ENT_ENEMY) {
+        // Compact-room bodies are visible immediately. Wide fields
+        // run the forced first camera-sector refresh below and clear
+        // only the distant bodies; teleport limbo also clears this
+        // same authoritative render/collision flag.
+        slot->flags |= EF_ON_SCREEN;
+        if (entity_enemy_count == 0) {
+            visibility_sector_x = 0xFF;
+            visibility_sector_y = 0xFF;
+        }
+        entity_enemy_count++;
+    }
+    // OAM slots 0-3 reserved for player metasprite; entities use 4+
+    slot->oam_slot = (u8)(4 + i);
+    return i;
 }
 
 void entity_kill(u8 idx) {
@@ -231,6 +252,14 @@ static u8 enemy_is_big16(const entity_t *e) {
         /* Vault Hand 37 and Bane Brute 38: 16x16 art and 13x13 hitboxes. */
         || (u8)(eid - ENEMY_VAULT_HAND) < 2);
 }
+
+#define ENTITY_DRAW_SX(e) \
+    ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
+#define ENTITY_DRAW_SY(e) \
+    ((u8)(FIX8_TO_INT((e)->y) - room_camera_y + 16))
+#include "game/entity_draw_fast.h"
+#undef ENTITY_DRAW_SX
+#undef ENTITY_DRAW_SY
 
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a
 // cursor starting at 4 each frame (giant=16 tiles, 16x16=4, else 1), so no

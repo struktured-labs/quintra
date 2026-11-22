@@ -226,10 +226,13 @@ def main():
             arm(pb)
             hp = pb.memory[HP]
             fire_max(pb)
-            # Drop the shot onto his body on the first dash frame.
-            x = pb.memory[PLAYER + 9] | pb.memory[PLAYER + 10] << 8
-            make_shot(pb, 14, x + (sx - PX), sy, vx, vy)
+            # Drop the shot onto his body on each early dash frame. The
+            # dash outruns a 3 px/frame shot, so a single drop only lands
+            # if the host frame happens to end on the first dash step
+            # (it stopped doing so once the room loop got faster).
             for _ in range(6):
+                x = pb.memory[PLAYER + 9] | pb.memory[PLAYER + 10] << 8
+                make_shot(pb, 14, x + (sx - PX), sy, vx, vy)
                 pb.tick()
                 if pb.memory[HP] < hp:
                     break
