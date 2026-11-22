@@ -118,3 +118,131 @@ Overall: 384 fights, 334 finished, death rate 42%; 394 landings over 3334 hits t
 | stage 7 | 49 | 0 | 0 | 5 | 0 | 0 | 0/0 | 0/0 | 44/71 | 5/105 |
 | stage 8 | 60 | 14 | 1 | 6 | 0 | 12 | 76/112 | 47/146 | 107/209 | 62/592 |
 | stage 9 | 16 | 11 | 0 | 0 | 0 | 0 | 192/247 | 0/18 | 0/2 | 4/304 |
+
+## Easy (measured)
+
+3360 room fights; 2852 finished (85%), 235 deaths, 406 timeouts, 102 left the room.
+
+### Outcomes and status-death lift per stage and tier (measured)
+
+| Stage | Tier | Fights | Finished | Death rate | Hits/min | Status lands per hit | Deaths ≤5 s after status | Time in 5 s window | Lift 5 s | Deaths ≤10 s | Time in 10 s window | Lift 10 s | Control lift 10 s (plain hits) | Status/control |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | nonexpert | 120 | 106 | 0% | 2.9 | 0.02 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 1 | average | 120 | 114 | 0% | 2.9 | 0.03 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 1 | skilled | 120 | 112 | 0% | 2.2 | 0.03 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 1 | bot | 120 | 100 | 0% | 1.9 | 0.03 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| **1** | **all** | 480 | 432 | 0% | 2.5 | 0.03 | 0/0 (n/a) | 1% | **n/a** | 0/0 (n/a) | 1% | **n/a** | n/a | **n/a** |
+| 2 | nonexpert | 120 | 104 | 1% | 3.5 | 0.05 | 0/1 (0%) | 1% | 0.00 | 0/1 (0%) | 2% | 0.00 | 2.77 | 0.00 |
+| 2 | average | 120 | 106 | 1% | 3.8 | 0.04 | 0/1 (0%) | 1% | 0.00 | 0/1 (0%) | 2% | 0.00 | 0.00 | n/a |
+| 2 | skilled | 120 | 108 | 0% | 3.4 | 0.03 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 2 | bot | 120 | 97 | 0% | 2.4 | 0.02 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| **2** | **all** | 480 | 415 | 0% | 3.3 | 0.04 | 0/2 (0%) | 1% | **0.00** | 0/2 (0%) | 2% | **0.00** | 1.49 | **0.00** |
+| 3 | nonexpert | 240 | 215 | 36% | 10.1 | 0.04 | 3/77 (4%) | 3% | 1.11 | 13/77 (17%) | 6% | 2.60 | 1.27 | 2.04 |
+| 3 | average | 240 | 220 | 29% | 10.0 | 0.04 | 2/63 (3%) | 3% | 0.94 | 7/63 (11%) | 6% | 1.72 | 1.26 | 1.37 |
+| 3 | skilled | 240 | 218 | 20% | 9.2 | 0.04 | 2/44 (5%) | 3% | 1.51 | 8/44 (18%) | 6% | 3.27 | 1.31 | 2.50 |
+| 3 | bot | 240 | 178 | 19% | 7.2 | 0.04 | 0/33 (0%) | 2% | 0.00 | 1/33 (3%) | 5% | 0.67 | 1.71 | 0.39 |
+| **3** | **all** | 960 | 831 | 26% | 9.1 | 0.04 | 7/217 (3%) | 3% | **1.06** | 29/217 (13%) | 6% | **2.33** | 1.37 | **1.70** |
+| 4 | nonexpert | 60 | 53 | 0% | 3.4 | 0.00 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 0% | n/a | n/a | n/a |
+| 4 | average | 60 | 51 | 0% | 3.1 | 0.02 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 4 | skilled | 60 | 50 | 0% | 3.0 | 0.01 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 0% | n/a | n/a | n/a |
+| 4 | bot | 60 | 40 | 0% | 2.0 | 0.01 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 0% | n/a | n/a | n/a |
+| **4** | **all** | 240 | 194 | 0% | 2.8 | 0.01 | 0/0 (n/a) | 0% | **n/a** | 0/0 (n/a) | 0% | **n/a** | n/a | **n/a** |
+| 5 | nonexpert | 60 | 48 | 10% | 6.0 | 0.01 | 0/5 (0%) | 0% | 0.00 | 0/5 (0%) | 1% | 0.00 | 1.32 | 0.00 |
+| 5 | average | 60 | 53 | 4% | 5.4 | 0.01 | 0/2 (0%) | 1% | 0.00 | 0/2 (0%) | 1% | 0.00 | 2.24 | 0.00 |
+| 5 | skilled | 60 | 48 | 2% | 4.1 | 0.03 | 0/1 (0%) | 1% | 0.00 | 0/1 (0%) | 2% | 0.00 | 2.78 | 0.00 |
+| 5 | bot | 60 | 35 | 9% | 3.7 | 0.01 | 0/3 (0%) | 0% | 0.00 | 0/3 (0%) | 1% | 0.00 | 3.75 | 0.00 |
+| **5** | **all** | 240 | 184 | 6% | 4.8 | 0.01 | 0/11 (0%) | 1% | **0.00** | 0/11 (0%) | 1% | **0.00** | 2.15 | **0.00** |
+| 6 | nonexpert | 60 | 54 | 2% | 5.0 | 0.07 | 0/1 (0%) | 3% | 0.00 | 0/1 (0%) | 5% | 0.00 | 2.15 | 0.00 |
+| 6 | average | 60 | 51 | 0% | 3.9 | 0.06 | 0/0 (n/a) | 2% | n/a | 0/0 (n/a) | 4% | n/a | n/a | n/a |
+| 6 | skilled | 60 | 51 | 0% | 3.4 | 0.09 | 0/0 (n/a) | 2% | n/a | 0/0 (n/a) | 4% | n/a | n/a | n/a |
+| 6 | bot | 60 | 41 | 0% | 2.9 | 0.10 | 0/0 (n/a) | 2% | n/a | 0/0 (n/a) | 4% | n/a | n/a | n/a |
+| **6** | **all** | 240 | 197 | 1% | 3.8 | 0.08 | 0/1 (0%) | 2% | **0.00** | 0/1 (0%) | 4% | **0.00** | 2.63 | **0.00** |
+| 7 | nonexpert | 60 | 49 | 2% | 6.5 | 0.02 | 0/1 (0%) | 1% | 0.00 | 0/1 (0%) | 2% | 0.00 | 1.59 | 0.00 |
+| 7 | average | 60 | 50 | 0% | 6.1 | 0.02 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 2% | n/a | n/a | n/a |
+| 7 | skilled | 60 | 52 | 0% | 5.1 | 0.02 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 7 | bot | 60 | 48 | 0% | 4.2 | 0.01 | 0/0 (n/a) | 0% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| **7** | **all** | 240 | 199 | 1% | 5.5 | 0.02 | 0/1 (0%) | 1% | **0.00** | 0/1 (0%) | 1% | **0.00** | 1.79 | **0.00** |
+| 8 | nonexpert | 60 | 47 | 6% | 7.9 | 0.06 | 0/3 (0%) | 4% | 0.00 | 0/3 (0%) | 7% | 0.00 | 1.54 | 0.00 |
+| 8 | average | 60 | 51 | 0% | 6.7 | 0.08 | 0/0 (n/a) | 4% | n/a | 0/0 (n/a) | 7% | n/a | n/a | n/a |
+| 8 | skilled | 60 | 54 | 0% | 5.8 | 0.12 | 0/0 (n/a) | 6% | n/a | 0/0 (n/a) | 11% | n/a | n/a | n/a |
+| 8 | bot | 60 | 41 | 0% | 4.6 | 0.05 | 0/0 (n/a) | 2% | n/a | 0/0 (n/a) | 4% | n/a | n/a | n/a |
+| **8** | **all** | 240 | 193 | 2% | 6.2 | 0.08 | 0/3 (0%) | 4% | **0.00** | 0/3 (0%) | 7% | **0.00** | 1.85 | **0.00** |
+| 9 | nonexpert | 60 | 49 | 0% | 4.0 | 0.05 | 0/0 (n/a) | 2% | n/a | 0/0 (n/a) | 3% | n/a | n/a | n/a |
+| 9 | average | 60 | 54 | 0% | 3.5 | 0.03 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 1% | n/a | n/a | n/a |
+| 9 | skilled | 60 | 56 | 0% | 3.1 | 0.06 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 3% | n/a | n/a | n/a |
+| 9 | bot | 60 | 48 | 0% | 2.5 | 0.05 | 0/0 (n/a) | 1% | n/a | 0/0 (n/a) | 2% | n/a | n/a | n/a |
+| **9** | **all** | 240 | 207 | 0% | 3.3 | 0.05 | 0/0 (n/a) | 1% | **n/a** | 0/0 (n/a) | 2% | **n/a** | n/a | **n/a** |
+
+### Per status, all stages (measured)
+
+| Status | Carrier hits | Proc per carrier hit | Lands | Lands per hit taken | HP at landing, hearts (p25-p75) | Landed at ≤1 heart | Replaced an active status | Deaths ≤10 s after it | Time in its 10 s window | Lift 10 s |
+|---|---|---|---|---|---|---|---|---|---|---|
+| burn | 2993 | 8% | 261 | 0.015 | 5.5 (3.5-6.5) | 8% | 8 | 24/235 | 1.2% | 8.87 |
+| poison | 75 | 9% | 8 | 0.000 | 7.8 (7.5-8.0) | 0% | 0 | 0/235 | 0.0% | 0.00 |
+| bleed | 464 | 17% | 80 | 0.004 | 6.5 (5.9-7.1) | 0% | 2 | 0/235 | 0.4% | 0.00 |
+| slow | 28 | 14% | 4 | 0.000 | 6.8 (6.4-7.0) | 0% | 0 | 0/235 | 0.0% | 0.00 |
+| stop | 2280 | 7% | 175 | 0.010 | 5.0 (3.5-7.0) | 5% | 8 | 5/235 | 0.8% | 2.67 |
+| confusion | 572 | 9% | 50 | 0.003 | 8.0 (7.5-8.5) | 0% | 1 | 0/235 | 0.2% | 0.00 |
+| blind | 626 | 11% | 75 | 0.004 | 8.0 (7.5-8.0) | 0% | 4 | 0/235 | 0.3% | 0.00 |
+| mute | 302 | 18% | 56 | 0.003 | 7.0 (5.5-8.0) | 0% | 2 | 0/235 | 0.2% | 0.00 |
+| brittle | 115 | 10% | 12 | 0.001 | 7.2 (6.5-7.6) | 0% | 2 | 0/235 | 0.1% | 0.00 |
+| curse (Gloam Leech uses the separate curse system; no slot landings) | 323 | 0% | 0 | 0.000 | n/a (n/a-n/a) | n/a | 0 | 0/235 | 0.0% | n/a |
+| inversion | 26 | 12% | 3 | 0.000 | 7.5 (7.2-7.8) | 0% | 0 | 0/235 | 0.0% | 0.00 |
+
+Overall: 3360 fights, 2852 finished, death rate 8%; 724 landings over 17915 hits taken (0.04 per hit); deaths within 10 s of a status 29/235 (12%, 95% CI 9%-17%) vs 3% of fight time, lift 3.81 (CI 2.70-5.30); the same measure after hits that landed no status gives 1.92, so status windows are 1.98x as deadly as plain-hit windows.
+
+### Per status, stages 1-3 (measured)
+
+| Status | Carrier hits | Proc per carrier hit | Lands | Lands per hit taken | HP at landing, hearts (p25-p75) | Landed at ≤1 heart | Replaced an active status | Deaths ≤10 s after it | Time in its 10 s window | Lift 10 s |
+|---|---|---|---|---|---|---|---|---|---|---|
+| burn | 2993 | 8% | 261 | 0.023 | 5.5 (3.5-6.5) | 8% | 8 | 24/219 | 2.1% | 5.21 |
+| bleed | 464 | 17% | 80 | 0.007 | 6.5 (5.9-7.1) | 0% | 2 | 0/219 | 0.6% | 0.00 |
+| stop | 1704 | 7% | 117 | 0.010 | 4.5 (3.0-6.0) | 7% | 5 | 5/219 | 1.0% | 2.32 |
+| curse (Gloam Leech uses the separate curse system; no slot landings) | 323 | 0% | 0 | 0.000 | n/a (n/a-n/a) | n/a | 0 | 0/219 | 0.0% | n/a |
+
+Overall: 1920 fights, 1678 finished, death rate 13%; 458 landings over 11282 hits taken (0.04 per hit); deaths within 10 s of a status 29/219 (13%, 95% CI 9%-18%) vs 4% of fight time, lift 3.57 (CI 2.53-4.95); the same measure after hits that landed no status gives 1.82, so status windows are 1.96x as deadly as plain-hit windows.
+
+### Per status, Ember Depths Cinder rooms (Cinder Maw/Kite) (measured)
+
+| Status | Carrier hits | Proc per carrier hit | Lands | Lands per hit taken | HP at landing, hearts (p25-p75) | Landed at ≤1 heart | Replaced an active status | Deaths ≤10 s after it | Time in its 10 s window | Lift 10 s |
+|---|---|---|---|---|---|---|---|---|---|---|
+| burn | 2993 | 8% | 261 | 0.045 | 5.5 (3.5-6.5) | 8% | 8 | 24/157 | 6.4% | 2.39 |
+| stop | 638 | 5% | 38 | 0.007 | 4.8 (3.0-6.5) | 11% | 3 | 2/157 | 0.9% | 1.38 |
+
+Overall: 576 fights, 501 finished, death rate 31%; 299 landings over 5823 hits taken (0.05 per hit); deaths within 10 s of a status 26/157 (17%, 95% CI 12%-23%) vs 7% of fight time, lift 2.28 (CI 1.59-3.18); the same measure after hits that landed no status gives 1.30, so status windows are 1.74x as deadly as plain-hit windows.
+
+### Per status, Ember Depths other rooms (measured)
+
+| Status | Carrier hits | Proc per carrier hit | Lands | Lands per hit taken | HP at landing, hearts (p25-p75) | Landed at ≤1 heart | Replaced an active status | Deaths ≤10 s after it | Time in its 10 s window | Lift 10 s |
+|---|---|---|---|---|---|---|---|---|---|---|
+| stop | 1066 | 7% | 79 | 0.026 | 4.5 (3.0-5.8) | 5% | 2 | 3/60 | 3.3% | 1.52 |
+
+Overall: 384 fights, 330 finished, death rate 18%; 79 landings over 3038 hits taken (0.03 per hit); deaths within 10 s of a status 3/60 (5%, 95% CI 2%-14%) vs 3% of fight time, lift 1.52 (CI 0.52-4.15); the same measure after hits that landed no status gives 1.49, so status windows are 1.02x as deadly as plain-hit windows.
+
+### Chained effects (measured)
+
+| Scope | Deaths | Stop→hit at death | Confusion near spikes at death | Blind in crowd (≥3 within 48 px) at death | DoT pinned at ½ heart→hit at death | Status replaced (10 s before death) | Stop lands followed by a hit during Stop | Confusion lands near spikes | Blind lands in a crowd | Landings that replaced another status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| all | 235 | 2 | 0 | 0 | 6 | 0 | 0/175 | 23/50 | 30/75 | 27/724 |
+| stages 1-3 | 219 | 2 | 0 | 0 | 6 | 0 | 0/117 | 0/0 | 0/0 | 15/458 |
+| Cinder rooms | 157 | 1 | 0 | 0 | 6 | 0 | 0/38 | 0/0 | 0/0 | 11/299 |
+| stage 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0/0 | 0/0 | 0/0 | 2/32 |
+| stage 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0/0 | 0/0 | 0/0 | 0/48 |
+| stage 3 | 217 | 2 | 0 | 0 | 6 | 0 | 0/117 | 0/0 | 0/0 | 13/378 |
+| stage 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0/0 | 0/0 | 0/0 | 0/7 |
+| stage 5 | 11 | 0 | 0 | 0 | 0 | 0 | 0/0 | 0/0 | 0/0 | 2/20 |
+| stage 6 | 1 | 0 | 0 | 0 | 0 | 0 | 0/27 | 0/1 | 18/44 | 5/72 |
+| stage 7 | 1 | 0 | 0 | 0 | 0 | 0 | 0/0 | 0/0 | 3/9 | 0/24 |
+| stage 8 | 3 | 0 | 0 | 0 | 0 | 0 | 0/9 | 22/48 | 8/21 | 4/108 |
+| stage 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0/22 | 1/1 | 1/1 | 1/35 |
+
+## Normal vs Easy (measured)
+
+| Scope | Difficulty | Death rate | Status lands per hit | Lift 5 s | Lift 10 s | Control lift 10 s | Status/control 10 s |
+|---|---|---|---|---|---|---|---|
+| all | normal | 38% | 0.13 | 3.70 | 3.44 | 1.51 | 2.28 |
+| all | easy | 8% | 0.04 | 1.74 | 3.81 | 1.92 | 1.98 |
+| stages 1-3 | normal | 50% | 0.11 | 3.30 | 3.28 | 1.35 | 2.43 |
+| stages 1-3 | easy | 13% | 0.04 | 1.63 | 3.57 | 1.82 | 1.96 |
+| Cinder rooms | normal | 82% | 0.17 | 1.51 | 1.80 | 1.09 | 1.65 |
+| Cinder rooms | easy | 31% | 0.05 | 0.98 | 2.28 | 1.30 | 1.74 |
