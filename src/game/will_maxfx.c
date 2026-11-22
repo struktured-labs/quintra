@@ -58,6 +58,8 @@ static i16 fx_kx, fx_ky;     // carrier park point (floor)
 static u8 hit_a[(MAX_ENTITIES + 7) / 8];
 static u8 hit_b[(MAX_ENTITIES + 7) / 8];
 static u8 fx_oam[WILL_MAXFX_OAM_N * 4];
+static u8 fx_art;            // 1..4 from will_levels_art()
+static u8 fx_life;           // art duration; L4 matches shipped constants
 
 #define FX_T(n) ((u8)(WILL_MAXFX_TILE + (n)))
 static const u8 slot_bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
@@ -374,23 +376,25 @@ static void fx_end(void) {
 // ---- Sauran: Thunderline Bastion -------------------------------------------
 static void sauran_tick(u8 t) {
     u8 k;
-    if (!fx_stop && t <= 12) {
+    u8 spear_end = (fx_art <= 1) ? 6 : 12;
+    u8 spear_d = (u8)(fx_damage + ((fx_art >= 3) ? 4 : fx_art));
+    if (!fx_stop && t <= spear_end) {
         // The fault spear rides out about 12px a tick and stops at a wall.
+        // L1 is a short crack: six ticks, no pylons, no slam.
         u8 step = (fx_dx && fx_dy) ? 9 : 12;
         i16 nx = (i16)(fx_px + fx_dx * (i8)step);
         i16 ny = (i16)(fx_py + fx_dy * (i8)step);
-        hit_ring(fx_px, fx_py, (u8)(12 + fx_reach), hit_a,
-            (u8)(fx_damage + 4));
+        hit_ring(fx_px, fx_py, (u8)(12 + fx_reach), hit_a, spear_d);
         if (!(t & 1))
             fx_spawn(WILL_MAXFX_TILE, 2, (i16)(fx_px - 4), (i16)(fx_py - 4),
                 (u8)(44 - t));
-        if (!fx_floor(nx, ny) || t == 12) fx_stop = 1;
+        if (!fx_floor(nx, ny) || t == spear_end) fx_stop = 1;
         else { fx_px = nx; fx_py = ny; }
     }
-    if (t == 6 && fx_floor(fx_ax, fx_ay)) { fx_pyl |= 1; sfx_thud(1060); }
-    if (t == 14 && fx_floor(fx_bx, fx_by)) { fx_pyl |= 2; sfx_thud(960); }
+    if (fx_art >= 3 && t == 6 && fx_floor(fx_ax, fx_ay)) { fx_pyl |= 1; sfx_thud(1060); }
+    if (fx_art >= 3 && t == 14 && fx_floor(fx_bx, fx_by)) { fx_pyl |= 2; sfx_thud(960); }
     if (t == 10) unwash();
-    if (t == 44) {
+    if (fx_art >= 3 && t == 44) {
         // Crack and slam: one tremor hit around each standing pylon.
         set_sprite_data(FX_T(2), 2, fx_tiles_sauran_crack);
         wash(wash_ochre);
@@ -404,17 +408,17 @@ static void sauran_tick(u8 t) {
             hit_ring(fx_bx, fx_by, (u8)(24 + fx_reach), hit_b,
                 (u8)(fx_damage + 2));
     }
-    if (t == 43) palette_obj_load(2, pal_white);
-    if (t == 44) {
+    if (fx_art >= 3 && t == 43) palette_obj_load(2, pal_white);
+    if (fx_art >= 3 && t == 44) {
         if (fx_pyl & 1)
             fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_ax - 4), (i16)(fx_ay - 4), 10);
         if (fx_pyl & 2)
             fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_bx - 4), (i16)(fx_by - 4), 10);
     }
-    if (t == 46) palette_obj_load(2, pal_sauran);
+    if (fx_art >= 3 && t == 46) palette_obj_load(2, pal_sauran);
     if (t == 48) unwash();
     // Standing pylons are a gate: they eat hostile shots and stall rushers.
-    if (t < 44 && (t & 1)) {
+    if (fx_art >= 3 && t < 44 && (t & 1)) {
         for (k = 0; k < 2; ++k) {
             i16 x = k ? fx_bx : fx_ax, y = k ? fx_by : fx_ay;
             u8 i;
@@ -456,21 +460,23 @@ static void vespine_tick(u8 t) {
     if (t <= 6) eat_shots((i16)player.x + 8, (i16)player.y + 8, 18, 1);
     if (!fx_stop) {
         // The stinger flies about 6px a tick and lodges in the first body.
-        u8 j = hit_ring(fx_px, fx_py, 9, hit_a, (u8)(fx_damage + 4));
+        // L1 is a short dart (no lodge, no pincers); L2 lodges but has no sac.
+        u8 sting_d = (u8)(fx_damage + ((fx_art >= 3) ? 4 : fx_art));
+        u8 j = hit_ring(fx_px, fx_py, 9, hit_a, sting_d);
         if (j != 0xFF) {
             if (entities[j].flags & EF_ACTIVE) {
                 status_enemy_apply(j, QSTATUS_POISON, 60);
-                fx_anchor = j;
+                if (fx_art >= 2) fx_anchor = j;
             }
             fx_stop = 1;
         } else {
             u8 step = (fx_dx && fx_dy) ? 4 : 6;
             i16 nx = (i16)(fx_px + fx_dx * (i8)step);
             i16 ny = (i16)(fx_py + fx_dy * (i8)step);
-            if (t >= 8 || !fx_floor(nx, ny)) fx_stop = 1;
+            if (t >= ((fx_art <= 1) ? 4 : 8) || !fx_floor(nx, ny)) fx_stop = 1;
             else { fx_px = nx; fx_py = ny; }
         }
-        if (fx_stop) {
+        if (fx_stop && fx_art >= 3) {
             // Pincers snap shut on the stinger: a nip on its neighbours.
             hit_ring(fx_px, fx_py, 14, hit_a, fx_damage);
             fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_px - 4), (i16)(fx_py - 4), 8);
@@ -483,7 +489,7 @@ static void vespine_tick(u8 t) {
         else fx_anchor = 0xFF;
     }
     if (t == 6) unwash();
-    if (t == 45) {
+    if (fx_art >= 3 && t == 45) {
         // Rupture: acid burst, washes shots, feeds an active Swarm.
         wash(wash_magenta);
         hit_ring(fx_px, fx_py, fx_reach, hit_b, (u8)(fx_damage + 4));
@@ -513,7 +519,7 @@ static void vespine_tick(u8 t) {
     }
     if (carrier_ok()) carrier_park();
     hide_all();
-    if (t <= 8) {
+    if (fx_art >= 3 && t <= 8) {
         // Two pincers close in from either flank of the stinger.
         u8 gap = (u8)(t >= 8 ? 0 : (u8)(16 - (t << 1)));
         i16 qx = (i16)(-fx_dy * (i8)gap), qy = (i16)(fx_dx * (i8)gap);
@@ -522,7 +528,7 @@ static void vespine_tick(u8 t) {
         put(1, (i16)(fx_px - qx), (i16)(fx_py - qy),
             FX_T(1), S_FLIPY);
     }
-    if (t >= 45 && t < 54 && !(t & 1)) {
+    if (fx_art >= 3 && t >= 45 && t < 54 && !(t & 1)) {
         // Four acid droplets burst out on the diagonals.
         i16 r = (i16)((t - 44) << 2);
         put(0, (i16)(fx_px + r), (i16)(fx_py + r), FX_T(2), 0);
@@ -560,13 +566,15 @@ static void blade_pos(u8 k, u8 t, i16 *x, i16 *y) {
 static void corvin_tick(u8 t) {
     u8 k;
     i16 x, y;
-    if (t < 32) eat_shots(fx_kx, fx_ky, 18, 0);
-    if (t <= 20 || (t >= 28 && t < 40)) {
+    if (fx_art >= 3 && t < 32) eat_shots(fx_kx, fx_ky, 18, 0);
+    if (t <= 20 || (fx_art >= 3 && t >= 28 && t < 40)) {
         // Fan-out sweep and the snap flight: one feather hit per body. The
         // slow fan visits a quarter of the table per tick; the fast snap
-        // visits all of it.
+        // visits all of it. L1 is two feathers; L2+ is a four-feather fan.
+        u8 blades = (fx_art <= 1) ? 2 : 4;
+        u8 feather_d = (u8)(fx_damage + ((fx_art >= 3) ? 3 : fx_art));
         u8 i, step = (t >= 28) ? 1 : 4;
-        for (k = 0; k < 4; ++k) {
+        for (k = 0; k < blades; ++k) {
             entity_t *e;
             blade_pos(k, t, &x, &y);
             for (i = (step == 1) ? 0 : (u8)(t & 3), e = &entities[i];
@@ -574,12 +582,12 @@ static void corvin_tick(u8 t) {
                 if (!is_body(e) || MASK_HAS(hit_a, i)) continue;
                 if (vdist(BODY_X(e) - x, BODY_Y(e) - y) > 12) continue;
                 MASK_SET(hit_a, i);
-                fx_hit(i, (u8)(fx_damage + 3));
+                fx_hit(i, feather_d);
                 if (fx_carrier == 0xFF) break;
             }
         }
     }
-    if (t == 28) {
+    if (fx_art >= 3 && t == 28) {
         // Snap target: the Raven Mark if it is live, else the nearest body
         // ahead (within 96px), else 48px ahead.
         u8 m = will_corvin_mark_slot;
@@ -608,21 +616,23 @@ static void corvin_tick(u8 t) {
         }
         fx_ch4(0x3D, 0x34, 10);
     }
-    if (t == 40) {
+    if (fx_art >= 3 && t == 40) {
         u8 i;
         entity_t *e = entities;
+        u8 eclipse_r = (fx_art >= 4) ? fx_reach : 14;
         wash(wash_eclipse);
         palette_obj_load(2, pal_white);
         room_shake(2, 6);
         fx_ch1(0x00, 0x80, 0xC5, 1899, 6);
         fx_spawn(SPR_FX_IMPACT, 2, (i16)(fx_px - 4), (i16)(fx_py - 4), 10);
         for (i = 0; i < MAX_ENTITIES; ++i, ++e) {
-            u8 d = (u8)(fx_damage + 7);
+            u8 d = (u8)(fx_damage + ((fx_art >= 4) ? 7 : 4));
             if (!is_body(e) || MASK_HAS(hit_b, i)) continue;
-            if (vdist(BODY_X(e) - fx_px, BODY_Y(e) - fx_py) > fx_reach)
+            if (vdist(BODY_X(e) - fx_px, BODY_Y(e) - fx_py) > eclipse_r)
                 continue;
             MASK_SET(hit_b, i);
-            if (i == will_corvin_mark_slot && will_corvin_mark_ticks) {
+            if (fx_art >= 4 && i == will_corvin_mark_slot
+                && will_corvin_mark_ticks) {
                 d += 3;
                 will_corvin_mark_ticks = (will_corvin_mark_ticks > 210)
                     ? 255 : (u8)(will_corvin_mark_ticks + 45);
@@ -636,10 +646,15 @@ static void corvin_tick(u8 t) {
     // Effigy: the carrier holds the cast tile.
     fx_ctile = (u8)(WILL_MAXFX_TILE + ((t & 8) ? 3 : 2));
     fx_cflip = 0;
+    if (fx_art == 3 && t == 24 && carrier_ok()) {
+        entity_kill(fx_carrier);
+        fx_carrier = 0xFF;
+    }
     if (carrier_ok()) carrier_park();
     hide_all();
     if (t < 44 && !(t > 41 && (t & 1))) {
-        for (k = 0; k < 4; ++k) {
+        u8 blades = (fx_art <= 1) ? 2 : 4;
+        for (k = 0; k < blades; ++k) {
             u8 tile = (t >= 20 && t < 28 && ((t >> 1) & 1))
                 ? FX_T(1) : WILL_MAXFX_TILE;
             blade_pos(k, t, &x, &y);
@@ -657,16 +672,20 @@ static void wolfkin_tick(u8 t) {
         set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_wolfkin);
         palette_obj_load(2, pal_wolfkin);
     }
-    if (t == 28) palette_obj_load(2, pal_white);
-    if (t == 34) {
-        // The crescent shears inward: one more chord on each nearby body.
+    if (fx_art >= 4 && t == 28) palette_obj_load(2, pal_white);
+    if (fx_art >= 3 && t == 34) {
+        // L3: weaker 14 px shear, no eclipse flash. L4: shipped Cross-Rend.
+        u8 shear_r = (fx_art >= 4) ? fx_reach : 14;
+        u8 shear_d = (fx_art >= 4) ? (u8)(fx_damage + 1) : fx_damage;
         fx_kx = fx_floor(fx_px, fx_py) ? fx_px : (i16)player.x + 8;
         fx_ky = fx_floor(fx_px, fx_py) ? fx_py : (i16)player.y + 8;
         fx_ctile = FX_T(3);
         fx_cflip = 0;
-        hit_ring(fx_px, fx_py, fx_reach, hit_a, (u8)(fx_damage + 1));
-        wash(wash_eclipse);
-        room_shake(2, 6);
+        hit_ring(fx_px, fx_py, shear_r, hit_a, shear_d);
+        if (fx_art >= 4) {
+            wash(wash_eclipse);
+            room_shake(2, 6);
+        }
         fx_ch1(0x16, 0x40, 0xD3, 1800, 10);
         fx_ch4(0x81, 0x1B, 8);
     }
@@ -704,7 +723,18 @@ static void wolfkin_tick(u8 t) {
 
 // ---- entry points ------------------------------------------------------------
 u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
+    static const u8 life_tab[5][4] = {
+        { 16, 24, 34, 42 }, /* Wolfkin */
+        { 18, 28, 52, 52 }, /* Sauran: L4 Aftershock is a later stacked PR */
+        { 20, 28, 40, 48 }, /* Corvin */
+        { 24, 44, 64, 84 }, /* unused (Picsean lives in bank 18) */
+        { 18, 28, 54, 54 }, /* Vespine: L4 Brood Rupture is a later stacked PR */
+    };
     u8 k, level = player.will_level;
+    fx_art = will_levels_art();
+    if (fx_art < 1) fx_art = 1;
+    if (fx_art > 4) fx_art = 4;
+    fx_life = life_tab[class_id < 5 ? class_id : 0][(u8)(fx_art - 1)];
     if (level > WILL_LEVEL_CAP) level = WILL_LEVEL_CAP;
     if (!level) level = 1;
     if (will_maxfx_live) fx_end();
@@ -742,8 +772,8 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
             if (!carrier_ensure()) return 0;
             set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_sauran);
             palette_obj_load(2, pal_sauran);
-            wash(wash_ochre);
-            room_shake(2, 10);
+            if (fx_art >= 2) wash(wash_ochre);
+            if (fx_art >= 3) room_shake(2, 10);
             sfx_thud(1160);
             break;
         }
@@ -752,7 +782,7 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
             if (!carrier_ensure()) return 0;
             set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_vespine);
             palette_obj_load(2, pal_vespine);
-            wash(wash_venom);
+            if (fx_art >= 3) wash(wash_venom);
             // Wing buzz.
             fx_ch1(0x00, 0x00, 0xB3, 1780, 10);
             fx_ch4(0x31, 0x21, 6);
@@ -769,10 +799,14 @@ u8 will_maxfx_begin(u8 class_id, u8 dir, u8 damage) BANKED {
                 i16 ey = (i16)(fx_cy - fx_dy * (i8)back);
                 if (fx_floor(ex, ey)) { fx_kx = ex; fx_ky = ey; }
             }
-            if (!carrier_ensure()) return 0;
+            if (fx_art >= 3) {
+                if (!carrier_ensure()) return 0;
+            } else {
+                fx_carrier = 0xFF;
+            }
             set_sprite_data(WILL_MAXFX_TILE, 4, fx_tiles_corvin);
             palette_obj_load(2, pal_corvin);
-            wash(wash_night);
+            if (fx_art >= 3) wash(wash_night);
             // Soft feather whoosh: a rising noise swell.
             fx_ch4(0x2D, 0x45, 16);
             break;
@@ -818,19 +852,19 @@ void will_maxfx_tick(void) BANKED {
     switch (will_maxfx_live - 1) {
         case 1:
             sauran_tick(t);
-            if (t >= WILL_MAXFX_SAURAN_TICKS) { fx_end(); return; }
+            if (t >= fx_life) { fx_end(); return; }
             break;
         case 4:
             vespine_tick(t);
-            if (t >= WILL_MAXFX_VESPINE_TICKS) { fx_end(); return; }
+            if (t >= fx_life) { fx_end(); return; }
             break;
         case 2:
             corvin_tick(t);
-            if (t >= WILL_MAXFX_CORVIN_TICKS) { fx_end(); return; }
+            if (t >= fx_life) { fx_end(); return; }
             break;
         default:
             wolfkin_tick(t);
-            if (t >= WILL_MAXFX_WOLFKIN_TICKS) { fx_end(); return; }
+            if (t >= fx_life) { fx_end(); return; }
             break;
     }
     will_maxfx_t = (u8)(t + 1);

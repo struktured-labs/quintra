@@ -4,8 +4,11 @@ unlock XP caps up, Continue restores the cap."""
 
 from test_will_max import (
     boot, addr, seed_maxwill, MAXWILL_LEVEL, MAXWILL_XP,
+    player_shots, PLAYER, ENTITIES, ENTITY_SIZE,
 )
 from test_will_max_v2 import arm, press_max
+
+LIVE = addr("_will_maxfx_live")
 
 PICSEAN = 3
 RADIUS = addr("_picsean_vortex_radius")
@@ -104,6 +107,87 @@ def test_unlock_and_persist(pb):
     print("  ok  multi-threshold cap-up reaches L3")
 
 
+
+def art_life(pb):
+    arm(pb)
+    assert press_max(pb), "MAX did not fire"
+    life = 0
+    seen = 0
+    peak_t = 0
+    for _ in range(200):
+        live = pb.memory[LIVE]
+        tick = pb.memory[addr("_will_maxfx_t")]
+        if live:
+            seen = 1
+            life += 1
+            if tick > peak_t:
+                peak_t = tick
+        elif seen:
+            break
+        pb.tick()
+    return life, peak_t
+
+
+def wolfkin_lanes(pb):
+    shots = player_shots(pb)
+    claws = [s for s in shots if pb.memory[s + 12] == 122]
+    waves = [s for s in shots if 200 <= pb.memory[s + 12] <= 203]
+    return len(claws), len(waves)
+
+
+def test_other_heroes():
+    # Spec #151: L1 is a short art; L4 keeps the shipped v2 lifetime.
+    # Sauran L4 Aftershock and Vespine L4 Brood Rupture are not in this
+    # PR, so those L4 lives match the shipped L3 anchors (52 / 54).
+    expect = {
+        0: ("Wolfkin", 16, 42),
+        1: ("Sauran", 18, 52),
+        2: ("Corvin", 20, 48),
+        4: ("Vespine", 18, 54),
+    }
+    for cid, (name, l1, l4) in expect.items():
+        pb = boot(cid)
+        seed_maxwill(pb, 1, 0)
+        if cid == 0:
+            arm(pb)
+            assert press_max(pb), "Wolfkin L1 MAX did not fire"
+            claws, waves = wolfkin_lanes(pb)
+            print(f"    {name} L1 lanes claws={claws} waves={waves}")
+            assert claws == 1, f"{name} L1 should be one claw, got {claws}"
+            assert waves == 0, f"{name} L1 should have no Will wave, got {waves}"
+            # Finish the short art so L4 is a fresh boot.
+        pb.stop()
+        pb = boot(cid)
+        seed_maxwill(pb, 1, 0)
+        life1, peak1 = art_life(pb)
+        print(f"    {name} L1 life={life1} peak_t={peak1}")
+        # Host ticks can overshoot the authored life (press ticks + FX
+        # vblank overrun). Peak t is the controller frame and should sit
+        # on the authored duration (end runs when t >= life).
+        assert peak1 >= l1 - 2, f"{name} L1 peak_t {peak1} < {l1}"
+        assert peak1 <= l1 + 4, f"{name} L1 peak_t {peak1} too long vs {l1}"
+        pb.stop()
+        pb = boot(cid)
+        seed_maxwill(pb, 4, 0)
+        if cid == 0:
+            arm(pb)
+            assert press_max(pb), "Wolfkin L4 MAX did not fire"
+            claws, waves = wolfkin_lanes(pb)
+            print(f"    {name} L4 lanes claws={claws} waves={waves}")
+            assert claws >= 3 and waves == 3, (
+                f"{name} L4 should keep 3 claws + 3 wave cels, got {claws}/{waves}")
+            pb.stop()
+            pb = boot(cid)
+            seed_maxwill(pb, 4, 0)
+        life4, peak4 = art_life(pb)
+        print(f"    {name} L4 life={life4} peak_t={peak4}")
+        assert peak4 >= l4 - 2, f"{name} L4 peak_t {peak4} < {l4}"
+        assert peak4 <= l4 + 4, f"{name} L4 peak_t {peak4} too long vs {l4}"
+        assert peak4 > peak1, f"{name} L4 should outlast L1 ({peak4} vs {peak1})"
+        pb.stop()
+        print(f"  ok  {name} L1 is short, L4 keeps the shipped art")
+
+
 def main():
     pb = boot(PICSEAN)
     test_l1_modest(pb)
@@ -114,6 +198,8 @@ def main():
     pb.stop()
     pb = boot(PICSEAN)
     test_unlock_and_persist(pb)
+    pb.stop()
+    test_other_heroes()
     print("will max levels OK")
 
 

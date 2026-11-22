@@ -27,18 +27,18 @@ void will_charge_tick(void) BANKED {
     // adds one, up to the SPD cap.
     if (speed > PLAYER_SPD_MAX) speed = PLAYER_SPD_MAX;
     will_charge_fraction += (u8)(16 + speed);
-    /* Non-Picsean classes keep the shipped L4 spend and the original
-       compare/subtract path. Picsean drain lives in bank 25 so this
-       bank stays under the 256-byte floor. */
-    if (player.class_id != 3) {
-        if (will_charge_fraction < 40) return;
-        will_charge_fraction -= 40;
+    /* 16/24/32/40 from the unlocked cap. A local compute keeps this off
+       the bank-25 far call so the Wolfkin charge path stays cheap. */
+    {
+        u8 lv = player.maxwill_level;
+        u8 spend;
+        if (lv < MAXWILL_MIN) lv = MAXWILL_MIN;
+        if (lv > MAXWILL_MAX) lv = MAXWILL_MAX;
+        spend = (u8)(16 + (u8)((lv - 1) << 3));
+        if (will_charge_fraction < spend) return;
+        will_charge_fraction = (u8)(will_charge_fraction - spend);
         if (++player.will_charge >= WILL_NEXT_MAX) will_bank_charge();
-        return;
     }
-    /* spend_tab[0] is 16: skip the bank-25 far call until a pip can land. */
-    if (will_charge_fraction < 16) return;
-    if (will_levels_picsean_drain()) will_bank_charge();
 }
 
 void will_bank_charge(void) BANKED {

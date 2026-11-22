@@ -1816,7 +1816,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     player.will_level = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
                     if (wolfkin_melee) {
-                        dash_timer = 9;
+                        {
+                            extern u8 will_max_dash_timer;
+                            dash_timer = will_max_dash_timer
+                                ? will_max_dash_timer : 9;
+                            will_max_dash_timer = 0;
+                        }
                         dash_cd = 45;
                         dash_dx = dir8_dx[dir];
                         dash_dy = dir8_dy[dir];

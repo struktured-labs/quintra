@@ -29,10 +29,8 @@ u8 will_levels_art(void) BANKED {
 }
 
 u8 will_levels_clock(void) BANKED {
-    /* Until other classes have L1-L3 MAX scaling, pin their charge
-       and recast clocks to L4 so they cannot fire today's full arts
-       twice as often at run start. */
-    if (player.class_id != 3) return MAXWILL_MAX;
+    /* All five champions now have L1-L3 MAX arts, so charge and
+       recast follow the unlocked cap. */
     return will_levels_art();
 }
 

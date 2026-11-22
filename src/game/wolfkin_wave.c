@@ -8,6 +8,8 @@
 #include "game/projectile.h"
 #include "game/room.h"
 #include "game/wolfkin_wave.h"
+#include "game/will_levels.h"
+#include "game/will_maxfx.h"
 #include "render/palette.h"
 #include "render/tiles.h"
 #include "content.h"
@@ -61,6 +63,45 @@ static u8 wave_in_front(const entity_t *e, u8 reach) {
         if (rx + ry > reach) return 0;
     }
     return 1;
+}
+
+u8 will_max_dash_timer;
+
+u8 wolfkin_max_fire(u8 dir, u8 damage) BANKED {
+    u8 art = will_levels_art();
+    u8 first = projectile_spawn_player(dir8_dx[dir], dir8_dy[dir],
+        (u8)(damage + (art <= 1 ? 1 : 3)), PROJ_SPIKE);
+    if (first != 0xFF)
+        entities[first].ai_data[3] |= PROJ_FLAG_CONVERGENCE;
+    if (art > 1) {
+        u8 a = projectile_spawn_player(dir8_dx[(u8)((dir + 1) & 7)],
+            dir8_dy[(u8)((dir + 1) & 7)], (u8)(damage + 2), PROJ_SPIKE);
+        u8 b = projectile_spawn_player(dir8_dx[(u8)((dir + 7) & 7)],
+            dir8_dy[(u8)((dir + 7) & 7)], (u8)(damage + 2), PROJ_SPIKE);
+        if (a != 0xFF) entities[a].ai_data[3] |= PROJ_FLAG_CONVERGENCE;
+        if (b != 0xFF) entities[b].ai_data[3] |= PROJ_FLAG_CONVERGENCE;
+    }
+    if (first != 0xFF) {
+        if (art <= 1) {
+            wolfkin_wave_guard_begin(dir, 8);
+            will_max_dash_timer = 6;
+        } else {
+            wolfkin_wave_begin(dir, damage);
+            will_max_dash_timer = 9;
+        }
+        will_maxfx_begin(0, dir, damage);
+    }
+    return first;
+}
+
+void wolfkin_wave_guard_begin(u8 dir, u8 frames) BANKED {
+    i8 k;
+    wave_dx = dir8_dx[dir & 7];
+    wave_dy = dir8_dy[dir & 7];
+    for (k = 0; k < (i8)sizeof(wave_met); ++k) wave_met[k] = 0;
+    wave_slot[0] = wave_slot[1] = wave_slot[2] = 0xFF;
+    wolfkin_wave_guard_ticks = frames;
+    wolfkin_wave_fx_ticks = 0;
 }
 
 void wolfkin_wave_begin(u8 dir, u8 damage) BANKED {

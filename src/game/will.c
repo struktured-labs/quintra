@@ -185,18 +185,7 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     // body-dash applied by room.c: broad enough to read as a slash, short
     // enough to remain the game's true melee MAX.
     if (player.class_id == 0 && weapon_index == classes[0].starter_weapon) {
-        first = max_spawn(dir8_dx[dir], dir8_dy[dir],
-            (u8)(damage + 3), PROJ_SPIKE);
-        max_spawn(dir8_dx[(u8)((dir + 1) & 7)],
-            dir8_dy[(u8)((dir + 1) & 7)], (u8)(damage + 2), PROJ_SPIKE);
-        max_spawn(dir8_dx[(u8)((dir + 7) & 7)],
-            dir8_dy[(u8)((dir + 7) & 7)], (u8)(damage + 2), PROJ_SPIKE);
-        // The rush throws a wave of force ahead and guards his front while
-        // the body dash lasts (2026-11-12 Will wave spec).
-        if (first != 0xFF) {
-            wolfkin_wave_begin(dir, damage);
-            will_maxfx_begin(0, dir, damage);   // claw scars + cross-rend
-        }
+        first = wolfkin_max_fire(dir, damage);
     // Tail Spike — Thunderline Bastion; Featherbarb — Murderstorm Eclipse.
     // Authored controllers in bank 30 own their art, sound and hits.
     } else if (weapon_index == classes[1].starter_weapon) {
