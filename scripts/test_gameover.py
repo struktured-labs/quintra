@@ -133,38 +133,62 @@ def main():
         )
         assert enter_frames <= 120, \
             f"game-over entry remained blank too long: {enter_frames} frames"
-        # Console glyph writes change tile IDs only. A game-over screen must
-        # also clear the CGB attribute plane, otherwise dungeon palette bytes
-        # leak through and make arbitrary score digits appear red/oddly tinted.
         bg_map = 0x9C00 if (first.memory[0xFF40] & 0x08) else 0x9800
+        # The visor rises and the results text appears at frame 130. Wait
+        # for the authored GAME OVER glyphs on row 2 rather than assuming
+        # enter() already wrote them.
+        game_over = font_tiles("GAME OVER")
+        seen = False
+        title_at = -1
+        for _ in range(240):
+            first.tick()
+            row2 = bytes(first.memory[bg_map + 2 * 32:bg_map + 2 * 32 + 20])
+            title_at = row2.find(game_over)
+            if title_at >= 1 and title_at + len(game_over) <= 19:
+                seen = True
+                break
+        assert seen, (
+            "game-over never drew GAME OVER in bank-0 font tiles on row 2"
+        )
+        for _ in range(4):
+            first.tick()
         first.memory[0xFF4F] = 1
-        # A BG map is 32 tiles wide even though the display is 20. Inspect
-        # the visible rows, not the unused 12-tile padding between them.
         attrs = b"".join(
             bytes(first.memory[bg_map + y * 32:bg_map + y * 32 + 20])
             for y in range(18)
         )
         first.memory[0xFF4F] = 0
-        assert attrs == bytes(20 * 18), \
-            "game-over retained stale CGB text palette attributes"
-        game_over = font_tiles("GAME  OVER")
-        rendered_game_over = bytes(first.memory[
-            bg_map + 3 * 32 + 6:bg_map + 3 * 32 + 6 + len(game_over)
-        ])
-        assert rendered_game_over == game_over, (
-            "game-over drew its text into CGB attribute memory"
+        # Authored attributes only: palettes 0-4, optional bank-1 and flips,
+        # no leftover dungeon priority or unused bits.
+        for i, a in enumerate(attrs):
+            pal = a & 7
+            assert pal <= 4, f"stale or illegal palette {pal} at cell {i}"
+            assert (a & 0x90) == 0, f"illegal attribute bits {a:#x} at cell {i}"
+        # Every results line stays inside columns 1..18.
+        for y in (2, 13, 14, 15, 16):
+            row = bytes(first.memory[bg_map + y * 32:bg_map + y * 32 + 20])
+            assert row[0] == 0 and row[19] == 0, (
+                f"row {y} used a margin column: {list(row)}"
+            )
+        title_attrs = attrs[2 * 20 + title_at:2 * 20 + title_at + len(game_over)]
+        assert all((a & 0x0F) == 3 for a in title_attrs), (
+            f"GAME OVER must use title palette 3 in bank 0: {list(title_attrs)}"
         )
-        # A hard Normal death should teach the already-implemented inspection
-        # mode where the player actually needs it. This is an ordinary
-        # cartridge-rendered prompt, not documentation or a test-only overlay.
-        easy_hint = font_tiles("SELECT EASY AT HERO")
-        rendered_hint = bytes(first.memory[
-            bg_map + 13 * 32 + 1:bg_map + 13 * 32 + 1 + len(easy_hint)
-        ])
-        assert rendered_hint == easy_hint, (
-            f"Normal game-over omitted Easy-mode recovery hint: "
-            f"{list(rendered_hint)}"
+        easy_hint = font_tiles("TRY EASY MODE")
+        row13 = bytes(first.memory[bg_map + 13 * 32:bg_map + 13 * 32 + 20])
+        hint_at = row13.find(easy_hint)
+        assert hint_at >= 1 and hint_at + len(easy_hint) <= 19, (
+            f"Normal game-over omitted Easy-mode recovery hint: {list(row13)}"
         )
+        hint_attrs = attrs[13 * 20 + hint_at:13 * 20 + hint_at + len(easy_hint)]
+        assert all((a & 0x0F) == 4 for a in hint_attrs), (
+            f"hint must use gold palette 4 in bank 0: {list(hint_attrs)}"
+        )
+        # The visor well (rows 4-12, cols 5-14) must actually use bank-1 art.
+        well = []
+        for y in range(4, 13):
+            well.extend(attrs[y * 20 + 5:y * 20 + 15])
+        assert any(a & 0x08 for a in well), "game-over visor was not drawn in VRAM bank 1"
 
         first.memory[0x0000] = 0x0A
         first.memory[0x4000] = 0
