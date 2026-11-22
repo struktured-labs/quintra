@@ -48,12 +48,13 @@ cp "$project_root/LICENSES/SDCC-runtime-notice.txt" "$output_dir/licenses/SDCC-r
 cp "$project_root/docs/media/itch/quintra-cover-current-630x500.png" "$output_dir/media/cover.png"
 cp "$rom" "$output_dir/quintra.gbc"
 
+git_commit=$(git -C "$project_root" rev-parse HEAD)
+short_commit="${git_commit:0:8}"
+
 sed -i 's|href="player.css|href="emulator/quintra-player.css|' "$output_dir/index.html"
-sed -i "s|__QUINTRA_WEB_VERSION__|$version|g" "$output_dir/index.html"
+sed -i "s|__QUINTRA_WEB_VERSION__|$version|g; s|__QUINTRA_GIT_COMMIT__|$short_commit|g" "$output_dir/index.html"
 
 printf '%s  quintra.gbc\n' "$actual_rom_sha" > "$output_dir/quintra.sha256"
-
-git_commit=$(git -C "$project_root" rev-parse HEAD)
 source_dirty=false
 if [[ -n "$(git -C "$project_root" status --porcelain)" ]]; then
   source_dirty=true

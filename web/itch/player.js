@@ -904,7 +904,9 @@
       maxNumberOfAutoSaveStates: 2,
       onReady: () => setStatus("Cartridge ready")
     }, canvas);
-    await api.loadROM("quintra.gbc", { fileName: "quintra.gbc" });
+    const build = document.documentElement.getAttribute("data-quintra-build") || "";
+    const romUrl = build ? ("quintra.gbc?v=" + encodeURIComponent(build)) : "quintra.gbc";
+    await api.loadROM(romUrl, { fileName: "quintra.gbc" });
     ready = true;
     launch.querySelector("strong").textContent = "Enter the Riftwild";
     launch.querySelector("span").textContent = "Click, tap, or press A / Start to play with sound";

@@ -77,6 +77,14 @@ footer {
   letter-spacing: .09em;
 }
 
+.build-id {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: .7rem;
+  letter-spacing: .04em;
+  opacity: .8;
+}
+
 .status { text-align: right; }
 .status.error { color: #ff8b7c; }
 
