@@ -409,7 +409,7 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
             if (spd) ttl = (u8)(24 / spd); if (ttl < 4) ttl = 4;
         }
         if (player.class_id == 0) {
-            /* Longblade: two 2-damage beams at ±45°, ttl 28, 1 OAM each. */
+            /* Claw Sword: two 2-damage beams at ±45°, ttl 28, 1 OAM each. */
             u8 ttl = 28;
             u8 a = wolfkin_beam_spawn((i16)player.x + 4, (i16)player.y + 4,
                 (u8)((dir + 1) & 7), 2, ttl, PROJ_AUX_SWORD_PU);

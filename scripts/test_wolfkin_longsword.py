@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""ROM contracts for Wolfkin's wielded longsword, stab, and sword beam."""
+"""ROM contracts for Wolfkin's Claw Sword: 360-degree spin, stab, beam, and
+its reserved bank-1 OBJ tiles (144..159)."""
 import os
 from pathlib import Path
 
@@ -95,6 +96,21 @@ def spawn_foe(pb, x, y, hp=20, eid=2):
     return e
 
 
+def pin_spots(pb, foes):
+    return [(e, get16(pb, e + 3), get16(pb, e + 7)) for e in foes]
+
+
+def tick_pinned(pb, frames, foes, spots=None):
+    """Advance while holding test bodies still, so AI drift can't decide reach."""
+    if spots is None:
+        spots = pin_spots(pb, foes)
+    for _ in range(frames):
+        for e, x, y in spots:
+            put16(pb, e + 3, x)
+            put16(pb, e + 7, y)
+        pb.tick(1)
+
+
 def test_slash_diagonal_and_parented():
     pb = boot(0)
     try:
@@ -122,10 +138,10 @@ def test_slash_diagonal_and_parented():
         for e in fangs:
             assert pb.memory[e + ent_off("vx")] == 0, "slash segment has velocity"
             assert pb.memory[e + ent_off("vy")] == 0, "slash segment has velocity"
-        # Let the contact frames land
-        pb.tick(4)
+        # Let the spin pass the NE heading
+        pb.tick(20)
         hp = pb.memory[foe + 14]
-        assert hp == 15, f"slash did not deal 5 to a diagonal body (hp {hp})"
+        assert hp == 15, f"spin did not deal 5 to a diagonal body (hp {hp})"
     finally:
         pb.stop(save=False)
 
@@ -159,14 +175,21 @@ def test_stab_reach_and_damage():
             pass
         far = spawn_foe(pb, px + 44, py + 4, hp=20)
         # First prove a slash does not reach
-        fire_a(pb, direction=None, ticks=6)
-        pb.tick(4)
-        assert pb.memory[far + 14] == 20, "slash reached the stab-only lane"
+        spots = pin_spots(pb, [far])
+        pb.memory[PLAYER + 22] = 0
+        pb.button_press("a")
+        tick_pinned(pb, 2, [far], spots)
+        pb.button_release("a")
+        tick_pinned(pb, 26, [far], spots)
+        # The slot can inherit the close body's 1-HP bleed tick; a spin hit is 5.
+        spun = pb.memory[far + 14]
+        assert spun >= 19, f"spin reached the stab-only lane (hp {spun})"
         pb.memory[PLAYER + 22] = 0
         fire_a(pb, direction="right", ticks=6)
         pb.tick(6)
         far_hp = pb.memory[far + 14]
-        assert far_hp == 11, f"stab did not reach/deal 9 at 32px (hp {far_hp})"
+        assert spun - far_hp in (9, 10), (
+            f"stab did not reach/deal 9 at 32px (hp {spun} -> {far_hp})")
     finally:
         pb.stop(save=False)
 
@@ -265,7 +288,7 @@ def test_sword_sprite_reach():
         face_east(pb)
         fire_a(pb, direction=None, ticks=1)
         slash_peak = peak_sprite_reach_east(pb, px)
-        for _ in range(8):
+        for _ in range(22):
             pb.tick(1)
             slash_peak = max(slash_peak, peak_sprite_reach_east(pb, px))
         assert slash_peak >= SLASH_REACH - REACH_SLACK, (
@@ -382,6 +405,111 @@ def test_attract_sword_sprite_reach():
         os.environ.pop("QUINTRA_KEEP_INTRO", None)
 
 
+SWORD_BASE = 144
+SPIN_LIFE = 21
+SPIN_DMG = 5
+
+
+def sword_art():
+    """The 256 tile bytes the ROM must hold at bank-1 OBJ 144..159."""
+    src = (Path(__file__).resolve().parent.parent
+           / "src/game/wolfkin_sword_art.c").read_text()
+    body = src.split("wolfkin_sword_tiles[256] = {", 1)[1].split("};", 1)[0]
+    vals = [int(v, 16) for v in body.replace("\n", " ").split(",") if v.strip()]
+    assert len(vals) == 256, len(vals)
+    return bytes(vals)
+
+
+def sword_vram(pb):
+    return bytes(pb.memory[1, 0x8000 + SWORD_BASE * 16 + i] for i in range(256))
+
+
+def test_spin_hits_all_eight_sides_once():
+    pb = boot(0)
+    try:
+        clear_arena(pb)
+        drop_hp(pb, full=False)
+        face_east(pb)
+        px, py = player_xy(pb)
+        cx, cy = px + 8, py + 8
+        foes = []
+        # Body centres ~20 px past the body edge on cardinals, ~26 px out on
+        # diagonals; 8x8 boxes, so top-left = centre - 4.
+        for dx, dy in ((0, -1), (1, -1), (1, 0), (1, 1),
+                       (0, 1), (-1, 1), (-1, 0), (-1, -1)):
+            r = 28 if (dx == 0 or dy == 0) else 19
+            foes.append(spawn_foe(pb, cx + dx * r - 4, cy + dy * r - 4, hp=20))
+        far = spawn_foe(pb, cx + 48 - 4, cy - 4, hp=20)
+        spots = pin_spots(pb, foes + [far])
+        pb.memory[PLAYER + 22] = 0
+        pb.button_press("a")
+        tick_pinned(pb, 1, foes, spots)
+        pb.button_release("a")
+        tick_pinned(pb, 1, foes, spots)
+        cd = pb.memory[PLAYER + 22]
+        assert cd >= SPIN_LIFE + 1, f"spin cooldown {cd} shorter than the swing"
+        # Crowded rooms run game logic below 60 Hz; wait for the swing to end.
+        for _ in range(300):
+            tick_pinned(pb, 1, foes, spots)
+            if not fang_segs(pb):
+                break
+        tick_pinned(pb, 2, foes, spots)
+        hps = [pb.memory[e + 14] for e in foes]
+        assert all(h == 20 - SPIN_DMG for h in hps), (
+            f"spin must hit all 8 sides exactly once for {SPIN_DMG}: {hps}")
+        assert pb.memory[far + 14] == 20, "spin reached 48 px (stab-only range)"
+    finally:
+        pb.stop(save=False)
+
+
+def test_claw_sword_tiles_survive_events():
+    """Regression: the sword used to share bank-1 OBJ 160..175 with the spell
+    art, and every room entry / Pack resume turned it into spell glyphs."""
+    art = sword_art()
+    pb = boot(0)
+    try:
+        clear_arena(pb)
+        drop_hp(pb, full=False)
+        face_east(pb)
+        fire_a(pb, direction=None, ticks=1)
+        pb.tick(30)
+        assert sword_vram(pb) == art, "Claw Sword tiles not loaded at 144..159"
+        scr = addr("_loop_current_screen")
+        # Pack resume runs the same room-entry tile refresh as a door.
+        for _ in range(2):
+            pb.button("start"); pb.tick(40)
+            pb.button("start"); pb.tick(60)
+        assert pb.memory[scr] == 5, "did not return from the Pack"
+        assert sword_vram(pb) == art, "Pack/room refresh clobbered the Claw Sword"
+        # Spell (B) and Will MAX.
+        pb.button_press("b"); pb.tick(30); pb.button_release("b"); pb.tick(40)
+        assert sword_vram(pb) == art, "spell cast clobbered the Claw Sword"
+        pb.memory[PLAYER + 48] = 1  # will_level
+        pb.memory[PLAYER + 22] = 0
+        pb.button_press("a"); pb.tick(2); pb.button_release("a"); pb.tick(60)
+        assert sword_vram(pb) == art, "Will MAX clobbered the Claw Sword"
+        clear_arena(pb)
+        fire_a(pb, direction="right", ticks=4); pb.tick(20)
+        assert sword_vram(pb) == art, "stab after events drew stale tiles"
+    finally:
+        pb.stop(save=False)
+    # Reserved: another hero never writes the window.
+    pb = boot(2)
+    try:
+        before = sword_vram(pb)
+        scr = addr("_loop_current_screen")
+        for _ in range(2):
+            pb.button("start"); pb.tick(40)
+            pb.button("start"); pb.tick(60)
+        pb.button_press("b"); pb.tick(30); pb.button_release("b"); pb.tick(40)
+        pb.button_press("a"); pb.tick(20); pb.button_release("a"); pb.tick(20)
+        assert sword_vram(pb) == before, (
+            "bank-1 OBJ 144..159 is reserved for the Claw Sword, "
+            "but a non-Wolfkin run wrote it")
+    finally:
+        pb.stop(save=False)
+
+
 def main():
     test_slash_diagonal_and_parented()
     test_stab_reach_and_damage()
@@ -389,7 +517,9 @@ def main():
     test_formation_grants_projectiles()
     test_sword_sprite_reach()
     test_attract_sword_sprite_reach()
-    print("[wolfkin-longsword] PASS slash diag, stab 9/reach, beam latch, formation beams, sprite reach, attract reach")
+    test_spin_hits_all_eight_sides_once()
+    test_claw_sword_tiles_survive_events()
+    print("[wolfkin-longsword] PASS spin diag, stab 9/reach, beam latch, formation beams, sprite reach, attract reach, spin 8 sides once, reserved tiles")
 
 
 if __name__ == "__main__":

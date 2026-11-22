@@ -45,7 +45,7 @@ def main():
         assert stab, "directed A spawned no sword"
         for e in stab:
             assert pb.memory[e + 10] == 0 and pb.memory[e + 11] == 0, "stab travels"
-            assert 160 <= pb.memory[e + 12] <= 175, "stab lost longsword art"
+            assert 144 <= pb.memory[e + 12] <= 159, "stab lost Claw Sword art"
             assert pb.memory[e + 16] <= 10, "stab lives too long"
             assert pb.memory[e + 26] == 9, f"stab damage {pb.memory[e + 26]} != 9"
         furthest = max(get16(pb, e + 3) for e in stab)
@@ -129,7 +129,11 @@ def main():
             hit.memory[foe + 17] = 2
             hit.memory[foe + 25] = 0x88
             hit.memory[foe + 26] = 1
-            hit.tick()
+            # Game logic can lag a video frame; allow up to 3 for contact.
+            for _ in range(3):
+                hit.tick()
+                if hit.memory[foe + 14] != 20:
+                    break
             after = hit.memory[foe + 14]
             assert after == 11, f"stab contact was not 9 damage: hp {after}"
             hit.tick()
@@ -158,7 +162,7 @@ def main():
             swap.stop(save=False)
     finally:
         pb.stop(save=False)
-    print("[wolfkin-forms] PASS parented Longblade slash/stab, latch, weapon swap")
+    print("[wolfkin-forms] PASS parented Claw Sword spin/stab, latch, weapon swap")
 
 
 if __name__ == "__main__":

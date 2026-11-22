@@ -47,7 +47,7 @@ def main():
     entities = addr("_entities")
     tilemap = addr("_room_tilemap")
     for moves, name, max_ttl in (
-        (0, "Wolfkin", 10),
+        (0, "Wolfkin", 21),  # Claw Sword spin: 3f cock-back + 9 x 2f steps
         (1, "Sauran", 12),
         (4, "Vespine", 12),
     ):
@@ -55,7 +55,7 @@ def main():
         shot = first_player_shot(hero, player, entities, tilemap)
         tile = hero.memory[shot + 12]
         if name == "Wolfkin":
-            assert 160 <= tile <= 175, f"{name} melee is not longsword art ({tile})"
+            assert 144 <= tile <= 159, f"{name} melee is not Claw Sword art ({tile})"
         else:
             assert tile == 122, f"{name} melee is not arc art"
         assert hero.memory[shot + 16] <= max_ttl, f"{name} melee is not short lived"

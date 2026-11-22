@@ -324,7 +324,7 @@ void tiles_load_weapon_sprite(u8 weapon_index) BANKED {
     } else if (id == 1u || id == 4u) {
         set_sprite_data(SPR_FX_SWING, 1, sprite_fx_spike);
     } else {
-        // Longblade and Spirit Convergence retain authored steel.
+        // Claw Sword and Spirit Convergence retain authored steel.
         set_sprite_data(SPR_FX_SWING, 1, sprite_fx_sword);
     }
 }
