@@ -247,19 +247,16 @@ void gameover_art_paint_attrs(u8 text_on) BANKED {
     for (y = 0; y < 18; y++) {
         u8 pal = GOART_PAL_BACKDROP;
         if (text_on) {
-            if (y == 3) pal = GOART_PAL_TITLE;
-            else if (y == 2 || (y >= 13 && y <= 16)) pal = GOART_PAL_GOLD;
+            if (y == 2) pal = GOART_PAL_TITLE;
+            else if (y >= 13 && y <= 16) pal = GOART_PAL_GOLD;
         }
         for (x = 0; x < 20; x++) attrs[x] = pal;
         if (y == 0 || y == 17) {
             for (x = 0; x < 20; x++) attrs[x] = GOART_PAL_BACKDROP;
-        } else if (!(text_on && y == 13)) {
-            /* The Normal hint is 19 glyphs starting at column 1, so
-               column 19 must keep the gold text palette on that row. */
+        } else {
+            /* One-column margin: columns 0 and 19 never carry text palettes. */
             attrs[0] = GOART_PAL_BACKDROP;
             attrs[19] = GOART_PAL_BACKDROP;
-        } else {
-            attrs[0] = GOART_PAL_BACKDROP;
         }
         /* Only stamp visor attributes once the corresponding bank-1 tiles
            are in place. Doing this on enter left tile 0 in bank 1 showing

@@ -135,20 +135,20 @@ def main():
             f"game-over entry remained blank too long: {enter_frames} frames"
         bg_map = 0x9C00 if (first.memory[0xFF40] & 0x08) else 0x9800
         # The visor rises and the results text appears at frame 130. Wait
-        # for the authored GAME OVER glyphs rather than assuming enter()
-        # already wrote them.
-        game_over = font_tiles("GAME  OVER")
+        # for the authored GAME OVER glyphs on row 2 rather than assuming
+        # enter() already wrote them.
+        game_over = font_tiles("GAME OVER")
         seen = False
+        title_at = -1
         for _ in range(240):
             first.tick()
-            rendered_game_over = bytes(first.memory[
-                bg_map + 3 * 32 + 6:bg_map + 3 * 32 + 6 + len(game_over)
-            ])
-            if rendered_game_over == game_over:
+            row2 = bytes(first.memory[bg_map + 2 * 32:bg_map + 2 * 32 + 20])
+            title_at = row2.find(game_over)
+            if title_at >= 1 and title_at + len(game_over) <= 19:
                 seen = True
                 break
         assert seen, (
-            "game-over never drew GAME OVER in bank-0 font tiles at row 3"
+            "game-over never drew GAME OVER in bank-0 font tiles on row 2"
         )
         for _ in range(4):
             first.tick()
@@ -164,19 +164,23 @@ def main():
             pal = a & 7
             assert pal <= 4, f"stale or illegal palette {pal} at cell {i}"
             assert (a & 0x90) == 0, f"illegal attribute bits {a:#x} at cell {i}"
-        title_attrs = attrs[3 * 20 + 6:3 * 20 + 6 + len(game_over)]
+        # Every results line stays inside columns 1..18.
+        for y in (2, 13, 14, 15, 16):
+            row = bytes(first.memory[bg_map + y * 32:bg_map + y * 32 + 20])
+            assert row[0] == 0 and row[19] == 0, (
+                f"row {y} used a margin column: {list(row)}"
+            )
+        title_attrs = attrs[2 * 20 + title_at:2 * 20 + title_at + len(game_over)]
         assert all((a & 0x0F) == 3 for a in title_attrs), (
             f"GAME OVER must use title palette 3 in bank 0: {list(title_attrs)}"
         )
-        easy_hint = font_tiles("SELECT EASY AT HERO")
-        rendered_hint = bytes(first.memory[
-            bg_map + 13 * 32 + 1:bg_map + 13 * 32 + 1 + len(easy_hint)
-        ])
-        assert rendered_hint == easy_hint, (
-            f"Normal game-over omitted Easy-mode recovery hint: "
-            f"{list(rendered_hint)}"
+        easy_hint = font_tiles("TRY EASY MODE")
+        row13 = bytes(first.memory[bg_map + 13 * 32:bg_map + 13 * 32 + 20])
+        hint_at = row13.find(easy_hint)
+        assert hint_at >= 1 and hint_at + len(easy_hint) <= 19, (
+            f"Normal game-over omitted Easy-mode recovery hint: {list(row13)}"
         )
-        hint_attrs = attrs[13 * 20 + 1:13 * 20 + 1 + len(easy_hint)]
+        hint_attrs = attrs[13 * 20 + hint_at:13 * 20 + hint_at + len(easy_hint)]
         assert all((a & 0x0F) == 4 for a in hint_attrs), (
             f"hint must use gold palette 4 in bank 0: {list(hint_attrs)}"
         )

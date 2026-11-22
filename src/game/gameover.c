@@ -77,22 +77,123 @@ static void pulse_ember(void) {
     palette_bg_load(GOART_PAL_EMBER, pal);
 }
 
+/* Text lives in columns 1..18 (one-column margin on each side). */
+#define GO_MARGIN 1
+#define GO_TEXT_COLS 18
+
+static u8 prompt_on;
+
+static u8 str_len(const char *s) {
+    u8 n = 0;
+    while (s[n]) n++;
+    return n;
+}
+
+static u8 u16_len(u16 v) {
+    u8 n = 1;
+    while (v > 9) { v /= 10; n++; }
+    return n;
+}
+
+static char *put_u16(char *p, u16 v) {
+    char d[5];
+    u8 n = 0;
+    do {
+        d[n++] = (char)('0' + (v % 10));
+        v /= 10;
+    } while (v);
+    while (n) *p++ = d[--n];
+    return p;
+}
+
+static void write_centered(u8 y, const char *s) {
+    u8 n = str_len(s);
+    u8 x, i;
+    char tmp[19];
+    if (n > GO_TEXT_COLS) n = GO_TEXT_COLS;
+    x = (u8)((20 - n) / 2);
+    if (x < GO_MARGIN) x = GO_MARGIN;
+    if ((u8)(x + n) > 19) x = (u8)(19 - n);
+    for (i = 0; i < n; i++) tmp[i] = s[i];
+    tmp[n] = 0;
+    gotoxy(x, y);
+    text_write(tmp);
+}
+
+static void write_prompt(u8 on) {
+    if (on) write_centered(16, "PRESS START");
+    else {
+        gotoxy(GO_MARGIN, 16);
+        text_write("                  ");
+    }
+    prompt_on = on;
+}
+
+static void write_stats_row(void) {
+    char buf[19];
+    char *p = buf;
+    u16 rooms = (u16)run_state.room_counter;
+    u16 kills = run_state_enemies_killed_total();
+    u16 mins = (u16)(run_state.run_timer / 60);
+    u8 secs = (u8)(run_state.run_timer % 60);
+    /* "RM n K n T m ss" when it fits in 18 columns; otherwise tighten. */
+    u8 wide = (u8)(12 + u16_len(rooms) + u16_len(kills) + u16_len(mins));
+    u8 tight = (u8)(8 + u16_len(rooms) + u16_len(kills) + u16_len(mins));
+    if (wide <= GO_TEXT_COLS) {
+        *p++ = 'R'; *p++ = 'M'; *p++ = ' ';
+        p = put_u16(p, rooms);
+        *p++ = ' '; *p++ = 'K'; *p++ = ' ';
+        p = put_u16(p, kills);
+        *p++ = ' '; *p++ = 'T'; *p++ = ' ';
+        p = put_u16(p, mins);
+        *p++ = ' ';
+        *p++ = (char)('0' + (u8)(secs / 10));
+        *p++ = (char)('0' + (u8)(secs % 10));
+    } else if (tight <= GO_TEXT_COLS) {
+        *p++ = 'R';
+        p = put_u16(p, rooms);
+        *p++ = ' '; *p++ = 'K';
+        p = put_u16(p, kills);
+        *p++ = ' '; *p++ = 'T';
+        p = put_u16(p, mins);
+        *p++ = ' ';
+        *p++ = (char)('0' + (u8)(secs / 10));
+        *p++ = (char)('0' + (u8)(secs % 10));
+    } else {
+        /* Rare long times: drop the seconds rather than clip the row. */
+        *p++ = 'R';
+        p = put_u16(p, rooms);
+        *p++ = ' '; *p++ = 'K';
+        p = put_u16(p, kills);
+        *p++ = ' '; *p++ = 'T';
+        p = put_u16(p, mins);
+    }
+    *p = 0;
+    write_centered(14, buf);
+}
+
+static void write_run_row(void) {
+    char buf[19];
+    char *p = buf;
+    *p++ = 'R'; *p++ = 'U'; *p++ = 'N'; *p++ = ' ';
+    p = put_u16(p, (u16)run_state.score);
+    if (new_best & 1) {
+        *p++ = ' '; *p++ = 'N'; *p++ = 'E'; *p++ = 'W';
+    } else {
+        *p++ = ' '; *p++ = 'H'; *p++ = 'I'; *p++ = ' ';
+        p = put_u16(p, sram_meta_best());
+    }
+    *p = 0;
+    write_centered(15, buf);
+}
+
 static void write_results(void) {
-    gotoxy(2, 2);  text_write("TIME ");
-    text_u16((u16)(run_state.run_timer / 60));
-    text_write(":");
-    text_digit((u8)((run_state.run_timer % 60) / 10));
-    text_digit((u8)(run_state.run_timer % 10));
-    gotoxy(6, 3);  text_write("GAME  OVER");
-    gotoxy(1, 13);
-    text_write(RUN_IS_EASY() ? "TRY ANOTHER HERO" : "SELECT EASY AT HERO");
-    /* Stay in columns 1..18 so 5-digit values cannot wrap or eat the frame. */
-    gotoxy(1, 14); text_write("RM "); text_u16((u16)run_state.room_counter);
-    text_write(" KILL "); text_u16(run_state_enemies_killed_total());
-    gotoxy(2, 15); text_write("PRESS  START");
-    gotoxy(1, 16); text_write("RUN "); text_u16((u16)run_state.score);
-    if (new_best & 1) text_write(" NEW");
-    else { text_write(" HI "); text_u16(sram_meta_best()); }
+    write_centered(2, "GAME OVER");
+    /* Row 3 stays blank so the title sits above the visor with a gap. */
+    if (!RUN_IS_EASY()) write_centered(13, "TRY EASY MODE");
+    write_stats_row();
+    write_run_row();
+    write_prompt(1);
 }
 
 static void place_shards(void) {
@@ -161,6 +262,7 @@ void gameover_enter(void) {
     shown = 0;
     rise_rows = 0;
     pulse = 0;
+    prompt_on = 0;
     place_shards();
     for (i = 0; i < 40; i++) move_sprite(i, 0, 0);
 
@@ -222,6 +324,14 @@ screen_id_t gameover_tick(u8 keys, u8 pressed) {
     if (shown || anim >= GO_RISE_END) {
         pulse = (u8)(pulse + 1);
         if (pulse >= 90) pulse = 0;
+    }
+    /* 32 frames on, 16 off. Cheap: rewrite the one row only on a toggle. */
+    if (shown) {
+        u8 on = (u8)((pulse % 48) < 32);
+        if (on != prompt_on) {
+            wait_vbl_done();
+            write_prompt(on);
+        }
     }
     return SCREEN_SELF;
 }

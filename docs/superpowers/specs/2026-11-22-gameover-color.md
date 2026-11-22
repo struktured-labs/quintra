@@ -43,7 +43,7 @@ Game Over screen enters.
 | 0–19 | Ember void, input locked so the killing blow cannot skip it. Music starts immediately. |
 | 20–79 | The visor truly rises: the top of the mask sits on the well floor and climbs one tile-row at a time through its 10×9 well (rows 4–12, columns 5–14) while palettes fade from black to full. |
 | 80–129 | Ember cracks pulse; two to four rune-shard objects fall through the well and expire at its floor so they never sit on the gold text. |
-| 130+ | `GAME OVER` appears on row 3, column 6 (ember-red). Time sits on row 2. The Normal hint stays on row 13, column 1. Compact `RM`/`KILL` sit on row 14 and `RUN`/`HI` on row 16, kept to columns 1–18. `PRESS START` stays on row 15. All of those lines are gold, so they do not cover the visor well. The visor stays, with a slow ember pulse. Shards hide when the text appears. |
+| 130+ | `GAME OVER` is centered on row 2 (ember-red) with row 3 left blank above the visor. Below the visor: optional `TRY EASY MODE` on row 13 when the run was Normal, a centered `RM`/`K`/`T` stats row on row 14, a centered `RUN`/`HI` (or `NEW`) row on row 15, and a centered blinking `PRESS START` on row 16. Every line stays in columns 1–18. Gold for those lower lines. The visor stays, with a slow ember pulse. Shards hide when the text appears. |
 
 START or A after frame 19 jumps to the completed results layout. A second
 press returns to TITLE, as today.
@@ -52,8 +52,8 @@ press returns to TITLE, as today.
 
 - Motif tiles live in **VRAM bank 1**, indices `0..N-1`, `N ≤ 96`.
   Attribute bit 3 selects them. `font_min` stays in bank 0, tiles 0–36.
-- Bank 0 tile 37 is a 1-tile muted frame used on the top and bottom bars only. Side columns are left open so the 19-glyph Normal hint at (1, 13) and long stat lines cannot punch a hole in the frame. The frame is never
-  over text.
+- Bank 0 tile 37 is a 1-tile muted frame used on the top and bottom bars only. Side columns stay open. Every text line is centered in columns 1–18.
+  The frame is never over text.
 - Shard objects use four 8×8 tiles in OBJ VRAM and OBJ palette 0.
 - New data and loaders live in fixed bank 27 (`gameover_art.c`) so they
   do not land in a bank already under the 256-byte emergency floor.
@@ -76,8 +76,9 @@ for the results layout (or accept a skip) before reading glyphs, and to
 check an authored attribute plane instead of requiring every attribute
 byte to be zero:
 
-- `GAME OVER` remains at row 3, column 6, in bank-0 font tiles, title palette.
-- The Normal hint `SELECT EASY AT HERO` remains at row 13, column 1, gold palette.
+- `GAME OVER` is centered on row 2, in bank-0 font tiles, title palette, with row 3 blank.
+- The Normal hint is the 13-glyph `TRY EASY MODE`, centered on row 13, gold palette, and is omitted on Easy.
+- Every results line stays in columns 1–18.
 - Music track 20 still starts during `gameover_enter` (within 120 frames).
 - Motif cells in the well use VRAM bank 1.
 - No stale dungeon attributes remain.
