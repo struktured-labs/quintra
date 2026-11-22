@@ -13,7 +13,7 @@
 #define HY ((u8)player.y)
 
 extern u8 cd_dirty;
-static u8 hd_on;
+u8 cd_hdon;
 
 static u8 hero_box(u8 x0, u8 y0, u8 w, u8 h) {
     return ((u8)(HX + 13) >= x0 && (u8)(HX + 2) < (u8)(x0 + w)
@@ -25,8 +25,8 @@ static u8 hero_box(u8 x0, u8 y0, u8 w, u8 h) {
 static void heart_door(u8 bit, u8 lx) {
     if (cd_hdoor & bit) return;
     if (!hero_box((u8)(PX(lx) - 1), PY(CD_HD_Y), 10, 16)) return;
-    if (hd_on) return;
-    hd_on = 1;
+    if (cd_hdon) return;
+    cd_hdon = 1;
     if (cd_held & 2) {
         cd_held &= (u8)~2;
         cd_hdoor |= bit;
@@ -50,12 +50,13 @@ void cd_vault_doors(void) BANKED {
     if (!cd_lockup && cd_hkey && hero_box(PX(CD_LOCK_X), PY(CD_LOCK_Y), 16, 16)) {
         cd_hkey = 0;
         cd_held |= 2;
+        cd_hdon = 0;
         cd_dirty = 1;
         sfx_play(SFX_COIN);
     }
     on = (hero_box((u8)(PX(CD_HDA_X) - 1), PY(CD_HD_Y), 10, 16)
         || hero_box((u8)(PX(CD_HDB_X) - 1), PY(CD_HD_Y), 10, 16)) ? 1 : 0;
-    if (!on) hd_on = 0;
+    if (!on) cd_hdon = 0;
     heart_door(1, CD_HDA_X);
     heart_door(2, CD_HDB_X);
 }

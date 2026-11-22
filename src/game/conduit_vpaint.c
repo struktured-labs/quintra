@@ -23,15 +23,15 @@ static void wset(u8 x, u8 y, u8 t) {
     } else room_world_bottom[(u8)(y - ROOM_H)][x] = t;
 }
 
-u8 cd_cd_vt[4], cd_cd_va[4];
+u8 cd_vt[4], cd_va[4];
 
-// Write a w x h block (w*h <= 4) from vt/va to the world and, when live, VRAM.
+// Write a w x h block (w*h <= 4) from vt/va to the world and, when live, VRAM
+// (set_bkg_tiles is STAT-safe; no VBL wait, so a restore never stalls frames).
 void cd_vblk(u8 lx, u8 ly, u8 w, u8 h) BANKED {
     u8 i = 0, x, y;
     for (y = 0; y < h; ++y)
         for (x = 0; x < w; ++x, ++i) wset(WX(lx + x), WY(ly + y), cd_vt[i]);
     if (!cd_live) return;
-    wait_vbl_done();
     VBK_REG = 0;
     set_bkg_tiles(ROOM_BG_MAP_X(WX(lx)), ROOM_BG_MAP_Y(WY(ly)), w, h, cd_vt);
     VBK_REG = 1;

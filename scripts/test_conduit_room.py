@@ -446,6 +446,9 @@ def assert_restored(r, resets):
     assert r.m(FREEZE) == 0
 
 
+DBG_K = int(os.environ.get('CD_DBG_K', '-1'))
+
+
 def fuzz(r, snap):
     """Turret churn over FUZZ RNG seeds with the hero loitering in the door."""
     rnd = random.Random(1234)
@@ -484,6 +487,9 @@ def fuzz(r, snap):
             # pyboy samples at frame ends, which can land mid-update: a
             # mismatch must persist to count.
             odd = 0 if side_tiles_ok(r) else odd + 1
+            if DBG_K == k and 60 <= f <= 125:
+                g = world_tiles(r.pb)
+                print("dbg", f, r.c("side"), r.c("pend"), r.c("lock"), r.c("flips"), g[Y0 + 3][X0 + 6], g[Y0 + 4][X0 + 6], r.pos(), r.c("kst"), r.c("ra"), r.c("rb"))
             if odd >= 2:
                 tiles_bad += 1
                 if tiles_bad == 1:

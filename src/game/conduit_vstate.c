@@ -11,7 +11,7 @@
 
 #define PX CD_PX
 #define PY CD_PY
-extern u8 cd_von;
+extern u8 cd_von, cd_hdon;
 
 static void fixed_parts(void) {
     u8 x;
@@ -51,6 +51,7 @@ void cd_vault_restore(void) BANKED {
     cd_hkey = 1;
     cd_hdoor = 0;
     cd_von = 0xFF;
+    cd_hdon = 1;
     paint_all();
 }
 
