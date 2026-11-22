@@ -91,6 +91,11 @@ async function loadPlayer({ pads, search = "", store = makeStorage(), clock = { 
       querySelector: s => elements.get(s),
       querySelectorAll: s => (s === "[data-display-mode]" ? displayButtons : []),
       addEventListener(type, cb) { docListeners.set(type, [...(docListeners.get(type) || []), cb]); },
+      documentElement: {
+        getAttribute(name) {
+          return name === "data-quintra-build" ? "" : null;
+        }
+      },
       fullscreenElement: null, visibilityState: "visible"
     },
     window: win

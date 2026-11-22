@@ -904,7 +904,9 @@
       maxNumberOfAutoSaveStates: 2,
       onReady: () => setStatus("Cartridge ready")
     }, canvas);
-    const build = document.documentElement.getAttribute("data-quintra-build") || "";
+    const root = document.documentElement;
+    const build = (root && typeof root.getAttribute === "function"
+      && root.getAttribute("data-quintra-build")) || "";
     const romUrl = build ? ("quintra.gbc?v=" + encodeURIComponent(build)) : "quintra.gbc";
     await api.loadROM(romUrl, { fileName: "quintra.gbc" });
     ready = true;
