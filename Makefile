@@ -315,6 +315,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_title_cold_obj_palettes.py
 	$(PYBOY_RUN) scripts/test_corner_slide.py
 	$(PYBOY_RUN) scripts/test_waygear_layout.py
+	$(PYBOY_RUN) scripts/test_boulder_refuse.py
 	$(PYBOY_RUN) scripts/test_water_ride.py
 	$(PYBOY_RUN) scripts/test_auto_waygear.py
 	$(PYBOY_RUN) scripts/test_meta_saturation.py
