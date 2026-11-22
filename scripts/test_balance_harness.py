@@ -5,6 +5,9 @@
 * The Lua per-stage CSV header matches the number of fields it writes.
 * The report generator computes the stage-3 boss and status-death gates
   correctly on a synthetic sweep, and --check fails when they are breached.
+* The room report computes status-death lift against fight time and the
+  plain-hit control, ignores a proc on the killing blow, and gates on lift.
+* The room pilot never walks out through a door.
 """
 from __future__ import annotations
 
@@ -112,8 +115,84 @@ def test_report_gates():
         assert any(s["stage"] == 3 for s in m["spikes"])
 
 
+def synthetic_rooms(path: Path, killing_blow_proc: bool):
+    """Ten stage-3 average fights; five die 2 s after a Burn lands."""
+    from balance_rooms import EVENT_FIELDS, FIGHT_FIELDS
+    rows, events = [], []
+    for seed in range(10):
+        died = seed < 5
+        frames = 6000
+        base = dict(skill="average", seed=seed, hero="corvin", stage=3, difficulty="normal",
+                    room_id=40, fixture=f"room-s03-corvin-normal-{seed:02d}.pyboy")
+        rows.append(dict(base, **{"class": 2}, enemy_kinds="14 25", cinder=1,
+                         outcome="died" if died else "cleared", frames=frames, hits=3,
+                         dmg_taken=14 if died else 4, dot_dmg=0, hp_start=14, hp_end=0 if died else 10,
+                         hp_min=0 if died else 10, hp_max=14, lands=1, harmful=1, unreachable=0,
+                         exposed5=300, exposed10=600, death_kind="burn" if died else "",
+                         death_age=120 if died else -1, death_chain=""))
+        blank = {k: "" for k in EVENT_FIELDS}
+
+        def ev(frame, event, **kw):
+            events.append(dict(blank, **base, frame=frame, event=event, hp=kw.pop("hp", 8),
+                               hp_max=14, **kw))
+        ev(1000, "hit", carrier="", procced=0)
+        land = frames - 120 if died else 1000
+        ev(land - 1, "hit", carrier="burn", procced=1)
+        ev(land, "status", kind="burn", hp=6, crowd=1, hazard_near=0)
+        if died:
+            ev(frames, "hit", carrier="", procced=0, hp=0)
+            if killing_blow_proc and seed == 0:
+                ev(frames, "status", kind="stop", hp=0, crowd=1, hazard_near=0)
+            ev(frames, "death", kind="burn")
+    for p_, fields, data in ((path, FIGHT_FIELDS, rows),
+                             (path.with_suffix(".events.csv"), EVENT_FIELDS, events)):
+        with p_.open("w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=fields)
+            w.writeheader()
+            w.writerows(data)
+
+
+def test_room_report():
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        csv_path = tmp / "rooms-normal.csv"
+        synthetic_rooms(csv_path, killing_blow_proc=True)
+        th = {"rooms": {"tier": "average", "min_deaths": 4, "lift10_max_normal": 100.0}}
+        (tmp / "th.json").write_text(json.dumps(th))
+        cmd = [sys.executable, str(ROOT / "scripts/balance_rooms_report.py"), str(csv_path),
+               "--out", str(tmp / "rep"), "--check", str(tmp / "th.json")]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        assert res.returncode == 0, res.stdout + res.stderr
+        m = json.loads((tmp / "rep/rooms-metrics.json").read_text())["normal"]
+        l10 = m["stages_1_3_tier"]["average"]["lift10"]
+        # 5/5 deaths sit 2 s after a Burn (the Stop on the killing blow is
+        # ignored). 10 s windows: five full (597 frames) plus five cut to
+        # 120 frames by the death, over 60000 fight frames.
+        exposure = (5 * 597 + 5 * 120) / 60000
+        assert l10["near"] == 5 and l10["deaths"] == 5, l10
+        assert abs(l10["exposure"] - exposure) < 1e-9, l10
+        assert abs(l10["lift"] - 1 / exposure) < 1e-6, l10
+        burn = m["all"]["status"]["burn"]
+        assert burn["proc"] == 1.0 and burn["lands"] == 10 and burn["hp_med"] == 3.0, burn
+        assert m["cinder"]["outcome"]["fights"] == 10
+        th["rooms"]["lift10_max_normal"] = 10.0
+        (tmp / "th.json").write_text(json.dumps(th))
+        assert subprocess.run(cmd, capture_output=True, text=True).returncode == 1
+
+
+def test_pilot_keeps_inside():
+    from balance_rooms import keep_inside
+    obs = dict(x=4, y=60, world_width=248, world_height=248)
+    assert keep_inside(obs, 0x08 | 0x10) == 0x10        # no LEFT out the west door
+    assert keep_inside(dict(obs, x=230), 0x02) == 0       # no RIGHT out the east door
+    assert keep_inside(dict(obs, x=120, y=230), 0x04 | 0x02) == 0x02
+    assert keep_inside(dict(obs, x=120, y=120), 0x0F) == 0x0F
+
+
 if __name__ == "__main__":
     test_profiles_match()
     test_stage_header_matches_row()
     test_report_gates()
+    test_room_report()
+    test_pilot_keeps_inside()
     print("[balance-harness] contracts OK")

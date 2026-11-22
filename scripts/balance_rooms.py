@@ -202,6 +202,9 @@ def reach_map(obs: dict, blocked: frozenset | set = frozenset()) -> dict[tuple[i
     return seen
 
 
+_GOAL_CACHE: dict = {}
+
+
 def nav_action(obs: dict, cells: dict, enemy: dict, lane: int = 48) -> int:
     """Walk the flood fill to the nearest pose with a firing lane on ``enemy``.
 
@@ -213,8 +216,15 @@ def nav_action(obs: dict, cells: dict, enemy: dict, lane: int = 48) -> int:
     fire = hostile_firing_action(obs, enemy, lane)
     if fire:
         return fire | 0x10
-    goal = next((c for c in cells if hostile_firing_action(
-        obs, enemy, lane, player_x=c[0] * 8 - 2, player_y=c[1] * 8 - 8)), None)
+    # Lane goals depend only on the map, the fill and the target's pose:
+    # cache them so a long walk does not re-scan every cell each frame.
+    ck = (id(cells), len(cells), next(iter(cells)), enemy["x"], enemy["y"])
+    if ck not in _GOAL_CACHE:
+        if len(_GOAL_CACHE) > 256:
+            _GOAL_CACHE.clear()
+        _GOAL_CACHE[ck] = next((c for c in cells if hostile_firing_action(
+            obs, enemy, lane, player_x=c[0] * 8 - 2, player_y=c[1] * 8 - 8)), None)
+    goal = _GOAL_CACHE[ck]
     if goal is None:
         ex, ey = (enemy["x"] + 4) // 8, (enemy["y"] + 4) // 8
         goal = min(cells, key=lambda c: abs(c[0] - ex) + abs(c[1] - ey))

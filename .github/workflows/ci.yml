@@ -132,6 +132,19 @@ jobs:
             --trials 300 --check scripts/balance_thresholds.json
           cat tmp/balance-ci/report/report.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Room status smoke (stage 3 rooms incl. Cinder, status-death lift; average tier)
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$PWD/scripts/quintra_sitecustomize" QUINTRA_STATE_WAIVE_CHECKS=marked_gate
+          R="uv run --quiet --with pyboy==2.7.0 --with pillow python scripts/balance_rooms.py"
+          $R fixtures --stages 3 --difficulties normal --rooms 2 --extra "" --cinder 2 \
+            --jobs "$(nproc)" --out tmp/balance-ci/rooms
+          $R fight --fixtures tmp/balance-ci/rooms --stages 3 --skills average --seeds 3 \
+            --jobs "$(nproc)" --out tmp/balance-ci/rooms-normal.csv
+          python3 scripts/balance_rooms_report.py tmp/balance-ci/rooms-normal.csv \
+            --out tmp/balance-ci/rooms-report --check scripts/balance_thresholds.json
+          cat tmp/balance-ci/rooms-report/rooms-report.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: PyBoy suspend power-cycle
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
 
