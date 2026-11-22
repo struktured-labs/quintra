@@ -14,6 +14,11 @@
 #include "render/tiles.h"
 #include "content.h"
 
+/* 2 MP: trickle regen (25/min, 37.5 Picsean) plus a mid-run pool
+ * used to outpace a 1 MP bomb even at the 72-frame throw cap.
+ * Keep the Pack tip in inventory.c / inventory_aim.c in sync. */
+#define BOMB_MP_COST 2u
+
 static const i8 mstar_sx[16] = {
     0, 9, 17, 22, 24, 22, 17, 9,
     0, -9, -17, -22, -24, -22, -17, -9
@@ -43,7 +48,7 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     u8 i,bomb=player.active_item==ITEM_ID_BOMBS;
     u8 tier;
     entity_t *e;
-    if (player.active_charge || (bomb && !player.mp && !POWERUP_FREE_MP())) return 0;
+    if (player.active_charge || (bomb && !POWERUP_FREE_MP() && player.mp < BOMB_MP_COST)) return 0;
     for (i=0;i<INVENTORY_SLOTS;++i)
         if (player.inventory[i]==player.active_item) break;
     if (i==INVENTORY_SLOTS) return 0;
@@ -67,7 +72,7 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
         e->damage=player.atk+8;
         e->state_timer=48;
         if (moving) { e->vx=dir8_dx[dir&7]*2; e->vy=dir8_dy[dir&7]*2; }
-        if (!POWERUP_FREE_MP()) { player.mp--; hud_redraw_mp(); }
+        if (!POWERUP_FREE_MP()) { player.mp = (u8)(player.mp - BOMB_MP_COST); hud_redraw_mp(); }
     } else {
         tier=will_b_tier();
         e->ai_data[7]=tier;
