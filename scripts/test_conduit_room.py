@@ -475,11 +475,10 @@ def kite_wait(r, snap):
     assert wait(r, lambda: r.c("kx") < PX(7), 120) and r.c("kst") == K_FLY, \
         f"Kite stuck kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} live {r.c('live')}"
     ref, n = r.c("refusals"), r.c("rewrites")
-    r.set_pos(PX(3), fy(9))
+    r.set_pos(SWX[1], fy(9))                 # straight onto switch A (clear of the Jagger)
     r.tick(2)
-    r.wx(SWX[1])
     assert wait(r, lambda: r.c("refusals") == ref + 1, 10) and r.c("rewrites") == n, \
-        "switch A raised a cairn onto the Kite"
+        f"switch A raised a cairn onto the Kite (ref {r.c('refusals') - ref} rw {r.c('rewrites') - n} pos {r.pos()} kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra/rb {r.c('ra')}{r.c('rb')})"
     print("  Kite waits at a cairn; switch A refuses to raise one onto it")
 
 
