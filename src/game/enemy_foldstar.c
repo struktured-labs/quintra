@@ -4,6 +4,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_def.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "content.h"
@@ -19,6 +20,10 @@ void fold_star_update(entity_t *e, const enemy_def_t *def) BANKED {
     // ai_data[3] rotates the diagonal sequence.
     static const u8 beat[3] = { 7, 13, 9 };
     if (e->ai_data[1] == 0) {
+        // enemy_update passes no definition: copying all sixteen bytes every
+        // frame only fed these two timers, so load it on the flip alone.
+        enemy_def_t def_buf;
+        if (!def) { enemy_load_def(ENEMY_FOLD_STAR, &def_buf); def = &def_buf; }
         if (e->state == 0) {
             e->state = 1;
             e->ai_data[1] = def->ai_p0;

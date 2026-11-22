@@ -253,6 +253,14 @@ static u8 enemy_is_big16(const entity_t *e) {
         || (u8)(eid - ENEMY_VAULT_HAND) < 2);
 }
 
+#define ENTITY_DRAW_SX(e) \
+    ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
+#define ENTITY_DRAW_SY(e) \
+    ((u8)(FIX8_TO_INT((e)->y) - room_camera_y + 16))
+#include "game/entity_draw_fast.h"
+#undef ENTITY_DRAW_SX
+#undef ENTITY_DRAW_SY
+
 // Per-frame OAM allocator. Player owns 0-3; entities are laid out from a
 // cursor starting at 4 each frame (giant=16 tiles, 16x16=4, else 1), so no
 // entity is pinned to a fixed slot — which also fixes the old latent overlap
