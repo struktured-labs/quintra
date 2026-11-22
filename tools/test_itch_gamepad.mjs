@@ -112,6 +112,11 @@ const context = {
     querySelectorAll: selector => selector === "[data-touch-input]" ? touchButtons : [],
     addEventListener(type, callback) { documentListeners.set(type, callback); },
     fullscreenElement: null,
+    documentElement: {
+      getAttribute(name) {
+        return name === "data-quintra-build" ? "" : null;
+      }
+    },
     get visibilityState() { return visibilityState; }
   },
   window: {

@@ -100,6 +100,11 @@ async function loadPlayer({ pads, search = "", store = makeStorage() }) {
       querySelectorAll: () => [],
       addEventListener() {},
       fullscreenElement: null,
+      documentElement: {
+        getAttribute(name) {
+          return name === "data-quintra-build" ? "" : null;
+        }
+      },
       visibilityState: "visible"
     },
     window: { WasmBoy: { WasmBoy: api }, addEventListener() {} }

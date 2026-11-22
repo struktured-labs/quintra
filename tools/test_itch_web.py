@@ -66,8 +66,15 @@ if sha_record != rom_hash:
     fail("quintra.sha256 does not match packaged ROM")
 
 index = (root / "index.html").read_text()
-if "__QUINTRA_WEB_VERSION__" in index:
+if "__QUINTRA_WEB_VERSION__" in index or "__QUINTRA_GIT_COMMIT__" in index:
     fail("web version placeholder was not replaced")
+if build["version"] not in index:
+    fail("packaged page does not show the web version")
+short_commit = build["gitCommit"][:8]
+if short_commit not in index:
+    fail("packaged page does not show the git commit")
+if f'data-quintra-build="{build["version"]}"' not in index:
+    fail("page is missing the build attribute used to cache-bust the ROM")
 if f'emulator/quintra-player.js?v={build["version"]}' not in index:
     fail("player script URL is not cache-busted with the build version")
 if f'emulator/wasmboy.js?v={build["version"]}' not in index:
@@ -98,6 +105,8 @@ if "cartridgeRamStorageSize: 32 * 1024" not in player:
     fail("browser player does not pin the 32 KiB cartridge SRAM size")
 if "audioTargetLatencyInSeconds: 0.042" not in player:
     fail("browser player does not pin the zero-underrun 42 ms audio target")
+if "quintra.gbc?v=" not in player:
+    fail("browser player does not cache-bust the cartridge ROM URL")
 
 if "width=\"160\" height=\"144\"" not in index:
     fail("canvas does not declare native 160x144 dimensions")
