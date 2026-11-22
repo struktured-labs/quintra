@@ -1,4 +1,4 @@
-#pragma bank 23
+#pragma bank 255
 // Generated from GPT Image 2 (gpt-image-2.6-sunburst), quantized to
 // 4-colour GBC sprites. Raw renders are not committed.
 #include <gb/gb.h>

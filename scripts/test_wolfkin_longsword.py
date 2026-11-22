@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 """ROM contracts for Wolfkin's wielded longsword, stab, and sword beam."""
+import os
+from pathlib import Path
+
+from pyboy import PyBoy
+
 from test_will_max import (
     PLAYER, ENTITIES, TILEMAP, ENTITY_SIZE, boot, clear_arena, put16, addr,
 )
@@ -218,12 +223,173 @@ def test_formation_grants_projectiles():
         pb.stop(save=False)
 
 
+SLASH_REACH = 22
+STAB_REACH = 32
+# Allow 2 px of placement rounding; the old thrown Fang Claw peaked at ~14.
+REACH_SLACK = 2
+
+
+def fang_segs(pb):
+    return [e for e in shots(pb) if pb.memory[e + ent_off("ai6")] == AUX_FANG]
+
+
+def peak_sprite_reach_east(pb, px):
+    """Farthest visible sword pixel past the east body edge (player.x+16)."""
+    edge = px + 16
+    best = -999
+    for e in fang_segs(pb):
+        x = signed16(get16(pb, e + ent_off("x")))
+        w = pb.memory[e + ent_off("hitbox")] >> 4
+        vis = max(8, w)
+        dist = (x + vis) - edge
+        if dist > best:
+            best = dist
+    return best
+
+
+def face_east(pb):
+    pb.memory[PLAYER + 13] = 1  # FACE_E
+    try:
+        pb.memory[addr("_player_aim_dir")] = 2  # dir8 east
+    except RuntimeError:
+        pass
+
+
+def test_sword_sprite_reach():
+    """The blade sprite itself must reach the spec distances, not just the hitbox."""
+    pb = boot(0)
+    try:
+        clear_arena(pb)
+        drop_hp(pb, full=False)
+        px, _ = player_xy(pb)
+        face_east(pb)
+        fire_a(pb, direction=None, ticks=1)
+        slash_peak = peak_sprite_reach_east(pb, px)
+        for _ in range(8):
+            pb.tick(1)
+            slash_peak = max(slash_peak, peak_sprite_reach_east(pb, px))
+        assert slash_peak >= SLASH_REACH - REACH_SLACK, (
+            f"slash sprite only reached {slash_peak}px past the body "
+            f"(want {SLASH_REACH})"
+        )
+        clear_arena(pb)
+        drop_hp(pb, full=False)
+        px, _ = player_xy(pb)
+        face_east(pb)
+        fire_a(pb, direction="right", ticks=1)
+        # Use the current body edge each frame: the blade is parented, so a
+        # one-frame walk during the hold must not shrink measured reach.
+        stab_peak = -999
+        for _ in range(10):
+            cx, _ = player_xy(pb)
+            stab_peak = max(stab_peak, peak_sprite_reach_east(pb, cx))
+            pb.tick(1)
+        assert stab_peak >= STAB_REACH - REACH_SLACK, (
+            f"stab sprite only reached {stab_peak}px past the body "
+            f"(want {STAB_REACH})"
+        )
+        # And it must clearly beat the old 14 px thrown sprite.
+        assert stab_peak > slash_peak, (
+            f"stab reach {stab_peak} should exceed slash {slash_peak}"
+        )
+    finally:
+        pb.stop(save=False)
+
+
+def test_attract_sword_sprite_reach():
+    """The Wolfkin attract demo must show the same long blade, not Fang Claw."""
+    os.environ["QUINTRA_KEEP_INTRO"] = "1"
+    # Local imports: test_will_max boots with the intro muted.
+    from test_will_max import ROM, NOI
+    import re
+
+    def sym(name):
+        return int(re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", NOI).group(1), 16)
+
+    scr, cnt, demo, mute = map(sym, (
+        "_loop_current_screen", "_loop_frame_counter",
+        "_attract_demo", "_attract_mute",
+    ))
+    pb = PyBoy(str(ROM), window="null", cgb=True, sound_emulated=False)
+    m = pb.memory
+
+    def loop_cnt():
+        return m[cnt] | (m[cnt + 1] << 8)
+
+    try:
+        for _ in range(400):
+            pb.tick()
+            if m[scr] == 4 and loop_cnt() > 4:
+                break
+        assert m[scr] == 4, f"intro did not start (screen {m[scr]})"
+        pb.button_press("start")
+        pb.tick(4)
+        pb.button_release("start")
+        pb.tick(2)
+        for _ in range(40):
+            pb.tick()
+            if m[scr] == 1:
+                break
+        assert m[scr] == 1 and m[mute] == 0, (
+            f"skip did not reach a live title (screen {m[scr]} mute {m[mute]})"
+        )
+        started = False
+        for _ in range(720 + 200):
+            pb.tick()
+            if m[demo] == 1:
+                started = True
+                break
+        assert started, "Wolfkin attract demo did not start"
+        for _ in range(400):
+            pb.tick()
+            if m[scr] == 5:
+                break
+        peak = -999
+        for _ in range(700):
+            if not m[demo] or m[scr] != 5:
+                if not m[demo]:
+                    break
+                pb.tick()
+                continue
+            if fang_segs(pb):
+                cx, _ = player_xy(pb)
+                # Attract facing varies; measure the max axis from the body box.
+                px, py = cx, signed16(get16(pb, PLAYER + 11))
+                for e in fang_segs(pb):
+                    x = signed16(get16(pb, e + ent_off("x")))
+                    y = signed16(get16(pb, e + ent_off("y")))
+                    w = max(8, pb.memory[e + ent_off("hitbox")] >> 4)
+                    h = max(8, pb.memory[e + ent_off("hitbox")] & 0x0F)
+                    # Distance of the far sprite edge from the nearest body edge
+                    # in the direction the segment sits.
+                    if x + w / 2 >= px + 8:
+                        dist = (x + w) - (px + 16)
+                    else:
+                        dist = px - x
+                    if y + h / 2 >= py + 8:
+                        dist_y = (y + h) - (py + 16)
+                    else:
+                        dist_y = py - y
+                    peak = max(peak, dist, dist_y)
+            pb.tick()
+        # Slash is 22 px; a demo that only slashes still has to beat Fang Claw.
+        assert peak >= SLASH_REACH - REACH_SLACK, (
+            f"attract Wolfkin sword sprite only reached {peak}px past the body "
+            f"(want at least slash {SLASH_REACH})"
+        )
+    finally:
+        pb.stop(save=False)
+        os.environ.pop("QUINTRA_KEEP_INTRO", None)
+
+
 def main():
     test_slash_diagonal_and_parented()
     test_stab_reach_and_damage()
     test_beam_only_at_full_hearts_and_no_double_hit()
     test_formation_grants_projectiles()
-    print("[wolfkin-longsword] PASS slash diag, stab 9/reach, beam latch, formation beams")
+    test_sword_sprite_reach()
+    test_attract_sword_sprite_reach()
+    print("[wolfkin-longsword] PASS slash diag, stab 9/reach, beam latch, formation beams, sprite reach, attract reach")
 
 
 if __name__ == "__main__":
