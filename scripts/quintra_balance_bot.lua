@@ -404,6 +404,9 @@ end
 
 function tick(keys)
     keys = keys or 0
+    -- Optional human-skill filter (scripts/quintra_human_model.lua). Absent
+    -- unless QUINTRA_BOT_SKILL/QUINTRA_STAGELOG_OUT loaded the module.
+    if QH_FILTER then keys = QH_FILTER(keys) end
     if LS ~= 0 and emu:read8(LS) == 10 then
         dialog_input_phase = dialog_input_phase + 1
         if dialog_input_phase <= 2 then
@@ -2113,6 +2116,25 @@ function spore_shot_lane(px, py, ex, ey, max_range)
     return nil
 end
 
+-- One-pixel firing-lane searches flood the whole reachable field when the
+-- target has no lane (asleep behind a wall, off the live band, inside a
+-- seam). On 248x248 scrolling fields that full flood cost ~1 s of host CPU
+-- per emulated frame and turned 40k-frame trials into host timeouts. Cap
+-- each search and remember a miss for 45 frames per coarse target cell; the
+-- caller's fallback step is used meanwhile, exactly as for any other miss.
+PIXEL_SEARCH_NODE_CAP = 24000
+pixel_search_misses = {}
+function pixel_search_miss_key(kind, room, ex, ey)
+    return kind .. ":" .. room .. ":" .. math.floor(ex / 16) .. ":" .. math.floor(ey / 16)
+end
+function pixel_search_missed(kind, room, ex, ey)
+    local until_frame = pixel_search_misses[pixel_search_miss_key(kind, room, ex, ey)]
+    return until_frame ~= nil and emu:currentFrame() < until_frame
+end
+function pixel_search_mark_miss(kind, room, ex, ey)
+    pixel_search_misses[pixel_search_miss_key(kind, room, ex, ey)] = emu:currentFrame() + 45
+end
+
 function spore_pixel_step(room, px, py, ex, ey, fallback, max_range)
     if TM == 0 or EN == 0 then return fallback, true end
     local stride = QUINTRA_ARENA_W
@@ -2127,6 +2149,7 @@ function spore_pixel_step(room, px, py, ex, ey, fallback, max_range)
             return spore_pixel_route.aims[start], true
         end
     end
+    if pixel_search_missed("spore", room, ex, ey) then return fallback, true end
     local function safely_outside_all_spores(x, y)
         for i = 0, 31 do
             local p = EN + i * 28
@@ -2163,8 +2186,12 @@ function spore_pixel_step(room, px, py, ex, ey, fallback, max_range)
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
             end
         end
+        if tail > PIXEL_SEARCH_NODE_CAP then break end
     end
-    if not found then return fallback, true end
+    if not found then
+        pixel_search_mark_miss("spore", room, ex, ey)
+        return fallback, true
+    end
     local dirs, node = {}, found
     while previous[node] do
         dirs[previous[node]] = step[node]
@@ -2259,6 +2286,7 @@ function fold_star_pixel_step(room, px, py, ex, ey, fallback, max_range)
             return fold_star_pixel_route.aims[start], true
         end
     end
+    if pixel_search_missed("fold", room, ex, ey) then return fallback, false end
     local qx, qy, head, tail = {px}, {py}, 1, 1
     local seen, previous, step = {[start] = true}, {}, {}
     local found, found_aim = nil, nil
@@ -2279,8 +2307,12 @@ function fold_star_pixel_step(room, px, py, ex, ey, fallback, max_range)
                 tail = tail + 1; qx[tail], qy[tail] = nx, ny
             end
         end
+        if tail > PIXEL_SEARCH_NODE_CAP then break end
     end
-    if not found then return fallback, false end
+    if not found then
+        pixel_search_mark_miss("fold", room, ex, ey)
+        return fallback, false
+    end
     local dirs, node = {}, found
     while previous[node] do
         dirs[previous[node]] = step[node]
@@ -3068,6 +3100,57 @@ function quintra_giant_combat_keys(target, dx, dy, aim, held_style, frame, px, p
     return KEY_A + target_step(px, py, target.x, target.y, aim, giant_route_tiles)
 end
 
+-- The power-on lore intro (SCREEN_INTRO) and title attract mode sit between
+-- power-on and the class selector, so one fixed START no longer always lands
+-- on CLASS_SELECT. Press START like a player until the selector is up.
+-- Optional stage slice: QUINTRA_BOT_WARP_STAGE=1..9 enters the title's
+-- "rift spiral" code (UP RIGHT DOWN LEFT RIGHT UP LEFT DOWN B A), picks that
+-- stage in the Rift Index and lets the cartridge apply its own stage-ready
+-- build. Pure controller input; no RAM writes.
+WARP_STAGE = tonumber(os.getenv("QUINTRA_BOT_WARP_STAGE") or "")
+function quintra_boot_to_class_select()
+    if WARP_STAGE and LS ~= 0 then
+        for _ = 1, 30 do
+            if emu:read8(LS) == 1 then break end
+            tap(KEY_START)
+            for _ = 1, 30 do tick(0) end
+        end
+        for _ = 1, 20 do tick(0) end
+        for _, key in ipairs({KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
+                KEY_UP, KEY_LEFT, KEY_DOWN, KEY_B, KEY_A}) do
+            tap(key)
+            for _ = 1, 6 do tick(0) end
+        end
+        for _ = 2, WARP_STAGE do
+            tap(KEY_DOWN)
+            for _ = 1, 6 do tick(0) end
+        end
+        tap(KEY_A)
+        for _ = 1, 40 do tick(0) end
+        if emu:read8(LS) == 2 then return end
+    end
+    tap(KEY_START)
+    for _ = 1, 40 do tick(0) end
+    if LS == 0 then return end
+    for _ = 1, 30 do
+        if emu:read8(LS) == 2 then return end
+        tap(KEY_START)
+        for _ = 1, 30 do tick(0) end
+    end
+end
+
+-- A new run opens on the stage-1 foyer vignette before the first live room.
+-- Wait for a live room with a living hero, skipping a vignette with A.
+function quintra_wait_live_room()
+    if LS == 0 or PL == 0 then return end
+    for wait = 1, 900 do
+        local screen = emu:read8(LS)
+        if screen == 5 and emu:read8(PL + 2) ~= 0 then return end
+        -- A skips a vignette; START would carry into the room as a Map press.
+        if screen == 6 and wait % 60 == 0 then tap(KEY_A) else tick(0) end
+    end
+end
+
 -- Boot, choose a class, start a fresh run.
 -- RUN varies title-idle entropy. Confirm every champion at the same cartridge
 -- loop counter: cursor redraws have class-dependent cost, so fixed host-frame
@@ -3076,8 +3159,7 @@ end
 -- RNG or game state: it is literally extra title-idle time a player could wait.
 if not RESUME_STATE then
     for _ = 1, (120 + RUN * 37 + BOOT_EXTRA) do tick(0) end
-    tap(KEY_START)
-    for _ = 1, 40 do tick(0) end
+    quintra_boot_to_class_select()
     local select_base = FC ~= 0 and read16(FC) or 0
     for _ = 1, CLASS do
         tap(KEY_DOWN)
@@ -3127,6 +3209,7 @@ if not RESUME_STATE then
     else
         for _ = 1, 45 do tick(0) end
     end
+    quintra_wait_live_room()
 else
     if DEBUG then
         debug_log(string.format("BOTRESUME class=%d frame=%d screen=%d room=%d",
@@ -3155,6 +3238,12 @@ if DASH_SELFTEST then
         quintra_giant_body_dash_dir(72, 7, {x=72, y=24}, KEY_UP)))
 end
 
+-- Human-skill model and per-stage balance log; see quintra_human_model.lua.
+if os.getenv("QUINTRA_BOT_SKILL") or os.getenv("QUINTRA_STAGELOG_OUT") then
+    local here = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+    dofile(os.getenv("QUINTRA_HUMAN_MODEL") or (here .. "quintra_human_model.lua"))
+    QH_BEGIN()
+end
 local frames, max_room, last_hp, damage_taken, giant_overlap_damage, min_hp = 0, 0, 0, 0, 0, 255
 local min_giant_hp = 255
 local boss_start_frame, boss_start_beaten = -1, 0
@@ -3237,6 +3326,8 @@ function quintra_companion_kind()
     return 255
 end
 while frames < LIMIT do
+    if QH_OBSERVE then QH_OBSERVE(frames) end
+    if QH_STOP then break end
     local hp = PL ~= 0 and emu:read8(PL + 2) or 0
     local hp_max = PL ~= 0 and emu:read8(PL + 1) or 0
     local mp = PL ~= 0 and emu:read8(PL + 4) or 0
@@ -5716,12 +5807,15 @@ while frames < LIMIT do
         mp, mp_max, target, observed_threat, keys, room_age,
         equipped_weapon, active_charge, observed_shield_timer, iframes)
     last_input_keys = keys
+    QH_IN_MAIN = true
     tick(keys)
+    QH_IN_MAIN = false
     frames = frames + 1
     periodic_state(frames)
 end
 emu:setKeys(0)
 finish_periodic_states()
+if QH_FINISH then QH_FINISH(frames, RS ~= 0 and emu:read8(RS + 10) or 0) end
 
 -- Let a true win execute room_tick -> victory_enter, including the rendered
 -- ending, suspend invalidation, and meta-record write, before sampling it.

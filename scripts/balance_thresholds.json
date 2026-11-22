@@ -1,0 +1,18 @@
+{
+  "_note": "CI gates for scripts/balance_report.py --check (Balance smoke step: stage 3 Colossus, average tier, 5 heroes x 3 seeds). Gates sit just past the 2026-11-22 baseline so regressions fail; targets are for tuning, not gated. See docs/superpowers/specs/2026-11-22-balance-harness.md.",
+  "stage3_tier": "average",
+  "stage3_boss_win_rate_min": 0.0,
+  "stage3_boss_progress_min": 0.04,
+  "status_death_share_max": 0.25,
+  "status_min_deaths": 8,
+  "_baseline_2026_11_22": {
+    "stage3_boss_win_rate": 0.0,
+    "stage3_boss_progress_mean": 0.07,
+    "status_death_share_all_stages": 0.03,
+    "rom_sha256": "68755c1d5b9a971fef787fe1ada797832873126f372a7d3aa08c75ad61a5d664"
+  },
+  "_targets": {
+    "stage3_boss_win_rate_average": 0.5,
+    "status_death_lift_max": 1.5
+  }
+}

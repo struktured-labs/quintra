@@ -145,6 +145,13 @@ end
 tick(240)
 hold(KEY_START, 2)
 tick(25)
+-- The power-on lore intro and title attract can absorb the first START;
+-- keep pressing it like a player until the class selector (screen 2) opens.
+for _ = 1, 30 do
+    if emu:read8(LS) == 2 then break end
+    hold(KEY_START, 2)
+    tick(30)
+end
 for _ = 1, CLASS_ID do
     hold(KEY_DOWN, 2)
     tick(5)
@@ -155,6 +162,13 @@ if EASY then
 end
 hold(KEY_A, 2)
 tick(80)
+-- A new run opens on the stage-1 foyer vignette (screen 6). A skips it;
+-- START would carry into the room as a Map press.
+for _ = 1, 20 do
+    if emu:read8(LS) == SCREEN_ROOM then break end
+    if emu:read8(LS) == 6 then hold(KEY_A, 2) end
+    tick(40)
+end
 if emu:read8(LS) ~= SCREEN_ROOM or emu:read8(PL) ~= CLASS_ID then
     error("could not boot selected champion into the dungeon")
 end
@@ -275,9 +289,9 @@ local function enter_dungeon(target, stage, qualified, normalize_scroll)
     end
     if emu:read8(RS + 1) ~= target or emu:read8(RS + 17) ~= 0 then
         error(string.format(
-            "could not enter stage=%d room=%d (actual room=%d world=%d screen=%d x=%d y=%d)",
+            "could not enter stage=%d room=%d (actual room=%d world=%d screen=%d x=%d y=%d ui=%d)",
             stage + 1, target, emu:read8(RS + 1), emu:read8(RS + 17),
-            emu:read8(RS + 18), emu:read8(PL + 9), emu:read8(PL + 11)))
+            emu:read8(RS + 18), emu:read8(PL + 9), emu:read8(PL + 11), emu:read8(LS)))
     end
     if qualified then qualify_stage(stage) end
     mark_seen(target - STAGE_START[stage + 1])

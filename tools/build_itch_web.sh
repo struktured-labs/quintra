@@ -52,7 +52,19 @@ git_commit=$(git -C "$project_root" rev-parse HEAD)
 short_commit="${git_commit:0:8}"
 
 sed -i 's|href="player.css|href="emulator/quintra-player.css|' "$output_dir/index.html"
+# Opt-in local play telemetry (?telemetry=1) reads a few WRAM fields. Bake
+# their linker addresses into the page so a rebuilt ROM never reads stale ones.
+noi="${rom%.gbc}.noi"
+telemetry_symbols=""
+if [[ -f "$noi" ]]; then
+  telemetry_symbols=$(awk '
+    $1 == "DEF" && ($2 == "_run_state" || $2 == "_player" || $2 == "_entities" \
+      || $2 == "_player_status_kind" || $2 == "_player_status_ticks" \
+      || $2 == "_loop_current_screen") { printf "%s%s:%s", sep, substr($2, 2), $3; sep = "," }
+  ' "$noi")
+fi
 sed -i "s|__QUINTRA_WEB_VERSION__|$version|g; s|__QUINTRA_GIT_COMMIT__|$short_commit|g" "$output_dir/index.html"
+sed -i "s|__QUINTRA_TELEMETRY_SYMBOLS__|$telemetry_symbols|g" "$output_dir/index.html"
 
 printf '%s  quintra.gbc\n' "$actual_rom_sha" > "$output_dir/quintra.sha256"
 source_dirty=false
