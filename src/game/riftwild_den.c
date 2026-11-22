@@ -650,4 +650,13 @@ void procgen_generate_current_room(void) BANKED {
     // banked call. The function no-ops unless this is the shrine cell.
     powerup_place_room_shrine();
     new_monsters_post_spawn();
+    // Despawn after the body so tile/loot RNG stays identical; then count
+    // the visit so a bounce-back stays empty. A New Monsters foyer warp
+    // sets room_respawn_bypass so this room can refill without being
+    // treated as a new visit.
+    if (!room_respawn_bypass) {
+        if (run_state_room_on_cooldown())
+            run_state_despawn_cooled_enemies();
+        run_state_note_room_visit();
+    }
 }
