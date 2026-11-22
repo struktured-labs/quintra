@@ -46,7 +46,7 @@ static const char *effect(u8 ware, u8 item_index) {
         case WARE_BOOMERANG: return "B: STUN + FETCH";
         case WARE_HOOKSHOT: return "B: HOOK + PULL";
         case WARE_MORNINGSTAR: return "B: CHAIN SWING";
-        case WARE_BOMBS: return "B: BOMB / 1 MP";
+        case WARE_BOMBS: return "B: BOMB / 2 MP";
         case WARE_ANTIDOTE: return "PSN BURN BLEED";
         default: return "HEARTS TO MP";
     }
