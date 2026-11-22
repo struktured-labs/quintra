@@ -1,0 +1,7 @@
+Authentic Game Boy Color pixel art, like a 1991 handheld death-screen panel: very low resolution with big chunky square pixels (the whole image is 160x144 game pixels scaled up), flat colours, at most 4 colours per 8x8 area, strong dark outlines, simple dithering, no anti-aliasing, no gradients, no text, no letters, no numbers, no words, no border, no UI, no frame, no logo, no watermark.
+
+A large looming Quintra death motif, completely original. Do not draw a skull. Do not draw a human skull, a pirate flag, a jolly roger, or crossed bones. Do not copy Ultima or Runes of Virtue.
+
+The image is a tall hollow stone ritual mask, a nameless visor, carved from cracked dungeon runes, facing the viewer and filling the middle of the screen. The eye hollows are two dark vertical rift-slashes glowing with dying orange ember. A single vertical crack runs down the center of the mask like a sealed wound, not a mouth and not a jaw. The stone is cool grey-brown with ember-lit cracks. Broken rune chips crumble from the rim and drift down as faint ash and sparks. Behind the mask, two shattered ley-line staves of carved geometric stone cross loosely; they are clearly stone rods with rune cuts, not bones.
+
+Dark muted blue-grey void around the motif. Leave the top 24 game-pixels and the bottom 40 game-pixels almost empty (solid dark) so later text can sit there. Centered, solemn, tasteful, no blood, no gore, no cartoon grin, no hands, no body, no character.
