@@ -593,7 +593,11 @@ def main() -> int:
         we.writeheader()
         futs = [pool.submit(fight, t) for t in tasks]
         for n, fut in enumerate(as_completed(futs), 1):
-            row, events = fut.result()
+            try:
+                row, events = fut.result()
+            except Exception as exc:  # one broken fight must not sink the sweep
+                print(f"[rooms] fight failed: {exc}", flush=True)
+                continue
             wo.writerow({k: row[k] for k in FIGHT_FIELDS})
             we.writerows({k: e[k] for k in EVENT_FIELDS} for e in events)
             fo.flush()
