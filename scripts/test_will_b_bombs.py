@@ -23,8 +23,11 @@ AUX_BOMB = 0xF7
 AUX_SPLASH = 0xF2
 ENTITY_SIZE = 28
 BGT_CRYSTAL = 22
-SPR_BOMB_FRAG = 246
-SPR_BOMB_WAVE = 245
+SPR_BOMB_WAVE = 188
+SPR_BOMB_WAVE_H = 189
+SPR_BOMB_WAVE_CORNER = 190
+SPR_BOMB_FRAG = 191
+SPR_BOMB_WAVES = (SPR_BOMB_WAVE, SPR_BOMB_WAVE_H, SPR_BOMB_WAVE_CORNER)
 # (level, charge, waygear). waygear=7 raises WILL_LEVEL_CAP to 4 so
 # will_level=1 is mid-tier, not already max.
 WILL = {
@@ -56,13 +59,16 @@ def scene():
 
 def live(pb, aux=None, tile=None):
     out = []
+    tiles = None
+    if tile is not None:
+        tiles = tile if isinstance(tile, (tuple, list, set)) else (tile,)
     for i in range(32):
         base = E + i * ENTITY_SIZE
         if pb.memory[base] == 0 or not (pb.memory[base + 1] & 1):
             continue
         if aux is not None and pb.memory[base + 23] != aux:
             continue
-        if tile is not None and pb.memory[base + 12] != tile:
+        if tiles is not None and pb.memory[base + 12] not in tiles:
             continue
         out.append(base)
     return out
@@ -110,7 +116,7 @@ def throw_and_wait_blast(pb, level, charge, waygear=0, frames=80):
             saw_bomb = True
         peak_splash = max(peak_splash, len(live(pb, aux=AUX_SPLASH)))
         peak_frag = max(peak_frag, len(live(pb, tile=SPR_BOMB_FRAG)))
-        peak_wave = max(peak_wave, len(live(pb, tile=SPR_BOMB_WAVE)))
+        peak_wave = max(peak_wave, len(live(pb, tile=SPR_BOMB_WAVES)))
         pb.tick(1)
     return {
         "saw_bomb": saw_bomb,
@@ -162,6 +168,36 @@ class TestWillBBombs(unittest.TestCase):
         self.assertGreaterEqual(frags[2], 3)
         self.assertGreater(frags[3], frags[2])
 
+    def test_wave_and_frag_oam_keep_s_bank(self):
+        """S_BANK (OAM bit 3) must reach shadow OAM so bank-1 tiles draw."""
+        pb = scene()
+        try:
+            set_will(pb, 1, 0, 7)
+            pb.memory[P + 4] = 16
+            fire_b(pb)
+            shadow = 0xC000
+            found = 0
+            banked = 0
+            for _ in range(90):
+                for i in range(40):
+                    y = pb.memory[shadow + i * 4]
+                    tile = pb.memory[shadow + i * 4 + 2]
+                    prop = pb.memory[shadow + i * 4 + 3]
+                    if not (0 < y < 168):
+                        continue
+                    if tile in SPR_BOMB_WAVES or tile == SPR_BOMB_FRAG:
+                        found += 1
+                        if prop & 0x08:
+                            banked += 1
+                if found:
+                    break
+                pb.tick(1)
+            print(f"[bomb oam] visible={found} s_bank={banked}", flush=True)
+            self.assertGreaterEqual(found, 8, "wave/frag sprites never reached shadow OAM")
+            self.assertEqual(banked, found, "S_BANK missing on some wave/frag OAM entries")
+        finally:
+            pb.stop()
+
     def test_max_tier_spends_will_and_second_throw_is_not_max(self):
         pb = scene()
         try:
@@ -180,7 +216,7 @@ class TestWillBBombs(unittest.TestCase):
             second_waves = 0
             for _ in range(80):
                 second_frags = max(second_frags, len(live(pb, tile=SPR_BOMB_FRAG)))
-                second_waves = max(second_waves, len(live(pb, tile=SPR_BOMB_WAVE)))
+                second_waves = max(second_waves, len(live(pb, tile=SPR_BOMB_WAVES)))
                 pb.tick(1)
             print(
                 f"[bomb max-reset] second frags={second_frags} waves={second_waves} "
