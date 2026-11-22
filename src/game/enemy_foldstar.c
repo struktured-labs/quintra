@@ -4,6 +4,7 @@
 #include "audio/sfx.h"
 #include "core/types.h"
 #include "game/enemy_ai.h"
+#include "game/enemy_def.h"
 #include "game/entity.h"
 #include "game/player.h"
 #include "content.h"
@@ -19,6 +20,10 @@ void fold_star_update(entity_t *e, const enemy_def_t *def) BANKED {
     // ai_data[3] rotates the diagonal sequence.
     static const u8 beat[3] = { 7, 13, 9 };
     if (e->ai_data[1] == 0) {
+        // enemy_update passes no definition: copying all sixteen bytes every
+        // frame only fed these two timers, so load it on the flip alone.
+        enemy_def_t def_buf;
+        if (!def) { enemy_load_def(ENEMY_FOLD_STAR, &def_buf); def = &def_buf; }
         if (e->state == 0) {
             e->state = 1;
             e->ai_data[1] = def->ai_p0;
@@ -46,14 +51,32 @@ void fold_star_update(entity_t *e, const enemy_def_t *def) BANKED {
     // Expanded: shed four short-lived replicas on diagonal rays. They are FX,
     // not extra hostiles, so room-clear accounting and the 32-entity budget
     // remain stable. The core itself steps through the same diagonal sequence.
-    if ((e->ai_data[1] % beat[e->ai_data[2] % 3]) == 0) {
+    // SDCC lowers u8 '%' to a ~600-cycle runtime divide. Two of them per
+    // expanded star per frame made a packed stage-3 room drop below 20 fps.
+    // ai_data[1] <= open_ticks and every beat >= 7, so a short subtraction
+    // walk gives the identical remainder for a few dozen cycles.
+    u8 k = e->ai_data[2];
+    while (k >= 3) k -= 3;
+    {
+        u8 b = beat[k], r = e->ai_data[1];
+        while (r >= b) r -= b;
+        if (r) return;
+    }
+    // Echoes are visual only. A packed room of stars used to fill all 32
+    // entity slots with them (every later spawn then scanned a full table
+    // and every echo cost a draw), so a beat sheds only while ten slots
+    // remain: four for the echoes and six for shots, pickups and FX that
+    // matter. A lone star or a small group looks exactly as before.
+    if (entity_free_slots() >= 10) {
         i16 x = FIX8_TO_INT(e->x), y = FIX8_TO_INT(e->y);
         u8 d = (u8)(6 + ((e->ai_data[3] & 3) << 1));
         fx_spawn(e->sprite_tile, 0x05, x - d, y - d, 16);
         fx_spawn(e->sprite_tile, 0x05, x + d, y - d, 16);
         fx_spawn(e->sprite_tile, 0x05, x - d, y + d, 16);
         fx_spawn(e->sprite_tile, 0x05, x + d, y + d, 16);
-        e->ai_data[2] = (u8)((e->ai_data[2] + 1) % 3);
+    }
+    {
+        e->ai_data[2] = (u8)(k == 2 ? 0 : k + 1);
         e->ai_data[3]++;
         enemy_try_step(e, dir8_dx[(u8)((e->ai_data[3] * 2 + 1) & 7)],
                           dir8_dy[(u8)((e->ai_data[3] * 2 + 1) & 7)]);

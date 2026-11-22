@@ -47,9 +47,11 @@ extern u8 will_vespine_swarm_damage;
 // Aligns with the HUD digit + 3-segment bar.
 u8 will_b_tier(void) BANKED;
 
-// Launch the equipped weapon's full-Will art. Returns nonzero only if at
-// least one gameplay hitbox could be allocated, so a saturated entity table
-// never silently steals the charge.
+// Launch the active champion's full-Will art. The held A weapon still
+// shapes ordinary fire, but a merchant trade or floor swap cannot replace
+// the authored signature. Returns nonzero only if at least one gameplay
+// hitbox could be allocated, so a saturated entity table never silently
+// steals the charge.
 u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED;
 // Invoke the active champion's distinct B verb. Returns nonzero when the
 // signature committed a real defensive, marked-target, or swarm effect.

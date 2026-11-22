@@ -1,4 +1,5 @@
 #pragma bank 12
+#include "render/oam_grid.h"
 #include <gb/gb.h>
 #include "game/entity.h"
 
@@ -26,16 +27,13 @@ u8 colossus_oam_draw(u8 oam, u8 sx, u8 sy, u8 tile, u8 pal, u8 side,
         pal |= 0x08;
         tile = 128;
     }
-    for (r = 0; r < side; ++r) {
-        u8 py = hide ? 0 : (u8)(sy + (r << 3));
-        for (c = 0; c < side; ++c) {
-            it->y = py;
-            it->x = hide ? 0 : (u8)(sx + (c << 3));
-            it->tile = tile++;
-            it->prop = pal;
-            ++it;
-            ++oam;
-        }
-    }
-    return oam;
+    if (!side) return oam;
+    // Batched grid write (render/oam_grid.c); a hidden body parks every
+    // cell at 0,0 exactly as the old per-cell loop did.
+    og_ptr = (u8 *)it;
+    og_w = og_h = side; og_tile = tile; og_prop = pal;
+    if (hide) { og_y = og_x = og_dx = og_dy = 0; }
+    else { og_y = sy; og_x = sx; og_dx = og_dy = 8; }
+    oam_grid();
+    return (u8)(oam + (u8)(side * side));
 }

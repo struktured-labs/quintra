@@ -136,6 +136,9 @@ def main():
         assert pb.memory[PLAYER + WILL_OFFSET] < 8, (
             f"class {class_id} MAX did not spend Will")
         if class_id == 0:
+            # The Moonfang body-dash is nine logic frames; CGB double-speed
+            # means one PyBoy tick is only a half-frame, so wait it out.
+            pb.tick(16)
             after_x = pb.memory[PLAYER + 9] | (pb.memory[PLAYER + 10] << 8)
             assert after_x > before_x + 6, "Moonfang MAX did not body-dash"
             # Three physical claw lanes plus the Will wave's crescent
@@ -223,19 +226,34 @@ def main():
         f"full Will bar lacks its lavender MAX cue: {colors}"
     pb.stop(save=False)
 
-    # The two procedural melee pickups also receive distinct full-Will arts.
+    # Found A weapons still change ordinary fire, but the champion MAX
+    # stays bound to the hero. Equipping the Flail or Spear as Wolfkin
+    # must not steal Moonfang Rush.
     pb = boot(0)
-    for weapon, minimum, tile in ((20, 8, 122), (21, 1, 123)):
+    for weapon in (20, 21):
         clear_arena(pb)
         pb.memory[PLAYER + 21] = weapon
         pb.memory[PLAYER + WILL_OFFSET] = WILL_MAX
         pb.memory[PLAYER + LEVEL_OFFSET] = 1
+        try:
+            pb.memory[addr("_picsean_vortex_slow_charge")] = 0
+        except RuntimeError:
+            pass
+        before_x = pb.memory[PLAYER + 9] | (pb.memory[PLAYER + 10] << 8)
         fire_right(pb)
         shots = player_shots(pb)
-        assert len(shots) >= minimum, f"weapon {weapon} missing MAX geometry"
-        assert any(pb.memory[s + 12] == tile for s in shots)
+        assert pb.memory[addr("_will_maxfx_live")] == 1, (
+            f"weapon {weapon} stole Wolfkin's Moonfang MAX")
+        claws = [s for s in shots if pb.memory[s + 12] == 122]
+        waves = [s for s in shots if 200 <= pb.memory[s + 12] <= 203]
+        pb.tick(16)
+        after_x = pb.memory[PLAYER + 9] | (pb.memory[PLAYER + 10] << 8)
+        assert after_x > before_x + 6, (
+            f"weapon {weapon} dropped the Moonfang body-dash")
+        assert len(claws) >= 3, f"weapon {weapon} dropped Moonfang claws"
+        assert len(waves) == 3, f"weapon {weapon} dropped the Will wave"
     pb.stop(save=False)
-    print("[will-max] PASS five champions + two run weapons own restraint MAX arts")
+    print("[will-max] PASS five champions keep restraint MAX arts after weapon swaps")
 
 
 if __name__ == "__main__":

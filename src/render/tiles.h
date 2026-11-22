@@ -188,6 +188,10 @@
 // room atlas is restored after closing SELECT, so five visually explicit
 // Zelda-like barriers cost no additional BG tile address space.
 #define BGT_GATE_BOULDER 100 // Sauran or Titan Glove
+// Open art identity. Gameplay keeps slot 100 and swaps VRAM when the
+// hero can pass. Reserved so #173 (bomb-only wall) does not claim it.
+// Never written into room_tilemap.
+#define BGT_GATE_BOULDER_OPEN 133
 #define BGT_GATE_WATER   101 // Picsean or Tide Raft
 #define BGT_GATE_CHASM   102 // Corvin or Rift Hook
 #define BGT_GATE_THORNS  103 // Wolfkin only

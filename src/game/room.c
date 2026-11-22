@@ -56,6 +56,7 @@ void stage_event_resolve_fall(void) BANKED;
 #include "render/hud.h"
 #include "render/palette.h"
 #include "render/tiles.h"
+#include "render/gate_boulder.h"
 
 void tiles_load_switch_pressed(void) BANKED;
 #include "content.h"
@@ -1006,7 +1007,9 @@ void room_enter(void) {
     palette_obj_load(5, coin_palette);
     palette_obj_load(7, orc_palette);
 
+    gate_boulder_room_reset();
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
+    tiles_apply_passable_boulder();
     tiles_load_switch_pressed();
     tiles_load_boss_cue_bg();             // unmistakable sanctuary threshold
     // District, directive, and return-echo cards share this tiny alphabet.
@@ -1815,7 +1818,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     player.will_charge = 0;
                     player.will_level = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
-                    if (wolfkin_melee) {
+                    if (player.class_id == 0) {
                         dash_timer = 9;
                         dash_cd = 45;
                         dash_dx = dir8_dx[dir];
@@ -1926,6 +1929,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // B: hero magic (tap = attack spell, hold = ward) or the selected
         // tool. Runs after the A+B chord, which always wins.
         magic_input(keys, pressed, (u8)(w->p1+1+effective_atk));
+        gate_boulder_tick((u8)(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN)));
         if (player.active_charge) secondary_cooldown_tick();
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_transform_ticks--;
