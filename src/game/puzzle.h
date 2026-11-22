@@ -82,6 +82,8 @@ extern u8 room_rune_lit_mask;
 #define PUZZLE_KIND_HAS_NOTES(k) ((k) == PUZZLE_RUNE_SEQUENCE \
     || (k) == PUZZLE_PHASE_SWITCH)
 void puzzle_phase_switch_zap(void) BANKED;
+void rune_row_force_press(u8 tx, u8 ty) BANKED;
+void puzzle_phase_switch_hit(u8 tx, u8 ty) BANKED;
 void rune_row_prepare(u8 bit, u8 mix) BANKED;
 void rune_row_tick(u8 tx, u8 ty) BANKED;
 void rune_echo_tick(void) BANKED;

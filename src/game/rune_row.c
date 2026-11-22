@@ -26,6 +26,7 @@ static u8 echo_timer;
 static u8 echo_step;
 static u8 row_contact;
 static u8 row_phase_bit;
+static u8 row_toggle_earned;
 
 static void row_set_tiles(u8 lit) {
     u8 i;
@@ -190,6 +191,7 @@ void rune_row_prepare(u8 bit, u8 mix) BANKED {
         room_rune_pitch[i] = i;
     }
     solved = (run_state.dungeon_phase & bit) ? 1 : 0;
+    row_toggle_earned = solved;
     row_set_tiles(solved);
     if (solved) {
         room_row_progress = room_row_len;
@@ -228,9 +230,28 @@ void rune_row_tick(u8 tx, u8 ty) BANKED {
         return;
     }
     run_state.dungeon_phase |= row_phase_bit;
+    row_toggle_earned = 1;
     row_paint_solved(1);
     voice_plate_final(touched);
     room_shake(1, 12);
+}
+
+void rune_row_force_press(u8 tx, u8 ty) BANKED {
+    // A lightning (or oath) hit is a distinct press of this plate, not a
+    // skip of the whole phrase. Drop the walk-on contact latch so a shot
+    // at a plate the hero is not standing on still counts once.
+    row_contact = 0;
+    rune_row_tick(tx, ty);
+}
+
+void puzzle_phase_switch_hit(u8 tx, u8 ty) BANKED {
+    // An unsolved row must still be walked (or struck) note by note.
+    // After the phrase has been earned this visit (or was already open),
+    // lightning remains the remote close/reopen tool.
+    if (row_toggle_earned)
+        puzzle_phase_switch_zap();
+    else
+        rune_row_force_press(tx, ty);
 }
 
 void puzzle_phase_switch_zap(void) BANKED {
