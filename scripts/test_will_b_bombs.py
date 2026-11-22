@@ -145,7 +145,7 @@ class TestWillBBombs(unittest.TestCase):
                 waves.append(rec["waves"])
                 self.assertTrue(rec["saw_bomb"], f"tier {tier} never spawned a bomb")
             finally:
-                pb.stop()
+                pb.stop(save=False)
         print(
             f"[bomb will] crystals broken {broke}  splash {splashes}  "
             f"frags {frags}  waves {waves}",
@@ -196,7 +196,7 @@ class TestWillBBombs(unittest.TestCase):
             self.assertGreaterEqual(found, 8, "wave/frag sprites never reached shadow OAM")
             self.assertEqual(banked, found, "S_BANK missing on some wave/frag OAM entries")
         finally:
-            pb.stop()
+            pb.stop(save=False)
 
     def test_max_tier_spends_will_and_second_throw_is_not_max(self):
         pb = scene()
@@ -228,9 +228,12 @@ class TestWillBBombs(unittest.TestCase):
             # the 72-frame item cooldown, which is ordinary regen, not a
             # leftover max blast.
             self.assertEqual(second_frags, 0, "second bomb still spawned mid/max fragments")
-            self.assertEqual(pb.memory[P + LEVEL_OFFSET], 0)
+            # The cap-1 gauge refills from zero by ordinary regen in about
+            # 170 frames, so the level may bank back by one at the very end,
+            # depending on frame phase. More than one would be a leftover max.
+            self.assertLessEqual(pb.memory[P + LEVEL_OFFSET], 1)
         finally:
-            pb.stop()
+            pb.stop(save=False)
 
 
 if __name__ == "__main__":
