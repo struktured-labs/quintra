@@ -117,6 +117,12 @@
 #define BGT_MAP_LABEL_G 69
 #define BGT_MAP_LABEL_L 70
 #define BGT_MAP_LABEL_B 71
+// Dungeon-only subtle bomb-only crack (#173). SELECT overwrites this slot
+// with the Compass legend letter B (BGT_MAP_LABEL_B). tiles_load_dungeon_bg
+// restores the bomb-wall pattern when play resumes. Solid by default
+// (outside room_tile_walkable ranges). Distinct from boulder gate slots
+// 100-104 reserved for #172.
+#define BGT_WALL_BOMB   71
 
 // Combat-time HUD alphabet extensions temporarily reuse map-only slots. The
 // Compass reloads its own glyph atlas; returning to play reloads these.

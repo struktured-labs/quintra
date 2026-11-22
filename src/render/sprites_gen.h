@@ -108,6 +108,7 @@ extern const u8 bgt_pillar[16];
 extern const u8 bgt_crystal[16];
 extern const u8 bgt_rubble[16];
 extern const u8 bgt_wall_crack[16];
+extern const u8 bgt_wall_bomb[16];
 extern const u8 bgt_block[16];
 extern const u8 bgt_spikes[16];
 extern const u8 bgt_pot[16];
