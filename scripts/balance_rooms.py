@@ -53,7 +53,7 @@ FIGHT_FIELDS = ("skill,seed,hero,class,stage,difficulty,room_id,fixture,enemy_ki
                 "outcome,frames,hits,dmg_taken,dot_dmg,hp_start,hp_end,hp_min,hp_max,"
                 "lands,harmful,unreachable,exposed5,exposed10,death_kind,death_age,"
                 "death_chain").split(",")
-EVENT_FIELDS = ("skill,seed,hero,stage,difficulty,room_id,frame,event,kind,hp,hp_max,"
+EVENT_FIELDS = ("skill,seed,hero,stage,difficulty,room_id,fixture,frame,event,kind,hp,hp_max,"
                 "attacker,carrier,procced,replaced,crowd,hazard_near,status_active,"
                 "status_age").split(",")
 
@@ -286,7 +286,7 @@ def fight(task: dict) -> tuple[dict, list[dict]]:
         for _ in range(task["seed"] % 7):
             obs, _, _, _ = env.step(0, 1)
         base = dict(skill=task["skill"], seed=task["seed"], hero=fx["hero"], stage=fx["stage"],
-                    difficulty=fx["difficulty"], room_id=fx["room_id"])
+                    difficulty=fx["difficulty"], room_id=fx["room_id"], fixture=fx["file"])
 
         def ev(frame, event, **kw):
             row = dict(base, frame=frame, event=event, kind="", hp=obs["hp"],
