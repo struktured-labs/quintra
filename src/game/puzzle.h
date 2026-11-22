@@ -112,7 +112,7 @@ u8 puzzle_rune_attr(u8 tile) BANKED;
     && (u8)((u8)(x) - room_socket_x) < 2 && (u8)((u8)(y) - room_socket_y) < 2)
 #define PUZZLE_ATTR_OVERRIDE(x, y, tile) \
     ((room_puzzle_kind == PUZZLE_PRISM_TOGGLE) ? PRISM_ATTR_AT(x, y) \
-    : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR3 \
+    : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR \
         && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR \
     : PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) ? RUNE_ATTR_AT(x, y, tile) \
     : 0xFF)

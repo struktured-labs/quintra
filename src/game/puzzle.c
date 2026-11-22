@@ -164,8 +164,11 @@ static void prepare_push(u32 seed) {
     floor_rect(x0, y0, (u8)(x1 - x0 + 1), (u8)(y1 - y0 + 1));
     room_socket_x = sx;
     room_socket_y = sy;
-    room_tilemap[sy][sx] = room_tilemap[sy][sx + 1] = BGT_FLOOR3;
-    room_tilemap[sy + 1][sx] = room_tilemap[sy + 1][sx + 1] = BGT_FLOOR3;
+    // Plain stone, not the pebbled FLOOR3 variant: gold + pebble reads as
+    // a sand patch on the cavern floor. The door palette still paints a
+    // solid 2x2 metal dais the hero can walk and shove onto.
+    room_tilemap[sy][sx] = room_tilemap[sy][sx + 1] = BGT_FLOOR;
+    room_tilemap[sy + 1][sx] = room_tilemap[sy + 1][sx + 1] = BGT_FLOOR;
     room_tilemap[y][x] = BGT_BLOCK;
     room_tilemap[y][x + 1] = BGT_BLOCK_TR;
     room_tilemap[y + 1][x] = BGT_BLOCK_BL;
@@ -472,7 +475,7 @@ u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED {
                 // gold socket on every quadrant the crate does not cover.
                 if (room_tilemap[ty][tx] == BGT_FLOOR
                     || room_tilemap[ty][tx] == BGT_FLOOR3)
-                    set_tile_live(tx, ty, BGT_FLOOR3, BGPAL_DOOR);
+                    set_tile_live(tx, ty, BGT_FLOOR, BGPAL_DOOR);
             }
         if (nx != room_socket_x || ny != room_socket_y) {
             sfx_play_rune((u8)((nx + ny) & 3));

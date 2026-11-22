@@ -247,7 +247,7 @@ def run_stage(stage, frames):
                 ch = r["rows"][y][x]
                 t = tiles[y * 20 + x]
                 want = {"#": {WALL}, ".": {FLOOR}, "o": {CRYSTAL},
-                        "G": {FLOOR3}, "a": {PILLAR, FLOOR2},
+                        "G": {FLOOR}, "a": {PILLAR, FLOOR2},
                         "b": {PILLAR, FLOOR2}}[ch]
                 assert t in want, f"ROM {t} at {x},{y} != Rust {ch!r}"
         raised = pb.memory[RAISED]
