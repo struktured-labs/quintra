@@ -58,3 +58,14 @@ tools/build_itch_web.sh
 
 The independently compiled `quintra.gbc` file is cartridge data and retains
 the component licensing described in `../../LICENSES/README.md`.
+
+## Opt-in play stats (local only)
+
+Open the page with `?telemetry=1` to record per-run, per-stage play stats
+(time, damage, Colossus fights, status effects, deaths) in this browser's
+localStorage. The choice is remembered; an **Export stats** button appears and
+downloads JSON + CSV. `?telemetry=0` stops recording; `?telemetry=clear` wipes
+the stored stats. Nothing is sent anywhere. Symbol addresses are baked in by
+`tools/build_itch_web.sh` from the linker map. Checks:
+`node tools/test_itch_telemetry.mjs web/itch/player.js` and, against a served
+build, `python3 tools/test_itch_telemetry_live.py http://127.0.0.1:8000/`.

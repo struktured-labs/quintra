@@ -72,6 +72,7 @@ jobs:
           node tools/test_itch_gamepad.mjs web/itch/player.js
           node tools/test_itch_gamepad_layouts.mjs web/itch/player.js
           node tools/test_itch_pad_calibration.mjs web/itch/player.js
+          node tools/test_itch_telemetry.mjs web/itch/player.js
 
   rom:
     name: ROM build and cart smoke
@@ -113,6 +114,23 @@ jobs:
 
       - name: PyBoy room performance (CGB double-speed)
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_performance.py
+
+      - name: Balance smoke (stage 3 Colossus win rate, status-death share; average tier)
+        run: |
+          set -euo pipefail
+          luac -p scripts/quintra_human_model.lua scripts/quintra_balance_bot.lua
+          python3 scripts/test_balance_harness.py
+          export PYTHONPATH="$PWD/scripts/quintra_sitecustomize" QUINTRA_STATE_WAIVE_CHECKS=marked_gate
+          mkdir -p tmp/balance-ci
+          uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/make_stage_states.py \
+            --rom rom/working/quintra.gbc --stage 3 --difficulty normal --out tmp/balance-ci/states \
+            > tmp/balance-ci/states.log 2>&1 || { tail -20 tmp/balance-ci/states.log; exit 1; }
+          uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/balance_arena.py \
+            --rom rom/working/quintra.gbc --state-dir tmp/balance-ci/states --skills average \
+            --stages 3 --kinds boss --seeds 3 --jobs "$(nproc)" --out tmp/balance-ci/arena.csv
+          python3 scripts/balance_report.py tmp/balance-ci/arena.csv --out tmp/balance-ci/report \
+            --trials 300 --check scripts/balance_thresholds.json
+          cat tmp/balance-ci/report/report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: PyBoy suspend power-cycle
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py

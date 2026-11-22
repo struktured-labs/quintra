@@ -1318,6 +1318,196 @@
     }).catch(error => console.error("Could not update player visibility", error));
   });
 
+  // ---------------------------------------------------------------------
+  // Opt-in local play telemetry (balance calibration).
+  //
+  // Off unless the page is opened with ?telemetry=1 (remembered in this
+  // browser; ?telemetry=0 turns it off, ?telemetry=clear also wipes data).
+  // It samples a few WRAM fields ten times a second, keeps per-run/per-stage
+  // stats in localStorage only, and offers an "Export stats" download. It
+  // never sends anything anywhere. Field meanings mirror
+  // scripts/quintra_human_model.lua so exports compare 1:1 with bot sweeps.
+  // ---------------------------------------------------------------------
+  const TELEMETRY_KEY = "quintra:telemetry:v1";
+  const TELEMETRY_ON_KEY = "quintra:telemetry:on";
+  const STATUS_NAMES = ["", "poison", "burn", "slow", "stop", "blind", "confusion", "mute",
+    "brittle", "bleed", "curse", "regen", "haste", "inversion"];
+  function telemetryStore() {
+    try { return typeof localStorage !== "undefined" ? localStorage : null; } catch (e) { return null; }
+  }
+  function telemetryEnabled() {
+    const store = telemetryStore();
+    const param = pageParams.get("telemetry");
+    if (store && param === "clear") { store.removeItem(TELEMETRY_KEY); }
+    if (store && param === "0") store.removeItem(TELEMETRY_ON_KEY);
+    if (store && (param === "1" || param === "clear")) store.setItem(TELEMETRY_ON_KEY, "1");
+    return param === "1" || param === "clear" || Boolean(store && store.getItem(TELEMETRY_ON_KEY) === "1");
+  }
+  function parseTelemetrySymbols() {
+    const root = document.documentElement;
+    const raw = (root && typeof root.getAttribute === "function"
+      && root.getAttribute("data-quintra-symbols")) || "";
+    const out = {};
+    raw.split(",").forEach(pair => {
+      const parts = pair.split(":");
+      if (parts.length === 2 && /^0x[0-9a-f]+$/i.test(parts[1])) out[parts[0]] = parseInt(parts[1], 16);
+    });
+    return out.run_state && out.player && out.player_status_kind ? out : null;
+  }
+
+  // Pure sampler: feed it decoded fields each tick; it maintains the log.
+  // Exposed on window.QuintraTelemetry for tests.
+  function createTelemetry(data, buildId, now) {
+    data.runs = data.runs || [];
+    let run = null;
+    let stage = null;
+    let last = null;
+    const hits = [];
+    let lastHarm = null;
+    function newStage(s, t) {
+      stage = { stage: s, play_s: 0, wall_s: 0, dmg: 0, hits: 0, boss_s: 0, boss_seen: 0,
+        boss_cleared: 0, status: {}, status_harmful: 0, status_in_boss: 0, status_low_hp: 0,
+        burst_max: 0, started: t };
+      run.stages.push(stage);
+    }
+    function sample(f, t) {
+      const inRun = f.seed !== 0 && f.screen !== 4 && f.screen >= 5 && f.screen <= 12 && f.hpMax > 0;
+      if (!inRun) { last = null; return; }
+      const fresh = !run || run.seed !== f.seed || (last && f.room < last.room && f.bosses === 0);
+      if (fresh) {
+        run = { build: buildId, seed: f.seed, hero: f.hero, difficulty: f.difficulty ? "easy" : "normal",
+          started: new Date(t).toISOString(), outcome: "open", stages: [] };
+        data.runs.push(run);
+        if (data.runs.length > 300) data.runs.splice(0, data.runs.length - 300);
+        newStage(Math.min(9, f.bosses + 1), t);
+        last = null;
+        lastHarm = null;
+        hits.length = 0;
+      }
+      if (last) {
+        const dt = Math.max(0, Math.min(1, (t - last.t) / 1000));
+        if (f.bosses > last.bosses) {
+          stage.boss_cleared = 1;
+          newStage(Math.min(9, f.bosses + 1), t);
+        }
+        stage.wall_s += dt;
+        if (f.runTimer >= last.runTimer) stage.play_s += f.runTimer - last.runTimer;
+        if (f.boss) { stage.boss_s += dt; stage.boss_seen = 1; }
+        if (f.hp < last.hp) {
+          stage.dmg += last.hp - f.hp;
+          stage.hits += 1;
+          hits.push([t, last.hp - f.hp]);
+        }
+        while (hits.length && t - hits[0][0] > 2000) hits.shift();
+        const burst = hits.reduce((a, h) => a + h[1], 0);
+        stage.burst_max = Math.max(stage.burst_max, burst);
+        if (f.status > 0 && f.status < STATUS_NAMES.length
+            && (f.status !== last.status || f.statusTicks > last.statusTicks)) {
+          const name = STATUS_NAMES[f.status];
+          stage.status[name] = (stage.status[name] || 0) + 1;
+          if (f.status <= 10) {
+            stage.status_harmful += 1;
+            if (f.boss) stage.status_in_boss += 1;
+            if (f.hp * 3 <= f.hpMax) stage.status_low_hp += 1;
+            lastHarm = { kind: name, t };
+          }
+        }
+        if (f.victory) run.outcome = "won";
+        if (f.hp === 0 && last.hp > 0) {
+          run.outcome = "died";
+          run.death = { stage: stage.stage, in_boss: last.boss ? 1 : 0, burst,
+            status: lastHarm ? lastHarm.kind : "",
+            status_age_s: lastHarm ? Math.round((t - lastHarm.t) / 100) / 10 : -1 };
+        }
+      }
+      last = Object.assign({ t }, f);
+    }
+    return { sample, data };
+  }
+
+  function telemetryCsv(data) {
+    const head = ["run", "build", "hero", "difficulty", "started", "outcome", "stage", "play_s", "wall_s",
+      "dmg", "hits", "boss_s", "boss_cleared", "burst_max", "status_harmful", "status_in_boss",
+      "status_low_hp", "status_kinds", "death_here", "death_in_boss", "death_status", "death_status_age_s"];
+    const lines = [head.join(",")];
+    (data.runs || []).forEach((r, i) => r.stages.forEach(s => {
+      const d = r.death && r.death.stage === s.stage ? r.death : null;
+      lines.push([i + 1, r.build, r.hero, r.difficulty, r.started, r.outcome, s.stage,
+        s.play_s, Math.round(s.wall_s), s.dmg, s.hits, Math.round(s.boss_s), s.boss_cleared,
+        s.burst_max, s.status_harmful, s.status_in_boss, s.status_low_hp,
+        Object.keys(s.status).map(k => k + ":" + s.status[k]).join(";"),
+        d ? 1 : 0, d ? d.in_boss : "", d ? d.status : "", d ? d.status_age_s : ""].join(","));
+    }));
+    return lines.join("\n") + "\n";
+  }
+
+  function startTelemetry() {
+    const syms = parseTelemetrySymbols();
+    const store = telemetryStore();
+    const button = document.getElementById("export-stats");
+    if (!syms || !store || !api || typeof setInterval !== "function") return;
+    let data;
+    try { data = JSON.parse(store.getItem(TELEMETRY_KEY) || "{}"); } catch (e) { data = {}; }
+    const root = document.documentElement;
+    const buildId = (root && root.getAttribute("data-quintra-build")) || "";
+    const tel = createTelemetry(data, buildId);
+    if (button) {
+      button.hidden = false;
+      button.addEventListener("click", () => {
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        [["json", JSON.stringify(tel.data, null, 1), "application/json"],
+          ["csv", telemetryCsv(tel.data), "text/csv"]].forEach(([ext, body, type]) => {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(new Blob([body], { type }));
+          link.download = "quintra-stats-" + stamp + "." + ext;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        });
+      });
+    }
+    let base = null;
+    let busy = false;
+    let saveAt = 0;
+    setInterval(async () => {
+      if (busy || !ready) return;
+      busy = true;
+      try {
+        if (base === null) base = await api._getWasmConstant("WORK_RAM_LOCATION");
+        // WRAM bank 0 (0xC000) then bank 1 (0xD000) as WasmBoy lays them out.
+        const ram = new Uint8Array(await api._getWasmMemorySection(base, base + 0x2000));
+        const at = a => ram[a - 0xC000];
+        const rs = syms.run_state, pl = syms.player;
+        let boss = false;
+        if (syms.entities) {
+          for (let i = 0; i < 32; i++) {
+            const e = syms.entities + i * 28;
+            if (at(e) === 2 && (at(e + 1) & 1) && at(e + 17) === 1 && at(e + 20)) { boss = true; break; }
+          }
+        }
+        const t = Date.now();
+        tel.sample(window.QuintraTelemetry.last = {
+          screen: syms.loop_current_screen ? at(syms.loop_current_screen) : 5,
+          seed: at(rs + 2) | (at(rs + 3) << 8) | (at(rs + 4) << 16) | (at(rs + 5) << 24),
+          room: at(rs + 1), bosses: at(rs + 11), victory: at(rs + 10),
+          runTimer: at(rs + 7) | (at(rs + 8) << 8), difficulty: at(rs + 26),
+          hero: ["wolfkin", "sauran", "corvin", "picsean", "vespine"][at(pl)] || String(at(pl)),
+          hpMax: at(pl + 1), hp: at(pl + 2),
+          status: at(syms.player_status_kind), statusTicks: at(syms.player_status_ticks), boss
+        }, t);
+        if (t - saveAt > 5000) { saveAt = t; store.setItem(TELEMETRY_KEY, JSON.stringify(tel.data)); }
+      } catch (error) {
+        console.warn("telemetry sample failed", error);
+      } finally {
+        busy = false;
+      }
+    }, 100);
+    window.QuintraTelemetry.live = tel;
+    window.addEventListener("pagehide", () => store.setItem(TELEMETRY_KEY, JSON.stringify(tel.data)));
+  }
+  window.QuintraTelemetry = { createTelemetry, telemetryCsv, parseTelemetrySymbols };
+  if (telemetryEnabled()) startTelemetry();
+
   window.addEventListener("error", event => fail(event.error || new Error(event.message)));
   prepare().catch(fail);
 })();
