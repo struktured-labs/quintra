@@ -15,7 +15,9 @@ from test_will_max import (
 WAYGEAR = 44
 ITEM_BOOM = 45
 ITEM_STAR = 47
+ITEM_HOOK = 46
 AUX_BOOM = 0xF4
+AUX_HOOK = 0xF5
 AUX_STAR = 0xF6
 BGT_WALL, BGT_PILLAR, BGT_CRYSTAL, BGT_POT = 2, 21, 22, 32
 
@@ -304,7 +306,10 @@ def test_boom_tiers():
         print(f"[boom {name} t{tier}] travel={rec['travel']} max_x={rec['max_x']} "
               f"out={rec['outbound']} total={rec['total']} ret={rec['returned']} "
               f"spent={rec['spent']}")
-        assert not rec["spent"], name
+        if tier >= 3:
+            assert rec["spent"], (name, rec["before"], rec["after"])
+        else:
+            assert not rec["spent"], (name, rec["before"], rec["after"])
         assert rec["returned"], name
         # Allow a few frames of button latency; distance should land close
         # to the authored 3 px/tick table.
@@ -343,13 +348,143 @@ def test_boom_obstacles():
     assert full_pillar["travel"] >= 150, full_pillar
 
 
+HOOK_PX = {0: 96, 1: 112, 2: 128, 3: 144}
+
+
+def measure_hook(level, charge, waygear, pos=(24, 64), wide=False, record=None):
+    pb = scene(ITEM_HOOK, x=pos[0], y=pos[1])
+    frames = []
+    try:
+        set_will(pb, level, charge, waygear)
+        before = (pb.memory[P + WILL_OFFSET], pb.memory[P + LEVEL_OFFSET])
+        if wide:
+            pb.memory[addr("_room_world_width")] = 208
+        fire_right(pb)
+        after = (pb.memory[P + WILL_OFFSET], pb.memory[P + LEVEL_OFFSET])
+        pts = []
+        for f in range(220):
+            live = shots(pb, AUX_HOOK)
+            if record is not None and f % 2 == 0:
+                frames.append(grab(pb))
+            if not live:
+                break
+            e = live[0]
+            x, y = i16(pb, e, 3), i16(pb, e, 7)
+            pts.append((f, x, y))
+            pb.tick()
+        xs = [p[1] for p in pts]
+        travel = (max(xs) - (pos[0] + 4)) if xs else 0
+        if record:
+            save_gif(frames, GIF_DIR / record)
+        return dict(travel=travel, max_x=max(xs) if xs else None,
+                    total=len(pts),
+                    returned=not shots(pb, AUX_HOOK) and bool(pts),
+                    spent=(after[1] < before[1] or after[0] < before[0]),
+                    before=before, after=after)
+    finally:
+        pb.stop(save=False)
+
+
+def test_boom_max_resets():
+    """A max-Will boomerang spends the bank; a second throw is not a max toss."""
+    pb = scene(ITEM_BOOM, x=24, y=64)
+    try:
+        pb.memory[addr("_room_world_width")] = 208
+        set_will(pb, 1, 90, 0)
+        fire_right(pb)
+        assert pb.memory[P + LEVEL_OFFSET] == 0, "max boom did not reset will_level"
+        assert pb.memory[P + WILL_OFFSET] == 0, "max boom did not reset will_charge"
+        for _ in range(240):
+            if not shots(pb, AUX_BOOM):
+                break
+            pb.tick()
+        assert pb.memory[P + LEVEL_OFFSET] == 0, "will_level banked back before second toss"
+        fire_right(pb)
+        xs = []
+        for _ in range(220):
+            live = shots(pb, AUX_BOOM)
+            if not live:
+                break
+            xs.append(i16(pb, live[0], 3))
+            pb.tick()
+        travel = (max(xs) - 28) if xs else 0
+        print(f"[boom max-reset] second travel={travel} (max is {OUT_PX[3]})")
+        assert travel <= OUT_PX[1] + 12, (
+            f"second toss still reached {travel}, want well below max {OUT_PX[3]}")
+        assert pb.memory[P + LEVEL_OFFSET] == 0
+    finally:
+        pb.stop(save=False)
+
+
+def test_hook_tiers():
+    results = {}
+    setups = (
+        (0, 0, 0, 0, "empty"),
+        (0, 30, 0, 1, "one-third"),
+        (1, 0, 7, 2, "banked-cap4"),
+        (1, 90, 0, 3, "full-cap1"),
+    )
+    for level, charge, gear, tier, name in setups:
+        rec = measure_hook(level, charge, gear, wide=True,
+                           record=f"hookshot-tier{tier}-{name}.gif")
+        print(f"[hook {name} t{tier}] travel={rec['travel']} max_x={rec['max_x']} "
+              f"total={rec['total']} ret={rec['returned']} spent={rec['spent']}")
+        if tier >= 3:
+            assert rec["spent"], (name, rec["before"], rec["after"])
+        else:
+            assert not rec["spent"], (name, rec["before"], rec["after"])
+        assert rec["returned"], name
+        assert_near(f"hook {name} travel", rec["travel"], HOOK_PX[tier], 16)
+        results[tier] = rec
+    assert results[3]["travel"] > results[2]["travel"] + 8
+    assert results[2]["travel"] > results[1]["travel"] + 8
+    assert results[1]["travel"] > results[0]["travel"] + 8
+    return results
+
+
+def test_hook_max_resets():
+    """A max-Will hookshot spends the bank; a second shot is not a max reach."""
+    pb = scene(ITEM_HOOK, x=24, y=64)
+    try:
+        pb.memory[addr("_room_world_width")] = 208
+        set_will(pb, 1, 90, 0)
+        fire_right(pb)
+        assert pb.memory[P + LEVEL_OFFSET] == 0, "max hook did not reset will_level"
+        assert pb.memory[P + WILL_OFFSET] == 0, "max hook did not reset will_charge"
+        # Wait for the hook to fully retract; a mid-flight B only cancels it.
+        for _ in range(240):
+            if not shots(pb, AUX_HOOK):
+                break
+            pb.tick()
+        assert not shots(pb, AUX_HOOK), "hookshot never retracted"
+        assert pb.memory[P + LEVEL_OFFSET] == 0
+        fire_right(pb)
+        xs = []
+        for _ in range(220):
+            live = shots(pb, AUX_HOOK)
+            if not live:
+                break
+            xs.append(i16(pb, live[0], 3))
+            pb.tick()
+        travel = (max(xs) - 28) if xs else 0
+        print(f"[hook max-reset] second travel={travel} (max is {HOOK_PX[3]})")
+        assert travel <= HOOK_PX[1] + 16, (
+            f"second hook still reached {travel}, want well below max {HOOK_PX[3]}")
+        assert pb.memory[P + LEVEL_OFFSET] == 0
+    finally:
+        pb.stop(save=False)
+
+
 def main():
     test_star_tiers()
     test_star_max_resets()
     test_star_obstacles()
     test_boom_tiers()
     test_boom_obstacles()
-    print("[will-b-weapons] PASS morningstar radius/obstacles and boomerang range")
+    test_boom_max_resets()
+    test_hook_tiers()
+    test_hook_max_resets()
+    print("[will-b-weapons] PASS morningstar/boomerang/hookshot will tiers and max-reset")
 
 
 if __name__ == "__main__":
