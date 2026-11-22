@@ -204,7 +204,24 @@ def main():
     assert opened_bits(pb) == 0, "shot set bomb_walls_open"
     pb.stop(save=False)
 
+    # Hitting only the plain +1 partner still opens the pair.
+    pb = boot()
+    pb.tick(240)
+    clear_entities(pb)
+    flatten_floor(pb)
+    set_tile(pb, 4, 0, BGT_WALL_BOMB)
+    set_tile(pb, 5, 0, 2)
+    # Player (56,19) -> tile (8,3); 7x7 covers col 5 but not col 4.
+    place_player(pb, 56, 19)
+    use_tool(pb, 0, ITEM_RIFT_BOMB)
+    pb.tick(30)
+    assert tile_at(pb, 4, 0) == BGT_DOOR and tile_at(pb, 5, 0) == BGT_DOOR, (
+        f"partner hit did not open pair: {tile_at(pb, 4, 0)},{tile_at(pb, 5, 0)}"
+    )
+    pb.stop(save=False)
+
     print("[bomb-wall] PASS Rift Bomb opens, Chime and shots do not")
+
 
 
 if __name__ == "__main__":

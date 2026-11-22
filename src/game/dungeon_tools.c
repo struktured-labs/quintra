@@ -127,7 +127,9 @@ static void tool_bomb(void) {
             else if (t == BGT_POT) room_break_pot(x, y);
             else if (t == BGT_WALL_CRACK) room_open_secret(x, y);
             else if (t == BGT_WALL_BOMB) bomb_wall_try_open(x, y);
-            else if (t == BGT_WALL) puzzle_try_hidden_shot(x, y);
+            else if (t == BGT_WALL) {
+                if (!bomb_wall_try_open(x, y)) puzzle_try_hidden_shot(x, y);
+            }
             else if (t == BGT_PILLAR) sun_lattice_strike(x, y);
         }
     }

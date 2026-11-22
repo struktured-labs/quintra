@@ -657,7 +657,7 @@ static void do_glints(void) {
                 }
             }
             if (n) sfx_play(SFX_TICK);
-            bomb_wall_chime();
+            n = (u8)(n + bomb_wall_chime());
         }
         if (VEIL_HAS(VEIL_SUN_SEAL) && room_puzzle_kind == PUZZLE_SUN_LATTICE
             && room_puzzle_locked) {

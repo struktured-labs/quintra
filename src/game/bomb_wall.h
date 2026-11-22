@@ -11,6 +11,6 @@ void bomb_wall_prepare_room(void) BANKED;
 /* If (tx,ty) is a bomb wall (or the +1 tile of its pair), open it. */
 u8 bomb_wall_try_open(u8 tx, u8 ty) BANKED;
 /* Echo Chime / Cave Light: glint only, never open. */
-void bomb_wall_chime(void) BANKED;
+u8 bomb_wall_chime(void) BANKED;
 
 #endif

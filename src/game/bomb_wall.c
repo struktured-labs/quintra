@@ -22,6 +22,7 @@ static u32 mix32(u32 a, u32 b) {
 }
 
 static u8 cell_eligible(u8 cell, u8 size, u8 entry, u8 cache, u8 veil) {
+    if (cell >= 32) return 0;
     if (cell == 0 || cell == entry || cell == cache || cell == veil) return 0;
     if (cell + 3 >= size) return 0;
     if (cell == 2 || cell == 5 || cell == 8 || cell == 11
@@ -212,9 +213,9 @@ static void glint_at(u8 tx, u8 ty) {
         (i16)((u16)ty << 3) - 4, 40);
 }
 
-void bomb_wall_chime(void) BANKED {
+u8 bomb_wall_chime(void) BANKED {
     u8 i, n = 0;
-    if (run_state.world_mode) return;
+    if (run_state.world_mode) return 0;
     for (i = 1; i < ROOM_W - 1; ++i) {
         if (room_tilemap[0][i] == BGT_WALL_BOMB) { glint_at(i, 0); n++; }
         if (room_tilemap[ROOM_H - 1][i] == BGT_WALL_BOMB) {
@@ -227,5 +228,5 @@ void bomb_wall_chime(void) BANKED {
             glint_at(ROOM_W - 1, i); n++;
         }
     }
-    (void)n;
+    return n;
 }
