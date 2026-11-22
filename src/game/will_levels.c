@@ -102,15 +102,35 @@ void will_levels_on_max_cast(void) BANKED {
 }
 
 void will_levels_hud_pips(void) BANKED {
-    /* Mastery stand-in: a digit in the free column between MP and the
-       Will bar (true 4-pip tiles are a follow-up; no new 2bpp sheet
-       in this PR). Column 11 is blank on the standard 20-tile lane. */
-    u8 row[1];
+    /* #151 section 3.5: a packed 4-pip mastery strip on the Will window
+       lane. The 20-tile row is already full (hearts, MP, B letter+icon,
+       Will digit + 3-segment bar, coins), so the strip occupies the
+       same single column the stand-in digit used (col 11, over the B
+       icon). Locked pips are blank; unlocked pips are solid Will purple
+       (palette 5). Geometric 2bpp tiles, no new sheet. Called only on
+       cap-up, hud_init / Continue, and hud_redraw_all — not on the
+       per-segment Will-bar tick. */
+    static const u8 pip_tiles[4][16] = {
+        /* L1: top-left 3x3 */
+        {0x70,0x70, 0x70,0x70, 0x70,0x70, 0,0, 0,0, 0,0, 0,0, 0,0},
+        /* L2: top row */
+        {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0,0, 0,0, 0,0, 0,0},
+        /* L3: top row + bottom-left */
+        {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0x70,0x70, 0x70,0x70, 0x70,0x70, 0,0},
+        /* L4: both rows */
+        {0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0, 0x77,0x77, 0x77,0x77, 0x77,0x77, 0,0},
+    };
+    u8 row[1], attr[1];
     u8 lv = will_levels_art();
-    row[0] = (u8)(HUD_DIGIT_0 + lv);
+    set_bkg_data(HUD_MAXWILL_PIPS, 1, pip_tiles[(u8)(lv - 1)]);
+    row[0] = HUD_MAXWILL_PIPS;
+    attr[0] = 5;
     VBK_REG = 0;
     set_win_tiles(11, 0, 1, 1, row);
-    (void)cap_up_notice;
+    VBK_REG = 1;
+    set_win_tiles(11, 0, 1, 1, attr);
+    VBK_REG = 0;
+    cap_up_notice = 0;
 }
 
 void will_levels_vortex_setup(u8 *rmax, u8 *life, u8 *grow,
