@@ -1009,6 +1009,7 @@ void room_enter(void) {
 
     gate_boulder_room_reset();
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
+    tiles_apply_passable_boulder();
     tiles_load_switch_pressed();
     tiles_load_boss_cue_bg();             // unmistakable sanctuary threshold
     // District, directive, and return-echo cards share this tiny alphabet.
