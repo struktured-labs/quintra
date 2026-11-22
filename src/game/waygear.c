@@ -11,6 +11,7 @@
 #include "game/waygear.h"
 #include "game/will.h"
 #include "render/tiles.h"
+#include "render/gate_boulder.h"
 
 void riftwild_discovery_prepare(void) BANKED;
 
@@ -27,6 +28,10 @@ u8 waygear_grant(u8 gear) BANKED {
     if (gear < WAYGEAR_EQUIP_COUNT) player.waygear_equipped = gear;
     sfx_play_reward(SFX_REWARD_SIGIL);
     room_refresh_player_appearance(1);
+    if (gear == WAYGEAR_GLOVE) {
+        tiles_apply_passable_boulder();
+        gate_boulder_refresh_attrs();
+    }
     return 1;
 }
 

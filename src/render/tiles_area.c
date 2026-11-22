@@ -9,6 +9,7 @@
 #include "game/puzzle.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
+#include "game/waygear.h"
 #include "game/riftwild_setpiece.h"
 #include "render/riftwild_art.h"
 
@@ -77,8 +78,8 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
     if (outdoor) {
         if (tile == BGT_GATE_WATER || tile == BGT_GATE_CHASM)
             return BGPAL_CRYSTAL;
-        if (tile == BGT_GATE_BOULDER || tile == BGT_GATE_THORNS
-            || tile == BGT_GATE_VENT) return BGPAL_WALL;
+        if (tile == BGT_GATE_BOULDER) return WAYGEAR_BOULDER_ATTR();
+        if (tile == BGT_GATE_THORNS || tile == BGT_GATE_VENT) return BGPAL_WALL;
         return (tile == BGT_TREE || tile == BGT_WILD_STONE
                 || tile == BGT_WILD_MOUNTAIN || tile == BGT_WILD_REEDS)
             ? BGPAL_WALL
@@ -201,7 +202,8 @@ static void outdoor_row(u8 logical_y, u8 *tiles, u8 *attrs) {
     for (i = 0; i < 32; ++i) {
         t = row[i];
         tiles[p] = t;
-        attrs[p] = outdoor_attr_lut[t];
+        attrs[p] = (t == BGT_GATE_BOULDER)
+            ? WAYGEAR_BOULDER_ATTR() : outdoor_attr_lut[t];
         p = (u8)((p + 1) & 31);
     }
 }

@@ -4,6 +4,7 @@
 #include "core/types.h"
 #include "render/tiles.h"
 #include "render/sprites_gen.h"
+#include "render/gate_boulder.h"
 
 #include "render/large_boss.h"
 #include "stages.h"
@@ -456,6 +457,7 @@ void tiles_load_dungeon_bg(void) BANKED {
     set_bkg_data(BGT_WILD_STUMP,  1, bgt_wild_stump);
     set_bkg_data(BGT_GATE_BOULDER, 5, bgt_gate_tiles[0]);
     set_bkg_data(BGT_WILD_MUD, 6, bgt_wild_climate[0]);
+    tiles_apply_passable_boulder();
 }
 
 // Colossus rooms need a different texture hierarchy from ordinary dungeon
