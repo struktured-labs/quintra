@@ -148,6 +148,7 @@ static void tool_bomb(void) {
 
 static void tool_chime(void) {
     u8 i, dir;
+    u8 chime_kind = 0;
     // Silence the current bullet pattern without deleting bodies or loot.
     for (i = 0; i < MAX_ENTITIES; ++i) {
         if ((entities[i].flags & EF_ACTIVE)
@@ -161,10 +162,12 @@ static void tool_chime(void) {
             u8 next = run_state_dungeon_cell_neighbor(here, dir);
             if (next != 0xFF) run_state_reveal_dungeon_cell(next);
         }
-        if (!secret_merchant_chime()) puzzle_chime_reveal();
+        if (!secret_merchant_chime()) chime_kind = puzzle_chime_reveal();
     } else riftwild_den_chime();
     room_shake(1, 12);
-    sfx_play(SFX_PUZZLE);
+    /* A tone-path teaser already owns CH1; do not stomp it with the
+       landscape fanfare (return 2 from puzzle_chime_reveal). */
+    if (chime_kind != 2) sfx_play(SFX_PUZZLE);
 }
 
 static void tool_mirror(void) {

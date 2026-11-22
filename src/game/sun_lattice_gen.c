@@ -1,4 +1,4 @@
-#pragma bank 255
+#pragma bank 17  /* pinned: keep sl_generate out of bank 23 */
 // Sun Lattice generator and beam tracer. Plain C: also compiled on the host
 // (SL_HOST) by scripts/test_sun_lattice_parity.py against the Rust
 // reference in tools/crates/quintra-procgen/src/sun_lattice.rs. Every

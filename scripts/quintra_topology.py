@@ -283,6 +283,7 @@ PUZZLE_PUSH_SEAL = 1
 PUZZLE_RUNE_SEQUENCE = 2
 PUZZLE_SUN_LATTICE = 5
 PUZZLE_PRISM_TOGGLE = 6
+PUZZLE_TONE_PATH = 7
 _EARLY_POOL = (
     (PUZZLE_PUSH_SEAL, PUZZLE_RUNE_SEQUENCE, PUZZLE_PRISM_TOGGLE),
     (PUZZLE_RUNE_SEQUENCE, PUZZLE_PRISM_TOGGLE, PUZZLE_PUSH_SEAL),
@@ -297,7 +298,10 @@ def puzzle_slot_kind(run_seed: int, stage: int, slot: int) -> int:
         first = mix % 3
         if slot:
             first = (first + 1 + ((mix >> 2) & 1)) % 3
-        return _EARLY_POOL[stage][first]
+        kind = _EARLY_POOL[stage][first]
+        if stage == 0 and slot == 1 and kind == PUZZLE_PUSH_SEAL:
+            return PUZZLE_TONE_PATH
+        return kind
     if slot and stage <= 5 and (mix >> 3) & 1:
         return PUZZLE_PRISM_TOGGLE
     return PUZZLE_SUN_LATTICE

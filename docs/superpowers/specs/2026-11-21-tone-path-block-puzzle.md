@@ -118,31 +118,34 @@ the start cell.
 
 Four shoves, last is always West (tonic C5). Net is measured from the
 crate's start origin to the socket origin (N = (0,−1), E = (+1,0),
-S = (0,+1), W = (−1,0)). Loops (net 0) and monotone triples (EEE, NNN,
-SSS) are omitted. Because the cadence shove is West, the socket is
-always one tile west of the crate's penultimate cell; it may still sit
-east, north, or south of the *start*. A socket due-west of the start
-is not in this bank (that would need an eastward overshoot and a
-second West, which collapses to a loop at L = 4).
+S = (0,+1), W = (−1,0)). Loops (net 0), monotone triples, and
+self-intersecting origin routes (a start cell visited twice, including
+N,N,S,W / S,S,N,W) are omitted. S,E,S,W stays: its origins never repeat. Because the cadence shove
+is West, the socket is always one tile west of the crate's
+penultimate cell; it may still sit east, north, or south of the
+*start*.
+
+The bank has **8** phrases so `prepare_tone_path` can index with
+`(u8)(seed >> 5) & 7` and never pull a 32-bit modulo helper into
+fixed ROM.
 
 | Id | Melody | Shoves | Net | Why it sings |
 |----|--------|--------|-----|--------------|
-| 0 | G5 G5 D5 C5 | E, E, S, W | (+1, +1) | sol-sol-re-do: a little amen cadence |
-| 1 | G5 D5 G5 C5 | E, S, E, W | (+1, +1) | sol-re-sol-do: question, then home |
-| 2 | D5 G5 G5 C5 | S, E, E, W | (+1, +1) | re-sol-sol-do |
-| 3 | E5 G5 E5 C5 | N, E, N, W | (+1, −2) | mi-sol-mi-do |
-| 4 | G5 E5 G5 C5 | E, N, E, W | (+1, −1) | sol-mi-sol-do |
-| 5 | E5 E5 G5 C5 | N, N, E, W | (+1, −2) | mi-mi-sol-do |
-| 6 | G5 G5 E5 C5 | E, E, N, W | (+1, −1) | sol-sol-mi-do |
-| 7 | D5 D5 G5 C5 | S, S, E, W | (+1, +1) | re-re-sol-do |
-| 8 | E5 E5 D5 C5 | N, N, S, W | (0, −1) | mi-mi-re-do |
-| 9 | D5 D5 E5 C5 | S, S, N, W | (0, +1) | re-re-mi-do |
-| 10 | G5 E5 E5 C5 | E, N, N, W | (0, −2) | sol-mi-mi-do |
-| 11 | G5 D5 D5 C5 | E, S, S, W | (0, +2) | sol-re-re-do |
-| 12 | D5 G5 D5 C5 | S, E, S, W | (+1, +2) | re-sol-re-do |
-| 13 | E5 G5 G5 C5 | N, E, E, W | (+1, −1) | mi-sol-sol-do |
+| 0 | E5 G5 E5 C5 | N, E, N, W | (+1, −2) | mi-sol-mi-do |
+| 1 | E5 E5 G5 C5 | N, N, E, W | (+1, −2) | mi-mi-sol-do |
+| 2 | G5 E5 E5 C5 | E, N, N, W | (0, −2) | sol-mi-mi-do |
+| 3 | G5 D5 D5 C5 | E, S, S, W | (0, +2) | sol-re-re-do |
+| 4 | D5 G5 D5 C5 | S, E, S, W | (+1, +2) | re-sol-re-do |
+| 5 | E5 E5 C5 C5 | N, N, W, W | (−2, −2) | mi-mi-do-do |
+| 6 | E5 C5 E5 C5 | N, W, N, W | (−2, −2) | mi-do-mi-do |
+| 7 | D5 C5 D5 C5 | S, W, S, W | (−2, +2) | re-do-re-do |
 
-A room seed picks `id = (seed >> 5) % BANK_LEN` and places the socket
+The crate and the socket are both 2×2, so a phrase is rejected
+unless `|net_x| ≥ 2` or `|net_y| ≥ 2`. Draft amen cadences with net
+`(+1, +1)` or `(+1, −1)` made the gold plate and the cairn overlap.
+`tone_phrase_fits` also refuses a self-intersecting origin path.
+
+A room seed picks `id = (u8)(seed >> 5) & 7` and places the socket
 with the same 8/10 × 6/8 candidates Push Seal already uses, then
 places the crate at `socket - net`. If that crate origin would sit on
 a wall, in the doorway slit, or outside the 1..16 / 1..13 origin
@@ -373,3 +376,29 @@ Previews (GIF + a short audio description of each beat) land in
    this spec picks, because the phrase should restart.
 5. Any performance or ROM-resident dispatcher size concern with the
    new sting and the teaser state?
+
+
+## Carbon review (2026-11-21)
+
+Carbon: **approve with changes.** Call $0.0543; running total $8.8868 logged.
+The recommendations below are binding for the v1 implementation.
+
+- Keep the global West = C5 tonic. The last-step tell is acceptable:
+  four notes still map one-to-one onto four shoves, and the first
+  three steps remain hidden.
+- Full reset to start on a miss, not step-back.
+- Approach teaser is edge-triggered (leave and re-enter the 2-tile
+  zone) plus the 150-frame cooldown, so camping the socket does not
+  loop the lesson.
+- `sfx_play_tone_miss()` is `BANKED`; only the `PEND_TONE_MISS_NOTE2`
+  branch lives in the resident dispatcher.
+- Skip `SFX_DOOR` on a shove only while the tone-path seal is still
+  locked.
+- Cancel an in-flight teaser or 6-miss shimmer on any shove.
+- Snap-back ejects the player (and any guard) out of the restored
+  start 2x2 toward the missed cell, so no one is entombed in the crate.
+- Visual hints flash the full 2x2 destination footprint, and a flash
+  that overlaps the socket restores `BGT_FLOOR3` / `BGPAL_DOOR`.
+- The carved apron is the bounding box of *every* visited origin plus
+  a one-tile wrong-shove margin. Start and path origins stay in the
+  safe interior (`x` 4..14, `y` 3..11).

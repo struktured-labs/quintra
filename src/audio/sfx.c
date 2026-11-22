@@ -26,6 +26,7 @@
 #define PEND_REFUSE_NOTE2 17
 #define PEND_PUZZLE_DELAY 18
 #define PEND_PUZZLE_BREATH 19
+#define PEND_TONE_MISS_NOTE2 20
 
 static u8 pend_kind;
 static u8 pend_timer;
@@ -295,6 +296,11 @@ void sfx_play_rune(u8 step) {
     sfx_claim_channels(40, 0);
 }
 
+void sfx_arm_tone_miss_note2(void) {
+    pend_kind = PEND_TONE_MISS_NOTE2;
+    pend_timer = 10;
+}
+
 
 void sfx_tick(void) {
     if (ch1_busy_frames) ch1_busy_frames--;
@@ -322,6 +328,9 @@ static void advance_pending_sfx(void) {
     switch (pend_kind) {
         case PEND_PORTAL_ARRIVE:
             ch1(0x26, 0x40, 0xA2, 1720);
+            break;
+        case PEND_TONE_MISS_NOTE2:
+            ch1(0x00, 0x80, 0x93, 1849);            // E5, slightly quieter
             break;
         case PEND_REFUSE_NOTE2:
             NR12_REG = 0x92;                           // retrigger, env (9,down,2)

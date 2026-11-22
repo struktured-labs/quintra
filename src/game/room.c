@@ -1675,7 +1675,9 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                                 }
                             VBK_REG = 0;
                         }
-                        sfx_play(SFX_DOOR);
+                        if (!(room_puzzle_kind == PUZZLE_TONE_PATH
+                                && room_puzzle_locked))
+                            sfx_play(SFX_DOOR);
                         if (pressed_switch) activate_switch(switch_x, switch_y);
                         if (puzzle_on_block_moved(ox, oy)) room_unseal_doors();
                         push_timer = 0;

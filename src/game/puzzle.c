@@ -31,8 +31,8 @@ u8 room_hidden_secret_bit;
 u8 room_socket_x = 0xFF;
 u8 room_socket_y = 0xFF;
 
-static u8 puzzle_block_x;
-static u8 puzzle_block_y;
+u8 puzzle_block_x;
+u8 puzzle_block_y;
 static u8 puzzle_contact;
 static u8 rune_progress;
 static u8 rune_count;
@@ -309,7 +309,12 @@ u8 puzzle_slot_kind(u8 slot) BANKED {
     if (bb < 2) {
         first = (u8)(mix % 3);
         if (slot) first = (u8)((first + 1 + ((mix >> 2) & 1)) % 3);
-        return puzzle_early_pool[bb][first];
+        {
+            u8 kind = puzzle_early_pool[bb][first];
+            if (bb == 0 && slot && kind == PUZZLE_PUSH_SEAL)
+                return PUZZLE_TONE_PATH;
+            return kind;
+        }
     }
     if (slot && bb <= 5 && ((mix >> 3) & 1)) return PUZZLE_PRISM_TOGGLE;
     return PUZZLE_SUN_LATTICE;
@@ -420,6 +425,8 @@ void puzzle_prepare_room(void) BANKED {
 
     if (room_puzzle_kind == PUZZLE_PUSH_SEAL) {
         if (!puzzle_solved()) prepare_push(seed);
+    } else if (room_puzzle_kind == PUZZLE_TONE_PATH) {
+        if (!puzzle_solved()) prepare_tone_path(seed);
     } else if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE) {
         if (!puzzle_solved()) prepare_sequence(seed);
     } else if (room_puzzle_kind == PUZZLE_PRISM_TOGGLE) {
@@ -449,7 +456,13 @@ u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED {
         sfx_play(SFX_PUZZLE);
         return 0; // optional discovery never clears a live combat seal
     }
-    if (room_puzzle_kind != PUZZLE_PUSH_SEAL || !room_puzzle_locked) return 0;
+    if (!room_puzzle_locked) return 0;
+    if (room_puzzle_kind == PUZZLE_TONE_PATH) {
+        u8 solved = tone_on_block_moved(old_x, old_y);
+        if (solved) mark_puzzle_solved(1);
+        return solved;
+    }
+    if (room_puzzle_kind != PUZZLE_PUSH_SEAL) return 0;
     if (old_x != puzzle_block_x || old_y != puzzle_block_y) return 0;
     {
         // Follow the crate one tile, then repaint any socket quadrant the
@@ -497,6 +510,10 @@ u8 puzzle_try_hidden_shot(u8 tx, u8 ty) BANKED {
 
 u8 puzzle_chime_reveal(void) BANKED {
     u8 kind;
+    if (room_puzzle_kind == PUZZLE_TONE_PATH && room_puzzle_locked) {
+        tone_start_teaser();
+        return 2;
+    }
     if (room_hidden_secret_kind == HIDDEN_SECRET_NONE) return 0;
     kind = room_hidden_secret_kind;
     room_hidden_secret_kind = HIDDEN_SECRET_NONE;
@@ -575,6 +592,8 @@ u8 puzzle_update_player(void) BANKED {
     u8 ty = (u8)((player.y + 12) >> 3);
     tick_rune_flash();
     rune_echo_tick();
+    if (room_puzzle_kind == PUZZLE_TONE_PATH && room_puzzle_locked)
+        tone_tick_player();
     if (room_puzzle_kind == PUZZLE_RUNE_SEQUENCE && room_puzzle_locked)
         return update_sequence(tx, ty);
     if (room_puzzle_kind == PUZZLE_PHASE_SWITCH)
