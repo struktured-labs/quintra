@@ -182,6 +182,9 @@ typedef struct {
     // (cleared at the next dungeon start). Bits 1..3 = Riftwild regions 0..2.
     // Appended so older suspends load as unclaimed (0).
     u8  powerup_shrines;
+    // Local-cell bits 0..31: bomb-only walls opened this dungeon (#173).
+    // Cleared at the next dungeon start. Older suspends load as 0.
+    u32 bomb_walls_open;
 } run_state_t;
 
 #define DUNGEON_LAW_KIND_MASK 0x03

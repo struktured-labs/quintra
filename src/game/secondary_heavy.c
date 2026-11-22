@@ -6,6 +6,7 @@
 #include "game/projectile.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
+#include "game/bomb_wall.h"
 #include "game/riftwild_den.h"
 #include "game/puzzle.h"
 #include "game/powerup.h"
@@ -125,6 +126,8 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
                 t=room_tile_at_px(x+dx*8,y+dy*8);
                 if (t==BGT_WALL_CRACK)
                     room_open_secret((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
+                else if (t==BGT_WALL_BOMB)
+                    bomb_wall_try_open((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
                 else if (t==BGT_PILLAR)
                     sun_lattice_strike((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
                 else if (t==BGT_WILD_STONE)

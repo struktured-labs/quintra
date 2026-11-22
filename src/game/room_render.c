@@ -135,6 +135,7 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
             ? BGPAL_CRYSTAL : BGPAL_CRACK;
     switch (tile) {
         case BGT_WALL:
+        case BGT_WALL_BOMB:
         case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:

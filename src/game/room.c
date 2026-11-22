@@ -38,6 +38,7 @@ void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
+#include "game/bomb_wall.h"
 #include "game/vignette.h"
 #include "game/room.h"
 #include "game/secret_merchant.h"
@@ -675,6 +676,7 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
 static u8 attr_for_tile(u8 t) {
     switch (t) {
         case BGT_WALL:
+        case BGT_WALL_BOMB:
         case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:
@@ -1132,6 +1134,7 @@ void room_enter(void) {
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
     puzzle_prepare_room_role();
+    bomb_wall_prepare_room();
     dungeon_law_apply_room(0);
     stage_event_prepare_room();
     dungeon_director_activate();

@@ -51,7 +51,7 @@ void projectile_update_hostile(entity_t *e, u8 idx) BANKED {
         return;
     }
     if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE || t == BGT_CRYSTAL
-        || t == BGT_WALL_CRACK || t == BGT_POT) {
+        || t == BGT_WALL_CRACK || t == BGT_WALL_BOMB || t == BGT_POT) {
         fx_spawn(SPR_FX_IMPACT, 2, px, py, 4);
         entity_kill(idx);
     }
