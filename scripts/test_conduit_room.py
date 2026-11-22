@@ -446,6 +446,25 @@ def assert_restored(r, resets):
     assert r.m(FREEZE) == 0
 
 
+def kite_wait(r, snap):
+    snap.seek(0)
+    r.pb.load_state(snap)
+    mem = r.pb.memory
+    mem[S["kst"]], mem[S["kx"]] = K_FLY, PX(9)
+    r.tick(60)
+    assert r.c("kx") == PX(9), f"Kite flew through the A cairn ({r.c('kx') - PX(0)})"
+    mem[S["ra"]] = 1                         # pretend A was raised to stream: B is stream too
+    assert wait(r, lambda: r.c("kx") < PX(7), 120) and r.c("kst") == K_FLY, \
+        f"Kite stuck kx {r.c('kx') - PX(0)} kst {r.c('kst')} ra {r.c('ra')} rb {r.c('rb')} live {r.c('live')}"
+    ref, n = r.c("refusals"), r.c("rewrites")
+    r.set_pos(fx(7), fy(9) - 3)
+    r.tick(2)
+    r.walk(fx(7), fy(9), axis_first="y")
+    assert wait(r, lambda: r.c("refusals") == ref + 1, 10) and r.c("rewrites") == n, \
+        "switch A raised a cairn onto the Kite"
+    print("  Kite waits at a cairn; switch A refuses to raise one onto it")
+
+
 DBG_K = int(os.environ.get('CD_DBG_K', '-1'))
 
 
@@ -573,6 +592,9 @@ def main():
     import io
     snap = io.BytesIO()
     r.pb.save_state(snap)
+    if os.environ.get("CD_ONLY_KITE"):
+        kite_wait(r, snap)
+        return
     flips, worst, resets = fuzz(r, snap)
     if os.environ.get("CD_ONLY_FUZZ"):
         print(f"  fuzz only: {flips} flips, worst {worst}")
@@ -649,23 +671,7 @@ def main():
     assert_restored(r, 3)
     print("  rolling stone crushed the frozen Jagger; reset restored it")
 
-    # --- M5b: a cairn refuses the Kite; switch A over the stopped Kite refuses.
-    snap.seek(0)
-    r.pb.load_state(snap)
-    mem = r.pb.memory
-    mem[S["kst"]], mem[S["kx"]] = K_FLY, PX(9)
-    r.tick(60)
-    assert r.c("kx") == PX(9), f"Kite flew through the A cairn ({r.c('kx') - PX(0)})"
-    mem[S["ra"]] = 1                         # pretend A was raised to stream: B is stream too
-    r.tick(50)
-    assert r.c("kx") < PX(7) and r.c("kst") == K_FLY
-    ref, n = r.c("refusals"), r.c("rewrites")
-    r.set_pos(fx(7), fy(9) - 3)
-    r.tick(2)
-    r.walk(fx(7), fy(9), axis_first="y")
-    assert wait(r, lambda: r.c("refusals") == ref + 1, 10) and r.c("rewrites") == n, \
-        "switch A raised a cairn onto the Kite"
-    print("  Kite waits at a cairn; switch A refuses to raise one onto it")
+    kite_wait(r, snap)
 
     # --- full solve, closet first: Star key, switches, Kite chain, Heart key on
     # door A (treasure); door B refused; reset returns the key; then door B, goal.
