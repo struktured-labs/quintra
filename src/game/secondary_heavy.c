@@ -65,14 +65,25 @@ static void bomb_break_tiles(i16 x, i16 y, u8 radius);
 static void bomb_spawn_frag(i16 x, i16 y, u8 dir, u8 damage, u8 gold) {
     u8 i;
     entity_t *f;
+    i8 dx, dy;
     i = entity_spawn(ENT_PROJECTILE);
     if (i == 0xFF) return;
     f = &entities[i];
     f->flags |= EF_PLAYER_PROJ;
-    f->x = x;
-    f->y = y;
-    f->vx = (i8)(dir8_dx[dir] * 3);
-    f->vy = (i8)(dir8_dy[dir] * 3);
+    /* 8x8 sprite is top-left anchored; -4 centers it on the blast origin. */
+    f->x = (ppos_t)(x - 4);
+    f->y = (ppos_t)(y - 4);
+    dx = dir8_dx[dir];
+    dy = dir8_dy[dir];
+    /* Cardinals ±3, diagonals ±2 so the burst is circular and the three
+     * northern fragments do not share one scanline for their whole life. */
+    if (dx && dy) {
+        f->vx = (i8)(dx * 2);
+        f->vy = (i8)(dy * 2);
+    } else {
+        f->vx = (i8)(dx * 3);
+        f->vy = (i8)(dy * 3);
+    }
     f->sprite_tile = SPR_BOMB_FRAG;
     f->palette = gold ? SPR_BOMB_FX_GOLD : SPR_BOMB_FX_PROP;
     f->hp = 1;
@@ -82,6 +93,9 @@ static void bomb_spawn_frag(i16 x, i16 y, u8 dir, u8 damage, u8 gold) {
     f->ai_data[0] = 0;
     f->ai_data[2] = 1; /* skip bullet shimmer */
     f->ai_data[3] = 0;
+    f->ai_data[4] = 0;
+    if (dx < 0) f->ai_data[4] |= PROJ_VIS_FLIP_X;
+    if (dy > 0) f->ai_data[4] |= PROJ_VIS_FLIP_Y;
     f->ai_data[6] = 0;
 }
 
