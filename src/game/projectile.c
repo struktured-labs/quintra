@@ -6,6 +6,7 @@
 #include "game/entity.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
+#include "game/wolfkin_sword.h"
 #include "game/boss_projectile.h"
 #include "game/player.h"
 #include "game/puzzle.h"
@@ -214,6 +215,11 @@ void projectile_update_one(entity_t *e, u8 idx) {
     }
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
+    if ((flags & EF_PLAYER_PROJ) && e->ai_data[6] == PROJ_AUX_WOLFKIN_FANG) {
+        /* Parented longsword: re-anchor, never a traveling wall collision. */
+        wolfkin_sword_update(e);
+        return;
+    }
 
     if (!(flags & EF_PLAYER_PROJ)) {
         projectile_update_hostile(e, idx);

@@ -13,6 +13,7 @@
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/powerup.h"
+#include "game/wolfkin_sword.h"
 #include "game/procgen.h"
 #include "game/projectile.h"
 #include "game/room.h"
@@ -382,16 +383,16 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
     dmg = half_dmg(damage);
 
     if (id == POWERUP_LONGREACH) {
-        u8 hb = s->hitbox;
-        u8 w = (u8)((hb >> 4) & 0x0F);
-        u8 h = (u8)(hb & 0x0F);
-        w = (u8)(w << 1); if (w > 0x0F) w = 0x0F;
-        h = (u8)(h << 1); if (h > 0x0F) h = 0x0F;
-        s->hitbox = (u8)((w << 4) | h);
-        // 4x area is the hitbox; +50% travel only if the shot actually moves.
-        // A stationary Wolfkin claw must not become a lingering melee wall.
-        if (s->vx || s->vy)
-            s->state_timer = (u8)(s->state_timer + (s->state_timer >> 1));
+        if (!(player.class_id == 0 && s->ai_data[6] == PROJ_AUX_WOLFKIN_FANG)) {
+            u8 hb = s->hitbox;
+            u8 w = (u8)((hb >> 4) & 0x0F);
+            u8 h = (u8)(hb & 0x0F);
+            w = (u8)(w << 1); if (w > 0x0F) w = 0x0F;
+            h = (u8)(h << 1); if (h > 0x0F) h = 0x0F;
+            s->hitbox = (u8)((w << 4) | h);
+            if (s->vx || s->vy)
+                s->state_timer = (u8)(s->state_timer + (s->state_timer >> 1));
+        }
     }
 
     if (id == POWERUP_FORMATION && free_slots() > 8) {
@@ -408,14 +409,14 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
             if (spd) ttl = (u8)(24 / spd); if (ttl < 4) ttl = 4;
         }
         if (player.class_id == 0) {
-            // Wolfkin: two extra short arcs at ±45°.
-            u8 d1 = (u8)((dir + 1) & 7);
-            u8 d2 = (u8)((dir + 7) & 7);
-            u8 a = copy_from(primary, x, y,
-                (i8)(dir8_dx[d1] * 3), (i8)(dir8_dy[d1] * 3), dmg, 12);
-            u8 b = copy_from(primary, x, y,
-                (i8)(dir8_dx[d2] * 3), (i8)(dir8_dy[d2] * 3), dmg, 12);
-            (void)a; (void)b;
+            /* Longblade: two 2-damage beams at ±45°, ttl 28, 1 OAM each. */
+            u8 ttl = 28;
+            u8 a = wolfkin_beam_spawn((i16)player.x + 4, (i16)player.y + 4,
+                (u8)((dir + 1) & 7), 2, ttl, PROJ_AUX_SWORD_PU);
+            u8 b = wolfkin_beam_spawn((i16)player.x + 4, (i16)player.y + 4,
+                (u8)((dir + 7) & 7), 2, ttl, PROJ_AUX_SWORD_PU);
+            if (a != 0xFF) entities[a].ai_data[3] |= PROJ_FLAG_PU_COPY;
+            if (b != 0xFF) entities[b].ai_data[3] |= PROJ_FLAG_PU_COPY;
         } else {
             u8 a = copy_from(primary, (i16)(x + ox), (i16)(y + oy),
                 s->vx, s->vy, dmg, ttl);
@@ -430,13 +431,15 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
 
     if (id == POWERUP_HALO && (fire_count % 3) == 0 && free_slots() > 10) {
         if (player.class_id == 0) {
-            // Wolfkin: one spin-slash hitbox, 12 frames.
-            u8 idx = copy_from(primary, (i16)player.x, (i16)player.y,
-                0, 0, dmg, 12);
-            if (idx != 0xFF) {
-                entities[idx].hitbox = 0xFF;
-                entities[idx].vx = 0;
-                entities[idx].vy = 0;
+            /* 4-way ring, alternating cardinals then diagonals. */
+            static u8 halo_diag;
+            u8 i, base = halo_diag ? 1 : 0;
+            halo_diag = (u8)(halo_diag ? 0 : 1);
+            for (i = 0; i < 4; ++i) {
+                u8 d = (u8)((base + (u8)(i << 1)) & 7);
+                u8 idx = wolfkin_beam_spawn((i16)player.x + 4, (i16)player.y + 4,
+                    d, 2, 28, PROJ_AUX_SWORD_PU);
+                if (idx != 0xFF) entities[idx].ai_data[3] |= PROJ_FLAG_PU_COPY;
             }
         } else {
             for (i = 0; i < 8; ++i) {
@@ -477,7 +480,12 @@ void powerup_on_primary_fire(u8 primary, u8 dir, u8 damage) BANKED {
                 continue;
             bx = FIX8_TO_INT(entities[b].x);
             by = FIX8_TO_INT(entities[b].y);
-            copy_from(primary, bx, by, s->vx, s->vy, dmg, s->state_timer);
+            if (player.class_id == 0) {
+                u8 idx = wolfkin_beam_spawn(bx, by, dir, 2, 28, PROJ_AUX_SWORD_PU);
+                if (idx != 0xFF) entities[idx].ai_data[3] |= PROJ_FLAG_PU_COPY;
+            } else {
+                copy_from(primary, bx, by, s->vx, s->vy, dmg, s->state_timer);
+            }
         }
     }
 }
