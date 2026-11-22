@@ -1,8 +1,10 @@
 # Bomb-only cracked wall (Zelda-style subtle tell)
 
 Date: 2026-11-21. Status: **implementation spec for #173.** Split from #171.
-Carbon reviews this draft before ROM work; art is generated with GPT Image 2
-and also reviewed by Carbon. This PR stays a draft; it is not merged here.
+Carbon reviewed this draft (2026-11-21, revise-first, $0.0413, running total
+$8.9419 logged). The numbered fixes in §12 are folded into §§4–7 below. Art is
+generated with GPT Image 2 and also reviewed by Carbon. This PR stays a draft;
+it is not merged here.
 
 Source request (Carmelo, via #173 / the 2026-11-21 voice call):
 
@@ -121,11 +123,21 @@ intentional: the reward is optional loot, not a graph shortcut.
 
 **Solid lists.** Add `BGT_WALL_BOMB` wherever `BGT_WALL` or `BGT_WALL_CRACK`
 is already treated as a blocking surface in the projectile / hookshot /
-hostile-shot tails, so shots die on it instead of passing through. This is
-a correctness fix, not a new per-frame system.
+hostile-shot tails, so shots die on it instead of passing through.
 
-Opening also sets the persistence bit (§6) and may `sram_save_run()` the
-same way other one-shot room events do.
+**Ricochet.** In the player-projectile split, `PROJ_FLAG_RICOCHET` currently
+bounces on `BGT_WALL` or `BGT_PILLAR`. Treat `BGT_WALL_BOMB` like `BGT_WALL`
+so a disguised brick does not become a free shot-test tell.
+
+**Hostile hot path.** Hostile bullet-hell shots share the solid tail and
+must not pay a new comparison ahead of the common `BGT_WALL` case. Add
+`BGT_WALL_BOMB` after `BGT_WALL` (or only on the player-projectile branch
+if hostiles already die on `BGT_WALL` before they can reach a border bomb
+wall). Re-check the dense floor (135/180) after the change.
+
+**Persistence bit.** Set `bomb_walls_open` only in the Bomb Bag and Rift
+Bomb handlers, never inside shared `room_open_secret` (gold cracks use that
+helper and must stay non-persistent).
 
 ## 5. Echo Chime
 
@@ -135,8 +147,9 @@ same way other one-shot room events do.
 Additionally, after that existing work, scan the **room border only**
 (the only legal placement) for `BGT_WALL_BOMB`. Each hit gets the existing
 `glint()` FX used by Cave Light / Veil Chime (no new sprite, no per-frame
-timer). Play `SFX_TICK` if at least one bomb wall was found. **Do not** call
-`room_open_secret`.
+timer). `tool_chime` already ends with `sfx_play(SFX_PUZZLE)`, which would clobber
+a new `SFX_TICK`. Use the Chime's existing puzzle SFX and let the visual
+`glint()` be the tell. **Do not** call `room_open_secret`.
 
 Cave Light (`do_glints`) may also glint a bomb wall once per room, the same
 way it already glints gold cracks. Still no open.
@@ -152,24 +165,40 @@ Eligible local cells, all of which must pass:
 - Not a mission role (`mission_graph_cell_is_role`: trial, sigil, warden,
   waystone, deep warden / switch / gate).
 - Not the public shop (`size-3`), sanctuary (`size-2`), or boss (`size-1`).
-- Prefer degree-1 dead-ends, including the Farfold cache cell and the Veil
-  host cell when those are legal. Then any other off-role cell. This is the
-  same instinct as `secret_merchant_host_cell()`.
+- **Not the Veil host cell.** `room_open_secret` sets `SECRET_SHOP_MOUTH`
+  whenever `secret_merchant_host_here` is true, and `secret_door_x/y` is a
+  single doorway per room. A second mouth in the Veil host would mark the
+  stall open and clobber the Veil entrance. Plenty of other dead-ends exist.
+- Prefer remaining degree-1 dead-ends, including the Farfold cache cell.
+  Then any other off-role cell.
 
-In a chosen room, stamp **one** 2-adjacent-friendly border tile (the same
-"never on a door lane" rule as gold cracks: skip north/south cols 9–10 and
-east/west rows 8–9). Prefer a `BGT_WALL`. If a gold `BGT_WALL_CRACK` landed
-on that tile, **replace it** — that room keeps one optional vault, and it
-becomes bomb-only. Never stamp on `BGT_DOOR`.
+In a chosen room, stamp **one** border pair:
+
+- `room_open_secret` expands to `tx+1` on N/S walls and `ty+1` on E/W walls.
+  Skip positions whose *either* tile would enter a door lane: N/S skip
+  cols **8, 9, 10**; E/W skip rows **7, 8, 9**. Also skip the disguised-cairn
+  north-wall pair `(6, 0)–(7, 0)` used by `HIDDEN_SECRET_PUSH`.
+- Both `(tx, ty)` and its `+1` neighbor must already be `BGT_WALL` or
+  `BGT_WALL_CRACK`. Never stamp on `BGT_DOOR`.
+- **`secret_door_x/y` is one mouth per room.** In a bomb-wall host room,
+  suppress every gold `BGT_WALL_CRACK` (replace the chosen pair with the
+  bomb wall and turn any other cracks on that room's border back into
+  `BGT_WALL`) so the room never has two vault mouths. Do this *after* the
+  existing gold-crack RNG block so crate/spike/pot streams do not drift.
+- Do not stamp in a room that already has `room_hidden_secret_kind !=
+  HIDDEN_SECRET_NONE`. Prefer to pick host cells first, then let hidden
+  secrets skip a room that already has a bomb wall (one mouth).
 
 **Required progress is never behind one.** The mouth is a vault overlay, not
 a graph exit, and the host room is never a required lore/service cell. A
 player who never finds a bomb can still finish the dungeon.
 
-Precompute the 2–3 host cells once per dungeon from `run_seed` +
-`bosses_beaten` (a small helper, banked, not in the room hot bank). Procgen
-only asks "is this local cell a host?" after the existing gold-crack stamp
-so RNG streams for crates, spikes, and pots stay unchanged.
+Host cells *and* the border `(side, pos)` are computed with a **stateless
+hash of `(run_seed, bosses_beaten, local_cell)`**, never `rng_next_u8()`.
+A mid-procgen `rng_next_u8()` draw would still shift crate/spike/pot
+streams in host rooms. The helper is banked, not in the room hot bank.
+Procgen only asks "is this local cell a host?" after the existing
+gold-crack stamp.
 
 ## 7. Save and room-state persistence
 
@@ -178,14 +207,20 @@ Current `run_state_t` is ~70 bytes; SRAM stores `sizeof` in a `u8`, so four
 more bytes fit. Older suspends load with the new field zeroed
 (`sram_migrate` / size-prefixed copy already used by `powerup_shrines`).
 
-- Set the local-cell bit when the wall is opened.
+- Set the local-cell bit only in the two bomb-blast handlers when they
+  actually open a `BGT_WALL_BOMB`.
 - On room enter, after procgen stamps a closed bomb wall, if the bit is set,
-  call `room_open_secret` on that tile before `room_draw_tilemap` so the
-  doorway is already there (and a re-entry into the vault still works).
+  **do not call `room_open_secret`.** That helper `wait_vbl_done()`s twice,
+  writes VRAM before the coming full map draw, plays `SFX_DOOR` on every
+  re-entry, and may set `SECRET_SHOP_MOUTH`. Instead write `BGT_DOOR` into
+  the two `room_tilemap` cells and set `secret_door_x/y/x2/y2` directly,
+  then let `room_draw_tilemap` paint them.
 - Clear the field in `run_state_init` and `run_state_begin_dungeon` (same
-  lifetime as `dungeon_puzzles` / `dungeon_phase`). Continue mid-dungeon
-  keeps the bits.
+  lifetime as `dungeon_puzzles` / `dungeon_phase`). `run_state_enter_from_world`
+  already calls `run_state_begin_dungeon`. Continue mid-dungeon keeps the bits.
 - Gold cracks are unchanged and still do not persist.
+- `u32` covers local cells 0–31, matching the four `dungeon_visited*` bytes.
+  Current graphs use 0–29.
 
 ## 8. Performance
 
@@ -239,3 +274,23 @@ dense **135** (per 180 loop frames).
    Light glint, procgen placement, persist/restore, tests, previews.
 4. Carbon review of the final diff.
 5. Draft PR linked to #173. Do not merge.
+
+## 12. Carbon review (2026-11-21)
+
+Carbon verdict: **revise-first.** Call cost $0.0413; running total $8.9419
+logged. The required fixes, now folded above:
+
+1. Exclude the Veil host cell; one `secret_door_*` mouth per room.
+2. Restore opened walls by writing the tilemap and `secret_door_*`, never
+   by re-calling `room_open_secret`.
+3. Skip door-lane neighbor+1 positions (N/S 8–10, E/W 7–9) and require both
+   tiles of the pair to be wall or gold crack.
+4. Ricochet bounces on the bomb wall the same way as `BGT_WALL`.
+5. Keep the hostile projectile compare off the front of the 60 Hz tail.
+6. Stateless hash for host cells and `(side, pos)`; no `rng_next_u8()`.
+7. Chime uses existing `SFX_PUZZLE`; glint is visual only.
+8. Persist bits are set only in the two bomb handlers.
+
+Tile index **71 confirmed**. Do not change `room_tile_walkable`, gold-crack
+shot rules, `puzzle_chime_reveal`, or the fire/cost half of
+`secondary_heavy.c`.
