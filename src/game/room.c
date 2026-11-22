@@ -36,6 +36,7 @@ void new_monsters_foyer_warp(void) BANKED;
 void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
 void magic_convergence_fire(u8 damage) BANKED;
+void will_levels_hud_pips(void) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
@@ -1067,6 +1068,9 @@ void room_enter(void) {
         SCX_REG = room_scroll_x();
         SCY_REG = room_scroll_y();
         status_player_refresh_visual();
+        /* FX / identity uploads above can overwrite high OBJ-shared VRAM
+           after hud_init; restore the mastery strip now, not every frame. */
+        will_levels_hud_pips();
         // Music kept running through the pack screen (room_exit no longer stops
         // it), so there's nothing to restart here — resume is seamless.
         SHOW_SPRITES;
@@ -1182,6 +1186,7 @@ void room_enter(void) {
     sram_save_run();
 
     status_player_refresh_visual();
+    will_levels_hud_pips();
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;

@@ -25,6 +25,10 @@
 // Merchant proximity offer icons. These live only on the WINDOW HUD, so the
 // dungeon tilemap never interprets them as terrain.
 #define HUD_AEGIS_PIPS  124 // window-only 1/2/3 charge pips; rewritten on change
+#define HUD_MAXWILL_PIPS 123 // window-only 4-pip strip; low BG slot so
+                                // OBJ sheets cannot stomp it. Shares the
+                                // compass Farfold-cache index; map reloads
+                                // 123-126 on enter, we restore on resume.
 // Equipped-B HUD box. High slots stay free of room tiles; pack frames
 // start at 0xF6 and waygear at 0xF2, so these only live while the window is shown.
 #define HUD_B_LETTER    0xF0

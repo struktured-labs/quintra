@@ -422,8 +422,9 @@ void hud_redraw_action_charge(u8 cur, u8 max) BANKED {
         row[i + 1] = (i < segs) ? HUD_BAR_FULL : HUD_BAR_EMPTY;
     VBK_REG = 0;
     set_win_tiles(12, 0, 4, 1, row);
-    /* Mastery pips are not redrawn on every Will-bar tick: that was a
-       bank-25 far call each segment. hud_redraw_all and cap-up cover it. */
+    /* Mastery pips (col 11 packed strip) are not redrawn on every Will-bar
+       tick: that was a bank-25 far call each segment. hud_redraw_all and
+       cap-up cover it. */
 }
 
 void hud_low_hp_pulse(u8 phase) BANKED {
