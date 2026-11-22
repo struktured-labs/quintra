@@ -117,6 +117,12 @@
 #define BGT_MAP_LABEL_G 69
 #define BGT_MAP_LABEL_L 70
 #define BGT_MAP_LABEL_B 71
+// Dungeon-only subtle bomb-only crack (#173). SELECT overwrites this slot
+// with the Compass legend letter B (BGT_MAP_LABEL_B). tiles_load_dungeon_bg
+// restores the bomb-wall pattern when play resumes. Solid by default
+// (outside room_tile_walkable ranges). Distinct from boulder gate slots
+// 100-104 reserved for #172.
+#define BGT_WALL_BOMB   71
 
 // Combat-time HUD alphabet extensions temporarily reuse map-only slots. The
 // Compass reloads its own glyph atlas; returning to play reloads these.
@@ -188,6 +194,10 @@
 // room atlas is restored after closing SELECT, so five visually explicit
 // Zelda-like barriers cost no additional BG tile address space.
 #define BGT_GATE_BOULDER 100 // Sauran or Titan Glove
+// Open art identity. Gameplay keeps slot 100 and swaps VRAM when the
+// hero can pass. Reserved so #173 (bomb-only wall) does not claim it.
+// Never written into room_tilemap.
+#define BGT_GATE_BOULDER_OPEN 133
 #define BGT_GATE_WATER   101 // Picsean or Tide Raft
 #define BGT_GATE_CHASM   102 // Corvin or Rift Hook
 #define BGT_GATE_THORNS  103 // Wolfkin only
@@ -374,6 +384,20 @@
 #define SPR_ITEM_MORNINGSTAR 239
 #define SPR_ITEM_BOMB_BAG    240 // distinct from relic SPR_ITEM_RIFT_BOMB
 #define SPR_ITEM_MORNINGSTAR_BIG 241 // 16x16 head, tiles 241-244 bank 1
+// Player-bomb Will FX live in bank 1 at 188-191, in the gap after magic
+// tiles (160-175, bank 1) and before WILL_MAXFX (200-203, bank 1).
+// Bank 0 at 180-199 is class hurt; Facet Ram occupies 242-249 in bank 0
+// only, but these effects stay off that index range so a leftover VBK=1
+// cannot clobber them. 188 is a vertical `)` arc (E/W), 189 a horizontal
+// cap (N/S), 190 a NE corner; X/Y flips close a ring. 191 is a fragment.
+// SPR_BOMB_FX_* already include S_BANK; fx_spawn and the 8x8 draw path
+// write that prop byte straight into shadow OAM.
+#define SPR_BOMB_WAVE          188
+#define SPR_BOMB_WAVE_H        189
+#define SPR_BOMB_WAVE_CORNER   190
+#define SPR_BOMB_FRAG          191
+#define SPR_BOMB_FX_PROP       12  // heart red  | VRAM bank 1
+#define SPR_BOMB_FX_GOLD       13  // coin gold  | VRAM bank 1 (max Will)
 #define SPR_MORNINGSTAR_PROP 13  // coin gold | VRAM bank 1
 #define SPR_BOMB_BAG_PROP    12  // heart red  | VRAM bank 1
 #define SPR_BOMB_BAG_FLASH   13  // coin gold  | VRAM bank 1 (fuse warning)

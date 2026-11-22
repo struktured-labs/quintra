@@ -25,6 +25,7 @@
 #include "game/dungeon_director.h"
 #include "game/entity.h"
 #include "game/mission_graph.h"
+#include "game/bomb_wall.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/powerup.h"
@@ -569,7 +570,7 @@ void secret_merchant_write_effect(u8 code) BANKED {
         "CAVE LIGHT", "HONEYCOMB", "CINDER VEIL", "RIME SKATES",
         "FILTER MASK", "GLOAM LAMP", "SUN SEAL", "CRIMSON PACT",
         "LAST LIGHT", "WAYFARER BELL", "CACHE LURE", "HOLLOW WICK",
-        "B: BOMB / 1 MP", "TOOL: BOMB", "TOOL: CHIME", "REARM RIFTWELL",
+        "B: BOMB / 2 MP", "TOOL: BOMB", "TOOL: CHIME", "REARM RIFTWELL",
     };
     if (code < SM_CODE_COUNT) text_write(text[code]);
 }
@@ -656,6 +657,7 @@ static void do_glints(void) {
                 }
             }
             if (n) sfx_play(SFX_TICK);
+            n = (u8)(n + bomb_wall_chime());
         }
         if (VEIL_HAS(VEIL_SUN_SEAL) && room_puzzle_kind == PUZZLE_SUN_LATTICE
             && room_puzzle_locked) {

@@ -559,6 +559,11 @@ static void blade_pos(u8 k, u8 t, i16 *x, i16 *y) {
 static void corvin_tick(u8 t) {
     u8 k;
     i16 x, y;
+    // blade_pos (two signed /12 plus multiplies) depends only on k, t and
+    // fx_*; the hit sweep and the draw below used to compute it twice.
+    static i16 bpx[4], bpy[4];
+    if (t < 44)
+        for (k = 0; k < 4; ++k) blade_pos(k, t, &bpx[k], &bpy[k]);
     if (t < 32) eat_shots(fx_kx, fx_ky, 18, 0);
     if (t <= 20 || (t >= 28 && t < 40)) {
         // Fan-out sweep and the snap flight: one feather hit per body. The
@@ -567,7 +572,7 @@ static void corvin_tick(u8 t) {
         u8 i, step = (t >= 28) ? 1 : 4;
         for (k = 0; k < 4; ++k) {
             entity_t *e;
-            blade_pos(k, t, &x, &y);
+            x = bpx[k]; y = bpy[k];
             for (i = (step == 1) ? 0 : (u8)(t & 3), e = &entities[i];
                  i < MAX_ENTITIES; i += step, e += step) {
                 if (!is_body(e) || MASK_HAS(hit_a, i)) continue;
@@ -641,8 +646,7 @@ static void corvin_tick(u8 t) {
         for (k = 0; k < 4; ++k) {
             u8 tile = (t >= 20 && t < 28 && ((t >> 1) & 1))
                 ? FX_T(1) : WILL_MAXFX_TILE;
-            blade_pos(k, t, &x, &y);
-            put(k, x, y, tile, diag_prop[k]);
+            put(k, bpx[k], bpy[k], tile, diag_prop[k]);
         }
     }
 }

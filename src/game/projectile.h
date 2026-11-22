@@ -36,6 +36,9 @@ extern u8 g_fang_claw;
 // Picsean Tide Vortex damage carrier: inert to the shot sweep.
 #define PROJ_AUX_VORTEX       0xF0
 #define PROJ_AUX_WOLFKIN_FANG 0xF1
+/* Below HOOKSHOT (0xF5) so beams use the ordinary shot path. */
+#define PROJ_AUX_SWORD_BEAM    0xEE
+#define PROJ_AUX_SWORD_PU      0xED
 #define PROJ_AUX_SPLASH        0xF2
 #define PROJ_AUX_BEAM_TRAIL    0xF3
 #define PROJ_AUX_BOOMERANG     0xF4

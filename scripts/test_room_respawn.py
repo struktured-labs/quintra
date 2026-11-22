@@ -18,6 +18,13 @@ PL = None
 TM = None
 ENTITY_SIZE = 28
 
+# run_state: bomb_walls_open (u32) lives at offset 70; the respawn ring
+# is appended after it (visit_seq + 3x6-byte slots).
+RS_VISIT_SEQ = 74
+RS_CLEAR_TAG = 75
+RS_CLEAR_ID = 81
+RS_CLEAR_SEQ = 87
+
 
 def bind(pb=None):
     global RS, PL, TM
@@ -76,10 +83,10 @@ def mission_cells(pb):
 
 
 def dump_ring(pb, label):
-    visit = pb.memory[RS + 70]
-    tags = [pb.memory[RS + 71 + i] for i in range(6)]
-    ids = [pb.memory[RS + 77 + i] for i in range(6)]
-    seqs = [pb.memory[RS + 83 + i] for i in range(6)]
+    visit = pb.memory[RS + RS_VISIT_SEQ]
+    tags = [pb.memory[RS + RS_CLEAR_TAG + i] for i in range(6)]
+    ids = [pb.memory[RS + RS_CLEAR_ID + i] for i in range(6)]
+    seqs = [pb.memory[RS + RS_CLEAR_SEQ + i] for i in range(6)]
     missions = mission_cells(pb)
     print(f"[respawn] {label} room={room_of(pb)} enemies={count_enemies(pb)} "
           f"world={pb.memory[RS + 17]} visit={visit} rooms_cleared={pb.memory[RS + 9]} "
@@ -172,12 +179,12 @@ def main():
         pb.tick()
     cleared = pb.memory[RS + 8]  # rooms_cleared offset: 1+1+4+1+2 = 9? 
     # biome(1)+room(1)+seed(4)+entered(1)+timer(2)+rooms_cleared(1) => offset 10
-    # We'll just trust the hook; stamp should be in the ring at RS+70.
-    visit = pb.memory[RS + 70]
+    # We'll just trust the hook; stamp should be in the ring at RS+RS_VISIT_SEQ.
+    visit = pb.memory[RS + RS_VISIT_SEQ]
     cleared = pb.memory[RS + 9]  # rooms_cleared
-    tags = [pb.memory[RS + 71 + i] for i in range(6)]
-    ids = [pb.memory[RS + 77 + i] for i in range(6)]
-    seqs = [pb.memory[RS + 83 + i] for i in range(6)]
+    tags = [pb.memory[RS + RS_CLEAR_TAG + i] for i in range(6)]
+    ids = [pb.memory[RS + RS_CLEAR_ID + i] for i in range(6)]
+    seqs = [pb.memory[RS + RS_CLEAR_SEQ + i] for i in range(6)]
     print(f"[respawn] after clear enemies={count_enemies(pb)} visit_seq={visit} "
           f"rooms_cleared={cleared} tags={tags} ids={ids} seqs={seqs}")
     assert count_enemies(pb) == 0
@@ -187,9 +194,9 @@ def main():
     stamped = any(tags[i] and ids[i] == start_room for i in range(6))
     if not stamped:
         print("[respawn] hook did not stamp; writing cooldown ring")
-        pb.memory[RS + 71] = 1  # dungeon tag
-        pb.memory[RS + 77] = start_room
-        pb.memory[RS + 83] = visit
+        pb.memory[RS + RS_CLEAR_TAG] = 1  # dungeon tag
+        pb.memory[RS + RS_CLEAR_ID] = start_room
+        pb.memory[RS + RS_CLEAR_SEQ] = visit
         dump_ring(pb, "after stamp write")
     # Force-despawning may skip the latch-release voice; open the thresholds
     # so the graph walk can actually leave.

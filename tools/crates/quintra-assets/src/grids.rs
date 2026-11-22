@@ -1173,6 +1173,17 @@ pub const BGT_RUBBLE: [&str; 8] = [
     "22222222",
 ];
 
+pub const BGT_WALL_BOMB: [&str; 8] = [
+    "33333333",
+    "22212221",
+    "22212201",
+    "11111011",
+    "12221022",
+    "12221222",
+    "11111111",
+    "22212221",
+];
+
 pub const BGT_WALL_CRACK: [&str; 8] = [
     "11311211",
     "11322111",
@@ -2308,7 +2319,7 @@ pub const FX_8: [(&str, &[&str]); 21] = [
     ("apothecary", &APOTHECARY),
 ];
 
-pub const DUNGEON_TILES: [(&str, &[&str]); 15] = [
+pub const DUNGEON_TILES: [(&str, &[&str]); 16] = [
     ("floor_plain", &BGT_FLOOR_PLAIN),
     ("floor_crack", &BGT_FLOOR_CRACK),
     ("floor_pebble", &BGT_FLOOR_PEBBLE),
@@ -2319,6 +2330,7 @@ pub const DUNGEON_TILES: [(&str, &[&str]); 15] = [
     ("crystal", &BGT_CRYSTAL),
     ("rubble", &BGT_RUBBLE),
     ("wall_crack", &BGT_WALL_CRACK),
+    ("wall_bomb", &BGT_WALL_BOMB),
     ("block", &BGT_BLOCK),
     ("spikes", &BGT_SPIKES),
     ("pot", &BGT_POT),

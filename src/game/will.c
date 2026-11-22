@@ -175,15 +175,19 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
     if (!level) return 0;
     if (level > WILL_LEVEL_CAP) level = WILL_LEVEL_CAP;
     damage += (u8)(level - 1);
-    // Every champion's starter MAX shares the Tide Vortex's 360-frame recast
+    // Every champion's MAX shares the Tide Vortex's 360-frame recast
     // lock; A stays an ordinary shot meanwhile (2026-11-17 max-Will v2).
-    if (weapon_index == classes[player.class_id].starter_weapon
-        && will_maxfx_locked()) return 0;
+    // The lock and the art are bound to the champion, not the held A
+    // weapon: a merchant trade or floor swap must not steal Murderstorm,
+    // Tide Vortex, or the other authored signatures.
+    if (will_maxfx_locked()) return 0;
 
     // Fang Forms — Moonfang Rush. Three steel lanes travel with a brief
     // body-dash applied by room.c: broad enough to read as a slash, short
-    // enough to remain the game's true melee MAX.
-    if (player.class_id == 0 && weapon_index == classes[0].starter_weapon) {
+    // enough to remain the game's true melee MAX. Ordinary A still follows
+    // the held implement after a swap; the MAX does not.
+    if (player.class_id == 0) {
+        kind = PROJ_SPIKE;
         first = max_spawn(dir8_dx[dir], dir8_dy[dir],
             (u8)(damage + 3), PROJ_SPIKE);
         max_spawn(dir8_dx[(u8)((dir + 1) & 7)],
@@ -198,14 +202,14 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
         }
     // Tail Spike — Thunderline Bastion; Featherbarb — Murderstorm Eclipse.
     // Authored controllers in bank 30 own their art, sound and hits.
-    } else if (weapon_index == classes[1].starter_weapon) {
+    } else if (player.class_id == 1) {
         return will_maxfx_begin(1, dir, damage);
-    } else if (weapon_index == classes[2].starter_weapon) {
+    } else if (player.class_id == 2) {
         return will_maxfx_begin(2, dir, damage);
     // BubbleBolt — Tide Vortex. Four spiral arms spin out from Picsean and
     // grow until the front has swept the whole visible room, hitting every
     // body it passes and washing out hostile shots (2026-11-15 spec).
-    } else if (weapon_index == classes[3].starter_weapon) {
+    } else if (player.class_id == 3) {
         // The shared 360-frame recast lock is checked above.
         picsean_vortex_slow_charge = 0;
         picsean_vortex_begin(damage);
@@ -213,7 +217,7 @@ u8 will_fire_max(u8 weapon_index, u8 dir, u8 damage) BANKED {
         sfx_play(SFX_ROAR);
         return 1;
     // Stinger — Royal Stinger and Venom Sac.
-    } else if (weapon_index == classes[4].starter_weapon) {
+    } else if (player.class_id == 4) {
         return will_maxfx_begin(4, dir, damage);
     // Rift Flail — Worldwheel. A close eight-way sweep clears breathing room.
     } else if (kind == PROJ_FLAIL) {

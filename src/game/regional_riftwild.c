@@ -142,6 +142,7 @@ void run_state_begin_dungeon(void) BANKED {
     run_state.next_dungeon_reveal_xhi = 0;
     run_state.next_dungeon_reveal_xxhi = 0;
     run_state.dungeon_puzzles = 0;
+    run_state.bomb_walls_open = 0;
     run_state.shop_bought = 0;
     run_state.shop_civic = 0;
     run_state.secret_shop = 0;

@@ -97,15 +97,15 @@ mod tests {
     fn wolfkin_melee_power_is_spatial_not_a_one_shot_floor() {
         use quintra_content::ItemKind;
 
-        // Fang Forms already reaches through a lane and cleaves two bodies.
+        // Longblade already reaches through a lane and cleaves two bodies.
         // Its ordinary opener must not also one-tap the 7-10 HP early roster.
         assert_eq!(classes::WOLFKIN.base_stats.atk, 2);
         let r = registry();
         let fang = r.items.iter()
             .find(|item| item.id == classes::WOLFKIN.starter_weapon)
-            .expect("registered Fang Forms");
+            .expect("registered Longblade");
         let ItemKind::Weapon { damage, .. } = fang.kind else {
-            panic!("Fang Forms is not a weapon");
+            panic!("Longblade is not a weapon");
         };
         assert_eq!(damage + classes::WOLFKIN.base_stats.atk, 3);
     }

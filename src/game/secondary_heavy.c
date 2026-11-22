@@ -6,6 +6,7 @@
 #include "game/projectile.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
+#include "game/bomb_wall.h"
 #include "game/riftwild_den.h"
 #include "game/puzzle.h"
 #include "game/powerup.h"
@@ -14,18 +15,24 @@
 #include "render/tiles.h"
 #include "content.h"
 
+/* 2 MP: trickle regen (25/min, 37.5 Picsean) plus a mid-run pool
+ * used to outpace a 1 MP bomb even at the 72-frame throw cap.
+ * Keep the Pack tip in inventory.c / inventory_aim.c in sync. */
+#define BOMB_MP_COST 2u
+
 static const i8 mstar_sx[16] = {
     0, 9, 17, 22, 24, 22, 17, 9,
     0, -9, -17, -22, -24, -22, -17, -9
 };
-// 8.8 orbit scale for will_b_tier 0..3: 24, 27, 33, 39 px (24 * n/8).
-static const u8 mstar_scale[4] = {8, 9, 11, 13};
+// Orbit reach in pixels for will_b_tier 0..3. Was 24, 27, 33, 39
+// (+3, +6, +6); evened to 24, 29, 34, 39 (+5) without shrinking the max.
+static const u8 mstar_reach[4] = {24, 29, 34, 39};
 static const u8 mstar_life[4] = {40, 40, 44, 48};
 static const u8 mstar_box[4]  = {0xAA, 0xAA, 0xCC, 0xDD};
 static const u8 mstar_bonus[4] = {3, 3, 4, 5};
 
-static i16 mstar_offset(i8 base, u8 scale) {
-    return (i16)(((i16)base * (i16)scale) >> 3);
+static i16 mstar_offset(i8 base, u8 reach) {
+    return (i16)(((i16)base * (i16)reach) / 24);
 }
 
 static void mstar_clamp(entity_t *e) {
@@ -39,11 +46,154 @@ static void mstar_clamp(entity_t *e) {
     else if (e->y > max_y) e->y = max_y;
 }
 
+
+/* Blast presence grows roughly linearly with will_b_tier 0..3:
+ * tile radius 1/1/2/3, extra cardinal splashes, a shockwave ring,
+ * and (from mid tier) flying fragments. A max-tier throw spends Will. */
+static const u8 bomb_bonus[4]    = {8, 10, 12, 14};
+static const u8 bomb_tile_r[4]   = {1, 1, 2, 3};
+static const u8 bomb_splash_d[4] = {0, 10, 16, 22};
+static const u8 bomb_ring_r[4]   = {14, 16, 22, 28};
+/* Diagonal ring offsets ~5/7 of the cardinal radius so the 8-way
+ * shockwave reads as a circle, not a 1.41x square. */
+static const u8 bomb_ring_d[4]   = {10, 11, 16, 20};
+static const u8 bomb_frags[4]    = {0, 0, 4, 8};
+static const u8 bomb_shake[4]    = {2, 2, 3, 3};
+static const u8 bomb_shake_t[4]  = {10, 12, 16, 20};
+
+static void bomb_break_tiles(i16 x, i16 y, u8 radius);
+
+static void bomb_spawn_frag(i16 x, i16 y, u8 dir, u8 damage, u8 gold) {
+    u8 i;
+    entity_t *f;
+    i8 dx, dy;
+    i = entity_spawn(ENT_PROJECTILE);
+    if (i == 0xFF) return;
+    f = &entities[i];
+    f->flags |= EF_PLAYER_PROJ;
+    /* 8x8 sprite is top-left anchored; -4 centers it on the blast origin. */
+    f->x = (ppos_t)(x - 4);
+    f->y = (ppos_t)(y - 4);
+    dx = dir8_dx[dir];
+    dy = dir8_dy[dir];
+    /* Cardinals ±3, diagonals ±2 so the burst is circular and the three
+     * northern fragments do not share one scanline for their whole life. */
+    if (dx && dy) {
+        f->vx = (i8)(dx * 2);
+        f->vy = (i8)(dy * 2);
+    } else {
+        f->vx = (i8)(dx * 3);
+        f->vy = (i8)(dy * 3);
+    }
+    f->sprite_tile = SPR_BOMB_FRAG;
+    f->palette = gold ? SPR_BOMB_FX_GOLD : SPR_BOMB_FX_PROP;
+    f->hp = 1;
+    f->state_timer = 14;
+    f->hitbox = 0x66;
+    f->damage = damage ? damage : 1;
+    f->ai_data[0] = 0;
+    f->ai_data[2] = 1; /* skip bullet shimmer */
+    f->ai_data[3] = 0;
+    f->ai_data[4] = 0;
+    if (dx < 0) f->ai_data[4] |= PROJ_VIS_FLIP_X;
+    if (dy > 0) f->ai_data[4] |= PROJ_VIS_FLIP_Y;
+    f->ai_data[6] = 0;
+}
+
+static void bomb_explode(i16 x, i16 y, u8 damage, u8 tier) {
+    u8 dir, step, prop, n, tile;
+    i8 rr, dx, dy, rad;
+    if (tier > 3) tier = 3;
+    /* Visuals first so a crystal-rich room cannot spend every entity slot
+     * on wisps before the blast exists. Tile breaks follow; each break
+     * waits a vblank, so a packed field may not finish a 7x7 in one fuse. */
+    projectile_spawn_splash(x, y, damage, 0xFF);
+    n = bomb_splash_d[tier];
+    if (n) {
+        projectile_spawn_splash(x + (i16)n, y, damage, 0xFF);
+        projectile_spawn_splash(x - (i16)n, y, damage, 0xFF);
+        projectile_spawn_splash(x, y + (i16)n, damage, 0xFF);
+        projectile_spawn_splash(x, y - (i16)n, damage, 0xFF);
+    }
+    if (tier == 0) {
+        fx_spawn(SPR_FX_IMPACT, 4, x - 14, y - 14, 16);
+        fx_spawn(SPR_FX_IMPACT, 4, x + 10, y - 14, 16);
+        fx_spawn(SPR_FX_IMPACT, 4, x - 14, y + 10, 16);
+        fx_spawn(SPR_FX_IMPACT, 4, x + 10, y + 10, 16);
+    } else {
+        rr = (i8)bomb_ring_r[tier];
+        for (dir = 0; dir < 8; dir = (u8)(dir + 1)) {
+            dx = dir8_dx[dir];
+            dy = dir8_dy[dir];
+            if (dx && dy) {
+                tile = SPR_BOMB_WAVE_CORNER;
+                rad = (i8)bomb_ring_d[tier];
+            } else if (dy) {
+                tile = SPR_BOMB_WAVE_H;
+                rad = rr;
+            } else {
+                tile = SPR_BOMB_WAVE;
+                rad = rr;
+            }
+            prop = (tier >= 3) ? SPR_BOMB_FX_GOLD : SPR_BOMB_FX_PROP;
+            if (dx < 0) prop |= S_FLIPX;
+            if (dy > 0) prop |= S_FLIPY;
+            fx_spawn(tile, prop,
+                x + (i16)(dx * rad) - 4,
+                y + (i16)(dy * rad) - 4,
+                (u8)(12 + (tier << 1)));
+        }
+    }
+    n = bomb_frags[tier];
+    step = (u8)(n <= 4 ? 2 : 1);
+    for (dir = 0; dir < 8 && n; dir = (u8)(dir + step)) {
+        bomb_spawn_frag(x, y, dir, (u8)((damage + 1) >> 1), (u8)(tier >= 3));
+        --n;
+    }
+    bomb_break_tiles(x, y, bomb_tile_r[tier]);
+    room_shake(bomb_shake[tier], bomb_shake_t[tier]);
+    sfx_play(SFX_ROAR);
+}
+
+/* Unsigned span loop: SDCC has bitten signed i8 for (dy=-r; dy<=r) before,
+ * and a large radius must finish even after the FX/fragment spawns. */
+static void bomb_break_tiles(i16 x, i16 y, u8 radius) {
+    u8 t, ux, uy, span, tx, ty;
+    i16 px, py, off;
+    if (radius > 3) radius = 3;
+    span = (u8)((radius << 1) + 1);
+    for (uy = 0; uy < span; ++uy) {
+        off = ((i16)uy - (i16)radius) * 8;
+        py = y + off;
+        for (ux = 0; ux < span; ++ux) {
+            off = ((i16)ux - (i16)radius) * 8;
+            px = x + off;
+            t = room_tile_at_px(px, py);
+            if (px < 0 || py < 0) continue;
+            tx = (u8)(px >> 3);
+            ty = (u8)(py >> 3);
+            if (t == BGT_WALL_CRACK)
+                room_open_secret(tx, ty);
+            else if (t == BGT_WALL_BOMB)
+                bomb_wall_try_open(tx, ty);
+            else if (t == BGT_PILLAR)
+                sun_lattice_strike(tx, ty);
+            else if (t == BGT_WILD_STONE)
+                riftwild_den_strike(tx, ty);
+            else if (t == BGT_WALL) {
+                if (!bomb_wall_try_open(tx, ty)) puzzle_try_hidden_shot(tx, ty);
+            }
+            else if (t == BGT_CRYSTAL)
+                room_break_crystal(tx, ty);
+        }
+    }
+}
+
 u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     u8 i,bomb=player.active_item==ITEM_ID_BOMBS;
     u8 tier;
     entity_t *e;
-    if (player.active_charge || (bomb && !player.mp && !POWERUP_FREE_MP())) return 0;
+    if (player.active_charge || (bomb && !POWERUP_FREE_MP() && player.mp < BOMB_MP_COST)) return 0;
     for (i=0;i<INVENTORY_SLOTS;++i)
         if (player.inventory[i]==player.active_item) break;
     if (i==INVENTORY_SLOTS) return 0;
@@ -63,18 +213,30 @@ u8 secondary_heavy_fire(u8 dir,u8 moving) BANKED {
     e->ai_data[2]=1;
     e->ai_data[6]=bomb ? PROJ_AUX_FUSE_BOMB : PROJ_AUX_MORNINGSTAR;
     if (bomb) {
+        tier=will_b_tier();
+        e->ai_data[7]=tier;
         e->hitbox=0xAA;
-        e->damage=player.atk+8;
+        e->damage=player.atk+bomb_bonus[tier];
         e->state_timer=48;
         if (moving) { e->vx=dir8_dx[dir&7]*2; e->vy=dir8_dy[dir&7]*2; }
-        if (!POWERUP_FREE_MP()) { player.mp--; hud_redraw_mp(); }
+        if (!POWERUP_FREE_MP()) { player.mp = (u8)(player.mp - BOMB_MP_COST); hud_redraw_mp(); }
+        if (tier>=3) {
+            player.will_charge = 0;
+            player.will_level = 0;
+        }
     } else {
         tier=will_b_tier();
         e->ai_data[7]=tier;
         e->hitbox=mstar_box[tier];
         e->damage=player.atk+mstar_bonus[tier];
         e->state_timer=mstar_life[tier];
-        if (tier>=3) room_shake(1, 8);
+        if (tier>=3) {
+            room_shake(1, 8);
+            // Max-Will orbits used to leave the gauge armed, so a second
+            // swing at full size was free until a base A-attack spent it.
+            player.will_charge = 0;
+            player.will_level = 0;
+        }
     }
     player.active_charge=bomb ? 72 : 56;
     sfx_play_weapon(PROJ_FLAIL);
@@ -87,8 +249,8 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
     if (e->ai_data[6]==PROJ_AUX_MORNINGSTAR) {
         tier=e->ai_data[7]&3;
         a=(++e->ai_data[0]>>1)&15;
-        e->x=player.x+4+mstar_offset(mstar_sx[a], mstar_scale[tier]);
-        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], mstar_scale[tier]);
+        e->x=player.x+4+mstar_offset(mstar_sx[a], mstar_reach[tier]);
+        e->y=player.y+4-mstar_offset(mstar_sx[(a+4)&15], mstar_reach[tier]);
         mstar_clamp(e);
         t=room_tile_at_px(e->x+4,e->y+4);
         // One strike per swing: a full orbit would otherwise toggle a vane
@@ -117,26 +279,8 @@ void secondary_heavy_update(entity_t *e,u8 idx) BANKED {
     if (!e->state_timer) {
         i16 x=e->x+4,y=e->y+4;
         u8 damage=e->damage;
-        i8 dx,dy;
+        tier=e->ai_data[7]&3;
         entity_kill(idx);
-        for (dy=-1;dy<=1;++dy)
-            for (dx=-1;dx<=1;++dx)
-            {
-                t=room_tile_at_px(x+dx*8,y+dy*8);
-                if (t==BGT_WALL_CRACK)
-                    room_open_secret((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
-                else if (t==BGT_PILLAR)
-                    sun_lattice_strike((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
-                else if (t==BGT_WILD_STONE)
-                    riftwild_den_strike((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
-                else if (t==BGT_WALL)
-                    puzzle_try_hidden_shot((u8)((x+dx*8)>>3),(u8)((y+dy*8)>>3));
-            }
-        projectile_spawn_splash(x,y,damage,0xFF);
-        fx_spawn(SPR_FX_IMPACT,4,x-14,y-14,16);
-        fx_spawn(SPR_FX_IMPACT,4,x+10,y-14,16);
-        fx_spawn(SPR_FX_IMPACT,4,x-14,y+10,16);
-        fx_spawn(SPR_FX_IMPACT,4,x+10,y+10,16);
-        room_shake(2,10); sfx_play(SFX_ROAR);
+        bomb_explode(x,y,damage,tier);
     }
 }

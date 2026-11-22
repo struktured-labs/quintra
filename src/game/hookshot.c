@@ -1,6 +1,7 @@
 #pragma bank 16
 #include <gb/gb.h>
 #include "audio/sfx.h"
+#include "game/entity.h"
 #include "game/player.h"
 #include "game/pickup.h"
 #include "game/projectile.h"
@@ -38,8 +39,15 @@ void secondary_cooldown_tick(void) BANKED {
         fx_spawn(SPR_FX_IMPACT,6,player.x+4,player.y+2,6);
 }
 
+// Outbound life (4 px/tick): 96 / 112 / 128 / 144 px for will_b_tier 0..3.
+static const u8 hook_life[4]  = {24, 28, 32, 36};
+static const u8 hook_box[4]   = {0x66, 0x77, 0x88, 0x99};
+static const u8 hook_pull[4]  = {18, 22, 26, 30};
+static const u8 hook_yank[4]  = {3, 4, 5, 6};
+static const u8 hook_chain[4] = {4, 5, 6, 8};
+
 u8 projectile_throw_hookshot(u8 dir) BANKED {
-    u8 i;
+    u8 i, tier;
     entity_t *e;
     if (!owns(ITEM_ID_HOOKSHOT)) return 0;
     for (i=0; i<MAX_ENTITIES; ++i)
@@ -51,12 +59,19 @@ u8 projectile_throw_hookshot(u8 dir) BANKED {
     i=entity_spawn(ENT_PROJECTILE);
     if (i==0xFF) return 0;
     e=&entities[i];
+    tier=will_b_tier();
     e->flags |= EF_PLAYER_PROJ;
     e->x=player.x+4; e->y=player.y+4;
     e->vx=dir8_dx[dir&7]; e->vy=dir8_dy[dir&7];
     e->sprite_tile=SPR_WAYGEAR_HOOK;
-    e->palette=6; e->hitbox=0x66; e->hp=255;
-    e->state_timer=24; e->ai_data[6]=PROJ_AUX_HOOKSHOT;
+    e->palette=6; e->hitbox=hook_box[tier]; e->hp=255;
+    e->state_timer=hook_life[tier];
+    e->ai_data[1]=tier;
+    e->ai_data[6]=PROJ_AUX_HOOKSHOT;
+    if (tier >= 3) {
+        player.will_charge = 0;
+        player.will_level = 0;
+    }
     sfx_play_boomerang(0);
     return 1;
 }
@@ -67,6 +82,8 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
     u8 i, step, tile;
     i16 dx,dy,nx,ny;
     if (!e->state_timer--) { entity_kill(idx); return; }
+    if (e->ai_data[1] && (e->state_timer & 1)==0)
+        fx_spawn(SPR_FX_IMPACT, 6, e->x, e->y, (u8)(3 + e->ai_data[1]));
     if (!e->state) {
         for (step=0; step<4; ++step) {
             e->x+=e->vx; e->y+=e->vy;
@@ -85,7 +102,8 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
                 e->state=2; break;
             }
             if (tile==BGT_WALL || tile==BGT_PILLAR || tile==BGT_TREE
-                || tile==BGT_CRYSTAL || tile==BGT_WALL_CRACK) {
+                || tile==BGT_CRYSTAL || tile==BGT_WALL_CRACK
+                || tile==BGT_WALL_BOMB) {
                 e->state=1; break;
             }
             for (i=0; i<MAX_ENTITIES; ++i)
@@ -108,9 +126,12 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
             if (target->type!=ENT_ENEMY || !(target->flags&EF_ACTIVE)) e->state=2;
             else { e->x=target->x+4; e->y=target->y+4; }
         }
-        for (step=0; step<3 && e->state==1; ++step) {
+        for (step=0; step<hook_yank[e->ai_data[1] & 3] && e->state==1; ++step) {
             dx=e->x-player.x-4; dy=e->y-player.y-4;
-            if (magnitude(dx)<18 && magnitude(dy)<18) { e->state=2; break; }
+            {
+                u8 reach=hook_pull[e->ai_data[1] & 3];
+                if (magnitude(dx)<reach && magnitude(dy)<reach) { e->state=2; break; }
+            }
             nx=player.x+(dx>0 ? 1 : dx<0 ? -1 : 0);
             ny=player.y+(dy>0 ? 1 : dy<0 ? -1 : 0);
             if (!room_player_position_clear(nx,ny)) { e->state=2; break; }
@@ -128,11 +149,12 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
 }
 
 u8 hookshot_draw(entity_t *e,u8 oam,u8 x,u8 y) BANKED {
-    u8 n;
+    u8 n, links;
     i16 dx=(player.x+4-e->x)/4, dy=(player.y+4-e->y)/4;
     i16 sx,sy;
     x; y;
-    for (n=0; n<4 && oam<entity_oam_cap; ++n) {
+    links=hook_chain[e->ai_data[1] & 3];
+    for (n=0; n<links && oam<entity_oam_cap; ++n) {
         sx=e->x-room_camera_x+8+dx*n;
         sy=e->y-room_camera_y+16+dy*n;
         set_sprite_tile(oam,n ? SPR_BULLET : e->sprite_tile);

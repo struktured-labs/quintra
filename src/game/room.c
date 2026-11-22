@@ -33,11 +33,13 @@ void new_monsters_foyer_warp(void) BANKED;
 #include "game/player.h"
 #include "game/procgen.h"
 #include "game/projectile.h"
+#include "game/wolfkin_sword.h"
 void secondary_fire(u8 dir,u8 moving,u8 damage) BANKED;
 void magic_input(u8 keys, u8 pressed, u8 damage) BANKED;
 void secondary_cooldown_tick(void) BANKED;
 void stage_event_resolve_fall(void) BANKED;
 #include "game/puzzle.h"
+#include "game/bomb_wall.h"
 #include "game/vignette.h"
 #include "game/room.h"
 #include "game/secret_merchant.h"
@@ -56,6 +58,7 @@ void stage_event_resolve_fall(void) BANKED;
 #include "render/hud.h"
 #include "render/palette.h"
 #include "render/tiles.h"
+#include "render/gate_boulder.h"
 
 void tiles_load_switch_pressed(void) BANKED;
 #include "content.h"
@@ -675,6 +678,7 @@ u8 room_elemental_tile(u8 tx, u8 ty, u8 element) BANKED {
 static u8 attr_for_tile(u8 t) {
     switch (t) {
         case BGT_WALL:
+        case BGT_WALL_BOMB:
         case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:
@@ -1006,7 +1010,9 @@ void room_enter(void) {
     palette_obj_load(5, coin_palette);
     palette_obj_load(7, orc_palette);
 
+    gate_boulder_room_reset();
     tiles_load_dungeon_bg();              // authored dungeon tileset (slot 0 = void)
+    tiles_apply_passable_boulder();
     tiles_load_switch_pressed();
     tiles_load_boss_cue_bg();             // unmistakable sanctuary threshold
     // District, directive, and return-echo cards share this tiny alphabet.
@@ -1132,6 +1138,7 @@ void room_enter(void) {
     secret_door_x = secret_door_y = 0xFF;
     secret_door_x2 = secret_door_y2 = 0xFF;
     puzzle_prepare_room_role();
+    bomb_wall_prepare_room();
     dungeon_law_apply_room(0);
     stage_event_prepare_room();
     dungeon_director_activate();
@@ -1817,7 +1824,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     player.will_charge = 0;
                     player.will_level = 0;
                     player.fire_cooldown = player_fire_delay(w->p0);
-                    if (wolfkin_melee) {
+                    if (player.class_id == 0) {
                         dash_timer = 9;
                         dash_cd = 45;
                         dash_dx = dir8_dx[dir];
@@ -1836,35 +1843,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // never requires button mashing. Weapon swaps keep their authored
         // projectile behaviour.
         if (wolfkin_melee && !(keys & J_B)) {
-            if ((keys & J_A) && !max_fired) {
-                u8 dir = room_input_dir8(keys, player.facing);
-                // A held A is a deliberate physical combo, not a
-                // button-mashing tax: one contact arc every 24 frames.
-                if (player.fire_cooldown == 0) {
-                    u8 dmg = (u8)(w->p1 + effective_atk);
-                    u8 shot;
-                    if (room_weapon_surge_ticks) dmg++;
-                    // Fang Claw: a slow contact arc held at arm length
-                    // (projectile.c), never a travelling shot. Pays for the
-                    // missing reach with +2 damage, 3 bodies and knockback.
-                    dmg = (u8)(dmg + 2);
-                    g_fang_claw = 1;
-                    shot = projectile_spawn_player(
-                        dir8_dx[dir], dir8_dy[dir], dmg, PROJ_SPIKE);
-                    g_fang_claw = 0;
-                    if (room_weapon_surge_ticks && shot != 0xFF)
-                        entities[shot].hp++;
-                    if (shot != 0xFF
-                        && !(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN))) {
-                        // Neutral A sweeps a wider close arc while retaining
-                        // one hitbox, so bosses cannot be blendered.
-                        entities[shot].hitbox = 0xCC;
-                    }
-                    if (shot != 0xFF && !muted) player.will_charge = 0;
-                    powerup_echo_primary(shot, dir, dmg);
-                    player.fire_cooldown = player_fire_delay(w->p0);
-                }
-            }
+            if ((keys & J_A) && !max_fired)
+                wolfkin_sword_try_fire(keys, effective_atk, w->p1, w->p0, muted);
         } else if ((keys & J_A) && !(keys & J_B) && !max_fired) {
             // The ranged path shares the same contextual TALK edge. Checking
             // it before the cooldown gate means a resident always answers,
@@ -1928,6 +1908,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // B: hero magic (tap = attack spell, hold = ward) or the selected
         // tool. Runs after the A+B chord, which always wins.
         magic_input(keys, pressed, (u8)(w->p1+1+effective_atk));
+        gate_boulder_tick((u8)(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN)));
         if (player.active_charge) secondary_cooldown_tick();
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_transform_ticks--;

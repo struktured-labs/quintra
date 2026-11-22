@@ -181,6 +181,8 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_melee_visual.py
 	$(PYBOY_RUN) scripts/test_corvin_murder_capacity.py
 	uv run --quiet --with pyboy python scripts/test_wolfkin_forms.py
+	$(PYBOY_RUN) scripts/test_wolfkin_longsword.py
+	$(PYBOY_RUN) scripts/test_class_status_resist.py
 	$(PYBOY_RUN) scripts/test_attack_relics.py
 	$(PYBOY_RUN) scripts/test_attack_physics_relics.py
 	$(PYBOY_RUN) scripts/test_pickup_feedback.py
@@ -192,6 +194,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_will_tiers.py
 	$(PYBOY_RUN) scripts/test_picsean_tide_vortex.py
 	$(PYBOY_RUN) scripts/test_will_max_v2.py
+	$(PYBOY_RUN) scripts/test_corvin_max_will_pickup.py
 	$(PYBOY_RUN) scripts/test_serpent_tail_shield.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
 	$(PYBOY_RUN) scripts/test_will_b_weapons.py
@@ -257,6 +260,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_colossal_cinder.py
 	$(PYBOY_RUN) scripts/test_cinder_big.py
 	$(PYBOY_RUN) scripts/test_cinder_absorb.py
+	$(PYBOY_RUN) scripts/test_cinder_phase_heal.py
 	$(PYBOY_RUN) scripts/test_colossal_spider.py
 	$(PYBOY_RUN) scripts/test_colossal_mire.py
 	$(PYBOY_RUN) scripts/test_mire_roots.py
@@ -314,6 +318,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_title_cold_obj_palettes.py
 	$(PYBOY_RUN) scripts/test_corner_slide.py
 	$(PYBOY_RUN) scripts/test_waygear_layout.py
+	$(PYBOY_RUN) scripts/test_boulder_refuse.py
 	$(PYBOY_RUN) scripts/test_water_ride.py
 	$(PYBOY_RUN) scripts/test_auto_waygear.py
 	$(PYBOY_RUN) scripts/test_meta_saturation.py

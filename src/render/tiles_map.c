@@ -3,6 +3,7 @@
 
 #include "core/types.h"
 #include "render/tiles.h"
+#include "render/gate_boulder.h"
 
 // The Compass is an infrequent modal screen, so its private glyph atlas lives
 // with other roomy specialist rendering instead of crowding the combat atlas.
@@ -189,6 +190,7 @@ static const u8 bgt_map_label_h[16] = {
 
 void tiles_load_map_bg(void) BANKED {
     tiles_load_dungeon_bg();
+    tiles_apply_passable_boulder();
     set_bkg_data(BGT_MAP_ROOM,   1, bgt_map_room);
     set_bkg_data(BGT_MAP_HERE,   1, bgt_map_here);
     set_bkg_data(BGT_MAP_BOSS,   1, bgt_map_boss);

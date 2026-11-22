@@ -13,6 +13,7 @@
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
+#include "render/gate_boulder.h"
 
 u8 room_district_label_ticks;
 static u8 room_district_label_kind;
@@ -134,7 +135,10 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         return (run_state.dungeon_phase & room_puzzle_phase_bit)
             ? BGPAL_CRYSTAL : BGPAL_CRACK;
     switch (tile) {
+        case BGT_GATE_BOULDER:
+            return gate_boulder_attr;
         case BGT_WALL:
+        case BGT_WALL_BOMB:
         case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:
@@ -143,7 +147,6 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_WILD_STONE:
         case BGT_WILD_MOUNTAIN:
         case BGT_WILD_REEDS:
-        case BGT_GATE_BOULDER:
         case BGT_GATE_THORNS:
         case BGT_GATE_VENT:
         case BGT_BLOCK:

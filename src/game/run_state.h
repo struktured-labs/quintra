@@ -182,9 +182,13 @@ typedef struct {
     // (cleared at the next dungeon start). Bits 1..3 = Riftwild regions 0..2.
     // Appended so older suspends load as unclaimed (0).
     u8  powerup_shrines;
+    // Local-cell bits 0..31: bomb-only walls opened this dungeon (#173).
+    // Cleared at the next dungeon start. Older suspends load as 0.
+    u32 bomb_walls_open;
     // Ordinary-room clear cooldown. visit_seq ticks on every generated
     // room entry; a stamped room stays empty until 4 other rooms have
     // been visited. 6-slot ring, append-only (older suspends load as 0).
+    // Appended after bomb_walls_open so main #181 saves (size 74) stay valid.
     u8  room_visit_seq;
     u8  room_clear_tag[6];
     u8  room_clear_id[6];

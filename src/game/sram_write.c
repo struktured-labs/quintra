@@ -34,8 +34,9 @@
 #define PRE_SHOP_RS_SIZE 58
 #define PRE_VIGNETTE_RS_SIZE 60
 #define PRE_MERCHANT_RS_SIZE 62 // before secret-merchant bits
-#define PRE_RESPAWN_RS_SIZE 70 // before ordinary-room respawn ring
 #define PRE_SHRINE_RS_SIZE 69 // before power-shrine claim bits
+#define PRE_BOMB_WALL_RS_SIZE 70 // before bomb-only wall bits (#181)
+#define PRE_RESPAWN_RS_SIZE 74 // before ordinary-room respawn ring
 #define PRE_WILL_PL_SIZE 42
 #define PRE_OATH_PL_SIZE 43
 #define PRE_WAYGEAR_PL_SIZE 44
@@ -64,6 +65,7 @@ u8 sram_run_valid(void) BANKED {
             || SRAM_BASE[3] == PRE_SHOP_RS_SIZE
             || SRAM_BASE[3] == PRE_VIGNETTE_RS_SIZE
             || SRAM_BASE[3] == PRE_RESPAWN_RS_SIZE
+            || SRAM_BASE[3] == PRE_BOMB_WALL_RS_SIZE
             || SRAM_BASE[3] == PRE_SHRINE_RS_SIZE
             || SRAM_BASE[3] == PRE_MERCHANT_RS_SIZE
             || SRAM_BASE[3] == PRE_SHADOW_RS_SIZE

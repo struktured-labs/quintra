@@ -99,5 +99,7 @@ u8   aabb_overlap_player_wide(const entity_t *e) BANKED;   // full visible body 
 // FX: visual-only entity (no collision, decays on state_timer=0).
 // sprite_tile is the OBJ tile slot; ttl is frames until despawn.
 u8   fx_spawn(u8 sprite_tile, u8 palette, i16 px, i16 py, u8 ttl);
+// Count of inactive entity slots (fast register-only scan).
+u8   entity_free_slots(void);
 
 #endif
