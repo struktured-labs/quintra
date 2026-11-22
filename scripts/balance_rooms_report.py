@@ -309,7 +309,8 @@ def md_difficulty(name, m):
                      f"{num(s['hp_med'], 1)} ({num(s['hp_p25'], 1)}-{num(s['hp_p75'], 1)}) | {pct(s['low_share'])} | "
                      f"{s['replaced']} | {lb['near']}/{lb['deaths']} | {pct(lb['exposure'], 1)} | {num(lb['lift'])} |")
         o, l10 = blk["outcome"], blk["lift10"]
-        L += ["", f"Overall: {o['lands']} landings over {o['hits']} hits taken "
+        L += ["", f"Overall: {o['fights']} fights, {o['finished']} finished, death rate "
+              f"{pct(o['death_rate'])}; {o['lands']} landings over {o['hits']} hits taken "
               f"({num(o['lands_per_hit'])} per hit); deaths within 10 s of a status "
               f"{l10['near']}/{l10['deaths']} ({pct(l10['share'])}, 95% CI {pct(l10['share_lo'])}-{pct(l10['share_hi'])}) "
               f"vs {pct(l10['exposure'])} of fight time, lift {num(l10['lift'])} "
