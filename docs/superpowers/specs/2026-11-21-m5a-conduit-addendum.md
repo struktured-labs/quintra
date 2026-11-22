@@ -91,3 +91,4 @@ r9  #g..33....g#   rewrite switches at the hall dead ends: A (1) flips A and B, 
 * The Jagger's lane guard now spans cols 3..9 (it was 3..7), because the Star door moved to cols 6..7. The player can lure it either way; luring it east leaves a short dash west to the door that fits inside the freeze window.
 * The teleport lands on switch A already latched (`cd_von` bit 0), so landing never flips it; the player has to step off and back on. The landing spot stays clear of the Jagger, which avoids a shove-back loop.
 * Vault painting writes VRAM without a VBL wait, so a reset or rewrite never adds frames. The Kite costs one compare and one decrement per tick.
+* **Star door funnel.** When the door is open and the player holds only up or down within 10 px of the opening (feet rows 11..13), the hero is nudged 1 px per frame toward the opening and slides in. This reaches beyond the engine's 3 px corner slide. It costs one joypad read and runs nowhere else.
