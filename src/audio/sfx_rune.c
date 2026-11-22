@@ -28,3 +28,11 @@ void sfx_play_rune_final(u8 step) BANKED {
     sfx_claim_channels(56, 0);
     sfx_play_puzzle_after_note();
 }
+
+void sfx_play_tone_miss(void) BANKED {
+    /* F5 then E5: descending minor second, musical notes, no CH4 noise. */
+    sfx_will_active = 0;
+    rune_ch1(0xA3, 1868);
+    sfx_claim_channels(24, 0);
+    sfx_arm_tone_miss_note2();
+}

@@ -14,6 +14,7 @@ enum {
     PUZZLE_PHASE_GATE,
     PUZZLE_SUN_LATTICE,
     PUZZLE_PRISM_TOGGLE,
+    PUZZLE_TONE_PATH,
 };
 
 enum {
@@ -55,6 +56,12 @@ u8 puzzle_on_block_moved(u8 old_x, u8 old_y) BANKED;
 u8 puzzle_try_hidden_shot(u8 tx, u8 ty) BANKED;
 // Echo Chime resolves the active room's optional disguised secret, if any.
 u8 puzzle_chime_reveal(void) BANKED;
+
+void prepare_tone_path(u32 seed) BANKED;
+u8 tone_on_block_moved(u8 old_x, u8 old_y) BANKED;
+void tone_tick_player(void) BANKED;
+void tone_start_teaser(void) BANKED;
+
 
 // Active rune-sequence plates. Valid while room_puzzle_kind is
 // PUZZLE_RUNE_SEQUENCE and room_rune_count > 0 (the prepared, unsolved
@@ -112,7 +119,8 @@ u8 puzzle_rune_attr(u8 tile) BANKED;
     && (u8)((u8)(x) - room_socket_x) < 2 && (u8)((u8)(y) - room_socket_y) < 2)
 #define PUZZLE_ATTR_OVERRIDE(x, y, tile) \
     ((room_puzzle_kind == PUZZLE_PRISM_TOGGLE) ? PRISM_ATTR_AT(x, y) \
-    : (room_puzzle_kind == PUZZLE_PUSH_SEAL && (tile) == BGT_FLOOR3 \
+    : ((room_puzzle_kind == PUZZLE_PUSH_SEAL \
+        || room_puzzle_kind == PUZZLE_TONE_PATH) && (tile) == BGT_FLOOR3 \
         && PUZZLE_SOCKET_AT(x, y)) ? BGPAL_DOOR \
     : PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) ? RUNE_ATTR_AT(x, y, tile) \
     : 0xFF)

@@ -53,6 +53,9 @@ void sfx_tick_will(void) BANKED;
 extern u8 sfx_will_active;
 // Ordered floor runes answer with one of five stable major-pentatonic pitches.
 void sfx_play_rune(u8 step);
+// Sour descending minor-second double-note (Jeopardy time-out feel).
+void sfx_play_tone_miss(void) BANKED;
+void sfx_arm_tone_miss_note2(void);
 // Short call-and-response echo (env 0xF2, 24-frame claim).
 void sfx_play_rune_echo(u8 step) BANKED;
 // Final accepted note: env 0xF7, 56-frame claim, and in the same call
