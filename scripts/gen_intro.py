@@ -123,13 +123,53 @@ def reduce_palettes(cells, limit=7):
     return out
 
 
+TRUE_BLACK = (0, 0, 0)
+
+
+def is_near_black(c):
+    """Dirty colour-0 tints and near-black fills should stay transparent."""
+    return (c == TRUE_BLACK or c == (0, 0, 0) or c == BLACK
+            or max(c) <= 2
+            or (max(c) - min(c) <= 1 and max(c) <= 4))
+
+
+def pin_palette_color0(pals):
+    """Force colour 0 of every BG palette to true black so empty tiles
+    and transparency do not inherit a tinted colour-0 box."""
+    out = []
+    for pal in pals:
+        rest = [c for c in pal if not is_near_black(c)]
+        # Keep the 3 brightest so a highlight is never dropped in favour
+        # of a leftover dark tint.
+        rest = sorted(rest, key=lambda c: (c[0] * 3 + c[1] * 6 + c[2], c),
+                      reverse=True)
+        cols = [TRUE_BLACK] + rest[:3]
+        while len(cols) < 4:
+            cols.append(TRUE_BLACK)
+        out.append(cols)
+    return out
+
+
+def fit_pal(cell555, pal):
+    """Index plane and error for one cell against a single 4-colour pal.
+    Source black (and the intro BLACK tint) always maps to colour 0."""
+    pa = np.array(pal)
+    d = ((cell555[:, :, None, :] - pa[None, None]) ** 2).sum(3)
+    idx = d.argmin(2)
+    mx = cell555.max(2)
+    mn = cell555.min(2)
+    black = ((mx <= 2) | ((mx - mn <= 1) & (mx <= 4))
+             | np.all(cell555 == np.array(BLACK), axis=2))
+    idx = np.where(black, 0, idx)
+    err = int(np.where(black, 0, d.min(2)).sum())
+    return idx, err
+
+
 def fit(cell555, pals):
     """Best palette and index plane for one 8x8 RGB555 cell."""
     best = None
     for pi, p in enumerate(pals):
-        pa = np.array(p)
-        d = ((cell555[:, :, None, :] - pa[None, None]) ** 2).sum(3)
-        idx, err = d.argmin(2), int(d.min(2).sum())
+        idx, err = fit_pal(cell555, p)
         if best is None or err < best[1]:
             best = (idx, err, pi)
         if err == 0:
@@ -289,20 +329,70 @@ def scene_busts():
     sc = Scene("busts")
     pic = load("busts.png")
     cc = [[c555(c) for c in row] for row in cells_of(pic)]
-    pals = reduce_palettes([c for row in cc for c in row], 7)
-    g = sc.panel_grid(cc, pals)
-    h, w = len(g), len(g[0])
+    h, w = len(cc), len(cc[0])
+    src = load("busts.png")
     owner = {}
     for cy in range(h):
         for cx in range(w):
             best = (0, None)
             for i, (x, y, bw, bh) in enumerate(BUST_RECTS):
-                ox = max(0, min(cx * 8 + 8, x + bw) - max(cx * 8, x))
-                oy = max(0, min(cy * 8 + 8, y + bh) - max(cy * 8, y))
-                if ox * oy > best[0]:
-                    best = (ox * oy, i)
+                score = 0
+                y0, y1 = max(cy * 8, y), min(cy * 8 + 8, y + bh)
+                x0, x1 = max(cx * 8, x), min(cx * 8 + 8, x + bw)
+                for py in range(y0, y1):
+                    for px in range(x0, x1):
+                        c = to555(tuple(int(v) for v in src[py, px]))
+                        if not is_near_black(c):
+                            score += 1
+                if score > best[0]:
+                    best = (score, i)
             if best[1] is not None and best[0] >= 1:
                 owner[(cx, cy)] = best[1]
+    # Tight-rect, pixel-weighted pals (8x8 ownership tiles spill into
+    # gutters and were blending the Eye green into the T-Rex amber).
+    # CGB has 7 BG palettes; the two same-hue pairs share one each.
+    SHARE_PAIRS = ((2, 6), (5, 8))  # T-Rex+Cinder, Reaper+Facet
+
+    def pal_from_rects(rects):
+        pic = load("busts.png")
+        colors = {}
+        for (x, y, bw, bh) in rects:
+            for py in range(y, y + bh):
+                for px in range(x, x + bw):
+                    c = to555(tuple(int(v) for v in pic[py, px]))
+                    if is_near_black(c):
+                        continue
+                    colors[c] = colors.get(c, 0) + 1
+        if not colors:
+            return [TRUE_BLACK] * 4
+        return pin_palette_color0([_kmeans4(list(colors),
+                                            list(colors.values()))])[0]
+
+    pals = []
+    bust_pal = {}
+    used = set()
+    for a, b in SHARE_PAIRS:
+        red = pal_from_rects([BUST_RECTS[a], BUST_RECTS[b]])
+        pi = len(pals)
+        pals.append(red)
+        bust_pal[a] = bust_pal[b] = pi
+        used.add(a)
+        used.add(b)
+    for bid in range(len(BUST_RECTS)):
+        if bid in used:
+            continue
+        bust_pal[bid] = len(pals)
+        pals.append(pal_from_rects([BUST_RECTS[bid]]))
+
+    def cell_for(cx, cy):
+        o = owner.get((cx, cy))
+        if o is None:
+            return sc.blank()
+        pal_i = bust_pal[o]
+        idx, _ = fit_pal(cc[cy][cx], pals[pal_i])
+        return sc.cell(idx, pal_i)
+
+    g = [[cell_for(cx, cy) for cx in range(w)] for cy in range(h)]
 
     def state(k):
         out = blank_grid(sc, 20, 18)

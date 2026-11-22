@@ -40,7 +40,7 @@ extern u16 intro_pal[32];
 #define IB_BUSTS_BUST8 9
 #define IB_BUSTS_COLOSSI 10
 #define IPAL_BUSTS_SETS 1
-// busts: 229 tiles, bank 28
+// busts: 234 tiles, bank 28
 #define IB_SHRINE_MAP 0
 #define IB_SHRINE_SPIRITS 1
 #define IPAL_SHRINE_SETS 1
