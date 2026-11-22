@@ -6,6 +6,7 @@
 #include "game/projectile.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
+#include "game/bomb_wall.h"
 #include "game/riftwild_den.h"
 #include "game/puzzle.h"
 #include "game/powerup.h"
@@ -173,12 +174,15 @@ static void bomb_break_tiles(i16 x, i16 y, u8 radius) {
             ty = (u8)(py >> 3);
             if (t == BGT_WALL_CRACK)
                 room_open_secret(tx, ty);
+            else if (t == BGT_WALL_BOMB)
+                bomb_wall_try_open(tx, ty);
             else if (t == BGT_PILLAR)
                 sun_lattice_strike(tx, ty);
             else if (t == BGT_WILD_STONE)
                 riftwild_den_strike(tx, ty);
-            else if (t == BGT_WALL)
-                puzzle_try_hidden_shot(tx, ty);
+            else if (t == BGT_WALL) {
+                if (!bomb_wall_try_open(tx, ty)) puzzle_try_hidden_shot(tx, ty);
+            }
             else if (t == BGT_CRYSTAL)
                 room_break_crystal(tx, ty);
         }

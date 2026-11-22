@@ -336,14 +336,14 @@ void projectile_update_one(entity_t *e, u8 idx) {
             // split. Hostile bullet-hell shots are the dense hot path and
             // must not pay another ownership test every frame.
             if ((e->ai_data[3] & PROJ_FLAG_RICOCHET)
-                && (t == BGT_WALL || t == BGT_PILLAR)) {
+                && (t == BGT_WALL || t == BGT_WALL_BOMB || t == BGT_PILLAR)) {
                 // Back out before reversing both axes: a clean one-use
                 // pinball return without trapping a diagonal scrape.
                 projectile_ricochet(e, px, py);
                 return;
             }
         if (t == BGT_WALL || t == BGT_PILLAR || t == BGT_TREE || t == BGT_CRYSTAL
-            || t == BGT_WALL_CRACK || t == BGT_POT) {
+            || t == BGT_WALL_CRACK || t == BGT_WALL_BOMB || t == BGT_POT) {
             fx_spawn(SPR_FX_IMPACT, 2, px, py, 4);
             entity_kill(idx);
             return;

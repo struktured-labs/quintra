@@ -138,6 +138,7 @@ static u8 render_attr(u8 x, u8 y, u8 tile) {
         case BGT_GATE_BOULDER:
             return gate_boulder_attr;
         case BGT_WALL:
+        case BGT_WALL_BOMB:
         case BGT_ARROW_TRAP:
         case BGT_PILLAR:
         case BGT_ROOF:

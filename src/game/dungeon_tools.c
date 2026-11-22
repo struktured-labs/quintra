@@ -15,6 +15,7 @@
 #include "game/puzzle.h"
 #include "game/sun_lattice.h"
 #include "game/room.h"
+#include "game/bomb_wall.h"
 #include "game/run_state.h"
 #include "game/secret_merchant.h"
 #include "game/status.h"
@@ -125,7 +126,10 @@ static void tool_bomb(void) {
             }
             else if (t == BGT_POT) room_break_pot(x, y);
             else if (t == BGT_WALL_CRACK) room_open_secret(x, y);
-            else if (t == BGT_WALL) puzzle_try_hidden_shot(x, y);
+            else if (t == BGT_WALL_BOMB) bomb_wall_try_open(x, y);
+            else if (t == BGT_WALL) {
+                if (!bomb_wall_try_open(x, y)) puzzle_try_hidden_shot(x, y);
+            }
             else if (t == BGT_PILLAR) sun_lattice_strike(x, y);
         }
     }
@@ -162,6 +166,7 @@ static void tool_chime(void) {
             if (next != 0xFF) run_state_reveal_dungeon_cell(next);
         }
         if (!secret_merchant_chime()) puzzle_chime_reveal();
+        bomb_wall_chime();
     } else riftwild_den_chime();
     room_shake(1, 12);
     sfx_play(SFX_PUZZLE);

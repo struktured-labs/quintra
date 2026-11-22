@@ -102,7 +102,8 @@ void projectile_update_hookshot(entity_t *e, u8 idx) BANKED {
                 e->state=2; break;
             }
             if (tile==BGT_WALL || tile==BGT_PILLAR || tile==BGT_TREE
-                || tile==BGT_CRYSTAL || tile==BGT_WALL_CRACK) {
+                || tile==BGT_CRYSTAL || tile==BGT_WALL_CRACK
+                || tile==BGT_WALL_BOMB) {
                 e->state=1; break;
             }
             for (i=0; i<MAX_ENTITIES; ++i)

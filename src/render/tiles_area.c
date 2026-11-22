@@ -99,7 +99,8 @@ static u8 wide_attr(u8 tile, u8 outdoor, u8 x, u8 y) {
         u8 gate = LAW_LOCK_ATTR_OVERRIDE(x, y, tile);
         if (gate != 0xFF) return gate;
     }
-    if (tile == BGT_WALL || tile == BGT_ARROW_TRAP || tile == BGT_PILLAR
+    if (tile == BGT_WALL || tile == BGT_WALL_BOMB || tile == BGT_ARROW_TRAP
+        || tile == BGT_PILLAR
         || tile == BGT_BLOCK || tile == BGT_BLOCK_TR
         || tile == BGT_BLOCK_BL || tile == BGT_BLOCK_BR
         || tile == BGT_ROOF || tile == BGT_FENCE
