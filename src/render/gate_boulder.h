@@ -10,6 +10,6 @@ extern u8 gate_boulder_attr;
 void tiles_apply_passable_boulder(void) BANKED;
 void gate_boulder_refresh_attrs(void) BANKED;
 void gate_boulder_room_reset(void) BANKED;
-void gate_boulder_tick(void) BANKED;
+void gate_boulder_tick(u8 moving) BANKED;
 
 #endif

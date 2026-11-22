@@ -3,6 +3,7 @@
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
+#include "audio/sfx.h"
 #include "game/player.h"
 #include "game/room.h"
 #include "game/run_state.h"
@@ -23,12 +24,14 @@ const u8 bgt_gate_boulder_open[16] = {
 u8 gate_boulder_attr = BGPAL_WALL;
 
 static u8 s_cue_done;
+static u8 s_blocked_done;
 static u8 s_shimmer_ticks;
 static u8 s_shimmer_tx;
 static u8 s_shimmer_ty;
 
 void gate_boulder_room_reset(void) BANKED {
     s_cue_done = 0;
+    s_blocked_done = 0;
     s_shimmer_ticks = 0;
 }
 
@@ -82,8 +85,9 @@ static void front_tile(u8 *tx, u8 *ty) {
     *ty = (u8)(py >> 3);
 }
 
-void gate_boulder_tick(void) BANKED {
+void gate_boulder_tick(u8 moving) BANKED {
     u8 tx, ty, t;
+
     if (s_shimmer_ticks) {
         s_shimmer_ticks--;
         poke_attr(s_shimmer_tx, s_shimmer_ty,
@@ -92,13 +96,24 @@ void gate_boulder_tick(void) BANKED {
             poke_attr(s_shimmer_tx, s_shimmer_ty, BGPAL_CRACK);
         return;
     }
-    if (s_cue_done || !WAYGEAR_CAN_PASS_BOULDER()) return;
+
+    if (WAYGEAR_CAN_PASS_BOULDER()) {
+        if (s_cue_done) return;
+        front_tile(&tx, &ty);
+        t = room_tile_at_px((i16)tx << 3, (i16)ty << 3);
+        if (t != BGT_GATE_BOULDER) return;
+        s_cue_done = 1;
+        s_shimmer_tx = tx;
+        s_shimmer_ty = ty;
+        s_shimmer_ticks = 10;
+        poke_attr(tx, ty, BGPAL_DOOR);
+        return;
+    }
+
+    if (s_blocked_done || !moving) return;
     front_tile(&tx, &ty);
     t = room_tile_at_px((i16)tx << 3, (i16)ty << 3);
     if (t != BGT_GATE_BOULDER) return;
-    s_cue_done = 1;
-    s_shimmer_tx = tx;
-    s_shimmer_ty = ty;
-    s_shimmer_ticks = 10;
-    poke_attr(tx, ty, BGPAL_DOOR);
+    s_blocked_done = 1;
+    sfx_play(SFX_REFUSE);
 }

@@ -34,13 +34,19 @@ in front of the player. The per-room flag resets on `room_enter`.
 There is no field HUD hook for the Titan Glove — the glove icon lives in
 the pack — so this change does not add a per-frame HUD pulse.
 
+The first time the hero bumps a boulder they cannot pass (no Glove and not
+Sauran), the existing `SFX_REFUSE` two-note nuh-uh plays once. The check
+reads only the front tile, and only while a direction is held, so holding
+against the rock does not retrigger it every frame. A separate per-room
+flag resets on `room_enter`, so a mid-room Glove grant can still shimmer.
+
 ## What does not change
 
 Passability, Sauran's innate walk, Glove grant, other waygear gates, secret
 gold walls, and Riftwild art slots 0–39 and 64–98 stay as they are. No
 full-screen scan runs in the frame loop. Slowdown remains the top
 priority: attr choice is a macro, and the approach cue returns immediately
-after the room's first shimmer.
+after the room's first shimmer or blocked refuse cue.
 
 ## Art
 
@@ -50,6 +56,7 @@ against the solid boulder and the gold shot-wall before it is committed.
 
 ## Evidence
 
-`scripts/test_new_game_start.py` (including Continue) and the fixed-roster /
-dense performance floors (167 / 135) must stay green. Before and after
+`scripts/test_boulder_refuse.py` asserts the blocked bump plays `SFX_REFUSE`
+once. `scripts/test_new_game_start.py` (including Continue) and the
+fixed-roster / dense performance floors (167 / 135) must stay green. Before and after
 previews live at 3x scale under `/workspace/quintra-boulder/`.

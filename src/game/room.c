@@ -1929,7 +1929,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // B: hero magic (tap = attack spell, hold = ward) or the selected
         // tool. Runs after the A+B chord, which always wins.
         magic_input(keys, pressed, (u8)(w->p1+1+effective_atk));
-        gate_boulder_tick();
+        gate_boulder_tick((u8)(keys & (J_LEFT | J_RIGHT | J_UP | J_DOWN)));
         if (player.active_charge) secondary_cooldown_tick();
         if (room_transform_ticks > 0 && (run_clock_fraction & 7) == 0) {
             room_transform_ticks--;
