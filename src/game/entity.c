@@ -5,6 +5,7 @@
 #include "game/companion.h"
 #include "game/dungeon_director.h"
 #include "game/entity.h"
+#include "game/entity_draw_run.h"
 extern u8 new_monsters_in_room;
 extern u8 confusion_swirl_live;
 void new_monsters_draw(void) BANKED;
@@ -270,11 +271,13 @@ static u8 enemy_is_big16(const entity_t *e) {
 void entity_draw_all(void) {
     u8 i;
     u8 oam = serpent_tail_active ? 16 : cinder_pack_active ? cinder_oam_end : 4;
+#define ENTITY_DRAW_RUN
 #define ENTITY_DRAW_SX(e) \
     ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
 #define ENTITY_DRAW_SY(e) \
     ((u8)(FIX8_TO_INT((e)->y) - room_camera_y + 16))
 #include "game/entity_draw_core.h"
+#undef ENTITY_DRAW_RUN
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
     if (new_monsters_in_room || player_status_kind == QSTATUS_CONFUSION
