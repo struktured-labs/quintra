@@ -1,4 +1,5 @@
 #pragma bank 18
+#include "render/oam_grid.h"
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
@@ -241,30 +242,65 @@ void cinder_fire_repaint(void) BANKED {
    entries on a scanline win, so a bullet crossing the hound is never the
    sprite that drops: at worst an edge of the boss blinks, never a shot.
    Shots also draw over the body, never hidden under it. */
+// One 6-cell Rex row from cr_colx (0 = clipped column: Y parks too, since an
+// X=0 sprite still costs the scanline). og_tile steps by og_dx per cell
+// (+1 facing right, -1 mirrored). Batched: one pointer, state in registers.
+static u8 cr_colx[6];
+static void cinder_row(void) __naked {
+    __asm
+        ld  hl, #_og_ptr
+        ld  a, (hl+)
+        ld  h, (hl)
+        ld  l, a
+        ld  de, #_cr_colx
+        ld  a, (_og_tile)
+        ld  b, a
+        ld  c, #6
+    1$:
+        ld  a, (de)
+        or  a
+        jr  z, 2$
+        ld  a, (_og_y)
+    2$:
+        ld  (hl+), a
+        ld  a, (de)
+        inc de
+        ld  (hl+), a
+        ld  a, b
+        ld  (hl+), a
+        ld  a, (_og_dx)
+        add a, b
+        ld  b, a
+        ld  a, (_og_prop)
+        ld  (hl+), a
+        dec c
+        jr  nz, 1$
+        ld  a, l
+        ld  (_og_ptr), a
+        ld  a, h
+        ld  (_og_ptr + 1), a
+        ret
+    __endasm;
+}
+
 void cinder_rex_big_draw(i16 sx, i16 sy, u8 facing, u8 pose, u8 prop) BANKED {
-    u8 colx[6];
-    u8 *o = (u8 *)&shadow_OAM[CINDER_REX_OAM_BASE];
     u8 r, c;
     prop |= 0x08;                       /* both frames live in VRAM bank 1 */
     if (!facing) prop |= S_FLIPX;
     for (c = 0; c < 6; ++c) {
         i16 x = sx + (c << 3);
-        colx[c] = (x <= 0 || x >= 168) ? 0 : (u8)x;
+        cr_colx[c] = (x <= 0 || x >= 168) ? 0 : (u8)x;
     }
+    og_ptr = (u8 *)&shadow_OAM[CINDER_REX_OAM_BASE];
+    og_prop = prop;
+    og_dx = facing ? 1 : 0xFF;
     for (r = 0; r < 4; ++r) {
         i16 y16 = sy + (r << 3);
-        u8 y = (y16 <= 0 || y16 >= 160) ? 0 : (u8)y16;
         u8 band = r < 2 ? (pose & 1) : (pose & 2);
         u8 base = (u8)((band ? 88 : 64) + r * 6);
-        for (c = 0; c < 6; ++c) {
-            u8 x = colx[c];
-            /* A clipped column parks Y too: an X=0 sprite still costs the
-               scanline. */
-            *o++ = x ? y : 0;
-            *o++ = x;
-            *o++ = facing ? (u8)(base + c) : (u8)(base + 5 - c);
-            *o++ = prop;
-        }
+        og_y = (y16 <= 0 || y16 >= 160) ? 0 : (u8)y16;
+        og_tile = facing ? base : (u8)(base + 5);
+        cinder_row();
     }
 }
 
