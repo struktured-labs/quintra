@@ -97,7 +97,7 @@ static const char *active_tip_by_id(u16 id) {
     if (id == ITEM_ID_BOOMERANG) return "STUN AND FETCH";
     if (id == ITEM_ID_HOOKSHOT) return "LATCH AND PULL";
     if (id == ITEM_ID_MORNINGSTAR) return "SWING AROUND YOU";
-    if (id == ITEM_ID_BOMBS) return "1 MP THROW OR DROP";
+    if (id == ITEM_ID_BOMBS) return "2 MP THROW OR DROP";
     return (id >= 10 && id < 15) ? active_tips[id - 10] : "SEE SIG";
 }
 

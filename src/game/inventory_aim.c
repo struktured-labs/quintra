@@ -109,7 +109,7 @@ static const char *item_tip(u8 id) {
     if (id == ITEM_ID_BOOMERANG) return "STUN AND FETCH";
     if (id == ITEM_ID_HOOKSHOT) return "LATCH AND PULL";
     if (id == ITEM_ID_MORNINGSTAR) return "SWING AROUND YOU";
-    if (id == ITEM_ID_BOMBS) return "1 MP THROW OR DROP";
+    if (id == ITEM_ID_BOMBS) return "2 MP THROW OR DROP";
     switch (id) {
         case 10: return "HOLD: FLAME WARD";
         case 11: return "HOLD: STONESKIN";
