@@ -50,10 +50,19 @@ u8 projectile_throw_boomerang(u8 dir) BANKED {
     e->palette = 6;
     e->hp = 255;
     e->state_timer = 180;
-    e->hitbox = 0x77;
+    // Wider sweep at higher Will; range still follows boom_outbound.
+    {
+        static const u8 boom_box[4] = {0x77, 0x88, 0x99, 0xAA};
+        e->hitbox = boom_box[tier];
+    }
     e->ai_data[0] = boom_outbound[tier];
+    e->ai_data[1] = tier;
     e->ai_data[2] = 1;
     e->ai_data[6] = PROJ_AUX_BOOMERANG;
+    if (tier >= 3) {
+        player.will_charge = 0;
+        player.will_level = 0;
+    }
     sfx_play_boomerang(0);
     return 1;
 }
@@ -77,6 +86,10 @@ void projectile_update_boomerang(entity_t *e, u8 idx) BANKED {
         e->vy = dy > 4 ? 4 : dy < -4 ? -4 : (i8)dy;
     }
     e->ai_data[7]++;
+    // Mid and max Will leave a short afterimage trail (existing impact FX).
+    if (e->ai_data[1] && (e->ai_data[7] & (u8)(4 - e->ai_data[1])) == 0)
+        fx_spawn(SPR_FX_IMPACT, 6,
+            FIX8_TO_INT(e->x), FIX8_TO_INT(e->y), (u8)(3 + e->ai_data[1]));
     switch ((e->ai_data[7] >> 1) & 3) {
         case 1: e->ai_data[4] = PROJ_VIS_FLIP_X; break;
         case 2: e->ai_data[4] = PROJ_VIS_FLIP_X | PROJ_VIS_FLIP_Y; break;
