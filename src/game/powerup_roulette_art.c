@@ -29,10 +29,53 @@ void tiles_load_roulette_fx(void) BANKED {
 #include "game/pickup.h"
 #include "game/powerup.h"
 
-/* Written from WRAM set by powerup_extra.c (bank 29). */
-extern i8 powerup_roulette_bob;
-extern u8 powerup_roulette_fxflags;
-extern u8 powerup_roulette_spark_t;
+
+i8 powerup_roulette_bob;
+u8 powerup_roulette_fxflags;
+u8 powerup_roulette_spark_t;
+
+static u8 roulette_pop;
+static u8 roulette_smear_t;
+static const i8 roulette_pop_bob[3] = { -2, -3, -1 };
+static const i8 roulette_lock_bob[8] = { -2, -4, -3, -1, 1, 0, 0, 0 };
+
+void powerup_roulette_clear_fx(void) BANKED {
+    powerup_roulette_bob = 0;
+    powerup_roulette_fxflags = 0;
+    powerup_roulette_spark_t = 0;
+    roulette_pop = 0;
+    roulette_smear_t = 0;
+}
+
+void powerup_roulette_tick_fx(u8 just_changed, u8 locking, u8 lock_frame) BANKED {
+    u8 flags = RF_FRAME;
+    powerup_roulette_bob = 0;
+    if (just_changed) {
+        roulette_pop = 3;
+        roulette_smear_t = 2;
+    }
+    if (locking) {
+        if (lock_frame && lock_frame <= 8)
+            powerup_roulette_bob = roulette_lock_bob[lock_frame - 1];
+        if (lock_frame && lock_frame <= 16) flags |= RF_SPARK;
+        if (lock_frame && lock_frame <= 3) {
+            flags |= RF_SMEAR;
+            roulette_smear_t = 1;
+        }
+        powerup_roulette_spark_t = lock_frame;
+    } else {
+        if (roulette_pop) {
+            powerup_roulette_bob = roulette_pop_bob[3 - roulette_pop];
+            roulette_pop--;
+        }
+        if (roulette_smear_t) {
+            flags |= RF_SMEAR;
+            roulette_smear_t--;
+        }
+    }
+    powerup_roulette_fxflags = flags;
+}
+
 
 static const i8 spark_ox[8] = { 8, 6, 0, -6, -8, -6,  0,  6 };
 static const i8 spark_oy[8] = { 0,-6,-8, -6,  0,  6,  8,  6 };

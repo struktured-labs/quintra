@@ -36,15 +36,6 @@ static u8 roulette_index;
 static u8 roulette_lock;     // 0 spinning, 1..20 freeze, 0xFF done
 static u8 roulette_flags;
 static u8 roulette_slot;     // entity index, 0xFF if none
-static u8 roulette_pop;      // 3-frame pop after a face change
-static u8 roulette_smear_t;  // 2-frame smear overlay
-
-i8 powerup_roulette_bob;
-u8 powerup_roulette_fxflags;
-u8 powerup_roulette_spark_t;
-
-static const i8 roulette_pop_bob[3] = { -2, -3, -1 };
-static const i8 roulette_lock_bob[8] = { -2, -4, -3, -1, 1, 0, 0, 0 };
 
 static u8 buddy_idx[2];
 static u8 buddy_hp[2];
@@ -153,44 +144,6 @@ static void apply_face(entity_t *e, u8 id) {
     e->palette = face_prop(id, flash);
 }
 
-static void roulette_clear_fx(void) {
-    powerup_roulette_bob = 0;
-    powerup_roulette_fxflags = 0;
-    powerup_roulette_spark_t = 0;
-    roulette_pop = 0;
-    roulette_smear_t = 0;
-}
-
-static void roulette_tick_fx(u8 period, u8 just_changed, u8 locking) {
-    u8 flags = RF_FRAME;
-    powerup_roulette_bob = 0;
-    if (just_changed) {
-        roulette_pop = 3;
-        roulette_smear_t = 2;
-    }
-    if (locking) {
-        if (roulette_lock && roulette_lock <= 8)
-            powerup_roulette_bob = roulette_lock_bob[roulette_lock - 1];
-        if (roulette_lock && roulette_lock <= 16) flags |= RF_SPARK;
-        if (roulette_lock && roulette_lock <= 3) {
-            flags |= RF_SMEAR;
-            roulette_smear_t = 1;
-        }
-        powerup_roulette_spark_t = roulette_lock;
-    } else {
-        if (roulette_pop) {
-            powerup_roulette_bob = roulette_pop_bob[3 - roulette_pop];
-            roulette_pop--;
-        }
-        if (roulette_smear_t) {
-            flags |= RF_SMEAR;
-            roulette_smear_t--;
-        }
-        (void)period;
-    }
-    powerup_roulette_fxflags = flags;
-}
-
 u8 powerup_spawn_roulette(fix8_t x, fix8_t y, u8 flags) BANKED {
     u8 idx, want;
     if (flags & ROULETTE_UNCOMMON)
@@ -209,7 +162,7 @@ u8 powerup_spawn_roulette(fix8_t x, fix8_t y, u8 flags) BANKED {
     entities[idx].state_timer = 255;
     entities[idx].state = 0;
     apply_face(&entities[idx], roulette_faces[0]);
-    roulette_clear_fx();
+    powerup_roulette_clear_fx();
     powerup_roulette_fxflags = RF_FRAME;
     powerup_note_drop();
     powerup_world_live = 1;
@@ -239,7 +192,7 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
     }
     if (roulette_lock) {
         apply_face(e, e->ai_data[2]);
-        roulette_tick_fx(0, 0, 1);
+        powerup_roulette_tick_fx(0, 1, roulette_lock);
         roulette_lock++;
         if (roulette_lock > ROULETTE_LOCK_FRAMES) {
             u8 id = e->ai_data[2];
@@ -255,7 +208,7 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
             }
             entity_kill(idx);
             roulette_slot = 0xFF;
-            roulette_clear_fx();
+            powerup_roulette_clear_fx();
             refresh_world_live();
         }
         return;
@@ -270,14 +223,14 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
         roulette_index++;
         if (roulette_index >= roulette_count) roulette_index = 0;
         apply_face(e, roulette_faces[roulette_index]);
-        roulette_tick_fx(period, 1, 0);
+        powerup_roulette_tick_fx(1, 0, 0);
     } else {
         // Keep the latched face in ai_data[2] matching the visible tile.
         // A 2-frame white flash is visual only; the reward stays this face.
         e->ai_data[2] = e->ai_data[1];
         if (e->state + 2 >= period)
             e->palette = face_prop(e->ai_data[1], 1);
-        roulette_tick_fx(period, 0, 0);
+        powerup_roulette_tick_fx(0, 0, 0);
     }
     (void)idx;
 }
@@ -296,7 +249,7 @@ u8 powerup_roulette_try_lock(u8 idx) BANKED {
         roulette_slot = idx;
         sfx_play(SFX_TICK);
         apply_face(e, e->ai_data[2]);
-        roulette_tick_fx(0, 0, 1);
+        powerup_roulette_tick_fx(0, 1, roulette_lock);
     }
     return 0;
 }
@@ -327,7 +280,7 @@ static void world_tick(void) {
     if (!any) {
         roulette_lock = 0;
         roulette_slot = 0xFF;
-        roulette_clear_fx();
+        powerup_roulette_clear_fx();
     }
 }
 
