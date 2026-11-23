@@ -169,11 +169,40 @@ class Probe:
 
 
 def boot_room() -> PyBoy:
+    """Title -> class select -> Wolfkin -> first room.
+
+    Power-on can sit in the lore intro for well over 240 frames (#135), so
+    wait on loop_current_screen instead of counting frames, and skip the
+    opening vignette the same way scripts/test_performance.py does.
+    """
+    from quintra_vignettes import mute_after_class_select
+    screen = load_noi(ROM.with_suffix(".noi"))["_loop_current_screen"]
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240, render=False, sound=False)
+
+    def wait_for(value: int, limit: int) -> bool:
+        for _ in range(limit):
+            if pb.memory[screen] == value:
+                return True
+            pb.tick(1, render=False, sound=False)
+        return pb.memory[screen] == value
+
+    if not wait_for(1, 600):
+        pb.button("start")
+        wait_for(1, 180)
+    pb.tick(30, render=False, sound=False)
     pb.button("start")
+    wait_for(2, 200)
     pb.tick(30, render=False, sound=False)
     pb.button("a")
+    mute_after_class_select(pb, ROM, settle=8)
+    skipped = False
+    for i in range(400):
+        if pb.memory[screen] == 5:
+            break
+        if pb.memory[screen] == 6 and not skipped and i >= 8:
+            pb.button("start")
+            skipped = True
+        pb.tick(1, render=False, sound=False)
     pb.tick(90, render=False, sound=False)
     return pb
 
