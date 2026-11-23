@@ -96,12 +96,15 @@ void blue_crawler_pattern_tick(entity_t *e, u8 idx) BANKED {
         e->ai_data[3] = 32;
     clock = (u8)(e->ai_data[3] + 1);
     e->ai_data[3] = clock;
+    // Every cast below acts only from clock 145 on (dart >= 145, volley
+    // 145/161..193/194, viral pulse 150/160/170). Most ticks stop here,
+    // before the 16-bit centre math.
+    if (clock < 145) return;
     cx = FIX8_TO_INT(e->x) + 4;
     cy = FIX8_TO_INT(e->y) + 4;
 
     if (e->ai_data[4] == 1) {
         // Blue dart: a quicker single aimed lane, easy to read and sidestep.
-        if (clock < 145) return;
         e->ai_data[3] = 0;
         d = weak_aim_dir(cx, cy);
         crawler_shot(cx, cy, d, 2, e->damage, 3);

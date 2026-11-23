@@ -361,8 +361,9 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
 // Shared with combat_filter.c (bank 23).
 i16 shot_sx, shot_sy, shot_right, shot_bottom;
 static u8 shot_sx_b, shot_sy_b, shot_right_b, shot_bottom_b, shot_box_wide;
-static u8 shot_targets[MAX_ENTITIES];
-static u8 shot_list_n;
+// Shared with combat_filter.c (combat_next_ordinary_hit).
+u8 shot_targets[MAX_ENTITIES];
+u8 shot_list_n;
 static u8 shot_list_ready;
 
 #define SHOT_MISSES(ej) ( \
@@ -480,6 +481,7 @@ static u8 combat_scan_slots(entity_t *shot, u8 i, u8 start, u8 *giant_hits) {
 // returned). It re-reads live state on every call, so slots spawned, moved
 // or killed by a hit are seen exactly as the full walk would see them.
 u8 combat_next_cut_candidate(u8 i, u8 start) BANKED;
+u8 combat_next_ordinary_hit(u8 k) BANKED;
 
 static void combat_scan_listed(entity_t *shot, u8 i, u8 *giant_hits) {
     u8 j = 0;
@@ -498,15 +500,17 @@ static void combat_resolve_ordinary(entity_t *shot, u8 i, u8 *giant_hits) {
     combat_load_shot_box(shot);
     combat_tail_rescan = 0;
     if (!shot_list_ready) combat_collect_targets();
-    for (k = 0; k < shot_list_n; ++k) {
+    // The leaf skips inactive and missed targets in registers (exact
+    // SHOT_MISSES) and always returns the giant/Hexa body, whose own
+    // overlap test stays here. It re-reads the live list on every call.
+    for (k = 0; (k = combat_next_ordinary_hit(k)) != 0xFF; ++k) {
         j = shot_targets[k];
         ej = &entities[j];
-        if (!(ej->flags & EF_ACTIVE)) continue;
         if (hexa_boss_active && j == hexa_core_entity) {
             if (!hexa_shot_overlap(shot)) continue;
         } else if (j == large_boss_index) {
             if (!large_boss_shot_overlap(shot, ej)) continue;
-        } else if (combat_shot_misses(ej)) continue;
+        }
         if (combat_apply_player_shot_hit(shot, i, ej, j, giant_hits)) return;
         if (combat_tail_rescan) {
             combat_tail_rescan = 0;

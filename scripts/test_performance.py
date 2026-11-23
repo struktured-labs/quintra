@@ -102,10 +102,11 @@ def make_fixed_crawlers(pb):
     The opening pack is rng_seed(loop_frame_counter) at run_init, and the
     historical converter only retargets species on whatever foyer rolled.
     That layout (on-camera count, Blue Crawler pattern identities 1/2/3,
-    leftover shots) can swing the 167 floor by several loop frames: the
+    leftover shots) can swing the fixed-roster count by several loop frames: the
     same converter scored 168 on one Aftershock boot and 162 on another,
     while max-Will landed 163 with hooks reverted. Plant a fixed layout
-    instead of converting the roll. Do not lower the 167 floor.
+    instead of converting the roll. Do not lower the 174 floor (measured
+    178/180 after the Neon pass 2 renderer/combat work; was 167).
 
     3 on-camera / 13 off-camera in a 248x248 room, leftover shots cleared,
     walking clocks staggered. On-camera bodies are two type-1 darts and
@@ -263,19 +264,19 @@ def main():
         rom_sha256=sha, script_sha256=script_sha,
         fixture='Fresh boot; generated district, stationary shot saturation, planted 16-crawler roster (2 darts + 1 viral pulse on-camera). Native 180-LCD-frame windows; no stalls removed.',
         generated=generated, generated_floor=generated_floor,
-        fixed_roster=ordinary, fixed_floor=167, dense=loops, dense_floor=135,
+        fixed_roster=ordinary, fixed_floor=174, dense=loops, dense_floor=175,
         population=population, active_projectiles=active,
-        passed=ordinary>=167 and active>=10 and loops>=135),indent=2))
+        passed=ordinary>=174 and active>=10 and loops>=175),indent=2))
     print(f'[performance] measured generated={generated}, fixed={ordinary}, dense={loops} /180',flush=True)
 
-    assert ordinary >= 167, (
+    assert ordinary >= 174, (
         f"fixed-roster room missed video rate: {ordinary}/180 loop frames"
     )
     assert active >= 10, f"stress load evaporated before measurement ({active}/12)"
-    # Twelve simultaneous hostile shots produce the v0.20.5 saturated
-    # baseline of 135/180 (45 Hz). This is a regression fence, not a claim
-    # that the existing engine has already reached the future 80% target.
-    assert loops >= 135, (
+    # Twelve simultaneous hostile shots were 135/180 (45 Hz) in v0.20.5 and
+    # now saturate at 180/180; 175 fences a regression of more than a few
+    # loop turns without flaking on boot-timing jitter.
+    assert loops >= 175, (
         f"dense room fell below release baseline: {loops}/180 loop frames"
     )
     print(f"[performance] PASS double-speed generated={generated}/180, "

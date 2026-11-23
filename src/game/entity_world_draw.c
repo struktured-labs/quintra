@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 #include "game/entity.h"
+#include "game/entity_draw_run.h"
 extern u8 new_monsters_in_room;
 extern u8 confusion_swirl_live;
 void new_monsters_draw(void) BANKED;
@@ -42,13 +43,6 @@ static u8 enemy_is_big16(const entity_t *e) {
         || (u8)(eid - ENEMY_VAULT_HAND) < 2);
 }
 
-#define ENTITY_DRAW_SX(e) \
-    ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
-#define ENTITY_DRAW_SY(e) \
-    ((u8)(FIX8_TO_INT((e)->y) - room_camera_y + 16))
-#include "game/entity_draw_fast.h"
-#undef ENTITY_DRAW_SX
-#undef ENTITY_DRAW_SY
 
 static u8 world_camera_step(u8 current, i16 player_pos,
                             u8 world_extent, u8 view_extent) {
@@ -75,11 +69,17 @@ void entity_draw_all_world(void) BANKED {
     room_camera_y = (room_world_height > ROOM_VIEW_H_PX)
         ? world_camera_step(room_camera_y, player.y,
             room_world_height, ROOM_VIEW_H_PX) : 0;
+    // Plain sprites go through the same register-only scan as the compact
+    // renderer (bank 30). The camera step above has already moved
+    // room_camera_x/y, which is all the scan reads; the C leaf cost ~2.7k
+    // clocks a sprite and this path runs every frame the camera follows.
+#define ENTITY_DRAW_RUN
 #define ENTITY_DRAW_SX(e) \
     ((u8)(FIX8_TO_INT((e)->x) - room_camera_x + 8))
 #define ENTITY_DRAW_SY(e) \
     ((u8)(FIX8_TO_INT((e)->y) - room_camera_y + 16))
 #include "game/entity_draw_core.h"
+#undef ENTITY_DRAW_RUN
 #undef ENTITY_DRAW_SX
 #undef ENTITY_DRAW_SY
     if (new_monsters_in_room || player_status_kind == QSTATUS_CONFUSION

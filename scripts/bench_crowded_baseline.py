@@ -169,11 +169,40 @@ class Probe:
 
 
 def boot_room() -> PyBoy:
+    """Title -> class select -> Wolfkin -> first room.
+
+    Power-on can sit in the lore intro for well over 240 frames (#135), so
+    wait on loop_current_screen instead of counting frames, and skip the
+    opening vignette the same way scripts/test_performance.py does.
+    """
+    from quintra_vignettes import mute_after_class_select
+    screen = load_noi(ROM.with_suffix(".noi"))["_loop_current_screen"]
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240, render=False, sound=False)
+
+    def wait_for(value: int, limit: int) -> bool:
+        for _ in range(limit):
+            if pb.memory[screen] == value:
+                return True
+            pb.tick(1, render=False, sound=False)
+        return pb.memory[screen] == value
+
+    if not wait_for(1, 600):
+        pb.button("start")
+        wait_for(1, 180)
+    pb.tick(30, render=False, sound=False)
     pb.button("start")
+    wait_for(2, 200)
     pb.tick(30, render=False, sound=False)
     pb.button("a")
+    mute_after_class_select(pb, ROM, settle=8)
+    skipped = False
+    for i in range(400):
+        if pb.memory[screen] == 5:
+            break
+        if pb.memory[screen] == 6 and not skipped and i >= 8:
+            pb.button("start")
+            skipped = True
+        pb.tick(1, render=False, sound=False)
     pb.tick(90, render=False, sound=False)
     return pb
 
@@ -636,6 +665,71 @@ def build_scenes(selected: set[str] | None):
         clear_entities(pb, sym)
         spawn_bullets(pb, sym, 0, 16, view_origin(info, 28, 28), player=False, vx=1, vy=0)
 
+    def with_statuses(pb, sym):
+        # One status per enemy, cycling through the tinted and the
+        # movement-changing kinds, so the renderer's status-palette path and
+        # the condition dispatcher both run every update.
+        kinds = (1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 4, 7)
+        base = sym["_entities"]
+        n = 0
+        for slot in range(32):
+            if pb.memory[base + slot * ENT] == ENT_ENEMY:
+                pb.memory[sym["_enemy_status_kind"] + slot] = kinds[n % len(kinds)]
+                pb.memory[sym["_enemy_status_ticks"] + slot] = 200
+                n += 1
+        pb.memory[sym["_status_enemy_active"]] = 1
+
+    def follow_camera(pb, sym):
+        # The boot district is a scrolling field. Moving the champion one
+        # pixel restarts room_draw's 64-frame camera follow, so the scrolling
+        # world renderer (entity_draw_all_world) draws every update.
+        x = s16(pb, sym["_player"] + 9) + 1
+        pb.memory[sym["_player"] + 9] = x & 0xFF
+        pb.memory[sym["_player"] + 10] = (x >> 8) & 0xFF
+
+    def scene_walkers_status(pb, sym, info):
+        scene_walkers(16)(pb, sym, info)
+        with_statuses(pb, sym)
+
+    def scene_walkers_follow(pb, sym, info):
+        scene_walkers(16)(pb, sym, info)
+        follow_camera(pb, sym)
+
+    def scene_mixed_follow_status(pb, sym, info):
+        fill_floor(pb, sym)
+        clear_entities(pb, sym)
+        spawn_enemies(pb, sym, ENEMY_CRAWLER, SPR_CRAWLER, 8, view_origin(info, 32, 32))
+        with_statuses(pb, sym)
+        spawn_bullets(pb, sym, 8, 8, view_origin(info, 36, 96), player=False, vx=1, vy=0)
+        follow_camera(pb, sym)
+
+    def scene_boss_shots(pb, sym, info):
+        # Twelve boss-pattern shots covering every pattern (arc, wave, seed,
+        # spiral, return, bolt, lane), shape and speed state, a third of
+        # them due to split, so boss_projectile_update and its wall test run
+        # every branch. Damage 0 keeps the champion alive for 200 updates.
+        fill_floor(pb, sym)
+        clear_entities(pb, sym)
+        base = sym["_entities"]
+        hitboxes = (0x44, 0x77, 0xEE, 0xE6, 0xEE)
+        ox, oy = view_origin(info, 16, 76)
+        for slot in range(12):
+            pattern = slot % 7
+            shape = slot % 5
+            x = ox + (slot % 4) * 28
+            y = oy + (slot // 4) * 14
+            write_entity(pb, base, slot, ENT_PROJECTILE,
+                         EF_ACTIVE | EF_ALIVE | 0x80, x, y, 208 + shape, 1, 0,
+                         hitboxes[shape], state=slot % 4, timer=150,
+                         ai0=(slot * 5) & 31, ai1=pattern)
+            ep = base + slot * ENT
+            pb.memory[ep + 2] = (slot * 3) & 15        # x_frac
+            pb.memory[ep + 5] = x & 0xFF               # x_pad
+            pb.memory[ep + 6] = (slot * 5) & 15        # y_frac
+            pb.memory[ep + 9] = y & 0xFF               # y_pad
+            pb.memory[ep + 19] = 1 if slot % 3 == 0 else 0  # split generation
+            pb.memory[ep + 21] = shape
+
     catalog = [
         ("natural_opening", lambda pb, sym, info: None, 0, False, False),
         ("fixed_crawlers", lambda pb, sym, info: make_fixed_crawlers(pb, sym), 0, False, False),
@@ -648,6 +742,10 @@ def build_scenes(selected: set[str] | None):
         ("player_shots_miss", scene_split(False), 0, True, True),
         ("player_shots_overlap", scene_split(True), 0, True, True),
         ("hostile16_moving", scene_hostile_spread, 0, False, True),
+        ("walkers16_status", scene_walkers_status, 0, True, True),
+        ("walkers16_follow", scene_walkers_follow, 0, True, True),
+        ("mixed_follow_status", scene_mixed_follow_status, 0, False, True),
+        ("boss_shots12", scene_boss_shots, 0, False, True),
     ]
     if selected is None:
         return catalog
