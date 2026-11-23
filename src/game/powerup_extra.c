@@ -122,26 +122,18 @@ static void shuffle_faces(u8 min_id, u8 max_id, u8 want) {
     }
 }
 
-static u8 face_prop(u8 id, u8 flash) {
-    u8 tile, prop;
-    if (id == POWERUP_NONE || id >= POWERUP_COUNT) return 0;
-    tile = face_tile[id];
-    prop = flash ? 0x00 : face_pal[id];
-    if (tile >= SPR_ROULETTE_FRAME && tile <= SPR_ROULETTE_FACE_WING)
-        prop |= (u8)S_BANK;
-    return prop;
-}
+// Bank-1 face tiles (192-199) must keep S_BANK even while flashing white,
+// or a leftover VBK would show the bank-0 tile at that index.
+#define FACE_PROP(id, flash) ((u8)(((flash) ? 0x00 : face_pal[id]) | \
+    ((face_tile[id] >= SPR_ROULETTE_FRAME) ? (u8)S_BANK : 0)))
 
 static void apply_face(entity_t *e, u8 id) {
-    u8 flash;
     if (id == POWERUP_NONE || id >= POWERUP_COUNT) return;
     e->ai_data[1] = id;
     e->ai_data[2] = id;     // latched visible face (lock rule)
     e->sprite_tile = face_tile[id];
-    // White strobe only for the first 6 lock frames, then hold the true
-    // colours so the winning icon can be read.
-    flash = (u8)(roulette_lock && roulette_lock <= 6 && (roulette_lock & 1));
-    e->palette = face_prop(id, flash);
+    e->palette = FACE_PROP(id,
+        (u8)(roulette_lock && roulette_lock <= 6 && (roulette_lock & 1)));
 }
 
 u8 powerup_spawn_roulette(fix8_t x, fix8_t y, u8 flags) BANKED {
@@ -229,7 +221,7 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
         // A 2-frame white flash is visual only; the reward stays this face.
         e->ai_data[2] = e->ai_data[1];
         if (e->state + 2 >= period)
-            e->palette = face_prop(e->ai_data[1], 1);
+            e->palette = FACE_PROP(e->ai_data[1], 1);
         powerup_roulette_tick_fx(0, 0, 0);
     }
     (void)idx;
