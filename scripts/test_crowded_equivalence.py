@@ -38,6 +38,9 @@ LONG_SCENES = (
     "player_shots_miss",
     "player_shots_overlap",
     "hostile16_moving",
+    "walkers16_status",
+    "walkers16_follow",
+    "mixed_follow_status",
 )
 GATED = {
     "empty_room",
@@ -49,6 +52,9 @@ GATED = {
     "player_shots_miss",
     "player_shots_overlap",
     "hostile16_moving",
+    "walkers16_status",
+    "walkers16_follow",
+    "mixed_follow_status",
 }
 
 

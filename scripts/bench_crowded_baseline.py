@@ -665,6 +665,44 @@ def build_scenes(selected: set[str] | None):
         clear_entities(pb, sym)
         spawn_bullets(pb, sym, 0, 16, view_origin(info, 28, 28), player=False, vx=1, vy=0)
 
+    def with_statuses(pb, sym):
+        # One status per enemy, cycling through the tinted and the
+        # movement-changing kinds, so the renderer's status-palette path and
+        # the condition dispatcher both run every update.
+        kinds = (1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 4)
+        base = sym["_entities"]
+        n = 0
+        for slot in range(32):
+            if pb.memory[base + slot * ENT] == ENT_ENEMY:
+                pb.memory[sym["_enemy_status_kind"] + slot] = kinds[n % len(kinds)]
+                pb.memory[sym["_enemy_status_ticks"] + slot] = 200
+                n += 1
+        pb.memory[sym["_status_enemy_active"]] = 1
+
+    def follow_camera(pb, sym):
+        # The boot district is a scrolling field. Moving the champion one
+        # pixel restarts room_draw's 64-frame camera follow, so the scrolling
+        # world renderer (entity_draw_all_world) draws every update.
+        x = s16(pb, sym["_player"] + 9) + 1
+        pb.memory[sym["_player"] + 9] = x & 0xFF
+        pb.memory[sym["_player"] + 10] = (x >> 8) & 0xFF
+
+    def scene_walkers_status(pb, sym, info):
+        scene_walkers(16)(pb, sym, info)
+        with_statuses(pb, sym)
+
+    def scene_walkers_follow(pb, sym, info):
+        scene_walkers(16)(pb, sym, info)
+        follow_camera(pb, sym)
+
+    def scene_mixed_follow_status(pb, sym, info):
+        fill_floor(pb, sym)
+        clear_entities(pb, sym)
+        spawn_enemies(pb, sym, ENEMY_CRAWLER, SPR_CRAWLER, 8, view_origin(info, 32, 32))
+        with_statuses(pb, sym)
+        spawn_bullets(pb, sym, 8, 8, view_origin(info, 36, 96), player=False, vx=1, vy=0)
+        follow_camera(pb, sym)
+
     catalog = [
         ("natural_opening", lambda pb, sym, info: None, 0, False, False),
         ("fixed_crawlers", lambda pb, sym, info: make_fixed_crawlers(pb, sym), 0, False, False),
@@ -677,6 +715,9 @@ def build_scenes(selected: set[str] | None):
         ("player_shots_miss", scene_split(False), 0, True, True),
         ("player_shots_overlap", scene_split(True), 0, True, True),
         ("hostile16_moving", scene_hostile_spread, 0, False, True),
+        ("walkers16_status", scene_walkers_status, 0, True, True),
+        ("walkers16_follow", scene_walkers_follow, 0, True, True),
+        ("mixed_follow_status", scene_mixed_follow_status, 0, False, True),
     ]
     if selected is None:
         return catalog
