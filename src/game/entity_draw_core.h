@@ -144,6 +144,8 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
         it->prop = prop;
     }
     oam++;
+    if (e->type == ENT_PICKUP && e->ai_data[0] == PICKUP_ROULETTE)
+        oam = powerup_roulette_decorate(oam, sx, sy);
 }
 // Park only sprites that were occupied on the preceding frame. Room entry
 // already clears slots 4..39, and active slots are overwritten above; hiding
