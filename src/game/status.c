@@ -265,6 +265,10 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
     // long test run after the initiating enemy is already gone.
     if (kind == QSTATUS_CONFUSION && confusion_immune) return;
     if (kind == QSTATUS_DISARM && disarm_immune) return;
+    /* An unkillable Bubble must not refresh DISARM on every contact,
+       or the 4s timer never reaches zero and the immunity window never
+       starts. */
+    if (kind == QSTATUS_DISARM && player_status_kind == QSTATUS_DISARM) return;
     ticks = status_resist_adjust(kind, ticks);
     if (ticks == 0xFF) return;
     if (kind == QSTATUS_CONFUSION) {

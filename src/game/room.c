@@ -1996,7 +1996,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             if (!(entities[i].flags & EF_ACTIVE)) continue;
             if (entities[i].type != ENT_ENEMY)    continue;
             /* Unkillable Bubbles must never block unsealing or rooms_cleared. */
-            if (ENEMY_IS_CLEAR_HAZARD(&entities[i])) continue;
+            if (entities[i].ai_data[0] == ENEMY_BUBBLE && ENEMY_IS_CLEAR_HAZARD(&entities[i])) continue;
             alive++;
             if (corvin_i == 0xFF) corvin_i = i;
             if (!found && (entities[i].ai_data[0] == ENEMY_STONE_SENTINEL

@@ -33,7 +33,7 @@ def wait_room_live(pb, limit=1800):
 
 ENTITY_SIZE = 28
 ENT_ENEMY = 2
-EF_ACTIVE, EF_ALIVE = 0x01, 0x02
+EF_ACTIVE, EF_ALIVE, EF_ON_SCREEN = 0x01, 0x02, 0x04
 ENEMY_BUBBLE = 44
 ENEMY_AUX_BUBBLE_IMMORTAL = 0xB7
 SPR_ENEMY_BUBBLE = 78
@@ -83,7 +83,7 @@ def poke_bubble(pb, slot, x, y, immortal=False):
     for i in range(ENTITY_SIZE):
         pb.memory[ep + i] = 0
     pb.memory[ep + 0] = ENT_ENEMY
-    pb.memory[ep + 1] = EF_ACTIVE | EF_ALIVE
+    pb.memory[ep + 1] = EF_ACTIVE | EF_ALIVE | EF_ON_SCREEN
     put16(pb, ep + 3, x)
     put16(pb, ep + 7, y)
     pb.memory[ep + 12] = SPR_ENEMY_BUBBLE
@@ -94,6 +94,8 @@ def poke_bubble(pb, slot, x, y, immortal=False):
     pb.memory[ep + 19] = ENEMY_AUX_BUBBLE_IMMORTAL if immortal else 0
     pb.memory[ep + 25] = (6 << 4) | 6
     pb.memory[ep + 26] = 1
+    pb.memory[ep + 27] = 4 + slot
+    pb.memory[ep + 27] = 4 + slot  # oam_slot; 0 is the hero
     return ep
 
 

@@ -36,7 +36,9 @@ enum {
 
 // Unkillable Bubble variant. The flags byte is full (EF_RARE=0x80), so this
 // lives in ai_data[2] rather than a flag bit. Room-clear, unseal, and
-// rooms_cleared must skip entities tagged with this value.
+// rooms_cleared must skip entities tagged with this value. Always test
+// ai_data[0] == ENEMY_BUBBLE as well: other AI uses ai_data[2] as a timer
+// and must not inherit invincibility or drop out of the alive count.
 #define ENEMY_AUX_BUBBLE_IMMORTAL 0xB7
 #define ENEMY_IS_CLEAR_HAZARD(e) \
     ((e)->ai_data[2] == ENEMY_AUX_BUBBLE_IMMORTAL)

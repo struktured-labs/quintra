@@ -77,7 +77,7 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
         }
         return 0;
     }
-    if (ej->ai_data[2] == ENEMY_AUX_BUBBLE_IMMORTAL) {
+    if (eid == ENEMY_BUBBLE && ej->ai_data[2] == ENEMY_AUX_BUBBLE_IMMORTAL) {
         if (bubble_reject_hit(i, j)) return 1;
     }
     // Keep specialist rejection out of the miss scan's stack frame. The
