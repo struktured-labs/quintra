@@ -2,7 +2,8 @@
 // Register-only scan for the plain cases of the compact-room entity OAM
 // allocator (entity_draw_all). It walks the rotated slot order from edr_i
 // and places every plain 8x8 effect, ordinary player/enemy shot and plain
-// small on-screen enemy exactly as entity_draw_fast would, stopping at the
+// small on-screen enemy (status tint included) exactly as the general path
+// would, stopping at the
 // first active slot that needs the general C path. The caller handles that
 // one slot and calls again, so OAM order is unchanged.
 //
@@ -17,6 +18,26 @@
 #include "game/entity_draw_run.h"
 
 u8 edr_i, edr_rot, edr_oam;
+
+// status_palette() in game/status.c, indexed by QSTATUS_* (0..13). Kept in
+// this bank so the scan can tint a status-afflicted small enemy itself
+// instead of handing every such body to the general C path.
+const u8 edr_status_pal[14] = {
+    0, // NONE (not reached)
+    7, // POISON
+    4, // BURN
+    3, // SLOW
+    3, // STOP
+    0, // BLIND
+    6, // CONFUSION
+    0, // MUTE
+    4, // BRITTLE
+    4, // BLEED
+    6, // CURSE
+    7, // REGEN
+    5, // HASTE
+    6, // INVERSION
+};
 
 void entity_draw_run(void) BANKED __naked {
     __asm
@@ -76,15 +97,6 @@ void entity_draw_run(void) BANKED __naked {
         pop hl
         or  a, a
         ret nz
-        push hl
-        ld  hl, #_enemy_status_kind
-        ld  e, c
-        ld  d, #0
-        add hl, de
-        ld  a, (hl)
-        pop hl
-        or  a, a                    ; QSTATUS_NONE == 0
-        ret nz
         ld  a, (_room_return_echo_kind)
         cp  a, #4
         jr  c, 11103$
@@ -114,6 +126,33 @@ void entity_draw_run(void) BANKED __naked {
         sub a, #37                  ; Vault Hand / Bane Brute
         cp  a, #2
         ret c
+        ; Plain small enemy. A status tints it on the 8-frame beat exactly
+        ; as entity_draw_core.h does (status_enemy_palette_prop); off-beat
+        ; and untinted bodies keep e->palette.
+        push hl
+        ld  hl, #_enemy_status_kind
+        ld  e, c
+        ld  d, #0
+        add hl, de
+        ld  a, (hl)
+        pop hl
+        or  a, a                    ; QSTATUS_NONE == 0
+        jr  z, 11110$
+        ld  b, a                    ; b = kind
+        ld  a, (_entity_anim_counter)
+        and a, #8
+        jr  z, 11110$
+        ld  a, b
+        ld  b, #0                   ; status_palette() default
+        cp  a, #14                  ; QSTATUS_COUNT
+        jr  nc, 11130$
+        push hl
+        ld  e, a                    ; d is still 0
+        ld  hl, #_edr_status_pal
+        add hl, de
+        ld  b, (hl)
+        pop hl
+        jr  11130$
     11110$:                         ; plain: prop = palette
         push hl
         ld  de, #13

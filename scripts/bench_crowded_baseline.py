@@ -669,7 +669,7 @@ def build_scenes(selected: set[str] | None):
         # One status per enemy, cycling through the tinted and the
         # movement-changing kinds, so the renderer's status-palette path and
         # the condition dispatcher both run every update.
-        kinds = (1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 4)
+        kinds = (1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 13, 4, 7)
         base = sym["_entities"]
         n = 0
         for slot in range(32):
