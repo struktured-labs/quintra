@@ -466,6 +466,12 @@ u8 status_player_effective_stat(u8 stat) BANKED {
     values[2] = player.spd;
     values[3] = player.lck;
     if (stat >= 4) return 0;
+    // Pokemon-style Burn: half attack while it lasts. ATK 1 stays 1 so
+    // a weak starting swing is not erased; ATK 0 stays 0.
+    if (player_status_kind == QSTATUS_BURN && stat == QSTATUS_STAT_ATK) {
+        if (values[0] > 1) values[0] >>= 1;
+        return curse_adjust_stat(stat, values[0]);
+    }
     if (player_status_kind != QSTATUS_INVERSION)
         return curse_adjust_stat(stat, values[stat]);
     hi = lo = (u8)(inversion_tie & 3);

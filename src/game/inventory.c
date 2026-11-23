@@ -211,7 +211,7 @@ void inventory_enter(void) {
     text_write("/"); text_u16((u16)player.hp_max);
     gotoxy(11, 5); text_write("MP "); text_u16((u16)player.mp);
     text_write("/"); text_u16((u16)player.mp_max);
-    gotoxy(1, 6); text_write("ATK "); text_u16((u16)(STATUS_PLAYER_INVERTED()
+    gotoxy(1, 6); text_write("ATK "); text_u16((u16)(STATUS_PLAYER_ATK_MODIFIED()
         ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk));
     gotoxy(7, 6); text_write("DEF "); text_u16((u16)(STATUS_PLAYER_INVERTED()
         ? status_player_effective_stat(QSTATUS_STAT_DEF) : player.def));
