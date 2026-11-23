@@ -67,7 +67,8 @@ static u8 enemy_can_fill_room(u8 id) {
         && id != ENEMY_LEYBEAM
         && id != ENEMY_SUN_BASILISK
         && id != ENEMY_NOX_BASILISK
-        && id != ENEMY_FUSE_HURLER;
+        && id != ENEMY_FUSE_HURLER
+        && id != ENEMY_BUBBLE;
 }
 
 static u8 themed_stage_enemy(u8 stage, u8 start, u8 avoid) {

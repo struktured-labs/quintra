@@ -573,6 +573,18 @@ pub const FUSE_HURLER: Enemy = Enemy {
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
 
+
+pub const BUBBLE: Enemy = Enemy {
+    id: ENEMY_BUBBLE, symbol: "BUBBLE", name: "Bubble",
+    sprite_set: SPRITE_BUBBLE, palette: OBJ_PAL_BONE,
+    // Zelda 1 Bubble: a flashing skull that locks the A button on contact.
+    // Custom diagonal-bounce AI is dispatched by id; Walker is the content
+    // fallback so the generated table stays on the existing AI vocabulary.
+    stats: EnemyStats { hp: 6, damage: 1, speed: 40, score: 20, weakness: 0x08, poise: 0 },
+    ai_script: AiScriptId::Walker,
+    drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
+};
+
 pub fn register(r: &mut Registry) {
     r.add_enemy(BLUE_CRAWLER.clone());
     r.add_enemy(STONE_SENTINEL.clone());
@@ -618,4 +630,5 @@ pub fn register(r: &mut Registry) {
     r.add_enemy(FUSE_HURLER.clone());
     r.add_enemy(SUN_BASILISK.clone());
     r.add_enemy(NOX_BASILISK.clone());
+    r.add_enemy(BUBBLE.clone());
 }

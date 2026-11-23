@@ -12,6 +12,7 @@
 #include "game/dungeon_director.h"
 #include "game/enemy_ai.h"
 #include "game/entity.h"
+#include "game/enemy_bubble.h"
 #include "game/pickup.h"
 #include "game/player.h"
 #include "game/projectile.h"
@@ -75,6 +76,9 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
             status_enemy_apply(j, QSTATUS_STOP, 14);
         }
         return 0;
+    }
+    if (ej->ai_data[2] == ENEMY_AUX_BUBBLE_IMMORTAL) {
+        if (bubble_reject_hit(i, j)) return 1;
     }
     // Keep specialist rejection out of the miss scan's stack frame. The
     // helper is entered only for authored armor, shell, or projection

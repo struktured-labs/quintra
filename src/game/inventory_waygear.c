@@ -47,7 +47,7 @@ static const char *const nature_names[5] = {
 static const char *const pack_status_names[QSTATUS_COUNT] = {
     "NORMAL", "POISON", "BURNING", "SLOWED", "STOPPED",
     "BLINDED", "CONFUSED", "MUTED", "BRITTLE", "BLEEDING",
-    "CURSED", "REGEN", "HASTE", "INVERTED"
+    "CURSED", "REGEN", "HASTE", "INVERTED", "DISARM"
 };
 
 #define INV_FRAME_BASE ((u8)0xF6u)

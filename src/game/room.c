@@ -1327,7 +1327,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // slowed, stopped, or adaptively remapped by an active condition.
     if (player_status_kind == QSTATUS_STOP
         || player_status_kind == QSTATUS_SLOW
-        || player_status_kind == QSTATUS_CONFUSION)
+        || player_status_kind == QSTATUS_CONFUSION
+        || player_status_kind == QSTATUS_DISARM)
         status_player_filter_input(&keys, &pressed);
     if (new_monsters_in_room && vault_hand_holding) {
         keys &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN);
@@ -1994,6 +1995,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
             if (!(entities[i].flags & EF_ACTIVE)) continue;
             if (entities[i].type != ENT_ENEMY)    continue;
+            /* Unkillable Bubbles must never block unsealing or rooms_cleared. */
+            if (ENEMY_IS_CLEAR_HAZARD(&entities[i])) continue;
             alive++;
             if (corvin_i == 0xFF) corvin_i = i;
             if (!found && (entities[i].ai_data[0] == ENEMY_STONE_SENTINEL

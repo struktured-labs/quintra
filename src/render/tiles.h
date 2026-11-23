@@ -307,6 +307,7 @@
 #define SPR_ENEMY_RIFT_OOZE  76 // splitting late-stage blob
 #define SPR_ENEMY_MIRROR_MOTH 77 // Frost Vault movement-reflecting flyer
 #define SPR_ENEMY_MIRE_SPORE  78 // Toxic Mire proximity-armed radial mine
+#define SPR_ENEMY_BUBBLE      SPR_ENEMY_MIRE_SPORE // Shadow/Void only; Mire never shares those rooms
 #define SPR_APOTHECARY        79 // village rune keeper
 #define SPR_ENEMY_DUSK_MIDGE  SPR_APOTHECARY // combat-only fast fan harrier
 #define SPR_ENEMY_SUNWHEEL    SPR_APOTHECARY // Golden Temple-only orbiting lane shaper
@@ -511,6 +512,7 @@ void tiles_load_frost_lancer_sprite(void) BANKED;  // Frost Vault reuse of that 
 void tiles_load_vine_coil_sprite(void) BANKED;     // Verdant Hollow reuse of that slot
 void tiles_load_shard_crab_sprite(void) BANKED;    // Crystal Caverns reuse of that slot
 void tiles_load_void_halo_sprite(void) BANKED;     // Void Sanctum reuse of that slot
+void tiles_load_bubble_sprite(void) BANKED;       // Shadow Keep / Void reuse of slot 78
 void tiles_load_sunwheel_sprite(void) BANKED;      // Golden Temple reuse of that slot
 void tiles_load_merchant_callout_sprite(void) BANKED;
 void tiles_load_spear_sprite(void) BANKED;

@@ -79,6 +79,7 @@ static u8 player_status_aux;
 static u8 confusion_mode;
 static u8 confusion_streak;
 u16 confusion_immune;
+u8 disarm_immune;
 static u8 inversion_tie;
 static ppos_t bleed_last_x;
 static ppos_t bleed_last_y;
@@ -164,6 +165,7 @@ static u8 status_duration(u8 kind) {
         case QSTATUS_REGEN:     return 90;
         case QSTATUS_HASTE:     return 90;
         case QSTATUS_INVERSION: return 75;
+        case QSTATUS_DISARM:    return 30; // ~4 seconds; Easy halves it
         default:               return 0;
     }
 }
@@ -215,6 +217,7 @@ void status_reset_all(void) BANKED {
     confusion_mode = 0;
     confusion_streak = 0;
     confusion_immune = 0;
+    disarm_immune = 0;
     inversion_tie = 0;
     bleed_last_x = bleed_last_y = 0;
     powerup_reset();
@@ -223,6 +226,7 @@ void status_reset_all(void) BANKED {
 void status_player_cure(void) BANKED {
     u8 was_blind = (player_status_kind == QSTATUS_BLIND);
     if (player_status_kind == QSTATUS_CONFUSION) confusion_immune = STATUS_CONFUSION_IMMUNE_FRAMES;
+    if (player_status_kind == QSTATUS_DISARM) disarm_immune = 120;
     player_status_kind = QSTATUS_NONE;
     player_status_ticks = 0;
     player_status_aux = 0;
@@ -272,6 +276,7 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
     // present, but halve hostile duration so one unlucky proc cannot erase a
     // long test run after the initiating enemy is already gone.
     if (kind == QSTATUS_CONFUSION && confusion_immune) return;
+    if (kind == QSTATUS_DISARM && disarm_immune) return;
     ticks = status_resist_adjust(kind, ticks);
     if (ticks == 0xFF) return;
     if (kind == QSTATUS_CONFUSION) {
@@ -352,6 +357,7 @@ u8 status_hostile_kind_for_enemy(u8 eid) BANKED {
         case ENEMY_DUSK_MIDGE:     return QSTATUS_CONFUSION;
         case ENEMY_BOG_TOAD:       return QSTATUS_BRITTLE;
         case ENEMY_FROST_LANCER:   return QSTATUS_SLOW;
+        case ENEMY_BUBBLE:         return QSTATUS_DISARM;
         default:                   return QSTATUS_NONE;
     }
 }
@@ -376,6 +382,9 @@ void status_try_hostile_hit(u8 hostile_idx) BANKED {
     if (kind == QSTATUS_CONFUSION) {
         if (confusion_immune) return;
         chance = RUN_IS_EASY() ? 10 : 25;
+    } else if (kind == QSTATUS_DISARM) {
+        if (disarm_immune) return;
+        chance = 100;
     } else {
         chance = RUN_IS_EASY() ? 16 : 42;
         if ((e->type == ENT_ENEMY && (e->flags & EF_RARE))
@@ -463,6 +472,11 @@ void status_player_filter_input(u8 *keys, u8 *pressed) BANKED {
     if (player_status_kind == QSTATUS_STOP) {
         *keys &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN | J_A | J_B);
         *pressed &= (u8)~(J_LEFT | J_RIGHT | J_UP | J_DOWN | J_A | J_B);
+        return;
+    }
+    if (player_status_kind == QSTATUS_DISARM) {
+        *keys &= (u8)~J_A;
+        *pressed &= (u8)~J_A;
         return;
     }
     if (player_status_kind == QSTATUS_SLOW && (status_clock & 1)) {
@@ -574,6 +588,7 @@ void status_update_enemy_condition(u8 idx) BANKED {
 
 void status_tick(void) BANKED {
     if (confusion_immune) confusion_immune--;
+    if (disarm_immune) disarm_immune--;
     powerup_tick_cooldown();
     if (player_status_kind == QSTATUS_CONFUSION)
         powerup_confusion_stars();
@@ -622,6 +637,7 @@ void status_tick(void) BANKED {
         if (player_status_ticks == 0) {
             u8 was_blind = (kind == QSTATUS_BLIND);
             if (kind == QSTATUS_CONFUSION) confusion_immune = STATUS_CONFUSION_IMMUNE_FRAMES;
+            if (kind == QSTATUS_DISARM) disarm_immune = 120;
             player_status_kind = QSTATUS_NONE;
             player_status_aux = 0;
             confusion_streak = 0;

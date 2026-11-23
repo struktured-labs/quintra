@@ -84,10 +84,16 @@ void room_load_dynamic_fx_identity(void) BANKED {
                 tiles_load_cinder_maw_medium_sprite(); break;
             case 3: tiles_load_frost_lancer_sprite(); break;
             case 4: tiles_load_bog_toad_sprite(); break;
-            case 5: tiles_load_bramble_sprite(); break;
+            case 5:
+                tiles_load_bramble_sprite();
+                tiles_load_bubble_sprite();
+                break;
             case 6: tiles_load_sunwheel_sprite(); break;
             case 7: tiles_load_dusk_midge_sprite(); break;
-            default: tiles_load_void_halo_sprite(); break;
+            default:
+                tiles_load_void_halo_sprite();
+                tiles_load_bubble_sprite();
+                break;
         }
         tiles_load_spear_sprite();
     }

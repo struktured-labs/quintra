@@ -12,6 +12,7 @@
 #include "game/hexa_boss.h"
 #include "game/enemy_mirror.h"
 #include "game/enemy_spore.h"
+#include "game/enemy_bubble.h"
 #include "game/player.h"
 #include "game/projectile.h"
 #include "game/boss_phase.h"
@@ -621,6 +622,7 @@ void enemy_update(entity_t *e, u8 idx) BANKED {
         weak_pattern_tick(e, (u8)(0x80 | idx));
     }
     if (id == ENEMY_HORNET && hornet_swarm_tick(e, idx)) return;
+    if (id == ENEMY_BUBBLE) { bubble_tick(e); return; }
     if (id == ENEMY_BLUE_CRAWLER
         && e->ai_data[2] == ENEMY_AUX_OOZE_FRAGMENT) {
         ooze_fragment_update(e, idx); return;

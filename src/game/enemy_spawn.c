@@ -61,6 +61,12 @@ u8 enemy_spawn(u8 enemy_content_id, u8 tile_x, u8 tile_y) BANKED {
         } else {
             e->hitbox = (6 << 4) | 6;
         }
+        if (enemy_content_id == ENEMY_BUBBLE) {
+            /* Diagonal heading only (odd dir8). One in eight is unkillable. */
+            e->state = (u8)(((rng_next_u8() & 3) << 1) | 1);
+            if ((rng_next_u8() & 7) == 0)
+                e->ai_data[2] = ENEMY_AUX_BUBBLE_IMMORTAL;
+        }
     }
     if (enemy_content_id >= ENEMY_VEIL_MAGUS
         && enemy_content_id <= ENEMY_NOX_BASILISK)
