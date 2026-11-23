@@ -703,6 +703,33 @@ def build_scenes(selected: set[str] | None):
         spawn_bullets(pb, sym, 8, 8, view_origin(info, 36, 96), player=False, vx=1, vy=0)
         follow_camera(pb, sym)
 
+    def scene_boss_shots(pb, sym, info):
+        # Twelve boss-pattern shots covering every pattern (arc, wave, seed,
+        # spiral, return, bolt, lane), shape and speed state, a third of
+        # them due to split, so boss_projectile_update and its wall test run
+        # every branch. Damage 0 keeps the champion alive for 200 updates.
+        fill_floor(pb, sym)
+        clear_entities(pb, sym)
+        base = sym["_entities"]
+        hitboxes = (0x44, 0x77, 0xEE, 0xE6, 0xEE)
+        ox, oy = view_origin(info, 16, 76)
+        for slot in range(12):
+            pattern = slot % 7
+            shape = slot % 5
+            x = ox + (slot % 4) * 28
+            y = oy + (slot // 4) * 14
+            write_entity(pb, base, slot, ENT_PROJECTILE,
+                         EF_ACTIVE | EF_ALIVE | 0x80, x, y, 208 + shape, 1, 0,
+                         hitboxes[shape], state=slot % 4, timer=150,
+                         ai0=(slot * 5) & 31, ai1=pattern)
+            ep = base + slot * ENT
+            pb.memory[ep + 2] = (slot * 3) & 15        # x_frac
+            pb.memory[ep + 5] = x & 0xFF               # x_pad
+            pb.memory[ep + 6] = (slot * 5) & 15        # y_frac
+            pb.memory[ep + 9] = y & 0xFF               # y_pad
+            pb.memory[ep + 19] = 1 if slot % 3 == 0 else 0  # split generation
+            pb.memory[ep + 21] = shape
+
     catalog = [
         ("natural_opening", lambda pb, sym, info: None, 0, False, False),
         ("fixed_crawlers", lambda pb, sym, info: make_fixed_crawlers(pb, sym), 0, False, False),
@@ -718,6 +745,7 @@ def build_scenes(selected: set[str] | None):
         ("walkers16_status", scene_walkers_status, 0, True, True),
         ("walkers16_follow", scene_walkers_follow, 0, True, True),
         ("mixed_follow_status", scene_mixed_follow_status, 0, False, True),
+        ("boss_shots12", scene_boss_shots, 0, False, True),
     ]
     if selected is None:
         return catalog

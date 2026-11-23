@@ -41,6 +41,7 @@ LONG_SCENES = (
     "walkers16_status",
     "walkers16_follow",
     "mixed_follow_status",
+    "boss_shots12",
 )
 GATED = {
     "empty_room",
@@ -55,6 +56,7 @@ GATED = {
     "walkers16_status",
     "walkers16_follow",
     "mixed_follow_status",
+    "boss_shots12",
 }
 
 
