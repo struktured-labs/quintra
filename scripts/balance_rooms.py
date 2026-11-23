@@ -317,6 +317,7 @@ def fight(task: dict) -> tuple[dict, list[dict]]:
         last_land = None           # (frame, kind)
         land_frames: list[int] = []
         dot_pinned = False
+        dot_kill = False
         pending_hits: list[dict] = []
         seen_live = cleared_for = 0
         still, last_pos, wiggle = 0, None, 0
@@ -415,6 +416,8 @@ def fight(task: dict) -> tuple[dict, list[dict]]:
                     dot += taken
                     if hp == 1:
                         dot_pinned = True
+                    if hp == 0:
+                        dot_kill = True
                 else:
                     hits += 1
                     dmg += taken
@@ -472,6 +475,8 @@ def fight(task: dict) -> tuple[dict, list[dict]]:
                     chain.append("blind_in_crowd")
                 if dot_pinned:
                     chain.append("dot_pinned_then_hit")
+                if dot_kill:
+                    chain.append("dot_kill")
                 if any(e["replaced"] for e in recent if e["kind"] in [STATUS_NAMES[k] for k in HARMFUL]):
                     chain.append("status_replaced")
                 death_chain = "+".join(chain)

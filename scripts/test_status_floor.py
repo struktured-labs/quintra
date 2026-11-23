@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Live-ROM contract: conditions are survivable, readable and curable.
+"""Live-ROM contract: conditions are readable, curable, and fairly lethal.
 
-- Poison, Burn and Bleed never take the last half-heart on their own: a
-  champion at one half-heart rides out the full duration of each.
-- Totals: Poison 8, Burn 5, Bleed at most 3 half-hearts (sprinting the
-  whole time); Bleed costs nothing while standing still.
+- Burn never takes the last half-heart on its own: a champion at one
+  half-heart rides out the full duration. Poison and Bleed can kill.
+- Totals (from a full bar): Poison 8, Burn 5, Bleed at most 3 half-hearts
+  (sprinting the whole time); Bleed costs nothing while standing still.
 - Every drain tick re-names the condition, harm re-names itself while it
   lasts, and harm that wears off says CURED.
-- The Antidote cures all three: automatically at the half-heart floor, from
-  the Pack TOOL row (focused for Burn/Bleed too), and it still refuses on a
+- The Antidote cures all three: automatically at 1 HP (before a lethal
+  Poison/Bleed tick, or in place of a floored Burn tick), from the Pack
+  TOOL row (focused for Burn/Bleed too), and it still refuses on a
   healthy body.
 - Burn halves attack while it lasts (Pokemon-style), never below ATK 1,
   and does not rewrite the authored ATK field. Poison does not change ATK.
@@ -111,21 +112,67 @@ def ride_out(pb, kind, hp, move, max_frames=1400):
     raise AssertionError(f"{NAMES[kind]} never expired")
 
 
-def test_no_dot_death():
+def test_burn_floor():
+    """Burn rides out at 1 HP; it never takes the last half-heart."""
     pb = boot(0)
     try:
         calm(pb)
         set_inventory(pb, [])
-        for kind in (POISON, BURN, BLEED):
-            low, frames, shown = ride_out(pb, kind, 1, move=True)
-            assert low == 1 and pb.memory[HP] == 1, (
-                f"{NAMES[kind]} took the last half-heart (low={low})")
-            assert shown >= 2, f"{NAMES[kind]} at the floor stayed silent"
-            # Expiry names itself: CURED.
-            wait_cured(pb, f"{NAMES[kind]} expiry")
-            assert pb.memory[HP] == 1
-            tick(pb, 120)
+        low, frames, shown = ride_out(pb, BURN, 1, move=True)
+        assert low == 1 and pb.memory[HP] == 1, (
+            f"burn took the last half-heart (low={low})")
+        assert shown >= 2, "burn at the floor stayed silent"
+        wait_cured(pb, "burn expiry")
+        assert pb.memory[HP] == 1
         pb.screen.image.save(SHOTS / "status-floor-cured.png")
+    finally:
+        pb.stop(save=False)
+
+
+def wait_for_death(pb, what, frames=400):
+    """Tick until the champion leaves the room or HP hits 0."""
+    for f in range(frames):
+        pb.tick()
+        if pb.memory[HP] == 0 or pb.memory[SCREEN] != SCREEN_ROOM:
+            return f
+    raise AssertionError(
+        f"{what} did not kill at 1 HP (hp={pb.memory[HP]}, "
+        f"screen={pb.memory[SCREEN]}, status={pb.memory[STATUS]})")
+
+
+def test_poison_bleed_lethal():
+    """Without an Antidote, Poison and Bleed take the last half-heart."""
+    pb = boot(0)
+    try:
+        calm(pb)
+        set_inventory(pb, [])
+        # Deterministic first Poison tick: ticks 17 -> 16 lands damage.
+        put16(pb, X, 80)
+        put16(pb, Y, 72)
+        pb.memory[HP] = 1
+        pb.memory[NOTICE] = 0
+        afflict(pb, POISON, 17)
+        wait_for_death(pb, "poison", frames=40)
+        assert pb.memory[HP] == 0 or pb.memory[SCREEN] != SCREEN_ROOM, (
+            "poison did not take the last half-heart")
+
+        # Fresh body for Bleed: it ticks while moving.
+        calm(pb)
+        set_inventory(pb, [])
+        put16(pb, X, 80)
+        put16(pb, Y, 72)
+        pb.memory[HP] = 1
+        pb.memory[NOTICE] = 0
+        afflict(pb, BLEED, DURATION[BLEED])
+        for f in range(400):
+            put16(pb, X, 80 + (f & 1))
+            pb.memory[IFRAMES] = 0
+            pb.tick()
+            if pb.memory[HP] == 0 or pb.memory[SCREEN] != SCREEN_ROOM:
+                break
+        else:
+            raise AssertionError("moving bleed did not kill at 1 HP")
+        assert pb.memory[HP] == 0 or pb.memory[SCREEN] != SCREEN_ROOM
     finally:
         pb.stop(save=False)
 
@@ -317,14 +364,15 @@ def test_burn_halves_attack():
 
 
 def main():
-    test_no_dot_death()
+    test_burn_floor()
+    test_poison_bleed_lethal()
     test_totals()
     test_notices()
     test_antidote_cures_all()
     test_burn_halves_attack()
-    print("[status] PASS no DoT death, poison 8 / burn 5 / bleed <=3, "
-          "notices + CURED, Antidote cures poison/burn/bleed, "
-          "Burn halves ATK")
+    print("[status] PASS burn floors at 1 HP, poison/bleed can kill, "
+          "poison 8 / burn 5 / bleed <=3, notices + CURED, "
+          "Antidote cures poison/burn/bleed, Burn halves ATK")
 
 
 if __name__ == "__main__":

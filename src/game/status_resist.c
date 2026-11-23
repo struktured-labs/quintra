@@ -50,3 +50,14 @@ void status_tick_gate(void) BANKED {
     else
         status_clock++;
 }
+
+u8 status_hostile_proc_chance(u8 kind, u8 guaranteed) BANKED {
+    if (kind == QSTATUS_CONFUSION) return RUN_IS_EASY() ? 10 : 25;
+    if (guaranteed) return 100;
+    /* Only Cinder Maw and Cinder Kite author hostile Burn, and only on
+     * the ordinary chance path (not a 100% rare/flagged shot). */
+    if (kind == QSTATUS_BURN)
+        return RUN_IS_EASY() ? STATUS_BURN_PROC_EASY : STATUS_BURN_PROC_NORMAL;
+    return RUN_IS_EASY() ? 16 : 42;
+}
+

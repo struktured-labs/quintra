@@ -92,6 +92,10 @@ void status_enemy_apply(u8 idx, u8 kind, u8 ticks) BANKED;
 void status_try_player_shot(u8 enemy_idx, u8 shot_idx) BANKED;
 void status_try_hostile_hit(u8 hostile_idx) BANKED;
 u8 status_hostile_kind_for_enemy(u8 enemy_id) BANKED;
+// Chance 0-100 for a hostile status landing. guaranteed is 1 for rare
+// enemies and flagged 100% shots. Lives in bank 24 so bank 13 stays
+// under the emergency floor.
+u8 status_hostile_proc_chance(u8 kind, u8 guaranteed) BANKED;
 
 // Active-room clock and adaptive control filter.
 void status_tick(void) BANKED;
@@ -127,13 +131,13 @@ u8 status_player_effective_stat(u8 stat) BANKED;
 #define STATUS_PLAYER_ATK_MODIFIED() \
     (STATUS_PLAYER_INVERTED() || STATUS_PLAYER_BURNED())
 
-// Damage-over-time conditions. Standing rule: at least one HP-drain
-// status must never take the last half-heart on its own (a hit, not a
-// condition, ends a run). Poison, Burn and Bleed all already stop at
-// one half-heart; Burn also halves attack while it lasts, never below
-// 1. The Antidote cures all three. Regen and Haste are the only boons;
-// everything else is harm and gets a reminder while it lasts and a
-// CURED card when it ends.
+// Damage-over-time conditions. Standing rule: Burn never takes the
+// last half-heart on its own (a hit, not Burn, ends a run). Poison
+// and Bleed can kill. Burn also halves attack while it lasts, never
+// below 1. The Antidote cures all three; at 1 HP a carried vial still
+// breaks and cures before the tick. Regen and Haste are the only
+// boons; everything else is harm and gets a reminder while it lasts
+// and a CURED card when it ends.
 #define STATUS_KIND_IS_DOT(k) \
     ((k) == QSTATUS_POISON || (k) == QSTATUS_BURN || (k) == QSTATUS_BLEED)
 #define STATUS_PLAYER_DOT() STATUS_KIND_IS_DOT(player_status_kind)
@@ -143,5 +147,11 @@ u8 status_player_effective_stat(u8 stat) BANKED;
 #define STATUS_BLEED_STRIDE 128
 // Burn: one half-heart every this many eight-frame beats.
 #define STATUS_BURN_PERIOD  12
+// Cinder Maw / Cinder Kite Burn proc, as a percent. Trimmed below the
+// generic hostile chance (16 Easy / 42 Normal) so Ember rooms stay
+// dangerous without dominating deaths. Kept nonzero so Burn still
+// appears. Easy is scaled in proportion to the Normal trim.
+#define STATUS_BURN_PROC_NORMAL  12
+#define STATUS_BURN_PROC_EASY    5
 
 #endif
