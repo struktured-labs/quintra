@@ -81,7 +81,7 @@ static u8 oath_shot(i8 dx, i8 dy, u8 damage, u8 kind, u8 pierce) {
 }
 
 static u8 oath_attack(void) {
-    return STATUS_PLAYER_INVERTED()
+    return STATUS_PLAYER_ATK_MODIFIED()
         ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk;
 }
 

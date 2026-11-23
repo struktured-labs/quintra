@@ -10,12 +10,15 @@
 - The Antidote cures all three: automatically at the half-heart floor, from
   the Pack TOOL row (focused for Burn/Bleed too), and it still refuses on a
   healthy body.
+- Burn halves attack while it lasts (Pokemon-style), never below ATK 1,
+  and does not rewrite the authored ATK field. Poison does not change ATK.
 """
 import os
 from pathlib import Path
 
 from test_will_max import (
-    PLAYER, SCREEN, addr, boot, clear_arena, press, put16,
+    LEVEL_OFFSET, PLAYER, SCREEN, WILL_OFFSET, addr, boot, clear_arena,
+    player_shots, press, put16,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -240,13 +243,88 @@ def test_antidote_cures_all():
         pb.stop(save=False)
 
 
+def fire_shot_damage(pb):
+    """Fire a ranged A shot and return its damage byte."""
+    pb.memory[PLAYER + WILL_OFFSET] = 0
+    pb.memory[PLAYER + LEVEL_OFFSET] = 0
+    pb.memory[PLAYER + 22] = 0  # fire cooldown
+    pb.memory[NOTICE] = 0
+    for e in player_shots(pb):
+        pb.memory[e] = 0
+    pb.button_press("right")
+    pb.button_press("a")
+    damage = None
+    for _ in range(24):
+        pb.tick()
+        shots = player_shots(pb)
+        if shots:
+            damage = pb.memory[shots[0] + 26]
+            break
+    pb.button_release("a")
+    pb.button_release("right")
+    for e in player_shots(pb):
+        pb.memory[e] = 0
+    assert damage is not None, "ranged A did not spawn a shot"
+    return damage
+
+
+def test_burn_halves_attack():
+    # Sauran is a clean ranged A, so shot damage is weapon + effective ATK.
+    pb = boot(1)
+    try:
+        calm(pb)
+        set_inventory(pb, [])
+        atk_addr = PLAYER + 5
+        pb.memory[atk_addr] = 8
+        ordinary = fire_shot_damage(pb)
+        afflict(pb, BURN, 60)
+        burned = fire_shot_damage(pb)
+        assert pb.memory[atk_addr] == 8, "Burn rewrote authored ATK"
+        assert burned == ordinary - 4, (
+            f"Burn ATK 8: shot {ordinary} -> {burned}, expected {ordinary - 4}")
+
+        # ATK 3 halves to 1.
+        pb.memory[STATUS] = NONE
+        pb.memory[TICKS] = 0
+        pb.memory[atk_addr] = 3
+        ordinary = fire_shot_damage(pb)
+        afflict(pb, BURN, 60)
+        burned = fire_shot_damage(pb)
+        assert burned == ordinary - 2, (
+            f"Burn ATK 3: shot {ordinary} -> {burned}, expected {ordinary - 2}")
+
+        # ATK 1 stays 1: never below 1.
+        pb.memory[STATUS] = NONE
+        pb.memory[TICKS] = 0
+        pb.memory[atk_addr] = 1
+        ordinary = fire_shot_damage(pb)
+        afflict(pb, BURN, 60)
+        burned = fire_shot_damage(pb)
+        assert burned == ordinary, (
+            f"Burn ATK 1 changed shot damage {ordinary} -> {burned}")
+
+        # Poison is a drain, not an attack drop.
+        pb.memory[STATUS] = NONE
+        pb.memory[TICKS] = 0
+        pb.memory[atk_addr] = 8
+        ordinary = fire_shot_damage(pb)
+        afflict(pb, POISON, 120)
+        poisoned = fire_shot_damage(pb)
+        assert poisoned == ordinary, (
+            f"Poison changed shot damage {ordinary} -> {poisoned}")
+    finally:
+        pb.stop(save=False)
+
+
 def main():
     test_no_dot_death()
     test_totals()
     test_notices()
     test_antidote_cures_all()
+    test_burn_halves_attack()
     print("[status] PASS no DoT death, poison 8 / burn 5 / bleed <=3, "
-          "notices + CURED, Antidote cures poison/burn/bleed")
+          "notices + CURED, Antidote cures poison/burn/bleed, "
+          "Burn halves ATK")
 
 
 if __name__ == "__main__":

@@ -136,7 +136,7 @@ static void tool_bomb(void) {
     riftwild_den_burst(tx, ty);
     for (d = 0; d < 8; ++d) {
         u8 shot = projectile_spawn_player(dir8_dx[d], dir8_dy[d],
-            (u8)((STATUS_PLAYER_INVERTED()
+            (u8)((STATUS_PLAYER_ATK_MODIFIED()
                 ? status_player_effective_stat(QSTATUS_STAT_ATK)
                 : player.atk) + 4), PROJ_BOMB);
         if (shot != 0xFF) {
@@ -181,7 +181,7 @@ static void tool_mirror(void) {
         e->flags |= EF_PLAYER_PROJ;
         e->vx = (i8)-e->vx;
         e->vy = (i8)-e->vy;
-        e->damage = (u8)((STATUS_PLAYER_INVERTED()
+        e->damage = (u8)((STATUS_PLAYER_ATK_MODIFIED()
             ? status_player_effective_stat(QSTATUS_STAT_ATK)
             : player.atk) + 3);
         e->hp = 2;
