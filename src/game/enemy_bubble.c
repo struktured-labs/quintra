@@ -88,7 +88,7 @@ void status_draw_pack_label(void) BANKED {
     static const char *const names[QSTATUS_COUNT] = {
         "NORMAL ", "POISON ", "BURNING", "SLOWED ", "STOPPED",
         "BLINDED", "CONFUSE", "MUTED  ", "BRITTLE", "BLEED  ",
-        "CURSED ", "REGEN  ", "HASTED ", "INVERT "
+        "CURSED ", "REGEN  ", "HASTED ", "INVERT ", "DISARM "
     };
     u8 kind = player_status_kind < QSTATUS_COUNT
         ? player_status_kind : QSTATUS_NONE;

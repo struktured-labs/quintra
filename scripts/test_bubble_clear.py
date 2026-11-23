@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """An unkillable Bubble must not block room clear / unseal / rooms_cleared."""
 
-from test_will_max import PLAYER, ENTITIES, boot, clear_arena, addr
+from pyboy import PyBoy
+from quintra_vignettes import mute_after_class_select
+from test_will_max import PLAYER, ENTITIES, SCREEN, ROM, clear_arena, addr, press
+
+TITLE, CLASS_SELECT, INTRO, ROOM = 1, 2, 4, 5
 
 ENTITY_SIZE = 28
 ENT_ENEMY = 2
@@ -14,6 +18,36 @@ ENEMY_AUX_BUBBLE_IMMORTAL = 0xB7
 RS = addr("_run_state")
 ROOMS_CLEARED = RS + 9
 SEALED = addr("_room_combat_sealed")
+
+
+def until_screen(pb, value, limit):
+    for i in range(limit):
+        if pb.memory[SCREEN] == value:
+            return i
+        pb.tick()
+    return -1 if pb.memory[SCREEN] != value else limit
+
+
+def boot_room(class_id):
+    """Reach the first room with the foyer vignette muted (not the tight boot())."""
+    pb = PyBoy(str(ROM), window="null", cgb=True)
+    if until_screen(pb, INTRO, 600) < 0 and pb.memory[SCREEN] != TITLE:
+        raise AssertionError(f"did not reach intro/title, screen={pb.memory[SCREEN]}")
+    pb.tick(30)
+    press(pb, "start")
+    assert until_screen(pb, TITLE, 2400) >= 0, f"did not reach title, screen={pb.memory[SCREEN]}"
+    pb.tick(30)
+    press(pb, "start")
+    assert until_screen(pb, CLASS_SELECT, 400) >= 0, (
+        f"did not reach class select, screen={pb.memory[SCREEN]}")
+    pb.tick(20)
+    for _ in range(class_id):
+        press(pb, "down", held=3, released=6)
+    press(pb, "a")
+    mute_after_class_select(pb, ROM, settle=30)
+    assert until_screen(pb, ROOM, 400) >= 0, f"did not reach room, screen={pb.memory[SCREEN]}"
+    assert pb.memory[PLAYER] == class_id, f"class {pb.memory[PLAYER]} != {class_id}"
+    return pb
 
 
 def put16(pb, address, value):
@@ -44,7 +78,7 @@ def deactivate(pb, slot):
 
 
 def test_unkillable_does_not_block_clear():
-    pb = boot(0)
+    pb = boot_room(0)
     try:
         clear_arena(pb)
         # A skeleton plus an unkillable Bubble. Only the skeleton is a clear
@@ -72,7 +106,7 @@ def test_unkillable_does_not_block_clear():
 
 
 def test_killable_bubble_does_count():
-    pb = boot(0)
+    pb = boot_room(0)
     try:
         clear_arena(pb)
         poke_enemy(pb, 0, ENEMY_BUBBLE, 40, 40, hp=6, aux=0)
