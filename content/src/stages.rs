@@ -130,9 +130,9 @@ pub const STAGES: [StageTheme; 9] = [
         // contract. Specialist weight comes from ids 7 and 11, not from
         // Cantor or from Bramble's 5-point band; test_bramble_sprite uses a
         // Mixed-room seed that still rolls id 27 under this CDF.
-        // Bubble (id 44) takes 3 points from the final Fuse Hurler band
-        // only, so Bramble's Mixed-room CDF (70-74) is unchanged.
-        enemy_pool: &[(7, 15), (5, 18), (11, 12), (19, 15), (22, 10), (27, 5), (32, 6), (35, 8), (37, 6), (41, 2), (44, 3)],
+        // Bubble (id 44) replaces the final Fuse Hurler slot so the pool
+        // stays at 10 entries. Bramble's Mixed-room CDF (70-74) is unchanged.
+        enemy_pool: &[(7, 15), (5, 18), (11, 12), (19, 15), (22, 10), (27, 5), (32, 6), (35, 8), (37, 6), (44, 5)],
     },
     // 6 — Golden Temple (warm gold/sand)
     StageTheme {
@@ -179,8 +179,9 @@ pub const STAGES: [StageTheme; 9] = [
         // wider, slower opposite-pair lane puzzle. Midge still owns its
         // Bloodmoon encounter; the final pool remains seven entries and 100
         // weight, so this changes neither body density nor procgen draw count.
-        // Bubble (id 44) takes 3 points from the final Zag Dart band only.
-        enemy_pool: &[(11, 13), (15, 14), (19, 9), (20, 17), (21, 13), (31, 8), (32, 6), (43, 8), (35, 6), (39, 3), (44, 3)],
+        // Bubble (id 44) replaces the final Zag Dart slot so the pool
+        // stays at 10 entries. Earlier Void CDF bands are unchanged.
+        enemy_pool: &[(11, 13), (15, 14), (19, 9), (20, 17), (21, 13), (31, 8), (32, 6), (43, 8), (35, 6), (44, 6)],
     },
 ];
 
