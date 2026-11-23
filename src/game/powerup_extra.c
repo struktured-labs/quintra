@@ -49,11 +49,6 @@ static u8 volley_tag;
 static u8 volley_boss_hits;
 static u8 last_volley;
 
-static const u8 face_tile[POWERUP_COUNT] = {
-    0, SPR_ITEM_WARD_CHARM, SPR_ITEM_MANA_GEM, SPR_HEART,
-    SPR_ROULETTE_FACE_FORM, SPR_ROULETTE_FACE_HALO, SPR_ROULETTE_FACE_REACH,
-    SPR_ITEM_BLAST_SEED, SPR_ROULETTE_FACE_WING
-};
 static const u8 face_pal[POWERUP_COUNT] = {
     0, 0x01, 0x06, 0x07, 0x02, 0x05, 0x04, 0x04, 0x01
 };
@@ -122,19 +117,6 @@ static void shuffle_faces(u8 min_id, u8 max_id, u8 want) {
     }
 }
 
-// Bank-1 face tiles (192-199) must keep S_BANK even while flashing white,
-// or a leftover VBK would show the bank-0 tile at that index.
-#define FACE_PROP(id, flash) ((u8)(((flash) ? 0x00 : face_pal[id]) | \
-    ((face_tile[id] >= SPR_ROULETTE_FRAME) ? (u8)S_BANK : 0)))
-
-static void apply_face(entity_t *e, u8 id) {
-    if (id == POWERUP_NONE || id >= POWERUP_COUNT) return;
-    e->ai_data[1] = id;
-    e->ai_data[2] = id;     // latched visible face (lock rule)
-    e->sprite_tile = face_tile[id];
-    e->palette = FACE_PROP(id,
-        (u8)(roulette_lock && roulette_lock <= 6 && (roulette_lock & 1)));
-}
 
 u8 powerup_spawn_roulette(fix8_t x, fix8_t y, u8 flags) BANKED {
     u8 idx, want;
@@ -153,7 +135,7 @@ u8 powerup_spawn_roulette(fix8_t x, fix8_t y, u8 flags) BANKED {
     entities[idx].hitbox = 0x88;
     entities[idx].state_timer = 255;
     entities[idx].state = 0;
-    apply_face(&entities[idx], roulette_faces[0]);
+    powerup_roulette_apply_face(&entities[idx], roulette_faces[0], 0);
     powerup_roulette_clear_fx();
     powerup_roulette_fxflags = RF_FRAME;
     powerup_note_drop();
@@ -183,7 +165,7 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
         else if (dy < -1) e->y = (ppos_t)(e->y - FIX8(1));
     }
     if (roulette_lock) {
-        apply_face(e, e->ai_data[2]);
+        powerup_roulette_apply_face(e, e->ai_data[2], roulette_lock);
         powerup_roulette_tick_fx(0, 1, roulette_lock);
         roulette_lock++;
         if (roulette_lock > ROULETTE_LOCK_FRAMES) {
@@ -214,15 +196,15 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
         e->state = 0;
         roulette_index++;
         if (roulette_index >= roulette_count) roulette_index = 0;
-        apply_face(e, roulette_faces[roulette_index]);
+        powerup_roulette_apply_face(e, roulette_faces[roulette_index], 0);
         powerup_roulette_tick_fx(1, 0, 0);
     } else {
         // Keep the latched face in ai_data[2] matching the visible tile.
         // A 2-frame white flash is visual only; the reward stays this face.
         e->ai_data[2] = e->ai_data[1];
+        powerup_roulette_tick_fx(0, 0, e->state);
         if (e->state + 2 >= period)
-            e->palette = FACE_PROP(e->ai_data[1], 1);
-        powerup_roulette_tick_fx(0, 0, 0);
+            powerup_roulette_apply_face(e, e->ai_data[1], 1);
     }
     (void)idx;
 }
@@ -240,7 +222,7 @@ u8 powerup_roulette_try_lock(u8 idx) BANKED {
         roulette_lock = 1;
         roulette_slot = idx;
         sfx_play(SFX_TICK);
-        apply_face(e, e->ai_data[2]);
+        powerup_roulette_apply_face(e, e->ai_data[2], roulette_lock);
         powerup_roulette_tick_fx(0, 1, roulette_lock);
     }
     return 0;

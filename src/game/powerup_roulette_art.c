@@ -39,6 +39,29 @@ static u8 roulette_smear_t;
 static const i8 roulette_pop_bob[3] = { -2, -3, -1 };
 static const i8 roulette_lock_bob[8] = { -2, -4, -3, -1, 1, 0, 0, 0 };
 
+
+static const u8 face_tile[POWERUP_COUNT] = {
+    0, SPR_ITEM_WARD_CHARM, SPR_ITEM_MANA_GEM, SPR_HEART,
+    SPR_ROULETTE_FACE_FORM, SPR_ROULETTE_FACE_HALO, SPR_ROULETTE_FACE_REACH,
+    SPR_ITEM_BLAST_SEED, SPR_ROULETTE_FACE_WING
+};
+static const u8 face_pal[POWERUP_COUNT] = {
+    0, 0x01, 0x06, 0x07, 0x02, 0x05, 0x04, 0x04, 0x01
+};
+
+void powerup_roulette_apply_face(entity_t *e, u8 id, u8 lock) BANKED {
+    u8 tile, prop, flash;
+    if (id == POWERUP_NONE || id >= POWERUP_COUNT) return;
+    e->ai_data[1] = id;
+    e->ai_data[2] = id;
+    tile = face_tile[id];
+    e->sprite_tile = tile;
+    flash = (u8)(lock && lock <= 6 && (lock & 1));
+    prop = flash ? 0x00 : face_pal[id];
+    if (tile >= SPR_ROULETTE_FRAME) prop |= (u8)S_BANK;
+    e->palette = prop;
+}
+
 void powerup_roulette_clear_fx(void) BANKED {
     powerup_roulette_bob = 0;
     powerup_roulette_fxflags = 0;

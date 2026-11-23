@@ -84,6 +84,7 @@ extern i8 powerup_roulette_bob;
 u8   powerup_roulette_decorate(u8 oam, u8 sx, u8 sy) BANKED;
 void powerup_roulette_clear_fx(void) BANKED;
 void powerup_roulette_tick_fx(u8 just_changed, u8 locking, u8 lock_frame) BANKED;
+void powerup_roulette_apply_face(entity_t *e, u8 id, u8 lock) BANKED;
 extern u8 powerup_roulette_fxflags;
 extern u8 powerup_roulette_spark_t;
 #define RF_FRAME 0x01
