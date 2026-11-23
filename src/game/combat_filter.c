@@ -39,3 +39,30 @@ u8 combat_next_cut_candidate(u8 i, u8 start) BANKED {
     }
     return 0xFF;
 }
+
+extern u8 shot_targets[MAX_ENTITIES];
+extern u8 shot_list_n;
+
+// Next index k into the ordinary-bullet target list (combat.c,
+// combat_collect_targets) whose enemy is active and overlaps the shot box
+// (exact SHOT_MISSES), or that is the giant/Hexa body. 0xFF when none
+// remain. The spilled pair test in combat_resolve_ordinary cost ~800
+// clocks per missed pair; this leaf keeps the walk in registers.
+u8 combat_next_ordinary_hit(u8 k) BANKED {
+    for (; k < shot_list_n; ++k) {
+        u8 j = shot_targets[k];
+        const entity_t *e = &entities[j];
+        i16 v;
+        if (!(e->flags & EF_ACTIVE)) continue;
+        if ((hexa_boss_active && j == hexa_core_entity)
+            || j == large_boss_index) return k;
+        v = e->x;
+        if (shot_right <= v) continue;
+        if ((i16)(v + (u8)(e->hitbox >> 4)) <= shot_sx) continue;
+        v = e->y;
+        if (shot_bottom <= v) continue;
+        if ((i16)(v + (u8)(e->hitbox & 0x0F)) <= shot_sy) continue;
+        return k;
+    }
+    return 0xFF;
+}
