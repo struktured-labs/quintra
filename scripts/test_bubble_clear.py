@@ -7,6 +7,26 @@ from test_will_max import PLAYER, ENTITIES, SCREEN, ROM, clear_arena, addr, pres
 
 TITLE, CLASS_SELECT, INTRO, ROOM = 1, 2, 4, 5
 
+FRAME = addr("_loop_frame_counter")
+
+
+def frame_counter(pb):
+    return pb.memory[FRAME] | (pb.memory[FRAME + 1] << 8)
+
+
+def wait_room_live(pb, limit=1800):
+    """room_enter sets SCREEN_ROOM before it finishes; wait for loop_run."""
+    last = frame_counter(pb)
+    for i in range(limit):
+        pb.tick()
+        now = frame_counter(pb)
+        if now != last:
+            for _ in range(30):
+                pb.tick()
+            return i
+    raise AssertionError("room_enter never returned to loop_run")
+
+
 ENTITY_SIZE = 28
 ENT_ENEMY = 2
 EF_ACTIVE = 0x01
@@ -46,6 +66,7 @@ def boot_room(class_id):
     press(pb, "a")
     mute_after_class_select(pb, ROM, settle=30)
     assert until_screen(pb, ROOM, 400) >= 0, f"did not reach room, screen={pb.memory[SCREEN]}"
+    wait_room_live(pb)
     assert pb.memory[PLAYER] == class_id, f"class {pb.memory[PLAYER]} != {class_id}"
     return pb
 
