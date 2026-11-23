@@ -373,14 +373,11 @@ void status_try_hostile_hit(u8 hostile_idx) BANKED {
             : QSTATUS_NONE)
         : status_hostile_kind_for_enemy(e->ai_data[0]);
     if (kind == QSTATUS_NONE || kind >= QSTATUS_COUNT) return;
-    if (kind == QSTATUS_CONFUSION) {
-        if (confusion_immune) return;
-        chance = RUN_IS_EASY() ? 10 : 25;
-    } else {
-        chance = RUN_IS_EASY() ? 16 : 42;
-        if ((e->type == ENT_ENEMY && (e->flags & EF_RARE))
-            || (e->type == ENT_PROJECTILE && (e->ai_data[5] & 0x80))) chance = 100;
-    }
+    if (kind == QSTATUS_CONFUSION && confusion_immune) return;
+    chance = status_hostile_proc_chance(
+        kind,
+        (u8)((e->type == ENT_ENEMY && (e->flags & EF_RARE))
+             || (e->type == ENT_PROJECTILE && (e->ai_data[5] & 0x80))));
     if (rng_range(100) >= chance) return;
     if (kind == QSTATUS_CURSE) {
         // Gloam Leeches seed a room-scale hex instead of occupying the short
@@ -510,17 +507,21 @@ u8 status_player_effective_stat(u8 stat) BANKED {
     return curse_adjust_stat(stat, values[stat]);
 }
 
-// One damage-over-time tick. A condition never takes the last half-heart:
-// at the floor the tick only re-names itself, or, with an Antidote carried,
-// the vial breaks and cures so the champion is not left pinned at half a
-// heart. Every tick re-shows the condition so the drain is never silent.
+// One damage-over-time tick. Burn never takes the last half-heart: a
+// hit, not Burn, ends a run. Poison and Bleed can kill. At 1 HP a
+// carried Antidote still breaks and cures any of the three. Every tick
+// re-shows the condition so the drain is never silent.
 // Returns 0 when the condition was cured (the caller must stop).
 static u8 player_status_damage(void) {
     u8 kind = player_status_kind;
     if (player.hp <= 1) {
         if (antidote_try_rescue()) return 0;
-        hud_show_status(kind);
-        return 1;
+        if (kind == QSTATUS_BURN || player.hp == 0) {
+            hud_show_status(kind);
+            return 1;
+        }
+        // Poison and Bleed: fall through and take the last half-heart.
+        // room.c sees hp == 0 after this tick and takes the normal death path.
     }
     player.hp--;
     player.iframes = player.iframes < 8 ? 8 : player.iframes;

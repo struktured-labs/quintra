@@ -16,11 +16,41 @@
     "status_death_lift_max": 1.5
   },
   "rooms": {
-    "_note": "Room status smoke (balance_rooms.py, stage 3 rooms incl. 2 Cinder rooms per hero, average tier, 3 seeds). Gates sit well past the 2026-11-22 baseline (lift10 1.63, landings per hit 0.18 on 60 fights) so only regressions fail. See docs/superpowers/specs/2026-11-22-room-status-harness.md.",
+    "_note": "Room status smoke (balance_rooms.py, stage 3 rooms incl. 2 Cinder rooms per hero, average tier, 3 seeds). Existing lift/lands gates sit well past the 2026-11-22 baseline so only regressions fail. The Cinder death-rate cap is a loose CI tripwire (n is small); the measured Maw/Kite trim and the >=1 status-involved-death-per-average-Normal-run floor are documented in run_estimate and enforced when frozen stage rates are present. See docs/superpowers/specs/2026-11-22-room-status-harness.md.",
     "tier": "average",
     "min_deaths": 15,
     "min_hits": 100,
     "lift10_max_normal": 4.0,
-    "lands_per_hit_max_normal": 0.3
+    "lands_per_hit_max_normal": 0.3,
+    "cinder_death_rate_max_normal": 0.95,
+    "cinder_min_finished": 8,
+    "run_estimate": {
+      "_note": "Per-run status-involved deaths = sum(path_rooms_excluding_boss[s] * rate[s]). Path counts are critical_path_rooms(): mean entry-to-Colossus maze distance (boss room excluded). Stage 3 mixes Maw/Kite vs other rooms at ember_cinder_natural_share (~10% of unforced combat courts in the room-fixture set) because the harness oversamples Cinder rooms. frozen_stage_status_involved_rate fills stages the CI smoke does not run (filled from the PR's stages 1-9 average Normal sweep). status_involved = Poison/Burn/Bleed active at the killing blow, a landing within the 10 s / 600-frame lift window, or a direct Poison/Bleed tick kill. Burn itself cannot kill.",
+      "path_rooms_excluding_boss": {
+        "1": 9.0,
+        "2": 9.566666666666666,
+        "3": 9.533333333333333,
+        "4": 10.916666666666666,
+        "5": 11.9,
+        "6": 13.433333333333334,
+        "7": 12.183333333333334,
+        "8": 13.3,
+        "9": 16.866666666666667
+      },
+      "ember_cinder_natural_share": 0.1,
+      "frozen_stage_status_involved_rate": {
+        "_note": "Average-tier Normal rates from the PR's stages 1-9 sweep (5 heroes, 3 natural rooms/stage, +4 Cinder rooms on stage 3, 2 seeds; 310 fights) on the 12/5 Burn-proc ROM with lethal Poison/Bleed. Stage 3 is the blended natural-share rate (10% Maw/Kite + 90% other Ember courts); CI overwrites it with a live measurement when both Cinder and other Ember rooms are present.",
+        "1": 0.0,
+        "2": 0.13333333333333333,
+        "3": 0.022727272727272728,
+        "4": 0.0,
+        "5": 0.03333333333333333,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    "status_involved_per_run_min_normal": 1.0
   }
 }

@@ -40,6 +40,9 @@ TIERS = ("nonexpert", "average", "skilled", "bot")
 # Every hostile status the player slot can hold (inversion is index 13).
 STATUSES = ("burn", "poison", "bleed", "slow", "stop", "confusion", "blind",
             "mute", "brittle", "curse", "inversion")
+
+DOT_KINDS = {"poison", "burn", "bleed"}
+STATUS_INVOLVED_WINDOW = 600  # 10 s lift window; DoT floor means Burn cannot kill directly
 WINDOWS = (5, 10)
 STOP_HIT_FRAMES = 14 * 8          # Stop lasts 14 ticks x 8 frames
 CROWD = 3
@@ -142,6 +145,31 @@ class Fight:
         prior = [e for e in self.lands if int(e["frame"]) < self.death - 3]
         return prior[-1]["kind"] if prior else None
 
+    def status_involved(self):
+        """Poison/Burn/Bleed was active at the killing blow, a landing of
+        those was within the 10 s (600-frame) lift window, or a direct
+        Poison/Bleed tick took the last HP (dot_kill). Burn itself cannot
+        kill; a nearby Burn still counts because the DoT floor left the
+        champion at 1 HP for the finishing hit.
+        """
+        if self.outcome != "died":
+            return False
+        if "dot_kill" in self.chain:
+            return True
+        if self.death_ev and (self.death_ev.get("status_active") or "") in DOT_KINDS:
+            return True
+        if self.death is None:
+            return False
+        for e in self.lands:
+            if e.get("kind") in DOT_KINDS:
+                try:
+                    age = self.death - int(e["frame"])
+                except (TypeError, ValueError):
+                    continue
+                if 0 <= age <= STATUS_INVOLVED_WINDOW:
+                    return True
+        return False
+
 
 def lift_block(fights, window_s, kind=None):
     wf = int(window_s * FPS)
@@ -214,9 +242,18 @@ def outcome_block(fights):
     fin = c["died"] + c["cleared"]
     hits = sum(len(f.hits) for f in fights)
     lands = sum(len(f.lands) for f in fights)
+    involved = [f for f in fights if f.status_involved()]
+    burn_inv = [f for f in involved if (
+        (f.death_ev and f.death_ev.get("status_active") == "burn")
+        or any(e.get("kind") == "burn" for e in f.lands))]
     return dict(fights=n, cleared=c["cleared"], died=c["died"], timeout=c["timeout"],
                 left=c["left_room"], finished=fin,
                 death_rate=(c["died"] / fin if fin else float("nan")),
+                death_rate_of_fights=(c["died"] / n if n else float("nan")),
+                status_involved=len(involved),
+                status_involved_share=(len(involved) / c["died"] if c["died"] else float("nan")),
+                status_involved_rate=(len(involved) / n if n else float("nan")),
+                burn_involved=len(burn_inv),
                 unfinished=((n - fin) / n if n else float("nan")),
                 hits=hits, lands=lands, lands_per_hit=(lands / hits if hits else float("nan")),
                 hit_rate_min=(hits / (sum(f.frames for f in fights) / FPS / 60) if fights else float("nan")))
@@ -267,7 +304,11 @@ def md_difficulty(name, m):
     a = m["all"]["outcome"]
     L += [f"{a['fights']} room fights; {a['finished']} finished "
           f"({pct(1 - a['unfinished'])}), {a['died']} deaths, {a['timeout']} timeouts, "
-          f"{a['left']} left the room.", ""]
+          f"{a['left']} left the room. Status-involved deaths (Poison/Burn/Bleed "
+          f"active or within the 10 s lift window, or a direct Poison/Bleed tick "
+          f"kill): {a.get('status_involved', 0)}/{a['died']} deaths "
+          f"({pct(a.get('status_involved_share'))}); "
+          f"{pct(a.get('status_involved_rate'))} of all fights.", ""]
     L += ["### Outcomes and status-death lift per stage and tier (measured)", "",
           "| Stage | Tier | Fights | Finished | Death rate | Hits/min | Status lands per hit | "
           "Deaths ≤5 s after status | Time in 5 s window | Lift 5 s | Deaths ≤10 s | Time in 10 s window | Lift 10 s | "
@@ -334,6 +375,110 @@ def md_difficulty(name, m):
     return L
 
 
+
+def estimate_status_involved_per_run(metrics, th):
+    """Estimated status-involved deaths per average Normal run.
+
+    The whole-run bot (#203) cannot finish a Normal run, so this uses
+    per-stage combat-room rates times the mean shortest-path room count
+    (entry to boss, excluding the boss room) from quintra_topology.
+    Stage 3 is split into Maw/Kite vs other rooms with a documented
+    natural Maw/Kite share, because the CI fixture set oversamples them.
+    Stages missing from the CSV use frozen rates in the thresholds file.
+    Treating every path room as a combat court may overestimate slightly;
+    a result under 1 is therefore a real miss of the floor.
+    """
+    est = th.get("run_estimate") or {}
+    path = {int(k): float(v) for k, v in (est.get("path_rooms_excluding_boss") or {}).items()}
+    share = float(est.get("ember_cinder_natural_share", 0.10))
+    frozen = {}
+    for k, v in (est.get("frozen_stage_status_involved_rate") or {}).items():
+        try:
+            frozen[int(k)] = float(v)
+        except (TypeError, ValueError):
+            continue
+    m = metrics.get("normal") or {}
+    parts = {}
+    total = 0.0
+
+    def _rate(blk):
+        if not blk:
+            return None
+        r = (blk.get("outcome") or {}).get("status_involved_rate")
+        return r if r is not None and r == r else None
+
+    def _first_rate(*blks):
+        for blk in blks:
+            r = _rate(blk)
+            if r is not None:
+                return r
+        return None
+
+    def _stage_rate(stage):
+        # Prefer the average skill tier when the CSV mixed tiers.
+        # Do not use `or` on the rate: a measured 0.0 is a real rate.
+        return _first_rate(
+            (m.get("stage_tier") or {}).get(f"{stage}:average"),
+            (m.get("stage") or {}).get(stage),
+            (m.get("stage") or {}).get(str(stage)),
+        )
+
+    for stage, nrooms in path.items():
+        rate = None
+        if stage == 3:
+            p_c = _rate(m.get("cinder"))
+            p_o = _rate(m.get("ember_other"))
+            if p_c is not None and p_o is not None:
+                # CI and local sweeps oversample Maw/Kite; mix back to the
+                # natural combat-court share (~10%) so the per-run estimate
+                # is not inflated by the fixture boost.
+                rate = share * p_c + (1.0 - share) * p_o
+            elif p_c is not None and p_o is None:
+                # Only Cinder rooms in the CSV (unit tests / cinder-only).
+                # Do not scale by natural share; fall through to frozen
+                # other-room contribution via missing-stage handling? No:
+                # use the measured Cinder rate only for the Cinder share
+                # and frozen or None for the rest of Ember.
+                other = frozen.get(3)  # frozen is whole-stage; last resort
+                if other is not None:
+                    rate = share * p_c + (1.0 - share) * other
+                else:
+                    rate = p_c
+        if rate is None:
+            rate = _stage_rate(stage)
+        if rate is None:
+            rate = frozen.get(stage)
+        if rate is None:
+            continue
+        contrib = nrooms * rate
+        parts[str(stage)] = {"path_rooms": nrooms, "rate": rate, "contrib": contrib}
+        total += contrib
+    return {"per_run": total, "parts": parts, "method": (
+        "critical_path_rooms (entry-to-boss maze distance, boss excluded) "
+        "times combat-room status-involved death rate (Poison/Burn/Bleed "
+        "active at the killing blow, a landing within the 10 s / 600-frame "
+        "lift window, or a direct Poison/Bleed tick kill). Stage 3 mixes "
+        "Maw/Kite vs other rooms at the natural ~10% Cinder share so the "
+        "harness oversample does not inflate the estimate. Stages missing "
+        "from the CSV use frozen_stage_status_involved_rate.")}
+
+
+
+def md_run_estimate(est):
+    L = ["## Status-involved deaths per average Normal run (estimated)", "",
+         est["method"] + " The whole-run bot cannot finish a Normal run (#203), "
+         "so this is a path-length estimate, not a measured full-run death count. "
+         "Treating every path room as a combat court may overestimate slightly.", "",
+         "| Stage | Path rooms (excl. boss) | Status-involved rate | Contribution |",
+         "|---|---|---|---|"]
+    for stage in sorted(est["parts"], key=int):
+        p = est["parts"][stage]
+        L.append(f"| {stage} | {num(p['path_rooms'], 2)} | {pct(p['rate'])} | {num(p['contrib'], 2)} |")
+    L += ["", f"**Estimated status-involved deaths per average Normal run: "
+          f"{num(est['per_run'], 2)}.** The Normal-mode floor is at least 1.", ""]
+    return L
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -369,12 +514,19 @@ def main() -> int:
                          f"{num(b['outcome']['lands_per_hit'])} | {num(b['lift5']['lift'])} | {num(b['lift10']['lift'])} | "
                          f"{num(b['lift10']['control_lift'])} | {num(b['lift10']['excess'])} |")
         L.append("")
+    th_all = {}
+    if args.check and args.check.exists():
+        th_all = json.loads(args.check.read_text())
+    th_rooms = th_all.get("rooms", {})
+    if "normal" in metrics and th_rooms.get("run_estimate"):
+        metrics["normal"]["_run_estimate"] = estimate_status_involved_per_run(metrics, th_rooms)
+        L += md_run_estimate(metrics["normal"]["_run_estimate"])
     (args.out / "rooms-report.md").write_text("\n".join(L))
     (args.out / "rooms-metrics.json").write_text(json.dumps(clean(metrics), indent=1))
     print(f"[rooms-report] wrote {args.out / 'rooms-report.md'}")
     if not args.check:
         return 0
-    th = json.loads(args.check.read_text()).get("rooms", {})
+    th = th_rooms
     fails = []
     for diff, m in metrics.items():
         scope = m["stages_1_3_tier"].get(th.get("tier", "average")) if "stages_1_3_tier" in m else None
@@ -388,6 +540,27 @@ def main() -> int:
         cap = th.get(f"lands_per_hit_max_{diff}")
         if cap is not None and scope["outcome"]["hits"] >= th.get("min_hits", 30) and lph > cap:
             fails.append(f"{diff}: stage 1-3 status lands per hit {lph:.2f} > {cap}")
+    # Trim gates (Normal only): Maw/Kite death rate stays below the cap,
+    # and the estimated status-involved deaths per average run stay >= 1.
+    if "normal" in metrics:
+        nm = metrics["normal"]
+        cinder = nm.get("cinder") or {}
+        cout = cinder.get("outcome") or {}
+        cap = th.get("cinder_death_rate_max_normal")
+        min_c = th.get("cinder_min_finished", 8)
+        if cap is not None and cout.get("finished", 0) >= min_c:
+            rate = cout.get("death_rate")
+            if rate == rate and rate > cap:
+                fails.append(f"normal: Maw/Kite room death rate {rate:.2f} > {cap}")
+        if th.get("status_involved_per_run_min_normal") is not None:
+            est = estimate_status_involved_per_run(metrics, th)
+            floor = th["status_involved_per_run_min_normal"]
+            if est["per_run"] < floor:
+                fails.append(
+                    f"normal: estimated status-involved deaths per average run "
+                    f"{est['per_run']:.2f} < {floor}")
+            # Stash for the report markdown.
+            metrics["normal"]["_run_estimate"] = est
     for f in fails:
         print(f"[rooms-check] FAIL {f}")
     if not fails:

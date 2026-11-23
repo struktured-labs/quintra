@@ -1968,6 +1968,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
     // Conditions advance only during live room play. Their damage lands
     // before combat's death check, so poison/burn/bleed share the same fall
     // beat as bullets and hazards instead of hard-cutting to GAME OVER.
+    // Burn still stops at one half-heart; Poison and Bleed can reach 0.
     // The gate lives in bank 13 so bank 1 stays on its emergency floor.
     // Idle frames only increment the free-running clock; the 32-slot scan
     // still runs only when a status, power-up, roulette, or immunity is live.

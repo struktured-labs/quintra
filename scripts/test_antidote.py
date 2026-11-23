@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Live-ROM contract: Poison drains to the last half-heart, and the Antidote
-tool cures it (scripts/test_status_floor.py covers Burn and Bleed).
+"""Live-ROM contract: Poison can kill, and the Antidote tool cures it
+(scripts/test_status_floor.py covers Burn's non-lethal floor and Bleed).
 
-Covers the poison tick (damage + repeating POISON notice), the half-heart
-floor, the automatic Antidote rescue, manual use from the
-Pack TOOL row, and Antidote stock at the dungeon merchant and the Riftwild
-wayside trader (restocked, no sold-out bit, three-vial pouch cap).
+Covers the poison tick (damage + repeating POISON notice), lethal damage
+at 1 HP without a vial, the automatic Antidote rescue, manual use from
+the Pack TOOL row, and Antidote stock at the dungeon merchant and the
+Riftwild wayside trader (restocked, no sold-out bit, three-vial pouch cap).
 """
 import os
 from pathlib import Path
@@ -142,16 +142,16 @@ def test_poison_tick_and_rescue():
             f"rescue did not show CURED: {window_notice(pb)}")
         pb.screen.image.save(SHOTS / "antidote-cured.png")
 
-        # Without one, Poison stops at the floor: the tick re-names itself
-        # but never takes the last half-heart.
+        # Without one, Poison is lethal: the tick takes the last half-heart
+        # and the ordinary death path runs.
         tick(pb, 60)
         pb.memory[PLAYER + 2] = 1
         pb.memory[NOTICE] = 0
         poison(pb, 17)
-        tick(pb, 12)
-        assert pb.memory[PLAYER + 2] == 1, "poison took the last half-heart"
-        assert pb.memory[STATUS] == QSTATUS_POISON
-        assert pb.memory[NOTICE] > 0, "floored poison tick stayed silent"
+        tick(pb, 16)
+        assert pb.memory[PLAYER + 2] == 0 or pb.memory[SCREEN] != SCREEN_ROOM, (
+            f"poison did not kill at 1 HP (hp={pb.memory[PLAYER + 2]}, "
+            f"screen={pb.memory[SCREEN]})")
     finally:
         pb.stop(save=False)
 
@@ -279,7 +279,7 @@ def main():
     test_pack_tool()
     test_dungeon_merchant()
     test_riftwild_trader()
-    print("[antidote] PASS poison tick + notice + half-heart floor, auto rescue, Pack cure, "
+    print("[antidote] PASS poison tick + notice + lethal at 1 HP, auto rescue, Pack cure, "
           "merchant and Riftwild trader stock")
 
 

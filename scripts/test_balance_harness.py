@@ -196,3 +196,50 @@ if __name__ == "__main__":
     test_room_report()
     test_pilot_keeps_inside()
     print("[balance-harness] contracts OK")
+
+
+def test_status_involved_and_trim_gates():
+    """Burn within the 10 s window counts as status-involved; trim gates fire."""
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        csv_path = tmp / "rooms-normal.csv"
+        synthetic_rooms(csv_path, killing_blow_proc=False)
+        th = {"rooms": {
+            "tier": "average", "min_deaths": 4, "lift10_max_normal": 100.0,
+            "cinder_death_rate_max_normal": 0.95, "cinder_min_finished": 4,
+            "run_estimate": {
+                "path_rooms_excluding_boss": {"3": 10.0},
+                "ember_cinder_natural_share": 0.10,
+                "frozen_stage_status_involved_rate": {},
+            },
+        }}
+        (tmp / "th.json").write_text(json.dumps(th))
+        cmd = [sys.executable, str(ROOT / "scripts/balance_rooms_report.py"), str(csv_path),
+               "--out", str(tmp / "rep"), "--check", str(tmp / "th.json")]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        assert res.returncode == 0, res.stdout + res.stderr
+        m = json.loads((tmp / "rep/rooms-metrics.json").read_text())["normal"]
+        o = m["all"]["outcome"]
+        assert o["status_involved"] == 5 and o["died"] == 5, o
+        assert o["status_involved_rate"] == 0.5
+        # All ten fights are Cinder rooms, so the estimate uses the Cinder
+        # rate (0.5) for stage 3: 10 * 0.5 = 5.
+        est = m["_run_estimate"]
+        assert abs(est["per_run"] - 5.0) < 1e-9, est
+
+        # Cap fails when Maw/Kite finished death rate is above it (5/10 = 0.5).
+        th["rooms"]["cinder_death_rate_max_normal"] = 0.4
+        (tmp / "th.json").write_text(json.dumps(th))
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        assert res.returncode == 1 and "Maw/Kite room death rate" in res.stdout, res.stdout
+        th["rooms"]["cinder_death_rate_max_normal"] = 0.95
+
+        # Floor fails when the estimate is below the required per-run count.
+        th["rooms"]["status_involved_per_run_min_normal"] = 6.0
+        (tmp / "th.json").write_text(json.dumps(th))
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        assert res.returncode == 1 and "status-involved deaths per average run" in res.stdout, res.stdout
+        th["rooms"]["status_involved_per_run_min_normal"] = 1.0
+        (tmp / "th.json").write_text(json.dumps(th))
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        assert res.returncode == 0, res.stdout + res.stderr
