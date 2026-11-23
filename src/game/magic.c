@@ -190,7 +190,7 @@ static u8 is_floor(i16 x, i16 y) {
 }
 
 static u8 spell_damage(u8 base) {
-    u8 atk = STATUS_PLAYER_INVERTED()
+    u8 atk = STATUS_PLAYER_ATK_MODIFIED()
         ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk;
     return (u8)(base + (atk >> 1));
 }

@@ -1753,7 +1753,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             && w->p2 == PROJ_SPIKE) ? 1 : 0;
         u8 max_fired = 0;
         u8 muted = STATUS_PLAYER_MUTED() ? 1 : 0;
-        u8 effective_atk = STATUS_PLAYER_INVERTED()
+        u8 effective_atk = STATUS_PLAYER_ATK_MODIFIED()
             ? status_player_effective_stat(QSTATUS_STAT_ATK) : player.atk;
         u8 chord = ((keys & (J_A | J_B)) == (J_A | J_B)
             && (pressed & (J_A | J_B))) ? 1 : 0;

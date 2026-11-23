@@ -109,11 +109,20 @@ u8 status_player_effective_stat(u8 stat) BANKED;
     (player_status_kind == QSTATUS_HASTE)
 #define STATUS_PLAYER_INVERTED() \
     (player_status_kind == QSTATUS_INVERSION)
+#define STATUS_PLAYER_BURNED() \
+    (player_status_kind == QSTATUS_BURN)
+// Burn and Rift Inversion are the only conditions that rewrite ATK
+// through status_player_effective_stat. A far call is paid only then.
+#define STATUS_PLAYER_ATK_MODIFIED() \
+    (STATUS_PLAYER_INVERTED() || STATUS_PLAYER_BURNED())
 
-// Damage-over-time conditions. None of them takes the last half-heart on
-// its own (a hit, not a condition, ends a run), and the Antidote cures all
-// three. Regen and Haste are the only boons; everything else is harm and
-// gets a reminder while it lasts and a CURED card when it ends.
+// Damage-over-time conditions. Standing rule: at least one HP-drain
+// status must never take the last half-heart on its own (a hit, not a
+// condition, ends a run). Poison, Burn and Bleed all already stop at
+// one half-heart; Burn also halves attack while it lasts, never below
+// 1. The Antidote cures all three. Regen and Haste are the only boons;
+// everything else is harm and gets a reminder while it lasts and a
+// CURED card when it ends.
 #define STATUS_KIND_IS_DOT(k) \
     ((k) == QSTATUS_POISON || (k) == QSTATUS_BURN || (k) == QSTATUS_BLEED)
 #define STATUS_PLAYER_DOT() STATUS_KIND_IS_DOT(player_status_kind)
