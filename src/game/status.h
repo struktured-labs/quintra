@@ -44,7 +44,18 @@ enum {
 };
 
 extern u8 player_status_kind;
-extern u8 confusion_immune;
+// Confusion uses the shared 8-frame status beat. At 60 Hz that is
+// 23 beats = 3.067 s, 75 = 10 s, 150 = 20 s. Player applications roll
+// a triangular duration around 10 s, then clamp to this range. Easy
+// keeps the same shape at 3/5 scale, still never below 3 s.
+#define STATUS_CONFUSION_MIN_TICKS  23
+#define STATUS_CONFUSION_MEAN_TICKS 75
+#define STATUS_CONFUSION_MAX_TICKS  150
+// 600 frames = 10 s at 60 Hz. Long enough that a new proc cannot
+// chain back to back even after a short roll. u16 because 600 does
+// not fit in a byte.
+#define STATUS_CONFUSION_IMMUNE_FRAMES 600
+extern u16 confusion_immune;
 extern u8 player_status_ticks;
 extern u8 enemy_status_kind[MAX_ENTITIES];
 extern u8 enemy_status_ticks[MAX_ENTITIES];
