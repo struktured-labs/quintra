@@ -115,6 +115,9 @@ static u8 status_word(u8 status, u8 *row) {
         case QSTATUS_HASTE:
             row[0]=BGT_AREA_H; row[1]=BGT_AREA_A; row[2]=HUD_STATUS_S;
             row[3]=BGT_AREA_T; row[4]=BGT_AREA_E; return 5;
+        case QSTATUS_DISARM:
+            row[0]=BGT_AREA_D; row[1]=BGT_AREA_I; row[2]=HUD_STATUS_S;
+            row[3]=BGT_AREA_A; row[4]=BGT_AREA_R; row[5]=BGT_AREA_M; return 6;
         case HUD_NOTICE_HUNGER:
             row[0]=BGT_AREA_H; row[1]=HUD_STATUS_U; row[2]=BGT_AREA_N;
             row[3]=BGT_AREA_G; row[4]=BGT_AREA_E; row[5]=BGT_AREA_R; return 6;

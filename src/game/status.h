@@ -25,6 +25,7 @@ enum {
     QSTATUS_REGEN,
     QSTATUS_HASTE,
     QSTATUS_INVERSION,
+    QSTATUS_DISARM,
     QSTATUS_COUNT,
 };
 
@@ -56,6 +57,7 @@ extern u8 player_status_kind;
 // not fit in a byte.
 #define STATUS_CONFUSION_IMMUNE_FRAMES 600
 extern u16 confusion_immune;
+extern u8 disarm_immune;
 extern u8 player_status_ticks;
 extern u8 enemy_status_kind[MAX_ENTITIES];
 extern u8 enemy_status_ticks[MAX_ENTITIES];
@@ -122,6 +124,8 @@ u8 status_player_effective_stat(u8 stat) BANKED;
     (player_status_kind == QSTATUS_INVERSION)
 #define STATUS_PLAYER_BURNED() \
     (player_status_kind == QSTATUS_BURN)
+#define STATUS_PLAYER_DISARMED() \
+    (player_status_kind == QSTATUS_DISARM)
 // Burn and Rift Inversion are the only conditions that rewrite ATK
 // through status_player_effective_stat. A far call is paid only then.
 #define STATUS_PLAYER_ATK_MODIFIED() \

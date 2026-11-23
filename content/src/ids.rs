@@ -91,6 +91,8 @@ pub const ENEMY_FUSE_HURLER:     EnemyId = EnemyId::new(41);   // lobs fused bom
 pub const ENEMY_SUN_BASILISK:  EnemyId = EnemyId::new(42);   // basilisk tier 2: 24-px beam (Golden Temple)
 pub const ENEMY_NOX_BASILISK:   EnemyId = EnemyId::new(43);   // basilisk tier 3: 32-px beam (Void Sanctum)
 
+pub const ENEMY_BUBBLE:         EnemyId = EnemyId::new(44);   // Zelda-1 A-lock skull; Shadow Keep / Void
+
 
 // ----- Biomes
 pub const BIOME_CRYSTAL_CAVERNS: BiomeId = BiomeId::new(0);
@@ -157,6 +159,7 @@ pub const SPRITE_CINDER_MAW:  SpriteRef = SpriteRef::new(64);
 pub const SPRITE_RIFT_OOZE:   SpriteRef = SpriteRef::new(76);
 pub const SPRITE_MIRROR_MOTH: SpriteRef = SpriteRef::new(77);
 pub const SPRITE_MIRE_SPORE:  SpriteRef = SpriteRef::new(78);
+pub const SPRITE_BUBBLE:      SpriteRef = SpriteRef::new(78); // Shadow Keep / Void; never with Mire Spore
 pub const SPRITE_ECHO_GUARD:  SpriteRef = SpriteRef::new(80);
 pub const SPRITE_RUNE_LANTERN: SpriteRef = SpriteRef::new(124);
 // Slot 125 is a dungeon-only multiplex: combat rooms load Dread Bell art;

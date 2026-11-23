@@ -201,6 +201,8 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_magic.py
 	$(PYBOY_RUN) scripts/test_status_effects.py
+	$(PYBOY_RUN) scripts/test_disarm.py
+	$(PYBOY_RUN) scripts/test_bubble_clear.py
 	$(PYBOY_RUN) scripts/test_dungeon_tools.py
 	$(PYBOY_RUN) scripts/test_world_interactions.py
 	$(PYBOY_RUN) scripts/test_oath_arts.py

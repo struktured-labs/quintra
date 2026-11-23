@@ -45,7 +45,8 @@ void status_tick_gate(void) BANKED {
         status_player_apply(req, 0);
     }
     if (player_status_kind != QSTATUS_NONE || status_enemy_active
-        || powerup_id || powerup_world_live || confusion_immune)
+        || powerup_id || powerup_world_live || confusion_immune
+        || disarm_immune)
         status_tick();
     else
         status_clock++;
