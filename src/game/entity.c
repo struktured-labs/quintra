@@ -15,6 +15,7 @@ void new_monsters_draw(void) BANKED;
 #include "game/enemy_ai.h"
 #include "game/cinder_big.h"
 #include "game/pickup.h"
+#include "game/powerup.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"

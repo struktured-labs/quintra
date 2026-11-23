@@ -78,6 +78,15 @@ u8   powerup_copy_hit_ok(void) BANKED;
 // the capsule is still spinning or frozen on the winning face.
 u8   powerup_roulette_try_lock(u8 idx) BANKED;
 void powerup_confusion_stars(void) BANKED;
+// Visual-only: bounce is added to the icon's OAM Y; decorate writes
+// the 16x16 bezel, smear overlay, and lock sparkles (bank 1 tiles).
+extern i8 powerup_roulette_bob;
+u8   powerup_roulette_decorate(u8 oam, u8 sx, u8 sy) BANKED;
+extern u8 powerup_roulette_fxflags;
+extern u8 powerup_roulette_spark_t;
+#define RF_FRAME 0x01
+#define RF_SMEAR 0x02
+#define RF_SPARK 0x04
 // Visited, unclaimed dungeon shrine cell? 1 = draw the gold "!" mark.
 u8   powerup_shrine_map_mark(u8 cell) BANKED;
 

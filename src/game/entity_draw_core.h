@@ -138,12 +138,16 @@ for (i = 0; i < MAX_ENTITIES; ++i) {
             if (e->ai_data[4] & PROJ_VIS_FLIP_X) prop |= S_FLIPX;
             if (e->ai_data[4] & PROJ_VIS_FLIP_Y) prop |= S_FLIPY;
         }
+        if (e->type == ENT_PICKUP && e->ai_data[0] == PICKUP_ROULETTE)
+            sy = (u8)(sy + (u8)powerup_roulette_bob);
         it->y = sy;
         it->x = sx;
         it->tile = e->sprite_tile;
         it->prop = prop;
     }
     oam++;
+    if (e->type == ENT_PICKUP && e->ai_data[0] == PICKUP_ROULETTE)
+        oam = powerup_roulette_decorate(oam, sx, sy);
 }
 // Park only sprites that were occupied on the preceding frame. Room entry
 // already clears slots 4..39, and active slots are overwritten above; hiding

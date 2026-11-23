@@ -396,6 +396,17 @@
 #define SPR_BOMB_WAVE_H        189
 #define SPR_BOMB_WAVE_CORNER   190
 #define SPR_BOMB_FRAG          191
+// Roulette capsule FX and four replacement faces. Bank 1 only, in the
+// gap after bomb-wave 188-191 and before WILL_MAXFX 200-203.
+#define SPR_ROULETTE_FRAME       192
+#define SPR_ROULETTE_SMEAR       193
+#define SPR_ROULETTE_SPARK_A     194
+#define SPR_ROULETTE_SPARK_B     195
+#define SPR_ROULETTE_FACE_FORM   196
+#define SPR_ROULETTE_FACE_HALO   197
+#define SPR_ROULETTE_FACE_REACH  198
+#define SPR_ROULETTE_FACE_WING   199
+#define SPR_ROULETTE_PROP        0x0D // coin gold (pal 5) | VRAM bank 1
 #define SPR_BOMB_FX_PROP       12  // heart red  | VRAM bank 1
 #define SPR_BOMB_FX_GOLD       13  // coin gold  | VRAM bank 1 (max Will)
 #define SPR_MORNINGSTAR_PROP 13  // coin gold | VRAM bank 1
@@ -469,6 +480,7 @@ extern const u8 hud_tiles[][16];
 
 void tiles_load_pickup_sprites(void) BANKED;
 void tiles_load_item_sprites(void) BANKED;
+void tiles_load_roulette_fx(void) BANKED;
 void tiles_load_town_big_sprites(void) BANKED;
 void tiles_load_companion_sprite(void) BANKED;
 void tiles_load_town_waykeeper_sprite(void) BANKED;

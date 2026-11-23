@@ -111,6 +111,7 @@ void tiles_load_item_sprites(void) BANKED {
     set_sprite_data(SPR_BOMB_WAVE_H, 1, sprite_bomb_wave_h);
     set_sprite_data(SPR_BOMB_WAVE_CORNER, 1, sprite_bomb_wave_corner);
     set_sprite_data(SPR_BOMB_FRAG, 1, sprite_bomb_frag);
+    tiles_load_roulette_fx();
     VBK_REG = 0;
 }
 
