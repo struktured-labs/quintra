@@ -200,10 +200,10 @@ static void roulette_tick_one(entity_t *e, u8 idx) {
         powerup_roulette_tick_fx(1, 0, 0);
     } else {
         // Keep the latched face in ai_data[2] matching the visible tile.
-        // A 2-frame white flash is visual only; the reward stays this face.
+        // A 1-frame white flash is visual only; the reward stays this face.
         e->ai_data[2] = e->ai_data[1];
         powerup_roulette_tick_fx(0, 0, e->state);
-        if (e->state + 2 >= period)
+        if (e->state + 1 >= period)
             powerup_roulette_apply_face(e, e->ai_data[1], 1);
     }
     (void)idx;

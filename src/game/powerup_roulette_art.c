@@ -37,7 +37,6 @@ u8 powerup_roulette_spark_t;
 static u8 roulette_pop;
 static u8 roulette_smear_t;
 static const i8 roulette_pop_bob[3] = { -2, -3, -1 };
-static const i8 roulette_lock_bob[8] = { -2, -4, -3, -1, 1, 0, 0, 0 };
 
 
 static const u8 face_tile[POWERUP_COUNT] = {
@@ -78,8 +77,12 @@ void powerup_roulette_tick_fx(u8 just_changed, u8 locking, u8 lock_frame) BANKED
         roulette_smear_t = 2;
     }
     if (locking) {
-        if (lock_frame && lock_frame <= 8)
-            powerup_roulette_bob = roulette_lock_bob[lock_frame - 1];
+        // Rise above the 16x16 hero so the winning face stays readable
+        // (player OAM 0-3 would otherwise cover the icon on overlap).
+        if (lock_frame) {
+            if (lock_frame < 4) powerup_roulette_bob = (i8)(-4 * lock_frame);
+            else powerup_roulette_bob = -16;
+        }
         if (lock_frame && lock_frame <= 16) flags |= RF_SPARK;
         if (lock_frame && lock_frame <= 3) {
             flags |= RF_SMEAR;
@@ -106,7 +109,7 @@ static const i8 spark_oy[8] = { 0,-6,-8, -6,  0,  6,  8,  6 };
 static u8 emit(u8 oam, u8 x, u8 y, u8 tile, u8 prop) {
     OAM_item_t *it;
     if (oam >= entity_oam_cap) return oam;
-    if (y <= 8 || y >= 160 || x >= 176) return oam;
+    if (y <= 8 || y >= 152 || x == 0 || x >= 168) return oam;
     it = &shadow_OAM[oam];
     it->y = y;
     it->x = x;
@@ -118,7 +121,17 @@ static u8 emit(u8 oam, u8 x, u8 y, u8 tile, u8 prop) {
 u8 powerup_roulette_decorate(u8 oam, u8 sx, u8 sy) BANKED {
     u8 flags = powerup_roulette_fxflags;
     u8 t, i, k, tile, pal;
+    i16 ny;
     if (!flags) return oam;
+
+    /* Apply the bounce to the icon we just wrote, then to the FX. */
+    if (oam) {
+        OAM_item_t *icon = &shadow_OAM[oam - 1];
+        ny = (i16)icon->y + powerup_roulette_bob;
+        if (ny > 16 && ny < 152) icon->y = (u8)ny;
+        sy = icon->y;
+        sx = icon->x;
+    }
 
     if (flags & RF_FRAME) {
         pal = SPR_ROULETTE_PROP;
