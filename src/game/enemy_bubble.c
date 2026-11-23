@@ -9,6 +9,9 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "render/tiles.h"
+#include "render/text.h"
+#include "game/status.h"
+#include <gbdk/console.h>
 
 /* GPT Image 2.6 Sunburst, quantized to 8x8 2bpp. Placeholder skull is
    swapped for the chosen sheet tile once the generation pass finishes. */
@@ -80,3 +83,17 @@ u8 bubble_reject_hit(u8 shot_idx, u8 enemy_idx) BANKED {
     sfx_play(SFX_TICK);
     return 1;
 }
+
+void status_draw_pack_label(void) BANKED {
+    static const char *const names[QSTATUS_COUNT] = {
+        "NORMAL ", "POISON ", "BURNING", "SLOWED ", "STOPPED",
+        "BLINDED", "CONFUSE", "MUTED  ", "BRITTLE", "BLEED  ",
+        "CURSED ", "REGEN  ", "HASTED ", "INVERT "
+    };
+    u8 kind = player_status_kind < QSTATUS_COUNT
+        ? player_status_kind : QSTATUS_NONE;
+    gotoxy(12, 1);
+    text_write(names[kind]);
+}
+
+
