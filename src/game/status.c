@@ -78,7 +78,7 @@ extern u8 hud_notice_ticks;
 static u8 player_status_aux;
 static u8 confusion_mode;
 static u8 confusion_streak;
-u8 confusion_immune;
+u16 confusion_immune;
 static u8 inversion_tie;
 static ppos_t bleed_last_x;
 static ppos_t bleed_last_y;
@@ -156,7 +156,7 @@ static u8 status_duration(u8 kind) {
         case QSTATUS_SLOW:      return 90;
         case QSTATUS_STOP:      return 14;  // brief, fair hard disable
         case QSTATUS_BLIND:     return 75;
-        case QSTATUS_CONFUSION: return 24;
+        case QSTATUS_CONFUSION: return STATUS_CONFUSION_MEAN_TICKS; // player overwrites with a roll
         case QSTATUS_MUTE:      return 75;
         case QSTATUS_BRITTLE:   return 75;
         case QSTATUS_BLEED:     return 60;  // 8 seconds (was 12)
@@ -222,7 +222,7 @@ void status_reset_all(void) BANKED {
 
 void status_player_cure(void) BANKED {
     u8 was_blind = (player_status_kind == QSTATUS_BLIND);
-    if (player_status_kind == QSTATUS_CONFUSION) confusion_immune = 240;
+    if (player_status_kind == QSTATUS_CONFUSION) confusion_immune = STATUS_CONFUSION_IMMUNE_FRAMES;
     player_status_kind = QSTATUS_NONE;
     player_status_ticks = 0;
     player_status_aux = 0;
@@ -235,6 +235,31 @@ void status_player_cure(void) BANKED {
 void status_player_refresh_visual(void) BANKED {
     if (player_status_kind == QSTATUS_BLIND)
         room_status_blind_visual(1);
+}
+
+static u8 confusion_roll_ticks(void) {
+    // Two uniform [0, 75] rolls, signed around the 10 s mean, then
+    // clamped to [3 s, 20 s]. That is a cheap integer triangle
+    // peaked at 10 s; the 3 s floor only slightly raises the mean
+    // (about 10.05 s at 60 Hz). Easy keeps the same shape at 3/5,
+    // still never below 3 s (mean then about 6.1 s, cap 12 s).
+    u8 r1 = rng_range(STATUS_CONFUSION_MEAN_TICKS + 1);
+    u8 r2 = rng_range(STATUS_CONFUSION_MEAN_TICKS + 1);
+    u8 ticks;
+    if (r2 > (u8)(STATUS_CONFUSION_MEAN_TICKS + r1))
+        ticks = 0;
+    else
+        ticks = (u8)(STATUS_CONFUSION_MEAN_TICKS + r1 - r2);
+    if (ticks < STATUS_CONFUSION_MIN_TICKS)
+        ticks = STATUS_CONFUSION_MIN_TICKS;
+    if (ticks > STATUS_CONFUSION_MAX_TICKS)
+        ticks = STATUS_CONFUSION_MAX_TICKS;
+    if (RUN_IS_EASY()) {
+        ticks = (u8)((u16)(ticks * 3u + 2u) / 5u);
+        if (ticks < STATUS_CONFUSION_MIN_TICKS)
+            ticks = STATUS_CONFUSION_MIN_TICKS;
+    }
+    return ticks;
 }
 
 void status_player_apply(u8 kind, u8 ticks) BANKED {
@@ -250,13 +275,13 @@ void status_player_apply(u8 kind, u8 ticks) BANKED {
     ticks = status_resist_adjust(kind, ticks);
     if (ticks == 0xFF) return;
     if (kind == QSTATUS_CONFUSION) {
-        ticks = RUN_IS_EASY() ? 16 : 24;
+        ticks = confusion_roll_ticks();
         // Horizontal mirror or full reverse only; never reshuffle.
         confusion_mode = (rng_next_u8() & 1) ? 1 : 2;
         confusion_streak = 0;
     }
     if (player_status_kind == QSTATUS_CONFUSION && kind != QSTATUS_CONFUSION)
-        confusion_immune = 240;
+        confusion_immune = STATUS_CONFUSION_IMMUNE_FRAMES;
     player_status_kind = kind;
     player_status_ticks = ticks;
     player_status_aux = 0;
@@ -596,7 +621,7 @@ void status_tick(void) BANKED {
             status_effect(kind,status_palette(kind),player.x+4,player.y+2);
         if (player_status_ticks == 0) {
             u8 was_blind = (kind == QSTATUS_BLIND);
-            if (kind == QSTATUS_CONFUSION) confusion_immune = 240;
+            if (kind == QSTATUS_CONFUSION) confusion_immune = STATUS_CONFUSION_IMMUNE_FRAMES;
             player_status_kind = QSTATUS_NONE;
             player_status_aux = 0;
             confusion_streak = 0;
