@@ -119,19 +119,21 @@ static const u8 solid_tiles[128] = {
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 };
 
-static u8 blocked(entity_t *e) {
-    u8 left=e->x>>3, top=e->y>>3;
-    u8 right=(e->x+(e->hitbox>>4)-1)>>3;
-    u8 bottom=(e->y+(e->hitbox&15)-1)>>3;
-    u8 x,y,tile;
-    for (y=top;y<=bottom;++y) {
-        if (y<ROOM_H && right<ROOM_W) {
-            const u8 *cell=&room_tilemap[y][left];
-            for (x=left;x<=right;++x)
-                if (solid_tiles[(*cell++)&0x7F]) return 1;
+// Caller guarantees 8 <= ux, uy and ux + w, uy + h inside the room, so
+// every probe coordinate fits a byte (the old i16 shifts were ~1k clocks).
+static u8 blocked_box(u8 ux, u8 uy, u8 w, u8 h) {
+    u8 left = ux >> 3, top = uy >> 3;
+    u8 right = (u8)(ux + w - 1) >> 3;
+    u8 bottom = (u8)(uy + h - 1) >> 3;
+    u8 x, y, tile;
+    for (y = top; y <= bottom; ++y) {
+        if (y < ROOM_H && right < ROOM_W) {
+            const u8 *cell = &room_tilemap[y][left];
+            for (x = left; x <= right; ++x)
+                if (solid_tiles[(*cell++) & 0x7F]) return 1;
         } else {
-            for (x=left;x<=right;++x) {
-                tile=room_tile_at_px((i16)x<<3,(i16)y<<3);
+            for (x = left; x <= right; ++x) {
+                tile = room_tile_at_px((i16)x << 3, (i16)y << 3);
                 if (solid_tiles[tile]) return 1;
             }
         }
@@ -179,10 +181,24 @@ static u8 return_motion(entity_t *e,u8 idx,u8 age,u8 angle) {
     return 1;
 }
 
+// The two-frame telegraph and the split live out of line so the hot motion
+// path below does not keep the entity pointer spilled across them.
+static void boss_proj_split_phase(entity_t *e, u8 idx, u8 pattern,
+                                  u8 age, u8 split_age) {
+    if (pattern == BOSS_SHOT_RETURN) { e->x=e->x_pad; e->y=e->y_pad; }
+    if (age < split_age + 16) {
+        e->palette = (age & 4) ? (pattern_palette[pattern] == 4 ? 3 : 4) : pattern_palette[pattern];
+        if (e->ai_data[4] == BOSS_SHAPE_SEED)
+            e->sprite_tile = (age & 4) ? 220 : 210;
+        else if (e->ai_data[4] == BOSS_SHAPE_ORB)
+            e->sprite_tile = (age & 4) ? SPR_FX_IMPACT : 209;
+    } else {
+        split_projectile(e,idx);
+    }
+}
+
 void boss_projectile_update(entity_t *e, u8 idx) BANKED {
-    u8 age, angle, pattern, width, height, split_age;
-    i16 delta, forward;
-    i8 dx, dy;
+    u8 age, angle, pattern, split_age;
     if (!e->state_timer) { entity_kill(idx); return; }
     // A child born later in the table must not receive an extra update.
     if (e->ai_data[7] == entity_anim_counter) return;
@@ -192,18 +208,8 @@ void boss_projectile_update(entity_t *e, u8 idx) BANKED {
     pattern = e->ai_data[1];
     split_age = pattern == BOSS_SHOT_RETURN ? 72 : 40;
     if (e->ai_data[2] && age >= split_age) {
-        if (pattern == BOSS_SHOT_RETURN) { e->x=e->x_pad; e->y=e->y_pad; }
-        if (age < split_age + 16) {
-            e->palette = (age & 4) ? (pattern_palette[pattern] == 4 ? 3 : 4) : pattern_palette[pattern];
-            if (e->ai_data[4] == BOSS_SHAPE_SEED)
-                e->sprite_tile = (age & 4) ? 220 : 210;
-            else if (e->ai_data[4] == BOSS_SHAPE_ORB)
-                e->sprite_tile = (age & 4) ? SPR_FX_IMPACT : 209;
-            return;
-        } else {
-            split_projectile(e,idx);
-            return;
-        }
+        boss_proj_split_phase(e, idx, pattern, age, split_age);
+        return;
     }
     if (pattern == BOSS_SHOT_ARC && age < 72 && !(age & 3))
         e->ai_data[0] = (e->ai_data[0] + 1) & 31;
@@ -211,27 +217,46 @@ void boss_projectile_update(entity_t *e, u8 idx) BANKED {
     if (pattern == BOSS_SHOT_WAVE)
         angle = (angle + (sine[(age >> 1) & 31] >> 2)) & 31;
     if (pattern == BOSS_SHOT_SPIRAL) {
-        forward = age >> 2;
-        if (forward > 24) forward = 24;
+        u8 rad = age >> 2;
+        const i8 *row;
+        if (rad > 24) rad = 24;
+        row = spiral_offset[rad];
         angle = (angle + (age >> 2)) & 31;
-        e->x = (i16)e->x_pad + spiral_offset[forward][angle];
-        e->y = (i16)e->y_pad - spiral_offset[forward][(angle+8)&31];
+        e->x = (i16)e->x_pad + row[angle];
+        e->y = (i16)e->y_pad - row[(angle+8)&31];
     } else if (pattern == BOSS_SHOT_RETURN) {
         if (!return_motion(e,idx,age,angle)) return;
     } else {
-        dx = sine[angle]; dy = -sine[(angle+8)&31];
+        // x_frac/y_frac stay in 0..15 and |dx|,|dy| <= 36, so the sum fits
+        // an i8 and its arithmetic >> 4 equals the old i16 shift.
+        i8 dx = sine[angle], dy = -sine[(angle+8)&31];
+        i8 d, v;
         if (e->state == 1) { dx >>= 1; dy >>= 1; }
         else if (e->state == 3) { dx += dx >> 1; dy += dy >> 1; }
-        delta = (i16)e->x_frac + dx;
-        e->vx = (i8)(delta >> 4);
-        e->x_frac = (u8)delta & 15;
-        delta = (i16)e->y_frac + dy;
-        e->vy = (i8)(delta >> 4);
-        e->y_frac = (u8)delta & 15;
-        e->x += e->vx; e->y += e->vy;
+        d = (i8)(e->x_frac + dx);
+        v = (i8)(d >> 4);
+        e->vx = v;
+        e->x_frac = (u8)d & 15;
+        e->x += v;
+        d = (i8)(e->y_frac + dy);
+        v = (i8)(d >> 4);
+        e->vy = v;
+        e->y_frac = (u8)d & 15;
+        e->y += v;
     }
-    width = e->hitbox >> 4; height = e->hitbox & 15;
-    if (e->x < 8 || e->y < 8 || e->x + width > room_world_width - 8
-        || e->y + height > room_world_height - 8) { entity_kill(idx); return; }
-    if (blocked(e)) entity_kill(idx);
+    {
+        i16 px = e->x, py = e->y;
+        u8 hb = e->hitbox;
+        u8 w = hb >> 4, h = hb & 15;
+        u8 ux, uy;
+        // Negative or >= 256 is outside every room (worlds are <= 255 px).
+        if ((u8)((u16)px >> 8) | (u8)((u16)py >> 8)) { entity_kill(idx); return; }
+        ux = (u8)px; uy = (u8)py;
+        if (ux < 8 || uy < 8
+            || (i16)(ux + w) > (i16)(room_world_width - 8)
+            || (i16)(uy + h) > (i16)(room_world_height - 8)) {
+            entity_kill(idx); return;
+        }
+        if (blocked_box(ux, uy, w, h)) entity_kill(idx);
+    }
 }
