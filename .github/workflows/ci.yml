@@ -174,6 +174,8 @@ jobs:
 
       - name: PyBoy puzzle contracts (rune plate art, colours, pressed state)
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_puzzles.py
+      - name: PyBoy Prism orb tiles (door carve and stale Law Lock cache)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_prism_orb_tiles.py
 
       - name: PyBoy Cinder Rex pose
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_rex_pose.py
