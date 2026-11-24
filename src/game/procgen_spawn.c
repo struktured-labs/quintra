@@ -77,6 +77,7 @@ void procgen_repair_enemy_spawns(void) BANKED {
         if (!enemy_spawn_position_clear(e, px, py))
             place_wide_enemy_clear(e, px, py);
     }
+    procgen_ensure_required_warden();
 }
 
 // Twenty non-overlapping, body-valid anchors span the central cross and both
