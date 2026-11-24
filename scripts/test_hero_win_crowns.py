@@ -238,8 +238,11 @@ def assert_head_crown(pb, hero, tier, label):
     assert (prop & 7) == pal, f"{label}: head pal {prop & 7} != {pal}"
     py, px, _, _ = oam(pb, 0)
     assert py and px, f"{label}: preview missing ({px},{py})"
-    assert abs(x - (px + 4)) <= 2, f"{label}: crown x {x} vs preview {px}"
-    assert 1 <= (py - y) <= 6, f"{label}: crown y {y} vs preview {py}"
+    # Exact per-hero offsets from class_select_crowns.c (must stay in sync).
+    ox = (4, 4, 3, 4, 4)[hero]
+    lift = (4, 4, 4, 4, 4)[hero]
+    assert x == px + ox, f"{label}: crown x {x} != preview {px}+{ox}"
+    assert y == py - lift, f"{label}: crown y {y} != preview {py}-{lift}"
 
 
 def assert_no_crowns(pb, label):
@@ -598,11 +601,36 @@ def test_corrupt_extension_is_not_corruption():
         pb.stop(save=False)
 
 
+def test_head_crown_gallery():
+    """Capture each selected hero with a crown on the head (Easy 0-1, Normal 2-4)."""
+    dest = os.environ.get("QUINTRA_CROWN_CAPTURE")
+    ram = write_modern_meta(
+        wins=5,
+        hero_wins=[1, 1, 1, 1, 1],
+        hero_tiers=[1, 1, 2, 2, 2],
+    )
+    pb = boot(ram)
+    names = ("wolfkin", "sauran", "corvin", "picsean", "vespine")
+    tiers = (1, 1, 2, 2, 2)
+    try:
+        to_class_select(pb)
+        for i, name in enumerate(names):
+            if i:
+                press(pb, "down")
+                pb.tick(90)
+            assert_hero_crown(pb, i, 1, tiers[i], f"gallery-{name}", on_head=True)
+            if dest:
+                capture(pb, dest + f"/select-{name}.png")
+    finally:
+        pb.stop(save=False)
+
+
 def main():
     test_fresh_select()
     test_injected_display()
     test_record_once_per_hero_and_difficulty()
     test_select_after_easy_and_normal()
+    test_head_crown_gallery()
     test_legacy_meta_compat()
     test_modern_meta_without_extension()
     test_hexa_is_not_a_hero_win()

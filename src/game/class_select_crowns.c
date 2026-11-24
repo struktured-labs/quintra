@@ -23,10 +23,10 @@ static const u8 crown_tiles[2][16] = {
 };
 
 // Pixels right of the 16x16 preview origin, and pixels to lift the 8x8
-// crown so its band sits on each hero's scalp (ears, crests, and
-// antennae poke above and stay in front: they are lower OAM indices).
+// crown. Lift 4 puts the Easy band on the first preview row (1px overlap
+// with ear/crest/antenna tips; the taller Normal jewel overlaps 1px more).
 static const u8 crown_ox[HERO_TROPHY_SLOTS]   = { 4, 4, 3, 4, 4 };
-static const u8 crown_lift[HERO_TROPHY_SLOTS] = { 5, 5, 4, 5, 4 };
+static const u8 crown_lift[HERO_TROPHY_SLOTS] = { 4, 4, 4, 4, 4 };
 
 
 // Same metal/ruby as the BG gold/royal slots, but color 0 is transparent.
