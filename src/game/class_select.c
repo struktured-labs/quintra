@@ -126,6 +126,7 @@ static void cache_and_arm_palettes(void) {
         obj_pal_cache[slot][2] = 0;
         obj_pal_cache[slot][3] = 0;
     }
+    class_select_arm_crown_pals();
 
     // Four half-bursts (BG lo/hi, OBJ lo/hi) per rotating pass.
     class_select_pal_steps = (u8)(PALETTE_OBJ_COMMIT_PASSES * 4);
@@ -153,6 +154,8 @@ static void update_preview(void) {
     set_sprite_tile(4, SPR_BULLET);
     set_sprite_prop(4, 0x02);
     move_sprite(4, 16, (u8)((3 + class_select_cursor) * 8 + 16));
+    // Crown follows the preview origin so a later idle bob carries it.
+    class_select_place_head_crown(sx, sy);
 }
 
 static void write_stats(const class_def_t *c) {
@@ -247,6 +250,7 @@ void class_select_exit(void) {
     move_sprite(0, 0, 0); move_sprite(1, 0, 0);
     move_sprite(2, 0, 0); move_sprite(3, 0, 0);
     move_sprite(4, 0, 0);
+    class_select_hide_head_crown();
     class_select_attr_phase = 0;
     class_select_pal_steps = 0;
     class_select_vbl_work = 0;

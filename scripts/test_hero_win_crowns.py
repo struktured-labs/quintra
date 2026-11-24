@@ -21,9 +21,12 @@ SCREEN_ROOM = 5
 SCREEN_VIGNETTE = 6
 SCREEN_VICTORY = 12
 HERO_SLOTS = 5
-CROWN_COL = 12
-BGT_CROWN_EASY = 0x70
-BGT_CROWN_NORMAL = 0x71
+COUNT_COL = 12
+SPR_CROWN_EASY = 20
+SPR_CROWN_NORMAL = 21
+SPR_CROWN_OBJ = 5
+CS_PAL_OBJ_GOLD = 3
+CS_PAL_OBJ_ROYAL = 4
 DIFFICULTY_NORMAL = 0
 DIFFICULTY_EASY = 1
 RS_VICTORY = 10
@@ -215,46 +218,73 @@ CS_PAL_GOLD = 1
 CS_PAL_ROYAL = 4
 
 
+def oam(pb, idx):
+    base = 0xFE00 + idx * 4
+    return tuple(pb.memory[base + k] for k in range(4))
+
+
+def assert_no_head_crown(pb, label):
+    y, x, tile, prop = oam(pb, SPR_CROWN_OBJ)
+    assert y == 0 or x == 0, (
+        f"{label}: unexpected head crown OAM y={y} x={x} tile={tile} prop={prop}"
+    )
+
+
+def assert_head_crown(pb, hero, tier, label):
+    y, x, tile, prop = oam(pb, SPR_CROWN_OBJ)
+    want = SPR_CROWN_NORMAL if tier >= 2 else SPR_CROWN_EASY
+    pal = CS_PAL_OBJ_ROYAL if tier >= 2 else CS_PAL_OBJ_GOLD
+    assert tile == want, f"{label}: head tile {tile} != {want} (y={y} x={x})"
+    assert (prop & 7) == pal, f"{label}: head pal {prop & 7} != {pal}"
+    py, px, _, _ = oam(pb, 0)
+    assert py and px, f"{label}: preview missing ({px},{py})"
+    assert abs(x - (px + 4)) <= 2, f"{label}: crown x {x} vs preview {px}"
+    assert 1 <= (py - y) <= 6, f"{label}: crown y {y} vs preview {py}"
+
+
 def assert_no_crowns(pb, label):
     for i in range(HERO_SLOTS):
         row = tile_row(pb, 3 + i)
-        assert row[CROWN_COL] not in (BGT_CROWN_EASY, BGT_CROWN_NORMAL), (
-            f"{label}: unexpected crown on hero {i}: {row}"
+        blank = row[19]
+        assert row[COUNT_COL] == blank, (
+            f"{label}: unexpected count on hero {i}: {row}"
         )
+    assert_no_head_crown(pb, label)
 
 
-def assert_hero_crown(pb, hero, wins, tier, label, others_bare=False):
+def assert_hero_crown(pb, hero, wins, tier, label, others_bare=False,
+                      on_head=False):
     row = tile_row(pb, 3 + hero)
-    want = BGT_CROWN_NORMAL if tier >= 2 else BGT_CROWN_EASY
-    assert row[CROWN_COL] == want, (
-        f"{label}: hero {hero} tile {row[CROWN_COL]:#x} != {want:#x} ({row})"
-    )
     digits = str(wins)
-    first = row[CROWN_COL + 1]
+    first = row[COUNT_COL]
     base = first - int(digits[0])
     got = []
     for i, ch in enumerate(digits):
-        got.append(row[CROWN_COL + 1 + i] - base)
+        got.append(row[COUNT_COL + i] - base)
     assert "".join(str(d) for d in got) == digits, (
         f"{label}: hero {hero} count tiles {got} != {digits} ({row})"
     )
     pal = CS_PAL_ROYAL if tier >= 2 else CS_PAL_GOLD
     attrs = attr_row(pb, 3 + hero)
-    assert (attrs[CROWN_COL] & 7) == pal, (
-        f"{label}: hero {hero} crown pal {attrs[CROWN_COL] & 7} != {pal}"
-    )
     for i, _ in enumerate(digits):
-        ap = attrs[CROWN_COL + 1 + i] & 7
-        assert ap == CS_PAL_GOLD, (
-            f"{label}: hero {hero} digit {i} pal {ap} != gold"
+        ap = attrs[COUNT_COL + i] & 7
+        assert ap == pal, (
+            f"{label}: hero {hero} digit {i} pal {ap} != {pal}"
         )
     if others_bare:
         for i in range(HERO_SLOTS):
             if i == hero:
                 continue
             other = tile_row(pb, 3 + i)
-            if other[CROWN_COL] in (BGT_CROWN_EASY, BGT_CROWN_NORMAL):
-                raise AssertionError(f"{label}: stray crown on hero {i}: {other}")
+            assert other[COUNT_COL] == other[19], (
+                f"{label}: stray count on hero {i}: {other}"
+            )
+    if on_head:
+        assert_head_crown(pb, hero, tier, label)
+    else:
+        # Selected hero with no wins hides the sprite; this helper does
+        # not know the cursor, so callers check head state explicitly.
+        pass
 
 
 def capture(pb, path):
@@ -284,11 +314,12 @@ def test_injected_display():
     pb = boot(ram)
     try:
         to_class_select(pb)
-        assert tile_row(pb, 3)[CROWN_COL] not in (BGT_CROWN_EASY, BGT_CROWN_NORMAL)
+        assert_no_head_crown(pb, "injected-wolfkin")
+        assert tile_row(pb, 3)[COUNT_COL] == tile_row(pb, 3)[19]
         assert_hero_crown(pb, 1, 1, 1, "injected-sauran")
         assert_hero_crown(pb, 2, 12, 2, "injected-corvin")
         assert_hero_crown(pb, 4, 3, 2, "injected-vespine")
-        assert tile_row(pb, 6)[CROWN_COL] not in (BGT_CROWN_EASY, BGT_CROWN_NORMAL)
+        assert tile_row(pb, 6)[COUNT_COL] == tile_row(pb, 6)[19]
         if os.environ.get("QUINTRA_CROWN_CAPTURE"):
             capture(pb, os.environ["QUINTRA_CROWN_CAPTURE"] + "/after-mixed.png")
     finally:
@@ -386,10 +417,8 @@ def test_select_after_easy_and_normal():
     pb = boot(ram)
     try:
         to_class_select(pb)
-        row0 = tile_row(pb, 3)
-        row4 = tile_row(pb, 7)
-        assert row0[CROWN_COL] == BGT_CROWN_EASY, row0
-        assert row4[CROWN_COL] == BGT_CROWN_NORMAL, row4
+        assert_hero_crown(pb, 0, 1, 1, "select-easy", on_head=True)
+        assert_hero_crown(pb, 4, 1, 2, "select-vespine-count")
         if os.environ.get("QUINTRA_CROWN_CAPTURE"):
             base = os.environ["QUINTRA_CROWN_CAPTURE"]
             capture(pb, base + "/after-easy.png")
@@ -401,7 +430,18 @@ def test_select_after_easy_and_normal():
             pb.tick(8)
             press(pb, "down")
             pb.tick(90)
+            assert_hero_crown(pb, 4, 1, 2, "select-normal", on_head=True)
             capture(pb, base + "/after-normal.png")
+        else:
+            press(pb, "down")
+            pb.tick(8)
+            press(pb, "down")
+            pb.tick(8)
+            press(pb, "down")
+            pb.tick(8)
+            press(pb, "down")
+            pb.tick(90)
+            assert_hero_crown(pb, 4, 1, 2, "select-normal", on_head=True)
     finally:
         pb.stop(save=False)
 
@@ -497,10 +537,11 @@ def test_saturation_and_three_digits():
     pb = boot(ram)
     try:
         to_class_select(pb)
-        assert_hero_crown(pb, 0, 255, 2, "sat-display", others_bare=True)
+        assert_hero_crown(pb, 0, 255, 2, "sat-display", others_bare=True,
+                             on_head=True)
         row = tile_row(pb, 3)
-        zero = row[CROWN_COL + 1] - 2  # hundreds digit is '2'
-        fourth = row[CROWN_COL + 4]
+        zero = row[COUNT_COL] - 2  # hundreds digit is '2'
+        fourth = row[COUNT_COL + 3]
         assert not (0 <= (fourth - zero) <= 9), (
             f"sat-display: unexpected fourth digit tile {fourth:#x} ({row})"
         )
