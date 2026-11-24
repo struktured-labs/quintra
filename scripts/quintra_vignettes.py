@@ -25,19 +25,25 @@ def _symbol(rom, name):
 
 
 
-def reach_title(pb, rom, limit=600):
-    """Power-on can land in the lore intro for well over 240 frames.
+def reach_title(pb, rom, limit=600, min_ticks=240):
+    """Reach the title, then idle to at least `min_ticks` power-on frames.
 
-    CI's performance job does not set quintra_sitecustomize, so fixtures
-    that only tick a fixed 240 frames never see the title (#224).
+    Power-on can land in the lore intro for well over 240 frames, so a
+    fixed tick(240) never sees the title when sitecustomize is off (#224).
+    When the intro is already skipped, keep the historical 240-frame
+    settle so CI fixtures stay on the same DIV timeline as before.
     """
     screen = _symbol(rom, "_loop_current_screen")
+    ticks = 0
     if screen is None:
+        for _ in range(max(min_ticks, 0)):
+            pb.tick()
         return
-    for _ in range(limit):
-        if pb.memory[screen] == SCREEN_TITLE:
+    while ticks < limit:
+        if pb.memory[screen] == SCREEN_TITLE and ticks >= min_ticks:
             return
         pb.tick()
+        ticks += 1
     if pb.memory[screen] == SCREEN_TITLE:
         return
     pb.button_press("start")

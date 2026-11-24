@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_vignettes import reach_title, mute_after_class_select
+from quintra_vignettes import reach_title, mute_vignettes
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
 )
@@ -53,20 +53,20 @@ def projection_cells(pb, width=28, height=17):
 def enter_boss(stage, keep_open=False):
     pb = PyBoy(str(ROM), window="null", cgb=True)
     reach_title(pb, ROM)
-    pb.tick(30)
     pb.button("start")
     for _ in range(30):
         pb.tick()
     pb.button("a")
-    mute_after_class_select(pb, ROM, settle=0)
-    for _ in range(120):
-        if pb.memory[SCREEN] == 5:
-            break
+    # Mute during the historical 60-frame post-confirm settle so the
+    # foyer vignette cannot steal the door-walk budget.
+    muted = False
+    for _ in range(60):
         pb.tick()
-    if pb.memory[SCREEN] != 5:
-        raise RuntimeError("enter_boss did not reach the foyer")
-    for _ in range(30):
-        pb.tick()
+        if not muted and pb.memory[SCREEN] in (3, 5, 6):
+            mute_vignettes(pb, ROM)
+            muted = True
+    if not muted:
+        mute_vignettes(pb, ROM)
 
     target = STAGE_BOSS_ROOM[stage]
     pb.memory[RS + 1] = target - 1
