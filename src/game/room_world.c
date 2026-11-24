@@ -174,3 +174,31 @@ u8 room_tile_walkable(u8 t) NONBANKED {
          || t == BGT_WILD_FLOWER
          || (t >= BGT_WILD_MUD && t <= BGT_WILD_SNOW));
 }
+
+void room_player_nudge_to_clear(void) BANKED {
+    i16 old_x = player.x, old_y = player.y;
+    i8 radius, dx, dy;
+    if (room_player_position_clear(old_x, old_y)) return;
+    for (radius = 1; radius <= 12; ++radius) {
+        for (dy = (i8)-radius; dy <= radius; ++dy) {
+            for (dx = (i8)-radius; dx <= radius; ++dx) {
+                i8 ax = dx < 0 ? (i8)-dx : dx;
+                i8 ay = dy < 0 ? (i8)-dy : dy;
+                i16 x, y;
+                if ((i8)(ax + ay) != radius) continue;
+                x = old_x + (i16)dx * 8;
+                y = old_y + (i16)dy * 8;
+                if (room_player_position_in_bounds(x, y)
+                    && room_player_position_clear(x, y)) {
+                    player.x = (ppos_t)x;
+                    player.y = (ppos_t)y;
+                    return;
+                }
+            }
+        }
+    }
+    if (room_player_position_clear(72, 60)) {
+        player.x = 72;
+        player.y = 60;
+    }
+}

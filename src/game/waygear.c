@@ -92,4 +92,7 @@ void waygear_prepare_world_field(void) BANKED {
         && run_state_riftwild_gate_active(screen)
         && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_WORLDGLASS)))
         pickup_spawn_waygear(WAYGEAR_WORLDGLASS, FIX8(120), FIX8(40));
+    // After every field stamp, snap an embedded 16x16 spawn off solid
+    // climate or set-piece tiles (#236).
+    room_player_nudge_to_clear();
 }
