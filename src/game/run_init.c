@@ -10,6 +10,7 @@
 #include "game/loop.h"
 #include "game/pickup.h"
 #include "game/player.h"
+#include "render/hud.h"
 #include "game/room.h"
 #include "game/run_init.h"
 #include "game/run_state.h"
@@ -32,7 +33,7 @@ static void apply_stage_warp_progression(u8 stage) {
         player.inventory[i] = item;
         if (player.atk < 15) player.atk++;
         if (item == ITEM_ID_SWIFT_FANG && player.spd < PLAYER_SPD_MAX) player.spd++;
-        if (item == ITEM_ID_BLOOD_SIGIL && player.hp_max < 30)
+        if (item == ITEM_ID_BLOOD_SIGIL && player.hp_max < HP_CAP)
             player.hp_max++;
     }
     player.hp = player.hp_max;

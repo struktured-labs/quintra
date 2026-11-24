@@ -8,7 +8,7 @@ Numbers below are the Normal start, before relics. Hearts are health divided by 
 
 Caption: Wolfkin. Fang guards flame. Blade fighter.
 
-Seven hearts. Magic 4. Attack 2. Defense 1. Speed 5. The select screen calls the role a blade fighter, the weapon “stab slash dash,” the power “8 shots brief ward,” and the trait fast movement. The content names are Fang Forms on A and Howl on B. Howl is an eight-way burst and a very short ward, not a room-clearing stun. Wolfkin walks thorn tiles. A movement perk sits on the class; the screen’s words for it are FAST MOVEMENT, and it adds one speed when the run starts, so Wolfkin moves as fast as Vespine.
+Seven hearts. Magic 4. Attack 2. Defense 1. Speed 5. The select screen calls the role a blade fighter, the weapon “stab slash dash,” the power “8 shots brief ward,” and the trait fast movement. The content names are Longblade (Claw Sword) on A and Howl on B. Howl is an eight-way burst and a very short ward, not a room-clearing stun. Wolfkin walks thorn tiles. A movement perk sits on the class; the screen’s words for it are FAST MOVEMENT, and it adds one speed when the run starts, so Wolfkin moves as fast as Vespine.
 
 ## Sauran
 

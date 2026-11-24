@@ -4,7 +4,7 @@ A weapon orb is permanent until you swap it. Stand on the red orb and press A. T
 
 ## Opening weapons
 
-Fang Forms is Wolfkin’s A: a stab with the pad, a slash when you are still, a slower cadence that speed can quicken. Tail Spike hits harder and recovers longer. Featherbarb is the returning shot. BubbleBolt is the slow pierce. Stinger is the fast strike.
+The Longblade (Claw Sword) is Wolfkin’s A: a stab with the pad, a slash when you are still, a slower cadence that speed can quicken. Tail Spike hits harder and recovers longer. Featherbarb is the returning shot. BubbleBolt is the slow pierce. Stinger is the fast strike.
 
 Two later A weapons can come from a mini-boss or a vault, for any champion. Rift Flail is a slow three-pierce sweep, the widest of the heavy arms. Astral Spear is the opposite: one long precise thrust. Line it up. Do not spray it.
 
