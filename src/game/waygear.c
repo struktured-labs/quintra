@@ -15,6 +15,8 @@
 
 void riftwild_discovery_prepare(void) BANKED;
 
+u8 world_guard_unrepaired;
+
 u8 waygear_grant(u8 gear) BANKED {
     u8 bit;
     u8 was_full = player.will_level >= WILL_LEVEL_CAP;
@@ -96,4 +98,18 @@ void waygear_prepare_world_field(void) BANKED {
     // is already at player.x/y. Snap an embedded 16x16 body off solid
     // climate or set-piece tiles before encounters are placed (#236).
     room_player_nudge_to_clear();
+}
+
+void waygear_clear_guard_if_field_empty(void) BANKED {
+    u8 gear;
+    if (!world_guard_unrepaired) return;
+    if (!run_state.world_mode || RUN_IN_RIFT_DEN()) return;
+    if (!run_state_riftwild_guard_active(run_state.world_screen)) return;
+    gear = run_state_riftwild_guard_gear(run_state.world_screen);
+    run_state_riftwild_clear_guard();
+    // Match the regenerate-on-cleared-pedestal contract so a missed tagged
+    // kill still leaves the traversal implement on the trail, not lost.
+    if (gear < WAYGEAR_EQUIP_COUNT
+        && !(player.waygear_owned & WAYGEAR_BIT(gear)))
+        pickup_spawn_waygear(gear, FIX8(120), FIX8(72));
 }

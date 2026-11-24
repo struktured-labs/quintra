@@ -11,7 +11,8 @@ void procgen_place_visible_puzzle_guard(void) BANKED;
 // any body whose complete footprint is no longer open before the LCD returns.
 void procgen_repair_enemy_spawns(void) BANKED;
 // After population, guarantee the tagged Warden / Bellwarden in its
-// required dungeon cell so a missed compact-plane spawn cannot soft-lock.
+// required dungeon cell, and the Sentinel / Bellwarden on an active
+// Riftwild guard field, so a missed compact-plane spawn cannot soft-lock.
 void procgen_ensure_required_warden(void) BANKED;
 
 #endif

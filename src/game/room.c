@@ -2032,6 +2032,14 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
                 if (wlocal == run_state.mission_warden_cell)
                     run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+            } else if (!raw_alive && !alive && run_state.world_mode
+                       && hostiles_prev != 0) {
+                // Require a real clear of hostiles seen this visit so a
+                // poked world_screen or a first empty frame cannot wake
+                // the gate. A missing Warden with leftover pack still
+                // trips this after the last body falls; the ensure path
+                // covers a completely empty generate.
+                waygear_clear_guard_if_field_empty();
             }
         }
         if (room_encounter_complete && room_combat_sealed) {
