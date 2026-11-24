@@ -123,11 +123,12 @@ def hero_can_walk(pyboy, addrs: dict[str, int]) -> tuple[bool, int, int]:
 def assert_source_contracts(root: Path) -> None:
     room = (root / "src/game/room.c").read_text()
     setpiece = (root / "src/game/riftwild_setpiece.c").read_text()
-    collision = (root / "src/game/room_collision.c").read_text()
+    world = (root / "src/game/room_world.c").read_text()
+    waygear = (root / "src/game/waygear.c").read_text()
     assert "from_boss_world ? DIR_NONE : dir" in room, \
         "boss-to-world exits must drop entered_from so the center landing is used"
-    assert "room_player_nudge_to_clear" in collision, \
-        "missing nudge-to-nearest-clear fallback"
+    assert "room_player_nudge_to_clear" in world and "room_player_nudge_to_clear" in waygear, \
+        "missing nudge-to-nearest-clear fallback after field stamps"
     assert "world_screen == 8" in setpiece and "world_screen == 21" in setpiece, \
         "return-landing reservation must cover screens 8 and 21, not only 0"
 
