@@ -76,6 +76,13 @@ void procgen_ensure_required_warden(void) BANKED {
     if (local != run_state.mission_warden_cell
         && local != run_state.mission_deep_warden_cell)
         return;
+    // Don't respawn a Warden after a real kill or the clear-room safety net.
+    if (local == run_state.mission_deep_warden_cell
+        && (run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT))
+        return;
+    if (local == run_state.mission_warden_cell
+        && (run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT))
+        return;
     if (required_warden_present()) return;
 
     // Authored Sentinel / Bellwarden origin. Column 9 is already a
