@@ -18,7 +18,7 @@ from quintra_topology import (
     mission_graph,
     puzzle_slot_kind,
 )
-from test_stage_archetypes import generated_room, addr
+from test_stage_archetypes import generated_room, addr, RS
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.gbc"))
@@ -41,6 +41,18 @@ def rune_addrs():
 
 
 KIND = addr("_room_puzzle_kind") if NOI else 0
+# Packed run_state offsets (see src/game/run_state.h and generated_room).
+RS_MISSION_READY = 37
+RS_MISSION_TRIAL = 39
+RS_MISSION_WAYSTONE = 42
+RS_MISSION_DEEP_SWITCH = 44
+PUZZLE_PHASE_SWITCH = 3
+
+
+class MismatchedRole(Exception):
+    def __init__(self, cell):
+        super().__init__(f"rom role cell is {cell}")
+        self.cell = cell
 
 
 # #235 repros: Easy Corvin seeds on stage 6 (KEEP) where both north plates
@@ -180,11 +192,31 @@ def main():
     for stage, seed, cell, role in cases():
         label = f"stage {stage + 1} seed {seed:08x} {role} cell {cell}"
         print(f"[plate-reach] {label}", flush=True)
-        def probe(pb, tiles, _label=label, _role=role):
-            expected = aether_plates if _role == "aether" else None
-            assert_plates_reachable(_label, pb, tiles, expected)
+        wanted = [cell]
+        role_off = {
+            "aether": RS_MISSION_DEEP_SWITCH,
+            "trial": RS_MISSION_TRIAL,
+            "waystone": RS_MISSION_WAYSTONE,
+        }[role]
+        want_kind = PUZZLE_PHASE_SWITCH if role == "aether" else PUZZLE_RUNE_SEQUENCE
+
+        def probe(pb, tiles):
+            rom_cell = pb.memory[RS + role_off]
+            if pb.memory[KIND] != want_kind and rom_cell != wanted[0]:
+                raise MismatchedRole(rom_cell)
+            expected = aether_plates if role == "aether" else None
+            assert_plates_reachable(label, pb, tiles, expected)
+
         try:
-            generated_room(stage, seed=seed, local_room=cell, probe=probe)
+            try:
+                generated_room(stage, seed=seed, local_room=wanted[0],
+                               probe=probe)
+            except MismatchedRole as mismatch:
+                label = f"{label} (rom cell {mismatch.cell})"
+                print(f"[plate-reach] retry {label}", flush=True)
+                wanted[0] = mismatch.cell
+                generated_room(stage, seed=seed, local_room=wanted[0],
+                               probe=probe)
         except Exception as exc:
             failed.append(f"{label}: {exc}")
             print(f"[plate-reach] FAIL {label}: {exc}", flush=True)
