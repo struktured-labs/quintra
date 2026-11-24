@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_vignettes import reach_title, mute_vignettes
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
 )
@@ -23,11 +24,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
+RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, SCREEN = map(
     addr,
     ("_run_state", "_player", "_entities", "_room_tilemap",
      "_procgen_current_room_is_large", "_room_world_width",
-     "_room_world_height", "_room_camera_x", "_room_camera_y"),
+     "_room_world_height", "_room_camera_x", "_room_camera_y",
+     "_loop_current_screen"),
 )
 ENEMY_STATUS = addr("_enemy_status_kind")
 
@@ -50,14 +52,21 @@ def projection_cells(pb, width=28, height=17):
 
 def enter_boss(stage, keep_open=False):
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    for _ in range(240):
-        pb.tick()
+    reach_title(pb, ROM)
     pb.button("start")
     for _ in range(30):
         pb.tick()
     pb.button("a")
+    # Mute during the historical 60-frame post-confirm settle so the
+    # foyer vignette cannot steal the door-walk budget.
+    muted = False
     for _ in range(60):
         pb.tick()
+        if not muted and pb.memory[SCREEN] in (3, 5, 6):
+            mute_vignettes(pb, ROM)
+            muted = True
+    if not muted:
+        mute_vignettes(pb, ROM)
 
     target = STAGE_BOSS_ROOM[stage]
     pb.memory[RS + 1] = target - 1

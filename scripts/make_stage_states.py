@@ -446,6 +446,7 @@ def advance_to_sanctuary(pyboy: PyBoy, addrs: dict[str, int], stage: int) -> int
     if pyboy.memory[rs + 1] != target:
         raise RuntimeError(f"could not enter sanctuary {stage + 1}")
     settle_room(pyboy, tilemap)
+    wait_for_marked_gate(pyboy)
     return target
 
 
@@ -721,6 +722,35 @@ def boot_to_stage(rom: Path, addrs: dict[str, int], stage: int,
     return pyboy, ram, target
 
 
+def marked_gate_visible(pyboy: PyBoy) -> bool:
+    """True when the 16x16 skull seal is in the live BG map.
+
+    The cue is a VRAM overlay (the logical tilemap stays doors). A
+    compact 20x18 peek at 0x9800 is too early and too small: settle_room
+    returns once the logical map and scroll are stable, which can be
+    tens of frames before room_draw_tilemap blits the seal, and a
+    wide-room door can sit past column 19 (#205).
+    """
+    base = 0x9C00 if pyboy.memory[0xFF40] & 0x08 else 0x9800
+    visible = [pyboy.memory[base + y * 32 + x]
+               for y in range(32) for x in range(32)]
+    return all(tile in visible for tile in range(
+        BGT_BOSS_GATE_L, BGT_BOSS_GATE_L + 4))
+
+
+def wait_for_marked_gate(pyboy: PyBoy, limit: int = 120,
+                         required: bool = True) -> bool:
+    if marked_gate_visible(pyboy):
+        return True
+    for _ in range(limit):
+        pyboy.tick()
+        if marked_gate_visible(pyboy):
+            return True
+    if required:
+        raise RuntimeError("sanctuary marked gate never appeared in VRAM")
+    return False
+
+
 def verify_state(rom: Path, addrs: dict[str, int], path: Path,
                  stage: int, room: int, difficulty: str,
                  checkpoint: str, class_id: int) -> None:
@@ -803,10 +833,10 @@ def verify_state(rom: Path, addrs: dict[str, int], path: Path,
         # A spatial dungeon can approach its last snake cell from either of
         # two reciprocal edges. Verify the complete projected seal anywhere
         # on the visible BG rather than assuming every threshold is north.
-        visible = [pyboy.memory[0x9800 + y * 32 + x]
-                   for y in range(18) for x in range(20)]
-        checks["marked_gate"] = all(tile in visible for tile in range(
-            BGT_BOSS_GATE_L, BGT_BOSS_GATE_L + 4))
+        # Wait out the same post-settle blit the generator now requires,
+        # then accept the seal anywhere on the 32x32 BG map.
+        # Do not raise here: a waived marked_gate check must still record.
+        checks["marked_gate"] = wait_for_marked_gate(pyboy, required=False)
     elif checkpoint == "village":
         checks["village_room"] = room in VILLAGE_ROOM.values()
         checks["arrival_square"] = pyboy.memory[rs + 19] == 0

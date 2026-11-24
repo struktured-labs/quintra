@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from pyboy import PyBoy
-from quintra_vignettes import mute_vignettes
+from quintra_vignettes import mute_vignettes, reach_title
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -53,13 +53,18 @@ def put16(pb, address, value):
 
 def boot(class_id):
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    pb.tick(240)
+    reach_title(pb, ROM)
     press(pb, "start")
     pb.tick(30)
     for _ in range(class_id):
         press(pb, "down", held=3, released=3)
     press(pb, "a")
-    pb.tick(90)
+    muted = False
+    for _ in range(90):
+        pb.tick()
+        if not muted and pb.memory[SCREEN] in (3, 5, 6):
+            mute_vignettes(pb, ROM)
+            muted = True
     assert pb.memory[SCREEN] == 5 and pb.memory[PLAYER] == class_id
     mute_vignettes(pb, ROM)
     return pb

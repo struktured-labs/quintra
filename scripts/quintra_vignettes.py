@@ -12,6 +12,7 @@ from pathlib import Path
 
 # offsetof(run_state_t, vignette_seen): appended u16 after shop_civic (59).
 VIGNETTE_SEEN_OFFSET = 60
+SCREEN_TITLE = 1
 SCREEN_RUN_INIT = 3
 SCREEN_ROOM = 5
 SCREEN_VIGNETTE = 6
@@ -21,6 +22,37 @@ def _symbol(rom, name):
     noi = Path(rom).with_suffix(".noi").read_text()
     match = re.search(rf"DEF {name} 0x([0-9A-Fa-f]+)", noi)
     return int(match.group(1), 16) if match else None
+
+
+
+def reach_title(pb, rom, limit=600, min_ticks=240):
+    """Reach the title, then idle to at least `min_ticks` power-on frames.
+
+    Power-on can land in the lore intro for well over 240 frames, so a
+    fixed tick(240) never sees the title when sitecustomize is off (#224).
+    When the intro is already skipped, keep the historical 240-frame
+    settle so CI fixtures stay on the same DIV timeline as before.
+    """
+    screen = _symbol(rom, "_loop_current_screen")
+    ticks = 0
+    if screen is None:
+        for _ in range(max(min_ticks, 0)):
+            pb.tick()
+        return
+    while ticks < limit:
+        if pb.memory[screen] == SCREEN_TITLE and ticks >= min_ticks:
+            return
+        pb.tick()
+        ticks += 1
+    if pb.memory[screen] == SCREEN_TITLE:
+        return
+    pb.button_press("start")
+    pb.tick(4)
+    pb.button_release("start")
+    for _ in range(180):
+        if pb.memory[screen] == SCREEN_TITLE:
+            return
+        pb.tick()
 
 
 def seen_address(rom):
