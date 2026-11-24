@@ -12,7 +12,7 @@ pub const WOLFKIN: Class = Class {
     starter_weapon: ITEM_CLAW_COMBO,
     signature_active: ITEM_HOWL,
     passive_perk:  PERK_MOVE_SPEED_PLUS_20,
-    // Fang Forms owns reach and two-body lane control, not a hidden ranged-
+    // The Longblade owns reach and two-body lane control, not a hidden ranged-
     // damage premium. The old four-ATK opener combined with its fire affinity
     // for nine damage and literally one-tapped several 8-HP early creatures.
     // Two ATK keeps the dedicated melee vessel durable and spatially strong

@@ -6,7 +6,7 @@ Aim before you enter. Hold Aim means the last diagonal is still true when you st
 
 Dash is a resource, not a walk. The invulnerable moment is short. Spend it through a shot, not through empty floor. Double-tapping because you are nervous is how you arrive in the next pattern with the dash already gone.
 
-B is free and it is on a clock. Use Howl to delete a fan, not to open a room that Fang Forms would have cleared. Use Stoneskin when you have already chosen the tile you will stand on. A ward in the wrong tile is a statue. Raven Mark is one target. Pick the summoner, the bell, the thing that makes the room worse by existing. Swarm and Tidal Wave are commitments. Do not press them as a flinch.
+B is free and it is on a clock. Use Howl to delete a fan, not to open a room that the Longblade would have cleared. Use Stoneskin when you have already chosen the tile you will stand on. A ward in the wrong tile is a statue. Raven Mark is one target. Pick the summoner, the bell, the thing that makes the room worse by existing. Swarm and Tidal Wave are commitments. Do not press them as a flinch.
 
 Will is the attack you were patient for. Release A while you move. The charge hates a shield and it hates Mute, and it does not care that you are in a menu. At speed 4 the tiers take longer as they climb. Faster champions charge faster, up to the speed cap of 12. Do not hoard tier 4 for a boss if tier 2 would have saved the room that was about to end the run. A stored Will that you die holding is worth zero.
 
