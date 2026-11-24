@@ -1556,6 +1556,18 @@ void procgen_generate_room_body(void) BANKED {
                     // cage the required miniboss behind its own pillars.
                     u8 idx = spawn_reachable_enemy(ENEMY_STONE_SENTINEL,
                         (ROOM_W / 2) - 1, 3);
+                    if (idx == 0xFF) {
+                        // Reachability marked no legal 2x2 (door-edge start
+                        // or a partitioned apron). The N/S door lane at
+                        // column 9 is reserved floor; spawn there directly
+                        // rather than leave a sealed Warden room empty.
+                        u8 tx = (u8)((ROOM_W / 2) - 1);
+                        room_tilemap[3][tx] = BGT_FLOOR;
+                        room_tilemap[3][tx + 1] = BGT_FLOOR;
+                        room_tilemap[4][tx] = BGT_FLOOR;
+                        room_tilemap[4][tx + 1] = BGT_FLOOR;
+                        idx = enemy_spawn(ENEMY_STONE_SENTINEL, tx, 3);
+                    }
                     if (idx != 0xFF) {
                         // Silhouette comes from the generated stage table —
                         // ONE source shared with tiles_load_miniboss, so art and

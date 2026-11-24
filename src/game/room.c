@@ -2014,6 +2014,17 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // still alive. This makes the room verb mechanical, not a label over
         // another extermination encounter.
         alive = dungeon_director_update(alive);
+        // A deep (or early) Warden room that empties without the tagged
+        // kill must not hold the sanctuary/progress door forever. The
+        // spawn-ensure path is the real fix; this bit is the last net.
+        if (!alive && !run_state.world_mode
+            && run_state.mission_ready == MISSION_GRAPH_READY) {
+            u8 wlocal = run_state_dungeon_local();
+            if (wlocal == run_state.mission_deep_warden_cell)
+                run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
+            else if (wlocal == run_state.mission_warden_cell)
+                run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+        }
         if (room_encounter_complete && room_combat_sealed) {
             u8 hunt_complete = room_encounter_kind == ENCOUNTER_HUNT;
             pickup_settle_pending_boon();

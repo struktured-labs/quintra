@@ -11,7 +11,9 @@ ENTITY_SIZE = 28
 ENT_ENEMY = 2
 EF_ACTIVE = 0x01
 ENEMY_STONE_SENTINEL = 1
+ENEMY_DREAD_BELL = 20
 ENEMY_STAGE_REAPER = 34
+ENEMY_AUX_BELLWARDEN = 0xB1
 WALKABLE = {1, 3, 7, 19, 20, 23, 31, 33, 34, *range(9, 19)}
 WORLD_EXT, WORLD_BOTTOM, WORLD_W, WORLD_H = map(addr, (
     "_room_world_extension", "_room_world_bottom",
@@ -53,21 +55,46 @@ def world_tiles(pb, compact):
     return result, width, height
 
 
+def active_enemies(pb):
+    found = []
+    for i in range(32):
+        ep = EN + i * ENTITY_SIZE
+        if pb.memory[ep] == ENT_ENEMY and pb.memory[ep + 1] & EF_ACTIVE:
+            found.append({
+                "ep": ep,
+                "id": pb.memory[ep + 17],
+                "hp": pb.memory[ep + 14],
+                "ai2": pb.memory[ep + 19],
+                "x": pb.memory[ep + 3],
+                "y": pb.memory[ep + 7],
+            })
+    return found
+
+
+def specialists_matching(pb, expected):
+    found = []
+    for enemy in active_enemies(pb):
+        if enemy["id"] != expected["id"]:
+            continue
+        if expected.get("ai2") is not None and enemy["ai2"] != expected["ai2"]:
+            continue
+        if enemy["hp"] < expected["hp"]:
+            continue
+        found.append(enemy["ep"])
+    return found
+
+
 def main():
     checked = []
-    expected = {"id": ENEMY_STONE_SENTINEL, "hp": 50, "name": "Sentinel"}
+    expected = {"id": ENEMY_STONE_SENTINEL, "hp": 50, "name": "Sentinel",
+                "ai2": None}
 
     def inspect(pb, tiles):
         tiles, width, height = world_tiles(pb, tiles)
-        specialists = []
-        for i in range(32):
-            ep = EN + i * ENTITY_SIZE
-            if (pb.memory[ep] == ENT_ENEMY and pb.memory[ep + 1] & EF_ACTIVE
-                    and pb.memory[ep + 17] == expected["id"]
-                    and pb.memory[ep + 14] >= expected["hp"]):
-                specialists.append(ep)
+        specialists = specialists_matching(pb, expected)
         assert len(specialists) == 1, (
-            f"expected one required {expected['name']}, got {len(specialists)}")
+            f"expected one required {expected['name']}, got {len(specialists)} "
+            f"enemies={[ (e['id'], e['hp'], e['ai2']) for e in active_enemies(pb) ]}")
         specialist = specialists[0]
         sx = (pb.memory[specialist + 3] + 4) // 8
         sy = (pb.memory[specialist + 7] + 4) // 8
@@ -89,7 +116,7 @@ def main():
                 (graph["warden"], ENEMY_STONE_SENTINEL, 50, "Sentinel"),
                 (graph["deep_warden"], ENEMY_STONE_SENTINEL, 50, "Sentinel"),
                 (15, ENEMY_STAGE_REAPER, 80, "Dread Reaper")):
-            expected.update(id=enemy_id, hp=hp, name=name)
+            expected.update(id=enemy_id, hp=hp, name=name, ai2=None)
             generated_room(0, seed, probe=inspect, local_room=local_room)
 
     # The natural trigger is a progressed revisit, not the numeric fallback.
@@ -109,13 +136,51 @@ def main():
         assert tiles.count(31) >= 6, (
             f"Reaper hunt lost its trapped spike jaws ({tiles.count(31)})")
 
-    expected.update(id=ENEMY_STAGE_REAPER, hp=80, name="Dread Reaper")
+    expected.update(id=ENEMY_STAGE_REAPER, hp=80, name="Dread Reaper", ai2=None)
     generated_room(0, 0x51A70000, probe=inspect_hunt, local_room=4,
                    pre_cross=progressed_backtrack)
 
     assert len(checked) == 49
     print(f"[miniboss-spawn-reach] PASS 32 Sentinels + 16 fallback Reapers "
           f"+ trapped backtrack hunt positions={checked}")
+
+    # Issue #229: stage 5 (index 4) seed 0x7B081BB4 deep-Warden cell 1 used
+    # to populate only a Mire Spore, never the required Sentinel, and the
+    # sanctuary door stayed locked. Replay that seed, then sweep Warden and
+    # deep-Warden cells across every stage.
+    def expect_for_stage(stage):
+        if stage >= 6:
+            return {"id": ENEMY_DREAD_BELL, "hp": 20, "name": "Bellwarden",
+                    "ai2": ENEMY_AUX_BELLWARDEN}
+        # Stage-scaled miniboss Sentinels stay well above the ordinary
+        # table HP. Stage 0's contract already uses 50; later stages are
+        # higher, never lower.
+        return {"id": ENEMY_STONE_SENTINEL, "hp": 50, "name": "Sentinel",
+                "ai2": None}
+
+    # Exact #229 repro (Easy Corvin run used this seed; generation is
+    # seed-stable and the Normal harness is enough to catch a missing body).
+    repro_seed = 0x7B081BB4
+    repro_stage = 4
+    repro_graph = mission_graph(dungeon_size(repro_stage), repro_seed, repro_stage)
+    assert repro_graph["deep_warden"] == 1, repro_graph
+    expected.update(**expect_for_stage(repro_stage))
+    generated_room(repro_stage, repro_seed, probe=inspect,
+                   local_room=repro_graph["deep_warden"])
+    print(f"[miniboss-spawn-reach] #229 repro seed={repro_seed:#x} "
+          f"stage={repro_stage} cell={repro_graph['deep_warden']} PASS")
+
+    sweep_n = 0
+    for stage in range(9):
+        expected.update(**expect_for_stage(stage))
+        for seed in range(0x51A70000, 0x51A70000 + 8):
+            graph = mission_graph(dungeon_size(stage), seed, stage)
+            for role in ("warden", "deep_warden"):
+                generated_room(stage, seed, probe=inspect,
+                               local_room=graph[role])
+                sweep_n += 1
+    print(f"[miniboss-spawn-reach] PASS {sweep_n} Warden/deep-Warden cells "
+          f"across 9 stages (8 seeds each)")
 
 
 if __name__ == "__main__":

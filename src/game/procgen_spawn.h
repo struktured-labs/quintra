@@ -10,5 +10,8 @@ void procgen_place_visible_puzzle_guard(void) BANKED;
 // Final terrain normalisation can close a false gap after population. Repair
 // any body whose complete footprint is no longer open before the LCD returns.
 void procgen_repair_enemy_spawns(void) BANKED;
+// After population, guarantee the tagged Warden / Bellwarden in its
+// required dungeon cell so a missed compact-plane spawn cannot soft-lock.
+void procgen_ensure_required_warden(void) BANKED;
 
 #endif
