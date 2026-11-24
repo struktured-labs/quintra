@@ -192,6 +192,13 @@ def main():
           f"stage={repro_stage} cell={repro_graph['deep_warden']} "
           f"+ clear-room net PASS")
 
+    # The live bug was an Easy Corvin run. Stage 4 Easy still keeps
+    # Sentinel HP well above 50 (base 50 + 25 + 4*14, then halved).
+    generated_room(repro_stage, repro_seed, probe=inspect,
+                   local_room=repro_graph["deep_warden"],
+                   difficulty="easy")
+    print(f"[miniboss-spawn-reach] #229 Easy repro PASS")
+
     sweep_n = 0
     for stage in range(9):
         expected.update(**expect_for_stage(stage))

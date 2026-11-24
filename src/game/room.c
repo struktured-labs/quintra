@@ -2013,17 +2013,26 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
         // while HOLD and ELITE can release the exits with optional enemies
         // still alive. This makes the room verb mechanical, not a label over
         // another extermination encounter.
-        alive = dungeon_director_update(alive);
-        // A deep (or early) Warden room that empties without the tagged
-        // kill must not hold the sanctuary/progress door forever. The
-        // spawn-ensure path is the real fix; this bit is the last net.
-        if (!alive && !run_state.world_mode
-            && run_state.mission_ready == MISSION_GRAPH_READY) {
-            u8 wlocal = run_state_dungeon_local();
-            if (wlocal == run_state.mission_deep_warden_cell)
-                run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
-            else if (wlocal == run_state.mission_warden_cell)
-                run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+        {
+            u8 raw_alive = alive;
+            alive = dungeon_director_update(alive);
+            // A deep (or early) Warden room that empties without the tagged
+            // kill must not hold the sanctuary/progress door forever. The
+            // spawn-ensure path is the real fix; this bit is the last net.
+            // Warden cells already skip director verbs, but still require a
+            // true empty room (pre- and post-director) and the same role
+            // exclusions as procgen_ensure_required_warden.
+            if (!raw_alive && !alive && !run_state.world_mode
+                && !RUN_ROOM_IS_TOWN(run_state.room_counter)
+                && !run_state_is_boss_room() && !run_state_is_shop()
+                && !run_state_is_sanctuary()
+                && run_state.mission_ready == MISSION_GRAPH_READY) {
+                u8 wlocal = run_state_dungeon_local();
+                if (wlocal == run_state.mission_deep_warden_cell)
+                    run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
+                if (wlocal == run_state.mission_warden_cell)
+                    run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+            }
         }
         if (room_encounter_complete && room_combat_sealed) {
             u8 hunt_complete = room_encounter_kind == ENCOUNTER_HUNT;

@@ -111,13 +111,13 @@ def ordinary_seed(stage, base, *cells):
 
 def generated_room(stage, seed=0xCAFE1234, screenshot=None, probe=None,
                    local_room=None, dungeon_phase=0, pre_cross=None,
-                   keep_running=False):
+                   keep_running=False, difficulty="normal"):
     # Enter through the real Riftwild gate, then cross one reciprocal maze
     # edge. BGT_PORTAL is a mission-branch traversal mechanic now (local
     # 2<->8), not a generic test-only "next room" shortcut.
     select_rom_topology(ROM)
     addrs = symbol_addresses(ROM)
-    pb, _ram, _entry = boot_to_stage(ROM, addrs, stage, "normal", 0)
+    pb, _ram, _entry = boot_to_stage(ROM, addrs, stage, difficulty, 0)
 
     # Mission and hidden-secret roles are seed-first. Choose a normal wide
     # court when callers want stage identity, while explicit role/fixture

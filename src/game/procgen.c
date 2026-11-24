@@ -303,6 +303,8 @@ static u8 spawn_reachable_enemy(u8 eid, u8 preferred_x, u8 preferred_y) {
 // conditional-flow precision when the full miniboss setup lives in that scope.
 void treasure_cache_prepare(void) BANKED;
 
+// Mirrored in procgen_warden.c (bank 16) for the post-population ensure
+// path. Bank 4 cannot grow enough to export this helper.
 static void configure_sentinel_miniboss(u8 idx, u8 stage) {
     static const u8 mb_pal[5] = { 0x06, 0x07, 0x00, 0x04, 0x03 };
     u8 mb_pow = (stage < 9) ? stage : 8;

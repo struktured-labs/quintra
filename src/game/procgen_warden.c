@@ -58,10 +58,44 @@ static void configure_bellwarden(u8 idx, u8 stage) {
 }
 
 static void carve_warden_apron(u8 tx, u8 ty) {
+    // (tx, ty) is on the compact 20x17 plane (same origin as the primary
+    // Sentinel spawn). procgen_repair_enemy_spawns runs before
+    // room_draw_tilemap, so writing room_tilemap here is the live collision
+    // and render source; the 31x31 extensions only store x>=20 / y>=17.
     room_tilemap[ty][tx]         = BGT_FLOOR;
     room_tilemap[ty][tx + 1]     = BGT_FLOOR;
     room_tilemap[ty + 1][tx]     = BGT_FLOOR;
     room_tilemap[ty + 1][tx + 1] = BGT_FLOOR;
+}
+
+static void evict_apron_occupants(u8 tx, u8 ty) {
+    u8 i;
+    i16 x0 = (i16)tx * 8;
+    i16 y0 = (i16)ty * 8;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        i16 ex, ey;
+        if (!(entities[i].flags & EF_ACTIVE) || entities[i].type != ENT_ENEMY)
+            continue;
+        ex = FIX8_TO_INT(entities[i].x);
+        ey = FIX8_TO_INT(entities[i].y);
+        if (ex < x0 + 16 && ex + 8 > x0 && ey < y0 + 16 && ey + 8 > y0)
+            entities[i].flags &= (u8)~EF_ACTIVE;
+    }
+}
+
+static void evict_one_non_warden(void) {
+    u8 i = MAX_ENTITIES;
+    while (i) {
+        i--;
+        if (!(entities[i].flags & EF_ACTIVE) || entities[i].type != ENT_ENEMY)
+            continue;
+        if (entities[i].ai_data[0] == ENEMY_STONE_SENTINEL) continue;
+        if (entities[i].ai_data[0] == ENEMY_DREAD_BELL
+            && entities[i].ai_data[2] == ENEMY_AUX_BELLWARDEN)
+            continue;
+        entities[i].flags &= (u8)~EF_ACTIVE;
+        return;
+    }
 }
 
 void procgen_ensure_required_warden(void) BANKED {
@@ -86,16 +120,26 @@ void procgen_ensure_required_warden(void) BANKED {
     if (required_warden_present()) return;
 
     // Authored Sentinel / Bellwarden origin. Column 9 is already a
-    // reserved N/S door lane, so a 2x2 here cannot block circulation.
+    // reserved N/S door lane on the compact plane, so a 2x2 here cannot
+    // block circulation. Matches the primary is_miniboss spawn exactly.
     tx = (u8)((ROOM_W / 2) - 1);
     ty = 3;
     carve_warden_apron(tx, ty);
+    evict_apron_occupants(tx, ty);
     stage = run_state.bosses_beaten;
     if (stage >= 6) {
         idx = enemy_spawn(ENEMY_DREAD_BELL, tx, ty);
+        if (idx == 0xFF) {
+            evict_one_non_warden();
+            idx = enemy_spawn(ENEMY_DREAD_BELL, tx, ty);
+        }
         if (idx != 0xFF) configure_bellwarden(idx, stage);
     } else {
         idx = enemy_spawn(ENEMY_STONE_SENTINEL, tx, ty);
+        if (idx == 0xFF) {
+            evict_one_non_warden();
+            idx = enemy_spawn(ENEMY_STONE_SENTINEL, tx, ty);
+        }
         if (idx != 0xFF) configure_sentinel_miniboss(idx, stage);
     }
 }
