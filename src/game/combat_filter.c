@@ -9,6 +9,20 @@
 
 // Shot box of the current player shot (combat.c, combat_load_shot_box).
 extern i16 shot_sx, shot_sy, shot_right, shot_bottom;
+extern u8 shot_sx_b, shot_sy_b, shot_right_b, shot_bottom_b, shot_box_wide;
+
+// A resolved stroke leaves this hurtbox in WRAM. Discard it at the end of
+// combat_resolve so a later overlap cannot chip a body with an unplaced
+// shot (impact at 0,0, damage 0 becoming 1). right/bottom at I16_MIN makes
+// (right <= x) true for every i16 body, including those that straddle 0.
+// Lives in this bank so the call from combat_resolve is a real side effect.
+void combat_reset_shot_box(void) BANKED {
+    shot_sx = shot_sy = 0;
+    shot_right = shot_bottom = (i16)-0x8000;
+    shot_sx_b = shot_sy_b = 0;
+    shot_right_b = shot_bottom_b = 0;
+    shot_box_wide = 0;
+}
 
 // Next slot >= start that the cutting player shot `i` may act on: an
 // on-screen enemy or a hostile shot whose box overlaps (exact SHOT_MISSES),

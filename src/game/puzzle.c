@@ -257,6 +257,13 @@ static void prepare_phase_switch(u8 bit, u32 seed) {
     // Body-width cardinal lanes so every authored graph edge stays usable.
     floor_rect(1, 7, ROOM_W - 2, 3);
     floor_rect(9, 1, 3, ROOM_H - 2);
+    // North plates sit at (4,7) and (12,7). puzzle_update_player samples
+    // (player.x+8, player.y+12), so the 12px feet box occupies the row
+    // above those tiles. KEEP's portcullis is authored on row 6 and used
+    // to leave both north plates unreachable on foot (#235). Clear a
+    // body-wide apron there; the south plates already sit on the road.
+    floor_rect(3, 6, 3, 1);
+    floor_rect(11, 6, 3, 1);
     room_puzzle_visual_y = 8;
     room_puzzle_phase_bit = bit;
     /* Fold the 32-bit seed here so the banked prepare does not pay
