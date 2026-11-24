@@ -67,19 +67,9 @@ def body_ok(tiles, x, y):
     )
 
 
-def flood_from_doors(tiles):
-    """Body positions reachable from any compact door apron."""
-    starts = {(10, 1), (19, 9), (10, 16), (1, 9)}
-    for y in range(ROOM_H):
-        for x in range(ROOM_W):
-            if tile(tiles, x, y) != BGT_DOOR:
-                continue
-            for bx, by in ((x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)):
-                if body_ok(tiles, bx, by):
-                    starts.add((bx, by))
-    starts = {pos for pos in starts if body_ok(tiles, *pos)}
-    seen = set(starts)
-    todo = deque(starts)
+def flood_from(tiles, starts):
+    seen = {pos for pos in starts if body_ok(tiles, *pos)}
+    todo = deque(seen)
     while todo:
         x, y = todo.popleft()
         for nx, ny in ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)):
@@ -87,6 +77,27 @@ def flood_from_doors(tiles):
                 seen.add((nx, ny))
                 todo.append((nx, ny))
     return seen
+
+
+def door_starts(tiles):
+    """Body positions whose 2x2 includes a real door, plus wide-court seams.
+
+    Wide 31x31 courts turn the compact east/south edges into interior floor
+    (not BGT_DOOR); those two seams are valid approaches. Hardcoded cardinal
+    aprons are not used unless they are actually walkable.
+    """
+    starts = set()
+    for y in range(ROOM_H):
+        for x in range(ROOM_W):
+            if tile(tiles, x, y) != BGT_DOOR:
+                continue
+            for bx, by in ((x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)):
+                if body_ok(tiles, bx, by):
+                    starts.add((bx, by))
+    for pos in ((19, 9), (10, 16)):
+        if body_ok(tiles, *pos):
+            starts.add(pos)
+    return starts
 
 
 def row_slice(tiles, y, x0=0, x1=17):
@@ -107,11 +118,20 @@ def assert_plates_reachable(label, pb, tiles, expected=None):
     if expected is not None:
         assert plates == list(expected), (
             f"{label}: plate positions {plates} != {list(expected)}")
-    reachable = flood_from_doors(tiles)
-    missing = [plate for plate in plates if plate not in reachable]
-    if missing:
+    starts = door_starts(tiles)
+    assert starts, f"{label}: no walkable door or wide-court seam to start from"
+    from_doors = flood_from(tiles, starts)
+    missing = [plate for plate in plates if plate not in from_doors]
+    from_first = flood_from(tiles, [plates[0]])
+    stranded = [plate for plate in plates[1:] if plate not in from_first]
+    if missing or stranded:
+        why = []
+        if missing:
+            why.append(f"unreachable from doors: {missing}")
+        if stranded:
+            why.append(f"not connected to plate {plates[0]}: {stranded}")
         raise AssertionError(
-            f"{label}: plates {missing} unreachable on foot "
+            f"{label}: {' / '.join(why)} "
             f"(kind={kind}, plates={plates})\n"
             f"  row 5: {row_slice(tiles, 5)}\n"
             f"  row 6: {row_slice(tiles, 6)}\n"
