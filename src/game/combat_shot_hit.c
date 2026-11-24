@@ -96,7 +96,7 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     // strike a different enemy farther down the same lane.
     if (PROJ_IS_WOLFKIN_BLADE(shot)
         || shot->ai_data[6] == PROJ_AUX_SWORD_BEAM) {
-        if (PROJ_IS_WOLFKIN_BLADE(shot)
+        if (shot->ai_data[6] != PROJ_AUX_SWORD_BEAM
             && !wolfkin_sword_live(shot)) return 0;
         if (wolfkin_sword_already_hit(j)) return 0;
     }

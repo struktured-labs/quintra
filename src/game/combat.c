@@ -366,9 +366,7 @@ u8 shot_targets[MAX_ENTITIES];
 u8 shot_list_n;
 static u8 shot_list_ready;
 
-// Defined in combat_filter.c (bank 23) so SDCC cannot delete the stores
-// as dead at the end of combat_resolve.
-void combat_reset_shot_box(void) BANKED;
+/* combat_reset_shot_box is declared in combat.h and defined in bank 23. */
 
 #define SHOT_MISSES(ej) ( \
     shot_right <= (ej)->x \

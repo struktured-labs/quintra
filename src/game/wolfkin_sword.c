@@ -225,7 +225,6 @@ u8 wolfkin_beam_spawn(i16 x, i16 y, u8 dir, u8 dmg, u8 ttl, u8 aux) BANKED {
     e->hitbox = 0x88;
     e->damage = dmg;
     e->ai_data[1] = 1;
-    e->ai_data[2] = 1; /* physical: do not retile as a shimmering bullet */
     e->ai_data[6] = aux;
     e->ai_data[5] = 0xFF;
     if (dx < 0) e->ai_data[4] |= PROJ_VIS_FLIP_X;
