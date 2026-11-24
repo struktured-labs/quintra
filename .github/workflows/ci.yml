@@ -191,6 +191,9 @@ jobs:
         if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_puzzles.py
 
+      - name: PyBoy plate reachability (Aether row and rune-sequence, feet flood-fill)
+        run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_plate_reachability.py
+
       - name: PyBoy Cinder Rex pose
         if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_rex_pose.py

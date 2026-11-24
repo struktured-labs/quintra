@@ -36,6 +36,14 @@ extern u8 g_fang_claw;
 // Picsean Tide Vortex damage carrier: inert to the shot sweep.
 #define PROJ_AUX_VORTEX       0xF0
 #define PROJ_AUX_WOLFKIN_FANG 0xF1
+/* Travelling Wolfkin PROJ_SPIKE shots (Will wave, Howl, Moonfang
+ * lanes) share the FANG aux so the two-body cleave still applies.
+ * ai_data[7] bit 6 marks them as travel; parented Longblade segments
+ * leave that bit clear and stash facing in the low bits instead.
+ */
+#define PROJ_FANG_TRAVEL 0x40
+#define PROJ_IS_WOLFKIN_BLADE(e) \
+    ((e)->ai_data[6] == PROJ_AUX_WOLFKIN_FANG && !((e)->ai_data[7] & PROJ_FANG_TRAVEL))
 /* Below HOOKSHOT (0xF5) so beams use the ordinary shot path. */
 #define PROJ_AUX_SWORD_BEAM    0xEE
 #define PROJ_AUX_SWORD_PU      0xED
