@@ -96,6 +96,7 @@ jobs:
             scripts/test_suspend.py
 
       - name: Link ROM
+        id: link_rom
         run: |
           set -euo pipefail
           make gen
@@ -104,18 +105,22 @@ jobs:
           sha256sum rom/working/quintra.gbc
 
       - name: PyBoy new game and Continue start, all heroes and boot paths (room, spawn, music, vignette champion)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_new_game_start.py
 
       - name: PyBoy new specialists (Wizrobe, Hand, Brute, Dart, Leybeam, Fuse Hurler)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: |
           for t in veil_magus hex_walker vault_hand bane_brute zag_dart leybeam fuse_hurler confusion_fx; do
             uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_$t.py
           done
 
       - name: PyBoy room performance (CGB double-speed)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_performance.py
 
       - name: Balance smoke (stage 3 Colossus win rate, status-death share; average tier)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: |
           set -euo pipefail
           luac -p scripts/quintra_human_model.lua scripts/quintra_balance_bot.lua
@@ -133,6 +138,7 @@ jobs:
           cat tmp/balance-ci/report/report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Room status smoke (stage 3 rooms incl. Cinder, status-death lift; average tier)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: |
           set -euo pipefail
           export PYTHONPATH="$PWD/scripts/quintra_sitecustomize" QUINTRA_STATE_WAIVE_CHECKS=marked_gate
@@ -146,153 +152,203 @@ jobs:
           cat tmp/balance-ci/rooms-report/rooms-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: PyBoy suspend power-cycle
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_suspend.py
 
       - name: PyBoy title sprite leak
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_title_sprite_leak.py
 
       - name: PyBoy title cold OBJ palettes
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_title_cold_obj_palettes.py
 
       - name: PyBoy persistent eight-way aim
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_persistent_aim.py
 
       - name: PyBoy Mire Heart roots
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_mire_roots.py
 
       - name: PyBoy secret door seal
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_secret_door_seal.py
 
       - name: PyBoy heart HUD
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_heart_hud.py
 
       - name: PyBoy mid-room palette heal
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_palette_heal.py
 
       - name: PyBoy puzzle final note
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_puzzle_note.py
 
       - name: PyBoy puzzle contracts (rune plate art, colours, pressed state)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_puzzles.py
 
       - name: PyBoy Cinder Rex pose
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_rex_pose.py
 
       - name: PyBoy bigger Cinder Rex and fire pools
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_big.py
 
       - name: PyBoy Cinder Rex late-fight armor feedback
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_cinder_absorb.py
 
       - name: PyBoy dialogue radius
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_dialogue_radius.py
 
       - name: PyBoy merchant counter reach
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_merchant_counter.py
 
       - name: PyBoy companion greeting
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_companion_greeting.py
 
       - name: PyBoy merchant stock
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_merchant_stock.py
 
       - name: PyBoy merchant Compass marks
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_merchant_map.py
 
       - name: PyBoy Wolfkin Will wave
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_wolfkin_will_wave.py
 
       - name: PyBoy Wolfkin Longblade (slash, stab, beam, formation shots)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_wolfkin_longsword.py
 
       - name: PyBoy per-hero identity ailment resists
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_class_status_resist.py
 
       - name: PyBoy Picsean Tide Vortex
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_picsean_tide_vortex.py
 
       - name: PyBoy max-Will v2 arts
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_will_max_v2.py
 
       - name: PyBoy crystal cluster
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_crystal_cluster.py
 
       - name: PyBoy Rift Wild label
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_riftwild_label.py
 
       - name: PyBoy Riftwild dens
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_riftwild_dens.py
 
       - name: PyBoy secret merchants (Veil vaults and Riftwild caves)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_secret_merchants.py
 
       - name: PyBoy suspend layout compatibility
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_sram_compat.py
 
       - name: PyBoy Riftwild set pieces and tile art
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_setpiece.py
 
       - name: PyBoy Riftwild tiles (no orphan quarters, open calm fields)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_tiles.py
 
       - name: Stage vignette data is current
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with numpy --with pillow python scripts/gen_vignettes.py --check
 
       - name: Stage vignette play, skip, once, CUTSCENES OFF (headless)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow --with numpy python scripts/test_stage_vignettes.py
 
       - name: Lore intro data is current
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with numpy --with pillow python scripts/gen_intro.py --check
 
       - name: Lore intro skip and attract mode (idle, exit, no SRAM writes, demo replay)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_attract_mode.py
 
       - name: WATCH INTRO on the records page (play, A/B/START skip, back to records)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_watch_intro.py
 
       - name: PyBoy Riftwild mission pull (Warden, then gate)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_mission.py
 
       - name: PyBoy Riftwild field density
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_density.py
 
       - name: PyBoy Crystal Colossus pose
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_crystal_pose.py
 
       - name: PyBoy Sun Golem pose
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_golem_pose.py
 
       - name: PyBoy Void Lord pose
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_void_pose.py
 
       - name: PyBoy Serpent jaw
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_serpent_jaw.py
 
       - name: PyBoy Serpent plated tail shield
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_serpent_tail_shield.py
 
       - name: PyBoy Reaper pose
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_reaper_pose.py
 
       - name: PyBoy Sun Lattice Hookshot and Morningstar
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_sun_lattice_tools.py
 
       - name: PyBoy Will-scaled Morningstar and Boomerang
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_will_b_weapons.py
 
       - name: Headless mGBA smoke
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: bash scripts/test_smoke.sh rom/working/quintra.gbc
 
       - name: Hexa Dragmar
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_dragmar.py
 
       - name: Hexa Dragmar body art
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hexa_body_art_and_contrast.py
 
       - name: PyBoy B-item icon picker and equipped-B HUD
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_b_item_picker.py
 
       - name: PyBoy pickup notices (every pickup names its effect)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: |
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_notices.py
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_stat_max_pickup.py
@@ -300,15 +356,19 @@ jobs:
           uv run --quiet --with "pyboy==2.7.0" python scripts/test_pickup_feedback.py
 
       - name: PyBoy temporary power-ups
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_powerups.py
 
       - name: PyBoy boss drop persist
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_boss_drop_persist.py
 
       - name: PyBoy water ride (Tide Raft and Picsean swim)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_water_ride.py
 
       - name: PyBoy status effects (no DoT death, notices, Antidote cures)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: |
           mkdir -p tmp
           uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_status_floor.py
@@ -316,6 +376,7 @@ jobs:
           uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_trader_wares.py
 
       - name: PyBoy seeded-room fixtures (archetypes, spinners, Cinder Maw, Farfold Cache)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: |
           mkdir -p tmp
           for t in stage_archetypes bramble_sprite sunwheel void_halo medium_cinder farfold_cache; do
@@ -323,6 +384,7 @@ jobs:
           done
 
       - name: Upload ROM
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: quintra-gbc
@@ -331,6 +393,23 @@ jobs:
             rom/working/quintra.gbc
             rom/working/quintra.map
             rom/working/quintra.noi
+
+      - name: Cart smoke summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo '## Cart smoke'
+            echo
+            echo 'Every contract after Link ROM now runs even if an earlier'
+            echo 'one failed, so a known red step cannot hide later regressions.'
+            echo 'This job stays red if any of those steps failed.'
+            echo
+            echo "- Link ROM: ${{ steps.link_rom.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.link_rom.outcome }}" != "success" ]; then
+            echo 'Link ROM did not succeed; later contracts were skipped.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   desktop:
     name: Desktop wrapper (Electron, Windows + Linux)
