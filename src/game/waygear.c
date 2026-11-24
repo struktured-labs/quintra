@@ -92,4 +92,8 @@ void waygear_prepare_world_field(void) BANKED {
         && run_state_riftwild_gate_active(screen)
         && !(player.waygear_owned & WAYGEAR_BIT(WAYGEAR_WORLDGLASS)))
         pickup_spawn_waygear(WAYGEAR_WORLDGLASS, FIX8(120), FIX8(40));
+    // procgen calls this after entity_init_room(), so the new field spawn
+    // is already at player.x/y. Snap an embedded 16x16 body off solid
+    // climate or set-piece tiles before encounters are placed (#236).
+    room_player_nudge_to_clear();
 }

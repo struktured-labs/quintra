@@ -121,6 +121,9 @@ u8 room_player_position_clear(i16 x, i16 y) BANKED;
 void room_player_corner_slide(i8 dx, i8 dy) BANKED;
 // Move a spike-hit champion to an immediately adjacent safe body position.
 void room_stumble_off_hazard(void) BANKED;
+// If the current body pose is embedded, snap to the nearest clear 16x16
+// footprint (then the trail cross). Used after a room spawn.
+void room_player_nudge_to_clear(void) BANKED;
 // 1 if the tile id is walkable / passable for entities+bullets.
 u8 room_tile_walkable(u8 t) NONBANKED;
 // A player shot hit a cracked wall: convert it to a secret door.

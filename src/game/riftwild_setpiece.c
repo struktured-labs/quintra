@@ -262,14 +262,19 @@ static u8 soft(u8 t, u8 base) {
 // stamp is never half-overwritten (its bank-1 art would then sit on the
 // wrong collision). A den field carves its 7x7 clearing at (21..27,
 // 19..25) and an approach down x 9..10 / along y 21..22 after this pass
-// (riftwild_den_stamp_field); field 0 keeps its boss-exit landing apron.
+// (riftwild_den_stamp_field); fields 0, 8 and 21 keep the boss-exit apron.
 // Reserved cells are also never cleared as part of a ring.
 static u8 den_here;
 static u8 cave_here;   // cave-merchant footprint (secret_merchant.c)
 
 static u8 reserved(u8 x, u8 y) {
     u8 i;
-    if (run_state.world_screen == 0 && y <= 6 && x >= 6 && x <= 13)
+    // Return landings (screens 0, 8, 21): keep the north apron and the
+    // path down to the trail cross, where DIR_NONE spawns at (72, 60).
+    if ((run_state.world_screen == 0 || run_state.world_screen == 8
+            || run_state.world_screen == 21)
+        && ((y <= 6 && x >= 6 && x <= 13)
+            || (y <= 11 && x >= 8 && x <= 11)))
         return 1;
     // Placed stamps (and a one-tile margin) are never overdrawn by scatter:
     // a grove written over a column stamp left the stamp art on tree cells.
