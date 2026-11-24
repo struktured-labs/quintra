@@ -201,6 +201,35 @@ def test_beam_only_at_full_hearts_and_no_double_hit():
         pb.stop(save=False)
 
 
+SPR_SWORD_BEAM_TILE = 175  # SPR_SWORD_BASE 160 + 15
+
+
+def test_beam_keeps_sword_beam_tile():
+    """#211: the live beam must keep SPR_SWORD_BEAM_TILE, not SPR_BULLET."""
+    pb = boot(0)
+    try:
+        clear_arena(pb)
+        drop_hp(pb, full=True)
+        fire_a(pb, direction="right", ticks=4)
+        beams = [e for e in shots(pb) if pb.memory[e + ent_off("ai6")] == AUX_BEAM]
+        assert beams, "no sword beam at full hearts"
+        tiles = set()
+        seen = 0
+        # TTL is 36 frames; stay well under so the beam remains live.
+        for _ in range(30):
+            live = [e for e in shots(pb) if pb.memory[e + ent_off("ai6")] == AUX_BEAM]
+            if not live:
+                break
+            seen += 1
+            tiles |= {pb.memory[e + ent_off("tile")] for e in live}
+            pb.tick(1)
+        assert seen >= 10, f"beam despawned too soon ({seen} frames)"
+        assert tiles == {SPR_SWORD_BEAM_TILE}, (
+            f"beam tiles drifted from {SPR_SWORD_BEAM_TILE}: {sorted(tiles)}")
+    finally:
+        pb.stop(save=False)
+
+
 def test_formation_grants_projectiles():
     pb = boot(0)
     try:
@@ -413,10 +442,11 @@ def main():
     test_adjacent_crystal_shatters()
     test_stab_reach_and_damage()
     test_beam_only_at_full_hearts_and_no_double_hit()
+    test_beam_keeps_sword_beam_tile()
     test_formation_grants_projectiles()
     test_sword_sprite_reach()
     test_attract_sword_sprite_reach()
-    print("[wolfkin-longsword] PASS slash diag, stab 9/reach, beam latch, formation beams, sprite reach, attract reach")
+    print("[wolfkin-longsword] PASS slash diag, stab 9/reach, beam latch, beam tile, formation beams, sprite reach, attract reach")
 
 
 if __name__ == "__main__":

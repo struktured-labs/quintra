@@ -171,6 +171,12 @@ def main():
             clear_enemy_shots(pb)
             pb.tick()
             assert pb.memory[PL + 2] == after, 'roots hit twice in one cast'
+        # The wither overlay is committed at the start of the next LCD
+        # frame. One settle tick avoids reading mid-transfer empty VRAM
+        # (same pit as the growth paint at u=72). A banked shot-box reset
+        # at the end of combat_resolve can shift that transfer so this
+        # read would otherwise see the floor tile (#234).
+        pb.tick()
         assert bg(pb, *hazard) != pb.memory[TM + hazard[1] * 20 + hazard[0]]
         assert pb.memory[TM + hazard[1] * 20 + hazard[0]] in (1, 19, 20), \
             'root wrote the logical tilemap'

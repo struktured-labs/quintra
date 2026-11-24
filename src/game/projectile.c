@@ -155,6 +155,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
         && player.starter_weapon == classes[0].starter_weapon) {
         e->ai_data[5] = 0xFF;
         e->ai_data[6] = PROJ_AUX_WOLFKIN_FANG;
+        /* Assign, do not OR: a recycled slot must not keep dir/slash bits. */
+        e->ai_data[7] = PROJ_FANG_TRAVEL;
     }
     if ((kind == PROJ_SPIKE && player.class_id == 0
             && player.starter_weapon == classes[0].starter_weapon)
@@ -186,8 +188,12 @@ static u8 projectile_update_player(entity_t *e, u8 idx) {
     }
 
     // Ordinary player bullets shimmer; melee arcs and beams stay solid.
-    // Spells animate their own art (magic.c).
+    // Spells animate their own art (magic.c). Sword beams keep their
+    // bank-1 tile; a missed physical flag used to retile them as SPR_BULLET
+    // and draw blank/garbage VRAM (#211).
     if (e->ai_data[2] == 0 && !(e->ai_data[3] & PROJ_FLAG_BEAM)
+        && e->ai_data[6] != PROJ_AUX_SWORD_BEAM
+        && e->ai_data[6] != PROJ_AUX_SWORD_PU
         && !MAGIC_IS_SHOT(e)) {
         e->ai_data[0] = (u8)(e->ai_data[0] + 1);
         e->sprite_tile = (u8)((e->ai_data[0] & 0x02)
@@ -215,9 +221,11 @@ void projectile_update_one(entity_t *e, u8 idx) {
     }
     if (e->state_timer == 0) { entity_kill(idx); return; }
     e->state_timer--;
-    if ((flags & EF_PLAYER_PROJ) && e->ai_data[6] == PROJ_AUX_WOLFKIN_FANG) {
+    if ((flags & EF_PLAYER_PROJ) && PROJ_IS_WOLFKIN_BLADE(e)) {
         /* Parented longsword: re-anchor without a traveling wall despawn.
-         * Crystal / pot / vane touches live in wolfkin_sword_update. */
+         * Crystal / pot / vane touches live in wolfkin_sword_update.
+         * Will wave / Howl / Moonfang spikes keep the FANG aux but are
+         * marked PROJ_FANG_TRAVEL so they keep moving and keep their art. */
         wolfkin_sword_update(e);
         return;
     }
