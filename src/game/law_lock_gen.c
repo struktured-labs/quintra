@@ -12,6 +12,10 @@
 // reachable: no state can softlock, including a suspend/reload.
 
 #include "game/law_lock.h"
+#ifndef LL_HOST
+#include "game/run_state.h"
+#include "game/mission_graph.h"
+#endif
 
 u8 ll_size;
 u8 ll_nb[LL_CELLS][4];
@@ -74,6 +78,30 @@ u8 ll_edge_open(u8 cell, u8 dir, u8 state) LL_BANKED {
     if (g == LL_NONE) return 1;
     return (ll_gate_open[g] == state) ? 1 : 0;
 }
+
+
+#ifndef LL_HOST
+extern u32 law_lock_seed;
+extern u8 law_lock_tag;
+
+// true when the cached gate/altar graph still matches this stage's missions.
+// law_lock.c used to key only on seed+bosses, so a generate that ran before
+// roles were filled could pin an altar on the waystone (issue #233).
+u8 law_lock_cache_hit(void) LL_BANKED {
+    mission_graph_ensure();
+    if (law_lock_tag != (u8)(run_state.bosses_beaten + 1)) return 0;
+    if (law_lock_seed != run_state.run_seed) return 0;
+    if (ll_role[0] != run_state.mission_trial_cell) return 0;
+    if (ll_role[1] != run_state.mission_sigil_cell) return 0;
+    if (ll_role[2] != run_state.mission_warden_cell) return 0;
+    if (ll_role[3] != run_state.mission_waystone_cell) return 0;
+    if (ll_role[4] != run_state.mission_deep_warden_cell) return 0;
+    if (ll_role[5] != run_state.mission_deep_switch_cell) return 0;
+    if (ll_role[6] != run_state.mission_deep_gate_cell) return 0;
+    return 1;
+}
+
+#endif
 
 u8 ll_is_altar(u8 cell) LL_BANKED {
     u8 i;

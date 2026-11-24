@@ -26,14 +26,12 @@ u8 law_lock_has_altar;
 u8 law_lock_altar_x;
 u8 law_lock_altar_y;
 
-static u32 law_lock_seed;
-static u8 law_lock_tag;   // bosses_beaten + 1; 0 = nothing cached
+u32 law_lock_seed;
+u8 law_lock_tag;   // bosses_beaten + 1; 0 = nothing cached
 
 void law_lock_ensure(void) BANKED {
     u8 c, d, mix;
-    if (law_lock_tag == (u8)(run_state.bosses_beaten + 1)
-        && law_lock_seed == run_state.run_seed) return;
-    mission_graph_ensure();
+    if (law_lock_cache_hit()) return;
     ll_size = run_state_dungeon_size();
     if (ll_size > LL_CELLS) ll_size = LL_CELLS;
     for (c = 0; c < ll_size; ++c)
@@ -137,6 +135,8 @@ void law_lock_apply_room(u8 live) BANKED {
     if (!ll_is_altar(cell)) return;
     // The altar stands three tiles inside the room's first real doorway
     // (W, N, E, S), on a carved body-wide apron so it is always reachable.
+    // A seed+tag-only cache used to keep a stale altar on the waystone
+    // and flatten a Prism orb with this apron (issue #233).
     for (d = 0; d < 4; ++d) {
         static const u8 pref[4] = { DIR_W, DIR_N, DIR_E, DIR_S };
         u8 dir = pref[d], step;

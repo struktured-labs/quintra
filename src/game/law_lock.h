@@ -78,6 +78,7 @@ extern u8 law_lock_altar_y;
         || ((tile) == BGT_SWITCH && law_lock_has_altar)) \
         ? law_lock_attr_at((x), (y)) : 0xFF)
 void law_lock_ensure(void) BANKED;
+u8 law_lock_cache_hit(void) LL_BANKED;
 u8 law_lock_active(void) BANKED;
 u8 law_lock_cell_is_altar(u8 cell) BANKED;
 // Paint (or repaint live) the current room's gated doorways.
