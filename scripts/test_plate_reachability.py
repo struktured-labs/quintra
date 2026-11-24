@@ -14,11 +14,13 @@ from pathlib import Path
 
 from quintra_topology import (
     PUZZLE_RUNE_SEQUENCE,
+    STAGE_START,
     dungeon_size,
     mission_graph,
     puzzle_slot_kind,
 )
-from test_stage_archetypes import generated_room, addr, RS
+from test_stage_archetypes import generated_room, addr, RS, PL, put16
+import test_stage_archetypes as tsa
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = Path(os.environ.get("QUINTRA_TEST_ROM", ROOT / "rom/working/quintra.gbc"))
@@ -53,6 +55,53 @@ class MismatchedRole(Exception):
     def __init__(self, cell):
         super().__init__(f"rom role cell is {cell}")
         self.cell = cell
+
+
+def load_room(stage, seed, local_room, probe):
+    """Enter a puzzle room and pin the body so settle cannot recross a door.
+
+    Wide courts can leave the fixture standing on a compact seam. The
+    30-frame settle window is long enough to walk into a neighbor, which
+    is what dropped stage 5 seed 0xCAFE1235 out of its deep-switch cell.
+    """
+    expected = STAGE_START[stage] + local_room
+    orig = tsa.wait_for_generated_room
+
+    def pinned(pb):
+        for button in ("up", "down", "left", "right"):
+            pb.button_release(button)
+
+        def pin():
+            if pb.memory[RS + 1] == expected:
+                put16(pb, PL + 9, 80)
+                put16(pb, PL + 11, 72)
+
+        # Room entry re-places the body on the incoming door; a 31x31
+        # compact seam can then walk us into a neighbor during settle.
+        # Re-center around every tick so the fixture stays in-room.
+        orig_tick = pb.tick
+
+        def tick(*args, **kwargs):
+            pin()
+            result = orig_tick(*args, **kwargs)
+            pin()
+            return result
+
+        pb.tick = tick
+        try:
+            tiles = orig(pb)
+        finally:
+            pb.tick = orig_tick
+        assert pb.memory[RS + 1] == expected, (
+            f"left room {expected} during settle; now {pb.memory[RS + 1]}")
+        return tiles
+
+    tsa.wait_for_generated_room = pinned
+    try:
+        return generated_room(stage, seed=seed, local_room=local_room,
+                              probe=probe)
+    finally:
+        tsa.wait_for_generated_room = orig
 
 
 # #235 repros: Easy Corvin seeds on stage 6 (KEEP) where both north plates
@@ -209,14 +258,12 @@ def main():
 
         try:
             try:
-                generated_room(stage, seed=seed, local_room=wanted[0],
-                               probe=probe)
+                load_room(stage, seed, wanted[0], probe)
             except MismatchedRole as mismatch:
                 label = f"{label} (rom cell {mismatch.cell})"
                 print(f"[plate-reach] retry {label}", flush=True)
                 wanted[0] = mismatch.cell
-                generated_room(stage, seed=seed, local_room=wanted[0],
-                               probe=probe)
+                load_room(stage, seed, wanted[0], probe)
         except Exception as exc:
             failed.append(f"{label}: {exc}")
             print(f"[plate-reach] FAIL {label}: {exc}", flush=True)
