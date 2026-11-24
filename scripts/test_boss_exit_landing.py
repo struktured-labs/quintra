@@ -115,7 +115,9 @@ def hero_can_walk(pyboy, addrs: dict[str, int]) -> tuple[bool, int, int]:
         finally:
             pyboy.button_release(button)
         pyboy.tick(2)
-        if get16(pyboy, player + 9) != x0 or get16(pyboy, player + 11) != y0:
+        dx = abs(get16(pyboy, player + 9) - x0)
+        dy = abs(get16(pyboy, player + 11) - y0)
+        if dx + dy >= 8:
             return True, x0, y0
     return False, x0, y0
 
@@ -123,7 +125,7 @@ def hero_can_walk(pyboy, addrs: dict[str, int]) -> tuple[bool, int, int]:
 def assert_source_contracts(root: Path) -> None:
     room = (root / "src/game/room.c").read_text()
     setpiece = (root / "src/game/riftwild_setpiece.c").read_text()
-    world = (root / "src/game/room_world.c").read_text()
+    world = (root / "src/game/riftwild_phase.c").read_text()
     waygear = (root / "src/game/waygear.c").read_text()
     assert "from_boss_world ? DIR_NONE : dir" in room, \
         "boss-to-world exits must drop entered_from so the center landing is used"
@@ -175,9 +177,19 @@ def main() -> None:
                         cases += 1
                 finally:
                     pyboy.stop(save=False)
+    # Later-act returns reuse screens 0/8/21 in regions 1 and 2.
+    for after_stage in (4, 7):
+        for class_id, champion in enumerate(CHAMPIONS):
+            pyboy, _ram, _room = boot_to_stage(
+                ROM, addrs, after_stage, "easy", class_id)
+            try:
+                run_case(pyboy, addrs, after_stage, DIR_W, REPRO_SEED, champion)
+                cases += 1
+            finally:
+                pyboy.stop(save=False)
     print(f"[boss-exit-landing] PASS {cases} arrivals "
           f"(5 heroes × 4 doors on seed {REPRO_SEED} after stage 2; "
-          f"west+south on stages 1-3 × 2 seeds)")
+          f"west+south on stages 1-3 × 2 seeds; west after stages 4 and 7)")
 
 
 if __name__ == "__main__":

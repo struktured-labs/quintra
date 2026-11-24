@@ -273,3 +273,47 @@ u8 riftwild_claim_hollow_relic(u8 item_id, u8 claim_bit) BANKED {
     room_refresh_player_appearance(1);
     return 1;
 }
+
+void room_player_nudge_to_clear(void) BANKED {
+    i16 old_x = player.x, old_y = player.y;
+    i16 base_x, base_y;
+    i8 radius, dx, dy;
+    if (room_player_position_clear(old_x, old_y)) return;
+    // Snap the search to the 8px grid. A pose such as y=60 (60%8==4) has a
+    // 16px body that straddles three tile rows; stepping in 8px from there
+    // never tests a 2-row trail at y=64.
+    base_x = (i16)((old_x + 4) & (i16)~7);
+    base_y = (i16)((old_y + 4) & (i16)~7);
+    if (room_player_position_clear(base_x, base_y)) {
+        player.x = (ppos_t)base_x;
+        player.y = (ppos_t)base_y;
+        return;
+    }
+    for (radius = 1; radius <= 12; ++radius) {
+        for (dy = (i8)-radius; dy <= radius; ++dy) {
+            for (dx = (i8)-radius; dx <= radius; ++dx) {
+                i8 ax = dx < 0 ? (i8)-dx : dx;
+                i8 ay = dy < 0 ? (i8)-dy : dy;
+                i16 x, y;
+                if ((i8)(ax + ay) != radius) continue;
+                x = base_x + (i16)dx * 8;
+                y = base_y + (i16)dy * 8;
+                if (room_player_position_in_bounds(x, y)
+                    && room_player_position_clear(x, y)) {
+                    player.x = (ppos_t)x;
+                    player.y = (ppos_t)y;
+                    return;
+                }
+            }
+        }
+    }
+    if (room_player_position_clear(72, 60)) {
+        player.x = 72;
+        player.y = 60;
+        return;
+    }
+    if (room_player_position_clear(72, 64)) {
+        player.x = 72;
+        player.y = 64;
+    }
+}
