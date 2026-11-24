@@ -1154,6 +1154,10 @@ void procgen_generate_room_body(void) BANKED {
         waygear_prepare_world_field();
     if (run_state.world_mode)
         riftwild_prepare_hollow_field();
+    // Boss-to-world and other spawns can still land a 16x16 body on solid
+    // climate or set-piece tiles. Snap to a clear footprint before
+    // encounters are placed around the (possibly moved) hero (#236).
+    room_player_nudge_to_clear();
 
     // The Riftwild already contains distant arches, a Farfold staircase,
     // permanent traversal gear, and a one-use regional vault. Witnesses make

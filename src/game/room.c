@@ -2256,6 +2256,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
             || room_world_height > ROOM_VIEW_H_PX);
         u8 source_world_mode = run_state.world_mode;
         u8 seamless_wide = 0;
+        u8 from_boss_world = 0;
         if (player.y <= 0) {
             dir = DIR_N; tx = (u8)((player.x + 8) >> 3); ty = 0;
         } else if (player.y >= (ppos_t)(room_world_height - 16)) {
@@ -2418,7 +2419,12 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     } else if (run_state_was_cleared_boss()) {
                         // A defeated dungeon opens into a nonlinear overworld;
                         // locate its authored dungeon gate to begin the next.
+                        // entered_from must not keep the dungeon door: that
+                        // would place the hero on a field edge (DIR_W lands
+                        // at (224, 60) on a wide screen) instead of the
+                        // carved center apron (#236).
                         run_state_begin_world();
+                        from_boss_world = 1;
                     } else if (run_state.secret_pending == 1) {
                         // Generate the cache over the current graph cell.
                         // procgen promotes state 1 to persistent state 2.
@@ -2431,7 +2437,7 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                             run_state.room_counter = neighbor;
                     }
                 }
-                run_state.entered_from = dir;
+                run_state.entered_from = from_boss_world ? DIR_NONE : dir;
                 curse_advance_room();
                 if (!source_world_mode) sfx_play(SFX_DOOR);
                 if (run_state_is_boss_room()) {
