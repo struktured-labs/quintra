@@ -25,10 +25,11 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-PLAYER, ENTITIES, SCREEN, TILEMAP, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
+PLAYER, ENTITIES, SCREEN, TILEMAP, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, SHOT_SX = map(
     addr, ("_player", "_entities", "_loop_current_screen", "_room_tilemap",
            "_procgen_current_room_is_large", "_room_world_width",
-           "_room_world_height", "_room_camera_x", "_room_camera_y")
+           "_room_world_height", "_room_camera_x", "_room_camera_y",
+           "_shot_sx")
 )
 
 
@@ -73,6 +74,11 @@ def clear_arena(pb):
     put16(pb, PLAYER + 9, 80)
     put16(pb, PLAYER + 11, 72)
     pb.memory[PLAYER + 22] = 0
+    # A resolved stroke leaves its hurtbox in WRAM. Mid-test arena wipes
+    # must discard it: the next overlap can run before combat reloads the
+    # box and chip a newly planted body (impact at 0,0, dmg 0 becoming 1).
+    for i in range(8):
+        pb.memory[SHOT_SX + i] = 0
 
 
 def player_shots(pb):

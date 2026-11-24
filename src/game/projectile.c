@@ -155,7 +155,8 @@ u8 projectile_spawn_player(i8 dx, i8 dy, u8 damage, u8 kind) BANKED {
         && player.starter_weapon == classes[0].starter_weapon) {
         e->ai_data[5] = 0xFF;
         e->ai_data[6] = PROJ_AUX_WOLFKIN_FANG;
-        e->ai_data[7] |= PROJ_FANG_TRAVEL;
+        /* Assign, do not OR: a recycled slot must not keep dir/slash bits. */
+        e->ai_data[7] = PROJ_FANG_TRAVEL;
     }
     if ((kind == PROJ_SPIKE && player.class_id == 0
             && player.starter_weapon == classes[0].starter_weapon)

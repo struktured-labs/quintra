@@ -360,11 +360,15 @@ u8 combat_defeat_enemy(u8 j, u8 i, u8 weak) BANKED {
 // so a miss does not spill those temps on every entity.
 // Shared with combat_filter.c (bank 23).
 i16 shot_sx, shot_sy, shot_right, shot_bottom;
-static u8 shot_sx_b, shot_sy_b, shot_right_b, shot_bottom_b, shot_box_wide;
+u8 shot_sx_b, shot_sy_b, shot_right_b, shot_bottom_b, shot_box_wide;
 // Shared with combat_filter.c (combat_next_ordinary_hit).
 u8 shot_targets[MAX_ENTITIES];
 u8 shot_list_n;
 static u8 shot_list_ready;
+
+// Defined in combat_filter.c (bank 23) so SDCC cannot delete the stores
+// as dead at the end of combat_resolve.
+void combat_reset_shot_box(void) BANKED;
 
 #define SHOT_MISSES(ej) ( \
     shot_right <= (ej)->x \
@@ -765,5 +769,6 @@ u8 combat_resolve(void) BANKED {
             combat_defeat_enemy(j,0xFF,0);
     }
     if (!player.hp) player_died = 1;
+    combat_reset_shot_box();
     return player_died;
 }

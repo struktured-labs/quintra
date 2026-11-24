@@ -22,6 +22,7 @@ extern u8 leybeam_flush_pending;
 extern u8 new_monsters_in_room;
 void leybeam_vblank_flush(void) BANKED;
 void loop_overrun_vblank_flush(void) BANKED;
+void combat_reset_shot_box(void) BANKED;
 
 
 screen_id_t loop_current_screen = SCREEN_BOOT;
@@ -119,6 +120,7 @@ void loop_run(void) {
 
         if (screens[cur].draw) { screen_map(cur); screens[cur].draw(); }
 
+        if (cur == SCREEN_ROOM) combat_reset_shot_box();
         audio_tick();
 
         // If this iteration already crossed VBlank, skip a second wait so

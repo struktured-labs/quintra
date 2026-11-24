@@ -1243,6 +1243,10 @@ static screen_id_t room_apply_foyer_warp(void) {
 }
 
 screen_id_t room_tick(u8 keys, u8 pressed) {
+    // Discard a leftover shot box before input/fire/entity updates. A stale
+    // hurtbox from the previous stroke can otherwise chip a body the new
+    // attack never reached (impact FX at 0,0).
+    combat_reset_shot_box();
     if (new_monsters_in_room && pending_foyer_warp)
         return room_apply_foyer_warp();
     // Projectile-triggered Law altars finish on the next resident room tick;
