@@ -6,6 +6,7 @@
 #include <gb/gb.h>
 
 #include "core/types.h"
+#include "game/run_state.h"
 #include "game/sram.h"
 #include "game/attract.h"
 
@@ -18,6 +19,17 @@
 // best_win_time u16 (seconds; 0xFFFF = no win yet) |
 // meta_flags | checksum over bytes [0..11].
 // Legacy v2 stored sum([3..10]) at [11]. That shape is rewritten on read.
+//
+// Hero-crown extension (#243), appended so a missing block is not corruption:
+// [13] 'C' | [14] ext ver 1 | [15..19] wins[5] |
+// [20..21] 2-bit tiers packed | [22] sum([13..21]).
+#define META_EXT_MAGIC_OFF 13
+#define META_EXT_VER_OFF   14
+#define META_EXT_WINS_OFF  15
+#define META_EXT_TIER_OFF  20
+#define META_EXT_SUM_OFF   22
+#define META_EXT_VERSION   1
+
 static void meta_open(void)  {
     /* Pair with sram_write_open: keep VBlank off while cart RAM is unlocked. */
     disable_interrupts();
@@ -37,6 +49,26 @@ static u8 meta_sum_range(u8 from, u8 to) {
 
 static void meta_seal(void) {
     SRAM_BASE[12] = meta_sum_range(0, 12);
+}
+
+static void ext_seal(void) {
+    SRAM_BASE[META_EXT_SUM_OFF] = meta_sum_range(META_EXT_MAGIC_OFF,
+                                                META_EXT_SUM_OFF);
+}
+
+static u8 ext_valid(void) {
+    return (SRAM_BASE[META_EXT_MAGIC_OFF] == 'C'
+        && SRAM_BASE[META_EXT_VER_OFF] == META_EXT_VERSION
+        && SRAM_BASE[META_EXT_SUM_OFF]
+            == meta_sum_range(META_EXT_MAGIC_OFF, META_EXT_SUM_OFF)) ? 1 : 0;
+}
+
+static void ext_reset(void) {
+    u8 i;
+    SRAM_BASE[META_EXT_MAGIC_OFF] = 'C';
+    SRAM_BASE[META_EXT_VER_OFF] = META_EXT_VERSION;
+    for (i = META_EXT_WINS_OFF; i < META_EXT_SUM_OFF; ++i) SRAM_BASE[i] = 0;
+    ext_seal();
 }
 
 static u8 meta_header(void) {
@@ -68,6 +100,7 @@ static void meta_reset(void) {
     SRAM_BASE[9] = 0xFF; SRAM_BASE[10] = 0xFF;
     SRAM_BASE[11] = 0;
     meta_seal();
+    ext_reset();
 }
 
 static u16 meta_get16(u8 off) {
@@ -77,6 +110,10 @@ static u16 meta_get16(u8 off) {
 static void meta_put16(u8 off, u16 v) {
     SRAM_BASE[off]     = (u8)(v & 0xFF);
     SRAM_BASE[off + 1] = (u8)(v >> 8);
+}
+
+static void ext_ensure(void) {
+    if (!ext_valid()) ext_reset();
 }
 
 u16 sram_meta_best(void) BANKED {
@@ -158,5 +195,62 @@ void sram_meta_set_flag(u8 bit, u8 on) BANKED {
     if (on) SRAM_BASE[11] |= bit;
     else SRAM_BASE[11] &= (u8)~bit;
     meta_seal();
+    meta_close();
+}
+
+u8 sram_meta_hero_wins(u8 class_id) BANKED {
+    u8 v = 0;
+    if (class_id >= HERO_TROPHY_SLOTS) return 0;
+    meta_open();
+    if (meta_valid() && ext_valid())
+        v = SRAM_BASE[META_EXT_WINS_OFF + class_id];
+    meta_close();
+    return v;
+}
+
+u8 sram_meta_hero_tier(u8 class_id) BANKED {
+    u8 v = 0;
+    if (class_id >= HERO_TROPHY_SLOTS) return 0;
+    meta_open();
+    if (meta_valid() && ext_valid())
+        v = (u8)((meta_get16(META_EXT_TIER_OFF) >> (class_id * 2)) & 3);
+    meta_close();
+    return v;
+}
+
+void sram_meta_hero_trophies(u8 *wins, u8 *tiers) BANKED {
+    u8 i, ok;
+    u16 bits = 0;
+    meta_open();
+    ok = (u8)(meta_valid() && ext_valid());
+    if (ok) bits = meta_get16(META_EXT_TIER_OFF);
+    for (i = 0; i < HERO_TROPHY_SLOTS; ++i) {
+        wins[i] = ok ? SRAM_BASE[META_EXT_WINS_OFF + i] : 0;
+        tiers[i] = ok ? (u8)((bits >> (i * 2)) & 3) : 0;
+    }
+    meta_close();
+}
+
+void sram_meta_record_hero_win(u8 class_id, u8 difficulty) BANKED {
+    u8 tier, cur, shift;
+    u16 bits;
+    if (attract_demo) return;
+    if (class_id >= HERO_TROPHY_SLOTS) return;
+    // Easy stays simple; Normal and any future harder mode are majestic.
+    tier = (difficulty == DIFFICULTY_EASY) ? CROWN_TIER_EASY : CROWN_TIER_NORMAL;
+    meta_open();
+    if (!meta_valid()) meta_reset();
+    ext_ensure();
+    if (SRAM_BASE[META_EXT_WINS_OFF + class_id] != 0xFF)
+        SRAM_BASE[META_EXT_WINS_OFF + class_id]++;
+    bits = meta_get16(META_EXT_TIER_OFF);
+    shift = (u8)(class_id * 2);
+    cur = (u8)((bits >> shift) & 3);
+    if (tier > cur) {
+        bits &= (u16)~((u16)3 << shift);
+        bits |= (u16)tier << shift;
+        meta_put16(META_EXT_TIER_OFF, bits);
+    }
+    ext_seal();
     meta_close();
 }

@@ -238,6 +238,7 @@ verify: all check-balance-bot
 	python3 scripts/test_playtest_report.py
 	$(PYBOY_RUN) scripts/test_stage_states.py
 	$(PYBOY_RUN) scripts/test_sram_compat.py
+	$(PYBOY_RUN) scripts/test_hero_win_crowns.py
 	$(PYBOY_RUN) scripts/test_sram_garbage_boot.py
 	python3 scripts/make_mgba_states.py \
 		--rom "$(BINDIR)/$(PROJECT).gbc" --out "$(MGBA_STATE_SMOKE_OUT)" \

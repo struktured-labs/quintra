@@ -33,4 +33,17 @@ u8   sram_meta_note_hexa(u16 score) BANKED;
 // Set or clear one meta_flags bit (option bits such as CUTSCENES OFF).
 void sram_meta_set_flag(u8 bit, u8 on) BANKED;
 
+// Per-hero campaign trophies (#243). Five vessels, same order as class_id.
+// Counts saturate at 255. Tier is the best difficulty that hero has won.
+#define HERO_TROPHY_SLOTS   5
+#define CROWN_TIER_NONE     0
+#define CROWN_TIER_EASY     1
+#define CROWN_TIER_NORMAL   2  /* Normal, and any future harder mode */
+u8   sram_meta_hero_wins(u8 class_id) BANKED;
+u8   sram_meta_hero_tier(u8 class_id) BANKED;
+void sram_meta_hero_trophies(u8 *wins, u8 *tiers) BANKED;
+// Increment that hero's win count once and raise their tier if needed.
+// difficulty is a DIFFICULTY_* value from the run that just won.
+void sram_meta_record_hero_win(u8 class_id, u8 difficulty) BANKED;
+
 #endif

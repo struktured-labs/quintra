@@ -271,6 +271,10 @@ jobs:
         if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_sram_compat.py
 
+      - name: PyBoy hero-select win crowns (per-hero counts, tiers, save compat)
+        if: (success() || failure()) && steps.link_rom.outcome == 'success'
+        run: uv run --quiet --with "pyboy==2.7.0" python scripts/test_hero_win_crowns.py
+
       - name: PyBoy Riftwild set pieces and tile art
         if: (success() || failure()) && steps.link_rom.outcome == 'success'
         run: uv run --quiet --with "pyboy==2.7.0" --with pillow python scripts/test_riftwild_setpiece.py
