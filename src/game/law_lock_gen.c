@@ -12,8 +12,10 @@
 // reachable: no state can softlock, including a suspend/reload.
 
 #include "game/law_lock.h"
+#ifndef LL_HOST
 #include "game/run_state.h"
 #include "game/mission_graph.h"
+#endif
 
 u8 ll_size;
 u8 ll_nb[LL_CELLS][4];
@@ -78,6 +80,7 @@ u8 ll_edge_open(u8 cell, u8 dir, u8 state) LL_BANKED {
 }
 
 
+#ifndef LL_HOST
 extern u32 law_lock_seed;
 extern u8 law_lock_tag;
 
@@ -97,6 +100,8 @@ u8 law_lock_cache_hit(void) LL_BANKED {
     if (ll_role[6] != run_state.mission_deep_gate_cell) return 0;
     return 1;
 }
+
+#endif
 
 u8 ll_is_altar(u8 cell) LL_BANKED {
     u8 i;
