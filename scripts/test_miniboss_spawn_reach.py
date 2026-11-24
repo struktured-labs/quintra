@@ -165,10 +165,32 @@ def main():
     repro_graph = mission_graph(dungeon_size(repro_stage), repro_seed, repro_stage)
     assert repro_graph["deep_warden"] == 1, repro_graph
     expected.update(**expect_for_stage(repro_stage))
-    generated_room(repro_stage, repro_seed, probe=inspect,
+    RUN_DEEP_WARDEN_BIT = 0x80
+
+    def inspect_clear_net(pb, tiles):
+        inspect(pb, tiles)
+        assert not (pb.memory[RS + 28] & RUN_DEEP_WARDEN_BIT), (
+            "deep-Warden bit already set before the clear-room net")
+        # Deactivate every hostile without going through combat.c's
+        # Sentinel/Bellwarden kill hook. The room must still record the
+        # deep-Warden bit so a missing tagged kill cannot soft-lock the
+        # sanctuary door.
+        for enemy in active_enemies(pb):
+            pb.memory[enemy["ep"] + 1] &= ~EF_ACTIVE
+        for _ in range(180):
+            pb.tick()
+            if pb.memory[RS + 28] & RUN_DEEP_WARDEN_BIT:
+                return
+        raise AssertionError(
+            "deep-Warden room cleared without a Warden kill, but "
+            f"RUN_DEEP_WARDEN_BIT stayed clear "
+            f"(phase=0x{pb.memory[RS + 28]:02X})")
+
+    generated_room(repro_stage, repro_seed, probe=inspect_clear_net,
                    local_room=repro_graph["deep_warden"])
     print(f"[miniboss-spawn-reach] #229 repro seed={repro_seed:#x} "
-          f"stage={repro_stage} cell={repro_graph['deep_warden']} PASS")
+          f"stage={repro_stage} cell={repro_graph['deep_warden']} "
+          f"+ clear-room net PASS")
 
     sweep_n = 0
     for stage in range(9):
