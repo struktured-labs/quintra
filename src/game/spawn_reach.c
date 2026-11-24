@@ -5,7 +5,6 @@
 #include "game/player.h"
 #include "game/pickup.h"
 #include "game/room.h"
-#include "game/run_state.h"
 #include "game/spawn_reach.h"
 #include "render/tiles.h"
 
@@ -92,19 +91,7 @@ void mark_spawn_reachable(void) BANKED {
     } else if (sx >= ROOM_W - 1) {
         sx = ROOM_W - 2;
     }
-    if (!spawn_cell_open(sx, sy)) {
-        // Wide-court arrivals can sit on a wall or on the previous room's
-        // far edge, so the compact-plane flood used to return unmarked and
-        // suppress the required Warden. Fall back to the door apron for
-        // the threshold we just crossed.
-        u8 dir = run_state.entered_from;
-        if (dir == DIR_E) { sx = 2; sy = 8; }
-        else if (dir == DIR_W) { sx = (u8)(ROOM_W - 4); sy = 8; }
-        else if (dir == DIR_S) { sx = 9; sy = 2; }
-        else if (dir == DIR_N) { sx = 9; sy = (u8)(ROOM_H - 4); }
-        else { sx = 9; sy = 8; }
-        if (!spawn_cell_open(sx, sy)) return;
-    }
+    if (!spawn_cell_open(sx, sy)) return;
     reach_tail = 0;
     reach_enqueue(sx, sy);
     while (head < reach_tail) {
