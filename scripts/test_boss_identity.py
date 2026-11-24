@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from pyboy import PyBoy
+from quintra_vignettes import reach_title, mute_after_class_select
 from quintra_topology import (
     STAGE_BOSS_ROOM, STAGE_START, dungeon_direction, dungeon_size,
 )
@@ -23,11 +24,12 @@ def addr(name):
     return int(match.group(1), 16)
 
 
-RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y = map(
+RS, PL, EN, TM, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y, SCREEN = map(
     addr,
     ("_run_state", "_player", "_entities", "_room_tilemap",
      "_procgen_current_room_is_large", "_room_world_width",
-     "_room_world_height", "_room_camera_x", "_room_camera_y"),
+     "_room_world_height", "_room_camera_x", "_room_camera_y",
+     "_loop_current_screen"),
 )
 ENEMY_STATUS = addr("_enemy_status_kind")
 
@@ -50,13 +52,20 @@ def projection_cells(pb, width=28, height=17):
 
 def enter_boss(stage, keep_open=False):
     pb = PyBoy(str(ROM), window="null", cgb=True)
-    for _ in range(240):
-        pb.tick()
+    reach_title(pb, ROM)
+    pb.tick(30)
     pb.button("start")
     for _ in range(30):
         pb.tick()
     pb.button("a")
-    for _ in range(60):
+    mute_after_class_select(pb, ROM, settle=0)
+    for _ in range(120):
+        if pb.memory[SCREEN] == 5:
+            break
+        pb.tick()
+    if pb.memory[SCREEN] != 5:
+        raise RuntimeError("enter_boss did not reach the foyer")
+    for _ in range(30):
         pb.tick()
 
     target = STAGE_BOSS_ROOM[stage]

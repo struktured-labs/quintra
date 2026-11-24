@@ -11,6 +11,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from quintra_topology import dungeon_entry_room
+
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROM = ROOT / "rom/working/quintra.gbc"
@@ -86,6 +88,9 @@ def launch_generator(mgba: str, rom: Path, out: Path, addrs: dict[str, int],
         "QUINTRA_STATE_CLASS": str(class_id),
         "QUINTRA_STATE_CHAMPION": champion,
         "QUINTRA_STATE_DIFFICULTY": difficulty,
+        # Seeded entry cells for 0x51A6D00D, matching boot_to_stage / lua reset_run.
+        "QUINTRA_ENTRY_ROOMS": ",".join(
+            str(dungeon_entry_room(stage, 0x51A6D00D)) for stage in range(9)),
     })
     log_path = out / f".{champion}-{difficulty}.log"
     with log_path.open("wb", buffering=0) as log:

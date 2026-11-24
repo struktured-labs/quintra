@@ -15,6 +15,13 @@ local LR = assert(tonumber(os.getenv("QUINTRA_LARGE_ROOM_ADDR")))
 local CLASS_ID = assert(tonumber(os.getenv("QUINTRA_STATE_CLASS")))
 local CHAMPION = assert(os.getenv("QUINTRA_STATE_CHAMPION"))
 local DIFFICULTY = assert(os.getenv("QUINTRA_STATE_DIFFICULTY"))
+local ENTRY_ROOMS = {}
+do
+    local raw = os.getenv("QUINTRA_ENTRY_ROOMS") or ""
+    for token in string.gmatch(raw, "[^,]+") do
+        ENTRY_ROOMS[#ENTRY_ROOMS + 1] = assert(tonumber(token))
+    end
+end
 local EASY = DIFFICULTY == "easy"
 
 local KEY_A, KEY_SELECT, KEY_START = 0x01, 0x04, 0x08
@@ -192,7 +199,7 @@ local function restore_player(stage)
             spd = math.min(9, spd + 1)
         else
             atk = math.min(15, atk + 1)
-            hp_max = math.min(30, hp_max + 1)
+            hp_max = math.min(16, hp_max + 1)
         end
     end
     emu:write8(PL + 1, hp_max)
@@ -273,6 +280,12 @@ local function enter_dungeon(target, stage, qualified, normalize_scroll)
     tick(2)
     clear_entities()
     reset_run(stage)
+    -- Mirror boot_to_stage: this fixture begins after the leg's mandatory
+    -- Warden, which the Riftwild gate checks via run_state + 47 (#204).
+    do
+        local step = (stage == 0) and 0 or ((stage - 1) % 3)
+        emu:write8(RS + 47, 0x80 | (1 << (2 + step)))
+    end
     if qualified then qualify_stage(stage) end
     emu:write8(RS + 1, target - 1)
     emu:write8(RS + 17, 1)
@@ -408,7 +421,10 @@ local function save_checkpoint(checkpoint, human_stage, stage, after_stage)
 end
 
 for stage = 0, 8 do
-    local entry = stage == 0 and 1 or STAGE_START[stage + 1]
+    local entry = ENTRY_ROOMS[stage + 1]
+    if not entry then
+        error("QUINTRA_ENTRY_ROOMS missing seeded entry for stage " .. (stage + 1))
+    end
     enter_dungeon(entry, stage, false)
     save_checkpoint("entry", stage + 1, stage)
 
