@@ -30,6 +30,13 @@ PLAYER, ENTITIES, SCREEN, TILEMAP, LARGE, WORLD_W, WORLD_H, CAMERA_X, CAMERA_Y =
            "_procgen_current_room_is_large", "_room_world_width",
            "_room_world_height", "_room_camera_x", "_room_camera_y")
 )
+SHOT_SX, SHOT_SY, SHOT_RIGHT, SHOT_BOTTOM = map(
+    addr, ("_shot_sx", "_shot_sy", "_shot_right", "_shot_bottom")
+)
+SHOT_SX_B, SHOT_SY_B, SHOT_RIGHT_B, SHOT_BOTTOM_B, SHOT_BOX_WIDE = map(
+    addr, ("_shot_sx_b", "_shot_sy_b", "_shot_right_b", "_shot_bottom_b",
+           "_shot_box_wide")
+)
 
 
 def press(pb, button, held=4, released=4):
@@ -73,6 +80,20 @@ def clear_arena(pb):
     put16(pb, PLAYER + 9, 80)
     put16(pb, PLAYER + 11, 72)
     pb.memory[PLAYER + 22] = 0
+    # A resolved stroke leaves its hurtbox in WRAM. Mid-test arena wipes
+    # must discard it: a PyBoy tick can resume after combat_load_shot_box
+    # and chip a newly planted body (impact at 0,0, dmg 0 becoming 1).
+    # Look up every symbol: the empty box uses I16_MIN on right/bottom so
+    # (right <= x) is true for every i16 body, including those at x < 0.
+    put16(pb, SHOT_SX, 0)
+    put16(pb, SHOT_SY, 0)
+    put16(pb, SHOT_RIGHT, 0x8000)
+    put16(pb, SHOT_BOTTOM, 0x8000)
+    pb.memory[SHOT_SX_B] = 0
+    pb.memory[SHOT_SY_B] = 0
+    pb.memory[SHOT_RIGHT_B] = 0
+    pb.memory[SHOT_BOTTOM_B] = 0
+    pb.memory[SHOT_BOX_WIDE] = 0
 
 
 def player_shots(pb):

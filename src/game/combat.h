@@ -16,4 +16,7 @@ extern u8 g_hitstop;
 // Returns 1 if player just died this frame (HP went to 0).
 u8 combat_resolve(void) BANKED;
 
+// Clears the lingering player-shot hurtbox so a later frame cannot reuse it.
+void combat_reset_shot_box(void) BANKED;
+
 #endif
