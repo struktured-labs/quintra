@@ -94,9 +94,9 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
     // Fang Forms is a two-body cleave, not two consecutive damage ticks
     // against one overlapping body. Preserve the projectile so it can
     // strike a different enemy farther down the same lane.
-    if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+    if (PROJ_IS_WOLFKIN_BLADE(shot)
         || shot->ai_data[6] == PROJ_AUX_SWORD_BEAM) {
-        if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+        if (PROJ_IS_WOLFKIN_BLADE(shot)
             && !wolfkin_sword_live(shot)) return 0;
         if (wolfkin_sword_already_hit(j)) return 0;
     }
@@ -156,7 +156,7 @@ u8 combat_apply_player_shot_hit(entity_t *shot, u8 i, entity_t *ej,
             return 1;
         }
     }
-    if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG
+    if (PROJ_IS_WOLFKIN_BLADE(shot)
         || shot->ai_data[6] == PROJ_AUX_SWORD_BEAM)
         wolfkin_sword_mark_hit(j);
     if (shot->ai_data[6] == PROJ_AUX_WOLFKIN_FANG)
