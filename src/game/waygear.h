@@ -40,5 +40,9 @@ enum {
 
 u8 waygear_grant(u8 gear) BANKED;
 void waygear_prepare_world_field(void) BANKED;
+// Last-net for a Riftwild guard field that emptied without a tagged
+// Sentinel / Bellwarden kill: set the region bit and restore a missed
+// implement on the cleared pedestal so the gate can still wake (#242, #245).
+void waygear_clear_guard_if_field_empty(void) BANKED;
 
 #endif

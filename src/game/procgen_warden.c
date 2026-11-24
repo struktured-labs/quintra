@@ -100,23 +100,34 @@ static void evict_one_non_warden(void) {
 
 void procgen_ensure_required_warden(void) BANKED {
     u8 local, idx, stage, tx, ty;
-    if (run_state.world_mode || RUN_ROOM_IS_TOWN(run_state.room_counter))
+    u8 world_guard = 0;
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter))
         return;
-    if (run_state_is_boss_room() || run_state_is_shop()
-        || run_state_is_sanctuary())
-        return;
-    mission_graph_ensure();
-    local = run_state_dungeon_local();
-    if (local != run_state.mission_warden_cell
-        && local != run_state.mission_deep_warden_cell)
-        return;
-    // Don't respawn a Warden after a real kill or the clear-room safety net.
-    if (local == run_state.mission_deep_warden_cell
-        && (run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT))
-        return;
-    if (local == run_state.mission_warden_cell
-        && (run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT))
-        return;
+    if (run_state.world_mode) {
+        // Riftwild guard fields are the world-mode equivalent of a tagged
+        // Warden cell. Compact-plane reachability can still miss the body
+        // (#242, #245); do not leave the regional gate asleep.
+        if (RUN_IN_RIFT_DEN()) return;
+        if (!run_state_riftwild_guard_active(run_state.world_screen))
+            return;
+        world_guard = 1;
+    } else {
+        if (run_state_is_boss_room() || run_state_is_shop()
+            || run_state_is_sanctuary())
+            return;
+        mission_graph_ensure();
+        local = run_state_dungeon_local();
+        if (local != run_state.mission_warden_cell
+            && local != run_state.mission_deep_warden_cell)
+            return;
+        // Don't respawn a Warden after a real kill or the clear-room safety net.
+        if (local == run_state.mission_deep_warden_cell
+            && (run_state.dungeon_phase & RUN_DEEP_WARDEN_BIT))
+            return;
+        if (local == run_state.mission_warden_cell
+            && (run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT))
+            return;
+    }
     if (required_warden_present()) return;
 
     // Authored Sentinel / Bellwarden origin. Column 9 is already a
@@ -125,6 +136,16 @@ void procgen_ensure_required_warden(void) BANKED {
     tx = (u8)((ROOM_W / 2) - 1);
     ty = 3;
     carve_warden_apron(tx, ty);
+    if (world_guard) {
+        // Keep a body-wide corridor on that reserved lane down to the
+        // field's east-west trail (rows 8/9). Climate or the adjacent
+        // waygear pocket (x=12..18, y=2..7) must not isolate the apron.
+        u8 y;
+        for (y = 3; y <= 8; ++y) {
+            room_tilemap[y][tx] = BGT_FLOOR;
+            room_tilemap[y][tx + 1] = BGT_FLOOR;
+        }
+    }
     evict_apron_occupants(tx, ty);
     stage = run_state.bosses_beaten;
     if (stage >= 6) {

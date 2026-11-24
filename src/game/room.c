@@ -2032,6 +2032,8 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                     run_state.dungeon_phase |= RUN_DEEP_WARDEN_BIT;
                 if (wlocal == run_state.mission_warden_cell)
                     run_state.dungeon_puzzles |= RUN_WARDEN_BOON_BIT;
+            } else if (!raw_alive && !alive && run_state.world_mode) {
+                waygear_clear_guard_if_field_empty();
             }
         }
         if (room_encounter_complete && room_combat_sealed) {
