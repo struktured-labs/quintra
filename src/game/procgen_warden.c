@@ -9,6 +9,7 @@
 #include "game/procgen_spawn.h"
 #include "game/room.h"
 #include "game/run_state.h"
+#include "game/waygear.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -101,15 +102,22 @@ static void evict_one_non_warden(void) {
 void procgen_ensure_required_warden(void) BANKED {
     u8 local, idx, stage, tx, ty;
     u8 world_guard = 0;
-    if (RUN_ROOM_IS_TOWN(run_state.room_counter))
+    if (RUN_ROOM_IS_TOWN(run_state.room_counter)) {
+        world_guard_unrepaired = 0;
         return;
+    }
     if (run_state.world_mode) {
         // Riftwild guard fields are the world-mode equivalent of a tagged
         // Warden cell. Compact-plane reachability can still miss the body
         // (#242, #245); do not leave the regional gate asleep.
-        if (RUN_IN_RIFT_DEN()) return;
-        if (!run_state_riftwild_guard_active(run_state.world_screen))
+        if (RUN_IN_RIFT_DEN()) {
+            world_guard_unrepaired = 0;
             return;
+        }
+        if (!run_state_riftwild_guard_active(run_state.world_screen)) {
+            world_guard_unrepaired = 0;
+            return;
+        }
         world_guard = 1;
     } else {
         if (run_state_is_boss_room() || run_state_is_shop()
@@ -128,7 +136,11 @@ void procgen_ensure_required_warden(void) BANKED {
             && (run_state.dungeon_puzzles & RUN_WARDEN_BOON_BIT))
             return;
     }
-    if (required_warden_present()) return;
+    if (required_warden_present()) {
+        if (world_guard) world_guard_unrepaired = 0;
+        return;
+    }
+    if (world_guard) world_guard_unrepaired = 1; // until the spawn below lands
 
     // Authored Sentinel / Bellwarden origin. Column 9 is already a
     // reserved N/S door lane on the compact plane, so a 2x2 here cannot
@@ -163,4 +175,6 @@ void procgen_ensure_required_warden(void) BANKED {
         }
         if (idx != 0xFF) configure_sentinel_miniboss(idx, stage);
     }
+    if (world_guard)
+        world_guard_unrepaired = required_warden_present() ? 0 : 1;
 }

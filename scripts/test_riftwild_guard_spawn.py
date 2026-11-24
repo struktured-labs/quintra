@@ -17,7 +17,8 @@ from test_miniboss_spawn_reach import (
 )
 from test_riftwild_landmarks import WALKABLE, cross_to
 from test_overworld import (
-    CAMERA_X, CAMERA_Y, EN, LARGE, PL, ROM, RS, TM, WORLD_H, WORLD_W, exit_at,
+    CAMERA_X, CAMERA_Y, EN, LARGE, PL, ROM, RS, TM, WORLD_H, WORLD_W, addr,
+    exit_at,
 )
 from test_regional_riftwild import FLAGS, GUARD_1, GUARD_2, GUARD_3
 
@@ -193,6 +194,11 @@ def assert_clear_net(pb, guard_bit, where):
     assert not (pb.memory[RS + FLAGS] & guard_bit), (
         f"{where}: guard bit already set before the clear-room net "
         f"(flags=0x{pb.memory[RS + FLAGS]:02X})")
+    # The net is only for a visit whose generate did not land a Warden, so
+    # walking through a repaired field cannot wake the gate. After a
+    # successful ensure the kill hook is the real path; poke the visit
+    # latch so this contract still exercises the empty-field fallback.
+    pb.memory[addr("_world_guard_unrepaired")] = 1
     for enemy in active_enemies(pb):
         pb.memory[enemy["ep"] + 1] &= ~EF_ACTIVE
     for _ in range(180):
