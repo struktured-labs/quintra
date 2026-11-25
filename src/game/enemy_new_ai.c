@@ -1125,8 +1125,26 @@ void new_monsters_foyer_warp(void) BANKED {
        SCREEN_ROOM, and the nested enter crashes the machine. post_spawn
        already despawns a Hand in the foyer. */
 }
+/* If the Hand is gone (entity_kill, slot reuse, or a kill that skipped
+   vault_hand_tick's PHASE-3 exits) the grab flag must not keep masking
+   the d-pad. room.c locks movement while this flag and new_monsters_in_room
+   are both set, and this draw pass used to treat the flag itself as proof
+   that a specialist is still live, so a stale grab could never clear. */
+static void vault_hand_sync_holding(void) {
+    u8 i;
+    if (!vault_hand_holding) return;
+    for (i = 0; i < MAX_ENTITIES; ++i) {
+        entity_t *e = &entities[i];
+        if ((e->flags & EF_ACTIVE) && e->type == ENT_ENEMY
+            && e->hp && e->ai_data[0] == ENEMY_VAULT_HAND && PHASE == 3)
+            return;
+    }
+    vault_hand_holding = 0;
+}
+
 void new_monsters_draw(void) BANKED {
     u8 i, live_beam = 0, bi, used = 0, any = 0;
+    vault_hand_sync_holding();
     /* Drop the sticky busy flag once no specialist, bomb, or beam remains
        so a converted/cleared room does not bank-call this every frame. */
     for (i = 0; i < FUSE_BOMB_MAX; ++i) if (fb_live[i]) any = 1;

@@ -8,6 +8,7 @@
 #include "game/entity_draw_run.h"
 extern u8 new_monsters_in_room;
 extern u8 confusion_swirl_live;
+extern u8 vault_hand_holding;
 void new_monsters_draw(void) BANKED;
 #include "game/player.h"
 #include "game/projectile.h"
@@ -104,8 +105,16 @@ u8 entity_spawn(u8 type) {
 
 void entity_kill(u8 idx) {
     if (idx >= MAX_ENTITIES) return;
-    if (entities[idx].type == ENT_ENEMY && entity_enemy_count)
-        entity_enemy_count--;
+    /* Only the grabbing Hand (PHASE 3, ai_data[2]) owns the hold flag.
+       Post-spawn caps the species at one, but don't drop a live grab if
+       some other path ever frees a non-grabbing Hand in the same room. */
+    if (entities[idx].type == ENT_ENEMY) {
+        if (entities[idx].ai_data[0] == ENEMY_VAULT_HAND
+            && entities[idx].ai_data[2] == 3)
+            vault_hand_holding = 0;
+        if (entity_enemy_count)
+            entity_enemy_count--;
+    }
     enemy_status_kind[idx] = QSTATUS_NONE;
     entities[idx].flags &= (u8)~(EF_ACTIVE | EF_ALIVE);
     entities[idx].type   = ENT_NONE;
