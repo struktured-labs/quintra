@@ -2,20 +2,22 @@
 """Late-fight Cinder Rex armor must be readable, and never silently ignore hits.
 
 Carmelo's Vespine death in Ember Depths felt like the boss "absorbed hits
-near the end." Live probes on main (4614675c) showed this is authored
-invulnerability with misleading feedback, not a dropped-damage bug:
+near the end." Live probes showed this is authored invulnerability, not a
+dropped-damage bug:
 
-  * Only the 15x13 head/vent is a weak point, even while the 48x32 body
-    flashes. Body shots die with SPR_FX_IMPACT + the ordinary SFX_HIT
-    crunch, so they sound like damage.
+  * Only the 15x13 head/vent is a weak point, and only while the vent is
+    open. Body shots die with SPR_FX_IMPACT and the metallic armor clink
+    (cinder_armor_clink), never the SFX_HIT damage crunch.
   * At 40 HP, Rex splits into five fire husks for a full invuln reprise
     (now 64 frames). Every colliding shot is consumed; HP does not move.
   * Large-boss per-hit damage is clamped to 3 on Normal (5 on Easy), so
     a 12- or 20-damage volley still only chips 3.
 
-This contract locks the readable reject (spark + clink counter), the
-shortened late split, the vent-only damage window, the damage cap, and
-Vespine Bramble (B tap; replaced the old Swarm) / a MAX volley on both the closed husks and the open head.
+This contract locks the readable reject (spark counter), the shortened
+late split, the vent-only damage window, the damage cap, and Vespine
+Bramble (B tap; replaced the old Swarm) / a MAX volley on both the closed
+husks and the open head. Which sound and flash each outcome gets is locked
+by test_cinder_hit_feedback.py.
 """
 from test_boss_identity import EN, PL, addr, enter_boss, put16
 from test_colossal_cinder import (

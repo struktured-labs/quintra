@@ -102,7 +102,7 @@ static u8 cinder_try_heart_at(i16 x, i16 y) {
     return idx;
 }
 
-static void cinder_place_heart(u8 preferred_x, u8 preferred_y) {
+static u8 cinder_place_heart(u8 preferred_x, u8 preferred_y) {
     static const i8 dx[13] = {
         0, -16, 16, 0, 0, -16, 16, -16, 16, -32, 32, -32, 32
     };
@@ -113,11 +113,22 @@ static void cinder_place_heart(u8 preferred_x, u8 preferred_y) {
     for (i = 0; i < 13; ++i) {
         if (cinder_try_heart_at((i16)preferred_x + dx[i],
                                 (i16)preferred_y + dy[i]) != 0xFF)
-            return;
+            return 1;
     }
+    return 0;
 }
 
 void cinder_drop_phase_hearts(void) BANKED {
     cinder_place_heart(CINDER_HEAL_X0, CINDER_HEAL_Y0);
+    cinder_place_heart(CINDER_HEAL_X1, CINDER_HEAL_Y1);
+}
+
+// Every first-phase Kilnback kill drops one half-heart beside the fallen
+// body (x, y = its top-left), clear of the pool it leaves behind. If the
+// whole neighbourhood is blocked, fall back to the flank seats so the drop
+// is still guaranteed.
+void cinder_drop_kill_heart(u8 x, u8 y) BANKED {
+    if (cinder_place_heart(x, y)) return;
+    if (cinder_place_heart(CINDER_HEAL_X0, CINDER_HEAL_Y0)) return;
     cinder_place_heart(CINDER_HEAL_X1, CINDER_HEAL_Y1);
 }
