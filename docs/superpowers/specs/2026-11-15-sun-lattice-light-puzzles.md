@@ -813,3 +813,23 @@ taken while building:
 - **Known gaps:** during a room slide the incoming lattice briefly shows as
   plain pillars until the final redraw; the Lua balance bot cannot solve
   Sun Lattice rooms yet.
+
+## Visual pass (issue #250, 2026-11-27)
+
+Display only. Layouts, the trace, solvability and tile indices are unchanged.
+
+- **Mirrors.** The Helio Vane tile (bank 1, 57) is a framed pane on a dark
+  socket: frame lines either side of a bright glass face, mounts at both
+  ends, a darker back edge. hflip still gives the other angle. Rotatable
+  mirrors use `BGPAL_CRYSTAL`; fixed ones use `BGPAL_WALL` and look dull.
+- **Beam.** Beam cells (60..62) now use `BGPAL_CRYSTAL` instead of
+  `BGPAL_FLOOR`: white core, bright halo, saturated edge, dark outline.
+- **Animation.** `sun_lattice_animate()` (`sun_lattice_art.c`, bank 30)
+  re-uploads tile data only: the three beam tiles every 6th frame and the
+  mirror tile 3 frames later, four frames each. No map cell is rewritten.
+- **Glint.** Every 16 frames one `SPR_FX_IMPACT` spark (5 frames) lands on
+  the next mirror or Wedge that has a beam cell beside it. One sprite at
+  a time.
+- Art source: `scripts/gen_sun_lattice_art.py` (hand-pixeled, `--preview`).
+- Test: `scripts/test_sun_lattice_anim.py`.
+

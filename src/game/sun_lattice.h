@@ -71,6 +71,9 @@ u8 sun_lattice_hook(u8 tx, u8 ty) BANKED;
 void sun_lattice_retrace(void) BANKED;
 // Per-frame: debounce and the lit dwell. Returns 1 on the solve frame.
 u8 sun_lattice_tick(void) BANKED;
+// Animation (sun_lattice_art.c): beam shimmer, mirror highlight and the
+// reflection sparkle. Display only; call once per frame in a lattice room.
+void sun_lattice_animate(void) BANKED;
 #endif
 
 #endif
