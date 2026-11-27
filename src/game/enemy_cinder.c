@@ -43,6 +43,12 @@ static u8 cinder_late_split_spent;
 static u8 cinder_clink_cool;
 static u8 cinder_armor_flash;
 u8 cinder_armor_sparks;
+// Armor clinks that actually sounded (headless tests tell them from SFX_HIT).
+u8 cinder_clink_count;
+// Rex attack telegraphs flicker the head only, on their own counter. Real
+// damage (any HP drop) blinks the whole body bone white for 12 frames.
+static u8 cinder_rex_tell;
+static u8 cinder_hurt_flash;
 
 extern u8 entity_anim_counter;
 extern u8 sfx_will_active;
@@ -178,6 +184,7 @@ static void cinder_armor_clink(void) {
     NR43_REG = 0x14;
     NR44_REG = 0x80;
     cinder_clink_cool = 8;
+    cinder_clink_count++;
 }
 
 static void cinder_armor_collision(entity_t *e) {
@@ -360,11 +367,12 @@ static void cinder_update_alive(entity_t *e) {
         u8 fallen = (u8)(cinder_pack_alive - 1);
         cinder_hazard_add((u8)(cinder_pack_x[fallen] + 8),
             (u8)(cinder_pack_y[fallen] + 8), 0, 40);
+        // Guaranteed half-heart beside the fallen body, clear of its pool.
+        cinder_drop_kill_heart(cinder_pack_x[fallen], cinder_pack_y[fallen]);
         cinder_pack_alive--;
         room_shake(1, 14);
         sfx_play(SFX_DEATH);
     }
-    cinder_last_hp = e->hp;
 }
 
 static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
@@ -415,10 +423,8 @@ static void cinder_pack_phase_tick(entity_t *e, u8 damage) {
     }
     cinder_pack_anchor(e);
     e->state = cinder_pattern;
-    if (cinder_damage_open && (cinder_timer & 7) == 0) {
-        e->ai_data[7] = 5;
-        sfx_play(SFX_TICK);
-    }
+    // The open vent already blinks in cinder_draw; ai_data[7] is damage only.
+    if (cinder_damage_open && (cinder_timer & 7) == 0) sfx_play(SFX_TICK);
     cinder_timer++;
     if (cinder_timer >= 184) {
         cinder_timer = 0;
@@ -445,7 +451,7 @@ static void cinder_transform_tick(entity_t *e) {
         rex_place(e, 88, 50);
         e->hitbox = 0xFD;
         e->state = 0;
-        e->ai_data[7] = 16;
+        cinder_rex_tell = 16;
         room_shake(3, 30);
         sfx_play(SFX_DEATH);
     }
@@ -501,7 +507,7 @@ static void cinder_rex_begin(entity_t *e) {
     if (t > max_x) t = max_x;
     cinder_rex_target_x = (u8)t;
     cinder_rex_dir = cinder_cardinal_aim(e);
-    e->ai_data[7] = 12;
+    cinder_rex_tell = 12;
     sfx_play(SFX_TICK);
 }
 
@@ -529,7 +535,7 @@ static void cinder_furnace_wall(entity_t *e, u8 from_bottom, u8 damage) {
     cinder_breath_lanes = 1;
     room_shake(2, 16);
     boss_voice(2, BOSS_VOICE_ATTACK);
-    e->ai_data[7] = 10;
+    cinder_rex_tell = 10;
 }
 
 static void cinder_rex_tick(entity_t *e, u8 damage) {
@@ -594,7 +600,7 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
         default: // Rex Charge + slab-tail hammer.
             if (cinder_timer == 16) {
                 cinder_rex_dir = cinder_cardinal_aim(e);
-                e->ai_data[7] = 18;
+                cinder_rex_tell = 18;
                 sfx_play(SFX_TICK);
             }
             if (cinder_timer >= 34 && cinder_timer < 78)
@@ -612,10 +618,8 @@ static void cinder_rex_tick(entity_t *e, u8 damage) {
             }
             break;
     }
-    if (cinder_damage_open && (cinder_timer & 7) == 0) {
-        e->ai_data[7] = 5;
-        sfx_play(SFX_TICK);
-    }
+    // The open head strobes in cinder_draw; ai_data[7] is damage only.
+    if (cinder_damage_open && (cinder_timer & 7) == 0) sfx_play(SFX_TICK);
     cinder_timer++;
     if (cinder_timer >= 160) {
         cinder_timer = 0;
@@ -638,7 +642,7 @@ static void cinder_fire_pack_tick(entity_t *e, u8 damage) {
         cinder_timer = 0;
         rex_place(e, 88, 50);
         e->hitbox = 0xFD;
-        e->ai_data[7] = 14;
+        cinder_rex_tell = 14;
         room_shake(2, 20);
         boss_voice(2, BOSS_VOICE_ATTACK);
     }
@@ -680,6 +684,9 @@ void cinder_pack_reset(void) BANKED {
     cinder_armor_sparks = 0;
     cinder_clink_cool = 0;
     cinder_armor_flash = 0;
+    cinder_clink_count = 0;
+    cinder_rex_tell = 0;
+    cinder_hurt_flash = 0;
     entities[cinder_boss_index].state = 0;
     entities[cinder_boss_index].state_timer = 0;
     entities[cinder_boss_index].vx = entities[cinder_boss_index].vy = 0;
@@ -714,6 +721,8 @@ void cinder_boss_tick(entity_t *e) BANKED {
         cinder_pattern = cinder_brand_variant;
         cinder_timer = 0;
         cinder_damage_open = 0;
+        // Untargetable at once, not at the end of this (long) tick.
+        e->flags &= (u8)~EF_ON_SCREEN;
         for (i = 0; i < CINDER_KILNBACKS; ++i) {
             cinder_pack_x[i] = (u8)(rex_bx(e) + 16);
             cinder_pack_y[i] = (u8)(rex_by(e) + 8);
@@ -721,6 +730,8 @@ void cinder_boss_tick(entity_t *e) BANKED {
         room_shake(2, 18);
         boss_voice(2, BOSS_VOICE_PHASE);
     }
+    if (e->hp < cinder_last_hp) cinder_hurt_flash = 12;
+    cinder_last_hp = e->hp;
     cinder_hazards_tick();
     if (cinder_phase == 0) cinder_pack_phase_tick(e, damage);
     else if (cinder_phase == 1) cinder_transform_tick(e);
@@ -764,13 +775,15 @@ static u8 cinder_draw_member(u8 oam, u8 x, u8 y, u8 tile, u8 pal) {
 
 void cinder_draw(void) BANKED {
     entity_t *e;
-    u8 i, oam = 4, pal, flash;
+    u8 i, oam = 4, pal, flash, hurt;
     if (!cinder_pack_active || cinder_boss_index >= MAX_ENTITIES) return;
     e = &entities[cinder_boss_index];
     if (!(e->flags & EF_ACTIVE)) { cinder_pack_retire(); return; }
     pal = e->palette;
     flash = e->ai_data[7] ? 1 : 0;
     if (flash) e->ai_data[7]--;
+    // Ages in every phase, so a pack-phase hit never blinks the unfold.
+    hurt = cinder_hurt_flash && (--cinder_hurt_flash & 2);
 
     if (cinder_phase == 2) {
         i16 sx = (i16)rex_bx(e) - room_camera_x + 8;
@@ -791,19 +804,31 @@ void cinder_draw(void) BANKED {
             || (cinder_pattern == 3 && cinder_timer >= 34 && cinder_timer < 78)
             || (entity_anim_counter & 16))
             pose |= 2;
-        // Head-only flash: the open-window tell and a real vent hit both
-        // set ai_data[7]. Do not gate on cinder_damage_open, or a hit on
-        // the last open frame would lose its flash as the window closes.
-        cinder_rex_big_draw(sx, sy, cinder_rex_facing, pose, pal);
-        /* Head-only flash lives here (bank 9) so bank 18 stays under the
-           emergency floor. The atlas is west-facing: cols 0-1 when facing
-           west, cols 4-5 when facing east, top two rows only. */
-        if (flash && (e->ai_data[7] & 1)) {
+        /* A damaging hit blinks the whole body bone white, like every
+           large boss, but longer: three two-frame pulses a handheld cannot
+           miss. Otherwise the head is the only part that ever changes
+           colour, because it is the only weak point. Closed: a slow gold
+           glow. Open: a fast gold/blue strobe. Attack telegraphs flicker it
+           red. This lives here (bank 9) so bank 18 stays under the emergency
+           floor. The atlas is west-facing: cols 0-1 facing west, cols 4-5
+           facing east, top two rows only. One critical section: a VBlank
+           OAM copy between the body write and the head recolour would show
+           the head in armor colours. */
+        {
             u8 lo = cinder_rex_facing ? 0 : 4;
-            u8 r, c;
-            for (r = 0; r < 2; ++r)
-                for (c = lo; c < (u8)(lo + 2); ++c)
-                    shadow_OAM[CINDER_REX_OAM_BASE + r * 6 + c].prop &= (u8)~0x07;
+            u8 r, c, head;
+            if (cinder_damage_open) head = (entity_anim_counter & 4) ? 5 : 3;
+            else head = (entity_anim_counter & 16) ? 5 : pal;
+            if (cinder_rex_tell && (--cinder_rex_tell & 1)) head = 4;
+            if (hurt) head = pal = 0;
+            __critical {
+                cinder_rex_big_draw(sx, sy, cinder_rex_facing, pose, pal);
+                for (r = 0; r < 2; ++r)
+                    for (c = lo; c < (u8)(lo + 2); ++c) {
+                        u8 *prop = &shadow_OAM[CINDER_REX_OAM_BASE + r * 6 + c].prop;
+                        *prop = (u8)((*prop & (u8)~0x07) | head);
+                    }
+            }
         }
         return;
     } else {

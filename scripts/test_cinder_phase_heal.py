@@ -5,6 +5,10 @@ Phase 1 can chip the champion down, and the 64-tick metamorphosis used to
 heal nothing. This locks the mid-transform pair: both hearts spawn, sit on
 reachable floor, and stay clear of live fire pools. Easy mode is the same
 code path (no difficulty branch).
+
+Each Kilnback kill also drops its own half-heart (issue #248, covered by
+test_cinder_kill_hearts.py). This contract is about the transform pair, so
+it sets the kill hearts aside and checks the two that arrive after them.
 """
 from pathlib import Path
 import os
@@ -114,8 +118,8 @@ def reachable_from_player(pb, x, y):
     return False
 
 
-def assert_hearts_ok(pb, when):
-    hearts = heart_pickups(pb)
+def assert_hearts_ok(pb, when, kill_hearts=()):
+    hearts = [ep for ep in heart_pickups(pb) if ep not in kill_hearts]
     assert len(hearts) == 2, (
         f"{when}: expected 2 half-hearts, found {len(hearts)} at "
         f"{[entity_xy(pb, ep) for ep in hearts]}"
@@ -146,7 +150,13 @@ def drive_to_transform(pb, boss):
     for _ in range(80):
         keep_alive(pb, 1)
         if pb.memory[CINDER_PHASE] == 1:
-            return
+            # The pack's last tick drops the kill hearts; the transform
+            # pair only arrives on the first metamorphosis tick.
+            kill_hearts = set(heart_pickups(pb))
+            assert len(kill_hearts) == 5, (
+                f"expected one half-heart per Kilnback kill, found "
+                f"{len(kill_hearts)}")
+            return kill_hearts
     raise AssertionError(
         f"pack did not begin metamorphosis "
         f"(phase={pb.memory[CINDER_PHASE]} alive={pb.memory[CINDER_ALIVE]})"
@@ -156,7 +166,7 @@ def drive_to_transform(pb, boss):
 def main():
     pb, boss = enter_boss(2, keep_open=True)
     assert pb.memory[CINDER_PHASE] == 0, "Cinder fight did not start in pack phase"
-    drive_to_transform(pb, boss)
+    kill_hearts = drive_to_transform(pb, boss)
     assert pb.memory[CINDER_PHASE] == 1
 
     # Give the first transform tick a moment to spawn, then park the
@@ -172,7 +182,7 @@ def main():
     pb.memory[cam_x] = pb.memory[cam_y] = 0
     pb.memory[0xFF43] = pb.memory[0xFF42] = 0
     keep_alive(pb, 2)
-    positions = assert_hearts_ok(pb, "during transform")
+    positions = assert_hearts_ok(pb, "during transform", kill_hearts)
 
     PREVIEW.parent.mkdir(parents=True, exist_ok=True)
     pb.screen.image.save(str(PREVIEW))
@@ -183,7 +193,7 @@ def main():
             break
         keep_alive(pb, 1)
     assert pb.memory[CINDER_PHASE] == 2, "Cinder Rex did not unfold"
-    assert_hearts_ok(pb, "as phase 2 begins")
+    assert_hearts_ok(pb, "as phase 2 begins", kill_hearts)
 
     print(
         f"[cinder-phase-heal] PASS two half-hearts at {positions} "
