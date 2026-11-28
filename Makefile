@@ -245,6 +245,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_puzzles.py
 	$(PYBOY_RUN) scripts/test_sun_lattice_anim.py
 	$(PYBOY_RUN) scripts/test_no_basilisk_in_sun_lattice.py
+	$(PYBOY_RUN) scripts/test_basilisk_tanky.py
 	$(PYBOY_RUN) scripts/test_plate_reachability.py
 	$(PYBOY_RUN) scripts/test_boss_exit_landing.py
 	$(PYBOY_RUN) scripts/test_prism_toggle.py
