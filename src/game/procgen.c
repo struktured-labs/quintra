@@ -75,8 +75,11 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     return idx;
 }
 
-#define ANTIDOTE_TOWN_X 152
-#define ANTIDOTE_TOWN_Y 64
+// Beside the apothecary, clear of the east door. It used to sit at (152, 64),
+// the very tiles the hero arrives on from the village square, so every
+// visit to the forge quarter began by walking into the Antidote (#281).
+#define ANTIDOTE_TOWN_X 72
+#define ANTIDOTE_TOWN_Y 104
 #define RIFT_TRADER_X   128
 #define RIFT_TRADER_Y   20
 // Beside the keeper, never between the east-west trail and the keeper:
