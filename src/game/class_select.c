@@ -11,7 +11,9 @@
 #include "core/types.h"
 #include "game/class_select.h"
 #include "game/player.h"
+#include "game/sram.h"
 #include "render/class_palettes.h"
+#include "render/crown_tiles.h"
 #include "render/palette.h"
 #include "render/text.h"
 #include "render/tiles.h"
@@ -25,6 +27,8 @@ u8 class_select_attr_phase;
 u8 class_select_pal_steps;
 u8 class_select_vbl_work;
 u8 class_select_name_len;
+u8 class_select_hero_wins[HERO_TROPHY_SLOTS];
+u8 class_select_hero_tier[HERO_TROPHY_SLOTS];
 
 static const u16 cs_palette[4] = {
     BGR555( 0,  2,  6),    // 0: deep blue
@@ -46,6 +50,14 @@ static const u16 lavender_palette[4] = {
     BGR555( 4,  4, 12),
     BGR555(12, 10, 18),
     BGR555(20, 16, 28),
+};
+
+// Jeweled Normal crown: gold metal plus a ruby on color 3.
+static const u16 royal_palette[4] = {
+    BGR555( 0,  2,  6),
+    BGR555(12,  8,  2),
+    BGR555(31, 25,  6),
+    BGR555(31,  6,  8),
 };
 
 // Gold star cursor (reuses the bullet sprite tile)
@@ -78,11 +90,6 @@ static const char *const trait_tips[N_CLASSES] = {
     "FAST MP REGEN", "ELEMENT POWER",
 };
 
-#define CS_PAL_BODY      0
-#define CS_PAL_GOLD      1
-#define CS_PAL_ACCENT    2
-#define CS_PAL_LAVENDER  3
-
 static void cache_copy(u8 slot, const u16 *colors) {
     u8 i;
     for (i = 0; i < 4; ++i) bg_pal_cache[slot][i] = colors[i];
@@ -106,6 +113,7 @@ static void cache_and_arm_palettes(void) {
     bg_pal_cache[CS_PAL_ACCENT][3] = obj_pal_cache[1][3];
     cache_copy(CS_PAL_LAVENDER, lavender_palette);
     for (slot = 4; slot < 8; ++slot) cache_copy(slot, cs_palette);
+    cache_copy(CS_PAL_ROYAL, royal_palette);
 
     cache_obj_copy(2, cursor_palette);
     // Unused OBJ slots stay black so a leaked title spirit cannot show
@@ -118,6 +126,7 @@ static void cache_and_arm_palettes(void) {
         obj_pal_cache[slot][2] = 0;
         obj_pal_cache[slot][3] = 0;
     }
+    class_select_arm_crown_pals();
 
     // Four half-bursts (BG lo/hi, OBJ lo/hi) per rotating pass.
     class_select_pal_steps = (u8)(PALETTE_OBJ_COMMIT_PASSES * 4);
@@ -145,6 +154,8 @@ static void update_preview(void) {
     set_sprite_tile(4, SPR_BULLET);
     set_sprite_prop(4, 0x02);
     move_sprite(4, 16, (u8)((3 + class_select_cursor) * 8 + 16));
+    // Crown follows the preview origin so a later idle bob carries it.
+    class_select_place_head_crown(sx, sy);
 }
 
 static void write_stats(const class_def_t *c) {
@@ -177,6 +188,7 @@ static void render(void) {
         else                          text_write("  ");
         text_write(classes[i].name);
     }
+    class_select_draw_crowns();
 
     gotoxy(0, 9);  text_write("ROLE  ");
     text_write(role_tips[class_select_cursor]);
@@ -222,6 +234,7 @@ void class_select_enter(void) {
 
     class_select_cursor = 0;
     class_select_easy_mode = 0;
+    class_select_load_crowns();
     render();
     update_preview();
     cache_and_arm_palettes();
@@ -237,6 +250,7 @@ void class_select_exit(void) {
     move_sprite(0, 0, 0); move_sprite(1, 0, 0);
     move_sprite(2, 0, 0); move_sprite(3, 0, 0);
     move_sprite(4, 0, 0);
+    class_select_hide_head_crown();
     class_select_attr_phase = 0;
     class_select_pal_steps = 0;
     class_select_vbl_work = 0;

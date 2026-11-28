@@ -9,6 +9,7 @@
 #include "audio/music.h"
 #include "core/types.h"
 #include "game/companion.h"
+#include "game/player.h"
 #include "game/run_state.h"
 #include "game/sram.h"
 #include "game/victory.h"
@@ -98,6 +99,7 @@ void victory_enter(void) {
             && run_state.bosses_beaten == (u8)(BOSSES_TO_WIN + 1)) ? 1 : 0;
         if (run_state.bosses_beaten == BOSSES_TO_WIN) {
             new_best = sram_meta_record(run_state.score, 1, run_state.run_timer);
+            sram_meta_record_hero_win(player.class_id, run_state.difficulty);
         } else if (hexa_clear) {
             // The sixth colossus is a badge and a score, not another win.
             new_best = sram_meta_note_hexa(run_state.score);

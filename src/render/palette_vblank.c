@@ -64,11 +64,6 @@ void palette_obj_cache_title(void) BANKED {
     }
 }
 
-#define CS_PAL_BODY 0
-#define CS_PAL_GOLD 1
-#define CS_PAL_ACCENT 2
-#define CS_PAL_LAVENDER 3
-
 #define G CS_PAL_GOLD
 #define A CS_PAL_ACCENT
 #define L CS_PAL_LAVENDER
@@ -100,58 +95,19 @@ static const u8 *const cs_rows[18] = {
 #undef A
 #undef L
 
-// Page-dependent rows, built outside VBlank by class_select_attr_prepare.
-static u8 cs_row_name[20];
-static u8 cs_row_stats[20];
-
 // First row of each VBlank job; job n stores rows [start[n], start[n+1]).
 static const u8 cs_job_rows[7] = { 0, 3, 6, 9, 12, 15, 18 };
-
-static u8 *cs_digits(u8 *p, u8 v) {
-    *p++ = CS_PAL_BODY;
-    if (v >= 10) *p++ = CS_PAL_BODY;
-    if (v >= 100) *p++ = CS_PAL_BODY;
-    return p;
-}
-
-static u8 *cs_label(u8 *p, u8 space) {
-    if (space) *p++ = CS_PAL_BODY;
-    *p++ = CS_PAL_GOLD;
-    *p++ = CS_PAL_GOLD;
-    return p;
-}
-
-void class_select_attr_prepare(void) BANKED {
-    const class_def_t *c = &classes[class_select_cursor];
-    u8 *p = cs_row_stats;
-    // Selected name in its accent; the "> " cursor stays body white.
-    memset(cs_row_name, CS_PAL_BODY, sizeof cs_row_name);
-    memset(cs_row_name + 4, CS_PAL_ACCENT, class_select_name_len);
-    // Stat row, mirroring write_stats(): labels gold, digits and spaces
-    // body. Built from the numbers, not read back from VRAM.
-    memset(cs_row_stats, CS_PAL_BODY, sizeof cs_row_stats);
-    p = cs_label(p, 0);
-    p = cs_digits(p, c->base_stats.hp_max);
-    p = cs_label(p, c->base_stats.mp_max < 10);
-    p = cs_digits(p, c->base_stats.mp_max);
-    p = cs_label(p, 1);
-    p = cs_digits(p, c->base_stats.atk);
-    p = cs_label(p, 1);
-    p = cs_digits(p, c->base_stats.def);
-    p = cs_label(p, 1);
-    cs_digits(p, c->base_stats.spd);
-}
 
 static void cs_store_rows(u8 job) {
     u8 r = cs_job_rows[job];
     u8 end = cs_job_rows[job + 1];
     u8 *dst = (u8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800)
               + (u16)r * 32u;
-    u8 name_row = (u8)(3 + class_select_cursor);
     VBK_REG = 1;
     do {
         const u8 *src = cs_rows[r];
-        if (r == name_row) src = cs_row_name;
+        if (r >= 3 && r < (u8)(3 + HERO_TROPHY_SLOTS))
+            src = cs_row_names[r - 3];
         else if (r == 14) src = cs_row_stats;
         else if (r == 16)
             src = class_select_easy_mode ? cs_row_easy : cs_row_normal;
