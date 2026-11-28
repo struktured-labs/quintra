@@ -104,6 +104,7 @@ static const u8 notice_words[NW_COUNT][6] = {
     { N_B,N_L,N_O,N_O,N_M,N__ },          // NW_BLOOM    impact bloom
     { N_W,N_I,N_N,N_G,N_S,N__ },          // NW_WINGS    Wingmates
     { N_M,N_A,N_T,N_E,N_S,N__ },          // NW_MATES    flank buddies
+    { N_W,N_I,N_L,N_L,HUD_STATUS_PLUS,N_1 }, // NW_WILLUP one more Will tier can be stored
 };
 // 0 gold, 1 violet, 2 green, 6 MP blue, 7 HUD red.
 static const u8 notice_word_pal[NW_COUNT] = {
@@ -113,6 +114,7 @@ static const u8 notice_word_pal[NW_COUNT] = {
     0, 2, 0, 0, 7, 6, 2, 1, 0, 7, 1, 0, 0, 1,
     0, 0, 6, 6, 2, 2, 7,
     0, 0, 0, 0, 0, 0, 7, 7, 1, 1,
+    1,
 };
 
 u8 hud_notice_word_fill(u8 word, u8 *row) BANKED {

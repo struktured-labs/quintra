@@ -1,6 +1,7 @@
 #pragma bank 10
 
 #include <gb/gb.h>
+#include "render/hud.h"
 
 #include "audio/sfx.h"
 #include "core/types.h"
@@ -26,6 +27,9 @@ u8 waygear_grant(u8 gear) BANKED {
     player.waygear_owned |= bit;
     if (gear < WAYGEAR_EQUIP_COUNT && was_full)
         player.will_charge = 0;
+    // Glove, Raft and Hook each let one more Will tier be stored. Say so:
+    // the only sign used to be a bar that quietly started filling again.
+    if (gear < WAYGEAR_EQUIP_COUNT) hud_show_word(NW_WILLUP);
     // Retain the legacy slot only as the initial Pack cursor.
     if (gear < WAYGEAR_EQUIP_COUNT) player.waygear_equipped = gear;
     sfx_play_reward(SFX_REWARD_SIGIL);
