@@ -141,7 +141,7 @@ static u8 item_tile(u8 id, u8 *prop) {
 }
 
 static void write_field(const char *s, u8 width) {
-    while (width && *s) { putchar(*s++); width--; }
+    while (width && *s) { text_putc(*s++); width--; }
     while (width--) putchar(' ');
 }
 

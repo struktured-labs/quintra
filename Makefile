@@ -331,6 +331,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_damage_hud.py
 	uv run --quiet --with pyboy python scripts/test_corvin_hp_bar.py
 	uv run --quiet --with pyboy python scripts/test_heart_pickup.py
+	$(PYBOY_RUN) scripts/test_text_plus.py
 	$(PYBOY_RUN) scripts/test_pickup_reachability.py
 	uv run --quiet --with pyboy python scripts/test_unlock_feedback.py
 	uv run --quiet --with pyboy python scripts/test_vampiric_sigil.py
