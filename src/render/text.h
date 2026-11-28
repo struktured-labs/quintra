@@ -9,6 +9,9 @@
 // formatted I/O out of the cartridge avoids pulling the full stdio formatter
 // into always-mapped ROM bank 0.
 void text_write(const char *text) NONBANKED;
+// One character; '+' is drawn from a scratch tile (font_min lacks it).
+void text_putc(char c) NONBANKED;
+void text_plus(void) BANKED;
 void text_u16(u16 value) BANKED;
 void text_digit(u8 value) BANKED;
 

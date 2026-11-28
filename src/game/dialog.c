@@ -56,7 +56,7 @@ static void dialog_line(u8 row, const char *text) {
             accent = (u8)(text[1] - '0');
             text += 2;
         } else {
-            putchar(*text++);
+            text_putc(*text++);
             VBK_REG = 1;
             set_tiles(col++, row, 1, 1, (u8 *)0x9800, &accent);
             VBK_REG = 0;

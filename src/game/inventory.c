@@ -106,7 +106,7 @@ static const char *item_name_by_index(u8 index) {
 }
 
 static void write_field(const char *s, u8 width) {
-    while (width && *s) { putchar(*s++); width--; }
+    while (width && *s) { text_putc(*s++); width--; }
     while (width--) putchar(' ');
 }
 
@@ -180,7 +180,7 @@ void inventory_enter(void) {
     // The run's difficulty stays visible even when the vitals label is
     // busy naming a status, curse, or boost.
     gotoxy(13, 13); text_write(RUN_IS_EASY() ? " EASY " : "NORMAL");
-    gotoxy(1, 17); text_write("A TOOL  SEL B KIT");
+    gotoxy(1, 17); text_write("A TOOL  SEL+B KIT");
     inventory_prepare_sprites();
 
     gotoxy(4, 1); write_field(class_name(player.class_id), 7);
