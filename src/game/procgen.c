@@ -75,8 +75,11 @@ static u8 spawn_shop_ware(u8 px, u8 py, u8 ware, u8 price) {
     return idx;
 }
 
-#define ANTIDOTE_TOWN_X 152
-#define ANTIDOTE_TOWN_Y 64
+// Beside the apothecary, clear of the east door. It used to sit at (152, 64),
+// the very tiles the hero arrives on from the village square, so every
+// visit to the forge quarter began by walking into the Antidote (#281).
+#define ANTIDOTE_TOWN_X 72
+#define ANTIDOTE_TOWN_Y 104
 #define RIFT_TRADER_X   128
 #define RIFT_TRADER_Y   20
 // Beside the keeper, never between the east-west trail and the keeper:
@@ -1357,10 +1360,12 @@ void procgen_generate_room_body(void) BANKED {
                 // to buy the run-long sustain build the roguelike promises.
                 // Unlike a random relic roll, the player can plan around
                 // its fifth-kill half-heart rhythm before the next region.
+                // The shelf row sits above the east door's rows (y 60..76)
+                // so the way in from the square is open floor (#281).
                 if (!(run_state.shop_civic & 4))
-                    spawn_shop_ware(88, 64, WARE_VAMP, 35);
+                    spawn_shop_ware(88, 40, WARE_VAMP, 35);
                 if (!(run_state.shop_civic & 8))
-                    spawn_shop_ware(120, 64, WARE_RUNE, 30);
+                    spawn_shop_ware(120, 40, WARE_RUNE, 30);
                 // The apothecary also keeps a restocked Antidote shelf
                 // (no purchase bit; buying more is always allowed).
                 spawn_shop_ware(ANTIDOTE_TOWN_X, ANTIDOTE_TOWN_Y,
