@@ -552,19 +552,15 @@ then diagonal.
   beam ends. A new Fold Star starts at 0, so its first laser is diagonal.
   Bits 1..2 of the same byte hold N. Subject to the scratch-byte check in
   section 3.8.
-- What "perpendicular" means here is ambiguous, and I am flagging it. The
-  tendrils occupy **both** diagonal axes at once: today's echoes go to all
-  four diagonals (`enemy_foldstar.c:73-76`), and every segment of the
-  proposed fractal is diagonal too. The line at 90 degrees to a NE-SW
-  tendril is NW-SE, which is also a tendril direction. Two readings:
-  - **Reading 1 (proposed):** diagonal attack = the four diagonals (an X).
-    Perpendicular attack = the four cardinals (a +). Strictly that is 45
-    degrees off, not 90, but the cardinals are the only directions not
-    parallel to any tendril, and it gives two clearly different attacks.
-  - **Reading 2:** two beams per attack. Attack A fires NE and SW, attack B
-    fires NW and SE. That is a true 90 degrees, but both attacks are
-    diagonal and each is parallel to half the tendrils.
-  - Open question 7.
+- "Perpendicular" means the four cardinals. **Decided by the owner,
+  2026-11-27.** The diagonal attack fires along the four diagonals (an X),
+  parallel to the tendrils; the perpendicular attack fires up, down, left
+  and right (a +). The tendrils occupy both diagonal axes at once (today's
+  echoes go to all four diagonals, `enemy_foldstar.c:73-76`, and every
+  segment of the proposed fractal is diagonal too), so the cardinals are
+  the only directions not parallel to any tendril. The other reading
+  considered, two diagonal beams per attack on alternating axes, is
+  dropped.
 
 **Telegraph per direction (not colour alone).**
 
@@ -682,8 +678,7 @@ bytes of queue and token state. `entity_t` stays 28 bytes.
 5. Pockets: is fencing the player in for the 24-frame hold fun or cheap?
 6. May a tendril or the laser take the last half-heart? Proposed: no, same
    as the basilisk beam.
-7. "Perpendicular": cardinals (X then +, proposed) or the other diagonal
-   pair (two beams per attack)?
+7. Resolved 2026-11-27: "perpendicular" is the four cardinals (X, then +).
 8. Laser on the base N=1 Fold Star on Normal (proposed, every second
    contraction), or only on N >= 2?
 9. The laser stretches the vulnerable window from 60 to 84 frames while the
