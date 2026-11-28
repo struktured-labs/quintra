@@ -3,6 +3,7 @@
 #include <gb/cgb.h>
 #include "core/types.h"
 #include "game/map_marks.h"
+#include "game/map_slides.h"
 #include "game/run_state.h"
 #include "game/secret_merchant.h"
 #include "render/palette.h"
@@ -24,11 +25,14 @@ static u8 legend_attr(u8 tile) {
     return BGPAL_FLOOR;
 }
 
-static void put(u8 x, u8 y, u8 tile) {
-    u8 attr = legend_attr(tile);
+static void put_attr(u8 x, u8 y, u8 tile, u8 attr) {
     VBK_REG = 0; set_bkg_tiles(x, y, 1, 1, &tile);
     VBK_REG = 1; set_bkg_tiles(x, y, 1, 1, &attr);
     VBK_REG = 0;
+}
+
+static void put(u8 x, u8 y, u8 tile) {
+    put_attr(x, y, tile, legend_attr(tile));
 }
 
 static void put_shop_key(u8 x, u8 y) {
@@ -37,6 +41,30 @@ static void put_shop_key(u8 x, u8 y) {
     put((u8)(x + 2), y, BGT_MAP_LABEL_H);
     put((u8)(x + 3), y, BGT_MAP_LABEL_O);
     put((u8)(x + 4), y, BGT_MAP_LABEL_P);
+}
+
+// After the tutorial dungeon, local rooms 2 and 8 own a reversible rift
+// well. Explicit stage starts make those the same Compass cells in every
+// dungeon: nodes at (7,2) and (10,5). Each known end wears a violet diamond
+// in the corner of its own node that faces the other end. Once both are
+// known, a third diamond in the gap between them completes a diagonal that
+// touches both rooms. A lone diamond floating in that gap read as an
+// unexplained marker between rooms (#265), so it now needs both ends, and
+// the legend names it beside SHOP.
+void map_draw_rift_link(u8 here) BANKED {
+    u8 a = run_state_dungeon_cell_seen(2);
+    u8 b = run_state_dungeon_cell_seen(8);
+    // The hero's own node keeps its full YOU mark, and the key appears
+    // only with a diamond to explain.
+    if (!((a && here != 2) || (b && here != 8))) return;
+    if (a && here != 2) map_overlay_put(8, 3, BGT_MAP_RIFT, BGPAL_CRYSTAL);
+    if (b && here != 8) map_overlay_put(10, 5, BGT_MAP_RIFT, BGPAL_CRYSTAL);
+    if (a && b) put(9, 4, BGT_MAP_RIFT);
+    put(6, 16, BGT_MAP_RIFT);
+    put(7, 16, BGT_MAP_LABEL_R);
+    put(8, 16, BGT_MAP_LABEL_I);
+    put(9, 16, BGT_MAP_LABEL_F);
+    put(10, 16, BGT_MAP_LABEL_T);
 }
 
 void map_load_shop_palette(void) BANKED {
@@ -103,16 +131,13 @@ u8 map_world_shop_icon(u8 cell, u8 icon) BANKED {
     return secret_cave_map_icon(cell, icon);
 }
 
-u8 map_dungeon_shop_icon(u8 cell, u8 here, u8 icon) BANKED {
-    if (cell != here
-        && cell == run_state_dungeon_shop_cell()
-        && run_state_dungeon_cell_visited(cell))
-        return BGT_MAP_BIG_SHOP;
-    return icon;
-}
-
+// Town nodes are 3x3 boxes at x = 2, 8, 14 on row 8; the icon is the centre.
+// The market's coin is a real mark, so the hero shares that cell with it.
+// The forge roof and arrival floor are the node's own decoration, named by
+// the labels beneath, and simply give way to the hero.
 u8 map_town_shop_center(u8 visual_i, u8 here, u8 fallback) BANKED {
-    if (visual_i == here) return BGT_MAP_HERE;
-    if (visual_i == 2) return BGT_MAP_SHOP;
-    return fallback;
+    u8 under = (visual_i == 2) ? BGT_MAP_SHOP : fallback;
+    if (visual_i != here) return under;
+    if (visual_i != 2) return BGT_MAP_HERE;
+    return map_here_over(15, 9, BGT_MAP_SHOP, BGPAL_SHOP);
 }

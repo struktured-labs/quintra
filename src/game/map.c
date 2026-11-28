@@ -16,6 +16,7 @@
 #include "render/tiles.h"
 #include "content.h"
 #include "game/map_marks.h"
+#include "game/map_slides.h"
 #include "game/riftwild_mission.h"
 
 BANKREF(map_enter)
@@ -36,9 +37,6 @@ static const u16 map_pal_sigil[4] = {
 // like another route instruction instead of an unmistakable "you are here."
 static const u16 map_pal_landmark[4] = {
     BGR555(1,3,2), BGR555(2,10,14), BGR555(5,23,25), BGR555(12,31,31)
-};
-static const u16 map_pal_player[4] = {
-    BGR555(1,3,2), BGR555(2,10,4), BGR555(8,27,8), BGR555(29,31,24)
 };
 static const u16 map_pal_boss[4] = {
     BGR555(1,3,2), BGR555(14,3,1), BGR555(27,7,1), BGR555(31,20,4)
@@ -171,8 +169,7 @@ static void draw_world_grid(void) {
             // Thirty-six nodes fit because each one is already a complete
             // scrolling field. The graph therefore communicates geographic
             // scale without returning to tiny terrain screenshots or text.
-            if (cell == here) icon = BGT_MAP_HERE;
-            else if (cell == RIFTWELL_WORLD_SCREEN)
+            if (cell == RIFTWELL_WORLD_SCREEN)
                 icon = BGT_MAP_RIFT;
             else if (z->kind == ZELDA_CELL_DUNGEON_ENTRANCE)
                 icon = (cell == active_gate) ? BGT_PORTAL : BGT_MAP_ROOM;
@@ -191,6 +188,10 @@ static void draw_world_grid(void) {
             // through fog, so the Compass always shows the next step.
             icon = riftwild_compass_goal_icon(cell,
                 seen ? icon : BGT_MAP_UNKNOWN);
+            // The hero's field shows the hero; a landmark there shares the
+            // cell and the two take turns (#264).
+            if (cell == here)
+                icon = map_here_over(x, y, icon, map_attr(icon));
             // A Chime-heard den is a dim chest until it is actually found.
             if (icon & 0x80) map_put_attr(x, y, (u8)(icon & 0x7F), BGPAL_WALL);
             else map_put(x, y, icon);
@@ -256,22 +257,17 @@ static void draw_dungeon_grid(void) {
         // door. The corridor to it still waits until that room is entered.
         u8 boss_hint = (i == (u8)(size - 1)
             && run_state_dungeon_cell_seen((u8)(size - 2)));
-        u8 icon = BGT_MAP_BIG_ROOM;
+        u8 icon;
         u8 draw = (i == here || seen || (i == next_trial)
             || boss_hint) ? 1 : 0;
         if (!draw) continue;
-        if (i == here) icon = BGT_MAP_BIG_HERE;
-        // Each completed fixture reveals exactly one next GOAL, without
-        // drawing the unwalked doors that lead there.
-        if (i == next_trial && i != here) icon = BGT_MAP_BIG_GOAL;
-        if (boss_hint && i != here) icon = BGT_MAP_BIG_BOSS;
-        // The cache appears only after that room is visited or charted.
-        if (seen && i == cache_cell && !cache_done && i != here)
-            icon = BGT_MAP_BIG_CACHE;
-        // Unclaimed shrine: gold mark on the earned compass after a visit.
-        if (seen && i != here && powerup_shrine_map_mark(i))
-            icon = BGT_MAP_BIG_SHOP;
-        icon = map_dungeon_shop_icon(i, here, icon);
+        // Every mark this cell holds: the hero, the earned GOAL, the boss
+        // hint, a charted cache, an unclaimed shrine or the visited shop.
+        // One mark is drawn as before; two or more take turns (#264).
+        icon = map_dungeon_node_icon(i, here, next_trial,
+            (u8)((seen ? 1 : 0) | (boss_hint ? 2 : 0)
+                | ((seen && i == cache_cell && !cache_done) ? 4 : 0)),
+            gx[i], gy[i]);
         map_big_node(gx[i], gy[i], icon);
         // A charted altar wears the current Law colour in its lower half.
         if (law && seen && icon == BGT_MAP_BIG_ROOM)
@@ -283,10 +279,8 @@ static void draw_dungeon_grid(void) {
         u8 v = secret_merchant_map_cell();
         u8 c = (u8)(v & 0x7F);
         if (v != 0xFF && c < size) {
-            if (v & 0x80)
-                map_put_attr((u8)(gx[c] + 1), (u8)(gy[c] + 1), BGT_MAP_SHOP,
-                    BGPAL_WALL);
-            else map_put((u8)(gx[c] + 1), (u8)(gy[c] + 1), BGT_MAP_SHOP);
+            map_overlay_put((u8)(gx[c] + 1), (u8)(gy[c] + 1), BGT_MAP_SHOP,
+                (v & 0x80) ? BGPAL_WALL : 5);
         }
     }
     // Depth numbers appear only for rows that contain a room you have
@@ -346,16 +340,8 @@ static void draw_dungeon_grid(void) {
             }
         }
     }
-    // After the tutorial dungeon, local rooms 2 and 8 own a reversible rift
-    // well. Explicit stage starts make those the same Compass cells in every
-    // dungeon. Reveal one violet end-cap when its room is known;
-    // once both are seen, the completed diagonal makes the nonlinear shortcut
-    // explicit without pretending it is a cardinal hallway.
-    if (run_state.bosses_beaten > 0) {
-        if (run_state_dungeon_cell_seen(2)
-            || run_state_dungeon_cell_seen(8))
-            map_put(9, 4, BGT_MAP_RIFT);
-    }
+    // The rift-well link between local rooms 2 and 8 (map_marks.c).
+    if (run_state.bosses_beaten > 0 && size > 8) map_draw_rift_link(here);
     map_draw_dungeon_legend();
     // "LAW" in the colour of the active state: corridors of the same colour
     // are open now, the others wait for an altar.
@@ -426,11 +412,11 @@ void map_enter(void) {
     palette_bg_load(BGPAL_DOOR, map_pal_landmark);
     palette_bg_load(BGPAL_CRACK, map_pal_boss);
     map_load_shop_palette();
-    palette_bg_load(7, map_pal_player);
     if (run_state.world_mode) {
         // The area alphabet supplies G/A/E for GATE, then the Compass atlas
         // must win shared slots 90..92 so RIFT cannot render as "PNIHT".
-        tiles_load_area_labels(); tiles_load_map_bg(); map_clear_tiles();
+        tiles_load_area_labels(); tiles_load_map_bg(); map_marks_begin();
+        map_clear_tiles();
         draw_map_heading();
         draw_world_grid();
         map_draw_world_legend();
@@ -439,7 +425,8 @@ void map_enter(void) {
         return;
     }
     if (is_town) {
-        tiles_load_area_labels(); tiles_load_map_bg(); map_clear_tiles();
+        tiles_load_area_labels(); tiles_load_map_bg(); map_marks_begin();
+        map_clear_tiles();
         draw_map_heading();
         draw_town_grid();
         draw_ask_prompt();
@@ -448,6 +435,7 @@ void map_enter(void) {
     }
     mission_graph_ensure();
     tiles_load_area_labels(); tiles_load_map_bg(); tiles_load_hud();
+    map_marks_begin();
     dungeon_director_refresh_route();
     map_clear_tiles();
     draw_dungeon_heading();
@@ -458,6 +446,7 @@ void map_enter(void) {
 void map_exit(void) {}
 screen_id_t map_tick(u8 keys, u8 pressed) {
     keys;
+    map_slide_tick();
     if ((pressed & J_A) && companion_ask()) {
         room_request_resume();
         return SCREEN_ROOM;
