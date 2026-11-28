@@ -118,8 +118,22 @@ static void shuffle_faces(u8 min_id, u8 max_id, u8 want) {
 }
 
 
+// A merchant room: the dungeon shop cell, a town, or any room with wares on
+// its floor (the hidden Veil stall, a Riftwild trader). The cycling Capsule
+// never appears among merchandise (#262).
+static u8 merchant_room(void) {
+    u8 i;
+    if (run_state_is_shop()
+        || run_state_room_is_town(run_state.room_counter)) return 1;
+    for (i = 0; i < MAX_ENTITIES; ++i)
+        if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_PICKUP
+            && entities[i].ai_data[0] == PICKUP_SHOP) return 1;
+    return 0;
+}
+
 u8 powerup_spawn_roulette(fix8_t x, fix8_t y, u8 flags) BANKED {
     u8 idx, want;
+    if (merchant_room()) return 0xFF;
     if (flags & ROULETTE_UNCOMMON)
         shuffle_faces(POWERUP_FORMATION, POWERUP_WINGMATES, 5);
     else {
@@ -651,6 +665,12 @@ static u8 shrine_reserved_cell(u8 cell) {
     if (cell == run_state.mission_warden_cell) return 1;
     if (cell == run_state.mission_waystone_cell) return 1;
     if (cell == run_state.mission_deep_warden_cell) return 1;
+    // The merchant keeps the shop: the shrine's Roulette sits at the room
+    // centre, on the shelf row, and about 7% of early dungeons used to seat
+    // it there (#262). The Veil host cell stays eligible: its own room has
+    // no wares, and powerup_spawn_roulette() refuses the stall inside it.
+    // (Resolving the host cell here costs a visible room-entry hitch.)
+    if (cell == run_state_dungeon_shop_cell()) return 1;
     return 0;
 }
 
