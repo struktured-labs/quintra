@@ -11,6 +11,9 @@
 #include "game/room.h"
 #include "game/status.h"
 #include "render/basilisk_art.h"
+#include "render/rime_art.h"
+#include "game/player.h"
+#include "game/rime_room.h"
 #include "render/tiles.h"
 #include "content.h"
 
@@ -104,6 +107,41 @@ static void xo_block(i16 wx, i16 wy, const u8 *tiles, const u8 *props) {
 
 static u8 xb_tile[16], xb_prop[16];
 
+/* ---- M1 Rime chamber: Stone Jagger, Pipes pedestals, reset plate ---- */
+static void xo_quad(i16 wx, i16 wy, u8 t, u8 prop) {
+    xo_put(wx, wy, t, prop);
+    xo_put(wx + 8, wy, (u8)(t + 1), prop);
+    xo_put(wx, wy + 8, (u8)(t + 2), prop);
+    xo_put(wx + 8, wy + 8, (u8)(t + 3), prop);
+}
+
+static void rime_pedestal(u8 lx, u8 ly, u8 full) {
+    i16 x = (i16)((u8)(RIME_X0 + lx) << 3), y = (i16)((u8)(RIME_Y0 + ly) << 3);
+    if (full) xo_quad(x, y, RIME_TILE_PIPES, 3 | 0x08);
+    else {
+        /* Charge taken: only the empty stand remains. */
+        xo_put(x, y + 8, (u8)(RIME_TILE_PIPES + 2), 3 | 0x08);
+        xo_put(x + 8, y + 8, (u8)(RIME_TILE_PIPES + 3), 3 | 0x08);
+    }
+}
+
+#define RIME_XO_NEED 19
+static void rime_draw(void) {
+    u8 t = RIME_TILE_JAGGER;
+    u8 full = (!rime_charge && !room_freeze_beats) ? 1 : 0;
+    /* Frozen: Stop's ice blue. The Jagger never flashes: no hit state. */
+    u8 pal = room_freeze_beats ? 3 : 0;
+    if (!room_freeze_beats && !rime_jagger_hold
+        && ((entity_anim_counter >> 3) & 1)) t = RIME_TILE_JAGGER_WALK;
+    if (rime_charge)
+        xo_put(player.x + 4, player.y - 9, RIME_TILE_PIP, 3 | 0x08);
+    xo_quad(rime_jx, rime_jy, t, (u8)(pal | 0x08));
+    rime_pedestal(RIME_PED_FOYER_X, RIME_PED_FOYER_Y, full);
+    rime_pedestal(RIME_PED_VAULT_X, RIME_PED_VAULT_Y, full);
+    xo_quad((i16)((u8)(RIME_X0 + RIME_PLATE_X) << 3),
+        (i16)((u8)(RIME_Y0 + RIME_PLATE_Y) << 3), RIME_TILE_PLATE, 5 | 0x08);
+}
+
 static void basilisk_draw(u8 slot, entity_t *e) {
     static const u8 tier_pal[3] = { 7, 4, 6 };   /* green, red, Void stage */
     u8 base = BAS_TILE_IDLE, prop, k, left;
@@ -174,6 +212,7 @@ void nm_extras_draw(void) BANKED {
         if ((entities[i].flags & EF_ACTIVE) && entities[i].type == ENT_ENEMY
             && entities[i].ai_data[0] == ENEMY_FUSE_HURLER
             && entities[i].ai_data[2] == 3) need += 4;
+    if (rime_live) need += RIME_XO_NEED;
     if (!need) { xo_park(4); return; }
     xo_begin(need > 31 ? 31 : need);
     /* Two overlapping blasts share the burst by alternating frames. */
@@ -193,6 +232,7 @@ void nm_extras_draw(void) BANKED {
             fuse_tell_at(FIX8_TO_INT(e->x) + 4, FIX8_TO_INT(e->y) + 4,
                 (u8)(28 - TIMER));
     }
+    if (rime_live) rime_draw();
     {
         u8 end = xo;
         xo_park(end);

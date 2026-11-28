@@ -1,5 +1,6 @@
 #pragma bank 25
 
+#include "game/rime_room.h"
 #include <gb/gb.h>
 #include "audio/sfx.h"
 #include "core/rng.h"
@@ -1151,6 +1152,7 @@ void new_monsters_draw(void) BANKED {
     /* A pending lane restore keeps the room flag up until the floor is back. */
     if (leybeam_beam_live || vault_hand_holding || ley_flush
         || leybeam_flush_pending) any = 1;
+    if (rime_live) any = 1;   /* Rime chamber actors use the extras pass */
     if (!any) {
         for (i = 0; i < MAX_ENTITIES; ++i) {
             entity_t *e = &entities[i];

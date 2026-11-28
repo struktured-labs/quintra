@@ -1,4 +1,5 @@
 #pragma bank 2
+#include "game/rime_room.h"
 #include <gb/gb.h>
 
 #include "audio/sfx.h"
@@ -70,6 +71,10 @@ u8 enemy_try_step(entity_t *e, i8 dx, i8 dy) BANKED {
     i16 ext_x = ((e->hitbox >> 4) >= 10) ? 14 : 6;
     i16 ext_y = ((e->hitbox & 0x0F) >= 10) ? 14 : 6;
     if (nx < 8 || ny < 8) return 0;
+    // M1 Rime chamber: ordinary enemies never wander in (one lesson only,
+    // and nothing that moves may rest on the entrance or reset path).
+    if (rime_live && nx + 8 >= RIME_KEEP_X0
+        && ny + 8 >= RIME_KEEP_Y0 && ny + 8 < RIME_KEEP_Y1) return 0;
     if (nx + (ground ? 15 : ext_x) >= (i16)room_world_width
         || ny + (ground ? 15 : ext_y) >= (i16)room_world_height) return 0;
     if (ground) {
@@ -610,6 +615,8 @@ static void enemy_update_from_def(entity_t *e, u8 id) {
 
 void enemy_update(entity_t *e, u8 idx) BANKED {
     u8 id = e->ai_data[0];
+    // Rime Pipes: every body holds still and starts no new shot.
+    if (room_freeze_beats) return;
     if ((e->flags & EF_RARE) && rare_enemy_tick(e)) return;
     if (id == ENEMY_STONE_SENTINEL) { boss_tick(e); return; }
     // Return-echo elites are 24x24 Reaper/Weaver/Maw. Weaver and Maw take
